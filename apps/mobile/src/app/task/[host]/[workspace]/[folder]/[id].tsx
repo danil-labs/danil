@@ -5,7 +5,7 @@ import { Stack, router, useFocusEffect, useLocalSearchParams } from "expo-router
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { AppState, FlatList, Image, type NativeScrollEvent, type NativeSyntheticEvent, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { type HistoryRead, HistoryPager, type LoadedHistory, type OlderState, hasOlder, hasRecentGap } from "@terminus/chat/history";
-import { type ChatEvent, type Question, type Turn, DEFAULT_CHAT_VEIL } from "@terminus/protocol";
+import { type ChatEvent, DEFAULT_CHAT_VEIL, PROVIDER_HANDOFF_FEATURE, type Question, type Turn } from "@terminus/protocol";
 import { delegatedOf, taskTitle } from "@terminus/tasks";
 import {
   type ChatBackdropView,
@@ -23,6 +23,7 @@ import {
   respondPermission,
   runShell,
   sendToTask,
+  setSessionProvider,
   switchLiveMode,
   stopShell,
   stopTask,
@@ -30,9 +31,10 @@ import {
 } from "../../../../../lib/engine";
 import { HostError } from "../../../../../lib/hosts";
 import { type ChatLine, type Line, type LivePiece, type WorkLine, applyLive, lineMatches, liveAfterRead, runClock, savesLive, workRuns } from "../../../../../lib/steps";
-import { failureGesture, failureSentence, isInterruption } from "../../../../../lib/failureNotice";
+import { failureGesture, failureKey, failureSentence, isInterruption } from "../../../../../lib/failureNotice";
+import { handoverGate, sendWithHandover } from "../../../../../lib/handover";
 import { publishWork, releaseWork } from "../../../../../lib/workSheet";
-import { lang, t, w } from "../../../../../lib/i18n";
+import { hasKey, lang, phrase, t, w } from "../../../../../lib/i18n";
 import { type ScrollAnchor, anchorOf, restoreAnchor, scrollToEnd } from "../../../../../lib/scrollAnchor";
 import { type Follow, MARGIN, OPENED, fromTop, jumped, scrolled, showJump, unseen } from "../../../../../lib/follow";
 import { useAccount } from "../../../../../lib/account";
@@ -97,6 +99,8 @@ export default function TaskScreen() {
   const [waking, setWaking] = useState(false);
   // Lo que se mandó mientras la VM enciende: sin él, el mensaje desaparece el minuto o dos que tarda.
   const [pending, setPending] = useState<string | null>(null);
+  // El CLI confirmado que se aplicará al enviar (`provider_handoff_v1`).
+  const [pendingProvider, setPendingProvider] = useState<string | null>(null);
   const [background, setBackground] = useState<Backdrop | null>(null);
   // Las decisiones que ya salieron, por `request_id`: el motor falla en la segunda. El ref ataja el doble toque antes del render.
   const [deciding, setDeciding] = useState<ReadonlySet<string>>(new Set());
@@ -140,6 +144,12 @@ export default function TaskScreen() {
     ...delegatedOf((snapshot?.delegated ?? []).filter((task) => task.host === params.host && !task.remote_launcher), id),
     ...(snapshot?.delegated ?? []).filter((task) => !task.archived && task.remote_launcher === key),
   ].sort((a, b) => b.created_at - a.created_at), [snapshot, params.host, id, key]);
+  // Su fila en la lista: dice si es una hija remota, que en v1 no cambia de CLI.
+  const machineTasks = useMemo(
+    () => [...(snapshot?.tasks ?? []), ...(snapshot?.delegated ?? [])].filter((task) => task.host === params.host && task.workspace === workspace),
+    [snapshot, params.host, workspace],
+  );
+  const taskRow = useMemo(() => machineTasks.find((task) => task.id === id) ?? null, [machineTasks, id]);
   // Si el chat sigue el final, como el hilo del escritorio (ver `lib/follow.ts`). Ref y no estado:
   // cambia con cada evento de scroll; solo el botón, que se ve, va en estado.
   const follow = useRef<Follow>(OPENED);
@@ -187,6 +197,9 @@ export default function TaskScreen() {
       if (error instanceof HostError && error.code === "machine_outdated") return setNote(w("web.machines.outdated_action", { name }));
       if (error instanceof HostError && error.code === "machine_off") return setNote(w("shell.machines.task_off", { name }));
       if (error instanceof HostError && (error.code === "start_failed" || error.code === "start_timeout")) return setNote(t("machines.start_failed", { name }));
+      // Un fallo con frase del catálogo (el traspaso sin ventana) se dice igual que cualquier otro.
+      const clave = failureKey(error);
+      if (clave && hasKey(clave)) return setNote(t(clave));
       setNote(t("task.error", { detail: error instanceof Error ? error.message : String(error) }));
     },
     [host],
@@ -228,6 +241,7 @@ export default function TaskScreen() {
     pager.current = null;
     setHistory(null);
     setOlder("idle");
+    setPendingProvider(null);
     putLive([]);
     follow.current = OPENED;
     setJump({ shown: false, unseen: 0 });
@@ -363,11 +377,24 @@ export default function TaskScreen() {
     // Mandar es volver al final: lo que se acaba de escribir va abajo, como en el escritorio.
     toEnd();
     if (!s.shell && host?.canAct() === "wakes" && host.power() !== "on") setPending(s.prompt);
-    return act(() =>
-      s.shell
-        ? runShell(host!, workspace, { folder, session: id, command: s.command, provider: s.provider, model: s.model, effort: s.effort, permissionMode: s.permissionMode })
-        : sendToTask(host!, workspace, folder, id, s),
+    const sent = act(() =>
+      sendWithHandover<unknown>({
+        shell: s.shell,
+        pending: pendingProvider,
+        from: view?.session.provider ?? null,
+        to: s.provider,
+        consent: (provider) => setSessionProvider(host!, workspace, folder, id, provider),
+        send: () =>
+          s.shell
+            ? runShell(host!, workspace, { folder, session: id, command: s.command, provider: s.provider, model: s.model, effort: s.effort, permissionMode: s.permissionMode })
+            : sendToTask(host!, workspace, folder, id, s),
+      }),
     );
+    return sent.then((ok) => {
+      // Confirmado el envío, el pendiente ya lo aplicó el motor: no se repite en el siguiente.
+      if (ok && !s.shell && s.provider === pendingProvider) setPendingProvider(null);
+      return ok;
+    });
   };
   const inject = (text: string, attachments: string[]) => act(() => injectIntoTask(host!, workspace, folder, id, text, attachments));
 
@@ -393,6 +420,22 @@ export default function TaskScreen() {
       .catch(fail);
 
   const running = host?.power() === "on" && (view?.running ?? false);
+  // Cambiar de CLI lo decide el motor (`can_hand_over`/`hand_over_blocked`); aquí solo se suma lo que el cliente sabe.
+  const handover = handoverGate({
+    session: view?.session,
+    running,
+    features: host?.features?.(),
+    remote: Boolean(taskRow?.remote_parent || taskRow?.remote_launcher),
+  });
+  const machineReady = host?.power() === "on" && host.canAct() === "now";
+  const canHandoff = handover.allowed && machineReady;
+  const handoverReason = !handover.allowed && handover.reason
+    ? hasKey(handover.reason) ? t(handover.reason) : phrase({ clave: handover.reason })
+    : machineReady || !host
+      ? null
+      : host.canAct() === "outdated"
+        ? w("web.machines.outdated_action", { name: host.label })
+        : w("web.machines.off_action", { name: host.label });
   const permissions = useMemo(() => view?.permissions ?? [], [view?.permissions]);
   // Otro cliente pudo decidir: `pending_requests` manda, sin decisión optimista.
   useEffect(() => {
@@ -487,12 +530,23 @@ export default function TaskScreen() {
   // El modo con que sigue la tarea. Con `null` el motor correría el suyo por omisión, no el que guardó la tarea.
   const savedMode = view?.session.permission_mode ?? null;
   const workspaceMode = workspaces.find((w) => w.id === workspace)?.defaultPermissionMode ?? null;
-  const latest = useRef({ view, submit, respond });
-  latest.current = { view, submit, respond };
+  const latest = useRef({ view, submit, respond, pendingProvider });
+  latest.current = { view, submit, respond, pendingProvider };
   const decide = useCallback((permission: Permission, allow: boolean) => latest.current.respond(permission, allow), []);
   const quickReply = useCallback((prompt: string) => {
-    const { view: now, submit: send } = latest.current;
-    return now ? send({ shell: false, prompt, ...taskDefaults(now), effort: null, permissionMode: now.session.permission_mode ?? null, attachments: [] }) : Promise.resolve(false);
+    const { view: now, submit: send, pendingProvider: pending } = latest.current;
+    if (!now) return Promise.resolve(false);
+    const defaults = taskDefaults(now);
+    const handoverProvider = pending && pending !== defaults.provider ? pending : null;
+    return send({
+      shell: false,
+      prompt,
+      provider: handoverProvider ?? defaults.provider,
+      model: handoverProvider ? null : defaults.model,
+      effort: null,
+      permissionMode: now.session.permission_mode ?? null,
+      attachments: [],
+    });
   }, []);
 
   const folderRow = snapshot?.folders.find((f) => f.host === params.host && f.id === folder) ?? null;
@@ -603,8 +657,8 @@ export default function TaskScreen() {
         workspace={workspace}
         folder={folder}
         id={id}
-        task={[...(snapshot?.tasks ?? []), ...(snapshot?.delegated ?? [])].find((task) => task.host === params.host && task.workspace === workspace && task.id === id)}
-        tasks={[...(snapshot?.tasks ?? []), ...(snapshot?.delegated ?? [])].filter((task) => task.host === params.host && task.workspace === workspace)}
+        task={taskRow ?? undefined}
+        tasks={machineTasks}
         running={running || waking}
         onChanged={() => { void reload(); }}
         onFinished={() => { void reload(); router.replace("/"); }}
@@ -679,7 +733,11 @@ export default function TaskScreen() {
         model={view ? taskDefaults(view).model : null}
         permissionMode={workspaceMode}
         savedPermissionMode={savedMode}
-        providerLocked={Boolean(view?.session.turns.length)}
+        providerLocked={!canHandoff}
+        providerLockedReason={handoverReason}
+        canHandoff={canHandoff}
+        pendingProvider={pendingProvider}
+        onPendingProvider={setPendingProvider}
         running={running}
         disabled={asleep || waking || !view}
         placeholder={w("chat.composer.placeholder.next")}
@@ -726,12 +784,26 @@ const Row = memo(function Row({ line, theme, needle, paused, onOpen, streaming, 
       </View>
     );
   if (line.kind === "shell") return <ShellRun command={line.command} output={line.output} exitCode={line.exitCode} theme={theme} />;
+  if (line.kind === "message" && line.role === "system" && line.meta === "provider_handover") return <HandoverRow line={line} theme={theme} />;
   if (line.kind === "message" && line.role === "system" && (line.meta === "fallo" || line.meta === "cupo" || line.fallo)) return <FailureNotice line={line} theme={theme} />;
   return <Bubble line={line} theme={theme} streaming={streaming} onQuickReply={onQuickReply} />;
 });
 
 function say(key: string, vars?: Record<string, string | number>) {
   return t(key as Parameters<typeof t>[0], vars);
+}
+
+/** El aviso `system` con `meta: "provider_handover"` del motor: un separador, no un globo. */
+function HandoverRow({ line, theme }: { line: Extract<Line, { kind: "message" }>; theme: Theme }) {
+  return (
+    <View accessibilityRole="text" style={styles.notice} testID="provider-handover">
+      <View style={[styles.noticeRule, { backgroundColor: theme.border }]} />
+      <Text selectable style={{ color: theme.textMuted, fontSize: TEXT.label, lineHeight: 17, flexShrink: 1, textAlign: "center" }}>
+        {line.text}
+      </Text>
+      <View style={[styles.noticeRest, { backgroundColor: theme.border }]} />
+    </View>
+  );
 }
 
 /** La fila del fallo, como en la ventana: la frase de la clase y, si sirve, cambiar de cuenta. */

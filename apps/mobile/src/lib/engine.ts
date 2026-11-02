@@ -520,6 +520,15 @@ export async function sendToTask(host: Host, workspace: string, folder: string, 
   return value;
 }
 
+/**
+ * Cambiar el CLI de una tarea (`provider_handoff_v1`): deja el consentimiento
+ * de un solo uso para el siguiente turno, que abre sesión nueva con la
+ * conversación como texto o retoma la aparcada.
+ */
+export async function setSessionProvider(host: Host, workspace: string, folder: string, session: string, provider: string) {
+  await host.call("set_session_provider", workspace, { project: folder, session, provider });
+}
+
 /** «Mandar ahora»: el mensaje entra en el turno que corre, sin esperar a que termine. */
 export async function injectIntoTask(host: Host, workspace: string, folder: string, session: string, prompt: string, attachments: string[] = []) {
   await host.call("inject_message", workspace, { project: folder, session, prompt, queueId: null, attachments, taskMentions: [], recipients: [] });
