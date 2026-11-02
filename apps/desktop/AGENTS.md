@@ -32,10 +32,12 @@ is not a pass. What each guard checks is in [docs/guards.md](docs/guards.md);
 
 - The installed identity: `identifier` (`ai.danil.terminus`), `productName`,
   updater `pubkey` and endpoint in `src-tauri/tauri.conf.json`, and their copies
-  in `.github/workflows/publish.yml`. Installed copies depend on them, so the
-  stored string is still `Terminus` while the product and every visible title
-  say Danil; changing it needs an architect-reviewed installed-update
-  transition.
+  in `.github/workflows/publish.yml`. Installed copies depend on them; changing
+  one needs an architect-reviewed installed-update transition. `productName`
+  went from `Terminus` to `Danil` in 0.3.0. The Windows installer adopts the
+  old copy (`src-tauri/windows/hooks.nsh`, kept in every release), and
+  `scripts/guards/product-name.mjs` ties the AppImage paths and that
+  migration to `productName`.
 - `src-tauri/crates/engine-protocol/commands.json`: the frozen contract, kept
   byte-exact with LF. A command or event name the front uses must exist there.
 - Saved field names, command names and event names. An internal rename does

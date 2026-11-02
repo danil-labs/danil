@@ -12,7 +12,7 @@ inventory.json, browser-navigation.json, licenses/ and the <tree>/ every tool
 runs from in place. Downloaded archives stay in <output>/.payloads/<target>/
 and never ship. --tauri-config writes a Tauri config overlay only after every
 target verifies; on Linux it also adds resources-inventory.json, the inventory
-of every resource the AppImage copies (all under usr/share/Terminus). Chrome is metadata only, never staged.
+of every resource the AppImage copies (all under usr/share/Danil). Chrome is metadata only, never staged.
 """
 
 import argparse
@@ -714,9 +714,9 @@ def write_tauri_config(output, targets, config):
         inventory = output / "resources-inventory.json"
         inventory.write_bytes(resources_inventory(output, targets))
         # linuxdeploy recorre usr/bin y usr/lib: en usr/share no copia dependencias ni toca un ELF.
-        files = {f"/usr/share/Terminus/work-tools/{target}": path for target, path in trees.items()}
-        files["/usr/share/Terminus/lenguas"] = str(LANGUAGES.resolve())
-        files["/usr/share/Terminus/resources-inventory.json"] = str(inventory.resolve())
+        files = {f"/usr/share/Danil/work-tools/{target}": path for target, path in trees.items()}
+        files["/usr/share/Danil/lenguas"] = str(LANGUAGES.resolve())
+        files["/usr/share/Danil/resources-inventory.json"] = str(inventory.resolve())
         bundle = {"linux": {"appimage": {"files": files}}}
     else:
         raise ValueError("One Tauri overlay covers the targets of one platform")

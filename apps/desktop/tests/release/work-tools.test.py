@@ -240,8 +240,8 @@ class WorkToolsTests(unittest.TestCase):
             with patch.object(tools, "RESOURCES", source), patch.object(tools, "LANGUAGES", languages):
                 tools.write_tauri_config(out.parent, ["x86_64-unknown-linux-gnu"], config)
             files = json.loads(config.read_text())["bundle"]["linux"]["appimage"]["files"]
-            self.assertIn("/usr/share/Terminus/work-tools/x86_64-unknown-linux-gnu", files)
-            inventory = json.loads(Path(files["/usr/share/Terminus/resources-inventory.json"]).read_text())
+            self.assertIn("/usr/share/Danil/work-tools/x86_64-unknown-linux-gnu", files)
+            inventory = json.loads(Path(files["/usr/share/Danil/resources-inventory.json"]).read_text())
             paths = {row["path"] for row in inventory["files"]}
             self.assertIn("lenguas/es.json", paths)
             self.assertIn(f"work-tools/x86_64-unknown-linux-gnu/{manifest['tree']}/git/tool", paths)
@@ -250,7 +250,7 @@ class WorkToolsTests(unittest.TestCase):
             mounted = root / "mounted"
             shutil.copytree(languages, mounted / "lenguas")
             shutil.copytree(out, mounted / "work-tools" / "x86_64-unknown-linux-gnu", symlinks=True)
-            shutil.copyfile(files["/usr/share/Terminus/resources-inventory.json"], mounted / "resources-inventory.json")
+            shutil.copyfile(files["/usr/share/Danil/resources-inventory.json"], mounted / "resources-inventory.json")
             self.assertEqual(tools.verify_resources_inventory(mounted)["files"], len(inventory["files"]))
             (mounted / "lenguas" / "es.json").write_text("[]")
             with self.assertRaisesRegex(ValueError, "differs from its inventory"):

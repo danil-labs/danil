@@ -188,7 +188,7 @@ is a new folder name. `scripts/work-tools.py` builds it from the pins in
   path would pass `MAX_PATH` under a 32-character profile name. The engine
   removes older sibling trees once nothing uses them; a real uninstall runs
   `RMDir /r` on `work-tools`.
-- **Linux AppImage:** the resources travel in `usr/share/Terminus/` (with a
+- **Linux AppImage:** the resources travel in `usr/share/Danil/` (with a
   copy of `lenguas/`), where linuxdeploy neither deploys dependencies nor
   patches an ELF. The mount changes on every start, so the window copies
   every resource (`lenguas/` and `work-tools/`) to

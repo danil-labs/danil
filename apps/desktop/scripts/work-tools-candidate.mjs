@@ -44,7 +44,7 @@ const bundleEnvironment = process.platform === "linux" ? {
   NO_STRIP: "1",
   PATCHELF: join(root, "scripts/work-tools-patchelf.py"),
   TERMINUS_REAL_PATCHELF: resolve(required("patchelf")),
-  TERMINUS_WORK_TOOLS_ROOT: join(root, "src-tauri/target/release/bundle/appimage/Terminus.AppDir/usr/share/Terminus/work-tools"),
+  TERMINUS_WORK_TOOLS_ROOT: join(root, "src-tauri/target/release/bundle/appimage/Danil.AppDir/usr/share/Danil/work-tools"),
 } : {};
 const output = join(root, ".engine", `work-tools-candidate-${version}-${target}`);
 if (existsSync(output)) throw new Error("Candidate directory already exists; use a new version or inspect it first.");
@@ -96,7 +96,7 @@ const config = {
     createUpdaterArtifacts: false,
     externalBin: [join(binaries, "seldon-runtime")],
     ...(process.platform === "linux"
-      ? { linux: { appimage: { files: { [`/usr/share/Terminus/work-tools/${target}`]: stagedResources, "/usr/share/Terminus/lenguas": join(root, "plugins", "languages"), "/usr/share/Terminus/resources-inventory.json": join(output, "resources", "resources-inventory.json") } } } }
+      ? { linux: { appimage: { files: { [`/usr/share/Danil/work-tools/${target}`]: stagedResources, "/usr/share/Danil/lenguas": join(root, "plugins", "languages"), "/usr/share/Danil/resources-inventory.json": join(output, "resources", "resources-inventory.json") } } } }
       : process.platform === "darwin"
         ? { macOS: { files: { [`Resources/work-tools/${target}`]: stagedResources } } }
         : { resources: { [stagedResources]: `work-tools/${target}` } }),
