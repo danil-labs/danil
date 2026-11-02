@@ -62,7 +62,7 @@ El sello de `build.rs` en los cuatro binarios es
 - **Descarga y SHA-256**: los cuatro binarios bajados de la URL de su manifiesto
   dan el hash del manifiesto.
 - **Firma**: `seldon-runtime.json.sig` verificada contra
-  `scripts/remote-host/linux/release-keys/seldon-release-2026-10.pem`; se firmó
+  `seldon-host/scripts/remote-host/linux/release-keys/seldon-release-2026-10.pem`; se firmó
   en `vm-linux-shared` con el rol `seldon-release-signer`.
 - `node apps/desktop/scripts/guards/contract.mjs` → verde.
 

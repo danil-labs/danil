@@ -116,6 +116,10 @@ function installMacApp(tarPath, tmpDir) {
   // los mismos datos, y el LaunchAgent y los lanzadores apuntan a la ruta vieja.
   const has = (name) => destinations.find((dir) => fs.existsSync(path.join(dir, name)));
   const installedName = has(LEGACY_MAC_BUNDLE) ? LEGACY_MAC_BUNDLE : bundle;
+  // La copia que ya existe se reemplaza donde está, aunque sea ~/Applications:
+  // probar /Applications primero dejaría otra al lado.
+  const existing = has(installedName);
+  if (existing) destinations.sort((a, b) => (b === existing) - (a === existing));
   // Con las dos copias se reemplaza la vieja y no se borra nada: se avisa.
   if (installedName !== bundle && has(bundle)) {
     err(paint(C.yellow, t('duplicateBundle', {

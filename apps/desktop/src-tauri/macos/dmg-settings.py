@@ -1,5 +1,5 @@
 # Ventana del .dmg para dmgbuild; escribe el .DS_Store sin abrir Finder.
-# dmgbuild -s dmg-settings.py -D app=<Terminus.app> -D assets=<esta carpeta> "Instalar Terminus" <salida.dmg>
+# dmgbuild -s dmg-settings.py -D app=<Danil.app> -D assets=<esta carpeta> "Instalar Danil" <salida.dmg>
 import os.path
 
 app = defines["app"]
