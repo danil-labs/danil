@@ -900,7 +900,7 @@ fn person_send(
 }
 
 /// `person_send` con la sesión de la ventana; un 401 renueva el token y repite una vez:
-/// Computers rechazó el token antes de actuar, así que repetir no duplica nada.
+/// Computers rechazó el token antes de actuar: repetir no duplica nada.
 fn person_call(
     app: &tauri::AppHandle,
     account: &Option<String>,
