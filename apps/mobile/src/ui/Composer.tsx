@@ -14,7 +14,7 @@ import { modelName, previewLabel } from "@terminus/tasks";
 import * as DocumentPicker from "expo-document-picker";
 import { File } from "expo-file-system";
 import * as ImagePicker from "expo-image-picker";
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ComponentRef, type ReactNode } from "react";
 import { Keyboard, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, type TextInputKeyPressEvent, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
@@ -57,9 +57,9 @@ function effortLabel(effort: string | null) {
 
 /**
  * El cuadro de escribir del escritorio (`Chat.tsx`), adaptado al teléfono:
- * el texto crece hasta seis líneas; debajo, en una fila, adjuntar y permisos a
- * la izquierda y, a la derecha, el modelo con su razonamiento y el botón de
- * enviar, que con un turno corriendo es detener. `/` abre los comandos y las
+ * una sola fila con adjuntar, el texto (crece hasta seis líneas), el logotipo
+ * del proveedor y el botón de enviar, que con un turno corriendo es detener. El
+ * logotipo abre la hoja de proveedor, modelo, razonamiento y permisos. `/` abre los comandos y las
  * skills del agente; `@`, los archivos y carpetas; `!` lo vuelve terminal
  * («Ejecutar»). Escribir mientras trabaja deja el mensaje en cola, con
  * «Mandar ahora». Los selectores son hojas desde abajo. La tecla de retorno
@@ -145,7 +145,8 @@ export function Composer({
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [queue, setQueue] = useState<Queued[]>([]);
   const [busy, setBusy] = useState(false);
-  const [sheet, setSheet] = useState<"model" | "mode" | "attach" | "handover" | null>(null);
+  const [sheet, setSheet] = useState<"model" | "attach" | "handover" | null>(null);
+  const input = useRef<ComponentRef<typeof TextInput>>(null);
   // El CLI elegido que espera la confirmación del traspaso.
   const [candidate, setCandidate] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
@@ -425,6 +426,15 @@ export function Composer({
     onPendingProvider?.(null);
   }
 
+  // En la web el cuadro es un <textarea>: no crece solo, así que se mide con cada cambio.
+  useEffect(() => {
+    if (Platform.OS !== "web") return;
+    const node = input.current as unknown as HTMLTextAreaElement | null;
+    if (!node?.style) return;
+    node.style.height = "0px";
+    node.style.height = `${Math.min(Math.max(node.scrollHeight, INPUT_MIN), INPUT_MAX)}px`;
+  }, [text, shell]);
+
   const showStop = running && Boolean(onStop);
   const sendLabel = shell ? w("chat.composer.run") : w("chat.composer.send");
 
@@ -528,7 +538,8 @@ export function Composer({
               <Icon name="paperclip" size={20} color={theme.textMuted} />
             </Pressable>
           )}
-  <TextInput
+          <TextInput
+            ref={input}
             testID={testID}
             style={[styles.input, { color: theme.text, fontFamily: shell ? Platform.select({ ios: "Menlo", default: "monospace" }) : undefined }]}
             value={text}
@@ -542,6 +553,8 @@ export function Composer({
             placeholderTextColor={theme.textMuted}
             underlineColorAndroid="transparent"
             multiline
+            // Sin esto, react-native-web pinta un <textarea> de dos filas y el texto queda arriba de los botones.
+            numberOfLines={Platform.OS === "web" ? 1 : undefined}
             textAlignVertical="top"
             // El teclado dice «Enviar». En iOS y Android el retorno manda y no mete salto de línea.
             returnKeyType="send"
@@ -550,13 +563,8 @@ export function Composer({
             onSubmitEditing={Platform.OS === "web" ? undefined : () => void send()}
             onKeyPress={Platform.OS === "web" ? onWebKey : undefined}
           />
-            {!shell && modes.length ? (
-            <Pressable testID="mode" onPress={() => setSheet("mode")} accessibilityLabel={`${w("chat.mode.listbox")}: ${modeOption ? phrase(modeOption.label) : w("chat.mode.placeholder")}`} style={styles.round}>
-              <Icon name="shield" size={19} color={theme.textMuted} />
-            </Pressable>
-          ) : null}
           {!shell && current ? (
-            <Pressable testID="model" onPress={() => setSheet("model")} style={styles.round} accessibilityLabel={`${w("chat.model.title")}: ${modelText}${efforts.length ? ` · ${effortLabel(effort)}` : ""}`}>
+            <Pressable testID="model" onPress={() => setSheet("model")} style={styles.round} accessibilityLabel={`${w("chat.model.title")}: ${modelText}${efforts.length ? ` · ${effortLabel(effort)}` : ""}${modeOption ? ` · ${phrase(modeOption.label)}` : ""}`}>
               <BrandMark id={current} size={20} color={theme.text} />
             </Pressable>
           ) : null}
@@ -580,24 +588,6 @@ export function Composer({
         <SheetOption testID="attach-photos" icon="image" label={t("composer.attach_photos")} onPress={() => void pickPhotos()} />
         <SheetOption testID="attach-files" icon="file" label={t("composer.attach_files")} onPress={() => void pickFiles()} />
         <Text style={[styles.hint, { color: theme.textMuted, paddingHorizontal: 18, paddingTop: 8 }]}>{t("composer.unsupported_file")}</Text>
-      </Sheet>
-
-      <Sheet visible={sheet === "mode"} title={w("chat.mode.listbox")} onClose={() => setSheet(null)}>
-        {modes.map((m) => (
-          <SheetOption
-            key={m.id}
-            icon="shield"
-            label={phrase(m.label)}
-            detail={m.falta ? phrase(m.falta) : null}
-            disabled={Boolean(m.falta)}
-            selected={(modeOption?.id ?? null) === m.id}
-            onPress={() => {
-              setMode(m.id);
-              setSheet(null);
-              if (running) onModeChange?.(m.id);
-            }}
-          />
-        ))}
       </Sheet>
 
       <Sheet visible={sheet === "model"} title={w("chat.model.title")} search={t("search.models")} onClose={() => setSheet(null)}>
@@ -647,6 +637,26 @@ export function Composer({
                       </Pressable>
                     ))}
                   </View>
+                </>
+              ) : null}
+              {modes.length ? (
+                <>
+                  <SheetSection>{w("chat.mode.listbox")}</SheetSection>
+                  {modes.map((m) => (
+                    <SheetOption
+                      key={m.id}
+                      testID={`mode-${m.id}`}
+                      icon="shield"
+                      label={phrase(m.label)}
+                      detail={m.falta ? phrase(m.falta) : null}
+                      disabled={Boolean(m.falta)}
+                      selected={(modeOption?.id ?? null) === m.id}
+                      onPress={() => {
+                        setMode(m.id);
+                        if (running) onModeChange?.(m.id);
+                      }}
+                    />
+                  ))}
                 </>
               ) : null}
             </>
@@ -701,10 +711,13 @@ export function SelectorChip({ icon, left, label, value, onPress, testID, muted 
   );
 }
 
+const INPUT_MIN = 36;
+const INPUT_MAX = 21 * 6 + 15;
+
 const styles = StyleSheet.create({
   wrap: { paddingHorizontal: 10, paddingTop: 6, gap: 6 },
   box: { borderWidth: 0, borderRadius: 26, paddingVertical: 5, paddingHorizontal: 6, ...Platform.select({ web: { outlineStyle: "solid", outlineWidth: 0, boxShadow: "none" } }) },
-  input: { fontSize: 16, lineHeight: 21, flex: 1, minWidth: 0, minHeight: 34, maxHeight: 21 * 6 + 16, paddingHorizontal: 6, paddingTop: 7, paddingBottom: 6, borderWidth: 0, backgroundColor: "transparent", ...Platform.select({ web: { outlineStyle: "solid", outlineWidth: 0, boxShadow: "none" } }) },
+  input: { fontSize: 16, lineHeight: 21, flex: 1, minWidth: 0, minHeight: INPUT_MIN, maxHeight: INPUT_MAX, paddingHorizontal: 6, paddingTop: 8, paddingBottom: 7, borderWidth: 0, backgroundColor: "transparent", ...Platform.select({ web: { outlineStyle: "solid", outlineWidth: 0, boxShadow: "none", boxSizing: "border-box", resize: "none", scrollbarWidth: "none" } }) },
   row: { flexDirection: "row", alignItems: "flex-end", gap: 2 },
   shellPill: { marginBottom: 3, marginRight: 4 },
   round: { width: 36, height: 36, alignItems: "center", justifyContent: "center", borderRadius: 17 },
