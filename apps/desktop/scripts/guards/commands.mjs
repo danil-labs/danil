@@ -81,6 +81,7 @@ const SIN_INTERFAZ = {
   git_host_pending_setup: "el CLI del motor lo usa para completar la conexión; permanece en el contrato congelado",
   finish_git_host_setup: "el CLI del motor espera la instalación; la ventana actualiza al regresar",
   set_session_pinned: "el gesto de fijar lo implementa la tarea de frontend en paralelo",
+  set_session_provider: "la UI de cambio de proveedor llega con las tareas de escritorio y teléfono; el proxy ya la despacha",
   // Lo pide el conector del motor al recibir `memory.changed` del relay (seldon-host #108).
   sync_workspace_memory: "la sincronización de la memoria la programa el conector; ninguna pantalla la pide",
   // Los pide el conector al recibir `credentials.changed` y `credentials.reseal` del relay (seldon-host #144, #145).

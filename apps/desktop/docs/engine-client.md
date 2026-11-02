@@ -120,6 +120,43 @@ so the window can translate them.
 Keep `commands.json` byte-exact: `.gitattributes` checks it out with LF on every
 platform, and a CRLF copy has a different hash.
 
+### Extensión `provider_handoff_v1`
+
+Cambiar de CLI (Claude, Codex, OpenCode) dentro de una tarea normal
+(seldon-host#304, [provider-handoff.md](https://github.com/danil-labs/seldon-host/blob/dev/docs/provider-handoff.md)).
+La extensión
+`crates/engine-manifest/extensions/provider_handoff_v1.json` se copia byte a
+byte en `src-tauri/crates/engine-protocol/extensions/` y se registra en
+`EXTENSIONS`; queda fuera de la huella de compatibilidad (`status.contract`).
+El motor la anuncia en `status.service_features`; el cliente la reconoce con
+`PROVIDER_HANDOFF_FEATURE` (`@terminus/protocol`).
+
+- `set_session_provider {project, session, provider}` es una función de ventana
+  con autoridad `admin`. `provider` es el CLI de la tarea (`Session.agent`), no
+  el proveedor del modelo: en un turno, ese otro eje viaja como
+  `model_vendor` (`provider` de disco renombrado por el motor). No confundirlo
+  con `set_agent_model`.
+- El comando no cambia el turno en marcha: deja un consentimiento de un solo
+  uso para el siguiente turno, que abre una sesión nueva con la conversación
+  como texto o retoma la sesión aparcada con lo que pasó desde entonces.
+- `load_session` suma `can_hand_over` y `hand_over_blocked`. El segundo solo
+  aparece cuando hay rechazo y trae la clave del catálogo que lo explica
+  (`chat.handover.busy`, `.handler`, `.adopted`, `.fork`, `.subagent`,
+  `.unsupported`, `.child`, `.stale`, `.unknown_provider`). `can_hand_over` no
+  mira si hay un turno corriendo —eso cambia mientras se mira—, así que el
+  rechazo por ocupada lo decide el comando. Un motor anterior no manda
+  `can_hand_over`: `canHandOver()` lo normaliza con `=== true`, así que
+  ausente es que la tarea no puede cambiar.
+- `chat.handover.child` solo aplica a una tarea con `parent` real, creada por
+  otra tarea. En este `dev`, `create_parallel` y `build_handoff` ponen
+  `parent: None`, así que sus hijas no entran por esa clave; una tarea cuyo
+  único vínculo es `launched_by` sigue pudiendo cambiar de CLI.
+- `chat.handover.stale` es un consentimiento que ya no aplica y hay que volver
+  a elegir; `chat.handover.unknown_provider`, un CLI que esta tarea no ofrece.
+- `chat.continuation.provider_locked` sigue siendo el aviso de los casos que no
+  cambian en esta versión: encargados, subagentes, forks, tareas adoptadas y
+  clientes anteriores.
+
 ## Starting the engine
 
 Opened without arguments (a double click), the window uses the engine that

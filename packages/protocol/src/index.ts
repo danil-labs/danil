@@ -12,6 +12,7 @@ export {
   type AttachmentMime,
 } from "./attachments.ts";
 export { type AppCommand, type AppFeature, APP_ACTIONS, APP_COMMANDS, APP_FEATURES, APP_READS, NEEDS_YOU, isAppAction, isAppCommand } from "./commands.ts";
+export { PROVIDER_HANDOFF_FEATURE, canHandOver } from "./handover.ts";
 export { COMMAND_NOT_HERE, COMMAND_UNSUPPORTED, CommandSupport, type Support, isScopeRefusal, isUnknownCommand } from "./support.ts";
 export { type ChatBackground, type ChatBackgroundChange, type ChatBackgroundView, type ChatVeil, DEFAULT_CHAT_VEIL, chatBackgroundImageUrl, chatBackgroundView } from "./background.ts";
 export { isSingle as isSingleAttention, mergeAttention } from "./attention.ts";

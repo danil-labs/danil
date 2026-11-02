@@ -77,6 +77,9 @@ export const APP_ACTIONS = [
   "respond_permission",
   // Cambiar el modo de permisos con el turno en marcha: el turno vivo no relee el del cuadro.
   "set_permission_mode",
+  // Cambiar de CLI dentro de la tarea (`provider_handoff_v1`): el siguiente
+  // turno abre sesión nueva con la conversación como texto o retoma la aparcada.
+  "set_session_provider",
   "answer_question",
   "mark_task_seen",
   // La tarjeta de vista previa: Fijar, Archivar y Cambiarle el nombre.
