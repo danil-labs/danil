@@ -41,6 +41,7 @@
     "chat.handover.child",
     "chat.handover.fork",
     "chat.handover.handler",
+    "chat.handover.no_budget",
     "chat.handover.stale",
     "chat.handover.subagent",
     "chat.handover.unknown_provider",

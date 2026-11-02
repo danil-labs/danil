@@ -357,6 +357,7 @@ const es = {
   "chat.handover.child": "Una tarea creada por otra tarea conserva el proveedor con que nació.",
   "chat.handover.stale": "El cambio de proveedor caducó; vuelve a elegirlo.",
   "chat.handover.unknown_provider": "Ese proveedor no está disponible en esta tarea.",
+  "chat.handover.no_budget": "La conversación no cabe en la ventana del modelo de destino. Elige otro modelo o proveedor.",
   "web.desktop_layout": "Ver la versión de escritorio",
   "push.title": "Avisos de tareas",
   "push.subtitle": "En este dispositivo, cuando una tarea termina, se detiene o te pide algo.",
@@ -394,6 +395,10 @@ const es = {
   "composer.mention_files": "Archivos y carpetas",
   "composer.loading": "Cargando…",
   "composer.no_branches": "Esta carpeta no tiene git: la tarea empieza en la carpeta.",
+  "composer.handover_title": "Cambiar de proveedor",
+  "composer.handover_description": "La conversación viaja como texto y se recorta. El agente nuevo lee lo hablado, pero no recuerda archivos ni comandos de la sesión anterior.",
+  "composer.handover_confirm": "Cambiar a {provider}",
+  "composer.handover_pending": "Se cambiará a {provider} al enviar.",
   "accounts.subtitle": "Tus cuentas de IA, su consumo y en qué máquinas tienen la sesión iniciada",
   "accounts.empty": "Todavía no hay cuentas de {provider} disponibles.",
   "accounts.load_failed": "No se pudieron cargar las cuentas. Desliza hacia abajo para reintentar.",
@@ -880,6 +885,7 @@ const en: Record<Key, string> = {
   "chat.handover.child": "A task created by another task keeps the provider it was born with.",
   "chat.handover.stale": "The provider change expired; choose it again.",
   "chat.handover.unknown_provider": "That provider isn't available in this task.",
+  "chat.handover.no_budget": "The conversation doesn't fit in the destination model's window. Choose another model or provider.",
   "web.desktop_layout": "Open the desktop version",
   "push.title": "Task notifications",
   "push.subtitle": "On this device, when a task finishes, stops or needs you.",
@@ -917,6 +923,10 @@ const en: Record<Key, string> = {
   "composer.mention_files": "Files and folders",
   "composer.loading": "Loading…",
   "composer.no_branches": "This folder has no git: the task starts in the folder.",
+  "composer.handover_title": "Change provider",
+  "composer.handover_description": "The conversation travels as text and is trimmed. The new agent reads what was said, but doesn't remember files or commands from the previous session.",
+  "composer.handover_confirm": "Change to {provider}",
+  "composer.handover_pending": "Will change to {provider} when you send.",
   "accounts.subtitle": "Your AI accounts, their usage and the machines where they are signed in",
   "accounts.empty": "No {provider} accounts are available yet.",
   "accounts.load_failed": "Could not load accounts. Pull down to retry.",
@@ -1052,6 +1062,11 @@ const catalog: Record<Key, string> = lang === "es" ? es : en;
 
 export function t(key: Key, vars: Record<string, string | number> = {}): string {
   return catalog[key].replace(/\{(\w+)\}/g, (_, name: string) => String(vars[name] ?? ""));
+}
+
+/** Si el catálogo de la app conoce esta clave; un fallo del motor trae la suya. */
+export function hasKey(key: string): key is Key {
+  return Object.prototype.hasOwnProperty.call(catalog, key);
 }
 
 /** Un texto del motor: ya escrito, o una clave del catálogo compartido (si no la tiene, la clave tal cual). */

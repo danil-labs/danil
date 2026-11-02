@@ -576,8 +576,10 @@ export type ChatProps = {
   nativeSubagent?: boolean;
   /** Desde el primer envío, la tarea conserva agente, proveedor y modelo. */
   modelLocked: boolean;
-  /** Una tarea ya creada no puede cambiar de agente sin abrir otra. */
+  /** La tarea no ofrece cambiar de agente: el selector lo dice y enseña los demás con candado. */
   agentLocked: boolean;
+  /** Por qué no puede, en la lengua de la ventana: el candado lo dice, no esconde la lista. */
+  agentLockedReason?: string | null;
   onModel: (opcion: OpcionDeModelo) => void;
   effort: string;
   onEffort: (id: string) => void;
@@ -1039,15 +1041,10 @@ export default function Chat(props: ChatProps) {
   };
 
   const opciones = createMemo(() =>
-    // Una sesión ya tiene dueño: cambiar de agente pierde su reanudación y
-    // requiere el gesto explícito de continuar en otra tarea. Mostrar sus
-    // modelos aquí prometía un cambio que `App` tenía que rechazar al pulsarlo.
-    // Las superficies del mismo agente (por ejemplo, OpenCode) siguen juntas.
-    opcionesDeModelos(
-      props.superficies ?? [],
-      props.catalogos,
-      props.agentLocked ? props.agent : undefined,
-    ),
+    // Los otros agentes siguen visibles aunque cambiar de CLI esté cerrado:
+    // el candado dice el motivo y no esconde la lista. Las superficies del
+    // mismo agente (por ejemplo, OpenCode) siguen juntas.
+    opcionesDeModelos(props.superficies ?? [], props.catalogos),
   );
 
   // Qué se está escribiendo ahora mismo: una mención, una skill, o nada.
@@ -1652,6 +1649,7 @@ export default function Chat(props: ChatProps) {
         m.meta === "fallo" ||
         m.meta === "cupo" ||
         m.meta === "engine_updated" ||
+        m.meta === "provider_handover" ||
         esFilaDeLaBandeja(m.meta) ||
         esSalidaDeComando(m.meta) ||
         m.contexto ||
@@ -2810,9 +2808,13 @@ export default function Chat(props: ChatProps) {
                   !opciones().some((opcion) => opcion.usable)
                 }
                 disabledReason={
-                  props.nativeSubagent ? t("chat.model.native") : props.modelLocked ? t("chat.model.locked") : undefined
+                  props.agentLocked && props.agentLockedReason
+                    ? props.agentLockedReason
+                    : props.nativeSubagent ? t("chat.model.native") : props.modelLocked ? t("chat.model.locked") : undefined
                 }
                 onChange={props.onModel}
+                lockedAgent={props.agentLocked ? props.agent : undefined}
+                lockedReason={props.agentLocked ? props.agentLockedReason ?? t("chat.handover.unsupported") : null}
                 efforts={efforts()}
                 defaultEffort={elegido()?.default_effort ?? null}
                 effort={props.effort}
@@ -2999,6 +3001,10 @@ export default function Chat(props: ChatProps) {
 
                 <Match when={mensaje()?.msg.meta === "engine_updated"}>
                   <LineaDeSistema texto={t("chat.engine_updated")} />
+                </Match>
+
+                <Match when={mensaje()?.msg.meta === "provider_handover" ? mensaje()!.msg : null}>
+                  {(m) => <TraspasoDeProveedor texto={m().text} />}
                 </Match>
 
                 <Match when={mensaje() && esFilaDeLaBandeja(mensaje()!.msg.meta) ? mensaje()!.msg : null}>
@@ -4026,6 +4032,25 @@ function LineaDeSistema(props: { texto: string }) {
     <div class="col-start-1 flex items-center gap-3 py-2 text-xs text-neutral-500" role="status">
       <span class="h-px flex-1 bg-border" aria-hidden="true" />
       <span>{props.texto}</span>
+      <span class="h-px flex-1 bg-border" aria-hidden="true" />
+    </div>
+  );
+}
+
+/**
+ * El turno que siguió a un cambio de CLI (`provider_handoff_v1`). El motor
+ * escribe la prosa —qué agente entró y si retomó su sesión o leyó el texto—;
+ * aquí solo se lee como el separador que es.
+ */
+function TraspasoDeProveedor(props: { texto: string }) {
+  return (
+    <div
+      class="col-start-1 flex items-center gap-3 py-2 text-xs text-neutral-500"
+      role="status"
+      data-provider-handover
+    >
+      <span class="h-px flex-1 bg-border" aria-hidden="true" />
+      <span class="min-w-0 break-words text-center">{prosa(props.texto)}</span>
       <span class="h-px flex-1 bg-border" aria-hidden="true" />
     </div>
   );
