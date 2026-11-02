@@ -51,9 +51,10 @@ export function failureKey(error: unknown): string | null {
     if (typeof key === "string") return key;
     if (typeof envelope.message_key === "string") return envelope.message_key;
   }
+  // Una clave en `detail` es más específica que el `message_key` del sobre, que suele ser el genérico.
+  if (typeof detail === "string") return detail;
   const direct = (error as { message_key?: unknown }).message_key;
-  if (typeof direct === "string") return direct;
-  return typeof detail === "string" ? detail : null;
+  return typeof direct === "string" ? direct : null;
 }
 
 /** Hoy solo la hora; otro día, también la fecha. Un cupo semanal no se dice como «esta tarde». */

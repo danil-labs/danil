@@ -110,5 +110,10 @@ test("el rechazo del motor conserva su clave de catálogo", () => {
     "chat.handover.no_budget",
     "el sobre genérico no tapa la frase del motor",
   );
+  assert.equal(
+    failureKey({ code: "command_failed", message_key: "cli.error.command_failed", detail: "chat.handover.no_budget" }),
+    "chat.handover.no_budget",
+    "la clave en detail gana al message_key genérico",
+  );
   assert.equal(failureKey(new Error("boom")), null);
 });
