@@ -1,28 +1,28 @@
 {
   "version": 1,
   "name": "seldon-runtime",
-  "engine_version": "0.2.73",
-  "commit": "4e10efc24a9be6f8dbf15559f767a50fb109a0a7",
-  "release": "seldon-runtime-v0.2.73-4e10efc",
-  "manifest": "https://github.com/danil-labs/terminus/releases/download/seldon-runtime-v0.2.73-4e10efc/seldon-runtime.json",
-  "terms": "https://github.com/danil-labs/terminus/releases/download/seldon-runtime-v0.2.73-4e10efc/TERMS.md",
-  "contract": "93b1c32f25c4fb5fd722079a5593f8316125d91e8ecf12e64c3d7e1f7aebae98",
+  "engine_version": "0.3.0",
+  "commit": "ee736d02cd2baabac906997d0f24e0e929a0afa7",
+  "release": "",
+  "manifest": "",
+  "terms": "",
+  "contract": "5f59d6031b76b0248f09d7e19d184a542259d773c62080a30cb9298e7b5033ca",
   "platforms": {
     "x86_64-pc-windows-msvc": {
-      "url": "https://github.com/danil-labs/terminus/releases/download/seldon-runtime-v0.2.73-4e10efc/seldon-runtime-x86_64-pc-windows-msvc.exe",
-      "sha256": "9b8e940fdc2cbd2c39cd6344bab648bfd4ed1d72b20c3d50e7b3be7764939920"
+      "url": "",
+      "sha256": ""
     },
     "aarch64-apple-darwin": {
-      "url": "https://github.com/danil-labs/terminus/releases/download/seldon-runtime-v0.2.73-4e10efc/seldon-runtime-aarch64-apple-darwin",
-      "sha256": "d63daf4e33440bb02b3bd4b8a5492921284c5db5e296135cee40b1f03ca318d9"
+      "url": "",
+      "sha256": ""
     },
     "x86_64-apple-darwin": {
-      "url": "https://github.com/danil-labs/terminus/releases/download/seldon-runtime-v0.2.73-4e10efc/seldon-runtime-x86_64-apple-darwin",
-      "sha256": "469ad8793ba2ef3168bdfd3cb6c7d5ae2e47223a244810e9fefcf9a2dae35533"
+      "url": "",
+      "sha256": ""
     },
     "x86_64-unknown-linux-gnu": {
-      "url": "https://github.com/danil-labs/terminus/releases/download/seldon-runtime-v0.2.73-4e10efc/seldon-runtime-x86_64-unknown-linux-gnu",
-      "sha256": "5cff3bb4bfc0e74b75bdd2271e628f3d0d426bdb909e285800a7368737b13e0a"
+      "url": "",
+      "sha256": ""
     }
   }
 }
