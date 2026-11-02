@@ -30,6 +30,9 @@ export const HEADER_HEIGHT = "h-[30px]";
 // La fila de máquina, carpeta y herramientas es el aire de arriba (`pt-2`, 8 px)
 // más esta caja. La ventana de archivos empieza debajo. Con 36 px (`pt-9`) le
 // comía 2 px a esa fila desde que la caja pasó de 22 px a 30 px.
+// La fila entera, con su altura fija: aunque la ubicación todavía no cargue, el
+// hueco ya está y el primer mensaje no sube debajo de las herramientas.
+export const LOCATION_BAR = "h-[38px]";
 export const BELOW_LOCATION = "pt-[38px]";
 export const BELOW_LOCATION_MARGIN = "mt-[38px]";
 

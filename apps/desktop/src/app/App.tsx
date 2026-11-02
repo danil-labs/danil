@@ -292,6 +292,7 @@ import {
 import { cn } from "../lib/utils";
 import {
   BELOW_LOCATION,
+  LOCATION_BAR,
   createCompactViewport,
   HEADER_HEIGHT,
   isWindows,
@@ -7257,14 +7258,19 @@ export default function App() {
     };
     // Máquina, carpeta y rama de la tarea. Una función y no un elemento: el chat la pinta
     // y, cuando los archivos lo tapan, la fila de la tarea pinta la suya.
-    const ubicacion = () => <Show when={pp.sesion} fallback={<Show when={!paginaDeAgente()}><Suspense fallback={null}><TaskLocation
+    // Es una sola barra con las herramientas de la ventana (que flotan a su derecha):
+    // la caja guarda su altura aunque `TaskLocation` aún no cargue, para que el chat
+    // empiece siempre debajo y el primer mensaje no quede bajo esas herramientas.
+    const barraDeLaTarea = (contenido: JSX.Element) =>
+      <div data-task-bar="" class={cn("flex min-w-0 shrink-0 flex-col overflow-hidden", LOCATION_BAR)}>{contenido}</div>;
+    const ubicacion = () => <Show when={pp.sesion} fallback={<Show when={!paginaDeAgente()}>{barraDeLaTarea(<Suspense fallback={null}><TaskLocation
       /* La tarea nueva: la máquina y la carpeta donde va a correr. La rama sale al empezarla. */
       machine={draftMachine() ?? undefined}
       on={machines().find(m => m.id === draftMachine())?.on !== false}
       onScreen={abrirPantalla}
       project={proyectoDeLaCelda()?.name}
-      path={carpetaDeTrabajo(proyectoDeLaCelda() ?? {}) || undefined} /></Suspense></Show>}>{(id) => {
-      return <Suspense fallback={null}><TaskLocation
+      path={carpetaDeTrabajo(proyectoDeLaCelda() ?? {}) || undefined} /></Suspense>)}</Show>}>{(id) => {
+      return barraDeLaTarea(<Suspense fallback={null}><TaskLocation
         machine={filaDe(id())?.machine}
         on={!apagadas()[id()] && filaDe(id())?.machine_on !== false}
         onScreen={abrirPantalla}
@@ -7274,7 +7280,7 @@ export default function App() {
         }}
         project={proyectoDeLaCelda()?.name}
         path={estadoDelTrabajo()?.path || undefined}
-        branch={workLabel(estadoDelTrabajo()?.branch, estadoDelTrabajo()?.alias) || undefined} /></Suspense>;
+        branch={workLabel(estadoDelTrabajo()?.branch, estadoDelTrabajo()?.alias) || undefined} /></Suspense>);
     }}</Show>;
     return (
     <Show
