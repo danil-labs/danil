@@ -7,6 +7,7 @@ import {
   handOverReason,
   handoverInForce,
   handoverMatches,
+  shellCli,
   type HandoverGate,
   type HandoverState,
 } from "../../src/features/chat/handover.ts";
@@ -215,4 +216,10 @@ test("la confirmación solo se aplica a la tarea y al borrador que están delant
   assert.equal(handoverMatches(pedido, "t2", "t1"), false);
   assert.equal(handoverMatches(pedido, "t1", "borrador:p:agent:x"), false);
   assert.equal(handoverMatches(null, "t1", "t1"), false);
+});
+
+test("un `!` corre con el CLI de la sesión, no con el traspaso pendiente", () => {
+  assert.equal(shellCli("codex", "claude"), "codex");
+  assert.equal(shellCli(null, "claude"), "claude");
+  assert.equal(shellCli(undefined, "claude"), "claude");
 });

@@ -14,6 +14,10 @@ export type HandoverState = {
   blocked: string | null;
   /** El CLI de la sesión, no el proveedor del modelo. */
   provider: string | null;
+  /** El modelo con el que corre la sesión, para lo que no es un turno del agente (`!`). */
+  model?: string | null;
+  /** El nivel de razonamiento con el que corre la sesión. */
+  effort?: string | null;
 };
 
 export type HandoverGate = {
@@ -79,4 +83,13 @@ export function handoverMatches(
   clave: string,
 ): boolean {
   return !!pending && !!session && pending.sesion === session && pending.clave === clave;
+}
+
+/**
+ * El CLI con que corre un `!` y con el que el agente contesta su salida: el de
+ * la sesión. Un traspaso confirmado en el borrador no es un turno del agente y
+ * no se gasta aquí.
+ */
+export function shellCli(sessionProvider: string | null | undefined, draftProvider: string): string {
+  return sessionProvider || draftProvider;
 }

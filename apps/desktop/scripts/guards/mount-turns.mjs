@@ -169,6 +169,86 @@ await sleep(100);
 assert.doesNotMatch(lateDoc.body.textContent, /Trabajando/);
 assert.deepEqual(lateNotice.failures, []);
 
+// La fila que dejó un traspaso de CLI es un separador propio al reabrir, no un
+// paso de sistema escondido dentro de «Work».
+const handoverRow = await boot("listo", "provider-handover-row", {
+  ...TASK_AFTER_QUEUE,
+  load_session: { ...TASK_AFTER_QUEUE.load_session, turns: [
+    { role: "agent", id: "before", text: "Antes." },
+    { role: "system", id: "handover", meta: "provider_handover",
+      text: "La tarea pasó de Claude a Codex. Codex abre una sesión nueva y recibe la conversación como texto." },
+    { role: "agent", id: "after", text: "Después." },
+  ] },
+});
+const handoverDoc = handoverRow.w.document;
+handoverDoc.querySelector('[data-sesion="s1"]').click();
+await sleep(150);
+const handoverLine = handoverDoc.querySelector("[data-provider-handover]");
+assert.ok(handoverLine, "la fila del traspaso se pinta al reabrir la tarea");
+assert.ok(handoverLine.textContent.includes("pasó de Claude a Codex"));
+assert.ok(handoverDoc.body.textContent.includes("Antes."));
+assert.ok(handoverDoc.body.textContent.includes("Después."));
+assert.deepEqual(handoverRow.failures, []);
+
+// Un `!` con un traspaso confirmado corre y contesta con el CLI de la sesión;
+// el pendiente no se gasta y el siguiente mensaje normal sí lo consiente.
+const shellCalls = [];
+const answerCalls = [];
+const handoverCalls = [];
+let shellApp;
+const shellWithPending = await boot("listo", "shell-with-handover", {
+  ...TASK_AFTER_QUEUE,
+  machine_list: [{ id: "local", local: true, active: true, on: true, hosts: true, features: ["provider_handoff_v1"] }],
+  load_session: { ...TASK_AFTER_QUEUE.load_session, can_hand_over: true, hand_over_blocked: null },
+  list_surfaces: [
+    { id: "codex", provider: "codex", label: "Codex", catalogo: "todo", usable: true, marca: null, porque: null },
+    { id: "claude", provider: "claude", label: "Claude Code", catalogo: "todo", usable: true, marca: null, porque: null },
+  ],
+  set_session_provider: (args) => { handoverCalls.push(args); return null; },
+  run_shell_command: (args) => {
+    shellCalls.push(args);
+    shellApp.emit("chat", { workspace: "w", session: "s1", kind: "shell_started", text: args.command, id: "shell-1", target: "/tmp" });
+    return { session: "s1", turn: { role: "shell", id: "shell-turn", text: args.command } };
+  },
+  answer_shell_output: (args) => { answerCalls.push(args); return true; },
+});
+shellApp = shellWithPending;
+const shellDoc = shellWithPending.w.document;
+shellDoc.querySelector('[data-sesion="s1"]').click();
+await sleep(150);
+shellDoc.querySelector('button[aria-label^="Modelo:"]').click();
+await sleep(50);
+[...shellDoc.querySelectorAll("button")].find((button) => button.getAttribute("aria-label") === "Claude Code")?.click();
+await sleep(50);
+shellDoc.querySelector('[role="listbox"] [role="option"]')?.click();
+await sleep(120);
+const confirmHandover = [...shellDoc.querySelectorAll('[role="dialog"] button')].find((button) => button.textContent.trim() === "Cambiar");
+assert.ok(confirmHandover, "la confirmación del traspaso se abre");
+confirmHandover.click();
+await sleep(100);
+const shellInput = shellDoc.querySelector("textarea");
+shellInput.value = "!echo hola";
+shellInput.dispatchEvent(new shellWithPending.w.Event("input", { bubbles: true }));
+shellInput.closest("form").dispatchEvent(new shellWithPending.w.Event("submit", { bubbles: true, cancelable: true }));
+await sleep(120);
+assert.equal(shellCalls.length, 1);
+assert.equal(shellCalls[0].provider, undefined, "un ! de una tarea abierta no manda provider");
+shellWithPending.emit("chat", { workspace: "w", session: "s1", kind: "shell_done", id: "shell-1", text: "", meta: "0" });
+await sleep(300);
+assert.equal(answerCalls.length, 1);
+assert.equal(answerCalls[0].provider, "codex", "la salida del ! la contesta el CLI de la sesión");
+assert.equal(answerCalls[0].model, "gpt-5.6", "la salida del ! usa el modelo de la sesión");
+shellWithPending.emit("chat", { workspace: "w", session: "s1", kind: "done", text: "", ok: true });
+await sleep(200);
+const afterShell = shellDoc.querySelector("textarea");
+afterShell.value = "Sigue";
+afterShell.dispatchEvent(new shellWithPending.w.Event("input", { bubbles: true }));
+afterShell.closest("form").dispatchEvent(new shellWithPending.w.Event("submit", { bubbles: true, cancelable: true }));
+await sleep(150);
+assert.equal(handoverCalls.length, 1, "el pendiente sobrevive al !");
+assert.equal(handoverCalls[0].provider, "claude");
+assert.deepEqual(shellWithPending.failures, []);
+
 let activeTurns = [];
 let finishPendingTurn;
 let registeredTurns = [];
