@@ -295,7 +295,9 @@ export async function boot(environment, version, responses, userAgent, storage =
         ? Promise.resolve(new Response(""))
         : /\/v1\/workspaces$/.test(String(url?.url ?? url))
           ? Promise.resolve(accountRegistry === undefined ? new Response("{}", { status: 404 }) : Response.json({ workspaces: accountRegistry }))
-          : nodeFetch(url, opts);
+          : /\/v1\/shared-computers/.test(String(url?.url ?? url))
+            ? Promise.resolve(Response.json({ computers: [] }))
+            : nodeFetch(url, opts);
     local.__jsdomApp = true;
     globalThis.fetch = local;
   }

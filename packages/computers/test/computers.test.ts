@@ -15,6 +15,7 @@ import {
   systemOf,
   wakes,
   listComputers,
+  listSharedComputers,
   listWorkspacesWithDeleted,
   powerOf,
   purgeWorkspace,
@@ -23,6 +24,7 @@ import {
   sessionProbe,
   sessionUrl,
   startComputer,
+  startSharedComputer,
 } from "../src/index.ts";
 
 class FakeSocket implements SocketLike {
@@ -170,6 +172,37 @@ test("la API dice licencia, no tuya y error sin confundirlos", async () => {
     return { status: 200, ok: true, json: async () => [] };
   });
   assert.equal(seen?.authorization, "Bearer tok");
+  assert.equal((await listComputers("x.example", "t", answer(403, { error: "access_denied" }))).code, "access_denied");
+});
+
+test("las máquinas compartidas se leen y se encienden aparte de las de la persona", async () => {
+  const answer = (status: number, body: unknown = null) => async () => ({ status, ok: status < 300, json: async () => body });
+  const verify = {
+    computer_id: "cmp_verify",
+    name: "vm-verify",
+    organization_id: "org_danil",
+    purpose: "resource",
+    access: "service",
+    can_stop: false,
+    power: "stopped",
+  };
+  const listed = await listSharedComputers("x.example", "t", answer(200, { computers: [verify, { computer_id: "cmp_mia", purpose: "tasks" }, { name: "no" }] }));
+  assert.deepEqual(listed.kind === "ok" ? listed.value : null, [verify]);
+  const empty = await listSharedComputers("x.example", "t", answer(200, { computers: [] }));
+  assert.deepEqual(empty.kind === "ok" ? empty.value : null, []);
+  assert.equal((await listSharedComputers("x.example", "t", answer(200, {}))).kind, "error");
+  const calls: { url: string; method?: string }[] = [];
+  const started = await startSharedComputer("x.example", "tok", "cmp_verify", async (url, init) => {
+    calls.push({ url, method: init?.method });
+    return { status: 200, ok: true, json: async () => ({ ...verify, power: "starting" }) };
+  });
+  assert.equal(started.kind === "ok" ? started.value.power : null, "starting");
+  assert.deepEqual(calls, [{ url: "https://x.example/v1/shared-computers/cmp_verify/start", method: "POST" }]);
+  assert.equal((await startSharedComputer("x.example", "t", "cmp_verify", answer(403, { error: "license_required" }))).kind, "license");
+  const denied = await startSharedComputer("x.example", "t", "cmp_verify", answer(403, { error: "access_denied" }));
+  assert.equal(denied.kind === "error" ? denied.code : null, "access_denied");
+  assert.equal((await startSharedComputer("x.example", "t", "cmp_verify", answer(409, { error: "computer_stopping" }))).code, "computer_stopping");
+  assert.equal((await listSharedComputers("x.example", "t", answer(401))).kind, "unauthorized");
 });
 
 test("los workspaces se juntan por id igual, nunca por nombre ni remoto", () => {

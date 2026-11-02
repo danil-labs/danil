@@ -94,7 +94,8 @@ export async function request<T>(url: string, token: string, method: string, rea
     const code = errorCodeOf(await response.json().catch(() => null));
     if (code === "unknown_user") return { kind: "no_account" };
     if (code === "license_required") return { kind: "license" };
-    return { kind: "error", status: response.status };
+    // `access_denied` de las máquinas compartidas llega plano (`{"error":"código"}`).
+    return code ? { kind: "error", status: response.status, code } : { kind: "error", status: response.status };
   }
   if (response.status === 404) return { kind: "missing" };
   if (!response.ok) {
@@ -272,6 +273,83 @@ export function purgeWorkspace(endpoint: string, token: string, id: string, f: F
 export async function sessionProbe(endpoint: string, token: string, id: string, f: Fetch = globalFetch): Promise<"license_required" | null> {
   const answer = await request(apiUrl(endpoint, `/v1/computers/${encodeURIComponent(id)}/session`), token, "GET", () => null, f);
   return answer.kind === "license" ? "license_required" : null;
+}
+
+/**
+ * Una máquina de la organización (`purpose = resource`). No corre tareas y no
+ * está en `GET /v1/computers`. El encendido se lee del proveedor en cada lista.
+ */
+export type SharedComputer = {
+  computer_id: string;
+  name: string;
+  organization_id: string;
+  purpose: "resource";
+  access: "service" | "shell";
+  can_stop: boolean;
+  power: "running" | "stopped" | "starting" | "stopping" | "unknown";
+};
+
+const SHARED_ACCESS = ["service", "shell"] as const;
+const SHARED_POWER = ["running", "stopped", "starting", "stopping", "unknown"] as const;
+
+function sharedComputer(raw: unknown): SharedComputer | null {
+  const row = raw as Record<string, unknown> | null;
+  if (!row || typeof row.computer_id !== "string" || !row.computer_id) return null;
+  if (typeof row.name !== "string" || !row.name) return null;
+  if (typeof row.organization_id !== "string" || !row.organization_id.startsWith("org_")) return null;
+  if (row.purpose !== "resource") return null;
+  if (!SHARED_ACCESS.includes(row.access as (typeof SHARED_ACCESS)[number])) return null;
+  if (typeof row.can_stop !== "boolean") return null;
+  if (!SHARED_POWER.includes(row.power as (typeof SHARED_POWER)[number])) return null;
+  return {
+    computer_id: row.computer_id,
+    name: row.name,
+    organization_id: row.organization_id,
+    purpose: "resource",
+    access: row.access as SharedComputer["access"],
+    can_stop: row.can_stop,
+    power: row.power as SharedComputer["power"],
+  };
+}
+
+/**
+ * Las máquinas de la organización de esta persona (`GET /v1/shared-computers`).
+ * Sin organización o sin máquinas, la lista llega vacía. No pide licencia.
+ * El cuerpo de error es `{"error":"código"}`.
+ */
+export function listSharedComputers(endpoint: string, token: string, f: Fetch = globalFetch): Promise<Answer<SharedComputer[]>> {
+  return request(
+    apiUrl(endpoint, "/v1/shared-computers"),
+    token,
+    "GET",
+    (body) => {
+      const list = (body as { computers?: unknown } | null)?.computers;
+      if (!Array.isArray(list)) throw new Error("bad_shared");
+      return list.flatMap((row) => {
+        const parsed = sharedComputer(row);
+        return parsed ? [parsed] : [];
+      });
+    },
+    f,
+  );
+}
+
+/**
+ * Enciende una máquina de la organización (`POST /v1/shared-computers/:id/start`).
+ * Es idempotente si ya corre o está encendiéndose. Pide licencia; sin ella, `license`.
+ */
+export function startSharedComputer(endpoint: string, token: string, id: string, f: Fetch = globalFetch): Promise<Answer<SharedComputer>> {
+  return request(
+    apiUrl(endpoint, `/v1/shared-computers/${encodeURIComponent(id)}/start`),
+    token,
+    "POST",
+    (body) => {
+      const parsed = sharedComputer(body);
+      if (!parsed) throw new Error("bad_shared");
+      return parsed;
+    },
+    f,
+  );
 }
 
 /** Encendido explícito. La app no lo usa al abrir: una acción enciende la VM por el relay. */
