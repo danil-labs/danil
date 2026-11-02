@@ -1725,11 +1725,35 @@ export default function Chat(props: ChatProps) {
     // Por clave y no por índice: al anteponer, un índice viejo sobre los bloques nuevos es otra fila y su contenido se rehace.
     return { lista: asignadas, deBloque: new Map(lista.map((b, k) => [b, asignadas[k]])), deClave: new Map(lista.map((b, k) => [asignadas[k], b])) };
   });
+  // La fila que nace viva hereda su pliegue al cerrarse el turno: su clave deja
+  // de ser provisional y, sin esto, el bloque se cerraba solo al guardarse.
+  const heredarPliegues = (renombradas: readonly [string, string][]) => {
+    const trabajosAntes = untrack(trabajos);
+    const razonamientosAntes = untrack(razonamientos);
+    const siguientesTrabajos: Record<string, boolean> = { ...trabajosAntes };
+    const siguientesRazonamientos: Record<string, boolean> = { ...razonamientosAntes };
+    let tocaTrabajos = false;
+    let tocaRazonamientos = false;
+    for (const [vieja, nueva] of renombradas) {
+      const antes = claveDeBloque(vieja);
+      const despues = claveDeBloque(nueva);
+      if (antes in trabajosAntes) {
+        siguientesTrabajos[despues] = trabajosAntes[antes];
+        tocaTrabajos = true;
+      }
+      for (const clave of Object.keys(razonamientosAntes)) {
+        if (clave !== antes && !clave.startsWith(`${antes}:razonamiento:`)) continue;
+        siguientesRazonamientos[despues + clave.slice(antes.length)] = razonamientosAntes[clave];
+        tocaRazonamientos = true;
+      }
+    }
+    if (tocaTrabajos) setTrabajos(siguientesTrabajos);
+    if (tocaRazonamientos) setRazonamientos(siguientesRazonamientos);
+  };
   createEffect(() => {
     clavesDelHilo();
-    const renombradas = clavesDeBloques.takeRenames().filter(([vieja]) => claveDeBloque(vieja) in untrack(trabajos));
-    if (!renombradas.length) return;
-    setTrabajos({ ...untrack(trabajos), ...Object.fromEntries(renombradas.map(([vieja, nueva]) => [claveDeBloque(nueva), untrack(trabajos)[claveDeBloque(vieja)]])) });
+    const renombradas = clavesDeBloques.takeRenames();
+    if (renombradas.length) heredarPliegues(renombradas);
   });
   const claveFila = (b: Bloque) => claveDeBloque(props.msgs[b.i]?.clave ?? clavesDelHilo().deBloque.get(b) ?? String(b.i));
   const bloqueDeLectura = (lectura: Lectura) => {
@@ -2942,6 +2966,13 @@ export default function Chat(props: ChatProps) {
                         const k = claveFila(trabajo());
                         setRazonamientos({ ...razonamientos(), [k]: !razonamientos()[k] });
                       }}
+                      razonamientoDeTramo={(i) =>
+                        Boolean(razonamientos()[claveDeRazonamiento(claveFila(b()), i)])
+                      }
+                      onAlternarRazonamientoDeTramo={(i) => {
+                        const k = claveDeRazonamiento(claveFila(trabajo()), i);
+                        setRazonamientos({ ...razonamientos(), [k]: !razonamientos()[k] });
+                      }}
                       preguntasAbiertas={!preguntasPlegadas()[claveDeTrabajo(fromWork(b(), (t) => t.msg, SIN_MENSAJE))]}
                       onAlternarPreguntas={() => {
                         const k = claveDeTrabajo(trabajo().msg);
@@ -3643,6 +3674,9 @@ function RegistroDeTrabajo(props: {
   duracion?: string | null;
   abierto?: boolean;
   onAlternar: (abierto: boolean) => void;
+  /** Si el razonamiento del tramo `i` del avance está desplegado. Ver `razonamientos`. */
+  razonamientoDeTramo?: (i: number) => boolean;
+  onAlternarRazonamientoDeTramo?: (i: number) => void;
   /** Con él, «Editó N archivos» abre los cambios en el panel de la tarea. */
   onVerCambios?: () => void;
 }) {
@@ -3745,15 +3779,22 @@ function RegistroDeTrabajo(props: {
         <Show when={desplegado()}>
           <div class={cn(SUPERFICIE_DE_EJECUCION, "mb-2")}>
             <Index each={avance()}>
-              {(tramo) => (
+              {(tramo, tramoIndex) => (
                 <>
                   <Show when={tramo().pasos.length > 0}>
                     <LineaDeTiempo pasos={tramo().pasos} />
                   </Show>
-                  <Show when={tramo().msg.razonamiento?.length}>
-                    <div class="px-1 py-1 text-sm whitespace-pre-wrap text-neutral-500 select-text">
-                      {tramo().msg.razonamiento?.map((b) => b.text).join("\n\n")}
-                    </div>
+                  {/* La fila de siempre y no prosa suelta: dentro del pliegue
+                      una ráfaga sin su rótulo se lee como algo que el agente dijo. */}
+                  <Show when={tramo().msg.razonamiento?.length ? tramo().msg.razonamiento : null}>
+                    {(bloques) => (
+                      <Reasoning
+                        bloques={bloques()}
+                        vivo={false}
+                        abierto={props.razonamientoDeTramo?.(tramoIndex) ?? false}
+                        onAlternar={() => props.onAlternarRazonamientoDeTramo?.(tramoIndex)}
+                      />
+                    )}
                   </Show>
                   <div class="px-1 py-1 text-sm text-neutral-500">
                     <Markdown>{tramo().msg.text}</Markdown>
@@ -3799,6 +3840,9 @@ function TrabajoDeAgente(props: {
   /** Si el razonamiento de ESTE mensaje está desplegado. Ver `razonamientos`. */
   razonamientoAbierto: boolean;
   onAlternarRazonamiento: () => void;
+  /** Lo mismo para las ráfagas que quedaron dentro del pliegue de trabajo. */
+  razonamientoDeTramo: (i: number) => boolean;
+  onAlternarRazonamientoDeTramo: (i: number) => void;
   /** Si las preguntas de ESTE turno están desplegadas. Nacen abiertas. */
   preguntasAbiertas: boolean;
   onAlternarPreguntas: () => void;
@@ -3844,6 +3888,8 @@ function TrabajoDeAgente(props: {
           duracion={duracion()}
           abierto={props.abiertoElTrabajo}
           onAlternar={props.onAlternarTrabajo}
+          razonamientoDeTramo={props.razonamientoDeTramo}
+          onAlternarRazonamientoDeTramo={props.onAlternarRazonamientoDeTramo}
           onVerCambios={props.msg.code?.length ? props.onVerCambios : undefined}
         />
       </Show>
@@ -4035,6 +4081,11 @@ function claveDeTrabajo(msg: Msg): string {
 /** Identidad de la fila que nace con el primer paso y cierra con la respuesta. */
 function claveDeBloque(i: string): string {
   return `bloque:${i}`;
+}
+
+/** El pliegue de una ráfaga que quedó dentro de un tramo de trabajo, por tramo. */
+function claveDeRazonamiento(fila: string, tramo: number): string {
+  return `${fila}:razonamiento:${tramo}`;
 }
 
 /** El mecanismo de preguntas no es una respuesta para la persona. */
