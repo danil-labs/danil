@@ -6855,7 +6855,7 @@ export default function App() {
             <Show when={props.nueva && !props.locked}>
               {/* Su propio límite: mientras carga, el resto de la vista sigue. */}
               <Suspense fallback={null}>
-                <MachinePicker workspace={workspaceActivo()} project={projectList().find((p) => p.id === project())} />
+                <MachinePicker shared workspace={workspaceActivo()} project={projectList().find((p) => p.id === project())} />
               </Suspense>
             </Show>
           }
