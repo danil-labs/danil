@@ -10,7 +10,7 @@ import { relay } from "../helpers/fake-relay.mjs";
 import { boot, sleep } from "../helpers/jsdom-app.mjs";
 
 const SUPABASE = "https://supabase.test";
-const API = "https://computers.danil.ai/v1/computers";
+const API = "https://machines.danil.ai/v1/computers";
 const session = JSON.stringify({
   access_token: "stored",
   refresh_token: "r",

@@ -38,7 +38,7 @@ test("revocar es DELETE; una sesión vencida es unauthorized", async () => {
 });
 
 test("producción copia directamente el recurso OAuth canónico del MCP", () => {
-  for (const endpoint of ["computers.danil.ai", "https://computers.danil.ai/", "wss://computers.danil.ai"]) {
+  for (const endpoint of ["machines.danil.ai", "https://machines.danil.ai/", "wss://machines.danil.ai", "computers.danil.ai", "https://computers.danil.ai/", "wss://computers.danil.ai"]) {
     assert.equal(mcpUrl(endpoint), "https://mcp.danil.ai/mcp");
   }
 });

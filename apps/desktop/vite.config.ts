@@ -57,12 +57,14 @@ function webBuild(serve: boolean): UserConfig {
   const env = process.env;
   const origin = (value: string | undefined) => (value ? new URL(value).origin : "");
   const base = `/${(env.TERMINUS_WEB_BASE ?? "/terminus/").replace(/^\/+|\/+$/g, "")}/`.replace("//", "/");
-  const endpoint = origin(env.TERMINUS_WEB_ENDPOINT || "https://computers.danil.ai");
+  const endpoint = origin(env.TERMINUS_WEB_ENDPOINT || "https://machines.danil.ai");
   const supabaseUrl = origin(env.TERMINUS_WEB_SUPABASE_URL);
   const supabaseKey = (env.TERMINUS_WEB_SUPABASE_KEY ?? "").trim();
   const login = env.TERMINUS_WEB_LOGIN || `${base}auth`;
   const extra = (env.TERMINUS_WEB_CONNECT ?? "").replace(/[^\w:/.* -]/g, " ").split(/\s+/).filter(Boolean);
-  const connect = [endpoint, endpoint.replace(/^http/, "ws"), supabaseUrl, ...extra].filter(Boolean).join(" ");
+  // Sin el alias fallan avatar_url y logo_url, que aún salen con computers.danil.ai.
+  const alias = endpoint === "https://machines.danil.ai" ? ["https://computers.danil.ai", "wss://computers.danil.ai"] : [];
+  const connect = [endpoint, endpoint.replace(/^http/, "ws"), ...alias, supabaseUrl, ...extra].filter(Boolean).join(" ");
   const version = JSON.parse(readFileSync(new URL("./package.json", import.meta.url), "utf8")).version as string;
   const root = fileURLToPath(new URL("./dist-web/", import.meta.url));
   const outDir = join(root, base);

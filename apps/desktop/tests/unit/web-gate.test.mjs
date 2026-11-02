@@ -14,7 +14,7 @@ import { boot, sleep } from "../helpers/jsdom-app.mjs";
 globalThis.BroadcastChannel = undefined;
 
 const SUPABASE = "https://supabase.test";
-const API = "https://computers.danil.ai/v1/computers";
+const API = "https://machines.danil.ai/v1/computers";
 const session = (token) => JSON.stringify({
   access_token: token,
   refresh_token: `r-${token}`,
@@ -64,7 +64,7 @@ test("the web build uses the stored session, opens every computer and explains r
     assert.equal(w.document.querySelector("[data-web-gate]"), null, "several computers open without a picker");
     assert.deepEqual(
       fake.sockets.map((s) => s.url.split("?")[0]).sort(),
-      ["wss://computers.danil.ai/v1/computers/cmp_a/session", "wss://computers.danil.ai/v1/computers/cmp_b/session"],
+      ["wss://machines.danil.ai/v1/computers/cmp_a/session", "wss://machines.danil.ai/v1/computers/cmp_b/session"],
       "one relay session per computer",
     );
     assert.deepEqual(fake.sockets[0]?.protocols, ["danil.computers.v1", "bearer.stored"]);

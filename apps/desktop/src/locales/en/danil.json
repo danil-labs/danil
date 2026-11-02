@@ -126,7 +126,7 @@
   "danil.connect_machine.fix.unauthorized": "Sign in with your Danil account again and open this again.",
   "danil.connect_machine.fix.license_required": "Open app.danil.ai/modules/billing with this account.",
   "danil.connect_machine.fix.machine_timeout": "On the other machine, check that the command showed a code and approve it with this same account within 10 minutes. If it says which step failed, follow its fix; to retry: danil computers connect. If the command does not exist, run the install command again: it updates it and it stays the same computer.",
-  "danil.connect_machine.fix.machine_off": "On that machine run danil computers status: if the relay does not open, check outbound HTTPS to computers.danil.ai (proxy or firewall) and the service (systemctl --user status seldon-host or launchctl print gui/$(id -u)/ai.danil.seldon.host). If the command does not exist, run the install command again: it updates it and it stays the same computer.",
+  "danil.connect_machine.fix.machine_off": "On that machine run danil computers status: if the relay does not open, check outbound HTTPS to machines.danil.ai (proxy or firewall) and the service (systemctl --user status seldon-host or launchctl print gui/$(id -u)/ai.danil.seldon.host). If the command does not exist, run the install command again: it updates it and it stays the same computer.",
   "danil.connect_machine.fix.version_mismatch": "Run the install command again on that machine: it updates it and it stays the same computer.",
   "danil.connect_machine.own_power": "Your own machines are not turned on from Danil: when one is off, it shows as off until it comes back.",
   "danil.computers.title": "Account computers",
