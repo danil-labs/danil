@@ -15,12 +15,12 @@ export type HandoverSend<T> = {
 };
 
 /**
- * Manda el mensaje dejando el consentimiento justo antes. Si
- * `set_session_provider` falla, `send` no corre: un turno con el CLI viejo y un
- * mensaje escrito para el nuevo no es lo que se confirmó.
+ * Manda el mensaje dejando el consentimiento justo antes; si
+ * `set_session_provider` falla, `send` no corre.
  *
- * `settled` dice si el pendiente se consumió: se escribió el consentimiento o
- * el mensaje ya salió con el CLI que el pendiente pedía. Un `!` no lo consume.
+ * Si el consentimiento se escribe y `send` falla, lanza sin `settled`: el
+ * pendiente queda y el reintento vuelve a consentir. `settled` solo llega
+ * cuando el mensaje ya salió.
  */
 export async function sendWithHandover<T>(
   input: HandoverSend<T>,

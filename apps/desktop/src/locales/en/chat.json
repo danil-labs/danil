@@ -287,7 +287,7 @@
   "chat.fork.provider_changed": "Keep the original provider to start this forked task.",
   "chat.continuation.provider_locked": "This task keeps the provider it started with. Change the model within that provider.",
   "chat.handover.busy": "Wait for the turn to finish to change the provider.",
-  "chat.handover.handler": "A handler or an agent chat keeps its provider.",
+  "chat.handover.handler": "A handler keeps its provider.",
   "chat.handover.adopted": "This task adopted a CLI conversation and keeps its provider.",
   "chat.handover.fork": "This forked task first opens its session with the original provider.",
   "chat.handover.subagent": "A subagent runs inside its task and keeps its provider.",

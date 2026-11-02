@@ -126,6 +126,30 @@ test("si el consentimiento falla, el mensaje no se manda", async () => {
   assert.equal(mando, false);
 });
 
+test("si el consentimiento se escribe y el envío falla, el pendiente queda para el reintento", async () => {
+  const pasos: string[] = [];
+  await assert.rejects(
+    sendWithHandover({
+      session: "t1",
+      pending: "codex",
+      current: "claude",
+      provider: "codex",
+      command: false,
+      setProvider: async () => {
+        pasos.push("provider");
+      },
+      send: async () => {
+        pasos.push("send");
+        throw new Error("network");
+      },
+    }),
+    /network/,
+  );
+  // Se lanzó: no hubo `settled` y el borrador conserva el pendiente. El
+  // reintento vuelve a consentir, que es idempotente.
+  assert.deepEqual(pasos, ["provider", "send"]);
+});
+
 test("no hay consentimiento cuando el CLI no cambia, el mensaje no es del nuevo o es un `!`", async () => {
   type Caso = { pending: string | null; current: string | null; provider: string; command: boolean; session: string | null };
   const casos: { caso: Caso; settled: boolean }[] = [
