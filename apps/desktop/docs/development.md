@@ -301,6 +301,15 @@ The identity of the installed app — updater public key, bundle identifier
 purpose. Changing any of them strands installed copies; read the comments
 there first.
 
+Las descargas estables viven en `danil.ai/download`. La tarea del renombre es
+dueña de las URLs, las redirecciones y los nombres de artefactos
+(`docs/download-urls.md`): los de 0.3.0 serán `Danil_0.3.0_*`, `latest.json`
+apuntará a ellos y las copias `Terminus-*` se conservan por compatibilidad. Una
+*pre-release* no reemplaza los archivos estables hasta que se promueve.
+
+La prueba de upgrade 0.2.x → 0.3.0 tiene que cubrir `/download`, las
+redirecciones viejas y que la *pre-release* no reemplaza lo estable.
+
 ## Line endings
 
 `.gitattributes` checks out every text file with LF on all platforms. Generated
