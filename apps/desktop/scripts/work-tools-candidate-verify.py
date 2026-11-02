@@ -59,13 +59,13 @@ with tempfile.TemporaryDirectory(prefix='candidate-appimage-') as temporary:
     subprocess.run([str(patchelf), '--set-rpath', '$ORIGIN/../lib', str(expected)], check=True)
     if digest(engine) != digest(expected):
         raise ValueError('Packaged engine differs beyond the expected linuxdeploy RUNPATH transformation')
-    resources = unpacked / 'usr/share/Terminus/work-tools' / target
+    resources = unpacked / 'usr/share/Danil/work-tools' / target
     if tree(resources) != tree(base / metadata['resources']):
         raise ValueError('Packaged work tools differ from the verified overlay')
     if digest(resources / 'manifest.json') != metadata['resource_manifest_sha256']:
         raise ValueError('Packaged resource manifest SHA-256 mismatch')
     tools.verify_output(resources, target)
-    tools.verify_resources_inventory(unpacked / 'usr/share/Terminus')
+    tools.verify_resources_inventory(unpacked / 'usr/share/Danil')
     if digest(resources / 'browser-navigation.json') != metadata['browser_catalog_sha256']:
         raise ValueError('Packaged browser catalog SHA-256 mismatch')
     metadata['appimage'] = {'file': str(appimage), 'bytes': appimage.stat().st_size, 'sha256': digest(appimage)}

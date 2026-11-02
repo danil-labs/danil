@@ -1,6 +1,6 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "Terminus",
+  "productName": "Danil",
   "version": "0.3.0",
   "identifier": "ai.danil.terminus",
   "build": {

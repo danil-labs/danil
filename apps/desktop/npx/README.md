@@ -7,7 +7,7 @@ npx @danil-labs/terminus
 ```
 
 Es un canal de distribución para desarrolladores —que ya tienen Node— adicional
-a los instaladores que se bajan a mano desde [terminus.danil.ai](https://terminus.danil.ai).
+a los instaladores que se bajan a mano desde [danil.ai/download](https://danil.ai/download/).
 Funciona en Windows, macOS (Apple Silicon e Intel) y Linux x86_64.
 
 Este paquete instala la app; su único bin `danil-terminus` es el
@@ -101,7 +101,7 @@ Windows—, por el idioma que reporta `Intl`. Para forzarlo:
 `latest.json` es la fuente de verdad: trae la versión, la URL exacta del
 artefacto firmado y su firma embebida. Se descarga y verifica **ese** artefacto
 —el que la firma cubre—, no el alias de nombre estable
-`Terminus-Windows-Setup.exe` (que es una copia byte a byte, pero no dependemos
+`Danil-Windows-Setup.exe` (que es una copia byte a byte, pero no dependemos
 de esa suposición: verificamos exactamente lo firmado).
 
 En macOS lo que trae el manifiesto **no es el `.dmg`**: es el `.app` comprimido,

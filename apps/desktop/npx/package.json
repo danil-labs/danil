@@ -25,7 +25,7 @@
     "desktop"
   ],
   "license": "Apache-2.0",
-  "homepage": "https://terminus.danil.ai",
+  "homepage": "https://danil.ai/download/",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/danil-labs/terminus.git"

@@ -256,7 +256,7 @@ never used for packaging. `--tauri-config` writes the overlay `publish.yml`
 passes to `tauri build`: Tauri's `resources` copy the target of every symlink,
 so macOS and the AppImage use `bundle.macOS.files` and
 `bundle.linux.appimage.files`, which keep them. The AppImage carries them in
-`usr/share/Terminus/`: linuxdeploy walks `usr/lib` and would copy every
+`usr/share/Danil/`: linuxdeploy walks `usr/lib` and would copy every
 library the tools link into the image. Windows trees have no symlinks
 and use `resources`.
 
