@@ -12,7 +12,7 @@ import { boot, sleep } from "../helpers/jsdom-app.mjs";
 globalThis.BroadcastChannel = undefined;
 
 const SUPABASE = "https://supabase.test";
-const API = "https://computers.danil.ai/v1/devices";
+const API = "https://machines.danil.ai/v1/devices";
 const session = (token) => JSON.stringify({
   access_token: token,
   refresh_token: `r-${token}`,
