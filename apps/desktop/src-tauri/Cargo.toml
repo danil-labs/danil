@@ -2,7 +2,7 @@
 # The package name is the executable name (`terminus.exe`), which is what the
 # OS shows in task managers and firewall prompts.
 name = "terminus"
-version = "0.3.0-rc.1"
+version = "0.3.0"
 description = "Terminus desktop window: the client for the Seldon engine"
 authors = ["Danil"]
 license = "Apache-2.0"
