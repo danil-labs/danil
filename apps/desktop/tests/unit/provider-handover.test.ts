@@ -7,10 +7,10 @@ import {
   handOverReason,
   handoverInForce,
   handoverMatches,
-  sendWithHandover,
   type HandoverGate,
   type HandoverState,
 } from "../../src/features/chat/handover.ts";
+import { sendWithHandover } from "../../src/features/chat/handoverSend.ts";
 
 const estado = (over: Partial<HandoverState> = {}): HandoverState => ({
   can: true,

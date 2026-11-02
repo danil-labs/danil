@@ -57,7 +57,7 @@ import TranscriptSource from "../features/chat/TranscriptSource";
 import type { Lectura } from "../features/chat/threadWindow";
 import { lotesDeDeltas } from "../features/chat/deltaFrames";
 import { hasOlder, hasRecentGap, HistoryPager, type OlderState } from "../features/chat/history";
-import { agentSwitchBlocked, canHandOverTask, handoverInForce, handoverMatches, sendWithHandover, type HandoverPending, type HandoverState } from "../features/chat/handover";
+import { agentSwitchBlocked, canHandOverTask, handoverInForce, handoverMatches, type HandoverPending, type HandoverState } from "../features/chat/handover";
 import {
   anexarDeltas,
   anexarImagen,
@@ -83,6 +83,7 @@ import TaskFilesRow, { taskFilesWidth } from "../features/code/TaskFilesRow";
 import { TaskSide, TaskSideShell } from "../features/code/TaskSide";
 import { moviendoHueco } from "../lib/sites";
 const DeleteTaskDialog = lazy(() => import("../features/projects/DeleteTaskDialog"));
+const HandoverDialog = lazy(() => import("../features/chat/HandoverDialog"));
 const TaskFilesCard = lazy(() => import("../features/code/TaskFiles"));
 import { createTaskFiles, type TaskSideMode } from "../lib/taskFiles";
 import { esDeCodigo } from "../features/code/workdirKind";
@@ -6058,6 +6059,7 @@ export default function App() {
       if (pendiente && !vigente) {
         editarBorrador(claveBorrador, (b) => ({ ...b, provider: undefined }));
       }
+      const { sendWithHandover } = await import("../features/chat/handoverSend");
       const traspaso = await sendWithHandover({
         session: abierta,
         pending: vigente?.to ?? null,
@@ -8480,25 +8482,12 @@ export default function App() {
       {/* El traspaso de proveedor se confirma una vez y se guarda como
           intento: viaja en el turno siguiente, no al elegir el modelo. */}
       <Show when={traspasoPendiente()}>{(pedido) => (
-        <Dialog open onOpenChange={(abierto) => { if (!abierto) setTraspasoPendiente(null); }}>
-          <DialogContent class="flex flex-col gap-3">
-            <DialogTitle class="text-sm font-semibold">{t("chat.handover.confirm.title")}</DialogTitle>
-            <p class="m-0 text-ui text-neutral-700">
-              {t("chat.handover.confirm.body", {
-                from: agents().find((a) => a.id === pedido().desde)?.label ?? pedido().desde,
-                to: agents().find((a) => a.id === pedido().opcion.agent)?.label ?? pedido().opcion.agent,
-              })}
-            </p>
-            <div class="flex justify-end gap-2">
-              <Button variant="outline" size="sm" onClick={() => setTraspasoPendiente(null)}>
-                {t("chat.handover.confirm.cancel")}
-              </Button>
-              <Button size="sm" onClick={confirmarTraspaso}>
-                {t("chat.handover.confirm.accept")}
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+        <HandoverDialog
+          from={agents().find((a) => a.id === pedido().desde)?.label ?? pedido().desde}
+          to={agents().find((a) => a.id === pedido().opcion.agent)?.label ?? pedido().opcion.agent}
+          onCancel={() => setTraspasoPendiente(null)}
+          onConfirm={confirmarTraspaso}
+        />
       )}</Show>
 
       {/* Sin workspace no hay carpeta donde escribir: aquí sí se tapa
