@@ -374,6 +374,12 @@ const steps = [
     root,
   ],
   [
+    "A task changes CLI only when the engine, the machine and the idle session allow it, and the consent goes before the turn",
+    process.execPath,
+    ["--test", "--experimental-strip-types", join(root, "tests/unit/provider-handover.test.ts")],
+    root,
+  ],
+  [
     "Markdown is split without changing what is seen",
     process.execPath,
     ["--test", "--experimental-strip-types", join(root, "tests/unit/markdown.test.ts")],

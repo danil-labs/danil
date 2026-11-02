@@ -57,6 +57,7 @@ import TranscriptSource from "../features/chat/TranscriptSource";
 import type { Lectura } from "../features/chat/threadWindow";
 import { lotesDeDeltas } from "../features/chat/deltaFrames";
 import { hasOlder, hasRecentGap, HistoryPager, type OlderState } from "../features/chat/history";
+import { agentSwitchBlocked, canHandOverTask, handoverInForce, handoverMatches, type HandoverPending, type HandoverState } from "../features/chat/handover";
 import {
   anexarDeltas,
   anexarImagen,
@@ -82,6 +83,7 @@ import TaskFilesRow, { taskFilesWidth } from "../features/code/TaskFilesRow";
 import { TaskSide, TaskSideShell } from "../features/code/TaskSide";
 import { moviendoHueco } from "../lib/sites";
 const DeleteTaskDialog = lazy(() => import("../features/projects/DeleteTaskDialog"));
+const HandoverDialog = lazy(() => import("../features/chat/HandoverDialog"));
 const TaskFilesCard = lazy(() => import("../features/code/TaskFiles"));
 import { createTaskFiles, type TaskSideMode } from "../lib/taskFiles";
 import { esDeCodigo } from "../features/code/workdirKind";
@@ -178,7 +180,7 @@ import { pedirElCampo } from "../lib/focus";
 import { lastRoster, rememberRoster } from "../lib/handlerRoster";
 import { aplicarLenguaDeWorkspace, clavesConocidas, t } from "../lib/i18n";
 import { attachmentsOn, NotMovable } from "../lib/remoteAttachments";
-import { ATTACHMENT_DOCUMENTS_FEATURE } from "@terminus/protocol";
+import { ATTACHMENT_DOCUMENTS_FEATURE, PROVIDER_HANDOFF_FEATURE } from "@terminus/protocol";
 import { invoke } from "../lib/invoke.ts";
 import { connected } from "../lib/engineConnection";
 import { openChatVisual, readChatVisual } from "../features/chat/readVisual";
@@ -1083,6 +1085,13 @@ export default function App() {
     excludedSourceIds: string[];
     archivos: string[];
     configuration?: { agent: string; surface: string; model: string; effort: string; mode?: string };
+    /**
+     * El traspaso confirmado para ESTA tarea: de qué CLI a cuál, todavía sin
+     * consumir. Vive aquí y no en `configuration` para no convertirse en
+     * preferencia de las tareas nuevas. El `from` delata a otro cliente que
+     * cambió el CLI antes del envío.
+     */
+    provider?: HandoverPending;
   };
   const SIN_BORRADOR: Borrador = {
     input: "",
@@ -1305,6 +1314,9 @@ export default function App() {
   // encendiendo porque se le mandó algo.
   const [apagadas, setApagadas] = createSignal<Readonly<Record<string, string>>>({});
   const [encendiendo, setEncendiendo] = createSignal<Readonly<Record<string, string>>>({});
+  // Por tarea, lo que `load_session` dijo de cambiar de CLI. Se relee al abrir
+  // y al cerrar cada turno, que es cuando el motor puede haber cambiado de idea.
+  const [traspasos, setTraspasos] = createSignal<Readonly<Record<string, HandoverState>>>({});
   const anotar = (set: typeof setApagadas, id: string, machine: string | null) =>
     set((all) => {
       if ((all[id] ?? null) === machine) return all;
@@ -1400,6 +1412,24 @@ export default function App() {
   function loadResult(id: string, session: Session, clear: boolean, generation: number) {
     if (generation !== sessionGeneration) return;
     anotar(setApagadas, id, session.offline?.machine ?? null);
+    setTraspasos((all) => {
+      const previo = all[id];
+      const ahora = {
+        can: session.can_hand_over === true,
+        blocked: session.hand_over_blocked ?? null,
+        provider: session.provider ?? null,
+      };
+      if (previo && previo.can === ahora.can && previo.blocked === ahora.blocked && previo.provider === ahora.provider) return all;
+      return { ...all, [id]: ahora };
+    });
+    // Otro cliente pudo cambiar el CLI: un traspaso confirmado que ya no parte
+    // del que la sesión tiene caduca, y el siguiente envío no lo resucita.
+    setBorradores((bs) => {
+      const suyo = bs[id];
+      if (!suyo?.provider || suyo.provider.from === session.provider) return bs;
+      const { provider: _, ...resto } = suyo;
+      return { ...bs, [id]: resto };
+    });
     const pager = historiaDe(id);
     const loaded = pager.accept(session.turns, session.history, { reading: leyendoLejos.has(id) });
     setColaSuelta((all) => {
@@ -4400,7 +4430,7 @@ export default function App() {
         excludedSourceIds: s.excluded_sources ?? [],
       }));
       // Y encima, lo que se eligió en su caja sin llegar a mandar nada.
-      restoreSessionConfiguration();
+      restoreSessionConfiguration(s);
       // Lo del disco, y sin vaciar lo vivo: si está contestando, lo que lleva
       // dicho sigue en su hilo y se pinta detrás.
       loadResult(id, s, false, generation);
@@ -4417,7 +4447,7 @@ export default function App() {
         setEffort(state.effort ?? "");
         setModo(state.permission_mode ?? "");
         setAdjuntas(state.sources ?? []);
-        restoreSessionConfiguration();
+        restoreSessionConfiguration(state);
         void refreshFolder(proyecto, id);
       } catch { /* Sin estado autoritativo se conserva el error de la lectura original. */ }
       if (!current()) return;
@@ -4656,6 +4686,16 @@ export default function App() {
   const [cierreSinGuardar, setCierreSinGuardar] = createSignal<
     { ids: string[]; archivos: string[]; sucios: string[] } | null
   >(null);
+
+  /** El cambio de CLI con el que se está a punto de mandar el siguiente turno. */
+  const [traspasoPendiente, setTraspasoPendiente] = createSignal<
+    { clave: string; sesion: string; desde: string; opcion: OpcionDeModelo } | null
+  >(null);
+  // Cambiar de tarea o de borrador cancela la confirmación: lo que se aplique
+  // tiene que ser de la tarea que está delante.
+  createEffect(on([sessionId, claveAbierta], () => {
+    if (traspasoPendiente()) setTraspasoPendiente(null);
+  }));
 
   async function resolverCierre(decision: "guardar" | "descartar") {
     const cierre = cierreSinGuardar();
@@ -5555,8 +5595,8 @@ export default function App() {
    * en un batch impide un render intermedio con el modelo de Claude
    * bajo Codex, o el gratuito bajo la de pago de OpenCode.
    */
-  function saveDraftConfiguration(mode?: string) {
-    editarBorrador(claveAbierta(), (draft) => ({
+  function saveDraftConfiguration(mode?: string, clave = claveAbierta()) {
+    editarBorrador(clave, (draft) => ({
       ...draft,
       configuration: {
         agent: agent(), surface: superficie(), model: model(), effort: effort(),
@@ -5571,15 +5611,19 @@ export default function App() {
    * ahí vive con qué corrió el último turno, no con qué va a correr el
    * siguiente. Sin esto, salir de la tarea y volver revierte la elección.
    *
-   * El agente no entra: en una tarea empezada no se cambia, y el suyo es el
-   * que dice la sesión.
+   * El agente no entra, salvo el traspaso pendiente: si otro cliente cambió el
+   * CLI, el pendiente ya no parte del que la sesión tiene y no se aplica.
    */
-  function restoreSessionConfiguration() {
-    const configuration = borrador().configuration;
-    if (!configuration) return;
-    setModel(configuration.model);
-    setEffort(configuration.effort);
-    if (configuration.mode) setModo(configuration.mode);
+  function restoreSessionConfiguration(session?: Session) {
+    const { configuration, provider } = borrador();
+    if (configuration) {
+      setModel(configuration.model);
+      setEffort(configuration.effort);
+      if (configuration.mode) setModo(configuration.mode);
+    }
+    // El traspaso pendiente manda sobre el de la sesión: al volver a la
+    // tarea, el gesto sigue en pie y la caja dice el que se confirmó.
+    if (provider && (!session || session.provider === provider.from)) setAgent(provider.to);
   }
 
   function restoreDraftConfiguration() {
@@ -5626,25 +5670,68 @@ export default function App() {
     }
   }
 
-  const proveedorFijo = (id: string) => vivas().includes(id) || filaDe(id)?.native_work === true;
+  /**
+   * El motor anunció `provider_handoff_v1` en la máquina de la tarea. La de
+   * esta ventana no lleva id en la fila; las demás sí.
+   */
+  const anunciaTraspaso = (id: string) => {
+    if (!id) return false;
+    const machine = filaDe(id)?.machine ?? null;
+    const suya = machines().find((m) => (machine ? m.id === machine : m.local));
+    return suya?.features?.includes(PROVIDER_HANDOFF_FEATURE) === true;
+  };
 
-  function elegirModelo(opcion: OpcionDeModelo) {
-    const fila = sessionId() ? filaDe(sessionId()!) : undefined;
-    const chatDeAgente = fila && esChatDeAgente(fila);
-    // Cambiar de AGENTE en una tarea abierta sigue siendo otra cosa: es
-    // un traspaso —olvidar la reanudación y devolverle lo hablado al
-    // nuevo—, no un ajuste del selector. Se niega si el agente ya
-    // contestó; el modelo dentro del mismo agente sí cambia,
-    // cada turno guarda con cuál se contestó.
-    if (sessionId() && !chatDeAgente && opcion.agent !== agent() && proveedorFijo(sessionId()!)) return;
+  const situacionDeTraspaso = (id: string) => ({
+    session: id || null,
+    running: vivas().includes(id),
+    remote: !!filaDe(id)?.machine,
+    announced: anunciaTraspaso(id),
+    state: traspasos()[id],
+  });
+
+  /** Por qué no se ofrece el gesto, o `null`. No se deriva del encargado ni del fork: lo dice el motor. */
+  const puedeTraspasar = (id: string) => canHandOverTask(situacionDeTraspaso(id));
+
+  /** Aplica lo elegido a la caja del borrador, con o sin traspaso pendiente. */
+  function aplicarOpcionDeModelo(opcion: OpcionDeModelo, clave: string, provider?: HandoverPending | null) {
     const nivel = effortAlCambiarDeModelo(effort(), opcion.model);
     batch(() => {
       setSuperficie(opcion.superficie);
       setAgent(opcion.agent);
       setModel(opcion.model.id);
       setEffort(nivel);
-      saveDraftConfiguration();
+      if (provider !== undefined) editarBorrador(clave, (b) => ({ ...b, provider: provider ?? undefined }));
+      saveDraftConfiguration(undefined, clave);
     });
+    return nivel;
+  }
+
+  function elegirModelo(opcion: OpcionDeModelo) {
+    const abierta = sessionId();
+    const fila = abierta ? filaDe(abierta) : undefined;
+    const chatDeAgente = fila && esChatDeAgente(fila);
+    // Cambiar de AGENTE en una tarea abierta es un traspaso —la conversación
+    // viaja como texto—, no un ajuste del selector: se confirma antes de tocar
+    // la caja. El modelo dentro del mismo agente sí cambia, y cada turno guarda
+    // con cuál se contestó.
+    if (abierta && !chatDeAgente && opcion.agent !== agent()) {
+      const actual = traspasos()[abierta]?.provider ?? filaDe(abierta)?.provider ?? null;
+      // Volver al CLI que la sesión tiene no es traspaso: solo suelta el
+      // pendiente que se hubiera confirmado antes.
+      if (opcion.agent === actual) {
+        aplicarOpcionDeModelo(opcion, claveAbierta(), null);
+        return;
+      }
+      if (!puedeTraspasar(abierta)) return;
+      setTraspasoPendiente({
+        clave: claveAbierta(),
+        sesion: abierta,
+        desde: actual ?? agent(),
+        opcion,
+      });
+      return;
+    }
+    const nivel = aplicarOpcionDeModelo(opcion, claveAbierta());
     if (chatDeAgente && fila.agent) {
       void invoke("set_agent_model", {
         project: project(),
@@ -5654,6 +5741,26 @@ export default function App() {
         effort: nivel || null,
       }).then(notifyProfiles).catch((error) => setError(prosaDe(error)));
     }
+  }
+
+  /**
+   * El traspaso confirmado deja el CLI en el borrador de esa tarea, no en la
+   * preferencia de las nuevas, y se consume en el envío siguiente.
+   */
+  function confirmarTraspaso() {
+    const pedido = traspasoPendiente();
+    setTraspasoPendiente(null);
+    if (!pedido) return;
+    // Cambió la tarea o el borrador mientras se leía la confirmación: no se
+    // aplica ni a la nueva ni al que estaba delante.
+    if (!handoverMatches(pedido, sessionId(), claveAbierta())) return;
+    if (!puedeTraspasar(pedido.sesion)) return;
+    const actual = traspasos()[pedido.sesion]?.provider ?? filaDe(pedido.sesion)?.provider ?? null;
+    if (actual !== null && pedido.desde !== actual) return;
+    aplicarOpcionDeModelo(pedido.opcion, pedido.clave, {
+      from: pedido.desde,
+      to: pedido.opcion.agent,
+    });
   }
 
   /**
@@ -5897,7 +6004,7 @@ export default function App() {
       // validó y la escribió: primero persistir, y solo entonces pintarla.
       const opciones = abierta ? deLaTarea(abierta) : llevado ? { headers: { "x-terminus-machine": llevado.target } } : creationOptions;
       const attachments = await attachmentsFor(m.attachments, opciones, proyecto);
-      const id = await invoke<string>("send_message", {
+      const mandarTurno = () => invoke<string>("send_message", {
         provider: m.provider,
         project: proyecto,
         session: abierta,
@@ -5942,6 +6049,33 @@ export default function App() {
         // mensaje; lo que llega de otro canal no trae ninguno.
         space: espacioPara(m.space, opciones?.headers?.["x-terminus-machine"]),
       }, opciones);
+      // El consentimiento del traspaso va justo antes del turno: el motor lo
+      // consume en `send_message` y deja de valer para el siguiente.
+      const pendiente = abierta ? borradores()[claveBorrador]?.provider ?? null : null;
+      const actual = abierta ? (traspasos()[abierta]?.provider ?? filaDe(abierta)?.provider ?? null) : null;
+      const vigente = handoverInForce(pendiente, actual);
+      // Otro cliente cambió el CLI: el gesto confirmado ya no parte del que la
+      // sesión tiene. Se suelta en vez de traspasar desde otro.
+      if (pendiente && !vigente) {
+        editarBorrador(claveBorrador, (b) => ({ ...b, provider: undefined }));
+      }
+      const { sendWithHandover } = await import("../features/chat/handoverSend");
+      const traspaso = await sendWithHandover({
+        session: abierta,
+        pending: vigente?.to ?? null,
+        current: actual,
+        provider: m.provider,
+        command: m.text.trimStart().startsWith("!"),
+        setProvider: (provider) =>
+          invoke("set_session_provider", { project: proyecto, session: abierta ?? "", provider }, opciones),
+        send: mandarTurno,
+      });
+      const id = traspaso.answer;
+      // El gesto quedó consumido: se escribió el consentimiento o el mensaje ya
+      // salió con el CLI que pedía. Un `!` no lo consume.
+      if (traspaso.settled) {
+        editarBorrador(claveBorrador, (b) => ({ ...b, provider: undefined }));
+      }
       if (provisional && naceDormida) {
         anotar(setEncendiendo, provisional, null);
         void refetchMachines();
@@ -6944,6 +7078,18 @@ export default function App() {
       const fila = filaDe(pp.sesion ?? "");
       return fila && esChatDeAgente(fila) ? (fila.agent ?? null) : null;
     });
+    /**
+     * Por qué esta celda no ofrece cambiar de CLI; `null` si lo ofrece. El
+     * candado del selector lo dice con la frase del motor, no escondiendo los
+     * otros agentes.
+     */
+    const bloqueoDeTraspaso = createMemo(() => {
+      const fila = pp.sesion ? filaDe(pp.sesion) : undefined;
+      return agentSwitchBlocked({
+        ...situacionDeTraspaso(pp.sesion ?? ""),
+        agentChat: !!fila && esChatDeAgente(fila),
+      });
+    });
     // Memo: releer la fila tras una aprobación no es cambiar de agente ni cierra su perfil.
     const identidadVisualDeLaCelda = createMemo(() => pp.sesion
       ? (filaDe(pp.sesion)?.agent ?? null)
@@ -7320,7 +7466,8 @@ export default function App() {
            modelo no la hace mentir. Lo del agente queda fijo, y lo
            sostiene `elegirModelo`. */
         modelLocked={Boolean(pp.sesion && filaDe(pp.sesion)?.subagent)}
-        agentLocked={Boolean(pp.sesion) && !encargadoDeLaCelda() && proveedorFijo(pp.sesion ?? "")}
+        agentLocked={Boolean(pp.sesion) && bloqueoDeTraspaso() !== null}
+        agentLockedReason={bloqueoDeTraspaso() ? t(bloqueoDeTraspaso()!) : null}
         onModel={elegirModelo}
         effort={effort()}
         onEffort={chooseEffort}
@@ -8330,6 +8477,17 @@ export default function App() {
             </div>
           </DialogContent>
         </Dialog>
+      )}</Show>
+
+      {/* El traspaso de proveedor se confirma una vez y se guarda como
+          intento: viaja en el turno siguiente, no al elegir el modelo. */}
+      <Show when={traspasoPendiente()}>{(pedido) => (
+        <HandoverDialog
+          from={agents().find((a) => a.id === pedido().desde)?.label ?? pedido().desde}
+          to={agents().find((a) => a.id === pedido().opcion.agent)?.label ?? pedido().opcion.agent}
+          onCancel={() => setTraspasoPendiente(null)}
+          onConfirm={confirmarTraspaso}
+        />
       )}</Show>
 
       {/* Sin workspace no hay carpeta donde escribir: aquí sí se tapa
