@@ -55,6 +55,17 @@ async function openTask(app, id) {
   el.click();
   await sleep(400);
 }
+/** Los pliegues de razonamiento, en el orden del hilo. */
+const razonamientos = (app) => [...app.w.document.querySelectorAll("button[aria-expanded]")]
+  .filter((b) => /^(Pensando|Razonamiento)/.test((b.textContent ?? "").trim()));
+/** El de la fila de trabajo, que es el que guarda lo hecho antes de responder. */
+async function openWork(app) {
+  const fila = [...app.w.document.querySelectorAll("button[aria-expanded]")]
+    .find((b) => /Trabaj/.test(b.textContent ?? ""));
+  assert.ok(fila, "no hay fila de trabajo que abrir");
+  fila.click();
+  await sleep(150);
+}
 
 test("el razonamiento no se pega a la respuesta y un kind desconocido se ignora", async () => {
   const app = await boot("listo", "reasoning-stream", responses({
@@ -82,5 +93,115 @@ test("el razonamiento no se pega a la respuesta y un kind desconocido se ignora"
   await sleep(100);
   assert.equal(boton.getAttribute("aria-expanded"), "true");
   assert.ok(text(app).includes("pienso el problema"), "abrir no muestra el razonamiento");
+  assert.deepEqual(app.failures, []);
+});
+
+/** Un turno guardado con su orden: texto, herramienta, texto, con una ráfaga antes de cada texto. */
+const conRazonamiento = {
+  role: "agent",
+  id: "a2",
+  at: 2,
+  text: "Voy a leer el archivo.\n\nYa lo leí.",
+  tools: [{ name: "Read", target: "/lab/a.ts", ok: true }],
+  pieces: [{ text: "Voy a leer el archivo." }, { tool: 0 }, { text: "Ya lo leí." }],
+  reasoning: [
+    { text: "Primero miro qué hay en el archivo.", before_piece: 0 },
+    { text: "Ya sé qué hace.", before_piece: 2 },
+  ],
+  duration_ms: 1200,
+};
+
+test("una ráfaga antes de una herramienta conserva su fila dentro del pliegue", async () => {
+  const app = await boot("listo", "reasoning-fold", responses({
+    service_poll: () => ({ cursor: 0, gap: false, replay: false, runtime: "lab", reset: false }),
+    load_session: ({ id }) => session(id, [{ role: "user", id: "u1", at: 1, text: "Pregunta" }, conRazonamiento]),
+  }));
+  await sleep(600);
+  await openTask(app, "t1");
+
+  // La última ráfaga va con la respuesta; la primera queda dentro del pliegue.
+  assert.equal(razonamientos(app).length, 1, "la ráfaga del cierre no tiene su fila");
+  assert.ok(!text(app).includes("Primero miro"), "el razonamiento se pinta como prosa suelta");
+
+  await openWork(app);
+  const filas = razonamientos(app);
+  assert.equal(filas.length, 2, "la ráfaga anterior a la herramienta se quedó sin fila");
+  const dentro = filas[0];
+  assert.equal(dentro.getAttribute("aria-expanded"), "false");
+  assert.ok(!text(app).includes("Primero miro"), "la ráfaga del pliegue nace desplegada");
+  dentro.click();
+  await sleep(100);
+  assert.equal(dentro.getAttribute("aria-expanded"), "true");
+  assert.ok(text(app).includes("Primero miro qué hay en el archivo."), "abrir no muestra la ráfaga");
+  // Una sola vez: ni duplicada ni fundida con la respuesta.
+  assert.equal((text(app).match(/Primero miro/g) ?? []).length, 1);
+  assert.deepEqual(app.failures, []);
+});
+
+test("el bloque vive desde el primer fragmento y sobrevive al cierre sin duplicarse", async () => {
+  let guardado = false;
+  const cierre = {
+    role: "agent",
+    id: "a2",
+    at: 2,
+    text: "La respuesta.",
+    pieces: [{ text: "La respuesta." }],
+    reasoning: [{ text: "pienso el problema", before_piece: 0 }],
+    duration_ms: 900,
+  };
+  const app = await boot("listo", "reasoning-live", responses({
+    service_poll: () => ({ cursor: 0, gap: false, replay: false, runtime: "lab", reset: false }),
+    load_session: ({ id }) => session(id, guardado
+      ? [{ role: "user", id: "u1", at: 1, text: "Pregunta" }, cierre]
+      : [{ role: "user", id: "u1", at: 1, text: "Pregunta" }]),
+  }));
+  await sleep(600);
+  await openTask(app, "t1");
+  app.emit("chat", { kind: "started", session: "t1", workspace: "w" });
+  app.emit("chat", { kind: "reasoning", session: "t1", workspace: "w", text: "pienso el problema" });
+  await sleep(200);
+
+  const vivo = razonamientos(app);
+  assert.equal(vivo.length, 1, "el bloque no existe con el primer fragmento");
+  assert.equal(vivo[0].textContent.trim(), "Pensando…", "el resumen vivo no dice «Pensando…»");
+  vivo[0].click();
+  await sleep(100);
+  assert.ok(text(app).includes("pienso el problema"), "abrir el bloque vivo no muestra su texto");
+
+  app.emit("chat", { kind: "delta", session: "t1", workspace: "w", text: "La respuesta." });
+  guardado = true;
+  app.emit("chat", { kind: "done", session: "t1", workspace: "w", ok: true });
+  await sleep(900);
+
+  const cerrado = razonamientos(app);
+  assert.equal(cerrado.length, 1, "al cerrar salieron dos filas para la misma ráfaga");
+  assert.equal(cerrado[0].textContent.trim(), "Razonamiento", "al cerrar no cambió el resumen");
+  assert.equal(cerrado[0].getAttribute("aria-expanded"), "true", "al cerrar cambió de identidad y se plegó");
+  assert.equal((text(app).match(/pienso el problema/g) ?? []).length, 1, "la ráfaga se duplicó");
+  assert.ok(text(app).includes("La respuesta."), "la respuesta no sobrevivió al cierre");
+  assert.deepEqual(app.failures, []);
+});
+
+test("un turno guardado sin razonamiento se pinta como siempre", async () => {
+  const viejo = {
+    role: "agent",
+    id: "a2",
+    at: 2,
+    text: "Voy a leer el archivo.\n\nYa lo leí.",
+    tools: [{ name: "Read", target: "/lab/a.ts", ok: true }],
+    pieces: [{ text: "Voy a leer el archivo." }, { tool: 0 }, { text: "Ya lo leí." }],
+    duration_ms: 1200,
+  };
+  const app = await boot("listo", "reasoning-old", responses({
+    service_poll: () => ({ cursor: 0, gap: false, replay: false, runtime: "lab", reset: false }),
+    load_session: ({ id }) => session(id, [{ role: "user", id: "u1", at: 1, text: "Pregunta" }, viejo]),
+  }));
+  await sleep(600);
+  await openTask(app, "t1");
+  assert.equal(razonamientos(app).length, 0, "un turno sin razonamiento trajo una fila");
+  assert.ok(text(app).includes("Ya lo leí."), "la respuesta no se pintó");
+  await openWork(app);
+  assert.equal(razonamientos(app).length, 0, "el pliegue inventó una fila de razonamiento");
+  assert.ok(text(app).includes("Voy a leer el archivo."), "el avance del turno no se pinta");
   assert.deepEqual(app.failures, []);
 });
