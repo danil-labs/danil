@@ -82,7 +82,7 @@ export type Capabilities = {
     /** Enlaza un workspace propio con una cuenta de Danil Agents; rechaza con el código del plano de control. */
     link: (workspaceId: string, danilWorkspaceId: number) => Promise<void>;
   };
-  adminPage?: { href: (workspace: string | null) => string; allowed: () => Promise<boolean> };
+  adminPage?: { href: string; allowed: () => Promise<boolean> };
   /** Lo de una cuenta personal en Configuración › Cuenta. `isPersonal` decide si se ofrece; sin `usage` o `plan`, esas pestañas no salen. */
   personalAccount?: { isPersonal: () => Promise<boolean>; usage?: () => JSX.Element; plan?: () => JSX.Element };
   /** El logo y el fondo de los workspaces leídos y cambiados en la cuenta con la sesión (la web). */
