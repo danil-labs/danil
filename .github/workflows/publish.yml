@@ -694,7 +694,10 @@ jobs:
             $s = Get-AuthenticodeSignature -LiteralPath $_.FullName
             $rel = $_.FullName.Substring($dir.Length + 1)
             Write-Output ("{0}: {1} | {2} | sello: {3}" -f $rel, $s.Status, $s.SignerCertificate.Subject, [bool]$s.TimeStamperCertificate)
+            # Las herramientas incluidas conservan la firma de origen: `signCommand`
+            # las deja fuera a propósito (ver «Construir y firmar en Windows»).
             # Dentro de ForEach-Object, `return` pasa al siguiente archivo.
+            if ($rel -like 'work-tools\*') { return }
             if ($dryRun) { return }
             if ($rel -eq 'uninstall.exe' -and $s.Status -eq 'NotSigned') {
               # Sin firmar a propósito: ver «Construir y firmar en Windows».
