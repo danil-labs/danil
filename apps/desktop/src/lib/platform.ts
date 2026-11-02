@@ -137,6 +137,15 @@ export type Capabilities = {
     list: () => Promise<Answer<Computer[]>>;
     onReady: (computer: Computer) => void;
   };
+  /**
+   * Máquinas de la organización (`/v1/shared-computers`). La web las lee con la
+   * sesión de la página. El escritorio, si no la da, usa el token de cliente.
+   * No son destino de tareas.
+   */
+  sharedComputers?: {
+    list: () => Promise<Answer<import("@terminus/computers").SharedComputer[]>>;
+    start: (id: string) => Promise<Answer<import("@terminus/computers").SharedComputer>>;
+  };
 };
 
 const DESKTOP: Capabilities = { nativeWindow: true, updater: true, localSetup: true, computerStatus: false, danilAccount: true, radiant: true };

@@ -40,13 +40,32 @@ export const registry = (spaces) =>
 /** The envelope of a call to a machine, as the window builds it from the task's row. */
 export const on = (machine) => ({ headers: { "x-terminus-machine": machine } });
 
-export async function open(name, computers, relays, workspaces) {
+export async function open(name, computers, relays, workspaces, { shared = null, sharedStart = null } = {}) {
   const f = fleet(relays);
   const app = await boot("listo", name, {}, undefined, {}, {
     web: true,
     workspaces,
     beforeImport: (w) => {
       globalThis.WebSocket = f.Socket;
+      if (shared) {
+        const previous = globalThis.fetch;
+        const fake = (url, init) => {
+          const path = String(url?.url ?? url);
+          if (path.endsWith("/v1/shared-computers") && (init?.method ?? "GET") === "GET") return Promise.resolve(Response.json({ computers: shared }));
+          const start = /\/v1\/shared-computers\/([^/]+)\/start$/.exec(path);
+          if (start && init?.method === "POST") {
+            const id = decodeURIComponent(start[1]);
+            const row = shared.find((item) => item.computer_id === id);
+            if (!row) return Promise.resolve(Response.json({ error: "not_found" }, { status: 404 }));
+            if (sharedStart) return Promise.resolve(Response.json(sharedStart.body, { status: sharedStart.status }));
+            row.power = "starting";
+            return Promise.resolve(Response.json({ ...row }));
+          }
+          return previous(url, init);
+        };
+        fake.__jsdomApp = true;
+        globalThis.fetch = fake;
+      }
       w.terminusWeb = { endpoint: "https://relay.test", computers, getToken: async () => "tok" };
     },
   });
