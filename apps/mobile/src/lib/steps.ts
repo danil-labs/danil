@@ -46,6 +46,8 @@ export type Line =
   /** Lo que el agente dijo antes de su respuesta, mientras trabajaba. */
   | { key: string; kind: "progress"; text: string }
   | { key: string; kind: "steps"; rows: StepRow[] }
+  /** Lo que el agente pensó en el turno (`Turn.reasoning`), plegado en una fila. */
+  | { key: string; kind: "reasoning"; text: string; durationMs: number | null; live: boolean }
   /** Un `!` de la persona con su salida. */
   | { key: string; kind: "shell"; command: string; output: string; exitCode: number | null };
 
@@ -58,6 +60,30 @@ export { bareCommand, classify, fileName };
 /** La pregunta que el agente deja escrita no es un paso que enseñar. */
 const visible = (tool: TurnTool | undefined): tool is TurnTool => tool !== undefined && !isQuestionFile(tool.target);
 const toStep = (tool: TurnTool) => stepOf(tool.name ?? "", tool.target ?? null, tool.ok ?? null);
+
+/**
+ * El razonamiento del turno en una sola fila: el teléfono no pinta su estructura
+ * interna. `live` lo enciende `deriveRun` mientras el turno sigue corriendo.
+ */
+function reasoningOf(turn: Turn, key: string): Line | null {
+  const blocks = (turn.reasoning ?? []).filter((block) => block.text.trim());
+  if (!blocks.length) return null;
+  const timed = blocks.some((block) => typeof block.duration_ms === "number");
+  return {
+    key: `${key}:reasoning`,
+    kind: "reasoning",
+    text: blocks.map((block) => block.text).join("\n\n"),
+    durationMs: timed ? blocks.reduce((total, block) => total + (block.duration_ms ?? 0), 0) : null,
+    live: false,
+  };
+}
+
+/** Lo pensado va encima de la respuesta del turno, no repartido por sus mensajes. */
+function folded(lines: Line[], reasoning: Line | null): Line[] {
+  if (!reasoning) return lines;
+  const at = lines.findIndex((line) => line.kind === "message");
+  return at < 0 ? [...lines, reasoning] : [...lines.slice(0, at), reasoning, ...lines.slice(at)];
+}
 
 /**
  * Los renglones de un turno. Con su orden registrado (`pieces`): los avances y los
@@ -81,11 +107,12 @@ export function linesOfTurn(turn: Turn, key: string, images: string[]): Line[] {
     ...(turn.quota ? { quota: turn.quota } : {}),
   });
   if (turn.shell) return [{ key, kind: "shell", command: turn.text ?? "", output: turn.shell.output ?? "", exitCode: turn.shell.exit_code ?? null }];
+  const reasoning = reasoningOf(turn, key);
   const tools = turn.tools ?? [];
   const pieces = turn.pieces ?? [];
   if (!pieces.length) {
     const steps = tools.filter(visible).map(toStep);
-    return [...(steps.length ? [{ key: `${key}:steps`, kind: "steps", rows: groupSteps(steps) } as Line] : []), message(turn.text ?? "")];
+    return folded([...(steps.length ? [{ key: `${key}:steps`, kind: "steps", rows: groupSteps(steps) } as Line] : []), message(turn.text ?? "")], reasoning);
   }
   const lastText = pieces.reduce((at, p, i) => ("text" in p ? i : at), -1);
   let firstFinal = lastText;
@@ -114,7 +141,7 @@ export function linesOfTurn(turn: Turn, key: string, images: string[]): Line[] {
   });
   flush(pieces.length);
   if (lastText < 0) out.push(message(turn.text ?? ""));
-  return out;
+  return folded(out, reasoning);
 }
 
 /** Si tras este evento lo que llegó en vivo ya está guardado: la lectura lo reemplaza (`liveAfterRead`). */
@@ -331,6 +358,7 @@ function deriveRun(stretch: Stretch, pieces: readonly LivePiece[], open: boolean
     if (segment && line.kind === "message" && line.text) answers.push(line.text);
   };
 
+  const lastTurn = stretch.turns.at(-1)?.index;
   for (const { turn, index } of stretch.turns) {
     const decision = decisionOf(turn);
     if (decision) {
@@ -342,7 +370,8 @@ function deriveRun(stretch: Stretch, pieces: readonly LivePiece[], open: boolean
       worked = true;
     }
     const key = turn.id ?? String(index);
-    for (const line of linesOfTurn(turn, key, imagesOf(turn))) addLine(line, isSegment(turn));
+    const stillRunning = open && index === lastTurn;
+    for (const line of linesOfTurn(turn, key, imagesOf(turn))) addLine(line.kind === "reasoning" && stillRunning ? { ...line, live: true } : line, isSegment(turn));
   }
   if (pieces.length) target = tail;
   for (const line of linesOfLive(pieces)) {
@@ -391,6 +420,7 @@ export function workRuns(turns: readonly Turn[], live: readonly LivePiece[], run
 
 /** Si un renglón dice lo que se busca; `needle` ya en minúsculas. Un grupo busca en sus comandos, rutas y avances. */
 export function lineMatches(line: ChatLine, needle: string): boolean {
+  if (line.kind === "reasoning") return false;
   if (line.kind === "work") return hitOf(line, needle) !== null;
   return (line.kind === "shell" ? `${line.command}\n${line.output}` : line.text).toLowerCase().includes(needle);
 }

@@ -44,7 +44,7 @@ import { useWorkspaces } from "../../../../../lib/workspaces";
 import { HistoryDetail } from "../../../../../ui/chat/HistoryDetail";
 import { Attachments, MessageBody, toolImages } from "../../../../../ui/chat/Message";
 import { ChatScopeContext } from "../../../../../ui/chat/scope";
-import { TurnStatus, WorkGroup } from "../../../../../ui/chat/Work";
+import { ReasoningRow, TurnStatus, WorkGroup } from "../../../../../ui/chat/Work";
 import { Composer, type Submission } from "../../../../../ui/Composer";
 import { type Theme, useTheme } from "../../../../../ui/theme";
 import { Icon } from "../../../../../ui/Icon";
@@ -108,6 +108,8 @@ export default function TaskScreen() {
   const list = useRef<FlatList<ChatLine>>(null);
   // Buscar en el chat: con texto, solo las líneas que lo dicen; `null` cerrado.
   const [finding, setFinding] = useState<string | null>(null);
+  // Qué razonamiento está desplegado, por línea: efímero de pantalla y nace cerrado.
+  const [reasoning, setReasoning] = useState<ReadonlySet<string>>(new Set());
   const key = `${params.host}/${id}`;
   // La identidad de la tarea para el pendiente: dos máquinas pueden repetir el id.
   const transferKey = `${params.host}/${workspace}/${folder}/${id}`;
@@ -639,11 +641,16 @@ export default function TaskScreen() {
     [params.host, workspace, params.folder, id],
   );
   const waiting = permissions.length > 0;
+  const toggleReasoning = useCallback((key: string) => setReasoning((now) => {
+    const next = new Set(now);
+    if (!next.delete(key)) next.add(key);
+    return next;
+  }), []);
   const cached = cachedNote ? <Text style={[styles.banner, { color: theme.textMuted, backgroundColor: theme.muted }]}>{cachedNote}</Text> : undefined;
   const liveFooter = (
           <View style={styles.footer}>
             {liveLines.map((line) => (
-              <Row key={line.key} line={line} theme={theme} needle={needle} paused={waiting} onOpen={openWork} streaming={line.key === "live"} />
+              <Row key={line.key} line={line} theme={theme} needle={needle} paused={waiting} onOpen={openWork} streaming={line.key === "live"} reasoningOpen={reasoning.has(line.key)} onToggleReasoning={toggleReasoning} />
             ))}
             {running && !streaming ? <TurnStatus run={lastRun} since={since} waiting={waiting} /> : null}
             {pending && waking ? <Bubble line={{ key: "pending", kind: "message", role: "user", text: pending, images: [], attachments: [] }} theme={theme} /> : null}
@@ -701,7 +708,7 @@ export default function TaskScreen() {
         // Lo que cambia de alto por encima de lo que se lee (una imagen que carga, pasos que se abren) no lo mueve.
         maintainVisibleContentPosition={Platform.OS === "web" ? { minIndexForVisible: 0 } : { minIndexForVisible: 0, autoscrollToTopThreshold: MARGIN }}
         renderItem={({ item }) => {
-          const row = <Row line={item} theme={theme} needle={needle} paused={waiting} onOpen={openWork} onQuickReply={item.key === lastAgent && !running && !asleep ? quickReply : undefined} />;
+          const row = <Row line={item} theme={theme} needle={needle} paused={waiting} onOpen={openWork} onQuickReply={item.key === lastAgent && !running && !asleep ? quickReply : undefined} reasoningOpen={reasoning.has(item.key)} onToggleReasoning={toggleReasoning} />;
           return Platform.OS === "web" ? <View nativeID={`chat-row:${encodeURIComponent(webScope)}:${item.key}`}>{row}</View> : row;
         }}
         onEndReached={Platform.OS === "web" || needle ? undefined : () => void askOlder()}
@@ -787,7 +794,8 @@ function ChatBackdrop({ background, theme }: { background: Backdrop | null; them
 const MONO = Platform.select({ ios: "Menlo", default: "monospace" });
 
 /** Una línea solo se repinta si cambia: `linesOf` le deja el mismo objeto a la que no cambió. */
-const Row = memo(function Row({ line, theme, needle, paused, onOpen, streaming, onQuickReply }: { line: ChatLine; theme: Theme; needle: string; paused: boolean; onOpen: (line: WorkLine, at: number, find: string | null) => void; streaming?: boolean; onQuickReply?: (prompt: string) => Promise<boolean> }) {
+const Row = memo(function Row({ line, theme, needle, paused, onOpen, streaming, onQuickReply, reasoningOpen, onToggleReasoning }: { line: ChatLine; theme: Theme; needle: string; paused: boolean; onOpen: (line: WorkLine, at: number, find: string | null) => void; streaming?: boolean; onQuickReply?: (prompt: string) => Promise<boolean>; reasoningOpen: boolean; onToggleReasoning: (key: string) => void }) {
+  if (line.kind === "reasoning") return <ReasoningRow line={line} open={reasoningOpen} onToggle={onToggleReasoning} />;
   if (line.kind === "work") return <WorkGroup line={line} needle={needle} paused={paused} onOpen={onOpen} />;
   if (line.kind === "progress")
     return (

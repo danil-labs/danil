@@ -6,7 +6,7 @@ import { type ComponentRef, type ReactNode, memo, useCallback, useEffect, useMem
 import { ActivityIndicator, type LayoutChangeEvent, type NativeScrollEvent, type NativeSyntheticEvent, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { OPENED, type Follow, type Metrics, measuredFollow, shouldStick } from "../../lib/follow";
 import { lang, t, w } from "../../lib/i18n";
-import { type Step, type StepRow, type WorkLine, type WorkRun, elapsed, fileName, hitOf, runningStep, workFocus } from "../../lib/steps";
+import { type Line, type Step, type StepRow, type WorkLine, type WorkRun, elapsed, fileName, hitOf, runningStep, workFocus } from "../../lib/steps";
 import type { WorkSheetState } from "../../lib/workSheet";
 import { ToolBrandMark } from "../BrandMark";
 import { Icon, type IconName } from "../Icon";
@@ -152,6 +152,36 @@ export const WorkGroup = memo(function WorkGroup({ line, needle, paused, onOpen 
             <Marked text={hit.text.split("\n").find((part) => part.toLowerCase().includes(needle)) ?? hit.text} needle={needle} theme={theme} />
           </Text>
         </Pressable>
+      ) : null}
+    </View>
+  );
+});
+
+/** Lo que el agente pensó en el turno, plegado: el mismo lenguaje que una fila de trabajo. */
+export const ReasoningRow = memo(function ReasoningRow({ line, open, onToggle }: { line: Extract<Line, { kind: "reasoning" }>; open: boolean; onToggle: (key: string) => void }) {
+  const theme = useTheme();
+  const summary = line.live
+    ? t("chat.reasoning.thinking")
+    : line.durationMs !== null
+      ? t("chat.reasoning.summary", { duration: formatDuration(line.durationMs) })
+      : t("chat.reasoning.title");
+  return (
+    <View style={styles.group}>
+      <Pressable
+        testID="reasoning"
+        accessibilityRole="button"
+        accessibilityState={{ expanded: open }}
+        accessibilityLabel={summary}
+        onPress={() => onToggle(line.key)}
+        style={({ pressed }) => [styles.head, pressed ? { backgroundColor: theme.muted } : null]}
+      >
+        <View style={open ? styles.chevronOpen : null}><Icon name="chevron-right" size={12} color={theme.textMuted} /></View>
+        <Text numberOfLines={2} style={[styles.summary, { color: theme.textMuted }]}>{summary}</Text>
+      </Pressable>
+      {open ? (
+        <View style={[styles.body, { borderLeftColor: theme.border }]}>
+          <Text selectable style={[styles.plain, { color: theme.textMuted }]}>{line.text}</Text>
+        </View>
       ) : null}
     </View>
   );
@@ -348,6 +378,7 @@ const styles = StyleSheet.create({
   duration: { flexShrink: 0, fontSize: TEXT.label, fontVariant: ["tabular-nums"] },
   hit: { minHeight: 32, paddingLeft: 24, paddingRight: 4, paddingBottom: 8, paddingTop: 4 },
   mono: { fontFamily: MONO, fontSize: TEXT.label, lineHeight: 17 },
+  plain: { fontSize: TEXT.ui, lineHeight: 19 },
   status: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 4, paddingVertical: 6 },
   dot: { width: 7, height: 7, borderRadius: 4 },
   statusText: { fontSize: TEXT.ui, lineHeight: 18 },
