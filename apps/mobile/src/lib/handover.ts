@@ -21,20 +21,36 @@ export function handoverGate(input: {
   remote: boolean;
 }): HandoverGate {
   if (!input.session) return { allowed: false, reason: "chat.handover.unsupported" };
-  // `can_hand_over` no mira el turno vivo: ese rechazo lo decide el comando.
-  if (input.running) return { allowed: false, reason: "chat.handover.busy" };
   if (!input.features?.includes(PROVIDER_HANDOFF_FEATURE)) return { allowed: false, reason: "chat.handover.unsupported" };
   if (input.remote) return { allowed: false, reason: "chat.handover.unsupported" };
   if (input.session.hand_over_blocked) return { allowed: false, reason: input.session.hand_over_blocked };
   if (!canHandOver(input.session)) return { allowed: false, reason: "chat.handover.unsupported" };
+  // `can_hand_over` no mira el turno vivo: ese rechazo solo aplica si lo demás permite.
+  if (input.running) return { allowed: false, reason: "chat.handover.busy" };
   return { allowed: true, reason: null };
+}
+
+/** El traspaso confirmado y todavía no aplicado, atado a su tarea y a su CLI de origen. */
+export type PendingHandover = { to: string; from: string; task: string };
+
+/**
+ * El pendiente sigue vivo solo en su tarea y mientras la tarea siga en el CLI
+ * desde el que se confirmó. `to` es que ya se aplicó; otro `from` es un cambio
+ * de otro cliente. `current === null` es una lectura que todavía no llegó.
+ */
+export function livePending(pending: PendingHandover | null, task: string, current: string | null): PendingHandover | null {
+  if (!pending || pending.task !== task) return null;
+  if (current === null) return pending;
+  return current === pending.from ? pending : null;
 }
 
 /**
  * El envío de un mensaje con traspaso confirmado: primero el consentimiento
  * (`set_session_provider`) y después el mensaje. Si el consentimiento falla,
  * el mensaje no sale. Un `!` no escribe la intención, y sin cambio de CLI no
- * se toca el motor.
+ * se toca el motor. `onConsent` corre en cuanto el consentimiento quedó escrito,
+ * aunque el turno falle después: el pendiente ya no es una promesa para el
+ * próximo envío.
  */
 export async function sendWithHandover<T>(input: {
   shell: boolean;
@@ -45,9 +61,13 @@ export async function sendWithHandover<T>(input: {
   /** El CLI con que saldría este mensaje. */
   to: string;
   consent: (provider: string) => Promise<unknown>;
+  onConsent?: () => void;
   send: () => Promise<T>;
 }): Promise<T> {
   const changes = !input.shell && Boolean(input.from) && Boolean(input.pending) && input.pending === input.to && input.to !== input.from;
-  if (changes) await input.consent(input.to);
+  if (changes) {
+    await input.consent(input.to);
+    input.onConsent?.();
+  }
   return input.send();
 }

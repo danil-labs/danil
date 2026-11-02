@@ -43,13 +43,17 @@ type Notice = { text?: string; role?: string; meta?: string | null; fallo?: Turn
 export function failureKey(error: unknown): string | null {
   if (!error || typeof error !== "object") return null;
   const detail = (error as { detail?: unknown }).detail;
-  if (typeof detail === "string") return detail;
-  if (!detail || typeof detail !== "object") return null;
-  const envelope = detail as { what?: unknown; message_key?: unknown };
-  const what = envelope.what;
-  const key = what && typeof what === "object" ? (what as { clave?: unknown }).clave : what;
-  if (typeof key === "string") return key;
-  return typeof envelope.message_key === "string" ? envelope.message_key : null;
+  // El `Failure` del motor dentro de `detail` es más específico que el `message_key` genérico del sobre.
+  if (detail && typeof detail === "object") {
+    const envelope = detail as { what?: unknown; message_key?: unknown };
+    const what = envelope.what;
+    const key = what && typeof what === "object" ? (what as { clave?: unknown }).clave : what;
+    if (typeof key === "string") return key;
+    if (typeof envelope.message_key === "string") return envelope.message_key;
+  }
+  const direct = (error as { message_key?: unknown }).message_key;
+  if (typeof direct === "string") return direct;
+  return typeof detail === "string" ? detail : null;
 }
 
 /** Hoy solo la hora; otro día, también la fecha. Un cupo semanal no se dice como «esta tarde». */

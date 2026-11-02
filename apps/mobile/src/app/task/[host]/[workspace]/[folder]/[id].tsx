@@ -32,7 +32,7 @@ import {
 import { HostError } from "../../../../../lib/hosts";
 import { type ChatLine, type Line, type LivePiece, type WorkLine, applyLive, lineMatches, liveAfterRead, runClock, savesLive, workRuns } from "../../../../../lib/steps";
 import { failureGesture, failureKey, failureSentence, isInterruption } from "../../../../../lib/failureNotice";
-import { handoverGate, sendWithHandover } from "../../../../../lib/handover";
+import { handoverGate, livePending, sendWithHandover, type PendingHandover } from "../../../../../lib/handover";
 import { publishWork, releaseWork } from "../../../../../lib/workSheet";
 import { hasKey, lang, phrase, t, w } from "../../../../../lib/i18n";
 import { type ScrollAnchor, anchorOf, restoreAnchor, scrollToEnd } from "../../../../../lib/scrollAnchor";
@@ -99,8 +99,8 @@ export default function TaskScreen() {
   const [waking, setWaking] = useState(false);
   // Lo que se mandó mientras la VM enciende: sin él, el mensaje desaparece el minuto o dos que tarda.
   const [pending, setPending] = useState<string | null>(null);
-  // El CLI confirmado que se aplicará al enviar (`provider_handoff_v1`).
-  const [pendingProvider, setPendingProvider] = useState<string | null>(null);
+  // El CLI confirmado que se aplicará al enviar (`provider_handoff_v1`), atado a su tarea.
+  const [pendingHandover, setPendingHandover] = useState<PendingHandover | null>(null);
   const [background, setBackground] = useState<Backdrop | null>(null);
   // Las decisiones que ya salieron, por `request_id`: el motor falla en la segunda. El ref ataja el doble toque antes del render.
   const [deciding, setDeciding] = useState<ReadonlySet<string>>(new Set());
@@ -109,6 +109,8 @@ export default function TaskScreen() {
   // Buscar en el chat: con texto, solo las líneas que lo dicen; `null` cerrado.
   const [finding, setFinding] = useState<string | null>(null);
   const key = `${params.host}/${id}`;
+  // La identidad de la tarea para el pendiente: dos máquinas pueden repetir el id.
+  const transferKey = `${params.host}/${workspace}/${folder}/${id}`;
   // La ventana de la conversación y su página anterior; una por máquina, workspace y tarea.
   const [history, setHistory] = useState<LoadedHistory<Turn> | null>(null);
   const [older, setOlder] = useState<OlderState>("idle");
@@ -241,12 +243,20 @@ export default function TaskScreen() {
     pager.current = null;
     setHistory(null);
     setOlder("idle");
-    setPendingProvider(null);
+    setPendingHandover(null);
     putLive([]);
     follow.current = OPENED;
     setJump({ shown: false, unseen: 0 });
     return () => setOpenTask(null);
   }, [key, setOpenTask]);
+
+  // El pendiente caduca si se aplicó, si otro cliente cambió el CLI o si la lectura es de otra tarea.
+  useEffect(() => {
+    setPendingHandover((now) => {
+      const next = livePending(now, transferKey, view?.session.provider ?? null);
+      return next === now ? now : next;
+    });
+  }, [transferKey, view?.session.provider]);
 
   useEffect(() => {
     void refresh()
@@ -377,24 +387,21 @@ export default function TaskScreen() {
     // Mandar es volver al final: lo que se acaba de escribir va abajo, como en el escritorio.
     toEnd();
     if (!s.shell && host?.canAct() === "wakes" && host.power() !== "on") setPending(s.prompt);
-    const sent = act(() =>
+    return act(() =>
       sendWithHandover<unknown>({
         shell: s.shell,
-        pending: pendingProvider,
+        pending: pendingHandover?.to ?? null,
         from: view?.session.provider ?? null,
         to: s.provider,
         consent: (provider) => setSessionProvider(host!, workspace, folder, id, provider),
+        // El consentimiento ya está escrito: el pendiente no sobrevive aunque el turno falle después.
+        onConsent: () => setPendingHandover(null),
         send: () =>
           s.shell
             ? runShell(host!, workspace, { folder, session: id, command: s.command, provider: s.provider, model: s.model, effort: s.effort, permissionMode: s.permissionMode })
             : sendToTask(host!, workspace, folder, id, s),
       }),
     );
-    return sent.then((ok) => {
-      // Confirmado el envío, el pendiente ya lo aplicó el motor: no se repite en el siguiente.
-      if (ok && !s.shell && s.provider === pendingProvider) setPendingProvider(null);
-      return ok;
-    });
   };
   const inject = (text: string, attachments: string[]) => act(() => injectIntoTask(host!, workspace, folder, id, text, attachments));
 
@@ -429,13 +436,15 @@ export default function TaskScreen() {
   });
   const machineReady = host?.power() === "on" && host.canAct() === "now";
   const canHandoff = handover.allowed && machineReady;
-  const handoverReason = !handover.allowed && handover.reason
-    ? hasKey(handover.reason) ? t(handover.reason) : phrase({ clave: handover.reason })
-    : machineReady || !host
-      ? null
-      : host.canAct() === "outdated"
-        ? w("web.machines.outdated_action", { name: host.label })
-        : w("web.machines.off_action", { name: host.label });
+  const handoverReason = !host || !view
+    ? t("composer.loading")
+    : !handover.allowed && handover.reason
+      ? hasKey(handover.reason) ? t(handover.reason) : phrase({ clave: handover.reason })
+      : machineReady
+        ? null
+        : host.canAct() === "outdated"
+          ? w("web.machines.outdated_action", { name: host.label })
+          : w("web.machines.off_action", { name: host.label });
   const permissions = useMemo(() => view?.permissions ?? [], [view?.permissions]);
   // Otro cliente pudo decidir: `pending_requests` manda, sin decisión optimista.
   useEffect(() => {
@@ -530,14 +539,15 @@ export default function TaskScreen() {
   // El modo con que sigue la tarea. Con `null` el motor correría el suyo por omisión, no el que guardó la tarea.
   const savedMode = view?.session.permission_mode ?? null;
   const workspaceMode = workspaces.find((w) => w.id === workspace)?.defaultPermissionMode ?? null;
-  const latest = useRef({ view, submit, respond, pendingProvider });
-  latest.current = { view, submit, respond, pendingProvider };
+  const latest = useRef({ view, submit, respond, pendingHandover });
+  latest.current = { view, submit, respond, pendingHandover };
   const decide = useCallback((permission: Permission, allow: boolean) => latest.current.respond(permission, allow), []);
   const quickReply = useCallback((prompt: string) => {
-    const { view: now, submit: send, pendingProvider: pending } = latest.current;
+    const { view: now, submit: send, pendingHandover: pending } = latest.current;
+    const pendingTo = pending?.to ?? null;
     if (!now) return Promise.resolve(false);
     const defaults = taskDefaults(now);
-    const handoverProvider = pending && pending !== defaults.provider ? pending : null;
+    const handoverProvider = pendingTo && pendingTo !== defaults.provider ? pendingTo : null;
     return send({
       shell: false,
       prompt,
@@ -724,6 +734,7 @@ export default function TaskScreen() {
         </ScrollView>
       ) : null}
       <Composer
+        key={transferKey}
         host={host}
         workspace={workspace}
         folder={folder}
@@ -736,8 +747,11 @@ export default function TaskScreen() {
         providerLocked={!canHandoff}
         providerLockedReason={handoverReason}
         canHandoff={canHandoff}
-        pendingProvider={pendingProvider}
-        onPendingProvider={setPendingProvider}
+        pendingProvider={pendingHandover?.to ?? null}
+        onPendingProvider={(provider) => {
+          const from = view?.session.provider ?? null;
+          setPendingHandover(provider && from ? { to: provider, from, task: transferKey } : null);
+        }}
         running={running}
         disabled={asleep || waking || !view}
         placeholder={w("chat.composer.placeholder.next")}

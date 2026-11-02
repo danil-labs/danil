@@ -403,7 +403,12 @@ export function Composer({
   }
 
   function confirmHandover() {
-    if (!candidate) return;
+    // La tarea pudo cambiar debajo de la hoja: sin sesión o sin permiso, no se confirma.
+    if (!candidate || !session || !canHandoff) {
+      setCandidate(null);
+      setSheet(null);
+      return;
+    }
     setProvider(candidate);
     setModel(null);
     setEffort(null);
