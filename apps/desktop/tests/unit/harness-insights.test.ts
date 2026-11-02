@@ -9,43 +9,45 @@ import {
   filterActivity,
   isForbidden,
   isMcp,
-  isUnsupported,
   tokens,
 } from "../../src/features/settings/harness-insights.ts";
 
 const event = (over: Partial<ActivityEvent>): ActivityEvent => ({
-  id: 1,
-  at: 1,
-  actor: "alice",
-  workspace: "one",
-  action: "tools/call",
-  decision: "allow",
-  revision: "r1",
-  target: "",
+  id: "1",
+  at: "2026-11-02T06:00:00.000Z",
+  actor: "1",
+  workspace: "ws1",
+  machine: { id: "cmp_aaaaaaaaaaaaaaaaaaaaaaaaaa", name: "Machine", origin: "vm" },
+  origin: "vm",
+  kind: "tool",
+  action: "tool.summary",
+  result: "ok",
+  client: null,
+  service: "engine",
+  target: null,
   detail: null,
   ...over,
 });
 
 test("MCP is what the server marked, not what the action name looks like", () => {
-  const mcp = event({ detail: { channel: "mcp", tool: "github_read_file", client: "codex-cli/0.166.0" } });
-  const read = event({ action: "github_read_file" });
+  const mcp = event({ kind: "mcp", action: "task_create", client: "Claude" });
+  const tool = event({ action: "task_create" });
   assert.equal(isMcp(mcp), true);
-  assert.equal(isMcp(read), false);
-  assert.equal(actionOf(mcp), "github_read_file");
-  assert.equal(actionOf(read), "github_read_file");
-  assert.equal(clientOf(mcp), "codex-cli/0.166.0");
-  assert.equal(clientOf(read), "");
+  assert.equal(isMcp(tool), false);
+  assert.equal(actionOf(mcp), "task_create");
+  assert.equal(clientOf(mcp), "Claude");
+  assert.equal(clientOf(tool), "");
 });
 
 test("the activity filter keeps only what it promises", () => {
   const rows = [
-    event({ id: 1, detail: { channel: "mcp" } }),
-    event({ id: 2, decision: "deny" }),
-    event({ id: 3 }),
+    event({ id: "1", kind: "mcp", client: "Claude" }),
+    event({ id: "2", result: "denied" }),
+    event({ id: "3", result: "error" }),
   ];
-  assert.deepEqual(filterActivity(rows, "all").map((row) => row.id), [1, 2, 3]);
-  assert.deepEqual(filterActivity(rows, "mcp").map((row) => row.id), [1]);
-  assert.deepEqual(filterActivity(rows, "denied").map((row) => row.id), [2]);
+  assert.deepEqual(filterActivity(rows, "all").map((row) => row.id), ["1", "2", "3"]);
+  assert.deepEqual(filterActivity(rows, "mcp").map((row) => row.id), ["1"]);
+  assert.deepEqual(filterActivity(rows, "denied").map((row) => row.id), ["2"]);
 });
 
 test("tools add up across people without losing the errors", () => {
@@ -70,10 +72,4 @@ test("a role that cannot read is told apart from a server that is unavailable", 
   assert.equal(isForbidden({ what: { clave: "harness.admin.forbidden" } }), true);
   assert.equal(isForbidden({ what: { clave: "harness.admin.unavailable" } }), false);
   assert.equal(isForbidden("HTTP 403"), false);
-});
-
-test("an engine that does not know the command is not the same as a server failure", () => {
-  assert.equal(isUnsupported({ what: "service.error.command", detail: "command" }), true);
-  assert.equal(isUnsupported({ what: { clave: "harness.admin.failed" }, detail: "command" }), true);
-  assert.equal(isUnsupported({ what: { clave: "radiant.error.unreachable" }, detail: "connection_failed" }), false);
 });

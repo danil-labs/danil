@@ -31,10 +31,12 @@ import { Identity, type OrganizationSource, OrganizationWorkspaces, Plan } from 
 import type { PolicySource } from "./PolicyFlow";
 import { Rules, type RulesSource } from "./Rules";
 import { type AccountKind, accountKind, type GroupName, menuFor, type Section, visibleSections } from "./sections";
+import type { HarnessOrgSource } from "../../features/settings/harness-org";
 import { SharedAgents, SharedMcp, SharedSkills, type SharedSource } from "./Shared";
 import { Usage, type UsageSource } from "./Usage";
 
 const SupportAccess = lazy(() => import("../../features/settings/SupportAccess"));
+const HarnessInsights = lazy(() => import("../../features/settings/HarnessInsights"));
 const AuditLog = lazy(() => import("../../features/settings/AuditLog"));
 
 /** El plan de conversaciones sigue en la app de Danil. */
@@ -51,6 +53,8 @@ export type AdminSource = {
   /** Lo que se comparte con el equipo de este workspace. */
   shared?: SharedSource;
   usage?: UsageSource;
+  /** Consumo y actividad de Danil Machine (`/v1/org/*`). Sin esto, la sección no aparece. */
+  harness?: HarnessOrgSource;
   members?: MembersSource;
   rules?: RulesSource;
   /** Dónde se propone y se sigue un cambio de política; sin esto, no se ofrece proponer. */
@@ -68,6 +72,7 @@ export type AdminSource = {
 
 const ICONS: Record<Section, () => JSX.Element> = {
   general: () => <Settings size={15} />,
+  harness: () => <ChartColumn size={15} />,
   usage: () => <ChartColumn size={15} />,
   members: () => <Users size={15} />,
   support: () => <LifeBuoy size={15} />,
@@ -84,6 +89,7 @@ const ICONS: Record<Section, () => JSX.Element> = {
 const sectionName = (section: Section) =>
   ({
     general: t("web.admin.general"),
+    harness: t("web.admin.harness"),
     usage: t("web.admin.usage"),
     members: t("web.admin.members"),
     support: t("web.admin.support"),
@@ -127,6 +133,7 @@ export function AdminPage(props: { source: AdminSource }) {
     const s = props.source;
     return new Set<Section>([
       "general", "support", "audit",
+      ...(s.harness ? (["harness"] as const) : []),
       ...(s.usage ? (["usage"] as const) : []),
       ...(s.members ? (["members"] as const) : []),
       ...(s.shared ? (["skills", "mcp", "agents"] as const) : []),
@@ -269,7 +276,7 @@ function General(props: { workspace: Membership; source: AdminSource; onOpen: (s
           <Button size="sm" variant="secondary" onClick={() => props.onOpen("usage")}>{t("web.admin.open")}</Button>
         </SettingsRow>
       </Show>
-      <Show when={!props.source.usage}>
+      <Show when={!props.source.usage && !props.source.harness}>
         <SettingsRow label={t("web.admin.usage")} description={t("web.admin.usage_desktop_only")} />
       </Show>
       <SettingsRow label={t("web.admin.conversations_plan")} description={t("web.admin.conversations_plan_hint")}>
@@ -284,6 +291,15 @@ function General(props: { workspace: Membership; source: AdminSource; onOpen: (s
 
 function Body(props: { section: Section | undefined; workspace: Membership; source: AdminSource; active: number | null; manager: boolean; kind: AccountKind; onOpen: (section: Section) => void }) {
   const policy = () => props.source.policy;
+  /** La cuenta elegida en `/admin` manda: la ruta la revalida contra la membresía. */
+  const harnessSource = () => {
+    const base = props.source.harness;
+    if (!base) return undefined;
+    const scoped: HarnessOrgSource = {
+      get: (path, query = "") => base.get(path, `${query}${query ? "&" : ""}account_id=${props.workspace.id}`),
+    };
+    return scoped;
+  };
   return (
     <SettingsPanel>
       <Switch>
@@ -292,6 +308,9 @@ function Body(props: { section: Section | undefined; workspace: Membership; sour
         </Match>
         <Match when={props.section === "usage" && props.source.usage}>
           {(usage) => <Usage source={usage()} own={!props.manager} />}
+        </Match>
+        <Match when={props.section === "harness" && harnessSource()}>
+          {(harness) => <Suspense fallback={null}><HarnessInsights source={harness()} /></Suspense>}
         </Match>
         <Match when={props.section === "members" && props.source.members}>{(members) => <Members source={members()} />}</Match>
         <Match when={props.section === "skills" && props.source.shared}>{(s) => <SharedSkills source={s()} policy={policy()} canPropose={props.manager} />}</Match>

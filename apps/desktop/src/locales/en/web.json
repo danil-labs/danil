@@ -451,5 +451,6 @@
   "web.admin.policy_proposals": "Proposals for this policy",
   "web.admin.policy_no_proposals": "No open proposals.",
   "web.service.not_entered": "Could not enter this workspace. Try again.",
-  "web.admin.usage_desktop_only": "AI usage and the Harness activity log are read in the desktop app, with this workspace's Danil Teams session. This page does not receive that session."
+  "web.admin.usage_desktop_only": "AI usage and the Harness activity log are read in the desktop app, with this workspace's Danil Teams session. This page does not receive that session.",
+  "web.admin.harness": "Usage and activity"
 }

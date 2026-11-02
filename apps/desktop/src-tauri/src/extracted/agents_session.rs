@@ -533,6 +533,16 @@ fn allowed_path(path: &str) -> bool {
             .all(|b| b.is_ascii_alphanumeric() || matches!(b, b'/' | b'_' | b'-' | b'.'))
 }
 
+/// Rutas de lectura de Harness en Computers. Lista cerrada, no un proxy abierto.
+fn allowed_org_path(path: &str) -> bool {
+    (path == "/v1/org" || path.starts_with("/v1/org/"))
+        && path.len() <= 512
+        && !path.contains("..")
+        && path
+            .bytes()
+            .all(|b| b.is_ascii_alphanumeric() || matches!(b, b'/' | b'_' | b'-' | b'.'))
+}
+
 struct Sent {
     status: u16,
     proxy: bool,
@@ -633,6 +643,31 @@ fn proxy_error(sent: &Sent) -> Option<String> {
         .map(str::to_owned)
 }
 
+fn org_get(endpoint: &str, token: &str, path: &str, query: &str) -> Result<(u16, String), Value> {
+    let url = if query.is_empty() {
+        format!("{endpoint}{path}")
+    } else {
+        format!("{endpoint}{path}?{query}")
+    };
+    let mut response = agent()
+        .get(&url)
+        .header("Authorization", &format!("Bearer {token}"))
+        .header("Accept", "application/json")
+        .call()
+        .map_err(|e| match e {
+            ureq::Error::Timeout(_) => error("bff_timeout"),
+            _ => error("unavailable"),
+        })?;
+    let status = response.status().as_u16();
+    let body = response
+        .body_mut()
+        .with_config()
+        .limit(MAX_BODY as u64)
+        .read_to_string()
+        .map_err(|_| error("invalid_response"))?;
+    Ok((status, body))
+}
+
 fn directory_rows(body: &str) -> Result<Value, Value> {
     let value: Value = serde_json::from_str(body).map_err(|_| error("invalid_response"))?;
     match value.get("workspaces") {
@@ -660,6 +695,34 @@ fn directory_get(endpoint: &str, token: &str) -> Result<(u16, String), Value> {
         .read_to_string()
         .map_err(|_| error("invalid_response"))?;
     Ok((status, body))
+}
+
+/// Lectura de Harness con la sesión de persona de la ventana. El motor no participa y
+/// el JavaScript nunca ve el token. Solo GET y una lista cerrada de rutas.
+#[tauri::command(async)]
+pub(super) fn harness_org_fetch(
+    app: tauri::AppHandle,
+    account: Option<String>,
+    path: String,
+    query: Option<String>,
+) -> Result<Value, Value> {
+    if !allowed_org_path(&path) {
+        return Err(error("invalid_request"));
+    }
+    let query = query.unwrap_or_default();
+    if query.contains('#') || query.len() > 2048 {
+        return Err(error("invalid_request"));
+    }
+    let (_, endpoint) = client(&app, &account)?;
+    let name = key(&account);
+    let mut session = checked(&app, &account)?;
+    let mut got = org_get(&endpoint, &session.access_token, &path, &query)?;
+    if got.0 == 401 {
+        session = access(&app, &name, true)?;
+        got = org_get(&endpoint, &session.access_token, &path, &query)?;
+    }
+    let body: Value = serde_json::from_str(&got.1).unwrap_or(Value::Null);
+    Ok(json!({ "status": got.0, "body": body }))
 }
 
 /// El directorio de la persona, sin el token: la ventana elige la cuenta por id de workspace.
@@ -786,6 +849,16 @@ mod tests {
         assert!(!allowed_path("/api/../v1/computers"));
         assert!(!allowed_path("/api/inbox?x=1"));
         assert!(!allowed_path("/api/inbox%2F"));
+    }
+
+    #[test]
+    fn harness_paths_are_a_closed_read_list() {
+        assert!(allowed_org_path("/v1/org/me"));
+        assert!(allowed_org_path("/v1/org/usage"));
+        assert!(allowed_org_path("/v1/org/activity"));
+        assert!(!allowed_org_path("/v1/me/usage"));
+        assert!(!allowed_org_path("/v1/org/../v1/me"));
+        assert!(!allowed_org_path("/v1/org/usage?x=1"));
     }
 
     #[test]
