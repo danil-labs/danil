@@ -439,7 +439,7 @@ export function Composer({
   const sendLabel = shell ? w("chat.composer.run") : w("chat.composer.send");
 
   return (
-    <View style={[styles.wrap, { paddingBottom: 8 + (bottomInset && !keyboard ? insets.bottom : 0), backgroundColor: theme.bg }]}>
+    <View style={[styles.wrap, { paddingBottom: 8 + (bottomInset && !keyboard ? insets.bottom : 0) }]}>
       {slashQuery !== undefined ? (
         <Suggestions>
           {!slashItems ? <Text style={[styles.hint, { color: theme.textMuted }]}>{t("composer.loading")}</Text> : null}
@@ -716,7 +716,17 @@ const INPUT_MAX = 21 * 6 + 15;
 
 const styles = StyleSheet.create({
   wrap: { paddingHorizontal: 10, paddingTop: 6, gap: 6 },
-  box: { borderWidth: 0, borderRadius: 26, paddingVertical: 5, paddingHorizontal: 6, ...Platform.select({ web: { outlineStyle: "solid", outlineWidth: 0, boxShadow: "none" } }) },
+  // El contenedor no tiene fondo propio: el cuadro flota sobre el del chat con su sombra.
+  box: {
+    borderWidth: 0,
+    borderRadius: 26,
+    paddingVertical: 5,
+    paddingHorizontal: 6,
+    ...Platform.select({
+      web: { outlineStyle: "solid", outlineWidth: 0, boxShadow: "0 2px 6px rgba(0, 0, 0, 0.10), 0 8px 24px rgba(0, 0, 0, 0.16)" },
+      default: { shadowColor: "#000", shadowOpacity: 0.18, shadowRadius: 16, shadowOffset: { width: 0, height: 6 }, elevation: 8 },
+    }),
+  },
   input: { fontSize: 16, lineHeight: 21, flex: 1, minWidth: 0, minHeight: INPUT_MIN, maxHeight: INPUT_MAX, paddingHorizontal: 6, paddingTop: 8, paddingBottom: 7, borderWidth: 0, backgroundColor: "transparent", ...Platform.select({ web: { outlineStyle: "solid", outlineWidth: 0, boxShadow: "none", boxSizing: "border-box", resize: "none", scrollbarWidth: "none" } }) },
   row: { flexDirection: "row", alignItems: "flex-end", gap: 2 },
   shellPill: { marginBottom: 3, marginRight: 4 },
