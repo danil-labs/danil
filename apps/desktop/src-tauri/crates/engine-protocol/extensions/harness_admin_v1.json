@@ -1,0 +1,138 @@
+{
+  "version": 1,
+  "name": "harness_admin",
+  "description": "Lecturas del Harness contra el servidor que gobierna este workspace: identidad y organización, consumo de IA, bitácora de actividad (incluidas las llamadas MCP de agentes externos) y el gobierno compartido ya verificado (sin el contenido de contexto, skills ni agentes). La sesión no sale del motor. Fuera del hash de compatibilidad (status.contract); un motor sin esta capacidad no la anuncia en status.service_features.",
+  "features": [
+    "harness_admin_v1"
+  ],
+  "commands": [
+    {
+      "async": false,
+      "channel": null,
+      "kind": "invoke",
+      "name": "harness_admin_identity",
+      "output": "-> Result < Value , Failure >",
+      "parameters": [],
+      "path": "radiant::admin::harness_admin_identity",
+      "scope": "workspace",
+      "relay": true,
+      "audience": "window",
+      "authority": "admin",
+      "durable": false,
+      "enforcement": "server"
+    },
+    {
+      "async": false,
+      "channel": null,
+      "kind": "invoke",
+      "name": "harness_admin_usage",
+      "output": "-> Result < Value , Failure >",
+      "parameters": [
+        {
+          "key": "days",
+          "name": "days",
+          "type": "Option < u32 >"
+        },
+        {
+          "key": "month",
+          "name": "month",
+          "type": "Option < String >"
+        },
+        {
+          "key": "membersOnly",
+          "name": "members_only",
+          "type": "Option < bool >"
+        }
+      ],
+      "path": "radiant::admin::harness_admin_usage",
+      "scope": "workspace",
+      "relay": true,
+      "audience": "window",
+      "authority": "admin",
+      "durable": false,
+      "enforcement": "server"
+    },
+    {
+      "async": false,
+      "channel": null,
+      "kind": "invoke",
+      "name": "harness_admin_own_usage",
+      "output": "-> Result < Value , Failure >",
+      "parameters": [
+        {
+          "key": "days",
+          "name": "days",
+          "type": "Option < u32 >"
+        },
+        {
+          "key": "month",
+          "name": "month",
+          "type": "Option < String >"
+        }
+      ],
+      "path": "radiant::admin::harness_admin_own_usage",
+      "scope": "workspace",
+      "relay": true,
+      "audience": "window",
+      "authority": "admin",
+      "durable": false,
+      "enforcement": "server"
+    },
+    {
+      "async": false,
+      "channel": null,
+      "kind": "invoke",
+      "name": "harness_admin_members",
+      "output": "-> Result < Value , Failure >",
+      "parameters": [],
+      "path": "radiant::admin::harness_admin_members",
+      "scope": "workspace",
+      "relay": true,
+      "audience": "window",
+      "authority": "admin",
+      "durable": false,
+      "enforcement": "server"
+    },
+    {
+      "async": false,
+      "channel": null,
+      "kind": "invoke",
+      "name": "harness_admin_activity",
+      "output": "-> Result < Value , Failure >",
+      "parameters": [
+        {
+          "key": "days",
+          "name": "days",
+          "type": "Option < u32 >"
+        },
+        {
+          "key": "limit",
+          "name": "limit",
+          "type": "Option < u32 >"
+        }
+      ],
+      "path": "radiant::admin::harness_admin_activity",
+      "scope": "workspace",
+      "relay": true,
+      "audience": "window",
+      "authority": "admin",
+      "durable": false,
+      "enforcement": "server"
+    },
+    {
+      "async": false,
+      "channel": null,
+      "kind": "invoke",
+      "name": "harness_admin_governance",
+      "output": "-> Result < Value , Failure >",
+      "parameters": [],
+      "path": "radiant::admin::harness_admin_governance",
+      "scope": "workspace",
+      "relay": true,
+      "audience": "window",
+      "authority": "admin",
+      "durable": false,
+      "enforcement": "server"
+    }
+  ]
+}

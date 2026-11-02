@@ -269,6 +269,9 @@ function General(props: { workspace: Membership; source: AdminSource; onOpen: (s
           <Button size="sm" variant="secondary" onClick={() => props.onOpen("usage")}>{t("web.admin.open")}</Button>
         </SettingsRow>
       </Show>
+      <Show when={!props.source.usage}>
+        <SettingsRow label={t("web.admin.usage")} description={t("web.admin.usage_desktop_only")} />
+      </Show>
       <SettingsRow label={t("web.admin.conversations_plan")} description={t("web.admin.conversations_plan_hint")}>
         <Button as="a" size="sm" variant="secondary" href={AGENTS_URL} target="_blank" rel="noopener noreferrer">
           {t("web.admin.open")}

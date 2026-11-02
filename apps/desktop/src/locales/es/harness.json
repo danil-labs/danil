@@ -72,5 +72,8 @@
   "harness.usage.toggle": "Reportar el consumo de IA de este workspace",
   "harness.usage.required": "La política del workspace lo exige",
   "harness.usage.queued": "Líneas en espera",
-  "harness.usage.quarantined": "Lotes en cuarentena"
+  "harness.usage.quarantined": "Lotes en cuarentena",
+  "harness.admin.forbidden": "Tu rol en esta organización no permite ver esta sección del Harness.",
+  "harness.admin.unavailable": "Este servidor de Danil Teams todavía no expone esta sección del Harness. Pide a quien lo administra que lo actualice.",
+  "harness.admin.failed": "No se pudo leer esta sección del Harness. Vuelve a intentarlo."
 }

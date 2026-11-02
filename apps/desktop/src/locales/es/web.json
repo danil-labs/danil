@@ -450,5 +450,6 @@
   "web.admin.policy_send_review": "Enviar a revisión",
   "web.admin.policy_proposals": "Propuestas de esta política",
   "web.admin.policy_no_proposals": "No hay propuestas abiertas.",
-  "web.service.not_entered": "No se pudo entrar a este workspace. Vuelve a intentarlo."
+  "web.service.not_entered": "No se pudo entrar a este workspace. Vuelve a intentarlo.",
+  "web.admin.usage_desktop_only": "El consumo de IA y la bitácora del Harness se leen en la app de escritorio, con la sesión de Danil Teams de este workspace. Esta página no recibe esa sesión."
 }

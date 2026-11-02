@@ -536,6 +536,12 @@ const steps = [
     root,
   ],
   [
+    "Harness usage and activity keep missing data missing and tell MCP apart",
+    process.execPath,
+    ["--test", "--experimental-strip-types", join(root, "tests/unit/harness-insights.test.ts")],
+    root,
+  ],
+  [
     "A site's layer shows when due",
     process.execPath,
     ["--test", "--experimental-strip-types", join(root, "tests/unit/sites.test.ts")],
