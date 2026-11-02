@@ -105,7 +105,8 @@ El token de cliente solo sirve aquí. Ninguna otra ruta `/v1/bff/*` lo acepta.
   `/api/channels`, `/api/inbox/**`, `/api/messaging/reply`, `/api/media`,
   `/api/agents/**`, `/api/calendar/connections`, `/api/http_tools`,
   `/api/account_variables`, `/auth/profile`, `/auth/emails[/**]`,
-  `/auth/account/support-access`, `/auth/account/my-permissions`. Otra:
+  `/auth/account/support-access`, `/auth/account/my-permissions`,
+  `/api/workspace/enter`. Otra:
   404 `route_not_allowed`, sin reenviar.
 - Cabeceras de entrada que pasan: `Authorization`, `X-Danil-Workspace`
   (validada `^[aw]:[0-9a-f-]{36}$`), `Content-Type`, `Accept`. La query pasa
@@ -137,10 +138,31 @@ ventana oculta Atención y no reintenta.
 
 - Comandos propios de la ventana (no del motor; `desktop_command` en
   `proxy.rs`): `agents_session_status`, `agents_session_connect`,
-  `agents_session_sign_out`, `agents_session_directory` y `agents_bff_fetch`.
+  `agents_session_sign_out`, `agents_session_directory`, `agents_session_pins`,
+  `agents_session_link`, `agents_session_create_danil_workspace`,
+  `agents_session_refresh` y `agents_bff_fetch`.
   Todos con `account` opcional: la cuenta de Danil del workspace (sin ella, la principal).
   `agents_session_directory` llama `GET /v1/me/workspaces` con el JWT de la persona
   y devuelve solo el arreglo `workspaces`. El token no sale de Rust.
+- Directorio de workspaces (computers `docs/protocol.md`, «Directorio de
+  workspaces»), con el JWT de la persona y rutas que arma Rust:
+  `agents_session_pins {keys}` → `PUT /v1/me/workspaces/pins` (claves `a:<n>` o
+  `w:<id>`, hasta 32); `agents_session_link {workspaceId, danilWorkspaceId}` y
+  `agents_session_create_danil_workspace {workspaceId}` →
+  `POST /v1/workspaces/:id/danil-workspace` con `{danil_workspace_id}` o
+  `{create: true}`. El id del workspace solo admite `[A-Za-z0-9_-]`. Un rechazo
+  vuelve como `detail` con el código de Computers (`not_account_admin`,
+  `personal_workspace_exists`, …). `src/features/shell/desktop-directory.ts` los pone
+  en la capacidad `workspaceDirectory`: el menú del perfil es el de la web.
+- `agents_session_refresh` renueva ya el token: después de
+  `POST /v1/bff/api/workspace/enter` (entrar a otro workspace de Danil), el claim
+  `active_account_id` nuevo llega con él.
+- La ventana emite `agents-session` `{state: "signed_in" | "signed_out", account}`
+  al abrir una sesión nueva (tras la concesión) y al cerrarla. Con `signed_in`, si
+  el workspace abierto es de la persona y no está enlazado, sale el paso del
+  workspace de Danil (`DanilWorkspaceStep.tsx`): enlazar con uno que administra,
+  crear el personal con este, entrar a otro o «Ahora no» (no vuelve a preguntar por
+  ese workspace; preferencia local `danilWorkspaceStep.dismissed`).
 - El llavero guarda `{"version":1,"user_id","session"}`, uno por cuenta: servicio
   `ai.danil.terminus.agents-session`, usuario la cuenta (`default` sin ella).
   Sin llavero disponible la sesión vive solo en memoria; nunca en un archivo.
@@ -179,6 +201,8 @@ ventana oculta Atención y no reintenta.
 - Por ahora la ventana usa la cuenta principal de Danil (`account` vacío). Elegir
   la cuenta del workspace abierto queda pendiente: las vistas reciben el nombre
   del workspace, no su id.
+- Sin `DANIL_DESKTOP_ATTENTION`, un workspace que solo tiene agentes se abre en
+  Atención de la web (`alfa-app.danil.ai/inbox`): la ventana no tiene dónde pintarlo.
 
 ## 5. Un solo inicio de sesión (motor y ventana)
 

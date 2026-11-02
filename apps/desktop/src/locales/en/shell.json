@@ -423,5 +423,19 @@
   "shell.directory.linkNotAdmin": "Only an owner or admin of the account can link it.",
   "shell.directory.linkTaken": "That account or this workspace is already linked.",
   "shell.directory.linkFailed": "Could not link. Try again.",
-  "shell.directory.truncated": "There are more workspaces. Use search."
+  "shell.directory.truncated": "There are more workspaces. Use search.",
+  "shell.directory.create": "Create Danil workspace with {workspace}",
+  "shell.directory.createExists": "You already have a personal Danil workspace. Link it with this one instead of creating another.",
+  "shell.directory.createFailed": "Couldn't create the Danil workspace. Try again.",
+  "shell.danilStep.title": "Choose your Danil workspace",
+  "shell.danilStep.hint": "“{workspace}” isn't linked to a Danil workspace yet. Link it to work here with its agents and its name.",
+  "shell.danilStep.link": "Link with {name}",
+  "shell.danilStep.create": "Create Danil workspace with this one",
+  "shell.danilStep.createHint": "Your personal Danil workspace will be called “{workspace}”.",
+  "shell.danilStep.enter": "Go to another workspace",
+  "shell.danilStep.later": "Not now",
+  "shell.danilStep.enterTitle": "Go to another workspace",
+  "shell.danilStep.enterEmpty": "You don't have other workspaces.",
+  "shell.danilStep.agentsOnly": "Agents only",
+  "shell.danilStep.back": "Back"
 }

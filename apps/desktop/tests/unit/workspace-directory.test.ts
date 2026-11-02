@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { barWorkspaceIds, type DirectoryEntry, groupDirectory, linkDanilWorkspace, listDirectory, setDirectoryPins } from "../../../../packages/computers/src/directory.ts";
+import { barWorkspaceIds, createDanilWorkspace, type DirectoryEntry, groupDirectory, linkDanilWorkspace, listDirectory, setDirectoryPins } from "../../../../packages/computers/src/directory.ts";
 
 const entry = (key: string, patch: Partial<DirectoryEntry> = {}): DirectoryEntry => ({
   key, workspace_id: null, danil_workspace_id: null, name: key, kind: "personal", organization: null, role: "owner", owner: false,
@@ -56,4 +56,19 @@ test("linking posts the account to the workspace and passes the refusal code thr
   const taken = (async () => Response.json({ error: { code: "danil_workspace_taken" } }, { status: 409 })) as never;
   const refused = await linkDanilWorkspace("https://c.test", "t", "w", 476, taken);
   assert.deepEqual(refused, { kind: "error", status: 409, code: "danil_workspace_taken" });
+});
+
+test("creating posts `create` alone and passes the existing personal workspace through", async () => {
+  const calls: { url: string; init?: { method?: string; body?: string } }[] = [];
+  const ok = (async (url: string, init?: { method?: string; body?: string }) => {
+    calls.push({ url, init });
+    return Response.json({ workspace: {}, danil_workspace_id: 812, created: true }, { status: 201 });
+  }) as never;
+  const created = await createDanilWorkspace("https://c.test", "t", "ab12", ok);
+  assert.equal(created.kind === "ok" && created.value, 812);
+  assert.equal(calls[0].url, "https://c.test/v1/workspaces/ab12/danil-workspace");
+  assert.equal(calls[0].init?.method, "POST");
+  assert.equal(calls[0].init?.body, JSON.stringify({ create: true }));
+  const exists = (async () => Response.json({ error: { code: "personal_workspace_exists", danil_workspace_id: 476 } }, { status: 409 })) as never;
+  assert.deepEqual(await createDanilWorkspace("https://c.test", "t", "ab12", exists), { kind: "error", status: 409, code: "personal_workspace_exists" });
 });

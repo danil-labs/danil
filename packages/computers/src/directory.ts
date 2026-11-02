@@ -83,6 +83,27 @@ export function linkDanilWorkspace(
   );
 }
 
+/**
+ * Crea el workspace personal de Danil de la persona con este workspace de Terminus y
+ * los enlaza (`POST /v1/workspaces/:id/danil-workspace` `{create: true}`). Solo con el
+ * JWT de la persona. Si ya tiene su personal, `409 personal_workspace_exists`: se enlaza
+ * ese en vez de crear otro.
+ */
+export function createDanilWorkspace(endpoint: string, token: string, workspaceId: string, f: Fetch = globalFetch): Promise<Answer<number>> {
+  return request(
+    apiUrl(endpoint, `/v1/workspaces/${encodeURIComponent(workspaceId)}/danil-workspace`),
+    token,
+    "POST",
+    (body) => {
+      const id = (body as { danil_workspace_id?: unknown } | null)?.danil_workspace_id;
+      if (typeof id !== "number") throw new Error("bad_create");
+      return id;
+    },
+    f,
+    { create: true },
+  );
+}
+
 /** Personal, cada organización, sin enlazar y acceso de soporte, en ese orden. Sin grupos vacíos. */
 export function groupDirectory(entries: readonly DirectoryEntry[]): DirectoryGroup[] {
   const support = entries.filter((e) => e.support);

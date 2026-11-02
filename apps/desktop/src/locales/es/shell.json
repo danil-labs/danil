@@ -423,5 +423,19 @@
   "shell.directory.linkNotAdmin": "Solo un owner o admin de la cuenta puede enlazarla.",
   "shell.directory.linkTaken": "Esa cuenta o este workspace ya tienen un enlace.",
   "shell.directory.linkFailed": "No se pudo enlazar. Inténtalo de nuevo.",
-  "shell.directory.truncated": "Hay más workspaces. Usa la búsqueda."
+  "shell.directory.truncated": "Hay más workspaces. Usa la búsqueda.",
+  "shell.directory.create": "Crear workspace de Danil con {workspace}",
+  "shell.directory.createExists": "Ya tienes un workspace personal de Danil. Enlázalo con este en lugar de crear otro.",
+  "shell.directory.createFailed": "No se pudo crear el workspace de Danil. Inténtalo de nuevo.",
+  "shell.danilStep.title": "Elige tu workspace de Danil",
+  "shell.danilStep.hint": "«{workspace}» todavía no está enlazado con un workspace de Danil. Enlázalo para trabajar aquí con sus agentes y su nombre.",
+  "shell.danilStep.link": "Enlazar con {name}",
+  "shell.danilStep.create": "Crear workspace de Danil con este",
+  "shell.danilStep.createHint": "Tu workspace personal de Danil se llamará «{workspace}».",
+  "shell.danilStep.enter": "Entrar a otro workspace",
+  "shell.danilStep.later": "Ahora no",
+  "shell.danilStep.enterTitle": "Entrar a otro workspace",
+  "shell.danilStep.enterEmpty": "No tienes otros workspaces.",
+  "shell.danilStep.agentsOnly": "Solo agentes",
+  "shell.danilStep.back": "Volver"
 }

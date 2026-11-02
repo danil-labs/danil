@@ -76,7 +76,6 @@ export default function ProfileMenu(props: {
           <Suspense fallback={null}>
             <WorkspaceDirectoryMenu onClose={() => setOpen(false)} onOpenAgents={props.onOpenAgents} />
           </Suspense>
-          <div class="my-1 h-px bg-border" />
         </Show>
         <p class="m-0 px-2 pt-1 pb-1 text-caption font-medium text-neutral-500">{t("shell.profile.theme")}</p>
         <div role="radiogroup" aria-label={t("shell.profile.theme")} class={cn(SEGMENTO, "mx-2 mb-2")}>

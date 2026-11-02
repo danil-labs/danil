@@ -1,13 +1,24 @@
 import { type DirectoryEntry, groupDirectory } from "@terminus/computers";
 import Link from "lucide-solid/icons/link";
+import Plus from "lucide-solid/icons/plus";
 import Pin from "lucide-solid/icons/pin";
 import PinOff from "lucide-solid/icons/pin-off";
 import { createSignal, For, Show } from "solid-js";
 import { t } from "../../lib/i18n";
+import { directoryErrorText } from "./directory-errors";
 import { cn } from "../../lib/utils";
 import { ITEM_DE_MENU } from "../../ui/Popover";
 import { createWorkspaces } from "../settings/workspaces-store";
-import { directory, linkableAccounts, linkActiveWorkspace, setAgentsWorkspace, togglePin } from "./workspace-directory";
+import {
+  createForActiveWorkspace,
+  directory,
+  enterable,
+  enterDirectoryEntry,
+  linkableAccounts,
+  linkActiveWorkspace,
+  togglePin,
+  unlinkedActive,
+} from "./workspace-directory";
 
 /** Desde aquí se entra a cualquier workspace; la barra solo muestra los fijados. */
 export default function WorkspaceDirectoryMenu(props: { onClose: () => void; onOpenAgents?: () => void }) {
@@ -34,17 +45,23 @@ export default function WorkspaceDirectoryMenu(props: { onClose: () => void; onO
     const needle = query().trim().toLocaleLowerCase();
     return needle ? entries().filter((e) => e.name.toLocaleLowerCase().includes(needle)) : entries();
   };
-  const local = (entry: DirectoryEntry) => entry.capabilities.terminus && (ws.lista() ?? []).some((w) => w.id === entry.workspace_id);
   const open = (entry: DirectoryEntry) => {
     props.onClose();
-    if (local(entry)) {
-      setAgentsWorkspace(null);
-      void ws.cambiarA(entry.workspace_id as string);
+    enterDirectoryEntry(entry, ws, props.onOpenAgents);
+  };
+  const [creating, setCreating] = createSignal(false);
+  const create = async () => {
+    const active = ws.activo();
+    if (!active || creating()) return;
+    setCreating(true);
+    setLinkError(null);
+    const code = await createForActiveWorkspace(active);
+    setCreating(false);
+    if (code) {
+      setLinkError(code);
       return;
     }
-    if (!entry.capabilities.agents) return;
-    setAgentsWorkspace(entry.key);
-    props.onOpenAgents?.();
+    void ws.cargar();
   };
   const title = (group: ReturnType<typeof groupDirectory>[number]) => {
     if (group.kind === "organization") return group.name;
@@ -75,7 +92,7 @@ export default function WorkspaceDirectoryMenu(props: { onClose: () => void; onO
                     <button
                       type="button"
                       class={cn(ITEM_DE_MENU, "min-w-0 flex-1 truncate")}
-                      disabled={!local(entry) && !entry.capabilities.agents}
+                      disabled={!enterable(entry, ws)}
                       title={entry.name}
                       onClick={() => open(entry)}
                     >
@@ -112,18 +129,30 @@ export default function WorkspaceDirectoryMenu(props: { onClose: () => void; onO
           )}
         </For>
       </div>
+      <Show when={unlinkedActive(ws.activo())}>
+        <button
+          type="button"
+          class={cn(ITEM_DE_MENU, "mt-1 flex items-center gap-2")}
+          disabled={creating()}
+          data-directory-create=""
+          onClick={() => void create()}
+        >
+          <Plus size={13} aria-hidden="true" class="shrink-0 text-neutral-500" />
+          <span class="min-w-0 flex-1 truncate">{t("shell.directory.create", { workspace: ws.actual()?.name ?? "" })}</span>
+        </button>
+      </Show>
       <Show when={linkError()}>
-        <p class="m-0 px-2 pt-1 text-caption text-error-strong" role="alert">
-          {linkError() === "not_account_admin"
-            ? t("shell.directory.linkNotAdmin")
-            : linkError() === "workspace_already_linked" || linkError() === "danil_workspace_taken"
-              ? t("shell.directory.linkTaken")
-              : t("shell.directory.linkFailed")}
-        </p>
+        {(code) => (
+          <p class="m-0 px-2 pt-1 text-caption text-error-strong" role="alert">
+            {directoryErrorText(code())}
+          </p>
+        )}
       </Show>
       <Show when={directory()?.truncated}>
         <p class="m-0 px-2 pt-1 text-caption text-neutral-500">{t("shell.directory.truncated")}</p>
       </Show>
+      {/* Sin directorio (el escritorio sin sesión de la ventana) el menú no deja un separador suelto. */}
+      <div class="my-1 h-px bg-border" />
     </Show>
   );
 }

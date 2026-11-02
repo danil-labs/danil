@@ -1,5 +1,6 @@
 import { barWorkspaceIds, type DirectoryEntry } from "@terminus/computers";
 import { createResource, createRoot, createSignal } from "solid-js";
+import { leerPref, escribirPref } from "../../lib/prefs";
 import { capabilities } from "../../lib/platform";
 
 /** El workspace que solo tiene agentes abierto desde el menú; `null` con uno de Terminus. */
@@ -11,7 +12,13 @@ function createStore() {
     () => capabilities().workspaceDirectory,
     (source) => source.list(),
   );
-  return { loaded, refetch, mutate };
+  // Con la sesión recién abierta la lista se relee y el paso del workspace de Danil se ofrece; cerrada, se vacía.
+  const [signedIn, setSignedIn] = createSignal(0);
+  capabilities().workspaceDirectory?.onSession?.((state) => {
+    void refetch();
+    if (state === "signed_in") setSignedIn((n) => n + 1);
+  });
+  return { loaded, refetch, mutate, signedIn };
 }
 let created: ReturnType<typeof createStore> | undefined;
 const store = () => (created ??= createRoot(createStore));
@@ -66,4 +73,69 @@ export async function linkActiveWorkspace(active: string, account: DirectoryEntr
   } finally {
     reloadDirectory();
   }
+}
+
+/** La fila del workspace abierto si es de la persona y está sin enlazar; si no, `null`. */
+export function unlinkedActive(active: string | null): DirectoryEntry | null {
+  if (!active) return null;
+  const open = entries().find((e) => e.workspace_id === active && e.owner && !e.support);
+  return open && open.danil_workspace_id === null ? open : null;
+}
+
+/** Crea el workspace personal de Danil con el abierto; devuelve el código del error o `null`. */
+export async function createForActiveWorkspace(active: string): Promise<string | null> {
+  const source = capabilities().workspaceDirectory;
+  if (!source) return "create_failed";
+  try {
+    await source.create(active);
+    return null;
+  } catch (err) {
+    return err instanceof Error && err.message === "personal_workspace_exists" ? err.message : "create_failed";
+  } finally {
+    reloadDirectory();
+  }
+}
+
+/** Cuántas veces se abrió sesión en esta ventana desde que arrancó; el paso lo observa. */
+export const signedInCount = () => store().signedIn();
+
+const DISMISSED = "danilWorkspaceStep.dismissed";
+const DISMISSED_MAX = 50;
+
+/** «Ahora no» para este workspace: el paso no vuelve a salir con él. */
+export function dismissDanilWorkspaceStep(workspace: string) {
+  const list = leerPref<string[]>(DISMISSED, []).filter((w) => w !== workspace);
+  escribirPref(DISMISSED, [...list, workspace].slice(-DISMISSED_MAX));
+}
+
+export const danilWorkspaceStepDismissed = (workspace: string) => leerPref<string[]>(DISMISSED, []).includes(workspace);
+
+type Opener = { lista: () => readonly { id: string }[] | null; cambiarA: (id: string) => Promise<void> | void };
+
+/** Si la entrada es un workspace de Terminus que esta ventana conoce (aquí o en otra máquina de la cuenta). */
+export const enterableHere = (entry: DirectoryEntry, ws: Opener) =>
+  entry.capabilities.terminus && (ws.lista() ?? []).some((w) => w.id === entry.workspace_id);
+
+/** Se puede entrar: es de Terminus y se conoce, o tiene agentes (en esta ventana o en la web). */
+export const enterable = (entry: DirectoryEntry, ws: Opener) =>
+  enterableHere(entry, ws) || (entry.capabilities.agents && (!!capabilities().inbox || !!capabilities().workspaceDirectory?.openAgents));
+
+/**
+ * Entra como en la web: uno de Terminus se abre en la ventana (la flota lo enruta a su
+ * máquina); uno que solo tiene agentes, en Atención. Sin Atención en esta ventana, la
+ * plataforma lo abre donde sí la hay.
+ */
+export function enterDirectoryEntry(entry: DirectoryEntry, ws: Opener, onOpenAgents?: () => void) {
+  if (enterableHere(entry, ws)) {
+    setAgentsWorkspace(null);
+    void ws.cambiarA(entry.workspace_id as string);
+    return;
+  }
+  if (!entry.capabilities.agents) return;
+  if (!capabilities().inbox) {
+    capabilities().workspaceDirectory?.openAgents?.(entry.key);
+    return;
+  }
+  setAgentsWorkspace(entry.key);
+  onOpenAgents?.();
 }

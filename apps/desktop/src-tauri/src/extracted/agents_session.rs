@@ -12,6 +12,7 @@ use std::net::{TcpListener, TcpStream};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Mutex, OnceLock};
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
+use tauri::Emitter;
 
 const ENTRY: &str = "https://alfa-app.danil.ai";
 const LOGIN_WAIT: Duration = Duration::from_secs(600);
@@ -501,6 +502,11 @@ fn bind(app: &tauri::AppHandle, account: &Option<String>, value: &Live) -> Resul
         .lock()
         .unwrap_or_else(std::sync::PoisonError::into_inner)
         .insert(key(account));
+    // La ventana ofrece elegir o crear el workspace de Danil (`DanilWorkspaceStep`).
+    let _ = app.emit(
+        "agents-session",
+        json!({ "state": "signed_in", "account": key(account) }),
+    );
     Ok(())
 }
 
@@ -677,6 +683,10 @@ fn sign_out(app: &tauri::AppHandle, account: &Option<String>) -> Result<(), Valu
         .lock()
         .unwrap_or_else(std::sync::PoisonError::into_inner)
         .remove(&name);
+    let _ = app.emit(
+        "agents-session",
+        json!({ "state": "signed_out", "account": name }),
+    );
     Ok(())
 }
 
@@ -841,17 +851,44 @@ fn directory_rows(body: &str) -> Result<Value, Value> {
     }
 }
 
-/// `GET /v1/me/workspaces` con el JWT de la persona. El directorio no pasa por `/v1/bff`.
-fn directory_get(endpoint: &str, token: &str) -> Result<(u16, String), Value> {
-    let mut response = agent()
-        .get(&format!("{endpoint}/v1/me/workspaces"))
-        .header("Authorization", &format!("Bearer {token}"))
-        .header("Accept", "application/json")
-        .call()
-        .map_err(|e| match e {
-            ureq::Error::Timeout(_) => error("bff_timeout"),
-            _ => error("unavailable"),
-        })?;
+/// Una ruta de Computers con el JWT de la persona (el directorio no pasa por `/v1/bff`).
+/// `path` lo arma Rust, nunca el JavaScript.
+fn person_send(
+    endpoint: &str,
+    token: &str,
+    method: &str,
+    path: &str,
+    body: Option<&Value>,
+) -> Result<(u16, String), Value> {
+    let url = format!("{endpoint}{path}");
+    let authorization = format!("Bearer {token}");
+    let result = match (method, body) {
+        ("GET", _) => agent()
+            .get(&url)
+            .header("Authorization", &authorization)
+            .header("Accept", "application/json")
+            .call(),
+        ("DELETE", _) => agent()
+            .delete(&url)
+            .header("Authorization", &authorization)
+            .header("Accept", "application/json")
+            .call(),
+        ("PUT", Some(b)) => agent()
+            .put(&url)
+            .header("Authorization", &authorization)
+            .header("Accept", "application/json")
+            .send_json(b),
+        ("POST", Some(b)) => agent()
+            .post(&url)
+            .header("Authorization", &authorization)
+            .header("Accept", "application/json")
+            .send_json(b),
+        _ => return Err(error("invalid_request")),
+    };
+    let mut response = result.map_err(|e| match e {
+        ureq::Error::Timeout(_) => error("bff_timeout"),
+        _ => error("unavailable"),
+    })?;
     let status = response.status().as_u16();
     let body = response
         .body_mut()
@@ -860,6 +897,69 @@ fn directory_get(endpoint: &str, token: &str) -> Result<(u16, String), Value> {
         .read_to_string()
         .map_err(|_| error("invalid_response"))?;
     Ok((status, body))
+}
+
+/// `person_send` con la sesión de la ventana; un 401 renueva el token y repite una vez:
+/// Computers rechazó el token antes de actuar, así que repetir no duplica nada.
+fn person_call(
+    app: &tauri::AppHandle,
+    account: &Option<String>,
+    method: &str,
+    path: &str,
+    body: Option<&Value>,
+) -> Result<(u16, Value), Value> {
+    let (_, endpoint) = client(app, account)?;
+    let name = key(account);
+    let mut session = checked(app, account)?;
+    let mut got = person_send(&endpoint, &session.access_token, method, path, body)?;
+    if got.0 == 401 {
+        session = access(app, &name, true)?;
+        got = person_send(&endpoint, &session.access_token, method, path, body)?;
+    }
+    Ok((got.0, serde_json::from_str(&got.1).unwrap_or(Value::Null)))
+}
+
+/// El código de error de Computers (`{"error":{"code"}}`), o `fallback`.
+fn computers_error(body: &Value, fallback: &str) -> Value {
+    let code = body["error"]["code"]
+        .as_str()
+        .or_else(|| body["error"].as_str())
+        .filter(|c| c.len() <= 64 && c.bytes().all(|b| b.is_ascii_lowercase() || b == b'_'))
+        .unwrap_or(fallback);
+    let mut value = error(code);
+    if let Some(id) = body["error"]["danil_workspace_id"].as_u64() {
+        value["danil_workspace_id"] = json!(id);
+    }
+    value
+}
+
+/// Id de un workspace del motor: lo que acepta un segmento de ruta sin codificar.
+fn workspace_segment(id: &str) -> Option<&str> {
+    let ok = !id.is_empty()
+        && id.len() <= 128
+        && id
+            .bytes()
+            .all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_');
+    ok.then_some(id)
+}
+
+/// Las claves del directorio que se pueden fijar: `a:<cuenta>` o `w:<workspace>`, hasta 32 sin repetir.
+fn pin_keys(keys: &[String]) -> bool {
+    let unique: std::collections::HashSet<&String> = keys.iter().collect();
+    keys.len() <= 32
+        && unique.len() == keys.len()
+        && keys.iter().all(|k| {
+            if let Some(n) = k.strip_prefix("a:") {
+                !n.is_empty()
+                    && n.len() <= 16
+                    && !n.starts_with('0')
+                    && n.bytes().all(|b| b.is_ascii_digit())
+            } else if let Some(w) = k.strip_prefix("w:") {
+                !w.is_empty() && w.len() <= 128 && w.bytes().all(|b| (b'!'..=b'~').contains(&b))
+            } else {
+                false
+            }
+        })
 }
 
 /// Lectura de Harness con la sesión de persona de la ventana. El motor no participa y
@@ -896,18 +996,73 @@ pub(super) fn agents_session_directory(
     app: tauri::AppHandle,
     account: Option<String>,
 ) -> Result<Value, Value> {
-    let (_, endpoint) = client(&app, &account)?;
-    let name = key(&account);
-    let mut session = checked(&app, &account)?;
-    let mut got = directory_get(&endpoint, &session.access_token)?;
-    if got.0 == 401 {
-        session = access(&app, &name, true)?;
-        got = directory_get(&endpoint, &session.access_token)?;
-    }
-    if got.0 != 200 {
+    let (status, body) = person_call(&app, &account, "GET", "/v1/me/workspaces", None)?;
+    if status != 200 {
         return Err(error("directory_unavailable"));
     }
-    directory_rows(&got.1)
+    directory_rows(&body.to_string())
+}
+
+/// Los fijados de la barra (`PUT /v1/me/workspaces/pins`). Fijar no da acceso: decide Computers.
+#[tauri::command(async)]
+pub(super) fn agents_session_pins(
+    app: tauri::AppHandle,
+    account: Option<String>,
+    keys: Vec<String>,
+) -> Result<Value, Value> {
+    if !pin_keys(&keys) {
+        return Err(error("invalid_request"));
+    }
+    let body = json!({ "keys": keys });
+    match person_call(&app, &account, "PUT", "/v1/me/workspaces/pins", Some(&body))? {
+        (200, value) => Ok(value),
+        (_, value) => Err(computers_error(&value, "pin_failed")),
+    }
+}
+
+/// Enlaza un workspace propio con un workspace de Danil que la persona administra.
+#[tauri::command(async)]
+pub(super) fn agents_session_link(
+    app: tauri::AppHandle,
+    account: Option<String>,
+    workspace_id: String,
+    danil_workspace_id: u64,
+) -> Result<Value, Value> {
+    let id = workspace_segment(&workspace_id).ok_or_else(|| error("invalid_request"))?;
+    if danil_workspace_id == 0 || danil_workspace_id > (1u64 << 53) {
+        return Err(error("invalid_request"));
+    }
+    let body = json!({ "danil_workspace_id": danil_workspace_id });
+    let path = format!("/v1/workspaces/{id}/danil-workspace");
+    match person_call(&app, &account, "POST", &path, Some(&body))? {
+        (200, value) => Ok(json!({ "danil_workspace_id": value["danil_workspace_id"] })),
+        (_, value) => Err(computers_error(&value, "link_failed")),
+    }
+}
+
+/// Crea el workspace personal de Danil con este y lo enlaza (`{create: true}`).
+#[tauri::command(async)]
+pub(super) fn agents_session_create_danil_workspace(
+    app: tauri::AppHandle,
+    account: Option<String>,
+    workspace_id: String,
+) -> Result<Value, Value> {
+    let id = workspace_segment(&workspace_id).ok_or_else(|| error("invalid_request"))?;
+    let body = json!({ "create": true });
+    let path = format!("/v1/workspaces/{id}/danil-workspace");
+    match person_call(&app, &account, "POST", &path, Some(&body))? {
+        (200 | 201, value) => Ok(json!({
+            "danil_workspace_id": value["danil_workspace_id"],
+            "created": value["created"],
+        })),
+        (_, value) => Err(computers_error(&value, "create_failed")),
+    }
+}
+
+/// Renueva ya el token de la ventana: tras entrar a otro workspace, el claim nuevo llega así.
+#[tauri::command(async)]
+pub(super) fn agents_session_refresh(app: tauri::AppHandle, account: Option<String>) -> bool {
+    access(&app, &key(&account), true).is_ok()
 }
 
 /// Una llamada al BFF por Computers con la sesión de la persona; el JavaScript nunca ve el token.
@@ -1086,6 +1241,49 @@ mod tests {
         assert_eq!(user_code("ABCD-EFGH&port=1"), None);
         assert_eq!(user_code("ABCDEFGHI"), None);
         assert_eq!(user_code("ABCD EFGH"), None);
+    }
+
+    #[test]
+    fn directory_paths_only_take_plain_ids() {
+        assert_eq!(workspace_segment("ab12cd34"), Some("ab12cd34"));
+        assert_eq!(workspace_segment("ws_A-1"), Some("ws_A-1"));
+        assert_eq!(workspace_segment(""), None);
+        assert_eq!(workspace_segment("../v1/computers"), None);
+        assert_eq!(workspace_segment("a/b"), None);
+        assert_eq!(workspace_segment("a%2Fb"), None);
+        assert_eq!(workspace_segment(&"a".repeat(129)), None);
+    }
+
+    #[test]
+    fn pins_have_the_directory_shape() {
+        assert!(pin_keys(&["a:476".into(), "w:ab12cd34".into()]));
+        assert!(pin_keys(&[]));
+        assert!(!pin_keys(&["a:476".into(), "a:476".into()]));
+        assert!(!pin_keys(&["a:0476".into()]));
+        assert!(!pin_keys(&["x:1".into()]));
+        assert!(!pin_keys(&["w:".into()]));
+        assert!(!pin_keys(&["w:a b".into()]));
+        assert!(!pin_keys(
+            &(0..33).map(|i| format!("a:{}", i + 1)).collect::<Vec<_>>()
+        ));
+    }
+
+    #[test]
+    fn computers_errors_keep_only_a_code() {
+        let taken = computers_error(
+            &json!({"error":{"code":"personal_workspace_exists","danil_workspace_id":476}}),
+            "create_failed",
+        );
+        assert_eq!(taken["detail"], "personal_workspace_exists");
+        assert_eq!(taken["danil_workspace_id"], 476);
+        assert_eq!(
+            computers_error(&json!({"error":{"code":"Bad Code"}}), "link_failed")["detail"],
+            "link_failed"
+        );
+        assert_eq!(
+            computers_error(&Value::Null, "link_failed")["detail"],
+            "link_failed"
+        );
     }
 
     #[test]

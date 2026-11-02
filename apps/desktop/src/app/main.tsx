@@ -16,6 +16,7 @@ import { aplicarLengua, refreshLanguage, lenguasDisponibles, semillaDelAlta } fr
 import { cargarPaquetes } from "../locales/packs";
 import { mountAfterLanguagePacks } from "../locales/startup";
 import { capabilities } from "../lib/platform";
+import { installDesktopDirectory } from "../features/shell/desktop-directory";
 import "../styles/global.css";
 import "../lib/sharedClock";
 // Errores y avisos de encargado se leen al fallar algo, ya con la ventana montada: entran por detrás.
@@ -81,6 +82,9 @@ const montar = () =>
     ),
     document.getElementById("root")!,
   );
+
+// El directorio de workspaces con la sesión de la ventana: el menú del perfil, como en la web.
+if (capabilities().nativeWindow) installDesktopDirectory();
 
 const lenguasDeDisco = cargarPaquetes().then(refreshLanguage);
 // Las capacidades se leen al montar: Atención entra antes, en su trozo, solo con la bandera.

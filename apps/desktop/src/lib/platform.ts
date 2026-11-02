@@ -75,12 +75,18 @@ export type Capabilities = {
   /** La bitácora de cambios de la cuenta de Danil activa, con la sesión (la web en alfa); la muestra `/admin`. */
   accountAuditLog?: AuditLogSource;
   /** `/admin` dentro de esta web (alfa); `allowed` dice si la persona es owner o admin de algún workspace de Danil. Sin esto, el escritorio la abre en el navegador. */
-  /** Los workspaces que la persona puede entrar (la web). Sin esto, el menú y la barra siguen como en el motor. */
+  /** Los workspaces que la persona puede entrar (la web, y el escritorio con la sesión de la ventana). Sin esto, el menú y la barra siguen como en el motor. */
   workspaceDirectory?: {
     list: () => Promise<import("@terminus/computers").Directory>;
     pin: (keys: string[]) => Promise<void>;
     /** Enlaza un workspace propio con una cuenta de Danil Agents; rechaza con el código del plano de control. */
     link: (workspaceId: string, danilWorkspaceId: number) => Promise<void>;
+    /** Crea el workspace personal de Danil con este y los enlaza; rechaza con el código (`personal_workspace_exists`, …). */
+    create: (workspaceId: string) => Promise<void>;
+    /** Un workspace que solo tiene agentes, sin Atención en esta ventana: lo abre donde sí la hay (el escritorio, en la web). */
+    openAgents?: (key: string) => void;
+    /** Avisa cuando la persona inicia o cierra la sesión de esta ventana (el escritorio); devuelve cómo dejar de escuchar. */
+    onSession?: (listener: (state: "signed_in" | "signed_out") => void) => () => void;
   };
   adminPage?: { href: string; allowed: () => Promise<boolean> };
   /** Lo de una cuenta personal en Configuración › Cuenta. `isPersonal` decide si se ofrece; sin `usage` o `plan`, esas pestañas no salen. */

@@ -18,6 +18,7 @@ import {
   listDirectory,
   listSharedComputers,
   listWorkspaces,
+  createDanilWorkspace,
   linkDanilWorkspace,
   setDirectoryPins,
   createSpaceOrderSource,
@@ -256,6 +257,11 @@ function mountApp(computers: Computer[], base: Base, before?: (id: string) => ()
         if (answer.kind === "ok") return;
         if (answer.kind === "error" && answer.status === 403) throw new Error("not_account_admin");
         throw new Error(answer.kind === "error" ? (answer.code ?? "link_failed") : "link_failed");
+      },
+      create: async (workspaceId) => {
+        const answer = await createDanilWorkspace(base.endpoint, await token(), workspaceId);
+        if (answer.kind === "ok") return;
+        throw new Error(answer.kind === "error" ? (answer.code ?? "create_failed") : "create_failed");
       },
     } : undefined,
     inbox: import.meta.env.TERMINUS_ALPHA ? attentionCapability(false, window.location.pathname.replace(/\/+$/, "").endsWith("/inbox"), { userId: base.userId ?? mounted.webAccounts?.current.user_id, subscribe: base.subscribe, ...agents }) : undefined,

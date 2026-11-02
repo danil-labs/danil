@@ -84,6 +84,7 @@ import TaskFilesRow, { taskFilesWidth } from "../features/code/TaskFilesRow";
 import { TaskSide, TaskSideShell } from "../features/code/TaskSide";
 import { moviendoHueco } from "../lib/sites";
 const DeleteTaskDialog = lazy(() => import("../features/projects/DeleteTaskDialog"));
+const DanilWorkspaceStep = lazy(() => import("../features/shell/DanilWorkspaceStep"));
 const HandoverDialog = lazy(() => import("../features/chat/HandoverDialog"));
 const TaskFilesCard = lazy(() => import("../features/code/TaskFiles"));
 import { createTaskFiles, type TaskSideMode } from "../lib/taskFiles";
@@ -8652,6 +8653,12 @@ export default function App() {
           onNewTask={(id) => nuevaSesion(id)}
           onOpenConversation={(id) => { abrirInbox(); capabilities().inbox?.search.open(id); }}
         />
+        {/* Al iniciar sesión en la ventana, el paso de elegir o crear el workspace de Danil (solo el escritorio lo avisa). */}
+        <Show when={capabilities().workspaceDirectory?.onSession}>
+          <Suspense fallback={null}>
+            <DanilWorkspaceStep onOpenAgents={abrirInbox} />
+          </Suspense>
+        </Show>
         {/* El velo del marco cubre la columna y el hueco alrededor de la caja: un solo tono también en la esquina. */}
         <div class="tab-veil window-frame relative flex min-h-0 flex-1 overflow-visible">
           <WorkspaceColumn
