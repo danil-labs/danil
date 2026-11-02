@@ -90,6 +90,19 @@ export function usageTone(left: number): "error" | "warning" | "neutral" {
 }
 
 /**
+ * La ventana que corre ahora —las cinco horas antes que la semana—: la que
+ * vuelve a empezar primero. Una ventana ya reseteada pierde contra una vigente;
+ * sin fechas manda el orden en que las manda el proveedor.
+ */
+export function immediateWindow<T extends { resets_at: number | null }>(windows: readonly T[], now = Date.now()): T | null {
+  const dated = windows.filter((window) => window.resets_at !== null);
+  if (!dated.length) return windows[0] ?? null;
+  const running = dated.filter((window) => (window.resets_at as number) > now);
+  const pool = running.length ? running : dated;
+  return pool.reduce((first, window) => ((window.resets_at as number) < (first.resets_at as number) ? window : first));
+}
+
+/**
  * Cuándo vuelve a empezar una ventana (`cuandoVuelve` del escritorio). Sin
  * fecha hay dos casos: intacta todavía no arrancó; empezada, el proveedor no
  * dio el dato. `resetsAt` en ms de época.

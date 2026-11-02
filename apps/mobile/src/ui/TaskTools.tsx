@@ -1,5 +1,5 @@
 import { RADIUS, TEXT } from "@terminus/design";
-import { usageTone, windowLabel, windowLeft } from "@terminus/computers";
+import { immediateWindow, usageTone, windowLabel, windowLeft } from "@terminus/computers";
 import type { AccountLimits, UsageWindow } from "@terminus/protocol";
 import { router } from "expo-router";
 import { useEffect, useRef, useState } from "react";
@@ -72,7 +72,9 @@ export function TaskTools({
 
   const shown = usage && host ? activeUsage(usage, host.id) : null;
   const windows = shown && usage ? windowsOf(usage.limits[shown.key]) : [];
-  const tightest = windows.length ? Math.min(...windows.map(windowLeft)) : null;
+  // La barra mide la ventana que corre ahora, no la que va más apretada.
+  const immediate = windows.length ? immediateWindow(windows) : null;
+  const restante = immediate ? windowLeft(immediate) : null;
   const accountName = shown?.row.identity || shown?.row.label || "";
   const closeUsage = () => {
     setAnchor(null);
@@ -127,9 +129,9 @@ export function TaskTools({
         ) : null}
         {usage?.groups.length ? (
           <View ref={bar} collapsable={false}>
-            <Tap testID="chat-usage" accessibilityRole="button" accessibilityLabel={tightest === null ? t("task.tools.usage_open") : accountName ? t("task.tools.usage_account", { account: accountName, left: tightest }) : t("task.tools.usage", { left: tightest })} onPress={() => void measure(bar).then(setAnchor)} style={styles.tool}>
+            <Tap testID="chat-usage" accessibilityRole="button" accessibilityLabel={restante === null ? t("task.tools.usage_open") : accountName ? t("task.tools.usage_account", { account: accountName, left: restante }) : t("task.tools.usage", { left: restante })} onPress={() => void measure(bar).then(setAnchor)} style={styles.tool}>
               <View style={[styles.track, { backgroundColor: theme.border }]}>
-                {tightest !== null ? <View style={[styles.fill, { width: `${100 - tightest}%`, backgroundColor: toneColor(theme, tightest) }]} /> : null}
+                {restante !== null ? <View style={[styles.fill, { width: `${100 - restante}%`, backgroundColor: toneColor(theme, restante) }]} /> : null}
               </View>
             </Tap>
           </View>
