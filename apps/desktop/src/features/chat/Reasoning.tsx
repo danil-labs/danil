@@ -49,7 +49,7 @@ export default function Reasoning(props: {
           aria-hidden="true"
         />
         <Show when={props.vivo}>
-          <Loader2 size={14} class="shrink-0 animate-spin-steps text-primary" aria-hidden="true" />
+          <Loader2 size={14} class="shrink-0 animate-spin text-primary" aria-hidden="true" />
         </Show>
         <span class="min-w-0 truncate text-neutral-500">{resumen()}</span>
       </button>
