@@ -275,7 +275,24 @@ export type TreeFiles = { paths: string[]; folders: TreeFolder[]; truncated: boo
 /** The `history` field of a read: `turns[i]` is turn `start + i`. */
 export type HistoryPage = { version?: number; revision?: string; total: number; start: number; end: number; limit: number; has_more: boolean };
 
-export type OpenedSession = { id: string; provider: string; model: string | null; observed_model?: string | null; agent?: string | null; permission_mode?: string | null; turns: Turn[]; history?: HistoryPage | null };
+export type OpenedSession = {
+  id: string;
+  /** El CLI de la tarea, no el proveedor del modelo (el `model_vendor` del cable). */
+  provider: string;
+  model: string | null;
+  observed_model?: string | null;
+  agent?: string | null;
+  permission_mode?: string | null;
+  turns: Turn[];
+  history?: HistoryPage | null;
+  /**
+   * Con `provider_handoff_v1`: si `set_session_provider` la dejaría cambiar de
+   * CLI. Un motor anterior no lo manda; ausente es que no puede (`canHandOver`).
+   */
+  can_hand_over?: boolean;
+  /** La clave del catálogo (`chat.handover.*`) que explica el rechazo. */
+  hand_over_blocked?: string | null;
+};
 
 /** `pending_requests`. */
 export type PendingRequests = {

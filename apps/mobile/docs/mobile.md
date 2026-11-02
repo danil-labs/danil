@@ -223,6 +223,7 @@ lleva su comentario allí:
 |---|---|---|
 | Vista previa y finalizar | `task_blockers` | `set_session_pinned`, `rename_session`, `set_task_archived`, `finish_task`, `delete_session` |
 | Cuadro de escribir | `list_models`, `list_permission_modes`, `list_slash_menu`, `list_mentions`, `project_base_branches` | `run_shell_command`, `stop_shell_command`, `guardar_adjunto`, `guardar_imagen_pegada` (motores anteriores), `prepare_attachments`, `set_permission_mode` (cambiar el modo del turno en marcha; a automático aprueba lo pendiente) |
+| Cambiar de proveedor (`provider_handoff_v1`; la UI llega en la tarea del teléfono) | `load_session` (con `can_hand_over` y `hand_over_blocked`) | `set_session_provider` (el siguiente turno abre sesión nueva o retoma la aparcada) |
 | Almacenamiento por máquina (en Consumos) | `list_workspaces` sin workspace para capacidad; `list_storage` al abrir el detalle del workspace | — |
 | Reloj del turno en curso | `list_live_turns` | — |
 | Identidad de agentes | `list_agent_profiles`, `preview_file` | — |
