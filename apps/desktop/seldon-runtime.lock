@@ -2,7 +2,7 @@
   "version": 1,
   "name": "seldon-runtime",
   "engine_version": "0.3.0",
-  "commit": "ee736d02cd2baabac906997d0f24e0e929a0afa7",
+  "commit": "9e130e9b7907200ecb10034fea0bbc20d6369efb",
   "release": "",
   "manifest": "",
   "terms": "",

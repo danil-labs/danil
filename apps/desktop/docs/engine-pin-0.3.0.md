@@ -10,8 +10,8 @@ este estado.**
 | Campo | Valor | Origen |
 |---|---|---|
 | `engine_version` | `0.3.0` | versión pedida |
-| `commit` | `ee736d02cd2baabac906997d0f24e0e929a0afa7` | `seldon-host/dev` |
-| `contract` | `5f59d6031b76b0248f09d7e19d184a542259d773c62080a30cb9298e7b5033ca` | `commands.json` copiado |
+| `commit` | `9e130e9b7907200ecb10034fea0bbc20d6369efb` | `seldon-host/dev`, merge de #311; commit de la release |
+| `contract` | `5f59d6031b76b0248f09d7e19d184a542259d773c62080a30cb9298e7b5033ca` | `commands.json` de `9e130e9b`, confirmado |
 
 `MOTOR_PENDIENTE` se retira de `scripts/guards/contract.mjs`: el lock ya habla
 el contrato de la ventana y el guarda falla si la entrada sigue con él.
@@ -28,11 +28,21 @@ en el paso del motor por eso, y es lo esperado en un borrador. El guarda
 
 ### El commit de la release
 
-`ee736d02` trae `0.2.73` en `Cargo.toml`, y el motor reporta
-`CARGO_PKG_VERSION`. Para publicar 0.3.0 con un binario que diga 0.3.0 hace
-falta mergear el bump de `seldon-host` y compilar ese commit. En ese caso el
-`commit` del lock será el del bump, no `ee736d02`; se escribe desde el
-manifiesto, no a mano.
+El commit de la release es `9e130e9b7907200ecb10034fea0bbc20d6369efb` (merge
+de seldon-host #311 en `dev`). Trae 0.3.0, `machines.danil.ai` en
+`control_plane.rs`, `terminal.rs` y `remote-host.py`, y el contrato sigue en
+`5f59d603…`.
+
+No se compila desde `9d02329` (la rama del PR) ni desde `7aa96927` (no trae
+`machines.danil.ai`); el motor se publica solo desde `dev` y el sello de
+`build.rs` debe ser el merge. `ee736d02` tampoco sirve: todavía decía `0.2.73`.
+
+El renombre «Danil Machines» / `dn machines` **no está en `9e130e9b`**. Si tenía
+que viajar en el motor 0.3.0, este commit no lo cumple: habría que mergearlo
+antes y compilar el `dev` posterior. El pin sigue el commit que dio la persona.
+
+El comando de abajo escribe el `commit` y el `contract` que diga el manifiesto,
+no uno a mano.
 
 ## Cómo se completa
 
@@ -68,6 +78,8 @@ macOS ni Windows.
 
 - La release existe como *pre-release* con `--latest=false` y su
   `seldon-runtime.json.sig` de canal `dev`.
+- El manifiesto sale de `9e130e9b` y su `contract` es el mismo que el
+  `commands.json` copiado en la ventana.
 - Cada binario bajado de la URL de su manifiesto da el SHA-256 del manifiesto.
 - `pnpm verify --remote` sobre el commit del pin termina en verde, sin
   `SKIPPED` inesperados.
@@ -105,8 +117,7 @@ traspaso a un modelo local de 32k (`no_budget`); y repetir con el binario
 
 ## Lo que necesita el sí explícito
 
-1. Mergear el bump de versión del motor a `dev` (o publicar 0.3.0 sin bump,
-   aceptando que el binario diga 0.2.73).
-2. Publicar la release del motor (pre-release, `--latest=false`).
-3. Mergear este pin a `dev`.
-4. Publicar escritorio: **fuera de esta entrega**.
+1. Publicar la release del motor desde `9e130e9b` (pre-release,
+   `--latest=false`).
+2. Mergear este pin a `dev` con los artefactos ya escritos.
+3. Publicar escritorio: **fuera de esta entrega**.
