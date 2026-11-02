@@ -1649,6 +1649,7 @@ export default function Chat(props: ChatProps) {
         m.meta === "fallo" ||
         m.meta === "cupo" ||
         m.meta === "engine_updated" ||
+        m.meta === "provider_handover" ||
         esFilaDeLaBandeja(m.meta) ||
         esSalidaDeComando(m.meta) ||
         m.contexto ||

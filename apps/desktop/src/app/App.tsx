@@ -57,7 +57,7 @@ import TranscriptSource from "../features/chat/TranscriptSource";
 import type { Lectura } from "../features/chat/threadWindow";
 import { lotesDeDeltas } from "../features/chat/deltaFrames";
 import { hasOlder, hasRecentGap, HistoryPager, type OlderState } from "../features/chat/history";
-import { agentSwitchBlocked, canHandOverTask, handoverInForce, handoverMatches, type HandoverPending, type HandoverState } from "../features/chat/handover";
+import { agentSwitchBlocked, canHandOverTask, handoverInForce, handoverMatches, shellCli, type HandoverPending, type HandoverState } from "../features/chat/handover";
 import {
   anexarDeltas,
   anexarImagen,
@@ -3649,7 +3649,7 @@ export default function App() {
     comandosDeLaCola.set(abierta, item.id);
     const lanzado = {
       project: project(),
-      provider: item.provider,
+      provider: shellCli(cliDeLaSesion(abierta), item.provider),
       model: item.model,
       effort: item.effort,
       permission_mode: item.permission_mode,
@@ -5689,6 +5689,13 @@ export default function App() {
     state: traspasos()[id],
   });
 
+  /**
+   * El CLI con el que la tarea corre hoy, según el motor. El pendiente del
+   * borrador no cuenta: un `!` no es un turno del agente y no lo gasta.
+   */
+  const cliDeLaSesion = (id: string) =>
+    traspasos()[id]?.provider ?? filaDe(id)?.provider ?? null;
+
   /** Por qué no se ofrece el gesto, o `null`. No se deriva del encargado ni del fork: lo dice el motor. */
   const puedeTraspasar = (id: string) => canHandOverTask(situacionDeTraspaso(id));
 
@@ -6487,7 +6494,9 @@ export default function App() {
         if (!corrio && !input()) setInput(prompt);
         return corrio;
       }
-      const lanzado = { project: project(), provider: agent(), model: model() || null, effort: effort() || null, permission_mode: modo() || null };
+      // Un `!` corre y contesta con el CLI de la sesión: el traspaso confirmado
+      // en el borrador espera a su propio turno y no se gasta aquí.
+      const lanzado = { project: project(), provider: shellCli(cliDeLaSesion(id), agent()), model: model() || null, effort: effort() || null, permission_mode: modo() || null };
       return (await ejecutarComando(id, lanzado, comando, null)) === null;
     }
     if (queueBusy() || cola().length > 0) {
