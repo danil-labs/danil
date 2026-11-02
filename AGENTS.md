@@ -37,12 +37,18 @@ surface says «Danil» or names the surface, never a second product.
 
 Visible text follows this. These identifiers keep the old string on purpose,
 because they are installed identity, the updater, saved data or the engine
-contract: `ai.danil.terminus` and `ai.danil.terminus.mobile`, `productName`
-`Terminus` and the `Terminus-*` artifact names, `terminus://task`, the
+contract: `ai.danil.terminus` and `ai.danil.terminus.mobile`, `terminus://task`, the
 `/terminus` routes, `terminus.web.*` and `terminus-auth:*` storage keys,
 `::terminus-visual`, the `terminal_theme` id `terminus`, and RPC names such as
 `radiant_*`. Renaming any of them needs an architect-reviewed
 installed-update transition, not a find and replace.
+
+The desktop `productName` became `Danil` in 0.3.0 (artifacts `Danil_*`,
+stable downloads `Danil-*` at `danil.ai/download/`, with `Terminus-*` copies
+kept in each release). A 0.2.x copy installed as Terminus updates in place:
+`Terminus.app` and `Terminus.AppImage` keep their path, and on Windows
+`src-tauri/windows/hooks.nsh` adopts `%LOCALAPPDATA%\Terminus` and retires its
+entry. That migration stays in every future release.
 
 Everything else that is ours and not persisted is Danil: titles and catalogs,
 the PWA manifest, the window and app label, the MCP bridge name, CLI inputs

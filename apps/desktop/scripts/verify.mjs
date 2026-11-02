@@ -74,6 +74,7 @@ const steps = [
     root,
   ],
   ["No process opens a console on Windows", process.execPath, [join(root, "scripts/guards/console-window.mjs")], root],
+  ["What depends on productName says the same name, and Windows adopts the Terminus copy", process.execPath, [join(root, "scripts/guards/product-name.mjs")], root],
   ["No process is awaited without a deadline", process.execPath, [join(root, "scripts/guards/processes.mjs")], root],
   ["The window is not built twice", process.execPath, [join(root, "scripts/guards/window.mjs")], root],
   ["Docs do not point to a missing file", process.execPath, [join(root, "scripts/guards/doc-paths.mjs")], root],

@@ -6,10 +6,11 @@ evidencia.
 
 ## Compatibilidad e integración del motor
 
-La ventana conserva `productName: Terminus`, el binario físico `terminus`,
-`ai.danil.terminus`, llavero, `engine.json`, candados, pubkey, updater y nombres
-de descarga. Su forwarding es un mecanismo interno de distribución: no se
-instala ni anuncia ese ejecutable físico como tercer comando operativo.
+La ventana conserva el binario físico `terminus` (el `productName` pasó a
+`Danil` en la 0.3.0, con migración de la copia instalada),
+`ai.danil.terminus`, llavero, `engine.json`, candados, pubkey y updater. Su
+forwarding es un mecanismo interno de distribución: no se instala ni anuncia
+ese ejecutable físico como tercer comando operativo.
 El binario físico del motor también permanece en su directorio privado.
 Los instaladores del host no deben añadir un wrapper `seldon-runtime` al PATH;
 la conexión usa `danil machines connect` y `danil machines status`, del motor

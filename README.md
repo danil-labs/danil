@@ -5,7 +5,7 @@ Danil is a desktop agentic development environment. It runs terminal agents
 answers in plain language — for people who need those answers but don't write
 code.
 
-**[terminus.danil.ai](https://terminus.danil.ai)**
+**[danil.ai/download](https://danil.ai/download/)**
 
 This repository holds the **Danil window**: the desktop app (Tauri + SolidJS)
 and its release tooling. The **engine** that runs projects, tasks and agents,
@@ -14,21 +14,21 @@ repository and is downloaded pinned by version and SHA-256.
 
 ## Install
 
-Download the latest installer. The files keep the `Terminus-*` names because
-installed copies and the updater expect them:
+Download the latest installer from [danil.ai/download](https://danil.ai/download/):
 
-- **[Terminus-Windows-Setup.exe](https://github.com/danil-labs/terminus/releases/latest/download/Terminus-Windows-Setup.exe)** — Windows 10 or 11, 64-bit
-- **[Terminus-macOS.dmg](https://github.com/danil-labs/terminus/releases/latest/download/Terminus-macOS.dmg)** — macOS, Apple Silicon and Intel
-- **[Terminus-Linux-x86_64.AppImage](https://github.com/danil-labs/terminus/releases/latest/download/Terminus-Linux-x86_64.AppImage)** — Linux x86_64 (Ubuntu 22.04 or later)
+- **[Danil-Windows-Setup.exe](https://danil.ai/download/Danil-Windows-Setup.exe)** — Windows 10 or 11, 64-bit
+- **[Danil-macOS.dmg](https://danil.ai/download/Danil-macOS.dmg)** — macOS, Apple Silicon and Intel
+- **[Danil-Linux-x86_64.AppImage](https://danil.ai/download/Danil-Linux-x86_64.AppImage)** — Linux x86_64 (Ubuntu 22.04 or later)
 
-The macOS DMG is universal. `Terminus-macOS-Intel.dmg` is an alias with the
-same file.
+The macOS DMG is universal. `Danil-macOS-Intel.dmg` is an alias with the
+same file. Until 0.2.x the app was called Terminus; a copy installed with that
+name updates in place and keeps its folder.
 
 On Linux there is nothing to install: the AppImage is a portable executable.
 
 ```sh
-chmod +x Terminus-Linux-x86_64.AppImage
-./Terminus-Linux-x86_64.AppImage
+chmod +x Danil-Linux-x86_64.AppImage
+./Danil-Linux-x86_64.AppImage
 ```
 
 It needs `libfuse2` (Ubuntu: `sudo apt install libfuse2`). Without it, run it

@@ -25,7 +25,7 @@ pub(super) async fn update_install(app: tauri::AppHandle) -> Result<(), String> 
 async fn install(update: &tauri_plugin_updater::Update, bytes: Vec<u8>) -> Result<(), String> {
     let folder = std::env::temp_dir().join(format!("terminus-update-{}", update.version));
     std::fs::create_dir_all(&folder).map_err(|error| error.to_string())?;
-    let setup = folder.join(format!("Terminus_{}_x64-setup.exe", update.version));
+    let setup = folder.join(format!("Danil_{}_x64-setup.exe", update.version));
     std::fs::write(&setup, bytes).map_err(|error| error.to_string())?;
     log::info!("[update] installing {}", update.version);
     // Sin `/R`: el instalador no relanza la app; reiniciar lo decide la persona.

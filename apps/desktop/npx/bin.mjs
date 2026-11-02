@@ -32,7 +32,10 @@ const PUBKEY_B64 =
   'dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDM5ODEzRDE1M0QwQ0RFQjgKUldTNDNndzlGVDJCT1hPSnp4ZzBIbkowOW9kVGFYb0YyRkZKZjNTT2N3eERXOXhuRi9UblY5d3EK';
 
 const LATEST_JSON_URL = 'https://github.com/danil-labs/terminus/releases/latest/download/latest.json';
-const MANUAL_DOWNLOAD_URL = 'https://terminus.danil.ai';
+const MANUAL_DOWNLOAD_URL = 'https://danil.ai/download/';
+// Nombres con los que la 0.2.x se instaló, antes de llamarse Danil.
+const LEGACY_MAC_BUNDLE = 'Terminus.app';
+const LEGACY_APPIMAGE = 'Terminus.AppImage';
 
 const C = {
   reset: '\x1b[0m', bold: '\x1b[1m', dim: '\x1b[2m',
@@ -108,16 +111,28 @@ function installMacApp(tarPath, tmpDir) {
     process.exit(1);
   }
   const source = path.join(tmpDir, bundle);
+  // Hasta la 0.2.x el bundle era Terminus.app. Si esa copia está, se reemplaza en
+  // su sitio, igual que hace el updater: un Danil.app al lado serían dos apps con
+  // los mismos datos, y el LaunchAgent y los lanzadores apuntan a la ruta vieja.
+  const has = (name) => destinations.find((dir) => fs.existsSync(path.join(dir, name)));
+  const installedName = has(LEGACY_MAC_BUNDLE) ? LEGACY_MAC_BUNDLE : bundle;
+  // Con las dos copias se reemplaza la vieja y no se borra nada: se avisa.
+  if (installedName !== bundle && has(bundle)) {
+    err(paint(C.yellow, t('duplicateBundle', {
+      kept: path.join(has(LEGACY_MAC_BUNDLE), LEGACY_MAC_BUNDLE),
+      other: path.join(has(bundle), bundle),
+    })));
+  }
 
   // Copiar encima de una app abierta le cambia el binario por debajo y la mata
   // a mitad de lo que esté haciendo. Se mira por ruta y no por nombre: el
   // ejecutable de dentro no se llama como el bundle.
   for (const dir of destinations) {
-    const destination = path.join(dir, bundle);
+    const destination = path.join(dir, installedName);
     if (!fs.existsSync(destination)) continue;
     const ps = spawnSync('ps', ['-Ao', 'comm='], { encoding: 'utf8' });
     if ((ps.stdout || '').split('\n').some((l) => l.startsWith(`${destination}/`))) {
-      err(paint(C.yellow, t('appIsOpen', { bundle })));
+      err(paint(C.yellow, t('appIsOpen', { bundle: installedName })));
       err(t('closeAndRetry'));
       process.exit(1);
     }
@@ -126,7 +141,7 @@ function installMacApp(tarPath, tmpDir) {
   let placed = null;
   let lastFailure = null;
   for (const dir of destinations) {
-    const destination = path.join(dir, bundle);
+    const destination = path.join(dir, installedName);
     try {
       fs.mkdirSync(dir, { recursive: true });
       // Reemplazo y no fusión: un `cp` encima deja los archivos de la versión
@@ -166,7 +181,9 @@ function installMacApp(tarPath, tmpDir) {
 // busy». La app en marcha sigue con la versión vieja hasta que se reinicie.
 function installLinuxAppImage(appImagePath) {
   const dir = path.join(os.homedir(), 'Applications');
-  const destination = path.join(dir, 'Terminus.AppImage');
+  // Una copia de la 0.2.x se llama Terminus.AppImage: se reemplaza en su sitio.
+  const legacy = path.join(dir, LEGACY_APPIMAGE);
+  const destination = fs.existsSync(legacy) ? legacy : path.join(dir, 'Danil.AppImage');
   const staging = `${destination}.new`;
 
   log(`\n${paint(C.bold, t('installing'))}`);

@@ -48,7 +48,7 @@ export type Fetch = (input: string, init?: { method?: string; headers?: Record<s
 }>;
 
 /** El origen del plano de control de producción. */
-export const COMPUTERS_ENDPOINT = "https://computers.danil.ai";
+export const COMPUTERS_ENDPOINT = "https://machines.danil.ai";
 
 export function apiUrl(endpoint: string, path: string): string {
   const base = /^[a-z]+:\/\//i.test(endpoint) ? endpoint : `https://${endpoint}`;

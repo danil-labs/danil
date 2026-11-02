@@ -7,7 +7,7 @@ import subprocess
 import sys
 
 root = Path(os.environ['TERMINUS_WORK_TOOLS_ROOT']).resolve()
-if root.parts[-4:] != ('usr', 'share', 'Terminus', 'work-tools'):
+if root.parts[-4:] != ('usr', 'share', 'Danil', 'work-tools'):
     raise ValueError('Expected the canonical AppDir work-tools root')
 real = Path(os.environ['TERMINUS_REAL_PATCHELF']).resolve(strict=True)
 args = sys.argv[1:]
