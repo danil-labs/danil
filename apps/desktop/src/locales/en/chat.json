@@ -295,6 +295,7 @@
   "chat.handover.child": "A task created by another task keeps the provider it was born with.",
   "chat.handover.stale": "The provider change expired; choose it again.",
   "chat.handover.unknown_provider": "That provider isn't available in this task.",
+  "chat.handover.no_budget": "This model doesn't have a large enough window to receive the conversation. Choose one with more context, remove attachments, or start another task.",
   "chat.handover.confirm.title": "Change provider in this task",
   "chat.handover.confirm.body": "{from} → {to}. The conversation travels as text and is trimmed; the new provider reads what was said, but doesn't remember files or commands from earlier turns.",
   "chat.handover.confirm.cancel": "Cancel",
