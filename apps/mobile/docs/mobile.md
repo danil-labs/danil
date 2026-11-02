@@ -360,7 +360,8 @@ de 48 o más, segmentado, chips), `apps/mobile/src/ui/Popover.tsx` (menú anclad
   y el árbol de trabajo del chat todavía no están en la lista y no se ven.
 - El chat lleva bajo el título la fila máquina / carpeta / rama con buscar en
   el chat, subtareas y la barra de uso de la cuenta activa del proveedor
-  (detalle con sus ventanas, cuál está en uso, Usar esta para cambiarla,
+  (mide la ventana que corre ahora, la de cinco horas, no la más apretada;
+  detalle con sus ventanas, cuál está en uso, Usar esta para cambiarla,
   Actualizar y Gestionar cuentas). La memoria de la conversación
   (`session_usage`) no está en la lista cerrada.
 - La ficha del workspace (cabecera de Inicio y filas de Workspaces) pinta su
