@@ -76,6 +76,10 @@ export function Composer({
   permissionMode = null,
   savedPermissionMode = null,
   providerLocked = false,
+  providerLockedReason = null,
+  canHandoff = false,
+  pendingProvider = null,
+  onPendingProvider,
   running = false,
   disabled = false,
   placeholder,
@@ -100,8 +104,15 @@ export function Composer({
   permissionMode?: string | null;
   /** El modo que guarda la tarea abierta: manda sobre el del workspace, como al reanudar en la ventana. */
   savedPermissionMode?: string | null;
-  /** Una tarea que ya contestó no cambia de proveedor, como en la ventana. */
+  /** El proveedor no se puede cambiar ahora; `providerLockedReason` dice por qué. */
   providerLocked?: boolean;
+  /** El motivo ya escrito: `hand_over_blocked`, el turno vivo o la máquina. */
+  providerLockedReason?: string | null;
+  /** La tarea abierta puede cambiar de CLI (`provider_handoff_v1`), con confirmación. */
+  canHandoff?: boolean;
+  /** El CLI que se aplicará al enviar, si la persona ya lo confirmó. */
+  pendingProvider?: string | null;
+  onPendingProvider?: (provider: string | null) => void;
   running?: boolean;
   disabled?: boolean;
   placeholder: string;
@@ -134,7 +145,9 @@ export function Composer({
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [queue, setQueue] = useState<Queued[]>([]);
   const [busy, setBusy] = useState(false);
-  const [sheet, setSheet] = useState<"model" | "mode" | "attach" | null>(null);
+  const [sheet, setSheet] = useState<"model" | "mode" | "attach" | "handover" | null>(null);
+  // El CLI elegido que espera la confirmación del traspaso.
+  const [candidate, setCandidate] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
   const draining = useRef(false);
   const claimedQueue = useRef(new Set<string>());
@@ -165,6 +178,11 @@ export function Composer({
 
   const usable = usableProviders(providers);
   const current = provider ?? usable[0]?.id ?? null;
+  // Cambiar de CLI es de una tarea abierta; en una nueva se elige sin confirmar.
+  const locked = providerLocked || (Boolean(session) && !canHandoff);
+  const providerLabel = (id: string | null) => (id ? providers.find((p) => p.id === id)?.label ?? id : "");
+  const pendingLabel = pendingProvider ? providerLabel(pendingProvider) : null;
+  const candidateLabel = candidate ? providerLabel(candidate) : null;
 
   // Modelos y permisos del proveedor elegido; la barra de `/` se pide al usarla.
   useEffect(() => {
@@ -369,6 +387,44 @@ export function Composer({
     void send();
   }
 
+  /** Elegir otro CLI en una tarea abierta pide confirmación: la conversación viaja como texto. */
+  function chooseProvider(id: string) {
+    if (id === current) return;
+    if (session && !canHandoff) return;
+    if (session && canHandoff && id !== initialProvider) {
+      setCandidate(id);
+      setSheet("handover");
+      return;
+    }
+    setProvider(id);
+    setModel(null);
+    setEffort(null);
+    if (session && id === initialProvider) onPendingProvider?.(null);
+  }
+
+  function confirmHandover() {
+    // La tarea pudo cambiar debajo de la hoja: sin sesión o sin permiso, no se confirma.
+    if (!candidate || !session || !canHandoff) {
+      setCandidate(null);
+      setSheet(null);
+      return;
+    }
+    setProvider(candidate);
+    setModel(null);
+    setEffort(null);
+    onPendingProvider?.(candidate);
+    setCandidate(null);
+    setSheet(null);
+  }
+
+  /** Deshacer el traspaso pendiente sin enviar: vuelve al CLI con que sigue la tarea. */
+  function revertHandover() {
+    setProvider(initialProvider);
+    setModel(null);
+    setEffort(null);
+    onPendingProvider?.(null);
+  }
+
   const showStop = running && Boolean(onStop);
   const sendLabel = shell ? w("chat.composer.run") : w("chat.composer.send");
 
@@ -426,6 +482,17 @@ export function Composer({
       ) : null}
 
       {header}
+
+      {pendingLabel ? (
+        <View testID="handover-pending" style={[styles.pending, { borderColor: theme.border, backgroundColor: theme.muted }]}>
+          <Text numberOfLines={2} style={{ flex: 1, color: theme.textMuted, fontSize: TEXT.label }}>
+            {t("composer.handover_pending", { provider: pendingLabel })}
+          </Text>
+          <Pressable hitSlop={8} accessibilityRole="button" onPress={revertHandover}>
+            <Text style={{ color: theme.primary, fontWeight: "600", fontSize: TEXT.label }}>{t("task.actions.cancel")}</Text>
+          </Pressable>
+        </View>
+      ) : null}
 
       <View style={[styles.box, { backgroundColor: theme.surface }]}>
         {attachments.length ? (
@@ -539,20 +606,15 @@ export function Composer({
           return (
             <>
               <SheetSection>{w("chat.model.providers")}</SheetSection>
-              {providerLocked ? <Text style={[styles.hint, { color: theme.textMuted, paddingHorizontal: 18 }]}>{w("chat.model.locked")}</Text> : null}
+              {locked ? <Text style={[styles.hint, { color: theme.textMuted, paddingHorizontal: 18 }]}>{providerLockedReason ?? w("chat.model.locked")}</Text> : null}
               {usable.map((p) => (
                 <SheetOption
                   key={p.id}
                   left={<BrandMark id={p.id} size={17} color={theme.text} />}
                   label={p.label}
                   selected={p.id === current}
-                  disabled={providerLocked && p.id !== current}
-                  onPress={() => {
-                    if (p.id === current) return;
-                    setProvider(p.id);
-                    setModel(null);
-                    setEffort(null);
-                  }}
+                  disabled={locked && p.id !== current}
+                  onPress={() => chooseProvider(p.id)}
                 />
               ))}
               <SheetSection>{w("chat.model.listbox")}</SheetSection>
@@ -590,6 +652,21 @@ export function Composer({
             </>
           );
         }}
+      </Sheet>
+
+      <Sheet visible={sheet === "handover"} title={t("composer.handover_title")} onClose={() => { setCandidate(null); setSheet(null); }}>
+        <View style={styles.handoverBody}>
+          <View style={styles.handoverChange}>
+            <BrandMark id={current ?? ""} size={18} color={theme.text} />
+            <Text style={{ color: theme.text, fontSize: TEXT.ui, fontWeight: "600" }}>{providerLabel(current)}</Text>
+            <Icon name="chevron-right" size={14} color={theme.textMuted} />
+            <BrandMark id={candidate ?? ""} size={18} color={theme.text} />
+            <Text style={{ color: theme.text, fontSize: TEXT.ui, fontWeight: "600" }}>{candidateLabel}</Text>
+          </View>
+          <Text style={{ color: theme.textMuted, fontSize: TEXT.body, lineHeight: 20 }}>{t("composer.handover_description")}</Text>
+          <SheetOption testID="handover-confirm" icon="check" label={t("composer.handover_confirm", { provider: candidateLabel ?? "" })} onPress={confirmHandover} />
+          <SheetOption label={t("task.actions.cancel")} onPress={() => { setCandidate(null); setSheet("model"); }} />
+        </View>
       </Sheet>
     </View>
   );
@@ -637,6 +714,9 @@ const styles = StyleSheet.create({
   run: { flexDirection: "row", alignItems: "center", gap: 6, height: 34, borderRadius: 17, paddingHorizontal: 14 },
   files: { gap: 6, paddingHorizontal: 4, paddingTop: 4 },
   file: { flexDirection: "row", alignItems: "center", gap: 5, borderRadius: RADIUS.lg, paddingHorizontal: 8, paddingVertical: 5 },
+  pending: { flexDirection: "row", alignItems: "center", gap: 10, borderWidth: StyleSheet.hairlineWidth, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 7 },
+  handoverBody: { paddingHorizontal: 18, paddingBottom: 8, gap: 10 },
+  handoverChange: { flexDirection: "row", alignItems: "center", gap: 8, flexWrap: "wrap" },
   queue: { gap: 6 },
   queued: { flexDirection: "row", alignItems: "center", gap: 10, borderWidth: StyleSheet.hairlineWidth, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8 },
   queueLabel: { fontSize: TEXT.caption, fontWeight: "600" },

@@ -75,10 +75,8 @@ export function proveedorDe(
 export function opcionesDeModelos(
   superficies: Superficie[],
   catalogos: CatalogosDeModelos,
-  agente?: string,
 ): OpcionDeModelo[] {
   return superficies
-    .filter((superficie) => !agente || superficie.provider === agente)
     .flatMap((superficie) =>
       (catalogos[superficie.provider]?.models ?? [])
         .filter((model) => esDe(superficie, model))

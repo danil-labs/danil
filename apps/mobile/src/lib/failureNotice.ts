@@ -35,6 +35,28 @@ const KNOWN = new Set([
 
 type Notice = { text?: string; role?: string; meta?: string | null; fallo?: TurnFailure | null; quota?: QuotaChange | null };
 
+/**
+ * La clave del catálogo que trae un fallo del motor (`Failure.what.clave` o
+ * `message_key`), si la trae. El motor rechaza un traspaso sin ventana con
+ * `chat.handover.no_budget`; sin esto, la pantalla enseñaría `command_failed`.
+ */
+export function failureKey(error: unknown): string | null {
+  if (!error || typeof error !== "object") return null;
+  const detail = (error as { detail?: unknown }).detail;
+  // El `Failure` del motor dentro de `detail` es más específico que el `message_key` genérico del sobre.
+  if (detail && typeof detail === "object") {
+    const envelope = detail as { what?: unknown; message_key?: unknown };
+    const what = envelope.what;
+    const key = what && typeof what === "object" ? (what as { clave?: unknown }).clave : what;
+    if (typeof key === "string") return key;
+    if (typeof envelope.message_key === "string") return envelope.message_key;
+  }
+  // Una clave en `detail` es más específica que el `message_key` del sobre, que suele ser el genérico.
+  if (typeof detail === "string") return detail;
+  const direct = (error as { message_key?: unknown }).message_key;
+  return typeof direct === "string" ? direct : null;
+}
+
 /** Hoy solo la hora; otro día, también la fecha. Un cupo semanal no se dice como «esta tarde». */
 export function returnWhen(ms: number, now = Date.now()): string {
   const date = new Date(ms);

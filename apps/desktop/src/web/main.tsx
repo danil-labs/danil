@@ -16,6 +16,7 @@ import {
   serviceFeatures,
   listComputers,
   listDirectory,
+  listSharedComputers,
   listWorkspaces,
   linkDanilWorkspace,
   setDirectoryPins,
@@ -25,6 +26,7 @@ import {
   createScreenAccess,
   sessionProbe,
   startComputer,
+  startSharedComputer,
   systemOf,
   wakes,
 } from "@terminus/computers";
@@ -301,6 +303,10 @@ function mountApp(computers: Computer[], base: Base, before?: (id: string) => ()
       list: async () => listComputers(base.endpoint, await token()),
       // La nueva suma su rebanada sin recargar la página ni cerrar las demás.
       onReady: () => void relistNow?.(),
+    },
+    sharedComputers: {
+      list: async () => listSharedComputers(base.endpoint, await token()),
+      start: async (id) => startSharedComputer(base.endpoint, await token(), id),
     },
     accountMachines: (props) =>
       several() ? (

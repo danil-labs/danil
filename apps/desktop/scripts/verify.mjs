@@ -374,6 +374,12 @@ const steps = [
     root,
   ],
   [
+    "A task changes CLI only when the engine, the machine and the idle session allow it, and the consent goes before the turn",
+    process.execPath,
+    ["--test", "--experimental-strip-types", join(root, "tests/unit/provider-handover.test.ts")],
+    root,
+  ],
+  [
     "Markdown is split without changing what is seen",
     process.execPath,
     ["--test", "--experimental-strip-types", join(root, "tests/unit/markdown.test.ts")],
@@ -533,6 +539,12 @@ const steps = [
     "The Harness menu follows plan, role and available sources",
     process.execPath,
     ["--test", "--experimental-strip-types", join(root, "tests/unit/admin-sections.test.ts")],
+    root,
+  ],
+  [
+    "Harness usage and activity keep missing data missing and tell MCP apart",
+    process.execPath,
+    ["--test", "--experimental-strip-types", join(root, "tests/unit/harness-insights.test.ts")],
     root,
   ],
   [
@@ -698,6 +710,7 @@ const steps = [
   ["With the Danil account the desktop joins tasks from all its computers", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/desktop-account-machines.test.mjs")], root],
   ["With the Danil account the desktop follows its session and each computer", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/desktop-account-sessions.test.mjs")], root],
   ["With the Danil account the desktop sorts the rail and lists its computers", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/desktop-account-rail.test.mjs")], root],
+  ["Shared machines show in the toolbar menu, with status and start, and are not task targets", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/shared-machines-menu.test.mjs")], root],
   ["The viewer waits for noVNC and frees each connection on close or retry", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/screen-connection.test.ts"), join(root, "../../packages/computers/test/screen.test.ts")], root],
   ["Without the pushed stream the window polls as always", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/push-fallback.test.mjs")], root],
   ["Successful maintenance does not notify and dismissed failures do not repeat", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/activity-notice.test.mjs")], root],

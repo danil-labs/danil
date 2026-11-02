@@ -5,7 +5,7 @@
  */
 import { invoke } from "../../lib/invoke.ts";
 import { listen } from "../../lib/serviceEvents";
-import { createSignal, For, onCleanup, onMount, Show } from "solid-js";
+import { createSignal, For, lazy, onCleanup, onMount, Show, Suspense } from "solid-js";
 import { t } from "../../lib/i18n";
 import { destinoAbrible } from "../../lib/links";
 import { type Frase, prosa } from "../../lib/prose";
@@ -15,6 +15,8 @@ import { asFailure, type Failure, FailureNote } from "../../ui/Failure";
 import { Input } from "../../ui/Input";
 import { Select } from "../../ui/Select";
 import HarnessGovernance from "./HarnessGovernance";
+
+const HarnessInsights = lazy(() => import("./HarnessInsights"));
 
 type RemoteWorkspace = { id: string; name: string };
 type LoginView = {
@@ -398,6 +400,12 @@ export default function Harness() {
 
       <Show when={status()?.server && status()?.signed_in}>
         <HarnessGovernance remote={status()?.workspace ?? null} />
+      </Show>
+
+      <Show when={status()?.workspace}>
+        <Suspense fallback={null}>
+          <HarnessInsights />
+        </Suspense>
       </Show>
 
       <Show when={failure()}>{(error) => <FailureNote f={error()} />}</Show>

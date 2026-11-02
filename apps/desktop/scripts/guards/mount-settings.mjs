@@ -288,6 +288,33 @@ const radiantApp = await boot("listo", "settings-radiant", {
     radiantCalls.push(["connect", id]);
     return null;
   },
+  harness_org_fetch: ({ path }) => {
+    if (path === "/v1/org/me") return { status: 200, body: {
+      user: { id: "1", email: "person@example.test", name: "Person" },
+      account: { id: 100, name: "Danil" },
+      organization: { id: "org_0123456789ABCDEFGHIJKLMNOP", name: "Danil" },
+      role: "admin", admin: true, permissions: ["harness.read_all"],
+    } };
+    if (path === "/v1/org/usage") return { status: 200, body: {
+      window: { days: 30, month: null, since: 0, until: 1 },
+      totals: { turns: 2, tokens: { input_uncached: 10, cache_read: 0, cache_write: 0, output: 5, reasoning: 0 }, cost_usd: 0.5, turns_without_cost: 0 },
+      models: [{ agent: "claude", model: "sonnet", turns: 2, tokens: { input_uncached: 10, cache_read: 0, cache_write: 0, output: 5, reasoning: 0 }, cost_usd: 0.5, turns_without_cost: 0 }],
+      people: [{ user_id: "1", name: "Person", email: "person@example.test", status: "reporting",
+        totals: { turns: 2, tokens: { input_uncached: 10, cache_read: 0, cache_write: 0, output: 5, reasoning: 0 }, cost_usd: 0.5, turns_without_cost: 0 } }],
+      tools: [{ user_id: "1", name: "Bash", calls: 3, failed: 0, unknown: 0 }],
+      machines: [{ id: "cmp_aaaaaaaaaaaaaaaaaaaaaaaaaa", name: "Machine", origin: "local", turns: 2 }],
+      workspaces: [{ id: "eng", name: "Ingeniería", usage_reporting: "reported" }],
+    } };
+    if (path === "/v1/org/activity") return { status: 200, body: { events: [
+      { id: "1", at: "2026-11-02T06:00:00.000Z", actor: "1", workspace: "eng", machine: null, origin: "mcp",
+        kind: "mcp", action: "task_create", result: "ok", client: "Claude", service: "danil-mcp", target: "machine", detail: {} },
+    ] } };
+    if (path === "/v1/org/members") return { status: 200, body: {
+      members: [{ id: "1", user_id: "1", email: "person@example.test", name: "Person", role: "owner", status: "active", last_activity_at: null }],
+      invitations: [],
+    } };
+    return { status: 501, body: null };
+  },
   ...RESPONSES,
   list_language_packs: [], list_bundled_language_packs: [],
   radiant_status: () => radiantStatus(),

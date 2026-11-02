@@ -72,7 +72,7 @@ export const HOME = { computer_id: "cmp_home", name: "Mi Mac", state: "online", 
 export const VM = { computer_id: "cmp_vm", name: "Danil VM", state: "stopped", provider: "aws-ec2" };
 export const MAC = { computer_id: "cmp_mac", name: "Mac de Ana", state: "offline", provider: "self", kind: "physical" };
 
-export async function open(name, { status = SIGNED_IN, token = TOKEN, computers = [HOME, VM, MAC], relays = {}, extra = {}, registry = null, onRename = null, storage = {} } = {}) {
+export async function open(name, { status = SIGNED_IN, token = TOKEN, computers = [HOME, VM, MAC], relays = {}, extra = {}, registry = null, onRename = null, storage = {}, shared = null, sharedStart = null } = {}) {
   const f = fleet(relays);
   const calls = [];
   const listed = [];
@@ -91,6 +91,18 @@ export async function open(name, { status = SIGNED_IN, token = TOKEN, computers 
         if (String(url) === "https://relay.test/v1/workspaces") {
           registered.push(init?.headers?.authorization);
           return Promise.resolve(registry ? Response.json({ workspaces: registry }) : new Response("{}", { status: 404 }));
+        }
+        if (String(url) === "https://relay.test/v1/shared-computers" && (init?.method ?? "GET") === "GET") {
+          return Promise.resolve(Response.json({ computers: shared ?? [] }));
+        }
+        const starting = /^https:\/\/relay\.test\/v1\/shared-computers\/([^/]+)\/start$/.exec(String(url));
+        if (starting && init?.method === "POST") {
+          const id = decodeURIComponent(starting[1]);
+          const row = (shared ?? []).find((item) => item.computer_id === id);
+          if (!row) return Promise.resolve(Response.json({ error: "not_found" }, { status: 404 }));
+          if (sharedStart) return Promise.resolve(Response.json(sharedStart.body, { status: sharedStart.status }));
+          row.power = "starting";
+          return Promise.resolve(Response.json({ ...row }));
         }
         if (String(url).startsWith("https://relay.test/v1/computers/") && init?.method === "PATCH") {
           const id = decodeURIComponent(String(url).split("/").pop());
