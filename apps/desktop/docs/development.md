@@ -54,6 +54,12 @@ it the command says so; use `pnpm verify`. It never counts for macOS or Windows.
 Access: `alberto`, `alejandro`, `mauricio`, `roberto`, `cit`, and the machines
 `tag:vm-alberto`, `tag:vm-alejandro` and `tag:vm-mauricio`.
 
+`vm-verify` is also registered as a shared service machine in the Danil
+organization. An active organization member can list and start it through a
+Danil session; access to the queue still requires the Tailscale SSH rule above.
+Being able to start the machine does not grant SSH access by itself. The
+registration does not make it a destination for agent tasks.
+
 The client needs only Node, git, `ssh` on the PATH and Tailscale, so it runs the
 same from PowerShell or cmd on Windows (`ssh.exe` is the OpenSSH Client optional
 feature). What runs is still Linux: a run launched from Windows verifies Linux.
