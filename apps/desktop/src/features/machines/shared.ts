@@ -14,30 +14,44 @@ const [sharedBusy, setSharedBusy] = createRoot(() => createSignal<string | null>
 
 export { sharedBusy, sharedMachines, sharedNotice };
 
-function desktopSource(): NonNullable<ReturnType<typeof capabilities>["sharedComputers"]> | null {
-  if (!capabilities().danilAccount) return null;
+type Source = NonNullable<ReturnType<typeof capabilities>["sharedComputers"]>;
+type ClientToken = { token: string; endpoint: string };
+
+/**
+ * En la ventana, con el token de cliente de la CUENTA de Danil del workspace
+ * abierto (`danil_workspace_account`), como la memoria y las computadoras. Sin
+ * cuenta en ese workspace no hay máquinas de organización que mostrar.
+ */
+function desktopSource(workspace: string | null): Source | null {
+  if (!capabilities().danilAccount || !workspace) return null;
+  const client = async (): Promise<ClientToken | null> => {
+    const of = await invoke<{ account?: string | null; signed_in?: boolean }>("danil_workspace_account", { workspace }).catch(() => null);
+    if (!of?.signed_in) return null;
+    const account = of.account ?? null;
+    return invoke<ClientToken>("account_relay_token", account ? { account } : {}).catch(() => null);
+  };
   return {
     list: async () => {
-      const client = await invoke<{ token: string; endpoint: string }>("account_relay_token", {}).catch(() => null);
-      return client ? listSharedComputers(client.endpoint, client.token) : { kind: "error", status: null };
+      const c = await client();
+      return c ? listSharedComputers(c.endpoint, c.token) : { kind: "no_account" };
     },
     start: async (id) => {
-      const client = await invoke<{ token: string; endpoint: string }>("account_relay_token", {}).catch(() => null);
-      return client ? startSharedComputer(client.endpoint, client.token, id) : { kind: "error", status: null };
+      const c = await client();
+      return c ? startSharedComputer(c.endpoint, c.token, id) : { kind: "no_account" };
     },
   };
 }
 
-function source() {
-  return capabilities().sharedComputers ?? desktopSource();
+function source(workspace: string | null) {
+  return capabilities().sharedComputers ?? desktopSource(workspace);
 }
 
 let generation = 0;
 
 /** Vuelve a leer el encendido. Un fallo de red deja la lista anterior. */
-export async function refetchSharedMachines() {
+export async function refetchSharedMachines(workspace: string | null) {
   const turn = ++generation;
-  const client = source();
+  const client = source(workspace);
   if (!client) {
     if (turn === generation) setSharedMachines([]);
     return;
@@ -53,8 +67,8 @@ function replace(id: string, next: SharedComputer) {
 }
 
 /** Enciende una compartida. El menú sigue abierto para mostrar el estado nuevo. */
-export async function startSharedMachine(id: string, notice: { license: string; denied: string; stopping: string; failed: string }) {
-  const client = source();
+export async function startSharedMachine(workspace: string | null, id: string, notice: { license: string; denied: string; stopping: string; failed: string }) {
+  const client = source(workspace);
   if (!client || sharedBusy()) return;
   const turn = ++generation;
   setSharedBusy(id);

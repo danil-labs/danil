@@ -8,6 +8,9 @@ import { HOME, localNewTask, open as openDesktop, until } from "../helpers/deskt
 import { sleep } from "../helpers/jsdom-app.mjs";
 import { VM, open as openWeb, table } from "../helpers/web-machines.mjs";
 
+// La ventana pide el token de la cuenta de Danil del workspace abierto.
+const ACCOUNT = { danil_workspace_account: { account: "u_ana", email: "ana@danil.ai", signed_in: true, linked: true } };
+
 const verify = () => ({
   computer_id: "cmp_verify",
   name: "vm-verify",
@@ -26,7 +29,7 @@ async function openMenu(doc) {
 
 test("en el escritorio vm-verify se enciende desde el menú y no es destino de tareas", async () => {
   const shared = [verify()];
-  const { app, doc, invoke } = await openDesktop("desktop-shared-machines", { computers: [HOME], shared });
+  const { app, doc, invoke } = await openDesktop("desktop-shared-machines", { computers: [HOME], shared, extra: ACCOUNT });
   localNewTask(doc).click();
   await openMenu(doc);
   const row = doc.querySelector('[data-shared-machine="cmp_verify"]');
@@ -50,6 +53,7 @@ test("en el escritorio vm-verify se enciende desde el menú y no es destino de t
 test("en el escritorio, sin licencia, encender vm-verify se niega y sigue apagada", async () => {
   const { app, doc } = await openDesktop("desktop-shared-license", {
     computers: [HOME],
+    extra: ACCOUNT,
     shared: [verify()],
     sharedStart: { status: 403, body: { error: "license_required" } },
   });

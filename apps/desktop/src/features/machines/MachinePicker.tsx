@@ -26,7 +26,7 @@ export function MachinePicker(props: { workspace: string | null; project?: Proje
     void refetchMachines();
   }
   onMount(() => {
-    if (props.shared) void refetchSharedMachines();
+    if (props.shared) void refetchSharedMachines(props.workspace);
   });
 
   const [abierto, setAbierto] = createSignal(false);
@@ -64,7 +64,7 @@ export function MachinePicker(props: { workspace: string | null; project?: Proje
 
   return (
     <Show when={muestra()}>
-      <Popover open={abierto()} onOpenChange={(v) => { setAbierto(v); if (v) { void refetchMachines(); if (props.shared) void refetchSharedMachines(); } }} placement="top-start" gutter={4}>
+      <Popover open={abierto()} onOpenChange={(v) => { setAbierto(v); if (v) { void refetchMachines(); if (props.shared) void refetchSharedMachines(props.workspace); } }} placement="top-start" gutter={4}>
         <PopoverTrigger
           class="flex min-h-7 max-w-[260px] items-center gap-1.5 rounded-sm px-1 text-left text-xs text-neutral-500 hover:text-neutral-950"
           aria-label={t("shell.machines.label")}
@@ -119,7 +119,7 @@ export function MachinePicker(props: { workspace: string | null; project?: Proje
                           class="shrink-0 rounded-sm border border-border px-1.5 py-0.5 text-2xs text-neutral-950 hover:bg-surface-muted disabled:opacity-50"
                           data-shared-start={m.computer_id}
                           disabled={sharedBusy() === m.computer_id}
-                          onClick={() => void startSharedMachine(m.computer_id, {
+                          onClick={() => void startSharedMachine(props.workspace, m.computer_id, {
                             license: t("shell.machines.shared.license"),
                             denied: t("shell.machines.shared.denied"),
                             stopping: t("shell.machines.shared.stopping"),
