@@ -3,6 +3,7 @@ import { createSupportAccess } from "../../../../../packages/attention/src/suppo
 import { aplicarLengua, aplicarLenguaDeWorkspace, t } from "../../lib/i18n";
 import { accountSources, agentsSession } from "../attention/workspace-sources";
 import { activeAccountOf, webAuditLog } from "../audit-log";
+import { webHarnessOrg } from "../../features/settings/harness-org";
 import { authLocation } from "../auth/return";
 import type { WatchedSession } from "../session";
 import { AdminPage, type AdminSource } from "./AdminPage";
@@ -31,6 +32,7 @@ export async function startAdmin(settings: { endpoint: string; login: string; su
     active: async () => activeAccountOf(await session.getToken()),
     support: { demo: false, workspaces: api.workspaces, list: api.list },
     auditLog: webAuditLog(settings.supabaseUrl, settings.supabaseKey, () => session.getToken(), () => void session.unauthorized()),
+    harness: webHarnessOrg(settings.endpoint, () => session.getToken()),
     // La organización y sus workspaces salen del BFF; si no manda la organización, la sección no aparece.
     organization: { workspaces: api.organizationWorkspaces },
     workspace: new URLSearchParams(window.location.search).get("workspace"),

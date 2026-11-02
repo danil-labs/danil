@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { accountKind, menuFor, type Section, visibleSections } from "../../src/web/admin/sections.ts";
 
-const ALL = new Set<Section>(["general", "usage", "members", "support", "audit", "skills", "mcp", "agents", "rules", "workspaces", "plan", "identity"]);
+const ALL = new Set<Section>(["general", "harness", "usage", "members", "support", "audit", "skills", "mcp", "agents", "rules", "workspaces", "plan", "identity"]);
 
 test("only an explicit plan makes an account personal, so a missing plan never locks out an organization", () => {
   assert.equal(accountKind({ plan: "Enterprise" }), "enterprise");
@@ -22,7 +22,7 @@ test("a personal account has no Harness", () => {
 });
 
 test("a member only reads usage and what governs their work", () => {
-  assert.deepEqual(visibleSections("teams", false, ALL), ["usage", "skills", "mcp", "agents", "rules"]);
+  assert.deepEqual(visibleSections("teams", false, ALL), ["harness", "usage", "skills", "mcp", "agents", "rules"]);
 });
 
 test("only enterprise reaches identity, and only when it exists", () => {

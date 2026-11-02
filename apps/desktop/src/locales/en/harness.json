@@ -72,5 +72,8 @@
   "harness.usage.toggle": "Report this workspace's AI usage",
   "harness.usage.required": "Required by the workspace policy",
   "harness.usage.queued": "Lines waiting",
-  "harness.usage.quarantined": "Quarantined batches"
+  "harness.usage.quarantined": "Quarantined batches",
+  "harness.admin.forbidden": "Your role in this organization cannot open this Harness section.",
+  "harness.admin.unavailable": "This Danil Teams server does not expose this Harness section yet. Ask whoever administers it to update it.",
+  "harness.admin.failed": "This Harness section could not be read. Try again."
 }
