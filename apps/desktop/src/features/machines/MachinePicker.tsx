@@ -14,13 +14,11 @@ import { type Machine, machineName, machines, type ProjectPlace, refetchMachines
 let pedida = false;
 
 /**
- * «Ejecutar en»: la máquina donde corre la tarea que se va a crear, recordada por
- * workspace. La ventana sigue en su workspace; elegir una apagada no la enciende,
- * la enciende enviar. Una máquina sin el workspace lo crea con el mismo id al
- * enviar; la que no puede se ve desactivada con la razón. Un proyecto sin
- * remoto se lleva desde su máquina mientras esté encendida (`carry.ts`).
- * Con `shared`, debajo van las de la organización: estado y encendido, sin poder
- * elegirlas. No están en `machines()` y no corren tareas.
+ * «Ejecutar en»: la máquina de la tarea nueva, recordada por workspace. Elegir
+ * una apagada no la enciende; la enciende enviar. Sin el workspace lo crea con
+ * el mismo id; la que no puede se ve desactivada. Un proyecto sin remoto se
+ * lleva desde su máquina encendida. Con `shared`, debajo van las de la
+ * organización: estado y encendido, sin elegirlas.
  */
 export function MachinePicker(props: { workspace: string | null; project?: ProjectPlace; shared?: boolean }) {
   if (!pedida) {
