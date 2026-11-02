@@ -11,7 +11,7 @@ import test from "node:test";
 
 import "../helpers/catalog.ts";
 import type { Msg } from "../../src/features/chat/Chat.tsx";
-import { anexarDelta, anexarImagen } from "../../src/features/chat/transcript.ts";
+import { anexarDelta, anexarImagen, anexarRazonamiento } from "../../src/features/chat/transcript.ts";
 
 const texto = (msgs: Msg[]) => msgs.map((m) => `${m.role}:${m.text}`);
 
@@ -66,4 +66,36 @@ test("startsMessage abre otro globo aunque venga del mismo mensaje", () => {
     author: null,
   });
   assert.deepEqual(texto(fin), ["agent:Uno", "agent:Dos"]);
+});
+
+const razonamientos = (msgs: Msg[]) =>
+  msgs.flatMap((m) => (m.razonamiento ?? []).map((b) => b.text));
+
+test("el razonamiento con id vuelve a su mensaje aunque haya una herramienta en medio", () => {
+  const primero = anexarRazonamiento([], { text: "Pienso", messageId: "m1", author: null });
+  const conPaso: Msg[] = [...primero, { role: "system", text: "Read", meta: "usó" }];
+  const fin = anexarRazonamiento(conPaso, { text: " más", messageId: "m1", author: null });
+  assert.equal(fin.length, 2);
+  assert.deepEqual(razonamientos(fin), ["Pienso más"]);
+});
+
+test("sin id cada ráfaga es un bloque y el texto la cierra", () => {
+  const primero = anexarRazonamiento([], { text: "Primera", author: null });
+  const conTexto = anexarDelta(primero, { text: "Respuesta", author: null });
+  const fin = anexarRazonamiento(conTexto, { text: "Segunda", author: null });
+  assert.deepEqual(razonamientos(fin), ["Primera", "Segunda"]);
+});
+
+test("sin id una herramienta cierra la ráfaga", () => {
+  const primero = anexarRazonamiento([], { text: "Uno", author: null });
+  const conPaso: Msg[] = [...primero, { role: "system", text: "Read", meta: "usó" }];
+  const fin = anexarRazonamiento(conPaso, { text: "Dos", author: null });
+  assert.deepEqual(razonamientos(fin), ["Uno", "Dos"]);
+});
+
+test("startsMessage no fusiona dos ráfagas de razonamiento", () => {
+  const primero = anexarRazonamiento([], { text: "Uno", author: null });
+  const conTexto = anexarDelta(primero, { text: "Respuesta", startsMessage: true, author: null });
+  const fin = anexarRazonamiento(conTexto, { text: "Dos", author: null });
+  assert.deepEqual(razonamientos(fin), ["Uno", "Dos"]);
 });

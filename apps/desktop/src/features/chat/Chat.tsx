@@ -40,6 +40,7 @@ import {
 } from "solid-js";
 import { Dynamic, Portal } from "solid-js/web";
 import type { ThreadSearchTarget } from "./ThreadSearch";
+import { sharedLazy } from "../../lib/sharedLazy";
 import { taskChatPresentation } from "./TaskChatPresentation";
 import type { OlderState } from "./history";
 import { createBlockKeys, estimateBlock } from "./threadRows";
@@ -175,6 +176,9 @@ import EstadoDelTurno from "./TurnStatus";
 import { WithMentions } from "./WithMentions";
 import { Spinner } from "../../ui/Spinner";
 
+// Chunk aparte: el bloque de razonamiento solo lo carga un turno que lo trae.
+const Reasoning = sharedLazy(() => import("./Reasoning"));
+
 /**
  * Quién dijo un turno: lo arma Rust a partir de la cuenta del agente o del
  * nombre local, aquí no se completa ni se adivina nada. El login de GitHub
@@ -191,12 +195,26 @@ export type Author = {
 
 export type { CambioPorCupo, FalloDelTurno };
 
+/** Un bloque de lo que el agente pensó. No es su respuesta. */
+export type Razonamiento = {
+  text: string;
+  /** Cuánto duró, cuando el turno guardado lo trae. */
+  durationMs?: number;
+  /** El motor cortó el bloque por su tope. */
+  truncated?: boolean;
+};
+
 export type Msg = {
   historyRefs?: HistoryRef[];
   role: "user" | "agent" | "system";
   text: string;
   task_mentions?: TaskMention[];
   meta?: string;
+  /**
+   * Lo que el agente pensó antes de escribir. Va aparte de `text`: el
+   * razonamiento no es la respuesta ni entra en copiar, buscar o exportar.
+   */
+  razonamiento?: Razonamiento[];
   /**
    * Cuando `meta === "fallo"` y se pudo clasificar. Ausente en una
    * interrupción —que no es un fallo del proveedor— y en los turnos escritos
@@ -771,6 +789,7 @@ const DESFASE_DEL_SALTO = 12;
 /** Lo plegado y desplegado de una conversación. Vive en `App`: la pestaña escondida se desmonta. */
 export type VistaDeLaConversacion = {
   trabajos: Signal<Record<string, boolean>>;
+  razonamientos: Signal<Record<string, boolean>>;
   preguntasPlegadas: Signal<Record<string, boolean>>;
   /** El turno cuya pregunta pendiente está plegada. */
   preguntaPlegadaEn: Signal<string | null>;
@@ -778,6 +797,7 @@ export type VistaDeLaConversacion = {
 
 export const vistaNueva = (): VistaDeLaConversacion => ({
   trabajos: createSignal<Record<string, boolean>>({}),
+  razonamientos: createSignal<Record<string, boolean>>({}),
   preguntasPlegadas: createSignal<Record<string, boolean>>({}),
   preguntaPlegadaEn: createSignal<string | null>(null),
 });
@@ -804,6 +824,8 @@ export default function Chat(props: ChatProps) {
    */
   const visualBudget = createVisualBudget();
   const [trabajos, setTrabajos] = props.vista.trabajos;
+  /** Qué razonamiento está desplegado, por mensaje. Efímero como `trabajos`. */
+  const [razonamientos, setRazonamientos] = props.vista.razonamientos;
   /**
    * Qué registro de preguntas está plegado, por turno. Guarda el pliegue y
    * no el despliegue, al revés que `trabajos`: el bloque nace abierto, un
@@ -2915,6 +2937,11 @@ export default function Chat(props: ChatProps) {
                         const k = claveFila(trabajo());
                         setTrabajos({ ...trabajos(), [k]: !trabajos()[k] });
                       }}
+                      razonamientoAbierto={Boolean(razonamientos()[claveFila(b())])}
+                      onAlternarRazonamiento={() => {
+                        const k = claveFila(trabajo());
+                        setRazonamientos({ ...razonamientos(), [k]: !razonamientos()[k] });
+                      }}
                       preguntasAbiertas={!preguntasPlegadas()[claveDeTrabajo(fromWork(b(), (t) => t.msg, SIN_MENSAJE))]}
                       onAlternarPreguntas={() => {
                         const k = claveDeTrabajo(trabajo().msg);
@@ -3723,6 +3750,11 @@ function RegistroDeTrabajo(props: {
                   <Show when={tramo().pasos.length > 0}>
                     <LineaDeTiempo pasos={tramo().pasos} />
                   </Show>
+                  <Show when={tramo().msg.razonamiento?.length}>
+                    <div class="px-1 py-1 text-sm whitespace-pre-wrap text-neutral-500 select-text">
+                      {tramo().msg.razonamiento?.map((b) => b.text).join("\n\n")}
+                    </div>
+                  </Show>
                   <div class="px-1 py-1 text-sm text-neutral-500">
                     <Markdown>{tramo().msg.text}</Markdown>
                   </div>
@@ -3764,6 +3796,9 @@ function TrabajoDeAgente(props: {
   /** Si ESTE turno tiene su registro desplegado. Ver `trabajos` en `Chat`. */
   abiertoElTrabajo: boolean;
   onAlternarTrabajo: () => void;
+  /** Si el razonamiento de ESTE mensaje está desplegado. Ver `razonamientos`. */
+  razonamientoAbierto: boolean;
+  onAlternarRazonamiento: () => void;
   /** Si las preguntas de ESTE turno están desplegadas. Nacen abiertas. */
   preguntasAbiertas: boolean;
   onAlternarPreguntas: () => void;
@@ -3811,6 +3846,19 @@ function TrabajoDeAgente(props: {
           onAlternar={props.onAlternarTrabajo}
           onVerCambios={props.msg.code?.length ? props.onVerCambios : undefined}
         />
+      </Show>
+
+      {/* Lo pensado va entre el trabajo y la respuesta: se lee como lo que
+          llevó a contestar, sin parecer la contestación. */}
+      <Show when={props.msg.razonamiento?.length ? props.msg.razonamiento : null}>
+        {(bloques) => (
+          <Reasoning
+            bloques={bloques()}
+            vivo={props.vivo && !texto()}
+            abierto={props.razonamientoAbierto}
+            onAlternar={props.onAlternarRazonamiento}
+          />
+        )}
       </Show>
 
       {/* Entre el registro y la respuesta, que es donde ocurrió: el
