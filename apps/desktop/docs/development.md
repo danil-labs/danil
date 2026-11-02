@@ -90,7 +90,7 @@ If the queue does not answer and SSH did not refuse, the client starts the
 machine and asks again every 15 seconds, up to four minutes, while the queue
 stays silent; a machine that is still stopping refuses the first attempts.
 
-1. `danil computers machine start vm-verify --json`, with the caller's Danil
+1. `danil machines machine start vm-verify --json`, with the caller's Danil
    session (`DANIL_CLI` for the binary).
 2. `terminus machine start vm-verify --json`, the same with the installed client
    (`TERMINUS_CLI` for the binary), only when `danil` is missing, does not know
@@ -125,7 +125,7 @@ deletes them.
 
 ## The browser build
 
-The same front runs in a browser against Danil Computers instead of the Tauri
+The same front runs in a browser against Danil Machines instead of the Tauri
 window. `src/web/` holds only that entry: it answers the globals of
 `@tauri-apps/api` with a transport over the relay session socket, so the desktop
 bundle never imports it, and its phrases live in `src/locales/*/web.json`,

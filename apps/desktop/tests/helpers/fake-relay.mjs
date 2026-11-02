@@ -1,5 +1,5 @@
 /**
- * A Danil Computers relay simulated in Node for the browser build: one session
+ * A Danil Machines relay simulated in Node for the browser build: one session
  * socket per connection, answering `call` from a table of engine replies.
  */
 const row = (id) => ({ id, title: `Tarea ${id}`, last_message: "", provider: "codex", model: "gpt-5.6", refs: [], updated_at: 0, turns: 0, parent: null, esperando: false });

@@ -1,7 +1,7 @@
 /**
  * «Conectar otra máquina»: el comando que instala Seldon Host en un VPS, otra
  * laptop o una Raspberry Pi y la conecta a la cuenta con un código
- * (seldon-host `scripts/host-install/install.sh` y `danil computers
+ * (seldon-host `scripts/host-install/install.sh` y `danil machines
  * connect`), y la espera a que aparezca en `GET /v1/computers`.
  *
  * Conectar es gratis y sin tope de máquinas; controlarla desde la web o el

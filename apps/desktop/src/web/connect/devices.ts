@@ -18,7 +18,7 @@ type Fetch = (input: string, init?: RequestInit) => Promise<Response>;
 
 const EXPIRED = /expired/i;
 
-/** Danil Computers answers `{ error: { code, detail? } }`; a bare string is still read. */
+/** Danil Machines answers `{ error: { code, detail? } }`; a bare string is still read. */
 function errorCode(body: { error?: unknown } | null): string {
   const e = body?.error;
   if (typeof e === "string") return e;

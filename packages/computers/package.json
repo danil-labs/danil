@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Danil Computers from any client: the control-plane API, the relay session and the rules for waking a machine.",
+  "description": "Danil Machines from any client: the control-plane API, the relay session and the rules for waking a machine.",
   "exports": {
     ".": "./src/index.ts",
     "./space-order": "./src/space-order.ts"

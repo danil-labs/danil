@@ -1,5 +1,5 @@
 /**
- * El lado HTTP del plano de control de Danil Computers: las computadoras de la
+ * El lado HTTP del plano de control de Danil Machines: las computadoras de la
  * persona y su encendido. También explica lo que un upgrade de WebSocket
  * fallido no puede decir (sin licencia, no es tuya).
  *

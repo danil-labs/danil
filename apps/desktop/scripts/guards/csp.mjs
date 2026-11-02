@@ -64,7 +64,7 @@ const PERMITIDO = {
   // Las dos formas de la misma URL del IPC de Tauri: `ipc://localhost` en macOS y
   // Linux, `http://ipc.localhost` en Windows (`scripts/ipc-protocol.js` de la
   // caja de Tauri). Sin ellas cada `invoke` falla y cae a `postMessage`.
-  // Y el plano de control de Danil Computers: con la cuenta abierta la ventana lista las
+  // Y el plano de control de Danil Machines: con la cuenta abierta la ventana lista las
   // computadoras de la persona y abre su sesión del relay (`features/machines/account.tsx`).
   "connect-src": ["'self'", "ipc:", "http://ipc.localhost", "https://computers.danil.ai", "wss://computers.danil.ai"],
   // El tercer candado del contenedor: a dónde puede navegar un marco hijo. Sin

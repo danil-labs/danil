@@ -1,6 +1,6 @@
 /**
  * Los comandos que la app móvil manda al motor de una máquina, por cualquiera
- * de sus dos caminos: el relay de Danil Computers y el bridge de desarrollo.
+ * de sus dos caminos: el relay de Danil Machines y el bridge de desarrollo.
  * Son funciones de ventana (`service invoke`, `commands.json`), con los nombres
  * del contrato renombrado (`agent` = agente con nombre, `provider` = Codex,
  * Claude…). Es una lista cerrada: el bridge rechaza el resto con 403 y el

@@ -74,7 +74,7 @@ export function defaultComputer<T extends Pick<Computer, "provider" | "kind" | "
  * contesta desde el espejo o con `machine_off`.
  */
 export const INTENT_COMMANDS: ReadonlySet<string> = new Set([
-  // Orquestadores remotos por el MCP de Danil Computers (`connections.ts`).
+  // Orquestadores remotos por el MCP de Danil Machines (`connections.ts`).
   "connect_external",
   "connection_call",
   "disconnect_external",

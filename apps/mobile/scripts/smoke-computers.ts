@@ -1,6 +1,6 @@
 /**
  * Recorre la capa de datos de la app (`src/lib/hosts.ts` y `engine.ts`, sin
- * React Native) contra el Danil Computers falso, por HTTP y WebSocket reales:
+ * React Native) contra el Danil Machines falso, por HTTP y WebSocket reales:
  *
  *   node apps/mobile/scripts/smoke-computers.ts
  *

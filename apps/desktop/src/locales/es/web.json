@@ -20,7 +20,7 @@
   "web.add_account.sign_in_again": "Volver a entrar",
   "web.add_account.use_another": "Usar otra cuenta",
   "web.add_account.back_to_accounts": "Ver mis cuentas",
-  "web.computers.error": "No se pudo hablar con Danil Computers.",
+  "web.computers.error": "No se pudo hablar con Danil Machines.",
   "web.computers.no_workspaces": "Inicia sesión con tu cuenta de Danil en Danil en tu computadora: con la sesión iniciada, todos los workspaces de esa computadora se ven aquí.",
   "web.computers.none": "Todavía no tienes ninguna computadora en Danil.",
   "web.computers.not_yours": "Esta computadora no es tuya o ya no existe.",

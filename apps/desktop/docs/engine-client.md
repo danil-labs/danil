@@ -44,7 +44,7 @@ aprobación es el nombre de **esta computadora**, no el de la cuenta.
 La web (`alfa-app.danil.ai`) no ofrece Harness: ni la sección de
 Configuración, ni su gobierno en las pantallas, ni la elección «De mi
 organización» al crear el espacio (`capabilities().radiant`, solo en el
-escritorio). Harness se conectará con Danil Computers, no con cada ventana;
+escritorio). Harness se conectará con Danil Machines, no con cada ventana;
 el escritorio lo conserva por ahora (2026-10-21).
 
 La persona de la cuenta (nombre, correo, foto) sale del motor:
