@@ -19,7 +19,8 @@ uno, salen con la web en `apps/desktop/web-public/mcp/`.
 
 ```json
 "serverInfo": {
-  "name": "danil-computers",
+  "name": "danil-mcp",
+  "title": "Danil",
   "version": "…",
   "icons": [
     { "src": "https://alfa-app.danil.ai/mcp/mcp-light.svg", "mimeType": "image/svg+xml", "sizes": ["any"], "theme": "light" },
