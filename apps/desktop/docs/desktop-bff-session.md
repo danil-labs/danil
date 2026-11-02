@@ -144,7 +144,7 @@ ventana oculta Atención y no reintenta.
   Todos con `account` opcional: la cuenta de Danil del workspace (sin ella, la principal).
   `agents_session_directory` llama `GET /v1/me/workspaces` con el JWT de la persona
   y devuelve solo el arreglo `workspaces`. El token no sale de Rust.
-- Directorio de workspaces (computers `docs/protocol.md`, «Directorio de
+- Directorio de workspaces (protocolo de Computers, «Directorio de
   workspaces»), con el JWT de la persona y rutas que arma Rust:
   `agents_session_pins {keys}` → `PUT /v1/me/workspaces/pins` (claves `a:<n>` o
   `w:<id>`, hasta 32); `agents_session_link {workspaceId, danilWorkspaceId}` y
