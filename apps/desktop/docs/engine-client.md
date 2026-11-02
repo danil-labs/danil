@@ -484,6 +484,18 @@ launcher must deliver the master through a private pipe on every independent
 restart, without a new master or interactive fallback. Native signatures,
 keychain access, menu-bar status, CmdQ and reopen require macOS QA.
 
+## El evento `chat`
+
+`kind` es una lista cerrada: `started`, `delta`, `reasoning`, `tool`,
+`tool_done`, `permission`, `notice`, `task_launched`, `model`, `effort`,
+`retry`, `background`, `mcp_auth`, `presence`, `command_output`,
+`command_running`, `shell_started`, `shell_output`, `shell_done`, `image` y
+`done`. La ventana ignora un kind que no conoce y ninguno cae al texto de la
+respuesta: sólo `delta` escribe en ella. `reasoning` lleva lo que el agente
+pensó, aparte de su respuesta y sin `starts_message`, `target` ni `detail`; el
+móvil concatena todo `delta`, así que un `delta` con `meta` se volvería respuesta
+en el teléfono. Un kind nuevo se agrega primero al cliente y después al motor.
+
 ## Stream empujado
 
 Con un motor que anuncia `push_stream_v1` en `status.service_features`

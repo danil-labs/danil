@@ -61,6 +61,7 @@ import { agentSwitchBlocked, canHandOverTask, handoverInForce, handoverMatches, 
 import {
   anexarDeltas,
   anexarImagen,
+  anexarRazonamiento,
   type ChatEvent,
   type ChatExportado,
   clave,
@@ -2548,7 +2549,7 @@ export default function App() {
   }
 
   // Lo que reconstruye el turno en curso de una tarea que pasa a verse: lo filtrado y lo que lo acompaña.
-  const REPUESTO = new Set(["delta", "tool", "tool_done", "command_output", "command_running", "shell_started", "shell_output", "image", "retry", "notice", "task_launched", "segment_saved"]);
+  const REPUESTO = new Set(["delta", "reasoning", "tool", "tool_done", "command_output", "command_running", "shell_started", "shell_output", "image", "retry", "notice", "task_launched", "segment_saved"]);
   type PushedBatch = { events?: JournalEvent[]; catchup?: string; resync?: string };
   function applyPushed(batches: PushedBatch[]) {
     for (const lote of batches) {
@@ -2851,7 +2852,7 @@ export default function App() {
 
       const esGate = kind === "permission" || kind === "permission_resolved";
       const retainedStream = Boolean(workspace && liveThreads.has(liveThreadKey(workspace, session))) &&
-        ["delta", "image", "tool", "tool_done", "notice", "task_launched", "segment_saved", "command_output", "command_running"].includes(kind);
+        ["delta", "reasoning", "image", "tool", "tool_done", "notice", "task_launched", "segment_saved", "command_output", "command_running"].includes(kind);
       if (!esGate && !esDelWorkspaceAbierto(workspace) && !retainedStream) return;
 
       if (kind === "started") return;
@@ -3086,6 +3087,23 @@ export default function App() {
         if (imagenes.length > 0) append((m) => anexarImagen(m, imagenes));
         return;
       }
+
+      // El razonamiento no es la respuesta: va a su bloque. Sin este corte cae
+      // al delta de abajo y se lee como lo que el agente contestó.
+      if (kind === "reasoning") {
+        append((m) =>
+          anexarRazonamiento(m, {
+            text,
+            messageId: message_id,
+            author: firmas[session] ?? firmas[""] ?? null,
+          }),
+        );
+        return;
+      }
+
+      // Sólo `delta` llega a su rama. Un kind que esta ventana no conoce se
+      // ignora: el motor puede mandar uno nuevo antes de que exista aquí.
+      if (kind !== "delta") return;
 
       // delta: los fragmentos se CONCATENAN SIN SEPARADOR. Meter "\n" aquí
       // parte cada token en su propia línea y el texto sale destrozado.

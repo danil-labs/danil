@@ -715,6 +715,7 @@ const steps = [
   ["Shared machines show in the toolbar menu, with status and start, and are not task targets", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/shared-machines-menu.test.mjs")], root],
   ["The viewer waits for noVNC and frees each connection on close or retry", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/screen-connection.test.ts"), join(root, "../../packages/computers/test/screen.test.ts")], root],
   ["Without the pushed stream the window polls as always", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/push-fallback.test.mjs")], root],
+  ["The agent's reasoning never sticks to its answer", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/reasoning-stream.test.mjs")], root],
   ["Successful maintenance does not notify and dismissed failures do not repeat", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/activity-notice.test.mjs")], root],
   ["With tasks working, restart or quit waits for them or stops the ones it names", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/update-wait.test.mjs")], root],
   ["A reply with a visual does not vanish from chat even if the turn is not saved or the visual cannot be read", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/chat-turn-unsaved.test.mjs")], root],

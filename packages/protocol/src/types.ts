@@ -241,6 +241,13 @@ export type Turn = {
   agent?: string | null;
   /** La tarea que lo escribió por el CLI (`Turn::from_task`). */
   from_task?: SenderTask | null;
+  /** Lo que el agente pensó, ubicado por `before_piece`; ausente es «no se registró». */
+  reasoning?: {
+    text: string;
+    before_piece?: number;
+    duration_ms?: number | null;
+    truncated?: boolean;
+  }[] | null;
 };
 /** `sessions::PermissionDecision`. */
 export type PermissionDecision = { tool: string; target?: string | null; allow: boolean };

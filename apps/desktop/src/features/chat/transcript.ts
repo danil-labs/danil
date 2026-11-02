@@ -18,6 +18,7 @@ import type {
   Msg,
   PermissionDecision,
   PermissionOrigin,
+  Razonamiento,
 } from "./Chat.tsx";
 import type { Producido } from "./Delivery.tsx";
 import type { HistoryPage } from "./history.ts";
@@ -38,6 +39,8 @@ export type ChatEvent = {
   kind:
     | "started"
     | "delta"
+    /** Lo que el agente pensó antes de escribir; no es su respuesta. */
+    | "reasoning"
     | "tool"
     | "tool_done"
     | "permission"
@@ -88,11 +91,11 @@ export type ChatEvent = {
    */
   starts_message?: boolean;
   /**
-   * Solo en `delta`: el mensaje del agente al que pertenece el fragmento, si
-   * el CLI lo publica. ACP lo manda por `messageId`, y su orden de entrega no
-   * es el de generación: una herramienta del mensaje puede caer entre dos
-   * fragmentos suyos. Con esto el texto vuelve a su globo en vez de abrir uno
-   * nuevo. Ver `runtime/acp.rs`.
+   * Solo en `delta` y `reasoning`: el mensaje del agente al que pertenece el
+   * fragmento, si el CLI lo publica. ACP lo manda por `messageId`, y su orden
+   * de entrega no es el de generación: una herramienta del mensaje puede caer
+   * entre dos fragmentos suyos. Con esto el texto vuelve a su globo en vez de
+   * abrir uno nuevo. Ver `runtime/acp.rs`.
    */
   message_id?: string;
   /** Solo en `tool`/`tool_done`: con qué paso empareja. */
@@ -217,6 +220,60 @@ export function anexarDeltas(msgs: Msg[], deltas: readonly Delta[]): Msg[] {
     else juntos.push(d);
   }
   return juntos.reduce((m, d) => anexarDelta(m, d), msgs);
+}
+
+/**
+ * Mete un fragmento de razonamiento en el hilo vivo, en su bloque.
+ *
+ * Con `messageId` se pega al mensaje de ese id aunque una herramienta haya
+ * quedado en medio. Sin él —Codex y Claude no lo publican— cada ráfaga es un
+ * bloque: el texto o una herramienta la cierran.
+ */
+export function anexarRazonamiento(
+  msgs: Msg[],
+  r: {
+    text: string;
+    messageId?: string;
+    author: Author | null;
+  },
+): Msg[] {
+  const bloque: Razonamiento = { text: r.text };
+  const nuevo = (): Msg[] => [
+    ...msgs,
+    {
+      role: "agent",
+      text: "",
+      author: r.author,
+      nativeMessageId: r.messageId,
+      razonamiento: [bloque],
+    },
+  ];
+  const pegar = (m: Msg): Msg => {
+    const previos = m.razonamiento ?? [];
+    const ultimo = previos.at(-1);
+    return {
+      ...m,
+      razonamiento: ultimo
+        ? [...previos.slice(0, -1), { ...ultimo, text: ultimo.text + r.text }]
+        : [bloque],
+    };
+  };
+  if (r.messageId) {
+    for (let i = msgs.length - 1; i >= 0; i--) {
+      if (msgs[i].meta === "task_launched") break;
+      if (msgs[i].role === "agent" && msgs[i].nativeMessageId === r.messageId) {
+        const copia = [...msgs];
+        copia[i] = pegar(msgs[i]);
+        return copia;
+      }
+    }
+    return nuevo();
+  }
+  const ultimo = msgs[msgs.length - 1];
+  if (ultimo?.role === "agent" && !ultimo.text && ultimo.razonamiento?.length) {
+    return [...msgs.slice(0, -1), pegar(ultimo)];
+  }
+  return nuevo();
 }
 
 /**
@@ -358,6 +415,17 @@ export type Signatures = { person: Author; agent: Author };
 /** `workspace/artifacts.rs` · `ChatExportado`. */
 export type ChatExportado = { rel: string; path: string };
 
+/**
+ * Un bloque de razonamiento guardado. `before_piece` lo sitúa entre las
+ * piezas del turno; ausente es «no se registró».
+ */
+export type TurnReasoning = {
+  text: string;
+  before_piece?: number;
+  duration_ms?: number | null;
+  truncated?: boolean;
+};
+
 export type Turn = {
   task_mentions?: import("../../lib/taskMentions.ts").TaskMention[];
   role: string;
@@ -411,6 +479,11 @@ export type Turn = {
    * del texto como siempre.
    */
   pieces?: Piece[] | null;
+  /**
+   * Lo que el agente pensó, en bloques. Va aparte de `pieces`: no es algo que
+   * dijera ni hiciera, y no entra en copiar, buscar ni exportar.
+   */
+  reasoning?: TurnReasoning[] | null;
   id?: string | null;
   /** El modelo elegido al lanzar; ausente si se dejó el de por defecto. */
   model?: string | null;
@@ -511,6 +584,14 @@ const LINEAS_SIN_PROSA = new Set([
   "delivery_pending",
   "shell_reply",
 ]);
+
+function aRazonamiento(bloques: readonly TurnReasoning[]): Razonamiento[] {
+  return bloques.map((b) => ({
+    text: b.text,
+    ...(b.duration_ms != null ? { durationMs: b.duration_ms } : {}),
+    ...(b.truncated ? { truncated: true } : {}),
+  }));
+}
 
 /**
  * La transcripción guardada, tal como se pinta.
@@ -624,6 +705,7 @@ export function transcripcion(turns: Turn[], start = 0): Msg[] {
       hops: t.hops ?? undefined,
       woke_by: t.woke_by ?? undefined,
       turno: t.id ?? undefined,
+      razonamiento: t.reasoning?.length ? aRazonamiento(t.reasoning) : undefined,
       // Sin este renglón el punto de corte de un fork nativo no existe para
       // la pantalla, y todas las respuestas se leerían como turnos en vuelo.
       nativeId: t.native_id ?? undefined,
@@ -674,13 +756,14 @@ export function transcripcion(turns: Turn[], start = 0): Msg[] {
       !propio.preguntas &&
       !propio.respuestas &&
       !propio.permission &&
-      !propio.historyRefs?.length
+      !propio.historyRefs?.length &&
+      !propio.razonamiento
     )
       return [...cambio, ...pasos, ...entrega];
     // Con el orden registrado se pinta el orden. Lo que el turno arrastra
     // —lo que preguntó, lo que cambió, cuánto tardó— va en el ÚLTIMO mensaje:
     // es el que cierra el turno, y repartirlo pintaría cada cosa varias veces.
-    const enOrden = entrelazado(t, propio, paso, visible);
+    const enOrden = entrelazado(t, propio, paso, visible, t.reasoning ?? []);
     if (enOrden) return [...cambio, ...enOrden, ...entrega];
     return [...cambio, ...pasos, propio, ...entrega];
   };
@@ -703,6 +786,7 @@ function entrelazado(
   propio: Msg,
   paso: (h: Tool) => Msg,
   visible: (h: Tool | undefined) => boolean,
+  reasoning: readonly TurnReasoning[],
 ): Msg[] | null {
   const piezas = t.pieces ?? [];
   if (piezas.length === 0) return null;
@@ -710,6 +794,8 @@ function entrelazado(
     (acc, p, i) => ("text" in p ? i : acc),
     -1,
   );
+  // Sin texto no hay dónde colocar el orden: el turno se pinta como antes.
+  if (ultimoTexto < 0) return null;
   // La respuesta es lo dicho tras la última herramienta, como `orchestration::mensaje_final`.
   let primeroFinal = ultimoTexto;
   while (primeroFinal > 0 && "text" in piezas[primeroFinal - 1]) primeroFinal--;
@@ -718,6 +804,27 @@ function entrelazado(
     .map((p) => ("text" in p ? p.text.trim() : ""))
     .filter(Boolean)
     .join("\n\n");
+  // El razonamiento va pegado al mensaje que lo rodea: al texto anterior si
+  // lo sigue, y si no al siguiente. Los textos del cierre se juntan en `propio`.
+  const destino = (before: number) => {
+    const desde = Math.min(Math.max(0, before), piezas.length);
+    const previo = desde > 0 ? piezas[desde - 1] : undefined;
+    if (previo && "text" in previo) return desde - 1 >= primeroFinal ? ultimoTexto : desde - 1;
+    for (let i = desde; i < piezas.length; i++) {
+      if ("text" in piezas[i]) return i >= primeroFinal ? ultimoTexto : i;
+    }
+    return ultimoTexto;
+  };
+  const porPieza = new Map<number, Razonamiento[]>();
+  for (const r of reasoning) {
+    const bloque: Razonamiento = {
+      text: r.text,
+      ...(r.duration_ms != null ? { durationMs: r.duration_ms } : {}),
+      ...(r.truncated ? { truncated: true } : {}),
+    };
+    const clave = destino(r.before_piece ?? 0);
+    porPieza.set(clave, [...(porPieza.get(clave) ?? []), bloque]);
+  }
   const out: Msg[] = [];
   piezas.forEach((pieza, i) => {
     if ("tool" in pieza) {
@@ -726,7 +833,7 @@ function entrelazado(
       return;
     }
     if (i === ultimoTexto) {
-      out.push({ ...propio, text: respuesta });
+      out.push({ ...propio, text: respuesta, razonamiento: porPieza.get(i) });
       return;
     }
     if (i >= primeroFinal) return;
@@ -736,6 +843,7 @@ function entrelazado(
       avanceDe: t.id ?? undefined,
       author: t.author ?? undefined,
       agent: t.author?.kind !== "person" ? t.author?.kind : undefined,
+      razonamiento: porPieza.get(i),
     });
   });
   return out;
