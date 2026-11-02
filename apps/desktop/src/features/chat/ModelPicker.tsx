@@ -318,7 +318,7 @@ export default function SelectorDeModelo(props: SelectorDeModeloProps) {
           </nav>
           <div class="min-h-0 overflow-y-auto p-1" role="listbox" aria-label={t("chat.model.listbox")}>
           <Show
-            when={visibles().length > 0}
+            when={grupos().some((grupo) => grupo.models.length > 0)}
             fallback={
               <p class="m-0 px-2 py-3 text-sm text-neutral-500">
                 {t("chat.model.empty")}

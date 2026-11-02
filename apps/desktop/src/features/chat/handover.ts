@@ -18,7 +18,7 @@ export type HandoverState = {
 
 export type HandoverGate = {
   session: string | null;
-  /** Un encargado o el chat de un agente conserva su proveedor. */
+  /** Un encargado conserva su proveedor. */
   handler?: boolean;
   running: boolean;
   remote: boolean;
@@ -48,6 +48,39 @@ export function canHandOverTask(gate: HandoverGate): boolean {
   return !!gate.session && handOverReason(gate) === null;
 }
 
+/**
+ * El candado del selector. El chat de un agente no se bloquea: cambia de CLI
+ * por su perfil (`set_agent_model`), que es otro camino y sigue como antes.
+ */
+export function agentSwitchBlocked(gate: HandoverGate & { agentChat?: boolean }): string | null {
+  return gate.agentChat ? null : handOverReason(gate);
+}
+
+/** El traspaso confirmado: de qué CLI a cuál, y a qué tarea pertenece. */
+export type HandoverPending = { from: string; to: string };
+
+/**
+ * El pendiente que sigue en pie. Otro cliente pudo cambiar el CLI: entonces el
+ * `from` confirmado ya no es el de la sesión y el gesto caduca.
+ */
+export function handoverInForce(
+  pending: HandoverPending | null | undefined,
+  current: string | null,
+): HandoverPending | null {
+  if (!pending) return null;
+  if (current !== null && pending.from !== current) return null;
+  return pending;
+}
+
+/** La confirmación abierta es de la tarea y del borrador que están delante. */
+export function handoverMatches(
+  pending: { sesion: string; clave: string } | null | undefined,
+  session: string | null,
+  clave: string,
+): boolean {
+  return !!pending && !!session && pending.sesion === session && pending.clave === clave;
+}
+
 export type HandoverSend<T> = {
   session: string | null;
   /** El CLI confirmado en el borrador, si hay un traspaso pendiente. */
@@ -68,16 +101,27 @@ export type HandoverSend<T> = {
  * Manda el mensaje dejando el consentimiento justo antes. Si
  * `set_session_provider` falla, `send` no corre: un turno con el CLI viejo y un
  * mensaje escrito para el nuevo no es lo que se confirmó.
+ *
+ * `settled` dice si el pendiente se consumió: se escribió el consentimiento o
+ * el mensaje ya salió con el CLI que el pendiente pedía. Un `!` no lo consume.
  */
 export async function sendWithHandover<T>(
   input: HandoverSend<T>,
-): Promise<{ answer: T; handedOver: boolean }> {
+): Promise<{ answer: T; handedOver: boolean; settled: boolean }> {
   const pending = input.pending;
   const handedOver = !!input.session &&
     !!pending &&
     pending === input.provider &&
     pending !== input.current &&
     !input.command;
+  const alreadyOn = !!input.session &&
+    !!pending &&
+    pending === input.provider &&
+    pending === input.current;
   if (handedOver && pending) await input.setProvider(pending);
-  return { answer: await input.send(), handedOver };
+  return {
+    answer: await input.send(),
+    handedOver,
+    settled: handedOver || (!input.command && alreadyOn),
+  };
 }
