@@ -66,7 +66,9 @@ export function SidebarMenuItem(props: JSX.HTMLAttributes<HTMLLIElement>) {
 }
 
 export type SidebarMenuButtonProps =
-  JSX.ButtonHTMLAttributes<HTMLButtonElement> & {
+  JSX.ButtonHTMLAttributes<HTMLButtonElement> &
+  /** Con `as="a"`, el enlace. */
+  Pick<JSX.AnchorHTMLAttributes<HTMLAnchorElement>, "href" | "target" | "rel"> & {
     type?: "button" | "submit" | "reset";
     /** Qué elemento renderiza. Sustituye al `asChild` de Radix. */
     as?: ValidComponent;

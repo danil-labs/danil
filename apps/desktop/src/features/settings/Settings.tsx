@@ -173,14 +173,16 @@ const SIN_PESTANA: Pestana = { id: "", name: "", panel: null };
 const idTab = (id: string) => `cfg-tab-${id}`;
 const idSub = (id: string) => `cfg-sub-${id}`;
 
-/** El enlace al Harness: en la web de alfa, solo para owner y admin; el escritorio no sabe el rol y la ofrece siempre. */
-function AdminLink(props: { workspace: string | null }) {
+/** El enlace al Harness: en la web de alfa, solo para owner y admin; el escritorio no sabe el rol y la ofrece siempre. Es un enlace de verdad: siempre a `/admin`, en otra pestaña. */
+function AdminLink() {
   const page = capabilities().adminPage;
   const [allowed] = createResource(async () => (page ? await page.allowed().catch(() => false) : capabilities().nativeWindow));
-  const open = () => {
-    const query = props.workspace ? `?workspace=${encodeURIComponent(props.workspace)}` : "";
-    if (page) window.location.assign(page.href(props.workspace));
-    else void invoke("open_external", { target: `${ADMIN_URL}${query}` }).catch(() => {});
+  const href = page?.href ?? ADMIN_URL;
+  /** El escritorio no abre pestañas: lo manda al navegador. */
+  const open = (event: MouseEvent) => {
+    if (page) return;
+    event.preventDefault();
+    void invoke("open_external", { target: ADMIN_URL }).catch(() => {});
   };
   return (
     <Show when={allowed()}>
@@ -188,6 +190,10 @@ function AdminLink(props: { workspace: string | null }) {
         <SidebarMenu role="presentation">
           <SidebarMenuItem role="presentation">
             <SidebarMenuButton
+              as="a"
+              href={href}
+              target="_blank"
+              rel="noopener"
               data-settings-admin=""
               selectionMark={false}
               class="h-10 min-h-10 grid-cols-[18px_minmax(0,1fr)_auto] gap-2.5 rounded-l-[10px] rounded-r-none border-0 py-0 pl-3.5 pr-3"
@@ -471,7 +477,7 @@ export default function Settings(props: {
                   </optgroup>
                 )}</For>
               </Select>
-              <AdminLink workspace={props.agentsWorkspace ?? null} />
+              <AdminLink />
             </header>
             <Sidebar
               role="tablist"
@@ -501,7 +507,7 @@ export default function Settings(props: {
                   )}
                 </For>
               </SidebarContent>
-              <AdminLink workspace={props.agentsWorkspace ?? null} />
+              <AdminLink />
             </Sidebar>
 
             <div class="relative min-h-0 min-w-0 bg-surface">

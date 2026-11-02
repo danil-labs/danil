@@ -7,7 +7,7 @@ const api = (session: InboxSession) => createSupportAccess(session, fetch, `${im
 /** El enlace al Harness en Configuración. Un miembro entra en solo lectura, pero sus secciones aún no tienen fuente real: sin ellas no se le ofrece. */
 export function adminPageCapability(session: InboxSession, href = `${import.meta.env.BASE_URL}admin`) {
   return {
-    href: (workspace: string | null) => (workspace ? `${href}?workspace=${encodeURIComponent(workspace)}` : href),
+    href,
     allowed: async () => (await api(session).memberships()).some((m) => isManager(m.role) && accountKind(m) !== "personal"),
   };
 }
