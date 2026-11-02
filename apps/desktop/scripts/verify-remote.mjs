@@ -147,7 +147,9 @@ async function openLink(host) {
 function machineClis(machine, env) {
   const start = ["machine", "start", machine, "--json"];
   if (env.VERIFY_REMOTE_TERMINUS) return [[env.VERIFY_REMOTE_TERMINUS, start]];
-  return [[env.DANIL_CLI || "danil", ["computers", ...start]], [env.TERMINUS_CLI || "terminus", start]];
+  // El grupo público es `machines`. `terminus machine start` se queda: el motor
+  // instalado puede no conocer `machines` todavía, y ese caso sigue de largo.
+  return [[env.DANIL_CLI || "danil", ["machines", ...start]], [env.TERMINUS_CLI || "terminus", start]];
 }
 
 /** `absent` sigue con el siguiente CLI; `fallback` va directo a aws. */

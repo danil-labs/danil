@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Un Danil Computers falso para probar la app sin la sesión de nadie:
+ * Un Danil Machines falso para probar la app sin la sesión de nadie:
  * el login de Supabase (`/auth/v1/token`), el plano de control
  * (`/v1/computers`, `/start`, `/v1/workspaces`, la memoria `/v1/workspaces/:id/memory/*`) y el relay (`/v1/computers/:id/session`, protocolo
  * v1 con espejo), sobre HTTP y WebSocket reales en localhost.
@@ -859,6 +859,6 @@ server.on("upgrade", (request, raw) => {
   upgrade(request, raw, match[1]);
 });
 
-server.listen(PORT, "0.0.0.0", () => console.log(`Danil Computers falso en http://127.0.0.1:${PORT} (VM apagada con espejo, Mac ${machines.cmp_mac.state})`));
+server.listen(PORT, "0.0.0.0", () => console.log(`Danil Machines falso en http://127.0.0.1:${PORT} (VM apagada con espejo, Mac ${machines.cmp_mac.state})`));
 
 export { machines, server };

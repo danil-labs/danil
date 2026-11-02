@@ -4,7 +4,7 @@ import type { Pairing } from "./hosts";
 
 /**
  * El emparejamiento con el bridge de desarrollo (un Terminus de la red local).
- * Es un camino secundario: el principal son las máquinas de Danil Computers.
+ * Es un camino secundario: el principal son las máquinas de Danil Machines.
  */
 const KEY = "terminus.pairing";
 

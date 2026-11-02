@@ -1,6 +1,6 @@
 /**
  * Las conexiones de orquestadores externos de la persona (Hermes, OpenClaw,
- * ChatGPT…) que usan Danil por el MCP remoto de Danil Computers. Una conexión
+ * ChatGPT…) que usan Danil por el MCP remoto de Danil Machines. Una conexión
  * nace `pending` cuando el orquestador llama por primera vez y no hace nada
  * hasta que la persona le da máquinas, workspace y modo de permisos.
  */

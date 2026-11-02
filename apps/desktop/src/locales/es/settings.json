@@ -680,7 +680,7 @@
   "settings.connections.loading": "Cargando conexiones…",
   "settings.connections.failed": "No se pudo completar. Inténtalo de nuevo.",
   "settings.connections.unavailable": "Inicia sesión con tu cuenta de Danil",
-  "settings.connections.unavailable_hint": "Las conexiones viven en tu cuenta de Danil, en Danil Computers.",
+  "settings.connections.unavailable_hint": "Las conexiones viven en tu cuenta de Danil, en Danil Machines.",
   "settings.connections.empty": "Ningún orquestador se ha conectado",
   "settings.connections.empty_hint": "Pega {url} como servidor MCP en tu orquestador e inicia sesión con Danil. Aparecerá aquí para que le des máquina y permisos.",
   "settings.connections.pending_hint": "Revisa el acceso disponible y activa la conexión.",

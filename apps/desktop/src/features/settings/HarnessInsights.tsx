@@ -1,5 +1,5 @@
 /**
- * Consumo y actividad del Harness desde Danil Machine (`/v1/org/*`).
+ * Consumo y actividad del Harness desde Danil Machines (`/v1/org/*`).
  * En el escritorio la lectura la hace la ventana con la sesión de persona; en
  * la web `/admin`, la página con su sesión de Supabase. Un dato que el servidor
  * no manda se queda como «sin dato», nunca como cero.

@@ -400,7 +400,7 @@ test("solo terminus enciende", { skip }, (t) => {
 test("solo danil enciende", { skip }, (t) => {
   const { wake, danil, aws } = bothClis(t, [envelope(started)], null);
   assert.equal(wake().state, "started");
-  assert.deepEqual(danil.calls(), ["computers machine start vm-verify --json"]);
+  assert.deepEqual(danil.calls(), ["machines machine start vm-verify --json"]);
   assert.deepEqual(aws.calls(), []);
 });
 
@@ -413,7 +413,7 @@ test("con danil y terminus gana danil", { skip }, (t) => {
 
 const danilUnusable = {
   "no conoce el comando": envelope(refused("invalid_request"), 2),
-  "no conoce el comando y no responde JSON": { stderr: "error: unrecognized subcommand 'computers'\n", code: 2 },
+  "no conoce el comando y no responde JSON": { stderr: "error: unrecognized subcommand 'machines'\n", code: 2 },
   "rechaza el contexto TERMINUS_*": envelope({ version: 1, result: null, error: { code: "conflicting_selection", detail: { reason: "legacy_environment", variables: ["TERMINUS_CLI"] } } }, 2),
 };
 for (const [name, answer] of Object.entries(danilUnusable)) {

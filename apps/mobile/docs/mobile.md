@@ -4,7 +4,7 @@ Una app de iOS y Android para ver y dirigir Danil desde el teléfono: qué
 tareas te necesitan, aprobar o rechazar permisos, contestar preguntas, escribirle
 a una tarea o a un agente y crear tareas nuevas. No es un editor ni una terminal.
 
-Trabaja sobre las máquinas de la persona a través de **Danil Computers**: por
+Trabaja sobre las máquinas de la persona a través de **Danil Machines**: por
 omisión su VM administrada por Danil, y además cualquier otra máquina donde
 Danil o su Seldon Host esté conectado a su cuenta (una Mac, otro VPS). Cada
 máquina sigue siendo la dueña de sus tareas; el teléfono es otro cliente más,
@@ -40,7 +40,7 @@ como la web.
   que se escribe en vivo.
 - **Lista cerrada de comandos en los dos caminos** (`APP_COMMANDS` en
   `packages/protocol`): son funciones de ventana con el contrato renombrado.
-  El relay de Danil Computers solo bloquea las funciones de escritorio, así que
+  El relay de Danil Machines solo bloquea las funciones de escritorio, así que
   la lista la hace cumplir el cliente (`apps/mobile/src/lib/hosts.ts`, `command_not_allowed`);
   el bridge de desarrollo contesta 403 con la misma lista. Ver «Lista cerrada» abajo.
 - **La lista de tareas es la del sidebar del escritorio (#151)**, adaptada al
@@ -124,7 +124,7 @@ workspaces, que va a la raíz que fijó la compilación,
   `notificationclick`, sin `fetch` ni caché) y vive con scope `<base>m/`: en
   app.danil.ai la raíz es del service worker de Appv2. Lo registra
   `apps/mobile/src/lib/push.web.ts` cuando la persona activa «Avisos de tareas» en Cuenta de
-  Danil; la suscripción se guarda en Danil Computers, cuyo relay avisa cuando una
+  Danil; la suscripción se guarda en Danil Machines, cuyo relay avisa cuando una
   tarea termina, se detiene o pide algo, también con el navegador cerrado. El
   aviso trae solo identificadores: el worker arma la ruta (`?to=/task/…`) y no
   muestra texto del chat, así que con la app cerrada dice que se detuvo y no el
@@ -160,7 +160,7 @@ workspaces, que va a la raíz que fijó la compilación,
 
 ```
                                   ┌─▶ VM de Danil (conector)
-[App Expo] ──WSS + JWT──▶ [relay de Danil Computers] ─┤
+[App Expo] ──WSS + JWT──▶ [relay de Danil Machines] ─┤
      │                                               └─▶ Mac / VPS con Seldon Host
      └──HTTP + token (desarrollo)──▶ [bridge] ──RPC1──▶ [motor del lab]
 ```
@@ -309,7 +309,7 @@ una cuenta que llegó a autenticarse.
 
 ## Probarla
 
-Sin la sesión de nadie, contra el Danil Computers falso (`apps/mobile/scripts/fake-computers.mjs`:
+Sin la sesión de nadie, contra el Danil Machines falso (`apps/mobile/scripts/fake-computers.mjs`:
 login de Supabase, `/v1/computers`, `/start` y el relay con espejo, con una VM
 apagada y una Mac propia que comparten un workspace, cada motor con sus ids;
 además fijar y archivar, el cuadro de escribir, adjuntos con las reglas del

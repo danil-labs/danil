@@ -53,7 +53,7 @@ export type AdminSource = {
   /** Lo que se comparte con el equipo de este workspace. */
   shared?: SharedSource;
   usage?: UsageSource;
-  /** Consumo y actividad de Danil Machine (`/v1/org/*`). Sin esto, la sección no aparece. */
+  /** Consumo y actividad de Danil Machines (`/v1/org/*`). Sin esto, la sección no aparece. */
   harness?: HarnessOrgSource;
   members?: MembersSource;
   rules?: RulesSource;

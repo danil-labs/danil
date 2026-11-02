@@ -2,8 +2,11 @@ use std::ffi::OsStr;
 #[cfg(unix)]
 use std::os::unix::process::CommandExt;
 
-// Catálogo de args.rs del motor, más help y kn. `computers` y `harness` llegan
-// con el motor de #276; hasta entonces el error es del motor, no abrir la ventana.
+// Catálogo de args.rs del motor, más help y kn. `machines` es el grupo público
+// de Danil Machines. Hasta el motor que lo tiene, el error es del motor, no
+// abrir la ventana. No publicar este cliente antes de ese pin. `computers` es
+// su alias oculto en el motor (lo llama el verify publicado); sale de aquí
+// cuando el motor lo retire.
 const COMMANDS: &[&str] = &[
     "account",
     "activity",
@@ -24,6 +27,7 @@ const COMMANDS: &[&str] = &[
     "instances",
     "keep-awake",
     "kn",
+    "machines",
     "mcp",
     "notify",
     "operation",

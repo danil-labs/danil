@@ -680,7 +680,7 @@
   "settings.connections.loading": "Loading connections…",
   "settings.connections.failed": "That did not work. Try again.",
   "settings.connections.unavailable": "Sign in with your Danil account",
-  "settings.connections.unavailable_hint": "Connections live in your Danil account, in Danil Computers.",
+  "settings.connections.unavailable_hint": "Connections live in your Danil account, in Danil Machines.",
   "settings.connections.empty": "No orchestrator has connected",
   "settings.connections.empty_hint": "Paste {url} as an MCP server in your orchestrator and sign in with Danil. It will show up here so you can give it a machine and permissions.",
   "settings.connections.pending_hint": "Review the available access and activate the connection.",

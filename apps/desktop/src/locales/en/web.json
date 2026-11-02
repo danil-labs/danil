@@ -20,7 +20,7 @@
   "web.add_account.sign_in_again": "Sign in again",
   "web.add_account.use_another": "Use another account",
   "web.add_account.back_to_accounts": "See my accounts",
-  "web.computers.error": "Could not reach Danil Computers.",
+  "web.computers.error": "Could not reach Danil Machines.",
   "web.computers.no_workspaces": "Sign in with your Danil account in Danil on your computer: while signed in, every workspace on that computer shows up here.",
   "web.computers.none": "You do not have any computer in Danil yet.",
   "web.computers.open_account": "Open {email}",

@@ -12,7 +12,7 @@ which is not here.
 | `packages/tasks` | The task list both apps derive: flat list, filter and grouping, two-line card, agents dock. | — |
 | `packages/chat` | How every client reads an agent message: links, the visual directive, next steps, tool steps and the HTML sandbox. | — |
 | `packages/attention` | The Inbox, channels, customization and support access from any client, over the same-origin BFF. | — |
-| `packages/computers` | Danil Computers from any client: control-plane API, relay session (WebSocket injected) and wake rules. | — |
+| `packages/computers` | Danil Machines from any client: control-plane API, relay session (WebSocket injected) and wake rules. | — |
 | `packages/fleet` | Several machines behind one panel: the call envelope (the machine comes only from it), a slice with its status per machine, bounded waits and the merge. | — |
 | `packages/carry` | Carrying work between machines: what travels, the copy in parts and the base the new task starts on. | — |
 | `packages/protocol` | The closed list of commands the mobile app sends to a machine (relay or bridge) and their answers. | — |
@@ -28,7 +28,7 @@ account type is the feature, not the product:
 
 | Name | Who has it | What it is |
 |---|---|---|
-| **Computers** | every account | Your own VMs, or machines connected to the central relay `computers` (`computers.danil.ai`). |
+| **Machine** | every account | Your own VMs, or machines connected to the central relay `computers` (`computers.danil.ai`). CLI `danil machines` / `dn machines`. |
 | **Harness** | organizations only (Teams, Enterprise); a personal account has none | Policy, usage, members and evaluation. It is what Radiant used to be. |
 
 "Agents" survives only as a common noun (the agents dock, a task's agent, a

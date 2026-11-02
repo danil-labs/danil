@@ -7,7 +7,7 @@
  * It speaks RPC1 to the engine over loopback, like the window, and serves the
  * phone a small HTTP API with a bearer token. Only `APP_COMMANDS` of
  * `@terminus/protocol` reach the engine, through `service invoke`: the same
- * closed list the app's relay client enforces for Danil Computers. Without `--allow-lan` it answers loopback and Tailscale (100.64.0.0/10)
+ * closed list the app's relay client enforces for Danil Machines. Without `--allow-lan` it answers loopback and Tailscale (100.64.0.0/10)
  * addresses only: plain HTTP is acceptable inside the tailnet, not on a LAN.
  *
  * It forwards the engine's events as they come (`chat`, `attention`, `session`,

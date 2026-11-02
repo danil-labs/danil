@@ -2,7 +2,7 @@
 
 Aplica [AGENTS.md](../../AGENTS.md). App de Expo (React Native, TypeScript) para
 iOS y Android: un control remoto de Danil, no Danil completo. Opera
-tareas en las máquinas de la persona a través de Danil Computers; la
+tareas en las máquinas de la persona a través de Danil Machines; la
 arquitectura y el estado están en [docs/mobile.md](docs/mobile.md).
 
 Es un proyecto aparte de la raíz: tiene su `package.json` y su
@@ -19,7 +19,7 @@ npm start               # Metro; Expo Go en el teléfono o el simulador
 npm run typecheck       # tsc --noEmit
 npm test                # pruebas en Node de la capa de datos (scripts/*.test.ts)
 npm run doctor          # expo-doctor
-npm run computers:fake  # Danil Computers falso en :8787 (login, plano de control y relay)
+npm run computers:fake  # Danil Machines falso en :8787 (login, plano de control y relay)
 npm run computers:smoke # la capa de datos contra el falso, por HTTP y WebSocket reales
 npm run bridge          # bridge de desarrollo contra el motor del lab
 ```
@@ -45,7 +45,7 @@ se agregan con `npx expo install <paquete>`, que elige la versión compatible.
 - **Lista cerrada en los dos caminos.** La app manda al motor de una máquina
   solo los comandos de `APP_COMMANDS` (`packages/protocol/src/commands.ts`):
   funciones de ventana (`service invoke`) con los nombres del contrato
-  renombrado (`list_agents`, `provider`…). El relay de Danil Computers bloquea
+  renombrado (`list_agents`, `provider`…). El relay de Danil Machines bloquea
   poco (solo funciones de escritorio), así que el cliente del relay
   (`apps/mobile/src/lib/hosts.ts`) se niega a mandar cualquier otro (`command_not_allowed`);
   el bridge (`bridge/bridge.mjs`) contesta 403 con la misma lista. Un comando
@@ -70,7 +70,7 @@ se agregan con `npx expo install <paquete>`, que elige la versión compatible.
 - Lo que comparte con el escritorio viene de `packages/` en la raíz y no se
   copia aquí: colores, estado y palabras de `@terminus/design`; la lista plana,
   el filtro, la tarjeta de dos líneas y el dock de `@terminus/tasks`; el cliente
-  de Danil Computers de `@terminus/computers`; comandos y tipos de
+  de Danil Machines de `@terminus/computers`; comandos y tipos de
   `@terminus/protocol`. Dentro de `packages/` los imports llevan `.ts` y entre
   paquetes van por ruta relativa (`../../design/src/index.ts`).
 - El estado de una tarea se pinta solo con `apps/mobile/src/ui/TaskStatus.tsx`, sobre

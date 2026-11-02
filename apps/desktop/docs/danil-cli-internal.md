@@ -13,7 +13,7 @@ forwarding es un mecanismo interno de distribución: no se instala ni anuncia
 ese ejecutable físico como tercer comando operativo.
 El binario físico del motor también permanece en su directorio privado.
 Los instaladores del host no deben añadir un wrapper `seldon-runtime` al PATH;
-la conexión usa `danil computers connect` y `danil computers status`, del motor
+la conexión usa `danil machines connect` y `danil machines status`, del motor
 del PR seldon-host #276. El nombre del grupo `computers` está definido sólo en
 `COMPUTERS` de `crates/terminus-cli/src/args.rs`.
 Con una instalación en una ruta personalizada, pasa `--data` con la carpeta
