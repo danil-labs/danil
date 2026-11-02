@@ -667,6 +667,7 @@ const steps = [
   ["Workspace memory is written and edited like project memory", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/memory-workspace-scope.test.mjs")], root],
   ["The window shows account memory history and marks conflict copies", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/memory-history-window.test.mjs")], root],
   ["The Danil account talks to the engine through danil_connect_*", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/danil-account.test.ts")], root],
+  ["The device page hands the desktop window its session only after approving and only to 127.0.0.1", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/web-connect-desktop.test.ts")], root],
   ["Each workspace talks to its Danil account, and an older engine leaves the single account", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/danil-sessions.test.ts")], root],
   ["In the browser the approval page connects a computer to the account", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/web-connect.test.mjs")], root],
   ["An approval invalidates its identity without touching other slots", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/web-session.test.ts")], root],

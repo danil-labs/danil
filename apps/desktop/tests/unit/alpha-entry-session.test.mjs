@@ -372,3 +372,20 @@ test("desktop: an ended WorkOS session ends the window's session too", async () 
   assert.equal(refused.status, 401);
   assert.deepEqual(await refused.json(), { error: "session_ended" });
 });
+
+test("desktop: the device page approves with JSON and gets the loopback location to navigate to", async () => {
+  const w = world();
+  const { cookie } = await signedIn(w);
+  const fields = Object.fromEntries(new URLSearchParams(desktopQuery()));
+  const post = (body, headers = {}) => call(w, "/auth/desktop/approve", { method: "POST", headers: { "Content-Type": "application/json", Cookie: cookie, Origin: origin, ...headers }, body: JSON.stringify(body) });
+  assert.equal((await post(fields, { Origin: "https://evil.example" })).status, 403);
+  assert.equal((await post({ ...fields, port: "80" })).status, 400, "the port is checked again on the server");
+  assert.equal((await post({ ...fields, extra: "1" })).status, 400);
+  const answer = await post(fields);
+  assert.equal(answer.status, 200);
+  const location = new URL((await answer.json()).location);
+  assert.equal(location.origin + location.pathname, "http://127.0.0.1:49152/callback");
+  const code = location.searchParams.get("code");
+  const exchanged = await desktopJson(w, "/auth/desktop/exchange", { code, verifier: desktopVerifier });
+  assert.equal(exchanged.status, 200);
+});

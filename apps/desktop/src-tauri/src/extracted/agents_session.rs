@@ -84,7 +84,9 @@ fn entry() -> String {
 /// Los tokens solo viajan a un Computers conocido: el `endpoint` lo responde el motor,
 /// y un agente con el mismo usuario del sistema podría cambiar su configuración.
 fn known_computers(endpoint: &str) -> bool {
-    const KNOWN: [&str; 2] = [
+    const KNOWN: [&str; 4] = [
+        "https://machines.danil.ai",
+        "https://machines-dev.danil.ai",
         "https://computers.danil.ai",
         "https://computers-dev.danil.ai",
     ];
@@ -417,6 +419,111 @@ fn answer_browser(stream: &mut TcpStream, ok: bool) {
 }
 
 /// PKCE con el puerto local: el navegador trae un código que solo canjea quien tiene el verificador.
+struct Pkce {
+    verifier: String,
+    challenge: String,
+    state: String,
+    port: u16,
+    listener: TcpListener,
+}
+
+impl Pkce {
+    fn open() -> Result<Self, Value> {
+        let verifier = random(32)?;
+        let challenge = URL_SAFE_NO_PAD.encode(Sha256::digest(verifier.as_bytes()));
+        let state = random(24)?;
+        let listener = TcpListener::bind("127.0.0.1:0").map_err(|_| error("unavailable"))?;
+        let port = listener
+            .local_addr()
+            .map_err(|_| error("unavailable"))?
+            .port();
+        listener
+            .set_nonblocking(true)
+            .map_err(|_| error("unavailable"))?;
+        Ok(Self {
+            verifier,
+            challenge,
+            state,
+            port,
+            listener,
+        })
+    }
+
+    fn query(&self) -> String {
+        format!(
+            "challenge={}&state={}&port={}",
+            self.challenge, self.state, self.port
+        )
+    }
+
+    /// Una vuelta del navegador, sin bloquear: `Some(code)` cuando llega la buena.
+    fn poll(&self) -> Result<Option<String>, Value> {
+        match self.listener.accept() {
+            Ok((mut stream, _)) => {
+                let _ = stream.set_nonblocking(false);
+                match callback(&mut stream) {
+                    Some((code, returned)) if returned == self.state => {
+                        answer_browser(&mut stream, true);
+                        Ok(Some(code))
+                    }
+                    _ => {
+                        answer_browser(&mut stream, false);
+                        Ok(None)
+                    }
+                }
+            }
+            Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => Ok(None),
+            Err(_) => Err(error("unavailable")),
+        }
+    }
+
+    /// Canjea el código con el verificador y guarda la sesión de la ventana.
+    fn exchange(self, app: &tauri::AppHandle, name: &str, code: &str) -> Result<Live, Value> {
+        drop(self.listener);
+        let (status, answer) = post_json(
+            &format!("{}/auth/desktop/exchange", entry()),
+            &json!({ "code": code, "verifier": self.verifier }),
+        )?;
+        if status != 200 {
+            return Err(error(answer["error"].as_str().unwrap_or("unavailable")));
+        }
+        accept(app, name, &answer)
+    }
+}
+
+/// La concesión de la sesión recién abierta; si falla, la sesión no se queda a medias.
+fn bind(app: &tauri::AppHandle, account: &Option<String>, value: &Live) -> Result<(), Value> {
+    if let Err(e) = grant(app, account, &value.access_token) {
+        let _ = sign_out(app, account);
+        return Err(e);
+    }
+    verified()
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
+        .insert(key(account));
+    Ok(())
+}
+
+/// Espera la vuelta del navegador con la página de consentimiento de la entrada.
+fn pkce_alone(app: &tauri::AppHandle, name: &str, generation: u64) -> Result<Live, Value> {
+    let pkce = Pkce::open()?;
+    super::env::open_external(format!("{}/auth/desktop?{}", entry(), pkce.query()))
+        .map_err(|_| error("browser"))?;
+    let deadline = Instant::now() + LOGIN_WAIT;
+    loop {
+        if CONNECT.load(Ordering::SeqCst) != generation {
+            return Err(error("cancelled"));
+        }
+        if Instant::now() > deadline {
+            return Err(error("timeout"));
+        }
+        if let Some(code) = pkce.poll()? {
+            return pkce.exchange(app, name, &code);
+        }
+        std::thread::sleep(Duration::from_millis(200));
+    }
+}
+
 #[tauri::command(async)]
 pub(super) fn agents_session_connect(
     app: tauri::AppHandle,
@@ -424,65 +531,123 @@ pub(super) fn agents_session_connect(
 ) -> Result<Value, Value> {
     let name = key(&account);
     let generation = CONNECT.fetch_add(1, Ordering::SeqCst) + 1;
-    let verifier = random(32)?;
-    let challenge = URL_SAFE_NO_PAD.encode(Sha256::digest(verifier.as_bytes()));
-    let state = random(24)?;
-    let listener = TcpListener::bind("127.0.0.1:0").map_err(|_| error("unavailable"))?;
-    let port = listener
-        .local_addr()
-        .map_err(|_| error("unavailable"))?
-        .port();
-    listener
-        .set_nonblocking(true)
-        .map_err(|_| error("unavailable"))?;
-    let base = entry();
-    super::env::open_external(format!(
-        "{base}/auth/desktop?challenge={challenge}&state={state}&port={port}"
-    ))
-    .map_err(|_| error("browser"))?;
+    let value = pkce_alone(&app, &name, generation)?;
+    bind(&app, &account, &value)?;
+    Ok(status_of(&app, &name, &value))
+}
+
+/// Tras conectarse el motor, el código de la ventana tiene este margen para llegar.
+const AFTER_CONNECTED: Duration = Duration::from_secs(20);
+
+/// La página de enlace de esta entrada: solo ella recibe los parámetros de la ventana.
+fn paired_page(verification_uri: &str) -> bool {
+    let (Ok(page), Ok(base)) = (
+        tauri::Url::parse(verification_uri),
+        tauri::Url::parse(&entry()),
+    ) else {
+        return false;
+    };
+    page.scheme() == base.scheme()
+        && page.host_str() == base.host_str()
+        && page.port_or_known_default() == base.port_or_known_default()
+}
+
+/// `ABCD-EFGH` y nada más: el código lo entrega el motor.
+fn user_code(value: &str) -> Option<String> {
+    let code = value.trim().to_ascii_uppercase();
+    let ok = code.len() == 9
+        && code.bytes().enumerate().all(|(i, b)| {
+            if i == 4 {
+                b == b'-'
+            } else {
+                b.is_ascii_uppercase() || b.is_ascii_digit()
+            }
+        });
+    ok.then_some(code)
+}
+
+fn engine_status(app: &tauri::AppHandle) -> Result<Value, Value> {
+    super::proxy::engine_call(app, "danil_connect_status", json!({}))
+}
+
+/// Un solo inicio de sesión: el motor de esta computadora y la sesión de la ventana con una aprobación.
+#[tauri::command(async)]
+pub(super) fn danil_sign_in(app: tauri::AppHandle, name: Option<String>) -> Result<Value, Value> {
+    let account: Option<String> = None;
+    let key_name = key(&account);
+    let generation = CONNECT.fetch_add(1, Ordering::SeqCst) + 1;
+    let has_session = access(&app, &key_name, false).is_ok();
+    let status = engine_status(&app)?;
+    if status["state"] == "connected" {
+        if !has_session {
+            let value = pkce_alone(&app, &key_name, generation)?;
+            bind(&app, &account, &value)?;
+        }
+        return engine_status(&app);
+    }
+    let named = name
+        .as_deref()
+        .map(str::trim)
+        .filter(|n| !n.is_empty())
+        .map(|n| json!({ "name": n }))
+        .unwrap_or_else(|| json!({}));
+    let started = super::proxy::engine_call(&app, "danil_connect_start", named)?;
+    let code = started["user_code"].as_str().and_then(user_code);
+    let page = started["verification_uri"]
+        .as_str()
+        .or_else(|| started["verification_uri_complete"].as_str())
+        .unwrap_or_default();
+    // Sin código válido o con otra página de enlace: el navegador de siempre, y la ventana después.
+    let (Some(code), true, false) = (code, paired_page(page), has_session) else {
+        if let Some(url) = started["verification_uri_complete"].as_str() {
+            super::env::open_external(url.to_owned()).map_err(|_| error("browser"))?;
+        }
+        return Ok(started);
+    };
+    let pkce = Pkce::open()?;
+    super::env::open_external(format!("{}/connect?code={code}&{}", entry(), pkce.query()))
+        .map_err(|_| error("browser"))?;
     let deadline = Instant::now() + LOGIN_WAIT;
-    let code = loop {
+    let mut connected_at: Option<Instant> = None;
+    let mut window_code: Option<String> = None;
+    let mut next_check = Instant::now();
+    loop {
         if CONNECT.load(Ordering::SeqCst) != generation {
             return Err(error("cancelled"));
         }
-        if Instant::now() > deadline {
-            return Err(error("timeout"));
+        if window_code.is_none() {
+            window_code = pkce.poll()?;
         }
-        match listener.accept() {
-            Ok((mut stream, _)) => {
-                let _ = stream.set_nonblocking(false);
-                match callback(&mut stream) {
-                    Some((code, returned)) if returned == state => {
-                        answer_browser(&mut stream, true);
-                        break code;
-                    }
-                    _ => answer_browser(&mut stream, false),
-                }
+        if connected_at.is_none() && Instant::now() >= next_check {
+            next_check = Instant::now() + Duration::from_secs(1);
+            let now_status = engine_status(&app)?;
+            match now_status["state"].as_str() {
+                Some("connected") => connected_at = Some(Instant::now()),
+                Some("disconnected") | Some("error") => return Ok(now_status),
+                _ => {}
             }
-            Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => {
-                std::thread::sleep(Duration::from_millis(200));
-            }
-            Err(_) => return Err(error("unavailable")),
         }
-    };
-    drop(listener);
-    let (status, answer) = post_json(
-        &format!("{base}/auth/desktop/exchange"),
-        &json!({ "code": code, "verifier": verifier }),
-    )?;
-    if status != 200 {
-        return Err(error(answer["error"].as_str().unwrap_or("unavailable")));
+        let late = connected_at.is_some_and(|at| at.elapsed() > AFTER_CONNECTED);
+        if (connected_at.is_some() && window_code.is_some()) || late || Instant::now() > deadline {
+            break;
+        }
+        std::thread::sleep(Duration::from_millis(200));
     }
-    let value = accept(&app, &name, &answer)?;
-    if let Err(e) = grant(&app, &account, &value.access_token) {
-        let _ = sign_out(&app, &account);
-        return Err(e);
+    // Con el motor conectado y el código de la ventana: sesión y concesión. Si no, el estado como esté.
+    if let (Some(_), Some(window)) = (connected_at, window_code) {
+        let value = pkce.exchange(&app, &key_name, &window)?;
+        bind(&app, &account, &value)?;
     }
-    verified()
-        .lock()
-        .unwrap_or_else(std::sync::PoisonError::into_inner)
-        .insert(name.clone());
-    Ok(status_of(&app, &name, &value))
+    engine_status(&app)
+}
+
+/// Cierra las dos: la concesión y la sesión de la ventana, y después la cuenta principal del motor.
+#[tauri::command(async)]
+pub(super) fn danil_sign_out(app: tauri::AppHandle) -> Result<Value, Value> {
+    CONNECT.fetch_add(1, Ordering::SeqCst);
+    // La revocación usa el token de cliente del motor: va antes de desconectarlo.
+    let _ = sign_out(&app, &None);
+    super::proxy::engine_call(&app, "danil_disconnect", json!({}))
 }
 
 fn sign_out(app: &tauri::AppHandle, account: &Option<String>) -> Result<(), Value> {
@@ -888,6 +1053,39 @@ mod tests {
         assert!(directory_rows(r#"{"workspaces":[{"key":"a:476"}]}"#).is_ok());
         assert!(directory_rows(r#"{"workspaces":"no"}"#).is_err());
         assert!(directory_rows("[]").is_err());
+    }
+
+    #[test]
+    fn machines_hosts_are_known_by_exact_origin() {
+        assert!(known_computers("https://machines.danil.ai"));
+        assert!(known_computers("https://machines-dev.danil.ai"));
+        assert!(!known_computers("https://machines.danil.ai.evil.example"));
+        assert!(!known_computers("http://machines.danil.ai"));
+        assert!(!known_computers("https://machines.danil.ai:8443"));
+    }
+
+    #[test]
+    fn only_the_entry_page_gets_the_window_parameters() {
+        assert!(paired_page("https://alfa-app.danil.ai/connect"));
+        assert!(paired_page(
+            "https://alfa-app.danil.ai/connect?code=ABCD-EFGH"
+        ));
+        assert!(!paired_page("https://staging-app.danil.ai/connect"));
+        assert!(!paired_page(
+            "https://alfa-app.danil.ai.evil.example/connect"
+        ));
+        assert!(!paired_page("http://alfa-app.danil.ai/connect"));
+        assert!(!paired_page("https://alfa-app.danil.ai:8443/connect"));
+        assert!(!paired_page("not a url"));
+    }
+
+    #[test]
+    fn user_codes_are_checked_before_composing() {
+        assert_eq!(user_code("abcd-efgh").as_deref(), Some("ABCD-EFGH"));
+        assert_eq!(user_code("ABCD-EFG1").as_deref(), Some("ABCD-EFG1"));
+        assert_eq!(user_code("ABCD-EFGH&port=1"), None);
+        assert_eq!(user_code("ABCDEFGHI"), None);
+        assert_eq!(user_code("ABCD EFGH"), None);
     }
 
     #[test]

@@ -50,7 +50,8 @@ test("la cuenta de Danil entra con el navegador, muestra el código y cierra ses
       };
       return status;
     }),
-    danil_disconnect: record("danil_disconnect", () => {
+    // La ventana cierra su sesión y la de la cuenta del motor en una sola orden.
+    danil_sign_out: record("danil_sign_out", () => {
       status = { state: "disconnected", name: "alberto-mbp", online: false };
       return status;
     }),
@@ -117,7 +118,7 @@ test("la cuenta de Danil entra con el navegador, muestra el código y cierra ses
   assert.ok(text().includes("Sin conexión con Danil por ahora."));
   button("Cerrar sesión").click();
   await settle();
-  assert.equal(calls.at(-1)?.command, "danil_disconnect");
+  assert.equal(calls.at(-1)?.command, "danil_sign_out");
   assert.equal(panel()?.dataset.danilAccount, "disconnected");
 });
 
