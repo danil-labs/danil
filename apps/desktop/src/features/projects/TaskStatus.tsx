@@ -60,7 +60,8 @@ function RailDashedRing(props: { size?: number }) {
 /**
  * Identidad estable. Trabajando lo dice la animación del agente, sin arco
  * (sólo con movimiento reducido); sin agente queda un loader chico. Cualquier
- * otro estado es un punto de color en la esquina.
+ * otro estado es un punto de color: en la esquina del agente o, sin agente,
+ * al centro, donde iría el loader.
  */
 function CardMark(props: TaskActivity & { identity: () => JSX.Element; identityLabel?: string; provisional?: boolean; archivada?: boolean }) {
   const state = () => taskPriority(props);
