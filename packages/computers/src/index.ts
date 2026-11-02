@@ -97,6 +97,7 @@ export {
   type AccountMember,
   type AccountRowLike,
   groupAccounts,
+  immediateWindow,
   resetLabel,
   usageTone,
   windowLabel,

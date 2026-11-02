@@ -1,6 +1,7 @@
 import RefreshCw from "lucide-solid/icons/refresh-cw";
 import AlertTriangle from "lucide-solid/icons/triangle-alert";
 import { For, Show } from "solid-js";
+import { immediateWindow } from "@terminus/computers";
 import { t } from "../../lib/i18n";
 import { left, legible, tono } from "../../lib/limits";
 import { sharedLazy } from "../../lib/sharedLazy";
@@ -35,10 +36,11 @@ export default function UsageTool(props: {
     const old = props.usage.lastGoodReads()[k];
     return old ? { read: old, stale: true } : null;
   };
-  // La ventana más justa es la que corta primero el trabajo.
-  const tightest = () => {
-    const windows = read()?.read.windows ?? [];
-    return windows.length ? Math.min(...windows.map(left)) : null;
+  // La barra mide la ventana que corre ahora, no la que va más apretada.
+  const running = () => immediateWindow(read()?.read.windows ?? []);
+  const restante = () => {
+    const window = running();
+    return window ? left(window) : null;
   };
   const failed = () => {
     const c = card();
@@ -48,7 +50,7 @@ export default function UsageTool(props: {
   };
   const title = () => {
     const c = card();
-    const value = tightest();
+    const value = restante();
     return c && value !== null
       ? t("usage.tool.title", { agent: c.label, left: value })
       : t("usage.bar.aria");
@@ -70,13 +72,13 @@ export default function UsageTool(props: {
               <span class="flex size-4 shrink-0 items-center justify-center text-neutral-950">
                 <MarcaAgente id={c().agent} size={13} />
               </span>
-              <Show when={tightest() !== null}>
+              <Show when={restante() !== null}>
                 {/* Sin número: el porcentaje y cuándo vuelve van en el detalle. */}
                 <ProgressBar
                   class={cn("h-1 w-6 shrink-0 bg-neutral-200", read()?.stale && "opacity-60")}
-                  value={tightest() ?? 0}
+                  value={restante() ?? 0}
                   max={100}
-                  barClass={tono(tightest() ?? 0)}
+                  barClass={tono(restante() ?? 0)}
                   label={title()}
                 />
               </Show>
