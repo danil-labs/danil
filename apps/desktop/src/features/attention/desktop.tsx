@@ -106,7 +106,7 @@ const session: AgentsSession & { subscribe: (clear: () => void) => () => void } 
   // Lo lee `sessionFetch` para la cabecera, que `windowFetch` descarta.
   getToken: async () => "window",
   // Entrar a otro workspace (`enterWorkspace`) cambia la cuenta de la sesión: el token nuevo la trae.
-  unauthorized: async () => await invoke<boolean>("agents_session_refresh", {}).catch(() => false),
+  unauthorized: () => invoke("agents_session_refresh", {}).then((renewed) => renewed === true, () => false),
   workspaceKey: () => workspaceKey,
   rememberWorkspace(value) { workspaceKey = value; },
   async reenter() {
