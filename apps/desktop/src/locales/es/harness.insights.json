@@ -61,5 +61,5 @@
   "harness.insights.result_denied": "Denegada",
   "harness.insights.result_error": "Error",
   "harness.insights.result_unknown": "Sin dato",
-  "harness.insights.governance_unavailable": "El gobierno compartido todavía no se lee desde Danil Machine; el escritorio lo muestra con el documento local del workspace."
+  "harness.insights.governance_unavailable": "El gobierno compartido todavía no se lee desde Danil Machines; el escritorio lo muestra con el documento local del workspace."
 }

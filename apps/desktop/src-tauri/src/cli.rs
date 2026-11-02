@@ -4,7 +4,9 @@ use std::os::unix::process::CommandExt;
 
 // Catálogo de args.rs del motor, más help y kn. `machines` es el grupo público
 // de Danil Machines. Hasta el motor que lo tiene, el error es del motor, no
-// abrir la ventana. No publicar este cliente antes de ese pin.
+// abrir la ventana. No publicar este cliente antes de ese pin. `computers` es
+// su alias oculto en el motor (lo llama el verify publicado); sale de aquí
+// cuando el motor lo retire.
 const COMMANDS: &[&str] = &[
     "account",
     "activity",
@@ -12,7 +14,7 @@ const COMMANDS: &[&str] = &[
     "agent-context",
     "auth",
     "chat",
-    "machines",
+    "computers",
     "config",
     "context",
     "engine",
@@ -25,6 +27,7 @@ const COMMANDS: &[&str] = &[
     "instances",
     "keep-awake",
     "kn",
+    "machines",
     "mcp",
     "notify",
     "operation",

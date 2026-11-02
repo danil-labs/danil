@@ -1,5 +1,5 @@
 /**
- * Lecturas de consumo y actividad del Harness. Danil Machine entrega el JSON de
+ * Lecturas de consumo y actividad del Harness. Danil Machines entrega el JSON de
  * `/v1/org/*`; aquí solo se ordena y se decide qué falta, para que la pantalla
  * no invente un cero donde no hubo dato.
  */

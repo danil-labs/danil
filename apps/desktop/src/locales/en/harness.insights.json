@@ -61,5 +61,5 @@
   "harness.insights.result_denied": "Denied",
   "harness.insights.result_error": "Error",
   "harness.insights.result_unknown": "Unknown",
-  "harness.insights.governance_unavailable": "Shared governance is not read from Danil Machine yet; the desktop shows it from the workspace's local document."
+  "harness.insights.governance_unavailable": "Shared governance is not read from Danil Machines yet; the desktop shows it from the workspace's local document."
 }
