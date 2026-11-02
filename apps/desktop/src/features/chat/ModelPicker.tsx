@@ -1,5 +1,6 @@
 import Check from "lucide-solid/icons/check";
 import ChevronDown from "lucide-solid/icons/chevron-down";
+import Lock from "lucide-solid/icons/lock";
 import Search from "lucide-solid/icons/search";
 import Star from "lucide-solid/icons/star";
 import { createMemo, createSignal, For, Show } from "solid-js";
@@ -31,6 +32,9 @@ type SelectorDeModeloProps = {
   disabled?: boolean;
   disabledReason?: string;
   onChange: (model: OpcionDeModelo) => void;
+  /** El agente de la tarea: los demás se ven, pero el candado dice por qué no se eligen. */
+  lockedAgent?: string;
+  lockedReason?: string | null;
   /** La píldora de la caja del chat; sin ella, el disparador fantasma. */
   pildora?: boolean;
   /** El agente que responde, para pintar su marca en el disparador. */
@@ -70,6 +74,9 @@ export default function SelectorDeModelo(props: SelectorDeModeloProps) {
         opcion.superficie === props.superficie && opcion.model.id === props.model,
     );
   const todosLosGrupos = createMemo(() => agruparModelos(props.models, busqueda()));
+  const bloqueado = (opcion: OpcionDeModelo) =>
+    !!props.lockedAgent && opcion.agent !== props.lockedAgent;
+  const disponible = (opcion: OpcionDeModelo) => opcion.usable && !bloqueado(opcion);
   const grupos = createMemo<GrupoDeModelos[]>(() => {
     const busquedaActiva = busqueda().trim().length > 0;
     const actual = seccion();
@@ -85,7 +92,7 @@ export default function SelectorDeModelo(props: SelectorDeModeloProps) {
   const visibles = () =>
     grupos()
       .flatMap((grupo) => grupo.models)
-      .filter((opcion) => opcion.usable);
+      .filter(disponible);
 
   // Un glifo que se repite no distingue nada: OpenCode da Zen, Go y Free con el
   // mismo dibujo, y en un riel de solo iconos no hay forma de saber cuál es cuál
@@ -161,7 +168,7 @@ export default function SelectorDeModelo(props: SelectorDeModeloProps) {
     setActivo(
       agruparModelos(props.models, value)
         .flatMap((grupo) => grupo.models)
-        .find((opcion) => opcion.usable)?.key ?? "",
+        .find(disponible)?.key ?? "",
     );
   };
 
@@ -176,7 +183,7 @@ export default function SelectorDeModelo(props: SelectorDeModeloProps) {
 
   const elegir = (key: string) => {
     if (props.disabled) return;
-    const opcion = props.models.find((item) => item.key === key && item.usable);
+    const opcion = props.models.find((item) => item.key === key && disponible(item));
     if (!opcion) return;
     props.onChange(opcion);
     abrir(false);
@@ -265,6 +272,17 @@ export default function SelectorDeModelo(props: SelectorDeModeloProps) {
           />
         </div>
 
+        {/* El motivo del candado, visible aunque la lista siga a la vista: los
+            otros agentes no se esconden, se leen con su porqué. */}
+        <Show when={props.lockedReason}>
+          {(motivo) => (
+            <p class="m-0 flex items-start gap-1.5 border-b border-border px-3 py-2 text-xs text-neutral-500" role="note" data-agent-locked>
+              <Lock size={12} class="mt-0.5 shrink-0" aria-hidden="true" />
+              <span>{motivo()}</span>
+            </p>
+          )}
+        </Show>
+
         <div class="grid min-h-0 flex-1 grid-cols-[2.75rem_minmax(0,1fr)]">
           <nav class="flex min-h-0 flex-col gap-1 overflow-y-auto border-r border-border p-1" aria-label={t("chat.model.providers")}>
             <button
@@ -328,16 +346,20 @@ export default function SelectorDeModelo(props: SelectorDeModeloProps) {
                       <div
                         ref={(element) => filas.set(opcion.key, element)}
                         role="option"
-                        tabindex={opcion.usable ? 0 : -1}
+                        tabindex={disponible(opcion) ? 0 : -1}
                         aria-selected={opcion.key === elegido()?.key}
-                        aria-disabled={!opcion.usable}
+                        aria-disabled={!disponible(opcion)}
                         class={cn(
                           "grid w-full grid-cols-[16px_minmax(0,1fr)_auto_auto] items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm text-neutral-950",
                           activo() === opcion.key && "bg-surface-muted",
-                          !opcion.usable && "cursor-not-allowed opacity-50",
+                          !disponible(opcion) && "cursor-not-allowed opacity-50",
                         )}
-                        title={opcion.model.note ? prosa(opcion.model.note) : undefined}
-                        onMouseEnter={() => opcion.usable && setActivo(opcion.key)}
+                        title={
+                          bloqueado(opcion)
+                            ? props.lockedReason ?? t("chat.model.locked")
+                            : opcion.model.note ? prosa(opcion.model.note) : undefined
+                        }
+                        onMouseEnter={() => disponible(opcion) && setActivo(opcion.key)}
                         onClick={() => elegir(opcion.key)}
                         onKeyDown={(event) => {
                           if (event.key === "Enter" || event.key === " ") {
@@ -351,7 +373,12 @@ export default function SelectorDeModelo(props: SelectorDeModeloProps) {
                             <Check size={14} />
                           </Show>
                         </span>
-                        <span class="truncate">{opcion.model.label}</span>
+                        <span class="flex min-w-0 items-center gap-1 truncate">
+                          <Show when={bloqueado(opcion)}>
+                            <Lock size={12} class="shrink-0" aria-hidden="true" />
+                          </Show>
+                          <span class="truncate">{opcion.model.label}</span>
+                        </span>
                         <button
                           type="button"
                           class={cn("rounded-sm p-0.5 text-neutral-500 outline-none hover:text-primary focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-primary", esFavorito(opcion.key, favoritos()) && "text-primary")}

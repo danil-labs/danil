@@ -471,6 +471,10 @@ export type Session = {
   history?: HistoryPage | null;
   /** Su máquina está apagada: esto es lo último que se leyó de ella (su rebanada, `@terminus/fleet`). */
   offline?: { machine: string } | null;
+  /** Con `provider_handoff_v1`: si la tarea puede cambiar de CLI. Ausente es que no. */
+  can_hand_over?: boolean;
+  /** La clave `chat.handover.*` que explica el rechazo, cuando lo hay. */
+  hand_over_blocked?: string | null;
 };
 
 /** De qué archivo del CLI salió lo que dijo el agente, y en cuántas respuestas. */
