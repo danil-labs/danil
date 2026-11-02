@@ -14,6 +14,10 @@ export type HandoverState = {
   blocked: string | null;
   /** El CLI de la sesión, no el proveedor del modelo. */
   provider: string | null;
+  /** El modelo con el que corre la sesión, para lo que no es un turno del agente (`!`). */
+  model?: string | null;
+  /** El nivel de razonamiento con el que corre la sesión. */
+  effort?: string | null;
 };
 
 export type HandoverGate = {

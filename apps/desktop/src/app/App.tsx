@@ -1418,8 +1418,17 @@ export default function App() {
         can: session.can_hand_over === true,
         blocked: session.hand_over_blocked ?? null,
         provider: session.provider ?? null,
+        model: session.model ?? null,
+        effort: session.effort ?? null,
       };
-      if (previo && previo.can === ahora.can && previo.blocked === ahora.blocked && previo.provider === ahora.provider) return all;
+      if (
+        previo &&
+        previo.can === ahora.can &&
+        previo.blocked === ahora.blocked &&
+        previo.provider === ahora.provider &&
+        previo.model === ahora.model &&
+        previo.effort === ahora.effort
+      ) return all;
       return { ...all, [id]: ahora };
     });
     // Otro cliente pudo cambiar el CLI: un traspaso confirmado que ya no parte
@@ -3647,11 +3656,12 @@ export default function App() {
     if (!abierta) return;
     setInjecting((items) => [...items, { session: abierta, id: item.id }]);
     comandosDeLaCola.set(abierta, item.id);
+    const sesion = configDeLaSesion(abierta);
     const lanzado = {
       project: project(),
-      provider: shellCli(cliDeLaSesion(abierta), item.provider),
-      model: item.model,
-      effort: item.effort,
+      provider: sesion.provider,
+      model: sesion.model,
+      effort: sesion.effort,
       permission_mode: item.permission_mode,
     };
     const error = await ejecutarComando(abierta, lanzado, item.text.trimStart().slice(1), item.id);
@@ -5696,6 +5706,21 @@ export default function App() {
   const cliDeLaSesion = (id: string) =>
     traspasos()[id]?.provider ?? filaDe(id)?.provider ?? null;
 
+  /**
+   * Con qué corre un `!` y con qué el agente contesta su salida: el CLI y el
+   * modelo de la sesión, no los del borrador. El traspaso confirmado no se
+   * gasta en un comando de terminal.
+   */
+  const configDeLaSesion = (id: string) => {
+    const estado = traspasos()[id];
+    const fila = filaDe(id);
+    return {
+      provider: shellCli(cliDeLaSesion(id), agent()),
+      model: estado?.model ?? fila?.model ?? null,
+      effort: estado?.effort ?? null,
+    };
+  };
+
   /** Por qué no se ofrece el gesto, o `null`. No se deriva del encargado ni del fork: lo dice el motor. */
   const puedeTraspasar = (id: string) => canHandOverTask(situacionDeTraspaso(id));
 
@@ -6494,9 +6519,10 @@ export default function App() {
         if (!corrio && !input()) setInput(prompt);
         return corrio;
       }
-      // Un `!` corre y contesta con el CLI de la sesión: el traspaso confirmado
-      // en el borrador espera a su propio turno y no se gasta aquí.
-      const lanzado = { project: project(), provider: shellCli(cliDeLaSesion(id), agent()), model: model() || null, effort: effort() || null, permission_mode: modo() || null };
+      // Un `!` corre y contesta con lo que la sesión ya tiene: el traspaso
+      // confirmado en el borrador espera a su propio turno y no se gasta aquí.
+      const sesion = configDeLaSesion(id);
+      const lanzado = { project: project(), provider: sesion.provider, model: sesion.model, effort: sesion.effort, permission_mode: modo() || null };
       return (await ejecutarComando(id, lanzado, comando, null)) === null;
     }
     if (queueBusy() || cola().length > 0) {

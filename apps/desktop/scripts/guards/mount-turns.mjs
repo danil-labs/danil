@@ -237,6 +237,7 @@ shellWithPending.emit("chat", { workspace: "w", session: "s1", kind: "shell_done
 await sleep(300);
 assert.equal(answerCalls.length, 1);
 assert.equal(answerCalls[0].provider, "codex", "la salida del ! la contesta el CLI de la sesión");
+assert.equal(answerCalls[0].model, "gpt-5.6", "la salida del ! usa el modelo de la sesión");
 shellWithPending.emit("chat", { workspace: "w", session: "s1", kind: "done", text: "", ok: true });
 await sleep(200);
 const afterShell = shellDoc.querySelector("textarea");
