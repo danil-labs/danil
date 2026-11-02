@@ -179,3 +179,32 @@ ventana oculta Atención y no reintenta.
 - Por ahora la ventana usa la cuenta principal de Danil (`account` vacío). Elegir
   la cuenta del workspace abierto queda pendiente: las vistas reciben el nombre
   del workspace, no su id.
+
+## 5. Un solo inicio de sesión (motor y ventana)
+
+Revisión `desktop-single-sign-in-auto-approve-contract.md` (memoria del
+proyecto). Va siempre, con o sin `DANIL_DESKTOP_ATTENTION`.
+
+- «Iniciar sesión» (Configuración › Cuenta y primera ejecución) llama
+  `danil_sign_in` de la ventana. `signInWithBrowser` lo lanza y sigue: el estado
+  pendiente llega por `danil-connect`. Si falla al empezar, cae al flujo de antes.
+- Motor sin conectar y sin sesión de ventana: la ventana pide
+  `danil_connect_start` y abre UNA página que compone ella misma:
+  `<entrada>/connect?code=<user_code>&challenge=&state=&port=`. Solo si el
+  `user_code` tiene la forma `XXXX-XXXX` y el origen de `verification_uri` es
+  exactamente el de la entrada; si no, abre `verification_uri_complete` como
+  antes. La persona aprueba el código y el nombre con un clic. Solo con el
+  dispositivo aprobado, la página pide `POST /auth/desktop/approve` en JSON
+  (`{challenge, state, port}`) y navega al `location` que responde (el puerto
+  de `127.0.0.1`). La ventana canjea, espera `connected` del motor y crea la
+  concesión.
+- Si el motor queda conectado y el código de la ventana no llega en 20 s, la
+  ventana se queda sin sesión y Atención la pide después. Si el motor no se
+  conecta, el estado queda como esté (`pending`), sin éxito a medias.
+- Motor ya conectado (VM, CLI): solo el PKCE `/auth/desktop` si falta sesión.
+- Ninguna llamada de Rust a `/v1/devices/*`. «Cerrar sesión» llama
+  `danil_sign_out`: revoca la concesión, cierra la sesión de la ventana y
+  después desconecta la cuenta principal del motor. «Agregar otra cuenta»
+  sigue igual.
+- Pendiente: el motor no expone su endpoint de Computers; cuando lo haga
+  (campo opcional en `Status`), la ventana rechazará un motor que apunte a otro.

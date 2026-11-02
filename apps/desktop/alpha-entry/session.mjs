@@ -405,9 +405,22 @@ async function loginOf(config, uuid) {
 /** After the click: a one-time code to the window's loopback port. It holds no token; the session opens at the exchange. */
 async function desktopApprove(config, request) {
   try {
-    if (!/^application\/x-www-form-urlencoded\b/i.test(request.headers.get("Content-Type") ?? "")) throw new Denied("invalid_body", 400);
-    const bytes = await readBounded(request);
-    const fields = desktopRequest(new URLSearchParams(new TextDecoder().decode(bytes)));
+    // The consent page posts a form; the device page (`/connect`, CSP `form-action 'none'`) posts JSON and navigates itself.
+    const type = request.headers.get("Content-Type") ?? "";
+    const asJson = /^application\/json\b/i.test(type);
+    if (!asJson && !/^application\/x-www-form-urlencoded\b/i.test(type)) throw new Denied("invalid_body", 400);
+    const text = new TextDecoder().decode(await readBounded(request));
+    let params;
+    if (asJson) {
+      let body;
+      try { body = JSON.parse(text); } catch { throw new Denied("invalid_body", 400); }
+      if (!body || typeof body !== "object" || Array.isArray(body) || Object.keys(body).length !== 3 ||
+          !["challenge", "state", "port"].every(key => typeof body[key] === "string")) throw new Denied("invalid_body", 400);
+      params = new URLSearchParams(body);
+    } else {
+      params = new URLSearchParams(text);
+    }
+    const fields = desktopRequest(params);
     if (!fields) throw new Denied("invalid_body", 400);
     const session = await browserSession(config, request);
     await loginOf(config, session.uuid);
@@ -415,6 +428,7 @@ async function desktopApprove(config, request) {
     const back = new URL(`http://127.0.0.1:${fields.port}/callback`);
     back.searchParams.set("code", code);
     back.searchParams.set("state", fields.state);
+    if (asJson) return json({ location: back.href }, 200, { "Referrer-Policy": "no-referrer" });
     return new Response(null, { status: 303, headers: { ...NO_STORE, Location: back.href, "Referrer-Policy": "no-referrer" } });
   } catch (error) {
     return failure(error);
