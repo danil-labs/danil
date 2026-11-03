@@ -94,6 +94,7 @@ export function MachineCard(props: {
   const on = () => props.power === "on";
   const usage = () => hasUsage(r());
   const lvl = () => (on() ? level(r()) : null);
+  const tone = () => lvl() === "critical" ? "bg-error-strong" : lvl() === "high" ? "bg-warning-strong" : SEG_TASKS;
   const parts = () => { const x = r(); return hasUsage(x) ? split(x) : null; };
   const d = () => disk(r());
   const state = () => !on()
@@ -171,13 +172,8 @@ export function MachineCard(props: {
         {(p) => (
           <>
             <Metric label={t("shell.machine_panel.metric.memory")} value={t("shell.machine_panel.free", { size: peso(p().available) })}>
-              <ProgressBar class="h-2" value={p().total - p().available} max={p().total}
-                label={t("shell.machine_panel.memory_aria", { used: peso(p().total - p().available), total: peso(p().total) })}
-                segments={[
-                  { value: p().tasks, class: SEG_TASKS, label: t("shell.machine_panel.legend.tasks", { size: peso(p().tasks) }) },
-                  { value: p().engine, class: SEG_ENGINE, label: t("shell.machine_panel.legend.engine", { size: peso(p().engine) }) },
-                  { value: p().other, class: SEG_OTHER, label: t("shell.machine_panel.legend.other") },
-                ]} />
+              <ProgressBar class="h-2" value={p().total - p().available} max={p().total} barClass={tone()}
+                label={t("shell.machine_panel.memory_aria", { used: peso(p().total - p().available), total: peso(p().total) })} />
             </Metric>
           </>
         )}
@@ -349,6 +345,7 @@ export function MemoryTab(props: {
     return h.length ? h : [props.resources.pressure?.memory ?? 0];
   };
   const version = () => engineVersion(props.resources);
+  const parts = () => hasUsage(props.resources) ? split(props.resources) : null;
   const section = "m-0 mt-2.5 mb-1 flex items-center justify-between gap-2 px-1.5 text-caption font-semibold text-neutral-950";
   return (
     <div data-machine-memory="">
@@ -368,6 +365,25 @@ export function MemoryTab(props: {
           <ProgressBar class="h-2" value={props.resources.cpu!.usage_percent!} max={100} barClass={SEG_TASKS}
             label={t("shell.machine_panel.cpu_aria", { percent: Math.round(props.resources.cpu!.usage_percent!) })} />
         </Metric>
+      </Show>
+
+      <Show when={parts()}>
+        {(p) => (
+          <div class="mt-2 px-1.5">
+            <ProgressBar class="h-2" value={p().total - p().available} max={p().total}
+              label={t("shell.machine_panel.memory_aria", { used: peso(p().total - p().available), total: peso(p().total) })}
+              segments={[
+                { value: p().tasks, class: SEG_TASKS, label: t("shell.machine_panel.legend.tasks", { size: peso(p().tasks) }) },
+                { value: p().engine, class: SEG_ENGINE, label: t("shell.machine_panel.legend.engine", { size: peso(p().engine) }) },
+                { value: p().other, class: SEG_OTHER, label: t("shell.machine_panel.legend.other") },
+              ]} />
+            <span class="mt-1 flex flex-wrap gap-x-2.5 gap-y-0.5 text-2xs text-neutral-500">
+              <span class="flex items-center gap-1"><span class={cn("size-2 rounded-[2px]", SEG_TASKS)} aria-hidden />{t("shell.machine_panel.legend.tasks", { size: peso(p().tasks) })}</span>
+              <span class="flex items-center gap-1"><span class={cn("size-2 rounded-[2px]", SEG_ENGINE)} aria-hidden />{t("shell.machine_panel.legend.engine", { size: peso(p().engine) })}</span>
+              <span class="flex items-center gap-1"><span class={cn("size-2 rounded-[2px]", SEG_OTHER)} aria-hidden />{t("shell.machine_panel.legend.other")}</span>
+            </span>
+          </div>
+        )}
       </Show>
 
       <p class={section}>
