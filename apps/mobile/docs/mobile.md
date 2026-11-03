@@ -126,9 +126,11 @@ workspaces, que va a la raíz que fijó la compilación,
   `apps/mobile/src/lib/push.web.ts` cuando la persona activa «Avisos de tareas» en Cuenta de
   Danil; la suscripción se guarda en Danil Machines, cuyo relay avisa cuando una
   tarea termina, se detiene o pide algo, también con el navegador cerrado. El
-  aviso trae solo identificadores: el worker arma la ruta (`?to=/task/…`) y no
-  muestra texto del chat, así que con la app cerrada dice que se detuvo y no el
-  motivo. Con la app abierta, el aviso local, la campana y el chat leen la clase
+  aviso trae los identificadores y, si el relay ya leyó la carpeta, el nombre de
+  la tarea; la ruta (`?to=/task/…`) la arma el worker con los ids, nunca con el
+  texto. Hay una sola notificación por tarea (`tag`): la última sustituye a la
+  anterior y solo vuelve a sonar cuando la tarea pide algo y no había nada suyo
+  en pantalla; «terminó» se actualiza en silencio. Con la app abierta, el aviso local, la campana y el chat leen la clase
   del turno (`sin_cupo`, la credencial, …) y dicen la misma frase que el
   escritorio. El destino del aviso de inicio de sesión lo escribe el
   build (`phoneWorker`). En iPhone solo funciona instalada en el inicio (iOS
