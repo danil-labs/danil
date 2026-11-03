@@ -1,8 +1,5 @@
 # Web de staging (staging-app.danil.ai): la misma entrada que alfa contra la Supabase de
 # staging (rama `staging`) y computers-dev. Sin APPV2_BFF: /alpha-api responde 503.
-# Assets: build de `dev` con TERMINUS_WEB_BASE=/, TERMINUS_WEB_ENDPOINT=https://computers-dev.danil.ai,
-# TERMINUS_WEB_SUPABASE_URL/KEY de staging y TERMINUS_WEB_WORKOS=1, desplegado con
-# `wrangler deploy --config alpha-entry/wrangler.assets.toml --name terminus-web-staging`.
 # Secretos: WORKOS_API_KEY, SUPABASE_SERVICE_ROLE_KEY (de staging) y SESSION_COOKIE_KEY.
 name = "terminus-entry-staging"
 main = "worker.mjs"
@@ -14,10 +11,6 @@ preview_urls = false
 [[routes]]
 pattern = "staging-app.danil.ai"
 custom_domain = true
-
-[[services]]
-binding = "TERMINUS_WEB"
-service = "terminus-web-staging"
 
 [vars]
 ENTRY_HOST = "staging-app.danil.ai"
