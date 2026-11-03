@@ -1216,7 +1216,7 @@ export default function Almacenamiento(props: {
                     <Show when={tab() === "memory" && summaryOf(m.id)?.resources}>
                       {(r) => (
                         <div class="px-1 pb-1">
-                          <MemoryTab resources={r()} lookup={lookup} when={actividadDe}
+                          <MemoryTab resources={r()} machineId={m.id} lookup={lookup} when={actividadDe}
                             canStop={m.on && !!m.features?.includes(USAGE_FEATURE)}
                             stopping={stopping()} failure={stopFailure()} onStop={(x) => void stopTask(m, x)} />
                         </div>
