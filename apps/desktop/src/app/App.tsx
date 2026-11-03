@@ -173,7 +173,7 @@ import { createUsage } from "../features/shell/usage";
 import AvisoDeVersion from "../features/shell/VersionNotice";
 import CloseGuard from "../features/shell/CloseGuard";
 import WorkspaceColumn from "../features/shell/WorkspaceColumn";
-import { agentsWorkspace, setAgentsWorkspace } from "../features/shell/workspace-directory";
+import { agentsWorkspace, setAgentsWorkspace, signedInCount } from "../features/shell/workspace-directory";
 import Sitio from "../features/sites/Site";
 import { VELO_DE_FONDO } from "../lib/chat-background";
 import { fondoDeChat, fondoPropio, imagenDelWorkspace, veloDeFondo } from "../lib/chat-background-store";
@@ -8654,7 +8654,7 @@ export default function App() {
           onOpenConversation={(id) => { abrirInbox(); capabilities().inbox?.search.open(id); }}
         />
         {/* Al iniciar sesión en la ventana, el paso de elegir o crear el workspace de Danil (solo el escritorio lo avisa). */}
-        <Show when={capabilities().workspaceDirectory?.onSession}>
+        <Show when={capabilities().workspaceDirectory?.onSession && signedInCount() > 0}>
           <Suspense fallback={null}>
             <DanilWorkspaceStep onOpenAgents={abrirInbox} />
           </Suspense>

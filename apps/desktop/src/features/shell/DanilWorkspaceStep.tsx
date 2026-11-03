@@ -39,9 +39,9 @@ export default function DanilWorkspaceStep(props: { onOpenAgents?: () => void })
   const [view, setView] = createSignal<"choose" | "enter">("choose");
   const [busy, setBusy] = createSignal<string | null>(null);
   const [failure, setFailure] = createSignal<string | null>(null);
-  // Una sesión recién abierta espera a que el directorio relea antes de decidir.
+  // Se monta con la primera sesión abierta; cada una espera a que el directorio relea antes de decidir.
   const [pending, setPending] = createSignal(false);
-  createEffect(on(signedInCount, (n) => n > 0 && setPending(true), { defer: true }));
+  createEffect(on(signedInCount, (n) => n > 0 && setPending(true)));
   createEffect(() => {
     if (!pending() || !directory()) return;
     const active = ws.activo();
