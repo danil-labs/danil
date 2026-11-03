@@ -7,6 +7,7 @@ import {
   handOverReason,
   handoverInForce,
   handoverMatches,
+  MACHINE_UNANNOUNCED,
   shellCli,
   type HandoverGate,
   type HandoverState,
@@ -23,7 +24,6 @@ const estado = (over: Partial<HandoverState> = {}): HandoverState => ({
 const tarea = (over: Partial<HandoverGate> = {}): HandoverGate => ({
   session: "t1",
   running: false,
-  remote: false,
   announced: true,
   state: estado(),
   ...over,
@@ -48,9 +48,10 @@ test("un encargado conserva su proveedor", () => {
   assert.equal(handOverReason(tarea({ handler: true })), "chat.handover.handler");
 });
 
-test("una tarea de otra máquina no ofrece el gesto en esta ventana", () => {
-  assert.equal(handOverReason(tarea({ remote: true })), "chat.handover.unsupported");
-  assert.equal(canHandOverTask(tarea({ remote: true })), false);
+test("una tarea de otra máquina con el rasgo lo ofrece: ser remota no la bloquea", () => {
+  // El gate no mira dónde vive la tarea; el enrutado y la autoridad son del motor.
+  assert.equal(handOverReason(tarea({ announced: true })), null);
+  assert.equal(canHandOverTask(tarea({ announced: true })), true);
 });
 
 test("un motor anterior, sin can_hand_over, no puede cambiar", () => {
@@ -58,8 +59,25 @@ test("un motor anterior, sin can_hand_over, no puede cambiar", () => {
   assert.equal(canHandOverTask(tarea({ state: undefined })), false);
 });
 
-test("sin el rasgo anunciado la tarea tampoco puede", () => {
-  assert.equal(handOverReason(tarea({ announced: false })), "chat.handover.unsupported");
+test("la máquina que está en la lista y no anuncia el rasgo da su clave, sin llamarla vieja", () => {
+  assert.equal(handOverReason(tarea({ announced: false })), MACHINE_UNANNOUNCED);
+  assert.equal(canHandOverTask(tarea({ announced: false })), false);
+});
+
+test("la máquina que no está en la lista no permite afirmar nada: no ofrece el gesto", () => {
+  assert.equal(handOverReason(tarea({ announced: null })), "chat.handover.unsupported");
+  assert.equal(canHandOverTask(tarea({ announced: null })), false);
+});
+
+test("el motivo de motor viejo sale del anuncio y nunca de can === false", () => {
+  assert.equal(
+    handOverReason(tarea({ announced: false, state: estado({ can: false }) })),
+    MACHINE_UNANNOUNCED,
+  );
+  assert.equal(
+    handOverReason(tarea({ announced: true, state: estado({ can: false }) })),
+    "chat.handover.unsupported",
+  );
 });
 
 test("el motivo del motor es el que se muestra", () => {
