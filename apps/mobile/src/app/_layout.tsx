@@ -17,6 +17,7 @@ import { hydrate as hydrateTaskQueue } from "../lib/taskQueue";
 import { pinToVisibleArea } from "../lib/viewport";
 import { WorkspacesProvider } from "../lib/workspaces";
 import { ActivityNotice } from "../ui/ActivityNotice";
+import { UpdateNotice } from "../ui/UpdateNotice";
 import { useTheme } from "../ui/theme";
 
 Notifications?.setNotificationHandler({
@@ -128,6 +129,7 @@ export default function RootLayout() {
           <Stack.Screen name="auth/callback" options={{ headerShown: false }} />
         </Stack>
         <ActivityNotice />
+        <UpdateNotice />
       </InboxProvider>
       </CustomizationProvider>
       </WorkspacesProvider>
