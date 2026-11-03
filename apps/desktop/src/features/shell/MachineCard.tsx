@@ -218,7 +218,7 @@ export function MachineCard(props: {
         </span>
       </Show>
     </button>
-      <Show when={updatable() && (version()?.updateAvailable || update() !== "idle" || !!updateError() || !!rejected())}>
+      <Show when={(!!version() && !usage()) || (updatable() && (version()?.updateAvailable || update() !== "idle" || !!updateError() || !!rejected()))}>
         <div class={cn("flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 px-3 pb-2.5 text-caption text-neutral-500", !on() && "opacity-60")} data-machine-engine="">
           <Show when={version()}>
             {(v) => (
