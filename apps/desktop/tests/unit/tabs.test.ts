@@ -395,7 +395,7 @@ test("la tira guardada por la versión anterior se lee entera", () => {
   assert.equal(p.session, "s9");
 });
 
-const { taskPriority } = await import("../../../../packages/design/src/taskState.ts");
+const { markedState, taskPriority } = await import("../../../../packages/design/src/taskState.ts");
 const { compactGitKind, UNKNOWN_GIT, mergeRemoteGit, retainGitObservation } = await import("../../src/features/projects/taskGit.ts");
 
 test("la atención gana a trabajo y fallo; fin de turno no significa tarea terminada", () => {
@@ -407,6 +407,15 @@ test("la atención gana a trabajo y fallo; fin de turno no significa tarea termi
   assert.equal(taskPriority({ ...base, outcome: "delivered" }), null);
   assert.equal(taskPriority({ ...base, outcome: "interrupted", sinVer: true }), "interrupted", "detenida no es fallo y va antes que sin ver");
   assert.equal(taskPriority({ ...base, outcome: "interrupted", viva: true }), "working");
+});
+
+test("lo visto no lleva marca: ni entregada, ni detenida, ni gris", () => {
+  const base = { aprobando: false, esperando: false, viva: false };
+  assert.equal(markedState({ ...base, outcome: "delivered" }), null);
+  assert.equal(markedState({ ...base, outcome: "delivered", sinVer: true }), "unseen");
+  assert.equal(markedState({ ...base, outcome: "interrupted" }), null, "detenida y vista no se marca");
+  assert.equal(markedState({ ...base, outcome: "interrupted", sinVer: true }), "unseen", "detenida sin ver es verde");
+  assert.equal(markedState({ ...base, outcome: "failed" }), "failed");
 });
 
 test("compact Git retains known stale PRs but never invents an observation", () => {

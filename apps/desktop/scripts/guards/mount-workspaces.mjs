@@ -50,11 +50,10 @@ assert.equal(tile("w3").dataset.attention, "asked", "una pregunta gana a termina
 assert.ok(tile("w3").querySelector('.signal-dot[data-tone="warning"]'));
 assert.equal(tile("w4").dataset.attention, undefined, "un estado que la ventana no conoce no se pinta");
 const columnRow = (id) => doc.querySelector(`[data-sesion="${id}"]`);
-// La tarjeta del riel: sin ver es el punto verde; vista lo deja neutro y se apaga.
+// La tarjeta del riel: sin ver es el punto verde; vista no lleva punto y se apaga.
 assert.ok(columnRow("s1").querySelector('[aria-label="Terminó y no la has abierto"] .task-card-badge .signal-dot[data-tone="success"]'), "la fila dice terminada sin ver");
 assert.equal(columnRow("s3").dataset.apagada, "true", "una entregada ya vista se apaga, en su sitio");
-assert.ok(columnRow("s3").querySelector('[aria-label="Resultado entregado"] .task-card-badge .signal-dot[data-tone="neutral"]'), "y conserva el punto en su esquina");
-assert.equal(columnRow("s3").querySelector('[aria-label="Resultado entregado"] .signal-dot[data-tone="success"]'), null, "sin el verde de lo no visto");
+assert.equal(columnRow("s3").querySelector(".task-card-badge"), null, "y no lleva punto, ni gris");
 const foldEl = doc.querySelector('button[aria-label="Plegar «Proyecto»"]');
 foldEl.click();
 await sleep(50);

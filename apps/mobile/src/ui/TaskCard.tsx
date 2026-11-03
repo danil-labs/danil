@@ -1,4 +1,4 @@
-import { RADIUS, TEXT } from "@terminus/design";
+import { RADIUS, TEXT, markedState } from "@terminus/design";
 import { type CardPull, type TaskCard as Card, type PullTone, cardPull, canFinishTask, type TaskGit, taskTitle } from "@terminus/tasks";
 import * as Haptics from "expo-haptics";
 import { memo, useState } from "react";
@@ -152,7 +152,7 @@ function TaskCardView({
           </View>
         ) : null}
         <View style={styles.mark}>
-          <TaskMark state={card.state} delivered={card.delivered} identity={{ agent: task.agent, host: task.host, folder: task.folder }} />
+          <TaskMark state={markedState(card.activity)} identity={{ agent: task.agent, host: task.host, folder: task.folder }} />
         </View>
       </View>
       <View style={[styles.line, styles.second]}>
