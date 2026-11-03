@@ -33,7 +33,7 @@ el motor fijado en `seldon-runtime.lock`.
 
 La cuenta de Danil (Configuración → Cuenta de Danil) usa `danil_connect_start`,
 `danil_connect_status`, `danil_connect_options`, `danil_disconnect` y el evento
-`danil-connect` (seldon-host#66, [connector.md](https://github.com/danil-labs/seldon-host/blob/dev/docs/connector.md)). Iniciar sesión registra
+`danil-connect` (seldon-host#66, [connector.md](https://github.com/danil-labs/danil-engine/blob/dev/docs/connector.md)). Iniciar sesión registra
 esta computadora en la cuenta: con un workspace de Harness entra sin navegador;
 sin él, la ventana abre `verification_uri_complete` y la persona aprueba en
 `alfa-app.danil.ai/connect` (antes `app.danil.ai/terminus/connect`, que
@@ -123,7 +123,7 @@ platform, and a CRLF copy has a different hash.
 ### Extensión `provider_handoff_v1`
 
 Cambiar de CLI (Claude, Codex, OpenCode) dentro de una tarea normal
-(seldon-host#304, [provider-handoff.md](https://github.com/danil-labs/seldon-host/blob/dev/docs/provider-handoff.md)).
+(seldon-host#304, [provider-handoff.md](https://github.com/danil-labs/danil-engine/blob/dev/docs/provider-handoff.md)).
 La extensión
 `crates/engine-manifest/extensions/provider_handoff_v1.json` se copia byte a
 byte en `src-tauri/crates/engine-protocol/extensions/` y se registra en
@@ -511,7 +511,7 @@ en el teléfono. Un kind nuevo se agrega primero al cliente y después al motor.
 
 Con un motor que anuncia `push_stream_v1` en `status.service_features`
 (seldon-host#52, contrato en
-[push-stream-contract.md](https://github.com/danil-labs/seldon-host/blob/dev/docs/push-stream-contract.md)), el
+[push-stream-contract.md](https://github.com/danil-labs/danil-engine/blob/dev/docs/push-stream-contract.md)), el
 cliente deja de abrir una conexión TCP por petición:
 
 - Hasta cuatro conexiones persistentes para peticiones, con varias en vuelo por

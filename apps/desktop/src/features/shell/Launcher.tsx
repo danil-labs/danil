@@ -41,7 +41,7 @@ type Fase =
   | { phase: "previous"; tasks: number | null; stopping: boolean }
   | { phase: "failed"; code: string; log: string; data: string };
 
-const RELEASE_0274 = "https://github.com/danil-labs/terminus/releases/tag/v0.2.74";
+const RELEASE_0274 = "https://github.com/danil-labs/danil/releases/tag/v0.2.74";
 const TEXTOS = {
   first: () => [t("launcher.handoff.first.title"), t("launcher.handoff.first.body")],
   readopt: () => [t("launcher.handoff.readopt.title"), t("launcher.handoff.readopt.body")],

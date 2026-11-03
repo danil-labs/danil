@@ -9,7 +9,7 @@ use terminus_engine_protocol::Error;
 const ES: &str = include_str!("../../../src/locales/es/shell.json");
 const EN: &str = include_str!("../../../src/locales/en/shell.json");
 /// La última versión con el motor dentro de la app; sus datos no se tocan.
-const PREVIOUS_RELEASE: &str = "https://github.com/danil-labs/terminus/releases/tag/v0.2.74";
+const PREVIOUS_RELEASE: &str = "https://github.com/danil-labs/danil/releases/tag/v0.2.74";
 
 pub(super) fn phrase(frase: Frase) -> String {
     let catalog: Value = serde_json::from_str(if system_language().starts_with("es") {

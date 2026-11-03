@@ -19,7 +19,7 @@ descarga conservan compatibilidad con las instalaciones existentes.
 
 1. Detecta tu sistema operativo y arquitectura (`process.platform` / `process.arch`).
 2. Lee `latest.json` de la última release pública de
-   [`danil-labs/terminus`](https://github.com/danil-labs/terminus/releases/latest)
+   [`danil-labs/danil`](https://github.com/danil-labs/danil/releases/latest)
    (repo público, sin autenticación) y resuelve el instalador de tu plataforma.
 3. Descarga el instalador a una carpeta temporal, con barra de progreso.
 4. **Verifica su firma antes de ejecutar ni copiar nada.** Si la verificación

@@ -7,7 +7,7 @@ import { Button } from "../../ui/Button";
 import { GitHubMark } from "../../ui/icons";
 import { RETARDO_TOOLTIP, TooltipContent, TooltipRoot, TooltipTrigger } from "../../ui/Tooltip";
 
-const REPOSITORIO = "https://github.com/danil-labs/terminus";
+const REPOSITORIO = "https://github.com/danil-labs/danil";
 
 /**
  * La invitación a la estrella, a la derecha de la franja de pestañas.

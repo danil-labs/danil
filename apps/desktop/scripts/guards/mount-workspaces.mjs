@@ -114,7 +114,7 @@ assert.equal(titleBar.lastElementChild.lastElementChild, estrella(), "la invitac
 assert.equal(estrella().querySelector("button").textContent.trim(), "Star en GitHub");
 estrella().querySelector("button").click();
 await sleep(50);
-assert.deepEqual(estrellas, ["https://github.com/danil-labs/terminus"]);
+assert.deepEqual(estrellas, ["https://github.com/danil-labs/danil"]);
 assert.equal(estrella(), null, "abrir el repositorio retira la invitación");
 assert.ok(d1.querySelector('[data-workspace-column-foot] button[aria-label="Configuración"]'), "Configuración vive al pie de la columna");
 const setupRequests = [];

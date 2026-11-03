@@ -13,7 +13,7 @@ import { ITEM_DE_MENU, Popover, PopoverAnchor, PopoverContent } from "../../ui/P
 const DanilFooterEntry = lazy(() => import("./DanilFooterEntry"));
 const WorkspaceDirectoryMenu = lazy(() => import("./WorkspaceDirectoryMenu"));
 
-const BUG_REPORT_URL = "https://github.com/danil-labs/terminus/issues/new?template=bug_report.yml";
+const BUG_REPORT_URL = "https://github.com/danil-labs/danil/issues/new?template=bug_report.yml";
 
 const TEMAS: Apariencia[] = ["claro", "oscuro", "sistema"];
 function nombreDeTema(a: Apariencia): string {
