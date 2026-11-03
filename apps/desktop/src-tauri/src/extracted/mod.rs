@@ -32,6 +32,7 @@ mod tray;
 mod typst_live;
 mod update;
 pub mod util;
+mod wsl;
 use std::{path::PathBuf, sync::Arc};
 use tauri::{Emitter, Manager};
 use terminus_engine_client::Client;
@@ -110,6 +111,13 @@ pub fn stop_engine() -> i32 {
         engine::Stopped::Busy => 3,
         engine::Stopped::Unanswered => 1,
     }
+}
+
+/// Prototipo del alta de WSL: detección sin pantalla todavía
+/// (`docs/wsl-onboarding.md`). En otros sistemas contesta `unsupported`.
+#[tauri::command]
+pub(super) fn wsl_detect() -> std::result::Result<wsl::Detection, String> {
+    wsl::detect().map_err(|error| error.code().to_string())
 }
 
 pub fn run(client: Arc<Client>) {
@@ -290,7 +298,8 @@ fn start(client: Option<Arc<Client>>, autostart: bool, launcher: launcher::Launc
             typst_live::typst_live_complete,
             typst_live::typst_live_stop,
             update::update_install,
-            update::update_pending
+            update::update_pending,
+            wsl_detect
         ]))
         .build(context)
         .expect("tauri extracted client")
