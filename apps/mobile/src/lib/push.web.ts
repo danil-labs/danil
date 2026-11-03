@@ -1,4 +1,4 @@
-import { forgetPushDevice, keyBytes, type PushMode, pushPreferences, pushPublicKey, savePushDevice, savePushPreferences, testPush } from "@terminus/computers";
+import { forgetPushDevice, keyBytes, type PushPreferences, pushPreferences, pushPublicKey, savePushDevice, savePushPreferences, testPush } from "@terminus/computers";
 import { WEB_BASE } from "./alpha-mode";
 import type { PushState } from "./push";
 import { COMPUTERS } from "./supabase";
@@ -116,13 +116,13 @@ export async function sendTestPush(getToken: () => Promise<string>): Promise<num
 }
 
 /** La preferencia guardada en el relay; si no contesta, «todo» (lo que ya hacía). */
-export async function readPushMode(getToken: () => Promise<string>): Promise<PushMode> {
+export async function readPushPrefs(getToken: () => Promise<string>): Promise<PushPreferences> {
   const answer = await pushPreferences(COMPUTERS, await getToken());
-  return answer.kind === "ok" ? answer.value.mode : "all";
+  return answer.kind === "ok" ? answer.value : { mode: "all", quiet: null };
 }
 
-export async function writePushMode(getToken: () => Promise<string>, mode: PushMode): Promise<PushMode> {
-  const answer = await savePushPreferences(COMPUTERS, await getToken(), mode);
-  if (answer.kind !== "ok") throw new Error(answer.kind === "error" ? answer.code ?? "push_mode_failed" : "push_mode_failed");
-  return answer.value.mode;
+export async function writePushPrefs(getToken: () => Promise<string>, prefs: PushPreferences): Promise<PushPreferences> {
+  const answer = await savePushPreferences(COMPUTERS, await getToken(), prefs);
+  if (answer.kind !== "ok") throw new Error(answer.kind === "error" ? answer.code ?? "push_prefs_failed" : "push_prefs_failed");
+  return answer.value;
 }
