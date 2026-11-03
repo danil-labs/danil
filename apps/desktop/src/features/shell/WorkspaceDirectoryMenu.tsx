@@ -10,7 +10,7 @@ import { createWorkspaces } from "../settings/workspaces-store";
 import { directory, linkableAccounts, linkActiveWorkspace, setAgentsWorkspace, togglePin } from "./workspace-directory";
 
 /** Desde aquí se entra a cualquier workspace; la barra solo muestra los fijados. */
-export default function WorkspaceDirectoryMenu(props: { onClose: () => void; onOpenAgents?: () => void }) {
+export default function WorkspaceDirectoryMenu(props: { onClose: () => void; onOpenAgents?: () => void; localOnly?: boolean }) {
   const ws = createWorkspaces();
   const [query, setQuery] = createSignal("");
   const [linking, setLinking] = createSignal<string | null>(null);
@@ -35,6 +35,8 @@ export default function WorkspaceDirectoryMenu(props: { onClose: () => void; onO
     return needle ? entries().filter((e) => e.name.toLocaleLowerCase().includes(needle)) : entries();
   };
   const local = (entry: DirectoryEntry) => entry.capabilities.terminus && (ws.lista() ?? []).some((w) => w.id === entry.workspace_id);
+  const canOpen = (entry: DirectoryEntry) =>
+    local(entry) || (!props.localOnly && entry.capabilities.agents && Boolean(props.onOpenAgents));
   const open = (entry: DirectoryEntry) => {
     props.onClose();
     if (local(entry)) {
@@ -42,7 +44,7 @@ export default function WorkspaceDirectoryMenu(props: { onClose: () => void; onO
       void ws.cambiarA(entry.workspace_id as string);
       return;
     }
-    if (!entry.capabilities.agents) return;
+    if (!canOpen(entry)) return;
     setAgentsWorkspace(entry.key);
     props.onOpenAgents?.();
   };
@@ -75,7 +77,7 @@ export default function WorkspaceDirectoryMenu(props: { onClose: () => void; onO
                     <button
                       type="button"
                       class={cn(ITEM_DE_MENU, "min-w-0 flex-1 truncate")}
-                      disabled={!local(entry) && !entry.capabilities.agents}
+                      disabled={!canOpen(entry)}
                       title={entry.name}
                       onClick={() => open(entry)}
                     >

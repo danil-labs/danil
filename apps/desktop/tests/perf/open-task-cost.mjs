@@ -13,6 +13,7 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import { join } from "node:path";
+import baseline from "./open-task-cost-baseline.json" with { type: "json" };
 import { boot, sleep } from "../helpers/jsdom-app.mjs";
 
 const BASELINE = join(import.meta.dirname, "open-task-cost-baseline.json");
@@ -287,7 +288,7 @@ const counters = first.counters;
 console.log(`contadores: ${JSON.stringify(counters)}`);
 if (REAL_SESSION) process.exit(0);
 
-const ceiling = JSON.parse(readFileSync(BASELINE, "utf8"));
+const ceiling = baseline;
 if (ADJUST) {
   const lowered = Object.fromEntries(Object.entries(ceiling).map(([k, v]) => [k, Math.min(v, counters[k])]));
   writeFileSync(BASELINE, `${JSON.stringify(lowered, null, 2)}\n`);

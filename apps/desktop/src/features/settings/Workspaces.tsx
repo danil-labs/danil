@@ -29,6 +29,7 @@ import {
 import { capabilities } from "../../lib/platform";
 import { elegirArchivoDeImagen } from "../../lib/pick-image";
 import { blobToDataUrl } from "./account-profile";
+import WorkspaceDirectoryMenu from "../shell/WorkspaceDirectoryMenu";
 
 // Chunk aparte: la cuenta de Danil del workspace solo pesa al abrir esta pantalla.
 const WorkspaceAccount = lazy(() => import("./WorkspaceAccount"));
@@ -335,6 +336,7 @@ export default function Workspaces() {
   const [editando, setEditando] = createSignal<string | null>(null);
   const [borrador, setBorrador] = createSignal("");
   const [porBorrar, setPorBorrar] = createSignal<string | null>(null);
+  const [agregandoExistente, setAgregandoExistente] = createSignal(false);
 
   function empezarARenombrar(w: Workspace) {
     setPorBorrar(null);
@@ -563,17 +565,35 @@ export default function Workspaces() {
 
               Lo monta `App.tsx`, que es quien tiene la ventana entera; esta
               pantalla solo lo pide, como todo lo demás que hace. */}
-          <Button
-            variant="secondary"
-            size="sm"
-            class="justify-self-start"
-            onClick={() =>
-              window.dispatchEvent(new CustomEvent("harness:new-workspace"))
-            }
-          >
-            <Plus size={15} />
-            {t("settings.workspaces.add")}
-          </Button>
+          <div class="flex flex-wrap items-center gap-2">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() =>
+                window.dispatchEvent(new CustomEvent("harness:new-workspace"))
+              }
+            >
+              <Plus size={15} />
+              {t("settings.workspaces.add")}
+            </Button>
+            <Show when={capabilities().workspaceDirectory}>
+              <Button
+                variant="outline"
+                size="sm"
+                aria-expanded={agregandoExistente()}
+                onClick={() => setAgregandoExistente((value) => !value)}
+                data-workspaces-add-existing=""
+              >
+                {t("settings.workspaces.add_existing")}
+              </Button>
+            </Show>
+          </div>
+
+          <Show when={agregandoExistente()}>
+            <div class="max-w-md rounded-md border border-border bg-surface p-2" data-workspaces-directory="">
+              <WorkspaceDirectoryMenu localOnly onClose={() => setAgregandoExistente(false)} />
+            </div>
+          </Show>
 
           <Show when={ws.fallo()}>{(f) => <FailureNote f={f()} />}</Show>
 
