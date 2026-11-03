@@ -150,8 +150,9 @@ El motor la anuncia en `status.service_features`; el cliente la reconoce con
 - Una tarea de otra máquina también cambia de CLI. `set_session_provider` va
   con la cabecera `x-terminus-machine` de su fila y el workspace explícito; el
   motor de esa máquina es quien decide con `can_hand_over` y
-  `hand_over_blocked`, y el relay la despierta si hace falta. El cliente no la
-  bloquea por ser remota. Solo mira el rasgo de esa máquina en `machine_list`:
+  `hand_over_blocked`. La ventana la enciende antes de mandar la acción; el
+  relay solo despierta con sus comandos de intención. El cliente no la bloquea
+  por ser remota. Solo mira el rasgo de esa máquina en `machine_list`:
   si está en la lista y no anuncia `provider_handoff_v1`, muestra
   `chat.handover.machine_unannounced` (el `hello` del conector puede ser
   anterior a la actualización); si no está en la lista,

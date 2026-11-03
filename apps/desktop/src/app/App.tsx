@@ -7145,7 +7145,7 @@ export default function App() {
         agentChat: !!fila && esChatDeAgente(fila),
       });
     });
-    /** La frase del candado. `machine_unannounced` es del cliente: se traduce literal. */
+    /** La rama literal existe para locales.mjs, que solo cuenta usos literales y la clave no es del motor; con t(clave) queda huérfana. */
     const motivoDeTraspaso = () => {
       const clave = bloqueoDeTraspaso();
       if (!clave) return null;
