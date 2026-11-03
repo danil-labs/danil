@@ -115,8 +115,6 @@ function Space(props: { nuevo: boolean; onCancelar?: () => void; onCreated: (nam
   return (
     <Pantalla
       titulo={t("web.onboarding.space.title")}
-      lede={t("web.onboarding.space.lede")}
-      pie={t("onboarding.workspace.footer")}
       atras={props.nuevo ? props.onCancelar : undefined}
       atrasRotulo={t("onboarding.cancel")}
       primario={primary()}

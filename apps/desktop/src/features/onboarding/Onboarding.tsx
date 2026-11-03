@@ -73,7 +73,7 @@ export default function Onboarding(props: {
             <Escenario
               izquierda={
                 <>
-                  <TituloCambiante titulo={t("onboarding.ai.title")} lede={t("onboarding.ai.lede")} />
+                  <TituloCambiante titulo={t("onboarding.ai.title")} />
                   <Show when={fallo()}>
                     {(f) => (
                       <div class="mt-6">
@@ -112,7 +112,6 @@ export default function Onboarding(props: {
                   {t("onboarding.cancel")}
                 </Button>
               </Show>
-              <p class="m-0 text-xs text-neutral-500">{t("onboarding.ai.footer")}</p>
               <span class="flex-1" />
               <Button size="sm" disabled={conectadas().length === 0 || !workspace()} onClick={() => setPaso("personalizar")}>
                 {t("onboarding.continue")}

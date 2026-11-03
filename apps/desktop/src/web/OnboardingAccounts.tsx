@@ -36,8 +36,6 @@ export function OnboardingAccounts(props: { workspace: string; onDone: () => voi
   return (
     <Pantalla
       titulo={t("web.onboarding.accounts.title")}
-      lede={t("web.onboarding.accounts.lede", { workspace: props.workspace })}
-      pie={t("web.onboarding.accounts.footer")}
       atras={leave}
       atrasRotulo={t("web.onboarding.accounts.later")}
       primario={{ rotulo: t("web.onboarding.accounts.finish"), onClick: leave, disabled: !Object.values(connected()).some(Boolean) }}

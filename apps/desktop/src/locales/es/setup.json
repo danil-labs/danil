@@ -1,6 +1,5 @@
 {
   "setup.title": "Preparando Danil",
-  "setup.description": "Danil ya trae lo que necesita. Comprobamos que todo esté en su sitio.",
   "setup.error_check": "No se pudo revisar esta computadora. Vuelve a intentar.",
   "setup.error_in_flight": "Ya hay una preparación en curso y esta ventana no puede seguirla. Vuelve a intentar cuando termine.",
   "setup.tips.eyebrow": "Mientras se prepara Danil",
@@ -24,8 +23,6 @@
   "setup.repair.failed": "{name} necesita reparación. Algunas funciones pueden fallar hasta que se repare.",
   "setup.repair.open": "Ver estado del entorno",
   "setup.done_title": "Todo listo.",
-  "setup.done_lede": "Danil ya tiene lo que necesita. Ahora conectemos tu IA.",
-  "setup.done_lede_app": "Danil ya tiene lo que necesita.",
   "setup.progress": "Avance de la preparación",
   "setup.simple.done": "Todo listo",
   "setup.simple.essentials_ready": "Algunas funciones necesitan reparación",
