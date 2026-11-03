@@ -306,6 +306,23 @@ test("by the relay every call says its workspace: making one its own included; t
   await assert.rejects(scoped.router.handle("rename_session", { project: "p1", id: "cmp_vm~t1", title: "x" }, on("cmp_vm")), (e: { what: { clave: string } }) => e.what.clave === "shell.service.command");
 });
 
+test("set_session_provider de una tarea de la VM llega a su motor con su workspace y no toca el de esta ventana", async () => {
+  const vm = fakeLink({ set_session_provider: null });
+  const { router, native } = setup({ cmp_vm: vm });
+  await router.handle("list_workspaces");
+  native.length = 0;
+  const result = await router.handle(
+    "set_session_provider",
+    { project: "p1", session: "cmp_vm~t1", provider: "codex" },
+    { headers: { "x-terminus-machine": "cmp_vm", "x-terminus-workspace": "w" } },
+  );
+  assert.equal(result, null);
+  assert.deepEqual(vm.calls.map((c) => [c.command, c.args, c.workspace]), [
+    ["set_session_provider", { project: "p1", session: "t1", provider: "codex" }, "w"],
+  ]);
+  assert.equal(native.filter((c) => c.command === "set_session_provider").length, 0, "this computer's engine never sees it");
+});
+
 test("CASE 3: a task created on the VM from this window's space lands in THAT space, shared first with the account", async () => {
   const vm = fakeLink({
     send_message: "t9",

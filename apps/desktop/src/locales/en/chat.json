@@ -295,6 +295,7 @@
   "chat.handover.fork": "This forked task first opens its session with the original provider.",
   "chat.handover.subagent": "A subagent runs inside its task and keeps its provider.",
   "chat.handover.unsupported": "This task can't change its provider.",
+  "chat.handover.machine_unannounced": "This task's machine hasn't announced the provider change yet; if you just updated its engine, the window will take a few minutes to see it.",
   "chat.handover.child": "A task created by another task keeps the provider it was born with.",
   "chat.handover.stale": "The provider change expired; choose it again.",
   "chat.handover.unknown_provider": "That provider isn't available in this task.",

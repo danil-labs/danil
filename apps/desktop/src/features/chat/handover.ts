@@ -3,8 +3,8 @@ import { canHandOver as engineAllows } from "@terminus/protocol";
 /**
  * Cambiar de CLI en una tarea abierta (`provider_handoff_v1`). La autoridad es
  * el motor: `can_hand_over` en `load_session`, ausente en uno anterior y por
- * tanto «no». Aquí solo se combina con lo que el cliente ve —el turno vivo, la
- * máquina y el anuncio del rasgo— para decidir el gesto y el motivo.
+ * tanto «no». Aquí solo se combina con lo que el cliente ve —el turno vivo y lo
+ * que anuncia la máquina de la tarea— para decidir el gesto y el motivo.
  */
 
 /** Lo que `load_session` dijo de la tarea: si puede, por qué no y con cuál corre hoy. */
@@ -25,23 +25,30 @@ export type HandoverGate = {
   /** Un encargado conserva su proveedor. */
   handler?: boolean;
   running: boolean;
-  remote: boolean;
-  /** La máquina de la tarea anuncia `provider_handoff_v1`. */
-  announced: boolean;
+  /**
+   * La máquina de la tarea anuncia `provider_handoff_v1`: `true` si su fila lo
+   * trae, `false` si está en la lista y no lo anuncia, `null` si no está.
+   */
+  announced: boolean | null;
   state?: HandoverState;
 };
 
+/** Clave del cliente (el motor no la manda): la ventana la traduce literal. */
+export const MACHINE_UNANNOUNCED = "chat.handover.machine_unannounced";
+
 /**
  * Por qué la tarea no puede cambiar de CLI, o `null` si puede. Primero las
- * razones permanentes —el encargado, la otra máquina, lo que ya dijo el
- * motor— y al final el turno vivo, que se pasa solo.
+ * razones permanentes —el encargado, lo que ya dijo el motor y lo que anuncia
+ * su máquina— y al final el turno vivo, que se pasa solo.
  */
 export function handOverReason(gate: HandoverGate): string | null {
   if (!gate.session) return null;
   if (gate.handler) return "chat.handover.handler";
-  if (gate.remote) return "chat.handover.unsupported";
   if (gate.state?.blocked) return gate.state.blocked;
-  if (!gate.announced || !engineAllows({ can_hand_over: gate.state?.can })) {
+  // `false` solo afirma que esa máquina no lo anuncia hoy (su `hello` pudo ser
+  // anterior a la actualización); `can === false` no dice «motor viejo».
+  if (gate.announced === false) return MACHINE_UNANNOUNCED;
+  if (gate.announced === null || !engineAllows({ can_hand_over: gate.state?.can })) {
     return "chat.handover.unsupported";
   }
   if (gate.running) return "chat.handover.busy";

@@ -57,7 +57,7 @@ import TranscriptSource from "../features/chat/TranscriptSource";
 import type { Lectura } from "../features/chat/threadWindow";
 import { lotesDeDeltas } from "../features/chat/deltaFrames";
 import { hasOlder, hasRecentGap, HistoryPager, type OlderState } from "../features/chat/history";
-import { agentSwitchBlocked, canHandOverTask, handoverInForce, handoverMatches, shellCli, type HandoverPending, type HandoverState } from "../features/chat/handover";
+import { agentSwitchBlocked, canHandOverTask, handoverInForce, handoverMatches, MACHINE_UNANNOUNCED, shellCli, type HandoverPending, type HandoverState } from "../features/chat/handover";
 import {
   anexarDeltas,
   anexarImagen,
@@ -5701,20 +5701,21 @@ export default function App() {
 
   /**
    * El motor anunció `provider_handoff_v1` en la máquina de la tarea. La de
-   * esta ventana no lleva id en la fila; las demás sí.
+   * esta ventana no lleva id en la fila; las demás sí. Sin fila de esa máquina
+   * no se puede afirmar que no lo anuncie: `undefined`, no `false`.
    */
-  const anunciaTraspaso = (id: string) => {
-    if (!id) return false;
+  const anunciaTraspaso = (id: string): boolean | undefined => {
+    if (!id) return undefined;
     const machine = filaDe(id)?.machine ?? null;
     const suya = machines().find((m) => (machine ? m.id === machine : m.local));
-    return suya?.features?.includes(PROVIDER_HANDOFF_FEATURE) === true;
+    if (!suya) return undefined;
+    return suya.features?.includes(PROVIDER_HANDOFF_FEATURE) === true;
   };
 
   const situacionDeTraspaso = (id: string) => ({
     session: id || null,
     running: vivas().includes(id),
-    remote: !!filaDe(id)?.machine,
-    announced: anunciaTraspaso(id),
+    announced: anunciaTraspaso(id) ?? null,
     state: traspasos()[id],
   });
 
@@ -6118,7 +6119,7 @@ export default function App() {
         provider: m.provider,
         command: m.text.trimStart().startsWith("!"),
         setProvider: (provider) =>
-          invoke("set_session_provider", { project: proyecto, session: abierta ?? "", provider }, opciones),
+          invoke("set_session_provider", { project: proyecto, session: abierta ?? "", provider }, opcionesDeLaTarea(abierta, workspaceActivo())),
         send: mandarTurno,
       });
       const id = traspaso.answer;
@@ -7144,6 +7145,12 @@ export default function App() {
         agentChat: !!fila && esChatDeAgente(fila),
       });
     });
+    /** La frase del candado. `machine_unannounced` es del cliente: se traduce literal. */
+    const motivoDeTraspaso = () => {
+      const clave = bloqueoDeTraspaso();
+      if (!clave) return null;
+      return clave === MACHINE_UNANNOUNCED ? t("chat.handover.machine_unannounced") : t(clave);
+    };
     // Memo: releer la fila tras una aprobación no es cambiar de agente ni cierra su perfil.
     const identidadVisualDeLaCelda = createMemo(() => pp.sesion
       ? (filaDe(pp.sesion)?.agent ?? null)
@@ -7526,7 +7533,7 @@ export default function App() {
            sostiene `elegirModelo`. */
         modelLocked={Boolean(pp.sesion && filaDe(pp.sesion)?.subagent)}
         agentLocked={Boolean(pp.sesion) && bloqueoDeTraspaso() !== null}
-        agentLockedReason={bloqueoDeTraspaso() ? t(bloqueoDeTraspaso()!) : null}
+        agentLockedReason={motivoDeTraspaso()}
         onModel={elegirModelo}
         effort={effort()}
         onEffort={chooseEffort}
