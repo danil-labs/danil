@@ -403,9 +403,6 @@ export default function PuertosAbiertos(props: {
             <Plug size={12} class="text-neutral-500" aria-hidden />
             {t("shell.ports.title")}
           </h2>
-          <span class="font-mono text-caption tabular-nums text-neutral-500">
-            {mios()} de tus tareas · {externos()} externos
-          </span>
         </div>
 
         <Show
@@ -429,27 +426,33 @@ export default function PuertosAbiertos(props: {
               }
             >
               <For each={datos()?.tareas ?? []}>
-                {(t) => (
+                {(tarea) => (
                   <section class="border-b border-border last:border-b-0">
                     <h3 class="m-0 truncate px-3 pt-2.5 pb-1 text-xs font-semibold text-neutral-950">
-                      {t.tarea}
-                      <Show when={t.proyecto}>
+                      {tarea.tarea}
+                      <Show when={tarea.proyecto}>
                         {(p) => (
                           <span class="font-normal text-neutral-500"> · {p()}</span>
                         )}
                       </Show>
                     </h3>
                     <ul class="m-0 list-none px-3 pb-2.5 pt-0.5">
-                      <For each={t.puertos}>
-                        {(p) => <Fila p={p} session={t.session} project={t.project} />}
+                      <For each={tarea.puertos}>
+                        {(p) => <Fila p={p} session={tarea.session} project={tarea.project} />}
+                      </For>
+                      {/* Un proceso no es un puerto: comparten panel, no lista. */}
+                      <Show when={tarea.processes.length}>
+                        <li class="pt-1.5 text-2xs font-semibold uppercase tracking-wide text-neutral-500">
+                          {t("shell.processes.title")}
+                        </li>
+                      </Show>
+                      <For each={tarea.processes}>
+                        {(p) => <ProcessRow p={p} session={tarea.session} />}
                       </For>
                       {/* Lo que pasó cuando no se pudo cerrar, en la fila que lo
                           pidió: un botón que no hace nada y no dice por qué
                           manda a pulsarlo otra vez. */}
-                      <For each={t.processes}>
-                        {(p) => <ProcessRow p={p} session={t.session} />}
-                      </For>
-                      <For each={[...t.puertos, ...t.processes].filter((p) => fallo()[p.pid])}>
+                      <For each={[...tarea.puertos, ...tarea.processes].filter((p) => fallo()[p.pid])}>
                         {(p) => (
                           <li class="py-0.5 text-xs text-warning-strong">
                             {fallo()[p.pid]}
