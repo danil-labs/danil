@@ -124,8 +124,25 @@ const SIN_INTERFAZ = {
   danil_workspace_link_status:
     "la sincronización sigue a la sesión de Danil: el motor vincula todos los workspaces; sin interruptor por workspace",
   tree_diff: "el diff de un turno se pintaba bajo cada turno del chat; ahora «Editó N archivos» abre el panel de la tarea en «Cambios» (tree_changes)",
-  // `docs/agents.md` § Estado observable: el comando de agregación existe
-  // para que el riel deje de sondear; el riel mismo no está construido.
+  // El panel del Harness se retiró del repositorio público: su portal vive en harness.danil.ai.
+  get_radiant_identity: "el panel del Harness vive en su portal; sin pantalla en este repositorio",
+  harness_org_fetch: "el panel del Harness vive en su portal; sin pantalla en este repositorio",
+  list_governed_mcp_logins: "el panel del Harness vive en su portal; sin pantalla en este repositorio",
+  list_radiant_connections: "el panel del Harness vive en su portal; sin pantalla en este repositorio",
+  list_radiant_workspaces: "el panel del Harness vive en su portal; sin pantalla en este repositorio",
+  radiant_cancel_login: "el panel del Harness vive en su portal; sin pantalla en este repositorio",
+  radiant_connect_account: "el panel del Harness vive en su portal; sin pantalla en este repositorio",
+  radiant_govern_disable: "el panel del Harness vive en su portal; sin pantalla en este repositorio",
+  radiant_govern_enable: "el panel del Harness vive en su portal; sin pantalla en este repositorio",
+  radiant_govern_refresh: "el panel del Harness vive en su portal; sin pantalla en este repositorio",
+  radiant_login: "el panel del Harness vive en su portal; sin pantalla en este repositorio",
+  radiant_logout: "el panel del Harness vive en su portal; sin pantalla en este repositorio",
+  radiant_select_organization: "el panel del Harness vive en su portal; sin pantalla en este repositorio",
+  radiant_select_workspace: "el panel del Harness vive en su portal; sin pantalla en este repositorio",
+  radiant_set_server: "el panel del Harness vive en su portal; sin pantalla en este repositorio",
+  radiant_status: "el panel del Harness vive en su portal; sin pantalla en este repositorio",
+  radiant_usage_set_opt_in: "el panel del Harness vive en su portal; sin pantalla en este repositorio",
+  radiant_usage_status: "el panel del Harness vive en su portal; sin pantalla en este repositorio",
 };
 
 /**

@@ -537,15 +537,9 @@ const steps = [
     root,
   ],
   [
-    "The Harness menu follows plan, role and available sources",
+    "An explicit plan decides whether an account is personal",
     process.execPath,
-    ["--test", "--experimental-strip-types", join(root, "tests/unit/admin-sections.test.ts")],
-    root,
-  ],
-  [
-    "Harness usage and activity keep missing data missing and tell MCP apart",
-    process.execPath,
-    ["--test", "--experimental-strip-types", join(root, "tests/unit/harness-insights.test.ts")],
+    ["--test", "--experimental-strip-types", join(root, "tests/unit/account-kind.test.ts")],
     root,
   ],
   [

@@ -1,8 +1,5 @@
-import { Show } from "solid-js";
 import { t } from "../../lib/i18n";
-import { capabilities } from "../../lib/platform";
 import { SettingsPanel, SettingsSection } from "./layout";
-import Harness from "./Harness";
 import Herramientas from "./Tools";
 
 /** Conexiones › MCP: las herramientas que usan los agentes que trabajan en tus proyectos. */
@@ -14,9 +11,6 @@ export default function ConnectionsOperation() {
           <Herramientas />
         </div>
       </SettingsSection>
-      <Show when={capabilities().radiant}>
-        <Harness />
-      </Show>
     </SettingsPanel>
   );
 }

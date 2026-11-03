@@ -48,7 +48,8 @@ import { installIpc } from "./ipc";
 import { webAccountProfile } from "./account";
 import { webAccountEmails } from "./account-emails";
 import { authLocation } from "./auth/return";
-import { adminPageCapability, personalAccountCapability } from "./admin/capability";
+import { HARNESS_URL } from "../lib/harness-url";
+import { adminPageCapability, personalAccountCapability } from "./account-capability";
 import { agentsSession } from "./attention/workspace-sources";
 import { webGithubAccount } from "./github-account";
 import { type Account, type Listing, SLOT_PREFIX, loadAccounts, ownerOf, pickAccount, readListings, rememberLast, removeExtra, savedListings } from "./accounts";
@@ -599,15 +600,14 @@ function toPhone(): boolean {
 }
 
 const adminPath = `${import.meta.env.BASE_URL}admin`;
-const demo = new URLSearchParams(window.location.search).get("demo") === "1";
 
-if (import.meta.env.TERMINUS_ALPHA && window.location.pathname.replace(/\/+$/, "") === `${import.meta.env.BASE_URL}sign-in`) {
+if (window.location.pathname.replace(/\/+$/, "") === adminPath) {
+  // El panel del Harness no vive en el repositorio público: su portal es el destino.
+  window.location.replace(HARNESS_URL);
+} else if (import.meta.env.TERMINUS_ALPHA && window.location.pathname.replace(/\/+$/, "") === `${import.meta.env.BASE_URL}sign-in`) {
   // With WorkOS the alfa sign-in is the common one; `login` points here, so it renders in place.
   if (__TERMINUS_WEB__.workos) void import("./auth/main").then((m) => m.startAuth(__TERMINUS_WEB__, document.getElementById("root") as HTMLElement));
   else void import("./attention/SignIn").then((m) => m.startSignIn(__TERMINUS_WEB__));
-} else if (import.meta.env.TERMINUS_ALPHA && window.location.pathname.replace(/\/+$/, "") === adminPath) {
-  if (demo) void import("./admin/main").then((m) => m.startAdminDemo({ dark: new URLSearchParams(window.location.search).get("theme") === "dark" }));
-  else void import("./admin/main").then((m) => m.startAdmin({ ...__TERMINUS_WEB__, ...given } as WebSettings));
 } else if (import.meta.env.TERMINUS_ALPHA && !window.location.pathname.startsWith(`${import.meta.env.BASE_URL}m/`) && new URLSearchParams(window.location.search).get("demo") === "1") {
   void import("./attention/main").then((m) => m.startAttention(__TERMINUS_WEB__));
 } else if (toPhone()) {

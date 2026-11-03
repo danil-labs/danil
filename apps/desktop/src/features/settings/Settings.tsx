@@ -12,6 +12,7 @@ import { listen } from "../../lib/serviceEvents";
 import { createResource, createSignal, For, type JSX, lazy, onCleanup, onMount, Show, Suspense } from "solid-js";
 import { Dynamic } from "solid-js/web";
 import { capabilities } from "../../lib/platform";
+import { HARNESS_URL } from "../../lib/harness-url";
 import { t } from "../../lib/i18n";
 import { flechaDeLista } from "../../lib/shortcuts";
 import { type Superficie } from "../../lib/surfaces";
@@ -56,8 +57,7 @@ const Appearance = lazy(() => import("./Appearance"));
 const ManageProjects = lazy(() => import("./ManageProjects"));
 const Agents = lazy(() => import("./Agents"));
 
-/** `/admin` de la web de alfa; el escritorio la abre en el navegador. */
-const ADMIN_URL = "https://alfa-app.danil.ai/admin";
+/** El portal del Harness; el escritorio lo abre en el navegador. */
 const Secrets = lazy(() => import("./Secrets"));
 
 /**
@@ -173,16 +173,16 @@ const SIN_PESTANA: Pestana = { id: "", name: "", panel: null };
 const idTab = (id: string) => `cfg-tab-${id}`;
 const idSub = (id: string) => `cfg-sub-${id}`;
 
-/** El enlace al Harness: en la web de alfa, solo para owner y admin; el escritorio no sabe el rol y la ofrece siempre. Es un enlace de verdad: siempre a `/admin`, en otra pestaña. */
+/** El enlace al Harness: en la web de alfa, solo para owner y admin; el escritorio no sabe el rol y la ofrece siempre. Es un enlace de verdad: siempre al portal, en otra pestaña. */
 function AdminLink() {
   const page = capabilities().adminPage;
   const [allowed] = createResource(async () => (page ? await page.allowed().catch(() => false) : capabilities().nativeWindow));
-  const href = page?.href ?? ADMIN_URL;
+  const href = page?.href ?? HARNESS_URL;
   /** El escritorio no abre pestañas: lo manda al navegador. */
   const open = (event: MouseEvent) => {
     if (page) return;
     event.preventDefault();
-    void invoke("open_external", { target: ADMIN_URL }).catch(() => {});
+    void invoke("open_external", { target: HARNESS_URL }).catch(() => {});
   };
   return (
     <Show when={allowed()}>

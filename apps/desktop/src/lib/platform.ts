@@ -62,7 +62,7 @@ export type Capabilities = {
   localSetup: boolean;
   /** Una computadora apagada o encendiéndose se ve en su indicador, no como error. */
   computerStatus: boolean;
-  /** Radiant en Configuración y su gobierno en las pantallas; la web no lo ofrece. */
+  /** El gobierno del Harness en las pantallas; la web no lo ofrece. */
   radiant?: boolean;
   /** Iniciar sesión en Danil desde Configuración: la web ya entra con esa cuenta. */
   danilAccount?: boolean;
@@ -72,9 +72,9 @@ export type Capabilities = {
   accountEmails?: AccountEmailsSource;
   /** El panel de Configuración que la página pidió abrir al cargar (`?settings=`). */
   initialSettings?: string;
-  /** La bitácora de cambios de la cuenta de Danil activa, con la sesión (la web en alfa); la muestra `/admin`. */
+  /** La bitácora de cambios de la cuenta de Danil activa, con la sesión (la web en alfa). */
   accountAuditLog?: AuditLogSource;
-  /** `/admin` dentro de esta web (alfa); `allowed` dice si la persona es owner o admin de algún workspace de Danil. Sin esto, el escritorio la abre en el navegador. */
+  /** El enlace al Harness en Configuración; `allowed` dice si la persona es owner o admin de algún workspace de Danil. Sin esto, el escritorio lo abre en el navegador. */
   /** Los workspaces que la persona puede entrar (la web y la ventana). Sin esto, el menú y la barra siguen como en el motor. */
   workspaceDirectory?: {
     /** `account`: con qué sesión se lee el directorio; sin él, la del workspace abierto. */

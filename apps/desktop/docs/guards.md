@@ -55,7 +55,7 @@ sends).
 | `mount-task-composer` | `scripts/guards/mount-task-composer.mjs` | Same harness: an open task's composer, queue, fork, preview and attachments. |
 | `mount-sidebar` | `scripts/guards/mount-sidebar.mjs` | Same harness: the rail's git rows, closing with live turns, selection, groups, recents and clone. |
 | `mount-turns` | `scripts/guards/mount-turns.mjs` | Same harness: base branch, authoritative turn state, in-flight replies and task history. |
-| `mount-settings` | `scripts/guards/mount-settings.mjs` | Same harness: Settings for providers, integrations, plugins, Harness, language, agents and workspaces. |
+| `mount-settings` | `scripts/guards/mount-settings.mjs` | Same harness: Settings for providers, integrations, plugins, language, agents and workspaces. |
 | `mount-workspaces` | `scripts/guards/mount-workspaces.mjs` | Same harness: workspace column, title bar, finishing a task, local links and first-run setup. |
 | `mount-permissions` | `scripts/guards/mount-permissions.mjs` | Same harness: live questions, newborn tasks and permission choices. |
 | `mount-content` | `scripts/guards/mount-content.mjs` | Same harness: chat prose and diagrams, background child tasks, a rejected first turn and updates. |

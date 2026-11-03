@@ -41,11 +41,11 @@ ahora redirige allí). Un motor sin estos comandos recibe `command` del
 proxy y la sección lo dice. El campo editable del alta y de la página de
 aprobación es el nombre de **esta computadora**, no el de la cuenta.
 
-La web (`alfa-app.danil.ai`) no ofrece Harness: ni la sección de
-Configuración, ni su gobierno en las pantallas, ni la elección «De mi
-organización» al crear el espacio (`capabilities().radiant`, solo en el
-escritorio). Harness se conectará con Danil Machines, no con cada ventana;
-el escritorio lo conserva por ahora (2026-10-21).
+La web (`alfa-app.danil.ai`) no monta el panel del Harness: `/admin` redirige a
+`https://harness.danil.ai/`, y Configuración solo enlaza al portal para owner y
+admin de una organización. El gobierno que llega del servidor
+(`capabilities().radiant`, solo en el escritorio) sigue bloqueando las secciones
+que administra.
 
 La persona de la cuenta (nombre, correo, foto) sale del motor:
 `danil_connect_status` trae `account_name`, `avatar` (ruta de la foto guardada
