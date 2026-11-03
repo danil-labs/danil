@@ -32,6 +32,7 @@ import { blobToDataUrl } from "./account-profile";
 
 // Chunk aparte: la cuenta de Danil del workspace solo pesa al abrir esta pantalla.
 const WorkspaceAccount = lazy(() => import("./WorkspaceAccount"));
+const WorkspaceCloud = lazy(() => import("./WorkspaceCloud"));
 
 // ------------------------------------------------ la fila de la lista
 
@@ -530,6 +531,12 @@ export default function Workspaces() {
                     <Show when={capabilities().danilAccount}>
                       <Suspense fallback={null}>
                         <WorkspaceAccount workspace={w.id} name={w.name} />
+                      </Suspense>
+                    </Show>
+
+                    <Show when={capabilities().workspaceDirectory}>
+                      <Suspense fallback={null}>
+                        <WorkspaceCloud workspace={w.id} name={w.name} onChange={() => void ws.cargar()} />
                       </Suspense>
                     </Show>
 

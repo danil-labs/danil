@@ -456,6 +456,16 @@
   "settings.update.unreachable_hint": "Revisa tu conexión a internet y vuelve a intentar.",
   "settings.update.uptodate": "Tienes la versión más reciente.",
   "settings.workspaces.add": "Agregar workspace",
+  "settings.workspaces.cloud.title": "En la nube",
+  "settings.workspaces.cloud.synced": "Sincronizado con «{name}»",
+  "settings.workspaces.cloud.synced_hint": "El mismo workspace en todas tus máquinas y en la web, con sus agentes y su configuración.",
+  "settings.workspaces.cloud.other_name": "Aquí se llama «{local}»; en la nube, «{cloud}».",
+  "settings.workspaces.cloud.local": "Solo en esta computadora",
+  "settings.workspaces.cloud.local_hint": "Súbelo o sincronízalo para usarlo con tus agentes y verlo completo en la web.",
+  "settings.workspaces.cloud.upload": "Subir «{workspace}»",
+  "settings.workspaces.cloud.or": "o",
+  "settings.workspaces.cloud.pick": "Workspace de la nube para sincronizar",
+  "settings.workspaces.cloud.sync": "Sincronizar",
   "settings.workspaces.blocked": {
     "one": "Hay {count} tarea contestando ahora mismo. Borrar el workspace se llevaría la carpeta donde está escribiendo.",
     "other": "Hay {count} tareas contestando ahora mismo. Borrar el workspace se llevaría la carpeta donde está escribiendo."

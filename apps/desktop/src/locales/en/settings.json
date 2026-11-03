@@ -456,6 +456,16 @@
   "settings.update.unreachable_hint": "Check your internet connection and try again.",
   "settings.update.uptodate": "You have the latest version.",
   "settings.workspaces.add": "Add workspace",
+  "settings.workspaces.cloud.title": "In the cloud",
+  "settings.workspaces.cloud.synced": "Synced with “{name}”",
+  "settings.workspaces.cloud.synced_hint": "The same workspace on all your machines and on the web, with its agents and settings.",
+  "settings.workspaces.cloud.other_name": "Here it's called “{local}”; in the cloud, “{cloud}”.",
+  "settings.workspaces.cloud.local": "Only on this computer",
+  "settings.workspaces.cloud.local_hint": "Upload it or sync it to use it with your agents and see all of it on the web.",
+  "settings.workspaces.cloud.upload": "Upload “{workspace}”",
+  "settings.workspaces.cloud.or": "or",
+  "settings.workspaces.cloud.pick": "Cloud workspace to sync with",
+  "settings.workspaces.cloud.sync": "Sync",
   "settings.workspaces.blocked": {
     "one": "There is {count} task answering right now. Deleting the workspace would take away the folder it is writing in.",
     "other": "There are {count} tasks answering right now. Deleting the workspace would take away the folder they are writing in."
