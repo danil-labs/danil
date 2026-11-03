@@ -1672,6 +1672,10 @@ export default function Chat(props: ChatProps) {
         m.meta === "cupo" ||
         m.meta === "engine_updated" ||
         m.meta === "provider_handover" ||
+        // Lo que la ventana dice de un gesto que no se pudo hacer —«mandar
+        // ahora» contra un agente que no recibe mensajes a medias—: es un
+        // renglón del hilo y no un paso de lo que hizo el agente.
+        m.meta === "steer_refused" ||
         esFilaDeLaBandeja(m.meta) ||
         esSalidaDeComando(m.meta) ||
         m.contexto ||

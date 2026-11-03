@@ -242,3 +242,12 @@ export function contestaALaTerminal(restantes: readonly Encolado[], detenido: bo
 export function seMandaSinSuperficie(texto: string): boolean {
   return texto.startsWith("!");
 }
+
+/**
+ * Lo que contesta el ejecutor cuando despachó el mensaje pero no pudo saber si
+ * entró (`runtime/chat/delivery.rs`, `ACCEPTANCE_UNKNOWN`). Es una clave
+ * interna, no una frase: pintarla deja ese identificador en el hilo con un
+ * reintento que repite el mismo camino. La ventana la cuenta con
+ * `chat.steer.unconfirmed`; OpenCode 2.x cae aquí (rechaza el segundo prompt).
+ */
+export const ENTREGA_SIN_CONFIRMAR = "executor_acceptance_unknown";

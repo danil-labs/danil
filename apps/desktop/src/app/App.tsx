@@ -47,7 +47,7 @@ import {
 import { DelegatedLaunch, DelegatedNone, DelegatedToolbar, delegatedAttention, delegatedDescendants, delegatedFamilies, type DelegatedListProps, type DelegatedPanelModel } from "../features/chat/DelegatedTasks";
 import PreviousAgentChat from "../features/chat/PreviousAgentChat";
 import type { AlmacenDePreguntas, PreguntasAMedias, Respuesta, RespuestaEnviada } from "../features/chat/Questions";
-import { contestaALaTerminal, despachable, esDeLaTerminal, guardable, inyectable, type RazonDeRetencion, retencionAlCargar, siguienteLote, sueltaElBorrador } from "../features/chat/queue";
+import { contestaALaTerminal, despachable, ENTREGA_SIN_CONFIRMAR, esDeLaTerminal, guardable, inyectable, type RazonDeRetencion, retencionAlCargar, siguienteLote, sueltaElBorrador } from "../features/chat/queue";
 import type { ComandoEnVivo } from "../features/chat/ShellCard";
 import { comandoDeTerminal } from "../features/chat/terminalIndent";
 import type { AlMargen } from "../features/chat/SideQuestion";
@@ -303,7 +303,7 @@ import { LazyPart, retryableLazy } from "../ui/LazyPart";
 import { mergeGates } from "../features/chat/permissionGates";
 import { errorCode } from "../lib/errorCode.ts";
 import { Dialog, DialogContent, DialogTitle } from "../ui/Dialog";
-import { asFailure, claveDe, prosaDe } from "../ui/Failure";
+import { asFailure, claveDe, detalleDe, prosaDe } from "../ui/Failure";
 import { BotonConAtajo } from "../ui/Shortcut";
 import type { ActivityEvent } from "@terminus/protocol";
 import { Toast, ToastStack } from "../ui/Toast";
@@ -1517,6 +1517,19 @@ export default function App() {
   }
   const pendingStarts = new Map<string, symbol>();
   const [injecting, setInjecting] = createSignal<{ session: string; id: string }[]>([]);
+  /**
+   * Los agentes que ya contestaron que no reciben mensajes a mitad del turno
+   * (`chat.steer.unsupported`) o que dejaron la entrega sin confirmar. Con uno
+   * de ellos «Mandar ahora» no haría nada: el mensaje se queda en la cola. Es
+   * del agente y no de la tarea, y abrir la ventana lo olvida.
+   */
+  const [sinSteer, setSinSteer] = createSignal<string[]>([]);
+  /**
+   * Las tareas donde «detener y enviar» acaba de cortar el turno: al cerrar,
+   * la cola no se retiene por el fallo de la interrupción, que aquí lo pidió la
+   * persona. Sin esto el gesto dejaba el mensaje parado justo después de usarlo.
+   */
+  const enviarAlCerrar = new Set<string>();
   const queueBusy = () => busy() || settlingTurns().includes(sessionId() ?? "") || injecting().some((item) => item.session === sessionId());
   const [desdeDeTurno, setDesdeDeTurno] = createSignal<Record<string, number>>({});
   const liveThreads = new Set<string>();
@@ -2494,10 +2507,14 @@ export default function App() {
       setSettlingTurns((ids) => [...new Set([...ids, session])]);
       if (ok !== true) {
         const retained = ok === false ? "fallo" : "borrador";
-        if (session === sessionId()) setRetenida(retained);
+        // «Detener y enviar»: la interrupción la pidió la persona para que
+        // saliera lo que ya estaba escrito. Retener aquí dejaría el mensaje
+        // parado y el gesto a medias; la marca se suelta al salir la cola.
+        const saleAhora = enviarAlCerrar.has(session);
+        if (session === sessionId() && !saleAhora) setRetenida(retained);
         if (draftFromDisk === session) draftFromDisk = null;
         const queued = savedQueues.get(session);
-        if (queued) savedQueues.set(session, { ...queued, retained });
+        if (queued) savedQueues.set(session, { ...queued, retained: saleAhora ? null : retained });
         if (ok == null) sinDesenlace.add(session);
         else sinDesenlace.delete(session);
       } else if (sinDesenlace.delete(session)) {
@@ -3827,6 +3844,8 @@ export default function App() {
           // Sin nada en cola no hay nada que retener. Si no se soltara aquí, un
           // fallo dejaría detenida para siempre la cola que venga después.
           if (ret) setRetenida(null);
+          // «Detener y enviar» sin nada que enviar ya no tiene promesa que cumplir.
+          enviarAlCerrar.delete(mirando ?? "");
           return;
         }
         // El cierre permite reintentar una sesión reservada por otro turno.
@@ -3861,6 +3880,9 @@ export default function App() {
           // queda en la cola y sale en el siguiente, no se pierde ni se cuela
           // firmado por quien no lo escribió.
           setCola(resto);
+          // La promesa de «detener y enviar» se cumple aquí: el cierre de ese
+          // turno ya no tiene que dejar paso a una cola que ya salió.
+          enviarAlCerrar.delete(mirando ?? "");
           void enviar(mensaje);
         });
       },
@@ -6713,6 +6735,37 @@ export default function App() {
   }
 
   /**
+   * Deja de ofrecer «Mandar ahora» para ese agente y lo explica una vez. El
+   * mensaje no se toca: sigue en la cola y sale cuando cierre el turno — es el
+   * camino que el motor ya eligió al negarse.
+   */
+  function noRecibeAMedias(session: string, provider: string | null, aviso: string, workspace = workspaceActivo()) {
+    if (!provider) return;
+    const primera = !sinSteer().includes(provider);
+    if (primera) setSinSteer((lista) => [...lista, provider]);
+    if (!primera) return;
+    anexar(session, (ms) => [...ms, { role: "system", text: t(aviso), meta: "steer_refused" }], workspace);
+  }
+
+  /**
+   * Lo que la persona ya hace a mano cuando el agente no recibe mensajes a
+   * medias: parar el turno y mandar lo encolado. No es un steer y no se
+   * disfraza: el paso que corría se pierde, y el título del botón lo dice.
+   */
+  async function detenerYEnviar(id: string) {
+    const abierta = sessionId();
+    const m = cola().find((q) => q.id === id);
+    if (!abierta || !m || !inyectable(m)) return;
+    // Lo elegido sale primero; el resto conserva su orden.
+    setCola((c) => [m, ...c.filter((q) => q.id !== id)]);
+    setRetenida(null);
+    // Sin turno vivo no hay nada que detener: la cola sale sola.
+    if (!busy()) return;
+    enviarAlCerrar.add(abierta);
+    await detener();
+  }
+
+  /**
    * Mete un encolado en el turno que ya corre. Solo sale de la cola si el
    * backend lo aceptó: un mensaje que se borra de la lista sin haber entrado
    * en ningún sitio desaparece sin que nadie sepa que se perdió.
@@ -6723,6 +6776,9 @@ export default function App() {
     if (!abierta || !m || !inyectable(m) || injecting().some((item) => item.id === id)) return;
     const sourceProject = project();
     const sourceWorkspace = workspaceActivo();
+    // Quién contesta el turno vivo: la fila de la tarea, no el agente con que se
+    // escribió lo encolado — el mensaje entra en el turno que corre, no en otro.
+    const proveedor = filaDe(abierta)?.provider ?? m.provider;
     setInjecting((items) => [...items, { session: abierta, id }]);
     // Lo último del disco antes de meterlo: con un motor que no devuelve el turno,
     // lo guardado después con su texto es él (`mensajesDelHilo`).
@@ -6769,7 +6825,18 @@ export default function App() {
       }
       // Este agente no recibe mensajes a medias: sigue en la cola y sale al cerrar
       // el turno. Cortarlo mataba turnos de Claude que solo esperaban su canal.
-      if (clave === "chat.steer.unsupported") return;
+      if (clave === "chat.steer.unsupported") {
+        noRecibeAMedias(abierta, proveedor, "chat.steer.unsupported", sourceWorkspace);
+        return;
+      }
+      // El ejecutor no pudo saber si entró. Se queda en la cola —borrarlo
+      // perdería lo escrito— y se avisa en la lengua de la ventana: la clave es
+      // interna y en el hilo se leía tal cual, con un reintento que repetía el
+      // mismo rechazo.
+      if (detalleDe(e) === ENTREGA_SIN_CONFIRMAR) {
+        noRecibeAMedias(abierta, proveedor, "chat.steer.unconfirmed", sourceWorkspace);
+        return;
+      }
       anexar(abierta, (ms) => [...ms, { role: "system", ...mensajeDeFallo(e), meta: "fallo" }]);
     } finally {
       setInjecting((items) => items.filter((item) => item.id !== id));
@@ -7613,10 +7680,20 @@ export default function App() {
           onBorrar: quitarEncolado,
           onEditando: setEditando,
           onMandar: () => setRetenida(null),
-          // Solo con un turno vivo: sin él, lo escrito sale por el camino
-          // normal y el gesto no significaría nada.
-          onMandarAhora: pp.sesion && vivas().includes(pp.sesion)
+          // Solo con un turno vivo y con un agente que no haya dicho que no
+          // recibe mensajes a medias: sin él, lo escrito sale por el camino
+          // normal y el gesto no significaría nada; con él negado, sería un
+          // botón que no hace nada.
+          onMandarAhora: pp.sesion && vivas().includes(pp.sesion) &&
+            !sinSteer().includes(filaDe(pp.sesion)?.provider ?? "")
             ? (id: string) => mandarAhora(id)
+            : null,
+          // Y donde el motor ya negó el steer, el gesto que queda es el de la
+          // persona: parar el turno y enviar. Nada con una pregunta abierta:
+          // esa cola espera su respuesta, no un turno nuevo.
+          onDetenerYEnviar: pp.sesion && vivas().includes(pp.sesion) && !esperando() &&
+            sinSteer().includes(filaDe(pp.sesion)?.provider ?? "")
+            ? (id: string) => void detenerYEnviar(id)
             : null,
         }}
         />

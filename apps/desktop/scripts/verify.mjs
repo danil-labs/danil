@@ -720,6 +720,8 @@ const steps = [
   ["With tasks working, restart or quit waits for them or stops the ones it names", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/update-wait.test.mjs")], root],
   ["A reply with a visual does not vanish from chat even if the turn is not saved or the visual cannot be read", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/chat-turn-unsaved.test.mjs")], root],
   ["What is sent into the live turn goes out once, even on repeated presses or if the engine does not return the turn", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/chat-steer-once.test.mjs")], root],
+  ["An agent that refuses a mid-turn message keeps it queued, stops offering the gesture and never shows the executor's internal code", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/chat-steer-refused.test.mjs")], root],
+  ["«Stop and send» stops the turn and lets the queued message out instead of keeping it retained", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/chat-stop-and-send.test.mjs")], root],
   ["Opening a long task stays under its ceiling", process.execPath, [join(root, "tests/perf/open-task-cost.mjs")], root],
   ["Rereading an open task does not remount its thread", process.execPath, [join(root, "tests/perf/reread-thread.mjs")], root],
   ["A long session leaves no memory behind", process.execPath, ["--expose-gc", join(root, "tests/perf/long-session.mjs")], root],
