@@ -207,7 +207,6 @@
   "shell.machine_panel.title": "Máquinas",
   "shell.machine_panel.trigger.high": "Máquinas · {name}: presión alta",
   "shell.machine_panel.trigger.critical": "Máquinas · {name}: saturada",
-  "shell.machine_panel.state.normal": "Normal",
   "shell.machine_panel.state.high": "Presión alta",
   "shell.machine_panel.state.critical": "Saturada",
   "shell.machine_panel.state.disk_only": "Solo disco",
