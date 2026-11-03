@@ -18,6 +18,8 @@
     "indicators": "pnpm -C apps/desktop indicators",
     "phrases": "pnpm -C apps/desktop phrases",
     "icons": "pnpm -C apps/desktop icons",
-    "version:bump": "pnpm -C apps/desktop version:bump"
+    "version:bump": "pnpm -C apps/desktop version:bump",
+    "hooks:install": "node apps/desktop/scripts/install-hooks.mjs",
+    "prepare": "node apps/desktop/scripts/install-hooks.mjs"
   }
 }

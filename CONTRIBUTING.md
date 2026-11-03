@@ -30,6 +30,14 @@ engine can't be made here, but bug reports about them are welcome as issues.
 5. Open a pull request against `dev` and fill in the template; `dev` goes to
    `main` after QA.
 
+## Pre-push hook
+
+`pnpm install` sets `core.hooksPath` to `.githooks`, so every push runs the
+linter on what the push changes, the type check when a source file changed, and
+`cargo fmt --check` when a Rust file changed. It fails the push on an error and
+fails open when the toolchain is missing. Skip it with `SKIP_HOOKS=1 git push`
+only to unblock an emergency, never to deliver.
+
 The chain runs locally, on every platform the change touches, before a merge.
 GitHub Actions is not the gate. `pnpm verify --remote` is a queue on Danil's
 team machine and needs access to its tailnet; outside contributors verify
