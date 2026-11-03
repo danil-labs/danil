@@ -10,12 +10,12 @@ Las fuentes versionadas son los SVG de `src/`. Hay varios íconos, y no se mezcl
 | `src/mcp-light.svg`, `src/mcp-dark.svg` | El isotipo sin botón, para fondo claro y oscuro | Lista de conexiones de Claude; ver [MCP.md](MCP.md) |
 | `src/installer-macos.svg` | El disco del `.dmg`: una placa clara con una flecha de descarga | Escritorio y Finder mientras el disco está montado (`../macos/volume.icns`) |
 | `src/installer-windows.svg` | El `setup.exe`: el ícono de la app con una insignia de instalar | Descargas de Windows (`../windows/installer.ico`) |
-| `src/dmg-background.svg` | La ventana del `.dmg` (660×400): «Arrastra Terminus a Aplicaciones» | Al abrir el `.dmg` (`../macos/dmg-background*.png`) |
+| `src/dmg-background.svg` | La ventana del `.dmg` (660×400): «Arrastra Danil a Aplicaciones» | Al abrir el `.dmg` (`../macos/dmg-background*.png`) |
 | `src/nsis-sidebar.svg`, `src/nsis-header.svg` | La barra lateral (164×314) y el encabezado (150×57) del asistente de NSIS | Instalador de Windows (`../windows/nsis-*.bmp`, BMP de 24 bits) |
 | `src/phone-*.svg`, `src/android-*.svg` | La app a sangre (iOS y la PWA recortan la forma) y las capas del ícono adaptativo de Android | `apps/mobile/assets` y `apps/mobile/public/icons` |
 
 El instalador se dibuja distinto de la app a propósito: si el disco montado se
-ve igual que la app, la gente abre Terminus desde el disco en vez de copiarlo.
+ve igual que la app, la gente abre la app desde el disco en vez de copiarlo.
 
 ## Regenerar
 

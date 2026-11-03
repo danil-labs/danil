@@ -2,8 +2,8 @@
 <defs><linearGradient id="b" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#eef0f6"/></linearGradient>
 <radialGradient id="g" cx=".5" cy="1.1" r=".8"><stop offset="0" stop-color="#6539f5" stop-opacity=".10"/><stop offset="1" stop-color="#6539f5" stop-opacity="0"/></radialGradient></defs>
 <rect width="660" height="400" fill="url(#b)"/><rect width="660" height="400" fill="url(#g)"/>
-<text x="330" y="58" text-anchor="middle" font-family="-apple-system, 'SF Pro Display', 'Helvetica Neue', sans-serif" font-size="22" font-weight="600" fill="#0a0d23">Arrastra Terminus a Aplicaciones</text>
-<text x="330" y="84" text-anchor="middle" font-family="-apple-system, 'SF Pro Text', 'Helvetica Neue', sans-serif" font-size="14" fill="#5b6075">Drag Terminus to Applications</text>
+<text x="330" y="58" text-anchor="middle" font-family="-apple-system, 'SF Pro Display', 'Helvetica Neue', sans-serif" font-size="22" font-weight="600" fill="#0a0d23">Arrastra Danil a Aplicaciones</text>
+<text x="330" y="84" text-anchor="middle" font-family="-apple-system, 'SF Pro Text', 'Helvetica Neue', sans-serif" font-size="14" fill="#5b6075">Drag Danil to Applications</text>
 <path d="M270 190 H378" stroke="#0a0d23" stroke-opacity=".85" stroke-width="5" stroke-linecap="round" stroke-dasharray="1 14"/>
 <path d="M372 172 L394 190 L372 208" stroke="#0a0d23" stroke-opacity=".85" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
 <text x="330" y="352" text-anchor="middle" font-family="-apple-system, 'SF Pro Text', 'Helvetica Neue', sans-serif" font-size="12" fill="#8a8fa3">Después ábrelo desde Aplicaciones y expulsa este disco</text>
