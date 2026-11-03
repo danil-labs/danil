@@ -1082,7 +1082,7 @@
    móvil lee el mismo tamaño de `SIGNAL_DOT_SIZE` (`packages/design`). */
 :root {
   --signal-dot-size: 7px;
-  --signal-success: var(--color-success-strong);
+  --signal-success: var(--color-success);
   --signal-error: var(--color-error-strong);
   --signal-warning: var(--color-warning-strong);
   --signal-neutral: var(--color-neutral-500);

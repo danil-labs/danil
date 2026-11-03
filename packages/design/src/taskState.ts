@@ -24,6 +24,16 @@ export function taskPriority(s: TaskActivity): TaskState | null {
   return null;
 }
 
+/**
+ * El estado que marca la tarjeta. Lo visto no lleva nada, ni gris: una tarea
+ * detenida por ti sólo se marca mientras no la abras, y en verde como
+ * cualquier turno sin ver.
+ */
+export function markedState(s: TaskActivity): TaskState | null {
+  const state = taskPriority(s);
+  return state === "interrupted" ? (s.sinVer ? "unseen" : null) : state;
+}
+
 /** El resultado que resume a un grupo: un fallo pesa más que una interrupción. */
 export function rolledOutcome(rows: readonly { outcome?: TaskActivity["outcome"] }[]): "failed" | "interrupted" | null {
   if (rows.some((row) => row.outcome === "failed")) return "failed";
