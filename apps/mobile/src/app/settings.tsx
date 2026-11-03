@@ -1,15 +1,17 @@
+import type { PushMode } from "@terminus/computers";
 import { MOBILE_WEB_DIR, WEB_LAYOUT_KEY } from "@terminus/design";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
-import { Platform, ScrollView, View } from "react-native";
+import { Platform, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAccount } from "../lib/account";
 import { BRIDGE_ENABLED } from "../lib/bridge";
 import type { Host } from "../lib/hosts";
 import { t, w } from "../lib/i18n";
 import { useMachines } from "../lib/machines";
-import { disablePush, enablePush, PUSH_TEST, type PushState, pushState, sendTestPush } from "../lib/push";
+import { disablePush, enablePush, PUSH_IOS, PUSH_TEST, type PushState, pushState, readPushMode, sendTestPush, writePushMode } from "../lib/push";
 import { Dot } from "../ui/components";
+import { Icon } from "../ui/Icon";
 import { Group, GroupHeader, LargeTitle, ListRow, NavBar, pageColor } from "../ui/list";
 import { useTheme } from "../ui/theme";
 
@@ -133,12 +135,21 @@ export default function Settings() {
 
 /** Avisos de tareas en este dispositivo (solo web). Los errores quedan en la fila. */
 function PushRow({ getToken }: { getToken: () => Promise<string> }) {
+  const theme = useTheme();
   const [state, setState] = useState<PushState | null>(null);
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<string | null>(null);
+  const [mode, setMode] = useState<PushMode | null>(null);
   useEffect(() => {
     void pushState().then(setState);
   }, []);
+  useEffect(() => {
+    if (!state?.on) {
+      setMode(null);
+      return;
+    }
+    void readPushMode(getToken).then(setMode).catch(() => setMode("all"));
+  }, [state?.on, getToken]);
   if (!state || (!state.supported && !state.needsInstall)) return null;
   const run = async (action: () => Promise<string | null>) => {
     setBusy(true);
@@ -155,6 +166,20 @@ function PushRow({ getToken }: { getToken: () => Promise<string> }) {
     }
   };
   const subtitle = note ?? (state.needsInstall ? t("push.install") : state.blocked ? t("push.blocked") : t("push.subtitle"));
+  const choose = (next: PushMode) => void run(async () => {
+    setMode(await writePushMode(getToken, next));
+    return null;
+  });
+  const modeRow = (value: PushMode, title: string, detail: string) => (
+    <ListRow
+      testID={`push-mode-${value}`}
+      title={title}
+      subtitle={detail}
+      right={mode === value ? <Icon name="check" size={18} color={theme.primary} /> : <View style={{ width: 18 }} />}
+      disabled={busy || mode === null}
+      onPress={() => choose(value)}
+    />
+  );
   return (
     <>
       <Group>
@@ -175,6 +200,17 @@ function PushRow({ getToken }: { getToken: () => Promise<string> }) {
           <ListRow testID="push-test" title={t("push.test")} disabled={busy} onPress={() => void run(async () => t("push.test_sent", { count: String(await sendTestPush(getToken)) }))} />
         ) : null}
       </Group>
+      {state.on ? (
+        <>
+          <GroupHeader>{t("push.mode_title")}</GroupHeader>
+          <Group>
+            {modeRow("needs_you", t("push.mode.needs_you"), t("push.mode.needs_you_detail"))}
+            {modeRow("all", t("push.mode.all"), t("push.mode.all_detail"))}
+            {modeRow("off", t("push.mode.off"), t("push.mode.off_detail"))}
+          </Group>
+          {PUSH_IOS ? <Text style={{ color: theme.textMuted, fontSize: 12, marginHorizontal: 20, marginTop: 8 }}>{t("push.mode.ios")}</Text> : null}
+        </>
+      ) : null}
       <View style={{ height: 20 }} />
     </>
   );

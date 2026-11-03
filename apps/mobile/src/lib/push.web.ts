@@ -1,4 +1,4 @@
-import { forgetPushDevice, keyBytes, pushPublicKey, savePushDevice, testPush } from "@terminus/computers";
+import { forgetPushDevice, keyBytes, type PushMode, pushPreferences, pushPublicKey, savePushDevice, savePushPreferences, testPush } from "@terminus/computers";
 import { WEB_BASE } from "./alpha-mode";
 import type { PushState } from "./push";
 import { COMPUTERS } from "./supabase";
@@ -15,10 +15,12 @@ export const PUSH_TEST = process.env.EXPO_PUBLIC_TERMINUS_PUSH_TEST === "1";
 
 const supported = () => "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
 
+/** Safari en iPhone o iPad: no sustituye ni silencia (`tag`, `renotify`, `silent`). */
+export const PUSH_IOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && "ontouchend" in document);
+
 function needsInstall(): boolean {
-  const ios = /iphone|ipad|ipod/i.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && "ontouchend" in document);
   const standalone = window.matchMedia?.("(display-mode: standalone)").matches || (navigator as Navigator & { standalone?: boolean }).standalone === true;
-  return ios && !standalone;
+  return PUSH_IOS && !standalone;
 }
 
 async function ownRegistration(): Promise<ServiceWorkerRegistration | undefined> {
@@ -111,4 +113,16 @@ export async function sendTestPush(getToken: () => Promise<string>): Promise<num
   const answer = await testPush(COMPUTERS, await getToken());
   if (answer.kind !== "ok") throw new Error("push_test_failed");
   return answer.value.sent;
+}
+
+/** La preferencia guardada en el relay; si no contesta, «todo» (lo que ya hacía). */
+export async function readPushMode(getToken: () => Promise<string>): Promise<PushMode> {
+  const answer = await pushPreferences(COMPUTERS, await getToken());
+  return answer.kind === "ok" ? answer.value.mode : "all";
+}
+
+export async function writePushMode(getToken: () => Promise<string>, mode: PushMode): Promise<PushMode> {
+  const answer = await savePushPreferences(COMPUTERS, await getToken(), mode);
+  if (answer.kind !== "ok") throw new Error(answer.kind === "error" ? answer.code ?? "push_mode_failed" : "push_mode_failed");
+  return answer.value.mode;
 }

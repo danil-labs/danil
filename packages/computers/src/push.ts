@@ -30,6 +30,18 @@ export function forgetPushDevice(endpoint: string, token: string, device: Pick<P
   return request(apiUrl(endpoint, "/v1/push/subscriptions"), token, "DELETE", () => null, f, { endpoint: device.endpoint });
 }
 
+/** Qué avisa la persona: todo, solo lo que pide una decisión, o nada. */
+export type PushMode = "all" | "needs_you" | "off";
+
+/** La preferencia guardada en el relay de sus computadoras. */
+export function pushPreferences(endpoint: string, token: string, f: Fetch = globalFetch): Promise<Answer<{ mode: PushMode }>> {
+  return request(apiUrl(endpoint, "/v1/push/preferences"), token, "GET", (body) => body as { mode: PushMode }, f);
+}
+
+export function savePushPreferences(endpoint: string, token: string, mode: PushMode, f: Fetch = globalFetch): Promise<Answer<{ mode: PushMode }>> {
+  return request(apiUrl(endpoint, "/v1/push/preferences"), token, "PUT", (body) => body as { mode: PushMode }, f, { mode });
+}
+
 /** Solo en staging: un aviso de prueba a los dispositivos de quien lo pide. */
 export function testPush(endpoint: string, token: string, f: Fetch = globalFetch): Promise<Answer<{ sent: number; devices: number }>> {
   return request(apiUrl(endpoint, "/v1/push/test"), token, "POST", (body) => body as { sent: number; devices: number }, f);
