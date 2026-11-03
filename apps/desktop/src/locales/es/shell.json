@@ -256,6 +256,10 @@
   "shell.machine_panel.task.unknown": "Tarea {id}",
   "shell.machine_panel.leftover": "Quedó corriendo",
   "shell.machine_panel.leftover.none": "Nada: ninguna tarea terminada dejó procesos.",
+  "shell.machine_panel.leftover.card": {
+    "one": "{count} tarea terminada dejó procesos corriendo · {size}",
+    "other": "{count} tareas terminadas dejaron procesos corriendo · {size}"
+  },
   "shell.machine_panel.leftover.ended": "terminó {when}",
   "shell.machine_panel.leftover.archived": "archivada {when}",
   "shell.machine_panel.leftover.finished": "terminada",
