@@ -378,6 +378,8 @@ function takeSettingsParam(): string | undefined {
 
 /** Lists the computers again now; set once the page is mounted with a session. */
 let relistNow: (() => Promise<void>) | null = null;
+// Unir dos personas deja sus workspaces en la misma sesión: el directorio se relee.
+if (typeof window !== "undefined") window.addEventListener("harness:account-merged", () => void relistNow?.());
 
 /** The page's own address without query: where every account switch and sign-in returns. */
 const home = () => `${window.location.origin}${import.meta.env.BASE_URL}`;

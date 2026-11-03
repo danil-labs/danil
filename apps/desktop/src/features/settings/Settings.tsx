@@ -21,6 +21,7 @@ import { Button } from "../../ui/Button";
 import { Select } from "../../ui/Select";
 import { Dialog, DialogContent, DialogTitle } from "../../ui/Dialog";
 import { Close } from "../../ui/icons";
+import { adminHref } from "./admin-href";
 import {
   Sidebar,
   SidebarContent,
@@ -173,16 +174,16 @@ const SIN_PESTANA: Pestana = { id: "", name: "", panel: null };
 const idTab = (id: string) => `cfg-tab-${id}`;
 const idSub = (id: string) => `cfg-sub-${id}`;
 
-/** El enlace al Harness: en la web de alfa, solo para owner y admin; el escritorio no sabe el rol y la ofrece siempre. Es un enlace de verdad: siempre a `/admin`, en otra pestaña. */
-function AdminLink() {
+/** El enlace al Harness: en la web de alfa, solo para owner y admin; el escritorio no sabe el rol y la ofrece siempre. Lleva el workspace activo para que `/admin` resuelva su organización. */
+function AdminLink(props: { workspace?: string | null }) {
   const page = capabilities().adminPage;
   const [allowed] = createResource(async () => (page ? await page.allowed().catch(() => false) : capabilities().nativeWindow));
-  const href = page?.href ?? ADMIN_URL;
+  const href = () => adminHref(page?.href ?? ADMIN_URL, props.workspace);
   /** El escritorio no abre pestañas: lo manda al navegador. */
   const open = (event: MouseEvent) => {
     if (page) return;
     event.preventDefault();
-    void invoke("open_external", { target: ADMIN_URL }).catch(() => {});
+    void invoke("open_external", { target: href() }).catch(() => {});
   };
   return (
     <Show when={allowed()}>
@@ -191,7 +192,7 @@ function AdminLink() {
           <SidebarMenuItem role="presentation">
             <SidebarMenuButton
               as="a"
-              href={href}
+              href={href()}
               target="_blank"
               rel="noopener"
               data-settings-admin=""
@@ -477,7 +478,7 @@ export default function Settings(props: {
                   </optgroup>
                 )}</For>
               </Select>
-              <AdminLink />
+              <AdminLink workspace={props.workspace} />
             </header>
             <Sidebar
               role="tablist"
@@ -507,7 +508,7 @@ export default function Settings(props: {
                   )}
                 </For>
               </SidebarContent>
-              <AdminLink />
+              <AdminLink workspace={props.workspace} />
             </Sidebar>
 
             <div class="relative min-h-0 min-w-0 bg-surface">

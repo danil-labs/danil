@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { adminHref } from "../../src/features/settings/admin-href.ts";
 import { accountKind, menuFor, type Section, visibleSections } from "../../src/web/admin/sections.ts";
 
 const ALL = new Set<Section>(["general", "harness", "usage", "members", "support", "audit", "skills", "mcp", "agents", "rules", "workspaces", "plan", "identity"]);
@@ -40,4 +41,12 @@ test("real accounts today: only what has a source appears, and a member has noth
 test("the menu lists each section once and drops empty groups", () => {
   assert.deepEqual([...menuFor([...ALL]).flatMap((entry) => entry.sections)].sort(), [...ALL].sort());
   assert.deepEqual(menuFor(["general"]).map((entry) => entry.sections), [["general"]]);
+});
+
+test("the Harness link carries the active workspace so the organization is that one", () => {
+  assert.equal(adminHref("/admin", "w-476"), "/admin?workspace=w-476");
+  assert.equal(adminHref("/admin", null), "/admin");
+  assert.equal(adminHref("/admin", "  "), "/admin");
+  assert.equal(adminHref("/admin?demo=1", "w 1"), "/admin?demo=1&workspace=w+1");
+  assert.equal(adminHref("https://alfa-app.danil.ai/admin", "w-542"), "https://alfa-app.danil.ai/admin?workspace=w-542");
 });

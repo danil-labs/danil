@@ -16,6 +16,10 @@ de la cuenta) y de las decisiones del 2026-10-21 al 23:
 - Ningún workspace entra solo a una cuenta.
 - Iniciar sesión desde un workspace liga ese workspace.
 
+Para una sola sesión con dos personas de Danil (dos logins con membresías
+distintas), ver [`person-merge.md`](person-merge.md): la unión mueve las
+membresías, y el botón del Harness se abre con el workspace activo.
+
 ## Lo que había
 
 - **`src/web/session.ts`** leía **una** sesión de Supabase: la que guardó la

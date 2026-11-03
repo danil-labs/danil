@@ -3,6 +3,7 @@ import Plus from "lucide-solid/icons/plus";
 import Trash2 from "lucide-solid/icons/trash-2";
 import { createResource, createSignal, For, Match, onMount, Show, Switch } from "solid-js";
 import { t } from "../../lib/i18n";
+import { createNow } from "../../lib/sharedClock";
 import { Badge } from "../../ui/Badge";
 import { Button } from "../../ui/Button";
 import { Input } from "../../ui/Input";
@@ -10,13 +11,14 @@ import { Skeleton } from "../../ui/Skeleton";
 import {
   AccountEmailsError,
   type AccountEmailsSource,
+  type BlockedEmail,
+  type BlockedReason,
   EMAIL_SHAPE,
   type EmailRow,
   emailErrorText,
   emailRows,
 } from "./account-emails";
 import { SettingsSection } from "./layout";
-import { createNow } from "../../lib/sharedClock";
 
 type Feedback = { kind: "success" | "error"; text: string } | null;
 
@@ -44,6 +46,8 @@ export function EmailsSection(props: { source: AccountEmailsSource; onPrimaryCha
   const [codeFor, setCodeFor] = createSignal<string | null>(null);
   /** Cuándo se puede reenviar a cada dirección: el límite del servidor es por correo. */
   const [resendAt, setResendAt] = createSignal<Record<string, number>>({});
+  /** Correos que el servidor rechazó en esta visita; el servidor los devuelve tras recargar. */
+  const [blocked, setBlocked] = createSignal<BlockedEmail[]>([]);
   const waitUntil = (email: string, seconds: number) => setResendAt((m) => ({ ...m, [email]: Date.now() + seconds * 1000 }));
   let addWrap: HTMLDivElement | undefined;
   let draftInput: HTMLInputElement | undefined;
@@ -51,7 +55,12 @@ export function EmailsSection(props: { source: AccountEmailsSource; onPrimaryCha
   // Leer un recurso con error lanza y se lleva el panel entero: solo se lee listo.
   const ready = () => list.state === "ready" || list.state === "refreshing";
   const loading = () => list.state === "pending" || list.state === "unresolved";
-  const rows = () => (ready() ? emailRows(list()!) : []);
+  const rows = () => {
+    if (!ready()) return [];
+    const base = list()!;
+    const known = new Set((base.blocked ?? []).map((b) => b.email));
+    return emailRows({ ...base, blocked: [...(base.blocked ?? []), ...blocked().filter((b) => !known.has(b.email))] });
+  };
   const focusAdd = () => queueMicrotask(() => addWrap?.querySelector("button")?.focus());
 
   async function sendCode(email: string, fromDraft: boolean) {
@@ -83,12 +92,19 @@ export function EmailsSection(props: { source: AccountEmailsSource; onPrimaryCha
     void sendCode(email, true);
   }
 
-  async function changed(kind: "verified" | "primary" | "removed" | "gone") {
+  function keepBlocked(email: string, reason: BlockedReason) {
+    setBlocked((rows) => (rows.some((r) => r.email === email) ? rows : [...rows, { email, reason }]));
+  }
+
+  async function changed(kind: "verified" | "primary" | "removed" | "gone" | "merged", email?: string) {
+    if (kind === "merged" && email) setBlocked((rows) => rows.filter((r) => r.email !== email));
     await refetch();
     // El principal es el correo de la persona: la identidad y el pie lo vuelven a leer.
-    if (kind === "primary") props.onPrimaryChanged?.();
-    if (kind === "verified" || kind === "gone") setCodeFor(null);
-    if (kind === "removed" || kind === "verified" || kind === "gone") focusAdd();
+    if (kind === "primary" || kind === "merged") props.onPrimaryChanged?.();
+    if (kind === "verified" || kind === "gone" || kind === "merged") setCodeFor(null);
+    if (kind === "removed" || kind === "verified" || kind === "gone" || kind === "merged") focusAdd();
+    // Los workspaces de la otra cuenta entran al directorio sin recargar la ventana.
+    if (kind === "merged") window.dispatchEvent(new CustomEvent("harness:account-merged"));
   }
 
   return (
@@ -129,6 +145,7 @@ export function EmailsSection(props: { source: AccountEmailsSource; onPrimaryCha
                     onResend={() => void sendCode(row.email, false)}
                     resending={sending()}
                     onResult={setFeedback}
+                    onBlocked={keepBlocked}
                     onChanged={changed}
                   />
                 </li>
@@ -248,11 +265,13 @@ type ItemProps = {
   onResend: () => void;
   resending: boolean;
   onResult: (f: Feedback) => void;
-  onChanged: (kind: "verified" | "primary" | "removed" | "gone") => Promise<void>;
+  onBlocked: (email: string, reason: BlockedReason) => void;
+  onChanged: (kind: "verified" | "primary" | "removed" | "gone" | "merged", email?: string) => Promise<void>;
 };
 
 function EmailItem(props: ItemProps) {
   const [confirming, setConfirming] = createSignal<"primary" | "remove" | null>(null);
+  const [merging, setMerging] = createSignal(false);
   const [busy, setBusy] = createSignal(false);
   const email = () => props.row.email;
   let box: HTMLDivElement | undefined;
@@ -283,13 +302,17 @@ function EmailItem(props: ItemProps) {
   }
 
   const subtitle = () =>
-    props.row.primary
-      ? t("danil.emails.primary_hint")
-      : props.row.verified
-        ? t("danil.emails.confirmed")
-        : props.codeOpen
-          ? t("danil.emails.pending_open_hint")
-          : t("danil.emails.pending_hint");
+    props.row.blocked === "in_use"
+      ? t("danil.emails.blocked_in_use", { email: email() })
+      : props.row.blocked === "needs_support"
+        ? t("danil.emails.blocked_needs_support", { email: email() })
+        : props.row.primary
+          ? t("danil.emails.primary_hint")
+          : props.row.verified
+            ? t("danil.emails.confirmed")
+            : props.codeOpen
+              ? t("danil.emails.pending_open_hint")
+              : t("danil.emails.pending_hint");
 
   return (
     <div ref={box} class="grid gap-2 border-b border-border py-3.5" data-account-email={email()}>
@@ -303,13 +326,39 @@ function EmailItem(props: ItemProps) {
             <Show when={props.row.primary}>
               <Badge tone="neutral">{t("danil.emails.primary")}</Badge>
             </Show>
-            <Show when={!props.row.verified}>
+            <Show when={props.row.blocked === "in_use"}>
+              <Badge tone="warning">{t("danil.emails.blocked_badge_in_use")}</Badge>
+            </Show>
+            <Show when={props.row.blocked === "needs_support"}>
+              <Badge tone="warning">{t("danil.emails.blocked_badge_needs_support")}</Badge>
+            </Show>
+            <Show when={!props.row.verified && !props.row.blocked}>
               <Badge tone="warning">{t("danil.emails.unconfirmed")}</Badge>
             </Show>
           </div>
           <div class="min-w-0 truncate text-ui text-neutral-500">{subtitle()}</div>
         </div>
-        <Show when={!props.row.primary && !confirming()}>
+        <Show when={props.row.blocked}>
+          <Show when={!merging()}>
+            <div class="flex shrink-0 items-center gap-1">
+              <Show when={props.row.blocked === "in_use"}>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  aria-label={t("danil.emails.merge_label", { email: email() })}
+                  data-email-action=""
+                  onClick={() => {
+                    props.onResult(null);
+                    setMerging(true);
+                  }}
+                >
+                  {t("danil.emails.merge")}
+                </Button>
+              </Show>
+            </div>
+          </Show>
+        </Show>
+        <Show when={!props.row.blocked && !props.row.primary && !confirming()}>
           <div class="flex shrink-0 items-center gap-1">
             <Show
               when={props.row.verified}
@@ -390,6 +439,22 @@ function EmailItem(props: ItemProps) {
         </div>
       </Show>
 
+      <Show when={merging() && props.row.blocked === "in_use"}>
+        <MergePanel
+          email={email()}
+          source={props.source}
+          onResult={props.onResult}
+          onMerged={async () => {
+            setMerging(false);
+            await props.onChanged("merged", email());
+          }}
+          onClose={() => {
+            setMerging(false);
+            focusIn("[data-email-action]");
+          }}
+        />
+      </Show>
+
       <Show when={props.codeOpen && !props.row.verified}>
         <CodeForm
           email={email()}
@@ -402,9 +467,108 @@ function EmailItem(props: ItemProps) {
             focusIn("[data-email-action]");
           }}
           onResult={props.onResult}
+          onBlocked={props.onBlocked}
           onChanged={props.onChanged}
         />
       </Show>
+    </div>
+  );
+}
+
+/** Qué se une antes de unir: correos, accesos, membresías y lo que lo impide. */
+function MergePanel(props: {
+  email: string;
+  source: AccountEmailsSource;
+  onResult: (f: Feedback) => void;
+  onMerged: () => Promise<void>;
+  onClose: () => void;
+}) {
+  const [preview] = createResource(() => props.source.previewMerge(props.email));
+  const [busy, setBusy] = createSignal(false);
+  const [error, setError] = createSignal<string | null>(null);
+
+  async function run() {
+    setBusy(true);
+    setError(null);
+    try {
+      await props.source.mergePerson(props.email);
+      props.onResult({ kind: "success", text: t("danil.emails.merge_done", { email: props.email }) });
+      await props.onMerged();
+    } catch (err) {
+      setError(emailErrorText(err, props.email));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  // Leer el recurso con error lanza: el error tiene su propio aviso.
+  const previewValue = () => (preview.error ? undefined : preview());
+  const blockers = () => previewValue()?.blockers ?? [];
+
+  return (
+    <div class="grid gap-2 rounded-md border border-border bg-surface-muted p-3" data-email-merge="">
+      <p class="m-0 text-ui font-semibold text-neutral-950">{t("danil.emails.merge_title")}</p>
+      <p class="m-0 text-ui text-neutral-500">{t("danil.emails.merge_explain", { email: props.email })}</p>
+      <Switch>
+        <Match when={preview.loading}>
+          <p role="status" class="m-0 text-ui text-neutral-500">{t("danil.emails.merge_checking")}</p>
+        </Match>
+        <Match when={previewValue() === null}>
+          <p class="m-0 text-ui text-neutral-950">{t("danil.emails.merge_unavailable")}</p>
+        </Match>
+        <Match when={preview.error}>
+          <p role="alert" class="m-0 text-ui text-neutral-950">{t("danil.emails.error.merge_failed")}</p>
+        </Match>
+        <Match when={previewValue()}>
+          {(p) => (
+            <>
+              <dl class="m-0 grid gap-1 text-ui" data-email-merge-preview="">
+                <div class="flex min-w-0 gap-2">
+                  <dt class="w-24 shrink-0 text-neutral-500">{t("danil.emails.merge_emails")}</dt>
+                  <dd class="m-0 min-w-0 break-words">{p().emails.join(", ") || t("danil.emails.merge_none")}</dd>
+                </div>
+                <div class="flex min-w-0 gap-2">
+                  <dt class="w-24 shrink-0 text-neutral-500">{t("danil.emails.merge_logins")}</dt>
+                  <dd class="m-0 min-w-0 break-words">{p().logins.join(", ") || t("danil.emails.merge_none")}</dd>
+                </div>
+                <div class="flex min-w-0 gap-2">
+                  <dt class="w-24 shrink-0 text-neutral-500">{t("danil.emails.merge_memberships")}</dt>
+                  <dd class="m-0 min-w-0 break-words">
+                    {p()
+                      .memberships.map((m) => t("danil.emails.merge_membership", { account: m.account, role: m.role }))
+                      .join(" · ") || t("danil.emails.merge_none")}
+                  </dd>
+                </div>
+              </dl>
+              <Show when={blockers().length > 0}>
+                <div class="grid gap-1 rounded-md border border-warning-strong/40 p-2" data-email-merge-blocked="">
+                  <p class="m-0 text-ui font-semibold text-warning-strong">{t("danil.emails.merge_blockers")}</p>
+                  <ul class="m-0 grid list-disc gap-1 pl-5 text-ui text-neutral-950">
+                    <For each={blockers()}>{(blocker) => <li>{blocker}</li>}</For>
+                  </ul>
+                </div>
+              </Show>
+            </>
+          )}
+        </Match>
+      </Switch>
+      <Show when={error()}>
+        {(text) => (
+          <p role="alert" class="m-0 text-ui text-neutral-950">
+            {text()}
+          </p>
+        )}
+      </Show>
+      <div class="flex flex-wrap items-center gap-2">
+        <Show when={previewValue() && blockers().length === 0}>
+          <Button size="sm" variant="danger" disabled={busy()} onClick={() => void run()} data-email-merge-confirm="">
+            {busy() ? t("danil.emails.merge_working") : t("danil.emails.merge_confirm")}
+          </Button>
+        </Show>
+        <Button size="sm" variant="ghost" onClick={props.onClose}>
+          {t("danil.emails.cancel")}
+        </Button>
+      </div>
     </div>
   );
 }
@@ -417,7 +581,8 @@ function CodeForm(props: {
   resending: boolean;
   onClose: () => void;
   onResult: (f: Feedback) => void;
-  onChanged: (kind: "verified" | "gone") => Promise<void>;
+  onBlocked: (email: string, reason: BlockedReason) => void;
+  onChanged: (kind: "verified" | "gone", email?: string) => Promise<void>;
 }) {
   const [code, setCode] = createSignal("");
   const [error, setError] = createSignal<string | null>(null);
@@ -440,6 +605,7 @@ function CodeForm(props: {
       const reason = err instanceof AccountEmailsError ? err.code : "";
       if (reason === "email_in_use" || reason === "email_needs_support") {
         props.onResult({ kind: "error", text: emailErrorText(err, props.email) });
+        props.onBlocked(props.email, reason === "email_in_use" ? "in_use" : "needs_support");
         await props.onChanged("gone");
         return;
       }
