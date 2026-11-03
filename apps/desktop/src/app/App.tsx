@@ -8656,7 +8656,7 @@ export default function App() {
         {/* Al iniciar sesión en la ventana, el paso de elegir o crear el workspace de Danil (solo el escritorio lo avisa). */}
         <Show when={capabilities().workspaceDirectory?.onSession && signedInCount() > 0}>
           <Suspense fallback={null}>
-            <DanilWorkspaceStep onOpenAgents={abrirInbox} />
+            <DanilWorkspaceStep />
           </Suspense>
         </Show>
         {/* El velo del marco cubre la columna y el hueco alrededor de la caja: un solo tono también en la esquina. */}

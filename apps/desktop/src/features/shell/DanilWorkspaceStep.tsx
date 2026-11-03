@@ -1,13 +1,9 @@
-import { type DirectoryEntry, groupDirectory } from "@terminus/computers";
-import ArrowLeft from "lucide-solid/icons/arrow-left";
-import ChevronRight from "lucide-solid/icons/chevron-right";
-import Link from "lucide-solid/icons/link";
-import LogIn from "lucide-solid/icons/log-in";
-import Plus from "lucide-solid/icons/plus";
 import { createEffect, createSignal, For, on, Show } from "solid-js";
 import { t } from "../../lib/i18n";
+import { cn } from "../../lib/utils";
 import { Button } from "../../ui/Button";
 import { Dialog, DialogContent, DialogTitle } from "../../ui/Dialog";
+import { Select } from "../../ui/Select";
 import { createWorkspaces } from "../settings/workspaces-store";
 import { directoryErrorText } from "./directory-errors";
 import {
@@ -15,8 +11,6 @@ import {
   danilWorkspaceStepDismissed,
   directory,
   dismissDanilWorkspaceStep,
-  enterable,
-  enterDirectoryEntry,
   linkableAccounts,
   linkActiveWorkspace,
   signedInCount,
@@ -24,20 +18,25 @@ import {
 } from "./workspace-directory";
 
 const OPTION =
-  "flex w-full items-center gap-2.5 rounded-md border border-border px-3 py-2 text-left text-ui outline-none hover:bg-surface-muted focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-primary disabled:opacity-50";
+  "flex w-full items-start gap-2.5 rounded-md border border-border px-3 py-2.5 text-left text-ui outline-none hover:bg-surface-muted focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent aria-checked:border-primary aria-checked:shadow-[inset_0_0_0_1px_var(--color-primary)]";
+const RADIO =
+  "mt-0.5 size-3.5 shrink-0 rounded-full border-[1.5px] border-neutral-500 group-aria-checked:border-primary group-aria-checked:bg-[radial-gradient(var(--color-primary)_42%,transparent_48%)]";
+
+type Choice = "upload" | "sync";
 
 /**
- * El paso del workspace de Danil al terminar de iniciar sesión en la ventana: si el
- * workspace abierto es de la persona y no está enlazado, ofrece enlazarlo con un
- * workspace de Danil que administra, crear uno con este, entrar a otro o dejarlo.
- * «Ahora no» no vuelve a preguntar por ese workspace. Enlazar o crear lo decide el
- * plano de control; aquí solo se ofrece lo que el directorio dice.
+ * El paso del workspace al terminar de iniciar sesión en la ventana: si el workspace
+ * abierto es de la persona y no está en la nube, ofrece subirlo o sincronizarlo con uno
+ * que ya tiene (los que administra y no están sincronizados con otro). «Ahora no» no
+ * vuelve a preguntar por ese workspace. Subir o sincronizar lo decide el plano de
+ * control; aquí solo se ofrece lo que el directorio dice.
  */
-export default function DanilWorkspaceStep(props: { onOpenAgents?: () => void }) {
+export default function DanilWorkspaceStep() {
   const ws = createWorkspaces();
   const [open, setOpen] = createSignal(false);
-  const [view, setView] = createSignal<"choose" | "enter">("choose");
-  const [busy, setBusy] = createSignal<string | null>(null);
+  const [choice, setChoice] = createSignal<Choice>("upload");
+  const [picked, setPicked] = createSignal<string | null>(null);
+  const [busy, setBusy] = createSignal(false);
   const [failure, setFailure] = createSignal<string | null>(null);
   // Se monta con la primera sesión abierta; cada una espera a que el directorio relea antes de decidir.
   const [pending, setPending] = createSignal(false);
@@ -48,26 +47,36 @@ export default function DanilWorkspaceStep(props: { onOpenAgents?: () => void })
     if (!active) return;
     setPending(false);
     if (unlinkedActive(active) && !danilWorkspaceStepDismissed(active)) {
-      setView("choose");
+      const first = linkableAccounts(active)[0];
+      setChoice(first ? "sync" : "upload");
+      setPicked(first?.key ?? null);
       setFailure(null);
       setOpen(true);
     }
   });
-  // Enlazado por otro camino (el menú, otra ventana): el paso ya no tiene qué preguntar.
+  // Sincronizado por otro camino (el menú, otra ventana): el paso ya no tiene qué preguntar.
   createEffect(() => {
-    if (open() && view() === "choose" && directory() && !busy() && !unlinkedActive(ws.activo())) setOpen(false);
+    if (open() && directory() && !busy() && !unlinkedActive(ws.activo())) setOpen(false);
   });
 
   const name = () => ws.actual()?.name ?? "";
-  const run = async (key: string, action: (active: string) => Promise<string | null>) => {
+  const accounts = () => linkableAccounts(ws.activo());
+  const target = () => accounts().find((a) => a.key === picked()) ?? accounts()[0];
+  const targetName = () => target()?.name || t("shell.directory.unnamed");
+
+  const submit = async () => {
     const active = ws.activo();
     if (!active || busy()) return;
-    setBusy(key);
+    const account = target();
+    if (choice() === "sync" && !account) return;
+    setBusy(true);
     setFailure(null);
-    const code = await action(active);
-    setBusy(null);
+    const code = choice() === "sync" && account ? await linkActiveWorkspace(active, account) : await createForActiveWorkspace(active);
+    setBusy(false);
     if (code) {
       setFailure(code);
+      // Ya tiene uno propio en la nube: lo natural es sincronizar con ese.
+      if (code === "personal_workspace_exists" && accounts().length) setChoice("sync");
       return;
     }
     void ws.cargar();
@@ -78,121 +87,76 @@ export default function DanilWorkspaceStep(props: { onOpenAgents?: () => void })
     if (active) dismissDanilWorkspaceStep(active);
     setOpen(false);
   };
-  const others = () =>
-    (directory()?.workspaces ?? []).filter((e) => e.workspace_id !== ws.activo() && enterable(e, ws));
-  const enter = (entry: DirectoryEntry) => {
-    setOpen(false);
-    enterDirectoryEntry(entry, ws, props.onOpenAgents);
-  };
-  const groupTitle = (group: ReturnType<typeof groupDirectory>[number]) => {
-    if (group.kind === "organization") return group.name;
-    if (group.kind === "personal") return t("shell.directory.personal");
-    return group.kind === "support" ? t("shell.directory.support") : t("shell.directory.unlinked");
-  };
 
   return (
     <Dialog open={open()} onOpenChange={(next) => !next && setOpen(false)}>
-      <DialogContent class="max-w-[460px]" data-danil-workspace-step={view()}>
-        <Show
-          when={view() === "choose"}
-          fallback={
-            <>
-              <div class="flex items-center gap-1.5">
-                <button
-                  type="button"
-                  class="grid size-7 shrink-0 place-items-center rounded-sm text-neutral-500 outline-none hover:bg-neutral-200 hover:text-neutral-950 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-primary"
-                  aria-label={t("shell.danilStep.back")}
-                  onClick={() => setView("choose")}
-                >
-                  <ArrowLeft size={15} aria-hidden="true" />
-                </button>
-                <DialogTitle class="m-0 text-lead font-semibold">{t("shell.danilStep.enterTitle")}</DialogTitle>
-              </div>
-              <div class="mt-3 max-h-80 overflow-y-auto" data-danil-step-others="">
-                <Show when={others().length} fallback={<p class="m-0 text-ui text-neutral-500">{t("shell.danilStep.enterEmpty")}</p>}>
-                  <For each={groupDirectory(others())}>
-                    {(group) => (
-                      <>
-                        <p class="m-0 truncate px-1 pt-2 pb-1 text-caption text-neutral-500">{groupTitle(group)}</p>
-                        <For each={group.entries}>
-                          {(entry) => (
-                            <button
-                              type="button"
-                              class="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-ui outline-none hover:bg-surface-muted focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-primary"
-                              data-danil-step-enter={entry.key}
-                              onClick={() => enter(entry)}
-                            >
-                              <span class="min-w-0 flex-1 truncate">{entry.name || t("shell.directory.unnamed")}</span>
-                              <Show when={!entry.capabilities.terminus}>
-                                <span class="shrink-0 text-caption text-neutral-500">{t("shell.danilStep.agentsOnly")}</span>
-                              </Show>
-                              <ChevronRight size={14} aria-hidden="true" class="shrink-0 text-neutral-500" />
-                            </button>
-                          )}
-                        </For>
-                      </>
-                    )}
-                  </For>
-                </Show>
-              </div>
-            </>
-          }
-        >
-          <DialogTitle class="m-0 text-lead font-semibold">{t("shell.danilStep.title")}</DialogTitle>
-          <p class="m-0 mt-1.5 text-ui text-neutral-500">{t("shell.danilStep.hint", { workspace: name() })}</p>
-          <div class="mt-4 flex flex-col gap-2">
-            <For each={linkableAccounts(ws.activo())}>
-              {(account) => (
-                <button
-                  type="button"
-                  class={OPTION}
-                  disabled={busy() !== null}
-                  data-danil-step-link={account.key}
-                  onClick={() => void run(account.key, (active) => linkActiveWorkspace(active, account))}
-                >
-                  <Link size={15} aria-hidden="true" class="shrink-0 text-neutral-500" />
-                  <span class="min-w-0 flex-1 truncate">{t("shell.danilStep.link", { name: account.name || t("shell.directory.unnamed") })}</span>
-                </button>
-              )}
-            </For>
-            <button
-              type="button"
-              class={OPTION}
-              disabled={busy() !== null}
-              data-danil-step-create=""
-              onClick={() => void run("create", createForActiveWorkspace)}
-            >
-              <Plus size={15} aria-hidden="true" class="shrink-0 text-neutral-500" />
-              <span class="flex min-w-0 flex-1 flex-col">
-                <span class="truncate">{t("shell.danilStep.create")}</span>
-                <span class="text-caption text-neutral-500">{t("shell.danilStep.createHint", { workspace: name() })}</span>
+      <DialogContent class="max-w-[460px]" data-danil-workspace-step={choice()}>
+        <DialogTitle class="m-0 text-lead font-semibold">{t("shell.danilStep.title", { workspace: name() })}</DialogTitle>
+        <p class="m-0 mt-1.5 text-ui text-neutral-500">{t("shell.danilStep.hint")}</p>
+        <div class="mt-4 flex flex-col gap-2" role="radiogroup" aria-label={t("shell.danilStep.title", { workspace: name() })}>
+          <button
+            type="button"
+            role="radio"
+            aria-checked={choice() === "upload"}
+            class={cn(OPTION, "group")}
+            disabled={busy()}
+            data-danil-step-upload=""
+            onClick={() => setChoice("upload")}
+          >
+            <span class={RADIO} aria-hidden="true" />
+            <span class="flex min-w-0 flex-1 flex-col">
+              <span class="font-medium">{t("shell.danilStep.upload")}</span>
+              <span class="text-caption text-neutral-500">{t("shell.danilStep.uploadHint", { workspace: name() })}</span>
+            </span>
+          </button>
+          <button
+            type="button"
+            role="radio"
+            aria-checked={choice() === "sync"}
+            class={cn(OPTION, "group")}
+            disabled={busy() || !accounts().length}
+            data-danil-step-sync=""
+            onClick={() => setChoice("sync")}
+          >
+            <span class={RADIO} aria-hidden="true" />
+            <span class="flex min-w-0 flex-1 flex-col">
+              <span class="font-medium">{t("shell.danilStep.sync")}</span>
+              <span class="text-caption text-neutral-500">
+                {accounts().length ? t("shell.danilStep.syncHint", { workspace: name() }) : t("shell.danilStep.syncEmpty")}
               </span>
-            </button>
-            <button
-              type="button"
-              class={OPTION}
-              disabled={busy() !== null}
-              data-danil-step-other=""
-              onClick={() => setView("enter")}
-            >
-              <LogIn size={15} aria-hidden="true" class="shrink-0 text-neutral-500" />
-              <span class="min-w-0 flex-1 truncate">{t("shell.danilStep.enter")}</span>
-              <ChevronRight size={14} aria-hidden="true" class="shrink-0 text-neutral-500" />
-            </button>
-          </div>
-          <Show when={failure()}>
-            {(code) => (
-              <p class="m-0 mt-3 text-ui text-error-strong" role="alert">
-                {directoryErrorText(code())}
-              </p>
-            )}
+            </span>
+          </button>
+          <Show when={choice() === "sync" && accounts().length}>
+            <label class="ml-6 flex flex-col gap-1">
+              <span class="text-caption text-neutral-500">{t("shell.danilStep.syncLabel")}</span>
+              <Select
+                value={target()?.key ?? ""}
+                disabled={busy()}
+                data-danil-step-pick=""
+                onChange={(event) => setPicked(event.currentTarget.value)}
+              >
+                <For each={accounts()}>
+                  {(account) => <option value={account.key}>{account.name || t("shell.directory.unnamed")}</option>}
+                </For>
+              </Select>
+            </label>
           </Show>
-          <div class="mt-4 flex justify-end">
-            <Button variant="secondary" disabled={busy() !== null} data-danil-step-later="" onClick={later}>
-              {t("shell.danilStep.later")}
-            </Button>
-          </div>
+        </div>
+        <Show when={failure()}>
+          {(code) => (
+            <p class="m-0 mt-3 text-ui text-error-strong" role="alert">
+              {directoryErrorText(code())}
+            </p>
+          )}
         </Show>
+        <div class="mt-4 flex justify-end gap-2">
+          <Button variant="secondary" disabled={busy()} data-danil-step-later="" onClick={later}>
+            {t("shell.danilStep.later")}
+          </Button>
+          <Button disabled={busy() || (choice() === "sync" && !target())} data-danil-step-submit="" onClick={() => void submit()}>
+            {choice() === "sync" ? t("shell.danilStep.doSync", { name: targetName() }) : t("shell.danilStep.doUpload", { workspace: name() })}
+          </Button>
+        </div>
       </DialogContent>
     </Dialog>
   );
