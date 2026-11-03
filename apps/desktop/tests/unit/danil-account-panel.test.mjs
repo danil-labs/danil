@@ -286,11 +286,14 @@ test("el panel muestra solo la cuenta del workspace y revela los cambios de cuen
   assert.equal(panel.dataset.danilAccount, "workspace");
   assert.deepEqual([...panel.querySelectorAll("[data-danil-session]")].map((el) => el.dataset.danilSession), ["u_fdb"]);
   assert.ok(!panel.textContent.includes("alberto@danil.ai"), "the default account does not leak into this workspace");
-  assert.equal(panel.querySelector("[data-workspace-account-select]"), null, "account choices are progressive");
+  assert.equal(panel.querySelector("[data-workspace-change]"), null, "account choices are progressive");
   assert.deepEqual(calls, [{ command: "profile", account: "u_fdb" }]);
   panel.querySelector("[data-danil-manage]").click();
   await sleep(300);
-  assert.equal(panel.querySelector("[data-workspace-account-select]").value, "u_fdb");
+  const workspace = panel.querySelector("[data-workspace-account]");
+  assert.equal(workspace?.dataset.workspaceAccount, "synced");
+  assert.match(workspace?.textContent ?? "", /alberto@dondebanco\.org/);
+  assert.ok(panel.querySelector("[data-workspace-change]"), "the account change is revealed when asked");
   panel.querySelector("[data-danil-sign-out]").click();
   await sleep(100);
   assert.equal(calls.filter((c) => c.command === "disconnect").length, 0);
