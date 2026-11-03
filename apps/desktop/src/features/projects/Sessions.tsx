@@ -429,12 +429,14 @@ export default function Sessions(props: {
     try {
       const project = projectOfId(id);
       sacar(id);
+      // La fila sale y el cohete despega en el mismo gesto: esperar a que el
+      // motor mate turnos y tome los candados deja el estallido solo.
+      celebrateFinishedTask(rect);
       await invoke("finish_task", { project, id }, enSuMaquina(id));
       // `anunciar` no actualiza esta ventana: su firma es la de quien
       // escribió, y el sondeo la descarta. Sin este aviso el archivado
       // queda en disco y la lista de aquí sigue mostrando la fila.
       avisarCambio(project);
-      celebrateFinishedTask(rect);
     } catch (error) {
       devolver(id);
       setActionFailure(asFailure(error));
@@ -473,14 +475,13 @@ export default function Sessions(props: {
     }
     marcar(ids => [...ids, id]);
     setActionFailure(null);
-    // Fuera de la barra ya: lo común es que no haya nada que la detenga. Si lo
-    // hay, vuelve con el aviso.
-    sacar(id);
+    // La pregunta es corta; la fila se queda con la llama encendida mientras
+    // vuelve. Sacarla antes obligaría a devolverla, y el cohete despegaría por
+    // una tarea que todavía tiene algo en el camino.
     let blockers: Blockers;
     try {
       blockers = await invoke<Blockers>("task_blockers", { project: projectOfId(id), id, finish }, enSuMaquina(id));
     } catch (error) {
-      devolver(id);
       setActionFailure(asFailure(error));
       return;
     } finally {
@@ -490,7 +491,6 @@ export default function Sessions(props: {
       await (finish && rect ? finishTask(id, rect) : archiveTask(id));
       return;
     }
-    devolver(id);
     setAviso({ id, finish, rect, blockers });
   };
   const descartarYSeguir = async () => {
@@ -511,7 +511,10 @@ export default function Sessions(props: {
     }
     // Se vuelve a mirar: lo que apareció mientras el aviso estaba abierto se
     // queda en disco, y tiene que verse en el aviso y no en un error plegado.
-    await intentar(a.id, a.finish, a.rect);
+    // La fila sigue ahí: el cohete sale del botón de ahora y no de donde
+    // estaba cuando se abrió el aviso.
+    const boton = document.querySelector<HTMLElement>(`[data-sesion="${a.id}"] [data-session-finish]`);
+    await intentar(a.id, a.finish, boton?.getBoundingClientRect() ?? a.rect);
   };
   // La barra enseña solo lo vivo: las archivadas no se pintan ni se observan. Con
   // cientos archivadas, pedir su git y su historial en cada barrido trababa la ventana.

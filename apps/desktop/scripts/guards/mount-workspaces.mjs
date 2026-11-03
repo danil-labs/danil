@@ -305,9 +305,10 @@ assert.equal(finishButton("local-pending"), null);
 assert.ok(!finishButton("merged").closest(".opacity-0"));
 finishButton("merged").click();
 await sleep(100);
-// Sale de la barra en el clic, sin esperar al motor; si lo rechaza, vuelve.
+// Sale de la barra en el clic, sin esperar al motor, y el cohete despega en ese
+// mismo gesto: si lo rechaza, la fila vuelve con el error.
 assert.equal(finishButton("merged"), null);
-assert.equal(finishApp.w.document.querySelector("[data-finish-celebration]"), null);
+assert.ok(finishApp.w.document.querySelector("[data-finish-celebration]"), "El cohete sale con la fila, no cuando contesta el motor");
 assert.equal(finishCalls.length, 1);
 settleFinish();
 await sleep(100);
