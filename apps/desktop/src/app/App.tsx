@@ -47,7 +47,7 @@ import {
 import { DelegatedLaunch, DelegatedNone, DelegatedToolbar, delegatedAttention, delegatedDescendants, delegatedFamilies, type DelegatedListProps, type DelegatedPanelModel } from "../features/chat/DelegatedTasks";
 import PreviousAgentChat from "../features/chat/PreviousAgentChat";
 import type { AlmacenDePreguntas, PreguntasAMedias, Respuesta, RespuestaEnviada } from "../features/chat/Questions";
-import { contestaALaTerminal, despachable, esDeLaTerminal, guardable, inyectable, type RazonDeRetencion, retencionAlCargar, siguienteLote, sueltaElBorrador } from "../features/chat/queue";
+import { contestaALaTerminal, despachable, ENTREGA_SIN_CONFIRMAR, esDeLaTerminal, guardable, inyectable, type RazonDeRetencion, retencionAlCargar, siguienteLote, sueltaElBorrador } from "../features/chat/queue";
 import type { ComandoEnVivo } from "../features/chat/ShellCard";
 import { comandoDeTerminal } from "../features/chat/terminalIndent";
 import type { AlMargen } from "../features/chat/SideQuestion";
@@ -303,7 +303,7 @@ import { LazyPart, retryableLazy } from "../ui/LazyPart";
 import { mergeGates } from "../features/chat/permissionGates";
 import { errorCode } from "../lib/errorCode.ts";
 import { Dialog, DialogContent, DialogTitle } from "../ui/Dialog";
-import { asFailure, claveDe, prosaDe } from "../ui/Failure";
+import { asFailure, claveDe, detalleDe, prosaDe } from "../ui/Failure";
 import { BotonConAtajo } from "../ui/Shortcut";
 import type { ActivityEvent } from "@terminus/protocol";
 import { Toast, ToastStack } from "../ui/Toast";
@@ -1517,6 +1517,13 @@ export default function App() {
   }
   const pendingStarts = new Map<string, symbol>();
   const [injecting, setInjecting] = createSignal<{ session: string; id: string }[]>([]);
+  /**
+   * Los agentes que ya contestaron que no reciben mensajes a mitad del turno
+   * (`chat.steer.unsupported`) o que dejaron la entrega sin confirmar. Con uno
+   * de ellos «Mandar ahora» no haría nada: el mensaje se queda en la cola. Es
+   * del agente y no de la tarea, y abrir la ventana lo olvida.
+   */
+  const [sinSteer, setSinSteer] = createSignal<string[]>([]);
   const queueBusy = () => busy() || settlingTurns().includes(sessionId() ?? "") || injecting().some((item) => item.session === sessionId());
   const [desdeDeTurno, setDesdeDeTurno] = createSignal<Record<string, number>>({});
   const liveThreads = new Set<string>();
@@ -6713,6 +6720,19 @@ export default function App() {
   }
 
   /**
+   * Deja de ofrecer «Mandar ahora» para ese agente y lo explica una vez. El
+   * mensaje no se toca: sigue en la cola y sale cuando cierre el turno — es el
+   * camino que el motor ya eligió al negarse.
+   */
+  function noRecibeAMedias(session: string, provider: string | null, aviso: string, workspace = workspaceActivo()) {
+    if (!provider) return;
+    const primera = !sinSteer().includes(provider);
+    if (primera) setSinSteer((lista) => [...lista, provider]);
+    if (!primera) return;
+    anexar(session, (ms) => [...ms, { role: "system", text: t(aviso), meta: "steer_refused" }], workspace);
+  }
+
+  /**
    * Mete un encolado en el turno que ya corre. Solo sale de la cola si el
    * backend lo aceptó: un mensaje que se borra de la lista sin haber entrado
    * en ningún sitio desaparece sin que nadie sepa que se perdió.
@@ -6723,6 +6743,9 @@ export default function App() {
     if (!abierta || !m || !inyectable(m) || injecting().some((item) => item.id === id)) return;
     const sourceProject = project();
     const sourceWorkspace = workspaceActivo();
+    // Quién contesta el turno vivo: la fila de la tarea, no el agente con que se
+    // escribió lo encolado — el mensaje entra en el turno que corre, no en otro.
+    const proveedor = filaDe(abierta)?.provider ?? m.provider;
     setInjecting((items) => [...items, { session: abierta, id }]);
     // Lo último del disco antes de meterlo: con un motor que no devuelve el turno,
     // lo guardado después con su texto es él (`mensajesDelHilo`).
@@ -6769,7 +6792,18 @@ export default function App() {
       }
       // Este agente no recibe mensajes a medias: sigue en la cola y sale al cerrar
       // el turno. Cortarlo mataba turnos de Claude que solo esperaban su canal.
-      if (clave === "chat.steer.unsupported") return;
+      if (clave === "chat.steer.unsupported") {
+        noRecibeAMedias(abierta, proveedor, "chat.steer.unsupported", sourceWorkspace);
+        return;
+      }
+      // El ejecutor no pudo saber si entró. Se queda en la cola —borrarlo
+      // perdería lo escrito— y se avisa en la lengua de la ventana: la clave es
+      // interna y en el hilo se leía tal cual, con un reintento que repetía el
+      // mismo rechazo.
+      if (detalleDe(e) === ENTREGA_SIN_CONFIRMAR) {
+        noRecibeAMedias(abierta, proveedor, "chat.steer.unconfirmed", sourceWorkspace);
+        return;
+      }
       anexar(abierta, (ms) => [...ms, { role: "system", ...mensajeDeFallo(e), meta: "fallo" }]);
     } finally {
       setInjecting((items) => items.filter((item) => item.id !== id));
@@ -7613,9 +7647,12 @@ export default function App() {
           onBorrar: quitarEncolado,
           onEditando: setEditando,
           onMandar: () => setRetenida(null),
-          // Solo con un turno vivo: sin él, lo escrito sale por el camino
-          // normal y el gesto no significaría nada.
-          onMandarAhora: pp.sesion && vivas().includes(pp.sesion)
+          // Solo con un turno vivo y con un agente que no haya dicho que no
+          // recibe mensajes a medias: sin él, lo escrito sale por el camino
+          // normal y el gesto no significaría nada; con él negado, sería un
+          // botón que no hace nada.
+          onMandarAhora: pp.sesion && vivas().includes(pp.sesion) &&
+            !sinSteer().includes(filaDe(pp.sesion)?.provider ?? "")
             ? (id: string) => mandarAhora(id)
             : null,
         }}
