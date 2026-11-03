@@ -33,7 +33,6 @@ export default function Preview() {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
   const { host: hostId, id, intent } = useLocalSearchParams<{ host: string; id: string; intent?: string }>();
-  const [finishing, setFinishing] = useState(false);
   const [confirm, setConfirm] = useState(intent === "finish");
   const [revision, setRevision] = useState(0);
   const { hostOf, attention, hosts } = useMachines();
@@ -54,16 +53,16 @@ export default function Preview() {
   const observed = effectiveGit(book, task, snapshot?.tasks ?? []);
   const git = host.power() === "on" ? observed : { ...observed, stale: true };
   const running = marks.live.has(`${task.host}/${task.id}`) || marks.attention.get(`${task.host}/${task.id}`) === "approving";
-  const ready = host.power() === "on" && host.canAct() === "now" && canFinishTask(task, git, running || finishing);
+  const ready = host.power() === "on" && host.canAct() === "now" && canFinishTask(task, git, running);
   const pull = cardPull({ ...git, shared_with: null });
   const removed = () => { void reload(); router.back(); };
-  const frame = (content: ReactNode) => Platform.OS === "web" ? <Sheet visible onClose={() => { if (!finishing) router.back(); }}>{content}</Sheet> : content;
+  const frame = (content: ReactNode) => Platform.OS === "web" ? <Sheet visible onClose={() => router.back()}>{content}</Sheet> : content;
   if (confirm) return frame(<View style={[styles.sheet, { backgroundColor: theme.surface, paddingBottom: insets.bottom + 16 }]}>
     <Text style={[styles.title, { color: theme.text }]}>{t("task.header.finish_on", { name: host.label })}</Text>
     <Text style={{ color: theme.text, fontWeight: "600" }}>{preview.title}</Text>
     {pull ? <PullChip pull={pull} git={git} /> : null}
-    <TaskFinishConfirmation host={host} workspace={task.workspace} folder={task.folder} id={task.id} shared={!!git.shared_with} ready={ready} onBusy={setFinishing} onBlocked={() => setRevision((n) => n + 1)} onFinished={removed} />
-    <SheetOption label={t("task.header.cancel")} disabled={finishing} onPress={() => intent === "finish" ? router.back() : setConfirm(false)} />
+    <TaskFinishConfirmation host={host} workspace={task.workspace} folder={task.folder} id={task.id} shared={!!git.shared_with} ready={ready} onBlocked={() => setRevision((n) => n + 1)} onFinished={removed} />
+    <SheetOption label={t("task.header.cancel")} onPress={() => intent === "finish" ? router.back() : setConfirm(false)} />
   </View>);
 
   return frame(
@@ -108,11 +107,11 @@ export default function Preview() {
           </Field>
         ) : null}
       </View>
-      <Pressable accessibilityRole="button" disabled={finishing} onPress={() => { router.back(); openTask(task.host, task.workspace, task.folder, task.id); }} style={[styles.button, { backgroundColor: theme.primary, borderColor: theme.primary }]}>
+      <Pressable accessibilityRole="button" onPress={() => { router.back(); openTask(task.host, task.workspace, task.folder, task.id); }} style={[styles.button, { backgroundColor: theme.primary, borderColor: theme.primary }]}>
         <Text style={{ color: theme.onPrimary, fontWeight: "600" }}>{previewLabel(lang, "open")}</Text>
       </Pressable>
       {pull?.state === "merged" && !git.stale ? <SheetOption testID="preview-finish" icon="rocket" label={t("task.header.finish")} disabled={!ready} onPress={() => setConfirm(true)} /> : null}
-      <TaskActions host={host} task={task} running={running} onBusy={setFinishing} onChanged={() => { void reload(); }} onRemoved={() => { void reload(); router.back(); }} />
+      <TaskActions host={host} task={task} running={running} onChanged={() => { void reload(); }} onRemoved={() => { void reload(); router.back(); }} />
     </View>
   );
 }
