@@ -207,6 +207,8 @@
   "web.computers.no_account": "Tu sesión es válida, pero no se encontró tu cuenta de Danil. Reintenta o contacta a soporte; no necesitas crear otra identidad.",
   "web.alpha.select_hint": "Aquí verás los mensajes, el contacto y el estado de la IA.",
   "web.alpha.contact_details": "Detalles de contacto",
+  "web.alpha.resize_list": "Ancho de la lista de conversaciones",
+  "web.alpha.resize_details": "Ancho del detalle del contacto",
   "web.alpha.contact_details_title": "Detalles del contacto",
   "web.alpha.close_details": "Cerrar detalles de contacto",
   "web.alpha.back_to_chat": "Volver al chat",

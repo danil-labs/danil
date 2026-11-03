@@ -207,6 +207,8 @@
   "web.computers.no_account": "Your session is valid, but your Danil account could not be found. Try again or contact support; you do not need to create another identity.",
   "web.alpha.select_hint": "You'll see the messages, the contact and the AI status here.",
   "web.alpha.contact_details": "Contact details",
+  "web.alpha.resize_list": "Conversation list width",
+  "web.alpha.resize_details": "Contact details width",
   "web.alpha.contact_details_title": "Contact details",
   "web.alpha.close_details": "Close contact details",
   "web.alpha.back_to_chat": "Back to chat",
