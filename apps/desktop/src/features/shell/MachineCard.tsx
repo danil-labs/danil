@@ -38,7 +38,6 @@ export function taskTitle(task: Pick<MachineTaskUsage, "session" | "title">, loo
 function kind(m: Machine, r: MachineResources | undefined) {
   const parts = [m.wakes ? t("shell.machine_panel.kind.vm") : m.os === "macos" ? t("shell.machine_panel.kind.mac") : t("shell.machine_panel.kind.computer")];
   if (r?.cpu?.cores) parts.push(t("shell.machine_panel.kind.cores", { count: r.cpu.cores }));
-  if (r?.memory?.total_bytes) parts.push(peso(r.memory.total_bytes));
   return parts.join(" · ");
 }
 
@@ -105,7 +104,7 @@ export function MachineCard(props: {
         ? { label: t("shell.machine_panel.state.critical"), tone: "danger" as const }
         : lvl() === "high"
           ? { label: t("shell.machine_panel.state.high"), tone: "warning" as const }
-          : { label: t("shell.machine_panel.state.normal"), tone: "success" as const };
+          : null;
   const warnTasks = () => heaviest(r()).filter((x) => x.memory_bytes > 0)
     .map((x) => t("shell.machine_panel.warn.task", { title: taskTitle(x, props.lookup), size: peso(x.memory_bytes) })).join(", ");
 
