@@ -189,4 +189,4 @@ export { type SealOptions, type SealRecipient, SEAL_MAX_BYTES, canSeal, fromBase
 export { arrangeSpaces, spaceOrder, type SpaceOrderSource } from "./space-order.ts";
 export { createSpaceOrderSource } from "./space-order-source.ts";
 export { ACCOUNT_ASSET_MAX_BYTES, ACCOUNT_ASSET_TYPES, type AccountAssetKind, type BlobFetch, accountAssetUrl, readAccountAsset } from "./assets.ts";
-export { type PushDevice, forgetPushDevice, keyBytes, pushPublicKey, savePushDevice, testPush } from "./push.ts";
+export { type PushDevice, type PushMode, forgetPushDevice, keyBytes, pushPreferences, pushPublicKey, savePushDevice, savePushPreferences, testPush } from "./push.ts";
