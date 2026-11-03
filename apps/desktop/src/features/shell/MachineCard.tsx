@@ -97,6 +97,8 @@ export function MachineCard(props: {
   const tone = () => lvl() === "critical" ? "bg-error-strong" : lvl() === "high" ? "bg-warning-strong" : SEG_TASKS;
   const parts = () => { const x = r(); return hasUsage(x) ? split(x) : null; };
   const d = () => disk(r());
+  const cpu = () => on() && usage() && r()?.cpu?.usage_percent !== undefined ? Math.round(r()!.cpu!.usage_percent!) : null;
+  const cpuHigh = () => (cpu() ?? 0) >= 90;
   const state = () => !on()
     ? null
     : !usage()
@@ -105,7 +107,9 @@ export function MachineCard(props: {
         ? { label: t("shell.machine_panel.state.critical"), tone: "danger" as const }
         : lvl() === "high"
           ? { label: t("shell.machine_panel.state.high"), tone: "warning" as const }
-          : null;
+          : cpuHigh()
+            ? { label: t("shell.machine_panel.state.cpu"), tone: "warning" as const }
+            : null;
   const warnTasks = () => heaviest(r()).filter((x) => x.memory_bytes > 0)
     .map((x) => t("shell.machine_panel.warn.task", { title: taskTitle(x, props.lookup), size: peso(x.memory_bytes) })).join(", ");
 
@@ -191,6 +195,11 @@ export function MachineCard(props: {
       <Show when={(lvl() === "high" || lvl() === "critical") && warnTasks()}>
         <span role="status" class={cn(NOTE, "block", lvl() === "critical" ? "bg-error/10 text-error-strong" : "bg-warning/10 text-warning-strong")}>
           {lvl() === "critical" ? t("shell.machine_panel.warn.critical", { tasks: warnTasks() }) : t("shell.machine_panel.warn.high", { tasks: warnTasks() })}
+        </span>
+      </Show>
+      <Show when={lvl() !== "high" && lvl() !== "critical" && cpuHigh()}>
+        <span role="status" class={cn(NOTE, "block bg-warning/10 text-warning-strong")}>
+          {t("shell.machine_panel.warn.cpu", { percent: cpu() ?? 0 })}
         </span>
       </Show>
       <Show when={props.power === "off" || props.power === "starting"}>
