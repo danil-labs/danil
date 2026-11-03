@@ -81,7 +81,7 @@ assert.equal(tile("w2").getAttribute("aria-current"), "true");
 tile("w2").dispatchEvent(new columnApp.w.MouseEvent("contextmenu", { bubbles: true, cancelable: true }));
 await sleep(80);
 assert.ok([...doc.querySelectorAll('[role="menuitem"]')].some((b) => b.textContent.trim() === "Administrar workspaces"), "administrar sigue alcanzable desde el cuadro");
-assert.ok(doc.querySelector('[data-workspace-column] button[aria-label="Nuevo workspace"]'), "y crear uno, desde la columna");
+assert.ok(doc.querySelector('[data-workspace-column] button[aria-label="Agregar workspace"]'), "y crear uno, desde la columna");
 columnSpaces.workspaces = columnSpaces.workspaces.slice(0, 1);
 columnApp.w.dispatchEvent(new columnApp.w.CustomEvent("harness:workspace"));
 await sleep(300);
@@ -119,9 +119,13 @@ assert.equal(estrella(), null, "abrir el repositorio retira la invitación");
 assert.ok(d1.querySelector('[data-workspace-column-foot] button[aria-label="Configuración"]'), "Configuración vive al pie de la columna");
 const setupRequests = [];
 soloApp.w.addEventListener("harness:new-workspace", () => setupRequests.push(1));
-d1.querySelector('[data-workspace-column] button[aria-label="Nuevo workspace"]').click();
+d1.querySelector('[data-workspace-column] button[aria-label="Agregar workspace"]').click();
+await sleep(100);
+const createOne = [...d1.querySelectorAll('[role="menuitem"]')].find((b) => b.textContent.trim() === "Crear workspace");
+assert.ok(createOne, "el «+» ofrece crear uno");
+createOne.click();
 await sleep(150);
-assert.equal(setupRequests.length, 1, "Nuevo workspace pide el alta desde la columna");
+assert.equal(setupRequests.length, 1, "Crear workspace pide el alta desde la columna");
 assert.deepEqual(soloApp.failures, []);
 /**
  * Ocultar el riel vive a la izquierda de Agentes y Tareas. Oculto, lo trae de vuelta la fila de

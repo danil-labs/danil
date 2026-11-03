@@ -455,7 +455,8 @@
   "settings.update.unreachable": "No pude comprobar si hay una versión nueva.",
   "settings.update.unreachable_hint": "Revisa tu conexión a internet y vuelve a intentar.",
   "settings.update.uptodate": "Tienes la versión más reciente.",
-  "settings.workspaces.add": "Agregar workspace",
+  "settings.workspaces.add": "Crear workspace",
+  "settings.workspaces.add_existing": "Agregar existente",
   "settings.workspaces.blocked": {
     "one": "Hay {count} tarea contestando ahora mismo. Borrar el workspace se llevaría la carpeta donde está escribiendo.",
     "other": "Hay {count} tareas contestando ahora mismo. Borrar el workspace se llevaría la carpeta donde está escribiendo."

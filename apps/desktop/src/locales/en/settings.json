@@ -455,7 +455,8 @@
   "settings.update.unreachable": "I could not check whether there is a new version.",
   "settings.update.unreachable_hint": "Check your internet connection and try again.",
   "settings.update.uptodate": "You have the latest version.",
-  "settings.workspaces.add": "Add workspace",
+  "settings.workspaces.add": "Create workspace",
+  "settings.workspaces.add_existing": "Add existing",
   "settings.workspaces.blocked": {
     "one": "There is {count} task answering right now. Deleting the workspace would take away the folder it is writing in.",
     "other": "There are {count} tasks answering right now. Deleting the workspace would take away the folder they are writing in."

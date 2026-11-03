@@ -15,12 +15,16 @@ import { aplicarVeloDePestanas } from "../lib/chat-background-store";
 import { aplicarLengua, refreshLanguage, lenguasDisponibles, semillaDelAlta } from "../lib/i18n";
 import { cargarPaquetes } from "../locales/packs";
 import { mountAfterLanguagePacks } from "../locales/startup";
-import { capabilities } from "../lib/platform";
+import { capabilities, setCapabilities } from "../lib/platform";
+import { desktopWorkspaceDirectory } from "../features/shell/workspace-directory-desktop";
 import "../styles/global.css";
 import "../lib/sharedClock";
 // Errores y avisos de encargado se leen al fallar algo, ya con la ventana montada: entran por detrás.
 // Si el trozo no carga, caen a la prosa del motor; el panel de encargados lo vuelve a pedir.
 void import("../locales/failurePhrases").catch((e) => console.warn("[lenguas] failurePhrases", e));
+
+// El directorio de la cuenta también en la ventana: antes solo lo montaba la web.
+setCapabilities({ ...capabilities(), workspaceDirectory: desktopWorkspaceDirectory() });
 
 /**
  * El arranque fija tema y lengua antes del primer pintado. Los efectos declaran

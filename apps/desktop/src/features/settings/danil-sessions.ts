@@ -120,8 +120,12 @@ export function newSessionKey(known: string[], list: DanilSessionInfo[] | null |
 /** La sesión con la que habla un workspace; `null` si su cuenta no tiene sesión aquí. */
 export function sessionForWorkspace(list: DanilSessionInfo[] | null | undefined, of: WorkspaceAccount | null) {
   if (!of) return defaultSession(list);
-  if (!of.account) return null;
-  return sessionOf(list, of.account);
+  const byAccount = sessionOf(list, of.account);
+  if (byAccount) return byAccount;
+  // El enlace 1 a 1 puede nombrar el workspace de Danil y no la persona.
+  const email = of.email?.trim().toLocaleLowerCase();
+  if (!email) return null;
+  return connectedSessions(list).find((s) => s.email?.trim().toLocaleLowerCase() === email) ?? null;
 }
 
 /**
