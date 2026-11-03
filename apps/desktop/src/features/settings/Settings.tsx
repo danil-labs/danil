@@ -56,8 +56,8 @@ const Appearance = lazy(() => import("./Appearance"));
 const ManageProjects = lazy(() => import("./ManageProjects"));
 const Agents = lazy(() => import("./Agents"));
 
-/** `/admin` de la web de alfa; el escritorio la abre en el navegador. */
-const ADMIN_URL = "https://alfa-app.danil.ai/admin";
+/** Portal del Harness, servicio aparte; el escritorio lo abre en el navegador. */
+const HARNESS_URL = "https://harness.danil.ai/";
 const Secrets = lazy(() => import("./Secrets"));
 
 /**
@@ -176,12 +176,12 @@ const idSub = (id: string) => `cfg-sub-${id}`;
 function AdminLink() {
   const page = capabilities().adminPage;
   const [allowed] = createResource(async () => (page ? await page.allowed().catch(() => false) : capabilities().nativeWindow));
-  const href = page?.href ?? ADMIN_URL;
+  const href = page?.href ?? HARNESS_URL;
   /** El escritorio no abre pestañas: lo manda al navegador. */
   const open = (event: MouseEvent) => {
     if (page) return;
     event.preventDefault();
-    void invoke("open_external", { target: ADMIN_URL }).catch(() => {});
+    void invoke("open_external", { target: HARNESS_URL }).catch(() => {});
   };
   return (
     <Show when={allowed()}>
