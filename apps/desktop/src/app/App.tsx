@@ -1524,6 +1524,12 @@ export default function App() {
    * del agente y no de la tarea, y abrir la ventana lo olvida.
    */
   const [sinSteer, setSinSteer] = createSignal<string[]>([]);
+  /**
+   * Las tareas donde «detener y enviar» acaba de cortar el turno: al cerrar,
+   * la cola no se retiene por el fallo de la interrupción, que aquí lo pidió la
+   * persona. Sin esto el gesto dejaba el mensaje parado justo después de usarlo.
+   */
+  const enviarAlCerrar = new Set<string>();
   const queueBusy = () => busy() || settlingTurns().includes(sessionId() ?? "") || injecting().some((item) => item.session === sessionId());
   const [desdeDeTurno, setDesdeDeTurno] = createSignal<Record<string, number>>({});
   const liveThreads = new Set<string>();
@@ -2501,10 +2507,14 @@ export default function App() {
       setSettlingTurns((ids) => [...new Set([...ids, session])]);
       if (ok !== true) {
         const retained = ok === false ? "fallo" : "borrador";
-        if (session === sessionId()) setRetenida(retained);
+        // «Detener y enviar»: la interrupción la pidió la persona para que
+        // saliera lo que ya estaba escrito. Retener aquí dejaría el mensaje
+        // parado y el gesto a medias; la marca se suelta al salir la cola.
+        const saleAhora = enviarAlCerrar.has(session);
+        if (session === sessionId() && !saleAhora) setRetenida(retained);
         if (draftFromDisk === session) draftFromDisk = null;
         const queued = savedQueues.get(session);
-        if (queued) savedQueues.set(session, { ...queued, retained });
+        if (queued) savedQueues.set(session, { ...queued, retained: saleAhora ? null : retained });
         if (ok == null) sinDesenlace.add(session);
         else sinDesenlace.delete(session);
       } else if (sinDesenlace.delete(session)) {
@@ -3834,6 +3844,8 @@ export default function App() {
           // Sin nada en cola no hay nada que retener. Si no se soltara aquí, un
           // fallo dejaría detenida para siempre la cola que venga después.
           if (ret) setRetenida(null);
+          // «Detener y enviar» sin nada que enviar ya no tiene promesa que cumplir.
+          enviarAlCerrar.delete(mirando ?? "");
           return;
         }
         // El cierre permite reintentar una sesión reservada por otro turno.
@@ -3868,6 +3880,9 @@ export default function App() {
           // queda en la cola y sale en el siguiente, no se pierde ni se cuela
           // firmado por quien no lo escribió.
           setCola(resto);
+          // La promesa de «detener y enviar» se cumple aquí: el cierre de ese
+          // turno ya no tiene que dejar paso a una cola que ya salió.
+          enviarAlCerrar.delete(mirando ?? "");
           void enviar(mensaje);
         });
       },
@@ -6733,6 +6748,24 @@ export default function App() {
   }
 
   /**
+   * Lo que la persona ya hace a mano cuando el agente no recibe mensajes a
+   * medias: parar el turno y mandar lo encolado. No es un steer y no se
+   * disfraza: el paso que corría se pierde, y el título del botón lo dice.
+   */
+  async function detenerYEnviar(id: string) {
+    const abierta = sessionId();
+    const m = cola().find((q) => q.id === id);
+    if (!abierta || !m || !inyectable(m)) return;
+    // Lo elegido sale primero; el resto conserva su orden.
+    setCola((c) => [m, ...c.filter((q) => q.id !== id)]);
+    setRetenida(null);
+    // Sin turno vivo no hay nada que detener: la cola sale sola.
+    if (!busy()) return;
+    enviarAlCerrar.add(abierta);
+    await detener();
+  }
+
+  /**
    * Mete un encolado en el turno que ya corre. Solo sale de la cola si el
    * backend lo aceptó: un mensaje que se borra de la lista sin haber entrado
    * en ningún sitio desaparece sin que nadie sepa que se perdió.
@@ -7654,6 +7687,13 @@ export default function App() {
           onMandarAhora: pp.sesion && vivas().includes(pp.sesion) &&
             !sinSteer().includes(filaDe(pp.sesion)?.provider ?? "")
             ? (id: string) => mandarAhora(id)
+            : null,
+          // Y donde el motor ya negó el steer, el gesto que queda es el de la
+          // persona: parar el turno y enviar. Nada con una pregunta abierta:
+          // esa cola espera su respuesta, no un turno nuevo.
+          onDetenerYEnviar: pp.sesion && vivas().includes(pp.sesion) && !esperando() &&
+            sinSteer().includes(filaDe(pp.sesion)?.provider ?? "")
+            ? (id: string) => void detenerYEnviar(id)
             : null,
         }}
         />

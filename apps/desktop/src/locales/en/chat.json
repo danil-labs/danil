@@ -456,5 +456,7 @@
   "chat.history.loading": "Loading content…",
   "chat.history.text": "Message text",
   "chat.history.pieces": "Full record",
-  "chat.history.content": "Saved content"
+  "chat.history.content": "Saved content",
+  "chat.queue.stop_and_send": "Stop the turn and send",
+  "chat.queue.stop_and_send_aria": "Stop the turn and send queued message {n}"
 }
