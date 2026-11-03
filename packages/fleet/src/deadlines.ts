@@ -12,7 +12,7 @@ export const INTENT_DEADLINE = 330_000;
 export type Deadlines = { read: number; action: number; intent: number };
 export const DEADLINES: Deadlines = { read: READ_DEADLINE, action: ACTION_DEADLINE, intent: INTENT_DEADLINE };
 
-const READ = /^(list_|load_|read_|get_|preview_)|_status$|^(workspaces_startup|archived_tasks|session_usage|task_history|session_folder|setup_required|check_environment|account_limits|project_base_branches|chat_background|file_size|pending_requests|task_coordinator|turn_authors)$/;
+const READ = /^(list_|load_|read_|get_|preview_)|_status$|^(workspaces_startup|archived_tasks|session_usage|task_history|session_folder|setup_required|check_environment|account_limits|project_base_branches|chat_background|file_size|pending_requests|task_coordinator|turn_authors|danil_sessions|danil_workspace_account|danil_connect_options|account_relay_token|account_credentials_list|account_exists)$/;
 
 // `archived_tasks` es una lectura (el relay la guarda en su espejo): con la máquina apagada contesta la copia, no la enciende.
 export type CommandClass = "read" | "action" | "intent";
