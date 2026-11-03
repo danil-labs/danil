@@ -256,6 +256,10 @@
   "shell.machine_panel.task.unknown": "Task {id}",
   "shell.machine_panel.leftover": "Left running",
   "shell.machine_panel.leftover.none": "Nothing: no finished task left processes.",
+  "shell.machine_panel.leftover.card": {
+    "one": "{count} finished task left processes running · {size}",
+    "other": "{count} finished tasks left processes running · {size}"
+  },
   "shell.machine_panel.leftover.ended": "finished {when}",
   "shell.machine_panel.leftover.archived": "archived {when}",
   "shell.machine_panel.leftover.finished": "finished",

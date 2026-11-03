@@ -96,6 +96,7 @@ export function MachineCard(props: {
   const lvl = () => (on() ? level(r()) : null);
   const tone = () => lvl() === "critical" ? "bg-error-strong" : lvl() === "high" ? "bg-warning-strong" : SEG_TASKS;
   const parts = () => { const x = r(); return hasUsage(x) ? split(x) : null; };
+  const left = () => leftovers(r());
   const d = () => disk(r());
   const cpu = () => on() && usage() && r()?.cpu?.usage_percent !== undefined ? Math.round(r()!.cpu!.usage_percent!) : null;
   const cpuHigh = () => (cpu() ?? 0) >= 90;
@@ -200,6 +201,11 @@ export function MachineCard(props: {
       <Show when={lvl() !== "high" && lvl() !== "critical" && cpuHigh()}>
         <span role="status" class={cn(NOTE, "block bg-warning/10 text-warning-strong")}>
           {t("shell.machine_panel.warn.cpu", { percent: cpu() ?? 0 })}
+        </span>
+      </Show>
+      <Show when={on() && left().length}>
+        <span class={cn(NOTE_INFO, "block")}>
+          {t("shell.machine_panel.leftover.card", { count: left().length, size: peso(left().reduce((n, x) => n + x.memory_bytes, 0)) })}
         </span>
       </Show>
       <Show when={props.power === "off" || props.power === "starting"}>
