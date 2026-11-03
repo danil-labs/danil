@@ -24,7 +24,7 @@ import "../lib/sharedClock";
 void import("../locales/failurePhrases").catch((e) => console.warn("[lenguas] failurePhrases", e));
 
 // El directorio de la cuenta también en la ventana: antes solo lo montaba la web.
-setCapabilities({ ...capabilities(), workspaceDirectory: desktopWorkspaceDirectory() });
+setCapabilities({ ...capabilities(), workspaceDirectory: desktopWorkspaceDirectory(), wsl: /Windows/i.test(navigator.userAgent) });
 
 /**
  * El arranque fija tema y lengua antes del primer pintado. Los efectos declaran

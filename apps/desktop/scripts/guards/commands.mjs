@@ -124,8 +124,6 @@ const SIN_INTERFAZ = {
   danil_workspace_link_status:
     "la sincronización sigue a la sesión de Danil: el motor vincula todos los workspaces; sin interruptor por workspace",
   tree_diff: "el diff de un turno se pintaba bajo cada turno del chat; ahora «Editó N archivos» abre el panel de la tarea en «Cambios» (tree_changes)",
-  // `docs/wsl-onboarding.md`: la detección existe en Rust; la pantalla de alta llega después.
-  wsl_detect: "prototipo de detección de WSL; la pantalla de alta aún no lo invoca",
   // `docs/agents.md` § Estado observable: el comando de agregación existe
   // para que el riel deje de sondear; el riel mismo no está construido.
 };
