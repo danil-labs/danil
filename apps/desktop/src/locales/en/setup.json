@@ -1,6 +1,5 @@
 {
   "setup.title": "Preparing Danil",
-  "setup.description": "Danil already ships with what it needs. We're checking that everything is in place.",
   "setup.error_check": "We couldn't check this computer. Try again.",
   "setup.error_in_flight": "Another setup is already running and this window can't follow it. Try again when it finishes.",
   "setup.tips.eyebrow": "While Danil gets ready",
@@ -24,8 +23,6 @@
   "setup.repair.failed": "{name} needs repair. Some features may fail until it's repaired.",
   "setup.repair.open": "Open environment status",
   "setup.done_title": "All set.",
-  "setup.done_lede": "Danil has what it needs. Now let's connect your AI.",
-  "setup.done_lede_app": "Danil has what it needs.",
   "setup.progress": "Setup progress",
   "setup.simple.done": "All set",
   "setup.simple.essentials_ready": "Some features need repair",

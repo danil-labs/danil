@@ -15,18 +15,18 @@ export function Escenario(props: { izquierda: JSX.Element; derecha: JSX.Element 
   );
 }
 
-/** El título y su entrada; al cambiar se apagan, se reemplazan y vuelven a encenderse. */
-export function TituloCambiante(props: { titulo: string; lede: string; ref?: (el: HTMLHeadingElement) => void }) {
-  const [visible, setVisible] = createSignal({ titulo: props.titulo, lede: props.lede });
+/** El título; al cambiar se apaga, se reemplaza y vuelve a encenderse. */
+export function TituloCambiante(props: { titulo: string; ref?: (el: HTMLHeadingElement) => void }) {
+  const [visible, setVisible] = createSignal({ titulo: props.titulo });
   const [apagado, setApagado] = createSignal(false);
   createEffect(
     on(
-      () => [props.titulo, props.lede] as const,
-      ([titulo, lede]) => {
-        if (QUIETO()) return void setVisible({ titulo, lede });
+      () => props.titulo,
+      (titulo) => {
+        if (QUIETO()) return void setVisible({ titulo });
         setApagado(true);
         const id = setTimeout(() => {
-          setVisible({ titulo, lede });
+          setVisible({ titulo });
           setApagado(false);
         }, 220);
         onCleanup(() => clearTimeout(id));
@@ -43,7 +43,6 @@ export function TituloCambiante(props: { titulo: string; lede: string; ref?: (el
       >
         {visible().titulo}
       </h1>
-      <p class="m-0 mt-3.5 max-w-[40ch] text-sm text-neutral-500">{visible().lede}</p>
     </div>
   );
 }

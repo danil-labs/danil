@@ -90,7 +90,7 @@ function Esqueleto(props: { preparando: boolean }) {
       <main class="flex h-full flex-col overflow-hidden bg-bg" aria-busy="true" data-setup-skeleton="preparing">
         <CabeceraDelAlta />
         <Escenario
-          izquierda={<TituloCambiante titulo={t("setup.title")} lede={t("setup.description")} />}
+          izquierda={<TituloCambiante titulo={t("setup.title")} />}
           derecha={<TarjetaVacia />}
         />
       </main>
@@ -469,15 +469,9 @@ export default function Setup(props: { children: JSX.Element }) {
     if (terminado() && !falloEsencial() && !conFallas()) return t("setup.done_title");
     return t("setup.title");
   };
-  const lede = () => {
-    if (ia()) return t("onboarding.ai.lede");
-    if (terminado() && !falloEsencial() && !conFallas()) return alta() ? t("setup.done_lede") : t("setup.done_lede_app");
-    return t("setup.description");
-  };
-
   const izquierda = () => (
     <>
-      <TituloCambiante titulo={titulo()} lede={lede()} />
+      <TituloCambiante titulo={titulo()} />
       <Show when={fallo() ?? falloDelServicio()}>
         {(f) => (
           <div class="mt-6 w-full">
@@ -613,7 +607,6 @@ export default function Setup(props: { children: JSX.Element }) {
           </>
         }
       >
-        <p class="m-0 text-xs text-neutral-500">{t("onboarding.ai.footer")}</p>
         <span class="flex-1" />
         <Button size="sm" disabled={conectadas().length === 0} onClick={() => setPaso("personalizar")}>
           {t("onboarding.continue")}
