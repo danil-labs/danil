@@ -72,7 +72,6 @@ type Entrada = {
   id: SettingsEntryId;
   group: SettingsGroup;
   name: string;
-  hint: string;
   icono: () => JSX.Element;
   tabs: Pestana[];
 };
@@ -143,14 +142,14 @@ const pestanasDe = (
   };
 };
 
-const ENCABEZADOS: Record<SettingsEntryId, { name: () => string; hint: () => string; icono: () => JSX.Element }> = {
-  account: { name: () => t("settings.entry.account"), hint: () => t("settings.entry.account_hint"), icono: () => <CircleUserRound size={15} /> },
-  preferences: { name: () => t("settings.entry.preferences"), hint: () => t("settings.entry.preferences_hint"), icono: () => <SlidersHorizontal size={15} /> },
-  "ai-accounts": { name: () => t("settings.entry.ai_accounts"), hint: () => t("settings.entry.ai_accounts_hint"), icono: () => <Sparkles size={15} /> },
-  machines: { name: () => t("settings.entry.machines"), hint: () => t("settings.entry.machines_hint"), icono: () => <Monitor size={15} /> },
-  projects: { name: () => t("settings.entry.projects"), hint: () => t("settings.entry.projects_hint"), icono: () => <Folders size={15} /> },
-  "agents-skills": { name: () => t("settings.entry.agents_skills"), hint: () => t("settings.entry.agents_skills_hint"), icono: () => <Bot size={15} /> },
-  connections: { name: () => t("settings.nav.connections"), hint: () => t("settings.entry.connections_hint"), icono: () => <Plug size={15} /> },
+const ENCABEZADOS: Record<SettingsEntryId, { name: () => string; icono: () => JSX.Element }> = {
+  account: { name: () => t("settings.entry.account"), icono: () => <CircleUserRound size={15} /> },
+  preferences: { name: () => t("settings.entry.preferences"), icono: () => <SlidersHorizontal size={15} /> },
+  "ai-accounts": { name: () => t("settings.entry.ai_accounts"), icono: () => <Sparkles size={15} /> },
+  machines: { name: () => t("settings.entry.machines"), icono: () => <Monitor size={15} /> },
+  projects: { name: () => t("settings.entry.projects"), icono: () => <Folders size={15} /> },
+  "agents-skills": { name: () => t("settings.entry.agents_skills"), icono: () => <Bot size={15} /> },
+  connections: { name: () => t("settings.nav.connections"), icono: () => <Plug size={15} /> },
 };
 
 /** Una entrada sale si tiene alguna pestaña que ya existe. */
@@ -159,7 +158,7 @@ const entradasDe = (pestanas: Record<string, Pestana | undefined>): Entrada[] =>
     const tabs = e.tabs.flatMap((id) => (pestanas[id] ? [pestanas[id]!] : []));
     if (!tabs.some((p) => p.panel)) return [];
     const h = ENCABEZADOS[e.id];
-    return [{ id: e.id, group: e.group, get name() { return h.name(); }, get hint() { return h.hint(); }, icono: h.icono, tabs }];
+    return [{ id: e.id, group: e.group, get name() { return h.name(); }, icono: h.icono, tabs }];
   });
 
 const GRUPOS: { id: SettingsGroup; nombre: () => string }[] = [
@@ -522,11 +521,8 @@ export default function Settings(props: {
               >
                 {/* En escritorio el encabezado y sus pestañas quedan fuera del scroll: así el cerrar no comparte lugar con el contenido. */}
                 <div class="px-4 pt-5 md:shrink-0 md:px-8 md:pt-6">
-                <header class={cn("grid grid-cols-[minmax(0,1fr)] items-start gap-3 md:grid-cols-[minmax(0,1fr)_auto]", entrada().tabs.length > 1 ? "mb-5" : "border-0 border-b border-solid border-border pb-4")}>
-                  <div class="grid gap-0.5">
-                    <h2 class="m-0 text-lg font-semibold">{entrada().name}</h2>
-                    <p class="m-0 text-ui text-neutral-500">{entrada().hint}</p>
-                  </div>
+                <header class={cn("grid grid-cols-[minmax(0,1fr)] items-center gap-3 md:grid-cols-[minmax(0,1fr)_auto]", entrada().tabs.length > 1 ? "mb-5" : "border-0 border-b border-solid border-border pb-4")}>
+                  <h2 class="m-0 text-lg font-semibold">{entrada().name}</h2>
                   <Button variant="ghost" size="iconCompact" class="hidden size-7 md:inline-flex" onClick={props.onClose} aria-label={t("settings.close")}>
                     <Close size={16} />
                   </Button>

@@ -55,8 +55,9 @@ is not a pass. What each guard checks is in [docs/guards.md](docs/guards.md);
   guard limits the existing debt.
 - Every text a person reads in the app comes from the catalogs through `t()`
   ([docs/localization.md](docs/localization.md)); add the key to `es` and `en`.
-  Command names in `invoke()` and event names in `listen()` stay literal so the
-  guards can read them.
+  Visible text is a label, a state, an error or a consequence, never an
+  explanation ([docs/copy.md](docs/copy.md)). Command names in `invoke()` and
+  event names in `listen()` stay literal so the guards can read them.
 - Colors are theme tokens from `@theme` in `src/styles/global.css` and text sizes
   come from the shared scale (`text-caption`, `text-ui`…); shared controls live
   in `src/ui/` ([docs/visual-system.md](docs/visual-system.md)).
