@@ -4,7 +4,7 @@
 // instalador que se descarga a mano.
 //
 // Flujo: detecta SO/arquitectura -> resuelve el asset en las releases PÚBLICAS
-// de danil-labs/terminus vía latest.json -> descarga -> VERIFICA minisign (no
+// de danil-labs/danil vía latest.json -> descarga -> VERIFICA minisign (no
 // opcional: descargamos y ejecutamos un binario nativo) -> instala. Si la
 // verificación falla, borra la descarga y sale con error.
 //
@@ -31,7 +31,7 @@ import { t } from './lib/i18n.mjs';
 const PUBKEY_B64 =
   'dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDM5ODEzRDE1M0QwQ0RFQjgKUldTNDNndzlGVDJCT1hPSnp4ZzBIbkowOW9kVGFYb0YyRkZKZjNTT2N3eERXOXhuRi9UblY5d3EK';
 
-const LATEST_JSON_URL = 'https://github.com/danil-labs/terminus/releases/latest/download/latest.json';
+const LATEST_JSON_URL = 'https://github.com/danil-labs/danil/releases/latest/download/latest.json';
 const MANUAL_DOWNLOAD_URL = 'https://danil.ai/download/';
 // Nombres con los que la 0.2.x se instaló, antes de llamarse Danil.
 const LEGACY_MAC_BUNDLE = 'Terminus.app';

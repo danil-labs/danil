@@ -6,7 +6,7 @@
 («El workspace de la cuenta») y «Usar este workspace aquí».
 
 **Toca tres repositorios:** `danil-labs/computers` (plano de control),
-`danil-labs/seldon-host` (motor) y `danil-labs/terminus` (escritorio, web y
+`danil-labs/danil-engine` (motor) y `danil-labs/danil` (escritorio, web y
 móvil).
 
 ## Problema
@@ -136,7 +136,7 @@ Sobre computers#10 (`feat/workspace-owners`); ver «Conciliación».
    responde `409`; una versión vieja de ajustes responde `409`; la intención
    enciende y entrega una sola vez.
 
-### 2. `danil-labs/seldon-host` — materializar con el id de la cuenta
+### 2. `danil-labs/danil-engine` — materializar con el id de la cuenta
 
 Sobre seldon-host#72 (`feat/workspace-danil-link`); ver «Conciliación».
 
@@ -171,7 +171,7 @@ Sobre seldon-host#72 (`feat/workspace-danil-link`); ver «Conciliación».
 5. **Contrato.** Se agregan las órdenes nuevas y el campo `account` en
    `commands.json`. Sube la versión del contrato, y Danil fija el motor nuevo.
 
-### 3. `danil-labs/terminus` — una lista, una regla
+### 3. `danil-labs/danil` — una lista, una regla
 
 1. **Lista de workspaces desde la cuenta.** Con sesión de Danil, la lista es
    `GET /v1/workspaces` más los workspaces locales sin ligar del motor de esta
@@ -318,7 +318,7 @@ teléfono de esa cuenta, nunca en otra. Sigue sin haber interruptor de
 sincronizar.
 
 - **Motor** (seldon-host `feat/danil-session-per-account`, ver «Una sesión
-  por cuenta» en [connector.md](https://github.com/danil-labs/seldon-host/blob/dev/docs/connector.md)): una credencial y un relay por cuenta,
+  por cuenta» en [connector.md](https://github.com/danil-labs/danil-engine/blob/dev/docs/connector.md)): una credencial y un relay por cuenta,
   y el mapa workspace → cuenta. La primera sesión es la principal: los
   workspaces nuevos y los que no tienen cuenta anotada son suyos.
 - **Escritorio:** Configuración → Cuentas de Danil lista las sesiones y agrega

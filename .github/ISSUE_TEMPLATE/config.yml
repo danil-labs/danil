@@ -1,5 +1,5 @@
 blank_issues_enabled: false
 contact_links:
   - name: Report a security vulnerability
-    url: https://github.com/danil-labs/terminus/security/advisories/new
+    url: https://github.com/danil-labs/danil/security/advisories/new
     about: Report security issues privately, never in a public issue.

@@ -211,7 +211,7 @@ Workers Builds trigger.
 target triple, as published in the release manifest `seldon-runtime.json`:
 
 ```json
-"x86_64-pc-windows-msvc": { "url": "https://github.com/danil-labs/terminus/releases/download/seldon-runtime-v…/seldon-runtime-x86_64-pc-windows-msvc.exe", "sha256": "…" }
+"x86_64-pc-windows-msvc": { "url": "https://github.com/danil-labs/danil/releases/download/seldon-runtime-v…/seldon-runtime-x86_64-pc-windows-msvc.exe", "sha256": "…" }
 ```
 
 A platform with an empty `url` has no published engine yet; `engine.mjs
@@ -227,7 +227,7 @@ The contract comes from seldon-host (`crates/engine-protocol/commands.json`),
 copied byte for byte. Copying a newer one is not enough: the window computes
 its contract from those bytes, so it refuses the pinned engine until a
 `seldon-runtime` release with the same contract is published
-([runtime-binary-release.md](https://github.com/danil-labs/seldon-host/blob/dev/docs/runtime-binary-release.md)) and pinned here. Until then
+([runtime-binary-release.md](https://github.com/danil-labs/danil-engine/blob/dev/docs/runtime-binary-release.md)) and pinned here. Until then
 the `contract` guard requires the pending contract to be named in
 `MOTOR_PENDIENTE`, and `publish.yml` refuses to publish.
 
@@ -285,7 +285,7 @@ updated to a window without its engine would not open. To test a change to the
 workflow without publishing:
 
 ```sh
-gh workflow run publish.yml -R danil-labs/terminus --ref <branch> -f dry_run=true
+gh workflow run publish.yml -R danil-labs/danil --ref <branch> -f dry_run=true
 ```
 
 A dry run spends no eSigner signatures: Windows builds without

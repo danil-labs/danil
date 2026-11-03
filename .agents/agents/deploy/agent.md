@@ -18,12 +18,12 @@ encargo explícito de una persona mantenedora. Lee `AGENTS.md`,
    fallidas o pendientes.
 5. La etiqueta `v<versión>` dispara `.github/workflows/publish.yml`. No toques
    la firma ni la identidad de la app.
-6. Confirma la release con `gh release list --repo danil-labs/terminus` antes
+6. Confirma la release con `gh release list --repo danil-labs/danil` antes
    de anunciar que está disponible.
 
 ## Fallos de publicación
 
-Comprueba la corrida con `gh run view <id> --repo danil-labs/terminus`. Lee el
+Comprueba la corrida con `gh run view <id> --repo danil-labs/danil`. Lee el
 primer error del job y compara sus entradas y workflow con la última
 publicación correcta. Un cambio al workflow se prueba con `dry_run=true`.
 

@@ -83,8 +83,8 @@ the engine with `pnpm engine:stop` (it also stops by itself five minutes after
 the last window closes). `node scripts/engine.mjs help` lists every command.
 
 The engine is published as a prerelease of this repository
-([`seldon-runtime-v0.2.73-4b8714c`](https://github.com/danil-labs/terminus/releases/tag/seldon-runtime-v0.2.73-4b8714c)).
-By downloading it you accept its [terms](https://github.com/danil-labs/terminus/releases/download/seldon-runtime-v0.2.73-4b8714c/TERMS.md).
+([`seldon-runtime-v0.2.73-4b8714c`](https://github.com/danil-labs/danil/releases/tag/seldon-runtime-v0.2.73-4b8714c)).
+By downloading it you accept its [terms](https://github.com/danil-labs/danil/releases/download/seldon-runtime-v0.2.73-4b8714c/TERMS.md).
 The lock pins builds for Windows x86_64, macOS arm64/x86_64 and Linux x86_64.
 To use a local engine build instead, run
 `node scripts/engine.mjs download --from <path>`.
@@ -149,8 +149,8 @@ and generated dependency notices.
 
 The `seldon-runtime` engine is proprietary software by Danil and is not covered
 by this license. Its terms and third-party notices are published with each
-engine release: [TERMS.md](https://github.com/danil-labs/terminus/releases/download/seldon-runtime-v0.2.73-4b8714c/TERMS.md) and
-[third-party notices by platform](https://github.com/danil-labs/terminus/releases/tag/seldon-runtime-v0.2.73-4b8714c)
+engine release: [TERMS.md](https://github.com/danil-labs/danil/releases/download/seldon-runtime-v0.2.73-4b8714c/TERMS.md) and
+[third-party notices by platform](https://github.com/danil-labs/danil/releases/tag/seldon-runtime-v0.2.73-4b8714c)
 for the version pinned in `apps/desktop/seldon-runtime.lock`.
 
 "Danil" and its logo are trademarks of Danil. Some installers and installed

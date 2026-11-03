@@ -7,9 +7,20 @@ import { t } from '../../lib/i18n';
 import { inboxDraft } from './inbox-drafts';
 import { createMessaging } from '../../../../../packages/attention/src/messaging.ts';
 import { publishConversations, requestedConversation, requestConversation } from './loaded';
+import { createPref } from '../../lib/prefs';
+import { inboxWidth } from './inbox-widths';
 import { Button } from '../../ui/Button';
 import { Skeleton } from '../../ui/Skeleton';
-import { ChannelFilter, ContactDetails, ConversationHeader, ConversationRow, ConversationSearch, FilterChips, InboxComposer, MessageBubble, senderLabel, SelectConversation } from './inbox-view';
+import { ChannelFilter, ContactDetails, ConversationHeader, ConversationRow, ConversationSearch, FilterChips, InboxComposer, InboxSplitter, MessageBubble, senderLabel, SelectConversation } from './inbox-view';
+
+/** La lista de conversaciones: por debajo de 224 el nombre y el avatar no caben. */
+const LIST_MIN = 224;
+const LIST_MAX = 480;
+const LIST_DEFAULT = 288;
+/** El detalle del contacto abre con el ancho que tenía antes de poder arrastrarse. */
+const DETAIL_MIN = 240;
+const DETAIL_MAX = 560;
+const DETAIL_DEFAULT = 320;
 
 export function Attention(props: { demo: boolean; session?: AgentsSession & { subscribe?: (clear: () => void) => () => void }; workspace: () => string | null }) {
   const [resolved, setResolved] = createSignal(false);
@@ -28,6 +39,13 @@ export function Attention(props: { demo: boolean; session?: AgentsSession & { su
   const [channel, setChannel] = createSignal<string | null>(null);
   const [filter, setFilter] = createSignal<InboxFilter>('all');
   const [counts, setCounts] = createSignal<ConversationCounts>({ assistance: null, aiDisabled: null });
+  const [listWidth, setListWidth] = createPref('inbox.list.width', LIST_DEFAULT);
+  const [detailWidth, setDetailWidth] = createPref('inbox.detail.width', DETAIL_DEFAULT);
+  // Lo guardado se acota a los topes de hoy al montar: un tope que bajó no se entera solo.
+  if (listWidth() < LIST_MIN || listWidth() > LIST_MAX) setListWidth(inboxWidth(listWidth(), LIST_MIN, LIST_MAX));
+  if (detailWidth() < DETAIL_MIN || detailWidth() > DETAIL_MAX) setDetailWidth(inboxWidth(detailWidth(), DETAIL_MIN, DETAIL_MAX));
+  let listPanel: HTMLElement | undefined;
+  let detailPanel: HTMLElement | undefined;
   const bff = bffTransport();
   const api = props.session ? createInbox(props.session, bff.request, bff.prefix) : null;
   const draftSession = props.session ?? { getToken: async () => '', unauthorized: async () => false };
@@ -90,12 +108,12 @@ export function Attention(props: { demo: boolean; session?: AgentsSession & { su
   const chipCounts = () => channel() ? {} : { assistance: counts().assistance, ai_disabled: counts().aiDisabled };
   const emptyText = () => query().trim() ? t("web.alpha.search_empty", { query: query().trim() }) : filter() !== 'all' ? t(`web.alpha.empty_${filter()}`) : t("web.alpha.channel_empty", { channel: channel() ?? '' });
   const listLoading = () => busy() && rows().length === 0 && !selected();
-  return <section class="@container flex h-full min-h-0 min-w-0 flex-col overflow-hidden" data-alpha-inbox="">
+  return <section class="@container flex h-full min-h-0 min-w-0 flex-col overflow-hidden" style={{ '--inbox-list': `${listWidth()}px`, '--inbox-detail': `${detailWidth()}px` }} data-alpha-inbox="">
     <Show when={props.demo}><p class="m-0 border-b border-border px-4 py-2 text-xs text-neutral-500">{t("web.alpha.demo_badge")} · {t("web.alpha.external_only")} <a class="ml-2 underline" href={`${import.meta.env.BASE_URL}inbox`}>{t("web.alpha.change_mode")}</a></p></Show>
     {/* Alfa: sin selector de cuenta; abre «Danil Workspace» si existe y si no la primera. */}
     <Show when={error()}><div role="alert" class="flex flex-wrap items-center gap-2 border-b border-border p-3"><p class="m-0 text-sm text-error-strong">{t("web.alpha.error")} {error()}</p><Button size="sm" variant="secondary" disabled={busy()} onClick={() => selected() ? void open(selected()!) : account() ? void load(account()!) : void connect()}>{t("customize.retry")}</Button></div></Show>
-    <div class="flex min-h-0 flex-1 overflow-hidden @[46rem]:grid @[46rem]:grid-cols-[minmax(0,18rem)_minmax(0,1fr)]">
-      <section aria-label={t("customize.conversations")} class={`min-h-0 w-full min-w-0 flex-col overflow-hidden dark:bg-surface @[46rem]:flex @[46rem]:border-r @[46rem]:border-border ${selected() ? 'hidden' : 'flex'}`}>
+    <div class="flex min-h-0 flex-1 overflow-hidden">
+      <section ref={el => (listPanel = el)} aria-label={t("customize.conversations")} class={`min-h-0 w-full min-w-0 flex-col overflow-hidden dark:bg-surface @[46rem]:flex @[46rem]:w-[var(--inbox-list)] @[46rem]:max-w-[calc(100%_-_22.5rem)] @[46rem]:shrink-0 @[46rem]:border-r @[46rem]:border-border ${selected() ? 'hidden' : 'flex'}`}>
         <header class="flex min-h-11 w-full min-w-0 shrink-0 items-center gap-2 border-b border-border px-3 py-1">
           <span class="min-w-0 flex-1 truncate text-[0.85rem] font-semibold text-neutral-950">{t("web.alpha.inbox")}</span>
           <span class="shrink-0 rounded-full border border-border px-2 py-[3px] text-[0.68rem] font-medium text-neutral-500">{canReply() ? t("inbox-writes.enabled") : t("customize.read_only")}</span>
@@ -114,6 +132,7 @@ export function Attention(props: { demo: boolean; session?: AgentsSession & { su
           <Show when={more()}><div class="flex justify-center pb-3"><Button size="sm" variant="secondary" disabled={busy()} onClick={() => void load(account()!, true)}>{t("web.alpha.more")}</Button></div></Show>
         </div>
       </section>
+      <InboxSplitter class="hidden @[46rem]:block" label={t("web.alpha.resize_list")} side="left" panel={() => listPanel} min={LIST_MIN} max={LIST_MAX} value={listWidth()} onResize={setListWidth} onReset={() => setListWidth(LIST_DEFAULT)}/>
       <div class={`min-h-0 min-w-0 flex-1 flex-col overflow-hidden @[46rem]:flex ${selected() ? 'flex' : 'hidden'}`}>
         <Show when={selected()} fallback={<SelectConversation/>}>{row => <section class="@container/detail flex h-full min-h-0 min-w-0 flex-col" aria-label={t("web.alpha.conversation_with", { name: row().contact_name || t("web.alpha.contact_fallback") })}>
           <ConversationHeader conversation={row()} detailsOpen={detail()} onBack={close} onToggleDetails={() => setDetail(!detail())}/>
@@ -139,7 +158,8 @@ export function Attention(props: { demo: boolean; session?: AgentsSession & { su
             </div>
             <Show when={detail()}>
               <button type="button" class="absolute inset-0 z-10 bg-neutral-950/30 @[40rem]/detail:hidden" aria-label={t("web.alpha.close_details")} onClick={() => setDetail(false)}/>
-              <ContactDetails conversation={row()} onClose={() => setDetail(false)}/>
+              <InboxSplitter class="hidden @[40rem]/detail:block" label={t("web.alpha.resize_details")} side="right" panel={() => detailPanel} min={DETAIL_MIN} max={DETAIL_MAX} value={detailWidth()} onResize={setDetailWidth} onReset={() => setDetailWidth(DETAIL_DEFAULT)}/>
+              <ContactDetails ref={el => (detailPanel = el)} conversation={row()} onClose={() => setDetail(false)}/>
             </Show>
           </div>
         </section>}</Show>

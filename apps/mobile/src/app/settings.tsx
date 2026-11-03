@@ -1,4 +1,4 @@
-import type { PushMode } from "@terminus/computers";
+import type { PushMode, PushPreferences } from "@terminus/computers";
 import { MOBILE_WEB_DIR, WEB_LAYOUT_KEY } from "@terminus/design";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
@@ -9,11 +9,23 @@ import { BRIDGE_ENABLED } from "../lib/bridge";
 import type { Host } from "../lib/hosts";
 import { t, w } from "../lib/i18n";
 import { useMachines } from "../lib/machines";
-import { disablePush, enablePush, PUSH_IOS, PUSH_TEST, type PushState, pushState, readPushMode, sendTestPush, writePushMode } from "../lib/push";
+import { disablePush, enablePush, PUSH_IOS, PUSH_TEST, type PushState, pushState, readPushPrefs, sendTestPush, writePushPrefs } from "../lib/push";
 import { Dot } from "../ui/components";
 import { Icon } from "../ui/Icon";
 import { Group, GroupHeader, LargeTitle, ListRow, NavBar, pageColor } from "../ui/list";
+import { Sheet, SheetOption } from "../ui/Sheet";
 import { useTheme } from "../ui/theme";
+
+/** `1260` → `21:00`. */
+const hhmm = (minutes: number) => `${String(Math.floor(minutes / 60)).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}`;
+
+/** Ventanas que se ofrecen; la persona elige una, no escribe horas. */
+const QUIET_PRESETS = [
+  { from: 20 * 60, to: 8 * 60 },
+  { from: 21 * 60, to: 8 * 60 },
+  { from: 22 * 60, to: 7 * 60 },
+  { from: 23 * 60, to: 6 * 60 },
+];
 
 /**
  * La raíz de la web de escritorio: la que fijó la compilación
@@ -139,16 +151,17 @@ function PushRow({ getToken }: { getToken: () => Promise<string> }) {
   const [state, setState] = useState<PushState | null>(null);
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<string | null>(null);
-  const [mode, setMode] = useState<PushMode | null>(null);
+  const [prefs, setPrefs] = useState<PushPreferences | null>(null);
+  const [quietSheet, setQuietSheet] = useState(false);
   useEffect(() => {
     void pushState().then(setState);
   }, []);
   useEffect(() => {
     if (!state?.on) {
-      setMode(null);
+      setPrefs(null);
       return;
     }
-    void readPushMode(getToken).then(setMode).catch(() => setMode("all"));
+    void readPushPrefs(getToken).then(setPrefs).catch(() => setPrefs({ mode: "all", quiet: null }));
   }, [state?.on, getToken]);
   if (!state || (!state.supported && !state.needsInstall)) return null;
   const run = async (action: () => Promise<string | null>) => {
@@ -166,17 +179,24 @@ function PushRow({ getToken }: { getToken: () => Promise<string> }) {
     }
   };
   const subtitle = note ?? (state.needsInstall ? t("push.install") : state.blocked ? t("push.blocked") : t("push.subtitle"));
+  const savePrefs = (next: PushPreferences) => writePushPrefs(getToken, next).then(setPrefs);
   const choose = (next: PushMode) => void run(async () => {
-    setMode(await writePushMode(getToken, next));
+    await savePrefs({ ...(prefs ?? { quiet: null }), mode: next });
     return null;
   });
+  const chooseQuiet = (quiet: PushPreferences["quiet"]) => void run(async () => {
+    await savePrefs({ mode: prefs?.mode ?? "all", quiet });
+    setQuietSheet(false);
+    return null;
+  });
+  const quietLabel = prefs?.quiet ? `${hhmm(prefs.quiet.from)} – ${hhmm(prefs.quiet.to)}` : t("push.quiet_off");
   const modeRow = (value: PushMode, title: string, detail: string) => (
     <ListRow
       testID={`push-mode-${value}`}
       title={title}
       subtitle={detail}
-      right={mode === value ? <Icon name="check" size={18} color={theme.primary} /> : <View style={{ width: 18 }} />}
-      disabled={busy || mode === null}
+      right={prefs?.mode === value ? <Icon name="check" size={18} color={theme.primary} /> : <View style={{ width: 18 }} />}
+      disabled={busy || prefs === null}
       onPress={() => choose(value)}
     />
   );
@@ -209,9 +229,32 @@ function PushRow({ getToken }: { getToken: () => Promise<string> }) {
             {modeRow("off", t("push.mode.off"), t("push.mode.off_detail"))}
           </Group>
           {PUSH_IOS ? <Text style={{ color: theme.textMuted, fontSize: 12, marginHorizontal: 20, marginTop: 8 }}>{t("push.mode.ios")}</Text> : null}
+          <GroupHeader>{t("push.quiet_title")}</GroupHeader>
+          <Group>
+            <ListRow
+              testID="push-quiet"
+              title={t("push.quiet_title")}
+              subtitle={t("push.quiet_subtitle")}
+              value={quietLabel}
+              chevron
+              disabled={busy || prefs === null}
+              onPress={() => setQuietSheet(true)}
+            />
+          </Group>
         </>
       ) : null}
       <View style={{ height: 20 }} />
+      <Sheet visible={quietSheet} title={t("push.quiet_title")} onClose={() => setQuietSheet(false)}>
+        <SheetOption label={t("push.quiet_off")} selected={!prefs?.quiet} onPress={() => chooseQuiet(null)} />
+        {QUIET_PRESETS.map((preset) => (
+          <SheetOption
+            key={`${preset.from}-${preset.to}`}
+            label={`${hhmm(preset.from)} – ${hhmm(preset.to)}`}
+            selected={prefs?.quiet?.from === preset.from && prefs?.quiet?.to === preset.to}
+            onPress={() => chooseQuiet({ ...preset, offset: new Date().getTimezoneOffset() })}
+          />
+        ))}
+      </Sheet>
     </>
   );
 }

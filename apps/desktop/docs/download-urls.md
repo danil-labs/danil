@@ -7,7 +7,7 @@ archivos en GitHub y el README y npx enlazan a estas rutas.
 
 ## Lo que publica cada release
 
-`publish.yml` sube a `github.com/danil-labs/terminus/releases/download/v<versión>/`:
+`publish.yml` sube a `github.com/danil-labs/danil/releases/download/v<versión>/`:
 
 | Archivo estable | Para quién |
 |---|---|
@@ -30,7 +30,7 @@ publicada. Una pre-release no aparece ahí.
 | Ruta | Respuesta |
 |---|---|
 | `https://danil.ai/download/` | Página de descarga con los cuatro botones de abajo |
-| `https://danil.ai/download/Danil-Windows-Setup.exe` | `302` → `https://github.com/danil-labs/terminus/releases/latest/download/Danil-Windows-Setup.exe` |
+| `https://danil.ai/download/Danil-Windows-Setup.exe` | `302` → `https://github.com/danil-labs/danil/releases/latest/download/Danil-Windows-Setup.exe` |
 | `https://danil.ai/download/Danil-macOS.dmg` | `302` → `…/releases/latest/download/Danil-macOS.dmg` |
 | `https://danil.ai/download/Danil-macOS-Intel.dmg` | `302` → `…/releases/latest/download/Danil-macOS-Intel.dmg` |
 | `https://danil.ai/download/Danil-Linux-x86_64.AppImage` | `302` → `…/releases/latest/download/Danil-Linux-x86_64.AppImage` |
@@ -68,7 +68,7 @@ Regla general para cualquier archivo viejo: `Terminus-<resto>` →
 ## Lo que no pasa por aquí
 
 - **El updater de la app instalada** lee
-  `github.com/danil-labs/terminus/releases/latest/download/latest.json`, que está
+  `github.com/danil-labs/danil/releases/latest/download/latest.json`, que está
   fijado dentro de cada binario. No usa danil.ai, y renombrar el repositorio en
   GitHub solo funciona mientras GitHub mantenga la redirección del nombre viejo.
 - **npx** (`npx @danil-labs/terminus`) también resuelve por `latest.json`. Enlaza
