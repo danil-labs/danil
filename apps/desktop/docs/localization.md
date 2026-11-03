@@ -2,7 +2,7 @@
 
 Toda frase propia que una persona lee en la app sale de `t()` o `Frase`.
 Quien mantiene UI y catálogo revisa este contrato al cambiar el motor o los
-paquetes.
+paquetes. Qué cuenta como texto visible y qué no: [copy.md](./copy.md).
 
 | Se traduce | Conserva su forma |
 |---|---|

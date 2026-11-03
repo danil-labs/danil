@@ -74,6 +74,7 @@ sends).
 | `terminal-themes` | `scripts/guards/terminal-themes.mjs` | Terminal theme tokens, identifiers and contrast, without touching the chrome. |
 | `locales` | `scripts/guards/locales.mjs` | Used keys exist, unused keys are reported, placeholders match across catalogs. Engine keys come from `phrase-keys.json`; the window's Rust keys from `Frase::new("…")` in `src-tauri/src`. |
 | `literals` | `scripts/guards/literals.mjs` | Interface text outside the catalog in files already migrated. |
+| `copy` | `scripts/guards/copy.mjs` | Help text in `src/locales/es` does not grow: keys ending in `description`, `hint`, `why`, `lede`, `intro`, `help`, `note`, `subtitle` or `tagline`, with a dot or an underscore. The baseline only goes down; `--list` audits them. The rule is in [copy.md](./copy.md). |
 | `comments` | `scripts/guards/comments.mjs` | Limits long blocks, Markdown, argument and history in comments. The baseline only goes down. |
 | `test-policy` | `scripts/guards/test-policy.mjs` | Counts direct source reads in tests. |
 | `icons` | `scripts/icons.mjs` | File icons match the ones generated from the package. |

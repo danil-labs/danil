@@ -109,6 +109,7 @@ const steps = [
   ["`cn` recognizes the text scale", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/cn-text-scale.test.ts")], root],
   ["The design package says the same as the desktop", process.execPath, ["--experimental-strip-types", join(root, "scripts/guards/shared-design.mjs")], root],
   ["What is already translated does not get hardcoded again", process.execPath, [join(root, "scripts/guards/literals.mjs")], root],
+  ["Visible help text does not grow", process.execPath, [join(root, "scripts/guards/copy.mjs")], root],
   ["Comments do not grow or argue", process.execPath, [join(root, "scripts/guards/comments.mjs")], root],
   ["Source reads in tests respect the reviewed quota", process.execPath, [join(root, "scripts/guards/test-policy.mjs")], root],
   ["Tree icons are the package's", process.execPath, [join(root, "scripts/icons.mjs"), "--check"], root],
