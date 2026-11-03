@@ -33,13 +33,17 @@ export function forgetPushDevice(endpoint: string, token: string, device: Pick<P
 /** Qué avisa la persona: todo, solo lo que pide una decisión, o nada. */
 export type PushMode = "all" | "needs_you" | "off";
 
+/** Horas de silencio en la hora local del dispositivo. */
+export type PushQuiet = { from: number; to: number; offset: number };
+export type PushPreferences = { mode: PushMode; quiet: PushQuiet | null };
+
 /** La preferencia guardada en el relay de sus computadoras. */
-export function pushPreferences(endpoint: string, token: string, f: Fetch = globalFetch): Promise<Answer<{ mode: PushMode }>> {
-  return request(apiUrl(endpoint, "/v1/push/preferences"), token, "GET", (body) => body as { mode: PushMode }, f);
+export function pushPreferences(endpoint: string, token: string, f: Fetch = globalFetch): Promise<Answer<PushPreferences>> {
+  return request(apiUrl(endpoint, "/v1/push/preferences"), token, "GET", (body) => body as PushPreferences, f);
 }
 
-export function savePushPreferences(endpoint: string, token: string, mode: PushMode, f: Fetch = globalFetch): Promise<Answer<{ mode: PushMode }>> {
-  return request(apiUrl(endpoint, "/v1/push/preferences"), token, "PUT", (body) => body as { mode: PushMode }, f, { mode });
+export function savePushPreferences(endpoint: string, token: string, prefs: PushPreferences, f: Fetch = globalFetch): Promise<Answer<PushPreferences>> {
+  return request(apiUrl(endpoint, "/v1/push/preferences"), token, "PUT", (body) => body as PushPreferences, f, prefs);
 }
 
 /** Solo en staging: un aviso de prueba a los dispositivos de quien lo pide. */
