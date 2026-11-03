@@ -2,7 +2,7 @@ import { TEXT } from "@terminus/design";
 import { router } from "expo-router";
 import { canFinishTask, cardPull, isPinned, type TaskGit } from "@terminus/tasks";
 import { useState } from "react";
-import { ActivityIndicator, Keyboard, Pressable, StyleSheet, Text, View } from "react-native";
+import { Keyboard, Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { type Task } from "../lib/engine";
 import type { Host } from "../lib/hosts";
@@ -37,25 +37,24 @@ export function TaskHeader(props: {
   const insets = useSafeAreaInsets();
   const [sheet, setSheet] = useState<"menu" | "details" | "finish" | null>(null);
   const [revision, setRevision] = useState(0);
-  const [finishing, setFinishing] = useState(false);
   const book = useTaskGit(props.hostOf, [{ host: props.hostId, workspace: props.workspace, folder: props.folder, id: props.id }], revision);
   const raw = effectiveGit(book, { ...props.task, id: props.id, host: props.hostId, workspace: props.workspace, folder: props.folder }, props.tasks);
   const on = props.host?.power() === "on" && props.host.canAct() === "now";
   const git: TaskGit | undefined = raw && !on ? { ...raw, stale: true } : raw;
   const pull = cardPull(git ? { ...git, shared_with: null } : git);
   const showFinish = pull?.state === "merged" && !git?.stale;
-  const ready = !isPinned(props.task ?? { id: props.id, esperando: false }) && on && canFinishTask(props.task ?? {}, git, props.running || finishing);
+  const ready = !isPinned(props.task ?? { id: props.id, esperando: false }) && on && canFinishTask(props.task ?? {}, git, props.running);
   const current = git?.pull_known && git.head && git.head === git.pull?.head_sha;
   const checks = current ? git?.pull?.checks ?? "unknown" : "unknown";
   const review = current ? git?.pull?.review ?? "unknown" : "unknown";
   const color = git?.stale ? theme.textMuted : pull?.numberTone === "failure" ? theme.failedMark : pull?.tone === "merged" ? theme.merged : pull?.tone === "open" ? theme.unseenMark : theme.textMuted;
   const state = pull ? t(`task.git.${pull.state}`) : git?.kind === "kn" && git.kn === "saved" ? t("task.git.saved") : t("task.git.unknown");
-  const open = (next: "menu" | "details" | "finish") => { if (finishing) return; Keyboard.dismiss(); setSheet(next); };
-  const close = () => { if (!finishing) setSheet(null); };
+  const open = (next: "menu" | "details" | "finish") => { Keyboard.dismiss(); setSheet(next); };
+  const close = () => setSheet(null);
   return <>
     <View testID="task-header" style={{ paddingTop: insets.top, backgroundColor: theme.surface, borderBottomColor: theme.border, borderBottomWidth: StyleSheet.hairlineWidth }}>
       <View style={styles.bar}>
-        <Pressable accessibilityRole="button" accessibilityLabel={t("task.back")} disabled={finishing} style={styles.icon} onPress={() => router.canGoBack() ? router.back() : router.replace("/")}>
+        <Pressable accessibilityRole="button" accessibilityLabel={t("task.back")} style={styles.icon} onPress={() => router.canGoBack() ? router.back() : router.replace("/")}>
           <Icon name="arrow-left" size={22} color={theme.text} />
         </Pressable>
         <View style={styles.heading}>
@@ -69,10 +68,10 @@ export function TaskHeader(props: {
             {current && !git?.stale && checks !== "unknown" && checks !== "none" ? <Icon name={checks === "success" ? "check" : checks === "failure" ? "x" : "clock"} size={12} color={checks === "success" ? theme.success : checks === "failure" ? theme.failedMark : theme.approving} /> : null}
           </Pressable>
         </View>
-        {showFinish ? <Pressable testID="task-finish" accessibilityRole="button" accessibilityLabel={t("task.header.finish")} accessibilityState={{ disabled: !ready, busy: finishing }} disabled={!ready} onPress={() => open("finish")} style={[styles.icon, styles.rocket, { backgroundColor: theme.muted, opacity: ready ? 1 : 0.4 }]}>
-          {finishing ? <ActivityIndicator size="small" color={theme.merged} /> : <Icon name="rocket" size={21} color={theme.merged} />}
+        {showFinish ? <Pressable testID="task-finish" accessibilityRole="button" accessibilityLabel={t("task.header.finish")} accessibilityState={{ disabled: !ready }} disabled={!ready} onPress={() => open("finish")} style={[styles.icon, styles.rocket, { backgroundColor: theme.muted, opacity: ready ? 1 : 0.4 }]}>
+          <Icon name="rocket" size={21} color={theme.merged} />
         </Pressable> : null}
-        <Pressable accessibilityRole="button" accessibilityLabel={t("task.actions.menu")} onPress={() => open("menu")} style={styles.icon} disabled={finishing}>
+        <Pressable accessibilityRole="button" accessibilityLabel={t("task.actions.menu")} onPress={() => open("menu")} style={styles.icon}>
           <Icon name="ellipsis" size={20} color={theme.textMuted} />
         </Pressable>
       </View>
@@ -83,7 +82,7 @@ export function TaskHeader(props: {
         {sheet === "menu" ? <>
           <SheetOption label={t("task.header.details")} onPress={() => open("details")} />
           {showFinish ? <SheetOption label={t("task.header.finish")} icon="rocket" disabled={!ready} onPress={() => open("finish")} /> : null}
-          {props.host && props.task ? <TaskActions host={props.host} task={props.task} running={props.running} onRemoved={props.onFinished} onChanged={props.onChanged} onBusy={setFinishing} /> : null}
+          {props.host && props.task ? <TaskActions host={props.host} task={props.task} running={props.running} onRemoved={props.onFinished} onChanged={props.onChanged} /> : null}
         </> : sheet === "details" ? <>
           <Text style={{ color: theme.textMuted }}>{props.host?.label ?? props.hostId}</Text>
           <Text selectable style={{ color: theme.textMuted }}>{git?.branch}</Text>
@@ -95,8 +94,8 @@ export function TaskHeader(props: {
           {!ready ? <Text style={[styles.description, { color: theme.textMuted }]}>{t("task.header.finish_unavailable")}</Text> : null}
           <SheetOption label={t("task.header.refresh")} disabled={!on} onPress={() => setRevision((n) => n + 1)} />
           {showFinish ? <SheetOption label={t("task.header.finish")} icon="rocket" disabled={!ready} onPress={() => open("finish")} /> : null}
-        </> : props.host ? <TaskFinishConfirmation host={props.host} workspace={props.workspace} folder={props.folder} id={props.id} shared={!!git?.shared_with} ready={!!ready} onBusy={setFinishing} onBlocked={() => setRevision((n) => n + 1)} onFinished={props.onFinished} /> : null}
-        <SheetOption label={t(sheet === "finish" ? "task.header.cancel" : "task.header.close")} onPress={close} disabled={finishing} />
+        </> : props.host ? <TaskFinishConfirmation host={props.host} workspace={props.workspace} folder={props.folder} id={props.id} shared={!!git?.shared_with} ready={!!ready} onBlocked={() => setRevision((n) => n + 1)} onFinished={props.onFinished} /> : null}
+        <SheetOption label={t(sheet === "finish" ? "task.header.cancel" : "task.header.close")} onPress={close} />
       </View>
     </Sheet>
   </>;

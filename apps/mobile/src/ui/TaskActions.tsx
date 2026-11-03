@@ -2,20 +2,20 @@ import { TEXT } from "@terminus/design";
 import { isPinned } from "@terminus/tasks";
 import { useEffect, useRef, useState } from "react";
 import { Pressable, Text, TextInput, View } from "react-native";
-import { archiveTask, deleteTask, renameTask, setPinned, type Task } from "../lib/engine";
+import { deleteTask, renameTask, setPinned, type Task } from "../lib/engine";
+import { enqueue } from "../lib/taskQueue";
 import { HostError, type Host } from "../lib/hosts";
 import { t, w } from "../lib/i18n";
 import { SheetOption } from "./Sheet";
 import { useTheme } from "./theme";
 
 /** Las mismas acciones desde la conversación y la pulsación larga de la lista. */
-export function TaskActions({ host, task, running, onRemoved, onChanged, onBusy }: {
+export function TaskActions({ host, task, running, onRemoved, onChanged }: {
   host: Host;
   task: Task;
   running: boolean;
   onRemoved: () => void;
   onChanged: () => void;
-  onBusy?: (busy: boolean) => void;
 }) {
   const theme = useTheme();
   const [confirm, setConfirm] = useState<"archive" | "delete" | null>(null);
@@ -33,9 +33,15 @@ export function TaskActions({ host, task, running, onRemoved, onChanged, onBusy 
     const title = draft?.trim() ?? "";
     // Vacío o igual al de ahora no cambia nada, como en la fila del escritorio.
     if (action === "rename" && (!title || title === task.title)) { setDraft(null); return; }
+    // Archivar y borrar entran a la cola: la pantalla no espera al relay.
+    if (action === "archive" || action === "delete") {
+      enqueue(host, { workspace: task.workspace, folder: task.folder, id: task.id, title: task.title }, action);
+      setConfirm(null);
+      onRemoved();
+      return;
+    }
     submitting.current = true;
     setBusy(true);
-    onBusy?.(true);
     setError(null);
     try {
       if (action === "pin") {
@@ -44,18 +50,12 @@ export function TaskActions({ host, task, running, onRemoved, onChanged, onBusy 
       } else if (action === "rename") {
         await renameTask(host, task.workspace, task.folder, task.id, title);
         if (live.current) { setDraft(null); onChanged(); }
-      } else {
-        if (action === "archive") {
-          const result = await archiveTask(host, task.workspace, task.folder, task.id);
-          if ("blocked" in result) { if (live.current) setError(t("task.actions.blocked")); return; }
-        } else await deleteTask(host, task.workspace, task.folder, task.id);
-        if (live.current) onRemoved();
       }
     } catch (failure) {
       if (live.current) setError(failure instanceof HostError && failure.code === "task_status_unavailable" ? t("task.header.status_unavailable") : t("task.error", { detail: failure instanceof Error ? failure.message : String(failure) }));
     } finally {
       submitting.current = false;
-      if (live.current) { setBusy(false); onBusy?.(false); }
+      if (live.current) setBusy(false);
     }
   };
   return <View style={{ gap: 8 }}>
