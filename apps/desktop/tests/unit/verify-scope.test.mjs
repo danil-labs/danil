@@ -6,7 +6,7 @@ import { dirname, join } from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
 
-import { changedFiles, classify, stepFiles, testReader, touches } from "../../scripts/verify-scope.mjs";
+import { changedFiles, classify, quickScope, stepFiles, testReader, touches } from "../../scripts/verify-scope.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "../..");
 const desktop = (path) => `apps/desktop/${path}`;
@@ -100,4 +100,75 @@ test("un paso con comodín se expande a sus archivos", (t) => {
   writeFileSync(join(dir, "test/a.test.ts"), "");
   writeFileSync(join(dir, "test/b.ts"), "");
   assert.deepEqual(stepFiles(["--test", join(dir, "test/*.test.ts")]), [join(dir, "test/a.test.ts")]);
+});
+
+function desktopRepository(t) {
+  const dir = mkdtempSync(join(tmpdir(), "verify-scope-"));
+  t.after(() => rmSync(dir, { recursive: true, force: true }));
+  const git = (...args) => execFileSync("git", args, { cwd: dir, stdio: "ignore" });
+  git("init", "-q", "-b", "dev");
+  git("config", "user.email", "t@example.com");
+  git("config", "user.name", "t");
+  mkdirSync(join(dir, "apps/desktop/src/locales/es"), { recursive: true });
+  mkdirSync(join(dir, "apps/desktop/tests/unit"), { recursive: true });
+  writeFileSync(join(dir, "apps/desktop/src/bar.ts"), "export const bar = 1;\n");
+  writeFileSync(join(dir, "apps/desktop/src/foo.ts"), "export const foo = 1;\n");
+  writeFileSync(join(dir, "apps/desktop/src/locales/es/app.json"), "{}\n");
+  writeFileSync(
+    join(dir, "apps/desktop/tests/unit/foo.test.ts"),
+    'import assert from "node:assert/strict";\nimport { test } from "node:test";\nimport { bar } from "../../src/bar.ts";\ntest("bar", () => assert.equal(bar, 1));\n',
+  );
+  git("add", ".");
+  git("commit", "-qm", "base");
+  git("switch", "-qc", "work");
+  return { dir, git };
+}
+
+function quickScopeOf(dir, steps) {
+  const desktop = join(dir, "apps/desktop");
+  return quickScope({
+    root: desktop,
+    base: "dev",
+    steps,
+    rustSteps: [],
+    cliStep: ["cli", "x", ["nada"], desktop],
+    engineStep: ["engine", "x", ["nada"], desktop],
+    isVite: () => false,
+    requiresDist: /$^/,
+    skipRust: true,
+  });
+}
+
+test("un código que ninguna prueba alcanza pide la cadena completa", (t) => {
+  const { dir, git } = desktopRepository(t);
+  const desktop = join(dir, "apps/desktop");
+  writeFileSync(join(desktop, "src/foo.ts"), "export const foo = 2;\n");
+  git("add", ".");
+  git("commit", "-qm", "cambia foo");
+  const steps = [["la prueba", process.execPath, ["--test", join(desktop, "tests/unit/foo.test.ts")], desktop]];
+  assert.match(quickScopeOf(dir, steps).reason, /no test reaches apps\/desktop\/src\/foo\.ts/);
+});
+
+test("un código que sí alcanza una prueba corre esa prueba y no todo", (t) => {
+  const { dir, git } = desktopRepository(t);
+  const desktop = join(dir, "apps/desktop");
+  writeFileSync(join(desktop, "src/bar.ts"), "export const bar = 2;\n");
+  git("add", ".");
+  git("commit", "-qm", "cambia bar");
+  const steps = [["la prueba", process.execPath, ["--test", join(desktop, "tests/unit/foo.test.ts")], desktop]];
+  const scope = quickScopeOf(dir, steps);
+  assert.equal(scope.reason, undefined);
+  assert.ok(scope.plan.has(steps[0]));
+});
+
+test("un archivo de datos bajo src/ no pide la cadena completa", (t) => {
+  const { dir, git } = desktopRepository(t);
+  const desktop = join(dir, "apps/desktop");
+  writeFileSync(join(desktop, "src/locales/es/app.json"), '{"a":1}\n');
+  git("add", ".");
+  git("commit", "-qm", "cambia el catálogo");
+  const steps = [["la prueba", process.execPath, ["--test", join(desktop, "tests/unit/foo.test.ts")], desktop]];
+  const scope = quickScopeOf(dir, steps);
+  assert.equal(scope.reason, undefined);
+  assert.equal(scope.plan.size, 0);
 });

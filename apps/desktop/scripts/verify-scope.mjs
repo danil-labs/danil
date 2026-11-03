@@ -108,3 +108,44 @@ export function stepFiles(args) {
     return readdirSync(dir).filter((name) => name.endsWith(".test.ts")).map((name) => join(dir, name));
   });
 }
+
+const CODE_EXT = /\.(?:[cm]?[jt]s|tsx|jsx)$/;
+const ALWAYS_QUICK = /node_modules\/(?:@biomejs\/biome\/bin\/biome|typescript\/bin\/tsc)$|scripts\/icons\.mjs$|scripts\/guards\//;
+
+/** El plan de `--quick`: `reason` dice por qué corre todo; `plan` es el subconjunto de pasos cuando no. */
+export function quickScope({ root, base, steps, rustSteps = [], cliStep, engineStep, isVite, requiresDist, skipRust = false }) {
+  const isAlwaysQuick = ([, , args = []]) =>
+    !rustSteps.some((step) => step[2] === args) &&
+    args.some((arg) => ALWAYS_QUICK.test(arg) && !requiresDist.test(arg));
+
+  const diff = changedFiles(root, base);
+  if (diff.reason) return { reason: diff.reason };
+  const groups = classify(diff.files);
+  if (groups.full.length) return { reason: `touched ${groups.full.slice(0, 5).join(", ")}${groups.full.length > 5 ? "…" : ""}` };
+  const reachOf = testReader(root);
+  const rust = groups.rust.length > 0;
+  const plan = new Set(steps.filter(isAlwaysQuick));
+  const changed = [...groups.code, ...groups.tests];
+  const reached = new Set();
+  let build = false;
+  for (const step of steps) {
+    if (isVite(step) || rustSteps.includes(step) || step[2].some((arg) => requiresDist.test(arg))) continue;
+    const files = stepFiles(step[2]);
+    if (!files.length) continue;
+    const reach = reachOf(files);
+    for (const file of reach.files) reached.add(file);
+    if (touches(reach, changed) || (step === cliStep && rust)) {
+      plan.add(step);
+      build ||= reach.needsBuild;
+    }
+  }
+  const orphan = groups.tests.find((file) => !reached.has(file.slice("apps/desktop/".length)));
+  if (orphan) return { reason: `no test reaches ${orphan}` };
+  // Un cambio que ninguna prueba ni guard alcanza no puede quedar fuera del plan.
+  const unplaced = groups.code.filter((file) => CODE_EXT.test(file) && !reached.has(file.slice("apps/desktop/".length)));
+  if (unplaced.length) return { reason: `no test reaches ${unplaced[0]}` };
+  if (build || (rust && !skipRust)) for (const step of steps.filter(isVite)) plan.add(step);
+  if (rust) for (const step of rustSteps) plan.add(step);
+  if (plan.has(cliStep)) plan.add(engineStep);
+  return { plan, count: diff.files.length, mergeBase: diff.mergeBase.slice(0, 8) };
+}

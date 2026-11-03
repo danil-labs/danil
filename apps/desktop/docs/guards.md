@@ -20,7 +20,9 @@ skipped. Every run names that list
 and says it is not a complete verification. It falls back to the full chain,
 and says why, when git cannot answer, when `package.json`, a lockfile,
 `verify.mjs`, `verify-scope.mjs`, `git.mjs`, `tests/helpers/` or `packages/`
-changed, or when a file has no place in the map.
+changed, or when a file has no place in the map, or when a changed source file
+is not reached by any test or guard: that run goes to the full chain instead of
+reporting a green that exercised nothing.
 
 The engine (`seldon-runtime`) is not in this repository. Guards that need to
 know what the engine registers or emits read its frozen contract:

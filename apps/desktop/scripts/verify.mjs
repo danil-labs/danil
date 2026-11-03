@@ -7,7 +7,7 @@ import { setTimeout as sleep } from "node:timers/promises";
 import { fileURLToPath } from "node:url";
 
 import { SKIPPED_EXIT_CODE, walkFiles } from "./git.mjs";
-import { changedFiles, classify, stepFiles, testReader, touches } from "./verify-scope.mjs";
+import { quickScope } from "./verify-scope.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const backend = join(root, "src-tauri");
@@ -761,40 +761,6 @@ if (undocumented.length) {
 
 const isVite = (step) => step[0].startsWith("Bundles ");
 const REQUIRES_DIST = /scripts\/guards\/(?:mount-frontend|missing-classes|theme-inversion)\.mjs$/;
-const isAlwaysQuick = ([, , args]) =>
-  !rustSteps.some((step) => step[2] === args) &&
-  args.some((arg) => /node_modules\/(?:@biomejs\/biome\/bin\/biome|typescript\/bin\/tsc)$|scripts\/icons\.mjs$|scripts\/guards\//.test(arg) && !REQUIRES_DIST.test(arg));
-
-/** El plan de `--quick`: `reason` dice por qué corre todo; `plan` es el subconjunto de pasos cuando no. */
-function quickScope() {
-  const diff = changedFiles(root, BASE);
-  if (diff.reason) return { reason: diff.reason };
-  const groups = classify(diff.files);
-  if (groups.full.length) return { reason: `touched ${groups.full.slice(0, 5).join(", ")}${groups.full.length > 5 ? "…" : ""}` };
-  const reachOf = testReader(root);
-  const rust = groups.rust.length > 0;
-  const plan = new Set(steps.filter(isAlwaysQuick));
-  const changed = [...groups.code, ...groups.tests];
-  const reached = new Set();
-  let build = false;
-  for (const step of steps) {
-    if (plan.has(step) || isVite(step) || rustSteps.includes(step) || step[2].some((arg) => REQUIRES_DIST.test(arg))) continue;
-    const files = stepFiles(step[2]);
-    if (!files.length) continue;
-    const reach = reachOf(files);
-    for (const file of reach.files) reached.add(file);
-    if (touches(reach, changed) || (step === cliStep && rust)) {
-      plan.add(step);
-      build ||= reach.needsBuild;
-    }
-  }
-  const orphan = groups.tests.find((file) => !reached.has(file.slice("apps/desktop/".length)));
-  if (orphan) return { reason: `no test reaches ${orphan}` };
-  if (build || (rust && !SKIP_RUST)) for (const step of steps.filter(isVite)) plan.add(step);
-  if (rust) for (const step of rustSteps) plan.add(step);
-  if (plan.has(cliStep)) plan.add(engineStep);
-  return { plan, count: diff.files.length, mergeBase: diff.mergeBase.slice(0, 8) };
-}
 
 const outputOf = (e) => [e?.stdout, e?.stderr].map((s) => (s ?? "").toString()).join("").trimEnd();
 
@@ -929,7 +895,7 @@ async function runInOrder(list, weight) {
 const isCargoLane = (step) => rustSteps.includes(step) && step !== engineStep;
 const isPerf = ([, , args]) => args.some((arg) => typeof arg === "string" && arg.includes("tests/perf/"));
 const firstBuild = steps.findIndex(isVite);
-const scope = QUICK ? quickScope() : {};
+const scope = QUICK ? quickScope({ root, base: BASE, steps, rustSteps, cliStep, engineStep, isVite, requiresDist: REQUIRES_DIST, skipRust: SKIP_RUST }) : {};
 const omitted = scope.plan ? steps.filter((step) => !scope.plan.has(step)) : [];
 const planned = (step) => !omitted.includes(step);
 const beforeBuild = steps.slice(0, firstBuild).filter((step) => step !== engineStep && planned(step));
