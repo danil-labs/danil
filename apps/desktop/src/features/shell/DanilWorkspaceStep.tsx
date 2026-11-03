@@ -93,11 +93,24 @@ export default function DanilWorkspaceStep() {
       <DialogContent class="max-w-[460px]" data-danil-workspace-step={choice()}>
         <DialogTitle class="m-0 text-lead font-semibold">{t("shell.danilStep.title", { workspace: name() })}</DialogTitle>
         <p class="m-0 mt-1.5 text-ui text-neutral-500">{t("shell.danilStep.hint")}</p>
-        <div class="mt-4 flex flex-col gap-2" role="radiogroup" aria-label={t("shell.danilStep.title", { workspace: name() })}>
+        <div
+          class="mt-4 flex flex-col gap-2"
+          role="radiogroup"
+          aria-label={t("shell.danilStep.title", { workspace: name() })}
+          onKeyDown={(event) => {
+            // Como un grupo de radios: las flechas cambian la opción y el foco la sigue.
+            if (!["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(event.key) || !accounts().length) return;
+            event.preventDefault();
+            const next: Choice = choice() === "upload" ? "sync" : "upload";
+            setChoice(next);
+            event.currentTarget.querySelector<HTMLElement>(next === "upload" ? "[data-danil-step-upload]" : "[data-danil-step-sync]")?.focus();
+          }}
+        >
           <button
             type="button"
             role="radio"
             aria-checked={choice() === "upload"}
+            tabIndex={choice() === "upload" ? 0 : -1}
             class={cn(OPTION, "group")}
             disabled={busy()}
             data-danil-step-upload=""
@@ -113,6 +126,7 @@ export default function DanilWorkspaceStep() {
             type="button"
             role="radio"
             aria-checked={choice() === "sync"}
+            tabIndex={choice() === "sync" ? 0 : -1}
             class={cn(OPTION, "group")}
             disabled={busy() || !accounts().length}
             data-danil-step-sync=""
