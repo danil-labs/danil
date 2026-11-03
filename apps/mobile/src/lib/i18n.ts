@@ -159,6 +159,10 @@ const es = {
   "storage.measuring": "Midiendo workspace…",
   "storage.measure": "Medir workspace",
 
+  "update.title": "Hay una versión nueva de Danil",
+  "update.reload": "Recarga ahora",
+  "update.later": "Para después",
+
   "activity.dismiss": "Cerrar aviso",
   "activity.title": "Registros de actividad",
   "activity.description": "Instalaciones, diagnósticos y mantenimiento de tus máquinas, separados de tus tareas.",
@@ -721,6 +725,10 @@ const en: Record<Key, string> = {
   "storage.incomplete": "The measurement is incomplete.",
   "storage.measuring": "Measuring workspace…",
   "storage.measure": "Measure workspace",
+
+  "update.title": "There is a new version of Danil",
+  "update.reload": "Reload now",
+  "update.later": "Later",
 
   "activity.dismiss": "Dismiss notice",
   "activity.title": "Activity logs",
