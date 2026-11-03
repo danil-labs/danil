@@ -23,17 +23,17 @@
 #     dispara otra corrida; empujar el tag `v*` a mano sí, y publicaría como
 #     latest. Se lanza desde la rama, sin tag:
 #
-#         gh workflow run publish.yml -R danil-labs/terminus --ref main -f prerelease=true
+#         gh workflow run publish.yml -R danil-labs/danil --ref main -f prerelease=true
 #
 #     Pasarla a latest después de probar la actualización es una sola orden; no
 #     se reconstruye ni se resube nada, porque `latest.json` y los nombres
 #     estables ya están en la release y apuntan a `download/v<versión>`:
 #
-#         gh release edit v<versión> -R danil-labs/terminus --prerelease=false --latest
+#         gh release edit v<versión> -R danil-labs/danil --prerelease=false --latest
 #
 #     Y se comprueba como lo hace «Comprobar que la app lo ve»:
 #
-#         curl -fsSL https://github.com/danil-labs/terminus/releases/latest/download/latest.json | jq .version
+#         curl -fsSL https://github.com/danil-labs/danil/releases/latest/download/latest.json | jq .version
 #
 #   • **danil.ai/download/** sirve `Danil-Windows-Setup.exe`, `Danil-macOS.dmg`,
 #     `Danil-macOS-Intel.dmg` y `Danil-Linux-x86_64.AppImage` redirigiendo a
@@ -74,7 +74,7 @@ on:
 
   # By hand, from a maintainer:
   #
-  #     gh workflow run publish.yml -R danil-labs/terminus --ref v<version>
+  #     gh workflow run publish.yml -R danil-labs/danil --ref v<version>
   #
   workflow_dispatch:
     inputs:
@@ -87,7 +87,7 @@ on:
       # release: `publish` arma el manifiesto y lo deja como artefacto
       # `dist-manifest`, pero no publica nada. Se lanza desde la rama del PR:
       #
-      #     gh workflow run publish.yml -R danil-labs/terminus --ref <rama> -f dry_run=true
+      #     gh workflow run publish.yml -R danil-labs/danil --ref <rama> -f dry_run=true
       #
       # **Un ensayo no firma Windows.** El plan de eSigner cobra cada firma, y un
       # ensayo gastaba las de una release para un instalador que nadie baja. Sin
@@ -156,7 +156,7 @@ jobs:
   # ¿Hay algo que publicar? Sale barato preguntarlo, y evita arrancar los runners de build.
   # ─────────────────────────────────────────────────────────────────────────────
   check:
-    if: github.repository == 'danil-labs/terminus'
+    if: github.repository == 'danil-labs/danil'
     runs-on: ubuntu-latest
     defaults:
       run:

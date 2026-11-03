@@ -79,7 +79,7 @@ try {
 
   // El manifiesto, con las notas en los dos idiomas y con la transición: sin
   // nota en inglés, `notes` cae a la de español y `notes_by_locale.en` queda vacío.
-  const base = { V: '9.9.9', GITHUB_REPOSITORY: 'danil-labs/terminus' };
+  const base = { V: '9.9.9', GITHUB_REPOSITORY: 'danil-labs/danil' };
   run(step('publish', 'verify-signature-names'), merged, base);
   run(step('publish', 'build-manifest'), merged, { ...base, NOTE_ES: 'Prueba', NOTE_EN: 'Test' });
   let manifest = JSON.parse(readFileSync(join(merged, 'release-assets/latest.json'), 'utf8'));

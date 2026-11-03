@@ -31,7 +31,7 @@ const status = (extra: Partial<WorkStatus> = {}): WorkStatus => ({
   head: "a1",
   upstream: "origin/feat/run-on-bundle",
   remoteBase: "9f",
-  remoteUrl: "https://github.com/danil-labs/terminus.git",
+  remoteUrl: "https://github.com/danil-labs/danil.git",
   ahead: 3,
   changed: 5,
   untracked: 2,

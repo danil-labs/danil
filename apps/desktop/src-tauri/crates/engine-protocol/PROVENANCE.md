@@ -102,7 +102,7 @@ destination engine (348 commands, 30 events): `work_key` (no parameters) →
 `{publicKey}` and `work_export` takes `recipientKey`; `work.error.bad_key` and
 `work.error.sealed_open_failed`.
 
-The source is `crates/engine-protocol/commands.json` in `danil-labs/seldon-host`
+The source is `crates/engine-protocol/commands.json` in `danil-labs/danil-engine`
 (here, seldon-host `c30e399` on `feat/carry-work-4-sealed`). The engine pinned in `seldon-runtime.lock` must
 announce this same hash as its `contract`; the `contract` guard
 (`scripts/guards/contract.mjs`) compares the three.
@@ -113,7 +113,7 @@ from the engine source at `fdf4dd9863a80363a0dd7b15ea21fd6b69e1f4bd`. The 24
 `summary` and `vocabulary` come from seldon-host `34ebefa`
 (`feat/gitlab-git-host`). The eleven `danil.error.*` keys come from seldon-host
 `4e21caf`; `danil.error.not_connected`, `image_too_large`,
-`unsupported_image`, `unauthorized` and `unsupported` from `cb4ae57` ([connector.md](https://github.com/danil-labs/seldon-host/blob/dev/docs/connector.md)).
+`unsupported_image`, `unauthorized` and `unsupported` from `cb4ae57` ([connector.md](https://github.com/danil-labs/danil-engine/blob/dev/docs/connector.md)).
 `settings.appearance.background.workspace_missing` comes from `1687dbf`, where
 `settings.appearance.background.too_big` also became 700 KB.
 `danil.error.account_not_found` comes from `658cad2`.

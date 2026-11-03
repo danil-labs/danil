@@ -28,7 +28,7 @@
   "homepage": "https://danil.ai/download/",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/danil-labs/terminus.git"
+    "url": "git+https://github.com/danil-labs/danil.git"
   },
   "dependencies": {}
 }

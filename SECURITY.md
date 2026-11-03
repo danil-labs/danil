@@ -5,7 +5,7 @@
 Please **do not open a public issue** for security problems.
 
 Report them privately through GitHub:
-**[Report a vulnerability](https://github.com/danil-labs/terminus/security/advisories/new)**
+**[Report a vulnerability](https://github.com/danil-labs/danil/security/advisories/new)**
 (Security tab → *Report a vulnerability*). Only the maintainers can see the
 report.
 
