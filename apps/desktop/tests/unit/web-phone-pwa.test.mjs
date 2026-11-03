@@ -112,12 +112,21 @@ function worker(source, { scope = "https://app.danil.ai/terminus/m/", windows = 
   const handlers = {};
   const shown = [];
   const opened = [];
+  // Lo que el sistema tiene en pantalla: `showNotification` reemplaza por `tag`.
+  let onScreen = [];
   const self = {
     addEventListener: (name, handler) => { handlers[name] = handler; },
     skipWaiting: () => {},
     navigator: { language: "es-MX" },
     location: new URL(scope),
-    registration: { scope, showNotification: async (title, options) => { shown.push({ title, ...options }); } },
+    registration: {
+      scope,
+      showNotification: async (title, options) => {
+        shown.push({ title, ...options });
+        onScreen = onScreen.filter((each) => each.tag !== options.tag).concat([{ title, ...options }]);
+      },
+      getNotifications: async ({ tag } = {}) => onScreen.filter((each) => !tag || each.tag === tag),
+    },
     clients: { claim: async () => {}, matchAll: async () => windows, openWindow: async (url) => { opened.push(url); } },
   };
   runInNewContext(source, { self, URL, JSON, encodeURIComponent });
@@ -137,18 +146,52 @@ test("el service worker solo muestra avisos: sin fetch ni caché", () => {
   assert.deepEqual(Object.keys(handlers).sort(), ["activate", "install", "notificationclick", "push"]);
 });
 
-test("un aviso de tarea abre esa tarea en el teléfono; el contenido no trae dirección ni texto", async () => {
+test("un aviso de tarea abre esa tarea y nombra la tarea, nunca acepta una dirección del payload", async () => {
   const sw = worker(built());
-  await sw.fire("push", pushed({ kind: "asked", computer: "cmp_1", workspace: "fqgx1w8m", folder: null, session: "t1", url: "https://evil.test/", body: "secreto" }));
+  await sw.fire("push", pushed({ kind: "asked", computer: "cmp_1", workspace: "fqgx1w8m", folder: null, session: "t1", url: "https://evil.test/", task: "  Deploy\n  de prueba  " }));
   const [notice] = sw.shown;
-  assert.equal(notice.title, "Tu tarea te preguntó algo");
-  assert.doesNotMatch(notice.body, /secreto/);
+  assert.equal(notice.title, "Deploy de prueba · Te preguntó algo");
+  assert.equal(notice.body, "Toca para abrirla.");
   assert.equal(notice.tag, "task:cmp_1:t1");
+  assert.equal(notice.renotify, true, "la primera vez que la tarea pide algo, suena");
+  assert.equal(notice.silent, false);
   const to = new URL(notice.data.url);
   assert.equal(to.origin + to.pathname, "https://app.danil.ai/terminus/m/");
   assert.equal(to.searchParams.get("to"), "/task/cmp_1/fqgx1w8m/_/t1");
   await sw.fire("notificationclick", { notification: { data: notice.data, close() {} } });
   assert.deepEqual(sw.opened, [notice.data.url]);
+});
+
+test("el nombre y el cuerpo vienen recortados, y sin texto vuelve la frase fija", async () => {
+  const sw = worker(built());
+  await sw.fire("push", pushed({ kind: "failed", computer: "cmp_1", workspace: "w", session: "t1", task: "a".repeat(400), body: "b".repeat(400) }));
+  assert.equal(sw.shown[0].title, `${"a".repeat(79)}… · Se detuvo`);
+  assert.equal(sw.shown[0].body, `${"b".repeat(159)}…`);
+  await sw.fire("push", pushed({ kind: "finished", computer: "cmp_1", workspace: "w", session: "t2", task: "   ", body: 7 }));
+  assert.equal(sw.shown[1].title, "Tu tarea terminó");
+  assert.equal(sw.shown[1].body, "Toca para abrirla.");
+});
+
+test("una tarea tiene una sola notificación: la última sustituye y no vuelve a sonar", async () => {
+  const sw = worker(built());
+  await sw.fire("push", pushed({ kind: "approving", computer: "cmp_1", workspace: "w", session: "t1", task: "Deploy" }));
+  await sw.fire("push", pushed({ kind: "finished", computer: "cmp_1", workspace: "w", session: "t1", task: "Deploy" }));
+  assert.equal(sw.shown.length, 2, "se muestra el último aviso");
+  assert.equal(sw.shown[1].tag, sw.shown[0].tag);
+  assert.equal(sw.shown[1].renotify, false, "la misma tarea no vuelve a interrumpir");
+  assert.equal(sw.shown[1].silent, true);
+  assert.equal(sw.shown[1].title, "Deploy · Terminó");
+});
+
+test("con la app a la vista no suena, y «terminó» nunca suena", async () => {
+  const seen = worker(built(), { windows: [{ visibilityState: "visible", focus: async () => {}, navigate: async () => ({}) }] });
+  await seen.fire("push", pushed({ kind: "asked", computer: "cmp_1", workspace: "w", session: "t1" }));
+  assert.equal(seen.shown[0].renotify, false);
+  assert.equal(seen.shown[0].silent, true);
+  const other = worker(built());
+  await other.fire("push", pushed({ kind: "finished", computer: "cmp_1", workspace: "w", session: "t1" }));
+  assert.equal(other.shown[0].renotify, false);
+  assert.equal(other.shown[0].silent, true);
 });
 
 test("un identificador raro abre el inicio del teléfono, no otra ruta", async () => {
