@@ -17,7 +17,7 @@ name = "app_lib"
 crate-type = ["rlib"]
 
 [build-dependencies]
-tauri-build = { version = "2.6.3", features = [] }
+tauri-build = { version = "2.7.4", features = [] }
 
 [lints.rust]
 unused_must_use = "deny"
@@ -45,20 +45,20 @@ log = "0.4"
 uuid = { version = "1", features = ["v4"] }
 # `unstable` is required for `Window::add_child`: native site webviews are
 # mounted over a tab without loosening the main window's policy.
-tauri = { version = "2.11.3", features = ["unstable", "tray-icon", "image-png"] }
+tauri = { version = "2.12.5", features = ["unstable", "tray-icon", "image-png"] }
 tauri-plugin-log = "2"
-tauri-plugin-dialog = "2.7.2"
+tauri-plugin-dialog = "2.8.4"
 # The startup notice is shown before the webview exists; same rfd as tauri-plugin-dialog.
-rfd = { version = "0.16", default-features = false, features = ["gtk3", "common-controls-v6"] }
+rfd = { version = "0.17", default-features = false, features = ["gtk3", "common-controls-v6"] }
 dirs = "6"
 # `engine.json` y el candado de arranque: raíz canónica como el CLI y huella del motor.
 dunce = "1"
 sha2 = "0.10"
-tauri-plugin-updater = "2.10.1"
-tauri-plugin-process = "2.3.1"
+tauri-plugin-updater = "2.14.1"
+tauri-plugin-process = "2.4.0"
 # Avisos del segundo plano; se lanzan desde Rust, sin paquete ni permiso en el front.
 tauri-plugin-notification = "2"
-tauri-plugin-clipboard-manager = "2.3.3"
+tauri-plugin-clipboard-manager = "2.5.0"
 ureq = { version = "3.2", features = ["json"] }
 # La sesión de persona de Atención vive en el llavero del sistema (docs/desktop-bff-session.md).
 keyring = { version = "3.6", features = ["apple-native", "windows-native", "sync-secret-service", "crypto-rust"] }
