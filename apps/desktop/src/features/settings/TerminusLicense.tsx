@@ -34,7 +34,9 @@ export function TerminusLicense(props: { onRequest: () => void; onRetry: () => v
           {t("danil.license.retry")}
         </Button>
       </div>
-      <p class="m-0 text-xs select-all text-neutral-500">{ACCESS_CONTACT}</p>
+      <a class="m-0 text-xs text-neutral-500 underline hover:text-neutral-950" href={`mailto:${ACCESS_CONTACT}`} data-license-contact="">
+        {t("danil.license.contact", { email: ACCESS_CONTACT })}
+      </a>
     </div>
   );
 }
