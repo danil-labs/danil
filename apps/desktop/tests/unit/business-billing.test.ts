@@ -129,7 +129,7 @@ test("every error code has words in Spanish and English", () => {
   }
   elegirLengua("es");
   assert.match(t("web.business.seats_error_too_many_seats"), /hola@danil\.ai/);
-  assert.equal(t("web.business.fiscal_note"), "Usamos estos datos para enviarte tu factura por correo.");
+  assert.equal(t("web.business.fiscal_use"), "Usamos estos datos para enviarte tu factura por correo.");
 });
 
 test("fiscal data: RFC shape, regime by person type, 5-digit postal code, email; normalized for billing", () => {
@@ -143,8 +143,12 @@ test("fiscal data: RFC shape, regime by person type, 5-digit postal code, email;
   assert.deepEqual(bad, { ok: false, errors: { rfc: "rfc_generic", legal_name: "legal_name", tax_system: "tax_system", cfdi_use: "cfdi_use", zip: "zip", invoice_email: "email" } });
   const mismatch = checkFiscal({ rfc: "EKU9003173C9", legal_name: "X", tax_system: "612", cfdi_use: "G03", zip: "26015", invoice_email: "a@b.mx" });
   assert.deepEqual(mismatch, { ok: false, errors: { tax_system: "regime_for_person" } });
+  for (const name of ["Mi Empresa S.A. de C.V.", "MI EMPRESA, SA DE CV", "Taller S. de R.L. de C.V.", "Despacho SC", "Fundación A.C.", "Grupo SAPI de CV"]) {
+    assert.deepEqual(checkFiscal({ rfc: "EKU9003173C9", legal_name: name, tax_system: "601", cfdi_use: "G03", zip: "26015", invoice_email: "a@b.mx" }), { ok: false, errors: { legal_name: "legal_name_society" } }, name);
+  }
+  assert.equal(checkFiscal({ rfc: "EKU9003173C9", legal_name: "CASA DE ASADOS", tax_system: "601", cfdi_use: "G03", zip: "26015", invoice_email: "a@b.mx" }).ok, true);
   elegirLengua("es");
-  for (const code of ["rfc", "rfc_generic", "legal_name", "too_long", "tax_system", "regime_for_person", "regime_for_company", "cfdi_use", "zip", "email"]) {
+  for (const code of ["rfc", "rfc_generic", "legal_name", "legal_name_society", "too_long", "tax_system", "regime_for_person", "regime_for_company", "cfdi_use", "zip", "email"]) {
     assert.notEqual(t(`web.business.fiscal_error_${code}`), `web.business.fiscal_error_${code}`);
   }
 });

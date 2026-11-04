@@ -47,6 +47,9 @@ export const regimesFor = (type: PersonType | null) => (type ? TAX_REGIMES.filte
 export type FiscalField = keyof FiscalProfile;
 export type FiscalCheck = { ok: true; value: FiscalProfile } | { ok: false; errors: Partial<Record<FiscalField, string>> };
 
+/** CFDI 4.0: la razón social va sin el régimen societario («S.A. de C.V.», «S. de R.L.»…). */
+const SOCIETY_RE = /[\s,]+(S\.?\s?A\.?P?\.?I?\.?(\s?DE\s?C\.?\s?V\.?)?|S\.?\s?DE\s?R\.?\s?L\.?(\s?DE\s?C\.?\s?V\.?)?|S\.?\s?C\.?|A\.?\s?C\.?)$/;
+
 const EMAIL_RE = /^[^\s@\x00-\x1f]+@[^\s@\x00-\x1f]+\.[^\s@\x00-\x1f]{2,}$/;
 
 /** Valida y normaliza (RFC y razón social en mayúsculas, correo en minúsculas). */
@@ -58,6 +61,7 @@ export function checkFiscal(input: FiscalProfile): FiscalCheck {
   else if (!type) errors.rfc = "rfc";
   const legal = input.legal_name.trim().toUpperCase().replace(/\s+/g, " ");
   if (!legal) errors.legal_name = "legal_name";
+  else if (SOCIETY_RE.test(legal)) errors.legal_name = "legal_name_society";
   else if (legal.length > FISCAL_MAX.legalName) errors.legal_name = "too_long";
   const regime = TAX_REGIMES.find((r) => r.code === input.tax_system);
   if (!regime) errors.tax_system = "tax_system";

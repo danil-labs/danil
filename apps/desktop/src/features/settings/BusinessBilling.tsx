@@ -180,19 +180,14 @@ function SeatsCard(props: { b: ActiveBusiness; manage: boolean; onAdd: () => voi
   const label = () => t("web.business.seats_of", { used: plain(props.b.seatsUsed), allowed: plain(props.b.seatsAllowed) });
   const full = () => seatsFull(props.b);
   return (
-    <SettingsSection
-      title={t("web.business.seats_title")}
-      description={props.b.seatAmountCents !== null
-        ? t("web.business.seats_hint_price", { included: plain(props.b.includedSeats), price: money(props.b.seatAmountCents, props.b.currency), tax: taxNote(props.b) })
-        : t("web.business.seats_hint", { included: plain(props.b.includedSeats) })}
-      data-business-seats=""
-    >
+    <SettingsSection title={t("web.business.seats_title")} data-business-seats="">
       <div class="grid gap-2 py-3">
         <div class="flex flex-wrap items-center gap-3">
           <span class="text-lg font-semibold tabular-nums" data-business-seats-used="">{label()}</span>
           <Show when={full()}><Badge tone="warning">{t("web.business.seats_full")}</Badge></Show>
         </div>
         <ProgressBar value={Math.min(props.b.seatsUsed, props.b.seatsAllowed)} max={props.b.seatsAllowed} label={label()} barClass={full() ? "bg-warning" : undefined} />
+        <span class="text-xs text-neutral-500">{t("web.business.seats_pending")}</span>
       </div>
       <Show when={props.manage} fallback={<p class="m-0 text-ui text-neutral-500">{t("web.business.seats_manage_only")}</p>}>
         <div>
@@ -256,7 +251,7 @@ export function AddSeatsDialog(props: { source: BusinessBillingSource; b: Active
           <p class="m-0 text-ui text-neutral-700">{t("web.business.seats_total_after", { count: plain(props.b.seatsAllowed + add()) })}</p>
           <Show when={add() >= max()}>
             <p class="m-0 text-xs text-neutral-500" data-business-cap="">
-              {t("web.business.cap_hint", { max: plain(props.b.maxExtraSeats) })} <SalesMail />
+              {t("web.business.cap_reached", { max: plain(props.b.maxExtraSeats) })} <SalesMail />
             </p>
           </Show>
           <Show when={!preview.loading} fallback={<Skeleton class="h-16" />}>
@@ -271,7 +266,7 @@ export function AddSeatsDialog(props: { source: BusinessBillingSource; b: Active
               )}
             </Show>
           </Show>
-          <p class="m-0 text-xs text-neutral-500">{t("web.business.card_note")}</p>
+          <p class="m-0 text-xs text-neutral-500">{t("web.business.charge_card")}</p>
           <Show when={failure()}>{(code) => <p role="alert" class="m-0 text-ui text-error-strong">{t(`web.business.seats_error_${code()}`)}</p>}</Show>
           <div class="flex justify-end gap-2">
             <Button size="sm" variant="ghost" disabled={busy()} onClick={props.onClose}>{t("web.business.cancel")}</Button>
@@ -301,7 +296,7 @@ function CreditCard(props: { source: BusinessBillingSource; b: ActiveBusiness; m
       });
   };
   return (
-    <SettingsSection title={t("web.business.credit_title")} description={t("web.business.credit_hint")} data-business-credit="">
+    <SettingsSection title={t("web.business.credit_title")} data-business-credit="">
       <Show when={props.manage} fallback={<p class="m-0 py-3 text-ui text-neutral-500">{t("web.business.credit_manage_only")}</p>}>
         <div class="flex flex-wrap items-center gap-2 py-3" role="group" aria-label={t("web.business.credit_packs")}>
           <For each={props.b.creditPacksMxn}>
@@ -317,7 +312,7 @@ function CreditCard(props: { source: BusinessBillingSource; b: ActiveBusiness; m
         </div>
       </Show>
       <Show when={failure()}>{(code) => <p role="alert" class="m-0 text-ui text-error-strong">{t(`web.business.credit_error_${code()}`)}</p>}</Show>
-      <p class="m-0 text-xs text-neutral-500">{t("web.business.credit_note")}</p>
+      <p class="m-0 text-xs text-neutral-500">{t("web.business.credit_rate")}</p>
     </SettingsSection>
   );
 }
@@ -332,7 +327,7 @@ function FiscalPart(props: { source: BusinessBillingSource; account: number; man
   const [editing, setEditing] = createSignal(false);
   const [saved, setSaved] = createSignal(false);
   return (
-    <SettingsSection title={t("web.business.fiscal_title")} description={t("web.business.fiscal_note")} data-business-fiscal="">
+    <SettingsSection title={t("web.business.fiscal_title")} description={t("web.business.fiscal_use")} data-business-fiscal="">
       <Show when={!stored.loading} fallback={<Loading />}>
         <Show when={!stored.error} fallback={<p role="alert" class="m-0 py-3 text-ui text-error-strong">{t("web.business.fiscal_load_failed")}</p>}>
           <Show when={saved()}><p role="status" class="m-0 pt-3 text-ui" data-business-fiscal-saved="">{t("web.business.fiscal_saved")}</p></Show>
@@ -381,12 +376,12 @@ function FiscalRow(props: { label: string; value: string | null }) {
   return <SettingsRow label={props.label}><span class="text-ui font-medium">{props.value || "—"}</span></SettingsRow>;
 }
 
-function Field(props: { id: string; label: string; hint?: string; error?: string; children: JSX.Element }) {
+function Field(props: { id: string; label: string; error?: string; children: JSX.Element }) {
   return (
     <div class="grid min-w-0 content-start gap-1">
       <label for={props.id} class="text-ui font-medium">{props.label}</label>
       {props.children}
-      <Show when={props.error} fallback={<Show when={props.hint}><span class="text-xs text-neutral-500">{props.hint}</span></Show>}>
+      <Show when={props.error}>
         <span id={`${props.id}-error`} class="text-xs text-error-strong" data-business-field-error={props.id}>{t(`web.business.fiscal_error_${props.error}`)}</span>
       </Show>
     </div>
@@ -435,14 +430,14 @@ function FiscalForm(props: { source: BusinessBillingSource; account: number; ini
   return (
     <form class="grid gap-3 pt-3" noValidate onSubmit={submit} data-business-fiscal-form="">
       <div class="grid gap-3 sm:grid-cols-2">
-        <Field id="fiscal-rfc" label={t("web.business.fiscal_rfc")} hint={t("web.business.fiscal_rfc_hint")} error={errors().rfc}>
+        <Field id="fiscal-rfc" label={t("web.business.fiscal_rfc")} error={errors().rfc}>
           <Input {...input("rfc")} autocomplete="off" maxLength={16} onInput={(e) => set("rfc", e.currentTarget.value.toUpperCase())} />
         </Field>
-        <Field id="fiscal-zip" label={t("web.business.fiscal_zip")} hint={t("web.business.fiscal_zip_hint")} error={errors().zip}>
+        <Field id="fiscal-zip" label={t("web.business.fiscal_zip")} error={errors().zip}>
           <Input {...input("zip")} inputMode="numeric" maxLength={5} onInput={(e) => { const digits = e.currentTarget.value.replace(/\D/g, ""); e.currentTarget.value = digits; set("zip", digits); }} />
         </Field>
       </div>
-      <Field id="fiscal-legal_name" label={t("web.business.fiscal_legal_name")} hint={t("web.business.fiscal_legal_name_hint")} error={errors().legal_name}>
+      <Field id="fiscal-legal_name" label={t("web.business.fiscal_legal_name")} error={errors().legal_name}>
         <Input {...input("legal_name")} onInput={(e) => set("legal_name", e.currentTarget.value)} />
       </Field>
       <Field id="fiscal-tax_system" label={t("web.business.fiscal_tax_system")} error={errors().tax_system}>
