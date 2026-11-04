@@ -33,8 +33,10 @@ export const HEADER_HEIGHT = "h-[30px]";
 // La fila entera, con su altura fija: aunque la ubicación todavía no cargue, el
 // hueco ya está y el primer mensaje no sube debajo de las herramientas.
 export const LOCATION_BAR = "h-[38px]";
-export const BELOW_LOCATION = "pt-[38px]";
-export const BELOW_LOCATION_MARGIN = "mt-[38px]";
+// El panel lateral (archivos, consumo, agentes) deja 10 px más bajo la fila: si
+// empieza justo en 38 px, su borde toca los botones y el contador de agentes.
+export const BELOW_LOCATION = "pt-[48px]";
+export const BELOW_LOCATION_MARGIN = "mt-[48px]";
 
 export const needsTrafficLightPadding = (
   ownsCorner: () => boolean,

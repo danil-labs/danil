@@ -21,6 +21,7 @@ import type { TaskFiles } from "../../lib/taskFiles";
 import { machineOf } from "../machines/store";
 import type { Cambios } from "./Changes";
 import Codigo from "./Code";
+import KnIntegrate from "./KnIntegrate";
 import VistaPreviaDeTarea from "./TaskPreview";
 import VisorDeArchivo from "./FileViewer";
 import { IconoDeArchivo } from "./FileIcon";
@@ -50,6 +51,8 @@ export default function TaskFilesCard(props: {
   onRemoved: (session: string, tree: string, path: string) => void;
 }) {
   const key = () => props.panelKey ?? props.session;
+  // Guardar va junto a las pestañas y no en el buscador, que así se lee entero.
+  const [porGuardar, setPorGuardar] = createSignal<number | null>(0);
   const panel = () => props.files.panel(key());
   const hasTabs = () => panel().tabs.length > 0;
   const expanded = () => panel().expanded || (props.expandedOnly && hasTabs());
@@ -250,6 +253,11 @@ export default function TaskFilesCard(props: {
                 {side === "files" ? t("code.panel.side.files") : t("code.panel.side.changes")}
               </button>
             )}</For>
+            <Show when={porGuardar() !== 0 && !props.preview}>
+              <div class="relative z-10 ml-auto flex shrink-0 items-center self-center pl-1">
+                <KnIntegrate project={props.project} session={props.session} changed={porGuardar()} corto />
+              </div>
+            </Show>
             <Show when={!showViewer()}>{tools()}</Show>
           </div>
           <div class="min-h-0 flex-1" classList={{ hidden: panel().side !== "files" }}>
@@ -258,7 +266,7 @@ export default function TaskFilesCard(props: {
             <Codigo project={props.project} session={props.session} visible={props.visible && panel().side === "files"}
               onAbrir={(tree, path, changed) => open(tree, path, false, false, changed)}
               onAbrirFijo={(tree, path, changed) => open(tree, path, false, true, changed)}
-              onMovido={props.onMoved} onBorrado={props.onRemoved} />}>
+              onMovido={props.onMoved} onBorrado={props.onRemoved} onPorGuardar={setPorGuardar} />}>
               {(preview) => <VistaPreviaDeTarea project={props.project} baseRef={preview().baseRef} visible={props.visible}
                 onAbrir={(tree, path) => open(tree, path, false, false, false)} />}
             </Show>
