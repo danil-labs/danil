@@ -13,7 +13,8 @@ the catalog); the rest are development tools run by hand (`engine.mjs`,
   before the build, the vite builds, after the build with cargo beside it, and
   `tests/perf` alone.
 - `verify.mjs --quick` picks the tests of a change with `verify-scope.mjs`, which
-  follows imports from each test; what it cannot place runs the full chain.
+  follows imports from each test; what it cannot place stops without a green
+  and names the full chain to run.
   The rules are in [docs/guards.md](../docs/guards.md). It never replaces the
   full chain before a merge.
 - Every `.mjs` guard has a row in the catalog, and every `tests/unit/*.test.*`

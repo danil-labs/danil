@@ -17,10 +17,18 @@ change does not select the tests that mount `dist/`, `mount-frontend`,
 `missing-classes`, `theme-inversion`, `bundle-size` or the perf ceilings unless they also import the
 changed file: they depend on the whole front and appear in the list of what was
 skipped. Every run names that list
-and says it is not a complete verification. It falls back to the full chain,
-and says why, when git cannot answer, when `package.json`, a lockfile,
-`verify.mjs`, `verify-scope.mjs`, `git.mjs`, `tests/helpers/` or `packages/`
-changed, or when a file has no place in the map.
+and says it is not a complete verification. It cannot narrow the change when
+git cannot answer, when `package.json`, a lockfile, `verify.mjs`,
+`verify-scope.mjs`, `git.mjs`, `tests/helpers/` or `packages/` changed, when a
+file has no place in the map, or when a changed source file is not reached by
+any test or guard. Then it runs nothing, says why, exits with 1 and names the
+next command: `pnpm verify --remote --detach` on Linux, `pnpm verify` on macOS
+and Windows, because the queue only checks Linux. It never runs the full chain
+on the machine by itself and never reports a green that exercised nothing.
+
+The steps of the local chain, and the checks of the `pre-push` hook, run at
+niceness 10 (`scripts/priority.mjs`) so they do not take CPU from the engine. If
+the system refuses the change, they run at the priority they have.
 
 The engine (`seldon-runtime`) is not in this repository. Guards that need to
 know what the engine registers or emits read its frozen contract:
