@@ -15,7 +15,7 @@ import { Spinner } from "../../ui/Spinner";
 import { createDanilSession } from "../settings/danil-session";
 import { defaultSession, readSessions, sessionKey, setWorkspaceAccount, changeProblem } from "../settings/danil-sessions";
 import { linkProblem } from "../settings/workspace-link";
-import { startTrialInBrowser, TerminusLicense } from "../settings/TerminusLicense";
+import { requestAccessInBrowser, TerminusLicense } from "../settings/TerminusLicense";
 import { rememberAccountWelcome } from "./account-welcome";
 import { adoptDanilWorkspace, isTaken, pickWelcomeWorkspace } from "./welcome-workspace";
 import { crearWorkspace } from "./onboarding-store";
@@ -252,7 +252,7 @@ export default function ConnectAccount(props: { onListo: (result: ConnectAccount
         </Show>
 
         <Show when={session.license() && step() !== "pick"}>
-          <TerminusLicense onStart={startTrialInBrowser} onRetry={() => void session.retry()} busy={session.busy()} compact />
+          <TerminusLicense onRequest={requestAccessInBrowser} onRetry={() => void session.retry()} busy={session.busy()} compact />
         </Show>
         <Show when={signInMessage()}>
           {(m) => (
