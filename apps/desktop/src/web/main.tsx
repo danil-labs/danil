@@ -543,7 +543,7 @@ async function start(settings: WebSettings) {
 
   /** A refusal found after mounting covers the app: retrying the socket would not change it. */
   let blocked = false;
-  const block = (initial: { t: "license" } | { t: "no_account" } | { t: "not_yours" }) => {
+  const block = (initial: { t: "access_required" } | { t: "license" } | { t: "no_account" } | { t: "not_yours" }) => {
     if (blocked) return;
     blocked = true;
     const layer = document.createElement("div");
@@ -566,7 +566,8 @@ async function start(settings: WebSettings) {
             { endpoint, supabaseUrl: settings.supabaseUrl, supabaseKey: settings.supabaseKey, userId: current.user_id, refresh: () => session.unauthorized(), getToken: () => session.getToken(), onUnauthorized: () => void session.unauthorized(), subscribe: clear => session.watch(current.user_id, clear) },
             (computerId) => async () => {
               const answer = await computersOf(endpoint, session);
-              if (answer.kind === "license" || answer.kind === "no_account") block({ t: answer.kind });
+              if (answer.kind === "error" && answer.status === 403 && answer.code === "access_required") block({ t: "access_required" });
+              else if (answer.kind === "license" || answer.kind === "no_account") block({ t: answer.kind });
               // One computer gone from several only stops its own session.
               else if (answer.kind === "ok" && !answer.value.some((c) => c.computer_id === computerId)) {
                 if (!several) block({ t: "not_yours" });

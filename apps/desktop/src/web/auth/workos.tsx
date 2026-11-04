@@ -1,10 +1,11 @@
 import { createSignal, onMount, Show } from "solid-js";
 import { t } from "../../lib/i18n";
 import { Button } from "../../ui/Button";
+import { AccessRequest } from "./AccessRequest";
 import { workosSession } from "../workos-session";
 
 /** Codes the entry Worker sends back in `?error=`; any other shows the generic one. */
-const ERRORS = new Set(["callback_failed", "email_not_verified", "unknown_person", "no_login_yet", "login_banned", "identity_unavailable"]);
+const ERRORS = new Set(["callback_failed", "email_not_verified", "unknown_person", "no_login_yet", "login_banned", "identity_unavailable", "access_required"]);
 
 /**
  * Sign-in with WorkOS (AuthKit): every method goes through the entry Worker,
@@ -44,6 +45,7 @@ export function WorkosAuthPage(props: { base: string; next: string; error: strin
         </div>
         <Button class="min-h-11" disabled={busy()} onClick={go}>{t("web.auth.workos_email")}</Button>
         <p class="m-0 text-sm text-neutral-500">{t("web.auth.workos_password_hint")}</p>
+        <AccessRequest />
         <Show when={busy()}><p class="m-0 text-sm text-neutral-500" role="status">{t("web.auth.waiting")}</p></Show>
         <Show when={error()}><p class="m-0 text-sm text-error-strong" role="alert">{t(`web.auth.${error()}`)}</p></Show>
       </div>

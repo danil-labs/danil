@@ -124,3 +124,31 @@ test("without a license the gate offers the trial and opens the app once it is a
     globalThis.fetch = own;
   }
 });
+
+
+test("only an explicit access refusal offers request access, without replacing license or permission errors", async () => {
+  const own = globalThis.fetch;
+  for (const [index, [status, error, view]] of [
+    [403, { code: "access_required" }, "access_required"],
+    [403, "access_required", "access_required"],
+    [403, { code: "license_required" }, "license"],
+    [403, { code: "permission_denied" }, "error"],
+    [500, { code: "access_required" }, "error"],
+  ].entries()) {
+    globalThis.fetch = async (input, init) => String(input?.url ?? input).startsWith(API)
+      ? new Response(JSON.stringify({ error }), { status }) : own(input, init);
+    let w;
+    try {
+      const app = await boot("listo", `web-gate-access-${index}`, {}, undefined, { "sb-supabase-auth-token": session("stored") }, {
+        web: true, beforeImport: win => { w = win; win.terminusWeb = { supabaseUrl: SUPABASE, supabaseKey: "public-anon-key" }; },
+      });
+      await sleep(800);
+      const gate = w.document.querySelector("[data-web-gate]");
+      assert.equal(gate?.dataset.webGate, view);
+      const request = gate?.querySelector('[data-access-request] a[href^="mailto:"]');
+      assert.equal(!!request, view === "access_required");
+      if (request) assert.ok(request.href.startsWith("mailto:hola@danil.ai?subject="));
+      assert.deepEqual(app.failures, []);
+    } finally { globalThis.fetch = own; }
+  }
+});

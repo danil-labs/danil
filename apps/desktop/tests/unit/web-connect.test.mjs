@@ -105,6 +105,7 @@ const lookup = (r, approve) => {
 test("approving without a license or on a used code says why", async () => {
   for (const [approve, view] of [
     [{ status: 403, body: { error: "license_required" } }, "license"],
+    [{ status: 403, body: { error: { code: "access_required" } } }, "access_required"],
     [{ status: 409, body: { error: "code_already_used" } }, "used"],
   ]) {
     const { w, restore } = await page("/terminus/connect?code=BCDF-GHJK", (r) => lookup(r, approve));
@@ -113,6 +114,10 @@ test("approving without a license or on a used code says why", async () => {
       root().querySelector("form").dispatchEvent(new w.Event("submit", { bubbles: true, cancelable: true }));
       await sleep(300);
       assert.equal(root()?.dataset.webConnect, view);
+      if (view === "access_required") {
+        assert.equal(root().querySelector("[data-terminus-license]"), null);
+        assert.equal(root().querySelector("[data-access-request] a").textContent.trim(), "Solicitar acceso");
+      }
       if (view === "license") {
         const text = root().textContent;
         assert.ok(text.includes("Activa Danil") && text.includes("99 MXN al mes con IVA incluido"), text);

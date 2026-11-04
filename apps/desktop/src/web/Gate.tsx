@@ -8,9 +8,10 @@ import { type Answer, type Computer, listComputers } from "./computers";
 import type { WebAccountsSource } from "../lib/platform";
 import type { Session } from "./session";
 import { BrowserAccount } from "./BrowserAccount";
+import { AccessRequest } from "./auth/AccessRequest";
 
 /** What stands between the page and the app: the session, the license, having a computer and a workspace linked to the account. */
-export type GateView = { t: "waiting" } | { t: "license" } | { t: "no_account" } | { t: "not_yours" } | { t: "none" } | { t: "no_workspaces" } | { t: "error" };
+export type GateView = { t: "waiting" } | { t: "license" } | { t: "access_required" } | { t: "no_account" } | { t: "not_yours" } | { t: "none" } | { t: "no_workspaces" } | { t: "error" };
 
 /** The list with a token the API accepts: a refused token is refreshed once. */
 export async function computersOf(endpoint: string, session: Session): Promise<Answer<Computer[]>> {
@@ -38,6 +39,7 @@ export function Gate(props: { session: Session; endpoint: string; initial?: Gate
     const answer = await computersOf(props.endpoint, props.session).catch((): Answer<Computer[]> => ({ kind: "unauthorized" }));
     if (answer.kind === "unauthorized") return;
     if (answer.kind === "license" || answer.kind === "no_account") return setView({ t: answer.kind });
+    if (answer.kind === "error" && answer.status === 403 && answer.code === "access_required") return setView({ t: "access_required" });
     if (answer.kind !== "ok") return setView({ t: "error" });
     const computers = answer.value;
     const asked = new URLSearchParams(window.location.search).get("computer");
@@ -86,6 +88,10 @@ export function Gate(props: { session: Session; endpoint: string; initial?: Gate
         </Match>
         <Match when={view().t === "license"}>
           <TerminusLicense onStart={startTrialInPage} onRetry={retryLicense} />
+        </Match>
+        <Match when={view().t === "access_required"}>
+          {message(t("web.auth.access_required"))}
+          <div class="mt-6 max-w-sm"><AccessRequest /></div>
         </Match>
         <Match when={view().t === "no_account"}>{message(t("web.computers.no_account"), retry())}</Match>
         <Match when={view().t === "not_yours"}>{message(t("web.computers.not_yours"))}</Match>

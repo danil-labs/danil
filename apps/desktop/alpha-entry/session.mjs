@@ -1,7 +1,7 @@
 /**
  * WorkOS sign-in for alfa. The browser never holds a WorkOS or refresh token:
- * at the callback the Worker resolves the person (`resolve_login`) and opens a
- * real Supabase session for `users.uuid`; the cookie keeps the WorkOS session
+ * at the callback a service-role RPC resolves an approved existing person. A
+ * real Supabase session opens for `users.uuid`; the cookie keeps the WorkOS session
  * id and that refresh token, sealed. Each POST to `/auth/session`
  * checks the WorkOS session and refreshes in GoTrue, so bans, the hook and RLS
  * stay those of app.danil.ai. Any failure denies; there is no fallback.
@@ -189,8 +189,8 @@ async function checkSession(config, userId, sessionId) {
 }
 
 /**
- * WorkOS user → Danil person with a Supabase login. Only the callback calls
- * it: `resolve_login` writes (links logins, may create a person).
+ * Only this service-role RPC may link a login: it resolves an approved existing
+ * person atomically and never creates one. Missing RPC fails closed.
  */
 async function resolvePerson(config, workosUserId) {
   const user = await workos(config, `/user_management/users/${encodeURIComponent(workosUserId)}`);
@@ -198,8 +198,8 @@ async function resolvePerson(config, workosUserId) {
   if (user.id !== workosUserId || !email) throw unavailable();
   if (user.email_verified !== true) throw new Denied("email_not_verified", 403);
   const name = [user.first_name, user.last_name].filter(v => typeof v === "string" && v.trim()).join(" ").trim() || null;
-  const personId = await rpc(config, "resolve_login", { p_provider: "workos", p_subject: workosUserId, p_email: email, p_email_verified: user.email_verified === true, p_name: name });
-  if (!Number.isSafeInteger(personId) || personId < 1) throw new Denied("unknown_person", 403);
+  const personId = await rpc(config, "resolve_existing_terminus_login", { p_provider: "workos", p_subject: workosUserId, p_email: email, p_email_verified: user.email_verified === true, p_name: name });
+  if (!Number.isSafeInteger(personId) || personId < 1) throw new Denied("access_required", 403);
   const rows = await supabase(config, `/rest/v1/users?id=eq.${personId}&select=id,uuid,merged_into_user_id&limit=1`);
   const row = Array.isArray(rows) ? rows[0] : null;
   if (!row || row.id !== personId || row.merged_into_user_id != null) throw new Denied("unknown_person", 403);
@@ -208,6 +208,16 @@ async function resolvePerson(config, workosUserId) {
   if (login?.id !== row.uuid || typeof login.email !== "string" || !login.email) throw new Denied("no_login_yet", 403);
   if ((login.banned_until && Date.parse(login.banned_until) > Date.now()) || login.deleted_at) throw new Denied("login_banned", 403);
   return { uuid: row.uuid, loginEmail: login.email };
+}
+
+/** The sealed cookie carries a login UUID; eligibility is read again before every token. */
+async function requireTerminusAccess(config, uuid) {
+  const rows = await supabase(config, `/rest/v1/users?uuid=eq.${uuid}&select=id,uuid,merged_into_user_id&limit=1`);
+  const person = Array.isArray(rows) ? rows[0] : null;
+  if (!person || person.uuid !== uuid || !Number.isSafeInteger(person.id) || person.id < 1 || person.merged_into_user_id != null) throw new Denied("access_required", 403);
+  const allowed = await rpc(config, "user_can_access_terminus", { p_user: person.id });
+  if (allowed === false) throw new Denied("access_required", 403);
+  if (allowed !== true) throw unavailable();
 }
 
 /** GoTrue's answer as the page gets it; the refresh token stays in the cookie. */
@@ -249,7 +259,7 @@ async function start(config, url) {
   const authorize = new URL(`${WORKOS_API}/user_management/authorize`);
   for (const [key, value] of Object.entries({
     client_id: config.clientId, redirect_uri: `${url.origin}/auth/workos/callback`, response_type: "code",
-    provider, state, code_challenge: challenge, code_challenge_method: "S256",
+    provider, screen_hint: "sign-in", state, code_challenge: challenge, code_challenge_method: "S256",
   })) authorize.searchParams.set(key, value);
   const response = new Response(null, { status: 303, headers: { ...NO_STORE, Location: authorize.href, "Set-Cookie": setCookie(FLOW_COOKIE, flow, FLOW_SECONDS) } });
   response.headers.append("Set-Cookie", setCookie(SIGNED_OUT_COOKIE, "", 0));
@@ -264,12 +274,13 @@ function equal(a, b) {
 }
 
 async function callback(config, request, url) {
+  let flow;
   const back = (error) => {
     const page = new URL("/auth", url.origin);
     page.searchParams.set("error", error);
+    if (flow) page.searchParams.set("next", safeNext(flow.next));
     return new Response(null, { status: 303, headers: { ...NO_STORE, Location: page.href, "Set-Cookie": setCookie(FLOW_COOKIE, "", 0) } });
   };
-  let flow;
   try {
     flow = await open(config.env, FLOW_COOKIE, readCookie(request, FLOW_COOKIE));
   } catch {
@@ -314,12 +325,13 @@ async function issue(config, request) {
     const session = await open(config.env, SESSION_COOKIE, readCookie(request, SESSION_COOKIE));
     if (!ID_RE.test(session.user ?? "") || !ID_RE.test(session.sid ?? "") || !UUID_RE.test(session.uuid ?? "") || typeof session.refresh !== "string") throw new Denied("no_session");
     await checkSession(config, session.user, session.sid);
+    await requireTerminusAccess(config, session.uuid);
     const renewed = await refreshSupabaseSession(config, session.refresh, session.uuid);
     const sealed = await seal(config.env, SESSION_COOKIE, { ...session, refresh: renewed.refresh });
     return json(renewed.answer, 200, { "Set-Cookie": setCookie(SESSION_COOKIE, sealed, Math.max(0, session.exp - now())) });
   } catch (error) {
     const response = failure(error);
-    if (error instanceof Denied && error.status === 401) response.headers.set("Set-Cookie", setCookie(SESSION_COOKIE, "", 0));
+    if (error instanceof Denied && (error.status === 401 || error.status === 403)) response.headers.set("Set-Cookie", setCookie(SESSION_COOKIE, "", 0));
     return response;
   }
 }
@@ -493,6 +505,7 @@ async function desktopExchange(config, request) {
   const challenge = b64url(await crypto.subtle.digest("SHA-256", encoder.encode(body.verifier)));
   if (!equal(challenge, code.challenge)) throw new Denied("invalid_code");
   await checkSession(config, code.user, code.sid);
+  await requireTerminusAccess(config, code.uuid);
   // A NEW GoTrue session for the window, opened only by whoever holds the verifier.
   const login = await loginOf(config, code.uuid);
   const opened = await openSupabaseSession(config, { uuid: code.uuid, loginEmail: login.email });
@@ -505,6 +518,8 @@ async function desktopRefresh(config, request) {
   const value = await open(config.env, DESKTOP_SESSION, body.session);
   if (!validDesktop(value)) throw new Denied("no_session");
   await checkSession(config, value.user, value.sid);
+  // Like the browser's cookie, the window's session reads the grant again before every token.
+  await requireTerminusAccess(config, value.uuid);
   return desktopAnswer(config, value);
 }
 

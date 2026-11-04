@@ -38,31 +38,18 @@ function fill(w, name, value) {
 const click = (w, text) => [...w.document.querySelectorAll("button")].find((button) => button.textContent.trim() === text).click();
 const submit = (w) => w.document.querySelector("form").dispatchEvent(new w.Event("submit", { bubbles: true, cancelable: true }));
 
-test("registration waits for email confirmation and resends with the device return inside the link", async () => {
-  const next = "/terminus/connect?code=ABCD-EFGH";
-  const { app, w, requests, restore } = await page(`/terminus/auth?next=${encodeURIComponent(next)}`, () => ({ status: 200, body: { user: { id: "new-user", identities: [] }, session: null } }));
+test("new people can request access by email without a signup request", async () => {
+  const { app, w, requests, restore } = await page("/terminus/auth?next=%2Fterminus%2Fconnect%3Fcode%3DABCD-EFGH", () => ({ status: 500, body: {} }));
   try {
-    click(w, "¿No tienes cuenta? Crea una");
-    fill(w, "email", "persona@example.com");
-    fill(w, "password", "long-test-password");
-    submit(w);
-    await sleep(200);
-    assert.equal(w.document.querySelector("[data-web-auth]")?.dataset.webAuth, "confirmation");
-    assert.equal(w.document.activeElement?.tagName, "H2", "confirmation takes keyboard focus");
-    const signup = requests[0];
-    assert.equal(new URL(signup.url).pathname, "/auth/v1/signup");
-    const callback = new URL(new URL(signup.url).searchParams.get("redirect_to"));
-    assert.equal(callback.pathname, "/terminus/auth");
-    assert.equal(callback.searchParams.get("next"), next);
-    assert.equal(signup.body.email, "persona@example.com");
-    assert.equal(signup.body.data?.account_name, undefined, "the client does not invent an organization");
-    assert.equal(w.localStorage.getItem("sb-supabase-auth-token"), null, "unconfirmed signup grants no session");
-    click(w, "Reenviar correo");
-    await sleep(200);
-    assert.equal(new URL(requests[1].url).pathname, "/auth/v1/resend");
-    assert.equal(new URL(requests[1].url).searchParams.get("redirect_to"), callback.toString());
-    assert.equal(requests[1].body.type, "signup");
-    assert.ok(!w.document.querySelector("[data-web-gate]"));
+    const link = w.document.querySelector('[data-access-request] a');
+    assert.equal(link.textContent.trim(), "Solicitar acceso");
+    const mail = new URL(link.href);
+    assert.equal(mail.protocol, "mailto:");
+    assert.equal(mail.pathname, "hola@danil.ai");
+    assert.equal(mail.searchParams.get("subject"), "Solicitar acceso a Danil");
+    assert.match(w.document.querySelector('[data-access-request]').textContent, /hola@danil.ai/);
+    assert.equal(w.document.querySelector('[autocomplete="new-password"]'), null);
+    assert.equal(requests.length, 0);
     assert.deepEqual(app.failures, []);
   } finally { restore(); }
 });
@@ -114,20 +101,21 @@ test("email confirmation in a fresh tab stores the identity in the shared Danil 
   } finally { restore(); }
 });
 
-test("resending confirmation respects the server rate limit and keeps a retry available", async () => {
-  const { w, requests, restore } = await page("/terminus/auth", (request) => new URL(request.url).pathname.endsWith("/signup")
-    ? { status: 200, body: { user: { id: "new-user", identities: [] }, session: null } }
+test("existing unconfirmed accounts can resend confirmation and respect the rate limit", async () => {
+  const { w, requests, restore } = await page("/terminus/auth", (request) => new URL(request.url).pathname.endsWith("/token")
+    ? { status: 400, body: { code: "email_not_confirmed", msg: "Email not confirmed" } }
     : { status: 429, body: { code: "over_email_send_rate_limit", msg: "Rate limit" } });
   try {
-    click(w, "¿No tienes cuenta? Crea una");
     fill(w, "email", "persona@example.com");
     fill(w, "password", "long-test-password");
     submit(w);
     await sleep(200);
+    assert.equal(w.document.querySelector('[data-web-auth]').dataset.webAuth, "confirmation");
     click(w, "Reenviar correo");
     await sleep(200);
     assert.match(w.document.querySelector('[role="alert"]')?.textContent, /demasiados intentos/);
     assert.equal(requests.length, 2);
+    assert.equal(new URL(requests[1].url).pathname, "/auth/v1/resend");
     assert.equal([...w.document.querySelectorAll("button")].find((button) => button.textContent.trim() === "Reenviar correo").disabled, false);
   } finally { restore(); }
 });
