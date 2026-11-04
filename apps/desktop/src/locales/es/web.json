@@ -451,5 +451,12 @@
   "web.admin.policy_no_proposals": "No hay propuestas abiertas.",
   "web.service.not_entered": "No se pudo entrar a este workspace. Vuelve a intentarlo.",
   "web.admin.usage_desktop_only": "El consumo de IA y la bitácora del Harness se leen en la app de escritorio, con la sesión de Danil Teams de este workspace. Esta página no recibe esa sesión.",
-  "web.admin.harness": "Consumo y actividad"
+  "web.admin.harness": "Consumo y actividad",
+  "web.download.tab": "Descarga la app",
+  "web.download.title": "Descarga la app de escritorio",
+  "web.download.action": "Descargar",
+  "web.download.all": "Ver todas las descargas",
+  "web.download.platform.macos": "macOS",
+  "web.download.platform.windows": "Windows",
+  "web.download.platform.linux": "Linux"
 }

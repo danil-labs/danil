@@ -66,6 +66,8 @@ export type Capabilities = {
   wsl?: boolean;
   /** Radiant en Configuración y su gobierno en las pantallas; la web no lo ofrece. */
   radiant?: boolean;
+  /** «Descarga la app» en Configuración: solo la web; la ventana ya es la app. */
+  appDownloads?: boolean;
   /** Iniciar sesión en Danil desde Configuración: la web ya entra con esa cuenta. */
   danilAccount?: boolean;
   /** La persona de la cuenta de Danil leída sin el motor (la web, con su sesión): pie y Configuración. */
