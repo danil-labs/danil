@@ -268,14 +268,16 @@ export default function WorkspaceAccount(props: { workspace: string; name: strin
             <span class={cn("size-2 shrink-0 rounded-full", cloud() ? "bg-success-strong" : "bg-neutral-500")} aria-hidden="true" />
             {cloud() ? t("danil.workspace.cloud.synced", { name: cloud()?.name || t("shell.directory.unnamed") }) : t("danil.workspace.cloud.local")}
           </span>
-          <p class="m-0 text-neutral-500">
-            {/* El nombre de la nube manda al sincronizar; si aún difieren, se dice. */}
-            {!cloud()
-              ? t("danil.workspace.cloud.local_hint")
-              : cloud()?.name && cloud()?.name !== props.name
-                ? t("danil.workspace.cloud.other_name", { local: props.name, cloud: cloud()?.name ?? "" })
-                : t("danil.workspace.cloud.synced_hint", { email: accounts.of()?.email || "" })}
-          </p>
+          <Show when={cloud()}>
+            {(entry) => (
+              <p class="m-0 text-neutral-500">
+                {/* El nombre de la nube manda al sincronizar; si aún difieren, se dice. */}
+                {entry().name && entry().name !== props.name
+                  ? t("danil.workspace.cloud.other_name", { local: props.name, cloud: entry().name })
+                  : lineText()}
+              </p>
+            )}
+          </Show>
         </Show>
         <Show when={cloud() === null}>
           <div class="mt-1 flex flex-wrap items-center gap-2">

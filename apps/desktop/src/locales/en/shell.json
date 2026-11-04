@@ -435,7 +435,6 @@
   "shell.directory.createExists": "You already have your own workspace in the cloud. Sync this one with it.",
   "shell.directory.createExistsTaken": "You already have your own workspace in the cloud, and it is on another machine.",
   "shell.directory.createFailed": "Could not upload the workspace. Try again.",
-  "shell.danilStep.hint": "So you can use it with your agents and see all of it on the web, from any machine.",
   "shell.danilStep.upload": "Upload this workspace",
   "shell.danilStep.uploadHint": "It’s created in the cloud as “{workspace}”.",
   "shell.danilStep.sync": "Sync with an existing one",

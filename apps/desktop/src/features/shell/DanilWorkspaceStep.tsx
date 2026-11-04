@@ -91,7 +91,6 @@ export default function DanilWorkspaceStep() {
     <Dialog open={open()} onOpenChange={(next) => !next && setOpen(false)}>
       <DialogContent class="max-w-[460px]" data-danil-workspace-step={choice()}>
         <DialogTitle class="m-0 text-lead font-semibold">{t("shell.danilStep.title", { workspace: name() })}</DialogTitle>
-        <p class="m-0 mt-1.5 text-ui text-neutral-500">{t("shell.danilStep.hint")}</p>
         <div
           class="mt-4 flex flex-col gap-2"
           role="radiogroup"

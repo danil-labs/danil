@@ -435,7 +435,6 @@
   "shell.directory.createExists": "Ya tienes un workspace propio en la nube. Sincroniza este con ese.",
   "shell.directory.createExistsTaken": "Ya tienes un workspace propio en la nube y está en otra máquina.",
   "shell.directory.createFailed": "No se pudo subir el workspace. Inténtalo de nuevo.",
-  "shell.danilStep.hint": "Así lo usas con tus agentes y lo ves completo en la web, desde cualquier máquina.",
   "shell.danilStep.upload": "Subir este workspace",
   "shell.danilStep.uploadHint": "Se crea en la nube con el nombre «{workspace}».",
   "shell.danilStep.sync": "Sincronizar con uno existente",
