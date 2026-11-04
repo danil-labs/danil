@@ -293,11 +293,11 @@
   /* Todo lo que se repite cambia en múltiplos de 1/12 s y se ancla al reloj
      común (`lib/sharedClock.ts`): un loader o cuarenta repintan la ventana en
      los mismos 12 cuadros por segundo. El giro es la excepción: por pasos se
-     leía como un loader trabado. Es continuo y solo mueve `transform`, que el
-     compositor anima sin pasar por el hilo principal, y el reloj común deja a
-     todos en la misma fase. Un solo loader, `ui/Spinner.tsx`, y dos giros: el
-     normal y el lento del anillo de la tarea que el motor aún registra.
-     `pulse` pisa el de Tailwind, que es continuo. */
+     leía como un loader trabado. En Chromium es continuo y solo mueve
+     `transform`, que el compositor anima sin el hilo principal; en WebKit va
+     por pasos más finos (abajo). Un solo loader, `ui/Spinner.tsx`, y dos
+     giros: el normal y el lento del anillo de la tarea que el motor aún
+     registra. `pulse` pisa el de Tailwind, que es continuo. */
   --animate-spin: spin 1s linear infinite;
   --animate-spin-lento: spin 2.5s linear infinite;
   --animate-pulse: pulse 2s steps(2, jump-start) infinite;
@@ -344,6 +344,18 @@
       opacity: 1;
       transform: scale(1.1);
     }
+  }
+}
+
+/* WebKit (Safari y la app de Mac) recompone la ventana entera a 60 cuadros por
+   segundo mientras gira algo continuo. Ahí el giro va a 24 pasos por segundo:
+   el doble de fino que la rejilla de 1/12 s y lejos de los 60. Solo WebKit
+   implementa `hanging-punctuation`; si Chromium lo implementa, cae aquí y
+   sigue girando, solo que por pasos. */
+@supports (hanging-punctuation: first) {
+  :root {
+    --animate-spin: spin 1s steps(24) infinite;
+    --animate-spin-lento: spin 2.5s steps(60) infinite;
   }
 }
 

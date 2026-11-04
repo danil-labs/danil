@@ -15,7 +15,8 @@ const RAIZ = fileURLToPath(new URL("../../src", import.meta.url));
 
 /**
  * Animaciones de CSS que corren solo mientras dura un gesto corto, y el giro de
- * los loaders: por pasos se veía trabado, y solo rota, que va al compositor.
+ * los loaders: por pasos se veía trabado, y solo rota, que va al compositor. En
+ * WebKit vuelve a ir por pasos (`global.css`, `@supports`).
  */
 const KEYFRAMES_PERMITIDOS = new Set(["finish-task-ignition", "finish-task-exhaust", "spin"]);
 
