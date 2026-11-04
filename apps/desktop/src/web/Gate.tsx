@@ -11,7 +11,7 @@ import { BrowserAccount } from "./BrowserAccount";
 import { AccessRequest } from "./auth/AccessRequest";
 
 /** What stands between the page and the app: the session, the license, having a computer and a workspace linked to the account. */
-export type GateView = { t: "waiting" } | { t: "license" } | { t: "access_required" } | { t: "no_account" } | { t: "not_yours" } | { t: "none" } | { t: "no_workspaces" } | { t: "error" };
+export type GateView = { t: "waiting" } | { t: "license" } | { t: "access_required" } | { t: "no_account" } | { t: "not_yours" } | { t: "none" } | { t: "no_workspaces"; computers?: Computer[] } | { t: "error" };
 
 /** The list with a token the API accepts: a refused token is refreshed once. */
 export async function computersOf(endpoint: string, session: Session): Promise<Answer<Computer[]>> {
@@ -47,11 +47,11 @@ export function Gate(props: { session: Session; endpoint: string; initial?: Gate
       const one = computers.find((c) => c.computer_id === asked);
       if (!one) return setView({ t: "not_yours" });
       const any = hasLinkedWorkspaces([one]) || (await accountHasWorkspaces(props.endpoint, props.session, asked));
-      return any ? props.onOpen?.([one]) : setView({ t: "no_workspaces" });
+      return any ? props.onOpen?.([one]) : setView({ t: "no_workspaces", computers: [one] });
     }
     if (computers.length === 0) return setView({ t: "none" });
     // Each computer shows only the workspaces linked to the account: with none there nor in the account, the app would be empty.
-    if (!hasLinkedWorkspaces(computers) && !(await accountHasWorkspaces(props.endpoint, props.session))) return setView({ t: "no_workspaces" });
+    if (!hasLinkedWorkspaces(computers) && !(await accountHasWorkspaces(props.endpoint, props.session))) return setView({ t: "no_workspaces", computers });
     props.onOpen?.(computers);
   }
 
@@ -105,7 +105,10 @@ export function Gate(props: { session: Session; endpoint: string; initial?: Gate
             />
           </div>
         </Match>
-        <Match when={view().t === "no_workspaces"}>{message(t("web.computers.no_workspaces"), retry())}</Match>
+        <Match when={view().t === "no_workspaces"}>
+          {message(t("web.computers.no_workspaces"))}
+          <NoWorkspaces computers={creatable(view())} onCreate={props.onOpen ? (c) => props.onOpen?.([c]) : undefined} retry={retry()} />
+        </Match>
         <Match when={view().t === "error"}>{message(t("web.computers.error"), retry())}</Match>
       </Switch>
       {/* Esta cuenta no abre (licencia, sin computadoras): las otras de este navegador sí pueden. */}
@@ -124,5 +127,38 @@ export function Gate(props: { session: Session; endpoint: string; initial?: Gate
         </div>
       </Show>
     </main>
+  );
+}
+
+/** Where a first workspace can be created: the person's computers, the ones on first. */
+function creatable(view: GateView): Computer[] {
+  if (view.t !== "no_workspaces") return [];
+  const order = (c: Computer) => (c.state === "online" ? 0 : c.state === "starting" ? 1 : 2);
+  return [...(view.computers ?? [])].filter((c) => c.state !== "provisioning").sort((a, b) => order(a) - order(b));
+}
+
+/**
+ * Without a linked workspace the app would be empty. With a computer, the real
+ * way out is to open the app on it: with no workspace there it starts the
+ * first-run, which creates the workspace on that computer for this account.
+ */
+function NoWorkspaces(props: { computers: Computer[]; onCreate?: (computer: Computer) => void; retry: JSX.Element }) {
+  return (
+    <div class="mt-4 flex max-w-[60ch] flex-col gap-4" data-web-gate-no-workspaces="">
+      <Show when={props.onCreate && props.computers.length > 0}>
+        <p class="m-0 text-sm text-neutral-700">{t("web.computers.no_workspaces.create_hint")}</p>
+        <div class="flex flex-wrap gap-2">
+          <For each={props.computers}>
+            {(c) => (
+              <Button size="sm" data-web-gate-create={c.computer_id} onClick={() => props.onCreate?.(c)}>
+                {t("web.computers.no_workspaces.create", { name: c.name?.trim() || t("web.computers.no_workspaces.unnamed") })}
+              </Button>
+            )}
+          </For>
+        </div>
+      </Show>
+      <p class="m-0 text-sm text-neutral-500">{t("web.computers.no_workspaces.desktop_hint")}</p>
+      <div>{props.retry}</div>
+    </div>
   );
 }
