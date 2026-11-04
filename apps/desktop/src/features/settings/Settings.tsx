@@ -31,6 +31,8 @@ import {
   SidebarMenuItem,
 } from "../../ui/sidebar";
 import type { ModelChoices } from "../projects/NewAgent";
+import type { SurfacesState } from "./ai-providers-view";
+import { asFailure } from "../../ui/Failure";
 import AIProviders from "./AIProviders";
 import Connections from "./Connections";
 import ConnectionsOperation from "./ConnectionsOperation";
@@ -87,6 +89,9 @@ type ContextoDeAgentes = {
   /** Los agentes de las tareas abiertas: sus proveedores llegan desplegados. */
   readonly agentesEnUso: string[];
   onAgentProfile: (project: string, name: string) => void;
+  /** Si `list_surfaces` todavía no contesta, contestó o falló. */
+  readonly estadoSuperficies: SurfacesState;
+  reintentarSuperficies: () => void;
 };
 
 /**
@@ -120,7 +125,7 @@ const pestanasDe = (
     languages: tab("languages", () => t("settings.languages.title"), () => <SettingsPanel><PaquetesDeLengua /></SettingsPanel>),
     workspaces: tab("workspaces", () => t("settings.tab.workspace_bar"), () => <Workspaces />),
     download: capabilities().appDownloads ? tab("download", () => t("web.download.tab"), () => <Suspense fallback={null}><AppDownloads /></Suspense>) : undefined,
-    "proveedores-ia": tab("proveedores-ia", () => t("settings.nav.ai_providers"), () => <AIProviders superficies={superficies()} agentesEnUso={agentes.agentesEnUso} />),
+    "proveedores-ia": tab("proveedores-ia", () => t("settings.nav.ai_providers"), () => <AIProviders superficies={superficies()} agentesEnUso={agentes.agentesEnUso} estado={agentes.estadoSuperficies} onRetry={agentes.reintentarSuperficies} />),
     machines: cuenta ? tab("machines", () => t("settings.tab.machines"), () => <Suspense fallback={null}><DanilAccount part="machines" /></Suspense>) : undefined,
     entorno: tab("entorno", () => t("settings.nav.environment"), () => <Environment />),
     activity: tab("activity", () => t("activity.title"), () => <Suspense fallback={null}><ActivityLogs workspace={workspace()} machine={activityMachine()} /></Suspense>),
@@ -240,6 +245,7 @@ export default function Settings(props: {
   // Lo que se puede elegir para trabajar, que es lo que decide qué proveedores
   // tienen pantalla. Con su estado: aquí no apaga nada, lo enseña.
   const [superficies, setSuperficies] = createSignal<Superficie[]>([]);
+  const [estadoSuperficies, setEstadoSuperficies] = createSignal<SurfacesState>({ k: "loading" });
   /**
    * **Sólo se guarda si de verdad cambió**, y eso no es una optimización.
    *
@@ -259,12 +265,14 @@ export default function Settings(props: {
    */
   const cargarSuperficies = () => {
     void invoke<Superficie[]>("list_surfaces")
-      .then((s) =>
+      .then((s) => {
         setSuperficies((antes) =>
           JSON.stringify(antes) === JSON.stringify(s) ? antes : s,
-        ),
-      )
-      .catch(() => setSuperficies([]));
+        );
+        setEstadoSuperficies({ k: "ready" });
+      })
+      // Lo que ya se veía se queda; sin nada, el panel dice por qué (una VM encendiéndose, por ejemplo).
+      .catch((e) => setEstadoSuperficies({ k: "failed", f: asFailure(e) }));
   };
   onMount(cargarSuperficies);
 
@@ -296,8 +304,11 @@ export default function Settings(props: {
       if (e.payload.kind === "done") cargarSuperficies();
     });
     window.addEventListener("harness:consentimiento", cargarSuperficies);
+    // Una máquina de la cuenta se encendió o trajo otra rebanada: su lista puede haber llegado.
+    window.addEventListener("harness:machine-slices", cargarSuperficies);
     onCleanup(() => {
       window.removeEventListener("harness:consentimiento", cargarSuperficies);
+      window.removeEventListener("harness:machine-slices", cargarSuperficies);
       void cambios.then((f) => f());
       void cuenta.then((f) => f());
       void motor.then((f) => f());
@@ -315,6 +326,13 @@ export default function Settings(props: {
       return props.agentesEnUso ?? [];
     },
     onAgentProfile: (project, name) => props.onAgentProfile?.(project, name),
+    get estadoSuperficies() {
+      return estadoSuperficies();
+    },
+    reintentarSuperficies: () => {
+      setEstadoSuperficies({ k: "loading" });
+      cargarSuperficies();
+    },
   }, props.proyectos, () => props.workspace ?? null, () => props.activityMachine ?? null, () => props.agentsWorkspace ?? null);
   const ENTRADAS = entradasDe(pestanas);
 

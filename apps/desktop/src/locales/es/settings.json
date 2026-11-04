@@ -415,5 +415,12 @@
   "settings.tab.plan": "Plan",
   "settings.entry.billing": "Plan y cobro",
   "settings.tab.business": "Plan",
-  "settings.tab.fiscal": "Datos fiscales"
+  "settings.tab.fiscal": "Datos fiscales",
+  "settings.ai_providers.loading": "Cargando…",
+  "settings.ai_providers.retry": "Reintentar",
+  "settings.ai_providers.none_installed": "Esta máquina todavía no tiene asistentes de IA instalados.",
+  "settings.ai_providers.agent_claude": "Claude Code",
+  "settings.ai_providers.agent_codex": "Codex (ChatGPT)",
+  "settings.ai_providers.agent_antigravity": "Gemini / Antigravity",
+  "settings.ai_providers.agent_grok": "Grok"
 }

@@ -687,6 +687,8 @@ const steps = [
   ["The device page hands the desktop window its session only after approving and only to 127.0.0.1", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/web-connect-desktop.test.ts")], root],
   ["Each workspace talks to its Danil account, and an older engine leaves the single account", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/danil-sessions.test.ts")], root],
   ["In the browser the approval page connects a computer to the account", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/web-connect.test.mjs")], root],
+  ["Cuentas de IA is never blank: loading, failed with retry, or the agents Danil installs", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/ai-providers-view.test.ts")], root],
+  ["The AI accounts panel mounts loading, failed or with the supported agents, never empty", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/ai-providers-states.test.mjs")], root],
   ["An approval invalidates its identity without touching other slots", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/web-session.test.ts")], root],
   ["The alpha WorkOS session asks for a short token, renews it and ends without a fallback", process.execPath, ["--test", "--test-force-exit", "--experimental-strip-types", join(root, "tests/unit/web-workos-session.test.ts")], root],
   ["Broadcasts: the full panel, the Appv2 rules and what stays behind the switch", process.execPath, ["--test", "--experimental-strip-types", join(root, "../../packages/attention/test/broadcast-panel.test.ts")], root],
