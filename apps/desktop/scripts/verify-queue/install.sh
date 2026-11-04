@@ -7,14 +7,14 @@ state=/var/lib/verify-queue
 rust=/opt/rust
 toolchains="stable 1.97.1"
 
-# Los usuarios de corrida salen de repos.json: sin shell de entrada, sin sudo, sin cron ni at.
-# Están en `verify-runners` solo para leer los espejos; no pueden escribir nada de la cola.
-mapfile -t runners < <(node -e 'const c = require(process.argv[1]); for (const p of Object.values(c.repos)) if (p.user) console.log(p.user)' "$here/repos.json" | sort -u)
+# Los usuarios de corrida salen de repos.json: uno por repo y carril (`<user>` en el carril 0,
+# `<user>-<n>` en los demás), sin shell de entrada, sin sudo, sin cron ni at. Su grupo primario es
+# `verify-runners`: con él leen los espejos y egress.nft los limita, sin listar nombres.
+mapfile -t runners < <(node -e 'const c = require(process.argv[1]); for (const p of Object.values(c.repos)) if (p.user) for (let n = 0; n < (c.lanes ?? 1); n++) console.log(n ? `${p.user}-${n}` : p.user)' "$here/repos.json" | sort -u)
 getent group verify-runners >/dev/null || groupadd --system verify-runners
 for user in "${runners[@]}"; do
-  id -u "$user" >/dev/null 2>&1 || useradd --system --create-home --shell /usr/sbin/nologin "$user"
-  usermod -aG verify-runners "$user"
-  grep -q "\"$user\"" "$here/egress.nft" || { echo "egress.nft no limita a $user" >&2; exit 1; }
+  id -u "$user" >/dev/null 2>&1 || useradd --system --create-home --shell /usr/sbin/nologin -g verify-runners "$user"
+  usermod -g verify-runners "$user"
   for deny in /etc/cron.deny /etc/at.deny; do grep -qx "$user" "$deny" 2>/dev/null || echo "$user" >> "$deny"; done
 done
 
@@ -43,20 +43,25 @@ rm -f "$sudoers"
 install -d -o verify -g verify -m 0711 "$state"
 install -d -o verify -g verify -m 0700 "$state/runs" "$state/incoming"
 install -d -o verify -g verify-runners -m 2750 "$state/repos"
-install -d -o verify -g verify -m 0711 "$state/lanes" "$state/lanes/0"
+install -d -o verify -g verify -m 0711 "$state/lanes"
+lanes=$(node -e 'console.log(require(process.argv[1]).lanes ?? 1)' "$here/repos.json")
 for repo in $(node -e 'const c = require(process.argv[1]); for (const [r, p] of Object.entries(c.repos)) if (p.user) console.log(`${r}:${p.user}`)' "$here/repos.json"); do
-  name=${repo%%:*} user=${repo#*:}
-  # El carril es del usuario de la corrida; verify lo lee (grupo) para copiar artefactos y nada más.
-  install -d -o "$user" -g verify -m 2750 "$state/lanes/0/$name"
+  name=${repo%%:*} base=${repo#*:}
   if [ -d "$state/repos/$name" ]; then
     chgrp -R verify-runners "$state/repos/$name"
     find "$state/repos/$name" -type d -exec chmod g+rxs {} +
   fi
-  # La target que compiló la cola cuando corría como verify pasa al carril. Cambian las rutas
+  for n in $(seq 0 $((lanes - 1))); do
+    user=$base; [ "$n" = 0 ] || user=$base-$n
+    install -d -o verify -g verify -m 0711 "$state/lanes/$n"
+    # El carril es del usuario de la corrida; verify lo lee (grupo) para copiar artefactos y nada más.
+    install -d -o "$user" -g verify -m 2750 "$state/lanes/$n/$name"
+  done
+  # La target que compiló la cola cuando corría como verify pasa al carril 0. Cambian las rutas
   # absolutas de la dep-info: puede compilar en frío una vez, se mide en la primera corrida.
   if [ -d "$state/repos/$name/target" ] && [ ! -e "$state/lanes/0/$name/target" ]; then
     mv "$state/repos/$name/target" "$state/lanes/0/$name/target"
-    chown -R "$user:verify" "$state/lanes/0/$name/target"
+    chown -R "$base:verify" "$state/lanes/0/$name/target"
   fi
   # El checkout viejo era de verify y la rama podía escribirlo: no se reutiliza como espejo.
   rm -rf "$state/repos/$name/checkout"

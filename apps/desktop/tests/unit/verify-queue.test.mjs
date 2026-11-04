@@ -877,3 +877,70 @@ test("un .git que la rama cambió por un archivo se rehace", { skip }, async (t)
   assert.equal(second.run.state, "passed", readFileSync(queue.logPath(second.id), "utf8"));
   assert.match(readFileSync(queue.logPath(second.id), "utf8"), /sano/);
 });
+
+test("con dos carriles corren dos a la vez, la tercera espera, y cada una recibe la mitad de los núcleos", { skip }, async (t) => {
+  const { dir, repo, home } = workspace(t);
+  const trace = join(dir, "trace");
+  const lanesConfig = { lanes: 2, repos: { engine: { ...engineConfig.repos.engine, fresh: [], receipt: undefined, artifacts: [], jobs: { verify: { argv: ["bash", "chain.sh", "{jobs}"], options: { "--all": null } } } } } };
+  const queue = createQueue({ home, config: lanesConfig, sameUser: true, cpus: 8, diskPercent: () => 10 });
+  const chain = (name) => `echo "inicio-${name} $1" >> ${trace}; sleep 0.6; echo "fin-${name}" >> ${trace}`;
+  const ids = [];
+  for (const name of ["a", "b", "c"]) {
+    const sha = commit(repo, chain(name));
+    ids.push((await queue.submit({ repo: "engine", commit: sha, command: "verify", bundle: bundle(repo, dir) })).id);
+  }
+  await queue.settled();
+  const lines = readFileSync(trace, "utf8").trim().split("\n");
+  assert.deepEqual(lines.slice(0, 2).sort(), ["inicio-a 4", "inicio-b 4"], "dos a la vez, con 8/2 núcleos cada una");
+  assert.ok(lines.indexOf("inicio-c 4") > Math.min(lines.indexOf("fin-a"), lines.indexOf("fin-b")), "la tercera espera un carril libre");
+  const runs = ids.map((id) => queue.readRun(id));
+  assert.deepEqual(runs.map((run) => run.state), ["passed", "passed", "passed"]);
+  assert.deepEqual(runs.slice(0, 2).map((run) => run.lane).sort(), [0, 1]);
+  assert.equal(JSON.parse(queue.receiptBytes(ids[0])).lane, String(runs[0].lane));
+  assert.equal(existsSync(join(home, "busy")), false);
+});
+
+test("un repo vuelve al carril libre donde ya está caliente", { skip }, async (t) => {
+  const { dir, repo, home } = workspace(t);
+  const lanesConfig = { lanes: 3, repos: { engine: { ...engineConfig.repos.engine, fresh: [], receipt: undefined, artifacts: [] } } };
+  const queue = createQueue({ home, config: lanesConfig, sameUser: true, diskPercent: () => 10 });
+  const first = await engineRun(t, queue, repo, dir, "true");
+  assert.equal(first.run.lane, 0);
+  const second = await engineRun(t, queue, repo, dir, "echo otra");
+  assert.equal(second.run.lane, 0, "el carril 0 ya tiene el checkout y la target");
+  assert.throws(() => checkConfig({ lanes: 0, repos: {} }), /lanes/);
+  assert.throws(() => checkConfig({ lanes: 9, repos: {} }), /lanes/);
+});
+
+test("--wip manda la foto del árbol sobre HEAD y el recibo lo dice", { skip }, async (t) => {
+  const { repo, home } = workspace(t);
+  const queue = createQueue({ home, config, sameUser: true, diskPercent: () => 10 });
+  const host = await serve(t, queue);
+  const head = commit(repo, "echo comprometido");
+  writeFileSync(join(repo, "chain.sh"), "echo sin-commit");
+  writeFileSync(join(repo, "nuevo.txt"), "x");
+  const { code, output } = await client(repo, host, ["--wip"]);
+  assert.equal(code, 0, output);
+  assert.match(output, /sin-commit/);
+  assert.match(output, new RegExp(`foto wip sobre ${head.slice(0, 10)}`));
+  const [run] = queue.allRuns();
+  assert.equal(run.wip, true);
+  assert.equal(run.head, head);
+  assert.equal(JSON.parse(queue.receiptBytes(run.id)).wip, true);
+  assert.equal(git(repo, "rev-parse", "HEAD"), head, "la foto no mueve HEAD");
+  assert.match(git(repo, "status", "--porcelain"), /nuevo\.txt/, "ni toca el índice ni los archivos");
+  assert.equal(git(repo, "for-each-ref", "refs/verify-remote/"), "");
+});
+
+test("--wip sin cambios manda HEAD tal cual", { skip }, async (t) => {
+  const { repo, home } = workspace(t);
+  const queue = createQueue({ home, config, sameUser: true, diskPercent: () => 10 });
+  const host = await serve(t, queue);
+  const head = commit(repo, "echo limpio");
+  const { code, output } = await client(repo, host, ["--wip"]);
+  assert.equal(code, 0, output);
+  const [run] = queue.allRuns();
+  assert.equal(run.commit, head);
+  assert.equal(run.wip, false);
+  assert.equal((await client(repo, host, ["--wip", "--commit", head])).code, 2);
+});

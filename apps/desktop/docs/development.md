@@ -66,6 +66,7 @@ feature). What runs is still Linux: a run launched from Windows verifies Linux.
 
 ```sh
 pnpm verify --remote                   # HEAD; refuses uncommitted changes
+pnpm verify --remote --wip             # HEAD plus a snapshot of uncommitted work
 pnpm verify --remote --no-cargo        # the chain without Rust
 pnpm verify --remote --commit <sha>    # any local commit
 pnpm verify --remote --detach          # queue and return; prints the run id
@@ -108,8 +109,10 @@ stays silent; a machine that is still stopping refuses the first attempts.
 `computer_stopping` retries. `access_denied`, `license_required`, `not_found`
 and any other refusal from a CLI end the run with the reason.
 
-The queue is `scripts/verify-queue/server.mjs`: one per machine, one run at a
-time, first come first served, listening on loopback only. It takes repo, commit
+The queue is `scripts/verify-queue/server.mjs`: one per machine, first come
+first served, listening on loopback only. It runs one job per lane; `lanes` in
+`repos.json` sets how many, and each lane gets its share of the cores as
+`{jobs}`. A run takes the free lane where its repo is already warm. It takes repo, commit
 and a command from `repos.json`, and knows nothing else about a repo. A profile
 lists either exact `commands`, run with `bash -lc` after `prepare` (the app), or
 typed `jobs`: a fixed `argv`, `options` with an anchored pattern per value and
@@ -120,8 +123,8 @@ when the commit is a snapshot of uncommitted work on top of `HEAD`.
 
 Bundles land in a bare mirror per repo owned by `verify`. Branch code never runs
 as `verify`: each profile names its run user (`verify-run` for the app,
-`verify-run-engine` for the engine), and its lane
-(`/var/lib/verify-queue/lanes/0/<repo>/`) holds the checkout, the target, the
+`verify-run-engine` for the engine; lane `n` above 0 adds `-<n>`), and its lane
+(`/var/lib/verify-queue/lanes/<n>/<repo>/`) holds the checkout, the target, the
 cargo registry and caches, all owned by that user. Every git command, delete and
 kill in a lane goes through `sudo -n -u <user>`; `verify` only reads artifacts
 from it. Each run gets a fresh `HOME`; git runs without hooks or global config;
@@ -148,8 +151,9 @@ runs.
 `egress.nft` denies `verify` and the run users IMDS, the tailnet and private
 networks, and the `tailscaled` socket is closed to them; they keep internet
 access for packages. `/var/lib/verify-queue` is 0711, `runs/` and `incoming/`
-are 0700; run users read the mirrors through the `verify-runners` group, so one
-repo's branch can read the other repo's mirror. Toolchains live in `/opt/rust`,
+are 0700; `verify-runners` is the run users' primary group, which `egress.nft`
+matches and which reads the mirrors, so one repo's branch can read the other
+repo's mirror. Toolchains live in `/opt/rust`,
 owned by root. To install or update the queue, copy `scripts/verify-queue/` to
 the machine and run `install.sh` as root.
 

@@ -33,7 +33,7 @@ const MAX_TOKENS = 16;
 const MAX_CHECKS = 1000;
 const KEPT_RUNS = 50;
 const KEPT_COMMITS = 20;
-const LANE = "0";
+const MAX_LANES = 8;
 const REPO_NAME = /^[a-z0-9][a-z0-9._-]{0,63}$/;
 const USER_NAME = /^[a-z_][a-z0-9_-]{0,31}$/;
 const ENV_NAME = /^[A-Z_][A-Z0-9_]{0,63}$/;
@@ -68,6 +68,7 @@ function substitute(text, values) {
 
 /** Falla al arrancar si `repos.json` trae algo que la cola no sabría correr con seguridad. */
 export function checkConfig(config) {
+  if (config.lanes !== undefined && !(Number.isInteger(config.lanes) && config.lanes >= 1 && config.lanes <= MAX_LANES)) throw new Error(`repos.json: lanes es un entero de 1 a ${MAX_LANES}`);
   for (const [repo, profile] of Object.entries(config.repos ?? {})) {
     const where = `repos.json: ${repo}`;
     if (!REPO_NAME.test(repo)) throw new Error(`${where}: nombre inválido`);
@@ -284,7 +285,7 @@ export function createQueue({ home, config, diskPercent = defaultDiskPercent, ru
   const runsDir = join(home, "runs");
   const reposDir = join(home, "repos");
   const incomingDir = join(home, "incoming");
-  const lanesDir = join(home, "lanes", LANE);
+  const lanes = config.lanes ?? 1;
   const busyMarker = join(home, "busy");
   mkdirSync(home, { recursive: true });
   // El usuario de la corrida atraviesa `home` hacia su carril y el espejo, pero no lista ni lee el resto.
@@ -307,14 +308,20 @@ export function createQueue({ home, config, diskPercent = defaultDiskPercent, ru
   const allRuns = () => readdirSync(runsDir).filter((id) => RUN_ID.test(id) && existsSync(metaPath(id))).sort().map(readRun);
   const pending = () => allRuns().filter((run) => run.state === "queued");
   const runners = new Map();
-  const runner = (repo) => {
-    if (!runners.has(repo)) runners.set(repo, runnerFor(config.repos[repo].user, sudo));
-    return runners.get(repo);
+  /** Cada carril tiene su usuario: `kill -1`, el candado de HOME y la target no se cruzan entre carriles. */
+  const laneUser = (repo, lane) => {
+    const user = config.repos[repo].user;
+    return user && lane > 0 ? `${user}-${lane}` : user;
+  };
+  const runner = (repo, lane) => {
+    const key = `${repo}:${lane}`;
+    if (!runners.has(key)) runners.set(key, runnerFor(laneUser(repo, lane), sudo));
+    return runners.get(key);
   };
 
-  let current = null;
-  let draining = false;
-  let idle = Promise.resolve();
+  /** Carril → la corrida que lleva: id, cómo matarla y por qué terminó. */
+  const active = new Map();
+  const running = new Set();
 
   /** El espejo es de `verify` y solo recibe objetos: la rama nunca lo escribe. */
   const mirrorPath = (repo) => join(reposDir, repo, "mirror");
@@ -329,30 +336,30 @@ export function createQueue({ home, config, diskPercent = defaultDiskPercent, ru
     return mirror;
   }
 
-  function lanePaths(repo) {
-    const base = join(lanesDir, repo);
+  function lanePaths(repo, lane = 0) {
+    const base = join(home, "lanes", String(lane), repo);
     const checkout = join(base, "checkout");
     const target = config.repos[repo].target === "checkout" ? join(checkout, "target") : join(base, "target");
     return { base, checkout, target, home: join(base, "home"), cargo: join(base, "cargo"), cache: join(base, "cache"), data: join(base, "data") };
   }
 
   /** Lo que el carril pone en cada corrida: un HOME nuevo; registro, cachés y target persisten. */
-  function laneEnv(repo) {
-    const paths = lanePaths(repo);
+  function laneEnv(repo, lane) {
+    const paths = lanePaths(repo, lane);
     const insideTarget = config.repos[repo].target === "checkout";
-    return { ...runner(repo).inherited, HOME: paths.home, CARGO_HOME: paths.cargo, XDG_CACHE_HOME: paths.cache, XDG_DATA_HOME: paths.data, ...(insideTarget ? {} : { CARGO_TARGET_DIR: paths.target }) };
+    return { ...runner(repo, lane).inherited, HOME: paths.home, CARGO_HOME: paths.cargo, XDG_CACHE_HOME: paths.cache, XDG_DATA_HOME: paths.data, ...(insideTarget ? {} : { CARGO_TARGET_DIR: paths.target }) };
   }
 
   /** git en el checkout del carril, siempre con el usuario de la corrida, sin hooks ni config global. */
-  function laneGit(repo, args) {
-    const { checkout } = lanePaths(repo);
+  function laneGit(repo, lane, args) {
+    const { checkout } = lanePaths(repo, lane);
     const guard = ["-c", `safe.directory=${mirrorPath(repo)}`, "-c", "core.hooksPath=/dev/null", "-c", "core.fsmonitor=false"];
-    return runner(repo).sync(["git", ...guard, ...args], checkout, { ...laneEnv(repo), GIT_CONFIG_GLOBAL: "/dev/null" });
+    return runner(repo, lane).sync(["git", ...guard, ...args], checkout, { ...laneEnv(repo, lane), GIT_CONFIG_GLOBAL: "/dev/null" });
   }
 
-  function ensureLane(repo) {
-    const paths = lanePaths(repo);
-    const run = runner(repo);
+  function ensureLane(repo, lane) {
+    const paths = lanePaths(repo, lane);
+    const run = runner(repo, lane);
     run.sync(["rm", "-rf", paths.home], "/");
     run.sync(["mkdir", "-p", paths.checkout, paths.home, paths.cargo, paths.cache, paths.data], "/");
     // Lo que una rama deja en .git (filtros, include.path, insteadOf, alternates, hooks) correría en el
@@ -366,8 +373,8 @@ export function createQueue({ home, config, diskPercent = defaultDiskPercent, ru
     }
     if (!real) run.sync(["rm", "-rf", dotGit], "/");
     else run.sync(["rm", "-rf", join(dotGit, "config"), join(dotGit, "info"), join(dotGit, "objects/info/alternates"), join(dotGit, "hooks")], "/");
-    laneGit(repo, ["init", "-q"]);
-    laneGit(repo, ["config", "gc.auto", "0"]);
+    laneGit(repo, lane, ["init", "-q"]);
+    laneGit(repo, lane, ["config", "gc.auto", "0"]);
     return paths;
   }
 
@@ -376,7 +383,8 @@ export function createQueue({ home, config, diskPercent = defaultDiskPercent, ru
     return git(mirrorPath(repo), ["for-each-ref", "--sort=-creatordate", "--format=%(objectname)", "refs/verify/"]).split("\n").filter(Boolean);
   }
 
-  const jobsFor = () => cpus;
+  /** Los núcleos se reparten entre carriles: dos cadenas de 8 trabajos en 8 núcleos se frenan entre sí. */
+  const jobsFor = () => Math.max(1, Math.floor(cpus / lanes));
 
   function checkRequest({ repo, commit, command, base }) {
     if (!REPO_NAME.test(repo ?? "")) throw new Refusal(400, "repo inválido");
@@ -425,7 +433,7 @@ export function createQueue({ home, config, diskPercent = defaultDiskPercent, ru
     const id = `${Date.now()}-${randomBytes(4).toString("hex")}`;
     mkdirSync(runDir(id));
     writeFileSync(logPath(id), "");
-    const run = { id, repo, commit, tree, parents, head, wip: Boolean(wip), base, command, lane: LANE, state: "queued", exitCode: null, createdAt: new Date().toISOString(), startedAt: null, finishedAt: null, targetRebuilt: false, receiptSha256: null };
+    const run = { id, repo, commit, tree, parents, head, wip: Boolean(wip), base, command, lane: null, state: "queued", exitCode: null, createdAt: new Date().toISOString(), startedAt: null, finishedAt: null, targetRebuilt: false, receiptSha256: null };
     saveRun(run);
     pruneRuns();
     drain();
@@ -437,24 +445,39 @@ export function createQueue({ home, config, diskPercent = defaultDiskPercent, ru
     for (const run of finished.slice(0, Math.max(0, finished.length - KEPT_RUNS))) rmSync(runDir(run.id), { recursive: true, force: true });
   }
 
-  function drain() {
-    if (draining) return;
-    draining = true;
-    idle = (async () => {
-      try {
-        writeFileSync(busyMarker, "");
-        for (let next = pending()[0]; next; next = pending()[0]) await execute(next);
-      } finally {
-        rmSync(busyMarker, { force: true });
-        draining = false;
-      }
-    })();
+  /** Prefiere el carril libre donde el repo ya está caliente; si no, el primero libre. */
+  function pickLane(repo, free) {
+    return free.find((lane) => existsSync(join(lanePaths(repo, lane).checkout, ".git"))) ?? free[0];
   }
 
-  function attempt(repo, log, argv, env, cwd) {
+  /** Por orden de llegada, una corrida por carril. `execute` marca `running` antes de su primer await. */
+  function drain() {
+    for (;;) {
+      const free = [...Array(lanes).keys()].filter((lane) => !active.has(lane));
+      const next = free.length ? pending()[0] : null;
+      if (!next) return;
+      const lane = pickLane(next.repo, free);
+      const current = { id: next.id, kill: () => {}, cancelled: false, timedOut: false };
+      active.set(lane, current);
+      writeFileSync(busyMarker, "");
+      const done = execute(next, lane, current).finally(() => {
+        active.delete(lane);
+        running.delete(done);
+        if (!active.size) rmSync(busyMarker, { force: true });
+        drain();
+      });
+      running.add(done);
+    }
+  }
+
+  async function settled() {
+    while (running.size) await Promise.allSettled([...running]);
+  }
+
+  function attempt(repo, lane, current, log, argv, env, cwd) {
     return new Promise((resolve) => {
       if (current.cancelled) return resolve(1);
-      const run = runner(repo);
+      const run = runner(repo, lane);
       const child = run.spawn(argv, env, cwd, log);
       const kill = () => run.sweep(child);
       current.kill = kill;
@@ -474,7 +497,7 @@ export function createQueue({ home, config, diskPercent = defaultDiskPercent, ru
   /** Copia lo que la corrida dejó, antes de limpiar y con sus procesos ya muertos. */
   function collect(run, checkout, since) {
     const profile = config.repos[run.repo];
-    const { uid } = runner(run.repo);
+    const { uid } = runner(run.repo, run.lane);
     const globs = [...new Set([...(profile.artifacts ?? []), ...(profile.receipt?.summary ? [profile.receipt.summary] : [])])];
     const copied = [];
     const root = realpathSync(checkout);
@@ -502,7 +525,7 @@ export function createQueue({ home, config, diskPercent = defaultDiskPercent, ru
 
   function digests(run, checkout) {
     const out = {};
-    const { uid } = runner(run.repo);
+    const { uid } = runner(run.repo, run.lane);
     const root = realpathSync(checkout);
     for (const [name, path] of Object.entries(config.repos[run.repo].receipt?.digests ?? {})) {
       const opened = openLaneFile(root, path, uid);
@@ -540,9 +563,9 @@ export function createQueue({ home, config, diskPercent = defaultDiskPercent, ru
     }
   }
 
-  function toolchainOf(repo, env, checkout) {
+  function toolchainOf(repo, lane, env, checkout) {
     try {
-      return runner(repo).sync(["rustc", "-V"], checkout, env).trim() || null;
+      return runner(repo, lane).sync(["rustc", "-V"], checkout, env).trim() || null;
     } catch {
       return null;
     }
@@ -560,7 +583,7 @@ export function createQueue({ home, config, diskPercent = defaultDiskPercent, ru
       base: run.base,
       command: run.command,
       queue: queueName,
-      lane: run.lane,
+      lane: run.lane === null ? null : String(run.lane),
       lane_previous_commit: extra.previous ?? null,
       toolchain: extra.toolchain ?? null,
       started_at: run.startedAt,
@@ -577,11 +600,10 @@ export function createQueue({ home, config, diskPercent = defaultDiskPercent, ru
     return createHash("sha256").update(bytes).digest("hex");
   }
 
-  async function execute(queued) {
-    let run = { ...queued, state: "running", startedAt: new Date().toISOString() };
+  async function execute(queued, laneIndex, current) {
+    let run = { ...queued, state: "running", lane: laneIndex, startedAt: new Date().toISOString() };
     const since = Date.now();
     saveRun(run);
-    current = { id: run.id, kill: () => {}, cancelled: false, timedOut: false };
     const out = createWriteStream(logPath(run.id), { flags: "a" });
     await new Promise((resolve) => out.once("open", resolve));
     const say = (line) => writeFileSync(out.fd, `[cola] ${line}\n`);
@@ -592,21 +614,21 @@ export function createQueue({ home, config, diskPercent = defaultDiskPercent, ru
     const extra = {};
     try {
       const profile = config.repos[run.repo];
-      const lane = runner(run.repo);
-      const { checkout, target } = ensureLane(run.repo);
+      const lane = runner(run.repo, laneIndex);
+      const { checkout, target } = ensureLane(run.repo, laneIndex);
       const insideTarget = profile.target === "checkout";
       const dropTarget = () => lane.sync(["rm", "-rf", target], "/");
       try {
-        extra.previous = laneGit(run.repo, ["rev-parse", "--verify", "-q", "HEAD"]).trim() || null;
+        extra.previous = laneGit(run.repo, laneIndex, ["rev-parse", "--verify", "-q", "HEAD"]).trim() || null;
       } catch {
         extra.previous = null;
       }
       // Solo reescribe lo que difiere del commit anterior: un archivo tocado es un cambio para cargo.
       const clean = () => {
         lane.sync(["rm", "-f", join(checkout, ".git/index.lock")], "/");
-        laneGit(run.repo, ["fetch", "-q", "--no-tags", "--no-write-fetch-head", mirrorPath(run.repo), `+refs/verify/${run.commit}:refs/verify/run`]);
-        laneGit(run.repo, ["checkout", "-q", "-f", "--detach", run.commit]);
-        laneGit(run.repo, ["clean", "-q", "-ffdx", ...(insideTarget ? ["-e", "/target"] : [])]);
+        laneGit(run.repo, laneIndex, ["fetch", "-q", "--no-tags", "--no-write-fetch-head", mirrorPath(run.repo), `+refs/verify/${run.commit}:refs/verify/run`]);
+        laneGit(run.repo, laneIndex, ["checkout", "-q", "-f", "--detach", run.commit]);
+        laneGit(run.repo, laneIndex, ["clean", "-q", "-ffdx", ...(insideTarget ? ["-e", "/target"] : [])]);
       };
       if (diskPercent(home) > DISK_LIMIT_PERCENT) {
         say(`disco al ${diskPercent(home)} %: borro la target de ${run.repo}`);
@@ -619,14 +641,14 @@ export function createQueue({ home, config, diskPercent = defaultDiskPercent, ru
       const values = { commit: run.commit, base: run.base, jobs: jobsFor() };
       const { argv, env: jobEnv } = checkRequest(run);
       const profileEnv = Object.fromEntries(Object.entries(profile.env ?? {}).map(([key, value]) => [key, substitute(value, values)]));
-      const env = { ...profileEnv, ...jobEnv, ...laneEnv(run.repo) };
-      let code = await attempt(run.repo, out.fd, argv, env, checkout);
+      const env = { ...profileEnv, ...jobEnv, ...laneEnv(run.repo, laneIndex) };
+      let code = await attempt(run.repo, laneIndex, current, out.fd, argv, env, checkout);
       if (code !== 0 && !current.cancelled && !current.timedOut && diskPercent(home) > DISK_LIMIT_PERCENT && !run.targetRebuilt) {
         say(`falló con el disco al ${diskPercent(home)} %: borro la target y recompilo una vez`);
         dropTarget();
         clean();
         run = { ...run, targetRebuilt: true };
-        code = await attempt(run.repo, out.fd, argv, env, checkout);
+        code = await attempt(run.repo, laneIndex, current, out.fd, argv, env, checkout);
       }
       if (lane.sweep(null)) {
         const copied = collect(run, checkout, since);
@@ -634,14 +656,14 @@ export function createQueue({ home, config, diskPercent = defaultDiskPercent, ru
         extra.checks = checksOf(run, copied, say);
         extra.artifacts = digests(run, checkout);
       } else say(`quedan procesos de ${lane.user}: no copio artefactos`);
-      if (profile.env?.RUSTUP_TOOLCHAIN || profile.jobs) extra.toolchain = toolchainOf(run.repo, env, checkout);
+      if (profile.env?.RUSTUP_TOOLCHAIN || profile.jobs) extra.toolchain = toolchainOf(run.repo, laneIndex, env, checkout);
       if (current.cancelled) finish("cancelled", null);
       else {
         if (current.timedOut) say(`pasó de su plazo de ${Math.round(runTimeoutMs / 60_000)} min`);
         finish(code === 0 ? "passed" : "failed", code);
       }
       clean();
-      laneGit(run.repo, ["gc", "-q", "--prune=1.day.ago"]);
+      laneGit(run.repo, laneIndex, ["gc", "-q", "--prune=1.day.ago"]);
       say(`terminó: ${run.state}${run.exitCode === null ? "" : ` (exit ${run.exitCode})`}`);
     } catch (error) {
       say(error.message);
@@ -653,7 +675,6 @@ export function createQueue({ home, config, diskPercent = defaultDiskPercent, ru
       } catch (error) {
         say(`sin recibo: ${error.message}`);
       }
-      current = null;
       await new Promise((resolve) => out.end(resolve));
     }
   }
@@ -661,16 +682,19 @@ export function createQueue({ home, config, diskPercent = defaultDiskPercent, ru
   function cancel(id) {
     const run = readRun(id);
     if (run.state === "queued") saveRun({ ...run, state: "cancelled", finishedAt: new Date().toISOString() });
-    else if (run.state === "running" && current?.id === id) {
-      current.cancelled = true;
-      current.kill();
+    else if (run.state === "running") {
+      const current = [...active.values()].find((entry) => entry.id === id);
+      if (current) {
+        current.cancelled = true;
+        current.kill();
+      }
     }
     return readRun(id);
   }
 
   /** Lo que corría cuando la cola cayó ya no tiene dueño: se mata, se dice, y no se reintenta. */
   function recover() {
-    for (const repo of Object.keys(config.repos ?? {})) if (config.repos[repo].user) runner(repo).sweep(null);
+    for (const repo of Object.keys(config.repos ?? {})) if (config.repos[repo].user) for (let lane = 0; lane < lanes; lane += 1) runner(repo, lane).sweep(null);
     for (const run of allRuns()) {
       if (run.state !== "running") continue;
       appendFileSync(logPath(run.id), "[cola] la cola se reinició con esta corrida en marcha\n");
@@ -684,7 +708,7 @@ export function createQueue({ home, config, diskPercent = defaultDiskPercent, ru
   const hasRun = (id) => RUN_ID.test(id) && existsSync(metaPath(id));
   const receiptBytes = (id) => (existsSync(receiptPath(id)) ? readFileSync(receiptPath(id)) : null);
 
-  return { submit, cancel, recover, readRun, receiptBytes, allRuns, hasRun, knownCommits, position, logPath, lanePaths, settled: () => idle, home, incomingDir };
+  return { submit, cancel, recover, readRun, receiptBytes, allRuns, hasRun, knownCommits, position, logPath, lanePaths, settled, lanes, home, incomingDir };
 }
 
 function send(response, status, body) {

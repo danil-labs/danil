@@ -1,7 +1,7 @@
 #!/usr/sbin/nft -f
 # La cola (`verify`) y quienes corren código de ramas salen a internet, no a IMDS, la tailnet ni la VPC.
 # Tabla propia: nftables.service vaciaría las reglas de Tailscale y ufw.
-# Un usuario de corrida nuevo de repos.json entra en esta lista; install.sh lo comprueba.
+# Los usuarios de corrida tienen `verify-runners` como grupo primario: un carril nuevo no toca esta regla.
 table inet verify_egress
 delete table inet verify_egress
 table inet verify_egress {
@@ -11,6 +11,7 @@ table inet verify_egress {
   }
   chain output {
     type filter hook output priority filter; policy accept;
-    meta skuid { "verify", "verify-run", "verify-run-engine" } jump limited
+    meta skuid "verify" jump limited
+    meta skgid "verify-runners" jump limited
   }
 }
