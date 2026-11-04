@@ -9,7 +9,7 @@
  */
 import { invoke } from "@tauri-apps/api/core";
 import type { CallResult, EngineInfo, EventsPage, MachineState } from "@terminus/computers";
-import type { Link, MachineInfo } from "@terminus/fleet";
+import { classOf, type Link, type MachineInfo } from "@terminus/fleet";
 import { WSL_MACHINE_PREFIX, type WslChild } from "./wsl";
 
 const POLL_EVERY = 1_000;
@@ -25,6 +25,7 @@ export function wslMachineInfo(child: WslChild): MachineInfo {
     name: child.name,
     wakes: true,
     linked: null,
+    child: true,
     os: "linux",
     ...(child.features.length ? { features: child.features } : {}),
     ...(child.version ? { version: child.version } : {}),
@@ -38,6 +39,34 @@ type Folder = { id: string; name?: string; working_directory?: string | null };
 
 export function createWslLink(machine: string): Link {
   const copied = new Set<string>();
+  const workspaces = new Set<string>();
+
+  const childCall = <T,>(command: string, args: unknown, workspace: string | null, timeoutMs = 30_000) =>
+    invoke<T>("wsl_child_call", { machine, command, args: args ?? {}, workspace, folder: null, timeoutMs });
+
+  /** El workspace de la ventana, con el mismo id, en la distribución (la hija no tiene cuenta que lo traiga). */
+  async function ensureWorkspace(workspace: string | null) {
+    if (!workspace || workspaces.has(workspace)) return;
+    await childCall("materialize_workspace", { id: workspace }, workspace);
+    workspaces.add(workspace);
+  }
+
+  /**
+   * Las carpetas de la distribución y, con el mismo id, las de esta PC que
+   * todavía no tiene: elegir una la copia al crear la tarea (`ensureFolder`).
+   */
+  async function foldersFor(workspace: string | null): Promise<Folder[]> {
+    // Apagada, se ofrecen las de esta PC sin encenderla: elegir una y enviar la enciende.
+    let own: Folder[] = [];
+    if (state !== "offline") {
+      await ensureWorkspace(workspace);
+      const there = await childCall<Folder[]>("list_projects", {}, workspace);
+      own = Array.isArray(there) ? there : [];
+    }
+    const here = await invoke<Folder[]>("list_projects").catch(() => [] as Folder[]);
+    const missing = (Array.isArray(here) ? here : []).filter((f) => f.working_directory && !own.some((o) => o.id === f.id));
+    return [...own, ...missing];
+  }
 
   /**
    * La carpeta de la tarea, en la distribución. Si no está, se copia una vez
@@ -45,7 +74,8 @@ export function createWslLink(machine: string): Link {
    */
   async function ensureFolder(project: unknown, workspace: string | null) {
     if (typeof project !== "string" || !project || copied.has(project)) return;
-    const there = await invoke<Folder[]>("wsl_child_call", { machine, command: "list_projects", args: {}, workspace, folder: null, timeoutMs: 30_000 });
+    await ensureWorkspace(workspace);
+    const there = await childCall<Folder[]>("list_projects", {}, workspace);
     if (Array.isArray(there) && there.some((f) => f.id === project)) {
       copied.add(project);
       return;
@@ -109,6 +139,9 @@ export function createWslLink(machine: string): Link {
   return {
     state: () => state,
     async call(_id, command, workspace, folder, args, timeoutMs): Promise<CallResult> {
+      if (command === "list_projects") return { value: await foldersFor(workspace), cached: null, deferred: null };
+      // Apagada, leer no la enciende: la barra no prende Linux solo por estar abierta.
+      if (state === "offline" && classOf(command) === "read") throw { code: "machine_off" };
       if (CREATES.has(command)) await ensureFolder((args as { project?: unknown } | null)?.project, workspace);
       const value = await invoke<unknown>("wsl_child_call", { machine, command, workspace, folder, args: args ?? {}, timeoutMs: timeoutMs ?? null });
       if (state !== "online") setState("online");

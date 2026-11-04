@@ -625,8 +625,26 @@ pub fn status(entry: &ChildEntry, disk: bool) -> ChildInfo {
     info
 }
 
+/// Sin `disk`, una distribución que ya corre se lee igual (no se enciende nada);
+/// una apagada se queda apagada.
 pub fn children(app: &AppHandle, disk: bool) -> Vec<ChildInfo> {
-    load(app).iter().map(|e| status(e, disk)).collect()
+    let entries = load(app);
+    if entries.is_empty() {
+        return Vec::new();
+    }
+    let running = if disk { Vec::new() } else { running_distros() };
+    entries.iter().map(|e| status(e, disk || running.contains(&e.distro))).collect()
+}
+
+fn running_distros() -> Vec<String> {
+    let Ok(out) = wsl().args(["--list", "--running", "--quiet"]).output() else {
+        return Vec::new();
+    };
+    super::wsl::decode(&out.stdout)
+        .lines()
+        .map(|l| l.replace(' ', "").trim().to_string())
+        .filter(|l| !l.is_empty())
+        .collect()
 }
 
 // ---------------------------------------------------------------- progreso
