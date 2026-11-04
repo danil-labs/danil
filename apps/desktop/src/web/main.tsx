@@ -26,6 +26,8 @@ import {
   createScreenAccess,
   sessionProbe,
   startComputer,
+  startedOf,
+  MANAGED_PROVIDERS,
   startSharedComputer,
   systemOf,
   wakes,
@@ -134,6 +136,7 @@ const infoOf = (c: Computer): MachineInfo => {
     id: c.computer_id,
     name: c.name?.trim() || c.computer_id,
     wakes: wakes(c),
+    opensOnRead: typeof c.provider === "string" && MANAGED_PROVIDERS.has(c.provider),
     linked: linkedWorkspaces(c),
     features: serviceFeatures(c),
     ...(c.host_version ? { version: c.host_version } : {}),
@@ -191,7 +194,7 @@ function mountApp(computers: Computer[], base: Base, before?: (id: string) => ()
       ),
     // Sin `contracts` ni `compatible`, como el teléfono: un motor con otro contrato
     // sigue en servicio y solo falla la orden que no conoce (nunca la máquina entera).
-    wake: async (id) => (await startComputer(base.endpoint, await token(), id)).kind === "ok",
+    wake: async (id) => startedOf(await startComputer(base.endpoint, await token(), id)),
     storage: mounted.storage,
     onSlice: () => bump((n) => n + 1),
     // La cola de aplazadas cambió (aquí, en el escritorio o en el teléfono): la lista se relee.
