@@ -107,9 +107,12 @@ for (const [channel, color] of Object.entries(CHANNEL_COLORS)) {
   if (!hoja.includes(`--color-inbox-channel-${channel}: ${color};`)) failures.push(`CHANNEL_COLORS.${channel} es ${color} y global.css dice otra cosa`);
 }
 
+// `delivered` solo lo muestra el teléfono; una tarea vista no lleva marca en el escritorio.
+const PHONE_ONLY = new Set(["delivered"]);
 for (const lang of Object.keys(STATUS_LABELS)) {
   const catalog = JSON.parse(readFileSync(join(ROOT, `src/locales/${lang}/projects.json`), "utf8"));
   for (const [state, text] of Object.entries(STATUS_LABELS[lang])) {
+    if (PHONE_ONLY.has(state)) continue;
     const desktop = catalog[`projects.status.${state}`];
     if (desktop !== text) failures.push(`${lang}: STATUS_LABELS.${state} es "${text}"; projects.status.${state} es "${desktop}"`);
   }
