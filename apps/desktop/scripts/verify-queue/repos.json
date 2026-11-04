@@ -1,5 +1,5 @@
 {
-  "lanes": 2,
+  "lanes": 3,
   "repos": {
     "terminus": {
       "user": "verify-run",
@@ -12,7 +12,7 @@
       "env": {
         "HARNESS_BUILD_COMMIT": "{commit}",
         "RUSTUP_TOOLCHAIN": "1.97.1",
-        "SELDON_VERIFY_JOBS": "4",
+        "SELDON_VERIFY_JOBS": "3",
         "CARGO_INCREMENTAL": "0",
         "CARGO_PROFILE_DEV_DEBUG": "0"
       },
