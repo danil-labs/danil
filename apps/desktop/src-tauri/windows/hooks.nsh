@@ -49,20 +49,21 @@
 ; The template kills the app before installing. Installing sets the files aside
 ; instead; only a real uninstall closes it. An installer replacing this copy
 ; runs the uninstaller in place (`_?=$INSTDIR`); Settings runs a temporary copy.
+; Since CLI 2.12 the template passes the full path; set-aside and process lookup need the file name.
 !macroundef CheckIfAppIsRunning
-!macro CheckIfAppIsRunning executableName productName
+!macro CheckIfAppIsRunning executablePath productName
   !ifdef __UNINSTALL__
     ${If} $EXEDIR == $INSTDIR
-      !insertmacro TERMINUS_SET_ASIDE "${executableName}"
+      !insertmacro TERMINUS_SET_ASIDE "${MAINBINARYNAME}.exe"
     ${Else}
-      nsis_tauri_utils::FindProcessCurrentUser "${executableName}"
+      nsis_tauri_utils::FindProcessCurrentUser "${MAINBINARYNAME}.exe"
       Pop $R0
       ${If} $R0 = 0
         nsis_tauri_utils::StrReplace "$(appRunningOkKill)" "{{product_name}}" "${productName}"
         Pop $R2
         MessageBox MB_OKCANCEL $R2 /SD IDOK IDOK +2
         Abort
-        nsis_tauri_utils::KillProcessCurrentUser "${executableName}"
+        nsis_tauri_utils::KillProcessCurrentUser "${MAINBINARYNAME}.exe"
         Pop $R0
         Sleep 500
       ${EndIf}
