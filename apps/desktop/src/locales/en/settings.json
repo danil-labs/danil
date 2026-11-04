@@ -396,7 +396,7 @@
   },
   "settings.skills.search": "Search a skill",
   "settings.skills.sources_empty": "None of your sources carry skills.",
-  "settings.skills.sources_empty_help": "Skills arrive inside the folders you attach as a source.",
+  "settings.skills.sources_empty_help": "Skills arrive in skill repositories and in the folders you attach as a source.",
   "settings.skills.sources_title": "Skills",
   "settings.skills.tab_mcp": "MCP",
   "settings.skills.title": "Repositories",
@@ -790,5 +790,13 @@
   "settings.tab.memory": "Memory",
   "settings.tab.external": "External access",
   "settings.tab.usage": "Usage",
-  "settings.tab.plan": "Plan"
+  "settings.tab.plan": "Plan",
+  "settings.skills.kind_folder": "Folder",
+  "settings.skills.kind_repository": "Repository",
+  "settings.skills.source_off": "Source off",
+  "settings.skills.invoked_as": "Invoked as /{invoked}: {source} has the same name.",
+  "settings.skills.invoked_as_alone": "Invoked as /{invoked}: another source has the same name.",
+  "settings.skills.shadowed_off": "{source} has the same name: turned on, it is invoked with a suffix.",
+  "settings.skills.source_off_repository": "Its repository is off. Turn it on above, in Repositories.",
+  "settings.skills.source_off_folder": "This folder is also a skill repository. Its skills are turned on in that group."
 }

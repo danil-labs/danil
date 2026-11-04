@@ -189,3 +189,27 @@ test("project mentions are written as one token and keep their identity", () => 
   assert.deepEqual(searchPlaces([folder], "revamp-de").map(p => p.name), ["Revamp de scoring"]);
   assert.deepEqual(searchPlaces([folder], "").map(p => p.name), ["Revamp de scoring"]);
 });
+
+// La barra abre también en medio del texto, solo con skills, y nunca dentro de
+// una mención, una URL o una ruta.
+test("a slash after a space opens the skills menu and choosing keeps the rest of the text", () => {
+  const text = "revisa esto con /code y dime";
+  const d = activeTrigger(text, 21)!;
+  assert.deepEqual([d.kind, d.from, d.to, d.query, d.inline], ["/", 16, 21, "code", true]);
+  assert.equal(applySuggestion(text, d, "code-review").text, "revisa esto con /code-review y dime");
+  assert.equal(activeTrigger("/sta", 4)?.inline, false);
+});
+
+test("a slash inside a mention, a URL or a word is not a trigger", () => {
+  assert.equal(activeTrigger("mira @src/a/b", 13)?.kind, "@");
+  assert.equal(activeTrigger("abre https://x/y", 16), null);
+  assert.equal(activeTrigger("a/b", 3), null);
+});
+
+test("the composer paints a known skill in the middle of the text, but not a CLI command", () => {
+  const commands = new Set(["goal", "code-review"]);
+  const skills = new Set(["code-review"]);
+  assert.deepEqual(highlightSpans("mira /code-review y /goal", [], commands, [], skills).map(s => [s.text, s.kind]),
+    [["mira ", null], ["/code-review", "command"], [" y /goal", null]]);
+  assert.deepEqual(highlightSpans("abre https://x/code-review", [], commands, [], skills).map(s => s.kind), [null]);
+});
