@@ -454,7 +454,5 @@
   "web.admin.harness": "Usage and activity",
   "web.auth.request_access": "Request access",
   "web.auth.access_subject": "Request access to Danil",
-  "web.auth.access_hint": "Need access to Danil? Email us to request it.",
-  "web.auth.access_email_hint": "Your email app will open. If it does not, copy this address:",
   "web.auth.access_required": "You need approved access to Danil. You can request it by email."
 }
