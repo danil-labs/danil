@@ -62,3 +62,58 @@ export function wslFailureCode(error: unknown): string {
 /** Comandos que se muestran tal cual: no se traducen. */
 export const WSL_INSTALL = "wsl --install";
 export const WSL_INSTALL_UBUNTU = "wsl --install -d Ubuntu";
+
+/** El id de máquina de una distro conectada: `wsl:Ubuntu`. Sólo existe en esta PC. */
+export const WSL_MACHINE_PREFIX = "wsl:";
+
+/** Una distro con motor de Danil, como la devuelve `wsl_children`. */
+export type WslChild = {
+  id: string;
+  distro: string;
+  name: string;
+  user: string;
+  home: string;
+  online: boolean;
+  features: string[];
+  contract: string | null;
+  version: string | null;
+};
+
+/** Una distro que se puede instalar (catálogo de Microsoft). */
+export type WslCatalogItem = { name: string; label: string; url: string; sha256: string; default: boolean };
+
+export type WslDistroUser = { uid: number; user: string; home: string };
+
+/** El avance de una instalación (`wsl-progress`). */
+export type WslProgress = { target: string; step: string; done: number | null; total: number | null; line: string | null };
+
+/** Los pasos en el orden en que se muestran. */
+export const WSL_DISTRO_STEPS = ["download", "verify", "register", "user"] as const;
+export const WSL_ENGINE_STEPS = ["check", "deps", "download", "verify", "engine", "service", "connect"] as const;
+
+const RESERVED = new Set(["root", "daemon", "bin", "sys", "sync", "games", "man", "nobody", "admin", "ubuntu", "messagebus", "systemd-network"]);
+
+/** Las reglas de Ubuntu para un usuario nuevo; la ventana las vuelve a revisar. */
+export function wslUserProblem(user: string): "empty" | "reserved" | "format" | null {
+  if (!user) return "empty";
+  if (RESERVED.has(user)) return "reserved";
+  return /^[a-z][a-z0-9_-]{0,31}$/.test(user) ? null : "format";
+}
+
+/** Los distros del sistema (Docker, Rancher) se listan pero no se ofrecen. */
+export const isSystemDistro = (name: string) => /^(docker-desktop|docker-desktop-data|rancher-desktop|rancher-desktop-data|podman-machine)/i.test(name);
+
+/** El código de un fallo de los comandos `wsl_*` de la ventana. */
+export function wslErrorCode(error: unknown): string {
+  if (error && typeof error === "object" && typeof (error as { code?: unknown }).code === "string") return (error as { code: string }).code;
+  if (typeof error === "string") return error;
+  return "wsl_failed";
+}
+
+export function wslErrorDetail(error: unknown): string {
+  if (error && typeof error === "object") {
+    const d = (error as { detail?: unknown }).detail;
+    if (typeof d === "string") return d;
+  }
+  return "";
+}

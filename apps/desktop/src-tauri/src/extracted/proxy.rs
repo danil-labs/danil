@@ -285,6 +285,18 @@ pub(super) fn desktop_command(name: &str) -> bool {
                 | "service_filter"
                 | "load_history"
                 | "handler_action"
+                // Linux en esta PC (`wsl.rs`, `wsl_child.rs`): la ventana, no el motor.
+                | "wsl_detect"
+                | "wsl_catalog"
+                | "wsl_distro_user"
+                | "wsl_enable"
+                | "wsl_distro_install"
+                | "wsl_engine_install"
+                | "wsl_children"
+                | "wsl_child_remove"
+                | "wsl_child_wake"
+                | "wsl_child_call"
+                | "wsl_child_events"
         )
 }
 pub(super) fn with_desktop(
