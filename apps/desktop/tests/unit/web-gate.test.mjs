@@ -140,7 +140,7 @@ test("only an explicit access refusal offers request access, without replacing l
     let w;
     try {
       const app = await boot("listo", `web-gate-access-${index}`, {}, undefined, { "sb-supabase-auth-token": session("stored") }, {
-        web: true, antes: win => { w = win; win.terminusWeb = { supabaseUrl: SUPABASE, supabaseKey: "public-anon-key" }; },
+        web: true, beforeImport: win => { w = win; win.terminusWeb = { supabaseUrl: SUPABASE, supabaseKey: "public-anon-key" }; },
       });
       await sleep(800);
       const gate = w.document.querySelector("[data-web-gate]");
@@ -148,7 +148,7 @@ test("only an explicit access refusal offers request access, without replacing l
       const request = gate?.querySelector('[data-access-request] a[href^="mailto:"]');
       assert.equal(!!request, view === "access_required");
       if (request) assert.ok(request.href.startsWith("mailto:hola@danil.ai?subject="));
-      assert.deepEqual(app.fallos, []);
+      assert.deepEqual(app.failures, []);
     } finally { globalThis.fetch = own; }
   }
 });
