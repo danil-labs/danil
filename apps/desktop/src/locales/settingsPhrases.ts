@@ -4,15 +4,7 @@ import { sumarFrases, type Plural } from "../lib/i18n.ts";
 import "./catalogs";
 
 const SETTINGS = import.meta.glob(
-  [
-    "./*/settings.accounts.json",
-    "./*/settings.connections.json",
-    "./*/settings.general.json",
-    "./*/settings.skills.json",
-    "./*/settings.providers.json",
-    "./*/settings.environment.json",
-    "./*/settings.projects.json",
-  ],
+  ["./*/settings.*.json", "!./*/settings.handler.json", "!./*/settings.usage.json"],
   { eager: true, import: "default" },
 ) as Record<string, Record<string, string | Plural>>;
 for (const [path, phrases] of Object.entries(SETTINGS)) {
