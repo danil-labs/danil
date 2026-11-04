@@ -566,6 +566,8 @@ export type ChatProps = {
   reintento: { intento: number; total: number; clase: string } | null;
   /** El agente contestó y solo queda una hija en segundo plano. */
   enFondo?: boolean;
+  /** La máquina de la tarea se enciende para recibir el mensaje que ya salió. */
+  encendiendo?: { name: string; wakes: boolean } | null;
   /**
    * Desde cuándo contesta el turno que se está mirando, en epoch ms.
    * `null` sin turno vivo o cuando la ventana no sabe desde cuándo.
@@ -3514,9 +3516,10 @@ export default function Chat(props: ChatProps) {
               />
             )}
           </Show>
-          <Show when={props.busy && !props.terminal}>
+          <Show when={(props.busy || props.encendiendo) && !props.terminal}>
             <div class="col-start-1 min-w-0">
               <EstadoDelTurno
+                encendiendo={props.encendiendo ?? null}
                 paso={pasoVivo()}
                 esperando={props.esperando}
                 reintento={props.reintento}
