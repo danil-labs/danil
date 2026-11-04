@@ -1,7 +1,9 @@
 /**
  * Cada workspace es de un workspace de Danil, contra un motor simulado con una
  * sesión por cuenta: la sección «Cuenta de este workspace» en Workspaces, la
- * elección al conectar, el workspace tomado y la desconexión. Monta `dist/`.
+ * elección al conectar, el workspace tomado y la desconexión. Enlazar va por la
+ * sesión de persona de la ventana (`agents_session_link`), nunca con el token de
+ * cliente. Monta `dist/`.
  */
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -76,6 +78,7 @@ function engine({ sessions = [ALBERTO, FDB], map = { w: "u_alberto", w2: "u_fdb"
             return of(workspace);
           }),
       ),
+      agents_session_link: record("agents_session_link", (args) => plane.link(args)),
       account_relay_token: record("account_relay_token", ({ account } = {}) => ({ token: account ?? "main", expires_at: Date.now() + 3_600_000, endpoint: "https://directory.test" })),
       danil_connect_start: record("danil_connect_start", () => ({ state: "pending", user_code: "WDJB-MJHT", verification_uri_complete: "https://app.danil.ai/terminus/connect?code=WDJB-MJHT" })),
       open_external: record("open_external", () => null),
@@ -90,27 +93,40 @@ const DIRECTORY = [
   { key: "a:478", workspace_id: "otra", danil_workspace_id: 478, name: "Tomado", kind: "organization", organization: DANIL, role: "owner", owner: false, support: null, capabilities: { agents: true, terminus: true }, pin: null },
 ];
 
-/** Lo que contesta el plano de control: el directorio y el enlace 1 a 1. */
+/** El plano de control que contesta ahora; `agents_session_link` lo lee. */
+let plane = { link: () => { throw new Error("no control plane"); } };
+
+/**
+ * Lo que contesta el plano de control: el directorio (token de cliente) y el enlace
+ * 1 a 1 por la sesión de persona. Un enlace con el token de cliente es un defecto.
+ */
 function controlPlane(entries = DIRECTORY, linkStatus = null) {
   const links = [];
+  const clientLinks = [];
   const previous = globalThis.fetch;
   globalThis.fetch = async (input, init = {}) => {
     const url = String(input?.url ?? input);
     if (url.endsWith("/v1/me/workspaces")) return Response.json({ workspaces: entries, truncated: false });
     if (url.endsWith("/v1/me/workspaces/pins")) return Response.json({ keys: [] });
     if (url.includes("/danil-workspace")) {
-      const body = init.body ? JSON.parse(init.body) : {};
-      links.push({ url, method: init.method, danil: body.danil_workspace_id });
-      if (linkStatus) return Response.json({ error: { code: linkStatus } }, { status: 409 });
-      return Response.json({ workspace: {}, danil_workspace_id: body.danil_workspace_id });
+      clientLinks.push({ url, method: init.method });
+      return Response.json({ error: "unauthorized" }, { status: 401 });
     }
     return new Response("{}", { status: 404 });
   };
   globalThis.fetch.__jsdomApp = true;
+  plane = {
+    link(args = {}) {
+      links.push({ account: args.account, workspace: args.workspaceId, danil: args.danilWorkspaceId });
+      if (linkStatus) throw { what: { clave: `attention.desktop.error.${linkStatus}` }, detail: linkStatus };
+      return { danil_workspace_id: args.danilWorkspaceId };
+    },
+  };
   return {
     links,
     restore() {
       globalThis.fetch = previous;
+      assert.deepEqual(clientLinks, [], "nothing links with the client token");
     },
   };
 }
@@ -163,7 +179,7 @@ test("the workspace shows its sync line and only explicit actions; changing asks
 
     confirm.querySelector("[data-workspace-change-yes]").click();
     await sleep(500);
-    assert.deepEqual(control.links.map((l) => [l.method, l.danil]), [["POST", 477]]);
+    assert.deepEqual(control.links.map((l) => [l.workspace, l.danil, l.account]), [["w", 477, undefined]], "the main account's window session links");
     assert.deepEqual(e.calls.filter((c) => c.command === "danil_workspace_set_account").map((c) => c.args), [{ workspace: "w", account: "u_alberto" }]);
     assert.ok(section(w).textContent.includes("Se sincroniza con alberto@danil.ai"));
     assert.equal(w.document.querySelector("[role=alert]"), null);
@@ -265,6 +281,44 @@ test("the control plane refusing a taken workspace keeps the list open", async (
     assert.equal(w.document.querySelector("[data-workspace-account] [role=alert]")?.textContent, "Ese workspace de Danil ya está en otra máquina. Elige otro.");
     assert.ok(chooser(w), "the list stays open to choose another");
     assert.ok(!e.calls.some((c) => c.command === "danil_workspace_set_account"));
+    assert.deepEqual(app.failures, []);
+  } finally {
+    control.restore();
+  }
+});
+
+test("without a window session, linking asks to sign in and the engine keeps no account", async () => {
+  const control = controlPlane(DIRECTORY, "no_session");
+  try {
+    const e = engine({ map: {} });
+    const app = await openWorkspaces("danil-workspace-account-no-session", e);
+    const { w } = app;
+    buttonIn(section(w), "Vincular con Danil").click();
+    await sleep(400);
+    option(w, "a:477").click();
+    await sleep(500);
+    assert.equal(w.document.querySelector("[data-workspace-account] [role=alert]")?.textContent, "Inicia sesión con Danil en esta ventana para sincronizar este workspace.");
+    assert.ok(chooser(w), "the list stays open");
+    assert.ok(!e.calls.some((c) => c.command === "danil_workspace_set_account"));
+    assert.deepEqual(app.failures, []);
+  } finally {
+    control.restore();
+  }
+});
+
+test("a second account links with its own window session", async () => {
+  const control = controlPlane();
+  try {
+    const e = engine({ map: { w: "u_fdb", w2: "u_fdb" } });
+    const app = await openWorkspaces("danil-workspace-account-second", e);
+    const { w } = app;
+    buttonIn(section(w), "Cambiar").click();
+    await sleep(400);
+    option(w, "a:477").click();
+    await sleep(200);
+    w.document.querySelector("[data-workspace-change-yes]").click();
+    await sleep(500);
+    assert.deepEqual(control.links.map((l) => [l.account, l.danil]), [["u_fdb", 477]]);
     assert.deepEqual(app.failures, []);
   } finally {
     control.restore();

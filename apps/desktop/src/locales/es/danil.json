@@ -100,6 +100,7 @@
   "danil.workspace.taken": "Ya está en otra máquina",
   "danil.workspace.taken_error": "Ese workspace de Danil ya está en otra máquina. Elige otro.",
   "danil.workspace.not_admin": "Solo un owner o admin de la cuenta puede enlazar este workspace.",
+  "danil.workspace.sign_in_to_link": "Inicia sesión con Danil en esta ventana para sincronizar este workspace.",
   "danil.workspace.role.owner": "Owner",
   "danil.workspace.role.admin": "Admin",
   "danil.workspace.role.member": "Miembro",
