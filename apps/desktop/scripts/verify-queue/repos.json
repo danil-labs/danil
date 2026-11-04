@@ -1,13 +1,16 @@
 {
-  "lanes": 3,
+  "lanes": 4,
   "repos": {
     "terminus": {
       "user": "verify-run",
+      "lanes": 3,
       "prepare": "pnpm install --frozen-lockfile",
       "commands": ["pnpm verify", "pnpm verify --no-cargo"]
     },
     "danil-engine": {
       "user": "verify-run-engine",
+      "lanes": 2,
+      "cpus": 4,
       "target": "checkout",
       "env": {
         "HARNESS_BUILD_COMMIT": "{commit}",

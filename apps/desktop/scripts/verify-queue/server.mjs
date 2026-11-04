@@ -73,6 +73,8 @@ export function checkConfig(config) {
     const where = `repos.json: ${repo}`;
     if (!REPO_NAME.test(repo)) throw new Error(`${where}: nombre inválido`);
     if (profile.user !== undefined && !USER_NAME.test(profile.user)) throw new Error(`${where}: user inválido`);
+    if (profile.lanes !== undefined && !(Number.isInteger(profile.lanes) && profile.lanes >= 1 && profile.lanes <= (config.lanes ?? 1))) throw new Error(`${where}: lanes es un entero de 1 al total de carriles`);
+    if (profile.cpus !== undefined && !(Number.isInteger(profile.cpus) && profile.cpus >= 1 && profile.cpus <= 64)) throw new Error(`${where}: cpus es un entero de 1 a 64`);
     if (profile.target !== undefined && !["checkout", "outside"].includes(profile.target)) throw new Error(`${where}: target es "checkout" u "outside"`);
     if (!profile.jobs === !profile.commands) throw new Error(`${where}: lleva commands o jobs, no los dos`);
     const envs = [profile.env, ...Object.values(profile.jobs ?? {}).map((job) => job.env)];
@@ -402,7 +404,8 @@ export function createQueue({ home, config, diskPercent = defaultDiskPercent, ru
   }
 
   /** Los núcleos se reparten entre carriles: dos cadenas de 8 trabajos en 8 núcleos se frenan entre sí. */
-  const jobsFor = () => Math.max(1, Math.floor(cpus / lanes));
+  /** `{jobs}`: los núcleos del perfil, o una parte igual de la máquina por carril. */
+  const jobsFor = (repo) => config.repos[repo].cpus ?? Math.max(1, Math.floor(cpus / lanes));
 
   function checkRequest({ repo, commit, command, base }) {
     if (!REPO_NAME.test(repo ?? "")) throw new Refusal(400, "repo inválido");
@@ -411,7 +414,7 @@ export function createQueue({ home, config, diskPercent = defaultDiskPercent, ru
     const profile = own(config.repos, repo) ? config.repos[repo] : null;
     if (!profile) throw new Refusal(403, `esta cola no corre el repo ${repo}`);
     if (!profile.user && !sameUser) throw new Refusal(503, `el perfil ${repo} no tiene usuario de corrida: la cola no corre ramas con su propio usuario`);
-    const resolved = resolveCommand(profile, command, { commit, base, jobs: jobsFor() });
+    const resolved = resolveCommand(profile, command, { commit, base, jobs: jobsFor(repo) });
     if (!resolved) throw new Refusal(403, `esta cola no corre «${command}» en ${repo}`);
     return resolved;
   }
@@ -431,9 +434,15 @@ export function createQueue({ home, config, diskPercent = defaultDiskPercent, ru
     const type = spawnSync("git", ["cat-file", "-t", commit], { cwd: mirror, encoding: "utf8", timeout: GIT_TIMEOUT_MS });
     if (type.stdout?.trim() !== "commit") throw new Refusal(422, `el commit ${commit} no llegó en el bundle`);
     git(mirror, ["update-ref", `refs/verify/${commit}`, commit]);
-    const stale = knownCommits(repo).slice(KEPT_COMMITS);
-    for (const old of stale) git(mirror, ["update-ref", "-d", `refs/verify/${old}`]);
+    pruneRefs(repo, mirror, commit);
     return mirror;
+  }
+
+  /** Quedan los commits de las corridas sin terminar y de las últimas que llegaron: la fecha del commit no dice cuándo llegó. */
+  function pruneRefs(repo, mirror, incoming) {
+    const runs = allRuns().filter((run) => run.repo === repo);
+    const keep = new Set([incoming, ...runs.filter((run) => !FINISHED.has(run.state)).map((run) => run.commit), ...runs.slice(-KEPT_COMMITS).map((run) => run.commit)]);
+    for (const old of knownCommits(repo)) if (!keep.has(old)) git(mirror, ["update-ref", "-d", `refs/verify/${old}`]);
   }
 
   /** Lo que el recibo dice del árbol: el commit, su árbol y, si el cliente declaró una foto `wip`, el HEAD de debajo. */
@@ -468,14 +477,18 @@ export function createQueue({ home, config, diskPercent = defaultDiskPercent, ru
     return free.find((lane) => existsSync(join(lanePaths(repo, lane).checkout, ".git"))) ?? free[0];
   }
 
-  /** Por orden de llegada, una corrida por carril. `execute` marca `running` antes de su primer await. */
+  /**
+   * Por orden de llegada, una corrida por carril, sin pasar del tope de carriles de su repo: la primera
+   * en espera cuyo repo tiene cupo. `execute` marca `running` antes de su primer await.
+   */
   function drain() {
     for (;;) {
       const free = [...Array(lanes).keys()].filter((lane) => !active.has(lane));
-      const next = free.length ? pending()[0] : null;
+      const busy = (repo) => [...active.values()].filter((entry) => entry.repo === repo).length;
+      const next = free.length ? pending().find((run) => busy(run.repo) < (config.repos[run.repo]?.lanes ?? lanes)) : null;
       if (!next) return;
       const lane = pickLane(next.repo, free);
-      const current = { id: next.id, kill: () => {}, cancelled: false, timedOut: false };
+      const current = { id: next.id, repo: next.repo, kill: () => {}, cancelled: false, timedOut: false };
       active.set(lane, current);
       writeFileSync(busyMarker, "");
       const done = execute(next, lane, current).finally(() => {
@@ -656,7 +669,7 @@ export function createQueue({ home, config, diskPercent = defaultDiskPercent, ru
       clean();
       for (const path of profile.fresh ?? []) lane.sync(["rm", "-rf", join(checkout, path)], "/");
       say(`${run.repo} ${run.commit} en ${checkout}${lane.user ? ` como ${lane.user}` : ""}: ${run.command}`);
-      const values = { commit: run.commit, base: run.base, jobs: jobsFor() };
+      const values = { commit: run.commit, base: run.base, jobs: jobsFor(run.repo) };
       const { argv, env: jobEnv } = checkRequest(run);
       const profileEnv = Object.fromEntries(Object.entries(profile.env ?? {}).map(([key, value]) => [key, substitute(value, values)]));
       const env = { ...profileEnv, ...jobEnv, ...laneEnv(run.repo, laneIndex) };

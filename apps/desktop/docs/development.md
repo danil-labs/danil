@@ -111,8 +111,11 @@ and any other refusal from a CLI end the run with the reason.
 
 The queue is `scripts/verify-queue/server.mjs`: one per machine, first come
 first served, listening on loopback only. It runs one job per lane; `lanes` in
-`repos.json` sets how many, and each lane gets its share of the cores as
-`{jobs}`. A run takes the free lane where its repo is already warm. It takes repo, commit
+`repos.json` sets how many. A profile may cap its own runs with `lanes` and
+fix its cores with `cpus` (its `{jobs}`); without `cpus` a run gets an equal
+share of the machine. The first queued run whose repo is under its cap takes
+the free lane where its repo is already warm. On vm-verify: 4 lanes, up to 3
+app chains (wait-bound) and up to 2 engine runs with 4 cores each. It takes repo, commit
 and a command from `repos.json`, and knows nothing else about a repo. A profile
 lists either exact `commands`, run with `bash -lc` after `prepare` (the app), or
 typed `jobs`: a fixed `argv`, `options` with an anchored pattern per value and
