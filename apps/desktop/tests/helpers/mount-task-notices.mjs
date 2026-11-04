@@ -109,6 +109,22 @@ export async function taskNoticeScenarios({ boot, sleep, responses }) {
     attention([failure]);
     await sleep(50);
     assert.equal(toast(), null);
+
+    const finished = { session: "s2", project: "", state: "unseen" };
+    const base = calls();
+    attention([finished]);
+    await sleep(100);
+    assert.equal(calls(), base, "a finished task waits before notifying");
+    attention([]);
+    await sleep(4100);
+    assert.equal(calls(), base, "a task seen in another window does not notify");
+    attention([finished]);
+    await sleep(4100);
+    assert.equal(calls(), base + 1, "a finished task nobody saw still notifies");
+    attention([]);
+    attention([{ session: "s1", project: "", state: "unseen" }]);
+    await sleep(50);
+    assert.equal(calls(), base + 2, "the task this window shows notifies without waiting");
     assert.deepEqual(app.failures, []);
   } finally {
     app.w.close();
