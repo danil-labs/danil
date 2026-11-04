@@ -14,6 +14,15 @@ const ID: &str = "terminus-background";
 const MENU_BAR_ICON: &[u8] = include_bytes!("../../icons/tray@2x.png");
 pub(super) static FRONT_READY: std::sync::atomic::AtomicBool =
     std::sync::atomic::AtomicBool::new(false);
+/// Se ocultó desde pantalla completa: al volver la recupera.
+#[cfg(target_os = "macos")]
+static HID_FULLSCREEN: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+/// Cada `show_window` lo sube: una salida de pantalla completa pendiente ya no oculta.
+#[cfg(target_os = "macos")]
+static SHOWN: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+/// Lo que tarda macOS en la animación de salir de pantalla completa.
+#[cfg(target_os = "macos")]
+const LEAVE_FULLSCREEN: std::time::Duration = std::time::Duration::from_millis(900);
 
 #[derive(Deserialize)]
 pub(super) struct Labels {
@@ -33,8 +42,14 @@ pub(super) struct Item {
 /// `get_webview_window` ya no la devuelve.
 pub(super) fn show_window(app: &AppHandle) {
     if let Some(window) = app.get_window("main") {
+        #[cfg(target_os = "macos")]
+        SHOWN.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
         let _ = window.show();
         let _ = window.unminimize();
+        #[cfg(target_os = "macos")]
+        if HID_FULLSCREEN.swap(false, std::sync::atomic::Ordering::SeqCst) {
+            let _ = window.set_fullscreen(true);
+        }
         let _ = window.set_focus();
     }
 }
@@ -104,6 +119,24 @@ pub(super) fn hide_window(app: &AppHandle) -> Result<(), String> {
         initialize(app)?;
     }
     if let Some(window) = app.get_window("main") {
+        // Oculta dentro de pantalla completa, macOS deja su espacio en negro hasta salir
+        // desde el Dock: primero sale y, terminada la animación, se oculta.
+        #[cfg(target_os = "macos")]
+        if window.is_fullscreen().unwrap_or(false) {
+            use std::sync::atomic::Ordering;
+            window
+                .set_fullscreen(false)
+                .map_err(|error| error.to_string())?;
+            HID_FULLSCREEN.store(true, Ordering::SeqCst);
+            let shown = SHOWN.load(Ordering::SeqCst);
+            std::thread::spawn(move || {
+                std::thread::sleep(LEAVE_FULLSCREEN);
+                if SHOWN.load(Ordering::SeqCst) == shown {
+                    let _ = window.hide();
+                }
+            });
+            return Ok(());
+        }
         window.hide().map_err(|error| error.to_string())?;
     }
     Ok(())
