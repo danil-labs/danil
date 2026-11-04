@@ -1,9 +1,9 @@
 /**
- * La lista plana de tareas y su único filtro: carpetas, agente y agrupar. Es la vista del sidebar del escritorio (#151) y la de la lista del
+ * La lista plana de tareas y su único filtro: carpetas, agente, agrupar y ordenar. Es la vista del sidebar del escritorio (#151) y la de la lista del
  * teléfono; las palabras de cada opción viven en `SIDEBAR_LABELS` de
  * `@terminus/design` (el escritorio las lee de `shell.sidebar.view.*`).
  */
-import { type TaskActivity, type TaskState } from "../../design/src/index.ts";
+import { type TaskActivity, type TaskState, taskPriority } from "../../design/src/index.ts";
 import { type WorkState, WORK_STATES } from "./workState.ts";
 
 /** Qué enseña la lista de tareas. `folders` vacío son todas las carpetas. */
@@ -11,18 +11,26 @@ export type SidebarView = {
   folders: string[];
   agent: string | null;
   group: SidebarGrouping;
+  sort: SidebarSort;
 };
 
 export type SidebarGrouping = "none" | "folder" | "status" | "agent" | "machine";
 export type SidebarSection = "active";
+/**
+ * El orden dentro de cada grupo: `created` la más nueva primero, `recent` la
+ * que se movió hace menos y `status` lo que te necesita arriba (`statusRank`).
+ */
+export type SidebarSort = "created" | "recent" | "status";
 
 export const DEFAULT_SIDEBAR_VIEW: SidebarView = {
   folders: [],
   agent: null,
   group: "folder",
+  sort: "created",
 };
 
 export const GROUPINGS: readonly SidebarGrouping[] = ["none", "folder", "status", "agent", "machine"];
+export const SORTS: readonly SidebarSort[] = ["created", "recent", "status"];
 
 /** Lo que la lista sabe de una fila (`SessionRow`) y basta para colocarla. */
 export type SidebarTask = {
@@ -40,6 +48,10 @@ export type SidebarTask = {
   sin_ver?: boolean;
   stage?: "in_progress" | "review" | "done" | null;
   delegated_activity?: TaskActivity;
+  created_at?: number;
+  updated_at?: number;
+  /** Cuándo cerró su último turno; un motor anterior no lo manda. */
+  last_turn_at?: number | null;
 };
 
 export type SidebarContext<T extends SidebarTask = SidebarTask> = {
@@ -112,6 +124,7 @@ export function sanitizeSidebarView(raw: unknown): SidebarView {
     folders,
     agent: typeof v.agent === "string" && v.agent !== "" ? v.agent : null,
     group: GROUPINGS.includes(v.group as SidebarGrouping) ? (v.group as SidebarGrouping) : DEFAULT_SIDEBAR_VIEW.group,
+    sort: SORTS.includes(v.sort as SidebarSort) ? (v.sort as SidebarSort) : DEFAULT_SIDEBAR_VIEW.sort,
   };
 }
 
@@ -147,10 +160,37 @@ export function statusKeyOf<T extends SidebarTask>(task: T, ctx: Pick<SidebarCon
   return ctx.workStateOf?.(task) ?? "unknown";
 }
 
-const pinnedFirst = <T extends SidebarTask>(tasks: T[]): T[] =>
-  tasks.map((task, i) => ({ task, i }))
-    .sort((a, b) => Number(isPinned(b.task)) - Number(isPinned(a.task)) || a.i - b.i)
+/** La última vez que la tarea se movió, como la hora de su tarjeta. */
+export function lastActivity(task: SidebarTask): number {
+  return task.last_turn_at ?? task.updated_at ?? task.created_at ?? 0;
+}
+
+/**
+ * El lugar de una tarea al ordenar por estado: primero lo que te necesita
+ * (aprobar, contestar, un fallo), luego lo terminado sin ver, lo que trabaja,
+ * lo que detuviste y al final lo ya visto.
+ */
+export function statusRank(task: SidebarTask, ctx: Pick<SidebarContext, "live" | "approving">): number {
+  const state = taskPriority(activityOf(task, ctx));
+  if (needsYou(state)) return 0;
+  switch (state) {
+    case "unseen": return 1;
+    case "working": return 2;
+    case "interrupted": return 3;
+    default: return 4;
+  }
+}
+
+/** Las fijadas arriba y, debajo, el orden de la vista; a igualdad, el de entrada. */
+function arrange<T extends SidebarTask>(tasks: T[], sort: SidebarSort, ctx: Pick<SidebarContext, "live" | "approving">): T[] {
+  return tasks.map((task, i) => ({
+    task, i,
+    rank: sort === "status" ? statusRank(task, ctx) : 0,
+    when: sort === "created" ? 0 : lastActivity(task),
+  }))
+    .sort((a, b) => Number(isPinned(b.task)) - Number(isPinned(a.task)) || a.rank - b.rank || b.when - a.when || a.i - b.i)
     .map(({ task }) => task);
+}
 
 function groupBy<T extends SidebarTask>(tasks: T[], keyOf: (task: T) => string): Map<string, T[]> {
   const groups = new Map<string, T[]>();
@@ -179,6 +219,8 @@ export function applySidebarView<T extends SidebarTask>(
     && (view.folders.length === 0 || view.folders.includes(folderOf(task)))
     && (view.agent === null || sameAgent(task.agent, view.agent)));
 
+  const sort = view.sort ?? DEFAULT_SIDEBAR_VIEW.sort;
+  const pinnedFirst = (list: T[]) => arrange(list, sort, ctx);
   if (view.group === "none") return [{ kind: "section", key: "active", tasks: pinnedFirst(visible) }];
 
   let groups: Map<string, T[]>;
@@ -220,5 +262,6 @@ export function groupKey(group: Pick<SidebarGroup<unknown>, "kind" | "key" | "ma
 export function nonDefaultCount(view: SidebarView): number {
   return Number(view.folders.length > 0)
     + Number(view.agent !== null)
-    + Number(view.group !== DEFAULT_SIDEBAR_VIEW.group);
+    + Number(view.group !== DEFAULT_SIDEBAR_VIEW.group)
+    + Number((view.sort ?? DEFAULT_SIDEBAR_VIEW.sort) !== DEFAULT_SIDEBAR_VIEW.sort);
 }

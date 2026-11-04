@@ -2,6 +2,7 @@ import {
   type SidebarGrouping,
   type SidebarGroup,
   type SidebarSection,
+  type SidebarSort,
   type SidebarStatusKey,
   type SidebarView,
   sanitizeSidebarView,
@@ -15,10 +16,12 @@ export {
   type SidebarGroup,
   type SidebarGrouping,
   type SidebarSection,
+  type SidebarSort,
   type SidebarStatusKey,
   type SidebarTask,
   type SidebarView,
   DEFAULT_SIDEBAR_VIEW,
+  SORTS,
   agentOptions,
   applySidebarView,
   groupKey,
@@ -67,6 +70,14 @@ export function groupingLabel(group: SidebarGrouping): string {
   }
 }
 
+export function sortLabel(sort: SidebarSort): string {
+  switch (sort) {
+    case "recent": return t("shell.sidebar.view.sort_recent");
+    case "status": return t("shell.sidebar.view.sort_status");
+    default: return t("shell.sidebar.view.sort_created");
+  }
+}
+
 /** La línea bajo «Nueva tarea» que dice qué se enseña. */
 export function scopeLabel(view: SidebarView, folderName: (id: string) => string): string {
   const parts = [view.folders.length ? view.folders.map(folderName).join(", ") : t("shell.sidebar.view.all_folders")];
@@ -77,6 +88,8 @@ export function scopeLabel(view: SidebarView, folderName: (id: string) => string
     case "agent": parts.push(t("shell.sidebar.view.scope_by_agent")); break;
     case "machine": parts.push(t("shell.sidebar.view.scope_by_machine")); break;
   }
+  if (view.sort === "recent") parts.push(t("shell.sidebar.view.scope_sort_recent"));
+  if (view.sort === "status") parts.push(t("shell.sidebar.view.scope_sort_status"));
   return parts.join(" · ");
 }
 

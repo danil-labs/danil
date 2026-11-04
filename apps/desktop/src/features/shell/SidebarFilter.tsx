@@ -6,8 +6,10 @@ import {
   type SidebarGrouping,
   type SidebarView,
   DEFAULT_SIDEBAR_VIEW,
+  SORTS,
   groupingLabel,
   sameAgent,
+  sortLabel,
 } from "../../lib/sidebarView";
 import { cn } from "../../lib/utils";
 import { Button } from "../../ui/Button";
@@ -75,7 +77,7 @@ function Opcion(props: {
   );
 }
 
-/** Las secciones de «Filtrar y agrupar»: carpetas, agente y agrupar. */
+/** Las secciones de «Filtrar y agrupar»: carpetas, agente, agrupar y ordenar. */
 export function SidebarFilterSections(props: SidebarFilterProps) {
   const set = (patch: Partial<SidebarView>) => props.onChange({ ...props.view, ...patch });
   const total = () => props.folders.reduce((sum, f) => sum + f.count, 0);
@@ -153,6 +155,22 @@ export function SidebarFilterSections(props: SidebarFilterProps) {
         </For>
       </div>
 
+      <span class="my-1 h-px bg-border" />
+      <div role="group" aria-label={t("shell.sidebar.view.sort")} class="grid gap-0.5">
+        <div class={titulo}>{t("shell.sidebar.view.sort")}</div>
+        <For each={SORTS}>
+          {(s) => (
+            <Opcion
+              role="menuitemradio"
+              on={props.view.sort === s}
+              onSelect={() => set({ sort: s })}
+              aside={s === DEFAULT_SIDEBAR_VIEW.sort ? t("shell.sidebar.view.default") : undefined}
+            >
+              {sortLabel(s)}
+            </Opcion>
+          )}
+        </For>
+      </div>
     </div>
   );
 }
