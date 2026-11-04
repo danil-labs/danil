@@ -7,7 +7,9 @@ export function AccessRequest() {
   return (
     <div class="grid gap-3" data-access-request="">
       <Button as="a" class="min-h-11" variant="secondary" href={href()}>{t("web.auth.request_access")}</Button>
-      <p class="m-0 text-center text-sm select-all text-neutral-500">{CONTACT_EMAIL}</p>
+      <a class="m-0 text-center text-sm text-neutral-500 underline hover:text-neutral-950" href={`mailto:${CONTACT_EMAIL}`} data-access-contact="">
+        {t("web.auth.access_contact", { email: CONTACT_EMAIL })}
+      </a>
     </div>
   );
 }

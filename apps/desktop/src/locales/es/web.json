@@ -456,6 +456,7 @@
   "web.admin.harness": "Consumo y actividad",
   "web.auth.request_access": "Solicitar acceso",
   "web.auth.access_subject": "Solicitar acceso a Danil",
+  "web.auth.access_contact": "¿Dudas? Escríbenos a {email}",
   "web.auth.access_required": "Necesitas acceso autorizado a Danil. Puedes solicitarlo por correo.",
   "web.download.tab": "Descarga la app",
   "web.download.title": "Descarga la app de escritorio",
