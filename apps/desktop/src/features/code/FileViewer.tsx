@@ -15,6 +15,7 @@ import {
 import { invoke } from "../../lib/invoke.ts";
 import { machineOf } from "../machines/store";
 import Navegador from "lucide-solid/icons/external-link";
+import IconoDescarga from "lucide-solid/icons/download";
 import IconoCodigo from "lucide-solid/icons/code";
 import IconoLado from "lucide-solid/icons/columns-2";
 import IconoPrevia from "lucide-solid/icons/eye";
@@ -392,8 +393,25 @@ export default function VisorDeArchivo(props: {
     props.onSucio(false);
   });
 
+  /** Fuera de esta computadora (la web, o una tarea de otra máquina) el archivo se baja aquí en vez de abrirse allá. */
+  const conDescarga = () => leerParte() !== null && (!capabilities().nativeWindow || !!machineOf(props.session));
   /** La salida usa lo que hay en disco, no lo escrito sin guardar. */
-  const canOpenExternal = () => !conGuardadoManual() && (props.suelto || props.session !== "") && !machineOf(props.session);
+  const canOpenExternal = () => !conGuardadoManual() && (props.suelto || props.session !== "") && !machineOf(props.session) && !conDescarga();
+  const [bajando, setBajando] = createSignal(false);
+  async function bajar() {
+    const leer = leerParte();
+    if (!leer || bajando()) return;
+    setBajando(true);
+    setFalloAfuera(null);
+    try {
+      const { descargar } = await import("../viewers/Media");
+      await descargar(props.ruta, leer);
+    } catch (e) {
+      setFalloAfuera(asFailure(e));
+    } finally {
+      setBajando(false);
+    }
+  }
 
   async function openExternal() {
     setFalloAfuera(null);
@@ -786,6 +804,19 @@ export default function VisorDeArchivo(props: {
             <span class="sr-only">{CON_SU_APP.includes(extension(props.ruta)) ? t("code.file.open_with_app") : t("code.file.open_external")}</span>
           </Button>
         </Show>
+        <Show when={conDescarga()}>
+          <Button
+            variant="ghost"
+            size="compact"
+            class="shrink-0 gap-1.5 text-neutral-500"
+            title={bajando() ? t("code.file.download.busy") : t("code.file.download")}
+            disabled={bajando()}
+            onClick={() => void bajar()}
+          >
+            <IconoDescarga size={13} aria-hidden="true" />
+            <span class="sr-only">{bajando() ? t("code.file.download.busy") : t("code.file.download")}</span>
+          </Button>
+        </Show>
       </div>
 
       <Show when={borrado()}>
@@ -861,7 +892,7 @@ export default function VisorDeArchivo(props: {
 
                 <Show when={!mostrarCambios() && !editable()}>
                   <div data-select-scope class="min-h-0 min-w-0 flex-1 overflow-y-auto bg-surface-muted">
-                    <Cuerpo contenido={c()} ruta={props.ruta} onOpenExternal={() => void openExternal()} pedirOffice={pedirOffice} leerParte={leerParte()} />
+                    <Cuerpo contenido={c()} ruta={props.ruta} onOpenExternal={() => void openExternal()} pedirOffice={pedirOffice} leerParte={leerParte()} conDescarga={conDescarga()} />
                   </div>
                 </Show>
 
@@ -1136,12 +1167,13 @@ function Cuerpo(props: {
   onOpenExternal: () => void;
   pedirOffice: () => Promise<Preview> | null;
   leerParte: LeerParte | null;
+  conDescarga: boolean;
 }) {
   const esOffice = () => props.contenido.kind === "binary" && OFFICE.includes(extension(props.ruta));
   /** Un video o un audio se reproduce aquí aunque el motor lo cuente como binario. */
   const medio = () => (props.leerParte && props.contenido.kind !== "text" ? mediaKindOf(props.ruta) : null);
-  /** En la web «Abrir o ubicar» lo abriría en la otra máquina: se baja al navegador. */
-  const conDescarga = () => !capabilities().nativeWindow && props.leerParte !== null;
+  /** Fuera de esta computadora «Abrir o ubicar» lo abriría en la otra máquina: se baja aquí. */
+  const conDescarga = () => props.conDescarga;
   const [bajando, setBajando] = createSignal(false);
   const [falloDescarga, setFalloDescarga] = createSignal<Failure | null>(null);
   async function bajar() {

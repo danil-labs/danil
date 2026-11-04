@@ -44,7 +44,7 @@ import type {
 import { type HistoryRead } from "@terminus/chat/history";
 import { readDetailText } from "@terminus/chat/historyDetail";
 import { readVisualHtml, type VisualPart, type VisualWhole, VISUAL_FILE, VISUAL_TREE } from "@terminus/chat/visual";
-import { readTreeFile, type TreePart } from "@terminus/protocol";
+import { readTreeFile, sessionModelArgs, type TreePart } from "@terminus/protocol";
 import { arrangeSpaces, spaceOrder, type AccountWorkspace, groupWorkspaces, linkedAttention, onlyLinked, registryProjects, withRegistry } from "@terminus/computers";
 import {
   ATTACHMENT_MIMES,
@@ -532,6 +532,15 @@ export async function sendToTask(host: Host, workspace: string, folder: string, 
  */
 export async function setSessionProvider(host: Host, workspace: string, folder: string, session: string, provider: string) {
   await host.call("set_session_provider", workspace, { project: folder, session, provider });
+}
+
+/**
+ * Guardar en la tarea el modelo y el esfuerzo que la persona eligió en el chip
+ * (`session_model_v1`), juntos: el siguiente turno que llegue sin modelo sigue
+ * con ellos. No toca el turno que corre.
+ */
+export async function setSessionModel(host: Host, workspace: string, folder: string, session: string, model: string, effort: string | null) {
+  await host.call("set_session_model", workspace, sessionModelArgs(folder, session, model, effort));
 }
 
 /** «Mandar ahora»: el mensaje entra en el turno que corre, sin esperar a que termine. */

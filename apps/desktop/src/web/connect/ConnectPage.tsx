@@ -1,11 +1,12 @@
 import { createSignal, Match, onMount, Switch } from "solid-js";
 import { t } from "../../lib/i18n";
-import { startTrialInPage, TerminusLicense } from "../../features/settings/TerminusLicense";
+import { requestAccessInPage, TerminusLicense } from "../../features/settings/TerminusLicense";
 import { Button } from "../../ui/Button";
 import { Input } from "../../ui/Input";
 import type { Session } from "../session";
 import { BrowserAccount } from "../BrowserAccount";
 import "../phrases";
+import { AccessRequest } from "../auth/AccessRequest";
 import { approveDevice, denyDevice, type DeviceAnswer, type DeviceRequest, lookupDevice } from "./devices";
 import { type DesktopHandoff, finishDesktop } from "./desktop";
 
@@ -15,6 +16,7 @@ export type ConnectView =
   | { t: "invalid" }
   | { t: "license" }
   | { t: "no_account" }
+  | { t: "access_required" }
   | { t: "used" }
   | { t: "ambiguous" }
   | { t: "error" }
@@ -38,7 +40,7 @@ export function ConnectPage(props: { session: Session; endpoint: string; code: s
 
   const refused = (answer: DeviceAnswer<unknown>) => {
     if (answer.kind === "expired" || answer.kind === "invalid") setView({ t: "invalid" });
-    else if (answer.kind === "license" || answer.kind === "no_account" || answer.kind === "used" || answer.kind === "ambiguous") setView({ t: answer.kind });
+    else if (answer.kind === "access_required" || answer.kind === "license" || answer.kind === "no_account" || answer.kind === "used" || answer.kind === "ambiguous") setView({ t: answer.kind });
     else setView({ t: "error" });
   };
 
@@ -92,7 +94,11 @@ export function ConnectPage(props: { session: Session; endpoint: string; code: s
         <Match when={view().t === "missing"}>{note(t("danil.connect.missing_code"))}</Match>
         <Match when={view().t === "invalid"}>{note(t("danil.connect.invalid"))}</Match>
         <Match when={view().t === "license"}>
-          <TerminusLicense onStart={startTrialInPage} onRetry={() => void load()} />
+          <TerminusLicense onRequest={requestAccessInPage} onRetry={() => void load()} />
+        </Match>
+        <Match when={view().t === "access_required"}>
+          {note(t("web.auth.access_required"))}
+          <div class="mt-6 max-w-sm"><AccessRequest /></div>
         </Match>
         <Match when={view().t === "no_account"}>{note(t("danil.connect.no_account"))}</Match>
         <Match when={view().t === "used"}>{note(t("danil.connect.used"))}</Match>

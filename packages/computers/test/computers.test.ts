@@ -205,6 +205,16 @@ test("las máquinas compartidas se leen y se encienden aparte de las de la perso
   assert.equal((await listSharedComputers("x.example", "t", answer(401))).kind, "unauthorized");
 });
 
+test("access_required distingue sólo el 403 exacto de licencia y permisos", async () => {
+  const answer = (status: number, error: unknown) => async () => ({ status, ok: false, json: async () => ({ error }) });
+  for (const shape of ["access_required", { code: "access_required" }]) {
+    assert.deepEqual(await listComputers("x.example", "t", answer(403, shape)), { kind: "error", status: 403, code: "access_required" });
+  }
+  assert.deepEqual(await listComputers("x.example", "t", answer(403, { code: "permission_denied" })), { kind: "error", status: 403, code: "permission_denied" }, "other codes pass through but are not access_required");
+  assert.deepEqual(await listComputers("x.example", "t", answer(403, { code: "license_required" })), { kind: "license" });
+  assert.deepEqual(await listComputers("x.example", "t", answer(500, { code: "access_required" })), { kind: "error", status: 500, code: "access_required" });
+});
+
 test("los workspaces se juntan por id igual, nunca por nombre ni remoto", () => {
   const groups = groupWorkspaces([
     { machine: "vm", rows: [{ id: "a", name: "Producto", provider: "github", remote: "org/app" }, { id: "b", name: "Notas" }] },

@@ -25,7 +25,7 @@ import {
   syncLine,
 } from "./danil-sessions";
 import { isTakenByAnother, linkCandidates, linkProblem } from "./workspace-link";
-import { LICENSE_REQUIRED, startTrialInBrowser, TerminusLicense } from "./TerminusLicense";
+import { LICENSE_REQUIRED, requestAccessInBrowser, TerminusLicense } from "./TerminusLicense";
 import { directoryErrorText } from "../shell/directory-errors";
 import { cloudOf, linkableAccounts, linkActiveWorkspace, preferredAccount, reloadDirectory, uploadWorkspace } from "../shell/workspace-directory";
 
@@ -96,6 +96,7 @@ export default function WorkspaceAccount(props: { workspace: string; name: strin
   const problemText = (code: string) => {
     if (code === "taken") return t("danil.workspace.taken_error");
     if (code === "not_admin") return t("danil.workspace.not_admin");
+    if (code === "not_enabled") return t("danil.workspace.not_enabled");
     if (code === "directory_failed") return t("danil.workspace.directory_failed");
     if (code === "no_session") return t("danil.workspace.sign_in_to_link");
     const text = said(code);
@@ -462,7 +463,7 @@ export default function WorkspaceAccount(props: { workspace: string; name: strin
           </p>
         </Show>
         <Show when={message() === LICENSE_REQUIRED}>
-          <TerminusLicense onStart={startTrialInBrowser} onRetry={() => void signIn()} busy={accounts.busy()} compact />
+          <TerminusLicense onRequest={requestAccessInBrowser} onRetry={() => void signIn()} busy={accounts.busy()} compact />
         </Show>
         <Show when={message() !== LICENSE_REQUIRED && message()}>
           {(code) => (

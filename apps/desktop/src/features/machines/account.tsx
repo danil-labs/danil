@@ -21,6 +21,7 @@ import {
   RelaySession,
   sessionProbe,
   startComputer,
+  startedOf,
   systemOf,
   type SystemId,
   wakes,
@@ -183,7 +184,7 @@ export function startAccountMachines(target: Target = window) {
             }),
       // Sin `contracts` ni `compatible`, como el teléfono: un motor con otro contrato
       // sigue en servicio y solo falla la orden que no conoce (nunca la máquina entera).
-      wake: async (id) => (isWslMachine(id) ? wakeWslMachine(id) : (await startComputer(endpoint, (await getToken()).token, id)).kind === "ok"),
+      wake: async (id) => (isWslMachine(id) ? wakeWslMachine(id) : startedOf(await startComputer(endpoint, (await getToken()).token, id))),
       storage: localStorage,
       onChange: () => {
         bump((n) => n + 1);

@@ -279,3 +279,8 @@ them answers that the command is unknown, and only that feature turns off.
   download files, also through the relay (seldon-host `feat/tree-read-part`
   9b8e0af), SHA-256
   `f1bd7978ed0ac5113a4a6e385efcabcbc77dee685cca49af83eabe8b0e346f8b`.
+- `session_model_v1.json`: `set_session_model`, which saves the model and the
+  effort the person picked in the composer chip in `session.model` and
+  `session.effort` for the next turn, also through the relay (danil-engine#371,
+  dev `1a3b4438`), SHA-256
+  `b8ca109ae22758520341b5c2cca1911b2ccbfeee74e84c72595543eaae72d413`.

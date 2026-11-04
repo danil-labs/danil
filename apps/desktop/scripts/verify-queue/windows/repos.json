@@ -1,0 +1,10 @@
+{
+  "lanes": 2,
+  "repos": {
+    "terminus": {
+      "user": "verify-run",
+      "prepare": "pnpm install --frozen-lockfile",
+      "commands": ["pnpm verify", "pnpm verify --no-cargo"]
+    }
+  }
+}

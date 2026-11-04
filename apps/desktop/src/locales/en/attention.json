@@ -28,6 +28,7 @@
   "attention.desktop.sign_out": "Sign out of Attention",
   "attention.desktop.error.unavailable": "Could not reach Danil. Try again in a moment.",
   "attention.desktop.error.no_session": "Your Attention session ended. Connect again.",
+  "attention.desktop.error.access_required": "You need authorized access to Danil. You can request it by email at hola@danil.ai.",
   "attention.desktop.error.session_ended": "Your Attention session ended. Connect again.",
   "attention.desktop.error.client_token": "First sign in to Danil in Settings › Danil account.",
   "attention.desktop.error.person_mismatch": "You confirmed with another account. Use this computer's Danil account.",

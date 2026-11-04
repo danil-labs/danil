@@ -1,0 +1,41 @@
+{
+  "settings.projects.delete": "Borrar el proyecto",
+  "settings.projects.delete_now": "Borrar",
+  "settings.projects.delete_title": "¿Borrar «{name}»?",
+  "settings.projects.delete_with": {
+    "one": "Borrar con su tarea",
+    "other": "Borrar con sus {count} tareas"
+  },
+  "settings.projects.title": "Proyectos",
+  "settings.projects.add": "Añadir un proyecto",
+  "settings.projects.lead": "Las carpetas con las que trabajan las tareas de este espacio. El color es el del chip que se ve en cada tarea.",
+  "settings.projects.empty": "Este espacio todavía no tiene proyectos.",
+  "settings.projects.column.name": "Nombre",
+  "settings.projects.column.kind": "Tipo",
+  "settings.projects.column.location": "Ubicación",
+  "settings.projects.column.tasks": "Tareas",
+  "settings.projects.column.actions": "Acciones",
+  "settings.projects.kind.git_help": "Carpeta con historial de versiones",
+  "settings.projects.kind.folder_help": "Carpeta normal de tu disco",
+  "settings.projects.kind.cloud_help": "Carpeta de Google Drive, iCloud, OneDrive u otro servicio en la nube",
+  "settings.projects.no_location": "Sin carpeta",
+  "settings.projects.tasks": {
+    "one": "{count} tarea",
+    "other": "{count} tareas"
+  },
+  "settings.projects.no_tasks": "sin tareas",
+  "settings.projects.actions": "Acciones de «{name}»",
+  "settings.projects.rename": "Cambiar nombre",
+  "settings.projects.rename_label": "Nuevo nombre de «{name}»",
+  "settings.projects.reveal_finder": "Abrir en Finder",
+  "settings.projects.reveal_other": "Mostrar en el explorador de archivos",
+  "settings.projects.material": "Material que lee",
+  "settings.projects.remove": "Quitar de este espacio",
+  "settings.projects.delete_empty": "Se borrará el proyecto.",
+  "settings.projects.delete_with_tasks": {
+    "one": "También se borrarán su tarea, el chat y sus artefactos.",
+    "other": "También se borrarán sus {count} tareas, chats y artefactos."
+  },
+  "settings.projects.delete_no_undo": "No hay deshacer.",
+  "settings.projects.keep": "Conservarlo"
+}

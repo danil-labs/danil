@@ -240,9 +240,40 @@ fn access(app: &tauri::AppHandle, account: &str, force: bool) -> Result<Live, Va
             forget(app, account);
             Err(error("no_session"))
         }
+        // Sin concesión vigente la sesión guardada ya no sirve: se borra igual que con un 401.
+        403 if error_code(&answer) == Some(ACCESS_REQUIRED) => {
+            forget(app, account);
+            Err(error(ACCESS_REQUIRED))
+        }
         403 => Err(error(answer["error"].as_str().unwrap_or("forbidden"))),
         _ => Err(error("unavailable")),
     }
+}
+
+const ACCESS_REQUIRED: &str = "access_required";
+
+/// `{"error": "código"}` (entrada de alfa) o `{"error": {"code": "código"}}` (Computers).
+fn error_code(answer: &Value) -> Option<&str> {
+    let value = &answer["error"];
+    value.as_str().or_else(|| value["code"].as_str())
+}
+
+/// Computers rechazó a la persona por la concesión: la ventana pierde la sesión, como con un 401.
+fn access_revoked(
+    app: &tauri::AppHandle,
+    account: &Option<String>,
+    status: u16,
+    body: &str,
+) -> Result<(), Value> {
+    if status != 403 {
+        return Ok(());
+    }
+    let answer = serde_json::from_str::<Value>(body).unwrap_or(Value::Null);
+    if error_code(&answer) != Some(ACCESS_REQUIRED) {
+        return Ok(());
+    }
+    let _ = sign_out(app, account);
+    Err(error(ACCESS_REQUIRED))
 }
 
 /// El token de cliente de esa cuenta y la base de Computers, por el motor.
@@ -318,6 +349,9 @@ pub(super) fn agents_session_status(
     match checked(&app, &account) {
         Ok(value) => status_of(&app, &name, &value),
         Err(e) if e["detail"] == "no_session" => json!({ "state": "none" }),
+        Err(e) if e["detail"] == ACCESS_REQUIRED => {
+            json!({ "state": "none", "detail": ACCESS_REQUIRED })
+        }
         Err(e) => json!({ "state": "unavailable", "detail": e["detail"] }),
     }
 }
@@ -1048,6 +1082,7 @@ pub(super) fn harness_org_fetch(
         session = access(&app, &name, true)?;
         got = org_get(&endpoint, &session.access_token, &path, &query)?;
     }
+    access_revoked(&app, &account, got.0, &got.1)?;
     let body: Value = serde_json::from_str(&got.1).unwrap_or(Value::Null);
     Ok(json!({ "status": got.0, "body": body }))
 }
@@ -1066,6 +1101,7 @@ pub(super) fn agents_session_directory(
         session = access(&app, &name, true)?;
         got = directory_get(&endpoint, &session.access_token)?;
     }
+    access_revoked(&app, &account, got.0, &got.1)?;
     if got.0 != 200 {
         return Err(error("directory_unavailable"));
     }
@@ -1149,6 +1185,7 @@ pub(super) fn agents_bff_fetch(
             &body,
         )?;
     }
+    access_revoked(&app, &account, sent.status, &sent.body)?;
     let missing = sent.status == 404
         && !sent.proxy
         && !sent
@@ -1167,6 +1204,20 @@ pub(super) fn agents_bff_fetch(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn error_codes_are_read_in_both_shapes() {
+        assert_eq!(
+            error_code(&json!({ "error": "access_required" })),
+            Some("access_required")
+        );
+        assert_eq!(
+            error_code(&json!({ "error": { "code": "access_required" } })),
+            Some("access_required")
+        );
+        assert_eq!(error_code(&json!({ "error": { "code": 3 } })), None);
+        assert_eq!(error_code(&Value::Null), None);
+    }
 
     #[test]
     fn paths_stay_inside_the_bff() {

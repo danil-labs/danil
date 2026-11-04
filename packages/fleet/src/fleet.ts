@@ -27,8 +27,9 @@ type Row = Record<string, unknown>;
 /** `os` solo si se sabe: la tarjeta de la tarea lo lee y, si falta, no inventa un sistema. */
 /** `features`: lo que su motor anuncia (`status.service_features`); cada función se enciende por máquina. */
 /** `version`: la `host_version` de su último `hello`, según el plano de control; se conserva apagada. */
+/** `opensOnRead`: una VM de un proveedor administrado que se enciende al abrir la web si no hay copia que enseñar. */
 /** `child`: una máquina hija de esta computadora (Linux en esta PC): no está en el registro de la cuenta y es de todos sus workspaces. */
-export type MachineInfo = { id: string; name: string; wakes: boolean; outdated?: boolean; linked?: ReadonlySet<string> | null; os?: SystemId; features?: readonly string[]; version?: string; child?: boolean };
+export type MachineInfo = { id: string; name: string; wakes: boolean; opensOnRead?: boolean; outdated?: boolean; linked?: ReadonlySet<string> | null; os?: SystemId; features?: readonly string[]; version?: string; child?: boolean };
 export type Power = "on" | "off" | "starting" | "outdated";
 
 export type Envelope = { machine: string; workspace: string | null; command: string; args?: Row };
@@ -80,8 +81,8 @@ export type FleetConfig = {
   connect(info: MachineInfo): Link;
   /** Si este cliente habla el contrato de un motor: `null` si no se sabe (`machineCompatibility`). */
   compatible?(contract: string | null): boolean | null;
-  /** Enciende una VM por el plano de control; `false` si no se pudo. */
-  wake?(machine: string): Promise<boolean>;
+  /** Enciende una VM por el plano de control; `false` si no se pudo, `not_startable` si no es suya de encender. */
+  wake?(machine: string): Promise<boolean | "not_startable">;
   storage?: StorageLike | null;
   deadlines?: Partial<Deadlines>;
   /** Una máquina cambió de estado, o se agregó, quitó o renombró. */
@@ -163,7 +164,7 @@ export class Fleet {
         continue;
       }
       const before = member.info;
-      const same = before.name === info.name && before.wakes === info.wakes && before.os === info.os && !!before.outdated === !!info.outdated && sameLinks(before.linked ?? null, info.linked ?? null)
+      const same = before.name === info.name && before.wakes === info.wakes && before.opensOnRead === info.opensOnRead && before.os === info.os && !!before.outdated === !!info.outdated && sameLinks(before.linked ?? null, info.linked ?? null)
         && (before.features ?? []).join() === (info.features ?? []).join();
       // Un contrato que vuelve a ser compatible quita la marca que puso el relay.
       if (before.outdated && !info.outdated) member.outdated = false;
@@ -531,7 +532,9 @@ export class Fleet {
   private async wakeMember(member: Member) {
     const { id } = member.info;
     if (!this.config.wake) throw new FleetError("machine_off", id, null, true);
-    if (member.link.state() !== "starting" && !(await this.config.wake(id).catch(() => false))) throw new FleetError("machine_off", id, "start_failed", true);
+    const started = member.link.state() === "starting" || (await this.config.wake(id).catch(() => false));
+    if (started === "not_startable") throw new FleetError("machine_off", id, "not_remotely_startable", false);
+    if (!started) throw new FleetError("machine_off", id, "start_failed", true);
     await new Promise<void>((resolve, reject) => {
       const done = (ok: boolean) => {
         clearTimeout(timer);

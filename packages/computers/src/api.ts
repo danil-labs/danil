@@ -353,6 +353,12 @@ export function startSharedComputer(endpoint: string, token: string, id: string,
 }
 
 /** Encendido explícito. La app no lo usa al abrir: una acción enciende la VM por el relay. */
+/** Lo que la flota entiende de `POST /start`: encendida, no se pudo, o el plano de control no la enciende. */
+export function startedOf(answer: Answer<unknown>): boolean | "not_startable" {
+  if (answer.kind === "ok") return true;
+  return answer.kind === "error" && answer.code === "not_remotely_startable" ? "not_startable" : false;
+}
+
 export function startComputer(endpoint: string, token: string, id: string, f: Fetch = globalFetch): Promise<Answer<{ state: string } | null>> {
   return request(
     apiUrl(endpoint, `/v1/computers/${encodeURIComponent(id)}/start`),

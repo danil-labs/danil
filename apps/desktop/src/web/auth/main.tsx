@@ -7,6 +7,7 @@ import { Input } from "../../ui/Input";
 import "../phrases";
 import { authClient, authFailure } from "./client";
 import { authDestination } from "./return";
+import { AccessRequest } from "./AccessRequest";
 import { WorkosAuthPage } from "./workos";
 
 export function startAuth(settings: { supabaseUrl: string; supabaseKey: string; workos?: boolean }, root: HTMLElement) {
@@ -25,7 +26,6 @@ export function startAuth(settings: { supabaseUrl: string; supabaseKey: string; 
   const client = configured ? authClient(settings.supabaseUrl, settings.supabaseKey) : null;
 
   function AuthPage() {
-    const [mode, setMode] = createSignal<"signin" | "signup">("signin");
     const [email, setEmail] = createSignal("");
     const [password, setPassword] = createSignal("");
     const [busy, setBusy] = createSignal(true);
@@ -95,9 +95,7 @@ export function startAuth(settings: { supabaseUrl: string; supabaseKey: string; 
       setError("");
       try {
         const credentials = { email: email().trim(), password: password() };
-        const result = mode() === "signup"
-          ? await client.auth.signUp({ ...credentials, options: { emailRedirectTo: callback.toString() } })
-          : await client.auth.signInWithPassword(credentials);
+        const result = await client.auth.signInWithPassword(credentials);
         if (result.error) {
           setError(authFailure(result.error));
           if (result.error.code === "email_not_confirmed") setPending(true);
@@ -142,11 +140,11 @@ export function startAuth(settings: { supabaseUrl: string; supabaseKey: string; 
     }
 
     return (
-      <main class="flex h-full flex-col items-center overflow-y-auto bg-bg px-6 py-10 text-neutral-950" data-web-auth={pending() ? "confirmation" : mode()} aria-busy={busy()}>
+      <main class="flex h-full flex-col items-center overflow-y-auto bg-bg px-6 py-10 text-neutral-950" data-web-auth={pending() ? "confirmation" : "signin"} aria-busy={busy()}>
         <div class="grid w-full max-w-sm gap-6">
           <h1 class="m-0 text-3xl font-display font-bold tracking-[-0.03em]">{t("common.brand_name")}</h1>
           <div class="grid gap-2">
-            <h2 ref={heading} tabIndex={-1} class="m-0 text-xl font-semibold">{pending() ? t("web.auth.check_email") : mode() === "signup" ? t("web.auth.signup_title") : t("web.auth.signin_title")}</h2>
+            <h2 ref={heading} tabIndex={-1} class="m-0 text-xl font-semibold">{pending() ? t("web.auth.check_email") : t("web.auth.signin_title")}</h2>
             <p class="m-0 text-sm text-neutral-500" role="status">{pending() ? t("web.auth.confirm_hint", { email: email().trim() }) : t("web.auth.identity_hint")}</p>
           </div>
           <Show when={!pending()} fallback={
@@ -168,11 +166,11 @@ export function startAuth(settings: { supabaseUrl: string; supabaseKey: string; 
               </label>
               <label class="grid gap-2 text-sm">
                 {t("web.auth.password")}
-                <Input class="min-h-11 border-neutral-500 text-base" type="password" name="password" autocomplete={mode() === "signup" ? "new-password" : "current-password"} required value={password()} onInput={(e) => setPassword(e.currentTarget.value)} disabled={busy()} />
+                <Input class="min-h-11 border-neutral-500 text-base" type="password" name="password" autocomplete="current-password" required value={password()} onInput={(e) => setPassword(e.currentTarget.value)} disabled={busy()} />
               </label>
-              <Button class="min-h-11" type="submit" disabled={busy() || !client}>{mode() === "signup" ? t("web.auth.signup") : t("web.auth.signin")}</Button>
+              <Button class="min-h-11" type="submit" disabled={busy() || !client}>{t("web.auth.signin")}</Button>
             </form>
-            <Button class="min-h-11" variant="ghost" disabled={busy()} onClick={() => { setMode(mode() === "signin" ? "signup" : "signin"); setError(""); }}>{mode() === "signin" ? t("web.auth.to_signup") : t("web.auth.to_signin")}</Button>
+            <AccessRequest />
           </Show>
           <Show when={busy()}><p class="m-0 text-sm text-neutral-500" role="status">{t("web.auth.waiting")}</p></Show>
           <Show when={error()}><p class="m-0 text-sm text-error-strong" role="alert">{t(`web.auth.${error()}`)}</p></Show>

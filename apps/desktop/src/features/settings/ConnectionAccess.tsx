@@ -4,6 +4,7 @@ import { createSignal, createUniqueId, For, Show } from "solid-js";
 import { t } from "../../lib/i18n";
 import { Button } from "../../ui/Button";
 import { Select } from "../../ui/Select";
+import "../../locales/settingsPhrases";
 
 type Access = NonNullable<ConnectionPatch["machines"]>[number];
 const key = (m: Access) => JSON.stringify([m.computer_id, m.workspace, m.folder ?? ""]);

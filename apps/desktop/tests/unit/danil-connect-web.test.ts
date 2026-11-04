@@ -49,6 +49,7 @@ test("an expired, unknown or unlicensed code is told apart", async () => {
     [404, { error: "invalid_user_code" }, "invalid"],
     [403, { error: "license_required" }, "license"],
     [403, { error: "unknown_user" }, "no_account"],
+    [403, { error: "access_required" }, "access_required"],
     [409, { error: "code_already_used" }, "used"],
     [409, { error: "ambiguous_danil_account" }, "ambiguous"],
     [401, null, "unauthorized"],
@@ -57,6 +58,7 @@ test("an expired, unknown or unlicensed code is told apart", async () => {
     [400, { error: { code: "expired_token" } }, "expired"],
     [404, { error: { code: "invalid_user_code" } }, "invalid"],
     [403, { error: { code: "unknown_user" } }, "no_account"],
+    [403, { error: { code: "access_required" } }, "access_required"],
     [403, { error: { code: "license_required" } }, "license"],
     [409, { error: { code: "ambiguous_danil_account" } }, "ambiguous"],
     [409, { error: { code: "code_already_used" } }, "used"],
@@ -161,9 +163,13 @@ test("a refused photo carries the control plane's code, and 401 asks to sign in 
   assert.equal(gone.unauthorized(), 1);
 });
 
-test("the installer path serves a script, not the app page, and says nothing was installed", () => {
+test("the installer path serves a script, not the app page", () => {
   const file = join(dirname(fileURLToPath(import.meta.url)), "../../web-public/install.sh");
   assert.match(readFileSync(file, "utf8"), /^#!\/bin\/sh\n/);
+});
+
+test("the installer script says nothing was installed", { skip: process.platform === "win32" && "install.sh es POSIX y Windows no trae sh" }, () => {
+  const file = join(dirname(fileURLToPath(import.meta.url)), "../../web-public/install.sh");
   const run = spawnSync("sh", [file], { encoding: "utf8" });
   assert.equal(run.status, 1);
   assert.match(run.stderr, /no se instaló nada/);

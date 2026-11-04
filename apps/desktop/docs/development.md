@@ -73,6 +73,7 @@ pnpm verify --remote --detach          # queue and return; prints the run id
 pnpm verify --remote --attach <id>     # follow a run, replaying the full log
 pnpm verify --remote --cancel <id>     # stop a queued or running run
 pnpm verify --remote --status          # what is queued and running
+pnpm verify --remote --windows         # the same on the Windows queue
 ```
 
 The exit code is the run's. The run lives on the machine: if the client dies,
@@ -86,6 +87,41 @@ an outside pull request goes there only after someone reads it.
 port forward to 8787. The machine stops itself after 15 idle minutes. A run, a
 bundle upload, and sessions and builds younger than 2 hours count as use, so a
 forgotten shell stops counting at 2 hours and the machine stops 15 minutes later.
+
+### Windows queue
+
+`pnpm verify --remote --windows` runs the chain on Windows, on `vm-windows-shared`
+(8 cores, two lanes). It takes the same options and its receipt says
+`windows-x64`; it never counts for Linux or macOS. There is no SSH on this path:
+the client talks HTTP to `vm-windows-shared:8787`, and a gate on the machine lets
+the connection through only when `tailscale whois` names a person or tag in
+`scripts/verify-queue/windows/gate.json`. The tailnet ACL must also let the
+caller reach that port. Check access with `curl http://vm-windows-shared:8787/health`.
+
+`vm-windows-shared` is shared with people and QA: anyone on the team can stop it by hand, and a run in progress is then reported `interrupted`. The idle stop is off while other work uses the machine.
+
+The machine side lives in `scripts/verify-queue/windows/`; everything is on `D:\ci`.
+`tools.ps1` installs Node, pnpm and rustup there, and `install.ps1` installs the
+rest, run as administrator. `uninstall.ps1` removes all of it.
+
+| Part | Windows | Linux equivalent |
+|---|---|---|
+| Queue | `server.mjs` as user `verify`, task `verify-queue`, on the pipe `\\.\pipe\verify-queue` (the firewall does not filter loopback) | `verify-queue.service`, loopback 8787 |
+| Run users | `verify-run`, `verify-run-1`… (group `verify-runners`), reached through a private `sshd` on `127.0.0.1:8722` with the queue's key; `lane.mjs` sets the environment and kills leftovers | `sudo -u … env -i`, `kill -9 -1` |
+| Lanes | `D:\ci\lanes\<n>\terminus` (checkout, target, pnpm store) | `/var/lib/verify-queue/lanes/<n>` |
+| Network | firewall rule `verify-queue`: no 10/8, 100.64/10, 169.254/16, 172.16/12, 192.168/16 for those users | `egress.nft` |
+| Entry | `gate.mjs` on the Tailscale IP, task `verify-queue-gate` | Tailscale SSH tunnel |
+| Profile | `HKCU\...\Command Processor` and `HKCU\Environment` read-only for run users: `cmd /c` from sshd would run an AutoRun a branch left | `HOME` is new each run |
+| COM | `CLSID`, `Interface`, `TypeLib` and `AppID` (and their `Wow6432Node` copies) in the run user's `HKCU\Software\Classes` are emptied and read-only: a COM server a branch registers there would answer the next run. The rest of Classes stays writable because WMI and COM write to it | `HOME` is new each run |
+| Leftovers | `sweep.exe`, built by `install.ps1` from `sweep.cs` with the .NET Framework `csc` into `D:\ci\queue` (read-only for the branch). WMI is denied in an ssh session, so it lists with Toolhelp32 and reads each owner from the process token. It fails (exit 1) when the list does not hold itself and its caller, or the caller's owner cannot be read: an empty or blind list never reports clean | `kill -9 -1` |
+| Idle stop | task `verify-queue-idle`, 20 minutes; also counts other people's scheduled tasks, RDP and SSM | `verify-idle-stop`, 15 minutes |
+
+Known limit (OWNER RIGHTS): a run-user process that sets its own DACL with an
+OWNER RIGHTS entry that grants nothing loses the owner's implicit `WRITE_DAC`.
+`sweep.exe` runs as the same user, so it can neither see nor reopen it, and the
+process outlives the run. The fix is a final sweep as SYSTEM and an entry that
+checks that the pipe server is a `verify` process; the same fix covers
+`HKCU\Software\Microsoft\.NETFramework`, which was not measured.
 
 If the queue does not answer and SSH did not refuse, the client starts the
 machine and asks again every 15 seconds, up to four minutes, while the queue

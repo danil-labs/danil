@@ -18,6 +18,7 @@ import { accountKeyUrl } from "../settings/account-auth";
 import type { AccountList, AccountStatus, AgentOpt, LoginEvent } from "../settings/accounts-store";
 import { ORIGEN_SISTEMA } from "../settings/environment-store";
 import { crearModelosLocales } from "../settings/local-models-store";
+import "../../locales/settingsPhrases";
 
 type Agente = AgentOpt & { source: string | null; system_broken: boolean };
 type Avance = { id: string; done: number; bytes: number };

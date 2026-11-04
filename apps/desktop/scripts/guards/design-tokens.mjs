@@ -6,10 +6,10 @@
  */
 import { readFileSync, readdirSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "../..");
-const { TEXT } = await import(join(ROOT, "../../packages/design/src/scale.ts"));
+const { TEXT } = await import(pathToFileURL(join(ROOT, "../../packages/design/src/scale.ts")).href);
 
 /** Baja cuando un valor suelto pasa a la escala; no sube para aceptar uno nuevo. */
 const TECHO_SUELTOS = 74;

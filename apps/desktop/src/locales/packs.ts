@@ -28,7 +28,7 @@
  * instaló eligió esa carpeta y merece saber qué pasó con ella.
  */
 import { invoke } from "../lib/invoke.ts";
-import { clavesConocidas, registrarCatalogo, type Manifiesto, type Plural } from "../lib/i18n.ts";
+import { registrarPaquete, type Manifiesto, type Plural } from "../lib/i18n.ts";
 // Importarlo desde aquí es también lo que **ordena la carga**: los empotrados
 // entran al evaluarse ese módulo, así que ninguna lengua de disco puede llegar
 // al motor antes que el respaldo.
@@ -154,14 +154,7 @@ export function aplicar(paquete: Paquete): LenguaInstalada {
     return { codigo, manifiesto, rechazo: { por: "formato", formato: desconocido }, ignoradas: 0 };
   }
 
-  const conocidas = clavesConocidas();
-  const frases: Record<string, string | Plural> = {};
-  let ignoradas = 0;
-  for (const [clave, valor] of Object.entries(paquete.frases)) {
-    if (conocidas.has(clave)) frases[clave] = valor;
-    else ignoradas++;
-  }
-  registrarCatalogo(manifiesto, frases);
+  const ignoradas = registrarPaquete(manifiesto, paquete.frases);
   return { codigo, manifiesto, rechazo: null, ignoradas };
 }
 

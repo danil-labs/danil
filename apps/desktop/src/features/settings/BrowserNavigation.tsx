@@ -8,6 +8,7 @@ import { Button } from "../../ui/Button";
 import { asFailure, detalleDe, type Failure, FailureNote, prosaDe } from "../../ui/Failure";
 import type { Requirement } from "./environment-store";
 import { SettingsBlock, SettingsSection } from "./layout";
+import "../../locales/settingsPhrases";
 
 export default function BrowserNavigation(props: { requirement?: Requirement; onPrepared: () => Promise<void> }) {
   if (!capabilities().localSetup) return null;

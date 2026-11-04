@@ -229,6 +229,7 @@ lleva su comentario allí:
 | Vista previa y finalizar | `task_blockers` | `set_session_pinned`, `rename_session`, `set_task_archived`, `finish_task`, `delete_session` |
 | Cuadro de escribir | `list_models`, `list_permission_modes`, `list_slash_menu`, `list_mentions`, `project_base_branches` | `run_shell_command`, `stop_shell_command`, `guardar_adjunto`, `guardar_imagen_pegada` (motores anteriores), `prepare_attachments`, `set_permission_mode` (cambiar el modo del turno en marcha; a automático aprueba lo pendiente) |
 | Cambiar de proveedor (`provider_handoff_v1`) | `load_session` (con `can_hand_over` y `hand_over_blocked`) | `set_session_provider` (el siguiente turno abre sesión nueva o retoma la aparcada) |
+| Guardar el modelo del chip en la tarea (`session_model_v1`) | — | `set_session_model` (modelo y esfuerzo juntos, solo lo que la persona eligió; el siguiente turno sin modelo sigue con ese) |
 | Almacenamiento por máquina (en Consumos) | `list_workspaces` sin workspace para capacidad; `list_storage` al abrir el detalle del workspace | — |
 | Reloj del turno en curso | `list_live_turns` | — |
 | OpenCode como en la ventana: superficies («Zen y Go», «Modelos gratuitos») y su consentimiento | `list_surfaces`, `consent_text` (el texto y su versión; el sí guardado se lee de `list_workspaces`) | `set_provider_consent` (aceptar o retirar los gratuitos en el workspace; la clave de Go queda en la ventana) |

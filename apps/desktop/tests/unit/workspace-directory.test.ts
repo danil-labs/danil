@@ -80,6 +80,7 @@ test("anyone can upload a workspace of theirs that is not in the cloud yet, and 
 
 test("link refusals are grouped for the text the person reads", () => {
   assert.equal(linkProblem("danil_workspace_taken"), "taken");
+  assert.equal(linkProblem("account_not_enabled"), "not_enabled");
   assert.equal(linkProblem("workspace_id_taken"), "workspace_id_taken");
   assert.equal(linkProblem("not_account_admin"), "not_admin");
   assert.equal(linkProblem("account_not_found"), "account_not_found");
