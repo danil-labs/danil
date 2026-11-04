@@ -100,22 +100,58 @@ stays silent; a machine that is still stopping refuses the first attempts.
 3. `aws ec2 start-instances` with the caller's credentials (`AWS_PROFILE`,
    `VERIFY_REMOTE_AWS` for the binary), only when no CLI knows the command, or
    one answers `machine_account`, `machine_unreachable` or
-   `identity_unavailable`. `IncorrectInstanceState` retries; any other failure
-   ends the run. Windows builds without these CLIs always land here.
+   `identity_unavailable`. It needs the instance ID in `VERIFY_REMOTE_INSTANCE`
+   (and `VERIFY_REMOTE_REGION`, default `us-east-1`); this public repo does not
+   carry it. `IncorrectInstanceState` retries; any other failure ends the run.
+   Windows builds without these CLIs always land here.
 
 `computer_stopping` retries. `access_denied`, `license_required`, `not_found`
 and any other refusal from a CLI end the run with the reason.
 
 The queue is `scripts/verify-queue/server.mjs`: one per machine, one run at a
 time, first come first served, listening on loopback only. It takes repo, commit
-and a command listed in `repos.json`, and knows nothing else about a repo. Each
-repo has one fixed checkout and one fixed `CARGO_TARGET_DIR` under
-`/var/lib/verify-queue/repos/`; everything else is cleaned between runs. Above
-80 % disk it deletes the target, before a run or after a failed one, and
-rebuilds once. The user `verify` runs branch code, so `egress.nft` denies it
-IMDS, the tailnet and private networks, and the `tailscaled` socket is closed to
-it; it keeps internet access for packages. To install or update it, copy
-`scripts/verify-queue/` to the machine and run `install.sh` as root.
+and a command from `repos.json`, and knows nothing else about a repo. A profile
+lists either exact `commands`, run with `bash -lc` after `prepare` (the app), or
+typed `jobs`: a fixed `argv`, `options` with an anchored pattern per value and
+an optional positional, run without a shell (the engine: `verify`, `e2e <name>`,
+`build`, `clippy`, `test [filter]`). `POST /runs` also takes `base`, the fork
+point the client computes with `git merge-base HEAD origin/dev`, and `wip=1`
+when the commit is a snapshot of uncommitted work on top of `HEAD`.
+
+Bundles land in a bare mirror per repo owned by `verify`. Branch code never runs
+as `verify`: each profile names its run user (`verify-run` for the app,
+`verify-run-engine` for the engine), and its lane
+(`/var/lib/verify-queue/lanes/0/<repo>/`) holds the checkout, the target, the
+cargo registry and caches, all owned by that user. Every git command, delete and
+kill in a lane goes through `sudo -n -u <user>`; `verify` only reads artifacts
+from it. Each run gets a fresh `HOME`; git runs without hooks or global config;
+at the end the queue kills every process of the run user, also on restart. A
+profile without a run user is refused with 503. The checkout is reused, so
+`git checkout` only rewrites the files that differ from the previous commit and
+the target stays warm; `"target": "checkout"` keeps it in `<checkout>/target`
+(the engine's `scripts/verify` looks there), otherwise it goes in
+`CARGO_TARGET_DIR`. Above 80 % disk it deletes the target, before a run or after
+a failed one, and rebuilds once.
+
+`artifacts` are copied into the run folder before cleaning: regular files of the
+run user under the checkout, without links, up to 16 MiB each. When the run
+ends, `GET /runs/<id>/receipt` returns `receipt.json`: repo, commit, tree,
+parents, `head` and `wip`, base, command, queue, lane and the commit the lane
+held before, toolchain (`rustc -V`), times, state, exit code, `checks` from
+exactly one `summary.json` of that run (or `null`), `known_failures` and
+SHA-256 digests of `receipt.digests`. The header `x-receipt-sha256` and
+`receiptSha256` in `GET /runs/<id>` hash its exact bytes. `checks` is what the
+run reported; the exit code is the authority. The receipt is not signed and is
+not an attestation: the target, registry and lane objects are shared between
+runs.
+
+`egress.nft` denies `verify` and the run users IMDS, the tailnet and private
+networks, and the `tailscaled` socket is closed to them; they keep internet
+access for packages. `/var/lib/verify-queue` is 0711, `runs/` and `incoming/`
+are 0700; run users read the mirrors through the `verify-runners` group, so one
+repo's branch can read the other repo's mirror. Toolchains live in `/opt/rust`,
+owned by root. To install or update the queue, copy `scripts/verify-queue/` to
+the machine and run `install.sh` as root.
 
 ## Sweeping `target/`
 
