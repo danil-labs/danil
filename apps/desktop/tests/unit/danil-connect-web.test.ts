@@ -161,9 +161,13 @@ test("a refused photo carries the control plane's code, and 401 asks to sign in 
   assert.equal(gone.unauthorized(), 1);
 });
 
-test("the installer path serves a script, not the app page, and says nothing was installed", () => {
+test("the installer path serves a script, not the app page", () => {
   const file = join(dirname(fileURLToPath(import.meta.url)), "../../web-public/install.sh");
   assert.match(readFileSync(file, "utf8"), /^#!\/bin\/sh\n/);
+});
+
+test("the installer script says nothing was installed", { skip: process.platform === "win32" && "install.sh es POSIX y Windows no trae sh" }, () => {
+  const file = join(dirname(fileURLToPath(import.meta.url)), "../../web-public/install.sh");
   const run = spawnSync("sh", [file], { encoding: "utf8" });
   assert.equal(run.status, 1);
   assert.match(run.stderr, /no se instaló nada/);
