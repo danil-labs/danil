@@ -274,6 +274,23 @@ async fn wsl_child_call(
     .await
 }
 
+/// Copia una carpeta de esta PC a la distribución y la registra con el mismo id.
+#[tauri::command]
+async fn wsl_child_copy_folder(
+    app: tauri::AppHandle,
+    machine: String,
+    project: String,
+    name: String,
+    path: String,
+    workspace: Option<String>,
+) -> std::result::Result<String, serde_json::Value> {
+    blocking(move || {
+        let entry = wsl_child::lookup(&app, &machine)?;
+        wsl_child::copy_folder(&entry, &project, &name, &path, workspace.as_deref())
+    })
+    .await
+}
+
 #[tauri::command]
 async fn wsl_child_events(
     app: tauri::AppHandle,
@@ -484,6 +501,7 @@ fn start(client: Option<Arc<Client>>, autostart: bool, launcher: launcher::Launc
             wsl_child_remove,
             wsl_child_wake,
             wsl_child_call,
+            wsl_child_copy_folder,
             wsl_child_events
         ]))
         .build(context)

@@ -31,7 +31,32 @@ export function wslMachineInfo(child: WslChild): MachineInfo {
   };
 }
 
+/** Lo que crea algo en una carpeta: antes, la carpeta tiene que estar en la distribución. */
+const CREATES = new Set(["send_message", "run_shell_command"]);
+
+type Folder = { id: string; name?: string; working_directory?: string | null };
+
 export function createWslLink(machine: string): Link {
+  const copied = new Set<string>();
+
+  /**
+   * La carpeta de la tarea, en la distribución. Si no está, se copia una vez
+   * desde esta PC (`~/danil/<nombre>`) y se registra con el mismo id.
+   */
+  async function ensureFolder(project: unknown, workspace: string | null) {
+    if (typeof project !== "string" || !project || copied.has(project)) return;
+    const there = await invoke<Folder[]>("wsl_child_call", { machine, command: "list_projects", args: {}, workspace, folder: null, timeoutMs: 30_000 });
+    if (Array.isArray(there) && there.some((f) => f.id === project)) {
+      copied.add(project);
+      return;
+    }
+    const here = await invoke<Folder[]>("list_projects");
+    const folder = Array.isArray(here) ? here.find((f) => f.id === project) : undefined;
+    if (!folder?.working_directory) throw { code: "folder_missing", detail: project };
+    await invoke("wsl_child_copy_folder", { machine, project, name: folder.name ?? project, path: folder.working_directory, workspace });
+    copied.add(project);
+  }
+
   let state: MachineState = "unknown";
   let cursor: number | null = null;
   let subscribed = false;
@@ -84,6 +109,7 @@ export function createWslLink(machine: string): Link {
   return {
     state: () => state,
     async call(_id, command, workspace, folder, args, timeoutMs): Promise<CallResult> {
+      if (CREATES.has(command)) await ensureFolder((args as { project?: unknown } | null)?.project, workspace);
       const value = await invoke<unknown>("wsl_child_call", { machine, command, workspace, folder, args: args ?? {}, timeoutMs: timeoutMs ?? null });
       if (state !== "online") setState("online");
       return { value, cached: null, deferred: null };

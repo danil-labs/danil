@@ -444,7 +444,83 @@ pub fn invoke(
         folder,
         timeout,
     )?;
+    // El motor contesta la falla de una orden dentro del resultado; por el relay
+    // llega como error, y así la espera la ventana.
+    if let Some(error) = result.get("error").filter(|e| !e.is_null()) {
+        if result.get("value").is_none() {
+            return Err(error.clone());
+        }
+    }
     Ok(result.get("value").cloned().unwrap_or(result))
+}
+
+/// Copia una carpeta de Windows a la distribución, en `~/danil/<nombre>`, y la
+/// registra en su motor con el mismo id. Se salta lo que se reconstruye
+/// (`node_modules`, `target`, `.venv`, `dist`) y conserva `.git`.
+pub fn copy_folder(entry: &ChildEntry, id: &str, name: &str, windows_path: &str, workspace: Option<&str>) -> Result<String, Failure> {
+    let source = std::path::Path::new(windows_path);
+    if !source.is_dir() {
+        return Err(fail("folder_missing", windows_path));
+    }
+    let safe: String = name
+        .chars()
+        .map(|c| if c.is_ascii_alphanumeric() || matches!(c, '-' | '_' | '.') { c } else { '-' })
+        .collect::<String>()
+        .trim_matches('-')
+        .to_string();
+    let safe = if safe.is_empty() { id.to_string() } else { safe };
+    // Una carpeta con ese nombre que ya tenga algo: la copia va al lado.
+    let mut free = String::new();
+    script_ok(
+        &entry.distro,
+        Some(&entry.user),
+        r#"set -eu
+b="$HOME/danil/$1"; d="$b"; n=2
+while [ -e "$d" ] && [ -n "$(ls -A "$d" 2>/dev/null)" ]; do d="$b-$n"; n=$((n+1)); done
+mkdir -p "$d"
+printf '%s
+' "$d"
+"#,
+        &[&safe],
+        Duration::from_secs(60),
+        |l| free = l.to_string(),
+    )?;
+    if free.is_empty() {
+        return Err(fail("io", "destino"));
+    }
+    let mut tar = Command::new("tar.exe");
+    crate::util::no_console_window(&mut tar);
+    let mut tar = tar
+        .args(["-c", "-f", "-", "--exclude=node_modules", "--exclude=target", "--exclude=.venv", "--exclude=dist", "-C"])
+        .arg(source)
+        .arg(".")
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .map_err(|e| fail("io", format!("tar: {e}")))?;
+    let pipe = tar.stdout.take().ok_or_else(|| fail("io", "tar"))?;
+    let unpack = wsl()
+        .args(["-d", &entry.distro, "-u", &entry.user, "--exec", "sh", "-c", "tar -x -f - -C \"$1\"", "sh", &free])
+        .stdin(Stdio::from(pipe))
+        .stdout(Stdio::null())
+        .stderr(Stdio::piped())
+        .output()
+        .map_err(|e| fail("io", e.to_string()))?;
+    let packed = tar.wait_with_output().map_err(|e| fail("io", e.to_string()))?;
+    if !packed.status.success() || !unpack.status.success() {
+        let detail = String::from_utf8_lossy(&packed.stderr).into_owned() + &String::from_utf8_lossy(&unpack.stderr);
+        return Err(fail("copy_failed", detail.trim().to_string()));
+    }
+    invoke(
+        &entry.distro,
+        &entry.home,
+        "create_project",
+        json!({ "name": name, "id": id, "workingDirectory": free }),
+        workspace,
+        None,
+        Duration::from_secs(60),
+    )?;
+    Ok(free)
 }
 
 /// Una página de eventos del motor de la distro, con la forma de las del
@@ -1434,7 +1510,15 @@ pub fn state(app: &AppHandle) -> LinuxState {
                 .filter(|d| d.running())
                 .map(|d| d.name.clone())
                 .collect();
-            let children: Vec<ChildInfo> = load(app)
+            // Una distribución borrada por fuera de Danil deja de ser máquina.
+            let mut entries = load(app);
+            let before = entries.len();
+            entries.retain(|e| found.distros.iter().any(|d| d.name == e.distro));
+            if entries.len() != before {
+                let _ = save(app, &entries);
+                let _ = app.emit("wsl-state-changed", ());
+            }
+            let children: Vec<ChildInfo> = entries
                 .iter()
                 .map(|e| status(e, running.contains(&e.distro)))
                 .collect();
