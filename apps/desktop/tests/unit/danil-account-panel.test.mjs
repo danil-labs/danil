@@ -147,19 +147,23 @@ test("sin licencia, la sección abre la prueba en el navegador y reintenta", asy
 
   button("Iniciar sesión con Danil").click();
   await sleep(300);
-  assert.ok(text().includes("Activa Danil"), text());
-  assert.ok(text().includes("7 días gratis, sin tarjeta; después, 99 MXN al mes con IVA incluido."), text());
+  assert.ok(text().includes("Solicita acceso a Danil"), text());
+  assert.ok(text().includes("se abren cuenta por cuenta"), text());
+  assert.ok(!text().includes("7 días gratis"), "no trial is offered");
   assert.ok(!text().includes("no tiene licencia"), "the bare refusal is gone");
 
-  button("Empezar prueba gratis").click();
+  button("Solicitar acceso").click();
   await sleep(100);
-  assert.equal(calls.find((c) => c.command === "open_external")?.args?.target, "https://app.danil.ai/modules/billing?modulo=terminus");
+  assert.equal(
+    calls.find((c) => c.command === "open_external")?.args?.target,
+    `mailto:hola@danil.ai?subject=${encodeURIComponent("Solicitar acceso a Danil")}`,
+  );
 
   licensed = true;
-  button("Ya lo activé · Reintentar").click();
+  button("Ya tengo acceso · Reintentar").click();
   await sleep(300);
   assert.equal(calls.filter((c) => c.command === "danil_connect_start").length, 2, "retrying signs in again");
-  assert.ok(!text().includes("Activa Danil"), text());
+  assert.ok(!text().includes("Solicita acceso a Danil"), text());
   assert.ok(text().includes("Confirma en el navegador · código WDJB-MJHT"), text());
   assert.deepEqual(app.failures, []);
 });

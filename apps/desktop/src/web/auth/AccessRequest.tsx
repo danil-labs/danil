@@ -1,7 +1,6 @@
+import { ACCESS_CONTACT as CONTACT_EMAIL } from "../../lib/access-contact";
 import { t } from "../../lib/i18n";
 import { Button } from "../../ui/Button";
-
-const CONTACT_EMAIL = "hola@danil.ai";
 
 export function AccessRequest() {
   const href = () => `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(t("web.auth.access_subject"))}`;

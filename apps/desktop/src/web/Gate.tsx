@@ -1,7 +1,7 @@
 import { hasAccountWorkspaces, hasLinkedWorkspaces, listWorkspaces } from "@terminus/computers";
 import { type JSX, For, Match, onMount, Show, Switch, createSignal } from "solid-js";
 import { t } from "../lib/i18n";
-import { startTrialInPage, TerminusLicense } from "../features/settings/TerminusLicense";
+import { requestAccessInPage, TerminusLicense } from "../features/settings/TerminusLicense";
 import { Button } from "../ui/Button";
 import { ConnectMachine } from "../features/machines/ConnectMachine";
 import { type Answer, type Computer, listComputers } from "./computers";
@@ -87,7 +87,7 @@ export function Gate(props: { session: Session; endpoint: string; initial?: Gate
           <p class="m-0 text-sm text-neutral-500">{t("web.computers.waiting")}</p>
         </Match>
         <Match when={view().t === "license"}>
-          <TerminusLicense onStart={startTrialInPage} onRetry={retryLicense} />
+          <TerminusLicense onRequest={requestAccessInPage} onRetry={retryLicense} />
         </Match>
         <Match when={view().t === "access_required"}>
           {message(t("web.auth.access_required"))}

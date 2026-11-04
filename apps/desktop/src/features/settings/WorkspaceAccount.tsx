@@ -25,7 +25,7 @@ import {
   syncLine,
 } from "./danil-sessions";
 import { isTakenByAnother, linkCandidates, linkProblem } from "./workspace-link";
-import { LICENSE_REQUIRED, startTrialInBrowser, TerminusLicense } from "./TerminusLicense";
+import { LICENSE_REQUIRED, requestAccessInBrowser, TerminusLicense } from "./TerminusLicense";
 import { directoryErrorText } from "../shell/directory-errors";
 import { cloudOf, linkableAccounts, linkActiveWorkspace, preferredAccount, reloadDirectory, uploadWorkspace } from "../shell/workspace-directory";
 
@@ -462,7 +462,7 @@ export default function WorkspaceAccount(props: { workspace: string; name: strin
           </p>
         </Show>
         <Show when={message() === LICENSE_REQUIRED}>
-          <TerminusLicense onStart={startTrialInBrowser} onRetry={() => void signIn()} busy={accounts.busy()} compact />
+          <TerminusLicense onRequest={requestAccessInBrowser} onRetry={() => void signIn()} busy={accounts.busy()} compact />
         </Show>
         <Show when={message() !== LICENSE_REQUIRED && message()}>
           {(code) => (

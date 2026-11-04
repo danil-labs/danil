@@ -76,9 +76,9 @@ test("the web build uses the stored session, opens every computer and explains r
     fake.drop(4003);
     await sleep(1500);
     assert.ok(refreshes >= 1, "4003 refreshes the session");
-    assert.ok(text().includes("Activa Danil"), "a refused reconnection offers the trial");
-    assert.ok(text().includes("7 días gratis, sin tarjeta;"), text());
-    assert.ok(w.document.querySelector("[data-license-start]"), "the trial button is there");
+    assert.ok(text().includes("Solicita acceso a Danil"), "a refused reconnection offers to request access");
+    assert.ok(!text().includes("7 días gratis"), text());
+    assert.ok(w.document.querySelector("[data-license-request]"), "the request button is there");
     assert.ok(w.document.querySelector("[data-license-retry]"), "and the retry");
     assert.equal(fake.sockets.length, 2, "it does not retry the sockets blindly");
     assert.equal(w.document.querySelectorAll("[data-web-gate]").length, 1, "one notice for every refused session");
@@ -88,7 +88,7 @@ test("the web build uses the stored session, opens every computer and explains r
   }
 });
 
-test("without a license the gate offers the trial and opens the app once it is activated", async () => {
+test("without a license the gate offers to request access and opens the app once it is granted", async () => {
   const fake = relay();
   let licensed = false;
   const own = globalThis.fetch;
@@ -111,8 +111,8 @@ test("without a license the gate offers the trial and opens the app once it is a
     await sleep(800);
     const gate = () => w.document.querySelector("[data-web-gate]");
     assert.equal(gate()?.dataset.webGate, "license");
-    assert.ok(gate().textContent.includes("Activa Danil"), gate().textContent);
-    assert.equal(gate().querySelector("[data-license-start]")?.textContent.trim(), "Empezar prueba gratis");
+    assert.ok(gate().textContent.includes("Solicita acceso a Danil"), gate().textContent);
+    assert.equal(gate().querySelector("[data-license-request]")?.textContent.trim(), "Solicitar acceso");
 
     licensed = true;
     gate().querySelector("[data-license-retry]").click();
