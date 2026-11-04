@@ -196,6 +196,8 @@ export default function WorkspaceAccount(props: { workspace: string; name: strin
     setSaving(true);
     setProblem(null);
     try {
+      // Primero en el plano de control, con la sesión de la persona; si falla, el motor no cambia.
+      await source()?.unlink?.(props.workspace, accounts.of()?.account ?? null);
       const result = await setWorkspaceAccount(props.workspace, null);
       if (mine !== generation) return;
       accounts.setOf(result);

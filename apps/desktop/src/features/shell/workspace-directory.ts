@@ -1,5 +1,6 @@
 import { barWorkspaceIds, type DirectoryEntry } from "@terminus/computers";
 import { createResource, createRoot, createSignal } from "solid-js";
+import { escribirPref, leerPref } from "../../lib/prefs";
 import { capabilities } from "../../lib/platform";
 
 /** El workspace que solo tiene agentes abierto desde el menú; `null` con uno de Terminus. */
@@ -11,7 +12,13 @@ function createStore() {
     () => capabilities().workspaceDirectory,
     (source) => source.list(),
   );
-  return { loaded, refetch, mutate };
+  // Con la sesión de la ventana recién abierta la lista se relee y la hoja del workspace se ofrece.
+  const [signedIn, setSignedIn] = createSignal(0);
+  capabilities().workspaceDirectory?.onSession?.((state) => {
+    void refetch();
+    if (state === "signed_in") setSignedIn((n) => n + 1);
+  });
+  return { loaded, refetch, mutate, signedIn };
 }
 let created: ReturnType<typeof createStore> | undefined;
 const store = () => (created ??= createRoot(createStore));
@@ -67,3 +74,24 @@ export async function linkActiveWorkspace(active: string, account: DirectoryEntr
     reloadDirectory();
   }
 }
+
+/** La fila del workspace abierto si es de la persona y está sin enlazar; si no, `null`. */
+export function unlinkedActive(active: string | null): DirectoryEntry | null {
+  if (!active) return null;
+  const open = entries().find((e) => e.workspace_id === active && e.owner && !e.support);
+  return open && open.danil_workspace_id === null ? open : null;
+}
+
+/** Cuántas veces se abrió la sesión de la ventana desde que arrancó; la hoja lo observa. */
+export const signedInCount = () => store().signedIn();
+
+const DISMISSED = "danilWorkspaceStep.dismissed";
+const DISMISSED_MAX = 50;
+
+/** «Ahora no» para este workspace: la hoja no vuelve a salir con él. */
+export function dismissDanilWorkspaceStep(workspace: string) {
+  const list = leerPref<string[]>(DISMISSED, []).filter((w) => w !== workspace);
+  escribirPref(DISMISSED, [...list, workspace].slice(-DISMISSED_MAX));
+}
+
+export const danilWorkspaceStepDismissed = (workspace: string) => leerPref<string[]>(DISMISSED, []).includes(workspace);

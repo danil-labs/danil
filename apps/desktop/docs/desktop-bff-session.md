@@ -137,10 +137,29 @@ ventana oculta Atención y no reintenta.
 
 - Comandos propios de la ventana (no del motor; `desktop_command` en
   `proxy.rs`): `agents_session_status`, `agents_session_connect`,
-  `agents_session_sign_out`, `agents_session_directory` y `agents_bff_fetch`.
+  `agents_session_sign_out`, `agents_session_directory`, `agents_session_link`,
+  `agents_session_unlink`, `agents_session_refresh` y `agents_bff_fetch`.
   Todos con `account` opcional: la cuenta de Danil del workspace (sin ella, la principal).
   `agents_session_directory` llama `GET /v1/me/workspaces` con el JWT de la persona
   y devuelve solo el arreglo `workspaces`. El token no sale de Rust.
+- Enlazar y desenlazar van con el JWT de la persona, nunca con el token de cliente:
+  Computers solo lo acepta en `POST|DELETE /v1/workspaces/:id/danil-workspace`.
+  `agents_session_link {workspaceId, danilWorkspaceId}` manda `{danil_workspace_id}`;
+  `agents_session_unlink {workspaceId}` manda `DELETE` (un 404 es que el registro no
+  es de esa persona). Rust arma la ruta; el id solo admite `[A-Za-z0-9_-]`. Un
+  rechazo vuelve con el código de Computers en `detail`; sin sesión de ventana,
+  `no_session`. Desvincular en Configuración quita primero el enlace en Computers y
+  después la cuenta en el motor. Leer y fijar el directorio siguen con el token de
+  cliente (`src/features/shell/workspace-directory-desktop.ts`).
+- `agents_session_refresh` renueva ya el token. Atención lo usa como `unauthorized`:
+  después de `POST /v1/bff/api/workspace/enter` el claim `active_account_id` nuevo
+  llega con él.
+- La ventana emite `agents-session` `{state: "signed_in" | "signed_out", account}`
+  al abrir una sesión (tras la concesión) y al cerrarla. Con `signed_in`, si el
+  workspace abierto es de la persona, no está sincronizado y hay un workspace de
+  Danil que administra sin workspace local, sale `DanilWorkspaceStep.tsx`:
+  sincronizar con ese, entrar a otro o «Ahora no», que no vuelve a preguntar por
+  ese workspace (preferencia local `danilWorkspaceStep.dismissed`).
 - El llavero guarda `{"version":1,"user_id","session"}`, uno por cuenta: servicio
   `ai.danil.terminus.agents-session`, usuario la cuenta (`default` sin ella).
   Sin llavero disponible la sesión vive solo en memoria; nunca en un archivo.

@@ -426,5 +426,12 @@
   "shell.directory.linkTaken": "That account or this workspace is already linked.",
   "shell.directory.linkSignIn": "Sign in to Danil in this window to link.",
   "shell.directory.linkFailed": "Could not link. Try again.",
-  "shell.directory.truncated": "There are more workspaces. Use search."
+  "shell.directory.truncated": "There are more workspaces. Use search.",
+  "shell.danilStep.title": "Sync “{workspace}” with Danil",
+  "shell.danilStep.syncLabel": "Your Danil workspaces",
+  "shell.danilStep.syncHint": "“{workspace}” takes the name, agents and settings of the one you choose.",
+  "shell.danilStep.doSync": "Sync with “{name}”",
+  "shell.danilStep.browse": "Enter another workspace",
+  "shell.danilStep.back": "Back",
+  "shell.danilStep.later": "Not now"
 }
