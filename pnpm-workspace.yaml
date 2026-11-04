@@ -12,7 +12,7 @@ allowBuilds:
 # que la trae publica la versión corregida. Nada usa sass: lo pedía Excalidraw.
 overrides:
   "sass": "-"
-  "dompurify@<3.4.16": "^3.4.16"
+  "dompurify@<3.4.17": "^3.4.17"
   "katex@<0.18.2": "^0.18.2"
   "lodash-es@<4.18.0": "^4.18.1"
   "nanoid@<3.3.18": "^3.3.18"
