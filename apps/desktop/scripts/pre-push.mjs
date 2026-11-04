@@ -11,6 +11,7 @@ import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { lowerPriority } from "./priority.mjs";
+import { typecheckBin } from "./typescript.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const desktop = join(here, "..");
@@ -111,7 +112,7 @@ async function main() {
   if (lint.length > 0 && existsSync(biome)) {
     checks.push(["biome", run(process.execPath, [biome, "lint", "--no-errors-on-unmatched", ...lint], desktop)]);
   }
-  const tsc = join(desktop, "node_modules/typescript/bin/tsc");
+  const tsc = typecheckBin(desktop);
   if (typecheck && existsSync(tsc)) checks.push(["tsc", run(process.execPath, [tsc, "-b", "--pretty", "false"], desktop)]);
   if (rust) checks.push(["cargo fmt", run("cargo", ["fmt", "--check", "--", "--config-path", "rustfmt.toml"], join(desktop, "src-tauri"))]);
 
