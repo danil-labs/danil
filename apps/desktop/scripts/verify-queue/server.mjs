@@ -15,7 +15,7 @@
  */
 import { spawn, spawnSync } from "node:child_process";
 import { createHash, randomBytes } from "node:crypto";
-import { appendFileSync, chmodSync, closeSync, createReadStream, createWriteStream, existsSync, constants as fsConstants, fstatSync, mkdirSync, openSync, readdirSync, readFileSync, readSync, realpathSync, renameSync, rmSync, statfsSync, statSync, writeFileSync } from "node:fs";
+import { appendFileSync, chmodSync, closeSync, createReadStream, createWriteStream, existsSync, constants as fsConstants, fstatSync, lstatSync, mkdirSync, openSync, readdirSync, readFileSync, readSync, realpathSync, renameSync, rmSync, statfsSync, statSync, writeFileSync } from "node:fs";
 import { createServer } from "node:http";
 import { arch, availableParallelism, constants, platform } from "node:os";
 import { dirname, join, sep } from "node:path";
@@ -355,10 +355,19 @@ export function createQueue({ home, config, diskPercent = defaultDiskPercent, ru
     const run = runner(repo);
     run.sync(["rm", "-rf", paths.home], "/");
     run.sync(["mkdir", "-p", paths.checkout, paths.home, paths.cargo, paths.cache, paths.data], "/");
-    if (!existsSync(join(paths.checkout, ".git"))) {
-      laneGit(repo, ["init", "-q"]);
-      laneGit(repo, ["config", "gc.auto", "0"]);
+    // Lo que una rama deja en .git (filtros, include.path, insteadOf, alternates, hooks) correría en el
+    // checkout de la siguiente: se borra y se reinicia en cada corrida. Un .git que no es carpeta se tira entero.
+    const dotGit = join(paths.checkout, ".git");
+    let real = false;
+    try {
+      real = lstatSync(dotGit).isDirectory();
+    } catch {
+      // Primera corrida del carril.
     }
+    if (!real) run.sync(["rm", "-rf", dotGit], "/");
+    else run.sync(["rm", "-rf", join(dotGit, "config"), join(dotGit, "info"), join(dotGit, "objects/info/alternates"), join(dotGit, "hooks")], "/");
+    laneGit(repo, ["init", "-q"]);
+    laneGit(repo, ["config", "gc.auto", "0"]);
     return paths;
   }
 
