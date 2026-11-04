@@ -84,6 +84,7 @@ import TaskFilesRow, { taskFilesWidth } from "../features/code/TaskFilesRow";
 import { TaskSide, TaskSideShell } from "../features/code/TaskSide";
 import { moviendoHueco } from "../lib/sites";
 const DeleteTaskDialog = lazy(() => import("../features/projects/DeleteTaskDialog"));
+const DanilWorkspaceStep = lazy(() => import("../features/shell/DanilWorkspaceStep"));
 const HandoverDialog = lazy(() => import("../features/chat/HandoverDialog"));
 const TaskFilesCard = lazy(() => import("../features/code/TaskFiles"));
 import { createTaskFiles, type TaskSideMode } from "../lib/taskFiles";
@@ -172,7 +173,7 @@ import { createUsage } from "../features/shell/usage";
 import AvisoDeVersion from "../features/shell/VersionNotice";
 import CloseGuard from "../features/shell/CloseGuard";
 import WorkspaceColumn from "../features/shell/WorkspaceColumn";
-import { agentsWorkspace, setAgentsWorkspace } from "../features/shell/workspace-directory";
+import { agentsWorkspace, setAgentsWorkspace, signedInCount } from "../features/shell/workspace-directory";
 import Sitio from "../features/sites/Site";
 import { VELO_DE_FONDO } from "../lib/chat-background";
 import { fondoDeChat, fondoPropio, imagenDelWorkspace, veloDeFondo } from "../lib/chat-background-store";
@@ -8751,6 +8752,12 @@ export default function App() {
           onNewTask={(id) => nuevaSesion(id)}
           onOpenConversation={(id) => { abrirInbox(); capabilities().inbox?.search.open(id); }}
         />
+        {/* Con la sesión de la ventana recién abierta, la hoja para sincronizar el workspace abierto. */}
+        <Show when={capabilities().workspaceDirectory?.onSession && signedInCount() > 0}>
+          <Suspense fallback={null}>
+            <DanilWorkspaceStep />
+          </Suspense>
+        </Show>
         {/* El velo del marco cubre la columna y el hueco alrededor de la caja: un solo tono también en la esquina. */}
         <div class="tab-veil window-frame relative flex min-h-0 flex-1 overflow-visible">
           <WorkspaceColumn

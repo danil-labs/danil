@@ -86,8 +86,12 @@ export type Capabilities = {
     pin: (keys: string[], account?: string | null) => Promise<void>;
     /** Enlaza un workspace propio con un workspace de Danil; rechaza con el código del plano de control. */
     link: (workspaceId: string, danilWorkspaceId: number, account?: string | null) => Promise<void>;
-    /** Crear un workspace de Danil todavía no tiene ruta: quien la tenga la publica aquí. */
-    create?: (name: string) => Promise<import("@terminus/computers").DirectoryEntry>;
+    /** Quita el enlace en el plano de control; sin esto, desvincular solo cambia la cuenta en el motor. */
+    unlink?: (workspaceId: string, account?: string | null) => Promise<void>;
+    /** Avisa cuando se abre o se cierra la sesión de persona de esta ventana (el escritorio); devuelve cómo dejar de escuchar. */
+    onSession?: (listener: (state: "signed_in" | "signed_out") => void) => () => void;
+    /** Sube un workspace propio: crea el workspace personal de Danil de quien llama y lo enlaza; rechaza con el código (`personal_workspace_exists`, …). */
+    create?: (workspaceId: string, account?: string | null) => Promise<void>;
   };
   adminPage?: { href: string; allowed: () => Promise<boolean> };
   /** Lo de una cuenta personal en Configuración › Cuenta. `isPersonal` decide si se ofrece; sin `usage` o `plan`, esas pestañas no salen. */
