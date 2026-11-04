@@ -1,0 +1,41 @@
+{
+  "settings.projects.delete": "Delete project",
+  "settings.projects.delete_now": "Delete",
+  "settings.projects.delete_title": "Delete “{name}”?",
+  "settings.projects.delete_with": {
+    "one": "Delete with its task",
+    "other": "Delete with its {count} tasks"
+  },
+  "settings.projects.title": "Projects",
+  "settings.projects.add": "Add a project",
+  "settings.projects.lead": "The folders the tasks of this space work with. The color is the one on each task's chip.",
+  "settings.projects.empty": "This space has no projects yet.",
+  "settings.projects.column.name": "Name",
+  "settings.projects.column.kind": "Type",
+  "settings.projects.column.location": "Location",
+  "settings.projects.column.tasks": "Tasks",
+  "settings.projects.column.actions": "Actions",
+  "settings.projects.kind.git_help": "Folder with version history",
+  "settings.projects.kind.folder_help": "A regular folder on your disk",
+  "settings.projects.kind.cloud_help": "Folder in Google Drive, iCloud, OneDrive or another cloud service",
+  "settings.projects.no_location": "No folder",
+  "settings.projects.tasks": {
+    "one": "{count} task",
+    "other": "{count} tasks"
+  },
+  "settings.projects.no_tasks": "no tasks",
+  "settings.projects.actions": "Actions for “{name}”",
+  "settings.projects.rename": "Rename",
+  "settings.projects.rename_label": "New name for “{name}”",
+  "settings.projects.reveal_finder": "Open in Finder",
+  "settings.projects.reveal_other": "Show in file explorer",
+  "settings.projects.material": "Material it reads",
+  "settings.projects.remove": "Remove from this space",
+  "settings.projects.delete_empty": "The project will be deleted.",
+  "settings.projects.delete_with_tasks": {
+    "one": "Its task, chat and artifacts will also be deleted.",
+    "other": "Its {count} tasks, chats and artifacts will also be deleted."
+  },
+  "settings.projects.delete_no_undo": "There is no undo.",
+  "settings.projects.keep": "Keep it"
+}

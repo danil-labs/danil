@@ -49,6 +49,7 @@ import { SETTINGS_ENTRIES, type SettingsEntryId, type SettingsGroup, settingsTar
 import Skills from "./Skills";
 import Workspaces from "./Workspaces";
 import { SettingsPanel, SettingsSection } from "./layout";
+import "../../locales/settingsPhrases";
 // Chunks aparte: solo los carga quien abre la sección.
 const DanilAccount = lazy(() => import("./DanilAccount"));
 const SupportAccess = lazy(() => import("./SupportAccess"));

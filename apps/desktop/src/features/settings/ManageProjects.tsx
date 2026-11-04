@@ -24,6 +24,7 @@ import {
 import { workdirIconKind } from "../code/workdirKind";
 import WorkdirIcon, { workdirKindLabel } from "../code/WorkdirIcon";
 import { SettingsBlock, SettingsPanel, SettingsSection } from "./layout";
+import "../../locales/settingsPhrases";
 
 /** Lo que la página necesita de la ventana. Getters: leerlos en `Settings` remontaría el panel. */
 export type ContextoDeProyectos = {

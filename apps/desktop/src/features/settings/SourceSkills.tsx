@@ -13,6 +13,7 @@ import { SettingsRow, SettingsSection } from "./layout";
 import { lockedBy } from "../../lib/governance";
 import { cn } from "../../lib/utils";
 import { Governed } from "./Governed";
+import "../../locales/settingsPhrases";
 
 /** Una skill de una carpeta adjunta o de un repositorio. La compone `practices::SkillDeFuente`. */
 type SkillDeFuente = {

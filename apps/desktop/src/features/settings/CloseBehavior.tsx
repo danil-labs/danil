@@ -1,5 +1,6 @@
 import { t } from "../../lib/i18n";
 import { SettingsRow } from "./layout";
+import "../../locales/settingsPhrases";
 
 export function CloseBehavior() {
   return (

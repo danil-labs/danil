@@ -43,6 +43,7 @@ import {
   TableHeaderCell,
   TableRow,
 } from "../../ui/Table";
+import "../../locales/settingsPhrases";
 
 type Columna = "label" | "version" | "location" | "bytes" | "source";
 

@@ -3,6 +3,7 @@ import { createPref } from "../../lib/prefs";
 import { Select } from "../../ui/Select";
 import { NOTIFY_PREF, type NotifyChoice } from "../shell/TaskNotifier";
 import { SettingsRow } from "./layout";
+import "../../locales/settingsPhrases";
 
 /** Cuándo avisa una tarea que se mira desde otro lado o con la ventana sin foco. */
 export function NotifyBehavior() {
