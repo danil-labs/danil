@@ -1,0 +1,6 @@
+{
+  "chat.session_model.not_offered": "Ese modelo no está entre los que este agente ofrece en este workspace.",
+  "chat.session_model.effort_not_offered": "Ese esfuerzo no es de este modelo.",
+  "chat.session_model.catalog_unavailable": "No se pudo leer el catálogo de modelos de este agente. Revisa la conexión e inténtalo de nuevo.",
+  "chat.session_model.agent_changed": "La tarea cambió de agente mientras se guardaba el modelo. Vuelve a elegirlo."
+}

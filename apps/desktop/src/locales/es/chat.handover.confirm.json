@@ -1,0 +1,6 @@
+{
+  "chat.handover.confirm.title": "Cambiar de proveedor en esta tarea",
+  "chat.handover.confirm.body": "{from} → {to}. La conversación viaja como texto y se recorta; el proveedor nuevo lee lo hablado, pero no recuerda los archivos ni los comandos de los turnos anteriores.",
+  "chat.handover.confirm.cancel": "Cancelar",
+  "chat.handover.confirm.accept": "Cambiar"
+}
