@@ -97,7 +97,7 @@ async function windowFetch(input: RequestInfo | URL, init: RequestInit = {}): Pr
     reply = await invoke<Reply>("agents_bff_fetch", args);
   } catch (error) {
     const detail = detailOf(error);
-    if (detail === "no_session") changed({ state: "none" });
+    if (detail === "no_session" || detail === "access_required") changed({ state: "none" });
     throw new Error(errorText(detail));
   }
   if (reply.route_missing) changed({ state: "unavailable", detail: "route_missing" });
