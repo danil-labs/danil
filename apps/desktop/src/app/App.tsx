@@ -852,6 +852,7 @@ export default function App() {
   createEffect(
     on([sesiones, grupos, escritorio, spaces], ([lista, g, desk, todas]) => {
       if (!g.every((grupo) => grupo in lista)) return;
+      const delanteAntes = pestanaActiva();
       const fuera = pestanas.sync((id) => {
         for (const [grupo, filas] of Object.entries(lista)) {
           const fila = filas.find((r) => r.id === id);
@@ -870,6 +871,12 @@ export default function App() {
       fuera.forEach(soltarHilo);
       fuera.forEach(soltarBorrador);
       for (const id of fuera) olvidarPestana(id);
+      // Archivar (o borrar) la tarea de delante deja la conversación en
+      // blanco: el panel pondría la pestaña vecina, y quien archiva acabó
+      // con esa tarea, no pidió abrir otra.
+      if (delanteAntes !== null && !pestanas.open().some((p) => p.id === delanteAntes)) {
+        irAlBlanco(carpetaDelEscritorio(project()));
+      }
       // Una tarea que se movió a otro espacio se lleva su pestaña a esa tira.
       if (!desk) return;
       const ajenas: { p: TaskTab; a: string }[] = [];
