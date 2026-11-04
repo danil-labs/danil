@@ -120,9 +120,9 @@ test("approving without a license or on a used code says why", async () => {
       }
       if (view === "license") {
         const text = root().textContent;
-        assert.ok(text.includes("Activa Danil") && text.includes("99 MXN al mes con IVA incluido"), text);
+        assert.ok(text.includes("Solicita acceso a Danil") && !text.includes("99 MXN"), text);
         const buttons = [...root().querySelectorAll("[data-terminus-license] button")].map((b) => b.textContent.trim());
-        assert.deepEqual(buttons, ["Empezar prueba gratis", "Ya lo activé · Reintentar"]);
+        assert.deepEqual(buttons, ["Solicitar acceso", "Ya tengo acceso · Reintentar"]);
         root().querySelector("[data-license-retry]").click();
         await sleep(300);
         assert.equal(root()?.dataset.webConnect, "ask", "retrying looks the code up again");

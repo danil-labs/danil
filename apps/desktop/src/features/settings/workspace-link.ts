@@ -24,5 +24,6 @@ export function canCreateWorkspace(entries: readonly DirectoryEntry[], workspace
 export function linkProblem(code: string | null | undefined): string {
   if (code === "danil_workspace_taken" || code === "workspace_already_linked") return "taken";
   if (code === "not_account_admin") return "not_admin";
+  if (code === "account_not_enabled") return "not_enabled";
   return code || "failed";
 }

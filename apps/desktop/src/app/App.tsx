@@ -99,12 +99,12 @@ const Onboarding = lazy(() => import("../features/onboarding/Onboarding"));
 const TaskLocation = lazy(() => import("../features/chat/TaskLocation"));
 const CustomizeMenu = lazy(() => import("../features/shell/SidebarFilter").then((m) => ({ default: m.CustomizeMenu })));
 const Screen = lazy(() => import("../features/screen/Screen"));
-// El aviso de Terminus de pago solo se baja si la flota lo pide (trae los textos de Danil).
+// El aviso de licencia solo se baja si la flota lo pide (trae los textos de Danil).
 const MachinesLicense = lazy(() =>
   import("../features/settings/TerminusLicense").then((m) => ({
     default: (props: { onRetry: () => void }) => (
-      // En el escritorio, el navegador de la persona; en la web, la página de cobro (mismo origen).
-      <m.TerminusLicense compact onStart={capabilities().nativeWindow ? m.startTrialInBrowser : m.startTrialInPage} onRetry={props.onRetry} />
+      // En el escritorio, el correo del sistema; en la web, el del navegador.
+      <m.TerminusLicense compact onRequest={capabilities().nativeWindow ? m.requestAccessInBrowser : m.requestAccessInPage} onRetry={props.onRetry} />
     ),
   })),
 );

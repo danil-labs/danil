@@ -1,6 +1,6 @@
 import { createSignal, Match, onMount, Switch } from "solid-js";
 import { t } from "../../lib/i18n";
-import { startTrialInPage, TerminusLicense } from "../../features/settings/TerminusLicense";
+import { requestAccessInPage, TerminusLicense } from "../../features/settings/TerminusLicense";
 import { Button } from "../../ui/Button";
 import { Input } from "../../ui/Input";
 import type { Session } from "../session";
@@ -94,7 +94,7 @@ export function ConnectPage(props: { session: Session; endpoint: string; code: s
         <Match when={view().t === "missing"}>{note(t("danil.connect.missing_code"))}</Match>
         <Match when={view().t === "invalid"}>{note(t("danil.connect.invalid"))}</Match>
         <Match when={view().t === "license"}>
-          <TerminusLicense onStart={startTrialInPage} onRetry={() => void load()} />
+          <TerminusLicense onRequest={requestAccessInPage} onRetry={() => void load()} />
         </Match>
         <Match when={view().t === "access_required"}>
           {note(t("web.auth.access_required"))}

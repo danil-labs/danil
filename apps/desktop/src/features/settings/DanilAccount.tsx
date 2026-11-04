@@ -16,7 +16,7 @@ import { type DanilSessionInfo, sessionForWorkspace, sessionKey, statusOf, syncL
 import { AccountComputersSection } from "../machines/AccountComputers";
 import { ConnectMachineSection } from "../machines/ConnectMachine";
 import { WslMachineSection } from "../machines/WslMachine";
-import { startTrialInBrowser, TerminusLicense } from "./TerminusLicense";
+import { requestAccessInBrowser, TerminusLicense } from "./TerminusLicense";
 import { SettingsBlock, SettingsPanel, SettingsRow, SettingsSection } from "./layout";
 import { createWorkspaces } from "./workspaces-store";
 import WorkspaceAccount from "./WorkspaceAccount";
@@ -299,7 +299,7 @@ function SingleAccount(props: { part?: DanilAccountPart }) {
         <Show when={session.license()}>
           <SettingsBlock>
             <TerminusLicense
-              onStart={startTrialInBrowser}
+              onRequest={requestAccessInBrowser}
               onRetry={() => {
                 void session.retry();
               }}

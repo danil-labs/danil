@@ -118,7 +118,7 @@ export type Capabilities = {
   browserFiles?: boolean;
   /** Transporte para intentar ver la pantalla; `null` si la máquina no pertenece a esta cuenta. La captura la decide el motor. */
   machineScreen?: (machine: string) => (() => Promise<WebSocket>) | null;
-  /** `license_required` si el relay detuvo las otras máquinas por falta de Terminus de pago (aviso `TerminusLicense`); `null` si no. */
+  /** `license_required` si el relay detuvo las otras máquinas por falta de licencia (aviso `TerminusLicense`); `null` si no. */
   machinesLicense?: () => "license_required" | null;
   /** «Reintentar» del aviso de licencia: vuelve a abrir las sesiones de las otras máquinas. */
   retryMachines?: () => void;

@@ -1,12 +1,9 @@
-import { RADIUS, TEXT } from "@terminus/design";
+import { accessMailto, RADIUS, TEXT } from "@terminus/design";
 import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import type { Host } from "../lib/hosts";
 import { w } from "../lib/i18n";
 import { type Fleet, useMachines } from "../lib/machines";
 import { useTheme } from "./theme";
-
-/** El cobro vive en la web de Danil, mismo origen que `/terminus/m/`. */
-const BILLING_PATH = "/modules/billing?modulo=terminus";
 
 /**
  * Lo que la persona tiene que saber de sus máquinas, siempre en tono neutro:
@@ -43,8 +40,8 @@ export function MachineNote({ hosts, fleet }: { hosts: Host[]; fleet: Fleet }) {
 }
 
 /**
- * Sin licencia. Solo la web ofrece la prueba: la app nativa no enseña precios
- * ni lleva al cobro, nada más pide activarlo y deja reintentar.
+ * Sin licencia. Solo la web ofrece solicitar acceso por correo: la app nativa
+ * nada más lo dice y deja reintentar.
  */
 function LicenseNote() {
   const theme = useTheme();
@@ -57,11 +54,11 @@ function LicenseNote() {
         <>
           <Text style={{ color: theme.textMuted, fontSize: TEXT.ui }}>{w("danil.license.body")}</Text>
           <Pressable
-            testID="license-start"
+            testID="license-request"
             style={[styles.cta, { backgroundColor: theme.primary }]}
-            onPress={() => window.location.assign(BILLING_PATH)}
+            onPress={() => window.location.assign(accessMailto(w("danil.license.request_subject")))}
           >
-            <Text style={{ color: theme.onPrimary, fontWeight: "600" }}>{w("danil.license.start")}</Text>
+            <Text style={{ color: theme.onPrimary, fontWeight: "600" }}>{w("danil.license.request")}</Text>
           </Pressable>
         </>
       ) : null}
