@@ -1,4 +1,5 @@
 import type { Trigger } from "./mentions.ts";
+import { slashTokens } from "@terminus/chat/slash";
 
 /** Lo que la ventana vio de una tarea de otra máquina: el motor que no la tiene se la cuenta al agente con esto. */
 export type TaskAbout = { machine_name?: string; title?: string; branch?: string; folder_name?: string };
@@ -192,6 +193,7 @@ export function highlightSpans(
   mentions: readonly TaskMention[],
   commands: ReadonlySet<string>,
   recipients: readonly TextSpan[] = [],
+  skills: ReadonlySet<string> = new Set(),
 ): Span[] {
   const spans: Span[] = [];
   let from = 0;
@@ -200,9 +202,14 @@ export function highlightSpans(
     spans.push({ text: command[0], kind: "command" });
     from = command[0].length;
   }
+  // En medio del texto solo una skill: el CLI no corre comandos ahí.
+  const inlineSkills = slashTokens(text)
+    .filter(t => t.inline && skills.has(t.name))
+    .map(t => ({ span: { start: t.from, end: t.to, text: text.slice(t.from, t.to) }, kind: "command" as const }));
   const marked = [
     ...mentions.map(m => ({ span: m as TextSpan, kind: "mention" as const })),
     ...recipients.map(r => ({ span: r, kind: "recipient" as const })),
+    ...inlineSkills,
   ].sort((a, b) => a.span.start - b.span.start || a.span.end - b.span.end);
   for (const { span, kind } of marked) {
     if (span.start < from || text.slice(span.start, span.end) !== span.text) continue;
@@ -213,9 +220,9 @@ export function highlightSpans(
   return spans;
 }
 
-/** Un mensaje enviado: solo su comando inicial; las menciones las pinta `WithMentions`. */
-export function tramosDelMensaje(text: string, commands: ReadonlySet<string>): Span[] {
-  return highlightSpans(text, [], commands);
+/** Un mensaje enviado: su comando inicial y sus skills; las menciones las pinta `WithMentions`. */
+export function tramosDelMensaje(text: string, commands: ReadonlySet<string>, skills: ReadonlySet<string> = new Set()): Span[] {
+  return highlightSpans(text, [], commands, [], skills);
 }
 
 /** La clase de un tramo marcado, la misma en la caja y en el mensaje enviado. */
