@@ -28,11 +28,34 @@ type SkillDeFuente = {
   kind?: "folder" | "repository";
   source_enabled?: boolean;
   shadowed_by?: { source: string; source_name: string } | null;
+  /** El nombre con que se invoca hoy (`/<invoked_as>`), o `null` si no llega a ningún agente. */
+  invoked_as?: string | null;
 };
 
 type Grupo = { source: string; name: string; kind: "folder" | "repository"; on: boolean; skills: SkillDeFuente[] };
 
 const fuenteEncendida = (s: SkillDeFuente) => s.source_enabled !== false;
+
+/**
+ * La nota de nombre repetido. Dice el nombre real con que se invoca, no quién
+ * «gana»: con dos repositorios del mismo nombre ninguno se queda con el corto,
+ * y la más vieja no trae `shadowed_by`. La otra fuente sale de la sombra o de
+ * la otra fila con ese nombre.
+ */
+function notaDeNombre(s: SkillDeFuente, todas: readonly SkillDeFuente[]): string | null {
+  const otra =
+    s.shadowed_by?.source_name ??
+    todas.find((o) => o.name === s.name && o.source !== s.source)?.source_name;
+  if (s.invoked_as && s.invoked_as !== s.name) {
+    return otra
+      ? t("settings.skills.invoked_as", { invoked: s.invoked_as, source: otra })
+      : t("settings.skills.invoked_as_alone", { invoked: s.invoked_as });
+  }
+  if (!s.invoked_as && s.shadowed_by) {
+    return t("settings.skills.shadowed_off", { source: s.shadowed_by.source_name });
+  }
+  return null;
+}
 
 export function SkillsDeFuentes() {
   const [skills, setSkills] = createSignal<SkillDeFuente[]>([]);
@@ -50,6 +73,7 @@ export function SkillsDeFuentes() {
     return skills().filter(
       (s) =>
         s.name.toLowerCase().includes(q) ||
+        (s.invoked_as ?? "").toLowerCase().includes(q) ||
         s.source_name.toLowerCase().includes(q) ||
         s.providers.some((a) => a.toLowerCase().includes(q)),
     );
@@ -223,20 +247,17 @@ export function SkillsDeFuentes() {
                       </span>
                     }
                     description={
-                      <Show when={s.description || s.shadowed_by}>
+                      <Show when={s.description || notaDeNombre(s, skills())}>
                         <span class="grid min-w-0">
                           <Show when={s.description}>
                             <span class="block truncate" title={s.description}>
                               {s.description}
                             </span>
                           </Show>
-                          <Show when={s.shadowed_by}>
-                            {(gana) => (
-                              <span
-                                class="block truncate text-warning-strong"
-                                title={t("settings.skills.shadowed_by", { source: gana().source_name })}
-                              >
-                                {t("settings.skills.shadowed_by", { source: gana().source_name })}
+                          <Show when={notaDeNombre(s, skills())}>
+                            {(nota) => (
+                              <span class="block truncate text-warning-strong" title={nota()}>
+                                {nota()}
                               </span>
                             )}
                           </Show>
@@ -254,12 +275,25 @@ export function SkillsDeFuentes() {
                         <For each={s.providers}>{(a) => <Badge forma="dato">{a}</Badge>}</For>
                       </Show>
                     </span>
-                    <Toggle
-                      checked={s.enabled}
-                      disabled={ocupada() !== null || !g.on}
-                      label={s.name}
-                      onChange={() => void alternar(s)}
-                    />
+                    {/* Apagado por su fuente: dice dónde se enciende. El `title`
+                        va fuera porque el toggle deshabilitado no recibe el puntero. */}
+                    <span
+                      class="inline-flex shrink-0"
+                      title={
+                        g.on
+                          ? undefined
+                          : g.kind === "repository"
+                            ? t("settings.skills.source_off_repository")
+                            : t("settings.skills.source_off_folder")
+                      }
+                    >
+                      <Toggle
+                        checked={s.enabled}
+                        disabled={ocupada() !== null || !g.on}
+                        label={s.name}
+                        onChange={() => void alternar(s)}
+                      />
+                    </span>
                     {/* Un repositorio es una copia que Danil trae: se apaga, no se borra. */}
                     <Show when={g.kind === "folder"}>
                       <Button

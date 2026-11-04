@@ -794,5 +794,9 @@
   "settings.skills.kind_folder": "Carpeta",
   "settings.skills.kind_repository": "Repositorio",
   "settings.skills.source_off": "Fuente apagada",
-  "settings.skills.shadowed_by": "Se usa la de {source}: tiene el mismo nombre."
+  "settings.skills.invoked_as": "Se invoca como /{invoked}: {source} trae el mismo nombre.",
+  "settings.skills.invoked_as_alone": "Se invoca como /{invoked}: otra fuente trae el mismo nombre.",
+  "settings.skills.shadowed_off": "{source} trae el mismo nombre: al encenderla se invoca con sufijo.",
+  "settings.skills.source_off_repository": "Su repositorio está apagado. Enciéndelo arriba, en Repositorios.",
+  "settings.skills.source_off_folder": "Su carpeta está apagada. Enciéndela en Control de Fuentes."
 }
