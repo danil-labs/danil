@@ -5729,9 +5729,7 @@ export default function App() {
     }
     // El esfuerzo va con el modelo que la persona eligió en esta tarea, nunca
     // con el que la caja puso sola.
-    if (sesion && model() && modelosGuardados.get(sesion) === model()) {
-      guardarModeloEnLaTarea(sesion, model(), id || null);
-    }
+    if (sesion && model()) guardarModeloEnLaTarea(sesion, model(), id || null, true);
     // Como el modelo en `elegirModelo`: es lo que heredan sus temas nuevos.
     const fila = sessionId() ? filaDe(sessionId()!) : undefined;
     if (fila && esChatDeAgente(fila) && fila.agent) {
@@ -5760,30 +5758,18 @@ export default function App() {
   const anunciaTraspaso = (id: string) => anunciaEnLaTarea(id, PROVIDER_HANDOFF_FEATURE);
 
   /**
-   * El modelo que la persona eligió en el chip de cada tarea abierta y que ya
-   * quedó en su `session.model`. Solo con él un cambio de esfuerzo se guarda:
-   * sin elección explícita, el modelo de la caja es el que la ventana puso
-   * sola, y ese no se escribe en la tarea.
-   */
-  const modelosGuardados = new Map<string, string>();
-
-  /**
    * La elección explícita del chip queda en la tarea (`session_model_v1`), con
    * el modelo y el esfuerzo juntos: un `task send` o el relay que llegan sin
    * modelo siguen con ella. Un motor que no lo anuncia sigue como antes: la
    * ventana manda el modelo en cada turno y nada más.
    */
-  function guardarModeloEnLaTarea(id: string, modelo: string, nivel: string | null) {
+  function guardarModeloEnLaTarea(id: string, modelo: string, nivel: string | null, effortOnly = false) {
     if (anunciaEnLaTarea(id, SESSION_MODEL_FEATURE) !== true) return;
-    modelosGuardados.set(id, modelo);
     const proyecto = project();
     const opciones = opcionesDeLaTarea(id, workspaceActivo());
-    void import("../features/chat/sessionModel")
-      .then((m) => m.saveSessionModel(proyecto, id, modelo, nivel, opciones))
-      .catch((e) => {
-        if (modelosGuardados.get(id) === modelo) modelosGuardados.delete(id);
-        anexar(id, (m) => [...m, { role: "system", text: prosaDe(e), meta: "aviso" }]);
-      });
+    void import("../features/chat/handoverSend")
+      .then((m) => m.saveSessionModel(proyecto, id, modelo, nivel, opciones, effortOnly))
+      .catch((e) => anexar(id, (m) => [...m, { role: "system", text: prosaDe(e), meta: "aviso" }]));
   }
 
   const situacionDeTraspaso = (id: string) => ({
