@@ -1,4 +1,4 @@
-import { For, Show, Suspense, createResource, createSignal, lazy, onMount, splitProps, type JSX } from "solid-js";
+import { For, Show, Suspense, createEffect, createSignal, lazy, on, onCleanup, onMount, splitProps, type JSX } from "solid-js";
 import { invoke } from "../../lib/invoke.ts";
 import { open } from "@tauri-apps/plugin-dialog";
 import Cloud from "lucide-solid/icons/cloud";
@@ -190,9 +190,22 @@ export function LogoDelWorkspace(props: {
   const [recorte, setRecorte] = createSignal<string | null>(null);
   const cuenta = capabilities().accountAssets;
   const [version, setVersion] = createSignal(0);
-  const [logoDeLaCuenta] = createResource(
-    () => (cuenta ? { id: props.workspace.id, v: version() } : null),
-    ({ id }) => cuenta?.read(id, "logo").catch(() => undefined) ?? undefined,
+  /* Sin `createResource`: suspendería el panel de Estilo entero, y en la web
+     cada relectura de `/v1/computers` trae otro objeto del workspace y lo
+     dejaría en blanco. Se relee solo si cambia el id o se guardó un logo. */
+  const [logoDeLaCuenta, setLogoDeLaCuenta] = createSignal<string | null | undefined>();
+  createEffect(
+    on([() => props.workspace.id, version], ([id]) => {
+      if (!cuenta) return;
+      let vivo = true;
+      onCleanup(() => {
+        vivo = false;
+      });
+      void cuenta.read(id, "logo").then(
+        (logo) => vivo && setLogoDeLaCuenta(logo),
+        () => vivo && setLogoDeLaCuenta(undefined),
+      );
+    }),
   );
   const tieneLogo = () => !!props.workspace.logo || !!logoDeLaCuenta();
   const cambiado = () => {
