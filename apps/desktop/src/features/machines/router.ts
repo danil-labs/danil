@@ -251,6 +251,7 @@ export function createRouter(config: RouterConfig) {
       case "machine_off":
         // Una VM que no se pudo encender no es lo mismo que una máquina propia apagada.
         if (error.canWake && error.detail === "start_failed") return { what: t("web.machines.start_failed", { name }), detail: "start_failed" };
+        if (error.machine && fleet.power(error.machine) === "starting") return { what: t("web.machines.starting", { name }), detail: "machine_starting" };
         return { what: t("web.machines.off_action", { name }), detail: "machine_off" };
       case "version_mismatch":
         return { what: t("web.machines.outdated_action", { name }), detail: "version_mismatch" };

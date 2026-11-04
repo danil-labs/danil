@@ -249,6 +249,13 @@ test("an off computer of the person with nothing saved is not started by a read 
   assert.equal(starts, 0);
 });
 
+test("a read to a VM that is starting says it is starting, not that Danil is closed", async () => {
+  const vm = fakeLink({ list_surfaces: [] }, "starting");
+  const { router } = web({ cmp_vm: vm });
+  await router.handle("list_workspaces");
+  await assert.rejects(router.handle("list_surfaces"), (e: { detail: string; what: string }) => e.detail === "machine_starting" && e.what === "Encendiendo Danil VM…");
+});
+
 test("the start answer of the control plane reads as started, failed or not startable", () => {
   assert.equal(startedOf({ kind: "ok", value: { state: "starting" } }), true);
   assert.equal(startedOf({ kind: "error", status: 409, code: "not_remotely_startable" }), "not_startable");
