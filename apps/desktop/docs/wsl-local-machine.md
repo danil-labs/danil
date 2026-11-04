@@ -73,3 +73,27 @@ dos veces sin decir nada cuando no corre en una consola.
 - macOS con Lima (`limactl`) como equivalente de `wsl.exe`.
 - Los nombres de distro con espacios no existen: WSL los rechaza
   (`E_INVALIDARG`).
+
+## Estado y trabajos (v6 del flujo)
+
+La pantalla no guarda nada: muestra lo que le da la ventana.
+
+- `wsl_state` devuelve de una vez el estado de Linux (`ready`, `missing`,
+  `reboot`, `virtualization`, `unsupported`, `unknown`), las distribuciones con
+  su máquina hija si la tienen, el trabajo en curso y lo que quedó pendiente de
+  un reinicio.
+- Activar, instalar y conectar son **trabajos**: uno a la vez, en un hilo de la
+  ventana. Un segundo clic se engancha al que corre. Cada paso se publica con
+  `wsl-job` y se guarda en `wsl-state.json`, así que salir de Configuración o
+  cerrar la ventana no lo pierde. Al terminar, `wsl-state-changed` pide releer.
+- **Reinicio pendiente:** se sabe por `RebootPending` en el registro, por
+  `wsl --status` (virtualización sin encender) o porque se activó WSL desde aquí
+  después del último arranque. Mientras falte, no se instala. Si una
+  instalación chocó con eso, queda en `resume` y, después del reinicio, se
+  ofrece «Continuar» con la misma descarga (la imagen verificada no se vuelve
+  a bajar). La contraseña se vuelve a pedir: no se guarda.
+- `apt-get` espera hasta 5 minutos a que otro programa suelte el candado
+  (`-o DPkg::Lock::Timeout=300`). Fue lo que tumbó el segundo intento de
+  conectar Debian.
+- Las líneas del instalador que se muestran en «Ver lo que está haciendo» no
+  nombran piezas internas: dicen «el motor de Danil».

@@ -1,3 +1,4 @@
+import { WslMachineRows } from "./WslMachine";
 import {
   type Answer,
   type Computer,
@@ -252,6 +253,7 @@ export function AccountComputersSection(props: {
           description={props.workspace ? t("danil.computers.workspace_description") : t("danil.computers.description")}
         >
           <AccountComputers source={s()} self={props.self} onSelfName={props.onSelfName} empty={props.workspace ? t("danil.computers.workspace_empty") : undefined} />
+          <WslMachineRows />
         </SettingsSection>
       )}
     </Show>

@@ -555,27 +555,12 @@ pub fn children(app: &AppHandle, disk: bool) -> Vec<ChildInfo> {
 
 // ---------------------------------------------------------------- progreso
 
-#[derive(Debug, Clone, Serialize)]
-struct Progress<'a> {
-    target: &'a str,
-    step: &'a str,
-    done: Option<u64>,
-    total: Option<u64>,
-    line: Option<String>,
+fn progress(_app: &AppHandle, _target: &str, step: &str, done: Option<u64>, total: Option<u64>) {
+    job_step(step, done, total);
 }
 
-fn progress(app: &AppHandle, target: &str, step: &str, done: Option<u64>, total: Option<u64>) {
-    let _ = app.emit(
-        "wsl-progress",
-        Progress { target, step, done, total, line: None },
-    );
-}
-
-fn progress_line(app: &AppHandle, target: &str, step: &str, line: &str) {
-    let _ = app.emit(
-        "wsl-progress",
-        Progress { target, step, done: None, total: None, line: Some(line.chars().take(300).collect()) },
-    );
+fn progress_line(_app: &AppHandle, _target: &str, _step: &str, line: &str) {
+    job_line(line);
 }
 
 // ---------------------------------------------------------------- catálogo
@@ -587,6 +572,14 @@ pub struct CatalogItem {
     pub url: String,
     pub sha256: String,
     pub default: bool,
+    pub size: Option<u64>,
+    /// Danil sabe instalar lo que necesita el motor (apt o dnf).
+    pub supported: bool,
+}
+
+fn supported_family(name: &str) -> bool {
+    let n = name.to_lowercase();
+    ["ubuntu", "debian", "kali", "fedora", "almalinux", "oraclelinux", "oracle"].iter().any(|f| n.starts_with(f))
 }
 
 pub fn catalog() -> Result<Vec<CatalogItem>, Failure> {
@@ -598,15 +591,12 @@ pub fn catalog() -> Result<Vec<CatalogItem>, Failure> {
         .map_err(|e| fail("network", e.to_string()))?;
     let mut out = Vec::new();
     if let Some(families) = body["ModernDistributions"].as_object() {
-        for (family, list) in families {
-            if !matches!(family.as_str(), "Ubuntu" | "Debian") {
-                continue;
-            }
+        for list in families.values() {
             for d in list.as_array().into_iter().flatten() {
                 let name = d["Name"].as_str().unwrap_or_default();
                 let url = d["Amd64Url"]["Url"].as_str().unwrap_or_default();
                 let sha = d["Amd64Url"]["Sha256"].as_str().unwrap_or_default();
-                if name.is_empty() || url.is_empty() || sha.len() != 64 || !url.starts_with("https://") {
+                if name.is_empty() || url.is_empty() || sha.len() != 64 || !url.starts_with("https://") || !valid_distro(name) {
                     continue;
                 }
                 out.push(CatalogItem {
@@ -615,9 +605,30 @@ pub fn catalog() -> Result<Vec<CatalogItem>, Failure> {
                     url: url.to_string(),
                     sha256: sha.to_ascii_lowercase(),
                     default: d["Default"].as_bool().unwrap_or(false),
+                    size: None,
+                    supported: supported_family(name),
                 });
             }
         }
+    }
+    // El tamaño de cada imagen, en paralelo: una sola lista no debe tardar.
+    let handles: Vec<_> = out
+        .iter()
+        .map(|i| {
+            let url = i.url.clone();
+            std::thread::spawn(move || {
+                ureq::head(&url)
+                    .config()
+                    .timeout_global(Some(Duration::from_secs(6)))
+                    .build()
+                    .call()
+                    .ok()
+                    .and_then(|r| r.headers().get("content-length").and_then(|v| v.to_str().ok()).and_then(|v| v.parse::<u64>().ok()))
+            })
+        })
+        .collect();
+    for (item, h) in out.iter_mut().zip(handles) {
+        item.size = h.join().ok().flatten();
     }
     Ok(out)
 }
@@ -643,6 +654,10 @@ fn download(app: &AppHandle, target: &str, url: &str, sha: &str) -> Result<PathB
     let dir = std::env::temp_dir().join("danil-wsl");
     std::fs::create_dir_all(&dir).map_err(|e| fail("io", e.to_string()))?;
     let path = dir.join(format!("{target}.wsl"));
+    if verified(&path, sha) {
+        progress(app, target, "verify", None, None);
+        return Ok(path);
+    }
     let mut attempts = 0;
     loop {
         attempts += 1;
@@ -672,13 +687,22 @@ fn download(app: &AppHandle, target: &str, url: &str, sha: &str) -> Result<PathB
             let mut buf = vec![0u8; 1 << 16];
             let mut done = start;
             let mut last = Instant::now();
+            let mut window = (Instant::now(), done);
             loop {
+                while job_paused() {
+                    std::thread::sleep(Duration::from_millis(300));
+                }
                 let n = reader.read(&mut buf).map_err(|e| e.to_string())?;
                 if n == 0 {
                     break;
                 }
                 file.write_all(&buf[..n]).map_err(|e| e.to_string())?;
                 done += n as u64;
+                if window.0.elapsed() >= Duration::from_secs(1) {
+                    let secs = window.0.elapsed().as_secs_f64().max(0.001);
+                    job_speed(((done - window.1) as f64 / secs) as u64);
+                    window = (Instant::now(), done);
+                }
                 if last.elapsed() > Duration::from_millis(250) {
                     progress(app, target, "download", Some(done), total);
                     last = Instant::now();
@@ -705,6 +729,15 @@ fn download(app: &AppHandle, target: &str, url: &str, sha: &str) -> Result<PathB
         return Err(fail("checksum", got));
     }
     Ok(path)
+}
+
+fn verified(path: &std::path::Path, sha: &str) -> bool {
+    use sha2::{Digest, Sha256};
+    let Ok(mut file) = std::fs::File::open(path) else {
+        return false;
+    };
+    let mut hasher = Sha256::new();
+    std::io::copy(&mut file, &mut hasher).is_ok() && format!("{:x}", hasher.finalize()) == sha
 }
 
 /// Crea el usuario como lo pide Ubuntu al abrirse la primera vez: nombre y
@@ -770,13 +803,13 @@ pub fn install_distro(
         .output()
         .map_err(|e| fail("io", e.to_string()))?;
     if !output.status.success() {
+        // La imagen se queda en la carpeta temporal: después del reinicio se reutiliza.
         let text = super::wsl::decode(&output.stdout) + &super::wsl::decode(&output.stderr);
         return Err(fail("wsl_failed", text.trim().to_string()));
     }
     let _ = std::fs::remove_file(&file);
     progress(app, name, "user", None, None);
     create_user(name, user, password)?;
-    progress(app, name, "done", None, None);
     Ok(())
 }
 
@@ -843,7 +876,7 @@ ldconfig -p 2>/dev/null | grep -q 'libdbus-1.so.3' || need="$need libdbus"
 [ -z "$need" ] && exit 0
 if command -v apt-get >/dev/null; then
   export DEBIAN_FRONTEND=noninteractive
-  apt-get update -qq && apt-get install -y -qq curl tar diffutils libdbus-1-3 ca-certificates
+  apt-get -o DPkg::Lock::Timeout=300 update -qq && apt-get -o DPkg::Lock::Timeout=300 install -y -qq curl tar diffutils libdbus-1-3 ca-certificates
 elif command -v dnf >/dev/null; then dnf install -y curl tar diffutils dbus-libs
 else echo "faltan:$need" >&2; exit 3; fi
 "#;
@@ -857,8 +890,8 @@ else echo "faltan:$need" >&2; exit 3; fi
     let body = format!(
         "set -eu\nd=$(mktemp -d)\ncat > \"$d/install.sh\" <<'DANIL_INSTALL_HOST_EOF'\n{INSTALL_HOST}\nDANIL_INSTALL_HOST_EOF\ncat > \"$d/engine.sh\" <<'DANIL_ENGINE_EOF'\n{ENGINE_INSTALL}\nDANIL_ENGINE_EOF\nrc=0\nsh \"$d/engine.sh\" \"$1\" \"$2\" \"$3\" \"$d/install.sh\" || rc=$?\nrm -rf \"$d\"\nexit $rc\n"
     );
-    let mut step = "download".to_string();
-    progress(app, target, "download", None, None);
+    let mut step = "engine_download".to_string();
+    progress(app, target, "engine_download", None, None);
     script_ok(
         distro,
         Some(&who.user),
@@ -868,8 +901,8 @@ else echo "faltan:$need" >&2; exit 3; fi
         |l| {
             if let Some(next) = l.strip_prefix("PASO ") {
                 step = match next.trim() {
-                    "descargar" => "download",
-                    "verificar" => "verify",
+                    "descargar" => "engine_download",
+                    "verificar" => "engine_verify",
                     "instalar" => "engine",
                     _ => "engine",
                 }
@@ -1000,6 +1033,447 @@ pub fn enable() -> Result<(), Failure> {
 pub fn lookup(app: &AppHandle, machine: &str) -> Result<ChildEntry, Failure> {
     let distro = machine.strip_prefix(MACHINE_PREFIX).unwrap_or(machine);
     entry(app, distro)
+}
+
+// ---------------------------------------------------------------- estado y trabajos
+
+/// Una falla con su código (la frase la pone la ventana) y el texto crudo.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct JobError {
+    pub code: String,
+    pub detail: String,
+}
+
+/// Lo que se está haciendo ahora: activar Linux, instalar una distribución o
+/// conectar una que ya existe. Uno a la vez; vive aquí y no en la pantalla, así
+/// que salir de Configuración no lo pierde.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Job {
+    pub id: String,
+    /// `enable` · `install` · `connect`.
+    pub kind: String,
+    pub target: String,
+    pub label: String,
+    pub user: Option<String>,
+    pub step: String,
+    pub done: Option<u64>,
+    pub total: Option<u64>,
+    /// Bytes por segundo de la descarga en curso.
+    pub speed: Option<u64>,
+    pub paused: bool,
+    pub lines: Vec<String>,
+    pub error: Option<JobError>,
+    pub finished: bool,
+    pub started_at: u64,
+}
+
+/// Lo que quedó a medias por un reinicio: se retoma con la misma descarga.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Resume {
+    pub name: String,
+    pub label: String,
+    pub url: String,
+    pub sha256: String,
+    pub user: String,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+struct Saved {
+    job: Option<Job>,
+    resume: Option<Resume>,
+    /// Cuándo se activó WSL desde aquí; si fue después del último arranque, falta reiniciar.
+    enabled_at: Option<u64>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct DistroRow {
+    pub name: String,
+    pub state: String,
+    pub version: Option<u8>,
+    pub default: bool,
+    pub system: bool,
+    pub child: Option<ChildInfo>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct LinuxState {
+    /// `ready` · `missing` · `reboot` · `virtualization` · `unsupported` · `unknown`.
+    pub wsl: String,
+    pub distros: Vec<DistroRow>,
+    pub job: Option<Job>,
+    pub resume: Option<Resume>,
+    pub detail: Option<String>,
+}
+
+fn saved_path(app: &AppHandle) -> Option<PathBuf> {
+    registry_path(app).ok().map(|p| p.with_file_name("wsl-state.json"))
+}
+
+fn read_saved(app: &AppHandle) -> Saved {
+    saved_path(app)
+        .and_then(|p| std::fs::read(p).ok())
+        .and_then(|b| serde_json::from_slice(&b).ok())
+        .unwrap_or_default()
+}
+
+fn write_saved(app: &AppHandle, saved: &Saved) {
+    if let Some(path) = saved_path(app) {
+        let tmp = path.with_extension("json.tmp");
+        if std::fs::write(&tmp, serde_json::to_vec_pretty(saved).unwrap_or_default()).is_ok() {
+            let _ = std::fs::rename(&tmp, &path);
+        }
+    }
+}
+
+struct Current {
+    job: Option<Job>,
+    running: bool,
+    app: Option<AppHandle>,
+    last_emit: Option<Instant>,
+}
+
+fn current() -> &'static Mutex<Current> {
+    static C: OnceLock<Mutex<Current>> = OnceLock::new();
+    C.get_or_init(|| Mutex::new(Current { job: None, running: false, app: None, last_emit: None }))
+}
+
+fn emit_job(force: bool) {
+    let mut c = current().lock().unwrap_or_else(|p| p.into_inner());
+    if !force && c.last_emit.is_some_and(|t| t.elapsed() < Duration::from_millis(200)) {
+        return;
+    }
+    c.last_emit = Some(Instant::now());
+    if let (Some(app), job) = (c.app.clone(), c.job.clone()) {
+        drop(c);
+        let _ = app.emit("wsl-job", &job);
+        if let Some(job) = job {
+            let mut saved = read_saved(&app);
+            saved.job = Some(job);
+            write_saved(&app, &saved);
+        }
+    }
+}
+
+fn with_job(change: impl FnOnce(&mut Job)) {
+    {
+        let mut c = current().lock().unwrap_or_else(|p| p.into_inner());
+        if let Some(job) = c.job.as_mut() {
+            change(job);
+        }
+    }
+}
+
+/// El paso en curso. La descarga también trae bytes; los demás pasos los limpian.
+fn job_step(step: &str, done: Option<u64>, total: Option<u64>) {
+    let mut changed_step = false;
+    with_job(|job| {
+        changed_step = job.step != step;
+        job.step = step.to_string();
+        job.done = done;
+        job.total = total;
+        if changed_step {
+            job.speed = None;
+        }
+    });
+    emit_job(changed_step);
+}
+
+/// Una línea del instalador para «Ver lo que está haciendo», sin nombres internos.
+fn job_line(line: &str) {
+    let clean = line
+        .replace("Seldon Host", "el motor de Danil")
+        .replace("seldon-host", "danil")
+        .replace("seldon-runtime", "motor de Danil");
+    with_job(|job| {
+        job.lines.push(clean.chars().take(300).collect());
+        let extra = job.lines.len().saturating_sub(60);
+        job.lines.drain(..extra);
+    });
+    emit_job(false);
+}
+
+fn job_speed(bytes_per_second: u64) {
+    with_job(|job| job.speed = Some(bytes_per_second));
+}
+
+fn job_paused() -> bool {
+    current()
+        .lock()
+        .unwrap_or_else(|p| p.into_inner())
+        .job
+        .as_ref()
+        .is_some_and(|j| j.paused && !j.finished)
+}
+
+pub fn pause(paused: bool) {
+    with_job(|job| job.paused = paused);
+    emit_job(true);
+}
+
+/// Cierra el aviso de un trabajo terminado o fallido.
+pub fn dismiss(app: &AppHandle) {
+    let mut c = current().lock().unwrap_or_else(|p| p.into_inner());
+    if c.running {
+        return;
+    }
+    c.job = None;
+    drop(c);
+    let mut saved = read_saved(app);
+    saved.job = None;
+    write_saved(app, &saved);
+    let _ = app.emit("wsl-job", Option::<Job>::None);
+}
+
+/// El código de una falla conocida, a partir de lo que dijo WSL o el script.
+fn classify(error: &Failure) -> JobError {
+    let code = error["code"].as_str().unwrap_or("io").to_string();
+    let detail = error["detail"].as_str().unwrap_or_default().to_string();
+    let low = detail.to_lowercase();
+    let code = if low.contains("hcs_e_service_not_available")
+        || low.contains("hcs_e_hyperv_not_installed")
+        || low.contains("virtualiz")
+    {
+        "reboot_required".to_string()
+    } else if low.contains("could not get lock") || low.contains("dpkg lock") {
+        "apt_lock".to_string()
+    } else if low.contains("already exists") || low.contains("ya existe") || low.contains("error_already_exists") {
+        "already_installed".to_string()
+    } else if low.contains("could not resolve") || low.contains("temporary failure resolving") {
+        "network".to_string()
+    } else {
+        code
+    };
+    JobError { code, detail }
+}
+
+fn start(app: &AppHandle, kind: &str, target: &str, label: &str, user: Option<&str>, work: impl FnOnce(&AppHandle) -> Result<(), Failure> + Send + 'static) -> Result<Job, Job> {
+    let job = Job {
+        id: uuid::Uuid::new_v4().to_string(),
+        kind: kind.to_string(),
+        target: target.to_string(),
+        label: label.to_string(),
+        user: user.map(String::from),
+        step: if kind == "enable" { "permission".into() } else if kind == "install" { "download".into() } else { "check".into() },
+        done: None,
+        total: None,
+        speed: None,
+        paused: false,
+        lines: Vec::new(),
+        error: None,
+        finished: false,
+        started_at: now_ms(),
+    };
+    {
+        let mut c = current().lock().unwrap_or_else(|p| p.into_inner());
+        if c.running {
+            // Un segundo clic se engancha al que ya corre.
+            return Err(c.job.clone().unwrap_or(job));
+        }
+        c.running = true;
+        c.app = Some(app.clone());
+        c.job = Some(job.clone());
+    }
+    emit_job(true);
+    let app = app.clone();
+    std::thread::spawn(move || {
+        let result = work(&app);
+        with_job(|job| {
+            job.finished = true;
+            job.paused = false;
+            match &result {
+                Ok(()) => job.step = "done".into(),
+                Err(e) => job.error = Some(classify(e)),
+            }
+        });
+        {
+            let mut c = current().lock().unwrap_or_else(|p| p.into_inner());
+            c.running = false;
+        }
+        emit_job(true);
+        let _ = app.emit("wsl-state-changed", ());
+    });
+    Ok(job)
+}
+
+pub fn start_enable(app: &AppHandle) -> Result<Job, Job> {
+    start(app, "enable", "wsl", "Linux", None, |app| {
+        enable()?;
+        let mut saved = read_saved(app);
+        saved.enabled_at = Some(now_ms());
+        write_saved(app, &saved);
+        Ok(())
+    })
+}
+
+pub struct InstallRequest {
+    pub name: String,
+    pub label: String,
+    pub url: String,
+    pub sha256: String,
+    pub user: String,
+    pub password: String,
+    pub workspace: Option<(String, String)>,
+}
+
+pub fn start_install(app: &AppHandle, req: InstallRequest) -> Result<Job, Job> {
+    let (name, label, user) = (req.name.clone(), req.label.clone(), req.user.clone());
+    start(app, "install", &name, &label, Some(&user), move |app| {
+        let resume = Resume {
+            name: req.name.clone(),
+            label: req.label.clone(),
+            url: req.url.clone(),
+            sha256: req.sha256.clone(),
+            user: req.user.clone(),
+        };
+        let result = install_distro(app, &req.name, &req.url, &req.sha256, &req.user, &req.password);
+        let mut saved = read_saved(app);
+        match &result {
+            Err(e) if classify(e).code == "reboot_required" => saved.resume = Some(resume),
+            Ok(()) => saved.resume = None,
+            Err(_) => {}
+        }
+        write_saved(app, &saved);
+        result?;
+        let ws = req.workspace.as_ref().map(|(i, n)| (i.as_str(), n.as_str()));
+        install_engine(app, &req.name, None, None, &req.label, ws).map(|_| ())
+    })
+}
+
+pub fn start_connect(app: &AppHandle, distro: &str, label: &str, user: Option<String>, password: Option<String>, workspace: Option<(String, String)>) -> Result<Job, Job> {
+    let (d, l) = (distro.to_string(), label.to_string());
+    start(app, "connect", distro, label, user.as_deref(), move |app| {
+        let ws = workspace.as_ref().map(|(i, n)| (i.as_str(), n.as_str()));
+        install_engine(app, &d, user.as_deref(), password.as_deref(), &l, ws).map(|_| ())
+    })
+}
+
+pub fn forget_resume(app: &AppHandle) {
+    let mut saved = read_saved(app);
+    saved.resume = None;
+    write_saved(app, &saved);
+}
+
+#[cfg(windows)]
+fn boot_time_ms() -> u64 {
+    #[link(name = "kernel32")]
+    extern "system" {
+        fn GetTickCount64() -> u64;
+    }
+    now_ms().saturating_sub(unsafe { GetTickCount64() })
+}
+
+#[cfg(not(windows))]
+fn boot_time_ms() -> u64 {
+    0
+}
+
+/// Windows dice que hay un reinicio pendiente de mantenimiento (activar componentes).
+fn reboot_pending() -> bool {
+    let mut command = Command::new("reg.exe");
+    crate::util::no_console_window(&mut command);
+    command
+        .args(["query", r"HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Component Based Servicing\RebootPending"])
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status()
+        .is_ok_and(|s| s.success())
+}
+
+fn virtualization_off() -> bool {
+    let Ok(out) = wsl().args(["--status"]).output() else {
+        return false;
+    };
+    let text = (super::wsl::decode(&out.stdout) + &super::wsl::decode(&out.stderr)).to_lowercase();
+    text.contains("virtualización no está habilitada")
+        || text.contains("virtualizacion no esta habilitada")
+        || text.contains("virtualization is not enabled")
+        || text.contains("wsl2 no se puede iniciar")
+        || text.contains("wsl2 is unable to start")
+}
+
+/// Todo lo que muestra «Linux en esta PC», de una vez. La pantalla lo pide al
+/// abrir y vuelve a pedirlo cuando un trabajo termina.
+pub fn state(app: &AppHandle) -> LinuxState {
+    let saved = read_saved(app);
+    {
+        let mut c = current().lock().unwrap_or_else(|p| p.into_inner());
+        c.app.get_or_insert_with(|| app.clone());
+        if c.job.is_none() {
+            // Un trabajo guardado que nadie corre: la app se cerró a la mitad.
+            if let Some(mut job) = saved.job.clone() {
+                if !job.finished {
+                    job.finished = true;
+                    if job.kind != "enable" {
+                        job.error = Some(JobError { code: "interrupted".into(), detail: String::new() });
+                    } else {
+                        job.step = "done".into();
+                    }
+                }
+                c.job = Some(job);
+            }
+        }
+    }
+    let job = current().lock().unwrap_or_else(|p| p.into_inner()).job.clone();
+    let enabled_since_boot = saved.enabled_at.is_some_and(|t| t > boot_time_ms());
+    let mut out = LinuxState { wsl: "unknown".into(), distros: Vec::new(), job, resume: saved.resume.clone(), detail: None };
+    match super::wsl::detect() {
+        Err(super::wsl::WslError::Unsupported) => out.wsl = "unsupported".into(),
+        Err(super::wsl::WslError::NotInstalled) => {
+            out.wsl = if enabled_since_boot || reboot_pending() { "reboot" } else { "missing" }.into();
+        }
+        Err(e) => {
+            out.detail = Some(e.to_string());
+        }
+        Ok(found) => {
+            // Las que ya corren se leen de su disco (no se enciende nada); las demás,
+            // solo por el puerto que ya se conocía.
+            let running: Vec<String> = found
+                .distros
+                .iter()
+                .filter(|d| d.running())
+                .map(|d| d.name.clone())
+                .collect();
+            let children: Vec<ChildInfo> = load(app)
+                .iter()
+                .map(|e| status(e, running.contains(&e.distro)))
+                .collect();
+            out.distros = found
+                .distros
+                .into_iter()
+                .map(|d| DistroRow {
+                    system: is_system_distro(&d.name),
+                    child: children.iter().find(|c| c.distro == d.name).cloned(),
+                    name: d.name,
+                    state: d.state,
+                    version: d.version,
+                    default: d.default,
+                })
+                .collect();
+            out.wsl = if virtualization_off() {
+                if enabled_since_boot || reboot_pending() { "reboot" } else { "virtualization" }
+            } else {
+                "ready"
+            }
+            .into();
+        }
+    }
+    out
+}
+
+fn is_system_distro(name: &str) -> bool {
+    let n = name.to_lowercase();
+    ["docker-desktop", "rancher-desktop", "podman-machine"].iter().any(|p| n.starts_with(p))
+}
+
+/// Reinicia Windows en unos segundos, a pedido de la persona.
+pub fn reboot() -> Result<(), Failure> {
+    let mut command = Command::new("shutdown.exe");
+    crate::util::no_console_window(&mut command);
+    let status = command
+        .args(["/r", "/t", "5", "/c", "Danil: reinicio para terminar de activar Linux"])
+        .status()
+        .map_err(|e| fail("io", e.to_string()))?;
+    if status.success() { Ok(()) } else { Err(fail("io", "shutdown")) }
 }
 
 #[cfg(test)]

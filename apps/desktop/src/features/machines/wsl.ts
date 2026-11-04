@@ -79,17 +79,43 @@ export type WslChild = {
   version: string | null;
 };
 
-/** Una distro que se puede instalar (catálogo de Microsoft). */
-export type WslCatalogItem = { name: string; label: string; url: string; sha256: string; default: boolean };
+/** Una distribución del catálogo de Microsoft, con su tamaño y si Danil sabe prepararla. */
+export type WslCatalogItem = { name: string; label: string; url: string; sha256: string; default: boolean; size: number | null; supported: boolean };
 
 export type WslDistroUser = { uid: number; user: string; home: string };
 
-/** El avance de una instalación (`wsl-progress`). */
-export type WslProgress = { target: string; step: string; done: number | null; total: number | null; line: string | null };
+export type WslJobError = { code: string; detail: string };
 
-/** Los pasos en el orden en que se muestran. */
-export const WSL_DISTRO_STEPS = ["download", "verify", "register", "user"] as const;
-export const WSL_ENGINE_STEPS = ["check", "deps", "download", "verify", "engine", "service", "connect"] as const;
+/** Lo que se está haciendo (`wsl-job`): lo guarda la ventana, no la pantalla. */
+export type WslJob = {
+  id: string;
+  kind: "enable" | "install" | "connect";
+  target: string;
+  label: string;
+  user: string | null;
+  step: string;
+  done: number | null;
+  total: number | null;
+  speed: number | null;
+  paused: boolean;
+  lines: string[];
+  error: WslJobError | null;
+  finished: boolean;
+  started_at: number;
+};
+
+export type WslDistroRow = { name: string; state: string; version: number | null; default: boolean; system: boolean; child: WslChild | null };
+
+export type WslResume = { name: string; label: string; url: string; sha256: string; user: string };
+
+/** Todo lo que muestra «Linux en esta PC» (`wsl_state`). */
+export type WslLinuxState = {
+  wsl: "ready" | "missing" | "reboot" | "virtualization" | "unsupported" | "unknown";
+  distros: WslDistroRow[];
+  job: WslJob | null;
+  resume: WslResume | null;
+  detail: string | null;
+};
 
 const RESERVED = new Set(["root", "daemon", "bin", "sys", "sync", "games", "man", "nobody", "admin", "ubuntu", "messagebus", "systemd-network"]);
 
@@ -100,20 +126,14 @@ export function wslUserProblem(user: string): "empty" | "reserved" | "format" | 
   return /^[a-z][a-z0-9_-]{0,31}$/.test(user) ? null : "format";
 }
 
-/** Los distros del sistema (Docker, Rancher) se listan pero no se ofrecen. */
-export const isSystemDistro = (name: string) => /^(docker-desktop|docker-desktop-data|rancher-desktop|rancher-desktop-data|podman-machine)/i.test(name);
-
-/** El código de un fallo de los comandos `wsl_*` de la ventana. */
-export function wslErrorCode(error: unknown): string {
-  if (error && typeof error === "object" && typeof (error as { code?: unknown }).code === "string") return (error as { code: string }).code;
-  if (typeof error === "string") return error;
-  return "wsl_failed";
-}
-
-export function wslErrorDetail(error: unknown): string {
-  if (error && typeof error === "object") {
-    const d = (error as { detail?: unknown }).detail;
-    if (typeof d === "string") return d;
-  }
-  return "";
+/** Lo que escribe la persona, ajustado a un usuario de Linux: «Tu Nombre» → «tu-nombre». */
+export function linuxUserSlug(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[\s.]+/g, "-")
+    .replace(/[^a-z0-9_-]/g, "")
+    .replace(/^[^a-z]+/, "")
+    .slice(0, 32);
 }

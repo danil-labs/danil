@@ -132,8 +132,72 @@ async fn blocking<T: Send + 'static>(
 }
 
 #[tauri::command]
+async fn wsl_state(app: tauri::AppHandle) -> std::result::Result<wsl_child::LinuxState, serde_json::Value> {
+    blocking(move || Ok(wsl_child::state(&app))).await
+}
+
+#[tauri::command]
 async fn wsl_catalog() -> std::result::Result<Vec<wsl_child::CatalogItem>, serde_json::Value> {
     blocking(wsl_child::catalog).await
+}
+
+/// Los tres arrancan un trabajo y vuelven enseguida; si ya hay uno, devuelven
+/// ese para que la pantalla se enganche en vez de lanzar otro.
+#[tauri::command]
+fn wsl_enable(app: tauri::AppHandle) -> wsl_child::Job {
+    wsl_child::start_enable(&app).unwrap_or_else(|running| running)
+}
+
+#[tauri::command]
+#[allow(clippy::too_many_arguments)]
+fn wsl_install(
+    app: tauri::AppHandle,
+    name: String,
+    label: String,
+    url: String,
+    sha256: String,
+    user: String,
+    password: String,
+    workspace: Option<String>,
+    workspace_name: Option<String>,
+) -> wsl_child::Job {
+    let workspace = workspace.map(|id| {
+        let n = workspace_name.unwrap_or_else(|| id.clone());
+        (id, n)
+    });
+    let request = wsl_child::InstallRequest { name, label, url, sha256, user, password, workspace };
+    wsl_child::start_install(&app, request).unwrap_or_else(|running| running)
+}
+
+#[tauri::command]
+fn wsl_connect(
+    app: tauri::AppHandle,
+    distro: String,
+    user: Option<String>,
+    password: Option<String>,
+    workspace: Option<String>,
+    workspace_name: Option<String>,
+) -> wsl_child::Job {
+    let workspace = workspace.map(|id| {
+        let n = workspace_name.unwrap_or_else(|| id.clone());
+        (id, n)
+    });
+    wsl_child::start_connect(&app, &distro, &distro, user, password, workspace).unwrap_or_else(|running| running)
+}
+
+#[tauri::command]
+fn wsl_job_pause(paused: bool) {
+    wsl_child::pause(paused);
+}
+
+#[tauri::command]
+fn wsl_job_dismiss(app: tauri::AppHandle) {
+    wsl_child::dismiss(&app);
+}
+
+#[tauri::command]
+fn wsl_resume_forget(app: tauri::AppHandle) {
+    wsl_child::forget_resume(&app);
 }
 
 #[tauri::command]
@@ -142,40 +206,8 @@ async fn wsl_distro_user(distro: String) -> std::result::Result<wsl_child::Distr
 }
 
 #[tauri::command]
-async fn wsl_enable() -> std::result::Result<(), serde_json::Value> {
-    blocking(wsl_child::enable).await
-}
-
-#[tauri::command]
-async fn wsl_distro_install(
-    app: tauri::AppHandle,
-    name: String,
-    url: String,
-    sha256: String,
-    user: String,
-    password: String,
-) -> std::result::Result<(), serde_json::Value> {
-    blocking(move || wsl_child::install_distro(&app, &name, &url, &sha256, &user, &password)).await
-}
-
-#[tauri::command]
-#[allow(clippy::too_many_arguments)]
-async fn wsl_engine_install(
-    app: tauri::AppHandle,
-    distro: String,
-    name: String,
-    user: Option<String>,
-    password: Option<String>,
-    workspace: Option<String>,
-    workspace_name: Option<String>,
-) -> std::result::Result<wsl_child::ChildInfo, serde_json::Value> {
-    blocking(move || {
-        let ws = workspace
-            .as_deref()
-            .map(|id| (id, workspace_name.as_deref().unwrap_or(id)));
-        wsl_child::install_engine(&app, &distro, user.as_deref(), password.as_deref(), &name, ws)
-    })
-    .await
+fn wsl_reboot() -> std::result::Result<(), serde_json::Value> {
+    wsl_child::reboot()
 }
 
 #[tauri::command]
@@ -445,11 +477,16 @@ fn start(client: Option<Arc<Client>>, autostart: bool, launcher: launcher::Launc
             update::update_install,
             update::update_pending,
             wsl_detect,
+            wsl_state,
             wsl_catalog,
-            wsl_distro_user,
             wsl_enable,
-            wsl_distro_install,
-            wsl_engine_install,
+            wsl_install,
+            wsl_connect,
+            wsl_job_pause,
+            wsl_job_dismiss,
+            wsl_resume_forget,
+            wsl_distro_user,
+            wsl_reboot,
             wsl_children,
             wsl_child_remove,
             wsl_child_wake,
