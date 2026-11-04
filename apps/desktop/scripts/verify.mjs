@@ -772,12 +772,12 @@ const GIB = 1024 ** 3;
 const STEP_TIMEOUT_MS = 15 * 60_000;
 const CARGO_TIMEOUT_MS = 45 * 60_000;
 
-/** Un paso por cada dos núcleos y por cada 2 GiB libres; con 1, la cadena corre en serie. En macOS `freemem` no cuenta la caché: vale la mitad del total. */
+/** Un paso por núcleo y por cada 2 GiB libres: casi todos esperan temporizadores, no CPU. Con 1, la cadena corre en serie. En macOS `freemem` no cuenta la caché: vale la mitad del total. */
 function budget() {
   const forced = Number(process.env.VERIFY_JOBS);
   if (Number.isSafeInteger(forced) && forced > 0) return forced;
   const memory = process.platform === "darwin" ? totalmem() / 2 : freemem();
-  return Math.max(1, Math.min(Math.floor(availableParallelism() / 2), Math.floor(memory / (2 * GIB))));
+  return Math.max(1, Math.min(availableParallelism(), Math.floor(memory / (2 * GIB))));
 }
 
 const running = new Set();
