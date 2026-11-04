@@ -4,8 +4,9 @@ import { MAX_CHAT_VISUALS, parseVisualDirective } from "@terminus/chat/visual";
 import * as Clipboard from "expo-clipboard";
 import { type Token, type Tokens, marked } from "marked";
 import { type ReactNode, memo, useMemo, useState } from "react";
-import { Alert, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Alert, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import { t } from "../../lib/i18n";
+import { columnWidths } from "../../lib/tableColumns";
 import { openTask } from "../components";
 import { Icon } from "../Icon";
 import { type Theme, useTheme } from "../theme";
@@ -248,26 +249,45 @@ function CodeBlock({ code, theme }: { code: string; theme: Theme }) {
 
 function Table({ table, ctx }: { table: Tokens.Table; ctx: Ctx }) {
   const { theme } = ctx;
-  const cell = (c: Tokens.TableCell, k: string, header: boolean) => (
-    <View key={k} style={[styles.cell, { borderColor: theme.border, backgroundColor: header ? theme.muted : "transparent" }]}>
+  const window = useWindowDimensions();
+  const [available, setAvailable] = useState(0);
+  const widths = useMemo(
+    () =>
+      columnWidths(
+        table.header.map((h, i) => ({ header: h.text, cells: table.rows.map((row) => row[i]?.text ?? "") })),
+        available || window.width - 32,
+        ctx.size * 0.93,
+        CELL_PAD * 2 + 2,
+      ),
+    [table, available, window.width, ctx.size],
+  );
+  const cell = (c: Tokens.TableCell, k: string, header: boolean, i: number) => (
+    <View key={k} style={[styles.cell, { width: widths[i], borderColor: theme.border, backgroundColor: header ? theme.muted : "transparent" }]}>
       <Text selectable style={{ color: theme.text, fontSize: ctx.size * 0.93, fontWeight: header ? "700" : "400", textAlign: c.align ?? "left" }}>
         {inline(c.tokens, ctx, k)}
       </Text>
     </View>
   );
   return (
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tableWrap}>
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      style={styles.tableWrap}
+      onLayout={(e) => setAvailable(Math.floor(e.nativeEvent.layout.width))}
+    >
       <View style={[styles.table, { borderColor: theme.border }]}>
-        <View style={styles.row}>{table.header.map((c, i) => cell(c, `h${i}`, true))}</View>
+        <View style={styles.row}>{table.header.map((c, i) => cell(c, `h${i}`, true, i))}</View>
         {table.rows.map((row, r) => (
           <View key={`r${r}`} style={styles.row}>
-            {row.map((c, i) => cell(c, `r${r}.${i}`, false))}
+            {row.map((c, i) => cell(c, `r${r}.${i}`, false, i))}
           </View>
         ))}
       </View>
     </ScrollView>
   );
 }
+
+const CELL_PAD = 6;
 
 const styles = StyleSheet.create({
   root: { gap: 8 },
@@ -289,5 +309,5 @@ const styles = StyleSheet.create({
   tableWrap: { flexGrow: 0 },
   table: { borderWidth: StyleSheet.hairlineWidth, borderRadius: RADIUS.lg, overflow: "hidden" },
   row: { flexDirection: "row" },
-  cell: { minWidth: 90, maxWidth: 260, padding: 6, borderWidth: StyleSheet.hairlineWidth },
+  cell: { padding: CELL_PAD, borderWidth: StyleSheet.hairlineWidth },
 });
