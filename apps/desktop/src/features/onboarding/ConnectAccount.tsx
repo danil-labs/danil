@@ -16,7 +16,8 @@ import { createDanilSession } from "../settings/danil-session";
 import { defaultSession, readSessions, sessionKey, setWorkspaceAccount, changeProblem } from "../settings/danil-sessions";
 import { linkProblem } from "../settings/workspace-link";
 import { startTrialInBrowser, TerminusLicense } from "../settings/TerminusLicense";
-import { adoptDanilWorkspace, isTaken, pickWelcomeWorkspace, rememberAccountWelcome } from "./account-welcome";
+import { rememberAccountWelcome } from "./account-welcome";
+import { adoptDanilWorkspace, isTaken, pickWelcomeWorkspace } from "./welcome-workspace";
 import { crearWorkspace } from "./onboarding-store";
 
 type Step = "choose" | "signing" | "loading" | "pick" | "linking";
@@ -141,7 +142,7 @@ export default function ConnectAccount(props: { onListo: (result: ConnectAccount
     if (code === "taken") return t("danil.workspace.taken_error");
     if (code === "not_admin") return t("danil.workspace.not_admin");
     if (code === "directory_failed") return t("danil.workspace.directory_failed");
-    return t("onboarding.account.link_failed");
+    return t("danil.welcome.link_failed");
   };
 
   const signInMessage = () => (step() === "signing" || step() === "choose" ? session.message() : null);
@@ -150,7 +151,7 @@ export default function ConnectAccount(props: { onListo: (result: ConnectAccount
     <div class="min-h-0 flex-1 overflow-y-auto" data-account-welcome={step()}>
       <section class="mx-auto flex w-full max-w-[520px] flex-col gap-6 px-8 py-12">
         <h1 class="m-0 text-3xl leading-tight font-display font-bold tracking-[-0.03em] text-neutral-950">
-          {t("onboarding.account.title")}
+          {t("danil.welcome.title")}
         </h1>
 
         <Show when={step() === "choose"}>
@@ -158,16 +159,16 @@ export default function ConnectAccount(props: { onListo: (result: ConnectAccount
             <Opcion
               data="data-account-welcome-connect"
               icono={<Cloud size={18} />}
-              titulo={t("onboarding.account.connect")}
-              efecto={t("onboarding.account.connect_effect")}
+              titulo={t("danil.welcome.connect")}
+              efecto={t("danil.welcome.connect_effect")}
               disabled={session.busy() || session.view().t === "loading"}
               onClick={connect}
             />
             <Opcion
               data="data-account-welcome-local"
               icono={<Laptop size={18} />}
-              titulo={t("onboarding.account.local")}
-              efecto={t("onboarding.account.local_effect")}
+              titulo={t("danil.welcome.local")}
+              efecto={t("danil.welcome.local_effect")}
               onClick={() => finish({ workspace: null, connected: false })}
             />
           </div>
@@ -177,7 +178,7 @@ export default function ConnectAccount(props: { onListo: (result: ConnectAccount
           <div class="grid gap-3">
             <p class="m-0 flex items-center gap-2 text-sm text-neutral-700" role="status">
               <Spinner size={14} />
-              {t("onboarding.account.waiting")}
+              {t("danil.welcome.waiting")}
             </p>
             <Show when={session.status()?.user_code}>
               {(code) => (
@@ -200,17 +201,17 @@ export default function ConnectAccount(props: { onListo: (result: ConnectAccount
         <Show when={step() === "loading" || step() === "linking"}>
           <p class="m-0 flex items-center gap-2 text-sm text-neutral-700" role="status">
             <Spinner size={14} />
-            {linking() ? t("onboarding.account.linking", { name: linking() ?? "" }) : t("onboarding.account.loading")}
+            {linking() ? t("danil.welcome.linking", { name: linking() ?? "" }) : t("danil.welcome.loading")}
           </p>
         </Show>
 
         <Show when={step() === "pick"}>
           <div class="grid gap-2" data-account-welcome-pick="">
             <Show when={session.status()?.email}>
-              {(email) => <p class="m-0 text-xs text-neutral-500">{t("onboarding.account.connected_as", { email: email() })}</p>}
+              {(email) => <p class="m-0 text-xs text-neutral-500">{t("danil.welcome.connected_as", { email: email() })}</p>}
             </Show>
             <Show when={entries().length}>
-              <h2 class="m-0 text-sm font-semibold text-neutral-950">{t("onboarding.account.choose")}</h2>
+              <h2 class="m-0 text-sm font-semibold text-neutral-950">{t("danil.welcome.choose")}</h2>
             </Show>
             <div class="grid gap-1">
               <For each={entries()}>
@@ -245,7 +246,7 @@ export default function ConnectAccount(props: { onListo: (result: ConnectAccount
               onClick={() => finish({ workspace: created, connected: true })}
               data-account-welcome-skip-link=""
             >
-              {t("onboarding.account.continue_unlinked")}
+              {t("danil.welcome.continue_unlinked")}
             </Button>
           </div>
         </Show>

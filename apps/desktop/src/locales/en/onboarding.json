@@ -189,17 +189,5 @@
   "onboarding.login.waiting_code": "Waiting for the code the browser gives you…",
   "onboarding.login.waiting_browser": "Waiting for you to finish in the browser…",
   "onboarding.login.confirm_in_browser": "Confirm it in your browser",
-  "onboarding.tools.authorize": "Authorize",
-  "onboarding.account.title": "Connect your Danil account",
-  "onboarding.account.connect": "Connect account",
-  "onboarding.account.connect_effect": "Use your Danil workspace, agents and machines.",
-  "onboarding.account.local": "Continue without an account",
-  "onboarding.account.local_effect": "Everything stays on this computer.",
-  "onboarding.account.waiting": "Finish signing in in your browser.",
-  "onboarding.account.loading": "Looking for your workspaces…",
-  "onboarding.account.linking": "Connecting {name}…",
-  "onboarding.account.choose": "Choose your workspace",
-  "onboarding.account.connected_as": "Signed in as {email}",
-  "onboarding.account.continue_unlinked": "Continue without a Danil workspace",
-  "onboarding.account.link_failed": "The workspace could not be connected. Try again."
+  "onboarding.tools.authorize": "Authorize"
 }

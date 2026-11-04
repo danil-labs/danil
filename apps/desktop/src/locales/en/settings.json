@@ -790,12 +790,5 @@
   "settings.tab.memory": "Memory",
   "settings.tab.external": "External access",
   "settings.tab.usage": "Usage",
-  "settings.tab.plan": "Plan",
-  "settings.download.tab": "Get the app",
-  "settings.download.title": "Get the desktop app",
-  "settings.download.action": "Download",
-  "settings.download.all": "See all downloads",
-  "settings.download.platform.macos": "macOS",
-  "settings.download.platform.windows": "Windows",
-  "settings.download.platform.linux": "Linux"
+  "settings.tab.plan": "Plan"
 }

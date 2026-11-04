@@ -1,14 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import type { DirectoryEntry } from "../../../../packages/computers/src/directory.ts";
-import {
-  ACCOUNT_WELCOME_KEY,
-  accountWelcomeAnswered,
-  adoptDanilWorkspace,
-  offerAccountWelcome,
-  pickWelcomeWorkspace,
-  rememberAccountWelcome,
-} from "../../src/features/onboarding/account-welcome.ts";
+import { ACCOUNT_WELCOME_KEY, accountWelcomeAnswered, offerAccountWelcome, rememberAccountWelcome } from "../../src/features/onboarding/account-welcome.ts";
+import { adoptDanilWorkspace, pickWelcomeWorkspace } from "../../src/features/onboarding/welcome-workspace.ts";
 import { DESKTOP_DOWNLOADS, downloadsFor, platformOf } from "../../src/lib/downloads.ts";
 
 const entry = (key: string, danil: number | null, workspace: string | null = null, extra: Partial<DirectoryEntry> = {}): DirectoryEntry => ({
