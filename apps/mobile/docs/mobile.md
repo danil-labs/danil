@@ -236,6 +236,7 @@ lleva su comentario allí:
 | Fondo del chat | `chat_background` | — |
 | Chat enriquecido | `tree_show` (el árbol `terminus-chat-visuals`), `chat_visual_part`, `preview_file`, `attachment_preview` | — |
 | Archivos de la tarea | `list_task_trees`, `tree_files`, `tree_show` (cualquier árbol de la tarea, solo lectura) | — |
+| Visor de archivos | `tree_read_part` (los bytes por partes de 512 KiB, `tree_parts_v1`: video, audio y Compartir), `tree_office_preview` (el PDF de un Office), `tree_typst_export` (la vista de un `.typ`: escribe `dist/<principal>.pdf` en la copia de la tarea, como Exportar en la ventana, y no enciende la máquina) | — |
 | Carpetas nuevas | `get_project_directory`, `project_clone_status` | `create_project`, `start_project_clone`, `cancel_project_clone` |
 | Registros de actividad por máquina | `list_activity`, `read_activity`, `read_activity_log` | — |
 | PR en la tarjeta | `list_session_git` (por carpeta, con las visibles en `priority`) | — |

@@ -14,7 +14,6 @@ import { Button } from "../../ui/Button";
 import { Dialog, DialogContent, DialogTitle } from "../../ui/Dialog";
 import { asFailure, type Failure, FailureNote } from "../../ui/Failure";
 import { Toggle } from "../../ui/Toggle";
-import { vistaServida } from "../code/typst";
 import { SettingsRow, SettingsSection } from "./layout";
 
 type Plugin = "agentsview" | "libreoffice" | "drawio" | "computer-use" | "typst";
@@ -192,9 +191,6 @@ export default function Integrations() {
                     <span class="block">{t("settings.integrations.unsupported")}</span>
                   </Show>
                   <span class="mt-1 block text-xs leading-5">{scope(plugin.id)}</span>
-                  <Show when={plugin.id === "typst" && !vistaServida()}>
-                    <span class="mt-1 block text-xs leading-5">{t("settings.integrations.typst.no_live_view")}</span>
-                  </Show>
                 </>
               }
             >

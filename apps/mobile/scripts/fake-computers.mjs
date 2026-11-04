@@ -21,12 +21,18 @@
  *
  * y entrar con cualquier correo y contraseña. Sin dependencias.
  *
+ * `--files <carpeta>` sirve esa carpeta como el árbol de cada tarea (`list_task_trees`,
+ * `tree_files`, `tree_show`, `tree_read_part`), para probar el visor de archivos
+ * con archivos de verdad; la primera respuesta de cada tarea nombra algunos.
+ *
  * Para las pruebas, `POST /__fake/send?computer=cmp_mac` con `{ project, prompt,
  * session? }` manda un mensaje como otro dispositivo: crea la tarea (sin
  * `session`) o abre otro turno, con sus eventos por el relay.
  */
 import { createHash, randomUUID } from "node:crypto";
+import { closeSync, existsSync, openSync, readFileSync, readSync, readdirSync, statSync } from "node:fs";
 import { createServer } from "node:http";
+import { join, relative, resolve } from "node:path";
 
 const option = (name, fallback) => {
   const i = process.argv.indexOf(`--${name}`);
@@ -38,6 +44,7 @@ const WAKE_MS = Number(option("wake-ms", "800"));
 const WORKSPACE_MODE = option("workspace-mode", null);
 const STEP_MS = Number(option("step-ms", "400"));
 const TOKEN = "fake-jwt";
+const FILES = option("files", null) ? resolve(option("files", "")) : null;
 const INTENT = new Set(["send_message", "inject_message", "create_project", "start_project_clone", "create_agent", "create_agent_thread", "add_account", "login_account", "submit_login_code", "respond_permission", "answer_question", "answer_shell_output", "run_shell_command", "queue_ready", "resume_awaiting_quota", "recreate_task_work"]);
 const MIRROR = new Set(["workspaces_startup", "list_workspaces", "list_projects", "list_spaces", "list_live_sessions", "list_agent_status", "list_providers", "load_session", "pending_requests", "list_active_turns", "list_live_turns", "list_workspace_attention", "list_agents", "list_agent_profiles", "archived_tasks"]);
 
@@ -45,7 +52,7 @@ const MIRROR = new Set(["workspaces_startup", "list_workspaces", "list_projects"
 
 function engine(name, ws, projects, tasks, accounts) {
   const now = Date.now();
-  const sessions = new Map(tasks.map((t, i) => [t.id, { ...t, created_at: now - (i + 1) * 60_000, updated_at: now - i * 60_000, turns: [{ id: `${t.id}-u`, role: "user", text: t.title }, { id: `${t.id}-a`, role: "agent", text: `Hecho en ${name}.` }, ...(t.incoming ?? [])], pending: null }]));
+  const sessions = new Map(tasks.map((t, i) => [t.id, { ...t, created_at: now - (i + 1) * 60_000, updated_at: now - i * 60_000, turns: [{ id: `${t.id}-u`, role: "user", text: t.title }, { id: `${t.id}-a`, role: "agent", text: FILES ? `Hecho en ${name}. Revisa ![el informe](${FILES}/informe.pdf) y ![la demo](${FILES}/demo-app.mp4).` : `Hecho en ${name}.` }, ...(t.incoming ?? [])], pending: null }]));
   const spaces = [{ id: "s1", name: null, folders: [], created_at: now, updated_at: now }];
   return { name, ws, projects, sessions, spaces, awake: "agent", live: new Set(), cursor: 0, events: [], accounts, files: new Set(), logins: new Map(), gitObserved: new Set() };
 }
@@ -274,9 +281,88 @@ function seenIn(e, space) {
   return [...e.sessions.values()].filter((s) => s.space === space && !s.archived).map((s) => ({ folder: s.project, task: s.id, root: s.id, title: s.title, working: e.live.has(s.id), files: [], kn_pending: [] }));
 }
 
+// --- Archivos de la tarea (`--files`), con las reglas de `delivery/development` ---
+const IMAGE_MIME = { png: "image/png", jpg: "image/jpeg", jpeg: "image/jpeg", gif: "image/gif", webp: "image/webp", svg: "image/svg+xml", ico: "image/x-icon" };
+const PART_MIME = { ...IMAGE_MIME, pdf: "application/pdf", mp4: "video/mp4", m4v: "video/mp4", mov: "video/quicktime", webm: "video/webm", mp3: "audio/mpeg", m4a: "audio/mp4", wav: "audio/wav", ogg: "audio/ogg" };
+const OPAQUE = ["zip", "docx", "xlsx", "pptx", "doc", "xls", "ppt", "bin", "mp4", "mov", "webm", "m4a", "mp3", "wav"];
+const extOf = (path) => (path.includes(".") ? path.slice(path.lastIndexOf(".") + 1).toLowerCase() : "");
+
+function insideFiles(path) {
+  const full = resolve(FILES, path);
+  if (full !== FILES && !full.startsWith(`${FILES}/`)) throw { code: "command_failed", detail: "outside_tree" };
+  if (!existsSync(full) || !statSync(full).isFile()) throw { code: "command_failed", detail: "development.error.gone" };
+  return full;
+}
+
+function walk(dir, paths, folders) {
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const full = join(dir, entry.name);
+    const rel = relative(FILES, full);
+    if (entry.isDirectory()) {
+      folders.push({ path: rel, repo: false });
+      walk(full, paths, folders);
+    } else paths.push(rel);
+  }
+}
+
+function showFile(path) {
+  const full = insideFiles(path);
+  const ext = extOf(path);
+  const bytes = statSync(full).size;
+  if (IMAGE_MIME[ext]) return { kind: "image", text: "", data_url: `data:${IMAGE_MIME[ext]};base64,${readFileSync(full).toString("base64")}`, pdf: null, bytes, truncated: false };
+  if (ext === "pdf") return { kind: "pdf", text: "", data_url: null, pdf: readFileSync(full).toString("base64"), bytes, truncated: false };
+  const raw = OPAQUE.includes(ext) ? null : readFileSync(full);
+  const text = raw && !raw.includes(0) ? raw.toString("utf8") : null;
+  return text !== null ? { kind: "text", text, data_url: null, pdf: null, bytes, truncated: false } : { kind: "binary", text: "", data_url: null, pdf: null, bytes, truncated: false };
+}
+
+function readPart(args) {
+  const full = insideFiles(args.path);
+  const stat = statSync(full);
+  const revision = `${stat.size}-${stat.mtimeMs}`;
+  if (args.revision && args.revision !== revision) throw { code: "command_failed", detail: "file_changed" };
+  const start = Math.min(Number(args.offset) || 0, stat.size);
+  const size = Math.min(Math.max(1, Number(args.size) || 1), 1 << 20, stat.size - start);
+  const chunk = Buffer.alloc(Math.max(0, size));
+  const fd = openSync(full, "r");
+  try {
+    readSync(fd, chunk, 0, chunk.length, start);
+  } finally {
+    closeSync(fd);
+  }
+  return { data: chunk.toString("base64"), eof: start + chunk.length >= stat.size, total: stat.size, revision, mime: PART_MIME[extOf(args.path)] ?? "application/octet-stream" };
+}
+
+function fileCommand(command, args) {
+  switch (command) {
+    case "list_task_trees": return [{ key: "work", name: "Copia de la tarea", path: FILES, kind: "folder", missing: false }];
+    case "tree_files": {
+      const paths = [];
+      const folders = [];
+      walk(FILES, paths, folders);
+      return { paths, folders, truncated: false };
+    }
+    case "tree_show": return showFile(args.path);
+    case "tree_read_part": return readPart(args);
+    // Sin Typst en el falso: el PDF de al lado hace de `dist/<principal>.pdf`.
+    case "tree_typst_export": {
+      const pdf = String(args.path).replace(/\.typ$/i, ".pdf");
+      return existsSync(join(FILES, pdf)) ? { pdf, diagnostics: [] } : { pdf: null, diagnostics: [{ severity: "error", path: args.path, line: 1, column: 1, message: "no compila en el falso" }] };
+    }
+    case "tree_office_preview": throw { code: "command_failed", detail: "libreoffice_missing" };
+    case "list_integrations": return { plugins: [{ id: "typst", enabled: true }] };
+    case "preview_file": return { rel: args.rel, ...showFile(relative(FILES, args.path)) };
+  }
+  return undefined;
+}
+
 function invoke(m, command, args) {
   const e = m.engine;
   if (e.older?.has(command)) throw { code: "command", detail: command };
+  if (FILES && (command !== "preview_file" || String(args.path).startsWith(`${FILES}/`))) {
+    const answer = fileCommand(command, args);
+    if (answer !== undefined) return answer;
+  }
   switch (command) {
     case "list_activity": return [{ id: "maintenance-qa", project: e.projects[0].id, title: `Actualizar herramientas en ${e.name}`, state: "success", created_at: Date.now() - 60000, updated_at: Date.now() - 30000, steps: 1 }];
     case "read_activity": return { ...invoke(m, "list_activity", {})[0], steps: [{ id: "step-qa", command: "terminus --version", cwd: "/lab/tools", state: "success", started_at: Date.now() - 60000, ended_at: Date.now() - 30000, exit_code: 0, error: null }] };
