@@ -27,6 +27,7 @@ import { asFailure, type Failure, FailureNote, prosaDe } from "../../ui/Failure"
 import { Toast, ToastPortal } from "../../ui/Toast";
 import { esIncluida, fallasIncluidas, funcion } from "../onboarding/bundled";
 import type { Conexiones } from "../onboarding/connect-store";
+import { accountWelcomeAnswered, offerAccountWelcome } from "../onboarding/account-welcome";
 import { crearWorkspace } from "../onboarding/onboarding-store";
 import { CabeceraDelAlta } from "../onboarding/Phases";
 import type { EstadoDeEtapa, Instalacion } from "../onboarding/Prepare";
@@ -65,6 +66,7 @@ const Comprobacion = lazy(() => import("../onboarding/ConnectAI").then((m) => ({
 const Personalizar = lazy(() => import("../onboarding/Personalize"));
 const PreparationProgress = lazy(() => import("../onboarding/Prepare").then((m) => ({ default: m.PreparationProgress })));
 const FuncionesAfectadas = lazy(() => import("../onboarding/Repair").then((m) => ({ default: m.FuncionesAfectadas })));
+const ConectarCuenta = lazy(() => import("../onboarding/ConnectAccount"));
 
 /** El hueco de una tarjeta mientras llega su trozo: mismo borde, sin contenido. */
 function TarjetaVacia() {
@@ -123,6 +125,7 @@ export default function Setup(props: { children: JSX.Element }) {
   const [paso, setPaso] = createSignal<Paso>("preparar");
   const [entrando, setEntrando] = createSignal(false);
   const [workspace, setWorkspace] = createSignal<{ id: string; nombre: string } | null>(null);
+  const [cuentaRespondida, setCuentaRespondida] = createSignal(accountWelcomeAnswered());
   let tope = { total: -1, valor: 0 };
 
   const [conexiones, setConexiones] = createSignal<Conexiones | null>(null);
@@ -454,9 +457,11 @@ export default function Setup(props: { children: JSX.Element }) {
   }
 
   const alta = () => hayEspacio() === false;
+  /** «Conecta tu cuenta de Danil» va antes que todo el alta, y solo una vez por computadora. */
+  const pideCuenta = () => offerAccountWelcome(alta(), cuentaRespondida());
 
   createEffect(() => {
-    if (paso() === "preparar" && fin() && alta() && !falloEsencial() && !sinSoporte() && !conFallas() && !fallo() && !falloDelServicio()) {
+    if (paso() === "preparar" && fin() && alta() && !pideCuenta() && !falloEsencial() && !sinSoporte() && !conFallas() && !fallo() && !falloDelServicio()) {
       void aConectar();
     }
   });
@@ -652,6 +657,19 @@ export default function Setup(props: { children: JSX.Element }) {
         <main class="flex h-full flex-col overflow-hidden bg-bg">
           <CabeceraDelAlta fase={alta() ? (paso() === "personalizar" ? 1 : 0) : undefined} />
           <Show
+            when={!pideCuenta()}
+            fallback={
+              <Suspense fallback={<TarjetaVacia />}>
+                <ConectarCuenta
+                  onListo={(r) => {
+                    if (r.workspace) setWorkspace(r.workspace);
+                    setCuentaRespondida(true);
+                  }}
+                />
+              </Suspense>
+            }
+          >
+          <Show
             when={paso() === "personalizar"}
             fallback={
               <>
@@ -668,6 +686,7 @@ export default function Setup(props: { children: JSX.Element }) {
                 onListo={() => setSeguir(true)}
               />
             </Suspense>
+          </Show>
           </Show>
         </main>
       </Match>
