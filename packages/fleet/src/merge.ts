@@ -37,12 +37,12 @@ export type MergeContext = {
  * la tarea que lanzó a otra vive en el mismo motor, y con el mismo prefijo que
  * los `id` la lista la esconde bajo su lanzador, como en el escritorio.
  */
-const KEYS = new Set(["session", "parent", "launched_by", "portfolio", "account", "space"]);
+const KEYS = new Set(["session", "parent", "launched_by", "handoff_parent", "portfolio", "account", "space"]);
 /** Llaves cuyo valor es un archivo de imagen de esa máquina: `preview_file` lo lee allá. */
 const FILES = new Set(["logo", "background", "avatar"]);
 const isPath = (v: string) => /^(\/|~\/|[a-z]:[\\/])/i.test(v);
 /** Respuestas cuyas filas traen el id de lo que listan. */
-const ROW_IDS = new Set(["list_portfolios", "list_live_sessions", "list_spaces"]);
+const ROW_IDS = new Set(["list_portfolios", "list_live_sessions", "list_delegated_sessions", "list_spaces"]);
 /** Respuestas con un objeto por id de tarea. */
 const KEYED = new Set(["list_session_git"]);
 /** Respuestas que son un objeto con su propio id. */

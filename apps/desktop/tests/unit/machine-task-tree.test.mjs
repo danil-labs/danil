@@ -91,20 +91,3 @@ test("el árbol de una tarea de otra máquina se pide a esa máquina y enseña l
   assert.ok(doc.querySelector('[data-ruta="DANIL.md"]'), "el árbol no enseña el archivo que creó el agente");
   assert.equal(external, 0, "la ruta remota no debe abrirse en el explorador local");
 });
-
-test("una carpeta local conserva el acceso al explorador del equipo", async () => {
-  const values = responses((_command, value) => () => value);
-  values.list_live_sessions = ({ project }) => project === "p1" ? [row("l1", { machine: "local", machine_on: true })] : [];
-  const opened = [];
-  values.open_external = ({ target }) => { opened.push(target); return null; };
-  const app = await boot("listo", "local-task-folder", values, undefined, { "harness.layout.shell.right.open": "true" });
-  await sleep(600);
-  const doc = app.w.document;
-  doc.querySelector('[data-sesion="l1"]').click();
-  await sleep(800);
-  const open = doc.querySelector('button[aria-label="Abrir carpeta"]');
-  assert.ok(open, "la carpeta local conserva la acción del explorador");
-  open.click();
-  await sleep(100);
-  assert.deepEqual(opened, ["/tmp"]);
-});

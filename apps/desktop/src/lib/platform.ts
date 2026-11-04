@@ -62,6 +62,8 @@ export type Capabilities = {
   localSetup: boolean;
   /** Una computadora apagada o encendiéndose se ve en su indicador, no como error. */
   computerStatus: boolean;
+  /** La ventana corre en Windows y puede detectar WSL como máquina local. */
+  wsl?: boolean;
   /** Radiant en Configuración y su gobierno en las pantallas; la web no lo ofrece. */
   radiant?: boolean;
   /** Iniciar sesión en Danil desde Configuración: la web ya entra con esa cuenta. */
@@ -75,7 +77,19 @@ export type Capabilities = {
   /** La bitácora de cambios de la cuenta de Danil activa, con la sesión (la web en alfa); la muestra `/admin`. */
   accountAuditLog?: AuditLogSource;
   /** `/admin` dentro de esta web (alfa); `allowed` dice si la persona es owner o admin de algún workspace de Danil. Sin esto, el escritorio la abre en el navegador. */
-  adminPage?: { href: (workspace: string | null) => string; allowed: () => Promise<boolean> };
+  /** Los workspaces que la persona puede entrar (la web y la ventana). Sin esto, el menú y la barra siguen como en el motor. */
+  workspaceDirectory?: {
+    /** `account`: con qué sesión se lee el directorio; sin él, la del workspace abierto. */
+    list: (account?: string | null) => Promise<import("@terminus/computers").Directory>;
+    pin: (keys: string[], account?: string | null) => Promise<void>;
+    /** Enlaza un workspace propio con un workspace de Danil; rechaza con el código del plano de control. */
+    link: (workspaceId: string, danilWorkspaceId: number, account?: string | null) => Promise<void>;
+    /** Crear un workspace de Danil todavía no tiene ruta: quien la tenga la publica aquí. */
+    create?: (name: string) => Promise<import("@terminus/computers").DirectoryEntry>;
+  };
+  adminPage?: { href: string; allowed: () => Promise<boolean> };
+  /** Lo de una cuenta personal en Configuración › Cuenta. `isPersonal` decide si se ofrece; sin `usage` o `plan`, esas pestañas no salen. */
+  personalAccount?: { isPersonal: () => Promise<boolean>; usage?: () => JSX.Element; plan?: () => JSX.Element };
   /** El logo y el fondo de los workspaces leídos y cambiados en la cuenta con la sesión (la web). */
   accountAssets?: WorkspaceAssetsSource;
   /** Botón extra al lado de la búsqueda de la barra lateral (en la web, volver a Danil Agents). */
@@ -90,7 +104,7 @@ export type Capabilities = {
   machineOnCreate?: (workspace: string | null) => JSX.Element;
   /** La máquina donde se crea ahora un proyecto nuevo, si no es la de la ventana; `lead`, si sus spaces son los del panel. */
   remoteCreate?: (workspace: string | null) => { machine: string; lead: boolean } | null;
-  /** Los adjuntos salen del navegador como bytes: el motor solo guarda imágenes (`guardar_imagen_pegada`). */
+  /** Los adjuntos salen del navegador como bytes: los guarda el motor (`guardar_adjunto`). */
   browserFiles?: boolean;
   /** Transporte para intentar ver la pantalla; `null` si la máquina no pertenece a esta cuenta. La captura la decide el motor. */
   machineScreen?: (machine: string) => (() => Promise<WebSocket>) | null;
@@ -127,6 +141,15 @@ export type Capabilities = {
   connectMachine?: {
     list: () => Promise<Answer<Computer[]>>;
     onReady: (computer: Computer) => void;
+  };
+  /**
+   * Máquinas de la organización (`/v1/shared-computers`). La web las lee con la
+   * sesión de la página. El escritorio, si no la da, usa el token de cliente.
+   * No son destino de tareas.
+   */
+  sharedComputers?: {
+    list: () => Promise<Answer<import("@terminus/computers").SharedComputer[]>>;
+    start: (id: string) => Promise<Answer<import("@terminus/computers").SharedComputer>>;
   };
 };
 

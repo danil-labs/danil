@@ -171,8 +171,8 @@ const renders = passes.filter((targets) => inAnswer(targets).length > 0).length;
 const mutations = passes.reduce((n, targets) => n + inAnswer(targets).length, 0);
 const failure = !answerEl
   ? "La respuesta en vivo no pintó su final."
-  : app.fallos.length > 0
-    ? app.fallos.slice(0, 3).map((f) => String(f).split("\n").slice(0, 4).join("\n  ")).join("\n")
+  : app.failures.length > 0
+    ? app.failures.slice(0, 3).map((f) => String(f).split("\n").slice(0, 4).join("\n  ")).join("\n")
     : null;
 live = false;
 chat("done", { ok: true });

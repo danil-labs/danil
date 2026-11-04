@@ -86,16 +86,18 @@ test("una superficie de pago no aparece cuando no está autenticada", () => {  c
   assert.deepEqual(opciones.map((opcion) => opcion.model.id), ["opencode/free-model"]);
 });
 
-test("una sesión abierta solo ofrece modelos de su agente", () => {  const superficies: Superficie[] = [
+test("el selector recibe todos los agentes: el candado decide cuáles se eligen", () => {
+  const superficies: Superficie[] = [
     { id: "claude", provider: "claude", label: "Claude", catalogo: "todo", usable: true, marca: null, porque: null },
     { id: "codex", provider: "codex", label: "Codex", catalogo: "todo", usable: true, marca: null, porque: null },
   ];
-  const opciones = opcionesDeModelos(superficies, {    claude: { provider: "x", fallback: false, models: [model("sonnet", "Sonnet")] },
+  const opciones = opcionesDeModelos(superficies, {
+    claude: { provider: "x", fallback: false, models: [model("sonnet", "Sonnet")] },
     codex: { provider: "x", fallback: false, models: [model("gpt-5.6-sol", "GPT-5.6 Sol")] },
-  }, "codex");
+  });
 
-  assert.deepEqual(opciones.map((opcion) => opcion.agent), ["codex"]);
-  assert.deepEqual(opciones.map((opcion) => opcion.model.id), ["gpt-5.6-sol"]);
+  assert.deepEqual(opciones.map((opcion) => opcion.agent), ["claude", "codex"]);
+  assert.deepEqual(opciones.map((opcion) => opcion.model.id), ["sonnet", "gpt-5.6-sol"]);
 });
 
 test("se puede buscar por proveedor, id, acentos y sin separadores", () => {  assert.equal(coincideModelo("zen", ["GPT 5", "opencode/gpt-5", "OpenCode Zen"]), true);

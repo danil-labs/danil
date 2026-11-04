@@ -14,11 +14,15 @@ export type TaskFileTab = {
 
 export type TaskFilesSide = "files" | "changes";
 
+/** What the one task window shows. `open` still means the window is open. */
+export type TaskSideMode = "files" | "search" | "usage" | "delegated";
+
 export type TaskFilesPanel = {
   open: boolean;
   expanded: boolean;
   tree: boolean;
   side: TaskFilesSide;
+  mode: TaskSideMode;
   tabs: TaskFileTab[];
   active: string | null;
   dirty: string[];
@@ -28,7 +32,7 @@ export const taskFileTabId = (tree: string, path: string, changes: boolean) =>
   `${changes ? "cambios" : "archivo"}\u0000${tree}\u0000${path}`;
 
 const emptyPanel = (): TaskFilesPanel => ({
-  open: false, expanded: false, tree: true, side: "files", tabs: [], active: null, dirty: [],
+  open: false, expanded: false, tree: true, side: "files", mode: "files", tabs: [], active: null, dirty: [],
 });
 
 /** Per-task state of the files panel, in memory; only the widths persist (`lib/prefs.ts`). */
@@ -41,21 +45,32 @@ export function createTaskFiles() {
       change(all[task]);
     }));
 
+  /** Opens `mode`, or closes the window when that mode is already showing. */
+  const present = (task: string, mode: TaskSideMode) => edit(task, (p) => {
+    if (p.open && p.mode === mode) {
+      p.open = false;
+      p.expanded = false;
+      return;
+    }
+    p.open = true;
+    p.mode = mode;
+  });
+
   return {
     panel,
     setOpen: (task: string, open: boolean) => edit(task, (p) => {
       p.open = open;
       if (!open) p.expanded = false;
+      else p.mode = "files";
     }),
-    toggle: (task: string) => edit(task, (p) => {
-      p.open = !p.open;
-      if (!p.open) p.expanded = false;
-    }),
+    present,
+    toggle: (task: string) => present(task, "files"),
     setExpanded: (task: string, expanded: boolean) => edit(task, (p) => { p.expanded = expanded && p.tabs.length > 0; }),
     setTree: (task: string, tree: boolean) => edit(task, (p) => { p.tree = tree || p.tabs.length === 0; }),
     setSide: (task: string, side: TaskFilesSide) => edit(task, (p) => { p.side = side; p.tree = true; }),
     open: (task: string, file: { tree: string; path: string; changes: boolean; changed?: boolean; pinned?: boolean }) => edit(task, (p) => {
       p.open = true;
+      p.mode = "files";
       const id = taskFileTabId(file.tree, file.path, file.changes);
       const existing = p.tabs.find((tab) => tab.id === id);
       if (existing) {
@@ -114,6 +129,7 @@ export function createTaskFiles() {
       if (p.tabs.length === 0) { p.expanded = false; p.tree = true; }
     }),
     dirtyOf: (task: string) => panel(task).dirty,
+    forget: (task: string) => setPanels(produce(all => { delete all[task]; })),
   };
 }
 

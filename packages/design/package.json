@@ -5,6 +5,7 @@
   "type": "module",
   "description": "What a task looks like in every Terminus client: its state, marks, words and theme colors.",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./toolMarksData": "./src/toolMarksData.ts"
   }
 }

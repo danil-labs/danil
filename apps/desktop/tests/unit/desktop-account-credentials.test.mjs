@@ -116,7 +116,7 @@ test("la cuenta de OpenCode dice dónde está su clave y el aviso sube solo las 
   await waitFor(() => calls.some(([c]) => c === "account_credentials_upload"), "No subió");
   assert.deepEqual(calls.find(([c]) => c === "account_credentials_upload")[1], { slots: ["agentes/opencode-zen:cuenta-2"] }, "solo la elegida");
   await waitFor(() => !doc.querySelector("[data-local-keys-banner]"), "El aviso sigue después de subir");
-  assert.deepEqual(app.fallos, []);
+  assert.deepEqual(app.failures, []);
 });
 
 test("sin sesión de Danil en el workspace no hay «En uso en» ni aviso", async () => {

@@ -1,4 +1,5 @@
 import type { EngineUpdate, MachineResources, MachineTaskUsage, Startup } from "@terminus/protocol";
+import { SignalDot } from "../../ui/SignalDot";
 import type { JSX } from "solid-js";
 import {
   For,
@@ -933,11 +934,11 @@ export default function Almacenamiento(props: {
             </span>
             <p class="m-0 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-caption">
               <span class="flex items-center gap-1 font-medium text-warning-strong">
-                <span class="size-1.5 rounded-full bg-warning-strong" aria-hidden />
+                <SignalDot tone="warning" />
                 {t("shell.storage.reclaimable", { size: peso(datos()?.recuperable ?? 0) })}
               </span>
               <span class="flex items-center gap-1 text-neutral-500">
-                <span class="size-1.5 rounded-full bg-neutral-500" aria-hidden />
+                <SignalDot tone="neutral" />
                 {t("shell.storage.permanent", {
                   size: peso(
                     Math.max(0, (datos()?.bytes ?? 0) - (datos()?.recuperable ?? 0)),
@@ -1215,7 +1216,7 @@ export default function Almacenamiento(props: {
                     <Show when={tab() === "memory" && summaryOf(m.id)?.resources}>
                       {(r) => (
                         <div class="px-1 pb-1">
-                          <MemoryTab resources={r()} lookup={lookup} when={actividadDe}
+                          <MemoryTab resources={r()} machineId={m.id} lookup={lookup} when={actividadDe}
                             canStop={m.on && !!m.features?.includes(USAGE_FEATURE)}
                             stopping={stopping()} failure={stopFailure()} onStop={(x) => void stopTask(m, x)} />
                         </div>

@@ -42,14 +42,7 @@ export function chunkOf<T>(blocks: T[], id: number, origin = 0): T[] {
 }
 
 /**
- * Dónde se quedó leyendo alguien: el mensaje con que empieza el bloque y su
- * distancia al borde de arriba. Un índice de bloque cambia al plegarse un turno.
+ * Dónde se quedó leyendo alguien: la clave del bloque y su distancia al borde de
+ * arriba. Un índice de bloque cambia al plegarse un turno o al anteponer una página.
  */
-export type Lectura = { mensaje: number; desfase: number };
-
-/** El bloque que contiene `message`, dado el primer mensaje de cada bloque en orden. */
-export function blockOfMessage(starts: number[], message: number): number | null {
-  let found: number | null = null;
-  for (let k = 0; k < starts.length && starts[k] <= message; k++) found = k;
-  return found;
-}
+export type Lectura = { clave: string; desfase: number };

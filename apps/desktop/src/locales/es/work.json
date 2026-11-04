@@ -102,7 +102,5 @@
   "work.carry.sealed": "Van cifrados de punta a punta para {machine}; Danil no los ve.",
   "work.carry.key_changed": "La llave de {machine} no es la de la última vez. Si no la reinstalaste, alguien podría estar en medio: no lleves nada hasta saberlo.",
   "work.carry.trust_key": "Confiar en la nueva llave",
-  "work.carry.ignored_unsealed": "Sin cifrado de punta a punta con esa máquina, los archivos que git ignora no viajan por el relay.",
-  "work.failure.source_off": "{machine} está apagada: solo se puede llevar lo que hay en el remoto.",
-  "work.failure.without_work": "Seguir sin el trabajo sin subir"
+  "work.carry.ignored_unsealed": "Sin cifrado de punta a punta con esa máquina, los archivos que git ignora no viajan por el relay."
 }

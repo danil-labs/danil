@@ -1,0 +1,29 @@
+#!/bin/bash
+# Apaga la VM tras 15 minutos sin uso. Cuentan una corrida, una subida de bundle y las sesiones
+# y compilaciones de menos de 2 horas: lo olvidado deja de contar. Las sesiones salen de
+# loginctl porque `who` no ve las de Tailscale SSH.
+home=${VERIFY_QUEUE_HOME:-/var/lib/verify-queue}
+stamp=${VERIFY_IDLE_STAMP:-/run/verify-last-active}
+idle_seconds=900
+cap_seconds=7200
+now=$(date +%s)
+
+uploading() {
+  [ -n "$(find "$home" -maxdepth 1 -name 'incoming-*' -mmin -15 -print -quit)" ]
+}
+
+fresh_build() {
+  ps -eo etimes=,args= | awk -v cap="$cap_seconds" '$1 < cap && /verify\.mjs|[c]argo|[r]ustc/ { found = 1 } END { exit !found }'
+}
+
+fresh_session() {
+  local id
+  for id in $(loginctl list-sessions --no-legend | awk '{ print $1 }'); do
+    [ "$(loginctl show-session "$id" -p State --value)" = closing ] && continue
+    [ $(( now - $(date -d "$(loginctl show-session "$id" -p Timestamp --value)" +%s) )) -lt "$cap_seconds" ] && return 0
+  done
+  return 1
+}
+
+if [ -e "$home/busy" ] || uploading || fresh_build || fresh_session || [ ! -e "$stamp" ]; then touch "$stamp"; exit 0; fi
+[ $(( now - $(stat -c %Y "$stamp") )) -ge "$idle_seconds" ] && shutdown -h now

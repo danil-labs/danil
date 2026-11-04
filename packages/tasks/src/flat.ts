@@ -8,16 +8,19 @@ export type LauncherRow = {
   launched_by?: string | null;
   parent?: string | null;
   launcher_available?: boolean;
+  /** La ejecutora viva de la que continúa por handoff: familia, no destino de respuestas. */
+  handoff_parent?: string | null;
   /** El coordinador en otra máquina, ya con el id de la lista (`withRemoteLaunchers`). */
   remote_launcher?: string | null;
 };
 
 /**
  * La tarea que lanzó a esta (`parent` de un subagente, `launched_by` de una
- * delegada, `remote_launcher` de una hija remota), o `null`.
+ * delegada, `handoff_parent` de un receptor, `remote_launcher` de una hija
+ * remota), o `null`.
  */
 export function launcherOf(session: LauncherRow): string | null {
-  return session.parent ?? session.launched_by ?? session.remote_launcher ?? null;
+  return session.parent ?? session.launched_by ?? session.handoff_parent ?? session.remote_launcher ?? null;
 }
 
 /**

@@ -44,13 +44,14 @@ test("anteponer conserva los objetos de lo que ya estaba", () => {
   assert.equal(after.length, 4);
 });
 
-test("una revisión distinta invalida páginas aunque conserve el mismo número de turnos", () => {
+test("una reescritura invalida páginas aunque conserve el número de turnos", () => {
   const first = refreshHistory(undefined, turns(250, 400), { ...page(250, 400, 400), revision: "original" });
   assert.equal(prependHistory(first, turns(100, 250), { ...page(100, 250, 400), revision: "rewritten" }), null);
-  const fresh = refreshHistory(first, turns(300, 400), { ...page(300, 400, 400), revision: "rewritten" });
+  const rewritten = turns(300, 400).map((turn) => `${turn}!`);
+  const fresh = refreshHistory(first, rewritten, { ...page(300, 400, 400), revision: "rewritten" });
   assert.equal(fresh.start, 300);
   assert.equal(fresh.revision, "rewritten");
-  assert.deepEqual(fresh.turns, turns(300, 400));
+  assert.deepEqual(fresh.turns, rewritten);
 });
 
 test("bounded history drops a recoverable edge instead of retaining every visited page", () => {

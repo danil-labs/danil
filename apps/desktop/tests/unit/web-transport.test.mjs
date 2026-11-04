@@ -13,7 +13,7 @@ test("the web build talks to the relay: calls, events and machine state", async 
   const fake = relay();
   const app = await boot("listo", "web-transport", {}, undefined, {}, {
     web: true,
-    antes: (w) => {
+    beforeImport: (w) => {
       globalThis.WebSocket = fake.Socket;
       w.terminusWeb = { endpoint: "https://relay.test", computerId: "cmp_test", getToken: async () => "tok" };
     },
@@ -21,7 +21,7 @@ test("the web build talks to the relay: calls, events and machine state", async 
   await waitFor(() => app.w.document.querySelector('[data-sesion="cmp_test~t1"]'), "the task did not reach the sidebar");
   const text = () => app.w.document.body.textContent ?? "";
 
-  assert.deepEqual(app.fallos, []);
+  assert.deepEqual(app.failures, []);
   assert.equal(fake.sockets[0]?.url, "wss://relay.test/v1/computers/cmp_test/session", "like the phone, no ?contracts=: an engine on another contract stays in service");
   assert.deepEqual(fake.sockets[0]?.protocols, ["danil.computers.v1", "bearer.tok"]);
 
@@ -60,7 +60,7 @@ test("the web build talks to the relay: calls, events and machine state", async 
   fake.push({ type: "events", cursor: 3, gap: false, replay: false, runtime: "rt1", events: [] });
   await sleep(1200);
   assert.equal(app.w.document.querySelector("[data-web-sync]")?.dataset.state, "online", "the indicator stayed off after the machine came back");
-  assert.deepEqual(app.fallos, []);
+  assert.deepEqual(app.failures, []);
 });
 
 test("the transport leaves out what the account may not see: workspaces, attention and events", async () => {
@@ -78,7 +78,7 @@ test("the transport leaves out what the account may not see: workspaces, attenti
   ];
   const app = await boot("listo", "web-transport-linked", {}, undefined, {}, {
     web: true,
-    antes: (w) => {
+    beforeImport: (w) => {
       globalThis.WebSocket = f.Socket;
       w.terminusWeb = { endpoint: "https://relay.test", computers, getToken: async () => "tok" };
     },
@@ -112,7 +112,7 @@ test("the transport leaves out what the account may not see: workspaces, attenti
   assert.equal(tile("w2")?.dataset.attention, undefined, "and replaces what waited before");
   assert.equal(tile("z"), null);
 
-  assert.deepEqual(app.fallos, []);
+  assert.deepEqual(app.failures, []);
 });
 
 test("workspace context comes from its owning machine, including its source reads", async () => {
@@ -125,7 +125,7 @@ test("workspace context comes from its owning machine, including its source read
   const f = fleet({ cmp_vm: { table: vm }, cmp_mac: { table: mac } });
   const app = await boot("listo", "web-context-owner", {}, undefined, {}, {
     web: true,
-    antes: (w) => {
+    beforeImport: (w) => {
       globalThis.WebSocket = f.Socket;
       w.terminusWeb = { endpoint: "https://relay.test", computers: [
         { computer_id: "cmp_vm", name: "VM", state: "online", provider: "aws-ec2", workspaces: ["w"] },
@@ -209,7 +209,7 @@ test("workspace context comes from its owning machine, including its source read
   await sleep(600);
   assert.ok(app.w.document.body.textContent.includes("No se pudo leer la fuente principal"), "a missing root is a visible read failure");
   assert.ok(!app.w.document.body.textContent.includes("Sin fuente de contexto"));
-  assert.deepEqual(app.fallos, []);
+  assert.deepEqual(app.failures, []);
 });
 
 test("only a confirmed absence of a primary source shows the empty context actions", async () => {
@@ -218,14 +218,14 @@ test("only a confirmed absence of a primary source shows the empty context actio
     const fake = relay({ table: { ...engine, list_sources: primary === "error" ? undefined : [source] } });
     const app = await boot("listo", `web-context-primary-${primary}`, {}, undefined, {}, {
       web: true,
-      antes: (w) => {
+      beforeImport: (w) => {
         globalThis.WebSocket = fake.Socket;
         w.terminusWeb = { endpoint: "https://relay.test", computerId: "cmp_test", getToken: async () => "tok" };
       },
     });
     await sleep(700);
     assert.equal(app.w.document.body.textContent.includes("Sin fuente de contexto"), primary === false, "secondary material does not substitute for a primary source, and failed reads do not confirm an empty context");
-    assert.deepEqual(app.fallos, []);
+    assert.deepEqual(app.failures, []);
   }
 });
 
@@ -252,7 +252,7 @@ test("an existing local task can attach material without a machine list or an ex
   input.closest("form").dispatchEvent(new app.w.Event("submit", { bubbles: true, cancelable: true }));
   await sleep(300);
   assert.deepEqual(calls, [{ locator: "/local-folder" }]);
-  assert.deepEqual(app.fallos, []);
+  assert.deepEqual(app.failures, []);
 });
 
 test("la web muestra las tareas disponibles sin esperar a una máquina que no contesta", async (t) => {
@@ -268,7 +268,7 @@ test("la web muestra las tareas disponibles sin esperar a una máquina que no co
   };
   const app = await boot("listo", "web-slow-machine", {}, undefined, {}, {
     web: true,
-    antes: w => {
+    beforeImport: w => {
       globalThis.WebSocket = f.Socket;
       w.terminusWeb = {
         endpoint: "https://relay.test", getToken: async () => "tok",
@@ -280,7 +280,7 @@ test("la web muestra las tareas disponibles sin esperar a una máquina que no co
   while (!app.w.document.querySelector('[data-sesion="cmp_fast~t1"]') && Date.now() < deadline) await sleep(100);
   assert.ok(app.w.document.querySelector('[data-sesion="cmp_fast~t1"]'), "la máquina disponible aporta sus tareas dentro del plazo");
   t.diagnostic(`Primera lista visible: ${Date.now() - started} ms`);
-  assert.deepEqual(app.fallos, []);
+  assert.deepEqual(app.failures, []);
 });
 
 
@@ -298,7 +298,7 @@ test("una respuesta tardía agrega proyectos y tareas sin recargar ni duplicar l
   };
   const app = await boot("listo", "web-late-machine", {}, undefined, {}, {
     web: true,
-    antes: w => {
+    beforeImport: w => {
       globalThis.WebSocket = f.Socket;
       w.terminusWeb = {
         endpoint: "https://relay.test", getToken: async () => "tok",
@@ -335,5 +335,5 @@ test("una respuesta tardía agrega proyectos y tareas sin recargar ni duplicar l
   }
   const updated = await invoke("list_live_sessions", { project: "p1", open: ["cmp_slow~t1"] });
   assert.ok(!updated.some(task => task.id === "cmp_slow~t1"), "una respuesta vacía confirmada sí retira la fila");
-  assert.deepEqual(app.fallos, []);
+  assert.deepEqual(app.failures, []);
 });

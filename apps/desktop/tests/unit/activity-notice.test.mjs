@@ -48,5 +48,5 @@ test("maintenance successes stay silent and dismissed failures are not replayed"
   notice().querySelector('[aria-label="Cerrar el aviso"]').click();
   await emit("interrupted");
   assert.ok(notice(), "an interruption still calls for attention");
-  assert.deepEqual(app.fallos, []);
+  assert.deepEqual(app.failures, []);
 });

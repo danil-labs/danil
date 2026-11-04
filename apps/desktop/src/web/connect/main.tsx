@@ -7,6 +7,7 @@ import { workosSession } from "../workos-session";
 import { authLocation } from "../auth/return";
 import { ConnectPage } from "./ConnectPage";
 import { normalizeCode } from "./devices";
+import { desktopHandoff } from "./desktop";
 
 export type ConnectSettings = { endpoint: string; supabaseUrl: string; supabaseKey: string; login: string; workos?: boolean };
 
@@ -19,5 +20,6 @@ export function startConnect(settings: ConnectSettings, root: HTMLElement) {
   const leave = () => window.location.assign(authLocation(settings.login, window.location.origin, `${window.location.pathname}${window.location.search}`));
   const session = settings.workos ? workosSession({ onGone: leave }) : supabaseSession(settings.supabaseUrl, settings.supabaseKey, { onGone: leave });
   const code = normalizeCode(new URLSearchParams(window.location.search).get("code"));
-  render(() => <ConnectPage session={session} endpoint={settings.endpoint} code={code} />, root);
+  const desktop = settings.workos ? desktopHandoff(window.location.search) : null;
+  render(() => <ConnectPage session={session} endpoint={settings.endpoint} code={code} desktop={desktop} />, root);
 }

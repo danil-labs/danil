@@ -5,6 +5,7 @@ import { SettingsRow, SettingsSection } from '../../features/settings/layout';
 import { t } from '../../lib/i18n';
 import { Badge } from '../../ui/Badge';
 import { Button } from '../../ui/Button';
+import { bffTransport } from './transport';
 
 const TONE: Record<ConnectionState, 'success' | 'warning' | 'danger' | 'neutral'> = {
   connected: 'success', connecting: 'warning', expired: 'danger', disconnected: 'danger', failed: 'danger', replaced: 'neutral', untracked: 'neutral',
@@ -21,7 +22,8 @@ export function Channels(props: { demo: boolean; session?: InboxSession & { subs
   const [rows, setRows] = createSignal<Channel[]>(props.demo ? DEMO : []);
   const [busy, setBusy] = createSignal(false);
   const [error, setError] = createSignal('');
-  const api = props.session ? createChannels(props.session, fetch, `${import.meta.env.BASE_URL}alpha-api`) : null;
+  const bff = bffTransport();
+  const api = props.session ? createChannels(props.session, bff.request, bff.prefix) : null;
   let epoch = 0;
   async function load() {
     if (props.demo) return;

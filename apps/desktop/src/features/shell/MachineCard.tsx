@@ -38,7 +38,6 @@ export function taskTitle(task: Pick<MachineTaskUsage, "session" | "title">, loo
 function kind(m: Machine, r: MachineResources | undefined) {
   const parts = [m.wakes ? t("shell.machine_panel.kind.vm") : m.os === "macos" ? t("shell.machine_panel.kind.mac") : t("shell.machine_panel.kind.computer")];
   if (r?.cpu?.cores) parts.push(t("shell.machine_panel.kind.cores", { count: r.cpu.cores }));
-  if (r?.memory?.total_bytes) parts.push(peso(r.memory.total_bytes));
   return parts.join(" · ");
 }
 
@@ -69,9 +68,9 @@ function PressureBars(props: { values: number[]; tone: string }) {
 }
 
 /**
- * La tarjeta de una máquina: memoria partida en tareas, motor y sistema;
- * presión; CPU; disco, y los avisos. Sin `machine_usage_v1` queda el disco con
- * la etiqueta «Solo disco»; apagada, su última medición.
+ * La tarjeta de una máquina: memoria, disco y lo que exige acción. La presión,
+ * la CPU y el reparto viven en el detalle; aquí solo se ve lo que se mira de
+ * pasada.
  */
 export function MachineCard(props: {
   machine: Machine;
@@ -95,9 +94,12 @@ export function MachineCard(props: {
   const on = () => props.power === "on";
   const usage = () => hasUsage(r());
   const lvl = () => (on() ? level(r()) : null);
+  const tone = () => lvl() === "critical" ? "bg-error-strong" : lvl() === "high" ? "bg-warning-strong" : SEG_TASKS;
   const parts = () => { const x = r(); return hasUsage(x) ? split(x) : null; };
   const left = () => leftovers(r());
   const d = () => disk(r());
+  const cpu = () => on() && usage() && r()?.cpu?.usage_percent !== undefined ? Math.round(r()!.cpu!.usage_percent!) : null;
+  const cpuHigh = () => (cpu() ?? 0) >= 90;
   const state = () => !on()
     ? null
     : !usage()
@@ -106,9 +108,9 @@ export function MachineCard(props: {
         ? { label: t("shell.machine_panel.state.critical"), tone: "danger" as const }
         : lvl() === "high"
           ? { label: t("shell.machine_panel.state.high"), tone: "warning" as const }
-          : { label: t("shell.machine_panel.state.normal"), tone: "success" as const };
-  const barTone = () => lvl() === "critical" ? "bg-error-strong" : lvl() === "high" ? "bg-warning-strong" : "bg-neutral-500/50";
-  const bars = () => { const h = history(props.machine.id, r()); return h.length ? h : [r()?.pressure?.memory ?? 0]; };
+          : cpuHigh()
+            ? { label: t("shell.machine_panel.state.cpu"), tone: "warning" as const }
+            : null;
   const warnTasks = () => heaviest(r()).filter((x) => x.memory_bytes > 0)
     .map((x) => t("shell.machine_panel.warn.task", { title: taskTitle(x, props.lookup), size: peso(x.memory_bytes) })).join(", ");
 
@@ -175,31 +177,9 @@ export function MachineCard(props: {
         {(p) => (
           <>
             <Metric label={t("shell.machine_panel.metric.memory")} value={t("shell.machine_panel.free", { size: peso(p().available) })}>
-              <ProgressBar class="h-2" value={p().total - p().available} max={p().total}
-                label={t("shell.machine_panel.memory_aria", { used: peso(p().total - p().available), total: peso(p().total) })}
-                segments={[
-                  { value: p().tasks, class: SEG_TASKS, label: t("shell.machine_panel.legend.tasks", { size: peso(p().tasks) }) },
-                  { value: p().engine, class: SEG_ENGINE, label: t("shell.machine_panel.legend.engine", { size: peso(p().engine) }) },
-                  { value: p().other, class: SEG_OTHER, label: t("shell.machine_panel.legend.other") },
-                ]} />
+              <ProgressBar class="h-2" value={p().total - p().available} max={p().total} barClass={tone()}
+                label={t("shell.machine_panel.memory_aria", { used: peso(p().total - p().available), total: peso(p().total) })} />
             </Metric>
-            <Show when={r()?.pressure}>
-              {(pr) => (
-                <Metric label={t("shell.machine_panel.metric.pressure")} why={t("shell.machine_panel.pressure.why")}
-                  value={r()?.memory?.swap_used_bytes ? t("shell.machine_panel.compressed", { size: peso(r()!.memory!.swap_used_bytes) }) : ""}>
-                  <PressureBars values={bars()} tone={barTone()} />
-                  <span class="truncate text-caption text-neutral-500">
-                    {t("shell.machine_panel.pressure.text", { memory: Math.round(pr().memory), io: Math.round(pr().io) })}
-                  </span>
-                </Metric>
-              )}
-            </Show>
-            <Show when={r()?.cpu?.usage_percent !== undefined}>
-              <Metric label={t("shell.machine_panel.metric.cpu")} value={`${Math.round(r()!.cpu!.usage_percent!)} %`}>
-                <ProgressBar class="h-2" value={r()!.cpu!.usage_percent!} max={100} barClass={SEG_TASKS}
-                  label={t("shell.machine_panel.cpu_aria", { percent: Math.round(r()!.cpu!.usage_percent!) })} />
-              </Metric>
-            </Show>
           </>
         )}
       </Show>
@@ -213,35 +193,20 @@ export function MachineCard(props: {
         )}
       </Show>
 
-      <Show when={parts()}>
-        {(p) => (
-          <span class="mt-1.5 flex flex-wrap gap-x-2.5 gap-y-0.5 text-2xs text-neutral-500">
-            <span class="flex items-center gap-1"><span class={cn("size-2 rounded-[2px]", SEG_TASKS)} aria-hidden />{t("shell.machine_panel.legend.tasks", { size: peso(p().tasks) })}</span>
-            <span class="flex items-center gap-1"><span class={cn("size-2 rounded-[2px]", SEG_ENGINE)} aria-hidden />{t("shell.machine_panel.legend.engine", { size: peso(p().engine) })}</span>
-            <span class="flex items-center gap-1"><span class={cn("size-2 rounded-[2px]", SEG_OTHER)} aria-hidden />{t("shell.machine_panel.legend.other")}</span>
-            <span>{t("shell.machine_panel.legend.active", { count: active(r()).length })}</span>
-          </span>
-        )}
-      </Show>
-
-      <Show when={on() && left().length}>
-        <span class={cn(NOTE, "block", lvl() === "critical" ? "bg-error/10 text-error-strong" : "bg-surface-muted text-neutral-500")}>
-          {t("shell.machine_panel.leftover_note", { count: left().length, size: peso(left().reduce((n, x) => n + x.memory_bytes, 0)) })}
-        </span>
-      </Show>
       <Show when={(lvl() === "high" || lvl() === "critical") && warnTasks()}>
         <span role="status" class={cn(NOTE, "block", lvl() === "critical" ? "bg-error/10 text-error-strong" : "bg-warning/10 text-warning-strong")}>
           {lvl() === "critical" ? t("shell.machine_panel.warn.critical", { tasks: warnTasks() }) : t("shell.machine_panel.warn.high", { tasks: warnTasks() })}
         </span>
       </Show>
-      <Show when={usage() && r()?.attribution === "best_effort"}>
-        <span class={cn(NOTE_INFO, "block")}>{t("shell.machine_panel.best_effort")}</span>
+      <Show when={lvl() !== "high" && lvl() !== "critical" && cpuHigh()}>
+        <span role="status" class={cn(NOTE, "block bg-warning/10 text-warning-strong")}>
+          {t("shell.machine_panel.warn.cpu", { percent: cpu() ?? 0 })}
+        </span>
       </Show>
-      <Show when={usage() && r()?.attribution === "none"}>
-        <span class={cn(NOTE_INFO, "block")}>{t("shell.machine_panel.no_attribution")}</span>
-      </Show>
-      <Show when={props.power === "on" && r() && !usage()}>
-        <span class={cn(NOTE_INFO, "block")}>{t("shell.machine_panel.disk_only")}</span>
+      <Show when={on() && left().length}>
+        <span class={cn(NOTE_INFO, "block")}>
+          {t("shell.machine_panel.leftover.card", { count: left().length, size: peso(left().reduce((n, x) => n + x.memory_bytes, 0)) })}
+        </span>
       </Show>
       <Show when={props.power === "off" || props.power === "starting"}>
         <span class={cn(NOTE_INFO, "block")}>
@@ -253,7 +218,7 @@ export function MachineCard(props: {
         </span>
       </Show>
     </button>
-      <Show when={version() || updatable()}>
+      <Show when={(!!version() && !usage()) || (updatable() && (version()?.updateAvailable || update() !== "idle" || !!updateError() || !!rejected()))}>
         <div class={cn("flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 px-3 pb-2.5 text-caption text-neutral-500", !on() && "opacity-60")} data-machine-engine="">
           <Show when={version()}>
             {(v) => (
@@ -376,6 +341,8 @@ function TaskRow(props: {
  */
 export function MemoryTab(props: {
   resources: MachineResources;
+  /** La clave de las muestras de presión de esta máquina. */
+  machineId: string;
   lookup: TaskLookup;
   when: When;
   canStop: boolean;
@@ -386,12 +353,56 @@ export function MemoryTab(props: {
   const tasks = () => active(props.resources);
   const left = () => leftovers(props.resources);
   const scale = () => Math.max(0, ...tasks().map((x) => x.memory_bytes), ...left().map((x) => x.memory_bytes));
+  const lvl = () => level(props.resources);
+  const barTone = () => lvl() === "critical" ? "bg-error-strong" : lvl() === "high" ? "bg-warning-strong" : "bg-neutral-500/50";
+  const bars = () => {
+    const h = history(props.machineId, props.resources);
+    return h.length ? h : [props.resources.pressure?.memory ?? 0];
+  };
+  const version = () => engineVersion(props.resources);
+  const parts = () => hasUsage(props.resources) ? split(props.resources) : null;
   const section = "m-0 mt-2.5 mb-1 flex items-center justify-between gap-2 px-1.5 text-caption font-semibold text-neutral-950";
   return (
     <div data-machine-memory="">
+      <Show when={props.resources.pressure}>
+        {(pr) => (
+          <Metric label={t("shell.machine_panel.metric.pressure")} why={t("shell.machine_panel.pressure.why")}
+            value={props.resources.memory?.swap_used_bytes ? t("shell.machine_panel.compressed", { size: peso(props.resources.memory.swap_used_bytes) }) : ""}>
+            <PressureBars values={bars()} tone={barTone()} />
+            <span class="truncate text-caption text-neutral-500">
+              {t("shell.machine_panel.pressure.text", { memory: Math.round(pr().memory), io: Math.round(pr().io) })}
+            </span>
+          </Metric>
+        )}
+      </Show>
+      <Show when={props.resources.cpu?.usage_percent !== undefined}>
+        <Metric label={t("shell.machine_panel.metric.cpu")} value={`${Math.round(props.resources.cpu!.usage_percent!)} %`}>
+          <ProgressBar class="h-2" value={props.resources.cpu!.usage_percent!} max={100} barClass={SEG_TASKS}
+            label={t("shell.machine_panel.cpu_aria", { percent: Math.round(props.resources.cpu!.usage_percent!) })} />
+        </Metric>
+      </Show>
+
+      <Show when={parts()}>
+        {(p) => (
+          <div class="mt-2 px-1.5">
+            <ProgressBar class="h-2" value={p().total - p().available} max={p().total}
+              label={t("shell.machine_panel.memory_aria", { used: peso(p().total - p().available), total: peso(p().total) })}
+              segments={[
+                { value: p().tasks, class: SEG_TASKS, label: t("shell.machine_panel.legend.tasks", { size: peso(p().tasks) }) },
+                { value: p().engine, class: SEG_ENGINE, label: t("shell.machine_panel.legend.engine", { size: peso(p().engine) }) },
+                { value: p().other, class: SEG_OTHER, label: t("shell.machine_panel.legend.other") },
+              ]} />
+            <span class="mt-1 flex flex-wrap gap-x-2.5 gap-y-0.5 text-2xs text-neutral-500">
+              <span class="flex items-center gap-1"><span class={cn("size-2 rounded-[2px]", SEG_TASKS)} aria-hidden />{t("shell.machine_panel.legend.tasks", { size: peso(p().tasks) })}</span>
+              <span class="flex items-center gap-1"><span class={cn("size-2 rounded-[2px]", SEG_ENGINE)} aria-hidden />{t("shell.machine_panel.legend.engine", { size: peso(p().engine) })}</span>
+              <span class="flex items-center gap-1"><span class={cn("size-2 rounded-[2px]", SEG_OTHER)} aria-hidden />{t("shell.machine_panel.legend.other")}</span>
+            </span>
+          </div>
+        )}
+      </Show>
+
       <p class={section}>
         <span>{t("shell.machine_panel.tasks")}</span>
-        <span class="font-normal text-neutral-500">{t("shell.machine_panel.tasks.hint")}</span>
       </p>
       <Show when={tasks().length} fallback={<p class="m-0 px-1.5 text-caption text-neutral-500">{t("shell.machine_panel.tasks.none")}</p>}>
         <ul class="m-0 list-none p-0">
@@ -401,7 +412,6 @@ export function MemoryTab(props: {
 
       <p class={section}>
         <span>{t("shell.machine_panel.leftover")}</span>
-        <Show when={left().length}><span class="font-normal text-neutral-500">{t("shell.machine_panel.leftover.hint")}</span></Show>
       </p>
       <Show when={left().length} fallback={<p class="m-0 px-1.5 text-caption text-neutral-500">{t("shell.machine_panel.leftover.none")}</p>}>
         <ul class="m-0 list-none p-0">
@@ -426,7 +436,17 @@ export function MemoryTab(props: {
               <span>{t("shell.machine_panel.engine")}</span>
               <span class="font-mono font-normal tabular-nums">{peso(e().rss_bytes ?? 0)}</span>
             </p>
-            <p class="m-0 px-1.5 text-caption text-neutral-500">{t("shell.machine_panel.engine.detail", { threads: e().threads ?? 0 })}</p>
+            <p class="m-0 px-1.5 text-caption text-neutral-500">
+              <Show when={version()}>
+                {(v) => (
+                  <span class="font-mono">
+                    {v().build ? t("shell.machine_panel.engine_version_build", { version: v().version, build: v().build! }) : t("shell.machine_panel.engine_version", { version: v().version })}
+                    {" · "}
+                  </span>
+                )}
+              </Show>
+              {t("shell.machine_panel.engine.detail", { threads: e().threads ?? 0 })}
+            </p>
           </>
         )}
       </Show>

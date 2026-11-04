@@ -40,3 +40,25 @@ test("aprobar gana a todo y una entregada sin estado lleva su marca", () => {
   assert.equal(delivered.delivered, true);
   assert.equal(taskCard({ ...row, chat_de_agente: true }, { live: [], approving: [] }).pinned, true);
 });
+
+test("group headers hide exactly the metadata they name, including folder loose rows", async () => {
+  const { groupCardOptions } = await import("../src/index.ts");
+  const cases = [
+    [{ kind: "section", key: "active" }, false, false],
+    [{ kind: "agent", key: "Ada" }, false, false],
+    [{ kind: "status", key: "draft" }, false, false],
+    [{ kind: "machine", key: "vm" }, false, true],
+    [{ kind: "folder", key: "p1" }, true, false],
+    [{ kind: "folder", key: "p1", machine: "vm" }, true, true],
+    [{ kind: "folder", key: "" }, false, false],
+  ] as const;
+  for (const [group, hideFolder, hideMachine] of cases) {
+    const options = groupCardOptions(group);
+    assert.deepEqual(options, { hideFolder, hideMachine });
+    const card = taskCard({ ...row, provider: "claude", machine: "vm" }, { live: [row.id], approving: [], ...options });
+    assert.equal(card.folder, hideFolder ? null : "p1");
+    assert.equal(card.machine?.id ?? null, hideMachine ? null : "vm");
+    assert.equal(card.provider, "claude");
+    assert.equal(card.state, "working");
+  }
+});

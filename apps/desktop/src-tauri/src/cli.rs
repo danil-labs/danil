@@ -2,7 +2,11 @@ use std::ffi::OsStr;
 #[cfg(unix)]
 use std::os::unix::process::CommandExt;
 
-// Catálogo de args.rs del motor, más help y kn.
+// Catálogo de args.rs del motor, más help y kn. `machines` es el grupo público
+// de Danil Machines. Hasta el motor que lo tiene, el error es del motor, no
+// abrir la ventana. No publicar este cliente antes de ese pin. `computers` es
+// su alias oculto en el motor (lo llama el verify publicado); sale de aquí
+// cuando el motor lo retire.
 const COMMANDS: &[&str] = &[
     "account",
     "activity",
@@ -10,24 +14,34 @@ const COMMANDS: &[&str] = &[
     "agent-context",
     "auth",
     "chat",
+    "client",
+    "computers",
     "config",
     "context",
+    "credential",
     "engine",
+    "executor",
     "folder",
     "github",
     "guide",
     "handler",
+    "harness",
     "help",
+    "inbox",
     "instances",
     "keep-awake",
     "kn",
+    "machines",
     "mcp",
+    "notice",
     "notify",
     "operation",
     "plugin",
     "portfolio",
     "run",
+    "secret",
     "service",
+    "session",
     "skill",
     "space",
     "status",
@@ -37,6 +51,9 @@ const COMMANDS: &[&str] = &[
     "workspace",
 ];
 const GLOBAL_FLAGS: &[&str] = &[
+    "--root",
+    "--engine",
+    "--profile",
     "--workspace",
     "--machine",
     "--folder",

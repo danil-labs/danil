@@ -92,5 +92,5 @@ test("una carpeta en dos máquinas son dos grupos, y el «+» del de la VM empie
   assert.equal(sends.length, 1, "no salió el primer turno");
   assert.equal(sends[0].args.project, "p1");
   assert.equal(sends[0].machine, "vm", "la tarea no se lanzó en la máquina del grupo");
-  assert.deepEqual(app.fallos, []);
+  assert.deepEqual(app.failures, []);
 });

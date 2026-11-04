@@ -43,7 +43,7 @@ test("with every machine off the page opens in under two seconds with the saved 
   const app = await boot("listo", "web-fleet-off", {}, undefined, {}, {
     web: true,
     workspaces: REGISTRY,
-    antes: (w) => {
+    beforeImport: (w) => {
       globalThis.WebSocket = f.Socket;
       w.terminusWeb = { endpoint: "https://relay.test", computers: [VM, MAC], getToken: async () => "tok" };
     },
@@ -56,7 +56,7 @@ test("with every machine off the page opens in under two seconds with the saved 
   assert.equal(doc.querySelector("[data-managed-setup]"), null);
   assert.equal(doc.querySelector("[data-machine-slices]"), null, "no strip of slice states in the sidebar");
   assert.ok(!Object.values(f.relays).some((r) => r.calls.some((c) => c.command === "send_message")), "opening wakes nothing");
-  assert.deepEqual(app.fallos, []);
+  assert.deepEqual(app.failures, []);
 });
 
 test("a machine of another contract does not take the page down: it opens with the other", async () => {
@@ -65,7 +65,7 @@ test("a machine of another contract does not take the page down: it opens with t
   const app = await boot("listo", "web-fleet-outdated", {}, undefined, {}, {
     web: true,
     workspaces: REGISTRY,
-    antes: (w) => {
+    beforeImport: (w) => {
       globalThis.WebSocket = f.Socket;
       w.terminusWeb = { endpoint: "https://relay.test", computers: [{ ...VM, state: "online" }, { ...MAC, state: "online" }], getToken: async () => "tok" };
     },
@@ -76,5 +76,5 @@ test("a machine of another contract does not take the page down: it opens with t
   while (Date.now() - started < 5_000 && !text().includes("Tarea de la VM")) await sleep(50);
   assert.ok(text().includes("Tarea de la VM"), "the VM's tasks show");
   assert.equal(doc.querySelector("[data-machine-slices]"), null, "no strip of slice states in the sidebar");
-  assert.deepEqual(app.fallos, []);
+  assert.deepEqual(app.failures, []);
 });

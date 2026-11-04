@@ -102,7 +102,5 @@
   "work.carry.sealed": "They travel end-to-end encrypted for {machine}; Danil does not see them.",
   "work.carry.key_changed": "The key of {machine} is not the one from last time. If you did not reinstall it, someone could be in the middle: do not carry anything until you know.",
   "work.carry.trust_key": "Trust the new key",
-  "work.carry.ignored_unsealed": "Without end-to-end encryption with that machine, files git ignores do not travel through the relay.",
-  "work.failure.source_off": "{machine} is off: only what is on the remote can be carried.",
-  "work.failure.without_work": "Continue without the unpushed work"
+  "work.carry.ignored_unsealed": "Without end-to-end encryption with that machine, files git ignores do not travel through the relay."
 }

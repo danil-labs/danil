@@ -84,3 +84,8 @@ test("a proxy failure with engine detail keeps its code inside detail", () => {
   assert.equal(neverRan(busy), true);
   assert.equal(neverRan({ what: { clave: "shell.service.failed" }, detail: { code: "forbidden", detail: {} } }), false);
 });
+
+ test("explicit engine error code takes precedence over diagnostic text", () => {
+  assert.equal(canRepeat("task_lifecycle_apply", { code: "task_family_consent_changed", detail: "service_busy" }), false);
+  assert.equal(neverRan({ code: "service_busy", detail: "writers" }), true);
+});

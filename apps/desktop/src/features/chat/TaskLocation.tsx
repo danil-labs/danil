@@ -1,4 +1,5 @@
 import Folder from "lucide-solid/icons/folder";
+import { SignalDot } from "../../ui/SignalDot";
 import GitBranch from "lucide-solid/icons/git-branch";
 import Monitor from "lucide-solid/icons/monitor";
 import { MachineIcon } from "../machines/MachineIcon";
@@ -23,7 +24,7 @@ export type TaskLocationProps = {
   onFiles?: () => void;
 };
 
-const PARTE = "flex h-5.5 min-w-0 items-center gap-1.25 rounded-sm px-1.25 whitespace-nowrap";
+const PARTE = "flex h-[30px] min-w-0 items-center gap-1.5 rounded-sm px-2 whitespace-nowrap";
 
 function Pista(props: { tip: JSX.Element; children: JSX.Element; class?: string; onClick?: () => void; label?: string }) {
   return (
@@ -61,18 +62,15 @@ export default function TaskLocation(props: TaskLocationProps) {
       data-task-location=""
       data-task-location-on={props.on ? "true" : "false"}
       aria-label={t("chat.location.label")}
-      class="relative z-10 flex min-w-0 shrink-0 items-center gap-px px-3.5 pt-1 text-xs text-neutral-500"
+      class="relative z-10 flex min-w-0 shrink-0 items-center gap-px px-3.5 pt-2 text-ui text-neutral-500"
     >
       <Pista
         class={cn("max-w-[40%] shrink", !props.on && "opacity-65")}
         tip={props.on ? t("shell.machines.task_on", { name: nombre() }) : t("shell.machines.task_off", { name: nombre() })}
       >
-        <MachineIcon wakes={wakes()} size={13} class="shrink-0" />
+        <MachineIcon wakes={wakes()} size={14} class="shrink-0" />
         <span data-task-location-machine="" class="min-w-0 truncate">{nombre()}</span>
-        <span
-          aria-hidden="true"
-          class={cn("size-1.5 shrink-0 rounded-full", !props.on ? "bg-neutral-300" : wakes() ? "bg-info" : "bg-success")}
-        />
+        <SignalDot tone={props.on ? "success" : "off"} />
       </Pista>
       <Show when={props.project}>
         {(proyecto) => (
@@ -84,7 +82,7 @@ export default function TaskLocation(props: TaskLocationProps) {
               label={props.onFiles ? t("shell.folder.view_on", { name: nombre() }) : undefined}
               tip={<>{props.onFiles ? t("shell.folder.view_on", { name: nombre() }) : t("chat.location.project")}<Show when={props.path}>{(ruta) => <span class="block font-mono text-caption font-normal opacity-80">{ruta()}</span>}</Show></>}
             >
-              <Folder size={13} aria-hidden="true" class="shrink-0" />
+              <Folder size={14} aria-hidden="true" class="shrink-0" />
               <span data-task-location-project="" class="min-w-0 truncate">{proyecto()}</span>
             </Pista>
           </>
@@ -100,7 +98,7 @@ export default function TaskLocation(props: TaskLocationProps) {
               tip={copiada() ? t("chat.location.copied") : t("chat.location.copy_branch", { branch: rama() })}
               onClick={() => copiar(rama())}
             >
-              <GitBranch size={13} aria-hidden="true" class="shrink-0" />
+              <GitBranch size={14} aria-hidden="true" class="shrink-0" />
               <span data-task-location-branch="" class="min-w-0 truncate font-mono text-[0.71875rem]">{rama()}</span>
             </Pista>
           </>
@@ -114,7 +112,7 @@ export default function TaskLocation(props: TaskLocationProps) {
             tip={t("screen.open_tip", { name: nombre() })}
             onClick={() => props.onScreen?.(m())}
           >
-            <Monitor size={13} aria-hidden="true" class="shrink-0" />
+            <Monitor size={14} aria-hidden="true" class="shrink-0" />
             <span data-task-location-screen="">{t("screen.open")}</span>
           </Pista>
         )}

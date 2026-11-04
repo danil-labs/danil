@@ -1,4 +1,4 @@
-import { type InboxSession } from '../../../../../packages/attention/src/inbox.ts';
+import type { AgentsSession } from './workspace-sources';
 import { For, lazy, Show, Suspense } from 'solid-js';
 import { t } from '../../lib/i18n';
 import { SettingsRow, SettingsSection } from '../../features/settings/layout';
@@ -13,10 +13,10 @@ const CustomizationSection = lazy(() => import('./CustomizationSection').then(mo
 const Customer = () => import('./CustomerService');
 const CustomerAgents = lazy(() => Customer().then(module => ({default:module.CustomerAgents})));
 const CustomerConnections = lazy(() => Customer().then(module => ({default:module.CustomerConnections})));
-const LiveBroadcasts = lazy(async () => { const [{ Broadcasts }, { webBroadcastSource }] = await Promise.all([import('./Broadcasts'), import('./broadcasts/source')]); return { default: (props: { session?: InboxSession & { subscribe?: (clear: () => void) => () => void }; workspace: () => string | null }) => <Broadcasts source={props.session ? webBroadcastSource(props.session, props.workspace) : undefined}/> }; });
+const LiveBroadcasts = lazy(async () => { const [{ Broadcasts }, { webBroadcastSource }] = await Promise.all([import('./Broadcasts'), import('./broadcasts/source')]); return { default: (props: { session?: AgentsSession & { subscribe?: (clear: () => void) => () => void }; workspace: () => string | null }) => <Broadcasts source={props.session ? webBroadcastSource(props.session, props.workspace) : undefined}/> }; });
 const DemoBroadcasts = lazy(async () => { const [{ Broadcasts }, { demoBroadcastSource }] = await Promise.all([import('./Broadcasts'), import('./broadcasts/demo')]); return { default: () => <Broadcasts source={demoBroadcastSource()}/> }; });
 
-export function attentionCapability(demo: boolean, initial: boolean, session?: InboxSession & { subscribe?: (clear: () => void) => () => void; userId?: string | null }) {
+export function attentionCapability(demo: boolean, initial: boolean, session?: AgentsSession & { subscribe?: (clear: () => void) => () => void; userId?: string | null }) {
   const load = async () => demo ? (await import('./service-demo')).serviceDemo() : session ? (await Customer()).liveService(session) : null;
   return {
     customization: createCustomization, entries: featureEntries,

@@ -1,5 +1,5 @@
 import { AgentAvatar } from "../ui/AgentAvatar";
-import { folderColor, TEXT } from "@terminus/design";
+import { TEXT } from "@terminus/design";
 import { canFinishTask, cardPull, previewLabel, taskPreview } from "@terminus/tasks";
 import { router, useLocalSearchParams } from "expo-router";
 import { useState, type ReactNode } from "react";
@@ -10,6 +10,7 @@ import { effectiveGit } from "../lib/taskGit";
 import { useTaskGit } from "../lib/useTaskGit";
 import { TaskFinishConfirmation } from "../ui/TaskFinishConfirmation";
 import { Sheet, SheetOption } from "../ui/Sheet";
+import { FolderIcon } from "../ui/FolderIcon";
 import { PullChip } from "../ui/TaskCard";
 import { TaskActions } from "../ui/TaskActions";
 import { lang, t, w } from "../lib/i18n";
@@ -32,7 +33,6 @@ export default function Preview() {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
   const { host: hostId, id, intent } = useLocalSearchParams<{ host: string; id: string; intent?: string }>();
-  const [finishing, setFinishing] = useState(false);
   const [confirm, setConfirm] = useState(intent === "finish");
   const [revision, setRevision] = useState(0);
   const { hostOf, attention, hosts } = useMachines();
@@ -47,22 +47,22 @@ export default function Preview() {
   const row = cardTask(task, marks);
   const approving = [...marks.attention].filter(([, s]) => s === "approving").map(([k]) => k);
   const preview = taskPreview(lang, row, { live: marks.live, approving });
-  const folderName = snapshot?.folders.find((f) => f.key === task.folderKey)?.name;
+  const folder = snapshot?.folders.find((f) => f.key === task.folderKey);
   const provider = snapshot?.providers[task.host]?.find((p) => p.id === task.provider);
   const several = hosts.length > 1;
   const observed = effectiveGit(book, task, snapshot?.tasks ?? []);
   const git = host.power() === "on" ? observed : { ...observed, stale: true };
   const running = marks.live.has(`${task.host}/${task.id}`) || marks.attention.get(`${task.host}/${task.id}`) === "approving";
-  const ready = host.power() === "on" && host.canAct() === "now" && canFinishTask(task, git, running || finishing);
+  const ready = host.power() === "on" && host.canAct() === "now" && canFinishTask(task, git, running);
   const pull = cardPull({ ...git, shared_with: null });
   const removed = () => { void reload(); router.back(); };
-  const frame = (content: ReactNode) => Platform.OS === "web" ? <Sheet visible onClose={() => { if (!finishing) router.back(); }}>{content}</Sheet> : content;
+  const frame = (content: ReactNode) => Platform.OS === "web" ? <Sheet visible onClose={() => router.back()}>{content}</Sheet> : content;
   if (confirm) return frame(<View style={[styles.sheet, { backgroundColor: theme.surface, paddingBottom: insets.bottom + 16 }]}>
     <Text style={[styles.title, { color: theme.text }]}>{t("task.header.finish_on", { name: host.label })}</Text>
     <Text style={{ color: theme.text, fontWeight: "600" }}>{preview.title}</Text>
     {pull ? <PullChip pull={pull} git={git} /> : null}
-    <TaskFinishConfirmation host={host} workspace={task.workspace} folder={task.folder} id={task.id} shared={!!git.shared_with} ready={ready} onBusy={setFinishing} onBlocked={() => setRevision((n) => n + 1)} onFinished={removed} />
-    <SheetOption label={t("task.header.cancel")} disabled={finishing} onPress={() => intent === "finish" ? router.back() : setConfirm(false)} />
+    <TaskFinishConfirmation host={host} workspace={task.workspace} folder={task.folder} id={task.id} shared={!!git.shared_with} ready={ready} onBlocked={() => setRevision((n) => n + 1)} onFinished={removed} />
+    <SheetOption label={t("task.header.cancel")} onPress={() => intent === "finish" ? router.back() : setConfirm(false)} />
   </View>);
 
   return frame(
@@ -74,8 +74,8 @@ export default function Preview() {
       <View style={styles.rows}>
         {preview.folder ? (
           <Field label={previewLabel(lang, "folder")}>
-            <View style={[styles.square, { backgroundColor: folderColor(preview.folder) }]} />
-            <Text numberOfLines={1} style={[styles.value, { color: theme.text }]}>{folderName ?? task.folder}</Text>
+            <FolderIcon folder={folder} size={13} />
+            <Text numberOfLines={1} style={[styles.value, { color: theme.text }]}>{folder?.name ?? task.folder}</Text>
           </Field>
         ) : null}
         {preview.agent ? (
@@ -107,11 +107,11 @@ export default function Preview() {
           </Field>
         ) : null}
       </View>
-      <Pressable accessibilityRole="button" disabled={finishing} onPress={() => { router.back(); openTask(task.host, task.workspace, task.folder, task.id); }} style={[styles.button, { backgroundColor: theme.primary, borderColor: theme.primary }]}>
+      <Pressable accessibilityRole="button" onPress={() => { router.back(); openTask(task.host, task.workspace, task.folder, task.id); }} style={[styles.button, { backgroundColor: theme.primary, borderColor: theme.primary }]}>
         <Text style={{ color: theme.onPrimary, fontWeight: "600" }}>{previewLabel(lang, "open")}</Text>
       </Pressable>
       {pull?.state === "merged" && !git.stale ? <SheetOption testID="preview-finish" icon="rocket" label={t("task.header.finish")} disabled={!ready} onPress={() => setConfirm(true)} /> : null}
-      <TaskActions host={host} task={task} running={running} onBusy={setFinishing} onChanged={() => { void reload(); }} onRemoved={() => { void reload(); router.back(); }} />
+      <TaskActions host={host} task={task} running={running} onChanged={() => { void reload(); }} onRemoved={() => { void reload(); router.back(); }} />
     </View>
   );
 }
@@ -134,7 +134,6 @@ const styles = StyleSheet.create({
   field: { flexDirection: "row", alignItems: "center", gap: 8, minHeight: 22 },
   label: { width: 84, fontSize: TEXT.ui },
   fieldValue: { flex: 1, flexDirection: "row", alignItems: "center", gap: 6 },
-  square: { width: 9, height: 9, borderRadius: 2 },
   value: { flex: 1, fontSize: TEXT.body },
   button: { minHeight: 48, flexDirection: "row", gap: 6, alignItems: "center", justifyContent: "center", borderWidth: 1, borderRadius: 10, paddingVertical: 11 },
 });

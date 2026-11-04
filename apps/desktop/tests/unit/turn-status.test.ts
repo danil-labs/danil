@@ -32,12 +32,32 @@ test("cada herramienta en curso se nombra en presente y con su sujeto", () => {
     verbo: "Anotando el plan",
     sujeto: null,
   });
-  // Lo que no está en la tabla se nombra con su nombre crudo, que es más
-  // honesto que forzarlo a una categoría.
+  // Una herramienta con dueño nombra al servicio y deja el nombre de la tool
+  // legible: «Usando get file», no «Usando mcp__figma__get_file».
   assert.deepEqual(inProgress(stepOf("mcp__figma__get_file", "1234")), {
-    verbo: "Usando mcp__figma__get_file",
+    verbo: "Usando get file",
     sujeto: "1234",
+    origen: { server: "figma", tool: "get_file", mark: "figma", label: "Figma" },
   });
+});
+
+test("una fila de MCP ya cerrada lleva a su dueño y lee la tool sin identificador", () => {
+  const [row] = groupSteps([stepOf("mcp__supabase__query", "orders")]);
+  assert.deepEqual(summary(row), {
+    verbo: "Usó query",
+    sujeto: "orders",
+    origen: { server: "supabase", tool: "query", mark: "supabase", label: "Supabase" },
+  });
+  // Un servidor que no está en la tabla conserva su clave: no se inventa marca.
+  const [desconocido] = groupSteps([stepOf("mcp__acme-analytics__query", null)]);
+  assert.deepEqual(summary(desconocido).origen, {
+    server: "acme-analytics",
+    tool: "query",
+    mark: null,
+    label: "acme-analytics",
+  });
+  // Lo local no tiene dueño.
+  assert.equal(summary(groupSteps([stepOf("Read", "a.ts")])[0]).origen, undefined);
 });
 
 test("un comando en curso se enseña sin su envoltorio y en una línea", () => {
@@ -45,6 +65,16 @@ test("un comando en curso se enseña sin su envoltorio y en una línea", () => {
     verbo: "Ejecutando",
     sujeto: "pnpm verify",
   });
+});
+
+test("un comando se nombra por su programa y su primer tramo, no por el intérprete", () => {
+  const [row] = groupSteps([stepOf("Bash", "/bin/bash -lc 'cd /repo && pnpm verify'")]);
+  assert.equal(summary(row).sujeto, "pnpm verify");
+  const [wrapped] = groupSteps([stepOf("Bash", "env FOO=1 sudo -u root timeout 30 systemctl restart x")]);
+  assert.equal(summary(wrapped).sujeto, "systemctl restart x");
+  // Lo que ya era un comando no se toca, y el desplegado conserva todo.
+  const [plain] = groupSteps([stepOf("Bash", "pnpm verify 2>&1 | tail -20")]);
+  assert.equal(summary(plain).sujeto, "pnpm verify");
 });
 
 test("la cabecera de un tramo cuenta por clase, y las ediciones por archivo", () => {

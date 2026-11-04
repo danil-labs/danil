@@ -19,13 +19,14 @@ uno, salen con la web en `apps/desktop/web-public/mcp/`.
 
 ```json
 "serverInfo": {
-  "name": "danil-computers",
+  "name": "danil-mcp",
+  "title": "Danil",
   "version": "…",
   "icons": [
-    { "src": "https://app.danil.ai/terminus/mcp/mcp-light.svg", "mimeType": "image/svg+xml", "sizes": ["any"], "theme": "light" },
-    { "src": "https://app.danil.ai/terminus/mcp/mcp-dark.svg",  "mimeType": "image/svg+xml", "sizes": ["any"], "theme": "dark" },
-    { "src": "https://app.danil.ai/terminus/mcp/mcp-light-256.png", "mimeType": "image/png", "sizes": ["256x256"], "theme": "light" },
-    { "src": "https://app.danil.ai/terminus/mcp/mcp-dark-256.png",  "mimeType": "image/png", "sizes": ["256x256"], "theme": "dark" }
+    { "src": "https://alfa-app.danil.ai/mcp/mcp-light.svg", "mimeType": "image/svg+xml", "sizes": ["any"], "theme": "light" },
+    { "src": "https://alfa-app.danil.ai/mcp/mcp-dark.svg",  "mimeType": "image/svg+xml", "sizes": ["any"], "theme": "dark" },
+    { "src": "https://alfa-app.danil.ai/mcp/mcp-light-256.png", "mimeType": "image/png", "sizes": ["256x256"], "theme": "light" },
+    { "src": "https://alfa-app.danil.ai/mcp/mcp-dark-256.png",  "mimeType": "image/png", "sizes": ["256x256"], "theme": "dark" }
   ]
 }
 ```

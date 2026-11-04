@@ -143,7 +143,7 @@ test("with a Danil session the GitHub card is the account's: login, organization
       { key: "nosoypoot", installation_id: 8, repository_ids: null },
     ],
   });
-  assert.deepEqual(app.fallos, []);
+  assert.deepEqual(app.failures, []);
 });
 
 test("without a Danil session the local GitHub card stays as it was", async () => {
@@ -153,7 +153,7 @@ test("without a Danil session the local GitHub card stays as it was", async () =
   assert.equal(card(w)?.dataset.githubAccount, "local");
   assert.ok(tokenField(w), "the local form is there");
   assert.ok(!e.calls.some((c) => c.command === "github_account_status"), "nobody asks the account");
-  assert.deepEqual(app.fallos, []);
+  assert.deepEqual(app.failures, []);
 });
 
 test("an engine that does not know github_account_* keeps the local card without an error", async () => {
@@ -163,7 +163,7 @@ test("an engine that does not know github_account_* keeps the local card without
   assert.equal(card(w)?.dataset.githubAccount, "local");
   assert.ok(tokenField(w));
   assert.equal(w.document.querySelector("[role=alert]"), null);
-  assert.deepEqual(app.fallos, []);
+  assert.deepEqual(app.failures, []);
 });
 
 test("a local connection with an empty account offers to move it, and connecting waits for GitHub", async () => {
@@ -182,7 +182,7 @@ test("a local connection with an empty account offers to move it, and connecting
   await sleep(3500);
   assert.equal(card(w)?.dataset.githubAccount, "account", "once connected the account card takes over");
   assert.ok(!text(w).includes("Esperando a que apruebes en GitHub"));
-  assert.deepEqual(app.fallos, []);
+  assert.deepEqual(app.failures, []);
 });
 
 test("when the engine already opened the browser the card does not open it again, and keeps the link", async () => {
@@ -195,7 +195,7 @@ test("when the engine already opened the browser the card does not open it again
   assert.ok(!e.calls.some((c) => c.command === "open_external"), "only one tab");
   const link = [...card(w).querySelectorAll("a")].find((a) => a.textContent === "Abrir GitHub");
   assert.equal(link?.getAttribute("href"), "https://github.com/login/oauth/authorize?state=s");
-  assert.deepEqual(app.fallos, []);
+  assert.deepEqual(app.failures, []);
 });
 
 test("a connection GitHub stopped accepting asks to reconnect", async () => {
@@ -206,5 +206,5 @@ test("a connection GitHub stopped accepting asks to reconnect", async () => {
   buttonIn(card(w), "Vuelve a conectar").click();
   await sleep(300);
   assert.ok(e.calls.some((c) => c.command === "github_account_authorize"));
-  assert.deepEqual(app.fallos, []);
+  assert.deepEqual(app.failures, []);
 });

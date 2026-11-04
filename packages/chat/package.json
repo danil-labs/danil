@@ -6,10 +6,14 @@
   "description": "How every Terminus client reads an agent message: links and local images, the visual directive, next steps and the sandbox for agent HTML.",
   "exports": {
     ".": "./src/index.ts",
+    "./history": "./src/history.ts",
+    "./historyDetail": "./src/historyDetail.ts",
     "./links": "./src/links.ts",
     "./nextSteps": "./src/nextSteps.ts",
     "./sandbox": "./src/sandbox.ts",
     "./steps": "./src/steps.ts",
+    "./command": "./src/command.ts",
+    "./tools": "./src/tools.ts",
     "./inlineVisual": "./src/inlineVisual.ts",
     "./visual": "./src/visual.ts"
   }

@@ -43,7 +43,7 @@ import { fileURLToPath } from "node:url";
 const RUTA = fileURLToPath(new URL("../../../../packages/chat/src/sandbox.ts", import.meta.url));
 const fuente = readFileSync(RUTA, "utf8");
 
-const fallos = [];
+const failures = [];
 
 /**
  * El cuerpo de un literal, y con qué se declaró.
@@ -77,14 +77,14 @@ for (const [nombre, l] of [
   ["JS_INLINE", inlineJs],
 ]) {
   if (!l) {
-    fallos.push(
+    failures.push(
       `No encuentro \`const ${nombre} = String.raw\`…\`\` en packages/chat/src/.\n` +
         `  Ahí vive lo que corre dentro del contenedor; sin ello este chequeo no mira nada.`,
     );
     continue;
   }
   if (!l.crudo) {
-    fallos.push(
+    failures.push(
       `\`${nombre}\` no se declara con \`String.raw\`.\n` +
         `  Una plantilla normal se come las barras invertidas: \`\\s\` pasa a valer \`s\`, así que\n` +
         `  \`replace(/\\s+/g, " ")\` se vuelve \`replace(/s+/g, " ")\` y compila igual.`,
@@ -101,7 +101,7 @@ for (const [name, runtime] of [["JS_RUNTIME", JS], ["JS_INLINE", inlineJs]]) {
   try {
     new Function(runtime.cuerpo);
   } catch (e) {
-    fallos.push(
+    failures.push(
       `El runtime ${name} no parsea: ${e.message}\n` +
         `  Es una cadena, así que \`tsc\` la da por buena. Un error de sintaxis aquí no se ve\n` +
         `  hasta abrir un artefacto, y se ve como un documento en blanco.`,
@@ -134,7 +134,7 @@ if (CSS?.cuerpo && JS?.cuerpo) {
   const soloJs = [...enJs].filter((c) => !enCss.has(c)).sort();
 
   for (const c of soloCss) {
-    fallos.push(
+    failures.push(
       `El CSS del artefacto estiliza «${c}» y el runtime no se la pone a nada.\n` +
         `  Esa regla no se aplica nunca. Si el runtime pone otra parecida, son la misma\n` +
         `  clase escrita dos veces: `.trim() +
@@ -142,7 +142,7 @@ if (CSS?.cuerpo && JS?.cuerpo) {
     );
   }
   for (const c of soloJs) {
-    fallos.push(
+    failures.push(
       `El runtime pone la clase «${c}» y el CSS del artefacto no la estiliza.` +
         (soloCss.length
           ? `\n  Si es la misma que ${soloCss.map((x) => `«${x}»`).join(", ")}, están escritas distinto.`
@@ -153,14 +153,14 @@ if (CSS?.cuerpo && JS?.cuerpo) {
 
 // ----------------------------------------------------------------- el fallo
 
-if (!fallos.length) {
+if (!failures.length) {
   console.log(
     "El runtime del artefacto conserva sus escapes, parsea, y sus clases existen en los dos lados.",
   );
   process.exit(0);
 }
 
-for (const f of fallos) console.error(f + "\n");
+for (const f of failures) console.error(f + "\n");
 console.error(
   "Lo que corre dentro del contenedor no lo compila nadie: es una cadena que se\n" +
     "inyecta en el documento del agente. Cuando falla, falla en la máquina de otro\n" +

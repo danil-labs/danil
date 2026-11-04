@@ -65,9 +65,9 @@ test("sin push sondea como siempre, abre con load_session y no manda filtro", as
   }));
   await sleep(600);
   await openTask(app, "t1");
-  assert.ok(app.comandos.includes("load_session"));
-  assert.ok(!app.comandos.includes("load_history"));
-  assert.ok(!app.comandos.includes("service_filter"));
+  assert.ok(app.commands.includes("load_session"));
+  assert.ok(!app.commands.includes("load_history"));
+  assert.ok(!app.commands.includes("service_filter"));
   app.emit("chat", { kind: "started", session: "t1", workspace: "w" });
   app.emit("chat", { kind: "delta", session: "t1", workspace: "w", text: "hola sondeado" });
   await sleep(300);
@@ -76,5 +76,5 @@ test("sin push sondea como siempre, abre con load_session y no manda filtro", as
   await sleep(1000);
   const spaced = polls.length - before;
   assert.ok(spaced >= 2 && spaced <= 6, `${spaced} sondeos en 1 s`);
-  assert.deepEqual(app.fallos, []);
+  assert.deepEqual(app.failures, []);
 });

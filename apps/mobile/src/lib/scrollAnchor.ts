@@ -8,6 +8,15 @@ export const NEEDS_SCROLL_ANCHOR = typeof CSS !== "undefined" && !CSS.supports("
 
 export type ScrollAnchor = { element: Element; top: number; id?: string } | null;
 
+/**
+ * Baja al final de la lista web. `scroll` y no `scrollTo`: react-native-web cambia el `scrollTo` del nodo por
+ * el suyo (`{ x, y, animated }`), que con `top` entiende `y = 0` y sube al inicio del hilo.
+ */
+export function scrollToEnd(scroller: Element, animated: boolean) {
+  if (animated) scroller.scroll({ top: scroller.scrollHeight, behavior: "smooth" });
+  else scroller.scrollTop = scroller.scrollHeight;
+}
+
 /** El elemento del centro de `scroller`, para compararlo después. */
 export function anchorOf(scroller: Element): ScrollAnchor {
   const { left, top, width, height } = scroller.getBoundingClientRect();

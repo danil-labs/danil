@@ -268,6 +268,13 @@ pub(super) fn desktop_command(name: &str) -> bool {
                 | "tray_notify"
                 | "machine_list"
                 | "account_relay_token"
+                | "agents_session_status"
+                | "agents_session_connect"
+                | "agents_session_sign_out"
+                | "danil_sign_in"
+                | "danil_sign_out"
+                | "agents_session_directory"
+                | "agents_bff_fetch"
                 | "service_filter"
                 | "load_history"
                 | "handler_action"
@@ -990,6 +997,18 @@ pub(super) fn account_relay_token(
         None => json!({}),
     };
     invoke(&state, "danil_client_token", args)
+}
+
+/// Una orden del motor pedida desde el Rust de la ventana (`agents_session.rs`).
+pub(super) fn engine_call(
+    app: &tauri::AppHandle,
+    command: &str,
+    args: Value,
+) -> Result<Value, Value> {
+    let state = app
+        .try_state::<Arc<State>>()
+        .ok_or_else(|| failure(&Error::new("app_unavailable")))?;
+    invoke(&state, command, args)
 }
 
 /// La máquina de esta ventana. Las otras de la cuenta las suma la ventana por el

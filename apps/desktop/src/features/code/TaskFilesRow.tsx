@@ -1,6 +1,8 @@
 import { type JSX, Show, createSignal } from "solid-js";
 import { t } from "../../lib/i18n";
 import { setMoviendoHueco } from "../../lib/sites";
+import { cn } from "../../lib/utils";
+import { BELOW_LOCATION_MARGIN } from "../../lib/window";
 
 /** The chat keeps its 320 px minimum plus the 16 px gutter, whatever width was chosen. */
 const CHAT_ROOM = 336;
@@ -22,6 +24,8 @@ export default function TaskFilesRow(props: {
   treeWidth: number;
   onWidth: (fraction: number) => void;
   onTreeWidth: (px: number) => void;
+  /** Machine, folder and branch of the task. They sit above the chat, whatever the chat is doing (loading, being born, empty); while the card covers it, the row shows them beside it. */
+  location?: () => JSX.Element;
   chat: JSX.Element;
 }) {
   let row: HTMLDivElement | undefined;
@@ -36,11 +40,17 @@ export default function TaskFilesRow(props: {
   };
   return (
     <div ref={row} class="flex h-full min-h-0 min-w-0">
-      <div class="flex min-h-0 min-w-[320px] flex-1 flex-col" classList={{ hidden: props.open && props.covers }}>{props.chat}</div>
+      <div class="flex min-h-0 min-w-[320px] flex-1 flex-col" classList={{ hidden: props.open && props.covers }}>
+        {props.location?.()}
+        {props.chat}
+      </div>
+      <Show when={props.open && props.covers && props.location}>
+        {(location) => <div class="flex min-w-0 flex-1 flex-col">{location()()}</div>}
+      </Show>
       <Show when={props.open && !props.covers}>
           <div role="separator" tabindex={0} aria-orientation="vertical" aria-label={t("code.panel.resize")}
             data-dragging={dragging() ? "" : undefined}
-            class="group/hueco relative z-40 mt-9 mb-2 w-4 shrink-0 cursor-ew-resize touch-none outline-none"
+            class={cn("group/hueco relative z-40 mb-2 w-4 shrink-0 cursor-ew-resize touch-none outline-none", BELOW_LOCATION_MARGIN)}
             onPointerDown={(event) => {
               event.preventDefault();
               const handle = event.currentTarget;

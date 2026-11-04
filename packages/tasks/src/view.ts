@@ -3,7 +3,8 @@
  * teléfono; las palabras de cada opción viven en `SIDEBAR_LABELS` de
  * `@terminus/design` (el escritorio las lee de `shell.sidebar.view.*`).
  */
-import { type TaskActivity, type TaskState, TASK_STATES, taskPriority } from "../../design/src/index.ts";
+import { type TaskActivity, type TaskState } from "../../design/src/index.ts";
+import { type WorkState, WORK_STATES } from "./workState.ts";
 
 /** Qué enseña la lista de tareas. `folders` vacío son todas las carpetas. */
 export type SidebarView = {
@@ -44,6 +45,8 @@ export type SidebarTask = {
 export type SidebarContext<T extends SidebarTask = SidebarTask> = {
   /** Tareas con un turno en marcha (`vivas`). */
   live: Iterable<string>;
+  /** Estado de Git/kn ya resuelto al árbol compartido de la tarea. */
+  workStateOf?: (task: T) => WorkState;
   /** Tareas paradas esperando que se apruebe una acción (`aprobando`). */
   approving: Iterable<string>;
   /** De qué carpeta es la tarea; por omisión `task.folder`. */
@@ -64,7 +67,7 @@ export type SidebarGroup<T> = {
   tasks: T[];
 };
 
-export type SidebarStatusKey = TaskState | "idle" | "finished";
+export type SidebarStatusKey = WorkState;
 
 /**
  * Un agente con otra mayúscula es el mismo agente: en Windows y macOS su
@@ -140,8 +143,8 @@ export function needsYou(state: TaskState | null): boolean {
   return state === "approving" || state === "asked" || state === "failed";
 }
 
-export function statusKeyOf(task: SidebarTask, ctx: Pick<SidebarContext, "live" | "approving">): SidebarStatusKey {
-  return taskPriority(activityOf(task, ctx)) ?? (task.stage === "done" || task.outcome === "delivered" ? "finished" : "idle");
+export function statusKeyOf<T extends SidebarTask>(task: T, ctx: Pick<SidebarContext<T>, "workStateOf">): SidebarStatusKey {
+  return ctx.workStateOf?.(task) ?? "unknown";
 }
 
 const pinnedFirst = <T extends SidebarTask>(tasks: T[]): T[] =>
@@ -182,7 +185,7 @@ export function applySidebarView<T extends SidebarTask>(
   let order: string[];
   if (view.group === "status") {
     groups = groupBy(visible, (task) => statusKeyOf(task, ctx));
-    order = [...TASK_STATES, "idle", "finished"];
+    order = [...WORK_STATES];
   } else if (view.group === "machine") {
     // Esta máquina primero; las demás, en el orden en que aparece su tarea más nueva.
     groups = groupBy(visible, (task) => task.machine ?? "");

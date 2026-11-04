@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { type Fetch, listConnections, mcpUrl, revokeConnection, updateConnection, webhookUrlOk } from "../src/index.ts";
+import { type Fetch, connectionCapabilities, listConnections, mcpUrl, revokeConnection, updateConnection, webhookUrlOk } from "../src/index.ts";
 
 function fake(status: number, body: unknown) {
   const calls: Array<{ url: string; method?: string; headers?: Record<string, string>; body?: string }> = [];
@@ -38,7 +38,7 @@ test("revocar es DELETE; una sesión vencida es unauthorized", async () => {
 });
 
 test("producción copia directamente el recurso OAuth canónico del MCP", () => {
-  for (const endpoint of ["computers.danil.ai", "https://computers.danil.ai/", "wss://computers.danil.ai"]) {
+  for (const endpoint of ["machines.danil.ai", "https://machines.danil.ai/", "wss://machines.danil.ai", "computers.danil.ai", "https://computers.danil.ai/", "wss://computers.danil.ai"]) {
     assert.equal(mcpUrl(endpoint), "https://mcp.danil.ai/mcp");
   }
 });
@@ -65,5 +65,19 @@ test("solo destinos HTTPS públicos, como el servidor", () => {
   assert.equal(webhookUrlOk("https://hooks.example.com/danil"), true);
   for (const url of ["http://hooks.example.com/x", "https://localhost/x", "https://10.0.0.1/x", "https://u:p@hooks.example.com/x", "https://hooks.example.com:8443/x", "https://intranet/x", "no es url"]) {
     assert.equal(webhookUrlOk(url), false, url);
+  }
+});
+
+
+test("capabilities distinguishes legacy from outage and validates the advertised limits", async () => {
+  const body = { features: ["external_connection_destinations_v1"], limits: { max_destinations: 32, max_destination_bindings: 256 } };
+  const ok = fake(200, body);
+  assert.deepEqual(await connectionCapabilities("computers.test", "tok", ok.f), { kind: "ok", value: body });
+  assert.equal(ok.calls[0].url, "https://computers.test/v1/connections/capabilities");
+  assert.equal(ok.calls[0].headers?.authorization, "Bearer tok");
+  assert.deepEqual(await connectionCapabilities("computers.test", "tok", fake(404, null).f), { kind: "missing" });
+  assert.deepEqual(await connectionCapabilities("computers.test", "tok", fake(503, { error: "unavailable" }).f), { kind: "error", status: 503, code: "unavailable" });
+  for (const invalid of [null, {}, { ...body, limits: { max_destinations: 0, max_destination_bindings: 256 } }, { ...body, features: [12] }]) {
+    assert.deepEqual(await connectionCapabilities("computers.test", "tok", fake(200, invalid).f), { kind: "error", status: 200 });
   }
 });

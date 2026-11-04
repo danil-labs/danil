@@ -8,7 +8,6 @@
   "onboarding.workspace.default": "Personal",
   "onboarding.workspace.default_new": "New workspace",
   "onboarding.workspace.label": "Workspace",
-  "onboarding.workspace.hint": "Groups your projects, accounts and tools.",
   "onboarding.check.environment": "Environment ready",
   "onboarding.check.ai_connected": {
     "one": "{names} connected",
@@ -17,8 +16,6 @@
   "onboarding.check.ai_pending": "Connect at least one AI",
   "onboarding.check.personalize": "Personalize your space",
   "onboarding.ai.title": "Connect your AI.",
-  "onboarding.ai.lede": "Use the accounts you already have on this computer or connect others. You can add more anytime.",
-  "onboarding.ai.footer": "You can connect more later in Settings.",
   "onboarding.ai.found": "Found on your computer",
   "onboarding.ai.others": "Other providers",
   "onboarding.ai.choose": "Choose which AI to work with",
@@ -82,7 +79,6 @@
   "onboarding.ai.map.found": "We found {names} on your computer",
   "onboarding.ai.map.none": "No AI connected yet",
   "onboarding.personalize.title": "Personalize Danil.",
-  "onboarding.personalize.lede": "Connect the tools you already work with and choose what else to install. Everything can be changed later.",
   "onboarding.personalize.later": "I'll do it later",
   "onboarding.personalize.start": "Start",
   "onboarding.summary.no_ai": "No AI connected",
@@ -101,7 +97,6 @@
   "onboarding.summary.plugins_installing": "Installing plugins…",
   "onboarding.summary.no_plugins": "No plugins",
   "onboarding.tools.title": "Bring in your favorite tools",
-  "onboarding.tools.lede": "Your agents will be able to look things up and work with them.",
   "onboarding.tools.atlassian": "Jira and Confluence",
   "onboarding.tools.drive": "Google Drive",
   "onboarding.tools.about.github": "Your repositories, issues and pull requests",
@@ -177,7 +172,6 @@
   "onboarding.tools.bitbucket.token": "Workspace access token",
   "onboarding.tools.bitbucket.token_hint": "With read access to repositories.",
   "onboarding.plugins.title": "Plugins",
-  "onboarding.plugins.lede": "They install on this computer. You can keep going while they download.",
   "onboarding.plugins.background": {
     "one": "{count} plugin installing · it will continue in the background",
     "other": "{count} plugins installing · they will continue in the background"
@@ -190,7 +184,6 @@
   "onboarding.manual.skip": "Set up manually",
   "onboarding.workspace.create": "Create workspace",
   "onboarding.workspace.creating": "Creating…",
-  "onboarding.workspace.footer": "You can create more spaces later.",
   "onboarding.workspace.name": "Workspace name",
   "onboarding.login.opening_browser": "Opening the browser so you can sign in…",
   "onboarding.login.waiting_code": "Waiting for the code the browser gives you…",

@@ -1,6 +1,6 @@
 ---
 name: ui-component
-description: Cómo se escribe o se cambia una pieza de interfaz de Terminus dentro del sistema visual — tokens en @theme, átomos de src/ui con cva y cn, Kobalte para foco y portal, Solid sin desestructurar props y texto desde el catálogo. Úsala cuando pidan una pantalla, un panel, un componente, un botón o un control nuevo, cambiar colores, espaciado o tipografía, añadir una variante, o «rediseñar» algo en el front de Terminus.
+description: Cómo se escribe o se cambia una pieza de interfaz de Danil dentro del sistema visual — tokens en @theme, átomos de src/ui con cva y cn, Kobalte para foco y portal, Solid sin desestructurar props y texto desde el catálogo. Úsala cuando pidan una pantalla, un panel, un componente, un botón o un control nuevo, cambiar colores, espaciado o tipografía, añadir una variante, o «rediseñar» algo en el front de Danil.
 ---
 
 # Una pieza de interfaz dentro del sistema

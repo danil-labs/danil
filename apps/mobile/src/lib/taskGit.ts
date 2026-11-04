@@ -4,7 +4,7 @@
  * refrescar primero: una llamada por carpeta con sus tareas visibles, nunca una
  * por fila. Las tareas sin carpeta no tienen git.
  *
- * Lo leído se guarda por `host/id`, como el resto de la lista. Lo que no se
+ * Lo leído se guarda por máquina, workspace, carpeta e id. Lo que no se
  * pudo releer (la máquina no contesta, o está apagada) se conserva con
  * `stale`: la tarjeta lo enseña en gris, sin afirmar ni el rojo del CI.
  */
@@ -26,7 +26,10 @@ export function gitAsks(visible: readonly { host: string; workspace: string; fol
 
 /** Una firma estable de lo pedido: si no cambia, no se vuelve a preguntar. */
 export const gitAsksKey = (asks: readonly GitAsk[]) =>
-  asks.map((a) => `${a.host}/${a.workspace}/${a.project}:${a.priority.join(",")}`).sort().join("|");
+  asks.map((a) => `${a.host}/${a.workspace}/${a.project}:${[...a.priority].sort().join(",")}`).sort().join("|");
+
+export type GitScope = { host: string; workspace: string; folder: string };
+export const gitBookKey = (scope: GitScope, id: string) => JSON.stringify([scope.host, scope.workspace, scope.folder, id]);
 
 export type GitBook = Readonly<Record<string, TaskGitStatus>>;
 
@@ -39,12 +42,12 @@ const isRow = (v: unknown): v is TaskGitStatus => !!v && typeof v === "object" &
  * (`kind: "unknown"`) no borra lo que ya se sabía: queda vieja. Una más antigua
  * tampoco pisa lo más nuevo.
  */
-export function withGitAnswer(book: GitBook, host: string, answer: unknown): GitBook {
+export function withGitAnswer(book: GitBook, scope: GitScope, answer: unknown): GitBook {
   if (!answer || typeof answer !== "object") return book;
   let next: Record<string, TaskGitStatus> | null = null;
   for (const [id, row] of Object.entries(answer as Record<string, unknown>)) {
     if (!isRow(row)) continue;
-    const key = `${host}/${id}`;
+    const key = gitBookKey(scope, id);
     const before = book[key];
     const value = retainGitObservation(before ? { [id]: before } : {}, { [id]: row })[id];
     if (value === before) continue;
@@ -55,10 +58,10 @@ export function withGitAnswer(book: GitBook, host: string, answer: unknown): Git
 }
 
 /** Lo que ya se sabía de esas tareas, ahora viejo: no se pudo releer. */
-export function staleGit(book: GitBook, host: string, ids: readonly string[]): GitBook {
+export function staleGit(book: GitBook, scope: GitScope, ids: readonly string[]): GitBook {
   let next: Record<string, TaskGitStatus> | null = null;
   for (const id of ids) {
-    const key = `${host}/${id}`;
+    const key = gitBookKey(scope, id);
     const before = book[key];
     if (!before || before.stale) continue;
     next ??= { ...book };
@@ -67,8 +70,12 @@ export function staleGit(book: GitBook, host: string, ids: readonly string[]): G
   return next ?? book;
 }
 
-/** Resuelve la rama compartida dentro de la misma máquina y workspace. */
-export function effectiveGit(book: GitBook, task: TaskGitSession & { host: string; workspace: string }, tasks: readonly (TaskGitSession & { host: string; workspace: string })[]): TaskGitStatus {
-  const rows = Object.fromEntries(Object.entries(book).filter(([key]) => key.startsWith(`${task.host}/`)).map(([key, value]) => [key.slice(task.host.length + 1), value]));
-  return resolveTaskGit(task, rows, tasks.filter((row) => row.host === task.host && row.workspace === task.workspace), UNKNOWN_GIT).status;
+/** Resuelve la rama compartida dentro de la misma máquina, workspace y carpeta. */
+type ScopedGitSession = TaskGitSession & GitScope;
+
+export function effectiveGit(book: GitBook, task: ScopedGitSession, tasks: readonly ScopedGitSession[]): TaskGitStatus {
+  const scope = task;
+  const candidates = tasks.filter(row => row.host === task.host && row.workspace === task.workspace && row.folder === task.folder);
+  const rows = Object.fromEntries([task, ...candidates].map(row => [row.id, book[gitBookKey(scope, row.id)]]).filter((entry): entry is [string, TaskGitStatus] => !!entry[1]));
+  return resolveTaskGit(task, rows, candidates, UNKNOWN_GIT).status;
 }

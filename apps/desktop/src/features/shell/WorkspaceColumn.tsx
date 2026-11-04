@@ -1,19 +1,23 @@
 import Plus from "lucide-solid/icons/plus";
 import SettingsIcon from "lucide-solid/icons/settings";
-import { children, createEffect, createSignal, For, type JSX, onCleanup, Show } from "solid-js";
-import { Dynamic } from "solid-js/web";
+import { children, createEffect, createSignal, For, type JSX, lazy, onCleanup, Show, Suspense } from "solid-js";
 import { t } from "../../lib/i18n";
 import { createNavigationReorder } from "../../lib/navigation-order";
 import { KeyedList } from "../../ui/KeyedList";
 import { cn } from "../../lib/utils";
 import { capabilities, type OtherAccount, type OtherWorkspace } from "../../lib/platform";
 import { generacionDeLogo, urlDeLogo } from "./logo-src";
-import { ITEM_DE_MENU, Popover, PopoverAnchor, PopoverContent } from "../../ui/Popover";
+import { ITEM_DE_MENU, Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from "../../ui/Popover";
 import { RETARDO_TOOLTIP, TooltipContent, TooltipRoot, TooltipTrigger } from "../../ui/Tooltip";
-import { stateColor, stateIcon, taskLabel } from "../projects/TaskStatus";
+import { taskLabel } from "../projects/TaskStatus";
+import { SignalDot, taskSignalTone } from "../../ui/SignalDot";
 import { cerrarConEscape, createWorkspaces, type Workspace } from "../settings/workspaces-store";
 import { topState, type AttentionState, type WorkspaceAttention } from "./attention";
+import KeepAwake from "./KeepAwake";
 import ProfileMenu from "./ProfileMenu";
+import { workspaceBar } from "./workspace-directory";
+
+const WorkspaceDirectoryMenu = lazy(() => import("./WorkspaceDirectoryMenu"));
 
 /** Las iniciales de las dos primeras palabras; una sola palabra da una letra. */
 export function monogram(name: string) {
@@ -59,23 +63,11 @@ export function MarcaDeWorkspace(props: { id?: string; name: string; logo?: stri
   );
 }
 
-/**
- * Lo más urgente de un workspace, en un disco. La pregunta va en amarillo con el
- * glifo navy: el amarillo como glifo sobre la superficie no llega a 3:1.
- */
+/** Lo más urgente de un workspace: la señal común sobre un disco de superficie. */
 export function AttentionBadge(props: { state: AttentionState; class?: string }) {
   return (
-    <span
-      data-attention-badge={props.state}
-      class={cn(
-        "grid size-4 shrink-0 place-items-center rounded-full border",
-        props.state === "asked"
-          ? "border-border-strong bg-brand-yellow text-brand-navy"
-          : cn("border-border bg-surface", stateColor(props.state)),
-        props.class,
-      )}
-    >
-      <Dynamic component={stateIcon(props.state)} size={11} />
+    <span data-attention-badge={props.state} class={cn("grid size-3 shrink-0 place-items-center rounded-full bg-surface", props.class)}>
+      <SignalDot tone={taskSignalTone(props.state)} />
     </span>
   );
 }
@@ -85,6 +77,8 @@ export function AttentionBadge(props: { state: AttentionState; class?: string })
 export default function WorkspaceColumn(props: {
   attention: WorkspaceAttention[];
   onManage: () => void;
+  /** Abrió desde el menú un workspace que solo tiene agentes. */
+  onOpenAgents?: () => void;
   /** Ajustes, en su sección si se da. */
   onSettings: (panel?: string) => void;
   onReportarBug: () => void;
@@ -92,14 +86,20 @@ export default function WorkspaceColumn(props: {
   tools?: JSX.Element;
 }) {
   const ws = createWorkspaces();
+  // Con fijados, la barra muestra esos y el abierto; la persona cambia a cualquier otro desde el menú.
+  const visibles = () => {
+    const bar = workspaceBar(ws.activo() ?? null);
+    return (ws.lista() ?? []).filter(w => !bar || bar.has(w.id));
+  };
   let list: HTMLDivElement | undefined;
   const reorder = createNavigationReorder({
     scope: () => ws.activo() ?? "",
     list: () => list,
     attribute: "data-workspace-tile",
     axis: "y",
-    ids: () => (ws.lista() ?? []).map(w => w.id),
-    save: ws.reorder,
+    ids: () => visibles().map(w => w.id),
+    // Los que la barra no muestra conservan su lugar relativo, al final.
+    save: (ids) => ws.reorder([...ids, ...(ws.lista() ?? []).map(w => w.id).filter(id => !ids.includes(id))]),
   });
   const [menuOf, setMenuOf] = createSignal<string | null>(null);
   cerrarConEscape(() => menuOf() !== null, () => setMenuOf(null));
@@ -167,7 +167,7 @@ export default function WorkspaceColumn(props: {
                 </span>
               </span>
               <Show when={state()}>
-                {(s) => <AttentionBadge state={s()} class="absolute -top-1.5 -right-1.5" />}
+                {(s) => <AttentionBadge state={s()} class="absolute -top-1 -right-1" />}
               </Show>
             </span>
           </TooltipTrigger>
@@ -300,16 +300,8 @@ export default function WorkspaceColumn(props: {
         <Show when={accounts && others().length > 0}>
           <AccountHeader id={accounts!.current.user_id} email={accounts!.current.email} extra={accounts!.current.extra} signedIn />
         </Show>
-        <KeyedList each={ws.lista() ?? []} by={w => w.id}>{w => <Tile w={w()} />}</KeyedList>
-        <button
-          type="button"
-          class="mt-1 grid size-8 shrink-0 place-items-center rounded-md border border-dashed border-neutral-500 text-neutral-500 outline-none hover:bg-neutral-200 hover:text-neutral-950 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-          aria-label={t("shell.workspaces.new")}
-          title={t("shell.workspaces.new")}
-          onClick={() => window.dispatchEvent(new CustomEvent("harness:new-workspace"))}
-        >
-          <Plus size={16} aria-hidden="true" />
-        </button>
+        <KeyedList each={visibles()} by={w => w.id}>{w => <Tile w={w()} />}</KeyedList>
+        <AddWorkspaceMenu onOpenAgents={props.onOpenAgents} />
         <For each={others()}>
           {(account) => (
             <>
@@ -319,13 +311,77 @@ export default function WorkspaceColumn(props: {
           )}
         </For>
       </div>
-      <ColumnFoot tools={props.tools} onSettings={props.onSettings} onReportarBug={props.onReportarBug} />
+      <ColumnFoot onOpenAgents={props.onOpenAgents} tools={props.tools} onSettings={props.onSettings} onReportarBug={props.onReportarBug} />
     </nav>
+  );
+}
+
+/** El «+» del riel: crear uno nuevo o abrir el directorio para agregar uno existente. */
+function AddWorkspaceMenu(props: { onOpenAgents?: () => void }) {
+  const [open, setOpen] = createSignal(false);
+  const [step, setStep] = createSignal<"menu" | "directory">("menu");
+  const close = () => {
+    setOpen(false);
+    setStep("menu");
+  };
+  return (
+    <Popover
+      open={open()}
+      onOpenChange={(value) => {
+        if (!value) setStep("menu");
+        setOpen(value);
+      }}
+      placement="right-start"
+      gutter={4}
+    >
+      <PopoverTrigger
+        type="button"
+        class="mt-1 grid size-8 shrink-0 place-items-center rounded-md border border-dashed border-neutral-500 text-neutral-500 outline-none hover:bg-neutral-200 hover:text-neutral-950 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+        aria-label={t("shell.workspaces.add")}
+        title={t("shell.workspaces.add")}
+      >
+        <Plus size={16} aria-hidden="true" />
+      </PopoverTrigger>
+      <PopoverContent role={step() === "menu" ? "menu" : undefined} class="w-64 p-1">
+        <Show
+          when={step() === "menu"}
+          fallback={
+            <Suspense fallback={null}>
+              <WorkspaceDirectoryMenu
+                onClose={close}
+                onOpenAgents={() => {
+                  close();
+                  props.onOpenAgents?.();
+                }}
+              />
+            </Suspense>
+          }
+        >
+          <button
+            type="button"
+            role="menuitem"
+            class={ITEM_DE_MENU}
+            onClick={() => {
+              close();
+              window.dispatchEvent(new CustomEvent("harness:new-workspace"));
+            }}
+          >
+            {t("shell.workspaces.create")}
+          </button>
+          <Show when={capabilities().workspaceDirectory}>
+            <button type="button" role="menuitem" class={ITEM_DE_MENU} onClick={() => setStep("directory")}>
+              {t("shell.workspaces.add_existing")}
+            </button>
+          </Show>
+        </Show>
+      </PopoverContent>
+    </Popover>
   );
 }
 
 /** Lo que avisa de algo, Configuración y el perfil, al pie de la columna. */
 function ColumnFoot(props: {
+  onOpenAgents?: () => void;
   tools?: JSX.Element;
   onSettings: (panel?: string) => void;
   onReportarBug: () => void;
@@ -339,10 +395,12 @@ function ColumnFoot(props: {
         {tools()}
         <span aria-hidden="true" class="my-1 h-px w-6 shrink-0 bg-border-strong" />
       </Show>
+      {/* Sólo la computadora de esta ventana: en la web la orden iría a una máquina remota. */}
+      <Show when={import.meta.env.MODE !== "web"}><KeepAwake /></Show>
       <button type="button" class={boton} aria-label={t("settings.title")} title={t("settings.title")} onClick={() => props.onSettings()}>
         <SettingsIcon size={17} aria-hidden="true" />
       </button>
-      <ProfileMenu onAccount={() => props.onSettings("cuenta-danil")} onReportarBug={props.onReportarBug} />
+      <ProfileMenu onOpenAgents={props.onOpenAgents} onAccount={() => props.onSettings("cuenta-danil")} onReportarBug={props.onReportarBug} />
     </div>
   );
 }

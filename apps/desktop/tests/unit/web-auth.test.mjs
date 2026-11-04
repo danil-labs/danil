@@ -20,7 +20,7 @@ async function page(path, handler) {
   let w;
   const app = await boot("listo", `web-auth-${++mounts}`, {}, undefined, {}, {
     web: true,
-    antes: (win) => {
+    beforeImport: (win) => {
       w = win;
       win.history.replaceState(null, "", path);
       win.terminusWeb = { supabaseUrl: SUPABASE, supabaseKey: "public-anon-key" };
@@ -50,7 +50,7 @@ test("new people can request access by email without a signup request", async ()
     assert.match(w.document.querySelector('[data-access-request]').textContent, /hola@danil.ai/);
     assert.equal(w.document.querySelector('[autocomplete="new-password"]'), null);
     assert.equal(requests.length, 0);
-    assert.deepEqual(app.fallos, []);
+    assert.deepEqual(app.failures, []);
   } finally { restore(); }
 });
 
@@ -66,7 +66,7 @@ test("incorrect credentials keep the account and destination, then allow a retry
     assert.equal(w.document.querySelector('[name="password"]').value, "");
     assert.equal(new URL(requests[0].url).searchParams.get("grant_type"), "password");
     assert.equal(new URL(w.location.href).searchParams.get("next"), "/terminus/m/");
-    assert.deepEqual(app.fallos, []);
+    assert.deepEqual(app.failures, []);
   } finally { restore(); }
 });
 
@@ -77,7 +77,7 @@ test("a rejected callback is explained and its credentials are removed without e
     assert.equal(w.location.hash, "");
     assert.equal(new URL(w.location.href).searchParams.get("next"), "/terminus/connect?code=ABCD-EFGH");
     assert.equal(requests.length, 0);
-    assert.deepEqual(app.fallos, []);
+    assert.deepEqual(app.failures, []);
   } finally { restore(); }
 });
 
@@ -97,7 +97,7 @@ test("email confirmation in a fresh tab stores the identity in the shared Danil 
     assert.equal(saved.access_token, "confirmed-token");
     assert.equal(w.location.search.includes("token_hash"), false);
     assert.equal(new URL(w.location.href).searchParams.get("next"), "/terminus/connect?code=ABCD-EFGH");
-    assert.deepEqual(app.fallos.filter((error) => !error.includes("Not implemented: navigation")), []);
+    assert.deepEqual(app.failures.filter((error) => !error.includes("Not implemented: navigation")), []);
   } finally { restore(); }
 });
 

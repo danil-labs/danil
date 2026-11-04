@@ -12,7 +12,7 @@
   nsExec::Exec `"${STOPPER}" --stop-engine`
   Pop $0
   ${If} $0 == 3
-    MessageBox MB_OK|MB_ICONEXCLAMATION "Terminus is still working on a task. Let it finish, or stop it, and run this again.$\r$\n$\r$\nTerminus sigue trabajando en una tarea. Deja que termine, o detenla, y vuelve a ejecutar esto." /SD IDOK
+    MessageBox MB_OK|MB_ICONEXCLAMATION "Danil is still working on a task. Let it finish, or stop it, and run this again.$\r$\n$\r$\nDanil sigue trabajando en una tarea. Deja que termine, o detenla, y vuelve a ejecutar esto." /SD IDOK
     Abort
   ${ElseIf} $0 != 0
     !insertmacro TERMINUS_KILL_ENGINE
@@ -27,7 +27,7 @@
 !macroend
 
 ; Windows renames a running .exe but does not overwrite it: what is open keeps
-; running from old_*, and Terminus removes those files when it starts again.
+; running from old_*, and the app removes those files when it starts again.
 ; Window and engine share one prefix: a set-aside engine still working is reopened
 ; with its own window, so that window stays while any set-aside engine is left.
 !macro TERMINUS_SET_ASIDE WINDOW
@@ -46,8 +46,8 @@
   ${EndIf}
 !macroend
 
-; The template kills Terminus before installing. Installing sets the files aside
-; instead; only a real uninstall closes Terminus. An installer replacing this copy
+; The template kills the app before installing. Installing sets the files aside
+; instead; only a real uninstall closes it. An installer replacing this copy
 ; runs the uninstaller in place (`_?=$INSTDIR`); Settings runs a temporary copy.
 !macroundef CheckIfAppIsRunning
 !macro CheckIfAppIsRunning executableName productName
@@ -72,17 +72,106 @@
   !endif
 !macroend
 
+; Hasta la 0.2.x la app se instalaba como «Terminus»: `…\Uninstall\Terminus`,
+; `Software\<fabricante>\Terminus` y `%LOCALAPPDATA%\Terminus`. Desde la 0.3.0 el
+; productName es Danil y el template usaría otra clave y otra carpeta: dos apps y
+; dos entradas en Agregar o quitar programas. Si esa copia existe, se instala en
+; su carpeta (su ventana y su motor pueden seguir corriendo desde ahí, apartados
+; como old_*), y al terminar se retira su entrada y sus accesos pasan a llamarse Danil.
+; Las actualizaciones siguientes la encuentran por la clave Danil, con la misma carpeta.
+; Se queda en TODAS las releases: latest.json lleva una 0.2.x directo a la última.
+; `scripts/guards/product-name.mjs` falla si se pierde mientras productName no sea este.
+!define TERMINUS_LEGACY_PRODUCTNAME "Terminus"
+
+; La carpeta se decide en .onInit, antes de la página de carpeta y de que
+; `Section Install` haga SetOutPath: el template llama a SetContext justo antes de
+; poner la carpeta por omisión, y solo la pone si $INSTDIR sigue en el marcador.
+; MANUKEY y PLACEHOLDER_INSTALL_DIR se definen después de incluir este archivo;
+; se expanden al insertar la macro.
+!macroundef SetContext
+!macro SetContext
+  !if "${INSTALLMODE}" == "currentUser"
+    SetShellVarContext current
+  !else if "${INSTALLMODE}" == "perMachine"
+    SetShellVarContext all
+  !endif
+
+  ${If} ${RunningX64}
+    !if "${ARCH}" == "x64"
+      SetRegView 64
+    !else if "${ARCH}" == "arm64"
+      SetRegView 64
+    !else
+      SetRegView 32
+    !endif
+  ${EndIf}
+
+  !ifndef __UNINSTALL__
+    !insertmacro TERMINUS_ADOPT_LEGACY
+  !endif
+!macroend
+
+; Sin `/D=` (el marcador sigue), sin copia Danil y con la vieja en disco.
+; Se lee la clave del fabricante: guarda la carpeta sin comillas, al contrario
+; que `InstallLocation`.
+!macro TERMINUS_ADOPT_LEGACY
+  ${If} $INSTDIR == "${PLACEHOLDER_INSTALL_DIR}"
+    ReadRegStr $R7 SHCTX "${MANUPRODUCTKEY}" ""
+    ${If} $R7 == ""
+      ReadRegStr $R7 SHCTX "${MANUKEY}\${TERMINUS_LEGACY_PRODUCTNAME}" ""
+      ${If} $R7 != ""
+      ${AndIf} ${FileExists} "$R7\${MAINBINARYNAME}.exe"
+        StrCpy $INSTDIR $R7
+      ${EndIf}
+    ${EndIf}
+  ${EndIf}
+!macroend
+
+; Un acceso viejo que abre este terminus.exe pasa a llamarse Danil. En una
+; actualización (`/UPDATE`) el template no crea accesos: renombrar es lo que deja
+; uno. Si Danil.lnk ya existe (instalación interactiva), el viejo se borra:
+; Rename falla con el destino ocupado. El anclaje de la barra de tareas es una
+; copia aparte que sigue abriendo la app, y el AppUserModelId (BUNDLEID) no cambia.
+!macro TERMINUS_RENAME_LEGACY_SHORTCUT DIR
+  ${If} ${FileExists} "${DIR}\${TERMINUS_LEGACY_PRODUCTNAME}.lnk"
+    !insertmacro IsShortcutTarget "${DIR}\${TERMINUS_LEGACY_PRODUCTNAME}.lnk" "$INSTDIR\${MAINBINARYNAME}.exe"
+    Pop $0
+    ${If} $0 = 1
+      ${If} ${FileExists} "${DIR}\${PRODUCTNAME}.lnk"
+        Delete "${DIR}\${TERMINUS_LEGACY_PRODUCTNAME}.lnk"
+      ${Else}
+        Rename "${DIR}\${TERMINUS_LEGACY_PRODUCTNAME}.lnk" "${DIR}\${PRODUCTNAME}.lnk"
+      ${EndIf}
+    ${EndIf}
+  ${EndIf}
+!macroend
+
+; Después de escribir la clave Danil, y antes del aviso que termina en Quit: la
+; entrada «Terminus» se retira solo si es esta carpeta. El uninstall.exe nuevo
+; solo conoce las claves Danil.
+!macro TERMINUS_RETIRE_LEGACY
+  ReadRegStr $R7 SHCTX "${MANUKEY}\${TERMINUS_LEGACY_PRODUCTNAME}" ""
+  ${If} $R7 != ""
+  ${AndIf} $R7 == $INSTDIR
+    DeleteRegKey SHCTX "Software\Microsoft\Windows\CurrentVersion\Uninstall\${TERMINUS_LEGACY_PRODUCTNAME}"
+    DeleteRegKey SHCTX "${MANUKEY}\${TERMINUS_LEGACY_PRODUCTNAME}"
+    !insertmacro TERMINUS_RENAME_LEGACY_SHORTCUT "$SMPROGRAMS"
+    !insertmacro TERMINUS_RENAME_LEGACY_SHORTCUT "$DESKTOP"
+  ${EndIf}
+!macroend
+
 !macro NSIS_HOOK_PREINSTALL
   !insertmacro TERMINUS_SET_ASIDE "${MAINBINARYNAME}.exe"
 !macroend
 
 ; The app shows its own notice; silent and passive runs come from it.
 !macro NSIS_HOOK_POSTINSTALL
+  !insertmacro TERMINUS_RETIRE_LEGACY
   !insertmacro TERMINUS_SWEEP
   ${If} ${FileExists} "$INSTDIR\old_*.exe"
   ${AndIfNot} ${Silent}
   ${AndIf} $PassiveMode <> 1
-    MessageBox MB_OK|MB_ICONINFORMATION "Terminus ${VERSION} is installed. Restart Terminus to use it. If tasks are working, Terminus will offer to restart when they finish.$\r$\n$\r$\nTerminus ${VERSION} quedó instalado. Reinicia Terminus para usarlo. Si hay tareas trabajando, Terminus te avisará para reiniciar cuando terminen."
+    MessageBox MB_OK|MB_ICONINFORMATION "Danil ${VERSION} is installed. Restart Danil to use it. If tasks are working, Danil will offer to restart when they finish.$\r$\n$\r$\nDanil ${VERSION} quedó instalado. Reinicia Danil para usarlo. Si hay tareas trabajando, Danil te avisará para reiniciar cuando terminen."
     ; The finish page would run a second window next to the open one; its shortcut box is checked by default.
     Call CreateOrUpdateDesktopShortcut
     ; Without it, Quit exits with 2, as if the script had aborted.

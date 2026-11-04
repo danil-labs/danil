@@ -2,9 +2,9 @@
 
 Cada workspace conecta su cuenta y elige qué cuentas u organizaciones de GitHub
 usa. Dentro de cada una hereda todos los repositorios que su instalación de
-GitHub permite, también los que se creen después, sin confirmación en Terminus.
+GitHub permite, también los que se creen después, sin confirmación en Danil.
 Decisión del 2026-10-19: si el GitHub de la persona ya concede el acceso,
-Terminus no lo restringe por repositorio. Para ampliarlo o reducirlo se cambia la
+Danil no lo restringe por repositorio. Para ampliarlo o reducirlo se cambia la
 instalación en GitHub.
 
 ## Conectar
@@ -12,7 +12,7 @@ instalación en GitHub.
 1. Abre Configuración → Control de Fuentes → GitHub y conecta la cuenta.
 2. El selector oficial de GitHub permite instalar o configurar la App en una
    cuenta personal u organización, aunque existan instalaciones previas.
-3. Al volver a Terminus, elige las cuentas que usará este workspace.
+3. Al volver a Danil, elige las cuentas que usará este workspace.
    Administrar permisos en GitHub no repite el inicio de sesión.
 
 La cuenta conectada y «Acceso de este workspace» resumen las cuentas elegidas.

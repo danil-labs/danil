@@ -1,9 +1,14 @@
 import {
+  type AccountWorkspace,
   type Computer,
+  type ConnectionPatch,
+  type ConnectionCapabilities,
   type Connection,
   PERMISSION_MODES,
   listComputers,
   listConnections,
+  listWorkspaces,
+  connectionCapabilities,
   mcpUrl,
   revokeConnection,
   updateConnection,
@@ -20,12 +25,13 @@ import { EmptyState } from "../../ui/EmptyState";
 import { Input } from "../../ui/Input";
 import { Select } from "../../ui/Select";
 import { SettingsPanel, SettingsRow, SettingsSection } from "./layout";
+import { ConnectionAccess } from "./ConnectionAccess";
 import { snippets } from "./orchestratorSnippets.ts";
 
 /** `account_relay_token` (`proxy.rs`): el token de cliente de la cuenta y el plano de control. */
 type ClientToken = { token: string; expires_at: number; endpoint: string };
 
-type Loaded = { endpoint: string; connections: Connection[]; computers: Computer[] } | { failed: string };
+type Loaded = { endpoint: string; connections: Connection[]; computers: Computer[]; workspaces: AccountWorkspace[]; capabilities: ConnectionCapabilities | null } | { failed: string };
 
 async function token(): Promise<ClientToken> {
   return (await invoke("account_relay_token", {})) as ClientToken;
@@ -34,9 +40,11 @@ async function token(): Promise<ClientToken> {
 async function load(): Promise<Loaded> {
   try {
     const { token: tok, endpoint } = await token();
-    const [connections, computers] = await Promise.all([listConnections(endpoint, tok), listComputers(endpoint, tok)]);
+    const [connections, computers, workspaces, capabilities] = await Promise.all([listConnections(endpoint, tok), listComputers(endpoint, tok), listWorkspaces(endpoint, tok), connectionCapabilities(endpoint, tok)]);
     if (connections.kind !== "ok") return { failed: connections.kind };
-    return { endpoint, connections: connections.value, computers: computers.kind === "ok" ? computers.value : [] };
+    if (computers.kind !== "ok") return { failed: computers.kind };
+    if (capabilities.kind !== "ok" && capabilities.kind !== "missing") return { failed: capabilities.kind };
+    return { endpoint, capabilities: capabilities.kind === "ok" ? capabilities.value : null, connections: connections.value, computers: computers.value, workspaces: workspaces.kind === "ok" ? workspaces.value : [] };
   } catch {
     return { failed: "no_account" };
   }
@@ -54,6 +62,7 @@ type LocalOrchestrator = {
   created_at: number;
   active: boolean;
   credential_file: string;
+  credential_env?: string;
   cli: string | null;
 };
 
@@ -226,7 +235,7 @@ export default function Connections(props: { workspace?: string | null }) {
       const { token: tok, endpoint } = await token();
       const answer = await run(endpoint, tok);
       if (answer.kind !== "ok") setFailure(answer.kind);
-      await refetch();
+      if (answer.kind === "ok") await refetch();
       return answer;
     } catch {
       setFailure("error");
@@ -268,7 +277,13 @@ export default function Connections(props: { workspace?: string | null }) {
           <p class="m-0 py-3 text-sm text-neutral-500">{t("settings.connections.loading")}</p>
         </Show>
         <Show when={(() => { const d = data(); return d && "failed" in d ? d : null; })()}>
-          <EmptyState title={t("settings.connections.unavailable")} description={t("settings.connections.unavailable_hint")} />
+          {(d) => (
+            <div class="grid gap-3">
+              <EmptyState title={d().failed === "no_account" ? t("settings.connections.unavailable") : t("settings.connections.failed")}
+                description={t("settings.connections.unavailable_hint")} />
+              <Button variant="secondary" class="justify-self-start" onClick={() => void refetch()}>{t("settings.connections.retry")}</Button>
+            </div>
+          )}
         </Show>
         <Show when={ready()}>
           {(d) => (
@@ -281,23 +296,31 @@ export default function Connections(props: { workspace?: string | null }) {
                 />
               }
             >
-              <For each={d().connections}>
-                {(c) => (
+              <For each={d().connections.map(c => c.id)}>
+                {(id) => {
+                  const connection = () => d().connections.find(c => c.id === id)!;
+                  return (
                   <ConnectionRow
-                    connection={c}
+                    connection={connection()}
                     computers={d().computers}
-                    busy={busy() === c.id}
+                    workspaces={d().workspaces}
+                    capabilities={d().capabilities}
+                    busy={busy() === id}
                     machineName={(id) => machineName(d().computers, id)}
-                    onActivate={(patch) => act(c.id, (e, tok) => updateConnection(e, tok, c.id, { ...patch, state: "active" }))}
-                    onPause={() => act(c.id, (e, tok) => updateConnection(e, tok, c.id, { state: "paused" }))}
-                    onResume={() => act(c.id, (e, tok) => updateConnection(e, tok, c.id, { state: "active" }))}
-                    onRevoke={() => setRevoking(c)}
+                    onSave={async (patch) => {
+                      const answer = await act(id, (e, tok) => updateConnection(e, tok, id, patch));
+                      return answer?.kind === "ok" && answer.value?.id === id;
+                    }}
+                    onPause={() => act(id, (e, tok) => updateConnection(e, tok, id, { state: "paused" }))}
+                    onResume={() => act(id, (e, tok) => updateConnection(e, tok, id, { state: "active" }))}
+                    onRevoke={() => setRevoking(connection())}
                     onWebhook={async (webhook) => {
-                      const answer = await act(c.id, (e, tok) => updateConnection(e, tok, c.id, { webhook }));
+                      const answer = await act(id, (e, tok) => updateConnection(e, tok, id, { webhook }));
                       return answer?.kind === "ok" ? (answer.value?.webhook_secret ?? null) : null;
                     }}
                   />
-                )}
+                );
+                }}
               </For>
             </Show>
           )}
@@ -426,9 +449,11 @@ function WebhookBlock(props: {
 function ConnectionRow(props: {
   connection: Connection;
   computers: Computer[];
+  workspaces: AccountWorkspace[];
+  capabilities: ConnectionCapabilities | null;
   busy: boolean;
   machineName: (id: string) => string;
-  onActivate: (patch: { permission_mode: string; machines: Array<{ computer_id: string; workspace: string }> }) => void;
+  onSave: (patch: ConnectionPatch) => Promise<boolean>;
   onPause: () => void;
   onResume: () => void;
   onRevoke: () => void;
@@ -436,16 +461,10 @@ function ConnectionRow(props: {
   onWebhook: (webhook: { url: string; rotate?: boolean } | null) => Promise<string | null>;
 }) {
   const c = () => props.connection;
-  // Solo las máquinas con un workspace atado a la cuenta: el relay no llega a otro.
-  const candidates = () => props.computers.filter((m) => (m.workspaces ?? []).length > 0);
-  const [machine, setMachine] = createSignal("");
-  const [workspace, setWorkspace] = createSignal("");
-  const [mode, setMode] = createSignal<string>("manual");
-  const workspaces = () => props.computers.find((m) => m.computer_id === machine())?.workspaces ?? [];
 
   const summary = () => {
     if (c().state === "pending") return t("settings.connections.pending_hint");
-    const where = c().machines.map((m) => props.machineName(m.computer_id)).join(", ");
+    const where = c().machines.map((m) => `${props.machineName(m.computer_id)} / ${props.workspaces.find(w => w.id === m.workspace)?.name ?? m.workspace}`).join(", ");
     return t("settings.connections.summary", {
       machines: where || "—",
       mode: t(`settings.connections.mode.${c().permission_mode ?? "manual"}`),
@@ -484,41 +503,9 @@ function ConnectionRow(props: {
       <Show when={c().state === "active" || c().state === "paused"}>
         <WebhookBlock connection={c()} busy={props.busy} onChange={props.onWebhook} />
       </Show>
-      <Show when={c().state === "pending"}>
-        <div class="grid gap-3 pb-4 sm:grid-cols-[1fr_1fr_1fr_auto] sm:items-end">
-          <label class="grid gap-1 text-xs text-neutral-500">
-            {t("settings.connections.machine")}
-            <Select value={machine()} onChange={(e) => (setMachine(e.currentTarget.value), setWorkspace(""))}>
-              <option value="">{t("settings.connections.choose")}</option>
-              <For each={candidates()}>{(m) => <option value={m.computer_id}>{m.name ?? m.computer_id}</option>}</For>
-            </Select>
-          </label>
-          <label class="grid gap-1 text-xs text-neutral-500">
-            {t("settings.connections.workspace")}
-            <Select value={workspace()} disabled={!machine()} onChange={(e) => setWorkspace(e.currentTarget.value)}>
-              <option value="">{t("settings.connections.choose")}</option>
-              <For each={workspaces()}>{(w) => <option value={w}>{w}</option>}</For>
-            </Select>
-          </label>
-          <label class="grid gap-1 text-xs text-neutral-500">
-            {t("settings.connections.permissions")}
-            <Select value={mode()} onChange={(e) => setMode(e.currentTarget.value)}>
-              <For each={PERMISSION_MODES}>{(m) => <option value={m}>{t(`settings.connections.mode.${m}`)}</option>}</For>
-            </Select>
-          </label>
-          <Button
-            size="sm"
-            disabled={props.busy || !machine() || !workspace()}
-            onClick={() =>
-              props.onActivate({ permission_mode: mode(), machines: [{ computer_id: machine(), workspace: workspace() }] })
-            }
-          >
-            {t("settings.connections.activate")}
-          </Button>
-          <Show when={candidates().length === 0}>
-            <p class="m-0 text-xs text-neutral-500 sm:col-span-4">{t("settings.connections.no_machines")}</p>
-          </Show>
-        </div>
+      <Show when={c().state !== "revoked"}>
+        <ConnectionAccess connection={c()} computers={props.computers} workspaces={props.workspaces}
+          busy={props.busy} capabilities={props.capabilities} onSave={props.onSave} />
       </Show>
     </div>
   );

@@ -3,18 +3,23 @@
  * Solo lo carga la web (`capabilities().browserFiles`); el escritorio no lo baja.
  */
 import type { Accessor } from "solid-js";
+import {
+  attachmentAccept,
+  isImageMime,
+  MAX_UPLOAD_BYTES,
+  mimeOfAttachment,
+} from "@terminus/protocol";
 import { base64De } from "../../lib/clipboard";
 import { t } from "../../lib/i18n";
 import { asFailure, type Failure } from "../../ui/Failure";
 
-/** Lo que `guardar_imagen_pegada` sabe guardar. */
-const IMAGENES_SUBIBLES = ["image/png", "image/jpeg", "image/webp", "image/gif"];
-
 type Conversacion = {
   puede: () => boolean;
+  /** La máquina del turno anuncia `attachment_documents_v1`; si no, solo imágenes. */
+  documentos: () => boolean;
   marcar: (caja: DOMRect | null) => void;
   conversacion: Accessor<unknown>;
-  pegar: (mime: string, datos: string) => Promise<string>;
+  pegar: (mime: string, datos: string, nombre?: string) => Promise<string>;
   agregar: (rutas: string[]) => Promise<void>;
   fallo: (f: Failure | null) => void;
   ocupado: (delta: number) => void;
@@ -24,16 +29,37 @@ export function adjuntador(c: Conversacion) {
   async function subir(files: File[]) {
     if (!c.puede() || files.length === 0) return;
     const conversation = c.conversacion();
-    const fuera = files.filter((f) => !IMAGENES_SUBIBLES.includes(f.type));
+    const documentos = c.documentos();
+    const admitidos: File[] = [];
+    const sinDocumentos: string[] = [];
+    const noAdmitidos: string[] = [];
+    for (const f of files) {
+      const mime = mimeOfAttachment(f.type, f.name);
+      if (!mime || f.size > MAX_UPLOAD_BYTES) noAdmitidos.push(f.name);
+      else if (!documentos && !isImageMime(mime)) sinDocumentos.push(f.name);
+      else admitidos.push(f);
+    }
     c.fallo(null);
     c.ocupado(1);
     try {
       const rutas: string[] = [];
-      for (const f of files) if (IMAGENES_SUBIBLES.includes(f.type)) rutas.push(await c.pegar(f.type, await base64De(f)));
+      for (const f of admitidos) {
+        const mime = mimeOfAttachment(f.type, f.name)!;
+        rutas.push(await c.pegar(mime, await base64De(f), f.name));
+      }
       if (rutas.length) await c.agregar(rutas);
-      if (fuera.length && conversation === c.conversacion()) {
-        const names = fuera.map((f) => f.name).join(", ");
-        c.fallo({ what: t("chat.attachments.web_images_only", { names }), detail: "web_images_only" });
+      if ((sinDocumentos.length || noAdmitidos.length) && conversation === c.conversacion()) {
+        if (noAdmitidos.length) {
+          c.fallo({
+            what: t("chat.attachments.web_unsupported", { names: noAdmitidos.join(", ") }),
+            detail: "web_unsupported",
+          });
+        } else {
+          c.fallo({
+            what: t("chat.attachments.web_documents_unavailable", { names: sinDocumentos.join(", ") }),
+            detail: "web_documents_unavailable",
+          });
+        }
       }
     } catch (err) {
       if (conversation === c.conversacion()) c.fallo(asFailure(err));
@@ -47,7 +73,7 @@ export function adjuntador(c: Conversacion) {
       const input = document.createElement("input");
       input.type = "file";
       input.multiple = true;
-      input.accept = IMAGENES_SUBIBLES.join(",");
+      input.accept = attachmentAccept(c.documentos());
       input.onchange = () => void subir([...(input.files ?? [])]);
       input.click();
     },

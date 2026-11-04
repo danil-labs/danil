@@ -107,5 +107,5 @@ test("restarting and quitting wait for live tasks or stop the ones they name", a
   await sleep(2600);
   assert.equal(quits, 1, "quits once the live turns reach zero");
   assert.deepEqual(stops, [], "waiting never stops a task");
-  assert.deepEqual(app.fallos, []);
+  assert.deepEqual(app.failures, []);
 });

@@ -27,3 +27,20 @@ export const STATUS_LABELS: Record<"es" | "en", Record<StatusLabel, string>> = {
     delivered: "Result delivered",
   },
 };
+
+export const WORK_STATUS_LABELS = {
+  "es": {
+    "draft": "Borrador",
+    "review": "Revisión",
+    "ready": "Listo",
+    "closed": "Cerrado",
+    "unknown": "Desconocido"
+  },
+  "en": {
+    "draft": "Draft",
+    "review": "Review",
+    "ready": "Ready",
+    "closed": "Closed",
+    "unknown": "Unknown"
+  }
+} as const;

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { groupAccounts, resetLabel, usageTone, windowLabel, windowLeft } from "../src/index.ts";
+import { groupAccounts, immediateWindow, resetLabel, usageTone, windowLabel, windowLeft } from "../src/index.ts";
 
 test("cada credencial conserva su tarjeta y su máquina aunque comparta correo", () => {
   const groups = groupAccounts("claude", [
@@ -69,6 +69,21 @@ test("el tipo desconocido y dos cuentas del mismo tipo en una máquina no se atr
   ]);
   assert.equal(groups.length, 4);
   assert.ok(groups.every((g) => g.members.length === 1));
+});
+
+test("la barra mide la ventana que corre ahora, no la que queda más apretada", () => {
+  const now = 1_000_000_000_000;
+  const windows = [
+    { label: "últimas 5 horas", used_pct: 10, resets_at: now + 5 * 3_600_000 },
+    { label: "esta semana", used_pct: 91, resets_at: now + 4 * 86_400_000 },
+  ];
+  assert.equal(immediateWindow(windows, now)?.label, "últimas 5 horas");
+  assert.equal(windowLeft(immediateWindow(windows, now)!), 90);
+  // La semana ya reseteada no tapa a la de cinco horas, que sigue corriendo.
+  assert.equal(immediateWindow([windows[1], { ...windows[1], resets_at: now - 1 }, windows[0]], now)?.label, "últimas 5 horas");
+  // Sin fechas manda el orden del proveedor.
+  assert.equal(immediateWindow([{ label: "primera", resets_at: null }, { label: "segunda", resets_at: null }], now)?.label, "primera");
+  assert.equal(immediateWindow([], now), null);
 });
 
 test("lo que queda, su tono y cuándo vuelve, con las palabras del escritorio", () => {

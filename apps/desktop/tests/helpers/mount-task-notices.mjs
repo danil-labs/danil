@@ -16,7 +16,7 @@ export async function taskNoticeScenarios({ boot, sleep, responses }) {
   try {
     const doc = app.w.document;
     const toast = () => doc.querySelector('[data-task-notice="failed"]');
-    const calls = () => app.comandos.filter((c) => c === "tray_notify").length;
+    const calls = () => app.commands.filter((c) => c === "tray_notify").length;
     const attention = (tasks) => app.emit("attention", [{ workspace: "w", tasks }]);
     const failure = { session: "s1", project: "", state: "failed" };
     const click = async (id) => {
@@ -39,7 +39,7 @@ export async function taskNoticeScenarios({ boot, sleep, responses }) {
     assert.ok(preview, "the opened task starts as a temporary view");
     const userAgent = app.w.navigator.userAgent;
     Object.defineProperty(app.w.navigator, "userAgent", { value: "Windows", configurable: true });
-    const maximizes = () => app.comandos.filter((c) => c === "plugin:window|toggle_maximize").length;
+    const maximizes = () => app.commands.filter((c) => c === "plugin:window|toggle_maximize").length;
     const beforePin = maximizes();
     preview.dispatchEvent(new app.w.MouseEvent("dblclick", { bubbles: true }));
     await sleep(30);
@@ -109,7 +109,7 @@ export async function taskNoticeScenarios({ boot, sleep, responses }) {
     attention([failure]);
     await sleep(50);
     assert.equal(toast(), null);
-    assert.deepEqual(app.fallos, []);
+    assert.deepEqual(app.failures, []);
   } finally {
     app.w.close();
   }

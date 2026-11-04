@@ -14,7 +14,7 @@ import { boot, sleep } from "../helpers/jsdom-app.mjs";
 globalThis.BroadcastChannel = undefined;
 
 const SUPABASE = "https://supabase.test";
-const API = "https://computers.danil.ai/v1/computers";
+const API = "https://machines.danil.ai/v1/computers";
 const session = (token) => JSON.stringify({
   access_token: token,
   refresh_token: `r-${token}`,
@@ -51,7 +51,7 @@ test("the web build uses the stored session, opens every computer and explains r
   let w;
   const app = await boot("listo", "web-gate", {}, undefined, { "sb-supabase-auth-token": session("stored") }, {
     web: true,
-    antes: (win) => {
+    beforeImport: (win) => {
       w = win;
       globalThis.WebSocket = fake.Socket;
       win.terminusWeb = { supabaseUrl: SUPABASE, supabaseKey: "public-anon-key" };
@@ -64,7 +64,7 @@ test("the web build uses the stored session, opens every computer and explains r
     assert.equal(w.document.querySelector("[data-web-gate]"), null, "several computers open without a picker");
     assert.deepEqual(
       fake.sockets.map((s) => s.url.split("?")[0]).sort(),
-      ["wss://computers.danil.ai/v1/computers/cmp_a/session", "wss://computers.danil.ai/v1/computers/cmp_b/session"],
+      ["wss://machines.danil.ai/v1/computers/cmp_a/session", "wss://machines.danil.ai/v1/computers/cmp_b/session"],
       "one relay session per computer",
     );
     assert.deepEqual(fake.sockets[0]?.protocols, ["danil.computers.v1", "bearer.stored"]);
@@ -82,7 +82,7 @@ test("the web build uses the stored session, opens every computer and explains r
     assert.ok(w.document.querySelector("[data-license-retry]"), "and the retry");
     assert.equal(fake.sockets.length, 2, "it does not retry the sockets blindly");
     assert.equal(w.document.querySelectorAll("[data-web-gate]").length, 1, "one notice for every refused session");
-    assert.deepEqual(app.fallos, []);
+    assert.deepEqual(app.failures, []);
   } finally {
     globalThis.fetch = own;
   }
@@ -101,7 +101,7 @@ test("without a license the gate offers the trial and opens the app once it is a
   let w;
   const app = await boot("listo", "web-gate-license", {}, undefined, { "sb-supabase-auth-token": session("stored") }, {
     web: true,
-    antes: (win) => {
+    beforeImport: (win) => {
       w = win;
       globalThis.WebSocket = fake.Socket;
       win.terminusWeb = { supabaseUrl: SUPABASE, supabaseKey: "public-anon-key" };
@@ -119,7 +119,7 @@ test("without a license the gate offers the trial and opens the app once it is a
     await sleep(1200);
     assert.equal(gate(), null, "retrying asks again and opens the app");
     assert.equal(fake.sockets.length, 1);
-    assert.deepEqual(app.fallos, []);
+    assert.deepEqual(app.failures, []);
   } finally {
     globalThis.fetch = own;
   }

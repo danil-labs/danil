@@ -61,6 +61,37 @@ test("cerrar la última pestaña quita el modo expandido y vuelve el árbol", ()
   assert.equal(files.panel("t").open, true);
 });
 
+test("el modo abre, cambia, cierra, y abrir un archivo vuelve a archivos", () => {
+  const files = createTaskFiles();
+  assert.equal(files.panel("t").mode, "files");
+  files.present("t", "search");
+  assert.equal(files.panel("t").open, true);
+  assert.equal(files.panel("t").mode, "search");
+  files.present("t", "usage");
+  assert.equal(files.panel("t").open, true);
+  assert.equal(files.panel("t").mode, "usage");
+  files.present("t", "usage");
+  assert.equal(files.panel("t").open, false);
+  files.present("t", "delegated");
+  assert.equal(files.panel("t").open, true);
+  assert.equal(files.panel("t").mode, "delegated");
+  files.open("t", { tree: "a", path: "App.tsx", changes: false, pinned: true });
+  assert.equal(files.panel("t").open, true);
+  assert.equal(files.panel("t").mode, "files");
+  assert.deepEqual(ids(files, "t"), ["App.tsx"]);
+  files.present("t", "search");
+  files.setOpen("t", true);
+  assert.equal(files.panel("t").mode, "files");
+  assert.equal(files.panel("t").open, true);
+  files.present("t", "search");
+  files.toggle("t");
+  assert.equal(files.panel("t").mode, "files");
+  assert.equal(files.panel("t").open, true);
+  files.toggle("t");
+  assert.equal(files.panel("t").open, false);
+  assert.deepEqual(ids(files, "t"), ["App.tsx"]);
+});
+
 test("renombrar o borrar una carpeta mueve o cierra sus pestañas", () => {
   const files = createTaskFiles();
   files.open("t", { tree: "a", path: "src/App.tsx", changes: false, pinned: true });

@@ -1,7 +1,7 @@
 /**
  * «Conectar otra máquina»: el comando que instala Seldon Host en un VPS, otra
  * laptop o una Raspberry Pi y la conecta a la cuenta con un código
- * (seldon-host `scripts/host-install/install.sh` y `seldon-runtime danil
+ * (seldon-host `scripts/host-install/install.sh` y `danil machines
  * connect`), y la espera a que aparezca en `GET /v1/computers`.
  *
  * Conectar es gratis y sin tope de máquinas; controlarla desde la web o el
@@ -11,7 +11,7 @@
 import type { Answer, Computer } from "./api.ts";
 
 /** Donde Danil publica el instalador. */
-export const INSTALL_URL = "https://app.danil.ai/terminus/install.sh";
+export const INSTALL_URL = "https://alfa-app.danil.ai/install.sh";
 
 /** Lo que se espera a que la máquina nueva aparezca: el código vence a los 10 min. */
 export const APPEAR_WAIT = 11 * 60_000;

@@ -19,7 +19,7 @@ import { EmptyState } from "../../ui/EmptyState";
 import { capabilities } from "../../lib/platform";
 import HistorialDeEntrada from "./MemoryHistory";
 import { type EntradaDeCuenta, entradasDeCuenta, type MemoriaDeCuenta, memoriaDeCuenta } from "./memory-account";
-import { SectionLabel } from "../../ui/SectionLabel";
+import { Panel } from "../../ui/Panel";
 
 function scopeIgual(a: MemoriaScope, b: MemoriaScope): boolean {
   if (a.kind !== b.kind) return false;
@@ -302,17 +302,16 @@ export default function Memoria(props: { project: string; workspace?: string | n
   }
 
   return (
-    <section class="grid gap-2">
-      <div class="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
-        <SectionLabel>
-          {t("projects.memory.title")}
-        </SectionLabel>
+    <Panel
+      title={t("projects.memory.title")}
+      action={
         <Button variant="ghost" size="sm" onClick={() => setFormulario("nueva")}>
           <Plus size={14} />
           {t("projects.memory.write")}
         </Button>
-      </div>
-
+      }
+    >
+      <div class="grid gap-2 px-3 pb-3">
       <div class="flex flex-wrap items-center gap-3">
         <div class="flex flex-wrap gap-1" role="group" aria-label={t("projects.memory.scope_label")}>
           <Button
@@ -454,6 +453,7 @@ export default function Memoria(props: { project: string; workspace?: string | n
         path={(historial() as EntradaDeCuenta | null)?.path ?? null}
         onCerrar={() => setHistorial(null)}
       />
-    </section>
+      </div>
+    </Panel>
   );
 }

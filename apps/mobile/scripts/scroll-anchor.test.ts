@@ -6,7 +6,7 @@
  */
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { restoreAnchor } from "../src/lib/scrollAnchor.ts";
+import { restoreAnchor, scrollToEnd } from "../src/lib/scrollAnchor.ts";
 
 /** Un hilo invertido: subir `scrollTop` baja lo que se ve. `pushed` es lo que creció por abajo. */
 const thread = (scrollTop: number) => {
@@ -68,4 +68,19 @@ test("an anchor from another scroller never moves this conversation", () => {
   const scroller = { scrollTop: 500, contains: () => false, querySelectorAll: () => [foreign] } as unknown as Element;
   assert.equal(restoreAnchor(scroller, { element: foreign, top: 100, id: foreign.id }, false), false);
   assert.equal(scroller.scrollTop, 500);
+});
+
+test("enviar baja al final aunque react-native-web haya cambiado el scrollTo del nodo", () => {
+  const node = {
+    scrollTop: 885,
+    scrollHeight: 1583,
+    // Como `ScrollView` de react-native-web: lee `y`, no `top`.
+    scrollTo({ y }: { y?: number }) { node.scrollTop = y ?? 0; },
+    scroll({ top }: { top: number }) { node.scrollTop = top; },
+  };
+  scrollToEnd(node as unknown as Element, true);
+  assert.equal(node.scrollTop, 1583);
+  node.scrollTop = 885;
+  scrollToEnd(node as unknown as Element, false);
+  assert.equal(node.scrollTop, 1583);
 });

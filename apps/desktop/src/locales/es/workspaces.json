@@ -1,7 +1,7 @@
 {
   "workspaces.directory.save_failed": "No se pudo guardar la ubicación predeterminada. Vuelve a intentarlo.",
   "workspaces.directory.unavailable": "La carpeta elegida no está disponible. Conecta el disco o elige otra carpeta.",
-  "workspaces.migration.too_old": "Estos datos vienen de una versión anterior de Terminus que este binario ya no convierte. Instala primero la versión {version}, ábrela una vez para que migre el trabajo, y vuelve a actualizar.",
+  "workspaces.migration.too_old": "Estos datos vienen de una versión anterior de Danil que este binario ya no convierte. Instala primero la versión {version}, ábrela una vez para que migre el trabajo, y vuelve a actualizar.",
   "workspaces.permission_mode.save_failed": "No se pudieron guardar los permisos por defecto. Vuelve a intentarlo.",
   "workspaces.permission_mode.unknown": "Ese modo de permisos no existe: elige manual, ediciones o auto.",
   "workspaces.directory.no_documents": "No encontré tu carpeta Documentos. Elige en Configuración → General dónde crear los proyectos.",

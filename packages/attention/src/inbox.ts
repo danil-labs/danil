@@ -29,7 +29,11 @@ export type Conversation = {
 export type ConversationCounts = { assistance: number | null; aiDisabled: number | null };
 export type Message = { id: number; conversation_id: number; content: string | null; direction: 'inbound' | 'outbound'; sender_type: string; deleted_at?: string | null };
 export type Page<T> = { rows: T[]; hasMore: boolean };
-export type InboxSession = { getToken(): Promise<string>; unauthorized(): Promise<boolean> };
+export type InboxSession = {
+  getToken(): Promise<string>; unauthorized(): Promise<boolean>;
+  /** La clave del workspace activo (`X-Danil-Workspace`) y entrar otra vez si el BFF responde que no coincide. */
+  workspaceKey?: () => string | null; reenter?: () => Promise<boolean>;
+};
 
 const object = (value: unknown): Record<string, unknown> => {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('invalid_response');
@@ -47,7 +51,7 @@ const array = (value: unknown): unknown[] => {
   return value;
 };
 
-/** Only same-origin, read-only BFF routes; account IDs never imply Terminus workspace IDs. */
+/** Only same-origin, read-only BFF routes. The account of a workspace comes only from `resolveWorkspaceAccount`. */
 export function createInbox(session: InboxSession, request: typeof fetch = fetch, prefix = "/terminus/alpha-api") {
   const send = sessionFetch(session, request);
   async function get(path: string) {

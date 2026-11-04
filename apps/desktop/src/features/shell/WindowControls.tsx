@@ -57,7 +57,7 @@ export default function ControlesDeVentana() {
 
           Así que alinear no es cosa de este componente: es de la fila que lo
           pone, que es la única que sabe qué más lleva. */}
-      <div class="flex h-8 shrink-0 items-stretch">
+      <div class="flex h-[30px] shrink-0 items-stretch">
         <button class="grid w-11 place-items-center text-neutral-700 hover:bg-neutral-200 hover:text-neutral-950 focus-visible:z-10 focus-visible:outline-2 focus-visible:outline-primary" type="button" aria-label={t("shell.window.minimize")} title={t("shell.window.minimize")} onClick={minimizar}>
           <svg aria-hidden="true" width="10" height="10" viewBox="0 0 10 10"><path d="M1 5.5h8" fill="none" stroke="currentColor" /></svg>
         </button>

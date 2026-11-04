@@ -1,6 +1,6 @@
 ---
 name: review-ui
-description: Revisión visual y de accesibilidad de un cambio en la interfaz de Terminus antes de darlo por bueno — capturas en tema claro y oscuro, contraste medido y no a ojo, foco y teclado, movimiento reducido, y en qué webview se miró. Úsala cuando pidan revisar cómo se ve algo, comprobar si se lee en oscuro, sacar capturas, auditar accesibilidad o contraste, o antes de abrir un pull request que toca el front de Terminus.
+description: Revisión visual y de accesibilidad de un cambio en la interfaz de Danil antes de darlo por bueno — capturas en tema claro y oscuro, contraste medido y no a ojo, foco y teclado, movimiento reducido, y en qué webview se miró. Úsala cuando pidan revisar cómo se ve algo, comprobar si se lee en oscuro, sacar capturas, auditar accesibilidad o contraste, o antes de abrir un pull request que toca el front de Danil.
 ---
 
 # Revisar una interfaz

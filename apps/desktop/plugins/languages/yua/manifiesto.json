@@ -7,7 +7,7 @@
   "version": "0.1.0",
   "formato": "es-MX",
   "direccion": "ltr",
-  "autoria": "Terminus — borrador sin revisión de hablante",
+  "autoria": "Danil — borrador sin revisión de hablante",
   "salida": {
     "gate": "contexto-del-agente",
     "perfil": "salida.json"

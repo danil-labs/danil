@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Un Danil Computers falso para probar la app sin la sesión de nadie:
+ * Un Danil Machines falso para probar la app sin la sesión de nadie:
  * el login de Supabase (`/auth/v1/token`), el plano de control
  * (`/v1/computers`, `/start`, `/v1/workspaces`, la memoria `/v1/workspaces/:id/memory/*`) y el relay (`/v1/computers/:id/session`, protocolo
  * v1 con espejo), sobre HTTP y WebSocket reales en localhost.
@@ -102,6 +102,14 @@ const MODELS = {
   ],
 };
 const IMAGE_MIMES = new Set(["image/png", "image/jpeg", "image/webp", "image/gif"]);
+const DOCUMENT_MIMES = new Set([
+  "application/pdf", "text/plain", "text/markdown", "text/csv", "application/json",
+  "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.ms-excel", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "application/vnd.ms-powerpoint", "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+  "application/vnd.oasis.opendocument.text", "application/vnd.oasis.opendocument.spreadsheet",
+  "application/vnd.oasis.opendocument.presentation", "application/rtf",
+]);
 const IMAGE_CAP = 25 * 1024 * 1024;
 
 /** El inicio de sesión por tubería: Codex da enlace y código a comparar y termina solo; Claude pide pegar el código. */
@@ -345,7 +353,24 @@ function invoke(m, command, args) {
     case "load_session": {
       const s = e.sessions.get(args.id);
       if (!s) throw { code: "command_failed", detail: "no such task" };
-      return { id: s.id, provider: s.provider, model: s.model, agent: s.agent, turns: s.turns };
+      const opened = { id: s.id, provider: s.provider, model: s.model, agent: s.agent };
+      if (!args.history_request) return { ...opened, turns: s.turns };
+      // Como `bounded_history`: la revisión cambia con cada escritura y los textos largos salen por referencia.
+      const revision = `r${s.turns.length}`;
+      if (args.history_request.kind === "detail") {
+        const { turn, pointer, offset = 0 } = args.history_request;
+        if (args.history_request.revision !== revision) throw { code: "command_failed", detail: "revision_changed" };
+        const body = JSON.stringify(s.turns[turn]?.text ?? "");
+        if (pointer !== "/text") throw { code: "command_failed", detail: "unknown_pointer" };
+        const next = Math.min(body.length, offset + 65_536);
+        return { version: 1, revision, offset, next, total: body.length, done: next === body.length, text: body.slice(offset, next) };
+      }
+      const end = Math.min(args.history_request.before ?? s.turns.length, s.turns.length);
+      const start = Math.max(0, end - 50);
+      const turns = s.turns.slice(start, end).map((t, n) => t.text && t.text.length > 8192
+        ? { ...t, text: "", history_refs: [{ version: 1, turn: start + n, pointer: "/text", bytes: t.text.length + 2, revision }] }
+        : t);
+      return { ...opened, turns, history: { version: 1, revision, total: s.turns.length, start, end, limit: 50, has_more: start > 0 } };
     }
     case "pending_requests": {
       const s = e.sessions.get(args.session);
@@ -439,7 +464,7 @@ function invoke(m, command, args) {
     case "list_slash_menu":
       return { commands: [{ name: "review", description: "Revisa los cambios" }, { name: "compact", description: null }], skills: [{ name: "pdf", description: "Lee y escribe PDF" }], side_question: "btw" };
     case "list_mentions": return { fuentes: [{ ruta: "src", tipo: "carpeta" }, { ruta: "src/app.ts", tipo: "archivo" }, { ruta: "docs/guía de estilo.md", tipo: "archivo" }], truncado: false };
-    case "project_base_branches": return { branches: [{ reference: "refs/heads/main", name: "main", remote: null }, { reference: "refs/remotes/origin/dev", name: "origin/dev", remote: "origin" }], selected: "refs/heads/main", fetched_at: null };
+    case "project_base_branches": return { branches: [{ reference: "refs/heads/main", name: "main", remote: false, commit: "abc", ahead: null, behind: null }, { reference: "refs/remotes/origin/dev", name: "origin/dev", remote: true, commit: "def", ahead: 0, behind: 1 }], selected: "refs/heads/main", fetched_at: null };
     case "run_shell_command": {
       let s = args.session ? e.sessions.get(args.session) : null;
       if (!s) {
@@ -463,6 +488,16 @@ function invoke(m, command, args) {
       e.files.add(path);
       return path;
     }
+    case "guardar_adjunto": {
+      if (!IMAGE_MIMES.has(args.mime) && !DOCUMENT_MIMES.has(args.mime)) throw { code: "command_failed", detail: "chat.attachments.paste_unsupported_format" };
+      const bytes = Buffer.from(String(args.datos ?? ""), "base64");
+      if (!bytes.length) throw { code: "command_failed", detail: "chat.attachments.paste_empty" };
+      if (bytes.length > IMAGE_CAP) throw { code: "command_failed", detail: "chat.attachments.paste_too_large" };
+      const name = String(args.nombre ?? "").replace(/[^\p{L}\p{N}._-]+/gu, "-").replace(/^[._-]+|[._-]+$/g, "") || "adjunto";
+      const path = `/tmp/adjunto-${randomUUID().slice(0, 6)}-${name.includes(".") ? name : `${name}.${args.mime.split("/")[1]}`}`;
+      e.files.add(path);
+      return path;
+    }
     case "prepare_attachments":
       return args.paths.map((path) => {
         if (!e.files.has(path)) throw { code: "command_failed", detail: "preview.attachments.failed" };
@@ -470,7 +505,9 @@ function invoke(m, command, args) {
       });
     case "list_accounts": {
       const accounts = e.accounts[args.provider] ?? [];
-      return { provider: args.provider, env_var: null, shared_credential: null, secret_note: null, active: accounts[0]?.id ?? null, accounts };
+      const chosen = e.active?.[args.provider];
+      const active = accounts.some((a) => a.id === chosen) ? chosen : (accounts[0]?.id ?? null);
+      return { provider: args.provider, env_var: null, shared_credential: null, secret_note: null, active, accounts };
     }
     case "account_status": {
       const a = (e.accounts[args.provider] ?? []).find((x) => x.id === args.id);
@@ -522,6 +559,13 @@ function invoke(m, command, args) {
       const i = list.findIndex((a) => a.id === args.id);
       if (i < 0) throw { code: "command_failed", detail: "no such account" };
       list.splice(i, 1);
+      if (e.active?.[args.provider] === args.id) delete e.active[args.provider];
+      return null;
+    }
+    case "set_active_account": {
+      const list = e.accounts[args.provider] ?? [];
+      if (!list.some((a) => a.id === args.id)) throw { code: "command_failed", detail: "no such account" };
+      (e.active ??= {})[args.provider] = args.id;
       return null;
     }
   }
@@ -568,7 +612,7 @@ function wake(m) {
  * son de un workspace y sin él en el sobre no hay activo. `list_accounts` sale
  * vacía y lo demás falla con la frase del motor (medido en vm-alberto, 1198b04).
  */
-const ACCOUNT_COMMANDS = new Set(["list_accounts", "account_status", "account_limits", "add_account", "login_account", "remove_account"]);
+const ACCOUNT_COMMANDS = new Set(["list_accounts", "account_status", "account_limits", "add_account", "login_account", "remove_account", "set_active_account"]);
 const RELAY_WITHOUT_WORKSPACE = "Por el relay, la llamada tiene que decir de qué workspace es.";
 
 function withoutWorkspace(call) {
@@ -815,6 +859,6 @@ server.on("upgrade", (request, raw) => {
   upgrade(request, raw, match[1]);
 });
 
-server.listen(PORT, "0.0.0.0", () => console.log(`Danil Computers falso en http://127.0.0.1:${PORT} (VM apagada con espejo, Mac ${machines.cmp_mac.state})`));
+server.listen(PORT, "0.0.0.0", () => console.log(`Danil Machines falso en http://127.0.0.1:${PORT} (VM apagada con espejo, Mac ${machines.cmp_mac.state})`));
 
 export { machines, server };

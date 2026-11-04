@@ -1,4 +1,5 @@
 import Check from "lucide-solid/icons/check";
+import { SignalDot } from "../../ui/SignalDot";
 import ChevronDown from "lucide-solid/icons/chevron-down";
 import Pencil from "lucide-solid/icons/pencil";
 import Plus from "lucide-solid/icons/plus";
@@ -71,7 +72,7 @@ export default function SpaceMenu(props: {
             variant="chrome"
             size="compact"
             data-space-menu=""
-            class="h-7 min-w-0 max-w-44 shrink gap-1.5 px-2 text-ui font-semibold"
+            class="h-[30px] min-w-0 max-w-44 shrink gap-1.5 px-2 text-ui font-semibold"
             aria-label={t("spaces.bar.label", { workspace: props.workspace })}
             title={actual() ? spaceName(actual()!) : undefined}
             onDblClick={(e: MouseEvent) => {
@@ -82,7 +83,7 @@ export default function SpaceMenu(props: {
           >
             <span class="min-w-0 truncate">{actual() ? spaceName(actual()!) : t("spaces.default_name")}</span>
             <Show when={esperaEnOtro()}>
-              <span aria-hidden="true" class="size-1.5 shrink-0 rounded-full bg-info" />
+              <SignalDot tone="warning" />
             </Show>
             <ChevronDown size={13} aria-hidden="true" class="shrink-0 text-neutral-500" />
           </Button>

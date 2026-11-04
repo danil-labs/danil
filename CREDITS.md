@@ -19,7 +19,7 @@ not imply endorsement.
 The ZCode mark in `apps/desktop/src/ui/icons.tsx` reproduces the SVG in the header of the
 [official ZCode website](https://zcode.z.ai/en).
 It identifies the provider; the mark belongs to its owner and does not imply
-endorsement. It is separate from the license of Terminus and from Simple Icons.
+endorsement. It is separate from the license of Danil and from Simple Icons.
 
 ## Fonts bundled in the app
 

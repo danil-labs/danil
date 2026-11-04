@@ -2,11 +2,11 @@
 # The package name is the executable name (`terminus.exe`), which is what the
 # OS shows in task managers and firewall prompts.
 name = "terminus"
-version = "0.3.0-rc.1"
+version = "0.3.0"
 description = "Terminus desktop window: the client for the Seldon engine"
 authors = ["Danil"]
 license = "Apache-2.0"
-repository = "https://github.com/danil-labs/terminus"
+repository = "https://github.com/danil-labs/danil"
 edition = "2021"
 rust-version = "1.89"
 default-run = "terminus"
@@ -60,6 +60,10 @@ tauri-plugin-process = "2.3.1"
 tauri-plugin-notification = "2"
 tauri-plugin-clipboard-manager = "2.3.3"
 ureq = { version = "3.2", features = ["json"] }
+# La sesión de persona de Atención vive en el llavero del sistema (docs/desktop-bff-session.md).
+keyring = { version = "3.6", features = ["apple-native", "windows-native", "sync-secret-service", "crypto-rust"] }
+base64 = "0.22"
+getrandom = "0.3"
 # La vista en vivo de Typst arranca Tinymist en una carpeta de trabajo vacía.
 tempfile = "3"
 terminus-engine-client = { path = "crates/engine-client" }

@@ -1,11 +1,14 @@
 import { STATUS_LABELS, TEXT } from "@terminus/design";
 import { stepCounts } from "@terminus/chat/steps";
+import { commandSummary } from "@terminus/chat/command";
+import { readableToolName, toolSource, type ToolSource } from "@terminus/chat/tools";
 import { type ComponentRef, type ReactNode, memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, type LayoutChangeEvent, type NativeScrollEvent, type NativeSyntheticEvent, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { OPENED, type Follow, type Metrics, measuredFollow, shouldStick } from "../../lib/follow";
 import { lang, t, w } from "../../lib/i18n";
-import { type Step, type StepRow, type WorkLine, type WorkRun, bareCommand, elapsed, fileName, hitOf, runningStep, workFocus } from "../../lib/steps";
+import { type Line, type Step, type StepRow, type WorkLine, type WorkRun, elapsed, fileName, hitOf, runningStep, workFocus } from "../../lib/steps";
 import type { WorkSheetState } from "../../lib/workSheet";
+import { ToolBrandMark } from "../BrandMark";
 import { Icon, type IconName } from "../Icon";
 import { PermissionCard } from "../PermissionCard";
 import { type Theme, useTheme } from "../theme";
@@ -13,6 +16,9 @@ import { type Theme, useTheme } from "../theme";
 const MONO = Platform.select({ ios: "Menlo", default: "monospace" });
 
 const STEP_ICON: Record<StepRow["kind"], IconName> = { read: "file-text", search: "search", edit: "file-pen-line", run: "square-terminal", web: "globe", plan: "list-checks", other: "wrench", permission: "shield-check" };
+
+/** El servicio del que salió la fila, si la herramienta es de un MCP. */
+const toolOrigin = (step: Step | undefined): ToolSource | null => (step ? toolSource(step.name) : null);
 
 /** Lo que lleva o tardó, como en la ventana: el mismo formato en vivo y al cerrar. */
 export function formatDuration(ms: number) {
@@ -45,7 +51,7 @@ function runningEdit(name: string) {
 }
 
 /** En presente lo que sigue corriendo, como `enCurso` del escritorio. */
-function runningLabel(step: Step): { verb: string; subject: string | null } {
+function runningLabel(step: Step): { verb: string; subject: string | null; origin?: ToolSource } {
   const target = step.target;
   switch (step.kind) {
     case "read":
@@ -55,25 +61,29 @@ function runningLabel(step: Step): { verb: string; subject: string | null } {
     case "edit":
       return { verb: runningEdit(step.name), subject: target && fileName(target) };
     case "run":
-      return { verb: w("common.steps.running"), subject: target && bareCommand(target).split("\n")[0] };
+      return { verb: w("common.steps.running"), subject: target && commandSummary(target) };
     case "web":
       return { verb: w("common.steps.web_searching"), subject: target };
     case "plan":
       return { verb: w("common.steps.planning"), subject: null };
-    default:
-      return { verb: w("common.steps.using", { tool: step.name }), subject: target };
+    default: {
+      const origin = toolOrigin(step);
+      return origin
+        ? { verb: w("common.steps.using", { tool: readableToolName(origin.tool) }), subject: target, origin }
+        : { verb: w("common.steps.using", { tool: step.name }), subject: target };
+    }
   }
 }
 
-/** La cabecera de una fila, como `resumen` del escritorio: el verbo se lee, el sujeto va en mono. */
-function rowLabel(row: StepRow): { verb: string; subject: string | null } {
+/** La cabecera de una fila, como `resumen` del escritorio: el verbo se lee, el sujeto va en mono y el dueño va antes. */
+function rowLabel(row: StepRow): { verb: string; subject: string | null; origin?: ToolSource } {
   const n = row.steps.length;
   const first = row.steps[0];
   const target = first.target;
   if (n === 1 && first.running) return runningLabel(first);
   switch (row.kind) {
     case "permission": {
-      const subject = target && bareCommand(target).split("\n")[0];
+      const subject = target && commandSummary(target);
       const vars = { tool: first.name, who: first.by ?? "" };
       if (first.by) return { verb: w(first.allowed ? "common.steps.permission.allowed_by" : "common.steps.permission.denied_by", vars), subject };
       return { verb: w(first.allowed ? "common.steps.permission.allowed" : "common.steps.permission.denied", vars), subject };
@@ -87,13 +97,16 @@ function rowLabel(row: StepRow): { verb: string; subject: string | null } {
       return n === 1 ? { verb: pastEdit(first.name), subject: target && fileName(target) } : { verb: w("common.steps.edit.many", { count: files }), subject: null };
     }
     case "run":
-      return { verb: w("common.steps.run"), subject: target && bareCommand(target).split("\n")[0] };
+      return { verb: w("common.steps.run"), subject: target && commandSummary(target) };
     case "web":
       return n === 1 ? { verb: w("common.steps.web.one"), subject: target } : { verb: w("common.steps.web.many", { count: n }), subject: null };
     case "plan":
       return { verb: n === 1 ? w("common.steps.plan.one") : w("common.steps.plan.many", { count: n }), subject: null };
-    default:
+    default: {
+      const origin = n === 1 ? toolOrigin(first) : null;
+      if (origin) return { verb: w("common.steps.other.one", { tool: readableToolName(origin.tool) }), subject: target, origin };
       return n === 1 ? { verb: w("common.steps.other.one", { tool: first.name }), subject: target } : { verb: w("common.steps.other.many", { count: n }), subject: null };
+    }
   }
 }
 
@@ -144,6 +157,36 @@ export const WorkGroup = memo(function WorkGroup({ line, needle, paused, onOpen 
   );
 });
 
+/** Lo que el agente pensó en el turno, plegado: el mismo lenguaje que una fila de trabajo. */
+export const ReasoningRow = memo(function ReasoningRow({ line, open, onToggle }: { line: Extract<Line, { kind: "reasoning" }>; open: boolean; onToggle: (key: string) => void }) {
+  const theme = useTheme();
+  const summary = line.live
+    ? t("chat.reasoning.thinking")
+    : line.durationMs !== null
+      ? t("chat.reasoning.summary", { duration: formatDuration(line.durationMs) })
+      : t("chat.reasoning.title");
+  return (
+    <View style={styles.group}>
+      <Pressable
+        testID="reasoning"
+        accessibilityRole="button"
+        accessibilityState={{ expanded: open }}
+        accessibilityLabel={summary}
+        onPress={() => onToggle(line.key)}
+        style={({ pressed }) => [styles.head, pressed ? { backgroundColor: theme.muted } : null]}
+      >
+        <View style={open ? styles.chevronOpen : null}><Icon name="chevron-right" size={12} color={theme.textMuted} /></View>
+        <Text numberOfLines={2} style={[styles.summary, { color: theme.textMuted }]}>{summary}</Text>
+      </Pressable>
+      {open ? (
+        <View style={[styles.body, { borderLeftColor: theme.border }]}>
+          <Text selectable style={[styles.plain, { color: theme.textMuted }]}>{line.text}</Text>
+        </View>
+      ) : null}
+    </View>
+  );
+});
+
 /** Qué corre y cuánto lleva. El segundero vive aquí: que avance no repinta la conversación. */
 export function TurnStatus({ run, since, waiting }: { run: WorkRun | undefined; since: number | null; waiting: boolean }) {
   const theme = useTheme();
@@ -166,7 +209,7 @@ export function TurnStatus({ run, since, waiting }: { run: WorkRun | undefined; 
   return (
     <View style={styles.status} accessibilityRole="text" testID="turn-status">
       <View style={[styles.dot, { backgroundColor: theme.primary }]} />
-      <Text style={[styles.statusText, { color: theme.textMuted, flexShrink: 0 }]}>{label ? label.verb : `${t("state.working")}…`}</Text>
+      <Text style={[styles.statusText, { color: theme.textMuted, flexShrink: 0 }]}>{label?.origin ? `${label.origin.label} · ` : ""}{label ? label.verb : `${t("state.working")}…`}</Text>
       {label?.subject ? <Text numberOfLines={1} style={[styles.mono, { flexShrink: 1, color: theme.textMuted }]}>{label.subject}</Text> : null}
       {since !== null ? <Text style={[styles.duration, { color: theme.textMuted }]}>{`· ${formatDuration(elapsed(since, Math.max(now, Date.now())))}`}</Text> : null}
     </View>
@@ -178,7 +221,7 @@ const opensBody = (row: StepRow) => row.steps.length > 1 || (row.steps[0].target
 const isLongBody = (text: string) => text.split("\n").length > 6 || text.length > 260;
 
 const WorkRow = memo(function WorkRow({ row, id, open, full, needle, onToggle, onLayout, theme }: { row: StepRow; id: string; open: boolean; full: boolean; needle: string; onToggle: (id: string) => void; onLayout: (id: string, y: number) => void; theme: Theme }) {
-  const { verb, subject } = rowLabel(row);
+  const { verb, subject, origin } = rowLabel(row);
   const failed = row.steps.some((step) => step.ok === false);
   const running = row.steps.some((step) => step.running);
   const canOpen = opensBody(row);
@@ -187,7 +230,15 @@ const WorkRow = memo(function WorkRow({ row, id, open, full, needle, onToggle, o
   const head = (
     <>
       {canOpen ? <View style={open ? styles.chevronOpen : null}><Icon name="chevron-right" size={12} color={theme.textMuted} /></View> : <View style={styles.chevronGap} />}
-      {running ? <ActivityIndicator size="small" color={theme.primary} style={styles.spinner} /> : <View style={styles.icon}><Icon name={STEP_ICON[row.kind]} size={14} color={theme.textMuted} /></View>}
+      {running ? (
+        <ActivityIndicator size="small" color={theme.primary} style={styles.spinner} />
+      ) : origin ? (
+        <View style={styles.icon}><ToolBrandMark server={origin.server} size={14} color={theme.textMuted} /></View>
+      ) : (
+        <View style={styles.icon}><Icon name={STEP_ICON[row.kind]} size={14} color={theme.textMuted} /></View>
+      )}
+      {origin ? <Text numberOfLines={1} style={[styles.who, { color: theme.textMuted }]}>{origin.label}</Text> : null}
+      {origin ? <Text style={[styles.sep, { color: theme.textMuted }]}>·</Text> : null}
       <Text numberOfLines={1} style={[styles.verb, { color: theme.text, flexShrink: subject ? 0 : 1 }]}>{verb}</Text>
       {subject ? <Text numberOfLines={1} style={[styles.mono, styles.subject, { color: theme.textMuted }]}><Marked text={subject} needle={needle} theme={theme} /></Text> : <View style={{ flex: 1 }} />}
       {failed ? <Text style={[styles.failed, { color: theme.error }]}>{w("chat.timeline.failed")}</Text> : null}
@@ -327,6 +378,7 @@ const styles = StyleSheet.create({
   duration: { flexShrink: 0, fontSize: TEXT.label, fontVariant: ["tabular-nums"] },
   hit: { minHeight: 32, paddingLeft: 24, paddingRight: 4, paddingBottom: 8, paddingTop: 4 },
   mono: { fontFamily: MONO, fontSize: TEXT.label, lineHeight: 17 },
+  plain: { fontSize: TEXT.ui, lineHeight: 19 },
   status: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 4, paddingVertical: 6 },
   dot: { width: 7, height: 7, borderRadius: 4 },
   statusText: { fontSize: TEXT.ui, lineHeight: 18 },
@@ -344,6 +396,8 @@ const styles = StyleSheet.create({
   chevronOpen: { transform: [{ rotate: "90deg" }] },
   chevronGap: { width: 12 },
   icon: { width: 14, height: 14 },
+  who: { maxWidth: 108, flexShrink: 1, fontSize: TEXT.caption, lineHeight: 16 },
+  sep: { flexShrink: 0, fontSize: TEXT.caption, lineHeight: 16, opacity: 0.5 },
   verb: { fontSize: TEXT.ui, lineHeight: 18, fontWeight: "500" },
   subject: { flex: 1, minWidth: 0 },
   failed: { flexShrink: 0, marginLeft: 6, fontSize: TEXT.label },

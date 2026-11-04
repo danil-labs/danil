@@ -49,7 +49,7 @@ test("la memoria de la cuenta se ve, se edita y tiene historial con las máquina
     const app = await boot("listo", "web-memory-account", {}, undefined, {}, {
       web: true,
       workspaces: REGISTRY,
-      antes: (w) => {
+      beforeImport: (w) => {
         globalThis.WebSocket = f.Socket;
         w.terminusWeb = { endpoint: "https://computers.danil.ai", computers: [VM], getToken: async () => "tok" };
       },

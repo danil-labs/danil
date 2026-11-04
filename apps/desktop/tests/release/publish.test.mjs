@@ -49,24 +49,25 @@ try {
     mkdirSync(bundle, { recursive: true });
     mkdirSync(resources, { recursive: true });
     writeFileSync(join(resources, 'git-version.txt'), 'test git\n');
-    const archive = { windows: 'Terminus_9.9.9_x64-setup.exe', macos: 'Terminus.app.tar.gz', linux: 'Terminus_9.9.9_amd64.AppImage' }[row.name];
+    const archive = { windows: 'Danil_9.9.9_x64-setup.exe', macos: 'Danil.app.tar.gz', linux: 'Danil_9.9.9_amd64.AppImage' }[row.name];
     writeFileSync(join(bundle, archive), `Fixture for ${row.name}`);
     execFileSync(pnpm, [...cli, 'signer', 'sign', join(bundle, archive)], { env: { ...process.env, ...signing }, stdio: 'pipe' });
-    if (row.name === 'macos') writeFileSync(join(bundle, 'Terminus_9.9.9_universal.dmg'), row.name);
+    if (row.name === 'macos') writeFileSync(join(bundle, 'Danil_9.9.9_universal.dmg'), row.name);
     const code = step('build', 'collect-artifacts').replaceAll('${{ matrix.name }}', row.name);
     const env = { ...signing, PATH: `${bin}:${process.env.PATH}`, V: '9.9.9', MAC_ARCH: row.arch || '', GITHUB_STEP_SUMMARY: join(cwd, 'summary') };
     run(code, cwd, env);
     const files = readdirSync(join(cwd, 'release-assets'));
     if (row.name === 'macos') {
-      assert.deepEqual(files.sort(), ['Terminus.app.tar.gz', 'Terminus.app.tar.gz.sig', 'Terminus-macOS.dmg', 'Terminus-macOS-Intel.dmg', 'Terminus_9.9.9_universal.dmg'].sort());
-      assert.deepEqual(readFileSync(join(cwd, 'release-assets/Terminus-macOS.dmg')), readFileSync(join(cwd, 'release-assets/Terminus-macOS-Intel.dmg')));
-      await assert.rejects(verifyFile({ filePath: join(bundle, archive), sigFileB64: readFileSync(join(bundle, `${archive}.sig`), 'utf8'), publicKeyB64, expectedFileName: 'Terminus-Intel.app.tar.gz' }), /la firma es para|the signature is for/);
-      rmSync(join(bundle, 'Terminus_9.9.9_universal.dmg'));
+      // Los nombres estables `Terminus-*` siguen: terminus.danil.ai y los npx publicados los enlazan.
+      assert.deepEqual(files.sort(), ['Danil.app.tar.gz', 'Danil.app.tar.gz.sig', 'Danil-macOS.dmg', 'Danil-macOS-Intel.dmg', 'Terminus-macOS.dmg', 'Terminus-macOS-Intel.dmg', 'Danil_9.9.9_universal.dmg'].sort());
+      for (const name of ['Danil-macOS-Intel.dmg', 'Terminus-macOS.dmg', 'Terminus-macOS-Intel.dmg']) assert.deepEqual(readFileSync(join(cwd, 'release-assets/Danil-macOS.dmg')), readFileSync(join(cwd, 'release-assets', name)));
+      await assert.rejects(verifyFile({ filePath: join(bundle, archive), sigFileB64: readFileSync(join(bundle, `${archive}.sig`), 'utf8'), publicKeyB64, expectedFileName: 'Danil-Intel.app.tar.gz' }), /la firma es para|the signature is for/);
+      rmSync(join(bundle, 'Danil_9.9.9_universal.dmg'));
       run(code, cwd, env, 1);
     }
     if (row.name === 'linux') {
-      assert.deepEqual(files.sort(), ['Terminus-Linux-x86_64.AppImage', 'Terminus_9.9.9_amd64.AppImage', 'Terminus_9.9.9_amd64.AppImage.sig'].sort());
-      assert.deepEqual(readFileSync(join(cwd, 'release-assets/Terminus-Linux-x86_64.AppImage')), readFileSync(join(cwd, 'release-assets/Terminus_9.9.9_amd64.AppImage')));
+      assert.deepEqual(files.sort(), ['Danil-Linux-x86_64.AppImage', 'Terminus-Linux-x86_64.AppImage', 'Danil_9.9.9_amd64.AppImage', 'Danil_9.9.9_amd64.AppImage.sig'].sort());
+      for (const name of ['Danil-Linux-x86_64.AppImage', 'Terminus-Linux-x86_64.AppImage']) assert.deepEqual(readFileSync(join(cwd, 'release-assets', name)), readFileSync(join(cwd, 'release-assets/Danil_9.9.9_amd64.AppImage')));
       rmSync(join(bundle, `${archive}.sig`));
       run(code, cwd, env, 1);
     }
@@ -78,7 +79,7 @@ try {
 
   // El manifiesto, con las notas en los dos idiomas y con la transición: sin
   // nota en inglés, `notes` cae a la de español y `notes_by_locale.en` queda vacío.
-  const base = { V: '9.9.9', GITHUB_REPOSITORY: 'danil-labs/terminus' };
+  const base = { V: '9.9.9', GITHUB_REPOSITORY: 'danil-labs/danil' };
   run(step('publish', 'verify-signature-names'), merged, base);
   run(step('publish', 'build-manifest'), merged, { ...base, NOTE_ES: 'Prueba', NOTE_EN: 'Test' });
   let manifest = JSON.parse(readFileSync(join(merged, 'release-assets/latest.json'), 'utf8'));

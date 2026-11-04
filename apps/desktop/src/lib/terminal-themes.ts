@@ -12,7 +12,7 @@ export type TemaDeTerminal = { id: string; name: string };
 
 /** El primero es el que se pinta sin elección. */
 export const TEMAS_DE_TERMINAL: readonly TemaDeTerminal[] = [
-  { id: "terminus", name: "Terminus" },
+  { id: "terminus", name: "Danil" },
   { id: "tomorrow-night-blue", name: "Tomorrow Night Blue" },
   { id: "nord", name: "Nord" },
   { id: "gruvbox-dark", name: "Gruvbox Dark" },

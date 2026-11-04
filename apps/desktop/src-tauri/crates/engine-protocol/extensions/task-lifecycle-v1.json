@@ -1,0 +1,83 @@
+{
+  "feature": "task_lifecycle_v1",
+  "version": 1,
+  "commands": [
+    {
+      "name": "task_lifecycle_preview",
+      "kind": "invoke",
+      "scope": "workspace",
+      "audience": "window",
+      "authority": "admin",
+      "durable": false,
+      "enforcement": "server",
+      "relay": true,
+      "parameters": [
+        {
+          "key": "project",
+          "name": "project",
+          "type": "String"
+        },
+        {
+          "key": "id",
+          "name": "id",
+          "type": "String"
+        },
+        {
+          "key": "action",
+          "name": "action",
+          "type": "String"
+        }
+      ],
+      "path": "workspace::task_family::task_lifecycle_preview",
+      "output": "-> Result < Value , Failure >",
+      "async": false,
+      "channel": null
+    },
+    {
+      "name": "task_lifecycle_apply",
+      "kind": "invoke",
+      "scope": "workspace",
+      "audience": "window",
+      "authority": "admin",
+      "durable": false,
+      "enforcement": "server",
+      "relay": true,
+      "parameters": [
+        {
+          "key": "project",
+          "name": "project",
+          "type": "String"
+        },
+        {
+          "key": "id",
+          "name": "id",
+          "type": "String"
+        },
+        {
+          "key": "action",
+          "name": "action",
+          "type": "String"
+        },
+        {
+          "key": "consent",
+          "name": "consent",
+          "type": "String"
+        },
+        {
+          "key": "discard",
+          "name": "discard",
+          "type": "bool"
+        }
+      ],
+      "path": "workspace::task_family::task_lifecycle_apply",
+      "output": "-> Result < Value , Failure >",
+      "async": false,
+      "channel": null
+    }
+  ],
+  "name": "task_lifecycle",
+  "features": [
+    "task_lifecycle_v1"
+  ],
+  "events": []
+}

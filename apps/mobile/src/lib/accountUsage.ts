@@ -3,15 +3,38 @@ import type { AccountLimits, AiAccount } from "@terminus/protocol";
 import { accountWorkspace, accountsOf, limitsSnapshotOf } from "./engine.ts";
 import type { Host } from "./hosts.ts";
 
-export type ProviderUsage = { groups: AccountGroup<AiAccount>[]; limits: Record<string, AccountLimits | null>; cachedAt: Record<string, number | null> };
+export type ProviderUsage = {
+  groups: AccountGroup<AiAccount>[];
+  limits: Record<string, AccountLimits | null>;
+  cachedAt: Record<string, number | null>;
+  /** `list_accounts.active` de cada máquina. `null` si no hay cuenta activa o la máquina quedó fuera del workspace. */
+  activeByMachine: Record<string, string | null>;
+};
+
+/**
+ * La cuenta activa de esta máquina, para la barra de uso.
+ * Con id activo, solo el grupo que lo tiene en esa máquina: si no está, `null` (no se sustituye por otra).
+ * Sin id, y con un solo grupo, ese grupo.
+ */
+export function activeUsage(usage: ProviderUsage, machine: string): AccountGroup<AiAccount> | null {
+  const active = usage.activeByMachine[machine] ?? null;
+  if (active) return usage.groups.find((group) => group.members.some((member) => member.machine === machine && member.id === active)) ?? null;
+  return usage.groups.length === 1 ? usage.groups[0] : null;
+}
 
 /** La sesión y el consumo se leen de la misma máquina; las consultas se escalonan por proveedor. */
 export async function providerUsage(hosts: Host[], provider: string, scopeOf: (host: Host) => string | null = (host) => accountWorkspace(host, null)): Promise<ProviderUsage> {
-  const lists = await Promise.all(hosts.map(async (host) => ({
-    machine: host.id,
-    on: host.power() === "on",
-    accounts: scopeOf(host) || host.linked == null ? (await accountsOf(host, scopeOf(host), provider).catch(() => null))?.accounts ?? [] : [],
-  })));
+  const activeByMachine: Record<string, string | null> = {};
+  const lists = await Promise.all(hosts.map(async (host) => {
+    const inScope = Boolean(scopeOf(host) || host.linked == null);
+    if (!inScope) {
+      activeByMachine[host.id] = null;
+      return { machine: host.id, on: host.power() === "on", accounts: [] as AiAccount[] };
+    }
+    const list = await accountsOf(host, scopeOf(host), provider).catch(() => null);
+    activeByMachine[host.id] = list?.active ?? null;
+    return { machine: host.id, on: host.power() === "on", accounts: list?.accounts ?? [] };
+  }));
   const readings = new Map<string, Awaited<ReturnType<typeof limitsSnapshotOf>>>();
   for (const list of lists) {
     const host = hosts.find((host) => host.id === list.machine)!;
@@ -36,5 +59,5 @@ export async function providerUsage(hosts: Host[], provider: string, scopeOf: (h
     limits[group.key] = snapshot?.value ?? null;
     cachedAt[group.key] = snapshot?.cachedAt ?? null;
   }
-  return { groups, limits, cachedAt };
+  return { groups, limits, cachedAt, activeByMachine };
 }

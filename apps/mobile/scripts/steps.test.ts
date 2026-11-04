@@ -40,8 +40,8 @@ test("sin orden registrado, los pasos van delante del texto; un `!` trae su sali
   assert.deepEqual(lines.map((l) => l.kind), ["steps", "message"]);
   const shell = linesOfTurn({ role: "user", text: "ls", shell: { cwd: "/", output: "a\nb", exit_code: 0, duration_ms: 3, truncated: false } }, "s", []);
   assert.deepEqual(shell, [{ key: "s", kind: "shell", command: "ls", output: "a\nb", exitCode: 0 }]);
-  assert.equal(bareCommand('/bin/zsh -lc "cd \\"/a b\\" && git status"'), 'cd \\"/a b\\" && git status');
-  assert.equal(bareCommand("cd /repo && git status"), "git status");
+  assert.equal(bareCommand('/bin/zsh -lc "cd \\"/a b\\" && git status"'), 'cd "/a b" && git status');
+  assert.equal(bareCommand("cd /repo && git status"), "cd /repo && git status");
 });
 
 test("en vivo: los pasos corren y cierran, y el texto anterior queda como avance", () => {
@@ -212,6 +212,20 @@ test("en curso cada tramo es un grupo y el avance sigue a la vista; al cerrar se
   assert.equal(runningStep(thread.runs[0])?.target, "dos");
 });
 
+test("un fallo sin texto sigue en el hilo; la línea del cupo retira el que ya resolvió", () => {
+  const fallo = { clase: "sin_cupo", detail: "429" };
+  const stopped = workRuns([user("u"), { id: "f", role: "system", text: "", meta: "fallo", fallo }], [], false);
+  const last = stopped.lines.at(-1);
+  assert.ok(last?.kind === "message" && last.fallo?.clase === "sin_cupo" && last.meta === "fallo");
+  const continued = workRuns(
+    [user("u"), { id: "f", role: "system", text: "", meta: "fallo", fallo }, { id: "q", role: "system", text: "", meta: "cupo", quota: { from: "a", to: "b" } }],
+    [],
+    false,
+  );
+  const messages = continued.lines.filter((line) => line.kind === "message");
+  assert.deepEqual(messages.map((line) => (line.kind === "message" ? line.meta : null)), [undefined, "cupo"]);
+});
+
 test("una respuesta intermedia queda en el chat y en la hoja; la última, solo en el chat", () => {
   const { lines, runs } = workRuns([user("u"), agent("a", ["uno"], "Primera"), agent("b", ["dos"], "Segunda")], [], false);
   assert.deepEqual(lines.map((l) => l.kind), ["message", "work", "message", "work", "message"]);
@@ -302,4 +316,73 @@ test("Buscar elige la nota coincidente entre varias que comparten at", () => {
   assert.equal(hit.text, "Segunda compartido.", "la nota precede al paso que también coincide");
   assert.equal(workFocus(runs[0].items, hit.at, "compartido")?.id, notes[1].id);
   assert.equal(workFocus(runs[0].items, hit.at, "echo")?.kind, "row", "si solo coincide el paso, conserva su fila");
+});
+
+
+test("el razonamiento del turno es una fila plegada encima de la respuesta", () => {
+  const turn: Turn = {
+    id: "a", role: "agent", text: "Listo",
+    tools: [{ name: "Read", target: "a.ts" }],
+    pieces: [{ tool: 0 }, { text: "Listo" }],
+    reasoning: [{ text: "Miro el archivo.", duration_ms: 1200 }, { text: "Ya sé qué cambiar.", duration_ms: 800 }],
+  };
+  const lines = linesOfTurn(turn, "a", []);
+  assert.deepEqual(lines.map((l) => l.kind), ["steps", "reasoning", "message"], "una sola fila por turno, encima del texto");
+  const row = lines[1];
+  assert.ok(row.kind === "reasoning");
+  assert.equal(row.key, "a:reasoning");
+  assert.equal(row.text, "Miro el archivo.\n\nYa sé qué cambiar.");
+  assert.equal(row.durationMs, 2000, "la duración es la suma de los bloques");
+  assert.equal(row.live, false);
+});
+
+test("sin razonamiento no hay fila; un turno viejo o en blanco se pinta igual", () => {
+  const plain = linesOfTurn({ id: "a", role: "agent", text: "Listo" }, "a", []);
+  assert.deepEqual(plain.map((l) => l.kind), ["message"]);
+  const empty = linesOfTurn({ id: "b", role: "agent", text: "Listo", reasoning: [] }, "b", []);
+  assert.deepEqual(empty.map((l) => l.kind), ["message"]);
+  const blank = linesOfTurn({ id: "c", role: "agent", text: "Listo", reasoning: [{ text: "  \n " }] }, "c", []);
+  assert.deepEqual(blank.map((l) => l.kind), ["message"], "un bloque en blanco no deja fila");
+});
+
+test("sin `duration_ms` el razonamiento no inventa duración", () => {
+  const [row] = linesOfTurn({ id: "a", role: "agent", text: "", reasoning: [{ text: "Pienso." }] }, "a", []);
+  assert.ok(row.kind === "reasoning");
+  assert.equal(row.durationMs, null);
+});
+
+test("mientras el turno corre el razonamiento se marca en vivo; al cerrar, no", () => {
+  const turn: Turn = { id: "a", role: "agent", text: "Listo", reasoning: [{ text: "Pienso." }] };
+  const open = workRuns([user("u"), turn], [], true).lines.find((l) => l.kind === "reasoning");
+  assert.ok(open?.kind === "reasoning" && open.live, "el turno sigue y el resumen dice que está pensando");
+  const closed = workRuns([user("u"), turn], [], false).lines.find((l) => l.kind === "reasoning");
+  assert.ok(closed?.kind === "reasoning" && !closed.live);
+});
+
+test("dos lecturas con el mismo razonamiento dejan la misma fila; si cambia, la fila cambia", () => {
+  const turns: Turn[] = [user("u"), { id: "a", role: "agent", text: "Listo", reasoning: [{ text: "Pienso.", duration_ms: 500 }] }, user("v")];
+  const one = workRuns(turns, [], false).lines.find((l) => l.kind === "reasoning");
+  const two = workRuns(turns, [], false).lines.find((l) => l.kind === "reasoning");
+  assert.ok(one && two);
+  assert.equal(JSON.stringify(one), JSON.stringify(two), "la misma lectura reutiliza la fila (`sameLine`)");
+  const changed: Turn[] = [user("u"), { ...turns[1], reasoning: [{ text: "Pienso otra cosa.", duration_ms: 500 }] }, user("v")];
+  const three = workRuns(changed, [], false).lines.find((l) => l.kind === "reasoning");
+  assert.notEqual(JSON.stringify(one), JSON.stringify(three), "si el razonamiento cambia, la fila se actualiza al releer");
+});
+
+test("el razonamiento no entra en Buscar ni en los conteos del turno", () => {
+  const turn: Turn = { id: "a", role: "agent", text: "Listo", tools: [{ name: "Read", target: "a.ts" }], reasoning: [{ text: "Una pista secreta.", duration_ms: 10 }] };
+  const { lines, runs } = workRuns([user("u"), turn], [], false);
+  const row = lines.find((l) => l.kind === "reasoning");
+  assert.ok(row);
+  assert.equal(lineMatches(row, "secreta"), false);
+  assert.equal(runs[0].steps.length, 1, "no suma pasos");
+  assert.deepEqual(runs[0].items.map((i) => i.kind), ["row"], "no entra en la hoja del turno");
+  assert.equal(works(lines).length, 1);
+});
+
+test("el razonamiento en vivo se ignora: llega al releer tras `done`", () => {
+  const live: LivePiece[] = [{ text: "Sigo." }];
+  assert.equal(applyLive(live, { kind: "reasoning", text: "Pienso." }), live, "el stream no lo concatena");
+  assert.deepEqual(linesOfLive(live).map((l) => l.kind), ["message"]);
 });

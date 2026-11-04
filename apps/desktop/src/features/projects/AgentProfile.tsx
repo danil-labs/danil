@@ -445,7 +445,7 @@ export default function AgentProfile(props: {
                   </pre>
                   <span class="text-caption text-neutral-500">
                     {props.agent.managed
-                      ? t("projects.agents.profile_prompt_radiant")
+                      ? t("projects.agents.profile_prompt_harness")
                       : t("projects.agents.profile_prompt_where")}
                   </span>
                 </>

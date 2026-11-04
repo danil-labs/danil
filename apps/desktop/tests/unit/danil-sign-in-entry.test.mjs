@@ -95,7 +95,7 @@ async function personalize(name, table) {
 
 test("«Personaliza» no ofrece Danil: queda en Configuración, y «Empezar» entra directo a la app", async () => {
   const engine = danil({ state: "disconnected", name: "alberto-mbp" });
-  const { w, fallos } = await personalize("danil-onboarding", engine.table);
+  const { w, failures } = await personalize("danil-onboarding", engine.table);
   assert.equal(heading(w), "Personaliza Danil.", w.document.body.textContent.slice(0, 600));
   assert.equal(w.document.querySelector("[data-danil-onboarding]"), null);
   assert.ok(!button(w, "Iniciar sesión con Danil"));
@@ -104,7 +104,7 @@ test("«Personaliza» no ofrece Danil: queda en Configuración, y «Empezar» en
   await sleep(300);
   assert.ok(!w.document.body.textContent.includes("Personaliza Danil."), "starting enters the app");
   assert.ok(!engine.calls.some((c) => c.command === "danil_connect_start"));
-  assert.deepEqual(fallos, []);
+  assert.deepEqual(failures, []);
 });
 
 test("el pie de la barra lateral solo aparece con sesión de Danil y abre su sección", async () => {
@@ -124,11 +124,11 @@ test("el pie de la barra lateral solo aparece con sesión de Danil y abre su sec
   assert.equal(w.document.querySelector(`[data-profile-menu] button[aria-label="${PROFILE}"]`), null, "the person takes the generic avatar's place");
   assert.equal(foot().getAttribute("title"), "alberto@danil.ai · en línea con Danil");
   assert.equal(foot().getAttribute("aria-label"), "alberto@danil.ai · en línea con Danil", "the collapsed entry is named by its label");
-  assert.ok(foot().querySelector(".bg-success"), "the online dot");
+  assert.ok(foot().querySelector(".signal-dot[data-tone=\"success\"]"), "the online dot");
 
   engine.become(app, { state: "connected", computer_id: "cmp_1", name: "Mac", email: "alberto@danil.ai", online: false });
   await sleep(300);
-  assert.ok(!foot().querySelector(".bg-success"), "offline drops the dot's color");
+  assert.ok(!foot().querySelector(".signal-dot[data-tone=\"success\"]"), "offline drops the dot's color");
 
   foot().click();
   await sleep(300);
@@ -167,12 +167,12 @@ test("el pie muestra el nombre y la foto de la cuenta de Danil", async () => {
   await sleep(300);
   assert.equal(foot().getAttribute("title"), "Alberto Ceballos · en línea con Danil");
   assert.equal(foot().querySelector("img")?.getAttribute("src"), "data:image/png;base64,UFJPVg==");
-  assert.ok(foot().querySelector(".bg-success"), "the online dot stays over the photo");
+  assert.ok(foot().querySelector(".signal-dot[data-tone=\"success\"]"), "the online dot stays over the photo");
   assert.ok(!engine.calls.some((c) => c.command === "danil_account_refresh"), "the footer does not ask the control plane on every start");
 
   engine.become(app, person);
   await sleep(300);
   assert.equal(foot().querySelector("img"), null);
   assert.equal(foot().querySelector("[data-account-avatar]")?.textContent, "AC", "without a photo, the initials");
-  assert.deepEqual(app.fallos, []);
+  assert.deepEqual(app.failures, []);
 });

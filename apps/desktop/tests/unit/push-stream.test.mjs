@@ -17,8 +17,8 @@ test("con push los lotes llegan a los oyentes, el filtro sigue a la tarea y la t
   }));
   await sleep(600);
   await openTask(app, "t1");
-  assert.ok(app.comandos.includes("load_history"), "abrir no pidió load_history");
-  assert.ok(!app.comandos.includes("load_session"), "con push no debe leer la transcripción entera");
+  assert.ok(app.commands.includes("load_history"), "abrir no pidió load_history");
+  assert.ok(!app.commands.includes("load_session"), "con push no debe leer la transcripción entera");
   assert.ok(text(app).includes("Respuesta 3"));
   assert.ok(filters.some((sessions) => sessions.includes("t1")), `el filtro no incluye la tarea abierta: ${JSON.stringify(filters)}`);
 
@@ -36,5 +36,5 @@ test("con push los lotes llegan a los oyentes, el filtro sigue a la tarea y la t
   const before = stream.calls.length;
   await sleep(500);
   assert.ok(stream.calls.length - before <= 15, `${stream.calls.length - before} llamadas en 500 ms`);
-  assert.deepEqual(app.fallos, []);
+  assert.deepEqual(app.failures, []);
 });

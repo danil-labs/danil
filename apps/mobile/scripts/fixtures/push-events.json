@@ -1,0 +1,19 @@
+{
+  "comment": "Misma regla en computers (src/push.ts) y terminus (noticer, apps/mobile/src/lib/engine.ts): el mismo archivo en los dos repos.",
+  "events": [
+    { "name": "session", "workspace": "w1", "payload": { "session": "t1", "project": "f1" } },
+    { "name": "attention", "workspace": null, "payload": [{ "workspace": "w1", "tasks": [{ "session": "t1", "project": "f1", "state": "unseen" }] }, { "workspace": "w2", "tasks": [] }] },
+    { "name": "attention", "workspace": null, "payload": [{ "workspace": "w1", "tasks": [{ "session": "t1", "project": "f1", "state": "approving" }] }, { "workspace": "w2", "tasks": [] }] },
+    { "name": "attention", "workspace": null, "payload": [{ "workspace": "w1", "tasks": [{ "session": "t1", "project": "f1", "state": "approving" }] }, { "workspace": "w2", "tasks": [{ "session": "t2", "project": "f2", "state": "asked" }] }] },
+    { "name": "chat", "workspace": "w1", "payload": { "workspace": "w1", "session": "t1", "kind": "delta", "text": "hola", "ok": null, "request_id": "r1" } },
+    { "name": "chat", "workspace": "w1", "payload": { "workspace": "w1", "session": "t1", "kind": "done", "text": "", "ok": false, "request_id": "r1" } },
+    { "name": "chat", "workspace": "w1", "payload": { "workspace": "w1", "session": "t1", "kind": "done", "text": "", "ok": true, "request_id": "r2" } },
+    { "name": "attention", "workspace": null, "payload": [{ "workspace": "w1", "tasks": [{ "session": "t1", "project": "f1", "state": "failed" }] }] }
+  ],
+  "notices": [
+    { "kind": "approving", "workspace": "w1", "session": "t1", "folder": "f1" },
+    { "kind": "asked", "workspace": "w2", "session": "t2", "folder": "f2" },
+    { "kind": "finished", "workspace": "w1", "session": "t1", "folder": "f1" },
+    { "kind": "failed", "workspace": "w1", "session": "t1", "folder": "f1" }
+  ]
+}

@@ -1,6 +1,6 @@
 import { TEXT } from "@terminus/design";
 import { type ReactNode, useEffect, useRef, useState } from "react";
-import { KeyboardAvoidingView, Modal, PanResponder, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from "react-native";
+import { Animated, Easing, KeyboardAvoidingView, Modal, PanResponder, Platform, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { t } from "../lib/i18n";
 import { Icon, type IconName } from "./Icon";
@@ -15,6 +15,10 @@ import { useTheme } from "./theme";
  * buscado; la búsqueda se borra al cerrar. Con `detents` (fracciones de la
  * ventana, de menor a mayor) tiene alto fijo, cambia de altura desde el asa y
  * `children` pone su propio scroller: en web no existe el `formSheet`.
+ *
+ * El velo y la hoja se animan por separado: con el `slide` del `Modal` todo se
+ * desliza junto y el velo se ve como una caja oscura que sube desde abajo.
+ * Aquí el velo se aclara en su sitio y solo la hoja sube.
  */
 export function Sheet({
   visible,
@@ -34,6 +38,15 @@ export function Sheet({
   const theme = useTheme();
   const insets = useSafeAreaInsets();
   const [query, setQuery] = useState("");
+  // El `Modal` sigue montado mientras la hoja baja; `progress` va de 0 (fuera) a 1 (puesta).
+  const [mounted, setMounted] = useState(visible);
+  const progress = useRef(new Animated.Value(visible ? 1 : 0)).current;
+  useEffect(() => {
+    if (visible) setMounted(true);
+    const animation = Animated.timing(progress, { toValue: visible ? 1 : 0, duration: visible ? 240 : 180, easing: visible ? Easing.out(Easing.cubic) : Easing.in(Easing.cubic), useNativeDriver: Platform.OS !== "web" });
+    animation.start(({ finished }) => { if (finished && !visible) setMounted(false); });
+    return () => animation.stop();
+  }, [visible, progress]);
   useEffect(() => {
     if (!visible) setQuery("");
   }, [visible]);
@@ -59,10 +72,12 @@ export function Sheet({
     }),
   ).current;
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose} statusBarTranslucent navigationBarTranslucent>
+    <Modal visible={mounted} transparent animationType="none" onRequestClose={onClose} statusBarTranslucent navigationBarTranslucent>
       <KeyboardAvoidingView style={styles.root} behavior="padding">
-        <Pressable style={styles.backdrop} onPress={onClose} accessibilityRole="button" />
-        <View style={[styles.sheet, detents ? { height, maxHeight: height } : null, { backgroundColor: theme.surface, paddingBottom: detents ? insets.bottom : insets.bottom + 12, borderColor: theme.border }]}>
+        <Animated.View pointerEvents="box-none" style={[styles.backdrop, { opacity: progress }]}>
+          <Pressable style={StyleSheet.absoluteFill} onPress={onClose} accessibilityRole="button" />
+        </Animated.View>
+        <Animated.View style={[styles.sheet, detents ? { height, maxHeight: height } : null, { backgroundColor: theme.surface, paddingBottom: detents ? insets.bottom : insets.bottom + 12, borderColor: theme.border, transform: [{ translateY: progress.interpolate({ inputRange: [0, 1], outputRange: [windowHeight, 0] }) }] }]}>
           {detents ? (
             <View {...pan.panHandlers} style={styles.handleArea}>
               <Pressable testID="sheet-handle" accessibilityRole="button" accessibilityLabel={t(detent === 0 ? "sheet.expand" : "sheet.collapse")} onPress={() => setDetent((now) => (now === 0 ? 1 : 0))} style={styles.handle}>
@@ -81,7 +96,7 @@ export function Sheet({
               {typeof children === "function" ? children(query) : children}
             </ScrollView>
           )}
-        </View>
+        </Animated.View>
       </KeyboardAvoidingView>
     </Modal>
   );

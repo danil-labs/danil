@@ -1,6 +1,6 @@
 /**
  * Las conexiones de orquestadores externos de la persona (Hermes, OpenClaw,
- * ChatGPT…) que usan Danil por el MCP remoto de Danil Computers. Una conexión
+ * ChatGPT…) que usan Danil por el MCP remoto de Danil Machines. Una conexión
  * nace `pending` cuando el orquestador llama por primera vez y no hace nada
  * hasta que la persona le da máquinas, workspace y modo de permisos.
  */
@@ -74,7 +74,8 @@ export const PERMISSION_MODES = ["lectura", "manual", "ediciones", "auto"] as co
 /** La URL que se pega en el orquestador. */
 export function mcpUrl(endpoint: string): string {
   const url = apiUrl(endpoint, "/mcp");
-  return url === "https://computers.danil.ai/mcp" ? "https://mcp.danil.ai/mcp" : url;
+  // Producción (machines.danil.ai y su alias computers.danil.ai) publica el MCP en mcp.danil.ai.
+  return url === "https://machines.danil.ai/mcp" || url === "https://computers.danil.ai/mcp" ? "https://mcp.danil.ai/mcp" : url;
 }
 
 const rows = (body: unknown): Connection[] =>
@@ -113,4 +114,22 @@ export function connectionAudit(endpoint: string, token: string, id: string, f: 
     (body) => (Array.isArray(body) ? (body as AuditEntry[]) : []),
     f,
   );
+}
+
+export type ConnectionCapabilities = {
+  features: string[];
+  limits: { max_destinations: number; max_destination_bindings: number };
+};
+
+/** Un 404 distingue el servicio anterior; las demás fallas no son falta de soporte. */
+export function connectionCapabilities(endpoint: string, token: string, f: Fetch = globalFetch): Promise<Answer<ConnectionCapabilities>> {
+  return request(apiUrl(endpoint, "/v1/connections/capabilities"), token, "GET", (body) => {
+    const value = body as Partial<ConnectionCapabilities> | null;
+    if (!Array.isArray(value?.features) || !value.features.every(v => typeof v === "string") ||
+      !Number.isInteger(value.limits?.max_destinations) || (value.limits?.max_destinations ?? 0) < 1 ||
+      !Number.isInteger(value.limits?.max_destination_bindings) || (value.limits?.max_destination_bindings ?? 0) < 1) {
+      throw new Error("bad_capabilities");
+    }
+    return value as ConnectionCapabilities;
+  }, f);
 }

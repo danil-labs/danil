@@ -12,8 +12,9 @@ test("subir hasta arriba pide la página anterior y la antepone sin remontar lo 
     service_filter: null,
     load_history: ({ id, before }) => {
       pages.push(before);
-      return before === 30
-        ? session(id, turns(0, 30), { total: 60, start: 0, end: 30, limit: 150, has_more: false })
+      // La página solapa un turno con lo cargado: es lo que prueba que encajan.
+      return before === 31
+        ? session(id, turns(0, 31), { total: 60, start: 0, end: 31, limit: 150, has_more: false })
         : session(id, turns(30, 60), { total: 60, start: 30, end: 60, limit: 150, has_more: true });
     },
   }));
@@ -39,9 +40,9 @@ test("subir hasta arriba pide la página anterior y la antepone sin remontar lo 
     for (const edge of edges) edge([{ isIntersecting: true }]);
     await sleep(150);
   }
-  assert.equal(pages.filter((before) => before === 30).length, 1, `páginas pedidas: ${JSON.stringify(pages)}`);
-  assert.ok(pages.every((before) => before === null || before === 30));
+  assert.equal(pages.filter((before) => before === 31).length, 1, `páginas pedidas: ${JSON.stringify(pages)}`);
+  assert.ok(pages.every((before) => before === null || before === 31));
   assert.ok(text(app).includes("Pregunta 0"), "la página anterior no llegó al hilo");
   assert.ok(last.isConnected, "anteponer remontó lo que ya estaba pintado");
-  assert.deepEqual(app.fallos, []);
+  assert.deepEqual(app.failures, []);
 });

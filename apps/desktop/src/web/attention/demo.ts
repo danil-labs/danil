@@ -62,7 +62,7 @@ export function installDemo(labels: { workspace: string; space: string; folder: 
     load_session: { id:task.id, provider:'codex',sources:[],model:'gpt-5.6',effort:null,permission_mode:null,turns:[{role:'user',text:labels.task},{role:'assistant',text:labels.answer}] },
     task_history:{history:{archived:false,events:[],recovery:null},branch:null,path:null,available:true,owned:false,restorable:false,incomplete:false},
     session_usage:null, workspace_usage:null, session_folder:null, list_session_git: [], list_task_git_status: [], list_machine_agents: {own:[{agent,profile,folders:[project.id],all_folders:true,blocked:[],catalog_taken:null}],repository:[]},
-    list_integrations:{workspace:workspace.id,plugins:[]}, list_skills:{skills:[],errors:[]}, list_mcp_servers:[], list_accounts:[], list_provider_logins:[],
+    list_integrations:{workspace:workspace.id,plugins:[]}, list_skills:{skills:[],errors:[]}, list_mcp_servers:[], list_known_mcp:[], list_mcp_providers:[], account_credentials_list:{credentials:[],machines:[]}, list_accounts:{provider:'codex',env_var:'',shared_credential:null,secret_note:null,accounts:Array.from({length:5},(_,i)=>({id:`demo-account-${i}`,label:`Cuenta ${i+1}`,created_at:i,email:null})),active:'demo-account-0'}, tasks_awaiting_quota:[], account_status:{id:'demo-account-0',authenticated:true,detail:'sesión iniciada'}, account_limits:{mode:'read',windows:[{label:'esta semana',used_pct:40,resets_at:null}],at:0}, list_provider_logins:[],
     update_pending:false, app_version:'alfa-demo', service_poll:{cursor:0,gap:false,replay:false,runtime:'demo',reset:false},
   };
   const local = new Set(['window_ready','window_vitals','window_background','plugin:event|listen','plugin:event|unlisten']);
@@ -71,7 +71,7 @@ export function installDemo(labels: { workspace: string; space: string; folder: 
     if (Object.hasOwn(replies, command)) return structuredClone(replies[command]);
     if (local.has(command)) return null;
     trace.denied.push(command);
-    throw { clave: 'alpha.demo_denied', message: labels.denied, detail: 'demo_read_only' };
+    throw { clave: 'web.alpha.demo_denied', message: labels.denied, detail: 'demo_read_only' };
   } });
   return storage;
 }

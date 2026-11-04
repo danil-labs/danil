@@ -1,4 +1,7 @@
 /**
+ * Sin uso en producto: ningún cliente aparta una máquina por su contrato; solo
+ * un `version_mismatch` real del relay o del motor la marca. No es compuerta.
+ *
  * Si el motor de una computadora habla el contrato con el que se hizo un
  * cliente: `contract` es el hash que dio su último `hello` (`GET /v1/computers`)
  * y `own`, el de `commands.json` del cliente.

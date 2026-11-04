@@ -386,8 +386,8 @@ async function measure() {
     await sleep(20);
   }
   removed = removed.filter((r) => r.ref.deref() && !r.ref.deref().isConnected);
-  const tauri = app.comandos.filter((c) => c === "plugin:event|listen").length -
-    app.comandos.filter((c) => c === "plugin:event|unlisten").length;
+  const tauri = app.commands.filter((c) => c === "plugin:event|listen").length -
+    app.commands.filter((c) => c === "plugin:event|unlisten").length;
   return {
     nodes: doc.getElementsByTagName("*").length,
     detached: removed.filter((r) => r.cycle < cycleNow).length,
@@ -424,14 +424,14 @@ for (let i = 0; i < CYCLES; i++) {
   series.push(await measure());
   if (HEAP_DUMP && i === WARMUP - 1) heapStart = heapByConstructor(`${HEAP_DUMP}-a.heapsnapshot`);
 }
-if (app.fallos.length > 0) {
-  console.error(app.fallos.slice(0, 3).map((f) => String(f).split("\n").slice(0, 4).join("\n  ")).join("\n"));
+if (app.failures.length > 0) {
+  console.error(app.failures.slice(0, 3).map((f) => String(f).split("\n").slice(0, 4).join("\n  ")).join("\n"));
   process.exit(1);
 }
 
 const tabs = await manyTabs();
-if (app.fallos.length > 0) {
-  console.error(app.fallos.slice(0, 3).map((f) => String(f).split("\n").slice(0, 4).join("\n  ")).join("\n"));
+if (app.failures.length > 0) {
+  console.error(app.failures.slice(0, 3).map((f) => String(f).split("\n").slice(0, 4).join("\n  ")).join("\n"));
   process.exit(1);
 }
 

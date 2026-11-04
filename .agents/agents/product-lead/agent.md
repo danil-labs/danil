@@ -9,7 +9,7 @@ emitir un plan. Los contratos del producto delimitan las propuestas.
 
 ## Alcance del producto
 
-Terminus amplía los CLIs de los proveedores. Comprueba su capacidad nativa en
+Danil amplía los CLIs de los proveedores. Comprueba su capacidad nativa en
 la versión y el canal usados antes de aceptar un complemento. Una integración
 pendiente se declara sin verificar.
 

@@ -181,9 +181,16 @@ export type Pegado = {
    * Dónde lee la persona, como hijo del contenido y distancia al borde de
    * arriba; `null` si sigue al fondo. Es lo que se guarda al desmontar el hilo.
    */
-  lectura: () => { hijo: number; desfase: number } | null;
+  lectura: () => { hijo: number; desfase: number; el: Element } | null;
   /** Vuelve a dejar el hijo `hijo` a `desfase` del borde, suelto. */
   retomar: (hijo: number, desfase: number) => void;
+  /**
+   * El único camino de un virtualizador a la barra: `seguirElFondo` sigue siendo quien la
+   * escribe. `lectura`: esta es la nueva lectura; sin él, el ancla sigue siendo la de antes.
+   */
+  escribir: (valor: number, lectura?: boolean) => void;
+  /** Devuelve la lectura tras un cambio de alto que el observador no verá en este cuadro. */
+  sostener: () => void;
 };
 
 /**
@@ -770,7 +777,7 @@ export function seguirElFondo(enTurno: () => boolean = () => true): Pegado {
     tomarAncla();
   };
 
-  const lectura = () => (sigue() || !ancla ? null : { hijo: ancla.i, desfase: ancla.desfase });
+  const lectura = () => (sigue() || !ancla ? null : { hijo: ancla.i, desfase: ancla.desfase, el: ancla.el });
 
   const retomar = (hijo: number, desfase: number) => {
     const el = dentro?.children?.[hijo];
@@ -779,6 +786,18 @@ export function seguirElFondo(enTurno: () => boolean = () => true): Pegado {
     ponScrollTop(scrollTop() + el.getBoundingClientRect().top - caja.getBoundingClientRect().top - desfase);
     tomarAncla();
     ponCerca(estaCerca());
+  };
+
+  const escribir = (valor: number, lectura = false) => {
+    // Siguiendo manda `pegar`: la posición que recuerda un virtualizador ya quedó atrás del fondo.
+    if (!lectura && sigue()) return;
+    ponScrollTop(valor);
+    if (lectura && !sigue()) tomarAncla();
+    ponCerca(estaCerca());
+  };
+
+  const sostener = () => {
+    if (!sigue()) restaurarAncla();
   };
 
   // Quitar el padding no cambia `contentRect`: el observador no avisaría del cierre.
@@ -827,5 +846,7 @@ export function seguirElFondo(enTurno: () => boolean = () => true): Pegado {
     anteponer,
     lectura,
     retomar,
+    escribir,
+    sostener,
   };
 }

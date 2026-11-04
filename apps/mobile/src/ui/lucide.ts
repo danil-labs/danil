@@ -14,6 +14,13 @@ export type LucideShape =
   | { kind: "ellipse"; cx: number; cy: number; rx: number; ry: number };
 
 export const ICONS = {
+  "user-check": [{"kind": "path", "d": "m16 11 2 2 4-4"}, {"kind": "path", "d": "M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"}, {"kind": "circle", "cx": 9.0, "cy": 7.0, "r": 4.0}],
+  "message-square-warning": [{"kind": "path", "d": "M22 17a2 2 0 0 1-2 2H6.828a2 2 0 0 0-1.414.586l-2.202 2.202A.71.71 0 0 1 2 21.286V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2z"}, {"kind": "path", "d": "M12 15h.01"}, {"kind": "path", "d": "M12 7v4"}],
+  "circle-check": [{"kind": "circle", "cx": 12.0, "cy": 12.0, "r": 10.0}, {"kind": "path", "d": "m9 12 2 2 4-4"}],
+  "circle-x": [{"kind": "circle", "cx": 12.0, "cy": 12.0, "r": 10.0}, {"kind": "path", "d": "m15 9-6 6"}, {"kind": "path", "d": "m9 9 6 6"}],
+  "file-check": [{"kind": "path", "d": "M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"}, {"kind": "path", "d": "M14 2v4a2 2 0 0 0 2 2h4"}, {"kind": "path", "d": "m9 15 2 2 4-4"}],
+  "folder-git-2": [{"kind": "path", "d": "M9 20H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H20a2 2 0 0 1 2 2v5"}, {"kind": "circle", "cx": 13.0, "cy": 12.0, "r": 2.0}, {"kind": "path", "d": "M18 19c-2.8 0-5-2.2-5-5v8"}, {"kind": "circle", "cx": 20.0, "cy": 19.0, "r": 2.0}],
+  "folder-cloud": [{"kind": "path", "d": "M9 20H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H20a2 2 0 0 1 2 2v4"}, {"kind": "path", "d": "M19.75 20H15.5a3.5 3.5 0 1 1 3.355-4.5h.895a2.25 2.25 0 1 1 0 4.5Z"}],
   "gauge": [{ kind: "path", d: "m12 14 4-4" }, { kind: "path", d: "M3.34 19a10 10 0 1 1 17.32 0" }],
   "trash-2": [{"kind": "path", "d": "M10 11v6"}, {"kind": "path", "d": "M14 11v6"}, {"kind": "path", "d": "M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"}, {"kind": "path", "d": "M3 6h18"}, {"kind": "path", "d": "M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"}],
   "archive": [{"kind": "rect", "width": 20.0, "height": 5.0, "x": 2.0, "y": 3.0, "rx": 1.0}, {"kind": "path", "d": "M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"}, {"kind": "path", "d": "M10 12h4"}],

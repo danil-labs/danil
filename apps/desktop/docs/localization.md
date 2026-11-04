@@ -2,7 +2,7 @@
 
 Toda frase propia que una persona lee en la app sale de `t()` o `Frase`.
 Quien mantiene UI y catálogo revisa este contrato al cambiar el motor o los
-paquetes.
+paquetes. Qué cuenta como texto visible y qué no: [copy.md](./copy.md).
 
 | Se traduce | Conserva su forma |
 |---|---|
@@ -21,4 +21,4 @@ puente. Rust entrega frases propias mediante `Frase`; el tipo `util::Prosa`
 conserva texto crudo durante la migración y `sin_migrar` identifica sus pendientes.
 
 La lengua pertenece al workspace. El motor de traducción vive en
-`src/lib/i18n.ts`; el instalador de paquetes es parte del motor de Terminus.
+`src/lib/i18n.ts`; el instalador de paquetes es parte del motor de Danil.

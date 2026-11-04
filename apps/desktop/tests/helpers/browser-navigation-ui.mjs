@@ -43,12 +43,12 @@ const app = await boot("listo", "browser-navigation", {
 (await waitFor(() => app.w.document.querySelector("#cfg-tab-machines"))).click();
 (await waitFor(() => button(app, "Estado del entorno"))).click();
 const prepare = await waitFor(() => button(app, "Preparar navegación"));
-assert.ok(!app.comandos.includes("install_tool"), "Abrir ajustes no instala Chrome");
+assert.ok(!app.commands.includes("install_tool"), "Abrir ajustes no instala Chrome");
 await waitFor(() => app.w.document.body.textContent.includes("Importación pendiente"));
 // Node y npm son de quien usa la computadora: ni se listan ni se ofrecen.
 assert.equal([...app.w.document.querySelectorAll("tr")].some(row => /\b(npm|node)\b/.test(row.textContent)), false);
-assert.equal(app.comandos.includes("install_tool"), false);
-assert.equal(app.comandos.includes("install_base_tool"), false);
+assert.equal(app.commands.includes("install_tool"), false);
+assert.equal(app.commands.includes("install_base_tool"), false);
 calls.length = 0;
 prepare.click();
 await waitFor(() => rejectInstall);
@@ -81,8 +81,8 @@ chromeNeedsUpdate = true;
 (await waitFor(() => app.w.document.querySelector("#cfg-tab-machines"))).click();
 (await waitFor(() => button(app, "Estado del entorno"))).click();
 await waitFor(() => button(app, "Actualizar"));
-assert.equal(app.comandos.filter(c => c === "install_tool").length, 4, "Reabrir el inventario no instala Chrome");
-assert.equal(app.comandos.includes("install_provider"), false);
-assert.deepEqual(app.fallos, []);
+assert.equal(app.commands.filter(c => c === "install_tool").length, 4, "Reabrir el inventario no instala Chrome");
+assert.equal(app.commands.includes("install_provider"), false);
+assert.deepEqual(app.failures, []);
 console.log("Navegación explícita, avance, cancelación, reintento y error de motor anterior: ok (IPC simulado)");
 process.exit(0);

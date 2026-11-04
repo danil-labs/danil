@@ -86,7 +86,7 @@
   "broadcasts.showing_of": "Mostrando {shown} de {total}.",
   "broadcasts.contact_fallback": "Contacto {id}",
   "broadcasts.add_contacts": "Agregar contactos",
-  "broadcasts.import_elsewhere": "Para importar un archivo CSV o Excel, usa Danil Agents.",
+  "broadcasts.import_elsewhere": "Para importar un archivo CSV o Excel, usa Danil web.",
   "broadcasts.contacts_error": "No se pudieron cargar los contactos.",
   "broadcasts.no_contacts": "No hay contactos en esta cuenta todavía.",
   "broadcasts.no_sendable": "Ningún contacto tiene un teléfono para enviarle.",

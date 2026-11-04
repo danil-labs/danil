@@ -35,7 +35,7 @@ async function click(app, text) {
   b.click();
   await sleep(50);
 }
-const effects = app => app.comandos.filter(cmd => ["add_account", "install_provider", "login_account", "open_external"].includes(cmd));
+const effects = app => app.commands.filter(cmd => ["add_account", "install_provider", "login_account", "open_external"].includes(cmd));
 
 async function settings(scenario) {
   let metadata = () => [];
@@ -68,7 +68,7 @@ async function settings(scenario) {
   assert.equal(button(app, "+ Agregar cuenta").disabled, true, "Missing external app must prevent account creation");
   await click(app, "Descargar ZCode oficial");
   assert.deepEqual(opened, [external]);
-  assert.equal(app.comandos.includes("install_provider"), false, "External providers must not use managed installation");
+  assert.equal(app.commands.includes("install_provider"), false, "External providers must not use managed installation");
   metadata = () => [provider(true)];
   await click(app, "Ya la instalé · Comprobar");
   await waitFor(() => {
@@ -76,10 +76,10 @@ async function settings(scenario) {
     return add && !add.disabled;
   }, "Installed provider must permit account creation");
   await click(app, "+ Agregar cuenta");
-  await waitFor(() => app.comandos.includes("login_account"), "Installed provider did not start account connection");
-  assert.ok(app.comandos.includes("add_account"));
-  assert.equal(app.comandos.includes("install_provider"), false);
-  assert.deepEqual(app.fallos, []);
+  await waitFor(() => app.commands.includes("login_account"), "Installed provider did not start account connection");
+  assert.ok(app.commands.includes("add_account"));
+  assert.equal(app.commands.includes("install_provider"), false);
+  assert.deepEqual(app.failures, []);
 }
 
 async function onboarding() {
@@ -104,7 +104,7 @@ async function onboarding() {
   checkbox().click();
   assert.equal(button(app, "Instalar y continuar").disabled, false);
   assert.deepEqual(effects(app), []);
-  assert.deepEqual(app.fallos, []);
+  assert.deepEqual(app.failures, []);
 }
 
 const scenario = process.argv[2];

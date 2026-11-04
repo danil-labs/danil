@@ -13,6 +13,7 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import { join } from "node:path";
+import baseline from "./open-task-cost-baseline.json" with { type: "json" };
 import { boot, sleep } from "../helpers/jsdom-app.mjs";
 
 const BASELINE = join(import.meta.dirname, "open-task-cost-baseline.json");
@@ -231,7 +232,7 @@ async function openLong(turns, run, check) {
   const short = shown(doc, "Hola") && shown(doc, "Listo.");
   mutations = 0;
   addedNodes = 0;
-  const invokedBefore = app.comandos.length;
+  const invokedBefore = app.commands.length;
   const remoteBefore = remoteGit.calls;
   const bytesBefore = ipc.bytes;
   const nodesBefore = doc.querySelectorAll("*").length;
@@ -244,7 +245,7 @@ async function openLong(turns, run, check) {
     addedNodes,
     mutations,
     invokes:
-      app.comandos.slice(invokedBefore).filter((c) => !PERIODIC.has(c) && !c.startsWith("plugin:")).length -
+      app.commands.slice(invokedBefore).filter((c) => !PERIODIC.has(c) && !c.startsWith("plugin:")).length -
       (remoteGit.calls - remoteBefore),
     ipcBytes: ipc.bytes - bytesBefore,
   };
@@ -256,7 +257,7 @@ async function openLong(turns, run, check) {
       : null;
   if (!failure && check) failure = await behaves(app, turns, clock);
   observer.disconnect();
-  if (!failure && app.fallos.length > 0) failure = app.fallos.slice(0, 3).map((f) => String(f).split("\n").slice(0, 4).join("\n  ")).join("\n");
+  if (!failure && app.failures.length > 0) failure = app.failures.slice(0, 3).map((f) => String(f).split("\n").slice(0, 4).join("\n  ")).join("\n");
   app.w.close();
   return { ms, counters, failure };
 }
@@ -287,7 +288,7 @@ const counters = first.counters;
 console.log(`contadores: ${JSON.stringify(counters)}`);
 if (REAL_SESSION) process.exit(0);
 
-const ceiling = JSON.parse(readFileSync(BASELINE, "utf8"));
+const ceiling = baseline;
 if (ADJUST) {
   const lowered = Object.fromEntries(Object.entries(ceiling).map(([k, v]) => [k, Math.min(v, counters[k])]));
   writeFileSync(BASELINE, `${JSON.stringify(lowered, null, 2)}\n`);

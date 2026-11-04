@@ -39,7 +39,7 @@ async function open(name, { storage = {}, setup } = {}) {
   const fake = relay({ table: clone.table });
   const app = await boot("listo", name, {}, undefined, storage, {
     web: true,
-    antes: (w) => {
+    beforeImport: (w) => {
       globalThis.WebSocket = fake.Socket;
       w.terminusWeb = { endpoint: "https://relay.test", computerId: "cmp_test", getToken: async () => "tok" };
     },
@@ -110,7 +110,7 @@ test("a remote clone starts, shows its progress and opens the new project", asyn
   assert.ok(await t.listed("panel"), "the cloned project is in the list");
   assert.ok(!t.text().includes("Recibiendo objetos"), "the progress is gone");
   assert.equal(t.app.w.localStorage.getItem(PENDING), null, "a finished clone is forgotten");
-  assert.deepEqual(t.app.fallos, []);
+  assert.deepEqual(t.app.failures, []);
 });
 
 test("a remote clone that fails says why, and cancelling asks the machine", async () => {
@@ -134,7 +134,7 @@ test("a remote clone that fails says why, and cancelling asks the machine", asyn
   assert.ok(t.text().includes("Clonado cancelado"));
   assert.ok(!t.text().includes("Cancelando…"), "the clone is over");
   assert.equal(t.app.w.localStorage.getItem(PENDING), null);
-  assert.deepEqual(t.app.fallos, []);
+  assert.deepEqual(t.app.failures, []);
 });
 
 test("after a reload the clone is picked up with project_clone_status", async () => {
@@ -154,5 +154,5 @@ test("after a reload the clone is picked up with project_clone_status", async ()
   assert.ok(!t.text().includes("Resolviendo diferencias"), "the status says it ended, even without the event");
   assert.ok(await t.listed("panel"), "and the project is listed");
   assert.equal(t.app.w.localStorage.getItem(PENDING), null);
-  assert.deepEqual(t.app.fallos, []);
+  assert.deepEqual(t.app.failures, []);
 });

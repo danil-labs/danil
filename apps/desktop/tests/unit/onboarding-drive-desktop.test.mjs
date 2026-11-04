@@ -127,7 +127,7 @@ test("Drive oficial: del peso a conectada sola tras iniciar sesión", async () =
   await sleep(3000);
   assert.ok(card().textContent.includes("Conectado"), card().textContent);
   assert.ok(card().textContent.includes("yo@norte.mx · G:\\Mi unidad"), card().textContent);
-  assert.deepEqual(app.fallos, []);
+  assert.deepEqual(app.failures, []);
 });
 
 test("Drive oficial: cancelar la descarga devuelve la tarjeta al instante", async () => {
@@ -141,7 +141,7 @@ test("Drive oficial: cancelar la descarga devuelve la tarjeta al instante", asyn
   assert.deepEqual(m.llamadas, ["install", "cancel:google-drive-desktop"]);
   assert.ok(button(card(), "Conectar"), card().textContent);
   assert.ok(!card().className.includes("border-error-strong"), "cancelar no es un fallo");
-  assert.deepEqual(app.fallos, []);
+  assert.deepEqual(app.failures, []);
 });
 
 test("Drive oficial ya con sesión sale conectada; desconectar no desinstala y «Usar esta» vuelve", async () => {
@@ -158,7 +158,7 @@ test("Drive oficial ya con sesión sale conectada; desconectar no desinstala y �
   await sleep(50);
   assert.ok(card().textContent.includes("Conectado"), card().textContent);
   assert.deepEqual(m.llamadas, ["use:false", "use:true"], "«Usar esta» se lo dice al motor");
-  assert.deepEqual(app.fallos, []);
+  assert.deepEqual(app.failures, []);
 });
 
 test("Drive oficial: si la instalación falla, borde rojo, el error y «Reintentar»", async () => {
@@ -174,5 +174,5 @@ test("Drive oficial: si la instalación falla, borde rojo, el error y «Reintent
   assert.ok(card().className.includes("border-error-strong"), card().className);
   assert.ok(card().textContent.includes("no se dio el permiso de administrador"), card().textContent);
   assert.ok(button(card(), "Reintentar"), card().textContent);
-  assert.deepEqual(app.fallos, []);
+  assert.deepEqual(app.failures, []);
 });

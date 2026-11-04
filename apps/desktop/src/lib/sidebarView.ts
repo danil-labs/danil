@@ -86,14 +86,11 @@ export function sectionLabel(_section: SidebarSection): string {
 
 export function statusGroupLabel(key: SidebarStatusKey): string {
   switch (key) {
-    case "approving": return t("shell.sidebar.view.status_approving");
-    case "asked": return t("shell.sidebar.view.status_asked");
-    case "working": return t("shell.sidebar.view.status_working");
-    case "failed": return t("shell.sidebar.view.status_failed");
-    case "interrupted": return t("shell.sidebar.view.status_interrupted");
-    case "unseen": return t("shell.sidebar.view.status_unseen");
-    case "finished": return t("shell.sidebar.view.status_finished");
-    default: return t("shell.sidebar.view.status_idle");
+    case "draft": return t("shell.sidebar.view.status_draft");
+    case "review": return t("shell.sidebar.view.status_review");
+    case "ready": return t("shell.sidebar.view.status_ready");
+    case "closed": return t("shell.sidebar.view.status_closed");
+    default: return t("shell.sidebar.view.status_unknown");
   }
 }
 

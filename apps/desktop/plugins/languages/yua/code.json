@@ -1,7 +1,5 @@
 {
   "code.changes.truncated": "Le kʼexoʼ jach nojoch utiʼal u yeʼesaʼal tuláakal: teʼ kaabaloʼ yaan u chuun.",
-  "code.column.export_chat": "Jóoksej le tsikbaloʼ",
-  "code.column.export_chat.busy": "Táan u jóoksaʼal…",
   "code.comparing": "Táan u keetkuunsaʼal…",
   "code.empty": "Le meyajaʼ maʼ tu jelbesik mix jumpʼéel código.",
   "code.file.binary": "Lelaʼ jumpʼéel juʼun binario: minaʼan u xóotʼtsʼíibiloʼob utiʼal u keetkuunsaʼal.",
@@ -34,5 +32,7 @@
     "other": "Yaan kaʼach {count} juʼun kʼexaʼan ka káaj le meyajaʼ; leloʼob maʼ u tiʼal le ajmeyajiʼ."
   },
   "code.tree.missing": "Le kúuchil juʼunoʼobaʼ minaʼan tiʼ {path}. Kaʼa yéeyej tiʼ le noj meyajoʼ, wa lukʼsej.",
-  "code.tree.truncated": "Le repositorioaʼ yaan yaʼab juʼunoʼob tiʼ utiʼal u xoʼokol tuláakal: teʼ kaʼanaloʼ yaan u chuun."
+  "code.tree.truncated": "Le repositorioaʼ yaan yaʼab juʼunoʼob tiʼ utiʼal u xoʼokol tuláakal: teʼ kaʼanaloʼ yaan u chuun.",
+  "code.panel.export_chat": "Jóoksej le tsikbaloʼ",
+  "code.panel.export_chat.busy": "Táan u jóoksaʼal…"
 }

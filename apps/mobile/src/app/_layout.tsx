@@ -13,9 +13,11 @@ import { MachinesProvider } from "../lib/machines";
 import { Notifications } from "../lib/notifications";
 import { selectWordOnDoubleTap } from "../lib/selection";
 import { t, w } from "../lib/i18n";
+import { hydrate as hydrateTaskQueue } from "../lib/taskQueue";
 import { pinToVisibleArea } from "../lib/viewport";
 import { WorkspacesProvider } from "../lib/workspaces";
 import { ActivityNotice } from "../ui/ActivityNotice";
+import { UpdateNotice } from "../ui/UpdateNotice";
 import { useTheme } from "../ui/theme";
 
 Notifications?.setNotificationHandler({
@@ -67,6 +69,9 @@ export default function RootLayout() {
   // En el navegador el teclado no achica la página: sin esto se lleva la barra de arriba.
   useEffect(pinToVisibleArea, []);
 
+  // La cola de archivar/finalizar/borrar vive en disco: se recupera al abrir.
+  useEffect(() => { void hydrateTaskQueue(); }, []);
+
   useEffect(() => {
     if (!Notifications) return;
     openTarget(Notifications.getLastNotificationResponse());
@@ -117,12 +122,14 @@ export default function RootLayout() {
           <Stack.Screen name="inbox" options={{ headerShown: false }} />
           <Stack.Screen name="inbox-thread" options={{ headerShown: false }} />
           <Stack.Screen name="task-tools" options={{ headerShown: false }} />
+          <Stack.Screen name="task-files" options={{ headerShown: false }} />
           <Stack.Screen name="activity" options={{ title: t("activity.title") }} />
           <Stack.Screen name="accounts" options={{ title: w("settings.nav.ai_providers") }} />
           <Stack.Screen name="signin" options={{ headerShown: false }} />
           <Stack.Screen name="auth/callback" options={{ headerShown: false }} />
         </Stack>
         <ActivityNotice />
+        <UpdateNotice />
       </InboxProvider>
       </CustomizationProvider>
       </WorkspacesProvider>

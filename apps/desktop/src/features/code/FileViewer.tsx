@@ -26,6 +26,7 @@ import Documento from "../artifacts/Document";
 import type { Preview } from "../artifacts/Preview";
 import { formaDe } from "../artifacts/sandbox";
 import { cn } from "../../lib/utils";
+import { HEADER_HEIGHT } from "../../lib/window";
 import { t } from "../../lib/i18n";
 import { createPref, hayPref } from "../../lib/prefs";
 import { ariaDeAtajo, textoDeAtajo } from "../../lib/shortcuts";
@@ -162,6 +163,7 @@ export default function VisorDeArchivo(props: {
   enCambios?: boolean;
   /** Si esta pestaña es la que se está mirando. Las de detrás siguen montadas: ver `refresh.ts`. */
   visible: boolean;
+  readOnly?: boolean;
   /** Guardar lo convierte en un archivo cambiado, y eso lo tiene que saber el panel. */
   onGuardado: () => void;
   /** Abre otro archivo del mismo árbol en su pestaña: ahí lleva un error de Typst. */
@@ -341,7 +343,7 @@ export default function VisorDeArchivo(props: {
   async function guardar(): Promise<boolean> {
     const texto = borrador();
     if (texto === null || !sucio()) return true;
-    if (guardando()) return false;
+    if (guardando() || props.readOnly) return false;
     setGuardando(true);
     setFallo(null);
     try {
@@ -553,6 +555,7 @@ export default function VisorDeArchivo(props: {
   onCleanup(() => window.removeEventListener(IDOS, alIrse));
 
   function descartar() {
+    if (props.readOnly) return;
     // Con el archivo movido por debajo, lo que está en la mano es lo de antes: hay que traer lo del agente.
     const traer = desincronizado();
     setFallo(null);
@@ -662,7 +665,7 @@ export default function VisorDeArchivo(props: {
       class="@container flex h-full min-h-0 flex-col"
     >
       {/* Los controles de escritura van en esta fila: es la única que está siempre. */}
-      <div class="flex h-8.5 shrink-0 items-center gap-2 border-b border-border pr-1.5 pl-2.5">
+      <div class={cn("flex shrink-0 items-center gap-2 border-b border-border pr-1.5 pl-2.5", HEADER_HEIGHT)}>
         <Migas ruta={props.ruta}>
           <Show when={sucio() || guardando()}>
             <span
@@ -689,7 +692,7 @@ export default function VisorDeArchivo(props: {
             variant="ghost"
             size="compact"
             class="shrink-0"
-            disabled={guardando()}
+            disabled={guardando() || props.readOnly}
             onClick={descartar}
             title={desincronizado() ? t("code.file.discard.keep_agent") : t("code.file.discard.leave")}
           >
@@ -699,7 +702,7 @@ export default function VisorDeArchivo(props: {
             variant="secondary"
             size="compact"
             class="shrink-0"
-            disabled={guardando()}
+            disabled={guardando() || props.readOnly}
             onClick={() => void guardar()}
             aria-keyshortcuts={ariaDeAtajo("saveFile")}
             title={
@@ -761,10 +764,10 @@ export default function VisorDeArchivo(props: {
       <Show when={borrado()}>
         <div class="flex shrink-0 items-center gap-2 border-b border-border bg-surface-raised px-3 py-1.5">
           <p class="m-0 min-w-0 flex-1 text-caption text-warning-strong">{t("code.file.deleted")}</p>
-          <Button variant="ghost" size="compact" class="shrink-0" disabled={guardando()} onClick={() => props.onBorrado?.()}>
+          <Button variant="ghost" size="compact" class="shrink-0" disabled={guardando() || props.readOnly} onClick={() => props.onBorrado?.()}>
             {t("code.file.deleted.close")}
           </Button>
-          <Button variant="secondary" size="compact" class="shrink-0" disabled={guardando()} onClick={() => void guardar()}>
+          <Button variant="secondary" size="compact" class="shrink-0" disabled={guardando() || props.readOnly} onClick={() => void guardar()}>
             {t("code.file.deleted.save")}
           </Button>
         </div>
@@ -844,7 +847,8 @@ export default function VisorDeArchivo(props: {
                       <EditorDeCodigo
                         ruta={props.ruta}
                         texto={borrador() ?? c().text}
-                        onEscribir={setBorrador}
+                        readOnly={props.readOnly}
+                        onEscribir={text => { if (!props.readOnly) setBorrador(text); }}
                         onGuardar={() => void guardar()}
                         onCursor={(linea, columna) => setCursor({ linea, columna })}
                         onClic={mostrarEnLaVista}

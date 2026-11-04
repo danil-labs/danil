@@ -50,7 +50,8 @@ test("la cuenta de Danil entra con el navegador, muestra el código y cierra ses
       };
       return status;
     }),
-    danil_disconnect: record("danil_disconnect", () => {
+    // La ventana cierra su sesión y la de la cuenta del motor en una sola orden.
+    danil_sign_out: record("danil_sign_out", () => {
       status = { state: "disconnected", name: "alberto-mbp", online: false };
       return status;
     }),
@@ -117,7 +118,7 @@ test("la cuenta de Danil entra con el navegador, muestra el código y cierra ses
   assert.ok(text().includes("Sin conexión con Danil por ahora."));
   button("Cerrar sesión").click();
   await settle();
-  assert.equal(calls.at(-1)?.command, "danil_disconnect");
+  assert.equal(calls.at(-1)?.command, "danil_sign_out");
   assert.equal(panel()?.dataset.danilAccount, "disconnected");
 });
 
@@ -160,7 +161,7 @@ test("sin licencia, la sección abre la prueba en el navegador y reintenta", asy
   assert.equal(calls.filter((c) => c.command === "danil_connect_start").length, 2, "retrying signs in again");
   assert.ok(!text().includes("Activa Danil"), text());
   assert.ok(text().includes("Confirma en el navegador · código WDJB-MJHT"), text());
-  assert.deepEqual(app.fallos, []);
+  assert.deepEqual(app.failures, []);
 });
 
 test("con un motor que no trae el flujo, la sección lo dice en vez de fallar", async () => {
@@ -241,7 +242,7 @@ test("la cuenta muestra nombre y foto, cambia la foto en la cuenta y la quita", 
   assert.equal(calls.at(-1)?.command, "danil_account_remove_photo");
   assert.equal(photo(), null);
   assert.equal(panel().querySelector("[data-account-avatar]")?.textContent, "AC", "back to the initials");
-  assert.deepEqual(app.fallos, []);
+  assert.deepEqual(app.failures, []);
 });
 
 const session = (extra) => ({
@@ -285,11 +286,14 @@ test("el panel muestra solo la cuenta del workspace y revela los cambios de cuen
   assert.equal(panel.dataset.danilAccount, "workspace");
   assert.deepEqual([...panel.querySelectorAll("[data-danil-session]")].map((el) => el.dataset.danilSession), ["u_fdb"]);
   assert.ok(!panel.textContent.includes("alberto@danil.ai"), "the default account does not leak into this workspace");
-  assert.equal(panel.querySelector("[data-workspace-account-select]"), null, "account choices are progressive");
+  assert.equal(panel.querySelector("[data-workspace-change]"), null, "account choices are progressive");
   assert.deepEqual(calls, [{ command: "profile", account: "u_fdb" }]);
   panel.querySelector("[data-danil-manage]").click();
   await sleep(300);
-  assert.equal(panel.querySelector("[data-workspace-account-select]").value, "u_fdb");
+  const workspace = panel.querySelector("[data-workspace-account]");
+  assert.equal(workspace?.dataset.workspaceAccount, "synced");
+  assert.match(workspace?.textContent ?? "", /alberto@dondebanco\.org/);
+  assert.ok(panel.querySelector("[data-workspace-change]"), "the account change is revealed when asked");
   panel.querySelector("[data-danil-sign-out]").click();
   await sleep(100);
   assert.equal(calls.filter((c) => c.command === "disconnect").length, 0);
@@ -297,7 +301,7 @@ test("el panel muestra solo la cuenta del workspace y revela los cambios de cuen
   await sleep(300);
   assert.deepEqual(calls.at(-1), { command: "disconnect", account: "u_fdb" });
   assert.equal(panel.querySelector("[data-danil-session]"), null, "a signed-out owner is not replaced by the default session");
-  assert.deepEqual(app.fallos, []);
+  assert.deepEqual(app.failures, []);
 });
 
 test("con un motor anterior que no trae danil_sessions, la sección es la cuenta única de siempre", async () => {
@@ -316,5 +320,5 @@ test("con un motor anterior que no trae danil_sessions, la sección es la cuenta
   assert.equal(panel?.dataset.danilAccount, "connected");
   assert.ok(panel.textContent.includes("Esta computadora: Mac"));
   assert.ok(!panel.textContent.includes("Agregar otra cuenta"), "no second account without the engine's sessions");
-  assert.deepEqual(app.fallos, []);
+  assert.deepEqual(app.failures, []);
 });

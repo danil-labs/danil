@@ -7,7 +7,7 @@
  * It speaks RPC1 to the engine over loopback, like the window, and serves the
  * phone a small HTTP API with a bearer token. Only `APP_COMMANDS` of
  * `@terminus/protocol` reach the engine, through `service invoke`: the same
- * closed list the app's relay client enforces for Danil Computers. Without `--allow-lan` it answers loopback and Tailscale (100.64.0.0/10)
+ * closed list the app's relay client enforces for Danil Machines. Without `--allow-lan` it answers loopback and Tailscale (100.64.0.0/10)
  * addresses only: plain HTTP is acceptable inside the tailnet, not on a LAN.
  *
  * It forwards the engine's events as they come (`chat`, `attention`, `session`,
@@ -233,7 +233,7 @@ function addresses() {
 }
 
 server.listen(PORT, "0.0.0.0", () => {
-  console.log(`Terminus mobile bridge on port ${PORT}, engine data ${DATA}`);
+  console.log(`Danil mobile bridge on port ${PORT}, engine data ${DATA}`);
   for (const address of addresses()) {
     const url = `http://${address}:${PORT}`;
     console.log(`  ${url}\n  terminus-mobile://pair?url=${encodeURIComponent(url)}&token=${TOKEN}`);

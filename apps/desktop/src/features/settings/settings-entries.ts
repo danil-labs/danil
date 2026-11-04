@@ -4,20 +4,19 @@
  * guardados abren la pestaña que ahora los contiene.
  */
 export const SETTINGS_ENTRIES = [
-  { id: "account", group: "you", tabs: ["cuenta-danil", "emails", "security"] },
-  { id: "preferences", group: "you", tabs: ["general", "appearance", "notify", "workspaces"] },
+  { id: "account", group: "you", tabs: ["cuenta-danil", "emails", "usage", "plan", "support", "security"] },
+  { id: "preferences", group: "you", tabs: ["general", "appearance", "notify", "languages", "workspaces"] },
   { id: "ai-accounts", group: "you", tabs: ["proveedores-ia"] },
   { id: "machines", group: "you", tabs: ["machines", "entorno", "activity"] },
   { id: "projects", group: "workspace", tabs: ["proyectos", "fuentes", "secrets"] },
   { id: "agents-skills", group: "workspace", tabs: ["agentes", "skills"] },
-  { id: "connections", group: "workspace", tabs: ["operation", "customers"] },
+  { id: "connections", group: "workspace", tabs: ["operation", "plugins", "memory", "external", "customers"] },
 ] as const;
 
 const MOVED: Record<string, string> = {
-  plugins: "operation",
   secretos: "secrets",
   mcp: "operation",
-  conexiones: "operation",
+  conexiones: "external",
   radiant: "operation",
   integrations: "customers",
 };

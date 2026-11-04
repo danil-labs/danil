@@ -18,21 +18,21 @@ const pixeles = (valor, unidad) => Number(valor) * (unidad === "rem" ? 16 : 1);
 const escalones = new Map(Object.entries(TEXT).map(([nombre, px]) => [px, nombre]));
 const ARBITRARIO = /(?<![\w-])text-\[([\d.]+)(rem|px)\]/g;
 
-const fallos = [];
+const failures = [];
 let sueltos = 0;
 for (const entrada of readdirSync(join(ROOT, "src"), { recursive: true, withFileTypes: true })) {
   if (!entrada.isFile() || !/\.tsx?$/.test(entrada.name)) continue;
   const ruta = join(entrada.parentPath, entrada.name);
   for (const m of readFileSync(ruta, "utf8").matchAll(ARBITRARIO)) {
     const escalon = escalones.get(pixeles(m[1], m[2]));
-    if (escalon) fallos.push(`${relative(ROOT, ruta)}: ${m[0]} es text-${escalon}`);
+    if (escalon) failures.push(`${relative(ROOT, ruta)}: ${m[0]} es text-${escalon}`);
     else sueltos++;
   }
 }
 
-if (sueltos > TECHO_SUELTOS) fallos.push(`${sueltos} tamaños sueltos superan el techo de ${TECHO_SUELTOS}: usa un escalón de la escala.`);
-if (fallos.length) {
-  console.error(fallos.join("\n"));
+if (sueltos > TECHO_SUELTOS) failures.push(`${sueltos} tamaños sueltos superan el techo de ${TECHO_SUELTOS}: usa un escalón de la escala.`);
+if (failures.length) {
+  console.error(failures.join("\n"));
   process.exit(1);
 }
 if (sueltos < TECHO_SUELTOS) console.log(`Baja TECHO_SUELTOS a ${sueltos}.`);

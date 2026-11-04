@@ -1,19 +1,22 @@
+import { folderByKey } from "../../lib/folderIcon";
 import { RADIUS, TEXT } from "@terminus/design";
-import { applySidebarView, folderCounts, groupKey, groupLabel, isPinned, type SidebarView } from "@terminus/tasks";
+import { applySidebarView, groupCardOptions, workStateOf, folderCounts, groupKey, groupLabel, isPinned, type SidebarView } from "@terminus/tasks";
 import { router } from "expo-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Platform, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAccount } from "../../lib/account";
 import { ALPHA_DEMO, ALPHA_ORDINARY } from "../../lib/alpha-mode";
-import { cardOf, cardTask, marksOf } from "../../lib/cards";
+import { cardOf, cardTask, marksOf, familyTasks } from "../../lib/cards";
 import { useCustomization } from "../../lib/customization";
 import { archiveTask, failureText, setPinned, type Task, taskInSpace, taskKey } from "../../lib/engine";
 import { lang, t, w } from "../../lib/i18n";
+import { decodeFolded, FOLDED_KEY, toggleFolded } from "../../lib/foldedGroups";
 import { useInbox } from "../../lib/inbox";
 import { useMachines } from "../../lib/machines";
 import { Notifications } from "../../lib/notifications";
 import { can, ready, renameSpace } from "../../lib/pending";
+import { store } from "../../lib/store";
 import { effectiveGit } from "../../lib/taskGit";
 import { useTaskGit } from "../../lib/useTaskGit";
 import { shortWhen } from "../../lib/when";
@@ -67,6 +70,15 @@ export default function Home() {
   const [renaming, setRenaming] = useState<string | null>(null);
   const [newSpace, setNewSpace] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [folded, setFolded] = useState<string[]>([]);
+  useEffect(() => {
+    void store.get(FOLDED_KEY).then((raw) => setFolded((now) => (now.length ? now : decodeFolded(raw)))).catch(() => {});
+  }, []);
+  const toggleGroup = (key: string) => setFolded((now) => {
+    const next = toggleFolded(now, key);
+    void store.set(FOLDED_KEY, JSON.stringify(next)).catch(() => {});
+    return next;
+  });
 
   useEffect(() => {
     void Notifications?.getPermissionsAsync().then((p) => setAskNotifications(p.canAskAgain && !p.granted));
@@ -86,19 +98,19 @@ export default function Home() {
 
   const spaces = snapshot?.spaces ?? [];
   const inSpace = (key: string) => !space || key.endsWith("/") || space.folders.includes(key);
-  const tasks = (snapshot?.tasks ?? []).filter((task) => taskInSpace(task, space));
-  const folderName = (key: string) => snapshot?.folders.find((f) => f.key === key)?.name;
+  const tasks = familyTasks((snapshot?.tasks ?? []).filter((task) => taskInSpace(task, space)), snapshot?.delegated ?? [], marks);
   const counts = folderCounts(tasks.map((task) => ({ project: task.folderKey, row: task })));
   const kept = view.folders.filter((f) => (counts.get(f) ?? 0) > 0);
   const effective: SidebarView = kept.length === view.folders.length ? view : { ...view, folders: kept };
   const folderIdOf = (key: string) => snapshot?.folders.find((f) => f.key === key)?.id ?? key.slice(key.indexOf("/") + 1);
+  const git = useTaskGit(hostOf, tasks);
   const groups = applySidebarView(tasks.map((task) => ({ ...cardTask(task, marks), task })), { ...effective, folders: effective.folders.map(folderIdOf) }, {
     live: marks.live,
     approving: [...marks.attention].filter(([, s]) => s === "approving").map(([k]) => k),
     folderOf: (row) => row.task.folder,
     machineOf: (row) => row.task.host,
+    workStateOf: (row) => workStateOf(effectiveGit(git, row.task, snapshot?.tasks ?? [])),
   });
-  const git = useTaskGit(hostOf, groups.flatMap((group) => group.tasks.map(({ task }) => task)));
   const groupFolderName = (id: string) => snapshot?.folders.find((f) => f.id === id)?.name ?? id;
   const machineName = (id: string) => hosts.find((h) => h.id === id)?.label ?? id;
   const agents = (snapshot?.agents ?? []).filter((a) => a.places.some((p) => inSpace(`${p.host}/${p.folder}`)));
@@ -300,10 +312,22 @@ export default function Home() {
             ) : null}
           </Group>
 
-          {groups.map((group) => (
-            <View key={groupKey(group)}>
-              <GroupHeader strong count={group.tasks.length}>{groupLabel(lang, group, groupFolderName, machineName)}</GroupHeader>
-              <Group inset={46}>
+          {groups.map((group) => {
+            const key = groupKey(group);
+            const isFolded = folded.includes(key);
+            const name = groupLabel(lang, group, groupFolderName, machineName);
+            const needing = isFolded ? group.tasks.filter(({ task }) => NEEDS_YOU.has(marks.attention.get(taskKey(task)) ?? "")).length : 0;
+            return (
+            <View key={key}>
+              <GroupHeader
+                strong
+                count={group.tasks.length}
+                folded={isFolded}
+                onToggle={() => toggleGroup(key)}
+                foldLabel={t(isFolded ? "home.group.expand" : "home.group.collapse", { name })}
+                right={needing ? <CountBadge count={needing} /> : undefined}
+              >{name}</GroupHeader>
+              {isFolded ? null : <Group inset={46}>
                 {group.tasks.map(({ task }) => (
                   <TaskRow
                     key={taskKey(task)}
@@ -314,9 +338,9 @@ export default function Home() {
                     render={(onLongPress) => (
                       <TaskCard
                         task={task}
-                        card={cardOf(task, marks, effective.group === "folder")}
+                        card={cardOf(task, marks, groupCardOptions(group).hideFolder, groupCardOptions(group).hideMachine)}
                         git={effectiveGit(git, task, snapshot?.tasks ?? [])}
-                        folderName={folderName}
+                        folderOf={(key) => folderByKey(snapshot?.folders ?? [], key)}
                         when={shortWhen(task.last_turn_at ?? task.updated_at, lang)}
                         onPress={() => openTask(task.host, task.workspace, task.folder, task.id)}
                         onLongPress={onLongPress}
@@ -326,10 +350,11 @@ export default function Home() {
                     )}
                   />
                 ))}
-              </Group>
-              {!group.tasks.length ? <Text style={[styles.empty, { color: theme.textMuted }]}>{t("folder.empty")}</Text> : null}
+              </Group>}
+              {!isFolded && !group.tasks.length ? <Text style={[styles.empty, { color: theme.textMuted }]}>{t("folder.empty")}</Text> : null}
             </View>
-          ))}
+            );
+          })}
           {list.length === 0 && !loading && fleet === "ok" ? (
             <Text style={[styles.empty, { color: theme.textMuted }]}>{t(hosts.some((h) => h.linked) ? "home.no_linked_workspaces" : "home.no_workspaces")}</Text>
           ) : null}

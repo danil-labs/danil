@@ -16,5 +16,5 @@
   "surfaces.no_key": "Your {agent} account is not connected",
   "surfaces.no_model": "The local engine has no model downloaded",
   "surfaces.not_installed": "{agent} is not on this computer",
-  "surfaces.badge.radiant": "Danil Teams"
+  "surfaces.badge.harness": "Danil Teams"
 }

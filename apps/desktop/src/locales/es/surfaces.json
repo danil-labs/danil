@@ -16,5 +16,5 @@
   "surfaces.no_key": "Tu cuenta de {agent} no está conectada",
   "surfaces.no_model": "El motor local no tiene ningún modelo descargado",
   "surfaces.not_installed": "{agent} no está en esta computadora",
-  "surfaces.badge.radiant": "Danil Teams"
+  "surfaces.badge.harness": "Danil Teams"
 }

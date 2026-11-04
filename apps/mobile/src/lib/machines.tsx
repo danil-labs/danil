@@ -7,10 +7,12 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { AppState, Platform } from "react-native";
 import { useAccount } from "./account";
 import { BRIDGE_ENABLED, BRIDGE_WITHOUT_ACCOUNT, loadPairing, savePairing } from "./bridge";
-import { type Notice, attentionOf, noticer } from "./engine";
+import { type Notice, attentionOf, noticer, recentTurns } from "./engine";
+import { latestFailureSentence } from "./failureNotice";
 import { type AccountFleet, type Host, type Pairing, accountFleet, bridgeHost } from "./hosts";
 import { t } from "./i18n";
 import { Notifications } from "./notifications";
+import { renewPush } from "./push";
 import { COMPUTERS } from "./supabase";
 
 type Listener = (host: string, events: EngineEvent[], gap: boolean) => void;
@@ -42,6 +44,8 @@ type Machines = {
   /** Atención por máquina: `hostId → workspaces`. */
   attention: Record<string, WorkspaceAttention[]>;
   activity: { notice: Notice; at: number }[];
+  /** Por qué se detuvo, `host/sesión` → frase. Lo lee la campana; el aviso del sistema lo lleva en el cuerpo. */
+  reasonOf: (key: string) => string | undefined;
   titleOf: (key: string) => string | undefined;
   rememberTitles: (entries: [string, string][]) => void;
   setOpenTask: (key: string | null) => void;
@@ -61,17 +65,32 @@ export function useMachines() {
 const CHANNEL = "tasks";
 const LAST = "terminus.machine.last";
 
-async function announce(notice: Notice, title: string | undefined) {
+function sayFailure(key: string, vars?: Record<string, string | number>) {
+  return t(key as Parameters<typeof t>[0], vars);
+}
+
+async function announce(notice: Notice, title: string | undefined, reason = "") {
   if (!Notifications) return;
   const name = title?.trim() || t("notify.untitled");
   await Notifications.scheduleNotificationAsync({
     content: {
       title: t(`notify.${notice.state === "unseen" ? "finished" : notice.state}` as const, { title: name }),
-      body: "",
+      body: reason,
       data: { host: notice.host, workspace: notice.workspace, folder: notice.folder, task: notice.session },
     },
     trigger: Platform.OS === "android" ? { channelId: CHANNEL } : null,
   });
+}
+
+/** La frase del turno guardado. Una sola lectura: si todavía no está, queda el aviso genérico. No enciende la máquina. */
+async function failureReason(host: Host, notice: Notice): Promise<string> {
+  if (notice.state !== "failed" || !notice.folder) return "";
+  try {
+    const turns = await recentTurns(host, notice.workspace, notice.folder, notice.session);
+    return latestFailureSentence(turns, sayFailure) ?? "";
+  } catch {
+    return "";
+  }
 }
 
 /** La lista con un token que la API acepta: un token rechazado se refresca una vez. */
@@ -89,7 +108,7 @@ const demoHost: Host = {
 };
 
 export function MachinesProvider({ children, active = true }: { children: ReactNode; active?: boolean }) {
-  if (ALPHA_DEMO) return <Context.Provider value={{ ready: true, contextReady: true, fleet: "ok", hosts: [demoHost], hostOf: id => id === demoHost.id ? demoHost : undefined, registry: null, preferred: () => demoHost, rememberMachine: () => {}, pairing: null, pair: async () => { throw demoDenied(); }, reloadComputers: async () => {}, retryLicense: () => {}, attention: {}, activity: [], titleOf: () => undefined, rememberTitles: () => {}, setOpenTask: () => {}, subscribe: () => () => {}, tick: 0 }}>{children}</Context.Provider>;
+  if (ALPHA_DEMO) return <Context.Provider value={{ ready: true, contextReady: true, fleet: "ok", hosts: [demoHost], hostOf: id => id === demoHost.id ? demoHost : undefined, registry: null, preferred: () => demoHost, rememberMachine: () => {}, pairing: null, pair: async () => { throw demoDenied(); }, reloadComputers: async () => {}, retryLicense: () => {}, attention: {}, activity: [], reasonOf: () => undefined, titleOf: () => undefined, rememberTitles: () => {}, setOpenTask: () => {}, subscribe: () => () => {}, tick: 0 }}>{children}</Context.Provider>;
   return <LiveMachinesProvider active={active}>{children}</LiveMachinesProvider>;
 }
 
@@ -105,11 +124,25 @@ function LiveMachinesProvider({ children, active }: { children: ReactNode; activ
   const [tick, setTick] = useState(0);
   const [attention, setAttention] = useState<Record<string, WorkspaceAttention[]>>({});
   const [activity, setActivity] = useState<{ notice: Notice; at: number }[]>([]);
+  const [reasons, setReasons] = useState<Record<string, string>>({});
+  const reasonsRef = useRef(reasons);
+  const triedReason = useRef(new Set<string>());
+  const rememberReason = useCallback((key: string, reason: string) => {
+    if (!reason || reasonsRef.current[key] === reason) return;
+    const next = { ...reasonsRef.current, [key]: reason };
+    reasonsRef.current = next;
+    setReasons(next);
+  }, []);
   const [last, setLast] = useState<string | null>(null);
   const listeners = useRef(new Set<Listener>());
   const reloadGeneration = useRef(0);
   const openTask = useRef<string | null>(null);
   const titles = useRef(new Map<string, string>());
+
+  const signedInAs = account.session?.user.id;
+  useEffect(() => {
+    if (signedIn) void renewPush(account.getToken);
+  }, [signedIn, signedInAs]);
 
   useEffect(() => {
     if (!active) { setPairing(null); setPairingLoaded(true); return; }
@@ -222,7 +255,16 @@ function LiveMachinesProvider({ children, active }: { children: ReactNode; activ
             for (const notice of notices.take(event)) {
               setActivity((old) => [{ notice, at: Date.now() }, ...old].slice(0, 100));
               const key = `${notice.host}/${notice.session}`;
-              if (key !== openTask.current) void announce(notice, titles.current.get(key));
+              const open = key === openTask.current;
+              const title = titles.current.get(key);
+              const pending = failureReason(host, notice);
+              // La frase espera a la lectura, pero el aviso no se pierde si tarda.
+              const soon = Promise.race([pending, new Promise<string>((resolve) => setTimeout(() => resolve(""), 3000))]);
+              void soon.then(async (reason) => {
+                if (!open) await announce(notice, title, reason);
+                const sentence = reason || (await pending);
+                if (sentence) rememberReason(key, sentence);
+              });
             }
           }
           for (const listener of listeners.current) listener(host.id, events, gap);
@@ -234,7 +276,27 @@ function LiveMachinesProvider({ children, active }: { children: ReactNode; activ
       // Las computadoras las cierra la flota cuando dejan la cuenta; el bridge, aquí.
       for (const host of next) if (host.kind === "bridge") host.close();
     };
-  }, [active, machinesFleet, computers, pairing, signedIn]);
+  }, [active, machinesFleet, computers, pairing, signedIn, rememberReason]);
+
+  // Lo que ya estaba detenido al abrir: la campana también dice por qué. Una lectura por tarea.
+  useEffect(() => {
+    for (const host of hosts) {
+      for (const workspace of attention[host.id] ?? []) {
+        for (const task of workspace.tasks) {
+          if (task.state !== "failed" || !task.project) continue;
+          const key = `${host.id}/${task.session}`;
+          if (reasonsRef.current[key] || triedReason.current.has(key)) continue;
+          triedReason.current.add(key);
+          void recentTurns(host, workspace.workspace, task.project, task.session)
+            .then((turns) => {
+              const reason = latestFailureSentence(turns, sayFailure);
+              if (reason) rememberReason(key, reason);
+            })
+            .catch(() => {});
+        }
+      }
+    }
+  }, [attention, hosts, rememberReason]);
 
   const pair = useCallback(async (next: Pairing | null) => {
     await savePairing(next);
@@ -267,6 +329,7 @@ function LiveMachinesProvider({ children, active }: { children: ReactNode; activ
     for (const [key, title] of entries) titles.current.set(key, title);
   }, []);
   const titleOf = useCallback((key: string) => titles.current.get(key), []);
+  const reasonOf = useCallback((key: string) => reasons[key], [reasons]);
   const hostOf = useCallback((id: string) => hosts.find((h) => h.id === id), [hosts]);
 
   const retryLicense = useCallback(() => {
@@ -293,13 +356,14 @@ function LiveMachinesProvider({ children, active }: { children: ReactNode; activ
       retryLicense,
       attention,
       activity,
+      reasonOf,
       titleOf,
       rememberTitles,
       setOpenTask,
       subscribe,
       tick,
     }),
-    [account.ready, pairingLoaded, signedIn, fleet, computers, fleetState, retryLicense, hosts, hostOf, registry, preferred, rememberMachine, pairing, pair, reloadComputers, attention, activity, titleOf, rememberTitles, setOpenTask, subscribe, tick],
+    [account.ready, pairingLoaded, signedIn, fleet, computers, fleetState, retryLicense, hosts, hostOf, registry, preferred, rememberMachine, pairing, pair, reloadComputers, attention, activity, reasonOf, titleOf, rememberTitles, setOpenTask, subscribe, tick],
   );
   return <Context.Provider value={value}>{children}</Context.Provider>;
 }

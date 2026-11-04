@@ -30,6 +30,8 @@ export default function BaseBranchPicker(props: {
   directory?: string | null;
   machine?: string | null;
   preference?: boolean;
+  /** Quien lo monta ya pinta el rótulo a su lado. */
+  inlineLabel?: boolean;
   value?: string | null;
   disabled?: boolean;
   onChange?: (reference: string) => void;
@@ -171,7 +173,7 @@ export default function BaseBranchPicker(props: {
       : t("worktrees.base.not_fetched");
   return (
     <div class="grid min-w-0 gap-1">
-      <Show when={props.preference}>
+      <Show when={props.preference && !props.inlineLabel}>
         <span class="px-2 text-xs text-neutral-500">{t("worktrees.base.default")}</span>
       </Show>
       <Popover

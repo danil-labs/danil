@@ -3,6 +3,7 @@
  * against a fake `fetch`; and that no client takes a machine out by its contract.
  */
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { test } from "node:test";
@@ -160,4 +161,13 @@ test("a refused photo carries the control plane's code, and 401 asks to sign in 
   const gone = account(() => Response.json({ error: { code: "invalid_token" } }, { status: 401 }));
   await assert.rejects(gone.source.read(), { detail: "invalid_token" });
   assert.equal(gone.unauthorized(), 1);
+});
+
+test("the installer path serves a script, not the app page, and says nothing was installed", () => {
+  const file = join(dirname(fileURLToPath(import.meta.url)), "../../web-public/install.sh");
+  assert.match(readFileSync(file, "utf8"), /^#!\/bin\/sh\n/);
+  const run = spawnSync("sh", [file], { encoding: "utf8" });
+  assert.equal(run.status, 1);
+  assert.match(run.stderr, /no se instaló nada/);
+  assert.equal(run.stdout, "");
 });

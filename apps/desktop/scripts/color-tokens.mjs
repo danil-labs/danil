@@ -93,7 +93,7 @@ const barra = (p) => `<div class="lado p-${p.id}">
 </div>`;
 
 const html = `<!doctype html>
-<html lang="es"><head><meta charset="utf-8"><title>Terminus · Tokens de color</title>
+<html lang="es"><head><meta charset="utf-8"><title>Danil · Tokens de color</title>
 <style>
 ${PALETAS.map((p) => `.p-${p.id}{${declarar(p.vars)}}`).join("\n")}
 body{margin:0;background:#f4f4f5;color:#18181b;font:13px/1.5 ui-sans-serif,system-ui,-apple-system,sans-serif}

@@ -188,6 +188,10 @@ export type SessionRow = {
   parent?: string | null;
   launched_by?: string | null;
   launcher_available?: boolean;
+  /** La ejecutora viva de la que continúa por handoff; un motor viejo no lo manda. */
+  handoff_parent?: string | null;
+  /** Por qué no cuelga de quien le cedió; un motor viejo no lo manda. */
+  handoff_issue?: "missing_source" | "contradictory" | "cycle" | null;
   /** Hija de una delegación entre máquinas; un motor viejo no lo manda (`@terminus/tasks` `remote.ts`). */
   remote_parent?: { machine: string; workspace?: string | null; task: string; request_id?: string | null } | null;
   stage?: "in_progress" | "review" | "done" | null;
@@ -215,6 +219,10 @@ export type Turn = {
   text: string;
   at?: number;
   meta?: string | null;
+  /** Por qué falló, cuando se pudo clasificar (`failures::Fallo`). Sin este campo la clase se guarda y no se ve. */
+  fallo?: { clase: string; detail?: string; vuelve_en?: number; reintentos?: number; resumes_at?: number } | null;
+  /** Con qué cuenta siguió tras quedarse sin cupo (`quota::QuotaResume`). */
+  quota?: { from?: string | null; to?: string | null; until?: number | null } | null;
   model?: string | null;
   /** Tiempo de trabajo activo del tramo del agente; falta en tareas antiguas. */
   duration_ms?: number | null;
@@ -233,6 +241,13 @@ export type Turn = {
   agent?: string | null;
   /** La tarea que lo escribió por el CLI (`Turn::from_task`). */
   from_task?: SenderTask | null;
+  /** Lo que el agente pensó, ubicado por `before_piece`; ausente es «no se registró». */
+  reasoning?: {
+    text: string;
+    before_piece?: number;
+    duration_ms?: number | null;
+    truncated?: boolean;
+  }[] | null;
 };
 /** `sessions::PermissionDecision`. */
 export type PermissionDecision = { tool: string; target?: string | null; allow: boolean };
@@ -256,9 +271,35 @@ export type FilePreview = {
   truncated: boolean;
 };
 /** `tree_show`: un archivo de un árbol de la tarea. */
-export type TreeContent = { kind: string; text: string; bytes: number; truncated: boolean };
+export type TreeContent = { kind: string; text: string; bytes: number; truncated: boolean; data_url?: string | null; pdf?: string | null };
+/** `list_task_trees`: un árbol de la tarea (su copia de trabajo, y los que declare). */
+export type TaskTree = { key: string; name: string; path: string; kind: "git" | "folder" | "kn"; missing: boolean };
+/** Una carpeta de `tree_files`: `lazy` e `ignored` no traen sus archivos en la lista. */
+export type TreeFolder = { path: string; repo: boolean; lazy?: boolean; ignored?: boolean };
+/** `tree_files`: las rutas de los archivos de un árbol, con sus carpetas. */
+export type TreeFiles = { paths: string[]; folders: TreeFolder[]; truncated: boolean };
 /** `load_session`. */
-export type OpenedSession = { id: string; provider: string; model: string | null; agent?: string | null; permission_mode?: string | null; turns: Turn[] };
+/** The `history` field of a read: `turns[i]` is turn `start + i`. */
+export type HistoryPage = { version?: number; revision?: string; total: number; start: number; end: number; limit: number; has_more: boolean };
+
+export type OpenedSession = {
+  id: string;
+  /** El CLI de la tarea, no el proveedor del modelo (el `model_vendor` del cable). */
+  provider: string;
+  model: string | null;
+  observed_model?: string | null;
+  agent?: string | null;
+  permission_mode?: string | null;
+  turns: Turn[];
+  history?: HistoryPage | null;
+  /**
+   * Con `provider_handoff_v1`: si `set_session_provider` la dejaría cambiar de
+   * CLI. Un motor anterior no lo manda; ausente es que no puede (`canHandOver`).
+   */
+  can_hand_over?: boolean;
+  /** La clave del catálogo (`chat.handover.*`) que explica el rechazo. */
+  hand_over_blocked?: string | null;
+};
 
 /** `pending_requests`. */
 export type PendingRequests = {
@@ -300,8 +341,15 @@ export type PermissionModeOption = { id: string; label: Frase; falta?: Frase | n
 export type SlashMenu = { commands: { name: string; description?: string | null }[]; skills: { name: string; description?: string | null }[]; side_question?: string | null };
 /** `list_mentions`: archivos y carpetas que se pueden nombrar con `@`. */
 export type MentionList = { fuentes: { ruta: string; tipo: string; fuente?: string | null }[]; truncado?: boolean };
-/** `project_base_branches`. */
-export type BaseBranches = { branches: { reference: string; name: string; remote?: string | null }[]; selected: string | null; fetched_at?: number | null };
+/**
+ * `project_base_branches`. El motor manda `remote` como booleano. Un doble de
+ * desarrollo llegó a mandar el nombre del remoto, o `null`.
+ */
+export type BaseBranches = {
+  branches: { reference: string; name: string; remote?: boolean | string | null; commit?: string | null; ahead?: number | null; behind?: number | null }[];
+  selected: string | null;
+  fetched_at?: number | null;
+};
 /** `task_blockers`: lo que impide archivar sin preguntar. */
 export type TaskBlockers = { unsaved: { session: string; title: string; files: string[] }[]; not_finished?: boolean };
 

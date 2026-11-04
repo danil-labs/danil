@@ -117,7 +117,7 @@ async function download() {
   if (!pinned?.url || !pinned?.sha256) {
     fail(
       `No seldon-runtime has been published for ${PLATFORM} yet (release ${LOCK.release}).\n` +
-        `The Terminus window cannot run on this platform until it is. If you have an engine binary,\n` +
+        `The Danil window cannot run on this platform until it is. If you have an engine binary,\n` +
         `use it with: node scripts/engine.mjs download --from <path-to-seldon-runtime${EXE}>`,
     );
   }

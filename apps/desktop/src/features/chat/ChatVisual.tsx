@@ -1,4 +1,5 @@
 import { createEffect, createMemo, createResource, createSignal, on, onCleanup, onMount, Show } from "solid-js";
+import { createRowSignal, retainRowWhile } from "./threadRow";
 import Maximize2 from "lucide-solid/icons/maximize-2";
 import Minimize2 from "lucide-solid/icons/minimize-2";
 import X from "lucide-solid/icons/x";
@@ -27,9 +28,10 @@ export default function ChatVisual(props: {
   let expandButton: HTMLButtonElement | undefined;
   let restoreSites: (() => void) | undefined;
   const [visible, setVisible] = createSignal(false);
-  const [opened, setOpened] = createSignal(true);
+  const [opened, setOpened] = createRowSignal("visual-opened", true);
   const [expanded, setExpanded] = createSignal(false);
-  const [height, setHeight] = createSignal(320);
+  retainRowWhile(expanded);
+  const [height, setHeight] = createRowSignal("visual-height", 320);
   // La tarjeta se queda hasta que el marco ya midió su alto: así no se cambia
   // por un hueco a medio pintar ni salta el texto que la rodea.
   const [painted, setPainted] = createSignal(false);
@@ -163,7 +165,7 @@ export default function ChatVisual(props: {
     setPainted(false);
     if (panel) resize(false);
     setHeight(320);
-  }));
+  }, { defer: true }));
   return (
     <div ref={container} class="group/visual relative my-4" style={{ height: expanded() ? `${height()}px` : undefined }} data-chat-visual={props.visual.file}>
       <dialog ref={panel} open aria-label={title()} data-expanded={expanded() ? "" : undefined}

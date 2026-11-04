@@ -1,6 +1,6 @@
 # The window and the engine
 
-Terminus has two processes:
+Danil has two processes:
 
 - **The window** (this repository): a Tauri app with a SolidJS front. It draws
   the interface, hosts native site views, local images, dialogs, clipboard and
@@ -33,17 +33,18 @@ el motor fijado en `seldon-runtime.lock`.
 
 La cuenta de Danil (Configuración → Cuenta de Danil) usa `danil_connect_start`,
 `danil_connect_status`, `danil_connect_options`, `danil_disconnect` y el evento
-`danil-connect` (seldon-host#66, [connector.md](https://github.com/danil-labs/seldon-host/blob/dev/docs/connector.md)). Iniciar sesión registra
-esta computadora en la cuenta: con un workspace de Radiant entra sin navegador;
+`danil-connect` (seldon-host#66, [connector.md](https://github.com/danil-labs/danil-engine/blob/dev/docs/connector.md)). Iniciar sesión registra
+esta computadora en la cuenta: con un workspace de Harness entra sin navegador;
 sin él, la ventana abre `verification_uri_complete` y la persona aprueba en
-`app.danil.ai/terminus/connect`. Un motor sin estos comandos recibe `command` del
+`alfa-app.danil.ai/connect` (antes `app.danil.ai/terminus/connect`, que
+ahora redirige allí). Un motor sin estos comandos recibe `command` del
 proxy y la sección lo dice. El campo editable del alta y de la página de
 aprobación es el nombre de **esta computadora**, no el de la cuenta.
 
-La web (`app.danil.ai/terminus`) no ofrece Radiant: ni la sección de
+La web (`alfa-app.danil.ai`) no ofrece Harness: ni la sección de
 Configuración, ni su gobierno en las pantallas, ni la elección «De mi
 organización» al crear el espacio (`capabilities().radiant`, solo en el
-escritorio). Radiant se conectará con Terminus Computers, no con cada ventana;
+escritorio). Harness se conectará con Danil Machines, no con cada ventana;
 el escritorio lo conserva por ahora (2026-10-21).
 
 La persona de la cuenta (nombre, correo, foto) sale del motor:
@@ -119,6 +120,54 @@ so the window can translate them.
 Keep `commands.json` byte-exact: `.gitattributes` checks it out with LF on every
 platform, and a CRLF copy has a different hash.
 
+### Extensión `provider_handoff_v1`
+
+Cambiar de CLI (Claude, Codex, OpenCode) dentro de una tarea normal
+(seldon-host#304, [provider-handoff.md](https://github.com/danil-labs/danil-engine/blob/dev/docs/provider-handoff.md)).
+La extensión
+`crates/engine-manifest/extensions/provider_handoff_v1.json` se copia byte a
+byte en `src-tauri/crates/engine-protocol/extensions/` y se registra en
+`EXTENSIONS`; queda fuera de la huella de compatibilidad (`status.contract`).
+El motor la anuncia en `status.service_features`; el cliente la reconoce con
+`PROVIDER_HANDOFF_FEATURE` (`@terminus/protocol`).
+
+- `set_session_provider {project, session, provider}` es una función de ventana
+  con autoridad `admin`. `provider` es el CLI de la tarea (`Session.agent`), no
+  el proveedor del modelo: en un turno, ese otro eje viaja como
+  `model_vendor` (`provider` de disco renombrado por el motor). No confundirlo
+  con `set_agent_model`.
+- El comando no cambia el turno en marcha: deja un consentimiento de un solo
+  uso para el siguiente turno, que abre una sesión nueva con la conversación
+  como texto o retoma la sesión aparcada con lo que pasó desde entonces.
+- `load_session` suma `can_hand_over` y `hand_over_blocked`. El segundo solo
+  aparece cuando hay rechazo y trae la clave del catálogo que lo explica
+  (`chat.handover.busy`, `.handler`, `.adopted`, `.fork`, `.subagent`,
+  `.unsupported`, `.child`, `.stale`, `.unknown_provider`). `can_hand_over` no
+  mira si hay un turno corriendo —eso cambia mientras se mira—, así que el
+  rechazo por ocupada lo decide el comando. Un motor anterior no manda
+  `can_hand_over`: `canHandOver()` lo normaliza con `=== true`, así que
+  ausente es que la tarea no puede cambiar.
+- Una tarea de otra máquina también cambia de CLI. `set_session_provider` va
+  con la cabecera `x-terminus-machine` de su fila y el workspace explícito; el
+  motor de esa máquina es quien decide con `can_hand_over` y
+  `hand_over_blocked`. La ventana la enciende antes de mandar la acción; el
+  relay solo despierta con sus comandos de intención. El cliente no la bloquea
+  por ser remota. Solo mira el rasgo de esa máquina en `machine_list`:
+  si está en la lista y no anuncia `provider_handoff_v1`, muestra
+  `chat.handover.machine_unannounced` (el `hello` del conector puede ser
+  anterior a la actualización); si no está en la lista,
+  `chat.handover.unsupported`. «Motor viejo» nunca se deriva de
+  `can_hand_over === false`.
+- `chat.handover.child` solo aplica a una tarea con `parent` real, creada por
+  otra tarea. En este `dev`, `create_parallel` y `build_handoff` ponen
+  `parent: None`, así que sus hijas no entran por esa clave; una tarea cuyo
+  único vínculo es `launched_by` sigue pudiendo cambiar de CLI.
+- `chat.handover.stale` es un consentimiento que ya no aplica y hay que volver
+  a elegir; `chat.handover.unknown_provider`, un CLI que esta tarea no ofrece.
+- `chat.continuation.provider_locked` sigue siendo el aviso de los casos que no
+  cambian en esta versión: encargados, subagentes, forks, tareas adoptadas y
+  clientes anteriores.
+
 ## Starting the engine
 
 Opened without arguments (a double click), the window uses the engine that
@@ -150,7 +199,7 @@ is a new folder name. `scripts/work-tools.py` builds it from the pins in
   path would pass `MAX_PATH` under a 32-character profile name. The engine
   removes older sibling trees once nothing uses them; a real uninstall runs
   `RMDir /r` on `work-tools`.
-- **Linux AppImage:** the resources travel in `usr/share/Terminus/` (with a
+- **Linux AppImage:** the resources travel in `usr/share/Danil/` (with a
   copy of `lenguas/`), where linuxdeploy neither deploys dependencies nor
   patches an ELF. The mount changes on every start, so the window copies
   every resource (`lenguas/` and `work-tools/`) to
@@ -446,11 +495,23 @@ launcher must deliver the master through a private pipe on every independent
 restart, without a new master or interactive fallback. Native signatures,
 keychain access, menu-bar status, CmdQ and reopen require macOS QA.
 
+## El evento `chat`
+
+`kind` es una lista cerrada: `started`, `delta`, `reasoning`, `tool`,
+`tool_done`, `permission`, `notice`, `task_launched`, `model`, `effort`,
+`retry`, `background`, `mcp_auth`, `presence`, `command_output`,
+`command_running`, `shell_started`, `shell_output`, `shell_done`, `image` y
+`done`. La ventana ignora un kind que no conoce y ninguno cae al texto de la
+respuesta: sólo `delta` escribe en ella. `reasoning` lleva lo que el agente
+pensó, aparte de su respuesta y sin `starts_message`, `target` ni `detail`; el
+móvil concatena todo `delta`, así que un `delta` con `meta` se volvería respuesta
+en el teléfono. Un kind nuevo se agrega primero al cliente y después al motor.
+
 ## Stream empujado
 
 Con un motor que anuncia `push_stream_v1` en `status.service_features`
 (seldon-host#52, contrato en
-[push-stream-contract.md](https://github.com/danil-labs/seldon-host/blob/dev/docs/push-stream-contract.md)), el
+[push-stream-contract.md](https://github.com/danil-labs/danil-engine/blob/dev/docs/push-stream-contract.md)), el
 cliente deja de abrir una conexión TCP por petición:
 
 - Hasta cuatro conexiones persistentes para peticiones, con varias en vuelo por
@@ -489,7 +550,7 @@ Tinymist processes if the window dies.
 Windows does not overwrite a running `.exe`, but it renames one. The installer
 (`src-tauri/windows/hooks.nsh`) renames `terminus.exe` and `seldon-runtime.exe`
 to `old_*` and writes the new ones, so the open window and its engine keep
-working. The template's step that closes Terminus only runs on a real
+working. The template's step that closes Danil only runs on a real
 uninstall; an installer replacing the copy runs the uninstaller in place
 (`_?=$INSTDIR`), and that run also sets the files aside. The app does not use
 `downloadAndInstall`, which exits on Windows: `update_install` downloads with
@@ -498,7 +559,7 @@ the plugin's signature check and runs the installer with `/S /UPDATE`.
 `update_pending` reports when this window's image was set aside and the new
 `terminus.exe` is already in its place, whether the app or a manual installer
 did it, and the front asks for a restart. A manual installer that finds
-Terminus open shows the same notice and ends there, instead of running a second
+Danil open shows the same notice and ends there, instead of running a second
 window from its finish page. `restart_app` from a window running from `old_*`
 opens the installed `terminus.exe`, not itself.
 

@@ -8,7 +8,9 @@ export {
   COMPUTERS_ENDPOINT,
   COMPUTER_NAME_MAX,
   apiUrl,
+  type SharedComputer,
   listComputers,
+  listSharedComputers,
   listWorkspaces,
   listWorkspacesWithDeleted,
   purgeWorkspace,
@@ -16,16 +18,19 @@ export {
   restoreWorkspace,
   sessionProbe,
   startComputer,
+  startSharedComputer,
 } from "./api.ts";
 export {
   type AuditEntry,
   type Connection,
+  type ConnectionCapabilities,
   type ConnectionMachine,
   type ConnectionPatch,
   type ConnectionState,
   type UpdatedConnection,
   PERMISSION_MODES,
   connectionAudit,
+  connectionCapabilities,
   listConnections,
   mcpUrl,
   revokeConnection,
@@ -52,6 +57,7 @@ export {
 } from "./machine.ts";
 export { type WorkspaceGroup, type WorkspaceRow, groupWorkspaces, hasAccountWorkspaces, registryProjects, withRegistry } from "./fleet.ts";
 export { callWorkspace, hasLinkedWorkspaces, linkedAttention, linkedEvent, linkedEvents, linkedListing, linkedWorkspaces, onlyLinked, serviceFeatures, unlinkedWorkspaces } from "./links.ts";
+export { type Directory, type DirectoryEntry, type DirectoryGroup, barWorkspaceIds, groupDirectory, linkDanilWorkspace, listDirectory, setDirectoryPins } from "./directory.ts";
 export { type Compatibility, machineCompatibility, machineContracts } from "./compatibility.ts";
 export {
   type ConnectHop,
@@ -91,6 +97,7 @@ export {
   type AccountMember,
   type AccountRowLike,
   groupAccounts,
+  immediateWindow,
   resetLabel,
   usageTone,
   windowLabel,
@@ -182,3 +189,4 @@ export { type SealOptions, type SealRecipient, SEAL_MAX_BYTES, canSeal, fromBase
 export { arrangeSpaces, spaceOrder, type SpaceOrderSource } from "./space-order.ts";
 export { createSpaceOrderSource } from "./space-order-source.ts";
 export { ACCOUNT_ASSET_MAX_BYTES, ACCOUNT_ASSET_TYPES, type AccountAssetKind, type BlobFetch, accountAssetUrl, readAccountAsset } from "./assets.ts";
+export { type PushDevice, type PushMode, type PushPreferences, type PushQuiet, forgetPushDevice, keyBytes, pushPreferences, pushPublicKey, savePushDevice, savePushPreferences, testPush } from "./push.ts";

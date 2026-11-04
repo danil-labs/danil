@@ -77,6 +77,25 @@ test("upstream redirects, HTML and transport failures fail closed", async () => 
   assert.equal((await h.fetch(prefix + "/auth/profile", { headers: auth })).status, 502);
 });
 
+test("organization workspaces is one GET with account_id only", async () => {
+  const h = harness();
+  const path = "/auth/organization/workspaces?account_id=476";
+  const response = await h.fetch(prefix + path, { headers: auth });
+  assert.equal(response.status, 200);
+  assert.equal(h.calls.length, 1);
+  assert.equal(h.calls[0].url, origin + path);
+  assert.equal(h.calls[0].headers.get("Authorization"), auth.Authorization);
+  for (const query of ["", "account_id=0", "account_id=7&limit=10", "account_id=7&account_id=8", "organization_id=189"]) {
+    assert.equal((await h.fetch(prefix + "/auth/organization/workspaces?" + query, { headers: auth })).status, 400);
+  }
+  for (const method of ["POST", "PATCH", "DELETE"]) {
+    assert.equal((await h.fetch(prefix + path, { method, headers: auth })).status, 405);
+  }
+  assert.equal((await h.fetch(prefix + "/auth/organization/workspaces/476", { headers: auth })).status, 404);
+  assert.equal((await h.fetch(prefix + path)).status, 401);
+  assert.equal(h.calls.length, 1);
+});
+
 test("support access is one read with account_id only; revocation does not pass", async () => {
   const h = harness();
   const path = "/auth/account/support-access?account_id=7";
@@ -110,6 +129,19 @@ test("assets preserve CSP and serve every other path from the root", async () =>
   assert.equal((await h.fetch("/inbox", { method: "POST" })).status, 405);
   assert.equal((await worker.fetch(new Request("https://app.danil.ai/inbox"), h.env)).status, 404);
   assert.equal(h.calls.length, 0);
+});
+
+test("ENTRY_HOST moves the entry to another host; alfa then answers 404", async () => {
+  const h = harness();
+  const env = { ...h.env, ENTRY_HOST: "staging-app.danil.ai" };
+  const staging = "https://staging-app.danil.ai";
+  assert.equal(await (await worker.fetch(new Request(staging + "/inbox"), env)).text(), "assets");
+  assert.equal((await worker.fetch(new Request(origin + "/inbox"), env)).status, 404);
+  const email = { method: "POST", headers: { ...auth, "Content-Type": "application/json" }, body: JSON.stringify({ email: "a@b.co" }) };
+  assert.equal((await worker.fetch(new Request(staging + prefix + "/auth/emails", { ...email, headers: { ...email.headers, Origin: origin } }), env)).status, 403);
+  const accepted = await worker.fetch(new Request(staging + prefix + "/auth/emails", { ...email, headers: { ...email.headers, Origin: staging } }), env);
+  assert.equal(accepted.status, 200);
+  assert.equal(h.calls.at(-1).headers.get("Origin"), staging);
 });
 
 

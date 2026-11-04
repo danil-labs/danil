@@ -1,4 +1,4 @@
-# Builds Terminus for macOS (universal), Windows and Linux from this repository,
+# Builds Danil (the desktop app) for macOS (universal), Windows and Linux from this repository,
 # signs it and publishes it as a GitHub release.
 #
 # **Who can run it.** Only a tag push (`v*`) or a manual `workflow_dispatch`,
@@ -23,24 +23,30 @@
 #     dispara otra corrida; empujar el tag `v*` a mano sí, y publicaría como
 #     latest. Se lanza desde la rama, sin tag:
 #
-#         gh workflow run publish.yml -R danil-labs/terminus --ref main -f prerelease=true
+#         gh workflow run publish.yml -R danil-labs/danil --ref main -f prerelease=true
 #
 #     Pasarla a latest después de probar la actualización es una sola orden; no
 #     se reconstruye ni se resube nada, porque `latest.json` y los nombres
 #     estables ya están en la release y apuntan a `download/v<versión>`:
 #
-#         gh release edit v<versión> -R danil-labs/terminus --prerelease=false --latest
+#         gh release edit v<versión> -R danil-labs/danil --prerelease=false --latest
 #
 #     Y se comprueba como lo hace «Comprobar que la app lo ve»:
 #
-#         curl -fsSL https://github.com/danil-labs/terminus/releases/latest/download/latest.json | jq .version
+#         curl -fsSL https://github.com/danil-labs/danil/releases/latest/download/latest.json | jq .version
 #
-#   • **terminus.danil.ai** enlaza a `releases/latest/download/Terminus-Windows-Setup.exe`,
-#     `.../Terminus-macOS.dmg`, `.../Terminus-macOS-Intel.dmg` y
-#     `.../Terminus-Linux-x86_64.AppImage`. Son **nombres estables sin versión
+#   • **danil.ai/download/** sirve `Danil-Windows-Setup.exe`, `Danil-macOS.dmg`,
+#     `Danil-macOS-Intel.dmg` y `Danil-Linux-x86_64.AppImage` redirigiendo a
+#     `releases/latest/download/<mismo nombre>` (ver
+#     `apps/desktop/docs/download-urls.md`). Es decir, a `releases/latest/download/Danil-Windows-Setup.exe`,
+#     `.../Danil-macOS.dmg`, `.../Danil-macOS-Intel.dmg` y
+#     `.../Danil-Linux-x86_64.AppImage`. Son **nombres estables sin versión
 #     dentro**: la página no se toca al publicar, y por eso este workflow sube
 #     una copia con ese nombre además del archivo versionado. Cambiarlos rompe
-#     el botón de descarga sin que nada avise.
+#     el botón de descarga sin que nada avise. Desde la 0.3.0 la app se llama
+#     Danil; las copias `Terminus-*` se siguen subiendo durante la transición
+#     porque enlaces viejos (el README anterior, terminus.danil.ai mientras no
+#     redirija) apuntan a esos nombres en GitHub.
 #
 #   • **Las notas por idioma.** `latest.json` lleva `notes` (la nota en inglés,
 #     o en español si la versión no trae inglés: es el campo estándar del
@@ -68,7 +74,7 @@ on:
 
   # By hand, from a maintainer:
   #
-  #     gh workflow run publish.yml -R danil-labs/terminus --ref v<version>
+  #     gh workflow run publish.yml -R danil-labs/danil --ref v<version>
   #
   workflow_dispatch:
     inputs:
@@ -81,7 +87,7 @@ on:
       # release: `publish` arma el manifiesto y lo deja como artefacto
       # `dist-manifest`, pero no publica nada. Se lanza desde la rama del PR:
       #
-      #     gh workflow run publish.yml -R danil-labs/terminus --ref <rama> -f dry_run=true
+      #     gh workflow run publish.yml -R danil-labs/danil --ref <rama> -f dry_run=true
       #
       # **Un ensayo no firma Windows.** El plan de eSigner cobra cada firma, y un
       # ensayo gastaba las de una release para un instalador que nadie baja. Sin
@@ -132,23 +138,25 @@ env:
   #     la app abre **vacía**, sin error y sin aviso.
   #
   #   • `PRODUCT_NAME` — es la clave del registro de desinstalación en Windows
-  #     (`HKCU\…\Uninstall\Terminus`) y la carpeta de instalación. Cambiarlo
+  #     (`HKCU\…\Uninstall\<nombre>`) y la carpeta de instalación. Cambiarlo
   #     instala **al lado** de la copia vieja: dos entradas en Programas y
-  #     características y dos apps en disco.
+  #     características y dos apps en disco. Pasó de Terminus a Danil en la
+  #     0.3.0: `windows/hooks.nsh` encuentra la copia «Terminus», instala en su
+  #     carpeta y retira su entrada. Un cambio más exige otra migración igual.
   #
   # Duplicarlas aquí es el punto: son la memoria de lo que las copias instaladas
   # ya creen. Cambiarlas exige tocar este archivo, que es un PR que alguien lee —
   # en vez de un `tauri.conf.json` que se edita por otra razón.
   PUBLIC_KEY: dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDM5ODEzRDE1M0QwQ0RFQjgKUldTNDNndzlGVDJCT1hPSnp4ZzBIbkowOW9kVGFYb0YyRkZKZjNTT2N3eERXOXhuRi9UblY5d3EK
   IDENTIFIER: ai.danil.terminus
-  PRODUCT_NAME: Terminus
+  PRODUCT_NAME: Danil
 
 jobs:
   # ─────────────────────────────────────────────────────────────────────────────
   # ¿Hay algo que publicar? Sale barato preguntarlo, y evita arrancar los runners de build.
   # ─────────────────────────────────────────────────────────────────────────────
   check:
-    if: github.repository == 'danil-labs/terminus'
+    if: github.repository == 'danil-labs/danil'
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -196,7 +204,7 @@ jobs:
           compare_value "El nombre del producto" \
             "$PRODUCT_NAME" \
             "$(jq -r .productName src-tauri/tauri.conf.json)" \
-            "La actualización instala al lado de la copia vieja: dos entradas en Programas y características."
+            "La actualización instala al lado de la copia vieja: dos entradas en Programas y características. windows/hooks.nsh adopta solo la copia Terminus; otro nombre necesita su propia migración."
 
           compare_value "La llave pública que usa npx" \
             "$PUBLIC_KEY" \
@@ -655,7 +663,7 @@ jobs:
       # salió del build: v0.2.6 pasó todas las comprobaciones del build con un
       # `terminus.exe` que, instalado, daba `HashMismatch`. Aquí se instala en
       # silencio, como usuario, igual que lo hace una persona, y se mira lo que
-      # quedó en `%LOCALAPPDATA%\Terminus`. En un ensayo no hubo Authenticode:
+      # quedó en `%LOCALAPPDATA%\<PRODUCT_NAME>`. En un ensayo no hubo Authenticode:
       # se exige que esté todo y la marca de NSIS, y la firma solo se muestra.
       - name: Comprobar las firmas de lo que se instala
         if: runner.os == 'Windows'
@@ -686,7 +694,10 @@ jobs:
             $s = Get-AuthenticodeSignature -LiteralPath $_.FullName
             $rel = $_.FullName.Substring($dir.Length + 1)
             Write-Output ("{0}: {1} | {2} | sello: {3}" -f $rel, $s.Status, $s.SignerCertificate.Subject, [bool]$s.TimeStamperCertificate)
+            # Las herramientas incluidas conservan la firma de origen: `signCommand`
+            # las deja fuera a propósito (ver «Construir y firmar en Windows»).
             # Dentro de ForEach-Object, `return` pasa al siguiente archivo.
+            if ($rel -like 'work-tools\*') { return }
             if ($dryRun) { return }
             if ($rel -eq 'uninstall.exe' -and $s.Status -eq 'NotSigned') {
               # Sin firmar a propósito: ver «Construir y firmar en Windows».
@@ -767,20 +778,20 @@ jobs:
           set -euo pipefail
           case "$RUNNER_OS" in
             macOS)
-              app=src-tauri/target/universal-apple-darwin/release/bundle/macos/Terminus.app
+              app=src-tauri/target/universal-apple-darwin/release/bundle/macos/Danil.app
               resources="$app/Contents/Resources/work-tools"
               engine="$app/Contents/MacOS/seldon-runtime"
               ;;
             Windows)
-              resources="$(cygpath -u "$LOCALAPPDATA")/Terminus/work-tools"
-              engine="$(cygpath -u "$LOCALAPPDATA")/Terminus/seldon-runtime.exe"
+              resources="$(cygpath -u "$LOCALAPPDATA")/$PRODUCT_NAME/work-tools"
+              engine="$(cygpath -u "$LOCALAPPDATA")/$PRODUCT_NAME/seldon-runtime.exe"
               ;;
             Linux)
               image=$(find src-tauri/target/release/bundle -name '*.AppImage' -type f | head -1)
               image=$(realpath "$image")
               mkdir -p "$RUNNER_TEMP/work-tools-final"
               (cd "$RUNNER_TEMP/work-tools-final" && "$image" --appimage-extract >/dev/null)
-              resources="$RUNNER_TEMP/work-tools-final/squashfs-root/usr/share/Terminus/work-tools"
+              resources="$RUNNER_TEMP/work-tools-final/squashfs-root/usr/share/Danil/work-tools"
               engine="$RUNNER_TEMP/work-tools-final/squashfs-root/usr/bin/seldon-runtime"
               ;;
           esac
@@ -793,7 +804,7 @@ jobs:
         if: runner.os == 'macOS'
         run: |
           set -euo pipefail
-          APP=src-tauri/target/universal-apple-darwin/release/bundle/macos/Terminus.app
+          APP=src-tauri/target/universal-apple-darwin/release/bundle/macos/Danil.app
           lipo "$APP/Contents/MacOS/terminus" -verify_arch arm64 x86_64
           # Las herramientas van en un árbol por arquitectura: cada uno con la suya.
           TOOLS="$APP/Contents/Resources/work-tools"
@@ -809,7 +820,7 @@ jobs:
           done
 
       # Con `CI=true` Tauri arma el `.dmg` sin acomodar la ventana (`--skip-jenkins`)
-      # y le pone al disco el ícono de la app: la gente abría Terminus desde el
+      # y le pone al disco el ícono de la app: la gente abría la app desde el
       # disco en vez de copiarlo. dmgbuild escribe la ventana sin Finder, con el
       # ícono de instalador. Se firma aquí porque el llavero de Tauri ya no existe.
       - name: Armar el .dmg con su ventana
@@ -821,7 +832,7 @@ jobs:
         run: |
           set -euo pipefail
           B=src-tauri/target/universal-apple-darwin/release/bundle
-          APP="$B/macos/Terminus.app"
+          APP="$B/macos/Danil.app"
           DMG=$(find "$B" -type f -name '*.dmg' | head -1)
           [ -n "$DMG" ] || { echo "::error::No se construyó el .dmg."; exit 1; }
 
@@ -829,7 +840,7 @@ jobs:
           "$RUNNER_TEMP/dmgbuild/bin/pip" install --quiet 'dmgbuild==1.6.7'
           rm "$DMG"
           "$RUNNER_TEMP/dmgbuild/bin/dmgbuild" -s src-tauri/macos/dmg-settings.py \
-            -D "app=$APP" -D "assets=$PWD/src-tauri/macos" "Instalar Terminus" "$DMG"
+            -D "app=$APP" -D "assets=$PWD/src-tauri/macos" "Instalar Danil" "$DMG"
 
           KC="$RUNNER_TEMP/dmg-signing.keychain-db"
           KC_PASSWORD=$(openssl rand -hex 24)
@@ -848,7 +859,7 @@ jobs:
 
           MNT=$(mktemp -d)
           hdiutil attach -nobrowse -readonly -mountpoint "$MNT" "$DMG" >/dev/null
-          for f in .DS_Store .VolumeIcon.icns .background.tiff Terminus.app Applications; do
+          for f in .DS_Store .VolumeIcon.icns .background.tiff Danil.app Applications; do
             [ -e "$MNT/$f" ] || { hdiutil detach "$MNT" >/dev/null; echo "::error::Al .dmg le falta $f."; exit 1; }
           done
           hdiutil detach "$MNT" >/dev/null
@@ -878,9 +889,9 @@ jobs:
         run: |
           set -euo pipefail
           B=src-tauri/target/universal-apple-darwin/release/bundle
-          APP=$(find "$B" -name 'Terminus.app' -type d | head -1)
+          APP=$(find "$B" -name 'Danil.app' -type d | head -1)
           DMG=$(find "$B" -type f -name '*.dmg' | head -1)
-          [ -n "$APP" ] || { echo "::error::No se construyó Terminus.app."; exit 1; }
+          [ -n "$APP" ] || { echo "::error::No se construyó Danil.app."; exit 1; }
           [ -n "$DMG" ] || { echo "::error::No se construyó el .dmg."; exit 1; }
 
           codesign --verify --deep --strict --verbose=2 "$APP"
@@ -935,21 +946,24 @@ jobs:
             # NSIS y no MSI: es el formato que el updater sabe aplicar sin
             # intervención, y `installMode: passive` lo instala enseñando barra
             # de progreso pero sin preguntar nada.
-            require_file '*_x64-setup.exe'     "Terminus_${V}_x64-setup.exe"
-            require_file '*_x64-setup.exe.sig' "Terminus_${V}_x64-setup.exe.sig"
-            cp "release-assets/Terminus_${V}_x64-setup.exe" release-assets/Terminus-Windows-Setup.exe
+            require_file '*_x64-setup.exe'     "Danil_${V}_x64-setup.exe"
+            require_file '*_x64-setup.exe.sig' "Danil_${V}_x64-setup.exe.sig"
+            cp "release-assets/Danil_${V}_x64-setup.exe" release-assets/Danil-Windows-Setup.exe
+            cp "release-assets/Danil_${V}_x64-setup.exe" release-assets/Terminus-Windows-Setup.exe
           elif [ "${{ matrix.name }}" = "macos" ]; then
-            require_file '*.app.tar.gz'     "Terminus.app.tar.gz"
-            require_file '*.app.tar.gz.sig' "Terminus.app.tar.gz.sig"
-            require_file '*_universal.dmg'  "Terminus_${V}_universal.dmg"
-            cp "release-assets/Terminus_${V}_universal.dmg" release-assets/Terminus-macOS.dmg
-            cp "release-assets/Terminus_${V}_universal.dmg" release-assets/Terminus-macOS-Intel.dmg
+            require_file '*.app.tar.gz'     "Danil.app.tar.gz"
+            require_file '*.app.tar.gz.sig' "Danil.app.tar.gz.sig"
+            require_file '*_universal.dmg'  "Danil_${V}_universal.dmg"
+            for name in Danil-macOS Danil-macOS-Intel Terminus-macOS Terminus-macOS-Intel; do
+              cp "release-assets/Danil_${V}_universal.dmg" "release-assets/$name.dmg"
+            done
           else
             # El AppImage es lo que el updater baja y lo que la página enlaza:
             # una sola copia versionada, más el nombre estable.
-            require_file '*.AppImage'     "Terminus_${V}_amd64.AppImage"
-            require_file '*.AppImage.sig' "Terminus_${V}_amd64.AppImage.sig"
-            cp "release-assets/Terminus_${V}_amd64.AppImage" release-assets/Terminus-Linux-x86_64.AppImage
+            require_file '*.AppImage'     "Danil_${V}_amd64.AppImage"
+            require_file '*.AppImage.sig' "Danil_${V}_amd64.AppImage.sig"
+            cp "release-assets/Danil_${V}_amd64.AppImage" release-assets/Danil-Linux-x86_64.AppImage
+            cp "release-assets/Danil_${V}_amd64.AppImage" release-assets/Terminus-Linux-x86_64.AppImage
           fi
 
           {
@@ -1074,16 +1088,16 @@ jobs:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
           set -euo pipefail
-          tar xzf release-assets/Terminus.app.tar.gz
-          lipo Terminus.app/Contents/MacOS/terminus -verify_arch arm64 x86_64
-          codesign --verify --deep --strict Terminus.app
-          lipo Terminus.app/Contents/MacOS/seldon-runtime -verify_arch arm64 x86_64
+          tar xzf release-assets/Danil.app.tar.gz
+          lipo Danil.app/Contents/MacOS/terminus -verify_arch arm64 x86_64
+          codesign --verify --deep --strict Danil.app
+          lipo Danil.app/Contents/MacOS/seldon-runtime -verify_arch arm64 x86_64
           # Sin argumentos arrancaría el motor empaquetado. Con uno que no entiende
           # sale con `cli.error.invalid_request`: el ejecutable carga; la interfaz no se prueba.
-          out=$(Terminus.app/Contents/MacOS/terminus --external-host 2>&1) && { echo "::error::Arrancó con un argumento inválido"; exit 1; }
+          out=$(Danil.app/Contents/MacOS/terminus --external-host 2>&1) && { echo "::error::Arrancó con un argumento inválido"; exit 1; }
           echo "$out" | grep -q invalid_request
-          python3 apps/desktop/scripts/work-tools-release.py verify --directory Terminus.app/Contents/Resources/work-tools
-          python3 apps/desktop/scripts/work-tools-runtime-smoke.py --engine Terminus.app/Contents/MacOS/seldon-runtime --resources Terminus.app/Contents/Resources --browser --clone --app Terminus.app
+          python3 apps/desktop/scripts/work-tools-release.py verify --directory Danil.app/Contents/Resources/work-tools
+          python3 apps/desktop/scripts/work-tools-runtime-smoke.py --engine Danil.app/Contents/MacOS/seldon-runtime --resources Danil.app/Contents/Resources --browser --clone --app Danil.app
 
   # El AppImage que se va a publicar, en un Ubuntu limpio: la firma minisign
   # con el mismo verificador que usa `npx`, que lleve el motor, y que el binario
@@ -1113,7 +1127,7 @@ jobs:
           V: ${{ needs.check.outputs.version }}
         run: |
           set -euo pipefail
-          APP="Terminus_${V}_amd64.AppImage"
+          APP="Danil_${V}_amd64.AppImage"
           export APP PUBLIC_KEY
           node --input-type=module <<'JS'
           import { verifyFile } from './apps/desktop/npx/lib/minisign.mjs';
@@ -1196,12 +1210,12 @@ jobs:
             --arg notes_es "$NOTE_ES" \
             --arg notes_en "$NOTE_EN" \
             --arg pub_date "$(date -u +%Y-%m-%dT%H:%M:%S.000Z)" \
-            --arg win_sig "$(cat "release-assets/Terminus_${V}_x64-setup.exe.sig")" \
-            --arg win_url "$BASE/Terminus_${V}_x64-setup.exe" \
-            --arg mac_sig "$(cat "release-assets/Terminus.app.tar.gz.sig")" \
-            --arg mac_url "$BASE/Terminus.app.tar.gz" \
-            --arg linux_sig "$(cat "release-assets/Terminus_${V}_amd64.AppImage.sig")" \
-            --arg linux_url "$BASE/Terminus_${V}_amd64.AppImage" \
+            --arg win_sig "$(cat "release-assets/Danil_${V}_x64-setup.exe.sig")" \
+            --arg win_url "$BASE/Danil_${V}_x64-setup.exe" \
+            --arg mac_sig "$(cat "release-assets/Danil.app.tar.gz.sig")" \
+            --arg mac_url "$BASE/Danil.app.tar.gz" \
+            --arg linux_sig "$(cat "release-assets/Danil_${V}_amd64.AppImage.sig")" \
+            --arg linux_url "$BASE/Danil_${V}_amd64.AppImage" \
             '{
               version: $v,
               notes: (if $notes_en != "" then $notes_en else $notes_es end),
@@ -1248,11 +1262,11 @@ jobs:
           # shellcheck disable=SC2016  # Los backticks son Markdown literal.
           BODY=$(
             printf '%s\n\n' "$NOTE_EN"
-            printf 'Windows: `Terminus-Windows-Setup.exe` · macOS Apple Silicon: `Terminus-macOS.dmg` · macOS Intel: `Terminus-macOS-Intel.dmg` · Linux x86_64: `Terminus-Linux-x86_64.AppImage`\n\n'
+            printf 'Windows: `Danil-Windows-Setup.exe` · macOS Apple Silicon: `Danil-macOS.dmg` · macOS Intel: `Danil-macOS-Intel.dmg` · Linux x86_64: `Danil-Linux-x86_64.AppImage`\n\n'
             printf 'The two macOS files contain the same universal DMG. If you already have it installed there is nothing to download: the app notifies you on its own.\n\n'
             printf 'Built from `%s` in run `%s`.\n\n---\n\n' "$SHA" "$GITHUB_RUN_ID"
             printf '%s\n\n' "$NOTE_ES"
-            printf 'Windows: `Terminus-Windows-Setup.exe` · macOS Apple Silicon: `Terminus-macOS.dmg` · macOS Intel: `Terminus-macOS-Intel.dmg` · Linux x86_64: `Terminus-Linux-x86_64.AppImage`\n\n'
+            printf 'Windows: `Danil-Windows-Setup.exe` · macOS Apple Silicon: `Danil-macOS.dmg` · macOS Intel: `Danil-macOS-Intel.dmg` · Linux x86_64: `Danil-Linux-x86_64.AppImage`\n\n'
             printf 'Los dos archivos de macOS traen el mismo DMG universal. Quien ya la tenga instalada no necesita bajar nada: la app avisa sola.\n\n'
             printf 'Construida desde `%s` en `%s`.\n' "$SHA" "$GITHUB_RUN_ID"
           )
@@ -1318,7 +1332,7 @@ jobs:
 
           # Todos los enlaces de descarga estables deben existir antes de dar
           # esto por bueno.
-          for a in Terminus-Windows-Setup.exe Terminus-macOS.dmg Terminus-macOS-Intel.dmg Terminus-Linux-x86_64.AppImage; do
+          for a in {Danil,Terminus}-Windows-Setup.exe {Danil,Terminus}-macOS.dmg {Danil,Terminus}-macOS-Intel.dmg {Danil,Terminus}-Linux-x86_64.AppImage; do
             curl -fsSIL -o /dev/null "$BASE/$a" \
               || { echo "::error::$a no se puede descargar — el botón de la página está roto"; exit 1; }
           done

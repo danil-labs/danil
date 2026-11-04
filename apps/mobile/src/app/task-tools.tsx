@@ -1,3 +1,4 @@
+import { folderByKey } from "../lib/folderIcon";
 import { delegatedOf } from "@terminus/tasks";
 import { useLocalSearchParams } from "expo-router";
 import { useMemo } from "react";
@@ -16,9 +17,8 @@ import { useTheme } from "../ui/theme";
 
 /**
  * Herramientas del chat: sus subtareas, cada una con su tarjeta de dos
- * líneas. Viven aquí y en Buscar, nunca anidadas en Inicio. El árbol de
- * trabajo de la rama necesita comandos que el teléfono todavía no manda
- * (`list_task_trees`, `tree_changes`) y no se enseña.
+ * líneas. Viven aquí y en Buscar, nunca anidadas en Inicio. Los archivos
+ * de la tarea tienen su propia pantalla (`task-files.tsx`).
  */
 export default function TaskToolsScreen() {
   const theme = useTheme();
@@ -32,7 +32,6 @@ export default function TaskToolsScreen() {
     ...delegatedOf((snapshot?.delegated ?? []).filter((task) => task.host === params.host && !task.remote_launcher), params.id),
     ...(snapshot?.delegated ?? []).filter((task) => !task.archived && task.remote_launcher === key),
   ].sort((a, b) => b.created_at - a.created_at);
-  const folderName = (folderKey: string) => snapshot?.folders.find((f) => f.key === folderKey)?.name;
 
   return (
     <View style={{ flex: 1, backgroundColor: pageColor(theme) }}>
@@ -45,7 +44,7 @@ export default function TaskToolsScreen() {
               key={taskKey(task)}
               task={task}
               card={cardOf(task, marks)}
-              folderName={folderName}
+              folderOf={(key) => folderByKey(snapshot?.folders ?? [], key)}
               when={shortWhen(task.last_turn_at ?? task.updated_at, lang)}
               onPress={() => openTask(task.host, task.workspace, task.folder, task.id)}
               online={hostOf(task.host)?.power() === "on"}

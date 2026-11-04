@@ -61,6 +61,10 @@ export default function TabStrip(props: {
   // El arrastre nativo de Tauri intercepta dragstart/drop; las pestañas usan eventos de puntero.
   onDrag?: (id: string, e: PointerEvent) => void;
   dropIndex?: number | null;
+  // La tarea nueva sin lanzar no tiene pestaña en lib/tabs.ts; la tira la pinta delante.
+  draftLabel?: string;
+  // Sin él no hay a qué volver y la tarea nueva no se cierra.
+  onCloseDraft?: () => void;
 }) {
   let strip: HTMLDivElement | undefined;
   const [gitRows, setGitRows] = createSignal<Record<string, GitStatus>>({});
@@ -123,14 +127,16 @@ export default function TabStrip(props: {
   // Se revela el envoltorio, que incluye el botón de cerrar. Si hay que desplazar,
   // asoma también la vecina de ese lado para poder seguir avanzando con clics.
   function reveal(n: number) {
-    const element = strip?.querySelector<HTMLElement>(`[data-envoltorio="${n}"]`);
+    revealElement(strip?.querySelector<HTMLElement>(`[data-envoltorio="${n}"]`), n > 0, n < props.tabs.length - 1);
+  }
+  function revealElement(element: HTMLElement | null | undefined, before: boolean, after: boolean) {
     if (!strip || !element) return;
     const start = element.offsetLeft - EDGE;
     const end = element.offsetLeft + element.offsetWidth + EDGE;
     const view = strip.clientWidth;
     let target = strip.scrollLeft;
-    if (start < target) target = start - (n > 0 ? PEEK : 0);
-    else if (end > target + view) target = end + (n < props.tabs.length - 1 ? PEEK : 0) - view;
+    if (start < target) target = start - (before ? PEEK : 0);
+    else if (end > target + view) target = end + (after ? PEEK : 0) - view;
     else return;
     strip.scrollLeft = Math.max(0, Math.min(target, strip.scrollWidth - view));
   }
@@ -144,7 +150,10 @@ export default function TabStrip(props: {
           restored = true;
           strip.scrollLeft = scrollBySite.get(site()) ?? 0;
         }
-        if (!id) return;
+        if (!id) {
+          if (props.draftLabel) revealElement(strip?.querySelector<HTMLElement>("[data-borrador]"), true, previewTabs().length > 0);
+          return;
+        }
         // Los ids contienen bytes nulos y no se pueden usar como valores de un selector CSS.
         const n = orderedTabs().findIndex((p) => p.id === id);
         if (n >= 0) reveal(n);
@@ -268,8 +277,8 @@ export default function TabStrip(props: {
             props.onDrag?.(p.id, e);
           }}
           class={cn(
-            "group flex h-7 shrink-0 touch-none items-center rounded-sm pr-1 select-none",
-            task() ? "w-[220px] text-sm" : "w-[180px] text-label",
+            "group flex h-[30px] shrink-0 touch-none items-center rounded-sm pr-1 select-none",
+            task() ? "w-[220px] text-ui" : "w-[180px] text-label",
             active()
               ? "tab-active font-semibold text-neutral-950"
               : "font-medium text-neutral-500 hover:bg-neutral-950/5 hover:text-neutral-950",
@@ -457,6 +466,40 @@ export default function TabStrip(props: {
         />
       </Show>
       </div>
+      {/* Tras las conservadas: al lanzarse, su pestaña conservada aparece en este mismo sitio.
+          Fuera del tablist y sin rol de pestaña, como las vistas: no es una pestaña guardada. */}
+      <Show when={props.draftLabel}>
+        {(label) => (
+          <div
+            data-borrador=""
+            class="tab-active ml-0.5 group flex h-[30px] w-[220px] shrink-0 items-center rounded-sm pr-1 text-ui font-semibold text-neutral-950 select-none"
+          >
+            <div
+              aria-current="page"
+              title={label()}
+              class="flex h-full min-w-0 flex-1 cursor-default items-center gap-1.5 pl-2"
+            >
+              <SquarePen size={12} class="shrink-0 text-neutral-500" aria-hidden={true} />
+              <span class="min-w-0 flex-1 truncate">{label()}</span>
+            </div>
+            <Show when={props.onCloseDraft}>
+              {(close) => (
+                <button
+                  type="button"
+                  tabindex={-1}
+                  aria-label={t("projects.tabs.close_named", { title: label() })}
+                  title={`${t("projects.tabs.close")} (${textoDeAtajo("closeTab")})`}
+                  aria-keyshortcuts={ariaDeAtajo("closeTab")}
+                  onClick={() => close()()}
+                  class="grid size-5 shrink-0 place-items-center rounded-sm text-neutral-500 outline-none hover:bg-neutral-200 hover:text-neutral-950 focus-visible:opacity-100"
+                >
+                  <X size={13} />
+                </button>
+              )}
+            </Show>
+          </div>
+        )}
+      </Show>
       <Show when={previewTabs().length > 0}>
       <div data-preview-header="" class="ml-0.5 flex shrink-0 items-end self-stretch">
         <For each={previewTabs()}>{(p, i) => renderTab(p, () => keptTabs().length + i())}</For>

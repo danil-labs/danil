@@ -1,20 +1,25 @@
 # @danil-labs/terminus
 
-Instala **Terminus** (la app de escritorio de Danil) con un solo comando:
+Instala **Danil** (la app de escritorio) con un solo comando:
 
 ```bash
 npx @danil-labs/terminus
 ```
 
 Es un canal de distribución para desarrolladores —que ya tienen Node— adicional
-a los instaladores que se bajan a mano desde [terminus.danil.ai](https://terminus.danil.ai).
+a los instaladores que se bajan a mano desde [danil.ai/download](https://danil.ai/download/).
 Funciona en Windows, macOS (Apple Silicon e Intel) y Linux x86_64.
+
+Este paquete instala la app; su único bin `danil-terminus` es el
+instalador de escritorio. `danil` y `dn` se configuran por separado; consulta la
+[guía del CLI](../docs/danil-cli.md). El nombre del paquete y las rutas de
+descarga conservan compatibilidad con las instalaciones existentes.
 
 ## Qué hace
 
 1. Detecta tu sistema operativo y arquitectura (`process.platform` / `process.arch`).
 2. Lee `latest.json` de la última release pública de
-   [`danil-labs/terminus`](https://github.com/danil-labs/terminus/releases/latest)
+   [`danil-labs/danil`](https://github.com/danil-labs/danil/releases/latest)
    (repo público, sin autenticación) y resuelve el instalador de tu plataforma.
 3. Descarga el instalador a una carpeta temporal, con barra de progreso.
 4. **Verifica su firma antes de ejecutar ni copiar nada.** Si la verificación
@@ -96,7 +101,7 @@ Windows—, por el idioma que reporta `Intl`. Para forzarlo:
 `latest.json` es la fuente de verdad: trae la versión, la URL exacta del
 artefacto firmado y su firma embebida. Se descarga y verifica **ese** artefacto
 —el que la firma cubre—, no el alias de nombre estable
-`Terminus-Windows-Setup.exe` (que es una copia byte a byte, pero no dependemos
+`Danil-Windows-Setup.exe` (que es una copia byte a byte, pero no dependemos
 de esa suposición: verificamos exactamente lo firmado).
 
 En macOS lo que trae el manifiesto **no es el `.dmg`**: es el `.app` comprimido,

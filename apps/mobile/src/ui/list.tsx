@@ -109,17 +109,41 @@ export function LargeTitle({ children, note }: { children: string; note?: ReactN
   );
 }
 
-/** El rótulo de un grupo: en mayúsculas pequeñas, o en negrita con su número (las secciones de Inicio). */
-export function GroupHeader({ children, count, strong, right }: { children: string; count?: number; strong?: boolean; right?: ReactNode }) {
+/**
+ * El rótulo de un grupo: en mayúsculas pequeñas, o en negrita con su número (las secciones de Inicio).
+ * Con `folded` y `onToggle` el rótulo se toca para plegar el grupo y lleva un chevron; `right` va
+ * junto al chevron (lo que el grupo plegado sigue avisando).
+ */
+export function GroupHeader({ children, count, strong, right, folded, onToggle, foldLabel }: { children: string; count?: number; strong?: boolean; right?: ReactNode; folded?: boolean; onToggle?: () => void; foldLabel?: string }) {
   const theme = useTheme();
+  const label = (
+    <Text accessibilityRole={onToggle ? undefined : "header"} numberOfLines={2} style={strong ? [styles.strongText, { color: theme.text }] : [styles.capsText, { color: theme.textMuted }]}>
+      {strong ? children : children.toLocaleUpperCase()}
+      {count !== undefined ? <Text style={{ color: theme.textMuted, fontWeight: "500", fontSize: strong ? 14 : 12 }}>{`  ${count}`}</Text> : null}
+    </Text>
+  );
+  if (!onToggle) {
+    return (
+      <View style={[styles.groupHeader, strong ? styles.groupHeaderStrong : null]}>
+        {label}
+        {right}
+      </View>
+    );
+  }
   return (
-    <View style={[styles.groupHeader, strong ? styles.groupHeaderStrong : null]}>
-      <Text accessibilityRole="header" numberOfLines={2} style={strong ? [styles.strongText, { color: theme.text }] : [styles.capsText, { color: theme.textMuted }]}>
-        {strong ? children : children.toLocaleUpperCase()}
-        {count !== undefined ? <Text style={{ color: theme.textMuted, fontWeight: "500", fontSize: strong ? 14 : 12 }}>{`  ${count}`}</Text> : null}
-      </Text>
+    <Tap
+      accessibilityRole="button"
+      accessibilityState={{ expanded: !folded }}
+      accessibilityLabel={foldLabel}
+      onPress={onToggle}
+      style={[styles.groupHeader, strong ? styles.groupHeaderStrong : null, styles.groupHeaderTap]}
+    >
+      <View style={styles.groupHeaderLabel}>
+        <Icon name={folded ? "chevron-right" : "chevron-down"} size={16} color={theme.textMuted} />
+        {label}
+      </View>
       {right}
-    </View>
+    </Tap>
   );
 }
 
@@ -297,6 +321,8 @@ const styles = StyleSheet.create({
   largeText: { fontSize: 34, fontWeight: "800", letterSpacing: -0.5 },
   groupHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 32, paddingTop: 18, paddingBottom: 6 },
   groupHeaderStrong: { paddingHorizontal: 20, paddingTop: 22, paddingBottom: 8 },
+  groupHeaderTap: { minHeight: 44 },
+  groupHeaderLabel: { flexDirection: "row", alignItems: "center", gap: 6, flexShrink: 1 },
   capsText: { fontSize: 12.5, fontWeight: "600", letterSpacing: 0.4, flexShrink: 1 },
   strongText: { fontSize: 19, fontWeight: "700", flexShrink: 1 },
   footer: { paddingHorizontal: 32, paddingTop: 8, fontSize: TEXT.ui, lineHeight: 18 },

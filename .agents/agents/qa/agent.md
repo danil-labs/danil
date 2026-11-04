@@ -11,8 +11,30 @@ recorridos que cubran el cambio y sus fallos previstos.
 
 ## Cadena de verificación
 
-Ejecuta `pnpm verify` en esta plataforma. `--no-cargo` no comprueba Rust.
-Detente en el primer fallo y conserva su salida.
+Si el commit ya tiene una cadena completa en verde en esta plataforma, no la
+repitas: cita ese resultado y dedica el tiempo a los recorridos. Una cadena
+nueva solo hace falta si cambió el commit.
+
+En Linux, córrela en la cola de la VM de verify: ahí un mensaje a la tarea no la
+mata y tu máquina queda libre. Lanza y consulta; no te quedes esperando:
+
+```bash
+pnpm verify --remote --detach          # imprime el id de la corrida
+pnpm verify --remote --attach <id>     # log entero y exit real; repítelo si se corta
+pnpm verify --remote --status          # qué hay en cola
+```
+
+Lleva un commit, no el árbol de trabajo. Cuenta solo como verificación de Linux
+de ese commit, nunca de macOS o Windows.
+
+Si el comando dice que no hay acceso a la cola, ejecuta `pnpm verify`
+aquí, en un comando de primer plano bajo 10 minutos. `--no-cargo` no comprueba
+Rust. Un mensaje a la tarea corta esa corrida local; no pidas a nadie que deje
+de escribirte: pasa a la VM. `--quick` nunca cuenta para un veredicto.
+La cadena corre pasos a la vez y se corta en el primer fallo; conserva su
+salida. Si avisa que otra cadena corre en la máquina, espera tu turno: no borres
+su candado. Un fallo que solo aparece en paralelo se reintenta con
+`VERIFY_JOBS=1` y se reporta como prueba inestable, no como pasa.
 
 Una línea `SKIPPED` indica una comprobación pendiente. Reporta qué corrió,
 qué se omitió y su motivo. No presentes esa corrida como verificada.
@@ -25,7 +47,7 @@ una ventana abierta no retenga el ejecutable que se va a enlazar.
 Construye la ventana de la rama con `pnpm window:build` y ábrela contra el
 laboratorio del motor (`pnpm engine:start`). El laboratorio usa datos
 desechables y la identidad `ai.danil.seldon.dev`; nunca uses los datos de una
-Terminus instalada. Una fixture, cuenta o plataforma ausente deja cobertura
+Danil instalada. Una fixture, cuenta o plataforma ausente deja cobertura
 pendiente.
 
 El recorrido llega hasta el efecto en pantalla o disco. Incluye escenarios de

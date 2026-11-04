@@ -255,6 +255,7 @@ export default function EditorDeCodigo(props: {
   ruta: string;
   /** Lo que tiene que haber dentro. Cambiarlo desde fuera reemplaza el documento. */
   texto: string;
+  readOnly?: boolean;
   onEscribir: (texto: string) => void;
   onGuardar: () => void;
   /** Dónde está el cursor, en línea y columna contadas desde 1: lo pinta la barra de estado. */
@@ -274,6 +275,7 @@ export default function EditorDeCodigo(props: {
   const textos = new Compartment();
   const historial = new Compartment();
   const renglones = new Compartment();
+  const editability = new Compartment();
   const grande = props.texto.length > RESALTADO_HASTA;
 
   const avisarCursor = (estado: EditorState) => {
@@ -289,6 +291,8 @@ export default function EditorDeCodigo(props: {
         doc: props.texto,
         extensions: [
           lineNumbers(),
+          editability.of([EditorState.readOnly.of(Boolean(props.readOnly)), EditorView.editable.of(!props.readOnly)]),
+          EditorState.transactionFilter.of(transaction => props.readOnly && transaction.docChanged ? [] : transaction),
           props.marcas ? numerosMarcados : [],
           saltoMarcado,
           highlightActiveLineGutter(),
@@ -370,6 +374,10 @@ export default function EditorDeCodigo(props: {
 
     createEffect(() => {
       vista.dispatch({ effects: renglones.reconfigure(conAjuste()) });
+    });
+
+    createEffect(() => {
+      vista.dispatch({ effects: editability.reconfigure([EditorState.readOnly.of(Boolean(props.readOnly)), EditorView.editable.of(!props.readOnly)]) });
     });
 
     const marcar = (marcas: MarcaDelEditor[] | undefined) => {

@@ -102,8 +102,8 @@ for (const scenario of ["connected-workspace", "existing-installation", "no-inst
     assert.ok(app.w.document.body.textContent.includes("acme y other"));
     assert.equal(button("Ver repositorios"), undefined);
     assert.equal(button("ver qué trae"), undefined);
-    assert.equal(app.comandos.includes("git_host_projects"), false, "Configuración no consulta repositorios");
-    assert.equal(app.comandos.includes("attach_repo"), false, "las fuentes se agregan desde el compositor");
+    assert.equal(app.commands.includes("git_host_projects"), false, "Configuración no consulta repositorios");
+    assert.equal(app.commands.includes("attach_repo"), false, "las fuentes se agregan desde el compositor");
     button("Cambiar acceso").click(); await espera(100);
     button("Quitar del workspace").click(); await espera(100);
     button("Listo").click(); await espera(100);
@@ -114,7 +114,7 @@ for (const scenario of ["connected-workspace", "existing-installation", "no-inst
     await action("Desconectar");
     assert.equal(connected, false);
     assert.ok(button("Conectar con GitHub"));
-    assert.deepEqual(app.fallos, []);
+    assert.deepEqual(app.failures, []);
     console.log("PASS connected-workspace: resumen, edición y administración sin explorar repositorios");
     continue;
   }
@@ -148,7 +148,7 @@ for (const scenario of ["connected-workspace", "existing-installation", "no-inst
     assert.equal(button("Usar en este workspace"), undefined, "Listo oculta las opciones disponibles");
     assert.ok(app.w.document.body.textContent.includes("Acceso: todos los repositorios que tu GitHub permite"));
   }
-  assert.deepEqual(app.fallos, []);
+  assert.deepEqual(app.failures, []);
   console.log(`PASS ${scenario}: selector, regreso, cancelación y acceso heredado sin confirmar`);
 }
 for (const scenario of ["absent", "incompatible", "unknown"]) {
@@ -194,7 +194,7 @@ for (const scenario of ["absent", "incompatible", "unknown"]) {
     assert.ok(tools.textContent.includes("Compatible"));
     assert.equal(app.w.document.body.textContent.includes("No se pudo descargar gh"), false);
   }
-  assert.deepEqual(app.fallos, []);
+  assert.deepEqual(app.failures, []);
   console.log(`PASS github-cli-${scenario}: herramientas plegadas y estado visible`);
 }
 process.exit(0);

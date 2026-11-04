@@ -9,7 +9,7 @@ import { relay } from "../helpers/fake-relay.mjs";
 import { boot, sleep } from "../helpers/jsdom-app.mjs";
 
 const SUPABASE = "https://supabase.test";
-const API = "https://computers.danil.ai/v1/computers";
+const API = "https://machines.danil.ai/v1/computers";
 const session = JSON.stringify({
   access_token: "stored",
   refresh_token: "r",
@@ -30,7 +30,7 @@ test("reads the relay kept show with their age while the computer is off", async
   let w;
   const app = await boot("listo", "web-cached", {}, undefined, { "sb-supabase-auth-token": session }, {
     web: true,
-    antes: (win) => {
+    beforeImport: (win) => {
       w = win;
       globalThis.WebSocket = fake.Socket;
       win.terminusWeb = { supabaseUrl: SUPABASE, supabaseKey: "public-anon-key" };
@@ -46,7 +46,7 @@ test("reads the relay kept show with their age while the computer is off", async
     fake.setState("online");
     await sleep(300);
     assert.ok(!w.document.querySelector("[data-web-sync]")?.title, "the age leaves once the computer is on");
-    assert.deepEqual(app.fallos, []);
+    assert.deepEqual(app.failures, []);
   } finally {
     globalThis.fetch = own;
   }

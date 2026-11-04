@@ -1,7 +1,7 @@
 # MCP Apps en el chat
 
 Una MCP App es una vista HTML publicada por un servidor MCP junto a una herramienta.
-Terminus la muestra al terminar esa llamada, fuera del registro plegable de trabajo
+Danil la muestra al terminar esa llamada, fuera del registro plegable de trabajo
 y antes de la respuesta final del agente.
 
 ## Descubrimiento y conexión

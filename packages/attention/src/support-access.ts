@@ -9,8 +9,14 @@ export type SupportGrant = {
   created_at: string; expires_at: string; revoked_at: string | null; revoked_by_kind: string | null; status: SupportStatus;
 };
 export type SupportWorkspace = { id: number; name: string };
-/** Un workspace de Danil al que la persona entra como miembro, con su rol; organización y plan solo si el BFF los manda. */
-export type Membership = SupportWorkspace & { role: string; organization: string | null; plan: string | null };
+/**
+ * Un workspace de Danil al que la persona entra como miembro, con su rol; organización y plan solo si el BFF los manda.
+ * `personal` es `true` solo cuando el BFF dice que no tiene organización (`organization: null`); si no manda el campo, no se sabe.
+ * `organizationId` existe cuando el BFF manda la organización: decide por él, no por el nombre, que puede venir vacío.
+ */
+export type Membership = SupportWorkspace & { role: string; organization: string | null; plan: string | null; personal?: boolean; organizationId?: number };
+/** Un workspace de la organización, visto desde el Harness: nombre y número de miembros, nunca la entrada. */
+export type OrganizationWorkspace = { id: number; name: string; members: number };
 
 const object = (value: unknown): Record<string, unknown> => {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('invalid_response');
@@ -26,6 +32,11 @@ const text = (value: unknown): string => {
 };
 const nullable = (value: unknown): string | null => value === null || value === undefined ? null : text(value);
 const STATUSES: readonly string[] = ['active', 'expired', 'revoked'];
+/** El id de la organización que manda el BFF, si es un entero positivo. */
+const organizationIdOf = (value: unknown): number | undefined => {
+  const raw = value && typeof value === 'object' ? (value as Record<string, unknown>).id : undefined;
+  return typeof raw === 'number' && Number.isSafeInteger(raw) && raw > 0 ? raw : undefined;
+};
 /** Quién puede ver y revocar lo decide el BFF (`members.manage`); aquí solo se listan los workspaces donde la persona es owner o admin. */
 const MANAGERS: readonly string[] = ['owner', 'admin'];
 export const isManager = (role: string) => MANAGERS.includes(role);
@@ -64,6 +75,8 @@ export function createSupportAccess(session: InboxSession, request: typeof fetch
         id: id(row.id), name: typeof row.name === 'string' ? row.name : '', role: String(row.role ?? ''),
         organization: typeof organization === 'string' && organization ? organization : null,
         plan: typeof row.plan === 'string' && row.plan ? row.plan : null,
+        ...(Object.hasOwn(row, 'organization') && row.organization === null ? { personal: true } : {}),
+        ...(organizationIdOf(row.organization) ? { organizationId: organizationIdOf(row.organization) } : {}),
       }];
     });
   }
@@ -71,6 +84,18 @@ export function createSupportAccess(session: InboxSession, request: typeof fetch
     memberships,
     async workspaces(): Promise<SupportWorkspace[]> {
       return (await memberships()).filter(m => isManager(m.role)).map(m => ({ id: m.id, name: m.name }));
+    },
+    /** Los workspaces de la organización dueña de `account`; el BFF solo responde a su owner o admin. */
+    async organizationWorkspaces(account: number): Promise<OrganizationWorkspace[]> {
+      const data = await get(`/auth/organization/workspaces?account_id=${id(account)}`);
+      if (data.organization === null) return [];
+      if (!Array.isArray(data.workspaces)) throw new Error('invalid_response');
+      return data.workspaces.map(value => {
+        const row = object(value);
+        const members = row.members;
+        if (typeof members !== 'number' || !Number.isSafeInteger(members) || members < 0) throw new Error('invalid_response');
+        return { id: id(row.id), name: typeof row.name === 'string' ? row.name : '', members };
+      });
     },
     async list(account: number): Promise<{ grants: SupportGrant[]; canRevokeAll: boolean }> {
       const workspace = id(account);

@@ -82,7 +82,7 @@ const responses = {
 
 const app = await boot("listo", "task-history-calls", responses);
 const doc = app.w.document;
-const count = (cmd) => app.comandos.filter((c) => c === cmd).length;
+const count = (cmd) => app.commands.filter((c) => c === cmd).length;
 const chat = (session, kind, extra = {}) => {
   if (kind === "started" || kind === "done") saved.set(session, (saved.get(session) ?? 0) + 1);
   app.emit("chat", { kind, session, workspace: "w", ...extra });
@@ -141,8 +141,8 @@ for (const id of [shown, hidden]) {
 }
 await sleep(1500);
 
-if (app.fallos.length > 0) {
-  console.error(app.fallos.slice(0, 3).map((f) => String(f).split("\n").slice(0, 4).join("\n  ")).join("\n"));
+if (app.failures.length > 0) {
+  console.error(app.failures.slice(0, 3).map((f) => String(f).split("\n").slice(0, 4).join("\n  ")).join("\n"));
   process.exit(1);
 }
 const measured = {

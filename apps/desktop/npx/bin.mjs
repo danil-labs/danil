@@ -1,10 +1,10 @@
 #!/usr/bin/env node
-// npx @danil-labs/terminus — instala Terminus (app de escritorio Danil) con un
+// npx @danil-labs/terminus — instala Danil (app de escritorio) con un
 // comando. Canal para desarrolladores (que ya tienen Node), adicional al
 // instalador que se descarga a mano.
 //
 // Flujo: detecta SO/arquitectura -> resuelve el asset en las releases PÚBLICAS
-// de danil-labs/terminus vía latest.json -> descarga -> VERIFICA minisign (no
+// de danil-labs/danil vía latest.json -> descarga -> VERIFICA minisign (no
 // opcional: descargamos y ejecutamos un binario nativo) -> instala. Si la
 // verificación falla, borra la descarga y sale con error.
 //
@@ -25,14 +25,17 @@ import { downloadToFile, fetchText } from './lib/download.mjs';
 import { verifyFile } from './lib/minisign.mjs';
 import { t } from './lib/i18n.mjs';
 
-// Clave pública minisign de Terminus. Idéntica a la embebida en la app
+// Clave pública minisign de Danil. Idéntica a la embebida en la app
 // (harness-app/terminus-app -> src-tauri/tauri.conf.json -> plugins.updater.pubkey).
 // Es pública por diseño; sella que el instalador salió de Danil.
 const PUBKEY_B64 =
   'dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDM5ODEzRDE1M0QwQ0RFQjgKUldTNDNndzlGVDJCT1hPSnp4ZzBIbkowOW9kVGFYb0YyRkZKZjNTT2N3eERXOXhuRi9UblY5d3EK';
 
-const LATEST_JSON_URL = 'https://github.com/danil-labs/terminus/releases/latest/download/latest.json';
-const MANUAL_DOWNLOAD_URL = 'https://terminus.danil.ai';
+const LATEST_JSON_URL = 'https://github.com/danil-labs/danil/releases/latest/download/latest.json';
+const MANUAL_DOWNLOAD_URL = 'https://danil.ai/download/';
+// Nombres con los que la 0.2.x se instaló, antes de llamarse Danil.
+const LEGACY_MAC_BUNDLE = 'Terminus.app';
+const LEGACY_APPIMAGE = 'Terminus.AppImage';
 
 const C = {
   reset: '\x1b[0m', bold: '\x1b[1m', dim: '\x1b[2m',
@@ -52,7 +55,7 @@ function parseArgs(argv) {
 }
 
 function printHelp() {
-  log(`${paint(C.bold, 'Terminus')} — ${t('help', { manualUrl: MANUAL_DOWNLOAD_URL })}`);
+  log(`${paint(C.bold, 'Danil')} — ${t('help', { manualUrl: MANUAL_DOWNLOAD_URL })}`);
 }
 
 async function sha256File(filePath) {
@@ -108,16 +111,32 @@ function installMacApp(tarPath, tmpDir) {
     process.exit(1);
   }
   const source = path.join(tmpDir, bundle);
+  // Hasta la 0.2.x el bundle era Terminus.app. Si esa copia está, se reemplaza en
+  // su sitio, igual que hace el updater: un Danil.app al lado serían dos apps con
+  // los mismos datos, y el LaunchAgent y los lanzadores apuntan a la ruta vieja.
+  const has = (name) => destinations.find((dir) => fs.existsSync(path.join(dir, name)));
+  const installedName = has(LEGACY_MAC_BUNDLE) ? LEGACY_MAC_BUNDLE : bundle;
+  // La copia que ya existe se reemplaza donde está, aunque sea ~/Applications:
+  // probar /Applications primero dejaría otra al lado.
+  const existing = has(installedName);
+  if (existing) destinations.sort((a, b) => (b === existing) - (a === existing));
+  // Con las dos copias se reemplaza la vieja y no se borra nada: se avisa.
+  if (installedName !== bundle && has(bundle)) {
+    err(paint(C.yellow, t('duplicateBundle', {
+      kept: path.join(has(LEGACY_MAC_BUNDLE), LEGACY_MAC_BUNDLE),
+      other: path.join(has(bundle), bundle),
+    })));
+  }
 
   // Copiar encima de una app abierta le cambia el binario por debajo y la mata
   // a mitad de lo que esté haciendo. Se mira por ruta y no por nombre: el
   // ejecutable de dentro no se llama como el bundle.
   for (const dir of destinations) {
-    const destination = path.join(dir, bundle);
+    const destination = path.join(dir, installedName);
     if (!fs.existsSync(destination)) continue;
     const ps = spawnSync('ps', ['-Ao', 'comm='], { encoding: 'utf8' });
     if ((ps.stdout || '').split('\n').some((l) => l.startsWith(`${destination}/`))) {
-      err(paint(C.yellow, t('appIsOpen', { bundle })));
+      err(paint(C.yellow, t('appIsOpen', { bundle: installedName })));
       err(t('closeAndRetry'));
       process.exit(1);
     }
@@ -126,7 +145,7 @@ function installMacApp(tarPath, tmpDir) {
   let placed = null;
   let lastFailure = null;
   for (const dir of destinations) {
-    const destination = path.join(dir, bundle);
+    const destination = path.join(dir, installedName);
     try {
       fs.mkdirSync(dir, { recursive: true });
       // Reemplazo y no fusión: un `cp` encima deja los archivos de la versión
@@ -166,7 +185,9 @@ function installMacApp(tarPath, tmpDir) {
 // busy». La app en marcha sigue con la versión vieja hasta que se reinicie.
 function installLinuxAppImage(appImagePath) {
   const dir = path.join(os.homedir(), 'Applications');
-  const destination = path.join(dir, 'Terminus.AppImage');
+  // Una copia de la 0.2.x se llama Terminus.AppImage: se reemplaza en su sitio.
+  const legacy = path.join(dir, LEGACY_APPIMAGE);
+  const destination = fs.existsSync(legacy) ? legacy : path.join(dir, 'Danil.AppImage');
   const staging = `${destination}.new`;
 
   log(`\n${paint(C.bold, t('installing'))}`);
@@ -196,7 +217,7 @@ async function main() {
     process.exit(1);
   }
 
-  log(paint(C.bold, 'Terminus') + paint(C.dim, ` · ${t('title')}`));
+  log(paint(C.bold, 'Danil') + paint(C.dim, ` · ${t('title')}`));
 
   const plat = detectPlatform();
   log(`  ${t('system')}${plat.label}  ${paint(C.dim, `(${plat.platform}/${plat.arch})`)}`);

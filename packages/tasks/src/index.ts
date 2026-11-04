@@ -33,7 +33,7 @@ export {
   orderDockAgents,
   planDock,
 } from "./dock.ts";
-export { type CardOptions, type CardTask, type TaskCard, taskCard } from "./card.ts";
+export { type CardOptions, type CardTask, type TaskCard, groupCardOptions, taskCard } from "./card.ts";
 export { dockStatusText, groupLabel, groupingLabel, scopeLabel, sectionLabel, statusGroupLabel } from "./labels.ts";
 export {
   type ModelCatalog,
@@ -49,4 +49,7 @@ export {
 export { type CardPull, type CheckState, type PullTone, type TaskGit, type TaskGitSession, cardPull, resolveTaskGit } from "./pull.ts";
 export { type KnState, type ReviewState, type TaskGitStatus, UNKNOWN_TASK_GIT, canFinishTask, mergeRemoteGit, readTaskGit, retainGitObservation, sameGit } from "./git.ts";
 
+export { type AttentionRow, delegatedAttention, delegatedFamilies, withFamilyActivity } from "./family.ts";
 export { type TaskTreeRow, type TaskBranch, taskIdentity, taskParent, buildTaskTree, withTaskAncestors, taskDescendants } from "./tree.ts";
+
+export { type WorkState, WORK_STATES, workStateOf } from "./workState.ts";

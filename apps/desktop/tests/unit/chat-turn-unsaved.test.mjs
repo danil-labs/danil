@@ -52,7 +52,7 @@ function responses(overrides) {
 
 // El del arnés nunca dispara: sin esto el visual no llega a leerse.
 const visible = {
-  antes: (w) => {
+  beforeImport: (w) => {
     globalThis.IntersectionObserver = w.IntersectionObserver = class {
       constructor(callback) { this.callback = callback; }
       observe(target) { setTimeout(() => this.callback([{ isIntersecting: true, target }], this), 0); }
@@ -186,7 +186,7 @@ test("un rechazo al enviar explica cómo seguir y conserva el error desplegable"
     assert.ok(detail, "el diagnóstico debe poder desplegarse");
     assert.equal(detail.open, false);
     assert.match(detail.textContent, /worker_unavailable/);
-    assert.deepEqual(app.fallos, []);
+    assert.deepEqual(app.failures, []);
   } finally {
     app.w.close();
   }

@@ -82,5 +82,5 @@ test("Drive con su CLI ya instalado vuelve a conectar después de desconectar", 
   await sleep(300);
   assert.deepEqual(logins, ["start", "finish"], "pulsar «Conectar» no abrió el login de Drive");
   assert.ok(card().textContent.includes("Conectado"), card().textContent);
-  assert.deepEqual(app.fallos, []);
+  assert.deepEqual(app.failures, []);
 });

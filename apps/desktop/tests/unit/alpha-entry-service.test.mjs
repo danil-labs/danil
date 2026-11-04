@@ -35,3 +35,36 @@ test("without a session nothing is forwarded", async () => {
   assert.equal(response.status, 401);
   assert.equal(seen.length, 0);
 });
+
+test("the workspace key reaches the BFF only with its shape", async () => {
+  const seen = [];
+  const env = { APPV2_BFF: bff(seen) };
+  assert.equal((await read("/api/agents", env, { headers: { Authorization: "Bearer token", "X-Danil-Workspace": "a:476" } })).status, 200);
+  assert.equal(seen[0].headers.get("X-Danil-Workspace"), "a:476");
+  assert.equal((await read("/api/agents", env, { headers: { Authorization: "Bearer token", "X-Danil-Workspace": "476" } })).status, 400);
+  assert.equal(seen.length, 1);
+  assert.equal((await read("/api/agents", env)).status, 200);
+  assert.equal(seen[1].headers.get("X-Danil-Workspace"), null);
+});
+
+test("entering a workspace is a closed write", async () => {
+  const seen = [];
+  const env = { APPV2_BFF: bff(seen) };
+  const post = (body, headers = {}) => worker.fetch(new Request(`${origin}/alpha-api/api/workspace/enter`, {
+    method: "POST", body: JSON.stringify(body),
+    headers: { Authorization: "Bearer token", Origin: origin, "Content-Type": "application/json", ...headers },
+  }), env);
+  assert.equal((await post({ key: "a:476" })).status, 200);
+  assert.equal(await seen[0].text(), JSON.stringify({ key: "a:476" }));
+  assert.equal((await post({ key: "a:476", account: 1 })).status, 400);
+  assert.equal((await post({ key: "476" })).status, 400);
+  assert.equal((await post({ key: "a:476" }, { Origin: "https://evil.test" })).status, 403);
+  assert.equal((await post({ key: "a:476" }, { "X-Danil-Actor": "ai" })).status, 403);
+  assert.equal(seen.length, 1);
+  const staging = await worker.fetch(new Request("https://staging-app.danil.ai/alpha-api/api/workspace/enter", {
+    method: "POST", body: JSON.stringify({ key: "a:476" }),
+    headers: { Authorization: "Bearer token", Origin: "https://staging-app.danil.ai", "Content-Type": "application/json" },
+  }), { ...env, ENTRY_HOST: "staging-app.danil.ai" });
+  assert.equal(staging.status, 200, "the staging host enters with its own origin");
+  assert.equal(seen[1].headers.get("Origin"), "https://staging-app.danil.ai");
+});

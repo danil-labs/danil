@@ -1,7 +1,8 @@
 /**
- * Manifest y cabeceras de caché que vuelven instalable el teléfono (`<base>m/`).
- * Las etiquetas del `<head>` y los íconos están en `apps/mobile/public/`. Sin
- * service worker: `index.html` y el manifest se revalidan; lo que lleva hash, largo.
+ * Manifest, service worker y cabeceras de caché del teléfono (`<base>m/`).
+ * Las etiquetas del `<head>`, los íconos y `sw.js` están en `apps/mobile/public/`.
+ * El service worker solo muestra avisos push: sin `fetch` ni caché, así que
+ * `index.html`, el manifest y `sw.js` se revalidan; lo que lleva hash, largo.
  *
  * `scope` es `/`: el inicio de sesión de Danil vive en `/` y, fuera del scope,
  * iOS lo abre en una vista de Safari aparte. `id` y `start_url` NO se cambian
@@ -22,9 +23,9 @@ export function phoneManifest(base) {
   const phone = `${base}${PHONE_DIR}/`;
   return {
     id: phone,
-    name: "Terminus",
-    short_name: "Terminus",
-    description: "Tus tareas de Terminus desde el teléfono.",
+    name: "Danil",
+    short_name: "Danil",
+    description: "Tus tareas de Danil desde el teléfono.",
     lang: "es",
     dir: "ltr",
     start_url: phone,
@@ -52,6 +53,8 @@ export function phoneHeaders(base) {
     fresh,
     `${phone}index.html`,
     fresh,
+    `${phone}sw.js`,
+    fresh,
     `${phone}manifest.webmanifest`,
     "  Content-Type: application/manifest+json",
     fresh,
@@ -61,4 +64,13 @@ export function phoneHeaders(base) {
     forever,
     "",
   ];
+}
+
+/** `sw.js` con la entrada de este build: el aviso de inicio de sesión vuelve al teléfono. */
+export function phoneWorker(source, login, base) {
+  if (!source.includes('"__TERMINUS_SIGN_IN__"')) throw new Error("sw.js sin __TERMINUS_SIGN_IN__");
+  const url = new URL(login, "https://danil.invalid");
+  if (url.origin !== "https://danil.invalid") throw new Error(`la entrada ${login} no es del mismo origen`);
+  url.searchParams.set("next", `${base}${PHONE_DIR}/`);
+  return source.replace('"__TERMINUS_SIGN_IN__"', JSON.stringify(`${url.pathname}${url.search}`));
 }

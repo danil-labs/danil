@@ -66,7 +66,7 @@ test("con una cuenta que comparte credencial, el motivo de no poder agregar otra
   const texto = (await waitFor(() => nota(app), "El motivo no se ve en la tarjeta")).textContent;
   assert.ok(texto.includes(PORQUE), `la nota no dice el motivo del motor: ${texto}`);
   assert.ok(texto.includes("quita primero la que está"), `la nota no dice qué hacer: ${texto}`);
-  assert.deepEqual(app.fallos, []);
+  assert.deepEqual(app.failures, []);
 });
 
 test("sin cuentas, la primera se puede conectar y no hay nota", async () => {
@@ -74,5 +74,5 @@ test("sin cuentas, la primera se puede conectar y no hay nota", async () => {
   const add = await waitFor(() => button(app, "+ Agregar cuenta"), "Falta «+ Agregar cuenta»");
   assert.equal(add.disabled, false);
   assert.equal(nota(app), null);
-  assert.deepEqual(app.fallos, []);
+  assert.deepEqual(app.failures, []);
 });

@@ -38,14 +38,11 @@ export function sectionLabel(lang: Lang, _section: SidebarSection): string {
 
 export function statusGroupLabel(lang: Lang, key: SidebarStatusKey): string {
   switch (key) {
-    case "approving": return word(lang, "shell.sidebar.view.status_approving");
-    case "asked": return word(lang, "shell.sidebar.view.status_asked");
-    case "working": return word(lang, "shell.sidebar.view.status_working");
-    case "failed": return word(lang, "shell.sidebar.view.status_failed");
-    case "interrupted": return word(lang, "shell.sidebar.view.status_interrupted");
-    case "unseen": return word(lang, "shell.sidebar.view.status_unseen");
-    case "finished": return word(lang, "shell.sidebar.view.status_finished");
-    default: return word(lang, "shell.sidebar.view.status_idle");
+    case "draft": return word(lang, "shell.sidebar.view.status_draft");
+    case "review": return word(lang, "shell.sidebar.view.status_review");
+    case "ready": return word(lang, "shell.sidebar.view.status_ready");
+    case "closed": return word(lang, "shell.sidebar.view.status_closed");
+    default: return word(lang, "shell.sidebar.view.status_unknown");
   }
 }
 

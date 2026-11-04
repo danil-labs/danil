@@ -63,7 +63,7 @@ function bloque(fuente, desde) {
  * Devuelve `[{ manejador, linea }]`.
  */
 export function overridden(fuente) {
-  const fallos = [];
+  const failures = [];
   // `as={(p: object) => (` — el nombre del parámetro es lo que se esparce.
   const inicio = /as=\{\s*\(\s*(\w+)\s*(?::[^)]*)?\)\s*=>/g;
   for (const m of fuente.matchAll(inicio)) {
@@ -76,13 +76,13 @@ export function overridden(fuente) {
       if (puesto === -1) continue;
       // Reenviado a mano: `p.onClick?.(e)` dentro del propio manejador.
       if (cuerpo.includes(`${m[1]} as `) && cuerpo.includes(`.${h}?.(`)) continue;
-      fallos.push({
+      failures.push({
         manejador: h,
         linea: fuente.slice(0, abre + puesto).split("\n").length,
       });
     }
   }
-  return fallos;
+  return failures;
 }
 
 test("ningún disparador pisa el manejador que lo abre", () => {

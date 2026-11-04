@@ -36,6 +36,20 @@
   "audit.empty": "No changes have been logged in this workspace yet.",
   "audit.empty_filter": "No changes of this kind among the loaded ones.",
   "audit.no_account": "Your session has no active Danil workspace. Choose one and open this section again.",
-  "audit.forbidden": "Only workspace admins can see the change log.",
-  "audit.unavailable": "The change log could not be read. Check the connection and try again."
+  "audit.forbidden": "Only the workspace owner and admins can see the change log.",
+  "audit.unavailable": "The change log could not be read. Check the connection and try again.",
+  "audit.kind_filter": "Filter by event type",
+  "audit.kind_all": "All events",
+  "audit.kind.machines": "Machines",
+  "audit.kind.tasks": "Tasks",
+  "audit.kind.mcp": "MCP",
+  "audit.kind.credentials": "Credentials",
+  "audit.kind.sessions": "Sign-ins",
+  "audit.kind.support": "Support",
+  "audit.kind.workspace": "Workspace",
+  "audit.event.machine_started": "A machine was started",
+  "audit.event.task_created": "A task was created",
+  "audit.event.mcp_connected": "An MCP was connected",
+  "audit.event.credential_rotated": "A credential was changed",
+  "audit.event.session_started": "Signed in"
 }

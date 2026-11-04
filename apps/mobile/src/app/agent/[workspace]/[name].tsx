@@ -1,3 +1,4 @@
+import { folderByKey } from "../../../lib/folderIcon";
 import { AgentAvatar } from "../../../ui/AgentAvatar";
 import { agentFolder, dockStatusText } from "@terminus/tasks";
 import { Stack, useLocalSearchParams } from "expo-router";
@@ -31,7 +32,6 @@ export default function AgentScreen() {
   const [seen, setSeen] = useState<ReadonlySet<string>>(new Set());
   const onSeen = useRef<FlatListProps<Task>["onViewableItemsChanged"]>(({ viewableItems }) => setSeen(new Set(viewableItems.map((v) => v.key)))).current;
   const git = useTaskGit(hostOf, tasks.filter((task) => seen.has(taskKey(task))));
-  const folderName = (id: string) => snapshot?.folders.find((f) => f.id === id)?.name;
   // En qué máquina se habla con él: la preferida entre las que lo tienen.
   const host = preferred(hostsOfCurrent.filter((h) => agent?.places.some((p) => p.host === h.id)));
   const places = agent?.places.filter((p) => p.host === host?.id).map((p) => p.folder) ?? [];
@@ -49,7 +49,7 @@ export default function AgentScreen() {
         ? (await runShell(host, local, { folder, session: null, command: s.command, provider: s.provider, model: s.model, effort: s.effort, permissionMode: s.permissionMode, agent: name })).session
         : await createTask(host, local, { folder, prompt: s.prompt, provider: s.provider, model: s.model, effort: s.effort, permissionMode: s.permissionMode, attachments: s.attachments, agent: name, space: null });
       rememberMachine(host.id);
-      openTask(host.id, local, folder, id);
+      openTask(host.id, local, folder, id, true);
       return true;
     } catch (error) {
       if (error instanceof HostError && error.code === "machine_asleep") setNote(w("web.machines.off_action", { name: host.label }));
@@ -81,7 +81,7 @@ export default function AgentScreen() {
             task={item}
             card={cardOf(item, marks)}
             git={effectiveGit(git, item, snapshot?.tasks ?? [])}
-            folderName={folderName}
+            folderOf={(key) => folderByKey(snapshot?.folders ?? [], key)}
             onPress={() => openTask(item.host, item.workspace, item.folder, item.id)}
             onLongPress={() => openPreview(item.host, item.id)}
             onFinish={() => openPreview(item.host, item.id, "finish")}

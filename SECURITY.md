@@ -5,7 +5,7 @@
 Please **do not open a public issue** for security problems.
 
 Report them privately through GitHub:
-**[Report a vulnerability](https://github.com/danil-labs/terminus/security/advisories/new)**
+**[Report a vulnerability](https://github.com/danil-labs/danil/security/advisories/new)**
 (Security tab → *Report a vulnerability*). Only the maintainers can see the
 report.
 
@@ -22,12 +22,12 @@ work on a fix, and credit you in the advisory unless you prefer otherwise.
 
 In scope:
 
-- the Terminus window and its front (this repository);
+- the Danil window and its front (this repository);
 - the release pipeline and the `npx` installer;
 - how the window handles content produced by agents (artifacts, Markdown,
   links, embedded sites) — see [tests/security/](apps/desktop/tests/security/README.md) for the existing
   containment tests;
-- the engine `seldon-runtime` as shipped with Terminus. Its source is not
+- the engine `seldon-runtime` as shipped with Danil. Its source is not
   public, but reports about its behavior are welcome through the same channel.
 
 Out of scope: vulnerabilities in third-party agent CLIs or providers

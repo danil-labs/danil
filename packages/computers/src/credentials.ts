@@ -254,9 +254,9 @@ export function envSecretOf(slot: string): EnvSecretSlot | null {
 }
 
 /** Copia de seldon-host `docs/account-credentials.md` § Secretos genéricos; `test/fixtures/env-secret-names.json` es el mismo archivo que prueba el motor. */
-const RESERVED_ENV_PREFIXES = ["TERMINUS_", "SELDON_", "HARNESS_", "ANTHROPIC_", "OPENAI_", "CLAUDE_", "CODEX_", "OPENCODE_", "GROK_", "AGY_", "XDG_", "LD_", "DYLD_", "GIT_"];
+const RESERVED_ENV_PREFIXES = ["DANIL_", "TERMINUS_", "SELDON_", "HARNESS_", "ANTHROPIC_", "OPENAI_", "CLAUDE_", "CODEX_", "OPENCODE_", "GROK_", "AGY_", "XDG_", "LD_", "DYLD_", "GIT_"];
 const RESERVED_ENV = new Set([
-  "PATH", "HOME", "SHELL", "USER", "TMPDIR", "TERM", "NODE_OPTIONS", "GH_TOKEN", "GITHUB_TOKEN", "XAI_API_KEY", "ZCODE_DATA_BASE_DIR", "DANIL_COMPUTERS_URL",
+  "PATH", "HOME", "SHELL", "USER", "TMPDIR", "TERM", "NODE_OPTIONS", "GH_TOKEN", "GITHUB_TOKEN", "XAI_API_KEY", "ZCODE_DATA_BASE_DIR",
   "USERPROFILE", "APPDATA", "LOCALAPPDATA", "SYSTEMROOT", "COMSPEC", "PATHEXT", "TEMP", "TMP", "SYSTEMDRIVE", "WINDIR", "PROGRAMFILES", "PROGRAMDATA", "PSMODULEPATH",
 ]);
 const ENV_SECRET_NAME_MAX = 128;

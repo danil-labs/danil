@@ -1,0 +1,11 @@
+[Unit]
+Description=Límites de red del usuario verify
+Before=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/sbin/nft -f /etc/verify-queue/egress.nft
+
+[Install]
+WantedBy=multi-user.target

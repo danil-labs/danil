@@ -4,6 +4,8 @@
  * por el relay o por el bridge. Sin React Native: se prueba en Node.
  */
 import type {
+  HistoryChunk,
+  HistoryRef,
   AccountLimits,
   AccountList,
   LoginEvent,
@@ -29,15 +31,32 @@ import type {
   SlashMenu,
   Space,
   TaskBlockers,
+  TaskTree,
+  TreeContent,
+  TreeFiles,
   Startup,
   Turn,
   Workspace,
   WorkspaceAttention,
   LiveTurn,
 } from "@terminus/protocol";
+import { type HistoryRead } from "@terminus/chat/history";
+import { readDetailText } from "@terminus/chat/historyDetail";
 import { readVisualHtml, type VisualPart, type VisualWhole, VISUAL_FILE, VISUAL_TREE } from "@terminus/chat/visual";
 import { arrangeSpaces, spaceOrder, type AccountWorkspace, groupWorkspaces, linkedAttention, onlyLinked, registryProjects, withRegistry } from "@terminus/computers";
-import { type ChatBackgroundView, chatBackgroundImageUrl, chatBackgroundView, isSingleAttention } from "@terminus/protocol";
+import {
+  ATTACHMENT_MIMES,
+  COMMAND_UNSUPPORTED,
+  IMAGE_MIMES,
+  MAX_UPLOAD_BYTES,
+  type ChatBackgroundView,
+  chatBackgroundImageUrl,
+  chatBackgroundView,
+  isImageMime,
+  isSingleAttention,
+  isUnknownCommand,
+} from "@terminus/protocol";
+import type { TaskActivity } from "@terminus/design";
 import { type FlatRow, flattenTasks, launcherOf, REMOTE_CHILD_FEATURE, type RemoteScope, remoteLauncherOf } from "@terminus/tasks";
 import { AUTO_MODE } from "./composer.ts";
 import { type Host, HostError } from "./hosts.ts";
@@ -48,6 +67,8 @@ export type Task = SessionRow & {
   host: string;
   /** Hija remota: la `taskKey` de su coordinador en otra máquina (`mergeSnapshots`). */
   remote_launcher?: string | null;
+  /** La atención de la familia, si la entrada la carga (`withFamilyActivity`). */
+  delegated_activity?: TaskActivity;
   workspace: string;
   /** Id de la carpeta en su máquina; `""` es sin carpeta. */
   folder: string;
@@ -75,7 +96,7 @@ export type Agent = {
 };
 
 /** Lo que una máquina sabe de un workspace. */
-export type Folder = Project & { key: string; host: string };
+export type Folder = Project & { key: string; host: string; cloud?: string | null };
 
 export type HostSnapshot = {
   host: string;
@@ -375,10 +396,43 @@ export type TaskView = {
   liveSince: number | null;
 };
 
-export async function loadTask(host: Host, workspace: string, folder: string, id: string): Promise<TaskView> {
+/** Con estos campos exactos, `null` incluido: la copia del relay se busca por los argumentos y así la comparte con la web. */
+const historyRequest = (before: number | null) => ({ version: 1, before, revision: null });
+
+/** La cola guardada, para decir por qué se detuvo. Es una lectura: no enciende la máquina. */
+export async function recentTurns(host: Host, workspace: string, folder: string, id: string): Promise<Turn[]> {
+  const session = await read<OpenedSession | null>(host, "load_session", workspace, { project: folder, id, history_request: historyRequest(null) }, null, { cachedAt: null });
+  return session?.turns ?? [];
+}
+
+/** La cola de la tarea. Una máquina apagada sin esa copia aún puede tener la entera, solo para quien no tiene nada que perder. */
+async function tailOf(host: Host, workspace: string, folder: string, id: string, holding: boolean, at: { cachedAt: number | null }) {
+  const session = await read<OpenedSession | null>(host, "load_session", workspace, { project: folder, id, history_request: historyRequest(null) }, null, at);
+  if (session || holding || host.power() === "on") return session;
+  return read<OpenedSession | null>(host, "load_session", workspace, { project: folder, id }, null, at);
+}
+
+/** Una página anterior. Sin ella en una máquina apagada no es el principio de la conversación: es que no se puede leer ahora. */
+export async function loadTurns(host: Host, workspace: string, folder: string, id: string, before: number): Promise<HistoryRead<Turn>> {
+  const session = await read<OpenedSession | null>(host, "load_session", workspace, { project: folder, id, history_request: historyRequest(before) }, null, { cachedAt: null });
+  if (!session) throw new HostError("machine_off", host.label);
+  return { turns: session.turns ?? [], history: session.history };
+}
+
+/**
+ * El contenido entero de un campo que no cupo en la página; `null` si no se puede traer de una
+ * vez. En fila: el relay acota las lecturas de historial simultáneas.
+ */
+export function loadDetail(host: Host, workspace: string, folder: string, id: string, ref: HistoryRef, turnId: string | undefined): Promise<string | null> {
+  const part = async (current: HistoryRef, offset: number) =>
+    (await host.call<HistoryChunk>("load_session", workspace, { project: folder, id, history_request: { ...current, kind: "detail", offset } })).value;
+  return readDetailText({ part, turns: (before) => loadTurns(host, workspace, folder, id, before) }, ref, turnId);
+}
+
+export async function loadTask(host: Host, workspace: string, folder: string, id: string, holding = false): Promise<TaskView> {
   const at = { cachedAt: null as number | null };
   const [session, pending, live, liveTurns] = await Promise.all([
-    read<OpenedSession | null>(host, "load_session", workspace, { project: folder, id }, null, at),
+    tailOf(host, workspace, folder, id, holding, at),
     read<PendingRequests | null>(host, "pending_requests", workspace, { session: id }, null, at).catch((): PendingRequests | null => null),
     read<string[]>(host, "list_active_turns", workspace, { workspace }, [], at).catch((): string[] => []),
     read<LiveTurn[]>(host, "list_live_turns", workspace, {}, [], at).catch((): LiveTurn[] => []),
@@ -446,7 +500,7 @@ export type Draft = {
 
 /** El proveedor y el modelo con que sigue una tarea: los de su último turno. */
 export function taskDefaults(view: TaskView): { provider: string; model: string | null } {
-  const model = [...view.session.turns].reverse().find((t) => t.model)?.model ?? view.session.model ?? null;
+  const model = [...view.session.turns].reverse().find((t) => t.model)?.model ?? view.session.model ?? view.session.observed_model ?? null;
   return { provider: view.session.provider, model };
 }
 
@@ -464,6 +518,15 @@ export async function sendToTask(host: Host, workspace: string, folder: string, 
     attachments: draft.attachments,
   });
   return value;
+}
+
+/**
+ * Cambiar el CLI de una tarea (`provider_handoff_v1`): deja el consentimiento
+ * de un solo uso para el siguiente turno, que abre sesión nueva con la
+ * conversación como texto o retoma la aparcada.
+ */
+export async function setSessionProvider(host: Host, workspace: string, folder: string, session: string, provider: string) {
+  await host.call("set_session_provider", workspace, { project: folder, session, provider });
 }
 
 /** «Mandar ahora»: el mensaje entra en el turno que corre, sin esperar a que termine. */
@@ -578,6 +641,8 @@ export async function answerQuestion(host: Host, workspace: string, folder: stri
   // El proceso puede haber terminado o la pregunta haberse respondido en otro cliente.
   const current = await loadTask(host, workspace, folder, id);
   const question = current.questions.find((q) => q.turn === pending.turn);
+  // Una pregunta que ya no entra en la cola no prueba que esté contestada: la respuesta no se descarta en silencio.
+  if (!question && !current.session.turns.some((turn) => turn.id === pending.turn)) throw new HostError("question_unverified");
   if (!question) return;
   const remaining = respuestas.filter((a) => question.questions.some((q) => q.id === a.question));
   if (question.request_id) {
@@ -668,11 +733,37 @@ export async function mentionsOf(host: Host, workspace: string, folder: string, 
   return { fuentes: value?.fuentes ?? [], truncado: value?.truncado ?? false };
 }
 
+/** Una rama elegible. `detail` es texto o `null`: el booleano del motor no llega a la hoja. */
+export type BranchChoice = { reference: string; name: string; remote: boolean; detail: string | null };
+
+export type BranchList = { branches: BranchChoice[]; selected: string | null };
+
+/**
+ * Normaliza `project_base_branches`. El motor manda `remote: true | false`.
+ * Un doble viejo mandaba el nombre del remoto. Buscar o pintar ese booleano
+ * deja la hoja en blanco.
+ */
+export function branchChoices(value: { branches?: unknown; selected?: unknown } | null): BranchList {
+  const raw = Array.isArray(value?.branches) ? value.branches : [];
+  const branches = raw.flatMap((item): BranchChoice[] => {
+    if (!item || typeof item !== "object") return [];
+    const row = item as { reference?: unknown; name?: unknown; remote?: unknown };
+    const reference = typeof row.reference === "string" ? row.reference : "";
+    if (!reference) return [];
+    const fallback = reference.replace(/^refs\/(heads|remotes)\//, "");
+    const name = typeof row.name === "string" && row.name ? row.name : fallback;
+    const remote = row.remote === true || (typeof row.remote === "string" && row.remote.length > 0) || reference.startsWith("refs/remotes/");
+    const detail = typeof row.remote === "string" && row.remote ? row.remote : remote ? reference.split("/")[2] ?? null : null;
+    return [{ reference, name, remote, detail }];
+  });
+  return { branches, selected: typeof value?.selected === "string" ? value.selected : null };
+}
+
 /** Las ramas desde las que puede empezar una tarea nueva en una carpeta con git. */
-export async function baseBranchesOf(host: Host, workspace: string, folder: string): Promise<BaseBranches> {
+export async function baseBranchesOf(host: Host, workspace: string, folder: string): Promise<BranchList> {
   const at = { cachedAt: null as number | null };
   const value = await read<BaseBranches | null>(host, "project_base_branches", workspace, { project: folder, refresh: false, details: false }, null, at).catch(() => null);
-  return { branches: value?.branches ?? [], selected: value?.selected ?? null, fetched_at: value?.fetched_at ?? null };
+  return branchChoices(value);
 }
 
 /**
@@ -707,19 +798,35 @@ export function stopShell(host: Host, workspace: string, session: string) {
 }
 
 /**
- * Una imagen del teléfono a la máquina, por el camino de pegar una imagen en
- * la ventana: viaja en base64 (`guardar_imagen_pegada`) y queda como adjunto
- * del workspace (`prepare_attachments`). Devuelve la ruta para `attachments`.
- * El motor solo guarda así PNG, JPEG, WebP y GIF de hasta 25 MiB, y el socket
- * corta en 16 MiB por mensaje: el teléfono no sube otros archivos ni imágenes
- * de más de `MAX_ATTACHMENT_BYTES`.
+ * Un archivo del teléfono a la máquina: viaja en base64 (`guardar_adjunto`) y
+ * queda como adjunto del workspace (`prepare_attachments`). Devuelve la ruta
+ * para `attachments`. Con un motor anterior, el documento no cabe: las
+ * imágenes siguen por `guardar_imagen_pegada`, y el resto se rechaza. El
+ * socket corta en 16 MiB por mensaje: `MAX_ATTACHMENT_BYTES` deja margen.
  */
-export const ATTACHMENT_MIMES: ReadonlySet<string> = new Set(["image/png", "image/jpeg", "image/webp", "image/gif"]);
-/** 16 MiB de mensaje en base64 son unos 12 MB de imagen. */
-export const MAX_ATTACHMENT_BYTES = 11 * 1024 * 1024;
+export { ATTACHMENT_MIMES, IMAGE_MIMES };
+/** 16 MiB de mensaje en base64 son unos 11 MB de archivo. */
+export const MAX_ATTACHMENT_BYTES = MAX_UPLOAD_BYTES;
 
-export async function uploadAttachment(host: Host, workspace: string, folder: string, file: { mime: string; base64: string }): Promise<string> {
-  const saved = await host.call<string>("guardar_imagen_pegada", workspace, { mime: file.mime, datos: file.base64 });
+export async function uploadAttachment(
+  host: Host,
+  workspace: string,
+  folder: string,
+  file: { mime: string; base64: string; name?: string },
+): Promise<string> {
+  const saved = await (async () => {
+    try {
+      return await host.call<string>("guardar_adjunto", workspace, {
+        mime: file.mime,
+        nombre: file.name ?? null,
+        datos: file.base64,
+      });
+    } catch (error) {
+      if (!isUnknownCommand(error)) throw error;
+      if (!isImageMime(file.mime)) throw new HostError(COMMAND_UNSUPPORTED, "guardar_adjunto");
+      return host.call<string>("guardar_imagen_pegada", workspace, { mime: file.mime, datos: file.base64 });
+    }
+  })();
   if (typeof saved.value !== "string" || !saved.value) throw new HostError("operation_failed");
   const prepared = await host.call<string[]>("prepare_attachments", workspace, { project: folder, paths: [saved.value] });
   const path = Array.isArray(prepared.value) ? prepared.value[0] : null;
@@ -759,6 +866,28 @@ export async function readVisual(host: Host, workspace: string, folder: string, 
   }
 }
 
+// --- Los archivos de la tarea -----------------------------------------------------
+
+/** Los árboles de la tarea: su copia de trabajo y los que declare. Los que ya no están en disco no se enseñan. */
+export async function taskTrees(host: Host, workspace: string, folder: string, session: string): Promise<TaskTree[]> {
+  const answer = await host.call<TaskTree[]>("list_task_trees", workspace, { project: folder, session });
+  return (answer.value ?? []).filter((tree) => !tree.missing);
+}
+
+/** Las rutas de un árbol de la tarea. */
+export async function treeFiles(host: Host, workspace: string, folder: string, session: string, tree: string): Promise<TreeFiles> {
+  const answer = await host.call<TreeFiles>("tree_files", workspace, { project: folder, session, tree });
+  if (!answer.value) throw new HostError("operation_failed");
+  return answer.value;
+}
+
+/** Un archivo de un árbol de la tarea: texto, o su imagen en `data_url`. */
+export async function treeFile(host: Host, workspace: string, folder: string, session: string, tree: string, path: string): Promise<TreeContent> {
+  const answer = await host.call<TreeContent>("tree_show", workspace, { project: folder, session, tree, path });
+  if (!answer.value) throw new HostError("operation_failed");
+  return answer.value;
+}
+
 // --- Cuentas de IA ---------------------------------------------------------------
 
 /**
@@ -778,6 +907,11 @@ export function accountWorkspace(host: Pick<Host, "linked">, current: string | n
 export async function accountsOf(host: Host, workspace: string | null, provider: string): Promise<AccountList | null> {
   const at = { cachedAt: null as number | null };
   return read<AccountList | null>(host, "list_accounts", workspace, { provider }, null, at);
+}
+
+/** El próximo turno corre con esta cuenta. No enciende la máquina. */
+export async function setActiveAccount(host: Host, workspace: string | null, provider: string, id: string) {
+  await host.call("set_active_account", accountWorkspace(host, workspace), { provider, id });
 }
 
 export async function limitsSnapshotOf(host: Host, workspace: string | null, provider: string, id: string) {

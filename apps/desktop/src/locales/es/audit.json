@@ -36,6 +36,20 @@
   "audit.empty": "Todavía no hay cambios registrados en este workspace.",
   "audit.empty_filter": "No hay cambios de este tipo entre los cargados.",
   "audit.no_account": "Tu sesión no tiene un workspace de Danil activo. Elige uno y vuelve a abrir esta sección.",
-  "audit.forbidden": "Solo quien administra el workspace puede ver la bitácora de cambios.",
-  "audit.unavailable": "No se pudo leer la bitácora. Comprueba la conexión e inténtalo otra vez."
+  "audit.forbidden": "Solo el owner y los admin del workspace ven la bitácora de cambios.",
+  "audit.unavailable": "No se pudo leer la bitácora. Comprueba la conexión e inténtalo otra vez.",
+  "audit.kind_filter": "Filtrar por tipo de evento",
+  "audit.kind_all": "Todos los eventos",
+  "audit.kind.machines": "Máquinas",
+  "audit.kind.tasks": "Tareas",
+  "audit.kind.mcp": "MCP",
+  "audit.kind.credentials": "Credenciales",
+  "audit.kind.sessions": "Inicios de sesión",
+  "audit.kind.support": "Soporte",
+  "audit.kind.workspace": "Workspace",
+  "audit.event.machine_started": "Se encendió una máquina",
+  "audit.event.task_created": "Se creó una tarea",
+  "audit.event.mcp_connected": "Se conectó un MCP",
+  "audit.event.credential_rotated": "Se cambió una credencial",
+  "audit.event.session_started": "Inició sesión"
 }

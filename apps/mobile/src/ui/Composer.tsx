@@ -1,16 +1,26 @@
 import { RADIUS, TEXT } from "@terminus/design";
 import { SendButton } from "./SendButton";
-import type { MentionList, PermissionModeOption, ProviderInfo, ProviderModels, SlashMenu } from "@terminus/protocol";
+import {
+  ATTACHMENT_DOCUMENTS_FEATURE,
+  isImageMime,
+  mimeOfAttachment,
+  type MentionList,
+  type PermissionModeOption,
+  type ProviderInfo,
+  type ProviderModels,
+  type SlashMenu,
+} from "@terminus/protocol";
 import { modelName, previewLabel } from "@terminus/tasks";
 import * as DocumentPicker from "expo-document-picker";
 import { File } from "expo-file-system";
 import * as ImagePicker from "expo-image-picker";
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ComponentRef, type ReactNode } from "react";
 import { Keyboard, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, type TextInputKeyPressEvent, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   ATTACHMENT_MIMES,
   type Draft,
+  IMAGE_MIMES,
   MAX_ATTACHMENT_BYTES,
   mentionsOf,
   modelsOf,
@@ -47,9 +57,9 @@ function effortLabel(effort: string | null) {
 
 /**
  * El cuadro de escribir del escritorio (`Chat.tsx`), adaptado al teléfono:
- * el texto crece hasta seis líneas; debajo, en una fila, adjuntar y permisos a
- * la izquierda y, a la derecha, el modelo con su razonamiento y el botón de
- * enviar, que con un turno corriendo es detener. `/` abre los comandos y las
+ * una sola fila con adjuntar, el texto (crece hasta seis líneas), el logotipo
+ * del proveedor y el botón de enviar, que con un turno corriendo es detener. El
+ * logotipo abre la hoja de proveedor, modelo, razonamiento y permisos. `/` abre los comandos y las
  * skills del agente; `@`, los archivos y carpetas; `!` lo vuelve terminal
  * («Ejecutar»). Escribir mientras trabaja deja el mensaje en cola, con
  * «Mandar ahora». Los selectores son hojas desde abajo. La tecla de retorno
@@ -66,6 +76,10 @@ export function Composer({
   permissionMode = null,
   savedPermissionMode = null,
   providerLocked = false,
+  providerLockedReason = null,
+  canHandoff = false,
+  pendingProvider = null,
+  onPendingProvider,
   running = false,
   disabled = false,
   placeholder,
@@ -90,8 +104,15 @@ export function Composer({
   permissionMode?: string | null;
   /** El modo que guarda la tarea abierta: manda sobre el del workspace, como al reanudar en la ventana. */
   savedPermissionMode?: string | null;
-  /** Una tarea que ya contestó no cambia de proveedor, como en la ventana. */
+  /** El proveedor no se puede cambiar ahora; `providerLockedReason` dice por qué. */
   providerLocked?: boolean;
+  /** El motivo ya escrito: `hand_over_blocked`, el turno vivo o la máquina. */
+  providerLockedReason?: string | null;
+  /** La tarea abierta puede cambiar de CLI (`provider_handoff_v1`), con confirmación. */
+  canHandoff?: boolean;
+  /** El CLI que se aplicará al enviar, si la persona ya lo confirmó. */
+  pendingProvider?: string | null;
+  onPendingProvider?: (provider: string | null) => void;
   running?: boolean;
   disabled?: boolean;
   placeholder: string;
@@ -124,7 +145,10 @@ export function Composer({
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [queue, setQueue] = useState<Queued[]>([]);
   const [busy, setBusy] = useState(false);
-  const [sheet, setSheet] = useState<"model" | "mode" | "attach" | null>(null);
+  const [sheet, setSheet] = useState<"model" | "attach" | "handover" | null>(null);
+  const input = useRef<ComponentRef<typeof TextInput>>(null);
+  // El CLI elegido que espera la confirmación del traspaso.
+  const [candidate, setCandidate] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
   const draining = useRef(false);
   const claimedQueue = useRef(new Set<string>());
@@ -155,6 +179,11 @@ export function Composer({
 
   const usable = usableProviders(providers);
   const current = provider ?? usable[0]?.id ?? null;
+  // Cambiar de CLI es de una tarea abierta; en una nueva se elige sin confirmar.
+  const locked = providerLocked || (Boolean(session) && !canHandoff);
+  const providerLabel = (id: string | null) => (id ? providers.find((p) => p.id === id)?.label ?? id : "");
+  const pendingLabel = pendingProvider ? providerLabel(pendingProvider) : null;
+  const candidateLabel = candidate ? providerLabel(candidate) : null;
 
   // Modelos y permisos del proveedor elegido; la barra de `/` se pide al usarla.
   useEffect(() => {
@@ -266,12 +295,20 @@ export function Composer({
     }
   }
 
+  function aceptaDocumentos() {
+    if (!host) return false;
+    const features = host.features?.();
+    if (features?.length) return features.includes(ATTACHMENT_DOCUMENTS_FEATURE);
+    return host.supports?.("guardar_adjunto") !== "no";
+  }
+
   async function addFiles(files: { name: string; mime: string; size: number | null; read: () => Promise<string> }[]) {
     if (!host || !workspace || folder === null) return;
     for (const file of files) {
       const key = `${file.name}-${Date.now()}-${Math.random()}`;
-      if (!ATTACHMENT_MIMES.has(file.mime)) {
-        setNote(t("composer.only_images"));
+      const mime = mimeOfAttachment(file.mime, file.name);
+      if (!mime || (!aceptaDocumentos() && !isImageMime(mime))) {
+        setNote(t("composer.unsupported_file"));
         continue;
       }
       if (file.size !== null && file.size > MAX_ATTACHMENT_BYTES) {
@@ -282,7 +319,7 @@ export function Composer({
       try {
         const base64 = await file.read();
         if (base64.length * 0.75 > MAX_ATTACHMENT_BYTES) throw new Error(t("composer.too_large", { name: file.name, size: ((base64.length * 0.75) / 1048576).toFixed(1) }));
-        const path = await uploadAttachment(host, workspace, folder, { mime: file.mime, base64 });
+        const path = await uploadAttachment(host, workspace, folder, { mime, base64, name: file.name });
         setAttachments((old) => old.map((a) => (a.key === key ? { ...a, path } : a)));
       } catch (error) {
         const detail = error instanceof Error ? error.message : String(error);
@@ -309,7 +346,7 @@ export function Composer({
 
   async function pickFiles() {
     setSheet(null);
-    const result = await DocumentPicker.getDocumentAsync({ type: [...ATTACHMENT_MIMES], multiple: true, copyToCacheDirectory: true });
+    const result = await DocumentPicker.getDocumentAsync({ type: [...(aceptaDocumentos() ? ATTACHMENT_MIMES : IMAGE_MIMES)], multiple: true, copyToCacheDirectory: true });
     if (result.canceled) return;
     await addFiles(
       result.assets.map((asset) => ({
@@ -351,11 +388,58 @@ export function Composer({
     void send();
   }
 
-  const showStop = running && !hasText && Boolean(onStop);
+  /** Elegir otro CLI en una tarea abierta pide confirmación: la conversación viaja como texto. */
+  function chooseProvider(id: string) {
+    if (id === current) return;
+    if (session && !canHandoff) return;
+    if (session && canHandoff && id !== initialProvider) {
+      setCandidate(id);
+      setSheet("handover");
+      return;
+    }
+    setProvider(id);
+    setModel(null);
+    setEffort(null);
+    if (session && id === initialProvider) onPendingProvider?.(null);
+  }
+
+  function confirmHandover() {
+    // La tarea pudo cambiar debajo de la hoja: sin sesión o sin permiso, no se confirma.
+    if (!candidate || !session || !canHandoff) {
+      setCandidate(null);
+      setSheet(null);
+      return;
+    }
+    setProvider(candidate);
+    setModel(null);
+    setEffort(null);
+    onPendingProvider?.(candidate);
+    setCandidate(null);
+    setSheet(null);
+  }
+
+  /** Deshacer el traspaso pendiente sin enviar: vuelve al CLI con que sigue la tarea. */
+  function revertHandover() {
+    setProvider(initialProvider);
+    setModel(null);
+    setEffort(null);
+    onPendingProvider?.(null);
+  }
+
+  // En la web el cuadro es un <textarea>: no crece solo, así que se mide con cada cambio.
+  useEffect(() => {
+    if (Platform.OS !== "web") return;
+    const node = input.current as unknown as HTMLTextAreaElement | null;
+    if (!node?.style) return;
+    node.style.height = "0px";
+    node.style.height = `${Math.min(Math.max(node.scrollHeight, INPUT_MIN), INPUT_MAX)}px`;
+  }, [text, shell]);
+
+  const showStop = running && Boolean(onStop);
   const sendLabel = shell ? w("chat.composer.run") : w("chat.composer.send");
 
   return (
-    <View style={[styles.wrap, { paddingBottom: 8 + (bottomInset && !keyboard ? insets.bottom : 0), backgroundColor: theme.bg }]}>
+    <View style={[styles.wrap, { paddingBottom: 8 + (bottomInset && !keyboard ? insets.bottom : 0) }]}>
       {slashQuery !== undefined ? (
         <Suggestions>
           {!slashItems ? <Text style={[styles.hint, { color: theme.textMuted }]}>{t("composer.loading")}</Text> : null}
@@ -409,6 +493,17 @@ export function Composer({
 
       {header}
 
+      {pendingLabel ? (
+        <View testID="handover-pending" style={[styles.pending, { borderColor: theme.border, backgroundColor: theme.muted }]}>
+          <Text numberOfLines={2} style={{ flex: 1, color: theme.textMuted, fontSize: TEXT.label }}>
+            {t("composer.handover_pending", { provider: pendingLabel })}
+          </Text>
+          <Pressable hitSlop={8} accessibilityRole="button" onPress={revertHandover}>
+            <Text style={{ color: theme.primary, fontWeight: "600", fontSize: TEXT.label }}>{t("task.actions.cancel")}</Text>
+          </Pressable>
+        </View>
+      ) : null}
+
       <View style={[styles.box, { backgroundColor: theme.surface }]}>
         {attachments.length ? (
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.files}>
@@ -425,69 +520,56 @@ export function Composer({
             ))}
           </ScrollView>
         ) : null}
-        <TextInput
-          testID={testID}
-          style={[styles.input, { color: theme.text, fontFamily: shell ? Platform.select({ ios: "Menlo", default: "monospace" }) : undefined }]}
-          value={text}
-          onChangeText={setText}
-          selection={forced ?? undefined}
-          onSelectionChange={(e) => {
-            setSelection(e.nativeEvent.selection);
-            if (forced) setForced(null);
-          }}
-          placeholder={placeholder}
-          placeholderTextColor={theme.textMuted}
-          underlineColorAndroid="transparent"
-          multiline
-          textAlignVertical="top"
-          // El teclado dice «Enviar». En iOS y Android el retorno manda y no mete salto de línea.
-          returnKeyType="send"
-          enterKeyHint="send"
-          submitBehavior={Platform.OS === "web" ? undefined : "submit"}
-          onSubmitEditing={Platform.OS === "web" ? undefined : () => void send()}
-          onKeyPress={Platform.OS === "web" ? onWebKey : undefined}
-        />
         <View style={styles.row}>
           {shell ? (
-            <View style={[styles.pill, { backgroundColor: theme.text }]}>
+            <View style={[styles.pill, styles.shellPill, { backgroundColor: theme.text }]}>
               <Icon name="terminal" size={13} color={theme.bg} />
               <Text style={{ color: theme.bg, fontSize: TEXT.label, fontWeight: "600" }}>{w("chat.composer.terminal")}</Text>
             </View>
           ) : (
-            <>
-              <Pressable
-                testID="attach"
-                hitSlop={6}
-                disabled={!ready}
-                accessibilityLabel={w("chat.attachments.add")}
-                onPress={() => setSheet("attach")}
-                style={[styles.round, { opacity: ready ? 1 : 0.4 }]}
-              >
-                <Icon name="paperclip" size={18} color={theme.textMuted} />
-              </Pressable>
-              {modes.length ? (
-                <Pressable testID="mode" onPress={() => setSheet("mode")} style={[styles.pill, { borderColor: theme.border, borderWidth: StyleSheet.hairlineWidth }]}>
-                  <Icon name="shield" size={13} color={theme.textMuted} />
-                  <Text numberOfLines={1} style={{ color: theme.textMuted, fontSize: TEXT.label, maxWidth: 110 }}>
-                    {modeOption ? phrase(modeOption.label) : w("chat.mode.placeholder")}
-                  </Text>
-                </Pressable>
-              ) : null}
-            </>
+            <Pressable
+              testID="attach"
+              hitSlop={6}
+              disabled={!ready}
+              accessibilityLabel={w("chat.attachments.add")}
+              onPress={() => setSheet("attach")}
+              style={[styles.round, { opacity: ready ? 1 : 0.4 }]}
+            >
+              <Icon name="paperclip" size={20} color={theme.textMuted} />
+            </Pressable>
           )}
-          <View style={{ flex: 1 }} />
+          <TextInput
+            ref={input}
+            testID={testID}
+            style={[styles.input, { color: theme.text, fontFamily: shell ? Platform.select({ ios: "Menlo", default: "monospace" }) : undefined }]}
+            value={text}
+            onChangeText={setText}
+            selection={forced ?? undefined}
+            onSelectionChange={(e) => {
+              setSelection(e.nativeEvent.selection);
+              if (forced) setForced(null);
+            }}
+            placeholder={placeholder}
+            placeholderTextColor={theme.textMuted}
+            underlineColorAndroid="transparent"
+            multiline
+            // Sin esto, react-native-web pinta un <textarea> de dos filas y el texto queda arriba de los botones.
+            numberOfLines={Platform.OS === "web" ? 1 : undefined}
+            textAlignVertical="top"
+            // El teclado dice «Enviar». En iOS y Android el retorno manda y no mete salto de línea.
+            returnKeyType="send"
+            enterKeyHint="send"
+            submitBehavior={Platform.OS === "web" ? undefined : "submit"}
+            onSubmitEditing={Platform.OS === "web" ? undefined : () => void send()}
+            onKeyPress={Platform.OS === "web" ? onWebKey : undefined}
+          />
           {!shell && current ? (
-            <Pressable testID="model" onPress={() => setSheet("model")} style={[styles.pill, styles.modelPill, { borderColor: theme.border }]} accessibilityLabel={w("chat.model.title")}>
-              <BrandMark id={current} size={13} color={theme.text} />
-              <Text numberOfLines={1} style={{ color: theme.text, fontSize: TEXT.label, maxWidth: 130 }}>
-                {modelText}
-              </Text>
-              {efforts.length ? <Text style={{ color: theme.textMuted, fontSize: TEXT.label }}>· {effortLabel(effort)}</Text> : null}
-              <Icon name="chevron-down" size={12} color={theme.textMuted} />
+            <Pressable testID="model" onPress={() => setSheet("model")} style={styles.round} accessibilityLabel={`${w("chat.model.title")}: ${modelText}${efforts.length ? ` · ${effortLabel(effort)}` : ""}${modeOption ? ` · ${phrase(modeOption.label)}` : ""}`}>
+              <BrandMark id={current} size={20} color={theme.text} />
             </Pressable>
           ) : null}
           {showStop ? (
-            <Pressable testID="stop" onPress={onStop} accessibilityLabel={w("chat.turn.stop")} style={[styles.send, { backgroundColor: theme.text }]}>
+            <Pressable testID="stop" onPress={onStop} accessibilityRole="button" accessibilityLabel={w("chat.turn.stop")} style={[styles.send, { backgroundColor: theme.text }]}>
               <Icon name="square" size={11} color={theme.bg} fill={theme.bg} />
             </Pressable>
           ) : shell ? (
@@ -500,36 +582,12 @@ export function Composer({
           )}
         </View>
       </View>
-      {running && hasText && onStop ? (
-        <Pressable onPress={onStop} style={styles.stopLine} testID="stop-inline">
-          <Icon name="square" size={10} color={theme.textMuted} fill={theme.textMuted} />
-          <Text style={{ color: theme.textMuted, fontSize: TEXT.ui }}>{w("chat.turn.stop")}</Text>
-        </Pressable>
-      ) : null}
       {note ? <Text style={[styles.hint, { color: theme.textMuted, paddingHorizontal: 16 }]}>{note}</Text> : null}
 
       <Sheet visible={sheet === "attach"} title={w("chat.attachments.add")} onClose={() => setSheet(null)}>
         <SheetOption testID="attach-photos" icon="image" label={t("composer.attach_photos")} onPress={() => void pickPhotos()} />
         <SheetOption testID="attach-files" icon="file" label={t("composer.attach_files")} onPress={() => void pickFiles()} />
-        <Text style={[styles.hint, { color: theme.textMuted, paddingHorizontal: 18, paddingTop: 8 }]}>{t("composer.only_images")}</Text>
-      </Sheet>
-
-      <Sheet visible={sheet === "mode"} title={w("chat.mode.listbox")} onClose={() => setSheet(null)}>
-        {modes.map((m) => (
-          <SheetOption
-            key={m.id}
-            icon="shield"
-            label={phrase(m.label)}
-            detail={m.falta ? phrase(m.falta) : null}
-            disabled={Boolean(m.falta)}
-            selected={(modeOption?.id ?? null) === m.id}
-            onPress={() => {
-              setMode(m.id);
-              setSheet(null);
-              if (running) onModeChange?.(m.id);
-            }}
-          />
-        ))}
+        <Text style={[styles.hint, { color: theme.textMuted, paddingHorizontal: 18, paddingTop: 8 }]}>{t("composer.unsupported_file")}</Text>
       </Sheet>
 
       <Sheet visible={sheet === "model"} title={w("chat.model.title")} search={t("search.models")} onClose={() => setSheet(null)}>
@@ -538,20 +596,15 @@ export function Composer({
           return (
             <>
               <SheetSection>{w("chat.model.providers")}</SheetSection>
-              {providerLocked ? <Text style={[styles.hint, { color: theme.textMuted, paddingHorizontal: 18 }]}>{w("chat.model.locked")}</Text> : null}
+              {locked ? <Text style={[styles.hint, { color: theme.textMuted, paddingHorizontal: 18 }]}>{providerLockedReason ?? w("chat.model.locked")}</Text> : null}
               {usable.map((p) => (
                 <SheetOption
                   key={p.id}
                   left={<BrandMark id={p.id} size={17} color={theme.text} />}
                   label={p.label}
                   selected={p.id === current}
-                  disabled={providerLocked && p.id !== current}
-                  onPress={() => {
-                    if (p.id === current) return;
-                    setProvider(p.id);
-                    setModel(null);
-                    setEffort(null);
-                  }}
+                  disabled={locked && p.id !== current}
+                  onPress={() => chooseProvider(p.id)}
                 />
               ))}
               <SheetSection>{w("chat.model.listbox")}</SheetSection>
@@ -586,9 +639,44 @@ export function Composer({
                   </View>
                 </>
               ) : null}
+              {modes.length ? (
+                <>
+                  <SheetSection>{w("chat.mode.listbox")}</SheetSection>
+                  {modes.map((m) => (
+                    <SheetOption
+                      key={m.id}
+                      testID={`mode-${m.id}`}
+                      icon="shield"
+                      label={phrase(m.label)}
+                      detail={m.falta ? phrase(m.falta) : null}
+                      disabled={Boolean(m.falta)}
+                      selected={(modeOption?.id ?? null) === m.id}
+                      onPress={() => {
+                        setMode(m.id);
+                        if (running) onModeChange?.(m.id);
+                      }}
+                    />
+                  ))}
+                </>
+              ) : null}
             </>
           );
         }}
+      </Sheet>
+
+      <Sheet visible={sheet === "handover"} title={t("composer.handover_title")} onClose={() => { setCandidate(null); setSheet(null); }}>
+        <View style={styles.handoverBody}>
+          <View style={styles.handoverChange}>
+            <BrandMark id={current ?? ""} size={18} color={theme.text} />
+            <Text style={{ color: theme.text, fontSize: TEXT.ui, fontWeight: "600" }}>{providerLabel(current)}</Text>
+            <Icon name="chevron-right" size={14} color={theme.textMuted} />
+            <BrandMark id={candidate ?? ""} size={18} color={theme.text} />
+            <Text style={{ color: theme.text, fontSize: TEXT.ui, fontWeight: "600" }}>{candidateLabel}</Text>
+          </View>
+          <Text style={{ color: theme.textMuted, fontSize: TEXT.body, lineHeight: 20 }}>{t("composer.handover_description")}</Text>
+          <SheetOption testID="handover-confirm" icon="check" label={t("composer.handover_confirm", { provider: candidateLabel ?? "" })} onPress={confirmHandover} />
+          <SheetOption label={t("task.actions.cancel")} onPress={() => { setCandidate(null); setSheet("model"); }} />
+        </View>
       </Sheet>
     </View>
   );
@@ -623,19 +711,35 @@ export function SelectorChip({ icon, left, label, value, onPress, testID, muted 
   );
 }
 
+const INPUT_MIN = 36;
+const INPUT_MAX = 21 * 6 + 15;
+
 const styles = StyleSheet.create({
   wrap: { paddingHorizontal: 10, paddingTop: 6, gap: 6 },
-  box: { borderWidth: 0, borderRadius: 20, paddingTop: 4, paddingBottom: 6, paddingHorizontal: 6, ...Platform.select({ web: { outlineStyle: "solid", outlineWidth: 0, boxShadow: "none" } }) },
-  input: { fontSize: 16, lineHeight: 21, minHeight: 40, maxHeight: 21 * 6 + 16, paddingHorizontal: 8, paddingTop: 9, paddingBottom: 6, borderWidth: 0, backgroundColor: "transparent", ...Platform.select({ web: { outlineStyle: "solid", outlineWidth: 0, boxShadow: "none" } }) },
-  row: { flexDirection: "row", alignItems: "center", gap: 6 },
-  round: { width: 34, height: 34, alignItems: "center", justifyContent: "center", borderRadius: 17 },
+  // El contenedor no tiene fondo propio: el cuadro flota sobre el del chat con su sombra.
+  box: {
+    borderWidth: 0,
+    borderRadius: 26,
+    paddingVertical: 5,
+    paddingHorizontal: 6,
+    ...Platform.select({
+      web: { outlineStyle: "solid", outlineWidth: 0, boxShadow: "0 2px 6px rgba(0, 0, 0, 0.10), 0 8px 24px rgba(0, 0, 0, 0.16)" },
+      default: { shadowColor: "#000", shadowOpacity: 0.18, shadowRadius: 16, shadowOffset: { width: 0, height: 6 }, elevation: 8 },
+    }),
+  },
+  input: { fontSize: 16, lineHeight: 21, flex: 1, minWidth: 0, minHeight: INPUT_MIN, maxHeight: INPUT_MAX, paddingHorizontal: 6, paddingTop: 8, paddingBottom: 7, borderWidth: 0, backgroundColor: "transparent", ...Platform.select({ web: { outlineStyle: "solid", outlineWidth: 0, boxShadow: "none", boxSizing: "border-box", resize: "none", scrollbarWidth: "none" } }) },
+  row: { flexDirection: "row", alignItems: "flex-end", gap: 2 },
+  shellPill: { marginBottom: 3, marginRight: 4 },
+  round: { width: 36, height: 36, alignItems: "center", justifyContent: "center", borderRadius: 17 },
   pill: { flexDirection: "row", alignItems: "center", gap: 5, borderRadius: 14, paddingHorizontal: 9, height: 28 },
   modelPill: { borderWidth: StyleSheet.hairlineWidth, flexShrink: 1 },
   send: { width: 34, height: 34, borderRadius: 17, alignItems: "center", justifyContent: "center" },
   run: { flexDirection: "row", alignItems: "center", gap: 6, height: 34, borderRadius: 17, paddingHorizontal: 14 },
-  stopLine: { flexDirection: "row", alignItems: "center", gap: 6, alignSelf: "flex-end", paddingHorizontal: 8 },
   files: { gap: 6, paddingHorizontal: 4, paddingTop: 4 },
   file: { flexDirection: "row", alignItems: "center", gap: 5, borderRadius: RADIUS.lg, paddingHorizontal: 8, paddingVertical: 5 },
+  pending: { flexDirection: "row", alignItems: "center", gap: 10, borderWidth: StyleSheet.hairlineWidth, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 7 },
+  handoverBody: { paddingHorizontal: 18, paddingBottom: 8, gap: 10 },
+  handoverChange: { flexDirection: "row", alignItems: "center", gap: 8, flexWrap: "wrap" },
   queue: { gap: 6 },
   queued: { flexDirection: "row", alignItems: "center", gap: 10, borderWidth: StyleSheet.hairlineWidth, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8 },
   queueLabel: { fontSize: TEXT.caption, fontWeight: "600" },

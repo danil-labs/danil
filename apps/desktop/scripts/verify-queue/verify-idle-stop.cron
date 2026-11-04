@@ -1,0 +1,2 @@
+PATH=/usr/sbin:/usr/bin:/sbin:/bin
+* * * * * root /usr/local/bin/verify-idle-stop

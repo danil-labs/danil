@@ -1,6 +1,6 @@
 ---
 name: animate-ui
-description: Cómo se anima la interfaz de Terminus (Solid + Tailwind v4 dentro del webview de Tauri) — qué herramienta elegir entre CSS, Web Animations, View Transitions, Motion y GSAP, con qué duraciones, cómo se limpia en Solid y cómo se respeta prefers-reduced-motion. Úsala cuando pidan animar, meter una transición, un efecto de entrada o salida, un timeline, algo «más fluido» o «con más vida», o usar GSAP, Motion o anime.js en el front de Terminus.
+description: Cómo se anima la interfaz de Danil (Solid + Tailwind v4 dentro del webview de Tauri) — qué herramienta elegir entre CSS, Web Animations, View Transitions, Motion y GSAP, con qué duraciones, cómo se limpia en Solid y cómo se respeta prefers-reduced-motion. Úsala cuando pidan animar, meter una transición, un efecto de entrada o salida, un timeline, algo «más fluido» o «con más vida», o usar GSAP, Motion o anime.js en el front de Danil.
 ---
 
 # Animar la interfaz

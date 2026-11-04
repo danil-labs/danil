@@ -89,7 +89,7 @@ export default function McpAppView(props: { call: McpAppCall }) {
       const { AppBridge, PostMessageTransport } = await import("@modelcontextprotocol/ext-apps/app-bridge");
       if (disposed || !frame?.contentWindow || !view()) return;
       const resource = view()!;
-      const current = new AppBridge(null, { name: "Terminus", version: "0.2.6" }, { serverTools: {} }, {
+      const current = new AppBridge(null, { name: "Danil", version: "0.2.6" }, { serverTools: {} }, {
         hostContext: {
           toolInfo: { tool: resource.tool },
           theme: document.documentElement.dataset.theme === "dark" ? "dark" : "light",

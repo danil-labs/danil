@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Terminus",
+    "name": "Danil",
     "slug": "terminus-mobile",
     "version": "0.1.0",
     "orientation": "portrait",
@@ -39,7 +39,7 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "Terminus abre tus fotos solo para adjuntar las que elijas a un mensaje.",
+          "photosPermission": "Danil abre tus fotos solo para adjuntar las que elijas a un mensaje.",
           "cameraPermission": false,
           "microphonePermission": false
         }

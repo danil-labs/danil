@@ -37,12 +37,8 @@ export function classify(name: string): StepKind {
 }
 
 /** The command without its shell wrapper (Codex sends `zsh -lc "…"`) or a leading `cd … &&`; a bare `cd` stays. */
-export function bareCommand(cmd: string) {
-  const wrapped = /^\S*(?:sh|bash|zsh)\s+-[a-z]*c\s+(["'])([\s\S]*)\1\s*$/.exec(cmd.trim());
-  const bare = (wrapped ? wrapped[2] : cmd).trim();
-  const withCd = /^cd\s+(?:"[^"]*"|'[^']*'|\S+)\s*&&\s*([\s\S]+)$/.exec(bare);
-  return (withCd ? withCd[1] : bare).trim();
-}
+/** El comando sin su envoltorio de shell (Codex manda `zsh -lc "…"`) y sin un `cd … &&` de preparación; un `cd` solo se queda. */
+export { bareCommand } from "./command.ts";
 
 /** The last part of a path, with either slash. */
 export const fileName = (path: string) => path.split(/[\\/]/).filter(Boolean).pop() || path;

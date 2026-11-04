@@ -1,3 +1,4 @@
+import { folderByKey } from "../lib/folderIcon";
 import { TEXT } from "@terminus/design";
 import { contactDisplayName, contactSubIdentifier } from "../../../../packages/attention/src/inbox.ts";
 import { taskTitle } from "@terminus/tasks";
@@ -16,7 +17,8 @@ import { useWorkspaces } from "../lib/workspaces";
 import { Avatar, openTask } from "../ui/components";
 import { Icon } from "../ui/Icon";
 import { Chip, goBack, Group, GroupHeader, ListRow, pageColor, Tap } from "../ui/list";
-import { FolderSquare, TaskCard } from "../ui/TaskCard";
+import { FolderIcon } from "../ui/FolderIcon";
+import { TaskCard } from "../ui/TaskCard";
 import { useTheme } from "../ui/theme";
 
 type Kind = "all" | "tasks" | "archived" | "folders" | "inbox" | "actions";
@@ -71,7 +73,6 @@ export default function Search() {
   }, [withArchived, current, hostOf]);
 
   const marks = useMemo(() => marksOf(attention, current?.members, snapshot?.live ?? new Set()), [attention, current?.members, snapshot?.live]);
-  const folderName = (key: string) => snapshot?.folders.find((f) => f.key === key)?.name;
   const all = [...(snapshot?.tasks ?? []), ...(snapshot?.delegated ?? [])];
   const q = plain(query.trim());
   const hit = (...fields: (string | null | undefined)[]) => !q || fields.some((f) => f && plain(f).includes(q));
@@ -99,7 +100,7 @@ export default function Search() {
       <TaskCard
         task={task}
         card={cardOf(task, marks)}
-        folderName={folderName}
+        folderOf={(key) => folderByKey(snapshot?.folders ?? [], key)}
         when={shortWhen(task.last_turn_at ?? task.updated_at, lang)}
         onPress={() => openTask(task.host, task.workspace, task.folder, task.id)}
         online={hostOf(task.host)?.power() === "on"}
@@ -157,7 +158,7 @@ export default function Search() {
             <GroupHeader>{w("search.group.folders")}</GroupHeader>
             <Group inset={52}>
               {folders.map((f) => (
-                <ListRow key={f.key} left={<FolderSquare id={f.key} size={14} />} title={f.name} subtitle={machinesOf(f.id)} chevron onPress={() => router.push({ pathname: "/new", params: { folder: f.id, host: f.host } })} />
+                <ListRow key={f.key} left={<FolderIcon folder={f} size={14} />} title={f.name} subtitle={machinesOf(f.id)} chevron onPress={() => router.push({ pathname: "/new", params: { folder: f.id, host: f.host } })} />
               ))}
             </Group>
           </>

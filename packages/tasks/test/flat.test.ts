@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { delegatedOf, flattenTasks, launcherOf } from "../src/index.ts";
+import { delegatedAttention, delegatedFamilies, delegatedOf, flattenTasks, launcherOf, withFamilyActivity } from "../src/index.ts";
 
 const row = (id: string, created_at: number, extra: object = {}) => ({ id, created_at, ...extra });
 
@@ -40,4 +40,35 @@ test("las delegadas de un lanzador: vivas, directas y de la más nueva a la más
   assert.deepEqual(delegatedOf(rows, "l").map((r) => r.id), ["d2", "d1"]);
   assert.equal(launcherOf({ parent: "p", launched_by: "q" }), "p");
   assert.equal(launcherOf({}), null);
+});
+
+test("un receptor de handoff no sale al riel y su actividad sube a la entrada de la familia", () => {
+  const rows = [
+    { ...row("raiz", 3), sin_ver: false },
+    { ...row("a", 2), launched_by: null, launcher_available: false, handoff_parent: "raiz" },
+    { ...row("b", 1), launched_by: null, launcher_available: false, handoff_parent: "a", esperando: true },
+  ];
+  assert.deepEqual(flattenTasks({ p: rows }).map((t) => t.row.id), ["raiz"]);
+  assert.equal(launcherOf(rows[2]), "a");
+  assert.deepEqual(delegatedOf(rows, "raiz").map((r) => r.id), ["a"]);
+  const families = delegatedFamilies(rows);
+  assert.deepEqual(families.get("raiz"), ["a", "b"], "launcher_available:false no corta la arista");
+  assert.equal(delegatedAttention(rows, [], []).esperando, true);
+  assert.equal(delegatedAttention(rows, [], ["b"]).aprobando, true);
+});
+
+test("un receptor con solicitante conserva a su coordinador; roto, sigue en el riel", () => {
+  const delegada = { ...row("d", 2), launched_by: "x", handoff_parent: "c", launcher_available: true };
+  assert.equal(launcherOf(delegada), "x");
+  const huerfana = { ...row("h", 1), launched_by: null, handoff_issue: "missing_source" };
+  assert.deepEqual(flattenTasks({ p: [huerfana] }).map((t) => t.row.id), ["h"]);
+});
+
+test("la entrada visible carga la aprobación de su receptor escondido, sin mezclar máquinas", () => {
+  const raiz = { ...row("raiz", 2), host: "h1" };
+  const otra = { ...row("raiz", 2), host: "h2" };
+  const b = { ...row("b", 1), host: "h1", handoff_parent: "raiz", launcher_available: false };
+  const [conFamilia, sinFamilia] = withFamilyActivity([raiz, otra], [b], (r) => r.host, (rows) => delegatedAttention(rows, [], ["b"]));
+  assert.equal(conFamilia.delegated_activity?.aprobando, true);
+  assert.equal(sinFamilia, otra, "sin familia, la misma fila");
 });

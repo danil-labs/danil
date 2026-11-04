@@ -67,23 +67,23 @@ function declaraciones(cuerpo) {
 
 const css = readFileSync(CSS, "utf8");
 const temas = bloques(css);
-const fallos = [];
+const failures = [];
 
-if (temas.size === 0) fallos.push(`${CSS} no declara ni un bloque \`[data-terminal-theme="…"]\`.`);
+if (temas.size === 0) failures.push(`${CSS} no declara ni un bloque \`[data-terminal-theme="…"]\`.`);
 
 // Nada fuera del archivo puede escribir estos bloques: si alguien los mueve, el
 // guarda dejaría de mirar sin fallar.
 const ajenos = css.replace(/\/\*[\s\S]*?\*\//g, "").match(/^\s*[^@\s/][^{]*\{/gm) ?? [];
 for (const sel of ajenos) {
   if (!/\[data-terminal-theme="[a-z0-9-]+"\]/.test(sel)) {
-    fallos.push(`Selector que no es un tema de terminal en ${CSS}: ${sel.trim()}`);
+    failures.push(`Selector que no es un tema de terminal en ${CSS}: ${sel.trim()}`);
   }
 }
 
 for (const [id, tokens] of temas) {
   for (const nombre of tokens.keys()) {
     if (!PROPIOS.some((p) => nombre.startsWith(p))) {
-      fallos.push(
+      failures.push(
         `«${id}» declara \`${nombre}\`, que es chrome de la app. La segunda capa ` +
           `solo posee ${PROPIOS.join(" y ")}.`,
       );
@@ -93,21 +93,21 @@ for (const [id, tokens] of temas) {
 
 const referencia = temas.get(POR_OMISION);
 if (!referencia) {
-  fallos.push(`Falta el bloque del tema por omisión «${POR_OMISION}».`);
+  failures.push(`Falta el bloque del tema por omisión «${POR_OMISION}».`);
 } else {
   for (const [id, tokens] of temas) {
     for (const nombre of referencia.keys()) {
-      if (!tokens.has(nombre)) fallos.push(`«${id}» no declara \`${nombre}\`.`);
+      if (!tokens.has(nombre)) failures.push(`«${id}» no declara \`${nombre}\`.`);
     }
     for (const nombre of tokens.keys()) {
-      if (!referencia.has(nombre)) fallos.push(`«${id}» declara \`${nombre}\`, que «${POR_OMISION}» no tiene.`);
+      if (!referencia.has(nombre)) failures.push(`«${id}» declara \`${nombre}\`, que «${POR_OMISION}» no tiene.`);
     }
   }
 
   const base = declaraciones(readFileSync(GLOBAL, "utf8").match(/@theme static\s*\{([\s\S]*?)\n\}/)?.[1] ?? "");
   for (const [nombre, valor] of referencia) {
     if (base.get(nombre) !== valor) {
-      fallos.push(
+      failures.push(
         `«${POR_OMISION}» dice \`${nombre}: ${valor}\` y \`@theme\` dice ` +
           `\`${base.get(nombre) ?? "nada"}\`. Quien no elige tema vería dos cosas distintas.`,
       );
@@ -118,10 +118,10 @@ if (!referencia) {
 const fuente = readFileSync(CATALOGO, "utf8");
 const declarados = new Set([...fuente.matchAll(/id:\s*"([a-z0-9-]+)"/g)].map((m) => m[1]));
 for (const id of temas.keys()) {
-  if (!declarados.has(id)) fallos.push(`«${id}» está en el CSS y no en ${CATALOGO}.`);
+  if (!declarados.has(id)) failures.push(`«${id}» está en el CSS y no en ${CATALOGO}.`);
 }
 for (const id of declarados) {
-  if (!temas.has(id)) fallos.push(`«${id}» está en ${CATALOGO} y no tiene bloque en el CSS.`);
+  if (!temas.has(id)) failures.push(`«${id}» está en ${CATALOGO} y no tiene bloque en el CSS.`);
 }
 
 const tabla = [];
@@ -135,7 +135,7 @@ for (const [id, tokens] of temas) {
     const sobreFondo = contrast(color, fondo);
     tabla.push([id, nombre.replace("--color-terminal-", ""), sobreFondo, minimo]);
     if (sobreFondo < minimo) {
-      fallos.push(
+      failures.push(
         `«${id}»: \`${nombre}\` da ${sobreFondo.toFixed(2)}:1 sobre el fondo y pide ${minimo}:1.`,
       );
     }
@@ -146,7 +146,7 @@ for (const [id, tokens] of temas) {
       const sobreBarra = contrast(tokens.get(nombre), barra);
       tabla.push([id, `${nombre.replace("--color-terminal-", "")} / barra`, sobreBarra, 4.5]);
       if (sobreBarra < 4.5) {
-        fallos.push(
+        failures.push(
           `«${id}»: \`${nombre}\` da ${sobreBarra.toFixed(2)}:1 sobre la barra y pide 4.5:1.`,
         );
       }
@@ -160,9 +160,9 @@ if (process.argv.includes("--table")) {
   }
 }
 
-if (fallos.length > 0) {
-  console.error(`\n${fallos.length} problema(s) en el catálogo de temas de terminal:\n`);
-  for (const f of fallos) console.error(`  · ${f}`);
+if (failures.length > 0) {
+  console.error(`\n${failures.length} problema(s) en el catálogo de temas de terminal:\n`);
+  for (const f of failures) console.error(`  · ${f}`);
   console.error("");
   process.exit(1);
 }

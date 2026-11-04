@@ -1,6 +1,6 @@
-# Terminus: working guide
+# Danil: working guide
 
-`apps/desktop/` is the Terminus window: a Tauri 2 desktop app (Rust) with a
+`apps/desktop/` is the Danil window: a Tauri 2 desktop app (Rust) with a
 SolidJS front. The domain (workspaces, projects, tasks, agent turns, accounts)
 lives in the engine `seldon-runtime`, a proprietary binary that is not in this
 repository. The window reaches it over RPC1 through a frozen contract; see
@@ -17,6 +17,7 @@ area guide before editing an area: [front](src/AGENTS.md),
 pnpm install
 pnpm verify              # guards, front build and Rust on this platform
 pnpm verify --no-cargo  # the same chain without Rust
+pnpm verify --quick     # guards, linter, tsc and the tests of this diff; not a merge gate
 pnpm window:build           # debug window with the front embedded
 pnpm engine:download        # engine pinned in seldon-runtime.lock
 pnpm engine:start           # engine with throwaway data + window
@@ -29,14 +30,19 @@ is not a pass. What each guard checks is in [docs/guards.md](docs/guards.md);
 
 ## Do not change
 
-- The app identity: `identifier` (`ai.danil.terminus`), `productName`, updater
-  `pubkey` and endpoint in `src-tauri/tauri.conf.json`, and their copies in
-  `.github/workflows/publish.yml`. Installed copies depend on them.
+- The installed identity: `identifier` (`ai.danil.terminus`), `productName`,
+  updater `pubkey` and endpoint in `src-tauri/tauri.conf.json`, and their copies
+  in `.github/workflows/publish.yml`. Installed copies depend on them; changing
+  one needs an architect-reviewed installed-update transition. `productName`
+  went from `Terminus` to `Danil` in 0.3.0. The Windows installer adopts the
+  old copy (`src-tauri/windows/hooks.nsh`, kept in every release), and
+  `scripts/guards/product-name.mjs` ties the AppImage paths and that
+  migration to `productName`.
 - `src-tauri/crates/engine-protocol/commands.json`: the frozen contract, kept
   byte-exact with LF. A command or event name the front uses must exist there.
 - Saved field names, command names and event names. An internal rename does
   not change the serialized name.
-- Local development never uses the data of an installed Terminus: the engine
+- Local development never uses the data of an installed Danil: the engine
   lab uses the identity `ai.danil.seldon.dev` and its own folders.
 
 ## Working rules
@@ -49,8 +55,9 @@ is not a pass. What each guard checks is in [docs/guards.md](docs/guards.md);
   guard limits the existing debt.
 - Every text a person reads in the app comes from the catalogs through `t()`
   ([docs/localization.md](docs/localization.md)); add the key to `es` and `en`.
-  Command names in `invoke()` and event names in `listen()` stay literal so the
-  guards can read them.
+  Visible text is a label, a state, an error or a consequence, never an
+  explanation ([docs/copy.md](docs/copy.md)). Command names in `invoke()` and
+  event names in `listen()` stay literal so the guards can read them.
 - Colors are theme tokens from `@theme` in `src/styles/global.css` and text sizes
   come from the shared scale (`text-caption`, `text-ui`…); shared controls live
   in `src/ui/` ([docs/visual-system.md](docs/visual-system.md)).

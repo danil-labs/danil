@@ -25,7 +25,7 @@ pub(super) async fn update_install(app: tauri::AppHandle) -> Result<(), String> 
 async fn install(update: &tauri_plugin_updater::Update, bytes: Vec<u8>) -> Result<(), String> {
     let folder = std::env::temp_dir().join(format!("terminus-update-{}", update.version));
     std::fs::create_dir_all(&folder).map_err(|error| error.to_string())?;
-    let setup = folder.join(format!("Terminus_{}_x64-setup.exe", update.version));
+    let setup = folder.join(format!("Danil_{}_x64-setup.exe", update.version));
     std::fs::write(&setup, bytes).map_err(|error| error.to_string())?;
     log::info!("[update] installing {}", update.version);
     // Sin `/R`: el instalador no relanza la app; reiniciar lo decide la persona.
@@ -113,9 +113,13 @@ fn clear_set_aside(dir: &Path, mut remove: impl FnMut(&Path) -> bool) -> bool {
     if engines_left > 0 {
         return false;
     }
-    others
-        .iter()
-        .fold(true, |clean, path| remove(path) && clean)
+    let mut clean = true;
+    for path in &others {
+        if !remove(path) {
+            clean = false;
+        }
+    }
+    clean
 }
 
 /// El nombre instalado de un ejecutable apartado: sin `old_` ni `old_<tick>_`.
@@ -250,7 +254,12 @@ mod tests {
     #[test]
     fn an_open_window_does_not_stop_the_rest() {
         let folder = folder(&["old_terminus.exe", "old_1_terminus.exe"]);
-        let clean = clear_set_aside(folder.path(), |path| !path.ends_with("old_terminus.exe"));
+        let mut asked = Vec::new();
+        let clean = clear_set_aside(folder.path(), |path| {
+            asked.push(path.to_path_buf());
+            false
+        });
         assert!(!clean);
+        assert_eq!(names(&asked), ["old_1_terminus.exe", "old_terminus.exe"]);
     }
 }

@@ -15,13 +15,18 @@ import {
   linkedWorkspaces,
   serviceFeatures,
   listComputers,
+  listDirectory,
+  listSharedComputers,
   listWorkspaces,
+  linkDanilWorkspace,
+  setDirectoryPins,
   createSpaceOrderSource,
   orderComputers,
   renameComputer,
   createScreenAccess,
   sessionProbe,
   startComputer,
+  startSharedComputer,
   systemOf,
   wakes,
 } from "@terminus/computers";
@@ -43,7 +48,8 @@ import { installIpc } from "./ipc";
 import { webAccountProfile } from "./account";
 import { webAccountEmails } from "./account-emails";
 import { authLocation } from "./auth/return";
-import { adminPageCapability } from "./admin/capability";
+import { adminPageCapability, personalAccountCapability } from "./admin/capability";
+import { agentsSession } from "./attention/workspace-sources";
 import { webGithubAccount } from "./github-account";
 import { type Account, type Listing, SLOT_PREFIX, loadAccounts, ownerOf, pickAccount, readListings, rememberLast, removeExtra, savedListings } from "./accounts";
 import { forgetShellCache, setShellCacheScope } from "../lib/shellCache";
@@ -52,6 +58,7 @@ import type { WatchedSession } from "./session";
 import { webWorkspaceAssets } from "./workspace-assets";
 import type { MachineRow, MachineStatus } from "./SyncNote";
 import { type BrowserHost, createWebTransport } from "./transport";
+import { announceStaleTab, updateNoticeReady } from "./update-state";
 
 declare const __TERMINUS_VERSION__: string;
 /** Set at build time in `vite.config.ts`; all public values. */
@@ -74,11 +81,17 @@ const UNLINKED_AGAIN = 60_000;
 /**
  * A tab opened before a deploy asks for chunks the new build no longer has, and
  * the Worker answers them with the page (`not_found_handling`): the lazy screen
- * stays blank. Reload into the new build, once per window of time so a chunk
- * that is really broken does not loop.
+ * stays blank. Once the app is on screen the person decides (`UpdateNotice`);
+ * before that there is nothing to lose: reload into the new build, once per
+ * window of time so a chunk that is really broken does not loop.
  */
 const RELOADED_AT = "terminus.web.reloaded-at";
 window.addEventListener("vite:preloadError", (event) => {
+  if (updateNoticeReady()) {
+    event.preventDefault();
+    announceStaleTab();
+    return;
+  }
   if (Date.now() - Number(sessionStorage.getItem(RELOADED_AT) ?? 0) < 30_000) return;
   sessionStorage.setItem(RELOADED_AT, String(Date.now()));
   event.preventDefault();
@@ -151,6 +164,7 @@ function mountApp(computers: Computer[], base: Base, before?: (id: string) => ()
     soon = setTimeout(() => void relistNow?.(), RELIST_SOON);
   };
   const token = async () => base.getToken();
+  const agents = agentsSession(base.endpoint, { getToken: async () => await base.getToken(), unauthorized: async () => base.refresh ? await base.refresh() : false });
   let router: Router | null = null;
   const powers = new Map<string, string>();
   const fleet = new Fleet({
@@ -230,7 +244,21 @@ function mountApp(computers: Computer[], base: Base, before?: (id: string) => ()
   for (const type of ["dragover", "drop"]) window.addEventListener(type, (e) => e.preventDefault());
   const screens = createScreenAccess({ endpoint: base.endpoint, getToken: token, knows: (id) => !!fleet.info(id) });
   setCapabilities({
-    inbox: import.meta.env.TERMINUS_ALPHA ? attentionCapability(false, window.location.pathname.replace(/\/+$/, "").endsWith("/inbox"), { userId: base.userId ?? mounted.webAccounts?.current.user_id, subscribe: base.subscribe, getToken: async () => await base.getToken(), unauthorized: async () => base.refresh ? await base.refresh() : false }) : undefined,
+    workspaceDirectory: import.meta.env.TERMINUS_ALPHA ? {
+      list: async () => {
+        const answer = await listDirectory(base.endpoint, await token());
+        if (answer.kind !== "ok") throw new Error("directory_unavailable");
+        return answer.value;
+      },
+      pin: async (keys) => { await setDirectoryPins(base.endpoint, await token(), keys); },
+      link: async (workspaceId, danilWorkspaceId) => {
+        const answer = await linkDanilWorkspace(base.endpoint, await token(), workspaceId, danilWorkspaceId);
+        if (answer.kind === "ok") return;
+        if (answer.kind === "error" && answer.status === 403) throw new Error("not_account_admin");
+        throw new Error(answer.kind === "error" ? (answer.code ?? "link_failed") : "link_failed");
+      },
+    } : undefined,
+    inbox: import.meta.env.TERMINUS_ALPHA ? attentionCapability(false, window.location.pathname.replace(/\/+$/, "").endsWith("/inbox"), { userId: base.userId ?? mounted.webAccounts?.current.user_id, subscribe: base.subscribe, ...agents }) : undefined,
     supportAccess: import.meta.env.TERMINUS_ALPHA ? supportAccessCapability({ getToken: async () => await base.getToken(), unauthorized: async () => base.refresh ? await base.refresh() : false }) : undefined,
     spaceOrder: createSpaceOrderSource(base.endpoint, token),
     nativeWindow: false,
@@ -244,7 +272,8 @@ function mountApp(computers: Computer[], base: Base, before?: (id: string) => ()
     initialSettings: takeSettingsParam(),
     accountAssets: webWorkspaceAssets(base.endpoint, base.getToken, base.onUnauthorized),
     accountAuditLog: import.meta.env.TERMINUS_ALPHA && base.supabaseUrl && base.supabaseKey ? webAuditLog(base.supabaseUrl, base.supabaseKey, base.getToken, base.onUnauthorized) : undefined,
-    adminPage: import.meta.env.TERMINUS_ALPHA ? adminPageCapability({ getToken: async () => await base.getToken(), unauthorized: async () => base.refresh ? await base.refresh() : false }) : undefined,
+    adminPage: import.meta.env.TERMINUS_ALPHA ? adminPageCapability({ getToken: async () => await base.getToken(), unauthorized: async () => base.refresh ? await base.refresh() : false }, "https://harness.danil.ai/") : undefined,
+    personalAccount: import.meta.env.TERMINUS_ALPHA ? personalAccountCapability({ getToken: async () => await base.getToken(), unauthorized: async () => base.refresh ? await base.refresh() : false }) : undefined,
     accountMemory: { endpoint: base.endpoint, getToken: token },
     accountCredentials: { endpoint: base.endpoint, getToken: token },
     machineName: (id) => fleet.name(id),
@@ -274,6 +303,10 @@ function mountApp(computers: Computer[], base: Base, before?: (id: string) => ()
       list: async () => listComputers(base.endpoint, await token()),
       // La nueva suma su rebanada sin recargar la página ni cerrar las demás.
       onReady: () => void relistNow?.(),
+    },
+    sharedComputers: {
+      list: async () => listSharedComputers(base.endpoint, await token()),
+      start: async (id) => startSharedComputer(base.endpoint, await token(), id),
     },
     accountMachines: (props) =>
       several() ? (
@@ -308,10 +341,15 @@ function mountApp(computers: Computer[], base: Base, before?: (id: string) => ()
   installIpc(window, createWebTransport(active, __TERMINUS_VERSION__, browser, github));
   window.addEventListener("pagehide", () => fleet.flush());
   void import("./phrases").then(() => import("../app/main"));
-  void Promise.all([import("solid-js/web"), import("./SyncNote"), import("./phrases")]).then(([{ render }, { SyncNote }]) => {
+  void Promise.all([import("solid-js/web"), import("./SyncNote"), import("./UpdateNotice"), import("./phrases")]).then(([{ render }, { SyncNote }, { UpdateNotice }]) => {
     const layer = document.createElement("div");
     document.body.append(layer);
-    render(() => <SyncNote machines={machines} />, layer);
+    render(() => (
+      <>
+        <SyncNote machines={machines} />
+        <UpdateNotice />
+      </>
+    ), layer);
   });
   return (fresh) => {
     rows = new Map(fresh.map((c) => [c.computer_id, c]));

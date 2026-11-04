@@ -44,11 +44,12 @@ const MESSAGES = {
 
   Qué hace:
     1. Detecta tu sistema operativo y arquitectura.
-    2. Resuelve el artefacto correcto de las releases públicas de Terminus.
+    2. Resuelve el artefacto correcto de las releases públicas de Danil.
     3. Lo descarga a una carpeta temporal.
     4. Verifica su firma minisign antes de ejecutar ni copiar nada.
     5. Windows: lanza el instalador. macOS: descomprime la app y la deja en
-       /Applications. Linux: deja el AppImage en ~/Applications/Terminus.AppImage.
+       /Applications. Linux: deja el AppImage en ~/Applications/Danil.AppImage
+       (o reemplaza ~/Applications/Terminus.AppImage si ya estaba).
        A partir de ahí, se actualiza sola.
 
   Descarga manual: ${manualUrl}`,
@@ -63,11 +64,12 @@ const MESSAGES = {
 
   What it does:
     1. Detects your operating system and architecture.
-    2. Resolves the right artifact from Terminus' public releases.
+    2. Resolves the right artifact from Danil's public releases.
     3. Downloads it to a temporary folder.
     4. Verifies its minisign signature before running or copying anything.
     5. Windows: launches the installer. macOS: unpacks the app and puts it in
-       /Applications. Linux: puts the AppImage at ~/Applications/Terminus.AppImage.
+       /Applications. Linux: puts the AppImage at ~/Applications/Danil.AppImage
+       (or replaces ~/Applications/Terminus.AppImage if it is there).
        From then on, it updates itself.
 
   Manual download: ${manualUrl}`,
@@ -120,8 +122,8 @@ const MESSAGES = {
   'installerLaunched': { es: '\n✓ Instalador lanzado.', en: '\n✓ Installer launched.' },
   'followSteps': { es: ' Sigue los pasos en pantalla.', en: ' Follow the steps on screen.' },
   'selfUpdates': {
-    es: '  A partir de ahora, Terminus se actualiza sola desde dentro de la app.',
-    en: '  From now on, Terminus updates itself from inside the app.',
+    es: '  A partir de ahora, Danil se actualiza sola desde dentro de la app.',
+    en: '  From now on, Danil updates itself from inside the app.',
   },
   'unexpected': {
     es: ({ detail }) => `\nError inesperado: ${detail}`,
@@ -137,6 +139,10 @@ const MESSAGES = {
   'contents': {
     es: ({ list }) => `  Contenido: ${list}`,
     en: ({ list }) => `  Contents: ${list}`,
+  },
+  'duplicateBundle': {
+    es: ({ kept, other }) => `\n  Se actualiza ${kept}. También está ${other}, con los mismos datos: ciérrala y bórrala a mano si no la usas.`,
+    en: ({ kept, other }) => `\n  Updating ${kept}. ${other} is also there and shares the same data: close it and delete it by hand if you do not use it.`,
   },
   'appIsOpen': {
     es: ({ bundle }) => `\n  ${bundle} está abierta.`,

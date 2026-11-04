@@ -15,6 +15,7 @@ import { EmailsSection } from "./EmailsSection";
 import { type DanilSessionInfo, sessionForWorkspace, sessionKey, statusOf, syncLine } from "./danil-sessions";
 import { AccountComputersSection } from "../machines/AccountComputers";
 import { ConnectMachineSection } from "../machines/ConnectMachine";
+import { WslMachineSection } from "../machines/WslMachine";
 import { startTrialInBrowser, TerminusLicense } from "./TerminusLicense";
 import { SettingsBlock, SettingsPanel, SettingsRow, SettingsSection } from "./layout";
 import { createWorkspaces } from "./workspaces-store";
@@ -84,6 +85,7 @@ function WebAccount(props: { source: AccountProfileSource; part?: DanilAccountPa
           {(workspace) => <AccountComputersSection workspace={workspace.id} />}
         </Show>
         <ConnectMachineSection />
+        <WslMachineSection />
       </Show>
     </SettingsPanel>
   );
@@ -168,6 +170,7 @@ function WorkspacePanel(props: { workspace: { id: string; name: string }; accoun
             <Show when={a.of()?.linked && props.part !== "profile"}>
               <AccountComputersSection account={key} workspace={props.workspace.id} self={session()?.computer_id} onSelfName={renameFor(session()?.computer_id)} />
               <ConnectMachineSection account={key} />
+              <WslMachineSection />
             </Show>
           </>
         )}
@@ -312,6 +315,7 @@ function SingleAccount(props: { part?: DanilAccountPart }) {
       <Show when={status()?.state === "connected" && props.part !== "profile"}>
         <AccountComputersSection self={status()?.computer_id ?? null} onSelfName={renameFor(status()?.computer_id)} />
         <ConnectMachineSection />
+        <WslMachineSection />
       </Show>
     </SettingsPanel>
   );

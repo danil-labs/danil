@@ -1,9 +1,4 @@
 {
-  "code.column.close.label": "Close the work tree",
-  "code.column.close.title": "Close the work tree (Esc)",
-  "code.column.export_chat": "Export chat",
-  "code.column.export_chat.busy": "Exporting…",
-  "code.column.title": "Folder",
   "code.comparing": "Comparing…",
   "code.diff.layout.label": "How the change is shown",
   "code.diff.layout.unified": "Unified",
@@ -52,8 +47,8 @@
   },
   "code.gap.title": "Bring these lines in",
   "code.tree.dirty_before": {
-    "one": "It already had {count} changed file when this task started; it does not count as the agent's.",
-    "other": "It already had {count} changed files when this task started; they do not count as the agent's."
+    "one": "{count} file in your folder was already modified before this task started; it is not in this list.",
+    "other": "{count} files in your folder were already modified before this task started; they are not in this list."
   },
   "code.tree.kind.folder": "Files",
   "code.tree.kind.git": "Code",
@@ -205,6 +200,8 @@
   "code.typst.complete.folder": "Folder",
   "code.typst.complete.function": "Function",
   "code.panel.toggle": "Task files",
+  "code.panel.export_chat": "Export chat",
+  "code.panel.export_chat.busy": "Exporting…",
   "code.panel.resize": "Files panel width",
   "code.panel.expand": "Expand inside the task",
   "code.panel.collapse": "Back to chat",

@@ -16,6 +16,8 @@
  * emparejamiento con lo que manda `runtime/chat/`.
  */
 import { bareCommand, classify, fileName, joinableKind, joinSteps, stepCounts, type CountedStep, type StepCount, type StepKind } from "@terminus/chat/steps";
+import { commandSummary } from "@terminus/chat/command";
+import { readableToolName, toolSource, type ToolSource } from "@terminus/chat/tools";
 import { manifiesto, t } from "./i18n.ts";
 
 /** Qué clase de acto fue. Decide el verbo y el ícono de la fila. */
@@ -85,6 +87,24 @@ export type Paso = {
   /** Solo en `permiso`: la tarea que decidió, cuando no fue la persona. */
   decidio?: string;
 };
+
+/**
+ * De qué servicio salió un paso: el servidor MCP ya separado, su marca y el
+ * nombre que se lee. Un paso local —leer, correr, buscar— no tiene dueño y
+ * devuelve `null`: nadie le presta la herramienta.
+ */
+export type Origen = ToolSource;
+
+export const origenDe = (paso: Paso): Origen | null =>
+  toolSource(paso.nombre, paso.mcpApp);
+
+/**
+ * El origen de una fila, si lo tiene. Una fila agrupada no lleva marca: `agrupar`
+ * nunca junta pasos con `mcpApp`, y dos servidores distintos en un renglón
+ * afirmarían un dueño que no es.
+ */
+export const origenDeFila = (fila: { pasos: Paso[] }): Origen | null =>
+  fila.pasos.length === 1 ? origenDe(fila.pasos[0]) : null;
 
 const CLASE: Record<StepKind, Clase> = { read: "leer", search: "buscar", edit: "editar", run: "ejecutar", web: "web", plan: "plan", other: "otro" };
 
@@ -231,14 +251,22 @@ export function extensionDe(ruta: string) {
  */
 export const comando = bareCommand;
 
+/** Lo que dice una fila: verbo, sujeto y, cuando la herramienta es de un MCP, su dueño. */
+export type Rotulo = { verbo: string; sujeto: string | null; origen?: Origen };
+
 /**
  * La cabecera de una fila: el verbo en prosa y el sujeto como dato de máquina.
  *
  * Van separados porque son dos cosas distintas y el sistema visual las distingue: el
  * verbo se lee, el sujeto es una ruta o un comando y va en mono. «Leyó» +
  * `Chat.tsx`, no «tool_use».
+ *
+ * **Un MCP lleva además su dueño.** «Usó create issue» no dice quién lo prestó;
+ * con el servicio delante —«GitHub · Usó create issue»— la fila deja de ser un
+ * identificador. El nombre de la tool se lee tal como lo publicó el servidor,
+ * sin guiones bajos y sin traducir: traducirlo inventaría un verbo.
  */
-export function resumen(fila: Fila): { verbo: string; sujeto: string | null } {
+export function resumen(fila: Fila): Rotulo {
   const n = fila.pasos.length;
   const [uno] = fila.pasos;
   const objetivo = uno.objetivo;
@@ -259,7 +287,7 @@ export function resumen(fila: Fila): { verbo: string; sujeto: string | null } {
     case "ejecutar":
       return {
         verbo: t("common.steps.run"),
-        sujeto: objetivo && comando(objetivo).split("\n")[0],
+        sujeto: objetivo && commandSummary(objetivo),
       };
     case "web":
       return n === 1
@@ -273,10 +301,14 @@ export function resumen(fila: Fila): { verbo: string; sujeto: string | null } {
             : t("common.steps.plan.many", { count: n }),
         sujeto: null,
       };
-    case "otro":
+    case "otro": {
+      const origen = n === 1 ? origenDe(uno) : null;
+      if (origen)
+        return { verbo: t("common.steps.other.one", { tool: readableToolName(origen.tool) }), sujeto: objetivo, origen };
       return n === 1
         ? { verbo: t("common.steps.other.one", { tool: uno.nombre }), sujeto: objetivo }
         : { verbo: t("common.steps.other.many", { count: n }), sujeto: null };
+    }
     // Si decidió la persona el verbo va en segunda persona: es lo que distingue
     // una decisión tuya de un paso del agente sin más rótulo.
     case "permiso":
@@ -288,7 +320,7 @@ export function resumen(fila: Fila): { verbo: string; sujeto: string | null } {
           : uno.permitido
             ? t("common.steps.permission.allowed", { tool: uno.nombre })
             : t("common.steps.permission.denied", { tool: uno.nombre }),
-        sujeto: objetivo && comando(objetivo).split("\n")[0],
+        sujeto: objetivo && commandSummary(objetivo),
       };
     // Estos tres traen su propio texto y no se agrupan.
     default:
@@ -297,7 +329,7 @@ export function resumen(fila: Fila): { verbo: string; sujeto: string | null } {
 }
 
 /** Una fila de un solo paso que sigue corriendo se nombra en presente, como su loader. */
-export function rotuloDeFila(fila: Fila): { verbo: string; sujeto: string | null } {
+export function rotuloDeFila(fila: Fila): Rotulo {
   const [uno] = fila.pasos;
   return fila.pasos.length === 1 && uno.corriendo ? enCurso(uno) : resumen(fila);
 }
@@ -313,7 +345,7 @@ export function rotuloDeFila(fila: Fila): { verbo: string; sujeto: string | null
  *
  * No agrupa, y no puede: un paso en curso es exactamente uno.
  */
-export function enCurso(paso: Paso): { verbo: string; sujeto: string | null } {
+export function enCurso(paso: Paso): Rotulo {
   const objetivo = paso.objetivo;
   switch (paso.clase) {
     case "leer":
@@ -328,14 +360,18 @@ export function enCurso(paso: Paso): { verbo: string; sujeto: string | null } {
     case "ejecutar":
       return {
         verbo: t("common.steps.running"),
-        sujeto: objetivo && comando(objetivo).split("\n")[0],
+        sujeto: objetivo && commandSummary(objetivo),
       };
     case "web":
       return { verbo: t("common.steps.web_searching"), sujeto: objetivo };
     case "plan":
       return { verbo: t("common.steps.planning"), sujeto: null };
-    default:
-      return { verbo: t("common.steps.using", { tool: paso.nombre }), sujeto: objetivo };
+    default: {
+      const origen = origenDe(paso);
+      return origen
+        ? { verbo: t("common.steps.using", { tool: readableToolName(origen.tool) }), sujeto: objetivo, origen }
+        : { verbo: t("common.steps.using", { tool: paso.nombre }), sujeto: objetivo };
+    }
   }
 }
 

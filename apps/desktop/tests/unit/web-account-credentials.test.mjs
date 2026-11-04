@@ -96,7 +96,7 @@ test("the web shows where an MCP key is in use, removes it from a machine with a
     const f = fleet({ cmp_vm: { table, state: "online" } });
     const app = await boot("listo", "web-account-credentials", {}, undefined, {}, {
       web: true,
-      antes: (w) => {
+      beforeImport: (w) => {
         globalThis.WebSocket = f.Socket;
         w.terminusWeb = { endpoint: API, computers: [{ computer_id: "cmp_vm", name: "vm-alberto", state: "online", provider: "aws-ec2" }], getToken: async () => "tok" };
       },
@@ -142,7 +142,7 @@ test("the web shows where an MCP key is in use, removes it from a machine with a
     assert.ok(!JSON.stringify(put).includes("lin_api_nueva"), "the value never travels in clear");
     assert.equal(open(put.copies[0].sealed, mac.privateKey, "w", SLOT), "lin_api_nueva_1234", "the Mac opens its copy");
     assert.ok(await until(() => !item()?.querySelector("[data-credential-rotate]")), "the field closes and forgets the value");
-    assert.deepEqual(app.fallos, []);
+    assert.deepEqual(app.failures, []);
   } finally {
     globalThis.fetch = own;
   }

@@ -27,17 +27,14 @@ const CLASE: Record<Cuerpo, string> = {
   monkeyplanet: "astro-monkeyplanet",
 };
 
-/** Escondida o sin foco, la ventana apaga los astros (`global.css`). */
+/** Escondida o minimizada, la ventana apaga los astros (`global.css`). Perder el
+ * foco no la apaga: es cuando se mira avanzar el trabajo desde otra app. */
 function markWindowIdle() {
-  const idle = document.visibilityState !== "visible" || !document.hasFocus();
-  document.documentElement.toggleAttribute("data-window-idle", idle);
+  document.documentElement.toggleAttribute("data-window-idle", document.visibilityState !== "visible");
 }
 
 if (typeof document !== "undefined") {
   document.addEventListener("visibilitychange", markWindowIdle);
-  window.addEventListener("focus", markWindowIdle);
-  // Al pasar el foco a un iframe del visor la ventana recibe `blur` sin perderlo.
-  window.addEventListener("blur", () => setTimeout(markWindowIdle));
   markWindowIdle();
 }
 

@@ -120,7 +120,7 @@ test("sin cuenta, Secretos lista la bóveda local, guarda y borra por el motor",
   button(row, "Borrar secreto").click();
   await waitFor(() => !panel.querySelector('[data-secret="env/*/STRIPE_KEY"]'), "No se borró");
   assert.deepEqual(calls.find(([c]) => c === "env_secret_remove")[1], { folder: "*", name: "STRIPE_KEY" });
-  assert.deepEqual(app.fallos, []);
+  assert.deepEqual(app.failures, []);
 });
 
 test("un motor sin secrets_v1 apaga solo Secretos", async () => {
@@ -139,7 +139,7 @@ test("un motor sin secrets_v1 apaga solo Secretos", async () => {
   assert.match(panel.textContent, /El motor de esta máquina no admite secretos/);
   assert.equal(button(panel, "Añadir secreto"), undefined, "no se ofrece guardar");
   assert.equal(panel.querySelector("[data-secret]"), null);
-  assert.deepEqual(app.fallos, []);
+  assert.deepEqual(app.failures, []);
 });
 
 
@@ -153,7 +153,7 @@ test("an announced extension that returns the legacy literal shows incompatibili
   const panel = await openSecrets(app);
   await waitFor(() => panel.querySelector("[data-secrets-unsupported]"), "Falta incompatibilidad específica");
   assert.equal(button(panel, "Añadir secreto"), undefined);
-  assert.deepEqual(app.fallos, []);
+  assert.deepEqual(app.failures, []);
 });
 
 test("secrets capability follows the active engine, not the local or run-on machine", () => {

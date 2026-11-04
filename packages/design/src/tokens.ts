@@ -23,6 +23,7 @@ export type ThemeTokens = {
   success: string;
   error: string;
   info: string;
+  warningStrong: string;
   approving: string;
   asked: string;
   failedMark: string;
@@ -43,10 +44,11 @@ export const CSS_SOURCE: Partial<Record<keyof ThemeTokens, string>> = {
   textMuted: "--color-neutral-500",
   primary: "--color-primary",
   incomingBubble: "--color-chat-incoming",
+  warningStrong: "--color-warning-strong",
   approving: "--color-warning",
   asked: "--color-brand-yellow",
   failedMark: "--color-error-strong",
-  unseenMark: "--color-success-strong",
+  unseenMark: "--color-success",
   delivered: "--color-neutral-500",
   merged: "--color-brand-purple",
 };
@@ -68,10 +70,11 @@ export const THEMES: { light: ThemeTokens; dark: ThemeTokens } = {
     success: "#15803d",
     error: "#dc2626",
     info: "#2563eb",
+    warningStrong: "#92400e",
     approving: "#f59e0b",
     asked: "#f4eb7b",
     failedMark: "#dc2626",
-    unseenMark: "#166534",
+    unseenMark: "#5fcc79",
     delivered: "#62647a",
     merged: "#6539f5",
   },
@@ -92,10 +95,11 @@ export const THEMES: { light: ThemeTokens; dark: ThemeTokens } = {
     success: "#4ade80",
     error: "#f87171",
     info: "#60a5fa",
+    warningStrong: "#fbbf24",
     approving: "#f59e0b",
     asked: "#f4eb7b",
     failedMark: "#f87171",
-    unseenMark: "#4ade80",
+    unseenMark: "#5fcc79",
     delivered: "#9a9aa3",
     merged: "#6539f5",
   },

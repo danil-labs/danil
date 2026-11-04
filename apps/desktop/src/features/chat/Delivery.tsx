@@ -1,4 +1,5 @@
-import { For, Show, createSignal, type Component } from "solid-js";
+import { For, Show, type Component } from "solid-js";
+import { createRowSignal } from "./threadRow";
 import { Dynamic } from "solid-js/web";
 import FilePenLine from "lucide-solid/icons/file-pen-line";
 import FilePlus2 from "lucide-solid/icons/file-plus-2";
@@ -82,7 +83,7 @@ export default function Entrega(props: {
   items: Producido[];
   onAbrir: (rel: string) => void;
 }) {
-  const [todos, setTodos] = createSignal(false);
+  const [todos, setTodos] = createRowSignal("delivery", false);
 
   return (
     <div class="grid gap-1.5 rounded-md border border-border bg-surface-raised p-1.5 shadow-sm">

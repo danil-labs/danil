@@ -4,7 +4,8 @@ import { SendButton } from "../../../../../ui/SendButton";
 import { Stack, router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { AppState, FlatList, Image, type NativeScrollEvent, type NativeSyntheticEvent, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
-import { type ChatEvent, type Question, type Turn, DEFAULT_CHAT_VEIL } from "@terminus/protocol";
+import { type HistoryRead, HistoryPager, type LoadedHistory, type OlderState, hasOlder, hasRecentGap } from "@terminus/chat/history";
+import { type ChatEvent, DEFAULT_CHAT_VEIL, PROVIDER_HANDOFF_FEATURE, type Question, type Turn } from "@terminus/protocol";
 import { delegatedOf, taskTitle } from "@terminus/tasks";
 import {
   type ChatBackdropView,
@@ -17,10 +18,12 @@ import {
   coalesced,
   injectIntoTask,
   loadTask,
+  loadTurns,
   markSeen,
   respondPermission,
   runShell,
   sendToTask,
+  setSessionProvider,
   switchLiveMode,
   stopShell,
   stopTask,
@@ -28,17 +31,20 @@ import {
 } from "../../../../../lib/engine";
 import { HostError } from "../../../../../lib/hosts";
 import { type ChatLine, type Line, type LivePiece, type WorkLine, applyLive, lineMatches, liveAfterRead, runClock, savesLive, workRuns } from "../../../../../lib/steps";
+import { failureGesture, failureKey, failureSentence, isInterruption } from "../../../../../lib/failureNotice";
+import { handoverGate, livePending, sendWithHandover, type PendingHandover } from "../../../../../lib/handover";
 import { publishWork, releaseWork } from "../../../../../lib/workSheet";
-import { lang, t, w } from "../../../../../lib/i18n";
-import { type ScrollAnchor, anchorOf, restoreAnchor } from "../../../../../lib/scrollAnchor";
+import { hasKey, lang, phrase, t, w } from "../../../../../lib/i18n";
+import { type ScrollAnchor, anchorOf, restoreAnchor, scrollToEnd } from "../../../../../lib/scrollAnchor";
 import { type Follow, MARGIN, OPENED, fromTop, jumped, scrolled, showJump, unseen } from "../../../../../lib/follow";
 import { useAccount } from "../../../../../lib/account";
 import { useMachines } from "../../../../../lib/machines";
 import { COMPUTERS } from "../../../../../lib/supabase";
 import { useWorkspaces } from "../../../../../lib/workspaces";
+import { HistoryDetail } from "../../../../../ui/chat/HistoryDetail";
 import { Attachments, MessageBody, toolImages } from "../../../../../ui/chat/Message";
 import { ChatScopeContext } from "../../../../../ui/chat/scope";
-import { TurnStatus, WorkGroup } from "../../../../../ui/chat/Work";
+import { ReasoningRow, TurnStatus, WorkGroup } from "../../../../../ui/chat/Work";
 import { Composer, type Submission } from "../../../../../ui/Composer";
 import { type Theme, useTheme } from "../../../../../ui/theme";
 import { Icon } from "../../../../../ui/Icon";
@@ -93,6 +99,8 @@ export default function TaskScreen() {
   const [waking, setWaking] = useState(false);
   // Lo que se mandó mientras la VM enciende: sin él, el mensaje desaparece el minuto o dos que tarda.
   const [pending, setPending] = useState<string | null>(null);
+  // El CLI confirmado que se aplicará al enviar (`provider_handoff_v1`), atado a su tarea.
+  const [pendingHandover, setPendingHandover] = useState<PendingHandover | null>(null);
   const [background, setBackground] = useState<Backdrop | null>(null);
   // Las decisiones que ya salieron, por `request_id`: el motor falla en la segunda. El ref ataja el doble toque antes del render.
   const [deciding, setDeciding] = useState<ReadonlySet<string>>(new Set());
@@ -100,7 +108,38 @@ export default function TaskScreen() {
   const list = useRef<FlatList<ChatLine>>(null);
   // Buscar en el chat: con texto, solo las líneas que lo dicen; `null` cerrado.
   const [finding, setFinding] = useState<string | null>(null);
+  // Qué razonamiento está desplegado, por línea: efímero de pantalla y nace cerrado.
+  const [reasoning, setReasoning] = useState<ReadonlySet<string>>(new Set());
   const key = `${params.host}/${id}`;
+  // La identidad de la tarea para el pendiente: dos máquinas pueden repetir el id.
+  const transferKey = `${params.host}/${workspace}/${folder}/${id}`;
+  // La ventana de la conversación y su página anterior; una por máquina, workspace y tarea.
+  const [history, setHistory] = useState<LoadedHistory<Turn> | null>(null);
+  const [older, setOlder] = useState<OlderState>("idle");
+  const pagerScope = `${params.host}\n${workspace}\n${id}`;
+  const pager = useRef<{ scope: string; pager: HistoryPager<Turn> } | null>(null);
+  const hostNow = useRef(host);
+  hostNow.current = host;
+  const pagerNow = () => {
+    if (pager.current?.scope === pagerScope) return pager.current.pager;
+    const scope = pagerScope;
+    const next: HistoryPager<Turn> = new HistoryPager<Turn>({
+      read: async (before): Promise<HistoryRead<Turn>> => {
+        const machine = hostNow.current;
+        if (!machine) throw new HostError("machine_off");
+        if (before !== null) return loadTurns(machine, workspace, folder, id, before);
+        const tail = await loadTask(machine, workspace, folder, id, true);
+        return { turns: tail.session.turns, history: tail.session.history };
+      },
+      onChange: () => {
+        if (pager.current?.scope !== scope) return;
+        setHistory(next.loaded ?? null);
+        setOlder(next.older);
+      },
+    });
+    pager.current = { scope, pager: next };
+    return next;
+  };
   const needle = finding?.trim().toLowerCase() ?? "";
   const webScope = JSON.stringify([params.host, workspace, folder, id, needle]);
   // Las que esta tarea lanzó: la lista las esconde bajo ella, como el riel del escritorio. Las hijas
@@ -109,6 +148,12 @@ export default function TaskScreen() {
     ...delegatedOf((snapshot?.delegated ?? []).filter((task) => task.host === params.host && !task.remote_launcher), id),
     ...(snapshot?.delegated ?? []).filter((task) => !task.archived && task.remote_launcher === key),
   ].sort((a, b) => b.created_at - a.created_at), [snapshot, params.host, id, key]);
+  // Su fila en la lista: dice si es una hija remota, que en v1 no cambia de CLI.
+  const machineTasks = useMemo(
+    () => [...(snapshot?.tasks ?? []), ...(snapshot?.delegated ?? [])].filter((task) => task.host === params.host && task.workspace === workspace),
+    [snapshot, params.host, workspace],
+  );
+  const taskRow = useMemo(() => machineTasks.find((task) => task.id === id) ?? null, [machineTasks, id]);
   // Si el chat sigue el final, como el hilo del escritorio (ver `lib/follow.ts`). Ref y no estado:
   // cambia con cada evento de scroll; solo el botón, que se ve, va en estado.
   const follow = useRef<Follow>(OPENED);
@@ -117,6 +162,7 @@ export default function TaskScreen() {
   const prepending = useRef<ScrollAnchor>(null);
   const prependTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const readingScope = useRef<string | null>(null);
+  const climb = useRef(() => {});
   const clearPrepending = () => {
     if (prependTimer.current !== null) clearTimeout(prependTimer.current);
     prependTimer.current = null;
@@ -129,14 +175,13 @@ export default function TaskScreen() {
   const webReady = useRef<string | null>(null);
   const [paintedScope, setPaintedScope] = useState<string | null>(null);
   const [webWindow, setWebWindow] = useState<{ scope: string; first: string | null }>({ scope: "", first: null });
+  const needleNow = useRef("");
   const webSlice = useRef<{ first: number; rows: readonly ChatLine[]; scope: string }>({ first: 0, rows: [], scope: "" });
   const scroller = () => Platform.OS === "web" ? list.current?.getScrollableNode() as unknown as Element | null : null;
   const toBottom = (animated: boolean) => {
     const node = scroller();
-    if (node) {
-      if (animated) node.scrollTo({ top: node.scrollHeight, behavior: "smooth" });
-      else node.scrollTop = node.scrollHeight;
-    } else list.current?.scrollToOffset({ offset: 0, animated });
+    if (node) scrollToEnd(node, animated);
+    else list.current?.scrollToOffset({ offset: 0, animated });
   };
   const restoreReading = (node: Element) => {
     const held = prepending.current;
@@ -144,6 +189,7 @@ export default function TaskScreen() {
       if (restoreAnchor(node, held, false)) {
         anchor.current = held;
         clearPrepending();
+        queueMicrotask(() => climb.current());
       }
     } else restoreAnchor(node, anchor.current, false);
   };
@@ -155,6 +201,9 @@ export default function TaskScreen() {
       if (error instanceof HostError && error.code === "machine_outdated") return setNote(w("web.machines.outdated_action", { name }));
       if (error instanceof HostError && error.code === "machine_off") return setNote(w("shell.machines.task_off", { name }));
       if (error instanceof HostError && (error.code === "start_failed" || error.code === "start_timeout")) return setNote(t("machines.start_failed", { name }));
+      // Un fallo con frase del catálogo (el traspaso sin ventana) se dice igual que cualquier otro.
+      const clave = failureKey(error);
+      if (clave && hasKey(clave)) return setNote(t(clave));
       setNote(t("task.error", { detail: error instanceof Error ? error.message : String(error) }));
     },
     [host],
@@ -174,8 +223,10 @@ export default function TaskScreen() {
     if (!host) return;
     const asked = `${host.id}/${id}`;
     const before = liveNow.current;
-    const next = await loadTask(host, workspace, folder, id);
+    const window = pagerNow();
+    const next = await loadTask(host, workspace, folder, id, Boolean(window.loaded));
     if (keyNow.current !== asked) return;
+    window.accept(next.session.turns, next.session.history, { reading: !follow.current.following });
     setView(next);
     putLive(liveAfterRead(liveNow.current, before, { running: next.running, resync }));
   };
@@ -190,11 +241,24 @@ export default function TaskScreen() {
   useEffect(() => {
     setOpenTask(key);
     setView(null);
+    pager.current?.pager.close();
+    pager.current = null;
+    setHistory(null);
+    setOlder("idle");
+    setPendingHandover(null);
     putLive([]);
     follow.current = OPENED;
     setJump({ shown: false, unseen: 0 });
     return () => setOpenTask(null);
   }, [key, setOpenTask]);
+
+  // El pendiente caduca si se aplicó, si otro cliente cambió el CLI o si la lectura es de otra tarea.
+  useEffect(() => {
+    setPendingHandover((now) => {
+      const next = livePending(now, transferKey, view?.session.provider ?? null);
+      return next === now ? now : next;
+    });
+  }, [transferKey, view?.session.provider]);
 
   useEffect(() => {
     void refresh()
@@ -290,12 +354,35 @@ export default function TaskScreen() {
     }
   }
 
-  /** Baja animado al final y vuelve a seguirlo: el botón y mandar un mensaje. */
+  /** Baja animado al final y vuelve a seguirlo: el botón y mandar un mensaje. Sin la cola cargada, primero la trae. */
   const toEnd = () => {
     follow.current = jumped(follow.current);
     setJump({ shown: false, unseen: 0 });
-    toBottom(true);
+    const window = pagerNow();
+    if (window.loaded && hasRecentGap(window.loaded)) void window.latest().then(() => toBottom(false)).catch(fail);
+    else toBottom(true);
   };
+
+  /** Pone lo anterior sobre lo que se lee. En la web la lista no es invertida: el ancla lo sostiene. */
+  const askOlder = async (retry = false) => {
+    const window = pagerNow();
+    if (!window.loaded || !hasOlder(window.loaded) || window.older === "loading" || (window.older === "failed" && !retry)) return;
+    const put = await window.fetchOlder();
+    if (!put) return;
+    const node = scroller();
+    const held = node ? anchorOf(node) : null;
+    if (held) {
+      clearPrepending();
+      prepending.current = held;
+      prependTimer.current = setTimeout(() => {
+        if (prepending.current === held) resetReading();
+        climb.current();
+      }, PREPEND_RECOVERY_MS);
+    }
+    put();
+  };
+  const askOlderNow = useRef(askOlder);
+  askOlderNow.current = askOlder;
 
   /** Enviar desde el cuadro: un mensaje abre otro turno; `!` corre el comando en la carpeta. */
   const submit = (s: Submission) => {
@@ -303,9 +390,19 @@ export default function TaskScreen() {
     toEnd();
     if (!s.shell && host?.canAct() === "wakes" && host.power() !== "on") setPending(s.prompt);
     return act(() =>
-      s.shell
-        ? runShell(host!, workspace, { folder, session: id, command: s.command, provider: s.provider, model: s.model, effort: s.effort, permissionMode: s.permissionMode })
-        : sendToTask(host!, workspace, folder, id, s),
+      sendWithHandover<unknown>({
+        shell: s.shell,
+        pending: pendingHandover?.to ?? null,
+        from: view?.session.provider ?? null,
+        to: s.provider,
+        consent: (provider) => setSessionProvider(host!, workspace, folder, id, provider),
+        // El consentimiento ya está escrito: el pendiente no sobrevive aunque el turno falle después.
+        onConsent: () => setPendingHandover(null),
+        send: () =>
+          s.shell
+            ? runShell(host!, workspace, { folder, session: id, command: s.command, provider: s.provider, model: s.model, effort: s.effort, permissionMode: s.permissionMode })
+            : sendToTask(host!, workspace, folder, id, s),
+      }),
     );
   };
   const inject = (text: string, attachments: string[]) => act(() => injectIntoTask(host!, workspace, folder, id, text, attachments));
@@ -332,6 +429,24 @@ export default function TaskScreen() {
       .catch(fail);
 
   const running = host?.power() === "on" && (view?.running ?? false);
+  // Cambiar de CLI lo decide el motor (`can_hand_over`/`hand_over_blocked`); aquí solo se suma lo que el cliente sabe.
+  const handover = handoverGate({
+    session: view?.session,
+    running,
+    features: host?.features?.(),
+    remote: Boolean(taskRow?.remote_parent || taskRow?.remote_launcher),
+  });
+  const machineReady = host?.power() === "on" && host.canAct() === "now";
+  const canHandoff = handover.allowed && machineReady;
+  const handoverReason = !host || !view
+    ? t("composer.loading")
+    : !handover.allowed && handover.reason
+      ? hasKey(handover.reason) ? t(handover.reason) : phrase({ clave: handover.reason })
+      : machineReady
+        ? null
+        : host.canAct() === "outdated"
+          ? w("web.machines.outdated_action", { name: host.label })
+          : w("web.machines.off_action", { name: host.label });
   const permissions = useMemo(() => view?.permissions ?? [], [view?.permissions]);
   // Otro cliente pudo decidir: `pending_requests` manda, sin decisión optimista.
   useEffect(() => {
@@ -349,8 +464,10 @@ export default function TaskScreen() {
   };
   const questions = view?.questions ?? [];
   const asleep = host?.canAct() === "asleep" || host?.canAct() === "outdated";
-  const turns = view?.session.turns ?? NO_TURNS;
-  const thread = useMemo(() => workRuns(turns, live, running, imagesOfTurn), [turns, live, running]);
+  const turns = history?.turns ?? NO_TURNS;
+  const base = history?.start ?? 0;
+  const thread = useMemo(() => workRuns(turns, live, running, imagesOfTurn, base), [turns, live, running, base]);
+  const recentGap = history ? hasRecentGap(history) : false;
   const shown = useRef<ReadonlyMap<string, ChatLine>>(new Map());
   const lines = useMemo(() => {
     const next = keepSame(thread.lines, shown.current);
@@ -364,7 +481,11 @@ export default function TaskScreen() {
   const liveLines = thread.live;
   // Las respuestas del agente, para contar en el botón las que entraron desde que se subió.
   const replies = useRef(0);
-  replies.current = lines.filter((line) => line.kind === "message" && line.role !== "user" && line.role !== "system" && line.role !== "shell").length;
+  const repliesHeld = lines.filter((line) => line.kind === "message" && line.role !== "user" && line.role !== "system" && line.role !== "shell").length;
+  // Una página anterior no es una respuesta nueva: al moverse la ventana, la cuenta sigue donde iba.
+  const repliesBase = useRef({ start: base, offset: 0 });
+  if (repliesBase.current.start !== base) repliesBase.current = { start: base, offset: repliesHeld - replies.current };
+  replies.current = repliesHeld - repliesBase.current.offset;
   const onScroll = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
     if (Platform.OS === "web" && prepending.current) return;
     const { contentOffset, contentSize, layoutMeasurement } = e.nativeEvent;
@@ -383,16 +504,34 @@ export default function TaskScreen() {
           if (prepending.current === held) resetReading();
         }, PREPEND_RECOVERY_MS);
         setWebWindow({ scope: page.scope, first: page.rows[Math.max(0, page.first - TAIL_PAGE_SIZE)].key });
-      }
+      } else if (!sheetOpened.current && webReady.current === page.scope && contentOffset.y < MARGIN && page.first === 0 && !needleNow.current) void askOlderNow.current();
     }
     const shown = showJump(next);
     setJump((now) => (now.shown === shown ? now : { shown, unseen: unseen(next, replies.current) }));
   }, []);
+  // Lo que entró arriba no mueve la barra: sin este paso nadie vuelve a mirar si hace falta más.
+  const continueUp = useCallback(() => {
+    const node = scroller();
+    if (!node || prepending.current || sheetOpened.current) return;
+    const page = webSlice.current;
+    if (webReady.current !== page.scope || node.scrollTop >= MARGIN) return;
+    if (page.first > 0) {
+      const held = anchorOf(node);
+      prepending.current = held;
+      if (held) prependTimer.current = setTimeout(() => {
+        if (prepending.current === held) resetReading();
+        climb.current();
+      }, PREPEND_RECOVERY_MS);
+      setWebWindow({ scope: page.scope, first: page.rows[Math.max(0, page.first - TAIL_PAGE_SIZE)].key });
+    } else if (!needleNow.current) void askOlderNow.current();
+  }, []);
+  climb.current = continueUp;
   const onContentSize = useCallback(() => {
     const node = scroller();
     if (!node || webReady.current !== webSlice.current.scope) return;
     if (prepending.current || !follow.current.following) restoreReading(node);
     else toBottom(false);
+    if (!prepending.current && !follow.current.following) continueUp();
   }, []);
   const newReplies = jump.shown ? unseen(follow.current, replies.current) : 0;
   const streaming = liveLines.some((line) => line.key === "live");
@@ -402,22 +541,35 @@ export default function TaskScreen() {
   // El modo con que sigue la tarea. Con `null` el motor correría el suyo por omisión, no el que guardó la tarea.
   const savedMode = view?.session.permission_mode ?? null;
   const workspaceMode = workspaces.find((w) => w.id === workspace)?.defaultPermissionMode ?? null;
-  const latest = useRef({ view, submit, respond });
-  latest.current = { view, submit, respond };
+  const latest = useRef({ view, submit, respond, pendingHandover });
+  latest.current = { view, submit, respond, pendingHandover };
   const decide = useCallback((permission: Permission, allow: boolean) => latest.current.respond(permission, allow), []);
   const quickReply = useCallback((prompt: string) => {
-    const { view: now, submit: send } = latest.current;
-    return now ? send({ shell: false, prompt, ...taskDefaults(now), effort: null, permissionMode: now.session.permission_mode ?? null, attachments: [] }) : Promise.resolve(false);
+    const { view: now, submit: send, pendingHandover: pending } = latest.current;
+    const pendingTo = pending?.to ?? null;
+    if (!now) return Promise.resolve(false);
+    const defaults = taskDefaults(now);
+    const handoverProvider = pendingTo && pendingTo !== defaults.provider ? pendingTo : null;
+    return send({
+      shell: false,
+      prompt,
+      provider: handoverProvider ?? defaults.provider,
+      model: handoverProvider ? null : defaults.model,
+      effort: null,
+      permissionMode: now.session.permission_mode ?? null,
+      attachments: [],
+    });
   }, []);
 
   const folderRow = snapshot?.folders.find((f) => f.host === params.host && f.id === folder) ?? null;
   const gitBook = useTaskGit(hostOf, [{ host: params.host, workspace, folder, id }]);
-  const git = effectiveGit(gitBook, { id, host: params.host, workspace }, snapshot?.tasks ?? []);
+  const git = effectiveGit(gitBook, { id, host: params.host, workspace, folder }, snapshot?.tasks ?? []);
   const visible = useMemo(() => needle ? lines.filter((line) => lineMatches(line, needle)) : lines, [lines, needle]);
   const first = webWindow.scope === webScope ? visible.findIndex((line) => line.key === webWindow.first) : -1;
   const webStart = first < 0 ? Math.max(0, visible.length - TAIL_PAGE_SIZE) : first;
   const listed = useMemo(() => Platform.OS === "web" ? visible.slice(webStart) : [...visible].reverse(), [visible, webStart]);
   webSlice.current = { first: webStart, rows: visible, scope: webScope };
+  needleNow.current = needle;
   useLayoutEffect(() => {
     if (readingScope.current !== webScope) {
       resetReading();
@@ -443,8 +595,12 @@ export default function TaskScreen() {
       if (prepending.current || !follow.current.following) restoreReading(node);
     });
     observer.observe(node, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ["style"] });
-    const intent = ["wheel", "touchstart", "pointerdown"] as const;
-    const interruptPrepend = () => { if (prepending.current) resetReading(); };
+    const intent = ["wheel", "touchstart", "touchmove", "pointerdown"] as const;
+    // En el borde de arriba un gesto no produce `scroll`: es el único aviso de que se quiere seguir.
+    const interruptPrepend = () => {
+      if (prepending.current) resetReading();
+      climb.current();
+    };
     for (const event of intent) node.addEventListener(event, interruptPrepend, { passive: true });
     return () => {
       observer.disconnect();
@@ -453,6 +609,18 @@ export default function TaskScreen() {
     };
   }, [webScope]);
 
+  const olderRow = older === "idle" ? null : (
+    <View style={styles.olderRow} accessibilityRole={older === "failed" ? "alert" : undefined} testID="older-state">
+      <Text style={{ color: theme.textMuted, fontSize: TEXT.ui }}>
+        {older === "loading" ? t("task.history.older_loading") : host?.power() === "on" ? t("task.history.older_failed") : t("task.history.older_offline")}
+      </Text>
+      {older === "failed" ? (
+        <Pressable onPress={() => void askOlder(true)} accessibilityRole="button" testID="older-retry">
+          <Text style={{ color: theme.primary, fontSize: TEXT.ui }}>{t("task.history.retry")}</Text>
+        </Pressable>
+      ) : null}
+    </View>
+  );
   const lastRun = thread.runs.at(-1);
   const since = running ? runClock(view?.liveSince ?? null, lastRun?.at ?? null) : null;
   const asleepNote = asleep && host ? (host.canAct() === "outdated" ? w("web.machines.outdated_action", { name: host.label }) : w("web.machines.off_action", { name: host.label })) : null;
@@ -473,11 +641,16 @@ export default function TaskScreen() {
     [params.host, workspace, params.folder, id],
   );
   const waiting = permissions.length > 0;
+  const toggleReasoning = useCallback((key: string) => setReasoning((now) => {
+    const next = new Set(now);
+    if (!next.delete(key)) next.add(key);
+    return next;
+  }), []);
   const cached = cachedNote ? <Text style={[styles.banner, { color: theme.textMuted, backgroundColor: theme.muted }]}>{cachedNote}</Text> : undefined;
   const liveFooter = (
           <View style={styles.footer}>
             {liveLines.map((line) => (
-              <Row key={line.key} line={line} theme={theme} needle={needle} paused={waiting} onOpen={openWork} streaming={line.key === "live"} />
+              <Row key={line.key} line={line} theme={theme} needle={needle} paused={waiting} onOpen={openWork} streaming={line.key === "live"} reasoningOpen={reasoning.has(line.key)} onToggleReasoning={toggleReasoning} />
             ))}
             {running && !streaming ? <TurnStatus run={lastRun} since={since} waiting={waiting} /> : null}
             {pending && waking ? <Bubble line={{ key: "pending", kind: "message", role: "user", text: pending, images: [], attachments: [] }} theme={theme} /> : null}
@@ -501,8 +674,8 @@ export default function TaskScreen() {
         workspace={workspace}
         folder={folder}
         id={id}
-        task={[...(snapshot?.tasks ?? []), ...(snapshot?.delegated ?? [])].find((task) => task.host === params.host && task.workspace === workspace && task.id === id)}
-        tasks={[...(snapshot?.tasks ?? []), ...(snapshot?.delegated ?? [])].filter((task) => task.host === params.host && task.workspace === workspace)}
+        task={taskRow ?? undefined}
+        tasks={machineTasks}
         running={running || waking}
         onChanged={() => { void reload(); }}
         onFinished={() => { void reload(); router.replace("/"); }}
@@ -511,13 +684,14 @@ export default function TaskScreen() {
         host={host}
         workspace={workspace}
         machine={host?.label ?? params.host}
-        folder={folderRow ? { key: folderRow.key, name: folderRow.name } : null}
+        folder={folderRow}
         branch={git?.branch ?? null}
         provider={view?.session.provider ?? null}
         subtasks={delegated.length}
         finding={finding}
         onFind={setFinding}
         onTools={() => router.push({ pathname: "/task-tools", params: { host: params.host, workspace, folder: params.folder, id } })}
+        onFiles={() => router.push({ pathname: "/task-files", params: { host: params.host, workspace, folder: params.folder, id } })}
       />
       <View style={styles.thread}>
       <FlatList
@@ -534,13 +708,15 @@ export default function TaskScreen() {
         // Lo que cambia de alto por encima de lo que se lee (una imagen que carga, pasos que se abren) no lo mueve.
         maintainVisibleContentPosition={Platform.OS === "web" ? { minIndexForVisible: 0 } : { minIndexForVisible: 0, autoscrollToTopThreshold: MARGIN }}
         renderItem={({ item }) => {
-          const row = <Row line={item} theme={theme} needle={needle} paused={waiting} onOpen={openWork} onQuickReply={item.key === lastAgent && !running && !asleep ? quickReply : undefined} />;
+          const row = <Row line={item} theme={theme} needle={needle} paused={waiting} onOpen={openWork} onQuickReply={item.key === lastAgent && !running && !asleep ? quickReply : undefined} reasoningOpen={reasoning.has(item.key)} onToggleReasoning={toggleReasoning} />;
           return Platform.OS === "web" ? <View nativeID={`chat-row:${encodeURIComponent(webScope)}:${item.key}`}>{row}</View> : row;
         }}
-        ListFooterComponent={Platform.OS === "web" ? liveFooter : cached}
-        ListHeaderComponent={Platform.OS === "web" ? cached : liveFooter}
+        onEndReached={Platform.OS === "web" || needle ? undefined : () => void askOlder()}
+        onEndReachedThreshold={0.5}
+        ListFooterComponent={Platform.OS === "web" ? liveFooter : <>{cached}{olderRow}</>}
+        ListHeaderComponent={Platform.OS === "web" ? <>{cached}{olderRow}</> : liveFooter}
       />
-      {jump.shown ? (
+      {jump.shown || recentGap ? (
         <Pressable
           onPress={toEnd}
           accessibilityRole="button"
@@ -548,7 +724,7 @@ export default function TaskScreen() {
           style={[styles.toBottom, { backgroundColor: theme.surface, borderColor: theme.border }]}
         >
           <Text style={{ color: theme.text, fontSize: TEXT.ui, fontWeight: "500" }}>
-            {newReplies > 0 ? w("chat.thread.new_messages", { count: newReplies }) : w("chat.thread.to_bottom")}
+            {recentGap ? t("task.history.latest") : newReplies > 0 ? w("chat.thread.new_messages", { count: newReplies }) : w("chat.thread.to_bottom")}
           </Text>
           <Icon name="arrow-down" size={14} color={theme.text} />
         </Pressable>
@@ -565,6 +741,7 @@ export default function TaskScreen() {
         </ScrollView>
       ) : null}
       <Composer
+        key={transferKey}
         host={host}
         workspace={workspace}
         folder={folder}
@@ -574,7 +751,14 @@ export default function TaskScreen() {
         model={view ? taskDefaults(view).model : null}
         permissionMode={workspaceMode}
         savedPermissionMode={savedMode}
-        providerLocked={Boolean(view?.session.turns.length)}
+        providerLocked={!canHandoff}
+        providerLockedReason={handoverReason}
+        canHandoff={canHandoff}
+        pendingProvider={pendingHandover?.to ?? null}
+        onPendingProvider={(provider) => {
+          const from = view?.session.provider ?? null;
+          setPendingHandover(provider && from ? { to: provider, from, task: transferKey } : null);
+        }}
         running={running}
         disabled={asleep || waking || !view}
         placeholder={w("chat.composer.placeholder.next")}
@@ -610,7 +794,8 @@ function ChatBackdrop({ background, theme }: { background: Backdrop | null; them
 const MONO = Platform.select({ ios: "Menlo", default: "monospace" });
 
 /** Una línea solo se repinta si cambia: `linesOf` le deja el mismo objeto a la que no cambió. */
-const Row = memo(function Row({ line, theme, needle, paused, onOpen, streaming, onQuickReply }: { line: ChatLine; theme: Theme; needle: string; paused: boolean; onOpen: (line: WorkLine, at: number, find: string | null) => void; streaming?: boolean; onQuickReply?: (prompt: string) => Promise<boolean> }) {
+const Row = memo(function Row({ line, theme, needle, paused, onOpen, streaming, onQuickReply, reasoningOpen, onToggleReasoning }: { line: ChatLine; theme: Theme; needle: string; paused: boolean; onOpen: (line: WorkLine, at: number, find: string | null) => void; streaming?: boolean; onQuickReply?: (prompt: string) => Promise<boolean>; reasoningOpen: boolean; onToggleReasoning: (key: string) => void }) {
+  if (line.kind === "reasoning") return <ReasoningRow line={line} open={reasoningOpen} onToggle={onToggleReasoning} />;
   if (line.kind === "work") return <WorkGroup line={line} needle={needle} paused={paused} onOpen={onOpen} />;
   if (line.kind === "progress")
     return (
@@ -621,15 +806,57 @@ const Row = memo(function Row({ line, theme, needle, paused, onOpen, streaming, 
       </View>
     );
   if (line.kind === "shell") return <ShellRun command={line.command} output={line.output} exitCode={line.exitCode} theme={theme} />;
+  if (line.kind === "message" && line.role === "system" && line.meta === "provider_handover") return <HandoverRow line={line} theme={theme} />;
+  if (line.kind === "message" && line.role === "system" && (line.meta === "fallo" || line.meta === "cupo" || line.fallo)) return <FailureNotice line={line} theme={theme} />;
   return <Bubble line={line} theme={theme} streaming={streaming} onQuickReply={onQuickReply} />;
 });
+
+function say(key: string, vars?: Record<string, string | number>) {
+  return t(key as Parameters<typeof t>[0], vars);
+}
+
+/** El aviso `system` con `meta: "provider_handover"` del motor: un separador, no un globo. */
+function HandoverRow({ line, theme }: { line: Extract<Line, { kind: "message" }>; theme: Theme }) {
+  return (
+    <View accessibilityRole="text" style={styles.notice} testID="provider-handover">
+      <View style={[styles.noticeRule, { backgroundColor: theme.border }]} />
+      <Text selectable style={{ color: theme.textMuted, fontSize: TEXT.label, lineHeight: 17, flexShrink: 1, textAlign: "center" }}>
+        {line.text}
+      </Text>
+      <View style={[styles.noticeRest, { backgroundColor: theme.border }]} />
+    </View>
+  );
+}
+
+/** La fila del fallo, como en la ventana: la frase de la clase y, si sirve, cambiar de cuenta. */
+function FailureNotice({ line, theme }: { line: Extract<Line, { kind: "message" }>; theme: Theme }) {
+  const sentence = failureSentence(line, say) ?? line.text;
+  if (!sentence) return null;
+  const gesture = line.meta === "fallo" ? failureGesture(line.fallo?.clase) : null;
+  const interrupted = line.meta === "fallo" && isInterruption(line.text);
+  const color = interrupted || line.meta !== "fallo" ? (line.quota?.to ? theme.info : theme.textMuted) : theme.warningStrong;
+  return (
+    <View accessibilityRole={line.meta === "fallo" && !interrupted ? "alert" : "text"} style={styles.notice}>
+      <View style={[styles.noticeRule, { backgroundColor: theme.border }]} />
+      <Text style={{ color, fontSize: TEXT.ui, lineHeight: 18, flexShrink: 1 }}>
+        {sentence}
+        {gesture ? (
+          <Text accessibilityRole="link" onPress={() => router.push("/accounts")} style={{ textDecorationLine: "underline" }}>
+            {` — ${say(gesture.key)}`}
+          </Text>
+        ) : null}
+      </Text>
+      <View style={[styles.noticeRest, { backgroundColor: theme.border }]} />
+    </View>
+  );
+}
 
 function Bubble({ line, theme, streaming, onQuickReply }: { line: Extract<Line, { kind: "message" }>; theme: Theme; streaming?: boolean; onQuickReply?: (prompt: string) => Promise<boolean> }) {
   const from = line.from ?? null;
   const mine = line.role === "user" && !from;
   const system = line.role === "system";
   const shell = line.role === "shell";
-  if (!line.text && !line.images.length && !line.attachments.length) return null;
+  if (!line.text && !line.images.length && !line.attachments.length && !line.refs?.length) return null;
   // Como en la ventana: lo de la persona va en globo; la respuesta del agente, sin globo y a todo el ancho.
   const agent = line.role !== "user" && !system && !shell;
   const bubble = (
@@ -657,6 +884,7 @@ function Bubble({ line, theme, streaming, onQuickReply }: { line: Extract<Line, 
       ) : line.text || line.images.length ? (
         <MessageBody text={line.text} streaming={streaming} images={line.images} onQuickReply={onQuickReply} />
       ) : null}
+      {line.refs?.map((reference) => <HistoryDetail key={`${reference.turn}${reference.pointer}`} reference={reference} turnId={line.turnId} />)}
     </View>
   );
   if (!from) return bubble;
@@ -785,6 +1013,7 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   footer: { gap: 8 },
+  olderRow: { alignItems: "center", gap: 4, paddingVertical: 6 },
   pending: { flexGrow: 0, maxHeight: "55%", paddingHorizontal: 12, paddingBottom: 8 },
   bubble: { maxWidth: "92%", borderRadius: 14, padding: 10, borderWidth: StyleSheet.hairlineWidth },
   incoming: { alignSelf: "flex-start", maxWidth: "100%", borderColor: "transparent", shadowColor: "#000", shadowOpacity: 0.08, shadowRadius: 2, shadowOffset: { width: 0, height: 1 }, elevation: 1 },
@@ -795,6 +1024,9 @@ const styles = StyleSheet.create({
   signature: { fontSize: TEXT.label, fontWeight: "600", paddingLeft: 2 },
   reply: { alignSelf: "stretch", paddingHorizontal: 4, paddingVertical: 2 },
   progress: { alignSelf: "stretch", paddingHorizontal: 4 },
+  notice: { flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 6 },
+  noticeRule: { width: 24, height: StyleSheet.hairlineWidth },
+  noticeRest: { flex: 1, height: StyleSheet.hairlineWidth },
   card: { borderWidth: 1, borderRadius: 14, padding: 12, gap: 10 },
   option: { borderWidth: 1, borderRadius: 10, padding: 10 },
   input: { flex: 1, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8, fontSize: TEXT.lead, maxHeight: 140 },

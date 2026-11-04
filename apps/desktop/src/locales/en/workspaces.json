@@ -1,7 +1,7 @@
 {
   "workspaces.directory.save_failed": "Could not save the default location. Try again.",
   "workspaces.directory.unavailable": "The selected folder is unavailable. Connect the drive or choose another folder.",
-  "workspaces.migration.too_old": "This data comes from an earlier Terminus version this binary no longer converts. Install version {version} first, open it once so it migrates your work, then update again.",
+  "workspaces.migration.too_old": "This data comes from an earlier Danil version this binary no longer converts. Install version {version} first, open it once so it migrates your work, then update again.",
   "workspaces.permission_mode.save_failed": "Could not save the default permissions. Try again.",
   "workspaces.permission_mode.unknown": "That permission mode does not exist: choose manual, ediciones or auto.",
   "workspaces.directory.no_documents": "Couldn't find your Documents folder. Choose where to create projects in Settings → General.",

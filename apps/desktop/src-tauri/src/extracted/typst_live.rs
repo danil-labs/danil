@@ -366,7 +366,7 @@ fn sugerencias(proceso: &Proceso, path: &str, items: Vec<Value>) -> Vec<Sugerenc
     };
     let citas: HashSet<String> = items
         .iter()
-        .filter(|i| es_titulo_de_cita(*i))
+        .filter(|i| es_titulo_de_cita(i))
         .filter_map(|i| i["textEdit"]["newText"].as_str().map(str::to_owned))
         .collect();
     let con_etiquetas = items.iter().any(|i| i["kind"].as_u64() == Some(18));
@@ -382,7 +382,7 @@ fn sugerencias(proceso: &Proceso, path: &str, items: Vec<Value>) -> Vec<Sugerenc
     };
     items
         .iter()
-        .filter(|i| !es_titulo_de_cita(*i))
+        .filter(|i| !es_titulo_de_cita(i))
         .filter_map(|i| {
             let label = i["label"].as_str()?.to_string();
             let edicion = &i["textEdit"];
@@ -556,10 +556,7 @@ fn cadenas_tras(texto: &str, palabras: &[&str]) -> Vec<String> {
                 None => (resto, false),
             };
             let mut cola = resto;
-            loop {
-                let Some(dentro) = cola.trim_start().strip_prefix('"') else {
-                    break;
-                };
+            while let Some(dentro) = cola.trim_start().strip_prefix('"') {
                 let Some(fin) = dentro.find('"') else {
                     break;
                 };

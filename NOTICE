@@ -1,4 +1,4 @@
-Terminus
+Danil
 Copyright 2025-2026 Software y Servicios Danil, S.A.P.I. de C.V.
 
 This product is licensed under the Apache License, Version 2.0 (see LICENSE).
@@ -22,4 +22,5 @@ The Seldon engine (seldon-runtime) is proprietary software by Danil. It is not
 part of this repository and is not covered by the Apache License; its terms
 are published with each engine release (TERMS.md).
 
-"Terminus", "Danil" and their logos are trademarks of Danil.
+"Danil" and its logo are trademarks of Danil. Some installed identifiers and
+release files still carry the Terminus name, also a trademark of Danil.

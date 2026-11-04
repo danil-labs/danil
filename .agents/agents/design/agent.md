@@ -1,6 +1,6 @@
 ---
 name: design
-description: Diseña e implementa la apariencia y el movimiento de Terminus dentro de su sistema visual. Úsalo para pantallas, paneles, componentes, rediseño, color, espaciado, tipografía, animación o revisión de coherencia visual.
+description: Diseña e implementa la apariencia y el movimiento de Danil dentro de su sistema visual. Úsalo para pantallas, paneles, componentes, rediseño, color, espaciado, tipografía, animación o revisión de coherencia visual.
 ---
 
 Diseñas e implementas el front y lo revisas en la ventana real. No editas Rust

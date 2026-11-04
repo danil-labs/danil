@@ -1,6 +1,7 @@
 import { type Accessor, createEffect, createSignal, For, on, onCleanup, Show } from "solid-js";
 import { df } from "../lib/format";
 import { t } from "../lib/i18n";
+import { SignalDot } from "../ui/SignalDot";
 import { Toast, ToastPortal } from "../ui/Toast";
 /** On, off, starting or speaking another contract: what the page says of a machine. */
 export type MachineStatus = "online" | "offline" | "starting" | "outdated";
@@ -16,18 +17,21 @@ const LABELS: Record<MachineStatus, () => string> = {
 
 /** Lo que dura el aviso a la vista antes de cerrarse solo. */
 const VISIBLE_MS = 6000;
+/** Al recargar, el estado de las máquinas se asienta sin avisar. */
+const SETTLE_MS = 20_000;
 
 const signature = (rows: MachineRow[]) => rows.map((m) => `${m.id}:${m.status}`).join("|");
 
 /**
  * On, off, starting or needing an update; none of them is an error. The state
- * shows as a normal toast when it changes (and once on load), closes by itself
- * and can be closed by hand. A hidden list keeps the current state for screen
+ * shows as a normal toast when it changes after loading, closes by itself and
+ * can be closed by hand. A hidden list keeps the current state for screen
  * readers.
  */
 export function SyncNote(props: { machines: Accessor<MachineRow[]> }) {
   const [open, setOpen] = createSignal(false);
   let timer: ReturnType<typeof setTimeout> | undefined;
+  const settledAt = Date.now() + SETTLE_MS;
   const close = () => {
     clearTimeout(timer);
     setOpen(false);
@@ -36,7 +40,7 @@ export function SyncNote(props: { machines: Accessor<MachineRow[]> }) {
     on(
       () => signature(props.machines()),
       (now, before) => {
-        if (!now || now === before) return;
+        if (!now || now === before || Date.now() < settledAt) return;
         clearTimeout(timer);
         setOpen(true);
         timer = setTimeout(() => setOpen(false), VISIBLE_MS);
@@ -51,10 +55,7 @@ export function SyncNote(props: { machines: Accessor<MachineRow[]> }) {
     <For each={props.machines()}>
       {(m) => (
         <li class="flex min-w-0 items-center gap-1.5" data-machine-row={marked ? m.id : undefined} data-state={marked ? m.status : undefined} title={tip(m)}>
-          <span
-            aria-hidden="true"
-            class={`size-1.5 shrink-0 rounded-full ${m.status === "online" ? "bg-success" : m.status === "starting" ? "animate-danil-pulse bg-neutral-500" : "bg-neutral-500"}`}
-          />
+          <SignalDot tone={m.status === "online" ? "success" : m.status === "outdated" ? "warning" : m.status === "starting" ? "neutral" : "off"} pulse={m.status === "starting"} />
           <span class="truncate">{m.name}</span>
           <span class="shrink-0">· {LABELS[m.status]()}</span>
         </li>

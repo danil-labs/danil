@@ -2,24 +2,28 @@
  * Los adjuntos de un turno que corre en otra máquina. Al adjuntar, la copia
  * queda en el motor de la ventana (`prepare_attachments`), y una ruta de esta
  * Mac no le sirve a la VM: el agente de allá no la puede abrir. Antes de
- * mandar, cada imagen viaja como bytes al motor de la tarea
- * (`guardar_imagen_pegada`) y allá se prepara su copia, igual que en el
- * teléfono (`apps/mobile/src/lib/engine.ts`).
+ * mandar, cada imagen o PDF viaja como bytes al motor de la tarea
+ * (`guardar_adjunto`) y allá se prepara su copia, igual que en el teléfono
+ * (`apps/mobile/src/lib/engine.ts`).
  */
-
-/** Lo que `guardar_imagen_pegada` sabe guardar. */
-const UPLOADABLE = ["image/png", "image/jpeg", "image/webp", "image/gif"];
+import { IMAGE_MIMES, isImageMime, MAX_UPLOAD_BYTES } from "@terminus/protocol";
 
 export type AttachmentMover = {
-  /** La miniatura del archivo en la máquina de la ventana (`preview_file`). */
-  read: (path: string) => Promise<{ data_url?: string | null }>;
+  /** La máquina del turno anuncia `attachment_documents_v1`. */
+  documentos: boolean;
+  /** La miniatura o los bytes del archivo en la máquina de la ventana (`preview_file`). */
+  read: (path: string) => Promise<{ data_url?: string | null; pdf?: string | null }>;
   /** Guarda los bytes en la máquina de la tarea y devuelve su ruta allá. */
-  save: (mime: string, datos: string) => Promise<string>;
+  save: (mime: string, datos: string, nombre: string) => Promise<string>;
   /** `prepare_attachments` en la máquina de la tarea. */
   prepare: (paths: string[]) => Promise<string[]>;
 };
 
-/** Lo que no se pudo llevar: no es una imagen, ya no está o pasa del tope de la miniatura (4 MB). */
+/**
+ * Lo que no se pudo llevar: no es una imagen ni un PDF, ya no está, pasa del
+ * tope de la miniatura (4 MB), del de un PDF (25 MB) o del mensaje (11 MB en
+ * base64), o la máquina del turno no acepta documentos.
+ */
 export class NotMovable extends Error {
   readonly names: string[];
   constructor(names: string[]) {
@@ -30,9 +34,11 @@ export class NotMovable extends Error {
 
 const nameOf = (path: string) => path.split(/[\\/]/).pop() || path;
 
-function split(dataUrl: string | null | undefined): { mime: string; datos: string } | null {
-  const m = /^data:([^;,]+);base64,(.*)$/s.exec(dataUrl ?? "");
-  return m && UPLOADABLE.includes(m[1]) ? { mime: m[1], datos: m[2] } : null;
+function payload(preview: { data_url?: string | null; pdf?: string | null } | null | undefined): { mime: string; datos: string } | null {
+  const m = /^data:([^;,]+);base64,(.*)$/s.exec(preview?.data_url ?? "");
+  if (m && (IMAGE_MIMES as readonly string[]).includes(m[1])) return { mime: m[1], datos: m[2] };
+  if (preview?.pdf) return { mime: "application/pdf", datos: preview.pdf };
+  return null;
 }
 
 /**
@@ -42,11 +48,15 @@ function split(dataUrl: string | null | undefined): { mime: string; datos: strin
  */
 export async function moveAttachments(paths: string[], c: AttachmentMover): Promise<string[]> {
   if (paths.length === 0) return [];
-  const read = await Promise.all(paths.map(async (path) => ({ path, image: split((await c.read(path).catch(() => null))?.data_url) })));
-  const refused = read.filter((r) => !r.image).map((r) => nameOf(r.path));
+  const read = await Promise.all(paths.map(async (path) => ({ path, file: payload((await c.read(path).catch(() => null)) ?? null) })));
+  const refused = read
+    .filter((r) => !r.file
+      || (!c.documentos && !isImageMime(r.file.mime))
+      || r.file.datos.length * 0.75 > MAX_UPLOAD_BYTES)
+    .map((r) => nameOf(r.path));
   if (refused.length) throw new NotMovable(refused);
   const saved: string[] = [];
-  for (const { image } of read) saved.push(await c.save(image!.mime, image!.datos));
+  for (const { path, file } of read) saved.push(await c.save(file!.mime, file!.datos, nameOf(path)));
   return c.prepare(saved);
 }
 

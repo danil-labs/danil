@@ -89,7 +89,6 @@ function servicio({ setupRequired, entorno, preparar, reset = () => false, extra
 
 const enPantalla = (app) => app.w.document.body.textContent.includes(TITULO);
 const aviso = (app) => app.w.document.querySelector("[data-setup-repair]");
-const lineas = (app) => [...app.w.document.querySelectorAll('main [role="log"] > div')].map((d) => d.textContent.trim());
 const acciones = (app) => [...app.w.document.querySelectorAll("main > footer button")].map((b) => b.textContent.trim());
 
 caso("lo esencial que falta con la app pintada se repara detrás, sin abrir la preparación", async () => {
@@ -175,48 +174,64 @@ caso("un corte del servicio a mitad de la corrida no deja error cuando termina b
   assert.ok(!acciones(app).includes("Volver a intentar"), `ofrece reintentar una corrida que terminó bien: ${acciones(app)}`);
 });
 
-caso("cada evento de la preparación pinta una sola línea", async () => {
+caso("la primera preparación sana abre Conecta tu IA sin una parada técnica", async () => {
+  let creados = 0;
+  const s = servicio({
+    setupRequired: true, entorno: reporte(false, []), preparar: terminada,
+    extra: {
+      list_workspaces: { workspaces: [], active: null },
+      workspaces_startup: { workspaces: [], active: null },
+      add_workspace: () => { creados += 1; return { id: "nuevo" }; },
+      set_active_workspace: null,
+      set_workspace_language: null,
+      list_system_sessions: [],
+    },
+  });
+  const app = await boot("listo", "primera-sin-parada-tecnica", s.respuestas);
+  s.conectar(app);
+  await sleep(1500);
+
+  assert.ok([...app.w.document.querySelectorAll("h1")].some((h) => h.textContent === "Conecta tu IA."));
+  assert.equal(creados, 1, "la transición duplicó el workspace");
+  assert.equal(app.w.document.querySelector('[role="radiogroup"]'), null);
+  assert.equal(app.w.document.querySelector('[role="log"]'), null);
+  assert.ok(!acciones(app).includes("Ver la preparación"));
+});
+
+caso("la comprobación muestra avance real sin terminal ni inventario técnico", async () => {
   const s = servicio({ setupRequired: true, entorno: reporte(false, []), preparar: enCurso });
-  const app = await boot("listo", "un-lector", s.respuestas);
+  const app = await boot("listo", "avance-incluido", s.respuestas);
   s.conectar(app);
   s.publicar("bootstrap-run", { type: "note", stage: "platform", kind: "platform", value: "windows x86_64" });
-  await sleep(1500);
-
-  assert.equal(lineas(app).filter((l) => l.includes("windows x86_64")).length, 1);
-});
-
-caso("la etapa work-tools dice qué herramienta quedó lista y cuál falló", async () => {
-  const s = servicio({ setupRequired: true, entorno: reporte(false, []), preparar: enCurso });
-  const app = await boot("listo", "notas-de-herramientas", s.respuestas);
-  s.conectar(app);
   s.publicar("bootstrap-run", { type: "note", stage: "work-tools", kind: "tool", value: "git", extra: "2.53.0" });
-  s.publicar("bootstrap-run", { type: "note", stage: "work-tools", kind: "tool_failed", value: "python", extra: "import_failed" });
-  s.publicar("bootstrap-run", { type: "note", stage: "work-tools", kind: "tool_failed", value: "uv", extra: "algo-nuevo" });
+  s.publicar("bootstrap-run", { type: "output", stage: "work-tools", line: "private diagnostic output", stream: "stdout" });
+  s.publicar("bootstrap-run", { type: "stage", name: "platform", state: "succeeded" });
+  s.publicar("bootstrap-run", { type: "stage", name: "work-tools", state: "running" });
   await sleep(1500);
 
-  const texto = lineas(app);
-  assert.equal(texto.filter((l) => l.includes("Git 2.53.0 listo")).length, 1, `sin la línea de Git: ${texto}`);
-  assert.ok(texto.some((l) => l.includes("Python (Editar Excel, Word, PowerPoint y PDF): No pudo cargar sus bibliotecas.")), `sin el fallo de Python: ${texto}`);
-  assert.ok(texto.some((l) => l.includes("uv (Paquetes extra y servidores MCP): Falta una parte")), `un motivo desconocido no cae a faltante: ${texto}`);
+  assert.equal(app.w.document.querySelector('[role="progressbar"]')?.getAttribute("aria-valuenow"), "50");
+  assert.equal(app.w.document.querySelector('[role="log"]'), null);
+  assert.equal(app.w.document.querySelector('[role="radiogroup"]'), null);
+  for (const detalle of ["windows x86_64", "Git 2.53.0", "private diagnostic output", "Terminal de preparación"]) {
+    assert.ok(!app.w.document.body.textContent.includes(detalle), `expone diagnóstico técnico: ${detalle}`);
+  }
+  assert.ok(app.w.document.body.textContent.includes("Comprobando las herramientas incluidas"));
 });
 
-caso("la corrida que retoma un servicio nuevo empieza con la terminal limpia", async () => {
-  const s = servicio({ setupRequired: true, entorno: reporte(false, []), preparar: enCurso });
-  const app = await boot("listo", "dos-corridas", s.respuestas);
+caso("sin terminal un fallo incluido conserva su función, motivo y reparación", async () => {
+  const python = { id: "python", label: "Python", ok: false, required: true, detail: "", reason: "import_failed" };
+  const s = servicio({ setupRequired: true, entorno: reporte(true, ["python"], [python]), preparar: enCurso });
+  const app = await boot("listo", "fallo-incluido-sin-terminal", s.respuestas);
   s.conectar(app);
-  const manifiesto = { type: "manifest", stages: ETAPAS.map((name) => ({ name, essential: true })) };
-  s.publicar("bootstrap-run", manifiesto);
-  s.publicar("bootstrap-run", { type: "note", stage: "platform", kind: "platform", value: "corrida-uno" });
-  await sleep(800);
-  // El servicio nuevo emite su manifiesto antes de que la ventana empiece a leerlo.
-  s.cambiarDeServicio();
-  s.publicar("bootstrap-run", manifiesto);
-  await sleep(600);
-  s.publicar("bootstrap-run", { type: "note", stage: "platform", kind: "platform", value: "corrida-dos" });
-  await sleep(800);
+  s.publicar("bootstrap-run", { type: "note", stage: "work-tools", kind: "tool_failed", value: "python", extra: "import_failed" });
+  s.publicar("bootstrap-run", { type: "stage", name: "work-tools", state: "failed" });
+  await sleep(1500);
 
-  assert.equal(lineas(app).filter((l) => l.includes("corrida-dos")).length, 1);
-  assert.deepEqual(lineas(app).filter((l) => l.includes("corrida-uno")), [], "la terminal repite la corrida anterior");
+  const detalle = app.w.document.querySelector('[data-function="python"]');
+  assert.ok(detalle?.textContent.includes("Editar Excel, Word, PowerPoint y PDF"));
+  assert.ok(detalle?.textContent.includes("No pudo cargar sus bibliotecas"));
+  assert.ok([...app.w.document.querySelectorAll("button")].some((b) => b.textContent === "Reparar"));
+  assert.equal(app.w.document.querySelector('[role="log"]'), null);
 });
 
 caso("una herramienta incluida que no contestó a tiempo no abre la preparación ni avisa", async () => {
@@ -236,17 +251,15 @@ const boton = (app, nombre) => [...app.w.document.querySelectorAll("main button"
 const MAC = "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0) AppleWebKit/605.1.15";
 const fallidaConFoto = () => foto((name) => (name === "work-tools" ? "failed" : "succeeded"), false);
 
-caso("la preparación es solo «Preparando Danil» con sus dos etapas, sin opcionales", async () => {
+caso("la preparación oculta etapas técnicas y mantiene la validación interna", async () => {
   const s = servicio({ setupRequired: true, entorno: reporte(false, []), preparar: enCurso });
   const app = await boot("listo", "dos-etapas", s.respuestas);
   s.conectar(app);
   await sleep(600);
 
   assert.ok(enPantalla(app), "no se ve «Preparando Danil»");
-  assert.deepEqual(
-    [...app.w.document.querySelectorAll("main ol > li")].map((li) => li.textContent.trim()),
-    ["Plataforma", "Entorno de Danil"],
-  );
+  assert.equal(app.w.document.querySelector("main ol"), null, "la lista técnica sigue visible");
+  assert.ok(texto(app).includes("Comprobando las herramientas incluidas"));
   assert.equal(app.w.document.querySelectorAll('main input[type="checkbox"]').length, 0, "quedan casillas");
   assert.ok(!/Opcionales|opcional/i.test(texto(app)), "quedan los opcionales");
   assert.deepEqual(s.llamadas.prepare_runtime, ["arrancar"]);
@@ -266,7 +279,7 @@ caso("una función incluida que falla se nombra y «Reparar» repara todo lo inc
   await sleep(400);
   assert.deepEqual(s.llamadas.install_tool, [{ tool: "bundled-work-tools" }]);
   assert.ok(texto(app).includes("No se pudo reparar el entorno de Danil."), "el error de reparar no se ve en la pantalla");
-  assert.ok(app.comandos.filter((c) => c === "check_environment").length >= 2, "después de reparar no se vuelve a comprobar");
+  assert.ok(app.commands.filter((c) => c === "check_environment").length >= 2, "después de reparar no se vuelve a comprobar");
 });
 
 caso("lo que no contestó a tiempo se dice distinto de lo dañado", async () => {
@@ -302,7 +315,7 @@ caso("en Mac lo dañado propone reinstalar, no reiniciar", async () => {
   assert.ok(boton(app, "Reparar"));
 });
 
-caso("un motor anterior con una etapa por herramienta la nombra por su función", async () => {
+caso("un motor anterior conserva la función afectada sin listar herramientas", async () => {
   const vieja = {
     stages: [
       { name: "platform", essential: true, state: "succeeded" },
@@ -316,8 +329,7 @@ caso("un motor anterior con una etapa por herramienta la nombra por su función"
   s.conectar(app);
   await sleep(800);
 
-  const filas = [...app.w.document.querySelectorAll("main ol > li")].map((li) => li.textContent.trim());
-  assert.ok(filas.some((f) => f.startsWith("Clonar y versionar repositorios")), `filas: ${filas}`);
+  assert.equal(app.w.document.querySelector("main ol"), null, "el motor anterior vuelve a listar herramientas");
   assert.ok(app.w.document.querySelector('[data-function="agent-browser"]'), "la etapa vieja fallida no se nombra por su función");
 });
 
@@ -356,7 +368,7 @@ caso("Estado del entorno lista solo los extras y lo incluido en una línea con �
   await sleep(300);
   assert.deepEqual(s.llamadas.install_tool, [{ tool: "bundled-work-tools" }]);
   assert.ok(app.w.document.body.textContent.includes("No se pudo reparar el entorno de Danil."));
-  assert.equal(app.comandos.includes("install_base_tool"), false);
+  assert.equal(app.commands.includes("install_base_tool"), false);
 });
 
 const elegido = process.env.SETUP_REPAIR_CASO;

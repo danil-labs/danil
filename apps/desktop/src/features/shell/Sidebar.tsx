@@ -1,3 +1,5 @@
+import { groupCardOptions, workStateOf } from "@terminus/tasks";
+import { SignalDot } from "../../ui/SignalDot";
 import History from "lucide-solid/icons/history";
 import Plus from "lucide-solid/icons/plus";
 import SquarePen from "lucide-solid/icons/square-pen";
@@ -28,6 +30,7 @@ import { watchHandlerStatuses } from "../projects/handlerPresence";
 import type { ModelChoices } from "../projects/NewAgent";
 import { watchProfiles } from "../projects/profiles";
 import Sessions, { type SessionRow } from "../projects/Sessions";
+import { effectiveTaskGit, watchSessionGit } from "../projects/taskGit";
 import type { Etapa } from "../projects/TaskStage";
 import {
   agentOptions,
@@ -167,7 +170,7 @@ export default function Sidebar(props: {
   /** «Traer a esta Mac» en el menú de una tarea de otra máquina; solo en el escritorio. */
   onBringHere?: (project: string, id: string) => void;
   /** «Llevar a otra máquina…» en el menú de una carpeta de git. */
-  onCarryFolder?: (project: string) => void;
+  onCarryFolder?: (project: string, machine?: string) => void;
 }) {
   const [creatingAgentIn, setCreatingAgentIn] = createSignal<{ id: string; name: string } | null>(null);
   let listViewport: HTMLDivElement | undefined;
@@ -250,11 +253,37 @@ export default function Sidebar(props: {
     const carpetas = v.folders.filter((f) => (cuentas().get(f) ?? 0) > 0);
     return carpetas.length === v.folders.length ? v : { ...v, folders: carpetas };
   });
+  const gitCandidates = createMemo(() => applySidebarView(todas().map(task => task.row), { ...vistaEfectiva(), group: "none" }, {
+    live: [], approving: [], folderOf: row => carpetaDe(row.id),
+  })[0].tasks);
+  const gitFolders = createMemo(() => [...new Set(gitCandidates().map(row => carpetaDe(row.id)))].sort(), [], {
+    equals: (a, b) => a.length === b.length && a.every((project, i) => project === b[i]),
+  });
+  const gitObservers = createMemo(mapArray(gitFolders, project => {
+    const watcher = watchSessionGit(project);
+    const input = createMemo(() => JSON.stringify([
+      gitCandidates().filter(row => carpetaDe(row.id) === project).map(row => [row.id, row.updated_at]), props.vivas, props.current,
+    ]));
+    createEffect(on(input, () => {
+      watcher.prioritize([...(props.current ? [props.current] : []), ...props.vivas,
+        ...gitCandidates().filter(row => carpetaDe(row.id) === project).map(row => row.id)]);
+      watcher.refresh();
+    }));
+    onCleanup(watcher.release);
+    return { project, rows: watcher.rows };
+  }));
   const grupos = createMemo(() => {
     const todosLosGrupos = applySidebarView(todas().map((x) => x.row), vistaEfectiva(), {
       live: props.vivas,
       approving: props.aprobando,
       folderOf: (row) => carpetaDe(row.id),
+      workStateOf: (row) => {
+        const project = carpetaDe(row.id);
+        const candidates = relacionadas().filter(other => carpetaDe(other.id) === project
+          && (other.machine ?? "") === (row.machine ?? ""));
+        const rows = gitObservers().find(observer => observer.project === project)?.rows() ?? {};
+        return workStateOf(effectiveTaskGit(row, rows, candidates));
+      },
     });
     // Por carpeta, en el orden del riel (la principal primero) y «sin carpeta» al final.
     const orden = (g: SidebarGroup<SessionRow>) => {
@@ -372,10 +401,11 @@ export default function Sidebar(props: {
    * sitios —expandida y en el desplegable—; una variable contendría un solo
    * nodo del DOM y colocarlo dos veces lo movería del primero al segundo.
    */
-  const Historial = (p: { filas: SessionRow[]; sinCarpeta?: boolean }) => (
-    <Sessions sidebar
+  const Historial = (p: { filas: SessionRow[]; sinCarpeta?: boolean; sinMaquina?: boolean }) => (
+    <Sessions sidebar gitManaged
       draggedTask={props.draggedTask}
       hideFolder={p.sinCarpeta}
+      hideMachine={p.sinMaquina}
       sessions={p.filas}
       relatedSessions={relacionadas()}
       groupByAuthor={false}
@@ -530,7 +560,7 @@ export default function Sidebar(props: {
                   onQuitarDelEspacio={props.onRemoveFromSpace ? () => props.onRemoveFromSpace?.(proj().id) : undefined}
                   onNuevaTarea={() => props.onNuevaTareaEn(proj().id, g().machine)}
                   onNuevoAgente={() => setCreatingAgentIn({ id: proj().id, name: proj().name })}
-                  onLlevar={props.onCarryFolder && proj().kind === "git" && !g().machine ? () => props.onCarryFolder?.(proj().id) : undefined}
+                  onLlevar={props.onCarryFolder && proj().kind === "git" ? () => props.onCarryFolder?.(proj().id, g().machine) : undefined}
                 />
               </Suspense>
             )}
@@ -540,7 +570,7 @@ export default function Sidebar(props: {
               when={g().tasks.length > 0}
               fallback={<p class="m-0 py-0.5 pl-7 text-caption text-neutral-500" data-folder-empty="">{t("shell.sidebar.folder_empty")}</p>}
             >
-              <Historial filas={g().tasks} sinCarpeta={g().kind === "folder" && !!g().key} />
+              <Historial filas={g().tasks} sinCarpeta={groupCardOptions(g()).hideFolder} sinMaquina={groupCardOptions(g()).hideMachine} />
             </Show>
           </Show>
         </section>
@@ -642,7 +672,7 @@ export default function Sidebar(props: {
                       sesión abierta: sin esto el estado se comunicaría solo al
                       desplegar. */}
                   <Show when={props.current}>
-                    <span class="ui-sidebar-menu-badge absolute top-1 right-1 size-1.5 rounded-full bg-primary" />
+                    <SignalDot tone="working" class="ui-sidebar-menu-badge absolute top-1 right-1" />
                   </Show>
                 </SidebarMenuButton>
               </SidebarMenuItem>

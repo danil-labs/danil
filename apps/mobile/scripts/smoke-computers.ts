@@ -1,6 +1,6 @@
 /**
  * Recorre la capa de datos de la app (`src/lib/hosts.ts` y `engine.ts`, sin
- * React Native) contra el Danil Computers falso, por HTTP y WebSocket reales:
+ * React Native) contra el Danil Machines falso, por HTTP y WebSocket reales:
  *
  *   node apps/mobile/scripts/smoke-computers.ts
  *
@@ -273,13 +273,14 @@ const ok = (step: string) => {
     ok("el cuadro: modelos y razonamiento, permisos (con los que faltan), `/` comandos y skills, `@` archivos y carpetas, ramas base");
 
     const png = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
-    const path = await uploadAttachment(mac, "w-prod", "p-mac-api", { mime: "image/png", base64: png });
+    const path = await uploadAttachment(mac, "w-prod", "p-mac-api", { mime: "image/png", base64: png, name: "captura.png" });
     assert.match(path, /^\/lab\/attachments\//);
-    await assert.rejects(uploadAttachment(mac, "w-prod", "p-mac-api", { mime: "application/pdf", base64: png }), (e: HostError) => String(e.detail).includes("paste_unsupported_format"));
-    await sendToTask(mac, "w-prod", "p-mac-api", "t-mac-1", { prompt: "Mira la captura", provider: "claude", model: "claude-opus-5-5", effort: "high", permissionMode: "manual", attachments: [path] });
+    const pdf = await uploadAttachment(mac, "w-prod", "p-mac-api", { mime: "application/pdf", base64: png, name: "informe.pdf" });
+    assert.match(pdf, /informe\.pdf$/);
+    await sendToTask(mac, "w-prod", "p-mac-api", "t-mac-1", { prompt: "Mira la captura", provider: "claude", model: "claude-opus-5-5", effort: "high", permissionMode: "manual", attachments: [path, pdf] });
     const sent = (await loadTask(mac, "w-prod", "p-mac-api", "t-mac-1")).session.turns.filter((t) => t.role === "user").at(-1) as Record<string, unknown>;
-    assert.deepEqual([sent.text, sent.model, sent.effort, sent.permissionMode, sent.attachments], ["Mira la captura", "claude-opus-5-5", "high", "manual", [path]]);
-    ok("adjuntar una imagen del teléfono (guardar_imagen_pegada + prepare_attachments) y mandarla con modelo, razonamiento y permisos; un PDF no pasa");
+    assert.deepEqual([sent.text, sent.model, sent.effort, sent.permissionMode, sent.attachments], ["Mira la captura", "claude-opus-5-5", "high", "manual", [path, pdf]]);
+    ok("adjuntar una imagen y un PDF del teléfono (guardar_adjunto + prepare_attachments) y mandarlos con modelo, razonamiento y permisos");
 
     await injectIntoTask(mac, "w-prod", "p-mac-api", "t-mac-1", "y también esto");
     const shell = await runShell(mac, "w-prod", { folder: "p-mac-api", session: null, command: "ls", provider: "claude" });

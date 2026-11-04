@@ -96,6 +96,7 @@ export const WAKES_FIRST: ReadonlySet<string> = new Set([
   "set_task_archived",
   "finish_task",
   "guardar_imagen_pegada",
+  "guardar_adjunto",
   "prepare_attachments",
   "add_account",
   "remove_account",

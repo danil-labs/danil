@@ -1,12 +1,12 @@
-# Terminus móvil
+# Danil móvil
 
-Una app de iOS y Android para ver y dirigir Terminus desde el teléfono: qué
+Una app de iOS y Android para ver y dirigir Danil desde el teléfono: qué
 tareas te necesitan, aprobar o rechazar permisos, contestar preguntas, escribirle
 a una tarea o a un agente y crear tareas nuevas. No es un editor ni una terminal.
 
-Trabaja sobre las máquinas de la persona a través de **Danil Computers**: por
+Trabaja sobre las máquinas de la persona a través de **Danil Machines**: por
 omisión su VM administrada por Danil, y además cualquier otra máquina donde
-Terminus o su Seldon Host esté conectado a su cuenta (una Mac, otro VPS). Cada
+Danil o su Seldon Host esté conectado a su cuenta (una Mac, otro VPS). Cada
 máquina sigue siendo la dueña de sus tareas; el teléfono es otro cliente más,
 como la web.
 
@@ -40,7 +40,7 @@ como la web.
   que se escribe en vivo.
 - **Lista cerrada de comandos en los dos caminos** (`APP_COMMANDS` en
   `packages/protocol`): son funciones de ventana con el contrato renombrado.
-  El relay de Danil Computers solo bloquea las funciones de escritorio, así que
+  El relay de Danil Machines solo bloquea las funciones de escritorio, así que
   la lista la hace cumplir el cliente (`apps/mobile/src/lib/hosts.ts`, `command_not_allowed`);
   el bridge de desarrollo contesta 403 con la misma lista. Ver «Lista cerrada» abajo.
 - **La lista de tareas es la del sidebar del escritorio (#151)**, adaptada al
@@ -99,7 +99,7 @@ como la web.
 
 ## En el navegador
 
-La misma app se compila para web y vive dentro de Terminus web, en
+La misma app se compila para web y vive dentro de Danil web, en
 `/terminus/m/` (`apps/desktop/scripts/web-mobile.mjs`, último paso de
 `pnpm web:build`). La web de escritorio manda ahí a los teléfonos y cada una
 tiene un enlace a la otra («Ver la versión de escritorio» en la hoja de
@@ -117,9 +117,27 @@ workspaces, que va a la raíz que fijó la compilación,
   (no se cambian: obligaría a reinstalar) y `scope: "/"`, porque el inicio de
   sesión de Danil vive en `/` y en iOS fuera del scope abriría Safari aparte.
   La app de Danil tiene su propio manifest con `id: "/"`; el `id` distinto deja
-  instalar las dos. Sin service worker: `index.html` y el manifest se revalidan
-  y solo `_expo/static/*` (con hash) se guarda largo. En iOS la app instalada no
+  instalar las dos. `index.html`, el manifest y `sw.js` se revalidan y solo
+  `_expo/static/*` (con hash) se guarda largo. En iOS la app instalada no
   comparte almacenamiento con Safari: se inicia sesión una vez dentro de ella.
+- **Avisos push:** `apps/mobile/public/sw.js` solo muestra avisos (`push` y
+  `notificationclick`, sin `fetch` ni caché) y vive con scope `<base>m/`: en
+  app.danil.ai la raíz es del service worker de Appv2. Lo registra
+  `apps/mobile/src/lib/push.web.ts` cuando la persona activa «Avisos de tareas» en Cuenta de
+  Danil; la suscripción se guarda en Danil Machines, cuyo relay avisa cuando una
+  tarea termina, se detiene o pide algo, también con el navegador cerrado. El
+  aviso trae los identificadores y, si el relay ya leyó la carpeta, el nombre de
+  la tarea; la ruta (`?to=/task/…`) la arma el worker con los ids, nunca con el
+  texto. En Chrome hay una sola notificación por tarea (`tag`): la última
+  sustituye a la anterior y solo vuelve a sonar cuando la tarea pide algo y no
+  había nada suyo en pantalla; «terminó» se actualiza en silencio. Safari en
+  iPhone e iPad ignora `tag`, `renotify` y `silent`, así que no puede sustituir
+  ni callar: a esos dispositivos el relay no les manda `finished`, solo
+  `approving`, `asked`, `failed` y `sign_in`. Con la app abierta, el aviso local, la campana y el chat leen la clase
+  del turno (`sin_cupo`, la credencial, …) y dicen la misma frase que el
+  escritorio. El destino del aviso de inicio de sesión lo escribe el
+  build (`phoneWorker`). En iPhone solo funciona instalada en el inicio (iOS
+  16.4 o posterior). Cerrar sesión borra la suscripción antes de soltar el token.
 - **Lo que se recuerda:** `localStorage` en lugar del llavero (`store.web.ts`).
 - **Visualizaciones y archivos HTML:** el `iframe` de la ventana (`srcdoc`,
   `allow-scripts` sin `allow-same-origin`) en lugar del WebView. Un PDF no se
@@ -147,7 +165,7 @@ workspaces, que va a la raíz que fijó la compilación,
 
 ```
                                   ┌─▶ VM de Danil (conector)
-[App Expo] ──WSS + JWT──▶ [relay de Danil Computers] ─┤
+[App Expo] ──WSS + JWT──▶ [relay de Danil Machines] ─┤
      │                                               └─▶ Mac / VPS con Seldon Host
      └──HTTP + token (desarrollo)──▶ [bridge] ──RPC1──▶ [motor del lab]
 ```
@@ -182,9 +200,9 @@ Los avisos salen en la app, igual para los dos caminos: una tarea que entra en
 | `personalize` | Personalizar: secciones de Inicio, Filtrar (abre `filter`) y Agrupar |
 | `profile` | Menú de perfil: Cuenta de Danil, Tema, Mantener despierta, Configuración, Puertos y Almacenamiento |
 | `settings` | Configuración (Proveedores de IA, actividad, memoria, máquinas, bridge); con `section=account`, Cuenta de Danil |
-| `inbox`, `inbox-thread` | El Inbox de Danil Agents de solo lectura y su conversación |
+| `inbox`, `inbox-thread` | El Inbox de Danil web de solo lectura y su conversación |
 | `task-tools` | Herramientas del chat: sus subtareas |
-| `(home)/notifications` | «Ahora» de todas las máquinas y «Antes», lo que llegó con la app abierta |
+| `(home)/notifications` | «Ahora» de todas las máquinas y «Antes», lo que llegó con la app abierta. Si se detuvo, el subtítulo dice por qué (el cupo, la credencial), leído del turno sin encender la máquina |
 | `(home)/new` | Nueva tarea: el cuadro de escribir con «Ejecutar en» (la última usada, si no la VM), carpeta, rama base y agente; `!` la crea con un comando. La hoja de Carpeta termina en «Nueva carpeta» y «Clonar repo» (ver «Carpetas nuevas») |
 | `preview` | Menú de una tarea (⋯ o pulsación larga): PR, Abrir, Cambiarle el nombre, Fijar, Archivar, Eliminar y Finalizar con confirmación; el cohete de la lista abre directamente la confirmación |
 | `accounts` | Proveedores de IA: cuentas por proveedor y correo, consumo, máquinas, iniciar y cerrar sesión |
@@ -192,7 +210,7 @@ Los avisos salen en la app, igual para los dos caminos: una tarea que entra en
 | `agents` | Hoja «Ver todos» del dock |
 | `workspaces` | Cambiar de workspace: cada uno con sus máquinas y lo que te necesita (las máquinas, la cuenta y el bridge pasaron a `settings`) |
 | `agent/[workspace]/[name]` | Conversaciones con el agente y cuadro para empezar otra |
-| `task/[host]/[workspace]/[folder]/[id]` | Conversación en la máquina de la tarea: aprobaciones, preguntas y el cuadro de escribir (modelo, permisos, adjuntos, `/`, `@`, `!`, cola y detener) |
+| `task/[host]/[workspace]/[folder]/[id]` | Conversación en la máquina de la tarea: aprobaciones, preguntas y el cuadro de escribir (modelo, permisos, adjuntos, `/`, `@`, `!`, cola y detener). Un fallo muestra la frase de su clase y, si es el cupo o la credencial, el enlace a Cuentas |
 | `pair` | Bridge de desarrollo; también `terminus-mobile://pair?url=…&token=…` |
 | `auth/callback` | La vuelta del navegador del inicio con Google o Microsoft |
 
@@ -209,13 +227,15 @@ lleva su comentario allí:
 | Para qué | Lecturas | Acciones |
 |---|---|---|
 | Vista previa y finalizar | `task_blockers` | `set_session_pinned`, `rename_session`, `set_task_archived`, `finish_task`, `delete_session` |
-| Cuadro de escribir | `list_models`, `list_permission_modes`, `list_slash_menu`, `list_mentions`, `project_base_branches` | `run_shell_command`, `stop_shell_command`, `guardar_imagen_pegada`, `prepare_attachments`, `set_permission_mode` (cambiar el modo del turno en marcha; a automático aprueba lo pendiente) |
+| Cuadro de escribir | `list_models`, `list_permission_modes`, `list_slash_menu`, `list_mentions`, `project_base_branches` | `run_shell_command`, `stop_shell_command`, `guardar_adjunto`, `guardar_imagen_pegada` (motores anteriores), `prepare_attachments`, `set_permission_mode` (cambiar el modo del turno en marcha; a automático aprueba lo pendiente) |
+| Cambiar de proveedor (`provider_handoff_v1`) | `load_session` (con `can_hand_over` y `hand_over_blocked`) | `set_session_provider` (el siguiente turno abre sesión nueva o retoma la aparcada) |
 | Almacenamiento por máquina (en Consumos) | `list_workspaces` sin workspace para capacidad; `list_storage` al abrir el detalle del workspace | — |
 | Reloj del turno en curso | `list_live_turns` | — |
 | Identidad de agentes | `list_agent_profiles`, `preview_file` | — |
-| Cuentas de IA | `list_accounts`, `account_status`, `account_limits` | `add_account`, `login_account`, `submit_login_code`, `cancel_login`, `discard_account`, `remove_account` |
+| Cuentas de IA | `list_accounts`, `account_status`, `account_limits` | `add_account`, `login_account`, `submit_login_code`, `cancel_login`, `discard_account`, `remove_account`, `set_active_account` (el próximo turno corre con esta cuenta; no enciende la máquina) |
 | Fondo del chat | `chat_background` | — |
-| Chat enriquecido | `tree_show` (solo el árbol `terminus-chat-visuals`), `chat_visual_part`, `preview_file`, `attachment_preview` | — |
+| Chat enriquecido | `tree_show` (el árbol `terminus-chat-visuals`), `chat_visual_part`, `preview_file`, `attachment_preview` | — |
+| Archivos de la tarea | `list_task_trees`, `tree_files`, `tree_show` (cualquier árbol de la tarea, solo lectura) | — |
 | Carpetas nuevas | `get_project_directory`, `project_clone_status` | `create_project`, `start_project_clone`, `cancel_project_clone` |
 | Registros de actividad por máquina | `list_activity`, `read_activity`, `read_activity_log` | — |
 | PR en la tarjeta | `list_session_git` (por carpeta, con las visibles en `priority`) | — |
@@ -277,11 +297,12 @@ en otra máquina lleva su trabajo sin subir con `@terminus/carry`
 trabajo de vuelta. `work_import` y `work_cancel` son intenciones del relay; las
 partes no. Sin comprobar en el simulador.
 
-**Adjuntos.** El único camino del motor para un archivo que viene de otro
-cliente es el de pegar una imagen (`guardar_imagen_pegada`, en base64): solo
-PNG, JPEG, WebP y GIF, hasta 25 MiB, y el socket corta en 16 MiB por mensaje.
-El teléfono adjunta fotos y archivos de imagen de hasta 11 MB; un PDF u otro
-archivo no viaja por el relay (haría falta un comando del motor para eso).
+**Adjuntos.** El camino del motor para un archivo que viene de otro cliente es
+`guardar_adjunto` (en base64): imágenes PNG, JPEG, WebP y GIF y documentos PDF,
+texto, Office y OpenDocument, con el nombre original y un tope de 25 MiB. El
+socket corta en 16 MiB por mensaje, así que el teléfono se queda en 11 MB. Un
+motor anterior no anuncia `attachment_documents_v1` y el teléfono solo le manda
+imágenes por `guardar_imagen_pegada`.
 
 **Inicio de sesión sin pantalla** (#67 del motor): `add_account` deja la
 cuenta vacía y `login_account` con modo `tuberia` arranca el CLI; los eventos
@@ -293,7 +314,7 @@ una cuenta que llegó a autenticarse.
 
 ## Probarla
 
-Sin la sesión de nadie, contra el Danil Computers falso (`apps/mobile/scripts/fake-computers.mjs`:
+Sin la sesión de nadie, contra el Danil Machines falso (`apps/mobile/scripts/fake-computers.mjs`:
 login de Supabase, `/v1/computers`, `/start` y el relay con espejo, con una VM
 apagada y una Mac propia que comparten un workspace, cada motor con sus ids;
 además fijar y archivar, el cuadro de escribir, adjuntos con las reglas del
@@ -308,7 +329,7 @@ EXPO_PUBLIC_SUPABASE_URL=http://<ip>:8787 EXPO_PUBLIC_COMPUTERS_ENDPOINT=http://
 ```
 
 En la app se entra con cualquier correo y contraseña. `--mac-off` apaga la Mac;
-`--license` simula una cuenta sin Terminus.
+`--license` simula una cuenta sin licencia de pago.
 
 El camino de desarrollo con el motor del lab sigue igual:
 
@@ -345,8 +366,10 @@ de 48 o más, segmentado, chips), `apps/mobile/src/ui/Popover.tsx` (menú anclad
   Archivadas en Buscar. Mover una tarea a otro espacio (`move_task_to_space`)
   y el árbol de trabajo del chat todavía no están en la lista y no se ven.
 - El chat lleva bajo el título la fila máquina / carpeta / rama con buscar en
-  el chat, subtareas y la barra de uso de la cuenta del proveedor (detalle con
-  sus ventanas, Actualizar y Gestionar cuentas). La memoria de la conversación
+  el chat, subtareas y la barra de uso de la cuenta activa del proveedor
+  (mide la ventana que corre ahora, la de cinco horas, no la más apretada;
+  detalle con sus ventanas, cuál está en uso, Usar esta para cambiarla,
+  Actualizar y Gestionar cuentas). La memoria de la conversación
   (`session_usage`) no está en la lista cerrada.
 - La ficha del workspace (cabecera de Inicio y filas de Workspaces) pinta su
   logo de la cuenta (`logo_url` de `GET /v1/workspaces`), leído con la sesión y

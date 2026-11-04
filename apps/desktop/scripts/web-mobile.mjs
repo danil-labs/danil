@@ -11,10 +11,10 @@
  * Al final escribe el manifest de la PWA y sus cabeceras (`web-phone-pwa.mjs`).
  */
 import { spawnSync } from "node:child_process";
-import { appendFileSync, existsSync, writeFileSync } from "node:fs";
+import { appendFileSync, existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { PHONE_DIR, phoneHeaders, phoneManifest } from "./web-phone-pwa.mjs";
+import { PHONE_DIR, phoneHeaders, phoneManifest, phoneWorker } from "./web-phone-pwa.mjs";
 
 const env = process.env;
 const mobile = fileURLToPath(new URL("../../mobile/", import.meta.url));
@@ -38,9 +38,10 @@ const expoEnv = {
   // La raíz de la web de escritorio, para «Ver la versión de escritorio» sin adivinarla de la ruta.
   EXPO_PUBLIC_TERMINUS_WEB_BASE: base,
   EXPO_PUBLIC_TERMINUS_ALPHA: env.TERMINUS_WEB_ALPHA === "1" ? "1" : "0",
-  EXPO_PUBLIC_COMPUTERS_ENDPOINT: origin(env.TERMINUS_WEB_ENDPOINT || "https://computers.danil.ai"),
+  EXPO_PUBLIC_COMPUTERS_ENDPOINT: origin(env.TERMINUS_WEB_ENDPOINT || "https://machines.danil.ai"),
   EXPO_PUBLIC_TERMINUS_WEB_LOGIN: env.TERMINUS_WEB_LOGIN || `${base}auth`,
   EXPO_PUBLIC_TERMINUS_WEB_WORKOS: env.TERMINUS_WEB_WORKOS === "1" ? "1" : "0",
+  EXPO_PUBLIC_TERMINUS_PUSH_TEST: env.TERMINUS_WEB_PUSH_TEST === "1" ? "1" : "0",
   ...(env.TERMINUS_WEB_SUPABASE_URL ? { EXPO_PUBLIC_SUPABASE_URL: origin(env.TERMINUS_WEB_SUPABASE_URL) } : {}),
   ...(env.TERMINUS_WEB_SUPABASE_KEY ? { EXPO_PUBLIC_SUPABASE_KEY: env.TERMINUS_WEB_SUPABASE_KEY.trim() } : {}),
 };
@@ -53,6 +54,7 @@ const run = spawnSync(npx, ["expo", "export", "--platform", "web", ...(env.TERMI
 });
 if (run.status !== 0) process.exit(run.status ?? 1);
 
+writeFileSync(join(out, "sw.js"), phoneWorker(readFileSync(join(out, "sw.js"), "utf8"), expoEnv.EXPO_PUBLIC_TERMINUS_WEB_LOGIN, base));
 writeFileSync(join(out, "manifest.webmanifest"), `${JSON.stringify(phoneManifest(base), null, 2)}\n`);
 appendFileSync(join(root, "_headers"), `\n${phoneHeaders(base).join("\n")}`);
 console.log(`web-mobile: ${out}`);

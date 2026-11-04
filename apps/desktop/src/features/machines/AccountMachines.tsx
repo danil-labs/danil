@@ -1,4 +1,5 @@
 import { type Accessor, For, Show, createSignal } from "solid-js";
+import { SignalDot } from "../../ui/SignalDot";
 import X from "lucide-solid/icons/x";
 import { t } from "../../lib/i18n";
 import { invoke } from "../../lib/invoke.ts";
@@ -42,7 +43,7 @@ export default function AccountMachines(props: AccountMachinesProps & { machines
               data-on={on() ? "true" : "false"}
               title={on() ? t("web.computers.state.online") : t("web.computers.state.offline")}
             >
-              <span aria-hidden="true" class={`size-1.5 shrink-0 rounded-full ${on() ? "bg-success" : "bg-neutral-300"}`} />
+              <SignalDot tone={on() ? "success" : "off"} />
               <span class="max-w-[140px] truncate">{name()}</span>
               <Show
                 when={asking() === m.id}
@@ -83,7 +84,7 @@ export default function AccountMachines(props: AccountMachinesProps & { machines
                   data-sign-in-on={m.id}
                   onSelect={() => void props.add({ headers: { "x-terminus-machine": m.id } })}
                 >
-                  <span aria-hidden="true" class={`size-1.5 shrink-0 rounded-full ${m.status === "online" ? "bg-success" : "bg-neutral-300"}`} />
+                  <SignalDot tone={m.status === "online" ? "success" : "off"} />
                   <span class="truncate">{m.name}</span>
                 </DropdownMenuItem>
               )}

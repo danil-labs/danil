@@ -1,3 +1,4 @@
+import { SignalDot } from "../../ui/SignalDot";
 import CircleUserRound from "lucide-solid/icons/circle-user-round";
 import { createEffect, createSignal, type JSX, on, onCleanup, onMount, Show } from "solid-js";
 import { t } from "../../lib/i18n";
@@ -128,13 +129,7 @@ function Entry(props: {
           <AccountAvatar profile={props.profile} class="size-5 text-2xs" />
         </Show>
         <Show when={props.online !== null}>
-          <span
-            aria-hidden="true"
-            class={cn(
-              "absolute -right-0.5 -bottom-0.5 size-2 rounded-full border border-surface-raised",
-              props.online ? "bg-success" : "bg-neutral-300",
-            )}
-          />
+          <SignalDot tone={props.online ? "success" : "off"} class="absolute -right-0.5 -bottom-0.5" />
         </Show>
       </span>
       <Show when={!props.collapsed}>

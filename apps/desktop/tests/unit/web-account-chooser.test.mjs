@@ -27,7 +27,7 @@ test("«Agregar cuenta» offers the accounts already signed in before another on
   let storage = null;
   const app = await boot("listo", "web-account-chooser", {}, undefined, {}, {
     web: true,
-    antes: (w) => {
+    beforeImport: (w) => {
       storage = w.localStorage;
       w.terminusWeb = {
         addAccount: {
@@ -77,7 +77,7 @@ test("«Agregar cuenta» offers the accounts already signed in before another on
 test("with no account here, «Agregar cuenta» goes straight to the form", async () => {
   const app = await boot("listo", "web-account-chooser-empty", {}, undefined, {}, {
     web: true,
-    antes: (w) => {
+    beforeImport: (w) => {
       w.terminusWeb = {
         addAccount: { storage: w.localStorage, accounts: [], clientFor: () => null, home: "https://app.danil.ai/terminus/", email: null, callback: null, code: null, error: null },
       };

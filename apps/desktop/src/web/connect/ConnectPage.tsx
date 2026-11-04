@@ -8,6 +8,7 @@ import { BrowserAccount } from "../BrowserAccount";
 import "../phrases";
 import { AccessRequest } from "../auth/AccessRequest";
 import { approveDevice, denyDevice, type DeviceAnswer, type DeviceRequest, lookupDevice } from "./devices";
+import { type DesktopHandoff, finishDesktop } from "./desktop";
 
 export type ConnectView =
   | { t: "loading" }
@@ -24,8 +25,8 @@ export type ConnectView =
   | { t: "done" }
   | { t: "denied" };
 
-/** `app.danil.ai/terminus/connect?code=…`: approves a Terminus that asked to join this account. */
-export function ConnectPage(props: { session: Session; endpoint: string; code: string }) {
+/** `alfa-app.danil.ai/connect?code=…`: approves a Terminus that asked to join this account. */
+export function ConnectPage(props: { session: Session; endpoint: string; code: string; desktop?: DesktopHandoff | null }) {
   const [view, setView] = createSignal<ConnectView>(props.code ? { t: "loading" } : { t: "missing" });
   const [name, setName] = createSignal("");
 
@@ -58,7 +59,10 @@ export function ConnectPage(props: { session: Session; endpoint: string; code: s
     const answer = await withToken((token) => approveDevice(props.endpoint, token, props.code, chosen)).catch(() => null);
     if (!answer) return;
     if (answer.kind !== "ok") return refused(answer);
+    // La ventana recibe su sesión solo con el dispositivo ya aprobado.
+    const back = props.desktop ? await finishDesktop(props.desktop, window.location.origin) : null;
     setView({ t: "done" });
+    if (back) window.location.assign(back);
   }
 
   async function deny(device: DeviceRequest) {

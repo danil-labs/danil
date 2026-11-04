@@ -7,7 +7,7 @@ import { lang, w } from "../lib/i18n";
 import { useMachines } from "../lib/machines";
 import { useWorkspaces } from "../lib/workspaces";
 import { SheetTitle } from "../ui/components";
-import { FolderSquare } from "../ui/TaskCard";
+import { FolderIcon } from "../ui/FolderIcon";
 import { useTheme } from "../ui/theme";
 
 /**
@@ -69,7 +69,7 @@ export default function Filter() {
       </Option>
       {folders.map((f) => (
         <Option key={f.key} testID={`filter-folder-${f.id}`} check on={view.folders.includes(f.key)} onPress={() => toggleFolder(f.key)} aside={counts.get(f.key) ?? 0}>
-          <FolderSquare id={f.key} size={10} />
+          <FolderIcon folder={f} size={13} />
           {text(several ? `${f.name} · ${hostLabel(f.host)}` : f.name)}
         </Option>
       ))}

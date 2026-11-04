@@ -1,4 +1,5 @@
 import { For, Show, Suspense, createSignal, lazy, onCleanup, onMount } from "solid-js";
+import { SignalDot } from "../../ui/SignalDot";
 import { listen } from "../../lib/serviceEvents";
 import { invoke } from "../../lib/invoke.ts";
 import { Button } from "../../ui/Button";
@@ -6,6 +7,8 @@ import { Textarea } from "../../ui/Textarea";
 import { FailureNote, asFailure, type Failure } from "../../ui/Failure";
 import { cn } from "../../lib/utils";
 import { MarcaProveedor, McpMark } from "../../ui/icons";
+import { MarcaServicio } from "../../ui/marcas";
+import { toolMarkId } from "@terminus/design";
 import { t } from "../../lib/i18n";
 import { prosa, type Frase } from "../../lib/prose";
 import { ITEM_DE_MENU, Popover, PopoverContent, PopoverTrigger } from "../../ui/Popover";
@@ -879,7 +882,7 @@ export default function Herramientas(props: { solo?: string | string[] }) {
                     </span>
                     <Show when={p.managed}>
                       <Badge forma="dato" class="shrink-0">
-                        {t("settings.tools.radiant")}
+                        {t("settings.tools.harness")}
                       </Badge>
                     </Show>
                     <Button
@@ -994,12 +997,15 @@ export function ConexionesMenu(props: {
    * entero es el botón que la inicia; el punto rojo solo lo señala.
    */
   const Renglon = (p: { name: string; label: string; marca?: string; detalle?: string; muerto?: boolean }) => {
+    // Sin grupo (el CLI de Danil, uno pegado a mano) el nombre del servidor
+    // sigue diciendo de qué servicio es; sin esto la fila queda sin marca.
+    const marca = () => toolMarkId(p.marca ?? p.name);
     const pide = () => pendientes().has(p.name);
     const estado = () => mcpSignInState(p.name);
     const aviso = () => (estado() === "retry" ? t("mcp.task.sign_in_again") : t("mcp.task.sign_in"));
     const contenido = () => (
       <>
-        <Show when={p.marca}>{(g) => <MarcaProveedor id={g()} size={14} />}</Show>
+        <Show when={marca()}>{(id) => <MarcaServicio id={id()} size={14} />}</Show>
         <span class="min-w-0 flex-1 truncate">{p.label}</span>
       </>
     );
@@ -1011,10 +1017,7 @@ export function ConexionesMenu(props: {
             <div class="flex min-h-8 items-center gap-2 px-2 py-1 text-ui" title={p.detalle || undefined}>
               {contenido()}
               {/* Ámbar si está muerto, verde si está puesto y sano. */}
-              <span
-                class={cn("size-1.5 shrink-0 rounded-full", p.muerto ? "bg-warning-strong" : "bg-success-strong")}
-                title={p.muerto ? t("settings.tools.dead_now") : undefined}
-              />
+              <SignalDot tone={p.muerto ? "warning" : "success"} title={p.muerto ? t("settings.tools.dead_now") : undefined} />
             </div>
           }
         >
@@ -1034,7 +1037,7 @@ export function ConexionesMenu(props: {
             {contenido()}
             <Show
               when={estado() === "waiting"}
-              fallback={<span class="size-1.5 shrink-0 rounded-full bg-error-strong" />}
+              fallback={<SignalDot tone="error" />}
             >
               <span class="shrink-0 text-caption text-neutral-500">
                 {mcpLoginUrl() ? t("settings.tools.open_login") : t("settings.tools.opening")}
@@ -1070,7 +1073,7 @@ export function ConexionesMenu(props: {
             <McpMark size={props.triggerClass ? 16 : 14} />
             {/* Sin contador: solo el punto, arriba, cuando alguno pide sesión. */}
             <Show when={pendientes().size > 0}>
-              <span class="absolute top-0.5 right-0.5 size-1.5 rounded-full bg-error-strong" />
+              <SignalDot tone="error" class="absolute top-0.5 right-0.5" />
             </Show>
           </Button>
         )}

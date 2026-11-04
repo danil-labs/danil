@@ -88,12 +88,13 @@ fn installed_resources(root: &Path) -> Result<PathBuf> {
     {
         let appdir = PathBuf::from(appdir);
         // `work-tools.py` deja ahí los recursos con su inventario, fuera del alcance de linuxdeploy.
-        let prepared = appdir.join("usr/share/Terminus");
+        // Carpeta y productName coinciden; `scripts/guards/product-name.mjs` lo exige.
+        let prepared = appdir.join("usr/share/Danil");
         if prepared.join(super::resources::INVENTORY).is_file() {
             return Ok(super::resources::materialize(&prepared, root)?);
         }
         // productName de tauri.conf.json: el bundle de Linux pone ahí los recursos.
-        let mounted = appdir.join("usr/lib/Terminus");
+        let mounted = appdir.join("usr/lib/Danil");
         let copy = root.join("resources");
         super::legacy::mirror(&mounted, &copy)?;
         return Ok(copy);

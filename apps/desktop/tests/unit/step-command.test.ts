@@ -17,11 +17,13 @@ import { clasificar, comando } from "../../src/lib/steps.ts";
  * ahí el comando tiene que ser el que se ejecutó de verdad.
  */
 
-test("quita los dos envoltorios cuando vienen juntos", () => {
-  // Es el caso real de Codex dentro de una carpeta de trabajo.
+test("el intérprete sale del comando y la carpeta de trabajo se queda", () => {
+  // Es el caso real de Codex dentro de una carpeta de trabajo: el cuerpo
+  // desplegado es la transcripción, y el `cd` es parte de lo que corrió. La
+  // fila, en cambio, se nombra con `commandSummary` («cargo test»).
   assert.equal(
     comando(`/bin/zsh -lc "cd \\"/Users/x/work\\" && cargo test"`),
-    "cargo test",
+    'cd "/Users/x/work" && cargo test',
   );
 });
 

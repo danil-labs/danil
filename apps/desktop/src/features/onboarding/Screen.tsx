@@ -10,10 +10,8 @@ export const SaltarAlta = createContext<(() => Promise<void>) | undefined>();
 /** Una pantalla del alta: título, contenido desplazable y el pie con Atrás y la acción. */
 export function Pantalla(props: {
   titulo: string;
-  lede: string;
   amplia?: boolean;
   children: JSX.Element;
-  pie: string;
   atras?: () => void;
   atrasRotulo?: string;
   primario: { rotulo: string; onClick: () => void; disabled?: boolean; variant?: "primary" | "secondary" };
@@ -44,11 +42,10 @@ export function Pantalla(props: {
           <h1
             ref={titulo}
             tabindex="-1"
-            class="m-0 text-3xl leading-tight font-display font-bold tracking-[-0.03em] text-neutral-950 outline-none"
+            class="mt-0 mb-8 text-3xl leading-tight font-display font-bold tracking-[-0.03em] text-neutral-950 outline-none"
           >
             {props.titulo}
           </h1>
-          <p class="m-0 mt-3 mb-8 max-w-[52ch] text-sm text-neutral-500">{props.lede}</p>
           {props.children}
           <Show when={props.error ?? falloAlSaltar()}>
             {(e) => (
@@ -67,7 +64,6 @@ export function Pantalla(props: {
             </Button>
           )}
         </Show>
-        <p class="m-0 text-xs text-neutral-500">{props.pie}</p>
         <span class="flex-1" />
         <Show when={saltar}>
           {(s) => (

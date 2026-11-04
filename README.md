@@ -1,33 +1,34 @@
-# Terminus
+# Danil
 
-A desktop agentic development environment. Terminus runs terminal agents
+Danil is a desktop agentic development environment. It runs terminal agents
 (Claude Code, Codex and others) against your organization's repositories and
 answers in plain language — for people who need those answers but don't write
 code.
 
-**[terminus.danil.ai](https://terminus.danil.ai)**
+**[danil.ai/download](https://danil.ai/download/)**
 
-This repository holds the **Terminus window**: the desktop app (Tauri + SolidJS)
+This repository holds the **Danil window**: the desktop app (Tauri + SolidJS)
 and its release tooling. The **engine** that runs projects, tasks and agents,
 `seldon-runtime`, is a proprietary binary by Danil; it is not in this
 repository and is downloaded pinned by version and SHA-256.
 
 ## Install
 
-Download the latest installer:
+Download the latest installer from [danil.ai/download](https://danil.ai/download/):
 
-- **[Terminus-Windows-Setup.exe](https://github.com/danil-labs/terminus/releases/latest/download/Terminus-Windows-Setup.exe)** — Windows 10 or 11, 64-bit
-- **[Terminus-macOS.dmg](https://github.com/danil-labs/terminus/releases/latest/download/Terminus-macOS.dmg)** — macOS, Apple Silicon and Intel
-- **[Terminus-Linux-x86_64.AppImage](https://github.com/danil-labs/terminus/releases/latest/download/Terminus-Linux-x86_64.AppImage)** — Linux x86_64 (Ubuntu 22.04 or later)
+- **[Danil-Windows-Setup.exe](https://danil.ai/download/Danil-Windows-Setup.exe)** — Windows 10 or 11, 64-bit
+- **[Danil-macOS.dmg](https://danil.ai/download/Danil-macOS.dmg)** — macOS, Apple Silicon and Intel
+- **[Danil-Linux-x86_64.AppImage](https://danil.ai/download/Danil-Linux-x86_64.AppImage)** — Linux x86_64 (Ubuntu 22.04 or later)
 
-The macOS DMG is universal. `Terminus-macOS-Intel.dmg` is an alias with the
-same file.
+The macOS DMG is universal. `Danil-macOS-Intel.dmg` is an alias with the
+same file. Until 0.2.x the app was called Terminus; a copy installed with that
+name updates in place and keeps its folder.
 
 On Linux there is nothing to install: the AppImage is a portable executable.
 
 ```sh
-chmod +x Terminus-Linux-x86_64.AppImage
-./Terminus-Linux-x86_64.AppImage
+chmod +x Danil-Linux-x86_64.AppImage
+./Danil-Linux-x86_64.AppImage
 ```
 
 It needs `libfuse2` (Ubuntu: `sudo apt install libfuse2`). Without it, run it
@@ -46,6 +47,15 @@ While the certificate builds reputation, SmartScreen may warn the first time:
 **More info → Run anyway**. The macOS app is signed and notarized with the same
 company's Developer ID. The `npx` path also verifies the minisign signature the
 app uses to update itself. Its code is in [`apps/desktop/npx/`](apps/desktop/npx).
+
+## Operational CLI
+
+`danil` is the primary command; `dn` is its official abbreviation. These are
+the only operational command names. The physical desktop executable keeps its
+distribution identity and forwards CLI calls internally. The npm command above
+installs the desktop app; it is not the operational CLI.
+See [CLI installation and compatibility](apps/desktop/docs/danil-cli.md)
+for explicit launcher installation, collision checks and engine dependencies.
 
 ## Build from source
 
@@ -68,13 +78,13 @@ pnpm engine:start            # starts the engine with throwaway data and opens t
 
 `pnpm engine:start` keeps everything under `apps/desktop/.engine/lab/`: its own data
 directory, HOME and temp folder, and the engine identity `ai.danil.seldon.dev`.
-It never touches the data, keychain or accounts of an installed Terminus. Stop
+It never touches the data, keychain or accounts of an installed Danil. Stop
 the engine with `pnpm engine:stop` (it also stops by itself five minutes after
 the last window closes). `node scripts/engine.mjs help` lists every command.
 
 The engine is published as a prerelease of this repository
-([`seldon-runtime-v0.2.73-4b8714c`](https://github.com/danil-labs/terminus/releases/tag/seldon-runtime-v0.2.73-4b8714c)).
-By downloading it you accept its [terms](https://github.com/danil-labs/terminus/releases/download/seldon-runtime-v0.2.73-4b8714c/TERMS.md).
+([`seldon-runtime-v0.2.73-4b8714c`](https://github.com/danil-labs/danil/releases/tag/seldon-runtime-v0.2.73-4b8714c)).
+By downloading it you accept its [terms](https://github.com/danil-labs/danil/releases/download/seldon-runtime-v0.2.73-4b8714c/TERMS.md).
 The lock pins builds for Windows x86_64, macOS arm64/x86_64 and Linux x86_64.
 To use a local engine build instead, run
 `node scripts/engine.mjs download --from <path>`.
@@ -117,7 +127,7 @@ packages/design           task states, marks, words, colors and the type scale b
 packages/tasks            the task list both apps derive: flat list, filter, two-line card, agents dock
 packages/chat             how every client reads an agent message: links, visuals, next steps, tool steps
 packages/attention        Inbox, channels, customization and support access from any client
-packages/computers        Danil Computers client: control-plane API, relay session, wake rules
+packages/computers        Danil Machines client: control-plane API, relay session, wake rules
 packages/fleet            several machines behind one panel: envelope, per-machine slices, merge
 packages/carry            carrying work between machines: what travels, parts, base of the new task
 packages/protocol         the commands the mobile app may send to a machine, and their answers
@@ -139,14 +149,15 @@ and generated dependency notices.
 
 The `seldon-runtime` engine is proprietary software by Danil and is not covered
 by this license. Its terms and third-party notices are published with each
-engine release: [TERMS.md](https://github.com/danil-labs/terminus/releases/download/seldon-runtime-v0.2.73-4b8714c/TERMS.md) and
-[third-party notices by platform](https://github.com/danil-labs/terminus/releases/tag/seldon-runtime-v0.2.73-4b8714c)
+engine release: [TERMS.md](https://github.com/danil-labs/danil/releases/download/seldon-runtime-v0.2.73-4b8714c/TERMS.md) and
+[third-party notices by platform](https://github.com/danil-labs/danil/releases/tag/seldon-runtime-v0.2.73-4b8714c)
 for the version pinned in `apps/desktop/seldon-runtime.lock`.
 
-"Terminus", "Danil" and their logos are trademarks of Danil;
-the license does not grant permission to use them. Forks must use their own
+"Danil" and its logo are trademarks of Danil. Some installers and installed
+identifiers still carry the Terminus name, also a trademark of Danil; the
+license does not grant permission to use either. Forks must use their own
 name, icons and update endpoint.
 
 ---
 
-Terminus is made by [Danil](https://danil.ai).
+Made by [Danil](https://danil.ai).

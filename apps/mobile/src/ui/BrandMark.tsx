@@ -1,7 +1,8 @@
 import { useTheme } from "./theme";
-import { AGENT_MARKS, agentMarkId } from "@terminus/design";
+import { AGENT_MARKS, agentMarkId, toolMarkId, toolMonogram } from "@terminus/design";
+import { TOOL_MARKS } from "@terminus/design/toolMarksData";
 import { useId } from "react";
-import Svg, { Defs, FeGaussianBlur, Filter, G, Mask, Path } from "react-native-svg";
+import Svg, { Defs, FeGaussianBlur, Filter, G, Mask, Path, Rect, Text as SvgText } from "react-native-svg";
 
 /**
  * La marca de un proveedor por su id, como `MarcaAgente` del escritorio: los
@@ -44,6 +45,35 @@ export function BrandMark({ id, size = 14, color }: { id: string | null | undefi
           <Path key={i} d={p.d} fill={p.fill ?? color} />
         ))}
       </G>
+    </Svg>
+  );
+}
+
+/**
+ * La marca del servicio que prestó una herramienta, como `MarcaHerramienta`
+ * del escritorio. Sin marca conocida pinta una baldosa con la inicial: no
+ * afirma un dueño que no sabemos, y el renglón escribe el nombre igual.
+ */
+export function ToolBrandMark({ server, size = 14, color }: { server: string; size?: number; color: string }) {
+  const dark = useTheme().dark;
+  const which = toolMarkId(server);
+  if (!which) {
+    return (
+      <Svg width={size} height={size} viewBox="0 0 14 14">
+        <Rect width="14" height="14" rx="3.5" fill={color} fillOpacity={0.14} />
+        <SvgText x="7" y="10.4" textAnchor="middle" fontSize="8.5" fontWeight="600" fill={color} fillOpacity={0.85}>
+          {toolMonogram(server)}
+        </SvgText>
+      </Svg>
+    );
+  }
+  const mark = TOOL_MARKS[which];
+  const paths = dark && mark.dark ? mark.dark : mark.paths;
+  return (
+    <Svg width={size} height={size} viewBox={mark.viewBox}>
+      {paths.map((p, i) => (
+        <Path key={i} d={p.d} fill={p.fill ?? color} />
+      ))}
     </Svg>
   );
 }

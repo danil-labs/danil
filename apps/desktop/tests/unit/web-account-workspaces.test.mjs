@@ -11,7 +11,7 @@ import { engine, fleet } from "../helpers/fake-relay.mjs";
 import { boot, sleep } from "../helpers/jsdom-app.mjs";
 
 const SUPABASE = "https://supabase.test";
-const API = "https://computers.danil.ai/v1/computers";
+const API = "https://machines.danil.ai/v1/computers";
 const session = JSON.stringify({
   access_token: "stored",
   refresh_token: "r",
@@ -56,7 +56,7 @@ test("the account's workspaces show with their machines asleep, not the create-w
   const app = await boot("listo", "web-account-workspaces", {}, undefined, {}, {
     web: true,
     workspaces: REGISTRY,
-    antes: (w) => {
+    beforeImport: (w) => {
       globalThis.WebSocket = f.Socket;
       w.terminusWeb = { endpoint: "https://relay.test", computers: [VM, MAC], getToken: async () => "tok" };
     },
@@ -89,7 +89,7 @@ test("the account's workspaces show with their machines asleep, not the create-w
   assert.equal(id, "cmp_vm~t9", "the new task is the VM's");
   assert.equal(calls("cmp_vm", "send_message").length, 1, "it goes to the VM, which wakes");
   assert.equal(calls("cmp_mac", "send_message").length, 0);
-  assert.deepEqual(app.fallos, []);
+  assert.deepEqual(app.failures, []);
 });
 
 test("with no linked workspace on any computer the gate still opens when the account has one", async () => {
@@ -104,7 +104,7 @@ test("with no linked workspace on any computer the gate still opens when the acc
     const app = await boot("listo", "web-account-workspaces-gate", {}, undefined, { "sb-supabase-auth-token": session }, {
       web: true,
       workspaces: REGISTRY,
-      antes: (w) => {
+      beforeImport: (w) => {
         globalThis.WebSocket = f.Socket;
         w.terminusWeb = { supabaseUrl: SUPABASE, supabaseKey: "public-anon-key" };
       },
@@ -113,7 +113,7 @@ test("with no linked workspace on any computer the gate still opens when the acc
     const doc = app.w.document;
     assert.equal(doc.querySelector("[data-web-gate]"), null, "the gate let the app in");
     assert.equal(doc.querySelector("[data-web-onboarding]"), null, "and the app opens no onboarding");
-    assert.deepEqual(app.fallos, []);
+    assert.deepEqual(app.failures, []);
   } finally {
     globalThis.fetch = own;
   }

@@ -1,5 +1,5 @@
 /**
- * El cliente del socket de sesión de Danil Computers (protocolo v1,
+ * El cliente del socket de sesión de Danil Machines (protocolo v1,
  * «Navegador/escritorio ↔ relay»): call/result, subscribe/events, state y
  * ping/pong sobre un WebSocket que se reconecta con un token fresco.
  *

@@ -23,7 +23,7 @@ const TAILWIND_CONTINUA = /\banimate-(?:ping|bounce)(?![\w-])/g;
 /** Una animación escrita en la clase, `animate-[nombre_1s_infinite]`. */
 const CLASE_ARBITRARIA = /\banimate-\[([^\]]+)\]/g;
 
-const fallos = [];
+const failures = [];
 for (const f of walkFiles(RAIZ, [".css"])) {
   const fuente = readFileSync(f, "utf8").replace(/\/\*[\s\S]*?\*\//g, (c) => c.replace(/[^\n]/g, " "));
   for (const m of fuente.matchAll(DECLARACION)) {
@@ -31,26 +31,26 @@ for (const f of walkFiles(RAIZ, [".css"])) {
     if (!/\binfinite\b/.test(valor) || POR_PASOS.test(valor)) continue;
     if (valor.split(/\s+/).some((palabra) => KEYFRAMES_PERMITIDOS.has(palabra))) continue;
     const linea = fuente.slice(0, m.index).split("\n").length;
-    fallos.push(`${relative(RAIZ, f)}:${linea}  ${valor}`);
+    failures.push(`${relative(RAIZ, f)}:${linea}  ${valor}`);
   }
 }
 
 for (const f of walkFiles(RAIZ, [".ts", ".tsx"])) {
   const fuente = readFileSync(f, "utf8");
   const clave = relative(RAIZ, f).replaceAll("\\", "/");
-  for (const m of fuente.matchAll(TAILWIND_CONTINUA)) fallos.push(`${clave}  ${m[0]}`);
+  for (const m of fuente.matchAll(TAILWIND_CONTINUA)) failures.push(`${clave}  ${m[0]}`);
   for (const m of fuente.matchAll(CLASE_ARBITRARIA)) {
     const valor = m[1].replaceAll("_", " ");
-    if (/\binfinite\b/.test(valor) && !POR_PASOS.test(valor)) fallos.push(`${clave}  ${m[0]}`);
+    if (/\binfinite\b/.test(valor) && !POR_PASOS.test(valor)) failures.push(`${clave}  ${m[0]}`);
   }
 }
 
-if (fallos.length === 0) {
+if (failures.length === 0) {
   console.log("Ninguna animación infinita nueva repinta la ventana a 60 cuadros por segundo.");
   process.exit(0);
 }
 
-for (const f of fallos) console.error(`Animación infinita continua — ${f}`);
+for (const f of failures) console.error(`Animación infinita continua — ${f}`);
 console.error(
   "\nMientras esté en pantalla, WebKit recompone la ventana a 60 cuadros por segundo.\n" +
     "Usa `steps()` —o los tokens `animate-spin`, `animate-pulse` y `animate-skeleton`— y, si\n" +

@@ -1,7 +1,7 @@
 /**
  * El front de `dist/` montado en jsdom, con el IPC de Tauri stubeado.
  *
- * Lo comparten `mount-frontend.mjs`, que afirma que el árbol pinta, y
+ * Lo comparten los guardas `mount-*.mjs`, que afirman que el árbol pinta, y
  * `open-task-cost.mjs`, que cuenta cuánto trabajo cuesta abrir una tarea. Un
  * arranque por guarda divergiría, y el contador dejaría de medir el árbol que el
  * otro guarda da por bueno.
@@ -13,16 +13,16 @@ import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { JSDOM, VirtualConsole } from "jsdom";
 
-const raiz = join(dirname(fileURLToPath(import.meta.url)), "../..");
-export const dist = join(raiz, "dist");
+const rootDir = join(dirname(fileURLToPath(import.meta.url)), "../..");
+export const dist = join(rootDir, "dist");
 
 if (!existsSync(join(dist, "index.html"))) {
   console.error("No hay dist/. Corre `pnpm build` antes que este guarda.");
   process.exit(1);
 }
 
-const indice = readFileSync(join(dist, "index.html"), "utf8");
-const bundle = /<script\b[^>]*\bsrc="\/assets\/([^"?]+\.js)"/.exec(indice)?.[1];
+const indexHtml = readFileSync(join(dist, "index.html"), "utf8");
+const bundle = /<script\b[^>]*\bsrc="\/assets\/([^"?]+\.js)"/.exec(indexHtml)?.[1];
 if (!bundle || !existsSync(join(dist, "assets", bundle))) {
   console.error("No está el script principal de dist/. Corre `pnpm build` antes que este guarda.");
   process.exit(1);
@@ -31,7 +31,7 @@ if (!bundle || !existsSync(join(dist, "assets", bundle))) {
 // Un chunk perezoso —mermaid— importa el módulo principal sin la query de su pasada.
 // Sin propagarla, Node lo evalúa otra vez y monta una segunda app dentro de #root.
 /** La entrada del navegador (`pnpm web:build`), que trae su propio IPC: `boot(..., { web: true })`. */
-export const distWeb = join(raiz, "dist-web");
+export const distWeb = join(rootDir, "dist-web");
 const assetsUrls = [join(dist, "assets"), distWeb].map((dir) => `${pathToFileURL(dir).href}/`);
 registerHooks({
   resolve(specifier, context, next) {
@@ -50,15 +50,15 @@ registerHooks({
  * la pide y Vite, al ver su `<link>`, no espera un `load` que jsdom nunca da
  * al abrir un trozo perezoso que comparte el CSS principal.
  */
-const HTML = indice
+const HTML = indexHtml
   .replace(/<script\b[^>]*><\/script>/g, "")
   .replace(/<link\b(?![^>]*\brel="stylesheet")[^>]*>/g, "");
 
 /** Los workspaces de la cuenta que contesta el plano de control simulado en esta pasada. */
-let registro;
+let accountRegistry;
 
 /** Lo que se copió a `globalThis` en la pasada anterior, para poder pisarlo. */
-let copiadas = [];
+let copiedKeys = [];
 
 /** El arranque son promesas ya resueltas: basta con dejar correr la cola. */
 export const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -79,28 +79,28 @@ export const cause = new AsyncLocalStorage();
  *   normal sube por el `setEnv` de `Setup.revisar` y **la traga su propio
  *   `try`**, que es exactamente por qué este fallo no dejó ni un mensaje.
  */
-export async function boot(entorno, version, respuestas, userAgent, storage = {}, { web = false, antes, workspaces } = {}) {
+export async function boot(environment, version, responses, userAgent, storage = {}, { web = false, beforeImport, workspaces } = {}) {
   // El registro de workspaces de la cuenta (`GET /v1/workspaces`): sin `workspaces`, un plano de control que no lo tiene.
-  registro = workspaces;
+  accountRegistry = workspaces;
   const dir = web ? distWeb : dist;
-  const pagina = web ? readFileSync(join(distWeb, "index.html"), "utf8") : indice;
-  const entrada = web ? /<script\b[^>]*\bsrc="\/?([^"?]*assets\/[^"?]+\.js)"/.exec(pagina)?.[1] : `assets/${bundle}`;
-  if (!entrada) throw new Error(`No está el script principal de ${dir}.`);
-  const fallos = [];
-  const comandos = [];
+  const page = web ? readFileSync(join(distWeb, "index.html"), "utf8") : indexHtml;
+  const entry = web ? /<script\b[^>]*\bsrc="\/?([^"?]*assets\/[^"?]+\.js)"/.exec(page)?.[1] : `assets/${bundle}`;
+  if (!entry) throw new Error(`No está el script principal de ${dir}.`);
+  const failures = [];
+  const commands = [];
   const storageQueries = [];
-  const consola = new VirtualConsole();
-  consola.on("jsdomError", (e) => fallos.push(`jsdomError: ${e.stack ?? e.message}`));
-  consola.on("error", (...a) => fallos.push(`console.error: ${a.join(" ")}`));
+  const virtualConsole = new VirtualConsole();
+  virtualConsole.on("jsdomError", (e) => failures.push(`jsdomError: ${e.stack ?? e.message}`));
+  virtualConsole.on("error", (...a) => failures.push(`console.error: ${a.join(" ")}`));
 
   // La hoja de la web se queda: sin ella, la precarga de Vite de cada trozo perezoso
   // la añade y espera un `load` que jsdom no emite. jsdom no la pide.
-  const dom = new JSDOM(web ? pagina.replace(/<script\b[^>]*><\/script>/g, "") : HTML, { url: "http://localhost/", pretendToBeVisual: true, virtualConsole: consola });
+  const dom = new JSDOM(web ? page.replace(/<script\b[^>]*><\/script>/g, "") : HTML, { url: "http://localhost/", pretendToBeVisual: true, virtualConsole: virtualConsole });
   const w = dom.window;
   if (userAgent) Object.defineProperty(w.navigator, "userAgent", { value: userAgent, configurable: true });
 
-  w.addEventListener("error", (e) => fallos.push(String(e.error?.stack ?? e.message)));
-  w.addEventListener("unhandledrejection", (e) => fallos.push(String(e.reason?.stack ?? e.reason)));
+  w.addEventListener("error", (e) => failures.push(String(e.error?.stack ?? e.message)));
+  w.addEventListener("unhandledrejection", (e) => failures.push(String(e.reason?.stack ?? e.reason)));
 
   // El contrato de `@tauri-apps/api`: llama a `window.__TAURI_INTERNALS__.invoke`
   // y espera una promesa. Se define antes del módulo porque el arranque pregunta
@@ -134,7 +134,7 @@ export async function boot(entorno, version, respuestas, userAgent, storage = {}
       currentWebview: { windowLabel: "main", label: "main" },
     },
     invoke: (cmd, args, options) => {
-      comandos.push(cmd);
+      commands.push(cmd);
       if (cmd === "list_storage") {
         storageQueries.push(args.refrescar);
         return Promise.resolve({
@@ -153,20 +153,20 @@ export async function boot(entorno, version, respuestas, userAgent, storage = {}
         return Promise.resolve(eventId);
       }
       if (cmd.startsWith("plugin:event|")) return Promise.resolve(1);
-      if (cmd === "check_environment" && cmd in respuestas) {
-        return Promise.resolve(respuestas[cmd](args));
+      if (cmd === "check_environment" && cmd in responses) {
+        return Promise.resolve(responses[cmd](args));
       }
       if (cmd === "check_environment") {
         // `"mudo"` es el sondeo que nunca contesta: la app tiene que montar
         // igual. Es la única forma de fijar que no está en el camino del
         // primer pintado — un `await` que vuelva aquí no rompe nada más.
-        if (entorno === "mudo") return new Promise(() => {});
-        return entorno === "listo"
+        if (environment === "mudo") return new Promise(() => {});
+        return environment === "listo"
           ? Promise.resolve({ ready: true, blocked: false, reason: null, items: [] })
           : Promise.reject(new Error("el guarda entra a mano"));
       }
-      if (cmd in respuestas) {
-        const response = respuestas[cmd];
+      if (cmd in responses) {
+        const response = responses[cmd];
         if (response instanceof Error) return Promise.reject(response);
         // Con sus opciones: la cabecera `x-terminus-machine` dice a qué máquina va.
         return Promise.resolve(typeof response === "function" ? response(args, options) : response);
@@ -221,12 +221,12 @@ export async function boot(entorno, version, respuestas, userAgent, storage = {}
    * ya tenía**: su `console` y sus timers son de donde salen los mensajes de
    * este guarda.
    */
-  for (const clave of copiadas) globalThis[clave] = w[clave];
-  for (const clave of Object.getOwnPropertyNames(w)) {
-    if (clave in globalThis) continue;
+  for (const storageKey of copiedKeys) globalThis[storageKey] = w[storageKey];
+  for (const storageKey of Object.getOwnPropertyNames(w)) {
+    if (storageKey in globalThis) continue;
     try {
-      globalThis[clave] = w[clave];
-      copiadas.push(clave);
+      globalThis[storageKey] = w[storageKey];
+      copiedKeys.push(storageKey);
     } catch {
       // Alguna propiedad de jsdom es solo de lectura. Ninguna hace falta.
     }
@@ -242,14 +242,14 @@ export async function boot(entorno, version, respuestas, userAgent, storage = {}
    *
    * No es hipotético: `@kobalte/core` construye un `CustomEvent` desde el ámbito
    * global cada vez que monta el foco atrapado de un popover, así que abrir el
-   * menú de modelos ya dejaba **dos** de estos en `fallos`. No se veían porque
-   * nada volvía a mirar `fallos` después del arranque. Cualquier comprobación
+   * menú de modelos ya dejaba **dos** de estos en `failures`. No se veían porque
+   * nada volvía a mirar `failures` después del arranque. Cualquier comprobación
    * nueva que lo mire —abrir la columna de artefactos, por ejemplo— habría
    * fallado por esto y habría señalado al sitio equivocado.
    */
-  for (const clave of ["Event", "CustomEvent", "KeyboardEvent", "MouseEvent", "PointerEvent", "InputEvent"]) {
-    globalThis[clave] = w[clave];
-    if (!copiadas.includes(clave)) copiadas.push(clave);
+  for (const storageKey of ["Event", "CustomEvent", "KeyboardEvent", "MouseEvent", "PointerEvent", "InputEvent"]) {
+    globalThis[storageKey] = w[storageKey];
+    if (!copiedKeys.includes(storageKey)) copiedKeys.push(storageKey);
   }
 
   // El chat pide getComputedStyle sobre su caja en el tick en que la crea,
@@ -257,13 +257,13 @@ export async function boot(entorno, version, respuestas, userAgent, storage = {}
   // documento inerte de un template, sin raíz. Un navegador contesta vacío;
   // jsdom sube hasta la raíz para heredar, lanza sobre null desde un efecto
   // y se lleva el proceso entero. Aquí contesta vacío, como el navegador.
-  const estiloDe = w.getComputedStyle.bind(w);
+  const styleOf = w.getComputedStyle.bind(w);
   w.getComputedStyle = (el, pseudo) =>
     el?.ownerDocument?.documentElement
-      ? estiloDe(el, pseudo)
+      ? styleOf(el, pseudo)
       : new Proxy({}, { get: (_, p) => (p === "getPropertyValue" ? () => "" : "") });
   globalThis.getComputedStyle = w.getComputedStyle;
-  if (!copiadas.includes("getComputedStyle")) copiadas.push("getComputedStyle");
+  if (!copiedKeys.includes("getComputedStyle")) copiedKeys.push("getComputedStyle");
 
   /**
    * **Y el almacenamiento también, que es lo mismo un piso más abajo.** Node 26
@@ -279,9 +279,9 @@ export async function boot(entorno, version, respuestas, userAgent, storage = {}
    * rojo que no es de la app. En Node 22 el guarda pasa: la diferencia era la
    * versión de Node de quien lo corría, no el commit.
    */
-  for (const clave of ["localStorage", "sessionStorage"]) {
-    Object.defineProperty(globalThis, clave, { value: w[clave], configurable: true, writable: true });
-    if (!copiadas.includes(clave)) copiadas.push(clave);
+  for (const storageKey of ["localStorage", "sessionStorage"]) {
+    Object.defineProperty(globalThis, storageKey, { value: w[storageKey], configurable: true, writable: true });
+    if (!copiedKeys.includes(storageKey)) copiedKeys.push(storageKey);
   }
   globalThis.window = w;
   globalThis.document = w.document;
@@ -289,13 +289,15 @@ export async function boot(entorno, version, respuestas, userAgent, storage = {}
   // y Vite los baja con `fetch` contra la URL de la página, que aquí no sirve nada:
   // el ECONNREFUSED sin capturar tumba el proceso. El módulo ya llega del disco.
   if (!globalThis.fetch.__jsdomApp) {
-    const deNode = globalThis.fetch;
+    const nodeFetch = globalThis.fetch;
     const local = (url, opts) =>
       /^(http:\/\/localhost\/|file:)/.test(String(url?.url ?? url))
         ? Promise.resolve(new Response(""))
         : /\/v1\/workspaces$/.test(String(url?.url ?? url))
-          ? Promise.resolve(registro === undefined ? new Response("{}", { status: 404 }) : Response.json({ workspaces: registro }))
-          : deNode(url, opts);
+          ? Promise.resolve(accountRegistry === undefined ? new Response("{}", { status: 404 }) : Response.json({ workspaces: accountRegistry }))
+          : /\/v1\/shared-computers/.test(String(url?.url ?? url))
+            ? Promise.resolve(Response.json({ computers: [] }))
+            : nodeFetch(url, opts);
     local.__jsdomApp = true;
     globalThis.fetch = local;
   }
@@ -344,11 +346,11 @@ export async function boot(entorno, version, respuestas, userAgent, storage = {}
 
   // La query hace que Node vuelva a evaluar el módulo en la segunda pasada; sin
   // ella devuelve el de la caché y no monta nada sobre este documento nuevo.
-  antes?.(w);
-  await import(`${pathToFileURL(join(dir, entrada)).href}?v=${version}`).catch((e) =>
-    fallos.push(`al evaluar el módulo: ${e?.stack ?? e}`),
+  beforeImport?.(w);
+  await import(`${pathToFileURL(join(dir, entry)).href}?v=${version}`).catch((e) =>
+    failures.push(`al evaluar el módulo: ${e?.stack ?? e}`),
   );
   await sleep(500);
 
-  return { w, fallos, comandos, storageQueries, emit: (event, payload) => { for (const id of [...(events.get(event)?.values() ?? [])]) callbacks.get(id)?.({ event, payload }); }, pintado: w.document.querySelector("#root")?.innerHTML ?? "" };
+  return { w, failures, commands, storageQueries, emit: (event, payload) => { for (const id of [...(events.get(event)?.values() ?? [])]) callbacks.get(id)?.({ event, payload }); }, painted: w.document.querySelector("#root")?.innerHTML ?? "" };
 }

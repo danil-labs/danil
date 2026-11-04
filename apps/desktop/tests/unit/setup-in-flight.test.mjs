@@ -31,14 +31,14 @@ test("la ventana que llega con una preparación en curso ofrece cómo seguir cua
     })),
     running: true,
   }));
-  assert.ok(app.comandos.includes("prepare_runtime"), "la ventana pidió preparar");
+  assert.ok(app.commands.includes("prepare_runtime"), "la ventana pidió preparar");
   for (const name of ETAPAS.filter((n) => !hechas.has(n))) {
     app.emit("bootstrap-run", { type: "stage", name, state: "succeeded", durationMs: 1 });
   }
   await sleep(100);
 
   assert.ok(acciones(app).length > 0, `la corrida terminó y la pantalla no ofrece seguir ni reintentar; dice «${estado(app)}»`);
-  assert.deepEqual(app.fallos, []);
+  assert.deepEqual(app.failures, []);
 });
 
 // Durante una instalación la ventana nueva puede hablar con el servicio anterior.
@@ -47,5 +47,5 @@ test("frente a un servicio que contesta sin estado, la pantalla ofrece reintenta
   await sleep(100);
 
   assert.ok(acciones(app).length > 0, `sin estado ni eventos la pantalla no ofrece salida; dice «${estado(app)}»`);
-  assert.deepEqual(app.fallos, []);
+  assert.deepEqual(app.failures, []);
 });

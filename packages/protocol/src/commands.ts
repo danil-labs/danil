@@ -1,6 +1,6 @@
 /**
  * Los comandos que la app móvil manda al motor de una máquina, por cualquiera
- * de sus dos caminos: el relay de Danil Computers y el bridge de desarrollo.
+ * de sus dos caminos: el relay de Danil Machines y el bridge de desarrollo.
  * Son funciones de ventana (`service invoke`, `commands.json`), con los nombres
  * del contrato renombrado (`agent` = agente con nombre, `provider` = Codex,
  * Claude…). Es una lista cerrada: el bridge rechaza el resto con 403 y el
@@ -46,6 +46,10 @@ export const APP_READS = [
   // (su árbol `terminus-chat-visuals`), y las imágenes, archivos y adjuntos que
   // el mensaje nombra por su ruta en la máquina.
   "tree_show",
+  // Los archivos de la tarea: sus árboles y la lista de cada uno. Se leen igual que en la ventana,
+  // sin encender nada que no esté encendido, y un archivo se abre con `tree_show`.
+  "list_task_trees",
+  "tree_files",
   // Un visual que no cabe de una vez: por partes de 512 KiB, con sus imágenes incrustadas.
   "chat_visual_part",
   "preview_file",
@@ -73,6 +77,9 @@ export const APP_ACTIONS = [
   "respond_permission",
   // Cambiar el modo de permisos con el turno en marcha: el turno vivo no relee el del cuadro.
   "set_permission_mode",
+  // Cambiar de CLI dentro de la tarea (`provider_handoff_v1`): el siguiente
+  // turno abre sesión nueva con la conversación como texto o retoma la aparcada.
+  "set_session_provider",
   "answer_question",
   "mark_task_seen",
   // La tarjeta de vista previa: Fijar, Archivar y Cambiarle el nombre.
@@ -85,7 +92,10 @@ export const APP_ACTIONS = [
   "run_shell_command",
   "stop_shell_command",
   // Adjuntar desde el teléfono: el archivo viaja en base64 y queda en la máquina.
+  // `guardar_adjunto` acepta documentos y el nombre original (motor con
+  // `attachment_documents_v1`); el de imágenes queda para los motores anteriores.
   "guardar_imagen_pegada",
+  "guardar_adjunto",
   "prepare_attachments",
   // Iniciar sesión en una cuenta de IA en otra máquina (enlace y código) y cerrarla.
   "add_account",
@@ -94,6 +104,8 @@ export const APP_ACTIONS = [
   "cancel_login",
   "discard_account",
   "remove_account",
+  // El próximo turno corre con esta cuenta. No enciende la máquina: el uso solo se muestra si ya está encendida.
+  "set_active_account",
   // «Nueva carpeta» y «Clonar repo» desde la tarea nueva: el clon corre en segundo
   // plano y avisa con el evento `project_clone`.
   "create_project",

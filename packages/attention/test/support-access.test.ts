@@ -79,3 +79,40 @@ test('memberships keep the role, and organization and plan only when the profile
     { id: 45, name: 'Otra', role: 'member', organization: null, plan: null },
   ]);
 });
+
+test('only an explicit organization: null marks a workspace personal; a missing field stays unknown', async () => {
+  const api = createSupportAccess(session(), async () => Response.json({ user: { accounts: [
+    { id: 476, name: 'Danil Workspace', role: 'owner', organization: { id: 189, name: 'Danil' } },
+    { id: 600, name: 'Mío', role: 'owner', organization: null },
+    { id: 45, name: 'Antiguo', role: 'owner' },
+  ] } }));
+  assert.deepEqual(await api.memberships(), [
+    { id: 476, name: 'Danil Workspace', role: 'owner', organization: 'Danil', plan: null, organizationId: 189 },
+    { id: 600, name: 'Mío', role: 'owner', organization: null, plan: null, personal: true },
+    { id: 45, name: 'Antiguo', role: 'owner', organization: null, plan: null },
+  ]);
+});
+
+test('organization workspaces is one read scoped to the workspace, with names and member counts', async () => {
+  const seen: string[] = [];
+  const api = createSupportAccess(session(), async (input) => {
+    seen.push(String(input));
+    return Response.json({ organization: { id: 189, name: 'Danil' }, workspaces: [{ id: 82, name: 'Danil Demo Account', members: 5 }, { id: 476, name: 'Danil Workspace', members: 6 }] });
+  });
+  assert.deepEqual(await api.organizationWorkspaces(476), [{ id: 82, name: 'Danil Demo Account', members: 5 }, { id: 476, name: 'Danil Workspace', members: 6 }]);
+  assert.deepEqual(seen, ['/terminus/alpha-api/auth/organization/workspaces?account_id=476']);
+  const personal = createSupportAccess(session(), async () => Response.json({ organization: null, workspaces: [] }));
+  assert.deepEqual(await personal.organizationWorkspaces(600), []);
+  const broken = createSupportAccess(session(), async () => Response.json({ organization: { id: 1, name: 'X' }, workspaces: [{ id: 1, name: 'A', members: -1 }] }));
+  await assert.rejects(broken.organizationWorkspaces(1), /invalid_response/);
+  await assert.rejects(api.organizationWorkspaces(0), /invalid_response/);
+});
+
+test('an organization without a name still counts as an organization', async () => {
+  const api = createSupportAccess(session(), async () => Response.json({ user: { accounts: [
+    { id: 476, name: 'Danil Workspace', role: 'owner', organization: { id: 189, name: '' } },
+  ] } }));
+  assert.deepEqual(await api.memberships(), [
+    { id: 476, name: 'Danil Workspace', role: 'owner', organization: null, plan: null, organizationId: 189 },
+  ]);
+});

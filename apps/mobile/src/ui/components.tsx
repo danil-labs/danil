@@ -82,9 +82,11 @@ export function Dot({ color }: { color: string }) {
   return <View style={[styles.dot, { backgroundColor: color }]} />;
 }
 
-/** Abre una tarea en la máquina que la corre. */
-export function openTask(host: string, workspace: string, folder: string, id: string) {
-  router.push({ pathname: "/task/[host]/[workspace]/[folder]/[id]", params: { host, workspace, folder: folder || "_", id } });
+/** Abre una tarea en la máquina que la corre. Con `replace` ocupa el lugar de la pantalla actual (la de nueva tarea), y «volver» sale al menú. */
+export function openTask(host: string, workspace: string, folder: string, id: string, replace = false) {
+  const route = { pathname: "/task/[host]/[workspace]/[folder]/[id]", params: { host, workspace, folder: folder || "_", id } } as const;
+  if (replace) router.replace(route);
+  else router.push(route);
 }
 
 /** La vista previa de una tarea (mantener pulsada su tarjeta). */

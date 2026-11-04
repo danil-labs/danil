@@ -25,3 +25,14 @@ test("una ruta con espacios sale entre comillas en la línea de Claude Code", ()
 test("sin ruta del CLI se usa terminus del PATH", () => {
   assert.match(snippets({ ...base, cli: null })[0]!.text, / -- terminus mcp serve$/);
 });
+
+test("la variable de la credencial es la que dice el motor", () => {
+  const [claude, hermes, generic] = snippets({ ...base, credential_env: "DANIL_CREDENTIAL" });
+  assert.match(claude!.text, /-e DANIL_CREDENTIAL=/);
+  assert.match(hermes!.text, /\n      DANIL_CREDENTIAL: /);
+  assert.deepEqual(JSON.parse(generic!.text).mcpServers.danil.env, { DANIL_CREDENTIAL: base.credential_file });
+});
+
+test("un nombre que no es de credencial no se muestra", () => {
+  assert.deepEqual(snippets({ ...base, credential_env: "X=1; rm -rf ~" }), []);
+});

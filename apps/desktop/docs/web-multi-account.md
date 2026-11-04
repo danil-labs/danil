@@ -41,7 +41,7 @@ de la cuenta) y de las decisiones del 2026-10-21 al 23:
 
 ```
  localStorage de app.danil.ai
- ├─ sb-…-auth-token            ← la sesión de la app de Danil (cuenta «principal»; Terminus solo la lee)
+ ├─ sb-…-auth-token            ← la sesión de la app de Danil (cuenta «principal»; Danil solo la lee)
  ├─ terminus.web.accounts      ← [{ slot, user_id, email, name }]  las cuentas extra
  ├─ terminus-auth:<slot>       ← la sesión de cada cuenta extra (un cliente de supabase-js por slot)
  ├─ terminus.web.listing:<uid> ← la última lista del registro de cada cuenta
@@ -82,7 +82,7 @@ de la cuenta) y de las decisiones del 2026-10-21 al 23:
 
    Luego monta el router con `set_active_workspace(?w)` y quita `?w` de la
    URL. Cambiar entre workspaces de la misma cuenta sigue siendo inmediato.
-5. **Agregar una cuenta** abre una página propia de Terminus,
+5. **Agregar una cuenta** abre una página propia de Danil,
    `?add-account` (`web/AddAccount.tsx`, un chunk aparte). Ofrece Google,
    Microsoft y correo con contraseña:
    - **Google y Microsoft** regresan a `?account-callback=<slot>`. Solo se
@@ -122,7 +122,7 @@ de la cuenta) y de las decisiones del 2026-10-21 al 23:
 | # | Decisión | Elegido | Por qué | Tipo |
 |---|----------|---------|---------|------|
 | D1 | Cambiar a otra cuenta | Recargar con `?w=` | El token está cerrado en 7 capacidades, la flota y la licencia. Cambiar todo en la misma página arriesga que se mezclen datos entre cuentas (P5). | Gusto |
-| D2 | Cómo inicia sesión una cuenta extra | Login propio de Terminus con PKCE y `storageKey` por slot | El login de la app de Danil sobrescribe la sesión principal. | Mecánica |
+| D2 | Cómo inicia sesión una cuenta extra | Login propio de Danil con PKCE y `storageKey` por slot | El login de la app de Danil sobrescribe la sesión principal. | Mecánica |
 | D3 | Clave de la sesión extra | Slot al azar, no `user_id` | Mover un refresh token entre claves dispara la detección de reuso de Supabase. | Mecánica |
 | D4 | Atención (badges) de otras cuentas | No en v1; queda en TODO | Requiere relay de otra cuenta. | Alcance |
 | D5 | Teléfono | Segundo PR | Ver «Fase 2». | Alcance |
@@ -234,7 +234,7 @@ carga en un teléfono.
 
 | Review | Trigger | Why | Runs | Status | Findings |
 |---|---|---|---|---|---|
-| Eng review (autoplan) | Pedido de Alberto | Plan de varias cuentas en la web | 1 | DONE (manual: las skills de gstack no están registradas en Terminus) | 3 de arquitectura (D7, D8, la principal sobrescrita), 0 brechas críticas |
+| Eng review (autoplan) | Pedido de Alberto | Plan de varias cuentas en la web | 1 | DONE (manual: las skills de gstack no están registradas en Danil) | 3 de arquitectura (D7, D8, la principal sobrescrita), 0 brechas críticas |
 | Outside voice (subagente Claude) | autoplan | Revisión adversaria | 1 | DONE | 11; se aplicaron 1, 2, 3, 4, 5, 6, 7, 8, 9 y 10; el 11 entra a la fase 2 |
 
 VERDICT: fase 1 implementada y probada. Quedan dos decisiones de gusto para

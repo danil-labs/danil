@@ -1,7 +1,8 @@
 {
+  "usage.heading": "Usage",
   "usage.bar.aria": "What is left on your active accounts",
   "usage.refresh": "Ask again how much you have left",
-  "usage.tool.title": "{agent}: {left}% left in the tightest window",
+  "usage.tool.title": "{agent}: {left}% left in the window running now",
   "usage.refresh_all": "Refresh",
   "usage.manage_accounts": "Manage accounts",
   "usage.bug_report": "Report a Danil bug",

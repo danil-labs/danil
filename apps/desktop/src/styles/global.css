@@ -810,7 +810,9 @@
   background-attachment: fixed;
 }
 .tab-active::before,
-.tab-active::after {
+.tab-active::after,
+.tab-join::before,
+.tab-join::after {
   content: "";
   position: absolute;
   bottom: 0;
@@ -818,15 +820,30 @@
   height: var(--tab-foot);
   pointer-events: none;
 }
-.tab-active::before {
+.tab-active::before,
+.tab-join::before {
   right: 100%;
   -webkit-mask: radial-gradient(circle at 0 0, transparent var(--tab-foot), #000 calc(var(--tab-foot) + 0.5px));
   mask: radial-gradient(circle at 0 0, transparent var(--tab-foot), #000 calc(var(--tab-foot) + 0.5px));
 }
-.tab-active::after {
+.tab-active::after,
+.tab-join::after {
   left: 100%;
   -webkit-mask: radial-gradient(circle at 100% 0, transparent var(--tab-foot), #000 calc(var(--tab-foot) + 0.5px));
   mask: radial-gradient(circle at 100% 0, transparent var(--tab-foot), #000 calc(var(--tab-foot) + 0.5px));
+}
+/* La pestaña de un documento se funde con el panel de abajo, igual que `.tab-active`
+   con la ventana. El relleno es la superficie del panel, no el fondo de la ventana:
+   el documento se lee sobre `surface` y la franja de atrás es `surface-muted`. */
+.tab-join {
+  --tab-foot: 6px;
+  position: relative;
+  border-radius: var(--tab-foot) var(--tab-foot) 0 0;
+  background: var(--color-surface);
+}
+.tab-join::before,
+.tab-join::after {
+  background: var(--color-surface);
 }
 /* Marco de la ventana (franja y columna de workspaces): en claro un gris sólido y la
    barra lateral un tono hundido; en oscuro se queda el velo y el vidrio de siempre. */
@@ -1009,8 +1026,9 @@
   }
 }
 
-/* Con la ventana escondida o sin foco no se mueve nada; al volver arrancan de
-   nuevo y se anclan otra vez al reloj común. */
+/* Con la ventana escondida o minimizada no se mueve nada; al volver arrancan de
+   nuevo y se anclan otra vez al reloj común. Sin foco sigue, que ahí se mira. */
+:root[data-window-idle] [data-task-orbit] [data-spinner],
 :root[data-window-idle] .astro-face,
 :root[data-window-idle] .astro-face::after,
 :root[data-window-idle] .astro-face * {
@@ -1059,3 +1077,57 @@
   to { transform: rotate(7deg); }
 }
 
+
+/* La señal de toda la app. Cambiar tamaño o tono aquí la cambia en todas partes;
+   móvil lee el mismo tamaño de `SIGNAL_DOT_SIZE` (`packages/design`). */
+:root {
+  --signal-dot-size: 7px;
+  --signal-success: var(--color-success);
+  --signal-error: var(--color-error-strong);
+  --signal-warning: var(--color-warning-strong);
+  --signal-neutral: var(--color-neutral-500);
+  --signal-off: var(--color-neutral-300);
+  --signal-working: var(--color-primary);
+}
+.signal-dot { display: inline-block; width: var(--signal-dot-size); height: var(--signal-dot-size); flex-shrink: 0; border-radius: 50%; }
+.signal-dot[data-tone="success"] { background: var(--signal-success); }
+.signal-dot[data-tone="error"] { background: var(--signal-error); }
+.signal-dot[data-tone="warning"] { background: var(--signal-warning); }
+.signal-dot[data-tone="neutral"] { background: var(--signal-neutral); }
+.signal-dot[data-tone="off"] { background: var(--signal-off); }
+.signal-dot[data-tone="working"] { background: var(--signal-working); }
+.signal-icon[data-tone="success"] { color: var(--signal-success); }
+.signal-icon[data-tone="warning"] { color: var(--signal-warning); }
+.signal-icon[data-tone="neutral"] { color: var(--signal-neutral); }
+
+/* Secciones de la tarjeta: el contenido se recorta dentro de su sección;
+   omitir una sección por agrupación elimina también su ancho. */
+.task-card-lines { position: relative; container-type: inline-size; width: 100%; min-width: 0; --task-card-surface: var(--color-rail); }
+.task-card-lines[data-outside] { --task-card-surface: var(--color-surface); }
+.task-card-selected .task-card-lines { --task-card-surface: var(--color-neutral-200); }
+/* Con el menú a la vista, la primera línea se desvanece a su lado y la hora con
+   ella; el cohete de la segunda línea sigue a la vista y a mano. */
+.group\/session:hover .task-card-with-menu > :not([data-session-actions], [data-session-preview]),
+.group\/session:focus-within .task-card-with-menu > :not([data-session-actions], [data-session-preview]),
+.task-card-with-menu[data-menu-open] > :not([data-session-actions], [data-session-preview]) { mask-image: linear-gradient(to right, #000 calc(100% - 72px), transparent calc(100% - 32px)); }
+.group\/session:hover .task-card-with-menu [data-session-time],
+.group\/session:focus-within .task-card-with-menu [data-session-time],
+.task-card-with-menu[data-menu-open] [data-session-time] { mask-image: linear-gradient(to right, #000, transparent); }
+.task-card-metadata { display: grid; grid-template-columns: 16px minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.3fr) 36px; min-width: 0; align-items: center; gap: 6px; height: 16px; }
+.task-card-metadata[data-no-folder], .task-card-metadata[data-no-machine] { grid-template-columns: 16px minmax(0, 1fr) minmax(0, 1.3fr) 36px; }
+.task-card-metadata[data-no-folder][data-no-machine] { grid-template-columns: 16px minmax(0, 1fr) 36px; }
+.task-card-metadata svg { flex-shrink: 0; }
+.task-card-provider { display: inline-flex; align-items: center; }
+.task-card-slot { display: flex; min-width: 0; align-items: center; overflow: hidden; }
+.task-card-git { display: flex; min-width: 0; align-items: center; gap: 4px; overflow: hidden; }
+.task-card-tail { display: inline-flex; flex-shrink: 0; align-items: center; gap: 4px; margin-left: auto; }
+.task-card-rocket { display: inline-flex; width: 18px; height: 18px; flex-shrink: 0; align-items: center; justify-content: center; }
+.task-card-rocket:empty { display: none; }
+.task-card-time { white-space: nowrap; text-align: right; }
+.task-card-identity { position: relative; display: inline-flex; width: 24px; height: 24px; flex-shrink: 0; align-items: center; justify-content: center; }
+.task-card-orbit { position: absolute; inset: 1px; display: flex; align-items: center; justify-content: center; pointer-events: none; }
+[data-with-agent] .task-card-orbit { display: none; }
+@media (prefers-reduced-motion: reduce) {
+  [data-with-agent] .task-card-orbit { display: flex; }
+}
+.task-card-badge { position: absolute; top: -2px; right: -2px; display: inline-flex; width: 12px; height: 12px; align-items: center; justify-content: center; border-radius: 50%; background: var(--task-card-surface, var(--color-surface)); }

@@ -43,7 +43,7 @@ def main():
                 # El árbol va en usr/share, fuera de linuxdeploy; esto lo protege si cambia.
                 environment.update(NO_STRIP="1", PATCHELF=str(ROOT / "scripts/work-tools-patchelf.py"),
                     TERMINUS_REAL_PATCHELF=shutil.which("patchelf"),
-                    TERMINUS_WORK_TOOLS_ROOT=str(ROOT / "src-tauri/target/release/bundle/appimage/Terminus.AppDir/usr/share/Terminus/work-tools"))
+                    TERMINUS_WORK_TOOLS_ROOT=str(ROOT / "src-tauri/target/release/bundle/appimage/Danil.AppDir/usr/share/Danil/work-tools"))
             with open(os.environ["GITHUB_ENV"], "a") as stream:
                 for key, value in environment.items():
                     stream.write(f"{key}={value}\n")

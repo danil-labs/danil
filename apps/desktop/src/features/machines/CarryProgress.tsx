@@ -12,7 +12,7 @@ import { carryOrigin, machineName } from "./store";
 
 const STEPS: CarryStep[] = ["wake", "clone", "copy", "ready"];
 
-/** El repositorio legible de un remoto: `danil-labs/terminus`. */
+/** El repositorio legible de un remoto: `danil-labs/danil`. */
 const repoOf = (url: string | null | undefined) => url?.replace(/\.git$/, "").split(/[/:]/).slice(-2).join("/") ?? "";
 
 /**

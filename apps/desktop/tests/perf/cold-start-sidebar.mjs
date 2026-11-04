@@ -86,8 +86,8 @@ async function run(name, storage) {
   app.emit("launcher", { phase: "ready", blank_0274: false });
   await sleep(4000);
   clearInterval(watch);
-  if (app.fallos.length > 0) {
-    console.error(app.fallos.slice(0, 3).map((f) => String(f).split("\n").slice(0, 4).join("\n  ")).join("\n"));
+  if (app.failures.length > 0) {
+    console.error(app.failures.slice(0, 3).map((f) => String(f).split("\n").slice(0, 4).join("\n  ")).join("\n"));
     process.exit(1);
   }
   const doc = app.w.document;

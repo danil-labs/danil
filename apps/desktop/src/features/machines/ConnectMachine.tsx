@@ -1,3 +1,4 @@
+import { SignalDot } from "../../ui/SignalDot";
 import {
   type Answer,
   type Computer,
@@ -106,7 +107,7 @@ export function ConnectMachine(props: ConnectMachineProps) {
                   fallback={
                     <Show
                       when={!failed() && steps().findIndex((s) => !s.done) === i()}
-                      fallback={<span class="size-1.5 rounded-full bg-neutral-300" aria-hidden="true" />}
+                      fallback={<SignalDot tone="off" />}
                     >
                       <Spinner />
                     </Show>

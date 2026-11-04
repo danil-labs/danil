@@ -46,7 +46,7 @@ test("the column lists other accounts' workspaces and opens them with their acco
     ];
     const app = await boot("listo", "web-other-accounts", {}, undefined, {}, {
       web: true,
-      antes: (w) => {
+      beforeImport: (w) => {
         globalThis.WebSocket = f.Socket;
         w.terminusWeb = {
           endpoint: API,
@@ -100,7 +100,7 @@ for (const emptyAccount of [false, true]) test(`a single workspace keeps the col
     const f = fleet({ cmp_vm: { table: engine, state: "online" } });
     app = await boot("listo", `web-single-workspace-${emptyAccount}`, {}, undefined, {}, {
       web: true,
-      antes: (w) => {
+      beforeImport: (w) => {
         globalThis.WebSocket = f.Socket;
         w.terminusWeb = {
           endpoint: API,
@@ -121,14 +121,16 @@ for (const emptyAccount of [false, true]) test(`a single workspace keeps the col
     assert.ok(await until(() => doc.querySelector('[data-workspace-column] [data-workspace-tile="w"]')), "the column shows the single workspace");
     const column = doc.querySelector("[data-workspace-column]");
     assert.equal([...column.querySelectorAll("button")].some((el) => el.textContent.trim() === "Agregar cuenta"), false, "the column only adds workspaces");
-    column.querySelector('button[aria-label="Nuevo workspace"]').click();
+    column.querySelector('button[aria-label="Agregar workspace"]').click();
+    assert.ok(await until(() => [...doc.querySelectorAll('[role="menuitem"]')].find((b) => b.textContent.trim() === "Crear workspace")), "the plus offers a new workspace");
+    [...doc.querySelectorAll('[role="menuitem"]')].find((b) => b.textContent.trim() === "Crear workspace").click();
     assert.ok(await until(() => doc.querySelector('[data-web-onboarding="space"]')), "creation opens the existing workspace flow");
     const other = [...doc.querySelectorAll("button")].find(el => el.textContent.trim() === "Usar otra cuenta");
     assert.ok(other, "the workspace flow keeps access to other Danil accounts");
     other.click();
     assert.deepEqual(added, [true]);
     assert.equal(f.relays.cmp_vm.calls.some(call => call.command === "add_workspace"), false, "choosing another account does not create in the previous account");
-    assert.deepEqual(app.fallos, []);
+    assert.deepEqual(app.failures, []);
   } finally {
     app?.w.close();
     globalThis.fetch = own;

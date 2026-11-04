@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import worker from "../../alpha-entry/worker.mjs";
 import { safeNext } from "../../alpha-entry/session.mjs";
+import { createHash } from "node:crypto";
 
 const origin = "https://alfa-app.danil.ai";
 const supabaseUrl = "https://project.supabase.co";
@@ -156,7 +157,8 @@ test("callback refuses a forged state, a missing flow cookie and a refused code"
   const w = world();
   const started = await call(w, "/auth/workos/start");
   const state = new URL(started.headers.get("Location")).searchParams.get("state");
-  for (const [query, cookie] of [[`code=code_ok&state=x${state}`, cookieHeader(started)], [`code=code_ok&state=${state}`, ""], [`code=bad&state=${state}`, cookieHeader(started)], [`error=access_denied&state=${state}`, cookieHeader(started)]]) {
+  const forged = `${state[0] === "x" ? "y" : "x"}${state.slice(1)}`;
+  for (const [query, cookie] of [[`code=code_ok&state=${forged}`, cookieHeader(started)], [`code=code_ok&state=${state}`, ""], [`code=bad&state=${state}`, cookieHeader(started)], [`error=access_denied&state=${state}`, cookieHeader(started)]]) {
     const response = await call(w, `/auth/workos/callback?${query}`, { headers: { Cookie: cookie } });
     assert.equal(response.status, 303);
     assert.equal(new URL(response.headers.get("Location")).searchParams.get("error"), "callback_failed");
@@ -293,6 +295,8 @@ test("return paths stay inside Terminus", () => {
   for (const value of [null, "", "inbox", "https://evil.example/", "//evil.example/", "/auth", "/auth?next=x", "/auth/workos/start", "/sign-in", "/sign-in?next=/inbox", "/x/../auth", "/x/../sign-in", "/%61uth", "/%73ign-in", "/alpha-api/auth/profile", "/\\evil", "/inbox\n"]) {
     assert.equal(safeNext(value), "/", String(value));
   }
+  assert.equal(safeNext("/inbox", "https://staging-app.danil.ai"), "/inbox");
+  assert.equal(safeNext("https://alfa-app.danil.ai/inbox", "https://staging-app.danil.ai"), "/");
 });
 
 test("callback refuses authentication and foreign return destinations without re-entering auth", async () => {
@@ -333,4 +337,119 @@ test("eligibility lookup fails closed when unavailable, malformed or no longer b
     assert.equal("access_token" in await response.json(), false);
     assert.equal(w.state.refreshes, 0);
   }
+});
+
+const desktopVerifier = "v".repeat(43);
+const desktopChallenge = () => createHash("sha256").update(desktopVerifier).digest("base64url");
+const desktopQuery = (port = "49152") => `challenge=${desktopChallenge()}&state=${"s".repeat(16)}&port=${port}`;
+const desktopJson = (w, path, body, headers = {}) => call(w, path, { method: "POST", headers: { "Content-Type": "application/json", ...headers }, body: JSON.stringify(body) });
+
+test("desktop: without a browser session the page sends to WorkOS and comes back to itself", async () => {
+  const w = world();
+  const page = await call(w, `/auth/desktop?${desktopQuery()}`);
+  assert.equal(page.status, 303);
+  const start = new URL(page.headers.get("Location"));
+  assert.equal(start.pathname, "/auth/workos/start");
+  const next = start.searchParams.get("next");
+  assert.equal(next, `/auth/desktop?${desktopQuery()}`);
+  assert.equal(safeNext(next, origin), next);
+  for (const bad of ["challenge=short&state=ssssssssssssssss&port=49152", desktopQuery("80"), `${desktopQuery()}&extra=1`]) {
+    assert.equal((await call(w, `/auth/desktop?${bad}`)).status, 400);
+  }
+});
+
+test("desktop: consent, one-time code to the loopback port, PKCE exchange, refresh and logout", async () => {
+  const w = world();
+  const { cookie } = await signedIn(w);
+  const page = await call(w, `/auth/desktop?${desktopQuery()}`, { headers: { Cookie: cookie, "Accept-Language": "es-MX" } });
+  assert.equal(page.status, 200);
+  const html = await page.text();
+  assert.match(html, /Conectar Danil en esta computadora/);
+  assert.match(html, /prueba@danil\.ai/);
+  assert.match(page.headers.get("Content-Security-Policy"), /form-action 'self' http:\/\/127\.0\.0\.1:\*/);
+
+  const form = new URLSearchParams(desktopQuery()).toString();
+  const formInit = (headers = {}) => ({ method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded", Cookie: cookie, Origin: origin, ...headers }, body: form });
+  assert.equal((await call(w, "/auth/desktop/approve", formInit({ Origin: "https://evil.example" }))).status, 403);
+  assert.equal((await call(w, "/auth/desktop/approve", formInit({ "X-Danil-Actor": "ai" }))).status, 403);
+  const approved = await call(w, "/auth/desktop/approve", formInit());
+  assert.equal(approved.status, 303);
+  const back = new URL(approved.headers.get("Location"));
+  assert.equal(back.origin + back.pathname, "http://127.0.0.1:49152/callback");
+  assert.equal(back.searchParams.get("state"), "s".repeat(16));
+  const code = back.searchParams.get("code");
+  assert.equal(w.calls.filter(c => c.url.endsWith("/auth/v1/verify")).length, 1, "approving opens no session; only the browser's exists");
+
+  assert.equal((await desktopJson(w, "/auth/desktop/exchange", { code, verifier: "w".repeat(43) })).status, 401, "a wrong verifier gets nothing");
+  assert.equal((await desktopJson(w, "/auth/desktop/exchange", { code, verifier: desktopVerifier }, { Origin: origin })).status, 403, "no page may call it");
+  const exchanged = await desktopJson(w, "/auth/desktop/exchange", { code, verifier: desktopVerifier });
+  assert.equal(exchanged.status, 200);
+  const first = await exchanged.json();
+  assert.equal(first.access_token, "sb.rt_0");
+  assert.deepEqual(first.user, { user_id: uuid, email: "prueba@danil.ai", name: "Prueba Danil" });
+  assert.ok(!first.session.includes("rt_"));
+  assert.equal("refresh_token" in first, false);
+  assert.equal((await desktopJson(w, "/auth/desktop/session", { session: code })).status, 401, "a code never opens as a session");
+
+  const renewed = await desktopJson(w, "/auth/desktop/session", { session: first.session });
+  assert.equal(renewed.status, 200);
+  const second = await renewed.json();
+  assert.equal(second.access_token, "sb.rt_1");
+  assert.notEqual(second.session, first.session);
+
+  const original = w.fetch;
+  let loggedOut = null;
+  w.fetch = async (input, init = {}) => {
+    const url = new URL(new Request(input, init).url);
+    if (url.pathname === "/auth/v1/logout") { loggedOut = new Headers(init.headers).get("Authorization"); return new Response(null, { status: 204 }); }
+    return original(input, init);
+  };
+  const out = await desktopJson(w, "/auth/desktop/logout", { session: second.session });
+  assert.equal(out.status, 204);
+  assert.equal(loggedOut, "Bearer sb.rt_2");
+});
+
+test("desktop: an ended WorkOS session ends the window's session too", async () => {
+  const w = world();
+  const { cookie } = await signedIn(w);
+  const approved = await call(w, "/auth/desktop/approve", { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded", Cookie: cookie, Origin: origin }, body: desktopQuery() });
+  const code = new URL(approved.headers.get("Location")).searchParams.get("code");
+  const first = await (await desktopJson(w, "/auth/desktop/exchange", { code, verifier: desktopVerifier })).json();
+  w.state.sessions[0].status = "inactive";
+  const refused = await desktopJson(w, "/auth/desktop/session", { session: first.session });
+  assert.equal(refused.status, 401);
+  assert.deepEqual(await refused.json(), { error: "session_ended" });
+});
+
+test("desktop: the device page approves with JSON and gets the loopback location to navigate to", async () => {
+  const w = world();
+  const { cookie } = await signedIn(w);
+  const fields = Object.fromEntries(new URLSearchParams(desktopQuery()));
+  const post = (body, headers = {}) => call(w, "/auth/desktop/approve", { method: "POST", headers: { "Content-Type": "application/json", Cookie: cookie, Origin: origin, ...headers }, body: JSON.stringify(body) });
+  assert.equal((await post(fields, { Origin: "https://evil.example" })).status, 403);
+  assert.equal((await post({ ...fields, port: "80" })).status, 400, "the port is checked again on the server");
+  assert.equal((await post({ ...fields, extra: "1" })).status, 400);
+  const answer = await post(fields);
+  assert.equal(answer.status, 200);
+  const location = new URL((await answer.json()).location);
+  assert.equal(location.origin + location.pathname, "http://127.0.0.1:49152/callback");
+  const code = location.searchParams.get("code");
+  const exchanged = await desktopJson(w, "/auth/desktop/exchange", { code, verifier: desktopVerifier });
+  assert.equal(exchanged.status, 200);
+});
+
+test("desktop: exchange and refresh read the grant again; a revoked person gets no token", async () => {
+  const w = world();
+  const { cookie } = await signedIn(w);
+  const approve = () => call(w, "/auth/desktop/approve", { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded", Cookie: cookie, Origin: origin }, body: desktopQuery() });
+  const codeOf = async () => new URL((await approve()).headers.get("Location")).searchParams.get("code");
+  const first = await (await desktopJson(w, "/auth/desktop/exchange", { code: await codeOf(), verifier: desktopVerifier })).json();
+  const pending = await codeOf();
+  w.state.access = false;
+  const refreshed = await desktopJson(w, "/auth/desktop/session", { session: first.session });
+  assert.equal(refreshed.status, 403);
+  assert.deepEqual(await refreshed.json(), { error: "access_required" });
+  const exchanged = await desktopJson(w, "/auth/desktop/exchange", { code: pending, verifier: desktopVerifier });
+  assert.equal(exchanged.status, 403);
+  assert.equal("access_token" in await exchanged.json(), false);
 });

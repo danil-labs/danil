@@ -61,10 +61,10 @@ test("«Detener y entrar ya» pide confirmar y solo entonces corta", async () =>
   await click(app, "Detener y entrar ya");
   assert.ok(aviso(app).textContent.includes("Se va a cortar 1 tarea"), aviso(app).textContent);
   await click(app, "Seguir esperando");
-  assert.ok(!app.comandos.includes("launcher_continue"), "cortó sin confirmar");
+  assert.ok(!app.commands.includes("launcher_continue"), "cortó sin confirmar");
   await click(app, "Detener y entrar ya");
   await click(app, "Detener");
-  assert.ok(app.comandos.includes("launcher_continue"), "no pidió detener la versión anterior");
+  assert.ok(app.commands.includes("launcher_continue"), "no pidió detener la versión anterior");
 });
 
 test("mientras la anterior se detiene no ofrece botones, y al conectar el aviso se va", async () => {

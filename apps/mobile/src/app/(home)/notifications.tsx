@@ -22,7 +22,7 @@ type Entry = { host: string; workspace: string; session: string; folder: string 
 export default function Notifications() {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
-  const { attention, activity, titleOf, hostOf, hosts } = useMachines();
+  const { attention, activity, titleOf, reasonOf, hostOf, hosts } = useMachines();
   const { list } = useWorkspaces();
   const [titles, setTitles] = useState<Record<string, string>>({});
   // El nombre del workspace por el id que le da su máquina.
@@ -65,6 +65,7 @@ export default function Notifications() {
     const time = entry.at ? new Date(entry.at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : null;
     const id = `${entry.host}/${entry.session}`;
     const machine = several ? hostOf(entry.host)?.label : null;
+    const reason = entry.state === "failed" ? reasonOf(`${entry.host}/${entry.session}`) : undefined;
     return (
       <Row
         key={key}
@@ -79,7 +80,7 @@ export default function Notifications() {
         }
         title={titleOf(id) ?? titles[id] ?? t("notify.untitled")}
         bold={entry.state !== "unseen"}
-        subtitle={[stateText(entry.state), nameOf(entry.host, entry.workspace), machine, time].filter(Boolean).join(" · ")}
+        subtitle={[reason || stateText(entry.state), nameOf(entry.host, entry.workspace), machine, time].filter(Boolean).join(" · ")}
         onPress={() => openTask(entry.host, entry.workspace, entry.folder ?? "", entry.session)}
       />
     );

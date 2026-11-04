@@ -1,6 +1,7 @@
 //! Ventana habitual conectada exclusivamente al motor privado seleccionado.
 //! Sin argumentos usa el motor empaquetado, que se resuelve con la ventana ya abierta;
 //! una raíz de 0.2.74 pasa antes por el traspaso.
+mod agents_session;
 mod appearance;
 mod background_service;
 mod desktop;
@@ -31,6 +32,7 @@ mod tray;
 mod typst_live;
 mod update;
 pub mod util;
+mod wsl;
 use std::{path::PathBuf, sync::Arc};
 use tauri::{Emitter, Manager};
 use terminus_engine_client::Client;
@@ -111,6 +113,13 @@ pub fn stop_engine() -> i32 {
     }
 }
 
+/// Prototipo del alta de WSL: detección sin pantalla todavía
+/// (`docs/wsl-onboarding.md`). En otros sistemas contesta `unsupported`.
+#[tauri::command]
+pub(super) fn wsl_detect() -> std::result::Result<wsl::Detection, String> {
+    wsl::detect().map_err(|error| error.code().to_string())
+}
+
 pub fn run(client: Arc<Client>) {
     start(Some(client), false, launcher::Launcher::ready(None));
 }
@@ -120,7 +129,7 @@ fn title(app: &tauri::AppHandle) -> String {
         .app
         .windows
         .first()
-        .map_or("Terminus", |w| w.title.as_str())
+        .map_or("Danil", |w| w.title.as_str())
         .to_owned()
 }
 
@@ -258,6 +267,14 @@ fn start(client: Option<Arc<Client>>, autostart: bool, launcher: launcher::Launc
             proxy::service_poll,
             proxy::machine_list,
             proxy::account_relay_token,
+            agents_session::agents_session_status,
+            agents_session::agents_session_connect,
+            agents_session::agents_session_sign_out,
+            agents_session::danil_sign_in,
+            agents_session::danil_sign_out,
+            agents_session::agents_session_directory,
+            agents_session::agents_bff_fetch,
+            agents_session::harness_org_fetch,
             proxy::service_filter,
             proxy::load_history,
             handler_policy::handler_action,
@@ -281,7 +298,8 @@ fn start(client: Option<Arc<Client>>, autostart: bool, launcher: launcher::Launc
             typst_live::typst_live_complete,
             typst_live::typst_live_stop,
             update::update_install,
-            update::update_pending
+            update::update_pending,
+            wsl_detect
         ]))
         .build(context)
         .expect("tauri extracted client")

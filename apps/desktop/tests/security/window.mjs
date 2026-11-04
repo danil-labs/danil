@@ -130,13 +130,13 @@ async function corrida(navegador, pagina, render) {
   // Fase 1 · pintar, sin tocar nada.
   let m = marca();
   let p = await abrir();
-  const pintado = desde(m);
+  const painted = desde(m);
   const dom = await p.evaluate(() => ({
     imgs: [...document.querySelectorAll("#respuesta img")].map((i) => i.getAttribute("src")),
     enlaces: [...document.querySelectorAll("#respuesta a")].map((a) => a.getAttribute("href")),
     artefacto: window.__ARTEFACTO__,
   }));
-  filas.push({ vector: "img-inline + img-referencia (SIN CLIC)", salio: pintado });
+  filas.push({ vector: "img-inline + img-referencia (SIN CLIC)", salio: painted });
   await p.close();
 
   // Fase 2 · un clic por vector, cada uno en su página.
@@ -162,7 +162,7 @@ async function corrida(navegador, pagina, render) {
       vector: nombre,
       // Cada clic va sobre una página recién cargada, así que las dos imágenes del
       // pintado vuelven a pedirse. Lo que este vector añade es lo que no estaba.
-      salio: desde(m).filter((u) => !pintado.includes(u)),
+      salio: desde(m).filter((u) => !painted.includes(u)),
       titulo: efecto.titulo === "SECUESTRADA" ? "el documento cambió de título" : "",
       escalada: efecto.escalada,
       navego: p.url() !== antes ? p.url() : "",

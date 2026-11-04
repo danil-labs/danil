@@ -8,7 +8,7 @@ import { type GitBook, gitAsks, gitAsksKey, staleGit, withGitAnswer } from "./ta
 const EVERY_MS = 30_000;
 
 /**
- * El git de las tarjetas visibles, por `host/id`. Una llamada por máquina y
+ * El git de las tarjetas visibles, por máquina, workspace, carpeta e id. Una llamada por máquina y
  * carpeta (`gitAsks`), al cambiar lo visible y cada 30 s con la app al frente.
  * Leer nunca enciende: a una máquina que no está encendida no se le pregunta y
  * lo suyo queda viejo (`stale`).
@@ -32,12 +32,13 @@ export function useTaskGit(hostOf: (id: string) => Host | undefined, visible: re
       try {
         await Promise.all(asks.map(async (ask) => {
           const host = hostOf(ask.host);
+          const scope = { host: ask.host, workspace: ask.workspace, folder: ask.project };
           if (!host || host.power() !== "on") {
-            if (live) setBook((b) => staleGit(b, ask.host, ask.priority));
+            if (live) setBook((b) => staleGit(b, scope, ask.priority));
             return;
           }
           const publish = (answer: { value: Record<string, TaskGitStatus>; cachedAt: number | null }) => {
-            if (live) setBook((b) => host.power() === "on" && answer.cachedAt === null ? withGitAnswer(b, ask.host, answer.value) : staleGit(b, ask.host, ask.priority));
+            if (live) setBook((b) => host.power() === "on" && answer.cachedAt === null ? withGitAnswer(b, scope, answer.value) : staleGit(b, scope, ask.priority));
           };
           try {
             const answer = await readTaskGit(
@@ -46,7 +47,7 @@ export function useTaskGit(hostOf: (id: string) => Host | undefined, visible: re
             );
             publish(answer);
           } catch {
-            if (live) setBook((b) => staleGit(b, ask.host, ask.priority));
+            if (live) setBook((b) => staleGit(b, scope, ask.priority));
           }
         }));
       } finally { reading = false; }

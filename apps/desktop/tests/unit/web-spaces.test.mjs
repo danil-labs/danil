@@ -50,7 +50,7 @@ test("the spaces of the machine that keeps them show with another machine asleep
   const app = await boot("listo", "web-spaces", {}, undefined, {}, {
     web: true,
     workspaces: REGISTRY,
-    antes: (w) => {
+    beforeImport: (w) => {
       globalThis.WebSocket = f.Socket;
       w.terminusWeb = { endpoint: "https://relay.test", computers: [VM, MAC], getToken: async () => "tok" };
     },
@@ -72,5 +72,5 @@ test("the spaces of the machine that keeps them show with another machine asleep
   assert.equal(made.id, "cmp_mac~s2", "a new space goes where the others are");
   assert.equal(calls("cmp_mac", "create_space").length, 1);
   for (const command of ["rename_space", "create_space"]) assert.equal(calls("cmp_vm", command).length, 0, `${command} never goes to the VM`);
-  assert.deepEqual(app.fallos, []);
+  assert.deepEqual(app.failures, []);
 });

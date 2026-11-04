@@ -171,8 +171,8 @@ if (!shown(doc, "Pregunta 0 ")) {
 }
 const quietud = await medir(app, () => sleep(RELOJ_CORTO * 6), RELOJ_CORTO * 2);
 
-if (app.fallos.length > 0) {
-  console.error(app.fallos.slice(0, 3).join("\n"));
+if (app.failures.length > 0) {
+  console.error(app.failures.slice(0, 3).join("\n"));
   process.exit(1);
 }
 app.w.close();

@@ -1,0 +1,13 @@
+#!/usr/sbin/nft -f
+# El usuario `verify` corre código de ramas: sale a internet, no a IMDS, la tailnet ni la VPC.
+# Tabla propia: nftables.service vaciaría las reglas de Tailscale y ufw.
+table inet verify_egress
+delete table inet verify_egress
+table inet verify_egress {
+  chain output {
+    type filter hook output priority filter; policy accept;
+    meta skuid != "verify" accept
+    ip daddr { 10.0.0.0/8, 100.64.0.0/10, 169.254.0.0/16, 172.16.0.0/12, 192.168.0.0/16 } counter reject
+    ip6 daddr { fd00::/8, fe80::/10 } counter reject
+  }
+}

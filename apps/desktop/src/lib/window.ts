@@ -23,8 +23,18 @@ export function toggleMaximizeFromHeader(event: MouseEvent) {
 // Su posición no se puede consultar; hay que volver a medir si macOS la cambia.
 export const TRAFFIC_LIGHT_PADDING = "pl-[84px]";
 
-// Una fila de 32 px alinea sus controles con el centro del semáforo, y=15,75 pt.
-export const HEADER_HEIGHT = "h-8";
+// La caja de «Nueva tarea» mide 30 px. La franja usa la misma: el semáforo
+// queda a 1 px de su centro (y=15,75 pt) y los controles llenan la fila.
+export const HEADER_HEIGHT = "h-[30px]";
+
+// La fila de máquina, carpeta y herramientas es el aire de arriba (`pt-2`, 8 px)
+// más esta caja. La ventana de archivos empieza debajo. Con 36 px (`pt-9`) le
+// comía 2 px a esa fila desde que la caja pasó de 22 px a 30 px.
+// La fila entera, con su altura fija: aunque la ubicación todavía no cargue, el
+// hueco ya está y el primer mensaje no sube debajo de las herramientas.
+export const LOCATION_BAR = "h-[38px]";
+export const BELOW_LOCATION = "pt-[38px]";
+export const BELOW_LOCATION_MARGIN = "mt-[38px]";
 
 export const needsTrafficLightPadding = (
   ownsCorner: () => boolean,

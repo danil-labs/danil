@@ -1,3 +1,4 @@
+import { SignalDot } from "../../ui/SignalDot";
 import CircleCheck from "lucide-solid/icons/circle-check";
 import CircleDashed from "lucide-solid/icons/circle-dashed";
 import CircleX from "lucide-solid/icons/circle-x";
@@ -131,11 +132,12 @@ export function TaskHoverCard(props: TaskHoverCardProps) {
       <Show when={maquina()}>
         {(m) => (
           <Fila label={t("projects.hover_card.machine")}>
-            <span
+            <span class="inline-flex shrink-0"
               data-hover-machine={m().id}
-              class={`inline-block size-1.5 shrink-0 rounded-full ${m().on ? "bg-success" : "bg-neutral-300"}`}
               aria-label={m().on ? t("shell.machines.on") : t("shell.machines.off")}
-            />
+            >
+              <SignalDot tone={m().on ? "success" : "off"} />
+            </span>
             <span class="truncate">
               {machineName(m().id, false)}
               <Show when={machineSystem(m().id)}>{(os) => <span class="text-neutral-500"> ({os()})</span>}</Show>

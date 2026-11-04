@@ -48,7 +48,7 @@ test("the web lists the account's computers and renames one in place", async () 
     const f = fleet({ cmp_vm: { table: engine, state: "online" }, cmp_mac: { table: engine, state: "online" } });
     const app = await boot("listo", "web-account-computers", {}, undefined, {}, {
       web: true,
-      antes: (w) => {
+      beforeImport: (w) => {
         globalThis.WebSocket = f.Socket;
         w.terminusWeb = { endpoint: API, computers: computers.map((c) => ({ ...c })), getToken: async () => "tok" };
       },
@@ -83,7 +83,7 @@ test("the web lists the account's computers and renames one in place", async () 
     assert.deepEqual(patched, [{ id: "cmp_mac", name: "Mac del estudio", token: "Bearer tok" }], "with the person's session");
     assert.ok(await until(() => rowOf("cmp_mac").querySelector("[data-computer-name]")?.textContent.startsWith("Mac del estudio")));
     assert.equal(rowOf("cmp_mac").querySelector("[data-rename-error]"), null);
-    assert.deepEqual(app.fallos, []);
+    assert.deepEqual(app.failures, []);
   } finally {
     globalThis.fetch = own;
   }

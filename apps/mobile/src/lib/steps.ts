@@ -4,7 +4,8 @@
  * qué ejecutó) y la respuesta. Sin React Native: se prueba en Node.
  */
 import { bareCommand, classify, fileName, isQuestionFile, joinSteps, type StepKind } from "@terminus/chat/steps";
-import type { Turn, TurnTool } from "@terminus/protocol";
+import type { HistoryRef, Turn, TurnTool } from "@terminus/protocol";
+import { quotaResolves, type QuotaChange, type TurnFailure } from "./failureNotice.ts";
 
 export type { StepKind };
 
@@ -27,10 +28,26 @@ export function senderOf(turn: Turn): Sender | null {
 
 /** Un renglón de la conversación. */
 export type Line =
-  | { key: string; kind: "message"; role: string; text: string; images: string[]; attachments: string[]; from?: Sender | null }
+  | {
+      key: string;
+      kind: "message";
+      role: string;
+      text: string;
+      images: string[];
+      attachments: string[];
+      from?: Sender | null;
+      refs?: readonly HistoryRef[];
+      turnId?: string;
+      /** `fallo` o `cupo`: la frase se arma al pintar, con la lengua de quien mira. */
+      meta?: string | null;
+      fallo?: TurnFailure | null;
+      quota?: QuotaChange | null;
+    }
   /** Lo que el agente dijo antes de su respuesta, mientras trabajaba. */
   | { key: string; kind: "progress"; text: string }
   | { key: string; kind: "steps"; rows: StepRow[] }
+  /** Lo que el agente pensó en el turno (`Turn.reasoning`), plegado en una fila. */
+  | { key: string; kind: "reasoning"; text: string; durationMs: number | null; live: boolean }
   /** Un `!` de la persona con su salida. */
   | { key: string; kind: "shell"; command: string; output: string; exitCode: number | null };
 
@@ -45,19 +62,57 @@ const visible = (tool: TurnTool | undefined): tool is TurnTool => tool !== undef
 const toStep = (tool: TurnTool) => stepOf(tool.name ?? "", tool.target ?? null, tool.ok ?? null);
 
 /**
+ * El razonamiento del turno en una sola fila: el teléfono no pinta su estructura
+ * interna. `live` lo enciende `deriveRun` mientras el turno sigue corriendo.
+ */
+function reasoningOf(turn: Turn, key: string): Line | null {
+  const blocks = (turn.reasoning ?? []).filter((block) => block.text.trim());
+  if (!blocks.length) return null;
+  const timed = blocks.some((block) => typeof block.duration_ms === "number");
+  return {
+    key: `${key}:reasoning`,
+    kind: "reasoning",
+    text: blocks.map((block) => block.text).join("\n\n"),
+    durationMs: timed ? blocks.reduce((total, block) => total + (block.duration_ms ?? 0), 0) : null,
+    live: false,
+  };
+}
+
+/** Lo pensado va encima de la respuesta del turno, no repartido por sus mensajes. */
+function folded(lines: Line[], reasoning: Line | null): Line[] {
+  if (!reasoning) return lines;
+  const at = lines.findIndex((line) => line.kind === "message");
+  return at < 0 ? [...lines, reasoning] : [...lines.slice(0, at), reasoning, ...lines.slice(at)];
+}
+
+/**
  * Los renglones de un turno. Con su orden registrado (`pieces`): los avances y los
  * pasos donde ocurrieron, y la respuesta (lo dicho tras la última herramienta) al
  * final; sin él, los pasos delante del texto.
  */
 export function linesOfTurn(turn: Turn, key: string, images: string[]): Line[] {
   const from = senderOf(turn);
-  const message = (text: string): Line => ({ key, kind: "message", role: turn.role, text, images, attachments: turn.attachments ?? [], from });
+  const refs = turn.history_refs?.filter((ref) => ref.pointer !== "/tools");
+  const message = (text: string): Line => ({
+    key,
+    kind: "message",
+    role: turn.role,
+    text,
+    images,
+    attachments: turn.attachments ?? [],
+    from,
+    ...(refs?.length ? { refs, turnId: turn.id } : {}),
+    ...(turn.meta ? { meta: turn.meta } : {}),
+    ...(turn.fallo ? { fallo: turn.fallo } : {}),
+    ...(turn.quota ? { quota: turn.quota } : {}),
+  });
   if (turn.shell) return [{ key, kind: "shell", command: turn.text ?? "", output: turn.shell.output ?? "", exitCode: turn.shell.exit_code ?? null }];
+  const reasoning = reasoningOf(turn, key);
   const tools = turn.tools ?? [];
   const pieces = turn.pieces ?? [];
   if (!pieces.length) {
     const steps = tools.filter(visible).map(toStep);
-    return [...(steps.length ? [{ key: `${key}:steps`, kind: "steps", rows: groupSteps(steps) } as Line] : []), message(turn.text ?? "")];
+    return folded([...(steps.length ? [{ key: `${key}:steps`, kind: "steps", rows: groupSteps(steps) } as Line] : []), message(turn.text ?? "")], reasoning);
   }
   const lastText = pieces.reduce((at, p, i) => ("text" in p ? i : at), -1);
   let firstFinal = lastText;
@@ -86,7 +141,7 @@ export function linesOfTurn(turn: Turn, key: string, images: string[]): Line[] {
   });
   flush(pieces.length);
   if (lastText < 0) out.push(message(turn.text ?? ""));
-  return out;
+  return folded(out, reasoning);
 }
 
 /** Si tras este evento lo que llegó en vivo ya está guardado: la lectura lo reemplaza (`liveAfterRead`). */
@@ -195,7 +250,8 @@ export type WorkThread = { lines: ChatLine[]; live: ChatLine[]; runs: WorkRun[] 
 
 const opensRun = (turn: Turn) => turn.role === "user" && !turn.permission && !turn.answers?.length && !turn.shell;
 const isSegment = (turn: Turn) => turn.role !== "user" && turn.role !== "system" && turn.role !== "shell";
-const isEmpty = (line: Line) => line.kind === "message" && !line.text && !line.images.length && !line.attachments.length;
+const isEmpty = (line: Line) =>
+  line.kind === "message" && !line.text && !line.images.length && !line.attachments.length && !line.refs?.length && line.meta !== "fallo" && line.meta !== "cupo" && !line.fallo;
 
 function decisionOf(turn: Turn): Step | null {
   if (!turn.permission) return null;
@@ -293,10 +349,16 @@ function deriveRun(stretch: Stretch, pieces: readonly LivePiece[], open: boolean
     if (line.kind === "progress") return addNote(line);
     if (isEmpty(line)) return;
     seal();
+    // La línea del cupo cierra el fallo que ya resolvió: la tarea siguió.
+    if (line.kind === "message" && line.meta === "cupo") {
+      const previous = target.at(-1);
+      if (previous?.kind === "message" && quotaResolves(previous.fallo?.clase)) target.pop();
+    }
     target.push(line);
     if (segment && line.kind === "message" && line.text) answers.push(line.text);
   };
 
+  const lastTurn = stretch.turns.at(-1)?.index;
   for (const { turn, index } of stretch.turns) {
     const decision = decisionOf(turn);
     if (decision) {
@@ -308,7 +370,8 @@ function deriveRun(stretch: Stretch, pieces: readonly LivePiece[], open: boolean
       worked = true;
     }
     const key = turn.id ?? String(index);
-    for (const line of linesOfTurn(turn, key, imagesOf(turn))) addLine(line, isSegment(turn));
+    const stillRunning = open && index === lastTurn;
+    for (const line of linesOfTurn(turn, key, imagesOf(turn))) addLine(line.kind === "reasoning" && stillRunning ? { ...line, live: true } : line, isSegment(turn));
   }
   if (pieces.length) target = tail;
   for (const line of linesOfLive(pieces)) {
@@ -323,12 +386,12 @@ function deriveRun(stretch: Stretch, pieces: readonly LivePiece[], open: boolean
   return { lines, tail, run };
 }
 
-function stretchesOf(turns: readonly Turn[]): Stretch[] {
+function stretchesOf(turns: readonly Turn[], base: number): Stretch[] {
   const out: { key: string; at: number | null; turns: { turn: Turn; index: number }[] }[] = [];
   turns.forEach((turn, index) => {
-    if (opensRun(turn)) out.push({ key: turn.id ?? String(index), at: turn.at ?? null, turns: [] });
+    if (opensRun(turn)) out.push({ key: turn.id ?? String(base + index), at: turn.at ?? null, turns: [] });
     else if (!out.length) out.push({ key: "start", at: null, turns: [] });
-    out.at(-1)!.turns.push({ turn, index });
+    out.at(-1)!.turns.push({ turn, index: base + index });
   });
   return out;
 }
@@ -339,12 +402,13 @@ const sealedOf = new WeakMap<readonly Turn[], Sealed>();
 /**
  * La conversación con sus ejecuciones: la única derivación que leen el chat y la hoja.
  * Solo la última ejecución cambia con lo vivo; las anteriores se calculan una vez por
- * lectura, porque esto corre con cada pedazo de texto que llega.
+ * lectura, porque esto corre con cada pedazo de texto que llega. `base`: la posición del
+ * primer turno en la transcripción entera; identifica a los turnos sin `id` entre páginas.
  */
-export function workRuns(turns: readonly Turn[], live: readonly LivePiece[], running: boolean, imagesOf: (turn: Turn) => string[] = () => []): WorkThread {
+export function workRuns(turns: readonly Turn[], live: readonly LivePiece[], running: boolean, imagesOf: (turn: Turn) => string[] = () => [], base = 0): WorkThread {
   let sealed = sealedOf.get(turns);
   if (!sealed) {
-    const stretches = stretchesOf(turns);
+    const stretches = stretchesOf(turns, base);
     const done = stretches.slice(0, -1).map((stretch) => deriveRun(stretch, [], false, imagesOf));
     sealed = { lines: done.flatMap((d) => d.lines), runs: done.map((d) => d.run), last: stretches.at(-1) ?? null };
     sealedOf.set(turns, sealed);
@@ -356,6 +420,7 @@ export function workRuns(turns: readonly Turn[], live: readonly LivePiece[], run
 
 /** Si un renglón dice lo que se busca; `needle` ya en minúsculas. Un grupo busca en sus comandos, rutas y avances. */
 export function lineMatches(line: ChatLine, needle: string): boolean {
+  if (line.kind === "reasoning") return false;
   if (line.kind === "work") return hitOf(line, needle) !== null;
   return (line.kind === "shell" ? `${line.command}\n${line.output}` : line.text).toLowerCase().includes(needle);
 }

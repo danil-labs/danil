@@ -1,10 +1,9 @@
 {
   "name": "@danil-labs/terminus",
   "version": "0.1.8",
-  "description": "Instala Terminus (app de escritorio Danil) con un solo comando: npx @danil-labs/terminus",
+  "description": "Instala Danil (app de escritorio) con un solo comando: npx @danil-labs/terminus",
   "type": "module",
   "bin": {
-    "terminus": "bin.mjs",
     "danil-terminus": "bin.mjs"
   },
   "files": [
@@ -26,10 +25,10 @@
     "desktop"
   ],
   "license": "Apache-2.0",
-  "homepage": "https://terminus.danil.ai",
+  "homepage": "https://danil.ai/download/",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/danil-labs/terminus.git"
+    "url": "git+https://github.com/danil-labs/danil.git"
   },
   "dependencies": {}
 }

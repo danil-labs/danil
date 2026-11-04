@@ -87,14 +87,9 @@ test("grouping keeps only non-empty groups; finished tasks stay in theirs", () =
   assert.deepEqual(ids(byFolder[0].tasks), ["d", "a", "e"]);
 
   const byStatus = applySidebarView(tasks, view({ group: "status" }), { live: ["c"], approving: [] });
-  assert.deepEqual(byStatus.map((g) => g.key), ["asked", "working", "idle", "finished"]);
-  assert.deepEqual(ids(byStatus[3].tasks), ["e"]);
-  assert.equal(groupLabel(byStatus[3], (id) => id), "Terminadas");
-
-  // Detenida por ti no es un fallo: su propio grupo, entre los fallos y lo que no has visto.
-  const stopped = applySidebarView([...tasks, task("f", { outcome: "interrupted" }), task("g", { outcome: "failed" }), task("h", { sin_ver: true })], view({ group: "status" }), { live: ["c"], approving: [] });
-  assert.deepEqual(stopped.map((g) => g.key), ["asked", "working", "failed", "interrupted", "unseen", "idle", "finished"]);
-  assert.equal(groupLabel(stopped[3], (id) => id), "Detenidas");
+  assert.deepEqual(byStatus.map((g) => g.key), ["unknown"]);
+  assert.deepEqual(ids(byStatus[0].tasks), ["d", "a", "b", "c", "e"]);
+  assert.equal(groupLabel(byStatus[0], (id) => id), "Desconocido");
 
   const byAgent = applySidebarView(tasks, view({ group: "agent" }), idle);
   assert.deepEqual(byAgent.map((g) => g.key), ["ada", "bob", ""]);
@@ -155,7 +150,7 @@ test("the scope line says what is shown, in the app language", () => {
   elegirLengua("es");
   assert.equal(scopeLabel(DEFAULT_SIDEBAR_VIEW, name), "Todas las carpetas · por carpeta");
   assert.equal(scopeLabel(view({ group: "none" }), name), "Todas las carpetas");
-  assert.equal(scopeLabel(view({ folders: ["f1"], group: "status" }), name), "terminus · por estado");
+  assert.equal(scopeLabel(view({ folders: ["f1"], group: "status" }), name), "terminus · por estado del trabajo");
   assert.equal(scopeLabel(view({ folders: ["f1", "f2"], agent: "ada", group: "none" }), name), "terminus, web · ada");
   assert.equal(groupLabel({ kind: "folder", key: "", tasks: [] }, name), "Sin carpeta");
   assert.equal(groupLabel({ kind: "section", key: "active", tasks: [] }, name), "Tareas");

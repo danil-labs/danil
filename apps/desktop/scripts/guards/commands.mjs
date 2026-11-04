@@ -69,10 +69,13 @@ const ARBOLES = [WEB].filter((d) => existsSync(d));
  * normal: el registro es la lista de lo que la app hace, no de lo que podría.
  */
 const SIN_INTERFAZ = {
-  // Extensión de orquestadores: las pide el relay de Danil Computers (MCP remoto), no una pantalla.
-  connect_external: "la pide el MCP remoto de Danil Computers por el relay",
-  connection_call: "la pide el MCP remoto de Danil Computers por el relay",
-  disconnect_external: "la pide Danil Computers al revocar una conexión",
+  delete_session: "contrato legacy; la ventana exige task_lifecycle_v1 con previa y consentimiento",
+  // La columna derecha de la tarea nueva se quitó: sus archivos viven dentro de la tarea. Siguen en el contrato del motor.
+  create_empty_session: "la pedía la columna derecha de la tarea nueva, que ya no existe; queda en el contrato del motor",
+  // Extensión de orquestadores: las pide el relay de Danil Machines (MCP remoto), no una pantalla.
+  connect_external: "la pide el MCP remoto de Danil Machines por el relay",
+  connection_call: "la pide el MCP remoto de Danil Machines por el relay",
+  disconnect_external: "la pide Danil Machines al revocar una conexión",
   run_activity_command: "el CLI ejecuta mantenimiento; los clientes solo consultan sus registros",
   import_chat_background: "la ventana manda el fondo reducido como `data:` (`set_chat_background`); queda en el contrato congelado para motores anteriores",
   git_host_pending_setup: "el CLI del motor lo usa para completar la conexión; permanece en el contrato congelado",

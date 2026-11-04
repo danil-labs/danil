@@ -1,22 +1,32 @@
 #!/usr/bin/env node
-import { execFileSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { spawn } from "node:child_process";
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { availableParallelism, freemem, tmpdir, totalmem } from "node:os";
 import { dirname, join, relative } from "node:path";
+import { setTimeout as sleep } from "node:timers/promises";
 import { fileURLToPath } from "node:url";
 
 import { SKIPPED_EXIT_CODE, walkFiles } from "./git.mjs";
+import { changedFiles, classify, stepFiles, testReader, touches } from "./verify-scope.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const backend = join(root, "src-tauri");
 const PLATFORM = { win32: "Windows", darwin: "macOS", linux: "Linux" }[process.platform] ?? process.platform;
 const OTHER_PLATFORMS =
   process.platform === "darwin"
-    ? "Windows y Linux"
+    ? "Windows and Linux"
     : process.platform === "win32"
-      ? "macOS y Linux"
-      : "Windows y macOS";
+      ? "macOS and Linux"
+      : "Windows and macOS";
+
+if (process.argv.includes("--remote")) {
+  const { runRemote } = await import("./verify-remote.mjs");
+  process.exit(await runRemote(process.argv.slice(2)));
+}
 
 const SKIP_RUST = process.argv.includes("--no-cargo");
+const QUICK = process.argv.includes("--quick");
+const BASE = process.argv.find((argument) => argument.startsWith("--base="))?.slice(7) ?? "origin/dev";
 const rustBuild = { command: "cargo", env: process.env };
 
 function undocumentedGuards() {
@@ -34,647 +44,702 @@ function undocumentedGuards() {
       .filter((argument) => (argument.startsWith("scripts/") || argument.startsWith("tests/perf/")) && argument.endsWith(".mjs") && !argument.includes(".test.")),
   );
   return [
-    ...[...scheduled].filter((path) => !documented.has(path)).map((path) => `Paso sin fila: ${path}`),
-    ...[...documented].filter((path) => !scheduled.has(path)).map((path) => `Fila sin paso: ${path}`),
+    ...[...scheduled].filter((path) => !documented.has(path)).map((path) => `Step without a row: ${path}`),
+    ...[...documented].filter((path) => !scheduled.has(path)).map((path) => `Row without a step: ${path}`),
   ];
 }
 
-const engineStep = ["El motor empaquetado está en su sitio", process.execPath, [join(root, "scripts/engine.mjs"), "sidecar"], root];
-const cliStep = ["La CLI reenvía al motor sin abrir ventana", process.execPath, ["--test", join(root, "tests/unit/cli-forward.test.mjs")], root];
+const engineStep = ["The bundled engine is in place", process.execPath, [join(root, "scripts/engine.mjs"), "sidecar"], root];
+const cliStep = ["The CLI forwards to the engine without opening a window", process.execPath, ["--test", join(root, "tests/unit/cli-forward.test.mjs")], root];
 const rustSteps = [
   engineStep,
   ["cargo fmt", "cargo", ["fmt", "--check", "--", "--config-path", "rustfmt.toml"], backend],
   ["cargo check", rustBuild.command, ["check", "--locked", "--all-targets"], backend],
   ["cargo clippy", rustBuild.command, ["clippy", "--locked", "--all-targets"], backend],
-  ["La ventana tiene permiso para lo que se le pide", process.execPath, [join(root, "scripts/guards/permissions.mjs")], root],
+  ["The window has permission for what it asks", process.execPath, [join(root, "scripts/guards/permissions.mjs")], root],
   ["cargo test", rustBuild.command, ["test", "--locked"], backend],
 ];
 
 const steps = [
   ...(SKIP_RUST ? [] : [engineStep]),
   cliStep,
-  ["El buscador de proyectos combina repositorios sin duplicarlos", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/project-repositories.test.ts")], root],
-  ["Todo el código es revisable", process.execPath, [join(root, "scripts/guards/reviewable.mjs")], root],
+  ["The Danil launchers keep the CLI and refuse collisions", process.execPath, ["--test", join(root, "tests/unit/cli-path.test.mjs")], root],
+  ["The project search merges repositories without duplicates", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/project-repositories.test.ts")], root],
+  ["The scope of --quick comes from the diff and falls back to the full chain when in doubt", process.execPath, ["--test", join(root, "tests/unit/verify-scope.test.mjs")], root],
+  ["All code is reviewable", process.execPath, [join(root, "scripts/guards/reviewable.mjs")], root],
   [
-    "Un guarda sin git lo dice, y no mata la cadena",
+    "A guard without git says so and does not kill the chain",
     process.execPath,
     ["--test", join(root, "tests/unit/tree-git.test.mjs")],
     root,
   ],
-  ["Ningún proceso abre una consola en Windows", process.execPath, [join(root, "scripts/guards/console-window.mjs")], root],
-  ["Ningún proceso se espera sin plazo", process.execPath, [join(root, "scripts/guards/processes.mjs")], root],
-  ["La ventana no se construye dos veces", process.execPath, [join(root, "scripts/guards/window.mjs")], root],
-  ["Los docs no mandan a un archivo que no está", process.execPath, [join(root, "scripts/guards/doc-paths.mjs")], root],
-  ["Alguien emite lo que la interfaz escucha", process.execPath, [join(root, "scripts/guards/bridge.mjs")], root],
-  ["Ningún error del backend se aplana", process.execPath, [join(root, "scripts/guards/service-errors.mjs")], root],
-  ["Alguien invoca lo que el backend registra", process.execPath, [join(root, "scripts/guards/commands.mjs")], root],
-  ["El motor fijado habla el contrato copiado", process.execPath, [join(root, "scripts/guards/contract.mjs")], root],
-  ["El runtime del artefacto no se rompe en silencio", process.execPath, [join(root, "scripts/guards/artifact.mjs")], root],
-  ["Llevar trabajo a otra máquina copia por partes, sigue desde la que falló y limpia al cancelar", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/carry-work.test.ts")], root],
-  ["Los visuales del chat llegan por partes y caen a tree_show con un motor anterior", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/chat-visual-parts.test.ts")], root],
-  ["La foto del sidebar se guarda acotada y con espera", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/shell-cache.test.ts")], root],
-  ["La configuración de un orquestador de esta máquina arranca mcp serve con su credencial", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/orchestrator-snippets.test.ts")], root],
-  ["El panel Carpeta reintenta solo, no amontona lecturas y no tira lo último bueno", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/tree-loader.test.ts")], root],
-  ["La ventana abre con la lista ligera y el arranque la confirma sin saltarse la negativa", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/early-startup.test.ts")], root],
-  ["La nota de la versión sale en el idioma de la app", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/release-notes.test.ts")], root],
-  ["Las tareas de la página de un agente se paginan sin separar subtareas de su padre", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/agent-page-tasks.test.ts")], root],
-  ["El riel de subtareas lanzadas suelta las que ya se terminaron", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/delegated-rail.test.ts")], root],
-  ["La búsqueda de tareas ignora acentos y encuentra varias palabras", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/task-search.test.ts")], root],
-  ["La vista de Typst solo acompaña a un .typ, no al archivo que se abre después", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/typst-scope.test.ts")], root],
-  ["El dock de agentes ordena por estado y cabe en una fila", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/agent-dock.test.ts")], root],
-  ["El sidebar junta las tareas de todas las carpetas sin repetirlas", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/sidebar-tasks.test.ts")], root],
-  ["El sidebar filtra por carpeta y agente y reparte en secciones o grupos", process.execPath, ["--conditions=browser", "--test", "--experimental-strip-types", join(root, "tests/unit/sidebar-view.test.ts")], root],
-  ["El visor conserva navegación y rechaza los canales retirados", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/artifact-viewer.test.ts"), join(root, "tests/unit/artifact-download.test.ts")], root],
-  ["La ventana no deja salir material", process.execPath, [join(root, "scripts/guards/csp.mjs")], root],
-  ["El tema de terminal no repinta el chrome", process.execPath, [join(root, "scripts/guards/terminal-themes.mjs")], root],
-  ["El catálogo define lo que el código pide", process.execPath, [join(root, "scripts/guards/locales.mjs")], root],
-  ["Los tamaños de letra salen de la escala", process.execPath, ["--experimental-strip-types", join(root, "scripts/guards/design-tokens.mjs")], root],
-  ["Los paquetes compartidos pasan sus pruebas", process.execPath, ["--test", "--experimental-strip-types", join(root, "../../packages/tasks/test/*.test.ts"), join(root, "../../packages/attention/test/*.test.ts"), join(root, "../../packages/design/test/*.test.ts"), join(root, "../../packages/chat/test/*.test.ts")], root],
-  ["`cn` reconoce la escala de texto", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/cn-text-scale.test.ts")], root],
-  ["El paquete de diseño dice lo mismo que el escritorio", process.execPath, ["--experimental-strip-types", join(root, "scripts/guards/shared-design.mjs")], root],
-  ["Lo ya traducido no se vuelve a soldar", process.execPath, [join(root, "scripts/guards/literals.mjs")], root],
-  ["Los comentarios no crecen ni argumentan", process.execPath, [join(root, "scripts/guards/comments.mjs")], root],
-  ["Las lecturas de fuente en pruebas respetan el cupo revisado", process.execPath, [join(root, "scripts/guards/test-policy.mjs")], root],
-  ["Los iconos del árbol son los del paquete", process.execPath, [join(root, "scripts/icons.mjs"), "--check"], root],
-  ["Soltar un archivo no depende de la pantalla", process.execPath, [join(root, "scripts/guards/drop.mjs")], root],
-  ["Ninguna animación infinita repinta a 60 cuadros", process.execPath, [join(root, "scripts/guards/animations.mjs")], root],
+  ["No process opens a console on Windows", process.execPath, [join(root, "scripts/guards/console-window.mjs")], root],
+  ["What depends on productName says the same name, and Windows adopts the Terminus copy", process.execPath, [join(root, "scripts/guards/product-name.mjs")], root],
+  ["No process is awaited without a deadline", process.execPath, [join(root, "scripts/guards/processes.mjs")], root],
+  ["The window is not built twice", process.execPath, [join(root, "scripts/guards/window.mjs")], root],
+  ["Docs do not point to a missing file", process.execPath, [join(root, "scripts/guards/doc-paths.mjs")], root],
+  ["Someone emits what the interface listens to", process.execPath, [join(root, "scripts/guards/bridge.mjs")], root],
+  ["No backend error gets flattened", process.execPath, [join(root, "scripts/guards/service-errors.mjs")], root],
+  ["Someone invokes what the backend registers", process.execPath, [join(root, "scripts/guards/commands.mjs")], root],
+  ["The pinned engine speaks the copied contract", process.execPath, [join(root, "scripts/guards/contract.mjs")], root],
+  ["The artifact runtime does not break silently", process.execPath, [join(root, "scripts/guards/artifact.mjs")], root],
+  ["Carrying work to another machine copies in parts, resumes from the failed one and cleans up on cancel", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/carry-work.test.ts")], root],
+  ["Chat visuals arrive in parts and fall back to tree_show on an older engine", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/chat-visual-parts.test.ts")], root],
+  ["An agent row names its readers only when they differ from the rest", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/agent-readers.test.ts")], root],
+  ["The sidebar snapshot is saved bounded and debounced", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/shell-cache.test.ts")], root],
+  ["A local orchestrator config starts mcp serve with its credential", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/orchestrator-snippets.test.ts")], root],
+  ["History pages join by their turns and a failure can be retried", process.execPath, ["--test", "--experimental-strip-types", join(root, "..", "..", "packages/chat/test/history.test.ts")], root],
+  ["Thread rows keep their key when saved and when prepending", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/thread-rows.test.ts")], root],
+  ["The Folder panel retries by itself, does not pile up reads and keeps the last good result", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/tree-loader.test.ts")], root],
+  ["The window opens with the light list and startup confirms it without skipping a denial", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/early-startup.test.ts")], root],
+  ["The release note comes in the app language", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/release-notes.test.ts")], root],
+  ["An agent page paginates tasks without separating subtasks from their parent", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/agent-page-tasks.test.ts")], root],
+  ["The launched subtasks rail drops the finished ones", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/delegated-rail.test.ts")], root],
+  ["Task search ignores accents and finds several words", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/task-search.test.ts")], root],
+  ["The Typst view only goes with a .typ, not with the file opened next", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/typst-scope.test.ts")], root],
+  ["The agents dock sorts by state and fits in one row", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/agent-dock.test.ts")], root],
+  ["The sidebar joins tasks from all folders without repeating them", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/sidebar-tasks.test.ts")], root],
+  ["The sidebar filters by folder and agent and splits into sections or groups", process.execPath, ["--conditions=browser", "--test", "--experimental-strip-types", join(root, "tests/unit/sidebar-view.test.ts")], root],
+  ["The viewer keeps navigation and rejects retired channels", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/artifact-viewer.test.ts"), join(root, "tests/unit/artifact-download.test.ts")], root],
+  ["The window lets no material out", process.execPath, [join(root, "scripts/guards/csp.mjs")], root],
+  ["The terminal theme does not repaint the chrome", process.execPath, [join(root, "scripts/guards/terminal-themes.mjs")], root],
+  ["The catalog defines what the code asks for", process.execPath, [join(root, "scripts/guards/locales.mjs")], root],
+  ["Font sizes come from the scale", process.execPath, ["--experimental-strip-types", join(root, "scripts/guards/design-tokens.mjs")], root],
+  ["The shared packages pass their tests", process.execPath, ["--test", "--experimental-strip-types", join(root, "../../packages/tasks/test/*.test.ts"), join(root, "../../packages/attention/test/*.test.ts"), join(root, "../../packages/design/test/*.test.ts"), join(root, "../../packages/chat/test/*.test.ts")], root],
+  ["`cn` recognizes the text scale", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/cn-text-scale.test.ts")], root],
+  ["The design package says the same as the desktop", process.execPath, ["--experimental-strip-types", join(root, "scripts/guards/shared-design.mjs")], root],
+  ["What is already translated does not get hardcoded again", process.execPath, [join(root, "scripts/guards/literals.mjs")], root],
+  ["Visible help text does not grow", process.execPath, [join(root, "scripts/guards/copy.mjs")], root],
+  ["Comments do not grow or argue", process.execPath, [join(root, "scripts/guards/comments.mjs")], root],
+  ["Source reads in tests respect the reviewed quota", process.execPath, [join(root, "scripts/guards/test-policy.mjs")], root],
+  ["Tree icons are the package's", process.execPath, [join(root, "scripts/icons.mjs"), "--check"], root],
+  ["Dropping a file does not depend on the screen", process.execPath, [join(root, "scripts/guards/drop.mjs")], root],
+  ["No infinite animation repaints at 60 fps", process.execPath, [join(root, "scripts/guards/animations.mjs")], root],
   [
-    "El disparador conserva el clic que lo abre",
+    "The trigger keeps the click that opens it",
     process.execPath,
     ["--test", join(root, "tests/unit/triggers.test.mjs")],
     root,
   ],
   [
-    "Un abanico de peticiones respeta su tope",
+    "A request fan-out respects its cap",
     process.execPath,
     ["--test", "--experimental-strip-types", join(root, "tests/unit/pool.test.ts")],
     root,
   ],
+  ["La cola remota corre uno a la vez, limpia entre corridas y devuelve el exit real", process.execPath, ["--test", join(root, "tests/unit/verify-queue.test.mjs")], root],
+  ["El barrido de target no toca lo que un cargo usa", process.execPath, ["--test", join(root, "tests/unit/sweep-targets.test.mjs")], root],
   [
-    "Un fondo de chat guardado que ya no existe no pinta nada",
+    "A saved chat background that no longer exists paints nothing",
     process.execPath,
     ["--test", "--experimental-strip-types", join(root, "tests/unit/chat-background.test.ts")],
     root,
   ],
   [
-    "El fondo del chat no se borra con un motor anterior ni pasa de un workspace a otro",
+    "The chat background is not erased by an older engine and does not cross workspaces",
     process.execPath,
     ["--test", "--experimental-strip-types", join(root, "tests/unit/chat-background-engine.test.ts")],
     root,
   ],
   [
-    "El nombre de un agente da un identificador que el backend acepta",
+    "An agent name gives an identifier the backend accepts",
     process.execPath,
     ["--test", "--experimental-strip-types", join(root, "tests/unit/agent-id.test.ts")],
     root,
   ],
   [
-    "Un formateador se reusa y sigue a la lengua",
+    "A formatter is reused and follows the language",
     process.execPath,
     ["--test", "--experimental-strip-types", join(root, "tests/unit/format.test.ts")],
     root,
   ],
   [
-    "Los indicadores leen las dos formas de una medida",
+    "Indicators read both forms of a measure",
     process.execPath,
     ["--test", join(root, "tests/unit/indicators.test.mjs")],
     root,
   ],
   [
-    "El hilo sigue al agente y se deja soltar",
+    "The thread follows the agent and can be let go",
     process.execPath,
     ["--conditions=browser", "--test", "--experimental-strip-types", join(root, "tests/unit/paste.test.ts")],
     root,
   ],
   [
-    "Las respuestas rápidas se leen igual en la ventana y en lo que sale del chat",
+    "Quick replies read the same in the window and in what leaves the chat",
     process.execPath,
     ["--test", "--experimental-strip-types", join(root, "tests/unit/next-steps.test.ts")],
     root,
   ],
   [
-    "La barra elige la fila, y el comando exacto encabeza",
+    "The bar picks the row, and the exact command leads",
     process.execPath,
     ["--test", "--experimental-strip-types", join(root, "tests/unit/suggestions.test.ts")],
     root,
   ],
   [
-    "/btw va al margen solo con el agente que lo declara, y «Pasar al hilo» no manda nada",
+    "/btw goes to the side only with an agent that declares it, and «Pasar al hilo» sends nothing",
     process.execPath,
     ["--test", "--experimental-strip-types", join(root, "tests/unit/side-question.test.ts")],
     root,
   ],
   [
-    "Los comandos `!` quedan alineados en la caja y se corren sin la sangría",
+    "`!` commands stay aligned in the box and run without the indent",
     process.execPath,
     ["--test", "--experimental-strip-types", join(root, "scripts/terminal-indent.test.ts")],
     root,
   ],
   [
-    "El menú de la arroba propone encargados por nombre, sin chocar con el material",
+    "The at-sign menu suggests delegates by name without clashing with material",
     process.execPath,
     ["--test", "--experimental-strip-types", join(root, "tests/unit/recipient-menu.test.ts")],
     root,
   ],
   [
-    "Un destinatario se pinta aparte del material y se mueve con él",
+    "A recipient is painted apart from the material and moves with it",
     process.execPath,
     ["--test", "--experimental-strip-types", join(root, "tests/unit/recipients.test.ts")],
     root,
   ],
   [
-    "Pegar una imagen la adjunta y pegar texto no",
+    "Pasting an image attaches it and pasting text does not",
     process.execPath,
     ["--test", "--experimental-strip-types", join(root, "tests/unit/clipboard.test.ts")],
     root,
   ],
   [
-    "La actividad de una tarea no le roba el foco a quien escribe",
+    "Task activity does not steal focus from whoever is typing",
     process.execPath,
     ["--test", "--experimental-strip-types", join(root, "tests/unit/focus.test.ts")],
     root,
   ],
   [
-    "⌘A fuera de un campo selecciona el bloque del clic, no la ventana",
+    "⌘A outside a field selects the clicked block, not the window",
     process.execPath,
     ["--test", "--experimental-strip-types", join(root, "tests/unit/select-all.test.ts")],
     root,
   ],
   [
-    "El turno reabierto conserva su orden",
+    "A reopened turn keeps its order",
     process.execPath,
     ["--test", "--experimental-strip-types", join(root, "tests/unit/turn-order.test.ts"), join(root, "tests/unit/history-refs.test.ts")],
     root,
   ],
   [
-    "La respuesta dice con qué modelo contestó",
+    "The reply says which model answered",
     process.execPath,
     ["--test", "--experimental-strip-types", join(root, "tests/unit/turn-model.test.ts")],
     root,
   ],
   [
-    "El medidor de contexto sale con lo que el agente publica",
+    "The context meter comes from what the agent publishes",
     process.execPath,
     ["--test", "--experimental-strip-types", join(root, "tests/unit/context-window.test.ts")],
     root,
   ],
   [
-    "La salida de un comando de barra se pinta con su comando",
+    "Slash command output is painted with its command",
     process.execPath,
     ["--test", "--experimental-strip-types", join(root, "tests/unit/command-output.test.ts")],
     root,
   ],
   [
-    "Lo que se le teclea a un `!` oculta las claves",
+    "What is typed into a `!` hides secrets",
     process.execPath,
     ["--test", "--experimental-strip-types", join(root, "tests/unit/command-input.test.ts")],
     root,
   ],
   [
-    "El fragmento tardío de un mensaje vuelve a su globo",
+    "A late fragment of a message returns to its bubble",
     process.execPath,
     ["--test", "--experimental-strip-types", join(root, "tests/unit/chat-delta.test.ts")],
     root,
   ],
   [
-    "Un turno con varias subtareas y un mensaje para una de ellas no se pinta dos veces",
+    "A turn with several subtasks and a message to one of them is not painted twice",
     process.execPath,
     ["--test", "--experimental-strip-types", join(root, "tests/unit/chat-delegation-thread.test.ts")],
     root,
   ],
   [
-    "El servicio que vuelve no se pinta en la pantalla",
+    "A service that comes back is not painted on screen",
     process.execPath,
     ["--test", "--experimental-strip-types", join(root, "tests/unit/invoke-retry.test.ts")],
     root,
   ],
   [
-    "Guardar el token de Telegram espera a una ventana saturada",
+    "Saving the Telegram token waits for a saturated window",
     process.execPath,
     ["--test", "--experimental-strip-types", join(root, "tests/unit/telegram-section.test.ts")],
     root,
   ],
   [
-    "Nueva tarea abre su borrador con las fuentes heredadas",
+    "New task opens its draft with the inherited sources",
     process.execPath,
     ["--test", "--experimental-strip-types", join(root, "tests/unit/new-task.test.ts")],
     root,
   ],
   [
-    "Arrastrar una tarea la mueve, y no la abre",
+    "Dragging a task moves it and does not open it",
     process.execPath,
     ["--test", "--experimental-strip-types", join(root, "tests/unit/move-task.test.ts")],
     root,
   ],
   [
-    "Una tarea archivada sale de la lista y no de su árbol",
+    "An archived task leaves the list and not its tree",
     process.execPath,
     ["--test", "--experimental-strip-types", join(root, "tests/unit/archived-tasks.test.ts")],
     root,
   ],
   [
-    "El historial mantiene el orden de sus grupos de autor",
+    "History keeps the order of its author groups",
     process.execPath,
     ["--test", "--experimental-strip-types", join(root, "tests/unit/task-authors.test.ts")],
     root,
   ],
   [
-    "La rama se enseña en la fila que tiene el árbol",
+    "The branch shows on the row that has the tree",
     process.execPath,
     ["--test", "--experimental-strip-types", join(root, "tests/unit/task-branch.test.ts")],
     root,
   ],
   [
-    "La tarjeta de una tarea colorea su carpeta y afirma solo el PR confirmado",
+    "A task card colors its folder and claims only the confirmed PR",
     process.execPath,
     ["--test", "--experimental-strip-types", join(root, "tests/unit/task-hover-card.test.ts")],
     root,
   ],
   [
-    "La fila enseña el comando, no cómo se lanzó",
+    "The row shows the command, not how it was launched",
     process.execPath,
     ["--test", "--experimental-strip-types", join(root, "tests/unit/step-command.test.ts")],
     root,
   ],
   [
-    "Una fuente se nombra por su proveedor, no por la copia en AppData",
+    "A source is named by its provider, not by the AppData copy",
     process.execPath,
     ["--test", "--experimental-strip-types", join(root, "tests/unit/source-origin.test.ts")],
     root,
   ],
   [
-    "El fondo del chat se reduce por pasos de calidad y tamaño hasta 1,5 MB",
+    "The chat background shrinks by quality and size steps down to 1.5 MB",
     process.execPath,
     ["--test", "--experimental-strip-types", join(root, "tests/unit/shrink-image.test.ts")],
     root,
   ],
   [
-    "En el navegador el logo y el fondo de un workspace se leen y se cambian en la cuenta",
+    "In the browser a workspace logo and background are read and changed in the account",
     process.execPath,
     ["--test", "--experimental-strip-types", join(root, "tests/unit/web-workspace-assets.test.ts")],
     root,
   ],
   [
-    "En el navegador la bitácora de cambios se lee de la cuenta activa con la sesión",
+    "In the browser the change log is read from the active account with the session",
     process.execPath,
     ["--test", "--experimental-strip-types", join(root, "tests/unit/web-audit-log.test.ts")],
     root,
   ],
   [
-    "El recorte del logo conserva el cuadrado elegido",
+    "Logo cropping keeps the chosen square",
     process.execPath,
     ["--test", "--experimental-strip-types", join(root, "tests/unit/logo-crop.test.ts")],
     root,
   ],
   [
-    "El chat no pinta un destino que ejecute",
+    "The chat paints no destination that executes",
     process.execPath,
     ["--test", "--experimental-strip-types", join(root, "tests/unit/links.test.ts")],
     root,
   ],
   [
-    "Una vista de draw.io no rompe la etiqueta que la contiene",
+    "A draw.io view does not break the tag that holds it",
     process.execPath,
     ["--test", "--experimental-strip-types", join(root, "tests/unit/drawio.test.ts")],
     root,
   ],
   [
-    "Ctrl+clic o ⌘+clic en un enlace del chat lo abre fuera sin preguntar",
+    "Ctrl+click or ⌘+click on a chat link opens it outside without asking",
     process.execPath,
     ["--test", "--experimental-strip-types", join(root, "tests/unit/link-click.test.ts")],
     root,
   ],
   [
-    "El backend se pinta en la lengua de la ventana",
+    "The backend is painted in the window language",
     process.execPath,
     ["--test", "--experimental-strip-types", join(root, "tests/unit/prose.test.ts")],
     root,
   ],
   [
-    "El selector conserva el proveedor",
+    "The selector keeps the provider",
     process.execPath,
     ["--test", "--experimental-strip-types", join(root, "tests/unit/models.test.ts")],
     root,
   ],
   [
-    "El markdown se parte sin cambiar lo que se ve",
+    "A task changes CLI only when the engine, the machine and the idle session allow it, and the consent goes before the turn",
+    process.execPath,
+    ["--test", "--experimental-strip-types", join(root, "tests/unit/provider-handover.test.ts")],
+    root,
+  ],
+  [
+    "Markdown is split without changing what is seen",
     process.execPath,
     ["--test", "--experimental-strip-types", join(root, "tests/unit/markdown.test.ts")],
     root,
   ],
   [
-    "Lo que se calcula por partes en streaming da lo mismo que de una vez",
+    "What streaming computes in parts equals computing it at once",
     process.execPath,
     ["--test", "--experimental-strip-types", join(root, "tests/unit/streaming-parity.test.ts")],
     root,
   ],
   [
-    "Las columnas de una tabla se reparten según su texto",
+    "Table columns are shared out by their text",
     process.execPath,
     ["--test", "--experimental-strip-types", join(root, "tests/unit/markdown-table.test.ts")],
     root,
   ],
   [
-    "Las fórmulas se pintan y el dinero queda como texto",
+    "Formulas are painted and money stays as text",
     process.execPath,
     ["--test", "--experimental-strip-types", join(root, "tests/unit/markdown-math.test.ts")],
     root,
   ],
   [
-    "El diff numera las líneas donde están",
+    "The diff numbers lines where they are",
     process.execPath,
     ["--test", "--experimental-strip-types", join(root, "tests/unit/diff.test.ts")],
     root,
   ],
   [
-    "El diff marca la palabra que cambió y alinea los dos paneles",
+    "The diff marks the changed word and aligns both panes",
     process.execPath,
     ["--test", "--experimental-strip-types", join(root, "tests/unit/diff-words.test.ts")],
     root,
   ],
   [
-    "El atajo de permisos no cicla lo que no se puede",
+    "The permissions shortcut does not cycle what it cannot",
     process.execPath,
     ["--test", "--experimental-strip-types", join(root, "tests/unit/modes.test.ts")],
     root,
   ],
   [
-    "El árbol no esconde lo que cambió",
+    "The tree does not hide what changed",
     process.execPath,
     ["--test", "--experimental-strip-types", join(root, "tests/unit/tree.test.ts")],
     root,
   ],
   [
-    "Un archivo tabular se lee como tabla y no como texto",
+    "A tabular file reads as a table and not as text",
     process.execPath,
     ["--test", "--experimental-strip-types", join(root, "tests/unit/csv.test.ts")],
     root,
   ],
   [
-    "La imagen se acerca sin salirse de sus topes",
+    "An image zooms within its limits",
     process.execPath,
     ["--test", "--experimental-strip-types", join(root, "tests/unit/zoom.test.ts")],
     root,
   ],
   [
-    "Cada archivo lleva el icono de su formato",
+    "Each file carries its format's icon",
     process.execPath,
     ["--test", "--experimental-strip-types", join(root, "tests/unit/icons.test.ts")],
     root,
   ],
   [
-    "Un repositorio en la nube se pinta como repositorio",
+    "A cloud repository is painted as a repository",
     process.execPath,
     ["--test", "--experimental-strip-types", join(root, "tests/unit/workdir-icon.test.ts")],
     root,
   ],
   [
-    "Un proyecto tiene color estable y una ubicación legible",
+    "A project has a stable color and a readable location",
     process.execPath,
     ["--test", "--experimental-strip-types", join(root, "tests/unit/project-settings.test.ts")],
     root,
   ],
   [
-    "Una pestaña no se pierde al cerrar otra",
+    "A tab is not lost when closing another",
     process.execPath,
     ["--test", "--experimental-strip-types", join(root, "tests/unit/tabs.test.ts")],
     root,
   ],
   [
-    "El panel de archivos de cada tarea guarda sus pestañas",
+    "Each task's files panel keeps its tabs",
     process.execPath,
     ["--test", "--experimental-strip-types", join(root, "tests/unit/task-files.test.ts")],
     root,
   ],
   [
-    "El atajo de pestaña lee la tecla física y no choca con otro",
+    "Search cards keep the match text and skip a day the message does not have",
+    process.execPath,
+    ["--test", "--experimental-strip-types", join(root, "tests/unit/search-cards.test.ts")],
+    root,
+  ],
+  [
+    "The tab shortcut reads the physical key and does not clash with another",
     process.execPath,
     ["--test", "--experimental-strip-types", join(root, "tests/unit/tab-shortcuts.test.ts")],
     root,
   ],
   [
-    "La rejilla de ventanas no se descuadra",
+    "The window grid does not go out of square",
     process.execPath,
     ["--test", "--experimental-strip-types", join(root, "tests/unit/panels.test.ts")],
     root,
   ],
   [
-    "Las páginas del historial se juntan sin mezclar transcripciones distintas",
+    "History pages join without mixing different transcripts",
     process.execPath,
     ["--test", "--experimental-strip-types", join(root, "tests/unit/push-history.test.ts")],
     root,
   ],
   [
-    "Abrir un hilo largo monta su final y lo de arriba llega al subir",
+    "Opening a long thread mounts its end and the rest arrives on scrolling up",
     process.execPath,
     ["--test", "--experimental-strip-types", join(root, "tests/unit/thread-window.test.ts")],
     root,
   ],
   [
-    "El archivo abierto se entera del turno",
+    "The open file hears about the turn",
     process.execPath,
     ["--test", "--experimental-strip-types", join(root, "tests/unit/code-refresh.test.ts")],
     root,
   ],
   [
-    "Un fallo al leer no vacía el panel de código",
+    "A read failure does not empty the code panel",
     process.execPath,
     ["--test", "--experimental-strip-types", join(root, "tests/unit/last-good-trees.test.ts")],
     root,
   ],
   [
-    "La lista de tareas se recupera sola de un fallo",
+    "The task list recovers from a failure by itself",
     process.execPath,
     ["--test", "--experimental-strip-types", join(root, "tests/unit/session-refresh.test.ts")],
     root,
   ],
   [
-    "El almacenamiento refresca sin mezclar workspaces",
+    "Storage refreshes without mixing workspaces",
     process.execPath,
     ["--test", "--experimental-strip-types", join(root, "tests/unit/storage-refresh.test.ts")],
     root,
   ],
   [
-    "Máquinas lee presión, memoria y versión, y un host anterior queda en «Solo disco»",
+    "Machines reads pressure, memory and version, and an older host stays at «Solo disco»",
     process.execPath,
     ["--test", "--experimental-strip-types", join(root, "tests/unit/machine-usage.test.ts")],
     root,
   ],
   [
-    "Configuración abre en su entrada y pestaña los ids de antes",
+    "Settings opens old ids at their entry and tab",
     process.execPath,
     ["--test", "--experimental-strip-types", join(root, "tests/unit/settings-entries.test.ts")],
     root,
   ],
   [
-    "La capa de un sitio se enseña cuando toca",
+    "The Harness menu follows plan, role and available sources",
+    process.execPath,
+    ["--test", "--experimental-strip-types", join(root, "tests/unit/admin-sections.test.ts")],
+    root,
+  ],
+  [
+    "Harness usage and activity keep missing data missing and tell MCP apart",
+    process.execPath,
+    ["--test", "--experimental-strip-types", join(root, "tests/unit/harness-insights.test.ts")],
+    root,
+  ],
+  [
+    "A site's layer shows when due",
     process.execPath,
     ["--test", "--experimental-strip-types", join(root, "tests/unit/sites.test.ts")],
     root,
   ],
   [
-    "Un fallo del proveedor dice cuál y qué hacer",
+    "A provider failure says which one and what to do",
     process.execPath,
     ["--test", "--experimental-strip-types", join(root, "tests/unit/turn-failure.test.ts")],
     root,
   ],
   [
-    "Un permiso decidido o en vuelo no se pinta como cerrado y una relectura no borra gates nuevos",
+    "A decided or in-flight permission is not painted as closed and a reread does not erase new gates",
     process.execPath,
     ["--test", "--experimental-strip-types", join(root, "tests/unit/permission-gates.test.ts")],
     root,
   ],
   [
-    "El reintento de entregas no reenvía a la persona",
+    "Delivery retry does not resend to the person",
     process.execPath,
     ["--test", join(root, "tests/unit/retry-delivery-resume.test.mjs")],
     root,
   ],
   [
-    "Los adjuntos salen de la caja al mandar y vuelven si falla",
+    "Attachments leave the box on send and return on failure",
     process.execPath,
     ["--test", "--experimental-strip-types", join(root, "tests/unit/draft-attachments.test.ts")],
     root,
   ],
   [
-    "Una imagen adjunta en esta Mac viaja como bytes a la máquina de la tarea",
+    "An image attached on this Mac travels as bytes to the task's machine",
     process.execPath,
     ["--test", "--experimental-strip-types", join(root, "tests/unit/remote-attachments.test.ts")],
     root,
   ],
   [
-    "La cola sale en la tarea en la que se escribió",
+    "The queue goes out in the task where it was written",
     process.execPath,
     ["--test", "--experimental-strip-types", join(root, "tests/unit/queue.test.ts")],
     root,
   ],
   [
-    "La tarea viva lo dice sin parar",
+    "A live task says so without stopping",
     process.execPath,
     ["--test", "--experimental-strip-types", join(root, "tests/unit/turn-status.test.ts")],
     root,
   ],
   [
-    "El clic derecho no ofrece recargar la ventana",
+    "Right-click does not offer to reload the window",
     process.execPath,
     ["--test", "--experimental-strip-types", join(root, "tests/unit/context-menu.test.ts")],
     root,
   ],
   [
-    "El riel conserva sus agentes al refrescar",
+    "The rail keeps its agents on refresh",
     process.execPath,
     ["--conditions=browser", "--test", "--experimental-strip-types", join(root, "tests/unit/sidebar-agents.test.ts")],
     root,
   ],
   [
-    "Una web se pinta como una web",
+    "A website is painted as a website",
     process.execPath,
     ["--test", "--experimental-strip-types", join(root, "tests/unit/web-artifact.test.ts")],
     root,
   ],
-  ["El front pasa el linter", process.execPath, [join(root, "node_modules/@biomejs/biome/bin/biome"), "lint", "src", "scripts", "tests"], root],
-  ["Compila el frontend", process.execPath, [join(root, "node_modules/typescript/bin/tsc"), "-b"], root],
+  ["The front passes the linter", process.execPath, [join(root, "node_modules/@biomejs/biome/bin/biome"), "lint", "src", "scripts", "tests"], root],
+  ["The front compiles", process.execPath, [join(root, "node_modules/typescript/bin/tsc"), "-b"], root],
   [
-    "Los tests TypeScript compilan de tipos",
+    "TypeScript tests typecheck",
     process.execPath,
     [join(root, "node_modules/typescript/bin/tsc"), "-p", join(root, "tests"), "--noEmit"],
     root,
   ],
-  ["Empaqueta el frontend", process.execPath, [join(root, "node_modules/vite/bin/vite.js"), "build"], root],
-  ["La carga inicial no pesa más que su techo", process.execPath, [join(root, "tests/perf/bundle-size.mjs")], root],
-  ["El front monta", process.execPath, [join(root, "scripts/guards/mount-frontend.mjs")], root],
-  ["Empaqueta la entrada del navegador", process.execPath, [join(root, "node_modules/vite/bin/vite.js"), "build", "--mode", "web"], root],
-  ["La versión del teléfono se instala como app y siempre carga lo último", process.execPath, ["--test", join(root, "tests/unit/web-phone-pwa.test.mjs")], root],
-  ["En el navegador la interfaz habla con el relay", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/web-transport.test.mjs")], root],
-  ["En el navegador la sesión de Danil elige la computadora y explica por qué no entra", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/web-gate.test.mjs")], root],
-  ["En el navegador la app abre enseguida, sin instalador ni pantalla de preparación", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/web-setup.test.mjs")], root],
-  ["En el navegador, un trozo que borró un despliegue recarga la página una vez", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/web-stale-chunk.test.mjs")], root],
-  ["En el navegador una computadora apagada monta sin encenderse y despierta al mandarle algo", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/web-off.test.mjs")], root],
-  ["En el navegador lo que el relay guardó se ve con su hora mientras la computadora está apagada", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/web-cached.test.mjs")], root],
-  ["En el navegador un panel junta todas las computadoras y cada orden va a su máquina", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/web-machines.test.mjs")], root],
-  ["En el navegador los workspaces de la cuenta se ven con sus máquinas dormidas", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/web-account-workspaces.test.mjs")], root],
-  ["En el navegador la memoria de la cuenta se ve, se edita y tiene historial con las máquinas apagadas", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/web-memory-account.test.mjs")], root],
-  ["En el navegador los spaces salen de la máquina que los guarda aunque otra duerma", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/web-spaces.test.mjs")], root],
-  ["En el navegador con todo apagado la página abre en menos de 2 s con lo guardado de cada máquina, y una de otro contrato no la tumba", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/web-fleet.test.mjs")], root],
-  ["En el navegador las imágenes y los visuales del chat se leen de la computadora remota", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/web-chat-media.test.mjs")], root],
-  ["En el navegador llevar trabajo entre computadoras va sellado y en partes de 512 KiB", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/web-carry.test.mjs")], root],
-  ["En el navegador clonar en la computadora sigue su avance, se cancela y se recupera al recargar", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/web-project-clone.test.mjs")], root],
-  ["En el navegador el alta de una computadora gestionada no instala y conecta las cuentas de nube", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/web-onboarding.test.mjs")], root],
-  ["La preparación en curso deja seguir a quien llega tarde", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/setup-in-flight.test.mjs")], root],
-  ["La preparación no se abre con la app pintada ni se queda ciega", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/setup-repair.test.mjs")], root],
-  ["La franja de consumo sigue a la cuenta activa cuando cambia por cupo", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/usage-active-account.test.mjs")], root],
-  ["Con una cuenta que comparte credencial, el motivo de no poder agregar otra se ve", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/shared-credential-note.test.mjs")], root],
-  ["Esperar a la versión anterior es un aviso y detenerla se confirma", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/launcher-previous.test.mjs")], root],
-  ["Las cuentas de Danil entran con el navegador, se agregan y cierran sesión", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/danil-account-panel.test.mjs")], root],
-  ["El alta y el pie de la barra lateral ofrecen la cuenta de Danil", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/danil-sign-in-entry.test.mjs")], root],
-  ["Google Drive del alta vuelve a conectar después de desconectar", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/onboarding-drive-reconnect.test.mjs")], root],
-  ["Google Drive con la app oficial se instala, espera la sesión y se deja de usar sin desinstalarla", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/onboarding-drive-desktop.test.mjs")], root],
-  ["Cada workspace elige su cuenta de Danil y el pie sigue a la del abierto", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/danil-workspace-account.test.mjs")], root],
-  ["La memoria del workspace se escribe y se edita como la del proyecto", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/memory-workspace-scope.test.mjs")], root],
-  ["La ventana muestra el historial de la memoria de la cuenta y marca las copias de conflicto", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/memory-history-window.test.mjs")], root],
-  ["La cuenta de Danil habla con el motor por danil_connect_*", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/danil-account.test.ts")], root],
-  ["Cada workspace habla con su cuenta de Danil, y un motor anterior deja la cuenta única", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/danil-sessions.test.ts")], root],
-  ["En el navegador la página de aprobación conecta una computadora a la cuenta", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/web-connect.test.mjs")], root],
-  ["Una aprobación invalida su identidad sin tocar otros slots", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/web-session.test.ts")], root],
-  ["La sesión de WorkOS de alfa pide un token corto, lo renueva y termina sin respaldo", process.execPath, ["--test", "--test-force-exit", "--experimental-strip-types", join(root, "tests/unit/web-workos-session.test.ts")], root],
-  ["Difusiones: el panel completo, las reglas de Appv2 y lo que queda tras el interruptor", process.execPath, ["--test", "--experimental-strip-types", join(root, "../../packages/attention/test/broadcast-panel.test.ts")], root],
-  ["La entrada de alfa acota lecturas y escrituras explícitas, y deja la entrada con WorkOS en el Worker", process.execPath, ["--test", join(root, "alpha-entry/worker.test.mjs")], root],
-  ["Un workspace sin cuenta segura no muestra datos de ninguna", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/workspace-account.test.ts")]],
-  ["El lector de atención no saca valores de variables ni rutas de conexiones API", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/attention-service.test.ts")]],
-  ["Inbox: permisos efectivos y respuestas en cola sin reintentos ambiguos", process.execPath, ["--test", "--experimental-strip-types", join(root, "../../packages/attention/test/inbox.test.ts"), join(root, "../../packages/attention/test/messaging.test.ts"), join(root, "tests/unit/inbox-drafts.test.ts")], root],
-  ["Broadcasts: permisos por cuenta y canal, plantillas y transiciones reales", process.execPath, ["--test", "--experimental-strip-types", join(root, "../../packages/attention/test/broadcasts.test.ts")], root],
-  ["La entrada de alfa canjea la sesión de WorkOS por un token de la base y niega ante cualquier fallo", process.execPath, ["--test", join(root, "tests/unit/alpha-entry-session.test.mjs")], root],
-  ["La entrada de alfa solo deja pasar las lecturas de atención de su lista cerrada", process.execPath, ["--test", join(root, "tests/unit/alpha-entry-service.test.mjs")], root],
-  ["El retorno de autenticación permanece dentro de Terminus", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/web-auth-return.test.ts")], root],
-  ["El registro web confirma correo y conserva el destino", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/web-auth.test.mjs")], root],
-  ["En el navegador se ve la persona de la cuenta de Danil y cambia su foto", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/web-account.test.mjs")], root],
-  ["En el navegador se listan las computadoras de la cuenta y se renombran en su sitio", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/web-account-computers.test.mjs")], root],
-  ["En el navegador la columna junta los workspaces de otras cuentas de Danil y abre cada uno con la suya", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/web-other-accounts.test.mjs")], root],
-  ["En el navegador «Agregar cuenta» ofrece primero las cuentas que ya tienen sesión, como Google", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/web-account-chooser.test.mjs")], root],
-  ["En el navegador cada clave de la cuenta dice en qué máquinas está, se quita con aviso y se cambia sellada aquí", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/web-account-credentials.test.mjs")], root],
-  ["En el navegador los secretos salen por alcance, una máquina vieja dice «no compatible» y uno nuevo se sella solo para las que tienen secrets_v1", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/web-secrets.test.mjs")], root],
-  ["En el escritorio las claves de la cuenta pasan por el motor y el aviso sube solo las elegidas", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/desktop-account-credentials.test.mjs")], root],
-  ["En el escritorio Secretos guarda y borra por el motor, sin cuenta dice «Solo en esta máquina» y un motor viejo apaga solo esa sección", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/desktop-secrets.test.mjs")], root],
-  ["La página de aprobación y la compatibilidad de contrato hablan con el plano de control", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/danil-connect-web.test.ts")], root],
-  ["Los correos de la cuenta en la web: cliente, orden y textos de rechazo", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/account-emails.test.ts")], root],
-  ["Con el stream empujado los lotes llegan a los oyentes y el historial se pagina", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/push-stream.test.mjs"), join(root, "tests/unit/push-history.test.mjs")], root],
-  ["Al enviar a otra máquina la hoja lleva el trabajo sin subir, y traerlo de vuelta lo deja en una rama de aquí", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/carry-window.test.mjs")], root],
-  ["Una tarea de una máquina apagada abre y se enciende al mandarle algo", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/machine-task.test.mjs")], root],
-  ["Por carpeta, una carpeta en dos máquinas es un grupo por máquina y su «+» lanza en la suya", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/sidebar-folder-machines.test.mjs")], root],
-  ["El árbol de una tarea de otra máquina se lee en esa máquina", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/machine-task-tree.test.mjs")], root],
-  ["La flota: la máquina sale del sobre, toda espera tiene tope y nadie contestando no es una lista vacía", process.execPath, ["--test", "--experimental-strip-types", join(root, "../../packages/fleet/test/fleet.test.ts")], root],
-  ["Danil Computers: sesión con contratos, renovación del token, motor y lápidas", process.execPath, ["--test", "--experimental-strip-types", join(root, "../../packages/computers/test/computers.test.ts")], root],
-  ["Danil Computers: GitHub de la cuenta por el Worker, con sus rutas y sus códigos", process.execPath, ["--test", "--experimental-strip-types", join(root, "../../packages/computers/test/github.test.ts")], root],
-  ["En la web GitHub de la cuenta lo contesta el Worker, no una máquina", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/web-github-account.test.ts")], root],
-  ["Con sesión de Danil la tarjeta de GitHub es la de la cuenta; sin ella, la local de siempre", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/github-account-settings.test.mjs")], root],
-  ["Las credenciales de la cuenta: el cliente del Worker y el sellado TERMINUS-SECRET/1 con los vectores del motor", process.execPath, ["--test", "--experimental-strip-types", join(root, "../../packages/computers/test/credentials.test.ts"), join(root, "../../packages/computers/test/seal.test.ts")], root],
-  ["Con la cuenta de Danil lo de esta computadora va nativo y primero; las otras suman su rebanada", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/machine-router.test.ts")], root],
-  ["Una tarea de otra máquina en un space de la cuenta se ve en ese mismo space", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/spaces-remote-task.test.ts")], root],
-  ["En la web todo es de otras máquinas: lo guardado abre ya, actuar enciende la VM y la Mac apagada lo dice", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/web-router.test.ts")], root],
-  ["En la web caben varias cuentas de Danil: cada una con su sesión, sin repetirse, y la página abre la dueña del workspace", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/web-accounts.test.ts")], root],
-  ["Con la cuenta de Danil el escritorio junta las tareas de todas sus computadoras", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/desktop-account-machines.test.mjs")], root],
-  ["El visor espera a noVNC y libera cada conexión al cerrar o reintentar", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/screen-connection.test.ts"), join(root, "../../packages/computers/test/screen.test.ts")], root],
-  ["Sin el stream empujado la ventana sondea como siempre", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/push-fallback.test.mjs")], root],
-  ["El mantenimiento exitoso no avisa y los fallos descartados no se repiten", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/activity-notice.test.mjs")], root],
-  ["Con tareas trabajando, reiniciar o salir espera a que terminen o detiene las que nombra", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/update-wait.test.mjs")], root],
-  ["Una respuesta con visual no desaparece del chat aunque el turno no se guarde o el visual no se lea", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/chat-turn-unsaved.test.mjs")], root],
-  ["Lo metido en el turno vivo sale una vez, aunque se pulse seguido o el motor no devuelva el turno", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/chat-steer-once.test.mjs")], root],
-  ["Abrir una tarea larga no cuesta más que su techo", process.execPath, [join(root, "tests/perf/open-task-cost.mjs")], root],
-  ["Releer una tarea abierta no remonta su hilo", process.execPath, [join(root, "tests/perf/reread-thread.mjs")], root],
-  ["Una sesión larga no deja memoria detrás", process.execPath, ["--expose-gc", join(root, "tests/perf/long-session.mjs")], root],
-  ["Un turno no vuelve a pedir cada historial", process.execPath, [join(root, "tests/perf/task-history-calls.mjs")], root],
-  ["Una respuesta larga no cuesta más que su techo por delta", process.execPath, [join(root, "tests/perf/delta-cost.mjs")], root],
-  ["El sidebar en caliente no espera al motor", process.execPath, [join(root, "tests/perf/cold-start-sidebar.mjs")], root],
-  ["Toda clase escrita pinta algo", process.execPath, [join(root, "scripts/guards/missing-classes.mjs")], root],
-  ["Todo color se invierte con el tema", process.execPath, [join(root, "scripts/guards/theme-inversion.mjs")], root],
+  ["Bundles the front", process.execPath, [join(root, "node_modules/vite/bin/vite.js"), "build"], root],
+  ["Initial load stays under its ceiling", process.execPath, [join(root, "tests/perf/bundle-size.mjs")], root],
+  ["Front mounts", process.execPath, [join(root, "scripts/guards/mount-frontend.mjs")], root],
+  ["Task notices mount", process.execPath, [join(root, "scripts/guards/mount-task-notices.mjs")], root],
+  ["Agents mount in the rail and the composer", process.execPath, [join(root, "scripts/guards/mount-agents.mjs")], root],
+  ["A task composer mounts with its queue and attachments", process.execPath, [join(root, "scripts/guards/mount-task-composer.mjs")], root],
+  ["The rail mounts with git, groups and clone", process.execPath, [join(root, "scripts/guards/mount-sidebar.mjs")], root],
+  ["Starting and following a turn mounts", process.execPath, [join(root, "scripts/guards/mount-turns.mjs")], root],
+  ["Settings mounts", process.execPath, [join(root, "scripts/guards/mount-settings.mjs")], root],
+  ["Workspaces, title bar and first run mount", process.execPath, [join(root, "scripts/guards/mount-workspaces.mjs")], root],
+  ["Live questions and permissions mount", process.execPath, [join(root, "scripts/guards/mount-permissions.mjs")], root],
+  ["Prose, diagrams and updates mount", process.execPath, [join(root, "scripts/guards/mount-content.mjs")], root],
+  ["Spaces mount", process.execPath, [join(root, "scripts/guards/mount-spaces.mjs")], root],
+  ["Bundles the browser entry", process.execPath, [join(root, "node_modules/vite/bin/vite.js"), "build", "--mode", "web"], root],
+  ["The phone version installs as an app and always loads the latest", process.execPath, ["--test", join(root, "tests/unit/web-phone-pwa.test.mjs")], root],
+  ["In the browser the interface talks to the relay", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/web-transport.test.mjs")], root],
+  ["In the browser the Danil session picks the computer and explains why it cannot enter", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/web-gate.test.mjs")], root],
+  ["In the browser the app opens at once, with no installer or setup screen", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/web-setup.test.mjs")], root],
+  ["In the browser a new version is offered without a forced reload", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/web-stale-chunk.test.mjs")], root],
+  ["In the browser an off computer mounts without starting and wakes on being sent something", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/web-off.test.mjs")], root],
+  ["In the browser what the relay saved shows with its time while the computer is off", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/web-cached.test.mjs")], root],
+  ["In the browser one panel joins all computers and each command goes to its machine", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/web-machines.test.mjs")], root],
+  ["In the browser storage follows its machine and does not wait for an off VM", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/web-machines-storage.test.mjs")], root],
+  ["In the browser an off machine or another contract does not break the panel and each credential stays apart", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/web-machines-contracts.test.mjs")], root],
+  ["In the browser account workspaces show with their machines asleep", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/web-account-workspaces.test.mjs")], root],
+  ["In the browser account memory shows, edits and has history with the machines off", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/web-memory-account.test.mjs")], root],
+  ["In the browser spaces come from the machine that keeps them even if another sleeps", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/web-spaces.test.mjs")], root],
+  ["In the browser with everything off the page opens in under 2 s with each machine's saved data, and another contract does not break it", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/web-fleet.test.mjs")], root],
+  ["In the browser chat images and visuals are read from the remote computer", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/web-chat-media.test.mjs")], root],
+  ["In the browser carrying work between computers goes sealed in 512 KiB parts", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/web-carry.test.mjs")], root],
+  ["In the browser cloning on the computer follows its progress, cancels and recovers on reload", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/web-project-clone.test.mjs")], root],
+  ["In the browser adding a managed computer does not install and connects cloud accounts", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/web-onboarding.test.mjs")], root],
+  ["Setup in progress lets a latecomer continue", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/setup-in-flight.test.mjs")], root],
+  ["Setup does not open over a painted app and does not go blind", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/setup-repair.test.mjs")], root],
+  ["The usage strip follows the active account when quota switches it", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/usage-active-account.test.mjs")], root],
+  ["With an account sharing a credential, the reason it cannot add another shows", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/shared-credential-note.test.mjs")], root],
+  ["Waiting for the previous version is a notice and stopping it is confirmed", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/launcher-previous.test.mjs")], root],
+  ["Danil accounts sign in through the browser, add up and sign out", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/danil-account-panel.test.mjs")], root],
+  ["First run and the sidebar footer offer the Danil account", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/danil-sign-in-entry.test.mjs")], root],
+  ["First-run Google Drive reconnects after disconnecting", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/onboarding-drive-reconnect.test.mjs")], root],
+  ["Google Drive with the official app installs, waits for the session and stops being used without uninstalling", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/onboarding-drive-desktop.test.mjs")], root],
+  ["Each workspace picks its Danil account and the footer follows the open one", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/danil-workspace-account.test.mjs")], root],
+  ["Workspace memory is written and edited like project memory", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/memory-workspace-scope.test.mjs")], root],
+  ["The window shows account memory history and marks conflict copies", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/memory-history-window.test.mjs")], root],
+  ["The Danil account talks to the engine through danil_connect_*", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/danil-account.test.ts")], root],
+  ["The device page hands the desktop window its session only after approving and only to 127.0.0.1", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/web-connect-desktop.test.ts")], root],
+  ["Each workspace talks to its Danil account, and an older engine leaves the single account", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/danil-sessions.test.ts")], root],
+  ["In the browser the approval page connects a computer to the account", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/web-connect.test.mjs")], root],
+  ["An approval invalidates its identity without touching other slots", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/web-session.test.ts")], root],
+  ["The alpha WorkOS session asks for a short token, renews it and ends without a fallback", process.execPath, ["--test", "--test-force-exit", "--experimental-strip-types", join(root, "tests/unit/web-workos-session.test.ts")], root],
+  ["Broadcasts: the full panel, the Appv2 rules and what stays behind the switch", process.execPath, ["--test", "--experimental-strip-types", join(root, "../../packages/attention/test/broadcast-panel.test.ts")], root],
+  ["app.danil.ai/terminus answers 308 to the same alfa path and never leaves that host", process.execPath, ["--test", join(root, "web-redirect/worker.test.mjs")], root],
+  ["The alpha entry bounds explicit reads and writes, and leaves WorkOS sign-in in the Worker", process.execPath, ["--test", join(root, "alpha-entry/worker.test.mjs")], root],
+  ["A workspace without a safe account shows data from none", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/workspace-account.test.ts")]],
+  ["The directory groups what can be entered and the bar shows the pinned ones", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/workspace-directory.test.ts")]],
+  ["The attention reader does not extract variable values or API connection paths", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/attention-service.test.ts")]],
+  ["Inbox: effective permissions and queued replies without ambiguous retries", process.execPath, ["--test", "--experimental-strip-types", join(root, "../../packages/attention/test/inbox.test.ts"), join(root, "../../packages/attention/test/messaging.test.ts"), join(root, "tests/unit/inbox-drafts.test.ts"), join(root, "tests/unit/inbox-widths.test.ts")], root],
+  ["Broadcasts: permissions by account and channel, templates and real transitions", process.execPath, ["--test", "--experimental-strip-types", join(root, "../../packages/attention/test/broadcasts.test.ts")], root],
+  ["The alpha entry swaps the WorkOS session for a database token and denies on any failure", process.execPath, ["--test", join(root, "tests/unit/alpha-entry-session.test.mjs")], root],
+  ["The alpha entry only lets through attention reads from its closed list", process.execPath, ["--test", join(root, "tests/unit/alpha-entry-service.test.mjs")], root],
+  ["The auth return stays inside Terminus", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/web-auth-return.test.ts")], root],
+  ["Web sign-up confirms the email and keeps the destination", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/web-auth.test.mjs")], root],
+  ["In the browser the Danil account's person shows and changes their photo", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/web-account.test.mjs")], root],
+  ["In the browser account computers are listed and renamed in place", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/web-account-computers.test.mjs")], root],
+  ["In the browser the column joins workspaces of other Danil accounts and opens each with its own", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/web-other-accounts.test.mjs")], root],
+  ["In the browser «Agregar cuenta» first offers accounts with a session, like Google", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/web-account-chooser.test.mjs")], root],
+  ["In the browser each account key says which machines it is on, is removed with a notice and is changed sealed here", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/web-account-credentials.test.mjs")], root],
+  ["In the browser secrets come by scope, an old machine says «no compatible» and a new one is sealed only for those with secrets_v1", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/web-secrets.test.mjs")], root],
+  ["On desktop account keys go through the engine and the notice uploads only the chosen ones", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/desktop-account-credentials.test.mjs")], root],
+  ["On desktop Secrets saves and deletes through the engine, without an account says «Solo en esta máquina» and an old engine turns off only that section", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/desktop-secrets.test.mjs")], root],
+  ["The approval page and contract compatibility talk to the control plane", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/danil-connect-web.test.ts")], root],
+  ["Account emails on the web: client, order and rejection texts", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/account-emails.test.ts")], root],
+  ["With the pushed stream batches reach listeners and history is paged", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/push-stream.test.mjs"), join(root, "tests/unit/push-history.test.mjs")], root],
+  ["Sending to another machine carries unpushed work, and bringing it back leaves it on a local branch", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/carry-window.test.mjs")], root],
+  ["A task of an off machine opens and starts on being sent something", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/machine-task.test.mjs")], root],
+  ["By folder, a folder on two machines is one group per machine and its «+» launches on its own", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/sidebar-folder-machines.test.mjs")], root],
+  ["A task tree from another machine is read on that machine", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/machine-task-tree.test.mjs")], root],
+  ["The fleet: the machine comes from the envelope, every wait has a cap and nobody answering is not an empty list", process.execPath, ["--test", "--experimental-strip-types", join(root, "../../packages/fleet/test/fleet.test.ts")], root],
+  ["WSL detection reads English and Spanish states and maps failures", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/wsl-detection.test.ts")], root],
+  ["Danil Machines: session with contracts, token renewal, engine and tombstones", process.execPath, ["--test", "--experimental-strip-types", join(root, "../../packages/computers/test/computers.test.ts")], root],
+  ["Danil Machines: account GitHub through the Worker, with its routes and codes", process.execPath, ["--test", "--experimental-strip-types", join(root, "../../packages/computers/test/github.test.ts")], root],
+  ["On the web account GitHub is answered by the Worker, not a machine", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/web-github-account.test.ts")], root],
+  ["With a Danil session the GitHub card is the account's; without it, the usual local one", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/github-account-settings.test.mjs")], root],
+  ["Account credentials: the Worker client and TERMINUS-SECRET/1 sealing with the engine vectors", process.execPath, ["--test", "--experimental-strip-types", join(root, "../../packages/computers/test/credentials.test.ts"), join(root, "../../packages/computers/test/seal.test.ts")], root],
+  ["With the Danil account this computer's work goes native and first; the others add their slice", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/machine-router.test.ts")], root],
+  ["A task from another machine in an account space shows in that same space", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/spaces-remote-task.test.ts")], root],
+  ["On the web everything is on other machines: saved data opens now, acting starts the VM and an off Mac says so", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/web-router.test.ts")], root],
+  ["The web holds several Danil accounts: each with its session, no repeats, and the page opens the workspace owner", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/web-accounts.test.ts")], root],
+  ["With the Danil account the desktop joins tasks from all its computers", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/desktop-account-machines.test.mjs")], root],
+  ["With the Danil account the desktop follows its session and each computer", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/desktop-account-sessions.test.mjs")], root],
+  ["With the Danil account the desktop sorts the rail and lists its computers", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/desktop-account-rail.test.mjs")], root],
+  ["Shared machines show in the toolbar menu, with status and start, and are not task targets", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/shared-machines-menu.test.mjs")], root],
+  ["The viewer waits for noVNC and frees each connection on close or retry", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/screen-connection.test.ts"), join(root, "../../packages/computers/test/screen.test.ts")], root],
+  ["Without the pushed stream the window polls as always", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/push-fallback.test.mjs")], root],
+  ["The agent's reasoning never sticks to its answer", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/reasoning-stream.test.mjs")], root],
+  ["Successful maintenance does not notify and dismissed failures do not repeat", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/activity-notice.test.mjs")], root],
+  ["With tasks working, restart or quit waits for them or stops the ones it names", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/update-wait.test.mjs")], root],
+  ["A reply with a visual does not vanish from chat even if the turn is not saved or the visual cannot be read", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/chat-turn-unsaved.test.mjs")], root],
+  ["What is sent into the live turn goes out once, even on repeated presses or if the engine does not return the turn", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/chat-steer-once.test.mjs")], root],
+  ["An agent that refuses a mid-turn message keeps it queued, stops offering the gesture and never shows the executor's internal code", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/chat-steer-refused.test.mjs")], root],
+  ["«Stop and send» stops the turn and lets the queued message out instead of keeping it retained", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/chat-stop-and-send.test.mjs")], root],
+  ["Opening a long task stays under its ceiling", process.execPath, [join(root, "tests/perf/open-task-cost.mjs")], root],
+  ["Rereading an open task does not remount its thread", process.execPath, [join(root, "tests/perf/reread-thread.mjs")], root],
+  ["A long session leaves no memory behind", process.execPath, ["--expose-gc", join(root, "tests/perf/long-session.mjs")], root],
+  ["A turn does not request every history again", process.execPath, [join(root, "tests/perf/task-history-calls.mjs")], root],
+  ["A long reply stays under its per-delta ceiling", process.execPath, [join(root, "tests/perf/delta-cost.mjs")], root],
+  ["The warm sidebar does not wait for the engine", process.execPath, [join(root, "tests/perf/cold-start-sidebar.mjs")], root],
+  ["Every written class paints something", process.execPath, [join(root, "scripts/guards/missing-classes.mjs")], root],
+  ["Every color inverts with the theme", process.execPath, [join(root, "scripts/guards/theme-inversion.mjs")], root],
   ...(SKIP_RUST ? [] : rustSteps.slice(1)),
 ];
 
 const undocumented = undocumentedGuards();
 if (undocumented.length) {
-  console.error("Catálogo de guardas desactualizado en docs/guards.md:");
+  console.error("Guard catalog out of date in docs/guards.md:");
   for (const guard of undocumented) console.error(`  ${guard}`);
-  console.error("\nCorrige las filas de docs/guards.md antes de verificar.");
+  console.error("\nFix the rows of docs/guards.md before verifying.");
   process.exit(1);
 }
 
@@ -686,53 +751,230 @@ if (undocumented.length) {
     .map((path) => relative(root, path));
   if (unscheduled.length > 0) {
     console.error(
-      `\n  Tests fuera de la cadena: ${unscheduled.join(", ")}` +
-        "\n  Añádelos a la lista de pasos de verify.mjs, donde les toque.\n",
+      `\n  Tests outside the chain: ${unscheduled.join(", ")}` +
+        "\n  Add them to the step list of verify.mjs, where they belong.\n",
     );
     process.exit(1);
   }
 }
 
+const isVite = (step) => step[0].startsWith("Bundles ");
+const REQUIRES_DIST = /scripts\/guards\/(?:mount-frontend|missing-classes|theme-inversion)\.mjs$/;
+const isAlwaysQuick = ([, , args]) =>
+  !rustSteps.some((step) => step[2] === args) &&
+  args.some((arg) => /node_modules\/(?:@biomejs\/biome\/bin\/biome|typescript\/bin\/tsc)$|scripts\/icons\.mjs$|scripts\/guards\//.test(arg) && !REQUIRES_DIST.test(arg));
+
+/** El plan de `--quick`: `reason` dice por qué corre todo; `plan` es el subconjunto de pasos cuando no. */
+function quickScope() {
+  const diff = changedFiles(root, BASE);
+  if (diff.reason) return { reason: diff.reason };
+  const groups = classify(diff.files);
+  if (groups.full.length) return { reason: `touched ${groups.full.slice(0, 5).join(", ")}${groups.full.length > 5 ? "…" : ""}` };
+  const reachOf = testReader(root);
+  const rust = groups.rust.length > 0;
+  const plan = new Set(steps.filter(isAlwaysQuick));
+  const changed = [...groups.code, ...groups.tests];
+  const reached = new Set();
+  let build = false;
+  for (const step of steps) {
+    if (plan.has(step) || isVite(step) || rustSteps.includes(step) || step[2].some((arg) => REQUIRES_DIST.test(arg))) continue;
+    const files = stepFiles(step[2]);
+    if (!files.length) continue;
+    const reach = reachOf(files);
+    for (const file of reach.files) reached.add(file);
+    if (touches(reach, changed) || (step === cliStep && rust)) {
+      plan.add(step);
+      build ||= reach.needsBuild;
+    }
+  }
+  const orphan = groups.tests.find((file) => !reached.has(file.slice("apps/desktop/".length)));
+  if (orphan) return { reason: `no test reaches ${orphan}` };
+  if (build || (rust && !SKIP_RUST)) for (const step of steps.filter(isVite)) plan.add(step);
+  if (rust) for (const step of rustSteps) plan.add(step);
+  if (plan.has(cliStep)) plan.add(engineStep);
+  return { plan, count: diff.files.length, mergeBase: diff.mergeBase.slice(0, 8) };
+}
+
 const outputOf = (e) => [e?.stdout, e?.stderr].map((s) => (s ?? "").toString()).join("").trimEnd();
 
-const startedAt = Date.now();
-let failure = null;
-const skipped = [];
+const GIB = 1024 ** 3;
+const STEP_TIMEOUT_MS = 15 * 60_000;
+const CARGO_TIMEOUT_MS = 45 * 60_000;
 
-for (const [name, cmd, args, cwd] of steps) {
-  process.stdout.write(`  ${name.padEnd(50)}`);
-  if (SKIP_RUST && name === cliStep[0]) {
-    console.log("SKIPPED");
-    skipped.push([name, "--no-cargo: necesita rustc y el sidecar fijado; se ejecuta en la cadena completa y verify (rust).", true]);
-    continue;
-  }
-  const start = Date.now();
+/** Un paso por cada dos núcleos y por cada 2 GiB libres; con 1, la cadena corre en serie. En macOS `freemem` no cuenta la caché: vale la mitad del total. */
+function budget() {
+  const forced = Number(process.env.VERIFY_JOBS);
+  if (Number.isSafeInteger(forced) && forced > 0) return forced;
+  const memory = process.platform === "darwin" ? totalmem() / 2 : freemem();
+  return Math.max(1, Math.min(Math.floor(availableParallelism() / 2), Math.floor(memory / (2 * GIB))));
+}
+
+const running = new Set();
+
+function killGroup(child) {
   try {
-    execFileSync(cmd, args, { cwd, env: cmd === rustBuild.command && cwd === backend && args[0] !== "fmt" ? rustBuild.env : process.env, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
-    console.log(`ok   ${((Date.now() - start) / 1000).toFixed(1)}s`);
-  } catch (e) {
-    if (e?.status === SKIPPED_EXIT_CODE) {
-      console.log("SKIPPED");
-      skipped.push([name, outputOf(e)]);
-      continue;
-    }
-    console.log("FALLA");
-    failure = { name, cmd, args, e };
-    break;
+    if (process.platform === "win32") child.kill();
+    else process.kill(-child.pid, "SIGKILL");
+  } catch {
+    // El proceso pudo salir antes de la señal.
   }
 }
 
+function run(cmd, args, cwd, env, timeoutMs) {
+  return new Promise((resolve) => {
+    const child = spawn(cmd, args, { cwd, env, stdio: ["ignore", "pipe", "pipe"], detached: process.platform !== "win32", windowsHide: true });
+    let stdout = "";
+    let stderr = "";
+    let timedOut = false;
+    running.add(child);
+    const timer = setTimeout(() => {
+      timedOut = true;
+      killGroup(child);
+    }, timeoutMs);
+    child.stdout.on("data", (chunk) => { stdout += chunk; });
+    child.stderr.on("data", (chunk) => { stderr += chunk; });
+    const finish = (status, signal, error) => {
+      clearTimeout(timer);
+      running.delete(child);
+      resolve({ status, signal, timedOut, stdout, stderr: error ? `${stderr}\n${error.message}` : stderr });
+    };
+    child.on("error", (error) => finish(null, null, error));
+    child.on("close", (status, signal) => finish(status, signal));
+  });
+}
+
+/** Reparte huecos; quien pide más que el total espera a tenerlos todos. */
+function slots(total) {
+  let free = total;
+  const waiting = [];
+  const wake = () => {
+    while (waiting.length && free >= waiting[0].weight) {
+      const { weight, resolve } = waiting.shift();
+      free -= weight;
+      resolve();
+    }
+  };
+  return {
+    acquire: (weight) => new Promise((resolve) => { waiting.push({ weight, resolve }); wake(); }),
+    release: (weight) => { free += weight; wake(); },
+  };
+}
+
+/** Dos cadenas juntas saturan memoria y disco; el candado de un proceso muerto se limpia. */
+async function takeLock() {
+  const dir = join(tmpdir(), "terminus-verify.lock");
+  const owner = join(dir, "pid");
+  for (let warned = false; ; await sleep(2000)) {
+    try {
+      mkdirSync(dir);
+      writeFileSync(owner, String(process.pid));
+      return () => rmSync(dir, { recursive: true, force: true });
+    } catch (error) {
+      if (error?.code !== "EEXIST") return () => {};
+    }
+    let pid = 0;
+    try {
+      pid = Number(readFileSync(owner, "utf8"));
+      process.kill(pid, 0);
+    } catch (error) {
+      if (error?.code === "EPERM") pid = Number(pid);
+      else if (pid || error?.code === "ESRCH") {
+        rmSync(dir, { recursive: true, force: true });
+        continue;
+      }
+    }
+    if (!warned) console.log(`  Another chain is running on this machine (pid ${pid}); waiting for it to finish.`);
+    warned = true;
+  }
+}
+
+let failure = null;
+const skipped = [];
+const JOBS = budget();
+const pool = slots(JOBS);
+
+async function runStep(step, weight = 1) {
+  const [name, cmd, args, cwd] = step;
+  await pool.acquire(weight);
+  try {
+    if (failure) return;
+    if (SKIP_RUST && name === cliStep[0]) {
+      console.log(`  ${name.padEnd(50)}SKIPPED`);
+      skipped.push([name, "--no-cargo: needs rustc and the pinned sidecar; it runs in the full chain and verify (rust).", true]);
+      return;
+    }
+    const isCargo = cmd === rustBuild.command;
+    const start = Date.now();
+    const result = await run(cmd, args, cwd, isCargo && cwd === backend && args[0] !== "fmt" ? rustBuild.env : process.env, isCargo ? CARGO_TIMEOUT_MS : STEP_TIMEOUT_MS);
+    if (result.status === 0) console.log(`  ${name.padEnd(50)}ok   ${((Date.now() - start) / 1000).toFixed(1)}s`);
+    else if (result.status === SKIPPED_EXIT_CODE) {
+      console.log(`  ${name.padEnd(50)}SKIPPED`);
+      skipped.push([name, outputOf(result)]);
+    } else if (!failure) {
+      console.log(`  ${name.padEnd(50)}${result.timedOut ? "TIMEOUT" : "FAILED"}`);
+      failure = { name, cmd, args, e: result };
+      for (const child of running) killGroup(child);
+    }
+  } finally {
+    pool.release(weight);
+  }
+}
+
+const runAll = (list) => Promise.all(list.map((step) => runStep(step)));
+async function runInOrder(list, weight) {
+  for (const step of list) await runStep(step, weight);
+}
+
+const isCargoLane = (step) => rustSteps.includes(step) && step !== engineStep;
+const isPerf = ([, , args]) => args.some((arg) => typeof arg === "string" && arg.includes("tests/perf/"));
+const firstBuild = steps.findIndex(isVite);
+const scope = QUICK ? quickScope() : {};
+const omitted = scope.plan ? steps.filter((step) => !scope.plan.has(step)) : [];
+const planned = (step) => !omitted.includes(step);
+const beforeBuild = steps.slice(0, firstBuild).filter((step) => step !== engineStep && planned(step));
+const afterBuild = steps.slice(firstBuild).filter((step) => !isVite(step) && !isCargoLane(step) && (!isPerf(step) || step[0].startsWith("Initial load")) && planned(step));
+const measured = steps.slice(firstBuild).filter((step) => isPerf(step) && !afterBuild.includes(step) && planned(step));
+
+const releaseLock = await takeLock();
+const startedAt = Date.now();
+for (const signal of ["SIGINT", "SIGTERM", "SIGHUP"]) {
+  process.on(signal, () => {
+    for (const child of running) killGroup(child);
+    releaseLock();
+    console.error(`\n  Chain cut by ${signal}: anything not marked ok was not checked.\n`);
+    process.exit(1);
+  });
+}
+console.log(`  Up to ${JOBS} steps at a time (VERIFY_JOBS changes it).`);
+if (scope.reason) console.log(`  --quick runs the full chain: ${scope.reason}.`);
+if (scope.plan) console.log(`  --quick against ${BASE} (${scope.mergeBase}): ${scope.count} files changed, ${steps.length - omitted.length} of ${steps.length} steps. This is NOT a full verification.`);
+console.log("");
+
+if (steps.includes(engineStep) && planned(engineStep)) await runStep(engineStep);
+if (!failure) await runAll(beforeBuild);
+if (!failure) await runInOrder(steps.filter((step) => isVite(step) && planned(step)), JOBS);
+// `generate_context!` lee `dist/`: cargo antes de vite falla en un checkout limpio.
+const cargoLane = SKIP_RUST || failure ? Promise.resolve() : runInOrder(steps.filter((step) => isCargoLane(step) && planned(step)), Math.ceil(JOBS / 2));
+if (!failure) await runAll(afterBuild);
+await cargoLane;
+// Miden un techo de gasto; con otros pasos al lado medirían esa carga.
+if (!failure) await runInOrder(measured, JOBS);
+releaseLock();
+
 if (failure) {
   const { name, cmd, args, e } = failure;
-  console.error(`\n  Falló: ${name}`);
-  console.error(`      ${[cmd, ...args].join(" ")}\n`);
+  console.error(`\n  Failed: ${name}`);
+  console.error(`      ${[cmd, ...args].join(" ")}`);
+  if (e?.signal) console.error(`      ended by signal ${e.signal}`);
+  if (e?.timedOut) console.error("      passed its deadline and was killed with its children");
+  console.error("");
   for (const [stream, output] of [["stdout", e?.stdout], ["stderr", e?.stderr]]) {
     const text = (output ?? "").toString().trimEnd();
     if (!text) continue;
     const lines = text.split("\n");
     console.error(`      ${stream}:`);
     for (const line of lines.slice(-40)) console.error(`      ${line}`);
-    if (lines.length > 40) console.error(`\n  (${lines.length - 40} líneas anteriores de ${stream} — vuelve a correr ese comando solo)`);
+    if (lines.length > 40) console.error(`\n  (${lines.length - 40} earlier lines of ${stream} — run that command alone again)`);
   }
   console.error("");
   process.exit(1);
@@ -742,22 +984,28 @@ const seconds = ((Date.now() - startedAt) / 1000).toFixed(0);
 
 if (skipped.length) {
   const one = skipped.length === 1;
-  const skippedCount = `${skipped.length} de ${steps.length} pasos ${one ? "NO corrió" : "NO corrieron"}`;
-  console.log(`\n  Corrido en ${PLATFORM}, ${seconds}s — y ${skippedCount}: esto NO es una verificación.`);
-  console.log(`  Lo que ${one ? "ese guarda caza" : "esos guardas cazan"} sigue sin comprobar:`);
+  const skippedCount = `${skipped.length} of ${steps.length - omitted.length} steps did NOT run`;
+  console.log(`\n  Ran on ${PLATFORM}, ${seconds}s — and ${skippedCount}: this is NOT a verification.`);
+  console.log(`  What ${one ? "that guard catches" : "those guards catch"} stays unchecked:`);
   for (const [name, reason] of skipped) {
     console.log(`\n    ${name}`);
     for (const line of reason.split("\n")) console.log(`      ${line}`);
   }
   console.log("");
-} else {
-  console.log(`\n  Verificado en ${PLATFORM}${SKIP_RUST ? " (cadena sin Rust)" : ""}, ${seconds}s.`);
+} else if (!omitted.length) {
+  console.log(`\n  Verified on ${PLATFORM}${SKIP_RUST ? " (chain without Rust)" : ""}, ${seconds}s.`);
+}
+if (omitted.length) {
+  console.log(`\n  --quick on ${PLATFORM}, ${seconds}s: this is NOT a full verification; run \`pnpm verify\` before merging.`);
+  console.log(`  ${omitted.length} steps skipped:`);
+  for (const [name] of omitted) console.log(`    ${name}`);
+  console.log("");
 }
 if (SKIP_RUST) {
-  console.log("  Sin comprobar en esta corrida: cargo fmt, check, clippy y test.");
-  console.log("    La ventana tiene permiso para lo que se le pide — necesita el build de Rust.\n");
+  console.log("  Not checked in this run: cargo fmt, check, clippy and test.");
+  console.log("    The window has permission for what it asks — needs the Rust build.\n");
 } else {
-  console.log(`  ${OTHER_PLATFORMS} NO se comprobó — quien revise desde ahí lo compila.\n`);
+  console.log(`  ${OTHER_PLATFORMS} NOT checked — whoever reviews from there builds it.\n`);
 }
 
 if (skipped.some(([, , expected]) => !expected) && process.env.CI) process.exit(1);

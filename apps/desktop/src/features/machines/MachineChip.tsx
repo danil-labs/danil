@@ -17,7 +17,7 @@ export function MachineChip(props: { machine: string; on: boolean; class?: strin
       title={label()}
       aria-label={label()}
     >
-      <MachineIcon wakes={machineWakes(props.machine)} size={11} />
+      <MachineIcon wakes={machineWakes(props.machine)} size={13} />
       <span class="truncate">{machineName(props.machine)}</span>
     </span>
   );

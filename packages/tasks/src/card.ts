@@ -10,7 +10,7 @@
  * Lo que solo el escritorio sabe (git, PR, worktree) lo añade él.
  */
 import { type TaskActivity, type TaskState, taskPriority } from "../../design/src/index.ts";
-import { type SidebarContext, type SidebarTask, activityOf, isPinned, needsYou } from "./view.ts";
+import { type SidebarContext, type SidebarGroup, type SidebarTask, activityOf, isPinned, needsYou } from "./view.ts";
 
 export type CardTask = SidebarTask & {
   title: string;
@@ -41,6 +41,7 @@ export type TaskCard = {
 export type CardOptions<T extends CardTask> = Pick<SidebarContext<T>, "live" | "approving" | "folderOf"> & {
   /** Bajo la cabecera de su carpeta, la fila no repite la carpeta. */
   hideFolder?: boolean;
+  hideMachine?: boolean;
 };
 
 export function taskCard<T extends CardTask>(task: T, options: CardOptions<T>): TaskCard {
@@ -56,6 +57,14 @@ export function taskCard<T extends CardTask>(task: T, options: CardOptions<T>): 
     provider: task.provider || null,
     folder,
     agent: task.agent && !task.chat_de_agente ? task.agent : null,
-    machine: task.machine ? { id: task.machine, on: task.machine_on !== false } : null,
+    machine: !options.hideMachine && task.machine ? { id: task.machine, on: task.machine_on !== false } : null,
+  };
+}
+
+/** Omite sólo los datos que la cabecera de este grupo ya nombra. */
+export function groupCardOptions(group: Pick<SidebarGroup<unknown>, "kind" | "key" | "machine">): { hideFolder: boolean; hideMachine: boolean } {
+  return {
+    hideFolder: group.kind === "folder" && !!group.key,
+    hideMachine: group.kind === "machine" || (group.kind === "folder" && !!group.key && group.machine !== undefined),
   };
 }

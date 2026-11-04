@@ -37,26 +37,6 @@ export function funcion(id: string | null): string {
   }
 }
 
-/** El nombre de la herramienta en la terminal de la preparación. */
-export function nombreDe(id: string): string {
-  switch (id) {
-    case "git":
-      return t("setup.tools.git");
-    case "python":
-      return t("setup.tools.python");
-    case "uv":
-      return t("setup.tools.uv");
-    case "ripgrep":
-      return t("setup.tools.ripgrep");
-    case "agent-browser":
-      return t("setup.tools.agent_browser");
-    case "computer-use":
-      return t("setup.tools.computer_use");
-    default:
-      return id;
-  }
-}
-
 /** Un motivo que no se conoce cuenta como faltante. */
 export const motivoConocido = (valor?: string): Motivo => (valor && MOTIVOS.has(valor) ? (valor as Motivo) : "missing");
 

@@ -20,6 +20,12 @@ const NEEDS_YOU: AttentionState[] = ["approving", "asked", "failed"];
 
 type Notice = { key: string; workspace: string; session: string; project: string; state: AttentionState; title: string };
 
+/**
+ * En la web cada máquina contesta a su ritmo: lo que llega justo tras recargar
+ * ya esperaba, aunque aparezca después de la primera lista.
+ */
+const SETTLE_MS = import.meta.env.MODE === "web" ? 20_000 : 0;
+
 /** Detener tareas a mano las cierra todas a la vez; eso no se avisa como si hubieran terminado. */
 let quietUntil = 0;
 export function quietFinished(ms = 15000) {
@@ -42,6 +48,7 @@ export default function TaskNotifier(props: {
   const ws = createWorkspaces();
   const [notices, setNotices] = createSignal<Notice[]>([]);
   let before: Map<string, AttentionState> | null = null;
+  const settledAt = Date.now() + SETTLE_MS;
   /** Los avisos del sistema recientes, para abrir su tarea al pulsarlos. */
   const sent = new Map<string, Notice>();
   const failed = new Set<string>();
@@ -101,7 +108,7 @@ export default function TaskNotifier(props: {
         const now = new Map<string, AttentionState>();
         for (const w of list) for (const task of w.tasks) now.set(`${w.workspace}/${task.session}`, task.state);
         // La primera lista es lo que ya esperaba al abrir: eso no es nuevo.
-        if (before) {
+        if (before && Date.now() >= settledAt) {
           for (const w of list) {
             for (const task of w.tasks) {
               const key = `${w.workspace}/${task.session}`;
@@ -110,6 +117,8 @@ export default function TaskNotifier(props: {
                 if (failed.has(key)) continue;
                 failed.add(key);
               }
+              // Sin título no hay nada legible que avisar.
+              if (w.workspace === props.workspace && !props.title(task.session)?.trim()) continue;
               void announce({ key, workspace: w.workspace, session: task.session, project: task.project, state: task.state, title: titleOf(w.workspace, task.session) });
             }
           }

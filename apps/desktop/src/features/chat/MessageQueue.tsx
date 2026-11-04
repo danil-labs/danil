@@ -1,5 +1,6 @@
 import type { Recipient, ReplyTo, SenderTask } from "../../lib/recipients";
 import { editMentions, finishEdit, trimMentions, type PendingEdit, type TaskMention } from "../../lib/taskMentions";
+import CircleStop from "lucide-solid/icons/circle-stop";
 import CornerDownLeft from "lucide-solid/icons/corner-down-left";
 import Paperclip from "lucide-solid/icons/paperclip";
 import Pause from "lucide-solid/icons/pause";
@@ -88,6 +89,15 @@ export type ColaDeMensajesProps = {
    * vivo, y un botón que no hace nada es peor que no tenerlo.
    */
   onMandarAhora: ((id: string) => Promise<void>) | null;
+  /**
+   * Lo mismo que hace la persona a mano cuando el agente no recibe mensajes a
+   * medias: detener el turno y dejar salir esta cola. `null` cuando el agente
+   * sí los recibe —ahí va `onMandarAhora`— o cuando no hay turno vivo.
+   *
+   * No es un steer y no se disfraza de uno: el paso que estaba corriendo se
+   * pierde, y eso lo dice el título.
+   */
+  onDetenerYEnviar: ((id: string) => void) | null;
   /** Editar pausa la cola: un turno que cierra a mitad de la edición no se lleva el texto a medias. */
   onEditando: (activo: boolean) => void;
   onMandar: () => void;
@@ -282,6 +292,22 @@ export default function ColaDeMensajes(props: ColaDeMensajesProps) {
                             onClick={() => mandar()(it.id)}
                           >
                             <CornerDownLeft size={13} />
+                          </Button>
+                        )}
+                      </Show>
+                      <Show when={inyectable(it) ? props.onDetenerYEnviar : null}>
+                        {(parar) => (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            class="size-7"
+                            aria-label={t("chat.queue.stop_and_send_aria", { n: i() + 1 })}
+                            title={t("chat.queue.stop_and_send")}
+                            disabled={props.pending?.includes(it.id)}
+                            onClick={() => parar()(it.id)}
+                          >
+                            <CircleStop size={13} />
                           </Button>
                         )}
                       </Show>

@@ -1,6 +1,6 @@
-# Contributing to Terminus
+# Contributing to Danil
 
-Thanks for helping. This repository holds the Terminus clients: the desktop app, the
+Thanks for helping. This repository holds the Danil clients: the desktop app, the
 mobile app, the packages they share and their release tooling. The engine (`seldon-runtime`) is a separate, proprietary
 binary; changes to how projects, tasks, agents or accounts behave inside the
 engine can't be made here, but bug reports about them are welcome as issues.
@@ -31,7 +31,9 @@ engine can't be made here, but bug reports about them are welcome as issues.
    `main` after QA.
 
 The chain runs locally, on every platform the change touches, before a merge.
-GitHub Actions is not the gate.
+GitHub Actions is not the gate. `pnpm verify --remote` is a queue on Danil's
+team machine and needs access to its tailnet; outside contributors verify
+locally. A maintainer may run your pull request there after reading it.
 
 ## Developer Certificate of Origin (DCO)
 

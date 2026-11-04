@@ -1,4 +1,5 @@
 import FileWarning from "lucide-solid/icons/triangle-alert";
+import { SignalDot } from "../../ui/SignalDot";
 import Save from "lucide-solid/icons/save";
 import { createResource, createSignal, For, type JSX, Show } from "solid-js";
 import { t } from "../../lib/i18n";
@@ -191,7 +192,7 @@ export default function DeleteSpace(props: {
           </Show>
           <Seccion
             clave="working"
-            icono={<span aria-hidden="true" class="grid size-4 place-items-center"><span class="size-1.5 rounded-full bg-primary" /></span>}
+            icono={<span aria-hidden="true" class="grid size-4 place-items-center"><SignalDot tone="working" /></span>}
             titulo={t("spaces.delete.working", { count: trabajando().length })}
             porque={t("spaces.delete.working_why")}
             filas={trabajando()}

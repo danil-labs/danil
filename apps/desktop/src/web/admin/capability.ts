@@ -1,8 +1,23 @@
-import { createSupportAccess } from "../../../../../packages/attention/src/support-access.ts";
+import { createSupportAccess, isManager } from "../../../../../packages/attention/src/support-access.ts";
 import type { InboxSession } from "../../../../../packages/attention/src/inbox.ts";
+import { accountKind } from "./sections";
 
-/** «Administración ↗» en Configuración: abre `/admin` si la persona administra algún workspace de Danil. */
+const api = (session: InboxSession) => createSupportAccess(session, fetch, `${import.meta.env.BASE_URL}alpha-api`);
+
+/** El enlace al Harness en Configuración. Un miembro entra en solo lectura, pero sus secciones aún no tienen fuente real: sin ellas no se le ofrece. */
 export function adminPageCapability(session: InboxSession, href = `${import.meta.env.BASE_URL}admin`) {
-  const api = createSupportAccess(session, fetch, `${import.meta.env.BASE_URL}alpha-api`);
-  return { href: (workspace: string | null) => (workspace ? `${href}?workspace=${encodeURIComponent(workspace)}` : href), allowed: async () => (await api.workspaces()).length > 0 };
+  return {
+    href,
+    allowed: async () => (await api(session).memberships()).some((m) => isManager(m.role) && accountKind(m) !== "personal"),
+  };
+}
+
+/** Una cuenta personal ve lo suyo en Configuración; consumo y plan aún no tienen fuente real. */
+export function personalAccountCapability(session: InboxSession) {
+  return {
+    isPersonal: async () => {
+      const rows = await api(session).memberships();
+      return rows.length > 0 && rows.every((m) => accountKind(m) === "personal");
+    },
+  };
 }

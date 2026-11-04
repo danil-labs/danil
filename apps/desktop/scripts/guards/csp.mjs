@@ -64,9 +64,9 @@ const PERMITIDO = {
   // Las dos formas de la misma URL del IPC de Tauri: `ipc://localhost` en macOS y
   // Linux, `http://ipc.localhost` en Windows (`scripts/ipc-protocol.js` de la
   // caja de Tauri). Sin ellas cada `invoke` falla y cae a `postMessage`.
-  // Y el plano de control de Danil Computers: con la cuenta abierta la ventana lista las
+  // Y el plano de control de Danil Machines: con la cuenta abierta la ventana lista las
   // computadoras de la persona y abre su sesión del relay (`features/machines/account.tsx`).
-  "connect-src": ["'self'", "ipc:", "http://ipc.localhost", "https://computers.danil.ai", "wss://computers.danil.ai"],
+  "connect-src": ["'self'", "ipc:", "http://ipc.localhost", "https://machines.danil.ai", "wss://machines.danil.ai", "https://computers.danil.ai", "wss://computers.danil.ai"],
   // El tercer candado del contenedor: a dónde puede navegar un marco hijo. Sin
   // esto el HTML del agente hace `location.href = "http://…/?" + contenido`.
   // `terminus-page` es la vista previa de un `.html` de la tarea (`page_preview.rs`):
@@ -81,7 +81,7 @@ const PERMITIDO = {
 /** Comodines que vacían una directiva de contenido aunque parezca que dice algo. */
 const VETADO = [/^\*$/, /^https?:$/, /^data:$/, /^ws{1,2}:$/, /^'unsafe-eval'$/, /^blob:$/];
 
-const fallos = [];
+const failures = [];
 const textos = new Map();
 
 for (const [archivo, leer] of SITIOS) {
@@ -89,11 +89,11 @@ for (const [archivo, leer] of SITIOS) {
   try {
     politica = leer(readFileSync(raiz(archivo), "utf8"));
   } catch (e) {
-    fallos.push(`${archivo}: no se pudo leer — ${e.message}`);
+    failures.push(`${archivo}: no se pudo leer — ${e.message}`);
     continue;
   }
   if (!politica) {
-    fallos.push(`${archivo}: no declara ninguna política de contenido`);
+    failures.push(`${archivo}: no declara ninguna política de contenido`);
     continue;
   }
   textos.set(archivo, politica.trim());
@@ -102,8 +102,8 @@ for (const [archivo, leer] of SITIOS) {
 // 1 · Los tres dicen exactamente lo mismo.
 const distintos = new Set(textos.values());
 if (distintos.size > 1) {
-  fallos.push("los tres sitios no dicen la misma política:");
-  for (const [archivo, t] of textos) fallos.push(`    ${archivo}\n        ${t}`);
+  failures.push("los tres sitios no dicen la misma política:");
+  for (const [archivo, t] of textos) failures.push(`    ${archivo}\n        ${t}`);
 }
 
 // 2 · Y lo que dicen no se ha aflojado.
@@ -123,7 +123,7 @@ if (politica) {
   for (const [nombre, permitido] of Object.entries(PERMITIDO)) {
     const fuentes = directivas.get(nombre);
     if (!fuentes) {
-      fallos.push(`falta \`${nombre}\`, que tenía que decir: ${permitido.join(" ")}`);
+      failures.push(`falta \`${nombre}\`, que tenía que decir: ${permitido.join(" ")}`);
       continue;
     }
     for (const f of fuentes) {
@@ -132,15 +132,15 @@ if (politica) {
       // `img-src` está permitido y en `script-src` sería una vía de ejecución, así
       // que la lista de la directiva manda y esto solo elige el mensaje.
       if (VETADO.some((v) => v.test(f))) {
-        fallos.push(`\`${nombre}\` acepta \`${f}\`, que es un comodín: la directiva deja de contener nada`);
+        failures.push(`\`${nombre}\` acepta \`${f}\`, que es un comodín: la directiva deja de contener nada`);
       } else {
-        fallos.push(`\`${nombre}\` ganó \`${f}\`, que no estaba. Solo puede decir: ${permitido.join(" ")}`);
+        failures.push(`\`${nombre}\` ganó \`${f}\`, que no estaba. Solo puede decir: ${permitido.join(" ")}`);
       }
     }
   }
 
   for (const nombre of directivas.keys()) {
-    if (!(nombre in PERMITIDO)) fallos.push(`\`${nombre}\` no está en la lista de este guarda: decide qué puede decir`);
+    if (!(nombre in PERMITIDO)) failures.push(`\`${nombre}\` no está en la lista de este guarda: decide qué puede decir`);
   }
 }
 
@@ -149,20 +149,20 @@ if (politica) {
 //     midieron por separado, y ninguna de las dos basta sola.
 const md = readFileSync(raiz("src/ui/Markdown.tsx"), "utf8");
 if (!/destinoAbrible|imagenInerte/.test(md)) {
-  fallos.push("src/ui/Markdown.tsx ya no filtra el esquema: no usa `destinoAbrible` ni `imagenInerte`");
+  failures.push("src/ui/Markdown.tsx ya no filtra el esquema: no usa `destinoAbrible` ni `imagenInerte`");
 }
 for (const crudo of ["href={p.href}", "src={p.src}"]) {
   if (md.includes(crudo)) {
-    fallos.push(`src/ui/Markdown.tsx pinta \`${crudo}\` tal cual — eso es lo que dejaba salir la imagen sin un clic`);
+    failures.push(`src/ui/Markdown.tsx pinta \`${crudo}\` tal cual — eso es lo que dejaba salir la imagen sin un clic`);
   }
 }
 
-if (fallos.length === 0) {
+if (failures.length === 0) {
   console.log("La política de la ventana dice lo mismo en los tres sitios, y el chat filtra el esquema.");
   process.exit(0);
 }
 
-for (const f of fallos) console.error(`  ${f}`);
+for (const f of failures) console.error(`  ${f}`);
 console.error(
   `\nLo que esta política impide está medido, con su control negativo, en\n` +
     `\`tests/security/window.mjs\`. Si hace falta aflojarla, la forma de saberlo es\n` +

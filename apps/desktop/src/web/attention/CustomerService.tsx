@@ -3,13 +3,13 @@ import ExternalLink from 'lucide-solid/icons/external-link';
 import { createResource, createSignal, For, type JSX, onCleanup, onMount, Show, Suspense, lazy } from 'solid-js';
 import type { InboxSession } from '../../../../../packages/attention/src/inbox.ts';
 import { createService, type ServiceAgent, type ServiceApi } from '../../../../../packages/attention/src/service.ts';
-import { createSupportAccess } from '../../../../../packages/attention/src/support-access.ts';
 import { resolveWorkspaceAccount } from '../../../../../packages/attention/src/workspace-account.ts';
 import { SettingsPanel, SettingsRow, SettingsSection } from '../../features/settings/layout';
 import { t } from '../../lib/i18n';
 import { Badge } from '../../ui/Badge';
 import { Button } from '../../ui/Button';
-import { activeAccountOf } from '../audit-log';
+import { bffTransport } from './transport';
+import { accountSources, type AgentsSession } from './workspace-sources';
 
 const Channels = lazy(() => import('./Channels').then(module => ({ default: module.Channels })));
 
@@ -20,12 +20,11 @@ export type ServiceSource = ServiceApi & { resolves: (workspace: string | null) 
 type Session = InboxSession & { subscribe?: (clear: () => void) => () => void };
 export type CustomerProps = { demo: boolean; session?: Session; load: () => Promise<ServiceSource | null>; workspace: () => string | null };
 
-export function liveService(session: InboxSession): ServiceSource {
-  const prefix = `${import.meta.env.BASE_URL}alpha-api`;
-  const support = createSupportAccess(session, fetch, prefix);
+export function liveService(session: AgentsSession): ServiceSource {
+  const bff = bffTransport();
   return {
-    ...createService(session, fetch, prefix),
-    resolves: async workspace => !!await resolveWorkspaceAccount(workspace, { accounts: support.memberships, active: async () => activeAccountOf(await session.getToken()) }),
+    ...createService(session, bff.request, bff.prefix),
+    resolves: async workspace => !!await resolveWorkspaceAccount(workspace, accountSources(session)),
   };
 }
 

@@ -81,7 +81,7 @@ test("the web lists secrets by scope, marks an old engine as not compatible, and
     const f = fleet({ cmp_vm: { table, state: "online" } });
     const app = await boot("listo", "web-secrets", {}, undefined, {}, {
       web: true,
-      antes: (w) => {
+      beforeImport: (w) => {
         globalThis.WebSocket = f.Socket;
         w.terminusWeb = { endpoint: API, computers: [{ computer_id: "cmp_vm", name: "vm-alberto", state: "online", provider: "aws-ec2" }], getToken: async () => "tok" };
       },
@@ -146,7 +146,7 @@ test("the web lists secrets by scope, marks an old engine as not compatible, and
     assert.ok(!JSON.stringify(put).includes("short-value"), "the value never travels in clear");
     assert.ok(await until(() => !form() && panel().querySelector('[data-secret="env/p1/DATABASE_URL"]')), "the dialog closes and the new row appears");
     assert.match(panel().querySelector('[data-secrets-group="p1"]').textContent, /^Carpeta P1/, "a folder group is named, not shown by id");
-    assert.deepEqual(app.fallos, []);
+    assert.deepEqual(app.failures, []);
   } finally {
     globalThis.fetch = own;
   }
@@ -172,7 +172,7 @@ test("the web refuses to create a secret when no machine announces secrets_v1", 
     const f = fleet({ cmp_vm: { table, state: "online" } });
     const app = await boot("listo", "web-secrets-sin-destino", {}, undefined, {}, {
       web: true,
-      antes: (w) => {
+      beforeImport: (w) => {
         globalThis.WebSocket = f.Socket;
         w.terminusWeb = { endpoint: API, computers: [{ computer_id: "cmp_vm", name: "vm-alberto", state: "online", provider: "aws-ec2" }], getToken: async () => "tok" };
       },
@@ -196,7 +196,7 @@ test("the web refuses to create a secret when no machine announces secrets_v1", 
     form().requestSubmit();
     await sleep(300);
     assert.deepEqual(calls.filter((m) => m !== "GET"), [], "no secret without copies is created");
-    assert.deepEqual(app.fallos, []);
+    assert.deepEqual(app.failures, []);
   } finally {
     globalThis.fetch = own;
   }

@@ -33,6 +33,8 @@ export default function KnIntegrate(props: {
   project: string;
   session: string;
   changed?: number | null;
+  /** En la fila de búsqueda cabe poco: el número solo, y la cuenta completa en el título. */
+  corto?: boolean;
 }) {
   const [abierto, setAbierto] = createSignal(false);
   const [ocupado, setOcupado] = createSignal<"finish" | "update" | null>(null);
@@ -95,10 +97,11 @@ export default function KnIntegrate(props: {
 
   return (
     <>
-      <Button variant="secondary" size="compact" class="shrink-0" onClick={() => void abrir()}>
+      <Button variant="secondary" size="compact" class="shrink-0" onClick={() => void abrir()}
+        title={props.corto && cuantos() ? t("kn.pending.count", { count: cuantos() }) : undefined}>
         {t("kn.integrate")}
         <Show when={cuantos()}>
-          {(n) => <span class="font-normal text-neutral-500">· {t("kn.pending.count", { count: n() })}</span>}
+          {(n) => <span class="font-normal text-neutral-500">· {props.corto ? n() : t("kn.pending.count", { count: n() })}</span>}
         </Show>
       </Button>
       <Dialog open={abierto()} onOpenChange={setAbierto}>

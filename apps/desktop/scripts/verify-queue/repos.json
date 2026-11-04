@@ -1,0 +1,8 @@
+{
+  "repos": {
+    "terminus": {
+      "prepare": "pnpm install --frozen-lockfile",
+      "commands": ["pnpm verify", "pnpm verify --no-cargo"]
+    }
+  }
+}

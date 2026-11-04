@@ -1,8 +1,8 @@
 /**
- * A tab opened before a deploy asks for a lazy screen whose chunk the new build
- * no longer has; Vite reports it with `vite:preloadError`. The page reloads into
- * the new build instead of leaving the screen blank, and only once in a while
- * so a broken chunk does not loop. Mounts `dist-web/`.
+ * A build deployed after the tab loaded is offered, not imposed: the notice asks
+ * and «Para después» keeps the tab. A chunk the deploy removed reloads only when
+ * no app is on screen yet; with the app mounted it brings the notice back.
+ * Mounts `dist-web/`.
  */
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -10,7 +10,7 @@ import { relay } from "../helpers/fake-relay.mjs";
 import { boot, sleep } from "../helpers/jsdom-app.mjs";
 
 const SUPABASE = "https://supabase.test";
-const API = "https://computers.danil.ai/v1/computers";
+const API = "https://machines.danil.ai/v1/computers";
 const session = JSON.stringify({
   access_token: "stored",
   refresh_token: "r",
@@ -20,35 +20,75 @@ const session = JSON.stringify({
   user: { id: "u1", aud: "authenticated", role: "authenticated", email: "persona@example.com", app_metadata: {}, user_metadata: {}, created_at: "2026-01-01T00:00:00Z" },
 });
 
-test("a chunk gone after a deploy reloads the page once", async () => {
+const pageWith = (entry) => `<!doctype html><html><head><script type="module" src="/terminus/assets/${entry}.js"></script></head></html>`;
+
+async function open(t) {
   const fake = relay();
   const own = globalThis.fetch;
+  const page = { html: null };
   globalThis.fetch = async (input, init) => {
     const url = String(input?.url ?? input);
+    if (url.endsWith("/terminus/") && page.html) return new Response(page.html, { status: 200 });
     if (!url.startsWith(API)) return own(input, init);
     return new Response(JSON.stringify([{ computer_id: "cmp_a", name: "Casa", state: "online" }]), { status: 200 });
   };
+  t.after(() => {
+    globalThis.fetch = own;
+  });
   let w;
   const app = await boot("listo", "web-stale-chunk", {}, undefined, { "sb-supabase-auth-token": session }, {
     web: true,
-    antes: (win) => {
+    beforeImport: (win) => {
       w = win;
       globalThis.WebSocket = fake.Socket;
       win.terminusWeb = { supabaseUrl: SUPABASE, supabaseKey: "public-anon-key" };
     },
   });
-  const fail = () => {
-    const event = new w.Event("vite:preloadError", { cancelable: true });
-    w.dispatchEvent(event);
-    return event.defaultPrevented;
+  await sleep(1500);
+  const notice = () => w.document.querySelector("[data-web-update]");
+  const check = async () => {
+    Object.defineProperty(w.document, "visibilityState", { value: "visible", configurable: true });
+    w.document.dispatchEvent(new w.Event("visibilitychange"));
+    await sleep(100);
   };
-  try {
-    await sleep(1500);
-    assert.equal(fail(), true, "the failed chunk is handled");
-    assert.ok(w.sessionStorage.getItem("terminus.web.reloaded-at"), "the reload is recorded");
-    assert.ok(app.fallos.some((f) => /navigation/i.test(f)), `the page reloads: ${app.fallos.join(" | ")}`);
-    assert.equal(fail(), false, "a second failure right after does not reload again");
-  } finally {
-    globalThis.fetch = own;
-  }
+  return { app, w, page, notice, check };
+}
+
+test("a new build is offered, a gone chunk asks, and «Para después» keeps the tab", async (t) => {
+  const { app, w, page, notice, check } = await open(t);
+  page.html = w.document.documentElement.outerHTML;
+  await check();
+  assert.equal(notice(), null, "the same build says nothing");
+
+  page.html = pageWith("bootstrap-new").replace("/terminus/assets/", "/elsewhere/");
+  await check();
+  assert.equal(notice(), null, "another app's page, like the sign-in, is not an update");
+
+  page.html = pageWith("bootstrap-new");
+  await check();
+  assert.match(notice()?.textContent ?? "", /Nueva versión de esta página/);
+
+  w.document.querySelector("[data-web-update-later]").click();
+  await sleep(50);
+  assert.equal(notice(), null, "«Para después» closes it");
+  await check();
+  assert.equal(notice(), null, "the build already postponed does not ask again");
+  assert.ok(!app.failures.some((f) => /navigation/i.test(f)), "nothing reloads the page");
+
+  const event = new w.Event("vite:preloadError", { cancelable: true });
+  w.dispatchEvent(event);
+  await sleep(50);
+  assert.equal(event.defaultPrevented, true, "the failed chunk is handled");
+  assert.ok(notice(), "a chunk gone brings the notice back");
+  assert.equal(w.sessionStorage.getItem("terminus.web.reloaded-at"), null, "no forced reload");
+  w.document.querySelector("[data-web-update-later]").click();
+  await sleep(50);
+
+  page.html = pageWith("bootstrap-newer");
+  await check();
+  assert.ok(notice(), "a newer deploy asks again");
+
+  w.document.querySelector("[data-web-update-reload]").click();
+  await sleep(50);
+  assert.ok(app.failures.some((f) => /navigation/i.test(f)), `«Recarga ahora» reloads: ${app.failures.join(" | ")}`);
 });

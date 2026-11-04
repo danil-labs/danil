@@ -12,7 +12,7 @@ import { boot, sleep } from "../helpers/jsdom-app.mjs";
 globalThis.BroadcastChannel = undefined;
 
 const SUPABASE = "https://supabase.test";
-const API = "https://computers.danil.ai/v1/devices";
+const API = "https://machines.danil.ai/v1/devices";
 const session = (token) => JSON.stringify({
   access_token: token,
   refresh_token: `r-${token}`,
@@ -38,7 +38,7 @@ async function page(path, handler) {
   let w;
   const app = await boot("listo", `web-connect-${++mounts}`, {}, undefined, { "sb-supabase-auth-token": session("stored") }, {
     web: true,
-    antes: (win) => {
+    beforeImport: (win) => {
       w = win;
       win.history.replaceState(null, "", path);
       win.terminusWeb = { supabaseUrl: SUPABASE, supabaseKey: "public-anon-key" };
@@ -74,7 +74,7 @@ test("the page shows the computer, takes a new name and approves the code", asyn
     assert.deepEqual(approve?.body, { user_code: "WDJB-MJHT", name: "Mac de Alberto" });
     assert.equal(root()?.dataset.webConnect, "done");
     assert.ok(text().includes("Listo, vuelve a Danil."));
-    assert.deepEqual(app.fallos, []);
+    assert.deepEqual(app.failures, []);
   } finally {
     restore();
   }

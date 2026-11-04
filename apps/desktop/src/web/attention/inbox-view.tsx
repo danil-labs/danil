@@ -12,6 +12,7 @@ import Search from 'lucide-solid/icons/search';
 import SendHorizontal from 'lucide-solid/icons/send-horizontal';
 import { For, type JSX, Show } from 'solid-js';
 import type { InboxDraft } from './inbox-drafts';
+import { inboxDrag, inboxWidth, type InboxSide } from './inbox-widths';
 import { ReplyError } from '../../../../../packages/attention/src/messaging.ts';
 import { contactDisplayName, contactIdentifier, contactSubIdentifier, type Conversation, type ConversationLabel, conversationLabels, type InboxFilter, type Message, normalizeProvider } from '../../../../../packages/attention/src/inbox.ts';
 import { df } from '../../lib/format';
@@ -143,6 +144,50 @@ export function ConversationRow(props: { conversation: Conversation; active: boo
   </button>;
 }
 
+/** El tirador entre dos paneles del Inbox: arrastra el ancho del panel, que se recuerda. */
+export function InboxSplitter(props: {
+  label: string;
+  /** De qué lado está el panel: a la derecha el gesto va al revés. */
+  side: InboxSide;
+  panel: () => HTMLElement | undefined;
+  min: number;
+  max: number;
+  value: number;
+  onResize: (px: number) => void;
+  onReset: () => void;
+  class?: string;
+}) {
+  const mover = (px: number) => props.onResize(inboxWidth(px, props.min, props.max));
+  return <div class={`group/tirador relative z-40 w-0 shrink-0 ${props.class ?? ''}`}>
+    <span aria-hidden="true" class="pointer-events-none absolute inset-y-0 left-1/2 w-0.5 -translate-x-1/2 rounded-full bg-primary opacity-0 transition-opacity duration-150 group-hover/tirador:opacity-70 group-focus-within/tirador:opacity-70"/>
+    <div role="separator" tabindex={0} aria-label={props.label} aria-orientation="vertical" aria-valuemin={props.min} aria-valuemax={props.max} aria-valuenow={props.value}
+      class="absolute inset-y-0 -left-1.5 w-3 cursor-col-resize touch-none bg-transparent outline-none focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-neutral-500"
+      onPointerDown={event => {
+        event.preventDefault();
+        const medido = props.panel()?.getBoundingClientRect().width ?? 0;
+        const desde = medido > 0 ? medido : props.value;
+        const inicio = event.clientX;
+        const seguir = (ev: PointerEvent) => props.onResize(inboxDrag(desde, ev.clientX - inicio, props.side, props.min, props.max));
+        const soltar = () => {
+          window.removeEventListener('pointermove', seguir);
+          window.removeEventListener('pointerup', soltar);
+          window.removeEventListener('pointercancel', soltar);
+        };
+        window.addEventListener('pointermove', seguir);
+        window.addEventListener('pointerup', soltar);
+        window.addEventListener('pointercancel', soltar);
+      }}
+      onDblClick={() => props.onReset()}
+      onKeyDown={event => {
+        if (event.key === 'Home' || event.key === 'End') { event.preventDefault(); mover(event.key === 'Home' ? props.min : props.max); return; }
+        const paso = event.key === 'ArrowLeft' ? -1 : event.key === 'ArrowRight' ? 1 : 0;
+        if (!paso) return;
+        event.preventDefault();
+        mover(props.value + paso * (props.side === 'left' ? 16 : -16));
+      }}/>
+  </div>;
+}
+
 export function SelectConversation() {
   return <div class="grid h-full place-items-center p-6 text-center">
     <div class="grid justify-items-center gap-2 text-neutral-500">
@@ -242,9 +287,9 @@ function contactFields(row: Conversation) {
   return fields;
 }
 
-export function ContactDetails(props: { conversation: Conversation; onClose: () => void }) {
+export function ContactDetails(props: { conversation: Conversation; onClose: () => void; ref?: (el: HTMLElement) => void }) {
   const row = () => props.conversation;
-  return <aside id={`alpha-contact-${row().id}`} aria-label={t("web.alpha.contact_details")} class="absolute inset-0 z-20 flex h-full w-full flex-col overflow-hidden bg-surface @[40rem]/detail:relative @[40rem]/detail:inset-auto @[40rem]/detail:z-0 @[40rem]/detail:w-[20rem] @[40rem]/detail:shrink-0 @[40rem]/detail:border-l @[40rem]/detail:border-border">
+  return <aside ref={props.ref} id={`alpha-contact-${row().id}`} aria-label={t("web.alpha.contact_details")} class="absolute inset-0 z-20 flex h-full w-full flex-col overflow-hidden bg-surface @[40rem]/detail:relative @[40rem]/detail:inset-auto @[40rem]/detail:z-0 @[40rem]/detail:w-[var(--inbox-detail)] @[40rem]/detail:max-w-[calc(100%_-_20rem)] @[40rem]/detail:shrink-0 @[40rem]/detail:border-l @[40rem]/detail:border-border">
     <div class="flex h-11 min-h-11 shrink-0 items-center border-b border-border bg-surface px-4 @[40rem]/detail:hidden">
       <Button size="iconCompact" variant="ghost" class="mr-2 text-neutral-500" aria-label={t("web.alpha.back_to_chat")} onClick={props.onClose}><ArrowLeft size={18}/></Button>
       <h3 class="m-0 text-[0.9rem] font-semibold text-neutral-950">{t("web.alpha.contact_details_title")}</h3>

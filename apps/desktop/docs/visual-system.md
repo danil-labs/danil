@@ -1,6 +1,6 @@
 # Sistema visual
 
-Los controles de Terminus usan tokens de `src/styles/global.css` y átomos de
+Los controles de Danil usan tokens de `src/styles/global.css` y átomos de
 `src/ui/`. Los valores por paleta están en [`color-tokens.md`](./color-tokens.md).
 
 ## Tema y paletas
@@ -61,9 +61,36 @@ restante. El reparto de paneles se guarda por espacio; con ancho insuficiente so
 se muestra el panel activo. Los menús y diálogos suspenden la capa nativa de sitios
 para mantenerse visibles por encima de ella.
 
+## Tarjetas de tarea
+
+El slot de identidad mide 24 px y permanece a la derecha del título. Un handler
+conserva su avatar entre estados; sin handler, el centro queda vacío. Trabajando
+lleva un arco exterior y el movimiento interno de Astro, sin punto ni pulso extra.
+Las otras marcas de atención van en la esquina de la identidad. El check verde
+indica entrega sin ver; el neutro corresponde a una entrega ya leída.
+
+La segunda línea ordena proveedor (solo icono, slot de 16 px), carpeta, máquina,
+Git/kn, acción y hora. Carpeta y máquina tienen anchos acotados por el contenedor;
+solo su texto se recorta. Agrupar omite la sección repetida y su ancho. La acción
+de finalizar conserva el morado de marca y aparece antes de la hora. El pin es
+independiente de la atención: sobre el borde superior en escritorio, en línea en
+móvil. El menú tiene su espacio y no sustituye la identidad.
+
+Git/kn conserva sus colores e iconos de trabajo; no decide el estado de atención.
+El movimiento reducido y el fondo suspenden arcos y movimiento interno. Los tokens
+semánticos existentes determinan el contraste de las marcas; el morado fijo conserva
+su limitación de contraste sobre el riel oscuro y no se sustituye por `primary`.
+
+## Página de carpeta
+
+La página abre en Tareas; Configuración es otra pestaña con carpeta, fuentes,
+agentes y memoria. Cada sección usa `Panel` de `src/ui/`, con `surface` sólido: el
+contraste de su texto no depende de la imagen de fondo. Un agente ocupa una línea
+y solo muestra quién lo lee cuando esa combinación se sale de la más común.
+
 ## Tema de terminal
 
-`src/lib/terminal-themes.ts` y `src/styles/terminal.css` conservan los temas Terminus,
+`src/lib/terminal-themes.ts` y `src/styles/terminal.css` conservan los temas Danil,
 Tomorrow Night Blue, Nord, Gruvbox Dark y Dracula. `Workspace.terminal_theme` guarda
 la elección y `data-terminal-theme` aplica los tokens `terminal-*`.
 
