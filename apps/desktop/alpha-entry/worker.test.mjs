@@ -572,3 +572,94 @@ test('marketing rejects unknown methods, routes and bodies before authorization 
   for (const path of ['/api/marketing/campaigns/4/unknown', '/api/marketing/channels']) assert.ok([404, 405].includes((await h.fetch(prefix + path, options)).status));
   assert.equal(h.calls.length, 0);
 });
+
+const businessToken = (account) => `Bearer h.${btoa(JSON.stringify({ active_account_id: account })).replace(/=+$/, "")}.s`;
+const businessWrite = (body, extra = {}) => ({
+  headers: { Authorization: businessToken(7), Origin: origin, "Content-Type": "application/json", ...extra },
+  body: typeof body === "string" ? body : JSON.stringify(body),
+});
+const FISCAL_BODY = { account_id: 7, rfc: "EKU9003173C9", legal_name: "ESCUELA KEMPER URGATE", tax_system: "601", cfdi_use: "G03", zip: "26015", invoice_email: "facturas@ejemplo.mx" };
+
+test("business reads are three exact GETs with only the active account_id", async () => {
+  for (const path of ["/auth/account/business/summary", "/auth/account/business/seats", "/auth/account/business/fiscal"]) {
+    const h = harness();
+    const response = await h.fetch(`${prefix}${path}?account_id=7`, { headers: { Authorization: businessToken(7), Cookie: "legacy=1" } });
+    assert.equal(response.status, 200);
+    assert.equal(h.calls.length, 1);
+    assert.equal(h.calls[0].url, `${origin}${path}?account_id=7`);
+    assert.equal(h.calls[0].method, "GET");
+    assert.equal(h.calls[0].headers.get("Cookie"), null);
+    assert.equal(response.headers.get("Cache-Control"), "no-store");
+  }
+  const h = harness();
+  for (const query of ["", "?account_id=8", "?account_id=7&account_id=7", "?account_id=7&extra=1", "?account_id=x"]) {
+    assert.ok([400, 403].includes((await h.fetch(`${prefix}/auth/account/business/summary${query}`, { headers: { Authorization: businessToken(7) } })).status), query);
+  }
+  assert.equal((await h.fetch(`${prefix}/auth/account/business/summary?account_id=7`)).status, 401);
+  assert.equal((await h.fetch(`${prefix}/auth/account/business/summary?account_id=7`, { headers: auth })).status, 403, "a token without active account");
+  for (const path of ["/auth/account/business", "/auth/account/business/credit/packs", "/auth/account/business/summary/"]) {
+    assert.ok([404, 405].includes((await h.fetch(`${prefix}${path}?account_id=7`, { headers: { Authorization: businessToken(7) } })).status), path);
+  }
+  assert.equal(h.calls.length, 0);
+});
+
+test("business writes pass as the other writes: exact route, rebuilt body, person Bearer", async () => {
+  const cases = [
+    ["POST", "/auth/account/business/seats/preview", { account_id: 7, extra_seats: 2 }, { account_id: 7, extra_seats: 2 }],
+    ["POST", "/auth/account/business/seats", { account_id: 7, extra_seats: 10, proration_date: 1_700_000_000 }, { account_id: 7, extra_seats: 10, proration_date: 1_700_000_000 }],
+    ["POST", "/auth/account/business/credit/checkout", { account_id: 7, amount_mxn: 500 }, { account_id: 7, amount_mxn: 500, return_to: "danil_web" }],
+    ["PUT", "/auth/account/business/fiscal", FISCAL_BODY, FISCAL_BODY],
+  ];
+  for (const [method, path, sent, expected] of cases) {
+    const h = harness();
+    const response = await h.fetch(prefix + path, { method, ...businessWrite(sent, { Cookie: "legacy=1", Referer: origin + "/" }) });
+    assert.equal(response.status, 200, path);
+    assert.equal(h.calls.length, 1);
+    assert.equal(h.calls[0].url, origin + path);
+    assert.equal(h.calls[0].method, method);
+    assert.equal(h.calls[0].headers.get("Authorization"), businessToken(7));
+    assert.equal(h.calls[0].headers.get("Origin"), origin);
+    assert.equal(h.calls[0].headers.get("Cookie"), null);
+    assert.deepEqual(await h.calls[0].json(), expected);
+  }
+});
+
+test("business writes fail closed before the BFF: CSRF, AI actor, session, account, query, type, size and fields", async () => {
+  const h = harness();
+  const path = prefix + "/auth/account/business/seats/preview";
+  const good = { account_id: 7, extra_seats: 1 };
+  const expect = async (options, status, why) => assert.equal((await h.fetch(path, { method: "POST", ...options })).status, status, why);
+  await expect(businessWrite(good, { Origin: "https://evil.example" }), 403, "foreign origin");
+  await expect({ ...businessWrite(good), headers: { Authorization: businessToken(7), "Content-Type": "application/json" } }, 403, "no origin");
+  await expect(businessWrite(good, { "X-Danil-Actor": "AI" }), 403, "AI actor");
+  await expect({ ...businessWrite(good), headers: { Origin: origin, "Content-Type": "application/json" } }, 401, "no Bearer");
+  await expect(businessWrite({ account_id: 8, extra_seats: 1 }), 403, "other account");
+  await expect(businessWrite(good, { "Content-Type": "text/plain" }), 400, "not JSON");
+  await expect(businessWrite("{"), 400, "broken JSON");
+  await expect(businessWrite({ ...good, extra: 1 }), 400, "extra field");
+  await expect(businessWrite({ account_id: 7, extra_seats: 11 }), 400, "over the online cap");
+  await expect(businessWrite({ account_id: 7, extra_seats: 1.5 }), 400, "not an integer");
+  await expect(businessWrite({ account_id: 7, extra_seats: 1, pad: "x".repeat(3000) }), 400, "over 2 KB");
+  assert.equal((await h.fetch(path + "?account_id=7", { method: "POST", ...businessWrite(good) })).status, 400, "query");
+  assert.equal((await h.fetch(prefix + "/auth/account/business/seats", { method: "POST", ...businessWrite({ account_id: 7, extra_seats: 1, proration_date: 0 }) })).status, 400);
+  assert.equal((await h.fetch(prefix + "/auth/account/business/credit/checkout", { method: "POST", ...businessWrite({ account_id: 7, amount_mxn: 500, success_url: "https://evil.example" }) })).status, 400, "the client never picks the return URL");
+  assert.equal((await h.fetch(prefix + "/auth/account/business/credit/checkout", { method: "POST", ...businessWrite({ account_id: 7, amount_mxn: 500, return_to: "danil_web" }) })).status, 400);
+  for (const field of [{ zip: "2601" }, { tax_system: "60" }, { cfdi_use: "g03" }, { invoice_email: "sin-arroba" }, { legal_name: " " }, { rfc: "EKU9003173C9\u0000" }]) {
+    assert.equal((await h.fetch(prefix + "/auth/account/business/fiscal", { method: "PUT", ...businessWrite({ ...FISCAL_BODY, ...field }) })).status, 400, JSON.stringify(field));
+  }
+  for (const method of ["GET", "PUT", "DELETE", "PATCH"]) assert.ok([400, 404, 405].includes((await h.fetch(path, { method, headers: { Authorization: businessToken(7) } })).status), method);
+  assert.equal((await h.fetch(prefix + "/auth/account/business/fiscal", { method: "POST", ...businessWrite(FISCAL_BODY) })).status, 405, "fiscal is PUT only");
+  assert.equal(h.calls.length, 0);
+});
+
+test("business: a chunked body over 2 KB is cut while reading, and BFF denials stay denials", async () => {
+  const h = harness();
+  const stream = new ReadableStream({ start(c) { c.enqueue(new TextEncoder().encode(`{"account_id":7,"extra_seats":1,"x":"${"x".repeat(4096)}"}`)); c.close(); } });
+  const response = await h.fetch(prefix + "/auth/account/business/seats/preview", { method: "POST", headers: { Authorization: businessToken(7), Origin: origin, "Content-Type": "application/json" }, body: stream, duplex: "half" });
+  assert.equal(response.status, 400);
+  assert.equal(h.calls.length, 0);
+  const env = { APPV2_BFF: { fetch: async () => Response.json({ error: "billing_manage_required" }, { status: 403 }) } };
+  const denied = await worker.fetch(new Request(origin + prefix + "/auth/account/business/seats", { method: "POST", ...businessWrite({ account_id: 7, extra_seats: 1, proration_date: 5 }) }), env);
+  assert.equal(denied.status, 403);
+  assert.deepEqual(await denied.json(), { error: "billing_manage_required" });
+});

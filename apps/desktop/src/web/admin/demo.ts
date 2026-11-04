@@ -8,6 +8,7 @@ import type { PolicyRule } from "./Rules";
 import { sharedDemo } from "./Shared";
 import type { UsagePersonRow, UsageReport, UsageSource } from "./Usage";
 import type { UsageDay, UsageMe, UsageMeSource, UsageTotals } from "../../features/settings/usage-me";
+import type { SeatUsage } from "../../features/settings/business-billing";
 
 const REVISION = "9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f1a0b9c8d7e6f5a4b3c2d1e0f9a8b";
 const NEXT = "1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c";
@@ -44,7 +45,10 @@ const usageDemo = (own: boolean): UsageSource => ({
   report: async ({ period, person }) => report(own ? PEOPLE.slice(0, 1) : person ? PEOPLE.filter((row) => row.id === person) : PEOPLE, period === "7d" ? 7 : 30),
 });
 
-function membersDemo(): MembersSource {
+/** Danil Business con 5 lugares: la quinta invitación llena el plan y la sexta la rechaza el BFF. */
+const DEMO_SEATS = 5;
+
+function membersDemo(): MembersSource & { seats: () => Promise<SeatUsage> } {
   let rows: Member[] = [
     { id: "1", name: "María Hernández", email: "maria@ejemplo.mx", role: "owner", invited: false },
     { id: "2", name: "José Ramírez", email: "jose@ejemplo.mx", role: "admin", invited: false },
@@ -53,7 +57,11 @@ function membersDemo(): MembersSource {
   ];
   return {
     list: async () => rows,
-    invite: async (email, role) => void (rows = [...rows, { id: String(rows.length + 10), name: "", email, role, invited: true }]),
+    invite: async (email, role) => {
+      if (rows.length >= DEMO_SEATS) throw Object.assign(new Error("seat_limit_reached"), { code: "seat_limit_reached" });
+      rows = [...rows, { id: String(rows.length + 10), name: "", email, role, invited: true }];
+    },
+    seats: async () => ({ business: true, seatsAllowed: DEMO_SEATS, seatsUsed: rows.length }),
     setRole: async (id, role) => void (rows = rows.map((row) => (row.id === id ? { ...row, role } : row))),
     remove: async (id) => void (rows = rows.filter((row) => row.id !== id)),
   };
@@ -193,12 +201,13 @@ const usageMeDemo: UsageMeSource = { get: async (days) => usageMeDemoReport(days
 export const personalDemo = { usageMe: usageMeDemo, plan: async () => ({ name: "Personal", detail: "1 workspace" }) };
 
 /** Las cuatro cuentas de la vista previa; `account` llega de `?account=`. */
-export function adminDemo(account: string | null, workspace: string, other: string, internalPolicy: boolean): Pick<AdminSource, "memberships" | "active" | "shared" | "workspace" | "auditLog" | "usage" | "members" | "rules" | "policy" | "organization"> {
+export function adminDemo(account: string | null, workspace: string, other: string, internalPolicy: boolean): Pick<AdminSource, "memberships" | "active" | "shared" | "workspace" | "auditLog" | "usage" | "members" | "seats" | "rules" | "policy" | "organization"> {
   const personal = account === "personal";
   const enterprise = account === "enterprise";
   const row: Membership = personal
     ? { id: 1, name: workspace, role: "owner", organization: null, plan: "Personal" }
     : { id: 1, name: workspace, role: account === "member" ? "member" : "owner", organization: "Danil", organizationId: 1, plan: enterprise ? "Enterprise" : "Teams" };
+  const members = membersDemo();
   return {
     memberships: async () => [row, { id: 2, name: other, role: "member", organization: row.organization, organizationId: row.organizationId, plan: row.plan }],
     active: async () => 1,
@@ -206,7 +215,8 @@ export function adminDemo(account: string | null, workspace: string, other: stri
     shared: sharedDemo(),
     auditLog: { list: async () => ({ kind: "ok", entries: auditDemo, more: false }) },
     usage: usageDemo(account === "member"),
-    members: membersDemo(),
+    members,
+    seats: members.seats,
     rules: { rules: async () => RULES },
     policy: policyDemo(internalPolicy),
     organization: organizationOf(row.plan ?? "", enterprise, workspace, other),

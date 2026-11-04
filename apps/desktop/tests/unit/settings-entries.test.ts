@@ -16,6 +16,8 @@ test("old settings ids open the entry and tab that now hold them", () => {
   assert.deepEqual(settingsTarget("radiant"), { entry: "connections", tab: "operation" });
   assert.deepEqual(settingsTarget("integrations"), { entry: "connections", tab: "customers" });
   assert.deepEqual(settingsTarget("connections"), { entry: "connections", tab: null });
+  assert.deepEqual(settingsTarget("business"), { entry: "billing", tab: "business" });
+  assert.deepEqual(settingsTarget("fiscal"), { entry: "billing", tab: "fiscal" });
 });
 
 test("unknown or empty ids open nothing in particular", () => {
@@ -23,8 +25,8 @@ test("unknown or empty ids open nothing in particular", () => {
   assert.equal(settingsTarget("bitacora"), null);
 });
 
-test("seven entries, every tab in exactly one", () => {
-  assert.equal(SETTINGS_ENTRIES.length, 7);
+test("eight entries, every tab in exactly one", () => {
+  assert.equal(SETTINGS_ENTRIES.length, 8);
   const tabs = SETTINGS_ENTRIES.flatMap((e) => [...e.tabs]);
   assert.equal(new Set(tabs).size, tabs.length);
 });
