@@ -282,7 +282,7 @@ function readBounded(fd, limit, onChunk) {
   }
 }
 
-export function createQueue({ home, config, diskPercent = defaultDiskPercent, runTimeoutMs = DEFAULT_RUN_TIMEOUT_MS, sudo = "/usr/bin/sudo", queueName = `${platform()}-${arch()}`, cpus = availableParallelism(), sameUser = false }) {
+export function createQueue({ home, config, diskPercent = defaultDiskPercent, runTimeoutMs = DEFAULT_RUN_TIMEOUT_MS, sudo = "/usr/bin/sudo", queueName = `${platform()}-${arch()}`, cpus = availableParallelism(), sameUser = false, lanesRoot = join(home, "lanes") }) {
   checkConfig(config);
   const runsDir = join(home, "runs");
   const reposDir = join(home, "repos");
@@ -339,10 +339,10 @@ export function createQueue({ home, config, diskPercent = defaultDiskPercent, ru
   }
 
   function lanePaths(repo, lane = 0) {
-    const base = join(home, "lanes", String(lane), repo);
+    const base = join(lanesRoot, String(lane), repo);
     const checkout = join(base, "checkout");
     const target = config.repos[repo].target === "checkout" ? join(checkout, "target") : join(base, "target");
-    return { base, checkout, target, home: join(base, "home"), tmp: join(base, "tmp"), cargo: join(base, "cargo"), cache: join(base, "cache"), data: join(base, "data") };
+    return { base, checkout, target, home: join(base, "h"), tmp: join(base, "t"), cargo: join(base, "cargo"), cache: join(base, "cache"), data: join(base, "data") };
   }
 
   /** Lo que el carril pone en cada corrida: un HOME nuevo; registro, cachés y target persisten. */
@@ -660,6 +660,9 @@ export function createQueue({ home, config, diskPercent = defaultDiskPercent, ru
         laneGit(run.repo, laneIndex, ["fetch", "-q", "--no-tags", "--no-write-fetch-head", mirrorPath(run.repo), `+refs/verify/${run.commit}:refs/verify/run`]);
         laneGit(run.repo, laneIndex, ["checkout", "-q", "-f", "--detach", run.commit]);
         laneGit(run.repo, laneIndex, ["clean", "-q", "-ffdx", ...(insideTarget ? ["-e", "/target"] : [])]);
+        // Las cadenas comparan contra origin/dev; el carril no tiene remoto: es el punto de corte que mandó el cliente.
+        laneGit(run.repo, laneIndex, ["update-ref", "-d", "refs/remotes/origin/dev"]);
+        if (run.base) laneGit(run.repo, laneIndex, ["update-ref", "refs/remotes/origin/dev", run.base]);
       };
       if (diskPercent(home) > DISK_LIMIT_PERCENT) {
         say(`disco al ${diskPercent(home)} %: borro la target de ${run.repo}`);
@@ -810,7 +813,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const home = process.env.VERIFY_QUEUE_HOME ?? "/var/lib/verify-queue";
   const port = Number(process.env.VERIFY_QUEUE_PORT ?? 8787);
   const config = JSON.parse(readFileSync(process.env.VERIFY_QUEUE_CONFIG ?? "/etc/verify-queue/repos.json", "utf8"));
-  const queue = createQueue({ home, config, ...(process.env.VERIFY_QUEUE_NAME ? { queueName: process.env.VERIFY_QUEUE_NAME } : {}) });
+  const queue = createQueue({ home, config, ...(process.env.VERIFY_QUEUE_NAME ? { queueName: process.env.VERIFY_QUEUE_NAME } : {}), ...(process.env.VERIFY_QUEUE_LANES ? { lanesRoot: process.env.VERIFY_QUEUE_LANES } : {}) });
   queue.recover();
   createHttpServer(queue).listen(port, "127.0.0.1", () => console.log(`verify-queue en 127.0.0.1:${port}`));
 }

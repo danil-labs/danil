@@ -4,8 +4,16 @@
 set -euo pipefail
 here=$(dirname "$(readlink -f "$0")")
 state=/var/lib/verify-queue
+# Los carriles cuelgan de root: el motor solo corre un ejecutor si cada carpeta de su ruta es de root
+# o del usuario que corre, sin escritura para nadie más. La ruta es corta por el tope de los sockets Unix.
+lanes_root=/var/lib/vl
 rust=/opt/rust
-toolchains="stable 1.97.1"
+# 1.99.1 es la del perfil del motor (con su rustfmt está formateado dev); 1.97.1, la de sus builds de release.
+toolchains="stable 1.97.1 1.99.1"
+# Los CLIs de los proveedores que piden las E2E del motor: solo los binarios, sin credenciales.
+agents=/opt/verify-agents
+claude_version=2.1.316
+codex_version=0.166.0
 
 # Los usuarios de corrida salen de repos.json: uno por repo y carril (`<user>` en el carril 0,
 # `<user>-<n>` en los demás), sin shell de entrada, sin sudo, sin cron ni at. Su grupo primario es
@@ -32,7 +40,7 @@ for user in "${runners[@]}"; do
 done
 
 # Una toolchain de root y de solo lectura: el HOME de verify es 0750, y una rama no puede envenenarla.
-# El registro de cargo de cada carril vive en lanes/<n>/<repo>/cargo.
+# El registro de cargo de cada carril vive en /var/lib/vl/<n>/<repo>/cargo.
 if [ ! -x "$rust/cargo/bin/rustup" ]; then
   init=$(mktemp)
   curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs -o "$init"
@@ -45,6 +53,19 @@ done
 RUSTUP_HOME=$rust/rustup CARGO_HOME=$rust/cargo "$rust/cargo/bin/rustup" default stable
 chmod -R a+rX,go-w "$rust"
 
+# El llavero de laboratorio de las E2E (dbus-run-session + gnome-keyring-daemon).
+if ! command -v gnome-keyring-daemon >/dev/null || ! command -v secret-tool >/dev/null; then
+  DEBIAN_FRONTEND=noninteractive apt-get install -y -q gnome-keyring libsecret-tools dbus-user-session >/dev/null
+fi
+for spec in "claude:@anthropic-ai/claude-code:$claude_version" "codex:@openai/codex:$codex_version"; do
+  IFS=: read -r cli package version <<<"$spec"
+  dir=$agents/$cli/$version
+  if [ ! -x "$dir/bin/$cli" ]; then
+    npm install -g -q --no-fund --no-audit --prefix "$dir" "$package@$version" >/dev/null
+  fi
+  chmod -R a+rX,go-w "$agents"
+done
+
 # La cola solo puede volverse los usuarios de corrida, y nada más.
 sudoers=$(mktemp)
 printf 'verify ALL=(%s) NOPASSWD: ALL\n' "$(IFS=,; echo "${runners[*]}")" > "$sudoers"
@@ -56,7 +77,7 @@ rm -f "$sudoers"
 install -d -o verify -g verify -m 0711 "$state"
 install -d -o verify -g verify -m 0700 "$state/runs" "$state/incoming"
 install -d -o verify -g verify-runners -m 2750 "$state/repos"
-install -d -o verify -g verify -m 0711 "$state/lanes"
+install -d -o root -g root -m 0711 "$lanes_root"
 lanes=$(node -e 'console.log(require(process.argv[1]).lanes ?? 1)' "$here/repos.json")
 for repo in $(node -e 'const c = require(process.argv[1]); for (const [r, p] of Object.entries(c.repos)) if (p.user) console.log(`${r}:${p.user}`)' "$here/repos.json"); do
   name=${repo%%:*} base=${repo#*:}
@@ -70,19 +91,24 @@ for repo in $(node -e 'const c = require(process.argv[1]); for (const [r, p] of 
   fi
   for n in $(seq 0 $((lanes - 1))); do
     user=$base; [ "$n" = 0 ] || user=$base-$n
-    install -d -o verify -g verify -m 0711 "$state/lanes/$n"
+    install -d -o root -g root -m 0711 "$lanes_root/$n"
+    # Un carril de antes (bajo $state/lanes, que es de verify) se muda con su checkout y su target calientes.
+    if [ -d "$state/lanes/$n/$name" ] && [ ! -e "$lanes_root/$n/$name" ]; then
+      mv "$state/lanes/$n/$name" "$lanes_root/$n/$name"
+    fi
     # El carril es del usuario de la corrida; verify lo lee (grupo) para copiar artefactos y nada más.
-    install -d -o "$user" -g verify -m 2750 "$state/lanes/$n/$name"
+    install -d -o "$user" -g verify -m 2750 "$lanes_root/$n/$name"
   done
-  # La target que compiló la cola cuando corría como verify pasa al carril 0. Cambian las rutas
-  # absolutas de la dep-info: puede compilar en frío una vez, se mide en la primera corrida.
-  if [ -d "$state/repos/$name/target" ] && [ ! -e "$state/lanes/0/$name/target" ]; then
-    mv "$state/repos/$name/target" "$state/lanes/0/$name/target"
-    chown -R "$base:verify" "$state/lanes/0/$name/target"
+  # La target que compiló la cola cuando corría como verify pasa al carril 0.
+  if [ -d "$state/repos/$name/target" ] && [ ! -e "$lanes_root/0/$name/target" ]; then
+    mv "$state/repos/$name/target" "$lanes_root/0/$name/target"
+    chown -R "$base:verify" "$lanes_root/0/$name/target"
   fi
   # El checkout viejo era de verify y la rama podía escribirlo: no se reutiliza como espejo.
   rm -rf "$state/repos/$name/checkout"
 done
+# Lo que quede bajo la raíz vieja de carriles es de carriles que ya no existen.
+rm -rf "$state/lanes"
 # Los bundles a medio subir vivían en la raíz.
 rm -f "$state"/incoming-*.bundle
 
