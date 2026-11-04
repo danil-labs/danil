@@ -43,6 +43,8 @@ const fuenteEncendida = (s: SkillDeFuente) => s.source_enabled !== false;
  * la otra fila con ese nombre que sí se invoca.
  */
 function notaDeNombre(s: SkillDeFuente, todas: readonly SkillDeFuente[]): string | null {
+  // Con la fuente apagada no se puede encender: «al encenderla» mentiría.
+  if (!fuenteEncendida(s)) return null;
   // La otra fila tiene que proyectarse: una fuente apagada no choca con nadie.
   const otra =
     s.shadowed_by?.source_name ??
