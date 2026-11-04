@@ -6,23 +6,34 @@
  * (`guardar_adjunto`) y allá se prepara su copia, igual que en el teléfono
  * (`apps/mobile/src/lib/engine.ts`).
  */
-import { IMAGE_MIMES, isImageMime, MAX_UPLOAD_BYTES } from "@terminus/protocol";
+import { IMAGE_MIMES, isImageMime, MAX_UPLOAD_BYTES, mimeOfAttachment } from "@terminus/protocol";
 
 export type AttachmentMover = {
   /** La máquina del turno anuncia `attachment_documents_v1`. */
   documentos: boolean;
   /** La miniatura o los bytes del archivo en la máquina de la ventana (`preview_file`). */
-  read: (path: string) => Promise<{ data_url?: string | null; pdf?: string | null }>;
+  read: (path: string) => Promise<Leido>;
   /** Guarda los bytes en la máquina de la tarea y devuelve su ruta allá. */
   save: (mime: string, datos: string, nombre: string) => Promise<string>;
   /** `prepare_attachments` en la máquina de la tarea. */
   prepare: (paths: string[]) => Promise<string[]>;
 };
 
+/** Lo que `preview_file` devuelve y sirve para llevar el archivo. */
+type Leido = { data_url?: string | null; pdf?: string | null; text?: string | null; truncated?: boolean };
+
 /**
- * Lo que no se pudo llevar: no es una imagen ni un PDF, ya no está, pasa del
- * tope de la miniatura (4 MB), del de un PDF (25 MB) o del mensaje (11 MB en
- * base64), o la máquina del turno no acepta documentos.
+ * Los de texto que el motor de la tarea acepta (`DOCUMENT_MIMES`). `preview_file`
+ * los devuelve enteros hasta 512 KB, y solo si son UTF-8: entonces el texto es
+ * el archivo, byte por byte.
+ */
+const TEXT_MIMES = new Set(["text/plain", "text/markdown", "text/csv", "application/json"]);
+
+/**
+ * Lo que no se pudo llevar: no es una imagen, un PDF ni un texto, ya no está,
+ * pasa del tope de la miniatura (4 MB), del de un PDF (25 MB), del de un texto
+ * (512 KB) o del mensaje (11 MB en base64), o la máquina del turno no acepta
+ * documentos.
  */
 export class NotMovable extends Error {
   readonly names: string[];
@@ -34,10 +45,21 @@ export class NotMovable extends Error {
 
 const nameOf = (path: string) => path.split(/[\\/]/).pop() || path;
 
-function payload(preview: { data_url?: string | null; pdf?: string | null } | null | undefined): { mime: string; datos: string } | null {
+function base64Utf8(text: string): string {
+  const bytes = new TextEncoder().encode(text);
+  let bin = "";
+  for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  return btoa(bin);
+}
+
+function payload(preview: Leido | null | undefined, name: string): { mime: string; datos: string } | null {
   const m = /^data:([^;,]+);base64,(.*)$/s.exec(preview?.data_url ?? "");
   if (m && (IMAGE_MIMES as readonly string[]).includes(m[1])) return { mime: m[1], datos: m[2] };
   if (preview?.pdf) return { mime: "application/pdf", datos: preview.pdf };
+  const mime = mimeOfAttachment("", name);
+  if (mime && TEXT_MIMES.has(mime) && typeof preview?.text === "string" && !preview.truncated) {
+    return { mime, datos: base64Utf8(preview.text) };
+  }
   return null;
 }
 
@@ -48,7 +70,7 @@ function payload(preview: { data_url?: string | null; pdf?: string | null } | nu
  */
 export async function moveAttachments(paths: string[], c: AttachmentMover): Promise<string[]> {
   if (paths.length === 0) return [];
-  const read = await Promise.all(paths.map(async (path) => ({ path, file: payload((await c.read(path).catch(() => null)) ?? null) })));
+  const read = await Promise.all(paths.map(async (path) => ({ path, file: payload((await c.read(path).catch(() => null)) ?? null, nameOf(path)) })));
   const refused = read
     .filter((r) => !r.file
       || (!c.documentos && !isImageMime(r.file.mime))

@@ -4,7 +4,7 @@ import test from "node:test";
 import { attachmentsOn, moveAttachments, NotMovable, type AttachmentMover } from "../../src/lib/remoteAttachments.ts";
 
 /** Dos motores: la Mac de la ventana tiene los archivos; la VM, lo que se le sube. */
-function motores(mac: Record<string, { data_url?: string | null; pdf?: string | null }>, documentos = true) {
+function motores(mac: Record<string, { data_url?: string | null; pdf?: string | null; text?: string | null; truncated?: boolean }>, documentos = true) {
   const vm: Record<string, string> = {};
   const llamadas: string[] = [];
   const c: AttachmentMover = {
@@ -86,4 +86,27 @@ test("una imagen pegada que ya está en la VM no viaja otra vez; las de la Mac s
   assert.equal(llamadas.some((l) => l.includes(enLaVm)), false);
   assert.deepEqual(await attachmentsOn([enLaVm], () => true, c), [enLaVm]);
   assert.equal(llamadas.length, 3);
+});
+
+test("un .md llega a la VM con sus bytes UTF-8, su tipo y su nombre", async () => {
+  const { c, vm, llamadas } = motores({ "/Users/alberto/01-estructura-corporativa.md": { text: "# Estructura\n\nAcción — ñ\n" } });
+  const rutas = await moveAttachments(["/Users/alberto/01-estructura-corporativa.md"], c);
+  assert.deepEqual(rutas, ["/home/alberto/.terminus/attachments/x/adjunto-0-01-estructura-corporativa.md"]);
+  assert.equal(Buffer.from(Object.values(vm)[0], "base64").toString("utf8"), "# Estructura\n\nAcción — ñ\n");
+  assert.ok(llamadas.includes("vm:guardar_adjunto text/markdown 01-estructura-corporativa.md"));
+});
+
+test("un texto que pasa del tope, uno sin extensión de texto, o sin la extensión de documentos, no sale", async () => {
+  const { c, vm } = motores({
+    "/Users/alberto/grande.csv": { text: null, truncated: true },
+    "/Users/alberto/script.sh": { text: "echo hola" },
+  });
+  await assert.rejects(
+    moveAttachments(["/Users/alberto/grande.csv", "/Users/alberto/script.sh"], c),
+    (e: unknown) => e instanceof NotMovable && e.names.join() === "grande.csv,script.sh",
+  );
+  const sin = motores({ "/Users/alberto/notas.md": { text: "hola" } }, false);
+  await assert.rejects(moveAttachments(["/Users/alberto/notas.md"], sin.c), (e: unknown) => e instanceof NotMovable);
+  assert.deepEqual(vm, {});
+  assert.deepEqual(sin.vm, {});
 });
