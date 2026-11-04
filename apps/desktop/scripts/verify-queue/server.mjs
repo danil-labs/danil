@@ -44,6 +44,8 @@ const CHECK_STATES = new Set(["PASS", "FAIL", "TIMEOUT", "SKIP", "KNOWN"]);
 /** Lo único que pasa del entorno de la cola al de la corrida; el carril pone HOME y sus cachés. */
 const INHERITED = ["PATH", "LANG", "RUSTUP_HOME"];
 const LANE_ENV = ["HOME", "TMPDIR", "CARGO_HOME", "XDG_CACHE_HOME", "XDG_DATA_HOME", "CARGO_TARGET_DIR", "GIT_CONFIG_GLOBAL"];
+const WINDOWS = platform() === "win32";
+const NULL_DEVICE = WINDOWS ? "NUL" : "/dev/null";
 /** El entorno con el que arranca `sudo`: `env -i` deja después solo lo de la corrida. */
 const SUDO_ENV = { PATH: "/usr/sbin:/usr/bin:/sbin:/bin" };
 
@@ -100,10 +102,11 @@ export function checkConfig(config) {
  * Un perfil con `jobs` nunca usa shell: `<trabajo> <tokens>` separados por un espacio,
  * y cada token se valida contra la definición del trabajo.
  */
-export function resolveCommand(profile, command, values) {
+export function resolveCommand(profile, command, values, windows = WINDOWS) {
   if (profile.commands) {
     if (!profile.commands.includes(command)) return null;
-    return { argv: ["bash", "-lc", [profile.prepare, command].filter(Boolean).join(" && ")], env: {} };
+    const line = [profile.prepare, command].filter(Boolean).join(" && ");
+    return { argv: windows ? ["cmd.exe", "/d", "/s", "/c", line] : ["bash", "-lc", line], env: {} };
   }
   const [name, ...tokens] = (command ?? "").split(" ");
   if (!own(profile.jobs, name)) return null;
@@ -175,8 +178,9 @@ const pause = (ms) => Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 
  * Quien corre el código de la rama. Con `user`, todo pasa por `sudo -n -u <user> -- env -i`.
  * Sin él es el proceso de la cola, y solo si la cola se creó con `sameUser` (pruebas).
  */
-function runnerFor(user, sudo) {
-  const uid = user ? passwdUid(user) : process.getuid();
+function runnerFor(user, sudo, launcher) {
+  if (launcher) return windowsRunner(user, launcher);
+  const uid = user ? passwdUid(user) : (process.getuid?.() ?? null);
   const inherited = Object.fromEntries(INHERITED.filter((key) => process.env[key]).map((key) => [key, process.env[key]]));
   inherited.LANG ??= "C.UTF-8";
   const wrap = (argv, env) => (user ? [sudo, ["-n", "-u", user, "--", "env", "-i", ...Object.entries(env).map(([key, value]) => `${key}=${value}`), ...argv]] : [argv[0], argv.slice(1)]);
@@ -209,6 +213,44 @@ function runnerFor(user, sudo) {
         spawnSync(command, args, { env: SUDO_ENV, stdio: "ignore", timeout: 30_000 });
         if (spawnSync("pgrep", ["-u", String(uid)], { stdio: "ignore" }).status === 1) return true;
         pause(200);
+      }
+      return false;
+    },
+  };
+}
+
+/**
+ * El mismo contrato en Windows: cada llamada entra por ssh como el usuario del carril y
+ * `lane.mjs` corre el argv con el entorno de la corrida, o barre los procesos del usuario.
+ * Sin uid: NTFS no lo da, y el carril ya es solo de ese usuario.
+ */
+function windowsRunner(user, launcher) {
+  if (!user) throw new Error("en Windows cada perfil necesita user");
+  const inherited = Object.fromEntries(INHERITED.filter((key) => process.env[key]).map((key) => [key, process.env[key]]));
+  const ssh = ["-F", "none", "-i", launcher.key, "-p", String(launcher.port), "-o", "BatchMode=yes", "-o", "IdentitiesOnly=yes", "-o", "StrictHostKeyChecking=yes", "-o", `UserKnownHostsFile=${launcher.knownHosts}`, "-o", "LogLevel=ERROR", `${user}@127.0.0.1`];
+  const argsFor = (request) => [...ssh, `${launcher.node} ${launcher.helper} ${Buffer.from(JSON.stringify(request)).toString("base64url")}`];
+  const options = { encoding: "utf8", timeout: GIT_TIMEOUT_MS, killSignal: "SIGKILL", stdio: ["ignore", "pipe", "pipe"], windowsHide: true };
+  return {
+    user,
+    uid: null,
+    inherited,
+    sync(argv, cwd, env = inherited) {
+      const result = spawnSync(launcher.ssh, argsFor({ argv, env, cwd }), options);
+      if (result.status !== 0) throw new Error(`${argv.slice(0, 4).join(" ")}: ${(result.stderr || result.error?.message || `exit ${result.status}`).trim()}`);
+      return result.stdout;
+    },
+    spawn(argv, env, cwd, log) {
+      return spawn(launcher.ssh, argsFor({ argv, env, cwd }), { stdio: ["ignore", log, log], windowsHide: true });
+    },
+    sweep(child) {
+      try {
+        child?.kill();
+      } catch {
+        // ssh pudo salir antes.
+      }
+      for (let round = 0; round < 5; round += 1) {
+        if (spawnSync(launcher.ssh, argsFor({ sweep: true }), { ...options, timeout: 60_000 }).status === 0) return true;
+        pause(500);
       }
       return false;
     },
@@ -253,14 +295,23 @@ function openLaneFile(root, path, uid) {
     return null;
   }
   if (parent !== root && !parent.startsWith(root + sep)) return null;
+  const file = join(parent, path.split("/").at(-1));
+  // Windows no tiene O_NOFOLLOW y los usuarios de corrida crean symlinks: se mira el nombre antes y el mismo archivo después.
+  let link = null;
+  try {
+    link = WINDOWS ? lstatSync(file) : null;
+  } catch {
+    return null;
+  }
+  if (link?.isSymbolicLink()) return null;
   let fd;
   try {
-    fd = openSync(join(parent, path.split("/").at(-1)), fsConstants.O_RDONLY | fsConstants.O_NOFOLLOW | fsConstants.O_NONBLOCK);
+    fd = openSync(file, fsConstants.O_RDONLY | fsConstants.O_NOFOLLOW | fsConstants.O_NONBLOCK);
   } catch {
     return null;
   }
   const info = fstatSync(fd);
-  if (!info.isFile() || info.uid !== uid || info.nlink !== 1) {
+  if (!info.isFile() || (uid !== null && info.uid !== uid) || info.nlink !== 1 || (link && (link.ino !== info.ino || link.dev !== info.dev))) {
     closeSync(fd);
     return null;
   }
@@ -280,7 +331,7 @@ function readBounded(fd, limit, onChunk) {
   }
 }
 
-export function createQueue({ home, config, diskPercent = defaultDiskPercent, runTimeoutMs = DEFAULT_RUN_TIMEOUT_MS, sudo = "/usr/bin/sudo", queueName = `${platform()}-${arch()}`, cpus = availableParallelism(), sameUser = false }) {
+export function createQueue({ home, config, diskPercent = defaultDiskPercent, runTimeoutMs = DEFAULT_RUN_TIMEOUT_MS, sudo = "/usr/bin/sudo", launcher = null, queueName = `${platform()}-${arch()}`, cpus = availableParallelism(), sameUser = false }) {
   checkConfig(config);
   const runsDir = join(home, "runs");
   const reposDir = join(home, "repos");
@@ -289,10 +340,11 @@ export function createQueue({ home, config, diskPercent = defaultDiskPercent, ru
   const busyMarker = join(home, "busy");
   mkdirSync(home, { recursive: true });
   // El usuario de la corrida atraviesa `home` hacia su carril y el espejo, pero no lista ni lee el resto.
-  chmodSync(home, 0o711);
+  // En Windows lo mismo lo ponen las ACL de windows/install.ps1.
+  if (!WINDOWS) chmodSync(home, 0o711);
   for (const dir of [runsDir, incomingDir]) {
     mkdirSync(dir, { recursive: true, mode: 0o700 });
-    chmodSync(dir, 0o700);
+    if (!WINDOWS) chmodSync(dir, 0o700);
   }
   mkdirSync(reposDir, { recursive: true });
 
@@ -315,7 +367,7 @@ export function createQueue({ home, config, diskPercent = defaultDiskPercent, ru
   };
   const runner = (repo, lane) => {
     const key = `${repo}:${lane}`;
-    if (!runners.has(key)) runners.set(key, runnerFor(laneUser(repo, lane), sudo));
+    if (!runners.has(key)) runners.set(key, runnerFor(laneUser(repo, lane), sudo, launcher));
     return runners.get(key);
   };
 
@@ -358,7 +410,8 @@ export function createQueue({ home, config, diskPercent = defaultDiskPercent, ru
   function laneGitConfig(repo) {
     const path = join(reposDir, repo, "gitconfig");
     const safe = [mirrorPath(repo), ...[...Array(lanes).keys()].map((lane) => lanePaths(repo, lane).checkout)];
-    const body = `[safe]\n${safe.map((dir) => `\tdirectory = ${dir}\n`).join("")}[core]\n\thooksPath = /dev/null\n\tfsmonitor = false\n`;
+    // En un archivo de config la barra invertida escapa: las rutas de Windows van con `/`.
+    const body = `[safe]\n${safe.map((dir) => `\tdirectory = ${dir.replaceAll(sep, "/")}\n`).join("")}[core]\n\thooksPath = ${NULL_DEVICE}\n\tfsmonitor = false\n`;
     if (!existsSync(path) || readFileSync(path, "utf8") !== body) {
       mkdirSync(dirname(path), { recursive: true });
       writeFileSync(`${path}.new`, body, { mode: 0o644 });
@@ -370,7 +423,7 @@ export function createQueue({ home, config, diskPercent = defaultDiskPercent, ru
   /** git en el checkout del carril, siempre con el usuario de la corrida, sin hooks ni otra config global. */
   function laneGit(repo, lane, args) {
     const { checkout } = lanePaths(repo, lane);
-    const guard = ["-c", "core.hooksPath=/dev/null", "-c", "core.fsmonitor=false"];
+    const guard = ["-c", `core.hooksPath=${NULL_DEVICE}`, "-c", "core.fsmonitor=false", ...(WINDOWS ? ["-c", "core.longpaths=true"] : [])];
     return runner(repo, lane).sync(["git", ...guard, ...args], checkout, { ...laneEnv(repo, lane), GIT_CONFIG_GLOBAL: laneGitConfig(repo) });
   }
 
@@ -512,13 +565,24 @@ export function createQueue({ home, config, diskPercent = defaultDiskPercent, ru
     });
   }
 
+  /**
+   * El checkout real, solo si sigue donde la cola lo puso: la rama es dueña de su carril y podría
+   * volverlo un enlace (en Windows un junction, sin privilegio) hacia lo que solo `verify` lee.
+   */
+  function laneRoot(run, checkout) {
+    const root = realpathSync(checkout);
+    const expected = join(realpathSync(join(home, "lanes", String(run.lane))), run.repo, "checkout");
+    if (root !== expected) throw new Error(`el checkout del carril apunta fuera de su sitio (${root}): no copio artefactos`);
+    return root;
+  }
+
   /** Copia lo que la corrida dejó, antes de limpiar y con sus procesos ya muertos. */
   function collect(run, checkout, since) {
     const profile = config.repos[run.repo];
     const { uid } = runner(run.repo, run.lane);
     const globs = [...new Set([...(profile.artifacts ?? []), ...(profile.receipt?.summary ? [profile.receipt.summary] : [])])];
     const copied = [];
-    const root = realpathSync(checkout);
+    const root = laneRoot(run, checkout);
     for (const glob of globs) {
       for (const path of matchFiles(root, glob)) {
         if (copied.length >= MAX_ARTIFACTS || copied.includes(path)) continue;
@@ -544,7 +608,7 @@ export function createQueue({ home, config, diskPercent = defaultDiskPercent, ru
   function digests(run, checkout) {
     const out = {};
     const { uid } = runner(run.repo, run.lane);
-    const root = realpathSync(checkout);
+    const root = laneRoot(run, checkout);
     for (const [name, path] of Object.entries(config.repos[run.repo].receipt?.digests ?? {})) {
       const opened = openLaneFile(root, path, uid);
       if (!opened) continue;
@@ -712,7 +776,11 @@ export function createQueue({ home, config, diskPercent = defaultDiskPercent, ru
 
   /** Lo que corría cuando la cola cayó ya no tiene dueño: se mata, se dice, y no se reintenta. */
   function recover() {
-    for (const repo of Object.keys(config.repos ?? {})) if (config.repos[repo].user) for (let lane = 0; lane < lanes; lane += 1) runner(repo, lane).sweep(null);
+    // Un proceso de una rama que sobrevive podría adelantarse a la cola en su puerto o su pipe: sin barrido limpio no se escucha.
+    for (const repo of Object.keys(config.repos ?? {})) {
+      if (!config.repos[repo].user) continue;
+      for (let lane = 0; lane < lanes; lane += 1) if (!runner(repo, lane).sweep(null)) throw new Error(`quedan procesos de ${runner(repo, lane).user}: la cola no arranca`);
+    }
     for (const run of allRuns()) {
       if (run.state !== "running") continue;
       appendFileSync(logPath(run.id), "[cola] la cola se reinició con esta corrida en marcha\n");
@@ -797,7 +865,13 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const home = process.env.VERIFY_QUEUE_HOME ?? "/var/lib/verify-queue";
   const port = Number(process.env.VERIFY_QUEUE_PORT ?? 8787);
   const config = JSON.parse(readFileSync(process.env.VERIFY_QUEUE_CONFIG ?? "/etc/verify-queue/repos.json", "utf8"));
-  const queue = createQueue({ home, config, ...(process.env.VERIFY_QUEUE_NAME ? { queueName: process.env.VERIFY_QUEUE_NAME } : {}) });
+  const launcher = process.env.VERIFY_QUEUE_LAUNCHER ? JSON.parse(readFileSync(process.env.VERIFY_QUEUE_LAUNCHER, "utf8")) : null;
+  if (WINDOWS && !launcher) throw new Error("en Windows la cola necesita VERIFY_QUEUE_LAUNCHER (windows/install.ps1)");
+  const queue = createQueue({ home, config, launcher, ...(process.env.VERIFY_QUEUE_NAME ? { queueName: process.env.VERIFY_QUEUE_NAME } : {}) });
   queue.recover();
-  createHttpServer(queue).listen(port, "127.0.0.1", () => console.log(`verify-queue en 127.0.0.1:${port}`));
+  // En Windows el firewall no filtra loopback: la cola escucha en un pipe que solo abren verify, SYSTEM y Administrators.
+  const pipe = process.env.VERIFY_QUEUE_PIPE;
+  if (WINDOWS && !pipe) throw new Error("en Windows la cola escucha en VERIFY_QUEUE_PIPE, no en un puerto");
+  if (pipe) createHttpServer(queue).listen(pipe, () => console.log(`verify-queue en ${pipe}`));
+  else createHttpServer(queue).listen(port, "127.0.0.1", () => console.log(`verify-queue en 127.0.0.1:${port}`));
 }
