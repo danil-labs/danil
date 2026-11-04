@@ -1030,6 +1030,7 @@ pub(super) fn agents_session_refresh(app: tauri::AppHandle, account: Option<Stri
 pub(super) fn harness_org_fetch(
     app: tauri::AppHandle,
     account: Option<String>,
+    path: String,
     query: Option<String>,
 ) -> Result<Value, Value> {
     if !allowed_person_path(&path) {

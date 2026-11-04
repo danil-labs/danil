@@ -6,6 +6,7 @@
 import { createMemo, createResource, createSignal, For, Show } from "solid-js";
 import { df, nf } from "../../lib/format";
 import { manifiesto, t } from "../../lib/i18n";
+import "../../locales/usagePhrases";
 import { Badge } from "../../ui/Badge";
 import { Button } from "../../ui/Button";
 import { EmptyState } from "../../ui/EmptyState";
@@ -90,7 +91,7 @@ function Daily(props: { days: UsageDay[] }) {
             const isPeak = peak().tokens > 0 && row.date === peak().date;
             return (
               <div
-                class={isPeak ? "min-w-0 flex-1 rounded-t-sm bg-warning-strong" : tokens === 0 ? "min-w-0 flex-1 rounded-t-sm bg-neutral-200" : "min-w-0 flex-1 rounded-t-sm bg-neutral-400"}
+                class={isPeak ? "min-w-0 flex-1 rounded-t-sm bg-warning-strong" : tokens === 0 ? "min-w-0 flex-1 rounded-t-sm bg-neutral-200" : "min-w-0 flex-1 rounded-t-sm bg-neutral-500"}
                 style={{ height: tokens === 0 ? "2px" : `${Math.max(4, (tokens / peak().tokens) * 100)}%` }}
                 title={t("settings.usage.daily_bar", { day: dayLabel(row.date), tokens: compact(tokens) })}
               />
