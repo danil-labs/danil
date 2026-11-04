@@ -300,6 +300,7 @@ pub(super) fn desktop_command(name: &str) -> bool {
                 | "wsl_child_wake"
                 | "wsl_child_call"
                 | "wsl_child_copy_folder"
+                | "wsl_child_sync_spaces"
                 | "wsl_child_events"
         )
 }

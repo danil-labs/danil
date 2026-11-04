@@ -274,6 +274,21 @@ async fn wsl_child_call(
     .await
 }
 
+/// Los espacios de esta PC, con el mismo id, en la distribución.
+#[tauri::command]
+async fn wsl_child_sync_spaces(
+    app: tauri::AppHandle,
+    machine: String,
+    workspace: String,
+    spaces: Vec<serde_json::Value>,
+) -> std::result::Result<(), serde_json::Value> {
+    blocking(move || {
+        let entry = wsl_child::lookup(&app, &machine)?;
+        wsl_child::sync_spaces(&entry, &workspace, &spaces)
+    })
+    .await
+}
+
 /// Copia una carpeta de esta PC a la distribución y la registra con el mismo id.
 #[tauri::command]
 async fn wsl_child_copy_folder(
@@ -502,6 +517,7 @@ fn start(client: Option<Arc<Client>>, autostart: bool, launcher: launcher::Launc
             wsl_child_wake,
             wsl_child_call,
             wsl_child_copy_folder,
+            wsl_child_sync_spaces,
             wsl_child_events
         ]))
         .build(context)

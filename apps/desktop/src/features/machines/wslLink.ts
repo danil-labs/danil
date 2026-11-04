@@ -44,10 +44,21 @@ export function createWslLink(machine: string): Link {
   const childCall = <T,>(command: string, args: unknown, workspace: string | null, timeoutMs = 30_000) =>
     invoke<T>("wsl_child_call", { machine, command, args: args ?? {}, workspace, folder: null, timeoutMs });
 
+  const spaces = new Set<string>();
+
+  /** Los espacios de esta PC, con el mismo id: sin ellos la distribución rechaza la tarea (`spaces.error.missing`). */
+  async function syncSpaces(workspace: string) {
+    const here = await invoke<{ id: string }[]>("list_spaces").catch(() => [] as { id: string }[]);
+    const list = Array.isArray(here) ? here : [];
+    await invoke("wsl_child_sync_spaces", { machine, workspace, spaces: list });
+    for (const s of list) spaces.add(s.id);
+  }
+
   /** El workspace de la ventana, con el mismo id, en la distribución (la hija no tiene cuenta que lo traiga). */
   async function ensureWorkspace(workspace: string | null) {
     if (!workspace || workspaces.has(workspace)) return;
     await childCall("materialize_workspace", { id: workspace }, workspace);
+    await syncSpaces(workspace);
     workspaces.add(workspace);
   }
 
@@ -142,7 +153,11 @@ export function createWslLink(machine: string): Link {
       if (command === "list_projects") return { value: await foldersFor(workspace), cached: null, deferred: null };
       // Apagada, leer no la enciende: la barra no prende Linux solo por estar abierta.
       if (state === "offline" && classOf(command) === "read") throw { code: "machine_off" };
-      if (CREATES.has(command)) await ensureFolder((args as { project?: unknown } | null)?.project, workspace);
+      if (CREATES.has(command)) {
+        await ensureFolder((args as { project?: unknown } | null)?.project, workspace);
+        const space = (args as { space?: unknown } | null)?.space;
+        if (workspace && typeof space === "string" && space && !spaces.has(space)) await syncSpaces(workspace);
+      }
       const value = await invoke<unknown>("wsl_child_call", { machine, command, workspace, folder, args: args ?? {}, timeoutMs: timeoutMs ?? null });
       if (state !== "online") setState("online");
       return { value, cached: null, deferred: null };

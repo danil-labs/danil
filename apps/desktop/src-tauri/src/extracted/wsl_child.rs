@@ -454,6 +454,45 @@ pub fn invoke(
     Ok(result.get("value").cloned().unwrap_or(result))
 }
 
+/// Los espacios del workspace, con el mismo id, en el motor de la distribución.
+/// Con las máquinas de la cuenta llegan por la nube; la hija no tiene cuenta y
+/// sin ellos rechaza toda tarea nueva (`spaces.error.missing`). No pisa uno que
+/// ya tenga.
+pub fn sync_spaces(entry: &ChildEntry, workspace: &str, spaces: &[Value]) -> Result<(), Failure> {
+    use base64::Engine as _;
+    if !workspace.chars().all(|c| c.is_ascii_alphanumeric()) {
+        return Err(fail("invalid_request", workspace));
+    }
+    for space in spaces {
+        let Some(id) = space["id"].as_str().filter(|i| !i.is_empty() && i.chars().all(|c| c.is_ascii_alphanumeric())) else {
+            continue;
+        };
+        let body = json!({
+            "id": id,
+            "name": space["name"],
+            "folders": space["folders"].as_array().cloned().unwrap_or_default(),
+            "created_at": space["created_at"].as_u64().unwrap_or_else(now_ms),
+            "updated_at": space["updated_at"].as_u64().unwrap_or_else(now_ms),
+        });
+        let encoded = base64::engine::general_purpose::STANDARD.encode(body.to_string());
+        script_ok(
+            &entry.distro,
+            Some(&entry.user),
+            r#"set -eu
+d="$HOME/.local/share/seldon-host/data/workspaces/$1/spaces/$2"
+[ -f "$d/space.json" ] && exit 0
+mkdir -p "$d"
+printf '%s' "$3" | base64 -d > "$d/space.json.tmp"
+mv "$d/space.json.tmp" "$d/space.json"
+"#,
+            &[workspace, id, &encoded],
+            Duration::from_secs(60),
+            |_| {},
+        )?;
+    }
+    Ok(())
+}
+
 /// Copia una carpeta de Windows a la distribución, en `~/danil/<nombre>`, y la
 /// registra en su motor con el mismo id. Se salta lo que se reconstruye
 /// (`node_modules`, `target`, `.venv`, `dist`) y conserva `.git`.
