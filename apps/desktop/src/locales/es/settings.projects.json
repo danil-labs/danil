@@ -30,7 +30,7 @@
   "settings.projects.reveal_finder": "Abrir en Finder",
   "settings.projects.reveal_other": "Mostrar en el explorador de archivos",
   "settings.projects.material": "Material que lee",
-  "settings.projects.remove": "Quitar de este espacio",
+  "settings.projects.remove": "Quitar proyecto",
   "settings.projects.delete_empty": "Se borrará el proyecto.",
   "settings.projects.delete_with_tasks": {
     "one": "También se borrarán su tarea, el chat y sus artefactos.",
