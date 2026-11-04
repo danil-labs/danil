@@ -45,6 +45,7 @@ export default function FileScreen() {
   const [page, setPage] = useState<{ page: number; pages: number } | null>(null);
   const [content, setContent] = useState<TreeContent | FilePreview | null | "error">(null);
   const [saving, setSaving] = useState(false);
+  const [saveFailed, setSaveFailed] = useState(false);
   const dark = kind === "image" || kind === "video";
 
   useEffect(() => {
@@ -67,14 +68,19 @@ export default function FileScreen() {
     [host, params.workspace, params.folder, params.id, tree, path],
   );
 
+  // Fuera de los árboles de la tarea solo se baja lo que `preview_file` trajo entero.
+  const loose = !tree && content && content !== "error" ? bytesOf(content) : null;
+  const canSave = CAN_SAVE && !!host && (!!tree || !!loose);
+
   async function share() {
-    if (!host || !tree || saving) return;
+    if (!host || saving || (!tree && !loose)) return;
     setSaving(true);
+    setSaveFailed(false);
     try {
-      const { bytes, mime } = await treeBytes(host, params.workspace, params.folder, params.id, tree, path);
+      const { bytes, mime } = tree ? await treeBytes(host, params.workspace, params.folder, params.id, tree, path) : loose!;
       await saveFile(baseName(path), bytes, mime);
     } catch {
-      // Sin `tree_parts_v1` la máquina no manda los bytes: el botón no hace nada visible y el archivo sigue a la vista.
+      setSaveFailed(true);
     } finally {
       setSaving(false);
     }
@@ -111,10 +117,11 @@ export default function FileScreen() {
             />
           )}
         </View>
-        {CAN_SAVE && tree ? (
+        {canSave ? (
           <View style={[styles.bar, { borderTopColor: theme.border, paddingBottom: insets.bottom + 10 }]}>
+            {saveFailed ? <Text style={{ color: theme.error, fontSize: TEXT.label }}>{t("task.files.share_failed")}</Text> : null}
             <Pressable accessibilityRole="button" disabled={saving} onPress={() => void share()} style={styles.barButton}>
-              {saving ? <ActivityIndicator size="small" color={theme.text} /> : <Icon name="share" size={17} color={theme.text} />}
+              {saving ? <ActivityIndicator size="small" color={theme.text} /> : <Icon name="download" size={17} color={theme.text} />}
               <Text style={{ color: theme.text, fontSize: TEXT.label }}>{t("task.files.share")}</Text>
             </Pressable>
           </View>
@@ -122,6 +129,19 @@ export default function FileScreen() {
       </View>
     </SlideIn>
   );
+}
+
+/** Los bytes de lo que llegó entero por `preview_file`; truncado o sin cuerpo no hay. */
+function bytesOf(content: TreeContent | FilePreview): { bytes: Uint8Array; mime: string } | null {
+  if (content.truncated) return null;
+  const decode = (base64: string) => Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
+  if (content.pdf) return { bytes: decode(content.pdf), mime: "application/pdf" };
+  const data = content.data_url?.match(/^data:([^;,]+)(;base64)?,(.*)$/s);
+  if (data) return { bytes: data[2] ? decode(data[3]) : new TextEncoder().encode(decodeURIComponent(data[3])), mime: data[1] };
+  if ((content.kind === "text" || content.kind === "html") && typeof content.text === "string") {
+    return { bytes: new TextEncoder().encode(content.text), mime: content.kind === "html" ? "text/html" : "text/plain" };
+  }
+  return null;
 }
 
 /**
@@ -403,7 +423,7 @@ const styles = StyleSheet.create({
   page: { padding: 16, paddingBottom: 40 },
   sides: { flexDirection: "row", gap: 2 },
   side: { width: 34, height: 30, borderRadius: 8, borderWidth: StyleSheet.hairlineWidth, borderColor: "transparent", alignItems: "center", justifyContent: "center" },
-  bar: { flexDirection: "row", justifyContent: "center", borderTopWidth: StyleSheet.hairlineWidth, paddingTop: 10 },
+  bar: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 12, borderTopWidth: StyleSheet.hairlineWidth, paddingTop: 10 },
   barButton: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 16, paddingVertical: 4 },
   mono: { fontFamily: Platform.select({ ios: "Menlo", default: "monospace" }), fontSize: 12.5, lineHeight: 18, padding: 12 },
   cell: { borderWidth: StyleSheet.hairlineWidth, paddingHorizontal: 8, paddingVertical: 5, fontSize: TEXT.label },
