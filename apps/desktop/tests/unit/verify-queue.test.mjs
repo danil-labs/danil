@@ -947,3 +947,24 @@ test("--wip sin cambios manda HEAD tal cual", { skip }, async (t) => {
   assert.equal(run.wip, false);
   assert.equal((await client(repo, host, ["--wip", "--commit", head])).code, 2);
 });
+
+test("el git del carril lee un espejo de otro dueño: safe.directory llega al upload-pack del fetch local", { skip }, async (t) => {
+  const { dir, repo, home } = workspace(t);
+  // Con un remoto local git quita los `-c` del entorno de upload-pack; este git falso hace que todo
+  // repo parezca de otro dueño cuando corre como git del carril, igual que verify-run frente al espejo.
+  const bin = join(dir, "bin");
+  mkdirSync(bin);
+  const real = execFileSync("sh", ["-c", "command -v git"], { encoding: "utf8" }).trim();
+  writeFileSync(join(bin, "git"), `#!/bin/sh\n[ -n "$GIT_CONFIG_GLOBAL" ] && export GIT_TEST_ASSUME_DIFFERENT_OWNER=1\nexec ${real} "$@"\n`, { mode: 0o755 });
+  const path = process.env.PATH;
+  process.env.PATH = `${bin}:${path}`;
+  t.after(() => {
+    process.env.PATH = path;
+  });
+  const queue = createQueue({ home, config: engineConfig, sameUser: true, diskPercent: () => 10 });
+  const { run, id } = await engineRun(t, queue, repo, dir, "echo ajeno");
+  const log = readFileSync(queue.logPath(id), "utf8");
+  assert.doesNotMatch(log, /dubious ownership/);
+  assert.equal(run.state, "passed", log);
+  assert.match(log, /ajeno/);
+});

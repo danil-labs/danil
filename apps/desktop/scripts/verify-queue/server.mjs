@@ -351,10 +351,27 @@ export function createQueue({ home, config, diskPercent = defaultDiskPercent, ru
   }
 
   /** git en el checkout del carril, siempre con el usuario de la corrida, sin hooks ni config global. */
+  /**
+   * La config global del git del carril: un archivo de `verify` que la rama no escribe. Lleva el
+   * `safe.directory` del espejo: con un remoto local, git quita los `-c` del entorno de upload-pack.
+   */
+  function laneGitConfig(repo) {
+    const path = join(reposDir, repo, "gitconfig");
+    const safe = [mirrorPath(repo), ...[...Array(lanes).keys()].map((lane) => lanePaths(repo, lane).checkout)];
+    const body = `[safe]\n${safe.map((dir) => `\tdirectory = ${dir}\n`).join("")}[core]\n\thooksPath = /dev/null\n\tfsmonitor = false\n`;
+    if (!existsSync(path) || readFileSync(path, "utf8") !== body) {
+      mkdirSync(dirname(path), { recursive: true });
+      writeFileSync(`${path}.new`, body, { mode: 0o644 });
+      renameSync(`${path}.new`, path);
+    }
+    return path;
+  }
+
+  /** git en el checkout del carril, siempre con el usuario de la corrida, sin hooks ni otra config global. */
   function laneGit(repo, lane, args) {
     const { checkout } = lanePaths(repo, lane);
-    const guard = ["-c", `safe.directory=${mirrorPath(repo)}`, "-c", "core.hooksPath=/dev/null", "-c", "core.fsmonitor=false"];
-    return runner(repo, lane).sync(["git", ...guard, ...args], checkout, { ...laneEnv(repo, lane), GIT_CONFIG_GLOBAL: "/dev/null" });
+    const guard = ["-c", "core.hooksPath=/dev/null", "-c", "core.fsmonitor=false"];
+    return runner(repo, lane).sync(["git", ...guard, ...args], checkout, { ...laneEnv(repo, lane), GIT_CONFIG_GLOBAL: laneGitConfig(repo) });
   }
 
   function ensureLane(repo, lane) {
