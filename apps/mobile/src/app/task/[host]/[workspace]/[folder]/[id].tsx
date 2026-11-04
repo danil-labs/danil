@@ -57,6 +57,7 @@ import { effectiveGit } from "../../../../../lib/taskGit";
 import { useTaskGit } from "../../../../../lib/useTaskGit";
 import { BrandMark } from "../../../../../ui/BrandMark";
 import { Avatar } from "../../../../../ui/components";
+import { SlideIn } from "../../../../../ui/SlideIn";
 
 /** Kinds that change what the task reports: pending requests or whether it runs. */
 const REFRESH = new Set(["permission", "permission_resolved", "started", "done", "presence", "segment_saved"]);
@@ -661,6 +662,8 @@ export default function TaskScreen() {
   );
 
   return (
+    // En la web, al volver de Archivos o del visor el chat entra desde la izquierda.
+    <SlideIn enter={false}>
     <KeyboardScreen>
       <ChatScopeContext.Provider value={scope}>
       <Stack.Screen options={{ title: titleOf(key) ?? title, headerShown: false }} />
@@ -769,6 +772,7 @@ export default function TaskScreen() {
       />
       </ChatScopeContext.Provider>
     </KeyboardScreen>
+    </SlideIn>
   );
 }
 
