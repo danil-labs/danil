@@ -112,7 +112,16 @@ rest, run as administrator. `uninstall.ps1` removes all of it.
 | Network | firewall rule `verify-queue`: no 10/8, 100.64/10, 169.254/16, 172.16/12, 192.168/16 for those users | `egress.nft` |
 | Entry | `gate.mjs` on the Tailscale IP, task `verify-queue-gate` | Tailscale SSH tunnel |
 | Profile | `HKCU\...\Command Processor` and `HKCU\Environment` read-only for run users: `cmd /c` from sshd would run an AutoRun a branch left | `HOME` is new each run |
+| COM | `CLSID`, `Interface`, `TypeLib` and `AppID` (and their `Wow6432Node` copies) in the run user's `HKCU\Software\Classes` are emptied and read-only: a COM server a branch registers there would answer the next run. The rest of Classes stays writable because WMI and COM write to it | `HOME` is new each run |
+| Leftovers | `sweep.exe`, built by `install.ps1` from `sweep.cs` with the .NET Framework `csc` into `D:\ci\queue` (read-only for the branch). WMI is denied in an ssh session, so it lists with Toolhelp32 and reads each owner from the process token. It fails (exit 1) when the list does not hold itself and its caller, or the caller's owner cannot be read: an empty or blind list never reports clean | `kill -9 -1` |
 | Idle stop | task `verify-queue-idle`, 20 minutes; also counts other people's scheduled tasks, RDP and SSM | `verify-idle-stop`, 15 minutes |
+
+Known limit (OWNER RIGHTS): a run-user process that sets its own DACL with an
+OWNER RIGHTS entry that grants nothing loses the owner's implicit `WRITE_DAC`.
+`sweep.exe` runs as the same user, so it can neither see nor reopen it, and the
+process outlives the run. The fix is a final sweep as SYSTEM and an entry that
+checks that the pipe server is a `verify` process; the same fix covers
+`HKCU\Software\Microsoft\.NETFramework`, which was not measured.
 
 If the queue does not answer and SSH did not refuse, the client starts the
 machine and asks again every 15 seconds, up to four minutes, while the queue

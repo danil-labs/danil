@@ -5,6 +5,7 @@
 using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
+using System.Security.AccessControl;
 using System.Security.Principal;
 
 static class Sweep {
@@ -61,17 +62,28 @@ static class Sweep {
     return true;
   }
 
-  // DACL nula sobre un proceso propio que se cerró: lo vuelve a dejar terminar.
-  static void Reopen(uint pid) {
+  // Un proceso propio que se cerró: su DACL pasa a conceder TERMINATE solo a este usuario.
+  static void Reopen(uint pid, string me) {
     IntPtr process = OpenProcess(WriteDac, false, pid);
     if (process == IntPtr.Zero) return;
-    SetSecurityInfo(process, 6, 4, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero);
-    CloseHandle(process);
+    var acl = new RawAcl(GenericAcl.AclRevision, 1);
+    acl.InsertAce(0, new CommonAce(AceFlags.None, AceQualifier.AccessAllowed, (int)Terminate, new SecurityIdentifier(me), false, null));
+    var bytes = new byte[acl.BinaryLength];
+    acl.GetBinaryForm(bytes, 0);
+    IntPtr dacl = Marshal.AllocHGlobal(bytes.Length);
+    try {
+      Marshal.Copy(bytes, 0, dacl, bytes.Length);
+      SetSecurityInfo(process, 6, 4, IntPtr.Zero, IntPtr.Zero, dacl, IntPtr.Zero);
+    } finally { Marshal.FreeHGlobal(dacl); CloseHandle(process); }
   }
 
   static List<uint> Others(uint caller, string me) {
     var all = Snapshot();
-    var chain = new HashSet<uint> { (uint)System.Diagnostics.Process.GetCurrentProcess().Id };
+    uint self = (uint)System.Diagnostics.Process.GetCurrentProcess().Id;
+    // Canario: un listado vacío o sin acceso a los tokens daría «limpio» sin haber visto nada.
+    if (!all.ContainsKey(self) || !all.ContainsKey(caller)) throw new Exception("el listado no trae " + self + " ni " + caller);
+    if (Owner(caller) != me) throw new Exception("no se lee el dueño de " + caller);
+    var chain = new HashSet<uint> { self };
     for (uint pid = caller; pid != 0 && all.ContainsKey(pid) && chain.Add(pid); pid = all[pid].Parent) { }
     var left = new List<uint>();
     foreach (var entry in all.Values) {
@@ -93,7 +105,7 @@ static class Sweep {
         if (left.Count == 0) return 0;
         foreach (uint pid in left) {
           IntPtr process = OpenProcess(Terminate, false, pid);
-          if (process == IntPtr.Zero) { Reopen(pid); process = OpenProcess(Terminate, false, pid); }
+          if (process == IntPtr.Zero) { Reopen(pid, me); process = OpenProcess(Terminate, false, pid); }
           if (process == IntPtr.Zero) continue;
           TerminateProcess(process, 137);
           CloseHandle(process);

@@ -75,7 +75,8 @@ function resolve(command, env) {
   for (const dir of path.split(delimiter).filter(isAbsolute)) {
     for (const extension of extensions) if (existsSync(join(dir, command + extension))) return join(dir, command + extension);
   }
-  return command;
+  console.error(`lane.mjs: ${command}: no está en el PATH de la corrida`);
+  process.exit(127);
 }
 
 const cwd = request.cwd && request.cwd !== "/" ? request.cwd : undefined;
