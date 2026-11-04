@@ -627,7 +627,10 @@ jobs:
 
           # Tauri ya escribe el `.sig` después de la firma Authenticode. Se
           # rehace de todos modos: sale gratis y no depende de ese orden interno.
-          pnpm tauri signer sign "$INSTALLER"
+          # `--app-version` liga la firma a la versión, como en macOS y Linux:
+          # el updater 2.14 rechaza un `.sig` cuya versión no es la de `latest.json`.
+          # `check` ya comprobó que el tag y `tauri.conf.json` coinciden.
+          pnpm tauri signer sign --app-version "$(jq -r .version src-tauri/tauri.conf.json)" "$INSTALLER"
 
           if [ "${DRY_RUN:-false}" = "true" ]; then
             {
