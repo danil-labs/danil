@@ -27,5 +27,6 @@
   "cli.error.pending_already_decided": "This request has already been decided.",
   "cli.error.pending_not_found": "The request is no longer available.",
   "cli.error.pending_owner_lost": "The process waiting for the answer is no longer available.",
-  "cli.error.pending_closed": "The request is already closed."
+  "cli.error.pending_closed": "The request is already closed.",
+  "cli.error.model_required": "This agent does not answer without a model, and none is allowed in this workspace. One of these is missing: turn on the free models or connect an account for this agent, in Settings → AI providers, or have the workspace governance allow a model."
 }

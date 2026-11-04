@@ -249,6 +249,55 @@ assert.equal(handoverCalls.length, 1, "el pendiente sobrevive al !");
 assert.equal(handoverCalls[0].provider, "claude");
 assert.deepEqual(shellWithPending.failures, []);
 
+// El chip guarda en la tarea el modelo que la persona elige del CLI de la
+// sesión (`session_model_v1`), con su esfuerzo. Con un traspaso confirmado, el
+// modelo del otro CLI no se guarda: lo guarda su primer turno.
+const sessionModelCalls = [];
+const chipApp = await boot("listo", "session-model-chip", {
+  ...TASK_AFTER_QUEUE,
+  machine_list: [{ id: "local", local: true, active: true, on: true, hosts: true, features: ["provider_handoff_v1", "session_model_v1"] }],
+  load_session: { ...TASK_AFTER_QUEUE.load_session, can_hand_over: true, hand_over_blocked: null },
+  list_models: { ...RESPONSES.list_models, models: [
+    ...RESPONSES.list_models.models,
+    { id: "gpt-alternate", label: "GPT Alternate", gratis: null, note: null, efforts: ["low", "high"], default_effort: "low" },
+  ] },
+  list_surfaces: [
+    { id: "codex", provider: "codex", label: "Codex", catalogo: "todo", usable: true, marca: null, porque: null },
+    { id: "claude", provider: "claude", label: "Claude Code", catalogo: "todo", usable: true, marca: null, porque: null },
+  ],
+  set_session_provider: () => null,
+  set_session_model: (args) => { sessionModelCalls.push(args); return null; },
+});
+const chipDoc = chipApp.w.document;
+const pickModel = async (label) => {
+  chipDoc.querySelector('button[aria-label^="Modelo:"]').click();
+  await sleep(50);
+  const option = [...chipDoc.querySelectorAll('[role="listbox"] [role="option"]')].find((o) => o.textContent.includes(label));
+  assert.ok(option, `el chip ofrece ${label}`);
+  option.click();
+  await sleep(120);
+};
+chipDoc.querySelector('[data-sesion="s1"]').click();
+await sleep(150);
+await pickModel("GPT Alternate");
+assert.equal(sessionModelCalls.length, 1, "elegir un modelo del CLI de la tarea lo guarda");
+assert.equal(sessionModelCalls[0].id, "s1");
+assert.equal(sessionModelCalls[0].model, "gpt-alternate");
+assert.ok("effort" in sessionModelCalls[0], "modelo y esfuerzo viajan juntos");
+chipDoc.querySelector('button[aria-label^="Modelo:"]').click();
+await sleep(50);
+[...chipDoc.querySelectorAll("button")].find((button) => button.getAttribute("aria-label") === "Claude Code")?.click();
+await sleep(50);
+chipDoc.querySelector('[role="listbox"] [role="option"]')?.click();
+await sleep(120);
+const confirmChip = [...chipDoc.querySelectorAll('[role="dialog"] button')].find((button) => button.textContent.trim() === "Cambiar");
+assert.ok(confirmChip, "la confirmación del traspaso se abre");
+confirmChip.click();
+await sleep(100);
+await pickModel("GPT Alternate");
+assert.equal(sessionModelCalls.length, 1, "con un traspaso confirmado, el modelo del otro CLI no se guarda en la tarea");
+assert.deepEqual(chipApp.failures, []);
+
 let activeTurns = [];
 let finishPendingTurn;
 let registeredTurns = [];

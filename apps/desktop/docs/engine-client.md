@@ -168,6 +168,32 @@ El motor la anuncia en `status.service_features`; el cliente la reconoce con
   cambian en esta versión: encargados, subagentes, forks, tareas adoptadas y
   clientes anteriores.
 
+### Extensión `session_model_v1`
+
+Guardar en la tarea el modelo que la persona eligió en el chip
+(danil-engine#371). `crates/engine-manifest/extensions/session_model_v1.json` se
+copia byte a byte en `src-tauri/crates/engine-protocol/extensions/` y se
+registra en `EXTENSIONS`, fuera de la huella. El cliente reconoce el rasgo con
+`SESSION_MODEL_FEATURE` (`@terminus/protocol`) en la fila de la máquina de la
+tarea.
+
+- `set_session_model {project, id, model, effort}` es una función de ventana
+  con autoridad `admin`. Escribe `session.model` y `session.effort` para el
+  siguiente turno y no toca el que corre. El motor escribe los dos campos
+  siempre (`null` borra), así que viajan juntos: `sessionModelArgs()`.
+- Solo la elección explícita se guarda: elegir un modelo del mismo CLI en el
+  chip, o el esfuerzo de un modelo que la persona ya eligió en esa tarea. El
+  modelo que la ventana pone sola (el primero del catálogo) no se escribe. Un
+  traspaso pendiente tampoco: el modelo de otro CLI lo guarda su primer turno.
+- La ventana sigue mandando el modelo en cada turno. Con un motor que no
+  anuncia el rasgo, nada cambia.
+- Rechazos, con frase en es y en: `chat.session_model.not_offered`,
+  `.effort_not_offered`, `.catalog_unavailable` y `.agent_changed`. Salen como
+  aviso en la conversación de la tarea.
+- `cli.error.model_required`: el motor niega un envío sin modelo cuando el
+  workspace no permite ninguno. La frase dice qué falta: activar los modelos
+  gratuitos, conectar una cuenta del agente o que el gobierno permita un modelo.
+
 ## Starting the engine
 
 Opened without arguments (a double click), the window uses the engine that

@@ -182,7 +182,7 @@ import { pedirElCampo } from "../lib/focus";
 import { lastRoster, rememberRoster } from "../lib/handlerRoster";
 import { aplicarLenguaDeWorkspace, clavesConocidas, t } from "../lib/i18n";
 import { attachmentsOn, NotMovable } from "../lib/remoteAttachments";
-import { ATTACHMENT_DOCUMENTS_FEATURE, PROVIDER_HANDOFF_FEATURE } from "@terminus/protocol";
+import { ATTACHMENT_DOCUMENTS_FEATURE, PROVIDER_HANDOFF_FEATURE, SESSION_MODEL_FEATURE, sessionModelArgs } from "@terminus/protocol";
 import { invoke } from "../lib/invoke.ts";
 import { connected } from "../lib/engineConnection";
 import { openChatVisual, readChatVisual } from "../features/chat/readVisual";
@@ -5727,6 +5727,11 @@ export default function App() {
         anexar(sesion, (m) => [...m, { role: "system", text: prosaDe(e), meta: "aviso" }]);
       });
     }
+    // El esfuerzo va con el modelo que la persona eligió en esta tarea, nunca
+    // con el que la caja puso sola.
+    if (sesion && model() && modelosGuardados.get(sesion) === model()) {
+      guardarModeloEnLaTarea(sesion, model(), id || null);
+    }
     // Como el modelo en `elegirModelo`: es lo que heredan sus temas nuevos.
     const fila = sessionId() ? filaDe(sessionId()!) : undefined;
     if (fila && esChatDeAgente(fila) && fila.agent) {
@@ -5741,17 +5746,42 @@ export default function App() {
   }
 
   /**
-   * El motor anunció `provider_handoff_v1` en la máquina de la tarea. La de
-   * esta ventana no lleva id en la fila; las demás sí. Sin fila de esa máquina
-   * no se puede afirmar que no lo anuncie: `undefined`, no `false`.
+   * El motor anunció `feature` en la máquina de la tarea. La de esta ventana
+   * no lleva id en la fila; las demás sí. Sin fila de esa máquina no se puede
+   * afirmar que no lo anuncie: `undefined`, no `false`.
    */
-  const anunciaTraspaso = (id: string): boolean | undefined => {
+  const anunciaEnLaTarea = (id: string, feature: string): boolean | undefined => {
     if (!id) return undefined;
     const machine = filaDe(id)?.machine ?? null;
     const suya = machines().find((m) => (machine ? m.id === machine : m.local));
     if (!suya) return undefined;
-    return suya.features?.includes(PROVIDER_HANDOFF_FEATURE) === true;
+    return suya.features?.includes(feature) === true;
   };
+  const anunciaTraspaso = (id: string) => anunciaEnLaTarea(id, PROVIDER_HANDOFF_FEATURE);
+
+  /**
+   * El modelo que la persona eligió en el chip de cada tarea abierta y que ya
+   * quedó en su `session.model`. Solo con él un cambio de esfuerzo se guarda:
+   * sin elección explícita, el modelo de la caja es el que la ventana puso
+   * sola, y ese no se escribe en la tarea.
+   */
+  const modelosGuardados = new Map<string, string>();
+
+  /**
+   * La elección explícita del chip queda en la tarea (`session_model_v1`), con
+   * el modelo y el esfuerzo juntos: un `task send` o el relay que llegan sin
+   * modelo siguen con ella. Un motor que no lo anuncia sigue como antes: la
+   * ventana manda el modelo en cada turno y nada más.
+   */
+  function guardarModeloEnLaTarea(id: string, modelo: string, nivel: string | null) {
+    if (anunciaEnLaTarea(id, SESSION_MODEL_FEATURE) !== true) return;
+    modelosGuardados.set(id, modelo);
+    void invoke("set_session_model", sessionModelArgs(project(), id, modelo, nivel), opcionesDeLaTarea(id, workspaceActivo()))
+      .catch((e) => {
+        if (modelosGuardados.get(id) === modelo) modelosGuardados.delete(id);
+        anexar(id, (m) => [...m, { role: "system", text: prosaDe(e), meta: "aviso" }]);
+      });
+  }
 
   const situacionDeTraspaso = (id: string) => ({
     session: id || null,
@@ -5812,7 +5842,8 @@ export default function App() {
       // Volver al CLI que la sesión tiene no es traspaso: solo suelta el
       // pendiente que se hubiera confirmado antes.
       if (opcion.agent === actual) {
-        aplicarOpcionDeModelo(opcion, claveAbierta(), null);
+        const nivel = aplicarOpcionDeModelo(opcion, claveAbierta(), null);
+        guardarModeloEnLaTarea(abierta, opcion.model.id, nivel || null);
         return;
       }
       if (!puedeTraspasar(abierta)) return;
@@ -5824,7 +5855,13 @@ export default function App() {
       });
       return;
     }
+    const pendiente = borradores()[claveAbierta()]?.provider;
     const nivel = aplicarOpcionDeModelo(opcion, claveAbierta());
+    // Solo un modelo del CLI con que corre la tarea: con un traspaso confirmado,
+    // o en un chat de agente que cambia de CLI, el del otro lo guarda su primer turno.
+    if (abierta && !pendiente && opcion.agent === cliDeLaSesion(abierta)) {
+      guardarModeloEnLaTarea(abierta, opcion.model.id, nivel || null);
+    }
     if (chatDeAgente && fila.agent) {
       void invoke("set_agent_model", {
         project: project(),
