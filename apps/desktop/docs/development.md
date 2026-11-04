@@ -129,7 +129,7 @@ at the end the queue kills every process of the run user, also on restart. A
 profile without a run user is refused with 503. The checkout is reused, so
 `git checkout` only rewrites the files that differ from the previous commit and
 the target stays warm; `"target": "checkout"` keeps it in `<checkout>/target`
-(the engine's `scripts/verify` looks there), otherwise it goes in
+(where the engine's verify script looks for its binaries), otherwise it goes in
 `CARGO_TARGET_DIR`. Above 80 % disk it deletes the target, before a run or after
 a failed one, and rebuilds once.
 
