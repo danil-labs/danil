@@ -1,7 +1,7 @@
 /**
  * Danil Business en el navegador: las rutas `/auth/account/business/*` del BFF por el
  * proxy de alfa (`<base>alpha-api`), con la sesión de la persona. El proxy deja pasar
- * solo el workspace activo de la sesión, así que la cuenta sale del token.
+ * solo el workspace activo de la sesión: la cuenta sale del token.
  */
 import { sessionFetch } from "../../../../packages/attention/src/request.ts";
 import {
