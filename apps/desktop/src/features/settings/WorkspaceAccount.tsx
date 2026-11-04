@@ -352,8 +352,9 @@ export default function WorkspaceAccount(props: { workspace: string; name: strin
             </div>
           }
         >
-          <Show when={cloud() !== null}>
-            <div class="flex flex-wrap items-center gap-2">
+          <div class="flex flex-wrap items-center gap-2">
+            {/* Solo aquí no hay con qué cambiar, pero el motor aún tiene la cuenta: desvincular sigue disponible. */}
+            <Show when={cloud() !== null}>
               <Button
                 size="sm"
                 variant="outline"
@@ -366,20 +367,20 @@ export default function WorkspaceAccount(props: { workspace: string; name: strin
               >
                 {t("danil.workspace.change")}
               </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                disabled={saving() || accounts.busy()}
-                onClick={() => {
-                  setProblem(null);
-                  setMode("confirm-unlink");
-                }}
-                data-workspace-unlink=""
-              >
-                {t("danil.workspace.unlink")}
-              </Button>
-            </div>
-          </Show>
+            </Show>
+            <Button
+              size="sm"
+              variant="ghost"
+              disabled={saving() || accounts.busy()}
+              onClick={() => {
+                setProblem(null);
+                setMode("confirm-unlink");
+              }}
+              data-workspace-unlink=""
+            >
+              {t("danil.workspace.unlink")}
+            </Button>
+          </div>
         </Show>
 
         <Show when={mode() === "choose" || mode() === "confirm-change"}>

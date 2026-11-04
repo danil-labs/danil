@@ -358,7 +358,8 @@ test("a workspace only on this computer is uploaded with its name, by anyone sig
     const { w } = app;
     assert.equal(section(w).dataset.workspaceCloud, "local", section(w).textContent);
     assert.ok(section(w).textContent.includes("Solo en esta computadora"));
-    assert.equal(buttonIn(section(w), "Desvincular"), undefined, "nothing to unlink yet");
+    assert.equal(buttonIn(section(w), "Cambiar"), undefined, "nothing to change to");
+    assert.ok(buttonIn(section(w), "Desvincular"), "the engine still has the account: it can be unlinked");
     assert.equal(w.document.querySelector("[data-workspace-cloud-sync]"), null, "a member's workspace is not offered to sync");
     assert.equal(w.document.querySelector("[data-workspace-create]"), null, "no name is asked");
     buttonIn(section(w), "Subir «Danil»").click();
@@ -366,6 +367,26 @@ test("a workspace only on this computer is uploaded with its name, by anyone sig
     assert.deepEqual(control.creates, [{ account: undefined, workspace: "w" }], "the main account's window session uploads it");
     assert.deepEqual(control.links, []);
     assert.equal(w.document.querySelector("[data-workspace-account] [role=alert]"), null);
+    assert.deepEqual(app.failures, []);
+  } finally {
+    control.restore();
+  }
+});
+
+test("a workspace only on this computer can be unlinked; without an engine account there is nothing to unlink", async () => {
+  const control = controlPlane([ONLY_HERE]);
+  try {
+    const e = engine();
+    const app = await openWorkspaces("danil-workspace-cloud-unlink-local", e);
+    const { w } = app;
+    assert.equal(section(w).dataset.workspaceCloud, "local");
+    buttonIn(section(w), "Desvincular").click();
+    w.document.querySelector("[data-workspace-leave-yes]").click();
+    await sleep(500);
+    assert.deepEqual(control.unlinks, [{ account: undefined, workspace: "w" }], "the DELETE is idempotent in Computers");
+    assert.deepEqual(e.calls.find((c) => c.command === "danil_workspace_set_account")?.args, { workspace: "w", account: null });
+    assert.equal(section(w).dataset.workspaceAccount, "none");
+    assert.equal(buttonIn(section(w), "Desvincular"), undefined, "nothing to unlink yet");
     assert.deepEqual(app.failures, []);
   } finally {
     control.restore();
