@@ -62,7 +62,7 @@ function fakeLink(answers: Record<string, unknown>, initial: MachineState = "onl
   return link;
 }
 
-const VM: MachineInfo = { id: "cmp_vm", name: "Danil VM", wakes: true };
+const VM: MachineInfo = { id: "cmp_vm", name: "Danil VM", wakes: true, opensOnRead: true };
 const MAC: MachineInfo = { id: "cmp_mac", name: "Mac de Ana", wakes: false };
 const REGISTRY = [{ id: "w", name: "Producto", computers: ["cmp_vm", "cmp_mac"], projects: [], settings: null, created_at: "2026-10-01T00:00:00Z" }];
 const row = (id: string, title = id) => ({ id, title, updated_at: 0 });
@@ -223,7 +223,7 @@ test("a VM the control plane could not start says so by name, and is asked again
   assert.deepEqual(starts, ["cmp_vm"], "a failed start is not retried on every read");
 });
 
-test("an own computer listed as startable stays «sin conexión» once the control plane says it does not start it", async () => {
+test("a VM the control plane says it does not start stays «sin conexión» after one try", async () => {
   const vm = fakeLink({}, "offline");
   let starts = 0;
   const { router } = web({ cmp_vm: vm }, memoryStorage(), async () => {
@@ -236,6 +236,17 @@ test("an own computer listed as startable stays «sin conexión» once the contr
   await new Promise((r) => setTimeout(r, 10));
   await assert.rejects(router.handle("list_live_sessions", args), (e: { detail: string; what: string }) => e.detail === "machine_off" && /Danil VM está sin conexión/.test(e.what));
   assert.equal(starts, 1);
+});
+
+test("an off computer of the person with nothing saved is not started by a read and says it is offline", async () => {
+  const own = fakeLink({}, "offline");
+  let starts = 0;
+  const fleet = new Fleet({ self: null, connect: () => own, storage: memoryStorage(), wake: async () => { starts++; return true; }, deadlines: { read: 40, action: 200, intent: 400 } });
+  const router = createRouter({ self: null, fleet, native: null, registry: async () => [{ ...REGISTRY[0], computers: ["cmp_own"] }] as never });
+  fleet.setMachines([{ id: "cmp_own", name: "Casa", wakes: true }]);
+  await router.handle("list_workspaces");
+  await assert.rejects(router.handle("list_live_sessions", { project: "", open: [] }), (e: { detail: string; what: string }) => e.detail === "machine_off" && /Casa está sin conexión/.test(e.what));
+  assert.equal(starts, 0);
 });
 
 test("the start answer of the control plane reads as started, failed or not startable", () => {
