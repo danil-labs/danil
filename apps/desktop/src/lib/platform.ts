@@ -86,6 +86,10 @@ export type Capabilities = {
     pin: (keys: string[], account?: string | null) => Promise<void>;
     /** Enlaza un workspace propio con un workspace de Danil; rechaza con el código del plano de control. */
     link: (workspaceId: string, danilWorkspaceId: number, account?: string | null) => Promise<void>;
+    /** Quita el enlace en el plano de control; sin esto, desvincular solo cambia la cuenta en el motor. */
+    unlink?: (workspaceId: string, account?: string | null) => Promise<void>;
+    /** Avisa cuando se abre o se cierra la sesión de persona de esta ventana (el escritorio); devuelve cómo dejar de escuchar. */
+    onSession?: (listener: (state: "signed_in" | "signed_out") => void) => () => void;
     /** Crear un workspace de Danil todavía no tiene ruta: quien la tenga la publica aquí. */
     create?: (name: string) => Promise<import("@terminus/computers").DirectoryEntry>;
   };

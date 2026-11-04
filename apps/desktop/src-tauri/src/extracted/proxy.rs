@@ -275,6 +275,8 @@ pub(super) fn desktop_command(name: &str) -> bool {
                 | "danil_sign_out"
                 | "agents_session_directory"
                 | "agents_session_link"
+                | "agents_session_unlink"
+                | "agents_session_refresh"
                 | "agents_bff_fetch"
                 | "harness_org_fetch"
                 | "typst_live_complete"
