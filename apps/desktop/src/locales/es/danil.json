@@ -100,6 +100,7 @@
   "danil.workspace.taken": "Ya está en otra máquina",
   "danil.workspace.taken_error": "Ese workspace de Danil ya está en otra máquina. Elige otro.",
   "danil.workspace.not_admin": "Solo un owner o admin de la cuenta puede enlazar este workspace.",
+  "danil.workspace.sign_in_to_link": "Inicia sesión con Danil en esta ventana para sincronizar este workspace.",
   "danil.workspace.role.owner": "Owner",
   "danil.workspace.role.admin": "Admin",
   "danil.workspace.role.member": "Miembro",
@@ -345,5 +346,17 @@
   "danil.wsl.error.wsl_timeout": "wsl.exe no contestó a tiempo.",
   "danil.wsl.error.wsl_failed": "No se pudo leer la lista de distros.",
   "danil.wsl.error.unsupported": "La detección de WSL solo está disponible en Windows.",
-  "danil.wsl.error.io": "No se pudo ejecutar wsl.exe."
+  "danil.wsl.error.io": "No se pudo ejecutar wsl.exe.",
+  "danil.welcome.title": "Conecta tu cuenta de Danil",
+  "danil.welcome.connect": "Conectar cuenta",
+  "danil.welcome.connect_effect": "Usa tu workspace, tus agentes y tus máquinas de Danil.",
+  "danil.welcome.local": "Continuar sin cuenta",
+  "danil.welcome.local_effect": "Todo queda en esta computadora.",
+  "danil.welcome.waiting": "Termina de entrar en el navegador.",
+  "danil.welcome.loading": "Buscando tus workspaces…",
+  "danil.welcome.linking": "Conectando {name}…",
+  "danil.welcome.choose": "Elige tu workspace",
+  "danil.welcome.connected_as": "Entraste como {email}",
+  "danil.welcome.continue_unlinked": "Continuar sin workspace de Danil",
+  "danil.welcome.link_failed": "No se pudo conectar el workspace. Intenta otra vez."
 }

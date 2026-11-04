@@ -11,6 +11,7 @@ import {
   type ProviderModels,
   type SlashMenu,
 } from "@terminus/protocol";
+import { replaceSlash, slashAt } from "@terminus/chat/slash";
 import { menuSurfaces, modelName, previewLabel, type Surface, surfaceHas, surfaceOf } from "@terminus/tasks";
 import * as DocumentPicker from "expo-document-picker";
 import { File } from "expo-file-system";
@@ -49,7 +50,6 @@ type Attachment = { key: string; name: string; path: string | null; error: strin
 export type ComposerChoice = { provider: string; model: string | null; effort: string | null; permissionMode: string | null };
 type Choice = ComposerChoice;
 
-const SLASH = /^\/([\w:-]*)$/;
 const MENTION = /(?:^|\s)@("?)([^\s"]*)$/;
 const EFFORT_LEVELS = ["minimal", "low", "medium", "high", "xhigh", "max"] as const;
 // Los modos de cada máquina y proveedor que ya se vieron: con la máquina apagada, el cuadro sigue sabiendo cuáles sostiene.
@@ -260,7 +260,9 @@ export function Composer({
   }, [surfaces, current, model, models, surface]);
 
   const shell = text.startsWith("!");
-  const slashQuery = !shell ? SLASH.exec(text)?.[1] : undefined;
+  // La gramática es la del escritorio: en medio del texto, solo skills.
+  const slashToken = !shell ? slashAt(text, selection.end) : null;
+  const slashQuery = slashToken?.name;
   const beforeCursor = text.slice(0, selection.end);
   const mentionMatch = !shell && slashQuery === undefined ? MENTION.exec(beforeCursor) : null;
   const mentionQuery = mentionMatch?.[2];
@@ -456,8 +458,17 @@ export function Composer({
     if (slashQuery === undefined || !slash) return null;
     const q = slashQuery.toLowerCase();
     const match = (list: SlashMenu["commands"]) => list.filter((c) => c.name.toLowerCase().includes(q)).slice(0, 30);
-    return { commands: match(slash.commands), skills: match(slash.skills) };
-  }, [slashQuery, slash]);
+    return { commands: slashToken?.inline ? [] : match(slash.commands), skills: match(slash.skills) };
+  }, [slashQuery, slashToken?.inline, slash]);
+  // Una barra en medio de una frase suele ser prosa: sin skill que case, no hay menú.
+  const slashOpen = slashQuery !== undefined && !(slashToken?.inline && slashItems && !slashItems.skills.length);
+  function pickSlash(name: string) {
+    if (!slashToken) return;
+    const next = replaceSlash(text, slashToken, name);
+    setText(next.text);
+    setSelection({ start: next.caret, end: next.caret });
+    setForced({ start: next.caret, end: next.caret });
+  }
   const mentionItems = useMemo(() => {
     if (mentionQuery === undefined || !mentions) return null;
     const q = mentionQuery.toLowerCase();
@@ -524,16 +535,16 @@ export function Composer({
 
   return (
     <View style={[styles.wrap, { paddingBottom: 8 + (bottomInset && !keyboard ? insets.bottom : 0) }]}>
-      {slashQuery !== undefined ? (
+      {slashOpen ? (
         <Suggestions>
           {!slashItems ? <Text style={[styles.hint, { color: theme.textMuted }]}>{t("composer.loading")}</Text> : null}
           {slashItems && !slashItems.commands.length && !slashItems.skills.length ? <Text style={[styles.hint, { color: theme.textMuted }]}>{w("chat.commands.no_match")}</Text> : null}
           {slashItems?.commands.map((c) => (
-            <SheetOption key={`c-${c.name}`} icon="slash" label={`/${c.name}`} detail={c.description} onPress={() => setText(`/${c.name} `)} />
+            <SheetOption key={`c-${c.name}`} icon="slash" label={`/${c.name}`} detail={c.description} onPress={() => pickSlash(c.name)} />
           ))}
           {slashItems?.skills.length ? <SheetSection>{w("chat.commands.skills")}</SheetSection> : null}
           {slashItems?.skills.map((c) => (
-            <SheetOption key={`s-${c.name}`} icon="sparkles" label={`/${c.name}`} detail={c.description} onPress={() => setText(`/${c.name} `)} />
+            <SheetOption key={`s-${c.name}`} icon="sparkles" label={`/${c.name}`} detail={c.description} onPress={() => pickSlash(c.name)} />
           ))}
         </Suggestions>
       ) : null}

@@ -893,8 +893,9 @@ export default function Chat(props: ChatProps) {
   const commandNames = createMemo(
     () => new Set([...props.skills.map((s) => s.name), ...props.commands.map((c) => c.name)]),
   );
+  const skillNames = createMemo(() => new Set(props.skills.map((s) => s.name)));
   const fieldSpans = createMemo(() =>
-    highlightSpans(props.input, props.taskMentions ?? [], commandNames(), props.recipients ?? []),
+    highlightSpans(props.input, props.taskMentions ?? [], commandNames(), props.recipients ?? [], skillNames()),
   );
   const hasHighlight = () => fieldSpans().some((tramo) => tramo.kind);
   /** Dónde dejar el cursor cuando el texto nuevo ya haya bajado. */
@@ -1094,7 +1095,9 @@ export default function Chat(props: ChatProps) {
 
   const slashGroups = createMemo(() => {
     const d = trigger();
-    return d?.kind === "/" ? slashSuggestions(props.skills, props.commands, d.query) : [];
+    if (d?.kind !== "/") return [];
+    // A mitad de frase el CLI no corre comandos: solo las skills que carga.
+    return slashSuggestions(props.skills, d.inline ? [] : props.commands, d.query);
   });
 
   const suggestions = createMemo<Suggestion[]>(() => {
@@ -1186,6 +1189,8 @@ export default function Chat(props: ChatProps) {
   const menuOpen = () => {
     const d = trigger();
     if (dismissed() || d === null) return false;
+    // Una barra en medio del texto suele ser prosa: abre solo si alguna skill casa.
+    if (d.kind === "/" && d.inline) return slashGroups().length > 0;
     return d.kind === "/"
       ? props.skills.length > 0 || props.commands.length > 0
       : (props.mentionSources?.fuentes.length ?? 0) > 0 || Boolean(props.taskCandidates?.length) ||
@@ -1333,7 +1338,7 @@ export default function Chat(props: ChatProps) {
     }
     const puesto = applySuggestion(props.input, d, value);
     pendingCaret = puesto.caret;
-    props.onInput(puesto.text);
+    props.onInput(puesto.text, undefined, { start: d.from, end: d.to });
   }
 
   // La caja cambia de sitio en cuanto hay un turno —del centro de la
@@ -3246,7 +3251,7 @@ export default function Chat(props: ChatProps) {
                         <Show when={m().text}>
                           <p data-thread-search-text={indice()} class="m-0 leading-[1.5] break-words whitespace-pre-wrap">
                             {/* Index y no For: los tramos se recalculan con objetos nuevos en cada cambio del hilo, y For recrearía cada etiqueta. */}
-                            <Index each={tramosDelMensaje(m().text, commandNames())}>
+                            <Index each={tramosDelMensaje(m().text, commandNames(), skillNames())}>
                               {(tramo) => (
                                 <Show
                                   when={tramo().kind}

@@ -1,6 +1,6 @@
 import { invoke } from "../../lib/invoke.ts";
 import { confirm } from "@tauri-apps/plugin-dialog";
-import { createMemo, createSignal, For, onMount, Show } from "solid-js";
+import { createMemo, createSignal, For, onCleanup, onMount, Show } from "solid-js";
 import { t } from "../../lib/i18n";
 import { asFailure, type Failure, FailureNote } from "../../ui/Failure";
 import { Badge } from "../../ui/Badge";
@@ -11,9 +11,10 @@ import { EmptyState } from "../../ui/EmptyState";
 import Search from "lucide-solid/icons/search";
 import { SettingsRow, SettingsSection } from "./layout";
 import { lockedBy } from "../../lib/governance";
+import { cn } from "../../lib/utils";
 import { Governed } from "./Governed";
 
-/** Una skill que ofrece una carpeta adjunta. La compone `practices::SkillDeFuente`. */
+/** Una skill de una carpeta adjunta o de un repositorio. La compone `practices::SkillDeFuente`. */
 type SkillDeFuente = {
   source: string;
   source_name: string;
@@ -23,7 +24,41 @@ type SkillDeFuente = {
   origin: string;
   /** Qué agentes la leen. Lo decide la carpeta en que está, no esta pantalla. */
   providers: string[];
+  /** Un motor anterior no los manda: solo carpetas, encendidas y sin sombra. */
+  kind?: "folder" | "repository";
+  source_enabled?: boolean;
+  shadowed_by?: { source: string; source_name: string } | null;
+  /** El nombre con que se invoca hoy (`/<invoked_as>`), o `null` si no llega a ningún agente. */
+  invoked_as?: string | null;
 };
+
+type Grupo = { source: string; name: string; kind: "folder" | "repository"; on: boolean; skills: SkillDeFuente[] };
+
+const fuenteEncendida = (s: SkillDeFuente) => s.source_enabled !== false;
+
+/**
+ * La nota de nombre repetido. Dice el nombre real con que se invoca, no quién
+ * «gana»: con dos repositorios del mismo nombre ninguno se queda con el corto,
+ * y la más vieja no trae `shadowed_by`. La otra fuente sale de la sombra o de
+ * la otra fila con ese nombre que sí se invoca.
+ */
+function notaDeNombre(s: SkillDeFuente, todas: readonly SkillDeFuente[]): string | null {
+  // Con la fuente apagada no se puede encender: «al encenderla» mentiría.
+  if (!fuenteEncendida(s)) return null;
+  // La otra fila tiene que proyectarse: una fuente apagada no choca con nadie.
+  const otra =
+    s.shadowed_by?.source_name ??
+    todas.find((o) => o.name === s.name && o.source !== s.source && o.invoked_as)?.source_name;
+  if (s.invoked_as && s.invoked_as !== s.name) {
+    return otra
+      ? t("settings.skills.invoked_as", { invoked: s.invoked_as, source: otra })
+      : t("settings.skills.invoked_as_alone", { invoked: s.invoked_as });
+  }
+  if (!s.invoked_as && s.shadowed_by) {
+    return t("settings.skills.shadowed_off", { source: s.shadowed_by.source_name });
+  }
+  return null;
+}
 
 export function SkillsDeFuentes() {
   const [skills, setSkills] = createSignal<SkillDeFuente[]>([]);
@@ -41,13 +76,29 @@ export function SkillsDeFuentes() {
     return skills().filter(
       (s) =>
         s.name.toLowerCase().includes(q) ||
+        (s.invoked_as ?? "").toLowerCase().includes(q) ||
         s.source_name.toLowerCase().includes(q) ||
         s.providers.some((a) => a.toLowerCase().includes(q)),
     );
   });
 
-  const encendidas = createMemo(() => skills().filter((s) => s.enabled).length);
-  const apagadasVisibles = createMemo(() => visibles().filter((s) => !s.enabled));
+  // Las de una fuente apagada no se alternan una por una ni en bloque.
+  const alternables = createMemo(() => visibles().filter(fuenteEncendida));
+  const encendidas = createMemo(() => skills().filter((s) => s.enabled && fuenteEncendida(s)).length);
+  const apagadasVisibles = createMemo(() => alternables().filter((s) => !s.enabled));
+
+  const grupos = createMemo(() => {
+    const porFuente = new Map<string, Grupo>();
+    for (const s of visibles()) {
+      let g = porFuente.get(s.source);
+      if (!g) {
+        g = { source: s.source, name: s.source_name, kind: s.kind ?? "folder", on: fuenteEncendida(s), skills: [] };
+        porFuente.set(s.source, g);
+      }
+      g.skills.push(s);
+    }
+    return [...porFuente.values()];
+  });
 
   // Cuántos agentes hay en total, para saber cuándo una skill es de todos sin
   // enumerarlos. Sale de las propias filas: la lista de agentes es de Rust.
@@ -104,7 +155,7 @@ export function SkillsDeFuentes() {
   // encender lo filtrado es el gesto; un «encender todas» a secas enciende
   // ochenta capacidades de una vez.
   async function alternarVisibles(on: boolean) {
-    const objetivo = visibles().filter((s) => s.enabled !== on);
+    const objetivo = alternables().filter((s) => s.enabled !== on);
     if (objetivo.length === 0) return;
     setOcupada("*");
     setFallo(null);
@@ -120,7 +171,13 @@ export function SkillsDeFuentes() {
     }
   }
 
-  onMount(() => void refrescar().catch((error) => setFallo(asFailure(error))));
+  // Encender o quitar un repositorio arriba cambia esta lista.
+  const alCambiarFuentes = () => void refrescar().catch((error) => setFallo(asFailure(error)));
+  onMount(() => {
+    alCambiarFuentes();
+    window.addEventListener("harness:sources", alCambiarFuentes);
+    onCleanup(() => window.removeEventListener("harness:sources", alCambiarFuentes));
+  });
 
   return (
     <SettingsSection
@@ -149,12 +206,12 @@ export function SkillsDeFuentes() {
           <Button
             variant="ghost"
             size="compact"
-            disabled={ocupada() !== null || visibles().length === 0 || lockedBy("context_sources") !== null}
+            disabled={ocupada() !== null || alternables().length === 0 || lockedBy("context_sources") !== null}
             onClick={() => void alternarVisibles(apagadasVisibles().length > 0)}
           >
             {apagadasVisibles().length > 0
               ? t("settings.skills.turn_on_n", { count: apagadasVisibles().length })
-              : t("settings.skills.turn_off_n", { count: visibles().length })}
+              : t("settings.skills.turn_off_n", { count: alternables().length })}
           </Button>
         </Show>
       }
@@ -171,47 +228,91 @@ export function SkillsDeFuentes() {
         }
       >
         <Governed section="context_sources">
-        <For each={visibles()}>
-          {(s) => (
-            <SettingsRow
-              label={
-                <span class="block truncate" title={s.description || undefined}>
-                  {s.name}
-                </span>
-              }
-              description={
-                // La ruta es lo que se puede ir a mirar y editar, y lo que dice
-                // que la skill no es de esta app.
-                <span class="block truncate" title={s.origin}>
-                  {s.source_name}
-                </span>
-              }
-            >
-              {/* Quién la lee lo decide su carpeta: sin decirlo, alguien
-                  enciende para Claude una skill que solo carga Codex. */}
-              <span class="flex flex-wrap justify-end gap-1">
-                <Show
-                  when={s.providers.length !== agentes()}
-                  fallback={<Badge>{t("settings.skills.all_agents")}</Badge>}
-                >
-                  <For each={s.providers}>{(a) => <Badge forma="dato">{a}</Badge>}</For>
+        <For each={grupos()}>
+          {(g) => (
+            <div class="grid min-w-0">
+              <div class="flex min-w-0 flex-wrap items-center gap-2 pt-4 pb-1">
+                <h4 class="m-0 min-w-0 truncate text-xs font-[560] text-neutral-500">{g.name}</h4>
+                <Badge forma="dato">
+                  {g.kind === "repository" ? t("settings.skills.kind_repository") : t("settings.skills.kind_folder")}
+                </Badge>
+                <Show when={!g.on}>
+                  <span class="text-xs text-neutral-500">{t("settings.skills.source_off")}</span>
                 </Show>
-              </span>
-              <Toggle
-                checked={s.enabled}
-                disabled={ocupada() !== null}
-                label={s.name}
-                onChange={() => void alternar(s)}
-              />
-              <Button
-                variant="ghost"
-                size="compact"
-                disabled={ocupada() !== null}
-                onClick={() => void desinstalar(s)}
-              >
-                {t("settings.skills.uninstall")}
-              </Button>
-            </SettingsRow>
+              </div>
+              <For each={g.skills}>
+                {(s) => (
+                  <SettingsRow
+                    label={
+                      // La ruta es lo que se puede ir a mirar y editar.
+                      <span class={cn("block truncate", !g.on && "text-neutral-500")} title={s.origin}>
+                        {s.name}
+                      </span>
+                    }
+                    description={
+                      <Show when={s.description || notaDeNombre(s, skills())}>
+                        <span class="grid min-w-0">
+                          <Show when={s.description}>
+                            <span class="block truncate" title={s.description}>
+                              {s.description}
+                            </span>
+                          </Show>
+                          <Show when={notaDeNombre(s, skills())}>
+                            {(nota) => (
+                              <span class="block truncate text-warning-strong" title={nota()}>
+                                {nota()}
+                              </span>
+                            )}
+                          </Show>
+                        </span>
+                      </Show>
+                    }
+                  >
+                    {/* Quién la lee lo decide su carpeta: sin decirlo, alguien
+                        enciende para Claude una skill que solo carga Codex. */}
+                    <span class="flex flex-wrap justify-end gap-1">
+                      <Show
+                        when={s.providers.length !== agentes()}
+                        fallback={<Badge>{t("settings.skills.all_agents")}</Badge>}
+                      >
+                        <For each={s.providers}>{(a) => <Badge forma="dato">{a}</Badge>}</For>
+                      </Show>
+                    </span>
+                    {/* Apagado por su fuente: dice dónde se enciende. El `title`
+                        va fuera porque el toggle deshabilitado no recibe el puntero. */}
+                    <span
+                      class="inline-flex shrink-0"
+                      title={
+                        g.on
+                          ? undefined
+                          : g.kind === "repository"
+                            ? t("settings.skills.source_off_repository")
+                            : t("settings.skills.source_off_folder")
+                      }
+                    >
+                      <Toggle
+                        checked={s.enabled}
+                        disabled={ocupada() !== null || !g.on}
+                        label={s.name}
+                        onChange={() => void alternar(s)}
+                      />
+                    </span>
+                    {/* Un repositorio es una copia que Danil trae: se apaga, no se borra.
+                        Una carpeta apagada es el clon de un repositorio de skills. */}
+                    <Show when={g.kind === "folder" && g.on}>
+                      <Button
+                        variant="ghost"
+                        size="compact"
+                        disabled={ocupada() !== null}
+                        onClick={() => void desinstalar(s)}
+                      >
+                        {t("settings.skills.uninstall")}
+                      </Button>
+                    </Show>
+                  </SettingsRow>
+                )}
+              </For>
+            </div>
           )}
         </For>
         </Governed>

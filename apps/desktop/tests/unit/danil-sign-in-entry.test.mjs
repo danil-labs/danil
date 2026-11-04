@@ -86,7 +86,8 @@ const TO_PERSONALIZE = {
 };
 
 async function personalize(name, table) {
-  const app = await boot("listo", name, { ...TO_PERSONALIZE, ...table });
+  // La pantalla de la cuenta ya se respondió: la prueba es de «Personaliza».
+  const app = await boot("listo", name, { ...TO_PERSONALIZE, ...table }, undefined, { "danil.onboarding.account_choice": "local" });
   await sleep(800);
   button(app.w, "Continuar").click();
   await sleep(500);

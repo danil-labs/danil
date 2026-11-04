@@ -120,7 +120,9 @@ export default function WorkspaceDirectoryMenu(props: { onClose: () => void; onO
             ? t("shell.directory.linkNotAdmin")
             : linkError() === "workspace_already_linked" || linkError() === "danil_workspace_taken"
               ? t("shell.directory.linkTaken")
-              : t("shell.directory.linkFailed")}
+              : linkError() === "no_session"
+                ? t("shell.directory.linkSignIn")
+                : t("shell.directory.linkFailed")}
         </p>
       </Show>
       <Show when={directory()?.truncated}>

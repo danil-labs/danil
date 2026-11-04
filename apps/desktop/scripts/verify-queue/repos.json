@@ -1,8 +1,72 @@
 {
+  "lanes": 3,
   "repos": {
     "terminus": {
+      "user": "verify-run",
       "prepare": "pnpm install --frozen-lockfile",
       "commands": ["pnpm verify", "pnpm verify --no-cargo"]
+    },
+    "danil-engine": {
+      "user": "verify-run-engine",
+      "target": "checkout",
+      "env": {
+        "HARNESS_BUILD_COMMIT": "{commit}",
+        "RUSTUP_TOOLCHAIN": "1.97.1",
+        "SELDON_VERIFY_JOBS": "3",
+        "CARGO_INCREMENTAL": "0",
+        "CARGO_PROFILE_DEV_DEBUG": "0"
+      },
+      "fresh": ["target/verify"],
+      "artifacts": ["target/verify/*/summary.json", "target/verify/*/*.log"],
+      "receipt": {
+        "summary": "target/verify/*/summary.json",
+        "digests": {
+          "seldon-runtime": "target/debug/seldon-runtime"
+        }
+      },
+      "jobs": {
+        "verify": {
+          "argv": ["python3", "scripts/verify", "{options}"],
+          "base": {
+            "argv": ["--base", "{base}"],
+            "unless": ["--all"]
+          },
+          "options": {
+            "--all": null,
+            "--only": "[a-z0-9-]{1,64}(,[a-z0-9-]{1,64}){0,63}",
+            "--repeat": "[1-5]"
+          }
+        },
+        "e2e": {
+          "argv": ["python3", "scripts/verify", "--no-lint", "{options}", "--only", "{arg}"],
+          "options": {
+            "--repeat": "[1-5]"
+          },
+          "positional": {
+            "name": "el nombre del E2E",
+            "pattern": "[a-z0-9-]{1,64}",
+            "required": true
+          }
+        },
+        "build": {
+          "argv": ["cargo", "build", "--workspace", "--locked", "--features", "danil-connector/screen-test-fixture", "-j", "{jobs}"]
+        },
+        "clippy": {
+          "argv": ["cargo", "clippy", "--workspace", "--all-targets", "--locked", "--features", "danil-connector/screen-test-fixture", "-j", "{jobs}"]
+        },
+        "test": {
+          "argv": ["cargo", "test", "--locked", "-j", "{jobs}", "{options}", "--", "{arg}"],
+          "options": {
+            "--workspace": null,
+            "--package": "[a-z0-9_-]{1,64}",
+            "--lib": null
+          },
+          "positional": {
+            "name": "un filtro de pruebas",
+            "pattern": "[A-Za-z0-9_:]{1,200}"
+          }
+        }
+      }
     }
   }
 }

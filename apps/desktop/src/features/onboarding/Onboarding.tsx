@@ -1,4 +1,4 @@
-import { createSignal, lazy, onMount, Show } from "solid-js";
+import { createSignal, lazy, onMount, Show, Suspense } from "solid-js";
 import { t } from "../../lib/i18n";
 import { invoke } from "../../lib/invoke.ts";
 import { capabilities } from "../../lib/platform";
@@ -6,6 +6,7 @@ import { Button } from "../../ui/Button";
 import { FailureNote, asFailure, prosaDe } from "../../ui/Failure";
 import { crearConexiones } from "./connect-store";
 import { Comprobacion, MapaDeConexiones, PanelDeIA } from "./ConnectAI";
+import { accountWelcomeAnswered } from "./account-welcome";
 import { crearWorkspace } from "./onboarding-store";
 import Personalizar from "./Personalize";
 import { CabeceraDelAlta } from "./Phases";
@@ -18,13 +19,38 @@ import { Escenario, TituloCambiante } from "./Stage";
  */
 // Una computadora gestionada llega preparada y con sus asistentes: en el navegador el alta es otra.
 const AltaGestionada = lazy(() => import("../../web/Onboarding"));
+const ConectarCuenta = lazy(() => import("./ConnectAccount"));
 
-export default function Onboarding(props: {
-  nuevo?: boolean;
-  onListo: () => void;
-  onCancelar?: () => void;
-}) {
+type Props = { nuevo?: boolean; onListo: () => void; onCancelar?: () => void };
+
+/** La primera alta de esta computadora pregunta antes por la cuenta de Danil; agregar otro workspace no. */
+export default function Onboarding(props: Props) {
   if (!capabilities().localSetup) return <AltaGestionada {...props} />;
+  const [respondida, setRespondida] = createSignal(Boolean(props.nuevo) || accountWelcomeAnswered());
+  const [tomado, setTomado] = createSignal<{ id: string; nombre: string } | null>(null);
+  return (
+    <Show
+      when={respondida()}
+      fallback={
+        <div class="flex min-h-0 flex-1 flex-col overflow-hidden bg-bg">
+          <CabeceraDelAlta fase={0} />
+          <Suspense fallback={null}>
+            <ConectarCuenta
+              onListo={(r) => {
+                setTomado(r.workspace);
+                setRespondida(true);
+              }}
+            />
+          </Suspense>
+        </div>
+      }
+    >
+      <AltaLocal {...props} tomado={tomado()} />
+    </Show>
+  );
+}
+
+function AltaLocal(props: Props & { tomado: { id: string; nombre: string } | null }) {
   const [paso, setPaso] = createSignal<"ia" | "personalizar">("ia");
   const [workspace, setWorkspace] = createSignal<{ id: string; nombre: string } | null>(null);
   const [fallo, setFallo] = createSignal<string | null>(null);
@@ -36,9 +62,13 @@ export default function Onboarding(props: {
     setFallo(null);
     try {
       anterior = (await invoke<{ active: string | null }>("list_workspaces")).active;
-      const nombre = props.nuevo ? t("onboarding.workspace.default_new") : t("onboarding.workspace.default");
-      const w = await crearWorkspace(nombre);
-      setWorkspace({ id: w.id, nombre });
+      if (props.tomado) {
+        setWorkspace(props.tomado);
+      } else {
+        const nombre = props.nuevo ? t("onboarding.workspace.default_new") : t("onboarding.workspace.default");
+        const w = await crearWorkspace(nombre);
+        setWorkspace({ id: w.id, nombre });
+      }
       await conexiones.cargar();
     } catch (e) {
       setFallo(prosaDe(e));

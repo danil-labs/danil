@@ -451,5 +451,12 @@
   "web.admin.policy_no_proposals": "No open proposals.",
   "web.service.not_entered": "Could not enter this workspace. Try again.",
   "web.admin.usage_desktop_only": "AI usage and the Harness activity log are read in the desktop app, with this workspace's Danil Teams session. This page does not receive that session.",
-  "web.admin.harness": "Usage and activity"
+  "web.admin.harness": "Usage and activity",
+  "web.download.tab": "Get the app",
+  "web.download.title": "Get the desktop app",
+  "web.download.action": "Download",
+  "web.download.all": "See all downloads",
+  "web.download.platform.macos": "macOS",
+  "web.download.platform.windows": "Windows",
+  "web.download.platform.linux": "Linux"
 }

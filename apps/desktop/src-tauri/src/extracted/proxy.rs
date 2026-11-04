@@ -274,7 +274,11 @@ pub(super) fn desktop_command(name: &str) -> bool {
                 | "danil_sign_in"
                 | "danil_sign_out"
                 | "agents_session_directory"
+                | "agents_session_link"
                 | "agents_bff_fetch"
+                | "harness_org_fetch"
+                | "typst_live_complete"
+                | "wsl_detect"
                 | "service_filter"
                 | "load_history"
                 | "handler_action"
@@ -1034,6 +1038,32 @@ pub(super) fn machine_list(app: tauri::AppHandle) -> Result<Value, Value> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Todo comando que la ventana registra en `generate_handler!` tiene que
+    /// pasar `desktop_command`; si no, `with_desktop` lo manda al motor y la
+    /// llamada falla. Pasó con `harness_org_fetch`, `typst_live_complete` y
+    /// `wsl_detect`.
+    #[test]
+    fn todo_comando_registrado_se_queda_en_la_ventana() {
+        let source = include_str!("mod.rs");
+        let start = source.find("generate_handler![").expect("generate_handler");
+        let rest = &source[start + "generate_handler![".len()..];
+        let body = &rest[..rest.find(']').expect("cierre")];
+        let names: Vec<&str> = body
+            .split(',')
+            .map(|item| item.trim().rsplit("::").next().unwrap_or("").trim())
+            .filter(|name| !name.is_empty())
+            .collect();
+        assert!(names.len() > 40, "se leyeron {} comandos", names.len());
+        let missing: Vec<&str> = names
+            .into_iter()
+            .filter(|name| !desktop_command(name))
+            .collect();
+        assert!(
+            missing.is_empty(),
+            "comandos registrados que la ventana no atiende: {missing:?}"
+        );
+    }
 
     #[test]
     fn conserva_el_diagnostico_de_un_rechazo_del_motor() {

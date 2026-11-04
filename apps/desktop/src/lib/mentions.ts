@@ -13,6 +13,7 @@
  * la interfaz dijo haber escrito. Esta copia es lo que hace falta para escribir
  * y pintar sin ir al backend por cada tecla. Las dos son cortas a propósito.
  */
+import { replaceSlash, slashAt } from "@terminus/chat/slash";
 
 /** Algo que la tarea alcanza y por tanto se puede mencionar. */
 export type MentionSource = {
@@ -111,21 +112,19 @@ export type Trigger = {
   to: number;
   /** Lo tecleado detrás del disparador, en minúsculas. */
   query: string;
+  /** Una barra en medio del texto: solo ofrece skills. */
+  inline?: boolean;
 };
 
 /**
- * Qué menú corresponde a lo que hay escrito y dónde está el cursor.
- *
- * **La barra solo dispara al principio del mensaje**, y no es una limitación:
- * una ruta mencionada lleva barras dentro (`@src/App.tsx`), así que un `/` que
- * disparara en cualquier posición abriría las skills a mitad de cada mención.
- * Además es lo que una skill significa: el modo del mensaje entero, no una
- * palabra suelta.
+ * Qué menú corresponde a lo que hay escrito y dónde está el cursor. La barra
+ * sigue `@terminus/chat/slash`: al principio o tras un espacio, nunca dentro
+ * de una mención, una ruta o una URL.
  */
 export function activeTrigger(text: string, caret: number): Trigger | null {
-  const slash = /^\/([\w:-]*)$/.exec(text);
+  const slash = slashAt(text, caret);
   if (slash) {
-    return { kind: "/", from: 0, to: text.length, query: slash[1].toLowerCase() };
+    return { kind: "/", from: slash.from, to: slash.to, query: slash.name.toLowerCase(), inline: slash.inline };
   }
 
   const before = text.slice(0, Math.max(0, Math.min(caret, text.length)));
@@ -156,7 +155,8 @@ export function applySuggestion(
   d: Trigger,
   value: string,
 ): { text: string; caret: number } {
-  const inserted = d.kind === "@" ? `${mentionText(value)} ` : `/${value} `;
+  if (d.kind === "/") return replaceSlash(text, d, value);
+  const inserted = `${mentionText(value)} `;
   return {
     text: text.slice(0, d.from) + inserted + text.slice(d.to),
     caret: d.from + inserted.length,

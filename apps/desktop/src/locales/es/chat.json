@@ -53,7 +53,7 @@
   "chat.attachments.paste_empty": "El archivo está vacío.",
   "chat.attachments.paste_too_large": "El archivo pesa {size} MB y el tope es {tope} MB.",
   "chat.attachments.paste_save_failed": "No se pudo guardar el archivo.",
-  "chat.attachments.remote_unsupported": "Para mandarlo a {machine} se llevan imágenes de hasta 4 MB, y PDF de hasta 11 MB si su motor ya acepta documentos. No se pudo llevar: {names}.",
+  "chat.attachments.remote_unsupported": "Para mandarlo a {machine} se llevan imágenes de hasta 4 MB y, si su motor ya acepta documentos, PDF de hasta 11 MB y textos (.md, .txt, .csv, .json) de hasta 512 KB. Word, Excel y PowerPoint todavía no viajan. No se pudo llevar: {names}.",
   "chat.attachments.web_unsupported": "Desde la web se adjuntan imágenes PNG, JPG, WebP o GIF y documentos PDF, TXT, MD, CSV, JSON, DOC/DOCX, XLS/XLSX, PPT/PPTX, ODT/ODS/ODP o RTF, de hasta 11 MB. No se adjuntó: {names}.",
   "chat.attachments.web_documents_unavailable": "La computadora de esta tarea todavía no actualiza su motor: por ahora solo se adjuntan imágenes PNG, JPG, WebP o GIF. No se adjuntó: {names}.",
   "chat.composer.placeholder.answer": "Contesta lo que te preguntó para seguir",

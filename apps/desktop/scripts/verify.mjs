@@ -8,6 +8,7 @@ import { fileURLToPath } from "node:url";
 
 import { SKIPPED_EXIT_CODE, walkFiles } from "./git.mjs";
 import { lowerPriority } from "./priority.mjs";
+import { typecheckBin } from "./typescript.mjs";
 import { quickRefusal, quickScope } from "./verify-scope.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -69,6 +70,7 @@ const steps = [
   ["The scope of --quick comes from the diff and stops without a green when in doubt", process.execPath, ["--test", join(root, "tests/unit/verify-scope.test.mjs")], root],
   ["The pre-push hook checks what the push changes", process.execPath, ["--test", join(root, "tests/unit/pre-push.test.mjs")], root],
   ["Local checks run at low priority and fail open", process.execPath, ["--test", join(root, "tests/unit/priority.test.mjs")], root],
+  ["Types are checked with tsgo, and with tsc when tsgo does not start", process.execPath, ["--test", join(root, "tests/unit/typescript-bin.test.mjs")], root],
   ["Installing the hooks keeps a foreign core.hooksPath", process.execPath, ["--test", join(root, "tests/unit/install-hooks.test.mjs")], root],
   ["All code is reviewable", process.execPath, [join(root, "scripts/guards/reviewable.mjs")], root],
   [
@@ -131,7 +133,6 @@ const steps = [
     ["--test", "--experimental-strip-types", join(root, "tests/unit/pool.test.ts")],
     root,
   ],
-  ["La cola remota corre uno a la vez, limpia entre corridas y devuelve el exit real", process.execPath, ["--test", join(root, "tests/unit/verify-queue.test.mjs")], root],
   ["El barrido de target no toca lo que un cargo usa", process.execPath, ["--test", join(root, "tests/unit/sweep-targets.test.mjs")], root],
   [
     "A saved chat background that no longer exists paints nothing",
@@ -620,11 +621,11 @@ const steps = [
     root,
   ],
   ["The front passes the linter", process.execPath, [join(root, "node_modules/@biomejs/biome/bin/biome"), "lint", "src", "scripts", "tests"], root],
-  ["The front compiles", process.execPath, [join(root, "node_modules/typescript/bin/tsc"), "-b"], root],
+  ["The front compiles", process.execPath, [typecheckBin(root), "-b"], root],
   [
     "TypeScript tests typecheck",
     process.execPath,
-    [join(root, "node_modules/typescript/bin/tsc"), "-p", join(root, "tests"), "--noEmit"],
+    [typecheckBin(root), "-p", join(root, "tests"), "--noEmit"],
     root,
   ],
   ["Bundles the front", process.execPath, [join(root, "node_modules/vite/bin/vite.js"), "build"], root],
@@ -641,10 +642,13 @@ const steps = [
   ["Prose, diagrams and updates mount", process.execPath, [join(root, "scripts/guards/mount-content.mjs")], root],
   ["Spaces mount", process.execPath, [join(root, "scripts/guards/mount-spaces.mjs")], root],
   ["Bundles the browser entry", process.execPath, [join(root, "node_modules/vite/bin/vite.js"), "build", "--mode", "web"], root],
+  // Espera más de un minuto sin CPU: antes del build retenía a Vite; aquí corre junto a los demás.
+  ["La cola remota corre uno a la vez, limpia entre corridas y devuelve el exit real", process.execPath, ["--test", join(root, "tests/unit/verify-queue.test.mjs")], root],
   ["The phone version installs as an app and always loads the latest", process.execPath, ["--test", join(root, "tests/unit/web-phone-pwa.test.mjs")], root],
   ["In the browser the interface talks to the relay", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/web-transport.test.mjs")], root],
   ["In the browser the Danil session picks the computer and explains why it cannot enter", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/web-gate.test.mjs")], root],
   ["In the browser the app opens at once, with no installer or setup screen", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/web-setup.test.mjs")], root],
+  ["In the browser Settings offers the desktop downloads", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/web-app-downloads.test.mjs")], root],
   ["In the browser a new version is offered without a forced reload", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/web-stale-chunk.test.mjs")], root],
   ["In the browser an off computer mounts without starting and wakes on being sent something", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/web-off.test.mjs")], root],
   ["In the browser what the relay saved shows with its time while the computer is off", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/web-cached.test.mjs")], root],
@@ -666,6 +670,7 @@ const steps = [
   ["Waiting for the previous version is a notice and stopping it is confirmed", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/launcher-previous.test.mjs")], root],
   ["Danil accounts sign in through the browser, add up and sign out", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/danil-account-panel.test.mjs")], root],
   ["First run and the sidebar footer offer the Danil account", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/danil-sign-in-entry.test.mjs")], root],
+  ["The first run asks for the Danil account and takes its workspace", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/account-welcome-first-run.test.mjs")], root],
   ["First-run Google Drive reconnects after disconnecting", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/onboarding-drive-reconnect.test.mjs")], root],
   ["Google Drive with the official app installs, waits for the session and stops being used without uninstalling", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/onboarding-drive-desktop.test.mjs")], root],
   ["Each workspace picks its Danil account and the footer follows the open one", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/danil-workspace-account.test.mjs")], root],
@@ -682,6 +687,7 @@ const steps = [
   ["The alpha entry bounds explicit reads and writes, and leaves WorkOS sign-in in the Worker", process.execPath, ["--test", join(root, "alpha-entry/worker.test.mjs")], root],
   ["A workspace without a safe account shows data from none", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/workspace-account.test.ts")]],
   ["The directory groups what can be entered and the bar shows the pinned ones", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/workspace-directory.test.ts")]],
+  ["The first-run account choice is remembered and picks the Danil workspace", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/account-welcome.test.ts")]],
   ["The attention reader does not extract variable values or API connection paths", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/attention-service.test.ts")]],
   ["Inbox: effective permissions and queued replies without ambiguous retries", process.execPath, ["--test", "--experimental-strip-types", join(root, "../../packages/attention/test/inbox.test.ts"), join(root, "../../packages/attention/test/messaging.test.ts"), join(root, "tests/unit/inbox-drafts.test.ts"), join(root, "tests/unit/inbox-widths.test.ts")], root],
   ["Broadcasts: permissions by account and channel, templates and real transitions", process.execPath, ["--test", "--experimental-strip-types", join(root, "../../packages/attention/test/broadcasts.test.ts")], root],
@@ -771,12 +777,12 @@ const GIB = 1024 ** 3;
 const STEP_TIMEOUT_MS = 15 * 60_000;
 const CARGO_TIMEOUT_MS = 45 * 60_000;
 
-/** Un paso por cada dos núcleos y por cada 2 GiB libres; con 1, la cadena corre en serie. En macOS `freemem` no cuenta la caché: vale la mitad del total. */
+/** Un paso por núcleo y por cada 2 GiB libres: casi todos esperan temporizadores, no CPU. Con 1, la cadena corre en serie. En macOS `freemem` no cuenta la caché: vale la mitad del total. */
 function budget() {
   const forced = Number(process.env.VERIFY_JOBS);
   if (Number.isSafeInteger(forced) && forced > 0) return forced;
   const memory = process.platform === "darwin" ? totalmem() / 2 : freemem();
-  return Math.max(1, Math.min(Math.floor(availableParallelism() / 2), Math.floor(memory / (2 * GIB))));
+  return Math.max(1, Math.min(availableParallelism(), Math.floor(memory / (2 * GIB))));
 }
 
 const running = new Set();
