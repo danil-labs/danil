@@ -26,6 +26,7 @@ import VistaPreviaDeTarea from "./TaskPreview";
 import VisorDeArchivo from "./FileViewer";
 import { IconoDeArchivo } from "./FileIcon";
 import { alMoverseElArbol } from "./refresh";
+import type { TreePart } from "@terminus/protocol";
 
 const nameOf = (path: string) => path.split("/").pop() ?? path;
 const folderOf = (path: string) => path.split("/").slice(0, -1).join("/");
@@ -119,17 +120,10 @@ export default function TaskFilesCard(props: {
   const download = async () => {
     const tab = activeTab();
     if (!tab) return;
-    const content = await invoke<{ kind: string; text: string; data_url: string | null; pdf: string | null }>("tree_show",
-      { project: props.project, session: props.session, tree: tab.tree, path: tab.path }, machineOf(props.session)).catch(() => null);
-    if (!content) return;
-    const blob = content.pdf
-      ? new Blob([Uint8Array.from(atob(content.pdf), (c) => c.charCodeAt(0))], { type: "application/pdf" })
-      : content.data_url ? await (await fetch(content.data_url)).blob() : new Blob([content.text]);
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = nameOf(tab.path);
-    link.click();
-    setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+    const { descargar } = await import("../viewers/Media");
+    await descargar(tab.path, (offset, size, revision) => invoke<TreePart>("tree_read_part", {
+      project: props.project, session: props.session, tree: tab.tree, path: tab.path, offset, size, revision: revision ?? null,
+    }, machineOf(props.session))).catch(() => {});
   };
   const tool = "size-6 shrink-0 p-0 text-neutral-500";
   const tools = () => (
