@@ -798,5 +798,5 @@
   "settings.skills.invoked_as_alone": "Se invoca como /{invoked}: otra fuente trae el mismo nombre.",
   "settings.skills.shadowed_off": "{source} trae el mismo nombre: al encenderla se invoca con sufijo.",
   "settings.skills.source_off_repository": "Su repositorio está apagado. Enciéndelo arriba, en Repositorios.",
-  "settings.skills.source_off_folder": "Su carpeta está apagada. Enciéndela en Control de Fuentes."
+  "settings.skills.source_off_folder": "Esta carpeta también es un repositorio de skills. Sus skills se encienden en ese grupo."
 }

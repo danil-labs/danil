@@ -798,5 +798,5 @@
   "settings.skills.invoked_as_alone": "Invoked as /{invoked}: another source has the same name.",
   "settings.skills.shadowed_off": "{source} has the same name: turned on, it is invoked with a suffix.",
   "settings.skills.source_off_repository": "Its repository is off. Turn it on above, in Repositories.",
-  "settings.skills.source_off_folder": "Its folder is off. Turn it on in Source Control."
+  "settings.skills.source_off_folder": "This folder is also a skill repository. Its skills are turned on in that group."
 }

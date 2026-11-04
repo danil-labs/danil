@@ -40,12 +40,13 @@ const fuenteEncendida = (s: SkillDeFuente) => s.source_enabled !== false;
  * La nota de nombre repetido. Dice el nombre real con que se invoca, no quién
  * «gana»: con dos repositorios del mismo nombre ninguno se queda con el corto,
  * y la más vieja no trae `shadowed_by`. La otra fuente sale de la sombra o de
- * la otra fila con ese nombre.
+ * la otra fila con ese nombre que sí se invoca.
  */
 function notaDeNombre(s: SkillDeFuente, todas: readonly SkillDeFuente[]): string | null {
+  // La otra fila tiene que proyectarse: una fuente apagada no choca con nadie.
   const otra =
     s.shadowed_by?.source_name ??
-    todas.find((o) => o.name === s.name && o.source !== s.source)?.source_name;
+    todas.find((o) => o.name === s.name && o.source !== s.source && o.invoked_as)?.source_name;
   if (s.invoked_as && s.invoked_as !== s.name) {
     return otra
       ? t("settings.skills.invoked_as", { invoked: s.invoked_as, source: otra })
@@ -294,8 +295,9 @@ export function SkillsDeFuentes() {
                         onChange={() => void alternar(s)}
                       />
                     </span>
-                    {/* Un repositorio es una copia que Danil trae: se apaga, no se borra. */}
-                    <Show when={g.kind === "folder"}>
+                    {/* Un repositorio es una copia que Danil trae: se apaga, no se borra.
+                        Una carpeta apagada es el clon de un repositorio de skills. */}
+                    <Show when={g.kind === "folder" && g.on}>
                       <Button
                         variant="ghost"
                         size="compact"
