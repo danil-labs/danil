@@ -6,6 +6,7 @@
 import { createMemo, createResource, createSignal, For, Show } from "solid-js";
 import { df, nf } from "../../lib/format";
 import { manifiesto, t } from "../../lib/i18n";
+import "../../locales/usagePhrases";
 import { Badge } from "../../ui/Badge";
 import { Button } from "../../ui/Button";
 import { EmptyState } from "../../ui/EmptyState";
