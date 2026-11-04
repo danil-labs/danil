@@ -53,7 +53,7 @@
   "chat.attachments.paste_empty": "The file is empty.",
   "chat.attachments.paste_too_large": "The file is {size} MB and the limit is {tope} MB.",
   "chat.attachments.paste_save_failed": "Could not save the file.",
-  "chat.attachments.remote_unsupported": "Images up to 4 MB, and PDFs up to 11 MB when that engine already accepts documents, can be taken to {machine}. Could not take: {names}.",
+  "chat.attachments.remote_unsupported": "Images up to 4 MB can be taken to {machine} and, when that engine already accepts documents, PDFs up to 11 MB and text files (.md, .txt, .csv, .json) up to 512 KB. Word, Excel and PowerPoint files cannot travel yet. Could not take: {names}.",
   "chat.attachments.web_unsupported": "From the web you can attach PNG, JPG, WebP or GIF images and PDF, TXT, MD, CSV, JSON, DOC/DOCX, XLS/XLSX, PPT/PPTX, ODT/ODS/ODP or RTF documents up to 11 MB. Not attached: {names}.",
   "chat.attachments.web_documents_unavailable": "This task's computer has not updated its engine yet: for now only PNG, JPG, WebP or GIF images are attached. Not attached: {names}.",
   "chat.composer.placeholder.answer": "Answer what it asked to keep going",
