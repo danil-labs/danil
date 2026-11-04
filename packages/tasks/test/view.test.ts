@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { DEFAULT_SIDEBAR_VIEW, agentOptions, applySidebarView, groupKey, groupLabel } from "../src/index.ts";
+import { DEFAULT_SIDEBAR_VIEW, agentOptions, applySidebarView, groupKey, groupLabel, sanitizeSidebarView } from "../src/index.ts";
 
 const task = (id: string, agent: string | null, extra: object = {}) => ({ id, agent, esperando: false, ...extra });
 const ctx = { live: [], approving: [] };
@@ -87,4 +87,36 @@ test("el filtro por carpeta junta las tareas de todas sus máquinas", () => {
   assert.deepEqual(none.map((g) => g.tasks.map((t) => t.id)), [["t1", "t2"]]);
   const split = applySidebarView(tasks, { ...byFolder, folders: ["terminus"] }, ctx);
   assert.deepEqual(split.map((g) => [g.machine, g.tasks.map((t) => t.id)]), [["", ["t1"]], ["vm-1", ["t2"]]]);
+});
+
+test("ordenar por estado pone arriba lo que te necesita, luego lo listo sin ver, lo que trabaja y lo visto", () => {
+  const tasks = [
+    task("visto", null, { created_at: 9, updated_at: 9 }),
+    task("trabaja", null, { created_at: 8, updated_at: 8 }),
+    task("lista", null, { created_at: 7, updated_at: 7, sin_ver: true }),
+    task("detenida", null, { created_at: 6, updated_at: 6, outcome: "interrupted" }),
+    task("falló", null, { created_at: 5, updated_at: 5, outcome: "failed" }),
+    task("pregunta", null, { created_at: 4, updated_at: 4, esperando: true }),
+    task("fijada", null, { created_at: 1, updated_at: 1, pinned: true }),
+  ];
+  const [group] = applySidebarView(tasks, { ...DEFAULT_SIDEBAR_VIEW, group: "none", sort: "status" }, { live: ["trabaja"], approving: [] });
+  assert.deepEqual(group.tasks.map((t) => t.id), ["fijada", "falló", "pregunta", "lista", "trabaja", "detenida", "visto"]);
+});
+
+test("ordenar por actividad usa el último turno; por creación se queda el orden de entrada", () => {
+  const tasks = [
+    task("nueva", null, { created_at: 3, updated_at: 3 }),
+    task("media", null, { created_at: 2, updated_at: 2, last_turn_at: 50 }),
+    task("vieja", null, { created_at: 1, updated_at: 10 }),
+  ];
+  const ids = (sort: "created" | "recent") =>
+    applySidebarView(tasks, { ...DEFAULT_SIDEBAR_VIEW, group: "none", sort }, ctx)[0].tasks.map((t) => t.id);
+  assert.deepEqual(ids("created"), ["nueva", "media", "vieja"]);
+  assert.deepEqual(ids("recent"), ["media", "vieja", "nueva"]);
+});
+
+test("una vista guardada sin orden, o con uno que no existe, vuelve al de por defecto", () => {
+  assert.equal(sanitizeSidebarView({ group: "none" }).sort, "created");
+  assert.equal(sanitizeSidebarView({ group: "none", sort: "nope" }).sort, "created");
+  assert.equal(sanitizeSidebarView({ group: "none", sort: "status" }).sort, "status");
 });

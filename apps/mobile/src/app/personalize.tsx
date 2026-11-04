@@ -1,4 +1,4 @@
-import { DEFAULT_SIDEBAR_VIEW, GROUPINGS, groupingLabel } from "@terminus/tasks";
+import { DEFAULT_SIDEBAR_VIEW, GROUPINGS, SORTS, groupingLabel, sortLabel } from "@terminus/tasks";
 import { router } from "expo-router";
 import { Linking, ScrollView, Switch, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -101,6 +101,21 @@ export default function Personalize() {
               right={view.group === g ? <Icon name="check" size={18} color={theme.merged} /> : <View style={{ width: 18 }} />}
               accessibilityLabel={groupingLabel(lang, g)}
               onPress={() => setView({ ...view, group: g })}
+            />
+          ))}
+        </Group>
+
+        <GroupHeader>{w("shell.sidebar.view.sort")}</GroupHeader>
+        <Group>
+          {SORTS.map((s) => (
+            <ListRow
+              key={s}
+              testID={`personalize-sort-${s}`}
+              title={sortLabel(lang, s)}
+              value={s === DEFAULT_SIDEBAR_VIEW.sort ? w("shell.sidebar.view.default") : undefined}
+              right={view.sort === s ? <Icon name="check" size={18} color={theme.merged} /> : <View style={{ width: 18 }} />}
+              accessibilityLabel={sortLabel(lang, s)}
+              onPress={() => setView({ ...view, sort: s })}
             />
           ))}
         </Group>
