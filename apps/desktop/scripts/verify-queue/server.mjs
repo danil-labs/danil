@@ -28,7 +28,8 @@ const DEFAULT_RUN_TIMEOUT_MS = 60 * 60_000;
 const MAX_BUNDLE_BYTES = 2 * 1024 ** 3;
 const MAX_ARTIFACT_BYTES = 16 * 1024 ** 2;
 const MAX_DIGEST_BYTES = 4 * 1024 ** 3;
-const MAX_ARTIFACTS = 64;
+const MAX_ARTIFACTS = 512;
+const MAX_ARTIFACTS_BYTES = 256 * 1024 ** 2;
 const MAX_TOKENS = 16;
 const MAX_CHECKS = 1000;
 const KEPT_RUNS = 50;
@@ -75,6 +76,8 @@ export function checkConfig(config) {
     const where = `repos.json: ${repo}`;
     if (!REPO_NAME.test(repo)) throw new Error(`${where}: nombre inválido`);
     if (profile.user !== undefined && !USER_NAME.test(profile.user)) throw new Error(`${where}: user inválido`);
+    if (profile.lanes !== undefined && !(Number.isInteger(profile.lanes) && profile.lanes >= 1 && profile.lanes <= (config.lanes ?? 1))) throw new Error(`${where}: lanes es un entero de 1 al total de carriles`);
+    if (profile.cpus !== undefined && !(Number.isInteger(profile.cpus) && profile.cpus >= 1 && profile.cpus <= 64)) throw new Error(`${where}: cpus es un entero de 1 a 64`);
     if (profile.target !== undefined && !["checkout", "outside"].includes(profile.target)) throw new Error(`${where}: target es "checkout" u "outside"`);
     if (!profile.jobs === !profile.commands) throw new Error(`${where}: lleva commands o jobs, no los dos`);
     const envs = [profile.env, ...Object.values(profile.jobs ?? {}).map((job) => job.env)];
@@ -331,7 +334,7 @@ function readBounded(fd, limit, onChunk) {
   }
 }
 
-export function createQueue({ home, config, diskPercent = defaultDiskPercent, runTimeoutMs = DEFAULT_RUN_TIMEOUT_MS, sudo = "/usr/bin/sudo", launcher = null, queueName = `${platform()}-${arch()}`, cpus = availableParallelism(), sameUser = false }) {
+export function createQueue({ home, config, diskPercent = defaultDiskPercent, runTimeoutMs = DEFAULT_RUN_TIMEOUT_MS, sudo = "/usr/bin/sudo", launcher = null, queueName = `${platform()}-${arch()}`, cpus = availableParallelism(), sameUser = false, lanesRoot = join(home, "lanes") }) {
   checkConfig(config);
   const runsDir = join(home, "runs");
   const reposDir = join(home, "repos");
@@ -389,10 +392,10 @@ export function createQueue({ home, config, diskPercent = defaultDiskPercent, ru
   }
 
   function lanePaths(repo, lane = 0) {
-    const base = join(home, "lanes", String(lane), repo);
+    const base = join(lanesRoot, String(lane), repo);
     const checkout = join(base, "checkout");
     const target = config.repos[repo].target === "checkout" ? join(checkout, "target") : join(base, "target");
-    return { base, checkout, target, home: join(base, "home"), tmp: join(base, "tmp"), cargo: join(base, "cargo"), cache: join(base, "cache"), data: join(base, "data") };
+    return { base, checkout, target, home: join(base, "h"), tmp: join(base, "t"), cargo: join(base, "cargo"), cache: join(base, "cache"), data: join(base, "data") };
   }
 
   /** Lo que el carril pone en cada corrida: un HOME nuevo; registro, cachés y target persisten. */
@@ -455,7 +458,8 @@ export function createQueue({ home, config, diskPercent = defaultDiskPercent, ru
   }
 
   /** Los núcleos se reparten entre carriles: dos cadenas de 8 trabajos en 8 núcleos se frenan entre sí. */
-  const jobsFor = () => Math.max(1, Math.floor(cpus / lanes));
+  /** `{jobs}`: los núcleos del perfil, o una parte igual de la máquina por carril. */
+  const jobsFor = (repo) => config.repos[repo].cpus ?? Math.max(1, Math.floor(cpus / lanes));
 
   function checkRequest({ repo, commit, command, base }) {
     if (!REPO_NAME.test(repo ?? "")) throw new Refusal(400, "repo inválido");
@@ -464,7 +468,7 @@ export function createQueue({ home, config, diskPercent = defaultDiskPercent, ru
     const profile = own(config.repos, repo) ? config.repos[repo] : null;
     if (!profile) throw new Refusal(403, `esta cola no corre el repo ${repo}`);
     if (!profile.user && !sameUser) throw new Refusal(503, `el perfil ${repo} no tiene usuario de corrida: la cola no corre ramas con su propio usuario`);
-    const resolved = resolveCommand(profile, command, { commit, base, jobs: jobsFor() });
+    const resolved = resolveCommand(profile, command, { commit, base, jobs: jobsFor(repo) });
     if (!resolved) throw new Refusal(403, `esta cola no corre «${command}» en ${repo}`);
     return resolved;
   }
@@ -484,9 +488,15 @@ export function createQueue({ home, config, diskPercent = defaultDiskPercent, ru
     const type = spawnSync("git", ["cat-file", "-t", commit], { cwd: mirror, encoding: "utf8", timeout: GIT_TIMEOUT_MS });
     if (type.stdout?.trim() !== "commit") throw new Refusal(422, `el commit ${commit} no llegó en el bundle`);
     git(mirror, ["update-ref", `refs/verify/${commit}`, commit]);
-    const stale = knownCommits(repo).slice(KEPT_COMMITS);
-    for (const old of stale) git(mirror, ["update-ref", "-d", `refs/verify/${old}`]);
+    pruneRefs(repo, mirror, commit);
     return mirror;
+  }
+
+  /** Quedan los commits de las corridas sin terminar y de las últimas que llegaron: la fecha del commit no dice cuándo llegó. */
+  function pruneRefs(repo, mirror, incoming) {
+    const runs = allRuns().filter((run) => run.repo === repo);
+    const keep = new Set([incoming, ...runs.filter((run) => !FINISHED.has(run.state)).map((run) => run.commit), ...runs.slice(-KEPT_COMMITS).map((run) => run.commit)]);
+    for (const old of knownCommits(repo)) if (!keep.has(old)) git(mirror, ["update-ref", "-d", `refs/verify/${old}`]);
   }
 
   /** Lo que el recibo dice del árbol: el commit, su árbol y, si el cliente declaró una foto `wip`, el HEAD de debajo. */
@@ -521,14 +531,18 @@ export function createQueue({ home, config, diskPercent = defaultDiskPercent, ru
     return free.find((lane) => existsSync(join(lanePaths(repo, lane).checkout, ".git"))) ?? free[0];
   }
 
-  /** Por orden de llegada, una corrida por carril. `execute` marca `running` antes de su primer await. */
+  /**
+   * Por orden de llegada, una corrida por carril, sin pasar del tope de carriles de su repo: la primera
+   * en espera cuyo repo tiene cupo. `execute` marca `running` antes de su primer await.
+   */
   function drain() {
     for (;;) {
       const free = [...Array(lanes).keys()].filter((lane) => !active.has(lane));
-      const next = free.length ? pending()[0] : null;
+      const busy = (repo) => [...active.values()].filter((entry) => entry.repo === repo).length;
+      const next = free.length ? pending().find((run) => busy(run.repo) < (config.repos[run.repo]?.lanes ?? lanes)) : null;
       if (!next) return;
       const lane = pickLane(next.repo, free);
-      const current = { id: next.id, kill: () => {}, cancelled: false, timedOut: false };
+      const current = { id: next.id, repo: next.repo, kill: () => {}, cancelled: false, timedOut: false };
       active.set(lane, current);
       writeFileSync(busyMarker, "");
       const done = execute(next, lane, current).finally(() => {
@@ -571,7 +585,7 @@ export function createQueue({ home, config, diskPercent = defaultDiskPercent, ru
    */
   function laneRoot(run, checkout) {
     const root = realpathSync(checkout);
-    const expected = join(realpathSync(join(home, "lanes", String(run.lane))), run.repo, "checkout");
+    const expected = join(realpathSync(join(lanesRoot, String(run.lane))), run.repo, "checkout");
     if (root !== expected) throw new Error(`el checkout del carril apunta fuera de su sitio (${root}): no copio artefactos`);
     return root;
   }
@@ -582,10 +596,11 @@ export function createQueue({ home, config, diskPercent = defaultDiskPercent, ru
     const { uid } = runner(run.repo, run.lane);
     const globs = [...new Set([...(profile.artifacts ?? []), ...(profile.receipt?.summary ? [profile.receipt.summary] : [])])];
     const copied = [];
+    let total = 0;
     const root = laneRoot(run, checkout);
     for (const glob of globs) {
       for (const path of matchFiles(root, glob)) {
-        if (copied.length >= MAX_ARTIFACTS || copied.includes(path)) continue;
+        if (copied.length >= MAX_ARTIFACTS || total >= MAX_ARTIFACTS_BYTES || copied.includes(path)) continue;
         const opened = openLaneFile(root, path, uid);
         if (!opened) continue;
         try {
@@ -595,7 +610,9 @@ export function createQueue({ home, config, diskPercent = defaultDiskPercent, ru
           if (readBounded(opened.fd, MAX_ARTIFACT_BYTES, (chunk) => parts.push(Buffer.from(chunk))) === null) continue;
           const destination = join(runDir(run.id), "artifacts", path);
           mkdirSync(dirname(destination), { recursive: true });
-          writeFileSync(destination, Buffer.concat(parts));
+          const body = Buffer.concat(parts);
+          writeFileSync(destination, body);
+          total += body.length;
           copied.push(path);
         } finally {
           closeSync(opened.fd);
@@ -711,6 +728,9 @@ export function createQueue({ home, config, diskPercent = defaultDiskPercent, ru
         laneGit(run.repo, laneIndex, ["fetch", "-q", "--no-tags", "--no-write-fetch-head", mirrorPath(run.repo), `+refs/verify/${run.commit}:refs/verify/run`]);
         laneGit(run.repo, laneIndex, ["checkout", "-q", "-f", "--detach", run.commit]);
         laneGit(run.repo, laneIndex, ["clean", "-q", "-ffdx", ...(insideTarget ? ["-e", "/target"] : [])]);
+        // Las cadenas comparan contra origin/dev; el carril no tiene remoto: es el punto de corte que mandó el cliente.
+        laneGit(run.repo, laneIndex, ["update-ref", "-d", "refs/remotes/origin/dev"]);
+        if (run.base) laneGit(run.repo, laneIndex, ["update-ref", "refs/remotes/origin/dev", run.base]);
       };
       if (diskPercent(home) > DISK_LIMIT_PERCENT) {
         say(`disco al ${diskPercent(home)} %: borro la target de ${run.repo}`);
@@ -720,7 +740,7 @@ export function createQueue({ home, config, diskPercent = defaultDiskPercent, ru
       clean();
       for (const path of profile.fresh ?? []) lane.sync(["rm", "-rf", join(checkout, path)], "/");
       say(`${run.repo} ${run.commit} en ${checkout}${lane.user ? ` como ${lane.user}` : ""}: ${run.command}`);
-      const values = { commit: run.commit, base: run.base, jobs: jobsFor() };
+      const values = { commit: run.commit, base: run.base, jobs: jobsFor(run.repo) };
       const { argv, env: jobEnv } = checkRequest(run);
       const profileEnv = Object.fromEntries(Object.entries(profile.env ?? {}).map(([key, value]) => [key, substitute(value, values)]));
       const env = { ...profileEnv, ...jobEnv, ...laneEnv(run.repo, laneIndex) };
@@ -867,7 +887,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const config = JSON.parse(readFileSync(process.env.VERIFY_QUEUE_CONFIG ?? "/etc/verify-queue/repos.json", "utf8"));
   const launcher = process.env.VERIFY_QUEUE_LAUNCHER ? JSON.parse(readFileSync(process.env.VERIFY_QUEUE_LAUNCHER, "utf8")) : null;
   if (WINDOWS && !launcher) throw new Error("en Windows la cola necesita VERIFY_QUEUE_LAUNCHER (windows/install.ps1)");
-  const queue = createQueue({ home, config, launcher, ...(process.env.VERIFY_QUEUE_NAME ? { queueName: process.env.VERIFY_QUEUE_NAME } : {}) });
+  const queue = createQueue({ home, config, launcher, ...(process.env.VERIFY_QUEUE_NAME ? { queueName: process.env.VERIFY_QUEUE_NAME } : {}), ...(process.env.VERIFY_QUEUE_LANES ? { lanesRoot: process.env.VERIFY_QUEUE_LANES } : {}) });
   queue.recover();
   // En Windows el firewall no filtra loopback: la cola escucha en un pipe que solo abren verify, SYSTEM y Administrators.
   const pipe = process.env.VERIFY_QUEUE_PIPE;

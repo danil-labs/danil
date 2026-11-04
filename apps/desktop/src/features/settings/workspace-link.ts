@@ -13,13 +13,11 @@ export function linkCandidates(entries: readonly DirectoryEntry[], current: stri
 }
 
 /**
- * Crear solo lo puede pedir un owner o admin de una organización. Una cuenta
- * personal tiene un solo workspace y no crea otro.
+ * Subir lo puede pedir quien tenga sesión, con un workspace suyo que aún no está en la
+ * nube. Crea solo su workspace personal; si ya lo tiene, el plano de control lo dice.
  */
-export function canCreateWorkspace(entries: readonly DirectoryEntry[]): boolean {
-  return entries.some(
-    (entry) => !entry.support && entry.kind === "organization" && (entry.role === "owner" || entry.role === "admin"),
-  );
+export function canCreateWorkspace(entries: readonly DirectoryEntry[], workspace: string | null): boolean {
+  return entries.some((entry) => entry.workspace_id === workspace && entry.owner && !entry.support && entry.danil_workspace_id === null);
 }
 
 /** El código del plano de control, agrupado para el texto que se pinta. */

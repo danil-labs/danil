@@ -147,8 +147,11 @@ and any other refusal from a CLI end the run with the reason.
 
 The queue is `scripts/verify-queue/server.mjs`: one per machine, first come
 first served, listening on loopback only. It runs one job per lane; `lanes` in
-`repos.json` sets how many, and each lane gets its share of the cores as
-`{jobs}`. A run takes the free lane where its repo is already warm. It takes repo, commit
+`repos.json` sets how many. A profile may cap its own runs with `lanes` and
+fix its cores with `cpus` (its `{jobs}`); without `cpus` a run gets an equal
+share of the machine. The first queued run whose repo is under its cap takes
+the free lane where its repo is already warm. On vm-verify: 4 lanes, up to 3
+app chains (wait-bound) and up to 2 engine runs with 4 cores each. It takes repo, commit
 and a command from `repos.json`, and knows nothing else about a repo. A profile
 lists either exact `commands`, run with `bash -lc` after `prepare` (the app), or
 typed `jobs`: a fixed `argv`, `options` with an anchored pattern per value and
@@ -160,10 +163,14 @@ when the commit is a snapshot of uncommitted work on top of `HEAD`.
 Bundles land in a bare mirror per repo owned by `verify`. Branch code never runs
 as `verify`: each profile names its run user (`verify-run` for the app,
 `verify-run-engine` for the engine; lane `n` above 0 adds `-<n>`), and its lane
-(`/var/lib/verify-queue/lanes/<n>/<repo>/`) holds the checkout, the target, the
-cargo registry and caches, all owned by that user. Every git command, delete and
+(`/var/lib/vl/<n>/<repo>/`, `VERIFY_QUEUE_LANES`) holds the checkout, the target,
+the cargo registry and caches, all owned by that user. `/var/lib/vl` and each
+`<n>` belong to root: the engine runs an executor only when every folder of its
+path belongs to root or to the running user and nobody else can write it. Every git command, delete and
 kill in a lane goes through `sudo -n -u <user>`; `verify` only reads artifacts
-from it. Each run gets a fresh `HOME`; git runs without hooks or global config;
+from it. Each run gets a fresh `HOME` and `TMPDIR` (short, for Unix
+socket paths), and `refs/remotes/origin/dev` points at the run's `base`, since
+the chains compare against it; git runs without hooks or global config;
 at the end the queue kills every process of the run user, also on restart. A
 profile without a run user is refused with 503. The checkout is reused, so
 `git checkout` only rewrites the files that differ from the previous commit and
@@ -189,8 +196,11 @@ networks, and the `tailscaled` socket is closed to them; they keep internet
 access for packages. `/var/lib/verify-queue` is 0711, `runs/` and `incoming/`
 are 0700; `verify-runners` is the run users' primary group, which `egress.nft`
 matches and which reads the mirrors, so one repo's branch can read the other
-repo's mirror. Toolchains live in `/opt/rust`,
-owned by root. To install or update the queue, copy `scripts/verify-queue/` to
+repo's mirror. Toolchains live in `/opt/rust`, owned by root, with no
+auto-install (`RUSTUP_AUTO_INSTALL=0`): the engine's `rust-toolchain.toml` picks
+the version, and one that `install.sh` did not install fails with "toolchain '…'
+is not installed". Provider CLIs (binaries only) and the work-tools tree for
+`bundled-work-tools` live in `/opt/verify-agents`, also read-only. To install or update the queue, copy `scripts/verify-queue/` to
 the machine and run `install.sh` as root.
 
 ## Sweeping `target/`

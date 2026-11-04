@@ -1000,3 +1000,71 @@ test("el git del carril lee un espejo de otro dueño: safe.directory llega al up
   assert.equal(run.state, "passed", log);
   assert.match(log, /ajeno/);
 });
+
+test("un commit con fecha vieja no se poda al llegar, aunque haya más de 20 nuevos", { skip }, async (t) => {
+  const { dir, repo, home } = workspace(t);
+  const queue = createQueue({ home, config, sameUser: true, diskPercent: () => 10 });
+  writeFileSync(join(repo, "chain.sh"), "echo viejo");
+  git(repo, "add", ".");
+  execFileSync("git", ["commit", "-q", "-m", "viejo"], { cwd: repo, env: { ...gitEnv, GIT_COMMITTER_DATE: "2020-01-01T00:00:00Z", GIT_AUTHOR_DATE: "2020-01-01T00:00:00Z" } });
+  const old = git(repo, "rev-parse", "HEAD");
+  for (let i = 0; i < 21; i += 1) {
+    const sha = commit(repo, `echo n${i}`);
+    await queue.submit({ repo: "terminus", commit: sha, command: "pnpm verify", bundle: bundle(repo, dir) });
+  }
+  await queue.settled();
+  git(repo, "update-ref", "refs/heads/viejo", old);
+  git(repo, "update-ref", "refs/verify-remote/t", old);
+  const file = join(dir, "old.bundle");
+  git(repo, "bundle", "create", "-q", file, "refs/verify-remote/t");
+  const run = await queue.submit({ repo: "terminus", commit: old, command: "pnpm verify", bundle: file });
+  await queue.settled();
+  assert.equal(queue.readRun(run.id).state, "passed", readFileSync(queue.logPath(run.id), "utf8"));
+  assert.ok(queue.knownCommits("terminus").length <= 22);
+});
+
+test("un repo con tope de carriles no pasa de él y usa sus núcleos; los demás siguen", { skip }, async (t) => {
+  const { dir, repo, home } = workspace(t);
+  const trace = join(dir, "trace");
+  const engine = { ...engineConfig.repos.engine, lanes: 1, cpus: 4, fresh: [], receipt: undefined, artifacts: [], jobs: { verify: { argv: ["bash", "chain.sh", "{jobs}"], options: { "--all": null } } } };
+  const budget = { lanes: 3, repos: { engine, terminus: config.repos.terminus } };
+  const queue = createQueue({ home, config: budget, sameUser: true, cpus: 8, diskPercent: () => 10 });
+  const chain = (name) => `echo "inicio-${name} $1" >> ${trace}; sleep 0.6; echo "fin-${name}" >> ${trace}`;
+  for (const name of ["m1", "m2"]) {
+    const sha = commit(repo, chain(name));
+    await queue.submit({ repo: "engine", commit: sha, command: "verify", bundle: bundle(repo, dir) });
+  }
+  const app = commit(repo, `echo "inicio-app" >> ${trace}; sleep 0.3; echo "fin-app" >> ${trace}`);
+  await queue.submit({ repo: "terminus", commit: app, command: "pnpm verify", bundle: bundle(repo, dir) });
+  await queue.settled();
+  const lines = readFileSync(trace, "utf8").trim().split("\n");
+  assert.ok(lines.indexOf("inicio-m2 4") > lines.indexOf("fin-m1"), "el motor corre de a uno");
+  assert.ok(lines.indexOf("inicio-app") < lines.indexOf("fin-m1"), "la app no espera al motor");
+  assert.ok(lines.includes("inicio-m1 4"), "el motor recibe sus 4 núcleos, no 8/3");
+  assert.throws(() => checkConfig({ lanes: 2, repos: { r: { ...engine, lanes: 3 } } }), /lanes/);
+});
+
+test("los carriles cuelgan de lanesRoot y origin/dev apunta a la base de la corrida", { skip }, async (t) => {
+  const { dir, repo, home } = workspace(t);
+  const lanesRoot = join(dir, "vl");
+  const queue = createQueue({ home, config: engineConfig, sameUser: true, diskPercent: () => 10, lanesRoot });
+  const root = commit(repo, "true");
+  const sha = commit(repo, 'echo "home:$HOME tmp:$TMPDIR"; echo "dev:$(git rev-parse --verify -q refs/remotes/origin/dev)"');
+  const based = await queue.submit({ repo: "engine", commit: sha, command: "verify", base: root, bundle: bundle(repo, dir) });
+  await queue.settled();
+  const log = readFileSync(queue.logPath(based.id), "utf8");
+  assert.equal(queue.readRun(based.id).state, "passed", log);
+  assert.ok(queue.lanePaths("engine").checkout.startsWith(lanesRoot));
+  assert.match(log, new RegExp(`home:${lanesRoot}/0/engine/h tmp:${lanesRoot}/0/engine/t`));
+  assert.match(log, new RegExp(`dev:${root}`));
+  const all = await queue.submit({ repo: "engine", commit: sha, command: "verify --all" });
+  await queue.settled();
+  assert.match(readFileSync(queue.logPath(all.id), "utf8"), /dev:\n/, "sin base no queda un origin/dev de otra corrida");
+});
+
+test("una corrida del motor con más de 64 logs los copia todos", { skip }, async (t) => {
+  const { dir, repo, home } = workspace(t);
+  const queue = createQueue({ home, config: engineConfig, sameUser: true, diskPercent: () => 10 });
+  const { id } = await engineRun(t, queue, repo, dir, "mkdir -p target/verify/r1; for i in $(seq 70); do echo $i > target/verify/r1/e$i.log; done");
+  assert.equal(readdirSync(join(home, "runs", id, "artifacts/target/verify/r1")).length, 70);
+});

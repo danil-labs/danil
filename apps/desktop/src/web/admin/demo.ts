@@ -7,6 +7,7 @@ import type { PolicyArea, PolicyPull, PolicySource } from "./PolicyFlow";
 import type { PolicyRule } from "./Rules";
 import { sharedDemo } from "./Shared";
 import type { UsagePersonRow, UsageReport, UsageSource } from "./Usage";
+import type { UsageDay, UsageMe, UsageMeSource, UsageTotals } from "../../features/settings/usage-me";
 
 const REVISION = "9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f1a0b9c8d7e6f5a4b3c2d1e0f9a8b";
 const NEXT = "1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c";
@@ -116,8 +117,80 @@ const organizationOf = (plan: string, enterprise: boolean, workspace: string, ot
   identity: enterprise ? [{ id: "sso", value: "Activo con Okta" }, { id: "domains", value: "ejemplo.mx" }, { id: "retention", value: "365 días" }] : undefined,
 });
 
+const demoDay = (date: string, weight: number): UsageDay => {
+  const turns = weight * 6;
+  const missing = weight === 4 ? turns : weight % 3 === 0 ? 2 : 0;
+  return {
+    date,
+    turns,
+    sessions: Math.max(1, Math.round(weight / 2)),
+    duration_ms: turns * 45_000,
+    measured_turns: turns - missing,
+    turns_without_cost: missing,
+    tokens: { input_uncached: weight * 9_000, cache_read: weight * 60_000, cache_write: weight * 2_500, output: weight * 7_000, reasoning: weight * 900 },
+    cost_usd: weight === 4 ? null : weight * 0.42,
+  };
+};
+
+const demoShare = (totals: UsageTotals, part: number): UsageTotals => ({
+  turns: Math.round(totals.turns * part),
+  sessions: Math.round(totals.sessions * part),
+  duration_ms: Math.round(totals.duration_ms * part),
+  measured_turns: Math.round(totals.measured_turns * part),
+  turns_without_cost: Math.round(totals.turns_without_cost * part),
+  tokens: {
+    input_uncached: Math.round(totals.tokens.input_uncached * part),
+    cache_read: Math.round(totals.tokens.cache_read * part),
+    cache_write: Math.round(totals.tokens.cache_write * part),
+    output: Math.round(totals.tokens.output * part),
+    reasoning: Math.round(totals.tokens.reasoning * part),
+  },
+  cost_usd: totals.cost_usd === null ? null : totals.cost_usd * part,
+});
+
+function usageMeDemoReport(days: number): UsageMe {
+  const daily = Array.from({ length: days }, (_, i) =>
+    demoDay(new Date(Date.UTC(2026, 10, 4 - (days - 1 - i))).toISOString().slice(0, 10), i === days - 3 ? 5 : 1 + ((i * 3) % 4)),
+  );
+  const totals: UsageTotals = {
+    turns: 0, sessions: 0, duration_ms: 0, measured_turns: 0, turns_without_cost: 0,
+    tokens: { input_uncached: 0, cache_read: 0, cache_write: 0, output: 0, reasoning: 0 }, cost_usd: null,
+  };
+  for (const day of daily) {
+    totals.turns += day.turns;
+    totals.sessions += day.sessions;
+    totals.duration_ms += day.duration_ms;
+    totals.measured_turns += day.measured_turns;
+    totals.turns_without_cost += day.turns_without_cost;
+    totals.tokens.input_uncached += day.tokens.input_uncached;
+    totals.tokens.cache_read += day.tokens.cache_read;
+    totals.tokens.cache_write += day.tokens.cache_write;
+    totals.tokens.output += day.tokens.output;
+    totals.tokens.reasoning += day.tokens.reasoning;
+    if (day.cost_usd !== null) totals.cost_usd = (totals.cost_usd ?? 0) + day.cost_usd;
+  }
+  return {
+    account_id: 1,
+    plan: { key: "personal", source: "none", paid: false },
+    window: { days, since: daily[0]?.date ?? "", until: daily.at(-1)?.date ?? "" },
+    totals,
+    daily,
+    models: [
+      { ...demoShare(totals, 0.62), agent: "claude", model: "claude-sonnet-4-5" },
+      { ...demoShare(totals, 0.38), agent: "codex", model: null },
+    ],
+    machines: [
+      { ...demoShare(totals, 0.7), machine_id: "cmp_aaaaaaaaaaaaaaaaaaaaaaaaaa", origin: "vm" },
+      { ...demoShare(totals, 0.3), machine_id: "cmp_bbbbbbbbbbbbbbbbbbbbbbbbbb", origin: "local" },
+    ],
+    truncated: false,
+  };
+}
+
+const usageMeDemo: UsageMeSource = { get: async (days) => usageMeDemoReport(days) };
+
 /** Lo de una cuenta personal en Configuración. */
-export const personalDemo = { usage: usageDemo(true), plan: async () => ({ name: "Personal", detail: "1 workspace" }) };
+export const personalDemo = { usageMe: usageMeDemo, plan: async () => ({ name: "Personal", detail: "1 workspace" }) };
 
 /** Las cuatro cuentas de la vista previa; `account` llega de `?account=`. */
 export function adminDemo(account: string | null, workspace: string, other: string, internalPolicy: boolean): Pick<AdminSource, "memberships" | "active" | "shared" | "workspace" | "auditLog" | "usage" | "members" | "rules" | "policy" | "organization"> {

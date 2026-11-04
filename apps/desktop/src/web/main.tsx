@@ -50,6 +50,7 @@ import { webAccountEmails } from "./account-emails";
 import { authLocation } from "./auth/return";
 import { adminPageCapability, personalAccountCapability } from "./admin/capability";
 import { agentsSession } from "./attention/workspace-sources";
+import { webUsageMe } from "../features/settings/usage-source";
 import { webGithubAccount } from "./github-account";
 import { type Account, type Listing, SLOT_PREFIX, loadAccounts, ownerOf, pickAccount, readListings, rememberLast, removeExtra, savedListings } from "./accounts";
 import { forgetShellCache, setShellCacheScope } from "../lib/shellCache";
@@ -63,6 +64,9 @@ import { announceStaleTab, updateNoticeReady } from "./update-state";
 declare const __TERMINUS_VERSION__: string;
 /** Set at build time in `vite.config.ts`; all public values. */
 declare const __TERMINUS_WEB__: WebSettings;
+
+/** La vista de consumo propio, en su trozo: solo la carga quien abre la pestaña. */
+const UsageView = lazy(() => import("../features/settings/UsageView"));
 
 type WebSettings = { endpoint: string; supabaseUrl: string; supabaseKey: string; login: string; workos?: boolean };
 
@@ -275,6 +279,13 @@ function mountApp(computers: Computer[], base: Base, before?: (id: string) => ()
     accountAuditLog: import.meta.env.TERMINUS_ALPHA && base.supabaseUrl && base.supabaseKey ? webAuditLog(base.supabaseUrl, base.supabaseKey, base.getToken, base.onUnauthorized) : undefined,
     adminPage: import.meta.env.TERMINUS_ALPHA ? adminPageCapability({ getToken: async () => await base.getToken(), unauthorized: async () => base.refresh ? await base.refresh() : false }, "https://harness.danil.ai/") : undefined,
     personalAccount: import.meta.env.TERMINUS_ALPHA ? personalAccountCapability({ getToken: async () => await base.getToken(), unauthorized: async () => base.refresh ? await base.refresh() : false }) : undefined,
+    accountUsage: import.meta.env.TERMINUS_ALPHA
+      ? () => (
+          <Suspense fallback={null}>
+            <UsageView source={webUsageMe(base.endpoint, base.getToken)} />
+          </Suspense>
+        )
+      : undefined,
     accountMemory: { endpoint: base.endpoint, getToken: token },
     accountCredentials: { endpoint: base.endpoint, getToken: token },
     machineName: (id) => fleet.name(id),

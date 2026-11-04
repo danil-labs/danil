@@ -12,6 +12,7 @@ use std::net::{TcpListener, TcpStream};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Mutex, OnceLock};
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
+use tauri::Emitter;
 
 const ENTRY: &str = "https://alfa-app.danil.ai";
 const LOGIN_WAIT: Duration = Duration::from_secs(600);
@@ -501,6 +502,11 @@ fn bind(app: &tauri::AppHandle, account: &Option<String>, value: &Live) -> Resul
         .lock()
         .unwrap_or_else(std::sync::PoisonError::into_inner)
         .insert(key(account));
+    // La ventana ofrece sincronizar el workspace abierto (`DanilWorkspaceStep`).
+    let _ = app.emit(
+        "agents-session",
+        json!({ "state": "signed_in", "account": key(account) }),
+    );
     Ok(())
 }
 
@@ -677,6 +683,10 @@ fn sign_out(app: &tauri::AppHandle, account: &Option<String>) -> Result<(), Valu
         .lock()
         .unwrap_or_else(std::sync::PoisonError::into_inner)
         .remove(&name);
+    let _ = app.emit(
+        "agents-session",
+        json!({ "state": "signed_out", "account": name }),
+    );
     Ok(())
 }
 
@@ -698,9 +708,11 @@ fn allowed_path(path: &str) -> bool {
             .all(|b| b.is_ascii_alphanumeric() || matches!(b, b'/' | b'_' | b'-' | b'.'))
 }
 
-/// Rutas de lectura de Harness en Computers. Lista cerrada, no un proxy abierto.
-fn allowed_org_path(path: &str) -> bool {
-    (path == "/v1/org" || path.starts_with("/v1/org/"))
+/// Rutas de lectura de la persona en Computers. Lista cerrada, no un proxy abierto.
+fn allowed_person_path(path: &str) -> bool {
+    let org = path == "/v1/org" || path.starts_with("/v1/org/");
+    let usage = path == "/v1/usage/me";
+    (org || usage)
         && path.len() <= 512
         && !path.contains("..")
         && path
@@ -862,22 +874,32 @@ fn directory_get(endpoint: &str, token: &str) -> Result<(u16, String), Value> {
     Ok((status, body))
 }
 
-/// `POST` a una ruta de Computers con el JWT de la persona. `path` lo arma Rust.
-fn person_post(
+/// `POST` con `body` o `DELETE` sin él, a una ruta de Computers con el JWT de la
+/// persona. `path` lo arma Rust.
+fn person_send(
     endpoint: &str,
     token: &str,
     path: &str,
-    body: &Value,
+    body: Option<&Value>,
 ) -> Result<(u16, Value), Value> {
-    let mut response = agent()
-        .post(&format!("{endpoint}{path}"))
-        .header("Authorization", &format!("Bearer {token}"))
-        .header("Accept", "application/json")
-        .send_json(body)
-        .map_err(|e| match e {
-            ureq::Error::Timeout(_) => error("bff_timeout"),
-            _ => error("unavailable"),
-        })?;
+    let url = format!("{endpoint}{path}");
+    let authorization = format!("Bearer {token}");
+    let sent = match body {
+        Some(body) => agent()
+            .post(&url)
+            .header("Authorization", &authorization)
+            .header("Accept", "application/json")
+            .send_json(body),
+        None => agent()
+            .delete(&url)
+            .header("Authorization", &authorization)
+            .header("Accept", "application/json")
+            .call(),
+    };
+    let mut response = sent.map_err(|e| match e {
+        ureq::Error::Timeout(_) => error("bff_timeout"),
+        _ => error("unavailable"),
+    })?;
     let status = response.status().as_u16();
     let text = response
         .body_mut()
@@ -924,31 +946,93 @@ pub(super) fn agents_session_link(
     }
     let body = json!({ "danil_workspace_id": danil_workspace_id });
     let path = format!("/v1/workspaces/{id}/danil-workspace");
-    let (_, endpoint) = client(&app, &account)?;
-    let name = key(&account);
-    let mut session = checked(&app, &account)?;
-    let mut got = person_post(&endpoint, &session.access_token, &path, &body)?;
-    // Computers rechazó el token antes de actuar: renovar y repetir una vez no duplica nada.
-    if got.0 == 401 {
-        session = access(&app, &name, true)?;
-        got = person_post(&endpoint, &session.access_token, &path, &body)?;
-    }
-    match got {
+    match person_call(&app, &account, &path, Some(&body))? {
         (200, value) => Ok(json!({ "danil_workspace_id": value["danil_workspace_id"] })),
         (_, value) => Err(computers_error(&value, "link_failed")),
     }
 }
 
-/// Lectura de Harness con la sesión de persona de la ventana. El motor no participa y
-/// el JavaScript nunca ve el token. Solo GET y una lista cerrada de rutas.
+/// `person_send` con la sesión de la ventana de esa cuenta. Computers rechazó el token
+/// antes de actuar: renovar y repetir una vez no duplica nada.
+fn person_call(
+    app: &tauri::AppHandle,
+    account: &Option<String>,
+    path: &str,
+    body: Option<&Value>,
+) -> Result<(u16, Value), Value> {
+    let (_, endpoint) = client(app, account)?;
+    let name = key(account);
+    let mut session = checked(app, account)?;
+    let mut got = person_send(&endpoint, &session.access_token, path, body)?;
+    if got.0 == 401 {
+        session = access(app, &name, true)?;
+        got = person_send(&endpoint, &session.access_token, path, body)?;
+    }
+    Ok(got)
+}
+
+/// Sube el workspace: crea el workspace personal de Danil de quien llama, con el nombre de
+/// este, y lo enlaza (`{create: true}`). Si ya tiene uno propio, `personal_workspace_exists`.
+#[tauri::command(async)]
+pub(super) fn agents_session_create_danil_workspace(
+    app: tauri::AppHandle,
+    account: Option<String>,
+    workspace_id: String,
+) -> Result<Value, Value> {
+    let id = workspace_segment(&workspace_id).ok_or_else(|| error("invalid_request"))?;
+    let path = format!("/v1/workspaces/{id}/danil-workspace");
+    let (status, value) = person_call(&app, &account, &path, Some(&json!({ "create": true })))?;
+    created(status, &value)
+}
+
+fn created(status: u16, value: &Value) -> Result<Value, Value> {
+    match status {
+        200 | 201 => Ok(json!({
+            "danil_workspace_id": value["danil_workspace_id"],
+            "created": value["created"],
+        })),
+        _ => Err(computers_error(value, "create_failed")),
+    }
+}
+
+/// Quita el enlace en Computers (`DELETE /v1/workspaces/:id/danil-workspace`, idempotente).
+/// Un 404 es que el registro no es de esta persona: no hay enlace suyo que quitar.
+#[tauri::command(async)]
+pub(super) fn agents_session_unlink(
+    app: tauri::AppHandle,
+    account: Option<String>,
+    workspace_id: String,
+) -> Result<(), Value> {
+    let id = workspace_segment(&workspace_id).ok_or_else(|| error("invalid_request"))?;
+    let path = format!("/v1/workspaces/{id}/danil-workspace");
+    let (status, value) = person_call(&app, &account, &path, None)?;
+    unlinked(status, &value)
+}
+
+fn unlinked(status: u16, value: &Value) -> Result<(), Value> {
+    match status {
+        200 | 204 | 404 => Ok(()),
+        _ => Err(computers_error(value, "unlink_failed")),
+    }
+}
+
+/// Renueva ya el token de la ventana: tras entrar a otro workspace de Danil, el claim
+/// `active_account_id` nuevo llega así.
+#[tauri::command(async)]
+pub(super) fn agents_session_refresh(app: tauri::AppHandle, account: Option<String>) -> bool {
+    access(&app, &key(&account), true).is_ok()
+}
+
+/// Lectura de Harness y del consumo propio con la sesión de persona de la ventana.
+/// El motor no participa y el JavaScript nunca ve el token. Solo GET y una lista
+/// cerrada de rutas.
 #[tauri::command(async)]
 pub(super) fn harness_org_fetch(
     app: tauri::AppHandle,
     account: Option<String>,
-    path: String,
     query: Option<String>,
 ) -> Result<Value, Value> {
-    if !allowed_org_path(&path) {
+    if !allowed_person_path(&path) {
         return Err(error("invalid_request"));
     }
     let query = query.unwrap_or_default();
@@ -1094,13 +1178,16 @@ mod tests {
     }
 
     #[test]
-    fn harness_paths_are_a_closed_read_list() {
-        assert!(allowed_org_path("/v1/org/me"));
-        assert!(allowed_org_path("/v1/org/usage"));
-        assert!(allowed_org_path("/v1/org/activity"));
-        assert!(!allowed_org_path("/v1/me/usage"));
-        assert!(!allowed_org_path("/v1/org/../v1/me"));
-        assert!(!allowed_org_path("/v1/org/usage?x=1"));
+    fn person_paths_are_a_closed_read_list() {
+        assert!(allowed_person_path("/v1/org/me"));
+        assert!(allowed_person_path("/v1/org/usage"));
+        assert!(allowed_person_path("/v1/org/activity"));
+        assert!(allowed_person_path("/v1/usage/me"));
+        assert!(!allowed_person_path("/v1/me/usage"));
+        assert!(!allowed_person_path("/v1/usage/me/other"));
+        assert!(!allowed_person_path("/v1/org/../v1/me"));
+        assert!(!allowed_person_path("/v1/org/usage?x=1"));
+        assert!(!allowed_person_path("/v1/usage/me?x=1"));
     }
 
     #[test]
@@ -1196,6 +1283,36 @@ mod tests {
         assert_eq!(
             computers_error(&Value::Null, "link_failed")["detail"],
             "link_failed"
+        );
+    }
+
+    #[test]
+    fn uploading_keeps_the_id_or_the_code() {
+        let made = created(201, &json!({"danil_workspace_id": 476, "created": true})).unwrap();
+        assert_eq!(made["danil_workspace_id"], 476);
+        assert_eq!(made["created"], true);
+        let exists = json!({"error":{"code":"personal_workspace_exists","danil_workspace_id":476}});
+        assert_eq!(
+            created(409, &exists).unwrap_err()["detail"],
+            "personal_workspace_exists"
+        );
+        assert_eq!(
+            created(502, &Value::Null).unwrap_err()["detail"],
+            "create_failed"
+        );
+    }
+
+    #[test]
+    fn unlinking_twice_or_without_a_record_is_done() {
+        assert!(unlinked(204, &Value::Null).is_ok());
+        assert!(unlinked(404, &json!({"error":"not_found"})).is_ok());
+        assert_eq!(
+            unlinked(403, &json!({"error":"not_account_admin"})).unwrap_err()["detail"],
+            "not_account_admin"
+        );
+        assert_eq!(
+            unlinked(502, &Value::Null).unwrap_err()["detail"],
+            "unlink_failed"
         );
     }
 

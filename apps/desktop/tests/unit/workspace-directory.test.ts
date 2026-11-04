@@ -68,13 +68,14 @@ test("a Danil workspace already on another machine is not offered; the current o
   assert.deepEqual(linkCandidates([current, free, taken, entry("w:local")], "w").map((e) => e.key), ["a:2", "a:3"]);
 });
 
-test("only an owner or admin of an organization can create; a personal account cannot", () => {
-  const org = { id: 1, name: "Acme" };
-  assert.equal(canCreateWorkspace([entry("a:1", { kind: "organization", organization: org, role: "member" })]), false);
-  assert.equal(canCreateWorkspace([entry("a:1", { kind: "organization", organization: org, role: "owner" })]), true);
-  assert.equal(canCreateWorkspace([entry("a:1", { kind: "organization", organization: org, role: "admin" })]), true);
-  assert.equal(canCreateWorkspace([entry("a:1", { kind: "personal", role: "owner" })]), false);
-  assert.equal(canCreateWorkspace([entry("a:1", { kind: "organization", organization: org, role: "owner", support: { level: "read", expires_at: "x" } })]), false);
+test("anyone can upload a workspace of theirs that is not in the cloud yet, and nothing else", () => {
+  const local = entry("w:w", { kind: "terminus_only", workspace_id: "w", owner: true, role: null });
+  assert.equal(canCreateWorkspace([local], "w"), true);
+  assert.equal(canCreateWorkspace([local], "otro"), false);
+  assert.equal(canCreateWorkspace([{ ...local, danil_workspace_id: 476 }], "w"), false, "already synced");
+  assert.equal(canCreateWorkspace([{ ...local, owner: false }], "w"), false, "someone else's record");
+  assert.equal(canCreateWorkspace([{ ...local, support: { level: "write", expires_at: "x" } }], "w"), false, "support access");
+  assert.equal(canCreateWorkspace([entry("a:1", { kind: "organization", organization: { id: 1, name: "Acme" }, role: "owner" })], "w"), false);
 });
 
 test("link refusals are grouped for the text the person reads", () => {
