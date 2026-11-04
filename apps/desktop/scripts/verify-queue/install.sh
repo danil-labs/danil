@@ -18,6 +18,19 @@ for user in "${runners[@]}"; do
   for deny in /etc/cron.deny /etc/at.deny; do grep -qx "$user" "$deny" 2>/dev/null || echo "$user" >> "$deny"; done
 done
 
+# Nada puede escribir en los carriles mientras se instala: se para la cola y lo que corría con ella
+# (KillMode=process deja vivos a los hijos de sudo). La cola vuelve a arrancar al salir, también si
+# algo falla a la mitad; su recover() marca como interrumpido lo que se cortó.
+systemctl stop verify-queue 2>/dev/null || true
+trap 'systemctl daemon-reload; systemctl restart verify-queue' EXIT
+for user in "${runners[@]}"; do
+  for _ in $(seq 20); do
+    pkill -KILL -u "$user" 2>/dev/null || true
+    pgrep -u "$user" >/dev/null || break
+    sleep 0.5
+  done
+done
+
 # Una toolchain de root y de solo lectura: el HOME de verify es 0750, y una rama no puede envenenarla.
 # El registro de cargo de cada carril vive en lanes/<n>/<repo>/cargo.
 if [ ! -x "$rust/cargo/bin/rustup" ]; then
@@ -47,6 +60,10 @@ install -d -o verify -g verify -m 0711 "$state/lanes"
 lanes=$(node -e 'console.log(require(process.argv[1]).lanes ?? 1)' "$here/repos.json")
 for repo in $(node -e 'const c = require(process.argv[1]); for (const [r, p] of Object.entries(c.repos)) if (p.user) console.log(`${r}:${p.user}`)' "$here/repos.json"); do
   name=${repo%%:*} base=${repo#*:}
+  # El git del carril lee el espejo, que es de verify. La cola ya pasa safe.directory en su config
+  # global; esta entrada del sistema cubre cualquier otro git de los usuarios de corrida.
+  mirror="$state/repos/$name/mirror"
+  git config --system --get-all safe.directory 2>/dev/null | grep -qxF "$mirror" || git config --system --add safe.directory "$mirror"
   if [ -d "$state/repos/$name" ]; then
     chgrp -R verify-runners "$state/repos/$name"
     find "$state/repos/$name" -type d -exec chmod g+rxs {} +
@@ -83,4 +100,4 @@ systemctl daemon-reload
 chmod 0660 /run/tailscale/tailscaled.sock
 systemctl enable verify-egress verify-queue >/dev/null 2>&1
 systemctl restart verify-egress
-systemctl restart verify-queue
+# verify-queue arranca en el trap de salida.
