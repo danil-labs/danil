@@ -15,6 +15,41 @@ const whatOf = (e: unknown): unknown => {
   return e;
 };
 
+/** Texto para personas: con espacios, no una clave (`cli.error.x`) ni un código. */
+const humano = (v: unknown): v is string => readable(v) && /\s/.test(v.trim());
+
+/**
+ * El motivo del rechazo del motor (`detail.reason`, `detail.recovery`, o `message` de una ficha plana),
+ * cruda o envuelta por `proxy.rs` o el relay; sin esto se pinta solo la frase o «[object Object]».
+ */
+export function explicacionDelMotor(e: unknown): string | null {
+  const niveles: Record<string, unknown>[] = [];
+  let nivel: unknown = e;
+  for (let i = 0; i < 3 && record(nivel); i++) {
+    niveles.push(nivel);
+    nivel = nivel.detail;
+  }
+  const primero = (campo: string, plano = false) => {
+    for (const n of niveles) {
+      if (plano && n instanceof Error) continue;
+      if (humano(n[campo])) return (n[campo] as string).trim();
+    }
+    return null;
+  };
+  const partes = [primero("reason") ?? primero("message", true), primero("recovery")].filter(
+    (p, i, all): p is string => !!p && all.indexOf(p) === i,
+  );
+  return partes.length ? partes.join("\n") : null;
+}
+
+/** La frase de la ventana seguida de la explicación del motor, sin repetirla. */
+function conExplicacion(what: Prosa, e: unknown): Prosa {
+  const extra = explicacionDelMotor(e);
+  if (!extra) return what;
+  const texto = prosa(what);
+  return texto.includes(extra) ? texto : `${texto}\n${extra}`;
+}
+
 /** El diagnóstico conserva los objetos y los Error sin depender de su toString. */
 function diagnostic(e: unknown): string {
   if (typeof e === "string") return readable(e) ? e : "";
@@ -48,16 +83,17 @@ export function asFailure(e: unknown, datos?: Data): Failure {
   const envelope = record(e) && "what" in e;
   const what = (envelope || claveDe(e)) && phrase(whatOf(e), datos);
   return {
-    what: what || { clave: "common.failure.generic" },
+    what: what ? conExplicacion(what, e) : { clave: "common.failure.generic" },
     detail: diagnostic(envelope ? e.detail : e),
   };
 }
 
 export function prosaDe(e: unknown, datos?: Data): string {
   const what = phrase(whatOf(e), datos);
-  if (what) return prosa(what);
+  if (what) return prosa(conExplicacion(what, e));
   const fallback = t("common.failure.generic");
-  return record(e) && readable(e.message) ? `${e.message}\n${fallback}` : fallback;
+  const extra = explicacionDelMotor(e) ?? (record(e) && readable(e.message) ? e.message : null);
+  return extra ? `${extra}\n${fallback}` : fallback;
 }
 
 export function detalleDe(e: unknown): string {
