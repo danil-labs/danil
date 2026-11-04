@@ -31,7 +31,8 @@ test("sin --apply solo lista", { skip }, (t) => {
   const dir = root(t);
   const old = target(dir, "viejo", 48);
   const output = execFileSync(process.execPath, [script, "--root", dir], { encoding: "utf8" });
-  assert.match(output, /se borraría/);
+  // Con un compilador ilegible de otro carril vivo, «en uso» también es correcto.
+  assert.match(output, /se borraría|en uso \(pid/);
   assert.equal(existsSync(old), true);
 });
 
@@ -64,8 +65,10 @@ test("un cargo vivo en el worktree la protege, según ps y /proc/*/cwd", { skip 
   const child = spawn(fake, ["30"], { cwd: join(worktree, "apps") });
   t.after(() => child.kill("SIGKILL"));
   for (let i = 0; i < 100 && !processes().some((proc) => String(proc.pid) === String(child.pid) && proc.comm.startsWith("cargo")); i += 1) await new Promise((done) => setTimeout(done, 20));
-  assert.equal(String(scan(dir)[0].heldBy), String(child.pid));
-  assert.deepEqual(sweep(dir).deleted, []);
+  // Un compilador de otro usuario (otro carril de la cola) tiene /proc/<pid>/cwd ilegible y retendría todo.
+  const running = processes().filter((proc) => proc.cwd || String(proc.pid) === String(child.pid));
+  assert.equal(String(scan(dir, { running })[0].heldBy), String(child.pid));
+  assert.deepEqual(sweep(dir, { running }).deleted, []);
   assert.equal(existsSync(old), true);
 });
 

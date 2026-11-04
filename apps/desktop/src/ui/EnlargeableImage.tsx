@@ -1,13 +1,14 @@
-import { createEffect, createSignal, For, lazy, Show, type JSX } from "solid-js";
+import { createSignal, lazy, Show, type JSX } from "solid-js";
 import ChevronLeft from "lucide-solid/icons/chevron-left";
 import ChevronRight from "lucide-solid/icons/chevron-right";
 import X from "lucide-solid/icons/x";
 import { t } from "../lib/i18n";
-import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious, type EmblaApi } from "./Carousel";
 import { Dialog, DialogContent, DialogTitle } from "./Dialog";
 
 // Solo dentro del diálogo ampliado: no entra en la carga inicial.
 const ZoomableImage = lazy(() => import("../features/viewers/ImageViewer"));
+// El carrusel (embla) solo hace falta con varias imágenes: tampoco entra.
+const ImageStrip = lazy(() => import("./ImageStrip"));
 
 /**
  * La miniatura es una caja fija; el clic la abre con el zoom del visor.
@@ -40,47 +41,33 @@ export function CarruselDeImagenes(props: { srcs: string[]; alt?: string }) {
   const adelante = () => {
     if (i() < total() - 1) setIndice(i() + 1);
   };
-  const [tira, setTira] = createSignal<EmblaApi>();
-  const visibles = () => Math.min(total(), 4);
-  createEffect(() => {
-    tira()?.scrollTo(i());
-  });
   return (
     <Show when={src()}>
-      <Carousel
-        class="min-w-0 max-w-full"
-        style={{ width: `min(100%, calc(${visibles()} * 12.5rem - 0.5rem))` }}
-        options={() => ({ align: "start", containScroll: "trimSnaps", dragFree: true })}
-        setApi={setTira}
+      <Show
+        when={varias()}
+        fallback={
+          <Miniatura
+            src={src()}
+            alt={nombre()}
+            marcada={abierta()}
+            onOpen={() => {
+              setIndice(0);
+              setAbierta(true);
+            }}
+          />
+        }
       >
-        <CarouselContent>
-          <For each={props.srcs}>
-            {(url, index) => (
-              <CarouselItem class="basis-48">
-                <button
-                  type="button"
-                  class="block size-48 rounded-md focus-visible:outline-2 focus-visible:outline-primary"
-                  title={t("chat.image.open")}
-                  aria-label={t("chat.image.open")}
-                  onClick={() => {
-                    setIndice(index());
-                    setAbierta(true);
-                  }}
-                >
-                  <img
-                    src={url}
-                    alt={nombre()}
-                    class="size-48 rounded-md border border-border bg-surface object-contain"
-                    classList={{ "ring-2 ring-primary": abierta() && i() === index() }}
-                  />
-                </button>
-              </CarouselItem>
-            )}
-          </For>
-        </CarouselContent>
-        <CarouselPrevious aria-label={t("chat.image.previous")} class="disabled:hidden" />
-        <CarouselNext aria-label={t("chat.image.next")} class="disabled:hidden" />
-      </Carousel>
+        <ImageStrip
+          srcs={props.srcs}
+          alt={nombre()}
+          actual={i()}
+          abierta={abierta()}
+          onOpen={(index) => {
+            setIndice(index);
+            setAbierta(true);
+          }}
+        />
+      </Show>
       <Dialog open={abierta()} onOpenChange={setAbierta}>
         <DialogContent
           class="flex h-[85vh] w-full max-w-[1100px] flex-col gap-2"
@@ -135,6 +122,26 @@ export function CarruselDeImagenes(props: { srcs: string[]; alt?: string }) {
         </DialogContent>
       </Dialog>
     </Show>
+  );
+}
+
+/** La miniatura sola: el botón que abre el diálogo. La tira repite este marcado. */
+export function Miniatura(props: { src: string; alt: string; marcada: boolean; onOpen: () => void }) {
+  return (
+    <button
+      type="button"
+      class="block size-48 rounded-md focus-visible:outline-2 focus-visible:outline-primary"
+      title={t("chat.image.open")}
+      aria-label={t("chat.image.open")}
+      onClick={() => props.onOpen()}
+    >
+      <img
+        src={props.src}
+        alt={props.alt}
+        class="size-48 rounded-md border border-border bg-surface object-contain"
+        classList={{ "ring-2 ring-primary": props.marcada }}
+      />
+    </button>
   );
 }
 

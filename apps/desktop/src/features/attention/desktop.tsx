@@ -5,8 +5,8 @@
  */
 import { createRoot, createSignal, Show, Suspense, lazy, type JSX } from "solid-js";
 import type { DirectoryEntry } from "@terminus/computers";
-import { enterWorkspace } from "../../../../../packages/attention/src/workspace-account.ts";
 import { invoke } from "../../lib/invoke.ts";
+import { windowSession } from "./desktop-session";
 import { listen } from "../../lib/serviceEvents";
 import { t } from "../../lib/i18n";
 import { capabilities, setCapabilities, type Capabilities } from "../../lib/platform";
@@ -17,6 +17,7 @@ import { loadedConversations, requestConversation } from "../../web/attention/lo
 import { bffTransport, setBffTransport, type BffTransport } from "../../web/attention/transport";
 import type { AgentsSession } from "../../web/attention/workspace-sources";
 import { Button } from "../../ui/Button";
+import { desktopUsageMe } from "../settings/usage-source";
 import "../../web/phrases";
 
 type User = { user_id: string; email: string | null; name: string | null };
@@ -29,6 +30,9 @@ export type DesktopStatus =
 type Reply = { status: number; content_type: string; body: string; proxy: string | null; route_missing: boolean };
 
 const PREFIX = "/danil-bff";
+
+/** La vista de consumo propio, en su trozo: solo la carga quien abre la pestaña. */
+const UsageView = lazy(() => import("../settings/UsageView"));
 
 const store = createRoot(() => {
   const [status, setStatus] = createSignal<DesktopStatus>({ state: "loading" });
@@ -101,28 +105,8 @@ async function windowFetch(input: RequestInfo | URL, init: RequestInit = {}): Pr
   return new Response(empty ? null : reply.body, { status: reply.status, headers: reply.content_type ? { "Content-Type": reply.content_type } : {} });
 }
 
-let workspaceKey: string | null = null;
 const session: AgentsSession & { subscribe: (clear: () => void) => () => void } = {
-  // Lo lee `sessionFetch` para la cabecera, que `windowFetch` descarta.
-  getToken: async () => "window",
-  unauthorized: async () => false,
-  workspaceKey: () => workspaceKey,
-  rememberWorkspace(value) { workspaceKey = value; },
-  async reenter() {
-    if (!workspaceKey) return false;
-    const bff = bffTransport();
-    try {
-      await enterWorkspace(
-        { getToken: async () => "window", unauthorized: async () => false },
-        bff.request,
-        bff.prefix,
-        workspaceKey,
-      );
-      return true;
-    } catch {
-      return false;
-    }
-  },
+  ...windowSession(invoke, bffTransport),
   // El directorio es de Computers y el token se queda en Rust.
   async directory() {
     const rows = await invoke<DirectoryEntry[]>("agents_session_directory", {});
@@ -277,7 +261,15 @@ export function installDesktopAttention() {
     )),
     search: { conversations: loadedConversations, open: requestConversation },
   };
-  setCapabilities({ ...capabilities(), inbox });
+  setCapabilities({
+    ...capabilities(),
+    inbox,
+    accountUsage: () => (
+      <Suspense fallback={null}>
+        <UsageView source={desktopUsageMe()} />
+      </Suspense>
+    ),
+  });
   void refreshStatus();
   // La sesión de la ventana es de la cuenta principal. Conectada: se vuelve a comprobar la persona.
   // Solo la principal desconectada la cierra; `pending`, `error` o una secundaria no la tocan.

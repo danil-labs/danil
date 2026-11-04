@@ -13,6 +13,7 @@
     "./sandbox": "./src/sandbox.ts",
     "./steps": "./src/steps.ts",
     "./command": "./src/command.ts",
+    "./slash": "./src/slash.ts",
     "./tools": "./src/tools.ts",
     "./inlineVisual": "./src/inlineVisual.ts",
     "./visual": "./src/visual.ts",

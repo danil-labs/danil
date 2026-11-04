@@ -187,7 +187,8 @@ caso("la primera preparación sana abre Conecta tu IA sin una parada técnica", 
       list_system_sessions: [],
     },
   });
-  const app = await boot("listo", "primera-sin-parada-tecnica", s.respuestas);
+  // La cuenta de Danil ya se respondió: la prueba es de la preparación.
+  const app = await boot("listo", "primera-sin-parada-tecnica", s.respuestas, undefined, { "danil.onboarding.account_choice": "local" });
   s.conectar(app);
   await sleep(1500);
 

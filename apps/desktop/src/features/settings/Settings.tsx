@@ -55,6 +55,7 @@ const ActivityLogs = lazy(() => import("./ActivityLogs"));
 const Appearance = lazy(() => import("./Appearance"));
 const ManageProjects = lazy(() => import("./ManageProjects"));
 const Agents = lazy(() => import("./Agents"));
+const AppDownloads = lazy(() => import("./AppDownloads"));
 
 /** Portal del Harness, servicio aparte; el escritorio lo abre en el navegador. */
 const HARNESS_URL = "https://harness.danil.ai/";
@@ -107,7 +108,7 @@ const pestanasDe = (
   return {
     "cuenta-danil": cuenta ? tab("cuenta-danil", () => t("settings.tab.profile"), () => <Suspense fallback={null}><DanilAccount part="profile" /></Suspense>) : undefined,
     emails: capabilities().accountEmails ? tab("emails", () => t("settings.tab.emails"), () => <Suspense fallback={null}><DanilAccount part="emails" /></Suspense>) : undefined,
-    usage: capabilities().personalAccount?.usage ? tab("usage", () => t("settings.tab.usage"), () => capabilities().personalAccount?.usage?.()) : undefined,
+    usage: capabilities().accountUsage ? tab("usage", () => t("settings.tab.usage"), () => capabilities().accountUsage?.()) : undefined,
     plan: capabilities().personalAccount?.plan ? tab("plan", () => t("settings.tab.plan"), () => capabilities().personalAccount?.plan?.()) : undefined,
     support: capabilities().personalAccount && capabilities().supportAccess ? tab("support", () => t("web.admin.support"), () => <Suspense fallback={null}><SettingsPanel><SupportAccess source={capabilities().supportAccess!} /></SettingsPanel></Suspense>) : undefined,
     security: tab("security", () => t("settings.tab.security"), null),
@@ -116,6 +117,7 @@ const pestanasDe = (
     notify: tab("notify", () => t("settings.tab.notify"), () => <SettingsPanel><SettingsSection title={t("settings.tab.notify")}><NotifyBehavior /></SettingsSection></SettingsPanel>),
     languages: tab("languages", () => t("settings.languages.title"), () => <SettingsPanel><PaquetesDeLengua /></SettingsPanel>),
     workspaces: tab("workspaces", () => t("settings.tab.workspace_bar"), () => <Workspaces />),
+    download: capabilities().appDownloads ? tab("download", () => t("web.download.tab"), () => <Suspense fallback={null}><AppDownloads /></Suspense>) : undefined,
     "proveedores-ia": tab("proveedores-ia", () => t("settings.nav.ai_providers"), () => <AIProviders superficies={superficies()} agentesEnUso={agentes.agentesEnUso} />),
     machines: cuenta ? tab("machines", () => t("settings.tab.machines"), () => <Suspense fallback={null}><DanilAccount part="machines" /></Suspense>) : undefined,
     entorno: tab("entorno", () => t("settings.nav.environment"), () => <Environment />),
@@ -313,7 +315,7 @@ export default function Settings(props: {
 
   // Sin soporte del motor activo, Secretos no se ofrece; su enlace directo sí abre el aviso.
   const [personal] = createResource(async () => (await capabilities().personalAccount?.isPersonal().catch(() => false)) ?? false);
-  const dePersonal = (p: Pestana) => ["usage", "plan", "support"].includes(p.id);
+  const dePersonal = (p: Pestana) => ["plan", "support"].includes(p.id);
   const pestanaVisible = (p: Pestana) => (dePersonal(p) ? personal() === true : p.id !== "secrets" || secretsRoute(capabilities().accountCredentials ? "worker" : "engine", machines()) !== "unsupported");
   const pedido = settingsTarget(props.panel);
   const inicial = ENTRADAS.find((e) => e.id === pedido?.entry) ?? ENTRADAS[0];

@@ -12,7 +12,9 @@ export type WorkspaceDanil = { user_id: string; email?: string | null; name?: st
  * `default_permission_mode`, el modo con que arranca una tarea nueva si la
  * persona eligió uno (`workspaces::Workspace::default_permission_mode`).
  */
-export type Workspace = { id: string; name: string; provider?: string | null; remote?: string | null; danil?: WorkspaceDanil | null; default_permission_mode?: string | null };
+export type Workspace = { id: string; name: string; provider?: string | null; remote?: string | null; danil?: WorkspaceDanil | null; default_permission_mode?: string | null;
+  /** Los consentimientos de modelos gratuitos aceptados en este workspace, con la versión del texto que se aceptó. */
+  consents?: { provider: string; version: number }[] | null };
 /** `list_workspaces`. */
 /**
  * `list_workspaces` → `machine_resources`. Lo de `memory` en adelante es aditivo
@@ -332,7 +334,7 @@ export type EngineEvent = { name: string; payload: unknown; workspace?: string |
 export type Frase = string | { clave: string; datos?: Record<string, string | number> | null };
 
 /** Un modelo de `list_models`; `efforts` vacío es que no se elige razonamiento. */
-export type ModelOption = { id: string; label: string; note?: Frase | null; efforts: string[]; default_effort: string | null };
+export type ModelOption = { id: string; label: string; note?: Frase | null; efforts: string[]; default_effort: string | null; /** Del catálogo gratuito de su agente; `null` si la distinción no aplica. */ gratis?: boolean | null };
 /** `list_models`. */
 export type ProviderModels = { provider: string; models: ModelOption[]; fallback?: boolean | null };
 /** `list_permission_modes`: `por_omision` es el que toma una tarea nueva; `falta` dice por qué no se puede usar. */

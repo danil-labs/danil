@@ -110,7 +110,7 @@ export function stepFiles(args) {
 }
 
 const CODE_EXT = /\.(?:[cm]?[jt]s|tsx|jsx)$/;
-const ALWAYS_QUICK = /node_modules\/(?:@biomejs\/biome\/bin\/biome|typescript\/bin\/tsc)$|scripts\/icons\.mjs$|scripts\/guards\//;
+const ALWAYS_QUICK = /node_modules\/(?:@biomejs\/biome\/bin\/biome|typescript\/bin\/tsc|@typescript\/native-preview\/bin\/tsgo)$|scripts\/icons\.mjs$|scripts\/guards\//;
 
 /** Lo que dice `--quick` cuando no puede acotar el cambio: no corre la cadena aquí ni da un verde, y nombra el siguiente comando. La cola solo verifica Linux. */
 export function quickRefusal(reason, platform = process.platform) {

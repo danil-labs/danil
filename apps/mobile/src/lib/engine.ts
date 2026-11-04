@@ -17,6 +17,7 @@ import type {
   ChatEvent,
   EngineEvent,
   FilePreview,
+  Frase,
   MentionList,
   OpenedSession,
   PendingRequests,
@@ -58,7 +59,7 @@ import {
   isUnknownCommand,
 } from "@terminus/protocol";
 import type { TaskActivity } from "@terminus/design";
-import { type FlatRow, flattenTasks, launcherOf, REMOTE_CHILD_FEATURE, type RemoteScope, remoteLauncherOf } from "@terminus/tasks";
+import { chipModel, type FlatRow, flattenTasks, launcherOf, REMOTE_CHILD_FEATURE, type RemoteScope, remoteLauncherOf, type Surface } from "@terminus/tasks";
 import { AUTO_MODE } from "./composer.ts";
 import { type Host, HostError } from "./hosts.ts";
 
@@ -499,10 +500,13 @@ export type Draft = {
   attachments: string[];
 };
 
-/** El proveedor y el modelo con que sigue una tarea: los de su último turno. */
+/**
+ * El proveedor y el modelo con que sigue una tarea, en el orden de la ventana
+ * (`chipModel` en `@terminus/tasks`): el elegido, el observado y, en una
+ * subtarea, el de su último turno.
+ */
 export function taskDefaults(view: TaskView): { provider: string; model: string | null } {
-  const model = [...view.session.turns].reverse().find((t) => t.model)?.model ?? view.session.model ?? view.session.observed_model ?? null;
-  return { provider: view.session.provider, model };
+  return { provider: view.session.provider, model: chipModel(view.session) };
 }
 
 /** Un mensaje a una tarea parada: abre otro turno con lo que eligió el cuadro. */
@@ -712,6 +716,72 @@ export async function modelsOf(host: Host, workspace: string, provider: string):
   const at = { cachedAt: null as number | null };
   const value = await read<ProviderModels | null>(host, "list_models", workspace, { provider }, null, at).catch(() => null);
   return value && Array.isArray(value.models) ? value : { provider, models: [] };
+}
+
+/** Lo que se elige para trabajar (`list_surfaces`): OpenCode da «Zen y Go» y «Modelos gratuitos». Apagada y sin copia, ninguna. */
+export async function surfacesOf(host: Host, workspace: string): Promise<Surface<Frase>[]> {
+  const at = { cachedAt: null as number | null };
+  const value = await read<Surface<Frase>[] | null>(host, "list_surfaces", workspace, {}, null, at).catch(() => null);
+  return Array.isArray(value) ? value : [];
+}
+
+/** El texto del consentimiento de los modelos gratuitos y su versión, el mismo de la ventana (`consent_text`). */
+export type ConsentText = { lines: Frase[]; version: number };
+
+export async function consentText(host: Host, workspace: string): Promise<ConsentText | null> {
+  const at = { cachedAt: null as number | null };
+  const value = await read<[Frase[], number] | null>(host, "consent_text", workspace, {}, null, at).catch(() => null);
+  return Array.isArray(value) && Array.isArray(value[0]) && typeof value[1] === "number" ? { lines: value[0], version: value[1] } : null;
+}
+
+/**
+ * Si el workspace aceptó los modelos gratuitos de ese agente con el texto de
+ * hoy. Vale el sí de esta versión, no cualquier sí: quien aceptó un texto
+ * anterior lo vuelve a ver (`workspaces::consintio`, como la ventana).
+ */
+export function consented(workspace: Pick<Workspace, "consents"> | null | undefined, provider: string, version: number): boolean {
+  return workspace?.consents?.some((c) => c.provider === provider && c.version === version) ?? false;
+}
+
+/** El consentimiento guardado en ese workspace de la máquina; `null` si no contestó. */
+export async function consentOf(host: Host, workspace: string, provider: string, version: number): Promise<boolean | null> {
+  const at = { cachedAt: null as number | null };
+  const startup = await read<Startup | null>(host, "list_workspaces", null, {}, null, at).catch(() => null);
+  const own = startup?.workspaces?.find((w) => w.id === workspace);
+  return own ? consented(own, provider, version) : null;
+}
+
+/**
+ * Aceptar o retirar los modelos gratuitos de ese agente en el workspace
+ * (`set_provider_consent`). Devuelve lo que quedó guardado, no lo pedido: si el
+ * motor rechaza algo, la pantalla enseña su estado.
+ */
+export async function setProviderConsent(host: Host, workspace: string, provider: string, accepted: boolean): Promise<boolean> {
+  const { value } = await host.call<Pick<Workspace, "consents"> | null>("set_provider_consent", workspace, { provider, accepted });
+  return value?.consents?.some((c) => c.provider === provider) ?? false;
+}
+
+/** Los modelos gratuitos de un agente en una máquina: su consentimiento y si ya se pueden usar. */
+export type FreeModels = { provider: string; label: string; text: ConsentText; accepted: boolean; usable: boolean };
+
+/**
+ * Lo que la persona decide en Proveedores de IA, por máquina: una fila por
+ * superficie gratuita (`list_surfaces`), con el texto de hoy y si el workspace
+ * ya lo aceptó. Sin texto no se ofrece activar: aceptar sin ver qué se acepta
+ * no es un consentimiento. Apagada, ninguna.
+ */
+export async function freeModelsOf(host: Host, workspace: string): Promise<FreeModels[]> {
+  const free = (await surfacesOf(host, workspace)).filter((s) => s.catalogo === "gratuitos");
+  if (!free.length) return [];
+  // En orden: saber si el sí guardado sigue valiendo necesita la versión del texto de hoy.
+  const text = await consentText(host, workspace);
+  if (!text) return [];
+  const rows: FreeModels[] = [];
+  for (const s of free) {
+    const accepted = await consentOf(host, workspace, s.provider, text.version);
+    rows.push({ provider: s.provider, label: s.label, text, accepted: accepted ?? false, usable: s.usable });
+  }
+  return rows;
 }
 
 export async function permissionModesOf(host: Host, workspace: string, provider: string): Promise<PermissionModeOption[]> {

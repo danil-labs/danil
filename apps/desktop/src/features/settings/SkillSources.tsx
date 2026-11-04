@@ -250,40 +250,35 @@ export function FuentesDeSkills() {
             }
           >
             {/* La gestionada no se trae ni se quita: se actualiza sola en cada
-                arranque, y el interruptor es lo único que queda. */}
-            <Show
-              when={f.managed}
-              fallback={
-                <>
-                  <Button
-                    variant="ghost"
-                    size="compact"
-                    disabled={trabajando() !== null}
-                    onClick={() => void traer(f.id)}
-                  >
-                    <RefreshCw size={14} class="shrink-0" />
-                    {trabajando() === f.id
-                      ? t("settings.skills.fetching")
-                      : t("settings.skills.fetch")}
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="compact"
-                    disabled={trabajando() !== null}
-                    onClick={() => void quitar(f.id)}
-                  >
-                    {t("settings.skills.remove")}
-                  </Button>
-                </>
-              }
-            >
-              <Toggle
-                checked={f.enabled}
+                arranque. */}
+            <Show when={!f.managed}>
+              <Button
+                variant="ghost"
+                size="compact"
                 disabled={trabajando() !== null}
-                label={f.nombre}
-                onChange={() => void alternar(f.id, !f.enabled)}
-              />
+                onClick={() => void traer(f.id)}
+              >
+                <RefreshCw size={14} class="shrink-0" />
+                {trabajando() === f.id
+                  ? t("settings.skills.fetching")
+                  : t("settings.skills.fetch")}
+              </Button>
+              <Button
+                variant="ghost"
+                size="compact"
+                disabled={trabajando() !== null}
+                onClick={() => void quitar(f.id)}
+              >
+                {t("settings.skills.remove")}
+              </Button>
             </Show>
+            {/* Una propia también se apaga y se vuelve a encender aquí. */}
+            <Toggle
+              checked={f.enabled}
+              disabled={trabajando() !== null}
+              label={f.nombre}
+              onChange={() => void alternar(f.id, !f.enabled)}
+            />
           </SettingsRow>
         )}
       </For>

@@ -454,5 +454,12 @@
   "web.admin.harness": "Usage and activity",
   "web.auth.request_access": "Request access",
   "web.auth.access_subject": "Request access to Danil",
-  "web.auth.access_required": "You need approved access to Danil. You can request it by email."
+  "web.auth.access_required": "You need approved access to Danil. You can request it by email.",
+  "web.download.tab": "Get the app",
+  "web.download.title": "Get the desktop app",
+  "web.download.action": "Download",
+  "web.download.all": "See all downloads",
+  "web.download.platform.macos": "macOS",
+  "web.download.platform.windows": "Windows",
+  "web.download.platform.linux": "Linux"
 }

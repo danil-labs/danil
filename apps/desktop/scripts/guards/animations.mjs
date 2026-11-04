@@ -13,12 +13,16 @@ import { walkFiles } from "../git.mjs";
 
 const RAIZ = fileURLToPath(new URL("../../src", import.meta.url));
 
-/** Animaciones de CSS que corren solo mientras dura un gesto corto. */
-const KEYFRAMES_PERMITIDOS = new Set(["finish-task-ignition", "finish-task-exhaust"]);
+/**
+ * Animaciones de CSS que corren solo mientras dura un gesto corto, y el giro de
+ * los loaders: por pasos se veía trabado, y solo rota, que va al compositor. En
+ * WebKit vuelve a ir por pasos (`global.css`, `@supports`).
+ */
+const KEYFRAMES_PERMITIDOS = new Set(["finish-task-ignition", "finish-task-exhaust", "spin"]);
 
 const DECLARACION = /(?:^|[;{\s])(?:animation|--animate-[\w-]+)\s*:\s*([^;}]+)/g;
 const POR_PASOS = /\bsteps\(|\bstep-(?:start|end)\b/;
-/** `animate-spin` y `animate-pulse` van por pasos (`global.css`); estos dos no. */
+/** `animate-spin` y `animate-pulse` pisan los de Tailwind (`global.css`); estos dos no. */
 const TAILWIND_CONTINUA = /\banimate-(?:ping|bounce)(?![\w-])/g;
 /** Una animación escrita en la clase, `animate-[nombre_1s_infinite]`. */
 const CLASE_ARBITRARIA = /\banimate-\[([^\]]+)\]/g;

@@ -84,6 +84,7 @@ import TaskFilesRow, { taskFilesWidth } from "../features/code/TaskFilesRow";
 import { TaskSide, TaskSideShell } from "../features/code/TaskSide";
 import { moviendoHueco } from "../lib/sites";
 const DeleteTaskDialog = lazy(() => import("../features/projects/DeleteTaskDialog"));
+const DanilWorkspaceStep = lazy(() => import("../features/shell/DanilWorkspaceStep"));
 const HandoverDialog = lazy(() => import("../features/chat/HandoverDialog"));
 const TaskFilesCard = lazy(() => import("../features/code/TaskFiles"));
 import { createTaskFiles, type TaskSideMode } from "../lib/taskFiles";
@@ -172,7 +173,7 @@ import { createUsage } from "../features/shell/usage";
 import AvisoDeVersion from "../features/shell/VersionNotice";
 import CloseGuard from "../features/shell/CloseGuard";
 import WorkspaceColumn from "../features/shell/WorkspaceColumn";
-import { agentsWorkspace, setAgentsWorkspace } from "../features/shell/workspace-directory";
+import { agentsWorkspace, setAgentsWorkspace, signedInCount } from "../features/shell/workspace-directory";
 import Sitio from "../features/sites/Site";
 import { VELO_DE_FONDO } from "../lib/chat-background";
 import { fondoDeChat, fondoPropio, imagenDelWorkspace, veloDeFondo } from "../lib/chat-background-store";
@@ -851,6 +852,7 @@ export default function App() {
   createEffect(
     on([sesiones, grupos, escritorio, spaces], ([lista, g, desk, todas]) => {
       if (!g.every((grupo) => grupo in lista)) return;
+      const delanteAntes = pestanaActiva();
       const fuera = pestanas.sync((id) => {
         for (const [grupo, filas] of Object.entries(lista)) {
           const fila = filas.find((r) => r.id === id);
@@ -869,6 +871,12 @@ export default function App() {
       fuera.forEach(soltarHilo);
       fuera.forEach(soltarBorrador);
       for (const id of fuera) olvidarPestana(id);
+      // Archivar (o borrar) la tarea de delante deja la conversación en
+      // blanco: el panel pondría la pestaña vecina, y quien archiva acabó
+      // con esa tarea, no pidió abrir otra.
+      if (delanteAntes !== null && !pestanas.open().some((p) => p.id === delanteAntes)) {
+        irAlBlanco(carpetaDelEscritorio(project()));
+      }
       // Una tarea que se movió a otro espacio se lleva su pestaña a esa tira.
       if (!desk) return;
       const ajenas: { p: TaskTab; a: string }[] = [];
@@ -8751,6 +8759,12 @@ export default function App() {
           onNewTask={(id) => nuevaSesion(id)}
           onOpenConversation={(id) => { abrirInbox(); capabilities().inbox?.search.open(id); }}
         />
+        {/* Con la sesión de la ventana recién abierta, la hoja para sincronizar el workspace abierto. */}
+        <Show when={capabilities().workspaceDirectory?.onSession && signedInCount() > 0}>
+          <Suspense fallback={null}>
+            <DanilWorkspaceStep />
+          </Suspense>
+        </Show>
         {/* El velo del marco cubre la columna y el hueco alrededor de la caja: un solo tono también en la esquina. */}
         <div class="tab-veil window-frame relative flex min-h-0 flex-1 overflow-visible">
           <WorkspaceColumn

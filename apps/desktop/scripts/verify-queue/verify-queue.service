@@ -1,5 +1,5 @@
 [Unit]
-Description=Cola de verificación
+Description=Cola de trabajos pesados (verificación y CI)
 After=network-online.target verify-egress.service
 Wants=network-online.target
 Requires=verify-egress.service
@@ -8,7 +8,10 @@ Requires=verify-egress.service
 User=verify
 Environment=VERIFY_QUEUE_HOME=/var/lib/verify-queue
 Environment=VERIFY_QUEUE_CONFIG=/etc/verify-queue/repos.json
-Environment=PATH=/home/verify/.cargo/bin:/home/verify/.local/bin:/usr/local/bin:/usr/bin:/bin
+Environment=PATH=/opt/rust/cargo/bin:/usr/local/bin:/usr/bin:/bin
+Environment=RUSTUP_HOME=/opt/rust/rustup
+Environment=VERIFY_QUEUE_NAME=linux-x64
+Environment=VERIFY_QUEUE_LANES=/var/lib/vl
 ExecStart=/usr/bin/env node /opt/verify-queue/server.mjs
 Restart=always
 RestartSec=2

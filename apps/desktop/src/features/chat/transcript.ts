@@ -558,20 +558,8 @@ export type TranscriptOrigin = {
   agent_turns: number;
 };
 
-/**
- * El modelo que se muestra al abrir una tarea: el elegido o, si nadie eligió,
- * el último que se observó contestando. Solo la que nunca contestó deja el
- * selector vacío para que el CLI use el suyo.
- */
-export function modeloDeSubtarea(session: Session): string | null {
-  if (session.model) return session.model;
-  if (!(session.parent || session.subagent)) return session.observed_model ?? null;
-  for (let i = session.turns.length - 1; i >= 0; i--) {
-    const turno = session.turns[i];
-    if (turno.role === "agent" && turno.model) return turno.model;
-  }
-  return null;
-}
+/** El modelo que se muestra al abrir una tarea; la misma regla en el teléfono (`@terminus/tasks`). */
+export { chipModel as modeloDeSubtarea } from "../../../../../packages/tasks/src/surfaces.ts";
 
 // Líneas de sistema que Rust guarda sin texto y la ventana compone.
 const LINEAS_SIN_PROSA = new Set([

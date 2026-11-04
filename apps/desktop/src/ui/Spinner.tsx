@@ -1,8 +1,9 @@
 import { cn } from "../lib/utils";
 
 /**
- * El loader de toda la app: una pista tenue y un arco que gira en 12 pasos por
- * segundo, al reloj común (`lib/sharedClock.ts`). Toma el color del texto.
+ * El loader de toda la app: una pista tenue y un arco que gira continuo (a 24
+ * pasos por segundo en WebKit), al reloj común (`lib/sharedClock.ts`). Toma el
+ * color del texto.
  */
 export function Spinner(props: { size?: number; class?: string; label?: string }) {
   const size = () => props.size ?? 16;

@@ -1,6 +1,8 @@
 import { barWorkspaceIds, type DirectoryEntry } from "@terminus/computers";
 import { createResource, createRoot, createSignal } from "solid-js";
+import { escribirPref, leerPref } from "../../lib/prefs";
 import { capabilities } from "../../lib/platform";
+import { canCreateWorkspace } from "../settings/workspace-link";
 
 /** El workspace que solo tiene agentes abierto desde el menú; `null` con uno de Terminus. */
 export const [agentsWorkspace, setAgentsWorkspace] = createSignal<string | null>(null);
@@ -11,7 +13,13 @@ function createStore() {
     () => capabilities().workspaceDirectory,
     (source) => source.list(),
   );
-  return { loaded, refetch, mutate };
+  // Con la sesión de la ventana recién abierta la lista se relee y la hoja del workspace se ofrece.
+  const [signedIn, setSignedIn] = createSignal(0);
+  capabilities().workspaceDirectory?.onSession?.((state) => {
+    void refetch();
+    if (state === "signed_in") setSignedIn((n) => n + 1);
+  });
+  return { loaded, refetch, mutate, signedIn };
 }
 let created: ReturnType<typeof createStore> | undefined;
 const store = () => (created ??= createRoot(createStore));
@@ -54,12 +62,12 @@ export function linkableAccounts(active: string | null): DirectoryEntry[] {
   );
 }
 
-/** Enlaza el workspace abierto con la cuenta; devuelve el código del error o `null`. */
-export async function linkActiveWorkspace(active: string, account: DirectoryEntry): Promise<string | null> {
+/** Enlaza el workspace con la cuenta; devuelve el código del error o `null`. `who`: la sesión de la ventana. */
+export async function linkActiveWorkspace(active: string, account: DirectoryEntry, who?: string | null): Promise<string | null> {
   const source = capabilities().workspaceDirectory;
   if (!source || account.danil_workspace_id === null) return "link_failed";
   try {
-    await source.link(active, account.danil_workspace_id);
+    await source.link(active, account.danil_workspace_id, who);
     return null;
   } catch (err) {
     return err instanceof Error ? err.message : "link_failed";
@@ -67,3 +75,48 @@ export async function linkActiveWorkspace(active: string, account: DirectoryEntr
     reloadDirectory();
   }
 }
+
+/** La fila del workspace si es de la persona y está sin enlazar; si no, `null`. */
+export function unlinkedActive(active: string | null): DirectoryEntry | null {
+  if (!active || !canCreateWorkspace(entries(), active)) return null;
+  return entries().find((e) => e.workspace_id === active) ?? null;
+}
+
+/** La fila de la nube con la que está sincronizado un workspace de la persona; `undefined` si el directorio no lo trae. */
+export function cloudOf(workspace: string): DirectoryEntry | null | undefined {
+  const own = entries().find((e) => e.workspace_id === workspace && e.owner && !e.support);
+  if (!own) return undefined;
+  return own.danil_workspace_id === null ? null : own;
+}
+
+/** Su workspace propio va primero: tras `personal_workspace_exists` es con el que se sincroniza. */
+export const preferredAccount = (accounts: readonly DirectoryEntry[], picked: string | null) =>
+  accounts.find((a) => a.key === picked) ?? accounts.find((a) => a.kind === "personal") ?? accounts[0];
+
+/** Sube el workspace a la nube (su workspace personal de Danil); devuelve el código del error o `null`. */
+export async function uploadWorkspace(workspace: string, who?: string | null): Promise<string | null> {
+  const source = capabilities().workspaceDirectory;
+  if (!source?.create) return "create_failed";
+  try {
+    await source.create(workspace, who);
+    return null;
+  } catch (err) {
+    return err instanceof Error ? err.message : "create_failed";
+  } finally {
+    reloadDirectory();
+  }
+}
+
+/** Cuántas veces se abrió la sesión de la ventana desde que arrancó; la hoja lo observa. */
+export const signedInCount = () => store().signedIn();
+
+const DISMISSED = "danilWorkspaceStep.dismissed";
+const DISMISSED_MAX = 50;
+
+/** «Ahora no» para este workspace: la hoja no vuelve a salir con él. */
+export function dismissDanilWorkspaceStep(workspace: string) {
+  const list = leerPref<string[]>(DISMISSED, []).filter((w) => w !== workspace);
+  escribirPref(DISMISSED, [...list, workspace].slice(-DISMISSED_MAX));
+}
+
+export const danilWorkspaceStepDismissed = (workspace: string) => leerPref<string[]>(DISMISSED, []).includes(workspace);

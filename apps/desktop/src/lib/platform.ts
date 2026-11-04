@@ -66,6 +66,8 @@ export type Capabilities = {
   wsl?: boolean;
   /** Radiant en Configuración y su gobierno en las pantallas; la web no lo ofrece. */
   radiant?: boolean;
+  /** «Descarga la app» en Configuración: solo la web; la ventana ya es la app. */
+  appDownloads?: boolean;
   /** Iniciar sesión en Danil desde Configuración: la web ya entra con esa cuenta. */
   danilAccount?: boolean;
   /** La persona de la cuenta de Danil leída sin el motor (la web, con su sesión): pie y Configuración. */
@@ -84,12 +86,18 @@ export type Capabilities = {
     pin: (keys: string[], account?: string | null) => Promise<void>;
     /** Enlaza un workspace propio con un workspace de Danil; rechaza con el código del plano de control. */
     link: (workspaceId: string, danilWorkspaceId: number, account?: string | null) => Promise<void>;
-    /** Crear un workspace de Danil todavía no tiene ruta: quien la tenga la publica aquí. */
-    create?: (name: string) => Promise<import("@terminus/computers").DirectoryEntry>;
+    /** Quita el enlace en el plano de control; sin esto, desvincular solo cambia la cuenta en el motor. */
+    unlink?: (workspaceId: string, account?: string | null) => Promise<void>;
+    /** Avisa cuando se abre o se cierra la sesión de persona de esta ventana (el escritorio); devuelve cómo dejar de escuchar. */
+    onSession?: (listener: (state: "signed_in" | "signed_out") => void) => () => void;
+    /** Sube un workspace propio: crea el workspace personal de Danil de quien llama y lo enlaza; rechaza con el código (`personal_workspace_exists`, …). */
+    create?: (workspaceId: string, account?: string | null) => Promise<void>;
   };
   adminPage?: { href: string; allowed: () => Promise<boolean> };
-  /** Lo de una cuenta personal en Configuración › Cuenta. `isPersonal` decide si se ofrece; sin `usage` o `plan`, esas pestañas no salen. */
-  personalAccount?: { isPersonal: () => Promise<boolean>; usage?: () => JSX.Element; plan?: () => JSX.Element };
+  /** Lo de una cuenta personal en Configuración › Cuenta. `isPersonal` decide si se ofrece; sin `plan`, esa pestaña no sale. */
+  personalAccount?: { isPersonal: () => Promise<boolean>; plan?: () => JSX.Element };
+  /** El consumo propio (`/v1/usage/me`) en Configuración › Cuenta. Sin fuente, la pestaña no sale. */
+  accountUsage?: () => JSX.Element;
   /** El logo y el fondo de los workspaces leídos y cambiados en la cuenta con la sesión (la web). */
   accountAssets?: WorkspaceAssetsSource;
   /** Botón extra al lado de la búsqueda de la barra lateral (en la web, volver a Danil Agents). */

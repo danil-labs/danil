@@ -5,7 +5,7 @@
  */
 export const SETTINGS_ENTRIES = [
   { id: "account", group: "you", tabs: ["cuenta-danil", "emails", "usage", "plan", "support", "security"] },
-  { id: "preferences", group: "you", tabs: ["general", "appearance", "notify", "languages", "workspaces"] },
+  { id: "preferences", group: "you", tabs: ["general", "appearance", "notify", "languages", "workspaces", "download"] },
   { id: "ai-accounts", group: "you", tabs: ["proveedores-ia"] },
   { id: "machines", group: "you", tabs: ["machines", "entorno", "activity"] },
   { id: "projects", group: "workspace", tabs: ["proyectos", "fuentes", "secrets"] },

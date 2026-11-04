@@ -231,6 +231,7 @@ lleva su comentario allí:
 | Cambiar de proveedor (`provider_handoff_v1`) | `load_session` (con `can_hand_over` y `hand_over_blocked`) | `set_session_provider` (el siguiente turno abre sesión nueva o retoma la aparcada) |
 | Almacenamiento por máquina (en Consumos) | `list_workspaces` sin workspace para capacidad; `list_storage` al abrir el detalle del workspace | — |
 | Reloj del turno en curso | `list_live_turns` | — |
+| OpenCode como en la ventana: superficies («Zen y Go», «Modelos gratuitos») y su consentimiento | `list_surfaces`, `consent_text` (el texto y su versión; el sí guardado se lee de `list_workspaces`) | `set_provider_consent` (aceptar o retirar los gratuitos en el workspace; la clave de Go queda en la ventana) |
 | Identidad de agentes | `list_agent_profiles`, `preview_file` | — |
 | Cuentas de IA | `list_accounts`, `account_status`, `account_limits` | `add_account`, `login_account`, `submit_login_code`, `cancel_login`, `discard_account`, `remove_account`, `set_active_account` (el próximo turno corre con esta cuenta; no enciende la máquina) |
 | Fondo del chat | `chat_background` | — |

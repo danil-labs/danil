@@ -7,6 +7,7 @@ import { t } from "../../lib/i18n";
 import { cn } from "../../lib/utils";
 import { ITEM_DE_MENU } from "../../ui/Popover";
 import { createWorkspaces } from "../settings/workspaces-store";
+import { directoryErrorText } from "./directory-errors";
 import { directory, linkableAccounts, linkActiveWorkspace, setAgentsWorkspace, togglePin } from "./workspace-directory";
 
 /** Desde aquí se entra a cualquier workspace; la barra solo muestra los fijados. */
@@ -116,11 +117,7 @@ export default function WorkspaceDirectoryMenu(props: { onClose: () => void; onO
       </div>
       <Show when={linkError()}>
         <p class="m-0 px-2 pt-1 text-caption text-error-strong" role="alert">
-          {linkError() === "not_account_admin"
-            ? t("shell.directory.linkNotAdmin")
-            : linkError() === "workspace_already_linked" || linkError() === "danil_workspace_taken"
-              ? t("shell.directory.linkTaken")
-              : t("shell.directory.linkFailed")}
+          {directoryErrorText(linkError() ?? "")}
         </p>
       </Show>
       <Show when={directory()?.truncated}>

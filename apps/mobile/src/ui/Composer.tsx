@@ -2,6 +2,7 @@ import { RADIUS, TEXT } from "@terminus/design";
 import { SendButton } from "./SendButton";
 import {
   ATTACHMENT_DOCUMENTS_FEATURE,
+  type Frase,
   isImageMime,
   mimeOfAttachment,
   type MentionList,
@@ -10,11 +11,12 @@ import {
   type ProviderModels,
   type SlashMenu,
 } from "@terminus/protocol";
-import { modelName, previewLabel } from "@terminus/tasks";
+import { replaceSlash, slashAt } from "@terminus/chat/slash";
+import { menuSurfaces, modelName, previewLabel, type Surface, surfaceHas, surfaceOf } from "@terminus/tasks";
 import * as DocumentPicker from "expo-document-picker";
 import { File } from "expo-file-system";
 import * as ImagePicker from "expo-image-picker";
-import { useEffect, useMemo, useRef, useState, type ComponentRef, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ComponentRef, type MutableRefObject, type ReactNode } from "react";
 import { Keyboard, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, type TextInputKeyPressEvent, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
@@ -26,11 +28,13 @@ import {
   modelsOf,
   permissionModesOf,
   slashMenuOf,
+  surfacesOf,
   uploadAttachment,
   usableProviders,
 } from "../lib/engine";
 import type { Host } from "../lib/hosts";
 import { effectiveMode, enterAction, hasSomethingToSend } from "../lib/composer";
+import { promote, type Queued, queueMemory } from "../lib/steer";
 import { lang, phrase, t, w } from "../lib/i18n";
 import { BrandMark } from "./BrandMark";
 import { Icon } from "./Icon";
@@ -42,13 +46,30 @@ import { useTheme } from "./theme";
 export type Submission = (Draft & { shell: false }) | { shell: true; command: string; provider: string; model: string | null; effort: string | null; permissionMode: string | null };
 
 type Attachment = { key: string; name: string; path: string | null; error: string | null };
-type Queued = { id: string; text: string; attachments: string[] };
+/** Lo que el cuadro tiene elegido ahora: «Reintentar» reenvía con el modelo del chip. */
+export type ComposerChoice = { provider: string; model: string | null; effort: string | null; permissionMode: string | null };
+type Choice = ComposerChoice;
 
-const SLASH = /^\/([\w:-]*)$/;
 const MENTION = /(?:^|\s)@("?)([^\s"]*)$/;
 const EFFORT_LEVELS = ["minimal", "low", "medium", "high", "xhigh", "max"] as const;
 // Los modos de cada máquina y proveedor que ya se vieron: con la máquina apagada, el cuadro sigue sabiendo cuáles sostiene.
 const knownModes = new Map<string, PermissionModeOption[]>();
+
+/** El nombre de una superficie como en la ventana (`AIProviders.tsx`): «Zen y Go», «Modelos gratuitos», «Locales». */
+function surfaceLabel(s: Surface) {
+  if (s.provider === "opencode-zen" && s.catalogo === "de_pago") return w("settings.ai_providers.zen_go");
+  if (s.catalogo === "gratuitos") return w("surfaces.label.free");
+  if (s.provider === "opencode-local") return w("surfaces.label.local");
+  return s.label;
+}
+
+/** Por qué no se puede usar: la frase del motor si el catálogo la conoce; si no, la de los gratuitos o su marca. */
+function whyNot(s: Surface<Frase>) {
+  const said = s.porque ? phrase(s.porque) : "";
+  const known = said && !(typeof s.porque === "object" && s.porque && said === s.porque.clave);
+  if (known) return said;
+  return s.catalogo === "gratuitos" ? w("surfaces.free_off") : s.marca;
+}
 
 function effortLabel(effort: string | null) {
   if (!effort) return w("chat.effort.agent_decides");
@@ -88,6 +109,11 @@ export function Composer({
   onInject,
   onStop,
   onModeChange,
+  queueKey = null,
+  steerRefused = false,
+  onStopAndSend,
+  choice,
+  onAccounts,
   bottomInset = true,
   testID = "composer",
 }: {
@@ -123,6 +149,16 @@ export function Composer({
   onStop?: () => void;
   /** Elegir modo con el turno en marcha: el turno vivo arrancó con el de entonces y no lo relee. */
   onModeChange?: (mode: string) => void;
+  /** La cola de esta tarea en memoria (`queueMemory`): salir de la pantalla y volver la encuentra igual. */
+  queueKey?: string | null;
+  /** El agente de la tarea ya negó «Mandar ahora» en esta máquina: no se ofrece otra vez. */
+  steerRefused?: boolean;
+  /** «Detener y enviar»: detiene el turno; el mensaje elegido sale primero al cerrar. */
+  onStopAndSend?: () => void;
+  /** Recibe lo elegido en el chip con cada cambio. */
+  choice?: MutableRefObject<Choice | null>;
+  /** Abre Proveedores de IA, donde se activan los modelos gratuitos. */
+  onAccounts?: () => void;
   /** Bajo una barra de pestañas, la barra ya deja el hueco del sistema. */
   bottomInset?: boolean;
   testID?: string;
@@ -143,7 +179,11 @@ export function Composer({
   const [slash, setSlash] = useState<SlashMenu | null>(null);
   const [mentions, setMentions] = useState<MentionList | null>(null);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
-  const [queue, setQueue] = useState<Queued[]>([]);
+  const [queue, setQueue] = useState<readonly Queued[]>(() => queueMemory.get(queueKey));
+  // La cola vive en memoria por tarea: el cuadro se desmonta al salir y la vuelve a tomar al entrar.
+  useEffect(() => queueMemory.set(queueKey, queue), [queueKey, queue]);
+  const [surfaces, setSurfaces] = useState<Surface<Frase>[]>([]);
+  const [surface, setSurface] = useState<string | undefined>(undefined);
   const [busy, setBusy] = useState(false);
   const [sheet, setSheet] = useState<"model" | "attach" | "handover" | null>(null);
   const input = useRef<ComponentRef<typeof TextInput>>(null);
@@ -203,9 +243,26 @@ export function Composer({
     };
   }, [host, workspace, current, host?.power()]);
   useEffect(() => setMentions(null), [host, workspace, folder]);
+  // Las superficies de la máquina: OpenCode parte su catálogo en «Zen y Go» y «Modelos gratuitos».
+  useEffect(() => {
+    if (!host || !workspace || host.power() !== "on") return;
+    let alive = true;
+    void surfacesOf(host, workspace).then((list) => alive && setSurfaces(list));
+    return () => {
+      alive = false;
+    };
+  }, [host, workspace, host?.power()]);
+  // La superficie sigue al agente y al modelo, y no al revés (`surfaceOf`, la regla de la ventana).
+  useEffect(() => {
+    if (!current) return;
+    const next = surfaceOf(surfaces, current, model ?? "", models?.models ?? [], surface);
+    if (next !== surface) setSurface(next);
+  }, [surfaces, current, model, models, surface]);
 
   const shell = text.startsWith("!");
-  const slashQuery = !shell ? SLASH.exec(text)?.[1] : undefined;
+  // La gramática es la del escritorio: en medio del texto, solo skills.
+  const slashToken = !shell ? slashAt(text, selection.end) : null;
+  const slashQuery = slashToken?.name;
   const beforeCursor = text.slice(0, selection.end);
   const mentionMatch = !shell && slashQuery === undefined ? MENTION.exec(beforeCursor) : null;
   const mentionQuery = mentionMatch?.[2];
@@ -231,6 +288,11 @@ export function Composer({
     }).finally(() => { draining.current = false; });
   }, [running, queue, injecting]);
 
+  // Solo parte el catálogo un agente con más de una superficie; los demás enseñan todo.
+  const ownSurfaces = surfaces.filter((s) => s.provider === current);
+  const activeSurface = ownSurfaces.length > 1 ? ownSurfaces.find((s) => s.id === surface) : undefined;
+  const menu = menuSurfaces(surfaces, surface);
+  const surfaceModels = models?.models.filter((m) => surfaceHas(activeSurface, m)) ?? [];
   const chosen = models?.models.find((m) => m.id === model) ?? null;
   const modelText = model ? modelName(model, models) : previewLabel(lang, "default_model");
   const efforts = chosen?.efforts ?? models?.models[0]?.efforts ?? [];
@@ -240,6 +302,30 @@ export function Composer({
   const uploading = attachments.some((a) => !a.path && !a.error);
   const ready = Boolean(host && workspace !== null && folder !== null && current) && !disabled && !busy && !uploading;
   const hasText = Boolean(text.trim()) || attachments.some((a) => a.path);
+  useEffect(() => {
+    if (choice) choice.current = current ? { provider: current, model, effort, permissionMode: sentMode } : null;
+  });
+
+  /** Elegir una superficie: el agente que la sirve y un modelo de su mitad del catálogo. */
+  function chooseSurface(s: Surface<Frase>) {
+    if (!s.usable) {
+      // Sin activar los gratuitos no hay catálogo: se activan en Proveedores de IA.
+      setSheet(null);
+      onAccounts?.();
+      return;
+    }
+    if (s.provider !== current) {
+      chooseProvider(s.provider);
+      setSurface(s.id);
+      return;
+    }
+    setSurface(s.id);
+    if (chosen && !surfaceHas(s, chosen)) {
+      const first = models?.models.find((m) => surfaceHas(s, m)) ?? null;
+      setModel(first?.id ?? null);
+      setEffort(null);
+    }
+  }
 
   async function submit(body: string, paths: string[]) {
     if (!current) return false;
@@ -372,8 +458,17 @@ export function Composer({
     if (slashQuery === undefined || !slash) return null;
     const q = slashQuery.toLowerCase();
     const match = (list: SlashMenu["commands"]) => list.filter((c) => c.name.toLowerCase().includes(q)).slice(0, 30);
-    return { commands: match(slash.commands), skills: match(slash.skills) };
-  }, [slashQuery, slash]);
+    return { commands: slashToken?.inline ? [] : match(slash.commands), skills: match(slash.skills) };
+  }, [slashQuery, slashToken?.inline, slash]);
+  // Una barra en medio de una frase suele ser prosa: sin skill que case, no hay menú.
+  const slashOpen = slashQuery !== undefined && !(slashToken?.inline && slashItems && !slashItems.skills.length);
+  function pickSlash(name: string) {
+    if (!slashToken) return;
+    const next = replaceSlash(text, slashToken, name);
+    setText(next.text);
+    setSelection({ start: next.caret, end: next.caret });
+    setForced({ start: next.caret, end: next.caret });
+  }
   const mentionItems = useMemo(() => {
     if (mentionQuery === undefined || !mentions) return null;
     const q = mentionQuery.toLowerCase();
@@ -440,16 +535,16 @@ export function Composer({
 
   return (
     <View style={[styles.wrap, { paddingBottom: 8 + (bottomInset && !keyboard ? insets.bottom : 0) }]}>
-      {slashQuery !== undefined ? (
+      {slashOpen ? (
         <Suggestions>
           {!slashItems ? <Text style={[styles.hint, { color: theme.textMuted }]}>{t("composer.loading")}</Text> : null}
           {slashItems && !slashItems.commands.length && !slashItems.skills.length ? <Text style={[styles.hint, { color: theme.textMuted }]}>{w("chat.commands.no_match")}</Text> : null}
           {slashItems?.commands.map((c) => (
-            <SheetOption key={`c-${c.name}`} icon="slash" label={`/${c.name}`} detail={c.description} onPress={() => setText(`/${c.name} `)} />
+            <SheetOption key={`c-${c.name}`} icon="slash" label={`/${c.name}`} detail={c.description} onPress={() => pickSlash(c.name)} />
           ))}
           {slashItems?.skills.length ? <SheetSection>{w("chat.commands.skills")}</SheetSection> : null}
           {slashItems?.skills.map((c) => (
-            <SheetOption key={`s-${c.name}`} icon="sparkles" label={`/${c.name}`} detail={c.description} onPress={() => setText(`/${c.name} `)} />
+            <SheetOption key={`s-${c.name}`} icon="sparkles" label={`/${c.name}`} detail={c.description} onPress={() => pickSlash(c.name)} />
           ))}
         </Suggestions>
       ) : null}
@@ -471,7 +566,7 @@ export function Composer({
               <Text numberOfLines={2} style={{ flex: 1, color: theme.text, fontSize: TEXT.body }}>
                 {q.text}
               </Text>
-              {onInject ? (
+              {onInject && !steerRefused ? (
                 <Pressable
                   hitSlop={6}
                   disabled={injecting.has(q.id)}
@@ -480,6 +575,19 @@ export function Composer({
                   onPress={() => void injectQueued(q)}
                 >
                   <Text style={{ color: theme.primary, fontWeight: "600", fontSize: TEXT.ui }}>{w("chat.queue.send_now")}</Text>
+                </Pressable>
+              ) : null}
+              {steerRefused && running && onStopAndSend ? (
+                <Pressable
+                  hitSlop={6}
+                  testID={`stop-and-send-${i}`}
+                  accessibilityRole="button"
+                  onPress={() => {
+                    setQueue((old) => promote(old, q.id));
+                    onStopAndSend();
+                  }}
+                >
+                  <Text style={{ color: theme.primary, fontWeight: "600", fontSize: TEXT.ui }}>{w("chat.queue.stop_and_send")}</Text>
                 </Pressable>
               ) : null}
               <Pressable hitSlop={6} accessibilityLabel={w("chat.queue.remove")} onPress={() => setQueue((old) => old.filter((x) => x.id !== q.id))}>
@@ -592,25 +700,42 @@ export function Composer({
 
       <Sheet visible={sheet === "model"} title={w("chat.model.title")} search={t("search.models")} onClose={() => setSheet(null)}>
         {(query) => {
-          const shownModels = models?.models.filter((m) => matches(query, m.label, m.id, modelName(m.id, models))) ?? [];
+          const shownModels = surfaceModels.filter((m) => matches(query, m.label, m.id, modelName(m.id, models)));
           return (
             <>
               <SheetSection>{w("chat.model.providers")}</SheetSection>
               {locked ? <Text style={[styles.hint, { color: theme.textMuted, paddingHorizontal: 18 }]}>{providerLockedReason ?? w("chat.model.locked")}</Text> : null}
-              {usable.map((p) => (
-                <SheetOption
-                  key={p.id}
-                  left={<BrandMark id={p.id} size={17} color={theme.text} />}
-                  label={p.label}
-                  selected={p.id === current}
-                  disabled={locked && p.id !== current}
-                  onPress={() => chooseProvider(p.id)}
-                />
-              ))}
+              {usable.map((p) => {
+                // Lo utilizable y lo de la tarea; los gratuitos sin activar también, para llevar a activarlos.
+                const own = surfaces.filter((s) => s.provider === p.id && (menu.includes(s) || s.catalogo === "gratuitos"));
+                if (own.length < 2)
+                  return (
+                    <SheetOption
+                      key={p.id}
+                      left={<BrandMark id={p.id} size={17} color={theme.text} />}
+                      label={p.label}
+                      selected={p.id === current}
+                      disabled={locked && p.id !== current}
+                      onPress={() => chooseProvider(p.id)}
+                    />
+                  );
+                return own.map((s) => (
+                  <SheetOption
+                    key={`${p.id}/${s.id}`}
+                    testID={`surface-${s.id}`}
+                    left={<BrandMark id={p.id} size={17} color={theme.text} />}
+                    label={`${p.label} · ${surfaceLabel(s)}`}
+                    detail={s.usable ? null : whyNot(s)}
+                    selected={p.id === current && s.id === surface}
+                    disabled={(locked && p.id !== current) || (!s.usable && !onAccounts)}
+                    onPress={() => chooseSurface(s)}
+                  />
+                ));
+              })}
               <SheetSection>{w("chat.model.listbox")}</SheetSection>
               {!models ? <Text style={[styles.hint, { color: theme.textMuted, paddingHorizontal: 18 }]}>{t("composer.loading")}</Text> : null}
-              {models && !models.models.length ? <Text style={[styles.hint, { color: theme.textMuted, paddingHorizontal: 18 }]}>{w("chat.model.empty")}</Text> : null}
-              {models && models.models.length > 0 && !shownModels.length ? <NoMatch /> : null}
+              {models && !surfaceModels.length ? <Text style={[styles.hint, { color: theme.textMuted, paddingHorizontal: 18 }]}>{w("chat.model.empty")}</Text> : null}
+              {models && surfaceModels.length > 0 && !shownModels.length ? <NoMatch /> : null}
               {shownModels.map((m) => (
                 <SheetOption
                   key={m.id}

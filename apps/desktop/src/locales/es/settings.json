@@ -396,7 +396,7 @@
   },
   "settings.skills.search": "Buscar una skill",
   "settings.skills.sources_empty": "Ninguna de tus fuentes trae skills.",
-  "settings.skills.sources_empty_help": "Las skills llegan dentro de las carpetas que adjuntas como fuente.",
+  "settings.skills.sources_empty_help": "Las skills llegan en los repositorios de skills y en las carpetas que adjuntas como fuente.",
   "settings.skills.sources_title": "Skills",
   "settings.skills.tab_mcp": "MCP",
   "settings.skills.title": "Repositorios",
@@ -789,6 +789,14 @@
   "settings.tab.plugins": "Plugins",
   "settings.tab.memory": "Memoria",
   "settings.tab.external": "Acceso externo",
-  "settings.tab.usage": "Consumo",
-  "settings.tab.plan": "Plan"
+  "settings.tab.usage": "Uso",
+  "settings.tab.plan": "Plan",
+  "settings.skills.kind_folder": "Carpeta",
+  "settings.skills.kind_repository": "Repositorio",
+  "settings.skills.source_off": "Fuente apagada",
+  "settings.skills.invoked_as": "Se invoca como /{invoked}: {source} trae el mismo nombre.",
+  "settings.skills.invoked_as_alone": "Se invoca como /{invoked}: otra fuente trae el mismo nombre.",
+  "settings.skills.shadowed_off": "{source} trae el mismo nombre: al encenderla se invoca con sufijo.",
+  "settings.skills.source_off_repository": "Su repositorio está apagado. Enciéndelo arriba, en Repositorios.",
+  "settings.skills.source_off_folder": "Esta carpeta también es un repositorio de skills. Sus skills se encienden en ese grupo."
 }
