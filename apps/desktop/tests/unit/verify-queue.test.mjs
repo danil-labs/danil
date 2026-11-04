@@ -847,3 +847,33 @@ test("base debe ser ancestro, y una foto wip dice el HEAD que tiene debajo", { s
   await queue.settled();
   assert.match(readFileSync(queue.logPath(based.id), "utf8"), new RegExp(`args:--base ${root}`));
 });
+
+test("lo que una corrida deja en .git del carril no corre en la siguiente", { skip }, async (t) => {
+  const { dir, repo, home } = workspace(t);
+  const queue = createQueue({ home, config: engineConfig, sameUser: true, diskPercent: () => 10 });
+  const ran = join(dir, "filtro-corrio");
+  writeFileSync(join(repo, "x.txt"), "uno\n");
+  const plant = `
+    git config filter.evil.smudge "sh -c 'touch ${ran}; cat'"
+    git config include.path /dev/null
+    mkdir -p .git/info; echo "*.txt filter=evil" > .git/info/attributes
+    printf '#!/bin/sh\ntouch ${ran}\n' > .git/hooks/post-checkout; chmod +x .git/hooks/post-checkout`;
+  const first = await engineRun(t, queue, repo, dir, plant);
+  assert.equal(first.run.state, "passed", readFileSync(queue.logPath(first.id), "utf8"));
+  rmSync(ran, { force: true });
+  writeFileSync(join(repo, "x.txt"), "dos\n");
+  const second = await engineRun(t, queue, repo, dir, "git config --get filter.evil.smudge && exit 9; cat x.txt");
+  assert.equal(second.run.state, "passed", readFileSync(queue.logPath(second.id), "utf8"));
+  assert.equal(existsSync(ran), false, "ni el filtro ni el hook corrieron en el checkout de la segunda");
+  assert.equal(readFileSync(join(queue.lanePaths("engine").checkout, "x.txt"), "utf8"), "dos\n");
+});
+
+test("un .git que la rama cambió por un archivo se rehace", { skip }, async (t) => {
+  const { dir, repo, home } = workspace(t);
+  const queue = createQueue({ home, config: engineConfig, sameUser: true, diskPercent: () => 10 });
+  const first = await engineRun(t, queue, repo, dir, `rm -rf .git; echo "gitdir: ${dir}" > .git`);
+  assert.equal(first.run.state, "passed");
+  const second = await engineRun(t, queue, repo, dir, "echo sano");
+  assert.equal(second.run.state, "passed", readFileSync(queue.logPath(second.id), "utf8"));
+  assert.match(readFileSync(queue.logPath(second.id), "utf8"), /sano/);
+});
