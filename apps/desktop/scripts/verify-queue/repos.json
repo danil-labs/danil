@@ -14,10 +14,11 @@
       "target": "checkout",
       "env": {
         "HARNESS_BUILD_COMMIT": "{commit}",
-        "RUSTUP_TOOLCHAIN": "1.99.1",
+        "RUSTUP_AUTO_INSTALL": "0",
         "SELDON_VERIFY_JOBS": "3",
         "SELDON_VERIFY_CLAUDE": "/opt/verify-agents/claude/2.1.316/bin/claude",
         "SELDON_VERIFY_CODEX": "/opt/verify-agents/codex/0.166.0/bin/codex",
+        "SELDON_VERIFY_WORK_TOOLS": "/opt/verify-agents/resources",
         "CARGO_INCREMENTAL": "0",
         "CARGO_PROFILE_DEV_DEBUG": "0"
       },

@@ -8,7 +8,9 @@ state=/var/lib/verify-queue
 # o del usuario que corre, sin escritura para nadie más. La ruta es corta por el tope de los sockets Unix.
 lanes_root=/var/lib/vl
 rust=/opt/rust
-# 1.99.1 es la del perfil del motor (con su rustfmt está formateado dev); 1.97.1, la de sus builds de release.
+# El motor fija la suya en rust-toolchain.toml (hoy 1.99.1) y la cola la respeta con RUSTUP_AUTO_INSTALL=0:
+# rustup no puede instalar en /opt/rust, y una versión nueva falla con «toolchain '…' is not installed».
+# Cuando el motor la cambie, se agrega aquí y se reinstala.
 toolchains="stable 1.97.1 1.99.1"
 # Los CLIs de los proveedores que piden las E2E del motor: solo los binarios, sin credenciales.
 agents=/opt/verify-agents
@@ -65,6 +67,19 @@ for spec in "claude:@anthropic-ai/claude-code:$claude_version" "codex:@openai/co
   fi
   chmod -R a+rX,go-w "$agents"
 done
+
+# El resource_dir de bundled-work-tools (SELDON_VERIFY_WORK_TOOLS): el árbol work-tools schema 2
+# que arma el cliente con sus pins. Se rehace solo cuando cambian los pins; queda de root y de solo lectura.
+target=x86_64-unknown-linux-gnu
+pins=$(sha256sum "$here/../../resources/work-tools/$target/pins.json" | cut -d' ' -f1)
+resources=$agents/resources
+if [ "$(cat "$resources/.pins-sha256" 2>/dev/null)" != "$pins" ]; then
+  staging=$(mktemp -d "$agents/.resources.XXXX")
+  python3 -I "$here/../work-tools.py" prepare --target "$target" --output "$staging/work-tools" --cache /var/cache/verify-work-tools --download >/dev/null
+  echo "$pins" > "$staging/.pins-sha256"
+  rm -rf "$resources" && mv "$staging" "$resources"
+fi
+chmod -R a+rX,go-w "$agents"
 
 # La cola solo puede volverse los usuarios de corrida, y nada más.
 sudoers=$(mktemp)

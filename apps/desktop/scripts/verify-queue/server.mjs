@@ -28,7 +28,8 @@ const DEFAULT_RUN_TIMEOUT_MS = 60 * 60_000;
 const MAX_BUNDLE_BYTES = 2 * 1024 ** 3;
 const MAX_ARTIFACT_BYTES = 16 * 1024 ** 2;
 const MAX_DIGEST_BYTES = 4 * 1024 ** 3;
-const MAX_ARTIFACTS = 64;
+const MAX_ARTIFACTS = 512;
+const MAX_ARTIFACTS_BYTES = 256 * 1024 ** 2;
 const MAX_TOKENS = 16;
 const MAX_CHECKS = 1000;
 const KEPT_RUNS = 50;
@@ -531,10 +532,11 @@ export function createQueue({ home, config, diskPercent = defaultDiskPercent, ru
     const { uid } = runner(run.repo, run.lane);
     const globs = [...new Set([...(profile.artifacts ?? []), ...(profile.receipt?.summary ? [profile.receipt.summary] : [])])];
     const copied = [];
+    let total = 0;
     const root = realpathSync(checkout);
     for (const glob of globs) {
       for (const path of matchFiles(root, glob)) {
-        if (copied.length >= MAX_ARTIFACTS || copied.includes(path)) continue;
+        if (copied.length >= MAX_ARTIFACTS || total >= MAX_ARTIFACTS_BYTES || copied.includes(path)) continue;
         const opened = openLaneFile(root, path, uid);
         if (!opened) continue;
         try {
@@ -544,7 +546,9 @@ export function createQueue({ home, config, diskPercent = defaultDiskPercent, ru
           if (readBounded(opened.fd, MAX_ARTIFACT_BYTES, (chunk) => parts.push(Buffer.from(chunk))) === null) continue;
           const destination = join(runDir(run.id), "artifacts", path);
           mkdirSync(dirname(destination), { recursive: true });
-          writeFileSync(destination, Buffer.concat(parts));
+          const body = Buffer.concat(parts);
+          writeFileSync(destination, body);
+          total += body.length;
           copied.push(path);
         } finally {
           closeSync(opened.fd);
