@@ -1,5 +1,5 @@
 /**
- * El consumo propio (`/v1/usage/me`): totales, serie diaria con ceros medidos,
+ * El uso propio (`/v1/usage/me`): totales, serie diaria con ceros medidos,
  * modelos, máquinas y plan. Un dato que el servidor no manda se queda como
  * «sin dato», nunca como cero.
  */
