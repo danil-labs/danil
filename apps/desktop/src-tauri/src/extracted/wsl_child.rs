@@ -1341,7 +1341,8 @@ pub fn start_install(app: &AppHandle, req: InstallRequest) -> Result<Job, Job> {
 
 pub fn start_connect(app: &AppHandle, distro: &str, label: &str, user: Option<String>, password: Option<String>, workspace: Option<(String, String)>) -> Result<Job, Job> {
     let (d, l) = (distro.to_string(), label.to_string());
-    start(app, "connect", distro, label, user.as_deref(), move |app| {
+    let shown = user.clone();
+    start(app, "connect", distro, label, shown.as_deref(), move |app| {
         let ws = workspace.as_ref().map(|(i, n)| (i.as_str(), n.as_str()));
         install_engine(app, &d, user.as_deref(), password.as_deref(), &l, ws).map(|_| ())
     })

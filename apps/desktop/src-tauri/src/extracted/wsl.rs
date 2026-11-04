@@ -405,9 +405,8 @@ fn read_all(pipe: &mut impl std::io::Read) -> Vec<u8> {
 /// copyright y el uso general, no con una lista.
 fn looks_unavailable(text: &str) -> bool {
     let text = text.to_lowercase();
-    // El `wsl.exe` de bandeja sin el paquete de WSL contesta localizado (y en
-    // UTF-16 aunque haya `WSL_UTF8`). Medido en Windows 11 en español el
-    // 2026-11-04: «El Subsistema de Windows para Linux no está instalado».
+    // Sin el paquete de WSL, el `wsl.exe` de Windows contesta en el idioma del
+    // sistema (y en UTF-16 aunque haya `WSL_UTF8`).
     text.contains("usage: wsl.exe")
         || text.contains("optional component is not enabled")
         || text.contains("wsl is not installed")

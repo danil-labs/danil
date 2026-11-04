@@ -281,7 +281,6 @@ pub(super) fn desktop_command(name: &str) -> bool {
                 | "agents_bff_fetch"
                 | "harness_org_fetch"
                 | "typst_live_complete"
-                | "wsl_detect"
                 | "service_filter"
                 | "load_history"
                 | "handler_action"

@@ -114,12 +114,6 @@ pub fn stop_engine() -> i32 {
     }
 }
 
-/// Prototipo del alta de WSL: detección sin pantalla todavía
-/// (`docs/wsl-onboarding.md`). En otros sistemas contesta `unsupported`.
-#[tauri::command]
-pub(super) fn wsl_detect() -> std::result::Result<wsl::Detection, String> {
-    wsl::detect().map_err(|error| error.code().to_string())
-}
 
 /// Lo de Linux en esta PC (`wsl_child.rs`) toca disco, red y `wsl.exe`: corre
 /// fuera del hilo de la ventana.
@@ -476,7 +470,6 @@ fn start(client: Option<Arc<Client>>, autostart: bool, launcher: launcher::Launc
             typst_live::typst_live_stop,
             update::update_install,
             update::update_pending,
-            wsl_detect,
             wsl_state,
             wsl_catalog,
             wsl_enable,

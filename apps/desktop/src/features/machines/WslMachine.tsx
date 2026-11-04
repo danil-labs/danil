@@ -109,7 +109,12 @@ function Section() {
     const j = job();
     return j && j.finished ? j : null;
   };
-  const dismiss = () => void invoke("wsl_job_dismiss").then(() => setJob(null));
+  const dismiss = () => {
+    void invoke("wsl_job_dismiss").then(() => setJob(null));
+  };
+  const enable = () => {
+    void invoke<WslJob>("wsl_enable").then(setJob);
+  };
 
   return (
     <SettingsSection title={t("danil.wsl.title")}>
@@ -127,10 +132,10 @@ function Section() {
               <EnablingCard />
             </Match>
             <Match when={ended()?.kind === "enable" && ended()?.error}>
-              <JobFailure job={ended()!} onRetry={() => void invoke<WslJob>("wsl_enable").then(setJob)} onClose={dismiss} />
+              <JobFailure job={ended()!} onRetry={enable} onClose={dismiss} />
             </Match>
             <Match when={linux()?.wsl === "missing"}>
-              <MissingCard onEnable={() => void invoke<WslJob>("wsl_enable").then(setJob)} />
+              <MissingCard onEnable={enable} />
             </Match>
             <Match when={linux()?.wsl === "reboot"}>
               <RebootCard resume={linux()?.resume ?? null} />
@@ -697,6 +702,10 @@ function DistroBox(props: { row: WslDistroRow; child: WslChild; onRemoved: () =>
     }
   }
 
+  const remove = () => {
+    void invoke("wsl_child_remove", { machine }).then(props.onRemoved);
+  };
+
   async function sendCode() {
     const l = login();
     if (!l || !code().trim()) return;
@@ -777,7 +786,7 @@ function DistroBox(props: { row: WslDistroRow; child: WslChild; onRemoved: () =>
           <span>{t("danil.wsl.box.folder", { home: props.child.home })}</span>
           <span>{t("danil.wsl.box.scope")}</span>
           <div class="flex items-center gap-2">
-            <Button size="sm" variant="secondary" onClick={() => void invoke("wsl_child_remove", { machine }).then(props.onRemoved)} data-wsl-remove="">
+            <Button size="sm" variant="secondary" onClick={remove} data-wsl-remove="">
               {t("danil.wsl.box.remove")}
             </Button>
             <span>{t("danil.wsl.box.remove_keeps")}</span>
@@ -788,14 +797,13 @@ function DistroBox(props: { row: WslDistroRow; child: WslChild; onRemoved: () =>
   );
 }
 
-/**
- * Las distribuciones conectadas, como una máquina más en «Máquinas de este
- * workspace»: no vienen del plano de control porque solo existen en esta PC.
- */
+/** Las distribuciones conectadas, como una máquina más en «Máquinas de este workspace». Solo existen en esta PC. */
 export function WslMachineRows() {
   if (!capabilities().wsl) return null;
   const [rows, setRows] = createSignal<WslChild[]>([]);
-  const read = () => void invoke<WslChild[]>("wsl_children", { fresh: false }).then(setRows).catch(() => setRows([]));
+  const read = () => {
+    void invoke<WslChild[]>("wsl_children", { fresh: false }).then(setRows).catch(() => setRows([]));
+  };
   onMount(read);
   window.addEventListener("danil:wsl-changed", read);
   onCleanup(() => window.removeEventListener("danil:wsl-changed", read));
