@@ -19,7 +19,6 @@ const REPO = "terminus";
 const DEFAULT_HOST = "vm-verify";
 const SSH_USER = "verify";
 const QUEUE_PORT = 8787;
-const DEFAULT_INSTANCE = "i-0af42d5cff6d4aa8a";
 const DEFAULT_REGION = "us-east-1";
 const COMMAND_TIMEOUT_MS = 60_000;
 const BUNDLE_TIMEOUT_MS = 5 * 60_000;
@@ -173,7 +172,9 @@ function cliStart(cli, args, machine) {
 /** Con las credenciales de quien lanza: la máquina no guarda ninguna. */
 function awsStart(host, env) {
   const aws = env.VERIFY_REMOTE_AWS ?? "aws";
-  const instance = env.VERIFY_REMOTE_INSTANCE ?? DEFAULT_INSTANCE;
+  // El ID de la instancia no vive en este repo público: lo da quien tiene las credenciales.
+  const instance = env.VERIFY_REMOTE_INSTANCE;
+  if (!instance) return { state: "failed", message: `${accessHelp(host)}\n  El respaldo por aws necesita el ID de la instancia en VERIFY_REMOTE_INSTANCE.` };
   const region = env.VERIFY_REMOTE_REGION ?? DEFAULT_REGION;
   const result = spawnSync(aws, ["ec2", "start-instances", "--region", region, "--instance-ids", instance], { encoding: "utf8", timeout: COMMAND_TIMEOUT_MS, killSignal: "SIGKILL", windowsHide: true });
   if (result.status === 0) return { state: "started" };
