@@ -30,6 +30,12 @@ The steps of the local chain, and the checks of the `pre-push` hook, run at
 niceness 10 (`scripts/priority.mjs`) so they do not take CPU from the engine. If
 the system refuses the change, they run at the priority they have.
 
+The chain and the `pre-push` hook check types with `tsgo` (TypeScript 7,
+`@typescript/native-preview`). If `tsgo` does not start, they fall back to the
+`tsc` of TypeScript 5 (`scripts/typescript.mjs`). Both give the same errors.
+TypeScript 5 stays installed: `verify-scope.mjs` reads imports with its API, and
+the `build` scripts call `tsc`.
+
 The engine (`seldon-runtime`) is not in this repository. Guards that need to
 know what the engine registers or emits read its frozen contract:
 `src-tauri/crates/engine-protocol/commands.json` (commands and events) and

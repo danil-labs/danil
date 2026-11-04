@@ -19,7 +19,6 @@ const REPO = "terminus";
 const DEFAULT_HOST = "vm-verify";
 const SSH_USER = "verify";
 const QUEUE_PORT = 8787;
-const DEFAULT_INSTANCE = "i-0af42d5cff6d4aa8a";
 const DEFAULT_REGION = "us-east-1";
 const COMMAND_TIMEOUT_MS = 60_000;
 const BUNDLE_TIMEOUT_MS = 5 * 60_000;
@@ -56,13 +55,14 @@ const noTailnetHelp = (host) =>
   "  Sin acceso al tailnet del equipo, verifica en local con `pnpm verify`.";
 
 function parse(argv) {
-  const options = { noCargo: false, commit: null, attach: null, cancel: null, status: false, detach: false };
+  const options = { noCargo: false, commit: null, attach: null, cancel: null, status: false, detach: false, wip: false };
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
     if (arg === "--remote") continue;
     else if (arg === "--no-cargo") options.noCargo = true;
     else if (arg === "--status") options.status = true;
     else if (arg === "--detach") options.detach = true;
+    else if (arg === "--wip") options.wip = true;
     else if (arg === "--commit" || arg === "--attach" || arg === "--cancel") {
       const value = argv[(i += 1)];
       if (!value) throw new RemoteError(`${arg} necesita un valor`);
@@ -173,7 +173,9 @@ function cliStart(cli, args, machine) {
 /** Con las credenciales de quien lanza: la máquina no guarda ninguna. */
 function awsStart(host, env) {
   const aws = env.VERIFY_REMOTE_AWS ?? "aws";
-  const instance = env.VERIFY_REMOTE_INSTANCE ?? DEFAULT_INSTANCE;
+  // El ID de la instancia no vive en este repo público: lo da quien tiene las credenciales.
+  const instance = env.VERIFY_REMOTE_INSTANCE;
+  if (!instance) return { state: "failed", message: `${accessHelp(host)}\n  El respaldo por aws necesita el ID de la instancia en VERIFY_REMOTE_INSTANCE.` };
   const region = env.VERIFY_REMOTE_REGION ?? DEFAULT_REGION;
   const result = spawnSync(aws, ["ec2", "start-instances", "--region", region, "--instance-ids", instance], { encoding: "utf8", timeout: COMMAND_TIMEOUT_MS, killSignal: "SIGKILL", windowsHide: true });
   if (result.status === 0) return { state: "started" };
@@ -246,11 +248,34 @@ async function bundleFor(commit, known) {
   }
 }
 
-async function submit(base, commit, command) {
+/**
+ * La foto de los cambios sin commit, como «Llevar a otra máquina»: un índice temporal
+ * sembrado desde HEAD, `add -A` y un commit fuera de toda rama. `null` si no hay cambios.
+ */
+function snapshot() {
+  const dir = mkdtempSync(join(tmpdir(), "verify-remote-wip-"));
+  const env = { ...process.env, GIT_INDEX_FILE: join(dir, "index"), GIT_AUTHOR_NAME: "Danil", GIT_AUTHOR_EMAIL: "verify@danil.invalid", GIT_COMMITTER_NAME: "Danil", GIT_COMMITTER_EMAIL: "verify@danil.invalid" };
+  const run = (args) => {
+    const result = spawnSync("git", args, { env, encoding: "utf8", timeout: BUNDLE_TIMEOUT_MS, killSignal: "SIGKILL", windowsHide: true });
+    if (result.status !== 0) throw new RemoteError(`git ${args[0]}: ${(result.stderr || result.error?.message || "").trim()}`);
+    return result.stdout.trim();
+  };
+  try {
+    run(["read-tree", "HEAD"]);
+    run(["add", "-A", "--", "."]);
+    const tree = run(["write-tree"]);
+    if (tree === git(["rev-parse", "HEAD^{tree}"])) return null;
+    return run(["commit-tree", tree, "-p", "HEAD", "-m", "wip: verify --remote"]);
+  } finally {
+    removeBundle(dir);
+  }
+}
+
+async function submit(base, commit, command, wip = false) {
   const { commits } = await json(base, `/repos/${REPO}/commits`);
   const bundle = commits.includes(commit) ? null : await bundleFor(commit, commits);
   try {
-    const query = new URLSearchParams({ repo: REPO, commit, command });
+    const query = new URLSearchParams({ repo: REPO, commit, command, ...(wip ? { wip: "1" } : {}) });
     const init = { method: "POST", ...(bundle ? { body: bundle.body } : {}) };
     return await json(base, `/runs?${query}`, init, UPLOAD_TIMEOUT_MS);
   } finally {
@@ -259,13 +284,13 @@ async function submit(base, commit, command) {
 }
 
 /** La máquina pudo apagarse justo al llegar el commit: se enciende y se manda una vez más. */
-async function submitOnce(link, host, commit, command) {
+async function submitOnce(link, host, commit, command, wip) {
   try {
-    return await submit(link.base, commit, command);
+    return await submit(link.base, commit, command, wip);
   } catch (error) {
     if (error instanceof RemoteError) throw error;
     await connect(link, host);
-    return submit(link.base, commit, command);
+    return submit(link.base, commit, command, wip);
   }
 }
 
@@ -332,11 +357,14 @@ export async function runRemote(argv) {
     }
     if (options.attach) return report(await follow(link, options.attach), platform, host);
 
-    if (!options.commit && git(["status", "--porcelain"])) throw new RemoteError("Hay cambios sin commit y la corrida solo lleva commits. Haz commit, o nombra uno con --commit <sha>.");
-    const commit = git(["rev-parse", "--verify", `${options.commit ?? "HEAD"}^{commit}`]);
+    if (options.wip && options.commit) throw new RemoteError("--wip fotografía el árbol de trabajo; no va con --commit.");
+    const dirty = !options.commit && git(["status", "--porcelain"]);
+    if (dirty && !options.wip) throw new RemoteError("Hay cambios sin commit y la corrida solo lleva commits. Haz commit, nombra uno con --commit <sha>, o manda la foto del árbol con --wip.");
+    const photo = dirty ? snapshot() : null;
+    const commit = photo ?? git(["rev-parse", "--verify", `${options.commit ?? "HEAD"}^{commit}`]);
     const command = options.noCargo ? "pnpm verify --no-cargo" : "pnpm verify";
-    const { id } = await submitOnce(link, host, commit, command);
-    console.log(`  Corrida ${id}: ${commit.slice(0, 10)}, «${command}», en ${host}.`);
+    const { id } = await submitOnce(link, host, commit, command, Boolean(photo));
+    console.log(`  Corrida ${id}: ${photo ? `foto wip sobre ${git(["rev-parse", "--short=10", "HEAD"])}` : commit.slice(0, 10)}, «${command}», en ${host}.`);
     if (options.detach) {
       resumeHint(id);
       return 0;

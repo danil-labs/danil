@@ -8,6 +8,7 @@ import { fileURLToPath } from "node:url";
 
 import { SKIPPED_EXIT_CODE, walkFiles } from "./git.mjs";
 import { lowerPriority } from "./priority.mjs";
+import { typecheckBin } from "./typescript.mjs";
 import { quickRefusal, quickScope } from "./verify-scope.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -69,6 +70,7 @@ const steps = [
   ["The scope of --quick comes from the diff and stops without a green when in doubt", process.execPath, ["--test", join(root, "tests/unit/verify-scope.test.mjs")], root],
   ["The pre-push hook checks what the push changes", process.execPath, ["--test", join(root, "tests/unit/pre-push.test.mjs")], root],
   ["Local checks run at low priority and fail open", process.execPath, ["--test", join(root, "tests/unit/priority.test.mjs")], root],
+  ["Types are checked with tsgo, and with tsc when tsgo does not start", process.execPath, ["--test", join(root, "tests/unit/typescript-bin.test.mjs")], root],
   ["Installing the hooks keeps a foreign core.hooksPath", process.execPath, ["--test", join(root, "tests/unit/install-hooks.test.mjs")], root],
   ["All code is reviewable", process.execPath, [join(root, "scripts/guards/reviewable.mjs")], root],
   [
@@ -131,7 +133,6 @@ const steps = [
     ["--test", "--experimental-strip-types", join(root, "tests/unit/pool.test.ts")],
     root,
   ],
-  ["La cola remota corre uno a la vez, limpia entre corridas y devuelve el exit real", process.execPath, ["--test", join(root, "tests/unit/verify-queue.test.mjs")], root],
   ["El barrido de target no toca lo que un cargo usa", process.execPath, ["--test", join(root, "tests/unit/sweep-targets.test.mjs")], root],
   [
     "A saved chat background that no longer exists paints nothing",
@@ -620,11 +621,11 @@ const steps = [
     root,
   ],
   ["The front passes the linter", process.execPath, [join(root, "node_modules/@biomejs/biome/bin/biome"), "lint", "src", "scripts", "tests"], root],
-  ["The front compiles", process.execPath, [join(root, "node_modules/typescript/bin/tsc"), "-b"], root],
+  ["The front compiles", process.execPath, [typecheckBin(root), "-b"], root],
   [
     "TypeScript tests typecheck",
     process.execPath,
-    [join(root, "node_modules/typescript/bin/tsc"), "-p", join(root, "tests"), "--noEmit"],
+    [typecheckBin(root), "-p", join(root, "tests"), "--noEmit"],
     root,
   ],
   ["Bundles the front", process.execPath, [join(root, "node_modules/vite/bin/vite.js"), "build"], root],
@@ -641,6 +642,8 @@ const steps = [
   ["Prose, diagrams and updates mount", process.execPath, [join(root, "scripts/guards/mount-content.mjs")], root],
   ["Spaces mount", process.execPath, [join(root, "scripts/guards/mount-spaces.mjs")], root],
   ["Bundles the browser entry", process.execPath, [join(root, "node_modules/vite/bin/vite.js"), "build", "--mode", "web"], root],
+  // Espera más de un minuto sin CPU: antes del build retenía a Vite; aquí corre junto a los demás.
+  ["La cola remota corre uno a la vez, limpia entre corridas y devuelve el exit real", process.execPath, ["--test", join(root, "tests/unit/verify-queue.test.mjs")], root],
   ["The phone version installs as an app and always loads the latest", process.execPath, ["--test", join(root, "tests/unit/web-phone-pwa.test.mjs")], root],
   ["In the browser the interface talks to the relay", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/web-transport.test.mjs")], root],
   ["In the browser the Danil session picks the computer and explains why it cannot enter", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/web-gate.test.mjs")], root],
@@ -771,12 +774,12 @@ const GIB = 1024 ** 3;
 const STEP_TIMEOUT_MS = 15 * 60_000;
 const CARGO_TIMEOUT_MS = 45 * 60_000;
 
-/** Un paso por cada dos núcleos y por cada 2 GiB libres; con 1, la cadena corre en serie. En macOS `freemem` no cuenta la caché: vale la mitad del total. */
+/** Un paso por núcleo y por cada 2 GiB libres: casi todos esperan temporizadores, no CPU. Con 1, la cadena corre en serie. En macOS `freemem` no cuenta la caché: vale la mitad del total. */
 function budget() {
   const forced = Number(process.env.VERIFY_JOBS);
   if (Number.isSafeInteger(forced) && forced > 0) return forced;
   const memory = process.platform === "darwin" ? totalmem() / 2 : freemem();
-  return Math.max(1, Math.min(Math.floor(availableParallelism() / 2), Math.floor(memory / (2 * GIB))));
+  return Math.max(1, Math.min(availableParallelism(), Math.floor(memory / (2 * GIB))));
 }
 
 const running = new Set();
