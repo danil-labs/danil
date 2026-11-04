@@ -76,8 +76,8 @@ test("la ventana muestra el historial de la cuenta y marca las copias de conflic
     assert.ok(section.querySelector("[data-memory-conflict-copy]")?.textContent.includes("deploy.md"), section.textContent);
     assert.ok(section.querySelector("[data-memory-conflicts]"), "the conflict copies are announced");
 
-    // El token se pidió para la cuenta del workspace abierto.
-    assert.deepEqual(e.calls.find((c) => c.command === "danil_workspace_account")?.args, { workspace: "w1" });
+    // El token se pidió para la cuenta del workspace abierto (la lectura del montaje va sin workspace).
+    assert.ok(e.calls.some((c) => c.command === "danil_workspace_account" && c.args?.workspace === "w1"), "the workspace account is read with its workspace");
     assert.deepEqual(e.calls.find((c) => c.command === "account_relay_token")?.args, { account: "u_ana" });
 
     const history = buttons(section, "Historial");

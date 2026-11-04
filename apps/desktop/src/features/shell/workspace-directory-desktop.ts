@@ -16,7 +16,8 @@ async function clientOf(account?: string | null): Promise<ClientToken> {
     const of = await invoke<WorkspaceAccount>("danil_workspace_account", {}).catch(() => null);
     key = of?.signed_in ? of.account : null;
   }
-  return invoke<ClientToken>("account_relay_token", key ? { account: key } : {});
+  if (!key) throw Object.assign(new Error("no_account"), { detail: "no_account" });
+  return invoke<ClientToken>("account_relay_token", { account: key });
 }
 
 function refused(answer: Answer<unknown>): never {
