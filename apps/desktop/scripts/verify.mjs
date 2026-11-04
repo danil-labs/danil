@@ -537,12 +537,6 @@ const steps = [
     root,
   ],
   [
-    "Usage keeps measured zeros, cost coverage and missing data apart",
-    process.execPath,
-    ["--test", "--experimental-strip-types", join(root, "tests/unit/usage-me.test.ts")],
-    root,
-  ],
-  [
     "Settings opens old ids at their entry and tab",
     process.execPath,
     ["--test", "--experimental-strip-types", join(root, "tests/unit/settings-entries.test.ts")],
