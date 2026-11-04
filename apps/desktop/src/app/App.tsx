@@ -5,6 +5,7 @@ import { open } from "@tauri-apps/plugin-dialog";
 import ArrowLeft from "lucide-solid/icons/arrow-left";
 import Columns2 from "lucide-solid/icons/columns-2";
 import FolderOpen from "lucide-solid/icons/folder-open";
+import FolderPlus from "lucide-solid/icons/folder-plus";
 import PanelLeftClose from "lucide-solid/icons/panel-left-close";
 import PanelLeftOpen from "lucide-solid/icons/panel-left-open";
 import Search from "lucide-solid/icons/search";
@@ -8755,6 +8756,17 @@ export default function App() {
             >
               <Search size={15} aria-hidden="true" />
             </BotonConAtajo>
+            <Button
+              variant="ghost"
+              size="icon"
+              class="size-[30px] shrink-0 text-neutral-500"
+              data-add-project=""
+              aria-label={t("projects.add.title")}
+              title={t("projects.add.title")}
+              onClick={() => setAnadiendoCarpeta(true)}
+            >
+              <FolderPlus size={15} aria-hidden="true" />
+            </Button>
             <Show when={sidebarFilter() || capabilities().inbox}>
               <Suspense>
                 <CustomizeMenu
