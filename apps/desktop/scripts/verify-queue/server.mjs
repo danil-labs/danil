@@ -360,7 +360,7 @@ export function createQueue({ home, config, diskPercent = defaultDiskPercent, ru
   function ensureLane(repo, lane) {
     const paths = lanePaths(repo, lane);
     const run = runner(repo, lane);
-    // HOME y TMPDIR nuevos en cada corrida; TMPDIR propio porque los candados de las cadenas viven ahí y /tmp lo comparten los carriles.
+    // HOME y TMPDIR nuevos en cada corrida. Con un /tmp común, el candado de una cadena frena la del otro carril.
     run.sync(["rm", "-rf", paths.home, paths.tmp], "/");
     run.sync(["mkdir", "-p", paths.checkout, paths.home, paths.tmp, paths.cargo, paths.cache, paths.data], "/");
     // Lo que una rama deja en .git (filtros, include.path, insteadOf, alternates, hooks) correría en el
