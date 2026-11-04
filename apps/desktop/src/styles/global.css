@@ -292,11 +292,14 @@
   --animate-danil-pulse: danil-pulse 2s steps(2, jump-none) infinite;
   /* Todo lo que se repite cambia en múltiplos de 1/12 s y se ancla al reloj
      común (`lib/sharedClock.ts`): un loader o cuarenta repintan la ventana en
-     los mismos 12 cuadros por segundo. Un solo loader, `ui/Spinner.tsx`, y dos
-     giros: el normal y el lento del anillo de la tarea que el motor aún
-     registra. `spin` y `pulse` pisan los de Tailwind, que son continuos. */
-  --animate-spin: spin 1s steps(12) infinite;
-  --animate-spin-lento: spin 2.5s steps(30) infinite;
+     los mismos 12 cuadros por segundo. El giro es la excepción: por pasos se
+     leía como un loader trabado. Es continuo y solo mueve `transform`, que el
+     compositor anima sin pasar por el hilo principal, y el reloj común deja a
+     todos en la misma fase. Un solo loader, `ui/Spinner.tsx`, y dos giros: el
+     normal y el lento del anillo de la tarea que el motor aún registra.
+     `pulse` pisa el de Tailwind, que es continuo. */
+  --animate-spin: spin 1s linear infinite;
+  --animate-spin-lento: spin 2.5s linear infinite;
   --animate-pulse: pulse 2s steps(2, jump-start) infinite;
   --animate-skeleton: danil-skeleton 1.5s steps(18) infinite;
   /* El trazo que corre hacia el centro del mapa mientras se conecta una IA. */
