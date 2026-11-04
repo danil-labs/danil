@@ -1,4 +1,5 @@
 import { t } from "../../lib/i18n";
+import "../../locales/handoverPhrases";
 import { Button } from "../../ui/Button";
 import { Dialog, DialogContent, DialogTitle } from "../../ui/Dialog";
 
