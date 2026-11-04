@@ -160,8 +160,11 @@ networks, and the `tailscaled` socket is closed to them; they keep internet
 access for packages. `/var/lib/verify-queue` is 0711, `runs/` and `incoming/`
 are 0700; `verify-runners` is the run users' primary group, which `egress.nft`
 matches and which reads the mirrors, so one repo's branch can read the other
-repo's mirror. Toolchains live in `/opt/rust`,
-owned by root. To install or update the queue, copy `scripts/verify-queue/` to
+repo's mirror. Toolchains live in `/opt/rust`, owned by root, with no
+auto-install (`RUSTUP_AUTO_INSTALL=0`): the engine's `rust-toolchain.toml` picks
+the version, and one that `install.sh` did not install fails with "toolchain '…'
+is not installed". Provider CLIs (binaries only) and the work-tools tree for
+`bundled-work-tools` live in `/opt/verify-agents`, also read-only. To install or update the queue, copy `scripts/verify-queue/` to
 the machine and run `install.sh` as root.
 
 ## Sweeping `target/`

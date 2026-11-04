@@ -1029,3 +1029,10 @@ test("los carriles cuelgan de lanesRoot y origin/dev apunta a la base de la corr
   await queue.settled();
   assert.match(readFileSync(queue.logPath(all.id), "utf8"), /dev:\n/, "sin base no queda un origin/dev de otra corrida");
 });
+
+test("una corrida del motor con más de 64 logs los copia todos", { skip }, async (t) => {
+  const { dir, repo, home } = workspace(t);
+  const queue = createQueue({ home, config: engineConfig, sameUser: true, diskPercent: () => 10 });
+  const { id } = await engineRun(t, queue, repo, dir, "mkdir -p target/verify/r1; for i in $(seq 70); do echo $i > target/verify/r1/e$i.log; done");
+  assert.equal(readdirSync(join(home, "runs", id, "artifacts/target/verify/r1")).length, 70);
+});
