@@ -708,9 +708,11 @@ fn allowed_path(path: &str) -> bool {
             .all(|b| b.is_ascii_alphanumeric() || matches!(b, b'/' | b'_' | b'-' | b'.'))
 }
 
-/// Rutas de lectura de Harness en Computers. Lista cerrada, no un proxy abierto.
-fn allowed_org_path(path: &str) -> bool {
-    (path == "/v1/org" || path.starts_with("/v1/org/"))
+/// Rutas de lectura de la persona en Computers. Lista cerrada, no un proxy abierto.
+fn allowed_person_path(path: &str) -> bool {
+    let org = path == "/v1/org" || path.starts_with("/v1/org/");
+    let usage = path == "/v1/usage/me";
+    (org || usage)
         && path.len() <= 512
         && !path.contains("..")
         && path
@@ -1021,16 +1023,16 @@ pub(super) fn agents_session_refresh(app: tauri::AppHandle, account: Option<Stri
     access(&app, &key(&account), true).is_ok()
 }
 
-/// Lectura de Harness con la sesión de persona de la ventana. El motor no participa y
-/// el JavaScript nunca ve el token. Solo GET y una lista cerrada de rutas.
+/// Lectura de Harness y del consumo propio con la sesión de persona de la ventana.
+/// El motor no participa y el JavaScript nunca ve el token. Solo GET y una lista
+/// cerrada de rutas.
 #[tauri::command(async)]
 pub(super) fn harness_org_fetch(
     app: tauri::AppHandle,
     account: Option<String>,
-    path: String,
     query: Option<String>,
 ) -> Result<Value, Value> {
-    if !allowed_org_path(&path) {
+    if !allowed_person_path(&path) {
         return Err(error("invalid_request"));
     }
     let query = query.unwrap_or_default();
@@ -1176,13 +1178,16 @@ mod tests {
     }
 
     #[test]
-    fn harness_paths_are_a_closed_read_list() {
-        assert!(allowed_org_path("/v1/org/me"));
-        assert!(allowed_org_path("/v1/org/usage"));
-        assert!(allowed_org_path("/v1/org/activity"));
-        assert!(!allowed_org_path("/v1/me/usage"));
-        assert!(!allowed_org_path("/v1/org/../v1/me"));
-        assert!(!allowed_org_path("/v1/org/usage?x=1"));
+    fn person_paths_are_a_closed_read_list() {
+        assert!(allowed_person_path("/v1/org/me"));
+        assert!(allowed_person_path("/v1/org/usage"));
+        assert!(allowed_person_path("/v1/org/activity"));
+        assert!(allowed_person_path("/v1/usage/me"));
+        assert!(!allowed_person_path("/v1/me/usage"));
+        assert!(!allowed_person_path("/v1/usage/me/other"));
+        assert!(!allowed_person_path("/v1/org/../v1/me"));
+        assert!(!allowed_person_path("/v1/org/usage?x=1"));
+        assert!(!allowed_person_path("/v1/usage/me?x=1"));
     }
 
     #[test]
