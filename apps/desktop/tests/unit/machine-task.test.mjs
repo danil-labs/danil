@@ -102,14 +102,56 @@ test("una tarea de una máquina apagada abre sin fallo y mandarle algo la encien
   assert.equal(location?.querySelector("[data-task-location-machine]")?.textContent, "vm", "la ventana no dice en qué máquina corre");
 
   await send(app, "sigue");
-  assert.equal(doc.querySelector("[data-machine-notice]")?.textContent, "Encendiendo vm…");
+  // El mensaje ya salió y se ve en el hilo; lo que espera es la máquina, y lo
+  // dice el renglón del turno, donde después dirá «Pensando».
+  assert.ok(text(app).includes("sigue"), "el mensaje no se ve enviado");
+  assert.equal(doc.querySelector("[data-machine-notice]"), null, "el aviso de arriba sigue diciendo que se enciende");
+  const waking = doc.querySelector("[data-turn-waking]")?.closest('[role="status"]');
+  assert.ok(waking, "el renglón del turno no lleva la máquina");
+  assert.ok(waking.textContent.startsWith("Encendiendo vm…"), `el renglón dice «${waking.textContent}»`);
   await sleep(700);
+  assert.equal(doc.querySelector("[data-turn-waking]"), null, "el renglón sigue diciendo que se enciende");
   assert.equal(sends.length, 1, "el mensaje salió más de una vez");
   assert.equal(sends[0].session, "r1");
   assert.equal(doc.querySelector("[data-machine-notice]"), null, "el aviso sigue tras encenderla");
   assert.ok(doc.querySelector('[data-task-location][data-task-location-on="true"]'), "la ventana sigue diciendo que está apagada");
   assert.ok(reads.some((r) => r.id === "r1" && r.awake), "no se volvió a leer la tarea");
   assert.ok(text(app).includes("Respuesta despierta"));
+  assert.deepEqual(app.failures, []);
+});
+
+test("la primera línea de una tarea nueva en una máquina apagada se ve enviada mientras la máquina se enciende", async () => {
+  const sends = [];
+  let soltar;
+  const app = await boot("listo", "machine-task-new-waking", responses({
+    list_live_sessions: () => [],
+    load_session: ({ id }) => session(id, [turn(0, "hola nueva"), turn(1, "Respuesta despierta")]),
+    send_message: (args) => {
+      sends.push(args);
+      return new Promise((resolve) => { soltar = () => resolve("n1"); });
+    },
+  }));
+  await sleep(600);
+  const doc = app.w.document;
+  doc.querySelector('[aria-label="Ejecutar en"]').click();
+  await sleep(100);
+  doc.querySelector('[data-machine-option="vm"]').click();
+  await sleep(150);
+
+  await send(app, "hola nueva");
+  await sleep(100);
+  assert.equal(sends.length, 1, "el mensaje no salió");
+  const hilo = doc.querySelector("[data-conversacion]")?.textContent ?? "";
+  assert.ok(hilo.includes("hola nueva"), `el mensaje no se ve enviado en la conversación: «${hilo.slice(0, 300)}»`);
+  assert.equal(doc.querySelector("textarea")?.value, "", "el texto se quedó en la caja");
+  assert.equal(doc.querySelector("[data-machine-notice]"), null, "el aviso de arriba dice que se enciende");
+  const waking = doc.querySelector("[data-turn-waking]")?.closest('[role="status"]');
+  assert.ok(waking, "el renglón del turno no lleva la máquina");
+  assert.ok(waking.textContent.startsWith("Encendiendo vm…"), `el renglón dice «${waking.textContent}»`);
+
+  soltar();
+  await sleep(400);
+  assert.equal(doc.querySelector("[data-turn-waking]"), null, "el renglón sigue diciendo que se enciende");
   assert.deepEqual(app.failures, []);
 });
 
