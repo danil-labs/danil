@@ -1,4 +1,5 @@
 {
+  "lanes": 2,
   "repos": {
     "terminus": {
       "user": "verify-run",

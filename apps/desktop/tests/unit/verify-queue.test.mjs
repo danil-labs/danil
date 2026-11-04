@@ -883,14 +883,15 @@ test("con dos carriles corren dos a la vez, la tercera espera, y cada una recibe
   const trace = join(dir, "trace");
   const lanesConfig = { lanes: 2, repos: { engine: { ...engineConfig.repos.engine, fresh: [], receipt: undefined, artifacts: [], jobs: { verify: { argv: ["bash", "chain.sh", "{jobs}"], options: { "--all": null } } } } } };
   const queue = createQueue({ home, config: lanesConfig, sameUser: true, cpus: 8, diskPercent: () => 10 });
-  const chain = (name) => `echo "inicio-${name} $1" >> ${trace}; sleep 0.6; echo "fin-${name}" >> ${trace}`;
+  const chain = (name) => `echo "inicio-${name} $1" >> ${trace}; echo "tmp $TMPDIR" >> ${trace}; sleep 0.6; echo "fin-${name}" >> ${trace}`;
   const ids = [];
   for (const name of ["a", "b", "c"]) {
     const sha = commit(repo, chain(name));
     ids.push((await queue.submit({ repo: "engine", commit: sha, command: "verify", bundle: bundle(repo, dir) })).id);
   }
   await queue.settled();
-  const lines = readFileSync(trace, "utf8").trim().split("\n");
+  const all = readFileSync(trace, "utf8").trim().split("\n");
+  const lines = all.filter((line) => !line.startsWith("tmp "));
   assert.deepEqual(lines.slice(0, 2).sort(), ["inicio-a 4", "inicio-b 4"], "dos a la vez, con 8/2 núcleos cada una");
   assert.ok(lines.indexOf("inicio-c 4") > Math.min(lines.indexOf("fin-a"), lines.indexOf("fin-b")), "la tercera espera un carril libre");
   const runs = ids.map((id) => queue.readRun(id));
@@ -898,6 +899,8 @@ test("con dos carriles corren dos a la vez, la tercera espera, y cada una recibe
   assert.deepEqual(runs.slice(0, 2).map((run) => run.lane).sort(), [0, 1]);
   assert.equal(JSON.parse(queue.receiptBytes(ids[0])).lane, String(runs[0].lane));
   assert.equal(existsSync(join(home, "busy")), false);
+  const tmps = new Set(all.filter((line) => line.startsWith("tmp ")));
+  assert.equal(tmps.size, 2, "cada carril tiene su TMPDIR: los candados de /tmp no cruzan carriles");
 });
 
 test("un repo vuelve al carril libre donde ya está caliente", { skip }, async (t) => {

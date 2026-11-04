@@ -43,7 +43,7 @@ const FINISHED = new Set(["passed", "failed", "cancelled", "interrupted"]);
 const CHECK_STATES = new Set(["PASS", "FAIL", "TIMEOUT", "SKIP", "KNOWN"]);
 /** Lo único que pasa del entorno de la cola al de la corrida; el carril pone HOME y sus cachés. */
 const INHERITED = ["PATH", "LANG", "RUSTUP_HOME"];
-const LANE_ENV = ["HOME", "CARGO_HOME", "XDG_CACHE_HOME", "XDG_DATA_HOME", "CARGO_TARGET_DIR", "GIT_CONFIG_GLOBAL"];
+const LANE_ENV = ["HOME", "TMPDIR", "CARGO_HOME", "XDG_CACHE_HOME", "XDG_DATA_HOME", "CARGO_TARGET_DIR", "GIT_CONFIG_GLOBAL"];
 /** El entorno con el que arranca `sudo`: `env -i` deja después solo lo de la corrida. */
 const SUDO_ENV = { PATH: "/usr/sbin:/usr/bin:/sbin:/bin" };
 
@@ -340,14 +340,14 @@ export function createQueue({ home, config, diskPercent = defaultDiskPercent, ru
     const base = join(home, "lanes", String(lane), repo);
     const checkout = join(base, "checkout");
     const target = config.repos[repo].target === "checkout" ? join(checkout, "target") : join(base, "target");
-    return { base, checkout, target, home: join(base, "home"), cargo: join(base, "cargo"), cache: join(base, "cache"), data: join(base, "data") };
+    return { base, checkout, target, home: join(base, "home"), tmp: join(base, "tmp"), cargo: join(base, "cargo"), cache: join(base, "cache"), data: join(base, "data") };
   }
 
   /** Lo que el carril pone en cada corrida: un HOME nuevo; registro, cachés y target persisten. */
   function laneEnv(repo, lane) {
     const paths = lanePaths(repo, lane);
     const insideTarget = config.repos[repo].target === "checkout";
-    return { ...runner(repo, lane).inherited, HOME: paths.home, CARGO_HOME: paths.cargo, XDG_CACHE_HOME: paths.cache, XDG_DATA_HOME: paths.data, ...(insideTarget ? {} : { CARGO_TARGET_DIR: paths.target }) };
+    return { ...runner(repo, lane).inherited, HOME: paths.home, TMPDIR: paths.tmp, CARGO_HOME: paths.cargo, XDG_CACHE_HOME: paths.cache, XDG_DATA_HOME: paths.data, ...(insideTarget ? {} : { CARGO_TARGET_DIR: paths.target }) };
   }
 
   /** git en el checkout del carril, siempre con el usuario de la corrida, sin hooks ni config global. */
@@ -360,8 +360,9 @@ export function createQueue({ home, config, diskPercent = defaultDiskPercent, ru
   function ensureLane(repo, lane) {
     const paths = lanePaths(repo, lane);
     const run = runner(repo, lane);
-    run.sync(["rm", "-rf", paths.home], "/");
-    run.sync(["mkdir", "-p", paths.checkout, paths.home, paths.cargo, paths.cache, paths.data], "/");
+    // HOME y TMPDIR nuevos en cada corrida; TMPDIR propio porque los candados de las cadenas viven ahí y /tmp lo comparten los carriles.
+    run.sync(["rm", "-rf", paths.home, paths.tmp], "/");
+    run.sync(["mkdir", "-p", paths.checkout, paths.home, paths.tmp, paths.cargo, paths.cache, paths.data], "/");
     // Lo que una rama deja en .git (filtros, include.path, insteadOf, alternates, hooks) correría en el
     // checkout de la siguiente: se borra y se reinicia en cada corrida. Un .git que no es carpeta se tira entero.
     const dotGit = join(paths.checkout, ".git");
