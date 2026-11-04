@@ -31,7 +31,8 @@ test("sin --apply solo lista", { skip }, (t) => {
   const dir = root(t);
   const old = target(dir, "viejo", 48);
   const output = execFileSync(process.execPath, [script, "--root", dir], { encoding: "utf8" });
-  assert.match(output, /se borraría/);
+  // Con un compilador ilegible de otro carril vivo, «en uso» también es correcto.
+  assert.match(output, /se borraría|en uso \(pid/);
   assert.equal(existsSync(old), true);
 });
 
