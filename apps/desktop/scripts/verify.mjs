@@ -112,7 +112,6 @@ const steps = [
   ["The catalog defines what the code asks for", process.execPath, [join(root, "scripts/guards/locales.mjs")], root],
   ["Font sizes come from the scale", process.execPath, ["--experimental-strip-types", join(root, "scripts/guards/design-tokens.mjs")], root],
   ["The shared packages pass their tests", process.execPath, ["--test", "--experimental-strip-types", join(root, "../../packages/tasks/test/*.test.ts"), join(root, "../../packages/attention/test/*.test.ts"), join(root, "../../packages/design/test/*.test.ts"), join(root, "../../packages/chat/test/*.test.ts")], root],
-  ["Settings › Usage reads the measured usage of the account", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/usage-me.test.ts")], root],
   ["`cn` recognizes the text scale", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/cn-text-scale.test.ts")], root],
   ["The design package says the same as the desktop", process.execPath, ["--experimental-strip-types", join(root, "scripts/guards/shared-design.mjs")], root],
   ["What is already translated does not get hardcoded again", process.execPath, [join(root, "scripts/guards/literals.mjs")], root],
@@ -541,6 +540,12 @@ const steps = [
     "Settings opens old ids at their entry and tab",
     process.execPath,
     ["--test", "--experimental-strip-types", join(root, "tests/unit/settings-entries.test.ts")],
+    root,
+  ],
+  [
+    "Usage reads the account's measured usage and keeps missing data missing",
+    process.execPath,
+    ["--test", "--experimental-strip-types", join(root, "tests/unit/usage-me.test.ts")],
     root,
   ],
   [
