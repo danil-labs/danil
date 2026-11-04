@@ -131,7 +131,6 @@ const steps = [
     ["--test", "--experimental-strip-types", join(root, "tests/unit/pool.test.ts")],
     root,
   ],
-  ["La cola remota corre uno a la vez, limpia entre corridas y devuelve el exit real", process.execPath, ["--test", join(root, "tests/unit/verify-queue.test.mjs")], root],
   ["El barrido de target no toca lo que un cargo usa", process.execPath, ["--test", join(root, "tests/unit/sweep-targets.test.mjs")], root],
   [
     "A saved chat background that no longer exists paints nothing",
@@ -641,6 +640,8 @@ const steps = [
   ["Prose, diagrams and updates mount", process.execPath, [join(root, "scripts/guards/mount-content.mjs")], root],
   ["Spaces mount", process.execPath, [join(root, "scripts/guards/mount-spaces.mjs")], root],
   ["Bundles the browser entry", process.execPath, [join(root, "node_modules/vite/bin/vite.js"), "build", "--mode", "web"], root],
+  // Espera más de un minuto sin CPU: antes del build retenía a Vite; aquí corre junto a los demás.
+  ["La cola remota corre uno a la vez, limpia entre corridas y devuelve el exit real", process.execPath, ["--test", join(root, "tests/unit/verify-queue.test.mjs")], root],
   ["The phone version installs as an app and always loads the latest", process.execPath, ["--test", join(root, "tests/unit/web-phone-pwa.test.mjs")], root],
   ["In the browser the interface talks to the relay", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/web-transport.test.mjs")], root],
   ["In the browser the Danil session picks the computer and explains why it cannot enter", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/web-gate.test.mjs")], root],
