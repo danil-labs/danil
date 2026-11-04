@@ -70,9 +70,11 @@ reservar `DANIL_TASK` y `DANIL_CONNECTION` como nombres de secreto, migrar
 `remote-host.py run <host> -- status --json`. Detalle en la nota de proyecto
 `danil-cli-final-delta-review.md`.
 
-`COMMANDS` ya incluye `computers` y `harness` para que un launcher sobre el
-ejecutable físico no abra la ventana; con el pin actual ambos terminan en el error
-del motor. Esa rutina sigue sin comprobarse con el motor nuevo.
+`COMMANDS` cubre todas las raíces de `agent-context --json` del pin 0.3.0,
+incluidas `client`, `credential`, `executor`, `inbox`, `notice`, `secret` y
+`session`, para que un launcher sobre el ejecutable físico no abra la ventana;
+un comando que el motor todavía no tiene (`harness`, `vm`) termina en su error.
+`cli-forward` contrasta la lista completa contra ese catálogo.
 
 Los ejemplos de la guía pública se ejecutaron con `seldon-runtime` SHA-256
 `22863f0d4456ed53…` de seldon-host `2d6520b`, Linux x86_64, enlazado como `danil`

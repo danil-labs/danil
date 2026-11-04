@@ -77,12 +77,12 @@ fn main() {
       assert.equal(catalog.error, null);
       const roots = new Set(catalog.result.commands.map(({ command }) => command.split(" ")[0]));
       assert.ok(roots.size > 0);
+      const missing = [];
       for (const root of roots) {
         const result = run([root]);
-        assert.equal(result.status, 23, `falta COMMANDS: ${root}`);
-        assert.equal(result.stdout, `${root}\n`);
-        assert.equal(result.stderr, "engine stderr\n");
+        if (result.status !== 23 || result.stdout !== `${root}\n` || result.stderr !== "engine stderr\n") missing.push(root);
       }
+      assert.deepEqual(missing, [], `comandos raíz del motor sin reenviar: ${missing.join(", ")}`);
       t.diagnostic(`${roots.size} comandos raíz contrastados con ${lock.release}`);
     });
 
@@ -116,7 +116,7 @@ fn main() {
     assert.equal(streamed.stdout, `chat\n--stream\n${"x".repeat(256 * 1024)}`);
     assert.equal(streamed.stderr, `${"y".repeat(256 * 1024)}engine stderr\n`);
 
-    for (const args of [["--root", "path with spaces", "status"], ["--engine=/tmp/engine", "status"], ["--profile", "desktop-lab", "status"], ["github", "status"], ["github", "install"], ["--machine=cmp_qa", "activity", "list"], ["--machine", "cmp_qa", "activity", "list"], ["--instance=123", "status"], ["--instance", "123", "status"], ["--json", "instances"], ["--help"], ["-h"], ["--version"], ["-V"], ["kn", "--help"]]) {
+    for (const args of [["--root", "path with spaces", "status"], ["--engine=/tmp/engine", "status"], ["--profile", "desktop-lab", "status"], ["github", "status"], ["github", "install"], ["--machine=cmp_qa", "activity", "list"], ["--machine", "cmp_qa", "activity", "list"], ["--instance=123", "status"], ["--instance", "123", "status"], ["--json", "instances"], ["--help"], ["-h"], ["--version"], ["-V"], ["kn", "--help"], ["executor", "release", "status"], ["executor", "release", "stage", "--manifest", "release.json"], ["inbox", "list", "--after", "cursor"], ["session", "detach", "--id", "ses_qa"], ["secret", "run", "--", "env"]]) {
       const result = run(args);
       assert.equal(result.status, 23);
       assert.equal(result.stdout, `${args.join("\n")}\n`);
