@@ -91,6 +91,9 @@ export const APP_ACTIONS = [
   // Cambiar de CLI dentro de la tarea (`provider_handoff_v1`): el siguiente
   // turno abre sesión nueva con la conversación como texto o retoma la aparcada.
   "set_session_provider",
+  // Guardar en la tarea el modelo y el esfuerzo que la persona eligió en el chip
+  // (`session_model_v1`): el siguiente turno que llegue sin modelo sigue con ese.
+  "set_session_model",
   "answer_question",
   "mark_task_seen",
   // La tarjeta de vista previa: Fijar, Archivar y Cambiarle el nombre.

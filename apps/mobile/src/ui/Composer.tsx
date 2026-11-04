@@ -113,6 +113,7 @@ export function Composer({
   steerRefused = false,
   onStopAndSend,
   choice,
+  onModelChoice,
   onAccounts,
   bottomInset = true,
   testID = "composer",
@@ -157,6 +158,12 @@ export function Composer({
   onStopAndSend?: () => void;
   /** Recibe lo elegido en el chip con cada cambio. */
   choice?: MutableRefObject<Choice | null>;
+  /**
+   * La persona eligió modelo, o el esfuerzo de un modelo que ya eligió, en la
+   * hoja. Nunca el que el cuadro pone solo (otra superficie, otro CLI): ese no
+   * se guarda en la tarea (`session_model_v1`).
+   */
+  onModelChoice?: (choice: { provider: string; model: string; effort: string | null }) => void;
   /** Abre Proveedores de IA, donde se activan los modelos gratuitos. */
   onAccounts?: () => void;
   /** Bajo una barra de pestañas, la barra ya deja el hueco del sistema. */
@@ -189,6 +196,8 @@ export function Composer({
   const input = useRef<ComponentRef<typeof TextInput>>(null);
   // El CLI elegido que espera la confirmación del traspaso.
   const [candidate, setCandidate] = useState<string | null>(null);
+  // El último modelo que la persona tocó en la hoja: un esfuerzo solo se guarda con ese.
+  const picked = useRef<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
   const draining = useRef(false);
   const claimedQueue = useRef(new Set<string>());
@@ -743,8 +752,11 @@ export function Composer({
                   detail={m.note ? phrase(m.note) : null}
                   selected={model === m.id}
                   onPress={() => {
+                    const level = effort && m.efforts.includes(effort) ? effort : null;
                     setModel(m.id);
-                    if (effort && !m.efforts.includes(effort)) setEffort(null);
+                    setEffort(level);
+                    picked.current = m.id;
+                    if (current) onModelChoice?.({ provider: current, model: m.id, effort: level });
                   }}
                 />
               ))}
@@ -755,7 +767,10 @@ export function Composer({
                     {[null, ...efforts].map((e) => (
                       <Pressable
                         key={e ?? "auto"}
-                        onPress={() => setEffort(e)}
+                        onPress={() => {
+                          setEffort(e);
+                          if (current && model && picked.current === model) onModelChoice?.({ provider: current, model, effort: e });
+                        }}
                         style={[styles.effort, { borderColor: e === effort ? theme.primary : theme.border, backgroundColor: e === effort ? theme.primary : "transparent" }]}
                       >
                         <Text style={{ color: e === effort ? theme.onPrimary : theme.text, fontWeight: e === effort ? "700" : "500" }}>{effortLabel(e)}</Text>
