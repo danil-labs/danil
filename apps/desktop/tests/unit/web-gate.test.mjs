@@ -152,3 +152,48 @@ test("only an explicit access refusal offers request access, without replacing l
     } finally { globalThis.fetch = own; }
   }
 });
+
+test("with no linked workspace the gate says only linked ones show and opens the computer to create one", async () => {
+  const fake = relay();
+  const own = globalThis.fetch;
+  const computers = [
+    { computer_id: "cmp_off", name: "Casa", state: "offline", workspaces: [] },
+    { computer_id: "cmp_vm", name: "Tacos Don Beto", state: "online", workspaces: [] },
+  ];
+  globalThis.fetch = async (input, init) => {
+    const url = String(input?.url ?? input);
+    if (url.startsWith(API)) return new Response(JSON.stringify(computers), { status: 200 });
+    if (url.startsWith("https://machines.danil.ai/v1/workspaces")) return new Response(JSON.stringify({ workspaces: [] }), { status: 200 });
+    return own(input, init);
+  };
+  let w;
+  try {
+    const app = await boot("listo", "web-gate-no-workspaces", {}, undefined, { "sb-supabase-auth-token": session("stored") }, {
+      web: true,
+      beforeImport: (win) => {
+        w = win;
+        globalThis.WebSocket = fake.Socket;
+        win.terminusWeb = { supabaseUrl: SUPABASE, supabaseKey: "public-anon-key" };
+      },
+    });
+    await sleep(1200);
+    const gate = () => w.document.querySelector("[data-web-gate]");
+    assert.equal(gate()?.dataset.webGate, "no_workspaces");
+    const text = gate().textContent;
+    assert.ok(text.includes("solo ves los workspaces ligados a tu cuenta"), text);
+    assert.ok(!text.includes("todos los workspaces de esa computadora se ven aquí"), "the old, wrong promise is gone");
+    const buttons = [...gate().querySelectorAll("[data-web-gate-create]")];
+    assert.deepEqual(buttons.map((b) => b.dataset.webGateCreate), ["cmp_vm", "cmp_off"], "the computer that is on comes first");
+    assert.equal(buttons[0].textContent.trim(), "Crear tu workspace en Tacos Don Beto");
+    assert.equal(fake.sockets.length, 0, "nothing opens before choosing");
+
+    buttons[0].click();
+    await sleep(1500);
+    assert.equal(gate(), null, "the app opens");
+    assert.deepEqual(fake.sockets.map((s) => s.url.split("?")[0]), ["wss://machines.danil.ai/v1/computers/cmp_vm/session"], "only on the chosen computer");
+    assert.ok(w.document.querySelector("[data-web-onboarding]"), "with no workspace there, the first run creates it");
+    assert.deepEqual(app.failures, []);
+  } finally {
+    globalThis.fetch = own;
+  }
+});
