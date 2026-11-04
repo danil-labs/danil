@@ -32,6 +32,7 @@ the catalog); the rest are development tools run by hand (`engine.mjs`,
   `verify-queue/`, which knows no repo: what it may run comes from
   `verify-queue/repos.json`. Use and setup are in
   [development](../docs/development.md#remote-verify). After changing that
-  folder, run its `install.sh` on the machine.
+  folder, run its `install.sh` on the machine; on the Windows queue,
+  `windows/install.ps1`.
 - `sweep-targets.mjs` lists the `target/` folders of unused worktrees; it
   deletes only with `--apply`.

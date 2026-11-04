@@ -371,6 +371,25 @@ test("con host:puerto enciende la máquina por defecto", { skip }, (t) => {
   assert.deepEqual(terminus.calls(), ["machine start vm-verify --json"]);
 });
 
+test("la cola de Windows enciende vm-windows-shared", { skip }, (t) => {
+  const { wake, terminus } = wakeWith(t, [envelope(started)], "vm-windows-shared:8787");
+  wake();
+  assert.deepEqual(terminus.calls(), ["machine start vm-windows-shared --json"]);
+});
+
+test("en Windows los comandos de la lista van por cmd.exe, no por bash", () => {
+  const profile = { prepare: "pnpm install --frozen-lockfile", commands: ["pnpm verify"] };
+  assert.deepEqual(resolveCommand(profile, "pnpm verify", {}, true).argv, ["cmd.exe", "/d", "/s", "/c", "pnpm install --frozen-lockfile && pnpm verify"]);
+  assert.deepEqual(resolveCommand(profile, "pnpm verify", {}, false).argv, ["bash", "-lc", "pnpm install --frozen-lockfile && pnpm verify"]);
+  assert.equal(resolveCommand(profile, "pnpm verify && curl x", {}, true), null);
+});
+
+test("la configuración de Windows pasa checkConfig", () => {
+  const windows = JSON.parse(readFileSync(resolve(import.meta.dirname, "../../scripts/verify-queue/windows/repos.json"), "utf8"));
+  assert.equal(checkConfig(windows), windows);
+  assert.ok(Object.values(windows.repos).every((profile) => profile.user), "en Windows cada perfil tiene usuario de corrida");
+});
+
 test("VERIFY_REMOTE_TERMINUS sustituye a danil y a terminus", { skip }, (t) => {
   const { dir } = workspace(t);
   const danil = fakeCli(dir, "danil", [envelope(started)]);
@@ -748,6 +767,19 @@ const summaryChain = (status = "PASS") => `
   printf '{"results":[{"name":"build","status":"PASS","seconds":12.0},{"name":"durable-pending","status":"${status}","seconds":3}]}' > target/verify/r1/summary.json
   echo log > target/verify/r1/build.log
   printf binario > target/debug/bin`;
+
+test("un checkout que la rama cambió por un enlace no deja copiar artefactos de otro sitio", { skip }, async (t) => {
+  const { dir, repo, home } = workspace(t);
+  const queue = createQueue({ home, config: engineConfig, sameUser: true, diskPercent: () => 10 });
+  const { run, id } = await engineRun(t, queue, repo, dir, `
+  set -e
+  lane=$(dirname "$PWD")
+  mkdir -p "$lane/decoy/target/verify/r1"; echo ajeno > "$lane/decoy/target/verify/r1/build.log"
+  mv "$PWD" "$lane/real"; ln -s "$lane/decoy" "$lane/checkout"`);
+  assert.equal(run.state, "failed");
+  assert.match(readFileSync(queue.logPath(id), "utf8"), /apunta fuera de su sitio/);
+  assert.equal(existsSync(join(home, "runs", id, "artifacts")), false);
+});
 
 test("el perfil del motor: target dentro del checkout, artefactos y recibo con checks", { skip }, async (t) => {
   const { dir, repo, home } = workspace(t);

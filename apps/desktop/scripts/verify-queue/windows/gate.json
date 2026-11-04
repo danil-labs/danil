@@ -1,0 +1,7 @@
+{
+  "port": 8787,
+  "target": "\\\\.\\pipe\\verify-queue",
+  "tailscale": "C:\\Program Files\\Tailscale\\tailscale.exe",
+  "users": ["alberto@danil.ai", "alejandro@danil.ai", "mauricio@danil.ai"],
+  "tags": ["tag:vm-alberto", "tag:vm-alejandro", "tag:vm-mauricio"]
+}

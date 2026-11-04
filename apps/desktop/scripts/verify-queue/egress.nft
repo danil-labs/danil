@@ -13,5 +13,8 @@ table inet verify_egress {
     type filter hook output priority filter; policy accept;
     meta skuid "verify" jump limited
     meta skgid "verify-runners" jump limited
+    # La API de la cola escucha en loopback: una rama no cancela, lee ni encola corridas.
+    meta skgid "verify-runners" ip daddr 127.0.0.0/8 tcp dport 8787 counter reject
+    meta skgid "verify-runners" ip6 daddr ::1 tcp dport 8787 counter reject
   }
 }
