@@ -7,7 +7,8 @@ import { setTimeout as sleep } from "node:timers/promises";
 import { fileURLToPath } from "node:url";
 
 import { SKIPPED_EXIT_CODE, walkFiles } from "./git.mjs";
-import { quickScope } from "./verify-scope.mjs";
+import { lowerPriority } from "./priority.mjs";
+import { quickRefusal, quickScope } from "./verify-scope.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const backend = join(root, "src-tauri");
@@ -65,8 +66,9 @@ const steps = [
   cliStep,
   ["The Danil launchers keep the CLI and refuse collisions", process.execPath, ["--test", join(root, "tests/unit/cli-path.test.mjs")], root],
   ["The project search merges repositories without duplicates", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/project-repositories.test.ts")], root],
-  ["The scope of --quick comes from the diff and falls back to the full chain when in doubt", process.execPath, ["--test", join(root, "tests/unit/verify-scope.test.mjs")], root],
+  ["The scope of --quick comes from the diff and stops without a green when in doubt", process.execPath, ["--test", join(root, "tests/unit/verify-scope.test.mjs")], root],
   ["The pre-push hook checks what the push changes", process.execPath, ["--test", join(root, "tests/unit/pre-push.test.mjs")], root],
+  ["Local checks run at low priority and fail open", process.execPath, ["--test", join(root, "tests/unit/priority.test.mjs")], root],
   ["All code is reviewable", process.execPath, [join(root, "scripts/guards/reviewable.mjs")], root],
   [
     "A guard without git says so and does not kill the chain",
@@ -790,6 +792,7 @@ function killGroup(child) {
 function run(cmd, args, cwd, env, timeoutMs) {
   return new Promise((resolve) => {
     const child = spawn(cmd, args, { cwd, env, stdio: ["ignore", "pipe", "pipe"], detached: process.platform !== "win32", windowsHide: true });
+    lowerPriority(child.pid);
     let stdout = "";
     let stderr = "";
     let timedOut = false;
@@ -896,6 +899,11 @@ const isCargoLane = (step) => rustSteps.includes(step) && step !== engineStep;
 const isPerf = ([, , args]) => args.some((arg) => typeof arg === "string" && arg.includes("tests/perf/"));
 const firstBuild = steps.findIndex(isVite);
 const scope = QUICK ? quickScope({ root, base: BASE, steps, rustSteps, cliStep, engineStep, isVite, requiresDist: REQUIRES_DIST, skipRust: SKIP_RUST }) : {};
+// Sin plan, `--quick` no corre la cadena completa en esta máquina: compite con el motor por la CPU.
+if (scope.reason) {
+  for (const line of quickRefusal(scope.reason)) console.error(line);
+  process.exit(1);
+}
 const omitted = scope.plan ? steps.filter((step) => !scope.plan.has(step)) : [];
 const planned = (step) => !omitted.includes(step);
 const beforeBuild = steps.slice(0, firstBuild).filter((step) => step !== engineStep && planned(step));
@@ -913,7 +921,6 @@ for (const signal of ["SIGINT", "SIGTERM", "SIGHUP"]) {
   });
 }
 console.log(`  Up to ${JOBS} steps at a time (VERIFY_JOBS changes it).`);
-if (scope.reason) console.log(`  --quick runs the full chain: ${scope.reason}.`);
 if (scope.plan) console.log(`  --quick against ${BASE} (${scope.mergeBase}): ${scope.count} files changed, ${steps.length - omitted.length} of ${steps.length} steps. This is NOT a full verification.`);
 console.log("");
 

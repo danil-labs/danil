@@ -112,7 +112,17 @@ export function stepFiles(args) {
 const CODE_EXT = /\.(?:[cm]?[jt]s|tsx|jsx)$/;
 const ALWAYS_QUICK = /node_modules\/(?:@biomejs\/biome\/bin\/biome|typescript\/bin\/tsc)$|scripts\/icons\.mjs$|scripts\/guards\//;
 
-/** El plan de `--quick`: `reason` dice por qué corre todo; `plan` es el subconjunto de pasos cuando no. */
+/** Lo que dice `--quick` cuando no puede acotar el cambio: no corre la cadena aquí ni da un verde, y nombra el siguiente comando. La cola solo verifica Linux. */
+export function quickRefusal(reason, platform = process.platform) {
+  const next = platform === "linux" ? "`pnpm verify --remote --detach`, the queue (Linux only)" : "`pnpm verify` on this machine; the queue checks Linux only";
+  return [
+    `  --quick cannot narrow this change: ${reason}.`,
+    "  Nothing was verified, and --quick does not run the full chain here.",
+    `  Next: ${next}.`,
+  ];
+}
+
+/** El plan de `--quick`: `reason` dice por qué no puede acotarlo; `plan` es el subconjunto de pasos cuando no. */
 export function quickScope({ root, base, steps, rustSteps = [], cliStep, engineStep, isVite, requiresDist, skipRust = false }) {
   const isAlwaysQuick = ([, , args = []]) =>
     !rustSteps.some((step) => step[2] === args) &&

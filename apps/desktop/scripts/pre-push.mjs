@@ -10,6 +10,8 @@ import { existsSync, readFileSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { lowerPriority } from "./priority.mjs";
+
 const here = dirname(fileURLToPath(import.meta.url));
 const desktop = join(here, "..");
 const repo = join(here, "../../..");
@@ -71,6 +73,7 @@ function run(command, args, cwd) {
   return new Promise((resolve) => {
     const started = Date.now();
     const child = spawn(command, args, { cwd, stdio: ["ignore", "pipe", "pipe"] });
+    lowerPriority(child.pid);
     let output = "";
     child.stdout.on("data", (chunk) => { output += chunk; });
     child.stderr.on("data", (chunk) => { output += chunk; });

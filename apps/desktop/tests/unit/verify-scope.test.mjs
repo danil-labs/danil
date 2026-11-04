@@ -6,7 +6,7 @@ import { dirname, join } from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
 
-import { changedFiles, classify, quickScope, stepFiles, testReader, touches } from "../../scripts/verify-scope.mjs";
+import { changedFiles, classify, quickRefusal, quickScope, stepFiles, testReader, touches } from "../../scripts/verify-scope.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "../..");
 const desktop = (path) => `apps/desktop/${path}`;
@@ -171,4 +171,17 @@ test("un archivo de datos bajo src/ no pide la cadena completa", (t) => {
   const scope = quickScopeOf(dir, steps);
   assert.equal(scope.reason, undefined);
   assert.equal(scope.plan.size, 0);
+});
+
+test("sin plan, --quick no da un verde y nombra el siguiente comando de la plataforma", () => {
+  const linux = quickRefusal("no test reaches apps/desktop/src/foo.ts", "linux").join("\n");
+  assert.match(linux, /no test reaches apps\/desktop\/src\/foo\.ts/);
+  assert.match(linux, /Nothing was verified/);
+  assert.match(linux, /pnpm verify --remote --detach/);
+  assert.doesNotMatch(linux, /Verified on/);
+  for (const platform of ["darwin", "win32"]) {
+    const local = quickRefusal("touched package.json", platform).join("\n");
+    assert.match(local, /`pnpm verify` on this machine/);
+    assert.doesNotMatch(local, /--remote/);
+  }
 });
