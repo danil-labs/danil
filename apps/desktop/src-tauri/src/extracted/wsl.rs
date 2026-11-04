@@ -405,9 +405,15 @@ fn read_all(pipe: &mut impl std::io::Read) -> Vec<u8> {
 /// copyright y el uso general, no con una lista.
 fn looks_unavailable(text: &str) -> bool {
     let text = text.to_lowercase();
+    // El `wsl.exe` de bandeja sin el paquete de WSL contesta localizado (y en
+    // UTF-16 aunque haya `WSL_UTF8`). Medido en Windows 11 en español el
+    // 2026-11-04: «El Subsistema de Windows para Linux no está instalado».
     text.contains("usage: wsl.exe")
         || text.contains("optional component is not enabled")
         || text.contains("wsl is not installed")
+        || text.contains("windows subsystem for linux is not installed")
+        || text.contains("subsistema de windows para linux no está instalado")
+        || text.contains("subsistema de windows para linux no esta instalado")
 }
 
 fn is_no_distros(text: &str) -> bool {
@@ -615,6 +621,14 @@ mod tests {
         let text = "Copyright (c) Microsoft Corporation. All rights reserved.\n\nUsage: wsl.exe [Argument]\n";
         assert!(looks_unavailable(text));
         assert!(!looks_unavailable("Ubuntu  Running  2"));
+    }
+
+    #[test]
+    fn the_inbox_stub_in_spanish_means_wsl_is_unavailable() {
+        let stub = utf16(
+            "El Subsistema de Windows para Linux no está instalado. Para instalar, ejecute \"wsl.exe --install\".\r\n\r\nPara obtener más información, visite https://aka.ms/wslinstall\r\n",
+        );
+        assert!(looks_unavailable(&decode(&stub)));
     }
 
     #[test]
