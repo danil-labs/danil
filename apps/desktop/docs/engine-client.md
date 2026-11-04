@@ -192,7 +192,7 @@ tarea.
   aviso en la conversación de la tarea.
 - `cli.error.model_required`: el motor niega un envío sin modelo cuando el
   workspace no permite ninguno. La frase dice qué falta: activar los modelos
-  gratuitos o conectar una cuenta del agente.
+  gratuitos, conectar una cuenta del agente o que el gobierno permita un modelo.
 
 ## Starting the engine
 

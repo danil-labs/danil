@@ -28,5 +28,5 @@
   "cli.error.pending_not_found": "La solicitud ya no está disponible.",
   "cli.error.pending_owner_lost": "El proceso que esperaba la respuesta ya no está disponible.",
   "cli.error.pending_closed": "La solicitud ya está cerrada.",
-  "cli.error.model_required": "Este agente no contesta sin un modelo, y en este workspace no hay ninguno permitido. Falta una de dos cosas: activar los modelos gratuitos o conectar una cuenta de este agente. Las dos están en Configuración → Proveedores de IA."
+  "cli.error.model_required": "Este agente no contesta sin un modelo, y en este workspace no hay ninguno permitido. Falta una de estas cosas: activar los modelos gratuitos o conectar una cuenta de este agente, en Configuración → Proveedores de IA, o que el gobierno del workspace permita un modelo."
 }

@@ -5855,9 +5855,13 @@ export default function App() {
       });
       return;
     }
+    const pendiente = borradores()[claveAbierta()]?.provider;
     const nivel = aplicarOpcionDeModelo(opcion, claveAbierta());
-    // El traspaso no llega aquí: el modelo de otro CLI lo guarda su primer turno.
-    if (abierta) guardarModeloEnLaTarea(abierta, opcion.model.id, nivel || null);
+    // Solo un modelo del CLI con que corre la tarea: con un traspaso confirmado,
+    // o en un chat de agente que cambia de CLI, el del otro lo guarda su primer turno.
+    if (abierta && !pendiente && opcion.agent === cliDeLaSesion(abierta)) {
+      guardarModeloEnLaTarea(abierta, opcion.model.id, nivel || null);
+    }
     if (chatDeAgente && fila.agent) {
       void invoke("set_agent_model", {
         project: project(),
