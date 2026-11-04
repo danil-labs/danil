@@ -90,8 +90,8 @@ export type Capabilities = {
     unlink?: (workspaceId: string, account?: string | null) => Promise<void>;
     /** Avisa cuando se abre o se cierra la sesión de persona de esta ventana (el escritorio); devuelve cómo dejar de escuchar. */
     onSession?: (listener: (state: "signed_in" | "signed_out") => void) => () => void;
-    /** Crear un workspace de Danil todavía no tiene ruta: quien la tenga la publica aquí. */
-    create?: (name: string) => Promise<import("@terminus/computers").DirectoryEntry>;
+    /** Sube un workspace propio: crea el workspace personal de Danil de quien llama y lo enlaza; rechaza con el código (`personal_workspace_exists`, …). */
+    create?: (workspaceId: string, account?: string | null) => Promise<void>;
   };
   adminPage?: { href: string; allowed: () => Promise<boolean> };
   /** Lo de una cuenta personal en Configuración › Cuenta. `isPersonal` decide si se ofrece; sin `usage` o `plan`, esas pestañas no salen. */

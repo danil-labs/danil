@@ -1,7 +1,7 @@
 /**
- * «Cuenta de este workspace», dentro de su tarjeta en Workspaces: con quién se
- * sincroniza, cambiar a otro workspace de Danil o desvincularlo. Sin selector
- * libre: cada acción se confirma y se ve lo que se mueve. Chunk aparte.
+ * «En la nube», dentro de su tarjeta en Workspaces: con qué workspace de la nube se
+ * sincroniza, subirlo o sincronizarlo si solo está aquí, cambiar a otro o
+ * desvincularlo. Cambiar y desvincular se confirman. Chunk aparte.
  */
 import "../../locales/danilPhrases";
 import { type DirectoryEntry, groupDirectory } from "@terminus/computers";
@@ -9,7 +9,7 @@ import { createEffect, createSignal, For, on, onCleanup, Show } from "solid-js";
 import { t } from "../../lib/i18n";
 import { capabilities } from "../../lib/platform";
 import { Button } from "../../ui/Button";
-import { Input } from "../../ui/Input";
+import { Select } from "../../ui/Select";
 import { cn } from "../../lib/utils";
 import { createDanilAccounts, type DanilAccounts } from "./danil-accounts";
 import { said } from "./danil-session";
@@ -24,9 +24,10 @@ import {
   setWorkspaceAccount,
   syncLine,
 } from "./danil-sessions";
-import { canCreateWorkspace, isTakenByAnother, linkCandidates, linkProblem } from "./workspace-link";
+import { isTakenByAnother, linkCandidates, linkProblem } from "./workspace-link";
 import { LICENSE_REQUIRED, startTrialInBrowser, TerminusLicense } from "./TerminusLicense";
-import { reloadDirectory } from "../shell/workspace-directory";
+import { directoryErrorText } from "../shell/directory-errors";
+import { cloudOf, linkableAccounts, linkActiveWorkspace, preferredAccount, reloadDirectory, uploadWorkspace } from "../shell/workspace-directory";
 
 type Mode = "idle" | "choose" | "confirm-change" | "confirm-unlink";
 
@@ -56,7 +57,8 @@ export default function WorkspaceAccount(props: { workspace: string; name: strin
   const [saving, setSaving] = createSignal(false);
   const [problem, setProblem] = createSignal<string | null>(null);
   const [awaiting, setAwaiting] = createSignal(false);
-  const [newName, setNewName] = createSignal("");
+  const [picked, setPicked] = createSignal<string | null>(null);
+  const [cloudFailure, setCloudFailure] = createSignal<string | null>(null);
   let known: string[] = [];
 
   createEffect(on(() => props.workspace, () => {
@@ -71,7 +73,8 @@ export default function WorkspaceAccount(props: { workspace: string; name: strin
     setChosen(null);
     setSession(null);
     setProblem(null);
-    setNewName("");
+    setPicked(null);
+    setCloudFailure(null);
   }
 
   const source = () => capabilities().workspaceDirectory;
@@ -213,23 +216,26 @@ export default function WorkspaceAccount(props: { workspace: string; name: strin
     }
   }
 
-  async function create() {
-    const directory = source();
-    const who = session();
-    const name = newName().trim();
-    if (!directory?.create || !who || !name) return;
-    if (!window.confirm(t("danil.workspace.create_confirm", { name }))) return;
+  // Con la cuenta del workspace con sesión aquí; `undefined` si el directorio no lo trae.
+  const cloud = () => (line().kind === "synced" ? cloudOf(props.workspace) : undefined);
+  const syncable = () => linkableAccounts(props.workspace);
+  const target = () => preferredAccount(syncable(), picked());
+
+  async function cloudAction(action: (who: string | null) => Promise<string | null>) {
+    if (saving()) return;
+    const mine = ++generation;
     setSaving(true);
-    setProblem(null);
-    try {
-      const entry = await directory.create(name);
-      setChosen(entry);
-      await applyLink(entry);
-    } catch (e) {
-      setProblem(linkProblem(changeProblem(null, e)));
-    } finally {
-      setSaving(false);
+    setCloudFailure(null);
+    const code = await action(accounts.of()?.account ?? null);
+    if (mine !== generation) return;
+    setSaving(false);
+    if (code) {
+      setCloudFailure(code);
+      if (code === "personal_workspace_exists") setPicked(null);
+      return;
     }
+    props.onChanged?.(null);
+    void accounts.reload();
   }
 
   const title = (group: ReturnType<typeof groupDirectory>[number]) => {
@@ -242,13 +248,80 @@ export default function WorkspaceAccount(props: { workspace: string; name: strin
 
   return (
     <Show when={accounts.sessions() && accounts.of()}>
-      <div class={cn("grid gap-1 text-xs", props.placement !== "section" && "pl-[27px]")} data-workspace-account={line().kind}>
+      <div
+        class={cn("grid gap-1 text-xs", props.placement !== "section" && "pl-[27px]")}
+        data-workspace-account={line().kind}
+        data-workspace-cloud={cloud() === undefined ? undefined : cloud() ? "synced" : "local"}
+      >
         <Show when={props.placement !== "section"}>
           <span class="text-neutral-500">{t("danil.workspace.title")}</span>
         </Show>
-        <p class="m-0 text-neutral-500" data-workspace-sync="">
-          {lineText()}
-        </p>
+        <Show
+          when={cloud() !== undefined}
+          fallback={
+            <p class="m-0 text-neutral-500" data-workspace-sync="">
+              {lineText()}
+            </p>
+          }
+        >
+          <span class="flex items-center gap-1.5 text-neutral-950" data-workspace-sync="">
+            <span class={cn("size-2 shrink-0 rounded-full", cloud() ? "bg-success-strong" : "bg-neutral-500")} aria-hidden="true" />
+            {cloud() ? t("danil.workspace.cloud.synced", { name: cloud()?.name || t("shell.directory.unnamed") }) : t("danil.workspace.cloud.local")}
+          </span>
+          <p class="m-0 text-neutral-500">
+            {/* El nombre de la nube manda al sincronizar; si aún difieren, se dice. */}
+            {!cloud()
+              ? t("danil.workspace.cloud.local_hint")
+              : cloud()?.name && cloud()?.name !== props.name
+                ? t("danil.workspace.cloud.other_name", { local: props.name, cloud: cloud()?.name ?? "" })
+                : t("danil.workspace.cloud.synced_hint", { email: accounts.of()?.email || "" })}
+          </p>
+        </Show>
+        <Show when={cloud() === null}>
+          <div class="mt-1 flex flex-wrap items-center gap-2">
+            <Button size="sm" disabled={saving() || !source()?.create} data-workspace-cloud-upload="" onClick={() => void cloudAction((who) => uploadWorkspace(props.workspace, who))}>
+              {t("danil.workspace.cloud.upload", { workspace: props.name })}
+            </Button>
+            <Show when={syncable().length}>
+              <span class="text-neutral-500">{t("danil.workspace.cloud.or")}</span>
+              <Select
+                class="min-h-8 w-auto max-w-56"
+                aria-label={t("danil.workspace.cloud.pick")}
+                value={target()?.key ?? ""}
+                disabled={saving()}
+                data-workspace-cloud-pick=""
+                onChange={(event) => setPicked(event.currentTarget.value)}
+              >
+                <For each={syncable()}>
+                  {(entry) => (
+                    <option value={entry.key} selected={entry.key === target()?.key}>
+                      {entry.name || t("shell.directory.unnamed")}
+                    </option>
+                  )}
+                </For>
+              </Select>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={saving() || !target()}
+                data-workspace-cloud-sync=""
+                onClick={() => {
+                  const entry = target();
+                  if (entry) void cloudAction((who) => linkActiveWorkspace(props.workspace, entry, who));
+                }}
+              >
+                {t("danil.workspace.cloud.sync")}
+              </Button>
+            </Show>
+          </div>
+          <Show when={cloudFailure()}>
+            {(code) => (
+              <p class="m-0 text-error-strong" role="alert">
+                {directoryErrorText(code(), syncable().some((entry) => entry.kind === "personal"))}
+              </p>
+            )}
+          </Show>
+        </Show>
         <Show
           when={hasAccount()}
           fallback={
@@ -277,32 +350,34 @@ export default function WorkspaceAccount(props: { workspace: string; name: strin
             </div>
           }
         >
-          <div class="flex flex-wrap items-center gap-2">
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={saving() || accounts.busy() || !source()}
-              onClick={() => {
-                const who = currentSession();
-                if (who) void openChooser(who);
-              }}
-              data-workspace-change=""
-            >
-              {t("danil.workspace.change")}
-            </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              disabled={saving() || accounts.busy()}
-              onClick={() => {
-                setProblem(null);
-                setMode("confirm-unlink");
-              }}
-              data-workspace-unlink=""
-            >
-              {t("danil.workspace.unlink")}
-            </Button>
-          </div>
+          <Show when={cloud() !== null}>
+            <div class="flex flex-wrap items-center gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={saving() || accounts.busy() || !source()}
+                onClick={() => {
+                  const who = currentSession();
+                  if (who) void openChooser(who);
+                }}
+                data-workspace-change=""
+              >
+                {t("danil.workspace.change")}
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                disabled={saving() || accounts.busy()}
+                onClick={() => {
+                  setProblem(null);
+                  setMode("confirm-unlink");
+                }}
+                data-workspace-unlink=""
+              >
+                {t("danil.workspace.unlink")}
+              </Button>
+            </div>
+          </Show>
         </Show>
 
         <Show when={mode() === "choose" || mode() === "confirm-change"}>
@@ -341,25 +416,6 @@ export default function WorkspaceAccount(props: { workspace: string; name: strin
                 </>
               )}
             </For>
-            <Show when={source()?.create}>
-              <Show
-                when={canCreateWorkspace(entries() ?? [])}
-                fallback={<p class="m-0 text-neutral-500">{t("danil.workspace.create_not_allowed")}</p>}
-              >
-                <div class="mt-1 grid gap-1 border-t border-border pt-2" data-workspace-create="">
-                  <Input
-                    class="min-h-8"
-                    value={newName()}
-                    placeholder={t("danil.workspace.create_name")}
-                    aria-label={t("danil.workspace.create_name")}
-                    onInput={(e) => setNewName(e.currentTarget.value)}
-                  />
-                  <Button size="sm" variant="secondary" disabled={saving() || !newName().trim()} onClick={() => void create()}>
-                    {t("danil.workspace.create")}
-                  </Button>
-                </div>
-              </Show>
-            </Show>
             <Button size="sm" variant="ghost" class="justify-self-start" onClick={() => reset()}>
               {t("danil.workspace.leave_no")}
             </Button>

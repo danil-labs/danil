@@ -969,6 +969,30 @@ fn person_call(
     Ok(got)
 }
 
+/// Sube el workspace: crea el workspace personal de Danil de quien llama, con el nombre de
+/// este, y lo enlaza (`{create: true}`). Si ya tiene uno propio, `personal_workspace_exists`.
+#[tauri::command(async)]
+pub(super) fn agents_session_create_danil_workspace(
+    app: tauri::AppHandle,
+    account: Option<String>,
+    workspace_id: String,
+) -> Result<Value, Value> {
+    let id = workspace_segment(&workspace_id).ok_or_else(|| error("invalid_request"))?;
+    let path = format!("/v1/workspaces/{id}/danil-workspace");
+    let (status, value) = person_call(&app, &account, &path, Some(&json!({ "create": true })))?;
+    created(status, &value)
+}
+
+fn created(status: u16, value: &Value) -> Result<Value, Value> {
+    match status {
+        200 | 201 => Ok(json!({
+            "danil_workspace_id": value["danil_workspace_id"],
+            "created": value["created"],
+        })),
+        _ => Err(computers_error(value, "create_failed")),
+    }
+}
+
 /// Quita el enlace en Computers (`DELETE /v1/workspaces/:id/danil-workspace`, idempotente).
 /// Un 404 es que el registro no es de esta persona: no hay enlace suyo que quitar.
 #[tauri::command(async)]
@@ -1254,6 +1278,22 @@ mod tests {
         assert_eq!(
             computers_error(&Value::Null, "link_failed")["detail"],
             "link_failed"
+        );
+    }
+
+    #[test]
+    fn uploading_keeps_the_id_or_the_code() {
+        let made = created(201, &json!({"danil_workspace_id": 476, "created": true})).unwrap();
+        assert_eq!(made["danil_workspace_id"], 476);
+        assert_eq!(made["created"], true);
+        let exists = json!({"error":{"code":"personal_workspace_exists","danil_workspace_id":476}});
+        assert_eq!(
+            created(409, &exists).unwrap_err()["detail"],
+            "personal_workspace_exists"
+        );
+        assert_eq!(
+            created(502, &Value::Null).unwrap_err()["detail"],
+            "create_failed"
         );
     }
 

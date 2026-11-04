@@ -1,10 +1,11 @@
 /**
  * Cada workspace es de un workspace de Danil, contra un motor simulado con una
- * sesión por cuenta: la sección «Cuenta de este workspace» en Workspaces, la
+ * sesión por cuenta: la sección «En la nube» en Workspaces, la
  * elección al conectar, el workspace tomado y la desconexión. Enlazar va por la
- * sesión de persona de la ventana (`agents_session_link`), igual que desenlazar
- * (`agents_session_unlink`), nunca con el token de cliente. También la hoja que sale
- * al abrirse la sesión de la ventana. Monta `dist/`.
+ * sesión de persona de la ventana (`agents_session_link`), igual que subir
+ * (`agents_session_create_danil_workspace`) y desenlazar (`agents_session_unlink`),
+ * nunca con el token de cliente. También la hoja que sale al abrirse la sesión de la
+ * ventana. Monta `dist/`.
  */
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -81,6 +82,7 @@ function engine({ sessions = [ALBERTO, FDB], map = { w: "u_alberto", w2: "u_fdb"
       ),
       agents_session_link: record("agents_session_link", (args) => plane.link(args)),
       agents_session_unlink: record("agents_session_unlink", (args) => plane.unlink(args)),
+      agents_session_create_danil_workspace: record("agents_session_create_danil_workspace", (args) => plane.create(args)),
       account_relay_token: record("account_relay_token", ({ account } = {}) => ({ token: account ?? "main", expires_at: Date.now() + 3_600_000, endpoint: "https://directory.test" })),
       danil_connect_start: record("danil_connect_start", () => ({ state: "pending", user_code: "WDJB-MJHT", verification_uri_complete: "https://app.danil.ai/terminus/connect?code=WDJB-MJHT" })),
       open_external: record("open_external", () => null),
@@ -95,16 +97,22 @@ const DIRECTORY = [
   { key: "a:478", workspace_id: "otra", danil_workspace_id: 478, name: "Tomado", kind: "organization", organization: DANIL, role: "owner", owner: false, support: null, capabilities: { agents: true, terminus: true }, pin: null },
 ];
 
-/** El plano de control que contesta ahora; `agents_session_link` y `agents_session_unlink` lo leen. */
-let plane = { link: () => { throw new Error("no control plane"); }, unlink: () => { throw new Error("no control plane"); } };
+const FREE_ORG = { ...DIRECTORY[1], key: "a:480", danil_workspace_id: 480, name: "Equipo libre", role: "owner" };
+const PERSONAL = { key: "a:490", workspace_id: null, danil_workspace_id: 490, name: "Alberto", kind: "personal", organization: null, role: "owner", owner: false, support: null, capabilities: { agents: true, terminus: false }, pin: null };
+const ONLY_HERE = { key: "w:w", workspace_id: "w", danil_workspace_id: null, name: "Danil", kind: "terminus_only", organization: null, role: null, owner: true, support: null, capabilities: { agents: false, terminus: true }, pin: null };
+
+/** El plano de control que contesta ahora; los comandos `agents_session_*` de la sesión de persona lo leen. */
+const none = () => { throw new Error("no control plane"); };
+let plane = { link: none, unlink: none, create: none };
 
 /**
  * Lo que contesta el plano de control: el directorio (token de cliente) y el enlace
  * 1 a 1 por la sesión de persona. Un enlace con el token de cliente es un defecto.
  */
-function controlPlane(entries = DIRECTORY, linkStatus = null, unlinkStatus = null) {
+function controlPlane(entries = DIRECTORY, linkStatus = null, unlinkStatus = null, createStatus = null) {
   const links = [];
   const unlinks = [];
+  const creates = [];
   const clientLinks = [];
   const previous = globalThis.fetch;
   globalThis.fetch = async (input, init = {}) => {
@@ -129,10 +137,16 @@ function controlPlane(entries = DIRECTORY, linkStatus = null, unlinkStatus = nul
       if (unlinkStatus) throw { what: { clave: `attention.desktop.error.${unlinkStatus}` }, detail: unlinkStatus };
       return null;
     },
+    create(args = {}) {
+      creates.push({ account: args.account, workspace: args.workspaceId });
+      if (createStatus) throw { what: { clave: `attention.desktop.error.${createStatus}` }, detail: createStatus };
+      return { danil_workspace_id: 490, created: true };
+    },
   };
   return {
     links,
     unlinks,
+    creates,
     restore() {
       globalThis.fetch = previous;
       assert.deepEqual(clientLinks, [], "nothing links with the client token");
@@ -166,8 +180,10 @@ test("the workspace shows its sync line and only explicit actions; changing asks
     const app = await openWorkspaces("danil-workspace-account", e);
     const { w } = app;
     assert.ok(section(w), w.document.body.textContent.slice(0, 300));
-    assert.ok(section(w).textContent.includes("Cuenta de este workspace"));
-    assert.ok(section(w).textContent.includes("Se sincroniza con alberto@danil.ai"));
+    assert.ok(section(w).textContent.includes("En la nube"));
+    assert.equal(section(w).dataset.workspaceCloud, "synced");
+    assert.ok(section(w).textContent.includes("Sincronizado con «Danil»"), section(w).textContent);
+    assert.ok(section(w).textContent.includes("alberto@danil.ai"));
     assert.equal(w.document.querySelector("[data-workspace-account-select]"), null, "there is no free selector");
     assert.ok(buttonIn(section(w), "Cambiar"));
     assert.ok(buttonIn(section(w), "Desvincular"));
@@ -190,7 +206,7 @@ test("the workspace shows its sync line and only explicit actions; changing asks
     await sleep(500);
     assert.deepEqual(control.links.map((l) => [l.workspace, l.danil, l.account]), [["w", 477, undefined]], "the main account's window session links");
     assert.deepEqual(e.calls.filter((c) => c.command === "danil_workspace_set_account").map((c) => c.args), [{ workspace: "w", account: "u_alberto" }]);
-    assert.ok(section(w).textContent.includes("Se sincroniza con alberto@danil.ai"));
+    assert.ok(section(w).textContent.includes("Sincronizado con «Danil»"));
     assert.equal(w.document.querySelector("[role=alert]"), null);
     assert.deepEqual(app.failures, []);
   } finally {
@@ -208,7 +224,7 @@ test("a workspace without an account asks once, and cancelling leaves it without
     assert.ok(section(w).textContent.includes("Este workspace no es de ninguna cuenta"));
     assert.equal(w.document.querySelector("[data-danil-foot]"), null, "the footer shows nobody");
 
-    buttonIn(section(w), "Vincular con Danil").click();
+    buttonIn(section(w), "Sincronizar con Danil").click();
     await sleep(400);
     assert.ok(chooser(w));
     buttonIn(chooser(w), "Cancelar").click();
@@ -216,13 +232,13 @@ test("a workspace without an account asks once, and cancelling leaves it without
     assert.equal(chooser(w), null);
     assert.ok(!e.calls.some((c) => c.command === "danil_workspace_set_account"), "cancel keeps it without an account");
 
-    buttonIn(section(w), "Vincular con Danil").click();
+    buttonIn(section(w), "Sincronizar con Danil").click();
     await sleep(400);
     option(w, "a:477").click();
     await sleep(500);
     assert.deepEqual(control.links.map((l) => l.danil), [477]);
     assert.deepEqual(e.calls.filter((c) => c.command === "danil_workspace_set_account").map((c) => c.args), [{ workspace: "w", account: "u_alberto" }]);
-    assert.ok(section(w).textContent.includes("Se sincroniza con alberto@danil.ai"), section(w).textContent);
+    assert.ok(section(w).textContent.includes("Sincronizado con «Danil»"), section(w).textContent);
     assert.deepEqual(app.failures, []);
   } finally {
     control.restore();
@@ -262,7 +278,7 @@ test("a workspace taken by another machine is explained and another one is offer
     const e = engine({ map: {} });
     const app = await openWorkspaces("danil-workspace-account-taken", e);
     const { w } = app;
-    buttonIn(section(w), "Vincular con Danil").click();
+    buttonIn(section(w), "Sincronizar con Danil").click();
     await sleep(400);
     option(w, "a:478").click();
     await sleep(200);
@@ -283,7 +299,7 @@ test("the control plane refusing a taken workspace keeps the list open", async (
     const e = engine({ map: {} });
     const app = await openWorkspaces("danil-workspace-account-refused", e);
     const { w } = app;
-    buttonIn(section(w), "Vincular con Danil").click();
+    buttonIn(section(w), "Sincronizar con Danil").click();
     await sleep(400);
     option(w, "a:477").click();
     await sleep(500);
@@ -302,7 +318,7 @@ test("without a window session, linking asks to sign in and the engine keeps no 
     const e = engine({ map: {} });
     const app = await openWorkspaces("danil-workspace-account-no-session", e);
     const { w } = app;
-    buttonIn(section(w), "Vincular con Danil").click();
+    buttonIn(section(w), "Sincronizar con Danil").click();
     await sleep(400);
     option(w, "a:477").click();
     await sleep(500);
@@ -334,15 +350,42 @@ test("a second account links with its own window session", async () => {
   }
 });
 
-test("creating a workspace is only offered through the capability, and never to a member", async () => {
-  const control = controlPlane([{ ...DIRECTORY[1], role: "member" }]);
+test("a workspace only on this computer is uploaded with its name, by anyone signed in", async () => {
+  const control = controlPlane([ONLY_HERE, { ...DIRECTORY[1], role: "member" }]);
   try {
-    const e = engine({ map: {} });
-    const app = await openWorkspaces("danil-workspace-account-member", e);
+    const e = engine();
+    const app = await openWorkspaces("danil-workspace-cloud-upload", e);
     const { w } = app;
-    buttonIn(section(w), "Vincular con Danil").click();
-    await sleep(400);
-    assert.equal(w.document.querySelector("[data-workspace-create]"), null, "without the route the control stays hidden");
+    assert.equal(section(w).dataset.workspaceCloud, "local", section(w).textContent);
+    assert.ok(section(w).textContent.includes("Solo en esta computadora"));
+    assert.equal(buttonIn(section(w), "Desvincular"), undefined, "nothing to unlink yet");
+    assert.equal(w.document.querySelector("[data-workspace-cloud-sync]"), null, "a member's workspace is not offered to sync");
+    assert.equal(w.document.querySelector("[data-workspace-create]"), null, "no name is asked");
+    buttonIn(section(w), "Subir «Danil»").click();
+    await sleep(500);
+    assert.deepEqual(control.creates, [{ account: undefined, workspace: "w" }], "the main account's window session uploads it");
+    assert.deepEqual(control.links, []);
+    assert.equal(w.document.querySelector("[data-workspace-account] [role=alert]"), null);
+    assert.deepEqual(app.failures, []);
+  } finally {
+    control.restore();
+  }
+});
+
+test("uploading when the person already has a workspace offers to sync with it", async () => {
+  const control = controlPlane([ONLY_HERE, FREE_ORG, PERSONAL], null, null, "personal_workspace_exists");
+  try {
+    const e = engine();
+    const app = await openWorkspaces("danil-workspace-cloud-exists", e);
+    const { w } = app;
+    buttonIn(section(w), "Subir «Danil»").click();
+    await sleep(500);
+    assert.equal(control.creates.length, 1);
+    assert.equal(w.document.querySelector("[data-workspace-account] [role=alert]")?.textContent, "Ya tienes un workspace propio en la nube. Sincroniza este con ese.");
+    assert.equal(w.document.querySelector("[data-workspace-cloud-pick]").value, "a:490", "its own workspace is picked");
+    w.document.querySelector("[data-workspace-cloud-sync]").click();
+    await sleep(500);
+    assert.deepEqual(control.links.map((l) => [l.workspace, l.danil]), [["w", 490]]);
     assert.deepEqual(app.failures, []);
   } finally {
     control.restore();
@@ -391,7 +434,7 @@ test("if Computers refuses to unlink, the engine keeps the account and the reaso
     await sleep(500);
     assert.equal(control.unlinks.length, 1);
     assert.ok(!e.calls.some((c) => c.command === "danil_workspace_set_account"), "the engine is not touched");
-    assert.ok(section(w).textContent.includes("Se sincroniza con alberto@danil.ai"));
+    assert.ok(section(w).textContent.includes("Sincronizado con «Danil»"));
     assert.equal(w.document.querySelector("[data-workspace-account] [role=alert]")?.textContent, "Inicia sesión con Danil en esta ventana para sincronizar este workspace.");
     assert.deepEqual(app.failures, []);
   } finally {
@@ -570,11 +613,11 @@ test("a returned link error remains visible after the choice closes", async () =
 });
 
 const LOCAL = { key: "w:w", workspace_id: "w", danil_workspace_id: null, name: "Danil", kind: "terminus_only", organization: null, role: null, owner: true, support: null, capabilities: { agents: false, terminus: true }, pin: null };
-const FREE = { ...DIRECTORY[1], key: "a:480", danil_workspace_id: 480, name: "Equipo libre", role: "owner" };
+const FREE = FREE_ORG;
 const step = (w) => w.document.querySelector("[data-danil-workspace-step]");
 
-async function signedIn(name, e, entries) {
-  const control = controlPlane(entries);
+async function signedIn(name, e, entries, createStatus = null) {
+  const control = controlPlane(entries, null, null, createStatus);
   const app = await boot("listo", name, { ...BASE, ...e.table });
   await sleep(600);
   assert.equal(step(app.w), null, "nothing asks before the window session opens");
@@ -583,22 +626,52 @@ async function signedIn(name, e, entries) {
   return { app, control };
 }
 
-test("opening the window session offers to sync the open workspace with one the person administers", async () => {
+test("opening the window session offers to upload the open workspace or sync it with one the person administers", async () => {
   const e = engine();
   const { app, control } = await signedIn("danil-workspace-step-sync", e, [LOCAL, FREE, DIRECTORY[1]]);
   try {
     const { w } = app;
     assert.ok(step(w), w.document.body.textContent.slice(0, 300));
+    assert.equal(step(w).dataset.danilWorkspaceStep, "upload", "uploading is the first choice");
+    assert.ok(step(w).textContent.includes("Sincroniza «Danil» con la nube"));
+    w.document.querySelector("[data-danil-step-sync]").click();
+    await sleep(200);
     const options = [...w.document.querySelectorAll("[data-danil-step-pick] option")].map((o) => o.value);
     assert.deepEqual(options, ["a:480"], "only the free ones it administers");
-    assert.ok(w.document.querySelector("[data-danil-step-browse]"), "it can enter another workspace");
-    assert.equal(w.document.querySelector("[data-danil-step-upload]"), null, "uploading is not offered");
+    assert.equal(w.document.querySelector("[data-danil-step-submit]").textContent, "Sincronizar con «Equipo libre»");
     w.document.querySelector("[data-danil-step-submit]").click();
     await sleep(500);
     assert.deepEqual(control.links, [{ account: undefined, workspace: "w", danil: 480 }]);
+    assert.deepEqual(control.creates, []);
     assert.deepEqual(app.failures, []);
   } finally {
     control.restore();
+  }
+});
+
+test("«Subir» creates the person's own workspace; if it exists, the step offers to sync with it", async () => {
+  for (const [name, status] of [["danil-workspace-step-upload", null], ["danil-workspace-step-exists", "personal_workspace_exists"]]) {
+    const { app, control } = await signedIn(name, engine(), [LOCAL, FREE, PERSONAL], status);
+    try {
+      const { w } = app;
+      assert.equal(w.document.querySelector("[data-danil-step-submit]").textContent, "Subir «Danil»");
+      w.document.querySelector("[data-danil-step-submit]").click();
+      await sleep(500);
+      assert.deepEqual(control.creates, [{ account: undefined, workspace: "w" }], name);
+      if (!status) {
+        assert.equal(step(w), null, "uploaded, the step closes");
+      } else {
+        assert.equal(step(w)?.dataset.danilWorkspaceStep, "sync");
+        assert.equal(step(w).querySelector("[role=alert]")?.textContent, "Ya tienes un workspace propio en la nube. Sincroniza este con ese.");
+        assert.equal(w.document.querySelector("[data-danil-step-pick]").value, "a:490");
+        w.document.querySelector("[data-danil-step-submit]").click();
+        await sleep(500);
+        assert.deepEqual(control.links, [{ account: undefined, workspace: "w", danil: 490 }]);
+      }
+      assert.deepEqual(app.failures, []);
+    } finally {
+      control.restore();
+    }
   }
 });
 
@@ -622,14 +695,24 @@ test("«Ahora no» does not ask again for that workspace", async () => {
   }
 });
 
-test("a linked workspace, or one with nothing to sync with, gets no step", async () => {
-  for (const [name, entries] of [["danil-workspace-step-linked", [{ ...LOCAL, danil_workspace_id: 476, key: "a:476" }, FREE]], ["danil-workspace-step-empty", [LOCAL, DIRECTORY[1]]]]) {
-    const { app, control } = await signedIn(name, engine(), entries);
+test("a linked workspace gets no step, and one with nothing to sync with can only be uploaded", async () => {
+  {
+    const { app, control } = await signedIn("danil-workspace-step-linked", engine(), [{ ...LOCAL, danil_workspace_id: 476, key: "a:476" }, FREE]);
     try {
-      assert.equal(step(app.w), null, name);
+      assert.equal(step(app.w), null);
       assert.deepEqual(app.failures, []);
     } finally {
       control.restore();
     }
+  }
+  const { app, control } = await signedIn("danil-workspace-step-empty", engine(), [LOCAL, DIRECTORY[1]]);
+  try {
+    const { w } = app;
+    assert.equal(step(w)?.dataset.danilWorkspaceStep, "upload");
+    assert.equal(w.document.querySelector("[data-danil-step-sync]").disabled, true);
+    assert.ok(step(w).textContent.includes("Todavía no tienes workspaces en la nube."));
+    assert.deepEqual(app.failures, []);
+  } finally {
+    control.restore();
   }
 });

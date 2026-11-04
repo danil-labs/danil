@@ -1,7 +1,7 @@
 /**
  * El directorio de la cuenta desde la ventana: el mismo `GET /v1/me/workspaces`
  * de la web, con el token de cliente del motor. La persona elige con qué sesión
- * (`account`); sin ella, la del workspace abierto. Enlazar y desenlazar van por Rust
+ * (`account`); sin ella, la del workspace abierto. Enlazar, subir y desenlazar van por Rust
  * con la sesión de persona de la ventana: Computers no acepta ahí el token de cliente.
  */
 import { type Answer, listDirectory, setDirectoryPins } from "@terminus/computers";
@@ -75,6 +75,8 @@ export function desktopWorkspaceDirectory(): NonNullable<Capabilities["workspace
     },
     link: (workspaceId, danilWorkspaceId, account) =>
       asPerson((who) => invoke("agents_session_link", { account: who, workspaceId, danilWorkspaceId }), account, "link_failed"),
+    create: (workspaceId, account) =>
+      asPerson((who) => invoke("agents_session_create_danil_workspace", { account: who, workspaceId }), account, "create_failed"),
     unlink: (workspaceId, account) => asPerson((who) => invoke("agents_session_unlink", { account: who, workspaceId }), account, "unlink_failed"),
     onSession: (listener) => {
       let stop: (() => void) | null = null;

@@ -275,6 +275,7 @@ fn start(client: Option<Arc<Client>>, autostart: bool, launcher: launcher::Launc
             agents_session::agents_session_directory,
             agents_session::agents_session_link,
             agents_session::agents_session_unlink,
+            agents_session::agents_session_create_danil_workspace,
             agents_session::agents_session_refresh,
             agents_session::agents_bff_fetch,
             agents_session::harness_org_fetch,
