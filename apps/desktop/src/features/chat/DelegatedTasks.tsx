@@ -104,7 +104,7 @@ export function DelegatedToolbar(props: { model: DelegatedPanelModel; pressed: b
       title={t("chat.delegation.open", { count: rows().length })}
       onClick={props.onClick}>
       <GitBranch size={14} aria-hidden="true" />
-      <span class="absolute -right-0.5 -bottom-0.5 min-w-3 rounded bg-surface-raised px-0.5 text-[9px] leading-3 tabular-nums">{rows().length}</span>
+      <span class="absolute -top-0.5 -right-0.5 min-w-3 rounded bg-surface-raised px-0.5 text-[9px] leading-3 tabular-nums">{rows().length}</span>
     </Button>
   </Show>;
 }

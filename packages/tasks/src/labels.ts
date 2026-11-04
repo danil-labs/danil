@@ -5,7 +5,7 @@
  */
 import { word } from "../../design/src/index.ts";
 import type { DockAgent } from "./dock.ts";
-import type { SidebarGroup, SidebarGrouping, SidebarSection, SidebarStatusKey, SidebarView } from "./view.ts";
+import type { SidebarGroup, SidebarGrouping, SidebarSection, SidebarSort, SidebarStatusKey, SidebarView } from "./view.ts";
 
 type Lang = "es" | "en";
 
@@ -19,6 +19,14 @@ export function groupingLabel(lang: Lang, group: SidebarGrouping): string {
   }
 }
 
+export function sortLabel(lang: Lang, sort: SidebarSort): string {
+  switch (sort) {
+    case "recent": return word(lang, "shell.sidebar.view.sort_recent");
+    case "status": return word(lang, "shell.sidebar.view.sort_status");
+    default: return word(lang, "shell.sidebar.view.sort_created");
+  }
+}
+
 /** La línea que dice qué se enseña. */
 export function scopeLabel(lang: Lang, view: SidebarView, folderName: (id: string) => string): string {
   const parts = [view.folders.length ? view.folders.map(folderName).join(", ") : word(lang, "shell.sidebar.view.all_folders")];
@@ -29,6 +37,8 @@ export function scopeLabel(lang: Lang, view: SidebarView, folderName: (id: strin
     case "agent": parts.push(word(lang, "shell.sidebar.view.scope_by_agent")); break;
     case "machine": parts.push(word(lang, "shell.sidebar.view.scope_by_machine")); break;
   }
+  if (view.sort === "recent") parts.push(word(lang, "shell.sidebar.view.scope_sort_recent"));
+  if (view.sort === "status") parts.push(word(lang, "shell.sidebar.view.scope_sort_status"));
   return parts.join(" · ");
 }
 

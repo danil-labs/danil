@@ -15,6 +15,7 @@
     "./command": "./src/command.ts",
     "./tools": "./src/tools.ts",
     "./inlineVisual": "./src/inlineVisual.ts",
-    "./visual": "./src/visual.ts"
+    "./visual": "./src/visual.ts",
+    "./table": "./src/table.ts"
   }
 }

@@ -592,7 +592,6 @@
   "settings.integrations.typst.description": "Compiles Typst documents (.typ) to PDF in the file view, with their errors in the editor, and gives the agent the same compiler.",
   "settings.integrations.typst.scope": "The compiler is installed once for Danil. Once enabled, Typst documents compile in this workspace and later turns receive its skill.",
   "settings.integrations.typst.size": "Downloads about 20 MB and takes about 55 MB installed.",
-  "settings.integrations.typst.no_live_view": "The Typst live preview isn't available in this version yet; the agent can still compile your documents.",
   "settings.providers.configure_access": "Manage permissions on GitHub",
   "settings.providers.refresh_access": "Refresh access",
   "settings.providers.choose_access": "Change",

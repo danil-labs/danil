@@ -11,7 +11,8 @@ import {
   type Manifiesto,
 } from "../../src/lib/i18n.ts";
 import { SIN_ESPACIO } from "../../src/lib/no-space.ts";
-import { asFailure, claveDe, detalleDe, prosaDe } from "../../src/lib/failure.ts";
+import { asFailure, claveDe, detalleDe, explicacionDelMotor, prosaDe } from "../../src/lib/failure.ts";
+import { mensajeDeFallo } from "../../src/features/chat/failures.ts";
 import { prosa } from "../../src/lib/prose.ts";
 
 // El control en español evita que un respaldo fijo en inglés pase como traducción.
@@ -158,4 +159,37 @@ test("un error guardado conserva su frase al cambiar de idioma", () => {
   assert.equal(prosa(error.what), prosa({ clave: "mcp.error.no_binary", datos: { agent: "Codex" } }));
   assert.equal(prosa(unknown.what), saltillo(en["common.failure.generic"]));
   elegirLengua("es");
+});
+
+// danil-labs/danil-engine#329: el encargado que no arranca se leía como «[object Object]».
+test("el rechazo del motor pinta su frase y su motivo, nunca la ficha", () => {
+  elegirLengua("es");
+  const detail = {
+    handler: "qa",
+    reason: "El motor todavía no tiene un adaptador certificado que aplique estos límites. No se inicia el proveedor.",
+    recovery: "Elige un proveedor configurado que garantice el límite o crea una copia con otro nombre y sin ese límite.",
+    alternatives: [],
+  };
+  const raw = { code: "handler_limit_unenforceable", message_key: "cli.error.handler_limit_unenforceable", detail };
+  const proxied = { what: { clave: raw.message_key }, detail: { code: raw.code, detail } };
+  const phrase = saltillo(es["cli.error.handler_limit_unenforceable"]);
+  for (const error of [raw, proxied]) {
+    for (const text of [prosaDe(error), prosa(asFailure(error).what), mensajeDeFallo(error).text]) {
+      assert.ok(text.startsWith(phrase), text);
+      assert.ok(text.includes(detail.reason), text);
+      assert.ok(text.includes(detail.recovery), text);
+      assert.doesNotMatch(text, /\[object Object\]|\{/);
+    }
+    assert.equal(claveDe(error), raw.message_key, "la clave sigue sirviendo para decidir");
+    assert.match(asFailure(error).detail, /handler_limit_unenforceable/, "el código queda en el detalle");
+  }
+  // Una ficha con `message` y sin frase conocida lo enseña antes del genérico.
+  const future = { code: "future_error", message_key: "cli.error.future_error", message: "Algo nuevo que la ventana no conoce." };
+  assert.ok(prosaDe(future).startsWith(future.message), prosaDe(future));
+  // Las claves y los códigos no son explicación; el `message` de un Error es del cliente.
+  assert.equal(explicacionDelMotor({ code: "io", detail: "timeout" }), null);
+  assert.equal(explicacionDelMotor({ what: { clave: "x" }, detail: { message: "cli.error.io" } }), null);
+  assert.equal(explicacionDelMotor(new Error("socket closed now")), null);
+  // Sin repetir lo que la frase ya dice.
+  assert.equal(prosaDe({ what: "Ya se explicó aquí.", detail: { reason: "Ya se explicó aquí." } }), "Ya se explicó aquí.");
 });

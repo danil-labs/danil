@@ -2,6 +2,7 @@ import { Show, createMemo } from "solid-js";
 import { t } from "../../lib/i18n";
 import { enCurso, formatearDuracion, type Paso } from "../../lib/steps";
 import { createNow } from "../../lib/sharedClock";
+import { MachineIcon } from "../machines/MachineIcon";
 
 // El rótulo sigue rotando durante las herramientas; la actividad va aparte.
 // Esperar una respuesta o reintentar sí sustituye el rótulo de trabajo.
@@ -22,6 +23,12 @@ export default function EstadoDelTurno(props: {
    * que esta ventana no vio arrancar— y entonces se cuenta desde aquí.
    */
   desde: number | null;
+  /**
+   * La máquina de la tarea se está encendiendo para recibir este mensaje: el
+   * turno ya salió y espera a que conteste. Hasta entonces no hay agente que
+   * piense, y decir «Pensando» sería inventarlo.
+   */
+  encendiendo?: { name: string; wakes: boolean } | null;
 }) {
   // Medirlo desde el montaje es lo que ponía el reloj a cero en cada
   // remontaje: cambiar de workspace, de pestaña o de tarea y volver.
@@ -39,6 +46,8 @@ export default function EstadoDelTurno(props: {
   });
 
   const dice = createMemo(() => {
+    if (props.encendiendo)
+      return { verbo: t("chat.turn.waking", { name: props.encendiendo.name }), sujeto: null };
     if (props.esperando)
       return { verbo: t("chat.turn.waiting_answer"), sujeto: null };
     if (props.enFondo)
@@ -84,22 +93,35 @@ export default function EstadoDelTurno(props: {
       role="status"
       aria-live="off"
       aria-label={
-        props.esperando
+        props.encendiendo
+          ? dice().verbo
+          : props.esperando
           ? t("chat.turn.waiting_answer")
           : props.reintento || props.enFondo
             ? dice().verbo
             : t("chat.turn.working_aria")
       }
     >
-      <span
-        class={
-          "mt-[0.45em] size-[7px] shrink-0 rounded-full " +
-          (props.enFondo
-            ? "bg-neutral-500"
-            : "bg-primary animate-danil-pulse")
+      <Show
+        when={props.encendiendo}
+        fallback={
+          <span
+            class={
+              "mt-[0.45em] size-[7px] shrink-0 rounded-full " +
+              (props.enFondo
+                ? "bg-neutral-500"
+                : "bg-primary animate-danil-pulse")
+            }
+            aria-hidden="true"
+          />
         }
-        aria-hidden="true"
-      />
+      >
+        {(m) => (
+          <span class="mt-[0.2em] shrink-0 text-primary animate-danil-pulse" data-turn-waking="">
+            <MachineIcon wakes={m().wakes} size={14} />
+          </span>
+        )}
+      </Show>
       <span class="min-w-0">
         <span>{dice().verbo}</span>
         <Show when={!props.esperando && !props.reintento && !props.enFondo}>

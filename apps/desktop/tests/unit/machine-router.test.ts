@@ -304,6 +304,15 @@ test("by the relay every call says its workspace: making one its own included; t
   const scoped = setup({ cmp_vm: refusing("command_not_allowed", { command: "rename_session", scope: "machine" }) });
   await scoped.router.handle("list_workspaces");
   await assert.rejects(scoped.router.handle("rename_session", { project: "p1", id: "cmp_vm~t1", title: "x" }, on("cmp_vm")), (e: { what: { clave: string } }) => e.what.clave === "shell.service.command");
+  // danil-labs/danil-engine#329: el rechazo del encargado conserva su frase y su motivo.
+  const reason = { reason: "El motor todavía no tiene un adaptador certificado que aplique estos límites.", alternatives: [] };
+  const handler = setup({ cmp_vm: refusing("handler_limit_unenforceable", reason) });
+  await handler.router.handle("list_workspaces");
+  await assert.rejects(handler.router.handle("send_message", { project: "p1", session: "cmp_vm~t1", prompt: "hola" }, on("cmp_vm")), (e: { what: { clave: string }; detail: unknown }) => {
+    assert.equal(e.what.clave, "cli.error.handler_limit_unenforceable");
+    assert.deepEqual(e.detail, { code: "handler_limit_unenforceable", detail: reason });
+    return true;
+  });
 });
 
 test("set_session_provider de una tarea de la VM llega a su motor con su workspace y no toca el de esta ventana", async () => {

@@ -6,10 +6,14 @@
     <!-- The window's policy (index.html) without the Tauri schemes. connect-src
          gets the control plane and Supabase at build time in vite.config.ts,
          which also writes this policy plus frame-ancestors 'none' to
-         dist-web/_headers. -->
+         dist-web/_headers (it covers the phone under /m/ too).
+         media-src adds blob: over the window: a video or audio file of the task
+         arrives in parts (tree_read_part) and plays from a blob: URL the page
+         itself made; Safari does not play video from data:. A blob: never
+         leaves the browser. -->
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self'; script-src-elem 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; media-src 'self' data:; connect-src 'self' %TERMINUS_WEB_CONNECT%; frame-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'"
+      content="default-src 'self'; script-src 'self'; script-src-elem 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self' %TERMINUS_WEB_CONNECT%; frame-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'"
     />
     <title>Danil</title>
     <!-- Rutas absolutas desde web-public/: Vite les antepone la base de la web. -->

@@ -4,21 +4,25 @@ export {
   type SidebarGroup,
   type SidebarGrouping,
   type SidebarSection,
+  type SidebarSort,
   type SidebarStatusKey,
   type SidebarTask,
   type SidebarView,
   DEFAULT_SIDEBAR_VIEW,
   GROUPINGS,
+  SORTS,
   activityOf,
   agentOptions,
   applySidebarView,
   groupKey,
   isPinned,
+  lastActivity,
   needsYou,
   nonDefaultCount,
   sameAgent,
   sanitizeSidebarView,
   statusKeyOf,
+  statusRank,
 } from "./view.ts";
 export { REMOTE_CHILD_FEATURE, type RemoteParent, type RemoteRow, type RemoteScope, remoteLauncherOf, remoteParentOf, withRemoteLaunchers } from "./remote.ts";
 export { type FlatRow, type FlatTask, type LauncherRow, delegatedOf, flattenTasks, folderCounts, isSubtask, launcherOf } from "./flat.ts";
@@ -34,7 +38,7 @@ export {
   planDock,
 } from "./dock.ts";
 export { type CardOptions, type CardTask, type TaskCard, groupCardOptions, taskCard } from "./card.ts";
-export { dockStatusText, groupLabel, groupingLabel, scopeLabel, sectionLabel, statusGroupLabel } from "./labels.ts";
+export { dockStatusText, groupLabel, groupingLabel, scopeLabel, sectionLabel, sortLabel, statusGroupLabel } from "./labels.ts";
 export {
   type ModelCatalog,
   type PreviewAction,

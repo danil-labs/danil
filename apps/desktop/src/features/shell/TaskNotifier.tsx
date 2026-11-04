@@ -26,6 +26,13 @@ type Notice = { key: string; workspace: string; session: string; project: string
  */
 const SETTLE_MS = import.meta.env.MODE === "web" ? 20_000 : 0;
 
+/**
+ * Una tarea que termina puede estar delante en otra ventana —la web, el
+ * teléfono—, que la marca vista en cuanto llega. Se espera ese rato antes de
+ * avisar; si la vio, no se avisa.
+ */
+const SEEN_ELSEWHERE_MS = 4000;
+
 /** Detener tareas a mano las cierra todas a la vez; eso no se avisa como si hubieran terminado. */
 let quietUntil = 0;
 export function quietFinished(ms = 15000) {
@@ -82,6 +89,11 @@ export default function TaskNotifier(props: {
     if (choice === "off" || (choice === "needs_you" && !NEEDS_YOU.includes(notice.state))) return;
     if (notice.state === "unseen" && Date.now() < quietUntil) return;
     pending.set(notice.key, notice);
+    // La que esta ventana tiene delante la marca vista ella misma, aunque esté escondida: esa no espera.
+    if (notice.state === "unseen" && !inView(notice)) {
+      await new Promise((done) => setTimeout(done, SEEN_ELSEWHERE_MS));
+      if (pending.get(notice.key) !== notice) return;
+    }
     // Rust decide con el foco nativo: aviso del sistema, parpadeo, o este panel.
     const where = await invoke<string>("tray_notify", {
       title: heading(notice.state, notice.title),

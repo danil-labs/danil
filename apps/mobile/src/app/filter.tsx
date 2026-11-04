@@ -1,5 +1,5 @@
 import { TEXT } from "@terminus/design";
-import { DEFAULT_SIDEBAR_VIEW, GROUPINGS, type SidebarView, agentOptions, folderCounts, groupingLabel, sameAgent } from "@terminus/tasks";
+import { DEFAULT_SIDEBAR_VIEW, GROUPINGS, SORTS, type SidebarView, agentOptions, folderCounts, groupingLabel, sameAgent, sortLabel } from "@terminus/tasks";
 import type { ReactNode } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { AgentAvatar } from "../ui/AgentAvatar";
@@ -12,8 +12,8 @@ import { useTheme } from "../ui/theme";
 
 /**
  * «Filtrar y agrupar», el único filtro de la lista: las mismas opciones y
- * palabras que el popover del escritorio (carpetas, agente, agrupar,
- * densidad), en una hoja del sistema.
+ * palabras que el popover del escritorio (carpetas, agente, agrupar y
+ * ordenar), en una hoja del sistema.
  */
 export default function Filter() {
   const theme = useTheme();
@@ -95,6 +95,14 @@ export default function Filter() {
       {GROUPINGS.filter((g) => g !== "machine" || view.group === g || tasks.some((task) => !!task.machine)).map((g) => (
         <Option key={g} testID={`filter-group-${g}`} on={view.group === g} onPress={() => set({ group: g })} aside={g === DEFAULT_SIDEBAR_VIEW.group ? w("shell.sidebar.view.default") : undefined}>
           {text(groupingLabel(lang, g))}
+        </Option>
+      ))}
+
+      <View style={[styles.rule, { backgroundColor: theme.border }]} />
+      <Title>{w("shell.sidebar.view.sort")}</Title>
+      {SORTS.map((s) => (
+        <Option key={s} testID={`filter-sort-${s}`} on={view.sort === s} onPress={() => set({ sort: s })} aside={s === DEFAULT_SIDEBAR_VIEW.sort ? w("shell.sidebar.view.default") : undefined}>
+          {text(sortLabel(lang, s))}
         </Option>
       ))}
     </ScrollView>

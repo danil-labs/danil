@@ -1,0 +1,7 @@
+#!/bin/sh
+# Corre el verificador de empuje del repo. Sin Node o sin el script, deja pasar.
+command -v node >/dev/null 2>&1 || exit 0
+root=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0
+script="$root/apps/desktop/scripts/pre-push.mjs"
+[ -f "$script" ] || exit 0
+exec node "$script"

@@ -245,6 +245,7 @@
   "chat.timeline.failed": "falló",
   "chat.timeline.output.truncated": "La salida seguía; aquí se cortó.",
   "chat.turn.retrying": "El proveedor no contesta — intento {attempt} de {total}",
+  "chat.turn.waking": "Encendiendo {name}",
   "chat.sleep.turn_running": "La tarea tiene un turno en curso. Detenlo antes de dormirla.",
   "chat.sleep.background_running": "La tarea tiene un proceso en segundo plano. Dormirla lo cerraría sin aviso.",
   "chat.sleep.background_running_many": "La tarea tiene {count} procesos en segundo plano. Dormirla los cerraría sin aviso.",

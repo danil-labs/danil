@@ -52,6 +52,12 @@ export const APP_READS = [
   "tree_files",
   // Un visual que no cabe de una vez: por partes de 512 KiB, con sus imágenes incrustadas.
   "chat_visual_part",
+  // El visor de archivos: los bytes de un video, un audio o una descarga por partes
+  // (`tree_parts_v1`), el PDF de un Office y el de un documento Typst, que se
+  // exporta a `dist/` dentro de la copia de la tarea, como el Exportar de la ventana.
+  "tree_read_part",
+  "tree_office_preview",
+  "tree_typst_export",
   "preview_file",
   "attachment_preview",
   // Carpeta nueva y clonar en la máquina: dónde quedan y cómo va un clon.

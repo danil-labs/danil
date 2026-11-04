@@ -245,6 +245,7 @@
   "chat.timeline.failed": "failed",
   "chat.timeline.output.truncated": "The output kept going; it was cut here.",
   "chat.turn.retrying": "The provider is not answering — attempt {attempt} of {total}",
+  "chat.turn.waking": "Starting {name}",
   "chat.sleep.turn_running": "The task has a turn in progress. Stop it before sleeping it.",
   "chat.sleep.background_running": "The task has a process running in the background. Sleeping it would close it without warning.",
   "chat.sleep.background_running_many": "The task has {count} processes running in the background. Sleeping it would close them without warning.",

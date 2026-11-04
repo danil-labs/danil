@@ -10,7 +10,6 @@ import { FailureNote, asFailure, type Failure } from "../../ui/Failure";
 import type { ArbolEnTarea } from "../../lib/model";
 import { t } from "../../lib/i18n";
 import ArbolDeArchivos from "./FileTreeLazy";
-import KnIntegrate from "./KnIntegrate";
 import KnCloud from "./KnCloud";
 import { siguienteLista } from "./trees";
 import { recordarArboles } from "./treeKind";
@@ -37,6 +36,8 @@ export default function Codigo(props: {
   onAbrirFijo?: (arbol: string, ruta: string, cambiado: boolean) => void;
   onMovido: (session: string, arbol: string, desde: string, hasta: string) => void;
   onBorrado: (session: string, arbol: string, ruta: string) => void;
+  /** Cuántos cambios de la copia faltan por guardar; `0` sin copia de kn. Guardar vive en la fila de pestañas. */
+  onPorGuardar?: (changed: number | null) => void;
 }) {
   precargarEditor();
   const [trees, setTrees] = createStore<{ items: ArbolEnTarea[] }>({ items: [] });
@@ -114,6 +115,12 @@ export default function Codigo(props: {
     });
   }));
 
+  createEffect(() => {
+    const kn = arboles().find((a) => a.kind === "kn" && !a.missing);
+    props.onPorGuardar?.(kn ? kn.changed : 0);
+  });
+  onCleanup(() => props.onPorGuardar?.(0));
+
   alMoverseElArbol(
     () => props.session,
     () => props.visible,
@@ -149,9 +156,6 @@ export default function Codigo(props: {
                   arbol={a.key}
                   kind={a.kind}
                   visible={props.visible}
-                  acciones={a.kind === "kn" && a.changed !== 0
-                    ? <KnIntegrate project={props.project} session={props.session} changed={a.changed} corto />
-                    : undefined}
                   onAbrir={(ruta, cambiado) => props.onAbrir(a.key, ruta, cambiado)}
                   onAbrirFijo={(ruta, cambiado) => props.onAbrirFijo?.(a.key, ruta, cambiado)}
                   onMovido={(desde, hasta) => props.onMovido(props.session, a.key, desde, hasta)}

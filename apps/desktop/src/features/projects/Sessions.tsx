@@ -782,7 +782,7 @@ export default function Sessions(props: {
     const marcaDeFijada = () => <span role="img" aria-label={t("projects.sessions.pinned")} title={t("projects.sessions.pinned")} class="shrink-0 text-neutral-500"><Pin size={12} /></span>;
     /**
      * Terminada y vista en la tarjeta del riel: sin marca, la fila se apaga
-     * —el título al 62 % y la segunda línea al 80 %— y recupera su color al
+     * —el título en `neutral-700` y la segunda línea al 80 %— y recupera su color al
      * pasar el puntero.
      */
     const apagada = createMemo(() => tarjetaDelRiel() && !taskPriority(activity()) && !esProvisional(f.s.id));
@@ -801,7 +801,7 @@ export default function Sessions(props: {
             "flex min-w-0 items-center gap-1 text-ui leading-[1.35]",
             // La tarjeta del riel: 13,5 px en su línea de 18, sin chincheta ni «Contexto».
             tarjetaDelRiel() && "text-[0.84375rem] leading-[18px]",
-            apagada() && "text-neutral-500 group-hover/session:text-neutral-950",
+            apagada() && "text-neutral-700 group-hover/session:text-neutral-950",
           )}>
             <Show when={fijada(f.s) && !tarjetaDelRiel()}>{marcaDeFijada()}</Show>
             <Show when={handoffRoto()}><span role="img" aria-label={t("projects.sessions.handoff_issue")} title={t("projects.sessions.handoff_issue")} class="shrink-0 text-warning-strong"><TriangleAlert size={12} /></span></Show>

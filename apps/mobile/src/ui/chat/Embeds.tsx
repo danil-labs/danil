@@ -1,14 +1,14 @@
-import { RADIUS, TEXT } from "@terminus/design";
+import { TEXT } from "@terminus/design";
 import { envolver } from "@terminus/chat/sandbox";
 import type { FilePreview } from "@terminus/protocol";
 import { useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, Image, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { previewFile, readVisual } from "../../lib/engine";
 import { t } from "../../lib/i18n";
 import { Icon } from "../Icon";
 import { useTheme } from "../theme";
+import { router } from "expo-router";
 import { useChatScope } from "./scope";
-import { PDF_INLINE, PdfPage, SandboxedPage } from "./Page";
 import { visualThemeOf } from "./visualTheme";
 import { WebFrame } from "./WebFrame";
 
@@ -148,15 +148,13 @@ const IMAGE_EXT = /\.(png|jpe?g|gif|webp|bmp|avif|heic)$/i;
 
 /**
  * `![x](/ruta/en/la/máquina)`: una imagen se pinta; un PDF, HTML u otro archivo
- * es una tarjeta que se abre en un visor (el PDF solo en iOS, que lo dibuja).
+ * es una tarjeta que abre el visor (`/file`), y «‹» vuelve al chat.
  */
 export function LocalFile({ path, alt }: { path: string; alt?: string }) {
   const scope = useChatScope();
   const theme = useTheme();
   const isImage = IMAGE_EXT.test(path);
-  const [open, setOpen] = useState(false);
-  const want = isImage || open;
-  const key = scope && want ? `${scope.hostId}/${path}` : null;
+  const key = scope && isImage ? `${scope.hostId}/${path}` : null;
   const { value, failed } = useLoad<FilePreview>(key, () => previewFile(scope!.host, scope!.workspace, path, scope!));
   if (isImage) {
     if (value?.data_url) return <ChatImage uri={value.data_url} alt={alt} />;
@@ -164,51 +162,22 @@ export function LocalFile({ path, alt }: { path: string; alt?: string }) {
     return <ActivityIndicator style={styles.loading} />;
   }
   const name = path.split("/").pop() ?? path;
+  const open = () =>
+    scope && router.push({ pathname: "/file", params: { host: scope.hostId, workspace: scope.workspace, folder: scope.folder, id: scope.session, path, from: "chat" } });
   return (
-    <>
-      <Pressable onPress={() => setOpen(true)} style={[styles.card, { borderColor: theme.border, backgroundColor: theme.surface }]} accessibilityRole="button">
-        <Icon name="file" size={18} color={theme.textMuted} />
-        <View style={{ flex: 1 }}>
-          <Text numberOfLines={1} style={{ color: theme.text, fontWeight: "600" }}>
-            {alt && alt !== name ? alt : name}
-          </Text>
-          <Text numberOfLines={1} style={{ color: theme.textMuted, fontSize: TEXT.label }}>
-            {path}
-          </Text>
-        </View>
-        <Icon name="chevron-right" size={16} color={theme.textMuted} />
-      </Pressable>
-      <Modal visible={open} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setOpen(false)}>
-        <View style={[styles.sheet, { backgroundColor: theme.bg }]}>
-          <View style={styles.sheetTop}>
-            <Text numberOfLines={1} style={{ color: theme.text, fontWeight: "700", flex: 1 }}>
-              {name}
-            </Text>
-            <Pressable hitSlop={10} onPress={() => setOpen(false)} accessibilityLabel={t("chat.close")}>
-              <Icon name="x" size={20} color={theme.text} />
-            </Pressable>
-          </View>
-          <FileBody preview={value} failed={failed || !scope} />
-        </View>
-      </Modal>
-    </>
+    <Pressable onPress={open} disabled={!scope} style={[styles.card, { borderColor: theme.border, backgroundColor: theme.surface }]} accessibilityRole="button">
+      <Icon name="file" size={18} color={theme.textMuted} />
+      <View style={{ flex: 1 }}>
+        <Text numberOfLines={1} style={{ color: theme.text, fontWeight: "600" }}>
+          {alt && alt !== name ? alt : name}
+        </Text>
+        <Text numberOfLines={1} style={{ color: theme.textMuted, fontSize: TEXT.label }}>
+          {path}
+        </Text>
+      </View>
+      <Icon name="chevron-right" size={16} color={theme.textMuted} />
+    </Pressable>
   );
-}
-
-function FileBody({ preview, failed }: { preview: FilePreview | null; failed: boolean }) {
-  const theme = useTheme();
-  if (failed) return <Muted>{t("chat.file.failed")}</Muted>;
-  if (!preview) return <ActivityIndicator style={styles.loading} />;
-  if (preview.kind === "image" && preview.data_url) return <Image source={{ uri: preview.data_url }} style={{ flex: 1 }} resizeMode="contain" />;
-  if (preview.kind === "html" && preview.text) return <SandboxedPage html={envolver(preview.text)} />;
-  if (preview.kind === "pdf" && preview.pdf && PDF_INLINE) return <PdfPage base64={preview.pdf} />;
-  if (preview.kind === "text" && preview.text)
-    return (
-      <Text selectable style={[styles.mono, { color: theme.text, backgroundColor: theme.muted }]}>
-        {preview.text}
-      </Text>
-    );
-  return <Muted>{t("chat.file.no_preview")}</Muted>;
 }
 
 const styles = StyleSheet.create({
@@ -224,5 +193,4 @@ const styles = StyleSheet.create({
   hidden: { position: "absolute", left: 0, right: 0, top: 0, opacity: 0 },
   sheet: { flex: 1, padding: 16, gap: 12 },
   sheetTop: { flexDirection: "row", alignItems: "center", gap: 12 },
-  mono: { fontFamily: Platform.select({ ios: "Menlo", default: "monospace" }), fontSize: 12.5, lineHeight: 18, padding: 10, borderRadius: RADIUS.lg },
 });

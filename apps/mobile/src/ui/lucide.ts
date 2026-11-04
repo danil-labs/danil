@@ -102,6 +102,15 @@ export const ICONS = {
   "chevron-left": [{"kind": "path", "d": "m15 18-6-6 6-6"}],
   "circle-dashed": [{"kind": "path", "d": "M10.1 2.182a10 10 0 0 1 3.8 0"}, {"kind": "path", "d": "M13.9 21.818a10 10 0 0 1-3.8 0"}, {"kind": "path", "d": "M17.609 3.721a10 10 0 0 1 2.69 2.7"}, {"kind": "path", "d": "M2.182 13.9a10 10 0 0 1 0-3.8"}, {"kind": "path", "d": "M20.279 17.609a10 10 0 0 1-2.7 2.69"}, {"kind": "path", "d": "M21.818 10.1a10 10 0 0 1 0 3.8"}, {"kind": "path", "d": "M3.721 6.391a10 10 0 0 1 2.7-2.69"}, {"kind": "path", "d": "M6.391 20.279a10 10 0 0 1-2.69-2.7"}],
   "file-text": [{"kind": "path", "d": "M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"}, {"kind": "path", "d": "M14 2v4a2 2 0 0 0 2 2h4"}, {"kind": "path", "d": "M10 9H8"}, {"kind": "path", "d": "M16 13H8"}, {"kind": "path", "d": "M16 17H8"}],
+  // El visor de archivos: código y vista, el tipo de cada archivo, compartir y descargar.
+  "code": [{"kind":"path","d":"m16 18 6-6-6-6"},{"kind":"path","d":"m8 6-6 6 6 6"}],
+  "eye": [{"kind":"path","d":"M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"},{"kind":"circle","cx":12,"cy":12,"r":3}],
+  "film": [{"kind":"rect","width":18,"height":18,"x":3,"y":3,"rx":2},{"kind":"path","d":"M7 3v18"},{"kind":"path","d":"M3 7.5h4"},{"kind":"path","d":"M3 12h18"},{"kind":"path","d":"M3 16.5h4"},{"kind":"path","d":"M17 3v18"},{"kind":"path","d":"M17 7.5h4"},{"kind":"path","d":"M17 16.5h4"}],
+  "music": [{"kind":"path","d":"M9 18V5l12-2v13"},{"kind":"circle","cx":6,"cy":18,"r":3},{"kind":"circle","cx":18,"cy":16,"r":3}],
+  "table": [{"kind":"path","d":"M12 3v18"},{"kind":"rect","width":18,"height":18,"x":3,"y":3,"rx":2},{"kind":"path","d":"M3 9h18"},{"kind":"path","d":"M3 15h18"}],
+  "share": [{"kind":"path","d":"M12 2v13"},{"kind":"path","d":"m16 6-4-4-4 4"},{"kind":"path","d":"M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"}],
+  "download": [{"kind":"path","d":"M12 15V3"},{"kind":"path","d":"M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"},{"kind":"path","d":"m7 10 5 5 5-5"}],
+  "presentation": [{"kind":"path","d":"M2 3h20"},{"kind":"path","d":"M21 3v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V3"},{"kind":"path","d":"m7 21 5-5 5 5"}],
 } satisfies Record<string, LucideShape[]>;
 
 export type IconName = keyof typeof ICONS;

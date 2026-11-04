@@ -40,6 +40,23 @@ ese contrato no se edita.
 Aplica `pnpm verify`. Si cambia Rust, la cadena sin `--no-cargo` es
 obligatoria en esta plataforma.
 
+En Linux, la cadena completa va a la cola de la VM de verify. Lanza y consulta;
+no te quedes esperando:
+
+```bash
+pnpm verify --remote --detach          # imprime el id de la corrida
+pnpm verify --remote --attach <id>     # log entero y exit real; repítelo si se corta
+```
+
+La corrida lleva un commit, no el árbol de trabajo. Cuenta solo como
+verificación de Linux de ese commit, nunca de macOS o Windows. Corre la cadena
+en local solo si el comando dice que no hay acceso a la cola. `--quick` nunca
+cuenta como veredicto.
+
+Varias tareas pueden compartir la máquina. No lances cadenas ni compilaciones
+completas en paralelo con otras: saturan la CPU y cortan los turnos de las
+demás tareas.
+
 Pide revisión a `@architect` cuando cambien el puente con el motor, datos
 guardados o contratos. Encarga a `@qa` los recorridos afectados en la ventana
 real.

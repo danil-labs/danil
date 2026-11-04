@@ -111,7 +111,7 @@ import { createdTasks } from "../features/projects/agentPageFilters";
 import BaseBranchPicker from "../features/projects/BaseBranchPicker";
 import { watchHandlerStatus, watchHandlerStatuses } from "../features/projects/handlerPresence";
 import { EmptyContext, ProjectPicker } from "../features/projects/Projects";
-import { bringHereLabel, canBringHere, carryOrigin, machineName, machineOf, machines, refetchMachines, remoteChildScope, runOn, senderTaskId, setRunOn, setTaskRowMachine } from "../features/machines/store";
+import { bringHereLabel, canBringHere, carryOrigin, machineName, machineOf, machineWakes, machines, refetchMachines, remoteChildScope, runOn, senderTaskId, setRunOn, setTaskRowMachine } from "../features/machines/store";
 import { launcherOf, withRemoteLaunchers } from "@terminus/tasks";
 import type { CarriedBase, CarryCheck } from "../features/machines/carry";
 // Chunk aparte: solo lo carga quien crea una tarea, no la carga inicial.
@@ -1392,13 +1392,24 @@ export default function App() {
     if (hasRecentGap(loaded)) leida.push({ role: "system", text: "", meta: "history_gap", clave: "history_gap" });
     releer(id, leida, clear, antepuesta, idsDeTurnos(loaded.turns), leidos);
   }
-  /** Lo que se dice de la máquina de la tarea abierta mientras está apagada o encendiéndose. */
+  /**
+   * La máquina que se enciende para el mensaje que la tarea de esta celda acaba
+   * de mandar. Una tarea que nace aún no tiene id: su pestaña provisional, o el
+   * borrador, es la que se mira.
+   */
+  const encendiendoEn = (sesion: string | null | undefined) => {
+    const id = sesion ?? (sessionId() ? null : pestanas.active());
+    const machine = (id ? encendiendo()[id] : undefined) ?? (sesion || sessionId() ? undefined : encendiendo()[claveAbierta()]);
+    return machine ? { name: machineName(machine), wakes: machineWakes(machine) } : null;
+  };
+  /**
+   * Lo que se dice de la máquina de la tarea abierta mientras está apagada.
+   * Encendiéndose no: el mensaje ya salió y lo dice el renglón del turno, donde
+   * después dirá «Pensando».
+   */
   const avisoDeMaquina = () => {
-    // Una tarea que nace aún no tiene id: su pestaña provisional es la que se mira.
+    if (encendiendoEn(sessionId())) return null;
     const id = sessionId() ?? pestanas.active();
-    // Antes de crearla, mientras se revisa qué llevar, el aviso cuelga del borrador.
-    const waking = (id ? encendiendo()[id] : undefined) ?? (sessionId() ? undefined : encendiendo()[claveAbierta()]);
-    if (waking) return t("shell.machines.waking", { name: machineName(waking) });
     const off = id ? apagadas()[id] : undefined;
     return off ? t("shell.machines.asleep_notice", { name: machineName(off) }) : null;
   };
@@ -7078,13 +7089,16 @@ export default function App() {
     soloLectura?: boolean;
   }) => {
     const visualWorkspace = workspaceActivo() ?? "";
+    // La pestaña de una tarea que nace no tiene hilo hasta `adoptarNacida`: su primer
+    // globo está en el de la ventana sin id, y con la máquina encendiéndose quedaba en blanco.
+    const claveDelHilo = () => (esProvisional(pp.sesion) ? "" : pp.sesion ?? "");
     /**
      * Mensajes de ESTA ventana, memoizados en dos pasos: leer `hilos()`
      * directo baja al fondo TODAS las ventanas al moverse una. El
      * primer memo aísla la entrada de esta por `===`; no usa `msgs()`
      * aunque sea la abierta, que cambiaría de identidad al mudar.
      */
-    const suyo = createMemo(() => hilos()[pp.sesion ?? ""]);
+    const suyo = createMemo(() => hilos()[claveDelHilo()]);
     // Un ternario en la prop crea un memo en cada lectura, y la que llega fuera de un dueño no se suelta nunca.
     const esperandoAqui = () => !pp.soloLectura && esperando();
     const proyectoDeLaCelda = () =>
@@ -7513,7 +7527,7 @@ export default function App() {
            `ventana()` enseñaría el de OTRA conversación, con un número
            creíble y equivocado. */
         ventana={pp.sesion === sessionId() ? ventana() : null}
-        busy={pp.sesion === sessionId() ? busy() : vivas().includes(pp.sesion ?? "")}
+        busy={pp.sesion === sessionId() ? busy() : esProvisional(pp.sesion) ? arrancando() : vivas().includes(pp.sesion ?? "")}
         stopping={deteniendo() !== null && deteniendo() === pp.sesion}
         agents={agents()}
         proyecto={
@@ -7585,6 +7599,7 @@ export default function App() {
           reintento()?.session === pp.sesion ? reintento() : null
         }
         enFondo={enFondo().includes(pp.sesion ?? "")}
+        encendiendo={encendiendoEn(pp.sesion)}
         inicioDelTurno={desdeDeTurno()[pp.sesion ?? ""] ?? null}
         terminal={terminales()[pp.sesion ?? ""] ?? null}
         carpetaDeTerminal={carpetasDeTerminal()[pp.sesion ?? ""] ?? null}

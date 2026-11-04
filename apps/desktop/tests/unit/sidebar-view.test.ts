@@ -150,7 +150,7 @@ test("the scope line says what is shown, in the app language", () => {
   elegirLengua("es");
   assert.equal(scopeLabel(DEFAULT_SIDEBAR_VIEW, name), "Todas las carpetas · por carpeta");
   assert.equal(scopeLabel(view({ group: "none" }), name), "Todas las carpetas");
-  assert.equal(scopeLabel(view({ folders: ["f1"], group: "status" }), name), "terminus · por estado del trabajo");
+  assert.equal(scopeLabel(view({ folders: ["f1"], group: "status" }), name), "terminus · por estado del código");
   assert.equal(scopeLabel(view({ folders: ["f1", "f2"], agent: "ada", group: "none" }), name), "terminus, web · ada");
   assert.equal(groupLabel({ kind: "folder", key: "", tasks: [] }, name), "Sin carpeta");
   assert.equal(groupLabel({ kind: "section", key: "active", tasks: [] }, name), "Tareas");
