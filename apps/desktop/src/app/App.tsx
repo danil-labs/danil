@@ -1264,6 +1264,10 @@ export default function App() {
   const deltasPorCuadro = lotesDeDeltas((session, workspace, deltas) =>
     escribirVivo(session, (m) => anexarDeltas(m, deltas), workspace),
   );
+  /** Un rechazo del motor como aviso en la conversación de esa tarea. */
+  function avisar(sesion: string) {
+    return (e: unknown) => anexar(sesion, (m) => [...m, { role: "system", text: prosaDe(e), meta: "aviso" }]);
+  }
   const anexar = (session: string, fn: (vivo: Msg[]) => Msg[], workspace = workspaceActivo()) => {
     deltasPorCuadro.vaciar();
     escribirVivo(session, fn, workspace);
@@ -5723,13 +5727,11 @@ export default function App() {
         project: project(),
         session: sesion,
         effort: effortDelTurno(),
-      }, deLaTarea(sesion)).catch((e) => {
-        anexar(sesion, (m) => [...m, { role: "system", text: prosaDe(e), meta: "aviso" }]);
-      });
+      }, deLaTarea(sesion)).catch(avisar(sesion));
     }
     // El esfuerzo va con el modelo que la persona eligió en esta tarea, nunca
     // con el que la caja puso sola.
-    if (sesion && model()) guardarModeloEnLaTarea(sesion, model(), id || null, true);
+    if (sesion && model()) guardarModeloEnLaTarea(sesion, agent(), model(), id || null, true);
     // Como el modelo en `elegirModelo`: es lo que heredan sus temas nuevos.
     const fila = sessionId() ? filaDe(sessionId()!) : undefined;
     if (fila && esChatDeAgente(fila) && fila.agent) {
@@ -5760,16 +5762,17 @@ export default function App() {
   /**
    * La elección explícita del chip queda en la tarea (`session_model_v1`), con
    * el modelo y el esfuerzo juntos: un `task send` o el relay que llegan sin
-   * modelo siguen con ella. Un motor que no lo anuncia sigue como antes: la
-   * ventana manda el modelo en cada turno y nada más.
+   * modelo siguen con ella. Solo un modelo del CLI con que corre la tarea: con
+   * un traspaso confirmado, o en un chat de agente que cambia de CLI, el del
+   * otro lo guarda su primer turno. Un motor que no lo anuncia sigue como antes.
    */
-  function guardarModeloEnLaTarea(id: string, modelo: string, nivel: string | null, effortOnly = false) {
-    if (anunciaEnLaTarea(id, SESSION_MODEL_FEATURE) !== true) return;
+  function guardarModeloEnLaTarea(id: string, agente: string, modelo: string, nivel: string | null, effortOnly?: boolean) {
+    if (agente !== cliDeLaSesion(id) || borradores()[claveAbierta()]?.provider || !anunciaEnLaTarea(id, SESSION_MODEL_FEATURE)) return;
     const proyecto = project();
     const opciones = opcionesDeLaTarea(id, workspaceActivo());
     void import("../features/chat/handoverSend")
       .then((m) => m.saveSessionModel(proyecto, id, modelo, nivel, opciones, effortOnly))
-      .catch((e) => anexar(id, (m) => [...m, { role: "system", text: prosaDe(e), meta: "aviso" }]));
+      .catch(avisar(id));
   }
 
   const situacionDeTraspaso = (id: string) => ({
@@ -5831,8 +5834,7 @@ export default function App() {
       // Volver al CLI que la sesión tiene no es traspaso: solo suelta el
       // pendiente que se hubiera confirmado antes.
       if (opcion.agent === actual) {
-        const nivel = aplicarOpcionDeModelo(opcion, claveAbierta(), null);
-        guardarModeloEnLaTarea(abierta, opcion.model.id, nivel || null);
+        guardarModeloEnLaTarea(abierta, opcion.agent, opcion.model.id, aplicarOpcionDeModelo(opcion, claveAbierta(), null) || null);
         return;
       }
       if (!puedeTraspasar(abierta)) return;
@@ -5844,13 +5846,8 @@ export default function App() {
       });
       return;
     }
-    const pendiente = borradores()[claveAbierta()]?.provider;
     const nivel = aplicarOpcionDeModelo(opcion, claveAbierta());
-    // Solo un modelo del CLI con que corre la tarea: con un traspaso confirmado,
-    // o en un chat de agente que cambia de CLI, el del otro lo guarda su primer turno.
-    if (abierta && !pendiente && opcion.agent === cliDeLaSesion(abierta)) {
-      guardarModeloEnLaTarea(abierta, opcion.model.id, nivel || null);
-    }
+    if (abierta) guardarModeloEnLaTarea(abierta, opcion.agent, opcion.model.id, nivel || null);
     if (chatDeAgente && fila.agent) {
       void invoke("set_agent_model", {
         project: project(),
@@ -5904,9 +5901,7 @@ export default function App() {
       .then(() => {
         if (id === MODO_AUTOMATICO) return aprobarPendientes(sesion);
       })
-      .catch((e) => {
-        anexar(sesion, (m) => [...m, { role: "system", text: prosaDe(e), meta: "aviso" }]);
-      });
+      .catch(avisar(sesion));
   }
 
   /**

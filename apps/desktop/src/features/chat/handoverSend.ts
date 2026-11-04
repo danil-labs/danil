@@ -63,7 +63,7 @@ export async function saveSessionModel(
   model: string,
   effort: string | null,
   options: Parameters<typeof invoke>[2],
-  effortOnly = false,
+  effortOnly?: boolean,
 ): Promise<void> {
   if (effortOnly && elegidos.get(id) !== model) return;
   elegidos.set(id, model);
