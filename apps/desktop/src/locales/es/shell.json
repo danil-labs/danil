@@ -424,6 +424,7 @@
   "shell.directory.link": "Enlazar {name} con {workspace}",
   "shell.directory.linkNotAdmin": "Solo un owner o admin de la cuenta puede enlazarla.",
   "shell.directory.linkTaken": "Esa cuenta o este workspace ya tienen un enlace.",
+  "shell.directory.linkSignIn": "Inicia sesión con Danil en esta ventana para enlazar.",
   "shell.directory.linkFailed": "No se pudo enlazar. Inténtalo de nuevo.",
   "shell.directory.truncated": "Hay más workspaces. Usa la búsqueda."
 }

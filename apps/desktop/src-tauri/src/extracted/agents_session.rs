@@ -862,6 +862,83 @@ fn directory_get(endpoint: &str, token: &str) -> Result<(u16, String), Value> {
     Ok((status, body))
 }
 
+/// `POST` a una ruta de Computers con el JWT de la persona. `path` lo arma Rust.
+fn person_post(
+    endpoint: &str,
+    token: &str,
+    path: &str,
+    body: &Value,
+) -> Result<(u16, Value), Value> {
+    let mut response = agent()
+        .post(&format!("{endpoint}{path}"))
+        .header("Authorization", &format!("Bearer {token}"))
+        .header("Accept", "application/json")
+        .send_json(body)
+        .map_err(|e| match e {
+            ureq::Error::Timeout(_) => error("bff_timeout"),
+            _ => error("unavailable"),
+        })?;
+    let status = response.status().as_u16();
+    let text = response
+        .body_mut()
+        .with_config()
+        .limit(MAX_BODY as u64)
+        .read_to_string()
+        .map_err(|_| error("invalid_response"))?;
+    Ok((status, serde_json::from_str(&text).unwrap_or(Value::Null)))
+}
+
+/// El código de Computers (`{"error":{"code"}}` o `{"error":"code"}`), o `fallback`.
+fn computers_error(body: &Value, fallback: &str) -> Value {
+    let code = body["error"]["code"]
+        .as_str()
+        .or_else(|| body["error"].as_str())
+        .filter(|c| c.len() <= 64 && c.bytes().all(|b| b.is_ascii_lowercase() || b == b'_'))
+        .unwrap_or(fallback);
+    error(code)
+}
+
+/// Id de un workspace del motor: lo que acepta un segmento de ruta sin codificar.
+fn workspace_segment(id: &str) -> Option<&str> {
+    let ok = !id.is_empty()
+        && id.len() <= 128
+        && id
+            .bytes()
+            .all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_');
+    ok.then_some(id)
+}
+
+/// Enlaza un workspace propio con un workspace de Danil que la persona administra
+/// (`POST /v1/workspaces/:id/danil-workspace`). Computers solo acepta ahí el JWT de la
+/// persona, no el token de cliente. Sin sesión de la ventana: `no_session`.
+#[tauri::command(async)]
+pub(super) fn agents_session_link(
+    app: tauri::AppHandle,
+    account: Option<String>,
+    workspace_id: String,
+    danil_workspace_id: u64,
+) -> Result<Value, Value> {
+    let id = workspace_segment(&workspace_id).ok_or_else(|| error("invalid_request"))?;
+    if danil_workspace_id == 0 || danil_workspace_id > (1u64 << 53) {
+        return Err(error("invalid_request"));
+    }
+    let body = json!({ "danil_workspace_id": danil_workspace_id });
+    let path = format!("/v1/workspaces/{id}/danil-workspace");
+    let (_, endpoint) = client(&app, &account)?;
+    let name = key(&account);
+    let mut session = checked(&app, &account)?;
+    let mut got = person_post(&endpoint, &session.access_token, &path, &body)?;
+    // Computers rechazó el token antes de actuar: renovar y repetir una vez no duplica nada.
+    if got.0 == 401 {
+        session = access(&app, &name, true)?;
+        got = person_post(&endpoint, &session.access_token, &path, &body)?;
+    }
+    match got {
+        (200, value) => Ok(json!({ "danil_workspace_id": value["danil_workspace_id"] })),
+        (_, value) => Err(computers_error(&value, "link_failed")),
+    }
+}
+
 /// Lectura de Harness con la sesión de persona de la ventana. El motor no participa y
 /// el JavaScript nunca ve el token. Solo GET y una lista cerrada de rutas.
 #[tauri::command(async)]
@@ -1086,6 +1163,40 @@ mod tests {
         assert_eq!(user_code("ABCD-EFGH&port=1"), None);
         assert_eq!(user_code("ABCDEFGHI"), None);
         assert_eq!(user_code("ABCD EFGH"), None);
+    }
+
+    #[test]
+    fn link_paths_only_take_plain_ids() {
+        assert_eq!(workspace_segment("ab12cd34"), Some("ab12cd34"));
+        assert_eq!(workspace_segment("ws_A-1"), Some("ws_A-1"));
+        assert_eq!(workspace_segment(""), None);
+        assert_eq!(workspace_segment("../v1/computers"), None);
+        assert_eq!(workspace_segment("a/b"), None);
+        assert_eq!(workspace_segment("a%2Fb"), None);
+        assert_eq!(workspace_segment(&"a".repeat(129)), None);
+    }
+
+    #[test]
+    fn link_refusals_keep_only_a_code() {
+        assert_eq!(
+            computers_error(&json!({"error":"danil_workspace_taken"}), "link_failed")["detail"],
+            "danil_workspace_taken"
+        );
+        assert_eq!(
+            computers_error(
+                &json!({"error":{"code":"not_account_admin"}}),
+                "link_failed"
+            )["detail"],
+            "not_account_admin"
+        );
+        assert_eq!(
+            computers_error(&json!({"error":{"code":"Bad Code"}}), "link_failed")["detail"],
+            "link_failed"
+        );
+        assert_eq!(
+            computers_error(&Value::Null, "link_failed")["detail"],
+            "link_failed"
+        );
     }
 
     #[test]
