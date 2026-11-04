@@ -47,7 +47,9 @@ test("new people can request access by email without a signup request", async ()
     assert.equal(mail.protocol, "mailto:");
     assert.equal(mail.pathname, "hola@danil.ai");
     assert.equal(mail.searchParams.get("subject"), "Solicitar acceso a Danil");
-    assert.match(w.document.querySelector('[data-access-request]').textContent, /hola@danil.ai/);
+    const contact = w.document.querySelector("[data-access-contact]");
+    assert.equal(contact.textContent.trim(), "¿Dudas? Escríbenos a hola@danil.ai", "the address reads as contact, not as an account");
+    assert.equal(contact.getAttribute("href"), "mailto:hola@danil.ai");
     assert.equal(w.document.querySelector('[autocomplete="new-password"]'), null);
     assert.equal(requests.length, 0);
     assert.deepEqual(app.failures, []);

@@ -456,6 +456,7 @@
   "web.admin.harness": "Usage and activity",
   "web.auth.request_access": "Request access",
   "web.auth.access_subject": "Request access to Danil",
+  "web.auth.access_contact": "Questions? Write to {email}",
   "web.auth.access_required": "You need approved access to Danil. You can request it by email.",
   "web.download.tab": "Get the app",
   "web.download.title": "Get the desktop app",
