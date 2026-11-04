@@ -18,6 +18,7 @@ export {
   restoreWorkspace,
   sessionProbe,
   startComputer,
+  startedOf,
   startSharedComputer,
 } from "./api.ts";
 export {

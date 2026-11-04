@@ -71,6 +71,8 @@ const FIRST_ANSWER_GRACE = 100;
 const PROGRESSIVE = new Set([...LISTING, "list_projects", "list_portfolios", "list_live_sessions", "list_spaces", "list_workspace_attention", "list_task_mentions"]);
 /** Lo que espera `service_poll` en la web: los eventos ya llegan solos (`events`). */
 const POLL_WAIT = 20_000;
+/** Tras un encendido fallido, cuánto se espera antes de que otra lectura lo vuelva a pedir. */
+const WAKE_RETRY_AFTER = 60_000;
 /** En la web no hay instalador: lo que la ventana pregunta de él se contesta aquí. */
 const NO_SETUP: Record<string, unknown> = { setup_required: false, prepare_runtime: { stages: [], running: false }, list_live_turns: [] };
 
@@ -207,6 +209,34 @@ export function createRouter(config: RouterConfig) {
   /** Sin elegir, lo nuevo nace en la máquina de la ventana; en un workspace que no está aquí, en su primera. */
   const defaultMachine = (workspace: string | null) => (elsewhere(workspace) ? (leadOf(workspace) ?? self) : self);
 
+  /** Las VM que se pidió encender por una lectura, y cuándo falló su último encendido. */
+  const waking = new Set<string>();
+  const wakeFailedAt = new Map<string, number>();
+  /** Las que el plano de control dijo que no enciende (`not_remotely_startable`): son de la persona. */
+  const notStartable = new Set<string>();
+  /**
+   * Una VM administrada apagada sin copia que enseñar: se enciende una vez, se dice
+   * «Encendiendo…» y la ventana vuelve a leer al llegar su `hello`.
+   */
+  const managedOff = (machine: string, name: string): Failure => {
+    if (notStartable.has(machine)) return { what: t("web.machines.off_action", { name }), detail: "machine_off" };
+    const failed = wakeFailedAt.get(machine);
+    if (failed !== undefined && Date.now() - failed < WAKE_RETRY_AFTER) return { what: t("web.machines.start_failed", { name }), detail: "start_failed" };
+    if (!waking.has(machine) && fleet.power(machine) !== "starting") {
+      waking.add(machine);
+      wakeFailedAt.delete(machine);
+      void fleet
+        .wake(machine)
+        .then(() => config.onSlices?.(["workspaces", "projects", "sessions", "spaces", "attention", "mentions"]))
+        .catch((error) => {
+          if (error instanceof FleetError && error.detail === "not_remotely_startable") notStartable.add(machine);
+          else wakeFailedAt.set(machine, Date.now());
+        })
+        .finally(() => waking.delete(machine));
+    }
+    return { what: t("web.machines.starting", { name }), detail: "machine_starting" };
+  };
+
   const named = (error: FleetError): Failure => {
     const name = error.machine ? fleet.name(error.machine) : "";
     switch (error.code) {
@@ -219,7 +249,7 @@ export function createRouter(config: RouterConfig) {
         return { what: { clave: "shell.service.failed" }, detail: error.code };
       case "machine_off":
         // Una VM que no se pudo encender no es lo mismo que una máquina propia apagada.
-        if (error.canWake && error.detail === "start_failed") return { what: t("web.start_failed"), detail: "start_failed" };
+        if (error.canWake && error.detail === "start_failed") return { what: t("web.machines.start_failed", { name }), detail: "start_failed" };
         return { what: t("web.machines.off_action", { name }), detail: "machine_off" };
       case "version_mismatch":
         return { what: t("web.machines.outdated_action", { name }), detail: "version_mismatch" };
@@ -356,7 +386,9 @@ export function createRouter(config: RouterConfig) {
   function noAnswer(slices: Slice[], workspace: string | null): Failure {
     const failed = slices.find((s) => s.error) ?? slices[0];
     const code = failed?.status === "outdated" ? "version_mismatch" : failed?.error === "machine_off" || !failed ? "machine_off" : (failed.error ?? "machine_timeout");
-    return named(new FleetError(code, failed?.machine ?? leadOf(workspace)));
+    const machine = failed?.machine ?? leadOf(workspace);
+    if (code === "machine_off" && machine && fleet.machines().some((m) => m.id === machine && m.wakes)) return managedOff(machine, fleet.name(machine));
+    return named(new FleetError(code, machine));
   }
 
   function previousSlice(envelope: Envelope): Slice | null {

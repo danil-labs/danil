@@ -79,8 +79,8 @@ export type FleetConfig = {
   connect(info: MachineInfo): Link;
   /** Si este cliente habla el contrato de un motor: `null` si no se sabe (`machineCompatibility`). */
   compatible?(contract: string | null): boolean | null;
-  /** Enciende una VM por el plano de control; `false` si no se pudo. */
-  wake?(machine: string): Promise<boolean>;
+  /** Enciende una VM por el plano de control; `false` si no se pudo, `not_startable` si no es suya de encender. */
+  wake?(machine: string): Promise<boolean | "not_startable">;
   storage?: StorageLike | null;
   deadlines?: Partial<Deadlines>;
   /** Una máquina cambió de estado, o se agregó, quitó o renombró. */
@@ -530,7 +530,9 @@ export class Fleet {
   private async wakeMember(member: Member) {
     const { id } = member.info;
     if (!this.config.wake) throw new FleetError("machine_off", id, null, true);
-    if (member.link.state() !== "starting" && !(await this.config.wake(id).catch(() => false))) throw new FleetError("machine_off", id, "start_failed", true);
+    const started = member.link.state() === "starting" || (await this.config.wake(id).catch(() => false));
+    if (started === "not_startable") throw new FleetError("machine_off", id, "not_remotely_startable", false);
+    if (!started) throw new FleetError("machine_off", id, "start_failed", true);
     await new Promise<void>((resolve, reject) => {
       const done = (ok: boolean) => {
         clearTimeout(timer);

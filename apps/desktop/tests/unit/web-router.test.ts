@@ -2,12 +2,13 @@
  * La web sobre la flota compartida (`features/machines/router.ts` sin motor
  * propio, `@terminus/fleet`) con sesiones de relay falsas: abre con todo
  * apagado desde lo guardado, una máquina de otro contrato no tumba la lista,
- * actuar en la VM apagada la enciende, en la Mac apagada lo dice con su nombre
+ * actuar en la VM apagada la enciende, leer en ella sin copia la enciende y dice
+ * «Encendiendo…», en la Mac apagada lo dice con su nombre
  * y los spaces de todas salen juntos.
  */
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { INTENT_COMMANDS, type MachineState } from "@terminus/computers";
+import { INTENT_COMMANDS, type MachineState, startedOf } from "@terminus/computers";
 import { Fleet, type Link, type MachineInfo } from "@terminus/fleet";
 import { delegatedOf, flattenTasks } from "@terminus/tasks";
 import "../helpers/catalog.ts";
@@ -71,9 +72,9 @@ function memoryStorage() {
   return { getItem: (k: string) => items.get(k) ?? null, setItem: (k: string, v: string) => void items.set(k, v), removeItem: (k: string) => void items.delete(k) };
 }
 
-function web(links: Record<string, ReturnType<typeof fakeLink>>, storage = memoryStorage(), wake?: (id: string) => Promise<boolean>) {
+function web(links: Record<string, ReturnType<typeof fakeLink>>, storage = memoryStorage(), wake?: (id: string) => Promise<boolean | "not_startable">, onSlices?: (changes: string[]) => void) {
   const fleet = new Fleet({ self: null, connect: (info) => links[info.id], storage, wake, deadlines: { read: 40, action: 200, intent: 400 } });
-  const router = createRouter({ self: null, fleet, native: null, registry: async () => REGISTRY as never });
+  const router = createRouter({ self: null, fleet, native: null, registry: async () => REGISTRY as never, onSlices });
   fleet.setMachines([VM, MAC].filter((m) => links[m.id]));
   return { router, fleet, storage };
 }
@@ -171,10 +172,77 @@ test("the spaces of the Mac and of the VM come out together, each with its machi
 });
 
 test("nobody answering is a named error, never an empty list", async () => {
-  const vm = fakeLink({}, "offline");
-  const { router } = web({ cmp_vm: vm });
+  const mac = fakeLink({}, "offline");
+  const { router } = web({ cmp_mac: mac });
   await router.handle("list_workspaces");
-  await assert.rejects(router.handle("list_live_sessions", { project: "", open: [] }), (e: { detail: string }) => e.detail === "machine_off");
+  await assert.rejects(router.handle("list_live_sessions", { project: "", open: [] }), (e: { detail: string; what: string }) => e.detail === "machine_off" && /Mac de Ana está sin conexión/.test(e.what));
+});
+
+test("an off VM with nothing saved is started once by the first read and says it is starting, not that Danil is closed", async () => {
+  const vm = fakeLink({ list_live_sessions: [row("t1")] }, "offline");
+  const starts: string[] = [];
+  const reread: string[][] = [];
+  const { router } = web({ cmp_vm: vm }, memoryStorage(), async (id) => {
+    starts.push(id);
+    setTimeout(() => vm.setState("starting"), 1);
+    setTimeout(() => vm.setState("online"), 15);
+    return true;
+  }, (changes) => reread.push(changes));
+  await router.handle("list_workspaces");
+  const args = { project: "", open: [] };
+  for (let i = 0; i < 2; i++) {
+    await assert.rejects(router.handle("list_live_sessions", args), (e: { detail: string; what: string }) => {
+      assert.equal(e.detail, "machine_starting");
+      assert.equal(e.what, "Encendiendo Danil VM…");
+      return true;
+    });
+  }
+  assert.deepEqual(starts, ["cmp_vm"], "two reads while it starts ask the control plane once");
+  await new Promise((r) => setTimeout(r, 40));
+  assert.ok(reread.some((c) => c.includes("sessions") && c.includes("projects")), "once online the window is told to read again");
+  const rows = (await router.handle("list_live_sessions", args)) as { id: string }[];
+  assert.deepEqual(rows.map((r) => r.id), ["cmp_vm~t1"], "once online, the same read answers");
+});
+
+test("a VM the control plane could not start says so by name, and is asked again only after a while", async () => {
+  const vm = fakeLink({}, "offline");
+  const starts: string[] = [];
+  const { router } = web({ cmp_vm: vm }, memoryStorage(), async (id) => {
+    starts.push(id);
+    return false;
+  });
+  await router.handle("list_workspaces");
+  const args = { project: "", open: [] };
+  await assert.rejects(router.handle("list_live_sessions", args), (e: { detail: string }) => e.detail === "machine_starting");
+  await new Promise((r) => setTimeout(r, 10));
+  await assert.rejects(router.handle("list_live_sessions", args), (e: { detail: string; what: string }) => {
+    assert.equal(e.detail, "start_failed");
+    assert.match(e.what, /^No pudimos encender Danil VM\. .*hola@danil\.ai/);
+    return true;
+  });
+  assert.deepEqual(starts, ["cmp_vm"], "a failed start is not retried on every read");
+});
+
+test("an own computer listed as startable stays «sin conexión» once the control plane says it does not start it", async () => {
+  const vm = fakeLink({}, "offline");
+  let starts = 0;
+  const { router } = web({ cmp_vm: vm }, memoryStorage(), async () => {
+    starts++;
+    return "not_startable";
+  });
+  await router.handle("list_workspaces");
+  const args = { project: "", open: [] };
+  await assert.rejects(router.handle("list_live_sessions", args), (e: { detail: string }) => e.detail === "machine_starting");
+  await new Promise((r) => setTimeout(r, 10));
+  await assert.rejects(router.handle("list_live_sessions", args), (e: { detail: string; what: string }) => e.detail === "machine_off" && /Danil VM está sin conexión/.test(e.what));
+  assert.equal(starts, 1);
+});
+
+test("the start answer of the control plane reads as started, failed or not startable", () => {
+  assert.equal(startedOf({ kind: "ok", value: { state: "starting" } }), true);
+  assert.equal(startedOf({ kind: "error", status: 409, code: "not_remotely_startable" }), "not_startable");
+  assert.equal(startedOf({ kind: "error", status: 409, code: "start_failed" }), false);
+  assert.equal(startedOf({ kind: "license" }), false);
 });
 
 test("web account creation, listing and login carry the selected workspace", async () => {
