@@ -84,7 +84,8 @@ const button = (root, label) =>
   [...root.querySelectorAll("button")].find((b) => b.textContent.trim() === label || b.getAttribute("aria-label") === label);
 
 async function aPersonaliza(m, nombre, ua = WINDOWS) {
-  const app = await boot("listo", nombre, m.respuestas, ua);
+  // La cuenta de Danil ya se respondió: la prueba es de «Personaliza».
+  const app = await boot("listo", nombre, m.respuestas, ua, { "danil.onboarding.account_choice": "local" });
   m.emit = app.emit;
   await sleep(800);
   button(app.w.document, "Continuar").click();

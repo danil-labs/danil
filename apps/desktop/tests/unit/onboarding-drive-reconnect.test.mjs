@@ -65,7 +65,7 @@ test("Drive con su CLI ya instalado vuelve a conectar después de desconectar", 
       return status();
     },
     open_external: null,
-  });
+  }, undefined, { "danil.onboarding.account_choice": "local" });
   await sleep(800);
   button(app.w.document, "Continuar").click();
   await sleep(500);
