@@ -30,6 +30,7 @@ import { capabilities } from "../../lib/platform";
 import { elegirArchivoDeImagen } from "../../lib/pick-image";
 import { blobToDataUrl } from "./account-profile";
 import WorkspaceDirectoryMenu from "../shell/WorkspaceDirectoryMenu";
+import "../../locales/settingsPhrases";
 
 // Chunk aparte: la cuenta de Danil del workspace solo pesa al abrir esta pantalla.
 const WorkspaceAccount = lazy(() => import("./WorkspaceAccount"));

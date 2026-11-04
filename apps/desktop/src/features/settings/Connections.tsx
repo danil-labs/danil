@@ -27,6 +27,7 @@ import { Select } from "../../ui/Select";
 import { SettingsPanel, SettingsRow, SettingsSection } from "./layout";
 import { ConnectionAccess } from "./ConnectionAccess";
 import { snippets } from "./orchestratorSnippets.ts";
+import "../../locales/settingsPhrases";
 
 /** `account_relay_token` (`proxy.rs`): el token de cliente de la cuenta y el plano de control. */
 type ClientToken = { token: string; expires_at: number; endpoint: string };

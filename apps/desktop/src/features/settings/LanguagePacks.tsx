@@ -11,6 +11,7 @@ import {
 } from "../../lib/i18n";
 import { EMPOTRADAS } from "../../locales/catalogs";
 import { cargarPaquetes, type LenguaInstalada } from "../../locales/packs";
+import "../../locales/settingsPhrases";
 import FileArchive from "lucide-solid/icons/file-archive";
 import FolderOpen from "lucide-solid/icons/folder-open";
 import { FailureNote, asFailure, type Failure } from "../../ui/Failure";

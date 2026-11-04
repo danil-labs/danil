@@ -52,6 +52,7 @@ import { SettingsBlock, SettingsRow, SettingsSection } from "./layout";
 import { crearModelosLocales } from "./local-models-store";
 import { Spinner } from "../../ui/Spinner";
 import { ExternalLink as EnlaceExterno } from "../../ui/ExternalLink";
+import "../../locales/settingsPhrases";
 
 // Las claves en la cuenta de Danil: un trozo aparte, solo para agentes con API key.
 const CredentialsInUse = lazy(() => import("./credentials/AccountCredentials").then((m) => ({ default: m.CredentialsInUse })));

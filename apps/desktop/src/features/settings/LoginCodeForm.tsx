@@ -2,6 +2,7 @@ import { enfocar } from "../../lib/focus";
 import { t } from "../../lib/i18n";
 import { Button } from "../../ui/Button";
 import { Input } from "../../ui/Input";
+import "../../locales/settingsPhrases";
 
 export function LoginCodeForm(props: { value: string; onInput: (value: string) => void; onSubmit: () => void }) {
   return (

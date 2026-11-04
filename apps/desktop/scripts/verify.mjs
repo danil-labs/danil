@@ -98,6 +98,7 @@ const steps = [
   ["Thread rows keep their key when saved and when prepending", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/thread-rows.test.ts")], root],
   ["The Folder panel retries by itself, does not pile up reads and keeps the last good result", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/tree-loader.test.ts")], root],
   ["The window opens with the light list and startup confirms it without skipping a denial", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/early-startup.test.ts")], root],
+  ["A disk language pack keeps the translations of phrases that load later", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/language-pack-lazy-phrases.test.ts")], root],
   ["The release note comes in the app language", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/release-notes.test.ts")], root],
   ["An agent page paginates tasks without separating subtasks from their parent", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/agent-page-tasks.test.ts")], root],
   ["The launched subtasks rail drops the finished ones", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/delegated-rail.test.ts")], root],
