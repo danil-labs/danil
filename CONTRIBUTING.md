@@ -38,6 +38,10 @@ linter on what the push changes, the type check when a source file changed, and
 fails open when the toolchain is missing. Skip it with `SKIP_HOOKS=1 git push`
 only to unblock an emergency, never to deliver.
 
+If `core.hooksPath` already points somewhere else, `pnpm install` leaves it and
+says so; `pnpm hooks:install --force` or
+`git config core.hooksPath .githooks` switches it.
+
 The chain runs locally, on every platform the change touches, before a merge.
 GitHub Actions is not the gate. `pnpm verify --remote` is a queue on Danil's
 team machine and needs access to its tailnet; outside contributors verify

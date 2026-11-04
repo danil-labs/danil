@@ -69,6 +69,7 @@ const steps = [
   ["The scope of --quick comes from the diff and stops without a green when in doubt", process.execPath, ["--test", join(root, "tests/unit/verify-scope.test.mjs")], root],
   ["The pre-push hook checks what the push changes", process.execPath, ["--test", join(root, "tests/unit/pre-push.test.mjs")], root],
   ["Local checks run at low priority and fail open", process.execPath, ["--test", join(root, "tests/unit/priority.test.mjs")], root],
+  ["Installing the hooks keeps a foreign core.hooksPath", process.execPath, ["--test", join(root, "tests/unit/install-hooks.test.mjs")], root],
   ["All code is reviewable", process.execPath, [join(root, "scripts/guards/reviewable.mjs")], root],
   [
     "A guard without git says so and does not kill the chain",
