@@ -9,7 +9,7 @@ cap_seconds=7200
 now=$(date +%s)
 
 uploading() {
-  [ -n "$(find "$home" -maxdepth 1 -name 'incoming-*' -mmin -15 -print -quit)" ]
+  [ -n "$(find "$home/incoming" -maxdepth 1 -name '*.bundle' -mmin -15 -print -quit 2>/dev/null)" ]
 }
 
 fresh_build() {
