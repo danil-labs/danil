@@ -146,7 +146,6 @@ function NoWorkspaces(props: { computers: Computer[]; onCreate?: (computer: Comp
   return (
     <div class="mt-4 flex max-w-[60ch] flex-col gap-4" data-web-gate-no-workspaces="">
       <Show when={props.onCreate && props.computers.length > 0}>
-        <p class="m-0 text-sm text-neutral-700">{t("web.computers.no_workspaces.create_hint")}</p>
         <div class="flex flex-wrap gap-2">
           <For each={props.computers}>
             {(c) => (
@@ -157,7 +156,6 @@ function NoWorkspaces(props: { computers: Computer[]; onCreate?: (computer: Comp
           </For>
         </div>
       </Show>
-      <p class="m-0 text-sm text-neutral-500">{t("web.computers.no_workspaces.desktop_hint")}</p>
       <div>{props.retry}</div>
     </div>
   );

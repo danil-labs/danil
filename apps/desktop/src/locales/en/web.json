@@ -23,8 +23,6 @@
   "web.computers.error": "Could not reach Danil Machines.",
   "web.computers.no_workspaces": "Your Danil account has no workspace yet. Here you only see the workspaces linked to your account, not every workspace on your computers.",
   "web.computers.no_workspaces.create": "Create your workspace on {name}",
-  "web.computers.no_workspaces.create_hint": "Create your workspace on one of your computers. Then you see it here, on your phone and in Danil on your computer.",
-  "web.computers.no_workspaces.desktop_hint": "Do you already have a workspace in Danil on your computer? Open it there and sign in with this account from that workspace.",
   "web.computers.no_workspaces.unnamed": "your computer",
   "web.computers.none": "You do not have any computer in Danil yet.",
   "web.computers.open_account": "Open {email}",

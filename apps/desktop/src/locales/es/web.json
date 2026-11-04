@@ -23,8 +23,6 @@
   "web.computers.error": "No se pudo hablar con Danil Machines.",
   "web.computers.no_workspaces": "Tu cuenta de Danil todavía no tiene un workspace. Aquí solo ves los workspaces ligados a tu cuenta, no todos los de tus computadoras.",
   "web.computers.no_workspaces.create": "Crear tu workspace en {name}",
-  "web.computers.no_workspaces.create_hint": "Crea tu workspace en una de tus computadoras. Después lo ves aquí, en tu teléfono y en Danil en tu computadora.",
-  "web.computers.no_workspaces.desktop_hint": "¿Ya tienes un workspace en Danil en tu computadora? Ábrelo ahí e inicia sesión con esta cuenta desde ese workspace.",
   "web.computers.no_workspaces.unnamed": "tu computadora",
   "web.computers.none": "Todavía no tienes ninguna computadora en Danil.",
   "web.computers.not_yours": "Esta computadora no es tuya o ya no existe.",
