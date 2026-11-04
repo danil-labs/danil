@@ -3,7 +3,7 @@
  * El nuevo Danil se abre cuenta por cuenta: no hay prueba ni cobro aquí, solo la solicitud por correo.
  */
 import "../../locales/danilPhrases";
-import { ACCESS_CONTACT } from "../../lib/access-contact";
+import { ACCESS_CONTACT, accessMailto } from "@terminus/design";
 import { t } from "../../lib/i18n";
 import { invoke } from "../../lib/invoke";
 import { Button } from "../../ui/Button";
@@ -11,8 +11,7 @@ import { Button } from "../../ui/Button";
 /** El código con que el plano de control (o el motor) dice que la cuenta no tiene Terminus. */
 export const LICENSE_REQUIRED = "license_required";
 
-export const accessRequestHref = () =>
-  `mailto:${ACCESS_CONTACT}?subject=${encodeURIComponent(t("danil.license.request_subject"))}`;
+export const accessRequestHref = () => accessMailto(t("danil.license.request_subject"));
 
 /** En la web, el cliente de correo del navegador. */
 export const requestAccessInPage = () => window.location.assign(accessRequestHref());

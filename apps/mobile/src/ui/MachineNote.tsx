@@ -1,12 +1,9 @@
-import { RADIUS, TEXT } from "@terminus/design";
+import { accessMailto, RADIUS, TEXT } from "@terminus/design";
 import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import type { Host } from "../lib/hosts";
 import { w } from "../lib/i18n";
 import { type Fleet, useMachines } from "../lib/machines";
 import { useTheme } from "./theme";
-
-/** El cobro vive en la web de Danil, mismo origen que `/terminus/m/`. */
-const ACCESS_CONTACT = "hola@danil.ai";
 
 /**
  * Lo que la persona tiene que saber de sus máquinas, siempre en tono neutro:
@@ -59,9 +56,7 @@ function LicenseNote() {
           <Pressable
             testID="license-request"
             style={[styles.cta, { backgroundColor: theme.primary }]}
-            onPress={() =>
-              window.location.assign(`mailto:${ACCESS_CONTACT}?subject=${encodeURIComponent(w("danil.license.request_subject"))}`)
-            }
+            onPress={() => window.location.assign(accessMailto(w("danil.license.request_subject")))}
           >
             <Text style={{ color: theme.onPrimary, fontWeight: "600" }}>{w("danil.license.request")}</Text>
           </Pressable>

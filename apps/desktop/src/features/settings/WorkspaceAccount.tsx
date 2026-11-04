@@ -96,6 +96,7 @@ export default function WorkspaceAccount(props: { workspace: string; name: strin
   const problemText = (code: string) => {
     if (code === "taken") return t("danil.workspace.taken_error");
     if (code === "not_admin") return t("danil.workspace.not_admin");
+    if (code === "not_enabled") return t("danil.workspace.not_enabled");
     if (code === "directory_failed") return t("danil.workspace.directory_failed");
     if (code === "no_session") return t("danil.workspace.sign_in_to_link");
     const text = said(code);

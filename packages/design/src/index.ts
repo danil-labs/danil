@@ -11,3 +11,4 @@ export { type AgentMark, type AgentMarkId, type MarkPath, AGENT_MARKS, agentMark
 export { type ToolMark, type ToolMarkId, type ToolMarkPath, TOOL_LABELS, toolLabel, toolMarkId, toolMonogram } from "./toolMarks.ts";
 
 export { astroMotion, astroBlink } from "./astroMotion.ts";
+export { ACCESS_CONTACT, accessMailto } from "./contact.ts";
