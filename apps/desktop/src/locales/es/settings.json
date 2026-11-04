@@ -794,5 +794,5 @@
   "settings.skills.kind_folder": "Carpeta",
   "settings.skills.kind_repository": "Repositorio",
   "settings.skills.source_off": "Fuente apagada",
-  "settings.skills.shadowed_by": "Otra fuente trae una skill con este nombre y gana: {source}"
+  "settings.skills.shadowed_by": "Se usa la de {source}: tiene el mismo nombre."
 }

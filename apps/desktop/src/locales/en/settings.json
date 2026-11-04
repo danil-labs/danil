@@ -794,5 +794,5 @@
   "settings.skills.kind_folder": "Folder",
   "settings.skills.kind_repository": "Repository",
   "settings.skills.source_off": "Source off",
-  "settings.skills.shadowed_by": "Another source has a skill with this name and wins: {source}"
+  "settings.skills.shadowed_by": "The one from {source} is used: it has the same name."
 }

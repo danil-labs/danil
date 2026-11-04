@@ -11,6 +11,7 @@ import { EmptyState } from "../../ui/EmptyState";
 import Search from "lucide-solid/icons/search";
 import { SettingsRow, SettingsSection } from "./layout";
 import { lockedBy } from "../../lib/governance";
+import { cn } from "../../lib/utils";
 import { Governed } from "./Governed";
 
 /** Una skill de una carpeta adjunta o de un repositorio. La compone `practices::SkillDeFuente`. */
@@ -215,10 +216,9 @@ export function SkillsDeFuentes() {
               <For each={g.skills}>
                 {(s) => (
                   <SettingsRow
-                    class={g.on ? undefined : "opacity-60"}
                     label={
                       // La ruta es lo que se puede ir a mirar y editar.
-                      <span class="block truncate" title={s.origin}>
+                      <span class={cn("block truncate", !g.on && "text-neutral-500")} title={s.origin}>
                         {s.name}
                       </span>
                     }
@@ -232,7 +232,10 @@ export function SkillsDeFuentes() {
                           </Show>
                           <Show when={s.shadowed_by}>
                             {(gana) => (
-                              <span class="block truncate text-warning-strong">
+                              <span
+                                class="block truncate text-warning-strong"
+                                title={t("settings.skills.shadowed_by", { source: gana().source_name })}
+                              >
                                 {t("settings.skills.shadowed_by", { source: gana().source_name })}
                               </span>
                             )}
