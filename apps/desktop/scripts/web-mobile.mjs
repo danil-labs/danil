@@ -45,6 +45,10 @@ const expoEnv = {
   ...(env.TERMINUS_WEB_SUPABASE_URL ? { EXPO_PUBLIC_SUPABASE_URL: origin(env.TERMINUS_WEB_SUPABASE_URL) } : {}),
   ...(env.TERMINUS_WEB_SUPABASE_KEY ? { EXPO_PUBLIC_SUPABASE_KEY: env.TERMINUS_WEB_SUPABASE_KEY.trim() } : {}),
 };
+// El worker de pdf.js va en `public/` (lo copia el `postinstall`); por si el `npm ci` fue anterior.
+const worker = spawnSync(process.execPath, ["scripts/pdf-worker.mjs"], { cwd: mobile, stdio: "inherit" });
+if (worker.status !== 0) process.exit(worker.status ?? 1);
+
 const npx = process.platform === "win32" ? "npx.cmd" : "npx";
 const run = spawnSync(npx, ["expo", "export", "--platform", "web", ...(env.TERMINUS_WEB_ALPHA === "1" ? ["--clear"] : []), "--output-dir", out], {
   cwd: mobile,

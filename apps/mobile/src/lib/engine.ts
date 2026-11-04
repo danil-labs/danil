@@ -43,6 +43,7 @@ import type {
 import { type HistoryRead } from "@terminus/chat/history";
 import { readDetailText } from "@terminus/chat/historyDetail";
 import { readVisualHtml, type VisualPart, type VisualWhole, VISUAL_FILE, VISUAL_TREE } from "@terminus/chat/visual";
+import { readTreeFile, type TreePart } from "@terminus/protocol";
 import { arrangeSpaces, spaceOrder, type AccountWorkspace, groupWorkspaces, linkedAttention, onlyLinked, registryProjects, withRegistry } from "@terminus/computers";
 import {
   ATTACHMENT_MIMES,
@@ -886,6 +887,40 @@ export async function treeFile(host: Host, workspace: string, folder: string, se
   const answer = await host.call<TreeContent>("tree_show", workspace, { project: folder, session, tree, path });
   if (!answer.value) throw new HostError("operation_failed");
   return answer.value;
+}
+
+/** Los bytes de un archivo del árbol por partes (`tree_parts_v1`): el video, el audio y la descarga. */
+export function treeBytes(host: Host, workspace: string, folder: string, session: string, tree: string, path: string, onProgress?: (done: number, total: number) => void) {
+  return readTreeFile(
+    async (offset, size, revision) => {
+      const answer = await host.call<TreePart>("tree_read_part", workspace, { project: folder, session, tree, path, offset, size, revision: revision ?? null });
+      if (!answer.value) throw new HostError("operation_failed");
+      return answer.value;
+    },
+    { onProgress },
+  );
+}
+
+/** El PDF de un Word, Excel o PowerPoint del árbol, convertido con el LibreOffice de la máquina. */
+export async function treeOfficePdf(host: Host, workspace: string, folder: string, session: string, tree: string, path: string): Promise<string | null> {
+  const answer = await host.call<FilePreview>("tree_office_preview", workspace, { project: folder, session, tree, path });
+  return answer.value?.pdf ?? null;
+}
+
+/** Un diagnóstico de `tree_typst_export` (`environment/typst.rs`). */
+export type TypstDiagnostic = { severity: "error" | "warning"; path: string | null; line: number | null; column: number | null; message: string };
+
+/**
+ * El PDF de un documento Typst: la máquina lo exporta a `dist/<principal>.pdf`
+ * (`tree_typst_export`, como Exportar en la ventana) y se lee con `tree_show`.
+ * `pdf` es `null` si no compiló; entonces vienen sus diagnósticos.
+ */
+export async function treeTypstPdf(host: Host, workspace: string, folder: string, session: string, tree: string, path: string): Promise<{ pdf: string | null; diagnostics: TypstDiagnostic[]; tooBig: boolean }> {
+  const exported = (await host.call<{ pdf: string | null; diagnostics: TypstDiagnostic[] }>("tree_typst_export", workspace, { project: folder, session, tree, path, main: null })).value;
+  if (!exported) throw new HostError("operation_failed");
+  if (!exported.pdf) return { pdf: null, diagnostics: exported.diagnostics, tooBig: false };
+  const content = await treeFile(host, workspace, folder, session, tree, exported.pdf);
+  return { pdf: content.pdf ?? null, diagnostics: exported.diagnostics, tooBig: !content.pdf };
 }
 
 // --- Cuentas de IA ---------------------------------------------------------------

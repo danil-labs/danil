@@ -31,6 +31,9 @@ import { t } from "../../lib/i18n";
 import { createPref, hayPref } from "../../lib/prefs";
 import { ariaDeAtajo, textoDeAtajo } from "../../lib/shortcuts";
 import { peso } from "../../lib/format";
+import { capabilities } from "../../lib/platform";
+import { mediaKindOf, type TreePart } from "@terminus/protocol";
+import type { LeerParte } from "../viewers/Media";
 import { comoDiff, parsearDiff, type ArchivoDiff } from "./diff";
 import { CuerpoDeArchivo, SelectorDeDisposicion } from "./Changes";
 import { IDOS, alMoverseElArbol, comoEntra, esBorrado, type DetalleDeIdos } from "./refresh";
@@ -49,6 +52,7 @@ import {
   ampliarVista,
   compiladoDe,
   conVistaTypst,
+  conVistaExportada,
   consumirSalto,
   diagnosticosDelArchivo,
   esTypst,
@@ -66,10 +70,12 @@ import { llevaVistaTypst } from "./typstScope";
 
 const EditorDeCodigo = lazy(cargarEditor);
 const VistaPreviaTypst = lazy(() => import("./TypstPreview"));
+const VistaTypstExportada = lazy(() => import("./TypstExportPreview"));
 /** Los visores de lo que no se edita bajan solo al abrirse: `pdfjs-dist` no entra en el arranque. */
 const PdfDocument = lazy(() => import("../viewers/Pdf"));
 const ZoomableImage = lazy(() => import("../viewers/ImageViewer"));
 const DelimitedTable = lazy(() => import("../viewers/CsvTable"));
+const Reproductor = lazy(() => import("../viewers/Media"));
 
 /**
  * Un archivo de un árbol de la tarea, en una sola barra: dónde está, qué se
@@ -237,8 +243,13 @@ export default function VisorDeArchivo(props: {
   const vistaTypst = () => conVistaTypst() && !previa() && llevaVistaTypst(props.ruta);
   /** El tiempo real, las marcas y el guardado solo: un `.typ` con la vista encendida. */
   const typstVivo = () => typst() && vistaTypst();
+  /** Sin Tinymist en la ventana: el PDF exportado en la máquina, que se pone al día con cada guardado. */
+  const typstExportado = () => typst() && !vistaTypst() && conVistaExportada();
+  /** Lo que se escribe se guarda solo: la vista de al lado lee el disco. */
+  const guardaSolo = () => typstVivo() || typstExportado();
   const conPrevia = () =>
     vistaTypst() ||
+    typstExportado() ||
     (esTexto() && !typst() && (esMarkdown(props.ruta) || esHtml(props.ruta) || delimiterFor(props.ruta) !== null));
   // The diff covers the code side, so a tab opened for its changes starts there whatever layout is remembered.
   const [elegida, setElegida] = createSignal<Disposicion | null>(props.enCambios ? "codigo" : null);
@@ -250,6 +261,7 @@ export default function VisorDeArchivo(props: {
       const d = elegida() ?? disposicionTypstRecordada();
       return d === "previa" ? "lado" : d;
     }
+    if (typstExportado()) return elegida() ?? disposicionTypstRecordada();
     return elegida() ?? (deCodigo() === false ? "previa" : disposicionRecordada());
   };
   const ladoCodigo = () => disposicion() !== "previa";
@@ -406,6 +418,21 @@ export default function VisorDeArchivo(props: {
   createEffect(() => {
     if (props.visible && ladoCodigo() && !mostrarCambios() && editable()) setConEditor(true);
   });
+
+  /** Los bytes del archivo por partes (`tree_parts_v1`): el video, el audio y la descarga. */
+  const leerParte = (): LeerParte | null =>
+    props.suelto || props.session === ""
+      ? null
+      : (offset, size, revision) =>
+          invoke<TreePart>("tree_read_part", {
+            project: props.project,
+            session: props.session,
+            tree: props.arbol,
+            path: props.ruta,
+            offset,
+            size,
+            revision: revision ?? null,
+          }, machineOf(props.session));
 
   // El PDF de un documento de Office; sin archivo en disco (una rama base) no hay.
   function pedirOffice(): Promise<Preview> | null {
@@ -637,7 +664,7 @@ export default function VisorDeArchivo(props: {
   createEffect(
     on(borrador, () => {
       clearTimeout(guardadoEnEspera);
-      if (!typstVivo() || !editable() || !sucio() || desincronizado() || borrado()) return;
+      if (!guardaSolo() || !editable() || !sucio() || desincronizado() || borrado()) return;
       guardadoEnEspera = setTimeout(() => {
         if (sucio() && !desincronizado() && !borrado()) void guardar();
       }, PAUSA_DEL_INDICE);
@@ -645,7 +672,7 @@ export default function VisorDeArchivo(props: {
   );
 
   /** Con el plugin, el archivo se guarda solo en la copia: Guardar y Descartar sobran salvo ante un cambio ajeno. */
-  const conGuardadoManual = () => sucio() && (!typstVivo() || !editable() || desincronizado());
+  const conGuardadoManual = () => sucio() && (!guardaSolo() || !editable() || desincronizado());
 
   return (
     <div
@@ -672,7 +699,7 @@ export default function VisorDeArchivo(props: {
               title={
                 desincronizado()
                   ? t("code.file.save.over_agent")
-                  : typstVivo() && editable()
+                  : guardaSolo() && editable()
                     ? t("code.typst.autosave.title")
                     : t("code.file.save.title")
               }
@@ -834,7 +861,7 @@ export default function VisorDeArchivo(props: {
 
                 <Show when={!mostrarCambios() && !editable()}>
                   <div data-select-scope class="min-h-0 min-w-0 flex-1 overflow-y-auto bg-surface-muted">
-                    <Cuerpo contenido={c()} ruta={props.ruta} onOpenExternal={() => void openExternal()} pedirOffice={pedirOffice} />
+                    <Cuerpo contenido={c()} ruta={props.ruta} onOpenExternal={() => void openExternal()} pedirOffice={pedirOffice} leerParte={leerParte()} />
                   </div>
                 </Show>
 
@@ -876,7 +903,7 @@ export default function VisorDeArchivo(props: {
             class={cn(
               "min-h-0 min-w-0 flex-1 flex-col",
               ladoPrevia() ? "flex" : "hidden",
-              !vistaTypst() && "overflow-y-auto",
+              !vistaTypst() && !typstExportado() && "overflow-y-auto",
               ladoCodigo() && "border-l border-border",
             )}
           >
@@ -884,10 +911,26 @@ export default function VisorDeArchivo(props: {
               when={vistaTypst()}
               fallback={
                 <Show
-                  when={pagina()}
-                  fallback={<Previa texto={textoDeLaPrevia()} ruta={props.ruta} aSangre={deCodigo() !== false} />}
+                  when={!typstExportado()}
+                  fallback={
+                    <Suspense fallback={<p class="m-0 p-3 text-xs text-neutral-500">{t("code.file.opening")}</p>}>
+                      <VistaTypstExportada
+                        project={props.project}
+                        session={props.session}
+                        arbol={props.arbol}
+                        ruta={props.ruta}
+                        version={contenido()?.text ?? ""}
+                        onIrA={irAlDiagnostico}
+                      />
+                    </Suspense>
+                  }
                 >
-                  {(url) => <PaginaEnVivo url={url()} nombre={props.ruta} />}
+                  <Show
+                    when={pagina()}
+                    fallback={<Previa texto={textoDeLaPrevia()} ruta={props.ruta} aSangre={deCodigo() !== false} />}
+                  >
+                    {(url) => <PaginaEnVivo url={url()} nombre={props.ruta} />}
+                  </Show>
                 </Show>
               }
             >
@@ -1092,8 +1135,28 @@ function Cuerpo(props: {
   ruta: string;
   onOpenExternal: () => void;
   pedirOffice: () => Promise<Preview> | null;
+  leerParte: LeerParte | null;
 }) {
   const esOffice = () => props.contenido.kind === "binary" && OFFICE.includes(extension(props.ruta));
+  /** Un video o un audio se reproduce aquí aunque el motor lo cuente como binario. */
+  const medio = () => (props.leerParte && props.contenido.kind !== "text" ? mediaKindOf(props.ruta) : null);
+  /** En la web «Abrir o ubicar» lo abriría en la otra máquina: se baja al navegador. */
+  const conDescarga = () => !capabilities().nativeWindow && props.leerParte !== null;
+  const [bajando, setBajando] = createSignal(false);
+  const [falloDescarga, setFalloDescarga] = createSignal<Failure | null>(null);
+  async function bajar() {
+    if (!props.leerParte) return;
+    setBajando(true);
+    setFalloDescarga(null);
+    try {
+      const { descargar } = await import("../viewers/Media");
+      await descargar(props.ruta, props.leerParte);
+    } catch (e) {
+      setFalloDescarga(asFailure(e));
+    } finally {
+      setBajando(false);
+    }
+  }
   // `office_preview` y `tree_office_preview` rechazan con la cadena sola.
   const [office] = createResource(
     () => (esOffice() ? props.ruta : null),
@@ -1115,7 +1178,7 @@ function Cuerpo(props: {
   };
   return (
     <>
-      <Show when={props.contenido.truncated}>
+      <Show when={props.contenido.truncated && !medio()}>
         <p class="m-0 border-b border-border bg-surface-raised px-3 py-2 text-caption text-neutral-500">
           {truncatedNotice()}
         </p>
@@ -1143,8 +1206,16 @@ function Cuerpo(props: {
         </Show>
       </Show>
 
+      <Show when={medio()}>
+        {(tipo) => (
+          <Suspense fallback={<p class="m-0 p-3 text-xs text-neutral-500">{t("code.file.opening")}</p>}>
+            <Reproductor ruta={props.ruta} tipo={tipo()} leer={props.leerParte!} />
+          </Suspense>
+        )}
+      </Show>
+
       {/* Un binario desconocido se muestra en su carpeta; nunca se ejecuta desde aquí. */}
-      <Show when={props.contenido.kind === "binary" && !(esOffice() && (office.loading || office()?.pdf))}>
+      <Show when={props.contenido.kind === "binary" && !medio() && !(esOffice() && (office.loading || office()?.pdf))}>
         <div class="flex flex-col items-center gap-3 p-6">
           <Show when={!props.contenido.truncated}>
             <p class="m-0 text-xs text-neutral-500">
@@ -1154,9 +1225,19 @@ function Cuerpo(props: {
           <Show when={office()?.falta}>
             <p class="m-0 text-xs text-neutral-500">{t("code.file.office.missing")}</p>
           </Show>
-          <Button variant="primary" size="compact" onClick={props.onOpenExternal}>
-            {t("code.file.open_external")}
-          </Button>
+          <Show
+            when={conDescarga()}
+            fallback={
+              <Button variant="primary" size="compact" onClick={props.onOpenExternal}>
+                {t("code.file.open_external")}
+              </Button>
+            }
+          >
+            <Button variant="primary" size="compact" disabled={bajando()} onClick={() => void bajar()}>
+              {bajando() ? t("code.file.download.busy") : t("code.file.download")}
+            </Button>
+            <Show when={falloDescarga()}>{(f) => <FailureNote f={f()} />}</Show>
+          </Show>
         </div>
       </Show>
 

@@ -274,3 +274,8 @@ them answers that the command is unknown, and only that feature turns off.
 - `artifact_parts_v1.json`: `artifact_read_part`, the bytes of a sealed artifact
   version in parts, so a window downloads a document from a task on another
   machine (seldon-host `feat/artifact-read-part`).
+- `tree_parts_v1.json`: `tree_read_part`, the bytes of any file of a task tree
+  in parts, read from disk, so the web and the phone play video and audio and
+  download files, also through the relay (seldon-host `feat/tree-read-part`
+  9b8e0af), SHA-256
+  `f1bd7978ed0ac5113a4a6e385efcabcbc77dee685cca49af83eabe8b0e346f8b`.

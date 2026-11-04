@@ -40,12 +40,18 @@ export { esTypst } from "./typstScope";
 /** Si el plugin Typst está activo en este workspace: sin él, un `.typ` es un archivo de texto más. */
 const [pluginTypst, setPluginTypst] = createSignal(false);
 
-/** Si esta ventana registra `typst_live_*`: hasta saberlo, no hay vista que ofrecer. */
-const [vistaServida, setVistaServida] = createSignal(false);
-export { vistaServida };
+/** Si esta ventana registra `typst_live_*`; `null` hasta saberlo, y entonces no hay vista que ofrecer. */
+const [servida, setVistaServida] = createSignal<boolean | null>(null);
+export const vistaServida = () => servida() === true;
 
 /** El ojo y el PDF al lado: el plugin activo y una ventana que sirve la vista. */
 export const conVistaTypst = () => pluginTypst() && vistaServida();
+
+/**
+ * Sin Tinymist en la ventana (la web), el PDF al lado sale de exportar en la
+ * máquina de la tarea (`tree_typst_export`) cada vez que el documento cambia.
+ */
+export const conVistaExportada = () => pluginTypst() && servida() === false;
 
 /** Al montar la ventana: suelta los Tinymist que dejó una recarga y, de paso, sabe si la vista existe. */
 export function soltarVistasHuerfanas() {
