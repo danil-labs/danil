@@ -8,6 +8,7 @@ import { fileURLToPath } from "node:url";
 
 import { SKIPPED_EXIT_CODE, walkFiles } from "./git.mjs";
 import { lowerPriority } from "./priority.mjs";
+import { typecheckBin } from "./typescript.mjs";
 import { quickRefusal, quickScope } from "./verify-scope.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -69,6 +70,7 @@ const steps = [
   ["The scope of --quick comes from the diff and stops without a green when in doubt", process.execPath, ["--test", join(root, "tests/unit/verify-scope.test.mjs")], root],
   ["The pre-push hook checks what the push changes", process.execPath, ["--test", join(root, "tests/unit/pre-push.test.mjs")], root],
   ["Local checks run at low priority and fail open", process.execPath, ["--test", join(root, "tests/unit/priority.test.mjs")], root],
+  ["Types are checked with tsgo, and with tsc when tsgo does not start", process.execPath, ["--test", join(root, "tests/unit/typescript-bin.test.mjs")], root],
   ["Installing the hooks keeps a foreign core.hooksPath", process.execPath, ["--test", join(root, "tests/unit/install-hooks.test.mjs")], root],
   ["All code is reviewable", process.execPath, [join(root, "scripts/guards/reviewable.mjs")], root],
   [
@@ -620,11 +622,11 @@ const steps = [
     root,
   ],
   ["The front passes the linter", process.execPath, [join(root, "node_modules/@biomejs/biome/bin/biome"), "lint", "src", "scripts", "tests"], root],
-  ["The front compiles", process.execPath, [join(root, "node_modules/typescript/bin/tsc"), "-b"], root],
+  ["The front compiles", process.execPath, [typecheckBin(root), "-b"], root],
   [
     "TypeScript tests typecheck",
     process.execPath,
-    [join(root, "node_modules/typescript/bin/tsc"), "-p", join(root, "tests"), "--noEmit"],
+    [typecheckBin(root), "-p", join(root, "tests"), "--noEmit"],
     root,
   ],
   ["Bundles the front", process.execPath, [join(root, "node_modules/vite/bin/vite.js"), "build"], root],
