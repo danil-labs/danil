@@ -712,6 +712,7 @@ const steps = [
   ["On desktop Secrets saves and deletes through the engine, without an account says «Solo en esta máquina» and an old engine turns off only that section", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/desktop-secrets.test.mjs")], root],
   ["The approval page and contract compatibility talk to the control plane", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/danil-connect-web.test.ts")], root],
   ["Account emails on the web: client, order and rejection texts", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/account-emails.test.ts")], root],
+  ["Danil Business on the web: business routes for the active account, online cap, Stripe-only redirects and fiscal rules", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/business-billing.test.ts")], root],
   ["With the pushed stream batches reach listeners and history is paged", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/push-stream.test.mjs"), join(root, "tests/unit/push-history.test.mjs")], root],
   ["Sending to another machine carries unpushed work, and bringing it back leaves it on a local branch", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/carry-window.test.mjs")], root],
   ["A task of an off machine opens and starts on being sent something", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/machine-task.test.mjs")], root],

@@ -8,13 +8,13 @@ import '../../lib/sharedClock';
 export async function startAttention(settings: { login: string }) {
   const query = new URLSearchParams(location.search);
   if (query.get('demo') === '1') {
-    const [{ installDemo }, { setCapabilities }, { attentionCapability }, { supportAccessDemo }, { personalAccountDemo }] = await Promise.all([import('./demo'), import('../../lib/platform'), import('./capability'), import('./support-access'), import('../admin/personal-demo')]);
+    const [{ installDemo }, { setCapabilities }, { attentionCapability }, { supportAccessDemo }, { personalAccountDemo }, { businessBillingDemo }] = await Promise.all([import('./demo'), import('../../lib/platform'), import('./capability'), import('./support-access'), import('../admin/personal-demo'), import('../admin/business-demo')]);
     const personal = query.get('account') === 'personal';
     const personalAccount = personal ? personalAccountDemo() : undefined;
     aplicarLenguaDeWorkspace(null);
     const ordinary = query.get('ordinary') === '1';
     installDemo({workspace:t('web.alpha.demo_workspace'),space:t('web.alpha.demo_space'),folder:t('web.alpha.demo_folder'),task:t('web.alpha.demo_task'),answer:t('web.alpha.demo_answer'),denied:t('web.alpha.demo_denied')}, {dark:query.get('theme')==='dark',ordinary});
-    setCapabilities({nativeWindow:false,updater:false,localSetup:false,computerStatus:false,inbox: ordinary ? undefined : attentionCapability(true,true),supportAccess: ordinary ? undefined : supportAccessDemo(t('web.alpha.demo_workspace')),personalAccount: personalAccount ? {isPersonal: personalAccount.isPersonal, plan: personalAccount.plan} : undefined,accountUsage: personalAccount?.accountUsage,initialSettings: query.get('settings') ?? undefined,adminPage: ordinary ? undefined : {href: `${import.meta.env.BASE_URL}admin?demo=1${query.get('theme')==='dark'?'&theme=dark':''}`,allowed:async()=>!personal}});
+    setCapabilities({nativeWindow:false,updater:false,localSetup:false,computerStatus:false,inbox: ordinary ? undefined : attentionCapability(true,true),supportAccess: ordinary ? undefined : supportAccessDemo(t('web.alpha.demo_workspace')),personalAccount: personalAccount ? {isPersonal: personalAccount.isPersonal, plan: personalAccount.plan} : undefined,accountUsage: personalAccount?.accountUsage,businessBilling: personal ? undefined : businessBillingDemo(query.get('business')),initialSettings: query.get('settings') ?? undefined,adminPage: ordinary ? undefined : {href: `${import.meta.env.BASE_URL}admin?demo=1${query.get('theme')==='dark'?'&theme=dark':''}`,allowed:async()=>!personal}});
     await import('../../app/main');
     return;
   }

@@ -51,6 +51,7 @@ import { authLocation } from "./auth/return";
 import { adminPageCapability, personalAccountCapability } from "./admin/capability";
 import { agentsSession } from "./attention/workspace-sources";
 import { webUsageMe } from "../features/settings/usage-source";
+import { webBusinessBilling } from "./business-billing";
 import { webGithubAccount } from "./github-account";
 import { type Account, type Listing, SLOT_PREFIX, loadAccounts, ownerOf, pickAccount, readListings, rememberLast, removeExtra, savedListings } from "./accounts";
 import { forgetShellCache, setShellCacheScope } from "../lib/shellCache";
@@ -67,6 +68,8 @@ declare const __TERMINUS_WEB__: WebSettings;
 
 /** La vista de consumo propio, en su trozo: solo la carga quien abre la pestaña. */
 const UsageView = lazy(() => import("../features/settings/UsageView"));
+/** Plan y cobro de Danil Business, en su trozo. */
+const BusinessBilling = lazy(() => import("../features/settings/BusinessBilling"));
 
 type WebSettings = { endpoint: string; supabaseUrl: string; supabaseKey: string; login: string; workos?: boolean };
 
@@ -286,6 +289,16 @@ function mountApp(computers: Computer[], base: Base, before?: (id: string) => ()
           </Suspense>
         )
       : undefined,
+    businessBilling: import.meta.env.TERMINUS_ALPHA
+      ? (() => {
+          const source = webBusinessBilling({ getToken: async () => await base.getToken(), unauthorized: async () => base.refresh ? await base.refresh() : false }, `${import.meta.env.BASE_URL}alpha-api`);
+          return (part: "plan" | "fiscal") => (
+            <Suspense fallback={null}>
+              <BusinessBilling source={source} part={part} />
+            </Suspense>
+          );
+        })()
+      : undefined,
     accountMemory: { endpoint: base.endpoint, getToken: token },
     accountCredentials: { endpoint: base.endpoint, getToken: token },
     machineName: (id) => fleet.name(id),
@@ -376,7 +389,7 @@ function mountApp(computers: Computer[], base: Base, before?: (id: string) => ()
 }
 
 /** Paneles que se abren desde la URL (`?settings=`); el parámetro sale de la barra al leerlo. */
-const LINKED_SETTINGS = ["cuenta-danil", "emails"];
+const LINKED_SETTINGS = ["cuenta-danil", "emails", "business", "fiscal"];
 
 function takeSettingsParam(): string | undefined {
   const params = new URLSearchParams(window.location.search);
