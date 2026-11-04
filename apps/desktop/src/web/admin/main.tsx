@@ -4,6 +4,7 @@ import { aplicarLengua, aplicarLenguaDeWorkspace, t } from "../../lib/i18n";
 import { accountSources, agentsSession } from "../attention/workspace-sources";
 import { activeAccountOf, webAuditLog } from "../audit-log";
 import { webHarnessOrg } from "../../features/settings/harness-org";
+import { webBusinessBilling } from "../business-billing";
 import { authLocation } from "../auth/return";
 import type { WatchedSession } from "../session";
 import { AdminPage, type AdminSource } from "./AdminPage";
@@ -38,6 +39,8 @@ export async function startAdmin(settings: { endpoint: string; login: string; su
     workspace: new URLSearchParams(window.location.search).get("workspace"),
     home: home(),
     settings: `${home()}?settings=usage`,
+    seats: (account) => webBusinessBilling({ getToken: () => session.getToken(), unauthorized: () => session.unauthorized() }, `${import.meta.env.BASE_URL}alpha-api`).seats(account),
+    addSeats: `${home()}?settings=business&seats=add`,
   };
   render(() => <AdminPage source={source} />, root());
 }
@@ -58,6 +61,7 @@ export async function startAdminDemo(options: { dark: boolean }) {
     section: (query.get("section") as Section | null) ?? undefined,
     home: `${home()}?demo=1${options.dark ? "&theme=dark" : ""}`,
     settings: `${home()}?demo=1&account=personal&settings=usage${options.dark ? "&theme=dark" : ""}`,
+    addSeats: `${home()}?demo=1&settings=business&seats=add${options.dark ? "&theme=dark" : ""}`,
   };
   render(() => <AdminPage source={source} />, root());
 }

@@ -26,6 +26,7 @@ import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "../../ui/sideba
 import type { SupportAccessSource } from "../../features/settings/SupportAccess";
 import { SettingsPanel, SettingsRow, SettingsSection } from "../../features/settings/layout";
 import type { AuditLogSource } from "../audit-log";
+import type { SeatUsage } from "../../features/settings/business-billing";
 import { Members, type MembersSource } from "./Members";
 import { Identity, type OrganizationSource, OrganizationWorkspaces, Plan } from "./Organization";
 import type { PolicySource } from "./PolicyFlow";
@@ -56,6 +57,8 @@ export type AdminSource = {
   /** Consumo y actividad de Danil Machines (`/v1/org/*`). Sin esto, la sección no aparece. */
   harness?: HarnessOrgSource;
   members?: MembersSource;
+  /** Los lugares de Danil Business de un workspace; con ellos Miembros enseña el límite al invitar. */
+  seats?: (account: number) => Promise<SeatUsage>;
   rules?: RulesSource;
   /** Dónde se propone y se sigue un cambio de política; sin esto, no se ofrece proponer. */
   policy?: PolicySource;
@@ -68,6 +71,8 @@ export type AdminSource = {
   home: string;
   /** Configuración, abierta donde vive lo de una cuenta personal. */
   settings: string;
+  /** Configuración › Plan y cobro con «Agregar usuarios» abierto. */
+  addSeats?: string;
 };
 
 const ICONS: Record<Section, () => JSX.Element> = {
@@ -312,7 +317,12 @@ function Body(props: { section: Section | undefined; workspace: Membership; sour
         <Match when={props.section === "harness" && harnessSource()}>
           {(harness) => <Suspense fallback={null}><HarnessInsights source={harness()} /></Suspense>}
         </Match>
-        <Match when={props.section === "members" && props.source.members}>{(members) => <Members source={members()} />}</Match>
+        <Match when={props.section === "members" && props.source.members}>{(members) => (
+          <Members
+            source={members()}
+            seats={props.source.seats ? { usage: () => props.source.seats!(props.workspace.id), addHref: props.source.addSeats ?? props.source.settings } : undefined}
+          />
+        )}</Match>
         <Match when={props.section === "skills" && props.source.shared}>{(s) => <SharedSkills source={s()} policy={policy()} canPropose={props.manager} />}</Match>
         <Match when={props.section === "mcp" && props.source.shared}>{(s) => <SharedMcp source={s()} policy={policy()} canPropose={props.manager} />}</Match>
         <Match when={props.section === "agents" && props.source.shared}>{(s) => <SharedAgents source={s()} policy={policy()} canPropose={props.manager} />}</Match>
