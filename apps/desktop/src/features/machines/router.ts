@@ -17,7 +17,7 @@
  */
 import { type AccountWorkspace, type SystemId, callWorkspace, isDeferrable, systemOf } from "@terminus/computers";
 import { AttentionBook, type Envelope, type Fleet, FleetError, type Slice, classOf, unwrap } from "@terminus/fleet";
-import { t } from "../../lib/i18n.ts";
+import { clavesConocidas, t } from "../../lib/i18n.ts";
 
 type Args = Record<string, unknown>;
 type Options = { headers?: HeadersInit } | undefined;
@@ -248,8 +248,12 @@ export function createRouter(config: RouterConfig) {
         if (typeof own === "string" || (own && typeof own === "object" && "what" in own)) return own as Failure;
         return { what: { clave: "shell.service.failed" }, detail: error.code };
       }
-      default:
-        return { what: { clave: SERVICE_KEYS[error.code] ?? "shell.service.failed" }, detail: error.code };
+      default: {
+        // El rechazo del motor de allá (`handler_*`…) conserva su frase y su motivo, como en `proxy.rs`.
+        const own = `cli.error.${error.code}`;
+        const clave = SERVICE_KEYS[error.code] ?? (clavesConocidas().has(own) ? own : "shell.service.failed");
+        return { what: { clave }, detail: error.detail == null ? error.code : { code: error.code, detail: error.detail } };
+      }
     }
   };
   const missing = (machine: string): Failure => ({ what: t("web.machines.missing_workspace", { name: fleet.name(machine) }), detail: "workspace_missing" });
