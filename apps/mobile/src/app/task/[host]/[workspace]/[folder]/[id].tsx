@@ -31,7 +31,8 @@ import {
 } from "../../../../../lib/engine";
 import { HostError } from "../../../../../lib/hosts";
 import { type ChatLine, type Line, type LivePiece, type WorkLine, applyLive, lineMatches, liveAfterRead, runClock, savesLive, workRuns } from "../../../../../lib/steps";
-import { failureGesture, failureKey, failureSentence, isInterruption } from "../../../../../lib/failureNotice";
+import { failureGesture, failureKey, failureSentence, isInterruption, retryTarget } from "../../../../../lib/failureNotice";
+import { QueueMemory, steerMemory, steerNotice, steerRefusal } from "../../../../../lib/steer";
 import { handoverGate, livePending, sendWithHandover, type PendingHandover } from "../../../../../lib/handover";
 import { publishWork, releaseWork } from "../../../../../lib/workSheet";
 import { hasKey, lang, phrase, t, w } from "../../../../../lib/i18n";
@@ -45,7 +46,7 @@ import { HistoryDetail } from "../../../../../ui/chat/HistoryDetail";
 import { Attachments, MessageBody, toolImages } from "../../../../../ui/chat/Message";
 import { ChatScopeContext } from "../../../../../ui/chat/scope";
 import { ReasoningRow, TurnStatus, WorkGroup } from "../../../../../ui/chat/Work";
-import { Composer, type Submission } from "../../../../../ui/Composer";
+import { Composer, type ComposerChoice, type Submission } from "../../../../../ui/Composer";
 import { type Theme, useTheme } from "../../../../../ui/theme";
 import { Icon } from "../../../../../ui/Icon";
 import { openTask } from "../../../../../ui/components";
@@ -405,7 +406,40 @@ export default function TaskScreen() {
       }),
     );
   };
-  const inject = (text: string, attachments: string[]) => act(() => injectIntoTask(host!, workspace, folder, id, text, attachments));
+  // Lo elegido en el chip: «Reintentar» reenvía con ese modelo, como la ventana.
+  const choice = useRef<ComposerChoice | null>(null);
+  // Cambia cuando un agente niega el steer: el cuadro deja de ofrecer «Mandar ahora».
+  const [, setSteerRefusals] = useState(0);
+  /**
+   * «Mandar ahora». Solo sale de la cola si el motor lo aceptó. Si este agente
+   * no recibe mensajes a medias (OpenCode), sigue en la cola, se dice una vez
+   * con la frase del catálogo y queda «Detener y enviar».
+   */
+  const inject = async (text: string, attachments: string[]) => {
+    if (!host) return false;
+    setNote(null);
+    try {
+      await injectIntoTask(host, workspace, folder, id, text, attachments);
+      void refresh().catch(fail);
+      return true;
+    } catch (error) {
+      const refusal = steerRefusal(error);
+      if (refusal === "delivered") {
+        void refresh().catch(fail);
+        return true;
+      }
+      // El turno acaba de cerrar: sale como el siguiente.
+      if (refusal === "later") return false;
+      if (refusal === "unsupported" || refusal === "unconfirmed") {
+        const provider = view?.session.provider;
+        if (provider && steerMemory.refuse(params.host, provider)) setNote(w(steerNotice(refusal)));
+        setSteerRefusals((n) => n + 1);
+        return false;
+      }
+      fail(error);
+      return false;
+    }
+  };
 
   const settle = (requestId: string) => {
     if (decidingNow.current.delete(requestId)) setDeciding(new Set(decidingNow.current));
@@ -477,6 +511,7 @@ export default function TaskScreen() {
   const cachedNote =
     view?.cachedAt && host ? t("machines.cached", { name: host.label, time: new Date(view.cachedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) }) : null;
   const title = (view?.session.turns.find((turn) => turn.role === "user")?.text ?? "").split("\n")[0];
+  const retryable = useMemo(() => retryTarget(lines), [lines]);
   const lastAgent = [...lines].reverse().find((line) => line.kind === "message" && line.role !== "user" && line.role !== "system" && line.role !== "shell")?.key;
   const liveLines = thread.live;
   // Las respuestas del agente, para contar en el botón las que entraron desde que se subió.
@@ -543,6 +578,22 @@ export default function TaskScreen() {
   const workspaceMode = workspaces.find((w) => w.id === workspace)?.defaultPermissionMode ?? null;
   const latest = useRef({ view, submit, respond, pendingHandover });
   latest.current = { view, submit, respond, pendingHandover };
+  /** «Reintentar» en el fallo vigente: el último texto, con lo elegido en el chip. Los adjuntos no viajan otra vez. */
+  const retry = useCallback((prompt: string) => {
+    const { view: now, submit: send } = latest.current;
+    if (!now) return;
+    const defaults = taskDefaults(now);
+    const chip = choice.current;
+    void send({
+      shell: false,
+      prompt,
+      provider: chip?.provider ?? defaults.provider,
+      model: chip ? chip.model : defaults.model,
+      effort: chip?.effort ?? null,
+      permissionMode: chip?.permissionMode ?? now.session.permission_mode ?? null,
+      attachments: [],
+    });
+  }, []);
   const decide = useCallback((permission: Permission, allow: boolean) => latest.current.respond(permission, allow), []);
   const quickReply = useCallback((prompt: string) => {
     const { view: now, submit: send, pendingHandover: pending } = latest.current;
@@ -708,7 +759,7 @@ export default function TaskScreen() {
         // Lo que cambia de alto por encima de lo que se lee (una imagen que carga, pasos que se abren) no lo mueve.
         maintainVisibleContentPosition={Platform.OS === "web" ? { minIndexForVisible: 0 } : { minIndexForVisible: 0, autoscrollToTopThreshold: MARGIN }}
         renderItem={({ item }) => {
-          const row = <Row line={item} theme={theme} needle={needle} paused={waiting} onOpen={openWork} onQuickReply={item.key === lastAgent && !running && !asleep ? quickReply : undefined} reasoningOpen={reasoning.has(item.key)} onToggleReasoning={toggleReasoning} />;
+          const row = <Row line={item} theme={theme} needle={needle} paused={waiting} onOpen={openWork} onQuickReply={item.key === lastAgent && !running && !asleep ? quickReply : undefined} onRetry={retryable && item.key === retryable.key && !running && !asleep && !waking ? () => retry(retryable.prompt) : undefined} reasoningOpen={reasoning.has(item.key)} onToggleReasoning={toggleReasoning} />;
           return Platform.OS === "web" ? <View nativeID={`chat-row:${encodeURIComponent(webScope)}:${item.key}`}>{row}</View> : row;
         }}
         onEndReached={Platform.OS === "web" || needle ? undefined : () => void askOlder()}
@@ -766,6 +817,11 @@ export default function TaskScreen() {
         onInject={inject}
         onStop={stop}
         onModeChange={changeMode}
+        queueKey={QueueMemory.key(params.host, workspace, id)}
+        steerRefused={steerMemory.refuses(params.host, view?.session.provider)}
+        onStopAndSend={waiting || questions.length ? undefined : stop}
+        choice={choice}
+        onAccounts={() => router.push("/accounts")}
       />
       </ChatScopeContext.Provider>
     </KeyboardScreen>
@@ -794,7 +850,7 @@ function ChatBackdrop({ background, theme }: { background: Backdrop | null; them
 const MONO = Platform.select({ ios: "Menlo", default: "monospace" });
 
 /** Una línea solo se repinta si cambia: `linesOf` le deja el mismo objeto a la que no cambió. */
-const Row = memo(function Row({ line, theme, needle, paused, onOpen, streaming, onQuickReply, reasoningOpen, onToggleReasoning }: { line: ChatLine; theme: Theme; needle: string; paused: boolean; onOpen: (line: WorkLine, at: number, find: string | null) => void; streaming?: boolean; onQuickReply?: (prompt: string) => Promise<boolean>; reasoningOpen: boolean; onToggleReasoning: (key: string) => void }) {
+const Row = memo(function Row({ line, theme, needle, paused, onOpen, streaming, onQuickReply, onRetry, reasoningOpen, onToggleReasoning }: { line: ChatLine; theme: Theme; needle: string; paused: boolean; onOpen: (line: WorkLine, at: number, find: string | null) => void; streaming?: boolean; onQuickReply?: (prompt: string) => Promise<boolean>; onRetry?: () => void; reasoningOpen: boolean; onToggleReasoning: (key: string) => void }) {
   if (line.kind === "reasoning") return <ReasoningRow line={line} open={reasoningOpen} onToggle={onToggleReasoning} />;
   if (line.kind === "work") return <WorkGroup line={line} needle={needle} paused={paused} onOpen={onOpen} />;
   if (line.kind === "progress")
@@ -807,7 +863,7 @@ const Row = memo(function Row({ line, theme, needle, paused, onOpen, streaming, 
     );
   if (line.kind === "shell") return <ShellRun command={line.command} output={line.output} exitCode={line.exitCode} theme={theme} />;
   if (line.kind === "message" && line.role === "system" && line.meta === "provider_handover") return <HandoverRow line={line} theme={theme} />;
-  if (line.kind === "message" && line.role === "system" && (line.meta === "fallo" || line.meta === "cupo" || line.fallo)) return <FailureNotice line={line} theme={theme} />;
+  if (line.kind === "message" && line.role === "system" && (line.meta === "fallo" || line.meta === "cupo" || line.fallo)) return <FailureNotice line={line} theme={theme} onRetry={onRetry} />;
   return <Bubble line={line} theme={theme} streaming={streaming} onQuickReply={onQuickReply} />;
 });
 
@@ -828,8 +884,8 @@ function HandoverRow({ line, theme }: { line: Extract<Line, { kind: "message" }>
   );
 }
 
-/** La fila del fallo, como en la ventana: la frase de la clase y, si sirve, cambiar de cuenta. */
-function FailureNotice({ line, theme }: { line: Extract<Line, { kind: "message" }>; theme: Theme }) {
+/** La fila del fallo, como en la ventana: la frase de la clase y, si sirve, cambiar de cuenta o «Reintentar» (solo la vigente). */
+function FailureNotice({ line, theme, onRetry }: { line: Extract<Line, { kind: "message" }>; theme: Theme; onRetry?: () => void }) {
   const sentence = failureSentence(line, say) ?? line.text;
   if (!sentence) return null;
   const gesture = line.meta === "fallo" ? failureGesture(line.fallo?.clase) : null;
@@ -843,6 +899,10 @@ function FailureNotice({ line, theme }: { line: Extract<Line, { kind: "message" 
         {gesture ? (
           <Text accessibilityRole="link" onPress={() => router.push("/accounts")} style={{ textDecorationLine: "underline" }}>
             {` — ${say(gesture.key)}`}
+          </Text>
+        ) : onRetry ? (
+          <Text accessibilityRole="button" testID="failure-retry" onPress={onRetry} style={{ textDecorationLine: "underline" }}>
+            {` — ${w("chat.failure.retry")}`}
           </Text>
         ) : null}
       </Text>

@@ -105,3 +105,27 @@ test("el catálogo del teléfono tiene la frase del cupo en los dos idiomas", ()
   const [spanish, english] = src.split("const en");
   assert.deepEqual(keys(english), keys(spanish));
 });
+
+test("«Reintentar» solo en el fallo vigente sin clasificar, y reenvía el último texto", async () => {
+  const { retryTarget, retryable } = await import("../src/lib/failureNotice.ts");
+  const user = (key: string, text: string) => ({ key, kind: "message", role: "user", text });
+  const fallo = (key: string, clase?: string, text = "Algo falló") => ({ key, kind: "message", role: "system", meta: "fallo", text, fallo: clase ? { clase } : null });
+  const agent = (key: string) => ({ key, kind: "message", role: "agent", text: "listo" });
+
+  assert.deepEqual(retryTarget([user("u1", "haz el PR"), fallo("f1")]), { key: "f1", prompt: "haz el PR" });
+  assert.deepEqual(retryTarget([user("u1", "haz el PR"), fallo("f1", "desconocido")]), { key: "f1", prompt: "haz el PR" });
+  assert.deepEqual(retryTarget([user("u1", "uno"), agent("a1"), user("u2", "dos"), fallo("f2", "sin_red")]), { key: "f2", prompt: "dos" });
+  // Solo el más nuevo: uno viejo no lo ofrece aunque sea sin clasificar.
+  assert.deepEqual(retryTarget([user("u1", "uno"), fallo("f1"), user("u2", "dos"), fallo("f2")])?.key, "f2");
+  // Con algo escrito después, ya no es vigente.
+  assert.equal(retryTarget([user("u1", "uno"), fallo("f1"), user("u2", "dos")]), null);
+  // Una clase con su gesto (cupo, credencial) o sin gesto (contexto lleno) no reintenta.
+  assert.equal(retryTarget([user("u1", "uno"), fallo("f1", "sin_cupo")]), null);
+  assert.equal(retryTarget([user("u1", "uno"), fallo("f1", "contexto_lleno")]), null);
+  // La interrupción es de la persona; sin texto que reponer, nada.
+  assert.equal(retryTarget([user("u1", "uno"), fallo("f1", undefined, "chat.turn.cancelled")]), null);
+  assert.equal(retryTarget([fallo("f1")]), null);
+  // Un mensaje de otra tarea no se reenvía como si fuera de la persona.
+  assert.equal(retryTarget([{ ...user("u1", "de otra"), from: { task: "t2" } }, fallo("f1")]), null);
+  assert.equal(retryable({ meta: "cupo", text: "" }), false);
+});

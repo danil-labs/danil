@@ -14,6 +14,7 @@ import { useMachines } from "../lib/machines";
 import { useWorkspaces } from "../lib/workspaces";
 import { BrandMark } from "../ui/BrandMark";
 import { Dot } from "../ui/components";
+import { FreeModels } from "../ui/FreeModels";
 import { Icon } from "../ui/Icon";
 import { MachineStorage } from "../ui/MachineStorage";
 import { Sheet, SheetOption } from "../ui/Sheet";
@@ -226,6 +227,7 @@ export default function Accounts() {
             </Pressable>
           </View>
         ))}
+        <FreeModels hosts={hosts} scopeOf={scopeOf} providers={data?.map((d) => d.provider) ?? []} theme={theme} tick={tick} />
       </ScrollView>
 
       <Sheet visible={pick !== null} title={t("accounts.pick_machine")} onClose={() => setPick(null)}>

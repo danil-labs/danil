@@ -30,6 +30,11 @@ export const APP_READS = [
   // El cuadro de escribir, como el de la ventana: modelos y razonamiento,
   // permisos, la barra de comandos, las menciones y la rama base.
   "list_models",
+  // Las superficies de cada agente (OpenCode: «Zen y Go» y «Modelos gratuitos»)
+  // y el texto del consentimiento de los gratuitos, con su versión: el mismo
+  // que firma la ventana (`workspaces::consent_text`).
+  "list_surfaces",
+  "consent_text",
   "list_permission_modes",
   "list_slash_menu",
   "list_mentions",
@@ -112,6 +117,10 @@ export const APP_ACTIONS = [
   "remove_account",
   // El próximo turno corre con esta cuenta. No enciende la máquina: el uso solo se muestra si ya está encendida.
   "set_active_account",
+  // Aceptar o retirar el consentimiento de los modelos gratuitos de un agente en
+  // el workspace (`workspaces::set_provider_consent`). Sin él, el catálogo
+  // gratuito llega vacío y el motor no lanza turnos por esa superficie.
+  "set_provider_consent",
   // «Nueva carpeta» y «Clonar repo» desde la tarea nueva: el clon corre en segundo
   // plano y avisa con el evento `project_clone`.
   "create_project",

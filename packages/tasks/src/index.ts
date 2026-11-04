@@ -57,3 +57,4 @@ export { type AttentionRow, delegatedAttention, delegatedFamilies, withFamilyAct
 export { type TaskTreeRow, type TaskBranch, taskIdentity, taskParent, buildTaskTree, withTaskAncestors, taskDescendants } from "./tree.ts";
 
 export { type WorkState, WORK_STATES, workStateOf } from "./workState.ts";
+export { type ModelSession, type Surface, type SurfaceModel, chipModel, menuSurfaces, surfaceHas, surfaceOf } from "./surfaces.ts";

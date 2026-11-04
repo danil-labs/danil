@@ -84,6 +84,48 @@ export function failureGesture(clase?: string): { key: "task.failure.other_accou
   return null;
 }
 
+/** La clase que se reintenta: la caída del proveedor o de la red. Lo demás tiene su gesto o ninguno. */
+const RETRIES = new Set(["proveedor_caido", "sin_red"]);
+
+/**
+ * Si la fila ofrece «Reintentar», como la ventana (`gestoDeLaFila` en
+ * `apps/desktop/src/features/chat/failures.ts`): un fallo sin clase (envío
+ * rechazado o sin clasificar), o una caída del proveedor o de la red. Ni la
+ * interrupción, que es de la persona, ni el turno que no se guardó.
+ */
+export function retryable(msg: Notice): boolean {
+  if (msg.meta !== "fallo") return false;
+  const text = msg.text ?? "";
+  if (isInterruption(text) || text === "chat.turn.unsaved") return false;
+  const clase = msg.fallo?.clase;
+  return !clase || clase === "desconocido" || RETRIES.has(clase);
+}
+
+type RetryLine = Notice & { key: string; kind: string; from?: unknown };
+
+/**
+ * La fila que ofrece «Reintentar» y el texto que reenvía. Solo la vigente: el
+ * fallo más nuevo, sin nada que la persona escribiera después. Reintentar manda
+ * el último texto, no el de una fila vieja. Sin texto que reponer (el primer
+ * turno murió antes de guardarse), ninguna.
+ */
+export function retryTarget(lines: readonly RetryLine[]): { key: string; prompt: string } | null {
+  for (let i = lines.length - 1; i >= 0; i--) {
+    const line = lines[i];
+    if (line.kind !== "message") continue;
+    if (line.role === "user") return null;
+    if (line.meta !== "fallo") continue;
+    if (!retryable(line)) return null;
+    for (let j = i - 1; j >= 0; j--) {
+      const before = lines[j];
+      const prompt = (before.text ?? "").trim();
+      if (before.kind === "message" && before.role === "user" && !before.from && prompt) return { key: line.key, prompt };
+    }
+    return null;
+  }
+  return null;
+}
+
 function quotaSentence(change: QuotaChange, say: FailureSay, now: number): string {
   if (change.to && change.from) {
     if (!change.until) return say("task.quota.switched", { to: change.to, from: change.from });
