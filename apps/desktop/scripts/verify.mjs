@@ -549,6 +549,12 @@ const steps = [
     root,
   ],
   [
+    "Usage reads the account's measured usage and keeps missing data missing",
+    process.execPath,
+    ["--test", "--experimental-strip-types", join(root, "tests/unit/usage-me.test.ts")],
+    root,
+  ],
+  [
     "The Harness menu follows plan, role and available sources",
     process.execPath,
     ["--test", "--experimental-strip-types", join(root, "tests/unit/admin-sections.test.ts")],
