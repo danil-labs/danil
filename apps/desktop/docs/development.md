@@ -127,10 +127,14 @@ when the commit is a snapshot of uncommitted work on top of `HEAD`.
 Bundles land in a bare mirror per repo owned by `verify`. Branch code never runs
 as `verify`: each profile names its run user (`verify-run` for the app,
 `verify-run-engine` for the engine; lane `n` above 0 adds `-<n>`), and its lane
-(`/var/lib/verify-queue/lanes/<n>/<repo>/`) holds the checkout, the target, the
-cargo registry and caches, all owned by that user. Every git command, delete and
+(`/var/lib/vl/<n>/<repo>/`, `VERIFY_QUEUE_LANES`) holds the checkout, the target,
+the cargo registry and caches, all owned by that user. `/var/lib/vl` and each
+`<n>` belong to root: the engine runs an executor only when every folder of its
+path belongs to root or to the running user and nobody else can write it. Every git command, delete and
 kill in a lane goes through `sudo -n -u <user>`; `verify` only reads artifacts
-from it. Each run gets a fresh `HOME`; git runs without hooks or global config;
+from it. Each run gets a fresh `HOME` and `TMPDIR` (short, for Unix
+socket paths), and `refs/remotes/origin/dev` points at the run's `base`, since
+the chains compare against it; git runs without hooks or global config;
 at the end the queue kills every process of the run user, also on restart. A
 profile without a run user is refused with 503. The checkout is reused, so
 `git checkout` only rewrites the files that differ from the previous commit and

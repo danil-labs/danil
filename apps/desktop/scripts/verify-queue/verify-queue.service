@@ -11,6 +11,7 @@ Environment=VERIFY_QUEUE_CONFIG=/etc/verify-queue/repos.json
 Environment=PATH=/opt/rust/cargo/bin:/usr/local/bin:/usr/bin:/bin
 Environment=RUSTUP_HOME=/opt/rust/rustup
 Environment=VERIFY_QUEUE_NAME=linux-x64
+Environment=VERIFY_QUEUE_LANES=/var/lib/vl
 ExecStart=/usr/bin/env node /opt/verify-queue/server.mjs
 Restart=always
 RestartSec=2
