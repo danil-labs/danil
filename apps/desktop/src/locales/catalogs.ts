@@ -21,9 +21,9 @@
 import { registrarCatalogo, type Manifiesto } from "../lib/i18n.ts";
 
 // `web.json`, `attention.json`, `customize.json`, `audit.json` y `broadcasts.json` los lleva la entrada web (`src/web/phrases.ts`);
-// `danil.json`, `work.json`, `settings.handler.json`, `settings.usage.json`, `cli.json` y `chat.notice.json`, los trozos
+// `danil.json`, `work.json`, `settings.handler.json`, `settings.usage.json`, `cli.json`, `chat.notice.json` y `chat.session_model.json`, los trozos
 // perezosos que los enseñan (`danilPhrases.ts`, `workPhrases.ts`, `handlerPhrases.ts`, `usagePhrases.ts`, `failurePhrases.ts`).
-const EMPOTRADOS = import.meta.glob(["./*/*.json", "!./*/web.json", "!./*/danil.json", "!./*/work.json", "!./*/settings.handler.json", "!./*/settings.usage.json", "!./*/cli.json", "!./*/chat.notice.json", "!./*/attention.json", "!./*/customize.json", "!./*/audit.json", "!./*/broadcasts.json", "!./*/harness.insights.json"], {
+const EMPOTRADOS = import.meta.glob(["./*/*.json", "!./*/web.json", "!./*/danil.json", "!./*/work.json", "!./*/settings.handler.json", "!./*/settings.usage.json", "!./*/cli.json", "!./*/chat.notice.json", "!./*/chat.session_model.json", "!./*/attention.json", "!./*/customize.json", "!./*/audit.json", "!./*/broadcasts.json", "!./*/harness.insights.json"], {
   eager: true,
   import: "default",
 }) as Record<string, Record<string, unknown>>;

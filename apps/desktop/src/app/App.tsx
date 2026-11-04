@@ -182,7 +182,7 @@ import { pedirElCampo } from "../lib/focus";
 import { lastRoster, rememberRoster } from "../lib/handlerRoster";
 import { aplicarLenguaDeWorkspace, clavesConocidas, t } from "../lib/i18n";
 import { attachmentsOn, NotMovable } from "../lib/remoteAttachments";
-import { ATTACHMENT_DOCUMENTS_FEATURE, PROVIDER_HANDOFF_FEATURE, SESSION_MODEL_FEATURE, sessionModelArgs } from "@terminus/protocol";
+import { ATTACHMENT_DOCUMENTS_FEATURE, PROVIDER_HANDOFF_FEATURE, SESSION_MODEL_FEATURE } from "@terminus/protocol";
 import { invoke } from "../lib/invoke.ts";
 import { connected } from "../lib/engineConnection";
 import { openChatVisual, readChatVisual } from "../features/chat/readVisual";
@@ -5776,7 +5776,10 @@ export default function App() {
   function guardarModeloEnLaTarea(id: string, modelo: string, nivel: string | null) {
     if (anunciaEnLaTarea(id, SESSION_MODEL_FEATURE) !== true) return;
     modelosGuardados.set(id, modelo);
-    void invoke("set_session_model", sessionModelArgs(project(), id, modelo, nivel), opcionesDeLaTarea(id, workspaceActivo()))
+    const proyecto = project();
+    const opciones = opcionesDeLaTarea(id, workspaceActivo());
+    void import("../features/chat/sessionModel")
+      .then((m) => m.saveSessionModel(proyecto, id, modelo, nivel, opciones))
       .catch((e) => {
         if (modelosGuardados.get(id) === modelo) modelosGuardados.delete(id);
         anexar(id, (m) => [...m, { role: "system", text: prosaDe(e), meta: "aviso" }]);
