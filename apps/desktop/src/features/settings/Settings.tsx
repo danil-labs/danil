@@ -1,6 +1,7 @@
 import { invoke } from "../../lib/invoke.ts";
 import Bot from "lucide-solid/icons/bot";
 import CircleUserRound from "lucide-solid/icons/circle-user-round";
+import CreditCard from "lucide-solid/icons/credit-card";
 import ExternalLink from "lucide-solid/icons/external-link";
 import Folders from "lucide-solid/icons/folders";
 import Monitor from "lucide-solid/icons/monitor";
@@ -141,6 +142,8 @@ const pestanasDe = (
     memory: tab("memory", () => t("settings.tab.memory"), () => <SettingsPanel><ProveedorDeMemoria /></SettingsPanel>),
     external: cuenta ? tab("external", () => t("settings.tab.external"), () => <Suspense fallback={null}><Connections workspace={workspace()} /></Suspense>) : undefined,
     customers: tab("customers", () => t("settings.tab.customers"), () => <CustomerConnections workspace={agentsWorkspace} />),
+    business: capabilities().businessBilling ? tab("business", () => t("settings.tab.business"), () => capabilities().businessBilling?.("plan")) : undefined,
+    fiscal: capabilities().businessBilling ? tab("fiscal", () => t("settings.tab.fiscal"), () => capabilities().businessBilling?.("fiscal")) : undefined,
   };
 };
 
@@ -152,6 +155,7 @@ const ENCABEZADOS: Record<SettingsEntryId, { name: () => string; icono: () => JS
   projects: { name: () => t("settings.entry.projects"), icono: () => <Folders size={15} /> },
   "agents-skills": { name: () => t("settings.entry.agents_skills"), icono: () => <Bot size={15} /> },
   connections: { name: () => t("settings.nav.connections"), icono: () => <Plug size={15} /> },
+  billing: { name: () => t("settings.entry.billing"), icono: () => <CreditCard size={15} /> },
 };
 
 /** Una entrada sale si tiene alguna pestaña que ya existe. */
