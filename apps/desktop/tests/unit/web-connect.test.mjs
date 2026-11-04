@@ -123,6 +123,9 @@ test("approving without a license or on a used code says why", async () => {
         assert.ok(text.includes("Solicita acceso a Danil") && !text.includes("99 MXN"), text);
         const buttons = [...root().querySelectorAll("[data-terminus-license] button")].map((b) => b.textContent.trim());
         assert.deepEqual(buttons, ["Solicitar acceso", "Ya tengo acceso · Reintentar"]);
+        const contact = root().querySelector("[data-license-contact]");
+        assert.equal(contact.textContent.trim(), "¿Dudas? Escríbenos a hola@danil.ai", "the address reads as contact, not as the signed-in account");
+        assert.equal(contact.getAttribute("href"), "mailto:hola@danil.ai");
         root().querySelector("[data-license-retry]").click();
         await sleep(300);
         assert.equal(root()?.dataset.webConnect, "ask", "retrying looks the code up again");

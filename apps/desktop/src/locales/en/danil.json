@@ -37,6 +37,7 @@
   "danil.license.request": "Request access",
   "danil.license.request_subject": "Request access to Danil",
   "danil.license.retry": "I have access · Retry",
+  "danil.license.contact": "Questions? Write to {email}",
   "danil.account.your_account": "Your Danil account",
   "danil.account.online": "Online with Danil.",
   "danil.account.offline": "Not connected to Danil right now.",
