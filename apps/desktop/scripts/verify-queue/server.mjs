@@ -352,8 +352,8 @@ export function createQueue({ home, config, diskPercent = defaultDiskPercent, ru
 
   /** git en el checkout del carril, siempre con el usuario de la corrida, sin hooks ni config global. */
   /**
-   * La config global del git del carril: un archivo de `verify` que la rama no escribe. Con un remoto
-   * local, git quita los `-c` del entorno de upload-pack, así que `safe.directory` del espejo va aquí.
+   * La config global del git del carril: un archivo de `verify` que la rama no escribe. Lleva el
+   * `safe.directory` del espejo: con un remoto local, git quita los `-c` del entorno de upload-pack.
    */
   function laneGitConfig(repo) {
     const path = join(reposDir, repo, "gitconfig");
