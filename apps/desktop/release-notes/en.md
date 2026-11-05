@@ -1,11 +1,15 @@
-Danil 0.3.0 brings the engine with provider handover and the Danil name across the app. It is a pre-release: it does not replace the stable version until it is promoted.
+Danil 0.3.1 brings Danil Business, access only for approved people, and each person's own GitHub. It is a pre-release: it does not replace the stable version until it is promoted.
 
-- **The app is called Danil.** The installer, the folder and the downloadable files become «Danil». A 0.2.x copy installed as Terminus updates in place and retires its previous entry.
-- **Provider handover.** A normal task changes CLI (Claude, Codex or OpenCode) without losing the conversation: the new turn receives the context, and going back to the original CLI resumes its session with only what happened while it was away.
-- **The engine decides who may change.** Adopted tasks, subagents, tasks with a handler and tasks with a live turn are refused. The budget is computed from the destination model's window; when it does not fit, the turn says so instead of trimming the conversation.
-- **machines.danil.ai.** It is the default Danil Machines host; computers.danil.ai keeps answering.
-- **A single sign-in.** The window opens the browser once and connects the engine with that same approval. Signing out closes both.
-- **Danil Machines.** It is the visible name of the machines and the CLI group (`danil machines`, `dn machines`); `computers` stays as a hidden alias.
-- **Usage for Harness.** The engine reports each turn's usage to Danil Machines, which stores it for the Harness panel.
+- **Danil Business.** On first launch the app connects your Danil Business account; on the web, Plan and billing shows your plan and downloads the app.
+- **Request access.** Only approved people can sign in. When your account has no access, the app says so and lets you request it.
+- **Your GitHub.** GitHub connects like your AI account: it is yours, not the workspace owner's, and your tasks use it on any machine of yours.
+- **Upload and sync.** A workspace on your computer can be uploaded to Danil, synced and unlinked from Settings.
+- **Sleeping machines.** When the VM is off you can still pick a project and send: Danil wakes it and the turn says «Starting».
+- **Usage.** Settings → Usage shows your account's measured usage.
+- **Repository skills.** They appear in Settings and in the `/` menu, also in the middle of the text.
+- **Files.** Download files from a task that runs on another machine, and view video, audio, PDF and Typst on the web and the phone.
+- **Model per task.** The model you pick in the chip is saved in the task.
+- **Task list.** Sort it by date, recent activity or status.
+- **Tauri 2.12.** The updater moves to 2.14.1 and the Windows signature is bound to the version.
 
-The engine and its resources are pinned by version and SHA-256. This pre-release does not change the stable download link or the automatic update of installed copies: it is installed from its GitHub page.
+The engine and resources are pinned by version and SHA-256. This pre-release does not change the stable download link or the automatic update of installed copies: install it from its GitHub page.
