@@ -284,7 +284,7 @@ pub(super) fn desktop_command(name: &str) -> bool {
                 | "service_filter"
                 | "load_history"
                 | "handler_action"
-                // Linux en esta PC (`wsl_child.rs`): la ventana, no el motor.
+                // Máquinas locales (`guests/`): la ventana, no el motor.
                 | "wsl_state"
                 | "wsl_catalog"
                 | "wsl_enable"
@@ -295,13 +295,15 @@ pub(super) fn desktop_command(name: &str) -> bool {
                 | "wsl_resume_forget"
                 | "wsl_distro_user"
                 | "wsl_reboot"
-                | "wsl_children"
-                | "wsl_child_remove"
-                | "wsl_child_wake"
-                | "wsl_child_call"
-                | "wsl_child_copy_folder"
-                | "wsl_child_sync_spaces"
-                | "wsl_child_events"
+                | "guest_channels"
+                | "guest_list"
+                | "guest_children"
+                | "guest_remove"
+                | "guest_start"
+                | "guest_call"
+                | "guest_copy_folder"
+                | "guest_sync_spaces"
+                | "guest_events"
         )
 }
 pub(super) fn with_desktop(

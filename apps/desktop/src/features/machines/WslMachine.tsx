@@ -45,7 +45,7 @@ function stateLabel(state: string): string {
 }
 
 /** La flota (Ejecutar en) vuelve a leer las distribuciones conectadas. */
-const fleetChanged = () => window.dispatchEvent(new CustomEvent("danil:wsl-changed"));
+const fleetChanged = () => window.dispatchEvent(new CustomEvent("danil:guests-changed"));
 
 type Workspaces = { workspaces?: { id: string; name?: string }[]; active?: string | null };
 
@@ -63,7 +63,7 @@ async function activeWorkspace(): Promise<{ id: string; name: string } | null> {
 
 /**
  * Configuración → Máquinas → Linux en esta PC. Lo que se ve lo guarda la
- * ventana (`wsl_state`, `wsl-job`), no esta pantalla: salir de Configuración
+ * ventana (`wsl_state`, `guest-job`), no esta pantalla: salir de Configuración
  * o reiniciar no pierde el avance (`docs/wsl-local-machine.md`).
  */
 export function WslMachineSection() {
@@ -91,8 +91,8 @@ function Section() {
   }
 
   onMount(() => void load());
-  const stopJob = listen<WslJob | null>("wsl-job", (e) => setJob(e.payload));
-  const stopState = listen("wsl-state-changed", () => {
+  const stopJob = listen<WslJob | null>("guest-job", (e) => setJob(e.payload));
+  const stopState = listen("guest-state-changed", () => {
     fleetChanged();
     void load();
   });
@@ -633,7 +633,7 @@ type Login = { provider: string; id: string; url: string | null; confirm: string
 function DistroBox(props: { row: WslDistroRow; child: WslChild; onRemoved: () => void }) {
   const machine = props.child.id;
   const call = <T,>(command: string, args: Record<string, unknown> = {}, timeoutMs?: number) =>
-    invoke<T>("wsl_child_call", { machine, command, args, workspace: null, folder: null, timeoutMs: timeoutMs ?? null });
+    invoke<T>("guest_call", { machine, command, args, workspace: null, folder: null, timeoutMs: timeoutMs ?? null });
   const [surfaces, setSurfaces] = createSignal<Surface[] | null>(null);
   const [problem, setProblem] = createSignal<string | null>(null);
   const [doing, setDoing] = createSignal<string | null>(null);
@@ -658,9 +658,9 @@ function DistroBox(props: { row: WslDistroRow; child: WslChild; onRemoved: () =>
     if (watching) return;
     watching = true;
     try {
-      cursor = (await invoke<{ cursor: number | null }>("wsl_child_events", { machine, cursor: null })).cursor ?? null;
+      cursor = (await invoke<{ cursor: number | null }>("guest_events", { machine, cursor: null })).cursor ?? null;
       while (login()) {
-        const page = await invoke<{ cursor: number | null; events?: { name: string; payload: { account?: string; kind?: string; text?: string } }[] }>("wsl_child_events", { machine, cursor });
+        const page = await invoke<{ cursor: number | null; events?: { name: string; payload: { account?: string; kind?: string; text?: string } }[] }>("guest_events", { machine, cursor });
         if (page.cursor !== null && page.cursor !== undefined) cursor = page.cursor;
         for (const ev of page.events ?? []) {
           const l = login();
@@ -703,7 +703,7 @@ function DistroBox(props: { row: WslDistroRow; child: WslChild; onRemoved: () =>
   }
 
   const remove = () => {
-    void invoke("wsl_child_remove", { machine }).then(props.onRemoved);
+    void invoke("guest_remove", { machine }).then(props.onRemoved);
   };
 
   async function sendCode() {
@@ -802,11 +802,11 @@ export function WslMachineRows() {
   if (!capabilities().wsl) return null;
   const [rows, setRows] = createSignal<WslChild[]>([]);
   const read = () => {
-    void invoke<WslChild[]>("wsl_children", { fresh: false }).then(setRows).catch(() => setRows([]));
+    void invoke<WslChild[]>("guest_children", { fresh: false }).then(setRows).catch(() => setRows([]));
   };
   onMount(read);
-  window.addEventListener("danil:wsl-changed", read);
-  onCleanup(() => window.removeEventListener("danil:wsl-changed", read));
+  window.addEventListener("danil:guests-changed", read);
+  onCleanup(() => window.removeEventListener("danil:guests-changed", read));
   return (
     <For each={rows()}>
       {(c) => (

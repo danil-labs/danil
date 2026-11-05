@@ -262,7 +262,7 @@ comando exacto para copiar, como hace hoy la fila de un servidor de Dray.
 
 ## Mapa de implementación
 
-- `apps/desktop/src-tauri/src/extracted/wsl.rs` (nuevo): detección, ejecución
+- `apps/desktop/src-tauri/src/extracted/guests/wsl.rs` (nuevo): detección, ejecución
   con argv seguro, decodificación UTF-16LE, timeouts y cancelación.
 - Una pantalla nueva en `src/features/machines/` y su estado local: pasos,
   errores y registro.

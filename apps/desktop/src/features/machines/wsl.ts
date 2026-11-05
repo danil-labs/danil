@@ -66,7 +66,7 @@ export const WSL_INSTALL_UBUNTU = "wsl --install -d Ubuntu";
 /** El id de máquina de una distro conectada: `wsl:Ubuntu`. Sólo existe en esta PC. */
 export const WSL_MACHINE_PREFIX = "wsl:";
 
-/** Una distro con motor de Danil, como la devuelve `wsl_children`. */
+/** Una distro con motor de Danil, como la devuelve `guest_children`. */
 export type WslChild = {
   id: string;
   distro: string;
@@ -86,9 +86,10 @@ export type WslDistroUser = { uid: number; user: string; home: string };
 
 export type WslJobError = { code: string; detail: string };
 
-/** Lo que se está haciendo (`wsl-job`): lo guarda la ventana, no la pantalla. */
+/** Lo que se está haciendo (`guest-job`): lo guarda la ventana, no la pantalla. */
 export type WslJob = {
   id: string;
+  channel: string;
   kind: "enable" | "install" | "connect";
   target: string;
   label: string;
