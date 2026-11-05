@@ -102,3 +102,12 @@ test("With only Colima VMs the block says there are none and offers the commands
   assert.equal(native("lima_create").length, 0);
   assert.ok(doc.querySelector("[data-lima-system]").textContent.includes("colima"));
 });
+
+test("A connected Lima VM says it is used from this Mac, not this PC", async () => {
+  const child = { id: "lima:danil-test", channel: "lima", distro: "danil-test", name: "danil-test", user: "u", home: "/home/u", online: true, features: [], contract: null, version: "0.3.1" };
+  const { doc } = await machines("lima-machine-box-scope", { guest_list: GUESTS, guest_children: [child], guest_call: ({ command }) => (command === "list_surfaces" ? [] : null) });
+  assert.ok(await until(() => doc.querySelector('[data-wsl-box="danil-test"] [data-box-scope]')), "the connected box with «Más opciones»");
+  const scope = doc.querySelector('[data-wsl-box="danil-test"] [data-box-scope]').textContent;
+  assert.equal(scope, "Solo se usa desde esta Mac o pasando por ella.");
+  assert.ok(!scope.includes("PC"), scope);
+});
