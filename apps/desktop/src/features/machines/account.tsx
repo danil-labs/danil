@@ -44,7 +44,8 @@ import { MachinePicker } from "./MachinePicker";
 import { createRouter, type Invoke, type Router, type SliceChange } from "./router";
 import { machineNamesChanged, refetchMachines } from "./store";
 import type { WslChild } from "./wsl";
-import { createWslLink, isWslMachine, wakeWslMachine, wslMachineInfo } from "./wslLink";
+import { guestChannels } from "./guestChannels";
+import { createGuestLink, guestMachineInfo, isGuestMachine, wakeGuestMachine } from "./guestLink";
 
 type Internals = { invoke: Invoke };
 type Target = Window & { __TAURI_INTERNALS__?: Internals };
@@ -63,21 +64,21 @@ type Installed = { key: string; fleet: Fleet; router: Router; restore: () => voi
 let started = false;
 
 /**
- * Linux en esta PC: las distros con motor son máquinas hijas de esta
- * computadora. No vienen del plano de control; se suman a la flota con un
- * enlace directo (`wslLink.ts`).
+ * Máquinas locales (Linux en esta PC): los huéspedes con motor son máquinas
+ * hijas de esta computadora. No vienen del plano de control; se suman a la
+ * flota con un enlace directo (`guestLink.ts`).
  */
-let wslMachines: MachineInfo[] = [];
+let guestMachines: MachineInfo[] = [];
 let lastOthers: Computer[] = [];
-async function readWslMachines(): Promise<MachineInfo[]> {
-  if (!capabilities().wsl) return [];
+async function readGuestMachines(): Promise<MachineInfo[]> {
+  if (!(await guestChannels()).length) return [];
   try {
     const { invoke } = await import("@tauri-apps/api/core");
-    wslMachines = (await invoke<WslChild[]>("wsl_children")).map(wslMachineInfo);
+    guestMachines = (await invoke<WslChild[]>("guest_children")).map(guestMachineInfo);
   } catch {
-    // Sin WSL o sin registro: la flota sigue con las de la cuenta.
+    // Sin canal o sin registro: la flota sigue con las de la cuenta.
   }
-  return wslMachines;
+  return guestMachines;
 }
 let installed: Installed | null = null;
 let syncing: Promise<void> | null = null;
@@ -169,8 +170,8 @@ export function startAccountMachines(target: Target = window) {
     const fleet = new Fleet({
       self,
       connect: (info) =>
-        isWslMachine(info.id)
-          ? createWslLink(info.id)
+        isGuestMachine(info.id)
+          ? createGuestLink(info.id)
           : new RelaySession({
               endpoint,
               computerId: info.id,
@@ -184,7 +185,7 @@ export function startAccountMachines(target: Target = window) {
             }),
       // Sin `contracts` ni `compatible`, como el teléfono: un motor con otro contrato
       // sigue en servicio y solo falla la orden que no conoce (nunca la máquina entera).
-      wake: async (id) => (isWslMachine(id) ? wakeWslMachine(id) : startedOf(await startComputer(endpoint, (await getToken()).token, id))),
+      wake: async (id) => (isGuestMachine(id) ? wakeGuestMachine(id) : startedOf(await startComputer(endpoint, (await getToken()).token, id))),
       storage: localStorage,
       onChange: () => {
         bump((n) => n + 1);
@@ -215,17 +216,17 @@ export function startAccountMachines(target: Target = window) {
       pickedFor,
       home: () => ({ wakes: homeWakes, os: homeOs, features: homeFeatures, version: homeVersion }),
     });
-    fleet.setMachines([...others.map(infoOf), ...wslMachines]);
+    fleet.setMachines([...others.map(infoOf), ...guestMachines]);
     fleet.subscribeEvents();
     // Una distro recién conectada o quitada en Configuración entra o sale de la flota en vivo.
-    const onWsl = () =>
-      void readWslMachines().then((list) => {
+    const onGuests = () =>
+      void readGuestMachines().then((list) => {
         if (installed?.fleet !== fleet) return;
         fleet.setMachines([...lastOthers.map(infoOf), ...list]);
         machineNamesChanged();
         void refetchMachines();
       });
-    window.addEventListener("danil:wsl-changed", onWsl);
+    window.addEventListener("danil:guests-changed", onGuests);
     const screens = createScreenAccess({
       endpoint,
       getToken: async () => (await getToken()).token,
@@ -372,12 +373,12 @@ export function startAccountMachines(target: Target = window) {
     homeVersion = mine?.host_version ?? null;
     const others = orderComputers(answer.value.filter((c) => c.computer_id !== self));
     lastOthers = others;
-    await readWslMachines();
+    await readGuestMachines();
     const key = JSON.stringify([self, account, client.endpoint]);
 
     // The same account: machines that came, left or changed name are applied live, without tearing the rest down.
     if (installed?.key === key) {
-      installed.fleet.setMachines([...others.map(infoOf), ...wslMachines]);
+      installed.fleet.setMachines([...others.map(infoOf), ...guestMachines]);
       machineNamesChanged();
       return void refetchMachines();
     }

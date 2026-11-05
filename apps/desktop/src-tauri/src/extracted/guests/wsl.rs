@@ -327,78 +327,35 @@ fn split_state_version(tail: &str) -> Option<(String, u8)> {
 /// plataformas para no dejar el camino de Windows sin type-check.
 #[cfg(any(windows, test))]
 fn run(args: &[&str]) -> Result<String, WslError> {
-    use std::process::{Command, Stdio};
-    use std::time::{Duration, Instant};
+    use super::run::RunError;
+    use std::time::Duration;
 
     const PLAZO_SIN_AVANCE: Duration = Duration::from_secs(15);
 
-    let mut command = Command::new("wsl.exe");
+    let mut command = std::process::Command::new("wsl.exe");
     crate::util::no_console_window(&mut command);
-    command
-        .args(args)
-        .env("WSL_UTF8", "1")
-        .stdin(Stdio::null())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped());
-    let mut child = command.spawn().map_err(|error| match error.kind() {
-        std::io::ErrorKind::NotFound => WslError::NotInstalled,
-        _ => WslError::Io(error.to_string()),
-    })?;
+    command.args(args).env("WSL_UTF8", "1");
+    let ran =
+        super::run::run(&mut command, None, PLAZO_SIN_AVANCE).map_err(|error| match error {
+            RunError::Missing => WslError::NotInstalled,
+            RunError::Timeout => WslError::Timeout,
+            RunError::Io(detail) => WslError::Io(detail),
+        })?;
 
-    // Los pipes se drenan en paralelo: si `wsl.exe` escribe más de lo que cabe
-    // en el buffer, esperar sin leerlo lo dejaría bloqueado.
-    let stdout = child
-        .stdout
-        .take()
-        .map(|mut pipe| std::thread::spawn(move || read_all(&mut pipe)));
-    let stderr = child
-        .stderr
-        .take()
-        .map(|mut pipe| std::thread::spawn(move || read_all(&mut pipe)));
-
-    let deadline = Instant::now() + PLAZO_SIN_AVANCE;
-    let status = loop {
-        match child.try_wait() {
-            Ok(Some(status)) => break status,
-            Ok(None) if Instant::now() >= deadline => {
-                let _ = child.kill();
-                let _ = child.wait();
-                return Err(WslError::Timeout);
-            }
-            Ok(None) => std::thread::sleep(Duration::from_millis(25)),
-            Err(error) => return Err(WslError::Io(error.to_string())),
-        }
-    };
-
-    let out = decode(
-        &stdout
-            .and_then(|handle| handle.join().ok())
-            .unwrap_or_default(),
-    );
-    let err = decode(
-        &stderr
-            .and_then(|handle| handle.join().ok())
-            .unwrap_or_default(),
-    );
-    if status.success() || is_no_distros(&out) || is_no_distros(&err) {
+    let out = decode(&ran.stdout);
+    let err = decode(&ran.stderr);
+    if ran.status.success() || is_no_distros(&out) || is_no_distros(&err) {
         return Ok(out);
     }
     if looks_unavailable(&out) || looks_unavailable(&err) {
         return Err(WslError::NotInstalled);
     }
     Err(WslError::Failed {
-        code: status.code(),
+        code: ran.status.code(),
         detail: first_line(&err)
             .or_else(|| first_line(&out))
             .unwrap_or_default(),
     })
-}
-
-#[cfg(any(windows, test))]
-fn read_all(pipe: &mut impl std::io::Read) -> Vec<u8> {
-    let mut bytes = Vec::new();
-    let _ = pipe.read_to_end(&mut bytes);
-    bytes
 }
 
 /// Un `wsl.exe` sin la característica habilitada contesta con el aviso de
@@ -428,6 +385,73 @@ fn first_line(text: &str) -> Option<String> {
     clean_lines(text)
         .into_iter()
         .find(|line| !line.to_lowercase().starts_with("copyright (c)"))
+}
+
+// ---------------------------------------------------------------- canal
+
+/// WSL como canal de huéspedes: `wsl.exe -l -v`, `keep_alive` y
+/// `wsl.exe -d X [-u U] --exec sh -s`.
+pub struct Wsl;
+
+impl super::Channel for Wsl {
+    fn kind(&self) -> super::ChannelKind {
+        super::ChannelKind::Wsl
+    }
+
+    /// En Windows siempre: si falta activarlo, «Linux en esta PC» lo ofrece.
+    fn available(&self) -> bool {
+        cfg!(windows)
+    }
+
+    fn list(&self) -> Result<Vec<super::Guest>, super::Failure> {
+        let found = detect().map_err(|error| super::fail(error.code(), error.to_string()))?;
+        Ok(found
+            .distros
+            .into_iter()
+            .map(|distro| super::Guest {
+                channel: super::ChannelKind::Wsl,
+                state: if distro.running() {
+                    super::GuestState::Running
+                } else if distro.stopped() {
+                    super::GuestState::Stopped
+                } else if distro.installing() {
+                    super::GuestState::Installing
+                } else {
+                    super::GuestState::Unknown
+                },
+                system: super::wsl_setup::is_system_distro(&distro.name),
+                label: distro.name.clone(),
+                arch: None,
+                detail: distro.version.map(|v| v.to_string()),
+                default: distro.default,
+                state_raw: distro.state,
+                id: distro.name,
+            })
+            .collect())
+    }
+
+    fn start(&self, guest: &str) -> Result<(), super::Failure> {
+        super::wsl_setup::keep_alive(guest);
+        Ok(())
+    }
+
+    fn exec(
+        &self,
+        guest: &str,
+        user: Option<&str>,
+        stdin: &str,
+        args: &[&str],
+        deadline: std::time::Duration,
+        on_line: &mut dyn FnMut(&str),
+    ) -> Result<(i32, String), super::Failure> {
+        let mut command = super::wsl_setup::wsl();
+        command.args(["-d", guest]);
+        if let Some(user) = user {
+            command.args(["-u", user]);
+        }
+        command.args(["--exec", "sh", "-s", "--"]).args(args);
+        super::run::stream(super::ChannelKind::Wsl, command, stdin, deadline, on_line)
+    }
 }
 
 #[cfg(test)]

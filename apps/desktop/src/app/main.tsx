@@ -17,6 +17,7 @@ import { cargarPaquetes } from "../locales/packs";
 import { mountAfterLanguagePacks } from "../locales/startup";
 import { capabilities, setCapabilities } from "../lib/platform";
 import { desktopWorkspaceDirectory } from "../features/shell/workspace-directory-desktop";
+import { askGuestChannels } from "../features/machines/guestChannels";
 import "../styles/global.css";
 import "../lib/sharedClock";
 // Errores y avisos de encargado se leen al fallar algo, ya con la ventana montada: entran por detrás.
@@ -24,7 +25,12 @@ import "../lib/sharedClock";
 void import("../locales/failurePhrases").catch((e) => console.warn("[lenguas] failurePhrases", e));
 
 // El directorio de la cuenta también en la ventana: antes solo lo montaba la web.
-setCapabilities({ ...capabilities(), workspaceDirectory: desktopWorkspaceDirectory(), wsl: /Windows/i.test(navigator.userAgent) });
+setCapabilities({ ...capabilities(), workspaceDirectory: desktopWorkspaceDirectory() });
+// Los canales de máquinas locales los dice la ventana (`guest_channels`), no el userAgent.
+// La web también carga este archivo: ahí `invoke` va por el relay y despertaría la máquina.
+if (capabilities().nativeWindow) {
+  void askGuestChannels().then((channels) => setCapabilities({ ...capabilities(), wsl: channels.includes("wsl") }));
+}
 
 /**
  * El arranque fija tema y lengua antes del primer pintado. Los efectos declaran

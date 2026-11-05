@@ -1,25 +1,42 @@
 /**
- * Linux en esta PC como enlace de la flota: la misma forma que una sesión de
- * relay (`Link` de `@terminus/fleet`), pero cada orden va directo al motor de
- * la distro por la ventana (`wsl_child_call`), sin pasar por la nube. Los
- * eventos se leen por páginas (`wsl_child_events`), como los del relay.
+ * Una máquina local (hoy, Linux en esta PC) como enlace de la flota: la misma
+ * forma que una sesión de relay (`Link` de `@terminus/fleet`), pero cada orden
+ * va directo al motor del huésped por la ventana (`guest_call`), sin pasar por
+ * la nube. Los eventos se leen por páginas (`guest_events`), como los del relay.
  *
  * La máquina hija no se inscribe en el plano de control: su id es
- * `wsl:<distro>` y sólo existe en esta computadora.
+ * `<canal>:<huésped>` (`wsl:<distro>`) y sólo existe en esta computadora.
  */
 import { invoke } from "@tauri-apps/api/core";
 import type { CallResult, EngineInfo, EventsPage, MachineState } from "@terminus/computers";
 import { classOf, type Link, type MachineInfo } from "@terminus/fleet";
 import { WSL_MACHINE_PREFIX, type WslChild } from "./wsl";
 
+/** Los prefijos de id de las máquinas locales, uno por canal. */
+const GUEST_PREFIXES = [WSL_MACHINE_PREFIX, "lima:"];
+
 const POLL_EVERY = 1_000;
 const POLL_IDLE = 4_000;
 const HEALTH_EVERY = 15_000;
+/** Cuánto vale una lectura de `guest_children`: los enlaces de todas las máquinas locales la comparten. */
+const CHILDREN_FOR = 3_000;
 
-export const isWslMachine = (id: string | null | undefined): id is string => !!id && id.startsWith(WSL_MACHINE_PREFIX);
+export const isGuestMachine = (id: string | null | undefined): id is string => !!id && GUEST_PREFIXES.some((p) => id.startsWith(p));
+
+type ChildHealth = { id: string; online: boolean; contract: string | null; version: string | null };
+let childrenRead: { at: number; list: Promise<ChildHealth[]> } | null = null;
+
+/** Una sola lectura de `guest_children` cada pocos segundos, para todas las máquinas locales. */
+function sharedChildren(): Promise<ChildHealth[]> {
+  const now = Date.now();
+  if (!childrenRead || now - childrenRead.at > CHILDREN_FOR) {
+    childrenRead = { at: now, list: invoke<ChildHealth[]>("guest_children") };
+  }
+  return childrenRead.list;
+}
 
 /** La fila de la flota de una distro conectada. Se puede encender (la ventana la despierta). */
-export function wslMachineInfo(child: WslChild): MachineInfo {
+export function guestMachineInfo(child: WslChild): MachineInfo {
   return {
     id: child.id,
     name: child.name,
@@ -37,12 +54,12 @@ const CREATES = new Set(["send_message", "run_shell_command"]);
 
 type Folder = { id: string; name?: string; working_directory?: string | null };
 
-export function createWslLink(machine: string): Link {
+export function createGuestLink(machine: string): Link {
   const copied = new Set<string>();
   const workspaces = new Set<string>();
 
   const childCall = <T,>(command: string, args: unknown, workspace: string | null, timeoutMs = 30_000) =>
-    invoke<T>("wsl_child_call", { machine, command, args: args ?? {}, workspace, folder: null, timeoutMs });
+    invoke<T>("guest_call", { machine, command, args: args ?? {}, workspace, folder: null, timeoutMs });
 
   const spaces = new Set<string>();
 
@@ -50,7 +67,7 @@ export function createWslLink(machine: string): Link {
   async function syncSpaces(workspace: string) {
     const here = await invoke<{ id: string }[]>("list_spaces").catch(() => [] as { id: string }[]);
     const list = Array.isArray(here) ? here : [];
-    await invoke("wsl_child_sync_spaces", { machine, workspace, spaces: list });
+    await invoke("guest_sync_spaces", { machine, workspace, spaces: list });
     for (const s of list) spaces.add(s.id);
   }
 
@@ -94,7 +111,7 @@ export function createWslLink(machine: string): Link {
     const here = await invoke<Folder[]>("list_projects");
     const folder = Array.isArray(here) ? here.find((f) => f.id === project) : undefined;
     if (!folder?.working_directory) throw { code: "folder_missing", detail: project };
-    await invoke("wsl_child_copy_folder", { machine, project, name: folder.name ?? project, path: folder.working_directory, workspace });
+    await invoke("guest_copy_folder", { machine, project, name: folder.name ?? project, path: folder.working_directory, workspace });
     copied.add(project);
   }
 
@@ -117,7 +134,7 @@ export function createWslLink(machine: string): Link {
   async function health() {
     if (closed) return;
     try {
-      const list = await invoke<{ id: string; online: boolean; contract: string | null; version: string | null }[]>("wsl_children");
+      const list = await sharedChildren();
       const me = list.find((c) => c.id === machine);
       if (me?.online) {
         setState("online");
@@ -133,7 +150,7 @@ export function createWslLink(machine: string): Link {
     if (closed || !subscribed) return;
     let quiet = true;
     try {
-      const page = await invoke<EventsPage & { latest?: number | null }>("wsl_child_events", { machine, cursor });
+      const page = await invoke<EventsPage & { latest?: number | null }>("guest_events", { machine, cursor });
       if (state !== "online") setState("online");
       const events = page.events ?? [];
       if (events.length || page.gap) {
@@ -158,7 +175,7 @@ export function createWslLink(machine: string): Link {
         const space = (args as { space?: unknown } | null)?.space;
         if (workspace && typeof space === "string" && space && !spaces.has(space)) await syncSpaces(workspace);
       }
-      const value = await invoke<unknown>("wsl_child_call", { machine, command, workspace, folder, args: args ?? {}, timeoutMs: timeoutMs ?? null });
+      const value = await invoke<unknown>("guest_call", { machine, command, workspace, folder, args: args ?? {}, timeoutMs: timeoutMs ?? null });
       if (state !== "online") setState("online");
       return { value, cached: null, deferred: null };
     },
@@ -197,5 +214,5 @@ export function createWslLink(machine: string): Link {
   };
 }
 
-/** Despierta la distro: la ventana deja abierto un `wsl.exe` y espera a que su motor conteste. */
-export const wakeWslMachine = (machine: string) => invoke<boolean>("wsl_child_wake", { machine });
+/** Enciende el huésped (en WSL, la ventana deja abierto un `wsl.exe`) y espera a que su motor conteste. */
+export const wakeGuestMachine = (machine: string) => invoke<boolean>("guest_start", { machine });
