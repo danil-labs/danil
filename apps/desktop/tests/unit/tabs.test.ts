@@ -1070,6 +1070,7 @@ test("la pantalla nunca es provisional y no sustituye a la tarea", () => {
 
 test("Git observations share one read per machine and keep routing explicit", async () => {
   const { watchSessionGit } = await import("../../src/features/projects/taskGit.ts");
+  const { setMachineRoute } = await import("../../src/lib/invoke.ts");
   const previousWindow = globalThis.window;
   const previousDocument = globalThis.document;
   let failure: unknown = null;
@@ -1085,6 +1086,7 @@ test("Git observations share one read per machine and keep routing explicit", as
   } });
   Object.defineProperty(globalThis, "window", { configurable: true, value: fake, writable: true });
   Object.defineProperty(globalThis, "document", { configurable: true, value: Object.assign(new EventTarget(), { hidden: false }), writable: true });
+  setMachineRoute((command, args, options) => fake.__TAURI_INTERNALS__.invoke(command, args as { remote: boolean }, { headers: Object.fromEntries(new Headers(options?.headers)) }));
   const mac = watchSessionGit("machine-scope-test", { workspace: "w", machine: "mac" });
   const again = watchSessionGit("machine-scope-test", { workspace: "w", machine: "mac" });
   const vm = watchSessionGit("machine-scope-test", { workspace: "w", machine: "vm" });
@@ -1113,6 +1115,7 @@ test("Git observations share one read per machine and keep routing explicit", as
 
   } finally {
     mac.release(); again.release(); vm.release();
+    setMachineRoute(null);
     Object.defineProperty(globalThis, "window", { configurable: true, value: previousWindow, writable: true });
     Object.defineProperty(globalThis, "document", { configurable: true, value: previousDocument, writable: true });
   }
