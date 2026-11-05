@@ -391,6 +391,7 @@
   "settings.nav.group_workspace": "This workspace",
   "settings.entry.account": "Account",
   "settings.entry.preferences": "Preferences",
+  "settings.entry.source_control": "Source control",
   "settings.entry.ai_accounts": "AI accounts",
   "settings.entry.machines": "Machines",
   "settings.entry.projects": "Projects",

@@ -391,6 +391,7 @@
   "settings.nav.group_workspace": "Este workspace",
   "settings.entry.account": "Cuenta",
   "settings.entry.preferences": "Preferencias",
+  "settings.entry.source_control": "Control de código",
   "settings.entry.ai_accounts": "Cuentas de IA",
   "settings.entry.machines": "Máquinas",
   "settings.entry.projects": "Proyectos",

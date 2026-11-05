@@ -35,7 +35,14 @@ import { ENLACE } from "../../../ui/ExternalLink";
 export type GithubAccountMode = "unknown" | "account" | "local";
 
 /** `session`: esta máquina tiene sesión de Danil para el workspace (`null` mientras se pregunta). */
-export type GithubAccountState = { mode: GithubAccountMode; connected: boolean; reauthorize: boolean; session: boolean | null };
+/** `connect`: el «Conectar» de la cabecera de la sección (Control de código), cuando se puede conectar. */
+export type GithubAccountState = {
+  mode: GithubAccountMode;
+  connected: boolean;
+  reauthorize: boolean;
+  session: boolean | null;
+  connect?: () => void;
+};
 
 /** Cada cuánto se pregunta tras abrir GitHub, y hasta cuándo. */
 const POLL_MS = 3_000;
@@ -55,6 +62,8 @@ export default function GithubAccount(props: {
   const [available, setAvailable] = createSignal<boolean | null>(null);
   const [session, setSession] = createSignal<boolean | null>(null);
   const [busy, setBusy] = createSignal<string | null>(null);
+  /** «Ocultar» la fila de «Pendiente» en esta pantalla. */
+  const [pendingHidden, setPendingHidden] = createSignal(false);
   const [failure, setFailure] = createSignal<Failure | null>(null);
   /** El código del último fallo: algunos se dicen en la fila de la cuenta y no abajo. */
   const [code, setCode] = createSignal<string | null>(null);
@@ -77,7 +86,15 @@ export default function GithubAccount(props: {
     if (a === null) return "unknown";
     return a && (connected() || !props.local) ? "account" : "local";
   };
-  createEffect(() => props.onState({ mode: mode(), connected: connected(), reauthorize: reauthorize(), session: session() }));
+  createEffect(() =>
+    props.onState({
+      mode: mode(),
+      connected: connected(),
+      reauthorize: reauthorize(),
+      session: session(),
+      connect: mode() === "account" && !connected() && !waiting() && !license() && !unavailable() && busy() === null ? () => void connect() : undefined,
+    }),
+  );
   const fail = (e: unknown) => {
     const c = githubAccountCode(e);
     setCode(c);
@@ -345,15 +362,10 @@ export default function GithubAccount(props: {
         </SettingsRow>
       </Show>
 
-      <Show when={mode() === "account" && !connected() && !waiting()}>
+      {/* Sin conectar, «Conectar» va en la cabecera de la sección (`onState().connect`); aquí solo lo que lo impide. */}
+      <Show when={mode() === "account" && !connected() && !waiting() && (license() || unavailable())}>
         <SettingsRow label={t("providers.github.account.connect_row")}>
-          <Show when={license() || unavailable()} fallback={
-            <Button size="sm" disabled={busy() !== null} onClick={() => void connect()}>
-              {t("providers.github.account.connect")}
-            </Button>
-          }>
-            <AccountState />
-          </Show>
+          <AccountState />
         </SettingsRow>
       </Show>
 
@@ -381,24 +393,13 @@ export default function GithubAccount(props: {
             </SettingsRow>
 
             <Show when={!unavailable() && !reauthorize()}>
-              <SettingsRow label={<span class="font-medium">{t("providers.github.account.areas")}</span>}>
-                <Show when={!license() ? installUrl() : null}>
-                  {(url) => (
-                    <Button variant="ghost" size="compact" disabled={busy() !== null} onClick={() => void openUrl(url())}>
-                      <Plus size={12} aria-hidden />
-                      {t("providers.github.account.add")}
-                      <ExternalIcon size={12} aria-hidden />
-                    </Button>
-                  )}
-                </Show>
-              </SettingsRow>
               <Show when={installs()} fallback={<SettingsBlock><Skeleton filas={2} class="h-6" /></SettingsBlock>}>
                 {(list) => (
                   <div class="contents" data-github-installations="">
                     <For each={list().installations}>
                       {(i) => (
                         <SettingsRow
-                          class={license() ? "opacity-60" : undefined}
+                          class={license() ? "pl-6 opacity-60" : "pl-6"}
                           data-github-installation={i.key}
                           lead={<Initial name={i.account.login} round={i.account.type === "User"} />}
                           label={i.account.login}
@@ -421,10 +422,26 @@ export default function GithubAccount(props: {
                         </SettingsRow>
                       )}
                     </For>
-                    <Show when={list().install_pending}>
-                      <SettingsRow data-github-installation-pending="" label={<Badge tone="warning">{t("providers.github.account.pending")}</Badge>}>
+                    <Show when={list().install_pending && !pendingHidden()}>
+                      <SettingsRow class="pl-6" data-github-installation-pending="" label={<Badge tone="warning">{t("providers.github.account.pending")}</Badge>}>
                         <span class="text-ui text-neutral-500">{t("providers.github.account.pending_admin")}</span>
+                        <Button variant="ghost" size="compact" onClick={() => setPendingHidden(true)}>
+                          {t("providers.github.account.pending_hide")}
+                        </Button>
                       </SettingsRow>
+                    </Show>
+                    <Show when={!license() ? installUrl() : null}>
+                      {(url) => (
+                        <SettingsRow
+                          class="pl-6"
+                          label={
+                            <Button variant="ghost" size="compact" class="-ml-2" disabled={busy() !== null} onClick={() => void openUrl(url())}>
+                              <Plus size={12} aria-hidden />
+                              {t("providers.github.account.add")}
+                            </Button>
+                          }
+                        />
+                      )}
                     </Show>
                   </div>
                 )}

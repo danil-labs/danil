@@ -588,13 +588,24 @@ function WorkspaceProviders(props: { solo?: string | string[] }) {
                         <Badge>{t("settings.providers.state.off")}</Badge>
                       }
                     >
+                      {/* GitHub (Control de código): sin insignias. Sin conexión, solo «Conectar». */}
                       <Match when={p.id === "github" && githubAccount().mode === "account"}>
-                        <Show when={githubAccount().connected} fallback={<Badge>{t("settings.providers.state.off")}</Badge>}>
-                          <Show when={githubAccount().reauthorize} fallback={<Badge tone="success">{t("settings.providers.state.on")}</Badge>}>
-                            <Badge tone="warning">{t("providers.github.account.reauthorize_badge")}</Badge>
-                          </Show>
+                        <Show when={!githubAccount().connected ? githubAccount().connect : null}>
+                          {(connect) => (
+                            <Button variant="secondary" size="sm" type="button" onClick={() => connect()()}>
+                              {t("providers.github.connect")}
+                            </Button>
+                          )}
                         </Show>
                       </Match>
+                      <Match when={p.id === "github" && githubAccount().mode === "local"}>
+                        <Show when={!p.connected && p.browser_login && !esperaAqui()}>
+                          <Button variant="secondary" size="sm" type="button" disabled={estado() !== null} onClick={() => void conectarEnNavegador(p)}>
+                            {t("providers.github.connect")}
+                          </Button>
+                        </Show>
+                      </Match>
+                      <Match when={p.id === "github"}>{null}</Match>
                       <Match when={estado() === "comprobando"}>
                         <Badge>{t("settings.providers.state.checking")}</Badge>
                       </Match>
@@ -898,7 +909,8 @@ function WorkspaceProviders(props: { solo?: string | string[] }) {
                             tiene. Va arriba: es el que casi todo el mundo
                             quiere. Con su aviso: por este camino GitHub no
                             sabe dar solo lectura. */}
-                        <Show when={p.browser_login}>
+                        {/* GitHub lo conecta desde la cabecera de la sección. */}
+                        <Show when={p.browser_login && p.id !== "github"}>
                           <SettingsRow
                             label={t("settings.providers.browser_row")}
                             description={prosa(p.login_help)}
