@@ -118,7 +118,6 @@ Comandos de la ventana (no del motor; no están en `commands.json`):
 | `guest_copy_folder`, `guest_sync_spaces` | Carpetas y espacios de esta PC en el huésped. |
 | `guest_start`, `guest_remove` | Encenderla y quitarla. |
 | `guest_connect { channel, guest, name, workspace }` | Conectar una VM de Lima que ya existe, como trabajo. |
-| `lima_create { name }` | Crear una VM de Lima sin montajes y conectarla, como trabajo. |
 | `guest_job` | El trabajo en curso o el último, de cualquier canal. |
 
 El alta de WSL conserva sus comandos (`wsl_state`, `wsl_catalog`,

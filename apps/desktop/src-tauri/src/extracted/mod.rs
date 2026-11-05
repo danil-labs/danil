@@ -257,21 +257,6 @@ fn guest_connect(
     .unwrap_or_else(|running| running)
 }
 
-/// Crea una VM de Lima sin montajes y la conecta, como un trabajo.
-#[tauri::command]
-fn lima_create(
-    app: tauri::AppHandle,
-    name: String,
-    workspace: Option<String>,
-    workspace_name: Option<String>,
-) -> guests::child::Job {
-    let workspace = workspace.map(|id| {
-        let n = workspace_name.unwrap_or_else(|| id.clone());
-        (id, n)
-    });
-    guests::child::start_lima_create(&app, &name, workspace).unwrap_or_else(|running| running)
-}
-
 /// El trabajo en curso o el último, de cualquier canal.
 #[tauri::command]
 fn guest_job(app: tauri::AppHandle) -> Option<guests::child::Job> {
@@ -595,7 +580,6 @@ fn start(client: Option<Arc<Client>>, autostart: bool, launcher: launcher::Launc
             guest_channels,
             guest_list,
             guest_connect,
-            lima_create,
             guest_job,
             guest_children,
             guest_remove,

@@ -10,13 +10,12 @@ import { t } from "../../lib/i18n";
 import { listen } from "../../lib/serviceEvents";
 import { Badge } from "../../ui/Badge";
 import { Button } from "../../ui/Button";
-import { Input } from "../../ui/Input";
 import { SignalDot } from "../../ui/SignalDot";
 import { Spinner } from "../../ui/Spinner";
 import { SettingsBlock, SettingsSection } from "../settings/layout";
 import { offersGuests } from "./guestChannels";
 import { DistroBox, StepList, Technical } from "./WslMachine";
-import { LIMA_INSTALL, type WslChild, type WslJob } from "./wsl";
+import { LIMA_CREATE, LIMA_INSTALL, LIMA_START, type WslChild, type WslJob } from "./wsl";
 
 /** Una VM de Lima como la devuelve `guest_list { channel: "lima" }`. */
 type LimaGuest = {
@@ -33,10 +32,7 @@ type LimaGuest = {
 
 type Listed = { kind: "ok"; guests: LimaGuest[] } | { kind: "missing" } | { kind: "failed"; detail: string };
 
-/** La regla de nombres de la ventana (`valid_distro`). */
-const VALID_NAME = /^[A-Za-z0-9._-]{1,64}$/;
 const STEPS = ["check", "already", "deps", "engine_download", "engine_verify", "engine", "service", "connect"] as const;
-const CREATE_STEPS = ["create", ...STEPS] as const;
 const KNOWN = new Set([
   "lima_missing",
   "lima_timeout",
@@ -99,7 +95,6 @@ function Section() {
   const [listed, setListed] = createSignal<Listed | null>(null);
   const [children, setChildren] = createSignal<WslChild[]>([]);
   const [job, setJob] = createSignal<WslJob | null>(null);
-  const [creating, setCreating] = createSignal(false);
   const [problem, setProblem] = createSignal<{ code: string; detail: string } | null>(null);
 
   async function load() {
@@ -193,7 +188,7 @@ function Section() {
               <Show when={failed()}>{(j) => <JobFailure job={j()} onClose={dismiss} />}</Show>
               <Show when={problem()}>{(p) => <Problem code={p().code} detail={p().detail} onClose={() => setProblem(null)} />}</Show>
               <Show when={own().length === 0 && !running()}>
-                <p class="m-0 text-sm text-neutral-700">{t("danil.lima.empty")}</p>
+                <NoVms />
               </Show>
               <For each={own()}>
                 {(g) => (
@@ -230,25 +225,6 @@ function Section() {
                 <p class="m-0 text-xs text-neutral-500" data-lima-system="">
                   {t("danil.lima.system", { names: system().map((g) => g.id).join(", ") })}
                 </p>
-              </Show>
-              <Show
-                when={creating()}
-                fallback={
-                  <Show when={!running()}>
-                    <Button size="sm" class="justify-self-start" onClick={() => setCreating(true)} data-lima-create="">
-                      {t("danil.lima.create")}
-                    </Button>
-                  </Show>
-                }
-              >
-                <Creator
-                  taken={guests().map((g) => g.id)}
-                  onCancel={() => setCreating(false)}
-                  onStarted={(j) => {
-                    setCreating(false);
-                    setJob(j);
-                  }}
-                />
               </Show>
             </Match>
           </Switch>
@@ -321,30 +297,34 @@ function GuestRow(props: { guest: LimaGuest; busy: boolean; onConnect: () => voi
   );
 }
 
-function Creator(props: { taken: string[]; onCancel: () => void; onStarted: (j: WslJob) => void }) {
-  const first = ["danil", "danil-2", "danil-3"].find((n) => !props.taken.includes(n)) ?? "";
-  const [name, setName] = createSignal(first);
-  const problem = () => (!VALID_NAME.test(name()) ? "invalid" : props.taken.includes(name()) ? "taken" : null);
-  async function go() {
-    const ws = await activeWorkspace();
-    props.onStarted(await invoke<WslJob>("lima_create", { name: name(), workspace: ws?.id ?? null, workspaceName: ws?.name ?? null }));
-  }
+/** Sin VMs propias: Danil no crea una; dice cómo crearla, para copiar. */
+function NoVms() {
   return (
-    <div class="grid gap-2 rounded-sm border border-border p-3" data-lima-creator="">
-      <label class="grid gap-1 text-xs text-neutral-500">
-        {t("danil.lima.create_name")}
-        <Input value={name()} maxLength={64} autocomplete="off" onInput={(e) => setName(e.currentTarget.value.trim())} />
-      </label>
-      <Show when={name() && problem()}>{(p) => <span class="text-xs text-error-strong">{t(`danil.lima.create_${p()}`)}</span>}</Show>
-      <p class="m-0 text-xs text-neutral-500">{t("danil.lima.create_mounts")}</p>
-      <div class="flex gap-2">
-        <Button size="sm" disabled={!!problem()} onClick={() => void go()} data-lima-create-go="">
-          {t("danil.lima.create_go")}
-        </Button>
-        <Button size="sm" variant="secondary" onClick={props.onCancel}>
-          {t("danil.wsl.cancel")}
+    <div class="grid gap-2 rounded-sm border border-border p-3" data-lima-empty="">
+      <p class="m-0 text-sm text-neutral-700">{t("danil.lima.empty")}</p>
+      <CopyLine text={LIMA_CREATE} />
+      <CopyLine text={LIMA_START} />
+    </div>
+  );
+}
+
+/** Un comando para copiar, sin correrlo. */
+function CopyLine(props: { text: string }) {
+  const [failure, setFailure] = createSignal(false);
+  const { copied, copy } = createCopied(2000, () => setFailure(true));
+  return (
+    <div class="grid gap-1">
+      <div class="flex items-center gap-2">
+        <code class="min-w-0 flex-1 rounded-sm bg-surface-muted px-2 py-1 font-mono text-xs break-all text-neutral-950" data-lima-command="">{props.text}</code>
+        <Button size="sm" variant="secondary" onClick={() => void copy(props.text)} aria-label={t("danil.lima.copy")} data-lima-copy="">
+          <Show when={copied()} fallback={<Copy size={13} aria-hidden="true" />}>
+            <Check size={13} aria-hidden="true" />
+          </Show>
         </Button>
       </div>
+      <Show when={failure()}>
+        <p class="m-0 text-xs text-error-strong">{t("common.clipboard.write_failed")}</p>
+      </Show>
     </div>
   );
 }
@@ -363,10 +343,10 @@ function JobProgress(props: { job: WslJob }) {
   return (
     <div class="grid gap-3 rounded-sm border border-border p-3" data-lima-job={props.job.step}>
       <p class="m-0 text-sm font-[560] text-neutral-950">
-        {props.job.kind === "create" ? t("danil.lima.job.creating", { name: props.job.label }) : t("danil.wsl.job.connecting", { distro: props.job.label })}
+        {t("danil.wsl.job.connecting", { distro: props.job.label })}
       </p>
       <Mounts count={props.job.mounts} />
-      <StepList steps={props.job.kind === "create" ? CREATE_STEPS : STEPS} current={props.job.step} done={false} labels="danil.lima.step" />
+      <StepList steps={STEPS} current={props.job.step} done={false} labels="danil.lima.step" />
       <Show when={props.job.lines.length}>
         <details class="text-xs text-neutral-500">
           <summary class="cursor-pointer">{t("danil.wsl.job.lines")}</summary>

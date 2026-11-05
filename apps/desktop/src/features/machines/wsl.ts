@@ -64,6 +64,9 @@ export const WSL_INSTALL = "wsl --install";
 export const WSL_INSTALL_UBUNTU = "wsl --install -d Ubuntu";
 /** Lo que la persona copia si falta Lima en la Mac. */
 export const LIMA_INSTALL = "brew install lima";
+/** Danil no crea VMs de Lima: sin ninguna, la persona copia estos dos. */
+export const LIMA_CREATE = "limactl create --name=danil --mount-none --containerd=none template:ubuntu-lts";
+export const LIMA_START = "limactl start danil";
 
 /** El id de máquina de una distro conectada: `wsl:Ubuntu`. Sólo existe en esta PC. */
 export const WSL_MACHINE_PREFIX = "wsl:";
@@ -94,7 +97,7 @@ export type WslJobError = { code: string; detail: string };
 export type WslJob = {
   id: string;
   channel: string;
-  kind: "enable" | "install" | "connect" | "create";
+  kind: "enable" | "install" | "connect";
   target: string;
   label: string;
   user: string | null;

@@ -11,7 +11,7 @@ use std::process::Command;
 use std::sync::{Mutex, OnceLock};
 use std::time::{Duration, Instant};
 
-/// Lo que se espera a `limactl start`: arrancar una VM tarda minutos la primera vez.
+/// Lo que se espera a `limactl start`: arrancar una VM puede tardar minutos.
 const START_WAIT: Duration = Duration::from_secs(5 * 60);
 const LIST_WAIT: Duration = Duration::from_secs(20);
 /// Cuánto vale una lectura de `limactl list`: todas las máquinas la comparten.
@@ -159,34 +159,6 @@ fn checked(guest: &str) -> Result<(), Failure> {
     } else {
         Err(fail("invalid_distro", guest))
     }
-}
-
-/// `limactl create` sin montajes ni containerd, y luego `start`.
-pub fn create(name: &str, on_line: &mut dyn FnMut(&str)) -> Result<(), Failure> {
-    checked(name)?;
-    let mut command = command()?;
-    command.args([
-        "create",
-        "--name",
-        name,
-        "--cpus",
-        "4",
-        "--memory",
-        "4",
-        "--mount-none",
-        "--containerd=none",
-        "--tty=false",
-        "template:ubuntu-lts",
-    ]);
-    let ran = super::run::run(&mut command, None, START_WAIT).map_err(run_failure)?;
-    for line in String::from_utf8_lossy(&ran.stderr).lines() {
-        on_line(line);
-    }
-    if !ran.status.success() {
-        return Err(fail("lima_failed", tail(&ran.stderr)));
-    }
-    forget_list();
-    Lima.start_vm(name)
 }
 
 fn tail(bytes: &[u8]) -> String {

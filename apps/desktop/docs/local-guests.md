@@ -42,9 +42,9 @@ al instante, sin `limactl shell` ni la espera de 40 s. Solo `guest_start`
 corre `limactl start` (hasta 5 min) y luego espera a que el motor conteste.
 Lima no necesita `keep_alive`: la VM sigue encendida sola.
 
-## Conectar (`guest_connect`) y crear (`lima_create`)
+## Conectar (`guest_connect`)
 
-Los dos son trabajos, como en WSL (`guest-job`, `wsl-state.json`).
+Es un trabajo, como en WSL (`guest-job`, `wsl-state.json`).
 
 1. `probe.sh` por el canal: arquitectura, systemd de usuario, dependencias,
    `sudo -n`, si hay motor y su `contract`, si está inscrito en una cuenta
@@ -62,13 +62,15 @@ Los dos son trabajos, como en WSL (`guest-job`, `wsl-state.json`).
 3. Espera a que el motor conteste, crea el workspace de la ventana con el mismo
    id y guarda la entrada en `guests.json`.
 
-«Crear VM» corre `limactl create --name <nombre> --cpus 4 --memory 4
---mount-none --containerd=none template:ubuntu-lts`, después `limactl start` y
-sigue con «Conectar». La VM que crea Danil no ve carpetas de la Mac.
+Danil no crea VMs de Lima: solo conecta una que la persona ya tiene. Sin
+ninguna (sin contar las de Colima), el bloque muestra para copiar
+`limactl create --name=danil --mount-none --containerd=none template:ubuntu-lts`
+y `limactl start danil`, sin correrlos.
 
 ## Pendiente
 
 - El lock no trae `aarch64-unknown-linux-gnu`. En una Mac con Apple Silicon,
-  una VM sin motor se detiene en `arch` hasta que se publique ese binario.
+  conectar una VM sin motor se detiene en `arch` hasta que se publique ese
+  binario.
   Solo se conecta una VM que ya tenga el motor (`already`).
 - Llegar a la VM desde la web y el teléfono, como con WSL.

@@ -1,7 +1,8 @@
 /**
  * Configuración › Máquinas › Linux en esta Mac (`features/machines/LimaMachine.tsx`):
  * las VMs de Lima con su estado y arquitectura, las de Colima aparte, Conectar
- * solo con la VM encendida, y sin `limactl` el comando para copiar.
+ * solo con la VM encendida, sin `limactl` el comando para copiar, y sin VMs
+ * los comandos para crear una (Danil no la crea).
  * Monta `dist/` con el IPC simulado de la ventana.
  */
 import assert from "node:assert/strict";
@@ -89,4 +90,15 @@ test("A late guest_channels answer still paints the block in an open Configuraci
   assert.equal(doc.querySelector("[data-lima]"), null, "no block before the window answers");
   answer(["lima"]);
   assert.ok(await until(() => doc.querySelector('[data-lima="ok"]')), "the block appears with the answer");
+});
+
+test("With only Colima VMs the block says there are none and offers the commands to create one, without a create button", async () => {
+  const { doc, native } = await machines("lima-machine-no-vms", { guest_list: [guest("colima", "stopped", { system: true })] });
+  assert.ok(await until(() => doc.querySelector("[data-lima-empty]")), "the empty state");
+  const commands = [...doc.querySelectorAll("[data-lima-empty] [data-lima-command]")].map((c) => c.textContent);
+  assert.deepEqual(commands, ["limactl create --name=danil --mount-none --containerd=none template:ubuntu-lts", "limactl start danil"]);
+  assert.equal(doc.querySelectorAll("[data-lima-empty] [data-lima-copy]").length, 2, "each one can be copied");
+  assert.equal(doc.querySelector("[data-lima-create]"), null, "Danil does not create VMs");
+  assert.equal(native("lima_create").length, 0);
+  assert.ok(doc.querySelector("[data-lima-system]").textContent.includes("colima"));
 });
