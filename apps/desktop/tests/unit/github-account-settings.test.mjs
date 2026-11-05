@@ -190,7 +190,7 @@ test("when the engine already opened the browser the card does not open it again
   e.table.github_account_authorize = () => ({ url: "https://github.com/login/oauth/authorize?state=s", expires_at: null, opened: true });
   const app = await openSources("github-account-opened", e);
   const { w } = app;
-  buttonIn(card(w), "Conectar con GitHub").click();
+  buttonIn(card(w), "Conectar GitHub").click();
   await sleep(300);
   assert.ok(!e.calls.some((c) => c.command === "open_external"), "only one tab");
   const link = [...card(w).querySelectorAll("a")].find((a) => a.textContent === "Abrir GitHub");

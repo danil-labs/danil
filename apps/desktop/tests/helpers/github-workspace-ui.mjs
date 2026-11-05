@@ -113,13 +113,13 @@ for (const scenario of ["connected-workspace", "existing-installation", "no-inst
     assert.deepEqual(opens, []);
     await action("Desconectar");
     assert.equal(connected, false);
-    assert.ok(button("Conectar con GitHub"));
+    assert.ok(button("Conectar GitHub"));
     assert.deepEqual(app.failures, []);
     console.log("PASS connected-workspace: resumen, edición y administración sin explorar repositorios");
     continue;
   }
-  assert.ok(button("Conectar con GitHub"));
-  button("Conectar con GitHub").click(); await espera(150);
+  assert.ok(button("Conectar GitHub"));
+  button("Conectar GitHub").click(); await espera(150);
   if (scenario === "cancel-login") {
     button("cancelar").click(); await espera(100);
     assert.equal(connected, false);
