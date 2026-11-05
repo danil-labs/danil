@@ -393,3 +393,23 @@ test("renombrar una computadora: PATCH con el nombre, y el error con su código"
   assert.deepEqual(await renameComputer("https://c.example", "t", "cmp_a", "", reply(400, { error: { code: "invalid_name" } })), { kind: "error", status: 400, code: "invalid_name" });
   assert.deepEqual(await renameComputer("https://c.example", "t", "cmp_b", "X", reply(404, { error: { code: "not_found" } })), { kind: "missing" });
 });
+
+test("un bloque MCP con valores escritos no sale al socket; uno con marcadores sale revisado", async () => {
+  const relay = session();
+  await tick();
+  const socket = FakeSocket.all[0];
+  socket.open();
+  const plain = JSON.stringify({ mcpServers: { acme: { command: "npx", env: { ACME_TOKEN: "abc123" } } } });
+  await assert.rejects(relay.call("m-1", "add_mcp_servers", "w", null, { bloque: plain }), (e: { code: string }) => e.code === "mcp_values_over_relay");
+  await assert.rejects(relay.call("m-2", "set_memory_provider", "w", null, { id: "m", block: plain, readWrite: true }), (e: { code: string }) => e.code === "mcp_values_over_relay");
+  await assert.rejects(relay.call("m-3", "add_mcp_servers", "w", null, { bloque: "{ ACME_TOKEN: abc" }), (e: { code: string }) => e.code === "mcp_block_invalid");
+  assert.equal(socket.sent.filter((m) => m.type === "call").length, 0, "nada llegó al socket");
+  // Con la clave repetida `JSON.parse` se queda con la última: viaja eso, no el texto original.
+  const repeated = '{"acme":{"command":"npx","env":{"T":"${secret:env/*/T}"},"args":[],"env":{"T":"${secret:env/*/T}"}}}';
+  const pending = relay.call("m-4", "add_mcp_servers", "w", null, { bloque: repeated });
+  const sent = socket.sent.find((m) => m.id === "m-4") as { args: { bloque: string } };
+  assert.equal(sent.args.bloque, JSON.stringify(JSON.parse(repeated)));
+  socket.receive({ type: "result", id: "m-4", value: 1 });
+  assert.equal((await pending).value, 1);
+  relay.close();
+});

@@ -185,6 +185,7 @@ export {
   removeCredentialMachine,
   restoreCredentialMachine,
 } from "./credentials.ts";
+export { type McpBlockCheck, MCP_BLOCK_ARGS, checkMcpBlock, relayArgs, urlWithCredentials } from "./mcp-block.ts";
 export { type SealOptions, type SealRecipient, SEAL_MAX_BYTES, canSeal, fromBase64, sealCredential, sealForRecipients, toBase64 } from "./seal.ts";
 
 export { arrangeSpaces, spaceOrder, type SpaceOrderSource } from "./space-order.ts";
