@@ -725,6 +725,7 @@ const steps = [
   ["A task tree from another machine is read on that machine", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/machine-task-tree.test.mjs")], root],
   ["The fleet: the machine comes from the envelope, every wait has a cap and nobody answering is not an empty list", process.execPath, ["--test", "--experimental-strip-types", join(root, "../../packages/fleet/test/fleet.test.ts")], root],
   ["WSL detection reads English and Spanish states and maps failures", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/wsl-detection.test.ts")], root],
+  ["WSL Linux user turns typed names into valid users", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/wsl-linux-user.test.ts")], root],
   ["Danil Machines: session with contracts, token renewal, engine and tombstones", process.execPath, ["--test", "--experimental-strip-types", join(root, "../../packages/computers/test/computers.test.ts")], root],
   ["Danil Machines: account GitHub through the Worker, with its routes and codes", process.execPath, ["--test", "--experimental-strip-types", join(root, "../../packages/computers/test/github.test.ts")], root],
   ["On the web account GitHub is answered by the Worker, not a machine", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/web-github-account.test.ts")], root],

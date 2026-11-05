@@ -90,6 +90,9 @@ fn now_ms() -> u64 {
 
 // ---------------------------------------------------------------- wsl.exe
 
+/// Cada espera a `wsl()` lleva plazo: `script` y `wait_wsl` lo cuentan. Sólo
+/// `keep_alive` (vive con la ventana y nadie lo espera) y la copia de una
+/// carpeta no lo llevan: proceso largo: a propósito.
 fn wsl() -> Command {
     let mut command = Command::new("wsl.exe");
     crate::util::no_console_window(&mut command);
@@ -103,6 +106,11 @@ fn valid_distro(name: &str) -> bool {
         && name
             .chars()
             .all(|c| c.is_ascii_alphanumeric() || matches!(c, '-' | '_' | '.'))
+}
+
+/// Un `wsl.exe` corto con su salida; al vencer el plazo se mata.
+fn wait_wsl(args: &[&str], timeout: Duration) -> std::io::Result<std::process::Output> {
+    crate::util::captured_output_with_timeout(wsl().args(args), timeout)
 }
 
 /// Corre un script de `sh` dentro de la distro, por stdin (nunca en la línea
@@ -142,23 +150,47 @@ fn script(
             String::from_utf8_lossy(&bytes).into_owned()
         })
     });
-    let started = Instant::now();
+    // stdout se lee en otro hilo: el plazo corre aunque el script se quede
+    // callado, no sólo cuando llega una línea.
+    let (lines, received) = std::sync::mpsc::channel::<Vec<u8>>();
     if let Some(out) = child.stdout.take() {
-        for line in BufReader::new(out).split(b'\n').map_while(|l| l.ok()) {
-            let text = String::from_utf8_lossy(&line);
-            for part in text.split('\r') {
-                let part = part.trim_end();
-                if !part.is_empty() {
-                    on_line(part);
+        std::thread::spawn(move || {
+            for line in BufReader::new(out).split(b'\n').map_while(|l| l.ok()) {
+                if lines.send(line).is_err() {
+                    break;
                 }
             }
-            if started.elapsed() > timeout {
-                let _ = child.kill();
-                return Err(fail("wsl_timeout", "script"));
+        });
+    }
+    let deadline = Instant::now() + timeout;
+    let timed_out = |child: &mut Child| {
+        let _ = child.kill();
+        let _ = child.wait();
+        fail("wsl_timeout", "script")
+    };
+    loop {
+        let left = deadline.saturating_duration_since(Instant::now());
+        match received.recv_timeout(left) {
+            Ok(line) => {
+                let text = String::from_utf8_lossy(&line);
+                for part in text.split('\r') {
+                    let part = part.trim_end();
+                    if !part.is_empty() {
+                        on_line(part);
+                    }
+                }
             }
+            Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => break,
+            Err(std::sync::mpsc::RecvTimeoutError::Timeout) => return Err(timed_out(&mut child)),
         }
     }
-    let status = child.wait().map_err(|e| fail("io", e.to_string()))?;
+    let status = loop {
+        match child.try_wait().map_err(|e| fail("io", e.to_string()))? {
+            Some(status) => break status,
+            None if Instant::now() >= deadline => return Err(timed_out(&mut child)),
+            None => std::thread::sleep(Duration::from_millis(50)),
+        }
+    };
     let stderr = err.and_then(|h| h.join().ok()).unwrap_or_default();
     let tail: Vec<&str> = stderr.lines().filter(|l| !l.trim().is_empty()).collect();
     let tail = tail[tail.len().saturating_sub(6)..].join("\n");
@@ -527,6 +559,8 @@ printf '%s
     if free.is_empty() {
         return Err(fail("io", "destino"));
     }
+    // La copia dura lo que pese la carpeta (proceso largo: a propósito): la
+    // persona la ve avanzar y no hay un tope honesto para un repo grande.
     let mut tar = Command::new("tar.exe");
     crate::util::no_console_window(&mut tar);
     let mut tar = tar
@@ -676,7 +710,7 @@ pub fn children(app: &AppHandle, disk: bool) -> Vec<ChildInfo> {
 }
 
 fn running_distros() -> Vec<String> {
-    let Ok(out) = wsl().args(["--list", "--running", "--quiet"]).output() else {
+    let Ok(out) = wait_wsl(&["--list", "--running", "--quiet"], Duration::from_secs(15)) else {
         return Vec::new();
     };
     super::wsl::decode(&out.stdout)
@@ -905,7 +939,7 @@ grep -q '^\[boot\]' /etc/wsl.conf || printf '\n[boot]\nsystemd=true\n' >> /etc/w
     );
     script_ok(distro, Some("root"), &body, &[], Duration::from_secs(120), |_| {})?;
     // El usuario por omisión y systemd se leen al arrancar la distro.
-    let _ = wsl().args(["--terminate", distro]).status();
+    let _ = wait_wsl(&["--terminate", distro], Duration::from_secs(60));
     Ok(())
 }
 
@@ -929,12 +963,18 @@ pub fn install_distro(
     progress(app, name, "download", Some(0), None);
     let file = download(app, name, url, &sha.to_ascii_lowercase())?;
     progress(app, name, "register", None, None);
-    let output = wsl()
-        .args(["--install", "--from-file"])
-        .arg(&file)
-        .args(["--name", name, "--no-launch"])
-        .output()
-        .map_err(|e| fail("io", e.to_string()))?;
+    // Registrar la imagen la descomprime en el disco virtual: minutos, no horas.
+    let output = crate::util::captured_output_with_timeout(
+        wsl()
+            .args(["--install", "--from-file"])
+            .arg(&file)
+            .args(["--name", name, "--no-launch"]),
+        Duration::from_secs(20 * 60),
+    )
+    .map_err(|e| match e.kind() {
+        std::io::ErrorKind::TimedOut => fail("wsl_timeout", "install"),
+        _ => fail("io", e.to_string()),
+    })?;
     if !output.status.success() {
         // La imagen se queda en la carpeta temporal: después del reinicio se reutiliza.
         let text = super::wsl::decode(&output.stdout) + &super::wsl::decode(&output.stderr);
@@ -1144,6 +1184,8 @@ pub fn remove(app: &AppHandle, distro: &str) -> Result<(), Failure> {
 /// Activa WSL con permiso de administrador (el aviso de Windows). Pide
 /// reiniciar: hasta entonces la distro no arranca.
 pub fn enable() -> Result<(), Failure> {
+    // Espera a que la persona conteste el aviso de UAC y a que WSL se active
+    // (proceso largo: a propósito): no hay plazo que no la corte a la mitad.
     let mut command = Command::new("powershell.exe");
     crate::util::no_console_window(&mut command);
     let status = command
@@ -1505,16 +1547,12 @@ fn boot_time_ms() -> u64 {
 fn reboot_pending() -> bool {
     let mut command = Command::new("reg.exe");
     crate::util::no_console_window(&mut command);
-    command
-        .args(["query", r"HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Component Based Servicing\RebootPending"])
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .status()
-        .is_ok_and(|s| s.success())
+    command.args(["query", r"HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Component Based Servicing\RebootPending"]);
+    crate::util::output_with_timeout(&mut command, Duration::from_secs(10)).is_ok_and(|s| s.success())
 }
 
 fn virtualization_off() -> bool {
-    let Ok(out) = wsl().args(["--status"]).output() else {
+    let Ok(out) = wait_wsl(&["--status"], Duration::from_secs(15)) else {
         return false;
     };
     let text = (super::wsl::decode(&out.stdout) + &super::wsl::decode(&out.stderr)).to_lowercase();
@@ -1611,9 +1649,8 @@ fn is_system_distro(name: &str) -> bool {
 pub fn reboot() -> Result<(), Failure> {
     let mut command = Command::new("shutdown.exe");
     crate::util::no_console_window(&mut command);
-    let status = command
-        .args(["/r", "/t", "5", "/c", "Danil: reinicio para terminar de activar Linux"])
-        .status()
+    command.args(["/r", "/t", "5", "/c", "Danil: reinicio para terminar de activar Linux"]);
+    let status = crate::util::output_with_timeout(&mut command, Duration::from_secs(15))
         .map_err(|e| fail("io", e.to_string()))?;
     if status.success() { Ok(()) } else { Err(fail("io", "shutdown")) }
 }
