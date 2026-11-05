@@ -19,7 +19,7 @@ por RPC1 en `127.0.0.1`. Cambia el canal: aquí es `limactl`, no `wsl.exe`.
 | Para qué | Canal |
 | --- | --- |
 | Encontrar `limactl` | `/opt/homebrew/bin`, `/usr/local/bin`, `~/.local/bin` y después el PATH. Una ventana abierta desde Finder no trae Homebrew en el PATH. |
-| Listar VMs | `limactl list --json` en el `LIMA_HOME` por omisión, y con `LIMA_HOME=~/.colima/_lima` para las de Colima: esas son del sistema y nunca se ofrecen |
+| Listar VMs | `limactl list --json` en el `LIMA_HOME` vigente (`~/.lima` si no está definido), y con `LIMA_HOME=$COLIMA_HOME/_lima` (`~/.colima/_lima` por omisión) para las de Colima: esas son del sistema y nunca se ofrecen |
 | Correr un script | `limactl shell --workdir / <vm> sh -s` con el script por stdin. Sin `--workdir`, Lima intenta entrar a la carpeta actual de la Mac |
 | Descriptor y token | un solo `limactl shell` que imprime los dos. Se leen en memoria: el token no va a disco, a un trabajo ni a un error |
 | Órdenes y eventos | RPC1 a `127.0.0.1:<puerto>`: el hostagent de Lima reenvía el puerto a la Mac |
@@ -27,6 +27,11 @@ por RPC1 en `127.0.0.1`. Cambia el canal: aquí es `limactl`, no `wsl.exe`.
 `address` del descriptor solo se acepta si es loopback. Si una orden no llega,
 o el motor contesta `invalid_token` o `unauthorized`, se relee por el canal: el
 puerto y el token cambian en cada arranque del motor.
+
+Sin cuenta de Danil el bloque se muestra igual: es local. El laboratorio
+(`pnpm engine:start`) le da a la ventana un `HOME` desechable; en macOS le
+pasa `LIMA_HOME` y `COLIMA_HOME` con las carpetas reales, para que vea las VMs
+de la persona (una variable ya definida se respeta).
 
 ## Apagada
 
@@ -37,9 +42,9 @@ al instante, sin `limactl shell` ni la espera de 40 s. Solo `guest_start`
 corre `limactl start` (hasta 5 min) y luego espera a que el motor conteste.
 Lima no necesita `keep_alive`: la VM sigue encendida sola.
 
-## Conectar (`guest_connect`) y crear (`lima_create`)
+## Conectar (`guest_connect`)
 
-Los dos son trabajos, como en WSL (`guest-job`, `wsl-state.json`).
+Es un trabajo, como en WSL (`guest-job`, `wsl-state.json`).
 
 1. `probe.sh` por el canal: arquitectura, systemd de usuario, dependencias,
    `sudo -n`, si hay motor y su `contract`, si está inscrito en una cuenta
@@ -57,13 +62,15 @@ Los dos son trabajos, como en WSL (`guest-job`, `wsl-state.json`).
 3. Espera a que el motor conteste, crea el workspace de la ventana con el mismo
    id y guarda la entrada en `guests.json`.
 
-«Crear VM» corre `limactl create --name <nombre> --cpus 4 --memory 4
---mount-none --containerd=none template:ubuntu-lts`, después `limactl start` y
-sigue con «Conectar». La VM que crea Danil no ve carpetas de la Mac.
+Danil no crea VMs de Lima: solo conecta una que la persona ya tiene. Sin
+ninguna (sin contar las de Colima), el bloque muestra para copiar
+`limactl create --name=danil --mount-none --containerd=none template:ubuntu-lts`
+y `limactl start danil`, sin correrlos.
 
 ## Pendiente
 
 - El lock no trae `aarch64-unknown-linux-gnu`. En una Mac con Apple Silicon,
-  una VM sin motor se detiene en `arch` hasta que se publique ese binario.
+  conectar una VM sin motor se detiene en `arch` hasta que se publique ese
+  binario.
   Solo se conecta una VM que ya tenga el motor (`already`).
 - Llegar a la VM desde la web y el teléfono, como con WSL.

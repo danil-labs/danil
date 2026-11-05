@@ -1257,32 +1257,6 @@ fn install_engine_script(
     )
 }
 
-/// Crea una VM de Lima sin montajes y la conecta.
-pub fn start_lima_create(
-    app: &AppHandle,
-    name: &str,
-    workspace: Option<(String, String)>,
-) -> Result<Job, Job> {
-    let guest = name.to_string();
-    start_in(
-        ChannelKind::Lima,
-        app,
-        "create",
-        name,
-        name,
-        None,
-        move |app| {
-            if !valid_distro(&guest) {
-                return Err(fail("invalid_distro", guest.as_str()));
-            }
-            progress(app, &guest, "create", None, None);
-            super::lima::create(&guest, &mut |l| job_line(l))?;
-            let ws = workspace.as_ref().map(|(i, n)| (i.as_str(), n.as_str()));
-            install_lima(app, &guest, &guest, ws).map(|_| ())
-        },
-    )
-}
-
 /// Conecta una VM de Lima que ya existe.
 pub fn start_lima_connect(
     app: &AppHandle,
@@ -1553,8 +1527,6 @@ fn start_in(
             "permission".into()
         } else if kind == "install" {
             "download".into()
-        } else if kind == "create" {
-            "create".into()
         } else {
             "check".into()
         },
@@ -1931,36 +1903,6 @@ mod lima_real {
             std::thread::sleep(Duration::from_secs(1));
         }
         println!("encendida y en línea");
-    }
-
-    /// Una VM nueva sin motor se detiene en `arch` mientras el lock no traiga
-    /// el motor de arm64. Crea `DANIL_LIMA_NEW` (por omisión `danil-qa`) y la borra.
-    #[test]
-    #[ignore = "crea y borra una VM de Lima"]
-    fn a_new_vm_stops_at_arch() {
-        let name = std::env::var("DANIL_LIMA_NEW").unwrap_or_else(|_| "danil-qa".into());
-        super::super::lima::create(&name, &mut |l| println!("{l}")).expect("create");
-        let mut lines = Vec::new();
-        let probed = exec_ok(
-            ChannelKind::Lima,
-            &name,
-            None,
-            PROBE,
-            &[],
-            Duration::from_secs(60),
-            |l| lines.push(l.to_string()),
-        );
-        limactl(&["delete", "-f", &name]);
-        probed.expect("probe");
-        let probe = parse_probe(&lines);
-        println!("{probe:?}");
-        let lock: Lock = serde_json::from_str(LOCK).expect("lock");
-        assert_eq!(found(&probe, &lock.contract), Found::Install);
-        assert_eq!(probe.mounts, 0, "la VM de Danil no ve carpetas de la Mac");
-        let engine = triple_for(&probe.arch)
-            .ok_or_else(|| fail("arch", probe.arch.clone()))
-            .and_then(linux_engine_for);
-        assert_eq!(engine.expect_err("arch")["code"], "arch");
     }
 
     /// Lo que tarda la lista compartida en dejar de valer.

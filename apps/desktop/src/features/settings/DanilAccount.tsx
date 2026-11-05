@@ -172,12 +172,11 @@ function WorkspacePanel(props: { workspace: { id: string; name: string }; accoun
             <Show when={a.of()?.linked && props.part !== "profile"}>
               <AccountComputersSection account={key} workspace={props.workspace.id} self={session()?.computer_id} onSelfName={renameFor(session()?.computer_id)} />
               <ConnectMachineSection account={key} />
-              <WslMachineSection />
-              <LimaMachineSection />
             </Show>
           </>
         )}
       </Show>
+      <LocalMachines part={props.part} />
     </SettingsPanel>
   );
 }
@@ -318,10 +317,19 @@ function SingleAccount(props: { part?: DanilAccountPart }) {
       <Show when={status()?.state === "connected" && props.part !== "profile"}>
         <AccountComputersSection self={status()?.computer_id ?? null} onSelfName={renameFor(status()?.computer_id)} />
         <ConnectMachineSection />
-        <WslMachineSection />
-        <LimaMachineSection />
       </Show>
+      <LocalMachines part={props.part} />
     </SettingsPanel>
+  );
+}
+
+/** Linux en esta Mac o PC: es local y no pide cuenta de Danil. */
+function LocalMachines(props: { part?: DanilAccountPart }) {
+  return (
+    <Show when={props.part !== "profile"}>
+      <WslMachineSection />
+      <LimaMachineSection />
+    </Show>
   );
 }
 

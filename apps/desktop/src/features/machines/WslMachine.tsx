@@ -2,9 +2,9 @@
 // repetir una instalación por un `app_unavailable` la correría dos veces.
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "../../lib/serviceEvents";
-import { For, Match, Show, Switch, createMemo, createSignal, onCleanup, onMount } from "solid-js";
+import { For, Match, Show, Switch, createEffect, createMemo, createSignal, on, onCleanup, onMount } from "solid-js";
 import { t } from "../../lib/i18n";
-import { capabilities } from "../../lib/platform";
+import { offersGuests } from "./guestChannels";
 import { Badge } from "../../ui/Badge";
 import { Button } from "../../ui/Button";
 import { MarcaAgente } from "../../ui/icons";
@@ -67,8 +67,11 @@ async function activeWorkspace(): Promise<{ id: string; name: string } | null> {
  * o reiniciar no pierde el avance (`docs/wsl-local-machine.md`).
  */
 export function WslMachineSection() {
-  if (!capabilities().wsl) return null;
-  return <Section />;
+  return (
+    <Show when={offersGuests("wsl")}>
+      <Section />
+    </Show>
+  );
 }
 
 function Section() {
@@ -800,12 +803,13 @@ export function DistroBox(props: { name: string; child: WslChild; onRemoved: () 
 
 /** Las distribuciones conectadas, como una máquina más en «Máquinas de este workspace». Solo existen en esta PC. */
 export function WslMachineRows() {
-  if (!capabilities().wsl && !capabilities().lima) return null;
   const [rows, setRows] = createSignal<WslChild[]>([]);
+  const offered = () => offersGuests("wsl") || offersGuests("lima");
   const read = () => {
+    if (!offered()) return;
     void invoke<WslChild[]>("guest_children", { fresh: false }).then(setRows).catch(() => setRows([]));
   };
-  onMount(read);
+  createEffect(on(offered, read));
   window.addEventListener("danil:guests-changed", read);
   onCleanup(() => window.removeEventListener("danil:guests-changed", read));
   return (
