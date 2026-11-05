@@ -327,6 +327,62 @@ export default function GithubAccount(props: {
     </Show>
   );
 
+  /**
+   * Las máquinas donde está en uso, como chips junto a la cuenta (el `Badge
+   * forma="dato"` de Proveedores de IA): hasta 3 y «+N»; el `title` da todas.
+   * Clic en un chip: su única acción, quitar o volver a poner.
+   */
+  function MachineChips(p: { machines: GithubMachine[] }) {
+    const shown = () => p.machines.slice(0, 3);
+    const rest = () => p.machines.length - shown().length;
+    const all = () => p.machines.map(machineName).join(", ");
+    return (
+      <Show when={p.machines.length > 0}>
+        <span class="inline-flex min-w-0 flex-wrap items-center gap-1" data-github-machines="" title={all()}>
+          <For each={shown()}>
+            {(m) => (
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  as="button"
+                  type="button"
+                  class="rounded-sm"
+                  data-github-machine={m.computer_id}
+                  aria-label={machineName(m)}
+                  disabled={busy() !== null}
+                >
+                  <Badge forma="dato" class={m.state === "removed" ? "shrink-0 opacity-60" : "shrink-0"}>
+                    {machineName(m)}
+                  </Badge>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent class="z-[90]" data-owns-escape>
+                  <DropdownMenuItem disabled={busy() !== null} onSelect={() => void machine(m, m.state === "removed")}>
+                    {m.state === "removed" ? t("providers.github.account.machine_restore") : t("providers.github.account.machine_remove")}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+          </For>
+          <Show when={rest() > 0}>
+            <DropdownMenu>
+              <DropdownMenuTrigger as="button" type="button" class="rounded-sm" aria-label={all()} disabled={busy() !== null}>
+                <Badge forma="dato" class="shrink-0">+{rest()}</Badge>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent class="z-[90]" data-owns-escape>
+                <For each={p.machines.slice(3)}>
+                  {(m) => (
+                    <DropdownMenuItem disabled={busy() !== null} onSelect={() => void machine(m, m.state === "removed")}>
+                      {machineName(m)} · {m.state === "removed" ? t("providers.github.account.machine_restore") : t("providers.github.account.machine_remove")}
+                    </DropdownMenuItem>
+                  )}
+                </For>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </Show>
+        </span>
+      </Show>
+    );
+  }
+
   return (
     <div data-github-account={mode()} class="contents">
       <Show when={waiting()}>
@@ -379,6 +435,7 @@ export default function GithubAccount(props: {
                 <span class="inline-flex min-w-0 items-baseline gap-2">
                   <Show when={c().config.name}>{(name) => <strong class="truncate font-semibold">{name()}</strong>}</Show>
                   <span class={c().config.name ? "truncate font-mono text-xs text-neutral-500" : "truncate font-semibold"}>@{c().config.login}</span>
+                  <MachineChips machines={c().machines} />
                 </span>
               }
               description={
@@ -448,23 +505,6 @@ export default function GithubAccount(props: {
               </Show>
             </Show>
 
-            <Show when={c().machines.length > 0}>
-              <SettingsRow label={<span class="font-medium">{t("providers.github.account.in_use")}</span>} />
-              <div class="contents" data-github-machines="">
-                <For each={c().machines}>
-                  {(m) => (
-                    <SettingsRow data-github-machine={m.computer_id} label={machineName(m)}>
-                      <Show when={m.state === "removed"}>
-                        <Badge>{t("providers.github.account.machine_removed")}</Badge>
-                      </Show>
-                      <Button variant="ghost" size="compact" disabled={busy() !== null} onClick={() => void machine(m, m.state === "removed")}>
-                        {m.state === "removed" ? t("providers.github.account.machine_restore") : t("providers.github.account.machine_remove")}
-                      </Button>
-                    </SettingsRow>
-                  )}
-                </For>
-              </div>
-            </Show>
           </>
         )}
       </Show>
