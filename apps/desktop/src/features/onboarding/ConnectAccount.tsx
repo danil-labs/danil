@@ -49,7 +49,7 @@ function Opcion(props: { icono: JSX.Element; titulo: string; efecto: string; dis
   );
 }
 
-export default function ConnectAccount(props: { onListo: (result: ConnectAccountResult) => void }) {
+export default function ConnectAccount(props: { onListo: (result: ConnectAccountResult) => void; workspaceExistente?: { id: string; nombre: string } | null }) {
   const session = createDanilSession({ oneClick: false });
   const [step, setStep] = createSignal<Step>("choose");
   const [entries, setEntries] = createSignal<DirectoryEntry[]>([]);
@@ -57,7 +57,7 @@ export default function ConnectAccount(props: { onListo: (result: ConnectAccount
   const [problem, setProblem] = createSignal<string | null>(null);
   const [linking, setLinking] = createSignal<string | null>(null);
   /** Si el enlace falló después de crear el workspace local, se reusa al reintentar. */
-  let created: { id: string; nombre: string } | null = null;
+  let created: { id: string; nombre: string } | null = props.workspaceExistente ?? null;
 
   const finish = (result: ConnectAccountResult) => {
     rememberAccountWelcome(result.connected ? "connected" : "local");
@@ -239,6 +239,9 @@ export default function ConnectAccount(props: { onListo: (result: ConnectAccount
                 )}
               </For>
             </div>
+            <Button size="sm" variant="ghost" class="justify-self-start" disabled={session.busy()} onClick={() => void cancelSigning()}>
+              {t("onboarding.back")}
+            </Button>
             <Button
               size="sm"
               variant="ghost"

@@ -27,6 +27,7 @@ type Props = { nuevo?: boolean; onListo: () => void; onCancelar?: () => void };
 export default function Onboarding(props: Props) {
   if (!capabilities().localSetup) return <AltaGestionada {...props} />;
   const [respondida, setRespondida] = createSignal(Boolean(props.nuevo) || accountWelcomeAnswered());
+  const [puedeVolver, setPuedeVolver] = createSignal(false);
   const [tomado, setTomado] = createSignal<{ id: string; nombre: string } | null>(null);
   return (
     <Show
@@ -36,8 +37,10 @@ export default function Onboarding(props: Props) {
           <CabeceraDelAlta fase={0} />
           <Suspense fallback={null}>
             <ConectarCuenta
+              workspaceExistente={tomado()}
               onListo={(r) => {
-                setTomado(r.workspace);
+                setTomado(r.workspace ?? tomado());
+                setPuedeVolver(!r.connected);
                 setRespondida(true);
               }}
             />
@@ -45,12 +48,12 @@ export default function Onboarding(props: Props) {
         </div>
       }
     >
-      <AltaLocal {...props} tomado={tomado()} />
+      <AltaLocal {...props} tomado={tomado()} onWorkspace={setTomado} onAtras={puedeVolver() ? () => setRespondida(false) : undefined} />
     </Show>
   );
 }
 
-function AltaLocal(props: Props & { tomado: { id: string; nombre: string } | null }) {
+function AltaLocal(props: Props & { tomado: { id: string; nombre: string } | null; onWorkspace: (w: { id: string; nombre: string }) => void; onAtras?: () => void }) {
   const [paso, setPaso] = createSignal<"ia" | "personalizar">("ia");
   const [workspace, setWorkspace] = createSignal<{ id: string; nombre: string } | null>(null);
   const [fallo, setFallo] = createSignal<string | null>(null);
@@ -68,6 +71,7 @@ function AltaLocal(props: Props & { tomado: { id: string; nombre: string } | nul
         const nombre = props.nuevo ? t("onboarding.workspace.default_new") : t("onboarding.workspace.default");
         const w = await crearWorkspace(nombre);
         setWorkspace({ id: w.id, nombre });
+        props.onWorkspace({ id: w.id, nombre });
       }
       await conexiones.cargar();
     } catch (e) {
@@ -137,6 +141,11 @@ function AltaLocal(props: Props & { tomado: { id: string; nombre: string } | nul
               derecha={<PanelDeIA c={conexiones} />}
             />
             <footer class="flex flex-wrap items-center gap-2.5 border-t border-border px-5 py-3.5">
+              <Show when={props.onAtras && workspace()}>
+                <Button size="sm" variant="ghost" onClick={props.onAtras}>
+                  {t("onboarding.back")}
+                </Button>
+              </Show>
               <Show when={props.nuevo}>
                 <Button size="sm" variant="ghost" disabled={cancelando()} onClick={() => void cancelar()}>
                   {t("onboarding.cancel")}
