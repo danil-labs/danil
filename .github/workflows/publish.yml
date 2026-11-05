@@ -104,6 +104,18 @@ on:
         description: "Publicar como prerelease, sin tocar releases/latest"
         type: boolean
         default: false
+      # Solo macOS: salta los builds de Windows y Linux y su prueba. Vale solo
+      # como prerelease o ensayo (lo comprueba `check`): una release latest sin
+      # Windows ni Linux dejaría a esas copias creyéndose al día y rompería sus
+      # botones de descarga. Por la misma razón, una prerelease `macos` NO se pasa
+      # a latest con `gh release edit`: su `latest.json` solo trae darwin.
+      #
+      #     gh workflow run publish.yml -R danil-labs/danil --ref main -f platforms=macos -f prerelease=true
+      platforms:
+        description: "all (Windows, macOS y Linux) o macos (solo prerelease o ensayo)"
+        type: choice
+        options: [all, macos]
+        default: all
 
 # Dos corridas a la vez se pisarían creando el mismo tag. No se cancela la que
 # esté en curso: a mitad de un build cancelar deja el tag sin sus binarios.
@@ -163,6 +175,7 @@ jobs:
         working-directory: apps/desktop
     outputs:
       should_build: ${{ steps.compare.outputs.should_build }}
+      matrix: ${{ steps.platforms.outputs.matrix }}
       version: ${{ steps.compare.outputs.version }}
       sha: ${{ steps.compare.outputs.sha }}
       note_es: ${{ steps.compare.outputs.note_es }}
@@ -178,6 +191,28 @@ jobs:
       # instalador y la corrida salen todos en verde con la identidad cambiada.
       # Falla aquí, antes de publicar, porque después de publicar ya no se puede
       # arreglar en las copias instaladas.
+      # Las filas de `build`. Un tag no trae inputs: vale `all`.
+      - name: Elegir plataformas
+        id: platforms
+        env:
+          PLATFORMS: ${{ inputs.platforms || 'all' }}
+          DRY_RUN: ${{ inputs.dry_run }}
+          PRERELEASE: ${{ inputs.prerelease }}
+        run: |
+          set -euo pipefail
+          case "$PLATFORMS" in
+            all) M='[{"so":"windows-latest","name":"windows"},{"so":"macos-latest","name":"macos"},{"so":"ubuntu-22.04","name":"linux"}]' ;;
+            macos)
+              if [ "${DRY_RUN:-false}" != "true" ] && [ "${PRERELEASE:-false}" != "true" ]; then
+                echo "::error::platforms=macos solo vale como prerelease o ensayo: una release latest sin Windows ni Linux deja a esas copias sin actualización."
+                exit 1
+              fi
+              M='[{"so":"macos-latest","name":"macos"}]' ;;
+            *) echo "::error::platforms desconocido: $PLATFORMS"; exit 1 ;;
+          esac
+          echo "matrix=$M" >> "$GITHUB_OUTPUT"
+          echo "Plataformas: $PLATFORMS → $M"
+
       - name: La identidad no cambió a espaldas de nadie
         run: |
           set -euo pipefail
@@ -335,13 +370,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - so: windows-latest
-            name: windows
-          - so: macos-latest
-            name: macos
-          - so: ubuntu-22.04
-            name: linux
+        # Las filas las decide `check` (paso «Elegir plataformas»): las tres, o
+        # solo macOS con `platforms=macos`.
+        include: ${{ fromJSON(needs.check.outputs.matrix) }}
     runs-on: ${{ matrix.so }}
     defaults:
       run:
@@ -1110,6 +1141,7 @@ jobs:
   # depender de que FUSE funcione dentro del runner.
   test-linux:
     needs: [check, build]
+    if: inputs.platforms != 'macos'
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
@@ -1153,7 +1185,14 @@ jobs:
     needs: [check, build, test-macos, test-linux]
     # En un ensayo también corre: arma el `latest.json` y lo deja como artefacto,
     # pero los pasos que crean la release y la comprueban se saltan.
-    if: ${{ success() }}
+    # `test-linux` se salta con `platforms=macos`; un `needs` saltado haría
+    # saltar también esto, así que se pide cada resultado a mano.
+    if: >-
+      ${{ !cancelled()
+          && needs.build.result == 'success'
+          && needs.test-macos.result == 'success'
+          && (needs.test-linux.result == 'success'
+              || (inputs.platforms == 'macos' && needs.test-linux.result == 'skipped')) }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -1194,6 +1233,7 @@ jobs:
           V: ${{ needs.check.outputs.version }}
           NOTE_ES: ${{ needs.check.outputs.note_es }}
           NOTE_EN: ${{ needs.check.outputs.note_en }}
+          PLATFORMS: ${{ inputs.platforms || 'all' }}
         run: |
           set -euo pipefail
           ls -la release-assets
@@ -1208,28 +1248,39 @@ jobs:
           # `notes` es el campo estándar y lo lee el updater de Tauri: la nota
           # en inglés, o en español si la versión no trae inglés. `notes_by_locale`
           # es de la app, que elige la de su idioma y, si no está, cae a `notes`.
+          # Con `platforms=macos` solo hay darwin: no se inventa una firma vacía
+          # para Windows ni Linux (sería «hay versión nueva» que no se instala).
+          win_sig=""; linux_sig=""
+          if [ "${PLATFORMS:-all}" != "macos" ]; then
+            win_sig=$(cat "release-assets/Danil_${V}_x64-setup.exe.sig")
+            linux_sig=$(cat "release-assets/Danil_${V}_amd64.AppImage.sig")
+          fi
           jq -n \
             --arg v "$V" \
             --arg notes_es "$NOTE_ES" \
             --arg notes_en "$NOTE_EN" \
             --arg pub_date "$(date -u +%Y-%m-%dT%H:%M:%S.000Z)" \
-            --arg win_sig "$(cat "release-assets/Danil_${V}_x64-setup.exe.sig")" \
+            --arg plat "${PLATFORMS:-all}" \
+            --arg win_sig "$win_sig" \
             --arg win_url "$BASE/Danil_${V}_x64-setup.exe" \
             --arg mac_sig "$(cat "release-assets/Danil.app.tar.gz.sig")" \
             --arg mac_url "$BASE/Danil.app.tar.gz" \
-            --arg linux_sig "$(cat "release-assets/Danil_${V}_amd64.AppImage.sig")" \
+            --arg linux_sig "$linux_sig" \
             --arg linux_url "$BASE/Danil_${V}_amd64.AppImage" \
             '{
               version: $v,
               notes: (if $notes_en != "" then $notes_en else $notes_es end),
               notes_by_locale: { es: $notes_es, en: $notes_en },
               pub_date: $pub_date,
-              platforms: {
+              platforms: (if $plat == "macos" then {
+                "darwin-aarch64": { signature: $mac_sig, url: $mac_url },
+                "darwin-x86_64": { signature: $mac_sig, url: $mac_url }
+              } else {
                 "windows-x86_64": { signature: $win_sig, url: $win_url },
                 "darwin-aarch64": { signature: $mac_sig, url: $mac_url },
                 "darwin-x86_64": { signature: $mac_sig, url: $mac_url },
                 "linux-x86_64": { signature: $linux_sig, url: $linux_url }
-              }
+              } end)
             }' > release-assets/latest.json
 
           cat release-assets/latest.json
@@ -1253,6 +1304,7 @@ jobs:
           SHA: ${{ needs.check.outputs.sha }}
           DRY_RUN: ${{ inputs.dry_run }}
           PRERELEASE: ${{ inputs.prerelease }}
+          PLATFORMS: ${{ inputs.platforms || 'all' }}
         run: |
           set -euo pipefail
 
@@ -1263,13 +1315,24 @@ jobs:
           [ -n "$NOTE_EN" ] || NOTE_EN="Improvements and fixes."
 
           # shellcheck disable=SC2016  # Los backticks son Markdown literal.
+          if [ "${PLATFORMS:-all}" = "macos" ]; then
+            FILES='macOS Apple Silicon: `Danil-macOS.dmg` · macOS Intel: `Danil-macOS-Intel.dmg`'
+            ONLY_EN='This build is macOS only.\n\n'
+            ONLY_ES='Esta versión es solo para macOS.\n\n'
+          else
+            FILES='Windows: `Danil-Windows-Setup.exe` · macOS Apple Silicon: `Danil-macOS.dmg` · macOS Intel: `Danil-macOS-Intel.dmg` · Linux x86_64: `Danil-Linux-x86_64.AppImage`'
+            ONLY_EN=''
+            ONLY_ES=''
+          fi
           BODY=$(
             printf '%s\n\n' "$NOTE_EN"
-            printf 'Windows: `Danil-Windows-Setup.exe` · macOS Apple Silicon: `Danil-macOS.dmg` · macOS Intel: `Danil-macOS-Intel.dmg` · Linux x86_64: `Danil-Linux-x86_64.AppImage`\n\n'
+            printf "%b" "$ONLY_EN"
+            printf '%s\n\n' "$FILES"
             printf 'The two macOS files contain the same universal DMG. If you already have it installed there is nothing to download: the app notifies you on its own.\n\n'
             printf 'Built from `%s` in run `%s`.\n\n---\n\n' "$SHA" "$GITHUB_RUN_ID"
             printf '%s\n\n' "$NOTE_ES"
-            printf 'Windows: `Danil-Windows-Setup.exe` · macOS Apple Silicon: `Danil-macOS.dmg` · macOS Intel: `Danil-macOS-Intel.dmg` · Linux x86_64: `Danil-Linux-x86_64.AppImage`\n\n'
+            printf "%b" "$ONLY_ES"
+            printf '%s\n\n' "$FILES"
             printf 'Los dos archivos de macOS traen el mismo DMG universal. Quien ya la tenga instalada no necesita bajar nada: la app avisa sola.\n\n'
             printf 'Construida desde `%s` en `%s`.\n' "$SHA" "$GITHUB_RUN_ID"
           )
