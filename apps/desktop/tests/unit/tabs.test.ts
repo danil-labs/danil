@@ -1085,6 +1085,9 @@ test("Git observations share one read per machine and keep routing explicit", as
   } });
   Object.defineProperty(globalThis, "window", { configurable: true, value: fake, writable: true });
   Object.defineProperty(globalThis, "document", { configurable: true, value: Object.assign(new EventTarget(), { hidden: false }), writable: true });
+  // Una cabecera de otra máquina solo existe con la flota instalada: sin ruta, `invoke` la rechaza.
+  const { setMachineRoute } = await import("../../src/lib/invoke.ts");
+  setMachineRoute((command, args, options) => fake.__TAURI_INTERNALS__.invoke(command, args as { remote: boolean }, options as { headers?: Record<string, string> }));
   const mac = watchSessionGit("machine-scope-test", { workspace: "w", machine: "mac" });
   const again = watchSessionGit("machine-scope-test", { workspace: "w", machine: "mac" });
   const vm = watchSessionGit("machine-scope-test", { workspace: "w", machine: "vm" });
@@ -1113,6 +1116,7 @@ test("Git observations share one read per machine and keep routing explicit", as
 
   } finally {
     mac.release(); again.release(); vm.release();
+    setMachineRoute(null);
     Object.defineProperty(globalThis, "window", { configurable: true, value: previousWindow, writable: true });
     Object.defineProperty(globalThis, "document", { configurable: true, value: previousDocument, writable: true });
   }

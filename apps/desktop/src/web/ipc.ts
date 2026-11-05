@@ -11,6 +11,8 @@ type Internals = {
   unregisterCallback(id: number): void;
   convertFileSrc(path: string, protocol?: string): string;
   metadata: { currentWindow: { label: string }; currentWebview: { windowLabel: string; label: string } };
+  /** Este IPC es el router de máquinas: reparte por `x-terminus-machine` (`lib/invoke.ts`). */
+  routesMachines: true;
 };
 
 export function installIpc(target: Window, transport: Pick<WebTransport, "handle">) {
@@ -29,6 +31,7 @@ export function installIpc(target: Window, transport: Pick<WebTransport, "handle
       currentWindow: { label: "main" },
       currentWebview: { windowLabel: "main", label: "main" },
     },
+    routesMachines: true,
   };
   Object.assign(target, {
     __TAURI_INTERNALS__: internals,

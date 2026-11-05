@@ -1,7 +1,11 @@
 /** Copia explícita de carpetas, reintento, cancelación y creación remota sin copia. Monta dist/. */
 import assert from "node:assert/strict";
 import test from "node:test";
-import { boot, sleep } from "../helpers/jsdom-app.mjs";
+import { boot as harnessBoot, sleep } from "../helpers/jsdom-app.mjs";
+
+/** Su IPC simulado reparte por `x-terminus-machine`, como el router de la web: lo declara. */
+const boot = (environment, name, table, userAgent, storage = {}, options = {}) =>
+  harnessBoot(environment, name, table, userAgent, storage, { ...options, routesMachines: true });
 
 const PAYLOAD = Buffer.from("bundle y archivos de la foto").toString("base64");
 const STATUS = {

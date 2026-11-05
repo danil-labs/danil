@@ -9,7 +9,11 @@
  */
 import assert from "node:assert/strict";
 import test from "node:test";
-import { boot, sleep } from "../helpers/jsdom-app.mjs";
+import { boot as harnessBoot, sleep } from "../helpers/jsdom-app.mjs";
+
+/** Su IPC simulado reparte por `x-terminus-machine`, como el router de la web: lo declara. */
+const boot = (environment, name, table, userAgent, storage = {}, options = {}) =>
+  harnessBoot(environment, name, table, userAgent, storage, { ...options, routesMachines: true });
 
 const FILE = "sidebar-acciones-v2.html";
 const ANSWER = `Aquí está otra vez:\n\n::terminus-visual{file="${FILE}" title="Sidebar"}\n\nArriba puedes cambiar entre las dos variantes.`;

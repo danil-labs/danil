@@ -79,7 +79,11 @@ export const cause = new AsyncLocalStorage();
  *   normal sube por el `setEnv` de `Setup.revisar` y **la traga su propio
  *   `try`**, que es exactamente por qué este fallo no dejó ni un mensaje.
  */
-export async function boot(environment, version, responses, userAgent, storage = {}, { web = false, beforeImport, workspaces } = {}) {
+/**
+ * `routesMachines`: el IPC simulado reparte por `x-terminus-machine`, como el
+ * router de la web. Sin él es el motor de la ventana, que no reparte.
+ */
+export async function boot(environment, version, responses, userAgent, storage = {}, { web = false, beforeImport, workspaces, routesMachines = false } = {}) {
   // El registro de workspaces de la cuenta (`GET /v1/workspaces`): sin `workspaces`, un plano de control que no lo tiene.
   accountRegistry = workspaces;
   const dir = web ? distWeb : dist;
@@ -123,6 +127,7 @@ export async function boot(environment, version, responses, userAgent, storage =
     },
   };
   if (!web) w.__TAURI_INTERNALS__ = {
+    ...(routesMachines ? { routesMachines: true } : {}),
     transformCallback: (callback) => { const id = ++lastId; callbacks.set(id, callback); return id; },
     convertFileSrc: (p) => p,
     // **`getCurrentWindow()` lee esto y no pasa por `invoke`.** Sin `metadata`

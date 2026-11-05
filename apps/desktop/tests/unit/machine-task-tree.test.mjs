@@ -6,7 +6,11 @@
  */
 import assert from "node:assert/strict";
 import test from "node:test";
-import { boot, sleep } from "../helpers/jsdom-app.mjs";
+import { boot as harnessBoot, sleep } from "../helpers/jsdom-app.mjs";
+
+/** Su IPC simulado reparte por `x-terminus-machine`, como el router de la web: lo declara. */
+const boot = (environment, name, table, userAgent, storage = {}, options = {}) =>
+  harnessBoot(environment, name, table, userAgent, storage, { ...options, routesMachines: true });
 
 const row = (id, extra) => ({ id, title: `Tarea ${id}`, last_message: "", provider: "codex", model: "gpt-5.6", refs: [], created_at: 0, updated_at: 0, turns: 2, parent: null, esperando: false, ...extra });
 const turns = [{ role: "user", id: "u0", at: 0, text: "crea un md hablando de danil" }, { role: "agent", id: "a1", at: 1, text: "Creé DANIL.md." }];

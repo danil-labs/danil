@@ -728,6 +728,8 @@ const steps = [
   ["WSL Linux user turns typed names into valid users", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/wsl-linux-user.test.ts")], root],
   ["Linux en esta Mac lists Lima VMs, keeps Colima aside and says how to install Lima", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/lima-machine.test.mjs")], root],
   ["Without an account the local guests are a fleet of their own and nothing goes to the account", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/local-fleet.test.mjs")], root],
+  ["Without a route an order for another machine never reaches an IPC that does not route by machine", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/invoke-unrouted.test.ts")], root],
+  ["The simulated relay answers an engine's rejection as an error", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/fake-relay.test.mjs")], root],
   ["Danil Machines: session with contracts, token renewal, engine and tombstones", process.execPath, ["--test", "--experimental-strip-types", join(root, "../../packages/computers/test/computers.test.ts")], root],
   ["Danil Machines: an MCP block with written values, a URL with a password or an argument with a token does not cross the relay", process.execPath, ["--test", "--experimental-strip-types", join(root, "../../packages/computers/test/mcp-block.test.ts")], root],
   ["Danil Machines: account GitHub through the Worker, with its routes and codes", process.execPath, ["--test", "--experimental-strip-types", join(root, "../../packages/computers/test/github.test.ts")], root],

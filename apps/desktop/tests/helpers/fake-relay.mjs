@@ -86,9 +86,15 @@ export function relay({ state: initial = "online", wakeAfter = 300, cachedAt = n
           ? { type: "result", id: m.id, error: { code: "command" } }
           : { type: "result", id: m.id, value: typeof answer === "function" ? answer(m.args, m) : answer };
         if (reply.value instanceof Promise) {
-          void reply.value.then((value) => {
-            if (this.readyState === 1) this.onmessage?.({ data: JSON.stringify({ ...reply, value }) });
-          });
+          void reply.value.then(
+            (value) => {
+              if (this.readyState === 1) this.onmessage?.({ data: JSON.stringify({ ...reply, value }) });
+            },
+            // Un rechazo del motor llega como `error`, igual que por el relay de verdad.
+            (error) => {
+              if (this.readyState === 1) this.onmessage?.({ data: JSON.stringify({ type: "result", id: m.id, error }) });
+            },
+          );
           return;
         }
         if (this.readyState === 1) this.onmessage?.({ data: JSON.stringify(reply) });

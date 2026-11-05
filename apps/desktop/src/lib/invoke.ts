@@ -93,8 +93,42 @@ export function setMachineRoute(next: Route | null) {
   route = next;
 }
 
+/** La máquina que pide la cabecera `x-terminus-machine`, si la hay. */
+function machineHeader(options?: InvokeOptions): string | null {
+  try {
+    return new Headers(options?.headers as HeadersInit | undefined).get("x-terminus-machine") || null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Si el IPC reparte por máquina: lo declara con `routesMachines: true` (el
+ * router de la web, `web/ipc.ts`). Sin la marca no reparte, como el nativo.
+ */
+function ipcRoutesMachines(): boolean {
+  // Donde lo lee `@tauri-apps/api`: `window`, que en el arnés no es `globalThis`.
+  const host = (typeof window === "undefined" ? globalThis : window) as { __TAURI_INTERNALS__?: { routesMachines?: unknown } };
+  const internals = host.__TAURI_INTERNALS__;
+  return internals?.routesMachines === true;
+}
+
+/**
+ * Sin ruta, un IPC que no reparte (el motor de la ventana) ignora la cabecera:
+ * una orden para otra máquina (en medio de un cambio de cuenta) correría aquí
+ * sin aviso. Se rechaza con su motivo; una VM huésped dice que está apagada.
+ */
+function unrouted<T>(command: string, args?: InvokeArgs, options?: InvokeOptions): Promise<T> {
+  const machine = machineHeader(options);
+  if (machine && machine !== "local" && !ipcRoutesMachines()) {
+    const guest = machine.startsWith("wsl:") || machine.startsWith("lima:");
+    return Promise.reject({ code: guest ? "machine_off" : "unknown_machine", detail: machine });
+  }
+  return tauri<T>(command, withoutAbout(args as Record<string, unknown> | undefined) as InvokeArgs | undefined, options);
+}
+
 const call = <T>(command: string, args?: InvokeArgs, options?: InvokeOptions): Promise<T> =>
-  (route ? route(command, args, options) : tauri<T>(command, withoutAbout(args as Record<string, unknown> | undefined) as InvokeArgs | undefined, options)) as Promise<T>;
+  (route ? route(command, args, options) : unrouted<T>(command, args, options)) as Promise<T>;
 
 export const invoke = <T>(command: string, args?: InvokeArgs, options?: InvokeOptions): Promise<T> =>
   untilConnected(() => retrying(() => call<T>(command, args, options), sleep, (e) => canRepeat(command, e)));
