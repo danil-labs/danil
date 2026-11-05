@@ -20,7 +20,7 @@ repositories, and `GitHostInfo`. Files on disk keep their keys; the types that
 are stored and also travel cross the contract wrapped in `Wire`, which renames
 their keys. There are no aliases. This copy is byte-identical to the engine's.
 SHA-256:
-`5f59d6031b76b0248f09d7e19d184a542259d773c62080a30cb9298e7b5033ca`.
+`46798e8630db16622e62b79747cde5b02073681ca602d92adc6fdae559d802e5`.
 
 seldon-host `4e21caf` (#66) added the Danil account (321 commands, 28 events):
 `danil_connect_start`, `danil_connect_status`, `danil_connect_options`,
@@ -242,6 +242,11 @@ seldon-host `release/train-2026-10-30` (`b8e7fcd`) adds the four admin CLI route
 events and the other routes unchanged). The window invokes none of them. This
 copy is `git show b8e7fcd:crates/engine-manifest/commands.json` byte for byte; no
 `seldon-runtime` with it is published yet.
+
+danil-engine `85335139` (release 0.3.1, `seldon-runtime-v0.3.1-85335139`) keeps
+553 entries and 37 events. Since #355 the CLI route `skill list` accepts the flag
+`agent`, which changes the hash to `46798e86…`. The window invokes no CLI route.
+This copy is `git show 85335139:crates/engine-manifest/commands.json` byte for byte.
 
 Handler and peer error keys come from the CLI catalogs at seldon-host
 `437a280` (`crates/terminus-cli/src/messages.{es,en}.json`); the window completes
