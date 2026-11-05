@@ -139,7 +139,8 @@ function gitSlice(slice: Slice): Slice {
 
 export function createRouter(config: RouterConfig) {
   const { self, fleet } = config;
-  const native: Invoke = config.native ?? (() => Promise.reject(new FleetError("unknown_machine", null)));
+  const rawNative: Invoke = config.native ?? (() => Promise.reject(new FleetError("unknown_machine", null)));
+  const native: Invoke = (command, args, options) => rawNative(command, args, withoutHeader(options, "x-terminus-machine"));
   /** Con motor propio (el escritorio); sin él, la web. */
   const local = config.native !== null;
   const contextOwners = new Map<string, string>();
