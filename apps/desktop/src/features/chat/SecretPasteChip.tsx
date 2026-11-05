@@ -107,3 +107,4 @@ export function SecretPasteChip(props: {
     </div>
   );
 }
+export default SecretPasteChip;
