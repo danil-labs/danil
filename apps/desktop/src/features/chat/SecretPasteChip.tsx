@@ -1,3 +1,4 @@
+import "../../locales/secretPhrases";
 import { envSecretNameProblem } from "@terminus/computers";
 import { onMount, Show } from "solid-js";
 import { unknownCommand } from "../../lib/errorCode.ts";
@@ -46,7 +47,7 @@ export function SecretPasteChip(props: {
   return (
     <div
       role="group"
-      aria-label={t("chat.secret_paste.group")}
+      aria-label={t("chat.secret.paste.group")}
       aria-busy={props.held.saving}
       class="mx-1 mt-1 flex min-w-0 items-center gap-2 rounded-lg border border-border bg-surface-raised p-[5px] pl-1.5 shadow-sm"
       data-secret-paste=""
@@ -68,7 +69,7 @@ export function SecretPasteChip(props: {
         <Input
           ref={field}
           class="min-h-7 py-[3px] pr-2 pl-[18px] font-mono text-label uppercase"
-          aria-label={t("chat.secret_paste.name")}
+          aria-label={t("chat.secret.paste.name")}
           aria-invalid={!!envSecretNameProblem(props.held.name)}
           aria-describedby={error() ? "secret-paste-error" : undefined}
           autocomplete="off"
@@ -95,15 +96,15 @@ export function SecretPasteChip(props: {
       </Show>
       <span class="flex-1" />
       <Button type="button" variant="ghost" size="compact" disabled={props.held.saving} onClick={props.onAsText} data-secret-paste-text="">
-        {t("chat.secret_paste.as_text")}
+        {t("chat.secret.paste.as_text")}
       </Button>
       <Button type="button" variant="primary" size="compact" disabled={blocked()} onClick={props.onSave} data-secret-paste-save="">
-        <Show when={props.held.saving} fallback={props.held.exists ? t("chat.secret_paste.replace") : t("chat.secret_paste.save")}>
+        <Show when={props.held.saving} fallback={props.held.exists ? t("chat.secret.paste.replace") : t("chat.secret.paste.save")}>
           <Spinner size={12} />
-          {t("chat.secret_paste.saving")}
+          {t("chat.secret.paste.saving")}
         </Show>
       </Button>
-      <CancelButton label={t("chat.secret_paste.discard")} disabled={props.held.saving} onClick={props.onDiscard} />
+      <CancelButton label={t("chat.secret.paste.discard")} disabled={props.held.saving} onClick={props.onDiscard} />
     </div>
   );
 }

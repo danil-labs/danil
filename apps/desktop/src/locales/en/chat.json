@@ -456,18 +456,5 @@
   "chat.history.content": "Saved content",
   "chat.queue.stop_and_send": "Stop the turn and send",
   "chat.queue.stop_and_send_aria": "Stop the turn and send queued message {n}",
-  "chat.secret_paste.group": "Possible pasted secret",
-  "chat.secret_paste.name": "Secret name",
-  "chat.secret_paste.save": "Save as secret",
-  "chat.secret_paste.replace": "Replace",
-  "chat.secret_paste.saving": "Saving…",
-  "chat.secret_paste.as_text": "Paste as text",
-  "chat.secret_paste.discard": "Discard",
-  "chat.secret_paste.send_blocked": "Save or discard the secret",
-  "chat.secret.error.empty": "Name missing",
-  "chat.secret.error.grammar": "Invalid name",
-  "chat.secret.error.reserved": "Reserved name",
-  "chat.secret.error.no_machine": "No compatible machine",
-  "chat.secret.error.engine": "Engine without secrets",
-  "chat.secret.error.failed": "Not saved"
+  "chat.secret_paste.send_blocked": "Save or discard the secret"
 }

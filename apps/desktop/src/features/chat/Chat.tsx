@@ -181,6 +181,7 @@ import { Spinner } from "../../ui/Spinner";
 // Chunk aparte: el bloque de razonamiento solo lo carga un turno que lo trae.
 const Reasoning = sharedLazy(() => import("./Reasoning"));
 const SecretPasteChip = sharedLazy(() => import("./SecretPasteChip"));
+const SecretRequestCard = sharedLazy(() => import("./SecretRequestCard"));
 /** El detector de secretos, fuera de la carga inicial: el compositor lo pide al montarse. */
 let escaner: typeof import("../../lib/secretPaste") | null = null;
 const cargarEscaner = () => import("../../lib/secretPaste").then((m) => (escaner = m));
@@ -1555,6 +1556,21 @@ export default function Chat(props: ChatProps) {
   createEffect(on(() => props.conversacion, () => setRetenido(null), { defer: true }));
   onMount(() => void cargarEscaner());
 
+  /** «Secreto solicitado»: las de esta tarea, leídas al abrirla y tras un hueco del stream. */
+  const [solicitudes, setSolicitudes] = createSignal<typeof import("./secretRequests") | null>(null);
+  onMount(() => void import("./secretRequests").then((m) => setSolicitudes(() => m)));
+  createEffect(() => {
+    const m = solicitudes();
+    const conversation = props.conversacion;
+    if (!m || props.soloLectura || !conversation) return;
+    onCleanup(m.watchSecretRequests(conversation, props.machine));
+  });
+  const solicitudesDeLaTarea = () => {
+    const m = solicitudes();
+    if (!m || m.secretRequestsUnsupported()) return [];
+    return [...m.secretRequests().values()].filter((r) => m.sameTask(props.conversacion, r.task));
+  };
+
   async function pegar(e: ClipboardEvent) {
     if (retenerSecreto(e)) return;
     if (props.soloLectura || !puedeAdjuntar()) return;
@@ -2524,6 +2540,10 @@ export default function Chat(props: ChatProps) {
             </>
           )}
         </Show>
+
+        <For each={solicitudesDeLaTarea()}>
+          {(request) => <SecretRequestCard request={request} conversation={props.conversacion} machine={props.machine} />}
+        </For>
 
         <Show when={!preguntaPendiente() || props.permission}>
 

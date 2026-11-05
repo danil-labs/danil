@@ -325,6 +325,8 @@ fn subscribe(
                 "replay": replay,
                 "desktop": true,
                 "desktop_pid": std::process::id(),
+                // Esta ventana pinta la tarjeta «Secreto solicitado»; un motor viejo ignora la clave.
+                "client_features": ["secret_request_v1"],
             }),
             Duration::from_secs(10),
         );
