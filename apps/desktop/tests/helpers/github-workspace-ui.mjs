@@ -44,6 +44,8 @@ for (const scenario of ["connected-workspace", "existing-installation", "no-inst
     open_external: ({ target }) => { opens.push(target); },
   });
   const button = text => [...app.w.document.querySelectorAll("button")].find(b => b.textContent?.trim() === text || b.getAttribute("aria-label") === text);
+  // «Conectar» de GitHub está en la cabecera de su sección en Configuración; el compositor tiene otro.
+  const inSettings = text => [...(app.w.document.querySelector("#cfg-panel")?.querySelectorAll("button") ?? [])].find(b => b.textContent?.trim() === text);
   const menuItem = text => [...app.w.document.querySelectorAll('[role="menuitem"]')].find(el => el.textContent?.trim() === text);
   const action = async text => {
     assert.ok(button("Más acciones de GitHub"));
@@ -113,13 +115,13 @@ for (const scenario of ["connected-workspace", "existing-installation", "no-inst
     assert.deepEqual(opens, []);
     await action("Desconectar");
     assert.equal(connected, false);
-    assert.ok(button("Conectar"));
+    assert.ok(inSettings("Conectar"));
     assert.deepEqual(app.failures, []);
     console.log("PASS connected-workspace: resumen, edición y administración sin explorar repositorios");
     continue;
   }
-  assert.ok(button("Conectar"));
-  button("Conectar").click(); await espera(150);
+  assert.ok(inSettings("Conectar"));
+  inSettings("Conectar").click(); await espera(150);
   if (scenario === "cancel-login") {
     button("cancelar").click(); await espera(100);
     assert.equal(connected, false);
