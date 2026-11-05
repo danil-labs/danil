@@ -29,16 +29,21 @@ pub const MACHINE_PREFIX: &str = "wsl:";
 const LOCK: &str = include_str!("../../../../seldon-runtime.lock");
 const INSTALL_HOST: &str = include_str!("install-host.sh");
 const ENGINE_INSTALL: &str = include_str!("engine-install.sh");
+const PROBE: &str = include_str!("probe.sh");
 /// Lo que se espera a que el motor de la distro vuelva tras un reinicio.
 const ENGINE_WAIT: Duration = Duration::from_secs(40);
 const MAX_FRAME: usize = 16 * 1024 * 1024;
 
 // ---------------------------------------------------------------- registro
 
-/// Una distro conectada a Danil, guardada por esta ventana. No es fuente de
-/// verdad de nada más: el motor de la distro tiene sus propios datos.
+/// Un huésped conectado a Danil, guardado por esta ventana. No es fuente de
+/// verdad de nada más: el motor del huésped tiene sus propios datos.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ChildEntry {
+    /// El canal no va en `wsl-children.json`: ahí todo es WSL.
+    #[serde(skip)]
+    pub channel: ChannelKind,
+    /// El huésped en su canal: la distro de WSL o la instancia de Lima.
     pub distro: String,
     pub user: String,
     pub home: String,
@@ -50,9 +55,44 @@ pub struct ChildEntry {
 }
 
 impl ChildEntry {
-    /// `wsl-children.json` solo guarda distros de WSL.
-    pub fn channel(&self) -> ChannelKind {
-        ChannelKind::Wsl
+    /// El id de máquina: `wsl:Ubuntu`, `lima:danil`.
+    pub fn id(&self) -> String {
+        format!("{}{}", self.channel.prefix(), self.distro)
+    }
+}
+
+/// Una VM de otro canal en `guests.json`. `wsl` no entra aquí: sigue en
+/// `wsl-children.json`.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GuestEntry {
+    pub channel: String,
+    pub guest: String,
+    pub user: String,
+    pub home: String,
+    pub name: String,
+    pub added_at: u64,
+    #[serde(flatten)]
+    pub extra: serde_json::Map<String, Value>,
+}
+
+impl GuestEntry {
+    fn kind(&self) -> Option<ChannelKind> {
+        match self.channel.as_str() {
+            "lima" => Some(ChannelKind::Lima),
+            _ => None,
+        }
+    }
+
+    fn child(&self) -> Option<ChildEntry> {
+        Some(ChildEntry {
+            channel: self.kind()?,
+            distro: self.guest.clone(),
+            user: self.user.clone(),
+            home: self.home.clone(),
+            name: self.name.clone(),
+            added_at: self.added_at,
+            extra: Default::default(),
+        })
     }
 }
 
@@ -69,29 +109,75 @@ pub(super) fn load(app: &AppHandle) -> Vec<ChildEntry> {
     registry_path(app).map(|p| load_at(&p)).unwrap_or_default()
 }
 
-/// Lo que hay en `wsl-children.json`: las entradas que esta versión entiende
-/// y, aparte y sin tocar, las que no.
-#[derive(Default)]
-struct Registry {
-    entries: Vec<ChildEntry>,
+fn guests_path(app: &AppHandle) -> Result<PathBuf, Failure> {
+    registry_path(app).map(|p| p.with_file_name("guests.json"))
+}
+
+/// Todas las máquinas hijas: las de `wsl-children.json` y las de `guests.json`.
+fn load_all(app: &AppHandle) -> Vec<ChildEntry> {
+    let mut all = load(app);
+    if let Ok(path) = guests_path(app) {
+        all.extend(
+            read_registry::<GuestEntry>(&path, |g| g.kind().is_some())
+                .map(|r| r.entries)
+                .unwrap_or_default()
+                .iter()
+                .filter_map(GuestEntry::child),
+        );
+    }
+    all
+}
+
+/// Guarda en `guests.json` con las mismas reglas que `wsl-children.json`.
+fn update_guests<T>(
+    app: &AppHandle,
+    change: impl FnOnce(&mut Vec<GuestEntry>) -> T,
+) -> Result<T, Failure> {
+    let path = guests_path(app)?;
+    let mut registry = read_registry::<GuestEntry>(&path, |g| g.kind().is_some())?;
+    let out = change(&mut registry.entries);
+    write_registry(&path, registry)?;
+    Ok(out)
+}
+
+/// Lo que hay en un registro: las entradas que esta versión entiende y,
+/// aparte y sin tocar, las que no.
+struct Registry<T> {
+    entries: Vec<T>,
     unknown: Vec<Value>,
+}
+
+impl<T> Default for Registry<T> {
+    fn default() -> Self {
+        Self {
+            entries: Vec::new(),
+            unknown: Vec::new(),
+        }
+    }
 }
 
 /// Sin archivo, el registro está vacío. Un archivo que no se puede leer o no
 /// es una lista es un error: guardar encima borraría las máquinas.
-fn read_registry(path: &std::path::Path) -> Result<Registry, Failure> {
+fn read_registry<T: serde::de::DeserializeOwned>(
+    path: &std::path::Path,
+    accept: impl Fn(&T) -> bool,
+) -> Result<Registry<T>, Failure> {
+    let file = path
+        .file_name()
+        .map(|n| n.to_string_lossy().into_owned())
+        .unwrap_or_default();
     let bytes = match std::fs::read(path) {
         Ok(bytes) => bytes,
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(Registry::default()),
-        Err(e) => return Err(fail("io", format!("wsl-children.json: {e}"))),
+        Err(e) => return Err(fail("io", format!("{file}: {e}"))),
     };
-    let list: Vec<Value> = serde_json::from_slice(&bytes)
-        .map_err(|e| fail("io", format!("wsl-children.json: {e}")))?;
+    let list: Vec<Value> =
+        serde_json::from_slice(&bytes).map_err(|e| fail("io", format!("{file}: {e}")))?;
     let mut registry = Registry::default();
     for item in list {
-        match serde_json::from_value::<ChildEntry>(item.clone()) {
-            Ok(entry) => registry.entries.push(entry),
-            Err(_) => registry.unknown.push(item),
+        match serde_json::from_value::<T>(item.clone()) {
+            Ok(entry) if accept(&entry) => registry.entries.push(entry),
+            _ => registry.unknown.push(item),
         }
     }
     Ok(registry)
@@ -99,7 +185,7 @@ fn read_registry(path: &std::path::Path) -> Result<Registry, Failure> {
 
 /// Para leer: lo que no se entiende se salta y un archivo roto no muestra nada.
 fn load_at(path: &std::path::Path) -> Vec<ChildEntry> {
-    read_registry(path)
+    read_registry::<ChildEntry>(path, |_| true)
         .map(|registry| registry.entries)
         .unwrap_or_default()
 }
@@ -117,8 +203,16 @@ fn update_at<T>(
     path: &std::path::Path,
     change: impl FnOnce(&mut Vec<ChildEntry>) -> T,
 ) -> Result<T, Failure> {
-    let mut registry = read_registry(path)?;
+    let mut registry = read_registry::<ChildEntry>(path, |_| true)?;
     let out = change(&mut registry.entries);
+    write_registry(path, registry)?;
+    Ok(out)
+}
+
+fn write_registry<T: Serialize>(
+    path: &std::path::Path,
+    registry: Registry<T>,
+) -> Result<(), Failure> {
     let mut list = registry
         .entries
         .iter()
@@ -129,8 +223,7 @@ fn update_at<T>(
     let body = serde_json::to_vec_pretty(&list).map_err(|e| fail("io", e.to_string()))?;
     let tmp = path.with_extension("json.tmp");
     std::fs::write(&tmp, body).map_err(|e| fail("io", e.to_string()))?;
-    std::fs::rename(&tmp, path).map_err(|e| fail("io", e.to_string()))?;
-    Ok(out)
+    std::fs::rename(&tmp, path).map_err(|e| fail("io", e.to_string()))
 }
 
 fn entry(app: &AppHandle, distro: &str) -> Result<ChildEntry, Failure> {
@@ -164,9 +257,38 @@ fn conns() -> &'static Mutex<HashMap<String, Conn>> {
     C.get_or_init(Default::default)
 }
 
-/// Lee el descriptor y el token por `\\wsl.localhost` (medio segundo, contra
-/// varios de `wsl.exe`). El motor cambia de puerto y token al reiniciarse.
-fn read_conn(distro: &str, home: &str) -> Result<Conn, Failure> {
+/// El descriptor y el token, por el canal. El motor cambia de puerto y token
+/// al reiniciarse.
+fn read_conn(entry: &ChildEntry) -> Result<Conn, Failure> {
+    match entry.channel {
+        ChannelKind::Wsl => read_conn_unc(&entry.distro, &entry.home),
+        ChannelKind::Lima => {
+            let (bytes, token) = super::lima::read_endpoint(&entry.distro)?;
+            let d: Descriptor = serde_json::from_slice(&bytes)
+                .map_err(|_| fail("app_unavailable", "descriptor"))?;
+            Ok(Conn {
+                address: loopback(&d.address)?,
+                token,
+                runtime: d.runtime,
+                contract: d.contract,
+            })
+        }
+    }
+}
+
+/// Solo `127.0.0.1` o `::1`: un descriptor que apunte a otra parte no se usa.
+fn loopback(address: &str) -> Result<SocketAddr, Failure> {
+    let parsed: SocketAddr = address
+        .parse()
+        .map_err(|_| fail("endpoint_untrusted", address))?;
+    if !parsed.ip().is_loopback() {
+        return Err(fail("endpoint_untrusted", address));
+    }
+    Ok(parsed)
+}
+
+/// WSL: por `\\wsl.localhost` (medio segundo, contra varios de `wsl.exe`).
+fn read_conn_unc(distro: &str, home: &str) -> Result<Conn, Failure> {
     let path = unc(
         distro,
         &format!("{home}/.local/share/seldon-host/data/seldon-endpoint.json"),
@@ -193,22 +315,35 @@ fn read_conn(distro: &str, home: &str) -> Result<Conn, Failure> {
     })
 }
 
-fn connection(distro: &str, home: &str, fresh: bool) -> Result<Conn, Failure> {
+fn connection(entry: &ChildEntry, fresh: bool) -> Result<Conn, Failure> {
     if !fresh {
         if let Some(c) = conns()
             .lock()
             .unwrap_or_else(|p| p.into_inner())
-            .get(distro)
+            .get(&entry.id())
         {
             return Ok(c.clone());
         }
     }
-    let c = read_conn(distro, home)?;
+    let c = read_conn(entry)?;
     conns()
         .lock()
         .unwrap_or_else(|p| p.into_inner())
-        .insert(distro.to_string(), c.clone());
+        .insert(entry.id(), c.clone());
     Ok(c)
+}
+
+/// Lima apagada no se enciende por leer: contesta `machine_off` al instante.
+/// WSL se mantiene viva mientras la ventana la use.
+fn wake_for_call(entry: &ChildEntry) -> Result<(), Failure> {
+    match entry.channel {
+        ChannelKind::Wsl => {
+            keep_alive(&entry.distro);
+            Ok(())
+        }
+        ChannelKind::Lima if super::lima::running(&entry.distro) => Ok(()),
+        ChannelKind::Lima => Err(fail("machine_off", entry.id())),
+    }
 }
 
 enum Wire {
@@ -243,20 +378,19 @@ fn exchange(conn: &Conn, request: &Value, timeout: Duration) -> Wire {
 /// descriptor y se repite con el mismo `request_id`, que el motor no corre dos
 /// veces. `pending` se vuelve a preguntar con el mismo id, como la ventana.
 fn rpc(
-    distro: &str,
-    home: &str,
+    entry: &ChildEntry,
     command: &str,
     args: Value,
     workspace: Option<&str>,
     folder: Option<&str>,
     timeout: Duration,
 ) -> Result<Value, Failure> {
-    keep_alive(distro);
+    wake_for_call(entry)?;
     let request_id = uuid::Uuid::new_v4().to_string();
     let deadline = Instant::now() + timeout.max(ENGINE_WAIT);
     let mut fresh = false;
     loop {
-        let conn = match connection(distro, home, fresh) {
+        let conn = match connection(entry, fresh) {
             Ok(c) => c,
             Err(e) => {
                 if Instant::now() > deadline {
@@ -311,8 +445,7 @@ fn rpc(
 /// Lo que la ventana manda a una máquina: `service invoke` con el comando del
 /// manifiesto, igual que por el relay. Devuelve el `value`.
 pub fn invoke(
-    distro: &str,
-    home: &str,
+    entry: &ChildEntry,
     command: &str,
     args: Value,
     workspace: Option<&str>,
@@ -320,8 +453,7 @@ pub fn invoke(
     timeout: Duration,
 ) -> Result<Value, Failure> {
     let result = rpc(
-        distro,
-        home,
+        entry,
         "service invoke",
         json!({ "command": command, "arguments": args }),
         workspace,
@@ -363,7 +495,7 @@ pub fn sync_spaces(entry: &ChildEntry, workspace: &str, spaces: &[Value]) -> Res
         });
         let encoded = base64::engine::general_purpose::STANDARD.encode(body.to_string());
         exec_ok(
-            entry.channel(),
+            entry.channel,
             &entry.distro,
             Some(&entry.user),
             r#"set -eu
@@ -415,7 +547,7 @@ pub fn copy_folder(
     // Una carpeta con ese nombre que ya tenga algo: la copia va al lado.
     let mut free = String::new();
     exec_ok(
-        entry.channel(),
+        entry.channel,
         &entry.distro,
         Some(&entry.user),
         r#"set -eu
@@ -434,8 +566,10 @@ printf '%s
     }
     // La copia dura lo que pese la carpeta (proceso largo: a propósito): la
     // persona la ve avanzar y no hay un tope honesto para un repo grande.
-    let mut tar = Command::new("tar.exe");
+    let mut tar = Command::new(if cfg!(windows) { "tar.exe" } else { "tar" });
     crate::util::no_console_window(&mut tar);
+    // macOS: sin los `._*` de los atributos extendidos.
+    tar.env("COPYFILE_DISABLE", "1");
     let mut tar = tar
         .args([
             "-c",
@@ -454,7 +588,8 @@ printf '%s
         .spawn()
         .map_err(|e| fail("io", format!("tar: {e}")))?;
     let pipe = tar.stdout.take().ok_or_else(|| fail("io", "tar"))?;
-    let unpack = unpack(&entry.distro, &entry.user, &free)
+    let unpack = super::channel(entry.channel)
+        .unpack(&entry.distro, &entry.user, &free)?
         .stdin(Stdio::from(pipe))
         .stdout(Stdio::null())
         .stderr(Stdio::piped())
@@ -469,8 +604,7 @@ printf '%s
         return Err(fail("copy_failed", detail.trim().to_string()));
     }
     invoke(
-        &entry.distro,
-        &entry.home,
+        entry,
         "create_project",
         json!({ "name": name, "id": id, "workingDirectory": free }),
         workspace,
@@ -483,19 +617,18 @@ printf '%s
 /// Una página de eventos del motor de la distro, con la forma de las del
 /// relay. Si el motor cambió (otro `runtime`), el cursor de antes no vale: se
 /// marca `gap` para que la ventana relea.
-pub fn events(distro: &str, home: &str, cursor: Option<u64>) -> Result<Value, Failure> {
+pub fn events(entry: &ChildEntry, cursor: Option<u64>) -> Result<Value, Failure> {
     let before = conns()
         .lock()
         .unwrap_or_else(|p| p.into_inner())
-        .get(distro)
+        .get(&entry.id())
         .map(|c| c.runtime.clone());
     let args = match cursor {
         Some(c) => json!({ "cursor": c }),
         None => json!({}),
     };
     let page = rpc(
-        distro,
-        home,
+        entry,
         "service events",
         args,
         None,
@@ -505,7 +638,7 @@ pub fn events(distro: &str, home: &str, cursor: Option<u64>) -> Result<Value, Fa
     let after = conns()
         .lock()
         .unwrap_or_else(|p| p.into_inner())
-        .get(distro)
+        .get(&entry.id())
         .map(|c| c.runtime.clone());
     let restarted = before.is_some() && before != after;
     let mut page = page;
@@ -521,6 +654,7 @@ pub fn events(distro: &str, home: &str, cursor: Option<u64>) -> Result<Value, Fa
 #[derive(Debug, Clone, Serialize)]
 pub struct ChildInfo {
     pub id: String,
+    pub channel: ChannelKind,
     pub distro: String,
     pub name: String,
     pub user: String,
@@ -531,11 +665,13 @@ pub struct ChildInfo {
     pub version: Option<String>,
 }
 
-/// `disk`: leer el descriptor de la distro, lo que la enciende si estaba
-/// apagada. Sin él sólo se pregunta al puerto que ya se conocía.
+/// `disk`: leer el descriptor del huésped. En WSL eso enciende una distro
+/// apagada; una VM de Lima apagada se queda así y sale fuera de línea. Sin
+/// `disk` sólo se pregunta al puerto que ya se conocía.
 pub fn status(entry: &ChildEntry, disk: bool) -> ChildInfo {
     let mut info = ChildInfo {
-        id: format!("{MACHINE_PREFIX}{}", entry.distro),
+        id: entry.id(),
+        channel: entry.channel,
         distro: entry.distro.clone(),
         name: entry.name.clone(),
         user: entry.user.clone(),
@@ -545,13 +681,16 @@ pub fn status(entry: &ChildEntry, disk: bool) -> ChildInfo {
         contract: None,
         version: None,
     };
+    if entry.channel == ChannelKind::Lima && !super::lima::running(&entry.distro) {
+        return info;
+    }
     let known = conns()
         .lock()
         .unwrap_or_else(|p| p.into_inner())
-        .get(&entry.distro)
+        .get(&entry.id())
         .cloned();
     let conn = match (known, disk) {
-        (_, true) => match read_conn(&entry.distro, &entry.home) {
+        (_, true) => match read_conn(entry) {
             Ok(c) => c,
             Err(_) => return info,
         },
@@ -581,7 +720,7 @@ pub fn status(entry: &ChildEntry, disk: bool) -> ChildInfo {
         conns()
             .lock()
             .unwrap_or_else(|p| p.into_inner())
-            .insert(entry.distro.clone(), conn);
+            .insert(entry.id(), conn);
     }
     info
 }
@@ -589,14 +728,23 @@ pub fn status(entry: &ChildEntry, disk: bool) -> ChildInfo {
 /// Sin `disk`, una distribución que ya corre se lee igual (no se enciende nada);
 /// una apagada se queda apagada.
 pub fn children(app: &AppHandle, disk: bool) -> Vec<ChildInfo> {
-    let entries = load(app);
+    let entries = load_all(app);
     if entries.is_empty() {
         return Vec::new();
     }
-    let running = if disk { Vec::new() } else { running_distros() };
+    let wsl = entries.iter().any(|e| e.channel == ChannelKind::Wsl);
+    let running = if disk || !wsl {
+        Vec::new()
+    } else {
+        running_distros()
+    };
     entries
         .iter()
-        .map(|e| status(e, disk || running.contains(&e.distro)))
+        .map(|e| match e.channel {
+            ChannelKind::Wsl => status(e, disk || running.contains(&e.distro)),
+            // `status` ya no lee una VM apagada.
+            ChannelKind::Lima => status(e, true),
+        })
         .collect()
 }
 
@@ -628,17 +776,23 @@ struct LockPlatform {
 struct Lock {
     engine_version: String,
     commit: String,
+    #[serde(default)]
+    contract: String,
     platforms: HashMap<String, LockPlatform>,
 }
 
 /// El mismo motor que fija esta ventana, en su versión de Linux: el contrato
 /// es idéntico al del motor de Windows.
 fn linux_engine() -> Result<(String, String, String), Failure> {
+    linux_engine_for("x86_64-unknown-linux-gnu")
+}
+
+fn linux_engine_for(triple: &str) -> Result<(String, String, String), Failure> {
     let lock: Lock = serde_json::from_str(LOCK).map_err(|e| fail("invalid_lock", e.to_string()))?;
     let p = lock
         .platforms
-        .get("x86_64-unknown-linux-gnu")
-        .ok_or_else(|| fail("arch", "x86_64-unknown-linux-gnu"))?;
+        .get(triple)
+        .ok_or_else(|| fail("arch", triple))?;
     let short: String = lock.commit.chars().take(8).collect();
     Ok((
         p.url.clone(),
@@ -732,16 +886,7 @@ else echo "faltan:$need" >&2; exit 3; fi
     // `executor-releases/` con escritura de grupo y su propio preflight lo
     // rechaza (`executor_release_permissions`). Se fija la máscara del servicio.
     progress(app, target, "service", None, None);
-    let service = r#"set -e
-d="$HOME/.config/systemd/user/seldon-host.service.d"
-mkdir -p "$d"
-printf '[Service]\nUMask=0077\n' > "$d/umask.conf"
-chmod -R go-w "$HOME/.local/share/seldon-host" 2>/dev/null || true
-if systemctl --user show-environment >/dev/null 2>&1; then
-  systemctl --user daemon-reload
-  systemctl --user restart seldon-host
-fi
-"#;
+    let service = SERVICE;
     exec_ok(
         ChannelKind::Wsl,
         distro,
@@ -753,6 +898,7 @@ fi
     )?;
 
     let entry = ChildEntry {
+        channel: ChannelKind::Wsl,
         distro: distro.to_string(),
         user: who.user.clone(),
         home: who.home.clone(),
@@ -775,7 +921,7 @@ fi
         std::thread::sleep(Duration::from_secs(1));
     }
     if let Some((id, label)) = workspace {
-        ensure_workspace(distro, &who.home, id, label)?;
+        ensure_workspace(&entry, id, label)?;
     }
     update(app, |entries| {
         entries.retain(|e| e.distro != distro);
@@ -788,10 +934,9 @@ fi
 /// El workspace de la ventana, con el mismo id, en el motor de la distro. Es
 /// local (`add_workspace`): `materialize_workspace` pide cuenta de Danil y la
 /// máquina hija no la tiene a propósito.
-pub fn ensure_workspace(distro: &str, home: &str, id: &str, name: &str) -> Result<(), Failure> {
+pub fn ensure_workspace(entry: &ChildEntry, id: &str, name: &str) -> Result<(), Failure> {
     let listed = invoke(
-        distro,
-        home,
+        entry,
         "list_workspaces",
         json!({}),
         None,
@@ -804,8 +949,7 @@ pub fn ensure_workspace(distro: &str, home: &str, id: &str, name: &str) -> Resul
         .is_some_and(|ws| ws.iter().any(|w| w["id"] == id));
     if !known {
         invoke(
-            distro,
-            home,
+            entry,
             "add_workspace",
             json!({ "name": name, "id": id }),
             None,
@@ -815,8 +959,7 @@ pub fn ensure_workspace(distro: &str, home: &str, id: &str, name: &str) -> Resul
     }
     if listed["active"] != id {
         invoke(
-            distro,
-            home,
+            entry,
             "set_active_workspace",
             json!({ "id": id }),
             None,
@@ -827,21 +970,339 @@ pub fn ensure_workspace(distro: &str, home: &str, id: &str, name: &str) -> Resul
     Ok(())
 }
 
-pub fn remove(app: &AppHandle, distro: &str) -> Result<(), Failure> {
-    update(app, |entries| entries.retain(|e| e.distro != distro))?;
-    let_sleep(distro);
+pub fn remove(app: &AppHandle, entry: &ChildEntry) -> Result<(), Failure> {
+    let distro = entry.distro.as_str();
+    match entry.channel {
+        ChannelKind::Wsl => {
+            update(app, |entries| entries.retain(|e| e.distro != distro))?;
+            let_sleep(distro);
+        }
+        ChannelKind::Lima => {
+            update_guests(app, |entries| {
+                entries.retain(|e| !(e.kind() == Some(ChannelKind::Lima) && e.guest == distro))
+            })?;
+        }
+    }
     conns()
         .lock()
         .unwrap_or_else(|p| p.into_inner())
-        .remove(distro);
+        .remove(&entry.id());
     Ok(())
 }
 
 // ---------------------------------------------------------------- comandos
 
 pub fn lookup(app: &AppHandle, machine: &str) -> Result<ChildEntry, Failure> {
-    let distro = machine.strip_prefix(MACHINE_PREFIX).unwrap_or(machine);
-    entry(app, distro)
+    match ChannelKind::of_machine(machine) {
+        Some((ChannelKind::Lima, guest)) => load_all(app)
+            .into_iter()
+            .find(|e| e.channel == ChannelKind::Lima && e.distro == guest)
+            .ok_or_else(|| fail("unknown_machine", machine)),
+        Some((ChannelKind::Wsl, distro)) => entry(app, distro),
+        None => entry(app, machine),
+    }
+}
+
+// ---------------------------------------------------------------- Lima
+
+/// Lo que `probe.sh` dice del huésped.
+#[derive(Debug, Default, PartialEq)]
+struct Probe {
+    arch: String,
+    user: String,
+    home: String,
+    systemd: String,
+    missing: Vec<String>,
+    sudo: bool,
+    engine: bool,
+    /// `machines status`: 0 conectado a una cuenta, 3 sin cuenta.
+    enrolled_rc: Option<i32>,
+    contract: Option<String>,
+    mounts: u32,
+}
+
+fn parse_probe(lines: &[String]) -> Probe {
+    let mut probe = Probe::default();
+    for line in lines {
+        let Some((key, value)) = line.split_once('=') else {
+            continue;
+        };
+        let value = value.trim();
+        match key {
+            "arch" => probe.arch = value.to_string(),
+            "user" => probe.user = value.to_string(),
+            "home" => probe.home = value.to_string(),
+            "systemd" => probe.systemd = value.to_string(),
+            "missing" => probe.missing = value.split_whitespace().map(String::from).collect(),
+            "sudo" => probe.sudo = value == "yes",
+            "engine" => probe.engine = value == "yes",
+            "enrolled_rc" => probe.enrolled_rc = value.parse().ok(),
+            "contract" if !value.is_empty() => probe.contract = Some(value.to_string()),
+            "mounts" => probe.mounts = value.parse().unwrap_or(0),
+            _ => {}
+        }
+    }
+    probe
+}
+
+/// El motor de Linux del lock para lo que dice `uname -m`.
+fn triple_for(arch: &str) -> Option<&'static str> {
+    match arch {
+        "x86_64" | "amd64" => Some("x86_64-unknown-linux-gnu"),
+        "aarch64" | "arm64" => Some("aarch64-unknown-linux-gnu"),
+        _ => None,
+    }
+}
+
+/// Qué hacer con un motor que ya está en el huésped.
+#[derive(Debug, PartialEq)]
+enum Found {
+    /// Sin motor, o con otro contrato y sin cuenta: se instala el del lock.
+    Install,
+    /// El motor del lock, sin cuenta: se conecta sin reinstalar.
+    Already,
+    /// Inscrito en una cuenta (o sin saberlo): no se toca.
+    Enrolled,
+}
+
+fn found(probe: &Probe, lock_contract: &str) -> Found {
+    if !probe.engine {
+        return Found::Install;
+    }
+    if probe.enrolled_rc != Some(3) {
+        return Found::Enrolled;
+    }
+    if !lock_contract.is_empty() && probe.contract.as_deref() == Some(lock_contract) {
+        Found::Already
+    } else {
+        Found::Install
+    }
+}
+
+/// En Ubuntu el servicio de usuario hereda `UMask=0002`: se fija con un drop-in
+/// también para motores instalados antes de que `install.sh` lo escriba.
+const SERVICE: &str = r#"set -e
+d="$HOME/.config/systemd/user/seldon-host.service.d"
+mkdir -p "$d"
+printf '[Service]\nUMask=0077\n' > "$d/umask.conf"
+chmod -R go-w "$HOME/.local/share/seldon-host" 2>/dev/null || true
+if systemctl --user show-environment >/dev/null 2>&1; then
+  systemctl --user daemon-reload
+  systemctl --user restart seldon-host
+fi
+"#;
+
+/// Lo que pide el motor y no viene en la imagen, como root.
+const DEPS: &str = r#"set -e
+need=''
+for t in curl tar cmp; do command -v "$t" >/dev/null 2>&1 || need="$need $t"; done
+ldconfig -p 2>/dev/null | grep -q 'libdbus-1.so.3' || need="$need libdbus"
+[ -z "$need" ] && exit 0
+if command -v apt-get >/dev/null; then
+  export DEBIAN_FRONTEND=noninteractive
+  apt-get -o DPkg::Lock::Timeout=300 update -qq && apt-get -o DPkg::Lock::Timeout=300 install -y -qq curl tar diffutils libdbus-1-3 ca-certificates
+elif command -v dnf >/dev/null; then dnf install -y curl tar diffutils dbus-libs
+else echo "faltan:$need" >&2; exit 3; fi
+"#;
+
+/// El comando que la persona copia si el huésped no tiene `sudo` sin contraseña.
+const DEPS_BY_HAND: &str = "sudo apt-get install -y curl tar diffutils libdbus-1-3 ca-certificates";
+
+/// Conecta una VM de Lima: sondeo, dependencias, motor y servicio. Un motor
+/// inscrito en una cuenta no se toca; el del lock sin cuenta se usa tal cual.
+pub fn install_lima(
+    app: &AppHandle,
+    guest: &str,
+    name: &str,
+    workspace: Option<(&str, &str)>,
+) -> Result<ChildInfo, Failure> {
+    if !valid_distro(guest) {
+        return Err(fail("invalid_distro", guest));
+    }
+    let lima = ChannelKind::Lima;
+    progress(app, guest, "check", None, None);
+    if !super::lima::running(guest) {
+        return Err(fail("machine_off", guest));
+    }
+    let mut lines = Vec::new();
+    exec_ok(
+        lima,
+        guest,
+        None,
+        PROBE,
+        &[],
+        Duration::from_secs(60),
+        |l| lines.push(l.to_string()),
+    )?;
+    let probe = parse_probe(&lines);
+    with_job(|job| job.mounts = Some(probe.mounts));
+    emit_job(true);
+    if probe.user.is_empty() || probe.home.is_empty() {
+        return Err(fail("lima_failed", "probe"));
+    }
+    if !matches!(probe.systemd.as_str(), "running" | "degraded") {
+        return Err(fail("no_systemd", probe.systemd.clone()));
+    }
+    let lock: Lock = serde_json::from_str(LOCK).map_err(|e| fail("invalid_lock", e.to_string()))?;
+    match found(&probe, &lock.contract) {
+        Found::Enrolled => {
+            return Err(fail(
+                "enrolled",
+                format!("machines status: {:?}", probe.enrolled_rc),
+            ))
+        }
+        Found::Already => progress(app, guest, "already", None, None),
+        Found::Install => {
+            let triple = triple_for(&probe.arch).ok_or_else(|| fail("arch", probe.arch.clone()))?;
+            let (url, sha, version) = linux_engine_for(triple)?;
+            if !probe.missing.is_empty() {
+                progress(app, guest, "deps", None, None);
+                if !probe.sudo {
+                    return Err(fail("sudo_required", DEPS_BY_HAND));
+                }
+                exec_ok(
+                    lima,
+                    guest,
+                    Some("root"),
+                    DEPS,
+                    &[],
+                    Duration::from_secs(900),
+                    |l| progress_line(app, guest, "deps", l),
+                )?;
+            }
+            install_engine_script(app, lima, guest, None, &url, &sha, &version)?;
+        }
+    }
+    let entry = ChildEntry {
+        channel: lima,
+        distro: guest.to_string(),
+        user: probe.user.clone(),
+        home: probe.home.clone(),
+        name: name.to_string(),
+        added_at: now_ms(),
+        extra: Default::default(),
+    };
+    progress(app, guest, "connect", None, None);
+    let deadline = Instant::now() + Duration::from_secs(90);
+    while !status(&entry, true).online {
+        if Instant::now() > deadline {
+            return Err(fail("app_unavailable", "engine"));
+        }
+        std::thread::sleep(Duration::from_secs(1));
+    }
+    if let Some((id, label)) = workspace {
+        ensure_workspace(&entry, id, label)?;
+    }
+    update_guests(app, |entries| {
+        entries.retain(|e| !(e.kind() == Some(lima) && e.guest == guest));
+        entries.push(GuestEntry {
+            channel: lima.as_str().to_string(),
+            guest: guest.to_string(),
+            user: entry.user.clone(),
+            home: entry.home.clone(),
+            name: entry.name.clone(),
+            added_at: entry.added_at,
+            extra: Default::default(),
+        });
+    })?;
+    progress(app, guest, "done", None, None);
+    Ok(status(&entry, false))
+}
+
+/// El motor del lock con `install.sh --no-connect` y la máscara del servicio.
+fn install_engine_script(
+    app: &AppHandle,
+    channel: ChannelKind,
+    guest: &str,
+    user: Option<&str>,
+    url: &str,
+    sha: &str,
+    version: &str,
+) -> Result<(), Failure> {
+    let body = format!(
+        "set -eu\nd=$(mktemp -d)\ncat > \"$d/install.sh\" <<'DANIL_INSTALL_HOST_EOF'\n{INSTALL_HOST}\nDANIL_INSTALL_HOST_EOF\ncat > \"$d/engine.sh\" <<'DANIL_ENGINE_EOF'\n{ENGINE_INSTALL}\nDANIL_ENGINE_EOF\nrc=0\nsh \"$d/engine.sh\" \"$1\" \"$2\" \"$3\" \"$d/install.sh\" || rc=$?\nrm -rf \"$d\"\nexit $rc\n"
+    );
+    let mut step = "engine_download".to_string();
+    progress(app, guest, "engine_download", None, None);
+    exec_ok(
+        channel,
+        guest,
+        user,
+        &body,
+        &[url, sha, version],
+        Duration::from_secs(1200),
+        |l| {
+            if let Some(next) = l.strip_prefix("PASO ") {
+                step = match next.trim() {
+                    "descargar" => "engine_download",
+                    "verificar" => "engine_verify",
+                    _ => "engine",
+                }
+                .to_string();
+                progress(app, guest, &step, None, None);
+            } else if !l.starts_with('#') && !l.contains('%') {
+                progress_line(app, guest, &step, l);
+            }
+        },
+    )?;
+    progress(app, guest, "service", None, None);
+    exec_ok(
+        channel,
+        guest,
+        user,
+        SERVICE,
+        &[],
+        Duration::from_secs(120),
+        |_| {},
+    )
+}
+
+/// Crea una VM de Lima sin montajes y la conecta.
+pub fn start_lima_create(
+    app: &AppHandle,
+    name: &str,
+    workspace: Option<(String, String)>,
+) -> Result<Job, Job> {
+    let guest = name.to_string();
+    start_in(
+        ChannelKind::Lima,
+        app,
+        "create",
+        name,
+        name,
+        None,
+        move |app| {
+            if !valid_distro(&guest) {
+                return Err(fail("invalid_distro", guest.as_str()));
+            }
+            progress(app, &guest, "create", None, None);
+            super::lima::create(&guest, &mut |l| job_line(l))?;
+            let ws = workspace.as_ref().map(|(i, n)| (i.as_str(), n.as_str()));
+            install_lima(app, &guest, &guest, ws).map(|_| ())
+        },
+    )
+}
+
+/// Conecta una VM de Lima que ya existe.
+pub fn start_lima_connect(
+    app: &AppHandle,
+    guest: &str,
+    name: &str,
+    workspace: Option<(String, String)>,
+) -> Result<Job, Job> {
+    let (g, n) = (guest.to_string(), name.to_string());
+    start_in(
+        ChannelKind::Lima,
+        app,
+        "connect",
+        guest,
+        name,
+        None,
+        move |app| {
+            let ws = workspace.as_ref().map(|(i, n)| (i.as_str(), n.as_str()));
+            install_lima(app, &g, &n, ws).map(|_| ())
+        },
+    )
 }
 
 // ---------------------------------------------------------------- estado y trabajos
@@ -878,6 +1339,9 @@ pub struct Job {
     pub error: Option<JobError>,
     pub finished: bool,
     pub started_at: u64,
+    /// Lima: cuántas carpetas del anfitrión ve la VM (sondeo antes de instalar).
+    #[serde(default)]
+    pub mounts: Option<u32>,
 }
 
 fn wsl_channel() -> String {
@@ -924,14 +1388,14 @@ pub(super) fn write_saved(app: &AppHandle, saved: &Saved) {
     }
 }
 
-pub(super) struct Current {
-    pub(super) job: Option<Job>,
+struct Current {
+    job: Option<Job>,
     running: bool,
-    pub(super) app: Option<AppHandle>,
+    app: Option<AppHandle>,
     last_emit: Option<Instant>,
 }
 
-pub(super) fn current() -> &'static Mutex<Current> {
+fn current() -> &'static Mutex<Current> {
     static C: OnceLock<Mutex<Current>> = OnceLock::new();
     C.get_or_init(|| {
         Mutex::new(Current {
@@ -1066,9 +1530,21 @@ pub(super) fn start(
     user: Option<&str>,
     work: impl FnOnce(&AppHandle) -> Result<(), Failure> + Send + 'static,
 ) -> Result<Job, Job> {
+    start_in(ChannelKind::Wsl, app, kind, target, label, user, work)
+}
+
+fn start_in(
+    channel: ChannelKind,
+    app: &AppHandle,
+    kind: &str,
+    target: &str,
+    label: &str,
+    user: Option<&str>,
+    work: impl FnOnce(&AppHandle) -> Result<(), Failure> + Send + 'static,
+) -> Result<Job, Job> {
     let job = Job {
         id: uuid::Uuid::new_v4().to_string(),
-        channel: wsl_channel(),
+        channel: channel.as_str().to_string(),
         kind: kind.to_string(),
         target: target.to_string(),
         label: label.to_string(),
@@ -1077,6 +1553,8 @@ pub(super) fn start(
             "permission".into()
         } else if kind == "install" {
             "download".into()
+        } else if kind == "create" {
+            "create".into()
         } else {
             "check".into()
         },
@@ -1088,6 +1566,7 @@ pub(super) fn start(
         error: None,
         finished: false,
         started_at: now_ms(),
+        mounts: None,
     };
     {
         let mut c = current().lock().unwrap_or_else(|p| p.into_inner());
@@ -1142,6 +1621,37 @@ pub fn start_connect(
             install_engine(app, &d, user.as_deref(), password.as_deref(), &l, ws).map(|_| ())
         },
     )
+}
+
+/// El trabajo en curso o el último. Uno guardado que nadie corre es de una
+/// ventana que se cerró a la mitad: se da por interrumpido.
+pub fn job(app: &AppHandle) -> Option<Job> {
+    let saved = read_saved(app);
+    {
+        let mut c = current().lock().unwrap_or_else(|p| p.into_inner());
+        c.app.get_or_insert_with(|| app.clone());
+        if c.job.is_none() {
+            if let Some(mut job) = saved.job.clone() {
+                if !job.finished {
+                    job.finished = true;
+                    if job.kind != "enable" {
+                        job.error = Some(JobError {
+                            code: "interrupted".into(),
+                            detail: String::new(),
+                        });
+                    } else {
+                        job.step = "done".into();
+                    }
+                }
+                c.job = Some(job);
+            }
+        }
+    }
+    current()
+        .lock()
+        .unwrap_or_else(|p| p.into_inner())
+        .job
+        .clone()
 }
 
 pub fn forget_resume(app: &AppHandle) {
@@ -1221,6 +1731,84 @@ mod tests {
         assert_eq!(load_at(&path).len(), 1);
     }
 
+    fn probe(text: &str) -> Probe {
+        parse_probe(&text.lines().map(String::from).collect::<Vec<_>>())
+    }
+
+    /// Lo que `probe.sh` contestó en una VM de Lima con el motor del lock.
+    const MEASURED: &str = "arch=aarch64\nuser=mau\nhome=/home/mau.guest\nsystemd=running\nmissing=\nsudo=yes\nengine=yes\nenrolled_rc=3\ncontract=46798e8630db16622e62b79747cde5b02073681ca602d92adc6fdae559d802e5\nmounts=0\n";
+
+    #[test]
+    fn reads_the_probe() {
+        let p = probe(MEASURED);
+        assert_eq!(p.arch, "aarch64");
+        assert_eq!(p.home, "/home/mau.guest");
+        assert!(p.missing.is_empty() && p.sudo && p.engine);
+        assert_eq!(p.enrolled_rc, Some(3));
+        assert_eq!(p.mounts, 0);
+        let q = probe("missing= curl libdbus\nsudo=no\nengine=no\nmounts=2\n");
+        assert_eq!(q.missing, vec!["curl", "libdbus"]);
+        assert!(!q.sudo && !q.engine);
+        assert_eq!(q.mounts, 2);
+    }
+
+    #[test]
+    fn an_engine_with_the_lock_contract_and_no_account_is_used_as_is() {
+        let lock: Lock = serde_json::from_str(LOCK).expect("lock");
+        assert_eq!(found(&probe(MEASURED), &lock.contract), Found::Already);
+        let other = MEASURED.replace("contract=4679", "contract=0000");
+        assert_eq!(found(&probe(&other), &lock.contract), Found::Install);
+        assert_eq!(found(&probe("engine=no\n"), &lock.contract), Found::Install);
+    }
+
+    #[test]
+    fn an_enrolled_or_unknown_engine_is_never_touched() {
+        let lock: Lock = serde_json::from_str(LOCK).expect("lock");
+        let enrolled = MEASURED.replace("enrolled_rc=3", "enrolled_rc=0");
+        assert_eq!(found(&probe(&enrolled), &lock.contract), Found::Enrolled);
+        let unknown = MEASURED.replace("enrolled_rc=3", "enrolled_rc=2");
+        assert_eq!(found(&probe(&unknown), &lock.contract), Found::Enrolled);
+    }
+
+    #[test]
+    fn the_engine_follows_the_guest_architecture() {
+        assert_eq!(triple_for("x86_64"), Some("x86_64-unknown-linux-gnu"));
+        assert_eq!(triple_for("aarch64"), Some("aarch64-unknown-linux-gnu"));
+        assert_eq!(triple_for("riscv64"), None);
+        assert!(linux_engine_for("x86_64-unknown-linux-gnu").is_ok());
+    }
+
+    #[test]
+    fn guests_json_keeps_wsl_and_unknown_entries_aside() {
+        let dir = tempfile::tempdir().expect("tmp");
+        let path = dir.path().join("guests.json");
+        let lima = json!({ "channel": "lima", "guest": "danil", "user": "mau", "home": "/home/mau", "name": "danil", "added_at": 1 });
+        let wsl = json!({ "channel": "wsl", "guest": "Ubuntu", "user": "mau", "home": "/home/mau", "name": "Ubuntu", "added_at": 1 });
+        let later = json!({ "channel": "orbstack", "guest": "x", "user": "u", "home": "/h", "name": "x", "added_at": 1 });
+        std::fs::write(
+            &path,
+            serde_json::to_vec(&json!([lima, wsl, later])).expect("json"),
+        )
+        .expect("write");
+        let registry = read_registry::<GuestEntry>(&path, |g| g.kind().is_some()).expect("read");
+        assert_eq!(registry.entries.len(), 1);
+        assert_eq!(
+            registry.entries[0].child().expect("child").id(),
+            "lima:danil"
+        );
+        write_registry(
+            &path,
+            Registry {
+                entries: Vec::<GuestEntry>::new(),
+                unknown: registry.unknown,
+            },
+        )
+        .expect("write");
+        let after = saved(&path);
+        assert!(after.as_array().expect("array").contains(&wsl), "{after}");
+        assert!(after.as_array().expect("array").contains(&later), "{after}");
+    }
+
     #[test]
     fn the_linux_engine_comes_from_the_lock() {
         let (url, sha, version) = linux_engine().expect("lock");
@@ -1228,4 +1816,153 @@ mod tests {
         assert_eq!(sha.len(), 64);
         assert!(version.contains('-'));
     }
+}
+
+/// Contra una VM de Lima real con el motor del lock y sin cuenta:
+/// `DANIL_LIMA_VM=danil-test cargo test lima_real -- --ignored --nocapture --test-threads=1`.
+#[cfg(all(test, target_os = "macos"))]
+mod lima_real {
+    use super::*;
+
+    fn vm() -> ChildEntry {
+        let guest = std::env::var("DANIL_LIMA_VM").unwrap_or_else(|_| "danil-test".into());
+        let mut lines = Vec::new();
+        exec_ok(
+            ChannelKind::Lima,
+            &guest,
+            None,
+            PROBE,
+            &[],
+            Duration::from_secs(60),
+            |l| lines.push(l.to_string()),
+        )
+        .expect("probe");
+        let probe = parse_probe(&lines);
+        let lock: Lock = serde_json::from_str(LOCK).expect("lock");
+        assert_eq!(found(&probe, &lock.contract), Found::Already, "{probe:?}");
+        ChildEntry {
+            channel: ChannelKind::Lima,
+            distro: guest,
+            user: probe.user,
+            home: probe.home,
+            name: "prueba".into(),
+            added_at: 0,
+            extra: Default::default(),
+        }
+    }
+
+    fn limactl(args: &[&str]) {
+        let status = Command::new(super::super::lima::limactl().expect("limactl"))
+            .args(args)
+            .stdin(Stdio::null())
+            .status()
+            .expect("limactl");
+        assert!(status.success(), "limactl {args:?}");
+    }
+
+    #[test]
+    #[ignore = "necesita una VM de Lima con el motor del lock"]
+    fn connects_survives_a_restart_and_does_not_start_when_off() {
+        let entry = vm();
+        let info = status(&entry, true);
+        println!("estado: online={} version={:?}", info.online, info.version);
+        assert!(info.online);
+        let first = conns().lock().unwrap().get(&entry.id()).map(|c| c.address);
+        let listed = invoke(
+            &entry,
+            "list_workspaces",
+            json!({}),
+            None,
+            None,
+            Duration::from_secs(30),
+        )
+        .expect("list_workspaces");
+        println!(
+            "workspaces: {}",
+            listed["workspaces"].as_array().map_or(0, |w| w.len())
+        );
+
+        // Puerto y token nuevos: la orden siguiente relee por el canal.
+        limactl(&[
+            "shell",
+            "--workdir",
+            "/",
+            &entry.distro,
+            "systemctl",
+            "--user",
+            "restart",
+            "seldon-host",
+        ]);
+        let again = invoke(
+            &entry,
+            "list_workspaces",
+            json!({}),
+            None,
+            None,
+            Duration::from_secs(30),
+        );
+        assert!(again.is_ok(), "{again:?}");
+        let second = conns().lock().unwrap().get(&entry.id()).map(|c| c.address);
+        println!("puerto antes {first:?}, después {second:?}");
+
+        limactl(&["stop", &entry.distro]);
+        std::thread::sleep(LIST_SETTLE);
+        let started = Instant::now();
+        let off = invoke(
+            &entry,
+            "list_workspaces",
+            json!({}),
+            None,
+            None,
+            Duration::from_secs(30),
+        );
+        let took = started.elapsed();
+        println!("apagada: {off:?} en {took:?}");
+        assert_eq!(off.expect_err("machine_off")["code"], "machine_off");
+        assert!(took < Duration::from_secs(2), "{took:?}");
+        assert!(!status(&entry, true).online);
+
+        super::super::channel(ChannelKind::Lima)
+            .start(&entry.distro)
+            .expect("start");
+        let deadline = Instant::now() + Duration::from_secs(90);
+        while !status(&entry, true).online {
+            assert!(Instant::now() < deadline, "no volvió en línea");
+            std::thread::sleep(Duration::from_secs(1));
+        }
+        println!("encendida y en línea");
+    }
+
+    /// Una VM nueva sin motor se detiene en `arch` mientras el lock no traiga
+    /// el motor de arm64. Crea `DANIL_LIMA_NEW` (por omisión `danil-qa`) y la borra.
+    #[test]
+    #[ignore = "crea y borra una VM de Lima"]
+    fn a_new_vm_stops_at_arch() {
+        let name = std::env::var("DANIL_LIMA_NEW").unwrap_or_else(|_| "danil-qa".into());
+        super::super::lima::create(&name, &mut |l| println!("{l}")).expect("create");
+        let mut lines = Vec::new();
+        let probed = exec_ok(
+            ChannelKind::Lima,
+            &name,
+            None,
+            PROBE,
+            &[],
+            Duration::from_secs(60),
+            |l| lines.push(l.to_string()),
+        );
+        limactl(&["delete", "-f", &name]);
+        probed.expect("probe");
+        let probe = parse_probe(&lines);
+        println!("{probe:?}");
+        let lock: Lock = serde_json::from_str(LOCK).expect("lock");
+        assert_eq!(found(&probe, &lock.contract), Found::Install);
+        assert_eq!(probe.mounts, 0, "la VM de Danil no ve carpetas de la Mac");
+        let engine = triple_for(&probe.arch)
+            .ok_or_else(|| fail("arch", probe.arch.clone()))
+            .and_then(linux_engine_for);
+        assert_eq!(engine.expect_err("arch")["code"], "arch");
+    }
+
+    /// Lo que tarda la lista compartida en dejar de valer.
+    const LIST_SETTLE: Duration = Duration::from_secs(4);
 }

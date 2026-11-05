@@ -1,10 +1,13 @@
 #!/bin/sh
-# Instala el motor de Linux de Danil en esta distro, sin conectarlo a la nube.
+# Instala el motor de Linux de Danil en este huésped, sin conectarlo a la nube.
 # Uso: engine-install.sh <url del binario> <sha256> <versión> <install.sh>
 set -eu
 url=$1 sha=$2 ver=$3 installer=$4
-t=x86_64-unknown-linux-gnu
-case "$(uname -m)" in x86_64|amd64) ;; *) echo "✗ Arquitectura $(uname -m) sin motor publicado" >&2; exit 2;; esac
+case "$(uname -m)" in
+  x86_64|amd64) t=x86_64-unknown-linux-gnu ;;
+  aarch64|arm64) t=aarch64-unknown-linux-gnu ;;
+  *) echo "✗ Arquitectura $(uname -m) sin motor publicado" >&2; exit 2;;
+esac
 w=$(mktemp -d); trap 'rm -rf "$w"' EXIT
 mkdir -p "$w/pkg/seldon-host-$t" "$w/dist"
 echo "PASO descargar"

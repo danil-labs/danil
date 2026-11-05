@@ -463,7 +463,7 @@ function Installer(props: { installed: string[]; onCancel: () => void; onStarted
 const DISTRO_STEPS = ["download", "verify", "register", "user"] as const;
 const ENGINE_STEPS = ["check", "deps", "engine_download", "engine_verify", "engine", "service", "connect"] as const;
 
-function StepList(props: { steps: readonly string[]; current: string; done: boolean }) {
+export function StepList(props: { steps: readonly string[]; current: string; done: boolean; labels?: string }) {
   const index = () => props.steps.indexOf(props.current);
   return (
     <ol class="m-0 grid list-none gap-1 p-0">
@@ -478,7 +478,7 @@ function StepList(props: { steps: readonly string[]; current: string; done: bool
                   <Match when={state() === "now"}><Spinner size={12} /></Match>
                 </Switch>
               </span>
-              <span class={state() === "todo" ? "text-neutral-500" : "text-neutral-950"}>{t(`danil.wsl.step.${step}`)}</span>
+              <span class={state() === "todo" ? "text-neutral-500" : "text-neutral-950"}>{t(`${props.labels ?? "danil.wsl.step"}.${step}`)}</span>
             </li>
           );
         }}
@@ -540,7 +540,7 @@ function JobProgress(props: { job: WslJob }) {
   );
 }
 
-function Technical(props: { text: string }) {
+export function Technical(props: { text: string }) {
   return (
     <details class="text-xs text-neutral-500">
       <summary class="cursor-pointer">{t("danil.wsl.technical")}</summary>
@@ -622,7 +622,7 @@ function Distro(props: { row: WslDistroRow; busy: boolean; onStarted: (j: WslJob
         </div>
       }
     >
-      {(child) => <DistroBox row={props.row} child={child()} onRemoved={props.onChanged} />}
+      {(child) => <DistroBox name={props.row.name} child={child()} onRemoved={props.onChanged} />}
     </Show>
   );
 }
@@ -630,7 +630,8 @@ function Distro(props: { row: WslDistroRow; busy: boolean; onStarted: (j: WslJob
 type Surface = { id: string; provider: string; label: string; catalogo: string; usable: boolean; marca?: string | null; porque?: { clave?: string } | null };
 type Login = { provider: string; id: string; url: string | null; confirm: string | null; wantsCode: boolean };
 
-function DistroBox(props: { row: WslDistroRow; child: WslChild; onRemoved: () => void }) {
+/** Un huésped conectado (WSL o Lima): Linux, Danil y sus proveedores de IA. */
+export function DistroBox(props: { name: string; child: WslChild; onRemoved: () => void }) {
   const machine = props.child.id;
   const call = <T,>(command: string, args: Record<string, unknown> = {}, timeoutMs?: number) =>
     invoke<T>("guest_call", { machine, command, args, workspace: null, folder: null, timeoutMs: timeoutMs ?? null });
@@ -714,7 +715,7 @@ function DistroBox(props: { row: WslDistroRow; child: WslChild; onRemoved: () =>
   }
 
   return (
-    <div class="grid gap-3 rounded-sm border border-border p-3" data-wsl-box={props.row.name}>
+    <div class="grid gap-3 rounded-sm border border-border p-3" data-wsl-box={props.name}>
       <div class="flex flex-wrap items-center gap-2">
         <SignalDot tone={props.child.online ? "success" : "off"} />
         <span class="min-w-0 flex-1 truncate text-ui font-[560] text-neutral-950">{props.child.name}</span>
@@ -799,7 +800,7 @@ function DistroBox(props: { row: WslDistroRow; child: WslChild; onRemoved: () =>
 
 /** Las distribuciones conectadas, como una máquina más en «Máquinas de este workspace». Solo existen en esta PC. */
 export function WslMachineRows() {
-  if (!capabilities().wsl) return null;
+  if (!capabilities().wsl && !capabilities().lima) return null;
   const [rows, setRows] = createSignal<WslChild[]>([]);
   const read = () => {
     void invoke<WslChild[]>("guest_children", { fresh: false }).then(setRows).catch(() => setRows([]));
@@ -814,7 +815,7 @@ export function WslMachineRows() {
           data-account-computer={c.id}
           data-wsl-machine=""
           label={<span class="truncate">{c.name}</span>}
-          description={c.online ? t("danil.wsl.row.online") : t("danil.wsl.row.off")}
+          description={c.channel === "lima" ? (c.online ? t("danil.lima.row.online") : t("danil.lima.row.off")) : c.online ? t("danil.wsl.row.online") : t("danil.wsl.row.off")}
         />
       )}
     </For>

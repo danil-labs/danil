@@ -452,6 +452,15 @@ impl super::Channel for Wsl {
         command.args(["--exec", "sh", "-s", "--"]).args(args);
         super::run::stream(super::ChannelKind::Wsl, command, stdin, deadline, on_line)
     }
+
+    fn unpack(
+        &self,
+        guest: &str,
+        user: &str,
+        dest: &str,
+    ) -> Result<std::process::Command, super::Failure> {
+        Ok(super::wsl_setup::unpack(guest, user, dest))
+    }
 }
 
 #[cfg(test)]
