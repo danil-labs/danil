@@ -120,6 +120,9 @@ type Borrador = { data: Record<string, string>; token: string };
 
 const SIN_BORRADOR: Borrador = { data: {}, token: "" };
 
+const ORDER = ["github", "gitlab", "bitbucket"];
+const rankOf = (id: string) => (ORDER.includes(id) ? ORDER.indexOf(id) : ORDER.length);
+
 /**
  * `solo` limita el catálogo a uno o varios proveedores. Configuración los
  * compone por sección sin volver a hacer de cada uno un destino del riel.
@@ -143,7 +146,7 @@ function WorkspaceProviders(props: { solo?: string | string[] }) {
   const scope = startup.then((s) => s.active ?? "pending");
   const [scopeId, setScopeId] = createSignal<string | null>(null);
   void scope.then((id) => setScopeId(id === "pending" ? null : id), () => {});
-  const [githubAccount, setGithubAccount] = createSignal<GithubAccountState>({ mode: "unknown", connected: false, reauthorize: false });
+  const [githubAccount, setGithubAccount] = createSignal<GithubAccountState>({ mode: "unknown", connected: false, reauthorize: false, session: null });
   /** La tarjeta local se ve sin sesión de Danil, con un motor sin GitHub de la cuenta o mientras la local manda. */
   const githubLocal = (id: string) => id !== "github" || githubAccount().mode === "local";
   let disposed = false;
@@ -531,7 +534,8 @@ function WorkspaceProviders(props: { solo?: string | string[] }) {
         ? props.solo
         : [props.solo]
       : null;
-    return solo ? l.filter((p) => solo.includes(p.id)) : l;
+    const shown = solo ? l.filter((p) => solo.includes(p.id)) : l;
+    return [...shown].sort((a, b) => rankOf(a.id) - rankOf(b.id));
   };
 
   return (
@@ -629,9 +633,23 @@ function WorkspaceProviders(props: { solo?: string | string[] }) {
                     )}
                   </Show>
                   <Show when={githubLocal(p.id) && p.id === "github" && p.source === "legacy" && p.browser_login && !esperaAqui()}>
-                    <SettingsRow label={t("providers.github.legacy.title")}>
+                    <SettingsRow label={
+                      <span class="inline-flex items-center gap-2 text-warning-strong">
+                        <Badge tone="warning">{t("providers.github.legacy.badge")}</Badge>
+                        {t("providers.github.legacy.title")}
+                      </span>
+                    }>
                       <Button size="sm" type="button" disabled={estado() !== null} onClick={() => void conectarEnNavegador(p)}>
                         {t("providers.github.connect")}
+                      </Button>
+                    </SettingsRow>
+                  </Show>
+                  {/* La App Danil sin sesión: al iniciar sesión la conexión sube a la cuenta. */}
+                  <Show when={githubLocal(p.id) && p.id === "github" && p.source === "device" && p.connected && githubAccount().session === false}>
+                    <SettingsRow label={<span class="text-warning-strong">{t("providers.github.device.only_here")}</span>}>
+                      <Button variant="secondary" size="sm" type="button"
+                        onClick={() => window.dispatchEvent(new CustomEvent("harness:open-settings", { detail: "cuenta-danil" }))}>
+                        {t("providers.github.device.sign_in")}
                       </Button>
                     </SettingsRow>
                   </Show>

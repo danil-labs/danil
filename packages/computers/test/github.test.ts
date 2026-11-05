@@ -91,11 +91,18 @@ test("instalaciones, áreas y desconectar van a sus rutas", async () => {
   const list = await githubInstallations(
     source(200, {
       installations: [
-        { key: "danil-labs", installation_id: 7, account: { login: "danil-labs", type: "Organization", avatar: null }, repository_selection: "all" },
-        { key: "nosoypoot", installation_id: 8, account: {}, repository_selection: "selected" },
+        {
+          key: "danil-labs",
+          installation_id: 7,
+          account: { login: "danil-labs", type: "Organization", avatar: null },
+          repository_selection: "all",
+          html_url: "https://github.com/organizations/danil-labs/settings/installations/7",
+        },
+        { key: "nosoypoot", installation_id: 8, account: {}, repository_selection: "selected", repository_count: 3 },
         { nope: true },
       ],
       install_url: "https://github.com/apps/terminus-app/installations/new",
+      install_pending: true,
     }, seen),
     "w",
   );
@@ -106,7 +113,15 @@ test("instalaciones, áreas y desconectar van a sus rutas", async () => {
       ["danil-labs", 7, "danil-labs", "all"],
       ["nosoypoot", 8, "nosoypoot", "selected"],
     ]);
+    assert.deepEqual(list.value.installations.map((i) => [i.html_url, i.repository_count]), [
+      ["https://github.com/organizations/danil-labs/settings/installations/7", null],
+      [null, 3],
+    ]);
+    assert.equal(list.value.install_pending, true);
   }
+  // Un Worker anterior no manda `html_url`, `repository_count` ni `install_pending`.
+  const old = await githubInstallations(source(200, { installations: [], install_url: null }), "w");
+  assert.deepEqual(old, { kind: "ok", value: { installations: [], install_url: null, install_pending: false } });
 
   const put = await setGithubAreas(source(200, { credential: { ...credential, version: 4 } }, seen), "w", [
     { key: "danil-labs", installation_id: 7, repository_ids: null },
