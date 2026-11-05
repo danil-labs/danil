@@ -45,8 +45,13 @@ fn command() -> Result<Command, Failure> {
 }
 
 /// La carpeta de Lima de Colima: sus VMs son de Colima, nunca se ofrecen.
+/// Respeta `COLIMA_HOME`, como Colima; las de Lima, `LIMA_HOME`, que
+/// `limactl` lee solo.
 fn colima_home() -> Option<PathBuf> {
-    std::env::var_os("HOME").map(|h| PathBuf::from(h).join(".colima/_lima"))
+    std::env::var_os("COLIMA_HOME")
+        .map(PathBuf::from)
+        .or_else(|| std::env::var_os("HOME").map(|h| PathBuf::from(h).join(".colima")))
+        .map(|h| h.join("_lima"))
 }
 
 #[derive(Debug, Deserialize)]

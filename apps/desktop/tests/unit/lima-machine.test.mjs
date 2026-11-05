@@ -12,8 +12,8 @@ const guest = (id, state, extra = {}) => ({ channel: "lima", id, label: id, stat
 const GUESTS = [guest("danil-test", "running"), guest("vieja", "stopped", { arch: "x86_64" }), guest("colima", "stopped", { system: true })];
 const JOB = { id: "j1", channel: "lima", kind: "connect", target: "danil-test", label: "danil-test", user: null, step: "check", done: null, total: null, speed: null, paused: false, lines: [], error: null, finished: false, started_at: 1, mounts: 0 };
 
-async function machines(name, extra) {
-  const opened = await open(name, { extra: { guest_channels: ["lima"], guest_children: [], guest_job: null, ...extra } });
+async function machines(name, extra, options = {}) {
+  const opened = await open(name, { ...options, extra: { guest_channels: ["lima"], guest_children: [], guest_job: null, ...extra } });
   const w = opened.app.w;
   w.dispatchEvent(new w.CustomEvent("harness:open-settings", { detail: "machines" }));
   return opened;
@@ -59,4 +59,34 @@ test("A connection that stops at an enrolled engine says so in the block", async
   const { doc } = await machines("lima-machine-enrolled", { guest_list: GUESTS, guest_job: failed });
   assert.ok(await until(() => doc.querySelector('[data-lima-failure="enrolled"]')));
   assert.ok(doc.querySelector('[data-lima-problem="enrolled"]').textContent.includes("conectado a una cuenta"));
+});
+
+const SIGNED_OUT = { status: { state: "disconnected" }, token: null };
+
+test("Without a Danil account the block still shows: an old engine with one session", async () => {
+  const { doc } = await machines("lima-machine-no-account-single", { guest_list: GUESTS }, SIGNED_OUT);
+  assert.ok(await until(() => doc.querySelector('[data-lima="ok"]')), "Linux en esta Mac without signing in");
+  assert.ok(doc.querySelector('[data-lima-guest="danil-test"]'));
+});
+
+test("Without a Danil account the block still shows: an engine with sessions and an unlinked workspace", async () => {
+  const { doc } = await machines(
+    "lima-machine-no-account-sessions",
+    { guest_list: GUESTS, danil_sessions: [], danil_workspace_account: () => ({ account: null, email: null, signed_in: false, linked: false }) },
+    SIGNED_OUT,
+  );
+  assert.ok(await until(() => doc.querySelector('[data-danil-account="workspace"]')), "the workspace panel");
+  assert.ok(await until(() => doc.querySelector('[data-lima="ok"]')), "Linux en esta Mac without signing in");
+});
+
+test("A late guest_channels answer still paints the block in an open Configuración", async () => {
+  let answer;
+  const late = new Promise((resolve) => {
+    answer = resolve;
+  });
+  const { doc } = await machines("lima-machine-late-channels", { guest_list: GUESTS, guest_channels: () => late });
+  assert.ok(await until(() => doc.querySelector("[data-danil-account]")), "Configuración is open");
+  assert.equal(doc.querySelector("[data-lima]"), null, "no block before the window answers");
+  answer(["lima"]);
+  assert.ok(await until(() => doc.querySelector('[data-lima="ok"]')), "the block appears with the answer");
 });

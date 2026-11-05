@@ -7,7 +7,6 @@ import { For, Match, Show, Switch, createSignal, onCleanup, onMount } from "soli
 import { createCopied } from "../../lib/clipboard";
 import { prosaDe } from "../../lib/failure";
 import { t } from "../../lib/i18n";
-import { capabilities } from "../../lib/platform";
 import { listen } from "../../lib/serviceEvents";
 import { Badge } from "../../ui/Badge";
 import { Button } from "../../ui/Button";
@@ -15,6 +14,7 @@ import { Input } from "../../ui/Input";
 import { SignalDot } from "../../ui/SignalDot";
 import { Spinner } from "../../ui/Spinner";
 import { SettingsBlock, SettingsSection } from "../settings/layout";
+import { offersGuests } from "./guestChannels";
 import { DistroBox, StepList, Technical } from "./WslMachine";
 import { LIMA_INSTALL, type WslChild, type WslJob } from "./wsl";
 
@@ -88,8 +88,11 @@ function stateLabel(state: LimaGuest["state"]): string {
 
 /** Configuración → Máquinas → Linux en esta Mac. El trabajo lo guarda la ventana (`guest_job`, `guest-job`). */
 export function LimaMachineSection() {
-  if (!capabilities().lima) return null;
-  return <Section />;
+  return (
+    <Show when={offersGuests("lima")}>
+      <Section />
+    </Show>
+  );
 }
 
 function Section() {

@@ -19,7 +19,7 @@ por RPC1 en `127.0.0.1`. Cambia el canal: aquí es `limactl`, no `wsl.exe`.
 | Para qué | Canal |
 | --- | --- |
 | Encontrar `limactl` | `/opt/homebrew/bin`, `/usr/local/bin`, `~/.local/bin` y después el PATH. Una ventana abierta desde Finder no trae Homebrew en el PATH. |
-| Listar VMs | `limactl list --json` en el `LIMA_HOME` por omisión, y con `LIMA_HOME=~/.colima/_lima` para las de Colima: esas son del sistema y nunca se ofrecen |
+| Listar VMs | `limactl list --json` en el `LIMA_HOME` vigente (`~/.lima` si no está definido), y con `LIMA_HOME=$COLIMA_HOME/_lima` (`~/.colima/_lima` por omisión) para las de Colima: esas son del sistema y nunca se ofrecen |
 | Correr un script | `limactl shell --workdir / <vm> sh -s` con el script por stdin. Sin `--workdir`, Lima intenta entrar a la carpeta actual de la Mac |
 | Descriptor y token | un solo `limactl shell` que imprime los dos. Se leen en memoria: el token no va a disco, a un trabajo ni a un error |
 | Órdenes y eventos | RPC1 a `127.0.0.1:<puerto>`: el hostagent de Lima reenvía el puerto a la Mac |
@@ -27,6 +27,11 @@ por RPC1 en `127.0.0.1`. Cambia el canal: aquí es `limactl`, no `wsl.exe`.
 `address` del descriptor solo se acepta si es loopback. Si una orden no llega,
 o el motor contesta `invalid_token` o `unauthorized`, se relee por el canal: el
 puerto y el token cambian en cada arranque del motor.
+
+Sin cuenta de Danil el bloque se muestra igual: es local. El laboratorio
+(`pnpm engine:start`) le da a la ventana un `HOME` desechable; en macOS le
+pasa `LIMA_HOME` y `COLIMA_HOME` con las carpetas reales, para que vea las VMs
+de la persona (una variable ya definida se respeta).
 
 ## Apagada
 
