@@ -625,9 +625,9 @@ test("the router does not judge an MCP block: a link that is not the relay (a WS
   const relay = fakeLink({ add_mcp_servers: () => Promise.reject({ code: "mcp_values_over_relay" }) });
   const other = setup({ cmp_vm: relay });
   await other.router.handle("list_workspaces");
-  await assert.rejects(other.router.handle("add_mcp_servers", { bloque: plain }, on("cmp_vm")), (e: { detail: string; what: { clave: string } }) => {
+  await assert.rejects(other.router.handle("add_mcp_servers", { bloque: plain }, on("cmp_vm")), (e: { detail: string; what: string }) => {
     assert.equal(e.detail, "mcp_values_over_relay");
-    assert.deepEqual(e.what, { clave: "settings.tools.paste_over_relay" });
+    assert.ok(e.what.includes("${secret:env/*/"), "the catalog phrase, with the marker");
     return true;
   });
 });

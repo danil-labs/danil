@@ -58,8 +58,6 @@ const SERVICE_KEYS: Record<string, string> = {
   unsupported: "shell.service.command",
   command_not_allowed: "shell.service.command",
   response_too_large: "shell.service.too_large",
-  mcp_values_over_relay: "settings.tools.paste_over_relay",
-  mcp_block_invalid: "settings.tools.paste_invalid",
 };
 /** Cada cuánto se vuelve a preguntar la misma lectura a otra máquina mientras la ventana la repite. */
 const REFRESH_GAP = 1_500;
@@ -274,6 +272,10 @@ export function createRouter(config: RouterConfig) {
       }
       case "revoked":
         return { what: t("web.revoked"), detail: "revoked" };
+      case "mcp_values_over_relay":
+        return { what: t("settings.tools.paste_over_relay"), detail: error.code };
+      case "mcp_block_invalid":
+        return { what: t("settings.tools.paste_invalid"), detail: error.code };
       case "workspace_not_linked":
         return { what: t("web.workspace_not_linked"), detail: "workspace_not_linked" };
       case "operation_failed": {
