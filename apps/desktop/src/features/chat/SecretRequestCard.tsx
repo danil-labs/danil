@@ -5,7 +5,7 @@ import { unknownCommand } from "../../lib/errorCode.ts";
 import { t } from "../../lib/i18n";
 import { Badge } from "../../ui/Badge";
 import { Button } from "../../ui/Button";
-import { type Failure, prosaDe } from "../../ui/Failure";
+import { asFailure, type Failure, prosaDe } from "../../ui/Failure";
 import { Input } from "../../ui/Input";
 import { Spinner } from "../../ui/Spinner";
 import { answerSecretRequest, readSecretRequests, type SecretRequest, syncSealedCopy } from "./secretRequests";
@@ -49,7 +49,7 @@ export function SecretRequestCard(props: { request: SecretRequest; conversation:
   });
 
   async function fail(e: unknown) {
-    const f = e && typeof e === "object" && "what" in e ? (e as Failure) : { what: t("chat.secret.error.failed"), detail: String(e) };
+    const f = asFailure(e);
     setFailure(f);
     if (codeOf(f) === "secret_request_unknown") await readSecretRequests(props.conversation, props.machine);
   }
