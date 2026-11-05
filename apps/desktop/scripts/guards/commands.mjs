@@ -86,6 +86,7 @@ const SIN_INTERFAZ = {
   // Los pide el conector al recibir `credentials.changed` y `credentials.reseal` del relay (seldon-host #144, #145).
   sync_account_credentials: "la reconciliación de las credenciales la programa el conector; ninguna pantalla la pide",
   reseal_account_credential: "sellar para otra máquina lo pide el relay al conector; ninguna pantalla lo hace",
+  github_account_set_areas: "la tarjeta de GitHub refleja las instalaciones de la App y ya no elige áreas; queda en el contrato del motor",
   github_account_changed: "tirar la caché del token de GitHub lo pide el conector con `credentials.changed`; ninguna pantalla lo hace",
   // El backend prepara los árboles; esta lectura aún no tiene pantalla.
   session_worktree: "el árbol y sus notas aún no se pintan en ninguna pantalla",
