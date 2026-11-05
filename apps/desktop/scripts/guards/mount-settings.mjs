@@ -63,7 +63,7 @@ const clickArea = (key, text) => [...(areaButton(key) ?? [])]
 const selectedKeys = (scope) => (selections.get(scope) ?? []).map(({ key }) => key);
 providers.w.document.querySelector('button[aria-label="Configuración"]')?.click();
 await sleep(100);
-providers.w.document.querySelector("#cfg-tab-projects")?.click();
+providers.w.document.querySelector("#cfg-tab-source-control")?.click();
 await sleep(50);
 providers.w.document.querySelector("#cfg-sub-fuentes")?.click();
 await sleep(100);

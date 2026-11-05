@@ -52,7 +52,7 @@ for (const scenario of ["connected-workspace", "existing-installation", "no-inst
     menuItem(text).dispatchEvent(new app.w.KeyboardEvent("keydown", { key: "Enter", bubbles: true })); await espera(100);
   };
   button("Configuración")?.click(); await espera(100);
-  app.w.document.querySelector("#cfg-tab-projects")?.click(); await espera(50);
+  app.w.document.querySelector("#cfg-tab-source-control")?.click(); await espera(50);
   button("Control de Fuentes")?.click(); await espera(100);
   if (scenario === "connected-workspace") {
     const rows = () => app.w.document.querySelectorAll("section li");
@@ -113,13 +113,13 @@ for (const scenario of ["connected-workspace", "existing-installation", "no-inst
     assert.deepEqual(opens, []);
     await action("Desconectar");
     assert.equal(connected, false);
-    assert.ok(button("Conectar GitHub"));
+    assert.ok(button("Conectar"));
     assert.deepEqual(app.failures, []);
     console.log("PASS connected-workspace: resumen, edición y administración sin explorar repositorios");
     continue;
   }
-  assert.ok(button("Conectar GitHub"));
-  button("Conectar GitHub").click(); await espera(150);
+  assert.ok(button("Conectar"));
+  button("Conectar").click(); await espera(150);
   if (scenario === "cancel-login") {
     button("cancelar").click(); await espera(100);
     assert.equal(connected, false);
@@ -167,8 +167,8 @@ for (const scenario of ["absent", "incompatible", "unknown"]) {
   });
   const button = text => [...app.w.document.querySelectorAll("button")].find(el => el.textContent?.trim() === text || el.getAttribute("aria-label") === text);
   button("Configuración").click(); await espera(100);
-  app.w.document.querySelector("#cfg-tab-projects").click(); await espera(50);
-  button("Control de Fuentes").click(); await espera(100);
+  app.w.document.querySelector("#cfg-tab-source-control").click(); await espera(50);
+  button("Control de Fuentes")?.click(); await espera(100);
   const tools = [...app.w.document.querySelectorAll("details")].find(el => el.querySelector("summary")?.textContent.startsWith("Herramientas para agentes"));
   const summary = tools.querySelector("summary");
   assert.equal(tools.open, false);
