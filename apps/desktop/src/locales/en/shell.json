@@ -107,7 +107,7 @@
   "shell.sidebar.delete_empty": "The project will be deleted.",
   "shell.sidebar.delete_no_undo": "There is no undo.",
   "shell.sidebar.delete_project": "Delete the project",
-  "shell.sidebar.remove_from_space": "Remove from this space",
+  "shell.sidebar.remove_from_space": "Remove project",
   "shell.sidebar.delete_title": "Delete “{name}”?",
   "shell.sidebar.delete_with_tasks": {
     "one": "Its task, its chat and its artifacts will be deleted too.",

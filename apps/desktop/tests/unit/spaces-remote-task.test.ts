@@ -31,3 +31,15 @@ test("the window keeps no memory of where a remote task was created", () => {
   assert.equal("rememberTaskSpace" in spaces, false);
   assert.equal("forgetTaskSpace" in spaces, false);
 });
+
+test("a removed folder does not come back to the rail for a subtask the rail hides", () => {
+  const desk = { ...space("esc1", true), folders: ["pa"] };
+  const projects = [{ id: "pa" }, { id: "pb" }, { id: "pc" }];
+  const rail = spaces.carpetasDelEscritorio(projects, desk, {
+    pb: [{ id: "t1", space: "esc1", launched_by: "t0" }],
+    pc: [{ id: "t2", space: "esc1" }],
+  });
+  assert.deepEqual(rail.map((p) => p.id), ["pa", "pc"], "only tasks the rail shows keep a folder");
+  const pinned = spaces.carpetasDelEscritorio(projects, desk, { pb: [{ id: "t1", space: "esc1", parent: "t0", pinned: true }] });
+  assert.deepEqual(pinned.map((p) => p.id), ["pa", "pb"], "a pinned subtask shows, so its folder stays");
+});

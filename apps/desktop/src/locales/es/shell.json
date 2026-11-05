@@ -107,7 +107,7 @@
   "shell.sidebar.delete_empty": "Se borrará el proyecto.",
   "shell.sidebar.delete_no_undo": "No hay deshacer.",
   "shell.sidebar.delete_project": "Borrar el proyecto",
-  "shell.sidebar.remove_from_space": "Quitar de este espacio",
+  "shell.sidebar.remove_from_space": "Quitar proyecto",
   "shell.sidebar.delete_title": "¿Borrar «{name}»?",
   "shell.sidebar.delete_with_tasks": {
     "one": "También se borrarán su tarea, el chat y sus artefactos.",

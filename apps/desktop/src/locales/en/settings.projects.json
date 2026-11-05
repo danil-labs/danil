@@ -30,7 +30,7 @@
   "settings.projects.reveal_finder": "Open in Finder",
   "settings.projects.reveal_other": "Show in file explorer",
   "settings.projects.material": "Material it reads",
-  "settings.projects.remove": "Remove from this space",
+  "settings.projects.remove": "Remove project",
   "settings.projects.delete_empty": "The project will be deleted.",
   "settings.projects.delete_with_tasks": {
     "one": "Its task, chat and artifacts will also be deleted.",
