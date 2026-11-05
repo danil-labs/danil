@@ -70,6 +70,7 @@ async function openTask(app) {
 }
 
 
+const machine = (features) => ({ machine_list: [{ id: "local", local: true, active: true, on: true, hosts: true, features }] });
 const card = (app, id = "r1") => app.w.document.querySelector(`[data-secret-request="${id}"]`);
 
 function type(app, field, text) {
@@ -81,6 +82,7 @@ test("saving goes to the request's slot first, then answers saved without the va
   const sent = [];
   const order = [];
   const app = await boot("listo", "chat-secret-request-save", responses({
+    ...machine(["secret_request_v1"]),
     secret_requests_list: { requests: [request()] },
     env_secrets_list: { secrets: [] },
     env_secret_set: (args) => {
@@ -120,6 +122,7 @@ test("saving goes to the request's slot first, then answers saved without the va
 test("not_saved keeps the card open with a short error; decline closes it", async () => {
   let answers = 0;
   const app = await boot("listo", "chat-secret-request-retry", responses({
+    ...machine(["secret_request_v1"]),
     secret_requests_list: { requests: [request()] },
     env_secrets_list: { secrets: [] },
     env_secret_set: null,
@@ -150,6 +153,7 @@ test("not_saved keeps the card open with a short error; decline closes it", asyn
 test("events open and expire a card; a later read closes what the engine no longer lists", async () => {
   let open = [];
   const app = await boot("listo", "chat-secret-request-events", responses({
+    ...machine(["secret_request_v1"]),
     secret_requests_list: () => ({ requests: open }),
     env_secrets_list: { secrets: [] },
   }));
@@ -175,8 +179,13 @@ test("events open and expire a card; a later read closes what the engine no long
 });
 
 test("an engine without secret_request_v1 paints no card and the composer keeps working", async () => {
+  const listed = [];
   const app = await boot("listo", "chat-secret-request-old", responses({
-    secret_requests_list: () => Promise.reject({ what: { clave: "shell.service.command" }, detail: "command" }),
+    ...machine(["secrets_v1"]),
+    secret_requests_list: () => {
+      listed.push(1);
+      return Promise.reject({ what: { clave: "shell.service.command" }, detail: "command" });
+    },
   }));
   try {
     const field = await openTask(app);
@@ -184,6 +193,7 @@ test("an engine without secret_request_v1 paints no card and the composer keeps 
     app.emit("secret_requested", request("r9"));
     await sleep(100);
     assert.equal(card(app, "r9"), null, "no card");
+    assert.equal(listed.length, 0, "without the feature the list is not even asked");
     assert.equal(field.disabled, false);
   } finally {
     app.w.close();

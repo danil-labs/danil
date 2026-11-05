@@ -1,11 +1,11 @@
 /**
- * `features/chat/secretRequests.ts`: la lista es la verdad (lo que falta y seguía
+ * `features/chat/secretRequestsBook.ts`: la lista es la verdad (lo que falta y seguía
  * abierto se cierra como vencido), `secret_requested` sustituye por id sin reabrir
  * una cerrada, y `secret_request_closed` pone su desenlace.
  */
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { applyClosed, applyList, applyRequested, type SecretRequestWire, sameTask } from "../../src/features/chat/secretRequests.ts";
+import { applyClosed, applyList, applyRequested, type SecretRequestWire, sameTask } from "../../src/features/chat/secretRequestsBook.ts";
 
 const wire = (id: string, task = "t1"): SecretRequestWire => ({ request_id: id, workspace: "w", task, folder: "p1", name: "STRIPE_KEY", reason: "para el checkout", reason_author: "agent", replace: false, created_at: "", expires_at: "" });
 

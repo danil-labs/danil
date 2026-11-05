@@ -7,45 +7,10 @@ import { createRoot, createSignal } from "solid-js";
 import { unknownCommand } from "../../lib/errorCode.ts";
 import { invoke } from "../../lib/invoke.ts";
 import { listen } from "../../lib/serviceEvents.ts";
+import { machines, refetchMachines } from "../machines/store";
+import { applyClosed, applyList, applyRequested, sameTask, type SecretRequest, type SecretRequestClosed, type SecretRequestWire } from "./secretRequestsBook.ts";
 
-/** Como la manda el motor; `reason` es texto del agente (`reason_author: "agent"`). */
-export type SecretRequestWire = { request_id: string; workspace: string; task: string; folder: string; name: string; reason: string; reason_author?: string; replace: boolean; created_at: string; expires_at: string };
-export type SecretRequestState = "open" | "saved" | "declined" | "expired";
-export type SecretRequest = SecretRequestWire & { state: SecretRequestState };
-export type SecretRequestClosed = { request_id: string; workspace?: string; task?: string; outcome: string; closed_at?: string };
-
-const CLOSED: Record<string, SecretRequestState> = { fulfilled: "saved", saved: "saved", declined: "declined", expired: "expired" };
-
-/** Un `secret_requested`: sustituye por `request_id`; un replay de una ya cerrada no la reabre. */
-export function applyRequested(book: ReadonlyMap<string, SecretRequest>, wire: SecretRequestWire): Map<string, SecretRequest> {
-  const next = new Map(book);
-  const known = book.get(wire.request_id);
-  next.set(wire.request_id, { ...wire, state: known && known.state !== "open" ? known.state : "open" });
-  return next;
-}
-
-export function applyClosed(book: ReadonlyMap<string, SecretRequest>, closed: SecretRequestClosed): Map<string, SecretRequest> {
-  const known = book.get(closed.request_id);
-  if (!known) return new Map(book);
-  const next = new Map(book);
-  next.set(closed.request_id, { ...known, state: CLOSED[closed.outcome] ?? "expired" });
-  return next;
-}
-
-/** La lista abierta de `task`: lo que falta de esa tarea y seguía abierto se cierra como vencido. */
-export function applyList(book: ReadonlyMap<string, SecretRequest>, task: (id: string) => boolean, open: readonly SecretRequestWire[]): Map<string, SecretRequest> {
-  const next = new Map(book);
-  const listed = new Set(open.map((r) => r.request_id));
-  for (const [id, r] of book) if (task(r.task) && r.state === "open" && !listed.has(id)) next.set(id, { ...r, state: "expired" });
-  for (const r of open) {
-    const known = next.get(r.request_id);
-    next.set(r.request_id, { ...r, state: known && known.state !== "open" && known.state !== "expired" ? known.state : "open" });
-  }
-  return next;
-}
-
-/** La tarea de una solicitud frente a la conversación: en la web el id lleva la máquina delante (`cmp~t1`). */
-export const sameTask = (conversation: string, task: string) => conversation === task || conversation.endsWith(`~${task}`);
+export { sameTask, type SecretRequest } from "./secretRequestsBook.ts";
 
 const [book, setBook] = createRoot(() => createSignal<Map<string, SecretRequest>>(new Map()));
 const [unsupported, setUnsupported] = createRoot(() => createSignal(false));
@@ -54,9 +19,18 @@ export { book as secretRequests, unsupported as secretRequestsUnsupported };
 let started = false;
 const reads = new Map<string, () => void>();
 
-function start() {
+/** Solo con un motor que anuncia `secret_request_v1` (`status.service_features`) se lee nada. */
+export function supportsSecretRequests(machine?: string): boolean {
+  const list = machines();
+  const target = machine ? list.find((m) => m.id === machine) : (list.find((m) => m.active) ?? list.find((m) => m.local));
+  return !!target?.features?.includes("secret_request_v1");
+}
+
+export function startSecretRequests() {
   if (started) return;
   started = true;
+  // Sin cuenta de Danil nadie pidió la lista; una vez, para saber qué anuncia este motor.
+  if (machines().length === 0) void refetchMachines();
   void listen<SecretRequestWire>("secret_requested", (e) => setBook((b) => applyRequested(b, e.payload)));
   void listen<SecretRequestClosed>("secret_request_closed", (e) => setBook((b) => applyClosed(b, e.payload)));
   window.addEventListener("harness:service-resync", () => {
@@ -68,7 +42,7 @@ const options = (machine?: string) => (machine ? { headers: { "x-terminus-machin
 
 /** Lee las abiertas de la tarea; un motor sin la extensión apaga solo la tarjeta. */
 export async function readSecretRequests(conversation: string, machine?: string): Promise<void> {
-  start();
+  startSecretRequests();
   if (unsupported()) return;
   try {
     const answer = await invoke<{ requests?: SecretRequestWire[] } | null>("secret_requests_list", { session: conversation }, options(machine));

@@ -1563,11 +1563,13 @@ export default function Chat(props: ChatProps) {
     const m = solicitudes();
     const conversation = props.conversacion;
     if (!m || props.soloLectura || !conversation) return;
+    m.startSecretRequests();
+    if (!m.supportsSecretRequests(props.machine)) return;
     onCleanup(m.watchSecretRequests(conversation, props.machine));
   });
   const solicitudesDeLaTarea = () => {
     const m = solicitudes();
-    if (!m || m.secretRequestsUnsupported()) return [];
+    if (!m || m.secretRequestsUnsupported() || !m.supportsSecretRequests(props.machine)) return [];
     return [...m.secretRequests().values()].filter((r) => m.sameTask(props.conversacion, r.task));
   };
 
