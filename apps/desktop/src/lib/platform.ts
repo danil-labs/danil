@@ -11,6 +11,7 @@ import type { SupportAccessSource } from "../features/settings/SupportAccess";
 import type { Account } from "../features/settings/accounts-store";
 import type { AuditLogSource } from "../web/audit-log";
 import type { WorkspaceAssetsSource } from "../web/workspace-assets";
+import type { GitHostAccountSource } from "../features/settings/github-account/git-host-answer";
 
 /** Una cuenta agrupada (web y escritorio): las máquinas donde tiene sesión (`@terminus/fleet`, `merge.ts`). */
 export type AccountMachinesProps = {
@@ -135,6 +136,8 @@ export type Capabilities = {
    * navegador. La ventana pasa por los comandos del motor (`account_credentials_*`).
    */
   accountCredentials?: CredentialSource;
+  /** GitLab y Bitbucket de la persona con la sesión de la página (la web). La ventana usa el token de cliente de la cuenta. */
+  accountGitHosts?: GitHostAccountSource;
   /** Bajo la tarjeta de una cuenta: sus máquinas. */
   accountMachines?: (props: AccountMachinesProps) => JSX.Element;
   /**

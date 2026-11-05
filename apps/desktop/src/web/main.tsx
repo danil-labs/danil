@@ -55,6 +55,7 @@ import { agentsSession } from "./attention/workspace-sources";
 import { webUsageMe } from "../features/settings/usage-source";
 import { webBusinessBilling } from "./business-billing";
 import { webGithubAccount } from "./github-account";
+import { webGitHostAccount } from "./git-host-account";
 import { type Account, type Listing, SLOT_PREFIX, loadAccounts, ownerOf, pickAccount, readListings, rememberLast, removeExtra, savedListings } from "./accounts";
 import { forgetShellCache, setShellCacheScope } from "../lib/shellCache";
 import { webAuditLog } from "./audit-log";
@@ -304,6 +305,7 @@ function mountApp(computers: Computer[], base: Base, before?: (id: string) => ()
       : undefined,
     accountMemory: { endpoint: base.endpoint, getToken: token },
     accountCredentials: { endpoint: base.endpoint, getToken: token },
+    accountGitHosts: webGitHostAccount({ endpoint: base.endpoint, getToken: base.getToken, onUnauthorized: base.onUnauthorized, href: () => window.location.href }),
     machineName: (id) => fleet.name(id),
     taskMachine: (id) => unwrap(id, fleet.remotes())?.machine ?? null,
     windowMachine: () => {

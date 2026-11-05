@@ -46,6 +46,32 @@ en esta máquina» y ofrece «Iniciar sesión». Una conexión de la App anterio
 (`source = "legacy"`) pide volver a conectar con Danil. Los proveedores se
 listan en este orden: GitHub, GitLab y Bitbucket.
 
+## GitLab y Bitbucket de la persona
+
+GitLab y Bitbucket usan el mismo panel que GitHub
+(`src/features/settings/github-account/GitHostAccount.tsx`), con su adaptador
+en `PersonalGitHostAccount.tsx`. La conexión es de la persona y la lee el
+Worker (`/v1/git-hosts/:provider`, cliente en `packages/computers/src/gitHosts.ts`):
+la web con la sesión de la página (`src/web/git-host-account.ts`) y la ventana
+con el token de cliente de la cuenta del workspace (`account_relay_token`). No
+hay comandos del motor nuevos; quitar o volver a poner una máquina usa
+`account_credential_*`.
+
+Con sesión: fila de la cuenta con «Comprobar conexión» y «Desconectar», y
+debajo, con sangría, los grupos (GitLab) o espacios (Bitbucket) del Worker,
+cada uno con su tipo y «Abrir». No hay «Añadir»: con OAuth de usuario no hay
+instalación por área. Sin conexión, el «Conectar» de la cabecera de la
+sección abre la autorización del Worker y espera, como GitHub.
+
+Sin sesión, GitLab conecta con el login por navegador del motor
+(`start_browser_login` con `id: "gitlab"`) cuando su descriptor trae
+`browser_login: true`. Bitbucket dice «Inicia sesión en Danil para conectar
+Bitbucket» y conserva el token del espacio pegado. Un token pegado
+(`source = "legacy"`) se sigue viendo y usando, con un renglón para conectar
+con Danil. Un PAT de un GitLab propio (campo `url` distinto de gitlab.com) se
+ve siempre: la cuenta no lo reemplaza. Un Worker sin estas rutas (`404`,
+`<provider>_disabled`) deja las tarjetas locales sin error.
+
 ## gh opcional
 
 La conexión de GitHub no necesita `gh`. En Configuración, «Herramientas para
