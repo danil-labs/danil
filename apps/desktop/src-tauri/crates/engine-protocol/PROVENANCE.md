@@ -120,6 +120,11 @@ from the engine source at `fdf4dd9863a80363a0dd7b15ea21fd6b69e1f4bd`. The 24
 `chat.steer.delivered` comes from `d2266ae` (`fix/mandar-ahora-sin-atoros`).
 `mcp.known.notion.requires` and `mcp.known.notion.after` come from `31774ed`
 (`feat/notion-mcp-conocido`).
+The 26 `providers.gitlab.*` and `providers.bitbucket.*` keys of the browser
+login and the person's account (`login_help.browser`, `error.*`, `account.*`)
+come from danil-engine `0fae9d36` (`feat/git-hosts-gitlab-device`,
+danil-engine#382): `delivery/git_hosts/gitlab.rs`, `gitlab_device.rs` and
+`danil/git_host_account.rs`.
 
 seldon-host `feat/onboarding-engine` (`8f32a29`, `21f5687`) and
 `feat/google-drive-integration` (`b831eeb`, rebased on them) add what the
