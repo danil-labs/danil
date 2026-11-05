@@ -312,6 +312,22 @@ test("a self-managed GitLab token stays visible next to the account", async () =
   }
 });
 
+test("with an empty account a self-managed GitLab row is named by its host, not a second «Cuenta»", async () => {
+  const fake = worker({ gitlab: { credential: null, fail: "license_required", status: 403 }, bitbucket: { credential: null } });
+  try {
+    const e = engine({ hosts: [host("gitlab", "GitLab", { connected: local("alberto", { url: "https://gitlab.raelay.mx/" }), source: "legacy" }), host("bitbucket", "Bitbucket")] });
+    const app = await openSources("git-host-account-self-managed-empty", e);
+    const { w } = app;
+    const gl = card(w, "GitLab");
+    const labels = [...gl.querySelectorAll(".text-sm")].map((el) => el.textContent.trim());
+    assert.equal(labels.filter((l) => l === "Cuenta").length, 1, labels.join(" | "));
+    assert.ok(labels.includes("gitlab.raelay.mx"), labels.join(" | "));
+    assert.deepEqual(app.failures, []);
+  } finally {
+    fake.restore();
+  }
+});
+
 test("without a session GitLab connects through the engine's browser login and Bitbucket asks to sign in", async () => {
   const fake = worker({});
   try {

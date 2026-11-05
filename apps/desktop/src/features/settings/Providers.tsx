@@ -133,6 +133,15 @@ const selfManaged = (p: { id: string; connected: { data: Record<string, string> 
   const url = p.id === "gitlab" ? p.connected?.data?.url?.trim() : "";
   return !!url && !GITLAB_COM.test(url);
 };
+/** El host de un GitLab propio, para nombrar su fila junto a la de la cuenta. */
+const selfManagedHost = (p: { id: string; connected: { data: Record<string, string> } | null }) => {
+  if (!selfManaged(p)) return null;
+  try {
+    return new URL(p.connected?.data?.url?.trim() ?? "").host || null;
+  } catch {
+    return null;
+  }
+};
 const rankOf = (id: string) => (ORDER.includes(id) ? ORDER.indexOf(id) : ORDER.length);
 
 /**
@@ -721,7 +730,7 @@ function WorkspaceProviders(props: { solo?: string | string[] }) {
                         <>
                           <Show when={p.id === "github"} fallback={<>
                             <SettingsRow
-                              label={t("settings.providers.account")}
+                              label={selfManagedHost(p) ?? t("settings.providers.account")}
                               description={
                                 <Show
                                   when={c().data.correo}
