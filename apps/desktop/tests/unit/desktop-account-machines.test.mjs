@@ -9,7 +9,8 @@
  */
 import assert from "node:assert/strict";
 import test from "node:test";
-import { HOME, localNewTask, newTask, open, openTask, remote, until, VM, write } from "../helpers/desktop-account.mjs";
+import { HOME, localNewTask, newTask, open, openTask, project, remote, until, VM, write } from "../helpers/desktop-account.mjs";
+import { engine } from "../helpers/fake-relay.mjs";
 import { sleep } from "../helpers/jsdom-app.mjs";
 
 test("signed out, the desktop is the local window as before", async () => {
@@ -224,4 +225,42 @@ test("with another machine in «Ejecutar en», a clone runs there with start_pro
   assert.ok(!text().includes("Recibiendo objetos"), "the clone ended");
   assert.equal(app.w.localStorage.getItem("harness.layout.projects.remote_clones"), null);
   assert.deepEqual(app.failures, []);
+});
+
+test("con la VM apagada, el composer ofrece los proyectos que puede abrir y enviar la enciende", async () => {
+  const repo = { id: "p5", name: "Repo con remoto", working_directory: "/lab/p5", kind: "git", portfolio: null, sources: [], remote_url: "https://github.com/danil/repo.git" };
+  const suelto = { id: "p6", name: "Carpeta sin remoto", working_directory: "/lab/p6", kind: "folder", portfolio: null, sources: [] };
+  // Lo que la VM contestó la última vez que estuvo encendida: el relay no guarda copia de sus agentes.
+  const lastAnswer = { "cmp_vm\u0000list_surfaces": engine.list_surfaces, "cmp_vm\u0000list_models:codex": engine.list_models };
+  const { app, doc, text, relayCalls } = await open("desktop-composer-target-off", {
+    computers: [HOME, VM],
+    relays: { cmp_vm: { table: remote("Proyecto de la VM", "Tarea VM", { send_message: () => "r8" }), state: "stopped" } },
+    extra: { list_projects: [project("Local"), { ...repo }, { ...suelto }], work_status: { ahead: 0, dirty: false, files: [], large: [], submodules: [] } },
+    storage: { "harness.layout.machines.last_answer": JSON.stringify(lastAnswer) },
+  });
+  try {
+    localNewTask(doc).click();
+    assert.ok(await until(() => doc.querySelector('[aria-label="Ejecutar en"]')), "the composer offers «Ejecutar en»");
+    doc.querySelector('[aria-label="Ejecutar en"]').click();
+    assert.ok(await until(() => doc.querySelector('[data-machine-option="cmp_vm"]')));
+    assert.equal(doc.querySelector('[data-machine-option="cmp_vm"]').disabled, false, "a sleeping VM can be picked");
+    doc.querySelector('[data-machine-option="cmp_vm"]').click();
+    await sleep(300);
+    doc.querySelector('button[aria-label="Proyecto"]').click();
+    await sleep(200);
+    const opcion = (name) => [...doc.querySelectorAll("button")].find((b) => b.textContent.includes(name) && b.textContent.includes("tarea"));
+    assert.ok(opcion("Repo con remoto"), "the project with a remote is offered: the VM clones it with the first message");
+    assert.equal(opcion("Carpeta sin remoto"), undefined, "a folder without remote that the VM lacks is not");
+    opcion("Repo con remoto").click();
+    await sleep(300);
+    assert.ok(!text().includes("/lab/p5"), "no path of this computer stands for the VM's folder");
+    assert.equal(relayCalls("cmp_vm", "project_base_branches").length, 0, "its branches are not asked while it sleeps");
+    await write(app, "arranca aquí");
+    assert.ok(await until(() => relayCalls("cmp_vm", "send_message").length === 1, 3000), "sending wakes the VM and delivers once");
+    assert.deepEqual(relayCalls("cmp_vm", "send_message").map((c) => [c.args.project, c.args.session, c.args.provider]), [["p5", null, "codex"]]);
+    assert.ok(!text().includes("Algo se rompió"), "no generic failure");
+    assert.deepEqual(app.failures, []);
+  } finally {
+    app.w.close();
+  }
 });
