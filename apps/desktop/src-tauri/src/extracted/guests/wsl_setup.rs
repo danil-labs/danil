@@ -5,8 +5,8 @@
 #![cfg_attr(not(windows), allow(dead_code, unused_imports))]
 
 use super::child::{
-    classify, current, install_engine, job_paused, job_speed, load, progress, read_saved, save,
-    start, status, write_saved, ChildInfo, Job, JobError, Resume,
+    classify, current, install_engine, job_paused, job_speed, load, progress, read_saved, start,
+    status, update, write_saved, ChildInfo, Job, JobError, Resume,
 };
 use super::{exec_ok, fail, now_ms, ChannelKind, Failure};
 use serde::Serialize;
@@ -649,7 +649,9 @@ pub fn state(app: &AppHandle) -> LinuxState {
             let before = entries.len();
             entries.retain(|e| found.distros.iter().any(|d| d.name == e.distro));
             if entries.len() != before {
-                let _ = save(app, &entries);
+                let _ = update(app, |saved| {
+                    saved.retain(|e| found.distros.iter().any(|d| d.name == e.distro))
+                });
                 let _ = app.emit("guest-state-changed", ());
             }
             let children: Vec<ChildInfo> = entries

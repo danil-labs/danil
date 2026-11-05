@@ -44,6 +44,9 @@ pub struct ChildEntry {
     pub home: String,
     pub name: String,
     pub added_at: u64,
+    /// Los campos que esta versión no conoce: se guardan tal como llegaron.
+    #[serde(flatten)]
+    pub extra: serde_json::Map<String, Value>,
 }
 
 impl ChildEntry {
@@ -63,19 +66,71 @@ fn registry_path(app: &AppHandle) -> Result<PathBuf, Failure> {
 }
 
 pub(super) fn load(app: &AppHandle) -> Vec<ChildEntry> {
-    registry_path(app)
-        .ok()
-        .and_then(|p| std::fs::read(p).ok())
-        .and_then(|b| serde_json::from_slice(&b).ok())
+    registry_path(app).map(|p| load_at(&p)).unwrap_or_default()
+}
+
+/// Lo que hay en `wsl-children.json`: las entradas que esta versión entiende
+/// y, aparte y sin tocar, las que no.
+#[derive(Default)]
+struct Registry {
+    entries: Vec<ChildEntry>,
+    unknown: Vec<Value>,
+}
+
+/// Sin archivo, el registro está vacío. Un archivo que no se puede leer o no
+/// es una lista es un error: guardar encima borraría las máquinas.
+fn read_registry(path: &std::path::Path) -> Result<Registry, Failure> {
+    let bytes = match std::fs::read(path) {
+        Ok(bytes) => bytes,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(Registry::default()),
+        Err(e) => return Err(fail("io", format!("wsl-children.json: {e}"))),
+    };
+    let list: Vec<Value> = serde_json::from_slice(&bytes)
+        .map_err(|e| fail("io", format!("wsl-children.json: {e}")))?;
+    let mut registry = Registry::default();
+    for item in list {
+        match serde_json::from_value::<ChildEntry>(item.clone()) {
+            Ok(entry) => registry.entries.push(entry),
+            Err(_) => registry.unknown.push(item),
+        }
+    }
+    Ok(registry)
+}
+
+/// Para leer: lo que no se entiende se salta y un archivo roto no muestra nada.
+fn load_at(path: &std::path::Path) -> Vec<ChildEntry> {
+    read_registry(path)
+        .map(|registry| registry.entries)
         .unwrap_or_default()
 }
 
-pub(super) fn save(app: &AppHandle, entries: &[ChildEntry]) -> Result<(), Failure> {
-    let path = registry_path(app)?;
-    let tmp = path.with_extension("json.tmp");
-    std::fs::write(&tmp, serde_json::to_vec_pretty(entries).unwrap_or_default())
+/// Lee el registro, le aplica `change` y lo guarda con las entradas que no
+/// entiende. Si no se puede leer, no guarda nada.
+pub(super) fn update<T>(
+    app: &AppHandle,
+    change: impl FnOnce(&mut Vec<ChildEntry>) -> T,
+) -> Result<T, Failure> {
+    update_at(&registry_path(app)?, change)
+}
+
+fn update_at<T>(
+    path: &std::path::Path,
+    change: impl FnOnce(&mut Vec<ChildEntry>) -> T,
+) -> Result<T, Failure> {
+    let mut registry = read_registry(path)?;
+    let out = change(&mut registry.entries);
+    let mut list = registry
+        .entries
+        .iter()
+        .map(serde_json::to_value)
+        .collect::<Result<Vec<Value>, _>>()
         .map_err(|e| fail("io", e.to_string()))?;
-    std::fs::rename(&tmp, &path).map_err(|e| fail("io", e.to_string()))
+    list.extend(registry.unknown);
+    let body = serde_json::to_vec_pretty(&list).map_err(|e| fail("io", e.to_string()))?;
+    let tmp = path.with_extension("json.tmp");
+    std::fs::write(&tmp, body).map_err(|e| fail("io", e.to_string()))?;
+    std::fs::rename(&tmp, path).map_err(|e| fail("io", e.to_string()))?;
+    Ok(out)
 }
 
 fn entry(app: &AppHandle, distro: &str) -> Result<ChildEntry, Failure> {
@@ -703,6 +758,7 @@ fi
         home: who.home.clone(),
         name: name.to_string(),
         added_at: now_ms(),
+        extra: Default::default(),
     };
     progress(app, target, "connect", None, None);
     keep_alive(distro);
@@ -721,10 +777,10 @@ fi
     if let Some((id, label)) = workspace {
         ensure_workspace(distro, &who.home, id, label)?;
     }
-    let mut entries = load(app);
-    entries.retain(|e| e.distro != distro);
-    entries.push(entry.clone());
-    save(app, &entries)?;
+    update(app, |entries| {
+        entries.retain(|e| e.distro != distro);
+        entries.push(entry.clone());
+    })?;
     progress(app, target, "done", None, None);
     Ok(status(&entry, false))
 }
@@ -772,9 +828,7 @@ pub fn ensure_workspace(distro: &str, home: &str, id: &str, name: &str) -> Resul
 }
 
 pub fn remove(app: &AppHandle, distro: &str) -> Result<(), Failure> {
-    let mut entries = load(app);
-    entries.retain(|e| e.distro != distro);
-    save(app, &entries)?;
+    update(app, |entries| entries.retain(|e| e.distro != distro))?;
     let_sleep(distro);
     conns()
         .lock()
@@ -1099,6 +1153,73 @@ pub fn forget_resume(app: &AppHandle) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn entry_json(distro: &str) -> Value {
+        json!({ "distro": distro, "user": "mau", "home": "/home/mau", "name": distro, "added_at": 1 })
+    }
+
+    fn sample(distro: &str) -> ChildEntry {
+        serde_json::from_value(entry_json(distro)).expect("entry")
+    }
+
+    fn saved(path: &std::path::Path) -> Value {
+        serde_json::from_slice(&std::fs::read(path).expect("read")).expect("json")
+    }
+
+    #[test]
+    fn a_registry_that_cannot_be_read_is_not_overwritten() {
+        let dir = tempfile::tempdir().expect("tmp");
+        let path = dir.path().join("wsl-children.json");
+        std::fs::write(&path, b"[{\"distro\": \"Ubuntu\", \"us").expect("write");
+        let result = update_at(&path, |entries| entries.push(sample("Debian")));
+        assert!(
+            result.is_err(),
+            "guardar sobre un registro roto tiene que fallar"
+        );
+        assert_eq!(
+            std::fs::read(&path).expect("read"),
+            b"[{\"distro\": \"Ubuntu\", \"us"
+        );
+    }
+
+    #[test]
+    fn saving_keeps_entries_and_fields_this_version_does_not_know() {
+        let dir = tempfile::tempdir().expect("tmp");
+        let path = dir.path().join("wsl-children.json");
+        let mut known = entry_json("Ubuntu");
+        known["later"] = json!({ "kept": true });
+        let unknown = json!({ "channel": "lima", "guest": "danil" });
+        let file = json!([known, unknown, entry_json("Debian")]);
+        std::fs::write(&path, serde_json::to_vec(&file).expect("json")).expect("write");
+
+        update_at(&path, |entries| entries.retain(|e| e.distro != "Debian")).expect("update");
+
+        let after = saved(&path);
+        let list = after.as_array().expect("array");
+        assert_eq!(list.len(), 2, "{after}");
+        assert!(list.contains(&known), "{after}");
+        assert!(list.contains(&unknown), "{after}");
+    }
+
+    #[test]
+    fn reading_skips_what_it_does_not_understand() {
+        let dir = tempfile::tempdir().expect("tmp");
+        let path = dir.path().join("wsl-children.json");
+        let file = json!([entry_json("Ubuntu"), { "channel": "lima" }]);
+        std::fs::write(&path, serde_json::to_vec(&file).expect("json")).expect("write");
+        let entries = load_at(&path);
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].distro, "Ubuntu");
+    }
+
+    #[test]
+    fn a_missing_registry_starts_empty() {
+        let dir = tempfile::tempdir().expect("tmp");
+        let path = dir.path().join("wsl-children.json");
+        assert!(load_at(&path).is_empty());
+        update_at(&path, |entries| entries.push(sample("Ubuntu"))).expect("update");
+        assert_eq!(load_at(&path).len(), 1);
+    }
 
     #[test]
     fn the_linux_engine_comes_from_the_lock() {
