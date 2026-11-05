@@ -154,6 +154,28 @@ export {
   setGithubAreas,
 } from "./github.ts";
 export {
+  type GitHostArea,
+  type GitHostAreaKind,
+  type GitHostAreas,
+  type GitHostAuthorize,
+  type GitHostConfig,
+  type GitHostCredential,
+  type GitHostProvider,
+  type GitHostStatus,
+  GIT_HOST_PROVIDERS,
+  disconnectGitHost,
+  gitHostAreas,
+  gitHostAreasOf,
+  gitHostAuthorize,
+  gitHostAuthorizeOf,
+  gitHostCredentialOf,
+  gitHostStatus,
+  gitHostStatusOf,
+  isGitHostProvider,
+  removeGitHostMachine,
+  restoreGitHostMachine,
+} from "./gitHosts.ts";
+export {
   type Credential,
   type CredentialAnswer,
   type CredentialDelivery,

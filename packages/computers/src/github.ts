@@ -72,7 +72,7 @@ const isObj = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 
 const str = (v: unknown): string | null => (typeof v === "string" && v ? v : null);
 const num = (v: unknown): number | null => (typeof v === "number" && Number.isFinite(v) ? v : null);
 
-async function call<T>(source: GithubSource, method: string, path: string, read: (body: unknown) => T, body?: unknown): Promise<GithubAnswer<T>> {
+export async function call<T>(source: GithubSource, method: string, path: string, read: (body: unknown) => T, body?: unknown): Promise<GithubAnswer<T>> {
   const response = await bearerCall(source, method, path, body);
   if (!response) return { kind: "failed", status: null, code: null };
   const { json } = response;
@@ -94,7 +94,7 @@ function areaOf(raw: unknown): GithubArea | null {
 
 const MACHINE_STATES = new Set(["active", "pending", "removed", "signed_in"]);
 
-function machineOf(raw: unknown): GithubMachine | null {
+export function machineOf(raw: unknown): GithubMachine | null {
   if (!isObj(raw) || !str(raw.computer_id)) return null;
   return {
     computer_id: raw.computer_id as string,
