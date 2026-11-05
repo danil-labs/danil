@@ -51,13 +51,13 @@ export type Workspace = {
 };
 
 /**
- * El proveedor de memoria del workspace. `origen` es el bloque de servidor
- * MCP tal cual lo guardó `mcp::extraer_entrada`: un `command` o una `url`, sin
- * forma propia — no hay nada más que pintar de él que lo que ya trae.
+ * El proveedor de memoria del workspace. `origen` es solo de dónde sale
+ * (esquema y host, o el programa), nunca el bloque: ningún cliente lo
+ * reconstruye ni lo reenvía.
  */
 export type MemoriaProveedor =
   | { tipo: "local" }
-  | { tipo: "mcp_externo"; origen: unknown; lectura_escritura: boolean };
+  | { tipo: "mcp_externo"; origen: { url: string } | { command: string }; lectura_escritura: boolean };
 
 /**
  * Una migración de los datos en disco que hace el motor.
