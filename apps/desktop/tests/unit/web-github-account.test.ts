@@ -119,3 +119,26 @@ test("return_to es la página actual sin la marca de GitHub ni el ancla", () => 
   assert.equal(returnToOf("https://app.danil.ai/terminus/w/fqgx1w8m?x=1&github=error&code=denied#a"), "https://app.danil.ai/terminus/w/fqgx1w8m?x=1");
   assert.equal(returnToOf("https://app.danil.ai/terminus/"), "https://app.danil.ai/terminus/");
 });
+
+test("las instalaciones llegan del Worker con su página, su número de repos y la pendiente", async () => {
+  const installations = {
+    installations: [
+      { key: "danil-labs", installation_id: 7, account: { login: "danil-labs", type: "Organization", avatar: null }, repository_selection: "all", html_url: "https://github.com/organizations/danil-labs/settings/installations/7" },
+      { key: "nosoypoot", installation_id: 8, account: { login: "nosoypoot", type: "User" }, repository_selection: "selected", repository_count: 3 },
+    ],
+    install_url: "https://github.com/apps/danil/installations/new?state=s",
+    install_pending: true,
+  };
+  const { transport, seen, engine } = setup(() => ({ status: 200, body: installations }));
+  const listed = (await transport.handle("github_account_installations", { scope: "w" })) as {
+    installations: { html_url: string | null; repository_count: number | null }[];
+    install_pending: boolean;
+  };
+  assert.equal(seen[0]?.url, "https://computers.example/v1/workspaces/w/github/installations");
+  assert.deepEqual(listed.installations.map((i) => [i.html_url, i.repository_count]), [
+    ["https://github.com/organizations/danil-labs/settings/installations/7", null],
+    [null, 3],
+  ]);
+  assert.equal(listed.install_pending, true);
+  assert.deepEqual(engine, []);
+});

@@ -1,8 +1,7 @@
 import { confirm } from "@tauri-apps/plugin-dialog";
 import {
-  type GithubArea,
-  type GithubCredential,
   type GithubInstallation,
+  type GithubInstallations,
   type GithubMachine,
   type GithubStatus,
   githubAuthorizeOf,
@@ -10,33 +9,38 @@ import {
   githubInstallationsOf,
   githubStatusOf,
 } from "@terminus/computers";
+import Ellipsis from "lucide-solid/icons/ellipsis";
+import ExternalIcon from "lucide-solid/icons/external-link";
+import Plus from "lucide-solid/icons/plus";
 import { For, Show, createEffect, createSignal, onCleanup, onMount } from "solid-js";
-import { manifiesto, t } from "../../../lib/i18n";
+import { t } from "../../../lib/i18n";
 import { invoke } from "../../../lib/invoke.ts";
 import { capabilities } from "../../../lib/platform";
 import { Badge } from "../../../ui/Badge";
 import { Button } from "../../../ui/Button";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "../../../ui/DropdownMenu";
 import { FailureNote, type Failure } from "../../../ui/Failure";
 import { Skeleton } from "../../../ui/Skeleton";
-import { Toggle } from "../../../ui/Toggle";
 import { SettingsBlock, SettingsRow } from "../layout";
-import { githubAccountFailureOf, notHere, silent } from "./failures.ts";
+import { githubAccountCode, githubAccountFailureOf, notHere, silent } from "./failures.ts";
 import { ENLACE } from "../../../ui/ExternalLink";
 
 /**
- * GitHub en la cuenta de Danil: una conexión por workspace que guarda el Worker
- * y de la que cada máquina pide su token. La ventana habla con su motor
- * (`github_account_*`); la web, con el Worker (`web/github-account.ts`).
+ * GitHub en la cuenta de Danil: la conexión es de la persona y Danil refleja
+ * dónde está instalada la App. La ventana habla con su motor (`github_account_*`);
+ * la web, con el Worker (`web/github-account.ts`).
  */
 
 /** `account`: esta tarjeta reemplaza la local. `local`: se ve la de esta máquina (sin sesión, motor viejo, o la local sigue mandando). */
 export type GithubAccountMode = "unknown" | "account" | "local";
 
-export type GithubAccountState = { mode: GithubAccountMode; connected: boolean; reauthorize: boolean };
+/** `session`: esta máquina tiene sesión de Danil para el workspace (`null` mientras se pregunta). */
+export type GithubAccountState = { mode: GithubAccountMode; connected: boolean; reauthorize: boolean; session: boolean | null };
 
 /** Cada cuánto se pregunta tras abrir GitHub, y hasta cuándo. */
 const POLL_MS = 3_000;
 const POLL_FOR_MS = 10 * 60_000;
+const PLANS_URL = "https://danil.ai/planes";
 
 type WorkspaceAccountOf = { signed_in?: boolean };
 
@@ -49,11 +53,13 @@ export default function GithubAccount(props: {
   const [status, setStatus] = createSignal<GithubStatus | null>(null);
   /** `null` mientras se pregunta; `false` si aquí no hay GitHub de la cuenta. */
   const [available, setAvailable] = createSignal<boolean | null>(null);
+  const [session, setSession] = createSignal<boolean | null>(null);
   const [busy, setBusy] = createSignal<string | null>(null);
   const [failure, setFailure] = createSignal<Failure | null>(null);
+  /** El código del último fallo: algunos se dicen en la fila de la cuenta y no abajo. */
+  const [code, setCode] = createSignal<string | null>(null);
   const [waiting, setWaiting] = createSignal<string | null>(null);
-  const [choosing, setChoosing] = createSignal(false);
-  const [installations, setInstallations] = createSignal<GithubInstallation[] | null>(null);
+  const [installs, setInstalls] = createSignal<GithubInstallations | null>(null);
   const [installUrl, setInstallUrl] = createSignal<string | null>(null);
   /** La máquina tenía otra GitHub (sin sesión) y la cuenta conservó la suya. */
   const [adoptNotice, setAdoptNotice] = createSignal<{ login: string; account_login: string } | null>(null);
@@ -62,14 +68,26 @@ export default function GithubAccount(props: {
 
   const credential = () => status()?.credential ?? null;
   const connected = () => !!status()?.connected;
+  const reauthorize = () => credential()?.status === "reauthorize" || code() === "github_reauthorize";
+  const license = () => code() === "license_required";
+  const unavailable = () => code() === "github_unavailable";
   // Con la cuenta vacía y una conexión local, la local sigue siendo la que usan las tareas.
   const mode = (): GithubAccountMode => {
     const a = available();
     if (a === null) return "unknown";
     return a && (connected() || !props.local) ? "account" : "local";
   };
-  createEffect(() => props.onState({ mode: mode(), connected: connected(), reauthorize: credential()?.status === "reauthorize" }));
-  const fail = (e: unknown) => setFailure(githubAccountFailureOf(e) as Failure);
+  createEffect(() => props.onState({ mode: mode(), connected: connected(), reauthorize: reauthorize(), session: session() }));
+  const fail = (e: unknown) => {
+    const c = githubAccountCode(e);
+    setCode(c);
+    // Estos tres se dicen en la fila de la cuenta, con su acción.
+    setFailure(c === "github_unavailable" || c === "github_reauthorize" || c === "license_required" ? null : (githubAccountFailureOf(e) as Failure));
+  };
+  const clearFailure = () => {
+    setFailure(null);
+    setCode(null);
+  };
 
   function applyStatus(next: GithubStatus) {
     setStatus(next);
@@ -80,10 +98,13 @@ export default function GithubAccount(props: {
   async function read(): Promise<GithubStatus | null> {
     if (capabilities().danilAccount) {
       const of = await invoke<WorkspaceAccountOf>("danil_workspace_account", { workspace: props.scope }).catch(() => null);
+      setSession(!!of?.signed_in);
       if (!of?.signed_in) {
         setAvailable(false);
         return null;
       }
+    } else {
+      setSession(true);
     }
     try {
       const raw = await invoke<unknown>("github_account_status", { scope: props.scope });
@@ -103,13 +124,33 @@ export default function GithubAccount(props: {
     }
   }
 
+  async function readInstallations(): Promise<GithubInstallations | null> {
+    try {
+      const listed = githubInstallationsOf(await invoke("github_account_installations", { scope: props.scope }));
+      if (disposed) return null;
+      setInstalls(listed);
+      if (listed.install_url) setInstallUrl(listed.install_url);
+      return listed;
+    } catch (e) {
+      if (!disposed) fail(e);
+      return null;
+    }
+  }
+
+  async function refresh() {
+    clearFailure();
+    const next = await read();
+    if (next?.connected) await readInstallations();
+  }
+
   onMount(() => {
-    void read();
-    const refresh = () => {
-      if (mode() !== "unknown" && !busy()) void read();
+    void refresh();
+    // Al volver de GitHub aparece la organización recién instalada.
+    const onFocus = () => {
+      if (mode() !== "unknown" && !busy() && !poll) void refresh();
     };
-    window.addEventListener("focus", refresh);
-    onCleanup(() => window.removeEventListener("focus", refresh));
+    window.addEventListener("focus", onFocus);
+    onCleanup(() => window.removeEventListener("focus", onFocus));
   });
   onCleanup(() => {
     disposed = true;
@@ -123,13 +164,13 @@ export default function GithubAccount(props: {
 
   async function connect() {
     setBusy("authorize");
-    setFailure(null);
+    clearFailure();
     try {
       const { url, opened } = githubAuthorizeOf(await invoke("github_account_authorize", { scope: props.scope }));
       if (disposed) return;
       setWaiting(url);
       // Si el motor no la abrió (la web, un motor sin pantalla), se abre aquí; si algo la bloquea, queda el enlace.
-      if (!opened) invoke("open_external", { target: url }).catch(() => {});
+      if (!opened) void openUrl(url);
       const until = Date.now() + POLL_FOR_MS;
       const reauthorizing = credential()?.status === "reauthorize";
       stopPolling();
@@ -138,7 +179,10 @@ export default function GithubAccount(props: {
         const next = await read();
         if (next?.connected && !(reauthorizing && next.credential?.status === "reauthorize")) {
           finishWaiting();
-          if (!next.credential?.config.areas.length) void chooseAreas();
+          const listed = await readInstallations();
+          // Sin ninguna instalación no hay nada que ver: se abre la página de instalar, una vez.
+          const install = listed?.install_url ?? installUrl();
+          if (listed && listed.installations.length === 0 && !listed.install_pending && install) void openUrl(install);
         }
       }, POLL_MS);
     } catch (e) {
@@ -153,52 +197,26 @@ export default function GithubAccount(props: {
     setWaiting(null);
   }
 
-  async function chooseAreas() {
-    setChoosing(true);
-    setBusy("installations");
-    setFailure(null);
-    try {
-      const listed = githubInstallationsOf(await invoke("github_account_installations", { scope: props.scope }));
-      if (disposed) return;
-      setInstallations(listed.installations);
-      if (listed.install_url) setInstallUrl(listed.install_url);
-    } catch (e) {
-      fail(e);
-    } finally {
-      setBusy(null);
-    }
-  }
-
-  async function toggleArea(i: GithubInstallation, on: boolean) {
-    const current = credential()?.config.areas ?? [];
-    const areas: GithubArea[] = on
-      ? [...current.filter((a) => a.key !== i.key), { key: i.key, installation_id: i.installation_id, repository_ids: null }]
-      : current.filter((a) => a.key !== i.key);
-    setBusy("areas");
-    setFailure(null);
-    try {
-      const reply = (await invoke("github_account_set_areas", { scope: props.scope, areas })) as { credential?: unknown };
-      const next = githubCredentialOf(reply?.credential);
-      if (next && !disposed) applyStatus({ ...(status() as GithubStatus), connected: true, credential: next });
-    } catch (e) {
-      fail(e);
-    } finally {
-      setBusy(null);
-    }
-  }
-
   async function disconnect() {
     if (!(await confirm(t("providers.github.account.disconnect_confirm"), { kind: "warning" }))) return;
     setBusy("disconnect");
-    setFailure(null);
+    clearFailure();
     try {
       await invoke("github_account_disconnect", { scope: props.scope });
       if (disposed) return;
-      setChoosing(false);
-      setInstallations(null);
+      setInstalls(null);
       applyStatus({ connected: false, credential: null, install_url: installUrl() });
     } catch (e) {
       fail(e);
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function check() {
+    setBusy("check");
+    try {
+      await refresh();
     } finally {
       setBusy(null);
     }
@@ -208,7 +226,7 @@ export default function GithubAccount(props: {
     const c = credential();
     if (!c) return;
     setBusy(`machine:${m.computer_id}`);
-    setFailure(null);
+    clearFailure();
     try {
       const args = { scope: props.scope, credential: c.id, computer: m.computer_id };
       const reply = (restore
@@ -225,8 +243,72 @@ export default function GithubAccount(props: {
   }
 
   const machineName = (m: GithubMachine) => m.name || capabilities().machineName?.(m.computer_id) || m.computer_id;
-  const areaKeys = (c: GithubCredential) => c.config.areas.map((a) => a.key);
   const openUrl = (url: string) => invoke("open_external", { target: url }).catch(() => {});
+  const scopeOf = (i: GithubInstallation) =>
+    i.repository_selection === "all"
+      ? t("providers.github.account.scope_all")
+      : i.repository_selection === "selected" && i.repository_count !== null
+        ? t("providers.github.account.scope_count", { count: i.repository_count })
+        : t("providers.github.account.scope_some");
+  const changeUrl = (i: GithubInstallation) => i.html_url ?? installUrl();
+
+  const Initial = (p: { name: string; round?: boolean }) => (
+    <span
+      aria-hidden="true"
+      class={`grid size-6 shrink-0 place-items-center bg-neutral-200 text-caption font-semibold text-neutral-700 ${p.round ? "rounded-full" : "rounded-sm"}`}
+    >
+      {p.name.slice(0, 1).toUpperCase()}
+    </span>
+  );
+
+  /** Lo que la fila de la cuenta dice en vez del menú: un estado con su acción. */
+  const AccountState = () => (
+    <Show
+      when={reauthorize() || license() || unavailable()}
+      fallback={
+        <DropdownMenu>
+          <DropdownMenuTrigger as={Button} variant="ghost" size="iconCompact" aria-label={t("providers.github.more_actions")} disabled={busy() !== null}>
+            <Ellipsis size={16} aria-hidden />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent class="z-[90]" data-owns-escape>
+            <DropdownMenuItem disabled={busy() !== null} onSelect={() => void check()}>
+              {t("providers.github.check_connection")}
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem class="text-error-strong" disabled={busy() !== null} onSelect={() => void disconnect()}>
+              {t("providers.github.disconnect")}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      }
+    >
+      <Show when={reauthorize()}>
+        <span class="inline-flex items-center gap-2 text-ui text-warning-strong">
+          <Badge tone="warning">{t("providers.github.account.reauthorize_badge")}</Badge>
+          {t("providers.github.account.reauthorize")}
+        </span>
+        <Button size="sm" disabled={busy() !== null} onClick={() => void connect()}>
+          {t("providers.github.account.reconnect")}
+        </Button>
+      </Show>
+      <Show when={!reauthorize() && license()}>
+        <span class="inline-flex items-center gap-2 text-ui text-warning-strong">
+          <Badge tone="warning">{t("providers.github.account.license_badge")}</Badge>
+          {t("providers.github.account.license")}
+        </span>
+        <Button variant="outline" size="compact" onClick={() => void openUrl(PLANS_URL)}>
+          {t("providers.github.account.plans")}
+          <ExternalIcon size={12} aria-hidden />
+        </Button>
+      </Show>
+      <Show when={!reauthorize() && !license() && unavailable()}>
+        <span class="text-ui text-error-strong" role="alert">{t("providers.github.account.unavailable")}</span>
+        <Button variant="outline" size="compact" disabled={busy() !== null} onClick={() => void check()}>
+          {t("providers.github.account.retry")}
+        </Button>
+      </Show>
+    </Show>
+  );
 
   return (
     <div data-github-account={mode()} class="contents">
@@ -249,127 +331,122 @@ export default function GithubAccount(props: {
 
       {/* Hay conexión local y la cuenta aún no tiene: pasarla es autorizar una vez. */}
       <Show when={available() && !connected() && props.local && !waiting()}>
-        <SettingsRow label={t("providers.github.account.migrate")} description={t("providers.github.account.migrate_help")}>
+        <SettingsRow label={t("providers.github.account.migrate")}>
           <Button size="compact" disabled={busy() !== null} onClick={() => void connect()}>
             {t("providers.github.account.migrate_action")}
           </Button>
         </SettingsRow>
       </Show>
 
+      {/* Sin licencia el Worker no da GitHub; la conexión de esta máquina, si hay, sigue. */}
+      <Show when={mode() === "local" && license() && !props.local}>
+        <SettingsRow label={t("providers.github.account.connect_row")}>
+          <AccountState />
+        </SettingsRow>
+      </Show>
+
       <Show when={mode() === "account" && !connected() && !waiting()}>
-        <SettingsRow label={t("providers.github.account.connect_row")} description={t("providers.github.account.connect_help")}>
-          <Button size="sm" disabled={busy() !== null} onClick={() => void connect()}>
-            {t("providers.github.account.connect")}
-          </Button>
+        <SettingsRow label={t("providers.github.account.connect_row")}>
+          <Show when={license() || unavailable()} fallback={
+            <Button size="sm" disabled={busy() !== null} onClick={() => void connect()}>
+              {t("providers.github.account.connect")}
+            </Button>
+          }>
+            <AccountState />
+          </Show>
         </SettingsRow>
       </Show>
 
       <Show when={mode() === "account" && connected() ? credential() : null}>
         {(c) => (
           <>
-            <Show when={c().status === "reauthorize" && !waiting()}>
-              <SettingsRow
-                label={<span class="inline-flex items-center gap-2"><Badge tone="warning">{t("providers.github.account.reauthorize_badge")}</Badge>{t("providers.github.account.reauthorize")}</span>}
-                description={t("providers.github.account.reauthorize_help")}
-              >
-                <Button size="compact" disabled={busy() !== null} onClick={() => void connect()}>
-                  {t("providers.github.account.reconnect")}
-                </Button>
-              </SettingsRow>
-            </Show>
             <SettingsRow
+              data-github-login={c().config.login}
+              lead={<Initial name={c().config.name ?? c().config.login} round />}
               label={
-                <span>
-                  <strong>@{c().config.login}</strong>
+                <span class="inline-flex min-w-0 items-baseline gap-2">
+                  <Show when={c().config.name}>{(name) => <strong class="truncate font-semibold">{name()}</strong>}</Show>
+                  <span class={c().config.name ? "truncate font-mono text-xs text-neutral-500" : "truncate font-semibold"}>@{c().config.login}</span>
                 </span>
               }
               description={
-                <>
-                  {t("providers.github.account.connected_help")}
-                  <Show when={adoptNotice()}>
-                    {(n) => <span class="block">{t("providers.github.account.adopt_kept", { account: n().account_login, machine: n().login })}</span>}
-                  </Show>
-                </>
-              }
-            >
-              <Button variant="ghost" size="compact" class="hover:text-error-strong" disabled={busy() !== null} onClick={() => void disconnect()}>
-                {t("providers.github.disconnect")}
-              </Button>
-            </SettingsRow>
-            <SettingsRow
-              label={t("providers.github.account.areas")}
-              description={
-                areaKeys(c()).length === 0
-                  ? t("providers.github.account.no_areas")
-                  : new Intl.ListFormat(manifiesto().formato).format(areaKeys(c()))
-              }
-            >
-              <Button variant="outline" size="compact" disabled={busy() !== null} aria-expanded={choosing()} onClick={() => (choosing() ? setChoosing(false) : void chooseAreas())}>
-                {choosing() ? t("providers.github.account.areas_done") : t("providers.github.account.choose_areas")}
-              </Button>
-            </SettingsRow>
-            <Show when={choosing()}>
-              <SettingsBlock class="gap-1.5">
-                <Show when={installations()} fallback={<Skeleton filas={2} class="h-6" />}>
-                  {(list) => (
-                    <>
-                      <Show when={list().length === 0}>
-                        <p class="m-0 text-xs text-neutral-500">{t("providers.github.account.no_installations")}</p>
-                      </Show>
-                      <ul class="m-0 flex list-none flex-col gap-1 p-0" data-github-installations="">
-                        <For each={list()}>
-                          {(i) => {
-                            const on = () => areaKeys(c()).includes(i.key);
-                            return (
-                              <li class="flex items-center gap-2 rounded-sm border border-border bg-surface px-2 py-1.5 text-xs">
-                                <span class="min-w-0 flex-1 truncate">{i.account.login}</span>
-                                <Show when={i.account.type}>{(type) => <span class="font-mono text-caption text-neutral-500">{type()}</span>}</Show>
-                                <Toggle
-                                  checked={on()}
-                                  label={t("providers.github.account.area_toggle", { name: i.account.login })}
-                                  disabled={busy() !== null}
-                                  onChange={(next) => void toggleArea(i, next)}
-                                />
-                              </li>
-                            );
-                          }}
-                        </For>
-                      </ul>
-                    </>
-                  )}
+                <Show when={adoptNotice()}>
+                  {(n) => t("providers.github.account.adopt_kept", { account: n().account_login, machine: n().login })}
                 </Show>
-                <Show when={installUrl()}>
+              }
+            >
+              <Show when={!waiting()}>
+                <AccountState />
+              </Show>
+            </SettingsRow>
+
+            <Show when={!unavailable() && !reauthorize()}>
+              <SettingsRow label={<span class="font-medium">{t("providers.github.account.areas")}</span>}>
+                <Show when={!license() ? installUrl() : null}>
                   {(url) => (
-                    <a class={`${ENLACE} self-start text-xs`} href={url()} target="_blank" rel="noopener noreferrer" onClick={(ev) => { ev.preventDefault(); void openUrl(url()); }}>
-                      {t("providers.github.account.install_more")}
-                    </a>
+                    <Button variant="ghost" size="compact" disabled={busy() !== null} onClick={() => void openUrl(url())}>
+                      <Plus size={12} aria-hidden />
+                      {t("providers.github.account.add")}
+                      <ExternalIcon size={12} aria-hidden />
+                    </Button>
                   )}
                 </Show>
-              </SettingsBlock>
+              </SettingsRow>
+              <Show when={installs()} fallback={<SettingsBlock><Skeleton filas={2} class="h-6" /></SettingsBlock>}>
+                {(list) => (
+                  <div class="contents" data-github-installations="">
+                    <For each={list().installations}>
+                      {(i) => (
+                        <SettingsRow
+                          class={license() ? "opacity-60" : undefined}
+                          data-github-installation={i.key}
+                          lead={<Initial name={i.account.login} round={i.account.type === "User"} />}
+                          label={i.account.login}
+                        >
+                          <span class="text-ui text-neutral-500">{scopeOf(i)}</span>
+                          <Show when={!license() ? changeUrl(i) : null}>
+                            {(url) => (
+                              <Button
+                                variant="outline"
+                                size="compact"
+                                aria-label={t("providers.github.account.change_on", { name: i.account.login })}
+                                disabled={busy() !== null}
+                                onClick={() => void openUrl(url())}
+                              >
+                                {t("providers.github.account.change")}
+                                <ExternalIcon size={12} aria-hidden />
+                              </Button>
+                            )}
+                          </Show>
+                        </SettingsRow>
+                      )}
+                    </For>
+                    <Show when={list().install_pending}>
+                      <SettingsRow data-github-installation-pending="" label={<Badge tone="warning">{t("providers.github.account.pending")}</Badge>}>
+                        <span class="text-ui text-neutral-500">{t("providers.github.account.pending_admin")}</span>
+                      </SettingsRow>
+                    </Show>
+                  </div>
+                )}
+              </Show>
             </Show>
+
             <Show when={c().machines.length > 0}>
-              <SettingsRow
-                class="flex-wrap gap-x-8 gap-y-2"
-                label={t("providers.github.account.in_use")}
-                description={new Intl.ListFormat(manifiesto().formato).format(c().machines.filter((m) => m.state !== "removed").map(machineName))}
-              />
-              <SettingsBlock class="gap-1">
-                <ul class="m-0 flex list-none flex-col gap-1 p-0" data-github-machines="">
-                  <For each={c().machines}>
-                    {(m) => (
-                      <li class="flex items-center gap-2 text-xs" data-github-machine={m.computer_id}>
-                        <span class="min-w-0 flex-1 truncate">{machineName(m)}</span>
-                        <Show when={m.state === "removed"}>
-                          <Badge>{t("providers.github.account.machine_removed")}</Badge>
-                        </Show>
-                        <Button variant="ghost" size="compact" disabled={busy() !== null} onClick={() => void machine(m, m.state === "removed")}>
-                          {m.state === "removed" ? t("providers.github.account.machine_restore") : t("providers.github.account.machine_remove")}
-                        </Button>
-                      </li>
-                    )}
-                  </For>
-                </ul>
-              </SettingsBlock>
+              <SettingsRow label={<span class="font-medium">{t("providers.github.account.in_use")}</span>} />
+              <div class="contents" data-github-machines="">
+                <For each={c().machines}>
+                  {(m) => (
+                    <SettingsRow data-github-machine={m.computer_id} label={machineName(m)}>
+                      <Show when={m.state === "removed"}>
+                        <Badge>{t("providers.github.account.machine_removed")}</Badge>
+                      </Show>
+                      <Button variant="ghost" size="compact" disabled={busy() !== null} onClick={() => void machine(m, m.state === "removed")}>
+                        {m.state === "removed" ? t("providers.github.account.machine_restore") : t("providers.github.account.machine_remove")}
+                      </Button>
+                    </SettingsRow>
+                  )}
+                </For>
+              </div>
             </Show>
           </>
         )}

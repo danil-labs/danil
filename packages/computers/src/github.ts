@@ -23,7 +23,7 @@ export type GithubMachine = {
   last_seen_at: string | null;
 };
 
-export type GithubConfig = { github_user_id: number | null; login: string; avatar: string | null; areas: GithubArea[] };
+export type GithubConfig = { github_user_id: number | null; login: string; name: string | null; avatar: string | null; areas: GithubArea[] };
 
 /** La credencial `kind = github` con la forma común del contrato de credenciales (§ 3). */
 export type GithubCredential = {
@@ -43,9 +43,13 @@ export type GithubInstallation = {
   installation_id: number;
   account: { login: string; type: string | null; avatar: string | null };
   repository_selection: "all" | "selected" | null;
+  /** La página de esa instalación en GitHub; un Worker anterior no la manda. */
+  html_url: string | null;
+  repository_count: number | null;
 };
 
-export type GithubInstallations = { installations: GithubInstallation[]; install_url: string | null };
+/** `install_pending`: alguien pidió instalar la App en una organización y falta que una admin lo apruebe. */
+export type GithubInstallations = { installations: GithubInstallation[]; install_url: string | null; install_pending: boolean };
 
 /** `opened`: el motor ya abrió el navegador (escritorio); el Worker nunca lo dice. */
 export type GithubAuthorize = { url: string; expires_at: string | null; opened: boolean };
@@ -115,6 +119,7 @@ export function githubCredentialOf(raw: unknown): GithubCredential | null {
     config: {
       github_user_id: num(config.github_user_id),
       login,
+      name: str(config.name),
       avatar: str(config.avatar),
       areas: (Array.isArray(config.areas) ? config.areas : []).map(areaOf).filter((a): a is GithubArea => a !== null),
     },
@@ -141,10 +146,12 @@ export function githubInstallationsOf(raw: unknown): GithubInstallations {
         installation_id: i.installation_id as number,
         account: { login: str(account.login) ?? (i.key as string), type: str(account.type), avatar: str(account.avatar) },
         repository_selection: selection,
+        html_url: str(i.html_url),
+        repository_count: num(i.repository_count),
       },
     ];
   });
-  return { installations, install_url: str(raw.install_url) };
+  return { installations, install_url: str(raw.install_url), install_pending: raw.install_pending === true };
 }
 
 export function githubAuthorizeOf(raw: unknown): GithubAuthorize {
