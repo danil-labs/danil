@@ -61,8 +61,18 @@ pub fn captured_output_with_timeout(
             })
         })
     };
-    let stdout = drain(child.stdout.take().map(|p| Box::new(p) as Box<dyn Read + Send>));
-    let stderr = drain(child.stderr.take().map(|p| Box::new(p) as Box<dyn Read + Send>));
+    let stdout = drain(
+        child
+            .stdout
+            .take()
+            .map(|p| Box::new(p) as Box<dyn Read + Send>),
+    );
+    let stderr = drain(
+        child
+            .stderr
+            .take()
+            .map(|p| Box::new(p) as Box<dyn Read + Send>),
+    );
     let deadline = std::time::Instant::now() + timeout;
     let status = loop {
         if let Some(status) = child.try_wait()? {
@@ -75,8 +85,14 @@ pub fn captured_output_with_timeout(
         }
         std::thread::sleep(std::time::Duration::from_millis(50));
     };
-    let join = |h: Option<std::thread::JoinHandle<Vec<u8>>>| h.and_then(|h| h.join().ok()).unwrap_or_default();
-    Ok(std::process::Output { status, stdout: join(stdout), stderr: join(stderr) })
+    let join = |h: Option<std::thread::JoinHandle<Vec<u8>>>| {
+        h.and_then(|h| h.join().ok()).unwrap_or_default()
+    };
+    Ok(std::process::Output {
+        status,
+        stdout: join(stdout),
+        stderr: join(stderr),
+    })
 }
 
 /// Quita el `%XX` de un tramo de URL; una secuencia rota o que no sea UTF-8 no da ruta.

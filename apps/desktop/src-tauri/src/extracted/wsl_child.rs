@@ -309,7 +309,10 @@ fn conns() -> &'static Mutex<HashMap<String, Conn>> {
 
 /// `\\wsl.localhost\<distro>\home\...` para una ruta de Linux.
 fn unc(distro: &str, linux: &str) -> PathBuf {
-    PathBuf::from(format!(r"\\wsl.localhost\{distro}{}", linux.replace('/', "\\")))
+    PathBuf::from(format!(
+        r"\\wsl.localhost\{distro}{}",
+        linux.replace('/', "\\")
+    ))
 }
 
 /// Lee el descriptor y el token por `\\wsl.localhost` (medio segundo, contra
@@ -496,7 +499,10 @@ pub fn sync_spaces(entry: &ChildEntry, workspace: &str, spaces: &[Value]) -> Res
         return Err(fail("invalid_request", workspace));
     }
     for space in spaces {
-        let Some(id) = space["id"].as_str().filter(|i| !i.is_empty() && i.chars().all(|c| c.is_ascii_alphanumeric())) else {
+        let Some(id) = space["id"]
+            .as_str()
+            .filter(|i| !i.is_empty() && i.chars().all(|c| c.is_ascii_alphanumeric()))
+        else {
             continue;
         };
         let body = json!({
@@ -528,18 +534,34 @@ mv "$d/space.json.tmp" "$d/space.json"
 /// Copia una carpeta de Windows a la distribución, en `~/danil/<nombre>`, y la
 /// registra en su motor con el mismo id. Se salta lo que se reconstruye
 /// (`node_modules`, `target`, `.venv`, `dist`) y conserva `.git`.
-pub fn copy_folder(entry: &ChildEntry, id: &str, name: &str, windows_path: &str, workspace: Option<&str>) -> Result<String, Failure> {
+pub fn copy_folder(
+    entry: &ChildEntry,
+    id: &str,
+    name: &str,
+    windows_path: &str,
+    workspace: Option<&str>,
+) -> Result<String, Failure> {
     let source = std::path::Path::new(windows_path);
     if !source.is_dir() {
         return Err(fail("folder_missing", windows_path));
     }
     let safe: String = name
         .chars()
-        .map(|c| if c.is_ascii_alphanumeric() || matches!(c, '-' | '_' | '.') { c } else { '-' })
+        .map(|c| {
+            if c.is_ascii_alphanumeric() || matches!(c, '-' | '_' | '.') {
+                c
+            } else {
+                '-'
+            }
+        })
         .collect::<String>()
         .trim_matches('-')
         .to_string();
-    let safe = if safe.is_empty() { id.to_string() } else { safe };
+    let safe = if safe.is_empty() {
+        id.to_string()
+    } else {
+        safe
+    };
     // Una carpeta con ese nombre que ya tenga algo: la copia va al lado.
     let mut free = String::new();
     script_ok(
@@ -564,7 +586,16 @@ printf '%s
     let mut tar = Command::new("tar.exe");
     crate::util::no_console_window(&mut tar);
     let mut tar = tar
-        .args(["-c", "-f", "-", "--exclude=node_modules", "--exclude=target", "--exclude=.venv", "--exclude=dist", "-C"])
+        .args([
+            "-c",
+            "-f",
+            "-",
+            "--exclude=node_modules",
+            "--exclude=target",
+            "--exclude=.venv",
+            "--exclude=dist",
+            "-C",
+        ])
         .arg(source)
         .arg(".")
         .stdout(Stdio::piped())
@@ -573,15 +604,29 @@ printf '%s
         .map_err(|e| fail("io", format!("tar: {e}")))?;
     let pipe = tar.stdout.take().ok_or_else(|| fail("io", "tar"))?;
     let unpack = wsl()
-        .args(["-d", &entry.distro, "-u", &entry.user, "--exec", "sh", "-c", "tar -x -f - -C \"$1\"", "sh", &free])
+        .args([
+            "-d",
+            &entry.distro,
+            "-u",
+            &entry.user,
+            "--exec",
+            "sh",
+            "-c",
+            "tar -x -f - -C \"$1\"",
+            "sh",
+            &free,
+        ])
         .stdin(Stdio::from(pipe))
         .stdout(Stdio::null())
         .stderr(Stdio::piped())
         .output()
         .map_err(|e| fail("io", e.to_string()))?;
-    let packed = tar.wait_with_output().map_err(|e| fail("io", e.to_string()))?;
+    let packed = tar
+        .wait_with_output()
+        .map_err(|e| fail("io", e.to_string()))?;
     if !packed.status.success() || !unpack.status.success() {
-        let detail = String::from_utf8_lossy(&packed.stderr).into_owned() + &String::from_utf8_lossy(&unpack.stderr);
+        let detail = String::from_utf8_lossy(&packed.stderr).into_owned()
+            + &String::from_utf8_lossy(&unpack.stderr);
         return Err(fail("copy_failed", detail.trim().to_string()));
     }
     invoke(
@@ -683,7 +728,11 @@ pub fn status(entry: &ChildEntry, disk: bool) -> ChildInfo {
         info.online = s["status"] == "ready";
         info.features = s["service_features"]
             .as_array()
-            .map(|a| a.iter().filter_map(|f| f.as_str().map(String::from)).collect())
+            .map(|a| {
+                a.iter()
+                    .filter_map(|f| f.as_str().map(String::from))
+                    .collect()
+            })
             .unwrap_or_default();
         info.contract = Some(conn.contract.clone());
         info.version = s["engine_version"]
@@ -706,7 +755,10 @@ pub fn children(app: &AppHandle, disk: bool) -> Vec<ChildInfo> {
         return Vec::new();
     }
     let running = if disk { Vec::new() } else { running_distros() };
-    entries.iter().map(|e| status(e, disk || running.contains(&e.distro))).collect()
+    entries
+        .iter()
+        .map(|e| status(e, disk || running.contains(&e.distro)))
+        .collect()
 }
 
 fn running_distros() -> Vec<String> {
@@ -746,7 +798,17 @@ pub struct CatalogItem {
 
 fn supported_family(name: &str) -> bool {
     let n = name.to_lowercase();
-    ["ubuntu", "debian", "kali", "fedora", "almalinux", "oraclelinux", "oracle"].iter().any(|f| n.starts_with(f))
+    [
+        "ubuntu",
+        "debian",
+        "kali",
+        "fedora",
+        "almalinux",
+        "oraclelinux",
+        "oracle",
+    ]
+    .iter()
+    .any(|f| n.starts_with(f))
 }
 
 pub fn catalog() -> Result<Vec<CatalogItem>, Failure> {
@@ -763,7 +825,12 @@ pub fn catalog() -> Result<Vec<CatalogItem>, Failure> {
                 let name = d["Name"].as_str().unwrap_or_default();
                 let url = d["Amd64Url"]["Url"].as_str().unwrap_or_default();
                 let sha = d["Amd64Url"]["Sha256"].as_str().unwrap_or_default();
-                if name.is_empty() || url.is_empty() || sha.len() != 64 || !url.starts_with("https://") || !valid_distro(name) {
+                if name.is_empty()
+                    || url.is_empty()
+                    || sha.len() != 64
+                    || !url.starts_with("https://")
+                    || !valid_distro(name)
+                {
                     continue;
                 }
                 out.push(CatalogItem {
@@ -790,7 +857,12 @@ pub fn catalog() -> Result<Vec<CatalogItem>, Failure> {
                     .build()
                     .call()
                     .ok()
-                    .and_then(|r| r.headers().get("content-length").and_then(|v| v.to_str().ok()).and_then(|v| v.parse::<u64>().ok()))
+                    .and_then(|r| {
+                        r.headers()
+                            .get("content-length")
+                            .and_then(|v| v.to_str().ok())
+                            .and_then(|v| v.parse::<u64>().ok())
+                    })
             })
         })
         .collect();
@@ -809,7 +881,18 @@ fn valid_user(user: &str) -> bool {
         && chars.all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-' || c == '_')
         && !matches!(
             user,
-            "root" | "daemon" | "bin" | "sys" | "sync" | "games" | "man" | "nobody" | "admin" | "ubuntu" | "messagebus" | "systemd-network"
+            "root"
+                | "daemon"
+                | "bin"
+                | "sys"
+                | "sync"
+                | "games"
+                | "man"
+                | "nobody"
+                | "admin"
+                | "ubuntu"
+                | "messagebus"
+                | "systemd-network"
         )
 }
 
@@ -937,7 +1020,14 @@ fi
 grep -q '^\[boot\]' /etc/wsl.conf || printf '\n[boot]\nsystemd=true\n' >> /etc/wsl.conf
 "#
     );
-    script_ok(distro, Some("root"), &body, &[], Duration::from_secs(120), |_| {})?;
+    script_ok(
+        distro,
+        Some("root"),
+        &body,
+        &[],
+        Duration::from_secs(120),
+        |_| {},
+    )?;
     // El usuario por omisión y systemd se leen al arrancar la distro.
     let _ = wait_wsl(&["--terminate", distro], Duration::from_secs(60));
     Ok(())
@@ -1010,7 +1100,11 @@ fn linux_engine() -> Result<(String, String, String), Failure> {
         .get("x86_64-unknown-linux-gnu")
         .ok_or_else(|| fail("arch", "x86_64-unknown-linux-gnu"))?;
     let short: String = lock.commit.chars().take(8).collect();
-    Ok((p.url.clone(), p.sha256.clone(), format!("{}-{short}", lock.engine_version)))
+    Ok((
+        p.url.clone(),
+        p.sha256.clone(),
+        format!("{}-{short}", lock.engine_version),
+    ))
 }
 
 pub fn install_engine(
@@ -1053,9 +1147,14 @@ if command -v apt-get >/dev/null; then
 elif command -v dnf >/dev/null; then dnf install -y curl tar diffutils dbus-libs
 else echo "faltan:$need" >&2; exit 3; fi
 "#;
-    script_ok(distro, Some("root"), deps, &[], Duration::from_secs(900), |l| {
-        progress_line(app, target, "deps", l)
-    })?;
+    script_ok(
+        distro,
+        Some("root"),
+        deps,
+        &[],
+        Duration::from_secs(900),
+        |l| progress_line(app, target, "deps", l),
+    )?;
 
     let (url, sha, version) = linux_engine()?;
     // El instalador de seldon-host va dentro del script por stdin; se arma un
@@ -1101,7 +1200,14 @@ if systemctl --user show-environment >/dev/null 2>&1; then
   systemctl --user restart seldon-host
 fi
 "#;
-    script_ok(distro, Some(&who.user), service, &[], Duration::from_secs(120), |_| {})?;
+    script_ok(
+        distro,
+        Some(&who.user),
+        service,
+        &[],
+        Duration::from_secs(120),
+        |_| {},
+    )?;
 
     let entry = ChildEntry {
         distro: distro.to_string(),
@@ -1139,8 +1245,16 @@ fi
 /// local (`add_workspace`): `materialize_workspace` pide cuenta de Danil y la
 /// máquina hija no la tiene a propósito.
 pub fn ensure_workspace(distro: &str, home: &str, id: &str, name: &str) -> Result<(), Failure> {
-    let listed = invoke(distro, home, "list_workspaces", json!({}), None, None, Duration::from_secs(30))
-        .unwrap_or(Value::Null);
+    let listed = invoke(
+        distro,
+        home,
+        "list_workspaces",
+        json!({}),
+        None,
+        None,
+        Duration::from_secs(30),
+    )
+    .unwrap_or(Value::Null);
     let known = listed["workspaces"]
         .as_array()
         .is_some_and(|ws| ws.iter().any(|w| w["id"] == id));
@@ -1281,7 +1395,9 @@ pub struct LinuxState {
 }
 
 fn saved_path(app: &AppHandle) -> Option<PathBuf> {
-    registry_path(app).ok().map(|p| p.with_file_name("wsl-state.json"))
+    registry_path(app)
+        .ok()
+        .map(|p| p.with_file_name("wsl-state.json"))
 }
 
 fn read_saved(app: &AppHandle) -> Saved {
@@ -1309,12 +1425,22 @@ struct Current {
 
 fn current() -> &'static Mutex<Current> {
     static C: OnceLock<Mutex<Current>> = OnceLock::new();
-    C.get_or_init(|| Mutex::new(Current { job: None, running: false, app: None, last_emit: None }))
+    C.get_or_init(|| {
+        Mutex::new(Current {
+            job: None,
+            running: false,
+            app: None,
+            last_emit: None,
+        })
+    })
 }
 
 fn emit_job(force: bool) {
     let mut c = current().lock().unwrap_or_else(|p| p.into_inner());
-    if !force && c.last_emit.is_some_and(|t| t.elapsed() < Duration::from_millis(200)) {
+    if !force
+        && c.last_emit
+            .is_some_and(|t| t.elapsed() < Duration::from_millis(200))
+    {
         return;
     }
     c.last_emit = Some(Instant::now());
@@ -1411,7 +1537,10 @@ fn classify(error: &Failure) -> JobError {
         "reboot_required".to_string()
     } else if low.contains("could not get lock") || low.contains("dpkg lock") {
         "apt_lock".to_string()
-    } else if low.contains("already exists") || low.contains("ya existe") || low.contains("error_already_exists") {
+    } else if low.contains("already exists")
+        || low.contains("ya existe")
+        || low.contains("error_already_exists")
+    {
         "already_installed".to_string()
     } else if low.contains("could not resolve") || low.contains("temporary failure resolving") {
         "network".to_string()
@@ -1421,14 +1550,27 @@ fn classify(error: &Failure) -> JobError {
     JobError { code, detail }
 }
 
-fn start(app: &AppHandle, kind: &str, target: &str, label: &str, user: Option<&str>, work: impl FnOnce(&AppHandle) -> Result<(), Failure> + Send + 'static) -> Result<Job, Job> {
+fn start(
+    app: &AppHandle,
+    kind: &str,
+    target: &str,
+    label: &str,
+    user: Option<&str>,
+    work: impl FnOnce(&AppHandle) -> Result<(), Failure> + Send + 'static,
+) -> Result<Job, Job> {
     let job = Job {
         id: uuid::Uuid::new_v4().to_string(),
         kind: kind.to_string(),
         target: target.to_string(),
         label: label.to_string(),
         user: user.map(String::from),
-        step: if kind == "enable" { "permission".into() } else if kind == "install" { "download".into() } else { "check".into() },
+        step: if kind == "enable" {
+            "permission".into()
+        } else if kind == "install" {
+            "download".into()
+        } else {
+            "check".into()
+        },
         done: None,
         total: None,
         speed: None,
@@ -1500,7 +1642,14 @@ pub fn start_install(app: &AppHandle, req: InstallRequest) -> Result<Job, Job> {
             sha256: req.sha256.clone(),
             user: req.user.clone(),
         };
-        let result = install_distro(app, &req.name, &req.url, &req.sha256, &req.user, &req.password);
+        let result = install_distro(
+            app,
+            &req.name,
+            &req.url,
+            &req.sha256,
+            &req.user,
+            &req.password,
+        );
         let mut saved = read_saved(app);
         match &result {
             Err(e) if classify(e).code == "reboot_required" => saved.resume = Some(resume),
@@ -1509,18 +1658,35 @@ pub fn start_install(app: &AppHandle, req: InstallRequest) -> Result<Job, Job> {
         }
         write_saved(app, &saved);
         result?;
-        let ws = req.workspace.as_ref().map(|(i, n)| (i.as_str(), n.as_str()));
+        let ws = req
+            .workspace
+            .as_ref()
+            .map(|(i, n)| (i.as_str(), n.as_str()));
         install_engine(app, &req.name, None, None, &req.label, ws).map(|_| ())
     })
 }
 
-pub fn start_connect(app: &AppHandle, distro: &str, label: &str, user: Option<String>, password: Option<String>, workspace: Option<(String, String)>) -> Result<Job, Job> {
+pub fn start_connect(
+    app: &AppHandle,
+    distro: &str,
+    label: &str,
+    user: Option<String>,
+    password: Option<String>,
+    workspace: Option<(String, String)>,
+) -> Result<Job, Job> {
     let (d, l) = (distro.to_string(), label.to_string());
     let shown = user.clone();
-    start(app, "connect", distro, label, shown.as_deref(), move |app| {
-        let ws = workspace.as_ref().map(|(i, n)| (i.as_str(), n.as_str()));
-        install_engine(app, &d, user.as_deref(), password.as_deref(), &l, ws).map(|_| ())
-    })
+    start(
+        app,
+        "connect",
+        distro,
+        label,
+        shown.as_deref(),
+        move |app| {
+            let ws = workspace.as_ref().map(|(i, n)| (i.as_str(), n.as_str()));
+            install_engine(app, &d, user.as_deref(), password.as_deref(), &l, ws).map(|_| ())
+        },
+    )
 }
 
 pub fn forget_resume(app: &AppHandle) {
@@ -1547,8 +1713,12 @@ fn boot_time_ms() -> u64 {
 fn reboot_pending() -> bool {
     let mut command = Command::new("reg.exe");
     crate::util::no_console_window(&mut command);
-    command.args(["query", r"HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Component Based Servicing\RebootPending"]);
-    crate::util::output_with_timeout(&mut command, Duration::from_secs(10)).is_ok_and(|s| s.success())
+    command.args([
+        "query",
+        r"HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Component Based Servicing\RebootPending",
+    ]);
+    crate::util::output_with_timeout(&mut command, Duration::from_secs(10))
+        .is_ok_and(|s| s.success())
 }
 
 fn virtualization_off() -> bool {
@@ -1576,7 +1746,10 @@ pub fn state(app: &AppHandle) -> LinuxState {
                 if !job.finished {
                     job.finished = true;
                     if job.kind != "enable" {
-                        job.error = Some(JobError { code: "interrupted".into(), detail: String::new() });
+                        job.error = Some(JobError {
+                            code: "interrupted".into(),
+                            detail: String::new(),
+                        });
                     } else {
                         job.step = "done".into();
                     }
@@ -1585,13 +1758,28 @@ pub fn state(app: &AppHandle) -> LinuxState {
             }
         }
     }
-    let job = current().lock().unwrap_or_else(|p| p.into_inner()).job.clone();
+    let job = current()
+        .lock()
+        .unwrap_or_else(|p| p.into_inner())
+        .job
+        .clone();
     let enabled_since_boot = saved.enabled_at.is_some_and(|t| t > boot_time_ms());
-    let mut out = LinuxState { wsl: "unknown".into(), distros: Vec::new(), job, resume: saved.resume.clone(), detail: None };
+    let mut out = LinuxState {
+        wsl: "unknown".into(),
+        distros: Vec::new(),
+        job,
+        resume: saved.resume.clone(),
+        detail: None,
+    };
     match super::wsl::detect() {
         Err(super::wsl::WslError::Unsupported) => out.wsl = "unsupported".into(),
         Err(super::wsl::WslError::NotInstalled) => {
-            out.wsl = if enabled_since_boot || reboot_pending() { "reboot" } else { "missing" }.into();
+            out.wsl = if enabled_since_boot || reboot_pending() {
+                "reboot"
+            } else {
+                "missing"
+            }
+            .into();
         }
         Err(e) => {
             out.detail = Some(e.to_string());
@@ -1630,7 +1818,11 @@ pub fn state(app: &AppHandle) -> LinuxState {
                 })
                 .collect();
             out.wsl = if virtualization_off() {
-                if enabled_since_boot || reboot_pending() { "reboot" } else { "virtualization" }
+                if enabled_since_boot || reboot_pending() {
+                    "reboot"
+                } else {
+                    "virtualization"
+                }
             } else {
                 "ready"
             }
@@ -1642,17 +1834,29 @@ pub fn state(app: &AppHandle) -> LinuxState {
 
 fn is_system_distro(name: &str) -> bool {
     let n = name.to_lowercase();
-    ["docker-desktop", "rancher-desktop", "podman-machine"].iter().any(|p| n.starts_with(p))
+    ["docker-desktop", "rancher-desktop", "podman-machine"]
+        .iter()
+        .any(|p| n.starts_with(p))
 }
 
 /// Reinicia Windows en unos segundos, a pedido de la persona.
 pub fn reboot() -> Result<(), Failure> {
     let mut command = Command::new("shutdown.exe");
     crate::util::no_console_window(&mut command);
-    command.args(["/r", "/t", "5", "/c", "Danil: reinicio para terminar de activar Linux"]);
+    command.args([
+        "/r",
+        "/t",
+        "5",
+        "/c",
+        "Danil: reinicio para terminar de activar Linux",
+    ]);
     let status = crate::util::output_with_timeout(&mut command, Duration::from_secs(15))
         .map_err(|e| fail("io", e.to_string()))?;
-    if status.success() { Ok(()) } else { Err(fail("io", "shutdown")) }
+    if status.success() {
+        Ok(())
+    } else {
+        Err(fail("io", "shutdown"))
+    }
 }
 
 #[cfg(test)]

@@ -114,7 +114,6 @@ pub fn stop_engine() -> i32 {
     }
 }
 
-
 /// Lo de Linux en esta PC (`wsl_child.rs`) toca disco, red y `wsl.exe`: corre
 /// fuera del hilo de la ventana.
 async fn blocking<T: Send + 'static>(
@@ -126,7 +125,9 @@ async fn blocking<T: Send + 'static>(
 }
 
 #[tauri::command]
-async fn wsl_state(app: tauri::AppHandle) -> std::result::Result<wsl_child::LinuxState, serde_json::Value> {
+async fn wsl_state(
+    app: tauri::AppHandle,
+) -> std::result::Result<wsl_child::LinuxState, serde_json::Value> {
     blocking(move || Ok(wsl_child::state(&app))).await
 }
 
@@ -159,7 +160,15 @@ fn wsl_install(
         let n = workspace_name.unwrap_or_else(|| id.clone());
         (id, n)
     });
-    let request = wsl_child::InstallRequest { name, label, url, sha256, user, password, workspace };
+    let request = wsl_child::InstallRequest {
+        name,
+        label,
+        url,
+        sha256,
+        user,
+        password,
+        workspace,
+    };
     wsl_child::start_install(&app, request).unwrap_or_else(|running| running)
 }
 
@@ -176,7 +185,8 @@ fn wsl_connect(
         let n = workspace_name.unwrap_or_else(|| id.clone());
         (id, n)
     });
-    wsl_child::start_connect(&app, &distro, &distro, user, password, workspace).unwrap_or_else(|running| running)
+    wsl_child::start_connect(&app, &distro, &distro, user, password, workspace)
+        .unwrap_or_else(|running| running)
 }
 
 #[tauri::command]
@@ -195,7 +205,9 @@ fn wsl_resume_forget(app: tauri::AppHandle) {
 }
 
 #[tauri::command]
-async fn wsl_distro_user(distro: String) -> std::result::Result<wsl_child::DistroUser, serde_json::Value> {
+async fn wsl_distro_user(
+    distro: String,
+) -> std::result::Result<wsl_child::DistroUser, serde_json::Value> {
     blocking(move || wsl_child::distro_user(&distro)).await
 }
 
@@ -213,7 +225,10 @@ async fn wsl_children(
 }
 
 #[tauri::command]
-async fn wsl_child_remove(app: tauri::AppHandle, machine: String) -> std::result::Result<(), serde_json::Value> {
+async fn wsl_child_remove(
+    app: tauri::AppHandle,
+    machine: String,
+) -> std::result::Result<(), serde_json::Value> {
     blocking(move || {
         let entry = wsl_child::lookup(&app, &machine)?;
         wsl_child::remove(&app, &entry.distro)
@@ -222,7 +237,10 @@ async fn wsl_child_remove(app: tauri::AppHandle, machine: String) -> std::result
 }
 
 #[tauri::command]
-async fn wsl_child_wake(app: tauri::AppHandle, machine: String) -> std::result::Result<bool, serde_json::Value> {
+async fn wsl_child_wake(
+    app: tauri::AppHandle,
+    machine: String,
+) -> std::result::Result<bool, serde_json::Value> {
     blocking(move || {
         let entry = wsl_child::lookup(&app, &machine)?;
         wsl_child::keep_alive(&entry.distro);
@@ -250,7 +268,8 @@ async fn wsl_child_call(
 ) -> std::result::Result<serde_json::Value, serde_json::Value> {
     blocking(move || {
         let entry = wsl_child::lookup(&app, &machine)?;
-        let timeout = std::time::Duration::from_millis(timeout_ms.unwrap_or(120_000).clamp(1_000, 1_800_000));
+        let timeout =
+            std::time::Duration::from_millis(timeout_ms.unwrap_or(120_000).clamp(1_000, 1_800_000));
         if command == "materialize_workspace" {
             // La máquina hija no tiene cuenta: el workspace se crea local con el mismo id.
             let id = args
