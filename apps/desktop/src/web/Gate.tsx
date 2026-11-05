@@ -27,6 +27,46 @@ async function accountHasWorkspaces(endpoint: string, session: Session, computer
   return hasAccountWorkspaces(computer ? answer.value.filter((w) => w.computers.includes(computer)) : answer.value);
 }
 
+/** Lo que falta para abrir, o las computadoras con las que ya se abre. `waiting` es la sesión rechazada: no hay otra pantalla que mostrar. */
+export type GateDecision = { t: "open"; computers: Computer[] } | GateView;
+
+/**
+ * La misma decisión que pinta `Gate`, sin pintar nada.
+ * La página la espera antes de montar, para no tapar el marco del HTML con otra pantalla.
+ */
+export async function resolveGate(endpoint: string, session: Session): Promise<GateDecision> {
+  const answer = await computersOf(endpoint, session).catch((): Answer<Computer[]> => ({ kind: "unauthorized" }));
+  if (answer.kind === "unauthorized") return { t: "waiting" };
+  if (answer.kind === "license" || answer.kind === "no_account") return { t: answer.kind };
+  if (answer.kind === "error" && answer.status === 403 && answer.code === "access_required") return { t: "access_required" };
+  if (answer.kind !== "ok") return { t: "error" };
+  const computers = answer.value;
+  const asked = new URLSearchParams(window.location.search).get("computer");
+  if (asked) {
+    const one = computers.find((c) => c.computer_id === asked);
+    if (!one) return { t: "not_yours" };
+    const any = hasLinkedWorkspaces([one]) || (await accountHasWorkspaces(endpoint, session, asked));
+    return any ? { t: "open", computers: [one] } : { t: "no_workspaces", computers: [one] };
+  }
+  if (computers.length === 0) return { t: "none" };
+  // Each computer shows only the workspaces linked to the account: with none there nor in the account, the app would be empty.
+  if (!hasLinkedWorkspaces(computers) && !(await accountHasWorkspaces(endpoint, session))) return { t: "no_workspaces", computers };
+  return { t: "open", computers };
+}
+
+/**
+ * El marco que ya pintó `web.html`, otra vez.
+ * Un reintento vuelve a esperar, y el HTML original ya lo reemplazó esta puerta.
+ */
+function MarcoDeCarga() {
+  let host: HTMLDivElement | undefined;
+  onMount(() => {
+    const tpl = document.getElementById("marco-de-carga");
+    if (tpl instanceof HTMLTemplateElement && host) host.append(tpl.content.cloneNode(true));
+  });
+  return <div ref={host} class="marco-host" data-marco-de-carga="" />;
+}
+
 /**
  * Opening is not intent to work: every computer of the person mounts as it is,
  * on or off, and wakes with the first action. `?computer=` opens only that one.
@@ -36,23 +76,9 @@ export function Gate(props: { session: Session; endpoint: string; initial?: Gate
 
   async function load() {
     setView({ t: "waiting" });
-    const answer = await computersOf(props.endpoint, props.session).catch((): Answer<Computer[]> => ({ kind: "unauthorized" }));
-    if (answer.kind === "unauthorized") return;
-    if (answer.kind === "license" || answer.kind === "no_account") return setView({ t: answer.kind });
-    if (answer.kind === "error" && answer.status === 403 && answer.code === "access_required") return setView({ t: "access_required" });
-    if (answer.kind !== "ok") return setView({ t: "error" });
-    const computers = answer.value;
-    const asked = new URLSearchParams(window.location.search).get("computer");
-    if (asked) {
-      const one = computers.find((c) => c.computer_id === asked);
-      if (!one) return setView({ t: "not_yours" });
-      const any = hasLinkedWorkspaces([one]) || (await accountHasWorkspaces(props.endpoint, props.session, asked));
-      return any ? props.onOpen?.([one]) : setView({ t: "no_workspaces", computers: [one] });
-    }
-    if (computers.length === 0) return setView({ t: "none" });
-    // Each computer shows only the workspaces linked to the account: with none there nor in the account, the app would be empty.
-    if (!hasLinkedWorkspaces(computers) && !(await accountHasWorkspaces(props.endpoint, props.session))) return setView({ t: "no_workspaces", computers });
-    props.onOpen?.(computers);
+    const decision = await resolveGate(props.endpoint, props.session);
+    if (decision.t === "open") props.onOpen?.(decision.computers);
+    else if (decision.t !== "waiting") setView(decision);
   }
 
   onMount(() => {
@@ -79,13 +105,11 @@ export function Gate(props: { session: Session; endpoint: string; initial?: Gate
   const retryLicense = () => (props.onOpen ? void load() : window.location.reload());
 
   return (
+    <Show when={view().t !== "waiting"} fallback={<MarcoDeCarga />}>
     <main class="flex h-full flex-col overflow-y-auto bg-bg px-10 py-10" data-web-gate={view().t}>
       <h1 class="m-0 mb-5 text-3xl leading-tight font-display font-bold tracking-[-0.03em] text-neutral-950">{t("common.brand_name")}</h1>
       <BrowserAccount session={props.session} onChange={props.accounts ? () => props.accounts?.add() : undefined} />
       <Switch>
-        <Match when={view().t === "waiting"}>
-          <p class="m-0 text-sm text-neutral-500">{t("web.computers.waiting")}</p>
-        </Match>
         <Match when={view().t === "license"}>
           <TerminusLicense onRequest={requestAccessInPage} onRetry={retryLicense} />
         </Match>
@@ -127,6 +151,7 @@ export function Gate(props: { session: Session; endpoint: string; initial?: Gate
         </div>
       </Show>
     </main>
+    </Show>
   );
 }
 

@@ -72,7 +72,11 @@ function laQueTocaYaEstaDentro(): boolean {
   return registrada(pedido) || registrada(pedido.split("-")[0]);
 }
 
-const montar = () =>
+const montar = () => {
+  const root = document.getElementById("root")!;
+  // En la web el marco ya es hijo de `#root`. `render` de Solid, si hay un hijo,
+  // inserta al final y lo deja: la ventana se vería dos veces.
+  root.replaceChildren();
   render(
     () => (
       // El lanzador va antes que todo: sin motor conectado no hay a quién preguntar.
@@ -83,8 +87,9 @@ const montar = () =>
         </Setup>
       </Lanzador>
     ),
-    document.getElementById("root")!,
+    root,
   );
+};
 
 const lenguasDeDisco = cargarPaquetes().then(refreshLanguage);
 // Las capacidades se leen al montar: Atención entra antes, en su trozo, solo con la bandera.
