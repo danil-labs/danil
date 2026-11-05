@@ -629,7 +629,7 @@ function WorkspaceProviders(props: { solo?: string | string[] }) {
                     )}
                   </Show>
                   <Show when={githubLocal(p.id) && p.id === "github" && p.source === "legacy" && p.browser_login && !esperaAqui()}>
-                    <SettingsRow label={t("providers.github.legacy.title")} description={t("providers.github.legacy.help")}>
+                    <SettingsRow label={t("providers.github.legacy.title")}>
                       <Button size="sm" type="button" disabled={estado() !== null} onClick={() => void conectarEnNavegador(p)}>
                         {t("providers.github.connect")}
                       </Button>
