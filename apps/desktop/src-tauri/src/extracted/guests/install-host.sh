@@ -179,12 +179,26 @@ if [ ! -s "$home/master" ]; then
 fi
 chmod 0600 "$home/master"
 
+# Quién lo supervisa, antes de escribir el lanzador: con systemd de usuario o
+# launchd el motor queda residente (no se cierra sin clientes; el supervisor lo
+# relanzaría con otro puerto y otro token). En segundo plano, sin supervisor,
+# conserva el cierre por inactividad. No depende de --no-connect.
+supervisor=none
+if [ "$service" = yes ] && [ "$os" = Linux ]; then
+  if systemctl --user show-environment >/dev/null 2>&1; then supervisor=systemd
+  else say "Aviso: no hay systemd de usuario aquí (contenedor o WSL sin systemd); el motor corre en segundo plano hasta reiniciar."; fi
+elif [ "$service" = yes ] && [ "$os" = Darwin ]; then
+  supervisor=launchd
+fi
+resident=''
+[ "$supervisor" = none ] || resident=' --resident'
+
 cat > "$home/bin/seldon-host" <<EOF
 #!/bin/sh
 # Arranca el motor de este usuario (lo escribió install.sh; se reescribe al actualizar).
 set -eu
 exec 3<"$home/master"
-exec "$dest/seldon-runtime" --data-dir "$home/data" --resource-dir "$dest/resources" --identity $LABEL --master-fd 3
+exec "$dest/seldon-runtime" --data-dir "$home/data" --resource-dir "$dest/resources" --identity $LABEL --master-fd 3$resident
 EOF
 chmod 0755 "$home/bin/seldon-host"
 
@@ -213,30 +227,30 @@ fi
 extra=''
 [ -z "${DANIL_COMPUTERS_URL:-}" ] || extra=$DANIL_COMPUTERS_URL
 started=no
-if [ "$service" = yes ] && [ "$os" = Linux ]; then
-  if systemctl --user show-environment >/dev/null 2>&1; then
-    unitdir="${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user"
-    mkdir -p "$unitdir"
-    {
-      printf '[Unit]\nDescription=Seldon Host (motor de Terminus)\nAfter=network-online.target\n\n[Service]\n'
-      printf 'Environment=SELDON_HOME=%s\nEnvironment=SELDON_HEADLESS=1\n' "$home"
-      [ -z "$extra" ] || printf 'Environment=DANIL_COMPUTERS_URL=%s\n' "$extra"
-      printf 'ExecStart=%s/bin/seldon-host\n' "$home"
-      # El motor se cierra solo sin clientes ni trabajo; se relanza ya con `current`.
-      printf 'Restart=always\nRestartSec=2\nKillMode=mixed\nOOMPolicy=continue\nTimeoutStopSec=30\n\n[Install]\nWantedBy=default.target\n'
-    } > "$unitdir/$UNIT.service"
-    systemctl --user daemon-reload
-    systemctl --user enable "$UNIT" >/dev/null 2>&1
-    systemctl --user restart "$UNIT"
-    started=systemd
-    if [ "$(loginctl show-user "$(id -un)" -p Linger --value 2>/dev/null || true)" != yes ] \
-      && ! loginctl enable-linger "$(id -un)" >/dev/null 2>&1; then
-      say "Aviso: el servicio se detiene al cerrar tu sesión. Para que siga tras salir o reiniciar: sudo loginctl enable-linger $(id -un)"
-    fi
-  else
-    say "Aviso: no hay systemd de usuario aquí (contenedor o WSL sin systemd); el motor corre en segundo plano hasta reiniciar."
+if [ "$supervisor" = systemd ]; then
+  unitdir="${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user"
+  mkdir -p "$unitdir"
+  {
+    printf '[Unit]\nDescription=Seldon Host (motor de Terminus)\nAfter=network-online.target\n\n[Service]\n'
+    printf 'Environment=SELDON_HOME=%s\nEnvironment=SELDON_HEADLESS=1\n' "$home"
+    [ -z "$extra" ] || printf 'Environment=DANIL_COMPUTERS_URL=%s\n' "$extra"
+    printf 'ExecStart=%s/bin/seldon-host\n' "$home"
+    # Sin UMask el servicio hereda 0002 (Ubuntu) y el motor rechaza
+    # `executor-releases/` con escritura de grupo.
+    printf 'UMask=0077\n'
+    # Residente: sale al relevarlo una versión nueva, con stop o si
+    # falla; systemd lo relanza ya con `current`.
+    printf 'Restart=always\nRestartSec=2\nKillMode=mixed\nOOMPolicy=continue\nTimeoutStopSec=30\n\n[Install]\nWantedBy=default.target\n'
+  } > "$unitdir/$UNIT.service"
+  systemctl --user daemon-reload
+  systemctl --user enable "$UNIT" >/dev/null 2>&1
+  systemctl --user restart "$UNIT"
+  started=systemd
+  if [ "$(loginctl show-user "$(id -un)" -p Linger --value 2>/dev/null || true)" != yes ] \
+    && ! loginctl enable-linger "$(id -un)" >/dev/null 2>&1; then
+    say "Aviso: el servicio se detiene al cerrar tu sesión. Para que siga tras salir o reiniciar: sudo loginctl enable-linger $(id -un)"
   fi
-elif [ "$service" = yes ] && [ "$os" = Darwin ]; then
+elif [ "$supervisor" = launchd ]; then
   plist="$HOME/Library/LaunchAgents/$LABEL.plist"
   mkdir -p "$HOME/Library/LaunchAgents" "$HOME/Library/Logs"
   {

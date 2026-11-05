@@ -5,8 +5,8 @@
 #![cfg_attr(not(windows), allow(dead_code, unused_imports))]
 
 use super::child::{
-    classify, current, install_engine, job_paused, job_speed, load, progress, read_saved, start,
-    status, update, write_saved, ChildInfo, Job, JobError, Resume,
+    classify, install_engine, job_paused, job_speed, load, progress, read_saved, start, status,
+    update, write_saved, ChildInfo, Job, Resume,
 };
 use super::{exec_ok, fail, now_ms, ChannelKind, Failure};
 use serde::Serialize;
@@ -588,32 +588,7 @@ fn virtualization_off() -> bool {
 /// abrir y vuelve a pedirlo cuando un trabajo termina.
 pub fn state(app: &AppHandle) -> LinuxState {
     let saved = read_saved(app);
-    {
-        let mut c = current().lock().unwrap_or_else(|p| p.into_inner());
-        c.app.get_or_insert_with(|| app.clone());
-        if c.job.is_none() {
-            // Un trabajo guardado que nadie corre: la app se cerró a la mitad.
-            if let Some(mut job) = saved.job.clone() {
-                if !job.finished {
-                    job.finished = true;
-                    if job.kind != "enable" {
-                        job.error = Some(JobError {
-                            code: "interrupted".into(),
-                            detail: String::new(),
-                        });
-                    } else {
-                        job.step = "done".into();
-                    }
-                }
-                c.job = Some(job);
-            }
-        }
-    }
-    let job = current()
-        .lock()
-        .unwrap_or_else(|p| p.into_inner())
-        .job
-        .clone();
+    let job = super::child::job(app);
     let enabled_since_boot = saved.enabled_at.is_some_and(|t| t > boot_time_ms());
     let mut out = LinuxState {
         wsl: "unknown".into(),
