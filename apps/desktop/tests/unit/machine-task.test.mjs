@@ -92,8 +92,8 @@ test("una tarea de una máquina apagada abre sin fallo y mandarle algo la encien
   await sleep(600);
   const doc = app.w.document;
   assert.ok(doc.querySelector('[data-sesion="r1"]'), "la tarea de la máquina apagada no sale en el sidebar");
-  // La tarjeta del riel ya no lleva la máquina: la dice su tarjeta flotante.
-  assert.equal(doc.querySelector('[data-sesion="r1"] [data-machine]'), null, "la tarjeta del sidebar no lleva chip de máquina");
+  assert.ok(doc.querySelector('[data-sesion="r1"] [data-machine="vm"][data-machine-on="false"]'), "la tarjeta remota indica su máquina apagada");
+  assert.ok(doc.querySelector('[data-sesion="t1"] [data-machine="local"][data-machine-on="true"]'), "con dos máquinas la tarjeta local también indica su máquina");
 
   await openTask(app, "r1");
   assert.ok(text(app).includes("Respuesta guardada"), "no enseña la copia guardada");

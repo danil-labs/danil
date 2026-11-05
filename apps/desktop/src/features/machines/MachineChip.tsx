@@ -3,7 +3,7 @@ import { cn } from "../../lib/utils";
 import { MachineIcon } from "./MachineIcon";
 import { machineName, machineWakes } from "./store";
 
-/** La máquina que corre una tarea que no es de la máquina de la ventana; atenuada si está apagada. */
+/** La máquina que corre una tarea; atenuada si está apagada. */
 export function MachineChip(props: { machine: string; on: boolean; class?: string }) {
   const label = () =>
     props.on

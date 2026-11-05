@@ -32,7 +32,7 @@ import FolderChip from "./FolderChip";
 import { gitAppearance, RailPull, sessionGitDescription } from "./SessionGit";
 import { WithTaskHoverCard } from "./TaskHoverCardTrigger";
 import { MachineChip } from "../machines/MachineChip";
-import { bringHereLabel, canBringHere } from "../machines/store";
+import { bringHereLabel, canBringHere, machines } from "../machines/store";
 import { createTaskHistories } from "./taskHistories";
 
 // Solo hace falta cuando algo estorba al terminar o archivar: fuera de la carga inicial.
@@ -624,7 +624,7 @@ export default function Sessions(props: {
   const activas = createMemo<RamaDeTareas<SessionRow>[]>((previas) => props.flat || props.sidebar
     ? filteredSessions().map(tarea => ({ tarea, hijas: [] }))
     : taskTree(filteredSessions(), props.includeArchived ? null : false, previas, props.groupByHandler === true));
-  const hayMaquinas = createMemo(() => !props.hideMachine && props.sessions.some((row) => !!row.machine));
+  const hayMaquinas = createMemo(() => machines().length > 1);
   const hideFolder = (row: SessionRow) => props.hideFolder && (props.folderGroup === undefined || projectOf(row) === props.folderGroup);
   const destinosDe = (row: SessionRow) => props.destinosDe?.(row) ?? props.destinos;
   const fijada = (row: SessionRow) => row.pinned ?? (row.chat_de_agente || row.inbox === true);
@@ -708,7 +708,7 @@ export default function Sessions(props: {
         </Show>
         <Show when={hayMaquinas()}>
           <span class="task-card-slot">
-            <Show when={r.s.machine}>{machine => <MachineChip machine={machine()} on={r.s.machine_on !== false} class="min-w-0" />}</Show>
+            <MachineChip machine={r.s.machine || machines().find((machine) => machine.local)?.id || "local"} on={r.s.machine_on !== false} class="min-w-0" />
           </span>
         </Show>
         <span class="task-card-git">
