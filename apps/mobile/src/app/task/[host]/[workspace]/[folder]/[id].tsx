@@ -5,7 +5,7 @@ import { Stack, router, useFocusEffect, useLocalSearchParams } from "expo-router
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { AppState, FlatList, Image, type NativeScrollEvent, type NativeSyntheticEvent, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { type HistoryRead, HistoryPager, type LoadedHistory, type OlderState, hasOlder, hasRecentGap } from "@terminus/chat/history";
-import { type ChatEvent, DEFAULT_CHAT_VEIL, PROVIDER_HANDOFF_FEATURE, type Question, type Turn } from "@terminus/protocol";
+import { type ChatEvent, DEFAULT_CHAT_VEIL, PROVIDER_HANDOFF_FEATURE, type Question, type Turn, savesSessionModel } from "@terminus/protocol";
 import { delegatedOf, taskTitle } from "@terminus/tasks";
 import {
   type ChatBackdropView,
@@ -23,6 +23,7 @@ import {
   respondPermission,
   runShell,
   sendToTask,
+  setSessionModel,
   setSessionProvider,
   switchLiveMode,
   stopShell,
@@ -490,6 +491,17 @@ export default function TaskScreen() {
 
   /** Elegir modo con el turno en marcha: el motor lo aplica al turno vivo (`switchLiveMode`). */
   const chosenMode = useRef<string | null>(null);
+  /**
+   * La elección del chip queda en la tarea (`session_model_v1`), como en la
+   * ventana: un `task send` o el relay sin modelo siguen con ella. Solo para
+   * el CLI con que la tarea corre: el modelo de un traspaso pendiente lo guarda
+   * su primer turno. Un motor anterior no la anuncia y todo sigue como antes.
+   */
+  const saveModel = (picked: { provider: string; model: string; effort: string | null }) => {
+    if (!host || !savesSessionModel(host.features?.())) return;
+    if (pendingHandover || picked.provider !== view?.session.provider) return;
+    void setSessionModel(host, workspace, folder, id, picked.model, picked.effort).catch(fail);
+  };
   const changeMode = (mode: string) => {
     if (!host) return;
     chosenMode.current = mode;
@@ -824,6 +836,7 @@ export default function TaskScreen() {
         steerRefused={steerMemory.refuses(params.host, view?.session.provider)}
         onStopAndSend={waiting || questions.length ? undefined : stop}
         choice={choice}
+        onModelChoice={saveModel}
         onAccounts={() => router.push("/accounts")}
       />
       </ChatScopeContext.Provider>

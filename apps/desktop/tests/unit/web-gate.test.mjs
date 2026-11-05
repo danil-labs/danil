@@ -76,9 +76,9 @@ test("the web build uses the stored session, opens every computer and explains r
     fake.drop(4003);
     await sleep(1500);
     assert.ok(refreshes >= 1, "4003 refreshes the session");
-    assert.ok(text().includes("Activa Danil"), "a refused reconnection offers the trial");
-    assert.ok(text().includes("7 días gratis, sin tarjeta;"), text());
-    assert.ok(w.document.querySelector("[data-license-start]"), "the trial button is there");
+    assert.ok(text().includes("Solicita acceso a Danil"), "a refused reconnection offers to request access");
+    assert.ok(!text().includes("7 días gratis"), text());
+    assert.ok(w.document.querySelector("[data-license-request]"), "the request button is there");
     assert.ok(w.document.querySelector("[data-license-retry]"), "and the retry");
     assert.equal(fake.sockets.length, 2, "it does not retry the sockets blindly");
     assert.equal(w.document.querySelectorAll("[data-web-gate]").length, 1, "one notice for every refused session");
@@ -88,7 +88,7 @@ test("the web build uses the stored session, opens every computer and explains r
   }
 });
 
-test("without a license the gate offers the trial and opens the app once it is activated", async () => {
+test("without a license the gate offers to request access and opens the app once it is granted", async () => {
   const fake = relay();
   let licensed = false;
   const own = globalThis.fetch;
@@ -111,14 +111,87 @@ test("without a license the gate offers the trial and opens the app once it is a
     await sleep(800);
     const gate = () => w.document.querySelector("[data-web-gate]");
     assert.equal(gate()?.dataset.webGate, "license");
-    assert.ok(gate().textContent.includes("Activa Danil"), gate().textContent);
-    assert.equal(gate().querySelector("[data-license-start]")?.textContent.trim(), "Empezar prueba gratis");
+    assert.ok(gate().textContent.includes("Solicita acceso a Danil"), gate().textContent);
+    assert.equal(gate().querySelector("[data-license-request]")?.textContent.trim(), "Solicitar acceso");
 
     licensed = true;
     gate().querySelector("[data-license-retry]").click();
     await sleep(1200);
     assert.equal(gate(), null, "retrying asks again and opens the app");
     assert.equal(fake.sockets.length, 1);
+    assert.deepEqual(app.failures, []);
+  } finally {
+    globalThis.fetch = own;
+  }
+});
+
+
+test("only an explicit access refusal offers request access, without replacing license or permission errors", async () => {
+  const own = globalThis.fetch;
+  for (const [index, [status, error, view]] of [
+    [403, { code: "access_required" }, "access_required"],
+    [403, "access_required", "access_required"],
+    [403, { code: "license_required" }, "license"],
+    [403, { code: "permission_denied" }, "error"],
+    [500, { code: "access_required" }, "error"],
+  ].entries()) {
+    globalThis.fetch = async (input, init) => String(input?.url ?? input).startsWith(API)
+      ? new Response(JSON.stringify({ error }), { status }) : own(input, init);
+    let w;
+    try {
+      const app = await boot("listo", `web-gate-access-${index}`, {}, undefined, { "sb-supabase-auth-token": session("stored") }, {
+        web: true, beforeImport: win => { w = win; win.terminusWeb = { supabaseUrl: SUPABASE, supabaseKey: "public-anon-key" }; },
+      });
+      await sleep(800);
+      const gate = w.document.querySelector("[data-web-gate]");
+      assert.equal(gate?.dataset.webGate, view);
+      const request = gate?.querySelector('[data-access-request] a[href^="mailto:"]');
+      assert.equal(!!request, view === "access_required");
+      if (request) assert.ok(request.href.startsWith("mailto:hola@danil.ai?subject="));
+      assert.deepEqual(app.failures, []);
+    } finally { globalThis.fetch = own; }
+  }
+});
+
+test("with no linked workspace the gate says only linked ones show and opens the computer to create one", async () => {
+  const fake = relay();
+  const own = globalThis.fetch;
+  const computers = [
+    { computer_id: "cmp_off", name: "Casa", state: "offline", workspaces: [] },
+    { computer_id: "cmp_vm", name: "Tacos Don Beto", state: "online", workspaces: [] },
+  ];
+  globalThis.fetch = async (input, init) => {
+    const url = String(input?.url ?? input);
+    if (url.startsWith(API)) return new Response(JSON.stringify(computers), { status: 200 });
+    if (url.startsWith("https://machines.danil.ai/v1/workspaces")) return new Response(JSON.stringify({ workspaces: [] }), { status: 200 });
+    return own(input, init);
+  };
+  let w;
+  try {
+    const app = await boot("listo", "web-gate-no-workspaces", {}, undefined, { "sb-supabase-auth-token": session("stored") }, {
+      web: true,
+      beforeImport: (win) => {
+        w = win;
+        globalThis.WebSocket = fake.Socket;
+        win.terminusWeb = { supabaseUrl: SUPABASE, supabaseKey: "public-anon-key" };
+      },
+    });
+    await sleep(1200);
+    const gate = () => w.document.querySelector("[data-web-gate]");
+    assert.equal(gate()?.dataset.webGate, "no_workspaces");
+    const text = gate().textContent;
+    assert.ok(text.includes("solo ves los workspaces ligados a tu cuenta"), text);
+    assert.ok(!text.includes("todos los workspaces de esa computadora se ven aquí"), "the old, wrong promise is gone");
+    const buttons = [...gate().querySelectorAll("[data-web-gate-create]")];
+    assert.deepEqual(buttons.map((b) => b.dataset.webGateCreate), ["cmp_vm", "cmp_off"], "the computer that is on comes first");
+    assert.equal(buttons[0].textContent.trim(), "Crear tu workspace en Tacos Don Beto");
+    assert.equal(fake.sockets.length, 0, "nothing opens before choosing");
+
+    buttons[0].click();
+    await sleep(1500);
+    assert.equal(gate(), null, "the app opens");
+    assert.deepEqual(fake.sockets.map((s) => s.url.split("?")[0]), ["wss://machines.danil.ai/v1/computers/cmp_vm/session"], "only on the chosen computer");
+    assert.ok(w.document.querySelector("[data-web-onboarding]"), "with no workspace there, the first run creates it");
     assert.deepEqual(app.failures, []);
   } finally {
     globalThis.fetch = own;

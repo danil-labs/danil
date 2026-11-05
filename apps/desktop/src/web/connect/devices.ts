@@ -8,6 +8,7 @@ export type DeviceAnswer<T> =
   | { kind: "unauthorized" }
   | { kind: "license" }
   | { kind: "no_account" }
+  | { kind: "access_required" }
   | { kind: "expired" }
   | { kind: "invalid" }
   | { kind: "used" }
@@ -36,6 +37,7 @@ async function send<T>(url: string, token: string, init: RequestInit, read: (bod
   const body = (await response.json().catch(() => null)) as { error?: unknown } | null;
   const error = errorCode(body);
   if (response.status === 401) return { kind: "unauthorized" };
+  if (response.status === 403 && error === "access_required") return { kind: "access_required" };
   if (response.status === 403) return { kind: error === "unknown_user" ? "no_account" : "license" };
   if (response.status === 409) return { kind: error === "ambiguous_danil_account" ? "ambiguous" : "used" };
   if (response.status === 410 || EXPIRED.test(error)) return { kind: "expired" };

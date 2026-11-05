@@ -26,6 +26,8 @@ import {
   createScreenAccess,
   sessionProbe,
   startComputer,
+  startedOf,
+  MANAGED_PROVIDERS,
   startSharedComputer,
   systemOf,
   wakes,
@@ -50,6 +52,8 @@ import { webAccountEmails } from "./account-emails";
 import { authLocation } from "./auth/return";
 import { adminPageCapability, personalAccountCapability } from "./admin/capability";
 import { agentsSession } from "./attention/workspace-sources";
+import { webUsageMe } from "../features/settings/usage-source";
+import { webBusinessBilling } from "./business-billing";
 import { webGithubAccount } from "./github-account";
 import { type Account, type Listing, SLOT_PREFIX, loadAccounts, ownerOf, pickAccount, readListings, rememberLast, removeExtra, savedListings } from "./accounts";
 import { forgetShellCache, setShellCacheScope } from "../lib/shellCache";
@@ -63,6 +67,11 @@ import { announceStaleTab, updateNoticeReady } from "./update-state";
 declare const __TERMINUS_VERSION__: string;
 /** Set at build time in `vite.config.ts`; all public values. */
 declare const __TERMINUS_WEB__: WebSettings;
+
+/** La vista de consumo propio, en su trozo: solo la carga quien abre la pestaña. */
+const UsageView = lazy(() => import("../features/settings/UsageView"));
+/** Plan y cobro de Danil Business, en su trozo. */
+const BusinessBilling = lazy(() => import("../features/settings/BusinessBilling"));
 
 type WebSettings = { endpoint: string; supabaseUrl: string; supabaseKey: string; login: string; workos?: boolean };
 
@@ -127,6 +136,7 @@ const infoOf = (c: Computer): MachineInfo => {
     id: c.computer_id,
     name: c.name?.trim() || c.computer_id,
     wakes: wakes(c),
+    opensOnRead: typeof c.provider === "string" && MANAGED_PROVIDERS.has(c.provider),
     linked: linkedWorkspaces(c),
     features: serviceFeatures(c),
     ...(c.host_version ? { version: c.host_version } : {}),
@@ -184,7 +194,7 @@ function mountApp(computers: Computer[], base: Base, before?: (id: string) => ()
       ),
     // Sin `contracts` ni `compatible`, como el teléfono: un motor con otro contrato
     // sigue en servicio y solo falla la orden que no conoce (nunca la máquina entera).
-    wake: async (id) => (await startComputer(base.endpoint, await token(), id)).kind === "ok",
+    wake: async (id) => startedOf(await startComputer(base.endpoint, await token(), id)),
     storage: mounted.storage,
     onSlice: () => bump((n) => n + 1),
     // La cola de aplazadas cambió (aquí, en el escritorio o en el teléfono): la lista se relee.
@@ -275,6 +285,23 @@ function mountApp(computers: Computer[], base: Base, before?: (id: string) => ()
     accountAuditLog: import.meta.env.TERMINUS_ALPHA && base.supabaseUrl && base.supabaseKey ? webAuditLog(base.supabaseUrl, base.supabaseKey, base.getToken, base.onUnauthorized) : undefined,
     adminPage: import.meta.env.TERMINUS_ALPHA ? adminPageCapability({ getToken: async () => await base.getToken(), unauthorized: async () => base.refresh ? await base.refresh() : false }, "https://harness.danil.ai/") : undefined,
     personalAccount: import.meta.env.TERMINUS_ALPHA ? personalAccountCapability({ getToken: async () => await base.getToken(), unauthorized: async () => base.refresh ? await base.refresh() : false }) : undefined,
+    accountUsage: import.meta.env.TERMINUS_ALPHA
+      ? () => (
+          <Suspense fallback={null}>
+            <UsageView source={webUsageMe(base.endpoint, base.getToken)} />
+          </Suspense>
+        )
+      : undefined,
+    businessBilling: import.meta.env.TERMINUS_ALPHA
+      ? (() => {
+          const source = webBusinessBilling({ getToken: async () => await base.getToken(), unauthorized: async () => base.refresh ? await base.refresh() : false }, `${import.meta.env.BASE_URL}alpha-api`);
+          return (part: "plan" | "fiscal") => (
+            <Suspense fallback={null}>
+              <BusinessBilling source={source} part={part} />
+            </Suspense>
+          );
+        })()
+      : undefined,
     accountMemory: { endpoint: base.endpoint, getToken: token },
     accountCredentials: { endpoint: base.endpoint, getToken: token },
     machineName: (id) => fleet.name(id),
@@ -365,7 +392,7 @@ function mountApp(computers: Computer[], base: Base, before?: (id: string) => ()
 }
 
 /** Paneles que se abren desde la URL (`?settings=`); el parámetro sale de la barra al leerlo. */
-const LINKED_SETTINGS = ["cuenta-danil", "emails"];
+const LINKED_SETTINGS = ["cuenta-danil", "emails", "business", "fiscal"];
 
 function takeSettingsParam(): string | undefined {
   const params = new URLSearchParams(window.location.search);
@@ -519,7 +546,7 @@ async function start(settings: WebSettings) {
 
   /** A refusal found after mounting covers the app: retrying the socket would not change it. */
   let blocked = false;
-  const block = (initial: { t: "license" } | { t: "no_account" } | { t: "not_yours" }) => {
+  const block = (initial: { t: "access_required" } | { t: "license" } | { t: "no_account" } | { t: "not_yours" }) => {
     if (blocked) return;
     blocked = true;
     const layer = document.createElement("div");
@@ -542,7 +569,8 @@ async function start(settings: WebSettings) {
             { endpoint, supabaseUrl: settings.supabaseUrl, supabaseKey: settings.supabaseKey, userId: current.user_id, refresh: () => session.unauthorized(), getToken: () => session.getToken(), onUnauthorized: () => void session.unauthorized(), subscribe: clear => session.watch(current.user_id, clear) },
             (computerId) => async () => {
               const answer = await computersOf(endpoint, session);
-              if (answer.kind === "license" || answer.kind === "no_account") block({ t: answer.kind });
+              if (answer.kind === "error" && answer.status === 403 && answer.code === "access_required") block({ t: "access_required" });
+              else if (answer.kind === "license" || answer.kind === "no_account") block({ t: answer.kind });
               // One computer gone from several only stops its own session.
               else if (answer.kind === "ok" && !answer.value.some((c) => c.computer_id === computerId)) {
                 if (!several) block({ t: "not_yours" });

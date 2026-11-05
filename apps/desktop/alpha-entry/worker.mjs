@@ -8,7 +8,9 @@
 // Difusiones: lo que falta sobre marketingProxy son listas cerradas en broadcasts.mjs. Lo que llega
 // a Meta responde 403 salvo con BROADCAST_WRITES="on"; lo que llega a clientes, 409 salvo con
 // BROADCAST_DELIVERY="on". Ambas pasan por el preflight de campaigns.manage.
+// Danil Business: lista cerrada en business.mjs, solo la cuenta activa del Bearer.
 import { broadcastRead, broadcastWrite } from "./broadcasts.mjs";
+import { BUSINESS_MAX_BODY, businessBody, businessRoute } from "./business.mjs";
 import { handleAuth, hasSignedOutMarker, sessionConfig } from "./session.mjs";
 
 const HOST = "alfa-app.danil.ai";
@@ -264,6 +266,38 @@ async function emailWrite(request, env, url, path) {
   return forward(env, new Request(url, { method: "POST", headers, body: JSON.stringify(body), redirect: "manual" }));
 }
 
+/** Danil Business: lecturas con solo `account_id` y escrituras con las barreras de las demás; siempre la cuenta activa. */
+async function businessProxy(request, env, url, path, route) {
+  if (!route.read && request.headers.get("Origin") !== url.origin) return json("forbidden_origin", 403);
+  if (!route.read && (request.headers.get("X-Danil-Actor") ?? "").trim().toLowerCase() === "ai") return json("identity_requires_person", 403);
+  const authorization = request.headers.get("Authorization");
+  if (!authorization || !/^Bearer \S+$/i.test(authorization)) return json("unauthorized", 401);
+  const account = bearerAccount(authorization);
+  if (account === null) return json("missing_active_account", 403);
+  const headers = new Headers({ Authorization: authorization, Accept: "application/json", Origin: url.origin });
+  let body;
+  if (route.read) {
+    const keys = [...url.searchParams.keys()];
+    const raw = url.searchParams.get("account_id");
+    if (keys.length !== 1 || keys[0] !== "account_id" || !/^\d+$/.test(raw ?? "") || !Number.isSafeInteger(Number(raw)) || Number(raw) <= 0) return json("invalid_query", 400);
+    if (Number(raw) !== account) return json("account_mismatch", 403);
+    url.search = new URLSearchParams({ account_id: String(account) }).toString();
+  } else {
+    if (url.search) return json("invalid_query", 400);
+    if (!/^application\/json(?:\s*;\s*charset=utf-8)?$/i.test(request.headers.get("Content-Type") ?? "")) return json("invalid_body", 400);
+    if (Number(request.headers.get("Content-Length") ?? "0") > BUSINESS_MAX_BODY) return json("invalid_body", 400);
+    const bytes = await boundedBody(request, BUSINESS_MAX_BODY);
+    if (!bytes) return json("invalid_body", 400);
+    const rebuilt = businessBody(route, bytes, account);
+    if (rebuilt.error) return json(rebuilt.error, rebuilt.error === "account_mismatch" ? 403 : 400);
+    body = JSON.stringify(rebuilt.body);
+    headers.set("Content-Type", "application/json");
+  }
+  if (!env.APPV2_BFF) return json("bff_unavailable", 503);
+  url.pathname = path;
+  return forward(env, new Request(url, { method: request.method, headers, ...(body === undefined ? {} : { body }), redirect: "manual" }));
+}
+
 /** Una escritura de Difusiones: las mismas barreras que los correos, más el interruptor. */
 async function writeBroadcast(request, env, url, path, route) {
   if (request.headers.get("Origin") !== url.origin) return json("forbidden_origin", 403);
@@ -321,6 +355,8 @@ export default {
       if (marketing) return marketingProxy(request, env, url, path, marketing);
       if (request.method === "POST" && path === "/api/messaging/reply") return replyWrite(request, env, url);
       if (request.method === "POST" && Object.hasOwn(EMAIL_WRITES, path)) return emailWrite(request, env, url, path);
+      const business = businessRoute(request.method, path);
+      if (business) return businessProxy(request, env, url, path, business);
       if (request.method !== "GET") return json("method_not_allowed", 405);
       const read = broadcastRead(path);
       const kind = read ? "broadcast" : path === "/auth/profile" ? "profile" :

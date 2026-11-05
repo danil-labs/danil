@@ -31,10 +31,13 @@ export function createTaskWork(
     equals: (a, b) => a?.project === b?.project && a?.id === b?.id,
   });
   const result = createResource(target, (value) =>
-    invoke<TaskWork>("task_history", value, machineOf(value.id)).catch((e) => {
-      onFailure?.(asFailure(e));
-      return undefined;
-    }),
+    invoke<TaskWork>("task_history", value, machineOf(value.id))
+      // Sin historial no es el estado de una tarea: una falla que llegó como valor.
+      .then((work) => (work && typeof work === "object" && "history" in work ? work : undefined))
+      .catch((e) => {
+        onFailure?.(asFailure(e));
+        return undefined;
+      }),
   );
   onMount(() => {
     const stop = listen<{ project: string; session: string }>("session", (e) => {

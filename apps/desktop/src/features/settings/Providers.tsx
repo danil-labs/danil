@@ -19,6 +19,7 @@ import {
 import { SettingsBlock, SettingsPanel, SettingsRow, SettingsSection } from "./layout";
 import type { GithubAccountState } from "./github-account/GithubAccount";
 import { ExternalLink } from "../../ui/ExternalLink";
+import "../../locales/settingsPhrases";
 
 // La tarjeta de Drive es la del alta; su chunk solo lo carga quien abre Fuentes.
 const Integraciones = lazy(() => import("../onboarding/ToolCards").then((m) => ({ default: m.Integraciones })));

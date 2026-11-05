@@ -20,7 +20,7 @@ import { FailureNote, type Failure } from "../../../ui/Failure";
 import { Skeleton } from "../../../ui/Skeleton";
 import { Toggle } from "../../../ui/Toggle";
 import { SettingsBlock, SettingsRow } from "../layout";
-import { githubAccountFailureOf, notHere } from "./failures.ts";
+import { githubAccountFailureOf, notHere, silent } from "./failures.ts";
 import { ENLACE } from "../../../ui/ExternalLink";
 
 /**
@@ -91,7 +91,7 @@ export default function GithubAccount(props: {
       if (disposed) return null;
       // Sin GitHub de la cuenta aquí manda la conexión de esta máquina; un fallo al releer no la cambia.
       if (notHere(e) || available() !== true) setAvailable(false);
-      if (!notHere(e)) fail(e);
+      if (!silent(e)) fail(e);
       return null;
     }
   }

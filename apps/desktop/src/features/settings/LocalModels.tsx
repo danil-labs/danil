@@ -14,6 +14,7 @@ import { RemoveButton } from "../../ui/IconAction";
 import { Spinner } from "../../ui/Spinner";
 import { AvanceDeDescarga, BarraDeCarga, Peso } from "../onboarding/DownloadProgress";
 import { type ModeloLocal, type ModelosLocales, OPERACION } from "./local-models-store";
+import "../../locales/settingsPhrases";
 
 /** La memoria se lee en gigas enteros: «16 GB», no «15.5 GB». */
 const gb = (b: number) => `${Math.max(1, Math.round(b / 1_073_741_824))} GB`;

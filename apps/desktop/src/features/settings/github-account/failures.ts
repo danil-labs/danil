@@ -19,11 +19,15 @@ const KNOWN = new Set([
   "github_disabled",
   "license_required",
   "invalid_return_to",
+  "not_found",
   "offline",
 ]);
 
 /** Sin estos no hay GitHub de la cuenta aquí: un motor que aún no tiene los comandos, sin sesión, sin licencia o un Worker sin la App. */
 const NOT_HERE = new Set(["command", "unsupported", "command_not_allowed", "not_found", "http_404", "not_linked", "workspace_not_linked", "github_disabled", "license_required"]);
+
+/** Estos no se le dicen a la persona: el motor o el Worker aún no tienen GitHub de la cuenta. */
+const SILENT = new Set(["command", "unsupported", "command_not_allowed", "http_404", "github_disabled"]);
 
 export function githubAccountFailure(code: string | null): Failure {
   const c = code ?? "offline";
@@ -45,3 +49,6 @@ export function githubAccountFailureOf(e: unknown): unknown {
 }
 
 export const notHere = (e: unknown): boolean => NOT_HERE.has(githubAccountCode(e) ?? "");
+
+/** Si el fallo se calla en vez de mostrarse. */
+export const silent = (e: unknown): boolean => SILENT.has(githubAccountCode(e) ?? "");

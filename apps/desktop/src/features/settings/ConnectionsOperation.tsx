@@ -4,6 +4,7 @@ import { capabilities } from "../../lib/platform";
 import { SettingsPanel, SettingsSection } from "./layout";
 import Harness from "./Harness";
 import Herramientas from "./Tools";
+import "../../locales/settingsPhrases";
 
 /** Conexiones › MCP: las herramientas que usan los agentes que trabajan en tus proyectos. */
 export default function ConnectionsOperation() {

@@ -5,9 +5,11 @@
  *   node --test apps/mobile/scripts/opencode-parity.test.ts
  */
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import { APP_COMMANDS } from "@terminus/protocol";
-import { consentText, consented, freeModelsOf, setProviderConsent, surfacesOf, type TaskView, taskDefaults } from "../src/lib/engine.ts";
+import { consentText, consented, freeModelsOf, setProviderConsent, setSessionModel, surfacesOf, type TaskView, taskDefaults } from "../src/lib/engine.ts";
+import { failureKey } from "../src/lib/failureNotice.ts";
 import type { Host } from "../src/lib/hosts.ts";
 
 function machine(answers: Record<string, unknown>) {
@@ -72,4 +74,31 @@ test("vale el sí de la versión de hoy: quien aceptó un texto anterior lo vuel
 test("sin texto del consentimiento no se ofrece activar", async () => {
   const { host } = machine({ list_surfaces: [{ id: "f", provider: "opencode-zen", label: "", catalogo: "gratuitos", usable: false, marca: null, porque: null }], consent_text: null });
   assert.deepEqual(await freeModelsOf(host, "w1"), []);
+});
+
+test("el modelo del chip se guarda en la tarea con modelo y esfuerzo juntos", async () => {
+  assert.ok(APP_COMMANDS.includes("set_session_model" as never));
+  const { host, calls } = machine({});
+  await setSessionModel(host, "w1", "f1", "t1", "zen/glm", "high");
+  await setSessionModel(host, "w1", "f1", "t1", "zen/glm", null);
+  assert.deepEqual(calls, [
+    { command: "set_session_model", workspace: "w1", args: { project: "f1", id: "t1", model: "zen/glm", effort: "high" } },
+    { command: "set_session_model", workspace: "w1", args: { project: "f1", id: "t1", model: "zen/glm", effort: null } },
+  ]);
+});
+
+test("los rechazos de set_session_model y model_required tienen frase", () => {
+  for (const key of [
+    "chat.session_model.not_offered",
+    "chat.session_model.effort_not_offered",
+    "chat.session_model.catalog_unavailable",
+    "chat.session_model.agent_changed",
+    "cli.error.model_required",
+  ]) {
+    // `i18n.ts` trae `expo-localization`: se contrasta el texto, como en `failure-notice.test.ts`.
+    const [spanish, english] = readFileSync(new URL("../src/lib/i18n.ts", import.meta.url), "utf8").split("const en");
+    for (const block of [spanish, english]) assert.ok(block.includes(`  "${key}": "`), key);
+  }
+  assert.equal(failureKey({ detail: { what: { clave: "chat.session_model.not_offered" } } }), "chat.session_model.not_offered");
+  assert.equal(failureKey({ message_key: "cli.error.model_required", detail: { free_models_accepted: false, account_connected: false } }), "cli.error.model_required");
 });

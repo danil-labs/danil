@@ -1,3 +1,4 @@
+import { isSubtask, type LauncherRow } from "../../../../packages/tasks/src/flat.ts";
 import { t } from "./i18n.ts";
 
 /**
@@ -40,10 +41,11 @@ export type DeleteOutcome = {
   failures: { folder: string; task: string; error: unknown }[];
 };
 
-type Fila = {
+type Fila = LauncherRow & {
   id?: string;
   space?: string | null;
   archived?: boolean | null;
+  pinned?: boolean | null;
   /** La máquina de la cuenta que tiene la tarea; sin ella, es de esta computadora. */
   machine?: string | null;
 };
@@ -76,7 +78,9 @@ export function escritorioDeFila(row: Fila | undefined, vivas: readonly Space[])
 /**
  * Las carpetas del riel en «Tareas»: las agregadas en su orden y después toda
  * carpeta con una tarea viva del escritorio, en el orden de la lista. Ninguna
- * tarea viva se esconde.
+ * tarea viva se esconde. Solo cuentan las que el riel enseña (`flattenTasks`):
+ * una subtarea vive bajo su lanzador, y por ella sola la carpeta quitada
+ * volvía al riel diciendo «Sin tareas todavía».
  */
 export function carpetasDelEscritorio<P extends { id: string }>(
   projects: readonly P[],
@@ -89,7 +93,7 @@ export function carpetasDelEscritorio<P extends { id: string }>(
   const conTareas = projects.filter(
     (p) =>
       !desk.folders.includes(p.id) &&
-      (sesiones[p.id] ?? []).some((r) => !r.archived && enEscritorio(r, desk.id)),
+      (sesiones[p.id] ?? []).some((r) => !r.archived && (r.pinned || !isSubtask(r)) && enEscritorio(r, desk.id)),
   );
   return [...agregadas, ...conTareas];
 }

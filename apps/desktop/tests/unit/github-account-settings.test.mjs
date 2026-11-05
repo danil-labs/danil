@@ -134,7 +134,7 @@ test("with a Danil session the GitHub card is the account's: login, organization
   await sleep(400);
   const list = w.document.querySelector("[data-github-installations]");
   assert.ok(list?.textContent.includes("nosoypoot"), "the installations are listed");
-  buttonIn(list, "Usar nosoypoot en este workspace").click();
+  buttonIn(list, "Usar nosoypoot en tus tareas").click();
   await sleep(300);
   assert.deepEqual(e.calls.find((c) => c.command === "github_account_set_areas")?.args, {
     scope: "w",

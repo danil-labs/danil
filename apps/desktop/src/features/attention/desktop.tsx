@@ -17,6 +17,7 @@ import { loadedConversations, requestConversation } from "../../web/attention/lo
 import { bffTransport, setBffTransport, type BffTransport } from "../../web/attention/transport";
 import type { AgentsSession } from "../../web/attention/workspace-sources";
 import { Button } from "../../ui/Button";
+import { desktopUsageMe } from "../settings/usage-source";
 import "../../web/phrases";
 
 type User = { user_id: string; email: string | null; name: string | null };
@@ -29,6 +30,9 @@ export type DesktopStatus =
 type Reply = { status: number; content_type: string; body: string; proxy: string | null; route_missing: boolean };
 
 const PREFIX = "/danil-bff";
+
+/** La vista de consumo propio, en su trozo: solo la carga quien abre la pestaña. */
+const UsageView = lazy(() => import("../settings/UsageView"));
 
 const store = createRoot(() => {
   const [status, setStatus] = createSignal<DesktopStatus>({ state: "loading" });
@@ -93,7 +97,7 @@ async function windowFetch(input: RequestInfo | URL, init: RequestInit = {}): Pr
     reply = await invoke<Reply>("agents_bff_fetch", args);
   } catch (error) {
     const detail = detailOf(error);
-    if (detail === "no_session") changed({ state: "none" });
+    if (detail === "no_session" || detail === "access_required") changed({ state: "none" });
     throw new Error(errorText(detail));
   }
   if (reply.route_missing) changed({ state: "unavailable", detail: "route_missing" });
@@ -257,7 +261,15 @@ export function installDesktopAttention() {
     )),
     search: { conversations: loadedConversations, open: requestConversation },
   };
-  setCapabilities({ ...capabilities(), inbox });
+  setCapabilities({
+    ...capabilities(),
+    inbox,
+    accountUsage: () => (
+      <Suspense fallback={null}>
+        <UsageView source={desktopUsageMe()} />
+      </Suspense>
+    ),
+  });
   void refreshStatus();
   // La sesión de la ventana es de la cuenta principal. Conectada: se vuelve a comprobar la persona.
   // Solo la principal desconectada la cierra; `pending`, `error` o una secundaria no la tocan.

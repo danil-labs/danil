@@ -9,6 +9,7 @@ import { Toggle } from "../../ui/Toggle";
 import { Badge } from "../../ui/Badge";
 import { SettingsBlock, SettingsRow, SettingsSection } from "./layout";
 import { Governed } from "./Governed";
+import "../../locales/settingsPhrases";
 
 /**
  * Lo que contestó la comprobación de frescura. Espeja `context::Frescura`, que

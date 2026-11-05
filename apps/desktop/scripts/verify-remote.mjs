@@ -5,6 +5,7 @@
  * de trabajo, y la corrida sigue en la máquina aunque este proceso muera.
  * La cola escucha en loopback: `VERIFY_REMOTE_HOST=máquina` llega por túnel SSH y
  * `VERIFY_REMOTE_HOST=host:puerto` usa un puerto ya abierto, como un túnel de SSM.
+ * `--windows` va a la cola de Windows, que se abre en la tailnet tras `tailscale whois`.
  * Corre igual en Windows: sin shell, y el commit viaja por HTTP desde un archivo
  * porque un pipe de PowerShell 5.1 corrompe binarios.
  */
@@ -17,6 +18,7 @@ import { setTimeout as sleep } from "node:timers/promises";
 
 const REPO = "terminus";
 const DEFAULT_HOST = "vm-verify";
+const WINDOWS_HOST = "vm-windows-shared";
 const SSH_USER = "verify";
 const QUEUE_PORT = 8787;
 const DEFAULT_REGION = "us-east-1";
@@ -41,7 +43,11 @@ const CLI_REFUSED = {
 class RemoteError extends Error {}
 
 const accessHelp = (host) =>
-  `No hay acceso a la cola en ${host}.\n` +
+  host.startsWith(`${WINDOWS_HOST}:`) ?
+    `No hay acceso a la cola en ${host}.\n` +
+    "  Entra quien la ACL de la tailnet deja llegar al puerto y está en `windows/gate.json` de la cola. Sin ese acceso, verifica en local con `pnpm verify`.\n" +
+    `  Con acceso, comprueba \`curl http://${host}/health\`. Si la máquina está apagada, encenderla pide sesión de Danil o, de respaldo, credenciales de AWS y VERIFY_REMOTE_INSTANCE.`
+  : `No hay acceso a la cola en ${host}.\n` +
   "  La cola es para el equipo de Danil dentro de su tailnet. Sin ese acceso, verifica en local con `pnpm verify`.\n" +
   `  Con acceso, comprueba Tailscale con \`ssh ${SSH_USER}@${host}\`. Si la máquina está apagada, encenderla pide sesión de Danil en \`danil\` o \`terminus\` o, de respaldo, credenciales de AWS en esta sesión.`;
 
@@ -55,7 +61,7 @@ const noTailnetHelp = (host) =>
   "  Sin acceso al tailnet del equipo, verifica en local con `pnpm verify`.";
 
 function parse(argv) {
-  const options = { noCargo: false, commit: null, attach: null, cancel: null, status: false, detach: false, wip: false };
+  const options = { noCargo: false, commit: null, attach: null, cancel: null, status: false, detach: false, wip: false, windows: false };
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
     if (arg === "--remote") continue;
@@ -63,6 +69,7 @@ function parse(argv) {
     else if (arg === "--status") options.status = true;
     else if (arg === "--detach") options.detach = true;
     else if (arg === "--wip") options.wip = true;
+    else if (arg === "--windows") options.windows = true;
     else if (arg === "--commit" || arg === "--attach" || arg === "--cancel") {
       const value = argv[(i += 1)];
       if (!value) throw new RemoteError(`${arg} necesita un valor`);
@@ -184,7 +191,7 @@ function awsStart(host, env) {
 
 /** Cada llamada es un intento y sigue con el CLI que ya respondió: uno que falla puede tardar un minuto. */
 export function createWake(host, env = process.env) {
-  const machine = host.includes(":") ? DEFAULT_HOST : host;
+  const machine = host.startsWith(`${WINDOWS_HOST}:`) ? WINDOWS_HOST : host.includes(":") ? DEFAULT_HOST : host;
   const clis = machineClis(machine, env);
   let reason = null;
   return () => {
@@ -338,7 +345,7 @@ function report(run, platform, host) {
 }
 
 export async function runRemote(argv) {
-  const host = process.env.VERIFY_REMOTE_HOST ?? DEFAULT_HOST;
+  const host = argv.includes("--windows") ? `${WINDOWS_HOST}:${QUEUE_PORT}` : (process.env.VERIFY_REMOTE_HOST ?? DEFAULT_HOST);
   try {
     const options = parse(argv);
     const link = await openLink(host);

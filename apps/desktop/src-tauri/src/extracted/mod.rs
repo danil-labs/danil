@@ -33,6 +33,7 @@ mod typst_live;
 mod update;
 pub mod util;
 mod wsl;
+mod wsl_child;
 use std::{path::PathBuf, sync::Arc};
 use tauri::{Emitter, Manager};
 use terminus_engine_client::Client;
@@ -113,11 +114,228 @@ pub fn stop_engine() -> i32 {
     }
 }
 
-/// Prototipo del alta de WSL: detección sin pantalla todavía
-/// (`docs/wsl-onboarding.md`). En otros sistemas contesta `unsupported`.
+/// Lo de Linux en esta PC (`wsl_child.rs`) toca disco, red y `wsl.exe`: corre
+/// fuera del hilo de la ventana.
+async fn blocking<T: Send + 'static>(
+    work: impl FnOnce() -> std::result::Result<T, serde_json::Value> + Send + 'static,
+) -> std::result::Result<T, serde_json::Value> {
+    tauri::async_runtime::spawn_blocking(work)
+        .await
+        .unwrap_or_else(|e| Err(serde_json::json!({ "code": "io", "detail": e.to_string() })))
+}
+
 #[tauri::command]
-pub(super) fn wsl_detect() -> std::result::Result<wsl::Detection, String> {
-    wsl::detect().map_err(|error| error.code().to_string())
+async fn wsl_state(
+    app: tauri::AppHandle,
+) -> std::result::Result<wsl_child::LinuxState, serde_json::Value> {
+    blocking(move || Ok(wsl_child::state(&app))).await
+}
+
+#[tauri::command]
+async fn wsl_catalog() -> std::result::Result<Vec<wsl_child::CatalogItem>, serde_json::Value> {
+    blocking(wsl_child::catalog).await
+}
+
+/// Los tres arrancan un trabajo y vuelven enseguida; si ya hay uno, devuelven
+/// ese para que la pantalla se enganche en vez de lanzar otro.
+#[tauri::command]
+fn wsl_enable(app: tauri::AppHandle) -> wsl_child::Job {
+    wsl_child::start_enable(&app).unwrap_or_else(|running| running)
+}
+
+#[tauri::command]
+#[allow(clippy::too_many_arguments)]
+fn wsl_install(
+    app: tauri::AppHandle,
+    name: String,
+    label: String,
+    url: String,
+    sha256: String,
+    user: String,
+    password: String,
+    workspace: Option<String>,
+    workspace_name: Option<String>,
+) -> wsl_child::Job {
+    let workspace = workspace.map(|id| {
+        let n = workspace_name.unwrap_or_else(|| id.clone());
+        (id, n)
+    });
+    let request = wsl_child::InstallRequest {
+        name,
+        label,
+        url,
+        sha256,
+        user,
+        password,
+        workspace,
+    };
+    wsl_child::start_install(&app, request).unwrap_or_else(|running| running)
+}
+
+#[tauri::command]
+fn wsl_connect(
+    app: tauri::AppHandle,
+    distro: String,
+    user: Option<String>,
+    password: Option<String>,
+    workspace: Option<String>,
+    workspace_name: Option<String>,
+) -> wsl_child::Job {
+    let workspace = workspace.map(|id| {
+        let n = workspace_name.unwrap_or_else(|| id.clone());
+        (id, n)
+    });
+    wsl_child::start_connect(&app, &distro, &distro, user, password, workspace)
+        .unwrap_or_else(|running| running)
+}
+
+#[tauri::command]
+fn wsl_job_pause(paused: bool) {
+    wsl_child::pause(paused);
+}
+
+#[tauri::command]
+fn wsl_job_dismiss(app: tauri::AppHandle) {
+    wsl_child::dismiss(&app);
+}
+
+#[tauri::command]
+fn wsl_resume_forget(app: tauri::AppHandle) {
+    wsl_child::forget_resume(&app);
+}
+
+#[tauri::command]
+async fn wsl_distro_user(
+    distro: String,
+) -> std::result::Result<wsl_child::DistroUser, serde_json::Value> {
+    blocking(move || wsl_child::distro_user(&distro)).await
+}
+
+#[tauri::command]
+fn wsl_reboot() -> std::result::Result<(), serde_json::Value> {
+    wsl_child::reboot()
+}
+
+#[tauri::command]
+async fn wsl_children(
+    app: tauri::AppHandle,
+    fresh: Option<bool>,
+) -> std::result::Result<Vec<wsl_child::ChildInfo>, serde_json::Value> {
+    blocking(move || Ok(wsl_child::children(&app, fresh.unwrap_or(false)))).await
+}
+
+#[tauri::command]
+async fn wsl_child_remove(
+    app: tauri::AppHandle,
+    machine: String,
+) -> std::result::Result<(), serde_json::Value> {
+    blocking(move || {
+        let entry = wsl_child::lookup(&app, &machine)?;
+        wsl_child::remove(&app, &entry.distro)
+    })
+    .await
+}
+
+#[tauri::command]
+async fn wsl_child_wake(
+    app: tauri::AppHandle,
+    machine: String,
+) -> std::result::Result<bool, serde_json::Value> {
+    blocking(move || {
+        let entry = wsl_child::lookup(&app, &machine)?;
+        wsl_child::keep_alive(&entry.distro);
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(60);
+        while std::time::Instant::now() < deadline {
+            if wsl_child::status(&entry, true).online {
+                return Ok(true);
+            }
+            std::thread::sleep(std::time::Duration::from_secs(1));
+        }
+        Ok(false)
+    })
+    .await
+}
+
+#[tauri::command]
+async fn wsl_child_call(
+    app: tauri::AppHandle,
+    machine: String,
+    command: String,
+    workspace: Option<String>,
+    folder: Option<String>,
+    args: Option<serde_json::Value>,
+    timeout_ms: Option<u64>,
+) -> std::result::Result<serde_json::Value, serde_json::Value> {
+    blocking(move || {
+        let entry = wsl_child::lookup(&app, &machine)?;
+        let timeout =
+            std::time::Duration::from_millis(timeout_ms.unwrap_or(120_000).clamp(1_000, 1_800_000));
+        if command == "materialize_workspace" {
+            // La máquina hija no tiene cuenta: el workspace se crea local con el mismo id.
+            let id = args
+                .as_ref()
+                .and_then(|a| a["id"].as_str().map(String::from))
+                .or(workspace.clone())
+                .unwrap_or_default();
+            wsl_child::ensure_workspace(&entry.distro, &entry.home, &id, &id)?;
+            return Ok(serde_json::Value::Null);
+        }
+        wsl_child::invoke(
+            &entry.distro,
+            &entry.home,
+            &command,
+            args.unwrap_or_else(|| serde_json::json!({})),
+            workspace.as_deref(),
+            folder.as_deref(),
+            timeout,
+        )
+    })
+    .await
+}
+
+/// Los espacios de esta PC, con el mismo id, en la distribución.
+#[tauri::command]
+async fn wsl_child_sync_spaces(
+    app: tauri::AppHandle,
+    machine: String,
+    workspace: String,
+    spaces: Vec<serde_json::Value>,
+) -> std::result::Result<(), serde_json::Value> {
+    blocking(move || {
+        let entry = wsl_child::lookup(&app, &machine)?;
+        wsl_child::sync_spaces(&entry, &workspace, &spaces)
+    })
+    .await
+}
+
+/// Copia una carpeta de esta PC a la distribución y la registra con el mismo id.
+#[tauri::command]
+async fn wsl_child_copy_folder(
+    app: tauri::AppHandle,
+    machine: String,
+    project: String,
+    name: String,
+    path: String,
+    workspace: Option<String>,
+) -> std::result::Result<String, serde_json::Value> {
+    blocking(move || {
+        let entry = wsl_child::lookup(&app, &machine)?;
+        wsl_child::copy_folder(&entry, &project, &name, &path, workspace.as_deref())
+    })
+    .await
+}
+
+#[tauri::command]
+async fn wsl_child_events(
+    app: tauri::AppHandle,
+    machine: String,
+    cursor: Option<u64>,
+) -> std::result::Result<serde_json::Value, serde_json::Value> {
+    blocking(move || {
+        let entry = wsl_child::lookup(&app, &machine)?;
+        wsl_child::events(&entry.distro, &entry.home, cursor)
+    })
+    .await
 }
 
 pub fn run(client: Arc<Client>) {
@@ -303,7 +521,23 @@ fn start(client: Option<Arc<Client>>, autostart: bool, launcher: launcher::Launc
             typst_live::typst_live_stop,
             update::update_install,
             update::update_pending,
-            wsl_detect
+            wsl_state,
+            wsl_catalog,
+            wsl_enable,
+            wsl_install,
+            wsl_connect,
+            wsl_job_pause,
+            wsl_job_dismiss,
+            wsl_resume_forget,
+            wsl_distro_user,
+            wsl_reboot,
+            wsl_children,
+            wsl_child_remove,
+            wsl_child_wake,
+            wsl_child_call,
+            wsl_child_copy_folder,
+            wsl_child_sync_spaces,
+            wsl_child_events
         ]))
         .build(context)
         .expect("tauri extracted client")

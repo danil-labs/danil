@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogTitle } from "../../ui/Dialog";
 import { prosaDe } from "../../ui/Failure";
 import { Input } from "../../ui/Input";
 import { Terminal, TerminalBody } from "../../ui/Terminal";
+import "../../locales/settingsPhrases";
 
 /** Un paso de la conexión: el número, qué hacer, y con qué. */
 function Paso(props: { numero: number; titulo: string; children: JSX.Element }) {

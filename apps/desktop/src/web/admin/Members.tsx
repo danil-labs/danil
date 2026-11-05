@@ -7,6 +7,7 @@ import { Button } from "../../ui/Button";
 import { Dialog, DialogContent, DialogTitle } from "../../ui/Dialog";
 import { Input } from "../../ui/Input";
 import { Select } from "../../ui/Select";
+import { seatsFull, type SeatUsage } from "../../features/settings/business-billing";
 
 export type MemberRole = "owner" | "admin" | "member";
 export type Member = { id: string; name: string; email: string; role: MemberRole; invited: boolean };
@@ -15,6 +16,15 @@ export type MembersSource = {
   invite: (email: string, role: MemberRole) => Promise<void>;
   setRole: (id: string, role: MemberRole) => Promise<void>;
   remove: (id: string) => Promise<void>;
+};
+
+/** Los lugares de Danil Business del workspace y dónde se agregan. Sin esto, no hay límite que enseñar. */
+export type MembersSeats = { usage: () => Promise<SeatUsage>; addHref: string };
+
+/** El BFF rechaza la invitación con el plan lleno (`seat_limit_reached`). */
+const seatLimit = (error: unknown) => {
+  const code = (error as { code?: unknown; message?: unknown } | null)?.code ?? (error as { message?: unknown } | null)?.message;
+  return code === "seat_limit_reached";
 };
 
 function RoleSelect(props: { value: MemberRole; label: string; disabled?: boolean; onChange: (role: MemberRole) => void }) {
@@ -27,30 +37,54 @@ function RoleSelect(props: { value: MemberRole; label: string; disabled?: boolea
   );
 }
 
-export function Members(props: { source: MembersSource }) {
+export function Members(props: { source: MembersSource; seats?: MembersSeats }) {
   const [rows, { refetch }] = createResource(() => props.source.list());
+  const [seats, { refetch: refetchSeats }] = createResource(async () => (props.seats ? await props.seats.usage().catch(() => null) : null));
+  const [limitHit, setLimitHit] = createSignal(false);
+  const business = () => {
+    const s = seats();
+    return s?.business ? s : null;
+  };
+  const full = () => limitHit() || (business() ? seatsFull(business()!) : false);
   const [email, setEmail] = createSignal("");
   const [role, setRole] = createSignal<MemberRole>("member");
   const [leaving, setLeaving] = createSignal<Member | null>(null);
   const [failed, setFailed] = createSignal(false);
   const act = (work: Promise<void>) => {
     setFailed(false);
-    return work.then(() => void refetch()).catch(() => setFailed(true));
+    return work.then(() => { void refetch(); void refetchSeats(); }).catch((error) => {
+      if (seatLimit(error)) setLimitHit(true);
+      else setFailed(true);
+    });
   };
   const lastOwner = (row: Member) => row.role === "owner" && rows()?.filter((m) => m.role === "owner" && !m.invited).length === 1;
   const invite = (event: SubmitEvent) => {
     event.preventDefault();
     const address = email().trim();
-    if (!address) return;
-    void act(props.source.invite(address, role())).then(() => setEmail(""));
+    if (!address || full()) return;
+    setLimitHit(false);
+    void act(props.source.invite(address, role())).then(() => { if (!limitHit() && !failed()) setEmail(""); });
   };
   return (
     <SettingsPanel data-admin-members="">
       <SettingsSection title={t("web.admin.members_invite")} description={t("web.admin.members_invite_hint")}>
+        <Show when={business() && !full()}>
+          <p class="m-0 pt-2 text-xs text-neutral-500" data-admin-seats="">{t("web.admin.members_seats", { used: business()!.seatsUsed, allowed: business()!.seatsAllowed })}</p>
+        </Show>
+        <Show when={full()}>
+          <div role="status" class="mt-3 grid gap-2 rounded-md border border-warning-strong p-3 text-ui" data-admin-seats-full="">
+            <p class="m-0">
+              {business() ? t("web.admin.members_seats_full", { used: business()!.seatsUsed, allowed: business()!.seatsAllowed }) : t("web.admin.members_seats_full_plain")}
+            </p>
+            <Show when={props.seats}>
+              {(link) => <Button as="a" size="sm" variant="secondary" class="justify-self-start" href={link().addHref} data-admin-add-seats="">{t("web.admin.members_add_seats")}</Button>}
+            </Show>
+          </div>
+        </Show>
         <form class="flex flex-wrap items-center gap-2 pt-3" onSubmit={invite}>
           <Input class="min-w-0 flex-1 basis-56" type="email" required aria-label={t("web.admin.members_email")} placeholder={t("web.admin.members_email")} value={email()} onInput={(event) => setEmail(event.currentTarget.value)} />
           <RoleSelect value={role()} label={t("web.admin.members_role")} onChange={setRole} />
-          <Button type="submit" size="sm">{t("web.admin.members_invite_action")}</Button>
+          <Button type="submit" size="sm" disabled={full()}>{t("web.admin.members_invite_action")}</Button>
         </form>
       </SettingsSection>
       <SettingsSection title={t("web.admin.members")}>

@@ -94,8 +94,12 @@ export type Capabilities = {
     create?: (workspaceId: string, account?: string | null) => Promise<void>;
   };
   adminPage?: { href: string; allowed: () => Promise<boolean> };
-  /** Lo de una cuenta personal en Configuración › Cuenta. `isPersonal` decide si se ofrece; sin `usage` o `plan`, esas pestañas no salen. */
-  personalAccount?: { isPersonal: () => Promise<boolean>; usage?: () => JSX.Element; plan?: () => JSX.Element };
+  /** Lo de una cuenta personal en Configuración › Cuenta. `isPersonal` decide si se ofrece; sin `plan`, esa pestaña no sale. */
+  personalAccount?: { isPersonal: () => Promise<boolean>; plan?: () => JSX.Element };
+  /** El consumo propio (`/v1/usage/me`) en Configuración › Cuenta. Sin fuente, la pestaña no sale. */
+  accountUsage?: () => JSX.Element;
+  /** Plan y cobro de Danil Business del workspace activo (solo la web). Sin esto, la entrada no sale. */
+  businessBilling?: (part: "plan" | "fiscal") => JSX.Element;
   /** El logo y el fondo de los workspaces leídos y cambiados en la cuenta con la sesión (la web). */
   accountAssets?: WorkspaceAssetsSource;
   /** Botón extra al lado de la búsqueda de la barra lateral (en la web, volver a Danil Agents). */
@@ -114,7 +118,7 @@ export type Capabilities = {
   browserFiles?: boolean;
   /** Transporte para intentar ver la pantalla; `null` si la máquina no pertenece a esta cuenta. La captura la decide el motor. */
   machineScreen?: (machine: string) => (() => Promise<WebSocket>) | null;
-  /** `license_required` si el relay detuvo las otras máquinas por falta de Terminus de pago (aviso `TerminusLicense`); `null` si no. */
+  /** `license_required` si el relay detuvo las otras máquinas por falta de licencia (aviso `TerminusLicense`); `null` si no. */
   machinesLicense?: () => "license_required" | null;
   /** «Reintentar» del aviso de licencia: vuelve a abrir las sesiones de las otras máquinas. */
   retryMachines?: () => void;

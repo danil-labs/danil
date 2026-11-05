@@ -1,6 +1,7 @@
 import { invoke } from "../../lib/invoke.ts";
 import Bot from "lucide-solid/icons/bot";
 import CircleUserRound from "lucide-solid/icons/circle-user-round";
+import CreditCard from "lucide-solid/icons/credit-card";
 import ExternalLink from "lucide-solid/icons/external-link";
 import Folders from "lucide-solid/icons/folders";
 import Monitor from "lucide-solid/icons/monitor";
@@ -30,6 +31,8 @@ import {
   SidebarMenuItem,
 } from "../../ui/sidebar";
 import type { ModelChoices } from "../projects/NewAgent";
+import type { SurfacesState } from "./ai-providers-view";
+import { asFailure } from "../../ui/Failure";
 import AIProviders from "./AIProviders";
 import Connections from "./Connections";
 import ConnectionsOperation from "./ConnectionsOperation";
@@ -48,6 +51,7 @@ import { SETTINGS_ENTRIES, type SettingsEntryId, type SettingsGroup, settingsTar
 import Skills from "./Skills";
 import Workspaces from "./Workspaces";
 import { SettingsPanel, SettingsSection } from "./layout";
+import "../../locales/settingsPhrases";
 // Chunks aparte: solo los carga quien abre la sección.
 const DanilAccount = lazy(() => import("./DanilAccount"));
 const SupportAccess = lazy(() => import("./SupportAccess"));
@@ -85,6 +89,9 @@ type ContextoDeAgentes = {
   /** Los agentes de las tareas abiertas: sus proveedores llegan desplegados. */
   readonly agentesEnUso: string[];
   onAgentProfile: (project: string, name: string) => void;
+  /** Si `list_surfaces` todavía no contesta, contestó o falló. */
+  readonly estadoSuperficies: SurfacesState;
+  reintentarSuperficies: () => void;
 };
 
 /**
@@ -108,7 +115,7 @@ const pestanasDe = (
   return {
     "cuenta-danil": cuenta ? tab("cuenta-danil", () => t("settings.tab.profile"), () => <Suspense fallback={null}><DanilAccount part="profile" /></Suspense>) : undefined,
     emails: capabilities().accountEmails ? tab("emails", () => t("settings.tab.emails"), () => <Suspense fallback={null}><DanilAccount part="emails" /></Suspense>) : undefined,
-    usage: capabilities().personalAccount?.usage ? tab("usage", () => t("settings.tab.usage"), () => capabilities().personalAccount?.usage?.()) : undefined,
+    usage: capabilities().accountUsage ? tab("usage", () => t("settings.tab.usage"), () => capabilities().accountUsage?.()) : undefined,
     plan: capabilities().personalAccount?.plan ? tab("plan", () => t("settings.tab.plan"), () => capabilities().personalAccount?.plan?.()) : undefined,
     support: capabilities().personalAccount && capabilities().supportAccess ? tab("support", () => t("web.admin.support"), () => <Suspense fallback={null}><SettingsPanel><SupportAccess source={capabilities().supportAccess!} /></SettingsPanel></Suspense>) : undefined,
     security: tab("security", () => t("settings.tab.security"), null),
@@ -118,7 +125,7 @@ const pestanasDe = (
     languages: tab("languages", () => t("settings.languages.title"), () => <SettingsPanel><PaquetesDeLengua /></SettingsPanel>),
     workspaces: tab("workspaces", () => t("settings.tab.workspace_bar"), () => <Workspaces />),
     download: capabilities().appDownloads ? tab("download", () => t("web.download.tab"), () => <Suspense fallback={null}><AppDownloads /></Suspense>) : undefined,
-    "proveedores-ia": tab("proveedores-ia", () => t("settings.nav.ai_providers"), () => <AIProviders superficies={superficies()} agentesEnUso={agentes.agentesEnUso} />),
+    "proveedores-ia": tab("proveedores-ia", () => t("settings.nav.ai_providers"), () => <AIProviders superficies={superficies()} agentesEnUso={agentes.agentesEnUso} estado={agentes.estadoSuperficies} onRetry={agentes.reintentarSuperficies} />),
     machines: cuenta ? tab("machines", () => t("settings.tab.machines"), () => <Suspense fallback={null}><DanilAccount part="machines" /></Suspense>) : undefined,
     entorno: tab("entorno", () => t("settings.nav.environment"), () => <Environment />),
     activity: tab("activity", () => t("activity.title"), () => <Suspense fallback={null}><ActivityLogs workspace={workspace()} machine={activityMachine()} /></Suspense>),
@@ -141,6 +148,8 @@ const pestanasDe = (
     memory: tab("memory", () => t("settings.tab.memory"), () => <SettingsPanel><ProveedorDeMemoria /></SettingsPanel>),
     external: cuenta ? tab("external", () => t("settings.tab.external"), () => <Suspense fallback={null}><Connections workspace={workspace()} /></Suspense>) : undefined,
     customers: tab("customers", () => t("settings.tab.customers"), () => <CustomerConnections workspace={agentsWorkspace} />),
+    business: capabilities().businessBilling ? tab("business", () => t("settings.tab.business"), () => capabilities().businessBilling?.("plan")) : undefined,
+    fiscal: capabilities().businessBilling ? tab("fiscal", () => t("settings.tab.fiscal"), () => capabilities().businessBilling?.("fiscal")) : undefined,
   };
 };
 
@@ -152,6 +161,7 @@ const ENCABEZADOS: Record<SettingsEntryId, { name: () => string; icono: () => JS
   projects: { name: () => t("settings.entry.projects"), icono: () => <Folders size={15} /> },
   "agents-skills": { name: () => t("settings.entry.agents_skills"), icono: () => <Bot size={15} /> },
   connections: { name: () => t("settings.nav.connections"), icono: () => <Plug size={15} /> },
+  billing: { name: () => t("settings.entry.billing"), icono: () => <CreditCard size={15} /> },
 };
 
 /** Una entrada sale si tiene alguna pestaña que ya existe. */
@@ -235,6 +245,7 @@ export default function Settings(props: {
   // Lo que se puede elegir para trabajar, que es lo que decide qué proveedores
   // tienen pantalla. Con su estado: aquí no apaga nada, lo enseña.
   const [superficies, setSuperficies] = createSignal<Superficie[]>([]);
+  const [estadoSuperficies, setEstadoSuperficies] = createSignal<SurfacesState>({ k: "loading" });
   /**
    * **Sólo se guarda si de verdad cambió**, y eso no es una optimización.
    *
@@ -254,12 +265,14 @@ export default function Settings(props: {
    */
   const cargarSuperficies = () => {
     void invoke<Superficie[]>("list_surfaces")
-      .then((s) =>
+      .then((s) => {
         setSuperficies((antes) =>
           JSON.stringify(antes) === JSON.stringify(s) ? antes : s,
-        ),
-      )
-      .catch(() => setSuperficies([]));
+        );
+        setEstadoSuperficies({ k: "ready" });
+      })
+      // Lo que ya se veía se queda; sin nada, el panel dice por qué (una VM encendiéndose, por ejemplo).
+      .catch((e) => setEstadoSuperficies({ k: "failed", f: asFailure(e) }));
   };
   onMount(cargarSuperficies);
 
@@ -291,8 +304,11 @@ export default function Settings(props: {
       if (e.payload.kind === "done") cargarSuperficies();
     });
     window.addEventListener("harness:consentimiento", cargarSuperficies);
+    // Una máquina de la cuenta se encendió o trajo otra rebanada: su lista puede haber llegado.
+    window.addEventListener("harness:machine-slices", cargarSuperficies);
     onCleanup(() => {
       window.removeEventListener("harness:consentimiento", cargarSuperficies);
+      window.removeEventListener("harness:machine-slices", cargarSuperficies);
       void cambios.then((f) => f());
       void cuenta.then((f) => f());
       void motor.then((f) => f());
@@ -310,12 +326,19 @@ export default function Settings(props: {
       return props.agentesEnUso ?? [];
     },
     onAgentProfile: (project, name) => props.onAgentProfile?.(project, name),
+    get estadoSuperficies() {
+      return estadoSuperficies();
+    },
+    reintentarSuperficies: () => {
+      setEstadoSuperficies({ k: "loading" });
+      cargarSuperficies();
+    },
   }, props.proyectos, () => props.workspace ?? null, () => props.activityMachine ?? null, () => props.agentsWorkspace ?? null);
   const ENTRADAS = entradasDe(pestanas);
 
   // Sin soporte del motor activo, Secretos no se ofrece; su enlace directo sí abre el aviso.
   const [personal] = createResource(async () => (await capabilities().personalAccount?.isPersonal().catch(() => false)) ?? false);
-  const dePersonal = (p: Pestana) => ["usage", "plan", "support"].includes(p.id);
+  const dePersonal = (p: Pestana) => ["plan", "support"].includes(p.id);
   const pestanaVisible = (p: Pestana) => (dePersonal(p) ? personal() === true : p.id !== "secrets" || secretsRoute(capabilities().accountCredentials ? "worker" : "engine", machines()) !== "unsupported");
   const pedido = settingsTarget(props.panel);
   const inicial = ENTRADAS.find((e) => e.id === pedido?.entry) ?? ENTRADAS[0];

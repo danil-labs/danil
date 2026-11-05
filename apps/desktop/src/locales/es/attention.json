@@ -28,6 +28,7 @@
   "attention.desktop.sign_out": "Cerrar sesión de Atención",
   "attention.desktop.error.unavailable": "No se pudo conectar con Danil. Prueba de nuevo en un momento.",
   "attention.desktop.error.no_session": "Tu sesión de Atención terminó. Conecta otra vez.",
+  "attention.desktop.error.access_required": "Necesitas acceso autorizado a Danil. Puedes solicitarlo por correo a hola@danil.ai.",
   "attention.desktop.error.session_ended": "Tu sesión de Atención terminó. Conecta otra vez.",
   "attention.desktop.error.client_token": "Primero inicia sesión en Danil en Configuración › Cuenta de Danil.",
   "attention.desktop.error.person_mismatch": "Confirmaste con otra cuenta. Usa la misma cuenta de Danil de esta computadora.",

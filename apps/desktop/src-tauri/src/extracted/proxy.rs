@@ -281,10 +281,27 @@ pub(super) fn desktop_command(name: &str) -> bool {
                 | "agents_bff_fetch"
                 | "harness_org_fetch"
                 | "typst_live_complete"
-                | "wsl_detect"
                 | "service_filter"
                 | "load_history"
                 | "handler_action"
+                // Linux en esta PC (`wsl_child.rs`): la ventana, no el motor.
+                | "wsl_state"
+                | "wsl_catalog"
+                | "wsl_enable"
+                | "wsl_install"
+                | "wsl_connect"
+                | "wsl_job_pause"
+                | "wsl_job_dismiss"
+                | "wsl_resume_forget"
+                | "wsl_distro_user"
+                | "wsl_reboot"
+                | "wsl_children"
+                | "wsl_child_remove"
+                | "wsl_child_wake"
+                | "wsl_child_call"
+                | "wsl_child_copy_folder"
+                | "wsl_child_sync_spaces"
+                | "wsl_child_events"
         )
 }
 pub(super) fn with_desktop(

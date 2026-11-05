@@ -62,3 +62,78 @@ export function wslFailureCode(error: unknown): string {
 /** Comandos que se muestran tal cual: no se traducen. */
 export const WSL_INSTALL = "wsl --install";
 export const WSL_INSTALL_UBUNTU = "wsl --install -d Ubuntu";
+
+/** El id de máquina de una distro conectada: `wsl:Ubuntu`. Sólo existe en esta PC. */
+export const WSL_MACHINE_PREFIX = "wsl:";
+
+/** Una distro con motor de Danil, como la devuelve `wsl_children`. */
+export type WslChild = {
+  id: string;
+  distro: string;
+  name: string;
+  user: string;
+  home: string;
+  online: boolean;
+  features: string[];
+  contract: string | null;
+  version: string | null;
+};
+
+/** Una distribución del catálogo de Microsoft, con su tamaño y si Danil sabe prepararla. */
+export type WslCatalogItem = { name: string; label: string; url: string; sha256: string; default: boolean; size: number | null; supported: boolean };
+
+export type WslDistroUser = { uid: number; user: string; home: string };
+
+export type WslJobError = { code: string; detail: string };
+
+/** Lo que se está haciendo (`wsl-job`): lo guarda la ventana, no la pantalla. */
+export type WslJob = {
+  id: string;
+  kind: "enable" | "install" | "connect";
+  target: string;
+  label: string;
+  user: string | null;
+  step: string;
+  done: number | null;
+  total: number | null;
+  speed: number | null;
+  paused: boolean;
+  lines: string[];
+  error: WslJobError | null;
+  finished: boolean;
+  started_at: number;
+};
+
+export type WslDistroRow = { name: string; state: string; version: number | null; default: boolean; system: boolean; child: WslChild | null };
+
+export type WslResume = { name: string; label: string; url: string; sha256: string; user: string };
+
+/** Todo lo que muestra «Linux en esta PC» (`wsl_state`). */
+export type WslLinuxState = {
+  wsl: "ready" | "missing" | "reboot" | "virtualization" | "unsupported" | "unknown";
+  distros: WslDistroRow[];
+  job: WslJob | null;
+  resume: WslResume | null;
+  detail: string | null;
+};
+
+const RESERVED = new Set(["root", "daemon", "bin", "sys", "sync", "games", "man", "nobody", "admin", "ubuntu", "messagebus", "systemd-network"]);
+
+/** Las reglas de Ubuntu para un usuario nuevo; la ventana las vuelve a revisar. */
+export function wslUserProblem(user: string): "empty" | "reserved" | "format" | null {
+  if (!user) return "empty";
+  if (RESERVED.has(user)) return "reserved";
+  return /^[a-z][a-z0-9_-]{0,31}$/.test(user) ? null : "format";
+}
+
+/** Lo que escribe la persona, ajustado a un usuario de Linux: «Tu Nombre» → «tu-nombre». */
+export function linuxUserSlug(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[\s.]+/g, "-")
+    .replace(/[^a-z0-9_-]/g, "")
+    .replace(/^[^a-z]+/, "")
+    .slice(0, 32);
+}

@@ -22,6 +22,7 @@ import { Governed } from "./Governed";
 import { Lengua } from "./Language";
 import { SettingsBlock, SettingsPanel, SettingsRow, SettingsSection } from "./layout";
 import MaterialPicker from "./MaterialPicker";
+import "../../locales/settingsPhrases";
 
 // Ajustes generales; el contexto principal y los secundarios pertenecen al workspace activo.
 
