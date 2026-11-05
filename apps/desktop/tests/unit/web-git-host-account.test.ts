@@ -93,6 +93,18 @@ test("los códigos de vuelta y de subida tienen frase: cancelado, deshabilitado,
   assert.equal(gitHostNotHere("gitlab", { detail: "credentials.error.gitlab_unavailable" }), false, "an actual service failure is still reported");
 });
 
+test("un Worker sin las rutas de git-hosts (404 not_found) deja la tarjeta local sin error", async () => {
+  const { source } = setup(() => ({ status: 404, body: { error: { code: "not_found" } } }));
+  for (const provider of ["gitlab", "bitbucket"] as const) {
+    await assert.rejects(source.status(provider), (e: unknown) => {
+      assert.equal((e as { detail: string }).detail, "credentials.error.not_found");
+      assert.ok(gitHostNotHere(provider, e), "the local card takes over");
+      assert.ok(gitHostSilent(provider, e), "and nothing is said");
+      return true;
+    });
+  }
+});
+
 test("return_to es la página actual sin la marca de GitLab o Bitbucket ni el ancla", () => {
   assert.equal(gitHostReturnToOf("https://app.danil.ai/terminus/w/x?x=1&bitbucket=error&code=bitbucket_cancelled#a"), "https://app.danil.ai/terminus/w/x?x=1");
   assert.equal(gitHostReturnToOf("https://app.danil.ai/terminus/"), "https://app.danil.ai/terminus/");

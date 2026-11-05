@@ -354,6 +354,9 @@ test("a Worker without the git-hosts routes keeps the local cards without an err
     assert.equal(account(w, "Bitbucket")?.dataset.gitHostAccount, "local");
     assert.ok(card(w, "Bitbucket").querySelector('input[type="password"]'), "the pasted token form is there");
     assert.equal(w.document.querySelector("[role=alert]"), null);
+    // Un 404 `not_found` de un Worker sin estas rutas no se le dice a la persona.
+    assert.equal(text(w).includes("Danil no encontró"), false, text(w).slice(0, 800));
+    assert.ok(fake.seen.some((s) => s.provider === "gitlab" && s.action === ""), "the account was asked");
     assert.deepEqual(app.failures, []);
   } finally {
     fake.restore();

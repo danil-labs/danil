@@ -72,7 +72,8 @@ const HOST_SHARED = new Set(["workspace_not_linked", "not_linked", "license_requ
 
 /** `no_client_token`: la ventana no pudo pedir el token de cliente de la cuenta (motor viejo o sin sesión). */
 const HOST_NOT_HERE = ["command", "unsupported", "command_not_allowed", "not_found", "http_404", "not_linked", "workspace_not_linked", "license_required", "no_client_token"];
-const HOST_SILENT = ["command", "unsupported", "command_not_allowed", "http_404", "no_client_token"];
+/** `not_found`: un Worker sin las rutas `/v1/git-hosts/*` contesta así; manda la tarjeta local. */
+const HOST_SILENT = ["command", "unsupported", "command_not_allowed", "not_found", "http_404", "no_client_token"];
 
 const hostKey = (provider: string, code: string): string | null => {
   if (code.startsWith(`${provider}_`) && HOST_KNOWN.has(code.slice(provider.length + 1))) return code.slice(provider.length + 1);
