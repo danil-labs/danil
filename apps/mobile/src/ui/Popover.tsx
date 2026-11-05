@@ -6,7 +6,7 @@ import { Modal, Platform, Pressable, StyleSheet, Text, useWindowDimensions, View
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Icon, type IconName } from "./Icon";
 import { Tap } from "./list";
-import { useTheme } from "./theme";
+import { SCRIM, useTheme } from "./theme";
 
 export type Rect = { x: number; y: number; width: number; height: number };
 
@@ -73,7 +73,7 @@ export function Popover({ anchor, items, onClose, align = "start", testID }: { a
   const arrowLeft = Math.max(14, Math.min(anchor.x + Math.min(anchor.width, 60) / 2 - left - 7, width - 28));
   return (
     <Modal visible transparent animationType="fade" onRequestClose={onClose} statusBarTranslucent>
-      <Pressable testID={testID ? `${testID}-backdrop` : undefined} accessibilityRole="button" accessibilityLabel="close" onPress={onClose} style={[StyleSheet.absoluteFill, { backgroundColor: theme.dark ? "rgba(0,0,0,0.35)" : "rgba(10,13,35,0.12)" }]} />
+      <Pressable testID={testID ? `${testID}-backdrop` : undefined} accessibilityRole="button" accessibilityLabel="close" onPress={onClose} style={[StyleSheet.absoluteFill, { backgroundColor: SCRIM }]} />
       <View
         testID={testID}
         accessibilityRole="menu"

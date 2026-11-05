@@ -7,27 +7,41 @@ import { StyleSheet, View } from "react-native";
  * una carpeta, el visor) entra desde la derecha, y la pantalla a la que se
  * vuelve entra desde la izquierda. La de arriba no se puede ver salir: la pila
  * esconde las de abajo (`display: none`), así que el movimiento lo hace la que
- * reaparece. `enter={false}`: solo anima al volver (el chat).
+ * reaparece. `enter={false}`: solo anima al volver (el chat). Las hojas que son
+ * pantallas transparentes (`OVERLAYS`) no esconden la de abajo: volver de ellas
+ * no la mueve.
  */
 export function SlideIn({ children, enter = true }: { children: ReactNode; enter?: boolean }) {
   const navigation = useNavigation();
   const [motion, setMotion] = useState<"in" | "back" | null>(enter ? "in" : null);
   const shown = useRef(false);
-  useEffect(
-    () =>
-      navigation.addListener("focus", () => {
-        if (!shown.current) {
-          shown.current = true;
-          return;
-        }
-        // Quitar la animación un cuadro y volver a ponerla la reinicia.
-        setMotion(null);
-        requestAnimationFrame(() => setMotion("back"));
-      }),
-    [navigation],
-  );
+  const covered = useRef(false);
+  useEffect(() => {
+    const blur = navigation.addListener("blur", () => {
+      const state = navigation.getState();
+      const top = state?.routes[state.index ?? 0];
+      covered.current = !top || !OVERLAYS.has(top.name);
+    });
+    const focus = navigation.addListener("focus", () => {
+      if (!shown.current) {
+        shown.current = true;
+        return;
+      }
+      if (!covered.current) return;
+      // Quitar la animación un cuadro y volver a ponerla la reinicia.
+      setMotion(null);
+      requestAnimationFrame(() => setMotion("back"));
+    });
+    return () => {
+      blur();
+      focus();
+    };
+  }, [navigation]);
   return <View style={[styles.slide, motion === "in" ? styles.in : motion === "back" ? styles.back : null]}>{children}</View>;
 }
+
+/** Las pantallas que en web se abren como `transparentModal` en `_layout.tsx`. */
+const OVERLAYS = new Set(["task-work", "preview"]);
 
 const styles = StyleSheet.create({
   slide: { flex: 1, animationDuration: "240ms", animationTimingFunction: "cubic-bezier(.2,.8,.2,1)" } as object,
