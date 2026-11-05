@@ -1,16 +1,18 @@
-//! Máquinas locales por canal: un huésped Linux en esta computadora (hoy, una
-//! distro de WSL) con su propio motor, al que la ventana le habla por
+//! Máquinas locales por canal: un huésped Linux en esta computadora (una
+//! distro de WSL o una VM de Lima) con su propio motor, al que la ventana le habla por
 //! loopback. `child.rs` tiene lo común; cada canal trae su forma de listar,
 //! encender y correr un script dentro (`docs/wsl-local-machine.md`).
 #![cfg_attr(not(windows), allow(dead_code))]
 
 pub mod child;
+pub mod lima;
 mod run;
 pub mod wsl;
 pub mod wsl_setup;
 
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
+use std::process::Command;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 /// Una falla con la forma que espera la pantalla: `{ code, detail }`.
@@ -27,19 +29,38 @@ pub fn now_ms() -> u64 {
         .unwrap_or(0)
 }
 
-/// Por dónde se llega al huésped. Se guarda y se manda como texto (`"wsl"`);
+/// Por dónde se llega al huésped. Se guarda y se manda como texto (`"wsl"`, `"lima"`);
 /// sus fallas se llaman `<canal>_missing`, `<canal>_timeout` y `<canal>_failed`.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum ChannelKind {
+    #[default]
     Wsl,
+    Lima,
 }
 
 impl ChannelKind {
     pub fn as_str(self) -> &'static str {
         match self {
             Self::Wsl => "wsl",
+            Self::Lima => "lima",
         }
+    }
+
+    /// El prefijo del id de máquina: `wsl:Ubuntu`, `lima:danil`.
+    pub fn prefix(self) -> &'static str {
+        match self {
+            Self::Wsl => "wsl:",
+            Self::Lima => "lima:",
+        }
+    }
+
+    pub fn of_machine(machine: &str) -> Option<(Self, &str)> {
+        [Self::Wsl, Self::Lima].into_iter().find_map(|kind| {
+            machine
+                .strip_prefix(kind.prefix())
+                .map(|guest| (kind, guest))
+        })
     }
 }
 
@@ -56,17 +77,17 @@ pub enum GuestState {
 #[derive(Debug, Clone, Serialize)]
 pub struct Guest {
     pub channel: ChannelKind,
-    /// El nombre del huésped en su canal (la distro de WSL).
+    /// El nombre del huésped en su canal (la distro de WSL, la instancia de Lima).
     pub id: String,
     pub label: String,
     pub state: GuestState,
     /// El estado tal como lo escribió el canal; `wsl.exe` lo localiza.
     pub state_raw: String,
     pub arch: Option<String>,
-    /// WSL: la versión (`1` o `2`).
+    /// WSL: la versión (`1` o `2`). Lima: el tipo de VM (`vz`, `qemu`).
     pub detail: Option<String>,
     pub default: bool,
-    /// De otra aplicación (Docker, Rancher): nunca se ofrece.
+    /// De otra aplicación (Docker, Rancher, Colima): nunca se ofrece.
     pub system: bool,
 }
 
@@ -89,17 +110,20 @@ pub trait Channel: Sync {
         deadline: Duration,
         on_line: &mut dyn FnMut(&str),
     ) -> Result<(i32, String), Failure>;
+    /// El proceso que desempaca en `dest` un `tar` que llega por stdin.
+    fn unpack(&self, guest: &str, user: &str, dest: &str) -> Result<Command, Failure>;
 }
 
 pub fn channel(kind: ChannelKind) -> &'static dyn Channel {
     match kind {
         ChannelKind::Wsl => &wsl::Wsl,
+        ChannelKind::Lima => &lima::Lima,
     }
 }
 
 /// Los canales que este equipo ofrece.
 pub fn channels() -> Vec<ChannelKind> {
-    [ChannelKind::Wsl]
+    [ChannelKind::Wsl, ChannelKind::Lima]
         .into_iter()
         .filter(|kind| channel(*kind).available())
         .collect()
@@ -140,9 +164,32 @@ mod tests {
         );
     }
 
-    #[cfg(not(windows))]
     #[test]
-    fn no_channel_off_windows() {
-        assert!(channels().is_empty());
+    fn each_system_offers_its_channel() {
+        let expected: Vec<ChannelKind> = if cfg!(windows) {
+            vec![ChannelKind::Wsl]
+        } else if cfg!(target_os = "macos") {
+            vec![ChannelKind::Lima]
+        } else {
+            vec![]
+        };
+        assert_eq!(channels(), expected);
+    }
+
+    #[test]
+    fn machine_ids_carry_their_channel() {
+        assert_eq!(
+            ChannelKind::of_machine("wsl:Ubuntu"),
+            Some((ChannelKind::Wsl, "Ubuntu"))
+        );
+        assert_eq!(
+            ChannelKind::of_machine("lima:danil"),
+            Some((ChannelKind::Lima, "danil"))
+        );
+        assert_eq!(ChannelKind::of_machine("cmp_a"), None);
+        assert_eq!(
+            serde_json::to_value(ChannelKind::Lima).unwrap(),
+            json!("lima")
+        );
     }
 }

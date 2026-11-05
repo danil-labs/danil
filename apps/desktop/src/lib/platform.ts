@@ -64,6 +64,8 @@ export type Capabilities = {
   computerStatus: boolean;
   /** La ventana ofrece WSL como canal de máquinas locales (`guest_channels`). */
   wsl?: boolean;
+  /** La ventana ofrece Lima como canal de máquinas locales (`guest_channels`, macOS). */
+  lima?: boolean;
   /** Radiant en Configuración y su gobierno en las pantallas; la web no lo ofrece. */
   radiant?: boolean;
   /** «Descarga la app» en Configuración: solo la web; la ventana ya es la app. */

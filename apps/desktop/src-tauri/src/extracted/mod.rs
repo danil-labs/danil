@@ -230,6 +230,54 @@ async fn guest_list(
     blocking(move || guests::channel(channel).list()).await
 }
 
+/// Conecta un huésped que ya existe (Lima). WSL conserva `wsl_connect`, que
+/// pide usuario y contraseña.
+#[tauri::command]
+fn guest_connect(
+    app: tauri::AppHandle,
+    channel: guests::ChannelKind,
+    guest: String,
+    name: Option<String>,
+    workspace: Option<String>,
+    workspace_name: Option<String>,
+) -> guests::child::Job {
+    let workspace = workspace.map(|id| {
+        let n = workspace_name.unwrap_or_else(|| id.clone());
+        (id, n)
+    });
+    let name = name.unwrap_or_else(|| guest.clone());
+    match channel {
+        guests::ChannelKind::Lima => {
+            guests::child::start_lima_connect(&app, &guest, &name, workspace)
+        }
+        guests::ChannelKind::Wsl => {
+            guests::child::start_connect(&app, &guest, &name, None, None, workspace)
+        }
+    }
+    .unwrap_or_else(|running| running)
+}
+
+/// Crea una VM de Lima sin montajes y la conecta, como un trabajo.
+#[tauri::command]
+fn lima_create(
+    app: tauri::AppHandle,
+    name: String,
+    workspace: Option<String>,
+    workspace_name: Option<String>,
+) -> guests::child::Job {
+    let workspace = workspace.map(|id| {
+        let n = workspace_name.unwrap_or_else(|| id.clone());
+        (id, n)
+    });
+    guests::child::start_lima_create(&app, &name, workspace).unwrap_or_else(|running| running)
+}
+
+/// El trabajo en curso o el último, de cualquier canal.
+#[tauri::command]
+fn guest_job(app: tauri::AppHandle) -> Option<guests::child::Job> {
+    guests::child::job(&app)
+}
+
 #[tauri::command]
 async fn guest_children(
     app: tauri::AppHandle,
@@ -245,7 +293,7 @@ async fn guest_remove(
 ) -> std::result::Result<(), serde_json::Value> {
     blocking(move || {
         let entry = guests::child::lookup(&app, &machine)?;
-        guests::child::remove(&app, &entry.distro)
+        guests::child::remove(&app, &entry)
     })
     .await
 }
@@ -257,7 +305,7 @@ async fn guest_start(
 ) -> std::result::Result<bool, serde_json::Value> {
     blocking(move || {
         let entry = guests::child::lookup(&app, &machine)?;
-        guests::channel(entry.channel()).start(&entry.distro)?;
+        guests::channel(entry.channel).start(&entry.distro)?;
         let deadline = std::time::Instant::now() + std::time::Duration::from_secs(60);
         while std::time::Instant::now() < deadline {
             if guests::child::status(&entry, true).online {
@@ -291,12 +339,11 @@ async fn guest_call(
                 .and_then(|a| a["id"].as_str().map(String::from))
                 .or(workspace.clone())
                 .unwrap_or_default();
-            guests::child::ensure_workspace(&entry.distro, &entry.home, &id, &id)?;
+            guests::child::ensure_workspace(&entry, &id, &id)?;
             return Ok(serde_json::Value::Null);
         }
         guests::child::invoke(
-            &entry.distro,
-            &entry.home,
+            &entry,
             &command,
             args.unwrap_or_else(|| serde_json::json!({})),
             workspace.as_deref(),
@@ -347,7 +394,7 @@ async fn guest_events(
 ) -> std::result::Result<serde_json::Value, serde_json::Value> {
     blocking(move || {
         let entry = guests::child::lookup(&app, &machine)?;
-        guests::child::events(&entry.distro, &entry.home, cursor)
+        guests::child::events(&entry, cursor)
     })
     .await
 }
@@ -547,6 +594,9 @@ fn start(client: Option<Arc<Client>>, autostart: bool, launcher: launcher::Launc
             wsl_reboot,
             guest_channels,
             guest_list,
+            guest_connect,
+            lima_create,
+            guest_job,
             guest_children,
             guest_remove,
             guest_start,
