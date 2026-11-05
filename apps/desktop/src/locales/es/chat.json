@@ -456,18 +456,5 @@
   "chat.history.content": "Contenido guardado",
   "chat.queue.stop_and_send": "Detener el turno y enviar",
   "chat.queue.stop_and_send_aria": "Detener el turno y enviar el mensaje {n} de la cola",
-  "chat.secret_paste.group": "Posible secreto pegado",
-  "chat.secret_paste.name": "Nombre del secreto",
-  "chat.secret_paste.save": "Guardar como secreto",
-  "chat.secret_paste.replace": "Reemplazar",
-  "chat.secret_paste.saving": "Guardando…",
-  "chat.secret_paste.as_text": "Pegar como texto",
-  "chat.secret_paste.discard": "Descartar",
-  "chat.secret_paste.send_blocked": "Guarda o descarta el secreto",
-  "chat.secret.error.empty": "Falta el nombre",
-  "chat.secret.error.grammar": "Nombre inválido",
-  "chat.secret.error.reserved": "Nombre reservado",
-  "chat.secret.error.no_machine": "Ninguna máquina compatible",
-  "chat.secret.error.engine": "Motor sin secretos",
-  "chat.secret.error.failed": "No se guardó"
+  "chat.secret_paste.send_blocked": "Guarda o descarta el secreto"
 }
