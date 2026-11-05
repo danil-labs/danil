@@ -153,11 +153,10 @@ export default function NewAgent(props: {
         if (!abierto) limpiar();
       }}
     >
-      {/* Con las caras y las instrucciones el formulario rebasa una ventana
-          baja: sin tope, el final queda fuera de pantalla y no hay cómo
-          llegar a él. */}
+      {/* El formulario es más alto que una ventana cómoda. El tope deja ver
+          la app detrás, el cuerpo se desplaza y Crear se queda a la vista. */}
       <DialogContent
-        class="max-h-[min(86vh,720px)] w-[26rem] max-w-[92vw] overflow-y-auto overscroll-contain p-4"
+        class="flex max-h-[min(60vh,28rem)] w-[26rem] max-w-[92vw] flex-col overflow-hidden p-4"
         data-owns-escape
         onCloseAutoFocus={(e: Event) => props.onCloseAutoFocus?.(e)}
       >
@@ -171,7 +170,8 @@ export default function NewAgent(props: {
         <Show
           when={eclipse()}
           fallback={
-            <div class="mt-3 grid gap-3">
+            <>
+            <div class="mt-3 grid min-h-0 flex-1 gap-3 overflow-y-auto overscroll-contain">
               <label class="grid gap-1">
                 <span class="text-xs text-neutral-500">
                   {t("projects.agents.new_name")}
@@ -212,7 +212,12 @@ export default function NewAgent(props: {
 
               <div class="grid gap-1">
                 <span class="text-xs text-neutral-500">{t("projects.agents.profile_face")}</span>
-                <BodyPicker name={id() || "agent"} value={body()} onChange={setBody} />
+                <BodyPicker
+                  class="flex-nowrap overflow-x-auto"
+                  name={id() || "agent"}
+                  value={body()}
+                  onChange={setBody}
+                />
               </div>
 
               <div class="grid gap-1">
@@ -270,7 +275,7 @@ export default function NewAgent(props: {
                 </span>
                 <Textarea
                   value={instructions()}
-                  rows={5}
+                  rows={3}
                   placeholder={t("projects.agents.new_instructions_hint")}
                   onInput={(e) => setInstructions(e.currentTarget.value)}
                 />
@@ -281,22 +286,22 @@ export default function NewAgent(props: {
                   <p class="m-0 text-xs text-error-strong">{texto()}</p>
                 )}
               </Show>
-
-              <div class="flex items-center justify-end gap-2">
-                <Button variant="ghost" size="sm" onClick={() => props.onAbrir(false)}>
-                  {t("projects.agents.new_cancel")}
-                </Button>
-                <Button
-                  size="sm"
-                  disabled={!listo() || guardando() || lockedBy("agents") !== null}
-                  onClick={() => void crear()}
-                >
-                  {guardando()
-                    ? t("projects.agents.new_saving")
-                    : t("projects.agents.new_create")}
-                </Button>
-              </div>
             </div>
+            <div class="mt-3 flex shrink-0 items-center justify-end gap-2">
+              <Button variant="ghost" size="sm" onClick={() => props.onAbrir(false)}>
+                {t("projects.agents.new_cancel")}
+              </Button>
+              <Button
+                size="sm"
+                disabled={!listo() || guardando() || lockedBy("agents") !== null}
+                onClick={() => void crear()}
+              >
+                {guardando()
+                  ? t("projects.agents.new_saving")
+                  : t("projects.agents.new_create")}
+              </Button>
+            </div>
+            </>
           }
         >
           {(creado) => (
