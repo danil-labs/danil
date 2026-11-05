@@ -162,12 +162,20 @@ test("with a Danil session the card reflects where the App is installed, with no
   assert.equal(card(w).querySelector('[role="switch"], input[type="checkbox"]'), null, "no area toggles");
   assert.ok(!e.calls.some((c) => c.command === "github_account_set_areas"), "the card never sets areas");
 
-  const machines = w.document.querySelector("[data-github-machines]");
+  // Las máquinas son chips en la fila de la cuenta, no filas; el `title` las nombra todas.
+  const machines = card(w).querySelector('[data-github-login] [data-github-machines]');
   assert.ok(machines?.textContent.includes("vm-alberto"));
-  buttonIn(machines.querySelector('[data-github-machine="cmp_mac"]'), "Volver a poner").click();
+  assert.ok(machines.getAttribute("title")?.includes("vm-alberto"));
+  assert.equal(text(w).includes("En uso en"), false, "no «En uso en» block");
+  const chip = () => machines.querySelector('[data-github-machine="cmp_mac"]');
+  chip().dispatchEvent(new w.KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }));
+  await sleep(100);
+  menuItem(w, "Volver a poner").dispatchEvent(new w.KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
   await sleep(300);
   assert.deepEqual(e.calls.find((c) => c.command === "account_credential_restore_machine")?.args, { scope: "w", credential: "cred_1", computer: "cmp_mac" });
-  assert.ok(buttonIn(w.document.querySelector('[data-github-machine="cmp_mac"]'), "Quitar"), "it is back in use there");
+  card(w).querySelector('[data-github-machine="cmp_mac"]').dispatchEvent(new w.KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }));
+  await sleep(100);
+  assert.ok(menuItem(w, "Quitar"), "it is back in use there");
   assert.deepEqual(app.failures, []);
 });
 
