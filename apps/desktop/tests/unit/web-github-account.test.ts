@@ -106,7 +106,7 @@ test("los fallos del Worker llegan como los del motor; un 401 renueva la sesión
   const { transport, unauthorized } = setup((s) => codes[Object.keys(codes).find((k) => s.url.endsWith(k)) ?? ""] ?? { status: 500, body: null });
   await assert.rejects(transport.handle("github_account_status", { scope: "w" }), (e: { what: unknown; detail: string }) => {
     assert.equal(e.detail, "credentials.error.workspace_not_linked");
-    assert.equal(e.what, "Este workspace no está ligado a tu cuenta de Danil.");
+    assert.equal(e.what, "Esta computadora no tiene sesión de Danil para este workspace. Inicia sesión en Danil para que tus tareas usen tu GitHub.");
     return true;
   });
   await assert.rejects(transport.handle("github_account_installations", { scope: "w" }), { detail: "credentials.error.github_reauthorize" });
