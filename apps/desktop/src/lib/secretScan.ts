@@ -132,3 +132,29 @@ export function maskServerSource(source: string): string {
     .join(" ");
 }
 
+/** El nombre que propone el chip; la persona lo cambia antes de guardar. */
+export function suggestSecretName(match: Pick<SecretMatch, "value" | "family">): string {
+  const v = match.value;
+  if (match.family === "pem") return "PRIVATE_KEY";
+  if (match.family === "jwt") return "JWT_TOKEN";
+  if (match.family === "url") return "SERVICE_URL";
+  if (v.startsWith("sk-ant-")) return "ANTHROPIC_KEY";
+  if (v.startsWith("sk-")) return "OPENAI_KEY";
+  if (/^gh[opsur]_|^github_pat_/.test(v)) return "GITHUB_PAT";
+  if (v.startsWith("glpat-")) return "GITLAB_TOKEN";
+  if (v.startsWith("xox")) return "SLACK_TOKEN";
+  if (/^(?:AKIA|ASIA)/.test(v)) return "AWS_ACCESS_KEY_ID";
+  if (/^(?:sk|rk)_(?:live|test)_/.test(v)) return "STRIPE_KEY";
+  if (v.startsWith("AIza")) return "GOOGLE_KEY";
+  return "API_KEY";
+}
+
+/** Un pegado retenido: dónde iba en el campo y qué texto lo rodeaba. El valor no sale de aquí hasta guardarse. */
+export type HeldPaste = { match: SecretMatch; pasted: string; start: number; end: number };
+
+/** El campo después de guardar: lo pegado con `$NOMBRE` en lugar del valor. */
+export function textWithSecretName(input: string, held: HeldPaste, name: string): { text: string; caret: number } {
+  const inserted = `${held.pasted.slice(0, held.match.start)}$${name}${held.pasted.slice(held.match.end)}`;
+  const text = input.slice(0, held.start) + inserted + input.slice(held.end);
+  return { text, caret: held.start + inserted.length };
+}
