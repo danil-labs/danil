@@ -151,7 +151,9 @@ test("without a Danil session the local GitHub card stays as it was", async () =
   const app = await openSources("github-account-none", e);
   const { w } = app;
   assert.equal(card(w)?.dataset.githubAccount, "local");
-  assert.ok(tokenField(w), "the local form is there");
+  // GitHub se conecta solo con la App Danil: un botón, sin token pegado.
+  assert.equal(tokenField(w), null, "no pasted token for GitHub");
+  assert.ok(buttonIn(w.document.body, "Conectar GitHub"), "the local form is there");
   assert.ok(!e.calls.some((c) => c.command === "github_account_status"), "nobody asks the account");
   assert.deepEqual(app.failures, []);
 });
@@ -161,7 +163,7 @@ test("an engine that does not know github_account_* keeps the local card without
   const app = await openSources("github-account-old-engine", e);
   const { w } = app;
   assert.equal(card(w)?.dataset.githubAccount, "local");
-  assert.ok(tokenField(w));
+  assert.ok(buttonIn(w.document.body, "Conectar GitHub"));
   assert.equal(w.document.querySelector("[role=alert]"), null);
   assert.deepEqual(app.failures, []);
 });
@@ -190,7 +192,7 @@ test("when the engine already opened the browser the card does not open it again
   e.table.github_account_authorize = () => ({ url: "https://github.com/login/oauth/authorize?state=s", expires_at: null, opened: true });
   const app = await openSources("github-account-opened", e);
   const { w } = app;
-  buttonIn(card(w), "Conectar con GitHub").click();
+  buttonIn(card(w), "Conectar GitHub").click();
   await sleep(300);
   assert.ok(!e.calls.some((c) => c.command === "open_external"), "only one tab");
   const link = [...card(w).querySelectorAll("a")].find((a) => a.textContent === "Abrir GitHub");
