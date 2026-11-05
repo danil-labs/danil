@@ -62,7 +62,7 @@ export function SecretPasteChip(props: {
         }
       }}
     >
-      <span class="relative min-w-[120px] basis-[200px]">
+      <span class="relative min-w-32 basis-48">
         <span class="pointer-events-none absolute top-1/2 left-2 -translate-y-1/2 font-mono text-label text-neutral-500" aria-hidden="true">
           $
         </span>
