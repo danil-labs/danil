@@ -613,3 +613,19 @@ test("a machine-usage event from another machine says which machine it came from
   router.events("cmp_vm", [{ name: "machine-usage", payload: { kind: "left_running", workspace: "w", tasks: [] } }, { name: "session", payload: { id: "t1" } }]);
   assert.deepEqual(delivered.map((e) => e.payload), [{ kind: "left_running", workspace: "w", tasks: [], machine: "cmp_vm" }, { id: "t1" }]);
 });
+
+test("an MCP block with written values goes to this computer's engine but never over the relay", async () => {
+  const vm = fakeLink({ add_mcp_servers: 1, set_memory_provider: null });
+  const { router, native } = setup({ cmp_vm: vm }, { add_mcp_servers: 1 });
+  await router.handle("list_workspaces");
+  const plain = JSON.stringify({ mcpServers: { acme: { command: "npx", env: { ACME_TOKEN: "abc123" } } } });
+  assert.equal(await router.handle("add_mcp_servers", { bloque: plain }), 1, "here the engine vaults the values itself");
+  assert.equal(native.filter((c) => c.command === "add_mcp_servers").length, 1);
+  await assert.rejects(router.handle("add_mcp_servers", { bloque: plain }, on("cmp_vm")), (e: { detail: string }) => e.detail === "mcp_values_over_relay");
+  await assert.rejects(router.handle("set_memory_provider", { id: "m", block: plain, readWrite: true }, on("cmp_vm")), (e: { detail: string }) => e.detail === "mcp_values_over_relay");
+  await assert.rejects(router.handle("add_mcp_servers", { bloque: "{ ACME_TOKEN: abc123" }, on("cmp_vm")), (e: { detail: string }) => e.detail === "mcp_block_invalid");
+  assert.equal(vm.calls.length, 0, "the VM never received the block");
+  const marked = JSON.stringify({ mcpServers: { acme: { command: "npx", env: { ACME_TOKEN: "${secret:env/*/ACME_TOKEN}" } } } });
+  assert.equal(await router.handle("add_mcp_servers", { bloque: marked }, on("cmp_vm")), 1, "with markers it goes");
+  assert.deepEqual(vm.calls.map((c) => c.command), ["add_mcp_servers"]);
+});

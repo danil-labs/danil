@@ -466,3 +466,14 @@ test("web history forwards its cursor to the host and preserves its bounded page
     assert.equal(mac.calls[0].args.id, "t1");
   } finally { router.close(); }
 });
+
+test("the web refuses an MCP block with values in env or headers before it reaches any machine", async () => {
+  const vm = fakeLink({ add_mcp_servers: 1 });
+  const { router } = web({ cmp_vm: vm });
+  await router.handle("list_workspaces");
+  const plain = JSON.stringify({ acme: { url: "https://mcp.acme.dev", headers: { Authorization: "Bearer abc123" } } });
+  await assert.rejects(router.handle("add_mcp_servers", { bloque: plain }, on("cmp_vm")), (e: { detail: string; what: string }) => e.detail === "mcp_values_over_relay" && e.what.includes("${secret:env/*/"));
+  assert.equal(vm.calls.filter((c) => c.command === "add_mcp_servers").length, 0);
+  const marked = JSON.stringify({ acme: { url: "https://mcp.acme.dev", headers: { Authorization: "Bearer ${secret:env/*/ACME_TOKEN}" } } });
+  assert.equal(await router.handle("add_mcp_servers", { bloque: marked }, on("cmp_vm")), 1);
+});

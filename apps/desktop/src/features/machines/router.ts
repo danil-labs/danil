@@ -18,6 +18,7 @@
 import { type AccountWorkspace, type SystemId, callWorkspace, isDeferrable, systemOf } from "@terminus/computers";
 import { AttentionBook, type Envelope, type Fleet, FleetError, type Slice, classOf, unwrap } from "@terminus/fleet";
 import { clavesConocidas, t } from "../../lib/i18n.ts";
+import { mcpBlockValues } from "../../lib/secretScan.ts";
 
 type Args = Record<string, unknown>;
 type Options = { headers?: HeadersInit } | undefined;
@@ -48,6 +49,17 @@ const CHANNELS: Record<string, string> = { clone_project: "progress", list_sessi
 const UNKNOWN = new Set(["command", "unsupported", "command_not_allowed"]);
 /** Lo que abre un archivo en esta computadora: el de una tarea de otra máquina está allá. */
 const FILES = /^(site_|typst_live_)|^(open_file_external|tree_open_external)$/;
+/** Las órdenes que llevan un bloque MCP pegado, y su argumento: por el relay solo van sin valores escritos. */
+const MCP_BLOCKS: Record<string, string> = { add_mcp_servers: "bloque", set_memory_provider: "block" };
+/** Lo que la persona escribió en `env` o `headers` no sale de la ventana hacia el relay. */
+function refusePlainBlock(command: string, args: Args) {
+  const key = MCP_BLOCKS[command];
+  const block = key ? args[key] : undefined;
+  if (typeof block !== "string") return;
+  const found = mcpBlockValues(block);
+  if (found === "plain") throw { what: t("settings.tools.paste_over_relay"), detail: "mcp_values_over_relay" };
+  if (found === "invalid") throw { what: t("settings.tools.paste_invalid"), detail: "mcp_block_invalid" };
+}
 /** Los demás códigos del relay, con la frase que la ventana ya conoce (los de `proxy.rs`). */
 const SERVICE_KEYS: Record<string, string> = {
   service_busy: "shell.service.busy",
@@ -433,6 +445,7 @@ export function createRouter(config: RouterConfig) {
 
   /** Una llamada a otra máquina, con el workspace del sobre. Una lectura sale de su rebanada: apagada con copia, no se pregunta. */
   async function remote(machine: string, command: string, args: Args, workspace: string | null): Promise<unknown> {
+    refusePlainBlock(command, args);
     args = withoutChannel(command, args);
     // Apagada o encendiéndose, el resumen de la máquina sale de su copia (la de
     // la flota o la del relay) con su hora, sin encenderla: es una lectura.
