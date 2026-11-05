@@ -350,7 +350,7 @@ fn defer_fullscreen_toggle(window: &tauri::Window) -> bool {
 extern "C-unwind" fn fullscreen_did_exit(
     _this: &objc2::runtime::AnyObject,
     _cmd: objc2::runtime::Sel,
-    _note: &objc2::runtime::AnyObject,
+    _note: *mut objc2::runtime::AnyObject,
 ) {
     SPACE_LEFT.store(true, std::sync::atomic::Ordering::SeqCst);
 }
@@ -379,8 +379,7 @@ fn arm_exit_observer(window: &tauri::Window) -> bool {
         unsafe {
             builder.add_method(
                 sel!(windowDidExitFullScreen:),
-                fullscreen_did_exit
-                    as extern "C-unwind" fn(&AnyObject, objc2::runtime::Sel, &AnyObject),
+                fullscreen_did_exit as extern "C-unwind" fn(_, _, _),
             );
         }
         builder.register()
