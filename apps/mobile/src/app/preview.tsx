@@ -35,6 +35,8 @@ export default function Preview() {
   const { host: hostId, id, intent } = useLocalSearchParams<{ host: string; id: string; intent?: string }>();
   const [confirm, setConfirm] = useState(intent === "finish");
   const [revision, setRevision] = useState(0);
+  // En web la hoja baja antes de quitar la pantalla.
+  const [open, setOpen] = useState(true);
   const { hostOf, attention, hosts } = useMachines();
   const { snapshot, current, reload } = useWorkspaces();
 
@@ -56,7 +58,7 @@ export default function Preview() {
   const ready = host.power() === "on" && host.canAct() === "now" && canFinishTask(task, git, running);
   const pull = cardPull({ ...git, shared_with: null });
   const removed = () => { void reload(); router.back(); };
-  const frame = (content: ReactNode) => Platform.OS === "web" ? <Sheet visible onClose={() => router.back()}>{content}</Sheet> : content;
+  const frame = (content: ReactNode) => Platform.OS === "web" ? <Sheet visible={open} onClose={() => setOpen(false)} onHidden={() => router.back()}>{content}</Sheet> : content;
   if (confirm) return frame(<View style={[styles.sheet, { backgroundColor: theme.surface, paddingBottom: insets.bottom + 16 }]}>
     <Text style={[styles.title, { color: theme.text }]}>{t("task.header.finish_on", { name: host.label })}</Text>
     <Text style={{ color: theme.text, fontWeight: "600" }}>{preview.title}</Text>

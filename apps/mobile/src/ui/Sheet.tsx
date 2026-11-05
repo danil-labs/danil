@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { t } from "../lib/i18n";
 import { Icon, type IconName } from "./Icon";
 import { SearchField } from "./Search";
-import { useTheme } from "./theme";
+import { SCRIM, useTheme } from "./theme";
 
 /**
  * Una hoja desde abajo para los selectores del cuadro de escribir (modelo,
@@ -18,7 +18,10 @@ import { useTheme } from "./theme";
  *
  * El velo y la hoja se animan por separado: con el `slide` del `Modal` todo se
  * desliza junto y el velo se ve como una caja oscura que sube desde abajo.
- * Aquí el velo se aclara en su sitio y solo la hoja sube.
+ * Aquí el velo se aclara en su sitio y solo la hoja sube. También cuando la
+ * hoja nace abierta (las pantallas `task-work` y `preview` en web): entra
+ * igual que las demás. `onHidden` avisa cuando terminó de bajar, para que esas
+ * pantallas se quiten de la pila después y no a media animación.
  */
 export function Sheet({
   visible,
@@ -26,6 +29,7 @@ export function Sheet({
   search,
   detents,
   onClose,
+  onHidden,
   children,
 }: {
   visible: boolean;
@@ -33,6 +37,7 @@ export function Sheet({
   search?: string;
   detents?: readonly [number, number];
   onClose: () => void;
+  onHidden?: () => void;
   children: ReactNode | ((query: string) => ReactNode);
 }) {
   const theme = useTheme();
@@ -40,11 +45,17 @@ export function Sheet({
   const [query, setQuery] = useState("");
   // El `Modal` sigue montado mientras la hoja baja; `progress` va de 0 (fuera) a 1 (puesta).
   const [mounted, setMounted] = useState(visible);
-  const progress = useRef(new Animated.Value(visible ? 1 : 0)).current;
+  const progress = useRef(new Animated.Value(0)).current;
+  const hidden = useRef(onHidden);
+  hidden.current = onHidden;
   useEffect(() => {
     if (visible) setMounted(true);
     const animation = Animated.timing(progress, { toValue: visible ? 1 : 0, duration: visible ? 240 : 180, easing: visible ? Easing.out(Easing.cubic) : Easing.in(Easing.cubic), useNativeDriver: Platform.OS !== "web" });
-    animation.start(({ finished }) => { if (finished && !visible) setMounted(false); });
+    animation.start(({ finished }) => {
+      if (!finished || visible) return;
+      setMounted(false);
+      hidden.current?.();
+    });
     return () => animation.stop();
   }, [visible, progress]);
   useEffect(() => {
@@ -157,7 +168,7 @@ export function SheetOption({
 
 const styles = StyleSheet.create({
   root: { flex: 1, justifyContent: "flex-end" },
-  backdrop: { ...StyleSheet.absoluteFill, backgroundColor: "rgba(0,0,0,0.35)" },
+  backdrop: { ...StyleSheet.absoluteFill, backgroundColor: SCRIM },
   sheet: { maxHeight: "80%", borderTopLeftRadius: 18, borderTopRightRadius: 18, borderWidth: StyleSheet.hairlineWidth, paddingTop: 8 },
   // El arrastre va solo en el asa: `touch-action: none` en la lista bloquearía su scroll.
   handleArea: { touchAction: "none", cursor: "grab" } as object,
