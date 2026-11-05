@@ -6,7 +6,8 @@
   "description": "Danil Machines from any client: the control-plane API, the relay session and the rules for waking a machine.",
   "exports": {
     ".": "./src/index.ts",
-    "./space-order": "./src/space-order.ts"
+    "./space-order": "./src/space-order.ts",
+    "./mcp-block": "./src/mcp-block.ts"
   },
   "scripts": {
     "test": "node --test 'test/*.test.ts'"

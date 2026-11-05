@@ -455,5 +455,6 @@
   "chat.history.pieces": "Full record",
   "chat.history.content": "Saved content",
   "chat.queue.stop_and_send": "Stop the turn and send",
-  "chat.queue.stop_and_send_aria": "Stop the turn and send queued message {n}"
+  "chat.queue.stop_and_send_aria": "Stop the turn and send queued message {n}",
+  "chat.secret_paste.send_blocked": "Save or discard the secret"
 }
