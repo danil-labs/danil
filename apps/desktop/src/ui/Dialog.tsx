@@ -1,6 +1,7 @@
 import { Dialog as Kobalte } from "@kobalte/core/dialog";
 import { splitProps, type ComponentProps } from "solid-js";
 import { cn } from "../lib/utils";
+import { InsideDialog } from "./layer";
 
 /**
  * Una ventana modal: **atrapa el foco y se cierra con `Escape`**, que es
@@ -43,14 +44,16 @@ export function DialogContent(props: ComponentProps<typeof Kobalte.Content>) {
           propio `Content` obligaría a `translate`, y con eso la animación de
           entrada de Kobalte pelea contra la posición. */}
       <div class="fixed inset-0 z-[80] grid place-items-center p-6">
-        <Kobalte.Content
-          aria-modal="true"
-          class={cn(
-            "w-full max-w-[420px] rounded-lg border border-border bg-surface p-4 text-neutral-950 shadow-lg outline-none",
-            propios.class,
-          )}
-          {...resto}
-        />
+        <InsideDialog.Provider value={true}>
+          <Kobalte.Content
+            aria-modal="true"
+            class={cn(
+              "w-full max-w-[420px] rounded-lg border border-border bg-surface p-4 text-neutral-950 shadow-lg outline-none",
+              propios.class,
+            )}
+            {...resto}
+          />
+        </InsideDialog.Provider>
       </div>
     </Kobalte.Portal>
   );
