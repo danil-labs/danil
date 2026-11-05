@@ -15,6 +15,7 @@ import { ITEM_DE_MENU, Popover, PopoverContent, PopoverTrigger } from "../../ui/
 import { Badge } from "../../ui/Badge";
 import { lockedBy } from "../../lib/governance";
 import { GovernedNotice } from "./Governed";
+import { maskServerSource } from "../../lib/secretScan";
 
 // Fuera de la carga inicial: este archivo también da el vistazo del riel.
 const CredentialsInUse = lazy(() => import("./credentials/AccountCredentials").then((m) => ({ default: m.CredentialsInUse })));
@@ -86,6 +87,9 @@ type Conocido = {
  * declara; el backend manda el dato, no la prosa.
  */
 type Puesto = { name: string; detalle: string; managed?: boolean };
+
+/** Solo no pintarlo: el motor ya mandó la URL o el comando enteros, y el arreglo es que mande `origen()`. */
+const sinSecretos = (lista: Puesto[]): Puesto[] => lista.map((p) => ({ ...p, detalle: maskServerSource(p.detalle ?? "") }));
 
 /** Un agente y si de verdad recibe lo que se conecta aquí. */
 type AgenteMcp = {
@@ -262,7 +266,7 @@ export default function Herramientas(props: { solo?: string | string[] }) {
         invoke<AgenteMcp[]>("list_mcp_providers"),
       ]);
       setConocidos(c);
-      setPuestos(p);
+      setPuestos(sinSecretos(p));
       setAgentes(a);
     } catch (e) {
       setFallo(asFailure(e));
@@ -822,7 +826,10 @@ export default function Herramientas(props: { solo?: string | string[] }) {
               size="sm"
               class="shrink-0"
               disabled={bloqueado()}
-              onClick={() => setPegando((v) => !v)}
+              onClick={() => {
+                setBloque("");
+                setPegando((v) => !v);
+              }}
             >
               {pegando()
                 ? t("settings.tools.paste_cancel")
@@ -838,6 +845,8 @@ export default function Herramientas(props: { solo?: string | string[] }) {
               <Textarea
                 rows={4}
                 class="font-mono text-caption"
+                spellcheck={false}
+                autocomplete="off"
                 value={bloque()}
                 onInput={(e) => setBloque(e.currentTarget.value)}
               />
@@ -966,7 +975,7 @@ export function ConexionesMenu(props: {
         invoke<Puesto[]>("list_mcp_servers"),
       ]);
       setConocidos(c);
-      setPuestos(p);
+      setPuestos(sinSecretos(p));
     } catch {
       // Un vistazo que no pudo cargar se queda vacío: la razón, si hay
       // alguna que decir, la explica la pantalla completa detrás de
