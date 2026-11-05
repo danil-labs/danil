@@ -246,7 +246,9 @@ export default function SelectorDeModelo(props: SelectorDeModeloProps) {
         )}
       />
 
-      <PopoverContent class="flex h-[22rem] max-h-[60vh] w-[24rem] flex-col overflow-hidden p-0" data-owns-escape>
+      {/* Alto fijo y no más de la mitad de la ventana: con `h` solo, el panel
+          tapa el diálogo de alta y buena parte del chat. */}
+      <PopoverContent class="flex h-[min(18rem,50vh)] w-[min(22rem,calc(100vw-2rem))] flex-col overflow-hidden p-0" data-owns-escape>
         <div class="flex min-h-9 items-center gap-2 border-b border-border px-3 text-neutral-500">
           <Search size={15} class="shrink-0" />
           <input

@@ -11,9 +11,11 @@ export function BodyPicker(props: {
   name: string;
   value: string | null;
   onChange: (body: Cuerpo | null) => void;
+  /** El alta lo deja en una sola fila: tres filas de caras alargan el diálogo. */
+  class?: string;
 }) {
   return (
-    <div class="flex flex-wrap gap-1.5">
+    <div class={cn("flex flex-wrap gap-1.5", props.class)}>
       <For each={[null, ...CUERPOS]}>
         {(option) => (
           <button
