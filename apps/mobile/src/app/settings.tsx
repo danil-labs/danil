@@ -93,6 +93,16 @@ export default function Settings() {
             ) : null}
             {session && registry?.length ? (
               <>
+                <GroupHeader>{t("github.title")}</GroupHeader>
+                <Group inset={56}>
+                  {registry.map((workspace) => (
+                    <ListRow key={workspace.id} testID={`github-${workspace.id}`} icon={{ name: "key-round", color: "#24292f" }} title={`${t("github.title")} · ${workspace.name}`} subtitle={t("github.subtitle")} chevron onPress={() => router.push({ pathname: "/github/[workspace]", params: { workspace: workspace.id } })} />
+                  ))}
+                </Group>
+              </>
+            ) : null}
+            {session && registry?.length ? (
+              <>
                 <GroupHeader>{t("memory.title")}</GroupHeader>
                 <Group inset={56}>
                   {registry.map((workspace) => (
