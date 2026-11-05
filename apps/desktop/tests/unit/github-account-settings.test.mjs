@@ -151,7 +151,9 @@ test("without a Danil session the local GitHub card stays as it was", async () =
   const app = await openSources("github-account-none", e);
   const { w } = app;
   assert.equal(card(w)?.dataset.githubAccount, "local");
-  assert.ok(tokenField(w), "the local form is there");
+  // GitHub se conecta solo con la App Danil: un botón, sin token pegado.
+  assert.equal(tokenField(w), null, "no pasted token for GitHub");
+  assert.ok(buttonIn(w.document.body, "Conectar GitHub"), "the local form is there");
   assert.ok(!e.calls.some((c) => c.command === "github_account_status"), "nobody asks the account");
   assert.deepEqual(app.failures, []);
 });
@@ -161,7 +163,7 @@ test("an engine that does not know github_account_* keeps the local card without
   const app = await openSources("github-account-old-engine", e);
   const { w } = app;
   assert.equal(card(w)?.dataset.githubAccount, "local");
-  assert.ok(tokenField(w));
+  assert.ok(buttonIn(w.document.body, "Conectar GitHub"));
   assert.equal(w.document.querySelector("[role=alert]"), null);
   assert.deepEqual(app.failures, []);
 });
