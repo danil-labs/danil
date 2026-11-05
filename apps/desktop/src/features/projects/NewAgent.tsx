@@ -153,8 +153,11 @@ export default function NewAgent(props: {
         if (!abierto) limpiar();
       }}
     >
+      {/* Con las caras y las instrucciones el formulario rebasa una ventana
+          baja: sin tope, el final queda fuera de pantalla y no hay cómo
+          llegar a él. */}
       <DialogContent
-        class="w-[26rem] max-w-[92vw] p-4"
+        class="max-h-[min(86vh,720px)] w-[26rem] max-w-[92vw] overflow-y-auto overscroll-contain p-4"
         data-owns-escape
         onCloseAutoFocus={(e: Event) => props.onCloseAutoFocus?.(e)}
       >
