@@ -1,28 +1,28 @@
 {
   "version": 1,
   "name": "seldon-runtime",
-  "engine_version": "0.3.0",
-  "commit": "3bac20da7586ad89b6dd8bcf5c95cbb24d165a18",
-  "release": "seldon-runtime-v0.3.0-3bac20da",
-  "manifest": "https://github.com/danil-labs/danil/releases/download/seldon-runtime-v0.3.0-3bac20da/seldon-runtime.json",
-  "terms": "https://github.com/danil-labs/danil/releases/download/seldon-runtime-v0.3.0-3bac20da/TERMS.md",
-  "contract": "5f59d6031b76b0248f09d7e19d184a542259d773c62080a30cb9298e7b5033ca",
+  "engine_version": "0.3.1",
+  "commit": "85335139ee67df78ae334174a7d99a18d8d42ec0",
+  "release": "seldon-runtime-v0.3.1-85335139",
+  "manifest": "https://github.com/danil-labs/danil/releases/download/seldon-runtime-v0.3.1-85335139/seldon-runtime.json",
+  "terms": "https://github.com/danil-labs/danil/releases/download/seldon-runtime-v0.3.1-85335139/TERMS.md",
+  "contract": "46798e8630db16622e62b79747cde5b02073681ca602d92adc6fdae559d802e5",
   "platforms": {
     "x86_64-pc-windows-msvc": {
-      "url": "https://github.com/danil-labs/danil/releases/download/seldon-runtime-v0.3.0-3bac20da/seldon-runtime-x86_64-pc-windows-msvc.exe",
-      "sha256": "4bd73a657d30ec68a26ece5ea593a3f52ab54490905b65a283c83b8fd12d61e1"
+      "url": "https://github.com/danil-labs/danil/releases/download/seldon-runtime-v0.3.1-85335139/seldon-runtime-x86_64-pc-windows-msvc.exe",
+      "sha256": "fa50443107bcb15b1f968b59d98f770c24ed70e36e4ea5b8892c5e31b58d09eb"
     },
     "aarch64-apple-darwin": {
-      "url": "https://github.com/danil-labs/danil/releases/download/seldon-runtime-v0.3.0-3bac20da/seldon-runtime-aarch64-apple-darwin",
-      "sha256": "6063e71721f24a26b54534b0c0077a2962501ce9c3e285f4fdc18a90182099a4"
+      "url": "https://github.com/danil-labs/danil/releases/download/seldon-runtime-v0.3.1-85335139/seldon-runtime-aarch64-apple-darwin",
+      "sha256": "3440bc5c0fa0d82021e0611acd5ab3fd00653cee1d7e392861234ba06648660e"
     },
     "x86_64-apple-darwin": {
-      "url": "https://github.com/danil-labs/danil/releases/download/seldon-runtime-v0.3.0-3bac20da/seldon-runtime-x86_64-apple-darwin",
-      "sha256": "66d993f3b6f5a03ac6493d6d4380c97920adc6abbab1c82ac8a69b70530089e8"
+      "url": "https://github.com/danil-labs/danil/releases/download/seldon-runtime-v0.3.1-85335139/seldon-runtime-x86_64-apple-darwin",
+      "sha256": "9dd888f35df481df49dc9fbd3a7bcb87df522d7e1115ec0f036dd8ee05ace370"
     },
     "x86_64-unknown-linux-gnu": {
-      "url": "https://github.com/danil-labs/danil/releases/download/seldon-runtime-v0.3.0-3bac20da/seldon-runtime-x86_64-unknown-linux-gnu",
-      "sha256": "0f983173529c14b151de23aebbcdec9a1359c06cf71bb22ac554987c1ca7a264"
+      "url": "https://github.com/danil-labs/danil/releases/download/seldon-runtime-v0.3.1-85335139/seldon-runtime-x86_64-unknown-linux-gnu",
+      "sha256": "9ca9096eec990f12e02f6b9d0fac79d1602a8d147b3bf3f38d7b2ddbaf2646e2"
     }
   }
 }
