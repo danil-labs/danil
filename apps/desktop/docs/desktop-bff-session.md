@@ -193,10 +193,10 @@ ventana oculta Atención y no reintenta.
   cualquier proceso del mismo usuario puede leerlo. El riesgo es del JWT, que
   también sirve directo contra el BFF; la ruta por Computers no lo amplía.
 - El Worker de entrada solo existe en alfa (`terminus-entry-alfa`).
-- Atención en la ventana sale solo en builds con `DANIL_DESKTOP_ATTENTION=1`
-  (`vite.config.ts`). Sin la bandera, la ventana no cambia. Se enciende cuando
-  la entrada (`/auth/desktop*`), Computers (`/v1/bff/*`) y la migración
-  `bff_window_grants` estén desplegados.
+- Atención en la ventana sale en todos los builds (`vite.config.ts`). Un build
+  con `DANIL_DESKTOP_ATTENTION=0` la apaga y la ventana queda como antes. Se
+  encendió el 2026-11-05: la entrada (`/auth/desktop*`), Computers
+  (`/v1/bff/*`) y la migración `bff_window_grants` ya estaban en producción.
 - El regreso del navegador usa un puerto de `127.0.0.1` (RFC 8252), no un
   sondeo: el Worker de entrada no guarda estado. El código no sirve sin el
   verificador, que solo tiene el Rust de la ventana. Lo que impide que un agente
@@ -208,7 +208,7 @@ ventana oculta Atención y no reintenta.
 ## 5. Un solo inicio de sesión (motor y ventana)
 
 Revisión `desktop-single-sign-in-auto-approve-contract.md` (memoria del
-proyecto). Va siempre, con o sin `DANIL_DESKTOP_ATTENTION`.
+proyecto). Va siempre, también con `DANIL_DESKTOP_ATTENTION=0`.
 
 - «Iniciar sesión» (Configuración › Cuenta y primera ejecución) llama
   `danil_sign_in` de la ventana. `signInWithBrowser` lo lanza y sigue: el estado
