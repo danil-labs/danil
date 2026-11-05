@@ -43,6 +43,8 @@ import AccountMachines from "./AccountMachines";
 import { MachinePicker } from "./MachinePicker";
 import { createRouter, type Invoke, type Router, type SliceChange } from "./router";
 import { machineNamesChanged, refetchMachines } from "./store";
+import type { WslChild } from "./wsl";
+import { createWslLink, isWslMachine, wakeWslMachine, wslMachineInfo } from "./wslLink";
 
 type Internals = { invoke: Invoke };
 type Target = Window & { __TAURI_INTERNALS__?: Internals };
@@ -59,6 +61,24 @@ const TOAST_FOR = 5_000;
 type Installed = { key: string; fleet: Fleet; router: Router; restore: () => void };
 
 let started = false;
+
+/**
+ * Linux en esta PC: las distros con motor son máquinas hijas de esta
+ * computadora. No vienen del plano de control; se suman a la flota con un
+ * enlace directo (`wslLink.ts`).
+ */
+let wslMachines: MachineInfo[] = [];
+let lastOthers: Computer[] = [];
+async function readWslMachines(): Promise<MachineInfo[]> {
+  if (!capabilities().wsl) return [];
+  try {
+    const { invoke } = await import("@tauri-apps/api/core");
+    wslMachines = (await invoke<WslChild[]>("wsl_children")).map(wslMachineInfo);
+  } catch {
+    // Sin WSL o sin registro: la flota sigue con las de la cuenta.
+  }
+  return wslMachines;
+}
 let installed: Installed | null = null;
 let syncing: Promise<void> | null = null;
 
@@ -149,20 +169,22 @@ export function startAccountMachines(target: Target = window) {
     const fleet = new Fleet({
       self,
       connect: (info) =>
-        new RelaySession({
-          endpoint,
-          computerId: info.id,
-          getToken: async () => (await getToken()).token,
-          // Un upgrade sin licencia no trae cuerpo: se pregunta por HTTP para no reintentar en bucle.
-          probe: async () => sessionProbe(endpoint, (await getToken()).token, info.id),
-          onUnauthorized: () => {
-            token = null;
-            void sync();
-          },
-        }),
+        isWslMachine(info.id)
+          ? createWslLink(info.id)
+          : new RelaySession({
+              endpoint,
+              computerId: info.id,
+              getToken: async () => (await getToken()).token,
+              // Un upgrade sin licencia no trae cuerpo: se pregunta por HTTP para no reintentar en bucle.
+              probe: async () => sessionProbe(endpoint, (await getToken()).token, info.id),
+              onUnauthorized: () => {
+                token = null;
+                void sync();
+              },
+            }),
       // Sin `contracts` ni `compatible`, como el teléfono: un motor con otro contrato
       // sigue en servicio y solo falla la orden que no conoce (nunca la máquina entera).
-      wake: async (id) => startedOf(await startComputer(endpoint, (await getToken()).token, id)),
+      wake: async (id) => (isWslMachine(id) ? wakeWslMachine(id) : startedOf(await startComputer(endpoint, (await getToken()).token, id))),
       storage: localStorage,
       onChange: () => {
         bump((n) => n + 1);
@@ -193,8 +215,17 @@ export function startAccountMachines(target: Target = window) {
       pickedFor,
       home: () => ({ wakes: homeWakes, os: homeOs, features: homeFeatures, version: homeVersion }),
     });
-    fleet.setMachines(others.map(infoOf));
+    fleet.setMachines([...others.map(infoOf), ...wslMachines]);
     fleet.subscribeEvents();
+    // Una distro recién conectada o quitada en Configuración entra o sale de la flota en vivo.
+    const onWsl = () =>
+      void readWslMachines().then((list) => {
+        if (installed?.fleet !== fleet) return;
+        fleet.setMachines([...lastOthers.map(infoOf), ...list]);
+        machineNamesChanged();
+        void refetchMachines();
+      });
+    window.addEventListener("danil:wsl-changed", onWsl);
     const screens = createScreenAccess({
       endpoint,
       getToken: async () => (await getToken()).token,
@@ -340,11 +371,13 @@ export function startAccountMachines(target: Target = window) {
     homeFeatures = mine ? serviceFeatures(mine) : [];
     homeVersion = mine?.host_version ?? null;
     const others = orderComputers(answer.value.filter((c) => c.computer_id !== self));
+    lastOthers = others;
+    await readWslMachines();
     const key = JSON.stringify([self, account, client.endpoint]);
 
     // The same account: machines that came, left or changed name are applied live, without tearing the rest down.
     if (installed?.key === key) {
-      installed.fleet.setMachines(others.map(infoOf));
+      installed.fleet.setMachines([...others.map(infoOf), ...wslMachines]);
       machineNamesChanged();
       return void refetchMachines();
     }

@@ -28,7 +28,8 @@ type Row = Record<string, unknown>;
 /** `features`: lo que su motor anuncia (`status.service_features`); cada función se enciende por máquina. */
 /** `version`: la `host_version` de su último `hello`, según el plano de control; se conserva apagada. */
 /** `opensOnRead`: una VM de un proveedor administrado que se enciende al abrir la web si no hay copia que enseñar. */
-export type MachineInfo = { id: string; name: string; wakes: boolean; opensOnRead?: boolean; outdated?: boolean; linked?: ReadonlySet<string> | null; os?: SystemId; features?: readonly string[]; version?: string };
+/** `child`: una máquina hija de esta computadora (Linux en esta PC): no está en el registro de la cuenta y es de todos sus workspaces. */
+export type MachineInfo = { id: string; name: string; wakes: boolean; opensOnRead?: boolean; outdated?: boolean; linked?: ReadonlySet<string> | null; os?: SystemId; features?: readonly string[]; version?: string; child?: boolean };
 export type Power = "on" | "off" | "starting" | "outdated";
 
 export type Envelope = { machine: string; workspace: string | null; command: string; args?: Row };
@@ -254,7 +255,7 @@ export class Fleet {
     const order = this.machines().map((m) => m.id);
     if (this.registry) {
       const w = this.registry.find((x) => x.id === workspace);
-      return w ? order.filter((id) => w.computers.includes(id)) : [];
+      return order.filter((id) => (w?.computers.includes(id) ?? false) || this.info(id)?.child === true);
     }
     return order.filter((id) => {
       const linked = this.info(id)?.linked ?? null;
