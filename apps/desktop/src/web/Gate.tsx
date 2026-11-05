@@ -64,7 +64,7 @@ function MarcoDeCarga() {
     const tpl = document.getElementById("marco-de-carga");
     if (tpl instanceof HTMLTemplateElement && host) host.append(tpl.content.cloneNode(true));
   });
-  return <div ref={host} class="marco-host" data-marco-de-carga="" />;
+  return <div ref={host} data-marco-de-carga="" />;
 }
 
 /**
