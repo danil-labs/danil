@@ -807,7 +807,7 @@ export async function spaceScenarios({ boot, sleep, withTask: WITH_TASK }) {
     u.doc.querySelector('button[aria-label="Acciones del proyecto «Finanzas»"]').click();
     await sleep(150);
     assert.equal(u.boton("Borrar el proyecto"), undefined, "a space does not delete the folder for everyone");
-    u.boton("Quitar de este espacio").click();
+    u.boton("Quitar proyecto").click();
     await sleep(300);
     assert.deepEqual(
       s.llamadas.filter(([c]) => c === "set_space_folders").map(([, a]) => a),

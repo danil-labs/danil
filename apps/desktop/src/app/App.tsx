@@ -5,6 +5,7 @@ import { open } from "@tauri-apps/plugin-dialog";
 import ArrowLeft from "lucide-solid/icons/arrow-left";
 import Columns2 from "lucide-solid/icons/columns-2";
 import FolderOpen from "lucide-solid/icons/folder-open";
+import FolderPlus from "lucide-solid/icons/folder-plus";
 import PanelLeftClose from "lucide-solid/icons/panel-left-close";
 import PanelLeftOpen from "lucide-solid/icons/panel-left-open";
 import Search from "lucide-solid/icons/search";
@@ -303,6 +304,7 @@ import { Button } from "../ui/Button";
 import { LazyPart, retryableLazy } from "../ui/LazyPart";
 import { mergeGates } from "../features/chat/permissionGates";
 import { errorCode } from "../lib/errorCode.ts";
+import { asleep, withLastAnswer } from "../features/machines/lastAnswer";
 import { Dialog, DialogContent, DialogTitle } from "../ui/Dialog";
 import { asFailure, claveDe, detalleDe, prosaDe } from "../ui/Failure";
 import { BotonConAtajo } from "../ui/Shortcut";
@@ -395,29 +397,53 @@ export default function App() {
   const setProjectList = (next: Project[]) => setProjectRows((previous) => conservar(previous, next, (p) => p.id));
   createEffect(() => recordarCarpetas(projectList()));
   const [sources, setSources] = createSignal<Source[]>([]);
-  const [draftProjects, setDraftProjects] = createSignal<{ workspace: string; machine: string; rows: Project[] } | null>(null);
+  // `rows: null`: la máquina está apagada y no contestó; el selector ofrece lo que se sabe de ella.
+  const [draftProjects, setDraftProjects] = createSignal<{ workspace: string; machine: string; rows: Project[] | null } | null>(null);
   const draftMachine = () => runOn(workspaceActivo()) ?? machines().find(m => m.active)?.id ?? null;
   const draftOptions = () => {
     const machine = draftMachine();
     return machine ? { headers: { "x-terminus-machine": machine } } : undefined;
   };
+  /**
+   * Con la máquina apagada no se le puede preguntar, y elegir proyecto no la
+   * enciende: la enciende enviar. Mientras, el selector ofrece los proyectos
+   * que ya tienen su carpeta ahí y los que tienen remoto, que el motor clona
+   * al llegar el primer mensaje (`ensure_here`). Sin su carpeta: la de la
+   * fila es de otra máquina.
+   */
+  const projectsWhileOff = (machine: string) =>
+    projectList()
+      .filter(p => p.machines?.includes(machine) || !!p.remote_url)
+      .map(p => ({ ...p, working_directory: null, work_tree: null }));
   const composerProjects = createMemo(() => {
     const machine = draftMachine();
     if (!machine) return projectList();
     if (machines().find(m => m.id === machine)?.local) return projectList().filter(p => !p.machines || p.machines.includes(machine));
     const found = draftProjects();
-    return found?.machine === machine && found.workspace === workspaceActivo() ? found.rows : [];
+    if (found?.machine !== machine || found.workspace !== workspaceActivo()) return [];
+    return found.rows ?? projectsWhileOff(machine);
   });
-  createEffect(on([workspaceActivo, draftMachine, projectList], ([workspace, machine]) => {
+  const draftMachineOn = () => machines().find(m => m.id === draftMachine())?.on;
+  createEffect(on([workspaceActivo, draftMachine, draftMachineOn, projectList], ([workspace, machine, encendida]) => {
     setDraftProjects(previous => previous?.workspace === workspace && previous.machine === machine ? previous : null);
     if (!workspace || !machine || machines().find(m => m.id === machine)?.local) return;
+    if (encendida === false) {
+      setDraftProjects({ workspace, machine, rows: null });
+      return;
+    }
     let current = true;
     onCleanup(() => { current = false; });
     void invoke<Project[]>("list_projects", {}, { headers: { "x-terminus-machine": machine } }).then(rows => {
       if (current) setDraftProjects({ workspace, machine, rows: rows.map(row => ({
         ...row, machines: projectList().find(p => p.id === row.id)?.machines ?? [machine],
       })) });
-    }).catch(e => { if (current) setError(prosaDe(e)); });
+    }).catch(e => {
+      if (!current) return;
+      // Se apagó entre la lista de máquinas y la pregunta, o la pregunta la está
+      // encendiendo: lo mismo que apagada.
+      if (asleep(e)) setDraftProjects({ workspace, machine, rows: null });
+      else setError(prosaDe(e));
+    });
   }));
   createEffect(on(draftMachine, (machine, before) => {
     if (before !== undefined && machine !== before) setDraftBases({});
@@ -4011,6 +4037,10 @@ export default function App() {
     });
     if (connected() && workspaceActivo()) void cargarSuperficies(false);
   }, { defer: true }));
+  // La que dormía ya contesta: lo suyo de verdad reemplaza lo último que dijo.
+  createEffect(on(() => machines().find((m) => m.id === composerMachine())?.on, (encendida, antes) => {
+    if (encendida && antes === false && connected() && workspaceActivo()) void cargarSuperficies(false);
+  }, { defer: true }));
 
   // El catálogo depende del agente. No se resetea el modelo elegido aquí: al
   // abrir una sesión se fijan agente y modelo juntos, y un efecto que limpiara
@@ -4027,7 +4057,7 @@ export default function App() {
     const yaVa = catalogosEnVuelo.get(a);
     if (yaVa) return yaVa;
     const revision = composerRevision;
-    const pedido = invoke<AgentModels>("list_models", { provider: a }, composerOptions())
+    const pedido = withLastAnswer(composerMachine(), `list_models:${a}`, () => invoke<AgentModels>("list_models", { provider: a }, composerOptions()))
       .then((catalogo) => {
         if (revision !== composerRevision) return;
         setCatalogos((actuales) => ({ ...actuales, [a]: catalogo }));
@@ -4118,7 +4148,7 @@ export default function App() {
   async function cargarSuperficies(inicial: boolean) {
     const revision = composerRevision;
     try {
-      const s = await invoke<Superficie[]>("list_surfaces", {}, composerOptions());
+      const s = await withLastAnswer(composerMachine(), "list_surfaces", () => invoke<Superficie[]>("list_surfaces", {}, composerOptions()));
       if (revision !== composerRevision) return;
       const primera = s.find((x) => x.usable);
       batch(() => {
@@ -7561,7 +7591,8 @@ export default function App() {
         agents={agents()}
         proyecto={
           <SelectorDeProyecto nueva={!pp.sesion} locked={!!encargadoDeLaCelda()} branch={
-            <Show when={!pp.sesion && esRepositorio()}>
+            /* Apagada no contesta sus ramas: la tarea sale de la rama por defecto. */
+            <Show when={!pp.sesion && esRepositorio() && draftMachineOn() !== false}>
               <BaseBranchPicker
                 project={project()}
                 machine={draftMachine()}
@@ -8755,6 +8786,17 @@ export default function App() {
             >
               <Search size={15} aria-hidden="true" />
             </BotonConAtajo>
+            <Button
+              variant="ghost"
+              size="icon"
+              class="size-[30px] shrink-0 text-neutral-500"
+              data-add-project=""
+              aria-label={t("projects.add.title")}
+              title={t("projects.add.title")}
+              onClick={() => setAnadiendoCarpeta(true)}
+            >
+              <FolderPlus size={15} aria-hidden="true" />
+            </Button>
             <Show when={sidebarFilter() || capabilities().inbox}>
               <Suspense>
                 <CustomizeMenu
