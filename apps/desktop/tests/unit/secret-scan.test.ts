@@ -5,7 +5,8 @@
  */
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { MASK, findPastedSecret, maskServerSource, secretFamilyOf } from "../../src/lib/secretScan.ts";
+import { findPastedSecret } from "../../src/lib/secretPaste.ts";
+import { MASK, maskServerSource, secretFamilyOf } from "../../src/lib/secretScan.ts";
 
 // Armados en la prueba: un literal con forma de llave real lo bloquea el escáner del repositorio.
 const body = (n: number) => "Q7f9Kp2LmX4vR8tZ1nB6cW3yH5jD0sAe".repeat(4).slice(0, n);
