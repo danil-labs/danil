@@ -79,6 +79,21 @@ function setup(links: Record<string, ReturnType<typeof fakeLink>>, local: Record
 const on = (machine: string) => ({ headers: { "x-terminus-machine": machine } });
 const sleep = (ms: number) => new Promise((done) => setTimeout(done, ms));
 
+test("the router removes the machine header only when it delivers to native IPC", async () => {
+  const vm = fakeLink({ send_message: "remote-task" });
+  const { router, native } = setup({ cmp_vm: vm });
+  await router.handle("list_workspaces");
+  await router.handle("send_message", { text: "local" }, { headers: { "x-terminus-machine": "cmp_home", "x-terminus-workspace": "w" } });
+  const local = native.filter((call) => call.command === "send_message").at(-1);
+  assert.ok(local);
+  const headers = new Headers((local.options as { headers?: HeadersInit } | undefined)?.headers);
+  assert.equal(headers.get("x-terminus-machine"), null);
+  assert.equal(headers.get("x-terminus-workspace"), "w");
+  await router.handle("send_message", { text: "remote" }, on("cmp_vm"));
+  assert.equal(native.filter((call) => call.command === "send_message").length, 1);
+  assert.equal(vm.calls.filter((call) => call.command === "send_message").length, 1);
+});
+
 test("the machine comes only from the envelope: a VM id in the args of this computer's call is refused before sending", async () => {
   const vm = fakeLink({ load_session: ({ id }: Args) => ({ id }) });
   const { router, native } = setup({ cmp_vm: vm });
