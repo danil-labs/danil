@@ -81,6 +81,9 @@ type Provider = GitHost & {
   browser_login: boolean;
   login_help: Frase;
   connected: Connection | null;
+  /** GitHub: `account` (cuenta de Danil), `device` (App Danil en esta máquina) o
+   *  `legacy` (la de antes). Un motor anterior no lo manda: sin él, como antes. */
+  source?: "account" | "device" | "legacy";
   /** Por qué no se pudo comprobar la conexión: sin red, fuera de la VPN, el
    *  proveedor caído. Con esto puesto la conexión sigue en pie y el token
    *  sigue en el llavero: lo que falló fue preguntar, no el token. */
@@ -625,6 +628,13 @@ function WorkspaceProviders(props: { solo?: string | string[] }) {
                       </Suspense>
                     )}
                   </Show>
+                  <Show when={githubLocal(p.id) && p.id === "github" && p.source === "legacy" && p.browser_login && !esperaAqui()}>
+                    <SettingsRow label={t("providers.github.legacy.title")} description={t("providers.github.legacy.help")}>
+                      <Button size="sm" type="button" disabled={estado() !== null} onClick={() => void conectarEnNavegador(p)}>
+                        {t("providers.github.connect")}
+                      </Button>
+                    </SettingsRow>
+                  </Show>
                   <Show when={githubLocal(p.id)}>
                   <Switch>
                     <Match when={p.connected && !esperaAqui() && !montajes()[p.id] ? p.connected : null}>
@@ -881,7 +891,7 @@ function WorkspaceProviders(props: { solo?: string | string[] }) {
                               disabled={estado() !== null}
                               onClick={() => void conectarEnNavegador(p)}
                             >
-                              {t("settings.providers.browser_login", { name: p.name })}
+                              {p.id === "github" ? t("providers.github.connect") : t("settings.providers.browser_login", { name: p.name })}
                             </Button>
                           </SettingsRow>
                         </Show>
@@ -921,6 +931,8 @@ function WorkspaceProviders(props: { solo?: string | string[] }) {
                           )}
                         </For>
 
+                        {/* GitHub: un solo botón, con la App Danil; sin token pegado. */}
+                        <Show when={p.id !== "github"}>
                         <SettingsRow
                           label={
                             p.browser_login
@@ -976,6 +988,7 @@ function WorkspaceProviders(props: { solo?: string | string[] }) {
                               : t("settings.providers.connect")}
                           </Button>
                         </SettingsRow>
+                        </Show>
                       </form>
                     </Match>
                   </Switch>

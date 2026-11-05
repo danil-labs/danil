@@ -55,6 +55,8 @@ export default function GithubAccount(props: {
   const [choosing, setChoosing] = createSignal(false);
   const [installations, setInstallations] = createSignal<GithubInstallation[] | null>(null);
   const [installUrl, setInstallUrl] = createSignal<string | null>(null);
+  /** La máquina tenía otra GitHub (sin sesión) y la cuenta conservó la suya. */
+  const [adoptNotice, setAdoptNotice] = createSignal<{ login: string; account_login: string } | null>(null);
   let poll: ReturnType<typeof setInterval> | undefined;
   let disposed = false;
 
@@ -84,7 +86,12 @@ export default function GithubAccount(props: {
       }
     }
     try {
-      const next = githubStatusOf(await invoke("github_account_status", { scope: props.scope }));
+      const raw = await invoke<unknown>("github_account_status", { scope: props.scope });
+      const notice = (raw as { adopt_notice?: { login?: unknown; account_login?: unknown } } | null)?.adopt_notice;
+      if (notice && typeof notice.login === "string" && typeof notice.account_login === "string") {
+        setAdoptNotice({ login: notice.login, account_login: notice.account_login });
+      }
+      const next = githubStatusOf(raw);
       if (!disposed) applyStatus(next);
       return next;
     } catch (e) {
@@ -276,7 +283,14 @@ export default function GithubAccount(props: {
                   <strong>@{c().config.login}</strong>
                 </span>
               }
-              description={t("providers.github.account.connected_help")}
+              description={
+                <>
+                  {t("providers.github.account.connected_help")}
+                  <Show when={adoptNotice()}>
+                    {(n) => <span class="block">{t("providers.github.account.adopt_kept", { account: n().account_login, machine: n().login })}</span>}
+                  </Show>
+                </>
+              }
             >
               <Button variant="ghost" size="compact" class="hover:text-error-strong" disabled={busy() !== null} onClick={() => void disconnect()}>
                 {t("providers.github.disconnect")}
