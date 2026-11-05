@@ -727,6 +727,7 @@ const steps = [
   ["WSL detection reads English and Spanish states and maps failures", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/wsl-detection.test.ts")], root],
   ["WSL Linux user turns typed names into valid users", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/wsl-linux-user.test.ts")], root],
   ["Danil Machines: session with contracts, token renewal, engine and tombstones", process.execPath, ["--test", "--experimental-strip-types", join(root, "../../packages/computers/test/computers.test.ts")], root],
+  ["Danil Machines: an MCP block with written values, a URL with a password or an argument with a token does not cross the relay", process.execPath, ["--test", "--experimental-strip-types", join(root, "../../packages/computers/test/mcp-block.test.ts")], root],
   ["Danil Machines: account GitHub through the Worker, with its routes and codes", process.execPath, ["--test", "--experimental-strip-types", join(root, "../../packages/computers/test/github.test.ts")], root],
   ["On the web account GitHub is answered by the Worker, not a machine", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/web-github-account.test.ts")], root],
   ["With a Danil session the GitHub card is the account's; without it, the usual local one", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/github-account-settings.test.mjs")], root],

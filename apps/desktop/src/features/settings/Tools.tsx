@@ -88,7 +88,7 @@ type Conocido = {
  */
 type Puesto = { name: string; detalle: string; managed?: boolean };
 
-/** El motor manda la URL o el comando enteros; lo que parece credencial no se pinta. */
+/** Solo no pintarlo: el motor ya mandó la URL o el comando enteros, y el arreglo es que mande `origen()`. */
 const sinSecretos = (lista: Puesto[]): Puesto[] => lista.map((p) => ({ ...p, detalle: maskServerSource(p.detalle ?? "") }));
 
 /** Un agente y si de verdad recibe lo que se conecta aquí. */

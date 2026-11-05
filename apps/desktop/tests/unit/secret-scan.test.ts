@@ -1,12 +1,11 @@
 /**
  * `lib/secretScan.ts`: qué se reconoce como secreto al pegar (una familia por
  * prefijo, JWT, PEM, URL con credenciales y alta entropía) y qué no (SHA,
- * UUID, rutas, URLs limpias, prosa); el `detalle` de MCP sin credenciales y el
- * bloque MCP con valores escritos.
+ * UUID, rutas, URLs limpias, prosa) y el `detalle` de MCP sin credenciales.
  */
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { MASK, findPastedSecret, maskServerSource, mcpBlockValues, secretFamilyOf } from "../../src/lib/secretScan.ts";
+import { MASK, findPastedSecret, maskServerSource, secretFamilyOf } from "../../src/lib/secretScan.ts";
 
 // Armados en la prueba: un literal con forma de llave real lo bloquea el escáner del repositorio.
 const body = (n: number) => "Q7f9Kp2LmX4vR8tZ1nB6cW3yH5jD0sAe".repeat(4).slice(0, n);
@@ -86,16 +85,7 @@ test("the MCP source keeps where it comes from and hides every credential", () =
   assert.equal(maskServerSource(`node server.js ${FAKE.stripe}`), `node server.js ${MASK}`);
   assert.equal(maskServerSource("API_TOKEN=xyz run-mcp"), `API_TOKEN=${MASK} run-mcp`);
   assert.equal(maskServerSource(""), "");
+  assert.equal(maskServerSource(`run --header "Authorization: Bearer abc123"`), `run --header "Authorization: Bearer ${MASK}`);
+  assert.equal(maskServerSource(`run "${FAKE.ghp}"`), `run ${MASK}`, "quotes do not hide a token");
   for (const value of Object.values(FAKE)) assert.ok(!maskServerSource(`tool ${value}`).includes(value), "no family survives in a command");
-});
-
-test("an MCP block with a value written in env or headers is plain; markers and schemes are clean", () => {
-  assert.equal(mcpBlockValues(JSON.stringify({ mcpServers: { a: { command: "npx", env: { API_KEY: "abc" } } } })), "plain");
-  assert.equal(mcpBlockValues(JSON.stringify({ a: { url: "https://x", headers: { Authorization: "Bearer abc" } } })), "plain");
-  assert.equal(mcpBlockValues(JSON.stringify({ command: "npx", env: { MODE: "prod" } })), "plain", "every literal value counts: the engine vaults them all");
-  assert.equal(mcpBlockValues(JSON.stringify({ mcpServers: { a: { command: "npx", env: { API_KEY: "${secret:env/*/API_KEY}" } } } })), "clean");
-  assert.equal(mcpBlockValues(JSON.stringify({ a: { url: "https://x", headers: { Authorization: "Bearer ${secret:env/*/TOKEN}" } } })), "clean");
-  assert.equal(mcpBlockValues(JSON.stringify({ a: { command: "npx", args: ["-y", "pkg"], env: {} } })), "clean");
-  assert.equal(mcpBlockValues(JSON.stringify({ a: { command: "npx", env: { EMPTY: "" } } })), "clean");
-  assert.equal(mcpBlockValues("{ not json"), "invalid");
 });

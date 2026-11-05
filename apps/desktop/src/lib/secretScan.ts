@@ -3,6 +3,7 @@
  * devuelve como dato de máquina. Es una heurística: un falso positivo se
  * resuelve con «Pegar como texto»; un falso negativo deja el texto como hoy.
  */
+import { urlWithCredentials } from "@terminus/computers";
 
 export type SecretFamily = "prefix" | "jwt" | "pem" | "entropy" | "url";
 
@@ -38,19 +39,6 @@ function bitsPerChar(text: string): number {
     bits -= p * Math.log2(p);
   }
   return bits;
-}
-
-/** Una URL con usuario y contraseña o con un parámetro de nombre sensible. */
-function urlWithCredentials(token: string): boolean {
-  let url: URL;
-  try {
-    url = new URL(token);
-  } catch {
-    return false;
-  }
-  if (url.password) return true;
-  for (const [name, value] of url.searchParams) if (value && SENSITIVE_NAME.test(name)) return true;
-  return false;
 }
 
 /** Un solo token (sin espacios): de qué familia de secreto es, o `null`. */
@@ -118,56 +106,29 @@ export function maskServerSource(source: string): string {
   const words = text.split(/\s+/);
   let hideNext = false;
   return words
-    .map((word) => {
+    .map((raw) => {
       if (hideNext) {
         hideNext = false;
         return MASK;
+      }
+      const word = raw.replace(/^["'`]+|["'`]+$/g, "");
+      if (/^(?:bearer|basic|token)$/i.test(word)) {
+        hideNext = true;
+        return raw;
       }
       const assign = /^(-{0,2})([A-Za-z0-9_.-]+)=(.*)$/.exec(word);
       if (assign) {
         const [, dashes, name, value] = assign;
         if (value && (SENSITIVE_NAME.test(name) || secretFamilyOf(value))) return `${dashes}${name}=${MASK}`;
-        return word;
+        return raw;
       }
       if (/^-{1,2}[A-Za-z]/.test(word) && SENSITIVE_NAME.test(word.replace(/^-+/, ""))) {
         hideNext = true;
-        return word;
+        return raw;
       }
       if (/^[a-z][a-z0-9+.-]*:\/\//i.test(word)) return maskServerSource(word);
-      return secretFamilyOf(word) ? MASK : word;
+      return secretFamilyOf(word) ? MASK : raw;
     })
     .join(" ");
 }
 
-const MARKER = /\$\{secret:[^}\s]+\}/g;
-/** Lo que puede acompañar a un marcador en una cabecera: el esquema de autorización. */
-const SCHEME = /^(?:bearer|basic|token)?$/i;
-
-/** Si un valor de `env` o `headers` lleva texto propio además de marcadores `${secret:…}`. */
-const literal = (value: unknown) => typeof value === "string" && !SCHEME.test(value.replace(MARKER, "").trim());
-
-/**
- * Qué lleva un bloque MCP pegado (`add_mcp_servers`, `set_memory_provider`):
- * `plain` si algún `env` o `headers` trae un valor escrito y no un marcador,
- * `invalid` si no es JSON. El motor guarda esos valores en la bóveda, pero el
- * bloque entero viaja antes en claro.
- */
-export function mcpBlockValues(block: string): "clean" | "plain" | "invalid" {
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(block.trim());
-  } catch {
-    return "invalid";
-  }
-  const walk = (node: unknown): boolean => {
-    if (Array.isArray(node)) return node.some(walk);
-    if (!node || typeof node !== "object") return false;
-    for (const [key, value] of Object.entries(node)) {
-      if ((key === "env" || key === "headers") && value && typeof value === "object" && !Array.isArray(value)) {
-        if (Object.values(value).some(literal)) return true;
-      } else if (walk(value)) return true;
-    }
-    return false;
-  };
-  return walk(parsed) ? "plain" : "clean";
-}
