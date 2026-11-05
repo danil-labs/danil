@@ -78,7 +78,7 @@ export default function RegistroPreguntas(props: {
               const respuesta = () => respuestaDe(pregunta);
               return (
                 <li class="grid min-w-0 gap-0.5 px-1.5 pb-0.5">
-                  <p class="m-0 text-xs break-words text-neutral-500">
+                  <p class="m-0 text-xs [overflow-wrap:anywhere] text-neutral-500">
                     {pregunta.question}
                   </p>
                   <Show
@@ -92,7 +92,7 @@ export default function RegistroPreguntas(props: {
                     {(r) => (
                       <p
                         class={cn(
-                          "m-0 text-sm break-words",
+                          "m-0 text-sm [overflow-wrap:anywhere]",
                           r().text ? "text-neutral-950" : "text-neutral-500 italic",
                         )}
                       >
