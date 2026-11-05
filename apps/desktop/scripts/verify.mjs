@@ -727,6 +727,7 @@ const steps = [
   ["WSL detection reads English and Spanish states and maps failures", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/wsl-detection.test.ts")], root],
   ["WSL Linux user turns typed names into valid users", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/wsl-linux-user.test.ts")], root],
   ["Linux en esta Mac lists Lima VMs, keeps Colima aside and says how to install Lima", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/lima-machine.test.mjs")], root],
+  ["Without an account the local guests are a fleet of their own and nothing goes to the account", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/local-fleet.test.mjs")], root],
   ["Danil Machines: session with contracts, token renewal, engine and tombstones", process.execPath, ["--test", "--experimental-strip-types", join(root, "../../packages/computers/test/computers.test.ts")], root],
   ["Danil Machines: account GitHub through the Worker, with its routes and codes", process.execPath, ["--test", "--experimental-strip-types", join(root, "../../packages/computers/test/github.test.ts")], root],
   ["On the web account GitHub is answered by the Worker, not a machine", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/web-github-account.test.ts")], root],

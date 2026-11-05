@@ -28,7 +28,13 @@ por RPC1 en `127.0.0.1`. Cambia el canal: aquí es `limactl`, no `wsl.exe`.
 o el motor contesta `invalid_token` o `unauthorized`, se relee por el canal: el
 puerto y el token cambian en cada arranque del motor.
 
-Sin cuenta de Danil el bloque se muestra igual: es local. El laboratorio
+Sin cuenta de Danil el bloque se muestra igual: es local. Con al menos un
+huésped conectado, la ventana arma una flota solo local (`account.tsx`): esta
+computadora es `local`, como en `machine_list`, y la VM entra en «Ejecutar en».
+No pide token ni lista máquinas de la cuenta. Al iniciar sesión la reemplaza la
+flota de la cuenta, con las mismas VMs y los mismos ids.
+
+El laboratorio
 (`pnpm engine:start`) le da a la ventana un `HOME` desechable; en macOS le
 pasa `LIMA_HOME` y `COLIMA_HOME` con las carpetas reales, para que vea las VMs
 de la persona (una variable ya definida se respeta).
