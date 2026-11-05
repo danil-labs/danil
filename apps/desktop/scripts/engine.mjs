@@ -23,6 +23,7 @@ import { spawn, spawnSync } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
 import { chmodSync, copyFileSync, existsSync, mkdirSync, openSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { createConnection } from "node:net";
+import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -295,13 +296,27 @@ async function select() {
   console.log(JSON.stringify({ selection: SELECTION, runtime: ep.runtime, build: status.result.build }));
 }
 
+/**
+ * Las VMs de Lima y Colima de la persona: con el HOME del laboratorio, la
+ * ventana no vería `~/.lima` ni `~/.colima` («Linux en esta Mac»). Solo se
+ * pasan las carpetas, y una ya definida se respeta.
+ */
+function localGuestHomes() {
+  if (process.platform !== "darwin") return {};
+  const real = homedir();
+  return {
+    LIMA_HOME: process.env.LIMA_HOME || join(real, ".lima"),
+    COLIMA_HOME: process.env.COLIMA_HOME || join(real, ".colima"),
+  };
+}
+
 function openWindow() {
   if (!existsSync(WINDOW)) fail(`No window binary at ${WINDOW}. Build it first (see README, "Build from source").`);
   const port = rest[rest.indexOf("--cdp-port") + 1];
   const debug = rest.includes("--cdp-port") && port ? { WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: `--remote-debugging-port=${port}` } : {};
   const child = spawn(WINDOW, ["--external-host", SELECTION], {
     cwd: LAB,
-    env: labEnvironment(debug),
+    env: labEnvironment({ ...debug, ...localGuestHomes() }),
     detached: true,
     stdio: ["ignore", openSync(join(LAB, "window.err"), "w"), openSync(join(LAB, "window.err"), "a")],
   });

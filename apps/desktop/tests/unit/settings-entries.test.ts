@@ -8,7 +8,8 @@ test("old settings ids open the entry and tab that now hold them", () => {
   assert.deepEqual(settingsTarget("proveedores-ia"), { entry: "ai-accounts", tab: "proveedores-ia" });
   assert.deepEqual(settingsTarget("entorno"), { entry: "machines", tab: "entorno" });
   assert.deepEqual(settingsTarget("activity"), { entry: "machines", tab: "activity" });
-  assert.deepEqual(settingsTarget("fuentes"), { entry: "projects", tab: "fuentes" });
+  assert.deepEqual(settingsTarget("fuentes"), { entry: "source-control", tab: "fuentes" });
+  assert.deepEqual(settingsTarget("source-control"), { entry: "source-control", tab: null });
   assert.deepEqual(settingsTarget("plugins"), { entry: "connections", tab: "plugins" });
   assert.deepEqual(settingsTarget("mcp"), { entry: "connections", tab: "operation" });
   assert.deepEqual(settingsTarget("conexiones"), { entry: "connections", tab: "external" });
@@ -25,8 +26,8 @@ test("unknown or empty ids open nothing in particular", () => {
   assert.equal(settingsTarget("bitacora"), null);
 });
 
-test("eight entries, every tab in exactly one", () => {
-  assert.equal(SETTINGS_ENTRIES.length, 8);
+test("nine entries, every tab in exactly one", () => {
+  assert.equal(SETTINGS_ENTRIES.length, 9);
   const tabs = SETTINGS_ENTRIES.flatMap((e) => [...e.tabs]);
   assert.equal(new Set(tabs).size, tabs.length);
 });

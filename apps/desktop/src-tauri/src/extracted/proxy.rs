@@ -284,7 +284,7 @@ pub(super) fn desktop_command(name: &str) -> bool {
                 | "service_filter"
                 | "load_history"
                 | "handler_action"
-                // Linux en esta PC (`wsl_child.rs`): la ventana, no el motor.
+                // Máquinas locales (`guests/`): la ventana, no el motor.
                 | "wsl_state"
                 | "wsl_catalog"
                 | "wsl_enable"
@@ -295,25 +295,43 @@ pub(super) fn desktop_command(name: &str) -> bool {
                 | "wsl_resume_forget"
                 | "wsl_distro_user"
                 | "wsl_reboot"
-                | "wsl_children"
-                | "wsl_child_remove"
-                | "wsl_child_wake"
-                | "wsl_child_call"
-                | "wsl_child_copy_folder"
-                | "wsl_child_sync_spaces"
-                | "wsl_child_events"
+                | "guest_channels"
+                | "guest_list"
+                | "guest_connect"
+                | "guest_job"
+                | "guest_children"
+                | "guest_remove"
+                | "guest_start"
+                | "guest_call"
+                | "guest_copy_folder"
+                | "guest_sync_spaces"
+                | "guest_events"
         )
 }
 pub(super) fn with_desktop(
     local: impl Fn(tauri::ipc::Invoke) -> bool + Send + Sync + 'static,
 ) -> impl Fn(tauri::ipc::Invoke) -> bool + Send + Sync + 'static {
     move |invoke| {
+        if !local_machine_header(invoke.message.headers()) {
+            invoke
+                .resolver
+                .reject(failure(&Error::new("unknown_machine")));
+            return true;
+        }
         if desktop_command(invoke.message.command()) {
             local(invoke)
         } else {
             handle(invoke);
             true
         }
+    }
+}
+
+fn local_machine_header(headers: &tauri::http::HeaderMap) -> bool {
+    let mut values = headers.get_all("x-terminus-machine").iter();
+    match values.next() {
+        None => true,
+        Some(value) => value.to_str().ok() == Some("local") && values.next().is_none(),
     }
 }
 pub(super) fn failure(error: &Error) -> Value {
@@ -1058,6 +1076,22 @@ pub(super) fn machine_list(app: tauri::AppHandle) -> Result<Value, Value> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn un_destino_no_local_no_pasa_al_ipc_nativo() {
+        use tauri::http::{HeaderMap, HeaderValue};
+        let mut headers = HeaderMap::new();
+        assert!(local_machine_header(&headers));
+        headers.insert("x-terminus-machine", HeaderValue::from_static("local"));
+        assert!(local_machine_header(&headers));
+        for id in ["lima:vm", "wsl:Ubuntu", "cmp_remote", ""] {
+            headers.insert("x-terminus-machine", HeaderValue::from_str(id).unwrap());
+            assert!(!local_machine_header(&headers), "{id}");
+        }
+        headers.insert("x-terminus-machine", HeaderValue::from_static("local"));
+        headers.append("x-terminus-machine", HeaderValue::from_static("lima:vm"));
+        assert!(!local_machine_header(&headers));
+    }
 
     /// Todo comando que la ventana registra en `generate_handler!` tiene que
     /// pasar `desktop_command`; si no, `with_desktop` lo manda al motor y la

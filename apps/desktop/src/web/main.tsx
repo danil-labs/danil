@@ -442,7 +442,7 @@ function othersOf(accounts: readonly Account[], current: Account, listings: Read
 }
 
 async function start(settings: WebSettings) {
-  const [{ render }, { Gate, computersOf }, { supabaseSession }, { aplicarLengua }] = await Promise.all([
+  const [{ render }, { Gate, computersOf, resolveGate }, { supabaseSession }, { aplicarLengua }] = await Promise.all([
     import("solid-js/web"),
     import("./Gate"),
     import("./session"),
@@ -555,48 +555,53 @@ async function start(settings: WebSettings) {
     render(() => <Gate session={session} endpoint={endpoint} initial={initial} accounts={webAccounts} />, layer);
   };
 
-  const dispose = render(
-    () => (
-      <Gate
-        session={session}
-        endpoint={endpoint}
-        accounts={webAccounts}
-        onOpen={(computers) => {
-          dispose();
-          const several = computers.length > 1;
-          const relink = mountApp(
-            computers,
-            { endpoint, supabaseUrl: settings.supabaseUrl, supabaseKey: settings.supabaseKey, userId: current.user_id, refresh: () => session.unauthorized(), getToken: () => session.getToken(), onUnauthorized: () => void session.unauthorized(), subscribe: clear => session.watch(current.user_id, clear) },
-            (computerId) => async () => {
-              const answer = await computersOf(endpoint, session);
-              if (answer.kind === "error" && answer.status === 403 && answer.code === "access_required") block({ t: "access_required" });
-              else if (answer.kind === "license" || answer.kind === "no_account") block({ t: answer.kind });
-              // One computer gone from several only stops its own session.
-              else if (answer.kind === "ok" && !answer.value.some((c) => c.computer_id === computerId)) {
-                if (!several) block({ t: "not_yours" });
-              } else return answer.kind !== "unauthorized";
-              return false;
-            },
-            { storage, webAccounts, workspace: wanted },
-          );
-          // A machine connected or a workspace linked since the page loaded shows up here without reloading it.
-          const relist = async () => {
-            const answer = await computersOf(endpoint, session).catch(() => null);
-            if (answer?.kind === "ok") relink(answer.value);
-            await reread().catch(() => undefined);
-          };
-          relistNow = relist;
-          if (!relisting) {
-            relisting = true;
-            setInterval(() => void relist(), RELIST);
-            document.addEventListener("visibilitychange", () => {
-              if (document.visibilityState === "visible") void relist();
-            });
-          }
-        }}
-      />
-    ),
-    document.getElementById("root") as HTMLElement,
+  const abrir = (computers: Computer[]) => {
+    const several = computers.length > 1;
+    const relink = mountApp(
+      computers,
+      { endpoint, supabaseUrl: settings.supabaseUrl, supabaseKey: settings.supabaseKey, userId: current.user_id, refresh: () => session.unauthorized(), getToken: () => session.getToken(), onUnauthorized: () => void session.unauthorized(), subscribe: clear => session.watch(current.user_id, clear) },
+      (computerId) => async () => {
+        const answer = await computersOf(endpoint, session);
+        if (answer.kind === "error" && answer.status === 403 && answer.code === "access_required") block({ t: "access_required" });
+        else if (answer.kind === "license" || answer.kind === "no_account") block({ t: answer.kind });
+        // One computer gone from several only stops its own session.
+        else if (answer.kind === "ok" && !answer.value.some((c) => c.computer_id === computerId)) {
+          if (!several) block({ t: "not_yours" });
+        } else return answer.kind !== "unauthorized";
+        return false;
+      },
+      { storage, webAccounts, workspace: wanted },
+    );
+    // A machine connected or a workspace linked since the page loaded shows up here without reloading it.
+    const relist = async () => {
+      const answer = await computersOf(endpoint, session).catch(() => null);
+      if (answer?.kind === "ok") relink(answer.value);
+      await reread().catch(() => undefined);
+    };
+    relistNow = relist;
+    if (!relisting) {
+      relisting = true;
+      setInterval(() => void relist(), RELIST);
+      document.addEventListener("visibilitychange", () => {
+        if (document.visibilityState === "visible") void relist();
+      });
+    }
+  };
+
+  // Mientras esto corre, el marco que trajo el HTML sigue en `#root`. Montar la
+  // puerta aquí lo borraría para pintar «conectando».
+  const decision = await resolveGate(endpoint, session);
+  if (decision.t === "open") {
+    abrir(decision.computers);
+    return;
+  }
+  if (decision.t === "waiting") return;
+  const root = document.getElementById("root") as HTMLElement;
+  // La licencia, el alta y el error sustituyen al marco. Sin vaciar, Solid lo deja detrás.
+  root.replaceChildren();
+  render(
+    () => <Gate session={session} endpoint={endpoint} accounts={webAccounts} initial={decision} onOpen={abrir} />,
+    root,
   );
 }
 

@@ -34,6 +34,7 @@ export {
   DOCK_SLOT,
   agentFolder,
   dockCapacity,
+  dockSources,
   orderDockAgents,
   planDock,
 } from "./dock.ts";

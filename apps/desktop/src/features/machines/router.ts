@@ -139,7 +139,8 @@ function gitSlice(slice: Slice): Slice {
 
 export function createRouter(config: RouterConfig) {
   const { self, fleet } = config;
-  const native: Invoke = config.native ?? (() => Promise.reject(new FleetError("unknown_machine", null)));
+  const rawNative: Invoke = config.native ?? (() => Promise.reject(new FleetError("unknown_machine", null)));
+  const native: Invoke = (command, args, options) => rawNative(command, args, withoutHeader(options, "x-terminus-machine"));
   /** Con motor propio (el escritorio); sin él, la web. */
   const local = config.native !== null;
   const contextOwners = new Map<string, string>();
@@ -272,6 +273,10 @@ export function createRouter(config: RouterConfig) {
       }
       case "revoked":
         return { what: t("web.revoked"), detail: "revoked" };
+      case "mcp_values_over_relay":
+        return { what: t("settings.tools.paste_over_relay"), detail: error.code };
+      case "mcp_block_invalid":
+        return { what: t("settings.tools.paste_invalid"), detail: error.code };
       case "workspace_not_linked":
         return { what: t("web.workspace_not_linked"), detail: "workspace_not_linked" };
       case "operation_failed": {

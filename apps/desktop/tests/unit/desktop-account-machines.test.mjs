@@ -52,10 +52,9 @@ test("signed in, the tasks of every machine show together; a VM task's actions g
   assert.ok(doc.querySelector('[data-sesion="t1"]'), "the local task keeps its id");
   assert.ok(doc.querySelector('[data-sesion="cmp_vm~t1"]'), "the VM task has its namespaced id");
   assert.ok(doc.querySelector('[data-sesion="cmp_mac~t1"]'));
-  // The rail card carries no machine chip; its hover card names the machine (see below).
-  assert.equal(doc.querySelector('[data-sesion="t1"] [data-machine]'), null, "a local task's row names no machine");
-  assert.equal(doc.querySelector('[data-sesion="cmp_vm~t1"] [data-machine]'), null, "the VM task's card has no machine chip");
-  assert.equal(doc.querySelector('[data-sesion="cmp_mac~t1"] [data-machine]'), null);
+  assert.ok(doc.querySelector('[data-sesion="t1"] [data-machine="cmp_home"]'), "the local task names its machine");
+  assert.ok(doc.querySelector('[data-sesion="cmp_vm~t1"] [data-machine="cmp_vm"]'), "the VM task names its machine");
+  assert.ok(doc.querySelector('[data-sesion="cmp_mac~t1"] [data-machine="cmp_mac"]'), "the remote Mac task names its machine");
   assert.ok(relayCalls("cmp_vm", "list_projects").some((c) => c.workspace === "w"), "the VM reads its own workspace");
   assert.ok(native("list_projects").length > 0, "the local engine still answers through the window");
 

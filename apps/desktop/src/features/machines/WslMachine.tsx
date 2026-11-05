@@ -2,9 +2,9 @@
 // repetir una instalación por un `app_unavailable` la correría dos veces.
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "../../lib/serviceEvents";
-import { For, Match, Show, Switch, createMemo, createSignal, onCleanup, onMount } from "solid-js";
+import { For, Match, Show, Switch, createEffect, createMemo, createSignal, on, onCleanup, onMount } from "solid-js";
 import { t } from "../../lib/i18n";
-import { capabilities } from "../../lib/platform";
+import { offersGuests } from "./guestChannels";
 import { Badge } from "../../ui/Badge";
 import { Button } from "../../ui/Button";
 import { MarcaAgente } from "../../ui/icons";
@@ -45,7 +45,7 @@ function stateLabel(state: string): string {
 }
 
 /** La flota (Ejecutar en) vuelve a leer las distribuciones conectadas. */
-const fleetChanged = () => window.dispatchEvent(new CustomEvent("danil:wsl-changed"));
+const fleetChanged = () => window.dispatchEvent(new CustomEvent("danil:guests-changed"));
 
 type Workspaces = { workspaces?: { id: string; name?: string }[]; active?: string | null };
 
@@ -63,12 +63,15 @@ async function activeWorkspace(): Promise<{ id: string; name: string } | null> {
 
 /**
  * Configuración → Máquinas → Linux en esta PC. Lo que se ve lo guarda la
- * ventana (`wsl_state`, `wsl-job`), no esta pantalla: salir de Configuración
+ * ventana (`wsl_state`, `guest-job`), no esta pantalla: salir de Configuración
  * o reiniciar no pierde el avance (`docs/wsl-local-machine.md`).
  */
 export function WslMachineSection() {
-  if (!capabilities().wsl) return null;
-  return <Section />;
+  return (
+    <Show when={offersGuests("wsl")}>
+      <Section />
+    </Show>
+  );
 }
 
 function Section() {
@@ -91,8 +94,8 @@ function Section() {
   }
 
   onMount(() => void load());
-  const stopJob = listen<WslJob | null>("wsl-job", (e) => setJob(e.payload));
-  const stopState = listen("wsl-state-changed", () => {
+  const stopJob = listen<WslJob | null>("guest-job", (e) => setJob(e.payload));
+  const stopState = listen("guest-state-changed", () => {
     fleetChanged();
     void load();
   });
@@ -463,7 +466,7 @@ function Installer(props: { installed: string[]; onCancel: () => void; onStarted
 const DISTRO_STEPS = ["download", "verify", "register", "user"] as const;
 const ENGINE_STEPS = ["check", "deps", "engine_download", "engine_verify", "engine", "service", "connect"] as const;
 
-function StepList(props: { steps: readonly string[]; current: string; done: boolean }) {
+export function StepList(props: { steps: readonly string[]; current: string; done: boolean; labels?: string }) {
   const index = () => props.steps.indexOf(props.current);
   return (
     <ol class="m-0 grid list-none gap-1 p-0">
@@ -478,7 +481,7 @@ function StepList(props: { steps: readonly string[]; current: string; done: bool
                   <Match when={state() === "now"}><Spinner size={12} /></Match>
                 </Switch>
               </span>
-              <span class={state() === "todo" ? "text-neutral-500" : "text-neutral-950"}>{t(`danil.wsl.step.${step}`)}</span>
+              <span class={state() === "todo" ? "text-neutral-500" : "text-neutral-950"}>{t(`${props.labels ?? "danil.wsl.step"}.${step}`)}</span>
             </li>
           );
         }}
@@ -540,7 +543,7 @@ function JobProgress(props: { job: WslJob }) {
   );
 }
 
-function Technical(props: { text: string }) {
+export function Technical(props: { text: string }) {
   return (
     <details class="text-xs text-neutral-500">
       <summary class="cursor-pointer">{t("danil.wsl.technical")}</summary>
@@ -622,7 +625,7 @@ function Distro(props: { row: WslDistroRow; busy: boolean; onStarted: (j: WslJob
         </div>
       }
     >
-      {(child) => <DistroBox row={props.row} child={child()} onRemoved={props.onChanged} />}
+      {(child) => <DistroBox name={props.row.name} child={child()} onRemoved={props.onChanged} />}
     </Show>
   );
 }
@@ -630,10 +633,11 @@ function Distro(props: { row: WslDistroRow; busy: boolean; onStarted: (j: WslJob
 type Surface = { id: string; provider: string; label: string; catalogo: string; usable: boolean; marca?: string | null; porque?: { clave?: string } | null };
 type Login = { provider: string; id: string; url: string | null; confirm: string | null; wantsCode: boolean };
 
-function DistroBox(props: { row: WslDistroRow; child: WslChild; onRemoved: () => void }) {
+/** Un huésped conectado (WSL o Lima): Linux, Danil y sus proveedores de IA. */
+export function DistroBox(props: { name: string; child: WslChild; onRemoved: () => void }) {
   const machine = props.child.id;
   const call = <T,>(command: string, args: Record<string, unknown> = {}, timeoutMs?: number) =>
-    invoke<T>("wsl_child_call", { machine, command, args, workspace: null, folder: null, timeoutMs: timeoutMs ?? null });
+    invoke<T>("guest_call", { machine, command, args, workspace: null, folder: null, timeoutMs: timeoutMs ?? null });
   const [surfaces, setSurfaces] = createSignal<Surface[] | null>(null);
   const [problem, setProblem] = createSignal<string | null>(null);
   const [doing, setDoing] = createSignal<string | null>(null);
@@ -658,9 +662,9 @@ function DistroBox(props: { row: WslDistroRow; child: WslChild; onRemoved: () =>
     if (watching) return;
     watching = true;
     try {
-      cursor = (await invoke<{ cursor: number | null }>("wsl_child_events", { machine, cursor: null })).cursor ?? null;
+      cursor = (await invoke<{ cursor: number | null }>("guest_events", { machine, cursor: null })).cursor ?? null;
       while (login()) {
-        const page = await invoke<{ cursor: number | null; events?: { name: string; payload: { account?: string; kind?: string; text?: string } }[] }>("wsl_child_events", { machine, cursor });
+        const page = await invoke<{ cursor: number | null; events?: { name: string; payload: { account?: string; kind?: string; text?: string } }[] }>("guest_events", { machine, cursor });
         if (page.cursor !== null && page.cursor !== undefined) cursor = page.cursor;
         for (const ev of page.events ?? []) {
           const l = login();
@@ -703,7 +707,7 @@ function DistroBox(props: { row: WslDistroRow; child: WslChild; onRemoved: () =>
   }
 
   const remove = () => {
-    void invoke("wsl_child_remove", { machine }).then(props.onRemoved);
+    void invoke("guest_remove", { machine }).then(props.onRemoved);
   };
 
   async function sendCode() {
@@ -714,7 +718,7 @@ function DistroBox(props: { row: WslDistroRow; child: WslChild; onRemoved: () =>
   }
 
   return (
-    <div class="grid gap-3 rounded-sm border border-border p-3" data-wsl-box={props.row.name}>
+    <div class="grid gap-3 rounded-sm border border-border p-3" data-wsl-box={props.name}>
       <div class="flex flex-wrap items-center gap-2">
         <SignalDot tone={props.child.online ? "success" : "off"} />
         <span class="min-w-0 flex-1 truncate text-ui font-[560] text-neutral-950">{props.child.name}</span>
@@ -799,14 +803,15 @@ function DistroBox(props: { row: WslDistroRow; child: WslChild; onRemoved: () =>
 
 /** Las distribuciones conectadas, como una máquina más en «Máquinas de este workspace». Solo existen en esta PC. */
 export function WslMachineRows() {
-  if (!capabilities().wsl) return null;
   const [rows, setRows] = createSignal<WslChild[]>([]);
+  const offered = () => offersGuests("wsl") || offersGuests("lima");
   const read = () => {
-    void invoke<WslChild[]>("wsl_children", { fresh: false }).then(setRows).catch(() => setRows([]));
+    if (!offered()) return;
+    void invoke<WslChild[]>("guest_children", { fresh: false }).then(setRows).catch(() => setRows([]));
   };
-  onMount(read);
-  window.addEventListener("danil:wsl-changed", read);
-  onCleanup(() => window.removeEventListener("danil:wsl-changed", read));
+  createEffect(on(offered, read));
+  window.addEventListener("danil:guests-changed", read);
+  onCleanup(() => window.removeEventListener("danil:guests-changed", read));
   return (
     <For each={rows()}>
       {(c) => (
@@ -814,7 +819,7 @@ export function WslMachineRows() {
           data-account-computer={c.id}
           data-wsl-machine=""
           label={<span class="truncate">{c.name}</span>}
-          description={c.online ? t("danil.wsl.row.online") : t("danil.wsl.row.off")}
+          description={c.channel === "lima" ? (c.online ? t("danil.lima.row.online") : t("danil.lima.row.off")) : c.online ? t("danil.wsl.row.online") : t("danil.wsl.row.off")}
         />
       )}
     </For>

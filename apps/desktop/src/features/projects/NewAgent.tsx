@@ -153,8 +153,11 @@ export default function NewAgent(props: {
         if (!abierto) limpiar();
       }}
     >
+      {/* Cabe en la ventana sin taparla: 74% o 38rem. El tope y el
+          desplazamiento van en el mismo elemento; si van separados, el de
+          afuera recorta y el de adentro no llega a desplazarse. */}
       <DialogContent
-        class="w-[26rem] max-w-[92vw] p-4"
+        class="scroll-visible max-h-[min(74vh,38rem)] w-[26rem] max-w-[92vw] overflow-y-auto overscroll-contain p-4"
         data-owns-escape
         onCloseAutoFocus={(e: Event) => props.onCloseAutoFocus?.(e)}
       >
@@ -278,7 +281,6 @@ export default function NewAgent(props: {
                   <p class="m-0 text-xs text-error-strong">{texto()}</p>
                 )}
               </Show>
-
               <div class="flex items-center justify-end gap-2">
                 <Button variant="ghost" size="sm" onClick={() => props.onAbrir(false)}>
                   {t("projects.agents.new_cancel")}

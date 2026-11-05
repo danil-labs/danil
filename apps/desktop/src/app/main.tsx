@@ -17,6 +17,7 @@ import { cargarPaquetes } from "../locales/packs";
 import { mountAfterLanguagePacks } from "../locales/startup";
 import { capabilities, setCapabilities } from "../lib/platform";
 import { desktopWorkspaceDirectory } from "../features/shell/workspace-directory-desktop";
+import { askGuestChannels } from "../features/machines/guestChannels";
 import "../styles/global.css";
 import "../lib/sharedClock";
 // Errores y avisos de encargado se leen al fallar algo, ya con la ventana montada: entran por detrás.
@@ -24,7 +25,12 @@ import "../lib/sharedClock";
 void import("../locales/failurePhrases").catch((e) => console.warn("[lenguas] failurePhrases", e));
 
 // El directorio de la cuenta también en la ventana: antes solo lo montaba la web.
-setCapabilities({ ...capabilities(), workspaceDirectory: desktopWorkspaceDirectory(), wsl: /Windows/i.test(navigator.userAgent) });
+setCapabilities({ ...capabilities(), workspaceDirectory: desktopWorkspaceDirectory() });
+// Los canales de máquinas locales los dice la ventana (`guest_channels`), no el userAgent.
+// La web también carga este archivo: ahí `invoke` va por el relay y despertaría la máquina.
+if (capabilities().nativeWindow) {
+  void askGuestChannels().then((channels) => setCapabilities({ ...capabilities(), wsl: channels.includes("wsl"), lima: channels.includes("lima") }));
+}
 
 /**
  * El arranque fija tema y lengua antes del primer pintado. Los efectos declaran
@@ -72,7 +78,11 @@ function laQueTocaYaEstaDentro(): boolean {
   return registrada(pedido) || registrada(pedido.split("-")[0]);
 }
 
-const montar = () =>
+const montar = () => {
+  const root = document.getElementById("root")!;
+  // En la web el marco ya es hijo de `#root`. `render` de Solid, si hay un hijo,
+  // inserta al final y lo deja: la ventana se vería dos veces.
+  root.replaceChildren();
   render(
     () => (
       // El lanzador va antes que todo: sin motor conectado no hay a quién preguntar.
@@ -83,8 +93,9 @@ const montar = () =>
         </Setup>
       </Lanzador>
     ),
-    document.getElementById("root")!,
+    root,
   );
+};
 
 const lenguasDeDisco = cargarPaquetes().then(refreshLanguage);
 // Las capacidades se leen al montar: Atención entra antes, en su trozo, solo con la bandera.

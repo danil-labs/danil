@@ -86,8 +86,10 @@ export default function AgentDock(props: {
     if (id) props.onProfile(id, name);
   };
 
+  // 10 px arriba y abajo, y 8 px entre el rótulo y las caras. El hueco de
+  // 26 px y los 6 px entre caras no se tocan: de eso sale cuántas caben.
   return (
-    <div class="flex flex-col gap-1 border-t border-border px-2 pt-1.5 pb-0.5" role="group" aria-label={t("shell.agent_dock.title")}>
+    <div class="flex flex-col gap-2 border-t border-border px-2 pt-2.5 pb-2.5" role="group" aria-label={t("shell.agent_dock.title")}>
       <div class="flex items-center text-caption text-neutral-500">
         <span>{t("shell.agent_dock.title")}</span>
         <button

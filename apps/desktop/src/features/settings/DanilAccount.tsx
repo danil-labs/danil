@@ -15,6 +15,7 @@ import { EmailsSection } from "./EmailsSection";
 import { type DanilSessionInfo, sessionForWorkspace, sessionKey, statusOf, syncLine } from "./danil-sessions";
 import { AccountComputersSection } from "../machines/AccountComputers";
 import { ConnectMachineSection } from "../machines/ConnectMachine";
+import { LimaMachineSection } from "../machines/LimaMachine";
 import { WslMachineSection } from "../machines/WslMachine";
 import { requestAccessInBrowser, TerminusLicense } from "./TerminusLicense";
 import { SettingsBlock, SettingsPanel, SettingsRow, SettingsSection } from "./layout";
@@ -86,6 +87,7 @@ function WebAccount(props: { source: AccountProfileSource; part?: DanilAccountPa
         </Show>
         <ConnectMachineSection />
         <WslMachineSection />
+        <LimaMachineSection />
       </Show>
     </SettingsPanel>
   );
@@ -170,11 +172,11 @@ function WorkspacePanel(props: { workspace: { id: string; name: string }; accoun
             <Show when={a.of()?.linked && props.part !== "profile"}>
               <AccountComputersSection account={key} workspace={props.workspace.id} self={session()?.computer_id} onSelfName={renameFor(session()?.computer_id)} />
               <ConnectMachineSection account={key} />
-              <WslMachineSection />
             </Show>
           </>
         )}
       </Show>
+      <LocalMachines part={props.part} />
     </SettingsPanel>
   );
 }
@@ -315,9 +317,19 @@ function SingleAccount(props: { part?: DanilAccountPart }) {
       <Show when={status()?.state === "connected" && props.part !== "profile"}>
         <AccountComputersSection self={status()?.computer_id ?? null} onSelfName={renameFor(status()?.computer_id)} />
         <ConnectMachineSection />
-        <WslMachineSection />
       </Show>
+      <LocalMachines part={props.part} />
     </SettingsPanel>
+  );
+}
+
+/** Linux en esta Mac o PC: es local y no pide cuenta de Danil. */
+function LocalMachines(props: { part?: DanilAccountPart }) {
+  return (
+    <Show when={props.part !== "profile"}>
+      <WslMachineSection />
+      <LimaMachineSection />
+    </Show>
   );
 }
 

@@ -126,6 +126,7 @@ export default function Setup(props: { children: JSX.Element }) {
   const [entrando, setEntrando] = createSignal(false);
   const [workspace, setWorkspace] = createSignal<{ id: string; nombre: string } | null>(null);
   const [cuentaRespondida, setCuentaRespondida] = createSignal(accountWelcomeAnswered());
+  const [puedeVolverCuenta, setPuedeVolverCuenta] = createSignal(false);
   let tope = { total: -1, valor: 0 };
 
   const [conexiones, setConexiones] = createSignal<Conexiones | null>(null);
@@ -612,6 +613,11 @@ export default function Setup(props: { children: JSX.Element }) {
           </>
         }
       >
+        <Show when={puedeVolverCuenta()}>
+          <Button size="sm" variant="ghost" onClick={() => setCuentaRespondida(false)}>
+            {t("onboarding.back")}
+          </Button>
+        </Show>
         <span class="flex-1" />
         <Button size="sm" disabled={conectadas().length === 0} onClick={() => setPaso("personalizar")}>
           {t("onboarding.continue")}
@@ -661,8 +667,10 @@ export default function Setup(props: { children: JSX.Element }) {
             fallback={
               <Suspense fallback={<TarjetaVacia />}>
                 <ConectarCuenta
+                  workspaceExistente={workspace()}
                   onListo={(r) => {
                     if (r.workspace) setWorkspace(r.workspace);
+                    setPuedeVolverCuenta(!r.connected);
                     setCuentaRespondida(true);
                   }}
                 />

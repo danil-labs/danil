@@ -769,6 +769,18 @@
   [data-scroll-active]::-webkit-scrollbar-thumb:hover {
     background: var(--scrollbar-thumb-hover);
   }
+  /* El resto de la app esconde la barra hasta que te mueves. En un formulario
+     recortado eso se lee como «aquí no hay más». Esta clase la deja a la vista. */
+  .scroll-visible {
+    scrollbar-width: thin;
+    scrollbar-color: var(--scrollbar-thumb) transparent;
+  }
+  .scroll-visible::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thumb);
+  }
+  .scroll-visible::-webkit-scrollbar-thumb:hover {
+    background: var(--scrollbar-thumb-hover);
+  }
   @supports not selector(::-webkit-scrollbar) {
     * {
       scrollbar-width: thin;

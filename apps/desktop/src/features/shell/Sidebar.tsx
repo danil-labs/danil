@@ -42,7 +42,7 @@ import {
   type SidebarGroup,
   type SidebarView,
 } from "../../lib/sidebarView";
-import type { DockAgent } from "./dockLayout";
+import { type DockAgent, dockSources } from "./dockLayout";
 import type { SidebarFilterProps } from "./SidebarFilter";
 import { flattenTasks, folderCounts } from "./sidebarTasks";
 import { machineName, machines } from "../machines/store";
@@ -310,7 +310,7 @@ export default function Sidebar(props: {
    * nombre; manda el estado más despierto y se suman sus tareas vivas.
    */
   const carpetasConTareas = createMemo(
-    () => [...cuentas().keys()].filter((k) => k !== "").sort(),
+    () => dockSources(todas()).map((s) => `${s.project}\n${s.machine}`),
     [],
     { equals: (a, b) => a.length === b.length && a.every((x, i) => x === b[i]) },
   );
@@ -318,10 +318,11 @@ export default function Sidebar(props: {
   const alCrearAgente = () => setAltas((n) => n + 1);
   window.addEventListener("harness:encargados", alCrearAgente);
   onCleanup(() => window.removeEventListener("harness:encargados", alCrearAgente));
-  const porCarpeta = createMemo(mapArray(carpetasConTareas, (project) => {
+  const porCarpeta = createMemo(mapArray(carpetasConTareas, (clave) => {
+    const [project, machine] = clave.split("\n");
     const roster = watchRoster(
-      project,
-      async () => (await invoke<HandlerList>("list_agents", { project })).agents,
+      machine ? `${project}@${machine}` : project,
+      async () => (await invoke<HandlerList>("list_agents", { project }, machine ? { headers: { "x-terminus-machine": machine } } : undefined)).agents,
       altas,
     );
     return {
@@ -362,7 +363,9 @@ export default function Sidebar(props: {
     const orden = (id: string) => { const i = props.projects.findIndex((p) => p.id === id); return i === -1 ? props.projects.length : i; };
     return porCarpeta()
       .filter((c) => c.roster().some((a) => a.name === name))
-      .map((c) => ({ id: c.project, name: nombreDe(c.project) ?? c.project }))
+      .map((c) => c.project)
+      .filter((id, i, ids) => ids.indexOf(id) === i)
+      .map((id) => ({ id, name: nombreDe(id) ?? id }))
       .sort((a, b) => orden(a.id) - orden(b.id));
   };
   const agentesDelFiltro = createMemo(() =>

@@ -7,6 +7,7 @@
  * navegador sirve tal cual).
  */
 import type { MachineState } from "./machine.ts";
+import { relayArgs } from "./mcp-block.ts";
 
 export type RelayConfig = {
   /** Origen del relay: `relay.example`, `https://relay.example` o `wss://relay.example`. */
@@ -247,6 +248,9 @@ export class RelaySession {
    * rechaza con `error`. Se reenvía con el mismo id tras una reconexión.
    */
   call(id: string, command: string, workspace: string | null, folder: string | null, args: unknown, timeoutMs = CALL_TIMEOUT): Promise<CallResult> {
+    const checked = relayArgs(command, args);
+    if ("code" in checked) return Promise.reject({ code: checked.code });
+    args = checked.args;
     const request = (args as { history_request?: { kind?: string } } | null)?.history_request;
     const history = command === "load_session" && !!request && request.kind !== "state";
     if (history && [...this.pending.values()].filter(call => call.history).length >= 4) return Promise.reject({ code: "service_busy" });

@@ -81,6 +81,9 @@ type Provider = GitHost & {
   browser_login: boolean;
   login_help: Frase;
   connected: Connection | null;
+  /** GitHub: `account` (cuenta de Danil), `device` (App Danil en esta máquina) o
+   *  `legacy` (la de antes). Un motor anterior no lo manda: sin él, como antes. */
+  source?: "account" | "device" | "legacy";
   /** Por qué no se pudo comprobar la conexión: sin red, fuera de la VPN, el
    *  proveedor caído. Con esto puesto la conexión sigue en pie y el token
    *  sigue en el llavero: lo que falló fue preguntar, no el token. */
@@ -117,6 +120,9 @@ type Borrador = { data: Record<string, string>; token: string };
 
 const SIN_BORRADOR: Borrador = { data: {}, token: "" };
 
+const ORDER = ["github", "gitlab", "bitbucket"];
+const rankOf = (id: string) => (ORDER.includes(id) ? ORDER.indexOf(id) : ORDER.length);
+
 /**
  * `solo` limita el catálogo a uno o varios proveedores. Configuración los
  * compone por sección sin volver a hacer de cada uno un destino del riel.
@@ -140,7 +146,7 @@ function WorkspaceProviders(props: { solo?: string | string[] }) {
   const scope = startup.then((s) => s.active ?? "pending");
   const [scopeId, setScopeId] = createSignal<string | null>(null);
   void scope.then((id) => setScopeId(id === "pending" ? null : id), () => {});
-  const [githubAccount, setGithubAccount] = createSignal<GithubAccountState>({ mode: "unknown", connected: false, reauthorize: false });
+  const [githubAccount, setGithubAccount] = createSignal<GithubAccountState>({ mode: "unknown", connected: false, reauthorize: false, session: null });
   /** La tarjeta local se ve sin sesión de Danil, con un motor sin GitHub de la cuenta o mientras la local manda. */
   const githubLocal = (id: string) => id !== "github" || githubAccount().mode === "local";
   let disposed = false;
@@ -528,7 +534,8 @@ function WorkspaceProviders(props: { solo?: string | string[] }) {
         ? props.solo
         : [props.solo]
       : null;
-    return solo ? l.filter((p) => solo.includes(p.id)) : l;
+    const shown = solo ? l.filter((p) => solo.includes(p.id)) : l;
+    return [...shown].sort((a, b) => rankOf(a.id) - rankOf(b.id));
   };
 
   return (
@@ -581,13 +588,24 @@ function WorkspaceProviders(props: { solo?: string | string[] }) {
                         <Badge>{t("settings.providers.state.off")}</Badge>
                       }
                     >
+                      {/* GitHub (Control de código): sin insignias. Sin conexión, solo «Conectar». */}
                       <Match when={p.id === "github" && githubAccount().mode === "account"}>
-                        <Show when={githubAccount().connected} fallback={<Badge>{t("settings.providers.state.off")}</Badge>}>
-                          <Show when={githubAccount().reauthorize} fallback={<Badge tone="success">{t("settings.providers.state.on")}</Badge>}>
-                            <Badge tone="warning">{t("providers.github.account.reauthorize_badge")}</Badge>
-                          </Show>
+                        <Show when={!githubAccount().connected ? githubAccount().connect : null}>
+                          {(connect) => (
+                            <Button variant="secondary" size="sm" type="button" onClick={() => connect()()}>
+                              {t("providers.github.connect")}
+                            </Button>
+                          )}
                         </Show>
                       </Match>
+                      <Match when={p.id === "github" && githubAccount().mode === "local"}>
+                        <Show when={!p.connected && p.browser_login && !esperaAqui()}>
+                          <Button variant="secondary" size="sm" type="button" disabled={estado() !== null} onClick={() => void conectarEnNavegador(p)}>
+                            {t("providers.github.connect")}
+                          </Button>
+                        </Show>
+                      </Match>
+                      <Match when={p.id === "github"}>{null}</Match>
                       <Match when={estado() === "comprobando"}>
                         <Badge>{t("settings.providers.state.checking")}</Badge>
                       </Match>
@@ -624,6 +642,27 @@ function WorkspaceProviders(props: { solo?: string | string[] }) {
                         <GithubAccount scope={id()} local={!!p.connected} onState={setGithubAccount} />
                       </Suspense>
                     )}
+                  </Show>
+                  <Show when={githubLocal(p.id) && p.id === "github" && p.source === "legacy" && p.browser_login && !esperaAqui()}>
+                    <SettingsRow label={
+                      <span class="inline-flex items-center gap-2 text-warning-strong">
+                        <Badge tone="warning">{t("providers.github.legacy.badge")}</Badge>
+                        {t("providers.github.legacy.title")}
+                      </span>
+                    }>
+                      <Button size="sm" type="button" disabled={estado() !== null} onClick={() => void conectarEnNavegador(p)}>
+                        {t("providers.github.connect")}
+                      </Button>
+                    </SettingsRow>
+                  </Show>
+                  {/* La App Danil sin sesión: al iniciar sesión la conexión sube a la cuenta. */}
+                  <Show when={githubLocal(p.id) && p.id === "github" && p.source === "device" && p.connected && githubAccount().session === false}>
+                    <SettingsRow label={<span class="text-warning-strong">{t("providers.github.device.only_here")}</span>}>
+                      <Button variant="secondary" size="sm" type="button"
+                        onClick={() => window.dispatchEvent(new CustomEvent("harness:open-settings", { detail: "cuenta-danil" }))}>
+                        {t("providers.github.device.sign_in")}
+                      </Button>
+                    </SettingsRow>
                   </Show>
                   <Show when={githubLocal(p.id)}>
                   <Switch>
@@ -870,7 +909,8 @@ function WorkspaceProviders(props: { solo?: string | string[] }) {
                             tiene. Va arriba: es el que casi todo el mundo
                             quiere. Con su aviso: por este camino GitHub no
                             sabe dar solo lectura. */}
-                        <Show when={p.browser_login}>
+                        {/* GitHub lo conecta desde la cabecera de la sección. */}
+                        <Show when={p.browser_login && p.id !== "github"}>
                           <SettingsRow
                             label={t("settings.providers.browser_row")}
                             description={prosa(p.login_help)}
@@ -881,7 +921,7 @@ function WorkspaceProviders(props: { solo?: string | string[] }) {
                               disabled={estado() !== null}
                               onClick={() => void conectarEnNavegador(p)}
                             >
-                              {t("settings.providers.browser_login", { name: p.name })}
+                              {p.id === "github" ? t("providers.github.connect") : t("settings.providers.browser_login", { name: p.name })}
                             </Button>
                           </SettingsRow>
                         </Show>
@@ -921,6 +961,8 @@ function WorkspaceProviders(props: { solo?: string | string[] }) {
                           )}
                         </For>
 
+                        {/* GitHub: un solo botón, con la App Danil; sin token pegado. */}
+                        <Show when={p.id !== "github"}>
                         <SettingsRow
                           label={
                             p.browser_login
@@ -976,6 +1018,7 @@ function WorkspaceProviders(props: { solo?: string | string[] }) {
                               : t("settings.providers.connect")}
                           </Button>
                         </SettingsRow>
+                        </Show>
                       </form>
                     </Match>
                   </Switch>

@@ -4,6 +4,7 @@ import CircleUserRound from "lucide-solid/icons/circle-user-round";
 import CreditCard from "lucide-solid/icons/credit-card";
 import ExternalLink from "lucide-solid/icons/external-link";
 import Folders from "lucide-solid/icons/folders";
+import GitBranch from "lucide-solid/icons/git-branch";
 import Monitor from "lucide-solid/icons/monitor";
 import Plug from "lucide-solid/icons/plug";
 import Shield from "lucide-solid/icons/shield";
@@ -157,6 +158,7 @@ const ENCABEZADOS: Record<SettingsEntryId, { name: () => string; icono: () => JS
   account: { name: () => t("settings.entry.account"), icono: () => <CircleUserRound size={15} /> },
   preferences: { name: () => t("settings.entry.preferences"), icono: () => <SlidersHorizontal size={15} /> },
   "ai-accounts": { name: () => t("settings.entry.ai_accounts"), icono: () => <Sparkles size={15} /> },
+  "source-control": { name: () => t("settings.entry.source_control"), icono: () => <GitBranch size={15} /> },
   machines: { name: () => t("settings.entry.machines"), icono: () => <Monitor size={15} /> },
   projects: { name: () => t("settings.entry.projects"), icono: () => <Folders size={15} /> },
   "agents-skills": { name: () => t("settings.entry.agents_skills"), icono: () => <Bot size={15} /> },

@@ -4,6 +4,7 @@ export {
   DOCK_DEFAULT_CAPACITY,
   agentFolder,
   dockCapacity,
+  dockSources,
   orderDockAgents,
   planDock,
 } from "@terminus/tasks";

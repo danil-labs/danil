@@ -79,6 +79,21 @@ function setup(links: Record<string, ReturnType<typeof fakeLink>>, local: Record
 const on = (machine: string) => ({ headers: { "x-terminus-machine": machine } });
 const sleep = (ms: number) => new Promise((done) => setTimeout(done, ms));
 
+test("the router removes the machine header only when it delivers to native IPC", async () => {
+  const vm = fakeLink({ send_message: "remote-task" });
+  const { router, native } = setup({ cmp_vm: vm });
+  await router.handle("list_workspaces");
+  await router.handle("send_message", { text: "local" }, { headers: { "x-terminus-machine": "cmp_home", "x-terminus-workspace": "w" } });
+  const local = native.filter((call) => call.command === "send_message").at(-1);
+  assert.ok(local);
+  const headers = new Headers((local.options as { headers?: HeadersInit } | undefined)?.headers);
+  assert.equal(headers.get("x-terminus-machine"), null);
+  assert.equal(headers.get("x-terminus-workspace"), "w");
+  await router.handle("send_message", { text: "remote" }, on("cmp_vm"));
+  assert.equal(native.filter((call) => call.command === "send_message").length, 1);
+  assert.equal(vm.calls.filter((call) => call.command === "send_message").length, 1);
+});
+
 test("the machine comes only from the envelope: a VM id in the args of this computer's call is refused before sending", async () => {
   const vm = fakeLink({ load_session: ({ id }: Args) => ({ id }) });
   const { router, native } = setup({ cmp_vm: vm });
@@ -612,4 +627,22 @@ test("a machine-usage event from another machine says which machine it came from
   const router = createRouter({ self: "cmp_home", fleet, native: async () => null, deliver: (list) => void delivered.push(...list) });
   router.events("cmp_vm", [{ name: "machine-usage", payload: { kind: "left_running", workspace: "w", tasks: [] } }, { name: "session", payload: { id: "t1" } }]);
   assert.deepEqual(delivered.map((e) => e.payload), [{ kind: "left_running", workspace: "w", tasks: [], machine: "cmp_vm" }, { id: "t1" }]);
+});
+
+test("the router does not judge an MCP block: a link that is not the relay (a WSL distro) receives it, and a relay refusal reads as its phrase", async () => {
+  const plain = JSON.stringify({ mcpServers: { acme: { command: "npx", env: { ACME_TOKEN: "abc123" } } } });
+  const distro = fakeLink({ add_mcp_servers: 1 });
+  const { router } = setup({ cmp_vm: distro });
+  await router.handle("list_workspaces");
+  assert.equal(await router.handle("add_mcp_servers", { bloque: plain }, on("cmp_vm")), 1);
+  assert.deepEqual(distro.calls.map((c) => c.args.bloque), [plain], "the block arrives as written");
+
+  const relay = fakeLink({ add_mcp_servers: () => Promise.reject({ code: "mcp_values_over_relay" }) });
+  const other = setup({ cmp_vm: relay });
+  await other.router.handle("list_workspaces");
+  await assert.rejects(other.router.handle("add_mcp_servers", { bloque: plain }, on("cmp_vm")), (e: { detail: string; what: string }) => {
+    assert.equal(e.detail, "mcp_values_over_relay");
+    assert.ok(e.what.includes("${secret:env/*/"), "the catalog phrase, with the marker");
+    return true;
+  });
 });

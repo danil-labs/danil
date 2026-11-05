@@ -246,7 +246,9 @@ export default function SelectorDeModelo(props: SelectorDeModeloProps) {
         )}
       />
 
-      <PopoverContent class="flex h-[22rem] max-h-[60vh] w-[24rem] flex-col overflow-hidden p-0" data-owns-escape>
+      {/* 22rem en una ventana normal; en una baja, 70%. La lista se desplaza
+          y la barra se ve: el resto de la app la esconde hasta que te mueves. */}
+      <PopoverContent class="flex h-[min(22rem,70vh)] w-[min(24rem,calc(100vw-2rem))] flex-col overflow-hidden p-0" data-owns-escape>
         <div class="flex min-h-9 items-center gap-2 border-b border-border px-3 text-neutral-500">
           <Search size={15} class="shrink-0" />
           <input
@@ -284,7 +286,7 @@ export default function SelectorDeModelo(props: SelectorDeModeloProps) {
         </Show>
 
         <div class="grid min-h-0 flex-1 grid-cols-[2.75rem_minmax(0,1fr)]">
-          <nav class="flex min-h-0 flex-col gap-1 overflow-y-auto border-r border-border p-1" aria-label={t("chat.model.providers")}>
+          <nav class="scroll-visible flex min-h-0 flex-col gap-1 overflow-y-auto border-r border-border p-1" aria-label={t("chat.model.providers")}>
             <button
               type="button"
               class={cn("flex size-9 shrink-0 items-center justify-center rounded-sm text-neutral-500 outline-none hover:bg-surface-muted hover:text-neutral-950 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-primary", seccion() === "favorites" && "bg-surface-muted text-primary")}
@@ -316,7 +318,7 @@ export default function SelectorDeModelo(props: SelectorDeModeloProps) {
               )}
             </For>
           </nav>
-          <div class="min-h-0 overflow-y-auto p-1" role="listbox" aria-label={t("chat.model.listbox")}>
+          <div class="scroll-visible min-h-0 overflow-y-auto p-1" role="listbox" aria-label={t("chat.model.listbox")}>
           <Show
             when={grupos().some((grupo) => grupo.models.length > 0)}
             fallback={

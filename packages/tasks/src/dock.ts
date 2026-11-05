@@ -77,3 +77,20 @@ export function agentFolder(available: readonly string[], current: string | null
   if (current && available.includes(current)) return current;
   return available.length === 1 ? available[0] : null;
 }
+
+/**
+ * A quién se pide la lista de agentes: cada carpeta con tareas, en cada máquina
+ * donde las tiene (`""` es la de la ventana). Sin máquina, la web la manda a la
+ * primera encendida de la cuenta, que puede no tener esa carpeta.
+ */
+export function dockSources(
+  tasks: readonly { project: string; row: { machine?: string | null } }[],
+): { project: string; machine: string }[] {
+  const seen = new Map<string, { project: string; machine: string }>();
+  for (const { project, row } of tasks) {
+    if (!project) continue;
+    const machine = row.machine ?? "";
+    seen.set(`${project}\n${machine}`, { project, machine });
+  }
+  return [...seen.entries()].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)).map(([, source]) => source);
+}

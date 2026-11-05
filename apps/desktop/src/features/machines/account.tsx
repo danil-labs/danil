@@ -5,8 +5,8 @@
  * relay session that only adds its slice. With one session per account, it is
  * the account of the open workspace: its client token, its computers and its
  * registry; switching to a workspace of another account installs that one.
- * Without an account nothing is installed. With only this computer, its screen
- * still opens through the relay. Loaded lazily from `app/main.tsx`.
+ * Without an account, a local guest (WSL, Lima) gets a guests-only fleet as
+ * `"local"`; with no guest either, nothing is installed. Lazy from `app/main.tsx`.
  */
 import "../../web/phrases";
 import {
@@ -44,7 +44,8 @@ import { MachinePicker } from "./MachinePicker";
 import { createRouter, type Invoke, type Router, type SliceChange } from "./router";
 import { machineNamesChanged, refetchMachines } from "./store";
 import type { WslChild } from "./wsl";
-import { createWslLink, isWslMachine, wakeWslMachine, wslMachineInfo } from "./wslLink";
+import { guestChannels } from "./guestChannels";
+import { createGuestLink, guestMachineInfo, isGuestMachine, wakeGuestMachine } from "./guestLink";
 
 type Internals = { invoke: Invoke };
 type Target = Window & { __TAURI_INTERNALS__?: Internals };
@@ -58,26 +59,30 @@ const TOKEN_MARGIN = 60_000;
 const TOAST_FOR = 5_000;
 
 /** Who the fan-out is for: this computer, its account and the control plane. Another one installs anew. */
+/** Sin cuenta: esta computadora es `"local"` (`machine_list`), como en el resto de la ventana. */
+const LOCAL = "local";
+const LOCAL_KEY = JSON.stringify([LOCAL, null, null]);
+
 type Installed = { key: string; fleet: Fleet; router: Router; restore: () => void };
 
 let started = false;
 
 /**
- * Linux en esta PC: las distros con motor son máquinas hijas de esta
- * computadora. No vienen del plano de control; se suman a la flota con un
- * enlace directo (`wslLink.ts`).
+ * Máquinas locales (Linux en esta PC): los huéspedes con motor son máquinas
+ * hijas de esta computadora. No vienen del plano de control; se suman a la
+ * flota con un enlace directo (`guestLink.ts`).
  */
-let wslMachines: MachineInfo[] = [];
-let lastOthers: Computer[] = [];
-async function readWslMachines(): Promise<MachineInfo[]> {
-  if (!capabilities().wsl) return [];
+let guestMachines: MachineInfo[] = [];
+async function readGuestMachines(): Promise<MachineInfo[]> {
+  if (!(await guestChannels()).length) return [];
   try {
     const { invoke } = await import("@tauri-apps/api/core");
-    wslMachines = (await invoke<WslChild[]>("wsl_children")).map(wslMachineInfo);
+    // Solo ids de huésped: la flota local no sabe llegar a otra cosa (`connect` lanza).
+    guestMachines = (await invoke<WslChild[]>("guest_children")).map(guestMachineInfo).filter((m) => isGuestMachine(m.id));
   } catch {
-    // Sin WSL o sin registro: la flota sigue con las de la cuenta.
+    // Sin canal o sin registro: la flota sigue con las de la cuenta.
   }
-  return wslMachines;
+  return guestMachines;
 }
 let installed: Installed | null = null;
 let syncing: Promise<void> | null = null;
@@ -164,14 +169,15 @@ export function startAccountMachines(target: Target = window) {
     setCapabilities(rest);
   };
 
-  function install(self: string, endpoint: string, others: Computer[], key: string) {
+  /** `endpoint` null: modo local, solo huéspedes, sin nada de la cuenta (token, relay, registro, pantallas, espacios). */
+  function install(self: string, endpoint: string | null, others: Computer[], key: string) {
     const [changed, bump] = createSignal(0);
     const fleet = new Fleet({
       self,
-      connect: (info) =>
-        isWslMachine(info.id)
-          ? createWslLink(info.id)
-          : new RelaySession({
+      connect: (info) => {
+        if (isGuestMachine(info.id)) return createGuestLink(info.id);
+        if (endpoint === null) throw { code: "unknown_machine", detail: info.id };
+        return new RelaySession({
               endpoint,
               computerId: info.id,
               getToken: async () => (await getToken()).token,
@@ -181,10 +187,15 @@ export function startAccountMachines(target: Target = window) {
                 token = null;
                 void sync();
               },
-            }),
+            });
+      },
       // Sin `contracts` ni `compatible`, como el teléfono: un motor con otro contrato
       // sigue en servicio y solo falla la orden que no conoce (nunca la máquina entera).
-      wake: async (id) => (isWslMachine(id) ? wakeWslMachine(id) : startedOf(await startComputer(endpoint, (await getToken()).token, id))),
+      wake: async (id) => {
+        if (isGuestMachine(id)) return wakeGuestMachine(id);
+        if (endpoint === null) throw { code: "unknown_machine", detail: id };
+        return startedOf(await startComputer(endpoint, (await getToken()).token, id));
+      },
       storage: localStorage,
       onChange: () => {
         bump((n) => n + 1);
@@ -205,32 +216,30 @@ export function startAccountMachines(target: Target = window) {
       self,
       fleet,
       native,
-      registry: async () => {
-        const answer = await listWorkspaces(endpoint, (await getToken()).token);
-        if (answer.kind === "unauthorized") token = null;
-        return answer.kind === "ok" ? answer.value : null;
-      },
+      ...(endpoint === null
+        ? {}
+        : {
+            registry: async () => {
+              const answer = await listWorkspaces(endpoint, (await getToken()).token);
+              if (answer.kind === "unauthorized") token = null;
+              return answer.kind === "ok" ? answer.value : null;
+            },
+          }),
       onSlices: slicesChanged,
       deliver,
       pickedFor,
       home: () => ({ wakes: homeWakes, os: homeOs, features: homeFeatures, version: homeVersion }),
     });
-    fleet.setMachines([...others.map(infoOf), ...wslMachines]);
+    fleet.setMachines([...others.map(infoOf), ...guestMachines]);
     fleet.subscribeEvents();
-    // Una distro recién conectada o quitada en Configuración entra o sale de la flota en vivo.
-    const onWsl = () =>
-      void readWslMachines().then((list) => {
-        if (installed?.fleet !== fleet) return;
-        fleet.setMachines([...lastOthers.map(infoOf), ...list]);
-        machineNamesChanged();
-        void refetchMachines();
-      });
-    window.addEventListener("danil:wsl-changed", onWsl);
-    const screens = createScreenAccess({
-      endpoint,
-      getToken: async () => (await getToken()).token,
-      knows: (id) => id === self || !!fleet.info(id),
-    });
+    const screens =
+      endpoint === null
+        ? null
+        : createScreenAccess({
+            endpoint,
+            getToken: async () => (await getToken()).token,
+            knows: (id) => id === self || !!fleet.info(id),
+          });
 
     const status = (id: string): MachineStatus => {
       const power = fleet.power(id);
@@ -239,11 +248,11 @@ export function startAccountMachines(target: Target = window) {
     const previous: Capabilities = capabilities();
     setCapabilities({
       ...previous,
-      spaceOrder: createSpaceOrderSource(endpoint, async () => (await getToken()).token),
+      ...(endpoint === null ? {} : { spaceOrder: createSpaceOrderSource(endpoint, async () => (await getToken()).token) }),
       machineName: (id) => (id === self ? homeName() : fleet.name(id)),
       taskMachine: (id) => unwrap(id, fleet.remotes())?.machine ?? null,
       windowMachine: () => ({ id: self, name: homeName(), local: true }),
-      machineScreen: (id) => screens.opener(id),
+      ...(screens ? { machineScreen: (id: string) => screens.opener(id) } : {}),
       remoteCreate: (workspace) => {
         const target = router.createsOn(workspace);
         return target && target.machine !== self ? target : null;
@@ -302,7 +311,7 @@ export function startAccountMachines(target: Target = window) {
       fleet,
       router,
       restore: () => {
-        screens.close();
+        screens?.close();
         setMachineRoute(null);
         window.removeEventListener("pagehide", onPageHide);
         setCapabilities(previous);
@@ -343,13 +352,14 @@ export function startAccountMachines(target: Target = window) {
     const who = await whoAmI();
     const self = who.self;
     if (who.account !== account) {
-      uninstall();
+      // La flota local no habla como ninguna cuenta: la de la cuenta la reemplaza en el mismo tick.
+      if (installed?.key !== LOCAL_KEY) uninstall();
       account = who.account;
       token = null;
     }
     if (!self) {
       token = null;
-      return disconnect();
+      return installLocal();
     }
     let client: ClientToken;
     try {
@@ -371,18 +381,36 @@ export function startAccountMachines(target: Target = window) {
     homeFeatures = mine ? serviceFeatures(mine) : [];
     homeVersion = mine?.host_version ?? null;
     const others = orderComputers(answer.value.filter((c) => c.computer_id !== self));
-    lastOthers = others;
-    await readWslMachines();
+    await readGuestMachines();
     const key = JSON.stringify([self, account, client.endpoint]);
 
     // The same account: machines that came, left or changed name are applied live, without tearing the rest down.
     if (installed?.key === key) {
-      installed.fleet.setMachines([...others.map(infoOf), ...wslMachines]);
+      installed.fleet.setMachines([...others.map(infoOf), ...guestMachines]);
       machineNamesChanged();
       return void refetchMachines();
     }
     uninstall();
     install(self, client.endpoint, others, key);
+  }
+
+  /** Sin cuenta: la flota de los huéspedes, si hay alguno; si no, nada, como antes. */
+  async function installLocal() {
+    const guests = await readGuestMachines();
+    if (!guests.length) return disconnect();
+    if (installed?.key === LOCAL_KEY) {
+      installed.fleet.setMachines([...guests]);
+      machineNamesChanged();
+      return void refetchMachines();
+    }
+    // Lo de la cuenta anterior no es de esta computadora sin cuenta.
+    setSelfName(null);
+    homeWakes = false;
+    homeOs = windowSystem();
+    homeFeatures = [];
+    homeVersion = null;
+    uninstall();
+    install(LOCAL, null, [], LOCAL_KEY);
   }
 
   let again = false;
@@ -411,6 +439,8 @@ export function startAccountMachines(target: Target = window) {
     window.addEventListener("harness:workspace", () => void sync());
     // Una máquina recién conectada («Conectar otra máquina») suma su rebanada sin desmontar las demás.
     window.addEventListener("harness:account-computers", () => void sync());
+    // Una VM conectada o quitada en Configuración: con cuenta o sin ella, la flota la suma o la quita.
+    window.addEventListener("danil:guests-changed", () => void sync());
     setInterval(() => void sync(), RELIST);
     return sync();
   });

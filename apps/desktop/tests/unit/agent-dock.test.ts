@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { agentFolder, type DockAgent, dockCapacity, orderDockAgents, planDock } from "../../src/features/shell/dockLayout.ts";
+import { agentFolder, type DockAgent, dockCapacity, dockSources, orderDockAgents, planDock } from "../../src/features/shell/dockLayout.ts";
 
 const agente = (name: string, status?: DockAgent["status"]): DockAgent => ({ name, status, liveTasks: 0 });
 const nombres = (lista: { name: string }[]) => lista.map((a) => a.name);
@@ -61,4 +61,19 @@ test("el chat con un agente se abre en la carpeta de lo abierto, en la única qu
   assert.equal(agentFolder(["web", "terminus"], "otra"), null);
   assert.equal(agentFolder(["web", "terminus"], null), null);
   assert.equal(agentFolder([], "web"), null);
+});
+
+test("los agentes se piden a cada máquina donde la carpeta tiene tareas, una vez por par", () => {
+  const fuentes = dockSources([
+    { project: "app", row: { machine: "vm-1" } },
+    { project: "app", row: { machine: "vm-1" } },
+    { project: "app", row: {} },
+    { project: "web", row: { machine: null } },
+    { project: "", row: { machine: "vm-1" } },
+  ]);
+  assert.deepEqual(fuentes, [
+    { project: "app", machine: "" },
+    { project: "app", machine: "vm-1" },
+    { project: "web", machine: "" },
+  ]);
 });

@@ -28,6 +28,24 @@ App en GitHub. Las conexiones anteriores con repositorios confirmados pasan a
 heredar sin ningún paso: el motor conserva el campo `repository_ids` pero ya no
 lo usa.
 
+## GitHub de la cuenta
+
+Con sesión de Danil, la tarjeta de GitHub es la de la cuenta y refleja GitHub.
+La fila de la cuenta tiene un menú «Más acciones de GitHub» con «Comprobar
+conexión» y «Desconectar». «Organizaciones» lista solo las cuentas y
+organizaciones donde está instalada la App (`github_account_installations`):
+cada una dice «Todos», «N repos» o «Algunos repos», y «Cambiar» abre esa
+instalación en GitHub (`html_url`, o `install_url` si el Worker no la manda).
+«Añadir» abre `install_url`. Con `install_pending` aparece la fila «Pendiente».
+Al conectar sin ninguna instalación se abre `install_url` una vez. Al volver
+el foco a la ventana se vuelven a pedir las instalaciones. La tarjeta no elige
+áreas por workspace: no llama a `github_account_set_areas`.
+
+Sin sesión, la conexión local de la App Danil (`source = "device"`) dice «Solo
+en esta máquina» y ofrece «Iniciar sesión». Una conexión de la App anterior
+(`source = "legacy"`) pide volver a conectar con Danil. Los proveedores se
+listan en este orden: GitHub, GitLab y Bitbucket.
+
 ## gh opcional
 
 La conexión de GitHub no necesita `gh`. En Configuración, «Herramientas para

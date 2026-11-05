@@ -20,8 +20,10 @@ cuenta, y que funcione sin internet.
   `install.sh` de seldon-host y `--no-connect`. Tiene sus propios workspaces,
   agentes, cuentas y archivos.
 - **Id de máquina:** `wsl:<distro>`. Solo existe en esta computadora
-  (`wsl-children.json` en la carpeta de datos de la ventana).
-- **En la flota** entra con un enlace propio (`features/machines/wslLink.ts`),
+  (`wsl-children.json` en la carpeta de datos de la ventana). Guardar ese
+  registro nunca lo vacía: si no se puede leer, falla, y conserva las entradas
+  que esta versión no entiende.
+- **En la flota** entra con un enlace propio (`features/machines/guestLink.ts`),
   con la misma forma que una sesión de relay: «Ejecutar en», el chat, los
   archivos y los eventos funcionan igual que con cualquier máquina.
 
@@ -70,7 +72,7 @@ dos veces sin decir nada cuando no corre en una consola.
 
 - Llegar a la distro desde la web y el teléfono: relay → motor de esta PC →
   motor de la distro. Hoy solo la ventana de esta PC la ve.
-- macOS con Lima (`limactl`) como equivalente de `wsl.exe`.
+- macOS con Lima: ver [local-guests.md](local-guests.md).
 - Los nombres de distro con espacios no existen: WSL los rechaza
   (`E_INVALIDARG`).
 
@@ -84,8 +86,8 @@ La pantalla no guarda nada: muestra lo que le da la ventana.
   un reinicio.
 - Activar, instalar y conectar son **trabajos**: uno a la vez, en un hilo de la
   ventana. Un segundo clic se engancha al que corre. Cada paso se publica con
-  `wsl-job` y se guarda en `wsl-state.json`, así que salir de Configuración o
-  cerrar la ventana no lo pierde. Al terminar, `wsl-state-changed` pide releer.
+  `guest-job` y se guarda en `wsl-state.json`, así que salir de Configuración o
+  cerrar la ventana no lo pierde. Al terminar, `guest-state-changed` pide releer.
 - **Reinicio pendiente:** se sabe por `RebootPending` en el registro, por
   `wsl --status` (virtualización sin encender) o porque se activó WSL desde aquí
   después del último arranque. Mientras falte, no se instala. Si una
@@ -97,3 +99,28 @@ La pantalla no guarda nada: muestra lo que le da la ventana.
   conectar Debian.
 - Las líneas del instalador que se muestran en «Ver lo que está haciendo» no
   nombran piezas internas: dicen «el motor de Danil».
+
+## Código y comandos
+
+El código vive en `src-tauri/src/extracted/guests/`, preparado para más de un
+canal de máquinas locales: `mod.rs` (el canal y el huésped), `run.rs` (procesos
+con plazo), `wsl.rs` (lectura de `wsl.exe`), `wsl_setup.rs` (lo que solo existe
+en WSL) y `child.rs` (registro, RPC1, eventos y trabajos).
+
+Comandos de la ventana (no del motor; no están en `commands.json`):
+
+| Comando | Qué hace |
+| --- | --- |
+| `guest_channels` | Los canales de este equipo: `["wsl"]` en Windows, `["lima"]` en macOS, `[]` en Linux. |
+| `guest_list { channel }` | Los huéspedes del canal, con o sin motor. |
+| `guest_children { fresh? }` | Las máquinas hijas con su estado. |
+| `guest_call`, `guest_events` | Una orden o una página de eventos al motor del huésped. |
+| `guest_copy_folder`, `guest_sync_spaces` | Carpetas y espacios de esta PC en el huésped. |
+| `guest_start`, `guest_remove` | Encenderla y quitarla. |
+| `guest_connect { channel, guest, name, workspace }` | Conectar una VM de Lima que ya existe, como trabajo. |
+| `guest_job` | El trabajo en curso o el último, de cualquier canal. |
+
+El alta de WSL conserva sus comandos (`wsl_state`, `wsl_catalog`,
+`wsl_enable`, `wsl_install`, `wsl_connect`, `wsl_reboot`, `wsl_distro_user`,
+`wsl_job_*`, `wsl_resume_forget`). Cuando cambia una máquina hija, la pantalla
+avisa a la flota con el evento `danil:guests-changed`.
