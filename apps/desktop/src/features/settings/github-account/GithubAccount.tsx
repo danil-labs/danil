@@ -345,12 +345,12 @@ export default function GithubAccount(props: {
                 <DropdownMenuTrigger
                   as="button"
                   type="button"
-                  class="rounded-sm focus-visible:outline focus-visible:outline-1 focus-visible:outline-primary"
+                  class="rounded-sm"
                   data-github-machine={m.computer_id}
                   aria-label={machineName(m)}
                   disabled={busy() !== null}
                 >
-                  <Badge forma="dato" class={m.state === "removed" ? "shrink-0 opacity-50 line-through" : "shrink-0"}>
+                  <Badge forma="dato" class={m.state === "removed" ? "shrink-0 opacity-60" : "shrink-0"}>
                     {machineName(m)}
                   </Badge>
                 </DropdownMenuTrigger>
