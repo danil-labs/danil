@@ -1,6 +1,7 @@
 import { Popover as Kobalte } from "@kobalte/core/popover";
 import { splitProps, type ComponentProps } from "solid-js";
 import { cn } from "../lib/utils";
+import { insideDialog } from "./layer";
 
 /**
  * Popover común sobre `@kobalte/core` **0.13.13**. Al subir esa versión hay que
@@ -41,12 +42,15 @@ export const ITEM_DE_MENU =
 
 export function PopoverContent(props: ComponentProps<typeof Kobalte.Content>) {
   const [propios, resto] = splitProps(props, ["class"]);
+  // Dentro de un diálogo (z-[80]) el panel tiene que quedar encima de él.
+  const capa = insideDialog() ? "z-[90]" : "z-[70]";
 
   return (
     <Kobalte.Portal>
       <Kobalte.Content
         class={cn(
-          "z-[70] w-72 rounded-lg border border-border bg-surface-raised p-4 text-neutral-950 shadow-md outline-none",
+          capa,
+          "w-72 rounded-lg border border-border bg-surface-raised p-4 text-neutral-950 shadow-md outline-none",
           propios.class,
         )}
         {...resto}
