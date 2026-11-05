@@ -4,11 +4,11 @@ import History from "lucide-solid/icons/history";
 import Plus from "lucide-solid/icons/plus";
 import SquarePen from "lucide-solid/icons/square-pen";
 import TriangleAlert from "lucide-solid/icons/triangle-alert";
-import { createEffect, createMemo, createResource, createSignal, type JSX, lazy, mapArray, on, onCleanup, Show, Suspense } from "solid-js";
+import { createEffect, createMemo, createSignal, type JSX, lazy, mapArray, on, onCleanup, Show, Suspense } from "solid-js";
 import { destinoEnVuelo, puntoDelArrastre, tareaEnVuelo } from "../../lib/drag";
 import { recordarCarpetas } from "../../lib/folderKinds";
 import { t } from "../../lib/i18n";
-import { lastRoster, rememberRoster } from "../../lib/handlerRoster";
+import { watchRoster } from "../../lib/handlerRoster";
 import { invoke } from "../../lib/invoke.ts";
 import type { AgentProfile, HandlerList, HandlerStatus, Project } from "../../lib/model";
 import { createPref } from "../../lib/prefs";
@@ -319,18 +319,14 @@ export default function Sidebar(props: {
   window.addEventListener("harness:encargados", alCrearAgente);
   onCleanup(() => window.removeEventListener("harness:encargados", alCrearAgente));
   const porCarpeta = createMemo(mapArray(carpetasConTareas, (project) => {
-    const [roster] = createResource(() => `${project}:${altas()}`, async () => {
-      try {
-        const listado = (await invoke<HandlerList>("list_agents", { project })).agents;
-        rememberRoster(project, listado);
-        return listado;
-      } catch {
-        return lastRoster(project) ?? [];
-      }
-    });
+    const roster = watchRoster(
+      project,
+      async () => (await invoke<HandlerList>("list_agents", { project })).agents,
+      altas,
+    );
     return {
       project,
-      roster: () => roster() ?? lastRoster(project) ?? [],
+      roster,
       estados: watchHandlerStatuses(project),
       perfiles: watchProfiles(project),
     };
