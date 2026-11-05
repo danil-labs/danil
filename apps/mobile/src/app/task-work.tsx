@@ -1,5 +1,5 @@
 import { Redirect, router, useLocalSearchParams } from "expo-router";
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { Platform } from "react-native";
 import { w } from "../lib/i18n";
 import type { WorkRun } from "../lib/steps";
@@ -19,14 +19,17 @@ export default function TaskWork() {
   const { host, workspace, folder, id, run: runKey, at, find } = useLocalSearchParams<{ host: string; workspace: string; folder: string; id: string; run: string; at?: string; find?: string }>();
   const state = useWorkState(`${host}/${id}`);
   const known = useRef<WorkRun | null>(null);
+  // En web la hoja baja primero y la pantalla se quita al terminar.
+  const [open, setOpen] = useState(true);
+  const close = Platform.OS === "web" ? () => setOpen(false) : () => router.back();
   if (!state) return <Redirect href={{ pathname: "/task/[host]/[workspace]/[folder]/[id]", params: { host, workspace, folder, id } }} />;
   known.current = shownRun(known.current, state.runs.find((run) => run.key === runKey));
   const content = (
-    <WorkSheet state={state} run={known.current} last={state.runs.at(-1)?.key === runKey} focus={Number(at ?? 0)} find={find ?? ""} onClose={() => router.back()} />
+    <WorkSheet state={state} run={known.current} last={state.runs.at(-1)?.key === runKey} focus={Number(at ?? 0)} find={find ?? ""} onClose={close} />
   );
   if (Platform.OS === "web") {
     return (
-      <Sheet visible title={w("chat.work.title")} detents={DETENTS} onClose={() => router.back()}>
+      <Sheet visible={open} title={w("chat.work.title")} detents={DETENTS} onClose={close} onHidden={() => router.back()}>
         {content}
       </Sheet>
     );

@@ -13,7 +13,7 @@ import { Icon } from "./Icon";
 import { Tap } from "./list";
 import { measure, type Rect } from "./Popover";
 import { FolderIcon } from "./FolderIcon";
-import { type Theme, useTheme } from "./theme";
+import { SCRIM, type Theme, useTheme } from "./theme";
 
 const windowsOf = (limits: AccountLimits | null | undefined): UsageWindow[] =>
   limits?.mode === "read" ? limits.windows : limits?.mode === "waiting" ? limits.last?.windows ?? [] : [];
@@ -148,7 +148,7 @@ export function TaskTools({
       ) : null}
 
       <Modal visible={!!anchor} transparent animationType="fade" onRequestClose={closeUsage}>
-        <Pressable accessibilityRole="button" onPress={closeUsage} style={[StyleSheet.absoluteFill, { backgroundColor: theme.dark ? "rgba(0,0,0,0.4)" : "rgba(10,13,35,0.18)" }]} />
+        <Pressable accessibilityRole="button" onPress={closeUsage} style={[StyleSheet.absoluteFill, { backgroundColor: SCRIM }]} />
         {anchor && usage && host ? (
           <View testID="usage-popover" style={[styles.popover, { top: anchor.y + anchor.height + 8, backgroundColor: theme.raised, borderColor: theme.borderStrong }]}>
             {[...usage.groups].sort((a, b) => Number(b.key === shown?.key) - Number(a.key === shown?.key)).map((group) => {
