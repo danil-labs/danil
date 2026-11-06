@@ -53,6 +53,8 @@ const NewAgent = retryableLazy(() => import("../projects/NewAgent"));
 
 // Fuera de la carga inicial: el botón y el dock llegan un instante después de la lista.
 const AgentDock = lazy(() => import("./AgentDock"));
+/** Cada cuánto se vuelven a pedir los agentes con la ventana a la vista. */
+const RELECTURA_DE_AGENTES_MS = 10_000;
 const FolderGroupHeader = sharedLazy(() => import("./FolderGroupHeader"));
 
 /* El ancho vive en `ColumnaLateral`, que es la columna que envuelve a esta
@@ -309,8 +311,16 @@ export default function Sidebar(props: {
    * presencia. Un mismo agente propio sale en cada carpeta y se junta por
    * nombre; manda el estado más despierto y se suman sus tareas vivas.
    */
+  /** La carpeta de lo que se mira ahora: sus agentes son los del panel. */
+  const carpetaActual = () => (props.current ? carpetaDe(props.current) : "") || props.proyectoAbierto || null;
   const carpetasConTareas = createMemo(
-    () => dockSources(todas()).map((s) => `${s.project}\n${s.machine}`),
+    () => {
+      const claves = dockSources(todas()).map((s) => `${s.project}\n${s.machine}`);
+      // La carpeta abierta cuenta aunque no tenga tareas: sus agentes son los que se piden aquí.
+      const actual = carpetaActual();
+      if (actual && !claves.some((c) => c.startsWith(`${actual}\n`))) claves.push(`${actual}\n`);
+      return claves;
+    },
     [],
     { equals: (a, b) => a.length === b.length && a.every((x, i) => x === b[i]) },
   );
@@ -318,6 +328,12 @@ export default function Sidebar(props: {
   const alCrearAgente = () => setAltas((n) => n + 1);
   window.addEventListener("harness:encargados", alCrearAgente);
   onCleanup(() => window.removeEventListener("harness:encargados", alCrearAgente));
+  // Un agente escrito a mano en `.agents/agents/` (o traído con un `git pull`)
+  // no avisa a la ventana: con ella a la vista, la lista se vuelve a pedir sola.
+  const relectura = setInterval(() => {
+    if (document.visibilityState === "visible") alCrearAgente();
+  }, RELECTURA_DE_AGENTES_MS);
+  onCleanup(() => clearInterval(relectura));
   const porCarpeta = createMemo(mapArray(carpetasConTareas, (clave) => {
     const [project, machine] = clave.split("\n");
     const roster = watchRoster(
@@ -368,6 +384,19 @@ export default function Sidebar(props: {
       }
     }
     return out;
+  });
+  /** El panel del dock: los del workspace, y los instalados y del repositorio de la carpeta abierta. */
+  const gruposDelDock = createMemo(() => {
+    const niveles = nivelDe();
+    const workspace = Object.keys(niveles).filter((name) => niveles[name] === "workspace");
+    const actual = carpetaActual();
+    const deLaCarpeta = actual ? porCarpeta().find((c) => c.project === actual)?.roster() ?? [] : [];
+    const propia = (a: { own: boolean; own_scope: { kind: string } | null }) => a.own && a.own_scope?.kind !== "workspace";
+    return {
+      workspace,
+      project: deLaCarpeta.filter(propia).map((a) => a.name),
+      repo: deLaCarpeta.filter((a) => !a.own).map((a) => a.name),
+    };
   });
   /** Carpetas donde está el agente, en el orden del riel. */
   const carpetasDelAgente = (name: string) => {
@@ -715,8 +744,9 @@ export default function Sidebar(props: {
               agents={agentesDelDock()}
               selected={vista().agent}
               foldersOf={carpetasDelAgente}
-              currentFolder={(props.current ? carpetaDe(props.current) : "") || props.proyectoAbierto}
-              nivelDe={(name) => nivelDe()[name]}
+              currentFolder={carpetaActual()}
+              currentFolderName={carpetaActual() ? nombreDe(carpetaActual()!) ?? null : null}
+              groups={gruposDelDock()}
               onTalk={props.onHablarCon}
               onShowTasks={(agent) => cambiarVista({ ...vista(), agent })}
               onProfile={props.onAgentProfile}
