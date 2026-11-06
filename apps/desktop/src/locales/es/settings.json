@@ -426,12 +426,5 @@
   "settings.ai_providers.agent_codex": "Codex (ChatGPT)",
   "settings.ai_providers.agent_antigravity": "Gemini / Antigravity",
   "settings.ai_providers.agent_grok": "Grok",
-  "settings.accounts.consent.title": "Activar Danil Free model router",
-  "settings.accounts.free.warning": "Los modelos gratuitos dependen de terceros. Sus límites y disponibilidad pueden cambiar sin previo aviso. Tus instrucciones, archivos y respuestas pueden registrarse y usarse para entrenamiento o mejora. No envíes información confidencial, sensible ni datos personales.",
-  "settings.accounts.free.warning_short": "Activado · no envíes información confidencial, sensible ni datos personales",
-  "settings.accounts.free.unavailable": "Danil Free model router no está disponible con este motor.",
-  "settings.accounts.free.policy_changed": "La política o el workspace cambió. Cierra este aviso y vuelve a revisar las condiciones.",
-  "settings.accounts.free.privacy": "Privacidad de {provider}",
-  "settings.accounts.free.terms": "Condiciones de {provider}",
   "settings.ai_providers.zen_go": "OpenCode"
 }

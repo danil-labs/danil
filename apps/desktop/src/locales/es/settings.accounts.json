@@ -24,7 +24,7 @@
   "settings.accounts.connecting": "Conectando…",
   "settings.accounts.consent.accept": "Activar",
   "settings.accounts.consent.cancel": "Cancelar",
-  "settings.accounts.consent.title": "Activar los modelos gratuitos de prueba",
+  "settings.accounts.consent.title": "Activar Danil Free model router",
   "settings.accounts.copy_link": "Copiar enlace",
   "settings.accounts.count": {
     "one": "· {count} cuenta",
@@ -55,8 +55,8 @@
   "settings.accounts.free.error_save": "No se pudo guardar.",
   "settings.accounts.free.missing": "falta instalar",
   "settings.accounts.free.provider": "Modelos servidos por {provider} durante su periodo gratuito.",
-  "settings.accounts.free.warning": "Lo que les envíes puede guardarse y usarse para entrenarlos. No los uses con código privado, claves ni datos personales. Pueden dejar de ser gratis sin aviso.",
-  "settings.accounts.free.warning_short": "Activados · no les envíes código privado ni datos personales",
+  "settings.accounts.free.warning": "Los modelos gratuitos dependen de terceros. Sus límites y disponibilidad pueden cambiar sin previo aviso. Tus instrucciones, archivos y respuestas pueden registrarse y usarse para entrenamiento o mejora. No envíes información confidencial, sensible ni datos personales.",
+  "settings.accounts.free.warning_short": "Activado · no envíes información confidencial, sensible ni datos personales",
   "settings.accounts.install_agent": "Instalar {agent}",
   "settings.accounts.installing_agent": "Instalando {agent}…",
   "settings.accounts.installs_on_connect": " (se instala al conectar)",
@@ -109,5 +109,9 @@
   "settings.accounts.external_required": "Instala la app oficial de {agent} y comprueba la instalación antes de conectar una cuenta. ZCode requiere macOS y Node.js 22 o posterior.",
   "settings.accounts.check_installed": "Ya la instalé · Comprobar",
   "settings.accounts.check_provider": "Comprobar proveedor",
-  "settings.accounts.error.check_provider": "No pude comprobar el proveedor. Vuelve a intentar."
+  "settings.accounts.error.check_provider": "No pude comprobar el proveedor. Vuelve a intentar.",
+  "settings.accounts.free.unavailable": "Danil Free model router no está disponible con este motor.",
+  "settings.accounts.free.policy_changed": "La política o el workspace cambió. Cierra este aviso y vuelve a revisar las condiciones.",
+  "settings.accounts.free.privacy": "Privacidad de {provider}",
+  "settings.accounts.free.terms": "Condiciones de {provider}"
 }
