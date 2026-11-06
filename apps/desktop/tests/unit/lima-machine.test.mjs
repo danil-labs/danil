@@ -108,6 +108,6 @@ test("A connected Lima VM says it is used from this Mac, not this PC", async () 
   const { doc } = await machines("lima-machine-box-scope", { guest_list: GUESTS, guest_children: [child], guest_call: ({ command }) => (command === "list_surfaces" ? [] : null) });
   assert.ok(await until(() => doc.querySelector('[data-wsl-box="danil-test"] [data-box-scope]')), "the connected box with «Más opciones»");
   const scope = doc.querySelector('[data-wsl-box="danil-test"] [data-box-scope]').textContent;
-  assert.equal(scope, "Solo se usa desde esta Mac o pasando por ella.");
+  assert.equal(scope, "Disponible a través de esta Mac.");
   assert.ok(!scope.includes("PC"), scope);
 });
