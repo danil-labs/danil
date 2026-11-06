@@ -128,7 +128,7 @@ export default function AgentDock(props: {
   );
 
   return (
-    <div class="relative flex flex-col gap-1.5 border-t border-border px-2 pt-1.5 pb-2" role="group" aria-label={t("shell.agent_dock.title")}>
+    <div class="relative flex flex-col gap-2.5 border-t border-border px-2 pt-2.5 pb-3" role="group" aria-label={t("shell.agent_dock.title")}>
       <Show when={desplegado()}>
         <div class="absolute inset-x-2 bottom-full z-30 mb-1 max-h-[18rem] overflow-auto rounded-lg border border-border bg-surface-raised p-1.5 shadow-lg">
           <div class="px-1.5 pt-0.5 pb-1 text-caption font-medium text-neutral-500">{t("shell.agent_dock.workspace")}</div>
@@ -183,7 +183,7 @@ export default function AgentDock(props: {
       >
         <ContextMenu onOpenChange={(abierto) => { if (!abierto) setMenuDe(null); }}>
           <ContextMenuTrigger
-            class="grid grid-cols-4 gap-1"
+            class="grid grid-cols-4 gap-2"
             onContextMenu={(e: MouseEvent) => {
               const cara = (e.target as HTMLElement).closest<HTMLElement>("[data-dock-agent]");
               if (!cara) e.preventDefault();
@@ -198,7 +198,7 @@ export default function AgentDock(props: {
                     <TooltipTrigger
                       as="button"
                       type="button"
-                      class={cn("relative flex min-w-0 flex-col items-center gap-0.5 rounded-lg border border-transparent bg-transparent px-0.5 py-1 hover:bg-neutral-100", nombres() && "py-1.5")}
+                      class={cn("relative flex min-w-0 flex-col items-center gap-1 rounded-lg border border-transparent bg-transparent px-0.5 py-2 hover:bg-neutral-100", nombres() && "py-2.5")}
                       data-dock-agent={agente.name}
                       aria-label={texto()}
                       onClick={(e: MouseEvent) => hablar(agente.name, e.currentTarget as HTMLElement)}
