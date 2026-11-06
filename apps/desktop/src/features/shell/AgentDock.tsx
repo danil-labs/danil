@@ -8,7 +8,6 @@ import { t } from "../../lib/i18n";
 import type { AgentProfile } from "../../lib/model";
 import { cn } from "../../lib/utils";
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from "../../ui/ContextMenu";
-import { Popover, PopoverContent } from "../../ui/Popover";
 import { RETARDO_TOOLTIP, TooltipContent, TooltipRoot, TooltipTrigger } from "../../ui/Tooltip";
 import { AstroAvatar } from "../projects/AstroAvatar";
 import { displayName } from "../projects/profiles";
@@ -109,15 +108,15 @@ export default function AgentDock(props: {
   window.addEventListener("keydown", cerrarConEscape);
   onCleanup(() => window.removeEventListener("keydown", cerrarConEscape));
 
-  // Un agente en varias carpetas sin ninguna obvia: se pregunta dónde, junto a su cara.
-  const [eligiendo, setEligiendo] = createSignal<{ name: string; anchor: HTMLElement; folders: DockFolder[] } | null>(null);
-  const hablar = (name: string, anchor: HTMLElement) => {
+  const hablar = (name: string) => {
     const folders = props.foldersOf(name);
-    const id = agentFolder(folders.map((f) => f.id), props.currentFolder);
-    if (id) {
-      setDesplegado(false);
-      props.onTalk(id, name);
-    } else if (folders.length > 0) setEligiendo({ name, anchor, folders });
+    // Directo al chat, sin preguntar: la carpeta abierta si lo tiene, si no la
+    // primera del riel. Un agente del workspace está en todas, y preguntar en
+    // cuál cada vez estorbaba.
+    const id = agentFolder(folders.map((f) => f.id), props.currentFolder) ?? folders[0]?.id;
+    if (!id) return;
+    setDesplegado(false);
+    props.onTalk(id, name);
   };
   const [menuDe, setMenuDe] = createSignal<string | null>(null);
   const perfil = (name: string) => {
@@ -151,7 +150,7 @@ export default function AgentDock(props: {
       type="button"
       class="group/fila flex w-full min-w-0 items-center gap-2.5 rounded-md border-0 bg-transparent px-2 py-1.5 text-left outline-none hover:bg-neutral-100 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-primary"
       data-dock-agent={a.name}
-      onClick={(e: MouseEvent) => hablar(a.name, e.currentTarget as HTMLElement)}
+      onClick={() => hablar(a.name)}
     >
       {cara(a, 24)}
       <span class="min-w-0 flex-1">
@@ -231,16 +230,21 @@ export default function AgentDock(props: {
     if (e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom) return;
     salir();
   };
+  // Salir de la ventana: `pointerout` sin destino. (Un `pointerleave` en la raíz
+  // del documento llegaba en falso y dejaba la cabecera apagada con el cursor dentro.)
+  const fueraDeLaVentana = (e: PointerEvent) => {
+    if (!e.relatedTarget) salir();
+  };
   const salir = () => {
     setEncima(false);
     document.removeEventListener("pointermove", fuera);
-    document.documentElement.removeEventListener("pointerleave", salir);
+    document.removeEventListener("pointerout", fueraDeLaVentana);
   };
   const entrar = () => {
     if (encima()) return;
     setEncima(true);
     document.addEventListener("pointermove", fuera);
-    document.documentElement.addEventListener("pointerleave", salir);
+    document.addEventListener("pointerout", fueraDeLaVentana);
   };
   onCleanup(salir);
   const CABECERA = 40;
@@ -257,6 +261,8 @@ export default function AgentDock(props: {
       style={{ height: `${alto()}px` }}
       data-dock-expanded={desplegado() ? "" : undefined}
       onPointerEnter={entrar}
+      // Por si algo la apagó con el cursor dentro: moverse sobre el dock la vuelve a encender.
+      onPointerMove={entrar}
       onFocusIn={() => setEncima(true)}
       onFocusOut={(e: FocusEvent) => { if (!raiz.contains(e.relatedTarget as Node | null)) setEncima(false); }}
     >
@@ -318,7 +324,7 @@ export default function AgentDock(props: {
                             class="relative flex min-w-0 flex-col items-center justify-center gap-1 rounded-lg border border-transparent bg-transparent px-0.5 py-1.5 hover:bg-neutral-100"
                             data-dock-agent={agente.name}
                             aria-label={texto()}
-                            onClick={(e: MouseEvent) => hablar(agente.name, e.currentTarget as HTMLElement)}
+                            onClick={() => hablar(agente.name)}
                           >
                             {cara(agente, 24)}
                             <span
@@ -403,30 +409,6 @@ export default function AgentDock(props: {
         </div>
       </Show>
 
-      <Show when={eligiendo()}>
-        {(e) => (
-          <Popover open onOpenChange={(abierto) => { if (!abierto) setEligiendo(null); }} anchorRef={() => e().anchor} placement="top-start" gutter={6}>
-            <PopoverContent role="menu" aria-label={t("shell.agent_dock.pick_folder", { name: label(e().name) })} class="w-56 p-1">
-              <p class="m-0 truncate px-2 pt-1 pb-1 text-caption font-medium text-neutral-500">
-                {t("shell.agent_dock.pick_folder", { name: label(e().name) })}
-              </p>
-              <For each={e().folders}>
-                {(f) => (
-                  <button
-                    type="button"
-                    role="menuitem"
-                    class="flex w-full items-center gap-2 truncate rounded-md border-0 bg-transparent px-2 py-1 text-left text-sm hover:bg-neutral-100"
-                    data-dock-folder={f.id}
-                    onClick={() => { setEligiendo(null); props.onTalk(f.id, e().name); }}
-                  >
-                    {f.name}
-                  </button>
-                )}
-              </For>
-            </PopoverContent>
-          </Popover>
-        )}
-      </Show>
     </div>
   );
 }
