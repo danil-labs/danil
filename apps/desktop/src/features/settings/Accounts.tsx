@@ -1630,6 +1630,9 @@ type AccountFreeState = {
   policy: FreePolicy & { lines: string[] };
 };
 
+type PendingFreeDecision = { account: string; accepted: boolean; action: ReturnType<typeof createFreeDecision> };
+let pendingFreeDecision: PendingFreeDecision | null = null;
+
 function ModelosGratuitos(props: {
   nombre: string;
   marca?: JSX.Element;
@@ -1644,7 +1647,8 @@ function ModelosGratuitos(props: {
   const [problem, setProblem] = createSignal<string | null>(null);
   const [asking, setAsking] = createSignal(false);
   const [busy, setBusy] = createSignal(false);
-  const [pending, setPending] = createSignal<{ account: string; accepted: boolean; action: ReturnType<typeof createFreeDecision> } | null>(null);
+  const [pending, setPendingSignal] = createSignal<PendingFreeDecision | null>(pendingFreeDecision);
+  const setPending = (next: PendingFreeDecision | null) => { pendingFreeDecision = next; setPendingSignal(next); };
   let epoch = 0;
   let disposed = false;
   const invalidate = () => {
