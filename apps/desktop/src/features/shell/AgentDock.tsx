@@ -102,7 +102,7 @@ export default function AgentDock(props: {
         </button>
       </div>
       <Show when={props.agents.length === 0}>
-        <p class="m-0 truncate px-0.5 pt-0.5 pb-1 text-[0.6875rem] text-neutral-500">
+        <p class="m-0 truncate px-0.5 pt-0.5 pb-1 text-caption text-neutral-500">
           {t("shell.agent_dock.empty")}
         </p>
       </Show>
