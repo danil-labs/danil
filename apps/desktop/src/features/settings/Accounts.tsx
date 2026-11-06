@@ -1389,7 +1389,7 @@ export default function Accounts(props: {
             <div class="flex flex-col gap-3">
               <DialogTitle>{t("settings.accounts.go_key")}</DialogTitle>
               <p class="m-0 text-xs text-neutral-500">{t("settings.accounts.go_key_hint")}</p>
-              <Button variant="outline" size="compact" onClick={() => void invoke("open_external", { target: "https://opencode.ai/zen" })}>
+              <Button variant="outline" size="compact" onClick={() => void invoke("open_external", { target: "https://opencode.ai/console" })}>
                 {t("settings.accounts.create_key")}
               </Button>
               <Input type="password" class="font-mono text-xs" value={claveGo()} placeholder={t("settings.accounts.key_placeholder")} onInput={(e) => setClaveGo(e.currentTarget.value)} onKeyDown={(e) => e.key === "Enter" && void guardarClaveGo()} />
@@ -1531,7 +1531,7 @@ export default function Accounts(props: {
  * probar el producto, no para trabajar con clientes. Los siete modelos que
  * ofrece tienen excepción de datos, y la frase lo dice con esas palabras.
  * Quien trabaje con material de un cliente usa su cuenta de Claude, Codex,
- * Grok o Antigravity, o paga Zen.
+ * Grok o Antigravity, o paga por modelos de OpenCode.
  */
 const AVISO_DE_USO = () => t("settings.accounts.free.warning");
 
