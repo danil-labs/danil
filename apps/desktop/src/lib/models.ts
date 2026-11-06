@@ -1,5 +1,5 @@
 import type { AgentModels, ModelOption } from "./model";
-import { esDe, type Superficie } from "./surfaces.ts";
+import { esDe, marcaDeSuperficie, type Superficie } from "./surfaces.ts";
 
 export type CatalogosDeModelos = Record<string, AgentModels | null>;
 
@@ -44,7 +44,7 @@ export function proveedorDe(
 ) {
   if (superficie.provider === "opencode-zen") {
     if (superficie.catalogo === "gratuitos") {
-      return { id: "opencode-free", label: "Danil Free AI", logo: "opencode" };
+      return { id: "opencode-free", label: "Danil Free AI", logo: marcaDeSuperficie(superficie) };
     }
     if (model.id.startsWith("opencode-go/")) {
       return { id: "opencode-go", label: "OpenCode Go", logo: "opencode" };
