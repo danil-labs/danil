@@ -1127,6 +1127,23 @@
 .signal-icon[data-tone="warning"] { color: var(--signal-warning); }
 .signal-icon[data-tone="neutral"] { color: var(--signal-neutral); }
 
+/* La lista del riel no se adelanta con barras. Nace con la estructura y,
+   cuando las tareas existen, entran juntas. `@starting-style` es el antes
+   del primer pintado: la transición corre de 0 a 1 sin script. Va en el
+   bloque, no en cada fila, para no pelear con la opacidad de arrastrar.
+   Un bloque nuevo —otra carpeta, otro espacio— entra igual; uno que ya
+   estaba no se repite. Quien pidió menos movimiento no ve la transición. */
+@media (prefers-reduced-motion: no-preference) {
+  [data-sidebar-tasks] > * {
+    transition: opacity 320ms ease-out;
+  }
+  @starting-style {
+    [data-sidebar-tasks] > * {
+      opacity: 0;
+    }
+  }
+}
+
 /* Secciones de la tarjeta: el contenido se recorta dentro de su sección;
    omitir una sección por agrupación elimina también su ancho. */
 .task-card-lines { position: relative; container-type: inline-size; display: flex; align-items: center; gap: 6px; width: 100%; min-width: 0; --task-card-lead: 16px; --task-card-end: 36px; }

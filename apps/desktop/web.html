@@ -135,14 +135,6 @@
         font-weight: 600;
         line-height: 1.25;
       }
-      .marco-space-name {
-        min-width: 0;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-      }
-      .marco-space-name:empty { display: none; }
-      .marco-space-name:not(:empty) + .marco-space-bone { display: none; }
       .marco-space-bone { width: 72px; }
       .marco-space .marco-svg { flex: none; color: var(--marco-faint); }
       .marco-tabs {
@@ -230,7 +222,7 @@
       }
       .marco-new {
         display: grid;
-        grid-template-columns: 22px minmax(0, 1fr) auto;
+        grid-template-columns: 22px minmax(0, 1fr);
         align-items: center;
         gap: 2px;
         height: 30px;
@@ -239,36 +231,11 @@
         border-radius: 4px;
         background: var(--marco-ink);
         color: var(--marco-on-ink);
-        font-size: 13px;
-        font-weight: 700;
-        line-height: 1.25;
       }
       .marco-new svg { justify-self: center; }
-      .marco-new kbd {
-        padding: 0 4px;
-        border: 1px solid color-mix(in srgb, currentColor 20%, transparent);
-        border-radius: 4px;
-        font-family: ui-monospace, monospace;
-        font-size: 12px;
-        font-weight: 400;
-      }
-      .marco-rows { display: flex; flex-direction: column; gap: 2px; }
-      .marco-folder {
-        display: flex;
-        align-items: center;
-        height: 34px;
-        margin-bottom: 4px;
-        padding-left: 22px;
-      }
-      .marco-task {
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        gap: 5px;
-        box-sizing: border-box;
-        height: 52px;
-        padding: 7px 8px 7px 10px;
-        border-radius: 10px;
+      .marco-new .marco-bone {
+        width: 88px;
+        background: color-mix(in srgb, var(--marco-on-ink) 22%, transparent);
       }
       .marco-main { display: flex; flex-direction: column; min-width: 0; flex: 1; }
       .marco-askwrap {
@@ -359,7 +326,6 @@
       .marco.marco-colapsado .marco-bar-side { width: auto; max-width: calc(100% - 2rem); }
       .marco.marco-colapsado .marco-ico-close { display: none; }
       .marco.marco-colapsado .marco-ico-open { display: grid; }
-      .marco.marco-sin-espacio .marco-space { display: none; }
       .marco-grow { flex: 1; }
       .marco-bone {
         display: block;
@@ -369,10 +335,6 @@
         animation: marco-breath 1.5s ease-in-out infinite;
       }
       .marco-mark.marco-bone { height: 32px; }
-      .marco-task .marco-bone + .marco-bone { height: 8px; animation-delay: 160ms; }
-      .marco-rows .marco-task:nth-child(3) .marco-bone { animation-delay: 120ms; }
-      .marco-rows .marco-task:nth-child(4) .marco-bone { animation-delay: 240ms; }
-      .marco-rows .marco-task:nth-child(5) .marco-bone { animation-delay: 360ms; }
       @keyframes marco-breath { 0%, 100% { opacity: 1; } 50% { opacity: 0.55; } }
       @media (prefers-reduced-motion: reduce) { .marco-bone { animation: none; } }
       @media (max-width: 600px) {
@@ -392,8 +354,7 @@
           <div class="marco-bar-side">
             <span class="marco-icon marco-ico-close" aria-hidden="true"><svg class="marco-svg" width="16" height="16" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 3v18"/><path d="m16 15-3-3 3-3"/></svg></span>
             <span class="marco-icon marco-ico-open" aria-hidden="true"><svg class="marco-svg" width="16" height="16" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 3v18"/><path d="m14 9 3 3-3 3"/></svg></span>
-            <span class="marco-space" data-marco-space>
-              <span class="marco-space-name" data-marco="space"></span>
+            <span class="marco-space">
               <span class="marco-space-bone marco-bone"></span>
               <svg class="marco-svg" width="13" height="13" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
             </span>
@@ -423,23 +384,15 @@
             <div class="marco-side">
               <div class="marco-new">
                 <svg class="marco-svg" width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z"/></svg>
-                <span data-marco="new">Nueva tarea</span>
-                <kbd data-marco="keys">Ctrl+T</kbd>
-              </div>
-              <div class="marco-rows">
-                <div class="marco-folder"><span class="marco-bone" style="width:46%"></span></div>
-                <div class="marco-task"><span class="marco-bone" style="width:78%"></span><span class="marco-bone" style="width:42%"></span></div>
-                <div class="marco-task"><span class="marco-bone" style="width:64%"></span><span class="marco-bone" style="width:36%"></span></div>
-                <div class="marco-task"><span class="marco-bone" style="width:86%"></span><span class="marco-bone" style="width:48%"></span></div>
-                <div class="marco-task"><span class="marco-bone" style="width:54%"></span><span class="marco-bone" style="width:30%"></span></div>
+                <span class="marco-bone"></span>
               </div>
             </div>
             <div class="marco-main">
               <span class="marco-grow"></span>
               <div class="marco-askwrap">
-                <div class="marco-sources"><span data-marco="sources">Fuentes:</span><span aria-hidden="true">+</span></div>
+                <div class="marco-sources"><span class="marco-bone" style="width:52px"></span><span aria-hidden="true">+</span></div>
                 <div class="marco-composer">
-                  <p class="marco-field" data-marco="ask">Pregunta algo</p>
+                  <p class="marco-field"></p>
                   <div class="marco-tools">
                     <span class="marco-clip" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m21 11-8.5 8.5a5 5 0 0 1-7-7L14 4a3.5 3.5 0 0 1 5 5L10.5 17.5a2 2 0 0 1-3-3L15 7"/></svg></span>
                     <span class="marco-pill"></span>
@@ -473,13 +426,8 @@
           var code = localStorage.getItem("harness:lengua:ultima") || (pref === "sistema" ? navigator.language : pref) || "es";
           es = String(code).toLowerCase().split("-")[0] === "es";
         } catch (e) {}
-        var text = {
-          status: es ? "Cargando" : "Loading",
-          "new": es ? "Nueva tarea" : "New task",
-          ask: es ? "Pregunta algo" : "Ask something",
-          sources: es ? "Fuentes:" : "Sources:",
-          keys: /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent) ? "⌘T" : "Ctrl+T"
-        };
+        var status = tpl.content.querySelector("[data-marco=status]");
+        if (status) status.setAttribute("aria-label", es ? "Cargando" : "Loading");
         // El ancho y el pliegue son los que el cliente dejó: la columna los
         // guarda en harness.layout y el marco nace ya con esa medida.
         var marco = tpl.content.querySelector(".marco");
@@ -496,28 +444,6 @@
           marco.style.setProperty("--marco-bar", (ancho + 40) + "px");
           if (colapsado) marco.classList.add("marco-colapsado");
         }
-        try {
-          var crudo = localStorage.getItem("harness:shell-cache");
-          var foto = crudo ? JSON.parse(crudo) : null;
-          var entrada = foto && foto.version === 2 && foto.workspaces ? foto.workspaces[foto.last] : null;
-          var snap = entrada && typeof entrada.snapshot === "string" ? JSON.parse(entrada.snapshot) : null;
-          var espacios = snap && Array.isArray(snap.spaces) ? snap.spaces : null;
-          if (espacios && espacios.length === 0 && marco) marco.classList.add("marco-sin-espacio");
-          if (espacios && espacios.length > 0) {
-            var elegido = espacios[0];
-            for (var s = 0; s < espacios.length; s++) {
-              if (espacios[s] && espacios[s].id === snap.desk) { elegido = espacios[s]; break; }
-            }
-            var nombre = elegido && typeof elegido.name === "string" ? elegido.name.trim() : "";
-            text.space = nombre || (es ? "Espacio 1" : "Space 1");
-          }
-        } catch (e) {}
-        tpl.content.querySelectorAll("[data-marco]").forEach(function (node) {
-          var key = node.getAttribute("data-marco");
-          if (!text[key]) return;
-          if (key === "status") node.setAttribute("aria-label", text[key]);
-          else node.textContent = text[key];
-        });
         // Sin sesión en este navegador no se pinta: si no la hay, la página se va
         // al inicio de sesión y el marco de la app no debe aparecer ahí. En alfa la
         // sesión vive en una cookie; `start` pinta el marco cuando ya comprobó que hay.
