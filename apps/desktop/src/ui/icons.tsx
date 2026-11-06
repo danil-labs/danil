@@ -185,12 +185,14 @@ function GeminiMark(props: { size?: number }) {
 export function MarcaAgente(props: { id: string; size?: number }) {
   const marca = () => agentMarkId(props.id);
   return (
+    <Show when={props.id !== "danil"} fallback={<MarcaServicio id="danil" size={props.size} />}>
     <Show when={marca()}>
       {(id) => (
         <Show when={id() !== "gemini"} fallback={<GeminiMark size={props.size} />}>
           <MarcaDeDatos mark={AGENT_MARKS[id()]} size={props.size} />
         </Show>
       )}
+    </Show>
     </Show>
   );
 }

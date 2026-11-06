@@ -94,27 +94,8 @@ export default function SelectorDeModelo(props: SelectorDeModeloProps) {
       .flatMap((grupo) => grupo.models)
       .filter(disponible);
 
-  // Un glifo que se repite no distingue nada: OpenCode da modelos de pago, Go y Free con el
-  // mismo dibujo, y en un riel de solo iconos no hay forma de saber cuál es cuál
-  // sin pasar el ratón. A los que repiten logo se les pone debajo su nombre
-  // corto; a los demás, ninguno.
-  const repetidos = createMemo(() => {
-    const cuenta = new Map<string, number>();
-    for (const grupo of todosLosGrupos()) {
-      cuenta.set(grupo.logo, (cuenta.get(grupo.logo) ?? 0) + 1);
-    }
-    return new Set(
-      [...cuenta.entries()].filter(([, n]) => n > 1).map(([logo]) => logo),
-    );
-  });
-
-  // Los gratuitos se nombran por catálogo: `proveedorDe` corre también en node, sin `t()`.
   const rotulo = (grupo: GrupoDeModelos) =>
     grupo.id === "opencode-free" ? t("surfaces.label.free") : grupo.label;
-  const corto = (grupo: GrupoDeModelos) =>
-    grupo.id === "opencode-free"
-      ? t("surfaces.label.free_short")
-      : (grupo.label.split(" ").at(-1) ?? grupo.label);
 
   const niveles = createMemo(() =>
     props.onEffort && props.efforts?.length
@@ -305,15 +286,7 @@ export default function SelectorDeModelo(props: SelectorDeModeloProps) {
                   title={rotulo(grupo)}
                   onClick={() => setSeccion(grupo.id)}
                 >
-                  <MarcaAgente
-                    id={grupo.logo}
-                    size={repetidos().has(grupo.logo) ? 13 : 17}
-                  />
-                  <Show when={repetidos().has(grupo.logo)}>
-                    <span class="text-[0.5625rem] font-medium leading-none">
-                      {corto(grupo)}
-                    </span>
-                  </Show>
+                  <MarcaAgente id={grupo.logo} size={17} />
                 </button>
               )}
             </For>
