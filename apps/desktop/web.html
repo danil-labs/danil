@@ -441,8 +441,24 @@
           if (key === "status") node.setAttribute("aria-label", text[key]);
           else node.textContent = text[key];
         });
-        var host = document.getElementById("root");
-        if (host) host.append(tpl.content.cloneNode(true));
+        // Sin sesión en este navegador no se pinta: si no la hay, la página se va
+        // al inicio de sesión y el marco de la app no debe aparecer ahí. En alfa la
+        // sesión vive en una cookie; `start` pinta el marco cuando ya comprobó que hay.
+        function pintarMarco() {
+          var host = document.getElementById("root");
+          if (!host || host.querySelector("[data-marco-de-carga]")) return;
+          host.append(tpl.content.cloneNode(true));
+        }
+        window.pintarMarcoDeCarga = pintarMarco;
+        try {
+          for (var i = 0; i < localStorage.length; i++) {
+            var key = localStorage.key(i) || "";
+            if ((key.indexOf("-auth-token") !== -1 || key.indexOf("terminus-auth:") === 0) && localStorage.getItem(key)) {
+              pintarMarco();
+              break;
+            }
+          }
+        } catch (e) {}
       })();
     </script>
     <script type="module" src="/src/web/bootstrap.ts"></script>

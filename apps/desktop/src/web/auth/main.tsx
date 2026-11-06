@@ -17,6 +17,8 @@ export function startAuth(settings: { supabaseUrl: string; supabaseKey: string; 
   const params = new URLSearchParams(window.location.search);
   const next = authDestination(params.get("next"), window.location.origin, base);
   if (settings.workos) {
+    // Solid, con un hijo ya en `#root`, deja el marco de la app detrás del inicio de sesión.
+    root.replaceChildren();
     render(() => <WorkosAuthPage base={base} next={next} error={params.get("error")} />, root);
     return;
   }
@@ -178,5 +180,6 @@ export function startAuth(settings: { supabaseUrl: string; supabaseKey: string; 
       </main>
     );
   }
+  root.replaceChildren();
   render(() => <AuthPage />, root);
 }
