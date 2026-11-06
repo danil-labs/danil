@@ -58,14 +58,13 @@ test("los resultados conservan la sección que desambigua modelos parecidos", ()
     [
       ["Claude", [["claude", "gpt-5"]]],
       ["Codex", [["codex", "gpt-5"]]],
-      ["OpenCode", [["opencode-zen", "opencode/gpt-5"]]],
-      ["OpenCode Go", [["opencode-zen", "opencode-go/gpt-5"]]],
+      ["OpenCode", [["opencode-zen", "opencode/gpt-5"], ["opencode-zen", "opencode-go/gpt-5"]]],
       ["Danil Free model router", [["opencode-zen", "danil-free/reflection/beam-free"]]],
       ["OpenCode Local", [["opencode-local", "ollama/gpt-5"]]],
     ],
   );
   assert.deepEqual(grupos.map((grupo) => grupo.logo), [
-    "claude", "codex", "opencode", "opencode", "opencode", "opencode",
+    "claude", "codex", "opencode", "opencode", "opencode",
   ]);
 });
 
@@ -159,4 +158,17 @@ test("la fila de acciones nombra el modelo con su versión", () => {
   assert.equal(nombreDeModelo("claude-haiku-4-5-20251001"), "Claude Haiku 4.5");
   assert.equal(nombreDeModelo("opus", catalogo), "Claude Opus 5.5");
   assert.equal(nombreDeModelo("grok-4.7"), "grok-4.7");
+});
+
+ test("OpenCode agrupa Go sin cambiar identidad, búsqueda ni favoritos", () => {
+  const surface: Superficie = { id: "opencode-zen", provider: "opencode-zen", label: "OpenCode", catalogo: "de_pago", usable: true, marca: null, porque: null };
+  const options = opcionesDeModelos([surface], { "opencode-zen": { provider: "opencode-zen", fallback: false, models: [model("opencode-go/kimi", "Kimi"), model("opencode/gpt", "GPT")] } });
+  const groups = agruparModelos(options, "");
+  assert.equal(groups.length, 1);
+  assert.equal(groups[0].label, "OpenCode");
+  assert.deepEqual(groups[0].models, options);
+  assert.equal(options[0].proveedor.id, "opencode-go");
+  assert.equal(options[0].key, "opencode-zen\u0000opencode-go/kimi");
+  assert.deepEqual(agruparModelos(options, "OpenCode Go")[0].models, [options[0]]);
+  assert.deepEqual(favoritosDeModelos(options, [options[0].key]), [options[0]]);
 });

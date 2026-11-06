@@ -139,9 +139,12 @@ export function agruparModelos(
     ) {
       continue;
     }
-    const grupo = grupos.get(proveedor.id) ?? { ...proveedor, models: [] };
+    const visual = proveedor.id === "opencode-go"
+      ? { id: "opencode-zen", label: "OpenCode", logo: proveedor.logo }
+      : proveedor;
+    const grupo = grupos.get(visual.id) ?? { ...visual, models: [] };
     grupo.models.push(opcion);
-    grupos.set(proveedor.id, grupo);
+    grupos.set(visual.id, grupo);
   }
 
   return [...grupos.values()];

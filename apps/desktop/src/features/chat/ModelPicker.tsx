@@ -335,7 +335,7 @@ export default function SelectorDeModelo(props: SelectorDeModeloProps) {
                       <MarcaAgente id={grupo.logo} size={14} />
                     </span>
                     <span>{rotulo(grupo)}</span>
-                    <Show when={grupo.id === "opencode-go" && cupoGo()?.mode === "read"}>
+                    <Show when={grupo.models.some((opcion) => opcion.proveedor.id === "opencode-go") && cupoGo()?.mode === "read"}>
                       <span class="ml-auto truncate font-normal">
                         {t("chat.model.go_remaining", {
                           left: Math.min(...((cupoGo() as Extract<Query, { mode: "read" }>).windows.map(left))),
