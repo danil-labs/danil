@@ -117,7 +117,7 @@ export default function AgentDock(props: {
         <span class="block truncate text-caption text-neutral-500">{dockStatusText(a)}</span>
       </span>
       <Show when={esRepo}>
-        <span class="rounded-full border border-dashed border-neutral-300 px-1.5 text-[0.625rem] text-neutral-500">
+        <span class="rounded-full border border-dashed border-neutral-300 px-1.5 text-2xs text-neutral-500">
           {t("shell.agent_dock.repo")}
         </span>
       </Show>
