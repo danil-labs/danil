@@ -109,5 +109,9 @@
   "settings.accounts.external_required": "Instala la app oficial de {agent} y comprueba la instalación antes de conectar una cuenta. ZCode requiere macOS y Node.js 22 o posterior.",
   "settings.accounts.check_installed": "Ya la instalé · Comprobar",
   "settings.accounts.check_provider": "Comprobar proveedor",
-  "settings.accounts.error.check_provider": "No pude comprobar el proveedor. Vuelve a intentar."
+  "settings.accounts.error.check_provider": "No pude comprobar el proveedor. Vuelve a intentar.",
+  "settings.accounts.free.account_error": "No se pudo consultar la decisión de esta cuenta. Vuelve a intentar.",
+  "settings.accounts.free.account": "Cuenta: {account}",
+  "settings.accounts.free.outcome_unknown": "No se pudo confirmar el resultado. Reintenta con la misma operación.",
+  "settings.accounts.free.changed": "La cuenta o el aviso cambiaron. Revisa la decisión otra vez."
 }

@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "name": "account_free_consent",
+  "description": "Lee el consentimiento Free de la cuenta efectiva; exige que el plano de control acredite account_id en la misma lectura. session_id es nonce de sesión de máquina, no de JWT de persona. No modifica la decisión ni admite turnos.",
+  "features": ["account_free_consent_v1"],
+  "events": ["account-free-consent-changed"],
+  "commands": [
+    {
+      "async": false,
+      "channel": null,
+      "kind": "invoke",
+      "name": "account_free_consent_get",
+      "output": "-> Result < serde_json :: Value , String >",
+      "parameters": [
+        {"key": "workspace", "name": "workspace", "type": "String"},
+        {"key": "locale", "name": "locale", "type": "String"}
+      ],
+      "path": "danil::account_free_consent_get",
+      "scope": "workspace",
+      "audience": "window",
+      "authority": "admin",
+      "durable": false,
+      "enforcement": "server"
+    }
+  ]
+}

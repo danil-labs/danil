@@ -532,6 +532,7 @@ fn start(client: Option<Arc<Client>>, autostart: bool, launcher: launcher::Launc
             proxy::machine_list,
             proxy::account_relay_token,
             agents_session::agents_session_status,
+            agents_session::account_free_consent_decide,
             agents_session::agents_session_connect,
             agents_session::agents_session_sign_out,
             agents_session::danil_sign_in,

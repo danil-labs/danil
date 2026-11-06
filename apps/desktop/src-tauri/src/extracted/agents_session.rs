@@ -1005,6 +1005,16 @@ fn person_call(
     Ok(got)
 }
 
+#[tauri::command(async)]
+pub(super) fn account_free_consent_decide(
+    app: tauri::AppHandle,
+    account: Option<String>,
+    body: Value,
+) -> Result<Value, Value> {
+    let (status, value) = person_call(&app, &account, "/v1/me/free-consent/decision", Some(&body))?;
+    Ok(json!({ "status": status, "body": value }))
+}
+
 /// Sube el workspace: crea el workspace personal de Danil de quien llama, con el nombre de
 /// este, y lo enlaza (`{create: true}`). Si ya tiene uno propio, `personal_workspace_exists`.
 #[tauri::command(async)]

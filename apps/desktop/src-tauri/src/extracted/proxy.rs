@@ -269,6 +269,7 @@ pub(super) fn desktop_command(name: &str) -> bool {
                 | "machine_list"
                 | "account_relay_token"
                 | "agents_session_status"
+                | "account_free_consent_decide"
                 | "agents_session_connect"
                 | "agents_session_sign_out"
                 | "danil_sign_in"

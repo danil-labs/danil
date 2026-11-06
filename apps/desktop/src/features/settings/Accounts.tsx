@@ -10,7 +10,7 @@ import { createEffect, createMemo, createSignal, createUniqueId, For, type JSX, 
 import { createStore, reconcile } from "solid-js/store";
 import { createCopied } from "../../lib/clipboard";
 import { enfocar } from "../../lib/focus";
-import { t } from "../../lib/i18n";
+import { lengua, t } from "../../lib/i18n";
 import { invoke } from "../../lib/invoke.ts";
 import { revocada } from "../../lib/limits";
 import { textoDeFalta } from "../../lib/no-space";
@@ -28,15 +28,18 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "../../ui/DropdownMenu";
+import { ExternalLink as EnlaceExterno } from "../../ui/ExternalLink";
 import { detalleDe, type Failure, FailureNote, prosaDe } from "../../ui/Failure";
 import { Input } from "../../ui/Input";
 import { MarcaAgente } from "../../ui/icons";
 import { Select } from "../../ui/Select";
 import { Skeleton } from "../../ui/Skeleton";
+import { Spinner } from "../../ui/Spinner";
 import { Terminal, TerminalBody } from "../../ui/Terminal";
 import { machineOf } from "../machines/store";
 import AccountCard, { accountPresentation } from "./AccountCard";
 import { accountKeyUrl } from "./account-auth";
+import { createFreeDecision, type FreePolicy } from "./account-free-decision";
 import {
   type Account,
   type AccountList,
@@ -46,12 +49,12 @@ import {
   type EnEspera,
   type LoginEvent,
 } from "./accounts-store";
+import { readSessions, readWorkspaceAccount } from "./danil-sessions";
 import ListaDeModelosLocales from "./LocalModels";
 import { LoginCodeForm } from "./LoginCodeForm";
 import { SettingsBlock, SettingsRow, SettingsSection } from "./layout";
 import { crearModelosLocales } from "./local-models-store";
-import { Spinner } from "../../ui/Spinner";
-import { ExternalLink as EnlaceExterno } from "../../ui/ExternalLink";
+import { createWorkspaces } from "./workspaces-store";
 import "../../locales/settingsPhrases";
 
 // Las claves en la cuenta de Danil: un trozo aparte, solo para agentes con API key.
@@ -1618,6 +1621,15 @@ export function Consentir(props: {
   );
 }
 
+type AccountFreeState = {
+  account_id: string;
+  session_id: string;
+  provider: "opencode";
+  decision: "accepted" | "revoked" | "unknown";
+  revision: number;
+  policy: FreePolicy & { lines: string[] };
+};
+
 function ModelosGratuitos(props: {
   nombre: string;
   marca?: JSX.Element;
@@ -1625,162 +1637,138 @@ function ModelosGratuitos(props: {
   proveedor: string;
   falta: boolean;
 }) {
-  const [aceptado, setAceptado] = createSignal(false);
-  const [guardando, setGuardando] = createSignal(false);
-  const [fallo, setFallo] = createSignal<string | null>(null);
-  const [texto, setTexto] = createSignal<Consentimiento | null>(null);
-  // El modal abierto. Se cierra sin activar nada por cualquiera de las tres
-  // vías; ver `Consentir`.
-  const [preguntando, setPreguntando] = createSignal(false);
-
-  // En orden y no en paralelo: saber si el sí guardado sigue valiendo
-  // necesita la versión del texto de hoy, que se pide primero. Lanzadas a
-  // la vez, la comparación se haría contra `undefined` la mitad de las
-  // veces y una cuenta ya aceptada aparecería sin aceptar, o al revés.
-  onMount(() => {
-    void (async () => {
-      try {
-        const [lineas, version] = await invoke<[Frase[], number]>("consent_text");
-        setTexto({ lineas, version });
-        const s = await invoke<{
-          active: string | null;
-          workspaces: {
-            id: string;
-            consents?: { provider: string; version: number }[];
-          }[];
-        }>("workspaces_startup");
-        const activo = s.workspaces.find((w) => w.id === s.active);
-        // Vale el sí de la versión de hoy, no cualquier sí: quien aceptó un
-        // texto anterior vuelve a verlo una vez, lo que aceptó decía otra
-        // cosa. Lo mismo lo comprueba el backend antes de dar catálogo o de
-        // lanzar un turno (`workspaces::consintio`); aquí solo se pinta.
-        setAceptado(
-          activo?.consents?.some(
-            (c) => c.provider === props.agente && c.version === version,
-          ) ?? false,
-        );
-      } catch {
-        /* Sin texto no se ofrece activar: el botón queda deshabilitado. */
-      }
-    })();
-  });
-
-  async function cambiar(valor: boolean) {
-    setGuardando(true);
+  const spaces = createWorkspaces();
+  const [state, setState] = createSignal<AccountFreeState | null>(null);
+  const [email, setEmail] = createSignal<string | null>(null);
+  const [person, setPerson] = createSignal<string | undefined>();
+  const [problem, setProblem] = createSignal<string | null>(null);
+  const [asking, setAsking] = createSignal(false);
+  const [busy, setBusy] = createSignal(false);
+  const [pending, setPending] = createSignal<{ account: string; accepted: boolean; action: ReturnType<typeof createFreeDecision> } | null>(null);
+  let epoch = 0;
+  let disposed = false;
+  const invalidate = () => {
+    epoch++;
+    setState(null);
+    setEmail(null);
+    setPerson(undefined);
+    setAsking(false);
+  };
+  async function load() {
+    const workspace = spaces.actual()?.id;
+    invalidate();
+    const token = epoch;
+    if (!workspace) return;
     try {
-      const w = await invoke<{ consents?: { provider: string; version: number }[] }>(
-        "set_provider_consent",
-        { provider: props.agente, accepted: valor },
-      );
-      // Lo que quedó guardado, no lo que se pidió: si el backend rechaza algo,
-      // la pantalla tiene que enseñar su estado y no el nuestro.
-      setAceptado(w.consents?.some((c) => c.provider === props.agente) ?? false);
-      setPreguntando(false);
-      setFallo(null);
-      // La caja de chat no ofrece modelos de un agente sin autorizar: tiene
-      // que enterarse ahora, no al cambiar de agente y volver.
-      window.dispatchEvent(new CustomEvent("harness:consentimiento"));
-    } catch (e) {
-      setFallo(prosaDe(e));
-    } finally {
-      setGuardando(false);
+      const selected = await readWorkspaceAccount(workspace);
+      if (!selected?.signed_in || !selected.account) throw new Error("no_account");
+      const sessions = await readSessions();
+      if (!sessions) throw new Error("account_unavailable");
+      const selectedSession = sessions.find((s) => s.account === selected.account && s.status === "connected");
+      if (!selectedSession) throw new Error("no_account");
+      const selectedEmail = selected.email ?? selectedSession.email;
+      if (!selectedEmail) throw new Error("no_account");
+      const main = sessions.find((s) => s.default)?.account;
+      const account = selected.account === main ? undefined : selected.account;
+      const personStatus = await invoke<{ state: string }>("agents_session_status", { account });
+      if (personStatus.state !== "active") throw new Error("no_account");
+      const reply = await invoke<AccountFreeState>("account_free_consent_get", { workspace, locale: lengua() });
+      if (disposed || token !== epoch || spaces.actual()?.id !== workspace) return;
+      if (!reply || typeof reply.account_id !== "string" || !/^[1-9][0-9]*$/.test(reply.account_id) || typeof reply.session_id !== "string" || !reply.session_id ||
+          reply.provider !== "opencode" || !["accepted", "revoked", "unknown"].includes(reply.decision) ||
+          !Number.isSafeInteger(reply.revision) || reply.revision < 0 || !reply.policy || !Array.isArray(reply.policy.lines) ||
+          !reply.policy.lines.every((line) => typeof line === "string" && line.length > 0) || !reply.policy.lines.length ||
+          typeof reply.policy.version !== "string" || !reply.policy.version || !Number.isSafeInteger(reply.policy.generation) || reply.policy.generation < 1 ||
+          reply.policy.locale !== lengua() || typeof reply.policy.text_sha256 !== "string" || !/^[a-f0-9]{64}$/.test(reply.policy.text_sha256)) throw new Error("invalid_response");
+      setPerson(account);
+      setEmail(selectedEmail);
+      setState(reply);
+      setProblem(null);
+    } catch {
+      if (!disposed && token === epoch) setProblem(t("settings.accounts.free.account_error"));
     }
   }
-
+  createEffect(on(() => [spaces.actual()?.id, lengua()] as const, () => void load()));
+  onMount(() => {
+    const changed = () => void load();
+    const offEngine = listen("account-free-consent-changed", changed);
+    const offSessions = listen("danil-sessions", changed);
+    const offPerson = listen("agents-session", changed);
+    window.addEventListener("focus", changed);
+    onCleanup(() => {
+      disposed = true;
+      invalidate();
+      void offEngine.then((off) => off()).catch(() => {});
+      void offSessions.then((off) => off()).catch(() => {});
+      void offPerson.then((off) => off()).catch(() => {});
+      window.removeEventListener("focus", changed);
+    });
+  });
+  async function change(accepted: boolean) {
+    const shown = state();
+    const workspace = spaces.actual()?.id;
+    if (!shown || !workspace || busy()) return;
+    const started = epoch;
+    setBusy(true);
+    try {
+      const fresh = await invoke<AccountFreeState>("account_free_consent_get", { workspace, locale: shown.policy.locale });
+      if (started !== epoch || fresh.account_id !== shown.account_id || fresh.session_id !== shown.session_id ||
+          fresh.policy.version !== shown.policy.version || fresh.policy.generation !== shown.policy.generation ||
+          fresh.policy.locale !== shown.policy.locale || fresh.policy.text_sha256 !== shown.policy.text_sha256) {
+        if (started === epoch) await load();
+        return;
+      }
+      const existing = pending();
+      if (existing && existing.account !== shown.account_id) {
+        setProblem(t("settings.accounts.free.outcome_unknown"));
+        return;
+      }
+      const action = existing?.action ?? createFreeDecision(shown.account_id, accepted, shown.policy, crypto.randomUUID());
+      if (!existing) setPending({ account: shown.account_id, accepted, action });
+      const result = await action(async (body) => {
+        const reply = await invoke<{ status: number; body: unknown }>("account_free_consent_decide", { account: person(), body: JSON.parse(body) });
+        return Response.json(reply.body, { status: reply.status });
+      });
+      if (started !== epoch || disposed) return;
+      if (result.kind === "outcome_unknown") {
+        setProblem(t("settings.accounts.free.outcome_unknown"));
+        return;
+      }
+      setPending(null);
+      if (result.kind === "saved") {
+        await load();
+        window.dispatchEvent(new CustomEvent("harness:consentimiento"));
+      } else if (result.kind === "policy_changed" || result.kind === "session_changed") {
+        await load();
+        setProblem(t("settings.accounts.free.changed"));
+        if (result.kind === "policy_changed" && accepted && state()?.account_id === shown.account_id && state()?.session_id === shown.session_id) setAsking(true);
+      } else setProblem(t("settings.accounts.free.error_save"));
+    } catch {
+      if (started === epoch) setProblem(t("settings.accounts.free.account_error"));
+    } finally {
+      setBusy(false);
+    }
+  }
   return (
     <>
-    {/* Cancelar cierra y no activa nada, por las tres vías. No deja el
-        interruptor a medias ni escribe un estado intermedio: el sí solo
-        existe si se pulsa Activar. */}
-    <Show when={preguntando() && texto()}>
-      {(pregunta) => (
-        <Consentir
-          texto={pregunta()}
-          guardando={guardando()}
-          fallo={fallo()}
-          onAceptar={() => void cambiar(true)}
-          onCancelar={() => setPreguntando(false)}
-        />
-      )}
-    </Show>
-    <SettingsRow
-      label={
-        props.nombre || props.marca ? (
-          <span class="flex flex-wrap items-center gap-2">
-            {props.nombre}
-            {props.marca}
-          </span>
-        ) : ""
-      }
-      description={
-      <>
-      {/* Omitir el proveedor o alejar el aviso oculta el destino de los datos al activar. */}
-      <Show
-        when={!aceptado() || props.falta}
-        fallback={<p class="m-0">{t("settings.accounts.free.warning_short")}</p>}
-      >
-        <p class="m-0">
-          {t("settings.accounts.free.provider", { provider: props.proveedor })}
-        </p>
-        <p class="m-0">
-          <strong>{AVISO_DE_USO()}</strong>
-        </p>
+      <Show when={asking() && state()}>
+        {(current) => <Consentir texto={{ lineas: current().policy.lines }} guardando={busy()} fallo={problem()} onAceptar={() => void change(true)} onCancelar={() => { setAsking(false); setProblem(null); }} />}
       </Show>
-      <Show when={!preguntando() ? fallo() : null}>
-        {(f) => (
-          <div class="mt-2">
-            <FailureNote f={{ what: t("settings.accounts.free.error_save"), detail: f() }} />
+      <SettingsRow label={<span class="flex flex-wrap items-center gap-2">{props.nombre}{props.marca}</span>} description={<>
+        <p class="m-0">{t("settings.accounts.free.provider", { provider: props.proveedor })}</p>
+        <p class="m-0"><strong>{AVISO_DE_USO()}</strong></p>
+        <Show when={email()}>{(name) => <p class="m-0">{t("settings.accounts.free.account", { account: name() })}</p>}</Show>
+        <Show when={!asking() ? problem() : null}>{(error) => <FailureNote f={{ what: error(), detail: "" }} />}</Show>
+      </>}>
+        <Show when={state() || !problem()} fallback={<Button size="sm" disabled={busy()} onClick={() => void load()}>{t("settings.accounts.retry")}</Button>}>
+        <Show when={state()?.decision === "accepted"} fallback={<Button size="sm" disabled={!state() || busy()} onClick={() => { setProblem(null); setAsking(true); }}>{t("settings.accounts.free.activate")}</Button>}>
+          <div class="flex items-center gap-2">
+            <Badge tone={props.falta ? "danger" : "success"}>{t(props.falta ? "settings.accounts.free.missing" : "settings.accounts.free.active")}</Badge>
+            <Button variant="outline" size="compact" disabled={busy()} onClick={() => void change(pending()?.accepted ?? false)}>{t(pending() ? "settings.accounts.retry" : "settings.accounts.free.deactivate")}</Button>
           </div>
-        )}
-      </Show>
-      </>
-      }
-    >
-      <Show
-        when={aceptado()}
-        fallback={
-          <Button
-            size="sm"
-            // Sin el texto no se puede pedir el sí, y tampoco se ofrece
-            // activar: aceptar sin ver qué se acepta no es un consentimiento.
-            disabled={guardando() || !texto()}
-            onClick={() => setPreguntando(true)}
-          >
-            {t("settings.accounts.free.activate")}
-          </Button>
-        }
-      >
-        <div class="flex items-center gap-2">
-          {/* «Activados» solo cuando de verdad se pueden usar. Con el sí
-              guardado y sin binario, esta etiqueta afirmaría algo que el
-              chat contradice tres clics más allá, donde la superficie sale
-              «no instalado» y no deja empezar una tarea. Consentimiento y
-              binario son dos cosas distintas —no se mezclan al guardarlas,
-              retiraría un sí ya dado— pero lo que la pantalla afirma tiene
-              que ser las dos.
-
-              Lo que falta se nombra y se ofrece: regla de `AGENTS.md` para
-              cuando algo desaparece de la máquina. Nombrarlo se quedó aquí;
-              ofrecerlo está en el bloque de arriba, donde las otras dos
-              superficies lo tienen. */}
-          <Show
-            when={props.falta}
-            fallback={<Badge tone="success">{t("settings.accounts.free.active")}</Badge>}
-          >
-            <Badge tone="danger">{t("settings.accounts.free.missing")}</Badge>
-          </Show>
-          <Button
-            variant="outline"
-            size="compact"
-            disabled={guardando()}
-            onClick={() => cambiar(false)}
-            title={t("settings.accounts.free.deactivate_title")}
-          >
-            {t("settings.accounts.free.deactivate")}
-          </Button>
-        </div>
-      </Show>
-    </SettingsRow>
+        </Show>
+        </Show>
+      </SettingsRow>
     </>
   );
 }

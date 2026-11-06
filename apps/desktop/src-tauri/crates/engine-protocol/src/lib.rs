@@ -97,6 +97,7 @@ pub const EXTENSIONS: &[&str] = &[
     include_str!("../extensions/provider_handoff_v1.json"),
     include_str!("../extensions/tree_parts_v1.json"),
     include_str!("../extensions/session_model_v1.json"),
+    include_str!("../extensions/account_free_consent_v1.json"),
 ];
 
 /// Las órdenes del contrato más las de las extensiones. La huella sigue siendo
@@ -111,6 +112,14 @@ pub fn full_manifest() -> serde_json::Value {
             for command in extra {
                 if !list.iter().any(|c| c["name"] == command["name"]) {
                     list.push(command);
+                }
+            }
+        }
+        let extra_events = ext["events"].as_array().cloned().unwrap_or_default();
+        if let Some(events) = manifest["events"].as_array_mut() {
+            for event in extra_events {
+                if !events.contains(&event) {
+                    events.push(event);
                 }
             }
         }
@@ -184,4 +193,22 @@ pub struct Push {
     pub session: Option<String>,
     #[serde(default)]
     pub detail: Value,
+}
+
+#[cfg(test)]
+mod extension_tests {
+    #[test]
+    fn extension_event_is_available_without_changing_the_base_manifest() {
+        let full = super::full_manifest();
+        let events = full["events"].as_array().expect("events");
+        assert!(events
+            .iter()
+            .any(|event| event == "account-free-consent-changed"));
+        let frozen: serde_json::Value = serde_json::from_str(super::MANIFEST).expect("manifest");
+        assert!(!frozen["events"]
+            .as_array()
+            .expect("events")
+            .iter()
+            .any(|event| event == "account-free-consent-changed"));
+    }
 }
