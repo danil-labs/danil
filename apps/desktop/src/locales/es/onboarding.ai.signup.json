@@ -1,4 +1,3 @@
 {
-  "onboarding.ai.error.keyring": "Esta computadora no tiene un llavero activo donde guardar la sesión. Abre o desbloquea el llavero del sistema (GNOME Keyring o KWallet) y vuelve a intentarlo.",
   "onboarding.ai.signup.hint_admin": "Google no dio una página para activarlo. Si es una cuenta de trabajo o de escuela, pide a quien la administra que active Antigravity y vuelve a comprobar."
 }
