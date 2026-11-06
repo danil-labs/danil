@@ -3913,6 +3913,7 @@ function TrabajoDeAgente(props: {
           <Reasoning
             bloques={bloques()}
             vivo={props.vivo && !texto()}
+            turnoActivo={props.vivo}
             abierto={props.razonamientoAbierto}
             onAlternar={props.onAlternarRazonamiento}
           />
