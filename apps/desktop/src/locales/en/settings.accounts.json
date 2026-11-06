@@ -113,5 +113,6 @@
   "settings.accounts.free.account_error": "Could not read this account’s decision. Try again.",
   "settings.accounts.free.account": "Account: {account}",
   "settings.accounts.free.outcome_unknown": "The result could not be confirmed. Retry the same operation.",
-  "settings.accounts.free.changed": "The account or notice changed. Review the decision again."
+  "settings.accounts.free.changed": "The account or notice changed. Review the decision again.",
+  "settings.accounts.free.accepted": "authorized"
 }

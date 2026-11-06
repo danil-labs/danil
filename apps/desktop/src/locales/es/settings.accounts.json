@@ -113,5 +113,6 @@
   "settings.accounts.free.account_error": "No se pudo consultar la decisión de esta cuenta. Vuelve a intentar.",
   "settings.accounts.free.account": "Cuenta: {account}",
   "settings.accounts.free.outcome_unknown": "No se pudo confirmar el resultado. Reintenta con la misma operación.",
-  "settings.accounts.free.changed": "La cuenta o el aviso cambiaron. Revisa la decisión otra vez."
+  "settings.accounts.free.changed": "La cuenta o el aviso cambiaron. Revisa la decisión otra vez.",
+  "settings.accounts.free.accepted": "autorizados"
 }

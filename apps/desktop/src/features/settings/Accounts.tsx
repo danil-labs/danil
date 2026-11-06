@@ -1758,7 +1758,8 @@ function ModelosGratuitos(props: {
         <Show when={state() || !problem()} fallback={<Button size="sm" disabled={busy()} onClick={() => void load()}>{t("settings.accounts.retry")}</Button>}>
         <Show when={state()?.decision === "accepted"} fallback={<Button size="sm" disabled={!state() || busy()} onClick={() => { setProblem(null); setAsking(true); }}>{t("settings.accounts.free.activate")}</Button>}>
           <div class="flex items-center gap-2">
-            <Badge tone={props.falta ? "danger" : "success"}>{t(props.falta ? "settings.accounts.free.missing" : "settings.accounts.free.active")}</Badge>
+            <Badge tone="success">{t("settings.accounts.free.accepted")}</Badge>
+            <Show when={props.falta}><Badge tone="danger">{t("settings.accounts.free.missing")}</Badge></Show>
             <Button variant="outline" size="compact" disabled={busy()} onClick={() => void change(pending()?.accepted ?? false)}>{t(pending() ? "settings.accounts.retry" : "settings.accounts.free.deactivate")}</Button>
           </div>
         </Show>
