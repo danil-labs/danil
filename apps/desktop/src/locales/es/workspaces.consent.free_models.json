@@ -1,4 +1,4 @@
 {
-  "workspaces.consent.free_models.accept": "Activo Danil Free model router en este workspace. Los modelos gratuitos dependen de Kilo, Vercel y Reflection. Sus límites y disponibilidad pueden cambiar sin previo aviso.",
-  "workspaces.consent.free_models.responsibility": "Entiendo que mis instrucciones, archivos y respuestas pueden registrarse y usarse para entrenamiento o mejora. Reflection puede retener contenido durante 30 días y contenido señalado hasta 12 meses, con las excepciones de sus términos. Estos plazos no cubren toda la cadena de proveedores. No enviaré información confidencial, sensible ni datos personales. Acepto las condiciones aplicables de los proveedores."
+  "workspaces.consent.free_models.accept": "Activo Danil Free model router en este workspace. Los servicios de Kilo, Vercel y Reflection procesan las solicitudes. Los modelos de IA pueden variar.",
+  "workspaces.consent.free_models.responsibility": "Entiendo que mis instrucciones, archivos y respuestas pueden registrarse y usarse para entrenamiento o mejora. Reflection puede retener contenido durante 30 días y contenido señalado hasta 12 meses, con las excepciones de sus términos. Estos plazos no cubren toda la cadena de proveedores. No enviaré código privado, claves, información confidencial, sensible ni datos personales. Acepto las condiciones aplicables de los proveedores."
 }

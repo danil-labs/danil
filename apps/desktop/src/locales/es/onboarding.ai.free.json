@@ -1,4 +1,4 @@
 {
-  "onboarding.ai.free.warning_lead": "Lo que les envíes puede guardarse y usarse para entrenarlos.",
-  "onboarding.ai.free.warning_rest": "No los uses con código privado, claves ni datos personales. Pueden dejar de ser gratis sin aviso."
+  "onboarding.ai.free.warning_lead": "Kilo, Vercel y Reflection procesan las solicitudes. Los modelos de IA pueden variar.",
+  "onboarding.ai.free.warning_rest": "Lo que envíes puede guardarse y usarse para entrenamiento o mejora. No envíes código privado, claves ni datos personales."
 }

@@ -75,7 +75,6 @@ export default function AIProviders(props: { superficies: Superficie[]; agentesE
             agente={grupo()[0].provider}
             soloGratuitos={grupo()[0].catalogo === "gratuitos"}
             titulo={grupo().length > 1 ? grupo()[0].label : rotuloDeSuperficie(grupo()[0])}
-            subtitulo={grupo()[0].catalogo === "gratuitos" ? t("settings.ai_providers.free_detail") : undefined}
             nombre={nombreDe(grupo()[0], grupo().length > 1)}
             marca={<Marca superficie={grupo()[0]} />}
             desplegado={props.agentesEnUso.includes(grupo()[0].provider)}

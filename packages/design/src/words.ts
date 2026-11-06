@@ -311,11 +311,11 @@ const es = {
   "settings.accounts.free.deactivate": "Desactivar",
   "settings.accounts.free.deactivate_title": "Dejan de ofrecerse. El modelo local sigue disponible.",
   "settings.accounts.free.error_save": "No se pudo guardar.",
-  "settings.accounts.free.provider": "Modelos servidos por {provider} durante su periodo gratuito.",
-  "settings.accounts.free.warning": "Los modelos gratuitos dependen de terceros. Sus límites y disponibilidad pueden cambiar sin previo aviso. Tus instrucciones, archivos y respuestas pueden registrarse y usarse para entrenamiento o mejora. No envíes información confidencial, sensible ni datos personales.",
+  "settings.accounts.free.provider": "Solicitudes procesadas por {provider}.",
+  "settings.accounts.free.warning": "Los modelos de IA pueden variar. Tus instrucciones, archivos y respuestas pueden guardarse y usarse para entrenamiento o mejora. No envíes código privado, claves, información confidencial o sensible ni datos personales.",
   "settings.accounts.free.warning_short": "Activado · no envíes información confidencial, sensible ni datos personales",
-  "workspaces.consent.free_models.accept": "Activo Danil Free model router en este workspace. Los modelos gratuitos dependen de Kilo, Vercel y Reflection. Sus límites y disponibilidad pueden cambiar sin previo aviso.",
-  "workspaces.consent.free_models.responsibility": "Entiendo que mis instrucciones, archivos y respuestas pueden registrarse y usarse para entrenamiento o mejora. Reflection puede retener contenido durante 30 días y contenido señalado hasta 12 meses, con las excepciones de sus términos. Estos plazos no cubren toda la cadena de proveedores. No enviaré información confidencial, sensible ni datos personales. Acepto las condiciones aplicables de los proveedores.",
+  "workspaces.consent.free_models.accept": "Activo Danil Free model router en este workspace. Los servicios de Kilo, Vercel y Reflection procesan las solicitudes. Los modelos de IA pueden variar.",
+  "workspaces.consent.free_models.responsibility": "Entiendo que mis instrucciones, archivos y respuestas pueden registrarse y usarse para entrenamiento o mejora. Reflection puede retener contenido durante 30 días y contenido señalado hasta 12 meses, con las excepciones de sus términos. Estos plazos no cubren toda la cadena de proveedores. No enviaré código privado, claves, información confidencial, sensible ni datos personales. Acepto las condiciones aplicables de los proveedores.",
 } as const satisfies Record<string, Word>;
 
 export type WordKey = keyof typeof es;
@@ -621,11 +621,11 @@ const en: Record<WordKey, Word> = {
   "settings.accounts.free.deactivate": "Turn off",
   "settings.accounts.free.deactivate_title": "They stop being offered. The local model stays available.",
   "settings.accounts.free.error_save": "Could not save.",
-  "settings.accounts.free.provider": "Models served by {provider} during their free period.",
-  "settings.accounts.free.warning": "Free models depend on third-party services. Their limits and availability may change without notice. Your prompts, files and responses may be logged and used for training or improvement. Do not send confidential or sensitive information or personal data.",
+  "settings.accounts.free.provider": "Requests processed by {provider}.",
+  "settings.accounts.free.warning": "AI models may vary. Your prompts, files and responses may be stored and used for training or improvement. Do not send private code, keys, confidential or sensitive information, or personal data.",
   "settings.accounts.free.warning_short": "Enabled · do not send confidential or sensitive information or personal data",
-  "workspaces.consent.free_models.accept": "I enable Danil Free model router in this workspace. Free models depend on Kilo, Vercel and Reflection. Their limits and availability may change without notice.",
-  "workspaces.consent.free_models.responsibility": "I understand that my prompts, files and responses may be logged and used for training or improvement. Reflection may retain content for 30 days and flagged content for up to 12 months, subject to the exceptions in its terms. These periods do not cover the whole provider chain. I will not send confidential or sensitive information or personal data. I accept the applicable provider terms.",
+  "workspaces.consent.free_models.accept": "I enable Danil Free model router in this workspace. Kilo, Vercel and Reflection services process requests. AI models may vary.",
+  "workspaces.consent.free_models.responsibility": "I understand that my prompts, files and responses may be logged and used for training or improvement. Reflection may retain content for 30 days and flagged content for up to 12 months, subject to the exceptions in its terms. These periods do not cover the whole provider chain. I will not send private code, keys, confidential or sensitive information or personal data. I accept the applicable provider terms.",
 };
 
 export const WORDS: Record<"es" | "en", Record<WordKey, Word>> = { es, en };
