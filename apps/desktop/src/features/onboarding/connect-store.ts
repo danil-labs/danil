@@ -150,13 +150,9 @@ export function crearConexiones() {
     return { cuenta: plan ? `${name} · ${plan}` : name, id: activa.id };
   }
 
-  async function consentida(agent: string) {
-    const [, version] = await invoke<[Frase[], number]>("consent_text");
-    const s = await invoke<{ active: string | null; workspaces: { id: string; consents?: { provider: string; version: number }[] }[] }>(
-      "workspaces_startup",
-    );
-    const activo = s.workspaces.find((w) => w.id === s.active);
-    return activo?.consents?.some((c) => c.provider === agent && c.version === version) ?? false;
+  async function consentida() {
+    const startup = await invoke<FreeModelStartup>("workspaces_startup");
+    return freeModelPolicy(startup)?.accepted ?? false;
   }
 
   async function pasoGuardado(f: Fila): Promise<Paso> {
@@ -165,7 +161,7 @@ export function crearConexiones() {
     const base: Paso = a?.available && (f.detectada || f.modo !== "clave") ? { k: "instalada" } : { k: "falta" };
     try {
       if (f.modo === "consentimiento") {
-        return a?.available && (await consentida(f.agente))
+        return a?.available && (await consentida())
           ? { k: "conectada", cuenta: t("settings.accounts.free.warning_short"), id: null }
           : base;
       }
@@ -491,7 +487,11 @@ export function crearConexiones() {
     poner(id, { k: "saliendo" });
     try {
       if (f.modo === "consentimiento") {
-        await invoke("set_provider_consent", { provider: f.agente, accepted: false });
+        const startup = await invoke<FreeModelStartup>("workspaces_startup");
+        if (!startup.active) throw new Error(t("settings.accounts.free.unavailable"));
+        await invoke("set_provider_consent", { provider: f.agente, accepted: false }, {
+          headers: { "x-terminus-workspace": startup.active },
+        });
         window.dispatchEvent(new CustomEvent("harness:consentimiento"));
       } else if (f.modo === "local") {
         await invoke("remove_local_runtime");

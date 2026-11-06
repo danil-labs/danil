@@ -50,7 +50,7 @@ export function proveedorDe(
 ) {
   if (superficie.provider === "opencode-zen") {
     if (superficie.catalogo === "gratuitos") {
-      return { id: "opencode-free", label: "Danil Free AI", logo: "opencode" };
+      return { id: "opencode-free", label: "Danil Free model router", logo: "opencode" };
     }
     if (model.id.startsWith("opencode-go/")) {
       return { id: "opencode-go", label: "OpenCode Go", logo: "opencode" };

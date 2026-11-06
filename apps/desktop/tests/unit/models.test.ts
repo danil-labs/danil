@@ -60,7 +60,7 @@ test("los resultados conservan la sección que desambigua modelos parecidos", ()
       ["Codex", [["codex", "gpt-5"]]],
       ["OpenCode", [["opencode-zen", "opencode/gpt-5"]]],
       ["OpenCode Go", [["opencode-zen", "opencode-go/gpt-5"]]],
-      ["Danil Free AI", [["opencode-zen", "opencode/free-gpt"]]],
+      ["Danil Free model router", [["opencode-zen", "opencode/free-gpt"]]],
       ["OpenCode Local", [["opencode-local", "ollama/gpt-5"]]],
     ],
   );
@@ -82,7 +82,7 @@ test("una superficie de pago no aparece cuando no está autenticada", () => {  c
     },
   );
 
-  assert.deepEqual(opciones.map((opcion) => opcion.proveedor.label), ["Danil Free AI"]);
+  assert.deepEqual(opciones.map((opcion) => opcion.proveedor.label), ["Danil Free model router"]);
   assert.deepEqual(opciones.map((opcion) => opcion.model.id), ["opencode/free-model"]);
 });
 

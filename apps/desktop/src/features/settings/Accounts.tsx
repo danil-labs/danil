@@ -1507,43 +1507,7 @@ export default function Accounts(props: {
   );
 }
 
-/**
- * Activar los modelos que OpenCode regala.
- *
- * Apagado por omisión, y el de omisión es el local: la diferencia no es de
- * calidad sino de a dónde va el material, el local no sale de la máquina y
- * estos sí. Se acepta una vez, explícitamente, y se puede retirar — un
- * consentimiento que no se puede revocar no es un consentimiento.
- *
- * El aviso dice las dos mitades: que sale, y qué hacen con ello. La segunda
- * no es igual para todos: los que entrenan con lo que les mandes se marcan
- * en la propia lista (`runtime/models.rs`).
- *
- * Es del workspace, no de la máquina: lo guarda `workspaces::set_provider_consent`,
- * y lo consultan el catálogo y el camino del chat. Lo que sale es material
- * de un cliente, y una decisión tomada para uno no aplica al trabajo de otro.
- */
-/**
- * Qué se puede mandar a estos modelos, en un solo sitio y para todos: la
- * restricción más estricta del conjunto, aplicada a la sección entera. Los
- * términos de datos son distintos modelo a modelo —hay quien entrena con lo
- * que le mandas, y dos que dicen «trial use only — do not submit personal or
- * confidential data»—, y aquí se afirma el peor caso de todos: nunca se
- * queda corta —el noveno modelo que OpenCode añada mañana ya está cubierto—
- * y no hay nada que mantener. Por qué no vuelve una marca por modelo, en
- * `models::Gobierno`.
- *
- * La app no puede hacerlo cumplir y no finge que sí: no sabe qué es
- * confidencial, informa y decide la persona, igual que con las fuentes que
- * adjunta a un proyecto. Un candado que no puede cerrar es peor que un
- * aviso que se lee.
- *
- * La consecuencia, para que nadie intente «arreglarlo»: esta sección es para
- * probar el producto, no para trabajar con clientes. Los siete modelos que
- * ofrece tienen excepción de datos, y la frase lo dice con esas palabras.
- * Quien trabaje con material de un cliente usa su cuenta de Claude, Codex,
- * Grok o Antigravity, o paga por modelos de OpenCode.
- */
+/** El aviso de uso acompaña la política versionada del motor. */
 const AVISO_DE_USO = () => t("settings.accounts.free.warning");
 
 /** Un paso de la conexión: el número, qué hacer, y con qué. */
@@ -1583,7 +1547,7 @@ function MotoresLocales() {
  * frase tiene el número al lado, y un guarda en Rust falla si el texto se
  * mueve sin que la versión suba.
  */
-export type Consentimiento = { lineas: Frase[]; version: number };
+export type Consentimiento = { lineas: Frase[]; version: number; policy: FreeModelPolicy };
 
 /**
  * El sí explícito, antes de activar.
@@ -1605,6 +1569,7 @@ export type Consentimiento = { lineas: Frase[]; version: number };
 export function Consentir(props: {
   texto: Consentimiento;
   guardando: boolean;
+  error?: string | null;
   onAceptar: () => void;
   onCancelar: () => void;
 }) {
@@ -1620,6 +1585,12 @@ export function Consentir(props: {
                 <p class={cn("m-0 text-xs leading-6 text-neutral-500", i() === 0 && "font-medium text-neutral-950")}>{prosa(linea)}</p>
               )}
             </For>
+            <div class="flex flex-wrap gap-x-3 gap-y-1">
+              <For each={props.texto.policy.terms}>{(term) => (
+                <Button variant="ghost" size="sm" onClick={() => void invoke("open_external", { target: term.url })}>{term.label}</Button>
+              )}</For>
+            </div>
+            <Show when={props.error}>{(error) => <p role="alert" class="m-0 text-xs text-error-strong">{error()}</p>}</Show>
             <div class="mt-2 flex justify-end gap-2">
               {/* Cancelar primero en el orden de lectura y sin peso visual: la
                   acción que gasta algo es la otra, y esta tiene que poder
@@ -1680,48 +1651,44 @@ function ModelosGratuitos(props: {
   // vías; ver `Consentir`.
   const [preguntando, setPreguntando] = createSignal(false);
 
-  // En orden y no en paralelo: saber si el sí guardado sigue valiendo
-  // necesita la versión del texto de hoy, que se pide primero. Lanzadas a
-  // la vez, la comparación se haría contra `undefined` la mitad de las
-  // veces y una cuenta ya aceptada aparecería sin aceptar, o al revés.
   onMount(() => {
-    void (async () => {
-      try {
-        const [lineas, version] = await invoke<[Frase[], number]>("consent_text");
-        setTexto({ lineas, version });
-        const s = await invoke<{
-          active: string | null;
-          workspaces: {
-            id: string;
-            consents?: { provider: string; version: number }[];
-          }[];
-        }>("workspaces_startup");
-        const activo = s.workspaces.find((w) => w.id === s.active);
-        // Vale el sí de la versión de hoy, no cualquier sí: quien aceptó un
-        // texto anterior vuelve a verlo una vez, lo que aceptó decía otra
-        // cosa. Lo mismo lo comprueba el backend antes de dar catálogo o de
-        // lanzar un turno (`workspaces::consintio`); aquí solo se pinta.
-        setAceptado(
-          activo?.consents?.some(
-            (c) => c.provider === props.agente && c.version === version,
-          ) ?? false,
-        );
-      } catch {
-        /* Sin texto no se ofrece activar: el botón queda deshabilitado. */
-      }
-    })();
+    void invoke<FreeModelStartup>("workspaces_startup").then((startup) => {
+      const policy = freeModelPolicy(startup);
+      if (!policy) return;
+      setTexto({ lineas: policy.lines, version: policy.version, policy });
+      setAceptado(policy.accepted);
+    }).catch(() => {});
   });
+
+  async function preguntar() {
+    setFallo(null);
+    try {
+      const policy = freeModelPolicy(await invoke<FreeModelStartup>("workspaces_startup"));
+      if (!policy) throw new Error(t("settings.accounts.free.unavailable"));
+      setTexto({ lineas: policy.lines, version: policy.version, policy });
+      setPreguntando(true);
+    } catch (e) {
+      setFallo(prosaDe(e));
+    }
+  }
 
   async function cambiar(valor: boolean) {
     setGuardando(true);
     try {
-      const w = await invoke<{ consents?: { provider: string; version: number }[] }>(
+      const policy = texto()?.policy;
+      if (!policy) throw new Error(t("settings.accounts.free.unavailable"));
+      const startup = await invoke<FreeModelStartup>("workspaces_startup");
+      if (startup.active !== policy.workspace_id || (valor && !sameFreeModelPolicy(policy, freeModelPolicy(startup)))) {
+        throw new Error(t("settings.accounts.free.policy_changed"));
+      }
+      const w = await invoke<{ free_model_consent?: FreeModelConsent }>(
         "set_provider_consent",
-        { provider: props.agente, accepted: valor },
+        { provider: valor ? policy.acceptance_ref : props.agente, accepted: valor },
+        freeModelScope(policy),
       );
-      // Lo que quedó guardado, no lo que se pidió: si el backend rechaza algo,
-      // la pantalla tiene que enseñar su estado y no el nuestro.
-      setAceptado(w.consents?.some((c) => c.provider === props.agente) ?? false);
+      const accepted = acceptedFreeModelPolicy(policy, w.free_model_consent);
+      setAceptado(accepted);
+      if (valor && !accepted) throw new Error(t("settings.accounts.free.policy_changed"));
       setPreguntando(false);
       setFallo(null);
       // Sin binario, activar deja el interruptor en verde y el chat sin poder
@@ -1748,6 +1715,7 @@ function ModelosGratuitos(props: {
         <Consentir
           texto={pregunta()}
           guardando={guardando()}
+          error={fallo()}
           onAceptar={() => void cambiar(true)}
           onCancelar={() => setPreguntando(false)}
         />
@@ -1770,13 +1738,14 @@ function ModelosGratuitos(props: {
         fallback={<p class="m-0">{t("settings.accounts.free.warning_short")}</p>}
       >
         <p class="m-0">
-          {t("settings.accounts.free.provider", { provider: props.proveedor })}
+          {t("settings.accounts.free.provider", { provider: t("settings.ai_providers.free_detail") })}
         </p>
         <p class="m-0">
           <strong>{AVISO_DE_USO()}</strong>
         </p>
       </Show>
-      <Show when={fallo()}>
+      <Show when={!texto()}><p class="m-0">{t("settings.accounts.free.unavailable")}</p></Show>
+      <Show when={!preguntando() && fallo()}>
         {(f) => (
           <div class="mt-2">
             <FailureNote f={{ what: t("settings.accounts.free.error_save"), detail: f() }} />
@@ -1794,7 +1763,7 @@ function ModelosGratuitos(props: {
             // Sin el texto no se puede pedir el sí, y tampoco se ofrece
             // activar: aceptar sin ver qué se acepta no es un consentimiento.
             disabled={guardando() || props.preparando || !texto()}
-            onClick={() => setPreguntando(true)}
+            onClick={() => void preguntar()}
           >
             {props.preparando
               ? t("settings.accounts.preparing")
