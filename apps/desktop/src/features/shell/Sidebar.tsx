@@ -326,7 +326,18 @@ export default function Sidebar(props: {
   );
   const [altas, setAltas] = createSignal(0);
   // Hasta la primera respuesta del motor, un dock vacío es «cargando», no «sin agentes».
-  const [rosterListo, setRosterListo] = createSignal(false);
+  // Listo es que contestaron TODAS las carpetas: con la primera vacía y las demás
+  // pendientes, el dock decía «sin agentes» con los agentes por llegar.
+  const [respondidas, setRespondidas] = createSignal<ReadonlySet<string>>(new Set());
+  // Una máquina apagada no contesta nunca: pasado el plazo, lo que haya es lo que hay.
+  const [plazoVencido, setPlazoVencido] = createSignal(false);
+  const plazo = setTimeout(() => setPlazoVencido(true), 15_000);
+  onCleanup(() => clearTimeout(plazo));
+  const rosterListo = () => {
+    if (plazoVencido()) return true;
+    const claves = carpetasConTareas();
+    return claves.length > 0 && claves.every((c) => respondidas().has(c));
+  };
   const alCrearAgente = () => setAltas((n) => n + 1);
   window.addEventListener("harness:encargados", alCrearAgente);
   onCleanup(() => window.removeEventListener("harness:encargados", alCrearAgente));
@@ -342,7 +353,7 @@ export default function Sidebar(props: {
       machine ? `${project}@${machine}` : project,
       async () => {
         const { agents } = await invoke<HandlerList>("list_agents", { project }, machine ? { headers: { "x-terminus-machine": machine } } : undefined);
-        setRosterListo(true);
+        setRespondidas((antes) => (antes.has(clave) ? antes : new Set(antes).add(clave)));
         return agents;
       },
       altas,
