@@ -1644,6 +1644,7 @@ function ModelosGratuitos(props: {
     setEmail(null);
     setPerson(undefined);
     setAsking(false);
+    setPending(null);
   };
   async function load() {
     const workspace = spaces.actual()?.id;
