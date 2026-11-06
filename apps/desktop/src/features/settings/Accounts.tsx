@@ -809,9 +809,11 @@ export default function Accounts(props: {
             aria-controls={idCuerpo}
             onClick={() => setAbierto(!abierto())}
           >
-            <span class="flex size-4 shrink-0 items-center justify-center">
-              <MarcaAgente id={agente()} size={16} />
-            </span>
+            <Show when={agente() !== "opencode-local"}>
+              <span class="flex size-4 shrink-0 items-center justify-center">
+                <MarcaAgente id={agente()} size={16} />
+              </span>
+            </Show>
             <span class="grid min-w-0 flex-1">
               <span class="truncate">{props.titulo}</span>
               <Show when={props.subtitulo}>

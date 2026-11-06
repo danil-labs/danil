@@ -9,7 +9,7 @@
   "surfaces.free_off": "Free models are not enabled in this workspace",
   "surfaces.label.free": "Danil Free model router",
   "surfaces.label.free_short": "Danil Free model router",
-  "surfaces.label.local": "Local",
+  "surfaces.label.local": "Local models",
   "surfaces.no_account": "{agent} account not connected",
   "surfaces.no_driver": "This version of the app can't drive {agent} yet",
   "surfaces.no_engine": "No local engine is installed on this computer",

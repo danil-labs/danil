@@ -9,7 +9,7 @@
   "surfaces.free_off": "Los modelos gratuitos no están activados en este workspace",
   "surfaces.label.free": "Danil Free model router",
   "surfaces.label.free_short": "Danil Free model router",
-  "surfaces.label.local": "Locales",
+  "surfaces.label.local": "Modelos locales",
   "surfaces.no_account": "Cuenta de {agent} sin conectar",
   "surfaces.no_driver": "Esta versión de la app todavía no sabe llevarle una tarea a {agent}",
   "surfaces.no_engine": "No hay ningún motor local instalado en esta computadora",
