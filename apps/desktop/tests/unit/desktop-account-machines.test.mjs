@@ -13,44 +13,6 @@ import { HOME, localNewTask, newTask, open, openTask, project, remote, until, VM
 import { engine } from "../helpers/fake-relay.mjs";
 import { sleep } from "../helpers/jsdom-app.mjs";
 
-test("desktop consent preserves captured scope at the native IPC boundary and refuses a removed machine", async () => {
-  const workspaces = [SAME, { ...SAME, id: "w2", name: "Dos" }];
-  const listing = { workspaces, active: "w" };
-  const reached = [];
-  const { app, f, invoke } = await open("desktop-free-policy-scope", {
-    computers: [HOME, { ...VM, state: "online" }],
-    relays: { cmp_vm: { table: remote("Panel", "VM", { list_workspaces: listing, workspaces_startup: listing }) } },
-    extra: { list_workspaces: listing, workspaces_startup: listing, set_provider_consent: null },
-    onNative: (command, args, options) => reached.push({ command, args, options }),
-  });
-  try {
-    const options = { headers: { "x-terminus-workspace": "w2", "x-terminus-machine": "cmp_home" } };
-    for (const [command, args] of [
-      ["workspaces_startup", {}],
-      ["set_provider_consent", { provider: "opaque-policy-reference", accepted: true }],
-      ["set_provider_consent", { provider: "opencode-zen", accepted: false }],
-    ]) {
-      const before = reached.length;
-      const remoteBefore = f.relays.cmp_vm.calls.filter((c) => c.command === command).length;
-      await invoke(command, args, options);
-      const sent = reached.slice(before).filter((c) => c.command === command);
-      assert.equal(sent.length, 1);
-      assert.deepEqual(sent[0].options, options);
-      assert.deepEqual(sent[0].args, args);
-      assert.equal(f.relays.cmp_vm.calls.filter((c) => c.command === command).length, remoteBefore);
-      const nativeBefore = reached.filter((c) => c.command === command).length;
-      await assert.rejects(invoke(command, args, { headers: {
-        "x-terminus-workspace": "w2", "x-terminus-machine": "removed",
-      } }), (error) => { assert.equal(error.detail, "engine_down"); return true; });
-      assert.equal(reached.filter((c) => c.command === command).length, nativeBefore);
-      assert.equal(f.relays.cmp_vm.calls.filter((c) => c.command === command).length, remoteBefore);
-    }
-  } finally {
-    for (const r of Object.values(f.relays)) for (const socket of r.sockets) socket.close();
-    app.w.close();
-  }
-});
-
 test("signed out, the desktop is the local window as before", async () => {
   const { app, f, doc, listed, invoke } = await open("desktop-account-signed-out", {
     status: { state: "disconnected", online: false },

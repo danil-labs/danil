@@ -25,14 +25,14 @@ test("consent and policy reads preserve captured workspace and machine without f
   }));
   const app = await boot("listo", "web-free-policy-scope", {}, undefined, {}, {
     web: true,
-    antes: (w) => {
+    beforeImport: (w) => {
       globalThis.WebSocket = f.Socket;
       w.terminusWeb = { endpoint: "https://relay.test", computers, getToken: async () => "tok" };
     },
   });
   try {
-    await sleep(1500);
-    assert.deepEqual(app.fallos, []);
+    await waitFor(() => f.relays.cmp_captured.calls.some((c) => c.command === "list_workspaces"), "captured machine did not connect");
+    assert.deepEqual(app.failures, []);
     const invoke = (command, args, options) => app.w.__TAURI_INTERNALS__.invoke(command, args, options);
     await invoke("list_workspaces");
     await invoke("set_active_workspace", { id: "w" });
@@ -52,7 +52,7 @@ test("consent and policy reads preserve captured workspace and machine without f
       const counts = Object.values(f.relays).map((r) => r.calls.filter((c) => c.command === command).length);
       await assert.rejects(invoke(command, args, { headers: {
         "x-terminus-workspace": "w2", "x-terminus-machine": "cmp_removed",
-      } }), (error) => error.detail === "engine_down");
+      } }), (error) => error.detail === "unknown_machine");
       assert.deepEqual(Object.values(f.relays).map((r) => r.calls.filter((c) => c.command === command).length), counts);
     }
   } finally {
