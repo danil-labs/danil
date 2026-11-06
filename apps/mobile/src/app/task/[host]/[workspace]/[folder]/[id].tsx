@@ -97,6 +97,7 @@ export default function TaskScreen() {
   const host = hostOf(params.host);
   const { snapshot, list: workspaces, reload } = useWorkspaces();
   const [view, setView] = useState<TaskView | null>(null);
+  const [questionsCollapsed, setQuestionsCollapsed] = useState(false);
   const [live, setLive] = useState<readonly LivePiece[]>([]);
   const [note, setNote] = useState<string | null>(null);
   const [waking, setWaking] = useState(false);
@@ -510,6 +511,7 @@ export default function TaskScreen() {
       .catch(fail);
   };
   const questions = view?.questions ?? [];
+  useEffect(() => { if (!questions.length) setQuestionsCollapsed(false); }, [questions.length]);
   const asleep = host?.canAct() === "asleep" || host?.canAct() === "outdated";
   const turns = history?.turns ?? NO_TURNS;
   const base = history?.start ?? 0;
@@ -796,16 +798,29 @@ export default function TaskScreen() {
         </Pressable>
       ) : null}
       </View>
-      {permissions.length || questions.length ? (
+      {permissions.length ? (
         <ScrollView style={styles.pending} contentContainerStyle={styles.footer}>
           {permissions.map((p) => (
             <PermissionCard key={p.request_id} permission={p} disabled={asleep} busy={deciding.has(p.request_id)} onDecide={(allow) => decide(p, allow)} />
           ))}
-          {questions.map((q) => (
-            <QuestionCard key={q.turn} pending={q} theme={theme} disabled={asleep} onAnswer={(c, f) => answer(q, c, f)} />
-          ))}
         </ScrollView>
       ) : null}
+      {questions.length ? (
+        <View style={{ display: questionsCollapsed ? "none" : "flex", maxHeight: "55%" }}>
+          <ScrollView style={{ paddingHorizontal: 12, paddingBottom: 8 }} contentContainerStyle={styles.footer} keyboardShouldPersistTaps="handled">
+            {questions.map((q) => (
+              <QuestionCard key={q.turn} pending={q} theme={theme} disabled={asleep || waking} onCollapse={() => setQuestionsCollapsed(true)} onAnswer={(c, f) => answer(q, c, f)} />
+            ))}
+          </ScrollView>
+        </View>
+      ) : null}
+      {questions.length && questionsCollapsed ? (
+        <Pressable accessibilityRole="button" onPress={() => setQuestionsCollapsed(false)} style={[styles.questionRestore, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+          <Text style={{ color: theme.text, fontSize: TEXT.ui }}>{t("task.questions_show")}</Text>
+          <Icon name="chevron-right" size={16} color={theme.text} />
+        </Pressable>
+      ) : null}
+      <View style={{ display: questions.length && !questionsCollapsed ? "none" : "flex" }}>
       <Composer
         key={transferKey}
         host={host}
@@ -839,6 +854,7 @@ export default function TaskScreen() {
         onModelChoice={saveModel}
         onAccounts={() => router.push("/accounts")}
       />
+      </View>
       </ChatScopeContext.Provider>
     </KeyboardScreen>
     </SlideIn>
@@ -1012,14 +1028,26 @@ function QuestionCard({
   theme,
   disabled,
   onAnswer,
+  onCollapse,
 }: {
   pending: PendingQuestion;
   theme: Theme;
   disabled: boolean;
   onAnswer: (chosen: Record<string, string[]>, free: Record<string, string>) => void;
+  onCollapse: () => void;
 }) {
   const [chosen, setChosen] = useState<Record<string, string[]>>({});
   const [free, setFree] = useState<Record<string, string>>({});
+  const [page, setPage] = useState(0);
+  const current = pending.questions[Math.min(page, pending.questions.length - 1)];
+  const answered = (q: Question) => Boolean(chosen[q.id]?.length || free[q.id]?.trim());
+  const advance = () => {
+    const next = pending.questions.findIndex((q, i) => i > page && !answered(q));
+    const missing = pending.questions.findIndex((q) => !answered(q));
+    if (next >= 0) setPage(next);
+    else if (missing >= 0) setPage(missing);
+    else onAnswer(chosen, free);
+  };
   const toggle = (q: Question, value: string) =>
     setChosen((old) => {
       const current = old[q.id] ?? [];
@@ -1028,8 +1056,13 @@ function QuestionCard({
     });
   return (
     <View style={[styles.card, { borderColor: theme.info, backgroundColor: theme.surface }]} testID="question">
-      <Text style={{ color: theme.textMuted, fontSize: TEXT.label }}>{t("task.question")}</Text>
-      {pending.questions.map((q) => (
+      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+        <Text style={{ color: theme.textMuted, fontSize: TEXT.label }}>{t("task.question")}</Text>
+        <Pressable accessibilityRole="button" accessibilityLabel={t("task.questions_collapse")} hitSlop={8} onPress={onCollapse}>
+          <Icon name="minimize-2" size={18} color={theme.textMuted} />
+        </Pressable>
+      </View>
+      {[current].filter(Boolean).map((q) => (
         <View key={q.id} style={{ gap: 6 }}>
           <Text style={{ color: theme.text, fontWeight: "600" }}>{q.question}</Text>
           {q.options.map((o) => {
@@ -1056,8 +1089,15 @@ function QuestionCard({
           ) : null}
         </View>
       ))}
-      <View style={{ alignSelf: "flex-end" }}>
-        <SendButton testID="answer-question" disabled={disabled} label={t("task.answer")} onPress={() => onAnswer(chosen, free)} />
+      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+        {pending.questions.length > 1 ? (
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+            <Pressable accessibilityRole="button" accessibilityLabel={t("task.questions_previous")} disabled={page === 0} onPress={() => setPage(page - 1)}><Icon name="chevron-left" size={20} color={theme.text} /></Pressable>
+            <Text style={{ color: theme.textMuted }}>{page + 1} / {pending.questions.length}</Text>
+            <Pressable accessibilityRole="button" accessibilityLabel={t("task.questions_next")} disabled={page >= pending.questions.length - 1} onPress={() => setPage(page + 1)}><Icon name="chevron-right" size={20} color={theme.text} /></Pressable>
+          </View>
+        ) : <View />}
+        <SendButton testID="answer-question" disabled={disabled || !current || !answered(current)} label={page < pending.questions.length - 1 ? t("task.questions_next_label") : t("task.answer")} onPress={advance} />
       </View>
     </View>
   );
@@ -1089,6 +1129,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     elevation: 3,
   },
+  questionRestore: { marginHorizontal: 12, marginBottom: 6, padding: 10, borderRadius: 10, borderWidth: 1, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   footer: { gap: 8 },
   olderRow: { alignItems: "center", gap: 4, paddingVertical: 6 },
   pending: { flexGrow: 0, maxHeight: "55%", paddingHorizontal: 12, paddingBottom: 8 },
