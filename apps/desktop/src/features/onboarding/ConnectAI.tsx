@@ -1,3 +1,4 @@
+import { marcaDeSuperficie } from "../../lib/surfaces";
 import Check from "lucide-solid/icons/check";
 import CircleCheck from "lucide-solid/icons/circle-check";
 import Circle from "lucide-solid/icons/circle";
@@ -15,7 +16,6 @@ import { Button } from "../../ui/Button";
 import { RemoveButton } from "../../ui/IconAction";
 import { Input } from "../../ui/Input";
 import { MarcaAgente } from "../../ui/icons";
-import { TerminusMark } from "../../ui/toolMarks";
 import { Spinner } from "../../ui/Spinner";
 import { Consentir } from "../settings/Accounts";
 import { DialogoDeConexion } from "../settings/LoginDialog";
@@ -41,9 +41,8 @@ function nombreCorto(f: Fila) {
 }
 
 function MarcaDeFila(props: { f: Fila; size: number }) {
-  if (props.f.modo === "consentimiento") return <TerminusMark size={props.size} />;
   if (props.f.modo === "local") return <Monitor size={props.size} />;
-  return <MarcaAgente id={props.f.agente} size={props.size} />;
+  return <MarcaAgente id={marcaDeSuperficie({ catalogo: props.f.modo === "consentimiento" ? "gratuitos" : "todo", provider: props.f.agente })} size={props.size} />;
 }
 
 const LINEA: Record<Nodo, string> = {
@@ -114,7 +113,7 @@ export function MapaDeConexiones(props: { c: Conexiones }) {
           </For>
         </svg>
         <span class="absolute top-1/2 left-1/2 grid size-[58px] -translate-1/2 place-items-center rounded-2xl bg-primary text-[var(--action-text)] shadow-lg ring-6 ring-bg">
-          <TerminusMark size={30} />
+          <MarcaAgente id="danil" size={30} />
         </span>
         <For each={filas()}>
           {(f, i) => {

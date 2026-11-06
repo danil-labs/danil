@@ -1,3 +1,4 @@
+import { marcaDeSuperficie } from "../../lib/surfaces";
 import { groupAccounts } from "@terminus/computers";
 import Check from "lucide-solid/icons/check";
 import ChevronRight from "lucide-solid/icons/chevron-right";
@@ -811,7 +812,7 @@ export default function Accounts(props: {
           >
             <Show when={agente() !== "opencode-local"}>
               <span class="flex size-4 shrink-0 items-center justify-center">
-                <MarcaAgente id={agente()} size={16} />
+                <MarcaAgente id={marcaDeSuperficie({ catalogo: props.soloGratuitos ? "gratuitos" : "todo", provider: agente() })} size={16} />
               </span>
             </Show>
             <span class="grid min-w-0 flex-1">

@@ -64,7 +64,7 @@ test("los resultados conservan la sección que desambigua modelos parecidos", ()
     ],
   );
   assert.deepEqual(grupos.map((grupo) => grupo.logo), [
-    "claude", "codex", "opencode", "opencode", "opencode",
+    "claude", "codex", "opencode", "danil", "opencode",
   ]);
 });
 

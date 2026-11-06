@@ -45,3 +45,8 @@ export function rotuloDeSuperficie(s: Superficie): string {
   if (s.provider === "opencode-local") return t("surfaces.label.local");
   return s.label;
 }
+
+/** La marca visible pertenece a Danil cuando la superficie ofrece modelos gratuitos. */
+export function marcaDeSuperficie(s: Pick<Superficie, "catalogo" | "provider">): string {
+  return s.catalogo === "gratuitos" ? "danil" : s.provider;
+}
