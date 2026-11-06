@@ -18,7 +18,6 @@ import { mountAfterLanguagePacks } from "../locales/startup";
 import { capabilities, setCapabilities } from "../lib/platform";
 import { desktopWorkspaceDirectory } from "../features/shell/workspace-directory-desktop";
 import { askGuestChannels } from "../features/machines/guestChannels";
-import "../styles/desktop.css";
 import "../lib/sharedClock";
 // Errores y avisos de encargado se leen al fallar algo, ya con la ventana montada: entran por detrás.
 // Si el trozo no carga, caen a la prosa del motor; el panel de encargados lo vuelve a pedir.
