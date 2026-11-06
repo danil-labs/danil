@@ -1690,6 +1690,7 @@ function ModelosGratuitos(props: {
     const offSessions = listen("danil-sessions", changed);
     const offPerson = listen("agents-session", changed);
     window.addEventListener("focus", changed);
+    window.addEventListener("harness:service-resync", changed);
     onCleanup(() => {
       disposed = true;
       invalidate();
@@ -1697,6 +1698,7 @@ function ModelosGratuitos(props: {
       void offSessions.then((off) => off()).catch(() => {});
       void offPerson.then((off) => off()).catch(() => {});
       window.removeEventListener("focus", changed);
+      window.removeEventListener("harness:service-resync", changed);
     });
   });
   async function change(accepted: boolean) {
