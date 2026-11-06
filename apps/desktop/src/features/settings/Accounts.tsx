@@ -1587,7 +1587,7 @@ export function Consentir(props: {
             </For>
             <div class="flex flex-wrap gap-x-3 gap-y-1">
               <For each={props.texto.policy.terms}>{(term) => (
-                <Button variant="ghost" size="sm" onClick={() => void invoke("open_external", { target: term.url })}>{term.label}</Button>
+                <Button variant="ghost" size="sm" onClick={() => void invoke("open_external", { target: term.url })}>{t(term.url.includes("privacy") ? "settings.accounts.free.privacy" : "settings.accounts.free.terms", { provider: term.label })}</Button>
               )}</For>
             </div>
             <Show when={props.error}>{(error) => <p role="alert" class="m-0 text-xs text-error-strong">{error()}</p>}</Show>
