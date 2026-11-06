@@ -62,6 +62,7 @@
     "chat.model.note.local_loaded",
     "chat.model.note.opus",
     "chat.model.note.sonnet",
+    "chat.notice.free_router_mcp_unavailable",
     "chat.resume.home_changed",
     "chat.resume.missing",
     "chat.session_model.agent_changed",
