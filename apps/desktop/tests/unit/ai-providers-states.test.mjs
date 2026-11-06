@@ -27,8 +27,8 @@ const BASE = {
   service_poll: { cursor: 0, gap: false, replay: false, runtime: "test-service", reset: false },
 };
 
-async function open(name, surfaces) {
-  const app = await boot("listo", name, { ...BASE, list_surfaces: surfaces });
+async function open(name, surfaces, extra = {}) {
+  const app = await boot("listo", name, { ...BASE, list_surfaces: surfaces, ...extra });
   await sleep(600);
   app.w.dispatchEvent(new app.w.CustomEvent("harness:open-settings", { detail: "proveedores-ia" }));
   await sleep(600);
@@ -82,3 +82,34 @@ test("Danil Credits exposes its sole model without execution or a fabricated bal
   assert.equal(section.querySelector('[role="status"]').textContent, "No disponible");
   assert.deepEqual(app.failures, []);
 });
+
+
+for (const [state, wallet, status, expected] of [
+  ["zero", { balance_credits: 0, available_credits: 0, status: "active" }, 200, "0 créditos"],
+  ["null", null, 200, "No disponible"],
+  ["error", null, 503, "No disponible"],
+  ["loading", null, 200, "Consultando…"],
+]) {
+  test(`the real Credits panel renders ${state} from the authenticated desktop transport`, async () => {
+    const requests = [];
+    let release;
+    const pending = new Promise((resolve) => { release = resolve; });
+    const reply = { status, content_type: "application/json", body: JSON.stringify({ account_id: 476, wallet, execution_available: false }) };
+    const { app, panel } = await open(`ai-credits-${state}`, [], {
+      agents_session_status: { state: "active", user: { user_id: "person", name: "Ana", email: "ana@example.test" }, active_account_id: 476 },
+      agents_bff_fetch: (args) => {
+        requests.push(args);
+        return state === "loading" ? pending : reply;
+      },
+    });
+    const section = panel().querySelector('section[aria-label="Danil Credits"]');
+    assert.ok(section);
+    assert.equal(section.querySelector('[role="status"]').textContent, expected);
+    assert.ok(section.querySelector("button").disabled);
+    assert.ok(requests.some((r) => r.path === "/api/credits/balance" && r.method === "GET"));
+    assert.ok(requests.every((r) => r.method === "GET"));
+    release(reply);
+    await sleep(20);
+    assert.deepEqual(app.failures, []);
+  });
+}
