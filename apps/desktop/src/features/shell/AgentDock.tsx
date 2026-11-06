@@ -215,7 +215,7 @@ export default function AgentDock(props: {
   const [altoRiel, setAltoRiel] = createSignal(0);
   const [encima, setEncima] = createSignal(false);
   onMount(() => {
-    const riel = raiz.parentElement;
+    const riel = raiz?.parentElement;
     if (!riel) return;
     const medir = () => setAltoRiel(riel.clientHeight);
     medir();
