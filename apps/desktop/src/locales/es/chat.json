@@ -455,5 +455,6 @@
   "chat.history.pieces": "Registro completo",
   "chat.history.content": "Contenido guardado",
   "chat.queue.stop_and_send": "Detener el turno y enviar",
-  "chat.queue.stop_and_send_aria": "Detener el turno y enviar el mensaje {n} de la cola"
+  "chat.queue.stop_and_send_aria": "Detener el turno y enviar el mensaje {n} de la cola",
+  "chat.secret_paste.send_blocked": "Guarda o descarta el secreto"
 }

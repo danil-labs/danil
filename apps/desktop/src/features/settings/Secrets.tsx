@@ -11,7 +11,7 @@
  * Trozo perezoso: lo carga quien abre la sección.
  */
 import "../../locales/danilPhrases";
-import { type Credential, type CredentialMachine, credentialMachines, credentialSlot, envSecretNameProblem, envSecretOf, sealRecipientsFor } from "@terminus/computers";
+import { type Credential, type CredentialMachine, credentialMachines, credentialSlot, envSecretNameProblem, envSecretOf } from "@terminus/computers";
 import { createEffect, createMemo, createResource, createSignal, For, Match, on, onMount, Show, Switch } from "solid-js";
 import { unknownCommand } from "../../lib/errorCode.ts";
 import { df } from "../../lib/format";
@@ -34,6 +34,7 @@ import { act, credentialsBackend, credentialsView, failureOf, reloadCredentials 
 import { SettingsBlock, SettingsPanel, SettingsSection } from "./layout";
 import { machines } from "../machines/store";
 import { secretsRoute } from "./secrets-support";
+import { noSecretRecipients, saveEnvSecret } from "./secrets-save";
 
 const NAME_PROBLEM = {
   empty: () => t("danil.secrets.name_empty"),
@@ -42,13 +43,6 @@ const NAME_PROBLEM = {
 } as const;
 
 const openSettings = (panel: string) => window.dispatchEvent(new CustomEvent("harness:open-settings", { detail: panel }));
-
-/** En la web: si ninguna máquina anuncia `secrets_v1` no hay para quién sellar, y un secreto sin copias no se crea. */
-function noSecretRecipients(): boolean {
-  if (viaEngine()) return false;
-  const v = credentialsView();
-  return v.kind === "ready" && sealRecipientsFor("env_secret", v.listing.recipients).filter((r) => r.public_key).length === 0;
-}
 
 /** Lo que el motor de esta máquina tiene en su bóveda (`env_secrets_list`), sin valores. */
 type EngineSecret = { slot: string; folder: string; name: string; hint: string | null; in_account: boolean };
@@ -181,21 +175,7 @@ function SecretDialog(props: { rows: SecretRow[]; folders: Project[]; initial: {
     if (busy() || !valid()) return;
     setBusy(true);
     setFailure(null);
-    const v = value();
-    let f: Failure | null = null;
-    if (viaEngine()) {
-      try {
-        await invoke("env_secret_set", { folder: folder() ?? "*", name: name(), value: v, replace: !!existing() });
-      } catch (err) {
-        f = failureOf(err);
-      }
-    } else {
-      f = await act(async (b, ws) => {
-        const now = credentialsView();
-        if (now.kind !== "ready" || !b.create) return;
-        await b.create(ws, { kind: "env_secret", provider: "env", slot: slot(), label: name(), config: { name: name(), folder: folder() } }, v, now.listing);
-      });
-    }
+    const f = await saveEnvSecret({ folder: folder(), name: name(), value: value(), replace: !!existing() });
     setBusy(false);
     setFailure(f);
     if (!f) {

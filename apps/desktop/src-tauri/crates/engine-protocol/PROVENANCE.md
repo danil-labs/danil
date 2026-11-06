@@ -289,3 +289,11 @@ them answers that the command is unknown, and only that feature turns off.
   `session.effort` for the next turn, also through the relay (danil-engine#371,
   dev `1a3b4438`), SHA-256
   `b8ca109ae22758520341b5c2cca1911b2ccbfeee74e84c72595543eaae72d413`.
+- `secret_request_v1.json`: «Secreto solicitado» (`secret_request_answer`,
+  `secret_requests_list`, the `secret_requested` and `secret_request_closed`
+  events, the `secret request` CLI route), feature `secret_request_v1`, from
+  danil-engine branch `feat/secret-request` commit `cefbfdd6` (base dev
+  `47b44a68`; not yet on GitHub), SHA-256
+  `e5e041c110fc2c6a1641766f5be6821244dc7c748cfb94b74f46b129b3f5e900`. The
+  window announces `client_features: ["secret_request_v1"]` in
+  `service subscribe` (`engine-client/src/push.rs`).
