@@ -477,6 +477,7 @@
   "danil.lima.step.connect": "Conectar con esta Mac",
   "danil.lima.row.online": "Linux en esta Mac · en línea",
   "danil.lima.row.off": "Linux en esta Mac · apagada",
+  "danil.lima.box.scope": "Disponible a través de esta Mac.",
   "danil.lima.fail.lima_missing": "Lima no está instalado en esta Mac.",
   "danil.lima.fail.lima_timeout": "Lima tardó demasiado en contestar. Reintenta.",
   "danil.lima.fail.lima_failed": "Lima no pudo completar la operación. El detalle técnico dice qué pasó.",

@@ -17,16 +17,23 @@ export function DelegatedSkeleton(props: { rows?: number }) {
       <span class="sr-only">{t("chat.delegation.loading")}</span>
       <For each={rows()}>
         {() => (
-          <div aria-hidden="true" class="flex h-[52px] flex-col justify-center gap-[5px] rounded-[10px] border border-transparent py-[7px] pr-2 pl-2.5">
-            <div class="flex h-[18px] min-w-0 items-center gap-1.5">
-              <Bar class="h-[9px] w-[150px]" />
-              <span class="flex-1" />
-              <span class="flex h-5 min-w-[22px] shrink-0 items-center justify-end">
-                <Spinner size={14} class="text-primary motion-safe:animate-spin-lento motion-reduce:animate-none" />
-              </span>
-            </div>
-            <div class="flex h-4 min-w-0 items-center">
-              <Bar class="h-2 w-[90px]" />
+          <div aria-hidden="true" class="flex h-[52px] flex-col justify-center rounded-[10px] border border-transparent py-[7px] pr-2 pl-2.5">
+            <div class="task-card-lines">
+              <div class="task-card-main">
+                <div class="flex h-[22px] min-w-0 items-center gap-1.5">
+                  <Bar class="h-[9px] w-[150px]" />
+                </div>
+                <div class="flex h-4 min-w-0 items-center gap-1.5">
+                  <Bar class="h-2 w-[90px]" />
+                </div>
+              </div>
+              <div class="task-card-end">
+                <span class="task-card-end-mark">
+                  <span class="task-card-mark">
+                    <Spinner size={14} class="text-primary motion-safe:animate-spin-lento motion-reduce:animate-none" />
+                  </span>
+                </span>
+              </div>
             </div>
           </div>
         )}

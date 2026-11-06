@@ -485,7 +485,12 @@ async function start(settings: WebSettings) {
   }
 
   let accounts = await loadAccounts({ storage: extras, primary, clientFor });
-  if (!accounts.some((a) => a.signedIn)) return leave();
+  if (!accounts.some((a) => a.signedIn)) {
+    // Una sesión vieja en localStorage pudo pintar el marco. El inicio de sesión va solo.
+    document.getElementById("root")?.replaceChildren();
+    return leave();
+  }
+  (window as Window & { pintarMarcoDeCarga?: () => void }).pintarMarcoDeCarga?.();
   const list = (token: string) => listWorkspaces(endpoint, token);
   // The account is picked with the saved lists; the network only when `?w=` is not in them.
   const wanted = params.get("w");
@@ -493,7 +498,10 @@ async function start(settings: WebSettings) {
   const fresh = readListings(storage, accounts, list);
   if (wanted && !ownerOf(wanted, listings)) listings = await fresh;
   const { account } = pickAccount(accounts, listings, wanted, storage);
-  if (!account) return leave();
+  if (!account) {
+    document.getElementById("root")?.replaceChildren();
+    return leave();
+  }
   const current = account;
   rememberLast(storage, current.user_id);
   if (wanted) {

@@ -21,5 +21,6 @@ export function startConnect(settings: ConnectSettings, root: HTMLElement) {
   const session = settings.workos ? workosSession({ onGone: leave }) : supabaseSession(settings.supabaseUrl, settings.supabaseKey, { onGone: leave });
   const code = normalizeCode(new URLSearchParams(window.location.search).get("code"));
   const desktop = settings.workos ? desktopHandoff(window.location.search) : null;
+  root.replaceChildren();
   render(() => <ConnectPage session={session} endpoint={settings.endpoint} code={code} desktop={desktop} />, root);
 }

@@ -1,7 +1,7 @@
 /**
  * El razonamiento del agente no es su respuesta.
  *
- * Un `chat` con `kind: "reasoning"` se pinta en su bloque, plegado y aparte; un
+ * Un `chat` con `kind: "reasoning"` se pinta en su bloque, aparte; un
  * kind que la ventana no conoce se ignora en vez de caer al texto del agente.
  * Monta `dist/`.
  */
@@ -81,18 +81,20 @@ test("el razonamiento no se pega a la respuesta y un kind desconocido se ignora"
   await sleep(300);
 
   assert.ok(text(app).includes("La respuesta."), "la respuesta no llegó al hilo");
-  assert.ok(!text(app).includes("pienso el problemaLa respuesta."), "el razonamiento se pegó a la respuesta");
   assert.ok(!text(app).includes("no debería verse"), "un kind desconocido llegó al hilo");
-  assert.ok(!text(app).includes("pienso el problema"), "el razonamiento nace desplegado");
+  assert.ok(text(app).includes("pienso el problema"), "el razonamiento vivo no está desplegado");
 
   const boton = [...app.w.document.querySelectorAll("button[aria-expanded]")]
     .find((b) => /Pensando|Razonamiento/.test(b.textContent ?? ""));
   assert.ok(boton, "no hay bloque de razonamiento");
-  assert.equal(boton.getAttribute("aria-expanded"), "false");
+  const panel = app.w.document.getElementById(boton.getAttribute("aria-controls"));
+  assert.ok(panel?.textContent.includes("pienso el problema"));
+  assert.ok(!panel.textContent.includes("La respuesta."), "la respuesta quedó dentro del razonamiento");
+  assert.equal(boton.getAttribute("aria-expanded"), "true");
   boton.click();
   await sleep(100);
-  assert.equal(boton.getAttribute("aria-expanded"), "true");
-  assert.ok(text(app).includes("pienso el problema"), "abrir no muestra el razonamiento");
+  assert.equal(boton.getAttribute("aria-expanded"), "false");
+  assert.ok(!text(app).includes("pienso el problema"), "plegar no oculta el razonamiento");
   assert.deepEqual(app.failures, []);
 });
 
@@ -164,9 +166,8 @@ test("el bloque vive desde el primer fragmento y sobrevive al cierre sin duplica
   const vivo = razonamientos(app);
   assert.equal(vivo.length, 1, "el bloque no existe con el primer fragmento");
   assert.equal(vivo[0].textContent.trim(), "Pensando…", "el resumen vivo no dice «Pensando…»");
-  vivo[0].click();
-  await sleep(100);
-  assert.ok(text(app).includes("pienso el problema"), "abrir el bloque vivo no muestra su texto");
+  assert.equal(vivo[0].getAttribute("aria-expanded"), "true");
+  assert.ok(text(app).includes("pienso el problema"), "el bloque vivo no muestra su texto");
 
   app.emit("chat", { kind: "delta", session: "t1", workspace: "w", text: "La respuesta." });
   guardado = true;
@@ -176,7 +177,9 @@ test("el bloque vive desde el primer fragmento y sobrevive al cierre sin duplica
   const cerrado = razonamientos(app);
   assert.equal(cerrado.length, 1, "al cerrar salieron dos filas para la misma ráfaga");
   assert.equal(cerrado[0].textContent.trim(), "Razonamiento", "al cerrar no cambió el resumen");
-  assert.equal(cerrado[0].getAttribute("aria-expanded"), "true", "al cerrar cambió de identidad y se plegó");
+  assert.equal(cerrado[0].getAttribute("aria-expanded"), "false", "al terminar no se plegó");
+  cerrado[0].click();
+  await sleep(100);
   assert.equal((text(app).match(/pienso el problema/g) ?? []).length, 1, "la ráfaga se duplicó");
   assert.ok(text(app).includes("La respuesta."), "la respuesta no sobrevivió al cierre");
   assert.deepEqual(app.failures, []);

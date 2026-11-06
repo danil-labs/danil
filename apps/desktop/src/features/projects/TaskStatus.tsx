@@ -4,7 +4,7 @@ import CircleHelp from "lucide-solid/icons/circle-help";
 import CirclePause from "lucide-solid/icons/circle-pause";
 import ShieldQuestion from "lucide-solid/icons/shield-question";
 import { SignalDot, taskSignalTone } from "../../ui/SignalDot";
-import { type JSX, Match, Show, Switch } from "solid-js";
+import { Match, Show, Switch } from "solid-js";
 import { t } from "../../lib/i18n";
 import { Spinner } from "../../ui/Spinner";
 import { cn } from "../../lib/utils";
@@ -58,23 +58,22 @@ function RailDashedRing(props: { size?: number }) {
 }
 
 /**
- * Identidad estable. Trabajando lo dice la animación del agente, sin arco
- * (sólo con movimiento reducido); sin agente queda un loader chico. Cualquier
- * otro estado es un punto de color: en la esquina del agente o, sin agente,
- * al centro, donde iría el loader.
+ * El estado de la tarjeta, en el mismo cuadro que el menú (22×20): el loader,
+ * el anillo de «recién creada» y el punto van al centro. La cara del agente no
+ * entra aquí: si lo hiciera, el punto se iría a una esquina y dejaría de caer
+ * sobre la hora.
  */
-function CardMark(props: TaskActivity & { identity: () => JSX.Element; identityLabel?: string; provisional?: boolean; archivada?: boolean }) {
+function CardMark(props: TaskActivity & { identityLabel?: string; provisional?: boolean; archivada?: boolean }) {
   const state = () => markedState(props);
   const label = () => [props.identityLabel, props.provisional ? t("projects.status.provisional") : taskLabel(state())].filter(Boolean).join(" · ");
-  return <span class="task-card-identity" data-task-orbit data-with-agent={props.identityLabel ? "" : undefined} role={label() ? "img" : undefined} title={label()} aria-label={label() || undefined}>
-    {props.identity()}
+  return <span class="task-card-identity" data-task-orbit role={label() ? "img" : undefined} title={label()} aria-label={label() || undefined}>
     <Show when={props.provisional} fallback={
       <Show when={state() === "working"} fallback={
         <Show when={state()}>
           <span class="task-card-badge"><SignalDot tone={taskSignalTone(state())} /></span>
         </Show>
-      }><span class="task-card-orbit"><Spinner size={props.identityLabel ? 22 : 16} class="animate-spin-lento text-primary motion-reduce:animate-none" /></span></Show>
-    }><span class="task-card-orbit"><RailDashedRing size={22} /></span></Show>
+      }><span class="task-card-orbit"><Spinner size={14} class="animate-spin-lento text-primary motion-reduce:animate-none" /></span></Show>
+    }><span class="task-card-orbit"><RailDashedRing size={14} /></span></Show>
   </span>;
 }
 
@@ -116,9 +115,10 @@ export default function EstadoDeTarea(props: TaskActivity & {
   class?: string;
   /** Lado del icono; la fila del riel lo sube a 13. */
   size?: number;
-  /** Las marcas de la tarjeta del riel (`Sessions.tsx`): arco, anillo, punto. */
+  /** Las marcas de la tarjeta del riel (`Sessions.tsx`): arco, anillo, punto, centrados. */
   riel?: boolean;
-  identity?: () => JSX.Element;
+  /** La tarjeta del riel: loader, anillo o punto en el cuadro del menú. */
+  tarjeta?: boolean;
   identityLabel?: string;
   /** Recién creada: el motor todavía no la registra (`lib/taskDraft.ts`). */
   provisional?: boolean;
@@ -127,7 +127,7 @@ export default function EstadoDeTarea(props: TaskActivity & {
   const lado = () => props.size ?? 12;
   const state = () => markedState(props);
   const label = () => taskLabel(state(), props.ambito === "plegadas");
-  return <Show when={!props.identity} fallback={<CardMark {...props} identity={props.identity!} />}>
+  return <Show when={!props.tarjeta} fallback={<CardMark {...props} />}>
   <Show when={!props.riel} fallback={<RailMark {...props} plegadas={props.ambito === "plegadas"} />}>
   <Show when={state()}><span class={cn("inline-flex shrink-0 items-center gap-0.5", props.class)}>
     <span class={cn("inline-flex shrink-0 items-center justify-center", stateColor(state()))} style={{ width: `${lado()}px`, height: `${lado()}px` }} title={label()} aria-label={label()}>
