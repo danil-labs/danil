@@ -162,7 +162,7 @@ export default function AgentDock(props: {
           {t("shell.agent_dock.repo")}
         </span>
       </Show>
-      <SquarePen size={14} aria-hidden="true" class="shrink-0 text-neutral-400 group-hover/fila:text-neutral-950" />
+      <SquarePen size={14} aria-hidden="true" class="shrink-0 text-neutral-500 group-hover/fila:text-neutral-950" />
     </button>
   );
 
@@ -171,7 +171,7 @@ export default function AgentDock(props: {
       <h3 class="m-0 px-2 pt-3 pb-1 text-caption font-medium text-neutral-500">{titulo}</h3>
       <Show
         when={agentes.length > 0}
-        fallback={<Show when={vacio}><p class="m-0 px-2 pb-1 text-caption text-neutral-400">{vacio}</p></Show>}
+        fallback={<Show when={vacio}><p class="m-0 px-2 pb-1 text-caption text-neutral-500">{vacio}</p></Show>}
       >
         <For each={agentes}>{(a) => filaPanel(a, esRepo)}</For>
       </Show>
@@ -278,7 +278,7 @@ export default function AgentDock(props: {
           {t("shell.agent_dock.team")}
         </span>
         <Show when={!desplegado() && sobran() > 0}>
-          <span class="ml-1.5 text-caption text-neutral-400">+{sobran()}</span>
+          <span class="ml-1.5 text-caption text-neutral-500">+{sobran()}</span>
         </Show>
         {botones()}
       </div>
@@ -375,7 +375,7 @@ export default function AgentDock(props: {
           {seccion(t("shell.agent_dock.workspace"), grupos().workspace, false, t("shell.agent_dock.workspace_empty"))}
           <Show
             when={props.currentFolder}
-            fallback={<p class="m-0 px-2 pt-3 text-caption text-neutral-400">{t("shell.agent_dock.no_folder")}</p>}
+            fallback={<p class="m-0 px-2 pt-3 text-caption text-neutral-500">{t("shell.agent_dock.no_folder")}</p>}
           >
             {seccion(
               props.currentFolderName
