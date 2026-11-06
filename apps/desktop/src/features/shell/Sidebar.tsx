@@ -358,6 +358,17 @@ export default function Sidebar(props: {
     }
     return undefined;
   };
+  /** De dónde viene cada agente: workspace, proyecto o repositorio. */
+  const nivelDe = createMemo<Record<string, "workspace" | "project" | "repo">>(() => {
+    const out: Record<string, "workspace" | "project" | "repo"> = {};
+    for (const c of porCarpeta()) {
+      for (const a of c.roster()) {
+        if (a.name in out) continue;
+        out[a.name] = !a.own ? "repo" : a.own_scope?.kind === "workspace" ? "workspace" : "project";
+      }
+    }
+    return out;
+  });
   /** Carpetas donde está el agente, en el orden del riel. */
   const carpetasDelAgente = (name: string) => {
     const orden = (id: string) => { const i = props.projects.findIndex((p) => p.id === id); return i === -1 ? props.projects.length : i; };
@@ -705,6 +716,7 @@ export default function Sidebar(props: {
               selected={vista().agent}
               foldersOf={carpetasDelAgente}
               currentFolder={(props.current ? carpetaDe(props.current) : "") || props.proyectoAbierto}
+              nivelDe={(name) => nivelDe()[name]}
               onTalk={props.onHablarCon}
               onShowTasks={(agent) => cambiarVista({ ...vista(), agent })}
               onProfile={props.onAgentProfile}
