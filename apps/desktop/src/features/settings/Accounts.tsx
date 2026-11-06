@@ -58,7 +58,6 @@ import "../../locales/settingsPhrases";
 const CredentialsInUse = lazy(() => import("./credentials/AccountCredentials").then((m) => ({ default: m.CredentialsInUse })));
 const LocalKeysBanner = lazy(() => import("./credentials/AccountCredentials").then((m) => ({ default: m.LocalKeysBanner })));
 
-// Si el CLI sin TTY no avanza, la Terminal lo abre con la misma carpeta de cuenta.
 /** Cuánto se espera a que el CLI diga algo antes de ofrecer la Terminal. */
 const ESPERA_ANTES_DE_LA_TERMINAL_MS = 15_000;
 

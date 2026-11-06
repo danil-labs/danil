@@ -12,9 +12,9 @@
  * la píldora transparente: una perilla blanca sobre una tarjeta blanca, que se
  * reportó como «no veo nada, solo un mensaje, ¿cómo lo activo?».
  *
- *   pnpm build && node scripts/guards/missing-classes.mjs
+ *   pnpm build && pnpm web:build && node scripts/guards/missing-classes.mjs
  *
- * Sale con 1 si encuentra alguna. Necesita `dist/assets`: compara contra el CSS
+ * Sale con 1 si encuentra alguna. Necesita `dist/assets` y `dist-web`: compara contra el CSS
  * **compilado**, no contra `global.css` — leer el token en el archivo fuente es
  * justo el paso que da por buena una clase que no se emitió.
  *
@@ -42,6 +42,7 @@ const RAIZ = join(dirname(fileURLToPath(import.meta.url)), "../..");
 const FUENTE = join(RAIZ, "src");
 const DIST = join(RAIZ, "dist/assets");
 const GLOBAL = join(RAIZ, "src/styles/global.css");
+const WEB = join(RAIZ, "dist-web");
 
 /** Dónde se escriben clases. Lo de fuera de aquí no se mira, y se dice. */
 const LLAMADAS = ["cn", "cva", "clsx", "cx"];
@@ -71,9 +72,27 @@ const css = hojas.map((hoja) => readFileSync(join(DIST, hoja), "utf8")).join("\n
  * de `:hover` no va escapado— y quitarle las barras devuelve la clase tal como
  * se escribe en el TSX.
  */
-const definidas = new Set(
-  [...css.matchAll(/\.((?:\\.|[\w-])+)/g)].map((m) => m[1].replace(/\\(.)/g, "$1")),
+const clasesEn = (texto) => new Set(
+  [...texto.matchAll(/\.((?:\\.|[\w-])+)/g)].map((m) => m[1].replace(/\\(.)/g, "$1")),
 );
+const definidas = clasesEn(css);
+function* hojasWeb(dir) {
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const path = join(dir, entry.name);
+    if (entry.isDirectory()) yield* hojasWeb(path);
+    else if (entry.name.endsWith(".css")) yield path;
+  }
+}
+if (!existsSync(WEB)) {
+  console.error("No hay dist-web. Corre `pnpm web:build` primero.");
+  process.exit(2);
+}
+const webHojas = [...hojasWeb(WEB)];
+if (!webHojas.length) {
+  console.error("No hay hojas en dist-web. Corre `pnpm web:build` primero.");
+  process.exit(2);
+}
+const definidasWeb = clasesEn(webHojas.map((f) => readFileSync(f, "utf8")).join("\n"));
 
 // ------------------------------------------------ los alias que no son utility
 
@@ -228,7 +247,7 @@ let saltadas = 0;
  * cosa es «encontré clases muertas» y otra «no estoy en condiciones de mirar».
  */
 const nuevos = [];
-const tCss = Math.min(...hojas.map((hoja) => statSync(join(DIST, hoja)).mtimeMs));
+const tCss = Math.min(...hojas.map((hoja) => statSync(join(DIST, hoja)).mtimeMs), ...webHojas.map((hoja) => statSync(hoja).mtimeMs));
 for (const f of archivos(FUENTE)) {
   if (statSync(f).mtimeMs > tCss) nuevos.push(relative(RAIZ, f));
 }
@@ -240,7 +259,7 @@ if (nuevos.length) {
   if (nuevos.length > 8) console.error(`  … y ${nuevos.length - 8} más`);
   console.error(
     "\nComparar contra ella daría por muertas las clases que aún no se han\n" +
-      "compilado, y por vivas las que ya se borraron. Corre `pnpm build` primero.",
+      "compilado, y por vivas las que ya se borraron. Compila escritorio y web primero.",
   );
   process.exit(2);
 }
@@ -248,6 +267,7 @@ if (nuevos.length) {
 for (const f of archivos(FUENTE)) {
   const donde = relative(RAIZ, f).replaceAll("\\", "/");
   const { literales, plantillas } = literalesDeClase(readFileSync(f, "utf8"));
+  const clases = /^src\/web\/(admin|auth|connect)\//.test(donde) ? definidasWeb : definidas;
   for (const { crudo } of plantillas) {
     for (const m of crudo.matchAll(/([a-zA-Z][\w-]*)-\$\{/g)) armadas.add(m[1]);
   }
@@ -257,7 +277,7 @@ for (const f of archivos(FUENTE)) {
       if (!token) continue;
       if (!comprobable(token)) { saltadas++; continue; }
       escritas++;
-      if (definidas.has(token)) continue;
+      if (clases.has(token)) continue;
       const clave = `${token} ${donde}:${linea}`;
       if (!muertas.has(clave)) muertas.set(clave, { token, donde, linea });
     }
