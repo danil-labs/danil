@@ -1,4 +1,4 @@
-import { createResource } from "solid-js";
+import { createEffect, createResource, createSignal, onCleanup } from "solid-js";
 import { capabilities } from "../../lib/platform";
 import { t } from "../../lib/i18n";
 import { Button } from "../../ui/Button";
@@ -6,9 +6,17 @@ import { availableDanilCredits, DANIL_CREDITS } from "./danil-credits";
 
 /** Vista cerrada hasta acordar el contrato de cuenta y saldo con el BFF. */
 export default function DanilCredits() {
+  const [revision, setRevision] = createSignal(0);
+  createEffect(() => {
+    const off = capabilities().danilCredits?.subscribe?.(() => setRevision((value) => value + 1));
+    if (off) onCleanup(off);
+  });
   const [balance] = createResource(
-    () => capabilities().danilCredits,
-    async (source) => {
+    () => {
+      const source = capabilities().danilCredits;
+      return source ? { source, revision: revision() } : undefined;
+    },
+    async ({ source }) => {
       try { return availableDanilCredits(await source.readBalance()); }
       catch { return null; }
     },

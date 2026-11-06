@@ -53,6 +53,7 @@ import { authLocation } from "./auth/return";
 import { adminPageCapability, personalAccountCapability } from "./admin/capability";
 import { agentsSession } from "./attention/workspace-sources";
 import { webUsageMe } from "../features/settings/usage-source";
+import { webDanilCredits } from "./danil-credits";
 import { webBusinessBilling } from "./business-billing";
 import { webGithubAccount } from "./github-account";
 import { type Account, type Listing, SLOT_PREFIX, loadAccounts, ownerOf, pickAccount, readListings, rememberLast, removeExtra, savedListings } from "./accounts";
@@ -278,6 +279,9 @@ function mountApp(computers: Computer[], base: Base, before?: (id: string) => ()
     computerStatus: true,
     browserFiles: true,
     sidebarExtra: () => <HomeLink />,
+    danilCredits: import.meta.env.TERMINUS_ALPHA
+      ? webDanilCredits({ getToken: async () => await base.getToken(), unauthorized: async () => base.refresh ? await base.refresh() : false }, `${import.meta.env.BASE_URL}alpha-api`, fetch, base.subscribe)
+      : undefined,
     accountProfile: webAccountProfile(base.endpoint, base.getToken, base.onUnauthorized),
     accountEmails: import.meta.env.TERMINUS_ALPHA ? webAccountEmails({ getToken: async () => await base.getToken(), unauthorized: async () => base.refresh ? await base.refresh() : false }, `${import.meta.env.BASE_URL}alpha-api`) : undefined,
     initialSettings: takeSettingsParam(),

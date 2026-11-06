@@ -3,7 +3,7 @@ import ChevronDown from "lucide-solid/icons/chevron-down";
 import Lock from "lucide-solid/icons/lock";
 import Search from "lucide-solid/icons/search";
 import Star from "lucide-solid/icons/star";
-import { createMemo, createSignal, For, Show } from "solid-js";
+import { createMemo, createSignal, For, Show, lazy } from "solid-js";
 import { t } from "../../lib/i18n";
 import { invoke } from "../../lib/invoke.ts";
 import { left, type Query } from "../../lib/limits";
@@ -22,8 +22,9 @@ import { prosa } from "../../lib/prose";
 import { cn } from "../../lib/utils";
 import { MarcaAgente } from "../../ui/icons";
 import { Popover, PopoverContent, PopoverTrigger } from "../../ui/Popover";
-import DanilCredits from "./DanilCredits";
 import type { AccountList } from "../settings/accounts-store";
+
+const DanilCredits = lazy(() => import("./DanilCredits"));
 
 type SelectorDeModeloProps = {
   invokeOptions?: { headers: Record<string, string> };
