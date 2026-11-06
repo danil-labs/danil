@@ -65,10 +65,8 @@
   "onboarding.ai.login_failed": "Sign-in didn't finish. Try again.",
   "onboarding.ai.signup.pending": "Your Google account doesn't have Antigravity turned on yet",
   "onboarding.ai.signup.hint": "Turn it on in the page that opened in your browser. When you come back here, we check again and connect it.",
-  "onboarding.ai.signup.hint_admin": "Google didn't give a page to turn it on. If it's a work or school account, ask whoever manages it to turn on Antigravity, then check again.",
   "onboarding.ai.signup.open": "Open the page again",
   "onboarding.ai.signup.check": "Check again",
-  "onboarding.ai.error.keyring": "This computer has no active keyring to store the session. Open or unlock the system keyring (GNOME Keyring or KWallet) and try again.",
   "onboarding.ai.map.connecting": "Connecting {name}…",
   "onboarding.ai.map.ready": {
     "one": "{names} ready to work",
