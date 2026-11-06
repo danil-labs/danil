@@ -1,3 +1,4 @@
+import { marcaDeSuperficie } from "../../lib/surfaces";
 import { groupAccounts } from "@terminus/computers";
 import Check from "lucide-solid/icons/check";
 import ChevronRight from "lucide-solid/icons/chevron-right";
@@ -58,17 +59,6 @@ import "../../locales/settingsPhrases";
 const CredentialsInUse = lazy(() => import("./credentials/AccountCredentials").then((m) => ({ default: m.CredentialsInUse })));
 const LocalKeysBanner = lazy(() => import("./credentials/AccountCredentials").then((m) => ({ default: m.LocalKeysBanner })));
 
-/**
- * "Conectar", no "iniciar sesión": la app no inicia ninguna sesión —lo hace
- * el CLI, en su carpeta— y decir lo contrario prometería que la credencial
- * pasa por aquí.
- *
- * La Terminal es recuperación, no una pregunta: un CLI sin TTY puede no
- * imprimir la URL, o sacar un menú y quedarse esperando una tecla, y la
- * conexión se cuelga sin decir nada. Se ofrece cuando el fallo está
- * ocurriendo, no antes. Los dos caminos escriben en la misma carpeta:
- * `spawn_terminal` abre la Terminal con la variable de entorno ya puesta.
- */
 /** Cuánto se espera a que el CLI diga algo antes de ofrecer la Terminal. */
 const ESPERA_ANTES_DE_LA_TERMINAL_MS = 15_000;
 
@@ -818,7 +808,7 @@ export default function Accounts(props: {
             onClick={() => setAbierto(!abierto())}
           >
             <span class="flex size-4 shrink-0 items-center justify-center">
-              <MarcaAgente id={agente()} size={16} />
+              <MarcaAgente id={marcaDeSuperficie({ catalogo: props.soloGratuitos ? "gratuitos" : "todo", provider: agente() })} size={16} />
             </span>
             <span class="grid min-w-0 flex-1">
               <span class="truncate">{props.titulo}</span>
@@ -1400,7 +1390,7 @@ export default function Accounts(props: {
             <div class="flex flex-col gap-3">
               <DialogTitle>{t("settings.accounts.go_key")}</DialogTitle>
               <p class="m-0 text-xs text-neutral-500">{t("settings.accounts.go_key_hint")}</p>
-              <Button variant="outline" size="compact" onClick={() => void invoke("open_external", { target: "https://opencode.ai/zen" })}>
+              <Button variant="outline" size="compact" onClick={() => void invoke("open_external", { target: "https://opencode.ai/console" })}>
                 {t("settings.accounts.create_key")}
               </Button>
               <Input type="password" class="font-mono text-xs" value={claveGo()} placeholder={t("settings.accounts.key_placeholder")} onInput={(e) => setClaveGo(e.currentTarget.value)} onKeyDown={(e) => e.key === "Enter" && void guardarClaveGo()} />
@@ -1542,7 +1532,7 @@ export default function Accounts(props: {
  * probar el producto, no para trabajar con clientes. Los siete modelos que
  * ofrece tienen excepción de datos, y la frase lo dice con esas palabras.
  * Quien trabaje con material de un cliente usa su cuenta de Claude, Codex,
- * Grok o Antigravity, o paga Zen.
+ * Grok o Antigravity, o paga por modelos de OpenCode.
  */
 const AVISO_DE_USO = () => t("settings.accounts.free.warning");
 

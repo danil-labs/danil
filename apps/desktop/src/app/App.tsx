@@ -2789,11 +2789,24 @@ export default function App() {
 
   onMount(() => {
     const refresh = () => void reconcileActiveTurns();
+    const refrescarAgentes = () => {
+      // Al volver a la ventana (o a la pestaña) se releen los agentes: pueden
+      // haberse escrito o editado archivos en `.agents/` por fuera de la app.
+      window.dispatchEvent(new CustomEvent("harness:encargados"));
+      window.dispatchEvent(new CustomEvent("harness:profiles"));
+    };
+    const alHacerseVisible = () => {
+      if (document.visibilityState === "visible") refrescarAgentes();
+    };
     const timer = setInterval(refresh, 5000);
     window.addEventListener("focus", refresh);
+    window.addEventListener("focus", refrescarAgentes);
+    document.addEventListener("visibilitychange", alHacerseVisible);
     onCleanup(() => {
       clearInterval(timer);
       window.removeEventListener("focus", refresh);
+      window.removeEventListener("focus", refrescarAgentes);
+      document.removeEventListener("visibilitychange", alHacerseVisible);
     });
   });
   createEffect(on(workspaceActivo, () => void reconcileActiveTurns()));

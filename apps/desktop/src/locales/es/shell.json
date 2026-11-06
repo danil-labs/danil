@@ -9,7 +9,14 @@
   },
   "shell.agent_dock.pick_folder": "Hablar con {name} en…",
   "shell.agent_dock.see_all": "Ver todos",
-  "shell.agent_dock.empty": "Todavía no hay agentes. Crea uno en «Ver todos».",
+  "shell.agent_dock.empty": "Sin agentes todavía. Escríbelos en `.agents/agents/<nombre>/agent.md`, o créalos en «Ver todos».",
+  "shell.agent_dock.team": "Tus agentes",
+  "shell.agent_dock.names": "Mostrar nombres",
+  "shell.agent_dock.expand": "Ver todos los agentes",
+  "shell.agent_dock.repo": "repo",
+  "shell.agent_dock.workspace": "Del espacio de trabajo",
+  "shell.agent_dock.project": "Instalados en esta carpeta",
+  "shell.agent_dock.repository": "Detectados en el repositorio",
   "shell.agent_dock.see_tasks": "Ver sus tareas",
   "shell.agent_dock.title": "Agentes",
   "shell.column.sidebar_width": "Ancho de la barra lateral",
@@ -440,5 +447,11 @@
   "shell.danilStep.uploadHint": "Se crea en la nube con el nombre «{workspace}».",
   "shell.danilStep.sync": "Sincronizar con uno existente",
   "shell.danilStep.syncEmpty": "Todavía no tienes workspaces en la nube.",
-  "shell.danilStep.doUpload": "Subir «{workspace}»"
+  "shell.danilStep.doUpload": "Subir «{workspace}»",
+  "shell.agent_dock.collapse": "Ocultar el panel",
+  "shell.agent_dock.project_in": "Instalados en {folder}",
+  "shell.agent_dock.workspace_empty": "Sin agentes del espacio todavía.",
+  "shell.agent_dock.project_empty": "Esta carpeta no tiene agentes instalados.",
+  "shell.agent_dock.repo_empty": "El repositorio no declara agentes en `.agents/agents/`.",
+  "shell.agent_dock.no_folder": "Abre una carpeta para ver sus agentes instalados y los de su repositorio."
 }

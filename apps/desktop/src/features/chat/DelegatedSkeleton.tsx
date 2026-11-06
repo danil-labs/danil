@@ -17,7 +17,7 @@ export function DelegatedSkeleton(props: { rows?: number }) {
       <span class="sr-only">{t("chat.delegation.loading")}</span>
       <For each={rows()}>
         {() => (
-          <div aria-hidden="true" class="flex h-[52px] flex-col justify-center rounded-[10px] border border-transparent py-[7px] pr-2 pl-2.5">
+          <div aria-hidden="true" class="flex h-[52px] flex-col justify-center rounded-[10px] border border-transparent py-[7px] pr-2.5 pl-2.5">
             <div class="task-card-lines">
               <div class="task-card-main">
                 <div class="flex h-[22px] min-w-0 items-center gap-1.5">

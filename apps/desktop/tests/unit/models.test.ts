@@ -58,14 +58,14 @@ test("los resultados conservan la sección que desambigua modelos parecidos", ()
     [
       ["Claude", [["claude", "gpt-5"]]],
       ["Codex", [["codex", "gpt-5"]]],
-      ["OpenCode Zen", [["opencode-zen", "opencode/gpt-5"]]],
+      ["OpenCode", [["opencode-zen", "opencode/gpt-5"]]],
       ["OpenCode Go", [["opencode-zen", "opencode-go/gpt-5"]]],
-      ["OpenCode Free", [["opencode-zen", "opencode/free-gpt"]]],
+      ["Danil Free AI", [["opencode-zen", "opencode/free-gpt"]]],
       ["OpenCode Local", [["opencode-local", "ollama/gpt-5"]]],
     ],
   );
   assert.deepEqual(grupos.map((grupo) => grupo.logo), [
-    "claude", "codex", "opencode", "opencode", "opencode", "opencode",
+    "claude", "codex", "opencode", "opencode", "danil", "opencode",
   ]);
 });
 
@@ -82,7 +82,7 @@ test("una superficie de pago no aparece cuando no está autenticada", () => {  c
     },
   );
 
-  assert.deepEqual(opciones.map((opcion) => opcion.proveedor.label), ["OpenCode Free"]);
+  assert.deepEqual(opciones.map((opcion) => opcion.proveedor.label), ["Danil Free AI"]);
   assert.deepEqual(opciones.map((opcion) => opcion.model.id), ["opencode/free-model"]);
 });
 
@@ -100,7 +100,7 @@ test("el selector recibe todos los agentes: el candado decide cuáles se eligen"
   assert.deepEqual(opciones.map((opcion) => opcion.model.id), ["sonnet", "gpt-5.6-sol"]);
 });
 
-test("se puede buscar por proveedor, id, acentos y sin separadores", () => {  assert.equal(coincideModelo("zen", ["GPT 5", "opencode/gpt-5", "OpenCode Zen"]), true);
+test("se puede buscar por proveedor, id, acentos y sin separadores", () => {  assert.equal(coincideModelo("opencode", ["GPT 5", "opencode/gpt-5", "OpenCode"]), true);
   assert.equal(coincideModelo("mimov25", ["MiMo V2.5"]), true);
   assert.equal(coincideModelo("razon", ["Razón"]), true);
   assert.equal(coincideModelo("gemini", ["Claude Sonnet"]), false);

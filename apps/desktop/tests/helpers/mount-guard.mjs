@@ -176,9 +176,9 @@ export async function talkFromFolder(app, folder, nameText) {
   for (let i = 0; i < 80 && !doc.querySelector(`[data-folder-group="${folder}"] [data-folder-open]`); i++) await sleep(25);
   doc.querySelector(`[data-folder-group="${folder}"] [data-folder-open]`).click();
   await sleep(120);
-  const settings = [...doc.querySelectorAll('[role="tab"]')].find((tab) => tab.textContent.trim() === "Configuración");
-  settings.dispatchEvent(new app.w.MouseEvent("mousedown", { bubbles: true, button: 0 }));
-  settings.click();
+  const agents = [...doc.querySelectorAll('[role="tab"]')].find((tab) => tab.textContent.trim() === "Agentes");
+  agents.dispatchEvent(new app.w.MouseEvent("mousedown", { bubbles: true, button: 0 }));
+  agents.click();
   await sleep(120);
   const agentEntry = [...doc.querySelectorAll("li > button")].find((b) => b.querySelector(".astro-face") && b.textContent.trim().startsWith(nameText));
   assert.ok(agentEntry, `la vista de la carpeta lista a ${nameText}`);
