@@ -325,6 +325,15 @@ export default function Sidebar(props: {
     { equals: (a, b) => a.length === b.length && a.every((x, i) => x === b[i]) },
   );
   const [altas, setAltas] = createSignal(0);
+  // Hasta la primera respuesta del motor, un dock vacío es «cargando», no «sin agentes».
+  // Listo es que TODAS las carpetas ya tienen su lista a la vista. Lo decide el
+  // propio recurso y no un aviso dentro de la carga: ese llegaba un instante
+  // antes que la lista, y el dock decía «sin agentes» con los agentes en camino.
+  // Sin plazo: `invoke` espera al motor, y una carpeta que falla resuelve igual.
+  const rosterListo = () => {
+    const carpetas = porCarpeta();
+    return carpetas.length > 0 && carpetas.every((c) => c.roster.ready());
+  };
   const alCrearAgente = () => setAltas((n) => n + 1);
   window.addEventListener("harness:encargados", alCrearAgente);
   onCleanup(() => window.removeEventListener("harness:encargados", alCrearAgente));
@@ -338,7 +347,10 @@ export default function Sidebar(props: {
     const [project, machine] = clave.split("\n");
     const roster = watchRoster(
       machine ? `${project}@${machine}` : project,
-      async () => (await invoke<HandlerList>("list_agents", { project }, machine ? { headers: { "x-terminus-machine": machine } } : undefined)).agents,
+      async () => {
+        const { agents } = await invoke<HandlerList>("list_agents", { project }, machine ? { headers: { "x-terminus-machine": machine } } : undefined);
+        return agents;
+      },
       altas,
     );
     return {
@@ -747,6 +759,7 @@ export default function Sidebar(props: {
               currentFolder={carpetaActual()}
               currentFolderName={carpetaActual() ? nombreDe(carpetaActual()!) ?? null : null}
               groups={gruposDelDock()}
+              loading={!rosterListo()}
               onTalk={props.onHablarCon}
               onShowTasks={(agent) => cambiarVista({ ...vista(), agent })}
               onProfile={props.onAgentProfile}
