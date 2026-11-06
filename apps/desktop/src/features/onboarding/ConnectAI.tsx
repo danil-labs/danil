@@ -40,7 +40,7 @@ function nombreCorto(f: Fila) {
 }
 
 function MarcaDeFila(props: { f: Fila; size: number }) {
-  if (props.f.modo === "consentimiento") return <Sparkles size={props.size} />;
+  if (props.f.modo === "consentimiento") return <TerminusMark size={props.size} />;
   if (props.f.modo === "local") return <Monitor size={props.size} />;
   return <MarcaAgente id={props.f.agente} size={props.size} />;
 }
