@@ -2864,7 +2864,7 @@ export default function Chat(props: ChatProps) {
               <SelectorDeModelo
                 pildora
                 invokeOptions={props.modelOptions}
-                marca={actual()?.provider ?? props.agent}
+                marca={modelBrand(actual()?.provider ?? props.agent, props.model)}
                 models={opciones()}
                 superficie={props.superficie}
                 model={props.model}
