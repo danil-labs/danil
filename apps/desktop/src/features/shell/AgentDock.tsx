@@ -159,7 +159,7 @@ export default function AgentDock(props: {
         <span class="block truncate text-caption text-neutral-500">{dockStatusText(a)}</span>
       </span>
       <Show when={esRepo}>
-        <span class="rounded-full border border-dashed border-neutral-300 px-1.5 text-[0.625rem] text-neutral-500">
+        <span class="rounded-full border border-dashed border-neutral-300 px-1.5 text-2xs text-neutral-500">
           {t("shell.agent_dock.repo")}
         </span>
       </Show>
@@ -323,7 +323,7 @@ export default function AgentDock(props: {
                             {cara(agente, 24)}
                             <span
                               class={cn(
-                                "max-w-full truncate text-[0.625rem] leading-none text-neutral-500 transition-[opacity,max-height] duration-200",
+                                "max-w-full truncate text-2xs leading-none text-neutral-500 transition-[opacity,max-height] duration-200",
                                 nombres() ? "max-h-3 opacity-100" : "max-h-0 opacity-0",
                               )}
                             >
