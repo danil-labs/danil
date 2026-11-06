@@ -717,9 +717,9 @@ export default function Sessions(props: {
           </span>
         </div>
       </div>
-      {/* La hora y el ⋯ (y, con ellos, el loader y el punto) en una caja que
-          mide lo que su contenido y se pega al padding derecho de la tarjeta.
-          El ⋯ se centra sobre el loader aunque la caja sea más angosta. */}
+      {/* La hora y el ⋯ (y, con ellos, el loader y el punto) en una caja
+          pegada al padding derecho. El loader no se mueve aunque la hora sea
+          más ancha, y el ⋯ se centra sobre él. */}
       <div class="task-card-end">
         <div class="task-card-end-mark">
           <span data-session-status class="task-card-mark">
