@@ -325,6 +325,8 @@ export default function Sidebar(props: {
     { equals: (a, b) => a.length === b.length && a.every((x, i) => x === b[i]) },
   );
   const [altas, setAltas] = createSignal(0);
+  // Hasta la primera respuesta del motor, un dock vacío es «cargando», no «sin agentes».
+  const [rosterListo, setRosterListo] = createSignal(false);
   const alCrearAgente = () => setAltas((n) => n + 1);
   window.addEventListener("harness:encargados", alCrearAgente);
   onCleanup(() => window.removeEventListener("harness:encargados", alCrearAgente));
@@ -338,7 +340,11 @@ export default function Sidebar(props: {
     const [project, machine] = clave.split("\n");
     const roster = watchRoster(
       machine ? `${project}@${machine}` : project,
-      async () => (await invoke<HandlerList>("list_agents", { project }, machine ? { headers: { "x-terminus-machine": machine } } : undefined)).agents,
+      async () => {
+        const { agents } = await invoke<HandlerList>("list_agents", { project }, machine ? { headers: { "x-terminus-machine": machine } } : undefined);
+        setRosterListo(true);
+        return agents;
+      },
       altas,
     );
     return {
@@ -747,6 +753,7 @@ export default function Sidebar(props: {
               currentFolder={carpetaActual()}
               currentFolderName={carpetaActual() ? nombreDe(carpetaActual()!) ?? null : null}
               groups={gruposDelDock()}
+              loading={!rosterListo()}
               onTalk={props.onHablarCon}
               onShowTasks={(agent) => cambiarVista({ ...vista(), agent })}
               onProfile={props.onAgentProfile}

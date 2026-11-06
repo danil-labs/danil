@@ -3,7 +3,7 @@ import ChevronUp from "lucide-solid/icons/chevron-up";
 import List from "lucide-solid/icons/list";
 import Plus from "lucide-solid/icons/plus";
 import SquarePen from "lucide-solid/icons/square-pen";
-import { createMemo, createSignal, For, type JSX, onCleanup, Show } from "solid-js";
+import { createMemo, createSignal, For, type JSX, onCleanup, onMount, Show } from "solid-js";
 import { t } from "../../lib/i18n";
 import type { AgentProfile } from "../../lib/model";
 import { cn } from "../../lib/utils";
@@ -12,7 +12,7 @@ import { Popover, PopoverContent } from "../../ui/Popover";
 import { RETARDO_TOOLTIP, TooltipContent, TooltipRoot, TooltipTrigger } from "../../ui/Tooltip";
 import { AstroAvatar } from "../projects/AstroAvatar";
 import { displayName } from "../projects/profiles";
-import { agentFolder, type DockAgent, orderDockAgents, planDock } from "./dockLayout";
+import { agentFolder, type DockAgent, orderDockAgents } from "./dockLayout";
 
 export type { DockAgent } from "./dockLayout";
 
@@ -70,6 +70,8 @@ export default function AgentDock(props: {
   onNewAgent?: () => void;
   /** Perfil del agente: nombre visible, cara, imagen propia y si está oculto. */
   profileOf?: (name: string) => AgentProfile | undefined;
+  /** Aún sin respuesta del motor: caras de espera, no «sin agentes». */
+  loading?: boolean;
 }) {
   const [nombres, setNombres] = createSignal(false);
   const [desplegado, setDesplegado] = createSignal(false);
@@ -93,7 +95,11 @@ export default function AgentDock(props: {
     const g = grupos();
     const aqui = [...g.workspace, ...g.project, ...g.repo];
     const candidatos = aqui.length > 0 ? ordenados().filter((a) => aqui.includes(a)) : ordenados();
-    return planDock(candidatos, CARAS, { selected: props.selected }).shown;
+    // Sin hueco reservado para «más»: el +N vive en la cabecera.
+    const shown = candidatos.slice(0, CARAS);
+    const elegido = props.selected ? candidatos.find((a) => a.name === props.selected) : undefined;
+    if (elegido && !shown.includes(elegido)) shown[CARAS - 1] = elegido;
+    return shown;
   });
   const sobran = () => Math.max(0, ordenados().length - fila().length);
 
@@ -200,23 +206,144 @@ export default function AgentDock(props: {
     </div>
   );
 
+  // Un solo panel que cambia de alto: la fila de caras, la fila con cabecera
+  // (cursor encima) o el riel entero (desplegado). Crece desde abajo, así que
+  // la cabecera asoma arriba y la lista de tareas cede su sitio sin quedar debajo.
+  let raiz!: HTMLDivElement;
+  const [altoRiel, setAltoRiel] = createSignal(0);
+  const [encima, setEncima] = createSignal(false);
+  onMount(() => {
+    const riel = raiz.parentElement;
+    if (!riel) return;
+    const medir = () => setAltoRiel(riel.clientHeight);
+    medir();
+    const ro = new ResizeObserver(medir);
+    ro.observe(riel);
+    onCleanup(() => ro.disconnect());
+  });
+  const CABECERA = 40;
+  const FILA = 68;
+  const alto = () => (desplegado() && altoRiel() > 0 ? altoRiel() : encima() ? FILA + CABECERA : FILA);
+
   return (
-    // Sin `relative` en la raíz: el panel desplegado se posiciona contra el riel y lo cubre entero.
-    <div role="group" aria-label={t("shell.agent_dock.title")}>
+    <div
+      ref={raiz}
+      role="group"
+      aria-label={t("shell.agent_dock.title")}
+      class="flex min-h-0 flex-col justify-end overflow-hidden border-t border-border transition-[height] duration-300 ease-out"
+      style={{ height: `${alto()}px` }}
+      data-dock-expanded={desplegado() ? "" : undefined}
+      onMouseEnter={() => setEncima(true)}
+      onMouseLeave={() => setEncima(false)}
+      onFocusIn={() => setEncima(true)}
+      onFocusOut={(e: FocusEvent) => { if (!raiz.contains(e.relatedTarget as Node | null)) setEncima(false); }}
+    >
       <div
         class={cn(
-          "absolute inset-0 z-50 flex flex-col bg-surface transition-[translate,opacity,visibility] duration-300 ease-out",
-          desplegado() ? "visible translate-y-0 opacity-100" : "invisible pointer-events-none translate-y-full opacity-0",
+          "flex shrink-0 items-center px-3 transition-opacity duration-200",
+          encima() || desplegado() ? "opacity-100" : "opacity-0",
         )}
-        aria-hidden={!desplegado()}
-        inert={!desplegado()}
-        data-dock-panel=""
+        style={{ height: `${CABECERA}px` }}
+        data-dock-header=""
       >
-        <div class="flex items-center border-b border-border px-3 py-2.5">
-          <span class="text-sm font-medium text-neutral-950">{t("shell.agent_dock.team")}</span>
-          {botones()}
-        </div>
-        <div class="min-h-0 flex-1 overflow-y-auto px-1.5 pb-2">
+        <span class={cn("font-medium", desplegado() ? "text-sm text-neutral-950" : "text-caption text-neutral-500")}>
+          {t("shell.agent_dock.team")}
+        </span>
+        <Show when={!desplegado() && sobran() > 0}>
+          <span class="ml-1.5 text-caption text-neutral-400">+{sobran()}</span>
+        </Show>
+        {botones()}
+      </div>
+
+      <Show
+        when={desplegado()}
+        fallback={
+          <div class="shrink-0 px-2" style={{ height: `${FILA}px` }}>
+            <Show
+              when={props.agents.length > 0}
+              fallback={
+                <Show
+                  when={!props.loading}
+                  fallback={
+                    <div class="grid h-16 grid-cols-5 items-center gap-1" aria-busy="true" data-dock-loading="">
+                      <For each={[0, 1, 2, 3, 4]}>
+                        {() => <span class="mx-auto size-6 animate-pulse rounded-full bg-neutral-200" />}
+                      </For>
+                    </div>
+                  }
+                >
+                  <p class="m-0 flex h-16 items-center truncate px-1 text-caption text-neutral-500">{t("shell.agent_dock.empty")}</p>
+                </Show>
+              }
+            >
+              <ContextMenu onOpenChange={(abierto) => { if (!abierto) setMenuDe(null); }}>
+                <ContextMenuTrigger
+                  class="grid h-16 grid-cols-5 items-center gap-1"
+                  onContextMenu={(e: MouseEvent) => {
+                    const el = (e.target as HTMLElement).closest<HTMLElement>("[data-dock-agent]");
+                    if (!el) e.preventDefault();
+                    setMenuDe(el?.dataset.dockAgent ?? null);
+                  }}
+                >
+                  <For each={fila()}>
+                    {(agente) => {
+                      const texto = () => `${label(agente.name)} · ${dockStatusText(agente)}`;
+                      return (
+                        <TooltipRoot openDelay={RETARDO_TOOLTIP} placement="top" gutter={6}>
+                          <TooltipTrigger
+                            as="button"
+                            type="button"
+                            class="relative flex min-w-0 flex-col items-center justify-center gap-1 rounded-lg border border-transparent bg-transparent px-0.5 py-1.5 hover:bg-neutral-100"
+                            data-dock-agent={agente.name}
+                            aria-label={texto()}
+                            onClick={(e: MouseEvent) => hablar(agente.name, e.currentTarget as HTMLElement)}
+                          >
+                            {cara(agente, 24)}
+                            <span
+                              class={cn(
+                                "max-w-full truncate text-[0.625rem] leading-none text-neutral-500 transition-[opacity,max-height] duration-200",
+                                nombres() ? "max-h-3 opacity-100" : "max-h-0 opacity-0",
+                              )}
+                            >
+                              {label(agente.name)}
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent class="pointer-events-none">
+                            <span class="block">{label(agente.name)}</span>
+                            <span class="block font-normal opacity-80">{dockStatusText(agente)}</span>
+                          </TooltipContent>
+                        </TooltipRoot>
+                      );
+                    }}
+                  </For>
+                  <Show when={props.onNewAgent && ordenados().length < CARAS}>
+                    <button
+                      type="button"
+                      class={cn(SLOT, "justify-self-center")}
+                      aria-label={t("projects.agents.new_open")}
+                      title={t("projects.agents.new_open")}
+                      onClick={() => props.onNewAgent?.()}
+                    >
+                      <Plus size={14} aria-hidden="true" />
+                    </button>
+                  </Show>
+                </ContextMenuTrigger>
+                <ContextMenuContent>
+                  <Show when={menuDe()}>
+                    {(name) => (
+                      <>
+                        <ContextMenuItem onSelect={() => props.onShowTasks(name())}>{t("shell.agent_dock.see_tasks")}</ContextMenuItem>
+                        <ContextMenuItem onSelect={() => perfil(name())}>{t("projects.agents.profile_open")}</ContextMenuItem>
+                      </>
+                    )}
+                  </Show>
+                </ContextMenuContent>
+              </ContextMenu>
+            </Show>
+          </div>
+        }
+      >
+        <div class="min-h-0 flex-1 overflow-y-auto border-t border-border px-1.5 pb-2" data-dock-panel="">
           {seccion(t("shell.agent_dock.workspace"), grupos().workspace, false, t("shell.agent_dock.workspace_empty"))}
           <Show
             when={props.currentFolder}
@@ -233,7 +360,7 @@ export default function AgentDock(props: {
             {seccion(t("shell.agent_dock.repository"), grupos().repo, true, t("shell.agent_dock.repo_empty"))}
           </Show>
         </div>
-        <div class="flex items-center gap-1 border-t border-border px-2 py-2">
+        <div class="flex shrink-0 items-center gap-1 border-t border-border px-2 py-2">
           <button
             type="button"
             class="rounded-md border-0 bg-transparent px-2 py-1 text-caption text-neutral-500 hover:text-neutral-950"
@@ -252,94 +379,7 @@ export default function AgentDock(props: {
             </button>
           </Show>
         </div>
-      </div>
-
-      {/* La banda: una fila de caras de alto fijo. La cabecera asoma encima al pasar el cursor. */}
-      <div class="group/dock relative border-t border-border px-2">
-        <div
-          class={cn(
-            "pointer-events-none absolute inset-x-0 bottom-full flex translate-y-1 items-center border-t border-border bg-surface px-3 py-1.5 opacity-0 transition-[opacity,translate] duration-150",
-            "group-hover/dock:pointer-events-auto group-hover/dock:translate-y-0 group-hover/dock:opacity-100",
-            "group-focus-within/dock:pointer-events-auto group-focus-within/dock:translate-y-0 group-focus-within/dock:opacity-100",
-          )}
-          data-dock-header=""
-        >
-          <span class="text-caption font-medium text-neutral-500">{t("shell.agent_dock.team")}</span>
-          <Show when={sobran() > 0}>
-            <span class="ml-1.5 text-caption text-neutral-400">+{sobran()}</span>
-          </Show>
-          {botones()}
-        </div>
-
-        <Show
-          when={props.agents.length > 0}
-          fallback={<p class="m-0 flex h-16 items-center truncate px-1 text-caption text-neutral-500">{t("shell.agent_dock.empty")}</p>}
-        >
-          <ContextMenu onOpenChange={(abierto) => { if (!abierto) setMenuDe(null); }}>
-            <ContextMenuTrigger
-              class="grid h-16 grid-cols-5 items-center gap-1"
-              onContextMenu={(e: MouseEvent) => {
-                const el = (e.target as HTMLElement).closest<HTMLElement>("[data-dock-agent]");
-                if (!el) e.preventDefault();
-                setMenuDe(el?.dataset.dockAgent ?? null);
-              }}
-            >
-              <For each={fila()}>
-                {(agente) => {
-                  const texto = () => `${label(agente.name)} · ${dockStatusText(agente)}`;
-                  return (
-                    <TooltipRoot openDelay={RETARDO_TOOLTIP} placement="top" gutter={6}>
-                      <TooltipTrigger
-                        as="button"
-                        type="button"
-                        class="relative flex min-w-0 flex-col items-center justify-center gap-1 rounded-lg border border-transparent bg-transparent px-0.5 py-1.5 hover:bg-neutral-100"
-                        data-dock-agent={agente.name}
-                        aria-label={texto()}
-                        onClick={(e: MouseEvent) => hablar(agente.name, e.currentTarget as HTMLElement)}
-                      >
-                        {cara(agente, 24)}
-                        <span
-                          class={cn(
-                            "max-w-full truncate text-[0.625rem] leading-none text-neutral-500 transition-[opacity,max-height] duration-200",
-                            nombres() ? "max-h-3 opacity-100" : "max-h-0 opacity-0",
-                          )}
-                        >
-                          {label(agente.name)}
-                        </span>
-                      </TooltipTrigger>
-                      <TooltipContent class="pointer-events-none">
-                        <span class="block">{label(agente.name)}</span>
-                        <span class="block font-normal opacity-80">{dockStatusText(agente)}</span>
-                      </TooltipContent>
-                    </TooltipRoot>
-                  );
-                }}
-              </For>
-              <Show when={props.onNewAgent && fila().length < CARAS}>
-                <button
-                  type="button"
-                  class={cn(SLOT, "justify-self-center")}
-                  aria-label={t("projects.agents.new_open")}
-                  title={t("projects.agents.new_open")}
-                  onClick={() => props.onNewAgent?.()}
-                >
-                  <Plus size={14} aria-hidden="true" />
-                </button>
-              </Show>
-            </ContextMenuTrigger>
-            <ContextMenuContent>
-              <Show when={menuDe()}>
-                {(name) => (
-                  <>
-                    <ContextMenuItem onSelect={() => props.onShowTasks(name())}>{t("shell.agent_dock.see_tasks")}</ContextMenuItem>
-                    <ContextMenuItem onSelect={() => perfil(name())}>{t("projects.agents.profile_open")}</ContextMenuItem>
-                  </>
-                )}
-              </Show>
-            </ContextMenuContent>
-          </ContextMenu>
-        </Show>
-      </div>
+      </Show>
 
       <Show when={eligiendo()}>
         {(e) => (
