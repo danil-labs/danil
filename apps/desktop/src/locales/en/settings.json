@@ -1,4 +1,5 @@
 {
+  "settings.environment.engine_build": "Engine {build}",
   "settings.ai_providers.opencode_detail": "Pay-as-you-go models and Go",
   "settings.ai_providers.free_detail": "Kilo · Vercel · Reflection",
   "settings.account_card.active": "active",

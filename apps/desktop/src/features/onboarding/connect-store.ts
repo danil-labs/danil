@@ -91,7 +91,7 @@ export function explicar(e: unknown) {
   return SIN_LLAVERO.test(`${texto} ${detalleDe(e)}`) ? t("onboarding.ai.error.keyring") : texto;
 }
 
-/** El nombre de la fila; la de OpenCode con clave es la de Zen y Go, y la local nombra lo que da. */
+/** El nombre de la fila; la de OpenCode con clave incluye Go, y la local nombra lo que da. */
 export function nombreDeFila(f: Fila) {
   if (f.modo === "consentimiento") return t("surfaces.label.free");
   if (f.modo === "local") return t("onboarding.ai.local.name");

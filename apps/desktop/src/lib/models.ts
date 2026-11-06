@@ -37,13 +37,7 @@ export function favoritosDeModelos(
   return models.filter((opcion) => esFavorito(opcion.key, favoritos));
 }
 
-/**
- * Quién ejecuta el modelo. **No es quién fabricó el modelo**: Claude Sonnet
- * servido por OpenCode sigue dentro de OpenCode, no bajo Anthropic.
- *
- * Los modelos de pago y Go salen de la misma superficie autenticada. Free y
- * Local ya son superficies propias y no necesitan mirar el modelo.
- */
+/** El proveedor que sirve el modelo puede ser distinto de quien lo fabricó. */
 export function proveedorDe(
   superficie: Superficie,
   model: ModelOption,

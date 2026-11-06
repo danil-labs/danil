@@ -1,4 +1,5 @@
 {
+  "settings.environment.engine_build": "Motor {build}",
   "settings.ai_providers.opencode_detail": "Modelos de pago y Go",
   "settings.ai_providers.free_detail": "Kilo · Vercel · Reflection",
   "settings.account_card.active": "activa",
