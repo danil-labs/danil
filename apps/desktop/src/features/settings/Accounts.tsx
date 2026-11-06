@@ -1490,9 +1490,6 @@ export default function Accounts(props: {
  * no es igual para todos: los que entrenan con lo que les mandes se marcan
  * en la propia lista (`runtime/models.rs`).
  *
- * Es del workspace, no de la máquina: lo guarda `workspaces::set_provider_consent`,
- * y lo consultan el catálogo y el camino del chat. Lo que sale es material
- * de un cliente, y una decisión tomada para uno no aplica al trabajo de otro.
  */
 /**
  * Qué se puede mandar a estos modelos, en un solo sitio y para todos: la
@@ -1548,13 +1545,7 @@ function MotoresLocales() {
   );
 }
 
-/**
- * Lo que hay que aceptar antes de activar, y a qué versión de texto. Los dos
- * llegan juntos del backend (`workspaces::consent_text`): quien cambie la
- * frase tiene el número al lado, y un guarda en Rust falla si el texto se
- * mueve sin que la versión suba.
- */
-export type Consentimiento = { lineas: (Frase | string)[]; version: number };
+export type Consentimiento = { lineas: (Frase | string)[] };
 
 /**
  * El sí explícito, antes de activar.
@@ -1574,7 +1565,7 @@ export type Consentimiento = { lineas: (Frase | string)[]; version: number };
  * a aceptar, lo que un consentimiento no puede hacer.
  */
 export function Consentir(props: {
-  texto: Pick<Consentimiento, "lineas">;
+  texto: Consentimiento;
   guardando: boolean;
   onAceptar: () => void;
   onCancelar: () => void;
