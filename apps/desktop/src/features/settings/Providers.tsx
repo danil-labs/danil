@@ -156,27 +156,12 @@ function WorkspaceProviders(props: { solo?: string | string[] }) {
       if (state === "esperando" || state === "instalando") void cancelarNavegador(id);
     }
   });
-  const [cli, setCli] = createSignal<{ available: boolean; version: string | null; managed_supported: boolean; installable: boolean; host_signed_in?: boolean } | null>(null);
-  const [loadingCli, setLoadingCli] = createSignal(true);
-  const [installingCli, setInstallingCli] = createSignal(false);
-  const [cliFailure, setCliFailure] = createSignal<Failure | null>(null);
-  async function installCli() {
-    setInstallingCli(true);
-    setCliFailure(null);
-    try {
-      await invoke("install_gh");
-      await refreshCli();
-    } catch (e) { setCliFailure(asFailure(e)); }
-    finally { setInstallingCli(false); }
-  }
-  async function refreshCli() {
-    setLoadingCli(true);
-    try {
-      const report = await invoke<{ githubCli?: NonNullable<ReturnType<typeof cli>> }>("check_environment");
-      setCli(report.githubCli ?? null);
-    } finally { setLoadingCli(false); }
-  }
-  onMount(() => { void refreshCli().catch((e) => setCliFailure(asFailure(e))); });
+  const [cli, setCli] = createSignal<{ available: boolean; host_signed_in?: boolean } | null>(null);
+  onMount(() => {
+    void invoke<{ githubCli?: { available: boolean; host_signed_in?: boolean } }>("check_environment")
+      .then((report) => setCli(report.githubCli ?? null))
+      .catch(() => {});
+  });
   // «Usar el GitHub de esta computadora»: es de esta máquina y no viaja con la cuenta.
   const [hostGithub, setHostGithub] = createSignal(false);
   const [savingHost, setSavingHost] = createSignal(false);
@@ -1153,35 +1138,6 @@ function WorkspaceProviders(props: { solo?: string | string[] }) {
                         </ul>
                       </SettingsBlock>
                     )}
-                  </Show>
-                  <Show when={p.id === "github"}>
-                    <SettingsBlock>
-                      <details>
-                        <summary class="cursor-pointer rounded-sm text-sm text-neutral-500 outline-none focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
-                          {t("providers.github.agent_tools")}
-                          <Show when={cliFailure() || (cli()?.available && !cli()?.managed_supported)}>
-                            {" "}
-                            <Badge tone="warning">{t("providers.github.cli.attention")}</Badge>
-                          </Show>
-                        </summary>
-                        <SettingsRow label={t("providers.github.cli.title")}>
-                          <Show when={cli()} fallback={
-                            <Show when={loadingCli()} fallback={
-                              <Show when={!cliFailure()}><span class="text-xs text-neutral-500">{t("providers.github.cli.unavailable")}</span></Show>
-                            }><Skeleton filas={1} class="h-6" /></Show>
-                          }>{(info) => <>
-                            <span class="text-xs text-neutral-500">{info().version ?? t("providers.github.cli.absent")}</span>
-                            <Show when={!info().managed_supported && info().installable}>
-                              <Button variant="secondary" size="compact" disabled={installingCli()} onClick={() => void installCli()}>
-                                {installingCli() ? t("providers.github.cli.installing") : t("providers.github.cli.install")}
-                              </Button>
-                            </Show>
-                            <Show when={info().managed_supported}><Badge>{t("providers.github.cli.ready")}</Badge></Show>
-                          </>}</Show>
-                        </SettingsRow>
-                      </details>
-                      <Show when={cliFailure()}>{(f) => <FailureNote f={f()} />}</Show>
-                    </SettingsBlock>
                   </Show>
                 </SettingsSection>
               );
