@@ -66,7 +66,6 @@
   "projects.agents.new_scope": "Where it will live",
   "projects.agents.new_scope_project": "In this folder",
   "projects.agents.new_scope_workspace": "Across the whole workspace",
-  "projects.agents.new_scope_workspace_hint": "It will appear in every folder you have now and every one you create later.",
   "projects.agents.new_open": "New agent",
   "projects.agents.new_saving": "Creating…",
   "projects.agents.new_shadowed": "It was created, but another agent with this name wins. While that one exists, it is the one that works.",

@@ -27,16 +27,7 @@ import { DEFAULT_PROFILE, notifyProfiles } from "./profiles";
 /** Lo que la caja de escritura ofrece para trabajar, para ofrecer lo mismo. */
 export type ModelChoices = { superficies: Superficie[]; catalogos: CatalogosDeModelos };
 
-/**
- * Crear un agente sin tocar el repositorio (docs/custom-agents.md).
- *
- * Dos campos y un botón: de seis productos medidos, ninguno pide más que un
- * nombre y qué hace. Cada campo obligatorio de más es fricción.
- *
- * Nace por omisión en el proyecto donde se crea. El alcance se pregunta aparte
- * —en esta carpeta o en todo el espacio— porque un agente de espacio sembrado
- * sin querer llega a todas las carpetas y cuesta deshacer.
- */
+/** Un agente de espacio alcanza todas las carpetas; el alcance inicial es el proyecto. */
 export default function NewAgent(props: {
   abierto: boolean;
   onAbrir: (abierto: boolean) => void;
@@ -209,11 +200,6 @@ export default function NewAgent(props: {
                   <option value="project">{t("projects.agents.new_scope_project")}</option>
                   <option value="workspace">{t("projects.agents.new_scope_workspace")}</option>
                 </Select>
-                <Show when={alcance() === "workspace"}>
-                  <span class="text-xs text-neutral-500">
-                    {t("projects.agents.new_scope_workspace_hint")}
-                  </span>
-                </Show>
               </label>
 
               <Show when={alcance() === "project" && props.carpetas}>

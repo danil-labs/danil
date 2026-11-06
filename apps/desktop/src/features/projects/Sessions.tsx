@@ -649,15 +649,7 @@ export default function Sessions(props: {
    */
   const gitDe = (row: SessionRow) => effectiveTaskGit(row, gitRows(), props.relatedSessions ?? props.sessions);
 
-  /**
-   * La tarjeta del riel y de las delegadas: 52 px y siempre dos líneas. Línea 1:
-   * la cara, si hay agente, y el título. Sin agente el título empieza en el
-   * borde izquierdo del contenido: un hueco vacío lo desalinea. Línea 2:
-   * proveedor, carpeta, máquina, Git y el cohete, juntos, con su icono pegado
-   * al texto. A la derecha, una sola caja —dentro del padding de la tarjeta,
-   * no en su borde— con el estado arriba y la hora abajo: los dos miden lo
-   * mismo, y el «⋯» ocupa el hueco del estado al pasar el puntero.
-   */
+  /** La tarjeta compartida mide 52 px; estado, menú y hora comparten la columna derecha. */
   const FilaDelRiel = (r: {
     s: SessionRow;
     actividad: TaskActivity;
