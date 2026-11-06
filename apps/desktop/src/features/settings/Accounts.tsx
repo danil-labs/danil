@@ -881,35 +881,9 @@ export default function Accounts(props: {
   );
   const hayCuentas = () => (lista()?.accounts.length ?? 0) > 0;
 
-  // La activación sola, sin la lista de cuentas: es un destino propio del
-  // riel, con su decisión aparte. Ver `soloGratuitos`.
-  //
-  // Sí trae la instalación: esta pantalla prueba la app sin traer una
-  // suscripción propia, y sin instalación el interruptor quedaría en verde
-  // con el chat diciendo «no instalado» sin nada que pulsar. Instalar no es
-  // una pregunta (`AGENTS.md`): no hay botón aparte, cuelga del acto que la
-  // persona ya eligió —activar— y solo se ve su progreso.
-  //
-  // Cuelga del estado, no solo del acto: colgarlo solo de activar dejaría
-  // fuera a quien ya activó antes, con «activados» encima de algo que no
-  // puede correr. `preparar` va sin definir cuando el binario ya está, y eso
-  // deja al bloque de abajo decir la verdad en los dos casos.
   if (props.soloGratuitos) {
     return envolver(
       <>
-        {/* El mismo bloque que las otras dos superficies, en el mismo sitio:
-            regla de `AGENTS.md` para cuando algo no está en la máquina, y las
-            tres filas de OpenCode contestan igual.
-
-            Instalar y consentir siguen siendo dos actos, dos botones. Activar
-            sigue trayendo el binario si falta —bajar cien megas antes de
-            aceptar sería gastar disco por una pregunta que puede contestarse
-            que no—; esto es para quien quiere el binario y no ha decidido lo
-            otro.
-
-            Las tres comparten paquete y carpeta (`agents::Install::carpeta`):
-            instalar desde cualquiera las quita de las tres, con el evento
-            `providers` haciéndolas releer `list_providers`. */}
         <Show when={!agentes().find((a) => a.id === agente())?.available}>
           <SettingsBlock class="justify-items-start">
             <Button
@@ -929,12 +903,6 @@ export default function Accounts(props: {
             agente={agente()}
             proveedor={etiqueta()}
             falta={!agentes().find((a) => a.id === agente())?.available}
-            preparar={
-              agentes().find((a) => a.id === agente())?.available
-                ? undefined
-                : instalarCli
-            }
-            preparando={Boolean(instalando())}
           />
         </Show>
         <Show when={fallo()}>
@@ -1607,6 +1575,7 @@ export function Consentir(props: {
   guardando: boolean;
   onAceptar: () => void;
   onCancelar: () => void;
+  fallo: string | null;
 }) {
   return (
     <Dialog open onOpenChange={(abierto) => !abierto && props.onCancelar()}>
@@ -1620,6 +1589,9 @@ export function Consentir(props: {
                 <p class={cn("m-0 text-xs leading-6 text-neutral-500", i() === 0 && "font-medium text-neutral-950")}>{prosa(linea)}</p>
               )}
             </For>
+            <Show when={props.fallo}>
+              {(f) => <FailureNote f={{ what: t("settings.accounts.free.error_save"), detail: f() }} />}
+            </Show>
             <div class="mt-2 flex justify-end gap-2">
               {/* Cancelar primero en el orden de lectura y sin peso visual: la
                   acción que gasta algo es la otra, y esta tiene que poder
@@ -1651,25 +1623,6 @@ function ModelosGratuitos(props: {
   marca?: JSX.Element;
   agente: string;
   proveedor: string;
-  /**
-   * Trae el CLI que sirve estos modelos, o `undefined` si ya está.
-   *
-   * Corre después de guardar el sí, no antes: se decide aquí que el material
-   * salga de esta computadora, y bajar cien megas antes de aceptar gastaría
-   * el disco por una pregunta que puede contestarse que no.
-   *
-   * Que esté definido es también cómo esta pantalla sabe que falta el
-   * binario, y de eso depende que no diga «activados» sobre algo que no
-   * puede correr.
-   */
-  preparar?: () => Promise<void>;
-  preparando?: boolean;
-  /**
-   * Si el binario no está en la máquina. Es un dato, no se deduce de que
-   * `preparar` esté definido: traerlo es del panel de arriba, que monta el
-   * botón junto al de las otras dos superficies; aquí solo decide qué
-   * afirma la etiqueta.
-   */
   falta: boolean;
 }) {
   const [aceptado, setAceptado] = createSignal(false);
@@ -1724,10 +1677,6 @@ function ModelosGratuitos(props: {
       setAceptado(w.consents?.some((c) => c.provider === props.agente) ?? false);
       setPreguntando(false);
       setFallo(null);
-      // Sin binario, activar deja el interruptor en verde y el chat sin poder
-      // usarlo. Su fallo lo pinta el panel de arriba, que es de quien es la
-      // instalación.
-      if (valor && props.preparar) await props.preparar();
       // La caja de chat no ofrece modelos de un agente sin autorizar: tiene
       // que enterarse ahora, no al cambiar de agente y volver.
       window.dispatchEvent(new CustomEvent("harness:consentimiento"));
@@ -1748,6 +1697,7 @@ function ModelosGratuitos(props: {
         <Consentir
           texto={pregunta()}
           guardando={guardando()}
+          fallo={fallo()}
           onAceptar={() => void cambiar(true)}
           onCancelar={() => setPreguntando(false)}
         />
@@ -1776,7 +1726,7 @@ function ModelosGratuitos(props: {
           <strong>{AVISO_DE_USO()}</strong>
         </p>
       </Show>
-      <Show when={fallo()}>
+      <Show when={!preguntando() ? fallo() : null}>
         {(f) => (
           <div class="mt-2">
             <FailureNote f={{ what: t("settings.accounts.free.error_save"), detail: f() }} />
@@ -1793,12 +1743,10 @@ function ModelosGratuitos(props: {
             size="sm"
             // Sin el texto no se puede pedir el sí, y tampoco se ofrece
             // activar: aceptar sin ver qué se acepta no es un consentimiento.
-            disabled={guardando() || props.preparando || !texto()}
+            disabled={guardando() || !texto()}
             onClick={() => setPreguntando(true)}
           >
-            {props.preparando
-              ? t("settings.accounts.preparing")
-              : t("settings.accounts.free.activate")}
+            {t("settings.accounts.free.activate")}
           </Button>
         }
       >
@@ -1824,7 +1772,7 @@ function ModelosGratuitos(props: {
           <Button
             variant="outline"
             size="compact"
-            disabled={guardando() || props.preparando}
+            disabled={guardando()}
             onClick={() => cambiar(false)}
             title={t("settings.accounts.free.deactivate_title")}
           >
