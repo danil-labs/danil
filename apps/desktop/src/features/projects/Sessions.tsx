@@ -717,8 +717,9 @@ export default function Sessions(props: {
           </span>
         </div>
       </div>
-      {/* La hora y el ⋯ (y, con ellos, el loader y el punto) en una caja.
-          El padding de la tarjeta queda fuera: esta caja no es el borde. */}
+      {/* La hora y el ⋯ (y, con ellos, el loader y el punto) en una caja que
+          mide lo que su contenido y se pega al padding derecho de la tarjeta.
+          El ⋯ se centra sobre el loader aunque la caja sea más angosta. */}
       <div class="task-card-end">
         <div class="task-card-end-mark">
           <span data-session-status class="task-card-mark">
@@ -726,7 +727,7 @@ export default function Sessions(props: {
               tarjeta
               provisional={esProvisional(r.s.id)} archivada={!!r.s.archived} />
           </span>
-          <Show when={r.conMenu}><span data-session-actions class={cn("absolute inset-0 z-10 hidden items-center justify-center group-hover/session:inline-flex group-focus-within/session:inline-flex", abierto() && "inline-flex")} data-abierto={abierto() ? "true" : undefined}>{r.menu()}</span></Show>
+          <Show when={r.conMenu}><span data-session-actions class={cn("absolute inset-y-0 left-1/2 z-10 hidden w-[22px] -translate-x-1/2 items-center justify-center group-hover/session:inline-flex group-focus-within/session:inline-flex", abierto() && "inline-flex")} data-abierto={abierto() ? "true" : undefined}>{r.menu()}</span></Show>
         </div>
         <span data-session-time class="task-card-time text-[0.71875rem] tabular-nums">{shortTaskTime(cuando())}</span>
       </div>
@@ -1148,7 +1149,7 @@ export default function Sessions(props: {
           data-apagada={apagada() ? "true" : undefined}
           class={tarjetaDelRiel() ? cn(
             // La tarjeta: 52 px fijos y dos líneas, pase lo que pase con los datos.
-            "group/session relative flex h-[52px] min-w-0 cursor-pointer flex-col justify-center gap-[5px] rounded-[10px] border border-transparent py-[7px] pr-2 pl-2.5 hover:bg-neutral-100 focus-visible:outline-2 focus-visible:outline-primary",
+            "group/session relative flex h-[52px] min-w-0 cursor-pointer flex-col justify-center gap-[5px] rounded-[10px] border border-transparent py-[7px] pr-2.5 pl-2.5 hover:bg-neutral-100 focus-visible:outline-2 focus-visible:outline-primary",
             // Abierta: un tinte y un borde suave. Ni barra de color, ni negrita, ni sombra.
             f.s.id === props.current && "border-border bg-neutral-200 hover:bg-neutral-200",
             // Fijada: el borde lo dibuja `::after` para poder abrirle un hueco

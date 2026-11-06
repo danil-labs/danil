@@ -1146,7 +1146,7 @@
 
 /* Secciones de la tarjeta: el contenido se recorta dentro de su sección;
    omitir una sección por agrupación elimina también su ancho. */
-.task-card-lines { position: relative; container-type: inline-size; display: flex; align-items: center; gap: 6px; width: 100%; min-width: 0; --task-card-lead: 16px; --task-card-end: 36px; }
+.task-card-lines { position: relative; container-type: inline-size; display: flex; align-items: center; gap: 6px; width: 100%; min-width: 0; --task-card-lead: 16px; }
 .task-card-main { display: flex; min-width: 0; flex: 1; flex-direction: column; }
 /* Con el menú a la vista, el título se desvanece a su lado y la hora con él;
    el cohete de la segunda línea sigue a la vista y a mano. */
@@ -1175,10 +1175,12 @@
 .task-card-time { display: flex; width: 100%; height: 16px; align-items: center; justify-content: center; white-space: nowrap; text-align: center; }
 /* La cara y el logo del proveedor comparten esta columna: 16 px, centrados. */
 .task-card-face { display: inline-flex; width: var(--task-card-lead, 16px); height: var(--task-card-lead, 16px); flex-shrink: 0; align-items: center; justify-content: center; }
-/* Una caja para la hora y para el ⋯. Mide lo que ya medía la hora (36 px) y
-   vive dentro del padding de la tarjeta (`pr-2`): el borde de la tarjeta queda
-   8 px más afuera. El loader y el punto usan el mismo ancho, centrados. */
-.task-card-end { display: flex; width: var(--task-card-end, 36px); flex-shrink: 0; flex-direction: column; }
+/* Una caja para la hora y para el ⋯. Mide lo que su contenido (al menos el
+   loader, 14 px) y vive dentro del padding de la tarjeta (`pr-2.5`), el mismo
+   que a la izquierda: el borde derecho queda tan cerca como el del título. El
+   loader y la hora se centran entre sí; si la hora es más ancha («ahora»), la
+   caja crece hacia la izquierda. */
+.task-card-end { display: flex; width: max-content; min-width: 14px; flex-shrink: 0; flex-direction: column; }
 .task-card-end-mark { position: relative; display: flex; width: 100%; height: 22px; align-items: center; justify-content: center; }
 .task-card-mark { display: inline-flex; width: 100%; height: 20px; flex-shrink: 0; align-items: center; justify-content: center; }
 .task-card-identity { position: relative; display: inline-flex; width: 100%; height: 100%; flex-shrink: 0; align-items: center; justify-content: center; }
