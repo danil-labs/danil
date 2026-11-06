@@ -9,6 +9,7 @@
   },
   "shell.agent_dock.pick_folder": "Talk to {name} in…",
   "shell.agent_dock.see_all": "See all",
+  "shell.agent_dock.empty": "No agents yet. Create one in «See all».",
   "shell.agent_dock.see_tasks": "See their tasks",
   "shell.agent_dock.title": "Agents",
   "shell.column.sidebar_width": "Sidebar width",
