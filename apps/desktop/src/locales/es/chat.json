@@ -455,5 +455,6 @@
   "chat.history.pieces": "Registro completo",
   "chat.history.content": "Contenido guardado",
   "chat.queue.stop_and_send": "Detener el turno y enviar",
-  "chat.queue.stop_and_send_aria": "Detener el turno y enviar el mensaje {n} de la cola"
+  "chat.queue.stop_and_send_aria": "Detener el turno y enviar el mensaje {n} de la cola",
+  "chat.failure.free_router_stopped": "Danil Free model router detuvo este turno para evitar reenviar el contenido."
 }
