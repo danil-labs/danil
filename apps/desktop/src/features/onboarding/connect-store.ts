@@ -156,7 +156,8 @@ export function crearConexiones() {
   }
 
   async function consentida() {
-    return (await loadFreeModelPolicy())?.accepted ?? false;
+    const policy = await loadFreeModelPolicy();
+    return policy?.accepted ? policy : null;
   }
 
   async function pasoGuardado(f: Fila): Promise<Paso> {
@@ -165,8 +166,9 @@ export function crearConexiones() {
     const base: Paso = a?.available && (f.detectada || f.modo !== "clave") ? { k: "instalada" } : { k: "falta" };
     try {
       if (f.modo === "consentimiento") {
-        return a?.available && (await consentida())
-          ? { k: "conectada", cuenta: t("settings.accounts.free.warning_short"), id: null }
+        const policy = await consentida();
+        return a?.available && policy
+          ? { k: "conectada", cuenta: policy.enabled ? t("settings.accounts.free.warning_short") : t("settings.accounts.free.paused"), id: null }
           : base;
       }
       if (f.modo === "local") {

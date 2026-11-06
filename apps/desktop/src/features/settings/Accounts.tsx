@@ -1736,7 +1736,7 @@ function ModelosGratuitos(props: {
       <>
       {/* Omitir el proveedor o alejar el aviso oculta el destino de los datos al activar. */}
       <Show
-        when={!aceptado() || props.falta}
+        when={!aceptado() || props.falta || !texto()?.policy.enabled}
         fallback={<p class="m-0">{t("settings.accounts.free.warning_short")}</p>}
       >
         <p class="m-0">
@@ -1788,7 +1788,7 @@ function ModelosGratuitos(props: {
               superficies lo tienen. */}
           <Show
             when={props.falta}
-            fallback={<Badge tone="success">{t("settings.accounts.free.active")}</Badge>}
+            fallback={<Badge tone={texto()?.policy.enabled ? "success" : "neutral"}>{texto()?.policy.enabled ? t("settings.accounts.free.active") : t("settings.accounts.free.paused")}</Badge>}
           >
             <Badge tone="danger">{t("settings.accounts.free.missing")}</Badge>
           </Show>
