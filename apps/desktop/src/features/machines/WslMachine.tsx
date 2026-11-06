@@ -788,7 +788,7 @@ export function DistroBox(props: { name: string; child: WslChild; onRemoved: () 
         <summary class="cursor-pointer">{t("danil.wsl.box.more")}</summary>
         <div class="mt-2 grid gap-2">
           <span>{t("danil.wsl.box.folder", { home: props.child.home })}</span>
-          <span>{t("danil.wsl.box.scope")}</span>
+          <span data-box-scope="">{props.child.channel === "lima" ? t("danil.lima.box.scope") : t("danil.wsl.box.scope")}</span>
           <div class="flex items-center gap-2">
             <Button size="sm" variant="secondary" onClick={remove} data-wsl-remove="">
               {t("danil.wsl.box.remove")}

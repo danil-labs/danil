@@ -1127,36 +1127,63 @@
 .signal-icon[data-tone="warning"] { color: var(--signal-warning); }
 .signal-icon[data-tone="neutral"] { color: var(--signal-neutral); }
 
+/* La lista del riel no se adelanta con barras. Nace con la estructura y,
+   cuando las tareas existen, entran juntas. `@starting-style` es el antes
+   del primer pintado: la transición corre de 0 a 1 sin script. Va en el
+   bloque, no en cada fila, para no pelear con la opacidad de arrastrar.
+   Un bloque nuevo —otra carpeta, otro espacio— entra igual; uno que ya
+   estaba no se repite. Quien pidió menos movimiento no ve la transición. */
+@media (prefers-reduced-motion: no-preference) {
+  [data-sidebar-tasks] > * {
+    transition: opacity 320ms ease-out;
+  }
+  @starting-style {
+    [data-sidebar-tasks] > * {
+      opacity: 0;
+    }
+  }
+}
+
 /* Secciones de la tarjeta: el contenido se recorta dentro de su sección;
    omitir una sección por agrupación elimina también su ancho. */
-.task-card-lines { position: relative; container-type: inline-size; width: 100%; min-width: 0; --task-card-surface: var(--color-rail); }
-.task-card-lines[data-outside] { --task-card-surface: var(--color-surface); }
-.task-card-selected .task-card-lines { --task-card-surface: var(--color-neutral-200); }
-/* Con el menú a la vista, la primera línea se desvanece a su lado y la hora con
-   ella; el cohete de la segunda línea sigue a la vista y a mano. */
-.group\/session:hover .task-card-with-menu > :not([data-session-actions], [data-session-preview]),
-.group\/session:focus-within .task-card-with-menu > :not([data-session-actions], [data-session-preview]),
-.task-card-with-menu[data-menu-open] > :not([data-session-actions], [data-session-preview]) { mask-image: linear-gradient(to right, #000 calc(100% - 72px), transparent calc(100% - 32px)); }
+.task-card-lines { position: relative; container-type: inline-size; display: flex; align-items: center; gap: 6px; width: 100%; min-width: 0; --task-card-lead: 16px; }
+.task-card-main { display: flex; min-width: 0; flex: 1; flex-direction: column; }
+/* Con el menú a la vista, el título se desvanece a su lado y la hora con él;
+   el cohete de la segunda línea sigue a la vista y a mano. */
+.group\/session:hover .task-card-with-menu .task-card-title,
+.group\/session:focus-within .task-card-with-menu .task-card-title,
+.task-card-with-menu[data-menu-open] .task-card-title { mask-image: linear-gradient(to right, #000 calc(100% - 36px), transparent); }
 .group\/session:hover .task-card-with-menu [data-session-time],
 .group\/session:focus-within .task-card-with-menu [data-session-time],
 .task-card-with-menu[data-menu-open] [data-session-time] { mask-image: linear-gradient(to right, #000, transparent); }
-.task-card-metadata { display: grid; grid-template-columns: 16px minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.3fr) 36px; min-width: 0; align-items: center; gap: 6px; height: 16px; }
-.task-card-metadata[data-no-folder], .task-card-metadata[data-no-machine] { grid-template-columns: 16px minmax(0, 1fr) minmax(0, 1.3fr) 36px; }
-.task-card-metadata[data-no-folder][data-no-machine] { grid-template-columns: 16px minmax(0, 1fr) 36px; }
+/* El menú ocupa el hueco del estado: si los dos se vieran, el «⋯» quedaría
+   encima del loader. */
+.group\/session:hover .task-card-with-menu [data-session-status],
+.group\/session:focus-within .task-card-with-menu [data-session-status],
+.task-card-with-menu[data-menu-open] [data-session-status] { visibility: hidden; }
+/* Icono y texto de cada dato van juntos. El espacio que sobra queda antes de
+   la caja de la hora, no entre la carpeta, la máquina y la rama. */
+.task-card-metadata { display: flex; min-width: 0; align-items: center; gap: 6px; height: 16px; overflow: hidden; }
 .task-card-metadata svg { flex-shrink: 0; }
-.task-card-provider { display: inline-flex; align-items: center; }
-.task-card-slot { display: flex; min-width: 0; align-items: center; overflow: hidden; }
-.task-card-git { display: flex; min-width: 0; align-items: center; gap: 4px; overflow: hidden; }
-.task-card-tail { display: inline-flex; flex-shrink: 0; align-items: center; gap: 4px; margin-left: auto; }
+.task-card-provider { display: inline-flex; flex-shrink: 0; align-items: center; justify-content: center; }
+.task-card-has-agent .task-card-provider { width: var(--task-card-lead, 16px); }
+.task-card-slot { display: flex; min-width: 0; flex: 0 1 auto; align-items: center; overflow: hidden; }
+.task-card-git { display: flex; min-width: 0; flex: 0 1 auto; align-items: center; gap: 4px; overflow: hidden; }
+.task-card-tail { display: inline-flex; flex-shrink: 0; align-items: center; gap: 4px; }
 .task-card-rocket { display: inline-flex; width: 18px; height: 18px; flex-shrink: 0; align-items: center; justify-content: center; }
 .task-card-rocket:empty { display: none; }
-.task-card-time { white-space: nowrap; text-align: right; }
-.task-card-identity { position: relative; display: inline-flex; width: 24px; height: 24px; flex-shrink: 0; align-items: center; justify-content: center; }
-.task-card-orbit { position: absolute; inset: 1px; display: flex; align-items: center; justify-content: center; pointer-events: none; }
-[data-with-agent] .task-card-orbit { display: none; }
-@media (prefers-reduced-motion: reduce) {
-  [data-with-agent] .task-card-orbit { display: flex; }
-}
-.task-card-badge { position: absolute; top: -2px; right: -2px; display: inline-flex; width: 12px; height: 12px; align-items: center; justify-content: center; border-radius: 50%; background: var(--task-card-surface, var(--color-surface)); }
-/* Sin agente no hay avatar al que pegarse: el punto va al centro, como el loader. */
-.task-card-identity:not([data-with-agent]) .task-card-badge { position: static; background: none; }
+.task-card-time { display: flex; min-width: var(--task-card-lead, 16px); height: 16px; align-items: center; justify-content: center; white-space: nowrap; text-align: center; }
+/* La cara y el logo del proveedor comparten esta columna: 16 px, centrados. */
+.task-card-face { display: inline-flex; width: var(--task-card-lead, 16px); height: var(--task-card-lead, 16px); flex-shrink: 0; align-items: center; justify-content: center; }
+/* Una caja para la hora y para el ⋯, pegada al padding de la tarjeta
+   (`pr-2.5`), el mismo que a la izquierda. El loader, el punto y el ⋯ viven en
+   una columna fija de 16 px —la misma que la cara a la izquierda— al ras del
+   borde, así que no se mueven de una tarjeta a otra. La hora se centra bajo
+   esa columna; si es más ancha («ahora»), crece hacia la izquierda y el loader
+   se queda donde estaba. */
+.task-card-end { display: flex; width: max-content; flex-shrink: 0; flex-direction: column; align-items: flex-end; }
+.task-card-end-mark { position: relative; display: flex; width: var(--task-card-lead, 16px); height: 22px; align-items: center; justify-content: center; }
+.task-card-mark { display: inline-flex; width: 100%; height: 20px; flex-shrink: 0; align-items: center; justify-content: center; }
+.task-card-identity { position: relative; display: inline-flex; width: 100%; height: 100%; flex-shrink: 0; align-items: center; justify-content: center; }
+.task-card-orbit { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none; }
+.task-card-badge { display: inline-flex; width: 12px; height: 12px; align-items: center; justify-content: center; }

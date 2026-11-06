@@ -649,12 +649,7 @@ export default function Sessions(props: {
    */
   const gitDe = (row: SessionRow) => effectiveTaskGit(row, gitRows(), props.relatedSessions ?? props.sessions);
 
-  /**
-   * La tarjeta del riel y de las delegadas: 52 px y siempre dos líneas. Línea 1:
-   * el título y el hueco del estado, que al pasar el puntero es el menú. Línea 2:
-   * proveedor, carpeta, máquina, Git, el cohete y la hora. Nada de lo
-   * que la tarea pide; lo demás vive en la tarjeta flotante.
-   */
+  /** La tarjeta compartida mide 52 px; estado, menú y hora comparten la columna derecha. */
   const FilaDelRiel = (r: {
     s: SessionRow;
     actividad: TaskActivity;
@@ -668,7 +663,6 @@ export default function Sessions(props: {
   }) => {
     // Qué lleva la línea 2 lo decide la tarjeta compartida con el teléfono (`@terminus/tasks`).
     const tarjeta = () => taskCard(r.s, { live: props.vivas, approving: props.aprobando, hideFolder: hideFolder(r.s), hideMachine: props.hideMachine });
-    const working = () => taskPriority(r.actividad) === "working" && !esProvisional(r.s.id);
     const activeAgent = () => r.s.agent;
     const git = () => gitDe(r.s);
     // La rama de quien comparte el árbol de su padre se dice en la fila del padre.
@@ -685,41 +679,56 @@ export default function Sessions(props: {
       const appearance = gitAppearance(git());
       return git().stale ? { ...appearance, color: "text-neutral-500" } : appearance;
     };
-    return <div class={cn("task-card-lines", r.conMenu && "task-card-with-menu")} data-menu-open={abierto() ? "" : undefined} data-outside={!tarjetaDelRiel() || undefined}>
-            <Show when={r.conMenu}><span data-session-actions class={cn("absolute top-0 right-0 z-10 hidden h-[22px] items-center group-hover/session:inline-flex group-focus-within/session:inline-flex", abierto() && "inline-flex")} data-abierto={abierto() ? "true" : undefined}>{r.menu()}</span></Show>
-      <div class="flex h-[22px] min-w-0 items-center gap-1.5">
-        <div class="min-w-0 flex-1">{r.titulo}</div>
-        <Show when={!tarjetaDelRiel()}><EtapaDeTarea etapa={r.s.stage} /></Show>
-        <span data-session-status class="inline-flex size-6 shrink-0 items-center justify-center">
-          <EstadoDeTarea {...r.actividad}
-            identity={() => <Show when={activeAgent()}>{agent => <span data-session-agent><AstroAvatar name={agent()} status={working() ? "working" : "awake"} body={profiles()[agent()]?.body} avatar={profiles()[agent()]?.avatar} size={18} /></span>}</Show>}
-            identityLabel={activeAgent() ? nombre(activeAgent()!) : undefined}
-            provisional={esProvisional(r.s.id)} archivada={!!r.s.archived} />
-        </span>
+    return <div class={cn("task-card-lines", r.conMenu && "task-card-with-menu")} data-menu-open={abierto() ? "" : undefined}>
+      <div class="task-card-main">
+        <div class="task-card-title flex h-[22px] min-w-0 items-center gap-1.5">
+          <Show when={activeAgent()}>
+            {(agent) => (
+              <span class="task-card-face" data-session-agent title={nombre(agent())} aria-label={nombre(agent())}>
+                <AstroAvatar name={agent()} status="awake" body={profiles()[agent()]?.body} avatar={profiles()[agent()]?.avatar} size={16} />
+              </span>
+            )}
+          </Show>
+          <div class="min-w-0 flex-1">{r.titulo}</div>
+          <Show when={!tarjetaDelRiel()}><EtapaDeTarea etapa={r.s.stage} /></Show>
+        </div>
+        <div data-session-preview data-no-folder={hideFolder(r.s) ? "" : undefined} data-no-machine={hayMaquinas() ? undefined : ""} class={cn("task-card-metadata text-xs font-normal leading-4 text-neutral-500", activeAgent() && "task-card-has-agent", r.apagada && "opacity-80 group-hover/session:opacity-100")}>
+          <span data-session-provider class="task-card-provider" title={tarjeta().provider ?? r.s.provider} aria-label={tarjeta().provider ?? r.s.provider}><MarcaAgente id={r.s.provider} size={13} /></span>
+          <Show when={!hideFolder(r.s)}>
+            <span class="task-card-slot">
+              <Show when={props.carpetaDe?.(r.s)}>{folder =>
+                <FolderChip id={projectOf(r.s)} name={folder()} untitled={tarjetaDelRiel()} class="min-w-0 text-xs text-neutral-500" />
+              }</Show>
+            </span>
+          </Show>
+          <Show when={hayMaquinas()}>
+            <span class="task-card-slot">
+              <MachineChip machine={r.s.machine || machines().find((machine) => machine.local)?.id || "local"} on={r.s.machine_on !== false} class="min-w-0" />
+            </span>
+          </Show>
+          <span class="task-card-git">
+            <Show when={conGit()}><Show when={git().kind === "kn" || !conPr()} fallback={<RailPull status={git()} />}>
+                <span data-session-pr class={cn("inline-flex min-w-0 items-center gap-1", gitStyle().color)} title={sessionGitDescription(git())} aria-label={sessionGitDescription(git())}><Dynamic component={gitStyle().icon} size={12} aria-hidden="true" /><Show when={git().kind === "branch"}><span class="min-w-0 truncate">{git().branch}</span></Show></span>
+              </Show></Show>
+            <span class="task-card-tail">
+              <Show when={r.s.deferred}><span data-deferred class="shrink-0 text-neutral-500" title={t("projects.sessions.deferred")} aria-label={t("projects.sessions.deferred")}>⧗</span></Show>
+              <span class="task-card-rocket">{r.cohete()}</span>
+            </span>
+          </span>
+        </div>
       </div>
-      <div data-session-preview data-no-folder={hideFolder(r.s) ? "" : undefined} data-no-machine={hayMaquinas() ? undefined : ""} class={cn("task-card-metadata text-xs font-normal leading-4 text-neutral-500", r.apagada && "opacity-80 group-hover/session:opacity-100")}>
-        <span data-session-provider class="task-card-provider" title={tarjeta().provider ?? r.s.provider} aria-label={tarjeta().provider ?? r.s.provider}><MarcaAgente id={r.s.provider} size={13} /></span>
-        <Show when={!hideFolder(r.s)}>
-          <span class="task-card-slot">
-            <Show when={props.carpetaDe?.(r.s)}>{folder =>
-              <FolderChip id={projectOf(r.s)} name={folder()} untitled={tarjetaDelRiel()} class="min-w-0 text-xs text-neutral-500" />
-            }</Show>
+      {/* La hora y el ⋯ (y, con ellos, el loader y el punto) en una caja
+          pegada al padding derecho. El loader no se mueve aunque la hora sea
+          más ancha, y el ⋯ se centra sobre él. */}
+      <div class="task-card-end">
+        <div class="task-card-end-mark">
+          <span data-session-status class="task-card-mark">
+            <EstadoDeTarea {...r.actividad}
+              tarjeta
+              provisional={esProvisional(r.s.id)} archivada={!!r.s.archived} />
           </span>
-        </Show>
-        <Show when={hayMaquinas()}>
-          <span class="task-card-slot">
-            <MachineChip machine={r.s.machine || machines().find((machine) => machine.local)?.id || "local"} on={r.s.machine_on !== false} class="min-w-0" />
-          </span>
-        </Show>
-        <span class="task-card-git">
-          <Show when={conGit()}><Show when={git().kind === "kn" || !conPr()} fallback={<RailPull status={git()} />}>
-              <span data-session-pr class={cn("inline-flex min-w-0 items-center gap-1", gitStyle().color)} title={sessionGitDescription(git())} aria-label={sessionGitDescription(git())}><Dynamic component={gitStyle().icon} size={12} aria-hidden="true" /><Show when={git().kind === "branch"}><span class="min-w-0 truncate">{git().branch}</span></Show></span>
-            </Show></Show>
-          <span class="task-card-tail">
-            <Show when={r.s.deferred}><span data-deferred class="shrink-0 text-neutral-500" title={t("projects.sessions.deferred")} aria-label={t("projects.sessions.deferred")}>⧗</span></Show>
-            <span class="task-card-rocket">{r.cohete()}</span>
-          </span>
-        </span>
+          <Show when={r.conMenu}><span data-session-actions class={cn("absolute inset-y-0 left-1/2 z-10 hidden w-[22px] -translate-x-1/2 items-center justify-center group-hover/session:inline-flex group-focus-within/session:inline-flex", abierto() && "inline-flex")} data-abierto={abierto() ? "true" : undefined}>{r.menu()}</span></Show>
+        </div>
         <span data-session-time class="task-card-time text-[0.71875rem] tabular-nums">{shortTaskTime(cuando())}</span>
       </div>
     </div>;
@@ -873,7 +882,7 @@ export default function Sessions(props: {
               {...p}
               class={m.riel
                 ? cn(
-                    "grid h-5 w-[22px] place-items-center rounded-[5px] border-0 bg-transparent p-0 text-neutral-500 hover:bg-neutral-200 hover:text-neutral-950 focus-visible:outline-2 focus-visible:outline-primary",
+                    "task-card-mark rounded-[5px] border-0 bg-transparent p-0 text-neutral-500 hover:bg-neutral-200 hover:text-neutral-950 focus-visible:outline-2 focus-visible:outline-primary",
                     menu() === f.s.id && "bg-neutral-200 text-neutral-950",
                   )
                 : "grid place-items-center rounded-sm border-0 bg-transparent px-1 py-0.5 leading-[1.3] text-neutral-500 hover:bg-neutral-200 hover:text-neutral-950"}
@@ -1140,9 +1149,9 @@ export default function Sessions(props: {
           data-apagada={apagada() ? "true" : undefined}
           class={tarjetaDelRiel() ? cn(
             // La tarjeta: 52 px fijos y dos líneas, pase lo que pase con los datos.
-            "group/session relative flex h-[52px] min-w-0 cursor-pointer flex-col justify-center gap-[5px] rounded-[10px] border border-transparent py-[7px] pr-2 pl-2.5 hover:bg-neutral-100 focus-visible:outline-2 focus-visible:outline-primary",
+            "group/session relative flex h-[52px] min-w-0 cursor-pointer flex-col justify-center gap-[5px] rounded-[10px] border border-transparent py-[7px] pr-2.5 pl-2.5 hover:bg-neutral-100 focus-visible:outline-2 focus-visible:outline-primary",
             // Abierta: un tinte y un borde suave. Ni barra de color, ni negrita, ni sombra.
-            f.s.id === props.current && "task-card-selected border-border bg-neutral-200 hover:bg-neutral-200",
+            f.s.id === props.current && "border-border bg-neutral-200 hover:bg-neutral-200",
             // Fijada: el borde lo dibuja `::after` para poder abrirle un hueco
             // arriba al centro, donde va el alfiler sin fondo; los 7 px de
             // arriba son los que el alfiler necesita para no recortarse.

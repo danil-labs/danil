@@ -318,7 +318,7 @@ export type Msg = {
   /** Agente dueño del turno; no se sustituye por el selector actual. */
   agent?: string;
   /**
-   * El proveedor de modelos con el que corrió el turno («OpenCode Zen»,
+   * El proveedor de modelos con el que corrió el turno («OpenCode»,
    * «OpenCode Go»). Lo guarda el cierre; la línea del turno lo enseña tras la
    * hora. Ausente en los turnos anteriores al campo.
    */
@@ -3913,6 +3913,7 @@ function TrabajoDeAgente(props: {
           <Reasoning
             bloques={bloques()}
             vivo={props.vivo && !texto()}
+            turnoActivo={props.vivo}
             abierto={props.razonamientoAbierto}
             onAlternar={props.onAlternarRazonamiento}
           />

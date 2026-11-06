@@ -119,11 +119,11 @@ for (let i = 0; i < 80 && !dock(); i++) await sleep(25);
 const faceOf = (nameText) => [...(dock()?.querySelectorAll("[data-dock-agent]") ?? [])].find((b) => b.getAttribute("aria-label").startsWith(nameText));
 assert.ok(faceOf("Holmes"), "el dock enseña a Holmes");
 assert.match(faceOf("Holmes").getAttribute("aria-label"), /Despierto/, "su cara dice cómo está");
-assert.equal(faceOf("Holmes").getAttribute("title"), null, "el nombre va en un tooltip propio, no en `title`");
+assert.equal(faceOf("Holmes").getAttribute("title"), null, "la cara no abre un tooltip nativo");
 faceOf("Holmes").dispatchEvent(new bubbleApp.w.PointerEvent("pointerenter", { bubbles: false, pointerType: "mouse" }));
 faceOf("Holmes").dispatchEvent(new bubbleApp.w.PointerEvent("pointermove", { bubbles: true, pointerType: "mouse" }));
 await sleep(300);
-assert.match(bubbleDocument.querySelector('[role="tooltip"]')?.textContent ?? "", /Holmes.*Despierto/, "pasar por la cara enseña su nombre y su estado");
+assert.equal(bubbleDocument.querySelector('[role="tooltip"]'), null, "pasar por la cara no abre un tooltip");
 faceOf("Holmes").dispatchEvent(new bubbleApp.w.PointerEvent("pointerleave", { bubbles: false, pointerType: "mouse" }));
 faceOf("Holmes").click();
 await sleep(150);
@@ -297,7 +297,9 @@ assert.equal(agentSends[0].baseRef, null);
 assert.ok(draftDoc.querySelector('[data-sidebar-tasks] [data-sesion="new-agent-task"] [data-session-agent]'), "el primer mensaje crea una tarea visible con la pastilla de su arquetipo");
 const activeDraftRow = draftDoc.querySelector('[data-sidebar-tasks] [data-sesion="new-agent-task"]');
 assert.equal(activeDraftRow.querySelectorAll("[data-session-agent]").length, 1, "la identidad activa se pinta una sola vez");
-assert.ok(activeDraftRow.querySelector('[data-session-status] [data-task-orbit] [data-astro-status="working"]'), "la cara activa va dentro del arco a la derecha del título");
+assert.equal(activeDraftRow.querySelector("[data-session-status] [data-session-agent]"), null, "el loader de la derecha no lleva la cara");
+assert.ok(activeDraftRow.querySelector("[data-session-agent] [data-astro-status='awake']"), "la cara va a la izquierda del título, quieta");
+assert.ok(activeDraftRow.querySelector("[data-session-status] [data-spinner]"), "trabajando, el hueco de la derecha es el loader");
 assert.equal(activeDraftRow.querySelector('[data-session-preview] [data-session-agent]'), null, "la segunda línea no duplica la cara activa");
 assert.deepEqual(draftApp.failures, []);
 draftApp.w.close();
@@ -453,7 +455,7 @@ assert.ok(createdHeadings[0].compareDocumentPosition(threadDoc.querySelector('[d
   "el rótulo antecede a la primera tarea creada");
 const delegatedToolbar = threadDoc.querySelector('[data-delegated-trigger="toolbar"]');
 assert.ok(delegatedToolbar, "la barra derecha permite consultar subtareas de una conversación existente");
-// En la tarjeta del riel el estado va en su hueco de 16 px, a la derecha del título.
+// En la tarjeta del riel el estado va en su cuadro de 22×20, a la derecha del título, y la cara a la izquierda.
 const previewOfCoordinator = () => sidebarTask("topic").querySelector("[data-session-status]");
 threadApp.emit("chat", { kind: "started", session: "topic-work", workspace: "w" });
 await sleep(100);
@@ -465,7 +467,8 @@ assert.equal(previewOfCoordinator().querySelectorAll('[aria-label$="Está trabaj
   "un solo estado ocupa su columna, sin contador de subtareas");
 assert.equal(sidebarTask("topic").querySelectorAll("[data-session-status]").length, 1, "el estado ocupa una sola ranura");
 assert.equal(previewOfCoordinator().querySelectorAll("[data-task-orbit]").length, 1, "la ranura lleva una sola órbita");
-assert.equal(previewOfCoordinator().querySelectorAll("[data-session-agent]").length, 1, "una sola identidad vive dentro de la órbita");
+assert.equal(previewOfCoordinator().querySelector("[data-session-agent]"), null, "la órbita del estado no lleva la cara");
+assert.equal(sidebarTask("topic").querySelectorAll("[data-session-agent]").length, 1, "la cara va una sola vez, a la izquierda del título");
 assert.equal(previewOfCoordinator().textContent.trim(), "", "la ranura no añade un contador de subtareas");
 threadApp.emit("chat", { kind: "done", session: "topic", workspace: "w", ok: true });
 await sleep(200);

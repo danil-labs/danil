@@ -477,6 +477,7 @@
   "danil.lima.step.connect": "Connect to this Mac",
   "danil.lima.row.online": "Linux on this Mac · online",
   "danil.lima.row.off": "Linux on this Mac · off",
+  "danil.lima.box.scope": "Available through this Mac.",
   "danil.lima.fail.lima_missing": "Lima is not installed on this Mac.",
   "danil.lima.fail.lima_timeout": "Lima took too long to answer. Try again.",
   "danil.lima.fail.lima_failed": "Lima could not finish. The technical detail says what happened.",

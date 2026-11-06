@@ -1,5 +1,5 @@
 import type { AgentModels, ModelOption } from "./model";
-import { esDe, type Superficie } from "./surfaces.ts";
+import { esDe, marcaDeSuperficie, type Superficie } from "./surfaces.ts";
 
 export type CatalogosDeModelos = Record<string, AgentModels | null>;
 
@@ -37,26 +37,19 @@ export function favoritosDeModelos(
   return models.filter((opcion) => esFavorito(opcion.key, favoritos));
 }
 
-/**
- * Quién ejecuta el modelo. **No es quién fabricó el modelo**: Claude Sonnet
- * servido por Zen sigue dentro de OpenCode Zen, no bajo Anthropic.
- *
- * OpenCode comparte una cuenta entre Zen y Go, así que ambos salen de la misma
- * superficie autenticada y el prefijo solo separa esos dos productos. Free y
- * Local ya son superficies propias y no necesitan mirar el modelo.
- */
+/** El proveedor que sirve el modelo puede ser distinto de quien lo fabricó. */
 export function proveedorDe(
   superficie: Superficie,
   model: ModelOption,
 ) {
   if (superficie.provider === "opencode-zen") {
     if (superficie.catalogo === "gratuitos") {
-      return { id: "opencode-free", label: "OpenCode Free", logo: "opencode" };
+      return { id: "opencode-free", label: "Danil Free AI", logo: marcaDeSuperficie(superficie) };
     }
     if (model.id.startsWith("opencode-go/")) {
       return { id: "opencode-go", label: "OpenCode Go", logo: "opencode" };
     }
-    return { id: "opencode-zen", label: "OpenCode Zen", logo: "opencode" };
+    return { id: "opencode-zen", label: "OpenCode", logo: "opencode" };
   }
   if (superficie.provider === "opencode-local") {
     return { id: "opencode-local", label: "OpenCode Local", logo: "opencode" };

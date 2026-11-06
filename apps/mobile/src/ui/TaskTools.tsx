@@ -131,7 +131,7 @@ export function TaskTools({
           <View ref={bar} collapsable={false}>
             <Tap testID="chat-usage" accessibilityRole="button" accessibilityLabel={restante === null ? t("task.tools.usage_open") : accountName ? t("task.tools.usage_account", { account: accountName, left: restante }) : t("task.tools.usage", { left: restante })} onPress={() => void measure(bar).then(setAnchor)} style={styles.tool}>
               <View style={[styles.track, { backgroundColor: theme.border }]}>
-                {restante !== null ? <View style={[styles.fill, { width: `${100 - restante}%`, backgroundColor: toneColor(theme, restante) }]} /> : null}
+                {restante !== null ? <View style={[styles.fill, { width: `${restante}%`, backgroundColor: toneColor(theme, restante) }]} /> : null}
               </View>
             </Tap>
           </View>
@@ -171,7 +171,7 @@ export function TaskTools({
                           <Text style={{ color: theme.textMuted, fontSize: 12.5 }}>{windowLabel(lang, win)}</Text>
                         </View>
                         <View style={[styles.longTrack, { backgroundColor: theme.border }]}>
-                          <View style={[styles.fill, { width: `${100 - left}%`, backgroundColor: toneColor(theme, left) }]} />
+                          <View style={[styles.fill, { width: `${left}%`, backgroundColor: toneColor(theme, left) }]} />
                         </View>
                       </View>
                     );

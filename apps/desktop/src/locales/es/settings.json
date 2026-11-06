@@ -1,5 +1,6 @@
 {
-  "settings.ai_providers.zen_go": "Zen y Go",
+  "settings.environment.engine_build": "Motor {build}",
+  "settings.ai_providers.opencode_detail": "Modelos de pago y Go",
   "settings.ai_providers.free_detail": "de OpenCode · sin cuenta",
   "settings.account_card.active": "activa",
   "settings.account_card.asking": "preguntando",

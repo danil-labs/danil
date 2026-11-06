@@ -114,16 +114,29 @@
         display: flex;
         align-items: center;
         gap: 4px;
-        width: 300px;
+        box-sizing: border-box;
+        width: var(--marco-bar, 300px);
         flex: none;
         padding-right: 8px;
       }
       .marco-space {
-        width: 112px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        box-sizing: border-box;
         height: 30px;
+        min-width: 0;
+        max-width: 176px;
         flex: none;
-        border-radius: 4px;
+        padding: 0 8px;
+        border-radius: 6px;
+        color: var(--marco-ink);
+        font-size: 13px;
+        font-weight: 600;
+        line-height: 1.25;
       }
+      .marco-space-bone { width: 72px; }
+      .marco-space .marco-svg { flex: none; color: var(--marco-faint); }
       .marco-tabs {
         display: flex;
         align-items: flex-end;
@@ -201,14 +214,15 @@
         display: flex;
         flex-direction: column;
         gap: 8px;
-        width: 260px;
+        box-sizing: border-box;
+        width: var(--marco-side, 260px);
         flex: none;
         padding: 8px 8px 0;
         background: var(--marco-muted);
       }
       .marco-new {
         display: grid;
-        grid-template-columns: 22px minmax(0, 1fr) auto;
+        grid-template-columns: 22px minmax(0, 1fr);
         align-items: center;
         gap: 2px;
         height: 30px;
@@ -217,36 +231,11 @@
         border-radius: 4px;
         background: var(--marco-ink);
         color: var(--marco-on-ink);
-        font-size: 13px;
-        font-weight: 700;
-        line-height: 1.25;
       }
       .marco-new svg { justify-self: center; }
-      .marco-new kbd {
-        padding: 0 4px;
-        border: 1px solid color-mix(in srgb, currentColor 20%, transparent);
-        border-radius: 4px;
-        font-family: ui-monospace, monospace;
-        font-size: 12px;
-        font-weight: 400;
-      }
-      .marco-rows { display: flex; flex-direction: column; gap: 2px; }
-      .marco-folder {
-        display: flex;
-        align-items: center;
-        height: 34px;
-        margin-bottom: 4px;
-        padding-left: 22px;
-      }
-      .marco-task {
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        gap: 5px;
-        box-sizing: border-box;
-        height: 52px;
-        padding: 7px 8px 7px 10px;
-        border-radius: 10px;
+      .marco-new .marco-bone {
+        width: 88px;
+        background: color-mix(in srgb, var(--marco-on-ink) 22%, transparent);
       }
       .marco-main { display: flex; flex-direction: column; min-width: 0; flex: 1; }
       .marco-askwrap {
@@ -318,9 +307,25 @@
         place-items: center;
         width: 30px;
         height: 30px;
+        flex: none;
         color: var(--marco-faint);
       }
+      .marco-icon-sm { width: 28px; height: 28px; }
       .marco-rail .marco-icon { width: 32px; height: 32px; }
+      .marco-ico-open { display: none; }
+      .marco-svg {
+        display: block;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+      .marco-svg-fill { display: block; fill: currentColor; stroke: none; }
+      .marco.marco-colapsado .marco-side { display: none; }
+      .marco.marco-colapsado .marco-bar-side { width: auto; max-width: calc(100% - 2rem); }
+      .marco.marco-colapsado .marco-ico-close { display: none; }
+      .marco.marco-colapsado .marco-ico-open { display: grid; }
       .marco-grow { flex: 1; }
       .marco-bone {
         display: block;
@@ -329,17 +334,14 @@
         background: color-mix(in srgb, var(--marco-faint) 28%, var(--marco-surface));
         animation: marco-breath 1.5s ease-in-out infinite;
       }
-      .marco-space.marco-bone { height: 30px; }
       .marco-mark.marco-bone { height: 32px; }
-      .marco-task .marco-bone + .marco-bone { height: 8px; animation-delay: 160ms; }
-      .marco-rows .marco-task:nth-child(3) .marco-bone { animation-delay: 120ms; }
-      .marco-rows .marco-task:nth-child(4) .marco-bone { animation-delay: 240ms; }
-      .marco-rows .marco-task:nth-child(5) .marco-bone { animation-delay: 360ms; }
       @keyframes marco-breath { 0%, 100% { opacity: 1; } 50% { opacity: 0.55; } }
       @media (prefers-reduced-motion: reduce) { .marco-bone { animation: none; } }
-      @media (max-width: 680px) {
-        .marco-bar-side { width: 46%; }
-        .marco-side { width: 42%; }
+      @media (max-width: 600px) {
+        .marco-side { display: none; }
+        .marco-bar-side { width: auto; max-width: calc(100% - 2rem); }
+        .marco-ico-close { display: none; }
+        .marco-ico-open { display: grid; }
       }
     </style>
   </head>
@@ -350,12 +352,16 @@
         <p class="marco-sr" data-marco="status" aria-label="Cargando"></p>
         <div class="marco-bar">
           <div class="marco-bar-side">
-            <span class="marco-icon" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/></svg></span>
-            <span class="marco-space marco-bone"></span>
+            <span class="marco-icon marco-ico-close" aria-hidden="true"><svg class="marco-svg" width="16" height="16" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 3v18"/><path d="m16 15-3-3 3-3"/></svg></span>
+            <span class="marco-icon marco-ico-open" aria-hidden="true"><svg class="marco-svg" width="16" height="16" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 3v18"/><path d="m14 9 3 3-3 3"/></svg></span>
+            <span class="marco-space">
+              <span class="marco-space-bone marco-bone"></span>
+              <svg class="marco-svg" width="13" height="13" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+            </span>
             <span class="marco-grow"></span>
-            <span class="marco-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="m20 20-3-3"/></svg></span>
-            <span class="marco-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 20h6V4H4zM14 20h6v-8h-6z"/><path d="M14 8V4h6"/></svg></span>
-            <span class="marco-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 6h16M4 12h16M4 18h10"/></svg></span>
+            <span class="marco-icon" aria-hidden="true"><svg class="marco-svg" width="15" height="15" viewBox="0 0 24 24"><path d="m21 21-4.34-4.34"/><circle cx="11" cy="11" r="8"/></svg></span>
+            <span class="marco-icon" aria-hidden="true"><svg class="marco-svg" width="15" height="15" viewBox="0 0 24 24"><path d="M12 10v6"/><path d="M9 13h6"/><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg></span>
+            <span class="marco-icon marco-icon-sm" aria-hidden="true"><svg class="marco-svg" width="15" height="15" viewBox="0 0 24 24"><path d="M10 5H3"/><path d="M12 19H3"/><path d="M14 3v4"/><path d="M16 17v4"/><path d="M21 12h-9"/><path d="M21 19h-5"/><path d="M21 5h-7"/><path d="M8 10v4"/><path d="M8 12H3"/></svg></span>
           </div>
           <div class="marco-tabs">
             <span class="marco-tab"><span class="marco-bone" style="width:62%"></span></span>
@@ -365,36 +371,28 @@
         <div class="marco-body">
           <div class="marco-rail">
             <span class="marco-mark marco-bone"></span>
-            <span class="marco-add" aria-hidden="true">+</span>
+            <span class="marco-add" aria-hidden="true"><svg class="marco-svg" width="16" height="16" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M12 5v14"/></svg></span>
             <span class="marco-grow"></span>
-            <span class="marco-icon" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 8h8v8H8z"/><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></span>
-            <span class="marco-icon" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 7v4a3 3 0 0 0 3 3h0a3 3 0 0 0 3-3V7"/><path d="M12 17v3M8 21h8"/></svg></span>
-            <span class="marco-icon" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="6" rx="1"/><rect x="3" y="14" width="18" height="6" rx="1"/></svg></span>
+            <span class="marco-icon" aria-hidden="true"><svg class="marco-svg-fill" width="16" height="16" viewBox="0 0 24 24"><path d="M13.85 0a4.16 4.16 0 0 0-2.95 1.217L1.456 10.66a.835.835 0 0 0 0 1.18.835.835 0 0 0 1.18 0l9.442-9.442a2.49 2.49 0 0 1 3.541 0 2.49 2.49 0 0 1 0 3.541L8.59 12.97l-.1.1a.835.835 0 0 0 0 1.18.835.835 0 0 0 1.18 0l.1-.098 7.03-7.034a2.49 2.49 0 0 1 3.542 0l.049.05a2.49 2.49 0 0 1 0 3.54l-8.54 8.54a1.96 1.96 0 0 0 0 2.755l1.753 1.753a.835.835 0 0 0 1.18 0 .835.835 0 0 0 0-1.18l-1.753-1.753a.266.266 0 0 1 0-.394l8.54-8.54a4.185 4.185 0 0 0 0-5.9l-.05-.05a4.16 4.16 0 0 0-2.95-1.218c-.2 0-.401.02-.6.048a4.17 4.17 0 0 0-1.17-3.552A4.16 4.16 0 0 0 13.85 0m0 3.333a.84.84 0 0 0-.59.245L6.275 10.56a4.186 4.186 0 0 0 0 5.902 4.186 4.186 0 0 0 5.902 0L19.16 9.48a.835.835 0 0 0 0-1.18.835.835 0 0 0-1.18 0l-6.985 6.984a2.49 2.49 0 0 1-3.54 0 2.49 2.49 0 0 1 0-3.54l6.983-6.985a.835.835 0 0 0 0-1.18.84.84 0 0 0-.59-.245"/></svg></span>
+            <span class="marco-icon" aria-hidden="true"><svg class="marco-svg" width="16" height="16" viewBox="0 0 24 24"><path d="M12 22v-5"/><path d="M15 8V2"/><path d="M17 8a1 1 0 0 1 1 1v4a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4V9a1 1 0 0 1 1-1z"/><path d="M9 8V2"/></svg></span>
+            <span class="marco-icon" aria-hidden="true"><svg class="marco-svg" width="16" height="16" viewBox="0 0 24 24"><rect width="20" height="8" x="2" y="2" rx="2" ry="2"/><rect width="20" height="8" x="2" y="14" rx="2" ry="2"/><line x1="6" x2="6.01" y1="6" y2="6"/><line x1="6" x2="6.01" y1="18" y2="18"/></svg></span>
             <span class="marco-rule"></span>
-            <span class="marco-icon" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2"/></svg></span>
-            <span class="marco-icon" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="3"/><path d="M5 19c1.5-3 3.8-4 7-4s5.5 1 7 4"/></svg></span>
+            <span class="marco-icon" aria-hidden="true"><svg class="marco-svg" width="17" height="17" viewBox="0 0 24 24"><path d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915"/><circle cx="12" cy="12" r="3"/></svg></span>
+            <span class="marco-icon" aria-hidden="true"><svg class="marco-svg" width="17" height="17" viewBox="0 0 24 24"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 0 0-16 0"/></svg></span>
           </div>
           <div class="marco-surface">
             <div class="marco-side">
               <div class="marco-new">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
-                <span data-marco="new">Nueva tarea</span>
-                <kbd data-marco="keys">Ctrl+T</kbd>
-              </div>
-              <div class="marco-rows">
-                <div class="marco-folder"><span class="marco-bone" style="width:46%"></span></div>
-                <div class="marco-task"><span class="marco-bone" style="width:78%"></span><span class="marco-bone" style="width:42%"></span></div>
-                <div class="marco-task"><span class="marco-bone" style="width:64%"></span><span class="marco-bone" style="width:36%"></span></div>
-                <div class="marco-task"><span class="marco-bone" style="width:86%"></span><span class="marco-bone" style="width:48%"></span></div>
-                <div class="marco-task"><span class="marco-bone" style="width:54%"></span><span class="marco-bone" style="width:30%"></span></div>
+                <svg class="marco-svg" width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z"/></svg>
+                <span class="marco-bone"></span>
               </div>
             </div>
             <div class="marco-main">
               <span class="marco-grow"></span>
               <div class="marco-askwrap">
-                <div class="marco-sources"><span data-marco="sources">Fuentes:</span><span aria-hidden="true">+</span></div>
+                <div class="marco-sources"><span class="marco-bone" style="width:52px"></span><span aria-hidden="true">+</span></div>
                 <div class="marco-composer">
-                  <p class="marco-field" data-marco="ask">Pregunta algo</p>
+                  <p class="marco-field"></p>
                   <div class="marco-tools">
                     <span class="marco-clip" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m21 11-8.5 8.5a5 5 0 0 1-7-7L14 4a3.5 3.5 0 0 1 5 5L10.5 17.5a2 2 0 0 1-3-3L15 7"/></svg></span>
                     <span class="marco-pill"></span>
@@ -428,21 +426,42 @@
           var code = localStorage.getItem("harness:lengua:ultima") || (pref === "sistema" ? navigator.language : pref) || "es";
           es = String(code).toLowerCase().split("-")[0] === "es";
         } catch (e) {}
-        var text = {
-          status: es ? "Cargando" : "Loading",
-          "new": es ? "Nueva tarea" : "New task",
-          ask: es ? "Pregunta algo" : "Ask something",
-          sources: es ? "Fuentes:" : "Sources:",
-          keys: /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent) ? "⌘T" : "Ctrl+T"
-        };
-        tpl.content.querySelectorAll("[data-marco]").forEach(function (node) {
-          var key = node.getAttribute("data-marco");
-          if (!text[key]) return;
-          if (key === "status") node.setAttribute("aria-label", text[key]);
-          else node.textContent = text[key];
-        });
-        var host = document.getElementById("root");
-        if (host) host.append(tpl.content.cloneNode(true));
+        var status = tpl.content.querySelector("[data-marco=status]");
+        if (status) status.setAttribute("aria-label", es ? "Cargando" : "Loading");
+        // El ancho y el pliegue son los que el cliente dejó: la columna los
+        // guarda en harness.layout y el marco nace ya con esa medida.
+        var marco = tpl.content.querySelector(".marco");
+        var ancho = 260;
+        var colapsado = false;
+        try {
+          var guardado = JSON.parse(localStorage.getItem("harness.layout.sidebar.width"));
+          if (typeof guardado === "number" && isFinite(guardado)) ancho = Math.min(420, Math.max(220, Math.round(guardado)));
+          colapsado = JSON.parse(localStorage.getItem("harness.layout.sidebar.collapsed")) === true;
+        } catch (e) {}
+        try { if (matchMedia("(max-width: 600px)").matches) colapsado = true; } catch (e) {}
+        if (marco) {
+          marco.style.setProperty("--marco-side", ancho + "px");
+          marco.style.setProperty("--marco-bar", (ancho + 40) + "px");
+          if (colapsado) marco.classList.add("marco-colapsado");
+        }
+        // Sin sesión en este navegador no se pinta: si no la hay, la página se va
+        // al inicio de sesión y el marco de la app no debe aparecer ahí. En alfa la
+        // sesión vive en una cookie; `start` pinta el marco cuando ya comprobó que hay.
+        function pintarMarco() {
+          var host = document.getElementById("root");
+          if (!host || host.querySelector("[data-marco-de-carga]")) return;
+          host.append(tpl.content.cloneNode(true));
+        }
+        window.pintarMarcoDeCarga = pintarMarco;
+        try {
+          for (var i = 0; i < localStorage.length; i++) {
+            var key = localStorage.key(i) || "";
+            if ((key.indexOf("-auth-token") !== -1 || key.indexOf("terminus-auth:") === 0) && localStorage.getItem(key)) {
+              pintarMarco();
+              break;
+            }
+          }
+        } catch (e) {}
       })();
     </script>
     <script type="module" src="/src/web/bootstrap.ts"></script>

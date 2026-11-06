@@ -1,12 +1,4 @@
-/**
- * El antes y el después de un archivo, línea a línea.
- *
- * **Vive aparte del componente que lo pinta a propósito.** El diff es cálculo
- * puro sobre dos cadenas: no toca el DOM ni la interfaz, y por eso puede
- * mudarse a un worker sin reescribir nada de lo que lo consume. Ese es el
- * siguiente paso (#74, el panel de diffs), y esta frontera es lo que lo hace
- * barato.
- */
+/** Calcula el antes y el después de un archivo sin depender de la interfaz. */
 
 /** Una línea del resultado, con el número que le toca en cada lado. */
 export type Linea = {

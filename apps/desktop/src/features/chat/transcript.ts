@@ -489,7 +489,7 @@ export type Turn = {
   model?: string | null;
   /** El modelo que reportó el CLI al cerrar el turno. */
   reported_model?: string | null;
-  /** El proveedor de modelos del turno («OpenCode Zen», «OpenCode Go»).
+  /** El proveedor de modelos del turno («OpenCode», «OpenCode Go»).
    *  Ausente en los turnos anteriores al campo y en los que no lanzan nada. */
   model_vendor?: string | null;
 
