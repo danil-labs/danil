@@ -8,7 +8,6 @@ import { t } from "../../lib/i18n";
 import type { AgentProfile } from "../../lib/model";
 import { cn } from "../../lib/utils";
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from "../../ui/ContextMenu";
-import { RETARDO_TOOLTIP, TooltipContent, TooltipRoot, TooltipTrigger } from "../../ui/Tooltip";
 import { AstroAvatar } from "../projects/AstroAvatar";
 import { displayName } from "../projects/profiles";
 import { agentFolder, type DockAgent, orderDockAgents } from "./dockLayout";
@@ -317,9 +316,8 @@ export default function AgentDock(props: {
                     {(agente) => {
                       const texto = () => `${label(agente.name)} · ${dockStatusText(agente)}`;
                       return (
-                        <TooltipRoot openDelay={RETARDO_TOOLTIP} placement="top" gutter={6}>
-                          <TooltipTrigger
-                            as="button"
+                        // Sin tooltip: estorbaba. El nombre y el estado van en `aria-label`, y los nombres se ven con ≡.
+                        <button
                             type="button"
                             class="relative flex min-w-0 flex-col items-center justify-center gap-1 rounded-lg border border-transparent bg-transparent px-0.5 py-1.5 hover:bg-neutral-100"
                             data-dock-agent={agente.name}
@@ -335,12 +333,7 @@ export default function AgentDock(props: {
                             >
                               {label(agente.name)}
                             </span>
-                          </TooltipTrigger>
-                          <TooltipContent class="pointer-events-none">
-                            <span class="block">{label(agente.name)}</span>
-                            <span class="block font-normal opacity-80">{dockStatusText(agente)}</span>
-                          </TooltipContent>
-                        </TooltipRoot>
+                          </button>
                       );
                     }}
                   </For>
