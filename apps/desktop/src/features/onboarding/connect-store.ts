@@ -151,8 +151,7 @@ export function crearConexiones() {
   }
 
   async function consentida() {
-    const startup = await invoke<FreeModelStartup>("workspaces_startup");
-    return freeModelPolicy(startup)?.accepted ?? false;
+    return (await loadFreeModelPolicy())?.accepted ?? false;
   }
 
   async function pasoGuardado(f: Fila): Promise<Paso> {
@@ -487,11 +486,9 @@ export function crearConexiones() {
     poner(id, { k: "saliendo" });
     try {
       if (f.modo === "consentimiento") {
-        const startup = await invoke<FreeModelStartup>("workspaces_startup");
-        if (!startup.active) throw new Error(t("settings.accounts.free.unavailable"));
-        await invoke("set_provider_consent", { provider: f.agente, accepted: false }, {
-          headers: { "x-terminus-workspace": startup.active },
-        });
+        const policy = await loadFreeModelPolicy();
+        if (!policy) throw new Error(t("settings.accounts.free.unavailable"));
+        await invoke("set_provider_consent", { provider: f.agente, accepted: false }, freeModelScope(policy));
         window.dispatchEvent(new CustomEvent("harness:consentimiento"));
       } else if (f.modo === "local") {
         await invoke("remove_local_runtime");

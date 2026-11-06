@@ -1543,7 +1543,7 @@ function MotoresLocales() {
 
 /**
  * Lo que hay que aceptar antes de activar, y a qué versión de texto. Los dos
- * llegan juntos del backend (`workspaces::consent_text`): quien cambie la
+ * llegan juntos con la política del workspace: quien cambie la
  * frase tiene el número al lado, y un guarda en Rust falla si el texto se
  * mueve sin que la versión suba.
  */
@@ -1652,8 +1652,7 @@ function ModelosGratuitos(props: {
   const [preguntando, setPreguntando] = createSignal(false);
 
   onMount(() => {
-    void invoke<FreeModelStartup>("workspaces_startup").then((startup) => {
-      const policy = freeModelPolicy(startup);
+    void loadFreeModelPolicy().then((policy) => {
       if (!policy) return;
       setTexto({ lineas: policy.lines, version: policy.version, policy });
       setAceptado(policy.accepted);
@@ -1663,8 +1662,8 @@ function ModelosGratuitos(props: {
   async function preguntar() {
     setFallo(null);
     try {
-      const policy = freeModelPolicy(await invoke<FreeModelStartup>("workspaces_startup"));
-      if (!policy) throw new Error(t("settings.accounts.free.unavailable"));
+      const policy = await loadFreeModelPolicy();
+      if (!policy?.enabled) throw new Error(t("settings.accounts.free.unavailable"));
       setTexto({ lineas: policy.lines, version: policy.version, policy });
       setPreguntando(true);
     } catch (e) {
@@ -1678,7 +1677,7 @@ function ModelosGratuitos(props: {
       const policy = texto()?.policy;
       if (!policy) throw new Error(t("settings.accounts.free.unavailable"));
       const startup = await invoke<FreeModelStartup>("workspaces_startup");
-      if (startup.active !== policy.workspace_id || (valor && !sameFreeModelPolicy(policy, freeModelPolicy(startup)))) {
+      if (startup.active !== policy.workspace_id || (valor && !sameFreeModelPolicy(policy, await loadFreeModelPolicy(policy)))) {
         throw new Error(t("settings.accounts.free.policy_changed"));
       }
       const w = await invoke<{ free_model_consent?: FreeModelConsent }>(
@@ -1762,7 +1761,7 @@ function ModelosGratuitos(props: {
             size="sm"
             // Sin el texto no se puede pedir el sí, y tampoco se ofrece
             // activar: aceptar sin ver qué se acepta no es un consentimiento.
-            disabled={guardando() || props.preparando || !texto()}
+            disabled={guardando() || props.preparando || !texto()?.policy.enabled}
             onClick={() => void preguntar()}
           >
             {props.preparando

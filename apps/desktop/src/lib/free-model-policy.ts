@@ -9,6 +9,7 @@ export type FreeModelPolicy = {
   enabled: boolean;
   terms: { label: string; url: string }[];
   accepted: boolean;
+  destination_machine?: string;
 };
 
 export type FreeModelConsent = {
@@ -25,19 +26,25 @@ export type FreeModelStartup = {
 };
 
 export function freeModelPolicy(startup: FreeModelStartup): FreeModelPolicy | null {
+  const policy = recognizedFreeModelPolicy(startup);
+  return policy?.enabled ? policy : null;
+}
+
+export function recognizedFreeModelPolicy(startup: FreeModelStartup): FreeModelPolicy | null {
   const policy = startup.free_model_policy;
-  if (!policy || policy.workspace_id !== startup.active || policy.version !== 2 || !policy.enabled ||
-    !policy.acceptance_ref || policy.lines.length === 0 ||
+  if (!policy || policy.workspace_id !== startup.active || policy.version !== 2 ||
+    !policy.acceptance_ref || !Array.isArray(policy.lines) || policy.lines.length === 0 ||
     !sameProviders(policy.providers, ["kilo", "vercel", "reflection"])) return null;
   return policy;
 }
 
 function sameProviders(a: string[], b: string[]): boolean {
+  if (!Array.isArray(a) || !Array.isArray(b)) return false;
   return a.length === b.length && new Set(a).size === a.length && a.every((id) => b.includes(id));
 }
 
 export function sameFreeModelPolicy(a: FreeModelPolicy, b: FreeModelPolicy | null): boolean {
-  return !!b && a.workspace_id === b.workspace_id && a.version === b.version && sameProviders(a.providers, b.providers);
+  return !!b && a.workspace_id === b.workspace_id && a.version === b.version && a.destination_machine === b.destination_machine && sameProviders(a.providers, b.providers);
 }
 
 export function acceptedFreeModelPolicy(policy: FreeModelPolicy, consent?: FreeModelConsent): boolean {
@@ -45,4 +52,4 @@ export function acceptedFreeModelPolicy(policy: FreeModelPolicy, consent?: FreeM
     !!consent.policy_id && !!consent.acceptance_id && sameProviders(consent.providers, policy.providers);
 }
 
-export const freeModelScope = (policy: FreeModelPolicy) => ({ headers: { "x-terminus-workspace": policy.workspace_id } });
+export const freeModelScope = (policy: Pick<FreeModelPolicy, "workspace_id" | "destination_machine">) => ({ headers: { "x-terminus-workspace": policy.workspace_id, ...(policy.destination_machine ? { "x-terminus-machine": policy.destination_machine } : {}) } });
