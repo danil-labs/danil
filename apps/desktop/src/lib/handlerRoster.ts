@@ -59,7 +59,7 @@ export function watchRoster(
   load: () => Promise<HandlerDefinition[]>,
   refresh: Accessor<unknown> = () => 0,
   waits: readonly number[] = ROSTER_RETRY_WAITS,
-): Accessor<HandlerDefinition[]> {
+): Accessor<HandlerDefinition[]> & { ready: Accessor<boolean> } {
   const [intento, setIntento] = createSignal(0);
   let fallos = 0;
   let pedido: unknown;
@@ -85,5 +85,7 @@ export function watchRoster(
     },
   );
   // `latest` y no `roster()`: una relectura no suspende el dock ni lo vacía.
-  return () => roster.latest ?? lastRoster(project) ?? [];
+  const list = () => roster.latest ?? lastRoster(project) ?? [];
+  // Contestó (con su lista, o con lo último tras un fallo) y la lista ya está a la vista.
+  return Object.assign(list, { ready: () => roster.state === "ready" || roster.state === "refreshing" });
 }
