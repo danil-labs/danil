@@ -1551,7 +1551,7 @@ function MotoresLocales() {
  * frase tiene el número al lado, y un guarda en Rust falla si el texto se
  * mueve sin que la versión suba.
  */
-export type Consentimiento = { lineas: Frase[]; version: number };
+export type Consentimiento = { lineas: (Frase | string)[]; version: number };
 
 /**
  * El sí explícito, antes de activar.
@@ -1571,14 +1571,14 @@ export type Consentimiento = { lineas: Frase[]; version: number };
  * a aceptar, lo que un consentimiento no puede hacer.
  */
 export function Consentir(props: {
-  texto: Consentimiento;
+  texto: Pick<Consentimiento, "lineas">;
   guardando: boolean;
   onAceptar: () => void;
   onCancelar: () => void;
   fallo: string | null;
 }) {
   return (
-    <Dialog open onOpenChange={(abierto) => !abierto && props.onCancelar()}>
+    <Dialog open onOpenChange={(abierto) => !abierto && !props.guardando && props.onCancelar()}>
         <DialogContent
           class="w-[min(520px,100%)] max-w-[520px] p-0"
           aria-label={t("settings.accounts.consent.title")}
@@ -1586,7 +1586,7 @@ export function Consentir(props: {
           <div class="flex flex-col gap-3 p-5">
             <For each={props.texto.lineas}>
               {(linea, i) => (
-                <p class={cn("m-0 text-xs leading-6 text-neutral-500", i() === 0 && "font-medium text-neutral-950")}>{prosa(linea)}</p>
+                <p class={cn("m-0 whitespace-pre-wrap text-xs leading-6 text-neutral-500", i() === 0 && "font-medium text-neutral-950")}>{typeof linea === "string" ? linea : prosa(linea)}</p>
               )}
             </For>
             <Show when={props.fallo}>
