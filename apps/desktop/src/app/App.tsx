@@ -8881,7 +8881,6 @@ export default function App() {
             </Show>
             <div
               class="h-full min-h-0 w-full min-w-0"
-              classList={{ "opacity-60": enCache() }}
               ref={(el) => createEffect(() => el.toggleAttribute("inert", enCache()))}
               aria-busy={enCache() || undefined}
               data-shell-cache={enCache() ? "" : undefined}
@@ -8940,11 +8939,6 @@ export default function App() {
               onSettings={(panel) => setSettings(panel ?? "")}
             />
             </div>
-            <Show when={enCache()}>
-              <p role="status" class="pointer-events-none absolute inset-x-3 bottom-3 m-0 rounded-sm bg-surface px-3 py-2 text-xs text-neutral-500 shadow-sm">
-                {t("shell.sidebar.cached")}
-              </p>
-            </Show>
             </div>
           </ColumnaLateral>
 

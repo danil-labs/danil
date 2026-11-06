@@ -9,6 +9,7 @@
   },
   "shell.agent_dock.pick_folder": "Hablar con {name} en…",
   "shell.agent_dock.see_all": "Ver todos",
+  "shell.agent_dock.empty": "Todavía no hay agentes. Crea uno en «Ver todos».",
   "shell.agent_dock.see_tasks": "Ver sus tareas",
   "shell.agent_dock.title": "Agentes",
   "shell.column.sidebar_width": "Ancho de la barra lateral",
