@@ -157,11 +157,11 @@ export default function AgentDock(props: {
         <span class="block truncate text-caption text-neutral-500">{dockStatusText(a)}</span>
       </span>
       <Show when={esRepo}>
-        <span class="rounded-full border border-dashed border-neutral-300 px-1.5 text-[0.625rem] text-neutral-500">
+        <span class="rounded-full border border-dashed border-neutral-300 px-1.5 text-2xs text-neutral-500">
           {t("shell.agent_dock.repo")}
         </span>
       </Show>
-      <SquarePen size={14} aria-hidden="true" class="shrink-0 text-neutral-400 group-hover/fila:text-neutral-950" />
+      <SquarePen size={14} aria-hidden="true" class="shrink-0 text-neutral-500 group-hover/fila:text-neutral-950" />
     </button>
   );
 
@@ -170,7 +170,7 @@ export default function AgentDock(props: {
       <h3 class="m-0 px-2 pt-3 pb-1 text-caption font-medium text-neutral-500">{titulo}</h3>
       <Show
         when={agentes.length > 0}
-        fallback={<Show when={vacio}><p class="m-0 px-2 pb-1 text-caption text-neutral-400">{vacio}</p></Show>}
+        fallback={<Show when={vacio}><p class="m-0 px-2 pb-1 text-caption text-neutral-500">{vacio}</p></Show>}
       >
         <For each={agentes}>{(a) => filaPanel(a, esRepo)}</For>
       </Show>
@@ -214,7 +214,7 @@ export default function AgentDock(props: {
   const [altoRiel, setAltoRiel] = createSignal(0);
   const [encima, setEncima] = createSignal(false);
   onMount(() => {
-    const riel = raiz.parentElement;
+    const riel = raiz?.parentElement;
     if (!riel) return;
     const medir = () => setAltoRiel(riel.clientHeight);
     medir();
@@ -277,7 +277,7 @@ export default function AgentDock(props: {
           {t("shell.agent_dock.team")}
         </span>
         <Show when={!desplegado() && sobran() > 0}>
-          <span class="ml-1.5 text-caption text-neutral-400">+{sobran()}</span>
+          <span class="ml-1.5 text-caption text-neutral-500">+{sobran()}</span>
         </Show>
         {botones()}
       </div>
@@ -327,7 +327,7 @@ export default function AgentDock(props: {
                             {cara(agente, 24)}
                             <span
                               class={cn(
-                                "max-w-full truncate text-[0.625rem] leading-none text-neutral-500 transition-[opacity,max-height] duration-200",
+                                "max-w-full truncate text-2xs leading-none text-neutral-500 transition-[opacity,max-height] duration-200",
                                 nombres() ? "max-h-3 opacity-100" : "max-h-0 opacity-0",
                               )}
                             >
@@ -368,7 +368,7 @@ export default function AgentDock(props: {
           {seccion(t("shell.agent_dock.workspace"), grupos().workspace, false, t("shell.agent_dock.workspace_empty"))}
           <Show
             when={props.currentFolder}
-            fallback={<p class="m-0 px-2 pt-3 text-caption text-neutral-400">{t("shell.agent_dock.no_folder")}</p>}
+            fallback={<p class="m-0 px-2 pt-3 text-caption text-neutral-500">{t("shell.agent_dock.no_folder")}</p>}
           >
             {seccion(
               props.currentFolderName
