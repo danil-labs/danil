@@ -31,6 +31,7 @@
     "chat.effort.unconfirmed",
     "chat.effort.unsupported",
     "chat.error.agent_not_in_folder",
+    "chat.failure.free_router_mcp_credentials",
     "chat.failure.free_router_stopped",
     "chat.fork.failed",
     "chat.fork.invalid_origin",

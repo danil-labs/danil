@@ -455,6 +455,5 @@
   "chat.history.pieces": "Full record",
   "chat.history.content": "Saved content",
   "chat.queue.stop_and_send": "Stop the turn and send",
-  "chat.queue.stop_and_send_aria": "Stop the turn and send queued message {n}",
-  "chat.failure.free_router_stopped": "Danil Free model router stopped this turn to avoid resending the content."
+  "chat.queue.stop_and_send_aria": "Stop the turn and send queued message {n}"
 }
