@@ -179,21 +179,13 @@ export function Comprobacion(props: { filas: { hecho: boolean; texto: string; en
 
 function detalle(c: Conexiones, f: Fila): string {
   const p = c.pasos[f.id];
-  const base =
-    f.modo === "consentimiento"
-      ? t("settings.ai_providers.free_detail")
-      : f.modo === "local"
-        ? t("onboarding.ai.local.detail")
-        : f.agente.startsWith("opencode")
-          ? t("onboarding.ai.opencode_detail")
-          : "";
   switch (p?.k) {
     case "externa":
       return t("onboarding.ai.external_waiting");
     case "sesion":
       return t("onboarding.ai.has_session", { account: p.identidad });
     case "instalada":
-      if (f.modo === "consentimiento" || f.modo === "local") return base;
+      if (f.modo === "consentimiento" || f.modo === "local") return "";
       return t("onboarding.ai.system_no_session");
     case "descargando":
       return t("onboarding.ai.downloading");
@@ -211,8 +203,7 @@ function detalle(c: Conexiones, f: Fila): string {
     case "alta":
       return t("onboarding.ai.signup.pending");
     default:
-      if (base) return base;
-      return c.externa(f) ? t("onboarding.ai.external_detail") : t("onboarding.ai.installs_and_signs_in");
+      return "";
   }
 }
 
@@ -242,9 +233,9 @@ function Tarjeta(props: { c: Conexiones; f: Fila; abajo?: JSX.Element; resaltada
         </span>
         <span class="grid min-w-0 flex-1 gap-0.5">
           <strong class="truncate text-sm font-semibold text-neutral-950">{nombre()}</strong>
-          <span class="truncate text-xs text-neutral-500" title={detalle(props.c, props.f)}>
-            {detalle(props.c, props.f)}
-          </span>
+          <Show when={detalle(props.c, props.f)}>
+            {(estado) => <span class="truncate text-xs text-neutral-500" title={estado()}>{estado()}</span>}
+          </Show>
         </span>
         <span class="flex w-[196px] shrink-0 items-center justify-end gap-1.5">
           <Switch
