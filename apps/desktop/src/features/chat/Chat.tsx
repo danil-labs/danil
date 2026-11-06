@@ -85,6 +85,7 @@ import { AstroAvatar } from "../projects/AstroAvatar";
 import {
   type CatalogosDeModelos,
   nombreDeModelo,
+  modelBrand,
   type OpcionDeModelo,
   opcionesDeModelos,
 } from "../../lib/models";
@@ -3166,7 +3167,7 @@ export default function Chat(props: ChatProps) {
                             class="flex size-11 items-center justify-center rounded-full bg-neutral-200"
                             title={sender().model ?? sender().provider}
                           >
-                            <MarcaAgente id={sender().provider} size={22} />
+                            <MarcaAgente id={modelBrand(sender().provider, sender().model)} size={22} />
                           </div>
                         </div>
                       )}
@@ -4381,7 +4382,7 @@ function LineaDeProveedor(props: {
 }) {
   // El nombre del proveedor no se escribe: el logo ya lo dice y el modelo va
   // solo. Queda en el `title` para quien pase el cursor por encima.
-  const titulo = () => props.provider ?? props.agentLabel;
+  const titulo = () => modelBrand(props.agent, props.model, props.catalogo) === "danil" ? t("surfaces.label.free") : props.provider ?? props.agentLabel;
   return (
     <span
       class="flex items-center gap-1 whitespace-nowrap rounded-sm px-1 text-caption leading-4 text-neutral-500"
@@ -4390,7 +4391,7 @@ function LineaDeProveedor(props: {
       data-provider={props.provider}
     >
       <span class="flex size-3.5 shrink-0 items-center justify-center">
-        <MarcaAgente id={props.agent} size={12} />
+        <MarcaAgente id={modelBrand(props.agent, props.model, props.catalogo)} size={12} />
       </span>
       <Show when={props.model}>
         {(id) => (

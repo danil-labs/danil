@@ -3,6 +3,7 @@ import { t } from "../../lib/i18n";
 import { Popover, PopoverContent } from "../../ui/Popover";
 import { RETARDO_TOOLTIP } from "../../ui/Tooltip";
 import { cn } from "../../lib/utils";
+import { modelBrand } from "../../lib/models";
 import { MarcaAgente } from "../../ui/icons";
 import { AstroAvatar } from "../projects/AstroAvatar";
 
@@ -178,7 +179,7 @@ export default function YourMessages(props: {
               {(sender) => (
                 <span class="flex size-6 shrink-0 items-center justify-center rounded-full bg-neutral-200">
                   <Show when={sender().kind === "agent" ? sender() as { kind: "agent"; name: string } : null}
-                    fallback={<MarcaAgente id={(sender() as { kind: "task"; agent: string }).agent} size={14} />}>
+                    fallback={<MarcaAgente id={modelBrand((sender() as { kind: "task"; agent: string }).agent, (sender() as { kind: "task"; model?: string | null }).model)} size={14} />}>
                     {(agent) => <AstroAvatar name={agent().name} status="awake" body={props.bodyOf?.(agent().name)} avatar={props.avatarOf?.(agent().name)} size={24} />}
                   </Show>
                 </span>

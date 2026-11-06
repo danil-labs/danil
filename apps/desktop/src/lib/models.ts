@@ -192,3 +192,9 @@ export function nombreDeModelo(id: string, catalogo?: AgentModels | null): strin
   }
   return catalogo?.models.find((m) => m.id === limpio)?.label || limpio;
 }
+
+/** La marca del modelo observado no cambia la identidad de su ejecutor. */
+export function modelBrand(agent: string, id?: string | null, catalog?: AgentModels | null): string {
+  return id?.startsWith("danil-free/") || catalog?.models.some((model) => model.id === id && model.gratis === true)
+    ? "danil" : agent;
+}

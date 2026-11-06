@@ -9,6 +9,7 @@ import {  agruparModelos,
   effortValue,
   effortAlCambiarDeModelo,
   nombreDeModelo,
+  modelBrand,
 } from "../../src/lib/models.ts";
 import type { ModelOption } from "../../src/lib/model.ts";
 import type { Superficie } from "../../src/lib/surfaces.ts";
@@ -171,4 +172,12 @@ test("la fila de acciones nombra el modelo con su versión", () => {
   assert.equal(options[0].key, "opencode-zen\u0000opencode-go/kimi");
   assert.deepEqual(agruparModelos(options, "OpenCode Go")[0].models, [options[0]]);
   assert.deepEqual(favoritosDeModelos(options, [options[0].key]), [options[0]]);
+});
+
+test("Free conserva la marca Danil en turnos observados y OpenCode pagado conserva su logo", () => {
+  assert.equal(modelBrand("opencode-zen", "danil-free/reflection/beam-free"), "danil");
+  assert.equal(modelBrand("opencode-zen", "opencode-go/kimi"), "opencode-zen");
+  assert.equal(modelBrand("opencode-zen", "opencode/claude"), "opencode-zen");
+  assert.equal(modelBrand("opencode-zen"), "opencode-zen");
+  assert.equal(modelBrand("opencode-zen", "legacy-free", { provider: "opencode-zen", fallback: false, models: [{ ...model("legacy-free", "Free"), gratis: true }] }), "danil");
 });
