@@ -3,7 +3,7 @@
  * devuelve como dato de máquina. Es una heurística: un falso positivo se
  * resuelve con «Pegar como texto»; un falso negativo deja el texto como hoy.
  */
-import { urlWithCredentials } from "@terminus/computers";
+import { urlWithCredentials } from "@terminus/computers/mcp-block";
 
 export type SecretFamily = "prefix" | "jwt" | "pem" | "entropy" | "url";
 
@@ -21,7 +21,6 @@ const PREFIXES: RegExp[] = [
 ];
 
 const JWT = /^eyJ[A-Za-z0-9_-]{8,}\.eyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}$/;
-const PEM = /-----BEGIN [A-Z0-9 ]*PRIVATE KEY-----[\s\S]+?-----END [A-Z0-9 ]*PRIVATE KEY-----/;
 const SHA = /^(?:[0-9a-f]{40}|[0-9a-f]{64})$/i;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const TOKEN_CHARS = /^[A-Za-z0-9+/=_.~-]+$/;
@@ -55,30 +54,6 @@ export function secretFamilyOf(token: string): SecretFamily | null {
   if (/^[~./]/.test(value) || /^[a-z0-9._-]+(?:\/[a-z0-9._-]+)+\/?$/.test(value) || /\.[a-z]{1,5}$/i.test(value)) return null;
   if (!/[0-9]/.test(value) || !/[A-Za-z]/.test(value)) return null;
   return bitsPerChar(value) >= ENTROPY_MIN_BITS ? "entropy" : null;
-}
-
-export type SecretMatch = { value: string; family: SecretFamily; start: number; end: number };
-
-/**
- * El secreto de un texto pegado. Una llave privada PEM o un token de prefijo,
- * JWT o URL con credenciales se reconocen dentro de una frase; la alta
- * entropía solo cuando lo pegado es ese único token.
- */
-export function findPastedSecret(text: string): SecretMatch | null {
-  const pem = PEM.exec(text);
-  if (pem) return { value: pem[0], family: "pem", start: pem.index, end: pem.index + pem[0].length };
-  const trimmed = text.trim();
-  if (trimmed && !/\s/.test(trimmed)) {
-    const family = secretFamilyOf(trimmed);
-    if (!family) return null;
-    const start = text.indexOf(trimmed);
-    return { value: trimmed, family, start, end: start + trimmed.length };
-  }
-  for (const m of text.matchAll(/[^\s"'`<>()[\]{},;]+/g)) {
-    const family = secretFamilyOf(m[0]);
-    if (family && family !== "entropy") return { value: m[0], family, start: m.index, end: m.index + m[0].length };
-  }
-  return null;
 }
 
 export const MASK = "•••";
@@ -131,4 +106,3 @@ export function maskServerSource(source: string): string {
     })
     .join(" ");
 }
-

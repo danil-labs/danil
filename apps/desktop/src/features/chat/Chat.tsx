@@ -60,6 +60,8 @@ import {
   type SenderTask,
 } from "../../lib/recipients";
 import { base64De, copyText, imagenPegada } from "../../lib/clipboard";
+import type { HeldPaste, SecretMatch } from "../../lib/secretPaste";
+import type { HeldSecret } from "./SecretPasteChip";
 import { capabilities } from "../../lib/platform";
 import { atenderElCampo, enfocar, enfocarSiNadieEscribe } from "../../lib/focus";
 import { df } from "../../lib/format";
@@ -178,6 +180,10 @@ import { Spinner } from "../../ui/Spinner";
 
 // Chunk aparte: el bloque de razonamiento solo lo carga un turno que lo trae.
 const Reasoning = sharedLazy(() => import("./Reasoning"));
+const SecretPasteChip = sharedLazy(() => import("./SecretPasteChip"));
+/** El detector de secretos, fuera de la carga inicial: el compositor lo pide al montarse. */
+let escaner: typeof import("../../lib/secretPaste") | null = null;
+const cargarEscaner = () => import("../../lib/secretPaste").then((m) => (escaner = m));
 
 /**
  * Quién dijo un turno: lo arma Rust a partir de la cuenta del agente o del
@@ -809,6 +815,8 @@ export default function Chat(props: ChatProps) {
   const [pick, setPick] = createSignal<number | null>(null);
   const [preparingAttachments, setPreparingAttachments] = createSignal(0);
   const [attachmentFailure, setAttachmentFailure] = createSignal<Failure | null>(null);
+  /** Un pegado con cara de secreto: el valor espera aquí, fuera del borrador, hasta guardarse o pegarse como texto. */
+  const [retenido, setRetenido] = createSignal<(HeldPaste & HeldSecret & { input: string; conversation: string }) | null>(null);
   const presentation = () => taskChatPresentation;
   const margenDelHilo = "px-4 py-3";
 
@@ -1036,7 +1044,7 @@ export default function Chat(props: ChatProps) {
   const escribible = () => !props.esperando || dirigido();
   // El campo no pide superficie: sin cuenta conectada hay que poder escribir un `!`.
   const mandable = () => escribible() && (Boolean(actual()?.usable) || seMandaSinSuperficie(props.input));
-  const listo = () => mandable() && preparingAttachments() === 0;
+  const listo = () => mandable() && preparingAttachments() === 0 && !retenido();
   const enviadas = createMemo(() => lastSentAt(props.msgs, props.cola.items.map((q) => q.text)));
   const respuestaRapida = (desde: number): RespuestaRapida | null => {
     const mandarRapida = props.onRespuestaRapida;
@@ -1479,7 +1487,76 @@ export default function Chat(props: ChatProps) {
     }
   }
 
+  function retenerSecreto(e: ClipboardEvent): boolean {
+    if (props.soloLectura || entradaActiva()) return false;
+    const pasted = e.clipboardData?.getData("text/plain") ?? "";
+    if (!pasted) return false;
+    const el = e.currentTarget as HTMLTextAreaElement;
+    const start = el.selectionStart ?? props.input.length;
+    const end = el.selectionEnd ?? start;
+    if (!escaner) {
+      // Sin detector todavía, el pegado espera a él en lugar de entrar sin mirar.
+      e.preventDefault();
+      const input = props.input;
+      void cargarEscaner().then((m) => recibirPegado(pasted, start, end, input, m.findPastedSecret(pasted)));
+      return true;
+    }
+    const match = escaner.findPastedSecret(pasted);
+    if (!match) return false;
+    e.preventDefault();
+    recibirPegado(pasted, start, end, props.input, match);
+    return true;
+  }
+
+  function recibirPegado(pasted: string, start: number, end: number, input: string, match: SecretMatch | null) {
+    if (!match) {
+      soltarRetenido({ match: { value: "", family: "prefix", start: 0, end: 0 }, pasted, start, end, input }, null);
+      return;
+    }
+    // Uno a la vez: el segundo no entra al texto mientras el primero espera.
+    if (retenido() || !escaner) return;
+    const hint = `••••${match.value.length >= 16 ? match.value.slice(-4) : ""}`;
+    setRetenido({ match, pasted, start, end, name: escaner.suggestSecretName(match), hint, exists: false, saving: false, failure: null, input, conversation: props.conversacion });
+    void comprobarNombre();
+  }
+
+  /** «Reemplazar» en lugar de «Guardar» cuando el nombre ya existe en el alcance de la tarea. */
+  async function comprobarNombre() {
+    const held = retenido();
+    if (!held) return;
+    const { envSecretExists } = await import("../settings/secrets-save");
+    const exists = await envSecretExists(props.mentionProject || null, held.name);
+    setRetenido((h) => (h && h.name === held.name ? { ...h, exists } : h));
+  }
+
+  /** Lo retenido vuelve al campo: con `$NOMBRE` tras guardarlo, o tal cual si era un falso positivo. */
+  function soltarRetenido(held: HeldPaste & { input: string }, name: string | null) {
+    const base = props.input === held.input ? held : { ...held, start: props.input.length, end: props.input.length };
+    const puesto = name
+      ? escaner!.textWithSecretName(props.input, base, name)
+      : { text: props.input.slice(0, base.start) + held.pasted + props.input.slice(base.end), caret: base.start + held.pasted.length };
+    setRetenido(null);
+    pendingCaret = puesto.caret;
+    props.onInput(puesto.text, "insertFromPaste");
+  }
+
+  async function guardarRetenido() {
+    const held = retenido();
+    if (!held || held.saving) return;
+    setRetenido({ ...held, saving: true, failure: null });
+    const { saveEnvSecret } = await import("../settings/secrets-save");
+    const failure = await saveEnvSecret({ folder: props.mentionProject || null, name: held.name, value: held.match.value, replace: held.exists });
+    const now = retenido();
+    if (!now || now.conversation !== held.conversation) return;
+    if (failure) setRetenido({ ...now, saving: false, failure });
+    else soltarRetenido(now, now.name);
+  }
+
+  createEffect(on(() => props.conversacion, () => setRetenido(null), { defer: true }));
+  onMount(() => void cargarEscaner());
+
   async function pegar(e: ClipboardEvent) {
+    if (retenerSecreto(e)) return;
     if (props.soloLectura || !puedeAdjuntar()) return;
     const img = imagenPegada(e.clipboardData);
     if (!img) return;
@@ -2454,6 +2531,21 @@ export default function Chat(props: ChatProps) {
           {(failure) => <FailureNote f={failure()} />}
         </Show>
 
+        <Show when={retenido()}>
+          {(held) => (
+            <SecretPasteChip
+              held={held()}
+              onName={(name) => {
+                setRetenido((h) => (h ? { ...h, name, exists: false, failure: null } : h));
+                void comprobarNombre();
+              }}
+              onSave={() => void guardarRetenido()}
+              onAsText={() => soltarRetenido(held(), null)}
+              onDiscard={() => setRetenido(null)}
+            />
+          )}
+        </Show>
+
         {/* Aquí solo van los archivos, no el material: el material vive en
             las filas de alcance de arriba, ponerlo también aquí lo
             enseñaría dos veces en la misma pantalla, con dos formas de
@@ -2916,7 +3008,9 @@ export default function Chat(props: ChatProps) {
                   ? props.stopping
                     ? t("chat.turn.stopping")
                     : t("chat.turn.stop")
-                  : t("chat.composer.send")
+                  : retenido()
+                    ? t("chat.secret_paste.send_blocked")
+                    : t("chat.composer.send")
               }
               onClick={props.busy ? () => void props.onStop() : undefined}
             >
