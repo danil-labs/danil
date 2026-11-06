@@ -5,6 +5,7 @@ import {
   acceptedFreeModelPolicy,
   freeModelPolicy,
   freeModelScope,
+  recognizedFreeModelPolicy,
   sameFreeModelPolicy,
   type FreeModelConsent,
   type FreeModelPolicy,
@@ -106,4 +107,28 @@ test("el scope de aceptar y revocar pertenece al workspace de la política mostr
   assert.deepEqual(freeModelScope(a), { headers: { "x-terminus-workspace": "workspace-a" } });
   assert.deepEqual(freeModelScope(b), { headers: { "x-terminus-workspace": "workspace-b" } });
   assert.deepEqual(freeModelScope(a), { headers: { "x-terminus-workspace": "workspace-a" } });
+});
+
+test("una política deshabilitada se reconoce para revocar pero no para aceptar", () => {
+  const disabled = policy({ enabled: false, accepted: true });
+  const startup = { active: "workspace-a", free_model_policy: disabled };
+  assert.equal(recognizedFreeModelPolicy(startup), disabled);
+  assert.equal(freeModelPolicy(startup), null);
+  assert.equal(acceptedFreeModelPolicy(disabled, consent()), true);
+  assert.equal(recognizedFreeModelPolicy({ ...startup, active: "workspace-b" }), null);
+  assert.equal(recognizedFreeModelPolicy({ ...startup, free_model_policy: policy({ enabled: false, version: 1 }) }), null);
+});
+
+test("cambiar de máquina invalida la política capturada aunque coincidan workspace y proveedores", () => {
+  const captured = policy({ destination_machine: "machine-a" });
+  assert.equal(sameFreeModelPolicy(captured, policy({ destination_machine: "machine-a" })), true);
+  assert.equal(sameFreeModelPolicy(captured, policy({ destination_machine: "machine-b" })), false);
+  assert.equal(sameFreeModelPolicy(captured, policy()), false);
+  assert.equal(sameFreeModelPolicy(policy(), captured), false);
+});
+
+test("el scope conserva juntos el workspace y la máquina capturados", () => {
+  assert.deepEqual(freeModelScope(policy({ destination_machine: "machine-a" })), {
+    headers: { "x-terminus-workspace": "workspace-a", "x-terminus-machine": "machine-a" },
+  });
 });
