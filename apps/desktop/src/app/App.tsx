@@ -6163,7 +6163,7 @@ export default function App() {
       const attachments = await attachmentsFor(m.attachments, opciones, proyecto);
       if (m.provider === "opencode-zen" && m.model !== "danil-free/reflection/beam-free") {
         const selected = catalogos()[m.provider]?.models.find((model) => model.id === m.model);
-        if (!selected || selected.gratis === true) throw new Error(t("settings.accounts.free.unavailable"));
+        if (!selected || selected.gratis === true) throw new Error(t("surfaces.free_off"));
       }
       const mandarTurno = () => invoke<string>("send_message", {
         provider: m.provider,

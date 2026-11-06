@@ -4,7 +4,5 @@
   "workspaces.migration.too_old": "Estos datos vienen de una versión anterior de Danil que este binario ya no convierte. Instala primero la versión {version}, ábrela una vez para que migre el trabajo, y vuelve a actualizar.",
   "workspaces.permission_mode.save_failed": "No se pudieron guardar los permisos por defecto. Vuelve a intentarlo.",
   "workspaces.permission_mode.unknown": "Ese modo de permisos no existe: elige manual, ediciones o auto.",
-  "workspaces.directory.no_documents": "No encontré tu carpeta Documentos. Elige en Configuración → General dónde crear los proyectos.",
-  "workspaces.consent.free_models.accept": "Activo Danil Free model router en este workspace. Los modelos gratuitos dependen de Kilo, Vercel y Reflection. Sus límites y disponibilidad pueden cambiar sin previo aviso.",
-  "workspaces.consent.free_models.responsibility": "Entiendo que mis instrucciones, archivos y respuestas pueden registrarse y usarse para entrenamiento o mejora. Reflection puede retener contenido durante 30 días y contenido señalado hasta 12 meses, con las excepciones de sus términos. Estos plazos no cubren toda la cadena de proveedores. No enviaré información confidencial, sensible ni datos personales. Acepto las condiciones aplicables de los proveedores."
+  "workspaces.directory.no_documents": "No encontré tu carpeta Documentos. Elige en Configuración → General dónde crear los proyectos."
 }
