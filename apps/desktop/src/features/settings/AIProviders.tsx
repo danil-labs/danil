@@ -10,6 +10,7 @@ import { rotuloDeSuperficie } from "../../lib/surfaces";
 import { Badge } from "../../ui/Badge";
 import { rotuloDeMarca } from "../chat/marks";
 import Accounts from "./Accounts";
+import DanilCredits from "../chat/DanilCredits";
 import { GovernedNotice } from "./Governed";
 import { SettingsPanel } from "./layout";
 
@@ -40,6 +41,7 @@ export default function AIProviders(props: { superficies: Superficie[]; agentesE
   return (
     <SettingsPanel>
       <GovernedNotice section="models" />
+      <DanilCredits />
       <Switch>
         <Match when={vista() === "loading"}>
           <div class="grid gap-3" data-ai-providers="loading">

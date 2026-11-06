@@ -22,6 +22,7 @@ import { prosa } from "../../lib/prose";
 import { cn } from "../../lib/utils";
 import { MarcaAgente } from "../../ui/icons";
 import { Popover, PopoverContent, PopoverTrigger } from "../../ui/Popover";
+import DanilCredits from "./DanilCredits";
 import type { AccountList } from "../settings/accounts-store";
 
 type SelectorDeModeloProps = {
@@ -91,7 +92,7 @@ export default function SelectorDeModelo(props: SelectorDeModeloProps) {
     return todosLosGrupos().filter((grupo) => grupo.id === actual);
   });
   const visibles = () =>
-    grupos()
+    (seccion() === "danil-credits" ? [] : grupos())
       .flatMap((grupo) => grupo.models)
       .filter(disponible);
 
@@ -168,7 +169,7 @@ export default function SelectorDeModelo(props: SelectorDeModeloProps) {
   };
 
   const elegir = (key: string) => {
-    if (props.disabled) return;
+    if (props.disabled || seccion() === "danil-credits") return;
     const opcion = props.models.find((item) => item.key === key && disponible(item));
     if (!opcion) return;
     props.onChange(opcion);
@@ -282,6 +283,16 @@ export default function SelectorDeModelo(props: SelectorDeModeloProps) {
             >
               <Star size={17} fill={seccion() === "favorites" ? "currentColor" : "none"} />
             </button>
+            <button
+              type="button"
+              class={cn("flex size-9 shrink-0 items-center justify-center rounded-sm text-neutral-500 outline-none hover:bg-surface-muted hover:text-neutral-950 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-primary", seccion() === "danil-credits" && "bg-surface-muted text-neutral-950")}
+              aria-label={t("chat.credits.label")}
+              aria-pressed={seccion() === "danil-credits"}
+              title={t("chat.credits.label")}
+              onClick={() => { setSeccion("danil-credits"); setActivo(""); }}
+            >
+              <MarcaAgente id="danil" size={17} />
+            </button>
             <For each={todosLosGrupos()}>
               {(grupo) => (
                 <button
@@ -296,7 +307,8 @@ export default function SelectorDeModelo(props: SelectorDeModeloProps) {
               )}
             </For>
           </nav>
-          <div class="scroll-visible min-h-0 overflow-y-auto p-1" role="listbox" aria-label={t("chat.model.listbox")}>
+          <div class="scroll-visible min-h-0 overflow-y-auto p-1" role={seccion() === "danil-credits" ? undefined : "listbox"} aria-label={t("chat.model.listbox")}>
+          <Show when={seccion() === "danil-credits"} fallback={
           <Show
             when={grupos().some((grupo) => grupo.models.length > 0)}
             fallback={
@@ -383,10 +395,11 @@ export default function SelectorDeModelo(props: SelectorDeModeloProps) {
               )}
             </For>
           </Show>
+          }><DanilCredits /></Show>
         </div>
         </div>
 
-        <Show when={niveles().length > 0}>
+        <Show when={seccion() !== "danil-credits" && niveles().length > 0}>
           <div class="flex min-h-10 items-center gap-3 border-t border-border px-3 py-1.5">
             <span class="shrink-0 text-xs font-medium text-neutral-700">
               {t("chat.effort.label")}

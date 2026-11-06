@@ -69,3 +69,16 @@ test("a failed read says why and retries until the list arrives", async () => {
   assert.ok(text().includes("Claude Code"));
   assert.deepEqual(app.failures, []);
 });
+
+
+test("Danil Credits exposes its sole model without execution or a fabricated balance", async () => {
+  const { app, panel } = await open("ai-providers-credits", []);
+  const section = panel().querySelector('section[aria-label="Danil Credits"]');
+  assert.ok(section);
+  const model = section.querySelector("button");
+  assert.ok(model.disabled);
+  assert.ok(model.textContent.includes("DeepSeek V4.1 Flash"));
+  assert.ok(section.textContent.includes("Cuenta Danil"));
+  assert.equal(section.querySelector('[role="status"]').textContent, "No disponible");
+  assert.deepEqual(app.failures, []);
+});

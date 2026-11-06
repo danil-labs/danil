@@ -455,5 +455,14 @@
   "chat.history.pieces": "Full record",
   "chat.history.content": "Saved content",
   "chat.queue.stop_and_send": "Stop the turn and send",
-  "chat.queue.stop_and_send_aria": "Stop the turn and send queued message {n}"
+  "chat.queue.stop_and_send_aria": "Stop the turn and send queued message {n}",
+  "chat.credits.label": "Danil Credits",
+  "chat.credits.model": "DeepSeek V4.1 Flash",
+  "chat.credits.unavailable": "Unavailable",
+  "chat.credits.integration_pending": "Integration pending acceptance",
+  "chat.credits.payer": "Paid by",
+  "chat.credits.account": "Danil account",
+  "chat.credits.balance": "Credit balance",
+  "chat.credits.loading": "Loading…",
+  "chat.credits.amount": "{count} credits"
 }

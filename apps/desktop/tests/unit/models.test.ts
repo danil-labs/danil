@@ -193,3 +193,29 @@ test("el proveedor gratuito sigue la lengua activa con la marca Danil", () => {
   }
   aplicarLenguaDeWorkspace("es");
 });
+
+import { availableDanilCredits, DANIL_CREDITS } from "../../src/features/chat/danil-credits.ts";
+
+const response = (available: number) => ({
+  account_id: "danil-account",
+  wallet: { balance_credits: 120, available_credits: available, status: "active" },
+  execution_available: false,
+});
+
+test("the account wallet uses available credit and preserves a verified zero", () => {
+  assert.equal(availableDanilCredits(response(80)), 80);
+  assert.equal(availableDanilCredits(response(0)), 0);
+  assert.equal(availableDanilCredits({ ...response(80), account_id: 476 }), 80);
+  assert.equal(availableDanilCredits({ ...response(0), wallet: null }), null);
+});
+
+test("missing, failed or incompatible balance data never becomes zero", () => {
+  for (const value of [undefined, null, {}, { balance: 99 },
+    { ...response(1), account_id: "" }, response(NaN), response(Infinity),
+    { ...response(1), execution_available: true },
+    { ...response(1), wallet: { available_credits: "20", status: "active" } }]) {
+    assert.equal(availableDanilCredits(value), null);
+  }
+  assert.equal(DANIL_CREDITS.executionEnabled, false);
+  assert.equal(DANIL_CREDITS.modelId, "deepseek/deepseek-v4.1-flash");
+});
