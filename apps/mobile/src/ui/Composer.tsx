@@ -57,7 +57,7 @@ const knownModes = new Map<string, PermissionModeOption[]>();
 
 /** El nombre de una superficie como en la ventana (`AIProviders.tsx`): «Zen y Go», «Modelos gratuitos», «Locales». */
 function surfaceLabel(s: Surface) {
-  if (s.provider === "opencode-zen" && s.catalogo === "de_pago") return w("settings.ai_providers.zen_go");
+  if (s.provider === "opencode-zen" && s.catalogo === "de_pago") return t("composer.zen_go");
   if (s.catalogo === "gratuitos") return w("surfaces.label.free");
   if (s.provider === "opencode-local") return w("surfaces.label.local");
   return s.label;
