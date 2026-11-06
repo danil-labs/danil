@@ -33,7 +33,7 @@ export default function AIProviders(props: { superficies: Superficie[]; agentesE
 
   const nombreDe = (superficie: Superficie, enGrupo: boolean) => {
     if (superficie.provider === "opencode-zen" && superficie.catalogo === "de_pago") {
-      return t("settings.ai_providers.zen_go");
+      return t("settings.ai_providers.opencode_detail");
     }
     // El título de la sección ya lo nombra; la fila deja solo el aviso.
     if (superficie.catalogo === "gratuitos") return enGrupo ? rotuloDeSuperficie(superficie) : "";

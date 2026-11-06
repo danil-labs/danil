@@ -94,7 +94,7 @@ export default function SelectorDeModelo(props: SelectorDeModeloProps) {
       .flatMap((grupo) => grupo.models)
       .filter(disponible);
 
-  // Un glifo que se repite no distingue nada: OpenCode da Zen, Go y Free con el
+  // Un glifo que se repite no distingue nada: OpenCode da modelos de pago, Go y Free con el
   // mismo dibujo, y en un riel de solo iconos no hay forma de saber cuál es cuál
   // sin pasar el ratón. A los que repiten logo se les pone debajo su nombre
   // corto; a los demás, ninguno.
