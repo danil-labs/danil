@@ -181,16 +181,19 @@ export default function AgentDock(props: {
 
   const botones = (): JSX.Element => (
     <div class="ml-auto flex items-center gap-1">
-      <button
-        type="button"
-        class={ICONO}
-        aria-pressed={nombres()}
-        aria-label={t("shell.agent_dock.names")}
-        title={t("shell.agent_dock.names")}
-        onClick={() => setNombres((v) => !v)}
-      >
-        <List size={13} aria-hidden="true" />
-      </button>
+      {/* Desplegado, el panel ya enseña los nombres: el botón sobra. */}
+      <Show when={!desplegado()}>
+        <button
+          type="button"
+          class={ICONO}
+          aria-pressed={nombres()}
+          aria-label={t("shell.agent_dock.names")}
+          title={t("shell.agent_dock.names")}
+          onClick={() => setNombres((v) => !v)}
+        >
+          <List size={13} aria-hidden="true" />
+        </button>
+      </Show>
       <button
         type="button"
         class={ICONO}
@@ -221,8 +224,28 @@ export default function AgentDock(props: {
     ro.observe(riel);
     onCleanup(() => ro.disconnect());
   });
+  // «Encima» se mide por la posición del puntero y no con `mouseleave`: el
+  // tooltip de una cara vive en un portal, y pasar sobre él contaba como salir.
+  const fuera = (e: PointerEvent) => {
+    const r = raiz.getBoundingClientRect();
+    if (e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom) return;
+    salir();
+  };
+  const salir = () => {
+    setEncima(false);
+    document.removeEventListener("pointermove", fuera);
+    document.documentElement.removeEventListener("pointerleave", salir);
+  };
+  const entrar = () => {
+    if (encima()) return;
+    setEncima(true);
+    document.addEventListener("pointermove", fuera);
+    document.documentElement.addEventListener("pointerleave", salir);
+  };
+  onCleanup(salir);
   const CABECERA = 40;
-  const FILA = 68;
+  // Caras centradas en la fila: el mismo aire arriba y abajo.
+  const FILA = 60;
   const alto = () => (desplegado() && altoRiel() > 0 ? altoRiel() : encima() ? FILA + CABECERA : FILA);
 
   return (
@@ -233,8 +256,7 @@ export default function AgentDock(props: {
       class="flex min-h-0 flex-col justify-end overflow-hidden border-t border-border transition-[height] duration-300 ease-out"
       style={{ height: `${alto()}px` }}
       data-dock-expanded={desplegado() ? "" : undefined}
-      onMouseEnter={() => setEncima(true)}
-      onMouseLeave={() => setEncima(false)}
+      onPointerEnter={entrar}
       onFocusIn={() => setEncima(true)}
       onFocusOut={(e: FocusEvent) => { if (!raiz.contains(e.relatedTarget as Node | null)) setEncima(false); }}
     >
@@ -265,20 +287,20 @@ export default function AgentDock(props: {
                 <Show
                   when={!props.loading}
                   fallback={
-                    <div class="grid h-16 grid-cols-5 items-center gap-1" aria-busy="true" data-dock-loading="">
+                    <div class="grid h-full grid-cols-5 items-center gap-1" aria-busy="true" data-dock-loading="">
                       <For each={[0, 1, 2, 3, 4]}>
                         {() => <span class="mx-auto size-6 animate-pulse rounded-full bg-neutral-200" />}
                       </For>
                     </div>
                   }
                 >
-                  <p class="m-0 flex h-16 items-center truncate px-1 text-caption text-neutral-500">{t("shell.agent_dock.empty")}</p>
+                  <p class="m-0 flex h-full items-center truncate px-1 text-caption text-neutral-500">{t("shell.agent_dock.empty")}</p>
                 </Show>
               }
             >
               <ContextMenu onOpenChange={(abierto) => { if (!abierto) setMenuDe(null); }}>
                 <ContextMenuTrigger
-                  class="grid h-16 grid-cols-5 items-center gap-1"
+                  class="grid h-full grid-cols-5 items-center gap-1"
                   onContextMenu={(e: MouseEvent) => {
                     const el = (e.target as HTMLElement).closest<HTMLElement>("[data-dock-agent]");
                     if (!el) e.preventDefault();
