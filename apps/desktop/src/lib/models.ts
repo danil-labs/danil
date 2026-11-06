@@ -39,10 +39,9 @@ export function favoritosDeModelos(
 
 /**
  * Quién ejecuta el modelo. **No es quién fabricó el modelo**: Claude Sonnet
- * servido por Zen sigue dentro de OpenCode Zen, no bajo Anthropic.
+ * servido por OpenCode sigue dentro de OpenCode, no bajo Anthropic.
  *
- * OpenCode comparte una cuenta entre Zen y Go, así que ambos salen de la misma
- * superficie autenticada y el prefijo solo separa esos dos productos. Free y
+ * Los modelos de pago y Go salen de la misma superficie autenticada. Free y
  * Local ya son superficies propias y no necesitan mirar el modelo.
  */
 export function proveedorDe(
@@ -51,12 +50,12 @@ export function proveedorDe(
 ) {
   if (superficie.provider === "opencode-zen") {
     if (superficie.catalogo === "gratuitos") {
-      return { id: "opencode-free", label: "OpenCode Free", logo: "opencode" };
+      return { id: "opencode-free", label: "Danil Free AI", logo: "opencode" };
     }
     if (model.id.startsWith("opencode-go/")) {
       return { id: "opencode-go", label: "OpenCode Go", logo: "opencode" };
     }
-    return { id: "opencode-zen", label: "OpenCode Zen", logo: "opencode" };
+    return { id: "opencode-zen", label: "OpenCode", logo: "opencode" };
   }
   if (superficie.provider === "opencode-local") {
     return { id: "opencode-local", label: "OpenCode Local", logo: "opencode" };

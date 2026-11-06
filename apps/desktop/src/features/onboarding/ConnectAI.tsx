@@ -2,6 +2,7 @@ import Check from "lucide-solid/icons/check";
 import CircleCheck from "lucide-solid/icons/circle-check";
 import Circle from "lucide-solid/icons/circle";
 import ExternalLink from "lucide-solid/icons/external-link";
+import Monitor from "lucide-solid/icons/monitor";
 import Sparkles from "lucide-solid/icons/sparkles";
 import TriangleAlert from "lucide-solid/icons/triangle-alert";
 import { createSignal, For, lazy, Match, Show, Suspense, Switch, type JSX } from "solid-js";
@@ -36,6 +37,12 @@ function nombreCorto(f: Fila) {
   if (f.modo === "consentimiento") return t("surfaces.label.free_short");
   if (f.agente === "antigravity") return "Gemini";
   return nombreDeFila(f);
+}
+
+function MarcaDeFila(props: { f: Fila; size: number }) {
+  if (props.f.modo === "consentimiento") return <Sparkles size={props.size} />;
+  if (props.f.modo === "local") return <Monitor size={props.size} />;
+  return <MarcaAgente id={props.f.agente} size={props.size} />;
 }
 
 const LINEA: Record<Nodo, string> = {
@@ -126,7 +133,7 @@ export function MapaDeConexiones(props: { c: Conexiones }) {
                     AZULEJO[estado()],
                   )}
                 >
-                  <MarcaAgente id={f.agente} size={22} />
+                  <MarcaDeFila f={f} size={22} />
                   <Show when={estado() === "on"}>
                     <span class="absolute -top-1 -right-1.5 grid size-4 place-items-center rounded-full bg-success-strong text-bg ring-2 ring-bg">
                       <Check size={10} stroke-width={3} />
@@ -178,7 +185,7 @@ function detalle(c: Conexiones, f: Fila): string {
       : f.modo === "local"
         ? t("onboarding.ai.local.detail")
         : f.agente.startsWith("opencode")
-          ? t("onboarding.ai.zen_detail")
+          ? t("onboarding.ai.opencode_detail")
           : "";
   switch (p?.k) {
     case "externa":
@@ -231,7 +238,7 @@ function Tarjeta(props: { c: Conexiones; f: Fila; abajo?: JSX.Element; resaltada
         )}
       >
         <span class="grid size-6 shrink-0 place-items-center">
-          <MarcaAgente id={props.f.agente} size={20} />
+          <MarcaDeFila f={props.f} size={20} />
         </span>
         <span class="grid min-w-0 flex-1 gap-0.5">
           <strong class="truncate text-sm font-semibold text-neutral-950">{nombre()}</strong>
