@@ -270,3 +270,19 @@ test("consent responses belong to the current account, session and latest reques
   gate.invalidate();
   assert.equal(beforeChange(first), false, "an account or policy event invalidates pending work");
 });
+
+test("link and person-session events invalidate consent even if the machine session returns to the same value", async () => {
+  const { createAccountConsentContext } = await import("../../src/features/settings/account-consent-context.ts");
+  const gate = createAccountConsentContext();
+  const machine = { account_id: "a", session_id: "machine-session" };
+  gate.setSession(machine);
+  const beforeLinkChange = gate.begin();
+  gate.invalidate();
+  gate.invalidate();
+  gate.setSession(machine);
+  assert.equal(beforeLinkChange(machine), false, "A to B to A cannot restore a response");
+  const beforePersonSignOut = gate.begin();
+  gate.invalidate();
+  gate.invalidate();
+  assert.equal(beforePersonSignOut(machine), false, "a person signing out and back in invalidates the response");
+});
