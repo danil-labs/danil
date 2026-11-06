@@ -13,7 +13,7 @@ import {
 
 const policy = (changes: Partial<FreeModelPolicy> = {}): FreeModelPolicy => ({
   workspace_id: "workspace-a",
-  version: 2,
+  version: 3,
   providers: ["kilo", "vercel", "reflection"],
   lines: [{ clave: "consent.free_model_router" }],
   acceptance_ref: "opaque-policy-reference",
@@ -25,7 +25,7 @@ const policy = (changes: Partial<FreeModelPolicy> = {}): FreeModelPolicy => ({
 
 const consent = (changes: Partial<FreeModelConsent> = {}): FreeModelConsent => ({
   workspace_id: "workspace-a",
-  version: 2,
+  version: 3,
   providers: ["kilo", "vercel", "reflection"],
   policy_id: "policy-v2",
   acceptance_id: "acceptance-a",
@@ -42,8 +42,8 @@ test("el modal solo recibe una política habilitada del workspace activo y versi
   assert.equal(freeModelPolicy({ active: "workspace-a", free_model_policy: current }), current);
   for (const changes of [
     { workspace_id: "workspace-b" },
-    { version: 1 },
-    { version: 3 },
+    { version: 1 }, { version: 2 },
+    { version: 4 },
     { enabled: false },
     { acceptance_ref: "" },
     { lines: [] },
@@ -76,7 +76,7 @@ test("el orden del mismo conjunto de proveedores no cambia la política ni su ac
 test("el consentimiento ausente, v1 o de otro workspace no autoriza", () => {
   assert.equal(acceptedFreeModelPolicy(policy()), false);
   assert.equal(acceptedFreeModelPolicy(policy(), consent()), true);
-  for (const changes of [{ version: 1 }, { version: 3 }, { workspace_id: "workspace-b" }]) {
+  for (const changes of [{ version: 1 }, { version: 2 }, { version: 4 }, { workspace_id: "workspace-b" }]) {
     assert.equal(acceptedFreeModelPolicy(policy(), consent(changes)), false);
   }
 });
@@ -87,8 +87,8 @@ test("un registro parcial no acredita una aceptación del motor", () => {
   }
   for (const record of [
     {},
-    { workspace_id: "workspace-a", version: 2 },
-    { workspace_id: "workspace-a", version: 2, policy_id: "p", acceptance_id: "a" },
+    { workspace_id: "workspace-a", version: 3 },
+    { workspace_id: "workspace-a", version: 3, policy_id: "p", acceptance_id: "a" },
   ]) {
     assert.equal(acceptedFreeModelPolicy(policy(), record as FreeModelConsent), false);
   }
@@ -97,7 +97,7 @@ test("un registro parcial no acredita una aceptación del motor", () => {
 test("un modal pendiente detecta cambio de workspace o versión y ausencia de política", () => {
   assert.equal(sameFreeModelPolicy(policy(), null), false);
   assert.equal(sameFreeModelPolicy(policy(), policy({ workspace_id: "workspace-b" })), false);
-  assert.equal(sameFreeModelPolicy(policy(), policy({ version: 3 })), false);
+  assert.equal(sameFreeModelPolicy(policy(), policy({ version: 4 })), false);
   assert.equal(sameFreeModelPolicy(policy(), policy()), true);
 });
 

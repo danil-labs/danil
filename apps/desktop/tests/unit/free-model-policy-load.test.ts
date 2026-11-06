@@ -4,7 +4,7 @@ import { loadFreeModelPolicy } from "../../src/lib/free-model-policy-load.ts";
 import type { FreeModelPolicy } from "../../src/lib/free-model-policy.ts";
 
 const policy = (changes: Partial<FreeModelPolicy> = {}): FreeModelPolicy => ({
-  workspace_id: "workspace-a", version: 2, providers: ["kilo", "vercel", "reflection"],
+  workspace_id: "workspace-a", version: 3, providers: ["kilo", "vercel", "reflection"],
   lines: [{ clave: "consent.free_model_router" }], acceptance_ref: "opaque-reference",
   enabled: true, accepted: false, terms: [], ...changes,
 });

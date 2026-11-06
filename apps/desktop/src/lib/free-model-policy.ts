@@ -32,7 +32,7 @@ export function freeModelPolicy(startup: FreeModelStartup): FreeModelPolicy | nu
 
 export function recognizedFreeModelPolicy(startup: FreeModelStartup): FreeModelPolicy | null {
   const policy = startup.free_model_policy;
-  if (!policy || policy.workspace_id !== startup.active || policy.version !== 2 ||
+  if (!policy || policy.workspace_id !== startup.active || policy.version !== 3 ||
     !policy.acceptance_ref || !Array.isArray(policy.lines) || policy.lines.length === 0 ||
     !sameProviders(policy.providers, ["kilo", "vercel", "reflection"])) return null;
   return policy;
