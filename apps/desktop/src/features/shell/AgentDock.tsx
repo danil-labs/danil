@@ -300,7 +300,7 @@ export default function AgentDock(props: {
                         {cara(agente, 24)}
                         <span
                           class={cn(
-                            "max-w-full truncate text-[0.625rem] leading-none text-neutral-500 transition-[opacity,max-height] duration-200",
+                            "max-w-full truncate text-2xs leading-none text-neutral-500 transition-[opacity,max-height] duration-200",
                             nombres() ? "max-h-3 opacity-100" : "max-h-0 opacity-0",
                           )}
                         >
