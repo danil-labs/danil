@@ -39,7 +39,7 @@ import { Terminal, TerminalBody } from "../../ui/Terminal";
 import { machineOf } from "../machines/store";
 import AccountCard, { accountPresentation } from "./AccountCard";
 import { accountKeyUrl } from "./account-auth";
-import { createFreeDecision, type FreePolicy } from "./account-free-decision";
+import { createFreeDecision, pendingFreeDecisions, removeFreeDecision, saveFreeDecision, type FreePolicy, type PendingFreeDecision } from "./account-free-decision";
 import {
   type Account,
   type AccountList,
@@ -1621,9 +1621,6 @@ type AccountFreeState = {
   policy: FreePolicy & { lines: string[] };
 };
 
-type PendingFreeDecision = { account: string; accepted: boolean; action: ReturnType<typeof createFreeDecision> };
-let pendingFreeDecision: PendingFreeDecision | null = null;
-
 function ModelosGratuitos(props: {
   nombre: string;
   marca?: JSX.Element;
@@ -1638,8 +1635,7 @@ function ModelosGratuitos(props: {
   const [problem, setProblem] = createSignal<string | null>(null);
   const [asking, setAsking] = createSignal(false);
   const [busy, setBusy] = createSignal(false);
-  const [pending, setPendingSignal] = createSignal<PendingFreeDecision | null>(pendingFreeDecision);
-  const setPending = (next: PendingFreeDecision | null) => { pendingFreeDecision = next; setPendingSignal(next); };
+  const [pending, setPending] = createSignal<PendingFreeDecision | null>(null);
   let epoch = 0;
   let disposed = false;
   const invalidate = () => {
@@ -1675,6 +1671,9 @@ function ModelosGratuitos(props: {
           !reply.policy.lines.every((line) => typeof line === "string" && line.length > 0) || !reply.policy.lines.length ||
           typeof reply.policy.version !== "string" || !reply.policy.version || !Number.isSafeInteger(reply.policy.generation) || reply.policy.generation < 1 ||
           reply.policy.locale !== lengua() || typeof reply.policy.text_sha256 !== "string" || !/^[a-f0-9]{64}$/.test(reply.policy.text_sha256)) throw new Error("invalid_response");
+      const existing = pendingFreeDecisions(localStorage, reply.account_id);
+      if (existing.length > 1) throw new Error("invalid_pending");
+      setPending(existing[0] ?? null);
       setPerson(account);
       setEmail(selectedEmail);
       setState(reply);
@@ -1720,8 +1719,12 @@ function ModelosGratuitos(props: {
         setProblem(t("settings.accounts.free.outcome_unknown"));
         return;
       }
-      const action = existing?.action ?? createFreeDecision(shown.account_id, accepted, shown.policy, crypto.randomUUID());
-      if (!existing) setPending({ account: shown.account_id, accepted, action });
+      const current = existing ?? { account: shown.account_id, accepted, policy: { version: shown.policy.version, generation: shown.policy.generation, locale: shown.policy.locale, text_sha256: shown.policy.text_sha256 }, operationId: crypto.randomUUID() };
+      if (!existing) {
+        saveFreeDecision(localStorage, current);
+        setPending(current);
+      }
+      const action = createFreeDecision(current.account, current.accepted, current.policy, current.operationId);
       const result = await action(async (body) => {
         const reply = await invoke<{ status: number; body: unknown }>("account_free_consent_decide", { account: person(), body: JSON.parse(body) });
         return Response.json(reply.body, { status: reply.status });
@@ -1731,6 +1734,7 @@ function ModelosGratuitos(props: {
         setProblem(t("settings.accounts.free.outcome_unknown"));
         return;
       }
+      removeFreeDecision(localStorage, current.operationId);
       setPending(null);
       if (result.kind === "saved") {
         await load();

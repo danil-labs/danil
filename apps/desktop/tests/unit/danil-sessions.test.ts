@@ -319,3 +319,21 @@ test("a consent decision refuses stale policy, another session and malformed rec
   });
   assert.equal(reply.kind, "saved");
 });
+
+test("an uncertain Free decision survives a reload without carrying credentials", async () => {
+  const { pendingFreeDecisions, saveFreeDecision, removeFreeDecision } = await import("../../src/features/settings/account-free-decision.ts");
+  const data = new Map<string, string>();
+  const storage = {
+    get length() { return data.size; }, key: (i: number) => [...data.keys()][i] ?? null,
+    getItem: (key: string) => data.get(key) ?? null,
+    setItem: (key: string, value: string) => { data.set(key, value); },
+    removeItem: (key: string) => { data.delete(key); }, clear: () => data.clear(),
+  } satisfies Storage;
+  const pending = { account: "42", accepted: true, policy: { version: "v1", generation: 3, locale: "es", text_sha256: "a".repeat(64) }, operationId: "47d52f1f-c9b8-4b63-93da-8de5290c415c" };
+  saveFreeDecision(storage, pending);
+  assert.deepEqual(pendingFreeDecisions(storage, "42"), [pending]);
+  assert.deepEqual(pendingFreeDecisions(storage, "43"), []);
+  assert.equal(JSON.stringify([...data.values()]).includes("token"), false);
+  removeFreeDecision(storage, pending.operationId);
+  assert.deepEqual(pendingFreeDecisions(storage, "42"), []);
+});
