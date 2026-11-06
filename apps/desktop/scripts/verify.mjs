@@ -65,6 +65,7 @@ const rustSteps = [
 const steps = [
   ["El consentimiento gratuito conserva su política y destino (free-model-policy-load.test.ts)", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/free-model-policy-load.test.ts")], root],
   ["El consentimiento gratuito conserva su política y destino (free-model-policy.test.ts)", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/free-model-policy.test.ts")], root],
+  ["El aviso MCP no absorbe mensajes ajenos ni modifica el historial", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/free-mcp-notice.test.ts")], root],
   ...(SKIP_RUST ? [] : [engineStep]),
   cliStep,
   ["The Danil launchers keep the CLI and refuse collisions", process.execPath, ["--test", join(root, "tests/unit/cli-path.test.mjs")], root],
