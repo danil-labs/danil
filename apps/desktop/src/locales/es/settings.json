@@ -432,5 +432,6 @@
   "settings.accounts.free.unavailable": "Danil Free model router no está disponible con este motor.",
   "settings.accounts.free.policy_changed": "La política o el workspace cambió. Cierra este aviso y vuelve a revisar las condiciones.",
   "settings.accounts.free.privacy": "Privacidad de {provider}",
-  "settings.accounts.free.terms": "Condiciones de {provider}"
+  "settings.accounts.free.terms": "Condiciones de {provider}",
+  "settings.ai_providers.zen_go": "OpenCode"
 }

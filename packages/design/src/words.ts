@@ -297,9 +297,9 @@ const es = {
   "chat.steer.unconfirmed": "No se pudo confirmar la entrega del mensaje al agente. Revisa la conversación antes de reenviarlo.",
   "chat.queue.stop_and_send": "Detener el turno y enviar",
   "chat.failure.retry": "Reintentar",
-  "settings.ai_providers.zen_go": "Zen y Go",
-  "settings.ai_providers.free_detail": "de OpenCode · sin cuenta",
-  "surfaces.label.free": "Modelos gratuitos",
+  "settings.ai_providers.zen_go": "OpenCode",
+  "settings.ai_providers.free_detail": "Kilo · Vercel · Reflection",
+  "surfaces.label.free": "Danil Free model router",
   "surfaces.label.local": "Locales",
   "surfaces.free_off": "Los modelos gratuitos no están activados en este workspace",
   "settings.accounts.consent.accept": "Activar",
@@ -313,8 +313,8 @@ const es = {
   "settings.accounts.free.provider": "Modelos servidos por {provider} durante su periodo gratuito.",
   "settings.accounts.free.warning": "Lo que les envíes puede guardarse y usarse para entrenarlos. No los uses con código privado, claves ni datos personales. Pueden dejar de ser gratis sin aviso.",
   "settings.accounts.free.warning_short": "Activados · no les envíes código privado ni datos personales",
-  "workspaces.consent.free_models.accept": "Activo los modelos gratuitos de prueba.",
-  "workspaces.consent.free_models.responsibility": "Entiendo que no debo enviarles información confidencial ni datos personales, y que el uso que haga de ellos es mi responsabilidad.",
+  "workspaces.consent.free_models.accept": "Activo Danil Free model router en este workspace. Los modelos gratuitos dependen de Kilo, Vercel y Reflection. Sus límites y disponibilidad pueden cambiar sin previo aviso.",
+  "workspaces.consent.free_models.responsibility": "Entiendo que mis instrucciones, archivos y respuestas pueden registrarse y usarse para entrenamiento o mejora. Reflection puede retener contenido durante 30 días y contenido señalado hasta 12 meses, con las excepciones de sus términos. Estos plazos no cubren toda la cadena de proveedores. No enviaré información confidencial, sensible ni datos personales. Acepto las condiciones aplicables de los proveedores.",
 } as const satisfies Record<string, Word>;
 
 export type WordKey = keyof typeof es;
@@ -606,9 +606,9 @@ const en: Record<WordKey, Word> = {
   "chat.steer.unconfirmed": "Message delivery to the agent could not be confirmed. Check the conversation before resending.",
   "chat.queue.stop_and_send": "Stop the turn and send",
   "chat.failure.retry": "Try again",
-  "settings.ai_providers.zen_go": "Zen and Go",
-  "settings.ai_providers.free_detail": "by OpenCode · no account",
-  "surfaces.label.free": "Free models",
+  "settings.ai_providers.zen_go": "OpenCode",
+  "settings.ai_providers.free_detail": "Kilo · Vercel · Reflection",
+  "surfaces.label.free": "Danil Free model router",
   "surfaces.label.local": "Local",
   "surfaces.free_off": "Free models are not enabled in this workspace",
   "settings.accounts.consent.accept": "Turn on",
@@ -622,8 +622,8 @@ const en: Record<WordKey, Word> = {
   "settings.accounts.free.provider": "Models served by {provider} during their free period.",
   "settings.accounts.free.warning": "What you send may be stored and used to train them. Don't use them with private code, keys or personal data. They may stop being free without notice.",
   "settings.accounts.free.warning_short": "On · don't send them private code or personal data",
-  "workspaces.consent.free_models.accept": "I'm turning on the free trial models.",
-  "workspaces.consent.free_models.responsibility": "I understand that I must not send them confidential information or personal data, and that how I use them is my responsibility.",
+  "workspaces.consent.free_models.accept": "I enable Danil Free model router in this workspace. Free models depend on Kilo, Vercel and Reflection. Their limits and availability may change without notice.",
+  "workspaces.consent.free_models.responsibility": "I understand that my prompts, files and responses may be logged and used for training or improvement. Reflection may retain content for 30 days and flagged content for up to 12 months, subject to the exceptions in its terms. These periods do not cover the whole provider chain. I will not send confidential or sensitive information or personal data. I accept the applicable provider terms.",
 };
 
 export const WORDS: Record<"es" | "en", Record<WordKey, Word>> = { es, en };
