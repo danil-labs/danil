@@ -39,7 +39,7 @@ import { Terminal, TerminalBody } from "../../ui/Terminal";
 import { machineOf } from "../machines/store";
 import AccountCard, { accountPresentation } from "./AccountCard";
 import { accountKeyUrl } from "./account-auth";
-import { createFreeDecision, pendingFreeDecisions, removeFreeDecision, saveFreeDecision, type FreePolicy, type PendingFreeDecision } from "./account-free-decision";
+import { createFreeDecision, pendingFreeDecisions, PENDING_PREFIX, removeFreeDecision, saveFreeDecision, type FreePolicy, type PendingFreeDecision } from "./account-free-decision";
 import {
   type Account,
   type AccountList,
@@ -1685,12 +1685,15 @@ function ModelosGratuitos(props: {
   createEffect(on(() => [spaces.actual()?.id, lengua()] as const, () => void load()));
   onMount(() => {
     const changed = () => void load();
+    const storageChanged = (event: StorageEvent) => {
+      if (event.key === null || event.key.startsWith(PENDING_PREFIX)) changed();
+    };
     const offEngine = listen("account-free-consent-changed", changed);
     const offSessions = listen("danil-sessions", changed);
     const offPerson = listen("agents-session", changed);
     window.addEventListener("focus", changed);
     window.addEventListener("harness:service-resync", changed);
-    window.addEventListener("storage", changed);
+    window.addEventListener("storage", storageChanged);
     onCleanup(() => {
       disposed = true;
       invalidate();
@@ -1699,7 +1702,7 @@ function ModelosGratuitos(props: {
       void offPerson.then((off) => off()).catch(() => {});
       window.removeEventListener("focus", changed);
       window.removeEventListener("harness:service-resync", changed);
-      window.removeEventListener("storage", changed);
+      window.removeEventListener("storage", storageChanged);
     });
   });
   async function change(accepted: boolean) {

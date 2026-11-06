@@ -65,7 +65,7 @@ export type PendingFreeDecision = {
   operationId: string;
 };
 
-const PENDING_PREFIX = "danil:free:pending:";
+export const PENDING_PREFIX = "danil:free:pending:";
 
 /** Persist only the decision identity, never a credential. */
 export function saveFreeDecision(storage: Storage, pending: PendingFreeDecision) {
