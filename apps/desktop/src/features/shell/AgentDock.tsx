@@ -101,6 +101,11 @@ export default function AgentDock(props: {
           <ChevronRight size={11} aria-hidden="true" />
         </button>
       </div>
+      <Show when={props.agents.length === 0}>
+        <p class="m-0 truncate px-0.5 pt-0.5 pb-1 text-[0.6875rem] text-neutral-500">
+          {t("shell.agent_dock.empty")}
+        </p>
+      </Show>
       <ContextMenu onOpenChange={(abierto) => { if (!abierto) setMenuDe(null); }}>
       <ContextMenuTrigger
         ref={fila}

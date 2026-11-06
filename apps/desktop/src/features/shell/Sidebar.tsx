@@ -695,7 +695,10 @@ export default function Sidebar(props: {
           </Show>
         </SidebarContent>
 
-        <Show when={!props.collapsed && agentesDelDock().length > 0}>
+        {/* La banda de agentes se queda siempre: con o sin agentes. Antes
+            desaparecía al quedar sin roster, y quien miraba perdía el sitio
+            donde estaban. Vacía enseña el rótulo y el alta. */}
+        <Show when={!props.collapsed}>
           <Suspense>
             <AgentDock
               agents={agentesDelDock()}
