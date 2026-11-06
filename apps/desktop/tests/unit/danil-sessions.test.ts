@@ -245,3 +245,28 @@ test("a stale machine read cannot restore permissions after a newer authority fa
   assert.equal((await first).kind, "error");
   assert.equal((await source.rename("cmp", "No")).kind, "missing");
 });
+
+test("consent responses belong to the current account, session and latest request", async () => {
+  const { createAccountConsentContext } = await import("../../src/features/settings/account-consent-context.ts");
+  const gate = createAccountConsentContext();
+  const first = { account_id: "a", session_id: "s1" };
+  const second = { account_id: "a", session_id: "s2" };
+  assert.equal(gate.begin()(first), false, "without a session nothing is current");
+  gate.setSession(first);
+  const pending = gate.begin();
+  assert.equal(pending(first), true);
+  assert.equal(pending({ account_id: "other", session_id: "s1" }), false);
+  assert.equal(pending(second), false);
+  gate.setSession(second);
+  assert.equal(pending(first), false, "a new sign-in to the same account invalidates the old reply");
+  const older = gate.begin();
+  const newer = gate.begin();
+  assert.equal(older(second), false, "an older read cannot replace a newer result");
+  assert.equal(newer(second), true);
+  gate.setSession(null);
+  gate.setSession(first);
+  assert.equal(newer(second), false, "signing out invalidates pending work");
+  const beforeChange = gate.begin();
+  gate.invalidate();
+  assert.equal(beforeChange(first), false, "an account or policy event invalidates pending work");
+});
