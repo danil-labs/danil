@@ -1672,7 +1672,6 @@ function ModelosGratuitos(props: {
           typeof reply.policy.version !== "string" || !reply.policy.version || !Number.isSafeInteger(reply.policy.generation) || reply.policy.generation < 1 ||
           reply.policy.locale !== lengua() || typeof reply.policy.text_sha256 !== "string" || !/^[a-f0-9]{64}$/.test(reply.policy.text_sha256)) throw new Error("invalid_response");
       const existing = pendingFreeDecisions(localStorage, reply.account_id);
-      if (existing.length > 1) throw new Error("invalid_pending");
       setPending(existing[0] ?? null);
       setPerson(account);
       setEmail(selectedEmail);
@@ -1690,6 +1689,7 @@ function ModelosGratuitos(props: {
     const offPerson = listen("agents-session", changed);
     window.addEventListener("focus", changed);
     window.addEventListener("harness:service-resync", changed);
+    window.addEventListener("storage", changed);
     onCleanup(() => {
       disposed = true;
       invalidate();
@@ -1698,6 +1698,7 @@ function ModelosGratuitos(props: {
       void offPerson.then((off) => off()).catch(() => {});
       window.removeEventListener("focus", changed);
       window.removeEventListener("harness:service-resync", changed);
+      window.removeEventListener("storage", changed);
     });
   });
   async function change(accepted: boolean) {
@@ -1714,7 +1715,18 @@ function ModelosGratuitos(props: {
         if (started === epoch) await load();
         return;
       }
+      const stored = pendingFreeDecisions(localStorage, shown.account_id);
       const existing = pending();
+      if (!existing && stored.length) {
+        setPending(stored[0]);
+        setAsking(false);
+        setProblem(t("settings.accounts.free.outcome_unknown"));
+        return;
+      }
+      if (existing && (!stored.some((item) => item.operationId === existing.operationId) || existing.accepted !== accepted)) {
+        await load();
+        return;
+      }
       if (existing && existing.account !== shown.account_id) {
         setProblem(t("settings.accounts.free.outcome_unknown"));
         return;
@@ -1730,20 +1742,23 @@ function ModelosGratuitos(props: {
         return Response.json(reply.body, { status: reply.status });
       });
       if (started !== epoch || disposed) return;
-      if (result.kind === "outcome_unknown") {
-        setProblem(t("settings.accounts.free.outcome_unknown"));
+      if (result.kind === "policy_changed") {
+        removeFreeDecision(localStorage, current.operationId);
+        setPending(null);
+        await load();
+        setProblem(t("settings.accounts.free.changed"));
+        if (current.accepted && state()?.account_id === shown.account_id && state()?.session_id === shown.session_id && !pending()) setAsking(true);
+        return;
+      }
+      if (result.kind !== "saved") {
+        setAsking(false);
+        setProblem(t(result.kind === "session_changed" ? "settings.accounts.free.reconnect_pending" : "settings.accounts.free.outcome_unknown"));
         return;
       }
       removeFreeDecision(localStorage, current.operationId);
       setPending(null);
-      if (result.kind === "saved") {
-        await load();
-        window.dispatchEvent(new CustomEvent("harness:consentimiento"));
-      } else if (result.kind === "policy_changed" || result.kind === "session_changed") {
-        await load();
-        setProblem(t("settings.accounts.free.changed"));
-        if (result.kind === "policy_changed" && accepted && state()?.account_id === shown.account_id && state()?.session_id === shown.session_id) setAsking(true);
-      } else setProblem(t("settings.accounts.free.error_save"));
+      await load();
+      window.dispatchEvent(new CustomEvent("harness:consentimiento"));
     } catch {
       if (started === epoch) setProblem(t("settings.accounts.free.account_error"));
     } finally {
@@ -1759,15 +1774,19 @@ function ModelosGratuitos(props: {
         <p class="m-0">{t("settings.accounts.free.provider", { provider: props.proveedor })}</p>
         <p class="m-0"><strong>{AVISO_DE_USO()}</strong></p>
         <Show when={email()}>{(name) => <p class="m-0">{t("settings.accounts.free.account", { account: name() })}</p>}</Show>
+        <Show when={pending()}><p class="m-0">{t("settings.accounts.free.pending")}</p></Show>
         <Show when={!asking() ? problem() : null}>{(error) => <FailureNote f={{ what: error(), detail: "" }} />}</Show>
       </>}>
         <Show when={state() || !problem()} fallback={<Button size="sm" disabled={busy()} onClick={() => void load()}>{t("settings.accounts.retry")}</Button>}>
+        <Show when={pending()} fallback={
         <Show when={state()?.decision === "accepted"} fallback={<Button size="sm" disabled={!state() || busy()} onClick={() => { setProblem(null); setAsking(true); }}>{t("settings.accounts.free.activate")}</Button>}>
           <div class="flex items-center gap-2">
             <Badge tone="success">{t("settings.accounts.free.accepted")}</Badge>
             <Show when={props.falta}><Badge tone="danger">{t("settings.accounts.free.missing")}</Badge></Show>
-            <Button variant="outline" size="compact" disabled={busy()} onClick={() => void change(pending()?.accepted ?? false)}>{t(pending() ? "settings.accounts.retry" : "settings.accounts.free.deactivate")}</Button>
+            <Button variant="outline" size="compact" disabled={busy()} onClick={() => void change(false)}>{t("settings.accounts.free.deactivate")}</Button>
           </div>
+        </Show>}>
+          {(operation) => <Button size="sm" disabled={!state() || busy()} onClick={() => void change(operation().accepted)}>{t(operation().accepted ? "settings.accounts.free.retry_accept" : "settings.accounts.free.retry_revoke")}</Button>}
         </Show>
         </Show>
       </SettingsRow>

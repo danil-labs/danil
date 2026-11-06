@@ -114,5 +114,9 @@
   "settings.accounts.free.account": "Cuenta: {account}",
   "settings.accounts.free.outcome_unknown": "No se pudo confirmar el resultado. Reintenta con la misma operación.",
   "settings.accounts.free.changed": "La cuenta o el aviso cambiaron. Revisa la decisión otra vez.",
-  "settings.accounts.free.accepted": "autorizados"
+  "settings.accounts.free.accepted": "autorizados",
+  "settings.accounts.free.retry_accept": "Reintentar activación",
+  "settings.accounts.free.retry_revoke": "Reintentar desactivación",
+  "settings.accounts.free.pending": "Hay una decisión pendiente de confirmar. Resuélvela antes de hacer otra.",
+  "settings.accounts.free.reconnect_pending": "La sesión cambió. Vuelve a entrar y reintenta la decisión pendiente."
 }

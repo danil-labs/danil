@@ -114,5 +114,9 @@
   "settings.accounts.free.account": "Account: {account}",
   "settings.accounts.free.outcome_unknown": "The result could not be confirmed. Retry the same operation.",
   "settings.accounts.free.changed": "The account or notice changed. Review the decision again.",
-  "settings.accounts.free.accepted": "authorized"
+  "settings.accounts.free.accepted": "authorized",
+  "settings.accounts.free.retry_accept": "Retry activation",
+  "settings.accounts.free.retry_revoke": "Retry deactivation",
+  "settings.accounts.free.pending": "A decision is waiting for confirmation. Resolve it before making another.",
+  "settings.accounts.free.reconnect_pending": "The session changed. Sign in again and retry the pending decision."
 }

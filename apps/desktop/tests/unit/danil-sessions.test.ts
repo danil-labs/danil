@@ -310,6 +310,7 @@ test("a consent decision refuses stale policy, another session and malformed rec
   const decide = createFreeDecision("42", true, policy, "op-2");
   assert.equal((await decide(async () => Response.json({ error: { code: "policy_changed" } }, { status: 409 }))).kind, "policy_changed");
   assert.equal((await decide(async () => Response.json({ error: { code: "session_changed" } }, { status: 409 }))).kind, "session_changed");
+  assert.equal((await decide(async () => Response.json({ error: { code: "invalid_credential" } }, { status: 401 }))).kind, "session_changed");
   assert.equal((await decide(async () => Response.json({ error: { code: "internal" } }, { status: 500 }))).kind, "outcome_unknown");
   assert.equal((await decide(async () => Response.json({ operation_id: "op-2", account_id: "43", decision: "accepted", revision: 2, policy_version: "v1", policy_generation: 3 }))).kind, "outcome_unknown");
   const revoke = createFreeDecision("42", false, policy, "op-3");

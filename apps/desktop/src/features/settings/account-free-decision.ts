@@ -16,7 +16,7 @@ export type FreeDecisionRequest = {
   text_sha256?: string;
 };
 
-const DEFINITIVE = new Set(["invalid_argument", "invalid_credential", "operation_conflict", "user_not_found"]);
+const DEFINITIVE = new Set(["invalid_argument", "operation_conflict", "user_not_found"]);
 
 export type FreeDecisionResult =
   | { kind: "saved" }
@@ -42,6 +42,7 @@ export function createFreeDecision(account: string, accepted: boolean, policy: F
     if (!response.ok) {
       const code = (result as { error?: { code?: unknown } } | null)?.error?.code;
       if (response.status >= 500 || typeof code !== "string") return { kind: "outcome_unknown", code: "outcome_unknown" };
+      if (response.status === 401 || code === "invalid_credential") return { kind: "session_changed", code: "invalid_credential" };
       if (code === "policy_changed" || code === "session_changed" || code === "outcome_unknown") return { kind: code, code };
       return DEFINITIVE.has(code) ? { kind: "failed", code } : { kind: "outcome_unknown", code: "outcome_unknown" };
     }
