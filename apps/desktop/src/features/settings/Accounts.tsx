@@ -58,17 +58,7 @@ import "../../locales/settingsPhrases";
 const CredentialsInUse = lazy(() => import("./credentials/AccountCredentials").then((m) => ({ default: m.CredentialsInUse })));
 const LocalKeysBanner = lazy(() => import("./credentials/AccountCredentials").then((m) => ({ default: m.LocalKeysBanner })));
 
-/**
- * "Conectar", no "iniciar sesión": la app no inicia ninguna sesión —lo hace
- * el CLI, en su carpeta— y decir lo contrario prometería que la credencial
- * pasa por aquí.
- *
- * La Terminal es recuperación, no una pregunta: un CLI sin TTY puede no
- * imprimir la URL, o sacar un menú y quedarse esperando una tecla, y la
- * conexión se cuelga sin decir nada. Se ofrece cuando el fallo está
- * ocurriendo, no antes. Los dos caminos escriben en la misma carpeta:
- * `spawn_terminal` abre la Terminal con la variable de entorno ya puesta.
- */
+// Si el CLI sin TTY no avanza, la Terminal lo abre con la misma carpeta de cuenta.
 /** Cuánto se espera a que el CLI diga algo antes de ofrecer la Terminal. */
 const ESPERA_ANTES_DE_LA_TERMINAL_MS = 15_000;
 
