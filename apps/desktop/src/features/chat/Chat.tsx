@@ -49,6 +49,7 @@ import { CHUNK, chunkAt, chunkIds, chunkOf, chunkStart, headChunk, tailChunk, ty
 import { workLabel } from "../projects/branchLabel";
 import { sangrarTerminal } from "./terminalIndent";
 import { ponerLanzamiento } from "./launchGroups";
+import { freeMcpNoticeAt } from "./free-mcp-notice.ts";
 import { FIN_DE_ARCHIVO, TECLAS_DE_TERMINAL, pideClave } from "./commandInput";
 import { claseDelTramo, finishEdit, highlightSpans, placeLabel, referenceId, searchPlaces, searchTasks, taskLabel, taskTarget, type MentionTarget, type PendingEdit, type PlaceCandidate, type TextEdit, type TaskCandidate, type TaskMention, tramosDelMensaje } from "../../lib/taskMentions";
 import {
@@ -1600,6 +1601,13 @@ export default function Chat(props: ChatProps) {
   const bloques = createMemo<Bloque[]>(() => {
     const out: Bloque[] = [];
     props.msgs.forEach((m, i) => {
+      const freeNotice = freeMcpNoticeAt(props.msgs, i);
+      if (freeNotice) {
+        const names = freeNotice.names?.map((name) => JSON.stringify(name)).join(", ");
+        out.push({ tipo: "msg", msg: { ...m, text: [t("chat.notice.free_router_mcp_unavailable"), names].filter(Boolean).join("\n") }, i });
+        return;
+      }
+      if (freeMcpNoticeAt(props.msgs, i - 1)?.names) return;
       // Contestar no deja un turno suelto en el hilo: la respuesta se pinta
       // DENTRO de la pregunta que contesta, que es donde se lee lo que se
       // preguntó y lo que se decidió como una sola cosa.

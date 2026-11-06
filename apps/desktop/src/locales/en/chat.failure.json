@@ -1,4 +1,4 @@
 {
   "chat.failure.free_router_stopped": "Danil Free model router stopped this turn to avoid resending the content.",
-  "chat.failure.free_router_mcp_credentials": "Danil Free model router cannot start this turn because an MCP integration requires credentials."
+  "chat.failure.free_router_mcp_credentials": "This turn cannot start with Danil Free model router because of its configuration restrictions."
 }
