@@ -446,7 +446,7 @@ export function createRouter(config: RouterConfig) {
       if (!slice.has || !slice.value || typeof slice.value !== "object") throw new FleetError("machine_off", machine);
       return { ...(fleet.encode(machine, slice.value, command) as object), cached_at: slice.at };
     }
-    if (STORAGE.has(command) || command === "list_workspaces") {
+    if (STORAGE.has(command) || command === "list_workspaces" || command === "workspaces_startup" || command === "set_provider_consent") {
       if (fleet.power(machine) !== "on") throw new FleetError("machine_off", machine);
       if (STORAGE.has(command) && !workspace) throw missing(machine);
       return fleet.call({ machine, workspace: command === "list_workspaces" ? null : workspace, command, args });
@@ -689,7 +689,7 @@ export function createRouter(config: RouterConfig) {
     if (FILES.test(command) && ((machine && machine !== self && fleet.has(machine)) || namesOther(args)))
       throw { what: t("shell.machines.local_only"), detail: "machine_files" };
     try {
-      if (machine && machine === self && (STORAGE.has(command) || command === "list_workspaces")) {
+      if (machine && machine === self && (STORAGE.has(command) || command === "list_workspaces" || command === "workspaces_startup" || command === "set_provider_consent")) {
         if (STORAGE.has(command) && !hasHere(workspace)) throw missing(machine);
         return await native(command, fleet.argsFor(machine, args), withoutHeader(options, "x-terminus-machine"));
       }

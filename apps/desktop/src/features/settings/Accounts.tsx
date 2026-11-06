@@ -12,6 +12,9 @@ import { createCopied } from "../../lib/clipboard";
 import { enfocar } from "../../lib/focus";
 import { t } from "../../lib/i18n";
 import { invoke } from "../../lib/invoke.ts";
+import { acceptedFreeModelPolicy, freeModelScope, sameFreeModelPolicy, type FreeModelConsent, type FreeModelPolicy, type FreeModelStartup } from "../../lib/free-model-policy.ts";
+import { loadFreeModelPolicy } from "../../lib/free-model-policy-load.ts";
+
 import { revocada } from "../../lib/limits";
 import { textoDeFalta } from "../../lib/no-space";
 import { capabilities } from "../../lib/platform";

@@ -17,6 +17,7 @@ import { Input } from "../../ui/Input";
 import { MarcaAgente } from "../../ui/icons";
 import { TerminusMark } from "../../ui/toolMarks";
 import { Spinner } from "../../ui/Spinner";
+import { Consentir } from "../settings/Accounts";
 import { DialogoDeConexion } from "../settings/LoginDialog";
 import { AvanceDeDescarga, BarraDeCarga, CodigoParaConfirmar, Peso } from "./DownloadProgress";
 import { AL_FINAL, type Conexiones, type Fila, nombreDeFila, ordenDelMapa, type Paso } from "./connect-store";
@@ -542,6 +543,17 @@ export function PanelDeIA(props: { c: Conexiones }) {
             />
           );
         }}
+      </Show>
+      <Show when={props.c.pregunta()}>
+        {(q) => (
+          <Consentir
+            texto={q().texto}
+            error={props.c.errores[q().fila]}
+            guardando={props.c.guardando()}
+            onAceptar={() => void props.c.responder(true)}
+            onCancelar={() => void props.c.responder(false)}
+          />
+        )}
       </Show>
     </div>
   );

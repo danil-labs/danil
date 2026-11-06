@@ -1,6 +1,6 @@
 {
-  "settings.ai_providers.opencode_detail": "Zen and Go",
-  "settings.ai_providers.free_detail": "by OpenCode · no account",
+  "settings.ai_providers.opencode_detail": "Pay-as-you-go models and Go",
+  "settings.ai_providers.free_detail": "Kilo · Vercel · Reflection",
   "settings.account_card.active": "active",
   "settings.account_card.asking": "asking",
   "settings.account_card.checking": "checking…",
@@ -425,5 +425,12 @@
   "settings.ai_providers.agent_claude": "Claude Code",
   "settings.ai_providers.agent_codex": "Codex (ChatGPT)",
   "settings.ai_providers.agent_antigravity": "Gemini / Antigravity",
-  "settings.ai_providers.agent_grok": "Grok"
+  "settings.ai_providers.agent_grok": "Grok",
+  "settings.accounts.consent.title": "Enable Danil Free model router",
+  "settings.accounts.free.warning": "Free models depend on third-party services. Their limits and availability may change without notice. Your prompts, files and responses may be logged and used for training or improvement. Do not send confidential or sensitive information or personal data.",
+  "settings.accounts.free.warning_short": "Enabled · do not send confidential or sensitive information or personal data",
+  "settings.accounts.free.unavailable": "Danil Free model router is unavailable with this engine.",
+  "settings.accounts.free.policy_changed": "The policy or workspace changed. Close this notice and review the terms again.",
+  "settings.accounts.free.privacy": "{provider} privacy",
+  "settings.accounts.free.terms": "{provider} terms"
 }

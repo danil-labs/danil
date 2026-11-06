@@ -6148,6 +6148,10 @@ export default function App() {
       // validó y la escribió: primero persistir, y solo entonces pintarla.
       const opciones = abierta ? deLaTarea(abierta) : llevado ? { headers: { "x-terminus-machine": llevado.target } } : creationOptions;
       const attachments = await attachmentsFor(m.attachments, opciones, proyecto);
+      if (m.provider === "opencode-zen" && m.model !== "danil-free/reflection/beam-free") {
+        const selected = catalogos()[m.provider]?.models.find((model) => model.id === m.model);
+        if (!selected || selected.gratis === true) throw new Error(t("settings.accounts.free.unavailable"));
+      }
       const mandarTurno = () => invoke<string>("send_message", {
         provider: m.provider,
         project: proyecto,

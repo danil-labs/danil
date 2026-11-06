@@ -8,8 +8,11 @@ import { batch, createEffect, createSignal, onCleanup, untrack } from "solid-js"
 import { createStore } from "solid-js/store";
 import { t } from "../../lib/i18n";
 import { invoke } from "../../lib/invoke.ts";
+import { acceptedFreeModelPolicy, freeModelScope, sameFreeModelPolicy, type FreeModelConsent, type FreeModelStartup } from "../../lib/free-model-policy.ts";
+import { loadFreeModelPolicy } from "../../lib/free-model-policy-load.ts";
+import type { Consentimiento } from "../settings/Accounts";
 import { textoDeFalta } from "../../lib/no-space";
-import type { Frase } from "../../lib/prose";
+
 import { listen } from "../../lib/serviceEvents";
 import type { Superficie } from "../../lib/surfaces.ts";
 import { detalleDe, prosaDe } from "../../ui/Failure";
@@ -105,6 +108,8 @@ export function crearConexiones() {
   const [salidas, setSalidas] = createStore<Record<string, string[]>>({});
   const [falloDeCarga, setFalloDeCarga] = createSignal<string | null>(null);
   const [cargada, setCargada] = createSignal(false);
+  const [pregunta, setPregunta] = createSignal<{ fila: string; texto: Consentimiento } | null>(null);
+  const [guardando, setGuardando] = createSignal(false);
   // La fila local cuyo panel de modelos está abierto debajo de su tarjeta.
   const [localAbierto, setLocalAbierto] = createSignal<string | null>(null);
   // Vive con la pantalla y no con el panel: una descarga que sigue con el panel cerrado también conecta.
@@ -298,7 +303,7 @@ export function crearConexiones() {
     const a = f && agente(f.agente);
     if (!f || !a || enCurso(id)) return;
     setErrores(id, null);
-    if (f.modo === "consentimiento") return void activar(id);
+    if (f.modo === "consentimiento") return void preguntar(id);
     if (!a.available) {
       if (a.external_install_url) {
         poner(id, { k: "externa" });
@@ -462,19 +467,39 @@ export function crearConexiones() {
     poner(id, sesion ? { k: "sesion", identidad: sesion.identity ?? "" } : agente(f?.agente ?? "")?.available ? { k: "instalada" } : { k: "falta" });
   }
 
-  /** Activar los gratuitos: el aviso de la tarjeta ya se leyó; se descarga OpenCode si falta y se guarda el consentimiento. */
-  async function activar(id: string) {
-    const f = fila(id);
-    if (!f) return;
-    if (!agente(f.agente)?.available && !(await descargar(f))) return;
-    poner(id, { k: "comprobando" });
+  async function preguntar(id: string) {
     try {
-      await invoke("set_provider_consent", { provider: f.agente, accepted: true });
-      window.dispatchEvent(new CustomEvent("harness:consentimiento"));
-      poner(id, { k: "conectada", cuenta: t("settings.accounts.free.warning_short"), id: null });
+      const policy = await loadFreeModelPolicy();
+      if (!policy?.enabled) throw new Error(t("settings.accounts.free.unavailable"));
+      setErrores(id, null);
+      setPregunta({ fila: id, texto: { lineas: policy.lines, version: policy.version, policy } });
     } catch (e) {
-      setErrores(id, explicar(e));
-      poner(id, agente(f.agente)?.available ? { k: "instalada" } : { k: "falta" });
+      setErrores(id, prosaDe(e));
+    }
+  }
+
+  async function responder(acepta: boolean) {
+    const q = pregunta();
+    const f = q && fila(q.fila);
+    if (!q || !f) return;
+    if (!acepta) return void setPregunta(null);
+    setGuardando(true);
+    try {
+      const policy = q.texto.policy;
+      const startup = await invoke<FreeModelStartup>("workspaces_startup");
+      if (startup.active !== policy.workspace_id || !sameFreeModelPolicy(policy, await loadFreeModelPolicy(policy))) throw new Error(t("settings.accounts.free.policy_changed"));
+      const workspace = await invoke<{ free_model_consent?: FreeModelConsent }>("set_provider_consent", {
+        provider: policy.acceptance_ref, accepted: true,
+      }, freeModelScope(policy));
+      if (!acceptedFreeModelPolicy(policy, workspace.free_model_consent)) throw new Error(t("settings.accounts.free.policy_changed"));
+      setPregunta(null);
+      if (!agente(f.agente)?.available && !(await descargar(f))) return;
+      window.dispatchEvent(new CustomEvent("harness:consentimiento"));
+      poner(f.id, { k: "conectada", cuenta: t("settings.accounts.free.warning_short"), id: null });
+    } catch (e) {
+      setErrores(f.id, prosaDe(e));
+    } finally {
+      setGuardando(false);
     }
   }
 
@@ -561,6 +586,9 @@ export function crearConexiones() {
 
   return {
     filas,
+    pregunta,
+    guardando,
+    responder,
     pasos,
     errores,
     salidas,
