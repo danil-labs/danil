@@ -195,9 +195,9 @@ export function githubInstallations(source: GithubSource, workspace: string) {
 }
 
 /** Cambia las organizaciones que alcanza el workspace; sube la versión de la credencial. */
-export function setGithubAreas(source: GithubSource, workspace: string, areas: GithubArea[], personal?: { expected_version: number }) {
+export function setGithubAreas(source: GithubSource, workspace: string, areas: GithubArea[], personal?: { expected_version: number; expected_credential_id: string }) {
   const body = areas.map((a) => ({ key: a.key, installation_id: a.installation_id, ...(a.repository_ids ? { repository_ids: a.repository_ids } : {}), ...(a.personal_repository_ids ? { personal_repository_ids: a.personal_repository_ids } : {}) }));
-  return call(source, "PUT", `${routeOf(workspace)}/areas`, credentialOrThrow, { areas: body, ...(personal ? { personal_scope: true, expected_version: personal.expected_version } : {}) });
+  return call(source, "PUT", `${routeOf(workspace)}/areas`, credentialOrThrow, { areas: body, ...(personal ? { personal_scope: true, expected_version: personal.expected_version, expected_credential_id: personal.expected_credential_id } : {}) });
 }
 
 /** Repositorios visibles para esta persona dentro de una instalación de la App. */

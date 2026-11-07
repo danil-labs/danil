@@ -80,6 +80,7 @@ export default function GithubAccount(props: {
   const [repositories, setRepositories] = createSignal<GithubRepository[]>([]);
   const [selected, setSelected] = createSignal<number[]>([]);
   const [editVersion, setEditVersion] = createSignal(0);
+  const [editCredentialId, setEditCredentialId] = createSignal<string | null>(null);
   const [installUrl, setInstallUrl] = createSignal<string | null>(null);
   /** La máquina tenía otra GitHub (sin sesión) y la cuenta conservó la suya. */
   const [adoptNotice, setAdoptNotice] = createSignal<{ login: string; account_login: string } | null>(null);
@@ -317,6 +318,7 @@ export default function GithubAccount(props: {
       setRepositories(result.value);
       setSelected(ids ? ids.filter((id) => visible.has(id)) : [...visible]);
       setEditVersion(c.version);
+      setEditCredentialId(c.id);
       setEditing(installation);
     } catch (e) {
       fail(e);
@@ -330,6 +332,11 @@ export default function GithubAccount(props: {
     const installation = editing();
     const list = installs();
     if (!c || !installation || !list) return;
+    if (c.id !== editCredentialId()) {
+      setEditing(null);
+      fail(githubAccountFailure("github_identity_mismatch"));
+      return;
+    }
     setBusy("repositories");
     clearFailure();
     try {
@@ -340,7 +347,7 @@ export default function GithubAccount(props: {
           .filter((a) => a.key.toLowerCase() !== installation.key.toLowerCase())
         : list.installations.filter((i) => i.installation_id !== installation.installation_id).map((i) => ({ key: i.key, installation_id: i.installation_id, repository_ids: null }));
       areas.push({ key: installation.key, installation_id: installation.installation_id, repository_ids: null, personal_repository_ids: selected() });
-      const result = await setGithubAreas(await sourceFor(c.id), props.scope, areas, { expected_version: editVersion() });
+      const result = await setGithubAreas(await sourceFor(c.id), props.scope, areas, { expected_version: editVersion(), expected_credential_id: c.id });
       if (result.kind === "unauthorized") capabilities().githubPersonalUnauthorized?.();
       if (result.kind !== "ok") throw githubAccountFailure(result.kind === "failed" ? result.code ?? "github_unavailable" : "unauthorized");
       applyStatus({ ...(status() as GithubStatus), credential: result.value });

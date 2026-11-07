@@ -184,6 +184,7 @@ test("a person chooses repositories without changing the organization's GitHub i
   const saved = JSON.parse(requests.find((r) => r.options.method === "PUT").options.body);
   assert.equal(saved.personal_scope, true);
   assert.equal(saved.expected_version, 2);
+  assert.equal(saved.expected_credential_id, "cred_1");
   assert.deepEqual(saved.areas.find((a) => a.key === "danil-labs").personal_repository_ids, [11, 12]);
   assert.ok(!card(w).querySelector("[data-github-personal-repositories]"));
   globalThis.fetch = originalFetch;
@@ -249,6 +250,32 @@ test("an account change while editing cannot save the selection to another accou
   try {
     buttonIn(row(w, "danil-labs"), "Cambiar repositorios de danil-labs").click();
     await sleep(100);
+    buttonIn(card(w).querySelector("[data-github-personal-repositories]"), "Guardar selección").click();
+    await sleep(100);
+    assert.ok(text(w).includes("no coincide con la cuenta de GitHub"));
+    assert.equal(writes, 0);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("a refreshed card cannot save a selection opened for the previous credential", async () => {
+  const e = engine();
+  const { w } = await openSources("github-account-card-changed", e);
+  const originalFetch = globalThis.fetch;
+  let writes = 0;
+  globalThis.fetch = async (url, options) => {
+    if (!String(url).startsWith("https://github-control.test/")) return originalFetch(url, options);
+    if (options.method === "PUT") { writes += 1; return Response.json({ credential: CREDENTIAL }); }
+    if (String(url).includes("/repositories?")) return Response.json({ repositories: [{ id: 11, name: "brand", full_name: "danil-labs/brand", clone_url: "https://github.com/danil-labs/brand.git" }] });
+    return Response.json({ connected: true, credential: e.state.status.credential });
+  };
+  try {
+    buttonIn(row(w, "danil-labs"), "Cambiar repositorios de danil-labs").click();
+    await sleep(100);
+    e.state.status = { connected: true, credential: { ...CREDENTIAL, id: "cred_other" }, install_url: INSTALLS.install_url };
+    w.dispatchEvent(new w.Event("focus"));
+    await sleep(150);
     buttonIn(card(w).querySelector("[data-github-personal-repositories]"), "Guardar selección").click();
     await sleep(100);
     assert.ok(text(w).includes("no coincide con la cuenta de GitHub"));

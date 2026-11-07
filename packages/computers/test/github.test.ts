@@ -47,8 +47,8 @@ test("conserva una selección personal de repositorios, incluso vacía", async (
   const status = githubStatusOf({ connected: true, credential: { ...credential, config: { ...credential.config, areas: [selected] } } });
   assert.deepEqual(status.credential?.config.areas, [selected]);
   const seen: Seen[] = [];
-  await setGithubAreas(source(200, { credential }, seen), "w", [selected], { expected_version: 3 });
-  assert.deepEqual(JSON.parse(seen[0]?.body ?? "null"), { areas: [{ key: selected.key, installation_id: selected.installation_id, personal_repository_ids: [] }], personal_scope: true, expected_version: 3 });
+  await setGithubAreas(source(200, { credential }, seen), "w", [selected], { expected_version: 3, expected_credential_id: "cred_1" });
+  assert.deepEqual(JSON.parse(seen[0]?.body ?? "null"), { areas: [{ key: selected.key, installation_id: selected.installation_id, personal_repository_ids: [] }], personal_scope: true, expected_version: 3, expected_credential_id: "cred_1" });
 });
 
 test("un área antigua sin instalación no desaparece silenciosamente al releer", () => {
