@@ -302,8 +302,9 @@ export default function GithubAccount(props: {
       if (result.kind !== "ok") throw githubAccountFailure(result.kind === "failed" ? result.code ?? "github_unavailable" : "unauthorized");
       const area = c.config.areas.find((a) => a.installation_id === installation.installation_id);
       const ids = c.config.personal_scope && !area ? [] : area?.personal_repository_ids;
+      const visible = new Set(result.value.map((repo) => repo.id));
       setRepositories(result.value);
-      setSelected(ids ?? result.value.map((repo) => repo.id));
+      setSelected(ids ? ids.filter((id) => visible.has(id)) : [...visible]);
       setEditVersion(c.version);
       setEditing(installation);
     } catch (e) {
