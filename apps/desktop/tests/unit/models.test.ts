@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import "../helpers/catalog.ts";
+import { aplicarLenguaDeWorkspace } from "../../src/lib/i18n.ts";
 
 import {  agruparModelos,
   coincideModelo,
@@ -10,6 +12,7 @@ import {  agruparModelos,
   effortAlCambiarDeModelo,
   nombreDeModelo,
   modelBrand,
+  proveedorDe,
 } from "../../src/lib/models.ts";
 import type { ModelOption } from "../../src/lib/model.ts";
 import type { Superficie } from "../../src/lib/surfaces.ts";
@@ -60,7 +63,7 @@ test("los resultados conservan la sección que desambigua modelos parecidos", ()
       ["Claude", [["claude", "gpt-5"]]],
       ["Codex", [["codex", "gpt-5"]]],
       ["OpenCode", [["opencode-zen", "opencode/gpt-5"], ["opencode-zen", "opencode-go/gpt-5"]]],
-      ["Free AI Router", [["opencode-zen", "danil-free/reflection/beam-free"]]],
+      ["Router IA gratis", [["opencode-zen", "danil-free/reflection/beam-free"]]],
       ["OpenCode Local", [["opencode-local", "ollama/gpt-5"]]],
     ],
   );
@@ -82,7 +85,7 @@ test("una superficie de pago no aparece cuando no está autenticada", () => {  c
     },
   );
 
-  assert.deepEqual(opciones.map((opcion) => opcion.proveedor.label), ["Free AI Router"]);
+  assert.deepEqual(opciones.map((opcion) => opcion.proveedor.label), ["Router IA gratis"]);
   assert.deepEqual(opciones.map((opcion) => opcion.model.id), ["danil-free/reflection/beam-free"]);
 });
 
@@ -180,4 +183,13 @@ test("Free conserva la marca Danil en turnos observados y OpenCode pagado conser
   assert.equal(modelBrand("opencode-zen", "opencode/claude"), "opencode-zen");
   assert.equal(modelBrand("opencode-zen"), "opencode-zen");
   assert.equal(modelBrand("opencode-zen", "legacy-free", { provider: "opencode-zen", fallback: false, models: [{ ...model("legacy-free", "Free"), gratis: true }] }), "danil");
+});
+
+test("el proveedor gratuito sigue la lengua activa con la marca Danil", () => {
+  const surface: Superficie = { id: "opencode-zen-free", provider: "opencode-zen", label: "Free", catalogo: "gratuitos", usable: true, marca: null, porque: null };
+  for (const [language, label] of [["es", "Router IA gratis"], ["en", "Free AI Router"]]) {
+    aplicarLenguaDeWorkspace(language);
+    assert.deepEqual(proveedorDe(surface, model("danil-free/reflection/beam-free", "Beam")), { id: "opencode-free", label, logo: "danil" });
+  }
+  aplicarLenguaDeWorkspace("es");
 });
