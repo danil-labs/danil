@@ -170,3 +170,34 @@ columna derecha); no forma parte de la fuente verificada. `git merge-tree`
 confirma integración sin conflictos contra esa cabeza sin modificar fuentes.
 La mergeabilidad remota se comprueba después del push; no se acredita aquí la
 prueba funcional de un merge posterior con ese delta.
+
+## Actualización de GitHub personal
+
+Fecha: 2026-11-06. Alcance: `github.md` y su enlace en el README, frente al
+cliente y las ramas de trabajo del servicio y del motor. La entrega coordinada
+sigue pendiente. Plataforma de las pruebas locales: macOS aarch64.
+
+Medición: `github.md` tiene 61 líneas y 3328 bytes; las guías leídas de
+escritorio, frontend y pruebas tienen 83, 26 y 17 líneas. La evaluación anterior
+cubre la transición de marca, no este cambio de GitHub.
+
+| Criterio | Estado | Evidencia |
+|---|---|---|
+| Instrucciones de raíz | pasa | La guía raíz exige `dev` primero y no cambiar el contrato RPC. |
+| Alcance por ámbito | pasa | Se leyeron las guías de escritorio, frontend y pruebas. |
+| Invariantes | pasa | `github.md` distingue permisos de GitHub, selección personal y motores anteriores. |
+| Arquitectura | pasa | Se separan ventana, servicio, motor e intermediario. |
+| Decisiones | pasa | La persona pidió selección personal y preparación automática de `gh`. |
+| Arranque | sin comprobar | No se auditó el arranque de los repositorios. |
+| Límites operativos | pasa | Se indican descarga en segundo plano, versiones anteriores y falta de sandbox. |
+| Coherencia global | sin comprobar | No se auditó toda la documentación de los tres repositorios. |
+| Navegación | pasa | El README enlaza a la guía de GitHub actualizada. |
+| Presupuesto global | sin comprobar | No se midió el presupuesto completo de autocarga. |
+| Controles | sin comprobar | La revisión documental no ejecutó por separado todos los guards. |
+| Secretos | pasa | Los documentos modificados no contienen credenciales. |
+| Construcción | sin comprobar | La evaluación documental no verifica artefactos distribuibles. |
+| Pruebas completas | sin comprobar | No se completó una verificación conjunta de ventana, servicio y motor en todas las plataformas. |
+| Verificación | pasa | Se distinguieron las pruebas simuladas de la ventana y Windows reales. |
+| Estilo | sin comprobar | No se ejecutó un validador documental específico. |
+
+**9 pasan · 0 fallan · 7 sin comprobar.**

@@ -8,6 +8,7 @@ import {
   type GithubRepository,
   type GithubArea,
   githubRepositories,
+  githubStatus,
   setGithubAreas,
   githubAuthorizeOf,
   githubCredentialOf,
@@ -274,7 +275,8 @@ export default function GithubAccount(props: {
   const scopeOf = (i: GithubInstallation) => {
     const config = credential()?.config;
     const area = config?.areas.find((a) => a.installation_id === i.installation_id);
-    if (config?.personal_scope && !area) return t("providers.github.account.scope_count", { count: 0 });
+    const replaced = config?.areas.some((a) => a.key.toLowerCase() === i.key.toLowerCase() && a.installation_id !== i.installation_id);
+    if ((config?.personal_scope || config?.legacy_areas_present || replaced) && !area) return t("providers.github.account.scope_count", { count: 0 });
     if (area?.personal_repository_ids) return t("providers.github.account.scope_count", { count: area.personal_repository_ids.length });
     return i.repository_selection === "all"
       ? t("providers.github.account.scope_all")
@@ -292,16 +294,27 @@ export default function GithubAccount(props: {
     return { endpoint: client.endpoint, getToken: async () => client.token };
   }
 
+  async function sourceFor(credentialId: string): Promise<GithubSource> {
+    const source = await personalSource();
+    const result = await githubStatus(source, props.scope);
+    if (result.kind === "unauthorized") capabilities().githubPersonalUnauthorized?.();
+    if (result.kind !== "ok") throw githubAccountFailure(result.kind === "failed" ? result.code ?? "github_unavailable" : "unauthorized");
+    if (result.value.credential?.id !== credentialId) throw githubAccountFailure("github_identity_mismatch");
+    return source;
+  }
+
   async function editRepositories(installation: GithubInstallation) {
     const c = credential();
     if (!c) return;
     setBusy("repositories");
     clearFailure();
     try {
-      const result = await githubRepositories(await personalSource(), props.scope, installation.installation_id);
+      const result = await githubRepositories(await sourceFor(c.id), props.scope, installation.installation_id);
+      if (result.kind === "unauthorized") capabilities().githubPersonalUnauthorized?.();
       if (result.kind !== "ok") throw githubAccountFailure(result.kind === "failed" ? result.code ?? "github_unavailable" : "unauthorized");
       const area = c.config.areas.find((a) => a.installation_id === installation.installation_id);
-      const ids = c.config.personal_scope && !area ? [] : area?.personal_repository_ids;
+      const replaced = c.config.areas.some((a) => a.key.toLowerCase() === installation.key.toLowerCase() && a.installation_id !== installation.installation_id);
+      const ids = (c.config.personal_scope || c.config.legacy_areas_present || replaced) && !area ? [] : area?.personal_repository_ids;
       const visible = new Set(result.value.map((repo) => repo.id));
       setRepositories(result.value);
       setSelected(ids ? ids.filter((id) => visible.has(id)) : [...visible]);
@@ -322,11 +335,15 @@ export default function GithubAccount(props: {
     setBusy("repositories");
     clearFailure();
     try {
-      const areas: GithubArea[] = c.config.personal_scope || c.config.areas.length > 0
-        ? c.config.areas.filter((a) => a.installation_id !== installation.installation_id)
+      const areas: GithubArea[] = c.config.personal_scope || c.config.legacy_areas_present || c.config.areas.length > 0
+        ? c.config.areas
+          .filter((a) => a.installation_id !== installation.installation_id)
+          .map((a) => ({ ...a, key: list.installations.find((i) => i.installation_id === a.installation_id)?.key ?? a.key }))
+          .filter((a) => a.key.toLowerCase() !== installation.key.toLowerCase())
         : list.installations.filter((i) => i.installation_id !== installation.installation_id).map((i) => ({ key: i.key, installation_id: i.installation_id, repository_ids: null }));
       areas.push({ key: installation.key, installation_id: installation.installation_id, repository_ids: null, personal_repository_ids: selected() });
-      const result = await setGithubAreas(await personalSource(), props.scope, areas, { expected_version: editVersion() });
+      const result = await setGithubAreas(await sourceFor(c.id), props.scope, areas, { expected_version: editVersion() });
+      if (result.kind === "unauthorized") capabilities().githubPersonalUnauthorized?.();
       if (result.kind !== "ok") throw githubAccountFailure(result.kind === "failed" ? result.code ?? "github_unavailable" : "unauthorized");
       applyStatus({ ...(status() as GithubStatus), credential: result.value });
       setEditing(null);
@@ -548,7 +565,7 @@ export default function GithubAccount(props: {
                               <span class="text-ui text-neutral-500">{t("providers.github.account.personal_scope_notice")}</span>
                               <For each={repositories()}>{(repo) => (
                                 <label class="flex items-center gap-2 text-ui">
-                                  <input type="checkbox" checked={selected().includes(repo.id)} onChange={(event) => setSelected((ids) => event.currentTarget.checked ? [...ids, repo.id] : ids.filter((id) => id !== repo.id))} />
+                                  <input type="checkbox" disabled={busy() !== null} checked={selected().includes(repo.id)} onChange={(event) => setSelected((ids) => event.currentTarget.checked ? [...ids, repo.id] : ids.filter((id) => id !== repo.id))} />
                                   {repo.full_name}
                                 </label>
                               )}</For>

@@ -103,9 +103,8 @@ pnpm verify --no-cargo  # the same chain without Rust
 
 What each guard checks is in [docs/guards.md](apps/desktop/docs/guards.md).
 
-La [conexión de GitHub por workspace](apps/desktop/docs/github.md) distingue la selección
-local de las instalaciones de la App en GitHub y describe la coordinación con
-el motor.
+La [conexión personal de GitHub](apps/desktop/docs/github.md) explica la selección
+de repositorios, las instalaciones de la App y la coordinación con el motor.
 
 ## How it fits together
 

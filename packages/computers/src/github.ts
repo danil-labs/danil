@@ -23,7 +23,7 @@ export type GithubMachine = {
   last_seen_at: string | null;
 };
 
-export type GithubConfig = { github_user_id: number | null; login: string; name: string | null; avatar: string | null; areas: GithubArea[]; personal_scope?: true };
+export type GithubConfig = { github_user_id: number | null; login: string; name: string | null; avatar: string | null; areas: GithubArea[]; personal_scope?: true; legacy_areas_present?: true };
 
 export type GithubRepository = { id: number; name: string; full_name: string; clone_url: string };
 
@@ -128,6 +128,7 @@ export function githubCredentialOf(raw: unknown): GithubCredential | null {
       avatar: str(config.avatar),
       areas: (Array.isArray(config.areas) ? config.areas : []).map(areaOf).filter((a): a is GithubArea => a !== null),
       ...(config.personal_scope === true ? { personal_scope: true as const } : {}),
+      ...(config.legacy_areas_present === true || (Array.isArray(config.areas) && config.areas.some((area) => areaOf(area) === null)) ? { legacy_areas_present: true as const } : {}),
     },
     machines: (Array.isArray(raw.machines) ? raw.machines : []).map(machineOf).filter((m): m is GithubMachine => m !== null),
   };

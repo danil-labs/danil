@@ -16,6 +16,7 @@ const KNOWN = new Set([
   "github_machine_removed",
   "github_reauthorize",
   "github_unavailable",
+  "github_identity_mismatch",
   "github_disabled",
   "license_required",
   "invalid_return_to",

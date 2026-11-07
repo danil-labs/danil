@@ -129,6 +129,7 @@
   "providers.github.account.change": "Change",
   "providers.github.account.personal_scope_notice": "Your selection applies to your machines. Machines running an older version must update to use GitHub.",
   "providers.github.account.save_repositories": "Save selection",
+  "providers.github.account.error.github_identity_mismatch": "This machine's account does not match the GitHub account shown. Open this space on its machine to change the selection.",
   "providers.github.account.change_on": "Change repositories for {name}",
   "providers.github.account.scope_all": "All",
   "providers.github.account.scope_count": { "one": "{count} repo", "other": "{count} repos" },

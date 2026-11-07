@@ -256,6 +256,7 @@ function mountApp(computers: Computer[], base: Base, before?: (id: string) => ()
   const screens = createScreenAccess({ endpoint: base.endpoint, getToken: token, knows: (id) => !!fleet.info(id) });
   setCapabilities({
     githubPersonalSource: { endpoint: base.endpoint, getToken: async () => await base.getToken() },
+    githubPersonalUnauthorized: base.onUnauthorized,
     appDownloads: true,
     workspaceDirectory: import.meta.env.TERMINUS_ALPHA ? {
       list: async () => {

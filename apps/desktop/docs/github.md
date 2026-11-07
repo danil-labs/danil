@@ -1,85 +1,61 @@
-# GitHub por workspace
+# GitHub de la persona
 
-Cada workspace conecta su cuenta y elige qué cuentas u organizaciones de GitHub
-usa. Dentro de cada una hereda todos los repositorios que su instalación de
-GitHub permite, también los que se creen después, sin confirmación en Danil.
-Decisión del 2026-10-19: si el GitHub de la persona ya concede el acceso,
-Danil no lo restringe por repositorio. Para ampliarlo o reducirlo se cambia la
-instalación en GitHub.
+Con sesión de Danil, la conexión de GitHub pertenece a la persona y se usa en
+sus máquinas. GitHub decide qué instalaciones y repositorios puede ver cada
+cuenta. La GitHub App se instala en la cuenta personal u organización; sus
+administradores controlan esa instalación.
 
-## Conectar
+## Conectar y elegir repositorios
 
-1. Abre Configuración → Control de Fuentes → GitHub y conecta la cuenta.
-2. El selector oficial de GitHub permite instalar o configurar la App en una
-   cuenta personal u organización, aunque existan instalaciones previas.
-3. Al volver a Danil, elige las cuentas que usará este workspace.
-   Administrar permisos en GitHub no repite el inicio de sesión.
+1. Abre Configuración → Control de código → GitHub y conecta la cuenta.
+2. Autoriza la App en GitHub. Si ya está autorizada, GitHub puede omitir esa pantalla.
+3. Confirma en el navegador la cuenta de Danil que inició la conexión.
+4. En Danil, usa «Cambiar» en una instalación para elegir los repositorios que
+   usará tu conexión. La selección es personal y se aplica a tus máquinas.
 
-La cuenta conectada y «Acceso de este workspace» resumen las cuentas elegidas.
-La fila «Repositorios» dice «Acceso: todos los repositorios que tu GitHub
-permite» y su botón «Cambiar en GitHub» abre la configuración de la instalación.
-«Cambiar acceso» abre el selector de cuentas y «Listo» lo oculta. La selección de
-repositorios como fuentes corresponde al compositor. El menú «Más acciones de
-GitHub» reúne «Administrar permisos en GitHub», «Comprobar conexión» y
-«Desconectar».
+La selección no cambia los permisos de otras personas ni la instalación de la
+organización. Solo se ofrecen repositorios que la cuenta de GitHub puede ver y
+que la instalación de la App alcanza. Una selección vacía no concede ninguno.
+Para instalar la App en otra organización se usa «Añadir organización»; GitHub
+puede requerir la aprobación de una persona administradora.
 
-Desconectar o quitar una cuenta afecta solo al workspace actual; no desinstala la
-App en GitHub. Las conexiones anteriores con repositorios confirmados pasan a
-heredar sin ningún paso: el motor conserva el campo `repository_ids` pero ya no
-lo usa.
+La confirmación del navegador vincula la autorización a la cuenta de Danil que
+inició el flujo. El estado del enlace dura diez minutos y se consume una vez.
+Al concluir, el escritorio muestra «GitHub quedó conectado»; la web vuelve a
+Danil. Repetir una confirmación consumida muestra «Este enlace ya no vale»,
+aunque el primer intento haya conectado la cuenta.
 
-## GitHub de la cuenta
+Las máquinas con un motor anterior no reciben el token después de establecer
+una selección personal: deben actualizarse para usar GitHub. El servicio rota
+el token anterior y notifica el cambio a las máquinas de la persona.
 
-Con sesión de Danil, la tarjeta de GitHub es la de la cuenta y refleja GitHub.
-La fila de la cuenta tiene un menú «Más acciones de GitHub» con «Comprobar
-conexión» y «Desconectar». «Organizaciones» lista solo las cuentas y
-organizaciones donde está instalada la App (`github_account_installations`):
-cada una dice «Todos», «N repos» o «Algunos repos», y «Cambiar» abre esa
-instalación en GitHub (`html_url`, o `install_url` si el Worker no la manda).
-«Añadir» abre `install_url`. Con `install_pending` aparece la fila «Pendiente».
-Al conectar sin ninguna instalación se abre `install_url` una vez. Al volver
-el foco a la ventana se vuelven a pedir las instalaciones. La tarjeta no elige
-áreas por workspace: no llama a `github_account_set_areas`.
+Sin sesión de Danil, la conexión local de la App dice «Solo en esta máquina».
+Una conexión de la App anterior pide volver a conectar con Danil. El campo
+legado `repository_ids` se conserva por compatibilidad; el alcance personal
+se guarda aparte como `personal_repository_ids`.
 
-Sin sesión, la conexión local de la App Danil (`source = "device"`) dice «Solo
-en esta máquina» y ofrece «Iniciar sesión». Una conexión de la App anterior
-(`source = "legacy"`) pide volver a conectar con Danil. Los proveedores se
-listan en este orden: GitHub, GitLab y Bitbucket.
+## GitHub CLI
 
-## gh opcional
+El motor prepara `gh` automáticamente cuando hay una conexión de GitHub. Usa
+una instalación compatible si ya existe; en caso contrario, descarga el
+artefacto oficial en una carpeta privada y comprueba su SHA-256. La descarga
+ocurre en segundo plano. Si un comando se ejecuta antes de que termine, puede
+fallar y volver a intentarse en la misma tarea después de la instalación.
 
-La conexión de GitHub no necesita `gh`. En Configuración, «Herramientas para
-agentes» está plegado y permite descargar una versión compatible si un agente
-la necesita. Los errores de descarga siguen visibles al plegarlo y una versión
-incompatible muestra «Requiere atención». El motor descarga el artefacto
-oficial y comprueba su SHA-256; no depende de Homebrew ni winget. El agente
-puede solicitarlo con `terminus github install` y consultar su disponibilidad
-con `terminus github status`.
+El `gh` gestionado consulta un intermediario local. Recibe un permiso de sesión
+del workspace, no la credencial externa de GitHub. Las operaciones admitidas
+se revalidan contra los repositorios elegidos y los permisos actuales de GitHub.
+Las operaciones de cuenta y las rutas desconocidas se rechazan. El proceso
+nativo del agente conserva acceso al equipo: esto no es un sandbox.
 
-El `gh` gestionado consulta un intermediario local del motor. Recibe un permiso
-de sesión del workspace y no la credencial externa de GitHub. El motor limita
-las operaciones a los repositorios que GitHub permite a las cuentas elegidas; las
-consultas y escrituras admitidas se revalidan en cada llamada. Las operaciones de
-cuenta (`/user/*`, gists, llaves, administración de organizaciones, búsqueda
-global) siguen bloqueadas. Una operación desconocida se rechaza.
-El proceso nativo del agente conserva su acceso al equipo: esto no es un sandbox.
+## Compatibilidad y validación
 
-## Ventana y motor
+La interfaz, el servicio de Machines y el motor deben entregarse de forma
+coordinada. La ventana no añade comandos al contrato RPC congelado. Para
+distribuir el motor se requieren sus artefactos verificados y la actualización
+de `seldon-runtime.lock`.
 
-La ventana implementa selección, retorno del navegador e instalación a demanda.
-La bóveda, la resolución del alcance en GitHub, el intermediario y el entorno de
-agentes pertenecen al motor privado. `check_environment` comunica el inventario
-opcional `githubCli`; `install_gh` es el comando existente. No se agrega un
-comando ni se cambia el hash del contrato RPC1 congelado.
-
-Esta interfaz necesita el portado correspondiente del motor. Para distribuir
-la función completa se debe publicar ese motor y actualizar
-`seldon-runtime.lock` con sus artefactos verificados. El lock anterior no
-acredita aislamiento por workspace ni soporte del intermediario. Los PRs de
-ventana y motor se revisan coordinadamente antes de una release.
-
-`node tests/helpers/github-workspace-ui.mjs`, después de `pnpm build`, comprueba
-el selector de cuentas, el resumen del acceso heredado, que no exista paso de
-confirmación y las herramientas opcionales sobre el frontend
-compilado con IPC simulado.
-Es integración; no prueba el navegador nativo, login o permisos reales de GitHub.
+La prueba de Configuración monta el frontend compilado con IPC y servicio
+simulados. Las pruebas del motor usan `gh` oficial contra un servidor de
+laboratorio. Esas pruebas no sustituyen una conexión real en la ventana ni una
+prueba en Windows.

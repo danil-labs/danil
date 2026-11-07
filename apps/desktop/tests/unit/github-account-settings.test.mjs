@@ -155,13 +155,17 @@ test("a person chooses repositories without changing the organization's GitHub i
 
   const originalFetch = globalThis.fetch;
   const requests = [];
+  let releaseSave;
+  const saveGate = new Promise((resolve) => { releaseSave = resolve; });
   globalThis.fetch = async (url, options) => {
     if (!String(url).startsWith("https://github-control.test/")) return originalFetch(url, options);
     requests.push({ url: String(url), options });
+    if (options.method === "GET" && !String(url).includes("/repositories?")) return Response.json({ connected: true, credential });
     if (options.method === "GET") return Response.json({ repositories: [
       { id: 11, name: "brand", full_name: "danil-labs/brand", clone_url: "https://github.com/danil-labs/brand.git" },
       { id: 12, name: "danil-workspace", full_name: "danil-labs/danil-workspace", clone_url: "https://github.com/danil-labs/danil-workspace.git" },
     ] });
+    await saveGate;
     const { areas } = JSON.parse(options.body);
     return Response.json({ credential: { ...CREDENTIAL, version: 3, config: { ...CREDENTIAL.config, areas, personal_scope: true } } });
   };
@@ -173,6 +177,9 @@ test("a person chooses repositories without changing the organization's GitHub i
   assert.equal(boxes.length, 2);
   boxes[1].click();
   buttonIn(picker, "Guardar selección").click();
+  await sleep(50);
+  assert.ok([...boxes].every((box) => box.disabled), "the selection stays fixed while the save is in flight");
+  releaseSave();
   await sleep(100);
   const saved = JSON.parse(requests.find((r) => r.options.method === "PUT").options.body);
   assert.equal(saved.personal_scope, true);
@@ -203,6 +210,141 @@ test("a person chooses repositories without changing the organization's GitHub i
   await sleep(100);
   assert.ok(menuItem(w, "Quitar"), "it is back in use there");
   assert.deepEqual(app.failures, []);
+});
+
+test("a different account cannot change the displayed GitHub selection", async () => {
+  const e = engine();
+  const { w } = await openSources("github-account-other-identity", e);
+  const originalFetch = globalThis.fetch;
+  const requests = [];
+  globalThis.fetch = async (url, options) => {
+    if (!String(url).startsWith("https://github-control.test/")) return originalFetch(url, options);
+    requests.push({ url: String(url), method: options.method });
+    return Response.json({ connected: true, credential: { ...CREDENTIAL, id: "cred_other" } });
+  };
+  try {
+    buttonIn(row(w, "danil-labs"), "Cambiar repositorios de danil-labs").click();
+    await sleep(100);
+    assert.ok(text(w).includes("no coincide con la cuenta de GitHub"));
+    assert.equal(requests.length, 1);
+    assert.ok(!card(w).querySelector("[data-github-personal-repositories]"));
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("an account change while editing cannot save the selection to another account", async () => {
+  const e = engine();
+  const { w } = await openSources("github-account-identity-changed", e);
+  const originalFetch = globalThis.fetch;
+  let statusReads = 0;
+  let writes = 0;
+  globalThis.fetch = async (url, options) => {
+    if (!String(url).startsWith("https://github-control.test/")) return originalFetch(url, options);
+    if (options.method === "PUT") { writes += 1; return Response.json({ credential: CREDENTIAL }); }
+    if (String(url).includes("/repositories?")) return Response.json({ repositories: [{ id: 11, name: "brand", full_name: "danil-labs/brand", clone_url: "https://github.com/danil-labs/brand.git" }] });
+    statusReads += 1;
+    return Response.json({ connected: true, credential: statusReads === 1 ? CREDENTIAL : { ...CREDENTIAL, id: "cred_other" } });
+  };
+  try {
+    buttonIn(row(w, "danil-labs"), "Cambiar repositorios de danil-labs").click();
+    await sleep(100);
+    buttonIn(card(w).querySelector("[data-github-personal-repositories]"), "Guardar selección").click();
+    await sleep(100);
+    assert.ok(text(w).includes("no coincide con la cuenta de GitHub"));
+    assert.equal(writes, 0);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("legacy areas cannot silently expand to other installations", async () => {
+  const credential = { ...CREDENTIAL, config: { ...CREDENTIAL.config, areas: [{ key: "danil-labs", installation_id: null, repository_ids: null }] } };
+  const e = engine({ status: { connected: true, credential, install_url: INSTALLS.install_url } });
+  const { w } = await openSources("github-account-legacy-areas", e);
+  const originalFetch = globalThis.fetch;
+  const requests = [];
+  globalThis.fetch = async (url, options) => {
+    if (!String(url).startsWith("https://github-control.test/")) return originalFetch(url, options);
+    requests.push({ url: String(url), options });
+    if (options.method === "GET" && !String(url).includes("/repositories?")) return Response.json({ connected: true, credential });
+    if (options.method === "GET") return Response.json({ repositories: [{ id: 11, name: "brand", full_name: "danil-labs/brand", clone_url: "https://github.com/danil-labs/brand.git" }] });
+    return Response.json({ credential: { ...credential, version: 3, config: { ...credential.config, areas: JSON.parse(options.body).areas, personal_scope: true } } });
+  };
+  try {
+    buttonIn(row(w, "danil-labs"), "Cambiar repositorios de danil-labs").click();
+    await sleep(100);
+    const picker = card(w).querySelector("[data-github-personal-repositories]");
+    const box = picker.querySelector('input[type="checkbox"]');
+    assert.equal(box.checked, false, "un área anterior sin instalación no concede repositorios por defecto");
+    box.click();
+    buttonIn(picker, "Guardar selección").click();
+    await sleep(100);
+    const saved = JSON.parse(requests.find((r) => r.options.method === "PUT").options.body);
+    assert.deepEqual(saved.areas, [{ key: "danil-labs", installation_id: 7, personal_repository_ids: [11] }]);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("a reinstalled GitHub App replaces the old installation without granting its old access", async () => {
+  const credential = { ...CREDENTIAL, config: { ...CREDENTIAL.config, areas: [{ key: "danil-labs", installation_id: 70, repository_ids: null }] } };
+  const e = engine({ status: { connected: true, credential, install_url: INSTALLS.install_url } });
+  const { w } = await openSources("github-account-reinstalled", e);
+  const originalFetch = globalThis.fetch;
+  const requests = [];
+  globalThis.fetch = async (url, options) => {
+    if (!String(url).startsWith("https://github-control.test/")) return originalFetch(url, options);
+    requests.push({ url: String(url), options });
+    if (options.method === "GET" && !String(url).includes("/repositories?")) return Response.json({ connected: true, credential });
+    if (options.method === "GET") return Response.json({ repositories: [{ id: 11, name: "brand", full_name: "danil-labs/brand", clone_url: "https://github.com/danil-labs/brand.git" }] });
+    return Response.json({ credential: { ...credential, version: 3, config: { ...credential.config, areas: JSON.parse(options.body).areas, personal_scope: true } } });
+  };
+  try {
+    buttonIn(row(w, "danil-labs"), "Cambiar repositorios de danil-labs").click();
+    await sleep(100);
+    const picker = card(w).querySelector("[data-github-personal-repositories]");
+    const box = picker.querySelector('input[type="checkbox"]');
+    assert.equal(box.checked, false);
+    box.click();
+    buttonIn(picker, "Guardar selección").click();
+    await sleep(100);
+    const saved = JSON.parse(requests.find((r) => r.options.method === "PUT").options.body);
+    assert.deepEqual(saved.areas, [{ key: "danil-labs", installation_id: 7, personal_repository_ids: [11] }]);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("a renamed installation keeps its selection when another installation reuses its old name", async () => {
+  const credential = { ...CREDENTIAL, config: { ...CREDENTIAL.config, personal_scope: true, areas: [{ key: "danil-labs", installation_id: 70, repository_ids: null, personal_repository_ids: [20] }] } };
+  const e = engine({ status: { connected: true, credential, install_url: INSTALLS.install_url } });
+  e.state.installs = { ...INSTALLS, installations: [...INSTALLS.installations, { key: "danil-renamed", installation_id: 70, account: { login: "danil-renamed", type: "Organization" }, repository_selection: "selected" }] };
+  const { w } = await openSources("github-account-renamed-installation", e);
+  const originalFetch = globalThis.fetch;
+  const requests = [];
+  globalThis.fetch = async (url, options) => {
+    if (!String(url).startsWith("https://github-control.test/")) return originalFetch(url, options);
+    requests.push({ url: String(url), options });
+    if (options.method === "GET" && !String(url).includes("/repositories?")) return Response.json({ connected: true, credential });
+    if (options.method === "GET") return Response.json({ repositories: [{ id: 11, name: "brand", full_name: "danil-labs/brand", clone_url: "https://github.com/danil-labs/brand.git" }] });
+    return Response.json({ credential: { ...credential, version: 3, config: { ...credential.config, areas: JSON.parse(options.body).areas } } });
+  };
+  try {
+    buttonIn(row(w, "danil-labs"), "Cambiar repositorios de danil-labs").click();
+    await sleep(100);
+    const picker = card(w).querySelector("[data-github-personal-repositories]");
+    picker.querySelector('input[type="checkbox"]').click();
+    buttonIn(picker, "Guardar selección").click();
+    await sleep(100);
+    const saved = JSON.parse(requests.find((r) => r.options.method === "PUT").options.body);
+    assert.deepEqual(saved.areas, [
+      { key: "danil-renamed", installation_id: 70, personal_repository_ids: [20] },
+      { key: "danil-labs", installation_id: 7, personal_repository_ids: [11] },
+    ]);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 });
 
 test("coming back to the window lists the organization that was just installed", async () => {
