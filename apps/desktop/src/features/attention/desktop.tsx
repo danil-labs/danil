@@ -265,7 +265,7 @@ export function installDesktopAttention() {
   setCapabilities({
     ...capabilities(),
     inbox,
-    danilCredits: webDanilCredits(session, PREFIX, windowFetch, (clear) => createRoot((dispose) => {
+    danilCredits: { ...webDanilCredits(session, PREFIX, windowFetch, (clear) => createRoot((dispose) => {
       const identity = createMemo(() => {
         const value = desktopStatus();
         return value.state === "active"
@@ -274,7 +274,12 @@ export function installDesktopAttention() {
       });
       createEffect(on(identity, clear, { defer: true }));
       return dispose;
-    })),
+    })), prepare: async (headers) => {
+      const machine = headers["x-terminus-machine"];
+      const workspace = headers["x-terminus-workspace"];
+      if ((machine && machine !== "local") || !workspace) throw new Error("credits_local_engine_required");
+      return invoke("credits_pilot_prepare", { workspace });
+    } },
     accountUsage: () => (
       <Suspense fallback={null}>
         <UsageView source={desktopUsageMe()} />

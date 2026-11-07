@@ -526,6 +526,7 @@ export type ChatProps = {
   onVerCambios?: () => void;
   agent: string;
   modelOptions?: { headers: Record<string, string> };
+  onCreditsPrepare?: () => void;
   /**
    * Lo que se puede elegir para trabajar. `null` mientras no se ha leído.
    * Ya viene filtrado por `superficies.paraElMenu`: lo utilizable, más
@@ -2879,6 +2880,7 @@ export default function Chat(props: ChatProps) {
                     : props.nativeSubagent ? t("chat.model.native") : props.modelLocked ? t("chat.model.locked") : undefined
                 }
                 onChange={props.onModel}
+                onCreditsPrepare={props.onCreditsPrepare}
                 lockedAgent={props.agentLocked ? props.agent : undefined}
                 lockedReason={props.agentLocked ? props.agentLockedReason ?? t("chat.handover.unsupported") : null}
                 efforts={efforts()}

@@ -14,6 +14,21 @@ use std::sync::{Mutex, OnceLock};
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use tauri::Emitter;
 
+mod credits;
+
+pub(super) fn credits_invalidate() {
+    credits::invalidate();
+}
+
+#[tauri::command(async)]
+pub(super) fn credits_pilot_prepare(
+    app: tauri::AppHandle,
+    account: Option<String>,
+    workspace: String,
+) -> Result<Value, Value> {
+    credits::prepare(app, account, workspace)
+}
+
 const ENTRY: &str = "https://alfa-app.danil.ai";
 const LOGIN_WAIT: Duration = Duration::from_secs(600);
 const HTTP_WAIT: Duration = Duration::from_secs(35);
@@ -684,6 +699,7 @@ pub(super) fn danil_sign_in(app: tauri::AppHandle, name: Option<String>) -> Resu
 /// Cierra las dos: la concesión y la sesión de la ventana, y después la cuenta principal del motor.
 #[tauri::command(async)]
 pub(super) fn danil_sign_out(app: tauri::AppHandle) -> Result<Value, Value> {
+    credits::invalidate();
     CONNECT.fetch_add(1, Ordering::SeqCst);
     // La revocación usa el token de cliente del motor: va antes de desconectarlo.
     let _ = sign_out(&app, &None);
@@ -691,6 +707,7 @@ pub(super) fn danil_sign_out(app: tauri::AppHandle) -> Result<Value, Value> {
 }
 
 fn sign_out(app: &tauri::AppHandle, account: &Option<String>) -> Result<(), Value> {
+    credits::invalidate();
     let name = key(account);
     let session = live()
         .lock()
@@ -729,6 +746,7 @@ pub(super) fn agents_session_sign_out(
     app: tauri::AppHandle,
     account: Option<String>,
 ) -> Result<(), Value> {
+    credits::invalidate();
     CONNECT.fetch_add(1, Ordering::SeqCst);
     sign_out(&app, &account)
 }
@@ -737,6 +755,7 @@ fn allowed_path(path: &str) -> bool {
     (path.starts_with("/api/") || path.starts_with("/auth/"))
         && path.len() <= 512
         && !path.contains("..")
+        && !path.split('/').any(|part| part == "delegations")
         && path
             .bytes()
             .all(|b| b.is_ascii_alphanumeric() || matches!(b, b'/' | b'_' | b'-' | b'.'))
