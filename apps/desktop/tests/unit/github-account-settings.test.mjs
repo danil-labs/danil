@@ -138,7 +138,8 @@ async function menu(w, label) {
 }
 
 test("a person chooses repositories without changing the organization's GitHub installation", async () => {
-  const e = engine();
+  const credential = { ...CREDENTIAL, config: { ...CREDENTIAL.config, personal_scope: true, areas: [{ key: "danil-labs", installation_id: 7, repository_ids: null, personal_repository_ids: [11, 99] }] } };
+  const e = engine({ status: { connected: true, credential, install_url: INSTALLS.install_url } });
   const app = await openSources("github-account-card", e);
   const { w } = app;
   assert.equal(card(w)?.dataset.githubAccount, "account", text(w).slice(0, 400));
@@ -147,9 +148,9 @@ test("a person chooses repositories without changing the organization's GitHub i
   assert.deepEqual(e.calls.find((c) => c.command === "github_account_status")?.args, { scope: "w" });
 
   assert.equal(text(w).includes("Organizaciones"), false, "no rótulo: las organizaciones son filas con sangría");
-  assert.ok(row(w, "danil-labs")?.textContent.includes("Todos"));
-  assert.ok(row(w, "nosoypoot")?.textContent.includes("3 repos"));
-  assert.ok(row(w, "raelay")?.textContent.includes("Algunos repos"), "without repository_count");
+  assert.ok(row(w, "danil-labs")?.textContent.includes("2 repos"));
+  assert.ok(row(w, "nosoypoot")?.textContent.includes("0 repos"));
+  assert.ok(row(w, "raelay")?.textContent.includes("0 repos"));
   assert.ok(card(w).querySelector("[data-github-installation-pending]")?.textContent.includes("Espera a una admin"));
 
   const originalFetch = globalThis.fetch;
@@ -176,7 +177,7 @@ test("a person chooses repositories without changing the organization's GitHub i
   const saved = JSON.parse(requests.find((r) => r.options.method === "PUT").options.body);
   assert.equal(saved.personal_scope, true);
   assert.equal(saved.expected_version, 2);
-  assert.deepEqual(saved.areas.find((a) => a.key === "danil-labs").personal_repository_ids, [11]);
+  assert.deepEqual(saved.areas.find((a) => a.key === "danil-labs").personal_repository_ids, [11, 12]);
   assert.ok(!card(w).querySelector("[data-github-personal-repositories]"));
   globalThis.fetch = originalFetch;
   buttonIn(card(w), "Añadir organización").click();
