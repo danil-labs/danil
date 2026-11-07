@@ -4,7 +4,7 @@ import { t } from "../../lib/i18n";
 import { Button } from "../../ui/Button";
 import { availableDanilCredits, DANIL_CREDITS } from "./danil-credits";
 
-/** Vista cerrada hasta acordar el contrato de cuenta y saldo con el BFF. */
+/** Saldo de cuenta por BFF; la ejecución espera aceptación de la integración. */
 export default function DanilCredits() {
   const [revision, setRevision] = createSignal(0);
   createEffect(() => {

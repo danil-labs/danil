@@ -1,4 +1,4 @@
-// La ejecución queda cerrada aunque una futura fuente de saldo esté disponible.
+// La ejecución queda cerrada aunque la lectura del saldo esté disponible.
 export const DANIL_CREDITS = Object.freeze({
   executionEnabled: false,
   modelId: "deepseek/deepseek-v4.1-flash",
