@@ -4,5 +4,5 @@
   "chat.notice.handler_memory_unavailable": "El almacén de memoria del encargado no está disponible. Continúa sin memoria propia.",
   "chat.notice.handler_memory_legacy": "Hay notas de memoria guardadas por nombre que no se cargan para esta identidad.",
   "chat.notice.handler_requires_tool_missing": "Una herramienta pedida por el encargado no está en el PATH del turno.",
-  "chat.notice.free_router_mcp_unavailable": "Estas integraciones MCP no están disponibles con Danil Free model router. Este modo restringe comandos, argumentos, variables de entorno y cabeceras, aunque no contengan secretos."
+  "chat.notice.free_router_mcp_unavailable": "Estas integraciones MCP no están disponibles con Router IA gratis. Este modo restringe comandos, argumentos, variables de entorno y cabeceras, aunque no contengan secretos."
 }

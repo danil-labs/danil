@@ -24,7 +24,7 @@
   "settings.accounts.connecting": "Connecting…",
   "settings.accounts.consent.accept": "Turn on",
   "settings.accounts.consent.cancel": "Cancel",
-  "settings.accounts.consent.title": "Enable Danil Free model router",
+  "settings.accounts.consent.title": "Enable Free AI Router",
   "settings.accounts.copy_link": "Copy link",
   "settings.accounts.count": {
     "one": "· {count} account",
@@ -106,7 +106,7 @@
   "settings.accounts.check_installed": "Installed · Check again",
   "settings.accounts.check_provider": "Check provider",
   "settings.accounts.error.check_provider": "Could not check the provider. Try again.",
-  "settings.accounts.free.unavailable": "Danil Free model router is unavailable with this engine.",
+  "settings.accounts.free.unavailable": "Free AI Router is unavailable with this engine.",
   "settings.accounts.free.policy_changed": "The policy or workspace changed. Close this notice and review the terms again.",
   "settings.accounts.free.privacy": "{provider} privacy",
   "settings.accounts.free.terms": "{provider} terms",

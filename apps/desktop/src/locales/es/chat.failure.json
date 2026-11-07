@@ -1,4 +1,4 @@
 {
-  "chat.failure.free_router_stopped": "Danil Free model router detuvo este turno para evitar reenviar el contenido.",
-  "chat.failure.free_router_mcp_credentials": "Este turno no puede iniciar con Danil Free model router por las restricciones de su configuración."
+  "chat.failure.free_router_stopped": "Router IA gratis detuvo este turno para evitar reenviar el contenido.",
+  "chat.failure.free_router_mcp_credentials": "Este turno no puede iniciar con Router IA gratis por las restricciones de su configuración."
 }
