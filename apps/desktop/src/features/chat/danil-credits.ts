@@ -15,8 +15,7 @@ export function availableDanilCredits(value: unknown): number | null {
   if (!value || typeof value !== "object") return null;
   const reply = value as Record<string, unknown>;
   const account = reply.account_id;
-  const identified = typeof account === "string" ? account.trim().length > 0
-    : typeof account === "number" && Number.isSafeInteger(account) && account > 0;
+  const identified = typeof account === "number" && Number.isSafeInteger(account) && account > 0;
   if (!identified || reply.execution_available !== false || !reply.wallet) return null;
   if (typeof reply.wallet !== "object") return null;
   const wallet = reply.wallet as Record<string, unknown>;

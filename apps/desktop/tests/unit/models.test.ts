@@ -197,7 +197,7 @@ test("el proveedor gratuito sigue la lengua activa con la marca Danil", () => {
 import { availableDanilCredits, DANIL_CREDITS } from "../../src/features/chat/danil-credits.ts";
 
 const response = (available: number) => ({
-  account_id: "danil-account",
+  account_id: 476,
   wallet: { balance_credits: 120, available_credits: available, status: "active" },
   execution_available: false,
 });
@@ -205,7 +205,7 @@ const response = (available: number) => ({
 test("the account wallet uses available credit and preserves a verified zero", () => {
   assert.equal(availableDanilCredits(response(80)), 80);
   assert.equal(availableDanilCredits(response(0)), 0);
-  assert.equal(availableDanilCredits({ ...response(80), account_id: 476 }), 80);
+  assert.equal(availableDanilCredits({ ...response(80), account_id: "476" }), null);
   assert.equal(availableDanilCredits({ ...response(0), wallet: null }), null);
 });
 
