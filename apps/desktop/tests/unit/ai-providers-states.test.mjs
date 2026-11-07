@@ -123,7 +123,7 @@ test("the task selector chooses the engine-advertised Credits model through its 
   const app = await boot("listo", "credits-task-selection", {
     ...BASE,
     list_providers: [{ id: provider, label: "OpenCode", available: true, driver: true }],
-    list_surfaces: [{ id: provider, provider, label: "OpenCode", catalogo: "de_pago", usable: true, marca: null, porque: null }],
+    list_surfaces: () => [{ id: provider, provider, label: "OpenCode", catalogo: "de_pago", usable: true, marca: null, porque: null }, ...(ready ? [{ id: "danil-credits", provider, label: "Danil Credits", catalogo: "todo", usable: true, marca: null, porque: null }] : [])],
     list_models: () => ({ provider, models: [option("base", "Base"), ...(ready ? [option(id, "DeepSeek V4.1 Flash")] : [])], fallback: false }),
     credits_pilot_prepare: ({ workspace }) => { assert.equal(workspace, "w"); ready = true; return { ready: true, account_id: 476, model: id, expires_at: 9999999999 }; },
     list_projects: [{ id: "p1", name: "P1", working_directory: "/lab/p1", kind: "git", portfolio: null, sources: [] }],

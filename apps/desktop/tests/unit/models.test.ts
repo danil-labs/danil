@@ -203,7 +203,7 @@ const response = (available: number) => ({
 });
 
 test("Danil Credits conserva el ejecutor y el modelo que anuncia el engine", () => {
-  const surface: Superficie = { id: "opencode-zen", provider: "opencode-zen", label: "OpenCode", catalogo: "de_pago", usable: true, marca: null, porque: null };
+  const surface: Superficie = { id: "danil-credits", provider: "opencode-zen", label: "Danil Credits", catalogo: "todo", usable: true, marca: null, porque: null };
   const options = opcionesDeModelos([surface], {
     "opencode-zen": { provider: "opencode-zen", fallback: false, models: [model(DANIL_CREDITS.modelId, "DeepSeek V4.1 Flash")] },
   });
@@ -265,4 +265,21 @@ test("the BFF reader uses the session-bound path and keeps loading, null, zero a
   assert.equal(availableDanilCredits(await read(Response.json({ ...response(0), wallet: null }))), null);
   await assert.rejects(read(Response.json({ error: "forbidden" }, { status: 403 })));
   await assert.rejects(read(new Response("not-json")));
+});
+
+
+test("Credits no habilita BYOK ni Free y sus permisos no heredan otra superficie", () => {
+  const credits: Superficie = { id: "danil-credits", provider: "opencode-zen", label: "Danil Credits", catalogo: "todo", usable: true, marca: null, porque: null };
+  const byok: Superficie = { ...credits, id: "opencode-zen", label: "OpenCode", catalogo: "de_pago", usable: false };
+  const free: Superficie = { ...credits, id: "opencode-zen-free", label: "Free", catalogo: "gratuitos", usable: false };
+  const catalog = { "opencode-zen": { provider: "opencode-zen", fallback: false, models: [
+    model(DANIL_CREDITS.modelId, "DeepSeek"), model("byok/model", "Own key"),
+    { ...model("danil-free/reflection/beam-free", "Beam"), gratis: true },
+    model("danil-credits/other", "Unapproved"),
+  ] } };
+  const options = opcionesDeModelos([credits, byok, free], catalog);
+  assert.deepEqual(options.filter((option) => option.usable).map((option) => [option.superficie, option.model.id]), [["danil-credits", DANIL_CREDITS.modelId]]);
+  const inverse = opcionesDeModelos([{ ...credits, usable: false }, { ...byok, usable: true }, { ...free, usable: true }], catalog);
+  assert.equal(inverse.find((option) => option.model.id === DANIL_CREDITS.modelId)?.usable, false);
+  assert.ok(inverse.filter((option) => option.usable).every((option) => !option.model.id.startsWith("danil-credits/")));
 });
