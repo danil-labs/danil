@@ -113,3 +113,46 @@ for (const [state, wallet, status, expected] of [
     assert.deepEqual(app.failures, []);
   });
 }
+
+test("the task selector chooses the engine-advertised Credits model through its existing agent", async () => {
+  const id = "danil-credits/deepseek/deepseek-v4.1-flash";
+  const provider = "opencode-zen";
+  const option = (id, label) => ({ id, label, gratis: false, note: null, efforts: [], default_effort: null });
+  const row = { id: "t1", title: "Credits task", last_message: "", provider, model: "base", refs: [], updated_at: 0, turns: 1, parent: null, esperando: false };
+  const app = await boot("listo", "credits-task-selection", {
+    ...BASE,
+    list_providers: [{ id: provider, label: "OpenCode", available: true, driver: true }],
+    list_surfaces: [{ id: provider, provider, label: "OpenCode", catalogo: "de_pago", usable: true, marca: null, porque: null }],
+    list_models: { provider, models: [option("base", "Base"), option(id, "DeepSeek V4.1 Flash")], fallback: false },
+    list_projects: [{ id: "p1", name: "P1", working_directory: "/lab/p1", kind: "git", portfolio: null, sources: [] }],
+    list_portfolios: [], list_agents: { agents: [], rechazados: [] }, list_agent_status: [],
+    list_live_sessions: [row], list_mentions: { fuentes: [], archivos: [] },
+    list_active_turns: [], load_queue: [], queue_ready: true, session_usage: null,
+    session_folder: "/tmp", list_task_trees: [], watch_task_tree: "watch", list_session_git: {},
+    task_history: { history: { archived: false, events: [], recovery: null }, branch: null, path: "/lab", available: true, owned: false, restorable: false, recreatable: false, incomplete: false },
+    load_session: { id: "t1", provider, model: "base", sources: [], effort: null, permission_mode: null, turns: [{ role: "user", id: "u0", at: 0, text: "hello" }] },
+  });
+  try {
+    await sleep(1200);
+    const doc = app.w.document;
+    assert.ok(doc.querySelector('[data-sesion="t1"]'), "the task is present");
+    doc.querySelector('[data-sesion="t1"]').click();
+    await sleep(600);
+    const picker = doc.querySelector('button[aria-label^="Modelo:"]');
+    assert.ok(picker, "the existing task model selector");
+    picker.click();
+    await sleep(250);
+    doc.querySelector('nav button[aria-label="Danil Credits"]').click();
+    await sleep(250);
+    const section = doc.querySelector('section[aria-label="Danil Credits"]');
+    const select = section?.querySelector("button");
+    assert.ok(select && !select.disabled, "the model is selectable only when the engine advertises it");
+    select.click();
+    await sleep(250);
+    assert.match(doc.querySelector('button[aria-label^="Modelo:"]').textContent, /DeepSeek V4.1 Flash/);
+    assert.equal(doc.querySelector('section[aria-label="Danil Credits"]'), null, "selection closes the picker");
+    assert.deepEqual(app.failures, []);
+  } finally {
+    app.w.close();
+  }
+});

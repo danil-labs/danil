@@ -2,10 +2,11 @@ import { createEffect, createResource, createSignal, onCleanup } from "solid-js"
 import { capabilities } from "../../lib/platform";
 import { t } from "../../lib/i18n";
 import { Button } from "../../ui/Button";
-import { availableDanilCredits, DANIL_CREDITS } from "./danil-credits";
+import { availableDanilCredits } from "./danil-credits";
+import type { OpcionDeModelo } from "../../lib/models";
 
-/** Saldo de cuenta por BFF; la ejecución espera aceptación de la integración. */
-export default function DanilCredits() {
+/** La opción ejecutable procede del catálogo autenticado del motor. */
+export default function DanilCredits(props: { model?: OpcionDeModelo; onSelect?: () => void; disabled?: boolean }) {
   const [revision, setRevision] = createSignal(0);
   createEffect(() => {
     const off = capabilities().danilCredits?.subscribe?.(() => setRevision((value) => value + 1));
@@ -35,11 +36,12 @@ export default function DanilCredits() {
         variant="outline"
         size="sm"
         class="justify-between"
-        disabled={!DANIL_CREDITS.executionEnabled}
-        title={t("chat.credits.integration_pending")}
+        disabled={!props.model?.usable || !props.onSelect || props.disabled}
+        title={!props.model?.usable || !props.onSelect || props.disabled ? t("chat.credits.integration_pending") : undefined}
+        onClick={() => props.onSelect?.()}
       >
         <span>{t("chat.credits.model")}</span>
-        <span class="text-caption">{t("chat.credits.unavailable")}</span>
+        <span class="text-caption">{t(props.model?.usable && props.onSelect && !props.disabled ? "chat.credits.select" : "chat.credits.unavailable")}</span>
       </Button>
       <dl class="m-0 grid gap-2 text-caption">
         <div class="flex justify-between gap-3">

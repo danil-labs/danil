@@ -458,6 +458,7 @@
   "chat.queue.stop_and_send_aria": "Stop the turn and send queued message {n}",
   "chat.credits.label": "Danil Credits",
   "chat.credits.model": "DeepSeek V4.1 Flash",
+  "chat.credits.select": "Select",
   "chat.credits.unavailable": "Unavailable",
   "chat.credits.integration_pending": "Integration pending acceptance",
   "chat.credits.payer": "Paid by",

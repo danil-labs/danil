@@ -202,6 +202,21 @@ const response = (available: number) => ({
   execution_available: false,
 });
 
+test("Danil Credits conserva el ejecutor y el modelo que anuncia el engine", () => {
+  const surface: Superficie = { id: "opencode-zen", provider: "opencode-zen", label: "OpenCode", catalogo: "de_pago", usable: true, marca: null, porque: null };
+  const options = opcionesDeModelos([surface], {
+    "opencode-zen": { provider: "opencode-zen", fallback: false, models: [model(DANIL_CREDITS.modelId, "DeepSeek V4.1 Flash")] },
+  });
+  assert.equal(options.length, 1);
+  assert.equal(options[0].agent, "opencode-zen");
+  assert.equal(options[0].model.id, DANIL_CREDITS.modelId);
+  assert.equal(options[0].proveedor.id, "danil-credits");
+  assert.equal(options[0].proveedor.logo, "danil");
+  assert.equal(modelBrand("opencode-zen", DANIL_CREDITS.modelId), "danil");
+  assert.equal(agruparModelos(options, "Danil Credits")[0].id, "danil-credits");
+  assert.equal(opcionesDeModelos([surface], {}).length, 0);
+});
+
 test("the account wallet uses available credit and preserves a verified zero", () => {
   assert.equal(availableDanilCredits(response(80)), 80);
   assert.equal(availableDanilCredits(response(0)), 0);
@@ -216,8 +231,8 @@ test("missing, failed or incompatible balance data never becomes zero", () => {
     { ...response(1), wallet: { available_credits: "20", status: "active" } }]) {
     assert.equal(availableDanilCredits(value), null);
   }
-  assert.equal(DANIL_CREDITS.executionEnabled, false);
-  assert.equal(DANIL_CREDITS.modelId, "deepseek/deepseek-v4.1-flash");
+  assert.equal(DANIL_CREDITS.modelId, "danil-credits/deepseek/deepseek-v4.1-flash");
+  assert.equal(DANIL_CREDITS.upstreamModelId, "deepseek/deepseek-v4.1-flash");
 });
 
 
