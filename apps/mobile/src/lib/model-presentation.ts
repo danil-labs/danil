@@ -12,3 +12,12 @@ export function selectedModelMark(provider: string | null | undefined, model?: s
   if (model?.startsWith("danil-free/") || (!model && surface?.catalogo === "gratuitos")) return "danil";
   return provider === "opencode-local" ? null : provider;
 }
+
+/**
+ * «Go» separa la suscripción del saldo de Zen. Los dos sirven el mismo modelo
+ * con el mismo nombre y cobran distinto: sin la etiqueta, el renglón que falla
+ * por falta de saldo es indistinguible del que ya está pagado.
+ */
+export function modelBillingTag(provider: string | null | undefined, model?: string | null) {
+  return provider === "opencode-zen" && model?.startsWith("opencode-go/") ? "Go" : null;
+}

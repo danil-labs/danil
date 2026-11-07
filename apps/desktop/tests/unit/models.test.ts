@@ -6,6 +6,7 @@ import { aplicarLenguaDeWorkspace } from "../../src/lib/i18n.ts";
 import {  agruparModelos,
   coincideModelo,
   favoritosDeModelos,
+  seccionDeModelo,
   effortOptions,
   opcionesDeModelos,
   effortValue,
@@ -62,13 +63,14 @@ test("los resultados conservan la sección que desambigua modelos parecidos", ()
     [
       ["Claude", [["claude", "gpt-5"]]],
       ["Codex", [["codex", "gpt-5"]]],
-      ["OpenCode", [["opencode-zen", "opencode/gpt-5"], ["opencode-zen", "opencode-go/gpt-5"]]],
+      ["OpenCode", [["opencode-zen", "opencode/gpt-5"]]],
+      ["OpenCode Go", [["opencode-zen", "opencode-go/gpt-5"]]],
       ["Router IA gratis", [["opencode-zen", "danil-free/reflection/beam-free"]]],
       ["OpenCode Local", [["opencode-local", "ollama/gpt-5"]]],
     ],
   );
   assert.deepEqual(grupos.map((grupo) => grupo.logo), [
-    "claude", "codex", "opencode", "danil", "opencode",
+    "claude", "codex", "opencode", "opencode", "danil", "opencode",
   ]);
 });
 
@@ -164,17 +166,22 @@ test("la fila de acciones nombra el modelo con su versión", () => {
   assert.equal(nombreDeModelo("grok-4.7"), "grok-4.7");
 });
 
- test("OpenCode agrupa Go sin cambiar identidad, búsqueda ni favoritos", () => {
+test("OpenCode separa Go de Zen sin cambiar identidad, búsqueda ni favoritos", () => {
   const surface: Superficie = { id: "opencode-zen", provider: "opencode-zen", label: "OpenCode", catalogo: "de_pago", usable: true, marca: null, porque: null };
   const options = opcionesDeModelos([surface], { "opencode-zen": { provider: "opencode-zen", fallback: false, models: [model("opencode-go/kimi", "Kimi"), model("opencode/gpt", "GPT")] } });
   const groups = agruparModelos(options, "");
-  assert.equal(groups.length, 1);
-  assert.equal(groups[0].label, "OpenCode");
-  assert.deepEqual(groups[0].models, options);
+  // Zen y Go cobran distinto: el mismo nombre en la misma sección deja dos
+  // renglones idénticos y el equivocado falla por saldo.
+  assert.deepEqual(groups.map((grupo) => grupo.label), ["OpenCode Go", "OpenCode"]);
+  assert.deepEqual(groups.flatMap((grupo) => grupo.models), options);
   assert.equal(options[0].proveedor.id, "opencode-go");
   assert.equal(options[0].key, "opencode-zen\u0000opencode-go/kimi");
   assert.deepEqual(agruparModelos(options, "OpenCode Go")[0].models, [options[0]]);
   assert.deepEqual(favoritosDeModelos(options, [options[0].key]), [options[0]]);
+  // Abrir el selector con un modelo Go elegido lleva a una sección que existe.
+  assert.equal(seccionDeModelo(groups, options[0].key), "opencode-go");
+  assert.equal(seccionDeModelo(groups, options[1].key), "opencode-zen");
+  assert.equal(seccionDeModelo(groups, "opencode-zen\u0000no-existe"), null);
 });
 
 test("Free conserva la marca Danil en turnos observados y OpenCode pagado conserva su logo", () => {

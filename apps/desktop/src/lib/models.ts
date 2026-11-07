@@ -142,15 +142,34 @@ export function agruparModelos(
     ) {
       continue;
     }
-    const visual = proveedor.id === "opencode-go"
-      ? { id: "opencode-zen", label: "OpenCode", logo: proveedor.logo }
-      : proveedor;
-    const grupo = grupos.get(visual.id) ?? { ...visual, models: [] };
+    // OpenCode Zen y OpenCode Go son dos servicios con la misma marca, el mismo
+    // catálogo y dos cobros distintos: Zen descuenta saldo y Go viene en un plan.
+    // Juntarlos deja dos «DeepSeek V4.1 Flash» idénticos en la misma sección y,
+    // al elegir uno, la sección del elegido no existe. Cada uno va en la suya y
+    // el encabezado dice cuál es.
+    const grupo = grupos.get(proveedor.id) ?? { ...proveedor, models: [] };
     grupo.models.push(opcion);
-    grupos.set(visual.id, grupo);
+    grupos.set(proveedor.id, grupo);
   }
 
   return [...grupos.values()];
+}
+
+/**
+ * La sección que contiene el modelo elegido, para abrir el selector ahí.
+ *
+ * **No sirve el proveedor del catálogo tal cual**: una sección puede juntar
+ * modelos de más de un proveedor (hoy no, y esa es justo la regla), y buscar en
+ * la lista agrupada es lo único que garantiza que la sección exista. `null`
+ * cuando el modelo no está en la lista — el modelo guardado de una tarea puede
+ * haber desaparecido del catálogo.
+ */
+export function seccionDeModelo(
+  grupos: readonly GrupoDeModelos[],
+  key: string | null | undefined,
+) {
+  if (!key) return null;
+  return grupos.find((grupo) => grupo.models.some((opcion) => opcion.key === key))?.id ?? null;
 }
 
 /**
