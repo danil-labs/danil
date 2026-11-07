@@ -90,7 +90,7 @@ const HandoverDialog = lazy(() => import("../features/chat/HandoverDialog"));
 const TaskFilesCard = lazy(() => import("../features/code/TaskFiles"));
 import { createTaskFiles, type TaskSideMode } from "../lib/taskFiles";
 import { esDeCodigo } from "../features/code/workdirKind";
-import Observability from "../features/observability/Observability";
+const Observability = lazy(() => import("../features/observability/Observability"));
 import AnadirCarpeta, { type ClonEnCurso, type InicioDeCarpeta } from "../features/projects/AddWorkdir";
 import AgentPageTasks from "../features/projects/AgentPageTasks";
 // Chunk aparte: el perfil completo de un agente solo se carga al abrirlo.

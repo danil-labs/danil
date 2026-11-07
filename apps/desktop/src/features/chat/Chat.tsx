@@ -155,7 +155,7 @@ import BloqueDeInterrupcion from "./InterruptionBlock";
 import ColaDeMensajes, { type ColaDeMensajesProps } from "./MessageQueue";
 import McpAppView from "./McpAppView";
 import { Select } from "../../ui/Select";
-import SelectorDeModelo from "./ModelPicker";
+const SelectorDeModelo = sharedLazy(() => import("./ModelPicker"));
 import SelectorDeModo from "./ModePicker";
 import { AltoMonotono } from "./MonotonicHeight";
 import { MARCA_SIN_ELEGIR } from "./marks";
