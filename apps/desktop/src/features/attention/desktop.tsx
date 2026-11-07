@@ -3,7 +3,7 @@
  * la web, con la sesión de persona que guarda la ventana y el BFF por Computers.
  * El token nunca llega aquí: `agents_bff_fetch` lo pone en Rust.
  */
-import { createRoot, createSignal, Show, Suspense, lazy, type JSX } from "solid-js";
+import { createRoot, createSignal, createEffect, createMemo, on, Show, Suspense, lazy, type JSX } from "solid-js";
 import type { DirectoryEntry } from "@terminus/computers";
 import { invoke } from "../../lib/invoke.ts";
 import { windowSession } from "./desktop-session";
@@ -17,6 +17,7 @@ import { loadedConversations, requestConversation } from "../../web/attention/lo
 import { bffTransport, setBffTransport, type BffTransport } from "../../web/attention/transport";
 import type { AgentsSession } from "../../web/attention/workspace-sources";
 import { Button } from "../../ui/Button";
+import { webDanilCredits } from "../../web/danil-credits";
 import { desktopUsageMe } from "../settings/usage-source";
 import "../../web/phrases";
 
@@ -264,6 +265,16 @@ export function installDesktopAttention() {
   setCapabilities({
     ...capabilities(),
     inbox,
+    danilCredits: webDanilCredits(session, PREFIX, windowFetch, (clear) => createRoot((dispose) => {
+      const identity = createMemo(() => {
+        const value = desktopStatus();
+        return value.state === "active"
+          ? `${value.user.user_id}:${value.active_account_id ?? ""}`
+          : value.state;
+      });
+      createEffect(on(identity, clear, { defer: true }));
+      return dispose;
+    })),
     accountUsage: () => (
       <Suspense fallback={null}>
         <UsageView source={desktopUsageMe()} />

@@ -193,3 +193,61 @@ test("el proveedor gratuito sigue la lengua activa con la marca Danil", () => {
   }
   aplicarLenguaDeWorkspace("es");
 });
+
+import { availableDanilCredits, DANIL_CREDITS } from "../../src/features/chat/danil-credits.ts";
+
+const response = (available: number) => ({
+  account_id: 476,
+  wallet: { balance_credits: 120, available_credits: available, status: "active" },
+  execution_available: false,
+});
+
+test("the account wallet uses available credit and preserves a verified zero", () => {
+  assert.equal(availableDanilCredits(response(80)), 80);
+  assert.equal(availableDanilCredits(response(0)), 0);
+  assert.equal(availableDanilCredits({ ...response(80), account_id: "476" }), null);
+  assert.equal(availableDanilCredits({ ...response(0), wallet: null }), null);
+});
+
+test("missing, failed or incompatible balance data never becomes zero", () => {
+  for (const value of [undefined, null, {}, { balance: 99 },
+    { ...response(1), account_id: "" }, response(NaN), response(Infinity),
+    { ...response(1), execution_available: true },
+    { ...response(1), wallet: { available_credits: "20", status: "active" } }]) {
+    assert.equal(availableDanilCredits(value), null);
+  }
+  assert.equal(DANIL_CREDITS.executionEnabled, false);
+  assert.equal(DANIL_CREDITS.modelId, "deepseek/deepseek-v4.1-flash");
+});
+
+
+import { webDanilCredits } from "../../src/web/danil-credits.ts";
+
+test("the BFF reader uses the session-bound path and keeps loading, null, zero and errors distinct", async () => {
+  const calls: { url: string; init: RequestInit | undefined }[] = [];
+  let release!: (value: Response) => void;
+  const pending = new Promise<Response>((resolve) => { release = resolve; });
+  const source = webDanilCredits(
+    { getToken: async () => "session-token", unauthorized: async () => false },
+    "/alpha-api",
+    async (input, init) => { calls.push({ url: String(input), init }); return pending; },
+  );
+  let settled = false;
+  const reading = source.readBalance().finally(() => { settled = true; });
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  assert.equal(settled, false, "a pending read stays pending instead of becoming zero");
+  assert.equal(calls[0].url, "/alpha-api/api/credits/balance");
+  assert.equal(calls[0].init?.method, "GET");
+  assert.equal(calls[0].init?.cache, "no-store");
+  assert.equal(new Headers(calls[0].init?.headers).get("Authorization"), "Bearer session-token");
+  release(Response.json(response(0)));
+  assert.equal(availableDanilCredits(await reading), 0);
+
+  const read = (reply: Response) => webDanilCredits(
+    { getToken: async () => "session-token", unauthorized: async () => false },
+    "/alpha-api", async () => reply,
+  ).readBalance();
+  assert.equal(availableDanilCredits(await read(Response.json({ ...response(0), wallet: null }))), null);
+  await assert.rejects(read(Response.json({ error: "forbidden" }, { status: 403 })));
+  await assert.rejects(read(new Response("not-json")));
+});
