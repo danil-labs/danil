@@ -60,4 +60,4 @@ export { type TaskTreeRow, type TaskBranch, taskIdentity, taskParent, buildTaskT
 export { type WorkState, WORK_STATES, workStateOf } from "./workState.ts";
 export { type ModelSession, type Surface, type SurfaceModel, chipModel, menuSurfaces, surfaceHas, surfaceOf } from "./surfaces.ts";
 
-export { modelPresentation } from "./model-presentation.ts";
+export { modelPresentation, routerDiscovery } from "./model-presentation.ts";

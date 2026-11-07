@@ -1,5 +1,5 @@
-import { modelPresentation } from "../../../../packages/tasks/src/model-presentation.ts";
-export { modelPresentation };
+import { modelPresentation, routerDiscovery } from "../../../../packages/tasks/src/model-presentation.ts";
+export { modelPresentation, routerDiscovery };
 import { t } from "./i18n.ts";
 import type { AgentModels, ModelOption } from "./model";
 import { esDe, marcaDeSuperficie, type Superficie } from "./surfaces.ts";

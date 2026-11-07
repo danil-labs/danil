@@ -470,17 +470,32 @@ assert.equal(sends[2].prompt, "Conserva este mensaje\n\nY este también");
 taskApp.emit("chat", { kind: "done", session: "s1", workspace: "w", ok: true });
 await sleep(100);
 
-const noUsable = await boot("listo", 3, NO_USABLE);
-const inventedSelector = noUsable.w.document.querySelector('button[title="Con qué modelo responde"]');
-const output = [...noUsable.w.document.querySelectorAll("button")].some(
-  (b) => b.textContent?.trim() === "Conectar una cuenta",
-);
-if (noUsable.failures.length > 0 || inventedSelector || !output) {
-  console.error(
-    "Sin superficies usables, el chat tiene que quedar sin selector de modelos y ofrecer conectar una cuenta.",
-  );
-  process.exit(1);
-}
+const discoverySends = [];
+const noUsable = await boot("listo", 3, {
+  ...NO_USABLE,
+  send_message: args => { discoverySends.push(args); return "unexpected-router-session"; },
+});
+const discoveryDoc = noUsable.w.document;
+const discoverySelector = discoveryDoc.querySelector('button[title="Con qué modelo responde"]');
+assert.deepEqual(noUsable.failures, []);
+assert.ok(discoverySelector && !discoverySelector.disabled, "Sin catálogo, el selector permite descubrir la oferta informativa.");
+assert.ok([...discoveryDoc.querySelectorAll("button")].some(b => b.textContent?.trim() === "Conectar una cuenta"), "Conectar una cuenta sigue disponible sin modelos usables.");
+discoverySelector.click();
+await sleep(50);
+const discovery = discoveryDoc.querySelector('section[aria-label="Router IA gratis"]');
+assert.ok(discovery, "La oferta del Router aparece sin un catálogo del motor.");
+assert.match(discovery.textContent, /Beam/);
+assert.match(discovery.textContent, /Reflection/);
+assert.match(discovery.textContent, /Conecta o actualiza una máquina compatible/);
+assert.ok(discovery.querySelector('[aria-disabled="true"]'), "Beam informativo no es seleccionable.");
+assert.equal(discovery.querySelector("button"), null, "La ficha no tiene acciones de selección.");
+assert.equal(discoveryDoc.querySelector('[role="option"]'), null, "La oferta no inventa opciones del catálogo.");
+discovery.click();
+const discoverySearch = discoveryDoc.querySelector('input[placeholder="Buscar modelos"]');
+discoverySearch?.dispatchEvent(new noUsable.w.KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+await sleep(20);
+assert.equal(discoverySends.length, 0, "Descubrir Beam no envía una inferencia.");
+assert.equal(discoveryDoc.querySelector('button[aria-label="Preguntar"]:not(:disabled)'), null, "Sin modelos usables no se habilita el envío.");
 for (const [platform, userAgent] of [
   ["macOS", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"],
   ["Windows", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"],
