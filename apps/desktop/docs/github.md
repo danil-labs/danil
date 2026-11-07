@@ -16,6 +16,8 @@ administradores controlan esa instalación.
 La selección no cambia los permisos de otras personas ni la instalación de la
 organización. Solo se ofrecen repositorios que la cuenta de GitHub puede ver y
 que la instalación de la App alcanza. Una selección vacía no concede ninguno.
+El selector admite hasta 1000 repositorios por instalación; si hay más, no
+muestra una lista incompleta ni permite guardar desde ella.
 Para instalar la App en otra organización se usa «Añadir organización»; GitHub
 puede requerir la aprobación de una persona administradora.
 

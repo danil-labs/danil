@@ -177,7 +177,7 @@ Fecha: 2026-11-06. Alcance: `github.md` y su enlace en el README, frente al
 cliente y las ramas de trabajo del servicio y del motor. La entrega coordinada
 sigue pendiente. Plataforma de las pruebas locales: macOS aarch64.
 
-Medición: `github.md` tiene 62 líneas y 3431 bytes; las guías leídas de
+Medición: `github.md` tiene 64 líneas y 3568 bytes; las guías leídas de
 escritorio, frontend y pruebas tienen 83, 26 y 17 líneas. La evaluación anterior
 cubre la transición de marca, no este cambio de GitHub.
 
