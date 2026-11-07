@@ -43,6 +43,7 @@ una instalación compatible si ya existe; en caso contrario, descarga el
 artefacto oficial en una carpeta privada y comprueba su SHA-256. La descarga
 ocurre en segundo plano. Si un comando se ejecuta antes de que termine, puede
 fallar y volver a intentarse en la misma tarea después de la instalación.
+Si la descarga falla, otra conexión o tarea puede reintentarla tras cinco minutos.
 
 El `gh` gestionado consulta un intermediario local. Recibe un permiso de sesión
 del workspace, no la credencial externa de GitHub. Las operaciones admitidas

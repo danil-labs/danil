@@ -275,8 +275,7 @@ export default function GithubAccount(props: {
   const scopeOf = (i: GithubInstallation) => {
     const config = credential()?.config;
     const area = config?.areas.find((a) => a.installation_id === i.installation_id);
-    const replaced = config?.areas.some((a) => a.key.toLowerCase() === i.key.toLowerCase() && a.installation_id !== i.installation_id);
-    if ((config?.personal_scope || config?.legacy_areas_present || replaced) && !area) return t("providers.github.account.scope_count", { count: 0 });
+    if ((config?.personal_scope || config?.legacy_areas_present || (config?.areas.length ?? 0) > 0) && !area) return t("providers.github.account.scope_count", { count: 0 });
     if (area?.personal_repository_ids) return t("providers.github.account.scope_count", { count: area.personal_repository_ids.length });
     return i.repository_selection === "all"
       ? t("providers.github.account.scope_all")
@@ -313,8 +312,7 @@ export default function GithubAccount(props: {
       if (result.kind === "unauthorized") capabilities().githubPersonalUnauthorized?.();
       if (result.kind !== "ok") throw githubAccountFailure(result.kind === "failed" ? result.code ?? "github_unavailable" : "unauthorized");
       const area = c.config.areas.find((a) => a.installation_id === installation.installation_id);
-      const replaced = c.config.areas.some((a) => a.key.toLowerCase() === installation.key.toLowerCase() && a.installation_id !== installation.installation_id);
-      const ids = (c.config.personal_scope || c.config.legacy_areas_present || replaced) && !area ? [] : area?.personal_repository_ids;
+      const ids = (c.config.personal_scope || c.config.legacy_areas_present || c.config.areas.length > 0) && !area ? [] : area?.personal_repository_ids;
       const visible = new Set(result.value.map((repo) => repo.id));
       setRepositories(result.value);
       setSelected(ids ? ids.filter((id) => visible.has(id)) : [...visible]);

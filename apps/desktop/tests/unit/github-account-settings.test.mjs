@@ -287,6 +287,34 @@ test("legacy areas cannot silently expand to other installations", async () => {
   }
 });
 
+test("an installation excluded by an existing area selection starts with no repositories", async () => {
+  const e = engine();
+  const { w } = await openSources("github-account-excluded-installation", e);
+  const originalFetch = globalThis.fetch;
+  const requests = [];
+  globalThis.fetch = async (url, options) => {
+    if (!String(url).startsWith("https://github-control.test/")) return originalFetch(url, options);
+    requests.push({ url: String(url), options });
+    if (options.method === "GET" && !String(url).includes("/repositories?")) return Response.json({ connected: true, credential: CREDENTIAL });
+    if (options.method === "GET") return Response.json({ repositories: [{ id: 12, name: "notes", full_name: "nosoypoot/notes", clone_url: "https://github.com/nosoypoot/notes.git" }] });
+    return Response.json({ credential: { ...CREDENTIAL, version: 3, config: { ...CREDENTIAL.config, areas: JSON.parse(options.body).areas, personal_scope: true } } });
+  };
+  try {
+    assert.ok(row(w, "nosoypoot").textContent.includes("0 repos"));
+    buttonIn(row(w, "nosoypoot"), "Cambiar repositorios de nosoypoot").click();
+    await sleep(100);
+    const picker = card(w).querySelector("[data-github-personal-repositories]");
+    assert.equal(picker.querySelector('input[type="checkbox"]').checked, false);
+    buttonIn(picker, "Guardar selección").click();
+    await sleep(100);
+    const saved = JSON.parse(requests.find((r) => r.options.method === "PUT").options.body);
+    assert.deepEqual(saved.areas.find((a) => a.key === "nosoypoot").personal_repository_ids, []);
+    assert.ok(saved.areas.some((a) => a.key === "danil-labs"));
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test("a reinstalled GitHub App replaces the old installation without granting its old access", async () => {
   const credential = { ...CREDENTIAL, config: { ...CREDENTIAL.config, areas: [{ key: "danil-labs", installation_id: 70, repository_ids: null }] } };
   const e = engine({ status: { connected: true, credential, install_url: INSTALLS.install_url } });
