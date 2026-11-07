@@ -129,6 +129,7 @@
   "chat.mode.unsupported": "This agent cannot change mode mid-turn. The mode you chose applies from the next one.",
   "chat.model.aria": "Model: {model}",
   "chat.model.aria_effort": "Model: {model}. Reasoning: {effort}",
+  "chat.model.router_requirements": "Connect or update a compatible machine. Enablement and consent are required.",
   "chat.model.empty": "No models",
   "chat.model.favorite": "Add {model} to favorites",
   "chat.model.favorites": "Favorites",

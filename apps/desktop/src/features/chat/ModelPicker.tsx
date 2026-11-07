@@ -10,6 +10,7 @@ import { left, type Query } from "../../lib/limits";
 import {
   agruparModelos,
   modelPresentation,
+  routerDiscovery,
   effortOptions,
   effortValue,
   esFavorito,
@@ -74,6 +75,7 @@ export default function SelectorDeModelo(props: SelectorDeModeloProps) {
       (opcion) =>
         opcion.superficie === props.superficie && opcion.model.id === props.model,
     );
+  const discovery = createMemo(() => routerDiscovery(props.models.map((option) => option.model.id), busqueda()));
   const todosLosGrupos = createMemo(() => agruparModelos(props.models, busqueda()));
   const bloqueado = (opcion: OpcionDeModelo) =>
     !!props.lockedAgent && opcion.agent !== props.lockedAgent;
@@ -141,7 +143,7 @@ export default function SelectorDeModelo(props: SelectorDeModeloProps) {
     }
     const inicial = elegido()?.usable ? elegido()!.key : visibles()[0]?.key ?? "";
     const proveedorElegido = elegido()?.proveedor.id;
-    setSeccion(proveedorElegido ?? (favoritos().length > 0 ? "favorites" : todosLosGrupos()[0]?.id ?? "favorites"));
+    setSeccion(proveedorElegido ?? (favoritos().length > 0 ? "favorites" : todosLosGrupos()[0]?.id ?? "router-info"));
     setActivo(inicial);
     setTimeout(() => {
       campo?.focus();
@@ -282,6 +284,17 @@ export default function SelectorDeModelo(props: SelectorDeModeloProps) {
             >
               <Star size={17} fill={seccion() === "favorites" ? "currentColor" : "none"} />
             </button>
+            <Show when={discovery()}>
+              <button
+                type="button"
+                class={cn("flex size-9 shrink-0 items-center justify-center rounded-sm text-neutral-500 hover:bg-surface-muted hover:text-neutral-950", seccion() === "router-info" && "bg-surface-muted text-neutral-950")}
+                aria-label={t("surfaces.label.free")}
+                title={t("surfaces.label.free")}
+                onClick={() => setSeccion("router-info")}
+              >
+                <MarcaAgente id="danil" size={17} />
+              </button>
+            </Show>
             <For each={todosLosGrupos()}>
               {(grupo) => (
                 <button
@@ -298,13 +311,27 @@ export default function SelectorDeModelo(props: SelectorDeModeloProps) {
           </nav>
           <div class="scroll-visible min-h-0 overflow-y-auto p-1" role="listbox" aria-label={t("chat.model.listbox")}>
           <Show
-            when={grupos().some((grupo) => grupo.models.length > 0)}
+            when={grupos().some((grupo) => grupo.models.length > 0) || !!discovery() && (seccion() === "router-info" || !!busqueda().trim())}
             fallback={
               <p class="m-0 px-2 py-3 text-sm text-neutral-500">
                 {t("chat.model.empty")}
               </p>
             }
           >
+            <Show when={discovery() && (seccion() === "router-info" || !!busqueda().trim())}>
+              <section aria-label={t("surfaces.label.free")} class="px-2 py-2">
+                <div class="flex items-center gap-1.5 text-xs font-medium text-neutral-500">
+                  <MarcaAgente id="danil" size={14} />
+                  <span>{t("surfaces.label.free")}</span>
+                </div>
+                <div class="mt-2 flex items-center gap-2 text-sm text-neutral-950" aria-disabled="true">
+                  <span>{discovery()?.label}</span>
+                  <span class="rounded-sm border border-border px-1 text-xs text-neutral-500">{discovery()?.creator}</span>
+                  <Lock size={12} class="ml-auto text-neutral-500" />
+                </div>
+                <p class="mb-0 mt-1 text-xs text-neutral-500">{t("chat.model.router_requirements")}</p>
+              </section>
+            </Show>
             <For each={grupos()}>
               {(grupo) => (
                 <section role="group" aria-label={rotulo(grupo)}>

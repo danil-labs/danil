@@ -2856,7 +2856,7 @@ export default function Chat(props: ChatProps) {
               </Button>
             </Show>
 
-            <Show when={(props.superficies?.length ?? 0) > 0 && !modoTerminal()}>
+            <Show when={!modoTerminal()}>
               {/* Una opción decide agente, superficie y modelo. Separarlos hacía
                   imposible buscar Claude, Codex y OpenCode en el mismo menú.
                   La marca sale del agente que sirve la superficie: «OpenCode»
@@ -2869,10 +2869,7 @@ export default function Chat(props: ChatProps) {
                 superficie={props.superficie}
                 model={props.model}
                 missingModelLabel={props.nativeSubagent ? t("chat.model.unreported") : undefined}
-                disabled={
-                  props.modelLocked ||
-                  !opciones().some((opcion) => opcion.usable)
-                }
+                disabled={props.modelLocked}
                 disabledReason={
                   props.agentLocked && props.agentLockedReason
                     ? props.agentLockedReason
