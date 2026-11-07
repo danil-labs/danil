@@ -90,6 +90,7 @@ function engine({ signedIn = true, local = null, source = undefined, status = { 
       check_git_host: () => github(local, source),
       git_host_areas: () => [],
       danil_workspace_account: record("danil_workspace_account", () => ({ account: signedIn ? "u_a" : null, signed_in: signedIn })),
+      account_relay_token: record("account_relay_token", () => ({ endpoint: "https://github-control.test", token: "client-jwt" })),
       github_account_status: record("github_account_status", () => {
         if (statusFails === true) throw unknown();
         if (statusFails) throw statusFails;
@@ -136,7 +137,7 @@ async function menu(w, label) {
   await sleep(300);
 }
 
-test("with a Danil session the card reflects where the App is installed, with no per-workspace picker", async () => {
+test("a person chooses repositories without changing the organization's GitHub installation", async () => {
   const e = engine();
   const app = await openSources("github-account-card", e);
   const { w } = app;
@@ -151,16 +152,40 @@ test("with a Danil session the card reflects where the App is installed, with no
   assert.ok(row(w, "raelay")?.textContent.includes("Algunos repos"), "without repository_count");
   assert.ok(card(w).querySelector("[data-github-installation-pending]")?.textContent.includes("Espera a una admin"));
 
-  buttonIn(row(w, "nosoypoot"), "Cambiar nosoypoot en GitHub").click();
-  buttonIn(row(w, "raelay"), "Cambiar raelay en GitHub").click();
+  const originalFetch = globalThis.fetch;
+  const requests = [];
+  globalThis.fetch = async (url, options) => {
+    if (!String(url).startsWith("https://github-control.test/")) return originalFetch(url, options);
+    requests.push({ url: String(url), options });
+    if (options.method === "GET") return Response.json({ repositories: [
+      { id: 11, name: "brand", full_name: "danil-labs/brand", clone_url: "https://github.com/danil-labs/brand.git" },
+      { id: 12, name: "danil-workspace", full_name: "danil-labs/danil-workspace", clone_url: "https://github.com/danil-labs/danil-workspace.git" },
+    ] });
+    const { areas } = JSON.parse(options.body);
+    return Response.json({ credential: { ...CREDENTIAL, version: 3, config: { ...CREDENTIAL.config, areas, personal_scope: true } } });
+  };
+  buttonIn(row(w, "danil-labs"), "Cambiar repositorios de danil-labs").click();
+  await sleep(100);
+  const picker = card(w).querySelector("[data-github-personal-repositories]");
+  assert.ok(picker?.textContent.includes("danil-labs/brand"));
+  const boxes = picker.querySelectorAll('input[type="checkbox"]');
+  assert.equal(boxes.length, 2);
+  boxes[1].click();
+  buttonIn(picker, "Guardar selección").click();
+  await sleep(100);
+  const saved = JSON.parse(requests.find((r) => r.options.method === "PUT").options.body);
+  assert.equal(saved.personal_scope, true);
+  assert.equal(saved.expected_version, 2);
+  assert.deepEqual(saved.areas.find((a) => a.key === "danil-labs").personal_repository_ids, [11]);
+  assert.ok(!card(w).querySelector("[data-github-personal-repositories]"));
+  globalThis.fetch = originalFetch;
   buttonIn(card(w), "Añadir organización").click();
   await sleep(100);
-  assert.deepEqual(opened(e), ["https://github.com/settings/installations/8", INSTALLS.install_url, INSTALLS.install_url], "html_url, else install_url");
+  assert.deepEqual(opened(e), [INSTALLS.install_url]);
 
   assert.equal(buttonIn(card(w), "Usar en este workspace"), undefined);
   assert.equal(buttonIn(card(w), "Elegir organizaciones"), undefined);
-  assert.equal(card(w).querySelector('[role="switch"], input[type="checkbox"]'), null, "no area toggles");
-  assert.ok(!e.calls.some((c) => c.command === "github_account_set_areas"), "the card never sets areas");
+  assert.equal(card(w).querySelector('[role="switch"], input[type="checkbox"]'), null, "picker is closed after saving");
 
   // Las máquinas son chips en la fila de la cuenta, no filas; el `title` las nombra todas.
   const machines = card(w).querySelector('[data-github-login] [data-github-machines]');

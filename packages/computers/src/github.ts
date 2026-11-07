@@ -10,7 +10,7 @@
 import { bearerCall, errorCodeOf } from "./api.ts";
 
 /** Una cuenta u organización elegida: `key` es su login en minúsculas. */
-export type GithubArea = { key: string; installation_id: number; repository_ids: number[] | null };
+export type GithubArea = { key: string; installation_id: number; repository_ids: number[] | null; personal_repository_ids?: number[] };
 
 export type GithubMachineState = "active" | "pending" | "removed" | "signed_in";
 
@@ -23,7 +23,9 @@ export type GithubMachine = {
   last_seen_at: string | null;
 };
 
-export type GithubConfig = { github_user_id: number | null; login: string; name: string | null; avatar: string | null; areas: GithubArea[] };
+export type GithubConfig = { github_user_id: number | null; login: string; name: string | null; avatar: string | null; areas: GithubArea[]; personal_scope?: true };
+
+export type GithubRepository = { id: number; name: string; full_name: string; clone_url: string };
 
 /** La credencial `kind = github` con la forma común del contrato de credenciales (§ 3). */
 export type GithubCredential = {
@@ -89,7 +91,10 @@ async function call<T>(source: GithubSource, method: string, path: string, read:
 function areaOf(raw: unknown): GithubArea | null {
   if (!isObj(raw) || !str(raw.key) || num(raw.installation_id) === null) return null;
   const ids = Array.isArray(raw.repository_ids) ? raw.repository_ids.filter((n): n is number => typeof n === "number") : null;
-  return { key: raw.key as string, installation_id: raw.installation_id as number, repository_ids: ids };
+  const personal = Array.isArray(raw.personal_repository_ids)
+    ? raw.personal_repository_ids.filter((n): n is number => Number.isSafeInteger(n) && n > 0)
+    : undefined;
+  return { key: raw.key as string, installation_id: raw.installation_id as number, repository_ids: ids, ...(personal ? { personal_repository_ids: personal } : {}) };
 }
 
 const MACHINE_STATES = new Set(["active", "pending", "removed", "signed_in"]);
@@ -122,6 +127,7 @@ export function githubCredentialOf(raw: unknown): GithubCredential | null {
       name: str(config.name),
       avatar: str(config.avatar),
       areas: (Array.isArray(config.areas) ? config.areas : []).map(areaOf).filter((a): a is GithubArea => a !== null),
+      ...(config.personal_scope === true ? { personal_scope: true as const } : {}),
     },
     machines: (Array.isArray(raw.machines) ? raw.machines : []).map(machineOf).filter((m): m is GithubMachine => m !== null),
   };
@@ -188,9 +194,20 @@ export function githubInstallations(source: GithubSource, workspace: string) {
 }
 
 /** Cambia las organizaciones que alcanza el workspace; sube la versión de la credencial. */
-export function setGithubAreas(source: GithubSource, workspace: string, areas: GithubArea[]) {
-  const body = areas.map((a) => (a.repository_ids ? a : { key: a.key, installation_id: a.installation_id }));
-  return call(source, "PUT", `${routeOf(workspace)}/areas`, credentialOrThrow, { areas: body });
+export function setGithubAreas(source: GithubSource, workspace: string, areas: GithubArea[], personal?: { expected_version: number }) {
+  const body = areas.map((a) => ({ key: a.key, installation_id: a.installation_id, ...(a.repository_ids ? { repository_ids: a.repository_ids } : {}), ...(a.personal_repository_ids ? { personal_repository_ids: a.personal_repository_ids } : {}) }));
+  return call(source, "PUT", `${routeOf(workspace)}/areas`, credentialOrThrow, { areas: body, ...(personal ? { personal_scope: true, expected_version: personal.expected_version } : {}) });
+}
+
+/** Repositorios visibles para esta persona dentro de una instalación de la App. */
+export function githubRepositories(source: GithubSource, workspace: string, installationId: number) {
+  return call(source, "GET", `${routeOf(workspace)}/repositories?installation_id=${encodeURIComponent(installationId)}`, (raw): GithubRepository[] => {
+    if (!isObj(raw) || !Array.isArray(raw.repositories)) throw new Error("bad_repositories");
+    return raw.repositories.map((repo: unknown) => {
+      if (!isObj(repo) || !Number.isSafeInteger(repo.id) || (repo.id as number) <= 0 || !str(repo.name) || !str(repo.full_name) || !str(repo.clone_url)) throw new Error("bad_repository");
+      return { id: repo.id as number, name: repo.name as string, full_name: repo.full_name as string, clone_url: repo.clone_url as string };
+    });
+  });
 }
 
 /** Revoca los tokens emitidos y borra la conexión del workspace. */

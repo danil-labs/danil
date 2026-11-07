@@ -254,6 +254,7 @@ function mountApp(computers: Computer[], base: Base, before?: (id: string) => ()
   for (const type of ["dragover", "drop"]) window.addEventListener(type, (e) => e.preventDefault());
   const screens = createScreenAccess({ endpoint: base.endpoint, getToken: token, knows: (id) => !!fleet.info(id) });
   setCapabilities({
+    githubPersonalSource: { endpoint: base.endpoint, getToken: async () => await base.getToken() },
     appDownloads: true,
     workspaceDirectory: import.meta.env.TERMINUS_ALPHA ? {
       list: async () => {

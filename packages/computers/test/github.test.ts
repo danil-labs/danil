@@ -42,6 +42,15 @@ const credential = {
   ],
 };
 
+test("conserva una selección personal de repositorios, incluso vacía", async () => {
+  const selected = { key: "danil-labs", installation_id: 7, repository_ids: null, personal_repository_ids: [] };
+  const status = githubStatusOf({ connected: true, credential: { ...credential, config: { ...credential.config, areas: [selected] } } });
+  assert.deepEqual(status.credential?.config.areas, [selected]);
+  const seen: Seen[] = [];
+  await setGithubAreas(source(200, { credential }, seen), "w", [selected], { expected_version: 3 });
+  assert.deepEqual(JSON.parse(seen[0]?.body ?? "null"), { areas: [{ key: selected.key, installation_id: selected.installation_id, personal_repository_ids: [] }], personal_scope: true, expected_version: 3 });
+});
+
 test("el estado de GitHub sale del Worker con el JWT: login, áreas y máquinas", async () => {
   const seen: Seen[] = [];
   const answer = await githubStatus(source(200, { connected: true, credential, install_url: "https://github.com/apps/terminus-app/installations/new" }, seen), "w 1");

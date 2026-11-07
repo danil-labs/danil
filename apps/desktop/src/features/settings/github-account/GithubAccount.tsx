@@ -4,6 +4,11 @@ import {
   type GithubInstallations,
   type GithubMachine,
   type GithubStatus,
+  type GithubSource,
+  type GithubRepository,
+  type GithubArea,
+  githubRepositories,
+  setGithubAreas,
   githubAuthorizeOf,
   githubCredentialOf,
   githubInstallationsOf,
@@ -22,8 +27,9 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { FailureNote, type Failure } from "../../../ui/Failure";
 import { Skeleton } from "../../../ui/Skeleton";
 import { SettingsBlock, SettingsRow } from "../layout";
-import { githubAccountCode, githubAccountFailureOf, notHere, silent } from "./failures.ts";
+import { githubAccountCode, githubAccountFailure, githubAccountFailureOf, notHere, silent } from "./failures.ts";
 import { ENLACE } from "../../../ui/ExternalLink";
+import type { WorkspaceAccount } from "../danil-sessions.ts";
 
 /**
  * GitHub en la cuenta de Danil: la conexión es de la persona y Danil refleja
@@ -69,6 +75,10 @@ export default function GithubAccount(props: {
   const [code, setCode] = createSignal<string | null>(null);
   const [waiting, setWaiting] = createSignal<string | null>(null);
   const [installs, setInstalls] = createSignal<GithubInstallations | null>(null);
+  const [editing, setEditing] = createSignal<GithubInstallation | null>(null);
+  const [repositories, setRepositories] = createSignal<GithubRepository[]>([]);
+  const [selected, setSelected] = createSignal<number[]>([]);
+  const [editVersion, setEditVersion] = createSignal(0);
   const [installUrl, setInstallUrl] = createSignal<string | null>(null);
   /** La máquina tenía otra GitHub (sin sesión) y la cuenta conservó la suya. */
   const [adoptNotice, setAdoptNotice] = createSignal<{ login: string; account_login: string } | null>(null);
@@ -261,13 +271,70 @@ export default function GithubAccount(props: {
 
   const machineName = (m: GithubMachine) => m.name || capabilities().machineName?.(m.computer_id) || m.computer_id;
   const openUrl = (url: string) => invoke("open_external", { target: url }).catch(() => {});
-  const scopeOf = (i: GithubInstallation) =>
-    i.repository_selection === "all"
+  const scopeOf = (i: GithubInstallation) => {
+    const config = credential()?.config;
+    const area = config?.areas.find((a) => a.installation_id === i.installation_id);
+    if (config?.personal_scope && !area) return t("providers.github.account.scope_count", { count: 0 });
+    if (area?.personal_repository_ids) return t("providers.github.account.scope_count", { count: area.personal_repository_ids.length });
+    return i.repository_selection === "all"
       ? t("providers.github.account.scope_all")
       : i.repository_selection === "selected" && i.repository_count !== null
         ? t("providers.github.account.scope_count", { count: i.repository_count })
         : t("providers.github.account.scope_some");
-  const changeUrl = (i: GithubInstallation) => i.html_url ?? installUrl();
+  };
+
+  async function personalSource(): Promise<GithubSource> {
+    const web = capabilities().githubPersonalSource;
+    if (web) return web;
+    const account = await invoke<WorkspaceAccount>("danil_workspace_account", { workspace: props.scope });
+    if (!account.signed_in || !account.account) throw githubAccountFailure("workspace_not_linked");
+    const client = await invoke<{ endpoint: string; token: string }>("account_relay_token", { account: account.account });
+    return { endpoint: client.endpoint, getToken: async () => client.token };
+  }
+
+  async function editRepositories(installation: GithubInstallation) {
+    const c = credential();
+    if (!c) return;
+    setBusy("repositories");
+    clearFailure();
+    try {
+      const result = await githubRepositories(await personalSource(), props.scope, installation.installation_id);
+      if (result.kind !== "ok") throw githubAccountFailure(result.kind === "failed" ? result.code ?? "github_unavailable" : "unauthorized");
+      const area = c.config.areas.find((a) => a.installation_id === installation.installation_id);
+      const ids = c.config.personal_scope && !area ? [] : area?.personal_repository_ids;
+      setRepositories(result.value);
+      setSelected(ids ?? result.value.map((repo) => repo.id));
+      setEditVersion(c.version);
+      setEditing(installation);
+    } catch (e) {
+      fail(e);
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function saveRepositories() {
+    const c = credential();
+    const installation = editing();
+    const list = installs();
+    if (!c || !installation || !list) return;
+    setBusy("repositories");
+    clearFailure();
+    try {
+      const areas: GithubArea[] = c.config.personal_scope || c.config.areas.length > 0
+        ? c.config.areas.filter((a) => a.installation_id !== installation.installation_id)
+        : list.installations.filter((i) => i.installation_id !== installation.installation_id).map((i) => ({ key: i.key, installation_id: i.installation_id, repository_ids: null }));
+      areas.push({ key: installation.key, installation_id: installation.installation_id, repository_ids: null, personal_repository_ids: selected() });
+      const result = await setGithubAreas(await personalSource(), props.scope, areas, { expected_version: editVersion() });
+      if (result.kind !== "ok") throw githubAccountFailure(result.kind === "failed" ? result.code ?? "github_unavailable" : "unauthorized");
+      applyStatus({ ...(status() as GithubStatus), credential: result.value });
+      setEditing(null);
+    } catch (e) {
+      fail(e);
+    } finally {
+      setBusy(null);
+    }
+  }
 
   const Initial = (p: { name: string; round?: boolean }) => (
     <span
@@ -454,7 +521,7 @@ export default function GithubAccount(props: {
                 {(list) => (
                   <div class="contents" data-github-installations="">
                     <For each={list().installations}>
-                      {(i) => (
+                      {(i) => (<>
                         <SettingsRow
                           class={license() ? "pl-6 opacity-60" : "pl-6"}
                           data-github-installation={i.key}
@@ -462,22 +529,36 @@ export default function GithubAccount(props: {
                           label={i.account.login}
                         >
                           <span class="text-ui text-neutral-500">{scopeOf(i)}</span>
-                          <Show when={!license() ? changeUrl(i) : null}>
-                            {(url) => (
+                          <Show when={!license()}>
                               <Button
                                 variant="outline"
                                 size="compact"
                                 aria-label={t("providers.github.account.change_on", { name: i.account.login })}
                                 disabled={busy() !== null}
-                                onClick={() => void openUrl(url())}
+                                onClick={() => void editRepositories(i)}
                               >
                                 {t("providers.github.account.change")}
-                                <ExternalIcon size={12} aria-hidden />
                               </Button>
-                            )}
                           </Show>
                         </SettingsRow>
-                      )}
+                        <Show when={editing()?.installation_id === i.installation_id}>
+                          <SettingsBlock>
+                            <div class="flex flex-col gap-2" data-github-personal-repositories="">
+                              <span class="text-ui text-neutral-500">{t("providers.github.account.personal_scope_notice")}</span>
+                              <For each={repositories()}>{(repo) => (
+                                <label class="flex items-center gap-2 text-ui">
+                                  <input type="checkbox" checked={selected().includes(repo.id)} onChange={(event) => setSelected((ids) => event.currentTarget.checked ? [...ids, repo.id] : ids.filter((id) => id !== repo.id))} />
+                                  {repo.full_name}
+                                </label>
+                              )}</For>
+                              <div class="flex gap-2">
+                                <Button size="compact" disabled={busy() !== null} onClick={() => void saveRepositories()}>{t("providers.github.account.save_repositories")}</Button>
+                                <Button variant="ghost" size="compact" disabled={busy() !== null} onClick={() => setEditing(null)}>{t("providers.github.account.cancel")}</Button>
+                              </div>
+                            </div>
+                          </SettingsBlock>
+                        </Show>
+                      </>)}
                     </For>
                     <Show when={list().install_pending && !pendingHidden()}>
                       <SettingsRow class="pl-6" data-github-installation-pending="" label={<Badge tone="warning">{t("providers.github.account.pending")}</Badge>}>
