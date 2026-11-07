@@ -155,7 +155,6 @@ import BloqueDeInterrupcion from "./InterruptionBlock";
 import ColaDeMensajes, { type ColaDeMensajesProps } from "./MessageQueue";
 import McpAppView from "./McpAppView";
 import { Select } from "../../ui/Select";
-import SelectorDeModelo from "./ModelPicker";
 import SelectorDeModo from "./ModePicker";
 import { AltoMonotono } from "./MonotonicHeight";
 import { MARCA_SIN_ELEGIR } from "./marks";
@@ -180,6 +179,7 @@ import { Spinner } from "../../ui/Spinner";
 
 // Chunk aparte: el bloque de razonamiento solo lo carga un turno que lo trae.
 const Reasoning = sharedLazy(() => import("./Reasoning"));
+const SelectorDeModelo = sharedLazy(() => import("./ModelPicker"));
 
 /**
  * Quién dijo un turno: lo arma Rust a partir de la cuenta del agente o del
