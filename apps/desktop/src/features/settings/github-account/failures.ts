@@ -17,6 +17,7 @@ const KNOWN = new Set([
   "github_reauthorize",
   "github_unavailable",
   "github_disabled",
+  "github_cancelled",
   "license_required",
   "invalid_return_to",
   "not_found",
@@ -52,3 +53,52 @@ export const notHere = (e: unknown): boolean => NOT_HERE.has(githubAccountCode(e
 
 /** Si el fallo se calla en vez de mostrarse. */
 export const silent = (e: unknown): boolean => SILENT.has(githubAccountCode(e) ?? "");
+
+/** Los de GitLab y Bitbucket llegan con el prefijo del proveedor (`gitlab_cancelled`); esto es lo que sigue. */
+const HOST_KNOWN = new Set([
+  "not_connected",
+  "machine_removed",
+  "machine_unowned",
+  "reauthorize",
+  "unavailable",
+  "disabled",
+  "cancelled",
+  "denied",
+  "invalid_grant",
+  "refresh_invalid",
+  "adopt_lost",
+]);
+const HOST_SHARED = new Set(["workspace_not_linked", "not_linked", "license_required", "invalid_return_to", "not_found", "offline"]);
+
+/** `no_client_token`: la ventana no pudo pedir el token de cliente de la cuenta (motor viejo o sin sesión). */
+const HOST_NOT_HERE = ["command", "unsupported", "command_not_allowed", "not_found", "http_404", "not_linked", "workspace_not_linked", "license_required", "no_client_token"];
+/** `not_found`: un Worker sin las rutas `/v1/git-hosts/*` contesta así; manda la tarjeta local. */
+const HOST_SILENT = ["command", "unsupported", "command_not_allowed", "not_found", "http_404", "no_client_token"];
+
+const hostKey = (provider: string, code: string): string | null => {
+  if (code.startsWith(`${provider}_`) && HOST_KNOWN.has(code.slice(provider.length + 1))) return code.slice(provider.length + 1);
+  if (HOST_SHARED.has(code)) return code === "not_linked" ? "workspace_not_linked" : code;
+  return null;
+};
+
+/** Como `githubAccountFailure`, para GitLab o Bitbucket: la frase lleva el nombre del proveedor. */
+export function gitHostAccountFailure(provider: string, name: string, code: string | null): Failure {
+  const c = code ?? "offline";
+  const key = hostKey(provider, c) ?? "generic";
+  return { what: t(`providers.git_host.account.error.${key}`, { name }), detail: `credentials.error.${c}` };
+}
+
+export function gitHostAccountFailureOf(provider: string, name: string, e: unknown): unknown {
+  const code = githubAccountCode(e);
+  return code && hostKey(provider, code) ? gitHostAccountFailure(provider, name, code) : e;
+}
+
+export const gitHostNotHere = (provider: string, e: unknown): boolean => {
+  const code = githubAccountCode(e) ?? "";
+  return HOST_NOT_HERE.includes(code) || code === `${provider}_disabled`;
+};
+
+export const gitHostSilent = (provider: string, e: unknown): boolean => {
+  const code = githubAccountCode(e) ?? "";
+  return HOST_SILENT.includes(code) || code === `${provider}_disabled`;
+};
