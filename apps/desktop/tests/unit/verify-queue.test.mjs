@@ -162,7 +162,7 @@ test("--remote devuelve el exit real y el log entero, y dice qué plataforma no 
   assert.equal(failed.code, 7, failed.output);
   assert.match(failed.output, /paso-visible/);
   assert.match(failed.output, /falló \(exit 7\)/);
-  assert.match(failed.output, /Linux en 127/);
+  assert.match(failed.output, process.platform === "darwin" ? /macOS en 127/ : /Linux en 127/);
   assert.match(failed.output, /NO se comprobó: una corrida --remote nunca cuenta por ellos/);
 
   commit(repo, "echo segundo");
