@@ -303,7 +303,6 @@ import {
 import { Button } from "../ui/Button";
 import { LazyPart, retryableLazy } from "../ui/LazyPart";
 import { mergeGates } from "../features/chat/permissionGates";
-import { errorCode } from "../lib/errorCode.ts";
 import { asleep, withLastAnswer } from "../features/machines/lastAnswer";
 import { Dialog, DialogContent, DialogTitle } from "../ui/Dialog";
 import { asFailure, claveDe, detalleDe, prosaDe } from "../ui/Failure";
@@ -2198,7 +2197,7 @@ export default function App() {
       setSources(fuentes);
       confirmContext(root, fuentes);
     } catch (e) {
-      if (generation !== sessionGeneration || request !== materialRequest) return;
+      if (generation !== sessionGeneration || request !== materialRequest || asleep(e)) return;
       setError(prosaDe(e));
     }
   }
@@ -2229,8 +2228,6 @@ export default function App() {
   // material»: traer un repositorio a mitad de una tarea por aquí cierra la
   // conversación y deja la anterior abandonada, sin error y sin aviso. Para
   // eso está `recargarMaterial`.
-  /** En la web una máquina apagada tiene su indicador y su rebanada: lo que no contestó no es un error. */
-  const apagadaEnLaWeb = (e: unknown) => !!capabilities().computerStatus && errorCode(e) === "machine_off";
 
   async function aplicar(a: Startup) {
     guardarCache.flush();
@@ -2346,10 +2343,10 @@ export default function App() {
         } else setError(t("projects.context.unavailable"));
       }
     } catch (e) {
-      if (generation !== sessionGeneration || material !== materialRequest) return;
+      if (generation !== sessionGeneration || material !== materialRequest || asleep(e)) return;
       setProjectList([]);
       setSources([]);
-      if (!apagadaEnLaWeb(e)) setError(prosaDe(e));
+      setError(prosaDe(e));
     }
     if (primeras) {
       // Si cambiaron las carpetas, `grupos` relee también las nuevas; esta lectura ya vale para las de siempre.
@@ -2466,8 +2463,8 @@ export default function App() {
           setTimeout(() => void arrancar(quedan - 1), 1000);
           return;
         }
-        // En la web una máquina apagada tiene su indicador: no es un error, y al encenderse trae sus workspaces.
-        if (!apagadaEnLaWeb(e)) setError(prosaDe(e));
+        // Una máquina apagada tiene su indicador; al conectarse trae sus workspaces.
+        if (!asleep(e)) setError(prosaDe(e));
         // La lista ya abrió la ventana: se dice el error y no se vacía lo que se está usando.
         if (aplicadaDeLista) return;
         if (enCache()) {
@@ -2492,7 +2489,7 @@ export default function App() {
       const request = ++workspaceRequest;
       void invoke<Startup>("list_workspaces")
         .then((startup) => request === workspaceRequest ? aplicar(startup) : undefined)
-        .catch((e) => { if (request === workspaceRequest) setError(prosaDe(e)); });
+        .catch((e) => { if (request === workspaceRequest && !asleep(e)) setError(prosaDe(e)); });
     };
     window.addEventListener("harness:workspace", alMudar);
     onCleanup(() => window.removeEventListener("harness:workspace", alMudar));
@@ -2734,8 +2731,8 @@ export default function App() {
         const encendiendo = claveDe(e) === "shell.service.machine_starting";
         const managed = claveDe(e) === "shell.service.managed";
         const caido = sinMotor || managed || apagada || encendiendo || claveDe(e) === "shell.service.engine_down";
-        // En la web la computadora en reposo tiene su indicador: no es un error.
-        if ((apagada || encendiendo) && capabilities().computerStatus) return;
+        // La computadora en reposo tiene su indicador, también en escritorio.
+        if (apagada || encendiendo || asleep(e)) return;
         if (!disposed && Date.now() - failingSince > (caido ? 2_000 : 10_000)) {
           setError(sinMotor ? t("shell.service.engine_missing") : managed ? t("shell.service.managed") : apagada ? t("shell.service.machine_off") : encendiendo ? t("shell.service.machine_starting") : t(caido ? "shell.service.engine_down" : "chat.error.service_unavailable"));
         }
@@ -3373,7 +3370,7 @@ export default function App() {
       const workspace = workspaceActivo();
       void invoke<Project[]>("list_projects").then((items) => {
         if (workspace === workspaceActivo()) setProjectList(items);
-      }).catch((error) => setError(prosaDe(error)));
+      }).catch((error) => { if (!asleep(error)) setError(prosaDe(error)); });
       void reloadSpaces();
       void cargarSuperficies(false);
       setCuentasTocadas((n) => n + 1);
@@ -3390,7 +3387,7 @@ export default function App() {
           const current = startup.workspaces.find((w) => w.id === workspace);
           aplicarLenguaDeWorkspace(current?.lengua ?? null);
           setWorkspaceMode(current?.default_permission_mode ?? null);
-        }).catch((error) => setError(prosaDe(error)));
+        }).catch((error) => { if (!asleep(error)) setError(prosaDe(error)); });
       }
     });
     onCleanup(() => void cliChanged.then((stop) => stop()));
