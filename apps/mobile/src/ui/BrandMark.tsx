@@ -14,6 +14,7 @@ export function BrandMark({ id, size = 14, color }: { id: string | null | undefi
   const dark = useTheme().dark;
   // Ids por instancia: la marca se pinta varias veces por pantalla, y dos ids iguales se pisan.
   const uid = useId().replace(/[^\w-]/g, "");
+  if (id === "danil") return <ToolBrandMark server="danil" size={size} color={color} />;
   const which = agentMarkId(id);
   if (!which) return null;
   const mark = AGENT_MARKS[which];
