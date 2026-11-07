@@ -1,3 +1,5 @@
+import { modelPresentation } from "../../../../packages/tasks/src/model-presentation.ts";
+export { modelPresentation };
 import { t } from "./i18n.ts";
 import type { AgentModels, ModelOption } from "./model";
 import { esDe, marcaDeSuperficie, type Superficie } from "./surfaces.ts";
@@ -191,7 +193,7 @@ export function nombreDeModelo(id: string, catalogo?: AgentModels | null): strin
     const nombre = `Claude ${familia[0].toUpperCase()}${familia.slice(1)}`;
     return version ? `${nombre} ${version.slice(1).replaceAll("-", ".")}` : nombre;
   }
-  return catalogo?.models.find((m) => m.id === limpio)?.label || limpio;
+  return modelPresentation(limpio, catalogo?.models.find((m) => m.id === limpio)?.label).label;
 }
 
 /** La marca del modelo observado no cambia la identidad de su ejecutor. */

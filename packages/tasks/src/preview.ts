@@ -8,6 +8,7 @@
  * Cada cliente pinta esto a su manera; qué entra y con qué palabras sale de
  * aquí. Lo que solo el escritorio sabe (rama, PR, etapa) lo añade él.
  */
+import { modelPresentation } from "./model-presentation.ts";
 import { word } from "../../design/src/index.ts";
 import { type CardOptions, type CardTask, taskCard } from "./card.ts";
 import { isPinned } from "./view.ts";
@@ -43,7 +44,7 @@ export function modelName(id: string, catalog?: ModelCatalog): string {
     const name = `Claude ${family[0].toUpperCase()}${family.slice(1)}`;
     return version ? `${name} ${version.slice(1).replaceAll("-", ".")}` : name;
   }
-  return catalog?.models.find((m) => m.id === clean)?.label || clean;
+  return modelPresentation(clean, catalog?.models.find((m) => m.id === clean)?.label).label;
 }
 
 export type PreviewTask = CardTask & TitledTask & {

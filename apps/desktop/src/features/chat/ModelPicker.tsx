@@ -9,6 +9,7 @@ import { invoke } from "../../lib/invoke.ts";
 import { left, type Query } from "../../lib/limits";
 import {
   agruparModelos,
+  modelPresentation,
   effortOptions,
   effortValue,
   esFavorito,
@@ -107,7 +108,11 @@ export default function SelectorDeModelo(props: SelectorDeModeloProps) {
     const opcion = niveles().find((o) => o.value === nivel());
     return opcion ? nombreDeNivel(opcion.label) : undefined;
   };
-  const nombre = () => elegido()?.model.label ?? (props.model || props.missingModelLabel || t("chat.model.none"));
+  const selectedName = () => {
+    const option = elegido();
+    return option ? modelPresentation(option.model.id, option.model.label).label : props.model ? modelPresentation(props.model).label : null;
+  };
+  const nombre = () => selectedName() ?? (props.missingModelLabel || t("chat.model.none"));
 
   const mostrarActivo = () => {
     queueMicrotask(() => filas.get(activo())?.scrollIntoView({ block: "nearest" }));
@@ -212,7 +217,7 @@ export default function SelectorDeModelo(props: SelectorDeModeloProps) {
               )}
             </Show>
             <span class={cn("min-w-0 truncate", props.pildora && "font-medium text-neutral-950")}>
-              {elegido()?.model.label ?? (props.model || props.missingModelLabel || t("chat.model.placeholder"))}
+              {selectedName() ?? (props.missingModelLabel || t("chat.model.placeholder"))}
             </span>
             <Show when={rotuloDeNivel()}>
               {(rotulo) => (
@@ -352,13 +357,13 @@ export default function SelectorDeModelo(props: SelectorDeModeloProps) {
                           <Show when={bloqueado(opcion)}>
                             <Lock size={12} class="shrink-0" aria-hidden="true" />
                           </Show>
-                          <span class="truncate">{opcion.model.label}</span>
+                          <span class="truncate">{modelPresentation(opcion.model.id, opcion.model.label).label}</span>
                         </span>
                         <button
                           type="button"
                           class={cn("rounded-sm p-0.5 text-neutral-500 outline-none hover:text-primary focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-primary", esFavorito(opcion.key, favoritos()) && "text-primary")}
-                          aria-label={esFavorito(opcion.key, favoritos()) ? t("chat.model.unfavorite", { model: opcion.model.label }) : t("chat.model.favorite", { model: opcion.model.label })}
-                          title={esFavorito(opcion.key, favoritos()) ? t("chat.model.unfavorite", { model: opcion.model.label }) : t("chat.model.favorite", { model: opcion.model.label })}
+                          aria-label={esFavorito(opcion.key, favoritos()) ? t("chat.model.unfavorite", { model: modelPresentation(opcion.model.id, opcion.model.label).label }) : t("chat.model.favorite", { model: modelPresentation(opcion.model.id, opcion.model.label).label })}
+                          title={esFavorito(opcion.key, favoritos()) ? t("chat.model.unfavorite", { model: modelPresentation(opcion.model.id, opcion.model.label).label }) : t("chat.model.favorite", { model: modelPresentation(opcion.model.id, opcion.model.label).label })}
                           onClick={(event) => {
                             event.stopPropagation();
                             alternarFavorito(opcion.key);
@@ -366,9 +371,9 @@ export default function SelectorDeModelo(props: SelectorDeModeloProps) {
                         >
                           <Star size={15} fill={esFavorito(opcion.key, favoritos()) ? "currentColor" : "none"} />
                         </button>
-                        <Show when={opcion.model.gratis === true}>
+                        <Show when={modelPresentation(opcion.model.id, opcion.model.label).creator}>
                           <span class="rounded-sm border border-border px-1 text-xs text-neutral-500">
-                            {t("chat.model.free")}
+                            {modelPresentation(opcion.model.id, opcion.model.label).creator}
                           </span>
                         </Show>
                       </div>

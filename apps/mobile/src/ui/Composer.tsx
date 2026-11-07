@@ -12,7 +12,7 @@ import {
   type SlashMenu,
 } from "@terminus/protocol";
 import { replaceSlash, slashAt } from "@terminus/chat/slash";
-import { menuSurfaces, modelName, previewLabel, type Surface, surfaceHas, surfaceOf } from "@terminus/tasks";
+import { menuSurfaces, modelName, modelPresentation, previewLabel, type Surface, surfaceHas, surfaceOf } from "@terminus/tasks";
 import * as DocumentPicker from "expo-document-picker";
 import { File } from "expo-file-system";
 import * as ImagePicker from "expo-image-picker";
@@ -749,7 +749,8 @@ export function Composer({
               {shownModels.map((m) => (
                 <SheetOption
                   key={m.id}
-                  label={m.label || modelName(m.id, models)}
+                  label={modelPresentation(m.id, m.label || modelName(m.id, models)).label}
+                  tag={modelPresentation(m.id, m.label).creator}
                   detail={m.note ? phrase(m.note) : null}
                   selected={model === m.id}
                   onPress={() => {
