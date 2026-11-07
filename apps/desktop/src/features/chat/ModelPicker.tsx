@@ -36,6 +36,7 @@ type SelectorDeModeloProps = {
   disabled?: boolean;
   disabledReason?: string;
   onChange: (model: OpcionDeModelo) => void;
+  onCreditsPrepare?: () => void;
   /** El agente de la tarea: los demás se ven, pero el candado dice por qué no se eligen. */
   lockedAgent?: string;
   lockedReason?: string | null;
@@ -292,7 +293,7 @@ export default function SelectorDeModelo(props: SelectorDeModeloProps) {
               aria-label={t("chat.credits.label")}
               aria-pressed={seccion() === "danil-credits"}
               title={t("chat.credits.label")}
-              onClick={() => { setSeccion("danil-credits"); setActivo(""); }}
+              onClick={() => { setSeccion("danil-credits"); setActivo(""); props.onCreditsPrepare?.(); }}
             >
               <MarcaAgente id="danil" size={17} />
             </button>

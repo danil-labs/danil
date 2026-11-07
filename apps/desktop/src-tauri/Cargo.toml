@@ -64,6 +64,9 @@ ureq = { version = "3.2", features = ["json"] }
 keyring = { version = "3.6", features = ["apple-native", "windows-native", "sync-secret-service", "crypto-rust"] }
 base64 = "0.22"
 getrandom = "0.3"
+httparse = "1.10"
+reqwest = { version = "0.13", default-features = false, features = ["rustls", "stream"] }
+tokio = { version = "1", features = ["sync", "macros"] }
 # La vista en vivo de Typst arranca Tinymist en una carpeta de trabajo vacía.
 tempfile = "3"
 terminus-engine-client = { path = "crates/engine-client" }

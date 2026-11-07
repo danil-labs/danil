@@ -117,13 +117,15 @@ for (const [state, wallet, status, expected] of [
 test("the task selector chooses the engine-advertised Credits model through its existing agent", async () => {
   const id = "danil-credits/deepseek/deepseek-v4.1-flash";
   const provider = "opencode-zen";
+  let ready = false;
   const option = (id, label) => ({ id, label, gratis: false, note: null, efforts: [], default_effort: null });
   const row = { id: "t1", title: "Credits task", last_message: "", provider, model: "base", refs: [], updated_at: 0, turns: 1, parent: null, esperando: false };
   const app = await boot("listo", "credits-task-selection", {
     ...BASE,
     list_providers: [{ id: provider, label: "OpenCode", available: true, driver: true }],
     list_surfaces: [{ id: provider, provider, label: "OpenCode", catalogo: "de_pago", usable: true, marca: null, porque: null }],
-    list_models: { provider, models: [option("base", "Base"), option(id, "DeepSeek V4.1 Flash")], fallback: false },
+    list_models: () => ({ provider, models: [option("base", "Base"), ...(ready ? [option(id, "DeepSeek V4.1 Flash")] : [])], fallback: false }),
+    credits_pilot_prepare: ({ workspace }) => { assert.equal(workspace, "w"); ready = true; return { ready: true, account_id: 476, model: id, expires_at: 9999999999 }; },
     list_projects: [{ id: "p1", name: "P1", working_directory: "/lab/p1", kind: "git", portfolio: null, sources: [] }],
     list_portfolios: [], list_agents: { agents: [], rechazados: [] }, list_agent_status: [],
     list_live_sessions: [row], list_mentions: { fuentes: [], archivos: [] },
@@ -143,7 +145,8 @@ test("the task selector chooses the engine-advertised Credits model through its 
     picker.click();
     await sleep(250);
     doc.querySelector('nav button[aria-label="Danil Credits"]').click();
-    await sleep(250);
+    await sleep(650);
+    assert.ok(ready, "opening Credits prepares the local engine without exposing a credential to JavaScript");
     const section = doc.querySelector('section[aria-label="Danil Credits"]');
     const select = section?.querySelector("button");
     assert.ok(select && !select.disabled, "the model is selectable only when the engine advertises it");

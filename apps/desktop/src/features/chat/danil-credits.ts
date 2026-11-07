@@ -7,6 +7,7 @@ export const DANIL_CREDITS = Object.freeze({
 /** El contrato completo y su esquema Zod pertenecen al BFF de Appv2. */
 export type DanilCreditsSource = {
   readBalance: () => Promise<unknown>;
+  prepare?: (headers: Record<string, string>) => Promise<unknown>;
   subscribe?: (clear: () => void) => () => void;
 };
 

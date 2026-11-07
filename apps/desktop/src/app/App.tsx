@@ -7656,6 +7656,17 @@ export default function App() {
         onAgregarAdjuntos={agregarArchivos}
         agent={agent()}
         modelOptions={composerOptions()}
+        onCreditsPrepare={() => {
+          const prepare = capabilities().danilCredits?.prepare;
+          if (!prepare) return;
+          const revision = composerRevision;
+          const options = composerOptions();
+          void prepare(options.headers).then(async () => {
+            if (revision !== composerRevision) return;
+            await cargarSuperficies(false);
+            await cargarModelos("opencode-zen", true);
+          }).catch(() => setError(t("chat.credits.integration_pending")));
+        }}
         /* Lo utilizable, más la superficie de la tarea abierta si dejó de
            serlo: una tarea viva no puede cambiar de agente en silencio. El
            `&&` va dentro del accesor y no aquí — ver `menuDeSuperficies`. */
