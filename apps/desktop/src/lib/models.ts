@@ -1,3 +1,6 @@
+import { modelPresentation } from "../../../../packages/tasks/src/model-presentation.ts";
+export { modelPresentation };
+import { t } from "./i18n.ts";
 import type { AgentModels, ModelOption } from "./model";
 import { esDe, marcaDeSuperficie, type Superficie } from "./surfaces.ts";
 
@@ -43,8 +46,11 @@ export function proveedorDe(
   model: ModelOption,
 ) {
   if (superficie.provider === "opencode-zen") {
+    if (model.id === "danil-credits/deepseek/deepseek-v4.1-flash") {
+      return { id: "danil-credits", label: t("chat.credits.label"), logo: "danil" };
+    }
     if (superficie.catalogo === "gratuitos") {
-      return { id: "opencode-free", label: "Danil Free AI", logo: marcaDeSuperficie(superficie) };
+      return { id: "opencode-free", label: t("surfaces.label.free"), logo: marcaDeSuperficie(superficie) };
     }
     if (model.id.startsWith("opencode-go/")) {
       return { id: "opencode-go", label: "OpenCode Go", logo: "opencode" };
@@ -139,9 +145,12 @@ export function agruparModelos(
     ) {
       continue;
     }
-    const grupo = grupos.get(proveedor.id) ?? { ...proveedor, models: [] };
+    const visual = proveedor.id === "opencode-go"
+      ? { id: "opencode-zen", label: "OpenCode", logo: proveedor.logo }
+      : proveedor;
+    const grupo = grupos.get(visual.id) ?? { ...visual, models: [] };
     grupo.models.push(opcion);
-    grupos.set(proveedor.id, grupo);
+    grupos.set(visual.id, grupo);
   }
 
   return [...grupos.values()];
@@ -187,5 +196,11 @@ export function nombreDeModelo(id: string, catalogo?: AgentModels | null): strin
     const nombre = `Claude ${familia[0].toUpperCase()}${familia.slice(1)}`;
     return version ? `${nombre} ${version.slice(1).replaceAll("-", ".")}` : nombre;
   }
-  return catalogo?.models.find((m) => m.id === limpio)?.label || limpio;
+  return modelPresentation(limpio, catalogo?.models.find((m) => m.id === limpio)?.label).label;
+}
+
+/** La marca del modelo observado no cambia la identidad de su ejecutor. */
+export function modelBrand(agent: string, id?: string | null, catalog?: AgentModels | null): string {
+  return id?.startsWith("danil-free/") || id?.startsWith("danil-credits/") || catalog?.models.some((model) => model.id === id && model.gratis === true)
+    ? "danil" : agent;
 }

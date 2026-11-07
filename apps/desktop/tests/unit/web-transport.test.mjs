@@ -9,6 +9,58 @@ import { engine, relay } from "../helpers/fake-relay.mjs";
 import { waitFor } from "../helpers/wait-for.mjs";
 import { boot, sleep } from "../helpers/jsdom-app.mjs";
 
+test("consent and policy reads preserve captured workspace and machine without fallback", async () => {
+  const { fleet } = await import("../helpers/fake-relay.mjs");
+  const workspaces = ["w", "w2"].map((id) => ({ id, name: id, context_root: null }));
+  const table = {
+    ...engine,
+    list_workspaces: { workspaces, active: "w" },
+    workspaces_startup: { workspaces, active: "w" },
+    set_active_workspace: null,
+    set_provider_consent: null,
+  };
+  const f = fleet({ cmp_first: { table }, cmp_captured: { table } });
+  const computers = ["cmp_first", "cmp_captured"].map((id) => ({
+    computer_id: id, name: id, state: "online", provider: "aws-ec2", workspaces: ["w", "w2"],
+  }));
+  const app = await boot("listo", "web-free-policy-scope", {}, undefined, {}, {
+    web: true,
+    beforeImport: (w) => {
+      globalThis.WebSocket = f.Socket;
+      w.terminusWeb = { endpoint: "https://relay.test", computers, getToken: async () => "tok" };
+    },
+  });
+  try {
+    await waitFor(() => f.relays.cmp_captured.calls.some((c) => c.command === "list_workspaces"), "captured machine did not connect");
+    assert.deepEqual(app.failures, []);
+    const invoke = (command, args, options) => app.w.__TAURI_INTERNALS__.invoke(command, args, options);
+    await invoke("list_workspaces");
+    await invoke("set_active_workspace", { id: "w" });
+    const captured = { headers: { "x-terminus-workspace": "w2", "x-terminus-machine": "cmp_captured" } };
+    for (const [command, args] of [
+      ["workspaces_startup", {}],
+      ["set_provider_consent", { provider: "opaque-policy-reference", accepted: true }],
+      ["set_provider_consent", { provider: "opencode-zen", accepted: false }],
+    ]) {
+      const before = Object.fromEntries(Object.entries(f.relays).map(([id, r]) => [id, r.calls.length]));
+      await invoke(command, args, captured);
+      const sent = f.relays.cmp_captured.calls.slice(before.cmp_captured).filter((c) => c.command === command);
+      assert.equal(sent.length, 1, `${command} reaches the captured machine once`);
+      assert.equal(sent[0].workspace, "w2");
+      assert.deepEqual(sent[0].args, args);
+      assert.equal(f.relays.cmp_first.calls.slice(before.cmp_first).filter((c) => c.command === command).length, 0);
+      const counts = Object.values(f.relays).map((r) => r.calls.filter((c) => c.command === command).length);
+      await assert.rejects(invoke(command, args, { headers: {
+        "x-terminus-workspace": "w2", "x-terminus-machine": "cmp_removed",
+      } }), (error) => error.detail === "unknown_machine");
+      assert.deepEqual(Object.values(f.relays).map((r) => r.calls.filter((c) => c.command === command).length), counts);
+    }
+  } finally {
+    for (const r of Object.values(f.relays)) for (const socket of r.sockets) socket.close();
+    app.w.close();
+  }
+});
+
 test("the web build talks to the relay: calls, events and machine state", async () => {
   const fake = relay();
   const app = await boot("listo", "web-transport", {}, undefined, {}, {

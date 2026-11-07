@@ -36,7 +36,7 @@ export type SurfaceModel = { id: string; gratis?: boolean | null };
  */
 export function surfaceHas(s: Surface | undefined, m: SurfaceModel): boolean {
   if (!s || s.catalogo === "todo") return true;
-  return s.catalogo === "gratuitos" ? m.gratis === true : m.gratis !== true;
+  return s.catalogo === "gratuitos" ? m.gratis === true && m.id === "danil-free/reflection/beam-free" : m.gratis !== true;
 }
 
 /**

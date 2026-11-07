@@ -49,6 +49,7 @@ import { CHUNK, chunkAt, chunkIds, chunkOf, chunkStart, headChunk, tailChunk, ty
 import { workLabel } from "../projects/branchLabel";
 import { sangrarTerminal } from "./terminalIndent";
 import { ponerLanzamiento } from "./launchGroups";
+import { freeMcpNoticeAt } from "./free-mcp-notice.ts";
 import { FIN_DE_ARCHIVO, TECLAS_DE_TERMINAL, pideClave } from "./commandInput";
 import { claseDelTramo, finishEdit, highlightSpans, placeLabel, referenceId, searchPlaces, searchTasks, taskLabel, taskTarget, type MentionTarget, type PendingEdit, type PlaceCandidate, type TextEdit, type TaskCandidate, type TaskMention, tramosDelMensaje } from "../../lib/taskMentions";
 import {
@@ -84,6 +85,7 @@ import { AstroAvatar } from "../projects/AstroAvatar";
 import {
   type CatalogosDeModelos,
   nombreDeModelo,
+  modelBrand,
   type OpcionDeModelo,
   opcionesDeModelos,
 } from "../../lib/models";
@@ -1600,6 +1602,13 @@ export default function Chat(props: ChatProps) {
   const bloques = createMemo<Bloque[]>(() => {
     const out: Bloque[] = [];
     props.msgs.forEach((m, i) => {
+      const freeNotice = freeMcpNoticeAt(props.msgs, i);
+      if (freeNotice) {
+        const names = freeNotice.names?.map((name) => JSON.stringify(name)).join(", ");
+        out.push({ tipo: "msg", msg: { ...m, text: [t("chat.notice.free_router_mcp_unavailable"), names].filter(Boolean).join("\n") }, i });
+        return;
+      }
+      if (freeMcpNoticeAt(props.msgs, i - 1)?.names) return;
       // Contestar no deja un turno suelto en el hilo: la respuesta se pinta
       // DENTRO de la pregunta que contesta, que es donde se lee lo que se
       // preguntó y lo que se decidió como una sola cosa.
@@ -2855,7 +2864,7 @@ export default function Chat(props: ChatProps) {
               <SelectorDeModelo
                 pildora
                 invokeOptions={props.modelOptions}
-                marca={actual()?.provider ?? props.agent}
+                marca={modelBrand(actual()?.provider ?? props.agent, props.model)}
                 models={opciones()}
                 superficie={props.superficie}
                 model={props.model}
@@ -3158,7 +3167,7 @@ export default function Chat(props: ChatProps) {
                             class="flex size-11 items-center justify-center rounded-full bg-neutral-200"
                             title={sender().model ?? sender().provider}
                           >
-                            <MarcaAgente id={sender().provider} size={22} />
+                            <MarcaAgente id={modelBrand(sender().provider, sender().model)} size={22} />
                           </div>
                         </div>
                       )}
@@ -4373,7 +4382,7 @@ function LineaDeProveedor(props: {
 }) {
   // El nombre del proveedor no se escribe: el logo ya lo dice y el modelo va
   // solo. Queda en el `title` para quien pase el cursor por encima.
-  const titulo = () => props.provider ?? props.agentLabel;
+  const titulo = () => modelBrand(props.agent, props.model, props.catalogo) === "danil" ? t("surfaces.label.free") : props.provider ?? props.agentLabel;
   return (
     <span
       class="flex items-center gap-1 whitespace-nowrap rounded-sm px-1 text-caption leading-4 text-neutral-500"
@@ -4382,7 +4391,7 @@ function LineaDeProveedor(props: {
       data-provider={props.provider}
     >
       <span class="flex size-3.5 shrink-0 items-center justify-center">
-        <MarcaAgente id={props.agent} size={12} />
+        <MarcaAgente id={modelBrand(props.agent, props.model, props.catalogo)} size={12} />
       </span>
       <Show when={props.model}>
         {(id) => (

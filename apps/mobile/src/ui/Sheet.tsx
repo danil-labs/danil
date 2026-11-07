@@ -1,4 +1,4 @@
-import { TEXT } from "@terminus/design";
+import { RADIUS, TEXT } from "@terminus/design";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { Animated, Easing, KeyboardAvoidingView, Modal, PanResponder, Platform, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -122,6 +122,7 @@ export function SheetSection({ children }: { children: string }) {
 /** Una opción de una hoja: ícono o marca, rótulo, detalle y si está elegida. */
 export function SheetOption({
   label,
+  tag,
   detail,
   icon,
   left,
@@ -132,6 +133,7 @@ export function SheetOption({
   destructive = false,
 }: {
   label: string;
+  tag?: string | null;
   detail?: string | null;
   icon?: IconName;
   left?: ReactNode;
@@ -161,6 +163,7 @@ export function SheetOption({
           </Text>
         ) : null}
       </View>
+      {tag ? <View style={{ borderWidth: 1, borderColor: theme.border, borderRadius: RADIUS.sm, paddingHorizontal: 5, paddingVertical: 1 }}><Text style={{ color: theme.textMuted, fontSize: TEXT.label }}>{tag}</Text></View> : null}
       {selected ? <Icon name="check" size={17} color={theme.primary} /> : null}
     </Pressable>
   );

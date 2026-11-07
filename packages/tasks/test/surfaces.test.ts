@@ -5,7 +5,7 @@ import { chipModel, menuSurfaces, type Surface, surfaceHas, surfaceOf } from "..
 const zen: Surface = { id: "opencode-zen", provider: "opencode-zen", label: "OpenCode", catalogo: "de_pago", usable: true, marca: null, porque: null };
 const free: Surface = { id: "opencode-zen:free", provider: "opencode-zen", label: "Modelos Free", catalogo: "gratuitos", usable: false, marca: "sin activar", porque: null };
 const claude: Surface = { id: "claude", provider: "claude", label: "Claude Code", catalogo: "todo", usable: true, marca: null, porque: null };
-const catalog = [{ id: "zen/big", gratis: false }, { id: "zen/free", gratis: true }];
+const catalog = [{ id: "zen/big", gratis: false }, { id: "danil-free/reflection/beam-free", gratis: true }];
 
 test("el chip sigue el orden de la ventana: elegido, observado y, en una subtarea, su último turno", () => {
   const turns = [{ role: "agent", model: "old" }, { role: "user", model: null }, { role: "agent", model: "last-turn" }];
@@ -33,9 +33,17 @@ test("el menú deja fuera lo no utilizable salvo la superficie de la tarea abier
 
 test("la superficie se deriva del modelo: una tarea de un modelo gratuito abre en los gratuitos", () => {
   const on = { ...free, usable: true };
-  assert.equal(surfaceOf([zen, on], "opencode-zen", "zen/free", catalog, undefined), "opencode-zen:free");
+  assert.equal(surfaceOf([zen, on], "opencode-zen", "danil-free/reflection/beam-free", catalog, undefined), "opencode-zen:free");
   assert.equal(surfaceOf([zen, on], "opencode-zen", "zen/big", catalog, "opencode-zen:free"), "opencode-zen");
   // Sin modelo, la que ya estaba se queda.
   assert.equal(surfaceOf([zen, on], "opencode-zen", "", catalog, "opencode-zen:free"), "opencode-zen:free");
   assert.equal(surfaceOf([zen, on], "codex", "", catalog, undefined), undefined);
+});
+
+
+test("la superficie gratuita rechaza modelos anteriores y la variante de pago aunque digan gratis", () => {
+  for (const id of ["zen/free", "opencode/big-pickle", "reflection/beam", "danil-free/reflection/beam"]) {
+    assert.equal(surfaceHas(free, { id, gratis: true }), false);
+  }
+  assert.equal(surfaceHas(free, { id: "danil-free/reflection/beam-free", gratis: false }), false);
 });

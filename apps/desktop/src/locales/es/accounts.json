@@ -1,6 +1,6 @@
 {
   "accounts.error.active_missing": "La cuenta activa ya no está disponible. Selecciona o conecta una cuenta del workspace para continuar.",
-  "accounts.error.go_key_missing": "La cuenta activa no tiene una sesión de OpenCode ni una clave de Go. Reconéctala o agrega una clave en Configuración.",
+  "accounts.error.go_key_missing": "La cuenta activa no tiene una sesión de OpenCode disponible. Reconéctala en Configuración.",
   "accounts.error.home_other_app": "Otra ventana de Danil con estos mismos datos —o la versión anterior, si acabas de actualizar— está trabajando con este agente. Espera a que termine o ciérrala, y vuelve a enviar.",
   "accounts.error.vault_unreadable": "No pude abrir la llave con la que se guardan tus conexiones, así que no pude comprobar esta cuenta. No se perdió nada: vuelve a intentar y acepta el permiso que te pida tu computadora.",
   "accounts.error.profile_unreadable": "No se pudo comprobar el correo de esta cuenta. Revisa tu conexión y vuelve a intentar.",

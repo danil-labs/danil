@@ -1,7 +1,7 @@
 {
   "settings.environment.engine_build": "Engine {build}",
   "settings.ai_providers.opencode_detail": "Pay-as-you-go models and Go",
-  "settings.ai_providers.free_detail": "by OpenCode · no account",
+  "settings.ai_providers.free_detail": "Kilo · Vercel · Reflection",
   "settings.account_card.active": "active",
   "settings.account_card.asking": "asking",
   "settings.account_card.checking": "checking…",
@@ -426,5 +426,6 @@
   "settings.ai_providers.agent_claude": "Claude Code",
   "settings.ai_providers.agent_codex": "Codex (ChatGPT)",
   "settings.ai_providers.agent_antigravity": "Gemini / Antigravity",
-  "settings.ai_providers.agent_grok": "Grok"
+  "settings.ai_providers.agent_grok": "Grok",
+  "settings.ai_providers.zen_go": "OpenCode"
 }

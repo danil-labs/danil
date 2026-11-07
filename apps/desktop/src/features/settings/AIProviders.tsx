@@ -10,6 +10,7 @@ import { rotuloDeSuperficie } from "../../lib/surfaces";
 import { Badge } from "../../ui/Badge";
 import { rotuloDeMarca } from "../chat/marks";
 import Accounts from "./Accounts";
+import DanilCredits from "../chat/DanilCredits";
 import { GovernedNotice } from "./Governed";
 import { SettingsPanel } from "./layout";
 
@@ -40,6 +41,7 @@ export default function AIProviders(props: { superficies: Superficie[]; agentesE
   return (
     <SettingsPanel>
       <GovernedNotice section="models" />
+      <DanilCredits />
       <Switch>
         <Match when={vista() === "loading"}>
           <div class="grid gap-3" data-ai-providers="loading">
@@ -75,7 +77,6 @@ export default function AIProviders(props: { superficies: Superficie[]; agentesE
             agente={grupo()[0].provider}
             soloGratuitos={grupo()[0].catalogo === "gratuitos"}
             titulo={grupo().length > 1 ? grupo()[0].label : rotuloDeSuperficie(grupo()[0])}
-            subtitulo={grupo()[0].catalogo === "gratuitos" ? t("settings.ai_providers.free_detail") : undefined}
             nombre={nombreDe(grupo()[0], grupo().length > 1)}
             marca={<Marca superficie={grupo()[0]} />}
             desplegado={props.agentesEnUso.includes(grupo()[0].provider)}

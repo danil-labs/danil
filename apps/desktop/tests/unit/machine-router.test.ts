@@ -79,6 +79,46 @@ function setup(links: Record<string, ReturnType<typeof fakeLink>>, local: Record
 const on = (machine: string) => ({ headers: { "x-terminus-machine": machine } });
 const sleep = (ms: number) => new Promise((done) => setTimeout(done, ms));
 
+test("Free policy read, accept and revoke keep their captured destination in the unified desktop router", async (t) => {
+  t.mock.method(console, "error", () => {});
+  const vm = fakeLink({ workspaces_startup: { active: "w2" }, set_provider_consent: null });
+  const { router, native } = setup({ cmp_vm: vm }, {
+    workspaces_startup: { active: "w2" }, set_provider_consent: null,
+  });
+  await router.handle("set_active_workspace", { id: "w" });
+  const operations: [string, Args][] = [
+    ["workspaces_startup", {}],
+    ["set_provider_consent", { provider: "opaque-reference", accepted: true }],
+    ["set_provider_consent", { provider: "opencode-zen", accepted: false }],
+  ];
+  for (const [command, args] of operations) {
+    const before = native.length;
+    const remoteBefore = vm.calls.length;
+    await router.handle(command, args, { headers: {
+      "x-terminus-workspace": "w2", "x-terminus-machine": "cmp_home",
+    } });
+    const sent = native.slice(before).filter((c) => c.command === command);
+    assert.equal(sent.length, 1);
+    assert.deepEqual(sent[0].args, args);
+    const headers = new Headers((sent[0].options as { headers?: HeadersInit }).headers);
+    assert.equal(headers.get("x-terminus-workspace"), "w2");
+    assert.equal(headers.get("x-terminus-machine"), null);
+    assert.equal(vm.calls.length, remoteBefore);
+    await router.handle(command, args, { headers: {
+      "x-terminus-workspace": "w2", "x-terminus-machine": "cmp_vm",
+    } });
+    const remote = vm.calls.filter((c) => c.command === command).at(-1);
+    assert.ok(remote);
+    assert.equal(remote.workspace, "w2");
+    assert.deepEqual(remote.args, args);
+    const counts = [native.length, vm.calls.length];
+    await assert.rejects(router.handle(command, args, { headers: {
+      "x-terminus-workspace": "w2", "x-terminus-machine": "removed",
+    } }), (error: { detail: string }) => error.detail === "unknown_machine");
+    assert.deepEqual([native.length, vm.calls.length], counts);
+  }
+});
+
 test("the router removes the machine header only when it delivers to native IPC", async () => {
   const vm = fakeLink({ send_message: "remote-task" });
   const { router, native } = setup({ cmp_vm: vm });

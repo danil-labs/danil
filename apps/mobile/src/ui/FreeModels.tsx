@@ -4,22 +4,15 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { type FreeModels as FreeRow, freeModelsOf, setProviderConsent } from "../lib/engine";
 import type { Host } from "../lib/hosts";
-import { phrase, w } from "../lib/i18n";
+import { phrase, t, w } from "../lib/i18n";
 import { BrandMark } from "./BrandMark";
 import { Sheet } from "./Sheet";
 import { type Theme } from "./theme";
 
 type Row = FreeRow & { host: Host; workspace: string };
 
-/**
- * «Modelos gratuitos» de OpenCode, como el panel de la ventana
- * (`apps/desktop/src/features/settings/Accounts.tsx`, `ModelosGratuitos`): una
- * fila por máquina encendida con el aviso, y Activar o Desactivar. Activar abre
- * el texto del motor (`consent_text`, el mismo que firma la ventana y con su
- * versión) y solo guarda el sí si se pulsa Activar; Cancelar no es un fallo.
- * La clave de Go queda en la ventana.
- */
-export function FreeModels({ hosts, scopeOf, providers, theme, tick }: { hosts: readonly Host[]; scopeOf: (host: Host) => string | null; providers: readonly ProviderInfo[]; theme: Theme; tick: unknown }) {
+/** La aceptación se guarda sólo desde la hoja explícita; cancelar no cambia el workspace. */
+export function FreeModels({ hosts, scopeOf, theme, tick }: { hosts: readonly Host[]; scopeOf: (host: Host) => string | null; providers: readonly ProviderInfo[]; theme: Theme; tick: unknown }) {
   const [rows, setRows] = useState<Row[]>([]);
   const [asking, setAsking] = useState<Row | null>(null);
   const [saving, setSaving] = useState(false);
@@ -61,13 +54,12 @@ export function FreeModels({ hosts, scopeOf, providers, theme, tick }: { hosts: 
   }
 
   if (!rows.length) return null;
-  const nameOf = (provider: string) => providers.find((p) => p.id === provider)?.label ?? provider;
 
   return (
     <View style={styles.section} testID="free-models">
       <View style={styles.head}>
-        <BrandMark id={rows[0].provider} size={18} color={theme.text} />
-        <Text style={[styles.title, { color: theme.text }]}>{w("surfaces.label.free")}</Text>
+        <BrandMark id="danil" size={18} color={theme.text} />
+        <Text style={[styles.title, { color: theme.text }]}>{t("composer.free_models")}</Text>
         <Text style={{ color: theme.textMuted, fontSize: TEXT.ui }}>{w("settings.ai_providers.free_detail")}</Text>
       </View>
       {rows.map((row) => {
@@ -79,7 +71,7 @@ export function FreeModels({ hosts, scopeOf, providers, theme, tick }: { hosts: 
               <Text style={{ color: theme.textMuted, fontSize: TEXT.ui }}>{w("settings.accounts.free.warning_short")}</Text>
             ) : (
               <>
-                <Text style={{ color: theme.textMuted, fontSize: TEXT.ui }}>{w("settings.accounts.free.provider", { provider: nameOf(row.provider) })}</Text>
+                <Text style={{ color: theme.textMuted, fontSize: TEXT.ui }}>{w("settings.accounts.free.provider", { provider: w("settings.ai_providers.free_detail") })}</Text>
                 <Text style={{ color: theme.text, fontSize: TEXT.ui, fontWeight: "600" }}>{w("settings.accounts.free.warning")}</Text>
               </>
             )}

@@ -475,6 +475,8 @@ pub(super) fn handle(invoke: tauri::ipc::Invoke) {
             | "reclaim_storage"
             | "empty_build_cache"
             | "collect_orphans"
+            | "workspaces_startup"
+            | "set_provider_consent"
     ) {
         // Cerrar con tareas vivas detiene también las de otros workspaces.
         invoke

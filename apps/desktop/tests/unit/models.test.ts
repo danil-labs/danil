@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import "../helpers/catalog.ts";
+import { aplicarLenguaDeWorkspace } from "../../src/lib/i18n.ts";
 
 import {  agruparModelos,
   coincideModelo,
@@ -9,6 +11,8 @@ import {  agruparModelos,
   effortValue,
   effortAlCambiarDeModelo,
   nombreDeModelo,
+  modelBrand,
+  proveedorDe,
 } from "../../src/lib/models.ts";
 import type { ModelOption } from "../../src/lib/model.ts";
 import type { Superficie } from "../../src/lib/surfaces.ts";
@@ -43,7 +47,7 @@ test("los resultados conservan la sección que desambigua modelos parecidos", ()
     "opencode-zen": { provider: "x", fallback: false,      models: [
         model("opencode/gpt-5", "GPT 5"),
         model("opencode-go/gpt-5", "GPT 5"),
-        { ...model("opencode/free-gpt", "GPT 5"), gratis: true },
+        { ...model("danil-free/reflection/beam-free", "GPT 5"), gratis: true },
       ],
     },
     "opencode-local": { provider: "x", fallback: false, models: [model("ollama/gpt-5", "GPT 5")] },
@@ -58,14 +62,13 @@ test("los resultados conservan la sección que desambigua modelos parecidos", ()
     [
       ["Claude", [["claude", "gpt-5"]]],
       ["Codex", [["codex", "gpt-5"]]],
-      ["OpenCode", [["opencode-zen", "opencode/gpt-5"]]],
-      ["OpenCode Go", [["opencode-zen", "opencode-go/gpt-5"]]],
-      ["Danil Free AI", [["opencode-zen", "opencode/free-gpt"]]],
+      ["OpenCode", [["opencode-zen", "opencode/gpt-5"], ["opencode-zen", "opencode-go/gpt-5"]]],
+      ["Router IA gratis", [["opencode-zen", "danil-free/reflection/beam-free"]]],
       ["OpenCode Local", [["opencode-local", "ollama/gpt-5"]]],
     ],
   );
   assert.deepEqual(grupos.map((grupo) => grupo.logo), [
-    "claude", "codex", "opencode", "opencode", "danil", "opencode",
+    "claude", "codex", "opencode", "danil", "opencode",
   ]);
 });
 
@@ -75,15 +78,15 @@ test("una superficie de pago no aparece cuando no está autenticada", () => {  c
     }],
     {      "opencode-zen": { provider: "x", fallback: false,        models: [
           model("opencode/claude-sonnet", "Claude Sonnet"),
-          { ...model("opencode/free-model", "Free Model"), gratis: true },
+          { ...model("danil-free/reflection/beam-free", "Free Model"), gratis: true },
           model("opencode-go/kimi", "Kimi"),
         ],
       },
     },
   );
 
-  assert.deepEqual(opciones.map((opcion) => opcion.proveedor.label), ["Danil Free AI"]);
-  assert.deepEqual(opciones.map((opcion) => opcion.model.id), ["opencode/free-model"]);
+  assert.deepEqual(opciones.map((opcion) => opcion.proveedor.label), ["Router IA gratis"]);
+  assert.deepEqual(opciones.map((opcion) => opcion.model.id), ["danil-free/reflection/beam-free"]);
 });
 
 test("el selector recibe todos los agentes: el candado decide cuáles se eligen", () => {
@@ -159,4 +162,107 @@ test("la fila de acciones nombra el modelo con su versión", () => {
   assert.equal(nombreDeModelo("claude-haiku-4-5-20251001"), "Claude Haiku 4.5");
   assert.equal(nombreDeModelo("opus", catalogo), "Claude Opus 5.5");
   assert.equal(nombreDeModelo("grok-4.7"), "grok-4.7");
+});
+
+ test("OpenCode agrupa Go sin cambiar identidad, búsqueda ni favoritos", () => {
+  const surface: Superficie = { id: "opencode-zen", provider: "opencode-zen", label: "OpenCode", catalogo: "de_pago", usable: true, marca: null, porque: null };
+  const options = opcionesDeModelos([surface], { "opencode-zen": { provider: "opencode-zen", fallback: false, models: [model("opencode-go/kimi", "Kimi"), model("opencode/gpt", "GPT")] } });
+  const groups = agruparModelos(options, "");
+  assert.equal(groups.length, 1);
+  assert.equal(groups[0].label, "OpenCode");
+  assert.deepEqual(groups[0].models, options);
+  assert.equal(options[0].proveedor.id, "opencode-go");
+  assert.equal(options[0].key, "opencode-zen\u0000opencode-go/kimi");
+  assert.deepEqual(agruparModelos(options, "OpenCode Go")[0].models, [options[0]]);
+  assert.deepEqual(favoritosDeModelos(options, [options[0].key]), [options[0]]);
+});
+
+test("Free conserva la marca Danil en turnos observados y OpenCode pagado conserva su logo", () => {
+  assert.equal(modelBrand("opencode-zen", "danil-free/reflection/beam-free"), "danil");
+  assert.equal(modelBrand("opencode-zen", "opencode-go/kimi"), "opencode-zen");
+  assert.equal(modelBrand("opencode-zen", "opencode/claude"), "opencode-zen");
+  assert.equal(modelBrand("opencode-zen"), "opencode-zen");
+  assert.equal(modelBrand("opencode-zen", "legacy-free", { provider: "opencode-zen", fallback: false, models: [{ ...model("legacy-free", "Free"), gratis: true }] }), "danil");
+});
+
+test("el proveedor gratuito sigue la lengua activa con la marca Danil", () => {
+  const surface: Superficie = { id: "opencode-zen-free", provider: "opencode-zen", label: "Free", catalogo: "gratuitos", usable: true, marca: null, porque: null };
+  for (const [language, label] of [["es", "Router IA gratis"], ["en", "Free AI Router"]]) {
+    aplicarLenguaDeWorkspace(language);
+    assert.deepEqual(proveedorDe(surface, model("danil-free/reflection/beam-free", "Beam")), { id: "opencode-free", label, logo: "danil" });
+  }
+  aplicarLenguaDeWorkspace("es");
+});
+
+import { availableDanilCredits, DANIL_CREDITS } from "../../src/features/chat/danil-credits.ts";
+
+const response = (available: number) => ({
+  account_id: 476,
+  wallet: { balance_credits: 120, available_credits: available, status: "active" },
+  execution_available: false,
+});
+
+test("Danil Credits conserva el ejecutor y el modelo que anuncia el engine", () => {
+  const surface: Superficie = { id: "opencode-zen", provider: "opencode-zen", label: "OpenCode", catalogo: "de_pago", usable: true, marca: null, porque: null };
+  const options = opcionesDeModelos([surface], {
+    "opencode-zen": { provider: "opencode-zen", fallback: false, models: [model(DANIL_CREDITS.modelId, "DeepSeek V4.1 Flash")] },
+  });
+  assert.equal(options.length, 1);
+  assert.equal(options[0].agent, "opencode-zen");
+  assert.equal(options[0].model.id, DANIL_CREDITS.modelId);
+  assert.equal(options[0].proveedor.id, "danil-credits");
+  assert.equal(options[0].proveedor.logo, "danil");
+  assert.equal(modelBrand("opencode-zen", DANIL_CREDITS.modelId), "danil");
+  assert.equal(agruparModelos(options, "Danil Credits")[0].id, "danil-credits");
+  assert.equal(opcionesDeModelos([surface], {}).length, 0);
+});
+
+test("the account wallet uses available credit and preserves a verified zero", () => {
+  assert.equal(availableDanilCredits(response(80)), 80);
+  assert.equal(availableDanilCredits(response(0)), 0);
+  assert.equal(availableDanilCredits({ ...response(80), account_id: "476" }), null);
+  assert.equal(availableDanilCredits({ ...response(0), wallet: null }), null);
+});
+
+test("missing, failed or incompatible balance data never becomes zero", () => {
+  for (const value of [undefined, null, {}, { balance: 99 },
+    { ...response(1), account_id: "" }, response(NaN), response(Infinity),
+    { ...response(1), execution_available: true },
+    { ...response(1), wallet: { available_credits: "20", status: "active" } }]) {
+    assert.equal(availableDanilCredits(value), null);
+  }
+  assert.equal(DANIL_CREDITS.modelId, "danil-credits/deepseek/deepseek-v4.1-flash");
+  assert.equal(DANIL_CREDITS.upstreamModelId, "deepseek/deepseek-v4.1-flash");
+});
+
+
+import { webDanilCredits } from "../../src/web/danil-credits.ts";
+
+test("the BFF reader uses the session-bound path and keeps loading, null, zero and errors distinct", async () => {
+  const calls: { url: string; init: RequestInit | undefined }[] = [];
+  let release!: (value: Response) => void;
+  const pending = new Promise<Response>((resolve) => { release = resolve; });
+  const source = webDanilCredits(
+    { getToken: async () => "session-token", unauthorized: async () => false },
+    "/alpha-api",
+    async (input, init) => { calls.push({ url: String(input), init }); return pending; },
+  );
+  let settled = false;
+  const reading = source.readBalance().finally(() => { settled = true; });
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  assert.equal(settled, false, "a pending read stays pending instead of becoming zero");
+  assert.equal(calls[0].url, "/alpha-api/api/credits/balance");
+  assert.equal(calls[0].init?.method, "GET");
+  assert.equal(calls[0].init?.cache, "no-store");
+  assert.equal(new Headers(calls[0].init?.headers).get("Authorization"), "Bearer session-token");
+  release(Response.json(response(0)));
+  assert.equal(availableDanilCredits(await reading), 0);
+
+  const read = (reply: Response) => webDanilCredits(
+    { getToken: async () => "session-token", unauthorized: async () => false },
+    "/alpha-api", async () => reply,
+  ).readBalance();
+  assert.equal(availableDanilCredits(await read(Response.json({ ...response(0), wallet: null }))), null);
+  await assert.rejects(read(Response.json({ error: "forbidden" }, { status: 403 })));
+  await assert.rejects(read(new Response("not-json")));
 });
