@@ -31,10 +31,6 @@
     "other": "· {count} accounts"
   },
   "settings.accounts.create_key": "Create a key in OpenCode",
-  "settings.accounts.go_key": "Go key (optional)",
-  "settings.accounts.go_key_hint": "If you connected your OpenCode account, its session already works for Go and for checking usage. This key is only needed for older accounts or to use a different key.",
-  "settings.accounts.go_key_error": "Could not save the Go key.",
-  "settings.accounts.go_key_remove": "Remove key",
   "settings.accounts.go_key_required": "Usage unavailable",
   "settings.accounts.error.activate": "Could not switch the active account.",
   "settings.accounts.error.code": "The code did not go through. Connect the account again to ask for a new one.",

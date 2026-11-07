@@ -244,26 +244,6 @@ export default function Accounts(props: {
   const [pidiendoClave, setPidiendoClave] = createSignal<string | null>(null);
   const [clave, setClave] = createSignal("");
   const [guardandoClave, setGuardandoClave] = createSignal(false);
-  const [pidiendoClaveGo, setPidiendoClaveGo] = createSignal<string | null>(null);
-  const [claveGo, setClaveGo] = createSignal("");
-  const [guardandoClaveGo, setGuardandoClaveGo] = createSignal(false);
-
-  async function guardarClaveGo() {
-    const id = pidiendoClaveGo();
-    if (!id) return;
-    setGuardandoClaveGo(true);
-    try {
-      await invoke("set_go_usage_key", { provider: agente(), id, key: claveGo() }, machineOf(id));
-      setPidiendoClaveGo(null);
-      setClaveGo("");
-      setConectadaVez((c) => ({ ...c, [id]: (c[id] ?? 0) + 1 }));
-    } catch (e) {
-      setFallo({ what: t("settings.accounts.go_key_error"), detail: detalleDe(e) });
-    } finally {
-      setGuardandoClaveGo(false);
-    }
-  }
-
   async function guardarClave() {
     const id = pidiendoClave();
     if (!id || !clave().trim()) return;
@@ -1084,11 +1064,6 @@ export default function Accounts(props: {
                   const dudosa = () => !caida() && info.sinComprobar;
                   return (
                     <>
-                      <Show when={agente() === "opencode-zen"}>
-                        <Button variant="outline" size="compact" onClick={() => setPidiendoClaveGo(a.id)}>
-                          {t("settings.accounts.go_key")}
-                        </Button>
-                      </Show>
                       <Show when={dudosa()}>
                         <Button
                           variant="outline"
@@ -1389,24 +1364,6 @@ export default function Accounts(props: {
       {/* Al modal por el mismo motivo que la conexión de arriba: se llega aquí
           pulsando «Agregar cuenta», que es justo el gesto que recrea la fila y
           plegaba la tarjeta con el campo dentro. */}
-      <Show when={pidiendoClaveGo()}>
-        <Dialog open onOpenChange={(open) => { if (!open) { setPidiendoClaveGo(null); setClaveGo(""); } }}>
-          <DialogContent class="w-[min(480px,100%)] max-w-[480px] p-4" aria-label={t("settings.accounts.go_key")}>
-            <div class="flex flex-col gap-3">
-              <DialogTitle>{t("settings.accounts.go_key")}</DialogTitle>
-              <p class="m-0 text-xs text-neutral-500">{t("settings.accounts.go_key_hint")}</p>
-              <Button variant="outline" size="compact" onClick={() => void invoke("open_external", { target: "https://opencode.ai/console" })}>
-                {t("settings.accounts.create_key")}
-              </Button>
-              <Input type="password" class="font-mono text-xs" value={claveGo()} placeholder={t("settings.accounts.key_placeholder")} onInput={(e) => setClaveGo(e.currentTarget.value)} onKeyDown={(e) => e.key === "Enter" && void guardarClaveGo()} />
-              <div class="flex gap-2">
-                <Button disabled={guardandoClaveGo() || !claveGo().trim()} onClick={() => void guardarClaveGo()}>{t("settings.accounts.save")}</Button>
-                <Button variant="outline" onClick={() => { setClaveGo(""); void guardarClaveGo(); }}>{t("settings.accounts.go_key_remove")}</Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
-      </Show>
       <Show when={pidiendoClave()}>
         <Dialog open>
         <DialogContent

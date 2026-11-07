@@ -31,10 +31,6 @@
     "other": "· {count} cuentas"
   },
   "settings.accounts.create_key": "Crear una clave en OpenCode",
-  "settings.accounts.go_key": "Clave de Go (opcional)",
-  "settings.accounts.go_key_hint": "Si conectaste tu cuenta de OpenCode, su sesión ya sirve para Go y para consultar el cupo. Esta clave solo hace falta en cuentas antiguas o para usar otra clave.",
-  "settings.accounts.go_key_error": "No se pudo guardar la clave de Go.",
-  "settings.accounts.go_key_remove": "Quitar clave",
   "settings.accounts.go_key_required": "Consumo no disponible",
   "settings.accounts.error.activate": "No se pudo cambiar la cuenta activa.",
   "settings.accounts.error.code": "El código no llegó. Vuelve a conectar la cuenta para pedir uno nuevo.",
