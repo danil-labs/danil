@@ -1,7 +1,7 @@
-// La ejecución queda cerrada aunque la lectura del saldo esté disponible.
+// El engine anuncia este modelo solo con una delegación vigente del pagador.
 export const DANIL_CREDITS = Object.freeze({
-  executionEnabled: false,
-  modelId: "deepseek/deepseek-v4.1-flash",
+  modelId: "danil-credits/deepseek/deepseek-v4.1-flash",
+  upstreamModelId: "deepseek/deepseek-v4.1-flash",
 } as const);
 
 /** El contrato completo y su esquema Zod pertenecen al BFF de Appv2. */

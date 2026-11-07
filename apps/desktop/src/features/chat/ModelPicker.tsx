@@ -23,6 +23,7 @@ import { cn } from "../../lib/utils";
 import { MarcaAgente } from "../../ui/icons";
 import { Popover, PopoverContent, PopoverTrigger } from "../../ui/Popover";
 import type { AccountList } from "../settings/accounts-store";
+import { DANIL_CREDITS } from "./danil-credits";
 
 const DanilCredits = lazy(() => import("./DanilCredits"));
 
@@ -80,6 +81,7 @@ export default function SelectorDeModelo(props: SelectorDeModeloProps) {
   const bloqueado = (opcion: OpcionDeModelo) =>
     !!props.lockedAgent && opcion.agent !== props.lockedAgent;
   const disponible = (opcion: OpcionDeModelo) => opcion.usable && !bloqueado(opcion);
+  const creditsModel = () => props.models.find((option) => option.model.id === DANIL_CREDITS.modelId);
   const grupos = createMemo<GrupoDeModelos[]>(() => {
     const busquedaActiva = busqueda().trim().length > 0;
     const actual = seccion();
@@ -170,7 +172,7 @@ export default function SelectorDeModelo(props: SelectorDeModeloProps) {
   };
 
   const elegir = (key: string) => {
-    if (props.disabled || seccion() === "danil-credits") return;
+    if (props.disabled) return;
     const opcion = props.models.find((item) => item.key === key && disponible(item));
     if (!opcion) return;
     props.onChange(opcion);
@@ -294,7 +296,7 @@ export default function SelectorDeModelo(props: SelectorDeModeloProps) {
             >
               <MarcaAgente id="danil" size={17} />
             </button>
-            <For each={todosLosGrupos()}>
+            <For each={todosLosGrupos().filter((group) => group.id !== "danil-credits")}>
               {(grupo) => (
                 <button
                   type="button"
@@ -396,7 +398,10 @@ export default function SelectorDeModelo(props: SelectorDeModeloProps) {
               )}
             </For>
           </Show>
-          }><DanilCredits /></Show>
+          }><DanilCredits model={creditsModel()} disabled={props.disabled || !creditsModel() || !disponible(creditsModel()!)} onSelect={() => {
+            const option = creditsModel();
+            if (option) elegir(option.key);
+          }} /></Show>
         </div>
         </div>
 
