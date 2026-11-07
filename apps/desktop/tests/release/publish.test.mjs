@@ -32,8 +32,24 @@ try {
   writeFileSync(join(bin, 'pnpm'), `#!/bin/sh\nshift\nexec '${pnpm.replaceAll("'", "'\\''")}' --package=@tauri-apps/cli@2.11.4 dlx tauri "$@"\n`, { mode: 0o755 });
   const merged = join(scratch, 'merged');
   mkdirSync(join(merged, 'release-assets'), { recursive: true });
-  const matrices = workflow.jobs.build.strategy.matrix.include;
+  // Las filas de `build` las escribe `check` (paso `platforms`): las tres por
+  // omisión (y en un tag, sin inputs); solo macOS con `platforms=macos`, que
+  // únicamente vale como prerelease o ensayo.
+  const rows = (env, expected = 0) => {
+    const out = join(scratch, `platforms-${Object.values(env).join('-')}`);
+    writeFileSync(out, '');
+    run(step('check', 'platforms'), scratch, { GITHUB_OUTPUT: out, DRY_RUN: 'false', PRERELEASE: 'false', ...env }, expected);
+    const line = readFileSync(out, 'utf8').split('\n').find(l => l.startsWith('matrix='));
+    return line ? JSON.parse(line.slice('matrix='.length)) : null;
+  };
+  assert.equal(workflow.jobs.build.strategy.matrix.include, '${{ fromJSON(needs.check.outputs.matrix) }}');
+  const matrices = rows({ PLATFORMS: 'all' });
   assert.deepEqual(matrices.map(m => m.name), ['windows', 'macos', 'linux']);
+  assert.deepEqual(rows({ PLATFORMS: 'macos', PRERELEASE: 'true' }).map(m => m.name), ['macos']);
+  assert.deepEqual(rows({ PLATFORMS: 'macos', DRY_RUN: 'true' }).map(m => m.name), ['macos']);
+  assert.equal(rows({ PLATFORMS: 'macos' }, 1), null, 'platforms=macos no puede publicar como latest');
+  assert.equal(rows({ PLATFORMS: 'windows' }, 1), null);
+  assert.equal(workflow.jobs['test-linux'].if, "inputs.platforms != 'macos'");
   assert.deepEqual(workflow.jobs['test-macos'].strategy.matrix.so, ['macos-latest', 'macos-15-intel']);
   for (const job of ['test-macos', 'test-linux']) assert(workflow.jobs.publish.needs.includes(job), `publish no espera a ${job}`);
   // Ruby (YAML 1.1) lee la clave `on` como el booleano `true`.
@@ -92,6 +108,17 @@ try {
   console.log('PASS notes: notes + notes_by_locale, with and without an English note');
 
   assert.deepEqual(Object.keys(manifest.platforms).sort(), ['windows-x86_64', 'darwin-aarch64', 'darwin-x86_64', 'linux-x86_64'].sort());
+  {
+    // Solo macOS: el manifiesto trae darwin y nada más, aunque no haya archivos de Windows ni Linux.
+    const macOnly = join(scratch, 'merged-macos');
+    mkdirSync(join(macOnly, 'release-assets'), { recursive: true });
+    for (const f of ['Danil.app.tar.gz', 'Danil.app.tar.gz.sig']) cpSync(join(merged, 'release-assets', f), join(macOnly, 'release-assets', f));
+    run(step('publish', 'build-manifest'), macOnly, { ...base, NOTE_ES: 'Prueba', NOTE_EN: 'Test', PLATFORMS: 'macos' });
+    const macManifest = JSON.parse(readFileSync(join(macOnly, 'release-assets/latest.json'), 'utf8'));
+    assert.deepEqual(Object.keys(macManifest.platforms).sort(), ['darwin-aarch64', 'darwin-x86_64']);
+    assert.deepEqual(macManifest.platforms['darwin-aarch64'], manifest.platforms['darwin-aarch64']);
+    console.log('PASS platforms=macos: latest.json only carries darwin');
+  }
   assert.deepEqual(manifest.platforms['darwin-aarch64'], manifest.platforms['darwin-x86_64']);
   for (const [platform, entry] of Object.entries(manifest.platforms)) {
     const name = basename(new URL(entry.url).pathname);

@@ -1,15 +1,12 @@
-Danil 0.3.1 brings Danil Business, access only for approved people, and each person's own GitHub. It is a pre-release: it does not replace the stable version until it is promoted.
+Danil 0.3.2 brings one button to connect your GitHub and a Source control section in Settings. It is a macOS-only pre-release: it does not replace the stable version until it is promoted.
 
-- **Danil Business.** On first launch the app connects your Danil Business account; on the web, Plan and billing shows your plan and downloads the app.
-- **Request access.** Only approved people can sign in. When your account has no access, the app says so and lets you request it.
-- **Your GitHub.** GitHub connects like your AI account: it is yours, not the workspace owner's, and your tasks use it on any machine of yours.
-- **Upload and sync.** A workspace on your computer can be uploaded to Danil, synced and unlinked from Settings.
-- **Sleeping machines.** When the VM is off you can still pick a project and send: Danil wakes it and the turn says «Starting».
-- **Usage.** Settings → Usage shows your account's measured usage.
-- **Repository skills.** They appear in Settings and in the `/` menu, also in the middle of the text.
-- **Files.** Download files from a task that runs on another machine, and view video, audio, PDF and Typst on the web and the phone.
-- **Model per task.** The model you pick in the chip is saved in the task.
-- **Task list.** Sort it by date, recent activity or status.
-- **Tauri 2.12.** The updater moves to 2.14.1 and the Windows signature is bound to the version.
+- **Connect GitHub.** One button, "Connect GitHub", with the Danil App. It works even when you are not signed in to Danil. You can move that connection to your account later.
+- **Source control.** Settings has a new section for GitHub. It shows your organizations and repositories as they are on GitHub.
+- **Pending permissions.** Danil tells you when a permission waits for your decision, and the decision arrives even if the agent restarts.
+- **Attention.** The Attention notice in the window is on by default.
+- **Agents.** Adding an agent covers less of the screen. The agents panel asks the right machine for its list and tries again when it fails.
+- **Task cards.** They show the local machine.
+- **Menus.** A menu opened inside a dialog stays above the dialog.
+- **Phone.** The Work sheet slides in and out, and does not move the chat.
 
-The engine and resources are pinned by version and SHA-256. This pre-release does not change the stable download link or the automatic update of installed copies: install it from its GitHub page.
+The macOS engine is new: `seldon-runtime-v0.3.1-be9f5362`. This pre-release does not change the stable download links or the automatic update of installed copies: install it from its GitHub page.

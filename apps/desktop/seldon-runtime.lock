@@ -2,10 +2,10 @@
   "version": 1,
   "name": "seldon-runtime",
   "engine_version": "0.3.1",
-  "commit": "85335139ee67df78ae334174a7d99a18d8d42ec0",
-  "release": "seldon-runtime-v0.3.1-85335139",
-  "manifest": "https://github.com/danil-labs/danil/releases/download/seldon-runtime-v0.3.1-85335139/seldon-runtime.json",
-  "terms": "https://github.com/danil-labs/danil/releases/download/seldon-runtime-v0.3.1-85335139/TERMS.md",
+  "commit": "be9f5362d111c50791977e89fd998e744aa270f8",
+  "release": "seldon-runtime-v0.3.1-be9f5362",
+  "manifest": "https://github.com/danil-labs/danil/releases/download/seldon-runtime-v0.3.1-be9f5362/seldon-runtime.json",
+  "terms": "https://github.com/danil-labs/danil/releases/download/seldon-runtime-v0.3.1-be9f5362/TERMS.md",
   "contract": "46798e8630db16622e62b79747cde5b02073681ca602d92adc6fdae559d802e5",
   "platforms": {
     "x86_64-pc-windows-msvc": {
@@ -13,12 +13,12 @@
       "sha256": "fa50443107bcb15b1f968b59d98f770c24ed70e36e4ea5b8892c5e31b58d09eb"
     },
     "aarch64-apple-darwin": {
-      "url": "https://github.com/danil-labs/danil/releases/download/seldon-runtime-v0.3.1-85335139/seldon-runtime-aarch64-apple-darwin",
-      "sha256": "3440bc5c0fa0d82021e0611acd5ab3fd00653cee1d7e392861234ba06648660e"
+      "url": "https://github.com/danil-labs/danil/releases/download/seldon-runtime-v0.3.1-be9f5362/seldon-runtime-aarch64-apple-darwin",
+      "sha256": "94c7ee9dff41b9cc0b00d433a41ce52694246d68f957a5ebbacf9cf3f936bb42"
     },
     "x86_64-apple-darwin": {
-      "url": "https://github.com/danil-labs/danil/releases/download/seldon-runtime-v0.3.1-85335139/seldon-runtime-x86_64-apple-darwin",
-      "sha256": "9dd888f35df481df49dc9fbd3a7bcb87df522d7e1115ec0f036dd8ee05ace370"
+      "url": "https://github.com/danil-labs/danil/releases/download/seldon-runtime-v0.3.1-be9f5362/seldon-runtime-x86_64-apple-darwin",
+      "sha256": "9ee4aafa5b1caa4c2a8226ad32102027ba08119869fcb8bc3fa3ff69fc7bb2df"
     },
     "x86_64-unknown-linux-gnu": {
       "url": "https://github.com/danil-labs/danil/releases/download/seldon-runtime-v0.3.1-85335139/seldon-runtime-x86_64-unknown-linux-gnu",

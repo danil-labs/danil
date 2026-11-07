@@ -247,6 +247,9 @@ danil-engine `85335139` (release 0.3.1, `seldon-runtime-v0.3.1-85335139`) keeps
 553 entries and 37 events. Since #355 the CLI route `skill list` accepts the flag
 `agent`, which changes the hash to `46798e86…`. The window invokes no CLI route.
 This copy is `git show 85335139:crates/engine-manifest/commands.json` byte for byte.
+danil-engine `be9f5362` (`seldon-runtime-v0.3.1-be9f5362`, macOS only) has the
+same bytes and the same hash; the lock pins it for both macOS targets and keeps
+Windows and Linux on `seldon-runtime-v0.3.1-85335139`.
 
 Handler and peer error keys come from the CLI catalogs at seldon-host
 `437a280` (`crates/terminus-cli/src/messages.{es,en}.json`); the window completes
