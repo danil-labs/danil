@@ -36,7 +36,7 @@ se guarda aparte como `personal_repository_ids`.
 
 ## GitHub CLI
 
-El motor prepara `gh` automáticamente cuando hay una conexión de GitHub. Usa
+En plataformas compatibles, el motor prepara `gh` automáticamente cuando hay una conexión de GitHub. Usa
 una instalación compatible si ya existe; en caso contrario, descarga el
 artefacto oficial en una carpeta privada y comprueba su SHA-256. La descarga
 ocurre en segundo plano. Si un comando se ejecuta antes de que termine, puede
@@ -44,7 +44,8 @@ fallar y volver a intentarse en la misma tarea después de la instalación.
 
 El `gh` gestionado consulta un intermediario local. Recibe un permiso de sesión
 del workspace, no la credencial externa de GitHub. Las operaciones admitidas
-se revalidan contra los repositorios elegidos y los permisos actuales de GitHub.
+se comprueban contra la selección personal y la lista de GitHub; esta lista
+puede permanecer en caché hasta cinco minutos. GitHub decide el acceso final.
 Las operaciones de cuenta y las rutas desconocidas se rechazan. El proceso
 nativo del agente conserva acceso al equipo: esto no es un sandbox.
 
