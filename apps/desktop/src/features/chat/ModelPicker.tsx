@@ -149,14 +149,15 @@ export default function SelectorDeModelo(props: SelectorDeModeloProps) {
     // La sección sale del grupo que de verdad contiene el modelo: agrupar y
     // proveedor no siempre coinciden, y abrir una sección inexistente deja la
     // lista vacía aunque el modelo esté elegido. Sin modelo elegido, la primera
-    // fila que se puede usar.
-    const primeroDisponible = gruposAbiertos
+    // fila que se puede usar; Danil Credits no cuenta: tiene su propio botón.
+    const gruposDeModelos = gruposAbiertos.filter((grupo) => grupo.id !== "danil-credits");
+    const primeroDisponible = gruposDeModelos
       .flatMap((grupo) => grupo.models)
       .find(disponible);
     const claveInicial = elegido()?.key ?? primeroDisponible?.key ?? "";
     const seccionElegida =
       seccionDeModelo(gruposAbiertos, claveInicial) ??
-      (favoritos().length > 0 ? "favorites" : gruposAbiertos[0]?.id ?? "favorites");
+      (favoritos().length > 0 ? "favorites" : gruposDeModelos[0]?.id ?? "favorites");
     setSeccion(seccionElegida);
     setActivo(claveInicial);
     setTimeout(() => {
