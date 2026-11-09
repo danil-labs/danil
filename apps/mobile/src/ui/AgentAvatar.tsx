@@ -1,13 +1,25 @@
 import { TaskOrbit } from "./TaskOrbit";
 import { useTheme } from "./theme";
 import { astroBlink, astroMotion, ASTRO_SHAPES, astroBody, astroColors, type AstroNode } from "@terminus/design";
-import { Image, View } from "react-native";
+import { Image, Platform, View } from "react-native";
 import Svg, { Circle, Ellipse, G, Path } from "react-native-svg";
 import { useActivityTime } from "./activityClock";
 import { useState } from "react";
 import { useWorkspaces } from "../lib/workspaces";
 
 const SHAPES = { g: G, circle: Circle, ellipse: Ellipse, path: Path };
+
+/**
+ * Las caras con ilustración (degradado de Business y sus versiones planas): los
+ * mismos SVG del escritorio, que el build del teléfono copia a `agent-icons/`.
+ * Fuera de la web no hay ruta a ellos y se queda la cara por nombre.
+ */
+const ICONO = /^(business|character)-(ventas|direccion|diseno|finanzas|rh)$/;
+const PHONE_BASE = process.env.EXPO_PUBLIC_TERMINUS_PHONE_BASE ?? "";
+function iconUrl(body: string | null | undefined, status: "working" | "awake" | "asleep"): string | null {
+  if (Platform.OS !== "web" || !PHONE_BASE || !body || !ICONO.test(body)) return null;
+  return `${PHONE_BASE}agent-icons/${body}-${status}.svg`;
+}
 
 function Shape({ node, colors, time, eye }: { node: AstroNode; colors: readonly [string, string]; time: number; eye: string }) {
   const Component = SHAPES[node.tag];
@@ -28,7 +40,8 @@ export function AgentAvatar({ name, size = 32, host, folder, working = false }: 
   const dark = useTheme().dark;
   const colors = astroColors(body, dark);
   const [failed, setFailed] = useState<string | null>(null);
-  const image = appearance?.avatar;
+  const status = working ? "working" : agent?.status ?? "asleep";
+  const image = appearance?.avatar ?? iconUrl(appearance?.body, status);
   const time = useActivityTime(working && !(image && failed !== image));
   const eye = body === "hole" ? "#eef1fa" : "#0b1026";
   const asleep = !working && agent?.status === "asleep";

@@ -82,9 +82,12 @@ export type Task = SessionRow & {
 };
 
 type AgentAppearance = { body?: string | null; avatar?: string | null };
-type AgentProfiles = Record<string, AgentAppearance>;
+type AgentProfiles = Record<string, AgentAppearance & { display_name?: string | null }>;
 
 /** Un agente con nombre, juntando sus carpetas y máquinas. */
+/** `list_agents` con lo que el teléfono necesita para separar el nivel workspace. */
+type ScopedAgentList = { agents: (AgentList["agents"][number] & { own?: boolean; own_scope?: { kind: string } | null })[] };
+
 export type Agent = {
   name: string;
   description: string | null;
@@ -93,6 +96,10 @@ export type Agent = {
   status: "working" | "awake" | "asleep";
   liveTasks: number;
   minutesSinceLastTurn: number | null;
+  /** Nombre visible de su perfil (`display_name`); sin él, `name`. */
+  displayName?: string | null;
+  /** Declarado en el workspace (nivel global), no en una carpeta ni en un repositorio. */
+  workspace?: boolean;
   /** `host/folder` donde está. */
   places: ({ host: string; folder: string } & AgentAppearance)[];
 };
@@ -258,17 +265,26 @@ export async function snapshotOf(host: Host, workspace: string): Promise<HostSna
     projects.map(async (project) => {
       const [rows, agents, status, profiles] = await Promise.all([
         read<SessionRow[]>(host, "list_live_sessions", workspace, { project, open: [] }, [], at),
-        project ? read<AgentList>(host, "list_agents", workspace, { project }, { agents: [] }, at).catch(() => ({ agents: [] })) : { agents: [] },
-        project ? read<AgentStatusRow[]>(host, "list_agent_status", workspace, { project }, [], at).catch(() => []) : [],
-        project ? read<AgentProfiles>(host, "list_agent_profiles", workspace, { project }, {}, at).catch((): AgentProfiles => ({})) : {} as AgentProfiles,
+        // Con `project: ""` el motor responde lo del workspace (más catálogo y gobierno):
+        // de ahí solo cuentan los del nivel workspace, como en el escritorio.
+        read<ScopedAgentList>(host, "list_agents", workspace, { project }, { agents: [] }, at).catch(() => ({ agents: [] })),
+        read<AgentStatusRow[]>(host, "list_agent_status", workspace, { project }, [], at).catch(() => []),
+        read<AgentProfiles>(host, "list_agent_profiles", workspace, { project }, {}, at).catch((): AgentProfiles => ({})),
       ]);
-      const faces = await Promise.all((agents.agents ?? []).map(async (agent) => {
+      const listed = (agents.agents ?? []).filter((agent) => project || agent.own_scope?.kind === "workspace");
+      const faces = await Promise.all(listed.map(async (agent) => {
         const profile = profiles[agent.name];
         const path = profile?.avatar;
         if (path && !images.has(path)) {
           images.set(path, read<FilePreview | null>(host, "preview_file", workspace, { path, rel: path }, null, at).then((value) => value?.data_url ?? null).catch(() => null));
         }
-        return { ...agent, body: profile?.body ?? null, avatar: path ? await images.get(path) : null };
+        return {
+          ...agent,
+          body: profile?.body ?? null,
+          avatar: path ? await images.get(path) : null,
+          displayName: profile?.display_name?.trim() || null,
+          workspace: agent.own_scope?.kind === "workspace",
+        };
       }));
       return { project, rows, agents: faces, status };
     }),
@@ -286,12 +302,16 @@ export async function snapshotOf(host: Host, workspace: string): Promise<HostSna
         known.places.push({ host: host.id, folder: project, body: a.body, avatar: a.avatar });
         known.liveTasks += s?.live_tasks ?? 0;
         if (s && rank(s.status) < rank(known.status)) known.status = s.status;
+        known.workspace ||= a.workspace;
+        known.displayName ??= a.displayName;
       } else {
         agents.set(a.name, {
           name: a.name,
           description: a.description ?? null,
           body: a.body,
           avatar: a.avatar,
+          displayName: a.displayName,
+          workspace: a.workspace,
           status: s?.status ?? "asleep",
           liveTasks: s?.live_tasks ?? 0,
           minutesSinceLastTurn: s?.minutes_since_last_turn ?? null,
