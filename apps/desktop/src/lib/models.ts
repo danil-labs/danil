@@ -145,9 +145,9 @@ export function agruparModelos(
     ) {
       continue;
     }
-    // Zen y Go comparten marca y catálogo y cobran distinto: Zen descuenta saldo
-    // y Go viene en un plan. Una sola entrada en el riel; el renglón de Go lleva
-    // su etiqueta y `seccionDeModelo` abre la sección del elegido.
+    // Un solo OpenCode: Go. `surfaceHas` deja fuera los modelos que se cobraban
+    // contra el saldo de Zen antes de llegar aquí; el grupo conserva el id de la
+    // superficie y el nombre propio.
     const visual =
       proveedor.id === "opencode-go"
         ? { id: "opencode-zen", label: "OpenCode", logo: proveedor.logo }

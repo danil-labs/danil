@@ -36,7 +36,7 @@ import type { Host } from "../lib/hosts";
 import { effectiveMode, enterAction, hasSomethingToSend } from "../lib/composer";
 import { promote, type Queued, queueMemory } from "../lib/steer";
 import { lang, phrase, t, w } from "../lib/i18n";
-import { surfacePresentation, selectedModelMark, modelBillingTag } from "../lib/model-presentation";
+import { surfacePresentation, selectedModelMark } from "../lib/model-presentation";
 import { BrandMark } from "./BrandMark";
 import { Icon } from "./Icon";
 import { matches, NoMatch } from "./Search";
@@ -750,7 +750,7 @@ export function Composer({
                 <SheetOption
                   key={m.id}
                   label={modelPresentation(m.id, m.label || modelName(m.id, models)).label}
-                  tag={modelBillingTag(current, m.id) ?? modelPresentation(m.id, m.label).creator}
+                  tag={modelPresentation(m.id, m.label).creator}
                   detail={m.note ? phrase(m.note) : null}
                   selected={model === m.id}
                   onPress={() => {
