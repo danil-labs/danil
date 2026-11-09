@@ -28,7 +28,7 @@ import { type ClonEnCurso, faseDeClon } from "../projects/AddWorkdir";
 import { AstroAvatar } from "../projects/AstroAvatar";
 import { watchHandlerStatuses } from "../projects/handlerPresence";
 import type { ModelChoices } from "../projects/NewAgent";
-import { watchProfiles } from "../projects/profiles";
+import { notifyProfiles, watchProfiles } from "../projects/profiles";
 import Sessions, { type SessionRow } from "../projects/Sessions";
 import { effectiveTaskGit, watchSessionGit } from "../projects/taskGit";
 import type { Etapa } from "../projects/TaskStage";
@@ -376,6 +376,15 @@ export default function Sidebar(props: {
       }
     }
     return [...juntos.values()];
+  });
+  // Un agente que llegó por su cuenta —el paquete Business, un `git pull`— trae
+  // su nombre visible y su cara en el perfil. La lista se relee sola cada 10 s,
+  // los perfiles no: sin esto se pintaba con la cara de omisión hasta recargar.
+  let nombresConocidos: string | null = null;
+  createEffect(() => {
+    const nombres = agentesDelDock().map((a) => a.name).sort().join("\n");
+    if (nombresConocidos !== null && nombres !== nombresConocidos) notifyProfiles();
+    nombresConocidos = nombres;
   });
   const perfilDe = (name: string): AgentProfile | undefined => {
     for (const c of porCarpeta()) {
