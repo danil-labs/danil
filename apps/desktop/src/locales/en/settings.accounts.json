@@ -1,4 +1,5 @@
 {
+  "settings.accounts.free.consented": "Consent accepted",
   "settings.accounts.add": "+ Add account",
   "settings.accounts.agent_fallback": "the agent",
   "settings.accounts.awaiting": {

@@ -155,7 +155,6 @@ import BloqueDeInterrupcion from "./InterruptionBlock";
 import ColaDeMensajes, { type ColaDeMensajesProps } from "./MessageQueue";
 import McpAppView from "./McpAppView";
 import { Select } from "../../ui/Select";
-import SelectorDeModelo from "./ModelPicker";
 import SelectorDeModo from "./ModePicker";
 import { AltoMonotono } from "./MonotonicHeight";
 import { MARCA_SIN_ELEGIR } from "./marks";
@@ -180,6 +179,7 @@ import { Spinner } from "../../ui/Spinner";
 
 // Chunk aparte: el bloque de razonamiento solo lo carga un turno que lo trae.
 const Reasoning = sharedLazy(() => import("./Reasoning"));
+const SelectorDeModelo = sharedLazy(() => import("./ModelPicker"));
 
 /**
  * Quién dijo un turno: lo arma Rust a partir de la cuenta del agente o del
@@ -2857,7 +2857,7 @@ export default function Chat(props: ChatProps) {
               </Button>
             </Show>
 
-            <Show when={(props.superficies?.length ?? 0) > 0 && !modoTerminal()}>
+            <Show when={!modoTerminal()}>
               {/* Una opción decide agente, superficie y modelo. Separarlos hacía
                   imposible buscar Claude, Codex y OpenCode en el mismo menú.
                   La marca sale del agente que sirve la superficie: «OpenCode»
@@ -2870,10 +2870,7 @@ export default function Chat(props: ChatProps) {
                 superficie={props.superficie}
                 model={props.model}
                 missingModelLabel={props.nativeSubagent ? t("chat.model.unreported") : undefined}
-                disabled={
-                  props.modelLocked ||
-                  !opciones().some((opcion) => opcion.usable)
-                }
+                disabled={props.modelLocked}
                 disabledReason={
                   props.agentLocked && props.agentLockedReason
                     ? props.agentLockedReason

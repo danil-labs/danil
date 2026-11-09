@@ -1,3 +1,4 @@
+import { routerAvailable } from "@terminus/tasks";
 import { marcaDeSuperficie } from "../../lib/surfaces";
 import { groupAccounts } from "@terminus/computers";
 import Check from "lucide-solid/icons/check";
@@ -1595,6 +1596,7 @@ function ModelosGratuitos(props: {
    */
   falta: boolean;
 }) {
+  const [routeAvailable, setRouteAvailable] = createSignal<boolean | null>(null);
   const [aceptado, setAceptado] = createSignal(false);
   const [guardando, setGuardando] = createSignal(false);
   const [fallo, setFallo] = createSignal<string | null>(null);
@@ -1608,6 +1610,9 @@ function ModelosGratuitos(props: {
       if (!policy) return;
       setTexto({ lineas: policy.lines, version: policy.version, policy });
       setAceptado(policy.accepted);
+      void invoke<{ models: { id: string; gratis?: boolean }[] }>("list_models", { provider: props.agente }, freeModelScope(policy))
+        .then((catalog) => setRouteAvailable(routerAvailable(catalog.models)))
+        .catch(() => setRouteAvailable(false));
     }).catch(() => {});
   });
 
@@ -1640,6 +1645,8 @@ function ModelosGratuitos(props: {
       const accepted = acceptedFreeModelPolicy(policy, w.free_model_consent);
       setAceptado(accepted);
       if (valor && !accepted) throw new Error(t("settings.accounts.free.policy_changed"));
+      const catalog = await invoke<{ models: { id: string; gratis?: boolean }[] }>("list_models", { provider: props.agente }, freeModelScope(policy)).catch(() => null);
+      setRouteAvailable(catalog ? routerAvailable(catalog.models) : false);
       setPreguntando(false);
       setFallo(null);
       // Sin binario, activar deja el interruptor en verde y el chat sin poder
@@ -1695,6 +1702,7 @@ function ModelosGratuitos(props: {
           <strong>{AVISO_DE_USO()}</strong>
         </p>
       </Show>
+      <Show when={aceptado() && routeAvailable() === false}><p class="m-0">{t("chat.model.router_route_unavailable")}</p></Show>
       <Show when={!texto()}><p class="m-0">{t("settings.accounts.free.unavailable")}</p></Show>
       <Show when={!preguntando() && fallo()}>
         {(f) => (
@@ -1737,7 +1745,7 @@ function ModelosGratuitos(props: {
               superficies lo tienen. */}
           <Show
             when={props.falta}
-            fallback={<Badge tone={texto()?.policy.enabled ? "success" : "neutral"}>{texto()?.policy.enabled ? t("settings.accounts.free.active") : t("settings.accounts.free.paused")}</Badge>}
+            fallback={<Badge tone={texto()?.policy.enabled && routeAvailable() ? "success" : "neutral"}>{texto()?.policy.enabled && routeAvailable() ? t("settings.accounts.free.active") : t("settings.accounts.free.consented")}</Badge>}
           >
             <Badge tone="danger">{t("settings.accounts.free.missing")}</Badge>
           </Show>
