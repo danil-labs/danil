@@ -143,6 +143,24 @@ export function renameComputer(endpoint: string, token: string, id: string, name
   );
 }
 
+/**
+ * Quita de la cuenta una computadora conectada por la persona (`DELETE /v1/computers/:id`).
+ * Pide la sesión de la persona: el token de cliente del escritorio contesta `unauthorized`.
+ * Una VM que Danil administra contesta `error` con `not_self_computer`; una que ya no está, `missing`.
+ */
+export function removeComputer(endpoint: string, token: string, id: string, f: Fetch = globalFetch): Promise<Answer<{ computer_id: string }>> {
+  return request(
+    apiUrl(endpoint, `/v1/computers/${encodeURIComponent(id)}`),
+    token,
+    "DELETE",
+    (body) => {
+      const b = body as { computer_id?: unknown } | null;
+      return { computer_id: typeof b?.computer_id === "string" ? b.computer_id : id };
+    },
+    f,
+  );
+}
+
 /** El largo máximo del nombre de una computadora, el mismo que valida el plano de control. */
 export const COMPUTER_NAME_MAX = 60;
 
