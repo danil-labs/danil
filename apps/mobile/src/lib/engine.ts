@@ -794,6 +794,7 @@ export async function setProviderConsent(host: Host, workspace: string, provider
 export type FreeModelPolicy = {
   workspace_id: string; version: number; providers: string[]; lines: Frase[];
   acceptance_ref: string; enabled: boolean; accepted: boolean;
+  destination_host?: string;
   terms: { label: string; url: string }[];
 };
 type FreeModelConsent = { workspace_id: string; version: number; providers: string[]; policy_id: string; acceptance_id: string };
@@ -827,7 +828,7 @@ export async function freeModelsOf(host: Host, workspace: string): Promise<FreeM
     const { value, cachedAt: modelsCachedAt } = await host.call<ProviderModels>("list_models", workspace, { provider: surface.provider }).catch(() => ({ value: null, cachedAt: null }));
     usable = modelsCachedAt === null && value?.fallback !== true && value?.models?.some((m) => m.id === FREE_BEAM_MODEL && m.gratis === true) === true;
   }
-  return [{ provider: "opencode-zen", label: "Danil", text: { lines: policy.lines, version: policy.version }, accepted: policy.accepted, usable, policy }];
+  return [{ provider: "opencode-zen", label: "Danil", text: { lines: policy.lines, version: policy.version }, accepted: policy.accepted, usable, policy: { ...policy, destination_host: host.id } }];
 }
 
 /** Revalida el texto mostrado antes de guardar; consulta el catálogo después. */
@@ -835,9 +836,9 @@ export async function changeFreeModels(host: Host, workspace: string, shown: Fre
   if (host.power() !== "on") throw new HostError("free_policy_changed");
   const current = await freePolicyOf(host, workspace);
   const policy = shown.policy;
-  if (!current || !policy || (accepted && (!current.enabled || current.acceptance_ref !== policy.acceptance_ref ||
+  if (!current || !policy || policy.destination_host !== host.id || policy.workspace_id !== workspace || (accepted && (!current.enabled || !policy.acceptance_ref ||
     JSON.stringify(current.lines) !== JSON.stringify(policy.lines) || JSON.stringify(current.terms) !== JSON.stringify(policy.terms)))) throw new HostError("free_policy_changed");
-  const { value, cachedAt } = await host.call<{ free_model_consent?: FreeModelConsent }>("set_provider_consent", workspace, { provider: accepted ? current.acceptance_ref : shown.provider, accepted });
+  const { value, cachedAt } = await host.call<{ free_model_consent?: FreeModelConsent }>("set_provider_consent", workspace, { provider: accepted ? policy.acceptance_ref : shown.provider, accepted });
   const consent = value?.free_model_consent;
   const saved = !!consent && consent.workspace_id === workspace && consent.version === current.version &&
     !!consent.policy_id && !!consent.acceptance_id && freeProviders(consent.providers);

@@ -136,7 +136,7 @@ test("v3 envía acceptance_ref por la máquina y refresca superficies y modelos"
 test("v3 rechaza política cambiada y copias que puedan autorizar", async () => {
   const { host } = freeMachine([{ id: FREE_BEAM_MODEL, gratis: true }]);
   const row = (await freeModelsOf(host, "w1"))[0];
-  await assert.rejects(changeFreeModels(host, "w1", { ...row, policy: { ...policy, acceptance_ref: "old" } }, true));
+  await assert.rejects(changeFreeModels(host, "w1", { ...row, policy: { ...policy, destination_host: "other-host" } }, true));
   const liveCall = host.call.bind(host);
   host.call = (async (...args: Parameters<Host["call"]>) => ({ ...await liveCall(...args), cachedAt: 10 })) as Host["call"];
   assert.deepEqual(await freeModelsOf(host, "w1"), []);
@@ -149,4 +149,17 @@ test("una copia del catálogo nunca declara disponible la ruta", async () => {
   const row = (await freeModelsOf(host, "w1"))[0];
   assert.equal(row.accepted, true);
   assert.equal(row.usable, false);
+});
+
+test("la referencia mostrada sigue válida cuando una lectura emite otra oferta del mismo texto", async () => {
+  let reads = 0;
+  const { host, calls } = freeMachine([{ id: FREE_BEAM_MODEL, gratis: true }], {
+    list_workspaces: () => ({ active: "w1", free_model_policy: { ...policy, acceptance_ref: `offer-${++reads}` } }),
+    set_provider_consent: { free_model_consent: { ...policy, policy_id: "policy", acceptance_id: "acceptance" } },
+  });
+  const shown = (await freeModelsOf(host, "w1"))[0];
+  assert.equal(shown.policy?.acceptance_ref, "offer-1");
+  await changeFreeModels(host, "w1", shown, true);
+  const mutation = calls.find((call) => call.command === "set_provider_consent");
+  assert.deepEqual(mutation?.args, { provider: "offer-1", accepted: true });
 });

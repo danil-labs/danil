@@ -26,6 +26,7 @@ import {
   MAX_ATTACHMENT_BYTES,
   mentionsOf,
   modelsOf,
+  subscribeFreeCatalog,
   permissionModesOf,
   slashMenuOf,
   surfacesOf,
@@ -227,6 +228,10 @@ export function Composer({
   const pendingLabel = pendingProvider ? providerLabel(pendingProvider) : null;
   const candidateLabel = candidate ? providerLabel(candidate) : null;
 
+  const [catalogRevision, setCatalogRevision] = useState(0);
+  useEffect(() => subscribeFreeCatalog((machine, changedWorkspace) => {
+    if (machine === host?.id && changedWorkspace === workspace) setCatalogRevision((revision) => revision + 1);
+  }), [host?.id, workspace]);
   // Modelos y permisos del proveedor elegido; la barra de `/` se pide al usarla.
   useEffect(() => {
     const key = `${host?.id}/${current}`;
@@ -243,7 +248,7 @@ export function Composer({
     return () => {
       alive = false;
     };
-  }, [host, workspace, current, host?.power()]);
+  }, [host, workspace, current, host?.power(), catalogRevision]);
   useEffect(() => setMentions(null), [host, workspace, folder]);
   // Las superficies mantienen sus ids aunque compartan el ejecutor.
   useEffect(() => {
@@ -253,7 +258,7 @@ export function Composer({
     return () => {
       alive = false;
     };
-  }, [host, workspace, host?.power()]);
+  }, [host, workspace, host?.power(), catalogRevision]);
   // La superficie sigue al agente y al modelo, y no al revés (`surfaceOf`, la regla de la ventana).
   useEffect(() => {
     if (!current) return;
