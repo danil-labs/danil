@@ -13,7 +13,7 @@ import { classOf, type Link, type MachineInfo } from "@terminus/fleet";
 import { WSL_MACHINE_PREFIX, type WslChild } from "./wsl";
 
 /** Los prefijos de id de las máquinas locales, uno por canal. */
-const GUEST_PREFIXES = [WSL_MACHINE_PREFIX, "lima:"];
+const GUEST_PREFIXES = [WSL_MACHINE_PREFIX];
 
 const POLL_EVERY = 1_000;
 const POLL_IDLE = 4_000;

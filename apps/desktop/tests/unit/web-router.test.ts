@@ -2,8 +2,8 @@
  * La web sobre la flota compartida (`features/machines/router.ts` sin motor
  * propio, `@terminus/fleet`) con sesiones de relay falsas: abre con todo
  * apagado desde lo guardado, una máquina de otro contrato no tumba la lista,
- * actuar en la VM apagada la enciende, leer en ella sin copia la enciende y dice
- * «Encendiendo…», en la Mac apagada lo dice con su nombre
+ * actuar en la VM apagada la enciende, leer en ella nunca la enciende, en la Mac
+ * apagada lo dice con su nombre
  * y los spaces de todas salen juntos.
  */
 import assert from "node:assert/strict";
@@ -62,7 +62,7 @@ function fakeLink(answers: Record<string, unknown>, initial: MachineState = "onl
   return link;
 }
 
-const VM: MachineInfo = { id: "cmp_vm", name: "Danil VM", wakes: true, opensOnRead: true };
+const VM: MachineInfo = { id: "cmp_vm", name: "Danil VM", wakes: true };
 const MAC: MachineInfo = { id: "cmp_mac", name: "Mac de Ana", wakes: false };
 const REGISTRY = [{ id: "w", name: "Producto", computers: ["cmp_vm", "cmp_mac"], projects: [], settings: null, created_at: "2026-10-01T00:00:00Z" }];
 const row = (id: string, title = id) => ({ id, title, updated_at: 0 });
@@ -178,64 +178,23 @@ test("nobody answering is a named error, never an empty list", async () => {
   await assert.rejects(router.handle("list_live_sessions", { project: "", open: [] }), (e: { detail: string; what: string }) => e.detail === "machine_off" && /Mac de Ana está sin conexión/.test(e.what));
 });
 
-test("an off VM with nothing saved is started once by the first read and says it is starting, not that Danil is closed", async () => {
+test("an off VM with nothing saved is not started by reads: only a message or an action starts it", async () => {
   const vm = fakeLink({ list_live_sessions: [row("t1")] }, "offline");
   const starts: string[] = [];
-  const reread: string[][] = [];
   const { router } = web({ cmp_vm: vm }, memoryStorage(), async (id) => {
     starts.push(id);
-    setTimeout(() => vm.setState("starting"), 1);
-    setTimeout(() => vm.setState("online"), 15);
     return true;
-  }, (changes) => reread.push(changes));
+  });
   await router.handle("list_workspaces");
   const args = { project: "", open: [] };
-  for (let i = 0; i < 2; i++) {
+  for (let i = 0; i < 3; i++) {
     await assert.rejects(router.handle("list_live_sessions", args), (e: { detail: string; what: string }) => {
-      assert.equal(e.detail, "machine_starting");
-      assert.equal(e.what, "Encendiendo Danil VM…");
+      assert.equal(e.detail, "machine_off");
+      assert.match(e.what, /^Danil VM está sin conexión/);
       return true;
     });
   }
-  assert.deepEqual(starts, ["cmp_vm"], "two reads while it starts ask the control plane once");
-  await new Promise((r) => setTimeout(r, 40));
-  assert.ok(reread.some((c) => c.includes("sessions") && c.includes("projects")), "once online the window is told to read again");
-  const rows = (await router.handle("list_live_sessions", args)) as { id: string }[];
-  assert.deepEqual(rows.map((r) => r.id), ["cmp_vm~t1"], "once online, the same read answers");
-});
-
-test("a VM the control plane could not start says so by name, and is asked again only after a while", async () => {
-  const vm = fakeLink({}, "offline");
-  const starts: string[] = [];
-  const { router } = web({ cmp_vm: vm }, memoryStorage(), async (id) => {
-    starts.push(id);
-    return false;
-  });
-  await router.handle("list_workspaces");
-  const args = { project: "", open: [] };
-  await assert.rejects(router.handle("list_live_sessions", args), (e: { detail: string }) => e.detail === "machine_starting");
-  await new Promise((r) => setTimeout(r, 10));
-  await assert.rejects(router.handle("list_live_sessions", args), (e: { detail: string; what: string }) => {
-    assert.equal(e.detail, "start_failed");
-    assert.match(e.what, /^No pudimos encender Danil VM\. .*hola@danil\.ai/);
-    return true;
-  });
-  assert.deepEqual(starts, ["cmp_vm"], "a failed start is not retried on every read");
-});
-
-test("a VM the control plane says it does not start stays «sin conexión» after one try", async () => {
-  const vm = fakeLink({}, "offline");
-  let starts = 0;
-  const { router } = web({ cmp_vm: vm }, memoryStorage(), async () => {
-    starts++;
-    return "not_startable";
-  });
-  await router.handle("list_workspaces");
-  const args = { project: "", open: [] };
-  await assert.rejects(router.handle("list_live_sessions", args), (e: { detail: string }) => e.detail === "machine_starting");
-  await new Promise((r) => setTimeout(r, 10));
-  await assert.rejects(router.handle("list_live_sessions", args), (e: { detail: string; what: string }) => e.detail === "machine_off" && /Danil VM está sin conexión/.test(e.what));
-  assert.equal(starts, 1);
+  assert.deepEqual(starts, [], "opening the window or reading never asks the control plane to start it");
 });
 
 test("an off computer of the person with nothing saved is not started by a read and says it is offline", async () => {

@@ -3,7 +3,7 @@ import ChevronDown from "lucide-solid/icons/chevron-down";
 import Lock from "lucide-solid/icons/lock";
 import Search from "lucide-solid/icons/search";
 import Star from "lucide-solid/icons/star";
-import { createMemo, createSignal, For, Show } from "solid-js";
+import { createMemo, createSignal, For, Show, lazy } from "solid-js";
 import { t } from "../../lib/i18n";
 import { invoke } from "../../lib/invoke.ts";
 import { left, type Query } from "../../lib/limits";
@@ -24,6 +24,9 @@ import { cn } from "../../lib/utils";
 import { MarcaAgente } from "../../ui/icons";
 import { Popover, PopoverContent, PopoverTrigger } from "../../ui/Popover";
 import type { AccountList } from "../settings/accounts-store";
+import { DANIL_CREDITS } from "./danil-credits";
+
+const DanilCredits = lazy(() => import("./DanilCredits"));
 
 type SelectorDeModeloProps = {
   invokeOptions?: { headers: Record<string, string> };
@@ -34,6 +37,7 @@ type SelectorDeModeloProps = {
   disabled?: boolean;
   disabledReason?: string;
   onChange: (model: OpcionDeModelo) => void;
+  onCreditsPrepare?: () => void;
   /** El agente de la tarea: los demás se ven, pero el candado dice por qué no se eligen. */
   lockedAgent?: string;
   lockedReason?: string | null;
@@ -79,6 +83,7 @@ export default function SelectorDeModelo(props: SelectorDeModeloProps) {
   const bloqueado = (opcion: OpcionDeModelo) =>
     !!props.lockedAgent && opcion.agent !== props.lockedAgent;
   const disponible = (opcion: OpcionDeModelo) => opcion.usable && !bloqueado(opcion);
+  const creditsModel = () => props.models.find((option) => option.model.id === DANIL_CREDITS.modelId);
   const grupos = createMemo<GrupoDeModelos[]>(() => {
     const busquedaActiva = busqueda().trim().length > 0;
     const actual = seccion();
@@ -92,7 +97,7 @@ export default function SelectorDeModelo(props: SelectorDeModeloProps) {
     return todosLosGrupos().filter((grupo) => grupo.id === actual);
   });
   const visibles = () =>
-    grupos()
+    (seccion() === "danil-credits" ? [] : grupos())
       .flatMap((grupo) => grupo.models)
       .filter(disponible);
 
@@ -293,7 +298,17 @@ export default function SelectorDeModelo(props: SelectorDeModeloProps) {
             >
               <Star size={17} fill={seccion() === "favorites" ? "currentColor" : "none"} />
             </button>
-            <For each={todosLosGrupos()}>
+            <button
+              type="button"
+              class={cn("flex size-9 shrink-0 items-center justify-center rounded-sm text-neutral-500 outline-none hover:bg-surface-muted hover:text-neutral-950 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-primary", seccion() === "danil-credits" && "bg-surface-muted text-neutral-950")}
+              aria-label={t("chat.credits.label")}
+              aria-pressed={seccion() === "danil-credits"}
+              title={t("chat.credits.label")}
+              onClick={() => { setSeccion("danil-credits"); setActivo(""); props.onCreditsPrepare?.(); }}
+            >
+              <MarcaAgente id="danil" size={17} />
+            </button>
+            <For each={todosLosGrupos().filter((group) => group.id !== "danil-credits")}>
               {(grupo) => (
                 <button
                   type="button"
@@ -312,7 +327,8 @@ export default function SelectorDeModelo(props: SelectorDeModeloProps) {
               )}
             </For>
           </nav>
-          <div class="scroll-visible min-h-0 overflow-y-auto p-1" role="listbox" aria-label={t("chat.model.listbox")}>
+          <div class="scroll-visible min-h-0 overflow-y-auto p-1" role={seccion() === "danil-credits" ? undefined : "listbox"} aria-label={t("chat.model.listbox")}>
+          <Show when={seccion() === "danil-credits"} fallback={
           <Show
             when={grupos().some((grupo) => grupo.models.length > 0)}
             fallback={
@@ -399,10 +415,14 @@ export default function SelectorDeModelo(props: SelectorDeModeloProps) {
               )}
             </For>
           </Show>
+          }><DanilCredits model={creditsModel()} disabled={props.disabled || !creditsModel() || !disponible(creditsModel()!)} onSelect={() => {
+            const option = creditsModel();
+            if (option) elegir(option.key);
+          }} /></Show>
         </div>
         </div>
 
-        <Show when={niveles().length > 0}>
+        <Show when={seccion() !== "danil-credits" && niveles().length > 0}>
           <div class="flex min-h-10 items-center gap-3 border-t border-border px-3 py-1.5">
             <span class="shrink-0 text-xs font-medium text-neutral-700">
               {t("chat.effort.label")}

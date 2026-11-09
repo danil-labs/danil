@@ -194,6 +194,7 @@ export type HandlerDefinition = {
   own_scope: HandlerScope | null;
   // Las declaraciones gestionadas por Radiant son de solo lectura.
   managed?: boolean;
+  package?: string;
 };
 
 // La apariencia vive en app data; cambiarla no modifica las instrucciones del repositorio.

@@ -39,6 +39,7 @@
   "web.local_files": "The browser cannot pick files or folders on this device. Use the Danil desktop app for that.",
   "web.machines.create_on": "Created on",
   "web.machines.off_action": "{name} is disconnected. Check that Danil is open and has internet access.",
+  "web.machines.off_wakes": "{name} is disconnected: it starts when you send it a message or act on it.",
   "web.machines.starting": "Starting {name}…",
   "web.machines.start_failed": "We could not start {name}. Try again in a minute; if it keeps failing, write to hola@danil.ai.",
   "web.machines.outdated_action": "{name} needs an update before you can use it from here.",

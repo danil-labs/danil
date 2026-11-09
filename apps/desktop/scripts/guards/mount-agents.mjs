@@ -73,8 +73,10 @@ const bubbleApp = await boot("listo", "agent-bubble", {
     { ...agentRow, id: "s-transfer", title: "Revisar entrega", agent: "Watson", chat_de_agente: false },
   ],
   list_agents: { ...bubbleResponses.list_agents, agents: [
-    { ...bubbleResponses.list_agents.agents[0], own: true },
-    { ...bubbleResponses.list_agents.agents[0], name: "Watson", own: true },
+    { ...bubbleResponses.list_agents.agents[0], own: true, own_scope: { kind: "workspace" } },
+    { ...bubbleResponses.list_agents.agents[0], name: "Watson", own: true, own_scope: { kind: "workspace" } },
+    { ...bubbleResponses.list_agents.agents[0], name: "Otro-repositorio" },
+    { ...bubbleResponses.list_agents.agents[0], name: "Otro-proyecto", own: true, own_scope: { kind: "project", id: "other" } },
   ] },
   telegram_status: { token_saved: false, bot_username: null, enabled: false, paired_chats: 0, pairing: null, topics_enabled: false, topics: 0 },
   queue_ready: false,
@@ -118,6 +120,8 @@ const dock = () => bubbleDocument.querySelector('[role="group"][aria-label="Agen
 for (let i = 0; i < 80 && !dock(); i++) await sleep(25);
 const faceOf = (nameText) => [...(dock()?.querySelectorAll("[data-dock-agent]") ?? [])].find((b) => b.getAttribute("aria-label").startsWith(nameText));
 assert.ok(faceOf("Holmes"), "el dock enseña a Holmes");
+assert.equal(faceOf("Otro-repositorio"), undefined, "sin carpeta no aparecen agentes de repositorio");
+assert.equal(faceOf("Otro-proyecto"), undefined, "sin carpeta no aparecen agentes instalados en otro proyecto");
 assert.match(faceOf("Holmes").getAttribute("aria-label"), /Despierto/, "su cara dice cómo está");
 assert.equal(faceOf("Holmes").getAttribute("title"), null, "la cara no abre un tooltip nativo");
 faceOf("Holmes").dispatchEvent(new bubbleApp.w.PointerEvent("pointerenter", { bubbles: false, pointerType: "mouse" }));

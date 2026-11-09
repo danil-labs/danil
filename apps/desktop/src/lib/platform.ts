@@ -28,6 +28,13 @@ export type AccountComputersSource = {
   rename: (id: string, name: string) => Promise<Answer<{ computer_id: string; name: string }>>;
   /** Quien pinta nombres de máquina (la flota) toma el nuevo sin recargar. */
   onRenamed: (id: string, name: string) => void;
+  /**
+   * Quita de la cuenta una máquina propia que no está en línea. Solo la da quien
+   * tiene la sesión de la persona (la web); el escritorio no la ofrece todavía.
+   */
+  remove?: (id: string) => Promise<Answer<{ computer_id: string }>>;
+  /** La flota deja de pintar la máquina quitada y sus tareas. */
+  onRemoved?: (id: string) => void;
 };
 
 /** Un workspace de otra cuenta de Danil de este navegador: se ve en la columna y abrirlo recarga con su cuenta. */
@@ -52,6 +59,8 @@ export type WebAccountsSource = {
 };
 
 export type Capabilities = {
+  /** Saldo de la cuenta Danil desde un BFF autenticado; ausente hasta verificar el adaptador. */
+  danilCredits?: import("../features/chat/danil-credits").DanilCreditsSource;
   inbox?: { customization: typeof import("./customization").createCustomization; entries: typeof import("./attention-labels").featureEntries; demo: boolean; userId?: string | null; subscribe?: (clear: () => void) => () => void; sidebarMenu: typeof import("../web/attention/SidebarEntries").AttentionMenu; personalizeMenu: typeof import("../web/attention/SidebarEntries").PersonalizeMenu; catalog: (props: import("../web/attention/CustomizationSection").CustomizationSectionProps) => JSX.Element; broadcasts: (workspace: () => string | null) => JSX.Element; initial: boolean; render: (workspace: () => string | null) => JSX.Element; agentSettings: (name: string) => JSX.Element; customerAgents: (workspace: () => string | null) => JSX.Element; customerConnections: (workspace: () => string | null) => JSX.Element; search: { conversations: () => import("../features/shell/GlobalSearch").SearchConversation[]; open: (id: number) => void } };
   spaceOrder?: SpaceOrderSource;
   /** Controles de ventana propios, semáforo de macOS y bandeja. */
@@ -64,8 +73,6 @@ export type Capabilities = {
   computerStatus: boolean;
   /** La ventana ofrece WSL como canal de máquinas locales (`guest_channels`). */
   wsl?: boolean;
-  /** La ventana ofrece Lima como canal de máquinas locales (`guest_channels`, macOS). */
-  lima?: boolean;
   /** Radiant en Configuración y su gobierno en las pantallas; la web no lo ofrece. */
   radiant?: boolean;
   /** «Descarga la app» en Configuración: solo la web; la ventana ya es la app. */

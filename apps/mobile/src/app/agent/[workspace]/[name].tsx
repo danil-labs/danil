@@ -61,7 +61,7 @@ export default function AgentScreen() {
 
   return (
     <KeyboardScreen>
-      <Stack.Screen options={{ title: name }} />
+      <Stack.Screen options={{ title: agent?.displayName || name }} />
       <FlatList
         data={tasks}
         keyExtractor={taskKey}

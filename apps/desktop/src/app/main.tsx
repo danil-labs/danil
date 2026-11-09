@@ -28,7 +28,7 @@ setCapabilities({ ...capabilities(), workspaceDirectory: desktopWorkspaceDirecto
 // Los canales de máquinas locales los dice la ventana (`guest_channels`), no el userAgent.
 // La web también carga este archivo: ahí `invoke` va por el relay y despertaría la máquina.
 if (capabilities().nativeWindow) {
-  void askGuestChannels().then((channels) => setCapabilities({ ...capabilities(), wsl: channels.includes("wsl"), lima: channels.includes("lima") }));
+  void askGuestChannels().then((channels) => setCapabilities({ ...capabilities(), wsl: channels.includes("wsl") }));
 }
 
 /**

@@ -35,6 +35,10 @@ export type SurfaceModel = { id: string; gratis?: boolean | null };
  * no parte el catálogo, todo vale.
  */
 export function surfaceHas(s: Surface | undefined, m: SurfaceModel): boolean {
+  if (s?.id === "danil-credits") {
+    return s.provider === "opencode-zen" && m.id === "danil-credits/deepseek/deepseek-v4.1-flash" && m.gratis !== true;
+  }
+  if (m.id.startsWith("danil-credits/")) return false;
   if (!s || s.catalogo === "todo") return true;
   return s.catalogo === "gratuitos" ? m.gratis === true && m.id === "danil-free/reflection/beam-free" : m.gratis !== true;
 }

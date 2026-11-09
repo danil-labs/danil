@@ -69,6 +69,8 @@ const ARBOLES = [WEB].filter((d) => existsSync(d));
  * normal: el registro es la lista de lo que la app hace, no de lo que podría.
  */
 const SIN_INTERFAZ = {
+  change_agent_folders: "la configuración global solo administra workspace; el CLI conserva la asignación de carpetas y el contrato congelado",
+  credits_pilot_install: "lo pide credits_captured_call desde Rust; el nonce del proxy local nunca entra en JavaScript",
   set_go_usage_key: "la conexión única de OpenCode reemplaza el campo de Go; se conserva el contrato y las claves guardadas de clientes anteriores",
   consent_text: "el contrato conserva la lectura antigua; el router usa la política y referencia de aceptación de workspaces_startup",
   delete_session: "contrato legacy; la ventana exige task_lifecycle_v1 con previa y consentimiento",

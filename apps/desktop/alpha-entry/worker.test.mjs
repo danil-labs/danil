@@ -663,3 +663,23 @@ test("business: a chunked body over 2 KB is cut while reading, and BFF denials s
   assert.equal(denied.status, 403);
   assert.deepEqual(await denied.json(), { error: "billing_manage_required" });
 });
+
+
+test("credits balance is an exact session-bound GET without a caller-selected account", async () => {
+  const h = harness();
+  const response = await h.fetch(prefix + "/api/credits/balance", { headers: { ...auth, Cookie: "legacy=1", "X-Account-Id": "99" } });
+  assert.equal(response.status, 200);
+  assert.equal(h.calls[0].url, origin + "/api/credits/balance");
+  assert.equal(h.calls[0].headers.get("Authorization"), auth.Authorization);
+  assert.equal(h.calls[0].headers.get("Cookie"), null);
+  assert.equal(h.calls[0].headers.get("X-Account-Id"), null);
+  assert.equal(response.headers.get("Cache-Control"), "no-store");
+  for (const path of ["/api/credits/balance?account_id=7", "/api/credits/balance?wallet=7", "/api/credits/balance/"]) {
+    assert.ok([400, 404].includes((await h.fetch(prefix + path, { headers: auth })).status));
+  }
+  assert.equal((await h.fetch(prefix + "/api/credits/balance")).status, 401);
+  for (const method of ["POST", "PUT", "PATCH", "DELETE"]) {
+    assert.equal((await h.fetch(prefix + "/api/credits/balance", { method, headers: auth })).status, 405);
+  }
+  assert.equal(h.calls.length, 1);
+});

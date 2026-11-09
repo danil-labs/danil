@@ -22,12 +22,12 @@ import {
   setDirectoryPins,
   createSpaceOrderSource,
   orderComputers,
+  removeComputer,
   renameComputer,
   createScreenAccess,
   sessionProbe,
   startComputer,
   startedOf,
-  MANAGED_PROVIDERS,
   startSharedComputer,
   systemOf,
   wakes,
@@ -53,6 +53,7 @@ import { authLocation } from "./auth/return";
 import { adminPageCapability, personalAccountCapability } from "./admin/capability";
 import { agentsSession } from "./attention/workspace-sources";
 import { webUsageMe } from "../features/settings/usage-source";
+import { webDanilCredits } from "./danil-credits";
 import { webBusinessBilling } from "./business-billing";
 import { webGithubAccount } from "./github-account";
 import { type Account, type Listing, SLOT_PREFIX, loadAccounts, ownerOf, pickAccount, readListings, rememberLast, removeExtra, savedListings } from "./accounts";
@@ -136,7 +137,6 @@ const infoOf = (c: Computer): MachineInfo => {
     id: c.computer_id,
     name: c.name?.trim() || c.computer_id,
     wakes: wakes(c),
-    opensOnRead: typeof c.provider === "string" && MANAGED_PROVIDERS.has(c.provider),
     linked: linkedWorkspaces(c),
     features: serviceFeatures(c),
     ...(c.host_version ? { version: c.host_version } : {}),
@@ -278,6 +278,9 @@ function mountApp(computers: Computer[], base: Base, before?: (id: string) => ()
     computerStatus: true,
     browserFiles: true,
     sidebarExtra: () => <HomeLink />,
+    danilCredits: import.meta.env.TERMINUS_ALPHA
+      ? webDanilCredits({ getToken: async () => await base.getToken(), unauthorized: async () => base.refresh ? await base.refresh() : false }, `${import.meta.env.BASE_URL}alpha-api`, fetch, base.subscribe)
+      : undefined,
     accountProfile: webAccountProfile(base.endpoint, base.getToken, base.onUnauthorized),
     accountEmails: import.meta.env.TERMINUS_ALPHA ? webAccountEmails({ getToken: async () => await base.getToken(), unauthorized: async () => base.refresh ? await base.refresh() : false }, `${import.meta.env.BASE_URL}alpha-api`) : undefined,
     initialSettings: takeSettingsParam(),
@@ -326,6 +329,9 @@ function mountApp(computers: Computer[], base: Base, before?: (id: string) => ()
       list: async () => listComputers(base.endpoint, await token()),
       rename: async (id, name) => renameComputer(base.endpoint, await token(), id, name),
       onRenamed: (id, name) => rename(id, name),
+      remove: async (id) => removeComputer(base.endpoint, await token(), id),
+      // La flota vuelve a leer la cuenta: la máquina y sus tareas dejan de pintarse.
+      onRemoved: () => void relistNow?.(),
     },
     connectMachine: {
       list: async () => listComputers(base.endpoint, await token()),
