@@ -263,3 +263,25 @@ test("con la VM apagada, el composer ofrece los proyectos que puede abrir y envi
     app.w.close();
   }
 });
+
+for (const code of ["machine_off", "machine_starting", "operation_failed"]) {
+  test(`desktop startup keeps loaded tasks and reports only failures: ${code}`, async () => {
+    const message = "Macbook está sin conexión. Verifica que Danil esté abierto y tenga acceso a internet.";
+    const { app, doc, text } = await open(`desktop-startup-${code}`, {
+      status: { state: "disconnected", online: false },
+      extra: {
+        workspaces_startup: async () => {
+          await sleep(800);
+          throw { what: message, detail: code };
+        },
+      },
+    });
+    try {
+      assert.ok(doc.querySelector('[data-sesion="t1"]'), "the successful workspace list keeps its tasks");
+      assert.equal(text().includes(message), code === "operation_failed", "only a real failure raises an error");
+      assert.deepEqual(app.failures, []);
+    } finally {
+      app.w.close();
+    }
+  });
+}
