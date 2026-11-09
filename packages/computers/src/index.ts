@@ -14,6 +14,7 @@ export {
   listWorkspaces,
   listWorkspacesWithDeleted,
   purgeWorkspace,
+  removeComputer,
   renameComputer,
   restoreWorkspace,
   sessionProbe,

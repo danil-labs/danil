@@ -22,6 +22,7 @@ import {
   setDirectoryPins,
   createSpaceOrderSource,
   orderComputers,
+  removeComputer,
   renameComputer,
   createScreenAccess,
   sessionProbe,
@@ -330,6 +331,9 @@ function mountApp(computers: Computer[], base: Base, before?: (id: string) => ()
       list: async () => listComputers(base.endpoint, await token()),
       rename: async (id, name) => renameComputer(base.endpoint, await token(), id, name),
       onRenamed: (id, name) => rename(id, name),
+      remove: async (id) => removeComputer(base.endpoint, await token(), id),
+      // La flota vuelve a leer la cuenta: la máquina y sus tareas dejan de pintarse.
+      onRemoved: () => void relistNow?.(),
     },
     connectMachine: {
       list: async () => listComputers(base.endpoint, await token()),
