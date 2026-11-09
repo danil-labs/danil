@@ -134,7 +134,6 @@
   "chat.model.favorites": "Favorites",
   "chat.model.free": "Free",
   "chat.model.go_remaining": "min. {left}% left",
-  "chat.model.go_tag": "Go",
   "chat.model.listbox": "Models",
   "chat.model.locked": "Can't change it while it's answering",
   "chat.model.native": "The parent agent’s CLI manages this subtask’s model.",

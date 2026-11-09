@@ -386,13 +386,6 @@ export default function SelectorDeModelo(props: SelectorDeModeloProps) {
                             <Lock size={12} class="shrink-0" aria-hidden="true" />
                           </Show>
                           <span class="truncate">{modelPresentation(opcion.model.id, opcion.model.label).label}</span>
-                          {/* Zen y Go sirven el mismo modelo con el mismo nombre;
-                              solo el cobro cambia. */}
-                          <Show when={opcion.proveedor.id === "opencode-go"}>
-                            <span class="shrink-0 rounded-sm border border-border px-1 text-2xs font-medium text-neutral-500">
-                              {t("chat.model.go_tag")}
-                            </span>
-                          </Show>
                         </span>
                         <button
                           type="button"

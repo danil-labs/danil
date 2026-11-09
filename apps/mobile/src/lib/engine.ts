@@ -747,7 +747,7 @@ export async function modelsOf(host: Host, workspace: string, provider: string):
   return value && Array.isArray(value.models) ? value : { provider, models: [] };
 }
 
-/** Lo que se elige para trabajar (`list_surfaces`): OpenCode da «Zen y Go» y «Modelos gratuitos». Apagada y sin copia, ninguna. */
+/** Lo que se elige para trabajar (`list_surfaces`): OpenCode da «OpenCode» (Go) y «Modelos gratuitos». Apagada y sin copia, ninguna. */
 export async function surfacesOf(host: Host, workspace: string): Promise<Surface<Frase>[]> {
   const at = { cachedAt: null as number | null };
   const value = await read<Surface<Frase>[] | null>(host, "list_surfaces", workspace, {}, null, at).catch(() => null);

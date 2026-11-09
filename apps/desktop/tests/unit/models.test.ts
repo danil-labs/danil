@@ -63,7 +63,7 @@ test("los resultados conservan la sección que desambigua modelos parecidos", ()
     [
       ["Claude", [["claude", "gpt-5"]]],
       ["Codex", [["codex", "gpt-5"]]],
-      ["OpenCode", [["opencode-zen", "opencode/gpt-5"], ["opencode-zen", "opencode-go/gpt-5"]]],
+      ["OpenCode", [["opencode-zen", "opencode-go/gpt-5"]]],
       ["Router IA gratis", [["opencode-zen", "danil-free/reflection/beam-free"]]],
       ["OpenCode Local", [["opencode-local", "ollama/gpt-5"]]],
     ],
@@ -165,24 +165,27 @@ test("la fila de acciones nombra el modelo con su versión", () => {
   assert.equal(nombreDeModelo("grok-4.7"), "grok-4.7");
 });
 
-test("OpenCode junta Zen y Go en una entrada sin perder identidad, búsqueda ni favoritos", () => {
+test("OpenCode es un solo proveedor: el login por Go deja fuera el saldo de Zen", () => {
   const surface: Superficie = { id: "opencode-zen", provider: "opencode-zen", label: "OpenCode", catalogo: "de_pago", usable: true, marca: null, porque: null };
-  const options = opcionesDeModelos([surface], { "opencode-zen": { provider: "opencode-zen", fallback: false, models: [model("opencode-go/kimi", "Kimi"), model("opencode/gpt", "GPT")] } });
+  const options = opcionesDeModelos([surface], {
+    "opencode-zen": {
+      provider: "opencode-zen",
+      fallback: false,
+      models: [model("opencode-go/kimi", "Kimi"), model("opencode/deepseek-v4.1-flash", "DeepSeek")],
+    },
+  });
+  // Zen (saldo) ya no se ofrece; Go conserva su id y su login.
+  assert.deepEqual(options.map((option) => option.model.id), ["opencode-go/kimi"]);
   const groups = agruparModelos(options, "");
-  // Una sola entrada en el riel; el renglón de Go lleva su etiqueta porque el
-  // mismo nombre puede costar saldo o venir en el plan.
-  assert.equal(groups.length, 1);
-  assert.equal(groups[0].id, "opencode-zen");
+  assert.deepEqual(groups.map((grupo) => grupo.id), ["opencode-zen"]);
   assert.equal(groups[0].label, "OpenCode");
-  assert.deepEqual(groups[0].models, options);
   assert.equal(options[0].proveedor.id, "opencode-go");
   assert.equal(options[0].key, "opencode-zen\u0000opencode-go/kimi");
-  assert.deepEqual(agruparModelos(options, "OpenCode Go")[0].models, [options[0]]);
+  assert.deepEqual(agruparModelos(options, "OpenCode")[0].models, [options[0]]);
   assert.deepEqual(favoritosDeModelos(options, [options[0].key]), [options[0]]);
   // Abrir el selector con un modelo Go elegido lleva a una sección que existe
   // aunque el proveedor del catálogo se llame distinto.
   assert.equal(seccionDeModelo(groups, options[0].key), "opencode-zen");
-  assert.equal(seccionDeModelo(groups, options[1].key), "opencode-zen");
   assert.equal(seccionDeModelo(groups, "opencode-zen\u0000no-existe"), null);
 });
 
