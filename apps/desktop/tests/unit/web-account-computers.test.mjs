@@ -107,3 +107,48 @@ test("the web lists the account's computers and renames one in place", async () 
     globalThis.fetch = own;
   }
 });
+
+test("the account's computers stay mounted while the workspaces reload: no «Leyendo…» loop", async () => {
+  const computers = [{ computer_id: "cmp_mac", name: "Mac de Ana", state: "offline", provider: "self", kind: "physical" }];
+  let lists = 0;
+  const own = globalThis.fetch;
+  globalThis.fetch = async (input, init = {}) => {
+    const url = String(input);
+    if (url === `${API}/v1/me`) return Response.json({ name: "Ana Pérez", email: "ana@danil.ai", avatar_url: null });
+    if (url === `${API}/v1/workspaces`) return Response.json({ workspaces: [{ id: "w", name: "W", computers: ["cmp_mac"] }] });
+    if (url === `${API}/v1/computers` && (init.method ?? "GET") === "GET") {
+      lists++;
+      return Response.json(computers);
+    }
+    return new Response("{}", { status: 404 });
+  };
+  globalThis.fetch.__jsdomApp = true;
+  try {
+    const f = fleet({ cmp_mac: { table: engine, state: "online" } });
+    const app = await boot("listo", "web-account-computers-reload", {}, undefined, {}, {
+      web: true,
+      beforeImport: (w) => {
+        globalThis.WebSocket = f.Socket;
+        w.terminusWeb = { endpoint: API, computers: computers.map((c) => ({ ...c })), getToken: async () => "tok" };
+      },
+    });
+    const { w } = app;
+    const doc = w.document;
+    await sleep(2500);
+    w.dispatchEvent(new w.CustomEvent("harness:open-settings", { detail: "machines" }));
+    assert.ok(await until(() => doc.querySelector('[data-account-computer="cmp_mac"]')));
+    const shown = doc.querySelector("[data-account-computers]");
+    const before = lists;
+    // Machines going on and off reload the workspace list in the background.
+    for (let i = 0; i < 3; i++) {
+      w.dispatchEvent(new w.CustomEvent("harness:workspace"));
+      await sleep(300);
+      assert.equal(doc.querySelector("[data-account-computers]"), shown, "the same list, not a new mount");
+    }
+    assert.equal(lists, before, "the account's computers are not asked again");
+    assert.deepEqual(app.failures, []);
+  } finally {
+    globalThis.fetch = own;
+  }
+});
+
