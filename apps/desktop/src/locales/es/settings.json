@@ -273,7 +273,7 @@
   "settings.agents.error.conflict": "{name} cambió mientras tanto. Revisa la lista y vuelve a intentarlo.",
   "settings.agents.error.io": "No se pudo cambiar dónde trabaja {name}.",
   "settings.agents.error.missing": "Ese agente ya no existe.",
-  "settings.agents.own_title": "Operación y código",
+  "settings.agents.own_title": "Agentes del workspace",
   "settings.agents.new": "Agregar nuevo agente",
   "settings.agents.new_no_folder": "Primero agrega un proyecto: el agente nace en uno.",
   "settings.agents.own_empty": "Todavía no tienes agentes propios",
@@ -427,5 +427,6 @@
   "settings.ai_providers.agent_codex": "Codex (ChatGPT)",
   "settings.ai_providers.agent_antigravity": "Gemini / Antigravity",
   "settings.ai_providers.agent_grok": "Grok",
-  "settings.ai_providers.zen_go": "OpenCode"
+  "settings.ai_providers.zen_go": "OpenCode",
+  "settings.agents.business": "Incluido en Business"
 }

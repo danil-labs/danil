@@ -7284,7 +7284,7 @@ export default function App() {
     const encargadoDeLaCelda = createMemo(() => {
       if (!pp.sesion) {
         const conversacion = hablandoCon();
-        if (!conversacion || conversacion.project !== proyectoDeLaCelda()?.id) return null;
+        if (!conversacion || conversacion.project !== (proyectoDeLaCelda()?.id ?? "")) return null;
         return conversacion.name;
       }
       const fila = filaDe(pp.sesion ?? "");
@@ -7321,7 +7321,7 @@ export default function App() {
     const estadoDelEncargado = watchHandlerStatus(() => {
       const name = identidadVisualDeLaCelda();
       const proyecto = proyectoDeLaCelda()?.id;
-      return name && proyecto ? { project: proyecto, name } : null;
+      return name ? { project: proyecto ?? "", name } : null;
     });
     /* Dentro de un memo: la celda del panel principal sigue al proyecto
        abierto, y mirarlo una sola vez al montar dejaba los perfiles del
@@ -7360,8 +7360,8 @@ export default function App() {
     const [declared] = createResource(
       () => {
         const name = identidadVisualDeLaCelda();
-        const id = proyectoDeLaCelda()?.id;
-        return name && id ? `${id}\u0000${name}` : undefined;
+        const id = proyectoDeLaCelda()?.id ?? "";
+        return name ? `${id}\u0000${name}` : undefined;
       },
       async (clave) => {
         const [id, name] = clave.split("\u0000");
@@ -7384,7 +7384,7 @@ export default function App() {
       const pedido = requestedProfile();
       if (!pedido) return;
       if (pedido.name !== identidadVisualDeLaCelda()) return;
-      if (pedido.project !== proyectoDeLaCelda()?.id) return;
+      if (pedido.project !== (proyectoDeLaCelda()?.id ?? "")) return;
       setRequestedProfile(null);
       setViewingProfile(true);
     });
@@ -7418,7 +7418,7 @@ export default function App() {
     const seguirConElAgente = () => {
       const name = encargadoDeLaCelda();
       const proyecto = proyectoDeLaCelda()?.id;
-      if (name && proyecto) hablarConEncargado(proyecto, name);
+      if (name) hablarConEncargado(proyecto ?? "", name);
     };
     // Máquina, carpeta y rama de la tarea. Una función y no un elemento: el chat la pinta
     // y, cuando los archivos lo tapan, la fila de la tarea pinta la suya.
