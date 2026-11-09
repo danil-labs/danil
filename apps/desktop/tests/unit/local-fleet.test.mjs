@@ -27,7 +27,6 @@ function guest(calls, overrides = {}) {
     guest_events: () => sleep(40).then(() => ({ cursor: 1, events: [], gap: false })),
     guest_sync_spaces: null,
     guest_start: true,
-    guest_job: null,
     list_spaces: [],
   };
 }

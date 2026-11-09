@@ -222,20 +222,6 @@ fn guest_channels() -> Vec<guests::ChannelKind> {
     guests::channels()
 }
 
-/// Los huéspedes de un canal, tengan o no motor de Danil.
-#[tauri::command]
-async fn guest_list(
-    channel: guests::ChannelKind,
-) -> std::result::Result<Vec<guests::Guest>, serde_json::Value> {
-    blocking(move || guests::channel(channel).list()).await
-}
-
-/// El trabajo en curso o el último, de cualquier canal.
-#[tauri::command]
-fn guest_job(app: tauri::AppHandle) -> Option<guests::child::Job> {
-    guests::child::job(&app)
-}
-
 #[tauri::command]
 async fn guest_children(
     app: tauri::AppHandle,
@@ -553,8 +539,6 @@ fn start(client: Option<Arc<Client>>, autostart: bool, launcher: launcher::Launc
             wsl_distro_user,
             wsl_reboot,
             guest_channels,
-            guest_list,
-            guest_job,
             guest_children,
             guest_remove,
             guest_start,
