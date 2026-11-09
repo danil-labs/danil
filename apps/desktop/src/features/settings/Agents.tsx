@@ -80,7 +80,7 @@ export default function Agents(props: {
     <Dialog open={deleting() !== null} onOpenChange={open => { if (!open && !busy()) setDeleting(null); }}>
       <Show when={deleting()}>{row => <DialogContent role="alertdialog" aria-describedby="delete-workspace-agent">
         <DialogTitle>{t("projects.agents.profile_delete_title", { name: displayName(row().agent.name, row().profile) })}</DialogTitle>
-        <p id="delete-workspace-agent" class="text-ui text-neutral-600">{t("projects.agents.profile_delete_what")}</p>
+        <p id="delete-workspace-agent" class="text-ui text-neutral-500">{t("projects.agents.profile_delete_what")}</p>
         <Show when={error()}>{message => <p role="alert" class="text-caption text-error-strong">{message()}</p>}</Show>
         <div class="flex justify-end gap-2">
           <Button variant="secondary" disabled={busy()} onClick={() => setDeleting(null)}>{t("projects.agents.profile_delete_cancel")}</Button>
