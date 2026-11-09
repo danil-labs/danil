@@ -2827,7 +2827,7 @@ export default function Chat(props: ChatProps) {
             {/* Sin `agente`: el rótulo del que no mide sale del catálogo
                 («Este agente»), y aquí el nombre legible del agente elegido
                 vive en la superficie, no en esta fila. */}
-            <Show when={props.superficies != null && !modoTerminal()}>
+            <Show when={!modoTerminal()}>
               <VentanaDeContexto ventana={props.ventana} />
             </Show>
             {/* Sin nada con qué trabajar no hay menú, hay una salida: en el
@@ -2857,7 +2857,7 @@ export default function Chat(props: ChatProps) {
               </Button>
             </Show>
 
-            <Show when={!modoTerminal()}>
+            <Show when={props.superficies != null && !modoTerminal()}>
               {/* Una opción decide agente, superficie y modelo. Separarlos hacía
                   imposible buscar Claude, Codex y OpenCode en el mismo menú.
                   La marca sale del agente que sirve la superficie: «OpenCode»
