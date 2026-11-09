@@ -48,7 +48,7 @@ export function AgentDock({
           <Pressable
             key={agent.name}
             testID={`dock-${agent.name}`}
-            accessibilityLabel={`${agent.name} · ${dockStatusText(lang, agent)}. ${t("dock.long_press")}`}
+            accessibilityLabel={`${(agent as { displayName?: string | null }).displayName || agent.name} · ${dockStatusText(lang, agent)}. ${t("dock.long_press")}`}
             onPress={() => onTalk(agent.name)}
             onLongPress={() => onShowTasks(agent.name)}
             style={[styles.slot, selected === agent.name ? { borderColor: theme.primary } : null]}
