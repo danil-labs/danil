@@ -319,11 +319,6 @@ export default function SelectorDeModelo(props: SelectorDeModeloProps) {
                   onClick={() => setSeccion(grupo.id)}
                 >
                   <MarcaAgente id={grupo.logo} size={17} />
-                  {/* Zen y Go comparten logotipo: sin la palabra, el riel
-                      enseña dos veces la misma marca y no se sabe cuál es cuál. */}
-                  <Show when={grupo.id === "opencode-go"}>
-                    <span class="text-[8px] font-medium leading-none" aria-hidden="true">Go</span>
-                  </Show>
                 </button>
               )}
             </For>
@@ -391,6 +386,13 @@ export default function SelectorDeModelo(props: SelectorDeModeloProps) {
                             <Lock size={12} class="shrink-0" aria-hidden="true" />
                           </Show>
                           <span class="truncate">{modelPresentation(opcion.model.id, opcion.model.label).label}</span>
+                          {/* Zen y Go sirven el mismo modelo con el mismo nombre;
+                              solo el cobro cambia. */}
+                          <Show when={opcion.proveedor.id === "opencode-go"}>
+                            <span class="shrink-0 rounded-sm border border-border px-1 text-2xs font-medium text-neutral-500">
+                              {t("chat.model.go_tag")}
+                            </span>
+                          </Show>
                         </span>
                         <button
                           type="button"

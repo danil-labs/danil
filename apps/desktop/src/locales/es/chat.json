@@ -134,6 +134,7 @@
   "chat.model.favorites": "Favoritos",
   "chat.model.free": "Gratis",
   "chat.model.go_remaining": "mín. {left}%",
+  "chat.model.go_tag": "Go",
   "chat.model.listbox": "Modelos",
   "chat.model.locked": "No se puede cambiar mientras contesta",
   "chat.model.native": "El CLI del agente padre administra el modelo de esta subtarea.",
