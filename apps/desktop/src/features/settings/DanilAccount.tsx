@@ -81,8 +81,9 @@ function WebAccount(props: { source: AccountProfileSource; part?: DanilAccountPa
         {(source) => <EmailsSection source={source()} onPrimaryChanged={() => window.dispatchEvent(new CustomEvent(PROFILE_CHANGED))} />}
       </Show>
       <Show when={props.part === "machines"}>
-        <Show when={workspaces.actual()} keyed>
-          {(workspace) => <AccountComputersSection workspace={workspace.id} />}
+        {/* Por el id: cada recarga trae otro objeto del mismo workspace y desmontaba la lista. */}
+        <Show when={workspaces.actual()?.id} keyed>
+          {(id) => <AccountComputersSection workspace={id} />}
         </Show>
         <ConnectMachineSection />
         <WslMachineSection />
