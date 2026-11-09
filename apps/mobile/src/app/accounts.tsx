@@ -175,6 +175,8 @@ export default function Accounts() {
             {t("accounts.machine_off", { name: h.label })}
           </Text>
         ))}
+        <Text style={{ color: theme.text, fontSize: 18, fontWeight: "600" }}>Danil</Text>
+        <FreeModels hosts={hosts} scopeOf={scopeOf} theme={theme} tick={tick} />
         {data?.map(({ provider, groups, limits, cachedAt }) => (
           <View key={provider.id} style={styles.provider} testID={`provider-${provider.id}`}>
             <View style={styles.providerHead}>
@@ -227,7 +229,6 @@ export default function Accounts() {
             </Pressable>
           </View>
         ))}
-        <FreeModels hosts={hosts} scopeOf={scopeOf} providers={data?.map((d) => d.provider) ?? []} theme={theme} tick={tick} />
       </ScrollView>
 
       <Sheet visible={pick !== null} title={t("accounts.pick_machine")} onClose={() => setPick(null)}>
