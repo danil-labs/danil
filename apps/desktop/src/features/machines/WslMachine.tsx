@@ -633,7 +633,7 @@ function Distro(props: { row: WslDistroRow; busy: boolean; onStarted: (j: WslJob
 type Surface = { id: string; provider: string; label: string; catalogo: string; usable: boolean; marca?: string | null; porque?: { clave?: string } | null };
 type Login = { provider: string; id: string; url: string | null; confirm: string | null; wantsCode: boolean };
 
-/** Un huésped conectado (WSL o Lima): Linux, Danil y sus proveedores de IA. */
+/** Una distro de WSL conectada: Linux, Danil y sus proveedores de IA. */
 export function DistroBox(props: { name: string; child: WslChild; onRemoved: () => void }) {
   const machine = props.child.id;
   const call = <T,>(command: string, args: Record<string, unknown> = {}, timeoutMs?: number) =>
@@ -788,7 +788,7 @@ export function DistroBox(props: { name: string; child: WslChild; onRemoved: () 
         <summary class="cursor-pointer">{t("danil.wsl.box.more")}</summary>
         <div class="mt-2 grid gap-2">
           <span>{t("danil.wsl.box.folder", { home: props.child.home })}</span>
-          <span data-box-scope="">{props.child.channel === "lima" ? t("danil.lima.box.scope") : t("danil.wsl.box.scope")}</span>
+          <span data-box-scope="">{t("danil.wsl.box.scope")}</span>
           <div class="flex items-center gap-2">
             <Button size="sm" variant="secondary" onClick={remove} data-wsl-remove="">
               {t("danil.wsl.box.remove")}
@@ -804,7 +804,7 @@ export function DistroBox(props: { name: string; child: WslChild; onRemoved: () 
 /** Las distribuciones conectadas, como una máquina más en «Máquinas de este workspace». Solo existen en esta PC. */
 export function WslMachineRows() {
   const [rows, setRows] = createSignal<WslChild[]>([]);
-  const offered = () => offersGuests("wsl") || offersGuests("lima");
+  const offered = () => offersGuests("wsl");
   const read = () => {
     if (!offered()) return;
     void invoke<WslChild[]>("guest_children", { fresh: false }).then(setRows).catch(() => setRows([]));
@@ -819,7 +819,7 @@ export function WslMachineRows() {
           data-account-computer={c.id}
           data-wsl-machine=""
           label={<span class="truncate">{c.name}</span>}
-          description={c.channel === "lima" ? (c.online ? t("danil.lima.row.online") : t("danil.lima.row.off")) : c.online ? t("danil.wsl.row.online") : t("danil.wsl.row.off")}
+          description={c.online ? t("danil.wsl.row.online") : t("danil.wsl.row.off")}
         />
       )}
     </For>

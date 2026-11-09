@@ -15,7 +15,6 @@ import { EmailsSection } from "./EmailsSection";
 import { type DanilSessionInfo, sessionForWorkspace, sessionKey, statusOf, syncLine } from "./danil-sessions";
 import { AccountComputersSection } from "../machines/AccountComputers";
 import { ConnectMachineSection } from "../machines/ConnectMachine";
-import { LimaMachineSection } from "../machines/LimaMachine";
 import { WslMachineSection } from "../machines/WslMachine";
 import { requestAccessInBrowser, TerminusLicense } from "./TerminusLicense";
 import { SettingsBlock, SettingsPanel, SettingsRow, SettingsSection } from "./layout";
@@ -87,7 +86,6 @@ function WebAccount(props: { source: AccountProfileSource; part?: DanilAccountPa
         </Show>
         <ConnectMachineSection />
         <WslMachineSection />
-        <LimaMachineSection />
       </Show>
     </SettingsPanel>
   );
@@ -328,7 +326,6 @@ function LocalMachines(props: { part?: DanilAccountPart }) {
   return (
     <Show when={props.part !== "profile"}>
       <WslMachineSection />
-      <LimaMachineSection />
     </Show>
   );
 }
