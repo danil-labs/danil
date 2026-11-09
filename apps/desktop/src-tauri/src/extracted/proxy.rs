@@ -297,8 +297,6 @@ pub(super) fn desktop_command(name: &str) -> bool {
                 | "wsl_distro_user"
                 | "wsl_reboot"
                 | "guest_channels"
-                | "guest_list"
-                | "guest_job"
                 | "guest_children"
                 | "guest_remove"
                 | "guest_start"
