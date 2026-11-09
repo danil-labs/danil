@@ -230,33 +230,6 @@ async fn guest_list(
     blocking(move || guests::channel(channel).list()).await
 }
 
-/// Conecta un huésped que ya existe (Lima). WSL conserva `wsl_connect`, que
-/// pide usuario y contraseña.
-#[tauri::command]
-fn guest_connect(
-    app: tauri::AppHandle,
-    channel: guests::ChannelKind,
-    guest: String,
-    name: Option<String>,
-    workspace: Option<String>,
-    workspace_name: Option<String>,
-) -> guests::child::Job {
-    let workspace = workspace.map(|id| {
-        let n = workspace_name.unwrap_or_else(|| id.clone());
-        (id, n)
-    });
-    let name = name.unwrap_or_else(|| guest.clone());
-    match channel {
-        guests::ChannelKind::Lima => {
-            guests::child::start_lima_connect(&app, &guest, &name, workspace)
-        }
-        guests::ChannelKind::Wsl => {
-            guests::child::start_connect(&app, &guest, &name, None, None, workspace)
-        }
-    }
-    .unwrap_or_else(|running| running)
-}
-
 /// El trabajo en curso o el último, de cualquier canal.
 #[tauri::command]
 fn guest_job(app: tauri::AppHandle) -> Option<guests::child::Job> {
@@ -581,7 +554,6 @@ fn start(client: Option<Arc<Client>>, autostart: bool, launcher: launcher::Launc
             wsl_reboot,
             guest_channels,
             guest_list,
-            guest_connect,
             guest_job,
             guest_children,
             guest_remove,
