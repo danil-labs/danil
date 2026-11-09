@@ -42,6 +42,7 @@
   "web.machines.missing_workspace": "{name} no tiene este workspace y su motor todavía no sabe crearlo. Actualízalo para crear tareas ahí.",
   "web.machines.none_for_workspace": "Ninguna máquina de la cuenta tiene este workspace.",
   "web.machines.off_action": "{name} está sin conexión. Verifica que Danil esté abierto y tenga acceso a internet.",
+  "web.machines.off_wakes": "{name} está sin conexión: se enciende cuando le mandes un mensaje o hagas algo en ella.",
   "web.machines.starting": "Encendiendo {name}…",
   "web.machines.start_failed": "No pudimos encender {name}. Intenta de nuevo en un minuto; si sigue igual, escríbenos a hola@danil.ai.",
   "web.machines.outdated_action": "{name} necesita actualizarse antes de usarla desde aquí.",
