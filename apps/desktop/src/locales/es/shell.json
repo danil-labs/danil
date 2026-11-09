@@ -9,7 +9,7 @@
   },
   "shell.agent_dock.pick_folder": "Hablar con {name} en…",
   "shell.agent_dock.see_all": "Ver todos",
-  "shell.agent_dock.empty": "Sin agentes todavía. Escríbelos en `.agents/agents/<nombre>/agent.md`, o créalos en «Ver todos».",
+  "shell.agent_dock.empty": "Todavía no hay agentes.",
   "shell.agent_dock.team": "Tus agentes",
   "shell.agent_dock.names": "Mostrar nombres",
   "shell.agent_dock.expand": "Ver todos los agentes",

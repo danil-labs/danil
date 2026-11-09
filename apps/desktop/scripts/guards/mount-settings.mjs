@@ -627,289 +627,79 @@ assert.equal(languageDoc.documentElement.lang, "es");
 assert.equal(languageSelect().value, "es");
 languageSaves.splice(0).forEach((save) => save());
 assert.deepEqual(languageApp.failures, []);
-/**
- * Configuración › Agentes contra un catálogo con estado: crear en otra
- * carpeta, agregar con mudanza, rechazo dentro del diálogo, quitar de
- * «todas», deshacer, y un deshacer que choca con un cambio hecho desde fuera.
- */
-const catalogFolders = [
-  { id: "app", name: "Terminus App", kind: "folder", sources: [], portfolio: null },
-  { id: "rad", name: "Radiant", kind: "folder", sources: [], portfolio: null },
-  { id: "kn", name: "kn", kind: "folder", sources: [], portfolio: null },
-];
-const catalogIds = catalogFolders.map((p) => p.id);
-const folderNameOf = (id) => catalogFolders.find((p) => p.id === id)?.name ?? id;
-const repositoryQa = "/repo/app/.agents/agents/qa/agent.md";
-const radiantQa = "/repo/rad/.agents/agents/qa/agent.md";
-let radiantDeclaresQa = false;
+/** Configuración global administra solo agentes del workspace, incluso sin carpetas. */
 const ownAgents = [
-  { name: "giskard-po", scope: { kind: "project", id: "app" }, list: ["app"], display: "Giskard Product Owner", description: "Product Owner de Terminus." },
-  { name: "notas-de-version", scope: { kind: "workspace" }, list: null, display: null, description: "Escribe las notas de versión." },
-  { name: "qa", scope: { kind: "project", id: "kn" }, list: ["kn"], display: "QA de kn", description: "Prueba los flujos de kn." },
+  { name: "giskard-po", scope: { kind: "project", id: "app" }, description: "Proyecto." },
+  { name: "notas-de-version", scope: { kind: "workspace" }, description: "Escribe las notas." },
+  { name: "ventas", scope: { kind: "workspace" }, package: "business", description: "Ventas." },
 ];
-const declaration = (a) => {
-  const base = a.scope.kind === "project" ? `/ws/projects/${a.scope.id}/agents/${a.name}` : `/ws/agents/${a.name}`;
-  return { name: a.name, description: a.description, instructions: "Trabaja.", tools: [], model: null, origin: `${base}/agent.md`, folder: base, providers: ["claude"], own: true, own_scope: a.scope };
-};
-const profileOf = (display) => ({ display_name: display, body: null, background: null, veil: 0.82, provider: null, model: null, effort: null, hidden: false });
-const folderChanges = [];
+const declaration = a => ({ name: a.name, description: a.description, instructions: "Trabaja.", tools: [], model: null, origin: `/ws/.agents/agents/${a.name}/agent.md`, folder: `/ws/.agents/agents/${a.name}`, providers: ["claude"], own: true, own_scope: a.scope, package: a.package });
 const createdItems = [];
+const deletedItems = [];
 const agentsApp = await boot("listo", "settings-agents", {
   ...RESPONSES,
-  list_projects: () => structuredClone(catalogFolders),
+  list_projects: [],
   list_language_packs: [], list_bundled_language_packs: [],
   list_agent_profiles: {},
-  // Clonado como lo entrega el IPC: el front reconcilia sobre lo que recibe.
   list_machine_agents: () => structuredClone({
-    own: ownAgents
-      .map((a) => ({
-        agent: declaration(a),
-        profile: profileOf(a.display),
-        folders: a.list === null ? catalogIds : catalogIds.filter((id) => a.list.includes(id)),
-        all_folders: a.list === null,
-        blocked: a.name === "qa" ? [{ folder: "app", origin: repositoryQa, repository: true }] : [],
-        catalog_taken: null,
-      }))
-      .sort((x, y) => x.agent.name.localeCompare(y.agent.name)),
-    repository: [{
-      agent: { name: "qa", description: "Verifica que un cambio funcione.", instructions: "", tools: [], model: null, origin: repositoryQa, folder: "/repo/app/.agents/agents/qa", providers: ["claude"], own: false, own_scope: null },
-      profile: profileOf(null),
-      folders: ["app"],
-    }],
+    own: ownAgents.map(a => ({ agent: declaration(a), profile: {}, folders: [], all_folders: true, blocked: [], catalog_taken: null })),
+    repository: [{ agent: { ...declaration({ name: "repo-qa", description: "Repositorio." }), own: false, own_scope: null }, profile: {}, folders: ["app"] }],
   }),
-  change_agent_folders: ({ scope, name, change }) => {
-    folderChanges.push([name, scope, change]);
-    const a = ownAgents.find((x) => x.name === name && JSON.stringify(x.scope) === JSON.stringify(scope));
-    const denies = (codeText, origin = "") => Promise.reject({
-      what: { clave: `settings.agents.error.${codeText}`, datos: { name, folder: change.folder ? folderNameOf(change.folder) : "", origin } },
-      detail: codeText,
-    });
-    if (!a) return denies("missing");
-    const current = a.list ?? catalogIds;
-    if (change.kind === "add") {
-      if (current.includes(change.folder)) return denies("already_active");
-      if (name === "qa" && change.folder === "app") return denies("shadowed_repository", repositoryQa);
-      if (name === "qa" && change.folder === "rad" && radiantDeclaresQa) return denies("shadowed_repository", radiantQa);
-      a.scope = { kind: "workspace" };
-      a.list = [...current, change.folder];
-      return [...a.list];
-    }
-    if (change.kind === "remove") {
-      const remaining = current.filter((id) => id !== change.folder);
-      if (remaining.length === 0) return denies("last_folder");
-      a.list = remaining;
-      return [...remaining];
-    }
-    if (JSON.stringify(change.expected) !== JSON.stringify(a.list)) return denies("conflict");
-    a.list = change.folders;
-    return structuredClone(a.list);
-  },
   create_agent: ({ name, description, scope }) => {
     createdItems.push([name, scope]);
-    const a = { name, scope, list: [scope.id], display: null, description };
+    const a = { name, scope, description };
     ownAgents.push(a);
     return { agent: declaration(a), eclipsado_por: null };
   },
-  save_agent_profile: ({ name, displayName }) => {
-    const a = ownAgents.find((x) => x.name === name);
-    if (a) a.display = displayName;
-    return null;
-  },
+  delete_agent: args => { deletedItems.push(args); ownAgents.splice(ownAgents.findIndex(a => a.name === args.name), 1); return null; },
+  save_agent_profile: () => null,
 });
 const agDoc = agentsApp.w.document;
-let railNotices = 0;
-agentsApp.w.addEventListener("harness:encargados", () => railNotices++);
-let profileNotices = 0;
-agentsApp.w.addEventListener("harness:profiles", () => profileNotices++);
-const pressedKey = (key) =>
-  agDoc.activeElement.dispatchEvent(new agentsApp.w.KeyboardEvent("keydown", { key, bubbles: true }));
-const buttonWith = (rootDir, textValue) => [...rootDir.querySelectorAll("button")].find((b) => b.textContent?.trim() === textValue);
-const ownItem = (name) =>
-  [...agDoc.querySelectorAll('section[aria-labelledby="agents-own"] [role="list"] > [role="listitem"]')]
-    .find((li) => [...li.querySelectorAll("span")].some((s) => s.textContent === name));
-const foldersLabel = (name) => ownItem(name).querySelector('[role="group"] > span').textContent;
-const chips = (name) => [...ownItem(name).querySelectorAll('[role="group"] > span')].slice(1).map((s) => s.textContent);
-const removeFrom = (name, folder) => ownItem(name).querySelector(`button[aria-label="Quitar ${name} de ${folder}"]`);
-const menuOf = (name) => agDoc.querySelector(`[role="menu"][aria-label="Agregar ${name} a un proyecto"]`);
-const openMenuOf = async (name) => {
-  buttonWith(ownItem(name), "Agregar a proyecto…").click();
-  await sleep(60);
-  return menuOf(name);
-};
-const lineEls = (menu) => [...menu.querySelectorAll('[role="menuitem"]')];
-const lineEl = (menu, folder) => lineEls(menu).find((r) => r.textContent.startsWith(folder));
-const moveDialog = (name) =>
-  [...agDoc.querySelectorAll('[role="dialog"],[role="alertdialog"]')]
-    .find((d) => d.textContent.includes(`¿Pasar ${name} al catálogo del workspace?`));
+await sleep(150);
+assert.ok(agDoc.querySelector('[role="group"][aria-label="Agentes"] button[aria-label="Nuevo agente"]'), "el alta permanece disponible sin agentes ni proyectos");
+assert.equal(agDoc.querySelector('[data-dock-loading]'), null, "el workspace vacío termina de cargar");
+const buttonWith = (root, text) => [...root.querySelectorAll("button")].find(b => b.textContent?.trim() === text);
+const ownItem = name => [...agDoc.querySelectorAll('section[aria-labelledby="agents-own"] [role="listitem"]')].find(li => li.textContent.includes(name));
 const settingsPanel = () => agDoc.querySelector("#cfg-panel");
-
-agDoc.querySelector('button[aria-label="Configuración"]')?.click();
+agDoc.querySelector('button[aria-label="Configuración"]').click();
 await sleep(100);
-const tabs = [...agDoc.querySelectorAll('[role="tab"][id^="cfg-tab-"]')].map((b) => b.id);
-const projects = tabs.indexOf("cfg-tab-projects");
-assert.deepEqual(tabs.slice(projects, projects + 2), ["cfg-tab-projects", "cfg-tab-agents-skills"]);
-agDoc.querySelector("#cfg-tab-projects").click();
-// La página llega en su propio trozo: se espera a que pinte sus filas.
-for (let i = 0; i < 120 && !agDoc.querySelector("#cfg-panel [data-settings-project]"); i++) await sleep(25);
-const projectRows = [...agDoc.querySelectorAll("#cfg-panel [data-settings-project]")];
-assert.deepEqual(projectRows.map((f) => f.getAttribute("data-settings-project")), catalogIds, "Ajustes › Proyectos lista las carpetas del espacio");
-assert.ok(projectRows.every((f) => f.textContent.includes("Archivos") && f.textContent.includes("sin tareas")), "cada fila dice su tipo en palabras y que no tiene tareas");
-assert.doesNotMatch(settingsPanel().textContent, /\bgit\b/i, "la página no le habla de git a la persona");
 agDoc.querySelector("#cfg-tab-agents-skills").click();
-// Agentes llega en su propio trozo: se espera a que pinte sus filas.
-for (let i = 0; i < 120 && !ownItem("giskard-po"); i++) await sleep(25);
-
-assert.ok(ownItem("giskard-po"), "la sección lista los agentes propios");
-assert.deepEqual(chips("giskard-po"), ["Terminus App"]);
-assert.equal(removeFrom("giskard-po", "Terminus App"), null, "la última carpeta no lleva ×");
-assert.equal(foldersLabel("notas-de-version"), "Activo en todos los proyectos:");
-assert.deepEqual(chips("notas-de-version"), ["Terminus App", "Radiant", "kn"]);
-assert.ok(removeFrom("notas-de-version", "kn"), "«todas» se ve carpeta por carpeta, cada una con ×");
-assert.equal(buttonWith(ownItem("notas-de-version"), "Agregar a proyecto…"), undefined);
-const fromRepo = agDoc.querySelector('section[aria-labelledby="agents-repository"]');
-assert.ok(fromRepo?.textContent.includes("Declarado en:"), "los del repositorio se ven aparte y solo se leen");
-assert.equal(buttonWith(fromRepo, "Agregar a proyecto…"), undefined);
-
-// Crear desde Configuración: el formulario del riel, con la carpeta elegible.
+for (let i = 0; i < 120 && !ownItem("notas-de-version"); i++) await sleep(25);
+assert.ok(ownItem("notas-de-version"));
+assert.ok(ownItem("ventas"));
+assert.equal(ownItem("giskard-po"), undefined, "los instalados en proyectos no aparecen en configuración global");
+assert.doesNotMatch(settingsPanel().textContent, /repo-qa|\.agents|\/ws\//, "ni repositorios ni rutas internas");
+assert.equal(buttonWith(ownItem("ventas"), "Eliminar agente"), undefined, "Business no ofrece eliminar");
 buttonWith(settingsPanel(), "Agregar nuevo agente").click();
-await sleep(80);
-const newItem = [...agDoc.querySelectorAll('[role="dialog"]')].find((d) => d.textContent.includes("Nuevo agente"));
-assert.ok(newItem, "«Agregar nuevo agente» abre el formulario de siempre");
-const scopeSelect = newItem.querySelector("select");
-assert.equal(scopeSelect.value, "project", "el alcance inicial es la carpeta");
-scopeSelect.value = "workspace";
-scopeSelect.dispatchEvent(new agentsApp.w.Event("change", { bubbles: true }));
-assert.equal(newItem.querySelectorAll("select").length, 1, "el alcance de espacio no pide carpeta");
-scopeSelect.value = "project";
-scopeSelect.dispatchEvent(new agentsApp.w.Event("change", { bubbles: true }));
-const newFolder = newItem.querySelectorAll("select")[1];
-assert.equal(newFolder.value, "app", "sin carpeta abierta, nace en la primera");
-newFolder.value = "rad";
-newFolder.dispatchEvent(new agentsApp.w.Event("change", { bubbles: true }));
-const typeText = (inputField, textValue) => {
-  inputField.value = textValue;
-  inputField.dispatchEvent(new agentsApp.w.InputEvent("input", { bubbles: true }));
-};
-const [nameInput, whatItDoesField] = newItem.querySelectorAll("input");
+await sleep(100);
+const newItem = [...agDoc.querySelectorAll('[role="dialog"]')].find(d => d.textContent.includes("Nuevo agente"));
+assert.ok(newItem, "crear funciona sin ningún proyecto");
+assert.equal([...newItem.querySelectorAll("option")].some(o => o.value === "project"), false, "configuración solo crea en workspace");
+const typeText = (field, text) => { field.value = text; field.dispatchEvent(new agentsApp.w.InputEvent("input", { bubbles: true })); };
+const [nameInput, descriptionInput] = newItem.querySelectorAll("input");
 typeText(nameInput, "Revisor");
-typeText(whatItDoesField, "Revisa antes de que aterrice.");
+typeText(descriptionInput, "Revisa antes de que aterrice.");
 typeText(newItem.querySelector("textarea"), "Con criterio.");
 buttonWith(newItem, "Crear").click();
-await sleep(150);
-assert.deepEqual(createdItems, [["revisor", { kind: "project", id: "rad" }]], "nace de proyecto en la carpeta elegida");
-assert.equal([...agDoc.querySelectorAll('[role="dialog"]')].some((d) => d.textContent.includes("Nuevo agente")), false);
-assert.deepEqual(chips("revisor"), ["Radiant"], "aparece en la lista sin reabrir Configuración");
-
-// Menú: marcadas, deshabilitadas con su razón, flechas, y Esc devuelve el foco.
-let menu = await openMenuOf("giskard-po");
-assert.ok(menu, "«Agregar a proyecto…» abre el menú de carpetas");
-assert.equal(lineEl(menu, "Terminus App").getAttribute("aria-disabled"), "true");
-assert.ok(lineEl(menu, "Terminus App").textContent.includes("Ya está aquí"));
-assert.equal(agDoc.activeElement, lineEl(menu, "Radiant"), "el foco entra al primer renglón elegible");
-pressedKey("ArrowDown");
-assert.equal(agDoc.activeElement, lineEl(menu, "kn"));
-pressedKey("Escape");
-await sleep(60);
-assert.equal(menuOf("giskard-po"), null, "Esc cierra el menú");
-assert.ok(settingsPanel(), "y no se lleva Configuración");
-assert.equal(agDoc.activeElement, buttonWith(ownItem("giskard-po"), "Agregar a proyecto…"), "el foco vuelve al botón");
-
-// Agregar uno de proyecto a otra carpeta pide la mudanza; Cancelar va primero.
-menu = await openMenuOf("giskard-po");
-lineEl(menu, "Radiant").click();
+await sleep(200);
+assert.deepEqual(createdItems, [["revisor", { kind: "workspace" }]]);
+assert.ok(ownItem("revisor"), "crear refresca la lista");
+buttonWith(ownItem("revisor"), "Eliminar agente").click();
 await sleep(80);
-assert.ok(moveDialog("giskard-po"), "uno de proyecto pide pasar al catálogo");
-assert.equal(agDoc.activeElement?.textContent?.trim(), "Cancelar", "el foco empieza en Cancelar");
-pressedKey("Escape");
+let deletion = agDoc.querySelector('[role="alertdialog"]');
+assert.ok(deletion, "eliminar pide confirmar");
+assert.match(deletion.textContent, /memoria/);
+buttonWith(deletion, "Cancelar").click();
 await sleep(80);
-assert.equal(moveDialog("giskard-po"), undefined);
-assert.ok(settingsPanel(), "Esc en el diálogo no cierra Configuración");
-assert.deepEqual(folderChanges, [], "cancelar no cambia nada");
-assert.equal(agDoc.activeElement, buttonWith(ownItem("giskard-po"), "Agregar a proyecto…"));
-menu = await openMenuOf("giskard-po");
-lineEl(menu, "Radiant").click();
+assert.equal(deletedItems.length, 0, "cancelar conserva el agente");
+buttonWith(ownItem("revisor"), "Eliminar agente").click();
 await sleep(80);
-const noticesBefore = railNotices;
-buttonWith(moveDialog("giskard-po"), "Pasar al catálogo y agregar").click();
-await sleep(150);
-assert.deepEqual(folderChanges.at(-1), ["giskard-po", { kind: "project", id: "app" }, { kind: "add", folder: "rad" }]);
-assert.equal(moveDialog("giskard-po"), undefined);
-assert.deepEqual(chips("giskard-po"), ["Terminus App", "Radiant"]);
-assert.ok(removeFrom("giskard-po", "Radiant"), "ya en el catálogo, cada carpeta se puede quitar");
-assert.ok(settingsPanel().textContent.includes("giskard-po pasó al catálogo del workspace."));
-assert.ok(settingsPanel().textContent.includes("Ya está activo en Terminus App y en Radiant."));
-assert.ok(railNotices > noticesBefore, "el riel se entera");
-
-// Rechazo: en el menú, con la razón; y el que llega del backend, dentro del diálogo.
-menu = await openMenuOf("qa");
-assert.equal(lineEl(menu, "Terminus App").getAttribute("aria-disabled"), "true");
-assert.ok(lineEl(menu, "Terminus App").textContent.includes("Gana el qa del repositorio de Terminus App"));
-const changesBefore = folderChanges.length;
-lineEl(menu, "Terminus App").click();
-await sleep(40);
-assert.equal(folderChanges.length, changesBefore, "un renglón deshabilitado no pide nada");
-pressedKey("Escape");
-await sleep(60);
-radiantDeclaresQa = true;
-menu = await openMenuOf("qa");
-lineEl(menu, "Radiant").click();
-await sleep(80);
-buttonWith(moveDialog("qa"), "Pasar al catálogo y agregar").click();
-await sleep(120);
-const rejection = moveDialog("qa")?.querySelector('[role="alert"]');
-assert.equal(
-  rejection?.textContent,
-  `No se agregó qa a Radiant. Ahí gana el qa del repositorio, que se declara en ${radiantQa}.`,
-  "el rechazo se lee dentro del diálogo, con quién gana y dónde",
-);
-buttonWith(moveDialog("qa"), "Cancelar").click();
-await sleep(80);
-assert.deepEqual(chips("qa"), ["kn"]);
-
-// Quitar de «todas» la vuelve lista fija; Deshacer la devuelve a «todas».
-const profilesBefore = profileNotices;
-removeFrom("notas-de-version", "kn").click();
-await sleep(120);
-assert.deepEqual(folderChanges.at(-1), ["notas-de-version", { kind: "workspace" }, { kind: "remove", folder: "kn" }]);
-assert.equal(foldersLabel("notas-de-version"), "Activo en:");
-assert.deepEqual(chips("notas-de-version"), ["Terminus App", "Radiant"]);
-assert.ok(buttonWith(ownItem("notas-de-version"), "Agregar a proyecto…"), "vuelve «Agregar a proyecto…»");
-assert.ok(settingsPanel().textContent.includes("notas-de-version ya no está en kn."));
-assert.ok(settingsPanel().textContent.includes("Ahora está en una lista fija de proyectos: los nuevos no lo tendrán."));
-assert.equal(agDoc.activeElement?.getAttribute("aria-label"), "Quitar notas-de-version de Radiant", "el foco pasa a la vecina");
-buttonWith(settingsPanel(), "Deshacer").click();
-await sleep(150);
-assert.deepEqual(folderChanges.at(-1)[2], { kind: "restore", expected: ["app", "rad"], folders: null });
-assert.equal(
-  profileNotices - profilesBefore,
-  2,
-  "quitar y deshacer releen las caras: el riel las lee por carpeta, y el que vuelve a una se pintaría sin su cara ni su fondo",
-);
-assert.equal(foldersLabel("notas-de-version"), "Activo en todos los proyectos:");
-assert.deepEqual(chips("notas-de-version"), ["Terminus App", "Radiant", "kn"]);
-
-// Un deshacer que choca con un cambio hecho desde fuera no lo pisa.
-removeFrom("giskard-po", "Radiant").click();
-await sleep(120);
-assert.ok(settingsPanel().textContent.includes("giskard-po ya no aparece en Radiant."));
-assert.equal(removeFrom("giskard-po", "Terminus App"), null);
-ownAgents.find((a) => a.name === "giskard-po").list = ["app", "kn"];
-buttonWith(settingsPanel(), "Deshacer").click();
-await sleep(150);
-assert.deepEqual(folderChanges.at(-1)[2], { kind: "restore", expected: ["app"], folders: ["app", "rad"] });
-assert.deepEqual(ownAgents.find((a) => a.name === "giskard-po").list, ["app", "kn"], "no pisa el cambio de fuera");
-assert.ok(
-  [...settingsPanel().querySelectorAll('[role="alert"]')].some((a) =>
-    a.textContent.includes("giskard-po cambió mientras tanto. Revisa la lista y vuelve a intentarlo.")),
-  "el conflicto se enseña",
-);
-assert.deepEqual(chips("giskard-po"), ["Terminus App", "kn"], "y la lista se relee");
-
-// Abrir perfil cierra Configuración y lo abre en su primera carpeta.
-buttonWith(ownItem("giskard-po"), "Abrir perfil").click();
-await sleep(100);
-assert.equal(agentsApp.commands.includes("send_message"), false, "abrir el perfil no crea un chat persistente");
-assert.equal(settingsPanel(), null);
+deletion = agDoc.querySelector('[role="alertdialog"]');
+buttonWith(deletion, "Eliminar").click();
+await sleep(200);
+assert.deepEqual(deletedItems, [{ project: "", name: "revisor" }]);
+assert.equal(ownItem("revisor"), undefined);
+assert.ok(ownItem("ventas"));
 assert.deepEqual(agentsApp.failures, []);
 /**
  * Renombrar un workspace es un gesto con nombre, vale para el que no está

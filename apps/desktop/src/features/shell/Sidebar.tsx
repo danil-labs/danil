@@ -42,7 +42,7 @@ import {
   type SidebarGroup,
   type SidebarView,
 } from "../../lib/sidebarView";
-import { type DockAgent, dockSources } from "./dockLayout";
+import { type DockAgent } from "./dockLayout";
 import type { SidebarFilterProps } from "./SidebarFilter";
 import { flattenTasks, folderCounts } from "./sidebarTasks";
 import { machineName, machines } from "../machines/store";
@@ -312,14 +312,12 @@ export default function Sidebar(props: {
    * nombre; manda el estado más despierto y se suman sus tareas vivas.
    */
   /** La carpeta de lo que se mira ahora: sus agentes son los del panel. */
-  const carpetaActual = () => (props.current ? carpetaDe(props.current) : "") || props.proyectoAbierto || null;
+  const carpetaActual = () => props.current ? carpetaDe(props.current) || null : props.proyectoAbierto || null;
   const carpetasConTareas = createMemo(
     () => {
-      const claves = dockSources(todas()).map((s) => `${s.project}\n${s.machine}`);
-      // La carpeta abierta cuenta aunque no tenga tareas: sus agentes son los que se piden aquí.
       const actual = carpetaActual();
-      if (actual && !claves.some((c) => c.startsWith(`${actual}\n`))) claves.push(`${actual}\n`);
-      return claves;
+      const machine = props.current ? relacionadas().find(row => row.id === props.current)?.machine ?? "" : "";
+      return [`${actual ?? ""}\n${machine}`];
     },
     [],
     { equals: (a, b) => a.length === b.length && a.every((x, i) => x === b[i]) },
@@ -332,7 +330,7 @@ export default function Sidebar(props: {
   // Sin plazo: `invoke` espera al motor, y una carpeta que falla resuelve igual.
   const rosterListo = () => {
     const carpetas = porCarpeta();
-    return carpetas.length > 0 && carpetas.every((c) => c.roster.ready());
+    return carpetas.every((c) => c.roster.ready());
   };
   const alCrearAgente = () => setAltas((n) => n + 1);
   window.addEventListener("harness:encargados", alCrearAgente);
@@ -349,7 +347,7 @@ export default function Sidebar(props: {
       machine ? `${project}@${machine}` : project,
       async () => {
         const { agents } = await invoke<HandlerList>("list_agents", { project }, machine ? { headers: { "x-terminus-machine": machine } } : undefined);
-        return agents;
+        return project ? agents : agents.filter((agent) => agent.own_scope?.kind === "workspace");
       },
       altas,
     );
@@ -764,6 +762,7 @@ export default function Sidebar(props: {
               onShowTasks={(agent) => cambiarVista({ ...vista(), agent })}
               onProfile={props.onAgentProfile}
               onSeeAll={() => props.onSettings("agentes")}
+              onNewAgent={() => setCreatingAgentIn({ id: carpetaActual() ?? "", name: "" })}
               profileOf={perfilDe}
             />
           </Suspense>

@@ -273,7 +273,7 @@
   "settings.agents.error.conflict": "{name} changed in the meantime. Check the list and try again.",
   "settings.agents.error.io": "Could not change where {name} works.",
   "settings.agents.error.missing": "That agent no longer exists.",
-  "settings.agents.own_title": "Operations and code",
+  "settings.agents.own_title": "Workspace agents",
   "settings.agents.new": "Add new agent",
   "settings.agents.new_no_folder": "Add a project first: the agent is born in one.",
   "settings.agents.own_empty": "You don't have agents of your own yet",
@@ -427,5 +427,6 @@
   "settings.ai_providers.agent_codex": "Codex (ChatGPT)",
   "settings.ai_providers.agent_antigravity": "Gemini / Antigravity",
   "settings.ai_providers.agent_grok": "Grok",
-  "settings.ai_providers.zen_go": "OpenCode"
+  "settings.ai_providers.zen_go": "OpenCode",
+  "settings.agents.business": "Included with Business"
 }
