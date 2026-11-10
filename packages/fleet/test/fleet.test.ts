@@ -6,7 +6,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { type CallResult, type DeferredFrame, type EventsPage, INTENT_COMMANDS, type MachineState, isDeferrable } from "../../computers/src/index.ts";
-import { Fleet, type FleetError, type Link, type MachineInfo, type Slice, SLICES_KEY, classOf } from "../src/index.ts";
+import { Fleet, type FleetError, type Link, type MachineInfo, PASSIVE, type Slice, SLICES_KEY, classOf } from "../src/index.ts";
 
 type Answer = unknown | ((args: Record<string, unknown>) => unknown);
 /** `errors`: what the relay answers the next calls, in order, before answering normally. */
@@ -755,6 +755,30 @@ test("opening a task of an off VM reads its tree, changes and previews without w
     assert.equal(wakes, 0, "only a message or an action starts the VM");
   } finally { off.fleet.close(); }
   for (const action of ["tree_write", "tree_delete", "tree_rename", "tree_patch", "tree_create_file"]) assert.equal(classOf(action), "action", action);
+});
+
+test("what the window asks on its own (mark seen, watch the tree, probes) never wakes an off VM; a gesture still does", async () => {
+  for (const command of PASSIVE) {
+    assert.ok(!INTENT_COMMANDS.has(command), `${command} is not an intent`);
+    assert.ok(!isDeferrable(command), `${command} is not queued by the relay`);
+  }
+  let wakes = 0;
+  const off = setup({ cmp_vm: { state: "stopped", answers: { set_session_stage: null } } }, [VM], {
+    wake: async () => {
+      wakes++;
+      setTimeout(() => off.link(VM.id).setState("online"), 10);
+      return true;
+    },
+  });
+  try {
+    for (const command of ["mark_task_seen", "watch_task_tree", "unwatch_task_tree", "kn_pending", "source_freshness", "tree_read_part", "list_storage"]) {
+      await assert.rejects(off.fleet.call({ machine: VM.id, workspace: "w", command, args: { project: "p1" } }), (e: FleetError) => e.code === "machine_off", command);
+    }
+    assert.equal(wakes, 0, "opening or focusing the web does not start the VM");
+    assert.equal(off.link(VM.id).calls.length, 0);
+    await off.fleet.call({ machine: VM.id, workspace: "w", command: "set_session_stage", args: { project: "p1", id: "cmp_vm~t1", stage: null } });
+    assert.equal(wakes, 1, "an action the person asked for still starts it");
+  } finally { off.fleet.close(); }
 });
 
 test("the in-memory slice cache evicts old pages and keeps the recently used one", async () => {
