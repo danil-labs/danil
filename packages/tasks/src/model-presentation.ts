@@ -19,3 +19,14 @@ export function routerDiscovery(modelIds: readonly string[], query = "") {
 export function routerAvailable(models: readonly { id: string; gratis?: boolean | null }[]): boolean {
   return models.some((model) => model.id === "danil-free/reflection/beam-free" && model.gratis === true);
 }
+
+export type RouterOfferState = "loading" | "update_engine" | "activate" | "unavailable" | "ready";
+
+/** Qué dice la fila del Router en el selector: sin política es motor viejo; sin sí, se ofrece activar. */
+export function routerOfferState(policy: { enabled: boolean; accepted: boolean } | null | undefined, routeAvailable: boolean | null): RouterOfferState {
+  if (policy === undefined) return "loading";
+  if (policy === null) return "update_engine";
+  if (!policy.enabled) return "unavailable";
+  if (!policy.accepted) return "activate";
+  return routeAvailable ? "ready" : "unavailable";
+}

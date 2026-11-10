@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { modelPresentation, routerDiscovery, routerAvailable } from "../src/model-presentation.ts";
+import { modelPresentation, routerDiscovery, routerAvailable, routerOfferState } from "../src/model-presentation.ts";
 import { modelName } from "../src/preview.ts";
 
 test("Beam has its creator tag and concise label without changing its exact id", () => {
@@ -44,4 +44,14 @@ test("consent cannot manufacture availability when the exact upstream model disa
   assert.equal(routerAvailable([{ id: "danil-free/reflection/beam-free", gratis: false }]), false);
   assert.equal(routerAvailable([{ id: "danil-free/reflection/beam-free" }]), false);
   assert.equal(routerAvailable([{ id: "danil-free/reflection/beam-free", gratis: true }]), true);
+});
+
+test("la fila del Router dice una sola cosa según política, sí y ruta", () => {
+  assert.equal(routerOfferState(undefined, null), "loading");
+  assert.equal(routerOfferState(null, null), "update_engine");
+  assert.equal(routerOfferState({ enabled: false, accepted: false }, null), "unavailable");
+  assert.equal(routerOfferState({ enabled: true, accepted: false }, null), "activate");
+  assert.equal(routerOfferState({ enabled: true, accepted: true }, false), "unavailable");
+  assert.equal(routerOfferState({ enabled: true, accepted: true }, null), "unavailable");
+  assert.equal(routerOfferState({ enabled: true, accepted: true }, true), "ready");
 });

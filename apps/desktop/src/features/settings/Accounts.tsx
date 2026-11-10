@@ -1,4 +1,3 @@
-import { routerAvailable } from "@terminus/tasks";
 import { marcaDeSuperficie } from "../../lib/surfaces";
 import { groupAccounts } from "@terminus/computers";
 import Check from "lucide-solid/icons/check";
@@ -14,13 +13,11 @@ import { createCopied } from "../../lib/clipboard";
 import { enfocar } from "../../lib/focus";
 import { t } from "../../lib/i18n";
 import { invoke } from "../../lib/invoke.ts";
-import { acceptedFreeModelPolicy, freeModelScope, sameFreeModelPolicy, type FreeModelConsent, type FreeModelPolicy, type FreeModelStartup } from "../../lib/free-model-policy.ts";
-import { loadFreeModelPolicy } from "../../lib/free-model-policy-load.ts";
 
 import { revocada } from "../../lib/limits";
 import { textoDeFalta } from "../../lib/no-space";
 import { capabilities } from "../../lib/platform";
-import { type Frase, prosa } from "../../lib/prose";
+import { prosa } from "../../lib/prose";
 import { listen } from "../../lib/serviceEvents";
 import { cn } from "../../lib/utils";
 import { Badge } from "../../ui/Badge";
@@ -58,6 +55,7 @@ import { crearModelosLocales } from "./local-models-store";
 import { Spinner } from "../../ui/Spinner";
 import { ExternalLink as EnlaceExterno } from "../../ui/ExternalLink";
 import "../../locales/settingsPhrases";
+import { createFreeRouterConsent } from "./free-router-consent";
 
 // Las claves en la cuenta de Danil: un trozo aparte, solo para agentes con API key.
 const CredentialsInUse = lazy(() => import("./credentials/AccountCredentials").then((m) => ({ default: m.CredentialsInUse })));
@@ -1494,82 +1492,6 @@ function MotoresLocales() {
   );
 }
 
-/**
- * Lo que hay que aceptar antes de activar, y a qué versión de texto. Los dos
- * llegan juntos con la política del workspace: quien cambie la
- * frase tiene el número al lado, y un guarda en Rust falla si el texto se
- * mueve sin que la versión suba.
- */
-export type Consentimiento = { lineas: Frase[]; version: number; policy: FreeModelPolicy };
-
-/**
- * El sí explícito, antes de activar.
- *
- * No choca con «una interfaz que necesita explicarse está mal diseñada»
- * (AGENTS.md): la regla prohíbe la glosa, el párrafo que describe lo que la
- * sección es; un consentimiento es retroalimentación sobre lo que el sistema
- * va a hacer, que la misma regla permite.
- *
- * Cancelar es una salida de verdad, no un paso más: si la única forma de
- * cerrar fuera aceptar, la decisión ya estaría tomada. Se sale por tres
- * vías —el botón, Escape y pulsar fuera— y las tres dejan el mismo estado:
- * no se activa nada.
- *
- * Cancelar no es un fallo: ni mensaje de error ni nota roja. Es una
- * respuesta legítima a una pregunta legítima; tratarla como error empujaría
- * a aceptar, lo que un consentimiento no puede hacer.
- */
-export function Consentir(props: {
-  texto: Consentimiento;
-  guardando: boolean;
-  error?: string | null;
-  onAceptar: () => void;
-  onCancelar: () => void;
-}) {
-  return (
-    <Dialog open onOpenChange={(abierto) => !abierto && props.onCancelar()}>
-        <DialogContent
-          class="w-[min(520px,100%)] max-w-[520px] p-0"
-          aria-label={t("settings.accounts.consent.title")}
-        >
-          <div class="flex flex-col gap-3 p-5">
-            <For each={props.texto.lineas}>
-              {(linea, i) => (
-                <p class={cn("m-0 text-xs leading-6 text-neutral-500", i() === 0 && "font-medium text-neutral-950")}>{prosa(linea)}</p>
-              )}
-            </For>
-            <div class="flex flex-wrap gap-x-3 gap-y-1">
-              <For each={props.texto.policy.terms}>{(term) => (
-                <Button variant="ghost" size="sm" onClick={() => void invoke("open_external", { target: term.url })}>{term.url.includes("privacy") ? t("settings.accounts.free.privacy", { provider: term.label }) : t("settings.accounts.free.terms", { provider: term.label })}</Button>
-              )}</For>
-            </div>
-            <Show when={props.error}>{(error) => <p role="alert" class="m-0 text-xs text-error-strong">{error()}</p>}</Show>
-            <div class="mt-2 flex justify-end gap-2">
-              {/* Cancelar primero en el orden de lectura y sin peso visual: la
-                  acción que gasta algo es la otra, y esta tiene que poder
-                  pulsarse sin buscarla. */}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={props.onCancelar}
-                disabled={props.guardando}
-              >
-                {t("settings.accounts.consent.cancel")}
-              </Button>
-              <Button
-                size="sm"
-                onClick={props.onAceptar}
-                disabled={props.guardando}
-              >
-                {t("settings.accounts.consent.accept")}
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-    </Dialog>
-  );
-}
-
 function ModelosGratuitos(props: {
   nombre: string;
   marca?: JSX.Element;
@@ -1596,95 +1518,19 @@ function ModelosGratuitos(props: {
    */
   falta: boolean;
 }) {
-  let catalogGeneration = 0;
-  onCleanup(() => { catalogGeneration++; });
-  async function refreshRoute(policy: FreeModelPolicy) {
-    const generation = ++catalogGeneration;
-    const catalog = await invoke<{ models: { id: string; gratis?: boolean }[] }>("list_models", { provider: props.agente }, freeModelScope(policy)).catch(() => null);
-    if (generation === catalogGeneration) setRouteAvailable(catalog ? routerAvailable(catalog.models) : false);
-  }
-  const [routeAvailable, setRouteAvailable] = createSignal<boolean | null>(null);
-  const [aceptado, setAceptado] = createSignal(false);
-  const [guardando, setGuardando] = createSignal(false);
-  const [fallo, setFallo] = createSignal<string | null>(null);
-  const [texto, setTexto] = createSignal<Consentimiento | null>(null);
-  // El modal abierto. Se cierra sin activar nada por cualquiera de las tres
-  // vías; ver `Consentir`.
-  const [preguntando, setPreguntando] = createSignal(false);
-
-  onMount(() => {
-    const generation = catalogGeneration;
-    void loadFreeModelPolicy().then((policy) => {
-      if (generation !== catalogGeneration || !policy) return;
-      setTexto({ lineas: policy.lines, version: policy.version, policy });
-      setAceptado(policy.accepted);
-      void refreshRoute(policy);
-    }).catch(() => {});
+  const consent = createFreeRouterConsent({
+    agente: () => props.agente,
+    despues: () => props.preparar?.(),
   });
-
-  async function preguntar() {
-    setFallo(null);
-    try {
-      const policy = await loadFreeModelPolicy();
-      if (!policy?.enabled) throw new Error(t("settings.accounts.free.unavailable"));
-      setTexto({ lineas: policy.lines, version: policy.version, policy });
-      setPreguntando(true);
-    } catch (e) {
-      setFallo(prosaDe(e));
-    }
-  }
-
-  async function cambiar(valor: boolean) {
-    catalogGeneration++;
-    setGuardando(true);
-    try {
-      const policy = texto()?.policy;
-      if (!policy) throw new Error(t("settings.accounts.free.unavailable"));
-      const startup = await invoke<FreeModelStartup>("workspaces_startup");
-      if (startup.active !== policy.workspace_id || (valor && !sameFreeModelPolicy(policy, await loadFreeModelPolicy(policy)))) {
-        throw new Error(t("settings.accounts.free.policy_changed"));
-      }
-      const w = await invoke<{ free_model_consent?: FreeModelConsent }>(
-        "set_provider_consent",
-        { provider: valor ? policy.acceptance_ref : props.agente, accepted: valor },
-        freeModelScope(policy),
-      );
-      const accepted = acceptedFreeModelPolicy(policy, w.free_model_consent);
-      setAceptado(accepted);
-      if (valor && !accepted) throw new Error(t("settings.accounts.free.policy_changed"));
-      await refreshRoute(policy);
-      setPreguntando(false);
-      setFallo(null);
-      // Sin binario, activar deja el interruptor en verde y el chat sin poder
-      // usarlo. Su fallo lo pinta el panel de arriba, que es de quien es la
-      // instalación.
-      if (valor && props.preparar) await props.preparar();
-      // La caja de chat no ofrece modelos de un agente sin autorizar: tiene
-      // que enterarse ahora, no al cambiar de agente y volver.
-      window.dispatchEvent(new CustomEvent("harness:consentimiento"));
-    } catch (e) {
-      setFallo(prosaDe(e));
-    } finally {
-      setGuardando(false);
-    }
-  }
+  const { routeAvailable, aceptado, guardando, fallo, texto, preguntando, preguntar, cambiar } = consent;
+  onMount(() => void consent.cargar());
 
   return (
     <>
     {/* Cancelar cierra y no activa nada, por las tres vías. No deja el
         interruptor a medias ni escribe un estado intermedio: el sí solo
         existe si se pulsa Activar. */}
-    <Show when={preguntando() && texto()}>
-      {(pregunta) => (
-        <Consentir
-          texto={pregunta()}
-          guardando={guardando()}
-          error={fallo()}
-          onAceptar={() => void cambiar(true)}
-          onCancelar={() => setPreguntando(false)}
-        />
-      )}
-    </Show>
+    {consent.dialogo()}
     <SettingsRow
       label={
         props.nombre || props.marca ? (

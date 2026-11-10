@@ -8,7 +8,8 @@ import { BrandMark } from "./BrandMark";
 import { Sheet } from "./Sheet";
 import { type Theme } from "./theme";
 
-type Row = FreeRow & { host: Host; workspace: string };
+export type FreeRouterRow = FreeRow & { host: Host; workspace: string };
+type Row = FreeRouterRow;
 
 /** La aceptación se guarda sólo desde la hoja explícita; cancelar no cambia el workspace. */
 export function FreeModels({ hosts, scopeOf, theme, tick }: { hosts: readonly Host[]; scopeOf: (host: Host) => string | null; theme: Theme; tick: unknown }) {
@@ -104,8 +105,43 @@ export function FreeModels({ hosts, scopeOf, theme, tick }: { hosts: readonly Ho
         );
       })}
 
+      <FreeConsentSheet
+        row={asking}
+        theme={theme}
+        onClose={() => setAsking(null)}
+        onSaved={(row, refreshed) => {
+          setRows((now) => [...now.filter((r) => r.host.id !== row.host.id || r.workspace !== row.workspace), ...refreshed.map((r) => ({ ...r, host: row.host, workspace: row.workspace }))]);
+          setAsking(null);
+          void load();
+        }}
+      />
+    </View>
+  );
+}
+
+/** La hoja del sí explícito; la usan Ajustes y el selector de modelos. Su error se queda dentro de la hoja. */
+export function FreeConsentSheet({ row: asking, theme, onClose, onSaved }: { row: FreeRouterRow | null; theme: Theme; onClose: () => void; onSaved: (row: FreeRouterRow, refreshed: FreeRow[]) => void }) {
+  const [saving, setSaving] = useState(false);
+  const [failed, setFailed] = useState(false);
+  useEffect(() => setFailed(false), [asking]);
+
+  async function accept(row: FreeRouterRow) {
+    setSaving(true);
+    setFailed(false);
+    try {
+      // Lo que quedó guardado, no lo pedido.
+      onSaved(row, await changeFreeModels(row.host, row.workspace, row, true));
+    } catch {
+      setFailed(true);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <>
       {/* Cancelar cierra y no activa nada, por cualquier vía: el sí solo existe si se pulsa Activar. */}
-      <Sheet visible={asking !== null} title={w("settings.accounts.consent.title")} onClose={() => setAsking(null)}>
+      <Sheet visible={asking !== null} title={w("settings.accounts.consent.title")} onClose={onClose}>
         {asking ? (
           <View style={styles.consent} testID="free-consent">
             {asking.text.lines.map((line, i) => (
@@ -118,19 +154,19 @@ export function FreeModels({ hosts, scopeOf, theme, tick }: { hosts: readonly Ho
                 <Text style={{ color: theme.primary }}>{term.label}</Text>
               </Pressable>
             ))}
-            {failed === `${asking.host.id}/${asking.provider}` ? <Text accessibilityRole="alert" style={{ color: theme.error }}>{w("settings.accounts.free.error_save")}</Text> : null}
+            {failed ? <Text accessibilityRole="alert" style={{ color: theme.error }}>{w("settings.accounts.free.error_save")}</Text> : null}
             <View style={styles.row}>
-              <Pressable testID="free-consent-cancel" accessibilityRole="button" disabled={saving} onPress={() => setAsking(null)} style={[styles.button, { borderColor: theme.border, borderWidth: 1 }]}>
+              <Pressable testID="free-consent-cancel" accessibilityRole="button" disabled={saving} onPress={onClose} style={[styles.button, { borderColor: theme.border, borderWidth: 1 }]}>
                 <Text style={{ color: theme.text, fontWeight: "600" }}>{w("settings.accounts.consent.cancel")}</Text>
               </Pressable>
-              <Pressable testID="free-consent-accept" accessibilityRole="button" disabled={saving} onPress={() => void change(asking, true)} style={[styles.button, { backgroundColor: theme.primary, opacity: saving ? 0.5 : 1 }]}>
+              <Pressable testID="free-consent-accept" accessibilityRole="button" disabled={saving} onPress={() => void accept(asking)} style={[styles.button, { backgroundColor: theme.primary, opacity: saving ? 0.5 : 1 }]}>
                 <Text style={{ color: theme.onPrimary, fontWeight: "600" }}>{w("settings.accounts.consent.accept")}</Text>
               </Pressable>
             </View>
           </View>
         ) : null}
       </Sheet>
-    </View>
+    </>
   );
 }
 

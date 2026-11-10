@@ -10,7 +10,7 @@ import { t } from "../../lib/i18n";
 import { invoke } from "../../lib/invoke.ts";
 import { acceptedFreeModelPolicy, freeModelScope, sameFreeModelPolicy, type FreeModelConsent, type FreeModelStartup } from "../../lib/free-model-policy.ts";
 import { loadFreeModelPolicy } from "../../lib/free-model-policy-load.ts";
-import type { Consentimiento } from "../settings/Accounts";
+import type { Consentimiento } from "../settings/free-router-consent";
 import { textoDeFalta } from "../../lib/no-space";
 
 import { listen } from "../../lib/serviceEvents";

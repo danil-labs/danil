@@ -22,6 +22,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   ATTACHMENT_MIMES,
   type Draft,
+  type FreeModels,
+  freeModelsOf,
   IMAGE_MIMES,
   MAX_ATTACHMENT_BYTES,
   mentionsOf,
@@ -38,7 +40,9 @@ import { effectiveMode, enterAction, hasSomethingToSend } from "../lib/composer"
 import { promote, type Queued, queueMemory } from "../lib/steer";
 import { lang, phrase, t, w } from "../lib/i18n";
 import { surfacePresentation, selectedModelMark } from "../lib/model-presentation";
+import { freeRouterState } from "../lib/free-router";
 import { BrandMark } from "./BrandMark";
+import { FreeConsentSheet, type FreeRouterRow } from "./FreeModels";
 import { Icon } from "./Icon";
 import { matches, NoMatch } from "./Search";
 import { Sheet, SheetOption, SheetSection } from "./Sheet";
@@ -187,6 +191,8 @@ export function Composer({
   const [surface, setSurface] = useState<string | undefined>(undefined);
   const [busy, setBusy] = useState(false);
   const [sheet, setSheet] = useState<"model" | "attach" | "handover" | null>(null);
+  const [routerRows, setRouterRows] = useState<FreeModels[] | null>(null);
+  const [routerAsking, setRouterAsking] = useState<FreeRouterRow | null>(null);
   const input = useRef<ComponentRef<typeof TextInput>>(null);
   // El CLI elegido que espera la confirmación del traspaso.
   const [candidate, setCandidate] = useState<string | null>(null);
@@ -229,6 +235,21 @@ export function Composer({
   const candidateLabel = candidate ? providerLabel(candidate) : null;
 
   const [catalogRevision, setCatalogRevision] = useState(0);
+  // Abrir no enciende: el estado del Router solo se pregunta a una máquina encendida.
+  useEffect(() => {
+    setRouterRows(null);
+    if (sheet !== "model" || !host || !workspace || host.power() !== "on") return;
+    let alive = true;
+    // El motor con consentimiento central publica la política completa tras un refresco: tres lecturas, un segundo entre cada una.
+    void (async () => {
+      for (let attempt = 1; alive; attempt++) {
+        const rows = await freeModelsOf(host, workspace).catch(() => [] as FreeModels[]);
+        if (rows.length || attempt >= 3) return alive && setRouterRows(rows);
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+      }
+    })();
+    return () => { alive = false; };
+  }, [sheet, host, workspace, catalogRevision]);
   useEffect(() => subscribeFreeCatalog((machine, changedWorkspace) => {
     if (machine === host?.id && changedWorkspace === workspace) setCatalogRevision((revision) => revision + 1);
   }), [host?.id, workspace]);
@@ -708,9 +729,12 @@ export function Composer({
         <Text style={[styles.hint, { color: theme.textMuted, paddingHorizontal: 18, paddingTop: 8 }]}>{t("composer.unsupported_file")}</Text>
       </Sheet>
 
+      <FreeConsentSheet row={routerAsking} theme={theme} onClose={() => setRouterAsking(null)} onSaved={() => setRouterAsking(null)} />
+
       <Sheet visible={sheet === "model"} title={w("chat.model.title")} search={t("search.models")} onClose={() => setSheet(null)}>
         {(query) => {
           const discovery = routerDiscovery(models?.models.map((m) => m.id) ?? [], query);
+          const routerState = freeRouterState(routerRows);
           const shownModels = surfaceModels.filter((m) => matches(query, m.label, m.id, modelName(m.id, models)));
           return (
             <>
@@ -754,12 +778,30 @@ export function Composer({
                     <BrandMark id="danil" size={17} color={theme.text} />
                     <Text style={{ color: theme.text, fontSize: TEXT.ui }}>{t("composer.free_models")}</Text>
                   </View>
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 8, minHeight: 32 }}>
                     <Text style={{ color: theme.text, fontSize: TEXT.ui }}>{discovery.label}</Text>
                     <Text style={{ color: theme.textMuted, fontSize: TEXT.label }}>{discovery.creator}</Text>
-                    <Icon name="shield" size={12} color={theme.textMuted} />
+                    <View style={{ flex: 1 }} />
+                    {routerState === "activate" ? (
+                      <Pressable
+                        testID="router-activate"
+                        accessibilityRole="button"
+                        onPress={() => {
+                          const row = routerRows?.find((r) => r.provider === "opencode-zen");
+                          if (!row || !host || !workspace) return;
+                          setSheet(null);
+                          setRouterAsking({ ...row, host, workspace });
+                        }}
+                        style={{ backgroundColor: theme.primary, borderRadius: RADIUS.sm, paddingHorizontal: 12, paddingVertical: 6 }}
+                      >
+                        <Text style={{ color: theme.onPrimary, fontSize: TEXT.ui, fontWeight: "600" }}>{w("chat.model.router_activate")}</Text>
+                      </Pressable>
+                    ) : routerState === "update_engine" || routerState === "unavailable" ? (
+                      <Text testID={`router-${routerState}`} style={{ color: theme.textMuted, fontSize: TEXT.ui }}>
+                        {w(routerState === "update_engine" ? "chat.model.router_update_engine" : "chat.model.router_route_unavailable")}
+                      </Text>
+                    ) : null}
                   </View>
-                  <Text style={{ color: theme.textMuted, fontSize: TEXT.ui }}>{w("chat.model.router_requirements")}</Text>
                 </View>
               ) : null}
               <SheetSection>{w("chat.model.listbox")}</SheetSection>
