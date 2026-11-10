@@ -51,7 +51,8 @@ export function createFreeRouterConsent(opts: { agente: () => string; despues?: 
   async function cargar() {
     const generation = catalogGeneration;
     try {
-      const policy = await politicaConReintento();
+      // El estado no necesita la referencia: el diálogo la espera al abrirse.
+      const policy = await loadFreeModelPolicy(undefined, true);
       if (generation !== catalogGeneration) return;
       setTexto(policy ? { lineas: policy.lines, version: policy.version, policy } : null);
       setAceptado(!!policy?.accepted);

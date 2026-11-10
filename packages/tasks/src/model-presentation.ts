@@ -28,5 +28,6 @@ export function routerOfferState(policy: { enabled: boolean; accepted: boolean }
   if (policy === null) return "update_engine";
   if (!policy.enabled) return "unavailable";
   if (!policy.accepted) return "activate";
+  if (routeAvailable === null) return "loading";
   return routeAvailable ? "ready" : "unavailable";
 }

@@ -52,6 +52,6 @@ test("la fila del Router dice una sola cosa según política, sí y ruta", () =>
   assert.equal(routerOfferState({ enabled: false, accepted: false }, null), "unavailable");
   assert.equal(routerOfferState({ enabled: true, accepted: false }, null), "activate");
   assert.equal(routerOfferState({ enabled: true, accepted: true }, false), "unavailable");
-  assert.equal(routerOfferState({ enabled: true, accepted: true }, null), "unavailable");
+  assert.equal(routerOfferState({ enabled: true, accepted: true }, null), "loading");
   assert.equal(routerOfferState({ enabled: true, accepted: true }, true), "ready");
 });

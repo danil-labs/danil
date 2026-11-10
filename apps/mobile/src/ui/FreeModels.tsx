@@ -120,10 +120,12 @@ export function FreeModels({ hosts, scopeOf, theme, tick }: { hosts: readonly Ho
 }
 
 /** La hoja del sí explícito; la usan Ajustes y el selector de modelos. Su error se queda dentro de la hoja. */
-export function FreeConsentSheet({ row: asking, theme, onClose, onSaved }: { row: FreeRouterRow | null; theme: Theme; onClose: () => void; onSaved: (row: FreeRouterRow, refreshed: FreeRow[]) => void }) {
+export function FreeConsentSheet({ row, theme, onClose, onSaved }: { row: FreeRouterRow | null; theme: Theme; onClose: () => void; onSaved: (row: FreeRouterRow, refreshed: FreeRow[]) => void }) {
   const [saving, setSaving] = useState(false);
   const [failed, setFailed] = useState(false);
-  useEffect(() => setFailed(false), [asking]);
+  const [current, setCurrent] = useState<FreeRouterRow | null>(row);
+  useEffect(() => { setFailed(false); setCurrent(row); }, [row]);
+  const asking = row ? current : null;
 
   async function accept(row: FreeRouterRow) {
     setSaving(true);
@@ -133,6 +135,10 @@ export function FreeConsentSheet({ row: asking, theme, onClose, onSaved }: { row
       onSaved(row, await changeFreeModels(row.host, row.workspace, row, true));
     } catch {
       setFailed(true);
+      // Con la política cambiada se relee y se pide confirmar de nuevo sobre el texto vigente.
+      const fresh = await freeModelsOf(row.host, row.workspace).catch(() => [] as FreeRow[]);
+      const same = fresh.find((r) => r.provider === row.provider);
+      if (same) setCurrent({ ...same, host: row.host, workspace: row.workspace });
     } finally {
       setSaving(false);
     }

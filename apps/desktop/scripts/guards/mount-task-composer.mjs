@@ -509,20 +509,20 @@ const openRouter = async (app) => {
   return app.w.document.querySelector('section[aria-label="Router IA gratis"]');
 };
 let consentSaves = 0;
-let pendingReads = 0;
+let refPublished = false;
 const activateApp = await boot("listo", "router-activate", {
   ...NO_USABLE,
   // El motor con consentimiento central publica la referencia en una lectura posterior.
-  workspaces_startup: () => startupWith(routerPolicy(false, ++pendingReads > 1 ? "ref-1" : "")),
+  workspaces_startup: () => startupWith(routerPolicy(false, refPublished ? "ref-1" : "")),
   set_provider_consent: () => { consentSaves++; return { free_model_consent: { workspace_id: "w", version: 3, providers: ["kilo", "vercel", "reflection"], policy_id: "p", acceptance_id: "a" } }; },
 });
 const activateRow = await openRouter(activateApp);
-await sleep(1200);
 const activate = [...activateRow.querySelectorAll("button")].find((b) => b.textContent?.trim() === "Activar");
-assert.ok(activate, "Sin consentimiento la fila ofrece Activar.");
+assert.ok(activate, "Política sin referencia y sin sí: la fila ofrece Activar, no Actualiza el motor.");
 assert.doesNotMatch(activateRow.textContent, /Requiere|Actualiza el motor|No disponible/);
+refPublished = true;
 activate.click();
-await sleep(1500);
+await sleep(300);
 const consentDialog = activateApp.w.document.querySelector('[role="dialog"]');
 assert.ok(consentDialog, "Activar abre el diálogo del consentimiento.");
 assert.match(consentDialog.textContent, /Activo Router IA gratis en este workspace/);
@@ -531,6 +531,11 @@ assert.equal(consentSaves, 0, "Abrir el diálogo no acepta nada.");
 const unavailableApp = await boot("listo", "router-unavailable", { ...NO_USABLE, workspaces_startup: () => startupWith(routerPolicy(true)) });
 const unavailableRow = await openRouter(unavailableApp);
 await sleep(100);
+let routeReady;
+const loadingApp = await boot("listo", "router-loading", { ...NO_USABLE, workspaces_startup: () => startupWith(routerPolicy(true)), list_models: () => new Promise((resolve) => { routeReady = resolve; }) });
+const loadingRow = await openRouter(loadingApp);
+assert.doesNotMatch(loadingRow.textContent, /No disponible por ahora|Actualiza el motor/, "Mientras se lee la ruta no se dice nada.");
+routeReady?.(NO_USABLE.list_models);
 assert.match(unavailableRow.textContent, /No disponible por ahora/, "Con el sí y sin ruta se dice en una frase.");
 assert.equal(unavailableRow.querySelector("button"), null);
 

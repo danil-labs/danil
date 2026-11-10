@@ -30,10 +30,11 @@ export function freeModelPolicy(startup: FreeModelStartup): FreeModelPolicy | nu
   return policy?.enabled ? policy : null;
 }
 
-export function recognizedFreeModelPolicy(startup: FreeModelStartup): FreeModelPolicy | null {
+/** Sin `pendingRef` exige la referencia de aceptación; con él basta para saber que el motor ofrece el Router. */
+export function recognizedFreeModelPolicy(startup: FreeModelStartup, pendingRef = false): FreeModelPolicy | null {
   const policy = startup.free_model_policy;
   if (!policy || policy.workspace_id !== startup.active || policy.version !== 3 ||
-    !policy.acceptance_ref || !Array.isArray(policy.lines) || policy.lines.length === 0 ||
+    (!pendingRef && !policy.acceptance_ref) || !Array.isArray(policy.lines) || policy.lines.length === 0 ||
     !sameProviders(policy.providers, ["kilo", "vercel", "reflection"])) return null;
   return policy;
 }

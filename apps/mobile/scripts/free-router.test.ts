@@ -15,4 +15,7 @@ test("la fila del Router en el selector móvil dice una sola cosa", () => {
   assert.equal(freeRouterState([row(true, false)]), "unavailable");
   assert.equal(freeRouterState([row(false, false, false)]), "unavailable");
   assert.equal(freeRouterState([row(true, true)]), "ready");
+  const pending = row(false, false);
+  pending.policy!.acceptance_ref = "";
+  assert.equal(freeRouterState([pending]), "activate", "política sin referencia todavía: Activar, no Actualiza el motor");
 });

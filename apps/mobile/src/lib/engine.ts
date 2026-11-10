@@ -799,13 +799,14 @@ export type FreeModelPolicy = {
 };
 type FreeModelConsent = { workspace_id: string; version: number; providers: string[]; policy_id: string; acceptance_id: string };
 const freeProviders = (providers: string[]) => Array.isArray(providers) && providers.length === 3 && new Set(providers).size === 3 && ["kilo", "vercel", "reflection"].every((p) => providers.includes(p));
-export function recognizedFreePolicy(policy: FreeModelPolicy | undefined, workspace: string): policy is FreeModelPolicy {
-  return !!policy && policy.workspace_id === workspace && policy.version === 3 && !!policy.acceptance_ref &&
+/** Sin `pendingRef` exige la referencia de aceptación; con él basta para saber que el motor ofrece el Router. */
+export function recognizedFreePolicy(policy: FreeModelPolicy | undefined, workspace: string, pendingRef = false): policy is FreeModelPolicy {
+  return !!policy && policy.workspace_id === workspace && policy.version === 3 && (pendingRef || !!policy.acceptance_ref) &&
     Array.isArray(policy.lines) && policy.lines.length > 0 && Array.isArray(policy.terms) && freeProviders(policy.providers);
 }
-async function freePolicyOf(host: Host, workspace: string): Promise<FreeModelPolicy | null> {
+async function freePolicyOf(host: Host, workspace: string, pendingRef = false): Promise<FreeModelPolicy | null> {
   const { value, cachedAt } = await host.call<Startup & { free_model_policy?: FreeModelPolicy }>("list_workspaces", workspace, {});
-  return cachedAt === null && recognizedFreePolicy(value?.free_model_policy, workspace) ? value.free_model_policy! : null;
+  return cachedAt === null && recognizedFreePolicy(value?.free_model_policy, workspace, pendingRef) ? value.free_model_policy! : null;
 }
 const freeCatalogListeners = new Set<(host: string, workspace: string) => void>();
 /** Composer se suscribe para recargar sus superficies y modelos al cambiar el consentimiento. */
@@ -819,7 +820,8 @@ export type FreeModels = { provider: string; label: string; text: ConsentText; a
 /** Una ruta por máquina. Aceptación y disponibilidad son estados independientes. */
 export async function freeModelsOf(host: Host, workspace: string): Promise<FreeModels[]> {
   if (host.power() !== "on") return [];
-  const policy = await freePolicyOf(host, workspace);
+  // El motor con consentimiento central publica `acceptance_ref` tras un refresco; aceptar lo exige después.
+  const policy = await freePolicyOf(host, workspace, true);
   if (!policy) return [];
   const { value: surfaces, cachedAt } = await host.call<Surface<Frase>[]>("list_surfaces", workspace, {}).catch(() => ({ value: [], cachedAt: null }));
   const surface = cachedAt === null && Array.isArray(surfaces) ? surfaces.find((s) => s.provider === "opencode-zen" && s.catalogo === "gratuitos") : undefined;
@@ -836,9 +838,9 @@ export async function changeFreeModels(host: Host, workspace: string, shown: Fre
   if (host.power() !== "on") throw new HostError("free_policy_changed");
   const current = await freePolicyOf(host, workspace);
   const policy = shown.policy;
-  if (!current || !policy || policy.destination_host !== host.id || policy.workspace_id !== workspace || (accepted && (!current.enabled || !policy.acceptance_ref ||
+  if (!current || !policy || policy.destination_host !== host.id || policy.workspace_id !== workspace || (accepted && (!current.enabled || !(policy.acceptance_ref || current.acceptance_ref) ||
     JSON.stringify(current.lines) !== JSON.stringify(policy.lines) || JSON.stringify(current.terms) !== JSON.stringify(policy.terms)))) throw new HostError("free_policy_changed");
-  const { value, cachedAt } = await host.call<{ free_model_consent?: FreeModelConsent }>("set_provider_consent", workspace, { provider: accepted ? policy.acceptance_ref : shown.provider, accepted });
+  const { value, cachedAt } = await host.call<{ free_model_consent?: FreeModelConsent }>("set_provider_consent", workspace, { provider: accepted ? policy.acceptance_ref || current.acceptance_ref : shown.provider, accepted });
   const consent = value?.free_model_consent;
   const saved = !!consent && consent.workspace_id === workspace && consent.version === current.version &&
     !!consent.policy_id && !!consent.acceptance_id && freeProviders(consent.providers);
