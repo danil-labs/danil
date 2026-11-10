@@ -23,7 +23,7 @@ export default function AIProviders(props: { superficies: Superficie[]; agentesE
   const vista = () => aiProvidersView(props.estado ?? { k: "ready" }, props.superficies.length);
   const grupos = createMemo(() => {
     const vistos = new Map<string, Superficie[]>();
-    for (const superficie of props.superficies) {
+    for (const superficie of props.superficies.filter((s) => s.catalogo !== "gratuitos")) {
       const clave = superficie.catalogo === "gratuitos" ? superficie.id : superficie.provider;
       const grupo = vistos.get(clave);
       if (grupo) grupo.push(superficie);
@@ -41,7 +41,11 @@ export default function AIProviders(props: { superficies: Superficie[]; agentesE
   return (
     <SettingsPanel>
       <GovernedNotice section="models" />
-      <DanilCredits />
+      <section class="grid gap-4" aria-label="Danil">
+        <h2 class="m-0 text-ui font-semibold text-neutral-950">Danil</h2>
+        <DanilCredits />
+        <Accounts agente="opencode-zen" soloGratuitos titulo={t("surfaces.label.free")} />
+      </section>
       <Switch>
         <Match when={vista() === "loading"}>
           <div class="grid gap-3" data-ai-providers="loading">

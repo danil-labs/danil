@@ -19,6 +19,7 @@ import {
   listWorkspacesWithDeleted,
   powerOf,
   purgeWorkspace,
+  removeComputer,
   renameComputer,
   restoreWorkspace,
   sessionProbe,
@@ -392,6 +393,18 @@ test("renombrar una computadora: PATCH con el nombre, y el error con su código"
   assert.deepEqual(asked[0], { url: "https://c.example/v1/computers/cmp_a", method: "PATCH", body: JSON.stringify({ name: "Mac del estudio" }), type: "application/json" });
   assert.deepEqual(await renameComputer("https://c.example", "t", "cmp_a", "", reply(400, { error: { code: "invalid_name" } })), { kind: "error", status: 400, code: "invalid_name" });
   assert.deepEqual(await renameComputer("https://c.example", "t", "cmp_b", "X", reply(404, { error: { code: "not_found" } })), { kind: "missing" });
+});
+
+test("quitar una computadora es DELETE sin cuerpo y distingue la VM administrada", async () => {
+  const asked: { url: string; method?: string; body?: string }[] = [];
+  const reply = (status: number, body: unknown) => async (url: string, init?: { method?: string; body?: string }) => {
+    asked.push({ url, method: init?.method, body: init?.body });
+    return { status, ok: status < 300, json: async () => body };
+  };
+  assert.deepEqual(await removeComputer("https://c.example", "t", "cmp_a", reply(200, { computer_id: "cmp_a", deleted: true })), { kind: "ok", value: { computer_id: "cmp_a" } });
+  assert.deepEqual(asked[0], { url: "https://c.example/v1/computers/cmp_a", method: "DELETE", body: undefined });
+  assert.deepEqual(await removeComputer("https://c.example", "t", "cmp_b", reply(409, { error: { code: "not_self_computer" } })), { kind: "error", status: 409, code: "not_self_computer" });
+  assert.deepEqual(await removeComputer("https://c.example", "t", "cmp_c", reply(404, { error: { code: "not_found" } })), { kind: "missing" });
 });
 
 test("un bloque MCP con valores escritos no sale al socket; uno con marcadores sale revisado", async () => {

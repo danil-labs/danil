@@ -1,5 +1,5 @@
-import { modelPresentation } from "../../../../packages/tasks/src/model-presentation.ts";
-export { modelPresentation };
+import { modelPresentation, routerDiscovery } from "../../../../packages/tasks/src/model-presentation.ts";
+export { modelPresentation, routerDiscovery };
 import { t } from "./i18n.ts";
 import type { AgentModels, ModelOption } from "./model";
 import { esDe, marcaDeSuperficie, type Superficie } from "./surfaces.ts";
@@ -46,6 +46,9 @@ export function proveedorDe(
   model: ModelOption,
 ) {
   if (superficie.provider === "opencode-zen") {
+    if (model.id === "danil-credits/deepseek/deepseek-v4.1-flash") {
+      return { id: "danil-credits", label: t("chat.credits.label"), logo: "danil" };
+    }
     if (superficie.catalogo === "gratuitos") {
       return { id: "opencode-free", label: t("surfaces.label.free"), logo: marcaDeSuperficie(superficie) };
     }
@@ -142,15 +145,34 @@ export function agruparModelos(
     ) {
       continue;
     }
-    const visual = proveedor.id === "opencode-go"
-      ? { id: "opencode-zen", label: "OpenCode", logo: proveedor.logo }
-      : proveedor;
+    // Un solo OpenCode: Go. `surfaceHas` deja fuera los modelos que se cobraban
+    // contra el saldo de Zen antes de llegar aquí; el grupo conserva el id de la
+    // superficie y el nombre propio.
+    const visual =
+      proveedor.id === "opencode-go"
+        ? { id: "opencode-zen", label: "OpenCode", logo: proveedor.logo }
+        : proveedor;
     const grupo = grupos.get(visual.id) ?? { ...visual, models: [] };
     grupo.models.push(opcion);
     grupos.set(visual.id, grupo);
   }
 
   return [...grupos.values()];
+}
+
+/**
+ * La sección que contiene el modelo elegido, para abrir el selector ahí.
+ *
+ * No sirve el proveedor tal cual: OpenCode y OpenCode Go comparten una sección,
+ * y buscarla en la lista agrupada es lo que garantiza que exista. `null` si el
+ * modelo guardado ya no está en el catálogo.
+ */
+export function seccionDeModelo(
+  grupos: readonly GrupoDeModelos[],
+  key: string | null | undefined,
+) {
+  if (!key) return null;
+  return grupos.find((grupo) => grupo.models.some((opcion) => opcion.key === key))?.id ?? null;
 }
 
 /**
@@ -198,6 +220,6 @@ export function nombreDeModelo(id: string, catalogo?: AgentModels | null): strin
 
 /** La marca del modelo observado no cambia la identidad de su ejecutor. */
 export function modelBrand(agent: string, id?: string | null, catalog?: AgentModels | null): string {
-  return id?.startsWith("danil-free/") || catalog?.models.some((model) => model.id === id && model.gratis === true)
+  return id?.startsWith("danil-free/") || id?.startsWith("danil-credits/") || catalog?.models.some((model) => model.id === id && model.gratis === true)
     ? "danil" : agent;
 }

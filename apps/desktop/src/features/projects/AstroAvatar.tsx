@@ -5,12 +5,17 @@ import type { HandlerStatus } from "../../lib/model";
 import { cn } from "../../lib/utils";
 import { generacionDeAvatar, urlDeAvatar } from "./avatar-src";
 
-export const CUERPOS = ASTRO_BODIES;
-export type Cuerpo = AstroBody;
+const CHARACTER_BODIES = ["character-ventas", "character-direccion", "character-diseno", "character-finanzas", "character-rh"] as const;
+export const CUERPOS = [...ASTRO_BODIES, ...CHARACTER_BODIES];
+export type Cuerpo = AstroBody | typeof CHARACTER_BODIES[number];
+const characterAssets = import.meta.glob<string>("./business-icons/*.svg", { eager: true, query: "?url&no-inline", import: "default" });
+function characterIcon(body: string | null | undefined, status: HandlerStatus) {
+  return characterAssets[`./business-icons/${body}-${status}.svg`];
+}
 
 /** La clase que lleva los dos tonos del cuerpo. Literal para que se encuentre
  * desde `global.css` con `grep`: compuesta con plantilla, no la ve nadie. */
-const CLASE: Record<Cuerpo, string> = {
+const CLASE: Record<AstroBody, string> = {
   sun: "astro-sun",
   planet: "astro-planet",
   moon: "astro-moon",
@@ -86,7 +91,7 @@ export function AstroAvatar(props: {
       data-astro-working={props.status === "working" ? "true" : undefined}
     >
       <Show
-        when={url()}
+        when={characterIcon(props.body, props.status) ?? url()}
         fallback={
           <svg
             class={cn(
@@ -127,7 +132,8 @@ export function AstroAvatar(props: {
             height={size()}
             draggable={false}
             class={cn(
-              "block shrink-0 rounded-full object-contain",
+              "block shrink-0 object-contain",
+              !characterIcon(props.body, props.status) && "rounded-full",
               props.status === "asleep" && "opacity-[0.62]",
               props.class,
             )}

@@ -742,6 +742,21 @@ test("branches and usage reopen from their saved slices without waking an off VM
   }
 });
 
+test("opening a task of an off VM reads its tree, changes and previews without waking it", async () => {
+  const panel = ["tree_summary", "tree_changes", "tree_files", "tree_folder", "tree_show", "tree_diff", "tree_office_preview", "tree_typst_target", "session_worktree", "artifact_history", "attachment_preview", "office_preview"];
+  for (const command of panel) assert.equal(classOf(command), "read", command);
+  let wakes = 0;
+  const off = setup({ cmp_vm: { state: "stopped" } }, [VM], { wake: async () => { wakes++; return true; } });
+  try {
+    for (const command of panel) {
+      const slice = await off.fleet.read({ machine: VM.id, workspace: "w", command, args: { project: "p1" } });
+      assert.equal(slice.has, false, command);
+    }
+    assert.equal(wakes, 0, "only a message or an action starts the VM");
+  } finally { off.fleet.close(); }
+  for (const action of ["tree_write", "tree_delete", "tree_rename", "tree_patch", "tree_create_file"]) assert.equal(classOf(action), "action", action);
+});
+
 test("the in-memory slice cache evicts old pages and keeps the recently used one", async () => {
   const { SliceBook } = await import("../src/slices.ts");
   const book = new SliceBook();

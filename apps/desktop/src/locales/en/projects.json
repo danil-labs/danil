@@ -95,7 +95,7 @@
   "projects.agents.profile_delete": "Delete agent",
   "projects.agents.profile_delete_cancel": "Cancel",
   "projects.agents.profile_delete_confirm": "Delete",
-  "projects.agents.profile_delete_what": "Its declaration, face and background go. What it already said stays.",
+  "projects.agents.profile_delete_what": "Its instructions and memory will be deleted. Its tasks and conversations will be kept.",
   "projects.agents.profile_deleting": "Deleting…",
   "projects.agents.profile_avatar_clear": "Remove avatar",
   "projects.agents.profile_face": "Face",
@@ -419,5 +419,10 @@
   "projects.sessions.delete_buffers": "There are unsaved editor changes. Cancel, save them in the editor, and review again before deleting.",
   "projects.sessions.delete_reviewed": "I reviewed this task and accept the listed losses.",
   "projects.sessions.delete_inspect_again": "Review again",
-  "projects.sessions.delete_changed": "The family or its files changed. The list was refreshed. Review and confirm each task again."
+  "projects.sessions.delete_changed": "The family or its files changed. The list was refreshed. Review and confirm each task again.",
+  "projects.agents.body.character-ventas": "Headset",
+  "projects.agents.body.character-direccion": "Clipboard",
+  "projects.agents.body.character-diseno": "Star",
+  "projects.agents.body.character-finanzas": "Calculator",
+  "projects.agents.body.character-rh": "Glasses"
 }

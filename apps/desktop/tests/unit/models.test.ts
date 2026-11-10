@@ -6,6 +6,7 @@ import { aplicarLenguaDeWorkspace } from "../../src/lib/i18n.ts";
 import {  agruparModelos,
   coincideModelo,
   favoritosDeModelos,
+  seccionDeModelo,
   effortOptions,
   opcionesDeModelos,
   effortValue,
@@ -62,7 +63,7 @@ test("los resultados conservan la sección que desambigua modelos parecidos", ()
     [
       ["Claude", [["claude", "gpt-5"]]],
       ["Codex", [["codex", "gpt-5"]]],
-      ["OpenCode", [["opencode-zen", "opencode/gpt-5"], ["opencode-zen", "opencode-go/gpt-5"]]],
+      ["OpenCode", [["opencode-zen", "opencode-go/gpt-5"]]],
       ["Router IA gratis", [["opencode-zen", "danil-free/reflection/beam-free"]]],
       ["OpenCode Local", [["opencode-local", "ollama/gpt-5"]]],
     ],
@@ -164,17 +165,28 @@ test("la fila de acciones nombra el modelo con su versión", () => {
   assert.equal(nombreDeModelo("grok-4.7"), "grok-4.7");
 });
 
- test("OpenCode agrupa Go sin cambiar identidad, búsqueda ni favoritos", () => {
+test("OpenCode es un solo proveedor: el login por Go deja fuera el saldo de Zen", () => {
   const surface: Superficie = { id: "opencode-zen", provider: "opencode-zen", label: "OpenCode", catalogo: "de_pago", usable: true, marca: null, porque: null };
-  const options = opcionesDeModelos([surface], { "opencode-zen": { provider: "opencode-zen", fallback: false, models: [model("opencode-go/kimi", "Kimi"), model("opencode/gpt", "GPT")] } });
+  const options = opcionesDeModelos([surface], {
+    "opencode-zen": {
+      provider: "opencode-zen",
+      fallback: false,
+      models: [model("opencode-go/kimi", "Kimi"), model("opencode/deepseek-v4.1-flash", "DeepSeek")],
+    },
+  });
+  // Zen (saldo) ya no se ofrece; Go conserva su id y su login.
+  assert.deepEqual(options.map((option) => option.model.id), ["opencode-go/kimi"]);
   const groups = agruparModelos(options, "");
-  assert.equal(groups.length, 1);
+  assert.deepEqual(groups.map((grupo) => grupo.id), ["opencode-zen"]);
   assert.equal(groups[0].label, "OpenCode");
-  assert.deepEqual(groups[0].models, options);
   assert.equal(options[0].proveedor.id, "opencode-go");
   assert.equal(options[0].key, "opencode-zen\u0000opencode-go/kimi");
-  assert.deepEqual(agruparModelos(options, "OpenCode Go")[0].models, [options[0]]);
+  assert.deepEqual(agruparModelos(options, "OpenCode")[0].models, [options[0]]);
   assert.deepEqual(favoritosDeModelos(options, [options[0].key]), [options[0]]);
+  // Abrir el selector con un modelo Go elegido lleva a una sección que existe
+  // aunque el proveedor del catálogo se llame distinto.
+  assert.equal(seccionDeModelo(groups, options[0].key), "opencode-zen");
+  assert.equal(seccionDeModelo(groups, "opencode-zen\u0000no-existe"), null);
 });
 
 test("Free conserva la marca Danil en turnos observados y OpenCode pagado conserva su logo", () => {
@@ -202,6 +214,21 @@ const response = (available: number) => ({
   execution_available: false,
 });
 
+test("Danil Credits conserva el ejecutor y el modelo que anuncia el engine", () => {
+  const surface: Superficie = { id: "danil-credits", provider: "opencode-zen", label: "Danil Credits", catalogo: "todo", usable: true, marca: null, porque: null };
+  const options = opcionesDeModelos([surface], {
+    "opencode-zen": { provider: "opencode-zen", fallback: false, models: [model(DANIL_CREDITS.modelId, "DeepSeek V4.1 Flash")] },
+  });
+  assert.equal(options.length, 1);
+  assert.equal(options[0].agent, "opencode-zen");
+  assert.equal(options[0].model.id, DANIL_CREDITS.modelId);
+  assert.equal(options[0].proveedor.id, "danil-credits");
+  assert.equal(options[0].proveedor.logo, "danil");
+  assert.equal(modelBrand("opencode-zen", DANIL_CREDITS.modelId), "danil");
+  assert.equal(agruparModelos(options, "Danil Credits")[0].id, "danil-credits");
+  assert.equal(opcionesDeModelos([surface], {}).length, 0);
+});
+
 test("the account wallet uses available credit and preserves a verified zero", () => {
   assert.equal(availableDanilCredits(response(80)), 80);
   assert.equal(availableDanilCredits(response(0)), 0);
@@ -216,8 +243,8 @@ test("missing, failed or incompatible balance data never becomes zero", () => {
     { ...response(1), wallet: { available_credits: "20", status: "active" } }]) {
     assert.equal(availableDanilCredits(value), null);
   }
-  assert.equal(DANIL_CREDITS.executionEnabled, false);
-  assert.equal(DANIL_CREDITS.modelId, "deepseek/deepseek-v4.1-flash");
+  assert.equal(DANIL_CREDITS.modelId, "danil-credits/deepseek/deepseek-v4.1-flash");
+  assert.equal(DANIL_CREDITS.upstreamModelId, "deepseek/deepseek-v4.1-flash");
 });
 
 
@@ -250,4 +277,21 @@ test("the BFF reader uses the session-bound path and keeps loading, null, zero a
   assert.equal(availableDanilCredits(await read(Response.json({ ...response(0), wallet: null }))), null);
   await assert.rejects(read(Response.json({ error: "forbidden" }, { status: 403 })));
   await assert.rejects(read(new Response("not-json")));
+});
+
+
+test("Credits no habilita BYOK ni Free y sus permisos no heredan otra superficie", () => {
+  const credits: Superficie = { id: "danil-credits", provider: "opencode-zen", label: "Danil Credits", catalogo: "todo", usable: true, marca: null, porque: null };
+  const byok: Superficie = { ...credits, id: "opencode-zen", label: "OpenCode", catalogo: "de_pago", usable: false };
+  const free: Superficie = { ...credits, id: "opencode-zen-free", label: "Free", catalogo: "gratuitos", usable: false };
+  const catalog = { "opencode-zen": { provider: "opencode-zen", fallback: false, models: [
+    model(DANIL_CREDITS.modelId, "DeepSeek"), model("byok/model", "Own key"),
+    { ...model("danil-free/reflection/beam-free", "Beam"), gratis: true },
+    model("danil-credits/other", "Unapproved"),
+  ] } };
+  const options = opcionesDeModelos([credits, byok, free], catalog);
+  assert.deepEqual(options.filter((option) => option.usable).map((option) => [option.superficie, option.model.id]), [["danil-credits", DANIL_CREDITS.modelId]]);
+  const inverse = opcionesDeModelos([{ ...credits, usable: false }, { ...byok, usable: true }, { ...free, usable: true }], catalog);
+  assert.equal(inverse.find((option) => option.model.id === DANIL_CREDITS.modelId)?.usable, false);
+  assert.ok(inverse.filter((option) => option.usable).every((option) => !option.model.id.startsWith("danil-credits/")));
 });

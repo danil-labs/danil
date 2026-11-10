@@ -12,7 +12,7 @@ import {
   type SlashMenu,
 } from "@terminus/protocol";
 import { replaceSlash, slashAt } from "@terminus/chat/slash";
-import { menuSurfaces, modelName, modelPresentation, previewLabel, type Surface, surfaceHas, surfaceOf } from "@terminus/tasks";
+import { menuSurfaces, modelName, modelPresentation, routerDiscovery, previewLabel, type Surface, surfaceHas, surfaceOf } from "@terminus/tasks";
 import * as DocumentPicker from "expo-document-picker";
 import { File } from "expo-file-system";
 import * as ImagePicker from "expo-image-picker";
@@ -26,6 +26,7 @@ import {
   MAX_ATTACHMENT_BYTES,
   mentionsOf,
   modelsOf,
+  subscribeFreeCatalog,
   permissionModesOf,
   slashMenuOf,
   surfacesOf,
@@ -227,6 +228,10 @@ export function Composer({
   const pendingLabel = pendingProvider ? providerLabel(pendingProvider) : null;
   const candidateLabel = candidate ? providerLabel(candidate) : null;
 
+  const [catalogRevision, setCatalogRevision] = useState(0);
+  useEffect(() => subscribeFreeCatalog((machine, changedWorkspace) => {
+    if (machine === host?.id && changedWorkspace === workspace) setCatalogRevision((revision) => revision + 1);
+  }), [host?.id, workspace]);
   // Modelos y permisos del proveedor elegido; la barra de `/` se pide al usarla.
   useEffect(() => {
     const key = `${host?.id}/${current}`;
@@ -243,7 +248,7 @@ export function Composer({
     return () => {
       alive = false;
     };
-  }, [host, workspace, current, host?.power()]);
+  }, [host, workspace, current, host?.power(), catalogRevision]);
   useEffect(() => setMentions(null), [host, workspace, folder]);
   // Las superficies mantienen sus ids aunque compartan el ejecutor.
   useEffect(() => {
@@ -253,7 +258,7 @@ export function Composer({
     return () => {
       alive = false;
     };
-  }, [host, workspace, host?.power()]);
+  }, [host, workspace, host?.power(), catalogRevision]);
   // La superficie sigue al agente y al modelo, y no al revés (`surfaceOf`, la regla de la ventana).
   useEffect(() => {
     if (!current) return;
@@ -676,7 +681,7 @@ export function Composer({
             onSubmitEditing={Platform.OS === "web" ? undefined : () => void send()}
             onKeyPress={Platform.OS === "web" ? onWebKey : undefined}
           />
-          {!shell && current ? (
+          {!shell ? (
             <Pressable testID="model" onPress={() => setSheet("model")} style={styles.round} accessibilityLabel={`${w("chat.model.title")}: ${modelText}${efforts.length ? ` · ${effortLabel(effort)}` : ""}${modeOption ? ` · ${phrase(modeOption.label)}` : ""}`}>
               {selectedMark ? <BrandMark id={selectedMark} size={20} color={theme.text} /> : <Icon name="sliders-horizontal" size={20} color={theme.text} />}
             </Pressable>
@@ -705,6 +710,7 @@ export function Composer({
 
       <Sheet visible={sheet === "model"} title={w("chat.model.title")} search={t("search.models")} onClose={() => setSheet(null)}>
         {(query) => {
+          const discovery = routerDiscovery(models?.models.map((m) => m.id) ?? [], query);
           const shownModels = surfaceModels.filter((m) => matches(query, m.label, m.id, modelName(m.id, models)));
           return (
             <>
@@ -742,6 +748,20 @@ export function Composer({
                   );
                 });
               })}
+              {discovery ? (
+                <View style={{ paddingHorizontal: 18, paddingVertical: 11, gap: 5 }} accessibilityLabel={t("composer.free_models")}>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                    <BrandMark id="danil" size={17} color={theme.text} />
+                    <Text style={{ color: theme.text, fontSize: TEXT.ui }}>{t("composer.free_models")}</Text>
+                  </View>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                    <Text style={{ color: theme.text, fontSize: TEXT.ui }}>{discovery.label}</Text>
+                    <Text style={{ color: theme.textMuted, fontSize: TEXT.label }}>{discovery.creator}</Text>
+                    <Icon name="shield" size={12} color={theme.textMuted} />
+                  </View>
+                  <Text style={{ color: theme.textMuted, fontSize: TEXT.ui }}>{w("chat.model.router_requirements")}</Text>
+                </View>
+              ) : null}
               <SheetSection>{w("chat.model.listbox")}</SheetSection>
               {!models ? <Text style={[styles.hint, { color: theme.textMuted, paddingHorizontal: 18 }]}>{t("composer.loading")}</Text> : null}
               {models && !surfaceModels.length ? <Text style={[styles.hint, { color: theme.textMuted, paddingHorizontal: 18 }]}>{w("chat.model.empty")}</Text> : null}

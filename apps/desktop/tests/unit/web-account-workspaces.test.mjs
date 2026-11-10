@@ -82,7 +82,7 @@ test("the account's workspaces show with their machines asleep, not the create-w
   const projects = await invoke("list_projects");
   assert.deepEqual(projects.map((p) => [p.id, p.machines, p.remote_url]), [["p1", ["cmp_vm"], "https://github.com/ana/app"]], "its project, from the registry");
   // Nadie contestó y no hay nada guardado: se dice por qué, nunca una lista vacía que no es cierta.
-  await assert.rejects(invoke("list_live_sessions", { project: "p1", open: [] }), (e) => ["machine_starting", "start_failed"].includes(e.detail) && e.what.includes("Danil VM") && !e.what.includes("Verifica que Danil esté abierto"), "the off VM is being started, said by name, never as a closed Danil");
+  await assert.rejects(invoke("list_live_sessions", { project: "p1", open: [] }), (e) => e.detail === "machine_off" && e.what.includes("Danil VM") && /se enciende cuando le mandes un mensaje/.test(e.what) && !e.what.includes("Verifica que Danil esté abierto"), "the off VM is not started by a read, said by name, never as a closed Danil");
   assert.ok(!f.relays.cmp_vm.calls.some((c) => c.command === "send_message"), "reading wakes nothing");
 
   const id = await invoke("send_message", { project: "p1", session: null, prompt: "hola", provider: "codex" });

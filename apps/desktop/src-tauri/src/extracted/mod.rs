@@ -222,47 +222,6 @@ fn guest_channels() -> Vec<guests::ChannelKind> {
     guests::channels()
 }
 
-/// Los huéspedes de un canal, tengan o no motor de Danil.
-#[tauri::command]
-async fn guest_list(
-    channel: guests::ChannelKind,
-) -> std::result::Result<Vec<guests::Guest>, serde_json::Value> {
-    blocking(move || guests::channel(channel).list()).await
-}
-
-/// Conecta un huésped que ya existe (Lima). WSL conserva `wsl_connect`, que
-/// pide usuario y contraseña.
-#[tauri::command]
-fn guest_connect(
-    app: tauri::AppHandle,
-    channel: guests::ChannelKind,
-    guest: String,
-    name: Option<String>,
-    workspace: Option<String>,
-    workspace_name: Option<String>,
-) -> guests::child::Job {
-    let workspace = workspace.map(|id| {
-        let n = workspace_name.unwrap_or_else(|| id.clone());
-        (id, n)
-    });
-    let name = name.unwrap_or_else(|| guest.clone());
-    match channel {
-        guests::ChannelKind::Lima => {
-            guests::child::start_lima_connect(&app, &guest, &name, workspace)
-        }
-        guests::ChannelKind::Wsl => {
-            guests::child::start_connect(&app, &guest, &name, None, None, workspace)
-        }
-    }
-    .unwrap_or_else(|running| running)
-}
-
-/// El trabajo en curso o el último, de cualquier canal.
-#[tauri::command]
-fn guest_job(app: tauri::AppHandle) -> Option<guests::child::Job> {
-    guests::child::job(&app)
-}
-
 #[tauri::command]
 async fn guest_children(
     app: tauri::AppHandle,
@@ -436,6 +395,7 @@ fn start(client: Option<Arc<Client>>, autostart: bool, launcher: launcher::Launc
         .on_window_event(move |window, event| {
             placement::track(window, event, &placed);
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                agents_session::credits_invalidate();
                 desktop::on_close_requested(window, api);
             }
         })
@@ -542,6 +502,7 @@ fn start(client: Option<Arc<Client>>, autostart: bool, launcher: launcher::Launc
             agents_session::agents_session_create_danil_workspace,
             agents_session::agents_session_refresh,
             agents_session::agents_bff_fetch,
+            agents_session::credits_pilot_prepare,
             agents_session::harness_org_fetch,
             proxy::service_filter,
             proxy::load_history,
@@ -578,9 +539,6 @@ fn start(client: Option<Arc<Client>>, autostart: bool, launcher: launcher::Launc
             wsl_distro_user,
             wsl_reboot,
             guest_channels,
-            guest_list,
-            guest_connect,
-            guest_job,
             guest_children,
             guest_remove,
             guest_start,

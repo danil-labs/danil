@@ -11,7 +11,7 @@
  * Al final escribe el manifest de la PWA y sus cabeceras (`web-phone-pwa.mjs`).
  */
 import { spawnSync } from "node:child_process";
-import { appendFileSync, existsSync, readFileSync, writeFileSync } from "node:fs";
+import { appendFileSync, cpSync, existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { PHONE_DIR, phoneHeaders, phoneManifest, phoneWorker } from "./web-phone-pwa.mjs";
@@ -37,6 +37,7 @@ const expoEnv = {
   TERMINUS_MOBILE_WEB_BASE: `${base}${PHONE_DIR}`,
   // La raíz de la web de escritorio, para «Ver la versión de escritorio» sin adivinarla de la ruta.
   EXPO_PUBLIC_TERMINUS_WEB_BASE: base,
+  EXPO_PUBLIC_TERMINUS_PHONE_BASE: `${base}${PHONE_DIR}/`,
   EXPO_PUBLIC_TERMINUS_ALPHA: env.TERMINUS_WEB_ALPHA === "1" ? "1" : "0",
   EXPO_PUBLIC_COMPUTERS_ENDPOINT: origin(env.TERMINUS_WEB_ENDPOINT || "https://machines.danil.ai"),
   EXPO_PUBLIC_TERMINUS_WEB_LOGIN: env.TERMINUS_WEB_LOGIN || `${base}auth`,
@@ -58,6 +59,9 @@ const run = spawnSync(npx, ["expo", "export", "--platform", "web", ...(env.TERMI
 });
 if (run.status !== 0) process.exit(run.status ?? 1);
 
+// Las caras de los agentes Business y sus versiones planas: los mismos SVG del
+// escritorio, servidos junto al teléfono (`AgentAvatar` los pide por URL).
+cpSync(fileURLToPath(new URL("../src/features/projects/business-icons/", import.meta.url)), join(out, "agent-icons"), { recursive: true });
 writeFileSync(join(out, "sw.js"), phoneWorker(readFileSync(join(out, "sw.js"), "utf8"), expoEnv.EXPO_PUBLIC_TERMINUS_WEB_LOGIN, base));
 writeFileSync(join(out, "manifest.webmanifest"), `${JSON.stringify(phoneManifest(base), null, 2)}\n`);
 appendFileSync(join(root, "_headers"), `\n${phoneHeaders(base).join("\n")}`);

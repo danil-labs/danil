@@ -8,7 +8,7 @@
 
 /**
  * Un renglón elegible (`list_surfaces`, `surfaces::Superficie`). Una fila de
- * agente puede dar más de una: OpenCode da «Zen y Go» (de pago) y «Modelos
+ * agente puede dar más de una: OpenCode da «OpenCode» (Go) y «Modelos
  * gratuitos». Los campos son los del cable.
  */
 export type Surface<Phrase = unknown> = {
@@ -33,8 +33,17 @@ export type SurfaceModel = { id: string; gratis?: boolean | null };
  * Si el modelo es de esa mitad del catálogo. Un sufijo `-free` no garantiza
  * gratuidad: el filtro usa el dato del catálogo. Sin superficie, o con una que
  * no parte el catálogo, todo vale.
+ *
+ * El login de OpenCode es uno solo, el de Go: los modelos que se cobraban
+ * contra el saldo de Zen (`opencode/…`) ya no se ofrecen. El motor todavía los
+ * publica; la partición los deja fuera aquí.
  */
 export function surfaceHas(s: Surface | undefined, m: SurfaceModel): boolean {
+  if (s?.id === "danil-credits") {
+    return s.provider === "opencode-zen" && m.id === "danil-credits/deepseek/deepseek-v4.1-flash" && m.gratis !== true;
+  }
+  if (m.id.startsWith("danil-credits/")) return false;
+  if (s?.provider === "opencode-zen" && s.catalogo === "de_pago" && m.id.startsWith("opencode/")) return false;
   if (!s || s.catalogo === "todo") return true;
   return s.catalogo === "gratuitos" ? m.gratis === true && m.id === "danil-free/reflection/beam-free" : m.gratis !== true;
 }

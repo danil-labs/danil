@@ -10,10 +10,12 @@ import { left, type Query } from "../../lib/limits";
 import {
   agruparModelos,
   modelPresentation,
+  routerDiscovery,
   effortOptions,
   effortValue,
   esFavorito,
   favoritosDeModelos,
+  seccionDeModelo,
   type GrupoDeModelos,
   type OpcionDeModelo,
 } from "../../lib/models";
@@ -23,6 +25,7 @@ import { cn } from "../../lib/utils";
 import { MarcaAgente } from "../../ui/icons";
 import { Popover, PopoverContent, PopoverTrigger } from "../../ui/Popover";
 import type { AccountList } from "../settings/accounts-store";
+import { DANIL_CREDITS } from "./danil-credits";
 
 const DanilCredits = lazy(() => import("./DanilCredits"));
 
@@ -35,6 +38,7 @@ type SelectorDeModeloProps = {
   disabled?: boolean;
   disabledReason?: string;
   onChange: (model: OpcionDeModelo) => void;
+  onCreditsPrepare?: () => void;
   /** El agente de la tarea: los demás se ven, pero el candado dice por qué no se eligen. */
   lockedAgent?: string;
   lockedReason?: string | null;
@@ -76,10 +80,12 @@ export default function SelectorDeModelo(props: SelectorDeModeloProps) {
       (opcion) =>
         opcion.superficie === props.superficie && opcion.model.id === props.model,
     );
+  const discovery = createMemo(() => routerDiscovery(props.models.map((option) => option.model.id), busqueda()));
   const todosLosGrupos = createMemo(() => agruparModelos(props.models, busqueda()));
   const bloqueado = (opcion: OpcionDeModelo) =>
     !!props.lockedAgent && opcion.agent !== props.lockedAgent;
   const disponible = (opcion: OpcionDeModelo) => opcion.usable && !bloqueado(opcion);
+  const creditsModel = () => props.models.find((option) => option.model.id === DANIL_CREDITS.modelId);
   const grupos = createMemo<GrupoDeModelos[]>(() => {
     const busquedaActiva = busqueda().trim().length > 0;
     const actual = seccion();
@@ -141,10 +147,21 @@ export default function SelectorDeModelo(props: SelectorDeModeloProps) {
       setActivo("");
       return;
     }
-    const inicial = elegido()?.usable ? elegido()!.key : visibles()[0]?.key ?? "";
-    const proveedorElegido = elegido()?.proveedor.id;
-    setSeccion(proveedorElegido ?? (favoritos().length > 0 ? "favorites" : todosLosGrupos()[0]?.id ?? "favorites"));
-    setActivo(inicial);
+    const gruposAbiertos = todosLosGrupos();
+    // La sección sale del grupo que de verdad contiene el modelo: agrupar y
+    // proveedor no siempre coinciden, y abrir una sección inexistente deja la
+    // lista vacía aunque el modelo esté elegido. Sin modelo elegido, la primera
+    // fila que se puede usar; Danil Credits no cuenta: tiene su propio botón.
+    const gruposDeModelos = gruposAbiertos.filter((grupo) => grupo.id !== "danil-credits");
+    const primeroDisponible = gruposDeModelos
+      .flatMap((grupo) => grupo.models)
+      .find(disponible);
+    const claveInicial = elegido()?.key ?? primeroDisponible?.key ?? "";
+    const seccionElegida =
+      seccionDeModelo(gruposAbiertos, claveInicial) ??
+      (favoritos().length > 0 ? "favorites" : gruposDeModelos[0]?.id ?? "router-info");
+    setSeccion(seccionElegida);
+    setActivo(claveInicial);
     setTimeout(() => {
       campo?.focus();
       mostrarActivo();
@@ -170,7 +187,7 @@ export default function SelectorDeModelo(props: SelectorDeModeloProps) {
   };
 
   const elegir = (key: string) => {
-    if (props.disabled || seccion() === "danil-credits") return;
+    if (props.disabled) return;
     const opcion = props.models.find((item) => item.key === key && disponible(item));
     if (!opcion) return;
     props.onChange(opcion);
@@ -290,11 +307,22 @@ export default function SelectorDeModelo(props: SelectorDeModeloProps) {
               aria-label={t("chat.credits.label")}
               aria-pressed={seccion() === "danil-credits"}
               title={t("chat.credits.label")}
-              onClick={() => { setSeccion("danil-credits"); setActivo(""); }}
+              onClick={() => { setSeccion("danil-credits"); setActivo(""); props.onCreditsPrepare?.(); }}
             >
               <MarcaAgente id="danil" size={17} />
             </button>
-            <For each={todosLosGrupos()}>
+            <Show when={discovery()}>
+              <button
+                type="button"
+                class={cn("flex size-9 shrink-0 items-center justify-center rounded-sm text-neutral-500 hover:bg-surface-muted hover:text-neutral-950", seccion() === "router-info" && "bg-surface-muted text-neutral-950")}
+                aria-label={t("surfaces.label.free")}
+                title={t("surfaces.label.free")}
+                onClick={() => setSeccion("router-info")}
+              >
+                <MarcaAgente id="danil" size={17} />
+              </button>
+            </Show>
+            <For each={todosLosGrupos().filter((group) => group.id !== "danil-credits")}>
               {(grupo) => (
                 <button
                   type="button"
@@ -311,13 +339,27 @@ export default function SelectorDeModelo(props: SelectorDeModeloProps) {
           <div class="scroll-visible min-h-0 overflow-y-auto p-1" role={seccion() === "danil-credits" ? undefined : "listbox"} aria-label={t("chat.model.listbox")}>
           <Show when={seccion() === "danil-credits"} fallback={
           <Show
-            when={grupos().some((grupo) => grupo.models.length > 0)}
+            when={grupos().some((grupo) => grupo.models.length > 0) || !!discovery() && (seccion() === "router-info" || !!busqueda().trim())}
             fallback={
               <p class="m-0 px-2 py-3 text-sm text-neutral-500">
                 {t("chat.model.empty")}
               </p>
             }
           >
+            <Show when={discovery() && (seccion() === "router-info" || !!busqueda().trim())}>
+              <section aria-label={t("surfaces.label.free")} class="px-2 py-2">
+                <div class="flex items-center gap-1.5 text-xs font-medium text-neutral-500">
+                  <MarcaAgente id="danil" size={14} />
+                  <span>{t("surfaces.label.free")}</span>
+                </div>
+                <div class="mt-2 flex items-center gap-2 text-sm text-neutral-950" aria-disabled="true">
+                  <span>{discovery()?.label}</span>
+                  <span class="rounded-sm border border-border px-1 text-xs text-neutral-500">{discovery()?.creator}</span>
+                  <Lock size={12} class="ml-auto text-neutral-500" />
+                </div>
+                <p class="mb-0 mt-1 text-xs text-neutral-500">{t("chat.model.router_requirements")}</p>
+              </section>
+            </Show>
             <For each={grupos()}>
               {(grupo) => (
                 <section role="group" aria-label={rotulo(grupo)}>
@@ -396,7 +438,10 @@ export default function SelectorDeModelo(props: SelectorDeModeloProps) {
               )}
             </For>
           </Show>
-          }><DanilCredits /></Show>
+          }><DanilCredits model={creditsModel()} disabled={props.disabled || !creditsModel() || !disponible(creditsModel()!)} onSelect={() => {
+            const option = creditsModel();
+            if (option) elegir(option.key);
+          }} /></Show>
         </div>
         </div>
 

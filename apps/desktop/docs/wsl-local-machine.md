@@ -72,7 +72,6 @@ dos veces sin decir nada cuando no corre en una consola.
 
 - Llegar a la distro desde la web y el teléfono: relay → motor de esta PC →
   motor de la distro. Hoy solo la ventana de esta PC la ve.
-- macOS con Lima: ver [local-guests.md](local-guests.md).
 - Los nombres de distro con espacios no existen: WSL los rechaza
   (`E_INVALIDARG`).
 
@@ -111,14 +110,11 @@ Comandos de la ventana (no del motor; no están en `commands.json`):
 
 | Comando | Qué hace |
 | --- | --- |
-| `guest_channels` | Los canales de este equipo: `["wsl"]` en Windows, `["lima"]` en macOS, `[]` en Linux. |
-| `guest_list { channel }` | Los huéspedes del canal, con o sin motor. |
+| `guest_channels` | Los canales de este equipo: `["wsl"]` en Windows, `[]` en los demás. |
 | `guest_children { fresh? }` | Las máquinas hijas con su estado. |
 | `guest_call`, `guest_events` | Una orden o una página de eventos al motor del huésped. |
 | `guest_copy_folder`, `guest_sync_spaces` | Carpetas y espacios de esta PC en el huésped. |
 | `guest_start`, `guest_remove` | Encenderla y quitarla. |
-| `guest_connect { channel, guest, name, workspace }` | Conectar una VM de Lima que ya existe, como trabajo. |
-| `guest_job` | El trabajo en curso o el último, de cualquier canal. |
 
 El alta de WSL conserva sus comandos (`wsl_state`, `wsl_catalog`,
 `wsl_enable`, `wsl_install`, `wsl_connect`, `wsl_reboot`, `wsl_distro_user`,

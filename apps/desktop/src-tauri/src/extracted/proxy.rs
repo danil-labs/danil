@@ -279,6 +279,7 @@ pub(super) fn desktop_command(name: &str) -> bool {
                 | "agents_session_create_danil_workspace"
                 | "agents_session_refresh"
                 | "agents_bff_fetch"
+                | "credits_pilot_prepare"
                 | "harness_org_fetch"
                 | "typst_live_complete"
                 | "service_filter"
@@ -296,9 +297,6 @@ pub(super) fn desktop_command(name: &str) -> bool {
                 | "wsl_distro_user"
                 | "wsl_reboot"
                 | "guest_channels"
-                | "guest_list"
-                | "guest_connect"
-                | "guest_job"
                 | "guest_children"
                 | "guest_remove"
                 | "guest_start"
@@ -1041,6 +1039,44 @@ pub(super) fn account_relay_token(
         None => json!({}),
     };
     invoke(&state, "danil_client_token", args)
+}
+
+/// Una orden del motor pedida desde el Rust de la ventana (`agents_session.rs`).
+pub(super) fn credits_local_client(
+    app: &tauri::AppHandle,
+    workspace: &str,
+) -> Result<Arc<Client>, Value> {
+    let state = app
+        .try_state::<Arc<State>>()
+        .ok_or_else(|| failure(&Error::new("app_unavailable")))?;
+    let client = state.client();
+    if state.remote()
+        || state.workspace().as_deref() != Some(workspace)
+        || !client.status()["service_features"]
+            .as_array()
+            .is_some_and(|features| features.iter().any(|f| f == "credits_pilot_v1"))
+    {
+        return Err(failure(&Error::new("credits_local_engine_required")));
+    }
+    Ok(client)
+}
+
+pub(super) fn credits_local_engine(
+    app: &tauri::AppHandle,
+    workspace: &str,
+) -> Result<String, Value> {
+    credits_local_client(app, workspace).map(|client| client.runtime().to_owned())
+}
+
+pub(super) fn credits_captured_call(
+    client: &Arc<Client>,
+    workspace: &str,
+    args: Value,
+) -> Result<Value, Value> {
+    client
+        .invoke("credits_pilot_install", Some(workspace.to_owned()), args)
+        .map_err(|e| failure(&e))
+        .and_then(reply)
 }
 
 /// Una orden del motor pedida desde el Rust de la ventana (`agents_session.rs`).

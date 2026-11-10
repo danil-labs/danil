@@ -27,9 +27,8 @@ type Row = Record<string, unknown>;
 /** `os` solo si se sabe: la tarjeta de la tarea lo lee y, si falta, no inventa un sistema. */
 /** `features`: lo que su motor anuncia (`status.service_features`); cada función se enciende por máquina. */
 /** `version`: la `host_version` de su último `hello`, según el plano de control; se conserva apagada. */
-/** `opensOnRead`: una VM de un proveedor administrado que se enciende al abrir la web si no hay copia que enseñar. */
 /** `child`: una máquina hija de esta computadora (Linux en esta PC): no está en el registro de la cuenta y es de todos sus workspaces. */
-export type MachineInfo = { id: string; name: string; wakes: boolean; opensOnRead?: boolean; outdated?: boolean; linked?: ReadonlySet<string> | null; os?: SystemId; features?: readonly string[]; version?: string; child?: boolean };
+export type MachineInfo = { id: string; name: string; wakes: boolean; outdated?: boolean; linked?: ReadonlySet<string> | null; os?: SystemId; features?: readonly string[]; version?: string; child?: boolean };
 export type Power = "on" | "off" | "starting" | "outdated";
 
 export type Envelope = { machine: string; workspace: string | null; command: string; args?: Row };
@@ -164,7 +163,7 @@ export class Fleet {
         continue;
       }
       const before = member.info;
-      const same = before.name === info.name && before.wakes === info.wakes && before.opensOnRead === info.opensOnRead && before.os === info.os && !!before.outdated === !!info.outdated && sameLinks(before.linked ?? null, info.linked ?? null)
+      const same = before.name === info.name && before.wakes === info.wakes && before.os === info.os && !!before.outdated === !!info.outdated && sameLinks(before.linked ?? null, info.linked ?? null)
         && (before.features ?? []).join() === (info.features ?? []).join();
       // Un contrato que vuelve a ser compatible quita la marca que puso el relay.
       if (before.outdated && !info.outdated) member.outdated = false;
@@ -395,6 +394,27 @@ export class Fleet {
     if (member.link.state() === "online") return;
     if (!member.info.wakes) throw new FleetError("machine_off", machine, null, false);
     await this.wakeMember(member);
+  }
+
+  /**
+   * Espera a que `machine`, que ya se está encendiendo, diga `online`, sin pedir
+   * que la enciendan: leer nunca enciende una máquina.
+   */
+  async untilOnline(machine: string): Promise<void> {
+    const member = this.members.get(machine);
+    if (!member) throw new FleetError("unknown_machine", machine);
+    if (member.link.state() === "online") return;
+    if (member.link.state() !== "starting") throw new FleetError("machine_off", machine, null, member.info.wakes);
+    await new Promise<void>((resolve, reject) => {
+      const done = (ok: boolean) => {
+        clearTimeout(timer);
+        stop();
+        ok ? resolve() : reject(new FleetError("machine_timeout", machine, "start"));
+      };
+      const timer = setTimeout(() => done(false), this.deadlines.intent);
+      const stop = member.link.onState((state) => (state === "online" ? done(true) : OFF.includes(state) && done(false)));
+      if (member.link.state() === "online") done(true);
+    });
   }
 
   /** Las acciones aplazadas de `machine` que esperan a que se conecte. */

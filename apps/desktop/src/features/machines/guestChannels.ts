@@ -1,6 +1,6 @@
 /**
  * Los canales de máquinas locales que ofrece este equipo, según la ventana
- * (`guest_channels`): `["wsl"]` en Windows, `["lima"]` en macOS, `[]` en Linux.
+ * (`guest_channels`): `["wsl"]` en Windows, `[]` en macOS y Linux.
  *
  * Solo la ventana de escritorio pregunta (`askGuestChannels` en `app/main.tsx`,
  * con `nativeWindow`). En la web `invoke` va por el relay a la máquina:

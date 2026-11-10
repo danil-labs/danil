@@ -82,9 +82,12 @@ export type Task = SessionRow & {
 };
 
 type AgentAppearance = { body?: string | null; avatar?: string | null };
-type AgentProfiles = Record<string, AgentAppearance>;
+type AgentProfiles = Record<string, AgentAppearance & { display_name?: string | null }>;
 
 /** Un agente con nombre, juntando sus carpetas y máquinas. */
+/** `list_agents` con lo que el teléfono necesita para separar el nivel workspace. */
+type ScopedAgentList = { agents: (AgentList["agents"][number] & { own?: boolean; own_scope?: { kind: string } | null })[] };
+
 export type Agent = {
   name: string;
   description: string | null;
@@ -93,6 +96,10 @@ export type Agent = {
   status: "working" | "awake" | "asleep";
   liveTasks: number;
   minutesSinceLastTurn: number | null;
+  /** Nombre visible de su perfil (`display_name`); sin él, `name`. */
+  displayName?: string | null;
+  /** Declarado en el workspace (nivel global), no en una carpeta ni en un repositorio. */
+  workspace?: boolean;
   /** `host/folder` donde está. */
   places: ({ host: string; folder: string } & AgentAppearance)[];
 };
@@ -258,17 +265,26 @@ export async function snapshotOf(host: Host, workspace: string): Promise<HostSna
     projects.map(async (project) => {
       const [rows, agents, status, profiles] = await Promise.all([
         read<SessionRow[]>(host, "list_live_sessions", workspace, { project, open: [] }, [], at),
-        project ? read<AgentList>(host, "list_agents", workspace, { project }, { agents: [] }, at).catch(() => ({ agents: [] })) : { agents: [] },
-        project ? read<AgentStatusRow[]>(host, "list_agent_status", workspace, { project }, [], at).catch(() => []) : [],
-        project ? read<AgentProfiles>(host, "list_agent_profiles", workspace, { project }, {}, at).catch((): AgentProfiles => ({})) : {} as AgentProfiles,
+        // Con `project: ""` el motor responde lo del workspace (más catálogo y gobierno):
+        // de ahí solo cuentan los del nivel workspace, como en el escritorio.
+        read<ScopedAgentList>(host, "list_agents", workspace, { project }, { agents: [] }, at).catch(() => ({ agents: [] })),
+        read<AgentStatusRow[]>(host, "list_agent_status", workspace, { project }, [], at).catch(() => []),
+        read<AgentProfiles>(host, "list_agent_profiles", workspace, { project }, {}, at).catch((): AgentProfiles => ({})),
       ]);
-      const faces = await Promise.all((agents.agents ?? []).map(async (agent) => {
+      const listed = (agents.agents ?? []).filter((agent) => project || agent.own_scope?.kind === "workspace");
+      const faces = await Promise.all(listed.map(async (agent) => {
         const profile = profiles[agent.name];
         const path = profile?.avatar;
         if (path && !images.has(path)) {
           images.set(path, read<FilePreview | null>(host, "preview_file", workspace, { path, rel: path }, null, at).then((value) => value?.data_url ?? null).catch(() => null));
         }
-        return { ...agent, body: profile?.body ?? null, avatar: path ? await images.get(path) : null };
+        return {
+          ...agent,
+          body: profile?.body ?? null,
+          avatar: path ? await images.get(path) : null,
+          displayName: profile?.display_name?.trim() || null,
+          workspace: agent.own_scope?.kind === "workspace",
+        };
       }));
       return { project, rows, agents: faces, status };
     }),
@@ -286,12 +302,16 @@ export async function snapshotOf(host: Host, workspace: string): Promise<HostSna
         known.places.push({ host: host.id, folder: project, body: a.body, avatar: a.avatar });
         known.liveTasks += s?.live_tasks ?? 0;
         if (s && rank(s.status) < rank(known.status)) known.status = s.status;
+        known.workspace ||= a.workspace;
+        known.displayName ??= a.displayName;
       } else {
         agents.set(a.name, {
           name: a.name,
           description: a.description ?? null,
           body: a.body,
           avatar: a.avatar,
+          displayName: a.displayName,
+          workspace: a.workspace,
           status: s?.status ?? "asleep",
           liveTasks: s?.live_tasks ?? 0,
           minutesSinceLastTurn: s?.minutes_since_last_turn ?? null,
@@ -727,7 +747,7 @@ export async function modelsOf(host: Host, workspace: string, provider: string):
   return value && Array.isArray(value.models) ? value : { provider, models: [] };
 }
 
-/** Lo que se elige para trabajar (`list_surfaces`): OpenCode da «Zen y Go» y «Modelos gratuitos». Apagada y sin copia, ninguna. */
+/** Lo que se elige para trabajar (`list_surfaces`): OpenCode da «OpenCode» (Go) y «Modelos gratuitos». Apagada y sin copia, ninguna. */
 export async function surfacesOf(host: Host, workspace: string): Promise<Surface<Frase>[]> {
   const at = { cachedAt: null as number | null };
   const value = await read<Surface<Frase>[] | null>(host, "list_surfaces", workspace, {}, null, at).catch(() => null);
@@ -770,27 +790,61 @@ export async function setProviderConsent(host: Host, workspace: string, provider
   return value?.consents?.some((c) => c.provider === provider) ?? false;
 }
 
-/** Los modelos gratuitos de un agente en una máquina: su consentimiento y si ya se pueden usar. */
-export type FreeModels = { provider: string; label: string; text: ConsentText; accepted: boolean; usable: boolean };
+/** Política v3 del motor de destino; no consulta consentimiento central. */
+export type FreeModelPolicy = {
+  workspace_id: string; version: number; providers: string[]; lines: Frase[];
+  acceptance_ref: string; enabled: boolean; accepted: boolean;
+  destination_host?: string;
+  terms: { label: string; url: string }[];
+};
+type FreeModelConsent = { workspace_id: string; version: number; providers: string[]; policy_id: string; acceptance_id: string };
+const freeProviders = (providers: string[]) => Array.isArray(providers) && providers.length === 3 && new Set(providers).size === 3 && ["kilo", "vercel", "reflection"].every((p) => providers.includes(p));
+export function recognizedFreePolicy(policy: FreeModelPolicy | undefined, workspace: string): policy is FreeModelPolicy {
+  return !!policy && policy.workspace_id === workspace && policy.version === 3 && !!policy.acceptance_ref &&
+    Array.isArray(policy.lines) && policy.lines.length > 0 && Array.isArray(policy.terms) && freeProviders(policy.providers);
+}
+async function freePolicyOf(host: Host, workspace: string): Promise<FreeModelPolicy | null> {
+  const { value, cachedAt } = await host.call<Startup & { free_model_policy?: FreeModelPolicy }>("list_workspaces", workspace, {});
+  return cachedAt === null && recognizedFreePolicy(value?.free_model_policy, workspace) ? value.free_model_policy! : null;
+}
+const freeCatalogListeners = new Set<(host: string, workspace: string) => void>();
+/** Composer se suscribe para recargar sus superficies y modelos al cambiar el consentimiento. */
+export function subscribeFreeCatalog(listener: (host: string, workspace: string) => void): () => void {
+  freeCatalogListeners.add(listener);
+  return () => { freeCatalogListeners.delete(listener); };
+}
+export const FREE_BEAM_MODEL = "danil-free/reflection/beam-free";
+export type FreeModels = { provider: string; label: string; text: ConsentText; accepted: boolean; usable: boolean; policy?: FreeModelPolicy };
 
-/**
- * Lo que la persona decide en Proveedores de IA, por máquina: una fila por
- * superficie gratuita (`list_surfaces`), con el texto de hoy y si el workspace
- * ya lo aceptó. Sin texto no se ofrece activar: aceptar sin ver qué se acepta
- * no es un consentimiento. Apagada, ninguna.
- */
+/** Una ruta por máquina. Aceptación y disponibilidad son estados independientes. */
 export async function freeModelsOf(host: Host, workspace: string): Promise<FreeModels[]> {
-  const free = (await surfacesOf(host, workspace)).filter((s) => s.catalogo === "gratuitos");
-  if (!free.length) return [];
-  // En orden: saber si el sí guardado sigue valiendo necesita la versión del texto de hoy.
-  const text = await consentText(host, workspace);
-  if (!text) return [];
-  const rows: FreeModels[] = [];
-  for (const s of free) {
-    const accepted = await consentOf(host, workspace, s.provider, text.version);
-    rows.push({ provider: s.provider, label: s.label, text, accepted: accepted ?? false, usable: s.usable });
+  if (host.power() !== "on") return [];
+  const policy = await freePolicyOf(host, workspace);
+  if (!policy) return [];
+  const { value: surfaces, cachedAt } = await host.call<Surface<Frase>[]>("list_surfaces", workspace, {}).catch(() => ({ value: [], cachedAt: null }));
+  const surface = cachedAt === null && Array.isArray(surfaces) ? surfaces.find((s) => s.provider === "opencode-zen" && s.catalogo === "gratuitos") : undefined;
+  let usable = false;
+  if (policy.enabled && policy.accepted && surface?.usable) {
+    const { value, cachedAt: modelsCachedAt } = await host.call<ProviderModels>("list_models", workspace, { provider: surface.provider }).catch(() => ({ value: null, cachedAt: null }));
+    usable = modelsCachedAt === null && value?.fallback !== true && value?.models?.some((m) => m.id === FREE_BEAM_MODEL && m.gratis === true) === true;
   }
-  return rows;
+  return [{ provider: "opencode-zen", label: "Danil", text: { lines: policy.lines, version: policy.version }, accepted: policy.accepted, usable, policy: { ...policy, destination_host: host.id } }];
+}
+
+/** Revalida el texto mostrado antes de guardar; consulta el catálogo después. */
+export async function changeFreeModels(host: Host, workspace: string, shown: FreeModels, accepted: boolean): Promise<FreeModels[]> {
+  if (host.power() !== "on") throw new HostError("free_policy_changed");
+  const current = await freePolicyOf(host, workspace);
+  const policy = shown.policy;
+  if (!current || !policy || policy.destination_host !== host.id || policy.workspace_id !== workspace || (accepted && (!current.enabled || !policy.acceptance_ref ||
+    JSON.stringify(current.lines) !== JSON.stringify(policy.lines) || JSON.stringify(current.terms) !== JSON.stringify(policy.terms)))) throw new HostError("free_policy_changed");
+  const { value, cachedAt } = await host.call<{ free_model_consent?: FreeModelConsent }>("set_provider_consent", workspace, { provider: accepted ? policy.acceptance_ref : shown.provider, accepted });
+  const consent = value?.free_model_consent;
+  const saved = !!consent && consent.workspace_id === workspace && consent.version === current.version &&
+    !!consent.policy_id && !!consent.acceptance_id && freeProviders(consent.providers);
+  if (cachedAt !== null || saved !== accepted) throw new HostError("free_policy_changed");
+  for (const listener of freeCatalogListeners) listener(host.id, workspace);
+  return freeModelsOf(host, workspace);
 }
 
 export async function permissionModesOf(host: Host, workspace: string, provider: string): Promise<PermissionModeOption[]> {

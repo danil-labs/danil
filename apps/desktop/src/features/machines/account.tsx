@@ -5,7 +5,7 @@
  * relay session that only adds its slice. With one session per account, it is
  * the account of the open workspace: its client token, its computers and its
  * registry; switching to a workspace of another account installs that one.
- * Without an account, a local guest (WSL, Lima) gets a guests-only fleet as
+ * Without an account, a local guest (WSL) gets a guests-only fleet as
  * `"local"`; with no guest either, nothing is installed. Lazy from `app/main.tsx`.
  */
 import "../../web/phrases";

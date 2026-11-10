@@ -729,7 +729,6 @@ const steps = [
   ["The fleet: the machine comes from the envelope, every wait has a cap and nobody answering is not an empty list", process.execPath, ["--test", "--experimental-strip-types", join(root, "../../packages/fleet/test/fleet.test.ts")], root],
   ["WSL detection reads English and Spanish states and maps failures", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/wsl-detection.test.ts")], root],
   ["WSL Linux user turns typed names into valid users", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/wsl-linux-user.test.ts")], root],
-  ["Linux en esta Mac lists Lima VMs, keeps Colima aside and says how to install Lima", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/lima-machine.test.mjs")], root],
   ["Without an account the local guests are a fleet of their own and nothing goes to the account", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/local-fleet.test.mjs")], root],
   ["Danil Machines: session with contracts, token renewal, engine and tombstones", process.execPath, ["--test", "--experimental-strip-types", join(root, "../../packages/computers/test/computers.test.ts")], root],
   ["Danil Machines: an MCP block with written values, a URL with a password or an argument with a token does not cross the relay", process.execPath, ["--test", "--experimental-strip-types", join(root, "../../packages/computers/test/mcp-block.test.ts")], root],

@@ -490,7 +490,7 @@ export default function AgentProfile(props: {
 
           <section class={SECTION}>
             <Show
-              when={props.agent.own}
+              when={props.agent.own && props.agent.package !== "business"}
               fallback={
                 <>
                   <span class="text-ui text-neutral-700">

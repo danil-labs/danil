@@ -95,7 +95,7 @@
   "projects.agents.profile_delete": "Eliminar agente",
   "projects.agents.profile_delete_cancel": "Cancelar",
   "projects.agents.profile_delete_confirm": "Eliminar",
-  "projects.agents.profile_delete_what": "Se borra su declaración, su cara y su fondo. Lo que ya habló se queda.",
+  "projects.agents.profile_delete_what": "Se eliminarán sus instrucciones y memoria. Sus tareas y conversaciones se conservarán.",
   "projects.agents.profile_deleting": "Eliminando…",
   "projects.agents.profile_avatar_clear": "Quitar avatar",
   "projects.agents.profile_face": "Cara",
@@ -419,5 +419,10 @@
   "projects.sessions.delete_buffers": "Hay cambios sin guardar en el editor. Cancela, guárdalos en el editor y vuelve a revisar antes de borrar.",
   "projects.sessions.delete_reviewed": "Revisé esta tarea y acepto las pérdidas indicadas.",
   "projects.sessions.delete_inspect_again": "Revisar de nuevo",
-  "projects.sessions.delete_changed": "La familia o sus archivos cambiaron. La lista se actualizó. Revisa y confirma cada tarea de nuevo."
+  "projects.sessions.delete_changed": "La familia o sus archivos cambiaron. La lista se actualizó. Revisa y confirma cada tarea de nuevo.",
+  "projects.agents.body.character-ventas": "Auricular",
+  "projects.agents.body.character-direccion": "Portapapeles",
+  "projects.agents.body.character-diseno": "Estrella",
+  "projects.agents.body.character-finanzas": "Calculadora",
+  "projects.agents.body.character-rh": "Lentes"
 }

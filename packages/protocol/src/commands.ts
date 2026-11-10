@@ -30,9 +30,9 @@ export const APP_READS = [
   // El cuadro de escribir, como el de la ventana: modelos y razonamiento,
   // permisos, la barra de comandos, las menciones y la rama base.
   "list_models",
-  // Las superficies de cada agente (OpenCode: «Zen y Go» y «Modelos gratuitos»)
-  // y el texto del consentimiento de los gratuitos, con su versión: el mismo
-  // que firma la ventana (`workspaces::consent_text`).
+  // Las superficies de cada agente (OpenCode: «OpenCode» con Go y «Modelos
+  // gratuitos») y el texto del consentimiento de los gratuitos, con su versión:
+  // el mismo que firma la ventana (`workspaces::consent_text`).
   "list_surfaces",
   "consent_text",
   "list_permission_modes",

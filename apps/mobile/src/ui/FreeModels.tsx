@@ -1,8 +1,7 @@
 import { TEXT } from "@terminus/design";
-import type { ProviderInfo } from "@terminus/protocol";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
-import { type FreeModels as FreeRow, freeModelsOf, setProviderConsent } from "../lib/engine";
+import { Linking, Pressable, StyleSheet, Text, View } from "react-native";
+import { type FreeModels as FreeRow, freeModelsOf, changeFreeModels } from "../lib/engine";
 import type { Host } from "../lib/hosts";
 import { phrase, t, w } from "../lib/i18n";
 import { BrandMark } from "./BrandMark";
@@ -12,7 +11,7 @@ import { type Theme } from "./theme";
 type Row = FreeRow & { host: Host; workspace: string };
 
 /** La aceptación se guarda sólo desde la hoja explícita; cancelar no cambia el workspace. */
-export function FreeModels({ hosts, scopeOf, theme, tick }: { hosts: readonly Host[]; scopeOf: (host: Host) => string | null; providers: readonly ProviderInfo[]; theme: Theme; tick: unknown }) {
+export function FreeModels({ hosts, scopeOf, theme, tick }: { hosts: readonly Host[]; scopeOf: (host: Host) => string | null; theme: Theme; tick: unknown }) {
   const [rows, setRows] = useState<Row[]>([]);
   const [asking, setAsking] = useState<Row | null>(null);
   const [saving, setSaving] = useState(false);
@@ -42,8 +41,8 @@ export function FreeModels({ hosts, scopeOf, theme, tick }: { hosts: readonly Ho
     setFailed(null);
     try {
       // Lo que quedó guardado, no lo pedido.
-      const saved = await setProviderConsent(row.host, row.workspace, row.provider, accepted);
-      setRows((now) => now.map((r) => (r.host.id === row.host.id && r.provider === row.provider ? { ...r, accepted: saved } : r)));
+      const refreshed = await changeFreeModels(row.host, row.workspace, row, accepted);
+      setRows((now) => [...now.filter((r) => r.host.id !== row.host.id || r.workspace !== row.workspace), ...refreshed.map((r) => ({ ...r, host: row.host, workspace: row.workspace }))]);
       setAsking(null);
       void load();
     } catch {
@@ -78,7 +77,7 @@ export function FreeModels({ hosts, scopeOf, theme, tick }: { hosts: readonly Ho
             {failed === id ? <Text accessibilityRole="alert" style={{ color: theme.error, fontSize: TEXT.ui }}>{w("settings.accounts.free.error_save")}</Text> : null}
             {row.accepted ? (
               <View style={styles.row}>
-                <Text style={{ color: theme.success, fontSize: TEXT.ui, fontWeight: "600" }}>{w("settings.accounts.free.active")}</Text>
+                <Text style={{ color: row.usable ? theme.success : theme.textMuted, fontSize: TEXT.ui, fontWeight: "600" }}>{t(row.usable ? "accounts.free_available" : "accounts.free_route_unavailable")}</Text>
                 <Pressable
                   testID={`free-off-${id}`}
                   accessibilityRole="button"
@@ -94,7 +93,7 @@ export function FreeModels({ hosts, scopeOf, theme, tick }: { hosts: readonly Ho
               <Pressable
                 testID={`free-on-${id}`}
                 accessibilityRole="button"
-                disabled={saving}
+                disabled={saving || !row.policy?.enabled}
                 onPress={() => setAsking(row)}
                 style={[styles.button, { backgroundColor: theme.primary, alignSelf: "flex-start", opacity: saving ? 0.5 : 1 }]}
               >
@@ -113,6 +112,11 @@ export function FreeModels({ hosts, scopeOf, theme, tick }: { hosts: readonly Ho
               <Text key={i} style={{ color: i === 0 ? theme.text : theme.textMuted, fontSize: TEXT.body, lineHeight: 20, fontWeight: i === 0 ? "600" : "400" }}>
                 {phrase(line)}
               </Text>
+            ))}
+            {asking.policy?.terms.map((term) => (
+              <Pressable key={term.url} accessibilityRole="link" onPress={() => void Linking.openURL(term.url)}>
+                <Text style={{ color: theme.primary }}>{term.label}</Text>
+              </Pressable>
             ))}
             {failed === `${asking.host.id}/${asking.provider}` ? <Text accessibilityRole="alert" style={{ color: theme.error }}>{w("settings.accounts.free.error_save")}</Text> : null}
             <View style={styles.row}>

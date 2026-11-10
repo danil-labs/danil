@@ -28,6 +28,13 @@ export type AccountComputersSource = {
   rename: (id: string, name: string) => Promise<Answer<{ computer_id: string; name: string }>>;
   /** Quien pinta nombres de máquina (la flota) toma el nuevo sin recargar. */
   onRenamed: (id: string, name: string) => void;
+  /**
+   * Quita de la cuenta una máquina propia que no está en línea. Solo la da quien
+   * tiene la sesión de la persona (la web); el escritorio no la ofrece todavía.
+   */
+  remove?: (id: string) => Promise<Answer<{ computer_id: string }>>;
+  /** La flota deja de pintar la máquina quitada y sus tareas. */
+  onRemoved?: (id: string) => void;
 };
 
 /** Un workspace de otra cuenta de Danil de este navegador: se ve en la columna y abrirlo recarga con su cuenta. */
@@ -66,8 +73,6 @@ export type Capabilities = {
   computerStatus: boolean;
   /** La ventana ofrece WSL como canal de máquinas locales (`guest_channels`). */
   wsl?: boolean;
-  /** La ventana ofrece Lima como canal de máquinas locales (`guest_channels`, macOS). */
-  lima?: boolean;
   /** Radiant en Configuración y su gobierno en las pantallas; la web no lo ofrece. */
   radiant?: boolean;
   /** «Descarga la app» en Configuración: solo la web; la ventana ya es la app. */
