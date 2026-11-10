@@ -3,7 +3,7 @@ import ChevronUp from "lucide-solid/icons/chevron-up";
 import List from "lucide-solid/icons/list";
 import Plus from "lucide-solid/icons/plus";
 import SquarePen from "lucide-solid/icons/square-pen";
-import { createMemo, createSignal, For, onCleanup, Show } from "solid-js";
+import { createEffect, createMemo, createSignal, For, onCleanup, Show } from "solid-js";
 import { t } from "../../lib/i18n";
 import type { AgentProfile } from "../../lib/model";
 import { cn } from "../../lib/utils";
@@ -48,6 +48,9 @@ export default function AgentDock(props: {
   loading?: boolean;
 }) {
   const [expanded, setExpanded] = createSignal(false);
+  // El panel cerrado no se monta: abrir otra tarea no debe repintar su lista invisible.
+  const [opened, setOpened] = createSignal(false);
+  createEffect(() => { if (expanded()) setOpened(true); });
   const [names, setNames] = createSignal(false);
   const [menu, setMenu] = createSignal<string | null>(null);
   const label = (name: string) => displayName(name, props.profileOf?.(name));
@@ -80,12 +83,14 @@ export default function AgentDock(props: {
   return <div role="group" aria-label={t("shell.agent_dock.title")} class="h-[100px] shrink-0" data-dock-expanded={expanded() ? "" : undefined}>
     <div inert={!expanded()} aria-hidden={!expanded()} data-dock-panel=""
       class={cn("absolute inset-x-0 top-0 bottom-[100px] z-20 overflow-y-auto bg-surface px-2 motion-safe:transition-[transform,opacity,visibility] motion-safe:duration-[180ms] motion-safe:ease-out", expanded() ? "visible translate-y-0 opacity-100" : "invisible translate-y-full opacity-0")}>
-      {group(t("shell.agent_dock.workspace"), props.groups?.workspace)}
-      <Show when={props.currentFolder}>
-        {group(t("shell.agent_dock.project"), props.groups?.project)}
-        {group(t("shell.agent_dock.repository"), props.groups?.repo)}
+      <Show when={opened()}>
+        {group(t("shell.agent_dock.workspace"), props.groups?.workspace)}
+        <Show when={props.currentFolder}>
+          {group(t("shell.agent_dock.project"), props.groups?.project)}
+          {group(t("shell.agent_dock.repository"), props.groups?.repo)}
+        </Show>
+        <button class="my-3 rounded-md border-0 bg-transparent px-2 py-1 text-caption text-neutral-500 hover:bg-neutral-100" onClick={() => { setExpanded(false); props.onSeeAll(); }}>{t("shell.agent_dock.see_all")}</button>
       </Show>
-      <button class="my-3 rounded-md border-0 bg-transparent px-2 py-1 text-caption text-neutral-500 hover:bg-neutral-100" onClick={() => { setExpanded(false); props.onSeeAll(); }}>{t("shell.agent_dock.see_all")}</button>
     </div>
     <div class="relative z-30 h-full border-t border-border bg-surface px-2" data-dock-header="">
       <div class="flex h-10 items-center gap-1 px-1">

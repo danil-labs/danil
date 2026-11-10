@@ -129,6 +129,8 @@
   "chat.mode.unsupported": "Este agente no cambia de modo con un turno en marcha. El modo elegido corre a partir del siguiente.",
   "chat.model.aria": "Modelo: {model}",
   "chat.model.aria_effort": "Modelo: {model}. Razonamiento: {effort}",
+  "chat.model.router_requirements": "Requiere una máquina compatible, consentimiento y una ruta verificada disponible.",
+  "chat.model.router_route_unavailable": "Beam no está disponible en el catálogo verificado del proveedor. El consentimiento sigue aceptado.",
   "chat.model.empty": "No hay modelos",
   "chat.model.favorite": "Marcar {model} como favorito",
   "chat.model.favorites": "Favoritos",
