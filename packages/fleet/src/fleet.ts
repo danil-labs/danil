@@ -15,7 +15,7 @@
  * suma su rebanada con `merge`.
  */
 import { type AccountWorkspace, type Blocked, type CallResult, type DeferredFrame, type EngineInfo, type EventsPage, type MachineState, type SystemId, cachedAt, callWorkspace, isDeferrable, linkedAttention, linkedEvents, linkedListing, requestId, unlinkedWorkspaces } from "../../computers/src/index.ts";
-import { DEADLINES, type Deadlines, classOf } from "./deadlines.ts";
+import { DEADLINES, type Deadlines, PASSIVE, classOf } from "./deadlines.ts";
 import { FleetError, fromRelay } from "./errors.ts";
 import { argsFor } from "./ids.ts";
 import { type MergeContext, encode, encodeEvent, merge } from "./merge.ts";
@@ -511,7 +511,8 @@ export class Fleet {
     const kind = classOf(command);
     if (kind !== "read" && this.isOutdated(member)) throw new FleetError("version_mismatch", machine);
     const off = OFF.includes(member.link.state());
-    if (off && ["list_storage", "reclaim_storage", "empty_build_cache", "collect_orphans"].includes(command)) throw new FleetError("machine_off", machine);
+    // Lo que la ventana pide sola (`PASSIVE`) no enciende la VM: solo un mensaje o un gesto de la persona.
+    if (off && PASSIVE.has(command)) throw new FleetError("machine_off", machine);
     // Archivar, borrar, renombrar, fijar o mover de space: el relay la guarda sin encenderla.
     if (off && kind !== "read" && !this.defers(command, args)) {
       if (!member.info.wakes) throw new FleetError("machine_off", machine, null, false);

@@ -24,3 +24,23 @@ export function classOf(command: string): CommandClass {
 }
 
 export const isRead = (command: string) => classOf(command) === "read";
+
+/**
+ * Lo que la ventana pide sola, sin un gesto de la persona: marcar una tarea
+ * vista, vigilar su árbol, sondeos, tamaños, ramas y vistas previas. No son
+ * lecturas (no tienen rebanada ni copia en el relay), pero tampoco encienden
+ * una VM apagada: con la máquina apagada fallan con `machine_off`. Antes caían
+ * en «acción», y abrir o volver a la pestaña de la web encendía la VM.
+ */
+export const PASSIVE: ReadonlySet<string> = new Set([
+  "watch_task_tree", "unwatch_task_tree", "mark_task_seen", "cli_task_opened", "site_sweep", "service_poll",
+  "kn_pending", "kn_cloud_state", "source_freshness", "skill_source_freshness", "source_detail",
+  "install_size", "provider_download_size", "machine_list", "env_secrets_list", "tasks_awaiting_quota",
+  "git_host_projects", "git_host_areas", "git_host_available_areas", "repo_branches", "publications_of",
+  "chat_visual_part", "artifact_read_part", "tree_read_part", "has_mcp_app", "space_delete_preview", "task_lifecycle_preview",
+  "local_runtime", "local_downloads", "wsl_state", "launcher_state", "zotero_bib_links",
+  "check_git_host", "check_google_drive", "check_integration", "check_mcp",
+  "guest_children", "guest_channels", "guest_events",
+  // El disco de la máquina: medirlo o limpiarlo nunca la enciende.
+  "list_storage", "reclaim_storage", "empty_build_cache", "collect_orphans",
+]);
