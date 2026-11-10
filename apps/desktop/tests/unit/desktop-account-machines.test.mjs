@@ -285,3 +285,26 @@ for (const code of ["machine_off", "machine_starting", "operation_failed"]) {
     }
   });
 }
+
+// Con la foto del sidebar de la vez anterior y la máquina dormida, el arranque
+// tiene que salir de la caché: si no, la ventana queda inerte con el estado
+// viejo y no se entera de cuando la máquina enciende.
+for (const code of ["machine_off", "machine_starting"]) {
+  test(`a sleeping machine at startup still leaves the shell cache: ${code}`, async () => {
+    const snapshot = { workspace: "w", projects: [], sessions: { "": [] }, spaces: [], desk: null };
+    const cache = { version: 2, last: "w", workspaces: { w: { saved: Date.now(), snapshot: JSON.stringify(snapshot) } } };
+    const { app, doc, text } = await open(`desktop-startup-cache-${code}`, {
+      storage: { "harness:shell-cache": JSON.stringify(cache) },
+      extra: {
+        list_projects: () => Promise.reject({ what: "La computadora está apagada.", detail: code }),
+      },
+    });
+    try {
+      assert.ok(await until(() => !doc.querySelector("[data-shell-cache]")), "the shell leaves the cache");
+      assert.ok(!text().includes("La computadora está apagada."), "a sleeping machine raises no error");
+      assert.deepEqual(app.failures, []);
+    } finally {
+      app.w.close();
+    }
+  });
+}
