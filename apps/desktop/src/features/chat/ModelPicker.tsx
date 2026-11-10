@@ -15,6 +15,7 @@ import {
   effortValue,
   esFavorito,
   favoritosDeModelos,
+  seccionDeModelo,
   type GrupoDeModelos,
   type OpcionDeModelo,
 } from "../../lib/models";
@@ -146,10 +147,21 @@ export default function SelectorDeModelo(props: SelectorDeModeloProps) {
       setActivo("");
       return;
     }
-    const inicial = elegido()?.usable ? elegido()!.key : visibles()[0]?.key ?? "";
-    const proveedorElegido = elegido()?.proveedor.id;
-    setSeccion(proveedorElegido ?? (favoritos().length > 0 ? "favorites" : todosLosGrupos()[0]?.id ?? "router-info"));
-    setActivo(inicial);
+    const gruposAbiertos = todosLosGrupos();
+    // La sección sale del grupo que de verdad contiene el modelo: agrupar y
+    // proveedor no siempre coinciden, y abrir una sección inexistente deja la
+    // lista vacía aunque el modelo esté elegido. Sin modelo elegido, la primera
+    // fila que se puede usar; Danil Credits no cuenta: tiene su propio botón.
+    const gruposDeModelos = gruposAbiertos.filter((grupo) => grupo.id !== "danil-credits");
+    const primeroDisponible = gruposDeModelos
+      .flatMap((grupo) => grupo.models)
+      .find(disponible);
+    const claveInicial = elegido()?.key ?? primeroDisponible?.key ?? "";
+    const seccionElegida =
+      seccionDeModelo(gruposAbiertos, claveInicial) ??
+      (favoritos().length > 0 ? "favorites" : gruposDeModelos[0]?.id ?? "router-info");
+    setSeccion(seccionElegida);
+    setActivo(claveInicial);
     setTimeout(() => {
       campo?.focus();
       mostrarActivo();

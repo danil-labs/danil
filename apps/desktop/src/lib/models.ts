@@ -145,15 +145,34 @@ export function agruparModelos(
     ) {
       continue;
     }
-    const visual = proveedor.id === "opencode-go"
-      ? { id: "opencode-zen", label: "OpenCode", logo: proveedor.logo }
-      : proveedor;
+    // Un solo OpenCode: Go. `surfaceHas` deja fuera los modelos que se cobraban
+    // contra el saldo de Zen antes de llegar aquí; el grupo conserva el id de la
+    // superficie y el nombre propio.
+    const visual =
+      proveedor.id === "opencode-go"
+        ? { id: "opencode-zen", label: "OpenCode", logo: proveedor.logo }
+        : proveedor;
     const grupo = grupos.get(visual.id) ?? { ...visual, models: [] };
     grupo.models.push(opcion);
     grupos.set(visual.id, grupo);
   }
 
   return [...grupos.values()];
+}
+
+/**
+ * La sección que contiene el modelo elegido, para abrir el selector ahí.
+ *
+ * No sirve el proveedor tal cual: OpenCode y OpenCode Go comparten una sección,
+ * y buscarla en la lista agrupada es lo que garantiza que exista. `null` si el
+ * modelo guardado ya no está en el catálogo.
+ */
+export function seccionDeModelo(
+  grupos: readonly GrupoDeModelos[],
+  key: string | null | undefined,
+) {
+  if (!key) return null;
+  return grupos.find((grupo) => grupo.models.some((opcion) => opcion.key === key))?.id ?? null;
 }
 
 /**
