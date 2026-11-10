@@ -409,6 +409,7 @@
   "projects.memory.history_view": "See this version",
   "projects.view.opening": "Opening folder…",
   "projects.sessions.delete_unsupported": "This engine does not support deletion with a safe review. Update it before deleting.",
+  "projects.sessions.delete_busy": "Another operation is in progress. Wait a moment and try deleting again.",
   "projects.sessions.delete_partial": "Deletion completed partially. Review the remaining tasks again.",
   "projects.sessions.delete_inspecting": "Inspecting tasks and their files…",
   "projects.sessions.delete_inspected": "Inspection complete",

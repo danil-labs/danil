@@ -14,7 +14,7 @@ const app = await boot("listo", "delete-task-consent", responses({
   task_lifecycle_apply: args => {
     applications.push(args);
     if (scenario === "partial") return { status: "partial", applied: [{ project: "p2", id: "child" }], failures: [{ project: "p1", id: "t1", error: { message: "Disk removal failed" } }] };
-    if (reject) throw { code: scenario === "refresh" ? "task_family_consent_changed" : "operation_failed", detail: "family", message: "Family contents changed" };
+    if (reject) throw { code: scenario === "refresh" ? "task_family_consent_changed" : scenario === "busy" ? "task_family_busy" : "operation_failed", detail: "family", message: "Family contents changed" };
     return { status: "complete", applied: [{ project: "p1", id: "t1" }, { project: "p2", id: "child" }], failures: [] };
   },
 }));
@@ -70,6 +70,19 @@ try {
     process.exit(0);
   }
   assert.ok(dialog().querySelector('[role="alert"]'), "error remains inside the dialog");
+  if (scenario === "busy") {
+    assert.match(dialog().querySelector('[role="alert"]').textContent, /Otra operación está en curso/);
+    assert.equal(remove().disabled, false, "a busy rejection preserves consent for an explicit retry");
+    assert.equal(generation, 1, "busy does not repeat the inspection");
+    reject = false;
+    remove().click();
+    await sleep(150);
+    assert.equal(dialog(), null);
+    assert.deepEqual(applications.map(args => args.consent), ['snapshot-1', 'snapshot-1']);
+    assert.deepEqual(app.failures, []);
+    console.log("PASS: transient contention keeps review and supports an explicit retry");
+    process.exit(0);
+  }
   assert.equal(remove().disabled, true, "a rejected consent cannot be used again");
   if (scenario === "refresh") {
     assert.equal(generation, 2, "stale family consent automatically refreshes the preview");
