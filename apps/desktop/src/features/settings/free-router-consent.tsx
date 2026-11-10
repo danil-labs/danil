@@ -75,6 +75,8 @@ export function createFreeRouterConsent(opts: { agente: () => string; despues?: 
       if (!policy?.enabled) throw new Error(t("settings.accounts.free.unavailable"));
       setTexto({ lineas: policy.lines, version: policy.version, policy });
     } catch (e) {
+      // Sin texto vigente el diálogo no ofrece aceptar; el error queda dentro.
+      setTexto(null);
       setFallo(prosaDe(e));
     } finally {
       setLeyendo(false);
@@ -88,12 +90,15 @@ export function createFreeRouterConsent(opts: { agente: () => string; despues?: 
       const policy = texto()?.policy;
       if (!policy) throw new Error(t("settings.accounts.free.unavailable"));
       const startup = await invoke<FreeModelStartup>("workspaces_startup");
-      if (startup.active !== policy.workspace_id || (valor && !sameFreeModelPolicy(policy, await loadFreeModelPolicy(policy)))) {
+      if (startup.active !== policy.workspace_id) throw new Error(t("settings.accounts.free.policy_changed"));
+      // La referencia sale siempre de la relectura estricta, nunca de la política mostrada.
+      const fresh = valor ? await loadFreeModelPolicy(policy) : null;
+      if (valor && (!fresh?.acceptance_ref || !sameFreeModelPolicy(policy, fresh))) {
         throw new Error(t("settings.accounts.free.policy_changed"));
       }
       const w = await invoke<{ free_model_consent?: FreeModelConsent }>(
         "set_provider_consent",
-        { provider: valor ? policy.acceptance_ref : opts.agente(), accepted: valor },
+        { provider: valor ? fresh!.acceptance_ref : opts.agente(), accepted: valor },
         freeModelScope(policy),
       );
       const accepted = acceptedFreeModelPolicy(policy, w.free_model_consent);

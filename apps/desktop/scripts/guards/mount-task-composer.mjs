@@ -528,6 +528,23 @@ assert.ok(consentDialog, "Activar abre el diálogo del consentimiento.");
 assert.match(consentDialog.textContent, /Activo Router IA gratis en este workspace/);
 assert.equal(consentSaves, 0, "Abrir el diálogo no acepta nada.");
 
+const emptyRefSends = [];
+const neverRefApp = await boot("listo", "router-never-ref", {
+  ...NO_USABLE,
+  workspaces_startup: () => startupWith(routerPolicy(false, "")),
+  set_provider_consent: (args) => { emptyRefSends.push(args); return {}; },
+});
+const neverRefRow = await openRouter(neverRefApp);
+[...neverRefRow.querySelectorAll("button")].find((b) => b.textContent?.trim() === "Activar").click();
+await sleep(2600);
+const neverRefDialog = neverRefApp.w.document.querySelector('[role="dialog"]');
+assert.ok(neverRefDialog?.querySelector('[role="alert"]'), "Sin referencia el error queda dentro del diálogo.");
+const acceptInDialog = [...neverRefDialog.querySelectorAll("button")].find((b) => b.textContent?.trim() === "Activar");
+acceptInDialog?.click();
+await sleep(100);
+assert.equal(acceptInDialog, undefined, "Sin referencia el diálogo no ofrece aceptar.");
+assert.deepEqual(emptyRefSends, [], "Nunca se envía set_provider_consent sin referencia.");
+
 const unavailableApp = await boot("listo", "router-unavailable", { ...NO_USABLE, workspaces_startup: () => startupWith(routerPolicy(true)) });
 const unavailableRow = await openRouter(unavailableApp);
 await sleep(100);
