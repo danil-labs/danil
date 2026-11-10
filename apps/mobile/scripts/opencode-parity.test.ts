@@ -163,3 +163,19 @@ test("la referencia mostrada sigue válida cuando una lectura emite otra oferta 
   const mutation = calls.find((call) => call.command === "set_provider_consent");
   assert.deepEqual(mutation?.args, { provider: "offer-1", accepted: true });
 });
+
+test("una política sin referencia todavía se ofrece y al aceptar usa la que ya publicó el motor", async () => {
+  let published = false;
+  const { host, calls } = freeMachine([{ id: FREE_BEAM_MODEL, gratis: true }], {
+    list_workspaces: () => ({ active: "w1", free_model_policy: { ...policy, accepted: false, acceptance_ref: published ? "late-ref" : "" } }),
+    set_provider_consent: { free_model_consent: { ...policy, policy_id: "policy", acceptance_id: "acceptance" } },
+  });
+  const shown = (await freeModelsOf(host, "w1"))[0];
+  assert.ok(shown, "sin referencia el Router sigue ofrecido");
+  assert.equal(shown.accepted, false);
+  await assert.rejects(changeFreeModels(host, "w1", shown, true));
+  published = true;
+  await changeFreeModels(host, "w1", shown, true);
+  const mutation = calls.find((call) => call.command === "set_provider_consent");
+  assert.deepEqual(mutation?.args, { provider: "late-ref", accepted: true });
+});

@@ -17,7 +17,7 @@ import { RemoveButton } from "../../ui/IconAction";
 import { Input } from "../../ui/Input";
 import { MarcaAgente } from "../../ui/icons";
 import { Spinner } from "../../ui/Spinner";
-import { Consentir } from "../settings/Accounts";
+import { Consentir } from "../settings/FreeRouterConsentDialog";
 import { DialogoDeConexion } from "../settings/LoginDialog";
 import { AvanceDeDescarga, BarraDeCarga, CodigoParaConfirmar, Peso } from "./DownloadProgress";
 import { AL_FINAL, type Conexiones, type Fila, nombreDeFila, ordenDelMapa, type Paso } from "./connect-store";

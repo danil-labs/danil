@@ -107,6 +107,7 @@
   "settings.accounts.check_installed": "Ya la instalé · Comprobar",
   "settings.accounts.check_provider": "Comprobar proveedor",
   "settings.accounts.error.check_provider": "No pude comprobar el proveedor. Vuelve a intentar.",
+  "settings.accounts.free.loading": "Cargando condiciones…",
   "settings.accounts.free.unavailable": "Router IA gratis no está disponible con este motor.",
   "settings.accounts.free.policy_changed": "La política o el workspace cambió. Cierra este aviso y vuelve a revisar las condiciones.",
   "settings.accounts.free.privacy": "Privacidad de {provider}",

@@ -107,6 +107,7 @@
   "settings.accounts.check_installed": "Installed · Check again",
   "settings.accounts.check_provider": "Check provider",
   "settings.accounts.error.check_provider": "Could not check the provider. Try again.",
+  "settings.accounts.free.loading": "Loading terms…",
   "settings.accounts.free.unavailable": "Free AI Router is unavailable with this engine.",
   "settings.accounts.free.policy_changed": "The policy or workspace changed. Close this notice and review the terms again.",
   "settings.accounts.free.privacy": "{provider} privacy",

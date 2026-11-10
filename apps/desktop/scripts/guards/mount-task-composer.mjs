@@ -486,7 +486,9 @@ const discovery = discoveryDoc.querySelector('section[aria-label="Router IA grat
 assert.ok(discovery, "La oferta del Router aparece sin un catálogo del motor.");
 assert.match(discovery.textContent, /Beam/);
 assert.match(discovery.textContent, /Reflection/);
-assert.match(discovery.textContent, /Requiere una máquina compatible/);
+await sleep(2300);
+assert.match(discovery.textContent, /Actualiza el motor/, "Sin política del Router el motor no es compatible.");
+assert.doesNotMatch(discovery.textContent, /Requiere una máquina compatible/);
 assert.ok(discovery.querySelector('[aria-disabled="true"]'), "Beam informativo no es seleccionable.");
 assert.equal(discovery.querySelector("button"), null, "La ficha no tiene acciones de selección.");
 assert.equal(discoveryDoc.querySelector('[role="option"]'), null, "La oferta no inventa opciones del catálogo.");
@@ -496,6 +498,64 @@ discoverySearch?.dispatchEvent(new noUsable.w.KeyboardEvent("keydown", { key: "E
 await sleep(20);
 assert.equal(discoverySends.length, 0, "Descubrir Beam no envía una inferencia.");
 assert.equal(discoveryDoc.querySelector('button[aria-label="Preguntar"]:not(:disabled)'), null, "Sin modelos usables no se habilita el envío.");
+const routerPolicy = (accepted, acceptance_ref = "ref-1") => ({
+  workspace_id: "w", version: 3, providers: ["kilo", "vercel", "reflection"], acceptance_ref, enabled: true, accepted,
+  lines: [{ clave: "workspaces.consent.free_models.accept" }], terms: [],
+});
+const startupWith = (policy) => ({ ...NO_USABLE.workspaces_startup, free_model_policy: policy });
+const openRouter = async (app) => {
+  app.w.document.querySelector('button[title="Con qué modelo responde"]').click();
+  await sleep(150);
+  return app.w.document.querySelector('section[aria-label="Router IA gratis"]');
+};
+let consentSaves = 0;
+let refPublished = false;
+const activateApp = await boot("listo", "router-activate", {
+  ...NO_USABLE,
+  // El motor con consentimiento central publica la referencia en una lectura posterior.
+  workspaces_startup: () => startupWith(routerPolicy(false, refPublished ? "ref-1" : "")),
+  set_provider_consent: () => { consentSaves++; return { free_model_consent: { workspace_id: "w", version: 3, providers: ["kilo", "vercel", "reflection"], policy_id: "p", acceptance_id: "a" } }; },
+});
+const activateRow = await openRouter(activateApp);
+const activate = [...activateRow.querySelectorAll("button")].find((b) => b.textContent?.trim() === "Activar");
+assert.ok(activate, "Política sin referencia y sin sí: la fila ofrece Activar, no Actualiza el motor.");
+assert.doesNotMatch(activateRow.textContent, /Requiere|Actualiza el motor|No disponible/);
+refPublished = true;
+activate.click();
+await sleep(300);
+const consentDialog = activateApp.w.document.querySelector('[role="dialog"]');
+assert.ok(consentDialog, "Activar abre el diálogo del consentimiento.");
+assert.match(consentDialog.textContent, /Activo Router IA gratis en este workspace/);
+assert.equal(consentSaves, 0, "Abrir el diálogo no acepta nada.");
+
+const emptyRefSends = [];
+const neverRefApp = await boot("listo", "router-never-ref", {
+  ...NO_USABLE,
+  workspaces_startup: () => startupWith(routerPolicy(false, "")),
+  set_provider_consent: (args) => { emptyRefSends.push(args); return {}; },
+});
+const neverRefRow = await openRouter(neverRefApp);
+[...neverRefRow.querySelectorAll("button")].find((b) => b.textContent?.trim() === "Activar").click();
+await sleep(2600);
+const neverRefDialog = neverRefApp.w.document.querySelector('[role="dialog"]');
+assert.ok(neverRefDialog?.querySelector('[role="alert"]'), "Sin referencia el error queda dentro del diálogo.");
+const acceptInDialog = [...neverRefDialog.querySelectorAll("button")].find((b) => b.textContent?.trim() === "Activar");
+acceptInDialog?.click();
+await sleep(100);
+assert.equal(acceptInDialog, undefined, "Sin referencia el diálogo no ofrece aceptar.");
+assert.deepEqual(emptyRefSends, [], "Nunca se envía set_provider_consent sin referencia.");
+
+const unavailableApp = await boot("listo", "router-unavailable", { ...NO_USABLE, workspaces_startup: () => startupWith(routerPolicy(true)) });
+const unavailableRow = await openRouter(unavailableApp);
+await sleep(100);
+let routeReady;
+const loadingApp = await boot("listo", "router-loading", { ...NO_USABLE, workspaces_startup: () => startupWith(routerPolicy(true)), list_models: () => new Promise((resolve) => { routeReady = resolve; }) });
+const loadingRow = await openRouter(loadingApp);
+assert.doesNotMatch(loadingRow.textContent, /No disponible por ahora|Actualiza el motor/, "Mientras se lee la ruta no se dice nada.");
+routeReady?.(NO_USABLE.list_models);
+assert.match(unavailableRow.textContent, /No disponible por ahora/, "Con el sí y sin ruta se dice en una frase.");
+assert.equal(unavailableRow.querySelector("button"), null);
+
 for (const [platform, userAgent] of [
   ["macOS", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"],
   ["Windows", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"],

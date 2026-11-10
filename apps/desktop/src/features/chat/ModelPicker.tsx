@@ -1,8 +1,10 @@
 import Check from "lucide-solid/icons/check";
 import ChevronDown from "lucide-solid/icons/chevron-down";
+import Gift from "lucide-solid/icons/gift";
 import Lock from "lucide-solid/icons/lock";
 import Search from "lucide-solid/icons/search";
 import Star from "lucide-solid/icons/star";
+import { routerOfferState } from "@terminus/tasks";
 import { createMemo, createSignal, For, Show, lazy } from "solid-js";
 import { t } from "../../lib/i18n";
 import { invoke } from "../../lib/invoke.ts";
@@ -22,9 +24,11 @@ import {
 import { createPref } from "../../lib/prefs";
 import { prosa } from "../../lib/prose";
 import { cn } from "../../lib/utils";
+import { Button } from "../../ui/Button";
 import { MarcaAgente } from "../../ui/icons";
 import { Popover, PopoverContent, PopoverTrigger } from "../../ui/Popover";
 import type { AccountList } from "../settings/accounts-store";
+import { createFreeRouterConsent } from "../settings/free-router-consent";
 import { DANIL_CREDITS } from "./danil-credits";
 
 const DanilCredits = lazy(() => import("./DanilCredits"));
@@ -73,6 +77,11 @@ export default function SelectorDeModelo(props: SelectorDeModeloProps) {
   const [favoritos, setFavoritos] = createPref<string[]>("chat.model.favorites", []);
   const [cupoGo, setCupoGo] = createSignal<Query | null>(null);
   const filas = new Map<string, HTMLElement>();
+  const consent = createFreeRouterConsent({ agente: () => "opencode-zen" });
+  const estadoRouter = () => routerOfferState(
+    consent.cargado() ? (consent.texto() ? { enabled: consent.texto()!.policy.enabled, accepted: consent.aceptado() } : null) : undefined,
+    consent.routeAvailable(),
+  );
   let campo: HTMLInputElement | undefined;
 
   const elegido = () =>
@@ -82,6 +91,8 @@ export default function SelectorDeModelo(props: SelectorDeModeloProps) {
     );
   const discovery = createMemo(() => routerDiscovery(props.models.map((option) => option.model.id), busqueda()));
   const todosLosGrupos = createMemo(() => agruparModelos(props.models, busqueda()));
+  // El Router vive en la sección de los gratuitos cuando ya hay alguno: una sola entrada en la barra.
+  const seccionRouter = () => todosLosGrupos().some((grupo) => grupo.id === "opencode-free") ? "opencode-free" : "router-info";
   const bloqueado = (opcion: OpcionDeModelo) =>
     !!props.lockedAgent && opcion.agent !== props.lockedAgent;
   const disponible = (opcion: OpcionDeModelo) => opcion.usable && !bloqueado(opcion);
@@ -130,6 +141,7 @@ export default function SelectorDeModelo(props: SelectorDeModeloProps) {
     if (next && props.disabled) return;
     setAbierto(next);
     if (next) {
+      void consent.cargar();
       const options = props.invokeOptions;
       setCupoGo(null);
       if (props.models.some((m) => m.proveedor.id === "opencode-go")) {
@@ -159,7 +171,7 @@ export default function SelectorDeModelo(props: SelectorDeModeloProps) {
     const claveInicial = elegido()?.key ?? primeroDisponible?.key ?? "";
     const seccionElegida =
       seccionDeModelo(gruposAbiertos, claveInicial) ??
-      (favoritos().length > 0 ? "favorites" : gruposDeModelos[0]?.id ?? "router-info");
+      (favoritos().length > 0 ? "favorites" : gruposDeModelos[0]?.id ?? seccionRouter());
     setSeccion(seccionElegida);
     setActivo(claveInicial);
     setTimeout(() => {
@@ -203,6 +215,8 @@ export default function SelectorDeModelo(props: SelectorDeModeloProps) {
   };
 
   return (
+    <>
+    {consent.dialogo()}
     <Popover
       open={abierto()}
       onOpenChange={abrir}
@@ -311,7 +325,7 @@ export default function SelectorDeModelo(props: SelectorDeModeloProps) {
             >
               <MarcaAgente id="danil" size={17} />
             </button>
-            <Show when={discovery()}>
+            <Show when={discovery() && seccionRouter() === "router-info"}>
               <button
                 type="button"
                 class={cn("flex size-9 shrink-0 items-center justify-center rounded-sm text-neutral-500 hover:bg-surface-muted hover:text-neutral-950", seccion() === "router-info" && "bg-surface-muted text-neutral-950")}
@@ -319,7 +333,7 @@ export default function SelectorDeModelo(props: SelectorDeModeloProps) {
                 title={t("surfaces.label.free")}
                 onClick={() => setSeccion("router-info")}
               >
-                <MarcaAgente id="danil" size={17} />
+                <Gift size={17} />
               </button>
             </Show>
             <For each={todosLosGrupos().filter((group) => group.id !== "danil-credits")}>
@@ -331,7 +345,9 @@ export default function SelectorDeModelo(props: SelectorDeModeloProps) {
                   title={rotulo(grupo)}
                   onClick={() => setSeccion(grupo.id)}
                 >
-                  <MarcaAgente id={grupo.logo} size={17} />
+                  <Show when={grupo.id === "opencode-free"} fallback={<MarcaAgente id={grupo.logo} size={17} />}>
+                    <Gift size={17} />
+                  </Show>
                 </button>
               )}
             </For>
@@ -339,25 +355,32 @@ export default function SelectorDeModelo(props: SelectorDeModeloProps) {
           <div class="scroll-visible min-h-0 overflow-y-auto p-1" role={seccion() === "danil-credits" ? undefined : "listbox"} aria-label={t("chat.model.listbox")}>
           <Show when={seccion() === "danil-credits"} fallback={
           <Show
-            when={grupos().some((grupo) => grupo.models.length > 0) || !!discovery() && (seccion() === "router-info" || !!busqueda().trim())}
+            when={grupos().some((grupo) => grupo.models.length > 0) || !!discovery() && (seccion() === seccionRouter() || !!busqueda().trim())}
             fallback={
               <p class="m-0 px-2 py-3 text-sm text-neutral-500">
                 {t("chat.model.empty")}
               </p>
             }
           >
-            <Show when={discovery() && (seccion() === "router-info" || !!busqueda().trim())}>
+            <Show when={discovery() && (seccion() === seccionRouter() || !!busqueda().trim())}>
               <section aria-label={t("surfaces.label.free")} class="px-2 py-2">
                 <div class="flex items-center gap-1.5 text-xs font-medium text-neutral-500">
                   <MarcaAgente id="danil" size={14} />
                   <span>{t("surfaces.label.free")}</span>
                 </div>
-                <div class="mt-2 flex items-center gap-2 text-sm text-neutral-950" aria-disabled="true">
+                <div class="mt-2 flex min-h-7 items-center gap-2 text-sm text-neutral-950" aria-disabled="true" data-router-state={estadoRouter()}>
                   <span>{discovery()?.label}</span>
                   <span class="rounded-sm border border-border px-1 text-xs text-neutral-500">{discovery()?.creator}</span>
-                  <Lock size={12} class="ml-auto text-neutral-500" />
+                  <span class="ml-auto shrink-0 text-xs text-neutral-500">
+                    <Show when={estadoRouter() === "activate"}>
+                      <Button size="compact" disabled={consent.guardando()} onClick={() => { abrir(false); void consent.preguntar(); }}>
+                        {t("chat.model.router_activate")}
+                      </Button>
+                    </Show>
+                    <Show when={estadoRouter() === "update_engine"}>{t("chat.model.router_update_engine")}</Show>
+                    <Show when={estadoRouter() === "unavailable"}>{t("chat.model.router_route_unavailable")}</Show>
+                  </span>
                 </div>
-                <p class="mb-0 mt-1 text-xs text-neutral-500">{t("chat.model.router_requirements")}</p>
               </section>
             </Show>
             <For each={grupos()}>
@@ -475,5 +498,6 @@ export default function SelectorDeModelo(props: SelectorDeModeloProps) {
         </Show>
       </PopoverContent>
     </Popover>
+    </>
   );
 }
