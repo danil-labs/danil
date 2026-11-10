@@ -2343,10 +2343,15 @@ export default function App() {
         } else setError(t("projects.context.unavailable"));
       }
     } catch (e) {
-      if (generation !== sessionGeneration || material !== materialRequest || asleep(e)) return;
-      setProjectList([]);
-      setSources([]);
-      setError(prosaDe(e));
+      if (generation !== sessionGeneration || material !== materialRequest) return;
+      // Una máquina dormida no es un fallo, pero el arranque sigue: sin salir
+      // de la caché, la ventana se queda inerte con la foto de la vez anterior
+      // y no restaura pestañas ni se entera de cuando la máquina enciende.
+      if (!asleep(e)) {
+        setProjectList([]);
+        setSources([]);
+        setError(prosaDe(e));
+      }
     }
     if (primeras) {
       // Si cambiaron las carpetas, `grupos` relee también las nuevas; esta lectura ya vale para las de siempre.
