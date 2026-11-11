@@ -1,7 +1,7 @@
 import Check from "lucide-solid/icons/check";
 import ChevronDown from "lucide-solid/icons/chevron-down";
 import Plus from "lucide-solid/icons/plus";
-import { createSignal, For, onMount, Show } from "solid-js";
+import { batch, createSignal, For, onMount, Show } from "solid-js";
 import { t } from "../../lib/i18n";
 import { Dialog, DialogContent, DialogTitle } from "../../ui/Dialog";
 import { ITEM_DE_MENU, Popover, PopoverContent, PopoverTrigger } from "../../ui/Popover";
@@ -20,7 +20,7 @@ let pedida = false;
  * lleva desde su máquina encendida. Con `shared`, debajo van las de la
  * organización: estado y encendido, sin elegirlas.
  */
-export function MachinePicker(props: { workspace: string | null; project?: ProjectPlace; shared?: boolean }) {
+export function MachinePicker(props: { workspace: string | null; project?: ProjectPlace; shared?: boolean; onChange?: () => void }) {
   if (!pedida) {
     pedida = true;
     void refetchMachines();
@@ -40,7 +40,11 @@ export function MachinePicker(props: { workspace: string | null; project?: Proje
 
   function elegir(m: Machine) {
     setAbierto(false);
-    setRunOn(props.workspace, m.active ? null : m.id);
+    if (!props.workspace || elegida()?.id === m.id) return;
+    batch(() => {
+      setRunOn(props.workspace, m.active ? null : m.id);
+      props.onChange?.();
+    });
   }
 
   const razon = (m: Machine) => {

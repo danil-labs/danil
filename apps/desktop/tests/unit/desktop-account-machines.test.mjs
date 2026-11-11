@@ -108,6 +108,12 @@ test("a new task is born on this computer unless «Ejecutar en» picks another f
   assert.ok(await until(() => doc.querySelector('[data-machine-option="cmp_vm"]')), "the picker lists the account's machines");
   doc.querySelector('[data-machine-option="cmp_vm"]').click();
   await sleep(200);
+  assert.equal(doc.querySelector('[aria-label="Proyecto"]').textContent.trim(), "Sin proyecto", "switching machines clears the previous folder");
+  doc.querySelector('[aria-label="Proyecto"]').click();
+  const remoteProject = () => [...doc.querySelectorAll("button")].find(b => b.querySelector("span")?.textContent === "Panel" && b.textContent.includes("tarea"));
+  assert.ok(await until(remoteProject), "the VM offers its own folders");
+  remoteProject().click();
+  await sleep(100);
   await write(app, "en la VM");
   assert.ok(await until(() => relayCalls("cmp_vm", "send_message").length === 1), "the picked machine gets it");
   assert.deepEqual(relayCalls("cmp_vm", "send_message").map((c) => [c.args.project, c.args.session, c.workspace]), [["p1", null, "w"]], "with the same project and workspace ids");
