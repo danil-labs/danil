@@ -450,6 +450,10 @@ export default function App() {
 
   const [taskSources, setTaskSources] = createSignal<Source[] | null>(null);
   const [error, setError] = createSignal<string | null>(null);
+  const errorVisible = () => {
+    const message = error();
+    return machines().some(machine => message === t("web.machines.off_wakes", { name: machineName(machine.id) })) ? null : message;
+  };
   // Por qué esta ventana no puede abrir estos datos, si es que no puede: una
   // instalación con una forma que este binario ya no sabe convertir
   // (`workspaces::base_decidida`). Con esto
@@ -1438,17 +1442,6 @@ export default function App() {
     const id = sesion ?? (sessionId() ? null : pestanas.active());
     const machine = (id ? encendiendo()[id] : undefined) ?? (sesion || sessionId() ? undefined : encendiendo()[claveAbierta()]);
     return machine ? { name: machineName(machine), wakes: machineWakes(machine) } : null;
-  };
-  /**
-   * Lo que se dice de la máquina de la tarea abierta mientras está apagada.
-   * Encendiéndose no: el mensaje ya salió y lo dice el renglón del turno, donde
-   * después dirá «Pensando».
-   */
-  const avisoDeMaquina = () => {
-    if (encendiendoEn(sessionId())) return null;
-    const id = sessionId() ?? pestanas.active();
-    const off = id ? apagadas()[id] : undefined;
-    return off ? t("shell.machines.asleep_notice", { name: machineName(off) }) : null;
   };
   // Encendida por otra vía (otra ventana, otra acción), la tarea se vuelve a leer de su motor.
   createEffect(on(() => {
@@ -7973,13 +7966,7 @@ export default function App() {
         </div>
       </div>
       </Show>
-      <Show when={avisoDeMaquina()}>
-        {(aviso) => (
-          <p role="status" data-machine-notice="" class="mx-4 mb-2 shrink-0 rounded-sm bg-surface px-3 py-2 text-xs text-neutral-500 shadow-sm">
-            {aviso()}
-          </p>
-        )}
-      </Show>
+
 
       {/* La columna del árbol de trabajo no reemplaza al chat: lo angosta. La
           vista de proyecto sí, y es la única cosa que lo hace: es lo que
@@ -8658,7 +8645,7 @@ export default function App() {
         {/* El error del último gesto, y no caduca solo: uno que se va a los
             segundos no se llega a leer. Lo quita su cruz o el cambio de
             workspace. */}
-        <Show when={error()}>
+        <Show when={errorVisible()}>
           {(e) => (
             <Toast tone="error" onDismiss={() => setError(null)}>
               <p class="m-0 break-words text-xs text-error-strong">{e()}</p>
