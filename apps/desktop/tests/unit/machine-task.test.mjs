@@ -56,6 +56,10 @@ const text = (app) => app.w.document.body.textContent ?? "";
 
 test("cambiar de máquina limpia el proyecto y la rama del composer", async () => {
   const app = await boot("listo", "machine-composer-reset", responses({
+    machine_list: [
+      { id: "local", local: true, active: true, on: true, hosts: true },
+      { id: "vm", local: false, active: false, on: true, hosts: true },
+    ],
     list_live_sessions: [],
     project_base_branches: {
       branches: [{ reference: "refs/heads/main", name: "main", remote: false, commit: "abc", ahead: null, behind: null }],
@@ -68,7 +72,7 @@ test("cambiar de máquina limpia el proyecto y la rama del composer", async () =
   async function pickProject() {
     doc.querySelector('[aria-label="Proyecto"]').click();
     await sleep(100);
-    const option = [...doc.querySelectorAll("button")].find((b) => b.querySelector('span')?.textContent === "P1");
+    const option = [...doc.querySelectorAll("button")].find((b) => b.querySelector('span')?.textContent === "P1" && b.textContent.includes("sin tareas"));
     assert.ok(option);
     option.click();
     await sleep(200);
@@ -98,7 +102,7 @@ test("cambiar de máquina limpia el proyecto y la rama del composer", async () =
   await pickMachine("local");
   assert.notEqual(doc.querySelector('[aria-label="Proyecto"]').textContent.trim(), "P1");
   assert.equal(doc.querySelector('[aria-label="Rama base"]'), null);
-  assert.deepEqual(app.fallos, []);
+  assert.deepEqual(app.failures, []);
 });
 
 async function openTask(app, id) {
