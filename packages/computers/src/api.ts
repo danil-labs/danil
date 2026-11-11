@@ -30,8 +30,8 @@ export type Computer = {
   os?: string | null;
   /** Los workspaces de esta computadora vinculados a la cuenta. Sin el campo, un plano de control de antes. */
   workspaces?: string[] | null;
-  /** Solo en el endpoint de la persona en un servidor de organización: la organización y el workspace que atiende. Un plano de control anterior no lo manda. */
-  organization?: { organization_id: string; workspace: { id: string; name: string } } | null;
+  /** Solo en el endpoint de la persona en un servidor de organización: la organización, su workspace principal y los de la persona que atiende (el principal primero). Un plano de control anterior no lo manda, o no manda `workspaces`. */
+  organization?: { organization_id: string; workspace: { id: string; name: string }; workspaces?: { id: string; name: string }[] } | null;
 };
 
 export type Answer<T> =

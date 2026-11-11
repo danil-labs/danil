@@ -12,13 +12,25 @@ export function linkedWorkspaces(computer: Pick<Computer, "workspaces">): Readon
   return Array.isArray(list) ? new Set(list.filter((id): id is string => typeof id === "string")) : null;
 }
 
-/** La organización cuyo servidor atiende `computer`, con su workspace; `null` si la fila no lo dice. */
-export function organizationOf(computer: Pick<Computer, "organization">): { id: string; workspace: { id: string; name: string } } | null {
-  const raw = computer.organization as { organization_id?: unknown; workspace?: { id?: unknown; name?: unknown } | null } | null | undefined;
-  const id = raw?.workspace?.id;
-  if (typeof raw?.organization_id !== "string" || typeof id !== "string" || !id) return null;
-  const name = typeof raw.workspace?.name === "string" && raw.workspace.name.trim() ? raw.workspace.name.trim() : id;
-  return { id: raw.organization_id, workspace: { id, name } };
+type Named = { id: string; name: string };
+
+const named = (raw: unknown): Named | null => {
+  const w = raw as { id?: unknown; name?: unknown } | null | undefined;
+  if (typeof w?.id !== "string" || !w.id) return null;
+  return { id: w.id, name: typeof w.name === "string" && w.name.trim() ? w.name.trim() : w.id };
+};
+
+/**
+ * La organización cuyo servidor atiende `computer`, con los workspaces de la persona en él (el principal
+ * primero); `null` si la fila no lo dice. Sin `workspaces` (un plano de control anterior), solo `workspace`.
+ */
+export function organizationOf(computer: Pick<Computer, "organization">): { id: string; workspaces: Named[] } | null {
+  const raw = computer.organization as { organization_id?: unknown; workspace?: unknown; workspaces?: unknown } | null | undefined;
+  if (typeof raw?.organization_id !== "string") return null;
+  const listed = Array.isArray(raw.workspaces) ? raw.workspaces.map(named) : [];
+  const workspaces: Named[] = [];
+  for (const w of [named(raw.workspace), ...listed]) if (w && !workspaces.some((s) => s.id === w.id)) workspaces.push(w);
+  return workspaces.length ? { id: raw.organization_id, workspaces } : null;
 }
 
 /**

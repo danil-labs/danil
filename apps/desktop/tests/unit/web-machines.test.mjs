@@ -278,3 +278,37 @@ test("a member, not the owner, sees the organization's server in «Ejecutar en»
     app.w.close();
   }
 });
+
+test("a member of two organization workspaces gets the server in «Ejecutar en» in both, and not in her own", async () => {
+  const org = { id: "fqgx1w8m", name: "Danil Workspace" };
+  const foundation = { id: "fnd00001", name: "Danil Foundation" };
+  const NUBE = { computer_id: "cmp_nube", name: "Nube IA", state: "stopped", provider: "self", wakeable: true, workspaces: [org.id, foundation.id], organization: { organization_id: "org_01", workspace: org, workspaces: [org, foundation] } };
+  const MINE = { ...MAC, workspaces: ["w"] };
+  const terminus = { workspaces: [{ ...SAME, name: "Terminus" }], active: "w" };
+  const { app, invoke, doc } = await open("web-machines-org-workspaces", [NUBE, MINE], {
+    cmp_nube: { state: "offline", table: table("Servidor", "Tarea de la nube", {}, "pn") },
+    cmp_mac: { table: table("Notas", "Tarea del Mac", { list_workspaces: terminus, workspaces_startup: terminus }, "pm") },
+  }, registry({ w: ["cmp_mac"] }));
+  const picker = async () => {
+    doc.querySelector('[aria-label="Ejecutar en"]').click();
+    assert.ok(await until(() => doc.querySelector("[data-machine-option]")), "the machine picker opens");
+    const offered = [...doc.querySelectorAll("[data-machine-option]")].map((o) => o.getAttribute("data-machine-option"));
+    doc.querySelector('[aria-label="Ejecutar en"]').click();
+    return offered;
+  };
+  try {
+    const listed = await invoke("list_workspaces");
+    assert.deepEqual(listed.workspaces.filter((w) => w.id !== "w").map((w) => [w.id, w.name, w.machines]), [[org.id, org.name, ["cmp_nube"]], [foundation.id, foundation.name, ["cmp_nube"]]], "both organization workspaces are in the switcher, served by Nube IA");
+    assert.ok(await until(() => doc.querySelector('[aria-label="Ejecutar en"]')), "«Ejecutar en» is there");
+    assert.ok(!(await picker()).includes("cmp_nube"), "in «Terminus» Nube IA is not offered");
+    for (const ws of [org, foundation]) {
+      await invoke("set_active_workspace", { id: ws.id });
+      app.w.dispatchEvent(new app.w.CustomEvent("harness:workspace"));
+      await sleep(800);
+      assert.deepEqual(await picker(), ["cmp_nube"], `in «${ws.name}» only Nube IA is offered`);
+    }
+    assert.deepEqual(app.failures, []);
+  } finally {
+    app.w.close();
+  }
+});

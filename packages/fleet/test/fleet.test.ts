@@ -274,17 +274,34 @@ test("a member's endpoint on an organization's server serves its workspace, thou
   const { fleet, changes } = setup({}, [VM, MAC]);
   const org = { id: "fqgx1w8m", name: "Danil Workspace" };
   fleet.setRegistry([{ id: "w", name: "W", projects: [], computers: ["cmp_home", "cmp_mac"] } as never]);
-  const endpoint = { ...VM, name: "Nube IA", linked: new Set<string>(), organization: { id: "org_01", workspace: org } };
+  const endpoint = { ...VM, name: "Nube IA", linked: new Set<string>(), organization: { id: "org_01", workspaces: [org] } };
   fleet.setMachines([endpoint, MAC]);
   assert.deepEqual(fleet.membersOf(org.id), ["cmp_vm"], "the row's organization says it, even with no link listed");
   assert.deepEqual(fleet.membersOf("w"), ["cmp_mac"]);
   assert.deepEqual(fleet.organizationWorkspaces(), [{ ...org, machines: ["cmp_vm"] }]);
   assert.equal(fleet.inRegistry(org.id), false, "it stays out of the account's own workspaces");
   changes.length = 0;
-  fleet.setMachines([{ ...endpoint, name: "Nube IA", organization: { id: "org_01", workspace: { ...org, name: "Danil" } } }, MAC]);
+  fleet.setMachines([{ ...endpoint, name: "Nube IA", organization: { id: "org_01", workspaces: [{ ...org, name: "Danil" }] } }, MAC]);
   assert.deepEqual(changes, ["cmp_vm"], "a renamed organization workspace is a change of that machine");
   fleet.setMachines([VM, MAC]);
   assert.deepEqual(fleet.organizationWorkspaces(), [], "without the field (an older control plane) the fleet knows none");
+});
+
+test("one endpoint serves every organization workspace of the member, and no other", () => {
+  const { fleet, changes } = setup({}, [VM, MAC]);
+  const primary = { id: "fqgx1w8m", name: "Danil Workspace" };
+  const foundation = { id: "fnd00001", name: "Danil Foundation" };
+  fleet.setRegistry([{ id: "w", name: "W", projects: [], computers: ["cmp_home", "cmp_mac"] } as never]);
+  const endpoint = { ...VM, name: "Nube IA", linked: new Set<string>(), organization: { id: "org_01", workspaces: [primary, foundation] } };
+  fleet.setMachines([endpoint, MAC]);
+  assert.deepEqual(fleet.membersOf(primary.id), ["cmp_vm"]);
+  assert.deepEqual(fleet.membersOf(foundation.id), ["cmp_vm"], "the second workspace is served by the same endpoint");
+  assert.deepEqual(fleet.membersOf("w"), ["cmp_mac"], "not the member's own workspace");
+  assert.deepEqual(fleet.organizationWorkspaces(), [{ ...primary, machines: ["cmp_vm"] }, { ...foundation, machines: ["cmp_vm"] }], "primary first");
+  changes.length = 0;
+  fleet.setMachines([{ ...endpoint, organization: { id: "org_01", workspaces: [primary] } }, MAC]);
+  assert.deepEqual(changes, ["cmp_vm"], "losing a workspace is a change of that machine");
+  assert.deepEqual(fleet.membersOf(foundation.id), []);
 });
 
 test("machines are added, removed and renamed live without reconnecting the others", async () => {
