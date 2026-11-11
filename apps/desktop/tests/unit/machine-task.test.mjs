@@ -149,7 +149,7 @@ test("una tarea de una máquina apagada abre sin fallo y mandarle algo la encien
 
   await openTask(app, "r1");
   assert.ok(text(app).includes("Respuesta guardada"), "no enseña la copia guardada");
-  assert.equal(doc.querySelector("[data-machine-notice]")?.textContent, "vm está apagada: se enciende cuando envíes un mensaje.");
+  assert.equal(doc.querySelector("[data-machine-notice]"), null, "no muestra un aviso por estar apagada");
   const location = doc.querySelector('[data-conversacion] [data-task-location][data-task-location-on="false"]');
   assert.equal(location?.querySelector("[data-task-location-machine]")?.textContent, "vm", "la ventana no dice en qué máquina corre");
 
