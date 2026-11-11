@@ -28,7 +28,22 @@ type Row = Record<string, unknown>;
 /** `features`: lo que su motor anuncia (`status.service_features`); cada función se enciende por máquina. */
 /** `version`: la `host_version` de su último `hello`, según el plano de control; se conserva apagada. */
 /** `child`: una máquina hija de esta computadora (Linux en esta PC): no está en el registro de la cuenta y es de todos sus workspaces. */
-export type MachineInfo = { id: string; name: string; wakes: boolean; outdated?: boolean; linked?: ReadonlySet<string> | null; os?: SystemId; features?: readonly string[]; version?: string; child?: boolean };
+/** `organization`: es el endpoint de la persona en el servidor de una organización y atiende ese workspace (`organization` de su fila). */
+export type MachineInfo = {
+  id: string;
+  name: string;
+  wakes: boolean;
+  outdated?: boolean;
+  linked?: ReadonlySet<string> | null;
+  os?: SystemId;
+  features?: readonly string[];
+  version?: string;
+  child?: boolean;
+  organization?: { id: string; workspace: { id: string; name: string } } | null;
+};
+
+/** El workspace que `info` atiende por una organización, si su fila lo dice. */
+const servedBy = (info: MachineInfo | undefined): string | null => info?.organization?.workspace.id ?? null;
 export type Power = "on" | "off" | "starting" | "outdated";
 
 export type Envelope = { machine: string; workspace: string | null; command: string; args?: Row };
@@ -164,7 +179,8 @@ export class Fleet {
       }
       const before = member.info;
       const same = before.name === info.name && before.wakes === info.wakes && before.os === info.os && !!before.outdated === !!info.outdated && sameLinks(before.linked ?? null, info.linked ?? null)
-        && (before.features ?? []).join() === (info.features ?? []).join();
+        && (before.features ?? []).join() === (info.features ?? []).join()
+        && JSON.stringify(before.organization ?? null) === JSON.stringify(info.organization ?? null);
       // Un contrato que vuelve a ser compatible quita la marca que puso el relay.
       if (before.outdated && !info.outdated) member.outdated = false;
       member.info = { ...info };
@@ -256,11 +272,11 @@ export class Fleet {
     const order = this.machines().map((m) => m.id);
     if (this.registry) {
       const w = this.registry.find((x) => x.id === workspace);
-      return order.filter((id) => (w?.computers.includes(id) ?? false) || this.info(id)?.child === true || (this.info(id)?.linked?.has(workspace) ?? false));
+      return order.filter((id) => (w?.computers.includes(id) ?? false) || this.info(id)?.child === true || (this.info(id)?.linked?.has(workspace) ?? false) || servedBy(this.info(id)) === workspace);
     }
     return order.filter((id) => {
       const linked = this.info(id)?.linked ?? null;
-      return linked === null || linked.has(workspace);
+      return linked === null || linked.has(workspace) || servedBy(this.info(id)) === workspace;
     });
   }
 
@@ -268,8 +284,21 @@ export class Fleet {
   private linkedAnywhere(workspace: string): boolean {
     return [...this.members.values()].some((m) => {
       const linked = m.info.linked ?? null;
-      return linked === null || linked.has(workspace);
+      return linked === null || linked.has(workspace) || servedBy(m.info) === workspace;
     });
+  }
+
+  /** Los workspaces de organización que atienden las máquinas según sus filas, con su nombre y quién los atiende. */
+  organizationWorkspaces(): { id: string; name: string; machines: string[] }[] {
+    const found = new Map<string, { id: string; name: string; machines: string[] }>();
+    for (const m of this.machines()) {
+      const w = m.organization?.workspace;
+      if (!w) continue;
+      const seen = found.get(w.id) ?? { id: w.id, name: w.name, machines: [] };
+      seen.machines.push(m.id);
+      found.set(w.id, seen);
+    }
+    return [...found.values()];
   }
 
   inRegistry(workspace: string | null): boolean {

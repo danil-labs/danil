@@ -47,7 +47,7 @@ const row = (id: string, title = id) => ({ id, title, updated_at: 0 });
 const VM: MachineInfo = { id: "cmp_vm", name: "Danil VM", wakes: true };
 const MAC: MachineInfo = { id: "cmp_mac", name: "Mac de Ana", wakes: false };
 
-function setup(links: Record<string, ReturnType<typeof fakeLink>>, local: Record<string, unknown> = {}, picked: string | null = null, home?: () => { wakes?: boolean; os?: "linux" | "macos" | "windows" }) {
+function setup(links: Record<string, ReturnType<typeof fakeLink>>, local: Record<string, unknown> = {}, picked: string | null = null, home?: () => { wakes?: boolean; os?: "linux" | "macos" | "windows" }, directory?: () => { workspace_id: string | null; name: string; owner?: boolean }[]) {
   const native: { command: string; args: Args; options: unknown }[] = [];
   const changes: string[][] = [];
   const fleet = new Fleet({ self: "cmp_home", connect: (info) => links[info.id], deadlines: { read: 40, action: 200, intent: 400 } });
@@ -72,6 +72,7 @@ function setup(links: Record<string, ReturnType<typeof fakeLink>>, local: Record
     onSlices: (c) => changes.push(c),
     pickedFor: () => picked,
     home,
+    directory,
   });
   fleet.setMachines([VM, MAC].filter((m) => links[m.id]));
   return { router, fleet, native, changes };
@@ -741,4 +742,45 @@ test("creating on a machine whose relay refuses the workspace names the machine 
     assert.equal(e.what, "Nube IA no trabaja en este workspace. Elige otra máquina en «Ejecutar en» o cambia a un workspace que tenga.");
     return true;
   });
+});
+
+/** Una miembro, no la dueña: el workspace de la organización no está en su registro ni en esta computadora. */
+const ORG = { id: "fqgx1w8m", name: "Danil Workspace" };
+const ENDPOINT: MachineInfo = { id: "cmp_vm", name: "Nube IA", wakes: true, linked: new Set([ORG.id]), organization: { id: "org_01", workspace: ORG } };
+const MEMBER_REGISTRY = [{ id: "w", name: "W", projects: [], computers: ["cmp_home", "cmp_mac"] }];
+
+test("a member picks the organization's server: the window lists its workspace, switches to it and creates there", async () => {
+  const vm = fakeLink({ send_message: "t9" });
+  const { router, fleet, native } = setup({ cmp_vm: vm, cmp_mac: fakeLink({}) });
+  fleet.setMachines([ENDPOINT, MAC]);
+  fleet.setRegistry(MEMBER_REGISTRY);
+  const listed = (await router.handle("list_workspaces")) as { workspaces: { id: string; name: string; machines?: string[] }[]; active: string };
+  assert.deepEqual(listed.workspaces.map((w) => [w.id, w.name]), [["w", "W"], [ORG.id, ORG.name]], "the organization's workspace is one the window can open");
+  assert.deepEqual(listed.workspaces.find((w) => w.id === ORG.id)?.machines, ["cmp_vm"]);
+  const row = await rowOf(router, "cmp_vm");
+  assert.deepEqual([row.hosts, row.materializes, row.refuses], [false, false, true]);
+  assert.deepEqual(row.workspaces, [ORG]);
+  assert.deepEqual(workspaceToRun(row, "w"), ORG, "picking Nube IA switches instead of being disabled");
+
+  await router.handle("set_active_workspace", { id: ORG.id });
+  assert.ok(!native.some((c) => c.command === "set_active_workspace" && c.args.id === ORG.id), "this computer's engine does not have it");
+  assert.equal(((await router.handle("list_workspaces")) as { active: string }).active, ORG.id);
+  assert.equal(workspaceToRun(await rowOf(router, "cmp_vm"), ORG.id), null);
+  const mac = await rowOf(router, "cmp_mac");
+  assert.deepEqual([mac.hosts, mac.materializes], [false, false], "the member's own machines never make it theirs");
+  assert.deepEqual(workspaceToRun(await rowOf(router, "cmp_home"), ORG.id), { id: "w", name: "W" }, "picking this computer goes back to one of its own");
+  await router.handle("send_message", { project: "p1", prompt: "hola" });
+  assert.deepEqual(vm.calls.map((c) => [c.command, c.workspace]), [["send_message", ORG.id]], "without a pick it runs on the server, with nothing to make its own");
+});
+
+test("without `organization` in the row, the directory names the workspace an organization's VM brings", async () => {
+  const directory = () => [{ workspace_id: "w", name: "W", owner: true }, { workspace_id: ORG.id, name: ORG.name, owner: false }];
+  const { router, fleet } = setup({ cmp_vm: fakeLink({}) }, {}, null, undefined, directory);
+  fleet.setMachines([{ id: "cmp_vm", name: "Nube IA", wakes: true, linked: new Set([ORG.id]) }]);
+  fleet.setRegistry(MEMBER_REGISTRY);
+  const listed = (await router.handle("list_workspaces")) as { workspaces: { id: string }[] };
+  assert.ok(listed.workspaces.some((w) => w.id === ORG.id));
+  const row = await rowOf(router, "cmp_vm");
+  assert.equal(row.refuses, true);
+  assert.deepEqual(workspaceToRun(row, "w"), ORG);
 });

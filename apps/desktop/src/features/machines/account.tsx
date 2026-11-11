@@ -13,6 +13,7 @@ import {
   type Computer,
   createScreenAccess,
   linkedWorkspaces,
+  organizationOf,
   serviceFeatures,
   listComputers,
   listWorkspaces,
@@ -34,6 +35,7 @@ import { setMachineRoute } from "../../lib/invoke";
 import { whenConnected } from "../../lib/engineConnection";
 import { leerPref } from "../../lib/prefs";
 import { capabilities, setCapabilities, type Capabilities } from "../../lib/platform";
+import { directoryEntries } from "../shell/workspace-directory";
 import { deliver, listen } from "../../lib/serviceEvents";
 import { isMac, isWindows } from "../../lib/window";
 import { Toast, ToastPortal } from "../../ui/Toast";
@@ -120,6 +122,7 @@ const infoOf = (c: Computer): MachineInfo => {
     name: c.name?.trim() || c.computer_id,
     wakes: wakes(c),
     linked: linkedWorkspaces(c),
+    organization: organizationOf(c),
     features: serviceFeatures(c),
     ...(c.host_version ? { version: c.host_version } : {}),
     ...(os ? { os } : {}),
@@ -228,6 +231,7 @@ export function startAccountMachines(target: Target = window) {
       onSlices: slicesChanged,
       deliver,
       pickedFor,
+      directory: directoryEntries,
       home: () => ({ wakes: homeWakes, os: homeOs, features: homeFeatures, version: homeVersion }),
     });
     fleet.setMachines([...others.map(infoOf), ...guestMachines]);

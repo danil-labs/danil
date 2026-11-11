@@ -272,3 +272,29 @@ test("picking in «Ejecutar en» an organization's server that lacks the open wo
     app.w.close();
   }
 });
+
+test("a member, not the owner, picks the organization's server while it sleeps: the window switches to the organization's workspace", async () => {
+  const org = { id: "fqgx1w8m", name: "Danil Workspace" };
+  const NUBE = { computer_id: "cmp_nube", name: "Nube IA", state: "stopped", provider: "self", wakeable: true, workspaces: [org.id], organization: { organization_id: "org_01", workspace: org } };
+  const MINE = { ...MAC, workspaces: ["w"] };
+  const terminus = { workspaces: [{ ...SAME, name: "Terminus" }], active: "w" };
+  const { app, invoke, doc, text } = await open("web-machines-org-member", [NUBE, MINE], {
+    cmp_nube: { state: "offline", table: table("Servidor", "Tarea de la nube", {}, "pn") },
+    cmp_mac: { table: table("Notas", "Tarea del Mac", { list_workspaces: terminus, workspaces_startup: terminus }, "pm") },
+  }, registry({ w: ["cmp_mac"] }));
+  try {
+    const listed = await invoke("list_workspaces");
+    assert.equal(listed.active, "w");
+    assert.deepEqual(listed.workspaces.find((w) => w.id === org.id)?.machines, ["cmp_nube"], "the member's window lists the organization's workspace from the server's row");
+    doc.querySelector('[aria-label="Ejecutar en"]').click();
+    const option = () => doc.querySelector('[data-machine-option="cmp_nube"]');
+    assert.ok(await until(() => option()?.disabled === false), "Nube IA can be picked, not disabled");
+    option().click();
+    assert.ok(await until(() => text().includes("Nube IA trabaja en «Danil Workspace»; cambié a ese workspace.")), "a plain notice says where the window went");
+    assert.equal((await invoke("list_workspaces")).active, org.id);
+    assert.equal(JSON.parse(app.w.localStorage.getItem("harness.layout.machines.run_on") ?? "{}")[org.id], "cmp_nube");
+    assert.deepEqual(app.failures, []);
+  } finally {
+    app.w.close();
+  }
+});

@@ -16,7 +16,7 @@
  * no tiene se lee de sus miembros y actúa en el primero.
  */
 import { type AccountWorkspace, type SystemId, callWorkspace, isDeferrable, systemOf } from "@terminus/computers";
-import { AttentionBook, type Envelope, type Fleet, FleetError, type MachineInfo, type Slice, classOf, unwrap } from "@terminus/fleet";
+import { AttentionBook, type Envelope, type Fleet, FleetError, type MachineInfo, type Slice, classOf, registryRow, unwrap } from "@terminus/fleet";
 import { clavesConocidas, t } from "../../lib/i18n.ts";
 
 type Args = Record<string, unknown>;
@@ -104,6 +104,8 @@ export type RouterConfig = {
   deliver?: (events: { name: string; payload: unknown }[]) => void;
   /** «Ejecutar en» para `workspace`, si la persona eligió una máquina. */
   pickedFor?: (workspace: string | null) => string | null;
+  /** El directorio de la persona (`GET /v1/me/workspaces`) ya leído: nombra el workspace de una organización que la fila de su servidor no nombra. */
+  directory?: () => readonly { workspace_id: string | null; name: string; owner?: boolean }[];
   /** La máquina de la ventana. `os` solo si se sabe; sin `wakes`, se pinta como laptop. */
   home?: () => { wakes?: boolean; os?: SystemId | null; features?: readonly string[]; version?: string | null };
 };
@@ -205,8 +207,8 @@ export function createRouter(config: RouterConfig) {
   };
 
   const hasHere = (workspace: string | null) => local && (!workspace || listed === null || listed.has(workspace));
-  /** Un workspace de la cuenta que esta computadora no tiene: vive en sus otras máquinas. En la web, todos. */
-  const elsewhere = (workspace: string | null) => !local || (!hasHere(workspace) && fleet.inRegistry(workspace));
+  /** Los workspaces de la cuenta que esta computadora no tiene viven en sus otras máquinas, y los de una organización en su servidor. En la web, todos. */
+  const elsewhere = (workspace: string | null) => !local || (!hasHere(workspace) && (fleet.inRegistry(workspace) || organizations().has(workspace as string)));
   /** Las máquinas de un workspace; sin workspace (en la web), todas. */
   const membersOf = (workspace: string | null) => (workspace ? fleet.membersOf(workspace) : fleet.machines().map((m) => m.id));
   /** La máquina que atiende un workspace que no está aquí: la primera encendida de sus miembros, o la primera. */
@@ -220,18 +222,45 @@ export function createRouter(config: RouterConfig) {
     if (!registry || !info.linked) return [];
     return [...info.linked].filter((id) => !registry.find((w) => w.id === id)?.computers.includes(info.id));
   };
-  /** Una VM con un workspace que le da una organización (su servidor) solo atiende esos: no hace suyo otro. */
-  const confined = (info: MachineInfo) => info.wakes && givenTo(info).length > 0;
-  /** Los workspaces que la ventana ofrece y `machine` tiene; primero los que le da una organización. */
+  /** Sin `organization` en su fila (un plano de control anterior), una VM con un workspace que el registro no le da es el servidor de una organización. */
+  const guessed = (info: MachineInfo) => (info.organization || !info.wakes ? [] : givenTo(info));
+  /** Lo que una organización da a la persona y su registro no tiene: el workspace con su nombre y los servidores que lo atienden. */
+  const organizations = (): Map<string, { name: string; machines: string[] }> => {
+    const found = new Map(fleet.organizationWorkspaces().map((w) => [w.id, { name: w.name, machines: w.machines }]));
+    const names = new Map((config.directory?.() ?? []).filter((e) => e.workspace_id && !e.owner).map((e) => [e.workspace_id as string, e.name]));
+    for (const info of fleet.machines())
+      for (const id of guessed(info)) {
+        const name = found.get(id)?.name ?? names.get(id);
+        if (name) found.set(id, { name, machines: [...(found.get(id)?.machines ?? []), info.id] });
+      }
+    for (const id of found.keys()) if (fleet.inRegistry(id)) found.delete(id);
+    return found;
+  };
+  /** El servidor de una organización solo atiende el workspace de ella: no hace suyo otro. */
+  const confined = (info: MachineInfo) => !!info.organization || guessed(info).length > 0;
+  /** Los workspaces que `machine` tiene y la ventana puede abrir; primero el que le da una organización. */
   const workspacesOf = (info: MachineInfo): { id: string; name: string }[] => {
-    const given = givenTo(info);
+    const given = info.organization ? [info.organization.workspace.id] : guessed(info);
     const own = (fleet.getRegistry() ?? []).filter((w) => w.computers.includes(info.id)).map((w) => w.id);
     const ids = [...new Set([...given, ...own, ...(info.linked ?? [])])];
-    return ids.filter((id) => offered.has(id)).map((id) => ({ id, name: offered.get(id) as string }));
+    const orgs = organizations();
+    return ids.flatMap((id) => {
+      const name = offered.get(id) ?? orgs.get(id)?.name;
+      return name ? [{ id, name }] : [];
+    });
   };
   /** Si `machine` puede hacer suyo `workspace` al crear ahí: el relay solo lo deja con un workspace de la cuenta. */
   const adopts = (info: MachineInfo, workspace: string | null) =>
-    !stale.has(info.id) && !confined(info) && (!workspace || !fleet.getRegistry() || !info.linked || fleet.inRegistry(workspace));
+    !stale.has(info.id) && !confined(info) && (!workspace || !organizations().has(workspace)) && (!workspace || !fleet.getRegistry() || !info.linked || fleet.inRegistry(workspace));
+  /** La lista de workspaces con los de una organización que ninguna lectura trajo: la ventana puede abrirlos. */
+  function withOrganizations<T>(merged: T): T {
+    const rows = (merged as { workspaces?: { id?: unknown }[] } | null)?.workspaces;
+    if (!Array.isArray(rows)) return merged;
+    const extra = [...organizations()]
+      .filter(([id]) => !rows.some((w) => w?.id === id))
+      .map(([id, w]) => ({ ...registryRow({ id, name: w.name, projects: [], computers: [] }), machines: w.machines }));
+    return extra.length ? { ...merged, workspaces: [...rows, ...extra] } : merged;
+  }
   /** Sin elegir, lo nuevo nace en la máquina de la ventana; en un workspace que no está aquí, en su primera. */
   const defaultMachine = (workspace: string | null) => (elsewhere(workspace) ? (leadOf(workspace) ?? self) : self);
 
@@ -550,7 +579,7 @@ export function createRouter(config: RouterConfig) {
     const value = (await native(command, args, options)) as { workspaces?: { id?: unknown }[]; active?: unknown } | null;
     if (Array.isArray(value?.workspaces)) listed = new Set(value.workspaces.map((w) => w?.id).filter((id): id is string => typeof id === "string"));
     if (active === null && typeof value?.active === "string") active = value.active;
-    const merged = fleet.merge(command, [{ machine: self as string, status: "ok", has: true, value, at: Date.now() }], null) as { active?: unknown } | undefined;
+    const merged = withOrganizations(fleet.merge(command, [{ machine: self as string, status: "ok", has: true, value, at: Date.now() }], null) as { active?: unknown } | undefined);
     rememberOffered(merged ?? value);
     if (!merged) return value;
     // El activo es el de esta ventana, aunque sea un workspace que solo tienen otras máquinas.
@@ -563,7 +592,7 @@ export function createRouter(config: RouterConfig) {
   async function webListing(command: string, args: Args): Promise<unknown> {
     const envelopes = fleet.machines().map((m) => ({ machine: m.id, workspace: null, command, args }));
     const slices = await gather(envelopes, { settles: !!fleet.getRegistry(), fresh: true });
-    const merged = fleet.merge(command, slices, null) as { workspaces?: { id?: unknown }[]; active?: unknown } | undefined;
+    const merged = withOrganizations(fleet.merge(command, slices, null) as { workspaces?: { id?: unknown }[]; active?: unknown } | undefined);
     unlisted = !merged;
     if (!merged) throw noAnswer(slices, null);
     const ids = (merged.workspaces ?? []).map((w) => w?.id).filter((id): id is string => typeof id === "string");
@@ -601,6 +630,13 @@ export function createRouter(config: RouterConfig) {
     });
   }
 
+  /** El workspace de una organización no se hace de esta computadora: elegirla vuelve a uno de los suyos. */
+  function selfMaterializes(workspace: string | null) {
+    if (!workspace || !organizations().has(workspace)) return { materializes: true };
+    const own = [...(listed ?? [])].flatMap((id) => (offered.has(id) ? [{ id, name: offered.get(id) as string }] : []));
+    return { materializes: false, refuses: true, workspaces: own };
+  }
+
   function machineList() {
     const workspace = active;
     const lead = defaultMachine(workspace);
@@ -608,7 +644,7 @@ export function createRouter(config: RouterConfig) {
     const home = config.home?.();
     const selfOs = systemOf(home?.os);
     return [
-      ...(self !== null ? [{ id: self, local: true, active: lead === self, on: true, power: "on" as const, hosts: hasHere(workspace), materializes: true, wakes: home?.wakes ?? false, ...(home?.features?.length ? { features: [...home.features] } : {}), ...(home?.version ? { version: home.version } : {}), ...(selfOs ? { os: selfOs } : {}) }] : []),
+      ...(self !== null ? [{ id: self, local: true, active: lead === self, on: true, power: "on" as const, hosts: hasHere(workspace), ...selfMaterializes(workspace), wakes: home?.wakes ?? false, ...(home?.features?.length ? { features: [...home.features] } : {}), ...(home?.version ? { version: home.version } : {}), ...(selfOs ? { os: selfOs } : {}) }] : []),
       // Una de otro contrato no corre tareas nuevas hasta actualizarse.
       ...fleet.machines().filter((m) => fleet.power(m.id) !== "outdated").map((m) => {
         const os = systemOf(m.os);
