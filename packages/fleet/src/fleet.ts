@@ -246,15 +246,17 @@ export class Fleet {
   }
 
   /**
-   * Las otras máquinas que tienen `workspace`, según el registro de la cuenta;
-   * sin registro, las que lo tienen vinculado. Nunca según quién contestó al final.
+   * Las otras máquinas que tienen `workspace`, según el registro de la cuenta
+   * más las que su fila dice que lo tienen (el workspace de una organización no
+   * está en el registro de quien no es su dueña); sin registro, las que lo
+   * tienen vinculado. Nunca según quién contestó al final.
    */
   membersOf(workspace: string | null): string[] {
     if (!workspace) return [];
     const order = this.machines().map((m) => m.id);
     if (this.registry) {
       const w = this.registry.find((x) => x.id === workspace);
-      return order.filter((id) => (w?.computers.includes(id) ?? false) || this.info(id)?.child === true);
+      return order.filter((id) => (w?.computers.includes(id) ?? false) || this.info(id)?.child === true || (this.info(id)?.linked?.has(workspace) ?? false));
     }
     return order.filter((id) => {
       const linked = this.info(id)?.linked ?? null;

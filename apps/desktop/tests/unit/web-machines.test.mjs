@@ -224,7 +224,7 @@ test("«Ejecutar en» disables, with the reason, a machine that cannot make the 
   });
   assert.equal(calls("cmp_old", "materialize_workspace").length, 1, "it was asked once");
   assert.equal(calls("cmp_old", "send_message").length, 0, "and never got the task");
-  assert.deepEqual((await invoke("machine_list")).find((m) => m.id === "cmp_old"), { id: "cmp_old", local: false, active: false, on: true, power: "on", hosts: false, materializes: false, wakes: true });
+  assert.deepEqual((await invoke("machine_list")).find((m) => m.id === "cmp_old"), { id: "cmp_old", local: false, active: false, on: true, power: "on", hosts: false, materializes: false, refuses: false, workspaces: [], wakes: true });
 
   doc.querySelector('[aria-label="Ejecutar en"]').click();
   assert.ok(await until(() => doc.querySelector('[data-machine-option="cmp_mac"]')), "the machine picker opens");
@@ -245,4 +245,30 @@ test("«Ejecutar en» disables, with the reason, a machine that cannot make the 
   assert.ok(!option("cmp_vm").textContent.includes("sin este proyecto"));
   assert.equal(option("cmp_old").disabled, true);
   assert.deepEqual(app.failures, []);
+});
+
+test("picking in «Ejecutar en» an organization's server that lacks the open workspace switches to the one it has and says so", async () => {
+  const NUBE = { computer_id: "cmp_nube", name: "Nube IA", state: "online", provider: "aws-ec2", wakeable: true, workspaces: ["org"] };
+  const MINE = { ...MAC, workspaces: ["w"] };
+  const terminus = { workspaces: [{ ...SAME, name: "Terminus" }], active: "w" };
+  const org = { workspaces: [{ ...SAME, id: "org", name: "Danil Workspace" }], active: null };
+  const { app, invoke, doc, text } = await open("web-machines-org-switch", [NUBE, MINE], {
+    cmp_nube: { table: table("Servidor", "Tarea de la nube", { list_workspaces: org, workspaces_startup: org }, "pn") },
+    cmp_mac: { table: table("Notas", "Tarea del Mac", { list_workspaces: terminus, workspaces_startup: terminus }, "pm") },
+  }, registry({ w: ["cmp_mac"] }));
+  try {
+    assert.equal((await invoke("list_workspaces")).active, "w");
+    doc.querySelector('[aria-label="Ejecutar en"]').click();
+    assert.ok(await until(() => doc.querySelector('[data-machine-option="cmp_nube"]')), "the machine picker opens");
+    const option = () => doc.querySelector('[data-machine-option="cmp_nube"]');
+    assert.ok(await until(() => option()?.disabled === false), "it can be picked: it has another workspace of the window");
+    option().click();
+    assert.ok(await until(() => text().includes("Nube IA trabaja en «Danil Workspace»; cambié a ese workspace.")), "a plain notice says where the window went");
+    assert.equal((await invoke("list_workspaces")).active, "org");
+    assert.equal(JSON.parse(app.w.localStorage.getItem("harness.layout.machines.run_on") ?? "{}").org, "cmp_nube", "the pick is remembered in the workspace it runs");
+    assert.ok(!text().includes("no deja hacer esto desde aquí"));
+    assert.deepEqual(app.failures, []);
+  } finally {
+    app.w.close();
+  }
 });

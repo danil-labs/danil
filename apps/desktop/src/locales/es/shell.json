@@ -383,6 +383,8 @@
   "shell.machines.asleep_notice": "{name} está apagada: se enciende cuando envíes un mensaje.",
   "shell.machines.waking": "Encendiendo {name}…",
   "shell.machines.unlinked_hint": "{name} no tiene este workspace y su motor todavía no sabe crearlo: actualízalo para correr ahí sus tareas.",
+  "shell.machines.no_workspace_title": "{name} no tiene este workspace ni otro que puedas abrir aquí.",
+  "shell.machines.switched": "{name} trabaja en «{workspace}»; cambié a ese workspace.",
   "shell.machines.no_project": "sin este proyecto",
   "shell.machines.no_project_hint": "«{project}» es una carpeta sin remoto de una máquina apagada: se puede llevar cuando esté encendida.",
   "shell.machines.now_on": "{name} se encendió",

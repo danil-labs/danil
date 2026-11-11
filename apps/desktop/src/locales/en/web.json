@@ -48,6 +48,7 @@
   "web.machines.timeout": "{name} didn't answer in time. You're seeing the last thing it said.",
   "web.machines.lost": "The connection to {name} was lost. Try again.",
   "web.machines.workspace_mismatch": "{name} won't allow this from here: it belongs to another workspace or account.",
+  "web.machines.workspace_refused": "{name} doesn't work in this workspace. Pick another machine in “Run on” or switch to a workspace it has.",
   "web.machines.license_required": "Using your other computers from here is part of paid Danil.",
   "web.onboarding.accounts.another": "Connect another",
   "web.onboarding.accounts.api_key": "Paste your API key",

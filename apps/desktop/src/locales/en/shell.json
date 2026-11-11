@@ -383,6 +383,8 @@
   "shell.machines.asleep_notice": "{name} is off: it starts when you send a message.",
   "shell.machines.waking": "Starting {name}…",
   "shell.machines.unlinked_hint": "{name} doesn't have this workspace and its engine can't create it yet: update it to run this workspace's tasks there.",
+  "shell.machines.no_workspace_title": "{name} doesn't have this workspace or any other you can open here.",
+  "shell.machines.switched": "{name} works in “{workspace}”; switched to that workspace.",
   "shell.machines.no_project": "lacks this project",
   "shell.machines.no_project_hint": "“{project}” is a folder without a remote on a machine that is off: it can be carried once that one is on.",
   "shell.machines.now_on": "{name} turned on",

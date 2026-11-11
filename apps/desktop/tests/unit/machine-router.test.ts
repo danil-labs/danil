@@ -11,6 +11,7 @@ import { Fleet, type Link, type MachineInfo, classOf } from "@terminus/fleet";
 import "../helpers/catalog.ts";
 import { withoutAbout } from "../../src/lib/taskMentions.ts";
 import { createRouter } from "../../src/features/machines/router.ts";
+import { workspaceToRun } from "../../src/features/machines/workspace-switch.ts";
 
 type Args = Record<string, unknown>;
 type Call = { command: string; args: Args; workspace: string | null; id: string };
@@ -683,6 +684,61 @@ test("the router does not judge an MCP block: a link that is not the relay (a WS
   await assert.rejects(other.router.handle("add_mcp_servers", { bloque: plain }, on("cmp_vm")), (e: { detail: string; what: string }) => {
     assert.equal(e.detail, "mcp_values_over_relay");
     assert.ok(e.what.includes("${secret:env/*/"), "the catalog phrase, with the marker");
+    return true;
+  });
+});
+
+/** Un servidor de organización: una VM que la cuenta le da con el workspace de la organización, que no está en el registro de la persona. */
+const NUBE: MachineInfo = { id: "cmp_vm", name: "Nube IA", wakes: true, linked: new Set(["org"]) };
+const TWO = { list_workspaces: { workspaces: [{ id: "w", name: "Terminus" }, { id: "org", name: "Danil Workspace" }], active: "w" } };
+type Row = { id: string; hosts: boolean | null; materializes?: boolean; refuses?: boolean; workspaces?: { id: string; name: string }[] };
+const rowOf = async (router: ReturnType<typeof setup>["router"], id: string) => ((await router.handle("machine_list")) as Row[]).find((m) => m.id === id) as Row;
+
+test("an organization's server that lacks the open workspace offers the one it has, and the window can switch to it", async () => {
+  const vm = fakeLink({ send_message: "t9" });
+  const { router, fleet } = setup({ cmp_vm: vm }, TWO);
+  fleet.setMachines([NUBE]);
+  fleet.setRegistry([{ id: "w", name: "Terminus", projects: [], computers: ["cmp_home"] }]);
+  await router.handle("list_workspaces");
+  const row = await rowOf(router, "cmp_vm");
+  assert.equal(row.hosts, false);
+  assert.equal(row.materializes, false, "the relay would refuse making «Terminus» its own");
+  assert.equal(row.refuses, true);
+  assert.deepEqual(row.workspaces, [{ id: "org", name: "Danil Workspace" }]);
+  assert.deepEqual(workspaceToRun(row, "w"), { id: "org", name: "Danil Workspace" });
+
+  await router.handle("set_active_workspace", { id: "org" });
+  const there = await rowOf(router, "cmp_vm");
+  assert.equal(there.hosts, true, "its row says it has the organization's workspace");
+  assert.equal(workspaceToRun(there, "org"), null);
+  await router.handle("send_message", { project: "p1", prompt: "hola" }, on("cmp_vm"));
+  assert.deepEqual(vm.calls.map((c) => [c.command, c.workspace]), [["send_message", "org"]], "nothing to make its own first");
+});
+
+test("a server with no workspace the window offers says so; one's own VM still makes the workspace its own", async () => {
+  const lone = setup({ cmp_vm: fakeLink({}) });
+  lone.fleet.setMachines([NUBE]);
+  lone.fleet.setRegistry([{ id: "w", name: "W", projects: [], computers: ["cmp_home"] }]);
+  await lone.router.handle("list_workspaces");
+  assert.equal(workspaceToRun(await rowOf(lone.router, "cmp_vm"), "w"), "none");
+
+  const own = setup({ cmp_vm: fakeLink({}) }, TWO);
+  own.fleet.setMachines([{ ...VM, linked: new Set(["org"]) }]);
+  own.fleet.setRegistry([{ id: "w", name: "Terminus", projects: [], computers: ["cmp_home"] }, { id: "org", name: "Danil Workspace", projects: [], computers: ["cmp_vm"] }]);
+  await own.router.handle("list_workspaces");
+  const row = await rowOf(own.router, "cmp_vm");
+  assert.equal(row.materializes, true);
+  assert.equal(workspaceToRun(row, "w"), null, "«Ejecutar en» keeps creating the workspace there with the same id");
+});
+
+test("creating on a machine whose relay refuses the workspace names the machine and the way out", async () => {
+  const vm = fakeLink({ send_message: () => Promise.reject({ code: "workspace_not_linked" }) });
+  const { router, fleet } = setup({ cmp_vm: vm });
+  fleet.setMachines([NUBE]);
+  await router.handle("list_workspaces");
+  await assert.rejects(router.handle("send_message", { project: "p1", prompt: "hola" }, on("cmp_vm")), (e: { what: string; detail: string }) => {
+    assert.equal(e.detail, "workspace_not_linked");
+    assert.equal(e.what, "Nube IA no trabaja en este workspace. Elige otra máquina en «Ejecutar en» o cambia a un workspace que tenga.");
     return true;
   });
 });

@@ -10,6 +10,7 @@ import { ConnectMachine, connectSource } from "./ConnectMachine";
 import { MachineIcon } from "./MachineIcon";
 import { refetchSharedMachines, sharedBusy, sharedMachines, sharedNotice, startSharedMachine } from "./shared";
 import { type Machine, machineName, machines, type ProjectPlace, refetchMachines, runOn, setRunOn, unavailable, wakesOf } from "./store";
+import { workspaceToRun } from "./workspace-switch";
 
 let pedida = false;
 
@@ -18,9 +19,17 @@ let pedida = false;
  * una apagada no la enciende; la enciende enviar. Sin el workspace lo crea con
  * el mismo id; la que no puede se ve desactivada. Un proyecto sin remoto se
  * lleva desde su máquina encendida. Con `shared`, debajo van las de la
- * organización: estado y encendido, sin elegirlas.
+ * organización: estado y encendido, sin elegirlas. Con `onWorkspace`, una que no
+ * puede correr este workspace pero tiene otro de la ventana se elige y la
+ * ventana cambia a ese.
  */
-export function MachinePicker(props: { workspace: string | null; project?: ProjectPlace; shared?: boolean; onChange?: () => void }) {
+export function MachinePicker(props: {
+  workspace: string | null;
+  project?: ProjectPlace;
+  shared?: boolean;
+  onChange?: () => void;
+  onWorkspace?: (to: { id: string; name: string }, machine: Machine) => void;
+}) {
   if (!pedida) {
     pedida = true;
     void refetchMachines();
@@ -41,6 +50,13 @@ export function MachinePicker(props: { workspace: string | null; project?: Proje
   function elegir(m: Machine) {
     setAbierto(false);
     if (!props.workspace || elegida()?.id === m.id) return;
+    const to = props.onWorkspace ? workspaceToRun(m, props.workspace) : null;
+    if (to && to !== "none") {
+      // Se recuerda en el workspace al que se cambia, no en el que no puede correr ahí.
+      setRunOn(to.id, m.id);
+      props.onWorkspace?.(to, m);
+      return;
+    }
     batch(() => {
       setRunOn(props.workspace, m.active ? null : m.id);
       props.onChange?.();
@@ -48,8 +64,8 @@ export function MachinePicker(props: { workspace: string | null; project?: Proje
   }
 
   const razon = (m: Machine) => {
-    const falta = props.workspace ? unavailable(m, props.project) : null;
-    if (falta === "workspace") return { label: t("shell.machines.unlinked"), hint: t("shell.machines.unlinked_hint", { name: nombre(m) }) };
+    const falta = props.workspace ? unavailable(m, props.project, machines(), !!props.onWorkspace) : null;
+    if (falta === "workspace") return { label: t("shell.machines.unlinked"), hint: m.refuses ? t("shell.machines.no_workspace_title", { name: nombre(m) }) : t("shell.machines.unlinked_hint", { name: nombre(m) }) };
     if (falta === "project") return { label: t("shell.machines.no_project"), hint: t("shell.machines.no_project_hint", { project: props.project?.name ?? "" }) };
     return null;
   };

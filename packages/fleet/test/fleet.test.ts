@@ -266,6 +266,8 @@ test("workspace members come from the account registry, not from whoever answere
   fleet.setRegistry(null);
   fleet.setMachines([{ ...VM, linked: new Set(["w"]) }, { ...MAC, linked: new Set(["w2"]) }]);
   assert.deepEqual(fleet.membersOf("w"), ["cmp_vm"], "without a registry, the links say it");
+  fleet.setRegistry([{ id: "w", name: "W", projects: [], computers: ["cmp_home"] } as never]);
+  assert.deepEqual(fleet.membersOf("w2"), ["cmp_mac"], "a workspace outside the registry that a machine's row lists is still that machine's");
 });
 
 test("machines are added, removed and renamed live without reconnecting the others", async () => {

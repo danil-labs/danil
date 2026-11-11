@@ -113,7 +113,7 @@ import { createdTasks } from "../features/projects/agentPageFilters";
 import BaseBranchPicker from "../features/projects/BaseBranchPicker";
 import { watchHandlerStatus, watchHandlerStatuses } from "../features/projects/handlerPresence";
 import { EmptyContext, ProjectPicker } from "../features/projects/Projects";
-import { bringHereLabel, canBringHere, carryOrigin, machineName, machineOf, machineWakes, machines, refetchMachines, remoteChildScope, runOn, senderTaskId, setRunOn, setTaskRowMachine } from "../features/machines/store";
+import { bringHereLabel, canBringHere, carryOrigin, type Machine, machineName, machineOf, machineWakes, machines, refetchMachines, remoteChildScope, runOn, senderTaskId, setRunOn, setTaskRowMachine } from "../features/machines/store";
 import { launcherOf, withRemoteLaunchers } from "@terminus/tasks";
 import type { CarriedBase, CarryCheck } from "../features/machines/carry";
 // Chunk aparte: solo lo carga quien crea una tarea, no la carga inicial.
@@ -1030,6 +1030,18 @@ export default function App() {
 
   /** El aviso de lo que un gesto sobre espacios acaba de hacer, con su «Ir». */
   const [aviso, setAviso] = createSignal<{ texto: string; boton?: string; ir?: () => void } | null>(null);
+  /** El aviso que sale cuando llegue ese workspace: cambiar de workspace borra el anterior. */
+  let avisoAlMudar: { workspace: string; texto: string } | null = null;
+
+  /** «Ejecutar en» eligió una máquina que no corre este workspace: la ventana cambia a uno que tenga. */
+  async function mudarParaCorrerEn(to: { id: string; name: string }, machine: Machine) {
+    avisoAlMudar = { workspace: to.id, texto: t("shell.machines.switched", { name: machineName(machine.id, machine.local), workspace: to.name }) };
+    await workspacesDeLaFranja.cambiarA(to.id);
+    if (workspacesDeLaFranja.activo() === to.id) return;
+    avisoAlMudar = null;
+    const fallo = workspacesDeLaFranja.fallo();
+    if (fallo) setError(prosaDe(fallo));
+  }
   const [deletingSpace, setDeletingSpace] = createSignal<string | null>(null);
   const replaceSpace = (i: Space) =>
     setSpaces((lista) => lista.map((x) => (x.id === i.id ? i : x)));
@@ -2254,6 +2266,8 @@ export default function App() {
     drainingQueues.clear();
     setSpacesContext(null);
     setWorkspaceActivo(a.active);
+    // «Ejecutar en» dice qué tiene cada máquina del workspace abierto: con otro, se relee.
+    void refetchMachines();
     setDraftBases({});
     // Sale la tira del anterior antes que `setSessionId(null)`, que apuntaría
     // «ninguna activa» en la que siga cargada. La nueva es la del escritorio y
@@ -2270,7 +2284,9 @@ export default function App() {
         setSpaces([]);
         setEscritorio(null);
       }
-      setAviso(null);
+      const mudanza = avisoAlMudar?.workspace === a.active ? avisoAlMudar : null;
+      avisoAlMudar = null;
+      setAviso(mudanza ? { texto: mudanza.texto } : null);
     });
     // Y la pantalla vuelve a una ventana: la rejilla que había era la del
     // cliente que se deja, y la del que llega la pone `asentarEscritorio`.
@@ -7032,6 +7048,7 @@ export default function App() {
                     setDraftBases({});
                     elegirProyecto("");
                   }}
+                  onWorkspace={(to, machine) => void mudarParaCorrerEn(to, machine)}
                 />
               </Suspense>
             </Show>

@@ -16,7 +16,7 @@
  * no tiene se lee de sus miembros y actúa en el primero.
  */
 import { type AccountWorkspace, type SystemId, callWorkspace, isDeferrable, systemOf } from "@terminus/computers";
-import { AttentionBook, type Envelope, type Fleet, FleetError, type Slice, classOf, unwrap } from "@terminus/fleet";
+import { AttentionBook, type Envelope, type Fleet, FleetError, type MachineInfo, type Slice, classOf, unwrap } from "@terminus/fleet";
 import { clavesConocidas, t } from "../../lib/i18n.ts";
 
 type Args = Record<string, unknown>;
@@ -46,6 +46,8 @@ const OF_THIS_WINDOW = /^radiant_|^danil_|^account_relay_token$|^agents_session_
 /** Las órdenes con canal pierden el canal por el relay: vuelve solo la respuesta final. */
 const CHANNELS: Record<string, string> = { clone_project: "progress", list_session_git: "progress", watch_task_tree: "changes" };
 const UNKNOWN = new Set(["command", "unsupported", "command_not_allowed"]);
+/** El relay no deja usar ese workspace en esa máquina. */
+const REFUSED_WORKSPACE = new Set(["workspace_not_linked", "workspace_mismatch"]);
 /** Lo que abre un archivo en esta computadora: el de una tarea de otra máquina está allá. */
 const FILES = /^(site_|typst_live_)|^(open_file_external|tree_open_external)$/;
 /** Los demás códigos del relay, con la frase que la ventana ya conoce (los de `proxy.rs`). */
@@ -168,6 +170,13 @@ export function createRouter(config: RouterConfig) {
   const attention = new AttentionBook();
   /** Los workspaces que esta computadora tiene, según su última lista; `null` antes de leerla. */
   let listed: Set<string> | null = null;
+  /** Los workspaces que la ventana ofrece (su última lista), con su nombre: a los que se puede cambiar. */
+  let offered = new Map<string, string>();
+  function rememberOffered(value: unknown) {
+    const rows = (value as { workspaces?: { id?: unknown; name?: unknown }[] } | null)?.workspaces;
+    if (!Array.isArray(rows)) return;
+    offered = new Map(rows.filter((w) => typeof w?.id === "string").map((w) => [w.id as string, typeof w.name === "string" && w.name ? w.name : (w.id as string)]));
+  }
   let active: string | null = null;
   /** Máquinas cuyo motor no sabe hacer suyo un workspace de la cuenta. */
   const stale = new Set<string>();
@@ -205,6 +214,24 @@ export function createRouter(config: RouterConfig) {
     const members = membersOf(workspace).filter((m) => fleet.power(m) !== "outdated");
     return members.find((m) => fleet.power(m) === "on") ?? members[0] ?? null;
   };
+  /** Los workspaces de `machine` que su fila dice y el registro no le atribuye: los que le da una organización. */
+  const givenTo = (info: MachineInfo): string[] => {
+    const registry = fleet.getRegistry();
+    if (!registry || !info.linked) return [];
+    return [...info.linked].filter((id) => !registry.find((w) => w.id === id)?.computers.includes(info.id));
+  };
+  /** Una VM con un workspace que le da una organización (su servidor) solo atiende esos: no hace suyo otro. */
+  const confined = (info: MachineInfo) => info.wakes && givenTo(info).length > 0;
+  /** Los workspaces que la ventana ofrece y `machine` tiene; primero los que le da una organización. */
+  const workspacesOf = (info: MachineInfo): { id: string; name: string }[] => {
+    const given = givenTo(info);
+    const own = (fleet.getRegistry() ?? []).filter((w) => w.computers.includes(info.id)).map((w) => w.id);
+    const ids = [...new Set([...given, ...own, ...(info.linked ?? [])])];
+    return ids.filter((id) => offered.has(id)).map((id) => ({ id, name: offered.get(id) as string }));
+  };
+  /** Si `machine` puede hacer suyo `workspace` al crear ahí: el relay solo lo deja con un workspace de la cuenta. */
+  const adopts = (info: MachineInfo, workspace: string | null) =>
+    !stale.has(info.id) && !confined(info) && (!workspace || !fleet.getRegistry() || !info.linked || fleet.inRegistry(workspace));
   /** Sin elegir, lo nuevo nace en la máquina de la ventana; en un workspace que no está aquí, en su primera. */
   const defaultMachine = (workspace: string | null) => (elsewhere(workspace) ? (leadOf(workspace) ?? self) : self);
 
@@ -419,8 +446,20 @@ export function createRouter(config: RouterConfig) {
     throw noAnswer(slices, workspace);
   }
 
-  /** Una llamada a otra máquina, con el workspace del sobre. Una lectura sale de su rebanada: apagada con copia, no se pregunta. */
+  /** Una llamada a otra máquina. Crear algo en un workspace que esa máquina no acepta se dice con su nombre. */
   async function remote(machine: string, command: string, args: Args, workspace: string | null): Promise<unknown> {
+    if (!CREATE.has(command)) return remoteCall(machine, command, args, workspace);
+    try {
+      return await remoteCall(machine, command, args, workspace);
+    } catch (error) {
+      if (error instanceof FleetError && REFUSED_WORKSPACE.has(error.code))
+        throw { what: t("web.machines.workspace_refused", { name: fleet.name(machine) }), detail: error.code };
+      throw error;
+    }
+  }
+
+  /** Una llamada a otra máquina, con el workspace del sobre. Una lectura sale de su rebanada: apagada con copia, no se pregunta. */
+  async function remoteCall(machine: string, command: string, args: Args, workspace: string | null): Promise<unknown> {
     args = withoutChannel(command, args);
     // Apagada o encendiéndose, el resumen de la máquina sale de su copia (la de
     // la flota o la del relay) con su hora, sin encenderla: es una lectura.
@@ -437,7 +476,7 @@ export function createRouter(config: RouterConfig) {
     if (CREATE.has(command) && workspace && fleet.inRegistry(workspace) && !fleet.membersOf(workspace).includes(machine)) await materialize(machine, workspace);
     if (WITH_SPACE.has(command)) args = await withSharedSpace(machine, workspace, args);
     if (command === "load_history") {
-      const session = await remote(machine, "load_session", {
+      const session = await remoteCall(machine, "load_session", {
         project: args.project, id: args.id,
         history_request: { version: 1, before: args.before ?? null, revision: args.revision ?? null },
       }, workspace) as { turns?: unknown[]; history?: unknown } | null;
@@ -512,6 +551,7 @@ export function createRouter(config: RouterConfig) {
     if (Array.isArray(value?.workspaces)) listed = new Set(value.workspaces.map((w) => w?.id).filter((id): id is string => typeof id === "string"));
     if (active === null && typeof value?.active === "string") active = value.active;
     const merged = fleet.merge(command, [{ machine: self as string, status: "ok", has: true, value, at: Date.now() }], null) as { active?: unknown } | undefined;
+    rememberOffered(merged ?? value);
     if (!merged) return value;
     // El activo es el de esta ventana, aunque sea un workspace que solo tienen otras máquinas.
     return active && elsewhere(active) ? { ...merged, active } : merged;
@@ -530,6 +570,7 @@ export function createRouter(config: RouterConfig) {
     // Una máquina sin workspaces no deja la página sin ninguno abierto: el primero de la cuenta.
     if (!active || !ids.includes(active)) active = typeof merged.active === "string" && ids.includes(merged.active) ? merged.active : (ids[0] ?? null);
     rememberContexts(merged);
+    rememberOffered(merged);
     return { ...merged, active };
   }
 
@@ -578,7 +619,9 @@ export function createRouter(config: RouterConfig) {
           on: fleet.power(m.id) === "on",
           power: fleet.power(m.id),
           hosts: workspace ? members.has(m.id) : null,
-          materializes: !stale.has(m.id),
+          materializes: adopts(m, workspace),
+          refuses: !stale.has(m.id) && !adopts(m, workspace),
+          workspaces: workspacesOf(m),
           wakes: m.wakes,
           ...(m.features?.length ? { features: [...m.features] } : {}),
           ...(m.version ? { version: m.version } : {}),
