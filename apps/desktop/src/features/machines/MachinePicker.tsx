@@ -9,27 +9,19 @@ import { SignalDot } from "../../ui/SignalDot";
 import { ConnectMachine, connectSource } from "./ConnectMachine";
 import { MachineIcon } from "./MachineIcon";
 import { refetchSharedMachines, sharedBusy, sharedMachines, sharedNotice, startSharedMachine } from "./shared";
-import { type Machine, machineName, machines, type ProjectPlace, refetchMachines, runOn, setRunOn, unavailable, wakesOf } from "./store";
-import { workspaceToRun } from "./workspace-switch";
+import { type Machine, machineName, machines, type ProjectPlace, refetchMachines, runOn, runsWorkspace, setRunOn, unavailable, wakesOf } from "./store";
 
 let pedida = false;
 
 /**
  * «Ejecutar en»: la máquina de la tarea nueva, recordada por workspace. Elegir
  * una apagada no la enciende; la enciende enviar. Sin el workspace lo crea con
- * el mismo id; la que no puede se ve desactivada. Un proyecto sin remoto se
- * lleva desde su máquina encendida. Con `shared`, debajo van las de la
- * organización: estado y encendido, sin elegirlas. Con `onWorkspace`, una que no
- * puede correr este workspace pero tiene otro de la ventana se elige y la
- * ventana cambia a ese.
+ * el mismo id; la que no puede se ve desactivada. La que no tiene permiso en
+ * este workspace no sale. Un proyecto sin remoto se lleva desde su máquina
+ * encendida. Con `shared`, debajo van las de la organización: estado y
+ * encendido, sin elegirlas.
  */
-export function MachinePicker(props: {
-  workspace: string | null;
-  project?: ProjectPlace;
-  shared?: boolean;
-  onChange?: () => void;
-  onWorkspace?: (to: { id: string; name: string }, machine: Machine) => void;
-}) {
+export function MachinePicker(props: { workspace: string | null; project?: ProjectPlace; shared?: boolean; onChange?: () => void }) {
   if (!pedida) {
     pedida = true;
     void refetchMachines();
@@ -41,22 +33,16 @@ export function MachinePicker(props: {
   const [abierto, setAbierto] = createSignal(false);
   const [conectando, setConectando] = createSignal(false);
   const fuente = connectSource();
+  const opciones = () => machines().filter(runsWorkspace);
   const elegida = () => {
     const id = runOn(props.workspace, props.project);
-    return machines().find((m) => (id ? m.id === id : m.active));
+    return opciones().find((m) => (id ? m.id === id : m.active));
   };
   const nombre = (m: Machine) => machineName(m.id, m.local);
 
   function elegir(m: Machine) {
     setAbierto(false);
     if (!props.workspace || elegida()?.id === m.id) return;
-    const to = props.onWorkspace ? workspaceToRun(m, props.workspace) : null;
-    if (to && to !== "none") {
-      // Se recuerda en el workspace al que se cambia, no en el que no puede correr ahí.
-      setRunOn(to.id, m.id);
-      props.onWorkspace?.(to, m);
-      return;
-    }
     batch(() => {
       setRunOn(props.workspace, m.active ? null : m.id);
       props.onChange?.();
@@ -64,12 +50,13 @@ export function MachinePicker(props: {
   }
 
   const razon = (m: Machine) => {
-    const falta = props.workspace ? unavailable(m, props.project, machines(), !!props.onWorkspace) : null;
-    if (falta === "workspace") return { label: t("shell.machines.unlinked"), hint: m.refuses ? t("shell.machines.no_workspace_title", { name: nombre(m) }) : t("shell.machines.unlinked_hint", { name: nombre(m) }) };
+    const falta = props.workspace ? unavailable(m, props.project) : null;
+    if (falta === "workspace") return { label: t("shell.machines.unlinked"), hint: t("shell.machines.unlinked_hint", { name: nombre(m) }) };
     if (falta === "project") return { label: t("shell.machines.no_project"), hint: t("shell.machines.no_project_hint", { project: props.project?.name ?? "" }) };
     return null;
   };
 
+  // Con una sola opción aquí también sale: dice dónde corre la tarea.
   const muestra = () => machines().length > 1 || (!!props.shared && sharedMachines().length > 0);
   const tono = (power: string) => (power === "running" ? "success" : power === "starting" ? "working" : power === "stopping" ? "warning" : power === "unknown" ? "neutral" : "off") as "success" | "working" | "warning" | "neutral" | "off";
   const estado = (power: string) => {
@@ -99,7 +86,7 @@ export function MachinePicker(props: {
         <PopoverContent class="w-[300px] overflow-hidden p-0 text-caption text-neutral-500 shadow-lg">
           <p class="m-0 border-b border-border px-2 py-1.5">{t("shell.machines.label")}</p>
           <div class="py-1">
-            <For each={machines()}>
+            <For each={opciones()}>
               {(m) => (
                 <button
                   class={`${ITEM_DE_MENU} flex items-center gap-2 disabled:opacity-50`}

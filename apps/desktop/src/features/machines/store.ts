@@ -8,16 +8,17 @@ import { createPref, escribirPref, leerPref } from "../../lib/prefs";
 import { isMac } from "../../lib/window";
 import { capabilities } from "../../lib/platform";
 
+export { runsWorkspace } from "./runs-workspace";
+
 /**
  * `machine_list`: `hosts` es si tiene el workspace abierto (`null`, que no se sabe
  * sin encenderla); `materializes`, si puede hacerlo suyo con el mismo id al crear ahí;
- * `refuses`, que el relay no lo dejaría aunque su motor sepa; `workspaces`, los
- * que la ventana ofrece y ella tiene.
+ * `refuses`, que el relay no la deja usarlo (no tiene permiso ahí).
  * `wakes`: VM administrada. `os` solo si se sabe; si falta, no se inventa.
  * `features`: lo que su motor anuncia (`status.service_features`). `power`, lo que
  * sabe la flota (`starting`: encendiéndose); `version`, su `host_version`, también apagada.
  */
-export type Machine = { id: string; local: boolean; active: boolean; on: boolean; power?: "on" | "off" | "starting" | "outdated"; version?: string; hosts: boolean | null; materializes?: boolean; refuses?: boolean; workspaces?: { id: string; name: string }[]; wakes?: boolean; os?: SystemId; features?: readonly string[] };
+export type Machine = { id: string; local: boolean; active: boolean; on: boolean; power?: "on" | "off" | "starting" | "outdated"; version?: string; hosts: boolean | null; materializes?: boolean; refuses?: boolean; wakes?: boolean; os?: SystemId; features?: readonly string[] };
 
 /** Lo que el picker sabe del proyecto de la tarea nueva: las máquinas con su carpeta y su remoto. */
 export type ProjectPlace = { name: string; machines?: string[]; remote_url?: string | null } | null | undefined;
@@ -25,11 +26,10 @@ export type ProjectPlace = { name: string; machines?: string[]; remote_url?: str
 /**
  * Por qué una máquina no puede correr la tarea nueva, o `null` si puede. Un
  * proyecto sin remoto se lleva desde la máquina donde vive mientras esté
- * encendida; apagada, sus tareas solo corren ahí. Con `switches`, la que tiene
- * otro workspace de la ventana sí puede: elegirla cambia a ese.
+ * encendida; apagada, sus tareas solo corren ahí.
  */
-export function unavailable(m: Machine, project: ProjectPlace, all: Machine[] = machines(), switches = false): "workspace" | "project" | null {
-  if (m.hosts === false && !m.materializes) return switches && m.workspaces?.length ? null : "workspace";
+export function unavailable(m: Machine, project: ProjectPlace, all: Machine[] = machines()): "workspace" | "project" | null {
+  if (m.hosts === false && !m.materializes) return "workspace";
   if (project?.machines && !project.remote_url && !project.machines.includes(m.id)) {
     const sourceOn = project.machines.some((id) => all.find((x) => x.id === id)?.on);
     if (!sourceOn) return "project";

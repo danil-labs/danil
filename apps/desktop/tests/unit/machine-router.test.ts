@@ -11,7 +11,7 @@ import { Fleet, type Link, type MachineInfo, classOf } from "@terminus/fleet";
 import "../helpers/catalog.ts";
 import { withoutAbout } from "../../src/lib/taskMentions.ts";
 import { createRouter } from "../../src/features/machines/router.ts";
-import { workspaceToRun } from "../../src/features/machines/workspace-switch.ts";
+import { runsWorkspace } from "../../src/features/machines/runs-workspace.ts";
 
 type Args = Record<string, unknown>;
 type Call = { command: string; args: Args; workspace: string | null; id: string };
@@ -689,88 +689,48 @@ test("the router does not judge an MCP block: a link that is not the relay (a WS
   });
 });
 
-/** Un servidor de organización: una VM que la cuenta le da con el workspace de la organización, que no está en el registro de la persona. */
-const NUBE: MachineInfo = { id: "cmp_vm", name: "Nube IA", wakes: true, linked: new Set(["org"]) };
-const TWO = { list_workspaces: { workspaces: [{ id: "w", name: "Terminus" }, { id: "org", name: "Danil Workspace" }], active: "w" } };
-type Row = { id: string; hosts: boolean | null; materializes?: boolean; refuses?: boolean; workspaces?: { id: string; name: string }[] };
-const rowOf = async (router: ReturnType<typeof setup>["router"], id: string) => ((await router.handle("machine_list")) as Row[]).find((m) => m.id === id) as Row;
-
-test("an organization's server that lacks the open workspace offers the one it has, and the window can switch to it", async () => {
-  const vm = fakeLink({ send_message: "t9" });
-  const { router, fleet } = setup({ cmp_vm: vm }, TWO);
-  fleet.setMachines([NUBE]);
-  fleet.setRegistry([{ id: "w", name: "Terminus", projects: [], computers: ["cmp_home"] }]);
-  await router.handle("list_workspaces");
-  const row = await rowOf(router, "cmp_vm");
-  assert.equal(row.hosts, false);
-  assert.equal(row.materializes, false, "the relay would refuse making «Terminus» its own");
-  assert.equal(row.refuses, true);
-  assert.deepEqual(row.workspaces, [{ id: "org", name: "Danil Workspace" }]);
-  assert.deepEqual(workspaceToRun(row, "w"), { id: "org", name: "Danil Workspace" });
-
-  await router.handle("set_active_workspace", { id: "org" });
-  const there = await rowOf(router, "cmp_vm");
-  assert.equal(there.hosts, true, "its row says it has the organization's workspace");
-  assert.equal(workspaceToRun(there, "org"), null);
-  await router.handle("send_message", { project: "p1", prompt: "hola" }, on("cmp_vm"));
-  assert.deepEqual(vm.calls.map((c) => [c.command, c.workspace]), [["send_message", "org"]], "nothing to make its own first");
-});
-
-test("a server with no workspace the window offers says so; one's own VM still makes the workspace its own", async () => {
-  const lone = setup({ cmp_vm: fakeLink({}) });
-  lone.fleet.setMachines([NUBE]);
-  lone.fleet.setRegistry([{ id: "w", name: "W", projects: [], computers: ["cmp_home"] }]);
-  await lone.router.handle("list_workspaces");
-  assert.equal(workspaceToRun(await rowOf(lone.router, "cmp_vm"), "w"), "none");
-
-  const own = setup({ cmp_vm: fakeLink({}) }, TWO);
-  own.fleet.setMachines([{ ...VM, linked: new Set(["org"]) }]);
-  own.fleet.setRegistry([{ id: "w", name: "Terminus", projects: [], computers: ["cmp_home"] }, { id: "org", name: "Danil Workspace", projects: [], computers: ["cmp_vm"] }]);
-  await own.router.handle("list_workspaces");
-  const row = await rowOf(own.router, "cmp_vm");
-  assert.equal(row.materializes, true);
-  assert.equal(workspaceToRun(row, "w"), null, "«Ejecutar en» keeps creating the workspace there with the same id");
-});
-
-test("creating on a machine whose relay refuses the workspace names the machine and the way out", async () => {
-  const vm = fakeLink({ send_message: () => Promise.reject({ code: "workspace_not_linked" }) });
-  const { router, fleet } = setup({ cmp_vm: vm });
-  fleet.setMachines([NUBE]);
-  await router.handle("list_workspaces");
-  await assert.rejects(router.handle("send_message", { project: "p1", prompt: "hola" }, on("cmp_vm")), (e: { what: string; detail: string }) => {
-    assert.equal(e.detail, "workspace_not_linked");
-    assert.equal(e.what, "Nube IA no trabaja en este workspace. Elige otra máquina en «Ejecutar en» o cambia a un workspace que tenga.");
-    return true;
-  });
-});
-
 /** Una miembro, no la dueña: el workspace de la organización no está en su registro ni en esta computadora. */
 const ORG = { id: "fqgx1w8m", name: "Danil Workspace" };
 const ENDPOINT: MachineInfo = { id: "cmp_vm", name: "Nube IA", wakes: true, linked: new Set([ORG.id]), organization: { id: "org_01", workspace: ORG } };
 const MEMBER_REGISTRY = [{ id: "w", name: "W", projects: [], computers: ["cmp_home", "cmp_mac"] }];
+type Row = { id: string; hosts: boolean | null; materializes?: boolean; refuses?: boolean };
+const pickable = async (router: ReturnType<typeof setup>["router"]) => ((await router.handle("machine_list")) as Row[]).filter(runsWorkspace).map((m) => m.id);
 
-test("a member picks the organization's server: the window lists its workspace, switches to it and creates there", async () => {
-  const vm = fakeLink({ send_message: "t9" });
-  const { router, fleet, native } = setup({ cmp_vm: vm, cmp_mac: fakeLink({}) });
+test("a member in another workspace does not get the organization's server in «Ejecutar en»; the workspace switcher lists its workspace", async () => {
+  const { router, fleet } = setup({ cmp_vm: fakeLink({}), cmp_mac: fakeLink({}) });
   fleet.setMachines([ENDPOINT, MAC]);
   fleet.setRegistry(MEMBER_REGISTRY);
   const listed = (await router.handle("list_workspaces")) as { workspaces: { id: string; name: string; machines?: string[] }[]; active: string };
+  assert.equal(listed.active, "w");
   assert.deepEqual(listed.workspaces.map((w) => [w.id, w.name]), [["w", "W"], [ORG.id, ORG.name]], "the organization's workspace is one the window can open");
   assert.deepEqual(listed.workspaces.find((w) => w.id === ORG.id)?.machines, ["cmp_vm"]);
-  const row = await rowOf(router, "cmp_vm");
-  assert.deepEqual([row.hosts, row.materializes, row.refuses], [false, false, true]);
-  assert.deepEqual(row.workspaces, [ORG]);
-  assert.deepEqual(workspaceToRun(row, "w"), ORG, "picking Nube IA switches instead of being disabled");
+  assert.deepEqual(await pickable(router), ["cmp_home", "cmp_mac"], "Nube IA has no permission in «W»: it is not offered");
+});
 
+test("a member in the organization's workspace gets its server in «Ejecutar en», and a task is created there", async () => {
+  const vm = fakeLink({ send_message: "t9" });
+  const { router, fleet, native } = setup({ cmp_vm: vm, cmp_mac: fakeLink({}) }, {}, "cmp_mac");
+  fleet.setMachines([ENDPOINT, MAC]);
+  fleet.setRegistry(MEMBER_REGISTRY);
+  await router.handle("list_workspaces");
   await router.handle("set_active_workspace", { id: ORG.id });
   assert.ok(!native.some((c) => c.command === "set_active_workspace" && c.args.id === ORG.id), "this computer's engine does not have it");
   assert.equal(((await router.handle("list_workspaces")) as { active: string }).active, ORG.id);
-  assert.equal(workspaceToRun(await rowOf(router, "cmp_vm"), ORG.id), null);
-  const mac = await rowOf(router, "cmp_mac");
-  assert.deepEqual([mac.hosts, mac.materializes], [false, false], "the member's own machines never make it theirs");
-  assert.deepEqual(workspaceToRun(await rowOf(router, "cmp_home"), ORG.id), { id: "w", name: "W" }, "picking this computer goes back to one of its own");
+  assert.deepEqual(await pickable(router), ["cmp_vm"], "only the server: neither this computer nor the member's Mac may make it theirs");
+  assert.equal(router.createsOn(ORG.id)?.machine, "cmp_vm", "a pick of «W» that has no permission here does not count");
   await router.handle("send_message", { project: "p1", prompt: "hola" });
-  assert.deepEqual(vm.calls.map((c) => [c.command, c.workspace]), [["send_message", ORG.id]], "without a pick it runs on the server, with nothing to make its own");
+  assert.deepEqual(vm.calls.map((c) => [c.command, c.workspace]), [["send_message", ORG.id]], "it runs on the server, with nothing to make its own");
+});
+
+test("the owner keeps the organization's workspace from the registry, and the server stays out of her other workspaces", async () => {
+  const { router, fleet } = setup({ cmp_vm: fakeLink({}), cmp_mac: fakeLink({}) }, { list_workspaces: { workspaces: [{ id: "w", name: "W" }, ORG], active: "w" } });
+  fleet.setMachines([ENDPOINT, MAC]);
+  fleet.setRegistry([...MEMBER_REGISTRY, { id: ORG.id, name: ORG.name, projects: [], computers: ["cmp_home"] }]);
+  const listed = (await router.handle("list_workspaces")) as { workspaces: { id: string }[] };
+  assert.deepEqual(listed.workspaces.map((w) => w.id), ["w", ORG.id], "once, from her own list");
+  assert.deepEqual(await pickable(router), ["cmp_home", "cmp_mac"]);
+  await router.handle("set_active_workspace", { id: ORG.id });
+  assert.deepEqual(await pickable(router), ["cmp_home", "cmp_vm", "cmp_mac"], "in it, the server and her machines that may make it theirs");
 });
 
 test("without `organization` in the row, the directory names the workspace an organization's VM brings", async () => {
@@ -780,7 +740,30 @@ test("without `organization` in the row, the directory names the workspace an or
   fleet.setRegistry(MEMBER_REGISTRY);
   const listed = (await router.handle("list_workspaces")) as { workspaces: { id: string }[] };
   assert.ok(listed.workspaces.some((w) => w.id === ORG.id));
-  const row = await rowOf(router, "cmp_vm");
-  assert.equal(row.refuses, true);
-  assert.deepEqual(workspaceToRun(row, "w"), ORG);
+  assert.deepEqual(await pickable(router), ["cmp_home"]);
+  await router.handle("set_active_workspace", { id: ORG.id });
+  assert.deepEqual(await pickable(router), ["cmp_vm"]);
+});
+
+test("one's own VM still makes the open workspace its own, and an engine that cannot yet is shown, not hidden", async () => {
+  const { router, fleet } = setup({ cmp_vm: fakeLink({}) });
+  fleet.setMachines([{ ...VM, linked: new Set(["w2"]) }]);
+  fleet.setRegistry([{ id: "w", name: "W", projects: [], computers: ["cmp_home"] }, { id: "w2", name: "W2", projects: [], computers: ["cmp_vm"] }]);
+  await router.handle("list_workspaces");
+  const row = ((await router.handle("machine_list")) as Row[]).find((m) => m.id === "cmp_vm") as Row;
+  assert.deepEqual([row.hosts, row.materializes, row.refuses], [false, true, false]);
+  assert.ok(runsWorkspace(row));
+  assert.ok(runsWorkspace({ hosts: false, materializes: false, refuses: false }), "an old engine is the person's machine: it stays, disabled with its reason");
+});
+
+test("creating on a machine whose relay refuses the workspace names the machine and the way out", async () => {
+  const vm = fakeLink({ send_message: () => Promise.reject({ code: "workspace_not_linked" }) });
+  const { router, fleet } = setup({ cmp_vm: vm });
+  fleet.setMachines([{ id: "cmp_vm", name: "Nube IA", wakes: true, linked: new Set(["org"]) }]);
+  await router.handle("list_workspaces");
+  await assert.rejects(router.handle("send_message", { project: "p1", prompt: "hola" }, on("cmp_vm")), (e: { what: string; detail: string }) => {
+    assert.equal(e.detail, "workspace_not_linked");
+    assert.equal(e.what, "Nube IA no trabaja en este workspace. Elige otra máquina en «Ejecutar en» o cambia a un workspace que tenga.");
+    return true;
+  });
 });

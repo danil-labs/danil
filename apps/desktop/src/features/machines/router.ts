@@ -172,13 +172,6 @@ export function createRouter(config: RouterConfig) {
   const attention = new AttentionBook();
   /** Los workspaces que esta computadora tiene, según su última lista; `null` antes de leerla. */
   let listed: Set<string> | null = null;
-  /** Los workspaces que la ventana ofrece (su última lista), con su nombre: a los que se puede cambiar. */
-  let offered = new Map<string, string>();
-  function rememberOffered(value: unknown) {
-    const rows = (value as { workspaces?: { id?: unknown; name?: unknown }[] } | null)?.workspaces;
-    if (!Array.isArray(rows)) return;
-    offered = new Map(rows.filter((w) => typeof w?.id === "string").map((w) => [w.id as string, typeof w.name === "string" && w.name ? w.name : (w.id as string)]));
-  }
   let active: string | null = null;
   /** Máquinas cuyo motor no sabe hacer suyo un workspace de la cuenta. */
   const stale = new Set<string>();
@@ -238,20 +231,11 @@ export function createRouter(config: RouterConfig) {
   };
   /** El servidor de una organización solo atiende el workspace de ella: no hace suyo otro. */
   const confined = (info: MachineInfo) => !!info.organization || guessed(info).length > 0;
-  /** Los workspaces que `machine` tiene y la ventana puede abrir; primero el que le da una organización. */
-  const workspacesOf = (info: MachineInfo): { id: string; name: string }[] => {
-    const given = info.organization ? [info.organization.workspace.id] : guessed(info);
-    const own = (fleet.getRegistry() ?? []).filter((w) => w.computers.includes(info.id)).map((w) => w.id);
-    const ids = [...new Set([...given, ...own, ...(info.linked ?? [])])];
-    const orgs = organizations();
-    return ids.flatMap((id) => {
-      const name = offered.get(id) ?? orgs.get(id)?.name;
-      return name ? [{ id, name }] : [];
-    });
-  };
-  /** Si `machine` puede hacer suyo `workspace` al crear ahí: el relay solo lo deja con un workspace de la cuenta. */
-  const adopts = (info: MachineInfo, workspace: string | null) =>
-    !stale.has(info.id) && !confined(info) && (!workspace || !organizations().has(workspace)) && (!workspace || !fleet.getRegistry() || !info.linked || fleet.inRegistry(workspace));
+  /** Si el relay deja a `machine` hacer suyo `workspace`: solo uno de la cuenta, y nunca el servidor de una organización. */
+  const permitted = (info: MachineInfo, workspace: string | null) =>
+    !confined(info) && (!workspace || (!organizations().has(workspace) && (!fleet.getRegistry() || !info.linked || fleet.inRegistry(workspace))));
+  /** Si `machine` puede hacer suyo `workspace` al crear ahí. */
+  const adopts = (info: MachineInfo, workspace: string | null) => !stale.has(info.id) && permitted(info, workspace);
   /** La lista de workspaces con los de una organización que ninguna lectura trajo: la ventana puede abrirlos. */
   function withOrganizations<T>(merged: T): T {
     const rows = (merged as { workspaces?: { id?: unknown }[] } | null)?.workspaces;
@@ -580,7 +564,6 @@ export function createRouter(config: RouterConfig) {
     if (Array.isArray(value?.workspaces)) listed = new Set(value.workspaces.map((w) => w?.id).filter((id): id is string => typeof id === "string"));
     if (active === null && typeof value?.active === "string") active = value.active;
     const merged = withOrganizations(fleet.merge(command, [{ machine: self as string, status: "ok", has: true, value, at: Date.now() }], null) as { active?: unknown } | undefined);
-    rememberOffered(merged ?? value);
     if (!merged) return value;
     // El activo es el de esta ventana, aunque sea un workspace que solo tienen otras máquinas.
     return active && elsewhere(active) ? { ...merged, active } : merged;
@@ -599,7 +582,6 @@ export function createRouter(config: RouterConfig) {
     // Una máquina sin workspaces no deja la página sin ninguno abierto: el primero de la cuenta.
     if (!active || !ids.includes(active)) active = typeof merged.active === "string" && ids.includes(merged.active) ? merged.active : (ids[0] ?? null);
     rememberContexts(merged);
-    rememberOffered(merged);
     return { ...merged, active };
   }
 
@@ -630,12 +612,9 @@ export function createRouter(config: RouterConfig) {
     });
   }
 
-  /** El workspace de una organización no se hace de esta computadora: elegirla vuelve a uno de los suyos. */
-  function selfMaterializes(workspace: string | null) {
-    if (!workspace || !organizations().has(workspace)) return { materializes: true };
-    const own = [...(listed ?? [])].flatMap((id) => (offered.has(id) ? [{ id, name: offered.get(id) as string }] : []));
-    return { materializes: false, refuses: true, workspaces: own };
-  }
+  /** El workspace de una organización no se hace de esta computadora. */
+  const selfMaterializes = (workspace: string | null) =>
+    workspace && organizations().has(workspace) ? { materializes: false, refuses: true } : { materializes: true };
 
   function machineList() {
     const workspace = active;
@@ -656,8 +635,7 @@ export function createRouter(config: RouterConfig) {
           power: fleet.power(m.id),
           hosts: workspace ? members.has(m.id) : null,
           materializes: adopts(m, workspace),
-          refuses: !stale.has(m.id) && !adopts(m, workspace),
-          workspaces: workspacesOf(m),
+          refuses: !permitted(m, workspace),
           wakes: m.wakes,
           ...(m.features?.length ? { features: [...m.features] } : {}),
           ...(m.version ? { version: m.version } : {}),
@@ -826,7 +804,9 @@ export function createRouter(config: RouterConfig) {
     const ws = workspace ?? active;
     const picked = config.pickedFor?.(ws) ?? null;
     const lead = defaultMachine(ws);
-    const machine = picked && (picked === self || fleet.has(picked)) ? picked : lead;
+    // Una elegida que no tiene permiso en este workspace no cuenta: «Ejecutar en» no la ofrece aquí.
+    const runs = (id: string) => (id === self ? !ws || !organizations().has(ws) : !!fleet.info(id) && (!ws || fleet.membersOf(ws).includes(id) || permitted(fleet.info(id) as MachineInfo, ws)));
+    const machine = picked && runs(picked) ? picked : lead;
     return machine ? { machine, lead: machine === lead } : null;
   }
 
