@@ -2254,6 +2254,8 @@ export default function App() {
     drainingQueues.clear();
     setSpacesContext(null);
     setWorkspaceActivo(a.active);
+    // «Ejecutar en» dice qué tiene cada máquina del workspace abierto: con otro, se relee.
+    void refetchMachines();
     setDraftBases({});
     // Sale la tira del anterior antes que `setSessionId(null)`, que apuntaría
     // «ninguna activa» en la que siga cargada. La nueva es la del escritorio y

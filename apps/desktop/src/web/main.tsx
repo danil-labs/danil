@@ -13,6 +13,7 @@ import {
   type MachineState,
   RelaySession,
   linkedWorkspaces,
+  organizationOf,
   serviceFeatures,
   listComputers,
   listDirectory,
@@ -36,6 +37,7 @@ import { chosenWebLayout, MOBILE_WEB_DIR } from "@terminus/design";
 import { Fleet, type Link, type MachineInfo, relayLink, unwrap } from "@terminus/fleet";
 import { type Accessor, createSignal, lazy, Suspense } from "solid-js";
 import { createRouter, type Router, type SliceChange } from "../features/machines/router";
+import { directoryEntries } from "../features/shell/workspace-directory";
 import { t } from "../lib/i18n";
 import { attentionCapability } from "./attention/capability";
 import { supportAccessCapability } from "./attention/support-access";
@@ -138,6 +140,7 @@ const infoOf = (c: Computer): MachineInfo => {
     name: c.name?.trim() || c.computer_id,
     wakes: wakes(c),
     linked: linkedWorkspaces(c),
+    organization: organizationOf(c),
     features: serviceFeatures(c),
     ...(c.host_version ? { version: c.host_version } : {}),
     ...(os ? { os } : {}),
@@ -230,7 +233,7 @@ function mountApp(computers: Computer[], base: Base, before?: (id: string) => ()
     if (answer.kind === "unauthorized") base.onUnauthorized?.();
     return answer.kind === "ok" ? answer.value : null;
   };
-  const active = createRouter({ self: null, fleet, native: null, registry, onSlices: slicesChanged, deliver, pickedFor });
+  const active = createRouter({ self: null, fleet, native: null, registry, onSlices: slicesChanged, deliver, pickedFor, directory: directoryEntries });
   router = active;
   // `?w=`: the page opens on that workspace of this account (the router keeps it while it is listed).
   if (mounted.workspace) void active.handle("set_active_workspace", { id: mounted.workspace }).catch(() => undefined);

@@ -48,6 +48,7 @@
   "web.machines.outdated_action": "{name} necesita actualizarse antes de usarla desde aquí.",
   "web.machines.timeout": "{name} no contestó a tiempo. Se ve lo último que dijo.",
   "web.machines.workspace_mismatch": "{name} no deja hacer esto desde aquí: es de otro workspace o de otra cuenta.",
+  "web.machines.workspace_refused": "{name} no trabaja en este workspace. Elige otra máquina en «Ejecutar en» o cambia a un workspace que tenga.",
   "web.onboarding.accounts.another": "Conectar otra",
   "web.onboarding.accounts.api_key": "Pega tu API key",
   "web.onboarding.accounts.failed": "No se pudo conectar {agent}.",

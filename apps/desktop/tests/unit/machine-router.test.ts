@@ -11,6 +11,7 @@ import { Fleet, type Link, type MachineInfo, classOf } from "@terminus/fleet";
 import "../helpers/catalog.ts";
 import { withoutAbout } from "../../src/lib/taskMentions.ts";
 import { createRouter } from "../../src/features/machines/router.ts";
+import { runsWorkspace } from "../../src/features/machines/runs-workspace.ts";
 
 type Args = Record<string, unknown>;
 type Call = { command: string; args: Args; workspace: string | null; id: string };
@@ -46,7 +47,7 @@ const row = (id: string, title = id) => ({ id, title, updated_at: 0 });
 const VM: MachineInfo = { id: "cmp_vm", name: "Danil VM", wakes: true };
 const MAC: MachineInfo = { id: "cmp_mac", name: "Mac de Ana", wakes: false };
 
-function setup(links: Record<string, ReturnType<typeof fakeLink>>, local: Record<string, unknown> = {}, picked: string | null = null, home?: () => { wakes?: boolean; os?: "linux" | "macos" | "windows" }) {
+function setup(links: Record<string, ReturnType<typeof fakeLink>>, local: Record<string, unknown> = {}, picked: string | null = null, home?: () => { wakes?: boolean; os?: "linux" | "macos" | "windows" }, directory?: () => { workspace_id: string | null; name: string; owner?: boolean }[]) {
   const native: { command: string; args: Args; options: unknown }[] = [];
   const changes: string[][] = [];
   const fleet = new Fleet({ self: "cmp_home", connect: (info) => links[info.id], deadlines: { read: 40, action: 200, intent: 400 } });
@@ -71,6 +72,7 @@ function setup(links: Record<string, ReturnType<typeof fakeLink>>, local: Record
     onSlices: (c) => changes.push(c),
     pickedFor: () => picked,
     home,
+    directory,
   });
   fleet.setMachines([VM, MAC].filter((m) => links[m.id]));
   return { router, fleet, native, changes };
@@ -683,6 +685,85 @@ test("the router does not judge an MCP block: a link that is not the relay (a WS
   await assert.rejects(other.router.handle("add_mcp_servers", { bloque: plain }, on("cmp_vm")), (e: { detail: string; what: string }) => {
     assert.equal(e.detail, "mcp_values_over_relay");
     assert.ok(e.what.includes("${secret:env/*/"), "the catalog phrase, with the marker");
+    return true;
+  });
+});
+
+/** Una miembro, no la dueña: el workspace de la organización no está en su registro ni en esta computadora. */
+const ORG = { id: "fqgx1w8m", name: "Danil Workspace" };
+const ENDPOINT: MachineInfo = { id: "cmp_vm", name: "Nube IA", wakes: true, linked: new Set([ORG.id]), organization: { id: "org_01", workspace: ORG } };
+const MEMBER_REGISTRY = [{ id: "w", name: "W", projects: [], computers: ["cmp_home", "cmp_mac"] }];
+type Row = { id: string; hosts: boolean | null; materializes?: boolean; refuses?: boolean };
+const pickable = async (router: ReturnType<typeof setup>["router"]) => ((await router.handle("machine_list")) as Row[]).filter(runsWorkspace).map((m) => m.id);
+
+test("a member in another workspace does not get the organization's server in «Ejecutar en»; the workspace switcher lists its workspace", async () => {
+  const { router, fleet } = setup({ cmp_vm: fakeLink({}), cmp_mac: fakeLink({}) });
+  fleet.setMachines([ENDPOINT, MAC]);
+  fleet.setRegistry(MEMBER_REGISTRY);
+  const listed = (await router.handle("list_workspaces")) as { workspaces: { id: string; name: string; machines?: string[] }[]; active: string };
+  assert.equal(listed.active, "w");
+  assert.deepEqual(listed.workspaces.map((w) => [w.id, w.name]), [["w", "W"], [ORG.id, ORG.name]], "the organization's workspace is one the window can open");
+  assert.deepEqual(listed.workspaces.find((w) => w.id === ORG.id)?.machines, ["cmp_vm"]);
+  assert.deepEqual(await pickable(router), ["cmp_home", "cmp_mac"], "Nube IA has no permission in «W»: it is not offered");
+});
+
+test("a member in the organization's workspace gets its server in «Ejecutar en», and a task is created there", async () => {
+  const vm = fakeLink({ send_message: "t9" });
+  const { router, fleet, native } = setup({ cmp_vm: vm, cmp_mac: fakeLink({}) }, {}, "cmp_mac");
+  fleet.setMachines([ENDPOINT, MAC]);
+  fleet.setRegistry(MEMBER_REGISTRY);
+  await router.handle("list_workspaces");
+  await router.handle("set_active_workspace", { id: ORG.id });
+  assert.ok(!native.some((c) => c.command === "set_active_workspace" && c.args.id === ORG.id), "this computer's engine does not have it");
+  assert.equal(((await router.handle("list_workspaces")) as { active: string }).active, ORG.id);
+  assert.deepEqual(await pickable(router), ["cmp_vm"], "only the server: neither this computer nor the member's Mac may make it theirs");
+  assert.equal(router.createsOn(ORG.id)?.machine, "cmp_vm", "a pick of «W» that has no permission here does not count");
+  await router.handle("send_message", { project: "p1", prompt: "hola" });
+  assert.deepEqual(vm.calls.map((c) => [c.command, c.workspace]), [["send_message", ORG.id]], "it runs on the server, with nothing to make its own");
+});
+
+test("the owner keeps the organization's workspace from the registry, and the server stays out of her other workspaces", async () => {
+  const { router, fleet } = setup({ cmp_vm: fakeLink({}), cmp_mac: fakeLink({}) }, { list_workspaces: { workspaces: [{ id: "w", name: "W" }, ORG], active: "w" } });
+  fleet.setMachines([ENDPOINT, MAC]);
+  fleet.setRegistry([...MEMBER_REGISTRY, { id: ORG.id, name: ORG.name, projects: [], computers: ["cmp_home"] }]);
+  const listed = (await router.handle("list_workspaces")) as { workspaces: { id: string }[] };
+  assert.deepEqual(listed.workspaces.map((w) => w.id), ["w", ORG.id], "once, from her own list");
+  assert.deepEqual(await pickable(router), ["cmp_home", "cmp_mac"]);
+  await router.handle("set_active_workspace", { id: ORG.id });
+  assert.deepEqual(await pickable(router), ["cmp_home", "cmp_vm", "cmp_mac"], "in it, the server and her machines that may make it theirs");
+});
+
+test("without `organization` in the row, the directory names the workspace an organization's VM brings", async () => {
+  const directory = () => [{ workspace_id: "w", name: "W", owner: true }, { workspace_id: ORG.id, name: ORG.name, owner: false }];
+  const { router, fleet } = setup({ cmp_vm: fakeLink({}) }, {}, null, undefined, directory);
+  fleet.setMachines([{ id: "cmp_vm", name: "Nube IA", wakes: true, linked: new Set([ORG.id]) }]);
+  fleet.setRegistry(MEMBER_REGISTRY);
+  const listed = (await router.handle("list_workspaces")) as { workspaces: { id: string }[] };
+  assert.ok(listed.workspaces.some((w) => w.id === ORG.id));
+  assert.deepEqual(await pickable(router), ["cmp_home"]);
+  await router.handle("set_active_workspace", { id: ORG.id });
+  assert.deepEqual(await pickable(router), ["cmp_vm"]);
+});
+
+test("one's own VM still makes the open workspace its own, and an engine that cannot yet is shown, not hidden", async () => {
+  const { router, fleet } = setup({ cmp_vm: fakeLink({}) });
+  fleet.setMachines([{ ...VM, linked: new Set(["w2"]) }]);
+  fleet.setRegistry([{ id: "w", name: "W", projects: [], computers: ["cmp_home"] }, { id: "w2", name: "W2", projects: [], computers: ["cmp_vm"] }]);
+  await router.handle("list_workspaces");
+  const row = ((await router.handle("machine_list")) as Row[]).find((m) => m.id === "cmp_vm") as Row;
+  assert.deepEqual([row.hosts, row.materializes, row.refuses], [false, true, false]);
+  assert.ok(runsWorkspace(row));
+  assert.ok(runsWorkspace({ hosts: false, materializes: false, refuses: false }), "an old engine is the person's machine: it stays, disabled with its reason");
+});
+
+test("creating on a machine whose relay refuses the workspace names the machine and the way out", async () => {
+  const vm = fakeLink({ send_message: () => Promise.reject({ code: "workspace_not_linked" }) });
+  const { router, fleet } = setup({ cmp_vm: vm });
+  fleet.setMachines([{ id: "cmp_vm", name: "Nube IA", wakes: true, linked: new Set(["org"]) }]);
+  await router.handle("list_workspaces");
+  await assert.rejects(router.handle("send_message", { project: "p1", prompt: "hola" }, on("cmp_vm")), (e: { what: string; detail: string }) => {
+    assert.equal(e.detail, "workspace_not_linked");
+    assert.equal(e.what, "Nube IA no trabaja en este workspace. Elige otra máquina en «Ejecutar en» o cambia a un workspace que tenga.");
     return true;
   });
 });

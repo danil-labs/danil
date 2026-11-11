@@ -266,6 +266,25 @@ test("workspace members come from the account registry, not from whoever answere
   fleet.setRegistry(null);
   fleet.setMachines([{ ...VM, linked: new Set(["w"]) }, { ...MAC, linked: new Set(["w2"]) }]);
   assert.deepEqual(fleet.membersOf("w"), ["cmp_vm"], "without a registry, the links say it");
+  fleet.setRegistry([{ id: "w", name: "W", projects: [], computers: ["cmp_home"] } as never]);
+  assert.deepEqual(fleet.membersOf("w2"), ["cmp_mac"], "a workspace outside the registry that a machine's row lists is still that machine's");
+});
+
+test("a member's endpoint on an organization's server serves its workspace, though the member's registry does not have it", () => {
+  const { fleet, changes } = setup({}, [VM, MAC]);
+  const org = { id: "fqgx1w8m", name: "Danil Workspace" };
+  fleet.setRegistry([{ id: "w", name: "W", projects: [], computers: ["cmp_home", "cmp_mac"] } as never]);
+  const endpoint = { ...VM, name: "Nube IA", linked: new Set<string>(), organization: { id: "org_01", workspace: org } };
+  fleet.setMachines([endpoint, MAC]);
+  assert.deepEqual(fleet.membersOf(org.id), ["cmp_vm"], "the row's organization says it, even with no link listed");
+  assert.deepEqual(fleet.membersOf("w"), ["cmp_mac"]);
+  assert.deepEqual(fleet.organizationWorkspaces(), [{ ...org, machines: ["cmp_vm"] }]);
+  assert.equal(fleet.inRegistry(org.id), false, "it stays out of the account's own workspaces");
+  changes.length = 0;
+  fleet.setMachines([{ ...endpoint, name: "Nube IA", organization: { id: "org_01", workspace: { ...org, name: "Danil" } } }, MAC]);
+  assert.deepEqual(changes, ["cmp_vm"], "a renamed organization workspace is a change of that machine");
+  fleet.setMachines([VM, MAC]);
+  assert.deepEqual(fleet.organizationWorkspaces(), [], "without the field (an older control plane) the fleet knows none");
 });
 
 test("machines are added, removed and renamed live without reconnecting the others", async () => {

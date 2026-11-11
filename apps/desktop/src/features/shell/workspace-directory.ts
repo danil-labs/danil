@@ -30,6 +30,9 @@ export const reloadDirectory = () => void store().refetch();
 
 const entries = (): readonly DirectoryEntry[] => directory()?.workspaces ?? [];
 
+/** Las filas ya leídas, sin crear la lista antes de que la plataforma tenga directorio. */
+export const directoryEntries = (): readonly DirectoryEntry[] => (capabilities().workspaceDirectory ? entries() : []);
+
 /** Lo que la barra deja ver; `null` si muestra todos. */
 export const workspaceBar = (active: string | null) => barWorkspaceIds(entries(), active);
 

@@ -12,6 +12,15 @@ export function linkedWorkspaces(computer: Pick<Computer, "workspaces">): Readon
   return Array.isArray(list) ? new Set(list.filter((id): id is string => typeof id === "string")) : null;
 }
 
+/** La organización cuyo servidor atiende `computer`, con su workspace; `null` si la fila no lo dice. */
+export function organizationOf(computer: Pick<Computer, "organization">): { id: string; workspace: { id: string; name: string } } | null {
+  const raw = computer.organization as { organization_id?: unknown; workspace?: { id?: unknown; name?: unknown } | null } | null | undefined;
+  const id = raw?.workspace?.id;
+  if (typeof raw?.organization_id !== "string" || typeof id !== "string" || !id) return null;
+  const name = typeof raw.workspace?.name === "string" && raw.workspace.name.trim() ? raw.workspace.name.trim() : id;
+  return { id: raw.organization_id, workspace: { id, name } };
+}
+
 /**
  * Las funciones que el motor de `computer` anuncia (`status.service_features`
  * de su último `hello`). Un plano de control que no las dice da ninguna: la
