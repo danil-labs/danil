@@ -28,20 +28,26 @@ async function page(handler) {
   } });
 }
 const button = (w, text) => [...w.document.querySelectorAll("button")].find(b => b.textContent.includes(text));
-const profile = () => Response.json({ id: "user_A", name: "A", organizations: [] });
-const workspaces = () => Response.json({ items: [{ id: "11", org: "org_A", name: "Alpha", role: "owner" }], next_cursor: null });
+const profile = (workspace = "11") => Response.json({ id: "user_A", name: "A", workspace, organizations: [] });
+const workspaces = () => Response.json({ items: [{ id: "11", org: "org_A", name: "Alpha", role: "owner" }, { id: "12", org: "org_A", name: "Beta", role: "owner" }], next_cursor: null });
 
-test("platform page selects, retains an uncertain operation's key and signs out without login loop", async () => {
-  const keys = [];
-  let calls = 0;
+test("lost A response blocks B until reconciliation; B then A creates new intents", async () => {
+  const writes = [];
+  const receipts = new Map();
+  let actual = "12";
+  let lost = true;
+  let down = false;
   const app = await page((path, init) => {
-    calls++;
-    if (path.endsWith("/me")) return profile();
+    if (path.endsWith("/me")) return down ? new Response(null, { status: 503 }) : profile(actual);
     if (path.endsWith("/workspaces")) return workspaces();
     if (path.endsWith("/csrf")) return Response.json({ csrf_token: "bound" });
     if (path.endsWith("/select")) {
-      keys.push(new Headers(init.headers).get("idempotency-key"));
-      return keys.length === 1 ? new Response(null, { status: 503 }) : Response.json({ workspace: "11", ctx: "ctx", authz_ver: 2 });
+      const id = JSON.parse(init.body).workspace;
+      const key = new Headers(init.headers).get("idempotency-key");
+      writes.push({ id, key });
+      if (!receipts.has(key)) { actual = id; receipts.set(key, id); }
+      if (lost) { lost = false; down = true; return new Response(null, { status: 503 }); }
+      return Response.json({ workspace: receipts.get(key), ctx: "ctx", authz_ver: 2 });
     }
     assert.ok(path.endsWith("/logout"));
     return new Response(null, { status: 204 });
@@ -50,14 +56,29 @@ test("platform page selects, retains an uncertain operation's key and signs out 
   await until(() => button(w, "Alpha"));
   button(w, "Alpha").click();
   await until(() => w.document.querySelector('[role="alert"]'));
+  assert.equal(button(w, "Alpha").disabled, true);
+  assert.equal(button(w, "Beta").disabled, true);
+  button(w, "Beta").click();
+  assert.equal(writes.length, 1);
+  button(w, "Reintentar").click();
+  await until(() => w.document.querySelector('[role="alert"]'));
+  assert.equal(button(w, "Beta").disabled, true, "authority outage cannot unlock another intent");
+  assert.equal(w.document.querySelector('[aria-pressed="true"]'), null);
+  down = false;
+  button(w, "Reintentar").click();
+  await until(() => !button(w, "Beta").disabled);
+  assert.equal(button(w, "Alpha").getAttribute("aria-pressed"), "true");
+  button(w, "Beta").click();
+  await until(() => button(w, "Beta").getAttribute("aria-pressed") === "true");
   button(w, "Alpha").click();
   await until(() => button(w, "Alpha").getAttribute("aria-pressed") === "true");
-  assert.equal(keys.length, 2);
+  assert.equal(actual, "11");
+  const keys = writes.filter(row => row.id === "11").map(row => row.key);
   assert.equal(keys[0], keys[1]);
+  assert.notEqual(keys[0], keys.at(-1));
   button(w, "Cerrar sesión").click();
   await until(() => w.document.querySelector('a[href*="/v1/identity/login"]'));
   assert.equal(w.document.querySelector('[aria-pressed="true"]'), null);
-  assert.equal(calls, 8);
   assert.deepEqual(app.failures, []);
 });
 

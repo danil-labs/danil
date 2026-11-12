@@ -7,6 +7,7 @@ import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
+import { workspaceSelection } from "../../src/web/workspace-selection.ts";
 import { platformSession, PlatformSessionError } from "../../src/web/platform-session.ts";
 
 // Run explicitly with DANIL_PLATFORM_REPOS pointing to sibling edge/identity/workspaces clones.
@@ -75,7 +76,7 @@ test("SPA cookie session against edge, identity and workspaces Workers with Post
       return MFResponse.json({ access_token: token, refresh_token: "synthetic-refresh", user: { id: "user_A" } });
     };
     const jwks = () => MFResponse.json({ ...publicKeys, issued_at: Math.floor(Date.now()/1000), expires_at: Math.floor(Date.now()/1000)+60, revoked_kids: [] });
-    const config = { WORKOS_ISSUER: "https://workos.test", WORKOS_AUDIENCE: "https://api.danil.ai", WORKOS_JWKS_URL: "https://workos.test/jwks", WEB_CLIENT_ID: "web-test" };
+    const config = { WORKOS_ISSUER: "https://workos.test", WORKOS_AUDIENCE: "https://api.danil.ai", WORKOS_JWKS_URL: "https://workos.test/jwks", WEB_CLIENT_ID: "web-test", ALLOWED_WEB_ORIGINS: "https://app.danil.ai,https://alfa-app.danil.ai" };
     const service = (name, bindings, serviceBindings) => ({ name, modules: true, script: bundles[name], compatibilityDate: "2026-11-12", compatibilityFlags: ["nodejs_compat"],
       hyperdrives: { HYPERDRIVE: db.appUrl.replace("identity_service:", `${name}_service:`) },
       bindings: { SQL_TIMEOUT_MS: "2000", ...bindings }, serviceBindings: { JWKS_AUTHORITY: jwks, ...serviceBindings }, outboundService: workos });
@@ -89,7 +90,7 @@ test("SPA cookie session against edge, identity and workspaces Workers with Post
         durableObjects: { LIMITS: { className: "WorkspaceLimits", useSQLite: true } },
         serviceBindings: { IDENTITY: { name: "identity", entrypoint: "WebSessions" }, WORKSPACES: { name: "workspaces", entrypoint: "EdgeWorkspaces" },
           COMPUTE: () => new MFResponse(null, { status: 500 }), CREDENTIALS: () => new MFResponse(null, { status: 500 }), BILLING: () => new MFResponse(null, { status: 500 }) }, outboundService: workos },
-      service("identity", { ...config, AUTHKIT_ORIGIN: "https://auth.test", WORKOS_API_ORIGIN: "https://workos.test", WORKOS_API_KEY: "synthetic", WEB_RETURN_URLS: '["https://app.danil.ai/"]',
+      service("identity", { ...config, AUTHKIT_ORIGIN: "https://auth.test", WORKOS_API_ORIGIN: "https://workos.test", WORKOS_API_KEY: "synthetic", WEB_RETURN_URLS: '["https://alfa-app.danil.ai/"]',
         SESSION_KEYS: JSON.stringify({ active: "test", keys: { test: randomBytes(32).toString("base64url") } }) }, {
         WORKSPACES_AUTHZ: { name: "workspaces", entrypoint: "AuthorizationAuthority" }, WEB_WORKSPACES: { name: "workspaces", entrypoint: "EdgeWorkspaces" } }),
       service("workspaces", {}, { IDENTITY_AUTHZ: { name: "identity", entrypoint: "AuthorizationProjection" } }),
@@ -104,13 +105,13 @@ test("SPA cookie session against edge, identity and workspaces Workers with Post
       assert.equal(r.headers.has("authorization"), false);
       const headers = new Headers(r.headers);
       headers.set("cookie", cookie);
-      headers.set("origin", "https://app.danil.ai");
+      headers.set("origin", "https://alfa-app.danil.ai");
       requests.push(r.url);
-      return runtime.dispatchFetch(r.url, { method: r.method, headers: Object.fromEntries(headers), body: r.method === "POST" ? await r.text() : undefined, redirect: "manual" });
+      return runtime.dispatchFetch(r.url, { method: r.method, headers: Object.fromEntries(headers), body: r.method === "POST" ? await r.text() : undefined, signal: r.signal, redirect: "manual" });
     };
     const api = platformSession({ origin: "https://api.danil.ai", timeoutMs: 5000 }, browserFetch);
     await t.test("PKCE login/callback issues cookie; callback replay fails", async () => {
-      const login = await runtime.dispatchFetch(api.loginUrl("https://app.danil.ai/"), { headers: { "cf-connecting-ip": "192.0.2.1" }, redirect: "manual" });
+      const login = await runtime.dispatchFetch(api.loginUrl("https://alfa-app.danil.ai/"), { headers: { "cf-connecting-ip": "192.0.2.1" }, redirect: "manual" });
       assert.equal(login.status, 302, await login.clone().text());
       const target = new URL(login.headers.get("location"));
       const callback = `https://api.danil.ai/v1/identity/callback?code=synthetic&state=${target.searchParams.get("state")}`;
@@ -133,6 +134,28 @@ test("SPA cookie session against edge, identity and workspaces Workers with Post
       assert.equal(context.rows[0].workspace, "9007199254740993");
       assert.equal(context.rows[0].selection_ver, 2);
       assert.equal((await db.admin.query("SELECT * FROM tenancy.selection_receipts")).rowCount, 1);
+    });
+    await t.test("lost A response, reconciliation, B and new A use distinct durable operations", async () => {
+      let lost = true;
+      const writes = [];
+      const selected = workspaceSelection({
+        active: api.active,
+        async select(id, key) {
+          writes.push({ id, key });
+          const response = await api.select(id, key);
+          if (lost) { lost = false; throw new Error("lost after server commit"); }
+          return response;
+        },
+      });
+      await assert.rejects(selected.choose("9007199254740993"));
+      await selected.choose("11");
+      assert.equal(await api.active(), "11");
+      await selected.choose("9007199254740993");
+      assert.equal(selected.active(), await api.active());
+      assert.equal(selected.active(), "9007199254740993");
+      const keys = writes.filter(row => row.id === "9007199254740993").map(row => row.key);
+      assert.equal(keys[0], keys[1]);
+      assert.notEqual(keys[0], keys.at(-1));
     });
     await t.test("missing CSRF and another organization's workspace are denied", async () => {
       const response = await browserFetch("https://api.danil.ai/v1/workspaces/select", { credentials: "include", method: "POST", headers: { "content-type": "application/json", "idempotency-key": "missing-csrf" }, body: '{"workspace":"11"}' });

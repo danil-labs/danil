@@ -28,7 +28,7 @@ test("cookie session reads profile and all workspace pages, selects with CSRF an
     assert.equal(r.headers.has("x-danil-workspace"), false);
     const url = new URL(r.url);
     assert.equal(url.origin, "https://api.danil.ai");
-    if (url.pathname.endsWith("/me")) return Response.json({ id: "user_A", name: "A", organizations: [] });
+    if (url.pathname.endsWith("/me")) return Response.json({ id: "user_A", name: "A", workspace: "11", organizations: [] });
     if (url.pathname.endsWith("/csrf")) return Response.json({ csrf_token: "bound-to-session" });
     if (url.pathname.endsWith("/select")) {
       assert.equal(r.headers.get("x-csrf-token"), "bound-to-session");

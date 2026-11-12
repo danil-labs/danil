@@ -4,6 +4,7 @@ import { aplicarLengua, t } from "../lib/i18n";
 import { seguirElTema } from "../lib/theme";
 import { Button } from "../ui/Button";
 import { platformSession, PlatformSessionError, type PlatformProfile, type PlatformWorkspace } from "./platform-session";
+import { workspaceSelection } from "./workspace-selection";
 import "./phrases";
 
 export function startPlatform(options: { origin: string; timeoutMs: number }, root: HTMLElement) {
@@ -18,7 +19,8 @@ export function startPlatform(options: { origin: string; timeoutMs: number }, ro
     const [busy, setBusy] = createSignal(false);
     const [signedOut, setSignedOut] = createSignal(false);
     const [error, setError] = createSignal("");
-    const pending = new Map<string, string>();
+    let selection = workspaceSelection(api);
+    const [uncertain, setUncertain] = createSignal(false);
     async function run(action: () => Promise<void>) {
       if (busy()) return;
       setBusy(true);
@@ -30,11 +32,12 @@ export function startPlatform(options: { origin: string; timeoutMs: number }, ro
           setProfile(undefined);
           setWorkspaces([]);
           setActive(undefined);
-          pending.clear();
+          selection = workspaceSelection(api);
         } else setError(cause instanceof PlatformSessionError && cause.status === 403 ? "web.platform.denied" : "web.platform.unavailable");
-      } finally { setBusy(false); }
+      } finally { setActive(selection.active() ?? undefined); setUncertain(selection.uncertain()); setBusy(false); }
     }
     const load = () => run(async () => {
+      await selection.reconcile();
       const person = await api.me();
       const listed = await api.workspaces();
       setProfile(person);
@@ -42,19 +45,14 @@ export function startPlatform(options: { origin: string; timeoutMs: number }, ro
       setSignedOut(false);
     });
     const select = (id: string) => run(async () => {
-      // Preserve the key after an uncertain response; a retry must reconcile the same operation.
-      const key = pending.get(id) ?? crypto.randomUUID();
-      pending.set(id, key);
-      const selected = await api.select(id, key);
-      pending.delete(id);
-      setActive(selected.workspace);
+      await selection.choose(id);
     });
     onMount(() => { void load(); });
     return <main class="min-h-full bg-bg px-6 py-10 text-neutral-950" data-platform-session="" aria-busy={busy()}>
       <div class="mx-auto grid max-w-xl gap-6">
         <header class="flex items-center justify-between gap-4">
           <h1 class="m-0 font-display text-lead font-bold">{t("common.brand_name")}</h1>
-          <Show when={profile()}><Button variant="ghost" disabled={busy()} onClick={() => void run(async () => { await api.logout(); setProfile(undefined); setWorkspaces([]); setActive(undefined); pending.clear(); setSignedOut(true); })}>{t("web.platform.sign_out")}</Button></Show>
+          <Show when={profile()}><Button variant="ghost" disabled={busy()} onClick={() => void run(async () => { await api.logout(); setProfile(undefined); setWorkspaces([]); selection = workspaceSelection(api); setSignedOut(true); })}>{t("web.platform.sign_out")}</Button></Show>
         </header>
         <Show when={profile()}>{person => <h2 class="m-0 text-body font-semibold">{person().name}</h2>}</Show>
         <Show when={signedOut()}><Button as="a" href={api.loginUrl(returnTo)}>{t("web.auth.signin")}</Button></Show>
@@ -62,7 +60,7 @@ export function startPlatform(options: { origin: string; timeoutMs: number }, ro
           <section class="grid gap-3" aria-label={t("web.platform.workspaces")}>
             <h2 class="m-0 text-ui font-semibold">{t("web.platform.workspaces")}</h2>
             <For each={workspaces()} fallback={<p class="text-ui text-neutral-500">{t("web.platform.empty")}</p>}>{row =>
-              <Button variant="secondary" disabled={busy()} aria-pressed={active() === row.id} onClick={() => void select(row.id)}>{row.name}<Show when={active() === row.id}><span class="text-caption">{t("web.platform.active")}</span></Show></Button>
+              <Button variant="secondary" disabled={busy() || uncertain()} aria-pressed={active() === row.id} onClick={() => void select(row.id)}>{row.name}<Show when={active() === row.id}><span class="text-caption">{t("web.platform.active")}</span></Show></Button>
             }</For>
           </section>
         </Show>
