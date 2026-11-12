@@ -1,3 +1,4 @@
+import { isRetiredAgent } from "@terminus/tasks";
 import type { HistoryRef } from "@terminus/protocol";
 import type { Preview } from "../artifacts/Preview";
 import { HistoryDetails } from "./HistoryDetails";
@@ -1010,7 +1011,8 @@ export default function Chat(props: ChatProps) {
   const bloqueoDeSuperficie = () => {
     if (props.superficies === null || props.superficies.length === 0) return null;
     if (!actual()) {
-      return t("chat.surface.gone");
+      // Una tarea de los modelos locales retirados conserva su historia, pero no tiene con qué seguir.
+      return isRetiredAgent(props.agent) ? t("chat.surface.local_retired") : t("chat.surface.gone");
     }
     const falta = actual()!.porque;
     return falta ? prosa(falta) : null;

@@ -33,10 +33,6 @@ export function rotuloDeMarca(marca: string): string {
       return t("surfaces.badge.no_account");
     case "sin activar":
       return t("surfaces.badge.off");
-    case "sin modelo":
-      return t("surfaces.badge.no_model");
-    case "sin motor":
-      return t("surfaces.badge.no_engine");
     case "radiant":
       return t("surfaces.badge.harness");
     // Una marca desconocida se pinta tal cual: un identificador se reporta y se

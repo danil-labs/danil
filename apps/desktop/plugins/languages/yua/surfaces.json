@@ -1,18 +1,13 @@
 {
   "surfaces.badge.no_account": "maʼ nupʼaʼaniʼ",
   "surfaces.badge.no_driver": "minaʼan máax bisik",
-  "surfaces.badge.no_engine": "minaʼan u motoril",
-  "surfaces.badge.no_model": "minaʼan u modeloil",
   "surfaces.badge.not_installed": "maʼ oksaʼaniʼ",
   "surfaces.badge.off": "maʼ tsʼoʼok u péeksaʼal",
   "surfaces.badge.unpicked": "maʼ tsʼoʼok u yéeyaʼal",
   "surfaces.free_off": "Le modeloʼob siibaloʼ maʼ péeksaʼanoʼob tiʼ le kúuchil meyajaʼ",
   "surfaces.label.free": "Modeloʼob siibal",
-  "surfaces.label.local": "Weyeʼ",
   "surfaces.no_account": "U ookbalil {agent} maʼ nupʼaʼaniʼ",
   "surfaces.no_driver": "Le u jaatsil le appaʼ maʼ u yojel u bisik jumpʼéel meyaj tiʼ {agent}",
-  "surfaces.no_engine": "Minaʼan mix jumpʼéel motor líikʼsaʼan tiʼ le computadoraaʼ",
   "surfaces.no_key": "A ookbalil {agent} maʼ nupʼaʼaniʼ",
-  "surfaces.no_model": "Le motor líikʼsaʼan teechoʼ minaʼan mix jumpʼéel modelo éensaʼan tiʼiʼ",
   "surfaces.not_installed": "{agent} minaʼan tiʼ le computadoraaʼ"
 }

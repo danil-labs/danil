@@ -40,7 +40,7 @@ export const RESPONSES = {
     models: [
       {
         id: "gpt-5.6", label: "GPT-5.6", gratis: null, efforts: [], default_effort: null,
-        note: { clave: "chat.model.note.local_loaded", datos: { engine: "Ollama" } },
+        note: { clave: "chat.model.note.opus", datos: {} },
       },
     ],
     fallback: false,

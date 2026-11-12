@@ -12,7 +12,7 @@ import {
   type SlashMenu,
 } from "@terminus/protocol";
 import { replaceSlash, slashAt } from "@terminus/chat/slash";
-import { menuSurfaces, modelName, modelPresentation, routerDiscovery, previewLabel, type Surface, surfaceHas, surfaceOf } from "@terminus/tasks";
+import { canonicalAgentId, isFreeRouterAgent, menuSurfaces, modelName, modelPresentation, routerDiscovery, previewLabel, type Surface, surfaceHas, surfaceOf } from "@terminus/tasks";
 import * as DocumentPicker from "expo-document-picker";
 import { File } from "expo-file-system";
 import * as ImagePicker from "expo-image-picker";
@@ -324,7 +324,7 @@ export function Composer({
   const chosen = models?.models.find((m) => m.id === model) ?? null;
   const selectedSurface = ownSurfaces.find((s) => s.id === surface) ?? (ownSurfaces.length === 1 ? ownSurfaces[0] : undefined);
   const selectedMark = selectedModelMark(current, model, selectedSurface);
-  const selectedProviderLabel = selectedSurface ? surfacePresentation(selectedSurface, { free: t("composer.free_models"), local: w("surfaces.label.local") }).label : providerLabel(current);
+  const selectedProviderLabel = selectedSurface ? surfacePresentation(selectedSurface, { free: t("composer.free_models") }).label : providerLabel(current);
   const modelText = model ? modelName(model, models) : previewLabel(lang, "default_model");
   const efforts = chosen?.efforts ?? models?.models[0]?.efforts ?? [];
   // Lo que se ve es lo que se manda: el elegido, o el de la tarea o el workspace, o el del proveedor.
@@ -744,7 +744,7 @@ export function Composer({
                 // Lo utilizable y lo de la tarea; los gratuitos sin activar también, para llevar a activarlos.
                 const own = surfaces.filter((s) => s.provider === p.id && (menu.includes(s) || s.catalogo === "gratuitos"));
                 if (!own.length) {
-                  const presentation = surfacePresentation({ provider: p.id, catalogo: "todo", label: p.label }, { free: t("composer.free_models"), local: w("surfaces.label.local") });
+                  const presentation = surfacePresentation({ provider: p.id, catalogo: "todo", label: p.label }, { free: t("composer.free_models") });
                   return (
                     <SheetOption
                       key={p.id}
@@ -757,7 +757,7 @@ export function Composer({
                   );
                 }
                 return own.map((s) => {
-                  const presentation = surfacePresentation(s, { free: t("composer.free_models"), local: w("surfaces.label.local") });
+                  const presentation = surfacePresentation(s, { free: t("composer.free_models") });
                   return (
                   <SheetOption
                     key={`${p.id}/${s.id}`}
@@ -787,7 +787,7 @@ export function Composer({
                         testID="router-activate"
                         accessibilityRole="button"
                         onPress={() => {
-                          const row = routerRows?.find((r) => r.provider === "opencode-zen");
+                          const row = routerRows?.find((r) => isFreeRouterAgent(canonicalAgentId(r.provider, "danil-free/")));
                           if (!row || !host || !workspace) return;
                           setSheet(null);
                           setRouterAsking({ ...row, host, workspace });

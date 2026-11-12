@@ -59,7 +59,7 @@ import {
   isUnknownCommand,
 } from "@terminus/protocol";
 import type { TaskActivity } from "@terminus/design";
-import { chipModel, type FlatRow, flattenTasks, launcherOf, REMOTE_CHILD_FEATURE, type RemoteScope, remoteLauncherOf, type Surface } from "@terminus/tasks";
+import { canonicalAgentId, chipModel, FREE_ROUTER_OPENCODE, type FlatRow, isFreeRouterAgent, flattenTasks, launcherOf, REMOTE_CHILD_FEATURE, type RemoteScope, remoteLauncherOf, type Surface } from "@terminus/tasks";
 import { AUTO_MODE } from "./composer.ts";
 import { type Host, HostError } from "./hosts.ts";
 
@@ -824,13 +824,13 @@ export async function freeModelsOf(host: Host, workspace: string): Promise<FreeM
   const policy = await freePolicyOf(host, workspace, true);
   if (!policy) return [];
   const { value: surfaces, cachedAt } = await host.call<Surface<Frase>[]>("list_surfaces", workspace, {}).catch(() => ({ value: [], cachedAt: null }));
-  const surface = cachedAt === null && Array.isArray(surfaces) ? surfaces.find((s) => s.provider === "opencode-zen" && s.catalogo === "gratuitos") : undefined;
+  const surface = cachedAt === null && Array.isArray(surfaces) ? surfaces.find((s) => s.catalogo === "gratuitos" && isFreeRouterAgent(canonicalAgentId(s.provider, FREE_BEAM_MODEL))) : undefined;
   let usable = false;
   if (policy.enabled && policy.accepted && surface?.usable) {
     const { value, cachedAt: modelsCachedAt } = await host.call<ProviderModels>("list_models", workspace, { provider: surface.provider }).catch(() => ({ value: null, cachedAt: null }));
     usable = modelsCachedAt === null && value?.fallback !== true && value?.models?.some((m) => m.id === FREE_BEAM_MODEL && m.gratis === true) === true;
   }
-  return [{ provider: "opencode-zen", label: "Danil", text: { lines: policy.lines, version: policy.version }, accepted: policy.accepted, usable, policy: { ...policy, destination_host: host.id } }];
+  return [{ provider: surface?.provider ?? FREE_ROUTER_OPENCODE, label: "Danil", text: { lines: policy.lines, version: policy.version }, accepted: policy.accepted, usable, policy: { ...policy, destination_host: host.id } }];
 }
 
 /** Revalida el texto mostrado antes de guardar; consulta el catálogo después. */

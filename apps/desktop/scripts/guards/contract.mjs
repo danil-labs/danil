@@ -21,7 +21,10 @@ const PROVENANCE = fileURLToPath(new URL("../../src-tauri/crates/engine-protocol
 const LOCK = fileURLToPath(new URL("../../seldon-runtime.lock", import.meta.url));
 
 /** El contrato copiado cuyo motor aún no tiene release publicada, y qué falta. */
-const MOTOR_PENDIENTE = null;
+const MOTOR_PENDIENTE = {
+  contract: "e8743072bc9b7af1f8b0061fc6d75035e082867b73c0724aaee56fa8c599275b",
+  why: "el motor sin modelos locales (opencode y free-router-opencode) aún no tiene release; se publica junto con este cambio",
+};
 
 const vendored = createHash("sha256").update(readFileSync(CONTRACT)).digest("hex");
 const declared = /SHA-256:\s*`([0-9a-f]{64})`/.exec(readFileSync(PROVENANCE, "utf8"))?.[1];

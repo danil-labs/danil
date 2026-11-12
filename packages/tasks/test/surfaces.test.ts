@@ -68,3 +68,19 @@ test("Credits es una partición exacta con disponibilidad independiente", () => 
   assert.equal(surfaceOf([credits, { ...zen, usable: false }, free], "opencode-zen", catalog[0].id, mixed, "danil-credits"), zen.id);
   assert.equal(surfaceOf([{ ...credits, usable: false }, zen, free], "opencode-zen", model.id, mixed, zen.id), "danil-credits");
 });
+
+test("con el motor nuevo, OpenCode y el Free Router son dos filas de una superficie cada una", () => {
+  const opencode: Surface = { id: "opencode", provider: "opencode", label: "OpenCode", catalogo: "todo", usable: true, marca: null, porque: null };
+  const router: Surface = { id: "free-router-opencode", provider: "free-router-opencode", label: "Free Router · OpenCode", catalogo: "gratuitos", usable: true, marca: null, porque: null };
+  assert.equal(surfaceHas(opencode, { id: "opencode-go/deepseek-v4.1-flash", gratis: false }), true);
+  assert.equal(surfaceHas(opencode, { id: "opencode/deepseek-v4.1-flash", gratis: false }), false);
+  assert.equal(surfaceHas(router, catalog[1]), true);
+  assert.equal(surfaceHas(router, catalog[0]), false);
+  // Una tarea guardada con el id viejo abre en la fila que le toca según su modelo.
+  assert.equal(surfaceOf([opencode, router], "opencode-zen", "danil-free/reflection/beam-free", catalog, undefined), "free-router-opencode");
+  assert.equal(surfaceOf([opencode, router], "opencode-zen", "opencode-go/x", [{ id: "opencode-go/x", gratis: false }], undefined), "opencode");
+  // Un modelo local retirado no tiene superficie.
+  assert.equal(surfaceOf([opencode, router], "opencode-local", "llamacpp/qwen", [], undefined), undefined);
+  const credits: Surface = { ...opencode, id: "danil-credits", label: "Danil Credits" };
+  assert.equal(surfaceHas(credits, { id: "danil-credits/deepseek/deepseek-v4.1-flash", gratis: false }), true);
+});

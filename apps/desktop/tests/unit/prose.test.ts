@@ -198,10 +198,10 @@ test("los rechazos de set_session_model y model_required pintan su frase en las 
   for (const [codigo, cat] of [["es", es], ["en", en]] as const) {
     elegirLengua(codigo);
     for (const clave of ["chat.session_model.not_offered", "chat.session_model.effort_not_offered", "chat.session_model.catalog_unavailable", "chat.session_model.agent_changed"]) {
-      const fallo = { what: { clave }, detail: JSON.stringify({ agent: "opencode-zen", model: "x" }) };
+      const fallo = { what: { clave }, detail: JSON.stringify({ agent: "opencode", model: "x" }) };
       assert.ok(prosaDe(fallo).startsWith(saltillo(cat[clave])), `${codigo} ${clave}`);
     }
-    const sinModelo = { code: "model_required", message_key: "cli.error.model_required", detail: { agent: "opencode-zen", valid_models: [], free_models_accepted: false, account_connected: false } };
+    const sinModelo = { code: "model_required", message_key: "cli.error.model_required", detail: { agent: "opencode", valid_models: [], free_models_accepted: false, account_connected: false } };
     assert.ok(prosaDe(sinModelo).startsWith(saltillo(cat["cli.error.model_required"])), codigo);
   }
   elegirLengua("es");

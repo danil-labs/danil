@@ -23,7 +23,7 @@ const session = JSON.stringify({
 function managed() {
   let space = null;
   const startup = () => (space ? { workspaces: [space], active: space.id } : { workspaces: [], active: null });
-  const accounts = { codex: [], claude: [], "opencode-zen": [] };
+  const accounts = { codex: [], claude: [], "opencode": [] };
   let next = 0;
   return {
     accounts,
@@ -35,7 +35,7 @@ function managed() {
       set_active_workspace: null,
       set_workspace_language: null,
       list_providers: [
-        { id: "opencode-zen", label: "OpenCode", available: true, driver: true, sin_cuenta: false, api_key: "https://opencode.ai/auth", external_install_url: null },
+        { id: "opencode", label: "OpenCode", available: true, driver: true, sin_cuenta: false, api_key: "https://opencode.ai/auth", external_install_url: null },
         { id: "codex", label: "Codex", available: true, driver: true, sin_cuenta: false, api_key: null, external_install_url: null },
         { id: "claude", label: "Claude Code", available: true, driver: true, sin_cuenta: false, api_key: null, external_install_url: null },
         { id: "grok", label: "Grok", available: false, driver: true, sin_cuenta: false, api_key: null, external_install_url: null },
@@ -101,7 +101,7 @@ test("a managed computer skips the install step and connects its cloud accounts 
     assert.ok(fake.calls.some((c) => c.command === "add_workspace"), "the space is created");
     assert.equal(w.document.querySelector("[data-web-onboarding]")?.dataset.webOnboarding, "accounts");
     const cards = [...w.document.querySelectorAll("[data-provider-card]")].map((c) => c.dataset.providerCard);
-    assert.deepEqual(cards, ["opencode-zen", "codex", "claude"], "only installed cloud providers, no local models or ZCode");
+    assert.deepEqual(cards, ["opencode", "codex", "claude"], "only installed cloud providers, no retired local models or ZCode");
     assert.ok(!text().includes("Descargar app oficial"), "no official app download");
     assert.ok(!fake.calls.some((c) => c.command === "install_provider"), "nothing is installed");
 
@@ -132,17 +132,17 @@ test("a managed computer skips the install step and connects its cloud accounts 
     await sleep(500);
     assert.deepEqual(fake.calls.find((c) => c.command === "submit_login_code")?.args, { id: "a2", code: "pasted-code" });
 
-    button("Conectar", card("opencode-zen")).click();
+    button("Conectar", card("opencode")).click();
     await sleep(500);
-    assert.deepEqual(fake.calls.find((c) => c.command === "login_account" && c.args.provider === "opencode-zen")?.args,
-      { provider: "opencode-zen", id: "a3", mode: "tuberia" }, "OpenCode starts browser auth even with legacy API key metadata");
-    assert.equal(card("opencode-zen").querySelector('input[type="password"]'), null, "the first connection never asks for a Go key");
+    assert.deepEqual(fake.calls.find((c) => c.command === "login_account" && c.args.provider === "opencode")?.args,
+      { provider: "opencode", id: "a3", mode: "tuberia" }, "OpenCode starts browser auth even with legacy API key metadata");
+    assert.equal(card("opencode").querySelector('input[type="password"]'), null, "the first connection never asks for a Go key");
     emit("a3", "url", "https://opencode.example/auth");
     await sleep(500);
-    assert.equal(card("opencode-zen").querySelector("[data-login-url]")?.getAttribute("href"), "https://opencode.example/auth");
+    assert.equal(card("opencode").querySelector("[data-login-url]")?.getAttribute("href"), "https://opencode.example/auth");
     emit("a3", "done", "");
     await sleep(500);
-    assert.ok(card("opencode-zen").querySelector("[data-connected-account]"), "OpenCode completes the shared browser flow");
+    assert.ok(card("opencode").querySelector("[data-connected-account]"), "OpenCode completes the shared browser flow");
 
     button("Hacerlo después").click();
     await sleep(1500);

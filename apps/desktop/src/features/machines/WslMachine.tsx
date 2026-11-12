@@ -1,3 +1,4 @@
+import { isFreeRouterAgent, isRetiredAgent } from "@terminus/tasks";
 // Todo va directo a la ventana, sin el reparto entre máquinas ni sus reintentos:
 // repetir una instalación por un `app_unavailable` la correría dos veces.
 import { invoke } from "@tauri-apps/api/core";
@@ -649,7 +650,7 @@ export function DistroBox(props: { name: string; child: WslChild; onRemoved: () 
   async function load() {
     try {
       const list = await call<Surface[]>("list_surfaces");
-      setSurfaces(list.filter((s) => s.catalogo !== "gratuitos" && s.provider !== "opencode-local"));
+      setSurfaces(list.filter((s) => s.catalogo !== "gratuitos" && !isFreeRouterAgent(s.provider) && !isRetiredAgent(s.provider)));
       setProblem(null);
     } catch (e) {
       setProblem(String((e as { detail?: unknown })?.detail ?? (e as { code?: unknown })?.code ?? e));

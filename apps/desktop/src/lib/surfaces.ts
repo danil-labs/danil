@@ -34,7 +34,7 @@ export { surfaceHas as esDe, menuSurfaces as paraElMenu, surfaceOf as superficie
 /**
  * El rótulo de una superficie, traducido cuando el nombre es nuestro: «Claude
  * Code» o «Codex» son nombres propios y van igual en toda lengua; «Modelos
- * gratuitos» y «Locales» son nuestros y sin esto salen en la lengua de Rust.
+ * gratuitos» es nuestro y sin esto salen en la lengua de Rust.
  *
  * Se distingue por identificador y no por el rótulo: `catalogo` y `agent`
  * cruzan la frontera entre procesos y no cambian con la lengua; comparar contra
@@ -42,7 +42,6 @@ export { surfaceHas as esDe, menuSurfaces as paraElMenu, surfaceOf as superficie
  */
 export function rotuloDeSuperficie(s: Superficie): string {
   if (s.catalogo === "gratuitos") return t("surfaces.label.free");
-  if (s.provider === "opencode-local") return t("surfaces.label.local");
   return s.label;
 }
 

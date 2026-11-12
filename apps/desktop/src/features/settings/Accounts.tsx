@@ -1,3 +1,4 @@
+import { canonicalAgentId, isFreeRouterAgent, OPENCODE } from "@terminus/tasks";
 import { marcaDeSuperficie } from "../../lib/surfaces";
 import { groupAccounts } from "@terminus/computers";
 import Check from "lucide-solid/icons/check";
@@ -48,10 +49,8 @@ import {
   type EnEspera,
   type LoginEvent,
 } from "./accounts-store";
-import ListaDeModelosLocales from "./LocalModels";
 import { LoginCodeForm } from "./LoginCodeForm";
 import { SettingsBlock, SettingsRow, SettingsSection } from "./layout";
-import { crearModelosLocales } from "./local-models-store";
 import { Spinner } from "../../ui/Spinner";
 import { ExternalLink as EnlaceExterno } from "../../ui/ExternalLink";
 import "../../locales/settingsPhrases";
@@ -210,15 +209,9 @@ export default function Accounts(props: {
    */
   const inferencia = () => agentes().find((a) => a.id === agente())?.inferencia;
 
-  // Nombrar un proveedor durante la preparación local atribuiría una salida de datos.
   const acto = () =>
     !proveedor()
       ? { boton: t("settings.accounts.check_provider"), curso: t("settings.accounts.preparing") }
-      : inferencia() === "en_la_maquina"
-      ? {
-          boton: t("settings.accounts.local_models.prepare"),
-          curso: t("settings.accounts.preparing"),
-        }
       : {
           boton: externalInstallUrl() ? t("settings.accounts.official_download", { agent: etiqueta() }) : t("settings.accounts.install_agent", { agent: etiqueta() }),
           curso: t("settings.accounts.installing_agent", { agent: etiqueta() }),
@@ -789,11 +782,9 @@ export default function Accounts(props: {
             aria-controls={idCuerpo}
             onClick={() => setAbierto(!abierto())}
           >
-            <Show when={agente() !== "opencode-local"}>
-              <span class="flex size-4 shrink-0 items-center justify-center">
-                <MarcaAgente id={marcaDeSuperficie({ catalogo: props.soloGratuitos ? "gratuitos" : "todo", provider: agente() })} size={16} />
-              </span>
-            </Show>
+            <span class="flex size-4 shrink-0 items-center justify-center">
+              <MarcaAgente id={marcaDeSuperficie({ catalogo: props.soloGratuitos ? "gratuitos" : "todo", provider: agente() })} size={16} />
+            </span>
             <span class="grid min-w-0 flex-1">
               <span class="truncate">{props.titulo}</span>
               <Show when={props.subtitulo}>
@@ -871,9 +862,9 @@ export default function Accounts(props: {
   if (props.soloGratuitos) {
     return envolver(
       <>
-        {/* El mismo bloque que las otras dos superficies, en el mismo sitio:
+        {/* El mismo bloque que la otra superficie, en el mismo sitio:
             regla de `AGENTS.md` para cuando algo no está en la máquina, y las
-            tres filas de OpenCode contestan igual.
+            dos filas de OpenCode contestan igual.
 
             Instalar y consentir siguen siendo dos actos, dos botones. Activar
             sigue trayendo el binario si falta —bajar cien megas antes de
@@ -881,8 +872,8 @@ export default function Accounts(props: {
             que no—; esto es para quien quiere el binario y no ha decidido lo
             otro.
 
-            Las tres comparten paquete y carpeta (`agents::Install::carpeta`):
-            instalar desde cualquiera las quita de las tres, con el evento
+            Las dos comparten paquete y carpeta (`agents::Install::carpeta`):
+            instalar desde cualquiera las quita de las dos, con el evento
             `providers` haciéndolas releer `list_providers`. */}
         <Show when={!agentes().find((a) => a.id === agente())?.available}>
           <SettingsBlock class="justify-items-start">
@@ -930,7 +921,7 @@ export default function Accounts(props: {
       {/* Lo que falta se nombra y se ofrece, también donde no hay cuenta que
           conectar: conectar ya instalaba el CLI si faltaba, pero un agente
           `sin_cuenta` no tiene ese botón, y su pantalla dejaba a la persona
-          sin ninguna salida para el modelo local. */}
+          sin ninguna salida. */}
       <Show when={!agentes().find((a) => a.id === agente())?.available}>
         <SettingsBlock class="justify-items-start">
           <Button
@@ -949,11 +940,6 @@ export default function Accounts(props: {
         </SettingsBlock>
       </Show>
 
-      {/* Nombrar el CLI aquí atribuiría una salida de datos a los modelos locales. */}
-      <Show when={inferencia() === "en_la_maquina"}>
-        <MotoresLocales />
-      </Show>
-
       {/* El consentimiento va antes que la lista de cuentas, no después: lo
           que se acepta aquí no es un ajuste, es que el material de un
           cliente salga de esta computadora. Conectar cuenta, que da el
@@ -970,7 +956,7 @@ export default function Accounts(props: {
                 Deshabilitarlo dejaría a quien llega con la máquina limpia sin
                 forma de elegir el agente que quiere. Lo que se dice es que
                 va a instalarse: consecuencia, no glosa. */}
-            <For each={agentes()}>
+            <For each={agentes().filter((a) => !a.sin_cuenta && !isFreeRouterAgent(a.id))}>
               {(a) => (
                 <option value={a.id}>
                   {a.label}
@@ -1482,16 +1468,6 @@ function Paso(props: { numero: number; titulo: string; children: JSX.Element }) 
  * columna que dice por qué hace falta consentimiento). Con el id escrito
  * dentro, este bloque solo serviría a una fila.
  */
-/** El runtime que Terminus instala, el catálogo de modelos y cuál usan las tareas. */
-function MotoresLocales() {
-  const m = crearModelosLocales();
-  return (
-    <SettingsBlock>
-      <ListaDeModelosLocales m={m} memoria />
-    </SettingsBlock>
-  );
-}
-
 function ModelosGratuitos(props: {
   nombre: string;
   marca?: JSX.Element;
@@ -1681,7 +1657,7 @@ function CuentaConfigurada(props: {
       checkingStatus={props.checkingStatus}
       statusUnknown={sinComprobar()}
       onRecheckStatus={props.onRecheckStatus}
-      noLimitsLabel={props.agent === "opencode-zen" ? t("settings.accounts.go_key_required") : undefined}
+      noLimitsLabel={canonicalAgentId(props.agent) === OPENCODE ? t("settings.accounts.go_key_required") : undefined}
       limits={lectura.limits}
       lastGood={lectura.lastGood}
       loadingLimits={lectura.loading}

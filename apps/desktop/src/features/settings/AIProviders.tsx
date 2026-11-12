@@ -1,4 +1,5 @@
 import { createMemo, For, Index, Match, Show, Switch } from "solid-js";
+import { FREE_ROUTER_OPENCODE, isFreeRouterAgent } from "@terminus/tasks";
 import { t } from "../../lib/i18n";
 import { Button } from "../../ui/Button";
 import { FailureNote } from "../../ui/Failure";
@@ -21,9 +22,14 @@ import { SettingsPanel } from "./layout";
  */
 export default function AIProviders(props: { superficies: Superficie[]; agentesEnUso: string[]; estado?: SurfacesState; onRetry?: () => void }) {
   const vista = () => aiProvidersView(props.estado ?? { k: "ready" }, props.superficies.length);
+  // Una sección del Free Router por motor (`free-router-<motor>`); sin superficies todavía, la de OpenCode.
+  const routers = createMemo(() => {
+    const ids = [...new Set(props.superficies.map((s) => s.provider).filter(isFreeRouterAgent))];
+    return ids.length ? ids : [FREE_ROUTER_OPENCODE];
+  });
   const grupos = createMemo(() => {
     const vistos = new Map<string, Superficie[]>();
-    for (const superficie of props.superficies.filter((s) => s.catalogo !== "gratuitos")) {
+    for (const superficie of props.superficies.filter((s) => s.catalogo !== "gratuitos" && !isFreeRouterAgent(s.provider))) {
       const clave = superficie.catalogo === "gratuitos" ? superficie.id : superficie.provider;
       const grupo = vistos.get(clave);
       if (grupo) grupo.push(superficie);
@@ -44,7 +50,7 @@ export default function AIProviders(props: { superficies: Superficie[]; agentesE
       <section class="grid gap-4" aria-label="Danil">
         <h2 class="m-0 text-ui font-semibold text-neutral-950">Danil</h2>
         <DanilCredits />
-        <Accounts agente="opencode-zen" soloGratuitos titulo={t("surfaces.label.free")} />
+        <For each={routers()}>{(id) => <Accounts agente={id} soloGratuitos titulo={t("surfaces.label.free")} />}</For>
       </section>
       <Switch>
         <Match when={vista() === "loading"}>

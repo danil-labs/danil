@@ -41,7 +41,7 @@ test("la misma suscripción une máquinas, elige una encendida y conserva el id 
 });
 
 test("OpenCode une el mismo correo y orgID aunque el plan visible cambie", () => {
-  const groups = groupAccounts("opencode-zen", [
+  const groups = groupAccounts("opencode", [
     { machine: "vm", on: false, accounts: [{ id: "oauth", identity: "Ana@Example.com", credential_group: "org-1", plan: "Go" }] },
     { machine: "mac", on: true, accounts: [{ id: "copy", identity: "ana@example.com", credential_group: "org-1" }] },
   ]);
@@ -54,7 +54,7 @@ test("OpenCode une el mismo correo y orgID aunque el plan visible cambie", () =>
 });
 
 test("OpenCode no une el mismo correo en organizaciones distintas", () => {
-  const groups = groupAccounts("opencode-zen", [
+  const groups = groupAccounts("opencode", [
     { machine: "vm", on: true, accounts: [{ id: "org-1", identity: "ana@example.com", credential_group: "org-1", plan: "Go" }] },
     { machine: "mac", on: true, accounts: [{ id: "org-2", identity: "ana@example.com", credential_group: "org-2", plan: "Go" }] },
   ]);
