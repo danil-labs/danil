@@ -10,6 +10,8 @@
 // BROADCAST_DELIVERY="on". Ambas pasan por el preflight de campaigns.manage.
 // Danil Business: lista cerrada en business.mjs, solo la cuenta activa del Bearer.
 export { DesktopCodeStore } from "./desktop-code-store.mjs";
+import { upstreamSignal } from "./transport.mjs";
+import { dependencyProblem, logDependency } from "./dependency-error.mjs";
 import { broadcastRead, broadcastWrite } from "./broadcasts.mjs";
 import { BUSINESS_MAX_BODY, businessBody, businessRoute } from "./business.mjs";
 import { handleAuth, hasSignedOutMarker, sessionConfig } from "./session.mjs";
@@ -203,7 +205,7 @@ function queryFor(url, kind) {
   return query;
 }
 
-/** Al BFF; solo vuelve JSON, sin redirecciones, cookies ni caché. */
+/** Al BFF; JSON y problemas con cabeceras cerradas, sin redirecciones ni cookies. */
 async function forward(env, upstream) {
   if (env.workspaceKey) {
     upstream = new Request(upstream);
@@ -211,23 +213,20 @@ async function forward(env, upstream) {
   }
   let response;
   try {
-    response = await env.APPV2_BFF.fetch(upstream);
+    response = await env.APPV2_BFF.fetch(new Request(upstream, { signal: upstreamSignal(env, upstream.signal) }));
   } catch {
     return json("bff_unavailable", 502);
   }
   if (response.status >= 300 && response.status < 400) return json("unexpected_redirect", 502);
-  if (response.status === 204) return new Response(null, { status: 204, headers: { "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" } });
   const contentType = response.headers.get("Content-Type") ?? "";
-  if (!contentType.toLowerCase().startsWith("application/json")) return json("unexpected_response", 502);
-  return new Response(response.body, {
-    status: response.status,
-    headers: {
-      "Content-Type": contentType,
-      "Cache-Control": "no-store",
-      "Pragma": "no-cache",
-      "X-Content-Type-Options": "nosniff",
-    },
-  });
+  const mediaType = contentType.split(";")[0].trim().toLowerCase();
+  if (response.status !== 204 && !["application/json", "application/problem+json"].includes(mediaType)) return json("unexpected_response", 502);
+  const headers = new Headers({ "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" });
+  for (const name of ["Content-Type", "Retry-After", "X-Request-Id", "ETag", "Cache-Control"]) {
+    const value = response.headers.get(name);
+    if (value !== null) headers.set(name, value);
+  }
+  return new Response(response.body, { status: response.status, headers });
 }
 
 /** Una escritura de correos: desde esta página, con sesión y el cuerpo exacto de su ruta. */
@@ -395,10 +394,15 @@ export default {
       return new Response(null, { status: 302, headers: { Location: `/auth/workos/start${url.search}`, "Cache-Control": "no-store" } });
     }
     if (!env.TERMINUS_WEB) return json("assets_unavailable", 503);
-    if (PHONE_ROUTES.includes(url.pathname)) {
-      url.pathname = "/m/";
-      return env.TERMINUS_WEB.fetch(new Request(url, request));
+    try {
+      if (PHONE_ROUTES.includes(url.pathname)) {
+        url.pathname = "/m/";
+        return await env.TERMINUS_WEB.fetch(new Request(new Request(url, request), { signal: upstreamSignal(env, request.signal) }));
+      }
+      return await env.TERMINUS_WEB.fetch(new Request(request, { signal: upstreamSignal(env, request.signal) }));
+    } catch (error) {
+      logDependency("assets_fetch", error);
+      return dependencyProblem("assets_unavailable");
     }
-    return env.TERMINUS_WEB.fetch(request);
   },
 };

@@ -60,7 +60,7 @@ function world(overrides = {}) {
   const fetch = async (input, init = {}) => {
     const request = new Request(input, init);
     const url = new URL(request.url);
-    calls.push({ url: request.url, method: request.method, headers: request.headers, body: init.body ?? null });
+    calls.push({ url: request.url, method: request.method, headers: request.headers, body: init.body ?? null, signal: init.signal });
     if (url.origin === "https://api.workos.com") {
       if (state.workosDown) throw new TypeError("network");
       assert.equal(request.headers.get("Authorization"), "Bearer sk_test");
@@ -431,7 +431,7 @@ test("desktop: consent, one-time code to the loopback port, PKCE exchange, refre
   let loggedOut = null;
   w.fetch = async (input, init = {}) => {
     const url = new URL(new Request(input, init).url);
-    if (url.pathname === "/auth/v1/logout") { loggedOut = new Headers(init.headers).get("Authorization"); return new Response(null, { status: 204 }); }
+    if (url.pathname === "/auth/v1/logout") { assert.ok(init.signal instanceof AbortSignal); loggedOut = new Headers(init.headers).get("Authorization"); return new Response(null, { status: 204 }); }
     return original(input, init);
   };
   const out = await desktopJson(w, "/auth/desktop/logout", { session: second.session });
@@ -585,4 +585,19 @@ test("desktop: a GoTrue failure leaves the code consumed", async () => {
   const replay = await withFetch(w, () => worker.fetch(exchangeRequest(code), w.env));
   assert.equal(replay.status, 401);
   assert.equal(sessionOpens(w), before);
+});
+
+
+test("WorkOS and Supabase calls carry a deadline through login and refresh", async () => {
+  const w = world();
+  w.env.UPSTREAM_TIMEOUT_MS = "5";
+  const { back, cookie } = await signedIn(w);
+  assert.equal(new URL(back.headers.get("Location")).pathname, "/inbox");
+  assert.equal((await session(w, cookie)).status, 200);
+  await new Promise(resolve => setTimeout(resolve, 15));
+  assert.ok(w.calls.length > 5);
+  for (const call of w.calls) {
+    assert.ok(call.signal instanceof AbortSignal, call.url);
+    assert.equal(call.signal.aborted, true, call.url);
+  }
 });
