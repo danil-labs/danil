@@ -9,6 +9,7 @@ export type FreeDecisionRequest = {
   provider: "opencode";
   operation_id: string;
   expected_account_id: string;
+  expected_revision: number;
   accepted: boolean;
   policy_version?: string;
   policy_generation?: number;
@@ -20,12 +21,12 @@ const DEFINITIVE = new Set(["invalid_argument", "operation_conflict", "user_not_
 
 export type FreeDecisionResult =
   | { kind: "saved" }
-  | { kind: "policy_changed" | "session_changed" | "outcome_unknown" | "failed"; code: string };
+  | { kind: "policy_changed" | "revision_conflict" | "session_changed" | "outcome_unknown" | "failed"; code: string };
 
 /** One operation retains its ID and the exact policy, including across uncertain replies. */
-export function createFreeDecision(account: string, accepted: boolean, policy: FreePolicy, operationId: string) {
+export function createFreeDecision(account: string, accepted: boolean, policy: FreePolicy, operationId: string, expectedRevision: number) {
   const body: FreeDecisionRequest = {
-    provider: "opencode", operation_id: operationId, expected_account_id: account, accepted,
+    provider: "opencode", operation_id: operationId, expected_account_id: account, expected_revision: expectedRevision, accepted,
     ...(accepted ? { policy_version: policy.version, policy_generation: policy.generation, locale: policy.locale, text_sha256: policy.text_sha256 } : {}),
   };
   const payload = JSON.stringify(body);
@@ -43,13 +44,13 @@ export function createFreeDecision(account: string, accepted: boolean, policy: F
       const code = (result as { error?: { code?: unknown } } | null)?.error?.code;
       if (response.status >= 500 || typeof code !== "string") return { kind: "outcome_unknown", code: "outcome_unknown" };
       if (response.status === 401 || code === "invalid_credential") return { kind: "session_changed", code: "invalid_credential" };
-      if (code === "policy_changed" || code === "session_changed" || code === "outcome_unknown") return { kind: code, code };
+      if (code === "policy_changed" || code === "revision_conflict" || code === "session_changed" || code === "outcome_unknown") return { kind: code, code };
       return DEFINITIVE.has(code) ? { kind: "failed", code } : { kind: "outcome_unknown", code: "outcome_unknown" };
     }
     const receipt = result as Record<string, unknown> | null;
     if (!receipt || receipt.operation_id !== operationId || receipt.account_id !== account ||
       receipt.decision !== (accepted ? "accepted" : "revoked") ||
-      !Number.isSafeInteger(receipt.revision) || (receipt.revision as number) < 1 ||
+      !Number.isSafeInteger(receipt.revision) || (receipt.revision as number) !== expectedRevision + 1 ||
       receipt.policy_version !== (body.policy_version ?? null) ||
       receipt.policy_generation !== (body.policy_generation ?? null)) {
       return { kind: "outcome_unknown", code: "outcome_unknown" };
@@ -63,6 +64,7 @@ export type PendingFreeDecision = {
   accepted: boolean;
   policy: FreePolicy;
   operationId: string;
+  expectedRevision?: number;
 };
 
 export const PENDING_PREFIX = "danil:free:pending:";
@@ -86,7 +88,8 @@ export function pendingFreeDecisions(storage: Storage, account: string): Pending
     if (!value || typeof value !== "object" || typeof value.account !== "string" || !/^[1-9][0-9]*$/.test(value.account) ||
         typeof value.accepted !== "boolean" || typeof value.operationId !== "string" ||
         !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(value.operationId) ||
-        key !== PENDING_PREFIX + value.operationId || !value.policy || typeof value.policy.version !== "string" || !value.policy.version ||
+        key !== PENDING_PREFIX + value.operationId ||
+        (value.expectedRevision !== undefined && (!Number.isSafeInteger(value.expectedRevision) || value.expectedRevision < 0)) || !value.policy || typeof value.policy.version !== "string" || !value.policy.version ||
         !Number.isSafeInteger(value.policy.generation) || value.policy.generation < 1 || typeof value.policy.locale !== "string" ||
         typeof value.policy.text_sha256 !== "string" || !/^[0-9a-f]{64}$/.test(value.policy.text_sha256)) throw new Error("invalid_pending");
     if (value.account === account) pending.push(value);

@@ -118,5 +118,9 @@
   "settings.accounts.free.retry_accept": "Reintentar activación",
   "settings.accounts.free.retry_revoke": "Reintentar desactivación",
   "settings.accounts.free.pending": "Hay una decisión pendiente de confirmar. Resuélvela antes de hacer otra.",
-  "settings.accounts.free.reconnect_pending": "La sesión cambió. Vuelve a entrar y reintenta la decisión pendiente."
+  "settings.accounts.free.reconnect_pending": "La sesión cambió. Vuelve a entrar y reintenta la decisión pendiente.",
+  "settings.accounts.free.revision_conflict": "La decisión cambió después de esta solicitud. Revisa el estado actual antes de elegir de nuevo.",
+  "settings.accounts.free.reconcile": "Revisar decisión actual",
+  "settings.accounts.free.review_current": "Revisa la decisión actual antes de elegir de nuevo.",
+  "settings.accounts.free.legacy_pending": "Una solicitud anterior no tiene revisión verificable. Se necesita recuperar su resultado antes de continuar."
 }

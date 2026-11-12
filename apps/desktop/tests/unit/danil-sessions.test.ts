@@ -290,7 +290,7 @@ test("link and person-session events invalidate consent even if the machine sess
 test("a consent decision retries an uncertain outcome with the same account, policy and operation", async () => {
   const { createFreeDecision } = await import("../../src/features/settings/account-free-decision.ts");
   const policy = { version: "v1", generation: 3, locale: "es", text_sha256: "a".repeat(64) };
-  const decide = createFreeDecision("42", true, policy, "op-1");
+  const decide = createFreeDecision("42", true, policy, "op-1", 1);
   const sent: string[] = [];
   const post = async (body: string) => {
     sent.push(body);
@@ -301,21 +301,21 @@ test("a consent decision retries an uncertain outcome with the same account, pol
   policy.version = "v2";
   assert.equal((await decide(post)).kind, "saved");
   assert.equal(sent[0], sent[1]);
-  assert.deepEqual(JSON.parse(sent[0]), { provider: "opencode", operation_id: "op-1", expected_account_id: "42", accepted: true, policy_version: "v1", policy_generation: 3, locale: "es", text_sha256: "a".repeat(64) });
+  assert.deepEqual(JSON.parse(sent[0]), { provider: "opencode", operation_id: "op-1", expected_account_id: "42", expected_revision: 1, accepted: true, policy_version: "v1", policy_generation: 3, locale: "es", text_sha256: "a".repeat(64) });
 });
 
 test("a consent decision refuses stale policy, another session and malformed receipts", async () => {
   const { createFreeDecision } = await import("../../src/features/settings/account-free-decision.ts");
   const policy = { version: "v1", generation: 3, locale: "es", text_sha256: "a".repeat(64) };
-  const decide = createFreeDecision("42", true, policy, "op-2");
+  const decide = createFreeDecision("42", true, policy, "op-2", 1);
   assert.equal((await decide(async () => Response.json({ error: { code: "policy_changed" } }, { status: 409 }))).kind, "policy_changed");
   assert.equal((await decide(async () => Response.json({ error: { code: "session_changed" } }, { status: 409 }))).kind, "session_changed");
   assert.equal((await decide(async () => Response.json({ error: { code: "invalid_credential" } }, { status: 401 }))).kind, "session_changed");
   assert.equal((await decide(async () => Response.json({ error: { code: "internal" } }, { status: 500 }))).kind, "outcome_unknown");
   assert.equal((await decide(async () => Response.json({ operation_id: "op-2", account_id: "43", decision: "accepted", revision: 2, policy_version: "v1", policy_generation: 3 }))).kind, "outcome_unknown");
-  const revoke = createFreeDecision("42", false, policy, "op-3");
+  const revoke = createFreeDecision("42", false, policy, "op-3", 2);
   const reply = await revoke(async (body) => {
-    assert.deepEqual(JSON.parse(body), { provider: "opencode", operation_id: "op-3", expected_account_id: "42", accepted: false });
+    assert.deepEqual(JSON.parse(body), { provider: "opencode", operation_id: "op-3", expected_account_id: "42", expected_revision: 2, accepted: false });
     return Response.json({ operation_id: "op-3", account_id: "42", decision: "revoked", revision: 3, policy_version: null, policy_generation: null });
   });
   assert.equal(reply.kind, "saved");
@@ -330,7 +330,7 @@ test("an uncertain Free decision survives a reload without carrying credentials"
     setItem: (key: string, value: string) => { data.set(key, value); },
     removeItem: (key: string) => { data.delete(key); }, clear: () => data.clear(),
   } satisfies Storage;
-  const pending = { account: "42", accepted: true, policy: { version: "v1", generation: 3, locale: "es", text_sha256: "a".repeat(64) }, operationId: "47d52f1f-c9b8-4b63-93da-8de5290c415c" };
+  const pending = { account: "42", accepted: true, policy: { version: "v1", generation: 3, locale: "es", text_sha256: "a".repeat(64) }, operationId: "47d52f1f-c9b8-4b63-93da-8de5290c415c", expectedRevision: 1 };
   saveFreeDecision(storage, pending);
   assert.deepEqual(pendingFreeDecisions(storage, "42"), [pending]);
   assert.deepEqual(pendingFreeDecisions(storage, "43"), []);

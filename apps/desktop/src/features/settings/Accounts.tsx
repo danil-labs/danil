@@ -1636,6 +1636,7 @@ function ModelosGratuitos(props: {
   const [asking, setAsking] = createSignal(false);
   const [busy, setBusy] = createSignal(false);
   const [pending, setPending] = createSignal<PendingFreeDecision | null>(null);
+  const [conflict, setConflict] = createSignal<string | null>(null);
   let epoch = 0;
   let disposed = false;
   const invalidate = () => {
@@ -1645,6 +1646,7 @@ function ModelosGratuitos(props: {
     setPerson(undefined);
     setAsking(false);
     setPending(null);
+    setConflict(null);
   };
   async function load() {
     const workspace = spaces.actual()?.id;
@@ -1714,7 +1716,7 @@ function ModelosGratuitos(props: {
     try {
       const fresh = await invoke<AccountFreeState>("account_free_consent_get", { workspace, locale: shown.policy.locale });
       if (started !== epoch || fresh.account_id !== shown.account_id || fresh.session_id !== shown.session_id ||
-          fresh.policy.version !== shown.policy.version || fresh.policy.generation !== shown.policy.generation ||
+          fresh.revision !== shown.revision || fresh.policy.version !== shown.policy.version || fresh.policy.generation !== shown.policy.generation ||
           fresh.policy.locale !== shown.policy.locale || fresh.policy.text_sha256 !== shown.policy.text_sha256) {
         if (started === epoch) await load();
         return;
@@ -1735,17 +1737,27 @@ function ModelosGratuitos(props: {
         setProblem(t("settings.accounts.free.outcome_unknown"));
         return;
       }
-      const current = existing ?? { account: shown.account_id, accepted, policy: { version: shown.policy.version, generation: shown.policy.generation, locale: shown.policy.locale, text_sha256: shown.policy.text_sha256 }, operationId: crypto.randomUUID() };
+      if (existing && existing.expectedRevision === undefined) {
+        setProblem(t("settings.accounts.free.legacy_pending"));
+        return;
+      }
+      const current = existing ?? { account: shown.account_id, accepted, expectedRevision: shown.revision, policy: { version: shown.policy.version, generation: shown.policy.generation, locale: shown.policy.locale, text_sha256: shown.policy.text_sha256 }, operationId: crypto.randomUUID() };
       if (!existing) {
         saveFreeDecision(localStorage, current);
         setPending(current);
       }
-      const action = createFreeDecision(current.account, current.accepted, current.policy, current.operationId);
+      const action = createFreeDecision(current.account, current.accepted, current.policy, current.operationId, current.expectedRevision!);
       const result = await action(async (body) => {
         const reply = await invoke<{ status: number; body: unknown }>("account_free_consent_decide", { account: person(), body: JSON.parse(body) });
         return Response.json(reply.body, { status: reply.status });
       });
       if (started !== epoch || disposed) return;
+      if (result.kind === "revision_conflict") {
+        setAsking(false);
+        setConflict(current.operationId);
+        setProblem(t("settings.accounts.free.revision_conflict"));
+        return;
+      }
       if (result.kind === "policy_changed") {
         removeFreeDecision(localStorage, current.operationId);
         setPending(null);
@@ -1769,6 +1781,28 @@ function ModelosGratuitos(props: {
       setBusy(false);
     }
   }
+  async function reconcile() {
+    const operation = pending();
+    const shown = state();
+    const workspace = spaces.actual()?.id;
+    if (!operation || !shown || !workspace || conflict() !== operation.operationId || busy()) return;
+    const started = epoch;
+    setBusy(true);
+    try {
+      const fresh = await invoke<AccountFreeState>("account_free_consent_get", { workspace, locale: shown.policy.locale });
+      if (started !== epoch || fresh.account_id !== shown.account_id || fresh.session_id !== shown.session_id) {
+        if (started === epoch) await load();
+        return;
+      }
+      removeFreeDecision(localStorage, operation.operationId);
+      await load();
+      setProblem(t("settings.accounts.free.review_current"));
+    } catch {
+      if (started === epoch) setProblem(t("settings.accounts.free.account_error"));
+    } finally {
+      setBusy(false);
+    }
+  }
   return (
     <>
       <Show when={asking() && state()}>
@@ -1778,7 +1812,7 @@ function ModelosGratuitos(props: {
         <p class="m-0">{t("settings.accounts.free.provider", { provider: props.proveedor })}</p>
         <p class="m-0"><strong>{AVISO_DE_USO()}</strong></p>
         <Show when={email()}>{(name) => <p class="m-0">{t("settings.accounts.free.account", { account: name() })}</p>}</Show>
-        <Show when={pending()}><p class="m-0">{t("settings.accounts.free.pending")}</p></Show>
+        <Show when={pending()}>{(operation) => <p class="m-0">{t(operation().expectedRevision === undefined ? "settings.accounts.free.legacy_pending" : "settings.accounts.free.pending")}</p>}</Show>
         <Show when={!asking() ? problem() : null}>{(error) => <FailureNote f={{ what: error(), detail: "" }} />}</Show>
       </>}>
         <Show when={state() || !problem()} fallback={<Button size="sm" disabled={busy()} onClick={() => void load()}>{t("settings.accounts.retry")}</Button>}>
@@ -1790,7 +1824,9 @@ function ModelosGratuitos(props: {
             <Button variant="outline" size="compact" disabled={busy()} onClick={() => void change(false)}>{t("settings.accounts.free.deactivate")}</Button>
           </div>
         </Show>}>
-          {(operation) => <Button size="sm" disabled={!state() || busy()} onClick={() => void change(operation().accepted)}>{t(operation().accepted ? "settings.accounts.free.retry_accept" : "settings.accounts.free.retry_revoke")}</Button>}
+          {(operation) => <Show when={conflict() === operation().operationId} fallback={<Button size="sm" disabled={!state() || busy() || operation().expectedRevision === undefined} onClick={() => void change(operation().accepted)}>{t(operation().accepted ? "settings.accounts.free.retry_accept" : "settings.accounts.free.retry_revoke")}</Button>}>
+            <Button size="sm" disabled={busy()} onClick={() => void reconcile()}>{t("settings.accounts.free.reconcile")}</Button>
+          </Show>}
         </Show>
         </Show>
       </SettingsRow>

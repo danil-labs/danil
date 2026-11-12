@@ -118,7 +118,7 @@ test("two pending operations in shared storage are resolved individually before 
   const requests = [];
   const ids = ["11111111-1111-4111-8111-111111111111", "22222222-2222-4222-8222-222222222222"];
   const storedPolicy = { version: "v1", generation: 1, locale: "es", text_sha256: "a".repeat(64) };
-  const storage = Object.fromEntries(ids.map((id, index) => [`danil:free:pending:${id}`, JSON.stringify({ account: "42", accepted: index === 0, policy: storedPolicy, operationId: id })]));
+  const storage = Object.fromEntries(ids.map((id, index) => [`danil:free:pending:${id}`, JSON.stringify({ account: "42", accepted: index === 0, policy: storedPolicy, operationId: id, expectedRevision: index })]));
   const app = await screen(() => current, ({ body }) => {
     requests.push(body);
     current = body.accepted ? "accepted" : "revoked";
@@ -139,7 +139,7 @@ test("two pending operations in shared storage are resolved individually before 
 test("a policy-changed resolution removes the old operation and displays the new literal notice", async () => {
   let currentPolicy = policy;
   const id = "33333333-3333-4333-8333-333333333333";
-  const saved = { account: "42", accepted: true, policy: { version: "v1", generation: 1, locale: "es", text_sha256: "a".repeat(64) }, operationId: id };
+  const saved = { account: "42", accepted: true, policy: { version: "v1", generation: 1, locale: "es", text_sha256: "a".repeat(64) }, operationId: id, expectedRevision: 1 };
   const app = await screen(() => "unknown", () => {
     currentPolicy = { ...policy, version: "v2", generation: 2, lines: ["Aviso nuevo", "Nueva segunda línea"], text_sha256: "b".repeat(64) };
     return { status: 409, body: { error: { code: "policy_changed" } } };

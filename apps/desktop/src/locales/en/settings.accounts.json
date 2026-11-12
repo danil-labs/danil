@@ -118,5 +118,9 @@
   "settings.accounts.free.retry_accept": "Retry activation",
   "settings.accounts.free.retry_revoke": "Retry deactivation",
   "settings.accounts.free.pending": "A decision is waiting for confirmation. Resolve it before making another.",
-  "settings.accounts.free.reconnect_pending": "The session changed. Sign in again and retry the pending decision."
+  "settings.accounts.free.reconnect_pending": "The session changed. Sign in again and retry the pending decision.",
+  "settings.accounts.free.revision_conflict": "The decision changed after this request. Review the current state before choosing again.",
+  "settings.accounts.free.reconcile": "Review current decision",
+  "settings.accounts.free.review_current": "Review the current decision before choosing again.",
+  "settings.accounts.free.legacy_pending": "An earlier request has no verifiable revision. Its result must be recovered before continuing."
 }
