@@ -1,5 +1,5 @@
 {
-  "lanes": 4,
+  "lanes": 8,
   "repos": {
     "terminus": {
       "user": "verify-run",
@@ -9,7 +9,7 @@
     },
     "danil-engine": {
       "user": "verify-run-engine",
-      "lanes": 2,
+      "lanes": 6,
       "cpus": 4,
       "target": "checkout",
       "env": {
