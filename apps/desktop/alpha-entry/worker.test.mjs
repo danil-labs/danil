@@ -778,3 +778,61 @@ test("pending asset fetches expire as controlled HTTP problems", async t => {
     assert.deepEqual(await response.json(), { type: "about:blank", title: "assets_unavailable", status: 503, error: "assets_unavailable" });
   }
 });
+
+test("permission dependency failures are retryable problems, never denials", async t => {
+  const logged = [];
+  t.mock.method(console, "error", (...args) => logged.push(args));
+  for (const reply of [
+    () => Response.json({ error: "offline" }, { status: 503 }),
+    () => Response.json({ error: "overloaded" }, { status: 500 }),
+    () => { throw new TypeError("private-token-must-not-leak"); },
+    () => new Response("{broken", { headers: { "Content-Type": "application/json" } }),
+    () => Response.json({ permissions: "bad" }),
+  ]) {
+    const h = harness();
+    let calls = 0;
+    h.env.APPV2_BFF.fetch = async () => { calls++; return reply(); };
+    const response = await h.fetch(prefix + "/api/marketing/campaigns/4/pause?account_id=7", { method: "POST", headers: { ...accountToken, Origin: origin } });
+    assert.equal(response.status, 503);
+    assert.match(response.headers.get("Content-Type"), /^application\/problem\+json/);
+    assert.equal(response.headers.get("Retry-After"), "1");
+    const body = await response.json();
+    assert.equal(body.status, 503);
+    assert.equal(body.error, "permissions_unavailable");
+    assert.equal(calls, 1, "no write after a failed preflight");
+  }
+  assert.ok(logged.length >= 5);
+  assert.ok(!JSON.stringify(logged).includes("private-token-must-not-leak"));
+});
+
+test("permission refusals retain 401/403 and missing grants still deny", async () => {
+  for (const status of [401, 403, 200]) {
+    const h = harness();
+    h.env.APPV2_BFF.fetch = async () => Response.json({ role: "member", permissions: [], scoped: [] }, { status });
+    const response = await h.fetch(prefix + "/api/marketing/campaigns/4/pause?account_id=7", { method: "POST", headers: { ...accountToken, Origin: origin } });
+    assert.equal(response.status, status === 200 ? 403 : status);
+  }
+});
+
+test("a missing BFF and a failed transport expose retryable problem responses", async t => {
+  t.mock.method(console, "error", () => {});
+  for (const env of [{}, { APPV2_BFF: { fetch: async () => { throw new Error("offline"); } } }]) {
+    const response = await worker.fetch(new Request(origin + prefix + "/auth/profile", { headers: auth }), env);
+    assert.ok([502, 503].includes(response.status));
+    assert.match(response.headers.get("Content-Type"), /^application\/problem\+json/);
+    assert.equal((await response.json()).error, "bff_unavailable");
+  }
+});
+
+test("an asset dependency outage is a problem response instead of a rejected request", async t => {
+  const logged = [];
+  t.mock.method(console, "error", (...args) => logged.push(args));
+  const env = { TERMINUS_WEB: { fetch: async () => { throw new TypeError("private-asset-message"); } } };
+  for (const path of ["/", "/m/inbox"]) {
+    const response = await worker.fetch(new Request(origin + path), env);
+    assert.equal(response.status, 503);
+    assert.match(response.headers.get("Content-Type"), /^application\/problem\+json/);
+  }
+  assert.ok(logged.length >= 2);
+  assert.ok(!JSON.stringify(logged).includes("private-asset-message"));
+});
