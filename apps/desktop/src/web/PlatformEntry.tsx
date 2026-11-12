@@ -60,7 +60,7 @@ export function startPlatform(options: WebSessionDeployment, root: HTMLElement) 
       await run(async () => { await selection.choose(id); });
     }
     onMount(() => { void load(); });
-    return <main class="min-h-full bg-bg px-6 py-10 text-neutral-950" data-platform-session="" aria-busy={busy()}>
+    return <main class="h-dvh overflow-y-auto bg-bg px-6 py-10 text-neutral-950" data-platform-session="" aria-busy={busy()}>
       <ToastStack><UpdateNotice /></ToastStack>
       <div class="mx-auto grid max-w-6xl gap-6">
         <header class="flex items-center justify-between gap-4">

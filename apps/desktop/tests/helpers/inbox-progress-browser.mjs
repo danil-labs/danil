@@ -4,7 +4,7 @@ import { spawn } from 'node:child_process';
 
 /** Pause the receipt after the real enqueue, as if its first writer were still completing. */
 export async function inboxProgressBrowser({ db, messaging, browserFetch, mode = 'progress' }) {
-  const expectedAttempts = mode === 'progress' ? 2 : 3;
+  const expectedAttempts = ['progress', 'mobile'].includes(mode) ? 2 : 3;
   const keys = new Set();
   let key, attempts = 0, output = '';
   messaging.afterResponse = async (response, request) => {
