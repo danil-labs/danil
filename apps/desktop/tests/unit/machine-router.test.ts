@@ -691,7 +691,7 @@ test("the router does not judge an MCP block: a link that is not the relay (a WS
 
 /** Una miembro, no la dueña: el workspace de la organización no está en su registro ni en esta computadora. */
 const ORG = { id: "fqgx1w8m", name: "Danil Workspace" };
-const ENDPOINT: MachineInfo = { id: "cmp_vm", name: "Nube IA", wakes: true, linked: new Set([ORG.id]), organization: { id: "org_01", workspace: ORG } };
+const ENDPOINT: MachineInfo = { id: "cmp_vm", name: "Nube IA", wakes: true, linked: new Set([ORG.id]), organization: { id: "org_01", workspaces: [ORG] } };
 const MEMBER_REGISTRY = [{ id: "w", name: "W", projects: [], computers: ["cmp_home", "cmp_mac"] }];
 type Row = { id: string; hosts: boolean | null; materializes?: boolean; refuses?: boolean };
 const pickable = async (router: ReturnType<typeof setup>["router"]) => ((await router.handle("machine_list")) as Row[]).filter(runsWorkspace).map((m) => m.id);
@@ -731,6 +731,22 @@ test("the owner keeps the organization's workspace from the registry, and the se
   assert.deepEqual(await pickable(router), ["cmp_home", "cmp_mac"]);
   await router.handle("set_active_workspace", { id: ORG.id });
   assert.deepEqual(await pickable(router), ["cmp_home", "cmp_vm", "cmp_mac"], "in it, the server and her machines that may make it theirs");
+});
+
+test("a member of two organization workspaces gets both in the switcher, and the server in «Ejecutar en» only inside them", async () => {
+  const FOUNDATION = { id: "fnd00001", name: "Danil Foundation" };
+  const { router, fleet } = setup({ cmp_vm: fakeLink({}), cmp_mac: fakeLink({}) }, {}, "cmp_mac");
+  fleet.setMachines([{ ...ENDPOINT, linked: new Set([ORG.id, FOUNDATION.id]), organization: { id: "org_01", workspaces: [ORG, FOUNDATION] } }, MAC]);
+  fleet.setRegistry(MEMBER_REGISTRY);
+  const listed = (await router.handle("list_workspaces")) as { workspaces: { id: string; name: string; machines?: string[] }[] };
+  assert.deepEqual(listed.workspaces.map((w) => [w.id, w.name]), [["w", "W"], [ORG.id, ORG.name], [FOUNDATION.id, FOUNDATION.name]]);
+  assert.deepEqual(listed.workspaces.slice(1).map((w) => w.machines), [["cmp_vm"], ["cmp_vm"]], "both served by the same endpoint");
+  assert.deepEqual(await pickable(router), ["cmp_home", "cmp_mac"], "not in the member's own workspace");
+  for (const ws of [ORG.id, FOUNDATION.id]) {
+    await router.handle("set_active_workspace", { id: ws });
+    assert.deepEqual(await pickable(router), ["cmp_vm"], `only the server in ${ws}`);
+    assert.equal(router.createsOn(ws)?.machine, "cmp_vm");
+  }
 });
 
 test("without `organization` in the row, the directory names the workspace an organization's VM brings", async () => {

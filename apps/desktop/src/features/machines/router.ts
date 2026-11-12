@@ -217,7 +217,7 @@ export function createRouter(config: RouterConfig) {
   };
   /** Sin `organization` en su fila (un plano de control anterior), una VM con un workspace que el registro no le da es el servidor de una organización. */
   const guessed = (info: MachineInfo) => (info.organization || !info.wakes ? [] : givenTo(info));
-  /** Lo que una organización da a la persona y su registro no tiene: el workspace con su nombre y los servidores que lo atienden. */
+  /** Lo que una organización da a la persona y su registro no tiene: cada workspace con su nombre y los servidores que lo atienden. */
   const organizations = (): Map<string, { name: string; machines: string[] }> => {
     const found = new Map(fleet.organizationWorkspaces().map((w) => [w.id, { name: w.name, machines: w.machines }]));
     const names = new Map((config.directory?.() ?? []).filter((e) => e.workspace_id && !e.owner).map((e) => [e.workspace_id as string, e.name]));
@@ -229,7 +229,7 @@ export function createRouter(config: RouterConfig) {
     for (const id of found.keys()) if (fleet.inRegistry(id)) found.delete(id);
     return found;
   };
-  /** El servidor de una organización solo atiende el workspace de ella: no hace suyo otro. */
+  /** El servidor de una organización solo atiende los workspaces de ella que su fila dice: no hace suyo otro. */
   const confined = (info: MachineInfo) => !!info.organization || guessed(info).length > 0;
   /** Si el relay deja a `machine` hacer suyo `workspace`: solo uno de la cuenta, y nunca el servidor de una organización. */
   const permitted = (info: MachineInfo, workspace: string | null) =>

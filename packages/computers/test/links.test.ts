@@ -1,12 +1,23 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { callWorkspace, hasLinkedWorkspaces, linkedAttention, linkedEvent, linkedEvents, linkedListing, linkedWorkspaces, onlyLinked, unlinkedWorkspaces } from "../src/index.ts";
+import { callWorkspace, hasLinkedWorkspaces, linkedAttention, linkedEvent, linkedEvents, linkedListing, linkedWorkspaces, onlyLinked, organizationOf, unlinkedWorkspaces } from "../src/index.ts";
 
 test("los vínculos salen de `workspaces`; sin el campo no se filtra", () => {
   assert.deepEqual([...(linkedWorkspaces({ workspaces: ["w1", "w2"] }) ?? [])], ["w1", "w2"]);
   assert.equal(linkedWorkspaces({}), null);
   assert.equal(linkedWorkspaces({ workspaces: null }), null);
   assert.equal(linkedWorkspaces({ workspaces: [] })?.size, 0);
+});
+
+test("los workspaces de organización salen de `workspaces`, el principal primero; sin el campo, de `workspace`", () => {
+  const primary = { id: "fqgx1w8m", name: "Danil Workspace" };
+  const foundation = { id: "fnd00001", name: "Danil Foundation" };
+  assert.deepEqual(organizationOf({ organization: { organization_id: "org_01", workspace: primary, workspaces: [primary, foundation] } }), { id: "org_01", workspaces: [primary, foundation] });
+  assert.deepEqual(organizationOf({ organization: { organization_id: "org_01", workspace: primary } }), { id: "org_01", workspaces: [primary] });
+  assert.deepEqual(organizationOf({ organization: { organization_id: "org_01", workspace: primary, workspaces: [] } }), { id: "org_01", workspaces: [primary] });
+  assert.deepEqual(organizationOf({ organization: { organization_id: "org_01", workspace: primary, workspaces: [foundation, { id: "", name: "x" } as never, { id: "w3", name: " " }] } }), { id: "org_01", workspaces: [primary, foundation, { id: "w3", name: "w3" }] });
+  assert.equal(organizationOf({ organization: null }), null);
+  assert.equal(organizationOf({}), null);
 });
 
 test("la cuenta sin ningún workspace vinculado se distingue de un plano de control anterior", () => {

@@ -28,7 +28,7 @@ type Row = Record<string, unknown>;
 /** `features`: lo que su motor anuncia (`status.service_features`); cada función se enciende por máquina. */
 /** `version`: la `host_version` de su último `hello`, según el plano de control; se conserva apagada. */
 /** `child`: una máquina hija de esta computadora (Linux en esta PC): no está en el registro de la cuenta y es de todos sus workspaces. */
-/** `organization`: es el endpoint de la persona en el servidor de una organización y atiende ese workspace (`organization` de su fila). */
+/** `organization`: es el endpoint de la persona en el servidor de una organización y atiende esos workspaces (`organization` de su fila). */
 export type MachineInfo = {
   id: string;
   name: string;
@@ -39,11 +39,11 @@ export type MachineInfo = {
   features?: readonly string[];
   version?: string;
   child?: boolean;
-  organization?: { id: string; workspace: { id: string; name: string } } | null;
+  organization?: { id: string; workspaces: readonly { id: string; name: string }[] } | null;
 };
 
-/** El workspace que `info` atiende por una organización, si su fila lo dice. */
-const servedBy = (info: MachineInfo | undefined): string | null => info?.organization?.workspace.id ?? null;
+/** Si `info` atiende `workspace` por una organización, según su fila. */
+const serves = (info: MachineInfo | undefined, workspace: string): boolean => !!info?.organization?.workspaces.some((w) => w.id === workspace);
 export type Power = "on" | "off" | "starting" | "outdated";
 
 export type Envelope = { machine: string; workspace: string | null; command: string; args?: Row };
@@ -272,11 +272,11 @@ export class Fleet {
     const order = this.machines().map((m) => m.id);
     if (this.registry) {
       const w = this.registry.find((x) => x.id === workspace);
-      return order.filter((id) => (w?.computers.includes(id) ?? false) || this.info(id)?.child === true || (this.info(id)?.linked?.has(workspace) ?? false) || servedBy(this.info(id)) === workspace);
+      return order.filter((id) => (w?.computers.includes(id) ?? false) || this.info(id)?.child === true || (this.info(id)?.linked?.has(workspace) ?? false) || serves(this.info(id), workspace));
     }
     return order.filter((id) => {
       const linked = this.info(id)?.linked ?? null;
-      return linked === null || linked.has(workspace) || servedBy(this.info(id)) === workspace;
+      return linked === null || linked.has(workspace) || serves(this.info(id), workspace);
     });
   }
 
@@ -284,7 +284,7 @@ export class Fleet {
   private linkedAnywhere(workspace: string): boolean {
     return [...this.members.values()].some((m) => {
       const linked = m.info.linked ?? null;
-      return linked === null || linked.has(workspace) || servedBy(m.info) === workspace;
+      return linked === null || linked.has(workspace) || serves(m.info, workspace);
     });
   }
 
@@ -292,11 +292,11 @@ export class Fleet {
   organizationWorkspaces(): { id: string; name: string; machines: string[] }[] {
     const found = new Map<string, { id: string; name: string; machines: string[] }>();
     for (const m of this.machines()) {
-      const w = m.organization?.workspace;
-      if (!w) continue;
-      const seen = found.get(w.id) ?? { id: w.id, name: w.name, machines: [] };
-      seen.machines.push(m.id);
-      found.set(w.id, seen);
+      for (const w of m.organization?.workspaces ?? []) {
+        const seen = found.get(w.id) ?? { id: w.id, name: w.name, machines: [] };
+        seen.machines.push(m.id);
+        found.set(w.id, seen);
+      }
     }
     return [...found.values()];
   }
