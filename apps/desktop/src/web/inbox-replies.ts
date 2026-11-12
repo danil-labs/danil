@@ -10,8 +10,20 @@ function pause(ms: number, signal: AbortSignal) {
   });
 }
 
+type ReplyApi = { reply(id: string, text: string, key: string, signal: AbortSignal): Promise<unknown> };
+
+/** Session-owned state survives inbox remounts; workspaces never share operation keys. */
+export function inboxReplyStore(api: ReplyApi, clock?: Parameters<typeof inboxReplies>[1]) {
+  const workspaces = new Map<string, ReturnType<typeof inboxReplies>>();
+  return (workspace: string) => {
+    let reply = workspaces.get(workspace);
+    if (!reply) { reply = inboxReplies(api, clock); workspaces.set(workspace, reply); }
+    return reply;
+  };
+}
+
 /** One unresolved operation per conversation; rereading never replaces its identity. */
-export function inboxReplies(api: { reply(id: string, text: string, key: string, signal: AbortSignal): Promise<unknown> }, clock = { now: Date.now, random: Math.random, pause }) {
+export function inboxReplies(api: ReplyApi, clock = { now: Date.now, random: Math.random, pause }) {
   const operations = new Map<string, { text: string; key: string; attempt: number; retryAt: number; running: boolean }>();
   return async (id: string, text: string, clientId: string, signal: AbortSignal) => {
     const content = text.trim();

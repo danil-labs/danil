@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { webDomainRoutes, webSessionDeployment } from '../../src/web/session-config.ts';
-import { inboxReplies } from '../../src/web/inbox-replies.ts';
+import { inboxReplies, inboxReplyStore } from '../../src/web/inbox-replies.ts';
 import { platformInbox } from '../../src/web/platform-inbox.ts';
 import { createMessaging } from '../../../../packages/attention/src/messaging.ts';
 import { PlatformSessionError } from '../../src/web/platform-session.ts';
@@ -131,4 +131,40 @@ test('aborting an in-progress retry stops the request while retaining its operat
   } }, { now: () => 0, random: () => 1, pause: async (_ms, signal) => { controller.abort(); signal.throwIfAborted(); } });
   await assert.rejects(send('cnv_A', 'hola', 'original', controller.signal), { name: 'AbortError' });
   assert.deepEqual(keys, ['original']);
+});
+
+
+test('session reply store resumes an operation cancelled by its previous mount', async () => {
+  let now = 0;
+  const controller = new AbortController();
+  const keys: string[] = [], waits: number[] = [];
+  const store = inboxReplyStore({ async reply(_id, _text, key) {
+    keys.push(key);
+    if (keys.length === 1) { controller.abort(); throw new PlatformSessionError(409, '1', 'idempotency_in_progress'); }
+  } }, { now: () => now, random: () => 1, pause: async (ms, signal) => { signal.throwIfAborted(); waits.push(ms); now += ms; } });
+  await assert.rejects(store('11')('cnv_A', 'hola', 'original', controller.signal), { name: 'AbortError' });
+  await store('11')('cnv_A', 'hola', 'new-mount-uuid', new AbortController().signal);
+  assert.deepEqual(keys, ['original', 'original']);
+  assert.deepEqual(waits, [1000]);
+});
+
+test('workspace return retains identity and backoff; other workspaces and sessions stay independent', async () => {
+  let now = 0, ongoing = true;
+  const keys: string[] = [], waits: number[] = [];
+  const api = { async reply(_id: string, _text: string, key: string) {
+    keys.push(key);
+    if (ongoing) throw new PlatformSessionError(409, '1', 'idempotency_in_progress');
+  } };
+  const clock = { now: () => now, random: () => 1, pause: async (ms: number) => { waits.push(ms); now += ms; } };
+  const store = inboxReplyStore(api, clock);
+  const signal = new AbortController().signal;
+  await assert.rejects(store('11')('cnv_A', 'hola', 'original-A', signal), /uncertain/);
+  ongoing = false;
+  await store('12')('cnv_A', 'hola', 'original-B', signal);
+  await inboxReplyStore(api, clock)('11')('cnv_A', 'hola', 'other-session', signal);
+  await store('11')('cnv_A', 'hola', 'replacement-A', signal);
+  assert.deepEqual(keys, ['original-A', 'original-A', 'original-A', 'original-B', 'other-session', 'original-A']);
+  assert.deepEqual(waits, [1000, 2000, 4000]);
+  await store('11')('cnv_A', 'next', 'next-operation', signal);
+  assert.equal(keys.at(-1), 'next-operation');
 });

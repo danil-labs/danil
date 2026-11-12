@@ -7,6 +7,7 @@ import urllib.request
 from playwright.sync_api import sync_playwright, expect
 
 keys, statuses, times, trace = [], [], [], []
+mode = os.environ.get('DANIL_INBOX_REVIEW_MODE', 'progress')
 
 
 def dispatch(route):
@@ -46,10 +47,35 @@ with sync_playwright() as p:
     expect(inbox.locator('textarea')).to_be_enabled()
     inbox.locator('textarea').fill('browser in progress')
     inbox.locator('button[type=submit]').click()
+    original_inbox = inbox.element_handle()
+    if mode in ('active', 'switch'):
+        expect(inbox.locator('form > button')).to_be_enabled(timeout=15000)
+        buttons = page.locator('button[aria-pressed]')
+        index = page.locator('button[aria-pressed=true]').evaluate('(element) => [...document.querySelectorAll("button[aria-pressed]")].indexOf(element)')
+        buttons.nth(index if mode == 'active' else 1 - index).click()
+        if mode == 'switch':
+            expect(buttons.nth(1 - index)).to_have_attribute('aria-pressed', 'true')
+            buttons.nth(index).click()
+        expect(buttons.nth(index)).to_have_attribute('aria-pressed', 'true')
+        expect(inbox).to_be_visible()
+        if not inbox.locator('textarea').count():
+            inbox.get_by_role('button').filter(has_text=re.compile('Contact 9007199254740993/')).first.click()
+        review = inbox.locator('form > button')
+        if review.count():
+            review.click()
+        expect(inbox.locator('textarea')).to_be_enabled()
+        inbox.locator('textarea').fill('browser in progress')
+        inbox.locator('button[type=submit]').click()
     expect(inbox.locator('textarea')).to_have_value('', timeout=15000)
-    assert statuses == [409, 409, 202], statuses
-    assert len(set(keys)) == 1 and len(keys) == 3, keys
+    expected = [409, 409, 202] if mode == 'progress' else [409, 409, 409, 202]
+    assert statuses == expected, (statuses, trace)
+    assert len(set(keys)) == 1 and len(keys) == len(expected), keys
+    if mode == 'active':
+        assert original_inbox.evaluate('(element) => element.isConnected'), 'active workspace remounted inbox'
+        assert not any('/workspaces/select' in url for url, _, _ in trace), trace
+    elif mode == 'switch':
+        assert sum('/workspaces/select' in url for url, _, _ in trace) == 2, trace
     assert all(b - a >= .95 for a, b in zip(times, times[1:])), times
     assert not errors, errors
-    print('PASS Chromium: actual workers 409/409/202, same UUID, Retry-After respected, accepted receipt')
+    print(f'PASS Chromium {mode}: actual workers {statuses}, same UUID, Retry-After respected, accepted receipt')
     browser.close()

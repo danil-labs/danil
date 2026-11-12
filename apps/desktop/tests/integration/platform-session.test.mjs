@@ -300,10 +300,10 @@ test("SPA cookie session against edge, identity and workspaces Workers with Post
       assert.deepEqual(messaging.failures, []);
       assert.equal(messaging.calls.filter(r => r.method === "POST" && r.key === key).length, 4);
     });
-    if (real && process.env.DANIL_INBOX_BROWSER_URL) await t.test('Chromium retries real in-progress replies with the same UUID and one PostgreSQL row', async () => {
+    if (real && process.env.DANIL_INBOX_BROWSER_URL) for (const mode of ['progress', 'active', 'switch']) await t.test(`Chromium ${mode}: real in-progress replies retain UUID and one PostgreSQL row`, async () => {
       await db.admin.query("UPDATE tenancy.access_projection SET verified_at=now(),valid_until=now()+interval '30 seconds'; UPDATE identity.access_projection SET verified_at=now(),valid_until=now()+interval '30 seconds'; UPDATE tenancy.client_grants SET valid_until=now()+interval '30 seconds'");
       await messaging.syncProjection();
-      t.diagnostic(await inboxProgressBrowser({ db, messaging, browserFetch }));
+      t.diagnostic(await inboxProgressBrowser({ db, messaging, browserFetch, mode }));
     });
     await t.test("logout revokes the cookie session, with no legacy exchange", async () => {
       await api.logout();

@@ -10,6 +10,7 @@ import { LegacyInbox } from "./LegacyInbox";
 import { type WebSessionDeployment, webDomainRoutes } from "./session-config";
 import { PlatformInbox } from "./PlatformInbox";
 import { platformInbox } from "./platform-inbox";
+import { inboxReplyStore } from "./inbox-replies";
 import "./phrases";
 
 export function startPlatform(options: Extract<WebSessionDeployment, { kind: "platform" }> & { legacy: { endpoint: string; login: string } }, root: HTMLElement) {
@@ -28,6 +29,7 @@ export function startPlatform(options: Extract<WebSessionDeployment, { kind: "pl
     const [signedOut, setSignedOut] = createSignal(false);
     const [error, setError] = createSignal("");
     let selection = workspaceSelection(api);
+    let replies = inboxReplyStore(inbox);
     const [uncertain, setUncertain] = createSignal(false);
     async function run(action: () => Promise<void>) {
       if (busy()) return;
@@ -41,6 +43,7 @@ export function startPlatform(options: Extract<WebSessionDeployment, { kind: "pl
           setWorkspaces([]);
           setActive(undefined);
           selection = workspaceSelection(api);
+          replies = inboxReplyStore(inbox);
         } else setError(cause instanceof PlatformSessionError && cause.status === 403 ? "web.platform.denied" : "web.platform.unavailable");
       } finally { setActive(selection.active() ?? undefined); setUncertain(selection.uncertain()); setBusy(false); }
     }
@@ -48,19 +51,22 @@ export function startPlatform(options: Extract<WebSessionDeployment, { kind: "pl
       await selection.reconcile();
       const person = await api.me();
       const listed = await api.workspaces();
+      const previous = profile();
+      if (previous && previous.id !== person.id) replies = inboxReplyStore(inbox);
       setProfile(person);
       setWorkspaces(listed);
       setSignedOut(false);
     });
-    const select = (id: string) => run(async () => {
-      await selection.choose(id);
-    });
+    async function select(id: string) {
+      if (id === active() && !uncertain()) return;
+      await run(async () => { await selection.choose(id); });
+    }
     onMount(() => { void load(); });
     return <main class="min-h-full bg-bg px-6 py-10 text-neutral-950" data-platform-session="" aria-busy={busy()}>
       <div class="mx-auto grid max-w-6xl gap-6">
         <header class="flex items-center justify-between gap-4">
           <h1 class="m-0 font-display text-lead font-bold">{t("common.brand_name")}</h1>
-          <Show when={profile()}><Button variant="ghost" disabled={busy()} onClick={() => void run(async () => { await api.logout(); setProfile(undefined); setWorkspaces([]); selection = workspaceSelection(api); setSignedOut(true); })}>{t("web.platform.sign_out")}</Button></Show>
+          <Show when={profile()}><Button variant="ghost" disabled={busy()} onClick={() => void run(async () => { await api.logout(); setProfile(undefined); setWorkspaces([]); selection = workspaceSelection(api); replies = inboxReplyStore(inbox); setSignedOut(true); })}>{t("web.platform.sign_out")}</Button></Show>
         </header>
         <Show when={profile()}>{person => <h2 class="m-0 text-body font-semibold">{person().name}</h2>}</Show>
         <Show when={signedOut()}><Button as="a" href={api.loginUrl(returnTo)}>{t("web.auth.signin")}</Button></Show>
@@ -74,7 +80,7 @@ export function startPlatform(options: Extract<WebSessionDeployment, { kind: "pl
         </Show>
         <Show when={busy()}><p class="m-0 text-ui text-neutral-500" role="status">{t("web.auth.waiting")}</p></Show>
         <Show when={error()}><div class="grid gap-3"><p class="m-0 text-ui text-error-strong" role="alert">{t(error())}</p><Button variant="secondary" disabled={busy()} onClick={() => void load()}>{t("web.computers.retry")}</Button></div></Show>
-        <Show when={profile() && !busy() && !uncertain() && active()} keyed>{workspace => <Show when={routes.inbox === "v1"} fallback={legacy ? <LegacyInbox workspace={workspace} session={legacy} endpoint={options.legacy.endpoint} login={options.legacy.login}/> : undefined}><PlatformInbox workspace={workspace} api={inbox}/></Show>}</Show>
+        <Show when={profile() && !busy() && !uncertain() && active()} keyed>{workspace => <Show when={routes.inbox === "v1"} fallback={legacy ? <LegacyInbox workspace={workspace} session={legacy} endpoint={options.legacy.endpoint} login={options.legacy.login}/> : undefined}><PlatformInbox workspace={workspace} api={inbox} reply={replies(workspace)}/></Show>}</Show>
       </div>
     </main>;
   }

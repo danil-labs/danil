@@ -2,6 +2,7 @@
 import base64
 import json
 import os
+import re
 import time
 from playwright.sync_api import sync_playwright, expect
 
@@ -10,19 +11,26 @@ base = os.environ.get('DANIL_INBOX_BROWSER_URL', 'http://127.0.0.1:5187/terminus
 created = '2026-11-12T00:00:00Z'
 requests, keys, times = [], [], []
 rows = {}
+active_workspace = "11"
+selections = []
 legacy_token = 'x.' + base64.b64encode(json.dumps(dict(active_account_id=11, role='authenticated')).encode()).decode() + '.y'
 
 
 def route_api(route):
+    global active_workspace
     r = route.request
     requests.append(r)
     path = r.url.split('/v1/')[-1]
     if 'api.danil.ai' in r.url:
         assert 'authorization' not in r.headers
         if path == 'identity/me':
-            data = dict(id='user_A', name='Operator', workspace='11', organizations=[])
+            data = dict(id='user_A', name='Operator', workspace=active_workspace, organizations=[])
         elif path == 'workspaces':
-            data = dict(items=[dict(id='11', org='org_A', name='Alpha', role='owner')], next_cursor=None)
+            data = dict(items=[dict(id='11', org='org_A', name='Alpha', role='owner'), dict(id='12', org='org_A', name='Other', role='owner')], next_cursor=None)
+        elif path == 'workspaces/select':
+            active_workspace = r.post_data_json['workspace']
+            selections.append(active_workspace)
+            data = dict(workspace=active_workspace, ctx='ctx' + active_workspace, authz_ver=1)
         elif path == 'identity/csrf':
             data = dict(csrf_token='bound')
         elif path.startswith('messaging/conversations'):
@@ -31,7 +39,7 @@ def route_api(route):
                 keys.append(key)
                 times.append(time.monotonic())
                 rows.setdefault(key, dict(id='ms_' + str(len(rows) + 1)))
-                if len(keys) < 3 and key == keys[0]:
+                if len(keys) < (4 if mode in ('active', 'switch') else 3) and key == keys[0]:
                     return route.fulfill(status=409, content_type='application/problem+json', headers={'Retry-After': '1', 'Access-Control-Expose-Headers': 'Retry-After'}, body=json.dumps(dict(type='https://docs.danil.ai/errors/idempotency_in_progress', title='In progress', status=409, code='idempotency_in_progress')))
                 return route.fulfill(status=202, content_type='application/json', body=json.dumps(dict(**rows[key], object='message_send', status='queued', contact_id='ct_A', channel_id='ch_A', created_at=created)))
             message = dict(id='msg_A', object='message', conversation_id='cnv_A', direction='inbound', author=dict(type='contact'), kind='text', text='latest', created_at=created)
@@ -81,14 +89,40 @@ with sync_playwright() as p:
     page.wait_for_load_state('networkidle')
     expect(page.locator('[data-platform-session]')).to_be_visible()
     expect(page.get_by_text('Operator', exact=True)).to_be_visible()
-    inbox = page.locator('[data-platform-inbox]' if mode == 'progress' else '[data-alpha-inbox]')
+    inbox = page.locator('[data-platform-inbox]' if mode != 'legacy' else '[data-alpha-inbox]')
     expect(inbox).to_be_visible()
-    inbox.get_by_text('Ana' if mode == 'progress' else 'Legacy Ana', exact=True).click()
-    expect(inbox.get_by_text('latest' if mode == 'progress' else 'legacy history', exact=True).last).to_be_visible()
+    inbox.get_by_text('Ana' if mode != 'legacy' else 'Legacy Ana', exact=True).click()
+    expect(inbox.get_by_text('latest' if mode != 'legacy' else 'legacy history', exact=True).last).to_be_visible()
     inbox.locator('textarea').fill('hola')
     send = inbox.locator('button[type=submit]')
     send.click()
-    if mode == 'progress':
+    if mode in ('active', 'switch'):
+        expect(inbox.locator('form > button')).to_be_enabled(timeout=10000)
+        original_inbox = inbox.element_handle()
+        page.locator('button[aria-pressed=true]').click() if mode == 'active' else page.get_by_role('button', name='Other', exact=True).click()
+        if mode == 'switch':
+            expect(page.get_by_role('button', name=re.compile('^Other'))).to_have_attribute('aria-pressed', 'true')
+            page.get_by_role('button', name='Alpha', exact=True).click()
+        expect(page.locator('button[aria-pressed=true]')).to_contain_text('Alpha')
+        expect(inbox).to_be_visible()
+        if not inbox.locator('textarea').count():
+            inbox.get_by_text('Ana', exact=True).click()
+        review = inbox.locator('form > button')
+        if review.count():
+            review.click()
+        expect(inbox.locator('textarea')).to_be_enabled()
+        inbox.locator('textarea').fill('hola')
+        send.click()
+        expect(inbox.locator('textarea')).to_have_value('', timeout=15000)
+        assert len(keys) == 4 and len(set(keys)) == 1, keys
+        assert len(rows) == 1, rows
+        if mode == 'active':
+            assert original_inbox.evaluate('(element) => element.isConnected'), 'active workspace remounted inbox'
+            assert selections == [], selections
+        else:
+            assert selections == ['12', '11'], selections
+        print(f'PASS {mode}: 409, workspace navigation, explicit resend, same UUID, one row')
+    elif mode == 'progress':
         deadline = time.monotonic() + 10
         while len(keys) < 2 and time.monotonic() < deadline:
             if keys and send.is_enabled():  # The old manual retry lost the operation key.

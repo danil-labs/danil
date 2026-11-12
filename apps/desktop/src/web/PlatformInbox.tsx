@@ -5,11 +5,11 @@ import { Button } from '../ui/Button';
 import { ContactDetails, ConversationRow, ConversationHeader, InboxComposer, MessageBubble, SelectConversation } from './attention/inbox-view';
 import { createInboxDraft, type InboxDraft } from './attention/inbox-drafts';
 import { inboxConversation, inboxMessage, platformInbox } from './platform-inbox';
-import { inboxReplies } from './inbox-replies';
+import type { inboxReplies } from './inbox-replies';
 import { PlatformSessionError } from './platform-session';
 
 /** Keyed by workspace in PlatformEntry: old reads and in-flight writes cannot enter a new inbox. */
-export function PlatformInbox(props: { workspace: string; api: ReturnType<typeof platformInbox> }) {
+export function PlatformInbox(props: { workspace: string; api: ReturnType<typeof platformInbox>; reply: ReturnType<typeof inboxReplies> }) {
   const [rows, setRows] = createSignal<Conversation<string>[]>([]);
   const [selected, setSelected] = createSignal<Conversation<string>>();
   const [messages, setMessages] = createSignal<Message<string>[]>([]);
@@ -19,7 +19,6 @@ export function PlatformInbox(props: { workspace: string; api: ReturnType<typeof
   const [error, setError] = createSignal('');
   const [details, setDetails] = createSignal(false);
   const drafts = new Map<string, InboxDraft>();
-  const reply = inboxReplies(props.api);
   const lifetime = new AbortController();
   let thread = 0;
   onCleanup(() => { lifetime.abort(); for (const draft of drafts.values()) draft.invalidate(); });
@@ -75,7 +74,7 @@ export function PlatformInbox(props: { workspace: string; api: ReturnType<typeof
           <Show when={!busy() && !error() && messages().length === 0}><p class="text-ui text-neutral-500">{t('web.alpha.no_messages')}</p></Show>
         </div>
         <Show when={details()}><ContactDetails conversation={row()} onClose={() => setDetails(false)}/></Show>
-        <InboxComposer draft={draft(row().id)} conversation={row().id} allowed={!busy()} onSend={reply} onRefresh={() => read(row())}/>
+        <InboxComposer draft={draft(row().id)} conversation={row().id} allowed={!busy()} onSend={props.reply} onRefresh={() => read(row())}/>
       </div>}</Show>
     </div>
   </section>;
