@@ -1,23 +1,14 @@
-import { upstreamSignal } from "./transport.mjs";
-import { dependencyProblem, logDependency } from "./dependency-error.mjs";
+import { upstreamSignal } from "../alpha-entry/transport.mjs";
+import { dependencyProblem, logDependency } from "../alpha-entry/dependency-error.mjs";
 
-/**
- * WorkOS sign-in for alfa. The browser never holds a WorkOS or refresh token:
- * at the callback a service-role RPC resolves an approved existing person. A
- * real Supabase session opens for `users.uuid`; the cookie keeps the WorkOS session
- * id and that refresh token, sealed. Each POST to `/auth/session`
- * checks the WorkOS session and refreshes in GoTrue, so bans, the hook and RLS
- * stay those of app.danil.ai. Any failure denies; there is no fallback.
- */
+// Deuda de Desk: retirar cuando agents_session.rs use identity. Nunca emite tokens a la SPA.
 const WORKOS_API = "https://api.workos.com";
 const FLOW_COOKIE = "__Host-danil_alfa_flow";
 const SESSION_COOKIE = "__Host-danil_alfa";
-const SIGNED_OUT_COOKIE = "__Host-danil_alfa_signed_out";
-const SIGNED_OUT_SECONDS = 600;
 const FLOW_SECONDS = 600;
 const SESSION_SECONDS = 30 * 86_400;
 /** The page asks again within this time, so an ended WorkOS session stops it soon. */
-export const RECHECK_SECONDS = 600;
+const RECHECK_SECONDS = 600;
 const COOKIE_VERSION = "v1";
 const SESSION_PAGES = 20;
 // The desktop window (docs/desktop-bff-session.md): consent page, one-time code and its own sealed session.
@@ -53,14 +44,14 @@ function fromB64url(value) {
 const randomToken = () => b64url(crypto.getRandomValues(new Uint8Array(32)));
 const now = () => Math.floor(Date.now() / 1000);
 
-export function sessionConfig(env) {
+function sessionConfig(env, signal) {
   const clientId = env.WORKOS_CLIENT_ID?.trim();
   const apiKey = env.WORKOS_API_KEY?.trim();
   const supabaseUrl = env.SUPABASE_URL?.trim().replace(/\/+$/, "");
   const serviceKey = env.SUPABASE_SERVICE_ROLE_KEY?.trim();
   if (!clientId || !ID_RE.test(clientId) || !apiKey || !supabaseUrl?.startsWith("https://") || !serviceKey ||
       !env.SESSION_COOKIE_KEY) return null;
-  return { clientId, apiKey, supabaseUrl, serviceKey, env };
+  return { clientId, apiKey, supabaseUrl, serviceKey, env, signal };
 }
 
 async function cookieKey(env) {
@@ -97,11 +88,8 @@ function readCookie(request, name) {
   }
   return null;
 }
-// `__Host-` needs Path=/. Flow and signed-out cookies survive the WorkOS return (Lax); the session stays Strict.
+// The flow survives the WorkOS return (Lax); the sealed Desk browser identity stays Strict.
 const setCookie = (name, value, maxAge) => `${name}=${value}; Path=/; Max-Age=${maxAge}; HttpOnly; Secure; SameSite=${name === SESSION_COOKIE ? "Strict" : "Lax"}`;
-
-// This marker only keeps the sign-in page visible; it never opens a session.
-export const hasSignedOutMarker = request => readCookie(request, SIGNED_OUT_COOKIE) === "1";
 
 /** A return path on this site, outside the sign-in itself and the data proxy; anything else goes to the root. */
 export function safeNext(value, origin = "https://alfa-app.danil.ai") {
@@ -121,7 +109,7 @@ async function workos(config, path, init = {}) {
   try {
     response = await fetch(WORKOS_API + path, {
       ...init,
-      signal: upstreamSignal(config.env, init.signal),
+      signal: upstreamSignal(config.env, init.signal ? AbortSignal.any([config.signal, init.signal]) : config.signal),
       headers: { Authorization: `Bearer ${config.apiKey}`, Accept: "application/json", ...(init.body ? { "Content-Type": "application/json" } : {}) },
       redirect: "manual",
     });
@@ -153,7 +141,7 @@ async function supabase(config, path, init = {}) {
   try {
     response = await fetch(config.supabaseUrl + path, {
       ...init,
-      signal: upstreamSignal(config.env, init.signal),
+      signal: upstreamSignal(config.env, init.signal ? AbortSignal.any([config.signal, init.signal]) : config.signal),
       headers: { apikey: config.serviceKey, Authorization: `Bearer ${config.serviceKey}`, Accept: "application/json", ...(init.body ? { "Content-Type": "application/json" } : {}) },
       redirect: "manual",
     });
@@ -243,7 +231,7 @@ async function requireTerminusAccess(config, uuid) {
   if (allowed !== true) throw unavailable();
 }
 
-/** GoTrue's answer as the page gets it; the refresh token stays in the cookie. */
+/** The access answer goes only to Rust; its refresh token stays sealed. */
 function sessionOf(body, uuid) {
   const user = body?.user;
   if (typeof body?.access_token !== "string" || typeof body.refresh_token !== "string" || !body.refresh_token ||
@@ -289,7 +277,6 @@ async function start(config, url) {
     provider, screen_hint: "sign-in", state, code_challenge: challenge, code_challenge_method: "S256",
   })) authorize.searchParams.set(key, value);
   const response = new Response(null, { status: 303, headers: { ...NO_STORE, Location: authorize.href, "Set-Cookie": setCookie(FLOW_COOKIE, flow, FLOW_SECONDS) } });
-  response.headers.append("Set-Cookie", setCookie(SIGNED_OUT_COOKIE, "", 0));
   return response;
 }
 
@@ -304,6 +291,7 @@ async function callback(config, request, url) {
   let flow;
   const back = (error) => {
     const page = new URL("/auth", url.origin);
+    page.pathname = "/auth/desktop/error";
     page.searchParams.set("error", error);
     if (flow) page.searchParams.set("next", safeNext(flow.next));
     return new Response(null, { status: 303, headers: { ...NO_STORE, Location: page.href, "Set-Cookie": setCookie(FLOW_COOKIE, "", 0) } });
@@ -324,8 +312,7 @@ async function callback(config, request, url) {
     const sessionId = typeof answer.access_token === "string" ? sessionIdOf(answer.access_token) : null;
     if (typeof userId !== "string" || !ID_RE.test(userId) || !sessionId) throw unavailable();
     const person = await resolvePerson(config, userId);
-    const opened = await openSupabaseSession(config, person);
-    const session = await seal(config.env, SESSION_COOKIE, { user: userId, sid: sessionId, uuid: person.uuid, refresh: opened.refresh, exp: now() + SESSION_SECONDS });
+    const session = await seal(config.env, SESSION_COOKIE, { user: userId, sid: sessionId, uuid: person.uuid, exp: now() + SESSION_SECONDS });
     const headers = new Headers({ ...NO_STORE, Location: new URL(flow.next, url.origin).href });
     headers.append("Set-Cookie", setCookie(FLOW_COOKIE, "", 0));
     headers.append("Set-Cookie", setCookie(SESSION_COOKIE, session, SESSION_SECONDS));
@@ -344,41 +331,6 @@ async function emptyBody(request) {
     await reader.cancel();
     throw new Denied("invalid_body", 400);
   }
-}
-
-async function issue(config, request) {
-  try {
-    await emptyBody(request);
-    const session = await open(config.env, SESSION_COOKIE, readCookie(request, SESSION_COOKIE));
-    if (!ID_RE.test(session.user ?? "") || !ID_RE.test(session.sid ?? "") || !UUID_RE.test(session.uuid ?? "") || typeof session.refresh !== "string") throw new Denied("no_session");
-    await checkSession(config, session.user, session.sid);
-    await requireTerminusAccess(config, session.uuid);
-    const renewed = await refreshSupabaseSession(config, session.refresh, session.uuid);
-    const sealed = await seal(config.env, SESSION_COOKIE, { ...session, refresh: renewed.refresh });
-    return json(renewed.answer, 200, { "Set-Cookie": setCookie(SESSION_COOKIE, sealed, Math.max(0, session.exp - now())) });
-  } catch (error) {
-    const response = failure(error);
-    if (error instanceof Denied && (error.status === 401 || error.status === 403)) response.headers.set("Set-Cookie", setCookie(SESSION_COOKIE, "", 0));
-    return response;
-  }
-}
-
-async function logout(config, request, url) {
-  let location = new URL("/auth", url.origin).href;
-  try {
-    const session = await open(config.env, SESSION_COOKIE, readCookie(request, SESSION_COOKIE));
-    if (ID_RE.test(session.sid ?? "")) {
-      const end = new URL(`${WORKOS_API}/user_management/sessions/logout`);
-      end.searchParams.set("session_id", session.sid);
-      end.searchParams.set("return_to", location);
-      location = end.href;
-    }
-  } catch {
-    // No session to end at WorkOS: the cookie is cleared all the same.
-  }
-  const response = json({ location }, 200, { "Set-Cookie": setCookie(SESSION_COOKIE, "", 0) });
-  response.headers.append("Set-Cookie", setCookie(SIGNED_OUT_COOKIE, "1", SIGNED_OUT_SECONDS));
-  return response;
 }
 
 /** The three fields of a desktop sign-in, or null: PKCE challenge, the window's state and its loopback port. */
@@ -540,7 +492,7 @@ async function desktopExchange(config, request) {
   const remaining = code.exp * 1000 - Date.now();
   if (remaining <= 0) throw new Denied("invalid_code");
   const consumed = await codes.get(codes.idFromName(code.id)).fetch("https://desktop-code/consume", {
-    method: "POST", body: JSON.stringify({ exp: code.exp }), signal: upstreamSignal(config.env, AbortSignal.timeout(remaining)),
+    method: "POST", body: JSON.stringify({ exp: code.exp }), signal: upstreamSignal(config.env, AbortSignal.any([config.signal, AbortSignal.timeout(remaining)])),
   });
   if (consumed.status === 401) throw new Denied("invalid_code");
   if (consumed.status !== 204) throw unavailable();
@@ -555,7 +507,7 @@ async function desktopRefresh(config, request) {
   const value = await open(config.env, DESKTOP_SESSION, body.session);
   if (!validDesktop(value)) throw new Denied("no_session");
   await checkSession(config, value.user, value.sid);
-  // Like the browser's cookie, the window's session reads the grant again before every token.
+  // Recheck the grant before every token issued to the window.
   await requireTerminusAccess(config, value.uuid);
   return desktopAnswer(config, value);
 }
@@ -572,7 +524,7 @@ async function desktopLogout(config, request) {
   if (!validDesktop(value)) return new Response(null, { status: 204, headers: NO_STORE });
   try {
     const renewed = await refreshSupabaseSession(config, value.refresh, value.uuid);
-    const response = await fetch(`${config.supabaseUrl}/auth/v1/logout?scope=local`, { method: "POST", headers: { apikey: config.serviceKey, Authorization: `Bearer ${renewed.answer.access_token}` }, redirect: "manual", signal: upstreamSignal(config.env) });
+    const response = await fetch(`${config.supabaseUrl}/auth/v1/logout?scope=local`, { method: "POST", headers: { apikey: config.serviceKey, Authorization: `Bearer ${renewed.answer.access_token}` }, redirect: "manual", signal: upstreamSignal(config.env, config.signal) });
     if (!response.ok && response.status !== 401 && response.status !== 404) throw unavailable();
   } catch (error) {
     if (!(error instanceof Denied) || error.status === 503) throw error instanceof Denied ? error : unavailable();
@@ -594,7 +546,7 @@ async function handleDesktop(request, env, url) {
   // The form posts from this page; the JSON routes are called by the window's Rust, never by a page.
   if (route === "approve" && origin !== url.origin) return json({ error: "forbidden_origin" }, 403);
   if (route !== "page" && route !== "approve" && origin !== null) return json({ error: "forbidden_origin" }, 403);
-  const config = sessionConfig(env);
+  const config = sessionConfig(env, request.signal);
   if (!config) return dependencyProblem("sign_in_unavailable");
   try {
     if (route === "page") return await desktopStart(config, request, url);
@@ -607,23 +559,23 @@ async function handleDesktop(request, env, url) {
   }
 }
 
-/** `/auth/workos/*`, `/auth/session`, `/auth/logout` and `/auth/desktop*`; null for any other path. */
-export async function handleAuth(request, env, url) {
-  const desktop = await handleDesktop(request, env, url);
-  if (desktop) return desktop;
-  const route = url.pathname === "/auth/workos/start" ? "start" :
-    url.pathname === "/auth/workos/callback" ? "callback" :
-    url.pathname === "/auth/session" ? "session" :
-    url.pathname === "/auth/logout" ? "logout" : null;
-  if (!route) return null;
-  const method = route === "start" || route === "callback" ? "GET" : "POST";
-  if (request.method !== method) return json({ error: "method_not_allowed" }, 405);
-  if (method === "POST" && request.headers.get("Origin") !== url.origin) return json({ error: "forbidden_origin" }, 403);
-  if (method === "POST" && request.headers.get("x-danil-actor")?.trim().toLowerCase() === "ai") return json({ error: "identity_requires_person" }, 403);
-  const config = sessionConfig(env);
-  if (!config) return dependencyProblem("sign_in_unavailable");
-  if (route === "start") return start(config, url);
-  if (route === "callback") return callback(config, request, url);
-  if (route === "session") return issue(config, request);
-  return logout(config, request, url);
-}
+export default {
+  async fetch(request, env) {
+    const url = new URL(request.url);
+    if (url.protocol !== "https:" || url.hostname !== (env.ENTRY_HOST || "alfa-app.danil.ai")) return json({ error: "not_found" }, 404);
+    if (url.pathname === `${DESKTOP_PAGE}/error`) return json({ error: "desktop_sign_in_failed" }, 403);
+    const desktop = await handleDesktop(request, env, url);
+    if (desktop) return desktop;
+    const route = url.pathname === "/auth/workos/start" ? "start" : url.pathname === "/auth/workos/callback" ? "callback" : null;
+    if (!route) return json({ error: "not_found" }, 404);
+    if (request.method !== "GET") return json({ error: "method_not_allowed" }, 405);
+    if (route === "start") {
+      const next = new URL(safeNext(url.searchParams.get("next")), url.origin);
+      if (next.pathname !== DESKTOP_PAGE || !desktopRequest(next.searchParams)) return json({ error: "invalid_request" }, 400);
+    }
+    const config = sessionConfig(env, request.signal);
+    if (!config) return dependencyProblem("sign_in_unavailable");
+    try { return route === "start" ? await start(config, url) : await callback(config, request, url); }
+    catch (error) { return failure(error); }
+  },
+};

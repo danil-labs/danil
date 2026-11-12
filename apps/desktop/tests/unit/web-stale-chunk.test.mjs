@@ -6,42 +6,31 @@
  */
 import assert from "node:assert/strict";
 import test from "node:test";
-import { relay } from "../helpers/fake-relay.mjs";
 import { boot, sleep } from "../helpers/jsdom-app.mjs";
-
-const SUPABASE = "https://supabase.test";
-const API = "https://machines.danil.ai/v1/computers";
-const session = JSON.stringify({
-  access_token: "stored",
-  refresh_token: "r",
-  token_type: "bearer",
-  expires_in: 3600,
-  expires_at: Math.floor(Date.now() / 1000) + 3600,
-  user: { id: "u1", aud: "authenticated", role: "authenticated", email: "persona@example.com", app_metadata: {}, user_metadata: {}, created_at: "2026-01-01T00:00:00Z" },
-});
 
 const pageWith = (entry) => `<!doctype html><html><head><script type="module" src="/terminus/assets/${entry}.js"></script></head></html>`;
 
 async function open(t) {
-  const fake = relay();
   const own = globalThis.fetch;
   const page = { html: null };
   globalThis.fetch = async (input, init) => {
     const url = String(input?.url ?? input);
     if (url.endsWith("/terminus/") && page.html) return new Response(page.html, { status: 200 });
-    if (!url.startsWith(API)) return own(input, init);
-    return new Response(JSON.stringify([{ computer_id: "cmp_a", name: "Casa", state: "online" }]), { status: 200 });
+    if (url.endsWith("/v1/identity/me")) return Response.json({ id: "user_A", name: "Ana", workspace: "11", organizations: [] });
+    if (url.endsWith("/v1/workspaces")) return Response.json({ items: [{ id: "11", org: "org_A", name: "Alpha", role: "owner" }], next_cursor: null });
+    if (url.includes("/v1/messaging/")) return Response.json({ data: [], page: { has_more: false, next_cursor: null } });
+    if (url.startsWith("http://localhost/") && url.includes("/assets/")) return new Response("");
+    return own(input, init);
   };
+  globalThis.fetch.__jsdomApp = true;
   t.after(() => {
     globalThis.fetch = own;
   });
   let w;
-  const app = await boot("listo", "web-stale-chunk", {}, undefined, { "sb-supabase-auth-token": session }, {
+  const app = await boot("listo", "web-stale-chunk", {}, undefined, {}, {
     web: true,
     beforeImport: (win) => {
       w = win;
-      globalThis.WebSocket = fake.Socket;
-      win.terminusWeb = { supabaseUrl: SUPABASE, supabaseKey: "public-anon-key" };
     },
   });
   await sleep(1500);

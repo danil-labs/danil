@@ -1,29 +1,15 @@
-// Entrada de alfa-app.danil.ai (o del host de ENTRY_HOST, como la web de staging): sirve Terminus
-// web (TERMINUS_WEB) en la raíz, la entrada con WorkOS (session.mjs) y, en /alpha-api, una lista cerrada del BFF de appv2 (APPV2_BFF).
-// Lecturas GET: /auth/profile, /auth/emails, /auth/account/support-access,
-// /auth/organization/workspaces, /api/channels, el
-// inbox y los agentes y conexiones de atención de Configuración, con query acotada.
-// Las escrituras usan Origin exacto, Bearer personal y cuerpos JSON reconstruidos y acotados.
-// La autorización de respuestas se revalida en el BFF sobre la cuenta y canal de la conversación.
-// Difusiones: lo que falta sobre marketingProxy son listas cerradas en broadcasts.mjs. Lo que llega
-// a Meta responde 403 salvo con BROADCAST_WRITES="on"; lo que llega a clientes, 409 salvo con
-// BROADCAST_DELIVERY="on". Ambas pasan por el preflight de campaigns.manage.
-// Danil Business: lista cerrada en business.mjs, solo la cuenta activa del Bearer.
 export { DesktopCodeStore } from "./desktop-code-store.mjs";
+// Plataforma para la SPA; /alpha-api conserva los dominios pendientes de W5.
 import { upstreamSignal } from "./transport.mjs";
 import { dependencyProblem, logDependency } from "./dependency-error.mjs";
 import { broadcastRead, broadcastWrite } from "./broadcasts.mjs";
-import { BUSINESS_MAX_BODY, businessBody, businessRoute } from "./business.mjs";
-import { handleAuth, hasSignedOutMarker, sessionConfig } from "./session.mjs";
 
 const HOST = "alfa-app.danil.ai";
 // Pasada la puerta de `fetch`, `url.origin` es `https://<host>`: las escrituras comparan contra él.
 // La web vive en la raíz del dominio (build con `TERMINUS_WEB_BASE=/`).
 const PREFIX = "/alpha-api";
-const ENTRY_PATHS = ["/auth", "/sign-in"];
 // Donde vivía antes; sus enlaces y PWA instaladas se mandan a la raíz.
 const LEGACY = "/terminus";
-const PHONE_ROUTES = ["inbox", "inbox-thread", "inbox-detail", "personalize", "broadcasts", "channels", "attention-agents"].map(route => `/m/${route}`);
 const json = (error, status) => status >= 500 ? dependencyProblem(error, status) : Response.json({ error }, {
   status,
   headers: { "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" },
@@ -38,10 +24,6 @@ const EMAIL_WRITES = {
 };
 const MAX_BODY = 1024;
 const WORKSPACE_KEY = /^(a:[1-9][0-9]{0,17}|w:[!-~]{1,128})$/;
-// Atención en Configuración: sin query; el BFF ancla cada una a la cuenta activa de la sesión.
-const SERVICE_READS = ["/api/credits/balance", "/api/agents", "/api/http_tools", "/api/account_variables"];
-const SERVICE_AGENT = /^\/api\/agents\/[1-9]\d*(\/connections)?$/;
-
 const positive = value => Number.isSafeInteger(value) && value > 0;
 const exact = (body, required, optional = []) => body && typeof body === "object" && !Array.isArray(body) && required.every(key => Object.hasOwn(body, key)) && Object.keys(body).every(key => required.includes(key) || optional.includes(key));
 
@@ -124,28 +106,6 @@ async function marketingProxy(request, env, url, path, route) {
   return forward(env, new Request(url, { method: request.method, headers, ...(body === undefined ? {} : { body }), redirect: "manual" }));
 }
 
-async function replyWrite(request, env, url) {
-  if (request.headers.get("Origin") !== url.origin) return json("forbidden_origin", 403);
-  if ((request.headers.get("X-Danil-Actor") ?? "").trim().toLowerCase() === "ai") return json("identity_requires_person", 403);
-  const authorization = request.headers.get("Authorization");
-  if (!authorization || !/^Bearer \S+$/i.test(authorization)) return json("unauthorized", 401);
-  if (url.search) return json("invalid_query", 400);
-  if (!/^application\/json(?:\s*;\s*charset=utf-8)?$/i.test(request.headers.get("Content-Type") ?? "")) return json("invalid_body", 400);
-  const bytes = await boundedBody(request, 20 * 1024);
-  if (!bytes) return json("invalid_body", 400);
-  let body;
-  try { body = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes)); } catch { return json("invalid_body", 400); }
-  if (!body || typeof body !== "object" || Array.isArray(body) || Object.keys(body).length !== 3 ||
-      !["conversation_id", "text", "client_message_id"].every(key => Object.hasOwn(body, key)) ||
-      !Number.isSafeInteger(body.conversation_id) || body.conversation_id <= 0 ||
-      typeof body.text !== "string" || !body.text.trim() || body.text.trim().length > 4096 ||
-      typeof body.client_message_id !== "string" || !/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(body.client_message_id)) return json("invalid_body", 400);
-  if (!env.APPV2_BFF) return json("bff_unavailable", 503);
-  url.pathname = "/api/messaging/reply";
-  const headers = { Authorization: authorization, Accept: "application/json", "Content-Type": "application/json", Origin: url.origin };
-  return forward(env, new Request(url, { method: "POST", headers, body: JSON.stringify({ conversation_id: body.conversation_id, text: body.text.trim(), client_message_id: body.client_message_id }), redirect: "manual" }));
-}
-
 /** Lee el cuerpo por partes y corta al pasar de `max` bytes: sin Content-Length no se carga entero. */
 async function boundedBody(request, max) {
   if (!request.body) return new Uint8Array();
@@ -193,20 +153,13 @@ async function emailBody(request, fields) {
 }
 
 function queryFor(url, kind) {
-  const fields = kind === "profile" || kind === "channels" || kind === "emails" || kind === "service" ? {} : kind === "support" ? { account_id: [1, Number.MAX_SAFE_INTEGER] } : {
-    account_id: [1, Number.MAX_SAFE_INTEGER],
-    limit: [1, 100],
-    ...(kind === "list" ? { offset: [0, 100_000] } : { before_id: [1, Number.MAX_SAFE_INTEGER] }),
-  };
   const query = new URLSearchParams();
   for (const [key, value] of url.searchParams) {
-    const bounds = Object.hasOwn(fields, key) && fields[key];
     const number = Number(value);
-    if (!bounds || query.has(key) || !/^\d+$/.test(value) ||
-        !Number.isSafeInteger(number) || number < bounds[0] || number > bounds[1]) return null;
+    if (kind !== "support" || key !== "account_id" || query.has(key) || !/^[1-9]\d*$/.test(value) || !Number.isSafeInteger(number)) return null;
     query.set(key, String(number));
   }
-  if (kind !== "profile" && kind !== "channels" && kind !== "emails" && kind !== "service" && !query.has("account_id")) return null;
+  if (kind === "support" && !query.has("account_id")) return null;
   return query;
 }
 
@@ -235,25 +188,7 @@ async function forward(env, upstream) {
   return new Response(response.body, { status: response.status, headers });
 }
 
-/** Una escritura de correos: desde esta página, con sesión y el cuerpo exacto de su ruta. */
-/** Entrar a un workspace en esta sesión. Solo la clave llega al BFF, que decide con el Bearer de la persona. */
-async function enterWrite(request, env, url) {
-  if (request.headers.get("Origin") !== url.origin) return json("forbidden_origin", 403);
-  if ((request.headers.get("X-Danil-Actor") ?? "").trim().toLowerCase() === "ai") return json("identity_requires_person", 403);
-  const authorization = request.headers.get("Authorization");
-  if (!authorization || !/^Bearer \S+$/i.test(authorization)) return json("unauthorized", 401);
-  if (url.search) return json("invalid_query", 400);
-  if (!/^application\/json(?:\s*;\s*charset=utf-8)?$/i.test(request.headers.get("Content-Type") ?? "")) return json("invalid_body", 400);
-  const bytes = await boundedBody(request, MAX_BODY);
-  let body;
-  try { body = bytes && JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes)); } catch { return json("invalid_body", 400); }
-  if (!exact(body, ["key"]) || typeof body.key !== "string" || !WORKSPACE_KEY.test(body.key)) return json("invalid_body", 400);
-  if (!env.APPV2_BFF) return json("bff_unavailable", 503);
-  url.pathname = "/api/workspace/enter";
-  const headers = { Authorization: authorization, Accept: "application/json", "Content-Type": "application/json", Origin: url.origin };
-  return forward(env, new Request(url, { method: "POST", headers, body: JSON.stringify({ key: body.key }), redirect: "manual" }));
-}
-
+/** Correos aún pendientes del servicio de identidad; solo cuerpos cerrados del origen propio. */
 async function emailWrite(request, env, url, path) {
   if (request.headers.get("Origin") !== url.origin) return json("forbidden_origin", 403);
   // Quitar la marca convertiría en persona a un turno de IA: se rechaza aquí, como en el BFF.
@@ -270,38 +205,6 @@ async function emailWrite(request, env, url, path) {
   url.pathname = path;
   url.search = "";
   return forward(env, new Request(url, { method: "POST", headers, body: JSON.stringify(body), redirect: "manual" }));
-}
-
-/** Danil Business: lecturas con solo `account_id` y escrituras con las barreras de las demás; siempre la cuenta activa. */
-async function businessProxy(request, env, url, path, route) {
-  if (!route.read && request.headers.get("Origin") !== url.origin) return json("forbidden_origin", 403);
-  if (!route.read && (request.headers.get("X-Danil-Actor") ?? "").trim().toLowerCase() === "ai") return json("identity_requires_person", 403);
-  const authorization = request.headers.get("Authorization");
-  if (!authorization || !/^Bearer \S+$/i.test(authorization)) return json("unauthorized", 401);
-  const account = bearerAccount(authorization);
-  if (account === null) return json("missing_active_account", 403);
-  const headers = new Headers({ Authorization: authorization, Accept: "application/json", Origin: url.origin });
-  let body;
-  if (route.read) {
-    const keys = [...url.searchParams.keys()];
-    const raw = url.searchParams.get("account_id");
-    if (keys.length !== 1 || keys[0] !== "account_id" || !/^\d+$/.test(raw ?? "") || !Number.isSafeInteger(Number(raw)) || Number(raw) <= 0) return json("invalid_query", 400);
-    if (Number(raw) !== account) return json("account_mismatch", 403);
-    url.search = new URLSearchParams({ account_id: String(account) }).toString();
-  } else {
-    if (url.search) return json("invalid_query", 400);
-    if (!/^application\/json(?:\s*;\s*charset=utf-8)?$/i.test(request.headers.get("Content-Type") ?? "")) return json("invalid_body", 400);
-    if (Number(request.headers.get("Content-Length") ?? "0") > BUSINESS_MAX_BODY) return json("invalid_body", 400);
-    const bytes = await boundedBody(request, BUSINESS_MAX_BODY);
-    if (!bytes) return json("invalid_body", 400);
-    const rebuilt = businessBody(route, bytes, account);
-    if (rebuilt.error) return json(rebuilt.error, rebuilt.error === "account_mismatch" ? 403 : 400);
-    body = JSON.stringify(rebuilt.body);
-    headers.set("Content-Type", "application/json");
-  }
-  if (!env.APPV2_BFF) return json("bff_unavailable", 503);
-  url.pathname = path;
-  return forward(env, new Request(url, { method: request.method, headers, ...(body === undefined ? {} : { body }), redirect: "manual" }));
 }
 
 /** Una escritura de Difusiones: las mismas barreras que los correos, más el interruptor. */
@@ -350,33 +253,23 @@ export default {
     }
     if (url.pathname === PREFIX || url.pathname.startsWith(`${PREFIX}/`)) {
       const path = url.pathname.slice(PREFIX.length);
+      if (path.startsWith("/auth/account/business/") || path === "/auth/organization/workspaces" || path === "/auth/profile" || path === "/api/workspace/enter" || path === "/api/messaging/reply" ||
+          /^\/api\/(inbox|agents|credits|http_tools|account_variables)(\/|$)/.test(path)) return json("not_found", 404);
       // Cerrada también: el BFF compara la clave con el claim verificado. Nunca elige workspace.
       const workspaceKey = request.headers.get("X-Danil-Workspace");
       if (workspaceKey !== null && !WORKSPACE_KEY.test(workspaceKey)) return json("invalid_workspace_key", 400);
       if (workspaceKey !== null) env = { ...env, workspaceKey };
-      if (request.method === "POST" && path === "/api/workspace/enter") return enterWrite(request, env, url);
       const write = broadcastWrite(request.method, path);
       if (write && (!write.delivery || env.BROADCAST_DELIVERY === "on")) return writeBroadcast(request, env, url, path, write);
       const marketing = marketingRoute(path);
       if (marketing) return marketingProxy(request, env, url, path, marketing);
-      if (request.method === "POST" && path === "/api/messaging/reply") return replyWrite(request, env, url);
       if (request.method === "POST" && Object.hasOwn(EMAIL_WRITES, path)) return emailWrite(request, env, url, path);
-      const business = businessRoute(request.method, path);
-      if (business) return businessProxy(request, env, url, path, business);
       if (request.method !== "GET") return json("method_not_allowed", 405);
       const read = broadcastRead(path);
-      const kind = read ? "broadcast" : path === "/auth/profile" ? "profile" :
-        path === "/auth/emails" ? "emails" :
-        path === "/api/inbox/conversations" ? "list" :
+      const kind = read ? "broadcast" : path === "/auth/emails" ? "emails" :
         path === "/api/channels" ? "channels" :
-        path === "/auth/account/support-access" ? "support" :
-        path === "/auth/organization/workspaces" ? "support" :
-        SERVICE_READS.includes(path) || SERVICE_AGENT.test(path) ? "service" :
-        path === "/auth/account/my-permissions" ? "support" :
-        /^\/api\/inbox\/conversations\/[1-9]\d*\/messages$/.test(path) ? "messages" : null;
+        ["/auth/account/support-access", "/auth/account/my-permissions"].includes(path) ? "support" : null;
       if (!kind) return json("not_found", 404);
-      if (kind === "messages" && !Number.isSafeInteger(Number(path.split("/")[4]))) return json("invalid_query", 400);
-      if (kind === "service" && path.startsWith("/api/agents/") && !Number.isSafeInteger(Number(path.split("/")[3]))) return json("invalid_query", 400);
       const query = read ? read(url.searchParams) : queryFor(url, kind);
       if (!query) return json("invalid_query", 400);
       const authorization = request.headers.get("Authorization");
@@ -391,20 +284,15 @@ export default {
       url.search = query.toString();
       return forward(env, new Request(url, { headers, redirect: "manual" }));
     }
-    const signIn = await handleAuth(request, env, url);
-    if (signIn) return signIn;
-    if (request.method !== "GET" && request.method !== "HEAD") return json("method_not_allowed", 405);
-    // Sin pantalla previa: la entrada es la de WorkOS. Con cualquier otro parámetro
-    // (`error`, `signed_out`) se pinta `/auth`; si no, un fallo volvería a entrar en bucle.
-    if (env.DANIL_WEB_SESSION !== "platform" && request.method === "GET" && sessionConfig(env) && !hasSignedOutMarker(request) && ENTRY_PATHS.includes(url.pathname) && [...url.searchParams.keys()].every((key) => key === "next")) {
-      return new Response(null, { status: 302, headers: { Location: `/auth/workos/start${url.search}`, "Cache-Control": "no-store" } });
+    if (url.pathname.startsWith("/auth/desktop") || url.pathname.startsWith("/auth/workos/")) {
+      if (!env.DESKTOP_AUTH) return dependencyProblem("desktop_auth_unavailable");
+      try { return await env.DESKTOP_AUTH.fetch(new Request(request, { signal: upstreamSignal(env, request.signal) })); }
+      catch (error) { logDependency("desktop_auth", error); return dependencyProblem("desktop_auth_unavailable"); }
     }
+    if (["/auth/session", "/auth/logout"].includes(url.pathname)) return json("not_found", 404);
+    if (request.method !== "GET" && request.method !== "HEAD") return json("method_not_allowed", 405);
     if (!env.TERMINUS_WEB) return json("assets_unavailable", 503);
     try {
-      if (PHONE_ROUTES.includes(url.pathname)) {
-        url.pathname = "/m/";
-        return await env.TERMINUS_WEB.fetch(new Request(new Request(url, request), { signal: upstreamSignal(env, request.signal) }));
-      }
       return await env.TERMINUS_WEB.fetch(new Request(request, { signal: upstreamSignal(env, request.signal) }));
     } catch (error) {
       logDependency("assets_fetch", error);

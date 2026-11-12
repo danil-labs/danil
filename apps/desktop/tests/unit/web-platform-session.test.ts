@@ -3,16 +3,14 @@ import test from "node:test";
 import { platformSession, PlatformSessionError } from "../../src/web/platform-session.ts";
 import { webSessionDeployment } from "../../src/web/session-config.ts";
 
-test("deployment selects complete session paths and rejects invalid configuration", () => {
-  assert.equal(webSessionDeployment({}).kind, "legacy");
-  const deployment = webSessionDeployment({ DANIL_WEB_SESSION: "platform" });
-  assert.deepEqual(deployment, { kind: "platform", origin: "https://api.danil.ai", timeoutMs: 15000, inbox: "legacy" });
-  assert.equal(webSessionDeployment({ DANIL_WEB_SESSION: "platform", DANIL_WEB_API_ORIGIN: "http://localhost:8787" }).kind, "platform");
+test("platform is the only session and origin is configurable", () => {
+  assert.deepEqual(webSessionDeployment({}), { origin: "https://api.danil.ai", timeoutMs: 15000 });
+  assert.equal(webSessionDeployment({ DANIL_WEB_API_ORIGIN: "https://api-beta.danil.ai" }).origin, "https://api-beta.danil.ai");
+  assert.equal(webSessionDeployment({ DANIL_WEB_API_ORIGIN: "http://localhost:8787" }).origin, "http://localhost:8787");
   for (const env of [
-    { DANIL_WEB_SESSION: "typo" },
-    { DANIL_WEB_SESSION: "platform", DANIL_WEB_API_ORIGIN: "https://evil.test/path" },
-    { DANIL_WEB_SESSION: "platform", DANIL_WEB_API_ORIGIN: "http://api.danil.ai" },
-    { DANIL_WEB_SESSION: "platform", DANIL_WEB_API_TIMEOUT_MS: "0" },
+    { DANIL_WEB_API_ORIGIN: "https://evil.test/path" },
+    { DANIL_WEB_API_ORIGIN: "http://api.danil.ai" },
+    { DANIL_WEB_API_TIMEOUT_MS: "0" },
   ]) assert.throws(() => webSessionDeployment(env));
 });
 

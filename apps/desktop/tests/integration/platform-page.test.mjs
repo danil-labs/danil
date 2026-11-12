@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { boot } from "../helpers/jsdom-app.mjs";
 
-// Requires a web bundle built with DANIL_WEB_SESSION=platform, and the ordinary desktop bundle.
+// Requires the web and desktop bundles.
 async function until(read) {
   const deadline = Date.now() + 3000;
   while (!read()) {
@@ -18,6 +18,7 @@ async function page(handler) {
     assert.equal(url.origin, "https://api.danil.ai");
     assert.equal(init.credentials, "include");
     assert.equal(new Headers(init.headers).has("authorization"), false);
+    if (url.pathname.startsWith("/v1/messaging/")) return Response.json({ data: [], page: { has_more: false, next_cursor: null } });
     return handler(url.pathname, init);
   };
   // The common mount helper's legacy registry stub uses this same /v1/workspaces path.

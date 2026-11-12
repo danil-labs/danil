@@ -5,21 +5,19 @@ import { seguirElTema } from "../lib/theme";
 import { Button } from "../ui/Button";
 import { platformSession, PlatformSessionError, type PlatformProfile, type PlatformWorkspace } from "./platform-session";
 import { workspaceSelection } from "./workspace-selection";
-import { workosSession } from "./workos-session";
-import { LegacyInbox } from "./LegacyInbox";
-import { type WebSessionDeployment, webDomainRoutes } from "./session-config";
+import { type WebSessionDeployment } from "./session-config";
 import { PlatformInbox } from "./PlatformInbox";
 import { platformInbox } from "./platform-inbox";
 import { inboxReplyStore } from "./inbox-replies";
+import { ToastStack } from "../ui/Toast";
+import { UpdateNotice } from "./UpdateNotice";
 import "./phrases";
 
-export function startPlatform(options: Extract<WebSessionDeployment, { kind: "platform" }> & { legacy: { endpoint: string; login: string } }, root: HTMLElement) {
+export function startPlatform(options: WebSessionDeployment, root: HTMLElement) {
   aplicarLengua();
   seguirElTema();
   const api = platformSession(options);
   const inbox = platformInbox(options);
-  const routes = webDomainRoutes(options);
-  const legacy = options.inbox === "legacy" ? workosSession() : undefined;
   const returnTo = new URL(import.meta.env.BASE_URL, window.location.origin).href;
   function PlatformEntry() {
     const [profile, setProfile] = createSignal<PlatformProfile>();
@@ -63,6 +61,7 @@ export function startPlatform(options: Extract<WebSessionDeployment, { kind: "pl
     }
     onMount(() => { void load(); });
     return <main class="min-h-full bg-bg px-6 py-10 text-neutral-950" data-platform-session="" aria-busy={busy()}>
+      <ToastStack><UpdateNotice /></ToastStack>
       <div class="mx-auto grid max-w-6xl gap-6">
         <header class="flex items-center justify-between gap-4">
           <h1 class="m-0 font-display text-lead font-bold">{t("common.brand_name")}</h1>
@@ -80,7 +79,7 @@ export function startPlatform(options: Extract<WebSessionDeployment, { kind: "pl
         </Show>
         <Show when={busy()}><p class="m-0 text-ui text-neutral-500" role="status">{t("web.auth.waiting")}</p></Show>
         <Show when={error()}><div class="grid gap-3"><p class="m-0 text-ui text-error-strong" role="alert">{t(error())}</p><Button variant="secondary" disabled={busy()} onClick={() => void load()}>{t("web.computers.retry")}</Button></div></Show>
-        <Show when={profile() && !busy() && !uncertain() && active()} keyed>{workspace => <Show when={routes.inbox === "v1"} fallback={legacy ? <LegacyInbox workspace={workspace} session={legacy} endpoint={options.legacy.endpoint} login={options.legacy.login}/> : undefined}><PlatformInbox workspace={workspace} api={inbox} reply={replies(workspace)}/></Show>}</Show>
+        <Show when={profile() && !busy() && !uncertain() && active()} keyed>{workspace => <PlatformInbox workspace={workspace} api={inbox} reply={replies(workspace)}/>}</Show>
       </div>
     </main>;
   }

@@ -1,5 +1,20 @@
 # Atención en el escritorio: sesión de persona y ruta por Machines
 
+Deuda exclusiva de Desk: el Worker privado `danil-legacy-desktop-auth`
+conserva GoTrue hasta migrar `agents_session.rs` a identity. `alpha-entry`
+delega solo `/auth/desktop*` y `/auth/workos/*` por `DESKTOP_AUTH` con plazo.
+La SPA usa siempre el borde de plataforma y `/auth/session` responde 404.
+El callback de compatibilidad guarda identidad sellada, sin abrir GoTrue;
+solo el canje PKCE de Rust abre la sesión.
+
+Antes de desplegar el nuevo binding, copiar WORKOS_API_KEY,
+SUPABASE_SERVICE_ROLE_KEY y SESSION_COOKIE_KEY al Worker privado sin cambiar
+el sello existente. Mantener el namespace DESKTOP_CODES de alpha-entry por
+binding remoto, para conservar los códigos consumidos durante la transición.
+Después, retirar los secretos de alpha-entry. No hay publicación ni migración
+de secretos ejecutada por este cambio.
+
+
 Decisión de la persona (2026-11-01) y revisión de arquitectura
 `desktop-bff-route-via-computers-review.md` (memoria del proyecto). La ventana
 de escritorio monta Atención, Difusiones y canales con un solo inicio de
@@ -14,7 +29,7 @@ Tres piezas, un contrato. Cambiar algo de aquí cambia las tres.
 | Pieza | Repositorio | Qué hace |
 |---|---|---|
 | Ventana (Rust) | terminus `apps/desktop/src-tauri/src/extracted/agents_session.rs` | PKCE con loopback, llavero, renovación, llamadas al BFF por Machines. El token nunca llega al JavaScript. |
-| Worker de entrada | terminus `apps/desktop/alpha-entry/session.mjs` | Consentimiento en el navegador y la sesión de escritorio sellada. |
+| Worker de entrada | terminus `apps/desktop/legacy-desktop-auth/worker.mjs` | Consentimiento en el navegador y la sesión de escritorio sellada. |
 | Machines | danil-labs/machines | Registro de concesiones de escritorio y `/v1/bff/*`. |
 
 ## 1. Inicio de sesión (Worker de entrada)
