@@ -24,7 +24,7 @@ const ENTRY_PATHS = ["/auth", "/sign-in"];
 // Donde vivía antes; sus enlaces y PWA instaladas se mandan a la raíz.
 const LEGACY = "/terminus";
 const PHONE_ROUTES = ["inbox", "inbox-thread", "inbox-detail", "personalize", "broadcasts", "channels", "attention-agents"].map(route => `/m/${route}`);
-const json = (error, status) => Response.json({ error }, {
+const json = (error, status) => status >= 500 ? dependencyProblem(error, status) : Response.json({ error }, {
   status,
   headers: { "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" },
 });
@@ -68,10 +68,15 @@ function bearerAccount(authorization) {
 async function requireCampaignsManage(env, url, headers, account) {
   const permissionsUrl = new URL(`/auth/account/my-permissions?account_id=${account}`, url.origin);
   const response = await forward(env, new Request(permissionsUrl, { headers, redirect: "manual" }));
-  if (!response.ok) return json("permissions_unavailable", response.status === 401 ? 401 : 403);
+  if (!response.ok) return response.status === 401 || response.status === 403
+    ? json("permissions_unavailable", response.status) : dependencyProblem("permissions_unavailable");
   let permissions;
-  try { permissions = await response.json(); } catch { return json("permissions_unavailable", 403); }
-  if (typeof permissions?.role !== "string" || !Array.isArray(permissions.permissions) || !permissions.permissions.every(value => typeof value === "string") || !Array.isArray(permissions.scoped) || !permissions.scoped.every(grant => grant && typeof grant.permission === "string" && typeof grant.scope_type === "string" && positive(grant.scope_id)) || !permissions.permissions.includes("campaigns.manage")) return json("forbidden_read_only", 403);
+  try { permissions = await response.json(); } catch (error) {
+    logDependency("permissions_parse", error);
+    return dependencyProblem("permissions_unavailable");
+  }
+  if (typeof permissions?.role !== "string" || !Array.isArray(permissions.permissions) || !permissions.permissions.every(value => typeof value === "string") || !Array.isArray(permissions.scoped) || !permissions.scoped.every(grant => grant && typeof grant.permission === "string" && typeof grant.scope_type === "string" && positive(grant.scope_id))) return dependencyProblem("permissions_unavailable");
+  if (!permissions.permissions.includes("campaigns.manage")) return json("forbidden_read_only", 403);
   return null;
 }
 
@@ -152,7 +157,7 @@ async function boundedBody(request, max) {
     if (done) break;
     size += value.byteLength;
     if (size > max) {
-      await reader.cancel().catch(() => {});
+      await reader.cancel().catch(error => logDependency("body_cancel", error));
       return null;
     }
     parts.push(value);
@@ -214,7 +219,8 @@ async function forward(env, upstream) {
   let response;
   try {
     response = await env.APPV2_BFF.fetch(new Request(upstream, { signal: upstreamSignal(env, upstream.signal) }));
-  } catch {
+  } catch (error) {
+    logDependency("bff_fetch", error);
     return json("bff_unavailable", 502);
   }
   if (response.status >= 300 && response.status < 400) return json("unexpected_redirect", 502);

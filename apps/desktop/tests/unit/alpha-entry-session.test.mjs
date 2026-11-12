@@ -242,7 +242,7 @@ test("WorkOS down denies with 503 and never a token", async () => {
   w.state.workosDown = true;
   const response = await session(w, cookie);
   assert.equal(response.status, 503);
-  assert.deepEqual(await response.json(), { error: "identity_unavailable" });
+  assert.deepEqual(await response.json(), { type: "about:blank", title: "identity_unavailable", status: 503, error: "identity_unavailable" });
   assert.deepEqual(cookiesOf(response), []);
   const { back } = await signedIn(world({ workosDown: true }));
   assert.equal(back.status, 303);
@@ -553,7 +553,7 @@ test("desktop: storage unavailability fails closed without a new session", async
     w.env.DESKTOP_CODES = unavailable;
     const response = await withFetch(w, () => worker.fetch(exchangeRequest(code), w.env));
     assert.equal(response.status, 503);
-    assert.deepEqual(await response.json(), { error: "identity_unavailable" });
+    assert.deepEqual(await response.json(), { type: "about:blank", title: "identity_unavailable", status: 503, error: "identity_unavailable" });
     assert.equal(sessionOpens(w), before);
   }
 });
@@ -599,5 +599,37 @@ test("WorkOS and Supabase calls carry a deadline through login and refresh", asy
   for (const call of w.calls) {
     assert.ok(call.signal instanceof AbortSignal, call.url);
     assert.equal(call.signal.aborted, true, call.url);
+  }
+});
+
+test("desktop consent surfaces a failed login lookup instead of rendering anonymous consent", async t => {
+  const logged = [];
+  t.mock.method(console, "error", (...args) => logged.push(args));
+  const w = world();
+  const { cookie } = await signedIn(w);
+  const original = w.fetch;
+  for (const reply of [() => new Response(null, { status: 503 }), () => { throw new TypeError("private-session-must-not-leak"); }]) {
+    w.fetch = async (input, init) => new URL(input).pathname === `/auth/v1/admin/users/${uuid}` ? reply() : original(input, init);
+    const response = await call(w, `/auth/desktop?${desktopQuery()}`, { headers: { Cookie: cookie } });
+    assert.equal(response.status, 503);
+    assert.match(response.headers.get("Content-Type"), /^application\/problem\+json/);
+    assert.equal(response.headers.get("Retry-After"), "1");
+    assert.equal((await response.json()).error, "identity_unavailable");
+  }
+  assert.ok(logged.length >= 2);
+  assert.ok(!JSON.stringify(logged).includes("private-session-must-not-leak"));
+});
+
+test("identity throttling is unavailable and never clears the person's session", async t => {
+  t.mock.method(console, "error", () => {});
+  for (const path of ["/user_management/users/user_01ABC/sessions", "/auth/v1/token"]) {
+    const w = world();
+    const { cookie } = await signedIn(w);
+    const original = w.fetch;
+    w.fetch = async (input, init) => new URL(input).pathname === path ? new Response(null, { status: 429 }) : original(input, init);
+    const response = await session(w, cookie);
+    assert.equal(response.status, 503, path);
+    assert.match(response.headers.get("Content-Type"), /^application\/problem\+json/);
+    assert.equal(response.headers.get("Set-Cookie"), null);
   }
 });

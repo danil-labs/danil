@@ -1,4 +1,5 @@
 import { upstreamSignal } from "./transport.mjs";
+import { dependencyProblem, logDependency } from "./dependency-error.mjs";
 
 /**
  * WorkOS sign-in for alfa. The browser never holds a WorkOS or refresh token:
@@ -124,16 +125,25 @@ async function workos(config, path, init = {}) {
       headers: { Authorization: `Bearer ${config.apiKey}`, Accept: "application/json", ...(init.body ? { "Content-Type": "application/json" } : {}) },
       redirect: "manual",
     });
-  } catch {
+  } catch (error) {
+    logDependency("identity_dependency", error);
+    throw unavailable();
+  }
+  if (response.status === 429) {
+    logDependency("workos_throttled", response);
     throw unavailable();
   }
   if (response.status >= 400 && response.status < 500) throw new Denied("invalid_workos_session");
-  if (response.status !== 200) throw unavailable();
+  if (response.status !== 200) {
+    logDependency("identity_response", response);
+    throw unavailable();
+  }
   try {
     const body = await response.json();
     if (!body || typeof body !== "object" || Array.isArray(body)) throw new Error("shape");
     return body;
-  } catch {
+  } catch (error) {
+    logDependency("identity_dependency", error);
     throw unavailable();
   }
 }
@@ -147,15 +157,24 @@ async function supabase(config, path, init = {}) {
       headers: { apikey: config.serviceKey, Authorization: `Bearer ${config.serviceKey}`, Accept: "application/json", ...(init.body ? { "Content-Type": "application/json" } : {}) },
       redirect: "manual",
     });
-  } catch {
+  } catch (error) {
+    logDependency("identity_dependency", error);
+    throw unavailable();
+  }
+  if (response.status === 429) {
+    logDependency("supabase_throttled", response);
     throw unavailable();
   }
   if (response.status === 404 && path.startsWith("/auth/v1/admin/users/")) throw new Denied("no_login_yet", 403);
   if (response.status >= 400 && response.status < 500 && init.refusal) throw new Denied(init.refusal.code, init.refusal.status);
-  if (response.status !== 200) throw unavailable();
+  if (response.status !== 200) {
+    logDependency("identity_response", response);
+    throw unavailable();
+  }
   try {
     return await response.json();
-  } catch {
+  } catch (error) {
+    logDependency("identity_dependency", error);
     throw unavailable();
   }
 }
@@ -251,7 +270,11 @@ async function refreshSupabaseSession(config, refreshToken, uuid) {
 }
 
 const json = (body, status, headers = {}) => Response.json(body, { status, headers: { ...NO_STORE, ...headers } });
-const failure = error => error instanceof Denied ? json({ error: error.code }, error.status) : json({ error: "identity_unavailable" }, 503);
+const failure = error => {
+  if (error instanceof Denied && error.status < 500) return json({ error: error.code }, error.status);
+  if (!(error instanceof Denied)) logDependency("identity_failure", error);
+  return dependencyProblem(error instanceof Denied ? error.code : "identity_unavailable");
+};
 
 async function start(config, url) {
   const provider = url.searchParams.get("provider") ?? "authkit";
@@ -401,12 +424,12 @@ async function desktopStart(config, request, url) {
   try {
     session = await browserSession(config, request);
   } catch (error) {
-    if (error instanceof Denied && error.status === 503) return failure(error);
+    if (!(error instanceof Denied) || error.status === 503) return failure(error);
     const start = new URL("/auth/workos/start", url.origin);
     start.searchParams.set("next", url.pathname + url.search);
     return new Response(null, { status: 303, headers: { ...NO_STORE, Location: start.href } });
   }
-  const login = await supabase(config, `/auth/v1/admin/users/${session.uuid}`).catch(() => null);
+  const login = await supabase(config, `/auth/v1/admin/users/${session.uuid}`);
   return desktopPage(request, fields, typeof login?.email === "string" ? login.email : null);
 }
 
@@ -462,7 +485,7 @@ async function readBounded(request) {
     if (done) break;
     size += value.byteLength;
     if (size > DESKTOP_MAX_BODY) {
-      await reader.cancel().catch(() => {});
+      await reader.cancel().catch(error => logDependency("body_cancel", error));
       throw new Denied("invalid_body", 400);
     }
     parts.push(value);
@@ -572,7 +595,7 @@ async function handleDesktop(request, env, url) {
   if (route === "approve" && origin !== url.origin) return json({ error: "forbidden_origin" }, 403);
   if (route !== "page" && route !== "approve" && origin !== null) return json({ error: "forbidden_origin" }, 403);
   const config = sessionConfig(env);
-  if (!config) return json({ error: "sign_in_unavailable" }, 503);
+  if (!config) return dependencyProblem("sign_in_unavailable");
   try {
     if (route === "page") return await desktopStart(config, request, url);
     if (route === "approve") return await desktopApprove(config, request);
@@ -598,7 +621,7 @@ export async function handleAuth(request, env, url) {
   if (method === "POST" && request.headers.get("Origin") !== url.origin) return json({ error: "forbidden_origin" }, 403);
   if (method === "POST" && request.headers.get("x-danil-actor")?.trim().toLowerCase() === "ai") return json({ error: "identity_requires_person" }, 403);
   const config = sessionConfig(env);
-  if (!config) return json({ error: "sign_in_unavailable" }, 503);
+  if (!config) return dependencyProblem("sign_in_unavailable");
   if (route === "start") return start(config, url);
   if (route === "callback") return callback(config, request, url);
   if (route === "session") return issue(config, request);
