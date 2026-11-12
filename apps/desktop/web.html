@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <!-- The window's policy (index.html) without the Tauri schemes. connect-src
-         gets the control plane and Supabase at build time in vite.config.ts,
+         gets the required HTTPS edge origin at build time in vite.config.ts,
          which also writes this policy plus frame-ancestors 'none' to
          dist-web/_headers (it covers the phone under /m/ too).
          media-src adds blob: over the window: a video or audio file of the task

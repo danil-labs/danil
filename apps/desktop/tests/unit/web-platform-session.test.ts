@@ -3,16 +3,35 @@ import test from "node:test";
 import { platformSession, PlatformSessionError } from "../../src/web/platform-session.ts";
 import { webSessionDeployment } from "../../src/web/session-config.ts";
 
-test("platform is the only session and origin is configurable", () => {
-  assert.deepEqual(webSessionDeployment({}), { origin: "https://api.danil.ai", timeoutMs: 15000 });
-  assert.equal(webSessionDeployment({ DANIL_WEB_API_ORIGIN: "https://api-beta.danil.ai" }).origin, "https://api-beta.danil.ai");
-  assert.equal(webSessionDeployment({ DANIL_WEB_API_ORIGIN: "http://localhost:8787" }).origin, "http://localhost:8787");
-  for (const env of [
-    { DANIL_WEB_API_ORIGIN: "https://evil.test/path" },
-    { DANIL_WEB_API_ORIGIN: "http://api.danil.ai" },
-    { DANIL_WEB_API_TIMEOUT_MS: "0" },
-  ]) assert.throws(() => webSessionDeployment(env));
+test("platform requires an explicit HTTPS edge origin and preserves its request budget", () => {
+  for (const origin of ["https://api-beta.danil.ai", "https://edge.test:8443/"]) {
+    assert.deepEqual(webSessionDeployment({ DANIL_WEB_API_ORIGIN: origin }), {
+      origin: new URL(origin).origin, timeoutMs: 15000,
+    });
+  }
+  assert.deepEqual(webSessionDeployment({ DANIL_WEB_API_ORIGIN: "https://api.danil.ai", DANIL_WEB_API_TIMEOUT_MS: "2500" }), {
+    origin: "https://api.danil.ai", timeoutMs: 2500,
+  });
 });
+
+for (const origin of [undefined, "", "   ", "not-a-url", "//edge.test", "http://api.danil.ai",
+  "http://localhost:8787", "http://127.0.0.1:8787", "http://[::1]:8787", "ftp://edge.test",
+  "https://edge.test/path", "https://edge.test/?query=1", "https://edge.test/#fragment",
+  "https://edge.test:invalid", "https://[invalid]",
+  "https://user:password@edge.test", "https:edge.test", "https:/edge.test",
+  "https://edge.test/path/..", "https://edge.test\\", "https://edge.test\n"]) {
+  test(`deployment rejects missing or invalid HTTPS origin: ${JSON.stringify(origin)}`, () => {
+    assert.throws(() => webSessionDeployment({ DANIL_WEB_API_ORIGIN: origin }),
+      /DANIL_WEB_API_ORIGIN.*required.*HTTPS origin/);
+  });
+}
+
+for (const timeout of ["0", "60001", "1.5", "NaN"]) {
+  test(`deployment rejects invalid timeout: ${timeout}`, () => {
+    assert.throws(() => webSessionDeployment({ DANIL_WEB_API_ORIGIN: "https://edge.test", DANIL_WEB_API_TIMEOUT_MS: timeout }),
+      /Invalid DANIL_WEB_API_TIMEOUT_MS/);
+  });
+}
 
 test("cookie session reads profile and all workspace pages, selects with CSRF and logs out", async () => {
   const calls: Request[] = [];
