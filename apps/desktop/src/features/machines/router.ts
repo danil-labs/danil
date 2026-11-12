@@ -253,7 +253,7 @@ export function createRouter(config: RouterConfig) {
   const confined = (info: MachineInfo) => !!info.organization || guessed(info).length > 0;
   /** Si el relay deja a `machine` hacer suyo `workspace`: solo uno de la cuenta, y nunca el servidor de una organización. */
   const permitted = (info: MachineInfo, workspace: string | null) =>
-    !confined(info) && (!workspace || (!organizations().has(workspace) && (!fleet.getRegistry() || !info.linked || fleet.inRegistry(workspace))));
+    !confined(info) && (!workspace || organizations().has(workspace) || !fleet.getRegistry() || !info.linked || fleet.inRegistry(workspace));
   /** Si `machine` puede hacer suyo `workspace` al crear ahí. */
   const adopts = (info: MachineInfo, workspace: string | null) => !stale.has(info.id) && permitted(info, workspace);
   /** La lista de workspaces con los de una organización que ninguna lectura trajo: la ventana puede abrirlos. */
@@ -632,9 +632,7 @@ export function createRouter(config: RouterConfig) {
     });
   }
 
-  /** El workspace de una organización no se hace de esta computadora. */
-  const selfMaterializes = (workspace: string | null) =>
-    workspace && organizations().has(workspace) ? { materializes: false, refuses: true } : { materializes: true };
+  const selfMaterializes = (_workspace: string | null) => ({ materializes: true });
 
   function machineList() {
     const workspace = active;
@@ -753,6 +751,15 @@ export function createRouter(config: RouterConfig) {
         if (STORAGE.has(command) && !hasHere(workspace)) throw missing(machine);
         return await native(command, fleet.argsFor(machine, args), withoutHeader(options, "x-terminus-machine"));
       }
+      // Elegida esta computadora para algo nuevo: se crea aquí aunque el workspace viva en otra.
+      if (local && machine && machine === self && (CREATE.has(command) || command === "get_project_directory")) {
+        const opts = withoutHeader(options, "x-terminus-machine");
+        if (CREATE.has(command) && workspace && !hasHere(workspace)) {
+          await native("materialize_workspace", { id: workspace }, opts);
+          listed?.add(workspace);
+        }
+        return await native(command, fleet.argsFor(self, args), opts);
+      }
       if (machine && machine !== self && fleet.has(machine)) return await remote(machine, command, args, callWorkspace(workspace, args));
       // Una máquina que ya no es de la cuenta no se cambia por otra en silencio.
       if (machine && machine !== self) throw new FleetError("unknown_machine", machine);
@@ -825,7 +832,7 @@ export function createRouter(config: RouterConfig) {
     const picked = config.pickedFor?.(ws) ?? null;
     const lead = defaultMachine(ws);
     // Una elegida que no tiene permiso en este workspace no cuenta: «Ejecutar en» no la ofrece aquí.
-    const runs = (id: string) => (id === self ? !ws || !organizations().has(ws) : !!fleet.info(id) && (!ws || fleet.membersOf(ws).includes(id) || permitted(fleet.info(id) as MachineInfo, ws)));
+    const runs = (id: string) => (id === self ? true : !!fleet.info(id) && (!ws || fleet.membersOf(ws).includes(id) || permitted(fleet.info(id) as MachineInfo, ws)));
     const machine = picked && runs(picked) ? picked : lead;
     return machine ? { machine, lead: machine === lead } : null;
   }

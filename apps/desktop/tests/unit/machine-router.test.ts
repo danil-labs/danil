@@ -718,8 +718,8 @@ test("a member in the organization's workspace gets its server in «Ejecutar en�
   await router.handle("set_active_workspace", { id: ORG.id });
   assert.ok(!native.some((c) => c.command === "set_active_workspace" && c.args.id === ORG.id), "this computer's engine does not have it");
   assert.equal(((await router.handle("list_workspaces")) as { active: string }).active, ORG.id);
-  assert.deepEqual(await pickable(router), ["cmp_vm"], "only the server: neither this computer nor the member's Mac may make it theirs");
-  assert.equal(router.createsOn(ORG.id)?.machine, "cmp_vm", "a pick of «W» that has no permission here does not count");
+  assert.deepEqual(await pickable(router), ["cmp_home", "cmp_vm", "cmp_mac"], "the server, and the member's own machines if she picks them");
+  assert.equal(router.createsOn(ORG.id)?.machine, "cmp_mac", "her pick of her Mac now counts here too");
   await router.handle("send_message", { project: "p1", prompt: "hola" });
   assert.deepEqual(vm.calls.map((c) => [c.command, c.workspace]), [["send_message", ORG.id]], "it runs on the server, with nothing to make its own");
 });
@@ -746,8 +746,8 @@ test("a member of two organization workspaces gets both in the switcher, and the
   assert.deepEqual(await pickable(router), ["cmp_home", "cmp_mac"], "not in the member's own workspace");
   for (const ws of [ORG.id, FOUNDATION.id]) {
     await router.handle("set_active_workspace", { id: ws });
-    assert.deepEqual(await pickable(router), ["cmp_vm"], `only the server in ${ws}`);
-    assert.equal(router.createsOn(ws)?.machine, "cmp_vm");
+    assert.deepEqual(await pickable(router), ["cmp_home", "cmp_vm", "cmp_mac"], `the server and her machines in ${ws}`);
+    assert.equal(router.createsOn(ws)?.machine, "cmp_mac", "her pick counts");
   }
 });
 
@@ -788,7 +788,22 @@ test("without `organization` in the row, the directory names the workspace an or
   assert.ok(listed.workspaces.some((w) => w.id === ORG.id));
   assert.deepEqual(await pickable(router), ["cmp_home"]);
   await router.handle("set_active_workspace", { id: ORG.id });
-  assert.deepEqual(await pickable(router), ["cmp_vm"]);
+  assert.deepEqual(await pickable(router), ["cmp_home", "cmp_vm"]);
+});
+
+test("cloning on this computer in an organization's workspace makes it local first and clones here, not on the server", async () => {
+  const vm = fakeLink({});
+  const { router, fleet, native } = setup({ cmp_vm: vm, cmp_mac: fakeLink({}) }, { materialize_workspace: null, clone_project: { id: "p9" }, get_project_directory: "/Users/me/Documents/Danil" }, "cmp_home");
+  fleet.setMachines([ENDPOINT, MAC]);
+  fleet.setRegistry(MEMBER_REGISTRY);
+  await router.handle("list_workspaces");
+  await router.handle("set_active_workspace", { id: ORG.id });
+  assert.equal(router.createsOn(ORG.id)?.machine, "cmp_home", "her pick of this computer counts");
+  const here = { headers: { "x-terminus-machine": "cmp_home" } };
+  assert.equal(await router.handle("get_project_directory", {}, here), "/Users/me/Documents/Danil", "the folder of this computer");
+  await router.handle("clone_project", { url: "https://github.com/o/r.git", name: "", workspace: ORG.id }, here);
+  assert.deepEqual(native.filter((c) => c.command === "materialize_workspace" || c.command === "clone_project").map((c) => c.command), ["materialize_workspace", "clone_project"]);
+  assert.ok(!vm.calls.some((c) => c.command === "clone_project" || c.command === "get_project_directory"), "nothing goes to the server");
 });
 
 test("one's own VM still makes the open workspace its own, and an engine that cannot yet is shown, not hidden", async () => {

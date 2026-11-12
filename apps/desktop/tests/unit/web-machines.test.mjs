@@ -272,7 +272,7 @@ test("a member, not the owner, sees the organization's server in «Ejecutar en»
     doc.querySelector('[aria-label="Ejecutar en"]').click();
     assert.ok(await until(() => doc.querySelector('[data-machine-option="cmp_nube"]')), "in «Danil Workspace» Nube IA is offered");
     assert.equal(doc.querySelector('[data-machine-option="cmp_nube"]').disabled, false);
-    assert.equal(doc.querySelector('[data-machine-option="cmp_mac"]'), null, "the member's Mac may not make it its own: not offered");
+    assert.ok(doc.querySelector('[data-machine-option="cmp_mac"]'), "the member's Mac is offered too: she may make it its own");
     assert.deepEqual(app.failures, []);
   } finally {
     app.w.close();
@@ -305,7 +305,7 @@ test("a member of two organization workspaces gets the server in «Ejecutar en»
       await invoke("set_active_workspace", { id: ws.id });
       app.w.dispatchEvent(new app.w.CustomEvent("harness:workspace"));
       await sleep(800);
-      assert.deepEqual(await picker(), ["cmp_nube"], `in «${ws.name}» only Nube IA is offered`);
+      assert.ok((await picker()).includes("cmp_nube"), `in «${ws.name}» Nube IA is offered, next to her own machines`);
     }
     assert.deepEqual(app.failures, []);
   } finally {
