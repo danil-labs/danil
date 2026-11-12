@@ -7,8 +7,26 @@
 
 export const LIGHT_STATE_MACHINES_FEATURE = "light_state_machines_v1";
 
-/** Un workspace que el motor conoce. `local`: existe en esta computadora; `organization`: lo sirve el servidor de una organización. */
-export type EngineWorkspace = { id: string; name: string | null; local: boolean; organization: boolean; machines: string[] };
+/**
+ * Un workspace que el motor conoce. `local`: existe en esta computadora; `organization`: lo sirve el servidor de una organización.
+ * `logo`: la ruta del de aquí (un motor anterior no la manda); `logo_version` cambia con la imagen aunque la ruta sea la misma.
+ */
+export type EngineWorkspace = { id: string; name: string | null; local: boolean; organization: boolean; machines: string[]; logo?: string | null; logo_version?: string | null };
+
+/** Lo que el riel pinta de un workspace. */
+export type RailWorkspace = { id: string; name: string; logo: string | null };
+
+/**
+ * El riel de la persona desde un solo índice: los de aquí y los que sirve otra
+ * máquina suya con nombre conocido, en el orden del motor (la ventana aplica el suyo).
+ * `null` con un motor que aún no da el logo de los de aquí: el riel sale de `list_workspaces`.
+ */
+export function railOf(rows: readonly EngineWorkspace[]): RailWorkspace[] | null {
+  if (rows.some((w) => w.local && w.logo === undefined)) return null;
+  return rows
+    .filter((w) => w.local || (w.machines.length > 0 && !!w.name))
+    .map((w) => ({ id: w.id, name: w.name ?? w.id, logo: w.local ? (w.logo ?? null) : null }));
+}
 
 type Invoke = (command: string, args?: Record<string, unknown>) => Promise<unknown>;
 type Listen = (event: string, handler: () => void) => Promise<() => void>;
@@ -16,7 +34,7 @@ type Listen = (event: string, handler: () => void) => Promise<() => void>;
 /** Los avisos llegan por copia (tareas, proyectos, la máquina): varios seguidos se leen una vez. */
 const SETTLE = 150;
 
-type Row = { workspace?: unknown; name?: unknown; local?: unknown; machines?: unknown };
+type Row = { workspace?: unknown; name?: unknown; local?: unknown; machines?: unknown; logo?: unknown; logo_version?: unknown };
 
 /** El estado de cada otra máquina según la lista de la cuenta que guardó el motor (`machines/<id>/machine.json`). */
 function statesOf(rows: unknown): Map<string, string> {
@@ -39,6 +57,7 @@ function parse(rows: unknown): EngineWorkspace[] | null {
       local: row.local === true,
       organization: machines.some((m) => !!m?.organization),
       machines: machines.map((m) => m?.computer_id).filter((id): id is string => typeof id === "string"),
+      ...("logo" in row ? { logo: typeof row.logo === "string" && row.logo ? row.logo : null, logo_version: typeof row.logo_version === "string" ? row.logo_version : null } : {}),
     });
   }
   return found;
@@ -47,6 +66,8 @@ function parse(rows: unknown): EngineWorkspace[] | null {
 export type EngineWorkspaces = {
   /** Lo último que dijo el motor; `null` si no anuncia la función o aún no contestó: entonces manda la flota. */
   workspaces: () => readonly EngineWorkspace[] | null;
+  /** Lo que el motor de aquí anuncia (`machine_list`), según la última lectura. */
+  features: () => readonly string[];
   /** El estado de cada otra máquina que dice la vista del motor (`online`, `offline`…). */
   machineStates: () => ReadonlyMap<string, string>;
   /** Vuelve a preguntar; `true` si la lista cambió. */
@@ -62,6 +83,7 @@ export function createEngineWorkspaces(options: { invoke: Invoke; listen: Listen
   const { invoke } = options;
   let current: EngineWorkspace[] | null = null;
   let states = new Map<string, string>();
+  let announced: readonly string[] = [];
   let version: string | null = null;
   let closed = false;
   let reading: Promise<boolean> | null = null;
@@ -70,7 +92,8 @@ export function createEngineWorkspaces(options: { invoke: Invoke; listen: Listen
   let stop: (() => void) | null = null;
 
   async function read(): Promise<boolean> {
-    if (version === null && !(await options.features().catch(() => [] as readonly string[])).includes(LIGHT_STATE_MACHINES_FEATURE)) {
+    if (version === null) announced = await options.features().catch(() => [] as readonly string[]);
+    if (version === null && !announced.includes(LIGHT_STATE_MACHINES_FEATURE)) {
       const had = current !== null;
       current = null;
       states = new Map();
@@ -128,6 +151,7 @@ export function createEngineWorkspaces(options: { invoke: Invoke; listen: Listen
   return {
     workspaces: () => current,
     machineStates: () => states,
+    features: () => announced,
     refresh,
     close: () => {
       closed = true;

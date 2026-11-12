@@ -77,6 +77,16 @@ const POLL_WAIT = 20_000;
 /** En la web no hay instalador: lo que la ventana pregunta de él se contesta aquí. */
 const NO_SETUP: Record<string, unknown> = { setup_required: false, prepare_runtime: { stages: [], running: false }, list_live_turns: [] };
 
+/** El índice de estado ligero del motor de aquí (`light_state_v1`) y sus copias de las otras máquinas (`light_state_machines_v1`). */
+const LIGHT_STATE = "light_state_v1";
+const LIGHT_COPIES = "light_state_machines_v1";
+/** Lo que la barra lee del índice en vez de preguntar a cada máquina, y su recurso. */
+const INDEXED: Record<string, "tasks" | "projects"> = { list_live_sessions: "tasks", list_projects: "projects" };
+/** Cuánto vale lo leído del índice de aquí sin volver a preguntar (con la versión, `not_modified`). */
+const LOCAL_INDEX_FOR = 1_000;
+/** Una copia de otra máquina la rehace el motor y lo avisa (`state.copy_changed`); esto es solo por si un aviso se perdió. */
+const COPY_INDEX_FOR = 30_000;
+
 /** Qué vuelve a leer la ventana cuando cambia la rebanada de una lectura. */
 export type SliceChange = "sessions" | "projects" | "spaces" | "attention" | "mentions" | "workspaces";
 const CHANGES: Record<string, SliceChange> = {
@@ -113,6 +123,12 @@ export type RouterConfig = {
    * los workspaces de una organización salen de la flota.
    */
   engineWorkspaces?: () => readonly EngineWorkspace[] | null;
+  /**
+   * Lo que anuncia el motor de aquí. Con `light_state_v1` la barra de esta máquina
+   * sale de su índice (`state_resource`) y, con `light_state_machines_v1`, la de
+   * las otras de sus copias (`state_copy`), sin preguntar a cada una por el relay.
+   */
+  engineFeatures?: () => readonly string[];
   /** La máquina de la ventana. `os` solo si se sabe; sin `wakes`, se pinta como laptop. */
   home?: () => { wakes?: boolean; os?: SystemId | null; features?: readonly string[]; version?: string | null };
 };
@@ -177,6 +193,84 @@ export function createRouter(config: RouterConfig) {
   }
 
   const attention = new AttentionBook();
+
+  /**
+   * Lo leído del índice por (workspace, máquina o `null` para esta, recurso), con
+   * su versión: se vuelve a pedir con ella (`not_modified`) solo si un aviso lo
+   * marcó o ya pasó su tiempo.
+   */
+  type Indexed = { version: string | null; rows: Args[]; at: number; stale: boolean };
+  const index = new Map<string, Indexed>();
+  const indexReads = new Map<string, Promise<Args[] | null>>();
+  const indexKey = (workspace: string, machine: string | null, resource: string) => JSON.stringify([workspace, machine, resource]);
+  const announces = (feature: string) => local && (config.engineFeatures?.() ?? []).includes(feature);
+  function indexed(workspace: string, machine: string | null, resource: "tasks" | "projects"): Promise<Args[] | null> {
+    const key = indexKey(workspace, machine, resource);
+    const known = index.get(key);
+    if (known && !known.stale && Date.now() - known.at < (machine === null ? LOCAL_INDEX_FOR : COPY_INDEX_FOR)) return Promise.resolve(known.rows);
+    const running = indexReads.get(key);
+    if (running) return running;
+    const version = known?.version ?? null;
+    const ask = machine === null
+      ? native("state_resource", { workspace, resource, version })
+      : native("state_copy", { workspace, machine, resource, version });
+    const read = ask
+      .then((raw) => {
+        const answer = raw as { version?: unknown; not_modified?: unknown; data?: unknown } | null;
+        if (answer?.not_modified === true && known) {
+          index.set(key, { ...known, at: Date.now(), stale: false });
+          return known.rows;
+        }
+        if (!Array.isArray(answer?.data)) return null;
+        const rows = (answer.data as unknown[]).filter((r): r is Args => !!r && typeof r === "object");
+        index.set(key, { version: typeof answer.version === "string" ? answer.version : null, rows, at: Date.now(), stale: false });
+        return rows;
+      })
+      // Sin copia o sin índice (otro motor), se lee como antes.
+      .catch(() => {
+        index.delete(key);
+        return null;
+      })
+      .finally(() => indexReads.delete(key));
+    indexReads.set(key, read);
+    return read;
+  }
+
+  /** Las filas del índice para una lectura de la barra; `null` si hay que leerla como antes (una pestaña archivada que el índice no trae). */
+  function fromIndex(command: string, rows: Args[], args: Args, machine: string): unknown[] | null {
+    if (command === "list_projects") return rows.map((p) => projectRow(p));
+    const project = typeof args.project === "string" ? args.project : "";
+    const mine = rows.filter((r) => (r.folder ?? "") === project);
+    const open = (fleet.argsFor(machine, args).open ?? []) as unknown[];
+    const all = new Set(rows.map((r) => r.id));
+    return open.every((id) => typeof id !== "string" || all.has(id)) ? mine : null;
+  }
+
+  /** Un proyecto de la copia de otra máquina (`ProjectEntry`) con los campos que la barra espera de `list_projects`. */
+  const projectRow = (p: Args): Args => ({
+    node: null, sources: [], created_at: 0, updated_at: 0, sessions: 0,
+    kind: typeof p.remote_url === "string" && p.remote_url ? "git" : "folder",
+    ...p,
+  });
+
+  /** La rebanada de otra máquina desde su copia en el motor de aquí; `null` si no la hay. */
+  async function copySlice(envelope: Envelope): Promise<Slice | null> {
+    const resource = INDEXED[envelope.command];
+    if (!resource || !envelope.workspace || !announces(LIGHT_COPIES)) return null;
+    const rows = await indexed(envelope.workspace, envelope.machine, resource);
+    const value = rows && fromIndex(envelope.command, rows, envelope.args ?? {}, envelope.machine);
+    if (!value) return null;
+    const at = index.get(indexKey(envelope.workspace, envelope.machine, resource))?.at ?? Date.now();
+    // Encendida, la copia es la de ahora; apagada, la última que dejó.
+    return { machine: envelope.machine, status: fleet.power(envelope.machine) === "on" ? "ok" : "cached", has: true, value, at };
+  }
+
+  /** La barra de esta máquina desde su índice; `null` sin él o si hay que leer el disco. */
+  async function localIndexed(command: string, args: Args, workspace: string | null): Promise<unknown[] | null> {
+    if (command !== "list_live_sessions" || !workspace || !announces(LIGHT_STATE)) return null;
+    const rows = await indexed(workspace, null, "tasks");
+    return rows && fromIndex(command, rows, args, self as string);
+  }
   /** Los workspaces que esta computadora tiene, según su última lista; `null` antes de leerla. */
   let listed: Set<string> | null = null;
   let active: string | null = null;
@@ -460,17 +554,21 @@ export function createRouter(config: RouterConfig) {
     // El canal de avance se queda en la ventana: por el relay vuelve solo la respuesta final.
     const envelopes = members.map((machine) => ({ machine, workspace, command, args: withoutChannel(command, args) }));
     const slices: Slice[] = [];
+    // Lo que las copias del motor de aquí ya tienen no se pregunta a su máquina.
+    const copies = await Promise.all(envelopes.map((envelope) => copySlice(envelope)));
+    const asked = envelopes.filter((_, i) => !copies[i]);
+    slices.push(...copies.filter((slice): slice is Slice => !!slice));
     if (!elsewhere(workspace)) {
-      const value = await native(command, fleet.argsFor(self as string, args), options);
-      slices.push({ machine: self as string, status: "ok", has: true, value, at: Date.now() });
-      for (const envelope of envelopes) {
+      const value = (await localIndexed(command, args, workspace)) ?? (await native(command, fleet.argsFor(self as string, args), options));
+      slices.unshift({ machine: self as string, status: "ok", has: true, value, at: Date.now() });
+      for (const envelope of asked) {
         const before = previousSlice(envelope);
         if (before) slices.push(before);
         refresh(envelope, before);
       }
-    } else {
+    } else if (asked.length) {
       // El refresco remoto de Git depende de que la observación local haya terminado en el motor.
-      const result = command === "list_session_git" ? await Promise.all(envelopes.map(envelope => fleet.read(envelope))) : await gather(envelopes);
+      const result = command === "list_session_git" ? await Promise.all(asked.map(envelope => fleet.read(envelope))) : await gather(asked);
       slices.push(...result);
     }
     if (command === "list_workspace_attention") for (const s of slices) if (s.has) attention.set(s.machine, fleet.encode(s.machine, s.value));
@@ -837,9 +935,30 @@ export function createRouter(config: RouterConfig) {
     return machine ? { machine, lead: machine === lead } : null;
   }
 
+  /** `state.changed` de esta máquina: lo leído de ese recurso se vuelve a pedir con su versión. */
+  function stateChanged(payload: unknown) {
+    const { workspace, resource } = (payload ?? {}) as { workspace?: unknown; resource?: unknown };
+    if (typeof workspace !== "string" || typeof resource !== "string") return;
+    const known = index.get(indexKey(workspace, null, resource));
+    if (known) known.stale = true;
+  }
+
+  /** `state.copy_changed`: cambió la copia de otra máquina; solo ese recurso se vuelve a pedir y la barra lo relee. */
+  function copyChanged(payload: unknown) {
+    const { workspace, machine, resource } = (payload ?? {}) as { workspace?: unknown; machine?: unknown; resource?: unknown };
+    if (typeof workspace !== "string" || typeof machine !== "string" || typeof resource !== "string") return;
+    const known = index.get(indexKey(workspace, machine, resource));
+    if (known) known.stale = true;
+    if (workspace !== active) return;
+    if (resource === "tasks") notify("list_live_sessions");
+    if (resource === "projects") notify("list_projects");
+  }
+
   return {
     handle,
     events,
+    stateChanged,
+    copyChanged,
     deferredChanged,
     createsOn,
     activeWorkspace: () => active,

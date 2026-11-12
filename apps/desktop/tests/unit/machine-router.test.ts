@@ -828,3 +828,89 @@ test("creating on a machine whose relay refuses the workspace names the machine 
     return true;
   });
 });
+
+/** El escritorio con el índice de estado ligero del motor de aquí: `state_resource` para esta máquina y `state_copy` para las otras. */
+function indexed(links: Record<string, ReturnType<typeof fakeLink>>, copies: Record<string, { version: string; data: unknown[] }>, features = ["light_state_v1", "light_state_machines_v1"]) {
+  const native: { command: string; args: Args }[] = [];
+  const changes: string[][] = [];
+  const state = { tasks: { version: "l1", data: [{ ...row("t1", "local"), folder: "p1" }, { ...row("t2", "otra carpeta"), folder: "p2" }] as unknown[] } };
+  const fleet = new Fleet({ self: "cmp_home", connect: (info) => links[info.id], deadlines: { read: 40, action: 200, intent: 400 } });
+  const router = createRouter({
+    self: "cmp_home",
+    fleet,
+    native: async (command, args = {}) => {
+      native.push({ command, args });
+      if (command === "list_workspaces") return { workspaces: [{ id: "w", name: "W" }], active: "w" };
+      if (command === "list_live_sessions") return [row("t1", "del disco")];
+      if (command === "state_resource") {
+        return args.version === state.tasks.version
+          ? { workspace: args.workspace, resource: args.resource, version: state.tasks.version, not_modified: true }
+          : { workspace: args.workspace, resource: args.resource, schema: 1, version: state.tasks.version, data: state.tasks.data };
+      }
+      if (command === "state_copy") {
+        const copy = copies[`${args.machine}/${args.resource}`];
+        if (!copy) throw "state.error.copy_missing";
+        return args.version === copy.version ? { not_modified: true, version: copy.version } : { schema: 1, version: copy.version, data: copy.data };
+      }
+      throw { what: { clave: "shell.service.command" }, detail: "command" };
+    },
+    onSlices: (c) => changes.push(c),
+    engineFeatures: () => features,
+  });
+  fleet.setMachines([VM, MAC].filter((m) => links[m.id]));
+  return { router, native, changes, state };
+}
+
+test("the task bar comes from the engine's index: this machine's state_resource and the other machine's copy, never the relay", async () => {
+  const vm = fakeLink({ list_live_sessions: [row("r1", "por el relay")] });
+  const copies = { "cmp_vm/tasks": { version: "c1", data: [{ ...row("r1", "de la copia"), folder: "p1" }, { ...row("r2"), folder: "p2" }] } };
+  const { router, native, changes } = indexed({ cmp_vm: vm }, copies);
+  await router.handle("list_workspaces");
+  const rows = (await router.handle("list_live_sessions", { project: "p1", open: [] })) as { id: string; title: string }[];
+  assert.deepEqual(rows.map((r) => [r.id, r.title]).sort(), [["cmp_vm~r1", "de la copia"], ["t1", "local"]], "only that folder, from both indexes");
+  assert.equal(vm.calls.length, 0, "the other machine is not asked over the relay");
+  assert.equal(native.filter((c) => c.command === "list_live_sessions").length, 0, "nor is this engine's disk listing");
+
+  // Otra carpeta, enseguida: los dos índices ya leídos, sin preguntar.
+  const before = native.length;
+  await router.handle("list_live_sessions", { project: "p2", open: [] });
+  assert.equal(native.length, before, "a burst of reads shares what was just read");
+
+  // La copia de la VM cambió: solo ese recurso se vuelve a pedir, con la versión que ya había.
+  copies["cmp_vm/tasks"] = { version: "c2", data: [{ ...row("r1", "renombrada"), folder: "p1" }] };
+  router.copyChanged({ workspace: "w", machine: "cmp_vm", resource: "tasks", version: "c2" });
+  await sleep(250);
+  assert.ok(changes.some((c) => c.includes("sessions")), "the window rereads the bar");
+  const again = (await router.handle("list_live_sessions", { project: "p1", open: [] })) as { id: string; title: string }[];
+  assert.equal(again.find((r) => r.id === "cmp_vm~r1")?.title, "renombrada");
+  const asked = native.filter((c) => c.command === "state_copy");
+  assert.deepEqual(asked.at(-1)?.args, { workspace: "w", machine: "cmp_vm", resource: "tasks", version: "c1" });
+  assert.equal(vm.calls.length, 0);
+
+  // Esta máquina: tras su `state.changed`, la misma versión contesta `not_modified` y sirve lo que ya había.
+  router.stateChanged({ workspace: "w", resource: "tasks", version: "l1" });
+  await router.handle("list_live_sessions", { project: "p1", open: [] });
+  const local = native.filter((c) => c.command === "state_resource");
+  assert.deepEqual(local.at(-1)?.args, { workspace: "w", resource: "tasks", version: "l1" });
+});
+
+test("without a copy, an archived open tab, or an engine without the index, the bar is read as before", async () => {
+  const vm = fakeLink({ list_live_sessions: [row("r9", "por el relay")] });
+  {
+    const { router, native } = indexed({ cmp_vm: vm }, {});
+    await router.handle("list_workspaces");
+    await router.handle("list_live_sessions", { project: "p1", open: [] });
+    await sleep(60);
+    assert.equal(vm.calls.filter((c) => c.command === "list_live_sessions").length, 1, "no copy of that machine: its relay");
+    // Una pestaña abierta que el índice no trae (archivada): el disco de aquí.
+    await router.handle("list_live_sessions", { project: "p1", open: ["t-archivada"] });
+    assert.equal(native.filter((c) => c.command === "list_live_sessions").length, 1);
+  }
+  {
+    const { router, native } = indexed({ cmp_vm: fakeLink({ list_live_sessions: [] }) }, {}, []);
+    await router.handle("list_workspaces");
+    await router.handle("list_live_sessions", { project: "p1", open: [] });
+    assert.equal(native.filter((c) => c.command.startsWith("state_")).length, 0, "an engine without the features is never asked for its index");
+    assert.equal(native.filter((c) => c.command === "list_live_sessions").length, 1);
+  }
+});
