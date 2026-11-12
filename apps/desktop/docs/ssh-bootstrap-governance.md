@@ -3,7 +3,7 @@
 **Estado:** PROPUESTA · 2026-11-03
 
 **Toca tres repositorios:** `danil-labs/terminus` (ventana, web, móvil y
-`packages/`), `danil-labs/computers` (plano de control y relay) y
+`packages/`), `danil-labs/machines` (plano de control y relay) y
 `danil-labs/seldon-host` (motor).
 
 **Decisión en una línea:** SSH sirve para instalar y transportar; la máquina se

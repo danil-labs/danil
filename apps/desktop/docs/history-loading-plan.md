@@ -4,7 +4,7 @@ Estado: propuesta del 2026-10-28; la parte del cliente ya entró (#441 y
 `history_request` en `features/machines/router.ts`), host y relay se confirman en su repo. Preparada a petición de la
 persona; no es aceptación de arquitectura ni autorización de despliegue.
 Base del cliente inspeccionada: `4cc7a618`. Lectores: responsables del motor,
-Computers y clientes. Resultado esperado: cualquier conversación existente abre
+Machines y clientes. Resultado esperado: cualquier conversación existente abre
 y permite continuar aunque contenga resultados de herramientas mayores que un
 marco del transporte.
 
@@ -23,7 +23,7 @@ marco del transporte.
 - `src/features/chat/history.ts` conserva y concatena páginas ya leídas.
   `packages/fleet/src/slices.ts` limita la persistencia de caché, pero su mapa
   de rebanadas en memoria no tiene un presupuesto explícito de bytes.
-- En el checkout local de `computers`, [mirror.ts de Computers](https://github.com/danil-labs/computers/blob/main/src/mirror.ts) limita cada valor a
+- En el checkout local de `machines`, [mirror.ts de Machines](https://github.com/danil-labs/machines/blob/main/src/mirror.ts) limita cada valor a
   1,000,000 bytes, el total a 64,000,000 bytes y las entradas a 500. Un valor
   demasiado grande borra la copia anterior de esa petición. Estos valores son
   evidencia del checkout, no una comprobación de la versión desplegada.
@@ -57,7 +57,7 @@ host y clientes, y anunciar su soporte en el camino remoto. No usar
 `push_stream_v1` como sustituto de la capacidad de historial. No modificar
 unilateralmente `commands.json`, su hash ni las listas de comandos permitidos.
 El primer entregable fija la extensión coordinada de RPC1 y del protocolo de
-Computers, con versiones y detección de soporte independientes.
+Machines, con versiones y detección de soporte independientes.
 
 La API lógica, con nombres aún por cerrar en el contrato, ofrece:
 
@@ -111,7 +111,7 @@ contenido descomprimido. Estos valores no son resultados de un benchmark.
 - Acotar el stream vivo y su catch-up con las mismas reglas. Una herramienta
   grande no debe reaparecer entera en un evento y eludir la paginación.
 
-### Relay y espejo: Computers
+### Relay y espejo: Machines
 
 - Incorporar las operaciones versionadas a autorización, enrutamiento y espejo.
   Aplicar permisos existentes en cada página y fragmento; no aceptar rutas del
