@@ -836,3 +836,18 @@ test("an asset dependency outage is a problem response instead of a rejected req
   assert.ok(logged.length >= 2);
   assert.ok(!JSON.stringify(logged).includes("private-asset-message"));
 });
+
+for (const status of [401, 403]) test(`permission preflight retains a ${status} JSON problem`, async () => {
+  const h = harness();
+  let calls = 0;
+  h.env.APPV2_BFF.fetch = async () => {
+    calls++;
+    return Response.json({ type: "about:blank", title: "denied", status }, { status, headers: { "Content-Type": "application/problem+json; charset=utf-8" } });
+  };
+  const response = await h.fetch(prefix + "/api/marketing/campaigns/4/pause?account_id=7", {
+    method: "POST", headers: { ...accountToken, Origin: origin },
+  });
+  assert.equal(response.status, status);
+  assert.equal((await response.json()).error, "permissions_unavailable");
+  assert.equal(calls, 1, "a denied preflight never reaches the mutation");
+});
