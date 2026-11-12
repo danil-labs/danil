@@ -66,7 +66,7 @@ function webBuild(serve: boolean): UserConfig {
   const extra = (env.TERMINUS_WEB_CONNECT ?? "").replace(/[^\w:/.* -]/g, " ").split(/\s+/).filter(Boolean);
   // Sin el alias fallan avatar_url y logo_url, que aún salen con computers.danil.ai.
   const alias = endpoint === "https://machines.danil.ai" ? ["https://computers.danil.ai", "wss://computers.danil.ai"] : [];
-  const connect = (session.kind === "platform" ? [session.origin] : [endpoint, endpoint.replace(/^http/, "ws"), ...alias, supabaseUrl, ...extra]).filter(Boolean).join(" ");
+  const connect = (session.kind === "platform" ? [session.origin, ...(session.inbox === "legacy" ? [endpoint] : [])] : [endpoint, endpoint.replace(/^http/, "ws"), ...alias, supabaseUrl, ...extra]).filter(Boolean).join(" ");
   const version = JSON.parse(readFileSync(new URL("./package.json", import.meta.url), "utf8")).version as string;
   const root = fileURLToPath(new URL("./dist-web/", import.meta.url));
   const outDir = join(root, base);

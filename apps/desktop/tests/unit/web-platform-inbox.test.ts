@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { webDomainRoutes, webSessionDeployment } from '../../src/web/session-config.ts';
+import { inboxReplies } from '../../src/web/inbox-replies.ts';
 import { platformInbox } from '../../src/web/platform-inbox.ts';
 import { createMessaging } from '../../../../packages/attention/src/messaging.ts';
 import { PlatformSessionError } from '../../src/web/platform-session.ts';
@@ -56,7 +57,7 @@ test('invalid bodies, foreign conversation messages and cancellation fail closed
 
 test('deployment switches the entire inbox and leaves other messaging domains in legacy', () => {
   assert.equal(webDomainRoutes(webSessionDeployment({})).inbox, 'legacy');
-  const routes = webDomainRoutes(webSessionDeployment({ DANIL_WEB_SESSION: 'platform' }));
+  const routes = webDomainRoutes(webSessionDeployment({ DANIL_WEB_SESSION: 'platform', DANIL_WEB_INBOX: 'platform' }));
   assert.equal(routes.inbox, 'v1');
   for (const domain of ['channels', 'agents', 'templates', 'campaigns', 'contacts', 'media', 'billing', 'audit'] as const) assert.equal(routes[domain], 'legacy');
 });
@@ -78,4 +79,56 @@ test('both reply transports preserve the exact same hyphenated UUID text', async
     assert.equal(platformKey, clientId); assert.equal(legacyKey, clientId);
     assert.match(String(platformKey), /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i);
   }
+});
+
+test('inbox rollout defaults to legacy and rolls back independently of the platform session', () => {
+  const deployment = webSessionDeployment({ DANIL_WEB_SESSION: 'platform', DANIL_WEB_INBOX: 'legacy' });
+  assert.equal(deployment.kind, 'platform');
+  assert.equal(webDomainRoutes(deployment).inbox, 'legacy');
+  assert.equal(webDomainRoutes(webSessionDeployment({ DANIL_WEB_SESSION: 'platform' })).inbox, 'legacy');
+  assert.equal(webDomainRoutes(webSessionDeployment({ DANIL_WEB_SESSION: 'platform', DANIL_WEB_INBOX: 'platform' })).inbox, 'v1');
+  assert.throws(() => webSessionDeployment({ DANIL_WEB_SESSION: 'platform', DANIL_WEB_INBOX: 'typo' }));
+});
+
+test('in-progress retries use one key with backoff and Retry-After, including HTTP dates', async () => {
+  let now = 0;
+  const waits: number[] = [], keys: string[] = [];
+  const send = inboxReplies({ async reply(_id, _text, key) {
+    keys.push(key);
+    if (keys.length < 3) throw new PlatformSessionError(409, keys.length === 1 ? new Date(5000).toUTCString() : null, 'idempotency_in_progress');
+    return {};
+  } }, { now: () => now, random: () => 1, pause: async ms => { waits.push(ms); now += ms; } });
+  await send('cnv_A', 'hola', 'original-uuid', new AbortController().signal);
+  assert.deepEqual(keys, ['original-uuid', 'original-uuid', 'original-uuid']);
+  assert.deepEqual(waits, [5000, 2000]);
+});
+
+test('exhausted polling and a reread never permit a different key or text until the operation finishes', async () => {
+  let now = 0;
+  const keys: string[] = [];
+  const waits: number[] = [];
+  const send = inboxReplies({ async reply(_id, _text, key) {
+    keys.push(key);
+    if (keys.length <= 3) throw new PlatformSessionError(409, '1', 'idempotency_in_progress');
+    return {};
+  } }, { now: () => now, random: () => 1, pause: async ms => { waits.push(ms); now += ms; } });
+  const signal = new AbortController().signal;
+  await assert.rejects(send('cnv_A', 'hola', 'original', signal), /uncertain/);
+  await assert.rejects(send('cnv_A', 'edited', 'replacement', signal), /uncertain/);
+  await send('cnv_A', 'hola', 'replacement', signal);
+  assert.deepEqual(keys, ['original', 'original', 'original', 'original']);
+  assert.deepEqual(waits, [1000, 2000, 4000]);
+  await send('cnv_A', 'new message', 'new-operation', signal);
+  assert.equal(keys.at(-1), 'new-operation');
+});
+
+test('aborting an in-progress retry stops the request while retaining its operation key', async () => {
+  const controller = new AbortController();
+  const keys: string[] = [];
+  const send = inboxReplies({ async reply(_id, _text, key) {
+    keys.push(key);
+    throw new PlatformSessionError(409, '1', 'idempotency_in_progress');
+  } }, { now: () => 0, random: () => 1, pause: async (_ms, signal) => { controller.abort(); signal.throwIfAborted(); } });
+  await assert.rejects(send('cnv_A', 'hola', 'original', controller.signal), { name: 'AbortError' });
+  assert.deepEqual(keys, ['original']);
 });

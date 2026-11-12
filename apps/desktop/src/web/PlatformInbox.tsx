@@ -1,11 +1,11 @@
 import { createSignal, For, onCleanup, onMount, Show } from 'solid-js';
 import type { Conversation, Message } from '../../../../packages/attention/src/inbox.ts';
-import { ReplyError } from '../../../../packages/attention/src/messaging.ts';
 import { t } from '../lib/i18n';
 import { Button } from '../ui/Button';
 import { ContactDetails, ConversationRow, ConversationHeader, InboxComposer, MessageBubble, SelectConversation } from './attention/inbox-view';
 import { createInboxDraft, type InboxDraft } from './attention/inbox-drafts';
 import { inboxConversation, inboxMessage, platformInbox } from './platform-inbox';
+import { inboxReplies } from './inbox-replies';
 import { PlatformSessionError } from './platform-session';
 
 /** Keyed by workspace in PlatformEntry: old reads and in-flight writes cannot enter a new inbox. */
@@ -19,7 +19,7 @@ export function PlatformInbox(props: { workspace: string; api: ReturnType<typeof
   const [error, setError] = createSignal('');
   const [details, setDetails] = createSignal(false);
   const drafts = new Map<string, InboxDraft>();
-  const operations = new Map<string, { text: string; key: string }>();
+  const reply = inboxReplies(props.api);
   const lifetime = new AbortController();
   let thread = 0;
   onCleanup(() => { lifetime.abort(); for (const draft of drafts.values()) draft.invalidate(); });
@@ -57,23 +57,6 @@ export function PlatformInbox(props: { workspace: string; api: ReturnType<typeof
     finally { if (!lifetime.signal.aborted && generation === thread) setBusy(false); }
   }
   const open = (row: Conversation<string>, older = false) => { void read(row, older).catch(() => { /* read displays the failure; the composer also needs its rejection. */ }); };
-  async function reply(id: string, text: string, clientId: string, signal: AbortSignal) {
-    const content = text.trim();
-    let operation = operations.get(id);
-    if (!operation || operation.text !== content) { operation = { text: content, key: clientId }; operations.set(id, operation); }
-    try {
-      await props.api.reply(id, content, operation.key, signal);
-      operations.delete(id);
-      return { requiresTemplate: false, duplicate: false };
-    } catch (cause) {
-      if (cause instanceof PlatformSessionError && cause.status < 500 && ![408, 429].includes(cause.status)) {
-        operations.delete(id);
-        if (cause.code === 'outside_messaging_window') return { requiresTemplate: true, duplicate: false };
-        throw new ReplyError(cause.code ?? 'rejected', cause.status);
-      }
-      throw new ReplyError('uncertain');
-    }
-  }
   onMount(() => { void load(); });
   return <section class="grid min-h-[28rem] gap-3" data-platform-inbox="" aria-label={t('web.alpha.inbox')} aria-busy={busy()}>
     <Show when={error()}><p role="alert" class="m-0 text-ui text-error-strong">{error()}</p><Button disabled={busy()} onClick={() => selected() ? open(selected()!) : void load()}>{t('customize.retry')}</Button></Show>

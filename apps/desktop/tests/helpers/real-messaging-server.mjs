@@ -99,6 +99,10 @@ export async function realMessagingServer({ db, dir, accessKeys, accessAssertion
       const response = await fetch(server.lastEnvelope.url, { method: server.lastEnvelope.method, headers, body: server.lastEnvelope.body, signal: AbortSignal.timeout(5000) });
       const body = await response.arrayBuffer();
       calls.push({ method: request.method, path: target.pathname, status: response.status, body: JSON.parse(Buffer.from(body).toString()) });
+      if (server.afterResponse) {
+        const changed = await server.afterResponse(new Response(body, { status: response.status, headers: response.headers }), request);
+        return { status: changed.status, headers: Object.fromEntries(changed.headers), body: await changed.arrayBuffer() };
+      }
       return { status: response.status, headers: Object.fromEntries(response.headers), body };
     },
     ids(kind, values) {

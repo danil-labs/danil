@@ -5,17 +5,20 @@ import { seguirElTema } from "../lib/theme";
 import { Button } from "../ui/Button";
 import { platformSession, PlatformSessionError, type PlatformProfile, type PlatformWorkspace } from "./platform-session";
 import { workspaceSelection } from "./workspace-selection";
-import { webDomainRoutes } from "./session-config";
+import { workosSession } from "./workos-session";
+import { LegacyInbox } from "./LegacyInbox";
+import { type WebSessionDeployment, webDomainRoutes } from "./session-config";
 import { PlatformInbox } from "./PlatformInbox";
 import { platformInbox } from "./platform-inbox";
 import "./phrases";
 
-export function startPlatform(options: { origin: string; timeoutMs: number }, root: HTMLElement) {
+export function startPlatform(options: Extract<WebSessionDeployment, { kind: "platform" }> & { legacy: { endpoint: string; login: string } }, root: HTMLElement) {
   aplicarLengua();
   seguirElTema();
   const api = platformSession(options);
   const inbox = platformInbox(options);
-  const routes = webDomainRoutes({ kind: "platform", ...options });
+  const routes = webDomainRoutes(options);
+  const legacy = options.inbox === "legacy" ? workosSession() : undefined;
   const returnTo = new URL(import.meta.env.BASE_URL, window.location.origin).href;
   function PlatformEntry() {
     const [profile, setProfile] = createSignal<PlatformProfile>();
@@ -71,7 +74,7 @@ export function startPlatform(options: { origin: string; timeoutMs: number }, ro
         </Show>
         <Show when={busy()}><p class="m-0 text-ui text-neutral-500" role="status">{t("web.auth.waiting")}</p></Show>
         <Show when={error()}><div class="grid gap-3"><p class="m-0 text-ui text-error-strong" role="alert">{t(error())}</p><Button variant="secondary" disabled={busy()} onClick={() => void load()}>{t("web.computers.retry")}</Button></div></Show>
-        <Show when={routes.inbox === "v1" && profile() && !busy() && !uncertain() && active()} keyed>{workspace => <PlatformInbox workspace={workspace} api={inbox}/>}</Show>
+        <Show when={profile() && !busy() && !uncertain() && active()} keyed>{workspace => <Show when={routes.inbox === "v1"} fallback={legacy ? <LegacyInbox workspace={workspace} session={legacy} endpoint={options.legacy.endpoint} login={options.legacy.login}/> : undefined}><PlatformInbox workspace={workspace} api={inbox}/></Show>}</Show>
       </div>
     </main>;
   }

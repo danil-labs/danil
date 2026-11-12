@@ -10,6 +10,7 @@ import { pathToFileURL } from "node:url";
 import { workspaceSelection } from "../../src/web/workspace-selection.ts";
 import { platformInbox } from "../../src/web/platform-inbox.ts";
 import { createMessaging } from "../../../../packages/attention/src/messaging.ts";
+import { inboxProgressBrowser } from "../helpers/inbox-progress-browser.mjs";
 import { realMessagingServer } from "../helpers/real-messaging-server.mjs";
 import { messagingContractServer } from "../helpers/messaging-contract-server.mjs";
 import { platformSession, PlatformSessionError } from "../../src/web/platform-session.ts";
@@ -298,6 +299,11 @@ test("SPA cookie session against edge, identity and workspaces Workers with Post
       assert.equal(messaging.writes(), 1);
       assert.deepEqual(messaging.failures, []);
       assert.equal(messaging.calls.filter(r => r.method === "POST" && r.key === key).length, 4);
+    });
+    if (real && process.env.DANIL_INBOX_BROWSER_URL) await t.test('Chromium retries real in-progress replies with the same UUID and one PostgreSQL row', async () => {
+      await db.admin.query("UPDATE tenancy.access_projection SET verified_at=now(),valid_until=now()+interval '30 seconds'; UPDATE identity.access_projection SET verified_at=now(),valid_until=now()+interval '30 seconds'; UPDATE tenancy.client_grants SET valid_until=now()+interval '30 seconds'");
+      await messaging.syncProjection();
+      t.diagnostic(await inboxProgressBrowser({ db, messaging, browserFetch }));
     });
     await t.test("logout revokes the cookie session, with no legacy exchange", async () => {
       await api.logout();
