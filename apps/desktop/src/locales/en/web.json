@@ -570,5 +570,11 @@
   "web.admin.members_add_seats": "Add users",
   "web.admin.members_seats_full_plain": "Your plan has no free seats. To invite another person, add users to your plan.",
   "web.business.seats_pending": "Pending invitations also take a seat.",
-  "web.business.fiscal_error_legal_name_society": "Write the legal name without the company type («S.A. de C.V.»), as in your Constancia de Situación Fiscal."
+  "web.business.fiscal_error_legal_name_society": "Write the legal name without the company type («S.A. de C.V.»), as in your Constancia de Situación Fiscal.",
+  "web.platform.workspaces": "Workspaces",
+  "web.platform.empty": "You have no available workspaces.",
+  "web.platform.active": "Active",
+  "web.platform.sign_out": "Sign out",
+  "web.platform.denied": "You do not have access to this resource.",
+  "web.platform.unavailable": "The request could not be completed. Try again."
 }
