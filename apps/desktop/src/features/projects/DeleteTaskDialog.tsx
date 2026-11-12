@@ -48,8 +48,13 @@ export default function DeleteTaskDialog(props: {
   const members = () => preview()?.members ?? [];
   const key = (member: DeleteMember) => JSON.stringify([member.project, member.id]);
   const dirty = (member: DeleteMember) => props.dirty(props.target.panelId(member.id));
+  // Only a completed inspection with nothing listed counts as losing nothing.
+  const needsReview = (member: DeleteMember) => member.inspection.status !== "complete" || !!member.inspection.error || member.working || member.files.length > 0;
+  const accepted = (member: DeleteMember) => !needsReview(member) || reviewed().has(key(member));
+  const reviewable = () => members().filter(member => needsReview(member) && member.inspection.status === "complete" && dirty(member).length === 0);
+  const allReviewed = () => reviewable().length > 0 && reviewable().every(member => reviewed().has(key(member)));
   const ready = createMemo(() => !busy() && props.isCurrent() && !invalid() && !!preview()?.consent && members().length > 0
-    && members().every(member => member.inspection.status === "complete" && reviewed().has(key(member)) && dirty(member).length === 0));
+    && members().every(member => member.inspection.status === "complete" && accepted(member) && dirty(member).length === 0));
   createEffect(() => {
     if (members().some(member => dirty(member).length > 0)) {
       setInvalid(true);
@@ -78,7 +83,7 @@ export default function DeleteTaskDialog(props: {
     try {
       await props.prepare(seen.members.map(member => props.target.panelId(member.id)));
       // Preparing native viewers yields; editors may have changed in the meantime.
-      if (preview() !== seen || invalid() || !props.isCurrent() || seen.members.some(member => !reviewed().has(key(member)) || dirty(member).length > 0)) {
+      if (preview() !== seen || invalid() || !props.isCurrent() || seen.members.some(member => !accepted(member) || dirty(member).length > 0)) {
         setError(t("projects.sessions.delete_buffers"));
         return;
       }
@@ -98,6 +103,20 @@ export default function DeleteTaskDialog(props: {
       <DialogTitle class="text-body font-semibold">{t("projects.sessions.delete_work_title")}</DialogTitle>
       <p class="m-0 text-ui text-neutral-700">{t("projects.sessions.delete_work")}</p>
       <Show when={busy()}><p role="status" class="m-0 text-ui text-neutral-500">{t("projects.sessions.delete_inspecting")}</p></Show>
+      <Show when={members().filter(needsReview).length > 1}>
+        <label class="flex items-center gap-2 text-ui font-medium text-neutral-950">
+          <input type="checkbox" class="accent-primary" data-delete-review-all disabled={busy() || invalid() || reviewable().length === 0}
+            checked={allReviewed()} onChange={event => {
+              const checked = event.currentTarget.checked;
+              setReviewed(current => {
+                const next = new Set(current);
+                for (const member of reviewable()) if (checked) next.add(key(member)); else next.delete(key(member));
+                return next;
+              });
+            }} />
+          {t("projects.sessions.delete_reviewed_all")}
+        </label>
+      </Show>
       <ul class="m-0 flex max-h-[40vh] list-none flex-col gap-3 overflow-y-auto p-0">
         <For each={members()}>{member => <li class="min-w-0">
           <p class="m-0 text-ui font-medium text-neutral-950">{member.title || member.id}</p>
@@ -111,7 +130,7 @@ export default function DeleteTaskDialog(props: {
             <p class="m-0 text-caption text-warning-strong">{t("projects.sessions.delete_buffers")}</p>
             <ul class="m-0 list-none p-0"><For each={dirty(member)}>{path => <li class="break-all font-mono text-caption text-warning-strong">{path}</li>}</For></ul>
           </Show>
-          <label class="flex items-center gap-2 text-ui text-neutral-700">
+          <Show when={needsReview(member)}><label class="flex items-center gap-2 text-ui text-neutral-700">
             <input type="checkbox" class="accent-primary" disabled={busy() || invalid() || member.inspection.status !== "complete" || dirty(member).length > 0}
               checked={reviewed().has(key(member))} onChange={event => setReviewed(current => {
                 const next = new Set(current);
@@ -119,7 +138,7 @@ export default function DeleteTaskDialog(props: {
                 return next;
               })} />
             {t("projects.sessions.delete_reviewed")}
-          </label>
+          </label></Show>
         </li>}</For>
       </ul>
       <Show when={error()}><p role="alert" class="m-0 whitespace-pre-wrap break-all text-ui text-error-strong">{error()}</p></Show>

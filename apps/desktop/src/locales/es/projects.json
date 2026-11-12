@@ -418,6 +418,7 @@
   "projects.sessions.delete_no_files": "No hay archivos pendientes que se perderían.",
   "projects.sessions.delete_buffers": "Hay cambios sin guardar en el editor. Cancela, guárdalos en el editor y vuelve a revisar antes de borrar.",
   "projects.sessions.delete_reviewed": "Revisé esta tarea y acepto las pérdidas indicadas.",
+  "projects.sessions.delete_reviewed_all": "Revisé todas estas tareas y acepto las pérdidas indicadas.",
   "projects.sessions.delete_inspect_again": "Revisar de nuevo",
   "projects.sessions.delete_changed": "La familia o sus archivos cambiaron. La lista se actualizó. Revisa y confirma cada tarea de nuevo.",
   "projects.agents.body.character-ventas": "Auricular",
