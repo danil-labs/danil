@@ -8,8 +8,6 @@ export function featureEntries(enabled: readonly string[]) {
     agents: [t("attention.agents"), t("attention.agents_description")],
     channels: [t("attention.channels"), t("attention.channels_description")],
     contacts: [t("attention.contacts"), t("attention.contacts_description")],
-    funnels: [t("attention.funnels"), t("attention.funnels_description")],
-    calendar: [t("attention.calendar"), t("attention.calendar_description")],
     inventory: [t("attention.inventory"), t("attention.inventory_description")],
   };
   return FEATURES.map(row => ({...row, title: labels[row.id][0], description: labels[row.id][1], selected: enabled.includes(row.id)}));

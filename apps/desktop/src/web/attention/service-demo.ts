@@ -14,13 +14,11 @@ export function serviceDemo(): ServiceSource {
     agent: async (id) => ({
       ...agents.find(row => row.id === id)!, model: 'claude-sonnet', description: t("web.service.demo_role"),
       channels: [{ id: '1', name: 'WhatsApp · Ventas', provider: 'WhatsApp' }, { id: '2', name: 'Instagram', provider: 'Instagram' }],
-      calendar: { id: '1', name: 'Google', email: 'agenda@ejemplo.mx' },
       httpTools: [{ id: 'a', name: t("web.service.demo_order") }],
       inventories: [{ id: '1', name: t("web.service.catalog") }],
       documents: [{ id: '1', name: t("web.service.demo_prices") }],
       directives: [],
     }),
-    calendars: async () => [{ id: 1, name: 'Google', provider: 'Google', email: 'agenda@ejemplo.mx', connected: true }],
     httpTools: async () => [
       { id: 'a', name: t("web.service.demo_order"), method: 'GET', host: 'api.ejemplo.mx', active: true },
       { id: 'b', name: t("web.service.demo_ticket"), method: 'POST', host: 'soporte.ejemplo.mx', active: true },

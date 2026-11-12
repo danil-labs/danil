@@ -26,7 +26,6 @@ const page = (params) => {
 const READS = [
   ["/auth/account/features", accountOnly],
   [`${CAMPAIGN}/messages`, page], [TEMPLATE, none], ["/api/contacts/metadata-keys", none],
-  ["/api/funnels", none], [`/api/funnels/(${ID})/board`, none],
 ].map(([path, query]) => [new RegExp(`^${path}$`), query]);
 
 /** El validador de la query de una lectura permitida, o null si la ruta no es de Difusiones. */

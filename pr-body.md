@@ -1,37 +1,22 @@
-## Qué cambia y por qué
+Causa: la decisión 3 del 2026-11-11 retira calendario, embudos y métricas, pero la entrada seguía publicando R29–R31 y la SPA solicitaba sus datos y conservaba interfaces, demos y opciones inactivas.
 
-S2-H corrige H2 de S2-C: el código de Desk estaba sellado y limitado a 120 segundos, pero cada canje volvía a abrir una sesión GoTrue. El replay secuencial y el concurrente devolvían 200 dos veces.
+Cambio: se eliminan las rutas /api/calendar/connections, /api/funnels y /api/funnels/:id/board. Desaparecen el calendario de conexiones y del detalle de agentes, los filtros y lectores de embudos/tableros, sus datos de demo y sus opciones en personalización. Se elimina el gráfico de embudo de campaña y su cálculo sin consumidores. Los contactos siguen cargando con sus filtros de actividad y etiquetas. Los tipos/lectores únicos viven en packages/attention: también se retiran allí, junto con las traducciones y la fila del fallback de escritorio que quedarían huérfanas. El número de archivos responde a estas eliminaciones, no a nuevas funcionalidades.
 
-Cada aprobación incorpora un identificador aleatorio dentro del sello. Tras comprobar PKCE, WorkOS y acceso, el canje consume ese identificador en una transacción de `DesktopCodeStore` **antes** de abrir GoTrue. Solo el primer consumo confirmado continúa; los siguientes responden `401 {"error":"invalid_code"}`. El plazo del binding termina con la vigencia del código. Una alarma elimina el registro al caducar.
+No existía una ruta o módulo independiente de métricas en esta SPA: /api/metrics y sus subrutas siguen cerradas y están cubiertas por la prueba de retiro. Se conservan los contadores operativos y /api/marketing/campaigns/:id/stats: la auditoría los clasifica como mensajería (R34/P14), y sirven para progreso y reconciliación de escrituras inciertas. Programar una campaña sigue permitido; el icono calendar-clock representa esa acción, no el calendario retirado.
 
-### Mecanismo y reutilización
+Base: origin/dev 5868129a. PR P2 de S2-F paso 1, independiente de P0/P1. Toda API restante sigue en legacy; no se activa v1 ni se toca H1/H7.
 
-Se reutilizan el sello AES-GCM, el generador aleatorio, PKCE, la caducidad y las comprobaciones existentes. No había un registro consumible ni bindings de KV/D1/DO en esta entrada. Se añade un Durable Object SQLite del propio Worker, con binding y migración declarados para alfa y staging. La transacción proporciona consumo durable y atómico; KV no ofrece aquí un compare-and-set. Supabase existe, pero sus migraciones pertenecen a `danil-workspace`: usar una tabla nueva exigiría cambiar otro repositorio y el contrato de sus RPC.
+Pruebas (Node v22.23.5, Linux):
+- Rojo antes: `node --test --experimental-strip-types apps/desktop/alpha-entry/worker.test.mjs apps/desktop/tests/unit/alpha-entry-*.test.mjs apps/desktop/tests/unit/attention-service.test.ts packages/attention/test/broadcast-panel.test.ts packages/attention/test/customization.test.ts`: 91 pasan, 4 fallan de 95 (rutas, lector de calendario, API de embudos y opciones retiradas).
+- Rojo del montaje nuevo en web-account.test.mjs: 0/1; las solicitudes observadas incluían /api/funnels y /api/calendar/connections.
+- `node --test --experimental-strip-types apps/desktop/alpha-entry/worker.test.mjs apps/desktop/tests/unit/alpha-entry-*.test.mjs`: 69/69.
+- `node --test --experimental-strip-types apps/desktop/tests/unit/attention-service.test.ts packages/attention/test/broadcast-panel.test.ts packages/attention/test/customization.test.ts`: 26/26.
+- `node --test --test-force-exit apps/desktop/tests/unit/web-account.test.mjs`: 2/2. Compila con Vite y monta los componentes reales de conexiones y selección de contactos en jsdom: carga contactos y conexiones API sin solicitudes ni controles retirados. No es una prueba nativa.
+- `node --test --test-force-exit --experimental-strip-types packages/attention/test/*.test.ts`: 60/60 (incluye parte de las 26 anteriores; no se suman).
+- Recorrido directo de demoBroadcastSource: las tres lecturas /api/funnels, /api/funnels/1/board y /api/metrics dan 404; /api/contacts da 200.
+- `pnpm verify --no-cargo`: salida 0; 266 pasos OK de 267 en 404 s, desde una instalación offline limpia (562 paquetes reutilizados, cero descargas y sin cambios de lockfile). Se omite el paso CLI que requiere Rust y sidecar. Cargo fmt/check/clippy/test y permisos nativos no comprobados; no es una verificación completa.
+- `git diff --check`: sin errores. Búsqueda sin rutas retiradas en código de producto de alpha-entry, src/web y packages/attention.
 
-La elección sigue la [semántica de transacciones de Durable Objects](https://developers.cloudflare.com/durable-objects/api/sqlite-storage-api/#transaction). El estado solo contiene una marca de consumo; no guarda códigos, identidad ni tokens. No se modifica H1 (`service_role`), el refresh, el logout ni la sesión del navegador.
+Riesgo: enlaces o consumidores viejos de las rutas retiradas recibirán 404; es el retiro solicitado. No hay migración de preferencias porque esas opciones nunca fueron habilitables. Se actualizan las aserciones del calendario y se retira solo la aserción del cálculo del gráfico eliminado; las pruebas nuevas comprueban su retiro. No se ensayó la ventana nativa ni móvil. Los gates propuestos del meta-repo sin configuración en este repo (mutación, ESLint estricto) no se inventaron.
 
-## Cómo se comprobó
-
-Linux, Node v22.23.5, base local `origin/dev` (`e8ba65858ecb18bc53673c53d2a97702b677618e`). Sin push ni despliegue.
-
-| Comando o comprobación | Resultado |
-|---|---|
-| Suite original: `node --test apps/desktop/alpha-entry/worker.test.mjs apps/desktop/tests/unit/alpha-entry*.test.mjs` | 61 pruebas, 61 correctas, 0 fallos |
-| Primero, pruebas nuevas sin el fix: `node --test apps/desktop/tests/unit/alpha-entry-session.test.mjs` | 23 pruebas: 21 correctas, 2 fallos. Replay: 200 en vez de 401; concurrencia: [200,200] en vez de [200,401] |
-| Misma suite de alpha-entry después del fix | 68 pruebas, 68 correctas, 0 fallos, 0 omitidas |
-| Pruebas de sesión con el fake sustituido temporalmente por un namespace real de Miniflare/workerd | 26 pruebas, 26 correctas, 0 fallos, 0 omitidas |
-| Consumo directo en workerd con SQLite y persistencia en disco | Primer consumo 204, replay 401; 20 consumos simultáneos: 1 aceptado y 19 rechazados; caducado 401; replay tras reiniciar el runtime 401 |
-| `pnpm verify --no-cargo` | Salida 0, Linux, 407 s: 266 pasos ejecutados correctamente de 267; 1 omitido (CLI con motor/Rust). La propia cadena advierte que no es una verificación completa |
-| `node --check` sobre los módulos modificados y `git diff --check` | Correctos |
-
-Las siete regresiones añadidas cubren primer canje 200, replay 401 sin abrir otra sesión, concurrencia con una sola sesión nueva, expiración al segundo 120, almacenamiento ausente/caído, pérdida del acuse después del consumo y fallo de GoTrue con el código ya gastado. Cada petición del fake crea una instancia nueva del objeto y conserva únicamente su almacenamiento.
-
-## Riesgo y límites
-
-- **Seguridad ante fallos parciales:** si el consumo se confirma y después falla el binding, GoTrue o la respuesta, el código queda gastado. Se requiere una aprobación nueva; no hay rollback ni reintento que pueda duplicar sesiones. Sin binding o ante fallo de almacenamiento, responde 503 sin abrir GoTrue.
-- **Publicación pendiente:** habrá que aplicar la migración del namespace al desplegar el Worker. No se ejecutó ningún despliegue. Debe conservarse ese namespace y su almacenamiento en futuras actualizaciones; no se puede volver a una versión que ignore el consumo.
-- **Transición:** los códigos emitidos por la versión anterior carecen de identificador y serán rechazados; su vigencia máxima era de 120 segundos. Sesiones ya emitidas conservan su comportamiento.
-- **Runtime local:** Miniflare 4.20260730.0 admite hasta `2026-08-06`; la prueba local usó esa fecha. Los TOML conservan `2026-10-01`. No se verificó el Worker publicado ni un login con proveedores reales.
-- Rust, el CLI con el motor y la ventana nativa no se verifican en esta entrega del Worker. El repo no configura un gate de mutación para esta zona.
-
-Rama: `fix/alpha-entry-one-time-code`; destino: `dev`. El orquestador publicará la rama y abrirá el PR para revisión de cambio y seguridad.
+Sin push, PR remoto ni despliegue.
