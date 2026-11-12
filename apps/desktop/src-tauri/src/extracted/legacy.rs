@@ -234,6 +234,18 @@ pub fn image_path(_pid: u32) -> Option<PathBuf> {
     None
 }
 
+/// El motor junto a `exe`: `danil-engine` en macOS; `seldon-runtime` en Windows, Linux
+/// y versiones anteriores.
+pub fn sibling_engine(exe: &Path) -> PathBuf {
+    let named = |name: &str| exe.with_file_name(format!("{name}{}", std::env::consts::EXE_SUFFIX));
+    let current = named("danil-engine");
+    if current.is_file() {
+        current
+    } else {
+        named("seldon-runtime")
+    }
+}
+
 /// El motor vivo corre de un binario que ya no es el instalado. `deep` compara
 /// además el contenido de la copia del AppImage, que solo cambia al arrancar.
 #[cfg(windows)]
@@ -248,7 +260,7 @@ pub fn engine_replaced(pid: u32, deep: bool) -> bool {
     if running.to_string_lossy().ends_with(" (deleted)") {
         return true;
     }
-    let bundled = std::env::current_exe().map(|exe| exe.with_file_name("seldon-runtime"));
+    let bundled = std::env::current_exe().map(|exe| sibling_engine(&exe));
     deep && std::env::var_os("APPIMAGE").is_some()
         && bundled.is_ok_and(|bundled| {
             bundled != running && std::fs::read(&bundled).ok() != std::fs::read(&running).ok()
@@ -262,7 +274,7 @@ pub fn engine_replaced(pid: u32, _deep: bool) -> bool {
     let mut path = vec![0u8; 4096];
     // SAFETY: el búfer es nuestro y se le pasa su tamaño.
     let length = unsafe { libc::proc_pidpath(pid, path.as_mut_ptr().cast(), path.len() as u32) };
-    let bundled = std::env::current_exe().map(|exe| exe.with_file_name("seldon-runtime"));
+    let bundled = std::env::current_exe().map(|exe| sibling_engine(&exe));
     let Ok(bundled) = bundled else {
         return false;
     };

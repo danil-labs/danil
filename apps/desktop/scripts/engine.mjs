@@ -148,9 +148,10 @@ async function download() {
 }
 
 /**
- * The engine the installer packages: Tauri looks for `src-tauri/binaries/seldon-runtime-<triple>`
- * on every platform. macOS also gets `universal-apple-darwin`, a `lipo` of both pinned binaries,
- * for the universal bundle.
+ * The engine the installer packages: Tauri looks for `src-tauri/binaries/<name>-<triple>`, with
+ * `danil-engine` on macOS and `seldon-runtime` elsewhere; the pinned asset keeps its published
+ * name. macOS also gets `universal-apple-darwin`, a `lipo` of both pinned binaries, for the
+ * universal bundle.
  */
 async function sidecar() {
   const triples = process.platform === "darwin" ? ["aarch64-apple-darwin", "x86_64-apple-darwin"] : [PLATFORM];
@@ -178,7 +179,9 @@ async function fetchRetrying(url, attempts = 3) {
   }
 }
 
-const sidecarPath = (triple) => join(ROOT, "src-tauri", "binaries", `seldon-runtime-${triple}${triple.includes("windows") ? ".exe" : ""}`);
+// Activity Monitor names the process after this file (tauri.macos.conf.json).
+const sidecarName = (triple) => (triple.includes("apple-darwin") ? "danil-engine" : "seldon-runtime");
+const sidecarPath = (triple) => join(ROOT, "src-tauri", "binaries", `${sidecarName(triple)}-${triple}${triple.includes("windows") ? ".exe" : ""}`);
 
 /** One pinned engine, downloaded only when the copy in place does not match the lock. */
 async function placeSidecar(triple) {
