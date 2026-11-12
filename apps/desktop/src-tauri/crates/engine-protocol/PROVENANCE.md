@@ -6,8 +6,8 @@ Apache-2.0); the manifest was regenerated on
 `b40d34999d140d30a0e1192ba752b2fdb860dc90`. The generator reads the engine
 source and is not part of this repository.
 
-`commands.json`: 542 entries: 359 invocations, 146 CLI routes, 12 RPC routes,
-three channels and twenty-two window/bridge functions; 35 events. Names, camelCase parameters, reference Rust
+`commands.json`: 553 entries: 370 invocations, 146 CLI routes, 12 RPC routes,
+three channels and twenty-two window/bridge functions; 37 events. Names, camelCase parameters, reference Rust
 types and literal events are kept.
 
 On 2026-10-19 the contract renamed its two concepts (317 commands, 27 events):
@@ -20,7 +20,7 @@ repositories, and `GitHostInfo`. Files on disk keep their keys; the types that
 are stored and also travel cross the contract wrapped in `Wire`, which renames
 their keys. There are no aliases. This copy is byte-identical to the engine's.
 SHA-256:
-`e8743072bc9b7af1f8b0061fc6d75035e082867b73c0724aaee56fa8c599275b`.
+`46798e8630db16622e62b79747cde5b02073681ca602d92adc6fdae559d802e5`.
 
 seldon-host `4e21caf` (#66) added the Danil account (321 commands, 28 events):
 `danil_connect_start`, `danil_connect_status`, `danil_connect_options`,
@@ -289,13 +289,3 @@ them answers that the command is unknown, and only that feature turns off.
   `session.effort` for the next turn, also through the relay (danil-engine#371,
   dev `1a3b4438`), SHA-256
   `b8ca109ae22758520341b5c2cca1911b2ccbfeee74e84c72595543eaae72d413`.
-
-On 2026-11-12 local models leave the engine (seldon-host «modelos locales
-fuera»): the invocations `list_local_models`, `local_runtime`,
-`install_local_runtime`, `remove_local_runtime`, `start_local_model`,
-`stop_local_model`, `install_local_model`, `cancel_local_model`,
-`local_downloads`, `remove_local_model` and `set_active_local_model`, and the
-events `local-engine` and `local-model`, are removed (542 entries, 35 events).
-The agent row `opencode-zen` is renamed `opencode`, `opencode-local` is
-retired and `free-router-opencode` is added; ids are data, so they do not move
-the hash. The engine still accepts `opencode-zen` as an alias.

@@ -736,6 +736,20 @@
       "async": false,
       "channel": null,
       "kind": "invoke",
+      "name": "cancel_local_model",
+      "output": "",
+      "parameters": [],
+      "path": "models::cancel_local_model",
+      "scope": "machine",
+      "audience": "window",
+      "authority": "admin",
+      "durable": false,
+      "enforcement": "server"
+    },
+    {
+      "async": false,
+      "channel": null,
+      "kind": "invoke",
       "name": "cancel_login",
       "output": "-> Result < () , String >",
       "parameters": [
@@ -3030,6 +3044,40 @@
       "async": false,
       "channel": null,
       "kind": "invoke",
+      "name": "install_local_model",
+      "output": "-> Result < () , Failure >",
+      "parameters": [
+        {
+          "key": "id",
+          "name": "id",
+          "type": "String"
+        }
+      ],
+      "path": "models::install_local_model",
+      "scope": "machine",
+      "audience": "window",
+      "authority": "admin",
+      "durable": false,
+      "enforcement": "server"
+    },
+    {
+      "async": false,
+      "channel": null,
+      "kind": "invoke",
+      "name": "install_local_runtime",
+      "output": "-> Result < () , Failure >",
+      "parameters": [],
+      "path": "models::install_local_runtime",
+      "scope": "machine",
+      "audience": "window",
+      "authority": "admin",
+      "durable": true,
+      "enforcement": "server"
+    },
+    {
+      "async": false,
+      "channel": null,
+      "kind": "invoke",
       "name": "install_provider",
       "output": "-> Result < String , String >",
       "parameters": [
@@ -3587,6 +3635,20 @@
       "async": false,
       "channel": null,
       "kind": "invoke",
+      "name": "list_local_models",
+      "output": "-> Result < Vec < ModelState > , Failure >",
+      "parameters": [],
+      "path": "models::list_local_models",
+      "scope": "workspace",
+      "audience": "window",
+      "authority": "admin",
+      "durable": false,
+      "enforcement": "server"
+    },
+    {
+      "async": false,
+      "channel": null,
+      "kind": "invoke",
       "name": "list_machine_agents",
       "output": "-> Result < Catalogo , String >",
       "parameters": [],
@@ -4110,6 +4172,34 @@
         }
       ],
       "path": "sessions::load_session",
+      "scope": "workspace",
+      "audience": "window",
+      "authority": "admin",
+      "durable": false,
+      "enforcement": "server"
+    },
+    {
+      "async": false,
+      "channel": null,
+      "kind": "invoke",
+      "name": "local_downloads",
+      "output": "-> Vec < Progress >",
+      "parameters": [],
+      "path": "models::local_downloads",
+      "scope": "workspace",
+      "audience": "window",
+      "authority": "admin",
+      "durable": false,
+      "enforcement": "server"
+    },
+    {
+      "async": false,
+      "channel": null,
+      "kind": "invoke",
+      "name": "local_runtime",
+      "output": "-> RuntimeInfo",
+      "parameters": [],
+      "path": "models::local_runtime",
       "scope": "workspace",
       "audience": "window",
       "authority": "admin",
@@ -5361,6 +5451,40 @@
       "async": false,
       "channel": null,
       "kind": "invoke",
+      "name": "remove_local_model",
+      "output": "-> Result < () , Failure >",
+      "parameters": [
+        {
+          "key": "id",
+          "name": "id",
+          "type": "String"
+        }
+      ],
+      "path": "models::remove_local_model",
+      "scope": "machine",
+      "audience": "window",
+      "authority": "admin",
+      "durable": false,
+      "enforcement": "server"
+    },
+    {
+      "async": false,
+      "channel": null,
+      "kind": "invoke",
+      "name": "remove_local_runtime",
+      "output": "-> Result < () , Failure >",
+      "parameters": [],
+      "path": "models::remove_local_runtime",
+      "scope": "machine",
+      "audience": "window",
+      "authority": "admin",
+      "durable": false,
+      "enforcement": "server"
+    },
+    {
+      "async": false,
+      "channel": null,
+      "kind": "invoke",
       "name": "remove_mcp_server",
       "output": "-> Result < () , Failure >",
       "parameters": [
@@ -6371,6 +6495,26 @@
       ],
       "path": "accounts::set_active_account",
       "scope": "workspace",
+      "audience": "window",
+      "authority": "admin",
+      "durable": false,
+      "enforcement": "server"
+    },
+    {
+      "async": false,
+      "channel": null,
+      "kind": "invoke",
+      "name": "set_active_local_model",
+      "output": "-> Result < () , Failure >",
+      "parameters": [
+        {
+          "key": "id",
+          "name": "id",
+          "type": "String"
+        }
+      ],
+      "path": "models::set_active_local_model",
+      "scope": "machine",
       "audience": "window",
       "authority": "admin",
       "durable": false,
@@ -7915,6 +8059,26 @@
     {
       "async": false,
       "channel": null,
+      "kind": "invoke",
+      "name": "start_local_model",
+      "output": "-> Result < String , Failure >",
+      "parameters": [
+        {
+          "key": "id",
+          "name": "id",
+          "type": "String"
+        }
+      ],
+      "path": "models::start_local_model",
+      "scope": "machine",
+      "audience": "window",
+      "authority": "admin",
+      "durable": false,
+      "enforcement": "server"
+    },
+    {
+      "async": false,
+      "channel": null,
       "ids": {
         "workspace": [
           "workspace"
@@ -7972,6 +8136,20 @@
       ],
       "path": "projects::start_project_clone",
       "scope": "workspace",
+      "audience": "window",
+      "authority": "admin",
+      "durable": false,
+      "enforcement": "server"
+    },
+    {
+      "async": false,
+      "channel": null,
+      "kind": "invoke",
+      "name": "stop_local_model",
+      "output": "-> Result < () , Failure >",
+      "parameters": [],
+      "path": "models::stop_local_model",
+      "scope": "machine",
       "audience": "window",
       "authority": "admin",
       "durable": false,
@@ -12010,6 +12188,8 @@
     "integrations-changed",
     "keep-awake-changed",
     "kn-cloud",
+    "local-engine",
+    "local-model",
     "mcp",
     "mcp-login",
     "notice",
