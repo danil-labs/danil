@@ -27,6 +27,7 @@ import {
   startComputer,
   startedOf,
   systemOf,
+  type MachineState,
   type SystemId,
   wakes,
 } from "@terminus/computers";
@@ -163,9 +164,15 @@ export function startAccountMachines(target: Target = window) {
       return Array.isArray(features) ? features.filter((f): f is string => typeof f === "string") : [];
     },
     onChange: () => {
-      if (installed) slicesChanged(["workspaces"]);
+      if (!installed) return;
+      observeEngine(installed.fleet);
+      slicesChanged(["workspaces"]);
     },
   });
+  /** Lo que la vista del motor sabe de cada máquina vale hasta que su sesión del relay diga algo. */
+  const observeEngine = (fleet: Fleet) => {
+    for (const [id, state] of engineWorkspaces.machineStates()) if (fleet.has(id)) fleet.observe(id, state as MachineState);
+  };
 
   const getToken = async (): Promise<ClientToken> => {
     if (token && token.expires_at - Date.now() > TOKEN_MARGIN) return token;
@@ -253,6 +260,7 @@ export function startAccountMachines(target: Target = window) {
       home: () => ({ wakes: homeWakes, os: homeOs, features: homeFeatures, version: homeVersion }),
     });
     fleet.setMachines([...others.map(infoOf), ...guestMachines]);
+    observeEngine(fleet);
     fleet.subscribeEvents();
     const screens =
       endpoint === null
@@ -409,6 +417,7 @@ export function startAccountMachines(target: Target = window) {
     // The same account: machines that came, left or changed name are applied live, without tearing the rest down.
     if (installed?.key === key) {
       installed.fleet.setMachines([...others.map(infoOf), ...guestMachines]);
+      observeEngine(installed.fleet);
       machineNamesChanged();
       return void refetchMachines();
     }

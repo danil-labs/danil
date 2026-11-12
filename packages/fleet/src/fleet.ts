@@ -44,6 +44,10 @@ export type MachineInfo = {
 
 /** Si `info` atiende `workspace` por una organización, según su fila. */
 const serves = (info: MachineInfo | undefined, workspace: string): boolean => !!info?.organization?.workspaces.some((w) => w.id === workspace);
+/** El endpoint de una organización vive en su servidor, siempre encendido: nunca se enciende desde aquí. */
+const alwaysOn = (info: MachineInfo): boolean => !!info.organization;
+/** La fila del plano de control dice `wakeable` para un endpoint (enciende su servidor); la flota no. */
+const normalized = (info: MachineInfo): MachineInfo => (alwaysOn(info) && info.wakes ? { ...info, wakes: false } : { ...info });
 export type Power = "on" | "off" | "starting" | "outdated";
 
 export type Envelope = { machine: string; workspace: string | null; command: string; args?: Row };
@@ -131,7 +135,12 @@ const RETRY_READ = new Set(["machine_lost", "machine_timeout", "io"]);
  * de la última rebanada guardada. Al apagarse, la VM deja en el relay su copia, más
  * nueva que lo leído aquí mientras estaba encendida (la respuesta que terminó al final).
  */
-type Member = { info: MachineInfo; link: Link; stops: (() => void)[]; was: MachineState; outdated: boolean; engine: boolean | null; fresh: Set<string> | null };
+/**
+ * `live`: contestó en vivo (sin `cached`) después del último `state` de su sesión,
+ * que entonces no decía `online`; lo más nuevo manda hasta el próximo `state`.
+ * `hint`: lo que dijo otra fuente (la vista del motor) antes del primer `state`.
+ */
+type Member = { info: MachineInfo; link: Link; stops: (() => void)[]; was: MachineState; outdated: boolean; engine: boolean | null; fresh: Set<string> | null; live: boolean; hint: MachineState | null };
 
 export class Fleet {
   readonly self: string | null;
@@ -162,7 +171,7 @@ export class Fleet {
    */
   setMachines(list: readonly MachineInfo[]) {
     if (this.closed) return;
-    const next = new Map(list.filter((m) => m.id !== this.self).map((m) => [m.id, m]));
+    const next = new Map(list.filter((m) => m.id !== this.self).map((m) => [m.id, normalized(m)]));
     for (const [id, member] of [...this.members])
       if (!next.has(id)) {
         this.drop(member);
@@ -174,7 +183,7 @@ export class Fleet {
     for (const info of next.values()) {
       const member = this.members.get(info.id);
       if (!member) {
-        this.add({ ...info });
+        this.add(info);
         continue;
       }
       const before = member.info;
@@ -183,7 +192,7 @@ export class Fleet {
         && JSON.stringify(before.organization ?? null) === JSON.stringify(info.organization ?? null);
       // Un contrato que vuelve a ser compatible quita la marca que puso el relay.
       if (before.outdated && !info.outdated) member.outdated = false;
-      member.info = { ...info };
+      member.info = info;
       if (!same) this.config.onChange?.(info.id);
     }
   }
@@ -232,9 +241,10 @@ export class Fleet {
     return this.registry;
   }
 
-  /** Las otras máquinas, administradas primero y luego por nombre. */
+  /** Las otras máquinas, administradas (las VM y los servidores de organización) primero y luego por nombre. */
   machines(): MachineInfo[] {
-    return [...this.members.values()].map((m) => m.info).sort((a, b) => Number(b.wakes) - Number(a.wakes) || a.name.localeCompare(b.name));
+    const managed = (m: MachineInfo) => Number(m.wakes || alwaysOn(m));
+    return [...this.members.values()].map((m) => m.info).sort((a, b) => managed(b) - managed(a) || a.name.localeCompare(b.name));
   }
 
   has(machine: string | null | undefined): boolean {
@@ -257,8 +267,59 @@ export class Fleet {
     const member = this.members.get(machine);
     if (!member) return "off";
     if (this.isOutdated(member)) return "outdated";
+    if (this.online(member)) return "on";
+    const state = this.stateOf(member);
+    // Un endpoint de organización no se enciende desde aquí: solo un `offline` de su relay lo apaga.
+    if (alwaysOn(member.info)) return OFF.includes(state) ? "off" : "on";
+    return state === "starting" ? "starting" : "off";
+  }
+
+  /**
+   * Lo que otra fuente sabe del estado de `machine` (la vista del motor, de la
+   * lista de la cuenta). Solo vale mientras su sesión no dijo nada: el relay manda.
+   */
+  observe(machine: string, state: MachineState) {
+    const member = this.members.get(machine);
+    if (!member || member.hint === state) return;
+    const before = this.power(machine);
+    member.hint = state;
+    if (this.power(machine) !== before) this.config.onChange?.(machine);
+  }
+
+  /** El estado de la sesión, o el de otra fuente si la sesión aún no dijo ninguno. */
+  private stateOf(member: Member): MachineState {
     const state = member.link.state();
-    return state === "online" ? "on" : state === "starting" ? "starting" : "off";
+    return state === "unknown" && member.hint ? member.hint : state;
+  }
+
+  /**
+   * Si la flota no le pregunta por estar apagada: según su relay y sin una
+   * respuesta en vivo más nueva. A un endpoint de organización siempre se le
+   * pregunta: su relay contesta (en vivo, de su copia o `machine_off`).
+   */
+  private isOff(member: Member): boolean {
+    return !member.live && !alwaysOn(member.info) && OFF.includes(this.stateOf(member));
+  }
+
+  /** En línea según lo último que se supo: su sesión, o una respuesta en vivo más nueva que ella. */
+  private online(member: Member): boolean {
+    return member.live || this.stateOf(member) === "online";
+  }
+
+  /** Contestó el motor de allá (no la copia del relay): está en línea aunque su último `state` dijera otra cosa. */
+  private answered(member: Member) {
+    if (member.live || member.link.state() === "online") return;
+    member.live = true;
+    // Como al llegar su `online`: lo leído mientras parecía apagada se relee.
+    if (this.listening) this.config.onEvents?.(member.info.id, [], true);
+    this.config.onChange?.(member.info.id);
+  }
+
+  /** El relay dijo que no la alcanza: la evidencia en vivo ya no vale. */
+  private unanswered(member: Member) {
+    if (!member.live) return;
+    member.live = false;
+    this.config.onChange?.(member.info.id);
   }
 
   /**
@@ -422,7 +483,7 @@ export class Fleet {
   async wake(machine: string): Promise<void> {
     const member = this.members.get(machine);
     if (!member) throw new FleetError("unknown_machine", machine);
-    if (member.link.state() === "online") return;
+    if (this.online(member) || (alwaysOn(member.info) && !OFF.includes(this.stateOf(member)))) return;
     if (!member.info.wakes) throw new FleetError("machine_off", machine, null, false);
     await this.wakeMember(member);
   }
@@ -434,7 +495,7 @@ export class Fleet {
   async untilOnline(machine: string): Promise<void> {
     const member = this.members.get(machine);
     if (!member) throw new FleetError("unknown_machine", machine);
-    if (member.link.state() === "online") return;
+    if (this.online(member) || (alwaysOn(member.info) && !OFF.includes(this.stateOf(member)))) return;
     if (member.link.state() !== "starting") throw new FleetError("machine_off", machine, null, member.info.wakes);
     await new Promise<void>((resolve, reject) => {
       const done = (ok: boolean) => {
@@ -502,7 +563,7 @@ export class Fleet {
     const member = this.members.get(machine);
     // Salvo si cambió la cola de aplazadas: la copia del relay ya la refleja y la de aquí no.
     const settled = !member?.fresh || member.fresh.has(key);
-    if (before?.has && member && settled && classOf(envelope.command) === "read" && OFF.includes(member.link.state())) return { ...before, status: "cached", error: "machine_off" };
+    if (before?.has && member && settled && classOf(envelope.command) === "read" && this.isOff(member)) return { ...before, status: "cached", error: "machine_off" };
     // Con otro contrato no se le pregunta: lo dirá su próximo `hello` (R14) o la lista de la cuenta.
     if (member && this.isOutdated(member)) return this.settle(keep("outdated", "version_mismatch"), key);
     let slice: Slice;
@@ -541,7 +602,7 @@ export class Fleet {
     if (stopped) throw new FleetError(stopped, machine);
     const kind = classOf(command);
     if (kind !== "read" && this.isOutdated(member)) throw new FleetError("version_mismatch", machine);
-    const off = OFF.includes(member.link.state());
+    const off = this.isOff(member);
     // Lo que la ventana pide sola (`PASSIVE`) no enciende la VM: solo un mensaje o un gesto de la persona.
     if (off && PASSIVE.has(command)) throw new FleetError("machine_off", machine);
     // Archivar, borrar, renombrar, fijar o mover de space: el relay la guarda sin encenderla.
@@ -560,6 +621,7 @@ export class Fleet {
       } catch (error) {
         const e = fromRelay(error, machine);
         if (e.code === "version_mismatch") this.markOutdated(member);
+        if (e.code === "machine_off") this.unanswered(member);
         if (e.code === "not_remotely_startable") throw new FleetError("machine_off", machine, null, false);
         const again = kind === "read" ? RETRY_READ : RETRY_ACTION;
         if (retried || command === "list_storage" || !again.has(e.code)) throw e;
@@ -567,6 +629,7 @@ export class Fleet {
       }
     };
     const result = await attempt(false);
+    if (!result.cached && !result.deferred) this.answered(member);
     return { value: this.linkedOnly(member, command, result.value), cached: result.cached };
   }
 
@@ -583,6 +646,7 @@ export class Fleet {
   /** Enciende la VM y espera a que diga `online`, con el tope de un intent. */
   private async wakeMember(member: Member) {
     const { id } = member.info;
+    if (alwaysOn(member.info)) throw new FleetError("machine_off", id, null, false);
     if (!this.config.wake) throw new FleetError("machine_off", id, null, true);
     const started = member.link.state() === "starting" || (await this.config.wake(id).catch(() => false));
     if (started === "not_startable") throw new FleetError("machine_off", id, "not_remotely_startable", false);
@@ -620,9 +684,11 @@ export class Fleet {
 
   private add(info: MachineInfo) {
     const link = this.config.connect(info);
-    const member: Member = { info, link, stops: [], was: link.state(), outdated: false, engine: null, fresh: null };
+    const member: Member = { info, link, stops: [], was: link.state(), outdated: false, engine: null, fresh: null, live: false, hint: null };
     member.stops.push(
       link.onState((state) => {
+        // Cada `state` de la sesión es lo más nuevo: deja atrás la respuesta en vivo anterior.
+        member.live = false;
         if (OUTDATED.includes(state)) member.outdated = true;
         const cameOn = state === "online" && member.was !== "online";
         // Se apagó en esta sesión: cada lectura vuelve a pedirse una vez a la copia del relay (no la enciende).
