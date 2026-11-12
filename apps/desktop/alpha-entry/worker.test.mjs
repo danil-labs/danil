@@ -746,3 +746,35 @@ test("asset fetches also receive a deadline and preserve caller cancellation", a
     assert.equal(signal.aborted, true);
   }
 });
+
+test("pending asset fetches expire as controlled HTTP problems", async t => {
+  t.mock.method(console, "error", () => {});
+  for (const path of ["/", "/m/inbox"]) {
+    const h = harness();
+    h.env.UPSTREAM_TIMEOUT_MS = "5";
+    let calls = 0;
+    let aborted;
+    let expiry;
+    h.env.TERMINUS_WEB.fetch = request => {
+      calls++;
+      return new Promise((resolve, reject) => {
+        const fail = () => { aborted = request.signal.reason; reject(aborted); };
+        if (request.signal.aborted) fail();
+        else request.signal.addEventListener("abort", fail, { once: true });
+      });
+    };
+    let response;
+    try {
+      response = await Promise.race([
+        h.fetch(path),
+        new Promise((_, reject) => { expiry = setTimeout(() => reject(new Error("asset deadline missing")), 500); }),
+      ]);
+    } finally { clearTimeout(expiry); }
+    assert.equal(aborted?.name, "TimeoutError", path);
+    assert.equal(calls, 1, "no retry after the deadline");
+    assert.equal(response.status, 503, path);
+    assert.match(response.headers.get("Content-Type"), /^application\/problem\+json/);
+    assert.equal(response.headers.get("Cache-Control"), "no-store");
+    assert.deepEqual(await response.json(), { type: "about:blank", title: "assets_unavailable", status: 503, error: "assets_unavailable" });
+  }
+});

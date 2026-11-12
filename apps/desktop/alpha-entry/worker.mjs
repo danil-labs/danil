@@ -11,6 +11,7 @@
 // Danil Business: lista cerrada en business.mjs, solo la cuenta activa del Bearer.
 export { DesktopCodeStore } from "./desktop-code-store.mjs";
 import { upstreamSignal } from "./transport.mjs";
+import { dependencyProblem, logDependency } from "./dependency-error.mjs";
 import { broadcastRead, broadcastWrite } from "./broadcasts.mjs";
 import { BUSINESS_MAX_BODY, businessBody, businessRoute } from "./business.mjs";
 import { handleAuth, hasSignedOutMarker, sessionConfig } from "./session.mjs";
@@ -393,10 +394,15 @@ export default {
       return new Response(null, { status: 302, headers: { Location: `/auth/workos/start${url.search}`, "Cache-Control": "no-store" } });
     }
     if (!env.TERMINUS_WEB) return json("assets_unavailable", 503);
-    if (PHONE_ROUTES.includes(url.pathname)) {
-      url.pathname = "/m/";
-      return env.TERMINUS_WEB.fetch(new Request(new Request(url, request), { signal: upstreamSignal(env, request.signal) }));
+    try {
+      if (PHONE_ROUTES.includes(url.pathname)) {
+        url.pathname = "/m/";
+        return await env.TERMINUS_WEB.fetch(new Request(new Request(url, request), { signal: upstreamSignal(env, request.signal) }));
+      }
+      return await env.TERMINUS_WEB.fetch(new Request(request, { signal: upstreamSignal(env, request.signal) }));
+    } catch (error) {
+      logDependency("assets_fetch", error);
+      return dependencyProblem("assets_unavailable");
     }
-    return env.TERMINUS_WEB.fetch(new Request(request, { signal: upstreamSignal(env, request.signal) }));
   },
 };
