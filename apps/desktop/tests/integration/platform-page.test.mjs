@@ -1,8 +1,27 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { boot } from "../helpers/jsdom-app.mjs";
+import { readFileSync } from "node:fs";
+import entry from "../../alpha-entry/worker.mjs";
+import { boot, distWeb } from "../helpers/jsdom-app.mjs";
 
-// Requires the web and desktop bundles.
+// Requires the web and desktop bundles and their explicit build origin.
+const apiOrigin = new URL(process.env.DANIL_WEB_API_ORIGIN).origin;
+
+test("alpha-entry serves the built page with the configured edge in both CSPs", async () => {
+  const html = readFileSync(`${distWeb}/index.html`, "utf8");
+  const policy = /http-equiv="Content-Security-Policy"\s*content="([^"]*)"/.exec(html)?.[1];
+  assert.ok(policy);
+  assert.equal(policy.split(";").map(d => d.trim()).find(d => d.startsWith("connect-src")),
+    `connect-src 'self' ${apiOrigin}`);
+  const headers = readFileSync(`${distWeb}/_headers`, "utf8");
+  const servedPolicy = /Content-Security-Policy: (.*)/.exec(headers)?.[1];
+  assert.equal(servedPolicy, `${policy}; frame-ancestors 'none'`);
+  const response = await entry.fetch(new Request("https://alfa-app.danil.ai/"), {
+    TERMINUS_WEB: { fetch: async () => new Response(html, { headers: { "Content-Security-Policy": servedPolicy } }) },
+  });
+  assert.equal(response.headers.get("Content-Security-Policy"), servedPolicy);
+  assert.equal(await response.text(), html);
+});
 async function until(read) {
   const deadline = Date.now() + 3000;
   while (!read()) {
@@ -15,7 +34,7 @@ async function page(handler) {
   globalThis.fetch = async (input, init) => {
     const url = new URL(String(input));
     if (url.origin === "http://localhost" && url.pathname.includes("/assets/")) return new Response("");
-    assert.equal(url.origin, "https://api.danil.ai");
+    assert.equal(url.origin, apiOrigin);
     assert.equal(init.credentials, "include");
     assert.equal(new Headers(init.headers).has("authorization"), false);
     if (url.pathname.startsWith("/v1/messaging/")) return Response.json({ data: [], page: { has_more: false, next_cursor: null } });
