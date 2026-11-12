@@ -14,8 +14,11 @@ import { For, type JSX, Show } from 'solid-js';
 import type { InboxDraft } from './inbox-drafts';
 import { inboxDrag, inboxWidth, type InboxSide } from './inbox-widths';
 import { ReplyError } from '../../../../../packages/attention/src/messaging.ts';
-import { contactDisplayName, contactIdentifier, contactSubIdentifier, type Conversation, type ConversationLabel, conversationLabels, type InboxFilter, type Message, normalizeProvider } from '../../../../../packages/attention/src/inbox.ts';
+import { contactDisplayName, contactIdentifier, contactSubIdentifier, type Conversation as LegacyConversation, type ConversationLabel, conversationLabels, type InboxFilter, type Message as LegacyMessage, normalizeProvider } from '../../../../../packages/attention/src/inbox.ts';
 import { df } from '../../lib/format';
+
+type Conversation = LegacyConversation<number | string>;
+type Message = LegacyMessage<number | string>;
 import { t } from '../../lib/i18n';
 import { Button } from '../../ui/Button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../../ui/DropdownMenu';
@@ -237,7 +240,7 @@ export function MessageBubble(props: { message: Message; position: 'first' | 'mi
   </div>;
 }
 
-export function InboxComposer(props: { draft: InboxDraft; conversation: number; allowed: boolean; onSend: (conversation: number, text: string, clientId: string, signal: AbortSignal) => Promise<{ requiresTemplate: boolean; duplicate: boolean }>; onRefresh: () => Promise<void> }) {
+export function InboxComposer<Id extends number | string>(props: { draft: InboxDraft; conversation: Id; allowed: boolean; onSend: (conversation: Id, text: string, clientId: string, signal: AbortSignal) => Promise<{ requiresTemplate: boolean; duplicate: boolean }>; onRefresh: () => Promise<void> }) {
   const state = () => props.draft.value();
   async function refresh() {
     const draft = props.draft;

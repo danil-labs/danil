@@ -696,6 +696,7 @@ const steps = [
   ["On the web the AI accounts panel says the VM is starting and fills in once it is online", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/web-ai-accounts-late.test.mjs")], root],
   ["An approval invalidates its identity without touching other slots", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/web-session.test.ts")], root],
   ["Workspace selection reconciles uncertain intents before another operation", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/web-workspace-selection.test.ts")], root],
+  ["The platform inbox uses opaque IDs, cursors and idempotent cookie writes", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/web-platform-inbox.test.ts")], root],
   ["The platform session uses cookies, CSRF and a separate deployment", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/web-platform-session.test.ts")], root],
   ["The alpha WorkOS session asks for a short token, renews it and ends without a fallback", process.execPath, ["--test", "--test-force-exit", "--experimental-strip-types", join(root, "tests/unit/web-workos-session.test.ts")], root],
   ["Broadcasts: the full panel, the Appv2 rules and what stays behind the switch", process.execPath, ["--test", "--experimental-strip-types", join(root, "../../packages/attention/test/broadcast-panel.test.ts")], root],

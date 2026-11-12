@@ -655,7 +655,7 @@ const demo = new URLSearchParams(window.location.search).get("demo") === "1";
 
 if (__DANIL_WEB_SESSION__.kind === "platform") {
   const deployment = __DANIL_WEB_SESSION__;
-  void import("./PlatformEntry").then(m => m.startPlatform(deployment, document.getElementById("root") as HTMLElement));
+  void import("./PlatformEntry").then(m => m.startPlatform({ ...deployment, legacy: __TERMINUS_WEB__ }, document.getElementById("root") as HTMLElement));
 } else if (import.meta.env.TERMINUS_ALPHA && window.location.pathname.replace(/\/+$/, "") === `${import.meta.env.BASE_URL}sign-in`) {
   // With WorkOS the alfa sign-in is the common one; `login` points here, so it renders in place.
   if (__TERMINUS_WEB__.workos) void import("./auth/main").then((m) => m.startAuth(__TERMINUS_WEB__, document.getElementById("root") as HTMLElement));

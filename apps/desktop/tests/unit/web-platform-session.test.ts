@@ -6,7 +6,7 @@ import { webSessionDeployment } from "../../src/web/session-config.ts";
 test("deployment selects complete session paths and rejects invalid configuration", () => {
   assert.equal(webSessionDeployment({}).kind, "legacy");
   const deployment = webSessionDeployment({ DANIL_WEB_SESSION: "platform" });
-  assert.deepEqual(deployment, { kind: "platform", origin: "https://api.danil.ai", timeoutMs: 15000 });
+  assert.deepEqual(deployment, { kind: "platform", origin: "https://api.danil.ai", timeoutMs: 15000, inbox: "legacy" });
   assert.equal(webSessionDeployment({ DANIL_WEB_SESSION: "platform", DANIL_WEB_API_ORIGIN: "http://localhost:8787" }).kind, "platform");
   for (const env of [
     { DANIL_WEB_SESSION: "typo" },
