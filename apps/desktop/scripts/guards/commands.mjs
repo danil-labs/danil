@@ -138,6 +138,7 @@ const SIN_INTERFAZ = {
     "la sincronización sigue a la sesión de Danil: el motor vincula todos los workspaces; sin interruptor por workspace",
   danil_workspace_link_status:
     "la sincronización sigue a la sesión de Danil: el motor vincula todos los workspaces; sin interruptor por workspace",
+  state_copy: "la copia de tareas y proyectos de otra máquina (light_state_machines_v1) aún no se pinta; el riel solo usa state_machines",
   tree_diff: "el diff de un turno se pintaba bajo cada turno del chat; ahora «Editó N archivos» abre el panel de la tarea en «Cambios» (tree_changes)",
   // `docs/agents.md` § Estado observable: el comando de agregación existe
   // para que el riel deje de sondear; el riel mismo no está construido.

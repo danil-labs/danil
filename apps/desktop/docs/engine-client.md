@@ -194,6 +194,28 @@ tarea.
   workspace no permite ninguno. La frase dice qué falta: activar los modelos
   gratuitos, conectar una cuenta del agente o que el gobierno permita un modelo.
 
+### Extensión `light_state_machines_v1`
+
+Estado ligero, etapa 3 (danil-engine#415): el motor guarda en disco qué
+workspaces sirven las otras máquinas de cada sesión de Danil que tiene, también
+los que aquí no existen. `light_state_machines_v1.json` se copia byte a byte y
+se registra en `EXTENSIONS`, fuera de la huella. Solo la ventana local
+(`relay: false`).
+
+- El riel del escritorio es de la persona, no del workspace abierto: si el motor
+  anuncia el rasgo (`machine_list`), `features/machines/engine-workspaces.ts`
+  lee `state_machines` y los workspaces que no son de aquí (de una organización
+  o de otra cuenta) entran en la lista que devuelve el router, con el workspace
+  abierto que sea. Un workspace sale del riel solo cuando el motor lo borra.
+- Se relee con `state.copy_changed` y con `danil-sessions`, siempre con la
+  `version` que ya se tiene (`not_modified` no cambia nada).
+- Con un motor sin el rasgo, los de una organización salen de la flota de la
+  cuenta del workspace abierto, como antes. Un workspace que no es de ninguna
+  cuenta habla con la sesión principal; uno cuya cuenta no tiene sesión aquí
+  sigue local. «Ejecutar en» sigue siendo del workspace abierto. La web no
+  tiene motor local y no cambia.
+- `state_copy` todavía no se usa.
+
 ## Starting the engine
 
 Opened without arguments (a double click), the window uses the engine that

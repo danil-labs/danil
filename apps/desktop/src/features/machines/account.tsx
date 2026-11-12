@@ -4,9 +4,12 @@
  * engine keeps the native IPC and paints first, and each other computer is one
  * relay session that only adds its slice. With one session per account, it is
  * the account of the open workspace: its client token, its computers and its
- * registry; switching to a workspace of another account installs that one.
- * Without an account, a local guest (WSL) gets a guests-only fleet as
- * `"local"`; with no guest either, nothing is installed. Lazy from `app/main.tsx`.
+ * registry; switching to a workspace of another account installs that one. A
+ * workspace of no account talks as the default one. The workspaces of
+ * other machines come from this engine (`state_machines`) when it has them,
+ * for every session at once. With no session at all, a local guest (WSL) gets
+ * a guests-only fleet as `"local"`; with no guest either, nothing is installed.
+ * Lazy from `app/main.tsx`.
  */
 import "../../web/phrases";
 import {
@@ -40,10 +43,11 @@ import { deliver, listen } from "../../lib/serviceEvents";
 import { isMac, isWindows } from "../../lib/window";
 import { Toast, ToastPortal } from "../../ui/Toast";
 import type { MachineStatus } from "../../web/SyncNote";
-import { type DanilSessionInfo, sessionForWorkspace, type WorkspaceAccount } from "../settings/danil-sessions";
+import { type DanilSessionInfo, railSession, type WorkspaceAccount } from "../settings/danil-sessions";
 import AccountMachines from "./AccountMachines";
 import { MachinePicker } from "./MachinePicker";
 import { createRouter, type Invoke, type Router, type SliceChange } from "./router";
+import { createEngineWorkspaces } from "./engine-workspaces";
 import { machineNamesChanged, refetchMachines } from "./store";
 import type { WslChild } from "./wsl";
 import { guestChannels } from "./guestChannels";
@@ -149,6 +153,19 @@ export function startAccountMachines(target: Target = window) {
   let homeVersion: string | null = null;
   /** The session the fan-out talks as: the open workspace's account; `null` is the default one. */
   let account: string | null = null;
+  // Los workspaces de otras máquinas que el motor de aquí conoce, de todas sus sesiones: el riel es de la persona, no del workspace abierto.
+  const engineWorkspaces = createEngineWorkspaces({
+    invoke,
+    listen,
+    features: async () => {
+      const rows = (await invoke("machine_list", {})) as { features?: unknown }[] | null;
+      const features = Array.isArray(rows) ? rows[0]?.features : null;
+      return Array.isArray(features) ? features.filter((f): f is string => typeof f === "string") : [];
+    },
+    onChange: () => {
+      if (installed) slicesChanged(["workspaces"]);
+    },
+  });
 
   const getToken = async (): Promise<ClientToken> => {
     if (token && token.expires_at - Date.now() > TOKEN_MARGIN) return token;
@@ -232,6 +249,7 @@ export function startAccountMachines(target: Target = window) {
       deliver,
       pickedFor,
       directory: directoryEntries,
+      engineWorkspaces: engineWorkspaces.workspaces,
       home: () => ({ wakes: homeWakes, os: homeOs, features: homeFeatures, version: homeVersion }),
     });
     fleet.setMachines([...others.map(infoOf), ...guestMachines]);
@@ -344,7 +362,7 @@ export function startAccountMachines(target: Target = window) {
       const listed = installed ? null : ((await invoke("list_workspaces", {}).catch(() => null)) as { active?: unknown } | null);
       const workspace = installed?.router.activeWorkspace() ?? (typeof listed?.active === "string" ? listed.active : null);
       const of = (await invoke("danil_workspace_account", workspace ? { workspace } : {}).catch(() => null)) as WorkspaceAccount | null;
-      const session = sessionForWorkspace(sessions, of);
+      const session = railSession(sessions, of);
       return { self: session?.computer_id ?? null, account: session?.account ?? session?.computer_id ?? null };
     }
     const status = (await invoke("danil_connect_status", {}).catch(() => null)) as DanilStatus | null;
@@ -438,7 +456,10 @@ export function startAccountMachines(target: Target = window) {
 
   void whenConnected().then(() => {
     void listen("danil-connect", () => void sync());
-    void listen("danil-sessions", () => void sync());
+    void listen("danil-sessions", () => {
+      void sync();
+      void engineWorkspaces.refresh();
+    });
     // Another workspace may belong to another account: its computers are others.
     window.addEventListener("harness:workspace", () => void sync());
     // Una máquina recién conectada («Conectar otra máquina») suma su rebanada sin desmontar las demás.
@@ -446,6 +467,7 @@ export function startAccountMachines(target: Target = window) {
     // Una VM conectada o quitada en Configuración: con cuenta o sin ella, la flota la suma o la quita.
     window.addEventListener("danil:guests-changed", () => void sync());
     setInterval(() => void sync(), RELIST);
+    void engineWorkspaces.refresh();
     return sync();
   });
 }

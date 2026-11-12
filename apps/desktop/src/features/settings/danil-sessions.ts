@@ -128,6 +128,10 @@ export function sessionForWorkspace(list: DanilSessionInfo[] | null | undefined,
   return connectedSessions(list).find((s) => s.email?.trim().toLocaleLowerCase() === email) ?? null;
 }
 
+/** La sesión de las otras máquinas de la persona: la del workspace abierto; si no es de ninguna cuenta, la principal. Una cuenta sin sesión aquí no habla como otra. */
+export const railSession = (list: DanilSessionInfo[] | null | undefined, of: WorkspaceAccount | null) =>
+  sessionForWorkspace(list, of) ?? (of?.account ? null : defaultSession(list));
+
 /**
  * La línea de solo lectura del workspace: con quién se sincroniza; `unlinked`
  * si su cuenta tiene sesión pero el plano de control todavía no lo unió (o no

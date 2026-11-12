@@ -120,6 +120,15 @@ test("a workspace talks as its account; signed out, as nobody", async () => {
   assert.deepEqual(syncLine({ account: null, email: null, signed_in: false, linked: false }, list), { kind: "none" }, "nobody chose an account");
 });
 
+test("the other machines of the person follow the open workspace's account, or the default session when it is of no account", async () => {
+  const { railSession } = await sessions();
+  const list = [ALBERTO, FUNDACION];
+  assert.equal(railSession(list, { account: "u_fdb", email: null, signed_in: true, linked: true })?.computer_id, "cmp_b");
+  assert.equal(railSession(list, { account: null, email: null, signed_in: false, linked: false })?.computer_id, "cmp_a", "a local workspace of no account");
+  assert.equal(railSession(list, { account: "u_ytw", email: "a@ytw.mx", signed_in: false, linked: false }), null, "an account signed out here does not talk as another");
+  assert.equal(railSession([], { account: null, email: null, signed_in: false, linked: false }), null, "no session at all: nobody");
+});
+
 test("adding an account starts the flow with add and opens the approval page", async () => {
   const calls = engine({
     danil_connect_start: () => ({ state: "pending", user_code: "WDJB-MJHT", verification_uri_complete: "https://app.danil.ai/terminus/connect?code=WDJB-MJHT" }),
