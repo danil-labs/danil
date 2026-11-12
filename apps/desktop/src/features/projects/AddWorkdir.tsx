@@ -316,9 +316,10 @@ export default function AnadirCarpeta(props: {
   }
 
   async function chooseRepository(repo: ProjectRepository) {
-    // Ya está clonado para un proyecto de este workspace: se abre ese, no un
-    // segundo clon al lado.
-    if (repo.project && props.workspace) {
+    // Ya clonado en la máquina elegida: se abre ese. La lista sale de la máquina
+    // del workspace; en otra elegida se clona ahí.
+    const deLaElegida = remota() ? remota()?.lead === true : machines().find((m) => m.local)?.hosts !== false;
+    if (repo.project && props.workspace && deLaElegida) {
       await terminar(invoke<Project>("reuse_project", {
         workspace: props.workspace, project: repo.project, space: props.space ?? undefined,
       }));
