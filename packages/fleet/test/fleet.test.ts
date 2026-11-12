@@ -847,3 +847,64 @@ test("delegated rows keep the panel ids, handoff parent included", () => {
   const [encoded] = fleet.encode("cmp_vm", [{ ...row("b"), handoff_parent: "a" }], "list_delegated_sessions") as Row[];
   assert.deepEqual([encoded.id, encoded.handoff_parent], ["cmp_vm~b", "cmp_vm~a"]);
 });
+
+/** Un relay que ya contesta en vivo aunque el último `state` de la sesión no lo dijo (2026-11-12, «Nube IA»). */
+function answeringLink(state: MachineState, answers: Record<string, unknown>) {
+  const link = fakeLink({ state, answers });
+  link.call = (id, command, workspace, _folder, args) => {
+    link.calls.push({ id, command, workspace, args: args as Record<string, unknown> });
+    return Promise.resolve({ value: answers[command] ?? null, cached: null });
+  };
+  return link;
+}
+
+test("regression: a machine whose session last said offline or starting is on once it answers live, and the next state frame wins again", async () => {
+  for (const stale of ["offline", "starting", "unknown"] as const) {
+    const link = answeringLink(stale, { list_live_sessions: [row("t1")], rename_session: { ok: true } });
+    const changes: string[] = [];
+    let wakes = 0;
+    const fleet = new Fleet({ self: "cmp_home", connect: () => link, wake: async () => { wakes++; return true; }, deadlines: { read: 40, action: 200, intent: 400 }, onChange: (m) => changes.push(m) });
+    fleet.setMachines([VM]);
+    assert.notEqual(fleet.power("cmp_vm"), "on", `${stale}: before any answer, the session's state`);
+    const slice = await fleet.read({ machine: "cmp_vm", workspace: "w", command: "list_live_sessions", args: { project: "p1" } });
+    assert.equal(slice.status, "ok");
+    assert.equal(fleet.power("cmp_vm"), "on", `${stale}: a live answer corrects the power`);
+    assert.ok(changes.includes("cmp_vm"), "the window repaints it");
+    await fleet.call({ machine: "cmp_vm", workspace: "w", command: "rename_session", args: { id: "cmp_vm~t1", title: "x" } });
+    await fleet.wake("cmp_vm");
+    assert.equal(wakes, 0, `${stale}: a machine that answers is never woken`);
+    link.setState("offline");
+    assert.equal(fleet.power("cmp_vm"), "off", "a newer frame from the relay wins");
+    link.setState("online");
+    assert.equal(fleet.power("cmp_vm"), "on");
+  }
+});
+
+test("regression: an organization endpoint is always on: no «Encender», no wake, and a stale starting never blocks it", async () => {
+  const org = { id: "ws_org", name: "Danil Foundation" };
+  // La fila de un endpoint dice `wakeable: true` (el plano de control enciende su servidor).
+  const endpoint: MachineInfo = { id: "cmp_nube", name: "Nube IA", wakes: true, organization: { id: "org_01", workspaces: [org] } };
+  const link = answeringLink("starting", { send_message: { ok: true }, create_empty_session: { id: "t9" } });
+  let wakes = 0;
+  const fleet = new Fleet({ self: "cmp_home", connect: () => link, wake: async () => { wakes++; return true; }, deadlines: { read: 40, action: 200, intent: 400 } });
+  fleet.setMachines([endpoint]);
+  assert.equal(fleet.info("cmp_nube")?.wakes, false, "never offered to be turned on");
+  assert.equal(fleet.power("cmp_nube"), "on", "a stale starting is not «Encendiendo…»");
+  await fleet.untilOnline("cmp_nube");
+  link.setState("offline");
+  assert.equal(fleet.power("cmp_nube"), "off", "only its relay saying offline turns it off");
+  await assert.rejects(fleet.wake("cmp_nube"), (e: FleetError) => e.code === "machine_off" && e.canWake === false);
+  await fleet.call({ machine: "cmp_nube", workspace: org.id, command: "create_empty_session", args: { project: "p1" } });
+  assert.equal(wakes, 0, "no wake intent ever reaches the control plane");
+  assert.deepEqual(link.calls.map((c) => c.command), ["create_empty_session"], "the action went to its relay instead of being refused as off");
+  assert.equal(fleet.power("cmp_nube"), "on", "and its live answer corrected the power");
+});
+
+test("the engine's view of a machine counts only until its session says something", () => {
+  const { fleet, link } = setup({ cmp_vm: { state: "unknown" } }, [VM]);
+  assert.equal(fleet.power("cmp_vm"), "off");
+  fleet.observe("cmp_vm", "online");
+  assert.equal(fleet.power("cmp_vm"), "on");
+  link("cmp_vm").setState("offline");
+  assert.equal(fleet.power("cmp_vm"), "off", "the relay wins");
+});

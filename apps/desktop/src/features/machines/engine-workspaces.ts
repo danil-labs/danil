@@ -18,6 +18,15 @@ const SETTLE = 150;
 
 type Row = { workspace?: unknown; name?: unknown; local?: unknown; machines?: unknown };
 
+/** El estado de cada otra máquina según la lista de la cuenta que guardó el motor (`machines/<id>/machine.json`). */
+function statesOf(rows: unknown): Map<string, string> {
+  const found = new Map<string, string>();
+  for (const row of Array.isArray(rows) ? (rows as Row[]) : [])
+    for (const m of (Array.isArray(row?.machines) ? row.machines : []) as { computer_id?: unknown; state?: unknown }[])
+      if (typeof m?.computer_id === "string" && typeof m.state === "string") found.set(m.computer_id, m.state);
+  return found;
+}
+
 function parse(rows: unknown): EngineWorkspace[] | null {
   if (!Array.isArray(rows)) return null;
   const found: EngineWorkspace[] = [];
@@ -38,6 +47,8 @@ function parse(rows: unknown): EngineWorkspace[] | null {
 export type EngineWorkspaces = {
   /** Lo último que dijo el motor; `null` si no anuncia la función o aún no contestó: entonces manda la flota. */
   workspaces: () => readonly EngineWorkspace[] | null;
+  /** El estado de cada otra máquina que dice la vista del motor (`online`, `offline`…). */
+  machineStates: () => ReadonlyMap<string, string>;
   /** Vuelve a preguntar; `true` si la lista cambió. */
   refresh: () => Promise<boolean>;
   close: () => void;
@@ -50,6 +61,7 @@ export type EngineWorkspaces = {
 export function createEngineWorkspaces(options: { invoke: Invoke; listen: Listen; features: () => Promise<readonly string[]>; onChange?: () => void }): EngineWorkspaces {
   const { invoke } = options;
   let current: EngineWorkspace[] | null = null;
+  let states = new Map<string, string>();
   let version: string | null = null;
   let closed = false;
   let reading: Promise<boolean> | null = null;
@@ -61,6 +73,7 @@ export function createEngineWorkspaces(options: { invoke: Invoke; listen: Listen
     if (version === null && !(await options.features().catch(() => [] as readonly string[])).includes(LIGHT_STATE_MACHINES_FEATURE)) {
       const had = current !== null;
       current = null;
+      states = new Map();
       return had;
     }
     let answer: { version?: unknown; not_modified?: unknown; workspaces?: unknown } | null;
@@ -75,6 +88,7 @@ export function createEngineWorkspaces(options: { invoke: Invoke; listen: Listen
     if (!next) return false;
     version = typeof answer?.version === "string" ? answer.version : null;
     current = next;
+    states = statesOf(answer?.workspaces);
     return true;
   }
 
@@ -113,6 +127,7 @@ export function createEngineWorkspaces(options: { invoke: Invoke; listen: Listen
 
   return {
     workspaces: () => current,
+    machineStates: () => states,
     refresh,
     close: () => {
       closed = true;

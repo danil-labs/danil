@@ -58,6 +58,7 @@ test("with the feature, the engine's workspaces of every session, re-read with i
     { id: "fnd00001", name: "Danil Foundation", local: false, organization: true, machines: ["cmp_nube"] },
   ]);
   assert.equal(changes, 1);
+  assert.deepEqual([...view.machineStates()], [["cmp_nube", "online"]], "what the engine's view says of each machine, for the fleet until its relay session speaks");
 
   // Un aviso de una copia sin cambios en la lista: `not_modified`, nada cambia.
   fake.emit("state.copy_changed");
