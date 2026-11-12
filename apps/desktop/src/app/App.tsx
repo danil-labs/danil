@@ -2784,8 +2784,30 @@ export default function App() {
     }
   }
 
+  // Con el índice de estado ligero del motor, los turnos vivos se reconcilian por
+  // eventos (`session`, una copia de otra máquina, un hueco); sin él, cada 5 s.
+  const turnosPorEventos = () => machines().find((m) => m.local)?.features?.includes("light_state_v1") === true;
+  let reconcileTimer: ReturnType<typeof setTimeout> | undefined;
+  let lastReconcile = 0;
+  /** Una tanda de eventos reconcilia una vez, como mucho cada 2 s. */
+  function reconcileSoon() {
+    if (!turnosPorEventos() || reconcileTimer) return;
+    reconcileTimer = setTimeout(() => {
+      reconcileTimer = undefined;
+      lastReconcile = Date.now();
+      void reconcileActiveTurns();
+    }, Math.max(300, 2_000 - (Date.now() - lastReconcile)));
+  }
+  onCleanup(() => clearTimeout(reconcileTimer));
+  createEffect(() => {
+    if (turnosPorEventos()) return;
+    const timer = setInterval(() => void reconcileActiveTurns(), 5000);
+    onCleanup(() => clearInterval(timer));
+  });
+
   onMount(() => {
     const refresh = () => void reconcileActiveTurns();
+    const resync = () => reconcileSoon();
     const refrescarAgentes = () => {
       // Al volver a la ventana (o a la pestaña) se releen los agentes: pueden
       // haberse escrito o editado archivos en `.agents/` por fuera de la app.
@@ -2795,12 +2817,12 @@ export default function App() {
     const alHacerseVisible = () => {
       if (document.visibilityState === "visible") refrescarAgentes();
     };
-    const timer = setInterval(refresh, 5000);
     window.addEventListener("focus", refresh);
     window.addEventListener("focus", refrescarAgentes);
+    window.addEventListener("harness:service-resync", resync);
     document.addEventListener("visibilitychange", alHacerseVisible);
     onCleanup(() => {
-      clearInterval(timer);
+      window.removeEventListener("harness:service-resync", resync);
       window.removeEventListener("focus", refresh);
       window.removeEventListener("focus", refrescarAgentes);
       document.removeEventListener("visibilitychange", alHacerseVisible);
@@ -3341,7 +3363,10 @@ export default function App() {
     // Otra máquina de la cuenta trajo una rebanada distinta (`features/machines/router.ts`): se relee solo eso.
     const machineSlices = (event: Event) => {
       const changes = (event as CustomEvent<{ changes?: string[] } | null>).detail?.changes ?? [];
-      if (changes.includes("sessions")) void refreshSessionsOnEvent(grupos());
+      if (changes.includes("sessions")) {
+        void refreshSessionsOnEvent(grupos());
+        reconcileSoon();
+      }
       if (changes.includes("spaces")) void reloadSpaces();
       if (changes.includes("mentions") && input().includes("@")) void refreshTaskCandidates();
       if (changes.includes("projects")) {
@@ -3422,6 +3447,7 @@ export default function App() {
       // la dejaría invisible hasta cambiar de proyecto. Su carpeta basta: el
       // aviso la trae, y releerlas todas esperaba a la más lenta.
       void refreshSessionsOnEvent(carpetasDeTarea(session, project));
+      reconcileSoon();
       // La otra instancia escribió esa tarea: su árbol también pudo moverse.
       // Mismo motivo que en el cierre de turno.
       avisarDeLosArboles(session);

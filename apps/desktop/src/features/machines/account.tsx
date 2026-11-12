@@ -48,7 +48,7 @@ import { type DanilSessionInfo, railSession, type WorkspaceAccount } from "../se
 import AccountMachines from "./AccountMachines";
 import { MachinePicker } from "./MachinePicker";
 import { createRouter, type Invoke, type Router, type SliceChange } from "./router";
-import { createEngineWorkspaces } from "./engine-workspaces";
+import { createEngineWorkspaces, railOf } from "./engine-workspaces";
 import { machineNamesChanged, refetchMachines } from "./store";
 import type { WslChild } from "./wsl";
 import { guestChannels } from "./guestChannels";
@@ -164,9 +164,20 @@ export function startAccountMachines(target: Target = window) {
       return Array.isArray(features) ? features.filter((f): f is string => typeof f === "string") : [];
     },
     onChange: () => {
-      if (!installed) return;
+      bumpRail((n) => n + 1);
+      if (!installed) return void window.dispatchEvent(new CustomEvent("harness:workspace-name"));
       observeEngine(installed.fleet);
       slicesChanged(["workspaces"]);
+    },
+  });
+  // El riel sale del índice del motor cuando lo tiene; el capability lo lee con su señal.
+  const [railRead, bumpRail] = createRoot(() => createSignal(0));
+  setCapabilities({
+    ...capabilities(),
+    railWorkspaces: () => {
+      railRead();
+      const rows = engineWorkspaces.workspaces();
+      return rows ? railOf(rows) : null;
     },
   });
   /** Lo que la vista del motor sabe de cada máquina vale hasta que su sesión del relay diga algo. */
@@ -257,6 +268,7 @@ export function startAccountMachines(target: Target = window) {
       pickedFor,
       directory: directoryEntries,
       engineWorkspaces: engineWorkspaces.workspaces,
+      engineFeatures: engineWorkspaces.features,
       home: () => ({ wakes: homeWakes, os: homeOs, features: homeFeatures, version: homeVersion }),
     });
     fleet.setMachines([...others.map(infoOf), ...guestMachines]);
@@ -465,6 +477,12 @@ export function startAccountMachines(target: Target = window) {
 
   void whenConnected().then(() => {
     void listen("danil-connect", () => void sync());
+    // Un motor sin el aviso de los workspaces de aquí: lo que cambia la ventana (crear, renombrar, logo) se vuelve a pedir con su versión.
+    window.addEventListener("harness:workspace-name", () => void engineWorkspaces.refresh());
+    window.addEventListener("harness:workspace", () => void engineWorkspaces.refresh());
+    // El índice de aquí y las copias de las otras máquinas: la barra relee solo el recurso que cambió.
+    void listen("state.changed", (e) => installed?.router.stateChanged(e.payload));
+    void listen("state.copy_changed", (e) => installed?.router.copyChanged(e.payload));
     void listen("danil-sessions", () => {
       void sync();
       void engineWorkspaces.refresh();

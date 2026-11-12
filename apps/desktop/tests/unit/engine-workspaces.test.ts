@@ -5,7 +5,7 @@
  */
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { createEngineWorkspaces, LIGHT_STATE_MACHINES_FEATURE } from "../../src/features/machines/engine-workspaces.ts";
+import { createEngineWorkspaces, LIGHT_STATE_MACHINES_FEATURE, railOf } from "../../src/features/machines/engine-workspaces.ts";
 
 const FOUNDATION = {
   workspace: "fnd00001",
@@ -94,5 +94,24 @@ test("a failed read keeps the last good list", async () => {
   fake.state.failing = true;
   assert.equal(await view.refresh(), false);
   assert.deepEqual(view.workspaces()?.map((w) => w.id), ["solo", "fnd00001"], "a failure is not a removal");
+  view.close();
+});
+
+test("the rail comes from one index: this computer's workspaces with name and logo, and the ones another machine serves", async () => {
+  const fake = engine([LIGHT_STATE_MACHINES_FEATURE, "light_state_v1"]);
+  fake.set([
+    { ...SOLO, logo: "/data/workspaces/solo/logo.png", logo_version: "1-10" },
+    FOUNDATION,
+    { workspace: "sin-nombre", name: null, local: false, machines: [{ computer_id: "cmp_x" }] },
+    { workspace: "sin-maquina", name: "Vacío", local: false, machines: [] },
+  ]);
+  const view = createEngineWorkspaces(fake);
+  await view.refresh();
+  assert.deepEqual(view.features(), [LIGHT_STATE_MACHINES_FEATURE, "light_state_v1"], "what this engine announces, for the task bar's index");
+  assert.deepEqual(railOf(view.workspaces() ?? []), [
+    { id: "solo", name: "Solo", logo: "/data/workspaces/solo/logo.png" },
+    { id: "fnd00001", name: "Danil Foundation", logo: null },
+  ], "a workspace of another machine with no name or no machine is not in the rail");
+  assert.equal(railOf([SOLO].map((w) => ({ id: w.workspace, name: w.name, local: true, organization: false, machines: [] }))), null, "an engine that does not give the logo of its own keeps the rail on list_workspaces");
   view.close();
 });
