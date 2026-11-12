@@ -240,12 +240,13 @@ jobs:
             echo "::error title=Motor con otro contrato::seldon-runtime.lock fija el contrato $pinned y la ventana habla $vendored: la app instalada no abriría su motor."
             exit 1
           fi
-          # Tauri suma a la base el archivo de cada plataforma; macOS no tiene archivo propio.
+          # Tauri suma a la base el archivo de cada plataforma y su `externalBin` reemplaza al de la base.
+          # macOS lo llama `danil-engine`; Windows y Linux siguen con `seldon-runtime`.
           for os in windows linux macos; do
             files=(src-tauri/tauri.conf.json)
             [ -f "src-tauri/tauri.$os.conf.json" ] && files+=("src-tauri/tauri.$os.conf.json")
-            jq -es 'map(.bundle.externalBin // []) | add | map(select(test("seldon-runtime"))) | length > 0' "${files[@]}" >/dev/null \
-              || { echo "::error title=Motor sin empaquetar::$os no declara seldon-runtime en bundle.externalBin (${files[*]})."; exit 1; }
+            jq -es 'map(.bundle.externalBin | select(. != null)) | last // [] | map(select(test("danil-engine|seldon-runtime"))) | length > 0' "${files[@]}" >/dev/null \
+              || { echo "::error title=Motor sin empaquetar::$os no declara el motor en bundle.externalBin (${files[*]})."; exit 1; }
           done
 
       - name: Comparar con lo publicado
@@ -392,7 +393,7 @@ jobs:
           pnpm engine:sidecar
           case "${{ matrix.name }}" in
             windows) expected=(seldon-runtime-x86_64-pc-windows-msvc.exe) ;;
-            macos) expected=(seldon-runtime-aarch64-apple-darwin seldon-runtime-x86_64-apple-darwin seldon-runtime-universal-apple-darwin) ;;
+            macos) expected=(danil-engine-aarch64-apple-darwin danil-engine-x86_64-apple-darwin danil-engine-universal-apple-darwin) ;;
             linux) expected=(seldon-runtime-x86_64-unknown-linux-gnu) ;;
           esac
           for f in "${expected[@]}"; do
@@ -783,7 +784,7 @@ jobs:
             macOS)
               app=src-tauri/target/universal-apple-darwin/release/bundle/macos/Danil.app
               resources="$app/Contents/Resources/work-tools"
-              engine="$app/Contents/MacOS/seldon-runtime"
+              engine="$app/Contents/MacOS/danil-engine"
               ;;
             Windows)
               resources="$(cygpath -u "$LOCALAPPDATA")/$PRODUCT_NAME/work-tools"
@@ -904,6 +905,11 @@ jobs:
             || { echo "::error::No está firmado con el Developer ID de Danil."; exit 1; }
           echo "$INFO" | grep -q "flags=.*runtime" \
             || { echo "::error::Falta hardened runtime: Apple rechaza la notarización."; exit 1; }
+          # El archivo se llama danil-engine, pero el llavero y `master_handoff` reconocen al motor por
+          # el identificador `seldon-runtime`, que sale del Info.plist embebido en el binario.
+          ENGINE_ID=$(codesign -dv "$APP/Contents/MacOS/danil-engine" 2>&1 | sed -n 's/^Identifier=//p')
+          [ "$ENGINE_ID" = seldon-runtime ] \
+            || { echo "::error title=Motor con otra identidad::Contents/MacOS/danil-engine firma como '$ENGINE_ID' y no como seldon-runtime: el llavero pediría permiso de nuevo. Fija un motor con Info.plist embebido (CFBundleIdentifier seldon-runtime)."; exit 1; }
 
           xcrun stapler validate "$APP"
           xcrun stapler validate "$DMG"
@@ -1094,13 +1100,13 @@ jobs:
           tar xzf release-assets/Danil.app.tar.gz
           lipo Danil.app/Contents/MacOS/terminus -verify_arch arm64 x86_64
           codesign --verify --deep --strict Danil.app
-          lipo Danil.app/Contents/MacOS/seldon-runtime -verify_arch arm64 x86_64
+          lipo Danil.app/Contents/MacOS/danil-engine -verify_arch arm64 x86_64
           # Sin argumentos arrancaría el motor empaquetado. Con uno que no entiende
           # sale con `cli.error.invalid_request`: el ejecutable carga; la interfaz no se prueba.
           out=$(Danil.app/Contents/MacOS/terminus --external-host 2>&1) && { echo "::error::Arrancó con un argumento inválido"; exit 1; }
           echo "$out" | grep -q invalid_request
           python3 apps/desktop/scripts/work-tools-release.py verify --directory Danil.app/Contents/Resources/work-tools
-          python3 apps/desktop/scripts/work-tools-runtime-smoke.py --engine Danil.app/Contents/MacOS/seldon-runtime --resources Danil.app/Contents/Resources --browser --clone --app Danil.app
+          python3 apps/desktop/scripts/work-tools-runtime-smoke.py --engine Danil.app/Contents/MacOS/danil-engine --resources Danil.app/Contents/Resources --browser --clone --app Danil.app
 
   # El AppImage que se va a publicar, en un Ubuntu limpio: la firma minisign
   # con el mismo verificador que usa `npx`, que lleve el motor, y que el binario

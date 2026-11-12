@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { execFileSync, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { closeSync, existsSync, mkdtempSync, openSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { closeSync, existsSync, mkdtempSync, openSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, relative, resolve } from "node:path";
 import { test } from "node:test";
@@ -10,12 +10,15 @@ import { fileURLToPath } from "node:url";
 const main = process.env.DANIL_CLI_TEST_MAIN ?? fileURLToPath(new URL("../../src-tauri/src/main.rs", import.meta.url));
 const windows = process.platform === "win32";
 const triple = { win32: "x86_64-pc-windows-msvc", darwin: `${process.arch === "arm64" ? "aarch64" : "x86_64"}-apple-darwin`, linux: "x86_64-unknown-linux-gnu" }[process.platform];
-const sidecar = fileURLToPath(new URL(`../../src-tauri/binaries/seldon-runtime-${triple}${windows ? ".exe" : ""}`, import.meta.url));
+const bundledName = process.platform === "darwin" ? "danil-engine" : "seldon-runtime";
+const sidecar = fileURLToPath(new URL(`../../src-tauri/binaries/${bundledName}-${triple}${windows ? ".exe" : ""}`, import.meta.url));
 
 test("el main de producción reenvía la CLI con pipes, archivos, salida descartada y sin consola nueva", async (t) => {
   const scratch = mkdtempSync(join(tmpdir(), "terminus-forward-"));
   const binary = join(scratch, windows ? "terminus.exe" : "terminus");
-  const engine = join(scratch, windows ? "seldon-runtime.exe" : "seldon-runtime");
+  const exe = windows ? ".exe" : "";
+  const engine = join(scratch, `danil-engine${exe}`);
+  const previous = join(scratch, `seldon-runtime${exe}`);
   const run = (args, options = {}) => {
     const result = spawnSync(binary, args, { encoding: "utf8", timeout: 10_000, windowsHide: true, ...options });
     assert.ifError(result.error);
@@ -135,7 +138,13 @@ fn main() {
     assert.equal(installer.stdout, "stop-engine\n");
     assert.equal(installer.status, 0);
 
-    rmSync(engine);
+    // Una instalación anterior, o Windows y Linux, traen el motor como `seldon-runtime`.
+    renameSync(engine, previous);
+    const fallback = run(["task", "--json"], { input: "" });
+    assert.equal(fallback.status, 23);
+    assert.equal(fallback.stdout, "task\n--json\n");
+
+    rmSync(previous);
     const missing = run(["task"]);
     assert.equal(missing.status, 1);
     assert.equal(missing.stdout, "");
