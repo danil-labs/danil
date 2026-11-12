@@ -27,3 +27,11 @@ service = "appv2"
 [vars]
 SUPABASE_URL = "https://sqonjbpvairwfksotadj.supabase.co"
 WORKOS_CLIENT_ID = "client_01M2HETZ89A209TH6NNPF6P8YC"
+
+[[durable_objects.bindings]]
+name = "DESKTOP_CODES"
+class_name = "DesktopCodeStore"
+
+[[migrations]]
+tag = "v1-desktop-codes"
+new_sqlite_classes = ["DesktopCodeStore"]
