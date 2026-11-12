@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { actionsFor, campaignProgress, cleanReason, contactTagLabels, contactsInWindow, createBroadcastPanel, failureReason, maskPhone, nothingReachedMeta, parseTemplateText, sendsDone, summarizeFailures, summarizeRejections, templateContent, templateHasUnmappableParams, templateVariables, type Recipient } from '../src/broadcast-panel.ts';
+import { actionsFor, campaignProgress, cleanReason, contactTagLabels, contactsInWindow, createBroadcastPanel, failureReason, maskPhone, parseTemplateText, sendsDone, summarizeFailures, summarizeRejections, templateContent, templateHasUnmappableParams, templateVariables, type Recipient } from '../src/broadcast-panel.ts';
 
 const session = (refresh = true) => ({ getToken: async () => 'jwt', unauthorized: async () => refresh });
 const panel = (request: typeof fetch, writes = false, prefix = '', refresh = true) => createBroadcastPanel({ session: session(refresh), request, prefix, writes, delivery: writes, account: async () => 7 });
@@ -108,7 +108,6 @@ test('progress reads open maps; an all-dead send counts as failed', () => {
   assert.deepEqual(campaignProgress(value), { pending: 3, sent: 5, delivered: 3, read: 0, failed: 3, responded: 1, processed: 7, total: 10 });
   assert.equal(sendsDone(stats({ by_process_status: { dispatched: 1 }, total: 1 }), 'running'), true);
   assert.equal(sendsDone(stats(), 'draft'), false);
-  assert.equal(nothingReachedMeta(stats({ by_process_status: { dead: 2 }, total: 2 })), true);
 });
 
 test('failure reasons prefer the Meta code and never stay blank', () => {
@@ -149,4 +148,11 @@ test('template text paints what WhatsApp paints, nothing more', () => {
   assert.deepEqual(parseTemplateText('2 * 3 * 4'), [{ type: 'text', value: '2 * 3 * 4' }]);
   assert.deepEqual(parseTemplateText('*a\nb*'), [{ type: 'text', value: '*a\nb*' }]);
   assert.deepEqual(parseTemplateText('```a*b*```'), [{ type: 'mono', value: 'a*b*' }]);
+});
+
+test('campaign audiences expose contacts, with no retired funnel or board API', async () => {
+  const api = panel(reply({ items: [{ id: 1, name: 'Ana', phone: '+525512345678' }] }));
+  assert.equal('funnels' in api, false);
+  assert.equal('board' in api, false);
+  assert.equal((await api.contacts())[0]?.id, 1);
 });

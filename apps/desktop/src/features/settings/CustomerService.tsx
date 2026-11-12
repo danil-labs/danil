@@ -40,7 +40,7 @@ export function CustomerConnections(props: { workspace: () => string | null }) {
   if (inbox) return inbox.customerConnections(props.workspace);
   return (
     <SettingsPanel>
-      <Unavailable rows={[t("web.alpha.channels_title"), t("web.service.calendars"), t("web.service.http_tools"), t("web.service.variables")]} />
+      <Unavailable rows={[t("web.alpha.channels_title"), t("web.service.http_tools"), t("web.service.variables")]} />
     </SettingsPanel>
   );
 }

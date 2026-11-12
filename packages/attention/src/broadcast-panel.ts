@@ -24,8 +24,6 @@ export type TemplateInput = TemplateContent & { channel_id: number; name: string
 export type CampaignInput = { template_id: number; channel_id: number; name: string; variable_mapping?: Record<string, string> };
 /** `phone` enmascarado; `sendable` dice si tiene teléfono aunque no alcance para enmascarar. */
 export type Contact = { id: number; name: string | null; email: string | null; phone: string | null; sendable: boolean; tags: string[]; last_active_at: string | null };
-export type Funnel = { id: number; name: string; stages: { id: number; name: string }[] };
-export type FunnelBoard = { stages: { id: number; name: string }[]; cards: { stage_id: number; contact_account_id: number }[] };
 export { canManageBroadcast, type BroadcastPermissions };
 
 /** Lo que cada cliente inyecta. Es un punto de inyección, no una frontera: el preflight y los cuerpos cerrados viven en la entrada que hay detrás de `prefix`. */
@@ -96,7 +94,6 @@ const contact = (value: unknown): Contact => {
   const phone = text(row.phone);
   return { id: id(row.id), name: text(row.name), email: text(row.email), phone: maskPhone(phone), sendable: !!phone?.trim(), tags: contactTagLabels(row.tags), last_active_at: text(row.last_active_at) };
 };
-const stage = (value: unknown) => { const row = object(value); return { id: id(row.id), name: required(row.name) }; };
 
 async function failure(response: Response): Promise<BroadcastPanelError> {
   let body: unknown;
@@ -168,13 +165,6 @@ export function createBroadcastPanel(source: Pick<BroadcastSource, 'session' | '
     },
     async contacts(): Promise<Contact[]> { return list((await scoped('/api/contacts')).items).map(contact); },
     async metadataKeys(): Promise<string[]> { return list((await get('/api/contacts/metadata-keys')).keys).filter((row): row is string => typeof row === 'string'); },
-    async funnels(): Promise<Funnel[]> {
-      return list((await get('/api/funnels')).funnels).map(value => { const row = object(value); return { id: id(row.id), name: required(row.name), stages: list(row.stages ?? []).map(stage) }; });
-    },
-    async board(funnelId: number): Promise<FunnelBoard> {
-      const data = await get(`/api/funnels/${id(funnelId)}/board`);
-      return { stages: list(data.stages).map(stage), cards: list(data.cards).map(value => { const row = object(value); return { stage_id: id(row.stage_id), contact_account_id: id(row.contact_account_id) }; }) };
-    },
     async channels(): Promise<{ id: number; name: string | null }[]> {
       const rows = list((await get('/api/channels')).channels).map(object);
       return operableChannels(rows).map(row => ({ id: id(row.id), name: text(row.name) }));
@@ -241,7 +231,6 @@ export function campaignProgress(stats: CampaignStats) {
 }
 /** La cola puede vaciarse antes de que cambie el estado: se avisa, pero no se inventa la transición. */
 export const sendsDone = (stats: CampaignStats, value: CampaignStatus) => { const c = campaignProgress(stats); return (value === 'running' || value === 'paused') && c.total > 0 && c.pending === 0; };
-export const nothingReachedMeta = (stats: CampaignStats) => { const c = campaignProgress(stats); return c.failed > 0 && c.total > 0 && Object.keys(stats.by_delivery_status).length === 0; };
 
 const META_ERROR_CODES = new Set(['131009', '131042', '131026', '131047', '131051', '131000', '132000', '132001', '133010', '130472', '368']);
 export function cleanReason(raw: string | null | undefined): string {

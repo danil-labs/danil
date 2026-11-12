@@ -47,10 +47,8 @@ function seed() {
     { id: 105, name: 'Sin Teléfono', email: 'sin@ejemplo.mx', phone: null, tags: [], last_active_at: ago(1) },
     { id: 106, name: 'Número Corto', phone: '12', tags: [], last_active_at: ago(1) },
   ];
-  const funnels = [{ id: 1, name: 'Ventas', stages: [{ id: 11, name: 'Nuevo' }, { id: 12, name: 'Cierre' }] }];
-  const cards = [{ stage_id: 11, contact_account_id: 101 }, { stage_id: 12, contact_account_id: 102 }];
   const channels = [{ id: 1, name: 'WhatsApp · Ventas', provider: 'whatsapp_cloud', active: true }, { id: 2, name: 'WhatsApp · Soporte', provider: 'whatsapp_cloud', active: true }, { id: 3, name: 'prueba_interna', provider: 'whatsapp_cloud', active: true }];
-  return { templates, campaigns, stats, recipients, contacts, funnels, cards, channels, nextId: 100 };
+  return { templates, campaigns, stats, recipients, contacts, channels, nextId: 100 };
 }
 
 const state = seed();
@@ -114,8 +112,6 @@ function route(path: string, method: string, body: Row, query: URLSearchParams, 
     if (path === '/api/marketing/templates') return json({ items: query.get('status') ? state.templates.filter(row => row.status === query.get('status')) : state.templates });
     if (path === '/api/contacts') return json({ items: state.contacts });
     if (path === '/api/contacts/metadata-keys') return json({ keys: ['ciudad', 'plan'] });
-    if (path === '/api/funnels') return json({ funnels: state.funnels });
-    if (path === '/api/funnels/1/board') return json({ funnel: state.funnels[0], stages: state.funnels[0]!.stages, cards: state.cards });
     if (path === '/api/channels') return json({ channels: state.channels });
     if (campaignMatch?.[2] === 'stats') { const row = state.campaigns.find(item => item.id === Number(campaignMatch[1])); if (!row) return notFound(); advance(row); return json({ campaign_id: row.id, ...state.stats[row.id as number] }); }
     if (campaignMatch?.[2] === 'messages') return json({ campaign_id: Number(campaignMatch[1]), limit: 200, offset: 0, items: state.recipients[Number(campaignMatch[1])] ?? [] });

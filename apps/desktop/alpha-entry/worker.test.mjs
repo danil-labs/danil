@@ -319,7 +319,7 @@ test("WorkOS sign-in routes stay in the Worker; the sign-in page is an asset", a
 
 test("the panel adds exact reads over marketingProxy", async () => {
   const h = harness();
-  for (const path of ["/auth/account/features?account_id=7", "/api/marketing/campaigns/4/messages?limit=200&offset=0", "/api/marketing/templates/9", "/api/contacts/metadata-keys", "/api/funnels", "/api/funnels/3/board"]) {
+  for (const path of ["/auth/account/features?account_id=7", "/api/marketing/campaigns/4/messages?limit=200&offset=0", "/api/marketing/templates/9", "/api/contacts/metadata-keys"]) {
     const response = await h.fetch(prefix + path, { headers: auth });
     assert.equal(response.status, 200, path);
     assert.equal(new URL(h.calls.at(-1).url).pathname + new URL(h.calls.at(-1).url).search, path);
@@ -332,7 +332,7 @@ test("the panel adds exact reads over marketingProxy", async () => {
   for (const path of ["/api/marketing/campaigns/4", "/api/marketing/other", "/api/contacts/5", "/api/contacts/imports/1", "/api/funnels/3", "/api/media"]) {
     assert.equal((await h.fetch(prefix + path, { headers: auth })).status, 404, path);
   }
-  assert.equal((await h.fetch(prefix + "/api/funnels")).status, 401);
+  assert.equal((await h.fetch(prefix + "/api/funnels")).status, 404);
   assert.equal(h.calls.length, before);
 });
 
@@ -682,4 +682,12 @@ test("credits balance is an exact session-bound GET without a caller-selected ac
     assert.equal((await h.fetch(prefix + "/api/credits/balance", { method, headers: auth })).status, 405);
   }
   assert.equal(h.calls.length, 1);
+});
+
+test("retired calendar, funnel and metrics routes never reach the BFF", async () => {
+  const h = harness();
+  for (const path of ["/api/calendar/connections", "/api/calendar/events", "/api/funnels", "/api/funnels/3/board", "/api/metrics", "/api/metrics/summary"]) {
+    assert.equal((await h.fetch(prefix + path, { headers: auth })).status, 404, path);
+  }
+  assert.equal(h.calls.length, 0);
 });

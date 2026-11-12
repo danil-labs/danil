@@ -14,10 +14,6 @@ const WINDOWS = Object.keys(ACTIVITY_WINDOWS) as ActivityWindow[];
 export function AddContacts(props: { context: Context; campaignId: number; canAdd: boolean; onAdded: () => void; onFinished: () => void; onClose: () => void }) {
   const api = props.context.api;
   const contacts = createQuery(() => api.contacts());
-  // Embudos y etiquetas son opcionales: sin ellos, el control no aparece.
-  const funnels = createQuery(() => api.funnels().catch(() => []));
-  const [funnelId, setFunnelId] = createSignal<number | null>(null);
-  const [stageId, setStageId] = createSignal<number | null>(null);
   const [tag, setTag] = createSignal<string | null>(null);
   const [activity, setActivity] = createSignal<ActivityWindow>('all');
   const [selected, setSelected] = createSignal<Set<number>>(new Set());
@@ -25,24 +21,17 @@ export function AddContacts(props: { context: Context; campaignId: number; canAd
   const [rejected, setRejected] = createSignal<Rejection[]>([]);
   const [error, setError] = createSignal('');
   const [busy, setBusy] = createSignal(false);
-  const board = createQuery(() => api.board(funnelId()!), { key: funnelId, enabled: () => funnelId() !== null });
 
   const all = () => contacts.data() ?? [];
   const sendable = createMemo(() => all().filter(row => row.sendable));
   const hidden = () => all().length - sendable().length;
   const tags = createMemo(() => [...new Set(sendable().flatMap(row => row.tags))].sort((a, b) => a.localeCompare(b)));
-  const members = createMemo(() => {
-    if (funnelId() === null) return null;
-    return new Set((board.data()?.cards ?? []).filter(card => stageId() === null || card.stage_id === stageId()).map(card => card.contact_account_id));
-  });
-  const visible = createMemo(() => contactsInWindow(sendable(), activity()).filter(row => (!members() || members()!.has(row.id)) && (!tag() || row.tags.includes(tag()!))));
-  const boardLoading = () => funnelId() !== null && !board.data() && !board.error();
+  const visible = createMemo(() => contactsInWindow(sendable(), activity()).filter(row => !tag() || row.tags.includes(tag()!)));
   const allSelected = () => visible().length > 0 && visible().every(row => selected().has(row.id));
   const someSelected = () => visible().some(row => selected().has(row.id));
-  const stages = () => board.data()?.stages ?? funnels.data()?.find(row => row.id === funnelId())?.stages ?? [];
 
-  createEffect(on(() => [sendable().length > 0, activity(), funnelId(), stageId(), boardLoading(), tag()] as const, ([ready, , , , loading]) => {
-    if (ready && !loading) setSelected(new Set(visible().map(row => row.id)));
+  createEffect(on(() => [sendable().length > 0, activity(), tag()] as const, ([ready]) => {
+    if (ready) setSelected(new Set(visible().map(row => row.id)));
   }));
 
   function toggle(id: number) {
@@ -81,26 +70,12 @@ export function AddContacts(props: { context: Context; campaignId: number; canAd
         <div class="flex flex-wrap items-center gap-1" role="group" aria-label={t("broadcasts.filter_activity")}>
           <For each={WINDOWS}>{value => <Button type="button" size="sm" variant={activity() === value ? 'primary' : 'secondary'} aria-pressed={activity() === value} onClick={() => setActivity(value)}>{t(`broadcasts.activity_${value}`)}</Button>}</For>
         </div>
-        <Show when={(funnels.data()?.length ?? 0) > 0 || tags().length > 0}>
+        <Show when={tags().length > 0}>
           <div class="flex flex-wrap items-center gap-1.5">
-            <Show when={(funnels.data()?.length ?? 0) > 0}>
-              <Select class="w-auto max-w-56" aria-label={t("broadcasts.filter_funnel")} value={funnelId() ?? ''} onChange={event => { setFunnelId(event.currentTarget.value ? Number(event.currentTarget.value) : null); setStageId(null); }}>
-                <option value="">{t("broadcasts.all_funnels")}</option>
-                <For each={funnels.data()}>{row => <option value={row.id}>{row.name}</option>}</For>
-              </Select>
-              <Show when={funnelId() !== null}>
-                <Select class="w-auto max-w-56" aria-label={t("broadcasts.filter_stage")} value={stageId() ?? ''} onChange={event => setStageId(event.currentTarget.value ? Number(event.currentTarget.value) : null)}>
-                  <option value="">{t("broadcasts.all_stages")}</option>
-                  <For each={stages()}>{row => <option value={row.id}>{row.name}</option>}</For>
-                </Select>
-              </Show>
-            </Show>
-            <Show when={tags().length > 0}>
-              <Select class="w-auto max-w-56" aria-label={t("broadcasts.filter_tag")} value={tag() ?? ''} onChange={event => setTag(event.currentTarget.value || null)}>
-                <option value="">{t("broadcasts.all_tags")}</option>
-                <For each={tags()}>{value => <option value={value}>{value}</option>}</For>
-              </Select>
-            </Show>
+            <Select class="w-auto max-w-56" aria-label={t("broadcasts.filter_tag")} value={tag() ?? ''} onChange={event => setTag(event.currentTarget.value || null)}>
+              <option value="">{t("broadcasts.all_tags")}</option>
+              <For each={tags()}>{value => <option value={value}>{value}</option>}</For>
+            </Select>
           </div>
         </Show>
         <Show when={hidden() > 0}><p class="m-0 px-1 text-label text-neutral-500">{(hidden() === 1 ? t("broadcasts.hidden_no_phone_one", { count: hidden() }) : t("broadcasts.hidden_no_phone_other", { count: hidden() }))}</p></Show>
@@ -108,17 +83,13 @@ export function AddContacts(props: { context: Context; campaignId: number; canAd
           <input type="checkbox" checked={allSelected()} ref={element => createEffect(() => { element.indeterminate = !allSelected() && someSelected(); })} disabled={visible().length === 0} onChange={toggleAll}/>
           <span>{t("broadcasts.select_all")} <Show when={visible().length > 0}><span class="tabular-nums">({visible().length})</span></Show></span>
         </label>
-        <Show when={boardLoading()}><Skeleton class="h-24"/></Show>
-        <Show when={board.error() && funnelId() !== null}><p role="alert" class="m-0 text-ui font-medium text-error-strong">{t("broadcasts.funnel_error")}</p></Show>
-        <Show when={!boardLoading() && !board.error()}>
-          <Show when={visible().length > 0} fallback={<p class="m-0 text-ui text-neutral-500">{t("broadcasts.no_filter_match")}</p>}>
-            <ul class="m-0 grid max-h-56 list-none content-start gap-0.5 overflow-auto rounded-md border border-border bg-surface p-0">
-              <For each={visible()}>{row => <li><label class="flex cursor-pointer items-center gap-2 px-3 py-2 text-body hover:bg-surface-muted">
-                <input type="checkbox" checked={selected().has(row.id)} onChange={() => toggle(row.id)}/>
-                <span class="truncate">{label(row)}<Show when={(row.name || row.email) && row.phone}><span class="text-neutral-500"> · {row.phone}</span></Show></span>
-              </label></li>}</For>
-            </ul>
-          </Show>
+        <Show when={visible().length > 0} fallback={<p class="m-0 text-ui text-neutral-500">{t("broadcasts.no_filter_match")}</p>}>
+          <ul class="m-0 grid max-h-56 list-none content-start gap-0.5 overflow-auto rounded-md border border-border bg-surface p-0">
+            <For each={visible()}>{row => <li><label class="flex cursor-pointer items-center gap-2 px-3 py-2 text-body hover:bg-surface-muted">
+              <input type="checkbox" checked={selected().has(row.id)} onChange={() => toggle(row.id)}/>
+              <span class="truncate">{label(row)}<Show when={(row.name || row.email) && row.phone}><span class="text-neutral-500"> · {row.phone}</span></Show></span>
+            </label></li>}</For>
+          </ul>
         </Show>
       </Show>
     </Show>

@@ -33,12 +33,21 @@ test("an agent joins its detail and its connections", async () => {
   }), "/p");
   const agent = await api.agent(7);
   assert.equal(agent.channels[0].provider, "whatsapp");
-  assert.equal(agent.calendar?.email, "a@b.mx");
+  assert.equal("calendar" in agent, false);
   assert.equal(agent.documents[0].name, "Precios");
   assert.deepEqual(agent.httpTools, []);
 });
 
 test("a refused read surfaces, it does not look empty", async () => {
   const api = createService(session, (async () => new Response("{}", { status: 403 })) as typeof fetch, "/p");
-  await assert.rejects(api.calendars(), /HTTP 403/);
+  await assert.rejects(api.httpTools(), /HTTP 403/);
+});
+
+test("the service reader has no calendar API and ignores legacy calendar connections", async () => {
+  const api = createService(session, replying({
+    "/api/agents/7": { id: 7, name: "A" },
+    "/api/agents/7/connections": { calendar: { id: 2, email: "retired@example.test" } },
+  }), "/p");
+  assert.equal("calendars" in api, false);
+  assert.equal("calendar" in await api.agent(7), false);
 });

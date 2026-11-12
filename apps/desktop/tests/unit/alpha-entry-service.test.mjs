@@ -8,7 +8,7 @@ const read = (path, env, init = {}) =>
   worker.fetch(new Request(`${origin}/alpha-api${path}`, { headers: { Authorization: "Bearer token" }, ...init }), env);
 
 test("customer service reads reach the BFF without a query", async () => {
-  for (const path of ["/api/agents", "/api/agents/7", "/api/agents/7/connections", "/api/calendar/connections", "/api/http_tools", "/api/account_variables"]) {
+  for (const path of ["/api/agents", "/api/agents/7", "/api/agents/7/connections", "/api/http_tools", "/api/account_variables"]) {
     const seen = [];
     const response = await read(path, { APPV2_BFF: bff(seen) });
     assert.equal(response.status, 200, path);

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { contextKey, decodeSelection, emptySelection, encodeSelection, toggleFeature } from '../src/customization.ts';
+import { FEATURES, contextKey, decodeSelection, emptySelection, encodeSelection, toggleFeature } from '../src/customization.ts';
 
 test('preferences start empty, opt in explicitly and retain only unique eligible IDs in canonical order', () => {
   let state = emptySelection();
@@ -34,4 +34,9 @@ test('identity, workspace and space are explicit, collision-free and bounded', (
   for (const change of [{user:'other'},{workspace:'other'},{space:'other'}]) assert.notEqual(contextKey({...scope,...change}),key);
   assert.notEqual(contextKey({user:'a/b',workspace:'c',space:'d'}),contextKey({user:'a',workspace:'b/c',space:'d'}));
   for (const user of [null,undefined,'',' ','u\n','x'.repeat(257)]) assert.equal(contextKey({...scope,user}),null);
+});
+
+
+test('retired calendar, funnels and metrics are absent from customization', () => {
+  assert.ok(FEATURES.every(row => !['calendar', 'funnels', 'metrics'].includes(row.id)));
 });
