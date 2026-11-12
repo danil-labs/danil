@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import { defineConfig, mergeConfig, type Plugin, type UserConfig } from "vite";
 import solid from "vite-plugin-solid";
 import tailwindcss from "@tailwindcss/vite";
+import { webSessionDeployment } from "./src/web/session-config";
 
 const fonts = resolve(fileURLToPath(
   new URL("./node_modules/@excalidraw/excalidraw/dist/prod/fonts/", import.meta.url),
@@ -55,6 +56,7 @@ const CONTRACT = JSON.stringify(
 // plano de control, Supabase (valores públicos) y política se fijan al compilar.
 function webBuild(serve: boolean): UserConfig {
   const env = process.env;
+  const session = webSessionDeployment(env);
   const origin = (value: string | undefined) => (value ? new URL(value).origin : "");
   const base = `/${(env.TERMINUS_WEB_BASE ?? "/terminus/").replace(/^\/+|\/+$/g, "")}/`.replace("//", "/");
   const endpoint = origin(env.TERMINUS_WEB_ENDPOINT || "https://machines.danil.ai");
@@ -64,7 +66,7 @@ function webBuild(serve: boolean): UserConfig {
   const extra = (env.TERMINUS_WEB_CONNECT ?? "").replace(/[^\w:/.* -]/g, " ").split(/\s+/).filter(Boolean);
   // Sin el alias fallan avatar_url y logo_url, que aún salen con computers.danil.ai.
   const alias = endpoint === "https://machines.danil.ai" ? ["https://computers.danil.ai", "wss://computers.danil.ai"] : [];
-  const connect = [endpoint, endpoint.replace(/^http/, "ws"), ...alias, supabaseUrl, ...extra].filter(Boolean).join(" ");
+  const connect = (session.kind === "platform" ? [session.origin] : [endpoint, endpoint.replace(/^http/, "ws"), ...alias, supabaseUrl, ...extra]).filter(Boolean).join(" ");
   const version = JSON.parse(readFileSync(new URL("./package.json", import.meta.url), "utf8")).version as string;
   const root = fileURLToPath(new URL("./dist-web/", import.meta.url));
   const outDir = join(root, base);
@@ -104,6 +106,7 @@ function webBuild(serve: boolean): UserConfig {
     base,
     define: {
       __TERMINUS_VERSION__: JSON.stringify(version),
+      __DANIL_WEB_SESSION__: JSON.stringify(session),
       __TERMINUS_WEB__: JSON.stringify({ endpoint, supabaseUrl, supabaseKey, login, alphaOauth: env.TERMINUS_WEB_ALPHA_OAUTH === "1", workos: env.TERMINUS_WEB_WORKOS === "1" }),
       "import.meta.env.TERMINUS_ALPHA": JSON.stringify(env.TERMINUS_WEB_ALPHA === "1"),
       "import.meta.env.TERMINUS_BROADCAST_WRITES": JSON.stringify(env.TERMINUS_WEB_BROADCAST_WRITES === "1"),

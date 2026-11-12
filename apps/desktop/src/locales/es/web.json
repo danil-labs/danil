@@ -570,5 +570,11 @@
   "web.admin.members_add_seats": "Agregar usuarios",
   "web.admin.members_seats_full_plain": "Tu plan ya no tiene lugares libres. Para invitar a otra persona, agrega usuarios a tu plan.",
   "web.business.seats_pending": "Las invitaciones pendientes también ocupan un lugar.",
-  "web.business.fiscal_error_legal_name_society": "Escribe la razón social sin el régimen societario («S.A. de C.V.»), como en tu Constancia de Situación Fiscal."
+  "web.business.fiscal_error_legal_name_society": "Escribe la razón social sin el régimen societario («S.A. de C.V.»), como en tu Constancia de Situación Fiscal.",
+  "web.platform.workspaces": "Workspaces",
+  "web.platform.empty": "No tienes workspaces disponibles.",
+  "web.platform.active": "Activo",
+  "web.platform.sign_out": "Cerrar sesión",
+  "web.platform.denied": "No tienes acceso a este recurso.",
+  "web.platform.unavailable": "No se pudo completar la solicitud. Vuelve a intentarlo."
 }

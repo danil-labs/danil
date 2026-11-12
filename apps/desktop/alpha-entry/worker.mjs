@@ -396,7 +396,7 @@ export default {
     if (request.method !== "GET" && request.method !== "HEAD") return json("method_not_allowed", 405);
     // Sin pantalla previa: la entrada es la de WorkOS. Con cualquier otro parámetro
     // (`error`, `signed_out`) se pinta `/auth`; si no, un fallo volvería a entrar en bucle.
-    if (request.method === "GET" && sessionConfig(env) && !hasSignedOutMarker(request) && ENTRY_PATHS.includes(url.pathname) && [...url.searchParams.keys()].every((key) => key === "next")) {
+    if (env.DANIL_WEB_SESSION !== "platform" && request.method === "GET" && sessionConfig(env) && !hasSignedOutMarker(request) && ENTRY_PATHS.includes(url.pathname) && [...url.searchParams.keys()].every((key) => key === "next")) {
       return new Response(null, { status: 302, headers: { Location: `/auth/workos/start${url.search}`, "Cache-Control": "no-store" } });
     }
     if (!env.TERMINUS_WEB) return json("assets_unavailable", 503);

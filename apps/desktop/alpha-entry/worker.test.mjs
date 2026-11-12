@@ -20,6 +20,19 @@ function harness() {
   return { calls, env, fetch: (path, options) => worker.fetch(new Request(origin + path, options), env) };
 }
 
+test("platform deployment serves its sign-in page without starting the legacy login", async () => {
+  const h = harness();
+  Object.assign(h.env, { DANIL_WEB_SESSION: "platform", WORKOS_CLIENT_ID: "synthetic", WORKOS_API_KEY: "synthetic", SUPABASE_URL: "https://supabase.test", SUPABASE_SERVICE_ROLE_KEY: "synthetic", SESSION_COOKIE_KEY: "synthetic" });
+  const page = await h.fetch("/auth");
+  assert.equal(page.status, 200);
+  assert.equal(await page.text(), "assets");
+  const legacy = await h.fetch(`${prefix}/auth/profile`, { headers: auth });
+  assert.equal(legacy.status, 200);
+  assert.equal(h.calls.at(-1).headers.get("Authorization"), auth.Authorization);
+  delete h.env.DANIL_WEB_SESSION;
+  assert.equal((await h.fetch("/auth")).status, 302);
+});
+
 test("exact reads preserve identity headers and query, never cookies", async () => {
   for (const path of ["/auth/profile", "/api/inbox/conversations?account_id=7&limit=30&offset=0", "/api/inbox/conversations/12/messages?account_id=7&limit=50&before_id=100", "/api/channels"]) {
     const h = harness();

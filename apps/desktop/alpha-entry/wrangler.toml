@@ -25,6 +25,8 @@ service = "appv2"
 # BROADCAST_DELIVERY = "on" abre lo que llega a clientes; sin ella responden 409. Enciende
 # primero el Worker y después el build. MEDIA_PUBLIC_BASE es la base que acepta `media_url`.
 [vars]
+# DANIL_WEB_SESSION = "platform" must match the web build to serve /auth without the legacy redirect.
+# Omitted: legacy. Platform build: DANIL_WEB_SESSION=platform; DANIL_WEB_API_ORIGIN defaults to https://api.danil.ai.
 SUPABASE_URL = "https://sqonjbpvairwfksotadj.supabase.co"
 WORKOS_CLIENT_ID = "client_01M2HETZ89A209TH6NNPF6P8YC"
 
