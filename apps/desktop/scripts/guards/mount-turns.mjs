@@ -660,7 +660,7 @@ assert.equal(selectedTask(), "s1", "confirmar el borrado conserva la tarea abier
 assert.equal(menuActions.length, 1, "the first confirmation only opens the family review");
 const deletionReview = menuDoc.querySelector('[role="dialog"]');
 assert.ok(deletionReview);
-deletionReview.querySelector('input[type="checkbox"]').click();
+assert.equal(deletionReview.querySelector('input[type="checkbox"]'), null, "a task without losses asks for no acceptance");
 [...deletionReview.querySelectorAll('button')].find(button => button.textContent.trim() === "Borrar la tarea").click();
 await sleep(100);
 assert.equal(selectedTask(), "s1", "applying the reviewed deletion preserves the open task");

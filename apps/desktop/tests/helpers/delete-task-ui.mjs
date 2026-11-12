@@ -8,14 +8,19 @@ let reject = true;
 const applications = [];
 const member = (id, project) => ({ workspace: "w", project, id, title: `Task ${id}`, working: false,
   files: [{ path: `${id}/ignored.txt`, hash: String(generation) }, ...(generation > 0 ? [{ path: `${id}/new.txt`, hash: "new" }] : [])], inspection: { status: scenario === "inspection" && id === "child" ? "failed" : "complete", ...(scenario === "inspection" && id === "child" ? { error: { message: "Cannot inspect owned files" } } : {}) } });
+// clean: one task with nothing to lose; mixed: a family where only some members list losses.
+const clean = (id, project) => ({ workspace: "w", project, id, title: `Task ${id}`, working: false, files: [], inspection: { status: "complete" } });
+const family = () => scenario === "clean" ? [clean("t1", "p1")]
+  : scenario === "mixed" ? [member("t1", "p1"), clean("quiet", "p1"), member("child", "p2"), { ...clean("runner", "p2"), working: true }]
+  : [member("t1", "p1"), member("child", "p2")];
 const app = await boot("listo", "delete-task-consent", responses({
   machine_list: [{ id: "local", local: true, active: true, on: true, hosts: true, features: scenario === "unsupported" ? [] : ["task_lifecycle_v1"] }],
-  task_lifecycle_preview: () => ({ members: [member("t1", "p1"), member("child", "p2")], consent: scenario === "inspection" ? null : `snapshot-${++generation}` }),
+  task_lifecycle_preview: () => ({ members: family(), consent: scenario === "inspection" ? null : `snapshot-${++generation}` }),
   task_lifecycle_apply: args => {
     applications.push(args);
     if (scenario === "partial") return { status: "partial", applied: [{ project: "p2", id: "child" }], failures: [{ project: "p1", id: "t1", error: { message: "Disk removal failed" } }] };
     if (reject) throw { code: scenario === "refresh" ? "task_family_consent_changed" : scenario === "busy" ? "task_family_busy" : "operation_failed", detail: "family", message: "Family contents changed" };
-    return { status: "complete", applied: [{ project: "p1", id: "t1" }, { project: "p2", id: "child" }], failures: [] };
+    return { status: "complete", applied: family().map(({ project, id }) => ({ project, id })), failures: [] };
   },
 }));
 try {
@@ -43,13 +48,58 @@ try {
     console.log("PASS: unsupported engine blocks deletion without legacy fallback");
     process.exit(0);
   }
+  const remove = () => [...dialog().querySelectorAll('button')].find(el => el.textContent.trim() === "Borrar la tarea");
+  const reviewAll = () => dialog().querySelector('[data-delete-review-all]');
+  const boxes = () => [...dialog().querySelectorAll('input[type="checkbox"]:not([data-delete-review-all])')];
+  if (scenario === "clean") {
+    assert.match(dialog().textContent, /No hay archivos pendientes/);
+    assert.equal(boxes().length, 0, "a task without losses asks for no acceptance");
+    assert.equal(reviewAll(), null);
+    assert.equal(remove().disabled, false);
+    reject = false;
+    remove().click();
+    await sleep(150);
+    assert.equal(dialog(), null);
+    assert.deepEqual(applications.map(args => [args.consent, args.discard]), [["snapshot-1", true]]);
+    assert.deepEqual(app.failures, []);
+    console.log("PASS: a task without losses is deleted without acceptance");
+    process.exit(0);
+  }
+  if (scenario === "mixed") {
+    assert.equal(boxes().length, 3, "only members with listed losses or an active turn ask for acceptance");
+    assert.ok(reviewAll(), "several members with losses offer accept all");
+    assert.equal(remove().disabled, true);
+    boxes()[0].click();
+    assert.equal(reviewAll().checked, false);
+    assert.equal(remove().disabled, true, "one accepted member is not enough");
+    reviewAll().click();
+    assert.ok(boxes().every(box => box.checked), "accept all marks every member with losses");
+    assert.equal(reviewAll().checked, true);
+    assert.equal(remove().disabled, false);
+    reviewAll().click();
+    assert.ok(boxes().every(box => !box.checked), "accept all clears them again");
+    assert.equal(remove().disabled, true);
+    reviewAll().click();
+    click(dialog(), 'button', "Revisar de nuevo");
+    await sleep(120);
+    assert.ok(boxes().every(box => !box.checked) && !reviewAll().checked, "a new inspection resets accept all");
+    assert.equal(remove().disabled, true);
+    reviewAll().click();
+    reject = false;
+    remove().click();
+    await sleep(150);
+    assert.equal(dialog(), null);
+    assert.deepEqual(applications.map(args => [args.consent, args.discard]), [["snapshot-2", true]]);
+    assert.deepEqual(app.failures, []);
+    console.log("PASS: accept all covers only members with losses and resets on a new inspection");
+    process.exit(0);
+  }
   assert.match(dialog().textContent, /Task child/);
   assert.match(dialog().textContent, /P1/);
   assert.match(dialog().textContent, /p2/);
   assert.match(dialog().textContent, /child\/ignored.txt/);
-  const remove = () => [...dialog().querySelectorAll('button')].find(el => el.textContent.trim() === "Borrar la tarea");
   assert.equal(remove().disabled, true, "every family member requires review");
-  const review = () => [...dialog().querySelectorAll('input[type="checkbox"]')].forEach(input => input.click());
+  const review = () => boxes().forEach(input => input.click());
   review();
   if (scenario === "inspection") {
     assert.equal(remove().disabled, true);
