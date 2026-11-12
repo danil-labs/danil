@@ -18,6 +18,7 @@
 import { type AccountWorkspace, type SystemId, callWorkspace, isDeferrable, systemOf } from "@terminus/computers";
 import { AttentionBook, type Envelope, type Fleet, FleetError, type MachineInfo, type Slice, classOf, registryRow, unwrap } from "@terminus/fleet";
 import { clavesConocidas, t } from "../../lib/i18n.ts";
+import type { EngineWorkspace } from "./engine-workspaces.ts";
 
 type Args = Record<string, unknown>;
 type Options = { headers?: HeadersInit } | undefined;
@@ -106,6 +107,12 @@ export type RouterConfig = {
   pickedFor?: (workspace: string | null) => string | null;
   /** El directorio de la persona (`GET /v1/me/workspaces`) ya leído: nombra el workspace de una organización que la fila de su servidor no nombra. */
   directory?: () => readonly { workspace_id: string | null; name: string; owner?: boolean }[];
+  /**
+   * Lo que el motor de esta computadora sabe de las otras máquinas de la persona
+   * (`state_machines`), de todas sus cuentas; `null` sin la función, y entonces
+   * los workspaces de una organización salen de la flota.
+   */
+  engineWorkspaces?: () => readonly EngineWorkspace[] | null;
   /** La máquina de la ventana. `os` solo si se sabe; sin `wakes`, se pinta como laptop. */
   home?: () => { wakes?: boolean; os?: SystemId | null; features?: readonly string[]; version?: string | null };
 };
@@ -217,16 +224,29 @@ export function createRouter(config: RouterConfig) {
   };
   /** Sin `organization` en su fila (un plano de control anterior), una VM con un workspace que el registro no le da es el servidor de una organización. */
   const guessed = (info: MachineInfo) => (info.organization || !info.wakes ? [] : givenTo(info));
-  /** Lo que una organización da a la persona y su registro no tiene: cada workspace con su nombre y los servidores que lo atienden. */
+  /** Lo que una organización (o, según el motor, otra cuenta de la persona) le da y su registro no tiene: cada workspace con su nombre y las máquinas que lo atienden. */
   const organizations = (): Map<string, { name: string; machines: string[] }> => {
-    const found = new Map(fleet.organizationWorkspaces().map((w) => [w.id, { name: w.name, machines: w.machines }]));
     const names = new Map((config.directory?.() ?? []).filter((e) => e.workspace_id && !e.owner).map((e) => [e.workspace_id as string, e.name]));
+    const known = config.engineWorkspaces?.() ?? null;
+    // El motor manda: lo de todas las sesiones de aquí, que solo se va cuando él lo borra.
+    if (known) return fromEngine(known, names);
+    const found = new Map(fleet.organizationWorkspaces().map((w) => [w.id, { name: w.name, machines: w.machines }]));
     for (const info of fleet.machines())
       for (const id of guessed(info)) {
         const name = found.get(id)?.name ?? names.get(id);
         if (name) found.set(id, { name, machines: [...(found.get(id)?.machines ?? []), info.id] });
       }
     for (const id of found.keys()) if (fleet.inRegistry(id)) found.delete(id);
+    return found;
+  };
+  /** Los workspaces que esta computadora no tiene y otra máquina de la persona sirve, sin los del registro (esos ya vienen en la lista). */
+  const fromEngine = (known: readonly EngineWorkspace[], names: Map<string, string>) => {
+    const found = new Map<string, { name: string; machines: string[] }>();
+    for (const w of known) {
+      const name = w.name ?? names.get(w.id);
+      if (w.local || !w.machines.length || !name || fleet.inRegistry(w.id)) continue;
+      found.set(w.id, { name, machines: [...w.machines] });
+    }
     return found;
   };
   /** El servidor de una organización solo atiende los workspaces de ella que su fila dice: no hace suyo otro. */

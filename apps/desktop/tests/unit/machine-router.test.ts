@@ -11,6 +11,7 @@ import { Fleet, type Link, type MachineInfo, classOf } from "@terminus/fleet";
 import "../helpers/catalog.ts";
 import { withoutAbout } from "../../src/lib/taskMentions.ts";
 import { createRouter } from "../../src/features/machines/router.ts";
+import type { EngineWorkspace } from "../../src/features/machines/engine-workspaces.ts";
 import { runsWorkspace } from "../../src/features/machines/runs-workspace.ts";
 
 type Args = Record<string, unknown>;
@@ -47,7 +48,7 @@ const row = (id: string, title = id) => ({ id, title, updated_at: 0 });
 const VM: MachineInfo = { id: "cmp_vm", name: "Danil VM", wakes: true };
 const MAC: MachineInfo = { id: "cmp_mac", name: "Mac de Ana", wakes: false };
 
-function setup(links: Record<string, ReturnType<typeof fakeLink>>, local: Record<string, unknown> = {}, picked: string | null = null, home?: () => { wakes?: boolean; os?: "linux" | "macos" | "windows" }, directory?: () => { workspace_id: string | null; name: string; owner?: boolean }[]) {
+function setup(links: Record<string, ReturnType<typeof fakeLink>>, local: Record<string, unknown> = {}, picked: string | null = null, home?: () => { wakes?: boolean; os?: "linux" | "macos" | "windows" }, directory?: () => { workspace_id: string | null; name: string; owner?: boolean }[], engineWorkspaces?: () => readonly EngineWorkspace[] | null) {
   const native: { command: string; args: Args; options: unknown }[] = [];
   const changes: string[][] = [];
   const fleet = new Fleet({ self: "cmp_home", connect: (info) => links[info.id], deadlines: { read: 40, action: 200, intent: 400 } });
@@ -73,6 +74,7 @@ function setup(links: Record<string, ReturnType<typeof fakeLink>>, local: Record
     pickedFor: () => picked,
     home,
     directory,
+    engineWorkspaces,
   });
   fleet.setMachines([VM, MAC].filter((m) => links[m.id]));
   return { router, fleet, native, changes };
@@ -747,6 +749,34 @@ test("a member of two organization workspaces gets both in the switcher, and the
     assert.deepEqual(await pickable(router), ["cmp_vm"], `only the server in ${ws}`);
     assert.equal(router.createsOn(ws)?.machine, "cmp_vm");
   }
+});
+
+test("with the engine's view, an organization's workspace stays in the switcher while an unlinked local workspace is open, until the engine removes it", async () => {
+  const FOUNDATION = { id: "fnd00001", name: "Danil Foundation" };
+  let known: EngineWorkspace[] | null = [
+    { id: "solo", name: "Solo", local: true, organization: false, machines: [] },
+    { id: FOUNDATION.id, name: FOUNDATION.name, local: false, organization: true, machines: ["cmp_vm"] },
+  ];
+  const { router, fleet } = setup({ cmp_vm: fakeLink({}), cmp_mac: fakeLink({}) }, { list_workspaces: { workspaces: [{ id: "solo", name: "Solo" }], active: "solo" } }, null, undefined, undefined, () => known);
+  // La cuenta de la ventana no trae a Nube IA: el workspace abierto no es de ninguna cuenta.
+  fleet.setMachines([MAC]);
+  fleet.setRegistry(MEMBER_REGISTRY);
+  const ids = async () => ((await router.handle("list_workspaces")) as { workspaces: { id: string }[] }).workspaces.map((w) => w.id);
+  const listed = (await router.handle("list_workspaces")) as { workspaces: { id: string; name: string; machines?: string[] }[]; active: string };
+  assert.equal(listed.active, "solo");
+  assert.deepEqual(listed.workspaces.map((w) => [w.id, w.name]), [["solo", "Solo"], ["w", "W"], [FOUNDATION.id, FOUNDATION.name]], "the account's own, from the default session's registry, and the organization's");
+  assert.deepEqual(listed.workspaces[2].machines, ["cmp_vm"]);
+
+  fleet.setMachines([ENDPOINT, MAC]);
+  assert.deepEqual(await pickable(router), ["cmp_home", "cmp_mac"], "«Ejecutar en» is still the open workspace's: Nube IA does not work in «Solo»");
+  known = [...known.slice(0, 1), { id: FOUNDATION.id, name: FOUNDATION.name, local: false, organization: true, machines: ["cmp_vm"] }];
+  assert.deepEqual(await ids(), ["solo", "w", FOUNDATION.id], "the fleet's own organization workspace does not count while the engine speaks");
+
+  known = known.slice(0, 1);
+  assert.deepEqual(await ids(), ["solo", "w"], "gone once the engine removed it");
+
+  known = null;
+  assert.deepEqual(await ids(), ["solo", "w", ORG.id], "an engine without the feature falls back to the fleet");
 });
 
 test("without `organization` in the row, the directory names the workspace an organization's VM brings", async () => {

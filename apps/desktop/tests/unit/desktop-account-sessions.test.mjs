@@ -148,6 +148,36 @@ test("a workspace whose account is signed out here keeps the window local", asyn
   assert.deepEqual(app.failures, []);
 });
 
+test("an organization's workspace this engine knows stays in the rail while a local workspace of no account is open, until the engine removes it", async () => {
+  const FOUNDATION = {
+    workspace: "fnd00001",
+    name: "Danil Foundation",
+    local: false,
+    machines: [{ computer_id: "cmp_nube", name: "Nube IA", state: "online", provider: "danil", organization: { organization_id: "org_1" }, resources: { machine: "v1" } }],
+  };
+  const known = { version: "v1", workspaces: [{ workspace: "w", name: "W", local: true, machines: [] }, FOUNDATION] };
+  const { app, doc, listed } = await open("desktop-account-engine-rail", {
+    computers: [HOME, MAC],
+    extra: {
+      danil_sessions: [SESSION_A],
+      danil_workspace_account: { account: null, email: null, signed_in: false, linked: false },
+      machine_list: [{ id: "local", local: true, active: true, on: true, hosts: true, features: ["light_state_machines_v1"] }],
+      state_machines: (args) => (args?.version === known.version ? { schema: 1, version: known.version, not_modified: true } : { schema: 1, ...known }),
+    },
+  });
+  const tile = (id) => doc.querySelector(`[data-workspace-column] [data-workspace-tile="${id}"]`);
+  assert.ok(listed.length > 0, "a workspace of no account talks as the default session");
+  assert.ok(await until(() => tile("fnd00001")), "the organization's workspace is in the rail");
+  assert.ok(tile("w"), "next to the open one");
+
+  known.version = "v2";
+  known.workspaces = known.workspaces.slice(0, 1);
+  app.emit("state.copy_changed", { workspace: "fnd00001", machine: "cmp_nube", resource: "machine", version: null });
+  assert.ok(await until(() => !tile("fnd00001")), "gone once the engine removed it");
+  assert.ok(tile("w"));
+  assert.deepEqual(app.failures, []);
+});
+
 // Un cambio de contrato nunca deja sin uso máquinas enteras: como el teléfono,
 // solo `version_mismatch` del relay o del motor la marca desactualizada.
 test("a VM whose engine speaks another contract keeps adding its tasks", async () => {
