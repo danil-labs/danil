@@ -95,10 +95,10 @@ export async function realMessagingServer({ db, dir, accessKeys, accessAssertion
       const target = new URL(request.url);
       const headers = Object.fromEntries(request.headers);
       headers['cf-access-jwt-assertion'] = await accessAssertion(`https://127.0.0.1:${authorityPort}`);
-      server.lastEnvelope = { url: `${server.origin}${target.pathname}${target.search}`, method: request.method, headers, body: request.method === 'POST' ? await request.text() : undefined };
+      server.lastEnvelope = { url: `${server.origin}${target.pathname}${target.search}`, method: request.method, headers, body: ['POST','PATCH','PUT','DELETE'].includes(request.method) ? await request.text() : undefined };
       const response = await fetch(server.lastEnvelope.url, { method: server.lastEnvelope.method, headers, body: server.lastEnvelope.body, signal: AbortSignal.timeout(5000) });
       const body = await response.arrayBuffer();
-      calls.push({ method: request.method, path: target.pathname, status: response.status, body: JSON.parse(Buffer.from(body).toString()) });
+      calls.push({ method: request.method, path: target.pathname, status: response.status, body: body.byteLength ? JSON.parse(Buffer.from(body).toString()) : null });
       if (server.afterResponse) {
         const changed = await server.afterResponse(new Response(body, { status: response.status, headers: response.headers }), request);
         return { status: changed.status, headers: Object.fromEntries(changed.headers), body: await changed.arrayBuffer() };

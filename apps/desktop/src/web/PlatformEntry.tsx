@@ -6,6 +6,8 @@ import { Button } from "../ui/Button";
 import { platformSession, PlatformSessionError, type PlatformProfile, type PlatformWorkspace } from "./platform-session";
 import { workspaceSelection } from "./workspace-selection";
 import { type WebSessionDeployment } from "./session-config";
+import { PlatformMessaging, type MessagingDomain, type MessagingIntents } from "./PlatformMessaging";
+import { platformMessaging } from "./platform-messaging";
 import { PlatformInbox } from "./PlatformInbox";
 import { platformInbox } from "./platform-inbox";
 import { inboxReplyStore } from "./inbox-replies";
@@ -18,8 +20,16 @@ export function startPlatform(options: WebSessionDeployment, root: HTMLElement) 
   seguirElTema();
   const api = platformSession(options);
   const inbox = platformInbox(options);
+  const messaging = platformMessaging(options);
   const returnTo = new URL(import.meta.env.BASE_URL, window.location.origin).href;
   function PlatformEntry() {
+    const [domain, setDomain] = createSignal<MessagingDomain | "inbox">("inbox");
+    let intents = new Map<string, MessagingIntents>();
+    const workspaceIntents = (workspace: string) => {
+      let value = intents.get(workspace);
+      if (!value) { value = new Map(); intents.set(workspace, value); }
+      return value;
+    };
     const [profile, setProfile] = createSignal<PlatformProfile>();
     const [workspaces, setWorkspaces] = createSignal<PlatformWorkspace[]>([]);
     const [active, setActive] = createSignal<string>();
@@ -41,7 +51,7 @@ export function startPlatform(options: WebSessionDeployment, root: HTMLElement) 
           setWorkspaces([]);
           setActive(undefined);
           selection = workspaceSelection(api);
-          replies = inboxReplyStore(inbox);
+          replies = inboxReplyStore(inbox); intents = new Map();
         } else setError(cause instanceof PlatformSessionError && cause.status === 403 ? "web.platform.denied" : "web.platform.unavailable");
       } finally { setActive(selection.active() ?? undefined); setUncertain(selection.uncertain()); setBusy(false); }
     }
@@ -50,7 +60,7 @@ export function startPlatform(options: WebSessionDeployment, root: HTMLElement) 
       const person = await api.me();
       const listed = await api.workspaces();
       const previous = profile();
-      if (previous && previous.id !== person.id) replies = inboxReplyStore(inbox);
+      if (previous && previous.id !== person.id) { replies = inboxReplyStore(inbox); intents = new Map(); }
       setProfile(person);
       setWorkspaces(listed);
       setSignedOut(false);
@@ -65,7 +75,7 @@ export function startPlatform(options: WebSessionDeployment, root: HTMLElement) 
       <div class="mx-auto grid max-w-6xl gap-6">
         <header class="flex items-center justify-between gap-4">
           <h1 class="m-0 font-display text-lead font-bold">{t("common.brand_name")}</h1>
-          <Show when={profile()}><Button variant="ghost" disabled={busy()} onClick={() => void run(async () => { await api.logout(); setProfile(undefined); setWorkspaces([]); selection = workspaceSelection(api); replies = inboxReplyStore(inbox); setSignedOut(true); })}>{t("web.platform.sign_out")}</Button></Show>
+          <Show when={profile()}><Button variant="ghost" disabled={busy()} onClick={() => void run(async () => { await api.logout(); setProfile(undefined); setWorkspaces([]); selection = workspaceSelection(api); replies = inboxReplyStore(inbox); intents = new Map(); setSignedOut(true); })}>{t("web.platform.sign_out")}</Button></Show>
         </header>
         <Show when={profile()}>{person => <h2 class="m-0 text-body font-semibold">{person().name}</h2>}</Show>
         <Show when={signedOut()}><Button as="a" href={api.loginUrl(returnTo)}>{t("web.auth.signin")}</Button></Show>
@@ -79,7 +89,10 @@ export function startPlatform(options: WebSessionDeployment, root: HTMLElement) 
         </Show>
         <Show when={busy()}><p class="m-0 text-ui text-neutral-500" role="status">{t("web.auth.waiting")}</p></Show>
         <Show when={error()}><div class="grid gap-3"><p class="m-0 text-ui text-error-strong" role="alert">{t(error())}</p><Button variant="secondary" disabled={busy()} onClick={() => void load()}>{t("web.computers.retry")}</Button></div></Show>
-        <Show when={profile() && !busy() && !uncertain() && active()} keyed>{workspace => <PlatformInbox workspace={workspace} api={inbox} reply={replies(workspace)}/>}</Show>
+        <Show when={profile() && !busy() && !uncertain() && active()} keyed>{workspace => <>
+          <nav class="flex flex-wrap gap-2" aria-label={t("web.messaging.navigation")}><For each={["inbox", "campaigns", "channels", "templates", "contacts", "media"] as const}>{value => <Button variant="secondary" aria-current={domain() === value ? "page" : undefined} onClick={() => setDomain(value)}>{t(value === "inbox" ? "web.alpha.inbox" : `web.messaging.${value}`)}</Button>}</For></nav>
+          <Show when={domain()} keyed>{value => value === "inbox" ? <PlatformInbox workspace={workspace} api={inbox} reply={replies(workspace)}/> : <PlatformMessaging domain={value} api={messaging} intents={workspaceIntents(workspace)}/>}</Show>
+        </>}</Show>
       </div>
     </main>;
   }
