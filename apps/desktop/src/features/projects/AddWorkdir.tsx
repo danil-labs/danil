@@ -106,6 +106,9 @@ export default function AnadirCarpeta(props: {
     return capabilities().remoteCreate?.(props.workspace) ?? null;
   });
   const enRemota = () => (remota() ? { headers: { "x-terminus-machine": remota()?.machine as string } } : undefined);
+  /** La máquina elegida en «Creado en», también esta: sin la cabecera la orden iría a la del workspace. */
+  const enElegida = () => enRemota() ?? (aqui() ? { headers: { "x-terminus-machine": aqui() as string } } : undefined);
+  const aqui = () => machines().find((m) => m.local)?.id ?? null;
   const spaceAlli = () => (remota() && !remota()?.lead ? undefined : (props.space ?? undefined));
   // Un fallo del formulario —la dirección vacía— no es un clon fallido. Sin
   // esto el riel pintaría una fila por cada intento que no llegó a git.
@@ -136,6 +139,12 @@ export default function AnadirCarpeta(props: {
         : null,
     );
   });
+
+  createEffect(on(() => remota()?.machine ?? null, () => {
+    if (!camino() || operation() || trabajando()) return;
+    setDestino(null);
+    void elegirCamino(camino() as "clonar" | "vacia");
+  }, { defer: true }));
 
   createEffect(on(() => props.workspace, () => {
     if (operation()) return;
@@ -186,7 +195,7 @@ export default function AnadirCarpeta(props: {
       progress: new Channel<{ phase: string; percent: number | null }>(value => {
         if (operation() === id) setProgress(value);
       }),
-    }));
+    }, enElegida()));
     setOperation(null);
   }
 
@@ -256,7 +265,7 @@ export default function AnadirCarpeta(props: {
     if (typeof dir !== "string" || workspace !== props.workspace) return false;
     // Sin nombre, Rust usa el de la carpeta y lo recorta al tope (`projects::crear`).
     await terminar(
-      invoke<Project>("create_project", { name: "", workingDirectory: dir, space: props.space ?? undefined }),
+      invoke<Project>("create_project", { name: "", workingDirectory: dir, space: props.space ?? undefined }, enElegida()),
     );
     return true;
   }
@@ -277,7 +286,7 @@ export default function AnadirCarpeta(props: {
     setTrabajando(true);
     setFallo(null);
     try {
-      const directory = await invoke<string>("get_project_directory", {}, enRemota());
+      const directory = await invoke<string>("get_project_directory", {}, enElegida());
       if (workspace !== props.workspace) return;
       setDirectorio(directory);
       setCamino(value);
@@ -426,7 +435,7 @@ export default function AnadirCarpeta(props: {
                 void terminar(
                   invoke<Project>("create_project", {
                     name: nombre(), space: spaceAlli(), directory: remota() ? undefined : (destino() ?? undefined),
-                  }, enRemota()),
+                  }, enElegida()),
                 );
               }}
             >
