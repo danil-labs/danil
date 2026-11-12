@@ -1,5 +1,5 @@
 import type { InboxSession } from '../../../../../packages/attention/src/inbox.ts';
-import { activeAccountOf } from '../audit-log';
+import { activeAccountOf } from '../active-account';
 
 /** Cómo llegan las vistas de Atención al BFF: la web por su entrada alfa; el escritorio, por la ventana y Computers. */
 export type BffTransport = {

@@ -35,7 +35,8 @@ def dispatch(route):
 
 with sync_playwright() as p:
     browser = p.chromium.launch(headless=True)
-    page = browser.new_page(locale='es-MX')
+    viewport = {'width': 390, 'height': 667} if mode == 'mobile' else {'width': 1280, 'height': 720}
+    page = browser.new_page(locale='es-MX', viewport=viewport)
     errors = []
     page.on('pageerror', lambda error: errors.append(str(error)))
     page.route('https://api.danil.ai/**', dispatch)
@@ -45,6 +46,16 @@ with sync_playwright() as p:
     inbox = page.locator('[data-platform-inbox]')
     inbox.get_by_role('button').filter(has_text=re.compile('Contact 9007199254740993/')).first.click()
     expect(inbox.locator('textarea')).to_be_enabled()
+    if mode == 'mobile':
+        textarea = inbox.locator('textarea')
+        page.mouse.move(195, 500)
+        deadline = time.monotonic() + 5
+        while not textarea.evaluate('(element) => { const box = element.getBoundingClientRect(); return box.top >= 0 && box.bottom <= innerHeight; }'):
+            assert time.monotonic() < deadline, f'Composer unreachable by wheel at 390x667: {textarea.bounding_box()}'
+            page.mouse.wheel(0, 800)
+            page.evaluate('() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))')
+        expect(textarea).to_be_in_viewport(ratio=1)
+        textarea.click()
     inbox.locator('textarea').fill('browser in progress')
     inbox.locator('button[type=submit]').click()
     original_inbox = inbox.element_handle()
@@ -67,7 +78,7 @@ with sync_playwright() as p:
         inbox.locator('textarea').fill('browser in progress')
         inbox.locator('button[type=submit]').click()
     expect(inbox.locator('textarea')).to_have_value('', timeout=15000)
-    expected = [409, 409, 202] if mode == 'progress' else [409, 409, 409, 202]
+    expected = [409, 409, 202] if mode in ('progress', 'mobile') else [409, 409, 409, 202]
     assert statuses == expected, (statuses, trace)
     assert len(set(keys)) == 1 and len(keys) == len(expected), keys
     if mode == 'active':
@@ -77,5 +88,5 @@ with sync_playwright() as p:
         assert sum('/workspaces/select' in url for url, _, _ in trace) == 2, trace
     assert all(b - a >= .95 for a, b in zip(times, times[1:])), times
     assert not errors, errors
-    print(f'PASS Chromium {mode}: actual workers {statuses}, same UUID, Retry-After respected, accepted receipt')
+    print(f'PASS Chromium {mode} {viewport}: actual workers {statuses}, same UUID, Retry-After respected, accepted receipt')
     browser.close()

@@ -18,18 +18,12 @@ service = "terminus-web-alfa"
 binding = "APPV2_BFF"
 service = "appv2"
 
-# Entrada con WorkOS (session.mjs), ambiente Production. Secretos: WORKOS_API_KEY,
-# SUPABASE_SERVICE_ROLE_KEY y SESSION_COOKIE_KEY (32 bytes base64url, versión v1 del sello).
-# Sin uno de ellos, /auth/session responde 503 y nadie entra.
-# BROADCAST_WRITES = "on" abre plantillas y medios a Meta; sin ella responden 403.
-# BROADCAST_DELIVERY = "on" abre lo que llega a clientes; sin ella responden 409. Enciende
-# primero el Worker y después el build. MEDIA_PUBLIC_BASE es la base que acepta `media_url`.
-[vars]
-# DANIL_WEB_SESSION = "platform" must match the web build to serve /auth without the legacy redirect.
-# Omitted: legacy. Platform build: DANIL_WEB_SESSION=platform; DANIL_WEB_API_ORIGIN defaults to https://api.danil.ai.
-SUPABASE_URL = "https://sqonjbpvairwfksotadj.supabase.co"
-WORKOS_CLIENT_ID = "client_01M2HETZ89A209TH6NNPF6P8YC"
+# Compatibilidad exclusiva de Desk; la web autentica por el borde configurado al compilar.
+[[services]]
+binding = "DESKTOP_AUTH"
+service = "danil-legacy-desktop-auth"
 
+# Conserva el namespace instalado; el Worker de compatibilidad lo consume remoto.
 [[durable_objects.bindings]]
 name = "DESKTOP_CODES"
 class_name = "DesktopCodeStore"

@@ -467,10 +467,9 @@ workspaces ligados):
   un workspace del registro abre sin esperar: proyectos del registro, tareas,
   fuentes y spaces vacíos. Crear una tarea va a la máquina elegida o a la
   última (con `materialize_workspace` antes si no lo tiene) y la enciende.
-- El alta de «crea tu workspace» y `no_workspaces` (`src/web/Gate.tsx`) solo
-  salen con el registro vacío y ninguna máquina con un workspace ligado.
-- Detección: si `/v1/workspaces` falla (un Worker anterior, 404, o la red), todo
-  queda como antes. Prueba: `tests/unit/web-account-workspaces.test.mjs`.
+- La web usa `src/web/PlatformEntry.tsx`: lista y selecciona workspaces por el
+  borde. El alta y el fallback del registro legado están retirados. La
+  reconciliación de selección se prueba en `tests/integration/platform-page.test.mjs`.
 
 ### Fase 2 (fuera de esta entrega)
 

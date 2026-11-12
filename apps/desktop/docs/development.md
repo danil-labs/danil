@@ -211,85 +211,30 @@ deletes them.
 
 ## The browser build
 
-The same front runs in a browser against Danil Machines instead of the Tauri
-window. `src/web/` holds only that entry: it answers the globals of
-`@tauri-apps/api` with a transport over the relay session socket, so the desktop
-bundle never imports it, and its phrases live in `src/locales/*/web.json`,
-which the desktop catalogs leave out. `options.headers` of `invoke` reach the
-transport (`x-terminus-workspace` is honored; other headers are ignored for now).
+The browser uses the platform edge for its session, workspace selection and
+inbox. The session is the edge's HttpOnly `__Host-danil_session` cookie. No
+WorkOS token, database token or database key reaches JavaScript.
 
-```sh
-TERMINUS_WEB_SUPABASE_URL=https://<project>.supabase.co \
-TERMINUS_WEB_SUPABASE_KEY=<publishable key> \
-pnpm web:build      # dist-web/<base>/ plus dist-web/index.html and dist-web/_headers
-pnpm web:dev        # Vite on <base>web.html with the same settings
-```
+`corepack pnpm web:build` builds the responsive SPA. It no longer embeds the
+mobile app's legacy browser bundle. `TERMINUS_WEB_BASE=/` serves the root;
+`DANIL_WEB_API_ORIGIN` configures `https://api.danil.ai` (default) or
+`https://api-beta.danil.ai`. `DANIL_WEB_API_TIMEOUT_MS` is the browser request
+budget (15000 ms by default, 1–60000 ms). The CSP allows only this API origin
+and same-origin connections. Session and inbox have no legacy selector.
 
-`pnpm web:build` ends with `scripts/web-mobile.mjs`: the phone app
-(`apps/mobile`, Expo for web) built into `dist-web/<base>m/` with the same
-public settings, so it needs `npm ci` in `apps/mobile` first. A phone (small,
-touch screen: `PHONE_QUERY` in `@terminus/design`) that opens `<base>` goes to
-`<base>m/`; each version links to the other and the choice is kept in
-`localStorage` (`terminus.web.layout`). Both share the origin, the Danil app's
-Supabase session and `_headers`. A deep link under `<base>m/` that falls back to
-`index.html` is passed to the phone app as `?to=`. `web:dev` serves only the
-desktop version.
+`tests/integration/platform-page.test.mjs` mounts the built page and checks
+workspace reconciliation and pending replies. The real-service E2E is
+`tests/integration/platform-session.test.mjs`: `DANIL_PLATFORM_REPOS` points
+to the directory with edge, identity and workspaces; `DANIL_WORKERS_REPO`,
+`DANIL_MESSAGING_SCHEMA_REPO` and `DANIL_WORKERS_PYTHON` select the messaging
+service, SQL migrations and its environment. `PG_BIN` selects PostgreSQL 16
+with pgvector. It creates and destroys its own cluster. Chromium checks also
+use `DANIL_INBOX_BROWSER_URL` and `DANIL_INBOX_BROWSER_PYTHON`.
 
-Build-time settings (environment variables; all are public values):
-
-| Variable | Default | Effect |
-|---|---|---|
-| `TERMINUS_WEB_BASE` | `/terminus/` | Path the page is served under |
-| `TERMINUS_WEB_ENDPOINT` | `https://computers.danil.ai` | Control plane and relay; added to `connect-src` as `https` and `wss` |
-| `TERMINUS_WEB_SUPABASE_URL` | none | The Danil app's Supabase project; added to `connect-src` |
-| `TERMINUS_WEB_SUPABASE_KEY` | none | Its publishable (anon) key |
-| `TERMINUS_WEB_LOGIN` | `<base>auth` | Browser sign-in entry when there is no session; an override must preserve `next` |
-| `TERMINUS_WEB_CONNECT` | empty | Extra `connect-src` sources |
-
-The page shares the Danil app's origin and Supabase session storage. Without a
-session it opens `<base>auth`, shared with the phone browser and device approval.
-This entry supports email/password registration and sign-in, Google and Microsoft,
-email confirmation and resending confirmation. Authentication callbacks run here
-before the machine gate or phone redirect. `next` stays inside the configured
-Danil base and travels in the callback URL, including a device code; it does
-not depend on the original tab's storage. Supabase must allow that callback URL
-and its email templates must preserve the supplied redirect. Registration does
-not grant a license or provision a machine. After a 401
-from the API or a relay close 4003 it calls `refreshSession()` and, if that
-fails, goes to the login. It lists the person's computers (`GET
-/v1/computers`), opens the only one or the remembered one, or shows a picker
-that can also start a computer; `?computer=<id>` opens that one. Opening does
-not start a computer: an off one mounts as it is, with the machine-off notice.
-The page runs the desktop's router over `@terminus/fleet`
-(`src/features/machines/router.ts` with no engine of its own): workspaces and
-projects come from the account registry, and each machine's tasks, folders and
-spaces are its slice, the saved one first (the page's copy or the relay's,
-marked saved with its time) and the live one behind. An off machine with a copy
-is not asked; one that does not answer keeps its last slice; one of another
-contract shows outdated. Only an action waits: the relay's intent commands
-(send a message, create a task, answer a permission…) wake a managed VM, and an
-action to the person's own machine that is off says so by name. The installer
-screen never shows (`localSetup` in `lib/platform.ts`). Before
-reconnecting the socket it asks the API again, so a missing license or a
-computer that is not theirs shows a notice instead of a blind retry. A page
-that sets `window.terminusWeb` before the script loads can override any of the
-settings above, or give `{ endpoint, computerId, getToken }` and skip the
-session and the picker.
-
-What the window does locally (native sites, Typst live, tray, updater, local
-file pickers, opening files on the host) answers with `web.desktop_only` or a
-browser equivalent. `tests/unit/web-transport.test.mjs` and
-`tests/unit/web-gate.test.mjs`, `tests/unit/web-setup.test.mjs`, `tests/unit/web-off.test.mjs`, `tests/unit/web-cached.test.mjs` and `tests/unit/web-onboarding.test.mjs` mount `dist-web/` against a relay simulated in
-Node (`tests/helpers/fake-relay.mjs`).
-
-`dist-web/` is served at the root of alfa-app.danil.ai (`alpha-entry/`, built
-with `TERMINUS_WEB_BASE=/`). `dist-web/_headers` carries the policy with
-`frame-ancestors 'none'`, and `dist-web/index.html` is the single-page fallback
-for paths under the base. `wrangler.web.toml` no longer serves the web: it
-deploys `web-redirect/worker.mjs` as the private Worker `terminus-web`, which
-the Danil app reaches for `/terminus/*` through a Service Binding and which
-answers 308 to the same path on alfa-app.danil.ai without the prefix. It has no
-Workers Builds trigger.
+The private asset Worker serves `dist-web/`; `alpha-entry/` fronts it and keeps
+only the appv2 routes still needed by W5. The web audit transport has been
+removed: there is no platform audit service. Desk's legacy login is isolated
+in `legacy-desktop-auth/`; see [desktop sessions](desktop-bff-session.md).
 
 ## The engine pin
 

@@ -53,20 +53,12 @@ const CONTRACT = JSON.stringify(
 
 // La entrada del navegador (`src/web/main.tsx`). Sale a `dist-web/<base>` para
 // que el Worker de assets sirva las mismas rutas que reenvía la app de Danil;
-// plano de control, Supabase (valores públicos) y política se fijan al compilar.
+// origen del borde y política se fijan al compilar.
 function webBuild(serve: boolean): UserConfig {
   const env = process.env;
   const session = webSessionDeployment(env);
-  const origin = (value: string | undefined) => (value ? new URL(value).origin : "");
   const base = `/${(env.TERMINUS_WEB_BASE ?? "/terminus/").replace(/^\/+|\/+$/g, "")}/`.replace("//", "/");
-  const endpoint = origin(env.TERMINUS_WEB_ENDPOINT || "https://machines.danil.ai");
-  const supabaseUrl = origin(env.TERMINUS_WEB_SUPABASE_URL);
-  const supabaseKey = (env.TERMINUS_WEB_SUPABASE_KEY ?? "").trim();
-  const login = env.TERMINUS_WEB_LOGIN || `${base}auth`;
-  const extra = (env.TERMINUS_WEB_CONNECT ?? "").replace(/[^\w:/.* -]/g, " ").split(/\s+/).filter(Boolean);
-  // Sin el alias fallan avatar_url y logo_url, que aún salen con computers.danil.ai.
-  const alias = endpoint === "https://machines.danil.ai" ? ["https://computers.danil.ai", "wss://computers.danil.ai"] : [];
-  const connect = (session.kind === "platform" ? [session.origin, ...(session.inbox === "legacy" ? [endpoint] : [])] : [endpoint, endpoint.replace(/^http/, "ws"), ...alias, supabaseUrl, ...extra]).filter(Boolean).join(" ");
+  const connect = session.origin;
   const version = JSON.parse(readFileSync(new URL("./package.json", import.meta.url), "utf8")).version as string;
   const root = fileURLToPath(new URL("./dist-web/", import.meta.url));
   const outDir = join(root, base);
@@ -106,8 +98,7 @@ function webBuild(serve: boolean): UserConfig {
     base,
     define: {
       __TERMINUS_VERSION__: JSON.stringify(version),
-      __DANIL_WEB_SESSION__: JSON.stringify(session),
-      __TERMINUS_WEB__: JSON.stringify({ endpoint, supabaseUrl, supabaseKey, login, alphaOauth: env.TERMINUS_WEB_ALPHA_OAUTH === "1", workos: env.TERMINUS_WEB_WORKOS === "1" }),
+      __DANIL_WEB_API__: JSON.stringify(session),
       "import.meta.env.TERMINUS_ALPHA": JSON.stringify(env.TERMINUS_WEB_ALPHA === "1"),
       "import.meta.env.TERMINUS_BROADCAST_WRITES": JSON.stringify(env.TERMINUS_WEB_BROADCAST_WRITES === "1"),
       "import.meta.env.TERMINUS_BROADCAST_DELIVERY": JSON.stringify(env.TERMINUS_WEB_BROADCAST_DELIVERY === "1"),

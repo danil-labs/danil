@@ -1,11 +1,4 @@
-/**
- * El front de `dist/` montado en jsdom, con el IPC de Tauri stubeado.
- *
- * Lo comparten los guardas `mount-*.mjs`, que afirman que el árbol pinta, y
- * `open-task-cost.mjs`, que cuenta cuánto trabajo cuesta abrir una tarea. Un
- * arranque por guarda divergiría, y el contador dejaría de medir el árbol que el
- * otro guarda da por bueno.
- */
+/** Shared mount for guards and performance checks: they must measure the same built app. */
 import { AsyncLocalStorage } from "node:async_hooks";
 import { existsSync, readFileSync } from "node:fs";
 import { registerHooks } from "node:module";
@@ -66,19 +59,7 @@ export const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 /** Con qué causa se emitió un evento, para atribuirle lo que dispare. */
 export const cause = new AsyncLocalStorage();
 
-/**
- * Monta el árbol una vez y devuelve qué pintó y qué lanzó.
- *
- * `entorno` decide cómo contesta `check_environment`, que es el portero de
- * `Setup`:
- *
- * - `"listo"` deja pasar a `App` directo. Es el arranque de verdad.
- * - `"falta"` lo rechaza, así que `Setup` pinta su pantalla de requisitos con
- *   el botón «Entrar de todos modos». Sirve para entrar **desde un manejador de
- *   evento**, que es lo único que hace salir la excepción: en el arranque
- *   normal sube por el `setEnv` de `Setup.revisar` y **la traga su propio
- *   `try`**, que es exactamente por qué este fallo no dejó ni un mensaje.
- */
+/** Mounts the built app; environment chooses the native setup response, and web chooses the browser bundle. */
 export async function boot(environment, version, responses, userAgent, storage = {}, { web = false, beforeImport, workspaces } = {}) {
   // El registro de workspaces de la cuenta (`GET /v1/workspaces`): sin `workspaces`, un plano de control que no lo tiene.
   accountRegistry = workspaces;

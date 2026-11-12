@@ -3,7 +3,7 @@
 Applies [AGENTS.md](../AGENTS.md). Node programs in two groups: `guards/`
 holds the static contract checks that `verify.mjs` runs (each with a row in
 the catalog); the rest are development tools run by hand (`engine.mjs`,
-`version.mjs`, `notices.mjs`, `icons.mjs`, `phrases.mjs`), and `web-mobile.mjs`, the last step of `pnpm web:build`. Tests live in
+`version.mjs`, `notices.mjs`, `icons.mjs`, `phrases.mjs`), and `web-mobile.mjs`, the standalone legacy mobile browser export. Tests live in
 [tests/](../tests/AGENTS.md).
 
 - `verify.mjs` lists every step and stops at the first failure. Its catalog is

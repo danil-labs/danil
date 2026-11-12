@@ -1,6 +1,5 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { webDomainRoutes, webSessionDeployment } from '../../src/web/session-config.ts';
 import { inboxReplies, inboxReplyStore } from '../../src/web/inbox-replies.ts';
 import { platformInbox } from '../../src/web/platform-inbox.ts';
 import { createMessaging } from '../../../../packages/attention/src/messaging.ts';
@@ -55,12 +54,6 @@ test('invalid bodies, foreign conversation messages and cancellation fail closed
   assert.equal(calls, 0);
 });
 
-test('deployment switches the entire inbox and leaves other messaging domains in legacy', () => {
-  assert.equal(webDomainRoutes(webSessionDeployment({})).inbox, 'legacy');
-  const routes = webDomainRoutes(webSessionDeployment({ DANIL_WEB_SESSION: 'platform', DANIL_WEB_INBOX: 'platform' }));
-  assert.equal(routes.inbox, 'v1');
-  for (const domain of ['channels', 'agents', 'templates', 'campaigns', 'contacts', 'media', 'billing', 'audit'] as const) assert.equal(routes[domain], 'legacy');
-});
 
 test('both reply transports preserve the exact same hyphenated UUID text', async () => {
   for (const clientId of ['7c917305-5975-49d4-9859-46f719a94dd6', '4A5283B1-872E-4C36-91B3-1F4E1933A2D1']) {
@@ -81,14 +74,6 @@ test('both reply transports preserve the exact same hyphenated UUID text', async
   }
 });
 
-test('inbox rollout defaults to legacy and rolls back independently of the platform session', () => {
-  const deployment = webSessionDeployment({ DANIL_WEB_SESSION: 'platform', DANIL_WEB_INBOX: 'legacy' });
-  assert.equal(deployment.kind, 'platform');
-  assert.equal(webDomainRoutes(deployment).inbox, 'legacy');
-  assert.equal(webDomainRoutes(webSessionDeployment({ DANIL_WEB_SESSION: 'platform' })).inbox, 'legacy');
-  assert.equal(webDomainRoutes(webSessionDeployment({ DANIL_WEB_SESSION: 'platform', DANIL_WEB_INBOX: 'platform' })).inbox, 'v1');
-  assert.throws(() => webSessionDeployment({ DANIL_WEB_SESSION: 'platform', DANIL_WEB_INBOX: 'typo' }));
-});
 
 test('in-progress retries use one key with backoff and Retry-After, including HTTP dates', async () => {
   let now = 0;
