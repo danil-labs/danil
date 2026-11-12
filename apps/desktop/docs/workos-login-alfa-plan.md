@@ -14,7 +14,7 @@ verificadores**:
 | Verificador | Cómo valida | Cómo resuelve a la persona |
 |---|---|---|
 | BFF de appv2 (`worker/src/jwt.ts`, vía `/alpha-api`) | ES256 contra el JWKS de Supabase; acepta cualquier `kid` publicado | `claims.sub` = `auth.users.id`, en decenas de sitios; reenvía el JWT a PostgREST (inbox) |
-| computers (`auth.ts` del repo `danil-labs/computers`, `computers.danil.ai` y relay) | El mismo `jwt.ts` copiado de appv2 | `users?uuid=eq.<sub>` |
+| machines (`auth.ts` del repo `danil-labs/machines`, `computers.danil.ai` y relay) | El mismo `jwt.ts` copiado de appv2 | `users?uuid=eq.<sub>` |
 | PostgREST directo (`audit-log.ts`) | Supabase: solo la llave **current** (y la anterior en rotación) | RLS: `current_user_id()` y `user_account_ids()` hacen `sub::uuid`; `auth.uid()` en 7 sitios del baseline |
 | Hook `custom_access_token_hook` | — | Estampa `active_account_id` con `user_can_enter_account` |
 
