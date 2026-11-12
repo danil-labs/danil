@@ -215,7 +215,7 @@ The browser uses the platform edge for its session, workspace selection and
 inbox. The session is the edge's HttpOnly `__Host-danil_session` cookie. No
 WorkOS token, database token or database key reaches JavaScript.
 
-`DANIL_WEB_API_ORIGIN=https://api-beta.danil.ai corepack pnpm web:build` builds
+`DANIL_WEB_API_ORIGIN=https://edge.danil.ai corepack pnpm web:build` builds
 the responsive SPA. It no longer embeds the mobile app's legacy browser bundle.
 `TERMINUS_WEB_BASE=/` serves the root;
 `DANIL_WEB_API_ORIGIN` is required: the build fails if it is absent or is not
@@ -229,7 +229,7 @@ selector.
 
 | Deployment | `DANIL_WEB_API_ORIGIN` | Status |
 |---|---|---|
-| Beta | `https://api-beta.danil.ai` | Explicit build input. |
+| Beta | `https://edge.danil.ai` | Explicit build input. |
 | Production | Pending | `api.danil.ai` still points to Supabase (CNAME to `supabase.co`); the edge origin remains pending until Supabase leaves this domain. |
 
 Tests may explicitly inject `https://api.danil.ai` as a fictional origin; this

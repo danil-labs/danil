@@ -4,7 +4,7 @@ import { platformSession, PlatformSessionError } from "../../src/web/platform-se
 import { webSessionDeployment } from "../../src/web/session-config.ts";
 
 test("platform requires an explicit HTTPS edge origin and preserves its request budget", () => {
-  for (const origin of ["https://api-beta.danil.ai", "https://edge.test:8443/"]) {
+  for (const origin of ["https://edge.danil.ai", "https://edge.test:8443/"]) {
     assert.deepEqual(webSessionDeployment({ DANIL_WEB_API_ORIGIN: origin }), {
       origin: new URL(origin).origin, timeoutMs: 15000,
     });
