@@ -12,31 +12,46 @@ export type PlatformWorkspace = z.infer<typeof workspace>;
 export class PlatformSessionError extends Error {
   readonly status: number;
   readonly retryAfter: string | null;
-  constructor(status: number, retryAfter: string | null) {
+  readonly code: string | null;
+  readonly requestId: string | null;
+  constructor(status: number, retryAfter: string | null, code: string | null = null, requestId: string | null = null) {
     super(`Platform session HTTP ${status}`);
     this.status = status;
     this.retryAfter = retryAfter;
+    this.code = code;
+    this.requestId = requestId;
   }
 }
 
 /** Cookie-only transport. No token getter or arbitrary URL can cross from the legacy client. */
-export function platformSession(options: { origin: string; timeoutMs: number }, request: typeof fetch = fetch) {
+export function platformTransport(options: { origin: string; timeoutMs: number }, request: typeof fetch = fetch) {
   async function call(path: string, init: RequestInit = {}) {
+    init.signal?.throwIfAborted();
+    const deadline = AbortSignal.timeout(options.timeoutMs);
     const response = await request(`${options.origin}/v1/${path}`, {
       ...init, credentials: "include", cache: "no-store", redirect: "error",
-      signal: AbortSignal.timeout(options.timeoutMs),
+      signal: init.signal ? AbortSignal.any([init.signal, deadline]) : deadline,
       headers: { Accept: "application/json", ...init.headers },
     });
     if (!response.ok) {
-      await response.body?.cancel();
-      throw new PlatformSessionError(response.status, response.headers.get("retry-after"));
+      const problem = response.headers.get("content-type")?.split(";")[0] === "application/problem+json"
+        ? await response.json().catch(() => null) as { code?: unknown; request_id?: unknown } | null : null;
+      if (!response.bodyUsed) await response.body?.cancel();
+      throw new PlatformSessionError(response.status, response.headers.get("retry-after"),
+        typeof problem?.code === "string" ? problem.code : null,
+        response.headers.get("x-request-id") ?? (typeof problem?.request_id === "string" ? problem.request_id : null));
     }
     return response;
   }
   async function mutation(path: string, init: RequestInit = {}) {
-    const token = csrf.parse(await (await call("identity/csrf")).json());
+    const token = csrf.parse(await (await call("identity/csrf", { signal: init.signal })).json());
     return call(path, { ...init, method: "POST", headers: { ...init.headers, "X-CSRF-Token": token.csrf_token } });
   }
+  return { call, mutation };
+}
+
+export function platformSession(options: { origin: string; timeoutMs: number }, request: typeof fetch = fetch) {
+  const { call, mutation } = platformTransport(options, request);
   return {
     loginUrl(returnTo: string) {
       const url = new URL(`${options.origin}/v1/identity/login`);

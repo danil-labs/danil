@@ -15,3 +15,10 @@ export function webSessionDeployment(env: Record<string, string | undefined>): W
   if (!Number.isInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > 60000) throw new Error("Invalid DANIL_WEB_API_TIMEOUT_MS");
   return { kind, origin: url.origin, timeoutMs };
 }
+
+/** A deployment changes a whole domain, including its reads and writes. */
+export function webDomainRoutes(deployment: WebSessionDeployment) {
+  const session = deployment.kind === 'platform' ? 'v1' : 'legacy';
+  return { identity: session, workspaces: session, inbox: session,
+    channels: 'legacy', agents: 'legacy', templates: 'legacy', campaigns: 'legacy', contacts: 'legacy', media: 'legacy', billing: 'legacy', audit: 'legacy' } as const;
+}
