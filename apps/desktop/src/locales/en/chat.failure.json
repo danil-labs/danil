@@ -1,4 +1,6 @@
 {
   "chat.failure.free_router_stopped": "Free AI Router stopped this turn to avoid resending the content.",
-  "chat.failure.free_router_mcp_credentials": "This turn cannot start with Free AI Router because of its configuration restrictions."
+  "chat.failure.free_router_mcp_credentials": "This turn cannot start with Free AI Router because of its configuration restrictions.",
+  "chat.failure.local_models_removed": "Local models are no longer available. The task keeps its history; continue it with another agent.",
+  "chat.failure.free_router_model_only": "The Free Router only runs its free model. Choose it from the list or switch agents."
 }

@@ -40,7 +40,7 @@ test("consent and policy reads preserve captured workspace and machine without f
     for (const [command, args] of [
       ["workspaces_startup", {}],
       ["set_provider_consent", { provider: "opaque-policy-reference", accepted: true }],
-      ["set_provider_consent", { provider: "opencode-zen", accepted: false }],
+      ["set_provider_consent", { provider: "free-router-opencode", accepted: false }],
     ]) {
       const before = Object.fromEntries(Object.entries(f.relays).map(([id, r]) => [id, r.calls.length]));
       await invoke(command, args, captured);

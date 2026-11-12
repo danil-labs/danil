@@ -1,5 +1,6 @@
 import { modelPresentation, routerDiscovery } from "../../../../packages/tasks/src/model-presentation.ts";
 export { modelPresentation, routerDiscovery };
+import { canonicalAgentId, isFreeRouterAgent, OPENCODE } from "../../../../packages/tasks/src/agents.ts";
 import { t } from "./i18n.ts";
 import type { AgentModels, ModelOption } from "./model";
 import { esDe, marcaDeSuperficie, type Superficie } from "./surfaces.ts";
@@ -45,20 +46,19 @@ export function proveedorDe(
   superficie: Superficie,
   model: ModelOption,
 ) {
-  if (superficie.provider === "opencode-zen") {
+  // El grupo del selector es uno solo para todo el Free Router, sea cual sea su motor.
+  if (isFreeRouterAgent(superficie.provider) || superficie.catalogo === "gratuitos") {
+    return { id: "opencode-free", label: t("surfaces.label.free"), logo: marcaDeSuperficie(superficie) };
+  }
+  // Una máquina con un motor anterior todavía publica `opencode-zen`.
+  if (canonicalAgentId(superficie.provider) === OPENCODE) {
     if (model.id === "danil-credits/deepseek/deepseek-v4.1-flash") {
       return { id: "danil-credits", label: t("chat.credits.label"), logo: "danil" };
-    }
-    if (superficie.catalogo === "gratuitos") {
-      return { id: "opencode-free", label: t("surfaces.label.free"), logo: marcaDeSuperficie(superficie) };
     }
     if (model.id.startsWith("opencode-go/")) {
       return { id: "opencode-go", label: "OpenCode Go", logo: "opencode" };
     }
-    return { id: "opencode-zen", label: "OpenCode", logo: "opencode" };
-  }
-  if (superficie.provider === "opencode-local") {
-    return { id: "opencode-local", label: "OpenCode Local", logo: "opencode" };
+    return { id: OPENCODE, label: "OpenCode", logo: "opencode" };
   }
   return {
     id: superficie.id,
@@ -150,7 +150,7 @@ export function agruparModelos(
     // superficie y el nombre propio.
     const visual =
       proveedor.id === "opencode-go"
-        ? { id: "opencode-zen", label: "OpenCode", logo: proveedor.logo }
+        ? { id: OPENCODE, label: "OpenCode", logo: proveedor.logo }
         : proveedor;
     const grupo = grupos.get(visual.id) ?? { ...visual, models: [] };
     grupo.models.push(opcion);
@@ -220,6 +220,6 @@ export function nombreDeModelo(id: string, catalogo?: AgentModels | null): strin
 
 /** La marca del modelo observado no cambia la identidad de su ejecutor. */
 export function modelBrand(agent: string, id?: string | null, catalog?: AgentModels | null): string {
-  return id?.startsWith("danil-free/") || id?.startsWith("danil-credits/") || catalog?.models.some((model) => model.id === id && model.gratis === true)
-    ? "danil" : agent;
+  return id?.startsWith("danil-free/") || id?.startsWith("danil-credits/") || isFreeRouterAgent(agent) || catalog?.models.some((model) => model.id === id && model.gratis === true)
+    ? "danil" : canonicalAgentId(agent, id);
 }

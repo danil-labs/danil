@@ -33,25 +33,21 @@ test("los resultados conservan la sección que desambigua modelos parecidos", ()
     {      id: "codex", provider: "codex", label: "Codex", catalogo: "todo",
       usable: true, marca: null, porque: null,
     },
-    {      id: "opencode-zen", provider: "opencode-zen", label: "OpenCode", catalogo: "de_pago",
+    {      id: "opencode", provider: "opencode", label: "OpenCode", catalogo: "todo",
       usable: true, marca: null, porque: null,
     },
-    {      id: "opencode-zen-gratuitos", provider: "opencode-zen", label: "Modelos Free",
+    {      id: "free-router-opencode", provider: "free-router-opencode", label: "Free Router · OpenCode",
       catalogo: "gratuitos", usable: true, marca: null, porque: null,
-    },
-    {      id: "opencode-local", provider: "opencode-local", label: "Locales", catalogo: "todo",
-      usable: true, marca: null, porque: null,
     },
   ];
   const opciones = opcionesDeModelos(superficies, {    claude: { provider: "x", fallback: false, models: [model("gpt-5", "GPT 5")] },
     codex: { provider: "x", fallback: false, models: [model("gpt-5", "GPT 5")] },
-    "opencode-zen": { provider: "x", fallback: false,      models: [
+    opencode: { provider: "x", fallback: false,      models: [
         model("opencode/gpt-5", "GPT 5"),
         model("opencode-go/gpt-5", "GPT 5"),
-        { ...model("danil-free/reflection/beam-free", "GPT 5"), gratis: true },
       ],
     },
-    "opencode-local": { provider: "x", fallback: false, models: [model("ollama/gpt-5", "GPT 5")] },
+    "free-router-opencode": { provider: "x", fallback: false, models: [{ ...model("danil-free/reflection/beam-free", "GPT 5"), gratis: true }] },
   });
   const grupos = agruparModelos(opciones, "gpt5");
 
@@ -63,21 +59,20 @@ test("los resultados conservan la sección que desambigua modelos parecidos", ()
     [
       ["Claude", [["claude", "gpt-5"]]],
       ["Codex", [["codex", "gpt-5"]]],
-      ["OpenCode", [["opencode-zen", "opencode-go/gpt-5"]]],
-      ["Router IA gratis", [["opencode-zen", "danil-free/reflection/beam-free"]]],
-      ["OpenCode Local", [["opencode-local", "ollama/gpt-5"]]],
+      ["OpenCode", [["opencode", "opencode-go/gpt-5"]]],
+      ["Router IA gratis", [["free-router-opencode", "danil-free/reflection/beam-free"]]],
     ],
   );
   assert.deepEqual(grupos.map((grupo) => grupo.logo), [
-    "claude", "codex", "opencode", "danil", "opencode",
+    "claude", "codex", "opencode", "danil",
   ]);
 });
 
 test("una superficie de pago no aparece cuando no está autenticada", () => {  const opciones = opcionesDeModelos(
-    [{      id: "opencode-zen-gratuitos", provider: "opencode-zen", label: "Modelos Free",
+    [{      id: "free-router-opencode", provider: "free-router-opencode", label: "Free Router · OpenCode",
       catalogo: "gratuitos", usable: true, marca: null, porque: null,
     }],
-    {      "opencode-zen": { provider: "x", fallback: false,        models: [
+    {      "free-router-opencode": { provider: "x", fallback: false,        models: [
           model("opencode/claude-sonnet", "Claude Sonnet"),
           { ...model("danil-free/reflection/beam-free", "Free Model"), gratis: true },
           model("opencode-go/kimi", "Kimi"),
@@ -166,10 +161,10 @@ test("la fila de acciones nombra el modelo con su versión", () => {
 });
 
 test("OpenCode es un solo proveedor: el login por Go deja fuera el saldo de Zen", () => {
-  const surface: Superficie = { id: "opencode-zen", provider: "opencode-zen", label: "OpenCode", catalogo: "de_pago", usable: true, marca: null, porque: null };
+  const surface: Superficie = { id: "opencode", provider: "opencode", label: "OpenCode", catalogo: "de_pago", usable: true, marca: null, porque: null };
   const options = opcionesDeModelos([surface], {
-    "opencode-zen": {
-      provider: "opencode-zen",
+    "opencode": {
+      provider: "opencode",
       fallback: false,
       models: [model("opencode-go/kimi", "Kimi"), model("opencode/deepseek-v4.1-flash", "DeepSeek")],
     },
@@ -177,28 +172,31 @@ test("OpenCode es un solo proveedor: el login por Go deja fuera el saldo de Zen"
   // Zen (saldo) ya no se ofrece; Go conserva su id y su login.
   assert.deepEqual(options.map((option) => option.model.id), ["opencode-go/kimi"]);
   const groups = agruparModelos(options, "");
-  assert.deepEqual(groups.map((grupo) => grupo.id), ["opencode-zen"]);
+  assert.deepEqual(groups.map((grupo) => grupo.id), ["opencode"]);
   assert.equal(groups[0].label, "OpenCode");
   assert.equal(options[0].proveedor.id, "opencode-go");
-  assert.equal(options[0].key, "opencode-zen\u0000opencode-go/kimi");
+  assert.equal(options[0].key, "opencode\u0000opencode-go/kimi");
   assert.deepEqual(agruparModelos(options, "OpenCode")[0].models, [options[0]]);
   assert.deepEqual(favoritosDeModelos(options, [options[0].key]), [options[0]]);
   // Abrir el selector con un modelo Go elegido lleva a una sección que existe
   // aunque el proveedor del catálogo se llame distinto.
-  assert.equal(seccionDeModelo(groups, options[0].key), "opencode-zen");
-  assert.equal(seccionDeModelo(groups, "opencode-zen\u0000no-existe"), null);
+  assert.equal(seccionDeModelo(groups, options[0].key), "opencode");
+  assert.equal(seccionDeModelo(groups, "opencode\u0000no-existe"), null);
 });
 
 test("Free conserva la marca Danil en turnos observados y OpenCode pagado conserva su logo", () => {
-  assert.equal(modelBrand("opencode-zen", "danil-free/reflection/beam-free"), "danil");
-  assert.equal(modelBrand("opencode-zen", "opencode-go/kimi"), "opencode-zen");
-  assert.equal(modelBrand("opencode-zen", "opencode/claude"), "opencode-zen");
-  assert.equal(modelBrand("opencode-zen"), "opencode-zen");
-  assert.equal(modelBrand("opencode-zen", "legacy-free", { provider: "opencode-zen", fallback: false, models: [{ ...model("legacy-free", "Free"), gratis: true }] }), "danil");
+  assert.equal(modelBrand("opencode", "danil-free/reflection/beam-free"), "danil");
+  assert.equal(modelBrand("opencode", "opencode-go/kimi"), "opencode");
+  assert.equal(modelBrand("opencode", "opencode/claude"), "opencode");
+  assert.equal(modelBrand("opencode"), "opencode");
+  // Una tarea de un motor anterior guarda `opencode-zen`: su marca es la de la fila nueva.
+  assert.equal(modelBrand("opencode-zen", "opencode-go/kimi"), "opencode");
+  assert.equal(modelBrand("free-router-opencode"), "danil");
+  assert.equal(modelBrand("opencode", "legacy-free", { provider: "opencode", fallback: false, models: [{ ...model("legacy-free", "Free"), gratis: true }] }), "danil");
 });
 
 test("el proveedor gratuito sigue la lengua activa con la marca Danil", () => {
-  const surface: Superficie = { id: "opencode-zen-free", provider: "opencode-zen", label: "Free", catalogo: "gratuitos", usable: true, marca: null, porque: null };
+  const surface: Superficie = { id: "free-router-opencode", provider: "free-router-opencode", label: "Free", catalogo: "gratuitos", usable: true, marca: null, porque: null };
   for (const [language, label] of [["es", "Router IA gratis"], ["en", "Free AI Router"]]) {
     aplicarLenguaDeWorkspace(language);
     assert.deepEqual(proveedorDe(surface, model("danil-free/reflection/beam-free", "Beam")), { id: "opencode-free", label, logo: "danil" });
@@ -215,16 +213,16 @@ const response = (available: number) => ({
 });
 
 test("Danil Credits conserva el ejecutor y el modelo que anuncia el engine", () => {
-  const surface: Superficie = { id: "danil-credits", provider: "opencode-zen", label: "Danil Credits", catalogo: "todo", usable: true, marca: null, porque: null };
+  const surface: Superficie = { id: "danil-credits", provider: "opencode", label: "Danil Credits", catalogo: "todo", usable: true, marca: null, porque: null };
   const options = opcionesDeModelos([surface], {
-    "opencode-zen": { provider: "opencode-zen", fallback: false, models: [model(DANIL_CREDITS.modelId, "DeepSeek V4.1 Flash")] },
+    "opencode": { provider: "opencode", fallback: false, models: [model(DANIL_CREDITS.modelId, "DeepSeek V4.1 Flash")] },
   });
   assert.equal(options.length, 1);
-  assert.equal(options[0].agent, "opencode-zen");
+  assert.equal(options[0].agent, "opencode");
   assert.equal(options[0].model.id, DANIL_CREDITS.modelId);
   assert.equal(options[0].proveedor.id, "danil-credits");
   assert.equal(options[0].proveedor.logo, "danil");
-  assert.equal(modelBrand("opencode-zen", DANIL_CREDITS.modelId), "danil");
+  assert.equal(modelBrand("opencode", DANIL_CREDITS.modelId), "danil");
   assert.equal(agruparModelos(options, "Danil Credits")[0].id, "danil-credits");
   assert.equal(opcionesDeModelos([surface], {}).length, 0);
 });
@@ -281,10 +279,10 @@ test("the BFF reader uses the session-bound path and keeps loading, null, zero a
 
 
 test("Credits no habilita BYOK ni Free y sus permisos no heredan otra superficie", () => {
-  const credits: Superficie = { id: "danil-credits", provider: "opencode-zen", label: "Danil Credits", catalogo: "todo", usable: true, marca: null, porque: null };
-  const byok: Superficie = { ...credits, id: "opencode-zen", label: "OpenCode", catalogo: "de_pago", usable: false };
-  const free: Superficie = { ...credits, id: "opencode-zen-free", label: "Free", catalogo: "gratuitos", usable: false };
-  const catalog = { "opencode-zen": { provider: "opencode-zen", fallback: false, models: [
+  const credits: Superficie = { id: "danil-credits", provider: "opencode", label: "Danil Credits", catalogo: "todo", usable: true, marca: null, porque: null };
+  const byok: Superficie = { ...credits, id: "opencode", label: "OpenCode", catalogo: "de_pago", usable: false };
+  const free: Superficie = { ...credits, id: "opencode-free", label: "Free", catalogo: "gratuitos", usable: false };
+  const catalog = { "opencode": { provider: "opencode", fallback: false, models: [
     model(DANIL_CREDITS.modelId, "DeepSeek"), model("byok/model", "Own key"),
     { ...model("danil-free/reflection/beam-free", "Beam"), gratis: true },
     model("danil-credits/other", "Unapproved"),

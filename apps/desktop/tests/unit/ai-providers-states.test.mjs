@@ -116,7 +116,7 @@ for (const [state, wallet, status, expected] of [
 
 test("the task selector chooses the engine-advertised Credits model through its existing agent", async () => {
   const id = "danil-credits/deepseek/deepseek-v4.1-flash";
-  const provider = "opencode-zen";
+  const provider = "opencode";
   let ready = false;
   const option = (id, label) => ({ id, label, gratis: false, note: null, efforts: [], default_effort: null });
   const row = { id: "t1", title: "Credits task", last_message: "", provider, model: "base", refs: [], updated_at: 0, turns: 1, parent: null, esperando: false };

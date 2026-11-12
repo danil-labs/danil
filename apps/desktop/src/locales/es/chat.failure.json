@@ -1,4 +1,6 @@
 {
   "chat.failure.free_router_stopped": "Router IA gratis detuvo este turno para evitar reenviar el contenido.",
-  "chat.failure.free_router_mcp_credentials": "Este turno no puede iniciar con Router IA gratis por las restricciones de su configuración."
+  "chat.failure.free_router_mcp_credentials": "Este turno no puede iniciar con Router IA gratis por las restricciones de su configuración.",
+  "chat.failure.local_models_removed": "Los modelos locales ya no están disponibles. La tarea conserva su historia; continúala con otro agente.",
+  "chat.failure.free_router_model_only": "El Free Router solo corre su modelo gratuito. Elígelo en la lista o cambia de agente."
 }

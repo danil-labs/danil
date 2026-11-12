@@ -144,8 +144,6 @@
   "chat.model.none": "none",
   "chat.model.note.fable": "the newest in the family",
   "chat.model.note.haiku": "the fastest",
-  "chat.model.note.local_cold": "on this computer — {engine} loads it on the first reply",
-  "chat.model.note.local_loaded": "on this computer, with {engine}",
   "chat.model.note.opus": "the most capable",
   "chat.model.note.sonnet": "balance of capability and speed",
   "chat.model.placeholder": "model",
@@ -234,6 +232,7 @@
   "chat.commands.no_match": "Nothing matches.",
   "chat.suggestions.truncated": "What is attached has more files than fit in this list.",
   "chat.surface.gone": "This task ran with an agent the app no longer offers. Pick another one to keep going.",
+  "chat.surface.local_retired": "Local model · no longer available. The task keeps its history; pick another agent to keep going.",
   "chat.rail.label": "Input messages",
   "chat.thread.new_messages": {
     "one": "{count} new message",

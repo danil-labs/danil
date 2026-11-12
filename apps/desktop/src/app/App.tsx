@@ -114,7 +114,7 @@ import BaseBranchPicker from "../features/projects/BaseBranchPicker";
 import { watchHandlerStatus, watchHandlerStatuses } from "../features/projects/handlerPresence";
 import { EmptyContext, ProjectPicker } from "../features/projects/Projects";
 import { bringHereLabel, canBringHere, carryOrigin, machineName, machineOf, machineWakes, machines, refetchMachines, remoteChildScope, runOn, senderTaskId, setRunOn, setTaskRowMachine } from "../features/machines/store";
-import { launcherOf, withRemoteLaunchers } from "@terminus/tasks";
+import { canonicalAgentId, isFreeRouterModel, launcherOf, OPENCODE, withRemoteLaunchers } from "@terminus/tasks";
 import type { CarriedBase, CarryCheck } from "../features/machines/carry";
 // Chunk aparte: solo lo carga quien crea una tarea, no la carga inicial.
 const MachinePicker = lazy(() =>
@@ -4266,18 +4266,7 @@ export default function App() {
       void cargarSuperficies(false);
     };
     window.addEventListener("harness:consentimiento", refrescar);
-    // El modelo local activo va primero en su catálogo: una tarea nueva lo adopta al cambiarlo.
-    const motorLocal = listen("local-engine", () => {
-      void cargarSuperficies(false).then(() => {
-        if (sessionId() || agent() !== "opencode-local") return;
-        const activo = catalogos()["opencode-local"]?.models[0]?.id;
-        if (activo) setModel(activo);
-      });
-    });
-    onCleanup(() => {
-      window.removeEventListener("harness:consentimiento", refrescar);
-      void motorLocal.then((f) => f());
-    });
+    onCleanup(() => window.removeEventListener("harness:consentimiento", refrescar));
   });
 
   // Lo que el menú de la barra ofrece depende del agente y del workspace, no
@@ -4510,7 +4499,8 @@ export default function App() {
       if (!current()) return;
       // Reanudar conserva con qué corrió: una sesión continuada con otro agente
       // o con otro modelo ya no es la misma sesión.
-      setAgent(s.provider);
+      // Una tarea de un motor anterior guarda `opencode-zen`; el modelo decide si es OpenCode o el Free Router.
+      setAgent(canonicalAgentId(s.provider, modeloDeSubtarea(s)));
       setModel(modeloDeSubtarea(s) ?? "");
       setEffort(s.effort ?? "");
       // El chat de un encargado no es una tarea que se reabre para releer
@@ -4556,7 +4546,7 @@ export default function App() {
           project: proyecto, id, history_request: { version: 1, kind: "state" },
         }, deLaTarea(id));
         if (!current()) return;
-        setAgent(state.provider);
+        setAgent(canonicalAgentId(state.provider, modeloDeSubtarea(state)));
         setModel(modeloDeSubtarea(state) ?? "");
         setEffort(state.effort ?? "");
         setModo(state.permission_mode ?? "");
@@ -6158,7 +6148,7 @@ export default function App() {
       // validó y la escribió: primero persistir, y solo entonces pintarla.
       const opciones = abierta ? deLaTarea(abierta) : llevado ? { headers: { "x-terminus-machine": llevado.target } } : creationOptions;
       const attachments = await attachmentsFor(m.attachments, opciones, proyecto);
-      if (m.provider === "opencode-zen" && m.model !== "danil-free/reflection/beam-free") {
+      if (canonicalAgentId(m.provider) === OPENCODE && !isFreeRouterModel(m.model)) {
         const selected = catalogos()[m.provider]?.models.find((model) => model.id === m.model);
         if (!selected || selected.gratis === true) throw new Error(t("surfaces.free_off"));
       }
@@ -7669,7 +7659,7 @@ export default function App() {
           void prepare(options.headers).then(async () => {
             if (revision !== composerRevision) return;
             await cargarSuperficies(false);
-            await cargarModelos("opencode-zen", true);
+            await cargarModelos(OPENCODE, true);
           }).catch(() => setError(t("chat.credits.integration_pending")));
         }}
         /* Lo utilizable, más la superficie de la tarea abierta si dejó de
@@ -7678,7 +7668,7 @@ export default function App() {
         superficies={menuDeSuperficies()}
         superficie={superficie()}
         /* La salida del estado vacío: es la sección, no una superficie.
-           Apuntaba al id de la primera —«claude», «opencode-zen»—, válido
+           Apuntaba al id de la primera —«claude», «opencode»—, válido
            cuando cada proveedor tenía panel propio; agrupada la
            configuración por secciones, ese id ya no nombra ningún panel y
            el primer arranque salía a ninguna parte, justo el peor sitio

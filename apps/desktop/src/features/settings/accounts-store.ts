@@ -157,14 +157,15 @@ export type AgentOpt = {
    * que saber siempre es cuándo su material sale de la máquina, y eso es lo que
    * este dato dice.
    *
-   * **Sustituye a dos `if` por id** (`agente() === "opencode-local"` y
-   * `=== "opencode-zen"`) que montaban a mano los bloques de motores y de
+   * **Sustituye a los `if` por id** que montaban a mano el bloque de
    * gratuitos. Escritos así, el tercer caso entra por la rama de otro sin que
    * nada falle: es el mismo comodín que `agents::AGENTS` existe para no volver a
    * escribir, cruzado al otro lado del puente donde ningún guarda de Rust lo
    * alcanza.
    */
-  inferencia: "en_la_maquina" | "con_cuenta" | "sin_pedir_nada";
+  inferencia: "con_cuenta" | "sin_pedir_nada";
+  /** Fila del Free Router (`free-router-<motor>`): sin cuenta, fuera de las conexiones. Falta en motores anteriores. */
+  free_router?: boolean;
 };
 
 /**

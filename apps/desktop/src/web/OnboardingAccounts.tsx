@@ -1,3 +1,4 @@
+import { isFreeRouterAgent, isRetiredAgent } from "../../../../packages/tasks/src/agents.ts";
 import { createSignal, For, Match, onCleanup, onMount, Show, Switch } from "solid-js";
 import { nombreDeAgente } from "../features/onboarding/onboarding-store";
 import { Pantalla } from "../features/onboarding/Screen";
@@ -13,8 +14,8 @@ import { asFailure, FailureNote } from "../ui/Failure";
 import { Input } from "../ui/Input";
 import { MarcaAgente } from "../ui/icons";
 
-/** Local models and providers with an app of their own are never offered on a managed computer. */
-export const offered = (a: AgentOpt) => a.available && !a.sin_cuenta && !a.external_install_url && a.id !== "opencode-local";
+/** Free Router rows and providers with an app of their own are never offered on a managed computer. */
+export const offered = (a: AgentOpt) => a.available && !a.sin_cuenta && !a.external_install_url && !isFreeRouterAgent(a.id) && !isRetiredAgent(a.id);
 
 /** One card per cloud provider installed on the computer, each connecting its account in this browser. */
 export function OnboardingAccounts(props: { workspace: string; onDone: () => void }) {

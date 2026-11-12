@@ -91,7 +91,7 @@ test("Free policy read, accept and revoke keep their captured destination in the
   const operations: [string, Args][] = [
     ["workspaces_startup", {}],
     ["set_provider_consent", { provider: "opaque-reference", accepted: true }],
-    ["set_provider_consent", { provider: "opencode-zen", accepted: false }],
+    ["set_provider_consent", { provider: "free-router-opencode", accepted: false }],
   ];
   for (const [command, args] of operations) {
     const before = native.length;

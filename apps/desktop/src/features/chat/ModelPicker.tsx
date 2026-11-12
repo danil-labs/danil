@@ -1,3 +1,4 @@
+import { FREE_ROUTER_OPENCODE, OPENCODE } from "@terminus/tasks";
 import Check from "lucide-solid/icons/check";
 import ChevronDown from "lucide-solid/icons/chevron-down";
 import Gift from "lucide-solid/icons/gift";
@@ -77,7 +78,7 @@ export default function SelectorDeModelo(props: SelectorDeModeloProps) {
   const [favoritos, setFavoritos] = createPref<string[]>("chat.model.favorites", []);
   const [cupoGo, setCupoGo] = createSignal<Query | null>(null);
   const filas = new Map<string, HTMLElement>();
-  const consent = createFreeRouterConsent({ agente: () => "opencode-zen" });
+  const consent = createFreeRouterConsent({ agente: () => FREE_ROUTER_OPENCODE });
   const estadoRouter = () => routerOfferState(
     consent.cargado() ? (consent.texto() ? { enabled: consent.texto()!.policy.enabled, accepted: consent.aceptado() } : null) : undefined,
     consent.routeAvailable(),
@@ -145,10 +146,10 @@ export default function SelectorDeModelo(props: SelectorDeModeloProps) {
       const options = props.invokeOptions;
       setCupoGo(null);
       if (props.models.some((m) => m.proveedor.id === "opencode-go")) {
-        void invoke<AccountList>("list_accounts", { provider: "opencode-zen" }, options)
+        void invoke<AccountList>("list_accounts", { provider: OPENCODE }, options)
           .then((accounts) => {
             if (!accounts.active) return null;
-            return invoke<Query>("account_limits", { provider: "opencode-zen", id: accounts.active, force: false }, options);
+            return invoke<Query>("account_limits", { provider: OPENCODE, id: accounts.active, force: false }, options);
           })
           .then(setCupoGo)
           .catch(() => setCupoGo(null));

@@ -12,9 +12,8 @@ export async function crearWorkspace(nombre: string) {
   return w;
 }
 
-/** La fila local se nombra por lo que da; Antigravity lleva también Gemini, que es como más se le conoce. */
+/** Antigravity lleva también Gemini, que es como más se le conoce. */
 export const nombreDeAgente = (a: { id: string; label: string }) => {
-  if (a.id === "opencode-local") return t("onboarding.agent.local");
   if (a.id === "antigravity") return t("onboarding.agent.antigravity");
   return a.label;
 };
