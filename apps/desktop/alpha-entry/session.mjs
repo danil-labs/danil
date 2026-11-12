@@ -1,3 +1,5 @@
+import { upstreamSignal } from "./transport.mjs";
+
 /**
  * WorkOS sign-in for alfa. The browser never holds a WorkOS or refresh token:
  * at the callback a service-role RPC resolves an approved existing person. A
@@ -118,6 +120,7 @@ async function workos(config, path, init = {}) {
   try {
     response = await fetch(WORKOS_API + path, {
       ...init,
+      signal: upstreamSignal(config.env, init.signal),
       headers: { Authorization: `Bearer ${config.apiKey}`, Accept: "application/json", ...(init.body ? { "Content-Type": "application/json" } : {}) },
       redirect: "manual",
     });
@@ -140,6 +143,7 @@ async function supabase(config, path, init = {}) {
   try {
     response = await fetch(config.supabaseUrl + path, {
       ...init,
+      signal: upstreamSignal(config.env, init.signal),
       headers: { apikey: config.serviceKey, Authorization: `Bearer ${config.serviceKey}`, Accept: "application/json", ...(init.body ? { "Content-Type": "application/json" } : {}) },
       redirect: "manual",
     });
@@ -513,7 +517,7 @@ async function desktopExchange(config, request) {
   const remaining = code.exp * 1000 - Date.now();
   if (remaining <= 0) throw new Denied("invalid_code");
   const consumed = await codes.get(codes.idFromName(code.id)).fetch("https://desktop-code/consume", {
-    method: "POST", body: JSON.stringify({ exp: code.exp }), signal: AbortSignal.timeout(remaining),
+    method: "POST", body: JSON.stringify({ exp: code.exp }), signal: upstreamSignal(config.env, AbortSignal.timeout(remaining)),
   });
   if (consumed.status === 401) throw new Denied("invalid_code");
   if (consumed.status !== 204) throw unavailable();
@@ -545,7 +549,7 @@ async function desktopLogout(config, request) {
   if (!validDesktop(value)) return new Response(null, { status: 204, headers: NO_STORE });
   try {
     const renewed = await refreshSupabaseSession(config, value.refresh, value.uuid);
-    const response = await fetch(`${config.supabaseUrl}/auth/v1/logout?scope=local`, { method: "POST", headers: { apikey: config.serviceKey, Authorization: `Bearer ${renewed.answer.access_token}` }, redirect: "manual" });
+    const response = await fetch(`${config.supabaseUrl}/auth/v1/logout?scope=local`, { method: "POST", headers: { apikey: config.serviceKey, Authorization: `Bearer ${renewed.answer.access_token}` }, redirect: "manual", signal: upstreamSignal(config.env) });
     if (!response.ok && response.status !== 401 && response.status !== 404) throw unavailable();
   } catch (error) {
     if (!(error instanceof Denied) || error.status === 503) throw error instanceof Denied ? error : unavailable();

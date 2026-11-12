@@ -10,7 +10,7 @@ function harness() {
   const env = {
     APPV2_BFF: { fetch: async request => {
       calls.push(request);
-      return Response.json({ ok: true }, { headers: { "Set-Cookie": "unsafe=1", "Cache-Control": "public" } });
+      return Response.json({ ok: true }, { headers: { "Set-Cookie": "unsafe=1", "Cache-Control": "no-store" } });
     } },
     TERMINUS_WEB: { fetch: async request => {
       calls.push(request);
@@ -20,7 +20,7 @@ function harness() {
   return { calls, env, fetch: (path, options) => worker.fetch(new Request(origin + path, options), env) };
 }
 
-test("exact reads preserve identity headers and query, never cookies or cache headers", async () => {
+test("exact reads preserve identity headers and query, never cookies", async () => {
   for (const path of ["/auth/profile", "/api/inbox/conversations?account_id=7&limit=30&offset=0", "/api/inbox/conversations/12/messages?account_id=7&limit=50&before_id=100", "/api/channels"]) {
     const h = harness();
     const response = await h.fetch(prefix + path, { headers: { ...auth, Origin: origin, Referer: origin + "/inbox", Cookie: "legacy=1", "X-Account-Id": "99" } });
@@ -690,4 +690,59 @@ test("retired calendar, funnel and metrics routes never reach the BFF", async ()
     assert.equal((await h.fetch(prefix + path, { headers: auth })).status, 404, path);
   }
   assert.equal(h.calls.length, 0);
+});
+
+
+test("forward preserves JSON problems, status and the closed response header list", async () => {
+  for (const status of [400, 401, 403, 404, 409, 422, 429, 503]) {
+    const h = harness();
+    const problem = { type: "about:blank", title: "Upstream failure", status };
+    const allowed = { "Content-Type": "application/problem+json; charset=utf-8", "Retry-After": "12", "X-Request-Id": "req-123", ETag: '\"v1\"', "Cache-Control": "private, max-age=0" };
+    h.env.APPV2_BFF.fetch = async () => Response.json(problem, { status, headers: { ...allowed, "Set-Cookie": "secret=1", Location: "https://evil.example", "X-Secret": "hidden" } });
+    const response = await h.fetch(prefix + "/auth/profile", { headers: auth });
+    assert.equal(response.status, status);
+    assert.deepEqual(await response.json(), problem);
+    for (const [name, value] of Object.entries(allowed)) assert.equal(response.headers.get(name), value);
+    for (const name of ["Set-Cookie", "Location", "X-Secret", "Pragma"]) assert.equal(response.headers.get(name), null);
+  }
+});
+
+test("empty upstream responses retain validators and cache policy", async () => {
+  const h = harness();
+  h.env.APPV2_BFF.fetch = async () => new Response(null, { status: 204, headers: { ETag: '\"v2\"', "Cache-Control": "private", "X-Request-Id": "empty" } });
+  const response = await h.fetch(prefix + "/auth/profile", { headers: auth });
+  assert.equal(response.status, 204);
+  assert.equal(await response.text(), "");
+  assert.equal(response.headers.get("ETag"), '\"v2\"');
+  assert.equal(response.headers.get("Cache-Control"), "private");
+});
+
+test("BFF calls have a configured deadline and terminate when it expires", async t => {
+  const h = harness();
+  h.env.UPSTREAM_TIMEOUT_MS = "5";
+  let expiry;
+  t.after(() => clearTimeout(expiry));
+  h.env.APPV2_BFF.fetch = async request => {
+    await new Promise((resolve, reject) => request.signal.addEventListener("abort", () => reject(request.signal.reason), { once: true }));
+    return Response.json({ late: true });
+  };
+  const response = await Promise.race([h.fetch(prefix + "/auth/profile", { headers: auth }), new Promise((_, reject) => { expiry = setTimeout(() => reject(new Error("deadline missing")), 100); })]);
+  assert.equal(response.status, 502);
+});
+
+test("asset fetches also receive a deadline and preserve caller cancellation", async () => {
+  const h = harness();
+  h.env.UPSTREAM_TIMEOUT_MS = "5";
+  for (const path of ["/", "/m/inbox"]) {
+    const controller = new AbortController();
+    let signal;
+    h.env.TERMINUS_WEB.fetch = async request => { signal = request.signal; return new Response("assets"); };
+    await worker.fetch(new Request(origin + path, { signal: controller.signal }), h.env);
+    await new Promise(resolve => setTimeout(resolve, 15));
+    assert.equal(signal.aborted, true, path);
+    const next = new AbortController();
+    await worker.fetch(new Request(origin + path, { signal: next.signal }), h.env);
+    next.abort();
+    assert.equal(signal.aborted, true);
+  }
 });
