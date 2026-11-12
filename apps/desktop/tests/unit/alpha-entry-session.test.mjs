@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import worker from "../../alpha-entry/worker.mjs";
+import worker, { DesktopCodeStore } from "../../alpha-entry/worker.mjs";
 import { safeNext } from "../../alpha-entry/session.mjs";
 import { createHash } from "node:crypto";
 
@@ -10,6 +10,35 @@ const uuid = "6f1c2b8e-3a4d-4e5f-8a9b-0c1d2e3f4a5b";
 const b64url = bytes => Buffer.from(bytes).toString("base64url");
 
 const workosAccess = `${b64url(Buffer.from("{}"))}.${b64url(Buffer.from(JSON.stringify({ sid: "session_01ABC", sub: "user_01ABC" })))}.sig`;
+
+/** Storage persists across object instances; transactions serialize concurrent requests. */
+function desktopCodes() {
+  const objects = new Map();
+  return {
+    idFromName: name => name,
+    get: id => ({ fetch: (input, init) => {
+      if (!objects.has(id)) {
+        let values = new Map();
+        let pending = Promise.resolve();
+        objects.set(id, {
+          setAlarm: async () => {},
+          deleteAll: async () => { values.clear(); },
+          transaction: fn => {
+            const run = pending.then(async () => {
+              const next = new Map(values);
+              const result = await fn({ get: async key => next.get(key), put: async (key, value) => { next.set(key, value); } });
+              values = next;
+              return result;
+            });
+            pending = run.catch(() => {});
+            return run;
+          },
+        });
+      }
+      return new DesktopCodeStore({ storage: objects.get(id) }).fetch(new Request(input, init));
+    } }),
+  };
+}
 
 /** WorkOS and Supabase as the Worker sees them; `state` changes what each answers. */
 function world(overrides = {}) {
@@ -80,6 +109,7 @@ function world(overrides = {}) {
     SUPABASE_SERVICE_ROLE_KEY: "service",
     SESSION_COOKIE_KEY: b64url(Buffer.alloc(32, 7)),
     TERMINUS_WEB: { fetch: async () => new Response("assets") },
+    DESKTOP_CODES: desktopCodes(),
   };
   return { state, calls, env, fetch };
 }
@@ -452,4 +482,107 @@ test("desktop: exchange and refresh read the grant again; a revoked person gets 
   const exchanged = await desktopJson(w, "/auth/desktop/exchange", { code: pending, verifier: desktopVerifier });
   assert.equal(exchanged.status, 403);
   assert.equal("access_token" in await exchanged.json(), false);
+});
+
+async function approvedDesktopCode(w) {
+  const { cookie } = await signedIn(w);
+  const approved = await call(w, "/auth/desktop/approve", {
+    method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded", Cookie: cookie, Origin: origin }, body: desktopQuery(),
+  });
+  assert.equal(approved.status, 303);
+  return new URL(approved.headers.get("Location")).searchParams.get("code");
+}
+
+const exchangeRequest = code => new Request(origin + "/auth/desktop/exchange", {
+  method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ code, verifier: desktopVerifier }),
+});
+const sessionOpens = w => w.calls.filter(c => c.url.endsWith("/auth/v1/verify")).length;
+
+test("desktop: a valid code opens exactly one new session", async () => {
+  const w = world();
+  const code = await approvedDesktopCode(w);
+  const before = sessionOpens(w);
+  const response = await withFetch(w, () => worker.fetch(exchangeRequest(code), w.env));
+  assert.equal(response.status, 200);
+  assert.equal((await response.json()).user.user_id, uuid);
+  assert.equal(sessionOpens(w), before + 1);
+});
+
+test("desktop: a second exchange rejects the consumed code without opening a session", async () => {
+  const w = world();
+  const code = await approvedDesktopCode(w);
+  assert.equal((await withFetch(w, () => worker.fetch(exchangeRequest(code), w.env))).status, 200);
+  const before = sessionOpens(w);
+  const replay = await withFetch(w, () => worker.fetch(exchangeRequest(code), w.env));
+  assert.equal(replay.status, 401);
+  assert.deepEqual(await replay.json(), { error: "invalid_code" });
+  assert.equal(sessionOpens(w), before);
+});
+
+test("desktop: concurrent exchanges accept exactly one and open only one session", async () => {
+  const w = world();
+  const code = await approvedDesktopCode(w);
+  const before = sessionOpens(w);
+  const replies = await withFetch(w, () => Promise.all([
+    worker.fetch(exchangeRequest(code), w.env), worker.fetch(exchangeRequest(code), w.env),
+  ]));
+  assert.deepEqual(replies.map(r => r.status).sort(), [200, 401]);
+  assert.deepEqual(await replies.find(r => r.status === 401).json(), { error: "invalid_code" });
+  assert.equal(sessionOpens(w), before + 1);
+});
+
+test("desktop: a code expires at 120 seconds without opening a session", async t => {
+  const issuedAt = Date.now();
+  t.mock.method(Date, "now", () => issuedAt);
+  const w = world();
+  const code = await approvedDesktopCode(w);
+  const before = sessionOpens(w);
+  t.mock.method(Date, "now", () => issuedAt + 120_000);
+  const response = await withFetch(w, () => worker.fetch(exchangeRequest(code), w.env));
+  assert.equal(response.status, 401);
+  assert.deepEqual(await response.json(), { error: "invalid_code" });
+  assert.equal(sessionOpens(w), before);
+});
+
+test("desktop: storage unavailability fails closed without a new session", async () => {
+  for (const unavailable of [undefined, { idFromName: name => name, get: () => ({ fetch: async () => { throw new Error("storage unavailable"); } }) },
+    { idFromName: name => name, get: () => ({ fetch: async () => new Response(null, { status: 503 }) }) }]) {
+    const w = world();
+    const code = await approvedDesktopCode(w);
+    const before = sessionOpens(w);
+    w.env.DESKTOP_CODES = unavailable;
+    const response = await withFetch(w, () => worker.fetch(exchangeRequest(code), w.env));
+    assert.equal(response.status, 503);
+    assert.deepEqual(await response.json(), { error: "identity_unavailable" });
+    assert.equal(sessionOpens(w), before);
+  }
+});
+
+test("desktop: a lost storage acknowledgement never permits a replay", async () => {
+  const w = world();
+  const code = await approvedDesktopCode(w);
+  const before = sessionOpens(w);
+  const codes = w.env.DESKTOP_CODES;
+  w.env.DESKTOP_CODES = { idFromName: codes.idFromName, get: id => ({ fetch: async (...args) => {
+    await codes.get(id).fetch(...args);
+    throw new Error("acknowledgement lost");
+  } }) };
+  assert.equal((await withFetch(w, () => worker.fetch(exchangeRequest(code), w.env))).status, 503);
+  w.env.DESKTOP_CODES = codes;
+  assert.equal((await withFetch(w, () => worker.fetch(exchangeRequest(code), w.env))).status, 401);
+  assert.equal(sessionOpens(w), before);
+});
+
+test("desktop: a GoTrue failure leaves the code consumed", async () => {
+  const w = world();
+  const code = await approvedDesktopCode(w);
+  const original = w.fetch;
+  w.fetch = async (input, init) => new URL(input).pathname === "/auth/v1/verify"
+    ? new Response(null, { status: 503 }) : original(input, init);
+  assert.equal((await withFetch(w, () => worker.fetch(exchangeRequest(code), w.env))).status, 503);
+  w.fetch = original;
+  const before = sessionOpens(w);
+  const replay = await withFetch(w, () => worker.fetch(exchangeRequest(code), w.env));
+  assert.equal(replay.status, 401);
+  assert.equal(sessionOpens(w), before);
 });

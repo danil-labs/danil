@@ -436,7 +436,7 @@ async function desktopApprove(config, request) {
     if (!fields) throw new Denied("invalid_body", 400);
     const session = await browserSession(config, request);
     await loginOf(config, session.uuid);
-    const code = await seal(config.env, DESKTOP_CODE, { user: session.user, sid: session.sid, uuid: session.uuid, challenge: fields.challenge, exp: now() + DESKTOP_CODE_SECONDS });
+    const code = await seal(config.env, DESKTOP_CODE, { id: randomToken(), user: session.user, sid: session.sid, uuid: session.uuid, challenge: fields.challenge, exp: now() + DESKTOP_CODE_SECONDS });
     const back = new URL(`http://127.0.0.1:${fields.port}/callback`);
     back.searchParams.set("code", code);
     back.searchParams.set("state", fields.state);
@@ -501,13 +501,23 @@ async function desktopExchange(config, request) {
   } catch {
     throw new Denied("invalid_code");
   }
-  if (!validPerson(code) || !CHALLENGE_RE.test(code.challenge ?? "")) throw new Denied("invalid_code");
+  if (!validPerson(code) || !CHALLENGE_RE.test(code.id ?? "") || !CHALLENGE_RE.test(code.challenge ?? "")) throw new Denied("invalid_code");
   const challenge = b64url(await crypto.subtle.digest("SHA-256", encoder.encode(body.verifier)));
   if (!equal(challenge, code.challenge)) throw new Denied("invalid_code");
   await checkSession(config, code.user, code.sid);
   await requireTerminusAccess(config, code.uuid);
   // A NEW GoTrue session for the window, opened only by whoever holds the verifier.
   const login = await loginOf(config, code.uuid);
+  const codes = config.env.DESKTOP_CODES;
+  if (!codes) throw unavailable();
+  const remaining = code.exp * 1000 - Date.now();
+  if (remaining <= 0) throw new Denied("invalid_code");
+  const consumed = await codes.get(codes.idFromName(code.id)).fetch("https://desktop-code/consume", {
+    method: "POST", body: JSON.stringify({ exp: code.exp }), signal: AbortSignal.timeout(remaining),
+  });
+  if (consumed.status === 401) throw new Denied("invalid_code");
+  if (consumed.status !== 204) throw unavailable();
+  // Una caída posterior quema el código: el usuario debe aprobar otro, nunca reabrir una sesión.
   const opened = await openSupabaseSession(config, { uuid: code.uuid, loginEmail: login.email });
   const session = await seal(config.env, DESKTOP_SESSION, { user: code.user, sid: code.sid, uuid: code.uuid, refresh: opened.refresh, exp: now() + SESSION_SECONDS });
   return json({ session, ...opened.answer }, 200);

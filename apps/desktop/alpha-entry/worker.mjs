@@ -9,6 +9,7 @@
 // a Meta responde 403 salvo con BROADCAST_WRITES="on"; lo que llega a clientes, 409 salvo con
 // BROADCAST_DELIVERY="on". Ambas pasan por el preflight de campaigns.manage.
 // Danil Business: lista cerrada en business.mjs, solo la cuenta activa del Bearer.
+export { DesktopCodeStore } from "./desktop-code-store.mjs";
 import { broadcastRead, broadcastWrite } from "./broadcasts.mjs";
 import { BUSINESS_MAX_BODY, businessBody, businessRoute } from "./business.mjs";
 import { handleAuth, hasSignedOutMarker, sessionConfig } from "./session.mjs";
