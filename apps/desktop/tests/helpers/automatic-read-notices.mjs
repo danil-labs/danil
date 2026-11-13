@@ -4,9 +4,12 @@ import { RESPONSES } from './mount-guard.mjs';
 const scenario = process.argv[2] ?? 'sources';
 let unavailable = true;
 let disconnected = scenario === 'connection';
+let releaseStartup;
+let startupAttempts = 0;
 const sample = { cursor: 0, gap: false, replay: false, runtime: 'fixture', reset: false };
 const app = await boot('listo', 'automatic-read-notices', {
   ...RESPONSES,
+  workspaces_startup: scenario === 'startup' ? () => ++startupAttempts === 1 ? Promise.reject({ what: 'Startup offline' }) : new Promise(resolve => { releaseStartup = resolve; }) : RESPONSES.workspaces_startup,
   list_projects: scenario === 'action' ? [{ id: 'vm', name: 'VM', kind: 'folder', working_directory: '/vm', sources: [] }] : [],
   send_message: () => Promise.reject('chat.context.cleanup_failed'),
   service_poll: () => disconnected ? Promise.reject('shell.service.engine_down') : sample,
@@ -15,6 +18,20 @@ const app = await boot('listo', 'automatic-read-notices', {
 const text = () => app.w.document.body.textContent;
 const toast = () => app.w.document.querySelector('[data-toast-error]');
 assert.equal(toast(), null, 'Automatic source failure must not create a global error toast');
+if (scenario === 'startup') {
+  assert.ok(app.w.document.querySelector('[data-read-status]'), 'Startup failure has a local retry');
+  const draft = app.w.document.querySelector('textarea');
+  draft.value = 'Do not reset this draft';
+  draft.dispatchEvent(new app.w.Event('input', { bubbles: true }));
+  app.w.document.querySelector('[data-read-status] button').click();
+  await sleep(50);
+  releaseStartup(RESPONSES.workspaces_startup);
+  await sleep(300);
+  assert.equal(app.w.document.querySelector('[data-read-status]'), null);
+  assert.equal(app.w.document.querySelector('textarea').value, 'Do not reset this draft', 'Retry must not reapply an already open workspace');
+  console.log('PASS startup: retry preserves the open draft');
+  process.exit(0);
+}
 if (scenario === 'connection') {
   await sleep(2500);
   assert.ok(app.w.document.querySelector('[data-read-status]'), 'Connection failure has local status');
