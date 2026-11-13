@@ -1,6 +1,7 @@
 import { For, Show, createSignal, type JSX } from "solid-js";
 import AlertTriangle from "lucide-solid/icons/triangle-alert";
 import RefreshCw from "lucide-solid/icons/refresh-cw";
+import { type CredentialState, credentialState } from "@terminus/protocol";
 import { SESION_INICIADA, type Account, type AccountStatus } from "./accounts-store";
 import { Badge } from "../../ui/Badge";
 import { ProgressBar } from "../../ui/ProgressBar";
@@ -11,7 +12,6 @@ import {
   haceCuanto,
   left,
   legible,
-  revocada,
   tono,
 } from "../../lib/limits";
 import { cn } from "../../lib/utils";
@@ -34,10 +34,11 @@ export default function AccountCard(props: {
   status?: AccountStatus;
   checkingStatus?: boolean;
   /**
-   * La cuenta estaba autenticada y la última consulta de estado no respondió.
-   * Lo que quedó en `status` es de antes y no se enseña como «conectada».
+   * El estado de la credencial (`credentialState`), cuando quien monta la tarjeta
+   * sabe cómo falló su última consulta. Sin él se decide aquí con la misma función,
+   * a partir de `status` y `limits`.
    */
-  statusUnknown?: boolean;
+  credential?: CredentialState;
   limits?: Query;
   lastGood?: Read;
   loadingLimits?: boolean;
@@ -71,14 +72,9 @@ export default function AccountCard(props: {
   }
   const presentacion = () =>
     accountPresentation(props.account, props.status, props.limits, props.lastGood);
-  // **Cuando las dos fuentes hablan, manda la que preguntó de verdad.**
-  // `status.authenticated` solo dice que el archivo de credencial está en disco;
-  // un 401 del proveedor dice que además ya no sirve. Sin esta línea la tarjeta
-  // enseña la etiqueta «conectada» **encima del error que la desmiente**.
-  const autenticada = () =>
-    revocada(props.limits)
-      ? false
-      : (props.status?.authenticated ?? inferAuthenticated(props.limits));
+  const credencial = (): CredentialState =>
+    props.credential ??
+    credentialState({ status: props.status, limits: props.limits, authenticatedAt: props.account.authenticated_at });
   // Una espera con la última lectura cuenta como leída: sin atenuar, y el aviso
   // pasa a ser una nota de cuándo se actualiza.
   const leido = () => legible(props.limits);
@@ -90,36 +86,29 @@ export default function AccountCard(props: {
     props.loadingLimits ||
     props.onRefreshLimits || props.onRecheckStatus;
   const fila = () => props.variant === "row";
-  const conexion = () => (
-    <Show
-      when={!props.checkingStatus}
-      fallback={<StatusTag row={fila()}>{t("settings.account_card.checking")}</StatusTag>}
-    >
-      <Show
-        when={!props.statusUnknown}
-        fallback={
-          <StatusTag row={fila()} tone="disconnected">
-            {t("settings.account_card.unverified")}
-          </StatusTag>
-        }
-      >
-      <Show
-        when={
-          autenticada() !== undefined &&
-          !props.status?.unreadable &&
-          // En la fila solo se nombra la cuenta caída; «activa» ya dice cuál se usa.
-          !(fila() && autenticada())
-        }
-      >
-        <StatusTag row={fila()} tone={autenticada() ? "connected" : "disconnected"}>
-          {autenticada()
-            ? t("settings.account_card.connected")
-            : t("settings.account_card.disconnected")}
-        </StatusTag>
-      </Show>
-      </Show>
-    </Show>
-  );
+  const conexion = () => {
+    if (props.checkingStatus) return <StatusTag row={fila()}>{t("settings.account_card.checking")}</StatusTag>;
+    const c = credencial();
+    switch (c.kind) {
+      // En la fila solo se nombra la cuenta caída; «activa» ya dice cuál se usa.
+      case "connected":
+        return fila() ? null : <StatusTag tone="connected">{t("settings.account_card.connected")}</StatusTag>;
+      case "disconnected":
+        return <StatusTag row={fila()} tone="disconnected">{t("settings.account_card.disconnected")}</StatusTag>;
+      case "unknown":
+        // Apagada no es una falla: la credencial está como estaba y se mira al encenderla.
+        if (c.why === "machine_off") return <StatusTag row={fila()}>{t("settings.account_card.machine_off")}</StatusTag>;
+        // Ilegible lo explica su aviso de abajo.
+        if (c.why === "unreadable") return null;
+        return <StatusTag row={fila()} tone="disconnected">{t("settings.account_card.unverified")}</StatusTag>;
+      case "pending":
+        return null;
+      default: {
+        const never: never = c;
+        return never;
+      }
+    }
+  };
 
   return (
     // Sin este borde y fondo, la tarjeta en uso vuelve a verse igual a las
@@ -434,12 +423,6 @@ function StatusTag(props: {
       </span>
     </Show>
   );
-}
-
-function inferAuthenticated(limits?: Query): boolean | undefined {
-  if (limits?.mode === "read") return true;
-  if (limits?.mode === "no_account") return false;
-  return undefined;
 }
 
 /**

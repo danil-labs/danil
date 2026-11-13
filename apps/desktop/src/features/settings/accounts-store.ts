@@ -13,6 +13,8 @@ import { t } from "../../lib/i18n";
 import type { Failure } from "../../ui/Failure";
 import { detalleDe } from "../../ui/Failure";
 import { machineOf } from "../machines/store";
+import { machineAsleep } from "@terminus/protocol";
+import { errorCode } from "../../lib/errorCode";
 
 export type Account = {
   id: string;
@@ -202,6 +204,8 @@ export function createAccountLimit(props: {
       const buena = legible(r);
       if (buena) setUltimo(buena);
     } catch (error) {
+      // Apagada no se pudo preguntar: queda la última lectura buena, sin aviso de fallo.
+      if (machineAsleep(errorCode(error))) return void setEstado(undefined);
       setEstado({
         mode: "failed",
         what: t("settings.limits.error", { agent: props.agentLabel }),

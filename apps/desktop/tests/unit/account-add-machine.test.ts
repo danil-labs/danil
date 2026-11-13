@@ -10,7 +10,8 @@ import { INTENT_COMMANDS, type MachineState } from "@terminus/computers";
 import { Fleet, type Link, type MachineInfo } from "@terminus/fleet";
 import "../helpers/catalog.ts";
 import { createRouter } from "../../src/features/machines/router.ts";
-import { addBlockedByExternal } from "../../src/features/settings/account-auth.ts";
+import { cloudInfo, cloudLink } from "../../src/features/machines/cloud-machines.ts";
+import { accountKeyUrl, addAccount, addBlockedByExternal } from "../../src/features/settings/account-auth.ts";
 type Args = Record<string, unknown>;
 function fakeLink(answers: Record<string, unknown>, initial: MachineState) {
   let state = initial; const calls: { command: string; args: Args; workspace: string | null }[] = [];
@@ -60,4 +61,81 @@ test("the + is not blocked while the providers of an off machine are unknown", (
   assert.equal(addBlockedByExternal({ available: false, external_install_url: "https://x" }), true);
   assert.equal(addBlockedByExternal({ available: true, external_install_url: "https://x" }), false);
   assert.equal(addBlockedByExternal({ available: false, external_install_url: null }), false);
+});
+
+/**
+ * La máquina de la organización por `/v1/machines` (MVP): su canal con ticket no
+ * la enciende con un intent; apagada no hay canal y una llamada esperaría su plazo
+ * entero. El «+» la enciende primero por el plano de control, como un mensaje, y
+ * después corre el flujo: crear, saber sus proveedores, conectar.
+ */
+function ticketRelay(answers: Record<string, unknown>) {
+  let state: MachineState = "unknown";
+  const calls: string[] = [];
+  const ls = new Set<(s: MachineState) => void>();
+  const relay = {
+    calls,
+    open() { state = "online"; for (const l of ls) l(state); },
+    state: () => state,
+    call(_i: string, command: string, _w: string | null, _f: string | null, _a: unknown, timeout?: number) {
+      calls.push(command);
+      return new Promise((res, rej) => {
+        if (state !== "online") return void setTimeout(() => rej({ code: "io", detail: "timeout" }), timeout);
+        if (answers[command] === undefined) return rej({ code: "command" });
+        res({ value: answers[command], cached: null });
+      });
+    },
+    onState: (l: (s: MachineState) => void) => { ls.add(l); return () => void ls.delete(l); },
+    onEvents: () => () => {}, onEngine: () => () => {}, blocked: () => null, onBlocked: () => () => {}, retry() {},
+    onDeferred: () => () => {}, deferred: () => ({ actions: [], done: [] }), subscribe() {}, start() {}, close() {},
+  };
+  return relay;
+}
+const CLOUD: MachineInfo = { id: "cmp_vm", name: "Danil", wakes: true };
+/** Los cuatro agentes del MVP; OpenCode 2 entra por el navegador, no por la clave (`accountKeyUrl`). */
+const AGENTS = [
+  { id: "claude", api_key: null },
+  { id: "codex", api_key: null },
+  { id: "antigravity", api_key: null },
+  { id: "opencode", api_key: "https://opencode.ai/auth" },
+];
+for (const where of ["desktop", "web"] as const) for (const start of ["stopped", "online"] as const) for (const agent of AGENTS) {
+  test(`${where}: + for ${agent.id} with the /v1/machines machine ${start} starts it if needed, then adds, learns its providers and logs in`, async () => {
+    const relay = ticketRelay({ add_account: { id: "a1" }, list_providers: AGENTS.map((a) => ({ ...a, available: true })), login_account: null });
+    let row: MachineState = start;
+    const woken: string[] = [];
+    if (start === "online") relay.open();
+    const fleet = new Fleet({ self: where === "desktop" ? "cmp_home" : null, connect: () => cloudLink(relay as never, () => row), deadlines: { read: 40, action: 200, intent: 400 },
+      wake: async (id) => { woken.push(id); row = "starting"; setTimeout(() => relay.open(), 10); return true; } });
+    const router = createRouter(where === "desktop"
+      ? { self: "cmp_home", fleet, native: async (c) => (c === "list_workspaces" ? { workspaces: [{ id: "w", name: "W" }], active: "w" } : null) }
+      : { self: null, fleet, native: null, registry: async () => [{ id: ORG.id, name: ORG.name, computers: ["cmp_vm"], projects: [], settings: null, created_at: "2026-10-01T00:00:00Z" }] as never });
+    fleet.setMachines([cloudInfo(CLOUD)]);
+    fleet.setRegistry([{ id: "w", name: "W", projects: [], computers: ["cmp_home"] }, { id: ORG.id, name: ORG.name, projects: [], computers: ["cmp_vm"] }] as never);
+    await router.handle("list_workspaces");
+    if (where === "desktop") await router.handle("set_active_workspace", { id: ORG.id });
+    assert.equal(fleet.power("cmp_vm"), start === "stopped" ? "off" : "on", "the row says stopped while there is no channel");
+    const call = (command: string, args?: Record<string, unknown>, options?: { headers: Record<string, string> }) => router.handle(command, args, options);
+    const { account, providers } = await addAccount(call as never, agent.id, null);
+    const opt = providers.find((p) => p.id === agent.id);
+    // OpenCode 2 trae su clave de Go en la tabla y aun así entra por el navegador (regresión de #426).
+    if (agent.id === "opencode") assert.equal(accountKeyUrl(opt), null);
+    await router.handle("login_account", { provider: agent.id, id: account.id, mode: "tuberia" });
+    assert.deepEqual(woken, start === "stopped" ? ["cmp_vm"] : [], "started once, by the control plane, only when it was off");
+    assert.deepEqual(relay.calls.filter((c) => c !== "list_workspaces"), ["add_account", "list_providers", "login_account"]);
+    router.close();
+  });
+}
+
+test("adding never logs in blind: if the providers of the woken machine cannot be read, it says so", async () => {
+  const seen: string[] = [];
+  const call = async (command: string) => {
+    seen.push(command);
+    if (command === "add_account") return { id: "a1" };
+    throw { what: "x", detail: "machine_timeout" };
+  };
+  await assert.rejects(addAccount(call as never, "claude", null), (e: { detail?: string }) => e.detail === "machine_timeout");
+  assert.deepEqual(seen, ["add_account", "list_providers"]);
+  const known = [{ id: "claude", available: true }] as never;
+  assert.equal((await addAccount(async () => ({ id: "a2" }), "claude", known)).providers, known, "known providers are not asked again");
 });

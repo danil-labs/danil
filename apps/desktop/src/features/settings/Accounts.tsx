@@ -15,7 +15,8 @@ import { enfocar } from "../../lib/focus";
 import { t } from "../../lib/i18n";
 import { invoke } from "../../lib/invoke.ts";
 
-import { revocada } from "../../lib/limits";
+import { type CredentialState, credentialState, machineAsleep } from "@terminus/protocol";
+import { errorCode } from "../../lib/errorCode";
 import { textoDeFalta } from "../../lib/no-space";
 import { capabilities } from "../../lib/platform";
 import { prosa } from "../../lib/prose";
@@ -39,7 +40,7 @@ import { Skeleton } from "../../ui/Skeleton";
 import { Terminal, TerminalBody } from "../../ui/Terminal";
 import { machineOf } from "../machines/store";
 import AccountCard, { accountPresentation } from "./AccountCard";
-import { accountKeyUrl, addBlockedByExternal } from "./account-auth";
+import { accountKeyUrl, addAccount, addBlockedByExternal } from "./account-auth";
 import {
   type Account,
   type AccountList,
@@ -121,7 +122,8 @@ export default function Accounts(props: {
   // Las que la última consulta de estado no pudo responder. No es «sin
   // conectar» —nadie lo dijo— ni «conectada»: una cuenta cuyo `account_status`
   // se corta por plazo cada vez se veía conectada con un error encima.
-  const [sinComprobar, setSinComprobar] = createSignal<Record<string, boolean>>({});
+  /** Con qué código falló la última `account_status` de cada cuenta; `null` si contestó. */
+  const [fallosDeEstado, setFallosDeEstado] = createSignal<Record<string, string | null>>({});
   const [fallo, setFallo] = createSignal<Failure | null>(null);
   // Quitar borra la credencial y no se puede deshacer: el primer clic pregunta.
   const [porQuitar, setPorQuitar] = createSignal<string | null>(null);
@@ -326,7 +328,7 @@ export default function Accounts(props: {
   createEffect(
     on(agente, () => {
       setEstados({});
-      setSinComprobar({});
+      setFallosDeEstado({});
       comprobadas.clear();
       setPorQuitar(null);
       // Las tarjetas del agente anterior no se quedan a la vista del nuevo.
@@ -532,14 +534,18 @@ export default function Accounts(props: {
         id,
       }, machineOf(id));
       setEstados((e) => ({ ...e, [id]: st }));
-      setSinComprobar((c) => ({ ...c, [id]: false }));
+      setFallosDeEstado((c) => ({ ...c, [id]: null }));
       return st;
     } catch (e) {
-      setSinComprobar((c) => ({ ...c, [id]: true }));
-      setFallo({
-        what: t("settings.accounts.error.status", { agent: etiqueta() }),
-        detail: detalleDe(e),
-      });
+      const codigo = errorCode(e) ?? "no_answer";
+      setFallosDeEstado((c) => ({ ...c, [id]: codigo }));
+      // Apagada no hay nada que reportar: la tarjeta lo dice, y se mira al encenderla.
+      if (!machineAsleep(codigo)) {
+        setFallo({
+          what: t("settings.accounts.error.status", { agent: etiqueta() }),
+          detail: detalleDe(e),
+        });
+      }
       return null;
     } finally {
       setComprobando((c) => ({ ...c, [id]: false }));
@@ -580,14 +586,9 @@ export default function Accounts(props: {
     if (addBlockedByExternal(proveedor()) || agregando()) return;
     setAgregando(true);
     try {
-      // Apagada, esto la enciende (intent del relay) antes de conectar.
-      const a = await invoke<Account>("add_account", {
-        provider: agente(),
-        label: "",
-      }, options);
-      if (!proveedor()) {
-        await invoke<AgentOpt[]>("list_providers").then(setAgentes).catch(() => {});
-      }
+      // Apagada, la flota la enciende primero; ya encendida se saben sus proveedores.
+      const { account: a, providers } = await addAccount(invoke, agente(), proveedor() ? agentes() : null, options);
+      setAgentes(providers);
       // Agregar crea la carpeta antes del login: ahí escribe el CLI la
       // credencial. Si el login no llega a nada, esto permite deshacerlo en
       // vez de dejar un objeto vacío en la lista.
@@ -1043,18 +1044,18 @@ export default function Accounts(props: {
                 active={activa()}
                 status={estado()}
                 checkingStatus={comprobando()[a.id]}
-                statusUnknown={sinComprobar()[a.id] && a.authenticated_at !== null}
+                statusFailure={fallosDeEstado()[a.id] ?? null}
                 onRecheckStatus={() => comprobar(a.id)}
                 supportsLimits={
                   agentes().find((x) => x.id === agente())?.limits ?? false
                 }
                 order={i()}
                 afterStatusChange={conectadaVez()[a.id] ?? 0}
-                actions={(info) => {
-                  const caida = () => info.revocada || estado()?.authenticated === false;
-                  // Autenticada alguna vez y sin respuesta ahora: se ofrece
-                  // preguntar de nuevo, y reconectar por si no era el plazo.
-                  const dudosa = () => !caida() && info.sinComprobar;
+                actions={(credencial) => {
+                  const caida = () => credencial.kind === "disconnected";
+                  // Sin respuesta ahora: se ofrece preguntar de nuevo, y
+                  // reconectar por si no era el plazo. Apagada, ninguna de las dos.
+                  const dudosa = () => credencial.kind === "unknown" && credencial.why === "no_answer";
                   return (
                     <>
                       <Show when={dudosa()}>
@@ -1608,8 +1609,8 @@ function CuentaConfigurada(props: {
   active: boolean;
   status?: AccountStatus;
   checkingStatus?: boolean;
-  /** Autenticada, pero la última consulta de estado falló. */
-  statusUnknown?: boolean;
+  /** El código con que falló la última consulta de estado, o `null`. */
+  statusFailure: string | null;
   onRecheckStatus?: () => void | Promise<unknown>;
   supportsLimits: boolean;
   order: number;
@@ -1626,7 +1627,7 @@ function CuentaConfigurada(props: {
    * colocaría una sola vez y no se recalcularía cuando la fila descubra
    * el 401.
    */
-  actions: (info: { revocada: boolean; sinComprobar: boolean }) => JSX.Element;
+  actions: (credencial: CredentialState) => JSX.Element;
   destructiveAction: JSX.Element;
 }) {
   const lectura = createAccountLimit({
@@ -1653,9 +1654,14 @@ function CuentaConfigurada(props: {
     },
   });
 
-  // Si el proveedor sí contestó con límites, la cuenta funciona aunque el CLI
-  // local no haya respondido a tiempo.
-  const sinComprobar = () => !!props.statusUnknown && lectura.limits?.mode !== "read";
+  // El único sitio que decide el estado de esta credencial: tarjeta y acciones leen esto.
+  const credencial = () =>
+    credentialState({
+      status: props.status,
+      statusFailure: props.statusFailure,
+      limits: lectura.limits,
+      authenticatedAt: props.account.authenticated_at,
+    });
 
   return (
     <AccountCard
@@ -1663,7 +1669,7 @@ function CuentaConfigurada(props: {
       active={props.active}
       status={props.status}
       checkingStatus={props.checkingStatus}
-      statusUnknown={sinComprobar()}
+      credential={credencial()}
       onRecheckStatus={props.onRecheckStatus}
       noLimitsLabel={canonicalAgentId(props.agent) === OPENCODE ? t("settings.accounts.go_key_required") : undefined}
       limits={lectura.limits}
@@ -1671,7 +1677,7 @@ function CuentaConfigurada(props: {
       loadingLimits={lectura.loading}
       refreshingLimits={lectura.refreshing}
       onRefreshLimits={props.supportsLimits ? lectura.refresh : undefined}
-      actions={props.actions({ revocada: revocada(lectura.limits), sinComprobar: sinComprobar() })}
+      actions={props.actions(credencial())}
       destructiveAction={props.destructiveAction}
       variant="row"
     />
