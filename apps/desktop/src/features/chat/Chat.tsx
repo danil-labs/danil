@@ -527,7 +527,7 @@ export type ChatProps = {
   onVerCambios?: () => void;
   agent: string;
   modelOptions?: { headers: Record<string, string> };
-  onCreditsPrepare?: () => void;
+  onCreditsPrepare?: () => Promise<void>;
   /**
    * Lo que se puede elegir para trabajar. `null` mientras no se ha leído.
    * Ya viene filtrado por `superficies.paraElMenu`: lo utilizable, más
