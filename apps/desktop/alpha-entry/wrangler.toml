@@ -14,15 +14,6 @@ zone_id = "e14ef2690bfae6ea80d2b8fffbcfd708"
 binding = "TERMINUS_WEB"
 service = "terminus-web-alfa"
 
-[[services]]
-binding = "APPV2_BFF"
-service = "appv2"
-
-# Compatibilidad exclusiva de Desk; la web autentica por el borde configurado al compilar.
-[[services]]
-binding = "DESKTOP_AUTH"
-service = "danil-legacy-desktop-auth"
-
 # Conserva el namespace instalado; el Worker de compatibilidad lo consume remoto.
 [[durable_objects.bindings]]
 name = "DESKTOP_CODES"

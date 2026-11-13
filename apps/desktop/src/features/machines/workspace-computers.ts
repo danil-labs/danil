@@ -23,7 +23,7 @@ export function workspaceComputersSource(source: AccountComputersSource, workspa
       allowed = new Set(value.map((c) => c.computer_id));
       return { kind: "ok", value };
     },
-    rename: (id, name) => allowed.has(id) ? source.rename(id, name) : Promise.resolve({ kind: "missing" }),
+    rename: source.rename ? (id, name) => allowed.has(id) ? source.rename?.(id, name) ?? Promise.resolve({ kind: "missing" }) : Promise.resolve({ kind: "missing" }) : undefined,
     remove: source.remove
       ? (id) => (allowed.has(id) ? source.remove!(id) : Promise.resolve({ kind: "missing" }))
       : undefined,

@@ -246,38 +246,6 @@ test("missing, failed or incompatible balance data never becomes zero", () => {
 });
 
 
-import { webDanilCredits } from "../../src/web/danil-credits.ts";
-
-test("the BFF reader uses the session-bound path and keeps loading, null, zero and errors distinct", async () => {
-  const calls: { url: string; init: RequestInit | undefined }[] = [];
-  let release!: (value: Response) => void;
-  const pending = new Promise<Response>((resolve) => { release = resolve; });
-  const source = webDanilCredits(
-    { getToken: async () => "session-token", unauthorized: async () => false },
-    "/alpha-api",
-    async (input, init) => { calls.push({ url: String(input), init }); return pending; },
-  );
-  let settled = false;
-  const reading = source.readBalance().finally(() => { settled = true; });
-  await new Promise((resolve) => setTimeout(resolve, 0));
-  assert.equal(settled, false, "a pending read stays pending instead of becoming zero");
-  assert.equal(calls[0].url, "/alpha-api/api/credits/balance");
-  assert.equal(calls[0].init?.method, "GET");
-  assert.equal(calls[0].init?.cache, "no-store");
-  assert.equal(new Headers(calls[0].init?.headers).get("Authorization"), "Bearer session-token");
-  release(Response.json(response(0)));
-  assert.equal(availableDanilCredits(await reading), 0);
-
-  const read = (reply: Response) => webDanilCredits(
-    { getToken: async () => "session-token", unauthorized: async () => false },
-    "/alpha-api", async () => reply,
-  ).readBalance();
-  assert.equal(availableDanilCredits(await read(Response.json({ ...response(0), wallet: null }))), null);
-  await assert.rejects(read(Response.json({ error: "forbidden" }, { status: 403 })));
-  await assert.rejects(read(new Response("not-json")));
-});
-
-
 test("Credits no habilita BYOK ni Free y sus permisos no heredan otra superficie", () => {
   const credits: Superficie = { id: "danil-credits", provider: "opencode", label: "Danil Credits", catalogo: "todo", usable: true, marca: null, porque: null };
   const byok: Superficie = { ...credits, id: "opencode", label: "OpenCode", catalogo: "de_pago", usable: false };

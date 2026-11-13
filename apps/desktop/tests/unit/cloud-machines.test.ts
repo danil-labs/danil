@@ -8,7 +8,7 @@ test("las llamadas van por danil_edge_fetch con la ruta y sin token", async () =
   const calls: { command: string; args?: Record<string, unknown> }[] = [];
   const cloud = createCloudMachines(async (command, args) => {
     calls.push({ command, args });
-    return { status: 200, body: args?.path === "/v1/capabilities" ? { items: [{ name: "machines", status: "available" }] } : { items: [machine] } };
+    return { status: 200, body: args?.path === "/v1/capabilities" ? { contract: "mvp-v1", items: [{ name: "machines", version: 1, status: "available" }] } : { items: [machine] } };
   });
   const rows = await cloud.rows();
   assert.ok(rows.state === "ready");
@@ -22,7 +22,7 @@ test("sin la capacidad «machines» no se llama y se reintenta solo (no disponib
   const paths: unknown[] = [];
   const cloud = createCloudMachines(async (_c, args) => {
     paths.push(args?.path);
-    return { status: 200, body: { items: [{ name: "machines", status: "unavailable" }] } };
+    return { status: 200, body: { contract: "mvp-v1", items: [{ name: "machines", version: 1, status: "unavailable" }] } };
   });
   assert.deepEqual(await cloud.rows(), { state: "unavailable" });
   assert.deepEqual(paths, ["/v1/capabilities"]);
@@ -54,14 +54,50 @@ test("403 organization_selection_required llega al selector", async () => {
   assert.deepEqual(seen, [{ detail: "organization_selection_required", status: 403, body }]);
 });
 
+test("Desk lee /v1/capabilities como la web: una versión que no conoce o un estado distinto de available no es «disponible» (edge.openapi Capability)", async () => {
+  for (const item of [{ name: "machines", version: 2, status: "available" }, { name: "machines", version: 1, status: "degraded" }, { name: "machines", status: "available" }]) {
+    const paths: unknown[] = [];
+    const cloud = createCloudMachines(async (_c, args) => {
+      paths.push(args?.path);
+      return { status: 200, body: args?.path === "/v1/capabilities" ? { contract: "mvp-v1", items: [item] } : { items: [machine], next_cursor: null } };
+    });
+    assert.deepEqual(await cloud.rows(), { state: "unavailable" }, JSON.stringify(item));
+    assert.deepEqual(paths, ["/v1/capabilities"], JSON.stringify(item));
+  }
+});
+
+test("la renovación en el canal solo vale anunciada en v1 y available; sin /v1/capabilities no se supone", async () => {
+  const caps = (renew: object | null) => async (_c: string, args?: Record<string, unknown>) =>
+    args?.path === "/v1/capabilities" ? (renew ? { status: 200, body: { contract: "mvp-v1", items: [{ name: "machines", version: 1, status: "available" }, renew] } } : { status: 404, body: null }) : { status: 200, body: { items: [machine], next_cursor: null } };
+  const renew = async (item: object | null) => { const rows = await createCloudMachines(caps(item)).rows(); assert.equal(rows.state, "ready"); return rows.state === "ready" && rows.renewInChannel; };
+  assert.equal(await renew({ name: "machines.session.renew", version: 1, status: "available" }), true);
+  assert.equal(await renew({ name: "machines.session.renew", version: 2, status: "available" }), false);
+  assert.equal(await renew(null), false, "sin descubrimiento se prueba la ruta y no se supone la renovación");
+});
+
+test("Desk sigue next_cursor por danil_edge_fetch: dos páginas llegan completas, con el cursor codificado en la query", async () => {
+  const paths: unknown[] = [];
+  const cloud = createCloudMachines(async (_c, args) => {
+    paths.push(args?.path);
+    if (args?.path === "/v1/capabilities") return { status: 404, body: null };
+    if (args?.path === "/v1/machines") return { status: 200, body: { items: [machine], next_cursor: "p2 /?'!" } };
+    if (args?.path === "/v1/machines?cursor=p2%20%2F%3F%27%21") return { status: 200, body: { items: [{ ...machine, machine_id: "cmp_2" }], next_cursor: null } };
+    return { status: 400, body: { code: "invalid_request" } };
+  });
+  const rows = await cloud.rows();
+  assert.equal(rows.state, "ready");
+  assert.deepEqual(rows.state === "ready" && rows.computers.map((c) => c.computer_id), ["cmp_1", "cmp_2"]);
+  assert.deepEqual(paths, ["/v1/capabilities", "/v1/machines", "/v1/machines?cursor=p2%20%2F%3F%27%21"]);
+});
+
 for (const status of [503, 504]) test(`un HTTP ${status} de machines conserva el estado transitorio`, async () => {
   const cloud = createCloudMachines(async (_command, args) => ({ status: args?.path === "/v1/capabilities" ? 200 : status,
-    body: args?.path === "/v1/capabilities" ? { items: [{ name: "machines", status: "available" }] } : null }));
+    body: args?.path === "/v1/capabilities" ? { contract: "mvp-v1", items: [{ name: "machines", version: 1, status: "available" }] } : null }));
   assert.equal((await cloud.rows()).state, "retrying");
 });
 for (const detail of ["unavailable", "timeout"]) test(`un fallo nativo ${detail} conserva el estado transitorio`, async () => {
   const cloud = createCloudMachines(async (_command, args) => {
-    if (args?.path === "/v1/capabilities") return { status: 200, body: { items: [{ name: "machines", status: "available" }] } };
+    if (args?.path === "/v1/capabilities") return { status: 200, body: { contract: "mvp-v1", items: [{ name: "machines", version: 1, status: "available" }] } };
     throw { detail };
   });
   assert.equal((await cloud.rows()).state, "retrying");
@@ -69,7 +105,7 @@ for (const detail of ["unavailable", "timeout"]) test(`un fallo nativo ${detail}
 
 for (const status of [404, 501]) test(`HTTP ${status} de la colección es ausencia definitiva`, async () => {
   const cloud = createCloudMachines(async (_command, args) => ({ status: args?.path === "/v1/capabilities" ? 200 : status,
-    body: args?.path === "/v1/capabilities" ? { items: [{ name: "machines", status: "available" }] } : null }));
+    body: args?.path === "/v1/capabilities" ? { contract: "mvp-v1", items: [{ name: "machines", version: 1, status: "available" }] } : null }));
   assert.deepEqual(await cloud.rows(), { state: "unavailable" });
 });
 test("un fallo transitorio de capacidades no se confunde con una capacidad ausente", async () => {
@@ -78,7 +114,7 @@ test("un fallo transitorio de capacidades no se confunde con una capacidad ausen
 });
 test("una sesión inválida se distingue de un fallo transitorio", async () => {
   const cloud = createCloudMachines(async (_command, args) => ({ status: args?.path === "/v1/capabilities" ? 200 : 401,
-    body: args?.path === "/v1/capabilities" ? { items: [{ name: "machines", status: "available" }] } : null }));
+    body: args?.path === "/v1/capabilities" ? { contract: "mvp-v1", items: [{ name: "machines", version: 1, status: "available" }] } : null }));
   assert.deepEqual(await cloud.rows(), { state: "denied" });
 });
 

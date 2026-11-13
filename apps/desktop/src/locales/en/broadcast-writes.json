@@ -1,7 +1,0 @@
-{
-  "broadcast-writes.write_error": "Could not confirm the operation. Close and refresh before retrying to check whether it was saved.",
-  "broadcast-writes.account_mismatch": "The account does not match your active session account. Renew your Danil session and reopen this view.",
-  "broadcast-writes.missing_active_account": "Your session has no active account. Choose an account in Danil and renew your session.",
-  "broadcast-writes.reconcile_required": "An operation for this account and resource has no confirmed result. Read the server again and review its state before retrying.",
-  "broadcast-writes.reread": "Read server state again"
-}

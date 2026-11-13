@@ -174,7 +174,7 @@ import { createUsage } from "../features/shell/usage";
 import AvisoDeVersion from "../features/shell/VersionNotice";
 import CloseGuard from "../features/shell/CloseGuard";
 import WorkspaceColumn from "../features/shell/WorkspaceColumn";
-import { agentsWorkspace, setAgentsWorkspace, signedInCount } from "../features/shell/workspace-directory";
+import { signedInCount } from "../features/shell/workspace-directory";
 import Sitio from "../features/sites/Site";
 import { VELO_DE_FONDO } from "../lib/chat-background";
 import { fondoDeChat, fondoPropio, imagenDelWorkspace, veloDeFondo } from "../lib/chat-background-store";
@@ -259,8 +259,6 @@ import {
   isContentTab,
   isTaskTab,
   migrateLegacyStrip,
-  INBOX_TAB_ID,
-  BROADCASTS_TAB_ID,
   OBSERVABILITY_TAB_ID,
   type ScreenTab,
   screenTabId,
@@ -541,15 +539,10 @@ export default function App() {
   const spaceOrder = createSpaceNavigationOrder(() => workspaceActivo() ?? "", () => setError(t("spaces.order.error")));
   const spaces = createMemo(() => spaceOrder.arrange(rawSpaces()));
   const [escritorio, setEscritorio] = createSignal<string | null>(null);
-  const [spacesContext, setSpacesContext] = createSignal<string | null>(null);
-  const customization = capabilities().inbox?.customization(() => ({ user: capabilities().inbox?.userId, workspace: workspaceActivo(), space: spacesContext() === workspaceActivo() ? escritorio() : null }), capabilities().inbox?.subscribe) ?? {ready:()=>false,scope:()=>"",selection:()=>({enabled:[],writable:false}),temporary:()=>true,toggle:(_id:string)=>{},enabled:(_id:string)=>false};
   const [sidebarFilter, setSidebarFilter] = createSignal<SidebarFilterProps | null>(null);
   // El nombre del workspace abierto rotula el menú de espacios de la franja.
   const workspacesDeLaFranja = createWorkspaces();
   const workspaceActual = () => workspacesDeLaFranja.actual();
-  // Agentes: el workspace abierto o el elegido en el menú que solo tiene agentes. Volver a uno de Terminus lo suelta.
-  const workspaceDeAgentes = () => agentsWorkspace() ?? workspaceActivo();
-  createEffect(on(() => workspaceActivo(), () => setAgentsWorkspace(null), { defer: true }));
   // Dónde empieza el chat, ya pasada la línea de la barra lateral: la primera pestaña nace ahí.
   const [bordeDeLaBarra, setBordeDeLaBarra] = createSignal<number | null>(null);
   const medirBordeDeLaBarra = (el: HTMLDivElement) => {
@@ -563,7 +556,6 @@ export default function App() {
     });
     onCleanup(() => ojo?.disconnect());
   };
-  const attentionEntries = () => capabilities().inbox?.entries(customization.selection().enabled) ?? [];
   const activeSpace = () => spaces().find((i) => i.id === escritorio()) ?? null;
   const multipleSpaces = () => spaces().length > 1;
   // El sidebar de la vez anterior, pintado antes del primer IPC e inerte hasta que el motor lo confirma.
@@ -995,7 +987,6 @@ export default function App() {
 
   /** Qué escritorio abre este workspace: el último que se usó si sigue vivo, o la primera. */
   function asentarEscritorio(ws: string, lista: Space[] | null): string | null {
-    setSpacesContext(ws);
     if (!lista || lista.length === 0) {
       batch(() => {
         setSpaces([]);
@@ -2252,7 +2243,6 @@ export default function App() {
     ));
     savedQueues.clear();
     drainingQueues.clear();
-    setSpacesContext(null);
     setWorkspaceActivo(a.active);
     // «Ejecutar en» dice qué tiene cada máquina del workspace abierto: con otro, se relee.
     void refetchMachines();
@@ -4900,7 +4890,7 @@ export default function App() {
     setProyectoAbierto(null);
     // El navegador del «+» tampoco cuelga de ninguna tarea: detrás no se
     // abre nada.
-    if ((p.clase === "inbox" || p.clase === "broadcasts") || p.clase === "observabilidad" || p.clase === "pantalla" || (p.clase === "sitio" && p.navegador)) {
+    if (p.clase === "observabilidad" || p.clase === "pantalla" || (p.clase === "sitio" && p.navegador)) {
       pestanas.activate(p.id);
       return;
     }
@@ -4942,39 +4932,6 @@ export default function App() {
     if (recorrido.length < 2) return;
     const i = recorrido.findIndex((s) => sameSite(s, paneles.activeSite()));
     mandarVentana(recorrido[(i + salto + recorrido.length) % recorrido.length]);
-  }
-
-  function abrirInbox() {
-    if (!customization.enabled("inbox")) return;
-    setProyectoAbierto(null);
-    pestanas.openInbox(t("alpha.inbox"));
-  }
-  let initialInboxOpened = false;
-  createEffect(() => {
-    const ws = workspaceActivo();
-    const space = escritorio();
-    if (!ws || !space || !customization.ready() || initialInboxOpened || !capabilities().inbox?.initial) return;
-    queueMicrotask(() => {
-      if (workspaceActivo() !== ws || escritorio() !== space || !customization.ready() || initialInboxOpened) return;
-      initialInboxOpened = true;
-      if (customization.enabled("inbox")) abrirInbox();
-    });
-  });
-
-  let attentionScope = customization.scope();
-  createEffect(() => {
-    const scope = customization.scope();
-    const changed = scope !== attentionScope;
-    attentionScope = scope;
-    const remove = pestanas.open().filter(tab => (tab.clase === "inbox" || tab.clase === "broadcasts") && (changed || !customization.enabled(tab.clase))).map(tab => tab.id);
-    if (remove.length) untrack(() => cerrarPestanasYa(remove));
-  });
-  function openAttentionFeature(id: string) {
-    if (!customization.enabled(id)) return;
-    if (id === "inbox") abrirInbox();
-    else if (id === "broadcasts") { setProyectoAbierto(null); pestanas.openBroadcasts(t("attention.broadcasts")); }
-    else if (id === "agents") setSettings("agentes");
-    else if (id === "channels") setSettings("integrations");
   }
 
   function abrirObservabilidad() {
@@ -5181,7 +5138,7 @@ export default function App() {
     const p = pestanasEnPantalla().find((x) => x.id === id);
     if (!p) return railDrag?.row.id === id ? railDrag.row.title : "";
     if (isTaskTab(p)) return p.titulo;
-    if ((p.clase === "inbox" || p.clase === "broadcasts") || p.clase === "observabilidad" || p.clase === "pantalla") return p.titulo;
+    if (p.clase === "observabilidad" || p.clase === "pantalla") return p.titulo;
     if (p.clase === "sitio" && !p.url) return t("sites.new_tab");
     const r = p.clase === "archivo" ? p.ruta : p.clase === "artefacto" ? p.rel : p.url;
     return r.slice(r.lastIndexOf("/") + 1);
@@ -8547,18 +8504,6 @@ export default function App() {
         }}
       </For>
 
-      <Show when={pestanas.open().some(p => p.id === INBOX_TAB_ID) && customization.enabled("inbox") ? customization.scope() : undefined} keyed>
-        <div class="min-h-0 min-w-0" classList={{ hidden: celdaDe(INBOX_TAB_ID) === undefined || tapadoPorElProyecto(paneles.siteOf(INBOX_TAB_ID)), "pt-8": llevaTiraInterior(paneles.siteOf(INBOX_TAB_ID)) }} style={celdaDe(INBOX_TAB_ID)}>
-          {capabilities().inbox?.render(workspaceDeAgentes)}
-        </div>
-      </Show>
-
-      <Show when={pestanas.open().some(p => p.id === BROADCASTS_TAB_ID) && customization.enabled("broadcasts") ? customization.scope() : undefined} keyed>
-        <div class="min-h-0 min-w-0" classList={{ hidden: celdaDe(BROADCASTS_TAB_ID) === undefined || tapadoPorElProyecto(paneles.siteOf(BROADCASTS_TAB_ID)), "pt-8": llevaTiraInterior(paneles.siteOf(BROADCASTS_TAB_ID)) }} style={celdaDe(BROADCASTS_TAB_ID)}>
-          {capabilities().inbox?.broadcasts(workspaceDeAgentes)}
-        </div>
-      </Show>
-
       <Show when={pestanas.open().some((p) => p.id === OBSERVABILITY_TAB_ID)}>
         <div
           class="min-h-0 min-w-0"
@@ -8840,11 +8785,10 @@ export default function App() {
             >
               <FolderPlus size={15} aria-hidden="true" />
             </Button>
-            <Show when={sidebarFilter() || capabilities().inbox}>
+            <Show when={sidebarFilter()}>
               <Suspense>
                 <CustomizeMenu
                   filter={sidebarFilter()}
-                  catalog={capabilities().inbox ? () => capabilities().inbox!.catalog({get temporary(){return customization.temporary();},get writable(){return customization.selection().writable;},demo:Boolean(capabilities().inbox?.demo),get entries(){return attentionEntries().map(entry=>({...entry,available:entry.available&&customization.selection().writable}));},onToggle:customization.toggle}) : undefined}
                 />
               </Suspense>
             </Show>
@@ -8859,11 +8803,9 @@ export default function App() {
           folders={proyectosDelRiel()}
           projects={projectList()}
           spaces={spaces()}
-          conversations={capabilities().inbox?.search && customization.enabled("inbox") ? capabilities().inbox!.search.conversations : undefined}
           onOpenTask={(p, id) => { setHablandoCon(null); void abrirSesion(p, id); }}
           onOpenFolder={abrirProyecto}
           onNewTask={(id) => nuevaSesion(id)}
-          onOpenConversation={(id) => { abrirInbox(); capabilities().inbox?.search.open(id); }}
         />
         {/* Con la sesión de la ventana recién abierta, la hoja para sincronizar el workspace abierto. */}
         <Show when={capabilities().workspaceDirectory?.onSession && signedInCount() > 0}>
@@ -8876,7 +8818,6 @@ export default function App() {
           <WorkspaceColumn
             attention={attention.list()}
             onManage={() => setSettings("workspaces")}
-            onOpenAgents={abrirInbox}
             onSettings={(panel) => setSettings(panel ?? "")}
             onReportarBug={() => setInput(t("chat.composer.bug_report_starter"))}
             tools={<>
@@ -8929,7 +8870,6 @@ export default function App() {
               data-shell-cache={enCache() ? "" : undefined}
             >
             <Sidebar
-              attentionMenu={capabilities().inbox ? collapsed => capabilities().inbox!.sidebarMenu({get entries(){return attentionEntries().filter(entry=>entry.selected);},get active(){return pestanas.active();},collapsed,onOpen:openAttentionFeature}) : undefined}
               projects={proyectosDelRiel()}
               modelos={modelosParaAgentes()}
               sessions={sesionesDelRiel()}
@@ -9046,8 +8986,6 @@ export default function App() {
         <Suspense fallback={null}>
           <Settings
             workspace={workspaceActivo()}
-            workspaceName={workspaceActual()?.name ?? null}
-            agentsWorkspace={workspaceDeAgentes()}
             activityMachine={activityMachine()}
             panel={settings() || undefined}
             modelos={modelosParaAgentes()}

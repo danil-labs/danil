@@ -8,10 +8,10 @@ import { cn } from "../../lib/utils";
 import { ITEM_DE_MENU } from "../../ui/Popover";
 import { createWorkspaces } from "../settings/workspaces-store";
 import { directoryErrorText } from "./directory-errors";
-import { directory, linkableAccounts, linkActiveWorkspace, setAgentsWorkspace, togglePin } from "./workspace-directory";
+import { directory, linkableAccounts, linkActiveWorkspace, togglePin } from "./workspace-directory";
 
 /** Desde aquí se entra a cualquier workspace; la barra solo muestra los fijados. */
-export default function WorkspaceDirectoryMenu(props: { onClose: () => void; onOpenAgents?: () => void; localOnly?: boolean }) {
+export default function WorkspaceDirectoryMenu(props: { onClose: () => void }) {
   const ws = createWorkspaces();
   const [query, setQuery] = createSignal("");
   const [linking, setLinking] = createSignal<string | null>(null);
@@ -36,18 +36,12 @@ export default function WorkspaceDirectoryMenu(props: { onClose: () => void; onO
     return needle ? entries().filter((e) => e.name.toLocaleLowerCase().includes(needle)) : entries();
   };
   const local = (entry: DirectoryEntry) => entry.capabilities.terminus && (ws.lista() ?? []).some((w) => w.id === entry.workspace_id);
-  const canOpen = (entry: DirectoryEntry) =>
-    local(entry) || (!props.localOnly && entry.capabilities.agents && Boolean(props.onOpenAgents));
+  const canOpen = local;
   const open = (entry: DirectoryEntry) => {
     props.onClose();
     if (local(entry)) {
-      setAgentsWorkspace(null);
       void ws.cambiarA(entry.workspace_id as string);
-      return;
     }
-    if (!canOpen(entry)) return;
-    setAgentsWorkspace(entry.key);
-    props.onOpenAgents?.();
   };
   const title = (group: ReturnType<typeof groupDirectory>[number]) => {
     if (group.kind === "organization") return group.name;

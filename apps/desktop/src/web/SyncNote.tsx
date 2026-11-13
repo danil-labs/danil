@@ -28,8 +28,8 @@ const signature = (rows: MachineRow[]) => rows.map((m) => `${m.id}:${m.status}`)
  * can be closed by hand. A hidden list keeps the current state for screen
  * readers.
  */
-export function SyncNote(props: { machines: Accessor<MachineRow[]> }) {
-  const [open, setOpen] = createSignal(false);
+export function SyncNote(props: { machines: Accessor<MachineRow[]>; unavailable?: boolean }) {
+  const [open, setOpen] = createSignal(Boolean(props.unavailable));
   let timer: ReturnType<typeof setTimeout> | undefined;
   const settledAt = Date.now() + SETTLE_MS;
   const close = () => {
@@ -74,9 +74,10 @@ export function SyncNote(props: { machines: Accessor<MachineRow[]> }) {
       >
         {rows(true)}
       </ul>
-      <Show when={open() && props.machines().length}>
+      <Show when={open() && (props.unavailable || props.machines().length)}>
         <ToastPortal>
           <Toast data-web-sync-toast="" onDismiss={close}>
+            <Show when={props.unavailable}><p class="m-0 text-ui" role="status" data-machines-unavailable="">{t("web.machines.unavailable")}</p></Show>
             <ul class="m-0 flex list-none flex-col gap-0.5 p-0 text-xs text-neutral-500" aria-hidden="true">
               {rows(false)}
             </ul>
