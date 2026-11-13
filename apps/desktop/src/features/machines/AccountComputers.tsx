@@ -10,7 +10,7 @@ import {
   wakes,
 } from "@terminus/computers";
 import Pencil from "lucide-solid/icons/pencil";
-import { createSignal, For, onMount, Show } from "solid-js";
+import { createSignal, For, onMount, onCleanup, Show } from "solid-js";
 import { df } from "../../lib/format";
 import { t } from "../../lib/i18n";
 import { invoke } from "../../lib/invoke";
@@ -103,7 +103,11 @@ export function AccountComputers(props: AccountComputersProps) {
       setList(orderComputers(answer.value));
     } else setFailed(answer?.kind === "missing" ? "missing" : "failed");
   }
-  onMount(() => void load());
+  onMount(() => {
+    void load();
+    const stop = props.source.subscribe?.(() => void load());
+    onCleanup(() => stop?.());
+  });
 
   const nameOf = (c: Computer) => c.name?.trim() || c.computer_id;
   const isSelf = (c: Computer) => !!props.self && c.computer_id === props.self;

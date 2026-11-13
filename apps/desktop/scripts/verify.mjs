@@ -63,6 +63,9 @@ const rustSteps = [
 ];
 
 const steps = [
+  ["Service capabilities are optional and versioned", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/web-service-capabilities.test.ts")], root],
+  ["Session caches are revoked and erased on logout", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/web-session-storage.test.ts")], root],
+  ["Machine preferences stay with the browser person", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/web-machine-preferences.test.ts")], root],
   ["Messaging stays isolated from Desk and web", process.execPath, [join(root, "scripts/guards/messaging-isolation.mjs")], root],
   ["Messaging isolation guard rejects reintroduced transports", process.execPath, ["--test", join(root, "tests/unit/messaging-isolation.test.mjs")], root],
   ["Web uses platform without direct database dependencies", process.execPath, [join(root, "scripts/guards/web-platform.mjs")], root],
@@ -657,7 +660,7 @@ const steps = [
   ["The organization selector hides on 404/501, retries itself and opens on organization_selection_required", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/organization-selection.test.ts")], root],
   ["The web organization selector goes by cookie, CSRF and one Idempotency-Key per intent", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/web-organizations.test.ts")], root],
   ["Desk retains engine attention without a messaging session", process.execPath, ["--test", "--test-force-exit", join(root, "tests/integration/messaging-isolation.test.mjs")], root],
-  ["The cookie session mounts the real window through compute", process.execPath, ["--test", "--test-force-exit", join(root, "tests/integration/window-page.test.mjs")], root],
+  ["The cookie session mounts the real window with identity and workspaces, and machines from /v1/machines", process.execPath, ["--test", "--test-force-exit", join(root, "tests/integration/window-page.test.mjs")], root],
   ["The platform session always uses cookies, CSRF and a configured edge", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/web-platform-session.test.ts")], root],
   ["app.danil.ai/terminus answers 308 to the same alfa path and never leaves that host", process.execPath, ["--test", join(root, "web-redirect/worker.test.mjs")], root],
   ["The entry serves assets and closes every retired proxy", process.execPath, ["--test", join(root, "alpha-entry/worker.test.mjs")], root],
@@ -679,7 +682,7 @@ const steps = [
   ["WSL detection reads English and Spanish states and maps failures", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/wsl-detection.test.ts")], root],
   ["WSL Linux user turns typed names into valid users", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/wsl-linux-user.test.ts")], root],
   ["Without an account the local guests are a fleet of their own and nothing goes to the account", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/local-fleet.test.mjs")], root],
-  ["Compute uses the edge session and relay tickets", process.execPath, ["--test", "--experimental-strip-types", join(root, "../../packages/computers/test/compute.test.ts")], root],
+  ["Machines follows the shared mvp-v1 contract", process.execPath, ["--test", "--experimental-strip-types", join(root, "../../packages/computers/test/machines.test.ts"), join(root, "../../packages/computers/test/machine-session.test.ts")], root],
   ["Danil Machines: session with contracts, token renewal, engine and tombstones", process.execPath, ["--test", "--experimental-strip-types", join(root, "../../packages/computers/test/computers.test.ts")], root],
   ["Danil Machines: an MCP block with written values, a URL with a password or an argument with a token does not cross the relay", process.execPath, ["--test", "--experimental-strip-types", join(root, "../../packages/computers/test/mcp-block.test.ts")], root],
   ["Danil Machines: account GitHub through the Worker, with its routes and codes", process.execPath, ["--test", "--experimental-strip-types", join(root, "../../packages/computers/test/github.test.ts")], root],

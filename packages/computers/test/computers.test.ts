@@ -426,3 +426,17 @@ test("un bloque MCP con valores escritos no sale al socket; uno con marcadores s
   assert.equal((await pending).value, 1);
   relay.close();
 });
+
+test('ticket context close code does not revoke a bearer session', async t => {
+  let unauthorized = false;
+  let socket: FakeSocket;
+  const relay = new RelaySession({ endpoint: 'https://computers.example', computerId: 'cmp_a',
+    getToken: () => 'jwt', onUnauthorized: () => { unauthorized = true; },
+  }, (url, protocols) => (socket = new FakeSocket(url, protocols)));
+  t.after(() => relay.close());
+  relay.start();
+  await tick();
+  socket!.open();
+  socket!.close(4008);
+  assert.equal(unauthorized, false);
+});

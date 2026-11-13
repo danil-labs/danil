@@ -24,6 +24,7 @@ export type AccountMachinesProps = {
 export type AccountComputersSource = {
   list: () => Promise<Answer<Computer[]>>;
   workspaces?: () => Promise<Answer<AccountWorkspace[]>>;
+  subscribe?: (changed: () => void) => () => void;
   rename?: (id: string, name: string) => Promise<Answer<{ computer_id: string; name: string }>>;
   /** Quien pinta nombres de máquina (la flota) toma el nuevo sin recargar. */
   onRenamed: (id: string, name: string) => void;
