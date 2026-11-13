@@ -57,7 +57,7 @@ export function EdgeAccountProvider({ children, context: Provided, deployment }:
   }, [read]);
 
   const signOut = useCallback(async () => {
-    await edge.identity.logout().catch(() => null);
+    await edge.identity.logout();
     window.sessionStorage.setItem(SIGNED_OUT, "1");
     setPerson(null);
   }, [edge]);

@@ -205,7 +205,8 @@ export function accountFleet(config: AccountFleetConfig, factory?: SocketFactory
       } };
     },
     wake: config.wake,
-    storage: config.storage ?? null,
+    // El borde no persiste lecturas privadas entre sesiones de personas.
+    storage: config.admit ? null : (config.storage ?? null),
     onChange: (machine) => changed(machine),
     // La cola de aplazadas cambió (aquí o en otro dispositivo): la lista se relee.
     onDeferred: (machine) => changed(machine),

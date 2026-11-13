@@ -94,3 +94,18 @@ test("una petición que no contesta se corta en su plazo", async () => {
     });
   await assert.rejects(edgeTransport({ origin: ORIGIN, timeoutMs: 10 }, request).call("identity/me"), { name: "TimeoutError" });
 });
+
+test("salir propaga los fallos de CSRF y logout para conservar la sesión y permitir reintentar", async () => {
+  for (const failure of ["csrf", "logout"]) {
+    let fail = true;
+    const request: typeof fetch = async (input) => {
+      const csrf = String(input).endsWith("/csrf");
+      if (fail && (failure === "csrf" ? csrf : !csrf)) return Response.json({ code: "unavailable" }, { status: 503 });
+      return csrf ? Response.json({ csrf_token: "bound" }) : new Response(null, { status: 204 });
+    };
+    const identity = edgeIdentity(edgeTransport({ origin: ORIGIN, timeoutMs: 1000 }, request), ORIGIN);
+    await assert.rejects(identity.logout(), { status: 503 });
+    fail = false;
+    await identity.logout();
+  }
+});

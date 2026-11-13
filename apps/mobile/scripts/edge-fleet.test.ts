@@ -140,3 +140,21 @@ test("el plano de control del borde: 404 o 501 de la colección es «aún no»; 
   assert.equal((await plane.computers()).kind, "unauthorized");
   assert.equal(expired, 1);
 });
+
+test("una sesión con ticket nunca restaura listas privadas persistidas por otra persona", async () => {
+  const privateRows = [{ id: "workspace-only-A", name: "Private A" }];
+  const key = `mch_1\u0000${JSON.stringify(["list_workspaces", null, {}])}`;
+  const saved = JSON.stringify({ [key]: { at: Date.now(), value: JSON.stringify(privateRows) } });
+  const storage = { getItem: () => saved, setItem: () => {}, removeItem: () => {} };
+  const machines = accountFleet({
+    endpoint: "wss://connect.example",
+    admit: async () => { throw new Error("machine_unreachable"); },
+    storage,
+  }, (url, protocols) => new FakeSocket(url, protocols));
+  try {
+    const [host] = machines.set([VM]);
+    await assert.rejects(host.call("list_workspaces", null), "sin respuesta propia no se devuelve la copia de A");
+  } finally {
+    machines.close();
+  }
+});

@@ -52,6 +52,21 @@ export default function Settings() {
   const insets = useSafeAreaInsets();
   const { section } = useLocalSearchParams<{ section?: string }>();
   const { email, name, signOut, session, getToken, plane, organizations } = useAccount();
+  const [signOutError, setSignOutError] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
+  const leave = async () => {
+    setSignOutError(false);
+    setSigningOut(true);
+    try {
+      if (plane.bearerServices) await disablePush(getToken);
+      await signOut();
+      router.dismissAll();
+    } catch {
+      setSignOutError(true);
+    } finally {
+      setSigningOut(false);
+    }
+  };
   const orgs = organizations?.state.kind === "ready" ? organizations.state : null;
   const { hosts, pairing, pair, registry } = useMachines();
   const account = section === "account";
@@ -68,8 +83,9 @@ export default function Settings() {
           <>
             <Group>
               {session ? <ListRow title={email ?? name ?? ""} subtitle={t("account.title")} /> : null}
+              {signOutError ? <GroupFooter>{t("github.error")}</GroupFooter> : null}
               {session ? (
-                <ListRow testID="sign-out" title={t("account.sign_out")} destructive onPress={() => { router.dismissAll(); void (plane.bearerServices ? disablePush(getToken) : Promise.resolve()).finally(signOut); }} />
+                <ListRow testID="sign-out" title={t("account.sign_out")} destructive disabled={signingOut} onPress={() => void leave()} />
               ) : (
                 <ListRow testID="sign-in" title={t("signin.title")} chevron onPress={() => router.push("/signin")} />
               )}
@@ -84,7 +100,7 @@ export default function Settings() {
                       testID={`organization-${org.id}`}
                       title={org.name}
                       disabled={orgs.busy}
-                      onPress={orgs.items.length > 1 ? () => organizations?.choose(org.id) : undefined}
+                      onPress={orgs.items.length > 1 || orgs.active !== org.id || orgs.error ? () => organizations?.choose(org.id) : undefined}
                       right={org.id === orgs.active ? <Icon name="check" size={18} color={theme.merged} /> : <View style={{ width: 18 }} />}
                     />
                   ))}
