@@ -15,9 +15,8 @@ import { UpdateNotice } from './UpdateNotice';
 import { WorkosAuthPage, signInError } from './auth/workos';
 import { mountWindow } from './window';
 import { sessionStorageScope, clearWebCaches } from './session-storage';
-import { createOrganizationSelection } from '../features/shell/organization-selection';
+import { createOrganizationSelection, hasActiveOrganization } from '../features/shell/organization-selection';
 import { webOrganizationSource } from './organizations';
-import PromoRedeem from '../features/shell/PromoRedeem';
 import './phrases';
 
 declare const __DANIL_WEB_RELAY_ORIGINS__: string[];
@@ -72,7 +71,6 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
             <p>{t('web.platform.empty')}</p>
             <For each={rows()}>{row => <Button onClick={() => void choose(row.id)}>{row.name}</Button>}</For>
           </Show>
-          <PromoRedeem redeem={redeemPromo} />
           <Button variant="ghost" data-web-sign-out="" onClick={() => void logout()}>{t('web.platform.sign_out')}</Button>
         </Show>
       </main></Show>, root);
@@ -204,7 +202,7 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
           profile: webAccountProfile(transport), onUnauthorized: expired,
           onUnavailable: () => { setError('web.platform.unavailable'); gate(); later(); },
           workspaces: { rows, active, busy, uncertain, choose: id => void choose(id) },
-          organizations: loadOrganizations, promo: redeemPromo,
+          organizations: loadOrganizations, promo: () => !orgNeeded() && hasActiveOrganization(orgState()) ? redeemPromo : undefined,
         }, { storage: cache.storage, webAccounts: {
           current: { user_id: person.id, name: person.name, email: null, extra: false },
           others: () => [], open: () => {}, add: () => {}, remove: async () => {}, signOut: () => void logout(),
