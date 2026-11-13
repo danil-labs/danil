@@ -29,7 +29,7 @@ export type RelayConfig = {
   probe?: () => Promise<Blocked | null>;
 } & (
   | { getToken: () => string | Promise<string>; getAdmission?: never }
-  | { getAdmission: () => Promise<{ url: string; ticket: string }>; getToken?: never }
+  | { getAdmission: () => Promise<{ url: string; ticket: string; session_expires_at?: string | null }>; getToken?: never }
 );
 
 /** Lo que detiene la sesión sin reintentar sola: la persona no tiene Terminus de pago (computers#22). */
@@ -87,6 +87,8 @@ export const CALL_TIMEOUT = 180_000;
 export const WAKE_TIMEOUT = 330_000;
 const REPLACED = 4001;
 const REVOKED = 4003;
+/** Cuánto antes de `session_expires_at` se cambia de ticket. */
+export const ADMISSION_RENEW_BEFORE = 10_000;
 const TICKET_CONTEXT_REVOKED = 4008;
 /** El token con que se abrió la sesión venció sin renovarse: se reabre con uno nuevo. */
 export const TOKEN_EXPIRED = 4005;
@@ -302,11 +304,16 @@ export class RelaySession {
     }
     let token: string;
     let target = sessionUrl(this.config.endpoint, this.config.computerId, this.config.contracts);
+    let sessionEnd: number | null = null;
     try {
       if (this.config.getAdmission) {
         const admission = await this.config.getAdmission();
         token = admission.ticket;
-        target = admission.url;
+        // La URL del ticket viene sin query: se le suma `?contracts=` como a la del puente.
+        const query = target.includes("?") ? target.slice(target.indexOf("?")) : "";
+        target = admission.url + query;
+        const end = admission.session_expires_at ? Date.parse(admission.session_expires_at) : NaN;
+        sessionEnd = Number.isFinite(end) ? end : null;
       } else if (this.config.getToken) token = await this.config.getToken();
       else throw new Error("relay_admission_required");
     } catch {
@@ -330,6 +337,11 @@ export class RelaySession {
       this.missed = 0;
       this.token = token;
       if (!this.config.getAdmission) this.scheduleRenew(tokenExpiry(token));
+      else if (sessionEnd !== null) {
+        // Con ticket no hay `auth`: antes de `session_expires_at` se pide otro ticket y se reabre, sin esperar el cierre `4005`.
+        clearTimeout(this.renew);
+        this.renew = setTimeout(() => this.reopen(socket), Math.max(1_000, sessionEnd - Date.now() - ADMISSION_RENEW_BEFORE));
+      }
       clearInterval(this.pinger);
       this.pinger = setInterval(() => this.ping(), PING_EVERY);
       if (this.subscribed) this.send({ type: "subscribe", after: this.after });
@@ -412,6 +424,15 @@ export class RelaySession {
       }
     }
     for (const listener of this.blockedListeners) listener(blocked);
+  }
+
+  /** Cambia de sesión del puente antes de que venza: cierra esta (sin avisar de un corte) y abre otra con un ticket nuevo. */
+  private reopen(socket: SocketLike) {
+    if (this.closed || this.socket !== socket) return;
+    this.socket = null;
+    clearInterval(this.pinger);
+    socket.close(1000, "renew");
+    void this.connect();
   }
 
   private reconnectLater() {

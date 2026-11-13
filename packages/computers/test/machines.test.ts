@@ -161,3 +161,21 @@ withExamples("contrato: los ejemplos de mvp-v1 los entiende el módulo", async (
   });
   assert.deepEqual(await client(failed.fetch).start("cmp_1"), { kind: "error", status: null, code: "provider_unavailable" });
 });
+
+test("sin lista configurada, el relay es cualquier wss://*.danil.ai y nada más", async () => {
+  const urlFor = (host: string) => `wss://${host}/v1/machines/cmp_1/session`;
+  for (const [host, good] of [["connect.danil.ai", true], ["machines.danil.ai", true], ["danil.ai", false], ["danil.ai.evil.example", false], ["evil-danil.ai", false], ["x.danil.ai:8443", false]] as const) {
+    const answer = await client(edge({ "POST /machines/cmp_1/tickets": [ticket(urlFor(host))] }).fetch).admission("cmp_1");
+    assert.equal(answer.kind === "ok", good, host);
+  }
+});
+
+test("sin getToken no manda Authorization (Desk pasa por Rust)", async () => {
+  const { fetch, calls } = edge({ "GET /machines": [{ status: 200, body: { items: [] } }] });
+  await machinesClient({ endpoint: "https://edge.danil.ai/v1", fetch }).list();
+  assert.equal(calls[0].headers.authorization, undefined);
+});
+
+test("501 de una operación o un start es «no disponible»", async () => {
+  assert.equal((await client(edge({ "POST /machines/cmp_1/start": [{ status: 501 }] }).fetch).start("cmp_1")).kind, "unavailable");
+});
