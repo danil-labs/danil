@@ -153,3 +153,18 @@ test("changing context cancels a pending machine write", async () => {
   assert.equal((await cloud.client.start("cmp_1")).kind, "error");
   assert.equal(calls, 1);
 });
+
+test("the organization selector cancels the previous machine intent before selecting", async () => {
+  const { cancelEdgeWrites } = await import("../../src/lib/edge.ts");
+  const { edgeOrganizationSource } = await import("../../src/features/shell/organization-edge.ts");
+  let entered!: () => void;
+  const firstAttempt = new Promise<void>(resolve => { entered = resolve; });
+  let writes = 0;
+  const cloud = createCloudMachines(async () => { writes++; entered(); throw { detail: "unavailable" }; });
+  const pending = cloud.client.start("cmp_1");
+  await firstAttempt;
+  const selector = edgeOrganizationSource(async () => ({ status: 200, body: { organization: { id: "org_other" }, workspace: null } }), cancelEdgeWrites);
+  await selector.select("org_other", "select-intent");
+  assert.equal((await pending).kind, "error");
+  assert.equal(writes, 1);
+});
