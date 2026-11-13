@@ -669,6 +669,7 @@ const steps = [
   ["The Danil account signs in through identity in the system browser, one account only", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/danil-account.test.ts")], root],
   ["Desk calls the edge through Rust and retries a route until it appears", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/edge-client.test.ts")], root],
   ["The organization selector hides on 404/501, retries itself and opens on organization_selection_required", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/organization-selection.test.ts")], root],
+  ["Cloud machines go through Rust, hide when not announced and open the selector on a 403", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/cloud-machines.test.ts")], root],
   ["Each workspace talks to its Danil account, and an older engine leaves the single account", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/danil-sessions.test.ts")], root],
   ["Cuentas de IA is never blank: loading, failed with retry, or the agents Danil installs", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/ai-providers-view.test.ts")], root],
   ["The AI accounts panel mounts loading, failed or with the supported agents, never empty", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/ai-providers-states.test.mjs")], root],
