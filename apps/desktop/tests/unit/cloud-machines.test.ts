@@ -12,6 +12,7 @@ test("las llamadas van por danil_edge_fetch con la ruta y sin token", async () =
   });
   const rows = await cloud.rows();
   assert.equal(rows.available, true);
+  assert.equal(rows.renewInChannel, false);
   assert.equal(rows.computers[0].state, "online");
   assert.deepEqual(calls.map((c) => [c.command, c.args?.method, c.args?.path]), [["danil_edge_fetch", "GET", "/v1/capabilities"], ["danil_edge_fetch", "GET", "/v1/machines"]]);
   assert.ok(!JSON.stringify(calls).toLowerCase().includes("bearer"));
@@ -23,7 +24,7 @@ test("sin la capacidad «machines» no se llama y se reintenta solo (no disponib
     paths.push(args?.path);
     return { items: [{ name: "machines", status: "unavailable" }] };
   });
-  assert.deepEqual(await cloud.rows(), { available: false, computers: [] });
+  assert.deepEqual(await cloud.rows(), { available: false, computers: [], renewInChannel: false });
   assert.deepEqual(paths, ["/v1/capabilities"]);
 });
 

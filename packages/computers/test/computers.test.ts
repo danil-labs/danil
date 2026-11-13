@@ -462,3 +462,65 @@ test("un bloque MCP con valores escritos no sale al socket; uno con marcadores s
   assert.equal((await pending).value, 1);
   relay.close();
 });
+
+/** Un relay con ticket que vence en `ms`, con un contador de tickets. */
+function admissionSession(ms: number, extra: { renewInChannel?: () => boolean } = {}) {
+  FakeSocket.all = [];
+  let n = 0;
+  const relay = new RelaySession(
+    {
+      endpoint: "https://computers.example",
+      computerId: "cmp_a",
+      getAdmission: async () => ({ url: "wss://machines.danil.ai/v1/machines/cmp_a/session", ticket: `t${++n}`, session_expires_at: new Date(Date.now() + ms).toISOString() }),
+      ...extra,
+    },
+    (url, protocols) => new FakeSocket(url, protocols),
+  );
+  relay.start();
+  return relay;
+}
+
+test("renovación en el canal: manda {auth, ticket} por el mismo socket y no reabre si el relay confirma", async () => {
+  const relay = admissionSession(10_300, { renewInChannel: () => true });
+  await tick();
+  const first = FakeSocket.all[0];
+  first.open();
+  await new Promise((r) => setTimeout(r, 1_300));
+  const auth = first.sent.find((m) => m.type === "auth");
+  assert.deepEqual(auth, { type: "auth", ticket: "t2" });
+  first.receive({ type: "auth", expires_at: new Date(Date.now() + 60_000).toISOString() });
+  await new Promise((r) => setTimeout(r, 4_500));
+  assert.equal(FakeSocket.all.length, 1, "sigue en el mismo socket");
+  relay.close();
+});
+
+test("renovación en el canal: si el relay no contesta, reabre con un ticket nuevo antes del fin", async () => {
+  const relay = admissionSession(7_000, { renewInChannel: () => true });
+  await tick();
+  FakeSocket.all[0].open();
+  await new Promise((r) => setTimeout(r, 1_300));
+  assert.ok(FakeSocket.all[0].sent.some((m) => m.type === "auth"));
+  assert.equal(FakeSocket.all.length, 1);
+  await new Promise((r) => setTimeout(r, 4_800));
+  assert.equal(FakeSocket.all.length, 2, "reabrió");
+  assert.ok(FakeSocket.all[1].protocols?.includes("ticket.t3"));
+  relay.close();
+});
+
+test("renovación en el canal: un error del relay reabre; sin la capacidad, nunca manda auth", async () => {
+  const relay = admissionSession(10_300, { renewInChannel: () => true });
+  await tick();
+  FakeSocket.all[0].open();
+  await new Promise((r) => setTimeout(r, 1_300));
+  FakeSocket.all[0].receive({ type: "auth", error: { code: "ticket_invalid" } });
+  await tick();
+  assert.equal(FakeSocket.all.length, 2);
+  relay.close();
+  const plain = admissionSession(10_300);
+  await tick();
+  FakeSocket.all[0].open();
+  await new Promise((r) => setTimeout(r, 1_300));
+  assert.ok(!FakeSocket.all[0].sent.some((m) => m.type === "auth"));
+  assert.equal(FakeSocket.all.length, 2);
+  plain.close();
+});

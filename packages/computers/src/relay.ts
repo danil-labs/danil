@@ -23,6 +23,12 @@ export type RelayConfig = {
    */
   contracts?: readonly string[];
   /**
+   * El relay acepta renovar dentro del canal (`machines.session.renew` anunciada): con ticket, antes de
+   * `session_expires_at` manda `{type:"auth", ticket}` por el mismo socket. Sin respuesta o con error,
+   * se reabre con un ticket nuevo, como sin la capacidad.
+   */
+  renewInChannel?: () => boolean;
+  /**
    * Por qué no abrió un upgrade fallido (sin cuerpo en el navegador):
    * `license_required` para la sesión hasta `retry()`; `null` reintenta como siempre.
    */
@@ -89,6 +95,8 @@ const REPLACED = 4001;
 const REVOKED = 4003;
 /** Cuánto antes de `session_expires_at` se cambia de ticket. */
 export const ADMISSION_RENEW_BEFORE = 10_000;
+/** Cuánto se espera la respuesta `auth` del relay a una renovación en el canal antes de reabrir. */
+export const ADMISSION_RENEW_WAIT = 4_000;
 const TICKET_CONTEXT_REVOKED = 4008;
 /** El token con que se abrió la sesión venció sin renovarse: se reabre con uno nuevo. */
 export const TOKEN_EXPIRED = 4005;
@@ -282,6 +290,8 @@ export class RelaySession {
     this.closed = true;
     clearTimeout(this.retryTimer);
     clearTimeout(this.renew);
+    clearTimeout(this.waiting?.timer);
+    this.waiting = null;
     clearInterval(this.pinger);
     this.socket?.close(1000);
     for (const [id, call] of this.pending) {
@@ -340,7 +350,7 @@ export class RelaySession {
       else if (sessionEnd !== null) {
         // Con ticket no hay `auth`: antes de `session_expires_at` se pide otro ticket y se reabre, sin esperar el cierre `4005`.
         clearTimeout(this.renew);
-        this.renew = setTimeout(() => this.reopen(socket), Math.max(1_000, sessionEnd - Date.now() - ADMISSION_RENEW_BEFORE));
+        this.renew = setTimeout(() => void this.renewAdmission(socket, sessionEnd), Math.max(1_000, sessionEnd - Date.now() - ADMISSION_RENEW_BEFORE));
       }
       clearInterval(this.pinger);
       this.pinger = setInterval(() => this.ping(), PING_EVERY);
@@ -357,6 +367,8 @@ export class RelaySession {
       this.socket = null;
       clearInterval(this.pinger);
       clearTimeout(this.renew);
+      clearTimeout(this.waiting?.timer);
+      this.waiting = null;
       for (const listener of this.linkListeners) listener(false);
       // Sin licencia no se reintenta en bucle: la sesión espera a `retry()`.
       if (event.code === REVOKED && event.reason === "license_required") return this.setBlocked("license_required");
@@ -426,11 +438,44 @@ export class RelaySession {
     for (const listener of this.blockedListeners) listener(blocked);
   }
 
+  private waiting: { socket: SocketLike; timer: ReturnType<typeof setTimeout> } | null = null;
+
+  /** Antes de `session_expires_at`: renueva dentro del canal si el relay lo anuncia; si no, o si falla, reabre. */
+  private async renewAdmission(socket: SocketLike, end: number) {
+    if (this.closed || this.socket !== socket) return;
+    if (!this.config.renewInChannel?.() || !this.config.getAdmission) return this.reopen(socket);
+    let ticket: string;
+    try {
+      ticket = (await this.config.getAdmission()).ticket;
+    } catch {
+      return this.reopen(socket);
+    }
+    if (this.closed || this.socket !== socket) return;
+    this.send({ type: "auth", ticket });
+    // Un relay que no contesta (o contesta con error) no deja caer la sesión: se reabre antes del fin.
+    const wait = Math.max(500, Math.min(ADMISSION_RENEW_WAIT, end - Date.now() - 1_000));
+    this.waiting = { socket, timer: setTimeout(() => (this.waiting = null, this.reopen(socket)), wait) };
+  }
+
+  /** La respuesta del relay a una renovación en el canal: `{auth, expires_at}` o `{auth, error}`. */
+  private admissionAnswered(message: { expires_at?: unknown; error?: unknown }) {
+    const waiting = this.waiting;
+    if (!waiting || this.socket !== waiting.socket) return;
+    clearTimeout(waiting.timer);
+    this.waiting = null;
+    const end = timeOf(message.expires_at);
+    if (message.error || end === null) return this.reopen(waiting.socket);
+    clearTimeout(this.renew);
+    this.renew = setTimeout(() => void this.renewAdmission(waiting.socket, end), Math.max(1_000, end - Date.now() - ADMISSION_RENEW_BEFORE));
+  }
+
   /** Cambia de sesión del puente antes de que venza: cierra esta (sin avisar de un corte) y abre otra con un ticket nuevo. */
   private reopen(socket: SocketLike) {
     if (this.closed || this.socket !== socket) return;
     this.socket = null;
     clearInterval(this.pinger);
+    clearTimeout(this.waiting?.timer);
+    this.waiting = null;
     socket.close(1000, "renew");
     void this.connect();
   }
@@ -508,7 +553,7 @@ export class RelaySession {
         return;
       }
       case "auth":
-        if (this.config.getAdmission) return;
+        if (this.config.getAdmission) return this.admissionAnswered(message);
         this.scheduleRenew(timeOf(message.expires_at) ?? (this.token ? tokenExpiry(this.token) : null));
         return;
       case "ping":
