@@ -28,6 +28,7 @@ async function run(owner, listed, pass) {
   const fixture = await open(`delegated-fleet-${owner}-${listed}-${pass}`, {
     computers: [HOME, { ...VM, state: "online" }],
     extra: owner === "cmp_home" ? table : {
+      project_base_branches: [],
       list_live_sessions: () => [task("child", "Colisión local: destino incorrecto")],
     },
     relays: { cmp_vm: { table: remote("Panel remoto", "Otra tarea", owner === "cmp_vm" ? table : {}), state: "online" } },
@@ -116,12 +117,15 @@ async function explicitCoordinator(source, owner) {
 try {
   for (const owner of ["cmp_home", "cmp_vm"]) {
     for (const listed of [true, false]) {
+      if (process.env.QA_DELEGATED_ONLY === "missing" && listed) continue;
       // Dos montajes: el segundo vuelve a leer el lanzamiento guardado desde load_session.
       for (const pass of ["historial", "reapertura"]) await run(owner, listed, pass);
     }
   }
-  await explicitCoordinator("cmp_home", "cmp_vm");
-  await explicitCoordinator("cmp_vm", "cmp_home");
+  if (process.env.QA_DELEGATED_ONLY !== "missing") {
+    await explicitCoordinator("cmp_home", "cmp_vm");
+    await explicitCoordinator("cmp_vm", "cmp_home");
+  }
   console.log(JSON.stringify({ scope: "jsdom integration, simulated IPC and relay", results }, null, 2));
 } catch (error) {
   console.error(JSON.stringify({ results, error: error.stack }, null, 2));
