@@ -53,6 +53,18 @@ export default function Settings() {
   const { section } = useLocalSearchParams<{ section?: string }>();
   const { email, name, signOut, session, getToken, plane, organizations } = useAccount();
   const orgs = organizations?.state.kind === "ready" ? organizations.state : null;
+  const [signOutFailed, setSignOutFailed] = useState(false);
+  // Se sale solo cuando la cuenta confirma el cierre; si no, la persona sigue dentro y puede reintentar.
+  const leave = async () => {
+    setSignOutFailed(false);
+    if (plane.bearerServices) await disablePush(getToken).catch(() => undefined);
+    try {
+      await signOut();
+      router.dismissAll();
+    } catch {
+      setSignOutFailed(true);
+    }
+  };
   const { hosts, pairing, pair, registry } = useMachines();
   const account = section === "account";
   const power = (host: Host) =>
@@ -69,11 +81,12 @@ export default function Settings() {
             <Group>
               {session ? <ListRow title={email ?? name ?? ""} subtitle={t("account.title")} /> : null}
               {session ? (
-                <ListRow testID="sign-out" title={t("account.sign_out")} destructive onPress={() => { router.dismissAll(); void (plane.bearerServices ? disablePush(getToken) : Promise.resolve()).finally(signOut); }} />
+                <ListRow testID="sign-out" title={t("account.sign_out")} destructive onPress={() => void leave()} />
               ) : (
                 <ListRow testID="sign-in" title={t("signin.title")} chevron onPress={() => router.push("/signin")} />
               )}
             </Group>
+            {signOutFailed ? <GroupFooter>{w("web.platform.unavailable")}</GroupFooter> : null}
             {session && orgs && orgs.items.length ? (
               <>
                 <GroupHeader>{w("shell.organization.title")}</GroupHeader>

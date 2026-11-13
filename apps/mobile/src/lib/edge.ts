@@ -81,7 +81,8 @@ export function edgeControlPlane(deployment: EdgeDeployment, options: EdgeOption
   };
 
   return {
-    identity: edgeIdentity(transport, deployment.origin),
+    // Identity decide la sesión: sus 401 no pasan por el aviso, que lo vuelve a preguntar a ella.
+    identity: edgeIdentity(raw, deployment.origin),
     organizations,
     /** Adonde abre el canal de datos; la URL exacta la trae cada ticket. */
     relayOrigin,

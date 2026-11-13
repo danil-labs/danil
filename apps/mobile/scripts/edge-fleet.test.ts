@@ -140,3 +140,13 @@ test("el plano de control del borde: 404 o 501 de la colección es «aún no»; 
   assert.equal((await plane.computers()).kind, "unauthorized");
   assert.equal(expired, 1);
 });
+
+test("identity decide la sesión: un 401 de identity/me no dispara el aviso de 401 (sin bucle con recheck)", async () => {
+  let expired = 0;
+  const request: typeof fetch = async () => Response.json({ code: "unauthorized" }, { status: 401, headers: { "content-type": "application/problem+json" } });
+  const plane = edgeControlPlane({ origin: "https://edge.example", timeoutMs: 1000 }, { fetch: request, onUnauthorized: () => expired++ });
+  await assert.rejects(plane.identity.me(), (e: unknown) => (e as { status?: number }).status === 401);
+  assert.equal(expired, 0);
+  assert.equal((await plane.computers()).kind, "unauthorized");
+  assert.equal(expired, 1, "las demás rutas sí avisan");
+});

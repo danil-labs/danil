@@ -13,6 +13,7 @@ import { type AccountFleet, type Host, type Pairing, accountFleet, bridgeHost } 
 import { t } from "./i18n";
 import { Notifications } from "./notifications";
 import { renewPush } from "./push";
+import { retryingRead } from "./reload";
 
 type Listener = (host: string, events: EngineEvent[], gap: boolean) => void;
 
@@ -131,7 +132,6 @@ function LiveMachinesProvider({ children, active }: { children: ReactNode; activ
   }, []);
   const [last, setLast] = useState<string | null>(null);
   const listeners = useRef(new Set<Listener>());
-  const reloadGeneration = useRef(0);
   const openTask = useRef<string | null>(null);
   const titles = useRef(new Map<string, string>());
 
@@ -153,45 +153,45 @@ function LiveMachinesProvider({ children, active }: { children: ReactNode; activ
     }
   }, [active]);
 
-  const retryWait = useRef(RETRY_FIRST_MS);
-  const retryTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const reloadComputers = useCallback(async () => {
-    const request = ++reloadGeneration.current;
-    if (retryTimer.current) clearTimeout(retryTimer.current);
-    retryTimer.current = null;
-    if (!signedIn) {
-      setComputers([]);
-      setRegistry(null);
-      setFleet("signed_out");
-      return;
-    }
-    const [answer, workspaces] = await Promise.all([
-      plane.computers().catch((): Answer<Computer[]> => ({ kind: "error", status: null })),
-      plane.workspaces().catch(() => null),
-    ]);
-    if (request !== reloadGeneration.current) return;
-    // Un plano de control sin el registro, o un fallo de red, deja la lista de antes.
-    if (workspaces?.kind === "ok") setRegistry((old) => (JSON.stringify(old) === JSON.stringify(workspaces.value) ? old : workspaces.value));
-    if (answer.kind === "ok") {
-      retryWait.current = RETRY_FIRST_MS;
-      setFleet("ok");
-      // Solo cambia la lista si cambian las máquinas o sus workspaces vinculados: cada cambio vuelve a abrir sus sesiones.
-      setComputers((old) => {
-        const linked = (c: Computer) => JSON.stringify(c.workspaces ?? null);
-        const same =
-          old.length === answer.value.length &&
-          old.every((c, i) => c.computer_id === answer.value[i].computer_id && c.provider === answer.value[i].provider && c.name === answer.value[i].name && linked(c) === linked(answer.value[i]));
-        return same ? old : answer.value;
-      });
-    } else if (answer.kind === "license" || answer.kind === "no_account") setFleet(answer.kind);
-    else if (answer.kind !== "unauthorized") {
-      setFleet("error");
-      // Sin la ruta todavía (404/501) o sin red: se reintenta solo, sin que la persona lo pida.
-      const wait = retryWait.current;
-      retryWait.current = Math.min(wait * 2, RETRY_MAX_MS);
-      retryTimer.current = setTimeout(() => void reloadComputers(), wait);
-    }
+  // La lista se relee sola mientras el plano de control no la tenga (404/501) o no conteste (`reload.ts`).
+  const reader = useMemo(() => {
+    type Read = { answer: Answer<Computer[]>; workspaces: Answer<AccountWorkspace[]> | null };
+    return retryingRead<Read | null>(
+      async () => {
+        if (!signedIn) return null;
+        const [answer, workspaces] = await Promise.all([
+          plane.computers().catch((): Answer<Computer[]> => ({ kind: "error", status: null })),
+          plane.workspaces().catch(() => null),
+        ]);
+        return { answer, workspaces };
+      },
+      (read) => {
+        if (!read) {
+          setComputers([]);
+          setRegistry(null);
+          setFleet("signed_out");
+          return;
+        }
+        const { answer, workspaces } = read;
+        // Un plano de control sin el registro, o un fallo de red, deja la lista de antes.
+        if (workspaces?.kind === "ok") setRegistry((old) => (JSON.stringify(old) === JSON.stringify(workspaces.value) ? old : workspaces.value));
+        if (answer.kind === "ok") {
+          setFleet("ok");
+          // Solo cambia la lista si cambian las máquinas o sus workspaces vinculados: cada cambio vuelve a abrir sus sesiones.
+          setComputers((old) => {
+            const linked = (c: Computer) => JSON.stringify(c.workspaces ?? null);
+            const same =
+              old.length === answer.value.length &&
+              old.every((c, i) => c.computer_id === answer.value[i].computer_id && c.provider === answer.value[i].provider && c.name === answer.value[i].name && linked(c) === linked(answer.value[i]));
+            return same ? old : answer.value;
+          });
+        } else if (answer.kind === "license" || answer.kind === "no_account") setFleet(answer.kind);
+        else if (answer.kind !== "unauthorized") setFleet("error");
+      },
+      { retry: (read) => read?.answer.kind === "error", first: RETRY_FIRST_MS, max: RETRY_MAX_MS },
+    );
   }, [signedIn, plane]);
+  const reloadComputers = reader.run;
 
   useEffect(() => {
     void reloadComputers();
@@ -199,10 +199,9 @@ function LiveMachinesProvider({ children, active }: { children: ReactNode; activ
     const sub = AppState.addEventListener("change", (state) => state === "active" && void reloadComputers());
     return () => {
       sub.remove();
-      reloadGeneration.current++;
-      if (retryTimer.current) clearTimeout(retryTimer.current);
+      reader.stop();
     };
-  }, [reloadComputers]);
+  }, [reader, reloadComputers]);
 
   // Una sola flota por sesión de Danil (`@terminus/fleet`), como el escritorio y la web: una sesión de relay por computadora.
   const [machinesFleet, setMachinesFleet] = useState<AccountFleet | null>(null);

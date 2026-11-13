@@ -27,6 +27,10 @@ export type AccountSession = { user: { id: string; email?: string } };
 export type Account = {
   ready: boolean;
   session: AccountSession | null;
+  /** El servicio de identidad no contestó: no hay persona confirmada ni «sin sesión»; se reintenta solo. */
+  unavailable: boolean;
+  /** Vuelve a preguntar ya (el botón «Reintentar» de la entrada). */
+  retry: () => void;
   email: string | null;
   /** El nombre de la persona, si el servicio de identidad lo dice. */
   name: string | null;
@@ -38,6 +42,7 @@ export type Account = {
   loginUrl: ((returnTo: string) => string) | null;
   signInWithPassword: (email: string, password: string) => Promise<string | null>;
   signInWithProvider: (provider: OAuthProvider) => Promise<string | null>;
+  /** Rechaza si el cierre no se confirmó: la persona sigue dentro y puede reintentar. */
   signOut: () => Promise<void>;
   /** Un token vigente para la API y el relay. */
   getToken: () => Promise<string>;
@@ -67,6 +72,8 @@ export async function finishOAuth(url: string): Promise<string | null> {
   return exchange ? exchange.message : null;
 }
 
+const noop = () => {};
+
 const DEMO_PLANE: ControlPlane = {
   computers: async () => { throw demoDenied(); },
   workspaces: async () => null,
@@ -76,7 +83,7 @@ const DEMO_PLANE: ControlPlane = {
 };
 
 export function AccountProvider({ children }: { children: ReactNode }) {
-  if (ALPHA_DEMO) return <Context.Provider value={{ ready: true, session: null, email: null, name: null, plane: DEMO_PLANE, organizations: null, loginUrl: null, signInWithPassword: async () => "demo_read_only", signInWithProvider: async () => "demo_read_only", signOut: async () => { throw demoDenied(); }, getToken: async () => { throw demoDenied(); }, unauthorized: async () => false }}>{children}</Context.Provider>;
+  if (ALPHA_DEMO) return <Context.Provider value={{ ready: true, session: null, unavailable: false, retry: () => {}, email: null, name: null, plane: DEMO_PLANE, organizations: null, loginUrl: null, signInWithPassword: async () => "demo_read_only", signInWithProvider: async () => "demo_read_only", signOut: async () => { throw demoDenied(); }, getToken: async () => { throw demoDenied(); }, unauthorized: async () => false }}>{children}</Context.Provider>;
   if (EDGE) return <EdgeAccountProvider context={Context} deployment={EDGE}>{children}</EdgeAccountProvider>;
   return <LiveAccountProvider>{children}</LiveAccountProvider>;
 }
@@ -137,6 +144,8 @@ function LiveAccountProvider({ children }: { children: ReactNode }) {
     () => ({
       ready,
       session,
+      unavailable: false,
+      retry: noop,
       email: session?.user.email ?? null,
       name: null,
       plane,
