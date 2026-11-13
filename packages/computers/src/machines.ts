@@ -56,7 +56,7 @@ export type MachinesConfig = {
 };
 
 /** Hoy, según el código del prototipo, el relay vive en estos dos nombres (N2 de Mauricio; es un parámetro). */
-export const DEFAULT_RELAY_ORIGINS: readonly string[] = ["wss://machines.danil.ai", "wss://computers.danil.ai"];
+export const DEFAULT_RELAY_ORIGINS: readonly string[] = ["wss://*.danil.ai"];
 export const OPERATION_TIMEOUT_MS = 330_000;
 const POLL_FIRST_MS = 500;
 const POLL_MAX_MS = 4_000;
@@ -112,6 +112,9 @@ export function admissionUrl(raw: unknown, machineId: string, origins: readonly 
   if (url.username || url.password || url.search || url.hash) return null;
   if (url.pathname !== `/v1/machines/${encodeURIComponent(machineId)}/session`) return null;
   const allowed = origins.some(origin => {
+    // `wss://*.danil.ai`: cualquier subdominio del relay, sin puerto (la web no se recompila si el relay cambia de nombre).
+    const wild = /^wss:\/\/\*\.([a-z0-9-]+(?:\.[a-z0-9-]+)+)$/i.exec(origin);
+    if (wild) return url.port === "" && new RegExp(`^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\\.${wild[1].replace(/\./g, "\\.")}$`, "i").test(url.hostname);
     try {
       const base = new URL(origin.replace(/^https?:/i, "wss:"));
       return base.protocol === "wss:" && base.pathname === "/" && !base.username && !base.password && !base.search && !base.hash && base.origin === url.origin;

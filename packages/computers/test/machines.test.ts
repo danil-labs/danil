@@ -107,6 +107,20 @@ test("ticket: valida wss, origen y ruta antes de entregarlo; sale con subprotoco
   }
 });
 
+test("ticket: wss://*.danil.ai acepta machines y connect, y rechaza host ajeno, puerto, falso sufijo y el apex", async () => {
+  for (const host of ["machines.danil.ai", "connect.danil.ai"]) {
+    const url = `wss://${host}/v1/machines/cmp_1/session`;
+    const answer = await client(edge({ "POST /machines/cmp_1/tickets": [ticket(url)] }).fetch, { relayOrigins: ["wss://*.danil.ai"] }).admission("cmp_1");
+    assert.equal(answer.kind, "ok", host);
+  }
+  for (const host of ["evil.example", "danil.ai.evil.example", "evildanil.ai", "danil.ai", "machines.danil.ai:8443", "a.b.evil.example"]) {
+    const answer = await client(edge({ "POST /machines/cmp_1/tickets": [ticket(`wss://${host}/v1/machines/cmp_1/session`)] }).fetch, { relayOrigins: ["wss://*.danil.ai"] }).admission("cmp_1");
+    assert.deepEqual(answer, { kind: "error", status: null, code: "invalid_admission_url" }, host);
+  }
+  const byDefault = await client(edge({ "POST /machines/cmp_1/tickets": [ticket("wss://connect.danil.ai/v1/machines/cmp_1/session")] }).fetch).admission("cmp_1");
+  assert.equal(byDefault.kind, "ok");
+});
+
 test("ticket: el origen del relay es configurable; 409 machine_unreachable conserva su código", async () => {
   const other = edge({ "POST /machines/cmp_1/tickets": [ticket("wss://relay.example/v1/machines/cmp_1/session")] });
   assert.equal((await client(other.fetch, { relayOrigins: ["wss://relay.example"] }).admission("cmp_1")).kind, "ok");

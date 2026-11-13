@@ -94,7 +94,7 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
       call: (path, init) => authorized(() => raw.call(path, init)),
       mutation: (path, init) => authorized(() => raw.mutation(path, init)),
     };
-    const machines = machinesClient({ endpoint: `${options.origin}/v1`, transport, relayOrigins: [__DANIL_WEB_RELAY_ORIGIN__] });
+    const machines = machinesClient({ endpoint: `${options.origin}/v1`, transport, relayOrigins: [__DANIL_WEB_RELAY_ORIGIN__, 'wss://*.danil.ai'] });
     // Tras cambiar de organización la página se relee entera, como tras cambiar de workspace.
     const organizations = createOrganizationSelection(webOrganizationSource(transport), { onSelected: () => window.location.assign(home) });
     const [orgNeeded, setOrgNeeded] = createSignal(false);

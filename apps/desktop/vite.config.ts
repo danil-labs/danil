@@ -59,7 +59,7 @@ function webBuild(serve: boolean): UserConfig {
   const session = webSessionDeployment(env);
   const base = `/${(env.TERMINUS_WEB_BASE ?? "/terminus/").replace(/^\/+|\/+$/g, "")}/`.replace("//", "/");
   const relayOrigin = webRelayOrigin(env.RELAY_ORIGIN);
-  const connect = `${session.origin} ${relayOrigin}`;
+  const connect = [...new Set([session.origin, relayOrigin, "wss://*.danil.ai"])].join(" ");
   const version = JSON.parse(readFileSync(new URL("./package.json", import.meta.url), "utf8")).version as string;
   const root = fileURLToPath(new URL("./dist-web/", import.meta.url));
   const outDir = join(root, base);
@@ -89,6 +89,8 @@ function webBuild(serve: boolean): UserConfig {
         `  Content-Security-Policy: ${policy}; frame-ancestors 'none'`,
         "  X-Content-Type-Options: nosniff",
         "  Referrer-Policy: strict-origin-when-cross-origin",
+        "  Strict-Transport-Security: max-age=31536000",
+        "  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=()",
         "",
       ];
       writeFileSync(join(root, "_headers"), headers.join("\n"));
