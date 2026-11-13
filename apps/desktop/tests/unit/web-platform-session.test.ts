@@ -226,3 +226,22 @@ test('a directory that stays empty exhausts startup after 20s and stops rereadin
   t.mock.timers.tick(60_000);
   assert.equal(calls, stoppedAt);
 });
+
+test('pending startup preserves its result when an in-flight read crosses the deadline', async t => {
+  t.mock.timers.enable({ apis: ['setTimeout', 'Date'], now: 0 });
+  const deadline = new AbortController();
+  t.mock.method(AbortSignal, 'timeout', () => deadline.signal);
+  let calls = 0;
+  const result = preparePlatformSession(async signal => {
+    if (++calls === 1) return false;
+    return new Promise<boolean>((_resolve, reject) => signal.addEventListener('abort', () => reject(signal.reason), { once: true }));
+  }, new AbortController().signal, () => {}, value => value);
+  const observed = result.then(value => ({ value }), error => ({ error }));
+  await new Promise(resolve => setImmediate(resolve));
+  t.mock.timers.tick(1000);
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(calls, 2);
+  t.mock.timers.tick(19_000);
+  deadline.abort(new DOMException('Startup deadline', 'TimeoutError'));
+  assert.deepEqual(await observed, { value: false });
+});

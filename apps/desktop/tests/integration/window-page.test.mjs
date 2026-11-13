@@ -357,6 +357,56 @@ test('free startup stops preparing an empty directory and offers retry without g
   assert.deepEqual(app.failures, []);
 });
 
+for (const status of [403, 409]) test(`free startup stops after definitive selection HTTP ${status}`, async t => {
+  let posts = 0;
+  const fetcher = async input => {
+    const path = new URL(String(input)).pathname;
+    if (path === '/v1/capabilities') return Response.json({ contract: 'mvp-v1', items: ['workspaces', 'identity.organizations'].map(name => ({ name, version: 1, status: 'available' })) });
+    if (path === '/v1/identity/me') return Response.json({ id: 'user_refused', name: 'Refused', workspace: null, organizations: [{ id: 'org_A', name: 'Organization' }] });
+    if (path === '/v1/workspaces') return Response.json({ items: [], next_cursor: null });
+    if (path === '/v1/identity/organizations') return Response.json({ items: [{ id: 'org_A', name: 'Organization' }], active_organization_id: null });
+    if (path === '/v1/identity/csrf') return Response.json({ csrf_token: 'bound' });
+    if (path === '/v1/identity/organizations/select') {
+      posts++;
+      return Response.json({ code: 'organization_selection_refused' }, { status, headers: { 'content-type': 'application/problem+json' } });
+    }
+    return new Response(null, { status: 404 });
+  };
+  fetcher.__jsdomApp = true; globalThis.fetch = fetcher;
+  const app = await open(t, 'listo', `free-selection-refused-${status}`, {}, undefined, {}, { web: true });
+  const doc = app.w.document;
+  await until(() => doc.querySelector('[role="alert"]'), 4000);
+  assert.equal(doc.querySelector('[data-spinner]'), null);
+  if (status === 403) assert.match(doc.querySelector('[role="alert"]').textContent, /No tienes acceso/);
+  await new Promise(resolve => setTimeout(resolve, 1600));
+  assert.equal(posts, 1, 'a definitive rejection must not create another selection intent');
+  assert.deepEqual(app.failures, []);
+});
+
+test('free startup does not restart after a pending read is aborted at the deadline', async t => {
+  let reads = 0;
+  const fetcher = async (input, init) => {
+    const path = new URL(String(input)).pathname;
+    if (path === '/v1/capabilities') return Response.json({ contract: 'mvp-v1', items: ['workspaces', 'identity.organizations'].map(name => ({ name, version: 1, status: 'available' })) });
+    if (path === '/v1/identity/me') {
+      if (++reads > 2) return new Promise((_resolve, reject) => init.signal.addEventListener('abort', () => reject(init.signal.reason), { once: true }));
+      return Response.json({ id: 'user_pending', name: 'Pending', workspace: null, organizations: [] });
+    }
+    if (path === '/v1/workspaces') return Response.json({ items: [], next_cursor: null });
+    if (path === '/v1/identity/organizations') return Response.json({ items: [], active_organization_id: null });
+    return new Response(null, { status: 404 });
+  };
+  fetcher.__jsdomApp = true; globalThis.fetch = fetcher;
+  const app = await open(t, 'listo', 'free-startup-inflight-deadline', {}, undefined, {}, { web: true });
+  const doc = app.w.document;
+  await until(() => doc.querySelector('[role="alert"]'), 25_000);
+  const endedAt = reads;
+  await new Promise(resolve => setTimeout(resolve, 1800));
+  assert.equal(reads, endedAt, 'deadline abort must not schedule another startup budget');
+  assert.equal(doc.querySelector('[data-spinner]'), null);
+  assert.deepEqual(app.failures, []);
+});
+
 test('promo redemption opens only in the active organization plan section', async t => {
   const fetcher = async input => {
     const path = new URL(String(input)).pathname;
