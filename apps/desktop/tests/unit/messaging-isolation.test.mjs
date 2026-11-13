@@ -29,3 +29,22 @@ test('engine attention and task delivery rows remain permitted', t => {
   const result = spawnSync(process.execPath, [fileURLToPath(guard), root], { encoding: 'utf8' });
   assert.equal(result.status, 0, result.stderr);
 });
+
+for (const [file, code] of [
+  ['src/relative.ts', 'call("messaging/conversations")'],
+  ['src/bff.ts', 'fetch("/v1/bff/grants")'],
+  ['src-tauri/src/extracted/agents_session.rs', 'fetch("/v1/bff/grants")'],
+  ['packages/attention/src/inbox.ts', 'call("messaging/conversations")'],
+  ['packages/example/src/transport.ts', 'call("messaging/conversations")'],
+  ['alpha-entry/route.mjs', 'fetch("/v1/bff/auth")'],
+]) test(`isolation rejects ${file}: ${code}`, t => {
+  const root = mkdtempSync(join(tmpdir(), 'danil-shared-isolation-'));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  mkdirSync(join(root, 'src'), { recursive: true });
+  mkdirSync(join(root, 'src-tauri/src'), { recursive: true });
+  mkdirSync(join(root, file, '..'), { recursive: true });
+  writeFileSync(join(root, file), code);
+  const result = spawnSync(process.execPath, [fileURLToPath(guard), root], { encoding: 'utf8' });
+  assert.equal(result.status, 1, result.stderr);
+  assert.ok(result.stderr.includes(file), result.stderr);
+});

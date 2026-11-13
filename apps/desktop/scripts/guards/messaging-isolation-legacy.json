@@ -1,0 +1,48 @@
+{
+  "files": {
+    "src-tauri/src/extracted/agents_session.rs": {
+      "sha256": "3c46eed8b0ee20fffc0a292c47b6b34b4d2e96b7f21f4493954ae5216f7661f1",
+      "pending": "(b): native identity exchange and grants; no native change authorized for web-only (a)"
+    },
+    "packages/attention/src/inbox.ts": {
+      "sha256": "6cd391eb6595d06fabf8f620f7a299ce9d221f10a79afcf6bee4b7701474b682",
+      "pending": "Mobile-only legacy module; desktop/web imports remain forbidden"
+    },
+    "packages/attention/src/broadcasts.ts": {
+      "sha256": "610949eadf4a6f9d84a843d1bcf3e599e4dae76b4aa125aa087456367be07ed8",
+      "pending": "Mobile-only legacy module; desktop/web imports remain forbidden"
+    },
+    "packages/attention/src/workspace-account.ts": {
+      "sha256": "c587a6a8acd091b9eb45b4727e2efdc60bbc9e208e1a2a92a071d54449b459ea",
+      "pending": "Mobile-only legacy module; desktop/web imports remain forbidden"
+    },
+    "packages/attention/src/messaging.ts": {
+      "sha256": "2ecb5220657f7bdecbeed355f7ddec082035a594089b529ceda872f45d118d91",
+      "pending": "Mobile-only legacy module; desktop/web imports remain forbidden"
+    },
+    "packages/attention/src/request.ts": {
+      "sha256": "efff04d411199edf4392a1c05900463abcebd808fb83d529e84d51e49da57897",
+      "pending": "Mobile-only legacy module; desktop/web imports remain forbidden"
+    },
+    "packages/attention/src/broadcast-panel.ts": {
+      "sha256": "cd3674c83e64d49c247ab177986c5ae2e968f7dff58103f76e84605b35a1393e",
+      "pending": "Mobile-only legacy module; desktop/web imports remain forbidden"
+    },
+    "packages/attention/src/channels.ts": {
+      "sha256": "2bc49dc77a061196462cecd57aed15f4bb32fbc8a0de2349b4e0c01548956679",
+      "pending": "Mobile-only legacy module; desktop/web imports remain forbidden"
+    },
+    "packages/attention/src/support-access.ts": {
+      "sha256": "e19f049f9c975b81f0d2f0b4032f2ba372ef20170273ebeac1eb9524730f237d",
+      "pending": "Mobile-only legacy module; desktop/web imports remain forbidden"
+    },
+    "packages/attention/src/service.ts": {
+      "sha256": "e95ac5930bc1fff5db3333195603ee8f060040a932c99eb82f44ec0f1e76cea1",
+      "pending": "Mobile-only legacy module; desktop/web imports remain forbidden"
+    },
+    "packages/attention/src/customization.ts": {
+      "sha256": "ad3c2e17ac52da1437ec9d5f65c924b3fc7b567d9427bb063d289463e106c34b",
+      "pending": "Mobile-only legacy module; desktop/web imports remain forbidden"
+    }
+  }
+}

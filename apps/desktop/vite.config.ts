@@ -58,7 +58,7 @@ function webBuild(serve: boolean): UserConfig {
   const env = process.env;
   const session = webSessionDeployment(env);
   const base = `/${(env.TERMINUS_WEB_BASE ?? "/terminus/").replace(/^\/+|\/+$/g, "")}/`.replace("//", "/");
-  const connect = `${session.origin} wss://connect.danil.ai`;
+  const connect = session.origin;
   const version = JSON.parse(readFileSync(new URL("./package.json", import.meta.url), "utf8")).version as string;
   const root = fileURLToPath(new URL("./dist-web/", import.meta.url));
   const outDir = join(root, base);

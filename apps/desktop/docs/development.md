@@ -241,16 +241,22 @@ does not configure a deployment. For the local front verification chain, run
 `tests/integration/window-page.test.mjs` mounts the real task window against a
 simulated cookie edge and relay. `tests/integration/window.browser.py` exercises
 the built page with Chromium; `DANIL_WINDOW_BROWSER_URL` selects the served URL.
-The existing compute adapter is provisional, awaiting Sprint 0; this cleanup adds no machine API. Its earlier stub uses: list/start under
-`/v1/compute/computers`, ticket at `POST /v1/compute/computers/:id/tickets`,
-WebSocket with the `ticket.*` subprotocol. The engine registry, shared machines,
-renaming, screen and account administration still depend on new service contracts;
-identity currently supplies a read-only profile. Desk and web do not mount or
-transport the messaging satellite. `messaging-isolation` guards their source
-boundaries; engine task attention and task delivery rows remain.
-Prototype metrics and directory readers are retired; Harness displays its
-unavailable state. Empty platform workspace lists display the plan empty state
-without requesting compute or implementing purchase logic.
+The browser window mounts with identity and workspaces only. No compute list,
+registry, wake or relay admission is mounted, and browser CSP permits only the
+configured edge for service connections. Machines show the unavailable state.
+The unmounted compute client awaits the Sprint 0 `/v1/machines` contract.
+Logout and identity 401 revoke and erase the person's browser caches; an initial
+401 with no known identity clears all web cache prefixes. Machine preferences
+use a person prefix. The beta assets worker sets anti-framing headers itself.
+
+`messaging-isolation` scans frontend, native, packages and assets-worker sources.
+The manifest freezes the existing native grants pending the separate Desk
+retirement and mobile-only attention modules. Any new forbidden consumer, or
+an edit retaining one in those files, fails. Desk/web imports of the satellite
+remain forbidden; this is not a claim that the frozen legacy has been retired.
+Engine task attention and task delivery rows remain. Prototype metrics and
+directory readers stay retired. Empty platform workspace lists display the
+plan empty state without implementing purchase logic.
 
 The platform workspace list and selection use `/v1/workspaces` as published.
 Pending: **modelo organización→N workspaces por decidir** (detalle de negocio)

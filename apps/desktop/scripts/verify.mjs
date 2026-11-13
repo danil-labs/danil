@@ -63,6 +63,8 @@ const rustSteps = [
 ];
 
 const steps = [
+  ["Session caches are revoked and erased on logout", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/web-session-storage.test.ts")], root],
+  ["Machine preferences stay with the browser person", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/web-machine-preferences.test.ts")], root],
   ["Messaging stays isolated from Desk and web", process.execPath, [join(root, "scripts/guards/messaging-isolation.mjs")], root],
   ["Messaging isolation guard rejects reintroduced transports", process.execPath, ["--test", join(root, "tests/unit/messaging-isolation.test.mjs")], root],
   ["Web uses platform without direct database dependencies", process.execPath, [join(root, "scripts/guards/web-platform.mjs")], root],
@@ -655,7 +657,7 @@ const steps = [
   ["Remote paths preserve their machine context", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/remote-path.test.ts")], root],
   ["Workspace selection reconciles uncertain intents before another operation", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/web-workspace-selection.test.ts")], root],
   ["Desk retains engine attention without a messaging session", process.execPath, ["--test", "--test-force-exit", join(root, "tests/integration/messaging-isolation.test.mjs")], root],
-  ["The cookie session mounts the real window through compute", process.execPath, ["--test", "--test-force-exit", join(root, "tests/integration/window-page.test.mjs")], root],
+  ["Identity and workspaces mount the window without compute", process.execPath, ["--test", "--test-force-exit", join(root, "tests/integration/window-page.test.mjs")], root],
   ["The platform session always uses cookies, CSRF and a configured edge", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/web-platform-session.test.ts")], root],
   ["app.danil.ai/terminus answers 308 to the same alfa path and never leaves that host", process.execPath, ["--test", join(root, "web-redirect/worker.test.mjs")], root],
   ["The entry serves assets and closes every retired proxy", process.execPath, ["--test", join(root, "alpha-entry/worker.test.mjs")], root],

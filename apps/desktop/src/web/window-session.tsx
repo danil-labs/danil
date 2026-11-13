@@ -1,6 +1,5 @@
 import { createRoot, createSignal, For, Show } from 'solid-js';
 import { render } from 'solid-js/web';
-import { computeClient, type ComputeTransport } from '@terminus/computers';
 import { aplicarLengua, t } from '../lib/i18n';
 import { setShellCacheScope } from '../lib/shellCache';
 import { seguirElTema } from '../lib/theme';
@@ -12,6 +11,7 @@ import type { WebSessionDeployment } from './session-config';
 import { workspaceSelection } from './workspace-selection';
 import { UpdateNotice } from './UpdateNotice';
 import { mountWindow } from './window';
+import { sessionStorageScope, clearWebCaches } from './session-storage';
 import './phrases';
 
 export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
@@ -30,6 +30,7 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
     let windowApp: ReturnType<typeof mountWindow> | undefined;
     let disposeGate: (() => void) | undefined;
     let stopped = false;
+    let cache: ReturnType<typeof sessionStorageScope> | undefined;
     let mountedBefore = false;
     const home = new URL(import.meta.env.BASE_URL, window.location.origin).href;
     function gate() {
@@ -52,6 +53,8 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
     }
     function expired() {
       if (stopped || signedOut()) return;
+      if (cache) cache.clear();
+      else clearWebCaches(localStorage);
       setSignedOut(true);
       setRows([]);
       setActive(null);
@@ -65,11 +68,10 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
         throw cause;
       }
     }
-    const transport: ComputeTransport = {
+    const transport: ReturnType<typeof platformTransport> = {
       call: (path, init) => authorized(() => raw.call(path, init)),
       mutation: (path, init) => authorized(() => raw.mutation(path, init)),
     };
-    const compute = computeClient(transport);
     async function run(action: () => Promise<void>) {
       if (busy() || stopped) return;
       setBusy(true);
@@ -104,27 +106,17 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
         setRows(workspaces);
         setActive(selection.active());
         setSignedOut(false);
+        cache = sessionStorageScope(localStorage, person.id, person.workspace);
         if (workspaces.length === 0) { gate(); return; }
-        const listed = await compute.list();
-        if (listed.kind === 'unauthorized') throw new PlatformSessionError(401, null);
-        if (listed.kind !== 'ok') throw new Error('compute_unavailable');
-        if (stopped) return;
-        // Engine workspace IDs and platform workspace IDs are separate registries.
         setShellCacheScope({ mine: () => false, prefer: null });
-        const prefix = `danil.web.${person.id}.${person.workspace}.`;
-        const storage = {
-          getItem: (key: string) => localStorage.getItem(prefix + key),
-          setItem: (key: string, value: string) => localStorage.setItem(prefix + key, value),
-          removeItem: (key: string) => localStorage.removeItem(prefix + key),
-        };
         disposeGate?.();
         disposeGate = undefined;
         mountedBefore = true;
-        windowApp = mountWindow(listed.value, {
-          compute, profile: webAccountProfile(transport), onUnauthorized: expired,
+        windowApp = mountWindow({
+          profile: webAccountProfile(transport),
           onUnavailable: () => { setError("web.platform.unavailable"); gate(); },
           workspaces: { rows, active, busy, uncertain, choose: id => void choose(id) },
-        }, { storage, webAccounts: {
+        }, { storage: cache.storage, webAccounts: {
           current: { user_id: person.id, name: person.name, email: null, extra: false },
           others: () => [], open: () => {}, add: () => {}, remove: async () => {}, signOut: () => void logout(),
         } });

@@ -246,5 +246,6 @@
   "web.alpha.older": "Ver mensajes anteriores",
   "web.alpha.deleted": "Mensaje eliminado",
   "web.alpha.empty": "No hay conversaciones en esta página.",
-  "web.alpha.details": "Detalles"
+  "web.alpha.details": "Detalles",
+  "web.machines.unavailable": "Máquinas no disponibles."
 }

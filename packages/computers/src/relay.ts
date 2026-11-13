@@ -85,6 +85,7 @@ export const CALL_TIMEOUT = 180_000;
 export const WAKE_TIMEOUT = 330_000;
 const REPLACED = 4001;
 const REVOKED = 4003;
+const TICKET_CONTEXT_REVOKED = 4008;
 /** El token con que se abrió la sesión venció sin renovarse: se reabre con uno nuevo. */
 export const TOKEN_EXPIRED = 4005;
 /** Cuánto antes de vencer se manda el token nuevo (`auth`), y cada cuánto se reintenta si aún no hay otro. */
@@ -345,7 +346,7 @@ export class RelaySession {
       for (const listener of this.linkListeners) listener(false);
       // Sin licencia no se reintenta en bucle: la sesión espera a `retry()`.
       if (event.code === REVOKED && event.reason === "license_required") return this.setBlocked("license_required");
-      if (event.code === 4008 || (event.code === REVOKED && this.config.getAdmission)) {
+      if (this.config.getAdmission && (event.code === TICKET_CONTEXT_REVOKED || event.code === REVOKED)) {
         this.config.onUnauthorized?.();
         return this.close();
       }

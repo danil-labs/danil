@@ -19,7 +19,12 @@ export default {
     if (!['GET', 'HEAD'].includes(request.method)) return json('method_not_allowed', 405);
     if (!env.TERMINUS_WEB) return dependencyProblem('assets_unavailable');
     try {
-      return await env.TERMINUS_WEB.fetch(new Request(request, { signal: upstreamSignal(env, request.signal) }));
+      const response = await env.TERMINUS_WEB.fetch(new Request(request, { signal: upstreamSignal(env, request.signal) }));
+      const headers = new Headers(response.headers);
+      const policy = (headers.get('Content-Security-Policy') || '').split(';').filter(part => !/^\s*frame-ancestors\b/.test(part)).filter(part => part.trim()).join(';');
+      headers.set('Content-Security-Policy', `${policy}${policy ? '; ' : ''}frame-ancestors 'none'`);
+      headers.set('X-Frame-Options', 'DENY');
+      return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
     } catch (error) {
       logDependency('assets_fetch', error);
       return dependencyProblem('assets_unavailable');
