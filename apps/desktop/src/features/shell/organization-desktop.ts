@@ -5,7 +5,7 @@
  * backoff largo lo lleva `organization-selection.ts`, con el selector oculto.
  * Al iniciar o cerrar sesión (`danil-connect`) se vuelve a leer.
  */
-import { listen } from "@tauri-apps/api/event";
+import { listen } from "../../lib/serviceEvents";
 import { onEdgeProblem, organizations, selectOrganization } from "../../lib/edge";
 import { refetchMachines } from "../machines/store";
 import { createOrganizationSelection, type OrganizationSelection } from "./organization-selection";
