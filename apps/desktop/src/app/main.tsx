@@ -18,7 +18,6 @@ import { mountAfterLanguagePacks } from "../locales/startup";
 import { capabilities, setCapabilities } from "../lib/platform";
 import { desktopWorkspaceDirectory } from "../features/shell/workspace-directory-desktop";
 import { askGuestChannels } from "../features/machines/guestChannels";
-import { desktopOrganizations } from "../features/shell/organization-desktop";
 import "../lib/sharedClock";
 // Errores y avisos de encargado se leen al fallar algo, ya con la ventana montada: entran por detrás.
 // Si el trozo no carga, caen a la prosa del motor; el panel de encargados lo vuelve a pedir.
@@ -30,7 +29,12 @@ setCapabilities({ ...capabilities(), workspaceDirectory: desktopWorkspaceDirecto
 // La web también carga este archivo: ahí `invoke` va por el relay y despertaría la máquina.
 if (capabilities().nativeWindow) {
   // El selector de organización de Desk, por el borde; oculto hasta que la ruta exista.
-  setCapabilities({ ...capabilities(), organizations: desktopOrganizations() });
+  // Fuera de la carga inicial: el módulo llega con el primer pintado del menú de la cuenta.
+  let organizations: ReturnType<NonNullable<ReturnType<typeof capabilities>["organizations"]>> | undefined;
+  setCapabilities({
+    ...capabilities(),
+    organizations: () => (organizations ??= import("../features/shell/organization-desktop").then((m) => m.desktopOrganizations())),
+  });
   void askGuestChannels().then((channels) => setCapabilities({ ...capabilities(), wsl: channels.includes("wsl") }));
 }
 

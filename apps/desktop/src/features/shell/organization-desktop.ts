@@ -7,9 +7,7 @@
  */
 import { listen } from "../../lib/serviceEvents";
 import { onEdgeProblem, organizations, selectOrganization } from "../../lib/edge";
-import { refetchMachines } from "../machines/store";
 import { createOrganizationSelection, type OrganizationSelection } from "./organization-selection";
-import { reloadDirectory } from "./workspace-directory";
 
 /** Evento de ventana tras cambiar de organización: quien guarde datos de la anterior los suelta. */
 export const ORGANIZATION_CHANGED = "danil:organization-changed";
@@ -26,8 +24,9 @@ export function desktopOrganizations(): OrganizationSelection {
     {
       onSelected: (organization, workspace) => {
         window.dispatchEvent(new CustomEvent(ORGANIZATION_CHANGED, { detail: { organization: organization.id, workspace } }));
-        reloadDirectory();
-        void refetchMachines();
+        // Solo tras un cambio: fuera de la carga inicial.
+        void import("./workspace-directory").then((m) => m.reloadDirectory());
+        void import("../machines/store").then((m) => m.refetchMachines());
       },
     },
   );

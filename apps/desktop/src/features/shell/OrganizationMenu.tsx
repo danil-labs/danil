@@ -1,5 +1,5 @@
 import Check from "lucide-solid/icons/check";
-import { createSignal, For, onCleanup, Show } from "solid-js";
+import { createEffect, createResource, createSignal, For, onCleanup, Show } from "solid-js";
 import { t } from "../../lib/i18n";
 import { cn } from "../../lib/utils";
 import { ITEM_DE_MENU } from "../../ui/Popover";
@@ -14,6 +14,28 @@ export function useOrganizations(selection: OrganizationSelection) {
     setNeeded(selection.needed());
   }));
   return { state, needed };
+}
+
+/** Sin pintar nada: un `403 organization_selection_required` (o varias sin activa) abre el menú. */
+export function OrganizationWatch(props: { load: () => Promise<OrganizationSelection>; onNeeded: () => void }) {
+  const [selection] = createResource(props.load);
+  return (
+    <Show when={selection()}>
+      {(s) => {
+        const { needed } = useOrganizations(s());
+        createEffect(() => {
+          if (needed()) props.onNeeded();
+        });
+        return null;
+      }}
+    </Show>
+  );
+}
+
+/** La sección con su store cargado; nada mientras llega. */
+export function OrganizationSection(props: { load: () => Promise<OrganizationSelection>; onClose: () => void }) {
+  const [selection] = createResource(props.load);
+  return <Show when={selection()}>{(s) => <OrganizationMenu selection={s()} onClose={props.onClose} />}</Show>;
 }
 
 /**

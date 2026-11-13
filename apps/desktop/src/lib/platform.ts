@@ -103,7 +103,7 @@ export type Capabilities = {
     create?: (workspaceId: string, account?: string | null) => Promise<void>;
   };
   /** El selector de organización (`identity.organizations`); sin esto, o sin la ruta en el servidor, no sale. */
-  organizations?: import("../features/shell/organization-selection").OrganizationSelection;
+  organizations?: () => Promise<import("../features/shell/organization-selection").OrganizationSelection>;
   adminPage?: { href: string; allowed: () => Promise<boolean> };
   /** Lo de una cuenta personal en Configuración › Cuenta. `isPersonal` decide si se ofrece; sin `plan`, esa pestaña no sale. */
   personalAccount?: { isPersonal: () => Promise<boolean>; plan?: () => JSX.Element };
