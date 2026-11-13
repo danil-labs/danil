@@ -102,3 +102,13 @@ test("web: 403 organization_selection_required de otra ruta abre el selector", a
   assert.equal(sel.report(error), true);
   assert.equal(sel.needed(), true);
 });
+
+
+test("web reuses bootstrap discovery for organizations instead of requesting it twice", async () => {
+  const c = clock();
+  const s = server({ "/v1/identity/organizations": () => json(200, { items: [DANIL, OTRA], next_cursor: null, active_organization_id: DANIL.id }) });
+  const sel = createOrganizationSelection(webOrganizationSource(s.transport, () => CAPS), { schedule: c.schedule });
+  await sel.load();
+  assert.equal(sel.state().kind, "ready");
+  assert.deepEqual(s.seen.map(r => r.path), ["/v1/identity/organizations"]);
+});

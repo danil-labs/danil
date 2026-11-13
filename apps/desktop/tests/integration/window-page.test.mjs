@@ -18,6 +18,40 @@ async function open(t, ...args) {
   return app;
 }
 
+test('session verification shows loading and reads me, capabilities and workspaces in parallel only once', async t => {
+  const calls = [];
+  const pending = new Map();
+  const fetcher = async input => {
+    const url = new URL(String(input));
+    if (url.origin === 'http://localhost' && url.pathname.includes('/assets/')) return new Response('');
+    calls.push(url.pathname);
+    if (['/v1/identity/me', '/v1/capabilities', '/v1/workspaces'].includes(url.pathname)) {
+      return new Promise(resolve => pending.set(url.pathname, resolve));
+    }
+    if (url.pathname === '/v1/machines') return Response.json({ items: [], next_cursor: null });
+    return new Response(null, { status: 404 });
+  };
+  fetcher.__jsdomApp = true; globalThis.fetch = fetcher;
+  const app = await open(t, 'listo', 'parallel-session-bootstrap', {}, undefined, {}, { web: true });
+  t.after(() => { for (const release of pending.values()) release(new Response(null, { status: 401 })); });
+  await until(() => calls.includes('/v1/identity/me'));
+  assert.ok(app.w.document.querySelector('[data-web-session-loading] [role="status"]'));
+  assert.equal(app.w.document.querySelector('[data-web-auth]'), null, 'login waits for an authoritative 401');
+  assert.ok(pending.has('/v1/capabilities'), 'discovery starts without waiting for the profile');
+  assert.ok(pending.has('/v1/workspaces'), 'directory starts without waiting for the profile');
+  pending.get('/v1/capabilities')(Response.json({ contract: 'mvp-v1', items: ['workspaces', 'machines'].map(name => ({ name, version: 1, status: 'available' })) }));
+  await until(() => calls.includes('/v1/machines'));
+  assert.ok(app.w.document.querySelector('[data-web-session-loading]'), 'machines starts while the profile is still pending');
+  pending.get('/v1/workspaces')(Response.json({ items: [{ id: '11', org: 'org_A', name: 'Alpha', role: 'owner' }], next_cursor: null }));
+  pending.get('/v1/identity/me')(Response.json({ id: 'user_A', name: 'Operator', workspace: '11', organizations: [] }));
+  await until(() => app.w.document.querySelector('[data-tira]'));
+  assert.equal(calls.filter(path => path === '/v1/identity/me').length, 1);
+  assert.equal(calls.filter(path => path === '/v1/workspaces').length, 1);
+  assert.equal(calls.filter(path => path === '/v1/capabilities').length, 1);
+  await until(() => calls.includes('/v1/machines'));
+  assert.deepEqual(app.failures, []);
+});
+
 test('identity and workspaces mount the real window without any compute or relay request', async t => {
   const calls = [];
   const fetcher = async (input, init) => {
@@ -135,7 +169,7 @@ for (const status of [401, 403, 503]) test(`identity HTTP ${status} stays distin
     if (url.origin === 'http://localhost' && url.pathname.includes('/assets/')) return new Response('');
     calls.push(url.pathname);
     if (['/v1/capabilities', '/v1/identity/organizations', '/v1/machines'].includes(url.pathname)) return new Response(null, { status: 404 });
-    assert.equal(url.pathname, '/v1/identity/me');
+    assert.ok(['/v1/identity/me', '/v1/workspaces'].includes(url.pathname));
     assert.equal(init.credentials, 'include');
     return new Response(null, { status });
   };
@@ -148,7 +182,7 @@ for (const status of [401, 403, 503]) test(`identity HTTP ${status} stays distin
     assert.match(app.w.document.querySelector('[role="status"]').textContent, /Preparando tu cuenta/);
     assert.equal(app.w.document.querySelector('[role="alert"]'), null);
   }
-  assert.deepEqual(calls, ['/v1/capabilities', '/v1/identity/me']);
+assert.equal(calls.filter(path => path === '/v1/identity/me').length, 1);
   assert.equal(app.w.localStorage.getItem('danil.web.previous.11.tasks'), status === 401 ? null : 'private');
   if (status !== 401) assert.equal(app.w.document.querySelector('a[href*="/login"]'), null);
   assert.deepEqual(app.failures, []);
@@ -159,7 +193,7 @@ test('a window without a session shows the original WorkOS sign-in screen and it
     const url = new URL(String(input));
     if (url.origin === 'http://localhost' && url.pathname.includes('/assets/')) return new Response('');
     if (['/v1/capabilities', '/v1/identity/organizations', '/v1/machines'].includes(url.pathname)) return new Response(null, { status: 404 });
-    if (url.pathname === '/v1/identity/me') return new Response(null, { status: 401 });
+    if (['/v1/identity/me', '/v1/workspaces'].includes(url.pathname)) return new Response(null, { status: 401 });
     throw new Error(`Unexpected request ${url.pathname}`);
   };
   fetcher.__jsdomApp = true; globalThis.fetch = fetcher;
@@ -204,10 +238,12 @@ test('an authenticated session with no workspaces shows the plan empty state wit
 for (const end of ['logout', '401']) test(`${end} revokes the mounted person's cached workspaces`, async t => {
   const calls = [];
   let expired = false;
+  let unauthorized = 0;
   const fetcher = async (input, init) => {
     const url = new URL(String(input));
     if (url.origin === 'http://localhost' && url.pathname.includes('/assets/')) return new Response('');
     calls.push(url.pathname);
+    if (url.pathname === '/v1/machines' && expired) { unauthorized++; return new Response(null, { status: 401 }); }
     if (['/v1/capabilities', '/v1/identity/organizations', '/v1/machines'].includes(url.pathname)) return new Response(null, { status: 404 });
     if (url.pathname === '/v1/identity/me') return expired ? new Response(null, { status: 401 }) : Response.json({ id: 'user_A', name: 'Operator', workspace: '11', organizations: [] });
     if (url.pathname === '/v1/workspaces') return Response.json({ items: [{ id: '11', org: 'org_A', name: 'Alpha', role: 'owner' }], next_cursor: null });
@@ -229,10 +265,10 @@ for (const end of ['logout', '401']) test(`${end} revokes the mounted person's c
     doc.querySelector('[data-sign-out]').click();
   } else {
     expired = true;
-    doc.querySelector('button[aria-label="Configuración"]').click();
   }
   await until(() => doc.querySelector('a[href*="/v1/identity/login"]'));
   assert.equal(doc.querySelector('[data-tira]'), null);
+  if (end === '401') assert.ok(unauthorized > 0, 'a protected machine request observes the expired session');
   assert.equal(app.w.localStorage.getItem('danil.web.user_A.11.tasks'), null);
   assert.equal(app.w.localStorage.getItem('danil.web.user_A.12.tasks'), null);
   assert.equal(app.w.localStorage.getItem('danil.web.user_B.11.tasks'), 'another person');
@@ -245,7 +281,7 @@ const CAPS = { contract: 'mvp-v1', items: [{ name: 'identity.organizations', ver
 for (const [label, me] of [
   ['403 workspace_selection_required', () => new Response(JSON.stringify({ type: 'urn:danil:problem:workspace_selection_required', status: 403, code: 'workspace_selection_required' }), { status: 403, headers: { 'content-type': 'application/problem+json' } })],
   ['200 with workspace null', () => Response.json({ id: 'user_A', name: 'Operator', workspace: null, organizations: [] })],
-]) test(`an organization without a workspace (${label}) shows the empty state with the organization selector and sign out, not a dead end`, async () => {
+]) test(`an organization without a workspace (${label}) shows the empty state with the organization selector and sign out, not a dead end`, async t => {
   const calls = [];
   const fetcher = async input => {
     const url = new URL(String(input));
@@ -258,7 +294,7 @@ for (const [label, me] of [
     throw new Error(`Unexpected request ${url.pathname}`);
   };
   fetcher.__jsdomApp = true; globalThis.fetch = fetcher;
-  const app = await boot('listo', `org-without-workspace-${label.length}`, {}, undefined, {}, { web: true });
+  const app = await open(t, 'listo', `org-without-workspace-${label.length}`, {}, undefined, {}, { web: true });
   const gate = () => app.w.document.querySelector('[data-web-gate]');
   await until(() => gate()?.querySelector('[data-web-organization="org_A"]'));
   assert.equal(gate().querySelector('[role="alert"]'), null, 'no «No tienes acceso»');
@@ -314,7 +350,7 @@ test('free startup reloads the directory and selects the appearing Free organiza
     return new Response(null, { status: 404 });
   };
   fetcher.__jsdomApp = true; globalThis.fetch = fetcher;
-  const app = await open(t, 'listo', 'free-startup-directory', {}, undefined, {}, { web: true });
+  const app = await open(t, 'listo', 'free-startup-directory', {}, undefined, {}, { web: true, beforeImport(w) { w.history.replaceState(null, '', '/?entry=free'); } });
   await until(() => app.w.document.querySelector('[data-web-gate]'));
   assert.equal(app.w.document.querySelector('[role="alert"]'), null);
   ready = true;

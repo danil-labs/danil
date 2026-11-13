@@ -2,7 +2,7 @@ import { z } from "zod";
 import { EdgeError as PlatformSessionError, edgeIdentity, edgeTransport } from "@terminus/computers";
 
 const workspaceId = z.string().regex(/^[1-9]\d*$/);
-const profile = z.object({ id: z.string().startsWith("user_"), name: z.string(), workspace: workspaceId.nullable(), organizations: z.array(z.object({ id: z.string(), name: z.string() })) });
+const profile = z.object({ id: z.string().startsWith("user_"), name: z.string(), email: z.string().nullable().optional(), workspace: workspaceId.nullable(), organizations: z.array(z.object({ id: z.string(), name: z.string() })) });
 const workspace = z.object({ id: workspaceId, org: z.string(), name: z.string(), role: z.string() });
 const page = z.object({ items: z.array(workspace), next_cursor: z.string().min(1).nullable() });
 /** `POST /v1/workspaces/select` → `{workspace: Workspace}` (mvp-v1 `WorkspaceSelection`); campos nuevos se ignoran. */
