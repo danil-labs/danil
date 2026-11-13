@@ -18,7 +18,7 @@ export type DeleteMember = {
   inspection: { status: "complete" | "failed"; error?: unknown };
 };
 type DeletePreview = { members: DeleteMember[]; consent?: string | null; expires_at?: number };
-type Integration = "merged" | "unmerged" | "unchecked";
+type Integration = "merged" | "unconfirmed";
 type DeleteResult = {
   status: "complete" | "partial";
   applied: { project: string; id: string }[];
@@ -54,7 +54,7 @@ export default function DeleteTaskDialog(props: {
   const dirty = (member: DeleteMember) => props.dirty(props.target.panelId(member.id));
   // The engine's finish check (`task_blockers` → `not_finished`) says whether a member's branch is integrated.
   const [integration, setIntegration] = createSignal<ReadonlyMap<string, Integration>>(new Map());
-  const integrationOf = (member: DeleteMember) => integration().get(key(member)) ?? "unchecked";
+  const integrationOf = (member: DeleteMember) => integration().get(key(member)) ?? "unconfirmed";
   // Only a completed inspection with nothing listed and an integrated branch counts as losing nothing.
   const needsReview = (member: DeleteMember) => member.inspection.status !== "complete" || !!member.inspection.error || member.files.length > 0
     || integrationOf(member) !== "merged";
@@ -80,17 +80,24 @@ export default function DeleteTaskDialog(props: {
     setBusy(true);
     try {
       const seen = await invoke<DeletePreview>("task_lifecycle_preview", args(), props.target.options);
-      setIntegration(new Map(await Promise.all(seen.members.map(async member => [key(member), await integrationCheck(member)] as const))));
+      setIntegration(await integrationChecks(seen.members));
       setPreview(seen);
     } catch (failure) { setError([message, failureText(failure)].filter(Boolean).join("\n")); setShown(true); }
     finally { setBusy(false); }
   }
-  async function integrationCheck(member: DeleteMember): Promise<Integration> {
-    if (member.inspection.status !== "complete") return "unchecked";
-    try {
-      const blockers = await invoke<{ not_finished: boolean }>("task_blockers", { project: member.project, id: member.id, finish: true }, props.target.options);
-      return blockers.not_finished ? "unmerged" : "merged";
-    } catch { return "unchecked"; }
+  // `not_finished` does not tell unmerged from unchecked; a member without an answer in time stays unconfirmed.
+  async function integrationChecks(list: DeleteMember[]): Promise<ReadonlyMap<string, Integration>> {
+    const result = new Map<string, Integration>();
+    const deadline = Date.now() + 20_000;
+    const queue = list.filter(member => member.inspection.status === "complete");
+    const worker = async () => {
+      for (let member = queue.shift(); member && Date.now() < deadline; member = queue.shift()) {
+        const blockers = await invoke<{ not_finished: boolean }>("task_blockers", { project: member.project, id: member.id, finish: true }, props.target.options).catch(() => null);
+        if (blockers && !blockers.not_finished) result.set(key(member), "merged");
+      }
+    };
+    await Promise.race([Promise.all(Array.from({ length: 4 }, worker)), new Promise(resolve => setTimeout(resolve, Math.max(0, deadline - Date.now())))]);
+    return new Map(result);
   }
   async function apply() {
     if (!ready()) return;
@@ -151,7 +158,7 @@ export default function DeleteTaskDialog(props: {
           <Show when={member.inspection.error}><p class="m-0 break-all text-caption text-error-strong">{failureText(member.inspection.error)}</p></Show>
           <Show when={member.working}><p class="m-0 text-caption text-warning-strong">{t("projects.sessions.delete_working")}</p></Show>
           <ul class="m-0 list-none p-0"><For each={member.files}>{file => <li class="break-all font-mono text-caption text-neutral-500">{file.path}</li>}</For></ul>
-          <Show when={member.inspection.status === "complete" && integrationOf(member) !== "merged"}><p class="m-0 text-caption text-warning-strong">{t(integrationOf(member) === "unmerged" ? "projects.sessions.delete_unmerged" : "projects.sessions.delete_unmerged_unchecked")}</p></Show>
+          <Show when={member.inspection.status === "complete" && integrationOf(member) !== "merged"}><p class="m-0 text-caption text-warning-strong">{t("projects.sessions.delete_unmerged")}</p></Show>
           <Show when={member.inspection.status === "complete" && member.files.length === 0}><p class="m-0 text-caption text-neutral-500">{t("projects.sessions.delete_no_files")}</p></Show>
           <Show when={dirty(member).length > 0}>
             <p class="m-0 text-caption text-warning-strong">{t("projects.sessions.delete_buffers")}</p>

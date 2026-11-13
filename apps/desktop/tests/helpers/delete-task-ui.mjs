@@ -25,7 +25,7 @@ const family = () => ["clean", "concurrent", "unmerged", "unchecked"].includes(s
   : [member("t1", "p1"), member("child", "p2")];
 const row = (id, parent = null) => ({ id, title: `Task ${id}`, last_message: "", provider: "codex", model: "gpt-5.6", refs: [], updated_at: 0, turns: 4, parent, esperando: false });
 const app = await boot("listo", "delete-task-consent", responses({
-  list_live_sessions: ({ project }) => (project === "" || project === "p1" ? [row("t1"), row("child", "t1"), row("t2")] : []),
+  list_live_sessions: ({ project }) => (project === "" || project === "p1" ? [row("t1"), row("child", "t1"), { ...row("kept", "t1"), pinned: true }, row("t2")] : []),
   task_blockers: args => {
     blockersAsked.push(args);
     if (scenario === "unchecked" && args.id === "child") throw { code: "operation_failed", message: "GitHub did not answer" };
@@ -100,7 +100,7 @@ try {
       assert.equal(boxes().length, 0, "members without losses ask for no acceptance");
       assert.equal(remove().disabled, false);
     } else {
-      assert.match(dialog().textContent, scenario === "unmerged" ? /Su rama tiene commits sin integrar/ : /No se pudo comprobar si su rama está integrada/);
+      assert.match(dialog().textContent, /No consta que su rama esté integrada/);
       assert.ok(blockersAsked.every(args => args.finish === true));
       assert.equal(boxes().length, 1, "only the member with an unintegrated branch asks for acceptance");
       assert.equal(remove().disabled, true);
