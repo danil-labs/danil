@@ -45,11 +45,13 @@ export default function DeleteTaskDialog(props: {
   const [busy, setBusy] = createSignal(false);
   const [error, setError] = createSignal("");
   const [invalid, setInvalid] = createSignal(false);
+  // The dialog only opens when the family has losses, the inspection failed or the engine refused.
+  const [shown, setShown] = createSignal(false);
   const members = () => preview()?.members ?? [];
   const key = (member: DeleteMember) => JSON.stringify([member.project, member.id]);
   const dirty = (member: DeleteMember) => props.dirty(props.target.panelId(member.id));
   // Only a completed inspection with nothing listed counts as losing nothing.
-  const needsReview = (member: DeleteMember) => member.inspection.status !== "complete" || !!member.inspection.error || member.working || member.files.length > 0;
+  const needsReview = (member: DeleteMember) => member.inspection.status !== "complete" || !!member.inspection.error || member.files.length > 0;
   const accepted = (member: DeleteMember) => !needsReview(member) || reviewed().has(key(member));
   const reviewable = () => members().filter(member => needsReview(member) && member.inspection.status === "complete" && dirty(member).length === 0);
   const allReviewed = () => reviewable().length > 0 && reviewable().every(member => reviewed().has(key(member)));
@@ -67,11 +69,11 @@ export default function DeleteTaskDialog(props: {
     setReviewed(new Set<string>());
     setInvalid(false);
     setError(message);
-    if (!props.target.supported) { setError(t("projects.sessions.delete_unsupported")); return; }
+    if (!props.target.supported) { setError(t("projects.sessions.delete_unsupported")); setShown(true); return; }
     setBusy(true);
     try {
       setPreview(await invoke<DeletePreview>("task_lifecycle_preview", args(), props.target.options));
-    } catch (failure) { setError([message, failureText(failure)].filter(Boolean).join("\n")); }
+    } catch (failure) { setError([message, failureText(failure)].filter(Boolean).join("\n")); setShown(true); }
     finally { setBusy(false); }
   }
   async function apply() {
@@ -85,20 +87,28 @@ export default function DeleteTaskDialog(props: {
       // Preparing native viewers yields; editors may have changed in the meantime.
       if (preview() !== seen || invalid() || !props.isCurrent() || seen.members.some(member => !accepted(member) || dirty(member).length > 0)) {
         setError(t("projects.sessions.delete_buffers"));
+        setShown(true);
         return;
       }
-      const result = await invoke<DeleteResult>("task_lifecycle_apply", { ...args(), consent: seen.consent, discard: true }, props.target.options);
+      const discard = seen.members.some(member => member.files.length > 0);
+      const result = await invoke<DeleteResult>("task_lifecycle_apply", { ...args(), consent: seen.consent, discard }, props.target.options);
       props.onDeleted(result.applied.map(member => ({ ...member, id: props.target.panelId(member.id) })));
       if (result.status === "complete" && result.failures.length === 0) props.onClose();
-      else { setInvalid(true); setError([t("projects.sessions.delete_partial"), ...result.failures.map(failure => `${props.target.folderName(failure.project)} / ${members().find(member => member.id === failure.id && member.project === failure.project)?.title || failure.id}: ${failureText(failure.error)}`)].join("\n")); }
+      else { setInvalid(true); setShown(true); setError([t("projects.sessions.delete_partial"), ...result.failures.map(failure => `${props.target.folderName(failure.project)} / ${members().find(member => member.id === failure.id && member.project === failure.project)?.title || failure.id}: ${failureText(failure.error)}`)].join("\n")); }
     } catch (failure) {
+      setShown(true);
       if (errorCode(failure) !== "task_family_busy") setInvalid(true);
       if (errorCode(failure) === "task_family_consent_changed") await inspect(t("projects.sessions.delete_changed"));
       else setError(failureText(failure));
     } finally { props.lock([]); setBusy(false); }
   }
-  onMount(() => void inspect());
-  return <Dialog open onOpenChange={open => { if (!open && !busy()) props.onClose(); }}>
+  onMount(async () => {
+    await inspect();
+    if (shown()) return;
+    if (ready() && members().every(member => !needsReview(member))) await apply();
+    else setShown(true);
+  });
+  return <Show when={shown()}><Dialog open onOpenChange={open => { if (!open && !busy()) props.onClose(); }}>
     <DialogContent class="flex flex-col gap-3">
       <DialogTitle class="text-body font-semibold">{t("projects.sessions.delete_work_title")}</DialogTitle>
       <p class="m-0 text-ui text-neutral-700">{t("projects.sessions.delete_work")}</p>
@@ -148,5 +158,5 @@ export default function DeleteTaskDialog(props: {
         <Button variant="danger" size="sm" disabled={!ready()} onClick={() => void apply()}>{t("projects.sessions.delete")}</Button>
       </div>
     </DialogContent>
-  </Dialog>;
+  </Dialog></Show>;
 }
