@@ -643,7 +643,7 @@ const steps = [
   ["Waiting for the previous version is a notice and stopping it is confirmed", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/launcher-previous.test.mjs")], root],
   ["Danil accounts sign in through the browser, add up and sign out", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/danil-account-panel.test.mjs")], root],
   ["First run and the sidebar footer offer the Danil account", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/danil-sign-in-entry.test.mjs")], root],
-  ["The first run asks for the Danil account and takes its workspace", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/account-welcome-first-run.test.mjs")], root],
+  ["The first run continues locally without the retired workspace directory", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/account-welcome-first-run.test.mjs")], root],
   ["First-run Google Drive reconnects after disconnecting", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/onboarding-drive-reconnect.test.mjs")], root],
   ["Google Drive with the official app installs, waits for the session and stops being used without uninstalling", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/onboarding-drive-desktop.test.mjs")], root],
   ["Workspace memory is written and edited like project memory", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/memory-workspace-scope.test.mjs")], root],

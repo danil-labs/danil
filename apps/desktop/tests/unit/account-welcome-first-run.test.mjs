@@ -1,7 +1,7 @@
 /**
  * «Conecta tu cuenta de Danil» en el primer arranque, contra un motor simulado:
- * seguir sin cuenta, conectar con un workspace de Danil (directo) o con varios
- * (se elige), que no vuelva a salir, y que la ventana no tenga «Descarga la app».
+ * seguir sin cuenta o entrar y continuar con el alta local, sin consultar ni
+ * adoptar el directorio retirado en L3. La elección no vuelve a preguntarse.
  * Monta `dist/`.
  */
 import assert from "node:assert/strict";
@@ -50,10 +50,11 @@ const BASE = {
 
 /** El motor y el plano de control: quién entró, qué workspaces locales nacen y qué se enlaza. */
 function engine({ directory = [], status = { state: "disconnected", name: "Mac" } } = {}) {
-  const state = { status, sessions: [], created: [], links: [], accounts: [], signIns: 0 };
+  const state = { status, sessions: [], created: [], links: [], accounts: [], signIns: 0, requests: [] };
   const previous = globalThis.fetch;
   globalThis.fetch = async (input) => {
     const url = String(input?.url ?? input);
+    state.requests.push(url);
     if (url.endsWith("/v1/me/workspaces")) return Response.json({ workspaces: directory, truncated: false });
     return new Response("{}", { status: 404 });
   };
@@ -101,6 +102,13 @@ function engine({ directory = [], status = { state: "disconnected", name: "Mac" 
 const screen = (w) => w.document.querySelector("[data-account-welcome]");
 const heading = (w) => w.document.querySelector("h1")?.textContent ?? "";
 
+function assertRetiredDirectoryUnused(app, state) {
+  assert.deepEqual(state.requests.filter(url => new URL(url).pathname.startsWith("/v1/me")), [], "no request goes to the retired directory");
+  assert.deepEqual(state.links, [], "no local workspace is linked to the prototype");
+  assert.deepEqual(state.accounts, [], "no cloud account is assigned to the local workspace");
+  assert.equal(app.commands.some(command => command.startsWith("agents_session_")), false, "the retired directory transport stays unused");
+}
+
 test("the first run asks for the Danil account; continuing without one keeps today's local onboarding", async () => {
   const e = engine();
   try {
@@ -124,7 +132,7 @@ test("the first run asks for the Danil account; continuing without one keeps tod
   }
 });
 
-test("connecting with one Danil workspace takes it directly and links the new local workspace", async () => {
+test("signing in continues locally without querying or adopting the retired directory", async () => {
   const e = engine({ directory: [entry("a:476", 476, "Norte MX")] });
   try {
     const app = await boot("listo", "account-welcome-one", e.table);
@@ -138,9 +146,8 @@ test("connecting with one Danil workspace takes it directly and links the new lo
 
     e.approve(app);
     await sleep(1200);
-    assert.deepEqual(e.state.created, ["Norte MX"], "the local workspace takes the Danil name");
-    assert.deepEqual(e.state.links, [["n1", 476]]);
-    assert.deepEqual(e.state.accounts, [["n1", "u_1"]]);
+    assert.deepEqual(e.state.created, ["Personal"], "the local onboarding creates its own workspace");
+    assertRetiredDirectoryUnused(app, e.state);
     assert.equal(w.localStorage.getItem(KEY), "connected");
     assert.equal(screen(w), null);
     assert.equal(heading(w), "Conecta tu IA.");
@@ -150,7 +157,7 @@ test("connecting with one Danil workspace takes it directly and links the new lo
   }
 });
 
-test("with several Danil workspaces the person chooses; one on another machine cannot be taken", async () => {
+test("an existing session continues locally without the retired cloud workspace chooser", async () => {
   const e = engine({
     status: CONNECTED,
     directory: [entry("a:1", 1, "Norte MX"), entry("a:2", 2, "Norte USA", null, "member"), entry("a:3", 3, "Tomado", "otra")],
@@ -163,17 +170,11 @@ test("with several Danil workspaces the person chooses; one on another machine c
     w.document.querySelector("[data-account-welcome-connect]").click();
     await sleep(800);
     assert.equal(e.state.signIns, 0, "an existing session is reused");
-    assert.equal(screen(w)?.dataset.accountWelcome, "pick");
-    const option = (key) => w.document.querySelector(`[data-account-welcome-option="${key}"]`);
-    assert.ok(option("a:1") && option("a:2"));
-    assert.equal(option("a:3").disabled, true);
-    assert.ok(option("a:3").textContent.includes("Ya está en otra máquina"));
-    assert.deepEqual(e.state.created, [], "nothing is created until one is chosen");
-
-    option("a:2").click();
-    await sleep(1000);
-    assert.deepEqual(e.state.created, ["Norte USA"]);
-    assert.deepEqual(e.state.links, [["n1", 2]]);
+    assert.equal(screen(w), null, "the account step completes without a cloud adoption choice");
+    assert.equal(w.document.querySelector("[data-account-welcome-pick]"), null);
+    assert.equal(w.localStorage.getItem(KEY), "connected");
+    assert.deepEqual(e.state.created, ["Personal"]);
+    assertRetiredDirectoryUnused(app, e.state);
     assert.equal(heading(w), "Conecta tu IA.");
     assert.deepEqual(app.failures, []);
   } finally {
