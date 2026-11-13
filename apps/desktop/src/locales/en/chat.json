@@ -459,13 +459,15 @@
   "chat.queue.stop_and_send": "Stop the turn and send",
   "chat.queue.stop_and_send_aria": "Stop the turn and send queued message {n}",
   "chat.credits.label": "Danil Credits",
-  "chat.credits.model": "DeepSeek V4.1 Flash",
-  "chat.credits.select": "Select",
   "chat.credits.unavailable": "Unavailable",
   "chat.credits.integration_pending": "Integration pending acceptance",
-  "chat.credits.payer": "Paid by",
-  "chat.credits.account": "Danil account",
-  "chat.credits.balance": "Credit balance",
-  "chat.credits.loading": "Loading…",
-  "chat.credits.amount": "{count} credits"
+  "chat.credits.balance": "Balance",
+  "chat.credits.amount": "{count} credits",
+  "chat.credits.add": "Add credits",
+  "chat.services.label": "Danil",
+  "chat.services.use": "Use",
+  "chat.services.in_use": "In use",
+  "chat.services.active": "Turned on",
+  "chat.services.loading": "Loading…",
+  "chat.services.router_description": "Automatic selection of free models"
 }

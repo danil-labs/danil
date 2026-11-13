@@ -459,13 +459,15 @@
   "chat.queue.stop_and_send": "Detener el turno y enviar",
   "chat.queue.stop_and_send_aria": "Detener el turno y enviar el mensaje {n} de la cola",
   "chat.credits.label": "Danil Credits",
-  "chat.credits.model": "DeepSeek V4.1 Flash",
-  "chat.credits.select": "Elegir",
   "chat.credits.unavailable": "No disponible",
   "chat.credits.integration_pending": "Integración pendiente de aceptación",
-  "chat.credits.payer": "Pagador",
-  "chat.credits.account": "Cuenta Danil",
-  "chat.credits.balance": "Saldo de créditos",
-  "chat.credits.loading": "Consultando…",
-  "chat.credits.amount": "{count} créditos"
+  "chat.credits.balance": "Saldo",
+  "chat.credits.amount": "{count} créditos",
+  "chat.credits.add": "Agregar créditos",
+  "chat.services.label": "Danil",
+  "chat.services.use": "Usar",
+  "chat.services.in_use": "En uso",
+  "chat.services.active": "Activado",
+  "chat.services.loading": "Consultando…",
+  "chat.services.router_description": "Selección automática de modelos gratuitos"
 }

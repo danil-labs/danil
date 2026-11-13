@@ -1,7 +1,6 @@
-import { FREE_ROUTER_OPENCODE, OPENCODE } from "@terminus/tasks";
+import { FREE_ROUTER_MODEL, FREE_ROUTER_OPENCODE, OPENCODE } from "@terminus/tasks";
 import Check from "lucide-solid/icons/check";
 import ChevronDown from "lucide-solid/icons/chevron-down";
-import Gift from "lucide-solid/icons/gift";
 import Lock from "lucide-solid/icons/lock";
 import Search from "lucide-solid/icons/search";
 import Star from "lucide-solid/icons/star";
@@ -13,7 +12,6 @@ import { left, type Query } from "../../lib/limits";
 import {
   agruparModelos,
   modelPresentation,
-  routerDiscovery,
   effortOptions,
   effortValue,
   esFavorito,
@@ -25,14 +23,19 @@ import {
 import { createPref } from "../../lib/prefs";
 import { prosa } from "../../lib/prose";
 import { cn } from "../../lib/utils";
-import { Button } from "../../ui/Button";
 import { MarcaAgente } from "../../ui/icons";
 import { Popover, PopoverContent, PopoverTrigger } from "../../ui/Popover";
 import type { AccountList } from "../settings/accounts-store";
 import { createFreeRouterConsent } from "../settings/free-router-consent";
 import { DANIL_CREDITS } from "./danil-credits";
 
-const DanilCredits = lazy(() => import("./DanilCredits"));
+const DanilServices = lazy(() => import("./DanilServices"));
+
+/** Grupos que se presentan como servicios de Danil y no como lista de modelos. */
+const SERVICIOS = new Set(["danil-credits", "opencode-free"]);
+const esServicio = (opcion: OpcionDeModelo | undefined) => !!opcion && SERVICIOS.has(opcion.proveedor.id);
+const gruposDeModelos = (models: OpcionDeModelo[], query: string) =>
+  agruparModelos(models.filter((opcion) => !esServicio(opcion)), query);
 
 type SelectorDeModeloProps = {
   invokeOptions?: { headers: Record<string, string> };
@@ -90,14 +93,20 @@ export default function SelectorDeModelo(props: SelectorDeModeloProps) {
       (opcion) =>
         opcion.superficie === props.superficie && opcion.model.id === props.model,
     );
-  const discovery = createMemo(() => routerDiscovery(props.models.map((option) => option.model.id), busqueda()));
-  const todosLosGrupos = createMemo(() => agruparModelos(props.models, busqueda()));
-  // El Router vive en la sección de los gratuitos cuando ya hay alguno: una sola entrada en la barra.
-  const seccionRouter = () => todosLosGrupos().some((grupo) => grupo.id === "opencode-free") ? "opencode-free" : "router-info";
+  const todosLosGrupos = createMemo(() => gruposDeModelos(props.models, busqueda()));
   const bloqueado = (opcion: OpcionDeModelo) =>
     !!props.lockedAgent && opcion.agent !== props.lockedAgent;
   const disponible = (opcion: OpcionDeModelo) => opcion.usable && !bloqueado(opcion);
   const creditsModel = () => props.models.find((option) => option.model.id === DANIL_CREDITS.modelId);
+  const routerModel = () => {
+    const free = props.models.filter((option) => option.proveedor.id === "opencode-free");
+    return free.find((option) => option.model.id === FREE_ROUTER_MODEL) ?? free.find(disponible);
+  };
+  const servicio = (opcion: OpcionDeModelo | undefined) => ({
+    ready: !props.disabled && !!opcion && disponible(opcion),
+    selected: !!opcion && opcion.key === elegido()?.key,
+    onUse: () => { if (opcion) elegir(opcion.key); },
+  });
   const grupos = createMemo<GrupoDeModelos[]>(() => {
     const busquedaActiva = busqueda().trim().length > 0;
     const actual = seccion();
@@ -106,17 +115,14 @@ export default function SelectorDeModelo(props: SelectorDeModeloProps) {
     if (busquedaActiva && actual === "favorites") return todosLosGrupos();
     if (actual === "favorites") {
       const elegibles = favoritosDeModelos(props.models, favoritos());
-      return agruparModelos(elegibles, busqueda());
+      return gruposDeModelos(elegibles, busqueda());
     }
     return todosLosGrupos().filter((grupo) => grupo.id === actual);
   });
   const visibles = () =>
-    (seccion() === "danil-credits" ? [] : grupos())
+    (seccion() === "danil" ? [] : grupos())
       .flatMap((grupo) => grupo.models)
       .filter(disponible);
-
-  const rotulo = (grupo: GrupoDeModelos) =>
-    grupo.id === "opencode-free" ? t("surfaces.label.free") : grupo.label;
 
   const niveles = createMemo(() =>
     props.onEffort && props.efforts?.length
@@ -130,6 +136,8 @@ export default function SelectorDeModelo(props: SelectorDeModeloProps) {
   };
   const selectedName = () => {
     const option = elegido();
+    if (option?.proveedor.id === "danil-credits") return t("chat.credits.label");
+    if (option?.proveedor.id === "opencode-free") return t("surfaces.label.free");
     return option ? modelPresentation(option.model.id, option.model.label).label : props.model ? modelPresentation(props.model).label : null;
   };
   const nombre = () => selectedName() ?? (props.missingModelLabel || t("chat.model.none"));
@@ -164,15 +172,15 @@ export default function SelectorDeModelo(props: SelectorDeModeloProps) {
     // La sección sale del grupo que de verdad contiene el modelo: agrupar y
     // proveedor no siempre coinciden, y abrir una sección inexistente deja la
     // lista vacía aunque el modelo esté elegido. Sin modelo elegido, la primera
-    // fila que se puede usar; Danil Credits no cuenta: tiene su propio botón.
-    const gruposDeModelos = gruposAbiertos.filter((grupo) => grupo.id !== "danil-credits");
-    const primeroDisponible = gruposDeModelos
+    // fila que se puede usar; los servicios de Danil tienen su propia sección.
+    const primeroDisponible = gruposAbiertos
       .flatMap((grupo) => grupo.models)
       .find(disponible);
-    const claveInicial = elegido()?.key ?? primeroDisponible?.key ?? "";
-    const seccionElegida =
-      seccionDeModelo(gruposAbiertos, claveInicial) ??
-      (favoritos().length > 0 ? "favorites" : gruposDeModelos[0]?.id ?? seccionRouter());
+    const claveInicial = esServicio(elegido()) ? "" : elegido()?.key ?? primeroDisponible?.key ?? "";
+    const seccionElegida = esServicio(elegido())
+      ? "danil"
+      : seccionDeModelo(gruposAbiertos, claveInicial) ??
+        (favoritos().length > 0 ? "favorites" : gruposAbiertos[0]?.id ?? "danil");
     setSeccion(seccionElegida);
     setActivo(claveInicial);
     setTimeout(() => {
@@ -184,7 +192,7 @@ export default function SelectorDeModelo(props: SelectorDeModeloProps) {
   const buscar = (value: string) => {
     setBusqueda(value);
     setActivo(
-      agruparModelos(props.models, value)
+      gruposDeModelos(props.models, value)
         .flatMap((grupo) => grupo.models)
         .find(disponible)?.key ?? "",
     );
@@ -318,80 +326,46 @@ export default function SelectorDeModelo(props: SelectorDeModeloProps) {
             </button>
             <button
               type="button"
-              class={cn("flex size-9 shrink-0 items-center justify-center rounded-sm text-neutral-500 outline-none hover:bg-surface-muted hover:text-neutral-950 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-primary", seccion() === "danil-credits" && "bg-surface-muted text-neutral-950")}
-              aria-label={t("chat.credits.label")}
-              aria-pressed={seccion() === "danil-credits"}
-              title={t("chat.credits.label")}
-              onClick={() => { setSeccion("danil-credits"); setActivo(""); props.onCreditsPrepare?.(); }}
+              class={cn("flex size-9 shrink-0 items-center justify-center rounded-sm text-neutral-500 outline-none hover:bg-surface-muted hover:text-neutral-950 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-primary", seccion() === "danil" && "bg-surface-muted text-neutral-950")}
+              aria-label={t("chat.services.label")}
+              aria-pressed={seccion() === "danil"}
+              title={t("chat.services.label")}
+              onClick={() => { setSeccion("danil"); setActivo(""); props.onCreditsPrepare?.(); }}
             >
               <MarcaAgente id="danil" size={17} />
             </button>
-            <Show when={discovery() && seccionRouter() === "router-info"}>
-              <button
-                type="button"
-                class={cn("flex size-9 shrink-0 items-center justify-center rounded-sm text-neutral-500 hover:bg-surface-muted hover:text-neutral-950", seccion() === "router-info" && "bg-surface-muted text-neutral-950")}
-                aria-label={t("surfaces.label.free")}
-                title={t("surfaces.label.free")}
-                onClick={() => setSeccion("router-info")}
-              >
-                <Gift size={17} />
-              </button>
-            </Show>
-            <For each={todosLosGrupos().filter((group) => group.id !== "danil-credits")}>
+            <For each={todosLosGrupos()}>
               {(grupo) => (
                 <button
                   type="button"
                   class={cn("flex size-9 shrink-0 flex-col items-center justify-center gap-px rounded-sm text-neutral-500 outline-none hover:bg-surface-muted hover:text-neutral-950 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-primary", seccion() === grupo.id && "bg-surface-muted text-neutral-950")}
-                  aria-label={rotulo(grupo)}
-                  title={rotulo(grupo)}
+                  aria-label={grupo.label}
+                  title={grupo.label}
                   onClick={() => setSeccion(grupo.id)}
                 >
-                  <Show when={grupo.id === "opencode-free"} fallback={<MarcaAgente id={grupo.logo} size={17} />}>
-                    <Gift size={17} />
-                  </Show>
+                  <MarcaAgente id={grupo.logo} size={17} />
                 </button>
               )}
             </For>
           </nav>
-          <div class="scroll-visible min-h-0 overflow-y-auto p-1" role={seccion() === "danil-credits" ? undefined : "listbox"} aria-label={t("chat.model.listbox")}>
-          <Show when={seccion() === "danil-credits"} fallback={
+          <div class="scroll-visible min-h-0 overflow-y-auto p-1" role={seccion() === "danil" ? undefined : "listbox"} aria-label={t("chat.model.listbox")}>
+          <Show when={seccion() === "danil"} fallback={
           <Show
-            when={grupos().some((grupo) => grupo.models.length > 0) || !!discovery() && (seccion() === seccionRouter() || !!busqueda().trim())}
+            when={grupos().some((grupo) => grupo.models.length > 0)}
             fallback={
               <p class="m-0 px-2 py-3 text-sm text-neutral-500">
                 {t("chat.model.empty")}
               </p>
             }
           >
-            <Show when={discovery() && (seccion() === seccionRouter() || !!busqueda().trim())}>
-              <section aria-label={t("surfaces.label.free")} class="px-2 py-2">
-                <div class="flex items-center gap-1.5 text-xs font-medium text-neutral-500">
-                  <MarcaAgente id="danil" size={14} />
-                  <span>{t("surfaces.label.free")}</span>
-                </div>
-                <div class="mt-2 flex min-h-7 items-center gap-2 text-sm text-neutral-950" aria-disabled="true" data-router-state={estadoRouter()}>
-                  <span>{discovery()?.label}</span>
-                  <span class="rounded-sm border border-border px-1 text-xs text-neutral-500">{discovery()?.creator}</span>
-                  <span class="ml-auto shrink-0 text-xs text-neutral-500">
-                    <Show when={estadoRouter() === "activate"}>
-                      <Button size="compact" disabled={consent.guardando()} onClick={() => { abrir(false); void consent.preguntar(); }}>
-                        {t("chat.model.router_activate")}
-                      </Button>
-                    </Show>
-                    <Show when={estadoRouter() === "update_engine"}>{t("chat.model.router_update_engine")}</Show>
-                    <Show when={estadoRouter() === "unavailable"}>{t("chat.model.router_route_unavailable")}</Show>
-                  </span>
-                </div>
-              </section>
-            </Show>
             <For each={grupos()}>
               {(grupo) => (
-                <section role="group" aria-label={rotulo(grupo)}>
+                <section role="group" aria-label={grupo.label}>
                   <div class="flex items-center gap-1.5 px-2 pb-1 pt-2 text-xs font-medium text-neutral-500">
                     <span class="flex size-4 shrink-0 items-center justify-center text-neutral-950">
                       <MarcaAgente id={grupo.logo} size={14} />
                     </span>
-                    <span>{rotulo(grupo)}</span>
+                    <span>{grupo.label}</span>
                     <Show when={grupo.models.some((opcion) => opcion.proveedor.id === "opencode-go") && cupoGo()?.mode === "read"}>
                       <span class="ml-auto truncate font-normal">
                         {t("chat.model.go_remaining", {
@@ -462,14 +436,19 @@ export default function SelectorDeModelo(props: SelectorDeModeloProps) {
               )}
             </For>
           </Show>
-          }><DanilCredits model={creditsModel()} disabled={props.disabled || !creditsModel() || !disponible(creditsModel()!)} onSelect={() => {
-            const option = creditsModel();
-            if (option) elegir(option.key);
-          }} /></Show>
+          }><DanilServices
+            credits={servicio(creditsModel())}
+            router={{
+              ...servicio(routerModel()),
+              state: estadoRouter(),
+              activating: consent.guardando(),
+              onActivate: () => { abrir(false); void consent.preguntar(); },
+            }}
+          /></Show>
         </div>
         </div>
 
-        <Show when={seccion() !== "danil-credits" && niveles().length > 0}>
+        <Show when={seccion() !== "danil" && niveles().length > 0}>
           <div class="flex min-h-10 items-center gap-3 border-t border-border px-3 py-1.5">
             <span class="shrink-0 text-xs font-medium text-neutral-700">
               {t("chat.effort.label")}
