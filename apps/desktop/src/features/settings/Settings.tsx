@@ -328,7 +328,7 @@ export default function Settings(props: {
   // Sin soporte del motor activo, Secretos no se ofrece; su enlace directo sí abre el aviso.
   const [personal] = createResource(async () => (await capabilities().personalAccount?.isPersonal().catch(() => false)) ?? false);
   const dePersonal = (p: Pestana) => ["plan", "support"].includes(p.id);
-  const pestanaVisible = (p: Pestana) => (dePersonal(p) ? personal() === true : p.id !== "secrets" || secretsRoute(capabilities().accountCredentials ? "worker" : "engine", machines()) !== "unsupported");
+  const pestanaVisible = (p: Pestana) => (p.id === "plan" && capabilities().webPromo ? true : dePersonal(p) ? personal() === true : p.id !== "secrets" || secretsRoute(capabilities().accountCredentials ? "worker" : "engine", machines()) !== "unsupported");
   const pedido = settingsTarget(props.panel);
   const inicial = ENTRADAS.find((e) => e.id === pedido?.entry) ?? ENTRADAS[0];
   const [activo, setActivo] = createSignal<SettingsEntryId>(inicial.id);
