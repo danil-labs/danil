@@ -69,6 +69,7 @@ export async function boot(environment, version, responses, userAgent, storage =
   if (!entry) throw new Error(`No está el script principal de ${dir}.`);
   const failures = [];
   const commands = [];
+  const commandsByCause = new Map();
   const storageQueries = [];
   const virtualConsole = new VirtualConsole();
   virtualConsole.on("jsdomError", (e) => failures.push(`jsdomError: ${e.stack ?? e.message}`));
@@ -116,6 +117,11 @@ export async function boot(environment, version, responses, userAgent, storage =
     },
     invoke: (cmd, args, options) => {
       commands.push(cmd);
+      const scope = cause.getStore();
+      if (scope !== undefined) {
+        if (!commandsByCause.has(scope)) commandsByCause.set(scope, []);
+        commandsByCause.get(scope).push(cmd);
+      }
       if (cmd === "list_storage") {
         storageQueries.push(args.refrescar);
         return Promise.resolve({
@@ -333,5 +339,5 @@ export async function boot(environment, version, responses, userAgent, storage =
   );
   await sleep(500);
 
-  return { w, failures, commands, storageQueries, emit: (event, payload) => { for (const id of [...(events.get(event)?.values() ?? [])]) callbacks.get(id)?.({ event, payload }); }, painted: w.document.querySelector("#root")?.innerHTML ?? "" };
+  return { w, failures, commands, commandsForCause: (scope) => commandsByCause.get(scope) ?? [], storageQueries, emit: (event, payload) => { for (const id of [...(events.get(event)?.values() ?? [])]) callbacks.get(id)?.({ event, payload }); }, painted: w.document.querySelector("#root")?.innerHTML ?? "" };
 }
