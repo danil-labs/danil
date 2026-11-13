@@ -348,7 +348,7 @@ test('free startup reloads the directory and selects the appearing Free organiza
     return new Response(null, { status: 404 });
   };
   fetcher.__jsdomApp = true; globalThis.fetch = fetcher;
-  const app = await open(t, 'listo', 'free-startup-directory', {}, undefined, {}, { web: true });
+  const app = await open(t, 'listo', 'free-startup-directory', {}, undefined, {}, { web: true, beforeImport(w) { w.history.replaceState(null, '', '/?entry=free'); } });
   await until(() => app.w.document.querySelector('[data-web-gate]'));
   assert.equal(app.w.document.querySelector('[role="alert"]'), null);
   ready = true;

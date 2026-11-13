@@ -224,7 +224,7 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
         disposeGate = undefined;
         mountedBefore = true;
         windowApp = mountWindow({ machines, initialMachines, permits, relayOrigin: __DANIL_WEB_RELAY_ORIGINS__[0],
-          profile: webAccountProfile(transport), onUnauthorized: expired,
+          profile: webAccountProfile(transport, () => person), onUnauthorized: expired,
           onUnavailable: () => { setError('web.platform.unavailable'); gate(); later(); },
           workspaces: { rows, active, busy, uncertain, choose: id => void choose(id) },
           organizations: loadOrganizations, promo: () => !orgNeeded() && hasActiveOrganization(orgState()) ? redeemPromo : undefined,
