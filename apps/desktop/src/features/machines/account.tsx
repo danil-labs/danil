@@ -167,7 +167,10 @@ export function startAccountMachines(target: Target = window) {
       // «No disponible»: el servidor aún no la tiene o no hay sesión; se reintenta solo.
       cloudRetry = setTimeout(() => {
         cloudRetry = null;
-        void sync();
+        // Solo la nube se relee; la flota se rehace únicamente cuando aparece algo (no se relista la cuenta cada 30 s).
+        void readCloud().then((rows) => {
+          if (rows.length) void sync();
+        });
       }, CLOUD_RETRY_MS);
       // Un reintento pendiente no mantiene vivo el proceso (pruebas en Node); en la webview no hace nada.
       (cloudRetry as unknown as { unref?: () => void }).unref?.();
