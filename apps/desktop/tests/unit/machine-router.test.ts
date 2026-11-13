@@ -194,13 +194,13 @@ test("this computer's list answers at once with its own rows; the VM's slice is 
   const vm = fakeLink({ list_live_sessions: [row("t1", "vm")] });
   const { router, changes } = setup({ cmp_vm: vm });
   await router.handle("list_workspaces");
-  const first = (await router.handle("list_live_sessions", { project: "p1", open: ["t1", "cmp_vm~t1"] })) as { id: string }[];
+  const first = (await router.handle("list_live_sessions", { project: "p1", open: ["t1"] })) as { id: string }[];
   assert.deepEqual(first.map((r) => r.id), ["t1"], "nothing waited on the VM");
   await sleep(300);
   assert.deepEqual(changes, [["sessions"]], "the window is told to read again");
-  const second = (await router.handle("list_live_sessions", { project: "p1", open: ["t1", "cmp_vm~t1"] })) as { id: string; machine?: string; machine_status?: string }[];
+  const second = (await router.handle("list_live_sessions", { project: "p1", open: ["t1"] })) as { id: string; machine?: string; machine_status?: string }[];
   assert.deepEqual(second.map((r) => [r.id, r.machine ?? null, r.machine_status ?? null]), [["t1", null, null], ["cmp_vm~t1", "cmp_vm", "ok"]]);
-  assert.deepEqual(vm.calls[0].args.open, ["t1"], "the VM gets only its own open tab");
+  assert.deepEqual(vm.calls[0].args.open, [], "a local open tab never delays the aggregate for another machine");
 });
 
 test("a workspace only other machines have, with nobody answering, is a named error and never an empty list", async () => {
@@ -921,3 +921,46 @@ test("machine_list conserva el estado del canal para distinguir conexión pendie
   assert.equal(list.find(m => m.id === "cmp_vm")?.connection, "unknown");
   assert.equal(list.find(m => m.id === "cmp_mac")?.connection, "offline");
 });
+
+
+for (const remoteOnly of [false, true]) {
+  test(`new remote open waits for its own response (${remoteOnly ? "remote-only" : "native"}) and confirmed absence stays authoritative`, async () => {
+    let release!: (value: unknown) => void;
+    let hold = true;
+    const vm = fakeLink({ list_live_sessions: ({ open }: Args) => (open as string[]).includes("child") && hold
+      ? new Promise(resolve => { release = resolve; }) : [] });
+    const { router, fleet } = setup({ cmp_vm: vm });
+    const workspace = remoteOnly ? "w2" : "w";
+    if (remoteOnly) fleet.setRegistry([{ id: workspace, name: "Remote", projects: [], computers: ["cmp_vm"] }]);
+    await router.handle("list_workspaces");
+    await router.handle("set_active_workspace", { id: workspace });
+    const args = { project: "p1", open: [] as string[] };
+    await fleet.read({ machine: "cmp_vm", workspace, command: "list_live_sessions", args });
+    await router.handle("list_live_sessions", args);
+    let settled = false;
+    const reading = router.handle("list_live_sessions", { ...args, open: ["cmp_vm~child"] }).then(value => { settled = true; return value as { id: string }[]; });
+    await sleep(10);
+    assert.equal(settled, false, "a previous slice cannot confirm absence for a new open request");
+    assert.equal(typeof release, "function");
+    release([row("child")]);
+    assert.ok((await reading).some(row => row.id === "cmp_vm~child"));
+    hold = false;
+    const confirmed = await router.handle("list_live_sessions", { ...args, open: ["cmp_vm~child", "cmp_vm~parent"] }) as { id: string }[];
+    assert.equal(confirmed.some(row => row.id === "cmp_vm~child"), false, "a valid exact response can confirm deletion; no previous child is restored");
+    router.close();
+  });
+
+  test(`failed new remote open is not an empty successful aggregate (${remoteOnly ? "remote-only" : "native"})`, async () => {
+    const vm = fakeLink({ list_live_sessions: ({ open }: Args) => (open as string[]).length ? Promise.reject({ code: "io" }) : [] });
+    const { router, fleet } = setup({ cmp_vm: vm });
+    const workspace = remoteOnly ? "w2" : "w";
+    if (remoteOnly) fleet.setRegistry([{ id: workspace, name: "Remote", projects: [], computers: ["cmp_vm"] }]);
+    await router.handle("list_workspaces");
+    await router.handle("set_active_workspace", { id: workspace });
+    const args = { project: "p1", open: [] };
+    await fleet.read({ machine: "cmp_vm", workspace, command: "list_live_sessions", args });
+    await router.handle("list_live_sessions", args);
+    await assert.rejects(router.handle("list_live_sessions", { ...args, open: ["cmp_vm~child"] }));
+    router.close();
+  });
+}

@@ -494,6 +494,7 @@ export function createRouter(config: RouterConfig) {
 
   /** La primera máquina con datos libera la lista; las pendientes conservan su última rebanada y avisan al contestar. */
   async function gatherAvailable(envelopes: Envelope[], settles: boolean): Promise<Slice[]> {
+    const required = envelopes.map(needsOpenRead);
     const slices = envelopes.map(previousSlice);
     let returned = false;
     let finish!: () => void;
@@ -504,15 +505,19 @@ export function createRouter(config: RouterConfig) {
     const live = envelopes.map(async (envelope, i) => {
       const before = slices[i];
       const slice = await fleet.read(envelope);
+      if (required[i] && !slice.has) throw noAnswer([slice], envelope.workspace);
       slices[i] = slice;
       if (envelope.command === "list_live_sessions" && slice.has) sessionReads.set(JSON.stringify([envelope.machine, envelope.workspace, envelope.args?.project]), envelope);
       if (returned) {
         if (differs(before, slice)) notify(envelope.command);
       } else if (slice.has) soon();
     });
-    await Promise.race([Promise.all(live), available]);
-    returned = true;
-    clearTimeout(timer);
+    try {
+      await Promise.all([Promise.race([Promise.all(live), available]), ...live.filter((_, i) => required[i])]);
+    } finally {
+      returned = true;
+      clearTimeout(timer);
+    }
     return slices.filter((slice): slice is Slice => !!slice);
   }
 
@@ -533,6 +538,12 @@ export function createRouter(config: RouterConfig) {
     }
     // Una lectura no sabe si el relay la encendería: lo dice la lista de la cuenta (`wakes`).
     return named(new FleetError(code, machine, null, code === "machine_off"));
+  }
+
+  function needsOpenRead(envelope: Envelope): boolean {
+    if (envelope.command !== "list_live_sessions" || fleet.peek(envelope)?.has) return false;
+    const open = fleet.argsFor(envelope.machine, envelope.args ?? {}).open;
+    return Array.isArray(open) && open.length > 0;
   }
 
   function previousSlice(envelope: Envelope): Slice | null {
@@ -561,11 +572,17 @@ export function createRouter(config: RouterConfig) {
     if (!elsewhere(workspace)) {
       const value = (await localIndexed(command, args, workspace)) ?? (await native(command, fleet.argsFor(self as string, args), options));
       slices.unshift({ machine: self as string, status: "ok", has: true, value, at: Date.now() });
-      for (const envelope of asked) {
+      const remoteSlices = await Promise.all(asked.map(async envelope => {
+        if (needsOpenRead(envelope)) {
+          const slice = await fleet.read(envelope);
+          if (!slice.has) throw noAnswer([slice], workspace);
+          return slice;
+        }
         const before = previousSlice(envelope);
-        if (before) slices.push(before);
         refresh(envelope, before);
-      }
+        return before;
+      }));
+      slices.push(...remoteSlices.filter((slice): slice is Slice => !!slice));
     } else if (asked.length) {
       // El refresco remoto de Git depende de que la observación local haya terminado en el motor.
       const result = command === "list_session_git" ? await Promise.all(asked.map(envelope => fleet.read(envelope))) : await gather(asked);
