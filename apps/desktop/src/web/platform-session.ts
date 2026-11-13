@@ -92,31 +92,50 @@ export function platformSession(options: { origin: string; timeoutMs: number }, 
   };
 }
 
+/**
+ * La preparación de la cuenta agotó su presupuesto sin quedar lista. No es un fallo del transporte:
+ * la ventana termina en un estado visible y solo la persona arranca otra preparación.
+ * `last` es la última negativa leída, si la última lectura fue una negativa; un valor pendiente no viaja.
+ */
+export class PreparationExpired extends Error {
+  constructor(readonly last?: PlatformSessionError) {
+    super('Account preparation did not finish within its budget');
+    this.name = 'PreparationExpired';
+  }
+}
+
+const PREPARATION_MS = 20_000;
+/** Red caída o plazo propio de la petición: no dicen nada de la cuenta. Por nombre, porque el error puede venir de otro realm. */
+const transportFailure = (e: unknown) => ['TypeError', 'TimeoutError'].includes(String((e as { name?: unknown } | null)?.name));
+
 export async function preparePlatformSession<T>(read: (signal: AbortSignal) => Promise<T>, signal: AbortSignal, preparing: () => void, ready: (value: T) => boolean = () => true): Promise<T> {
-  const deadline = Date.now() + 20_000;
-  const budget = AbortSignal.any([signal, AbortSignal.timeout(20_000)]);
-  let outcome: { kind: 'pending'; value: T } | { kind: 'error'; cause: PlatformSessionError } | undefined;
+  const deadline = Date.now() + PREPARATION_MS;
+  const budget = AbortSignal.any([signal, AbortSignal.timeout(PREPARATION_MS)]);
+  let last: PlatformSessionError | undefined;
+  let started = false;
   let attempt = 0;
-  do {
+  for (;;) {
     signal.throwIfAborted();
     try {
       const value = await read(budget);
       if (ready(value)) return value;
-      outcome = { kind: 'pending', value };
+      last = undefined;
     } catch (cause) {
       signal.throwIfAborted();
-      if (budget.aborted && outcome) {
-        if (outcome.kind === 'pending') return outcome.value;
-        throw outcome.cause;
-      }
-      if (!(cause instanceof PlatformSessionError) || ![403, 404].includes(cause.status) ||
-          ['workspace_selection_required', 'organization_selection_required'].includes(cause.code ?? '')) throw cause;
-      outcome = { kind: 'error', cause };
+      // Lo que corta el presupuesto (o cae con él) es el fin de la preparación, no una caída que reintentar.
+      if (budget.aborted && !(cause instanceof PlatformSessionError)) throw new PreparationExpired(last);
+      const preparingAccount = cause instanceof PlatformSessionError && [403, 404].includes(cause.status) &&
+        !['workspace_selection_required', 'organization_selection_required'].includes(cause.code ?? '');
+      // Empezada la preparación, una caída del transporte se reintenta dentro del mismo presupuesto:
+      // si escapara, la ventana arrancaría otra preparación y el plazo dejaría de acotarla.
+      if (preparingAccount) last = cause as PlatformSessionError;
+      else if (!(started && transportFailure(cause))) throw cause;
     }
+    started = true;
     const remaining = deadline - Date.now();
-    if (remaining <= 0) break;
+    if (remaining <= 0) throw new PreparationExpired(last);
     preparing();
-    const hint = outcome.kind === 'error' ? outcome.cause.retryAfter : null;
+    const hint = last?.retryAfter;
     const seconds = hint && /^\d+$/.test(hint) ? Number(hint) * 1000 : NaN;
     const retryAfter = hint ? (Number.isFinite(seconds) ? seconds : Date.parse(hint) - Date.now()) : 0;
     const backoff = Math.min(500 * 2 ** attempt++, 4000) * (1 + Math.random() / 4);
@@ -128,7 +147,6 @@ export async function preparePlatformSession<T>(read: (signal: AbortSignal) => P
       signal.addEventListener('abort', abort, { once: true });
       if (signal.aborted) abort();
     });
-  } while (Date.now() < deadline);
-  if (outcome.kind === 'error') throw outcome.cause;
-  return outcome.value;
+    if (Date.now() >= deadline) throw new PreparationExpired(last);
+  }
 }

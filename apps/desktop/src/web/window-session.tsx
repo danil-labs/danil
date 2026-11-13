@@ -8,7 +8,7 @@ import { Spinner } from '../ui/Spinner';
 import { Button } from '../ui/Button';
 import { ToastStack } from '../ui/Toast';
 import { webAccountProfile } from './account';
-import { platformSession, platformTransport, PlatformSessionError, preparePlatformSession, type PlatformWorkspace, type PlatformProfile } from './platform-session';
+import { platformSession, platformTransport, PlatformSessionError, PreparationExpired, preparePlatformSession, type PlatformWorkspace, type PlatformProfile } from './platform-session';
 import type { WebSessionDeployment } from './session-config';
 import { workspaceSelection } from './workspace-selection';
 import { readCapabilities, supports, type CapabilitiesSnapshot } from './service-capabilities';
@@ -24,8 +24,8 @@ import './phrases';
 declare const __DANIL_WEB_RELAY_ORIGINS__: string[];
 const FIRST_RETRY_MS = 1000;
 const POLL_MAX_MS = 30_000;
-
-class OrganizationSelectionRefusal extends PlatformSessionError {}
+/** Lo que la ventana dice de una negativa: un 403 es falta de acceso; lo demás, servicio no disponible. */
+const refusalCopy = (status: number | undefined) => status === 403 ? 'web.platform.denied' : 'web.platform.unavailable';
 
 export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
   return createRoot(dispose => {
@@ -165,10 +165,14 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
       catch (cause) {
         if (cause instanceof PlatformSessionError && cause.status === 401) expired();
         else if (cause instanceof PlatformSessionError && cause.code === 'workspace_selection_required') await withoutWorkspace();
+        // La preparación agotó su presupuesto: queda «Reintentar», sin otro presupuesto automático.
+        else if (cause instanceof PreparationExpired) {
+          if (!stopped && !signedOut()) { setError(refusalCopy(cause.last?.status)); gate(); }
+        }
         else if (!stopped && !signedOut() && organizations.report(cause)) gate();
         else if (!stopped && !signedOut()) {
-          setError(cause instanceof PlatformSessionError && cause.status === 403 ? 'web.platform.denied' : 'web.platform.unavailable'); gate();
-          if (!(cause instanceof OrganizationSelectionRefusal) && (!(cause instanceof PlatformSessionError) || [404, 408, 429, 501, 503].includes(cause.status))) later();
+          setError(refusalCopy(cause instanceof PlatformSessionError ? cause.status : undefined)); gate();
+          if (!(cause instanceof PlatformSessionError) || [404, 408, 429, 501, 503].includes(cause.status)) later();
         }
       } finally {
         setActive(signedOut() ? null : selection.active());
@@ -185,7 +189,6 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
     const redeemPromo = sessionPromoRedemption((code, key) => authorized(() => api.redeemPromo(code, key)));
     async function logout() { await run(async () => { await api.logout(); expired(); }); }
     async function load() {
-      let selectionRefusal: PlatformSessionError | undefined;
       const read = async (signal?: AbortSignal) => {
         startupSignal = signal;
         try { setCaps(await readCapabilities(transport)); }
@@ -197,11 +200,12 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
           await organizations.load();
           organizationsLoaded = true;
           const state = organizations.state();
-          if (state.kind === 'ready' && state.refused && state.error && state.errorStatus !== undefined) {
-            selectionRefusal = new OrganizationSelectionRefusal(state.errorStatus, null, state.error);
+          await withoutWorkspace();
+          // Una negativa definitiva a la selección es una respuesta, no una cuenta por preparar.
+          if (state.kind === 'ready' && state.refused) {
+            if (!stopped && !signedOut()) { setError(refusalCopy(state.errorStatus)); gate(); }
             return true;
           }
-          await withoutWorkspace();
           return state.kind === 'ready' && (state.active !== null || state.items.length > 1);
         }
         // Con sesión: el selector se lee una vez y, si la ruta aún no existe, se reintenta solo.
@@ -232,16 +236,11 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
         try {
           if (mountedBefore) await read();
           else {
-            const ready = await preparePlatformSession(read, lifetime.signal, () => {
+            await preparePlatformSession(read, lifetime.signal, () => {
               setPreparing(true);
               gate();
             }, value => value !== false);
-            if (ready === false && !stopped && !signedOut()) {
-              setError('web.platform.unavailable');
-              gate();
-            }
           }
-          if (selectionRefusal) throw selectionRefusal;
         } finally { startupSignal = undefined; setPreparing(false); }
       });
     }

@@ -98,6 +98,9 @@ export function createOrganizationSelection(source: OrganizationSource, options:
   let attempt = 0;
   let cancel: (() => void) | null = null;
   let pending: { id: string; key: string } | null = null;
+  // La última negativa definitiva (4xx) a una selección. La selección automática no la repite: solo
+  // una elección explícita de la persona, o que el directorio la anuncie activa, la deja atrás.
+  let refusal: { id: string; error: string; status?: number } | null = null;
   const listeners = new Set<() => void>();
   const emit = () => listeners.forEach((l) => l());
   const set = (next: OrganizationState) => {
@@ -127,8 +130,11 @@ export function createOrganizationSelection(source: OrganizationSource, options:
       const announced = text(body?.active_organization_id);
       const active = announced && items.some((o) => o.id === announced) ? announced : null;
       attempt = 0;
-      set({ kind: "ready", items, active, busy: false, error: null });
-      if (!active && items.length === 1) await choose(items[0].id);
+      if (active || !items.some((o) => o.id === refusal?.id)) refusal = null;
+      set(refusal
+        ? { kind: "ready", items, active, busy: false, error: refusal.error, errorStatus: refusal.status, refused: true }
+        : { kind: "ready", items, active, busy: false, error: null });
+      if (!active && items.length === 1 && !refusal) await choose(items[0].id);
       else if (!active && items.length > 1) {
         needed = true;
         emit();
@@ -153,6 +159,7 @@ export function createOrganizationSelection(source: OrganizationSource, options:
     }
     // La misma intención conserva su clave: repetirla tras una respuesta perdida es idempotente.
     if (pending?.id !== id) pending = { id, key: key() };
+    refusal = null;
     const before = state;
     set({ ...before, busy: true, error: null, errorStatus: undefined, refused: false });
     try {
@@ -167,8 +174,12 @@ export function createOrganizationSelection(source: OrganizationSource, options:
       const status = statusOf(e);
       // Un 4xx definitivo descarta la intención; red o 5xx la conservan para reintentar con la misma clave.
       const refused = status !== undefined && status >= 400 && status < 500 && status !== 408 && status !== 429;
-      if (refused) pending = null;
-      set({ ...before, busy: false, error: codeOf(e) ?? "unavailable", errorStatus: status, refused });
+      const error = codeOf(e) ?? "unavailable";
+      if (refused) {
+        pending = null;
+        refusal = { id, error, status };
+      }
+      set({ ...before, busy: false, error, errorStatus: status, refused });
     }
   }
 

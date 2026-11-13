@@ -276,6 +276,29 @@ for (const latest of ['pending', 'error']) test(`the latest ${latest} outcome su
   assert.equal(outcome.error?.last, latest === 'pending' ? undefined : refusal);
 });
 
+test('a transport failure after preparation started is retried within the same budget', async t => {
+  t.mock.timers.enable({ apis: ['setTimeout', 'Date'], now: 0 });
+  let reads = 0;
+  const result = preparePlatformSession(async () => {
+    reads++;
+    if (reads === 1) return false;
+    if (reads === 2) throw new DOMException('Request deadline', 'TimeoutError');
+    if (reads === 3) throw new TypeError('Failed to fetch');
+    return true;
+  }, new AbortController().signal, () => {}, value => value);
+  for (let i = 0; i < 4; i++) { await new Promise(resolve => setImmediate(resolve)); t.mock.timers.tick(5000); }
+  assert.equal(await result, true);
+  assert.equal(reads, 4);
+});
+
+test('a transport failure before preparation started keeps its own meaning', async () => {
+  const offline = new TypeError('Failed to fetch');
+  let preparing = false;
+  await assert.rejects(preparePlatformSession(async () => { throw offline; }, new AbortController().signal,
+    () => { preparing = true; }), e => e === offline);
+  assert.equal(preparing, false);
+});
+
 for (const kind of ['hang', 'offline']) test(`a first read that ${kind === 'hang' ? 'crosses' : 'fails at'} the deadline ends preparation instead of failing the transport`, async t => {
   t.mock.timers.enable({ apis: ['setTimeout', 'Date'], now: 0 });
   const deadline = new AbortController();
