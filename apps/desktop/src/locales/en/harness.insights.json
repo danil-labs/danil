@@ -1,3 +1,4 @@
 {
-  "harness.insights.title": "Usage and activity"
+  "harness.insights.title": "Usage and activity",
+  "harness.insights.description": "What your organization's server reports. A value that does not arrive stays missing, never zero."
 }

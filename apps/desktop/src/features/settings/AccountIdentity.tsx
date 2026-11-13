@@ -107,7 +107,7 @@ export function AccountIdentityBlock(props: { identity: AccountIdentityState }) 
             <div class="min-w-0 truncate text-ui text-neutral-500">{id.profile()?.email}</div>
           </Show>
         </div>
-        <Show when={!id.readonly}><div class="flex shrink-0 items-center gap-2">
+        <div class="flex shrink-0 items-center gap-2">
           <input
             ref={picker}
             type="file"
@@ -117,20 +117,20 @@ export function AccountIdentityBlock(props: { identity: AccountIdentityState }) 
             onChange={(e) => {
               const file = e.currentTarget.files?.[0];
               e.currentTarget.value = "";
-              if (file) void id.changePhoto(file);
+              if (file && !id.readonly) void id.changePhoto(file);
             }}
           />
-          <Button size="sm" variant="secondary" disabled={id.busy()} onClick={() => picker?.click()}>
+          <Button size="sm" variant="secondary" disabled={id.busy() || id.readonly} onClick={() => picker?.click()}>
             {id.busy() ? t("danil.account.photo_saving") : t("danil.account.photo_change")}
           </Button>
           <Show when={id.profile()?.source === "danil"}>
-            <Button size="sm" variant="ghost" disabled={id.busy()} onClick={() => void id.removePhoto()}>
+            <Button size="sm" variant="ghost" disabled={id.busy() || id.readonly} onClick={() => void id.removePhoto()}>
               {t("danil.account.photo_remove")}
             </Button>
           </Show>
-        </div></Show>
+        </div>
       </div>
-      <Show when={!id.readonly}><p class="m-0 text-ui text-neutral-500">{t("danil.account.photo_hint")}</p></Show>
+      <p class="m-0 text-ui text-neutral-500">{t("danil.account.photo_hint")}</p>
       <Show when={id.problem()}>
         {(text) => <p class="m-0 text-ui text-error-strong" role="alert">{text()}</p>}
       </Show>

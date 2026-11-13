@@ -1,3 +1,4 @@
 {
-  "harness.insights.title": "Consumo y actividad"
+  "harness.insights.title": "Consumo y actividad",
+  "harness.insights.description": "Lo que reporta el servidor de tu organización. Un dato que no llega se queda como «sin dato», nunca como cero."
 }

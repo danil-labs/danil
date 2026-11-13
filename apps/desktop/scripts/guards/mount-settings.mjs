@@ -381,6 +381,14 @@ assert.deepEqual(rShown(), ["ops", "Operación"], "tras elegir, el selector ense
 rBoton("Actualizar").click();
 await sleep(80);
 assert.deepEqual(rShown(), ["ops", "Operación"], "y lo sigue enseñando al actualizar la lista");
+const insights = rPanel().querySelector("[data-harness-insights]");
+assert.ok(insights, "la sección sin servicio conserva la tarjeta de consumo y actividad");
+assert.ok(insights.classList.contains("bg-surface-raised") && insights.classList.contains("p-4"), "la tarjeta conserva la superficie y el espacio del diseño original");
+assert.equal(insights.querySelector("header h3")?.textContent, "Consumo y actividad");
+assert.ok(insights.querySelector("header p")?.textContent.includes("Lo que reporta el servidor de tu organización"));
+assert.ok(insights.querySelector('[role="status"]')?.textContent.includes("todavía no expone"));
+assert.equal(radiantApp.commands.includes("harness_org_fetch"), false, "sin contrato no vuelve a invocar el lector retirado");
+
 radiantAccount.organization = "Danil";
 rBoton("Servidor propio").click();
 await sleep(50);
