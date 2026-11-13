@@ -137,7 +137,9 @@ export function ConnectPanel(): JSX.Element {
     setWaiting(true);
     setError("");
     try {
-      changed(await invoke<DesktopStatus>("agents_session_connect", {}));
+      // El login de Desk es uno solo, por identity en el navegador (`desk_auth`).
+      await invoke("danil_sign_in", {});
+      changed(await invoke<DesktopStatus>("agents_session_status", {}).catch(() => ({ state: "unavailable" }) as DesktopStatus));
     } catch (cause) {
       const detail = detailOf(cause);
       if (detail !== "cancelled") setError(errorText(detail));

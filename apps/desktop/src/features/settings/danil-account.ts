@@ -1,7 +1,8 @@
 /**
- * La cuenta de Danil de esta computadora: iniciar sesión (y con eso registrar
- * la máquina), ver con qué cuenta quedó y cerrar sesión. El flujo vive en el
- * motor (`danil_connect_*`); aquí solo se lee su estado y se lo pide.
+ * La cuenta de Danil de Desk: iniciar sesión por el navegador del sistema contra
+ * `identity` (PKCE y loopback, en Rust: `desk_auth/`), ver con qué cuenta quedó y
+ * cerrar sesión. Hay una sola cuenta: cambiar de usuario es cerrar sesión y
+ * entrar con otra. La ventana nunca ve tokens.
  */
 import { invoke } from "../../lib/invoke.ts";
 
@@ -31,16 +32,13 @@ export type DanilConnectStatus = {
   online?: boolean;
 };
 
-/**
- * «Continuar como <correo>» sin navegador. Apagado mientras la cuenta de Danil
- * sea solo Supabase: depende del intercambio de WorkOS.
- */
+/** Desk tiene una sola cuenta: no hay «Continuar como <correo>». */
 export const ONE_CLICK_SIGN_IN = false;
 
-/** Un workspace con sesión de Radiant y ese correo: con él se entra sin navegador. */
+/** Se conserva el tipo para quien pinta las maneras de entrar; la lista siempre está vacía. */
 export type DanilConnectOption = { workspace: string; name?: string | null; email: string };
 
-/** El código con que el motor rechazó la orden; `command` si no la conoce. */
+/** El código con que la ventana rechazó la orden; `command` si no la conoce. */
 export function failureCode(e: unknown): string | null {
   if (!e || typeof e !== "object") return null;
   const { detail, what } = e as { detail?: unknown; what?: { clave?: unknown } };
@@ -49,74 +47,53 @@ export function failureCode(e: unknown): string | null {
   return null;
 }
 
-/** `null` si el motor todavía no trae este flujo. */
+/** `null` si la ventana todavía no trae la sesión de Desk. */
 export async function readDanilAccount(): Promise<DanilConnectStatus | null> {
   try {
-    return await invoke<DanilConnectStatus>("danil_connect_status");
+    return await invoke<DanilConnectStatus>("danil_session_status");
   } catch (e) {
     if (failureCode(e) === "command") return null;
     throw e;
   }
 }
 
-/** Un correo una vez, con el primer workspace que lo tenga. */
+/** Sin varias cuentas no hay correos para elegir. */
 export async function readDanilOptions(): Promise<DanilConnectOption[]> {
-  const options = await invoke<DanilConnectOption[]>("danil_connect_options").catch(() => []);
-  const seen = new Set<string>();
-  return (Array.isArray(options) ? options : []).filter((o) => {
-    const key = typeof o?.email === "string" ? o.email.trim().toLowerCase() : "";
-    if (!key || typeof o.workspace !== "string" || seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
-}
-
-const nameArg = (name: string) => (name.trim() ? { name: name.trim() } : {});
-
-/** El flujo de antes: el motor deja el código pendiente y la ventana abre la página de aprobación. */
-async function deviceInBrowser(name: string): Promise<DanilConnectStatus> {
-  const started = await invoke<DanilConnectStatus>("danil_connect_start", nameArg(name));
-  const url = started.verification_uri_complete ?? started.verification_uri;
-  if (url) await invoke("open_external", { target: url }).catch(() => {});
-  return started;
+  return [];
 }
 
 const isStatus = (value: unknown): value is DanilConnectStatus =>
   !!value && typeof value === "object" && typeof (value as { state?: unknown }).state === "string";
 
-/** Lo que tarda `danil_sign_in` en abrir el navegador antes de leer el estado pendiente. */
+/** Lo que tarda `danil_sign_in` en abrir el navegador antes de leer el estado. */
 const SIGN_IN_STARTED_MS = 1500;
 
 /**
- * Un solo inicio de sesión (docs/desktop-bff-session.md): la ventana conecta el motor y
- * abre su propia sesión con una sola aprobación. Sigue sola; el estado llega por `danil-connect`.
+ * Abre el navegador del sistema en `identity` y espera la vuelta (hasta 10 min,
+ * en Rust). Si tarda, contesta con el estado actual y el resultado llega por
+ * `danil-connect`. Un fallo al empezar rechaza con su código.
  */
 export async function signInWithBrowser(name: string): Promise<DanilConnectStatus> {
-  const running = invoke<DanilConnectStatus>("danil_sign_in", nameArg(name));
+  const running = invoke<DanilConnectStatus>("danil_sign_in", name.trim() ? { name: name.trim() } : {});
   const early = await Promise.race([
     running.then((status) => ({ status }), (error: unknown) => ({ error })),
     new Promise<null>((resolve) => setTimeout(() => resolve(null), SIGN_IN_STARTED_MS)),
   ]);
-  // Una ventana sin la orden contesta sin estado: el flujo de antes.
-  if (early && "status" in early) return isStatus(early.status) ? early.status : deviceInBrowser(name);
-  // Una falla al empezar (ventana o entrada sin el flujo nuevo): el flujo de antes.
+  if (early && "status" in early && isStatus(early.status)) return early.status;
   if (early && "error" in early) {
-    if (failureCode(early.error) === "cancelled") return readDanilAccount().then((s) => s ?? deviceInBrowser(name));
-    return deviceInBrowser(name);
+    if (failureCode(early.error) === "cancelled") return (await readDanilAccount()) ?? { state: "disconnected" };
+    throw early.error;
   }
   void running.catch(() => {});
-  return (await readDanilAccount()) ?? deviceInBrowser(name);
+  return (await readDanilAccount()) ?? { state: "disconnected" };
 }
 
-/** Sin navegador, con la cuenta de Radiant que ya tiene ese workspace. */
-export function signInWithWorkspace(name: string, workspace: string): Promise<DanilConnectStatus> {
-  return invoke<DanilConnectStatus>("danil_connect_start", { ...nameArg(name), workspace });
+/** Ya no hay entrada sin navegador con el correo de un workspace: es la misma del navegador. */
+export function signInWithWorkspace(name: string, _workspace: string): Promise<DanilConnectStatus> {
+  return signInWithBrowser(name);
 }
 
-/** Cerrar sesión, o cancelar un código pendiente: también la sesión de la ventana y su concesión. */
+/** Cierra la sesión de esta instalación en `identity` y la borra del llavero. */
 export function signOut(): Promise<DanilConnectStatus> {
-  return invoke<unknown>("danil_sign_out").then(
-    (status) => (isStatus(status) ? status : invoke<DanilConnectStatus>("danil_disconnect")),
-    (e) => (failureCode(e) === "command" ? invoke<DanilConnectStatus>("danil_disconnect") : Promise.reject(e)),
-  );
+  return invoke<DanilConnectStatus>("danil_sign_out");
 }

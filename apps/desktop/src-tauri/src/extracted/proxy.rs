@@ -269,10 +269,11 @@ pub(super) fn desktop_command(name: &str) -> bool {
                 | "machine_list"
                 | "account_relay_token"
                 | "agents_session_status"
-                | "agents_session_connect"
                 | "agents_session_sign_out"
+                | "danil_session_status"
                 | "danil_sign_in"
                 | "danil_sign_out"
+                | "danil_edge_fetch"
                 | "agents_session_directory"
                 | "agents_session_link"
                 | "agents_session_unlink"
@@ -1079,7 +1080,7 @@ pub(super) fn credits_captured_call(
         .and_then(reply)
 }
 
-/// Una orden del motor pedida desde el Rust de la ventana (`agents_session.rs`).
+/// Una orden del motor pedida desde el Rust de la ventana (`desk_auth`).
 pub(super) fn engine_call(
     app: &tauri::AppHandle,
     command: &str,

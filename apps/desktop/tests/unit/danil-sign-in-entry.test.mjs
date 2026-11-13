@@ -53,6 +53,7 @@ function danil(initial) {
     become: (app, next) => app.emit("danil-connect", (status = next)),
     table: {
       danil_connect_status: record("danil_connect_status", () => status),
+      danil_session_status: record("danil_session_status", () => status),
       danil_connect_options: record("danil_connect_options", () => [{ workspace: "w", name: "W", email: "alberto@danil.ai" }]),
       danil_connect_start: record("danil_connect_start", () => (status = PENDING)),
       danil_disconnect: record("danil_disconnect", () => (status = { state: "disconnected", name: "alberto-mbp" })),

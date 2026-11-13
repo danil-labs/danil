@@ -4,6 +4,7 @@
 mod agents_session;
 mod appearance;
 mod background_service;
+mod desk_auth;
 mod desktop;
 mod engine;
 mod engine_profile;
@@ -492,10 +493,11 @@ fn start(client: Option<Arc<Client>>, autostart: bool, launcher: launcher::Launc
             proxy::machine_list,
             proxy::account_relay_token,
             agents_session::agents_session_status,
-            agents_session::agents_session_connect,
             agents_session::agents_session_sign_out,
-            agents_session::danil_sign_in,
-            agents_session::danil_sign_out,
+            desk_auth::danil_session_status,
+            desk_auth::danil_sign_in,
+            desk_auth::danil_sign_out,
+            desk_auth::danil_edge_fetch,
             agents_session::agents_session_directory,
             agents_session::agents_session_link,
             agents_session::agents_session_unlink,

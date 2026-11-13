@@ -61,6 +61,7 @@ function engine({ directory = [], status = { state: "disconnected", name: "Mac" 
   const table = {
     ...BASE,
     danil_connect_status: () => state.status,
+    danil_session_status: () => state.status,
     danil_sessions: () => state.sessions,
     danil_sign_in: () => {
       state.signIns++;

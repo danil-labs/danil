@@ -1,8 +1,12 @@
 //! Piloto local: solo la ventana conserva la sesión humana.
 use super::*;
+use sha2::{Digest, Sha256};
 use std::collections::HashSet;
-use std::sync::atomic::AtomicBool;
+use std::io::{Read, Write};
+use std::net::{TcpListener, TcpStream};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::Arc;
+use std::time::Instant;
 
 const MAX_INPUT: usize = 65536;
 const MAX_HEADERS: usize = 8192;

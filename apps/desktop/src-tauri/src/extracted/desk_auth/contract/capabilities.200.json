@@ -1,0 +1,57 @@
+{
+  "contract": "mvp-v1",
+  "items": [
+    {
+      "name": "identity.web",
+      "version": 1,
+      "status": "available"
+    },
+    {
+      "name": "identity.desk",
+      "version": 1,
+      "status": "available"
+    },
+    {
+      "name": "identity.organizations",
+      "version": 1,
+      "status": "available"
+    },
+    {
+      "name": "workspaces",
+      "version": 1,
+      "status": "available"
+    },
+    {
+      "name": "machines",
+      "version": 1,
+      "status": "available",
+      "routes": [
+        "GET /v1/machines",
+        "GET /v1/machines/{machine_id}"
+      ]
+    },
+    {
+      "name": "machines.start",
+      "version": 1,
+      "status": "available",
+      "routes": [
+        "POST /v1/machines/{machine_id}/start",
+        "GET /v1/operations/{operation_id}"
+      ]
+    },
+    {
+      "name": "machines.session",
+      "version": 1,
+      "status": "available",
+      "routes": [
+        "POST /v1/machines/{machine_id}/tickets"
+      ]
+    },
+    {
+      "name": "machines.session.renew",
+      "version": 1,
+      "status": "unavailable"
+    }
+  ],
+  "next_cursor": null
+}
