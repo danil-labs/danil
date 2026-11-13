@@ -6,15 +6,20 @@ import { sleep } from "./jsdom-app.mjs";
 const stamp = Date.UTC(2026, 10, 1);
 const task = (id, title, extra = {}) => ({ ...row(id, title), turns: 1, created_at: stamp, updated_at: stamp, ...extra });
 const results = [];
+const contradictory = process.env.QA_DELEGATED_CONTRACT === "contradictory";
 
 async function run(owner, listed, pass) {
   const prefix = owner === "cmp_home" ? "" : `${owner}~`;
   const parent = task("parent", `Padre QA ${owner}`, { has_delegates: true });
   const child = task("child", `Hija QA ${owner}`, { launched_by: "parent", folder: "p1" });
   const loaded = [];
+  const reads = [];
   const table = {
     project_base_branches: [],
-    list_live_sessions: ({ project }) => project === "p1" || project === "" ? [parent, ...(listed ? [child] : [])] : [],
+    list_live_sessions: ({ project, open = [] }) => {
+      reads.push({ project, open });
+      return project === "p1" || project === "" ? [parent, ...(listed || (!contradictory && open.includes("child")) ? [child] : [])] : [];
+    },
     list_delegated_sessions: ({ id }) => id === "parent" ? [child] : [],
     task_coordinator: ({ id }) => id === "child" ? { folder: "p1", task: "parent", title: parent.title, provider: "codex" } : null,
     load_session: ({ id }) => {
@@ -60,15 +65,20 @@ async function run(owner, listed, pass) {
     assert.ok(await until(dock), "dock contiene la misma hija");
     dock().click();
     const dockContent = await until(() => doc.body.textContent.includes(`CONTENIDO HIJA ${owner}`));
-    assert.ok(cardContent && dockContent, `contenido visible: tarjeta=${cardContent}, dock=${dockContent}`);
+    if (contradictory && !listed) {
+      assert.ok(!cardContent && !dockContent, "omitir una tarea solicitada con open permite podar su pestaña");
+    } else {
+      assert.ok(cardContent && dockContent, `contenido visible: tarjeta=${cardContent}, dock=${dockContent}`);
+    }
+    if (!listed) assert.ok(reads.some(read => read.open.includes("child")), "la ventana solicita la hija abierta con id del motor");
     if (owner !== "cmp_home") {
       assert.equal(native("load_session").filter(call => call.args.id === "child").length, 0, "la colisión local nunca se abre");
       assert.ok(relayCalls(owner, "load_session").some(call => call.args.id === "child"), "relay recibe el id corto");
     }
     assert.deepEqual(app.failures, []);
-    results.push({ owner, listed, pass, result: "pass", loaded });
+    results.push({ owner, listed, pass, result: contradictory && !listed ? "contract-limit" : "pass", loaded, reads, cardContent, dockContent });
   } catch (error) {
-    results.push({ owner, listed, pass, result: "fail", error: error.stack, loaded, text: doc.body.textContent, failures: app.failures });
+    results.push({ owner, listed, pass, result: "fail", error: error.stack, loaded, reads, text: doc.body.textContent, failures: app.failures });
     process.exitCode = 1;
   } finally {
     app.w.close();
@@ -126,7 +136,7 @@ try {
     await explicitCoordinator("cmp_home", "cmp_vm");
     await explicitCoordinator("cmp_vm", "cmp_home");
   }
-  console.log(JSON.stringify({ scope: "jsdom integration, simulated IPC and relay", results }, null, 2));
+  console.log(JSON.stringify({ scope: "jsdom integration, simulated IPC and relay", contract: contradictory ? "contradictory-open-omission" : "include-open-tasks", results }, null, 2));
 } catch (error) {
   console.error(JSON.stringify({ results, error: error.stack }, null, 2));
   process.exitCode = 1;
