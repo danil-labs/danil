@@ -24,7 +24,11 @@ export type OrganizationSource = {
 
 export type OrganizationState =
   | { kind: "hidden" }
-  | { kind: "ready"; items: Organization[]; active: string | null; busy: boolean; error: string | null };
+  | { kind: "ready"; items: Organization[]; active: string | null; busy: boolean; error: string | null; errorStatus?: number; refused?: boolean };
+
+export function hasActiveOrganization(state: OrganizationState): boolean {
+  return state.kind === "ready" && !state.busy && !state.error && state.items.some(org => org.id === state.active);
+}
 
 export type OrganizationOptions = {
   /** Programa un reintento; devuelve cómo cancelarlo. */
@@ -94,6 +98,9 @@ export function createOrganizationSelection(source: OrganizationSource, options:
   let attempt = 0;
   let cancel: (() => void) | null = null;
   let pending: { id: string; key: string } | null = null;
+  // La última negativa definitiva (4xx) a una selección. La selección automática no la repite: solo
+  // una elección explícita de la persona, o que el directorio la anuncie activa, la deja atrás.
+  let refusal: { id: string; error: string; status?: number } | null = null;
   const listeners = new Set<() => void>();
   const emit = () => listeners.forEach((l) => l());
   const set = (next: OrganizationState) => {
@@ -123,8 +130,11 @@ export function createOrganizationSelection(source: OrganizationSource, options:
       const announced = text(body?.active_organization_id);
       const active = announced && items.some((o) => o.id === announced) ? announced : null;
       attempt = 0;
-      set({ kind: "ready", items, active, busy: false, error: null });
-      if (!active && items.length === 1) await choose(items[0].id);
+      if (active || !items.some((o) => o.id === refusal?.id)) refusal = null;
+      set(refusal
+        ? { kind: "ready", items, active, busy: false, error: refusal.error, errorStatus: refusal.status, refused: true }
+        : { kind: "ready", items, active, busy: false, error: null });
+      if (!active && items.length === 1 && !refusal) await choose(items[0].id);
       else if (!active && items.length > 1) {
         needed = true;
         emit();
@@ -149,21 +159,27 @@ export function createOrganizationSelection(source: OrganizationSource, options:
     }
     // La misma intención conserva su clave: repetirla tras una respuesta perdida es idempotente.
     if (pending?.id !== id) pending = { id, key: key() };
+    refusal = null;
     const before = state;
-    set({ ...before, busy: true, error: null });
+    set({ ...before, busy: true, error: null, errorStatus: undefined, refused: false });
     try {
       const reply = record(await source.select(pending.id, pending.key));
       const organization = organizationOf(reply?.organization) ?? before.items.find((o) => o.id === id) ?? { id, name: id };
       const workspace = text(reply?.workspace) ?? null;
       pending = null;
       needed = false;
-      set({ ...before, active: organization.id, busy: false, error: null });
+      set({ ...before, active: organization.id, busy: false, error: null, errorStatus: undefined, refused: false });
       await options.onSelected?.(organization, workspace);
     } catch (e) {
       const status = statusOf(e);
       // Un 4xx definitivo descarta la intención; red o 5xx la conservan para reintentar con la misma clave.
-      if (status !== undefined && status >= 400 && status < 500 && status !== 408 && status !== 429) pending = null;
-      set({ ...before, busy: false, error: codeOf(e) ?? "unavailable" });
+      const refused = status !== undefined && status >= 400 && status < 500 && status !== 408 && status !== 429;
+      const error = codeOf(e) ?? "unavailable";
+      if (refused) {
+        pending = null;
+        refusal = { id, error, status };
+      }
+      set({ ...before, busy: false, error, errorStatus: status, refused });
     }
   }
 

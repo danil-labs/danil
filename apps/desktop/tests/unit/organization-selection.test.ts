@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   announcesOrganizations,
+  hasActiveOrganization,
   createOrganizationSelection,
   isOrganizationSelectionRequired,
   type OrganizationSource,
@@ -284,4 +285,83 @@ test("report: solo `organization_selection_required` abre el selector; otro 403 
 test("organizaciones `degraded` en /v1/capabilities es «no disponible», como en la web y en Machines (edge.openapi Capability)", () => {
   assert.equal(announcesOrganizations({ contract: "mvp-v1", items: [{ name: "identity.organizations", version: 1, status: "degraded" }] }), false);
   assert.equal(announcesOrganizations({ contract: "mvp-v1", items: [{ name: "identity.organizations", version: 1, status: "available" }] }), true);
+});
+
+
+test("promo requires a settled active organization in the current membership list", () => {
+  assert.equal(hasActiveOrganization({ kind: "hidden" }), false);
+  const ready = { kind: "ready" as const, items: [DANIL], active: DANIL.id, busy: false, error: null };
+  assert.equal(hasActiveOrganization(ready), true);
+  assert.equal(hasActiveOrganization({ ...ready, active: null }), false);
+  assert.equal(hasActiveOrganization({ ...ready, active: "org_removed" }), false);
+  assert.equal(hasActiveOrganization({ ...ready, items: [] }), false);
+  assert.equal(hasActiveOrganization({ ...ready, busy: true }), false);
+  assert.equal(hasActiveOrganization({ ...ready, error: "forbidden" }), false);
+});
+
+test('a Desk selection refusal retains its detail without inventing an HTTP status', async () => {
+  let selections = 0;
+  const sel = createOrganizationSelection({
+    list: async () => ({ items: [DANIL, OTRA], active_organization_id: DANIL.id }),
+    select: async () => { selections++; throw { detail: 'organization_not_found' }; },
+  });
+  await sel.load();
+  await sel.choose(OTRA.id);
+  const state = sel.state();
+  assert.equal(state.kind === 'ready' && state.error, 'organization_not_found');
+  assert.equal(state.kind === 'ready' && state.errorStatus, undefined);
+  assert.equal(state.kind === 'ready' && state.active, DANIL.id);
+  assert.equal(selections, 1);
+});
+
+for (const [status, refused] of [[403, true], [404, true], [409, true], [408, false], [429, false], [503, false]] as const) {
+  test(`the selector publishes its selection refusal decision for HTTP ${status}`, async () => {
+    const sel = createOrganizationSelection({
+      list: async () => ({ items: [DANIL, OTRA], active_organization_id: DANIL.id }),
+      select: async () => { throw problem(status, 'selection_failure'); },
+    });
+    await sel.load();
+    await sel.choose(OTRA.id);
+    const state = sel.state();
+    assert.equal(state.kind === 'ready' && state.errorStatus, status);
+    assert.equal(state.kind === 'ready' && state.refused, refused);
+    assert.equal(state.kind === 'ready' && state.active, DANIL.id);
+  });
+}
+
+test('a definitive automatic selection refusal is not sent again by later loads; only the person retries it', async () => {
+  const c = clock();
+  const keys: string[] = [];
+  const sel = createOrganizationSelection({
+    list: async () => ({ items: [DANIL], active_organization_id: null }),
+    select: async (_id, key) => { keys.push(key); throw problem(403, 'organization_forbidden'); },
+  }, { schedule: c.schedule, key: () => `key-${keys.length}` });
+  await sel.load();
+  await sel.load();
+  assert.equal(sel.report(problem(403, 'organization_selection_required')), true);
+  await c.fire();
+  const state = sel.state();
+  assert.equal(keys.length, 1, 'reloading the list must not repeat a refused selection');
+  assert.equal(state.kind === 'ready' && state.refused, true);
+  assert.equal(state.kind === 'ready' && state.error, 'organization_forbidden');
+  assert.equal(state.kind === 'ready' && state.errorStatus, 403);
+  assert.equal(hasActiveOrganization(state), false);
+  await sel.choose(DANIL.id);
+  assert.deepEqual(keys, ['key-0', 'key-1'], 'an explicit choice is a new intention with a new key');
+});
+
+test('a refused organization that the directory later reports active clears the refusal', async () => {
+  let active: string | null = null;
+  let selections = 0;
+  const sel = createOrganizationSelection({
+    list: async () => ({ items: [DANIL], active_organization_id: active }),
+    select: async () => { selections++; throw problem(409, 'organization_conflict'); },
+  });
+  await sel.load();
+  active = DANIL.id;
+  await sel.load();
+  const state = sel.state();
+  assert.equal(selections, 1);
+  assert.equal(state.kind === 'ready' && Boolean(state.refused), false);
+  assert.equal(hasActiveOrganization(state), true);
 });
