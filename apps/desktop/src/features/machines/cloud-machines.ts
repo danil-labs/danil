@@ -62,12 +62,12 @@ export function createCloudMachines(invoke: Invoke, onProblem?: (error: unknown)
     client,
     capabilities,
     /** Las máquinas como filas de flota; `available: false` cuando el servidor, la capacidad o la sesión aún no están (se reintenta solo). */
-    async rows(): Promise<{ available: boolean; computers: Computer[] }> {
+    async rows(): Promise<{ available: boolean; computers: Computer[]; renewInChannel: boolean }> {
       const caps = await capabilities();
-      if (caps && !caps.has("machines")) return { available: false, computers: [] };
+      if (caps && !caps.has("machines")) return { available: false, computers: [], renewInChannel: false };
       const answer: MachinesAnswer<unknown> = await client.list();
-      if (answer.kind === "ok") return { available: true, computers: (answer.value as Parameters<typeof machineToComputer>[0][]).map(machineToComputer) };
-      return { available: false, computers: [] };
+      if (answer.kind === "ok") return { available: true, computers: (answer.value as Parameters<typeof machineToComputer>[0][]).map(machineToComputer), renewInChannel: !!caps?.has("machines.session.renew") };
+      return { available: false, computers: [], renewInChannel: false };
     },
   };
 }

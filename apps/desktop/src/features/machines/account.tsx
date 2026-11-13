@@ -156,9 +156,12 @@ export function startAccountMachines(target: Target = window) {
     void organizations?.().then((selector) => selector.report(e));
   });
   let cloudIds = new Set<string>();
+  /** `machines.session.renew` anunciada por el borde: el relay renueva dentro del canal. */
+  let cloudRenew = false;
   let cloudRetry: ReturnType<typeof setTimeout> | null = null;
   async function readCloud(): Promise<Computer[]> {
-    const { available, computers } = await cloud.rows();
+    const { available, computers, renewInChannel } = await cloud.rows();
+    cloudRenew = renewInChannel;
     cloudIds = new Set(computers.map((c) => c.computer_id));
     if (!available && !cloudRetry) {
       // «No disponible»: el servidor aún no la tiene o no hay sesión; se reintenta solo.
@@ -248,6 +251,7 @@ export function startAccountMachines(target: Target = window) {
               if (answer.kind !== "ok") throw new Error(answer.kind);
               return answer.value;
             },
+            renewInChannel: () => cloudRenew,
             onUnauthorized: () => void sync(),
           });
         }
