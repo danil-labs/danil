@@ -49,6 +49,7 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
     let windowApp: ReturnType<typeof mountWindow> | undefined;
     let disposeGate: (() => void) | undefined;
     let person: PlatformProfile | undefined;
+    let profileReadAt = 0;
     let stopped = false;
     let cache: ReturnType<typeof sessionStorageScope> | undefined;
     let mountedBefore = false;
@@ -136,17 +137,19 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
       if (!mountedBefore) { await load(); return; }
       refreshing = true;
       try {
-        setCaps(await readCapabilities(transport));
+        const context = person && Date.now() - profileReadAt >= POLL_MAX_MS
+          ? Promise.all([api.me(), permits('workspaces') ? api.workspaces() : Promise.resolve(null)]) : null;
+        const [snapshot, ready, current] = await Promise.all([readCapabilities(transport), windowApp?.refresh(), context]);
         if (stopped || signedOut()) return;
-        if (person) {
-          const fresh = await api.me();
+        setCaps(snapshot);
+        if (current && person) {
+          const [fresh, listed] = current;
           if (fresh.id !== person.id || fresh.workspace !== person.workspace) { gate(); window.location.assign(home); return; }
           person = fresh;
-          if (stopped || signedOut() || busy()) return;
-          if (permits('workspaces')) setRows(await api.workspaces());
-          const ready = await windowApp?.refresh();
-          if (ready) wait = POLL_MAX_MS;
+          profileReadAt = Date.now();
+          if (listed) setRows(listed);
         }
+        if (ready) wait = POLL_MAX_MS;
       } catch (cause) {
         if (cause instanceof PlatformSessionError && cause.status === 401) expired();
         else if (cause instanceof PlatformSessionError && cause.retryAfter) wait = Math.max(wait, Number(cause.retryAfter) * 1000 || wait);
@@ -194,6 +197,7 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
         });
         const directory = Promise.allSettled([discovered, api.workspaces()]);
         person = await api.me();
+        profileReadAt = Date.now();
         await selection.reconcile(person);
         if (mountedBefore) { window.location.assign(home); return true; }
         const [capabilities, listed] = await directory;

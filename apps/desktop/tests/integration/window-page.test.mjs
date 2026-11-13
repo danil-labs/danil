@@ -28,6 +28,7 @@ test('session verification shows loading and reads me, capabilities and workspac
     if (['/v1/identity/me', '/v1/capabilities', '/v1/workspaces'].includes(url.pathname)) {
       return new Promise(resolve => pending.set(url.pathname, resolve));
     }
+    if (url.pathname === '/v1/machines') return Response.json({ items: [], next_cursor: null });
     return new Response(null, { status: 404 });
   };
   fetcher.__jsdomApp = true; globalThis.fetch = fetcher;
@@ -38,7 +39,7 @@ test('session verification shows loading and reads me, capabilities and workspac
   assert.equal(app.w.document.querySelector('[data-web-auth]'), null, 'login waits for an authoritative 401');
   assert.ok(pending.has('/v1/capabilities'), 'discovery starts without waiting for the profile');
   assert.ok(pending.has('/v1/workspaces'), 'directory starts without waiting for the profile');
-  pending.get('/v1/capabilities')(new Response(null, { status: 404 }));
+  pending.get('/v1/capabilities')(Response.json({ contract: 'mvp-v1', items: ['workspaces', 'machines'].map(name => ({ name, version: 1, status: 'available' })) }));
   await until(() => calls.includes('/v1/machines'));
   assert.ok(app.w.document.querySelector('[data-web-session-loading]'), 'machines starts while the profile is still pending');
   pending.get('/v1/workspaces')(Response.json({ items: [{ id: '11', org: 'org_A', name: 'Alpha', role: 'owner' }], next_cursor: null }));
