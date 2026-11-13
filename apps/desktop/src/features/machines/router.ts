@@ -834,8 +834,6 @@ export function createRouter(config: RouterConfig) {
         const there = machine && machine !== self && fleet.has(machine) ? machine : homeOf(args);
         if (there && fleet.has(there)) return await remote(there, command, args, callWorkspace(workspace, args));
         if (machine && machine !== self) throw new FleetError("unknown_machine", machine);
-        // Workspace que vive en otra máquina (la VM de la organización): sus cuentas, allá.
-        if (!machine && elsewhere(workspace)) return await ofAMachine(command, args, workspace);
         if (command === "list_accounts" && fleet.machines().length) return await accountsHere(args, workspace, withoutHeader(options, "x-terminus-machine"));
       } catch (error) {
         if (error instanceof FleetError) throw named(error);
