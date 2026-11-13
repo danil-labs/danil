@@ -72,6 +72,11 @@ export default function ProfileMenu(props: {
           </button>
           <div class="my-1 h-px bg-border" />
         </Show>
+        <Show when={capabilities().webWorkspaces}>{session => <>
+          <p class="m-0 px-2 pt-1 text-caption font-medium text-neutral-500">{t("web.platform.workspaces")}</p>
+          <For each={session().rows()}>{row => <button type="button" class={ITEM_DE_MENU} aria-pressed={session().active() === row.id} disabled={session().busy() || session().uncertain()} onClick={() => { setOpen(false); session().choose(row.id); }}>{row.name}</button>}</For>
+          <div class="my-1 h-px bg-border" />
+        </>}</Show>
         <Show when={capabilities().workspaceDirectory}>
           <Suspense fallback={null}>
             <WorkspaceDirectoryMenu onClose={() => setOpen(false)} onOpenAgents={props.onOpenAgents} />

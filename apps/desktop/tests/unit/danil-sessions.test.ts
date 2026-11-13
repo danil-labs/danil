@@ -221,6 +221,7 @@ test("workspace machines come from that account's registry and refuse actions ou
   };
   const first = workspaceComputersSource(source, "w1");
   const second = workspaceComputersSource(source, "w2");
+  assert.ok(first.rename && second.rename);
   assert.deepEqual(await first.list(), { kind: "ok", value: [{ computer_id: "cmp_a", state: "online", workspaces: ["w2"] }] });
   assert.deepEqual(await second.list(), { kind: "ok", value: [{ computer_id: "cmp_b", state: "offline", workspaces: ["w1"] }] });
   assert.equal((await first.rename("cmp_b", "No")).kind, "missing");
@@ -248,6 +249,7 @@ test("a stale machine read cannot restore permissions after a newer authority fa
     rename: async () => { throw new Error("stale permission"); },
     onRenamed: () => {},
   }, "w");
+  assert.ok(source.rename);
   const first = source.list();
   assert.equal((await source.list()).kind, "unauthorized");
   release();

@@ -24,7 +24,7 @@ import "../lib/sharedClock";
 void import("../locales/failurePhrases").catch((e) => console.warn("[lenguas] failurePhrases", e));
 
 // El directorio de la cuenta también en la ventana: antes solo lo montaba la web.
-setCapabilities({ ...capabilities(), workspaceDirectory: desktopWorkspaceDirectory() });
+if (capabilities().nativeWindow) setCapabilities({ ...capabilities(), workspaceDirectory: desktopWorkspaceDirectory() });
 // Los canales de máquinas locales los dice la ventana (`guest_channels`), no el userAgent.
 // La web también carga este archivo: ahí `invoke` va por el relay y despertaría la máquina.
 if (capabilities().nativeWindow) {
@@ -77,12 +77,17 @@ function laQueTocaYaEstaDentro(): boolean {
   return registrada(pedido) || registrada(pedido.split("-")[0]);
 }
 
+let disposeApp: (() => void) | undefined;
+let stopped = false;
+export function disposeWindow() { stopped = true; disposeApp?.(); }
+
 const montar = () => {
+  if (stopped) return;
   const root = document.getElementById("root")!;
   // En la web el marco ya es hijo de `#root`. `render` de Solid, si hay un hijo,
   // inserta al final y lo deja: la ventana se vería dos veces.
   root.replaceChildren();
-  render(
+  disposeApp = render(
     () => (
       // El lanzador va antes que todo: sin motor conectado no hay a quién preguntar.
       // La preparación va por fuera de la app: si falta git no hay nada útil detrás.

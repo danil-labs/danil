@@ -13,10 +13,6 @@ export type RelayConfig = {
   /** Origen del relay: `relay.example`, `https://relay.example` o `wss://relay.example`. */
   endpoint: string;
   computerId: string;
-  /** El token de la sesión de la persona; se pide en cada conexión. */
-  getToken?: () => string | Promise<string>;
-  /** A one-use compute ticket, requested again on every reconnect. */
-  getAdmission?: () => Promise<{ url: string; ticket: string }>;
   /** El relay revocó la sesión (4003): el cliente vuelve a iniciar sesión. */
   onUnauthorized?: () => void;
   /** Antes de cada reconexión: un upgrade fallido no trae cuerpo, así que el cliente pregunta a la API por qué. False para. */
@@ -31,7 +27,10 @@ export type RelayConfig = {
    * `license_required` para la sesión hasta `retry()`; `null` reintenta como siempre.
    */
   probe?: () => Promise<Blocked | null>;
-};
+} & (
+  | { getToken: () => string | Promise<string>; getAdmission?: never }
+  | { getAdmission: () => Promise<{ url: string; ticket: string }>; getToken?: never }
+);
 
 /** Lo que detiene la sesión sin reintentar sola: la persona no tiene Terminus de pago (computers#22). */
 export type Blocked = "license_required";

@@ -134,7 +134,7 @@ export function AccountComputers(props: AccountComputersProps) {
 
   async function save(c: Computer) {
     const name = draft().trim();
-    if (saving()) return;
+    if (saving() || !props.source.rename) return;
     if (name === nameOf(c)) return setEditing(null);
     if (!name || name.length > COMPUTER_NAME_MAX) {
       setProblem({ id: c.computer_id, text: t("danil.computers.rename_failed.invalid_name", { max: COMPUTER_NAME_MAX }) });
@@ -202,6 +202,7 @@ export function AccountComputers(props: AccountComputersProps) {
                     class="group flex max-w-full min-w-0 items-center gap-1.5 rounded-sm text-left hover:text-neutral-950"
                     title={t("danil.computers.rename")}
                     aria-label={t("danil.computers.rename_label", { name: nameOf(c) })}
+                    disabled={!props.source.rename}
                     onClick={() => edit(c)}
                     data-computer-name=""
                   >
@@ -209,7 +210,7 @@ export function AccountComputers(props: AccountComputersProps) {
                     <Show when={isSelf(c)}>
                       <span class="shrink-0 text-neutral-500">{t("danil.computers.this_one")}</span>
                     </Show>
-                    <Pencil size={12} class="shrink-0 text-neutral-500 opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100" aria-hidden="true" />
+                    <Show when={props.source.rename}><Pencil size={12} class="shrink-0 text-neutral-500 opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100" aria-hidden="true" /></Show>
                   </button>
                 }
               >
@@ -304,7 +305,7 @@ export function AccountComputersSection(props: {
   onSelfName?: (name: string) => void;
 }) {
   const accountSource = accountComputersSource(props.account ?? null);
-  const source = accountSource && props.workspace ? workspaceComputersSource(accountSource, props.workspace) : accountSource;
+  const source = accountSource?.workspaces && props.workspace ? workspaceComputersSource(accountSource, props.workspace) : accountSource;
   return (
     <Show when={source}>
       {(s) => (

@@ -25,7 +25,7 @@ export type AccountMachinesProps = {
 export type AccountComputersSource = {
   list: () => Promise<Answer<Computer[]>>;
   workspaces?: () => Promise<Answer<AccountWorkspace[]>>;
-  rename: (id: string, name: string) => Promise<Answer<{ computer_id: string; name: string }>>;
+  rename?: (id: string, name: string) => Promise<Answer<{ computer_id: string; name: string }>>;
   /** Quien pinta nombres de máquina (la flota) toma el nuevo sin recargar. */
   onRenamed: (id: string, name: string) => void;
   /**
@@ -59,6 +59,8 @@ export type WebAccountsSource = {
 };
 
 export type Capabilities = {
+  webWorkspaces?: { rows: () => { id: string; name: string }[]; active: () => string | null; busy: () => boolean; uncertain: () => boolean; choose: (id: string) => void };
+
   /** Saldo de la cuenta Danil desde un BFF autenticado; ausente hasta verificar el adaptador. */
   danilCredits?: import("../features/chat/danil-credits").DanilCreditsSource;
   inbox?: { customization: typeof import("./customization").createCustomization; entries: typeof import("./attention-labels").featureEntries; demo: boolean; userId?: string | null; subscribe?: (clear: () => void) => () => void; sidebarMenu: typeof import("../web/attention/SidebarEntries").AttentionMenu; personalizeMenu: typeof import("../web/attention/SidebarEntries").PersonalizeMenu; catalog: (props: import("../web/attention/CustomizationSection").CustomizationSectionProps) => JSX.Element; broadcasts: (workspace: () => string | null) => JSX.Element; initial: boolean; render: (workspace: () => string | null) => JSX.Element; agentSettings: (name: string) => JSX.Element; customerAgents: (workspace: () => string | null) => JSX.Element; customerConnections: (workspace: () => string | null) => JSX.Element; search: { conversations: () => import("../features/shell/GlobalSearch").SearchConversation[]; open: (id: number) => void } };

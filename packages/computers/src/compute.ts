@@ -1,4 +1,4 @@
-import { type AccountWorkspace, accountWorkspace, type Answer, type Computer, type SharedComputer } from './api.ts';
+import { type AccountWorkspace, accountWorkspace, type Answer, type Computer } from './api.ts';
 import { requestId } from './relay.ts';
 
 /** An edge session owns authentication, CSRF, deadlines and HTTP problems. */
@@ -44,18 +44,6 @@ export function computeClient(transport: ComputeTransport) {
       if (typeof state !== 'string') throw new Error('invalid_start');
       return { state };
     }, 'POST'),
-    rename: (id: string, name: string) => call(idPath(id), value => {
-      const row = value as { computer_id?: unknown; name?: unknown } | null;
-      if (typeof row?.computer_id !== 'string' || typeof row.name !== 'string') throw new Error('invalid_computer');
-      return { computer_id: row.computer_id, name: row.name };
-    }, 'PATCH', { name }),
-    remove: (id: string) => call(idPath(id), () => ({ computer_id: id }), 'DELETE'),
-    shared: () => call('shared-computers', value => {
-      const rows = (value as { computers?: unknown } | null)?.computers;
-      if (!Array.isArray(rows)) throw new Error('invalid_shared_computers');
-      return rows as SharedComputer[];
-    }),
-    startShared: (id: string) => call(`shared-computers/${encodeURIComponent(id)}/start`, value => value as SharedComputer, 'POST'),
     async admission(id: string): Promise<Admission> {
       const response = await transport.mutation(`compute/computers/${encodeURIComponent(id)}/tickets`, {
         headers: { 'Content-Type': 'application/json', 'Idempotency-Key': requestId() },
