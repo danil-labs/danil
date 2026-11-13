@@ -291,6 +291,45 @@ for (const status of [403, 404]) test(`startup HTTP ${status} shows preparation 
   assert.deepEqual(app.failures, []);
 });
 
+test('free startup reloads the directory and selects the appearing Free organization with CSRF', async t => {
+  let ready = false;
+  let selected = false;
+  const fetcher = async (input, init) => {
+    const path = new URL(String(input)).pathname;
+    if (path === '/v1/capabilities') return Response.json({ contract: 'mvp-v1', items: ['workspaces', 'identity.organizations'].map(name => ({ name, version: 1, status: 'available' })) });
+    if (path === '/v1/identity/me') return Response.json({ id: 'user_new', name: 'New account', workspace: selected ? '11' : null,
+      organizations: ready ? [{ id: 'org_free', name: 'Personal' }] : [], active_organization_id: selected ? 'org_free' : null });
+    if (path === '/v1/workspaces') return Response.json({ items: selected ? [{ id: '11', org: 'org_free', name: 'Personal', role: 'owner' }] : [], next_cursor: null, empty_reason: selected ? null : 'no_organization' });
+    if (path === '/v1/identity/organizations') return Response.json({ items: ready ? [{ id: 'org_free', name: 'Personal', role: 'owner', plan: 'free' }] : [], active_organization_id: selected ? 'org_free' : null });
+    if (path === '/v1/identity/csrf') return Response.json({ csrf_token: 'session-bound' });
+    if (path === '/v1/identity/organizations/select') {
+      assert.equal(init.method, 'POST');
+      assert.equal(init.credentials, 'include');
+      assert.equal(new Headers(init.headers).get('x-csrf-token'), 'session-bound');
+      assert.ok(new Headers(init.headers).get('idempotency-key'));
+      assert.deepEqual(JSON.parse(init.body), { organization_id: 'org_free' });
+      selected = true;
+      return Response.json({ organization: { id: 'org_free', name: 'Personal', plan: 'free' }, workspace: '11' });
+    }
+    return new Response(null, { status: 404 });
+  };
+  fetcher.__jsdomApp = true; globalThis.fetch = fetcher;
+  const app = await open(t, 'listo', 'free-startup-directory', {}, undefined, {}, { web: true });
+  await until(() => app.w.document.querySelector('[data-web-gate]'));
+  assert.equal(app.w.document.querySelector('[role="alert"]'), null);
+  ready = true;
+  await until(() => selected);
+  await until(() => app.failures.some(failure => /Not implemented.*navigation/s.test(failure)));
+  assert.ok(app.failures.every(failure => /Not implemented.*navigation/s.test(failure)), app.failures.join('\n'));
+  app.w.dispatchEvent(new app.w.Event('pagehide'));
+  const resumed = await open(t, 'listo', 'free-startup-selected', {}, undefined, {}, { web: true, beforeImport(w) {
+    w.history.replaceState(null, '', '/?settings=plan');
+  } });
+  await until(() => resumed.w.document.querySelector('[data-promo-plan] #promo-code'));
+  assert.equal(resumed.w.document.querySelector('[data-web-gate]'), null);
+  assert.deepEqual(resumed.failures, []);
+});
+
 test('promo redemption opens only in the active organization plan section', async t => {
   const fetcher = async input => {
     const path = new URL(String(input)).pathname;
