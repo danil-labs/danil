@@ -58,13 +58,21 @@ const isEntry = (v: unknown): v is Entry => isRow(v) && typeof v.workspace === "
 
 /** Una respuesta o evento de `machine` con los ids del panel. */
 export function encode(ctx: MergeContext, machine: string, value: unknown, command = ""): unknown {
-  if (machine === ctx.self) return value;
-  if (command === "list_active_turns" && Array.isArray(value)) return value.map((v) => (typeof v === "string" ? wrap(machine, v) : v));
-  if (command === "send_message" && typeof value === "string") return wrap(machine, value);
+  const remote = machine !== ctx.self;
+  const panelId = (owner: string, id: string) => owner === ctx.self ? id : wrap(owner, id);
+  const reference = (v: unknown, sender: boolean): unknown => {
+    if (!isRow(v) || typeof v.task !== "string") return v;
+    const owner = sender && typeof v.machine === "string" && v.machine ? v.machine : machine;
+    return { ...v, task: panelId(owner, v.task) };
+  };
+  if (remote && command === "list_active_turns" && Array.isArray(value)) return value.map((v) => (typeof v === "string" ? wrap(machine, v) : v));
+  if (remote && command === "send_message" && typeof value === "string") return wrap(machine, value);
   const walk = (v: unknown, key: string | null): unknown => {
-    if (key === "task_mentions" && Array.isArray(v)) return v.map((m) => mentionOf(machine, m));
+    if (key === "from_task" || (key === null && command === "task_coordinator")) return reference(v, true);
+    if (key === "reply_to") return reference(v, false);
+    if (remote && key === "task_mentions" && Array.isArray(v)) return v.map((m) => mentionOf(machine, m));
     if (typeof v === "string") {
-      if (!key || !v) return v;
+      if (!remote || !key || !v) return v;
       if (key === "space" && ctx.shared?.(v)) return v;
       return KEYS.has(key) || (FILES.has(key) && isPath(v)) ? wrap(machine, v) : v;
     }
@@ -73,10 +81,15 @@ export function encode(ctx: MergeContext, machine: string, value: unknown, comma
     return v;
   };
   const out = walk(value, null);
+  if (!remote) return out;
   // Un space compartido (`account`, o uno que el registro conoce) conserva su id.
   const sharedRow = (row: Row) => SPACES.has(command) && typeof row.id === "string" && (row.account === true || !!ctx.shared?.(row.id));
   const ownId = (row: Row) => (typeof row.id === "string" && !sharedRow(row) ? { ...row, id: wrap(machine, row.id) } : row);
-  if (ROW_IDS.has(command) && Array.isArray(out)) return out.map((r) => (isRow(r) ? ownId(r) : r));
+  if (ROW_IDS.has(command) && Array.isArray(out)) return out.map((r) => {
+    if (!isRow(r)) return r;
+    const row = ownId(r);
+    return command === "list_delegated_sessions" ? { ...row, machine, machine_on: ctx.on(machine) } : row;
+  });
   if (command === "list_task_mentions" && Array.isArray(out)) return out.map((r) => (isRow(r) && isRow(r.target) ? { ...r, target: taskOf(machine, r.target) } : r));
   if (OWN_ID.has(command) && isRow(out)) return ownId(out);
   if (KEYED.has(command) && isRow(out)) return Object.fromEntries(Object.entries(out).map(([id, v]) => [wrap(machine, id), v]));
