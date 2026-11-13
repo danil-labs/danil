@@ -257,3 +257,21 @@ test("adaptador del borde: lee /v1/capabilities; sin `identity.organizations` no
   assert.deepEqual(paths, ["/v1/capabilities", "/v1/capabilities", "/v1/identity/organizations"]);
   assert.equal(sel.visible(), true);
 });
+
+test("report: solo `organization_selection_required` abre el selector; otro 403 del borde (license_required, workspace_forbidden) se ignora", async () => {
+  const sel = createOrganizationSelection({
+    list: async () => ({ items: [DANIL, OTRA], next_cursor: null, active_organization_id: DANIL.id }),
+    select: async () => null,
+  });
+  await sel.load();
+  let changes = 0;
+  sel.subscribe(() => changes++);
+  for (const code of ["license_required", "workspace_forbidden", "csrf_failed"]) {
+    assert.equal(sel.report({ detail: code, status: 403, body: { code } }), false, code);
+  }
+  assert.equal(sel.report({ detail: "organization_selection_required", status: 404, body: {} }), false, "solo con 403");
+  assert.equal(sel.needed(), false);
+  assert.equal(changes, 0, "ni siquiera avisa");
+  assert.equal(sel.report({ detail: "organization_selection_required", status: 403, body: { code: "organization_selection_required" } }), true);
+  assert.equal(sel.needed(), true);
+});
