@@ -25,6 +25,8 @@ declare const __DANIL_WEB_RELAY_ORIGINS__: string[];
 const FIRST_RETRY_MS = 1000;
 const POLL_MAX_MS = 30_000;
 
+class OrganizationSelectionRefusal extends PlatformSessionError {}
+
 export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
   return createRoot(dispose => {
     aplicarLengua();
@@ -166,7 +168,7 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
         else if (!stopped && !signedOut() && organizations.report(cause)) gate();
         else if (!stopped && !signedOut()) {
           setError(cause instanceof PlatformSessionError && cause.status === 403 ? 'web.platform.denied' : 'web.platform.unavailable'); gate();
-          if (!(cause instanceof PlatformSessionError) || [404, 408, 429, 501, 503].includes(cause.status)) later();
+          if (!(cause instanceof OrganizationSelectionRefusal) && (!(cause instanceof PlatformSessionError) || [404, 408, 429, 501, 503].includes(cause.status))) later();
         }
       } finally {
         setActive(signedOut() ? null : selection.active());
@@ -183,6 +185,7 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
     const redeemPromo = sessionPromoRedemption((code, key) => authorized(() => api.redeemPromo(code, key)));
     async function logout() { await run(async () => { await api.logout(); expired(); }); }
     async function load() {
+      let selectionRefusal: PlatformSessionError | undefined;
       const read = async (signal?: AbortSignal) => {
         startupSignal = signal;
         try { setCaps(await readCapabilities(transport)); }
@@ -193,8 +196,13 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
         if (person.workspace === null) {
           await organizations.load();
           organizationsLoaded = true;
-          await withoutWorkspace();
           const state = organizations.state();
+          if (state.kind === 'ready' && state.error && state.errorStatus !== undefined &&
+              state.errorStatus >= 400 && state.errorStatus < 500 && ![408, 429].includes(state.errorStatus)) {
+            selectionRefusal = new OrganizationSelectionRefusal(state.errorStatus, null, state.error);
+            return true;
+          }
+          await withoutWorkspace();
           return state.kind === 'ready' && (state.active !== null || state.items.length > 1);
         }
         // Con sesión: el selector se lee una vez y, si la ruta aún no existe, se reintenta solo.
@@ -234,6 +242,7 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
               gate();
             }
           }
+          if (selectionRefusal) throw selectionRefusal;
         } finally { startupSignal = undefined; setPreparing(false); }
       });
     }

@@ -298,3 +298,18 @@ test("promo requires a settled active organization in the current membership lis
   assert.equal(hasActiveOrganization({ ...ready, busy: true }), false);
   assert.equal(hasActiveOrganization({ ...ready, error: "forbidden" }), false);
 });
+
+test('a Desk selection refusal retains its detail without inventing an HTTP status', async () => {
+  let selections = 0;
+  const sel = createOrganizationSelection({
+    list: async () => ({ items: [DANIL, OTRA], active_organization_id: DANIL.id }),
+    select: async () => { selections++; throw { detail: 'organization_not_found' }; },
+  });
+  await sel.load();
+  await sel.choose(OTRA.id);
+  const state = sel.state();
+  assert.equal(state.kind === 'ready' && state.error, 'organization_not_found');
+  assert.equal(state.kind === 'ready' && state.errorStatus, undefined);
+  assert.equal(state.kind === 'ready' && state.active, DANIL.id);
+  assert.equal(selections, 1);
+});

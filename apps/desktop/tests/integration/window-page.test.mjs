@@ -357,7 +357,7 @@ test('free startup stops preparing an empty directory and offers retry without g
   assert.deepEqual(app.failures, []);
 });
 
-for (const status of [403, 409]) test(`free startup stops after definitive selection HTTP ${status}`, async t => {
+for (const status of [403, 404, 409]) test(`free startup stops after definitive selection HTTP ${status}`, async t => {
   let posts = 0;
   const fetcher = async input => {
     const path = new URL(String(input)).pathname;

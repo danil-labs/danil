@@ -95,22 +95,22 @@ export function platformSession(options: { origin: string; timeoutMs: number }, 
 export async function preparePlatformSession<T>(read: (signal: AbortSignal) => Promise<T>, signal: AbortSignal, preparing: () => void, ready: (value: T) => boolean = () => true): Promise<T> {
   const deadline = Date.now() + 20_000;
   const budget = AbortSignal.any([signal, AbortSignal.timeout(20_000)]);
-  let last: PlatformSessionError | undefined;
-  let outcome: { kind: 'pending'; value: T } | { kind: 'error'; cause: PlatformSessionError };
+  let outcome: { kind: 'pending'; value: T } | { kind: 'error'; cause: PlatformSessionError } | undefined;
   let attempt = 0;
   do {
     signal.throwIfAborted();
     try {
       const value = await read(budget);
       if (ready(value)) return value;
-      last = undefined;
       outcome = { kind: 'pending', value };
     } catch (cause) {
       signal.throwIfAborted();
-      if (budget.aborted && last) throw last;
+      if (budget.aborted && outcome) {
+        if (outcome.kind === 'pending') return outcome.value;
+        throw outcome.cause;
+      }
       if (!(cause instanceof PlatformSessionError) || ![403, 404].includes(cause.status) ||
           ['workspace_selection_required', 'organization_selection_required'].includes(cause.code ?? '')) throw cause;
-      last = cause;
       outcome = { kind: 'error', cause };
     }
     const remaining = deadline - Date.now();

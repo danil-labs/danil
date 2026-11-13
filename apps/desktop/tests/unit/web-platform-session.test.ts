@@ -245,3 +245,26 @@ test('pending startup preserves its result when an in-flight read crosses the de
   deadline.abort(new DOMException('Startup deadline', 'TimeoutError'));
   assert.deepEqual(await observed, { value: false });
 });
+
+for (const latest of ['pending', 'error']) test(`the latest ${latest} outcome survives an in-flight deadline abort`, async t => {
+  t.mock.timers.enable({ apis: ['setTimeout', 'Date'], now: 0 });
+  const deadline = new AbortController();
+  t.mock.method(AbortSignal, 'timeout', () => deadline.signal);
+  const refusal = new PlatformSessionError(403, null, 'workspace_forbidden');
+  let reads = 0;
+  const result = preparePlatformSession(async signal => {
+    if (++reads === 3) return new Promise<boolean>((_resolve, reject) => signal.addEventListener('abort', () => reject(signal.reason), { once: true }));
+    if ((reads === 1) === (latest === 'pending')) throw refusal;
+    return false;
+  }, new AbortController().signal, () => {}, value => value);
+  const observed = result.then(value => ({ value }), error => ({ error }));
+  await new Promise(resolve => setImmediate(resolve));
+  t.mock.timers.tick(1000);
+  await new Promise(resolve => setImmediate(resolve));
+  t.mock.timers.tick(2000);
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(reads, 3);
+  t.mock.timers.tick(17_000);
+  deadline.abort(new DOMException('Startup deadline', 'TimeoutError'));
+  assert.deepEqual(await observed, latest === 'pending' ? { value: false } : { error: refusal });
+});
