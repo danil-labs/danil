@@ -37,6 +37,9 @@ export function nextDelay(attempt: number, hintMs: number | undefined, minDelayM
   return Math.max(Math.min(CEILING_MS, grown), hintMs ?? 0);
 }
 
+/** Los métodos que `danil_edge_fetch` envía tal cual; todo lo que no es GET es una escritura. */
+export type EdgeMethod = "GET" | "POST" | "PUT" | "DELETE";
+
 /** La respuesta del borde, sin tocar: el status, el cuerpo y `Location` si la hay. */
 export type EdgeReply<T = unknown> = { status: number; body: T; location?: string; idempotency_key?: string; retry_after_ms?: number };
 
@@ -79,7 +82,7 @@ const sleep = (ms: number, signal?: AbortSignal) =>
   });
 
 /** Una llamada, sin reintentos: el status del borde tal cual. */
-export function edgeFetch<T = unknown>(method: "GET" | "POST", path: string, body?: unknown, idempotencyKey?: string): Promise<EdgeReply<T>> {
+export function edgeFetch<T = unknown>(method: EdgeMethod, path: string, body?: unknown, idempotencyKey?: string): Promise<EdgeReply<T>> {
   const args: Record<string, unknown> = { method, path };
   if (body !== undefined) args.body = body;
   if (idempotencyKey) args.idempotencyKey = idempotencyKey;
@@ -90,9 +93,10 @@ export function edgeFetch<T = unknown>(method: "GET" | "POST", path: string, bod
  * Reintenta hasta un 2xx (o hasta `signal`) y devuelve la respuesta entera
  * (`Location` incluida). Las escrituras repiten su `Idempotency-Key`.
  */
-export async function edgeUntil<T = unknown>(method: "GET" | "POST", path: string, body?: unknown, patience: Patience = {}, transport: { send: typeof edgeFetch; onProblem?: (e: EdgeRefusal) => void } = { send: edgeFetch, onProblem: e => problemListener?.(e) }): Promise<EdgeReply<T>> {
-  const signal = method === "POST" ? AbortSignal.any([context.signal, ...(patience.signal ? [patience.signal] : [])]) : patience.signal;
-  const key = method === "POST" ? patience.idempotencyKey ?? crypto.randomUUID() : undefined;
+export async function edgeUntil<T = unknown>(method: EdgeMethod, path: string, body?: unknown, patience: Patience = {}, transport: { send: typeof edgeFetch; onProblem?: (e: EdgeRefusal) => void } = { send: edgeFetch, onProblem: e => problemListener?.(e) }): Promise<EdgeReply<T>> {
+  const write = method !== "GET";
+  const signal = write ? AbortSignal.any([context.signal, ...(patience.signal ? [patience.signal] : [])]) : patience.signal;
+  const key = write ? patience.idempotencyKey ?? crypto.randomUUID() : undefined;
   const deadline = Date.now() + (patience.retryBudgetMs ?? Infinity);
   let last: unknown;
   for (let attempt = 0; ; attempt++) {
@@ -121,7 +125,7 @@ export async function edgeUntil<T = unknown>(method: "GET" | "POST", path: strin
   }
 }
 
-const bodyOf = <T>(method: "GET" | "POST", path: string, body: unknown, p?: Patience) => edgeUntil<T>(method, path, body, p).then((r) => r.body);
+const bodyOf = <T>(method: EdgeMethod, path: string, body: unknown, p?: Patience) => edgeUntil<T>(method, path, body, p).then((r) => r.body);
 
 export const me = (p?: Patience) => bodyOf<Me>("GET", "/v1/identity/me", undefined, p);
 export const organizations = (p?: Patience) => bodyOf<OrganizationList>("GET", "/v1/identity/organizations", undefined, p);
