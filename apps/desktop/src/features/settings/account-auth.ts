@@ -14,14 +14,24 @@ export function addBlockedByExternal(provider: Pick<AgentOpt, "available" | "ext
 
 type Call = (command: string, args?: Record<string, unknown>, options?: { headers: Record<string, string> }) => Promise<unknown>;
 
+/** Los proveedores de la máquina de la cuenta: los ya sabidos, o leídos ahora (apagada la lista no llega). */
+export async function providersFor(call: Call, known: AgentOpt[] | null, options?: { headers: Record<string, string> }): Promise<AgentOpt[]> {
+  return known ?? ((await call("list_providers", {}, options)) as AgentOpt[]);
+}
+
+/** Lo que deja el «+»: la cuenta creada siempre; sus proveedores, o por qué no llegaron. */
+export type Added = { account: Account; providers: AgentOpt[] } | { account: Account; providers: null; failure: unknown };
+
 /**
- * El «+» de una cuenta, hasta antes del login. `add_account` es un intent: apagada,
- * la flota enciende la máquina primero. Ya encendida se leen sus proveedores si no se
- * sabían: sin ellos no se sabe si instalar el CLI ni cómo conectarlo. Que no lleguen
- * es un error para la persona, no un login a ciegas.
+ * El «+», hasta antes del login. `add_account` es un intent: apagada, la flota
+ * enciende la máquina primero. Ya creada, la cuenta no se pierde aunque sus
+ * proveedores no lleguen: «Conectar» la retoma con `providersFor`, sin otra alta.
  */
-export async function addAccount(call: Call, provider: string, known: AgentOpt[] | null, options?: { headers: Record<string, string> }): Promise<{ account: Account; providers: AgentOpt[] }> {
+export async function addAccount(call: Call, provider: string, known: AgentOpt[] | null, options?: { headers: Record<string, string> }): Promise<Added> {
   const account = (await call("add_account", { provider, label: "" }, options)) as Account;
-  const providers = known ?? ((await call("list_providers", {}, options)) as AgentOpt[]);
-  return { account, providers };
+  try {
+    return { account, providers: await providersFor(call, known, options) };
+  } catch (failure) {
+    return { account, providers: null, failure };
+  }
 }

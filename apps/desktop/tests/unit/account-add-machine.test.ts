@@ -11,7 +11,8 @@ import { Fleet, type Link, type MachineInfo } from "@terminus/fleet";
 import "../helpers/catalog.ts";
 import { createRouter } from "../../src/features/machines/router.ts";
 import { cloudInfo, cloudLink } from "../../src/features/machines/cloud-machines.ts";
-import { accountKeyUrl, addAccount, addBlockedByExternal } from "../../src/features/settings/account-auth.ts";
+import { accountKeyUrl, addAccount, addBlockedByExternal, providersFor } from "../../src/features/settings/account-auth.ts";
+import { errorCode } from "../../src/lib/errorCode.ts";
 type Args = Record<string, unknown>;
 function fakeLink(answers: Record<string, unknown>, initial: MachineState) {
   let state = initial; const calls: { command: string; args: Args; workspace: string | null }[] = [];
@@ -116,7 +117,9 @@ for (const where of ["desktop", "web"] as const) for (const start of ["stopped",
     if (where === "desktop") await router.handle("set_active_workspace", { id: ORG.id });
     assert.equal(fleet.power("cmp_vm"), start === "stopped" ? "off" : "on", "the row says stopped while there is no channel");
     const call = (command: string, args?: Record<string, unknown>, options?: { headers: Record<string, string> }) => router.handle(command, args, options);
-    const { account, providers } = await addAccount(call as never, agent.id, null);
+    const added = await addAccount(call as never, agent.id, null);
+    const { account, providers } = added;
+    assert.ok(providers, "providers read once it is on");
     const opt = providers.find((p) => p.id === agent.id);
     // OpenCode 2 trae su clave de Go en la tabla y aun así entra por el navegador (regresión de #426).
     if (agent.id === "opencode") assert.equal(accountKeyUrl(opt), null);
@@ -127,15 +130,22 @@ for (const where of ["desktop", "web"] as const) for (const start of ["stopped",
   });
 }
 
-test("adding never logs in blind: if the providers of the woken machine cannot be read, it says so", async () => {
+test("a created account is never lost: if its providers do not arrive, Connect resumes the same one without adding another", async () => {
   const seen: string[] = [];
+  let providersUp = false;
   const call = async (command: string) => {
     seen.push(command);
     if (command === "add_account") return { id: "a1" };
+    if (command === "list_providers" && providersUp) return [{ id: "claude", available: true }];
     throw { what: "x", detail: "machine_timeout" };
   };
-  await assert.rejects(addAccount(call as never, "claude", null), (e: { detail?: string }) => e.detail === "machine_timeout");
-  assert.deepEqual(seen, ["add_account", "list_providers"]);
+  const added = await addAccount(call as never, "claude", null);
+  assert.equal(added.account.id, "a1", "the account the machine created is kept");
+  assert.equal(added.providers, null, "no login without its providers");
+  assert.equal(errorCode((added as { failure: unknown }).failure), "machine_timeout", "and the person is told why");
+  providersUp = true;
+  assert.deepEqual((await providersFor(call as never, null)).map((p) => p.id), ["claude"]);
+  assert.deepEqual(seen, ["add_account", "list_providers", "list_providers"], "one account, never a second add_account");
   const known = [{ id: "claude", available: true }] as never;
   assert.equal((await addAccount(async () => ({ id: "a2" }), "claude", known)).providers, known, "known providers are not asked again");
 });

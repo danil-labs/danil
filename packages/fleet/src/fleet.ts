@@ -650,8 +650,20 @@ export class Fleet {
     return !(command === "move_task_to_space" && typeof args.space === "string" && this.shared.has(args.space));
   }
 
+  /** Los encendidos en vuelo, uno por máquina: dos intents a la vez esperan el mismo, no piden otro (`409 operation_in_progress`). */
+  private starting = new Map<string, Promise<void>>();
+
   /** Enciende la VM y espera a que diga `online`, con el tope de un intent. */
-  private async wakeMember(member: Member) {
+  private wakeMember(member: Member): Promise<void> {
+    const { id } = member.info;
+    const running = this.starting.get(id);
+    if (running) return running;
+    const start = this.startMember(member).finally(() => this.starting.delete(id));
+    this.starting.set(id, start);
+    return start;
+  }
+
+  private async startMember(member: Member) {
     const { id } = member.info;
     if (alwaysOn(member.info)) throw new FleetError("machine_off", id, null, false);
     if (!this.config.wake) throw new FleetError("machine_off", id, null, true);

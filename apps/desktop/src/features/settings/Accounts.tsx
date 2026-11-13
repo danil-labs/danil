@@ -40,7 +40,7 @@ import { Skeleton } from "../../ui/Skeleton";
 import { Terminal, TerminalBody } from "../../ui/Terminal";
 import { machineOf } from "../machines/store";
 import AccountCard, { accountPresentation } from "./AccountCard";
-import { accountKeyUrl, addAccount, addBlockedByExternal } from "./account-auth";
+import { accountKeyUrl, addAccount, addBlockedByExternal, providersFor } from "./account-auth";
 import {
   type Account,
   type AccountList,
@@ -587,12 +587,19 @@ export default function Accounts(props: {
     setAgregando(true);
     try {
       // Apagada, la flota la enciende primero; ya encendida se saben sus proveedores.
-      const { account: a, providers } = await addAccount(invoke, agente(), proveedor() ? agentes() : null, options);
-      setAgentes(providers);
+      const added = await addAccount(invoke, agente(), proveedor() ? agentes() : null, options);
+      const a = added.account;
       // Agregar crea la carpeta antes del login: ahí escribe el CLI la
       // credencial. Si el login no llega a nada, esto permite deshacerlo en
       // vez de dejar un objeto vacío en la lista.
       recienCreada = a.id;
+      // Sin proveedores no se conecta a ciegas: la cuenta queda en la lista y su «Conectar» la retoma.
+      if (added.providers === null) {
+        setFallo({ what: t("settings.accounts.error.check_provider"), detail: detalleDe(added.failure) });
+        await refrescar();
+        return;
+      }
+      setAgentes(added.providers);
       // Conectar va antes de refrescar, y ese orden es el arreglo.
       //
       // El efecto que sondea corre al llegar la lista y se salta la cuenta de
@@ -617,6 +624,18 @@ export default function Accounts(props: {
   }
 
   async function conectar(id: string, modo: "tuberia" | "terminal" = "tuberia") {
+    if (!proveedor()) {
+      // Ocupada desde ya: la lista que llegue mientras tanto no sondea esta cuenta.
+      setEnCurso(id);
+      try {
+        setAgentes(await providersFor(invoke, null, machineOf(id)));
+      } catch (e) {
+        setFallo({ what: t("settings.accounts.error.check_provider"), detail: detalleDe(e) });
+        return;
+      } finally {
+        setEnCurso(null);
+      }
+    }
     if (faltaExterno()) { await instalarCli(); return; }
     // El que se conecta con una clave no lanza nada: su CLI la pide en una
     // interfaz de texto que necesita un terminal, y conducirla sería enseñar
@@ -1660,7 +1679,6 @@ function CuentaConfigurada(props: {
       status: props.status,
       statusFailure: props.statusFailure,
       limits: lectura.limits,
-      authenticatedAt: props.account.authenticated_at,
     });
 
   return (

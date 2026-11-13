@@ -74,7 +74,7 @@ export default function AccountCard(props: {
     accountPresentation(props.account, props.status, props.limits, props.lastGood);
   const credencial = (): CredentialState =>
     props.credential ??
-    credentialState({ status: props.status, limits: props.limits, authenticatedAt: props.account.authenticated_at });
+    credentialState({ status: props.status, limits: props.limits });
   // Una espera con la última lectura cuenta como leída: sin atenuar, y el aviso
   // pasa a ser una nota de cuándo se actualiza.
   const leido = () => legible(props.limits);

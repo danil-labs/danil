@@ -368,6 +368,28 @@ for (const command of ["send_message", "add_account", "login_account"]) {
   });
 }
 
+test("two intents while a control-plane machine is starting share one start and are each delivered once", async () => {
+  let starts = 0;
+  const CLOUD: MachineInfo = { ...VM, starts: "control_plane" };
+  const { fleet, link } = setup({ cmp_vm: { state: "stopped", ticket: true, answers: { add_account: "a1", send_message: "t1" } } }, [CLOUD], {
+    wake: async (machine) => {
+      starts += 1;
+      // Como `POST /start` mientras otro sigue en curso: `409 operation_in_progress`.
+      if (starts > 1) return false;
+      await new Promise((done) => setTimeout(done, 30));
+      setTimeout(() => link(machine).setState("online"), 10);
+      return true;
+    },
+  });
+  const [a, b] = await Promise.all([
+    fleet.call({ machine: "cmp_vm", workspace: "w", command: "add_account", args: {} }),
+    fleet.call({ machine: "cmp_vm", workspace: "w", command: "send_message", args: { project: "p1", session: null } }),
+  ]);
+  assert.deepEqual([a, b], ["a1", "cmp_vm~t1"]);
+  assert.equal(starts, 1, "one start per machine while one is in flight");
+  assert.deepEqual(link("cmp_vm").calls.map((c) => c.command).sort(), ["add_account", "send_message"], "each intent once");
+});
+
 test("an intent to an off control-plane machine that cannot be started fails at once with machine_off, never waits its deadline", async () => {
   const CLOUD: MachineInfo = { ...VM, starts: "control_plane" };
   const { fleet, link } = setup({ cmp_vm: { state: "stopped", ticket: true } }, [CLOUD], { wake: async () => "not_startable" });

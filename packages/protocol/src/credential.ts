@@ -1,13 +1,13 @@
 /**
  * El estado de una credencial de IA, decidido en un solo sitio para Desk, la web y
  * el teléfono. Sus fuentes son `account_status` (el CLI de la máquina), cómo falló
- * esa consulta, `account_limits` (el proveedor) y `authenticated_at` (si alguna vez
- * se conectó). Cada pantalla pinta este resultado; ninguna lo vuelve a deducir.
+ * esa consulta y `account_limits` (el proveedor). `authenticated_at` no entra: dice
+ * que alguna vez se conectó, no cómo está ahora. Cada pantalla pinta este resultado.
  *
  * La regla que protege: **«no se pudo preguntar» no es «desconectada»**. Una máquina
  * apagada, un motor que no contestó a tiempo o un almacén ilegible dejan la
- * credencial intacta; solo una negativa real (el CLI dice que no hay sesión, el
- * proveedor contesta 401, nunca se conectó) es `disconnected`.
+ * credencial intacta; solo una negativa real (el CLI dice que no hay sesión, o el
+ * proveedor contesta 401) es `disconnected`.
  */
 
 export type CredentialState =
@@ -22,10 +22,8 @@ export type CredentialInputs = {
   status?: { authenticated: boolean; unreadable?: unknown } | null;
   /** El código con que falló la última `account_status` (`machine_off`, `machine_timeout`…): entonces `status` es de antes y no cuenta. */
   statusFailure?: string | null;
-  /** El `mode` de `account_limits`, si se leyó. */
+  /** El `mode` de `account_limits`, si se leyó. Solo `revoked` y `read` dicen algo de la sesión. */
   limits?: { mode: string } | null;
-  /** Si alguna vez terminó bien una conexión (`list_accounts`). */
-  authenticatedAt: number | null;
 };
 
 /** Lo que dice una máquina que no está encendida: la credencial no se pudo mirar, y no es un fallo que reportar. */
@@ -42,7 +40,8 @@ export function credentialState(input: CredentialInputs): CredentialState {
   if (limits?.mode === "read") return { kind: "connected" };
   if (status?.unreadable) return { kind: "unknown", why: "unreadable" };
   if (machineAsleep(statusFailure)) return { kind: "unknown", why: "machine_off" };
-  if (statusFailure) return input.authenticatedAt === null ? { kind: "disconnected", why: "signed_out" } : { kind: "unknown", why: "no_answer" };
-  if (limits?.mode === "no_account") return { kind: "disconnected", why: "signed_out" };
+  if (statusFailure) return { kind: "unknown", why: "no_answer" };
+  // `no_account` de `account_limits` es «sin dato de consumo» (también mientras el
+  // CLI renueva un 401, danil-engine#433), nunca un veredicto sobre la sesión.
   return { kind: "pending" };
 }
