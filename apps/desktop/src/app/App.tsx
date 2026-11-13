@@ -7246,7 +7246,9 @@ export default function App() {
     });
     const coordinatingTask = () => {
       const value = coordinator();
-      return value?.workspace === workspaceActivo() && value.id === pp.sesion ? value.reference : null;
+      if (value?.workspace !== workspaceActivo() || value.id !== pp.sesion) return null;
+      const reference = value.reference;
+      return reference?.machine ? { ...reference, task: senderTaskId(reference.machine, reference.task) } : reference;
     };
     const recuperable = () => !pp.soloLectura && !!estadoDelTrabajo()?.recreatable;
     const origenArchivada = () => (estadoDelTrabajo()?.history.archived ? origenes()[pp.sesion ?? ""] : undefined);
@@ -7468,7 +7470,8 @@ export default function App() {
               onContinue={seguirConElAgente} />
           </Show>
         </> : undefined}
-        delegatedTask={reference => <DelegatedLaunch reference={reference} rows={delegatedRows()}
+        delegatedTask={reference => <DelegatedLaunch reference={reference.machine
+          ? { ...reference, task: senderTaskId(reference.machine, reference.task) } : reference} rows={delegatedRows()}
           list={delegatedList} loading={delegation.loading} error={delegationData()?.error} />}
         coordinator={<>
           <Show when={coordinatingTask()}>
