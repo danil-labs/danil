@@ -103,11 +103,17 @@ for (const code of [4003, 4008]) test(`a ${code} on the live socket during a han
   await turn(); app.sockets[0].onopen?.({});
   t.mock.timers.tick(950); await turn();
   assert.equal(app.sockets.length, 2, 'handover in progress');
+  app.session.subscribe?.(0);
   app.sockets[0].onclose?.({ code });
   assert.equal(app.revoked(), true, 'asks to reread /v1/machines');
   assert.equal(app.sockets[1].closed, true, 'the pending socket is cancelled');
   app.sockets[1].onopen?.({});
   assert.equal(app.session.connected(), false, 'never promoted');
+  const late = app.session.call('late', 'list_projects', 'w', null, {}).catch(error => error);
   t.mock.timers.tick(10_000); await turn();
   assert.equal(app.tickets(), 2, 'no new ticket after revocation');
+  assert.equal(app.sockets.length, 2, 'no reconnection');
+  assert.deepEqual(app.sockets[1].sent, [], 'the cancelled socket sends no subscribe nor call');
+  assert.ok(app.sockets[0].sent.every(frame => JSON.parse(frame).id !== 'late'), 'a call after revocation does not go out');
+  assert.equal((await late)?.code, 'app_unavailable');
 });

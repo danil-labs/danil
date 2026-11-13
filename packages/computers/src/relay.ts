@@ -270,6 +270,8 @@ export class RelaySession {
     if (history && [...this.pending.values()].filter(call => call.history).length >= 4) return Promise.reject({ code: "service_busy" });
     const message = JSON.stringify({ type: "call", id, command, workspace, folder, args: args ?? {} });
     if (this.stopped) return Promise.reject({ code: this.stopped });
+    // Cerrada (revocada, reemplazada o cancelada) es definitiva: una llamada no espera un socket que no vendrá.
+    if (this.closed) return Promise.reject({ code: "app_unavailable" });
     return new Promise((resolve, reject) => {
       const timer = setTimeout(() => {
         this.pending.delete(id);
