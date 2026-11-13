@@ -859,7 +859,12 @@ fn free_router_routes_follow_the_contract_vectors() {
             .as_array()
             .unwrap()
             .iter()
-            .map(|p| (p[0].as_str().unwrap().to_owned(), p[1].as_str().unwrap().to_owned()))
+            .map(|p| {
+                (
+                    p[0].as_str().unwrap().to_owned(),
+                    p[1].as_str().unwrap().to_owned(),
+                )
+            })
             .collect()
     };
     let public = pairs("public");
@@ -882,10 +887,19 @@ fn free_router_routes_follow_the_contract_vectors() {
         ("POST", "/v1/workspaces/42/free-router"),
         ("DELETE", "/v1/workspaces/42/free-router/offer"),
         ("GET", "/v1/workspaces/42/free-router/consent"),
-        ("PUT", "/v1/workspaces/42/free-router/engine-workspaces/q3ce37ff/challenge"),
-        ("POST", "/v1/workspaces/42/free-router/engine-workspaces/q3ce37ff"),
+        (
+            "PUT",
+            "/v1/workspaces/42/free-router/engine-workspaces/q3ce37ff/challenge",
+        ),
+        (
+            "POST",
+            "/v1/workspaces/42/free-router/engine-workspaces/q3ce37ff",
+        ),
         ("GET", "/v1/workspaces/42/free-router/grant"),
-        ("DELETE", "/v1/workspaces/42/free-router/engine-workspaces/q3ce37ff/bindings/"),
+        (
+            "DELETE",
+            "/v1/workspaces/42/free-router/engine-workspaces/q3ce37ff/bindings/",
+        ),
         ("PATCH", "/v1/workspaces/42/free-router/consent"),
     ] {
         assert!(!allowed(m, p), "{m} {p}");
@@ -895,21 +909,43 @@ fn free_router_routes_follow_the_contract_vectors() {
 /// PUT y DELETE salen con su método real (antes salían como POST), con la clave de quien llama.
 #[test]
 fn put_and_delete_reach_the_edge_with_their_method_and_key() {
-    let (desk, log, _) = signed_in(Arc::new(|r: &Req, _| match (r.method.as_str(), r.path.as_str()) {
-        ("PUT", "/v1/workspaces/42/free-router/consent") => (200, json!({"accepted": true, "revision": 2})),
-        ("DELETE", "/v1/workspaces/42/free-router/consent") => (200, json!({"accepted": false, "revision": 3})),
-        ("DELETE", "/v1/workspaces/42/free-router/engine-workspaces/q3ce37ff/bindings/frb_1") => (204, Value::Null),
-        _ => (405, Value::Null),
+    let (desk, log, _) = signed_in(Arc::new(|r: &Req, _| {
+        match (r.method.as_str(), r.path.as_str()) {
+            ("PUT", "/v1/workspaces/42/free-router/consent") => {
+                (200, json!({"accepted": true, "revision": 2}))
+            }
+            ("DELETE", "/v1/workspaces/42/free-router/consent") => {
+                (200, json!({"accepted": false, "revision": 3}))
+            }
+            (
+                "DELETE",
+                "/v1/workspaces/42/free-router/engine-workspaces/q3ce37ff/bindings/frb_1",
+            ) => (204, Value::Null),
+            _ => (405, Value::Null),
+        }
     }));
     let consent = json!({"revision": 1, "version": 3, "policy_id": "p", "providers": ["kilo"]});
     let put = desk
-        .fetch("PUT", "/v1/workspaces/42/free-router/consent", Some(&consent), "key-put")
+        .fetch(
+            "PUT",
+            "/v1/workspaces/42/free-router/consent",
+            Some(&consent),
+            "key-put",
+        )
         .unwrap();
     assert_eq!((put.status, put.body["revision"].clone()), (200, json!(2)));
     let delete = desk
-        .fetch("DELETE", "/v1/workspaces/42/free-router/consent", None, "key-delete")
+        .fetch(
+            "DELETE",
+            "/v1/workspaces/42/free-router/consent",
+            None,
+            "key-delete",
+        )
         .unwrap();
-    assert_eq!((delete.status, delete.body["accepted"].clone()), (200, json!(false)));
+    assert_eq!(
+        (delete.status, delete.body["accepted"].clone()),
+        (200, json!(false))
+    );
     let unbind = desk
         .fetch(
             "DELETE",
@@ -932,11 +968,25 @@ fn put_and_delete_reach_the_edge_with_their_method_and_key() {
     let delete = sent("/v1/workspaces/42/free-router/consent", "DELETE");
     assert_eq!(delete.idempotency_key.as_deref(), Some("key-delete"));
     assert_eq!(delete.body, Value::Null, "un DELETE no lleva cuerpo");
-    let unbind = sent("/v1/workspaces/42/free-router/engine-workspaces/q3ce37ff/bindings/frb_1", "DELETE");
+    let unbind = sent(
+        "/v1/workspaces/42/free-router/engine-workspaces/q3ce37ff/bindings/frb_1",
+        "DELETE",
+    );
     assert_eq!(unbind.idempotency_key.as_deref(), Some("key-unbind"));
-    assert!(!seen.iter().any(|r| r.method == "POST" && r.path.contains("free-router")));
+    assert!(!seen
+        .iter()
+        .any(|r| r.method == "POST" && r.path.contains("free-router")));
     for method in ["PUT", "DELETE"] {
-        let reply = session::Reply { status: 200, body: Value::Null, retry_after: None, location: None };
-        assert_eq!(super::edge_reply(method, &reply, "k")["idempotency_key"], "k", "{method}");
+        let reply = session::Reply {
+            status: 200,
+            body: Value::Null,
+            retry_after: None,
+            location: None,
+        };
+        assert_eq!(
+            super::edge_reply(method, &reply, "k")["idempotency_key"],
+            "k",
+            "{method}"
+        );
     }
 }

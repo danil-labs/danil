@@ -271,7 +271,7 @@ pub(crate) fn edge_reply(method: &str, reply: &session::Reply, key: &str) -> Val
     if let Some(location) = &reply.location {
         value["location"] = json!(location);
     }
-    if method == "POST" {
+    if method != "GET" {
         value["idempotency_key"] = json!(key);
     }
     if let Some(wait) = reply.retry_after {
