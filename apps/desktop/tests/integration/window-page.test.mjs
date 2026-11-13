@@ -82,3 +82,30 @@ test('an authenticated session with no workspaces shows the plan empty state wit
   assert.ok(!calls.some(path => path.startsWith('/v1/compute')));
   assert.equal(app.w.document.querySelector('[data-tira]'), null);
 });
+
+const ORGS = { items: [{ id: 'org_A', name: 'Danil', plan: 'enterprise', role: 'owner' }, { id: 'org_B', name: 'Otra', plan: 'team', role: 'member' }], next_cursor: null, active_organization_id: 'org_B' };
+const CAPS = { contract: 'mvp-v1', items: [{ name: 'identity.organizations', version: 1, status: 'available' }] };
+for (const [label, me] of [
+  ['403 workspace_selection_required', () => new Response(JSON.stringify({ type: 'urn:danil:problem:workspace_selection_required', status: 403, code: 'workspace_selection_required' }), { status: 403, headers: { 'content-type': 'application/problem+json' } })],
+  ['200 with workspace null', () => Response.json({ id: 'user_A', name: 'Operator', workspace: null, organizations: [] })],
+]) test(`an organization without a workspace (${label}) shows the empty state with the organization selector and sign out, not a dead end`, async () => {
+  const calls = [];
+  const fetcher = async input => {
+    const url = new URL(String(input));
+    if (url.origin === 'http://localhost' && url.pathname.includes('/assets/')) return new Response('');
+    calls.push(url.pathname);
+    if (url.pathname === '/v1/identity/me') return me();
+    if (url.pathname === '/v1/capabilities') return Response.json(CAPS);
+    if (url.pathname === '/v1/identity/organizations') return Response.json(ORGS);
+    if (url.pathname === '/v1/workspaces') return Response.json({ items: [], next_cursor: null });
+    throw new Error(`Unexpected request ${url.pathname}`);
+  };
+  fetcher.__jsdomApp = true; globalThis.fetch = fetcher;
+  const app = await boot('listo', `org-without-workspace-${label.length}`, {}, undefined, {}, { web: true });
+  const gate = () => app.w.document.querySelector('[data-web-gate]');
+  await until(() => gate()?.querySelector('[data-web-organization="org_A"]'));
+  assert.equal(gate().querySelector('[role="alert"]'), null, 'no «No tienes acceso»');
+  assert.ok(gate().querySelector('[data-web-organization="org_B"][aria-pressed="true"]'), 'the active one is marked');
+  assert.ok(gate().querySelector('[data-web-sign-out]'), 'sign out is offered');
+  assert.ok(!calls.some(path => path.startsWith('/v1/compute')));
+});

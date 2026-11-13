@@ -654,6 +654,8 @@ const steps = [
   ["The AI accounts panel mounts loading, failed or with the supported agents, never empty", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/ai-providers-states.test.mjs")], root],
   ["Remote paths preserve their machine context", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/remote-path.test.ts")], root],
   ["Workspace selection reconciles uncertain intents before another operation", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/web-workspace-selection.test.ts")], root],
+  ["The organization selector hides on 404/501, retries itself and opens on organization_selection_required", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/organization-selection.test.ts")], root],
+  ["The web organization selector goes by cookie, CSRF and one Idempotency-Key per intent", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/web-organizations.test.ts")], root],
   ["Desk retains engine attention without a messaging session", process.execPath, ["--test", "--test-force-exit", join(root, "tests/integration/messaging-isolation.test.mjs")], root],
   ["The cookie session mounts the real window through compute", process.execPath, ["--test", "--test-force-exit", join(root, "tests/integration/window-page.test.mjs")], root],
   ["The platform session always uses cookies, CSRF and a configured edge", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/web-platform-session.test.ts")], root],

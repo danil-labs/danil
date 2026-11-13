@@ -12,6 +12,8 @@ import { ITEM_DE_MENU, Popover, PopoverAnchor, PopoverContent } from "../../ui/P
 
 const DanilFooterEntry = lazy(() => import("./DanilFooterEntry"));
 const WorkspaceDirectoryMenu = lazy(() => import("./WorkspaceDirectoryMenu"));
+const OrganizationWatch = lazy(() => import("./OrganizationMenu").then((m) => ({ default: m.OrganizationWatch })));
+const OrganizationSection = lazy(() => import("./OrganizationMenu").then((m) => ({ default: m.OrganizationSection })));
 
 const BUG_REPORT_URL = "https://github.com/danil-labs/danil/issues/new?template=bug_report.yml";
 
@@ -54,8 +56,24 @@ export default function ProfileMenu(props: {
   );
 
   return (
-    <Popover open={open()} onOpenChange={setOpen} placement="right-end" gutter={8}>
+    <Popover
+      open={open()}
+      onOpenChange={(o) => {
+        setOpen(o);
+        // Cerrar sin elegir: el próximo 403 lo vuelve a abrir.
+        if (!o) void capabilities().organizations?.().then((s) => s.dismiss());
+      }}
+      placement="right-end"
+      gutter={8}
+    >
       <PopoverAnchor class="relative grid size-8 place-items-center" data-profile-menu="">
+        <Show when={capabilities().organizations}>
+          {(load) => (
+            <Suspense fallback={null}>
+              <OrganizationWatch load={load()} onNeeded={() => setOpen(true)} />
+            </Suspense>
+          )}
+        </Show>
         {/* Sin sesión de Danil la entrada no pinta a nadie; el avatar genérico sigue abriendo el menú. */}
         <Show when={cuenta()} fallback={generico()}>
           <Suspense fallback={generico()}>
@@ -70,6 +88,13 @@ export default function ProfileMenu(props: {
             <ChevronRight size={14} aria-hidden="true" class="shrink-0 text-neutral-500" />
           </button>
           <div class="my-1 h-px bg-border" />
+        </Show>
+        <Show when={capabilities().organizations}>
+          {(load) => (
+            <Suspense fallback={null}>
+              <OrganizationSection load={load()} onClose={() => setOpen(false)} />
+            </Suspense>
+          )}
         </Show>
         <Show when={capabilities().webWorkspaces}>{session => <>
           <p class="m-0 px-2 pt-1 text-caption font-medium text-neutral-500">{t("web.platform.workspaces")}</p>

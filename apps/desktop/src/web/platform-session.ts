@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 const workspaceId = z.string().regex(/^[1-9]\d*$/);
-const profile = z.object({ id: z.string().startsWith("user_"), name: z.string(), workspace: workspaceId, organizations: z.array(z.object({ id: z.string(), name: z.string() })) });
+const profile = z.object({ id: z.string().startsWith("user_"), name: z.string(), workspace: workspaceId.nullable(), organizations: z.array(z.object({ id: z.string(), name: z.string() })) });
 const workspace = z.object({ id: workspaceId, org: z.string(), name: z.string(), role: z.string() });
 const page = z.object({ items: z.array(workspace), next_cursor: z.string().min(1).nullable() });
 const selection = z.object({ workspace: workspaceId, ctx: z.string().min(1), authz_ver: z.number().int().nonnegative() });
