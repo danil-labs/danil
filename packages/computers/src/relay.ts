@@ -354,8 +354,7 @@ export class RelaySession {
       if (!opened && this.config.probe) return void this.afterFailedUpgrade();
       // 4005: el token venció sin renovarse; la reconexión pide uno nuevo.
       // Otra sesión ocupó el lugar de esta computadora: reconectar la echaría a su vez.
-      // Con ticket, `4001 session_expired` es el fin de la sesión del puente: se pide otro ticket y se reconecta.
-      if (this.config.getAdmission && event.code === REPLACED && event.reason === "session_expired") return this.reconnectLater();
+      // Con ticket, `4005` (vencimiento de la sesión del puente) cae en `reconnectLater`: otro ticket y otra conexión.
       if (event.code === REPLACED) return this.close();
       this.reconnectLater();
     };

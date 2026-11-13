@@ -1,11 +1,12 @@
 import assert from "node:assert/strict";
+import { readFileSync, existsSync } from "node:fs";
 import { test } from "node:test";
 import { type Fetch, machinesClient, machineToComputer, powerOf } from "../src/index.ts";
 
 type Call = { url: string; method: string; headers: Record<string, string>; body?: string };
 
 /** Un borde de mentira: contesta por `METHOD ruta`, la última respuesta de cada ruta se repite. */
-function edge(routes: Record<string, { status: number; body?: unknown }[]>) {
+function edge(routes: Record<string, { status: number; body?: unknown; location?: string }[]>) {
   const calls: Call[] = [];
   const seen: Record<string, number> = {};
   const fetch: Fetch = async (url, init) => {
@@ -15,7 +16,7 @@ function edge(routes: Record<string, { status: number; body?: unknown }[]>) {
     const list = routes[key] ?? [{ status: 404 }];
     const r = list[Math.min(seen[key] ?? 0, list.length - 1)];
     seen[key] = (seen[key] ?? 0) + 1;
-    return { status: r.status, ok: r.status < 400, json: async () => r.body ?? null };
+    return { status: r.status, ok: r.status < 400, headers: { get: (n: string) => (n === "location" ? (r.location ?? null) : null) }, json: async () => r.body ?? null };
   };
   return { fetch, calls };
 }
@@ -54,7 +55,7 @@ test("start: 202 con operación y sondeo hasta succeeded, con Idempotency-Key", 
   const op = (status: string) => ({ operation: { operation_id: "op_1", kind: "machine.start", status, created_at: "t" } });
   const { fetch, calls } = edge({
     "POST /machines/cmp_1/start": [{ status: 202, body: { ...op("pending"), machine: { ...machine, state: "starting" } } }],
-    "GET /machines/operations/op_1": [{ status: 200, body: op("pending") }, { status: 200, body: op("mystery") }, { status: 200, body: op("running") }, { status: 200, body: op("succeeded") }],
+    "GET /operations/op_1": [{ status: 200, body: op("pending") }, { status: 200, body: op("mystery") }, { status: 200, body: op("running") }, { status: 200, body: op("succeeded") }],
     "GET /machines/cmp_1": [{ status: 200, body: machine }],
   });
   const answer = await client(fetch).start("cmp_1");
@@ -69,7 +70,7 @@ test("start: 202 con operación y sondeo hasta succeeded, con Idempotency-Key", 
 test("start: failed devuelve el código; not_remotely_startable llega como error con código", async () => {
   const failed = edge({
     "POST /machines/cmp_1/start": [{ status: 202, body: { operation: { operation_id: "op_2", status: "pending" }, machine } }],
-    "GET /machines/operations/op_2": [{ status: 200, body: { operation: { operation_id: "op_2", status: "failed", error: { code: "provider_error" } } } }],
+    "GET /operations/op_2": [{ status: 200, body: { operation: { operation_id: "op_2", status: "failed", error: { code: "provider_error" } } } }],
   });
   assert.deepEqual(await client(failed.fetch).start("cmp_1"), { kind: "error", status: null, code: "provider_error" });
   const no = edge({ "POST /machines/cmp_1/start": [{ status: 409, body: { code: "not_remotely_startable" } }] });
@@ -80,7 +81,7 @@ test("start: el sondeo se rinde en el plazo y no queda colgado", async () => {
   let clock = 0;
   const { fetch } = edge({
     "POST /machines/cmp_1/start": [{ status: 202, body: { operation: { operation_id: "op_3", status: "pending" }, machine } }],
-    "GET /machines/operations/op_3": [{ status: 200, body: { operation: { operation_id: "op_3", status: "pending" } } }],
+    "GET /operations/op_3": [{ status: 200, body: { operation: { operation_id: "op_3", status: "pending" } } }],
   });
   const answer = await client(fetch, { now: () => clock, sleep: async (ms: number) => void (clock += ms) }).start("cmp_1");
   assert.deepEqual(answer, { kind: "error", status: null, code: "operation_timeout" });
@@ -120,4 +121,43 @@ test("el token nunca va por query ni en el cuerpo", async () => {
   const { fetch, calls } = edge({ "GET /machines": [{ status: 200, body: { items: [] } }] });
   await client(fetch).list();
   assert.ok(!calls[0].url.includes("tok"));
+});
+
+test("start sigue Location hacia /v1/operations/{id}", async () => {
+  const { fetch, calls } = edge({
+    "POST /machines/cmp_1/start": [{ status: 202, location: "/v1/operations/op_9", body: { operation: { operation_id: "op_9", status: "pending" }, machine } }],
+    "GET /operations/op_9": [{ status: 200, body: { operation: { operation_id: "op_9", status: "succeeded" } } }],
+    "GET /machines/cmp_1": [{ status: 200, body: machine }],
+  });
+  assert.equal((await client(fetch).start("cmp_1")).kind, "ok");
+  assert.ok(calls.some((c) => c.url === "https://edge.danil.ai/v1/operations/op_9"));
+});
+
+// Ejemplos de los contratos mvp-v1 (terminus-workspace#35); sin el directorio, la prueba se omite.
+const EXAMPLES = process.env.MVP_CONTRACTS ?? "/home/alejandro/danil/mvp/contracts/mvp-v1/examples/machines";
+const example = (name: string) => JSON.parse(readFileSync(`${EXAMPLES}/${name}`, "utf8"));
+const withExamples = existsSync(EXAMPLES) ? test : test.skip;
+
+withExamples("contrato: los ejemplos de mvp-v1 los entiende el módulo", async () => {
+  const origins = ["wss://connect.danil.ai"];
+  const row = example("get.200.json");
+  assert.equal(machineToComputer(row).state, "online");
+  assert.equal(machineToComputer(example("start.202.json").machine).state, "starting");
+  assert.equal((await client(edge({ "GET /machines": [{ status: 200, body: example("list.200.json") }] }).fetch).list()).kind, "ok");
+  assert.equal((await client(edge({ "GET /machines": [{ status: 200, body: example("list.200.empty.json") }] }).fetch).list()).kind, "ok");
+  assert.equal((await client(edge({ "GET /machines": [{ status: 501, body: example("not_implemented.501.json") }] }).fetch).list()).kind, "unavailable");
+  assert.equal((await client(edge({ "GET /machines": [{ status: 401, body: example("invalid_session.401.json") }] }).fetch).list()).kind, "unauthorized");
+  const ticketAnswer = await client(edge({ "POST /machines/cmp_01JD6Z8K2M3N4P5Q6R7S8T9V0W/tickets": [{ status: 201, body: example("tickets.201.json") }] }).fetch, { relayOrigins: origins }).admission("cmp_01JD6Z8K2M3N4P5Q6R7S8T9V0W");
+  assert.equal(ticketAnswer.kind, "ok");
+  for (const [file, status, code] of [["tickets.409.machine_unreachable.json", 409, "machine_unreachable"], ["tickets.409.ticket_already_issued.json", 409, "ticket_already_issued"], ["tickets.503.invalid_relay_origin.json", 503, "invalid_relay_origin"]] as const) {
+    const a = await client(edge({ "POST /machines/cmp_1/tickets": [{ status, body: example(file) }] }).fetch).admission("cmp_1");
+    assert.deepEqual(a, { kind: "error", status, code });
+  }
+  const noStart = await client(edge({ "POST /machines/cmp_1/start": [{ status: 409, body: example("start.409.not_remotely_startable.json") }] }).fetch).start("cmp_1");
+  assert.deepEqual(noStart, { kind: "error", status: 409, code: "not_remotely_startable" });
+  const failed = edge({
+    "POST /machines/cmp_1/start": [{ status: 202, body: example("start.202.json") }],
+    "GET /operations/op_01JD7Q3W4E5R6T7Y8U9I0O1P2A": [{ status: 200, body: example("operation.200.failed.json") }],
+  });
+  assert.deepEqual(await client(failed.fetch).start("cmp_1"), { kind: "error", status: null, code: "provider_unavailable" });
 });
