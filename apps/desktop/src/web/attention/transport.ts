@@ -1,5 +1,4 @@
 import type { InboxSession } from '../../../../../packages/attention/src/inbox.ts';
-import { activeAccountOf } from '../active-account';
 
 /** Cómo llegan las vistas de Atención al BFF: la web por su entrada alfa; el escritorio, por la ventana y Computers. */
 export type BffTransport = {
@@ -10,9 +9,9 @@ export type BffTransport = {
 };
 
 let current: BffTransport = {
-  prefix: `${import.meta.env.BASE_URL}alpha-api`,
-  request: (input, init) => fetch(input, init),
-  active: async session => activeAccountOf(await session.getToken()),
+  prefix: "",
+  request: async () => { throw new Error("unavailable"); },
+  active: async () => null,
 };
 
 export const bffTransport = () => current;

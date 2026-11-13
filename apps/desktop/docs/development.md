@@ -212,20 +212,22 @@ deletes them.
 ## The browser build
 
 The browser uses the platform edge for its session, workspace selection and
-inbox. The session is the edge's HttpOnly `__Host-danil_session` cookie. No
+task window. The session is the edge's HttpOnly `__Host-danil_session` cookie. No
 WorkOS token, database token or database key reaches JavaScript.
 
 `DANIL_WEB_API_ORIGIN=https://edge.danil.ai corepack pnpm web:build` builds
 the responsive SPA. It no longer embeds the mobile app's legacy browser bundle.
-`TERMINUS_WEB_BASE=/` serves the root;
+For beta, build with
+`TERMINUS_WEB_BASE=/ DANIL_WEB_API_ORIGIN=https://edge.danil.ai corepack pnpm -C apps/desktop web:build`.
+`alpha-entry/wrangler.beta.toml` serves those assets on `beta.danil.ai` without a
+backend proxy. `TERMINUS_WEB_BASE=/` serves the root;
 `DANIL_WEB_API_ORIGIN` is required: the build fails if it is absent or is not
 a valid HTTPS origin without credentials, path, query or fragment. HTTP is
 rejected, including localhost. There is no default.
 `DANIL_WEB_API_TIMEOUT_MS` is the browser request budget (15000 ms by default,
-1–60000 ms). The CSP allows only this API origin
-and same-origin connections. `alpha-entry` preserves the CSP from the built
-assets; it has no separate API origin setting. Session and inbox have no legacy
-selector.
+1–60000 ms). The CSP allows this API origin, same-origin connections and the machine
+transport at `wss://connect.danil.ai`. `alpha-entry` preserves the CSP from the built
+assets; it has no separate API origin setting. There is no legacy session selector.
 
 | Deployment | `DANIL_WEB_API_ORIGIN` | Status |
 |---|---|---|
@@ -236,17 +238,23 @@ Tests may explicitly inject `https://api.danil.ai` as a fictional origin; this
 does not configure a deployment. For the local front verification chain, run
 `DANIL_WEB_API_ORIGIN=https://api.danil.ai corepack pnpm verify --no-cargo`.
 
-`tests/integration/platform-page.test.mjs` mounts the built page and checks
-workspace reconciliation and pending replies. The real-service E2E is
-`tests/integration/platform-session.test.mjs`: `DANIL_PLATFORM_REPOS` points
-to the directory with edge, identity and workspaces; `DANIL_WORKERS_REPO`,
-`DANIL_MESSAGING_SCHEMA_REPO` and `DANIL_WORKERS_PYTHON` select the messaging
-service, SQL migrations and its environment. `PG_BIN` selects PostgreSQL 16
-with pgvector. It creates and destroys its own cluster. Chromium checks also
-use `DANIL_INBOX_BROWSER_URL` and `DANIL_INBOX_BROWSER_PYTHON`.
+`tests/integration/window-page.test.mjs` mounts the real task window against a
+simulated cookie edge and relay. `tests/integration/window.browser.py` exercises
+the built page with Chromium; `DANIL_WINDOW_BROWSER_URL` selects the served URL.
+The compute adapter follows the current front B contract: list/start under
+`/v1/compute/computers`, ticket at `POST /v1/compute/computers/:id/tickets`,
+WebSocket with the `ticket.*` subprotocol. The engine registry, shared machines,
+renaming, screen and account administration still depend on new service contracts;
+identity currently supplies a read-only profile. No messaging entry is mounted.
 
-The private asset Worker serves `dist-web/`; `alpha-entry/` fronts it and keeps
-only the appv2 routes still needed by W5. The web audit transport has been
+The platform workspace list and selection use `/v1/workspaces` as published.
+Pending: **modelo organización→N workspaces por decidir** (detalle de negocio)
+and **perfil por cuenta**. La dirección de la persona establece N workspaces por
+organización, perfil local sin login en Desk y plan obligatorio para la nube. The client neither
+creates assignments nor infers a workspace from an organization.
+
+The private asset Worker serves `dist-web/`; `alpha-entry/` fronts it.
+The web audit transport has been
 removed: there is no platform audit service. Desk's legacy login is isolated
 in `legacy-desktop-auth/`; see [desktop sessions](desktop-bff-session.md).
 
