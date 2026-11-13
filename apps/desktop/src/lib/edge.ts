@@ -35,6 +35,12 @@ export type EdgeReply<T = unknown> = { status: number; body: T; location?: strin
 export type EdgeRefusal = { detail: string; status: number; body: unknown };
 
 const RETRIED_STATUS = new Set([404, 429, 501, 503]);
+
+/** Quien escucha los rechazos del borde (el selector de organización, ante `organization_selection_required`). */
+let problemListener: ((e: EdgeRefusal) => void) | null = null;
+export const onEdgeProblem = (listener: ((e: EdgeRefusal) => void) | null) => {
+  problemListener = listener;
+};
 /** Rust contesta así sin red; sin sesión o fuera de la lista no se reintenta. */
 const RETRIED_DETAIL = new Set(["unavailable"]);
 
@@ -74,7 +80,10 @@ export async function edgeUntil<T = unknown>(method: "GET" | "POST", path: strin
       if (reply.status >= 200 && reply.status < 300) return reply;
       const code = (reply.body as { code?: unknown } | null)?.code;
       last = { detail: typeof code === "string" ? code : `http_${reply.status}`, status: reply.status, body: reply.body } satisfies EdgeRefusal;
-      if (!RETRIED_STATUS.has(reply.status)) throw last;
+      if (!RETRIED_STATUS.has(reply.status)) {
+        problemListener?.(last as EdgeRefusal);
+        throw last;
+      }
       wait = reply.retry_after_ms;
     } catch (e) {
       if (e === last) throw e;
