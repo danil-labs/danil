@@ -97,6 +97,7 @@ export async function edgeUntil<T = unknown>(method: "GET" | "POST", path: strin
   let last: unknown;
   for (let attempt = 0; ; attempt++) {
     signal?.throwIfAborted();
+    if (attempt > 0 && Date.now() >= deadline) throw last;
     let wait: number | undefined;
     try {
       const reply = await transport.send<T>(method, path, body, key);

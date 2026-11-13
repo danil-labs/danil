@@ -161,3 +161,14 @@ test("a huge Retry-After never overflows the timer", async (t) => {
   assert.ok(delays.length > 0);
   assert.ok(delays.every(ms => ms <= 2 ** 31 - 1));
 });
+
+test("an expired intent is not sent when the app resumes after its retry budget", async (t) => {
+  let now = 0;
+  t.mock.method(Date, "now", () => now);
+  const original = globalThis.setTimeout;
+  t.mock.method(globalThis, "setTimeout", (fn: () => void, ms: number) => original(() => { now = 1000; fn(); }, ms));
+  const calls = window((_args, n) => n === 0 ? { status: 503, body: {} } : ok({}));
+  const { edgeUntil } = await edge();
+  await assert.rejects(edgeUntil("POST", "/v1/machines/cmp_1/start", {}, { minDelayMs: 1, retryBudgetMs: 20 }));
+  assert.equal(calls.length, 1);
+});
