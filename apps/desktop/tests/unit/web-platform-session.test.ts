@@ -200,3 +200,29 @@ test("promo attempt survives closing Plan after an uncertain response, only in s
   await redeem("EXAMPLE", "next-attempt");
   assert.equal(keys[2], "next-attempt");
 });
+
+test('a pending startup rereads until ready without manufacturing an HTTP refusal', async t => {
+  t.mock.timers.enable({ apis: ['setTimeout', 'Date'] });
+  let calls = 0;
+  let preparing = false;
+  const result = preparePlatformSession(async () => ++calls > 1, new AbortController().signal,
+    () => { preparing = true; }, value => value);
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(preparing, true);
+  t.mock.timers.tick(1000);
+  assert.equal(await result, true);
+  assert.equal(calls, 2);
+});
+
+test('a directory that stays empty exhausts startup after 20s and stops rereading', async t => {
+  t.mock.timers.enable({ apis: ['setTimeout', 'Date'], now: 0 });
+  let calls = 0;
+  const result = preparePlatformSession(async () => { calls++; return false; }, new AbortController().signal,
+    () => {}, value => value);
+  await new Promise(resolve => setImmediate(resolve));
+  t.mock.timers.tick(20_000);
+  assert.equal(await result, false);
+  const stoppedAt = calls;
+  t.mock.timers.tick(60_000);
+  assert.equal(calls, stoppedAt);
+});

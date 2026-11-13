@@ -4,8 +4,8 @@ import { boot } from '../helpers/jsdom-app.mjs';
 import { relay } from '../helpers/fake-relay.mjs';
 
 const origin = new URL(process.env.DANIL_WEB_API_ORIGIN).origin;
-async function until(read) {
-  const deadline = Date.now() + 8000;
+async function until(read, timeoutMs = 8000) {
+  const deadline = Date.now() + timeoutMs;
   while (!read()) {
     if (Date.now() > deadline) throw new Error('Window condition timed out');
     await new Promise(resolve => setTimeout(resolve, 15));
@@ -328,6 +328,33 @@ test('free startup reloads the directory and selects the appearing Free organiza
   await until(() => resumed.w.document.querySelector('[data-promo-plan] #promo-code'));
   assert.equal(resumed.w.document.querySelector('[data-web-gate]'), null);
   assert.deepEqual(resumed.failures, []);
+});
+
+test('free startup stops preparing an empty directory and offers retry without granting a plan', async t => {
+  const calls = [];
+  const fetcher = async input => {
+    const path = new URL(String(input)).pathname;
+    calls.push(path);
+    if (path === '/v1/capabilities') return Response.json({ contract: 'mvp-v1', items: ['workspaces', 'identity.organizations'].map(name => ({ name, version: 1, status: 'available' })) });
+    if (path === '/v1/identity/me') return Response.json({ id: 'user_pending', name: 'Pending', workspace: null, organizations: [], active_organization_id: null });
+    if (path === '/v1/workspaces') return Response.json({ items: [], next_cursor: null, empty_reason: 'no_organization' });
+    if (path === '/v1/identity/organizations') return Response.json({ items: [], active_organization_id: null });
+    return new Response(null, { status: 404 });
+  };
+  fetcher.__jsdomApp = true; globalThis.fetch = fetcher;
+  const app = await open(t, 'listo', 'free-startup-expired', {}, undefined, {}, { web: true });
+  const doc = app.w.document;
+  await until(() => doc.querySelector('[role="status"] [data-spinner]'));
+  assert.match(doc.querySelector('[role="status"]').textContent, /Preparando tu cuenta/);
+  await until(() => doc.querySelector('[role="alert"]'), 25_000);
+  assert.equal(doc.querySelector('[data-spinner]'), null);
+  assert.ok([...doc.querySelectorAll('button')].some(button => /Reintentar/.test(button.textContent)));
+  assert.equal(doc.querySelector('[data-promo-plan]'), null);
+  assert.ok(!calls.includes('/v1/identity/organizations/select'));
+  const reads = calls.length;
+  await new Promise(resolve => setTimeout(resolve, 1200));
+  assert.equal(calls.length, reads, 'preparation stops polling when its budget is exhausted');
+  assert.deepEqual(app.failures, []);
 });
 
 test('promo redemption opens only in the active organization plan section', async t => {

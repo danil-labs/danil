@@ -188,11 +188,17 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
         try { setCaps(await readCapabilities(transport)); }
         catch (cause) { if (cause instanceof PlatformSessionError && cause.status === 401) throw cause; }
         await selection.reconcile();
-        if (mountedBefore) { window.location.assign(home); return; }
+        if (mountedBefore) { window.location.assign(home); return true; }
         person = await api.me();
+        if (person.workspace === null) {
+          await organizations.load();
+          organizationsLoaded = true;
+          await withoutWorkspace();
+          const state = organizations.state();
+          return state.kind === 'ready' && (state.active !== null || state.items.length > 1);
+        }
         // Con sesión: el selector se lee una vez y, si la ruta aún no existe, se reintenta solo.
         readOrganizations();
-        if (person.workspace === null) { await withoutWorkspace(); return; }
         const workspaces = permits('workspaces') ? await api.workspaces() : [];
         if (stopped || signedOut()) return;
         setRows(workspaces);
@@ -213,14 +219,21 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
           others: () => [], open: () => {}, add: () => {}, remove: async () => {}, signOut: () => void logout(),
         } });
         later(FIRST_RETRY_MS);
+        return true;
       };
       await run(async () => {
         try {
           if (mountedBefore) await read();
-          else await preparePlatformSession(read, lifetime.signal, () => {
-            setPreparing(true);
-            gate();
-          });
+          else {
+            const ready = await preparePlatformSession(read, lifetime.signal, () => {
+              setPreparing(true);
+              gate();
+            }, value => value !== false);
+            if (ready === false && !stopped && !signedOut()) {
+              setError('web.platform.unavailable');
+              gate();
+            }
+          }
         } finally { startupSignal = undefined; setPreparing(false); }
       });
     }
