@@ -36,18 +36,36 @@ export async function messagingDomainsE2E({ db, messaging, browserFetch }) {
   assert.equal((await api.campaignAction(campaign.id, 'cancel', {}, 'w5-cancel')).status, 'cancelled');
   for (const domain of ['channels','templates','campaigns','contacts']) assert.ok((await api[domain]()).data.length > 0, domain);
   if (process.env.DANIL_MESSAGING_BROWSER_URL || process.env.DANIL_INBOX_BROWSER_URL) {
-    await browser(browserFetch);
+    await browser(browserFetch, db, messaging);
+    for (const table of ['campaigns', 'templates']) {
+      const rows = (await db.admin.query(`SELECT name,count(*)::int AS n FROM public.${table} WHERE name LIKE 'browser_%' GROUP BY name ORDER BY name`)).rows;
+      assert.equal(rows.length, 2); assert.ok(rows.every(row => row.n === 1));
+    }
     assert.deepEqual((await db.admin.query("SELECT name,count(*)::int AS n FROM public.contact_accounts WHERE name LIKE 'Browser contact %' GROUP BY name ORDER BY name")).rows, [{ name: 'Browser contact 1280', n: 1 }, { name: 'Browser contact 390', n: 1 }]);
   }
   return 'real edge/identity/workspaces/workers + PostgreSQL: contacts upsert/PATCH, channels read, templates POST/PATCH, campaign create/audience/idempotency/schedule/pause/cancel' + (process.env.DANIL_MESSAGING_BROWSER_URL || process.env.DANIL_INBOX_BROWSER_URL ? ' and Chromium desktop/mobile' : '');
 }
 
-async function browser(browserFetch) {
+async function browser(browserFetch, db, messaging) {
+  const committed = new Set();
+  const denied = new Set();
   const bridge = createServer(async (req, res) => {
     try {
       let body = ''; for await (const chunk of req) body += chunk;
       const call = JSON.parse(body);
+      await db.admin.query("UPDATE tenancy.access_projection SET verified_at=now(),valid_until=now()+interval '30 seconds'; UPDATE identity.access_projection SET verified_at=now(),valid_until=now()+interval '30 seconds'; UPDATE tenancy.client_grants SET valid_until=now()+interval '30 seconds'");
+      await messaging.syncProjection();
       const response = await browserFetch(call.url, call.init);
+      if (call.init.method === 'POST' && new URL(call.url).pathname.endsWith('/messaging/campaigns')) {
+        const key = call.init.headers['idempotency-key'];
+        if (response.ok && !committed.has(key)) {
+          committed.add(key);
+          await db.admin.query("UPDATE tenancy.client_grants SET scopes=array_remove(scopes,'campaigns.manage') WHERE audience='workers'");
+        } else if (response.status === 403) {
+          denied.add(key);
+          await db.admin.query("UPDATE tenancy.client_grants SET scopes=array_append(scopes,'campaigns.manage') WHERE audience='workers'");
+        }
+      }
       res.writeHead(200, { 'content-type': 'application/json' });
       res.end(JSON.stringify({ status: response.status, headers: Object.fromEntries(response.headers), body: await response.text() }));
     } catch (cause) { res.writeHead(500); res.end(String(cause)); }
@@ -61,5 +79,6 @@ async function browser(browserFetch) {
     timer = setTimeout(() => child.kill('SIGTERM'), 60000);
     const code = await new Promise((resolve, reject) => { child.on('error', reject); child.on('exit', resolve); });
     assert.equal(code, 0, output);
+    assert.equal(committed.size, 2); assert.deepEqual(denied, committed);
   } finally { clearTimeout(timer); child?.kill('SIGTERM'); await new Promise(resolve => bridge.close(resolve)); }
 }

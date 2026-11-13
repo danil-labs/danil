@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { platformTransport } from './platform-session.ts';
+import { PlatformSessionError, platformTransport } from './platform-session.ts';
 
 const id = z.string().min(1);
 const text = z.string().nullable();
@@ -20,6 +20,31 @@ export type CampaignDraft = { name: string; channel_id: string; template_id: str
 export type ContactDraft = { name: string; phone?: string; email?: string | null };
 export type CampaignAction = 'start' | 'schedule' | 'pause' | 'resume' | 'cancel';
 
+export type MessagingOperation<T = unknown> = {
+  readonly method: 'POST' | 'PATCH' | 'DELETE'; readonly resource: string; readonly body: string | undefined;
+  execute(key: string, signal?: AbortSignal): Promise<T>;
+};
+export type MessagingIntents = Map<string, { operation: MessagingOperation; key: string; uncertain: boolean }>;
+
+export async function runMessagingOperation<T>(intents: MessagingIntents, operation: MessagingOperation<T>, signal?: AbortSignal): Promise<T> {
+  const identity = JSON.stringify([operation.method, operation.resource, operation.body]);
+  const previous = intents.get(identity);
+  const pending = previous ?? { operation, key: crypto.randomUUID(), uncertain: false };
+  // A denial on a later attempt cannot disprove the effect of an earlier attempt.
+  if (previous) pending.uncertain = true;
+  intents.set(identity, pending);
+  try {
+    const result = await operation.execute(pending.key, signal);
+    intents.delete(identity);
+    return result;
+  } catch (cause) {
+    const rejected = cause instanceof PlatformSessionError && cause.status >= 400 && cause.status < 500 && ![408, 429].includes(cause.status) && (cause.status !== 409 || cause.code !== 'idempotency_in_progress');
+    if (rejected && !pending.uncertain) intents.delete(identity);
+    else pending.uncertain = true;
+    throw cause;
+  }
+}
+
 export function platformMessaging(options: { origin: string; timeoutMs: number }, request: typeof fetch = fetch) {
   const { call, mutation } = platformTransport(options, request);
   const resource = (domain: string, value: string) => `messaging/${domain}/${encodeURIComponent(id.parse(value))}`;
@@ -28,36 +53,43 @@ export function platformMessaging(options: { origin: string; timeoutMs: number }
     if (cursor) query.set('cursor', cursor);
     return z.object({ data: z.array(schema), page }).parse(await (await call(`messaging/${domain}?${query}`, { signal })).json());
   }
-  async function write(path: string, body: unknown, key: string, method = 'POST', signal?: AbortSignal) {
+  async function write(path: string, body: string | undefined, key: string, method: string, signal?: AbortSignal) {
     const response = await mutation(path, { method, signal,
       headers: { 'Content-Type': 'application/json', 'Idempotency-Key': id.max(255).parse(key) },
-      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+      ...(body === undefined ? {} : { body }),
     });
     if (response.status === 204) return null;
     const raw = await response.text();
     return raw ? JSON.parse(raw) as unknown : null;
   }
+  function operation<T>(resource: string, body: unknown, schema: z.ZodType<T>, method: MessagingOperation['method'] = 'POST'): MessagingOperation<T> {
+    const serialized = JSON.stringify(body);
+    return { method, resource, body: serialized, async execute(key, signal) { return schema.parse(await write(resource, serialized, key, method, signal)); } };
+  }
+  const audience = z.object({ added: z.number().int().nonnegative(), skipped: z.number().int().nonnegative(), audience_size: z.number().int().nonnegative() });
+  const operations = {
+    saveContact: (body: ContactDraft, value?: string) => operation(value ? resource('contacts', value) : 'messaging/contacts', body, contact, value ? 'PATCH' : 'POST'),
+    saveTemplate: (body: TemplateDraft, value?: string) => operation(value ? resource('templates', value) : 'messaging/templates', body, template, value ? 'PATCH' : 'POST'),
+    submitTemplate: (value: string) => operation(`${resource('templates', value)}/submit`, {}, template),
+    deleteTemplate: (value: string) => operation(resource('templates', value), undefined, z.null(), 'DELETE'),
+    syncTemplates: () => operation('messaging/templates/sync', {}, z.null()),
+    createCampaign: (body: CampaignDraft) => operation('messaging/campaigns', body, campaign),
+    campaignAction: (value: string, action: CampaignAction, body: { send_at?: string }) => operation(`${resource('campaigns', value)}/${action}`, body, campaign),
+    audience: (value: string, contacts: string[]) => operation(`${resource('campaigns', value)}/audience`, { contact_ids: contacts }, audience),
+  };
   return {
+    operations,
     channels: (cursor?: string, signal?: AbortSignal) => list('channels', channel, cursor, signal),
     templates: (cursor?: string, signal?: AbortSignal) => list('templates', template, cursor, signal),
     campaigns: (cursor?: string, signal?: AbortSignal) => list('campaigns', campaign, cursor, signal),
     contacts: (cursor?: string, signal?: AbortSignal) => list('contacts', contact, cursor, signal),
-    async saveContact(body: ContactDraft, key: string, value?: string, signal?: AbortSignal) {
-      return contact.parse(await write(value ? resource('contacts', value) : 'messaging/contacts', body, key, value ? 'PATCH' : 'POST', signal));
-    },
-    async saveTemplate(body: TemplateDraft, key: string, value?: string, signal?: AbortSignal) {
-      return template.parse(await write(value ? resource('templates', value) : 'messaging/templates', body, key, value ? 'PATCH' : 'POST', signal));
-    },
-    async submitTemplate(value: string, key: string, signal?: AbortSignal) { return template.parse(await write(`${resource('templates', value)}/submit`, {}, key, 'POST', signal)); },
-    async deleteTemplate(value: string, key: string, signal?: AbortSignal) { await write(resource('templates', value), undefined, key, 'DELETE', signal); },
-    async syncTemplates(key: string, signal?: AbortSignal) { await write('messaging/templates/sync', {}, key, 'POST', signal); },
-    async createCampaign(body: CampaignDraft, key: string, signal?: AbortSignal) { return campaign.parse(await write('messaging/campaigns', body, key, 'POST', signal)); },
-    async campaignAction(value: string, action: CampaignAction, body: { send_at?: string }, key: string, signal?: AbortSignal) {
-      return campaign.parse(await write(`${resource('campaigns', value)}/${action}`, body, key, 'POST', signal));
-    },
-    async audience(value: string, contacts: string[], key: string, signal?: AbortSignal) {
-      return z.object({ added: z.number().int().nonnegative(), skipped: z.number().int().nonnegative(), audience_size: z.number().int().nonnegative() })
-        .parse(await write(`${resource('campaigns', value)}/audience`, { contact_ids: contacts }, key, 'POST', signal));
-    },
+    saveContact: (body: ContactDraft, key: string, value?: string, signal?: AbortSignal) => operations.saveContact(body, value).execute(key, signal),
+    saveTemplate: (body: TemplateDraft, key: string, value?: string, signal?: AbortSignal) => operations.saveTemplate(body, value).execute(key, signal),
+    submitTemplate: (value: string, key: string, signal?: AbortSignal) => operations.submitTemplate(value).execute(key, signal),
+    async deleteTemplate(value: string, key: string, signal?: AbortSignal) { await operations.deleteTemplate(value).execute(key, signal); },
+    async syncTemplates(key: string, signal?: AbortSignal) { await operations.syncTemplates().execute(key, signal); },
+    createCampaign: (body: CampaignDraft, key: string, signal?: AbortSignal) => operations.createCampaign(body).execute(key, signal),
+    campaignAction: (value: string, action: CampaignAction, body: { send_at?: string }, key: string, signal?: AbortSignal) => operations.campaignAction(value, action, body).execute(key, signal),
+    audience: (value: string, contacts: string[], key: string, signal?: AbortSignal) => operations.audience(value, contacts).execute(key, signal),
   };
 }
