@@ -5,7 +5,7 @@
  * llega a la webview. Un 404 o un 501 llega como `not_available_yet` y la nube queda
  * «no disponible»: se oculta con gracia y se reintenta sola, guiada por
  * `GET /v1/capabilities` (Desk compilado no se recompila por cambios del servidor).
- * El canal de datos no pasa por aquí: va directo al relay con el ticket (`wss://*.danil.ai`).
+ * El canal de datos no pasa por aquí: va directo al relay con el ticket, solo a un origen exacto (`DEFAULT_RELAY_ORIGINS`).
  */
 import { type CapabilityList, type Computer, type Fetch, type MachinesAnswer, announces, capabilityList, machineToComputer, machinesClient, mayCall } from "@terminus/computers";
 

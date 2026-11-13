@@ -91,10 +91,10 @@ test("start: el sondeo se rinde en el plazo y no queda colgado", async () => {
 const ticket = (url: string) => ({ status: 201, body: { ticket: "t1", url, expires_at: "a", session_expires_at: "b" } });
 
 test("ticket: valida wss, origen y ruta antes de entregarlo; sale con subprotocolo ticket.*", async () => {
-  const good = edge({ "POST /machines/cmp_1/tickets": [ticket("wss://machines.danil.ai/v1/machines/cmp_1/session")] });
+  const good = edge({ "POST /machines/cmp_1/tickets": [ticket("wss://connect.danil.ai/v1/machines/cmp_1/session")] });
   const admission = await client(good.fetch).admission("cmp_1");
   assert.equal(admission.kind, "ok");
-  if (admission.kind === "ok") assert.deepEqual(admission.value, { url: "wss://machines.danil.ai/v1/machines/cmp_1/session", ticket: "t1", session_expires_at: "b", expires_at: "a" });
+  if (admission.kind === "ok") assert.deepEqual(admission.value, { url: "wss://connect.danil.ai/v1/machines/cmp_1/session", ticket: "t1", session_expires_at: "b", expires_at: "a" });
   for (const bad of [
     "https://machines.danil.ai/v1/machines/cmp_1/session",
     "wss://evil.example/v1/machines/cmp_1/session",
@@ -108,18 +108,29 @@ test("ticket: valida wss, origen y ruta antes de entregarlo; sale con subprotoco
   }
 });
 
-test("ticket: wss://*.danil.ai acepta machines y connect, y rechaza host ajeno, puerto, falso sufijo y el apex", async () => {
-  for (const host of ["machines.danil.ai", "connect.danil.ai"]) {
-    const url = `wss://${host}/v1/machines/cmp_1/session`;
-    const answer = await client(edge({ "POST /machines/cmp_1/tickets": [ticket(url)] }).fetch, { relayOrigins: ["wss://*.danil.ai"] }).admission("cmp_1");
+test("ticket: solo un origen exacto recibe el ticket; otro subdominio de Danil o un comodín no (machine-session.v1, Apertura §2)", async () => {
+  for (const host of ["machines-session.danil.ai", "connect.danil.ai"]) {
+    const answer = await client(edge({ "POST /machines/cmp_1/tickets": [ticket(`wss://${host}/v1/machines/cmp_1/session`)] }).fetch).admission("cmp_1");
     assert.equal(answer.kind, "ok", host);
   }
-  for (const host of ["evil.example", "danil.ai.evil.example", "evildanil.ai", "danil.ai", "machines.danil.ai:8443", "a.b.evil.example"]) {
-    const answer = await client(edge({ "POST /machines/cmp_1/tickets": [ticket(`wss://${host}/v1/machines/cmp_1/session`)] }).fetch, { relayOrigins: ["wss://*.danil.ai"] }).admission("cmp_1");
+  for (const host of ["billing.danil.ai", "machines.danil.ai", "evil.example", "danil.ai.evil.example", "danil.ai", "connect.danil.ai:8443"]) {
+    const answer = await client(edge({ "POST /machines/cmp_1/tickets": [ticket(`wss://${host}/v1/machines/cmp_1/session`)] }).fetch).admission("cmp_1");
     assert.deepEqual(answer, { kind: "error", status: null, code: "invalid_admission_url" }, host);
   }
-  const byDefault = await client(edge({ "POST /machines/cmp_1/tickets": [ticket("wss://connect.danil.ai/v1/machines/cmp_1/session")] }).fetch).admission("cmp_1");
-  assert.equal(byDefault.kind, "ok");
+  const wild = await client(edge({ "POST /machines/cmp_1/tickets": [ticket("wss://billing.danil.ai/v1/machines/cmp_1/session")] }).fetch, { relayOrigins: ["wss://*.danil.ai"] }).admission("cmp_1");
+  assert.deepEqual(wild, { kind: "error", status: null, code: "invalid_admission_url" }, "un comodín no es un origen");
+});
+
+test("start no pide un Location con traversal, barras invertidas o separadores codificados", async () => {
+  for (const location of ["/v1/operations/%2e%2e\\identity\\me", "/v1/operations/..", "/v1/operations/op%2F..%2Fidentity", "/v1/operations/op\\x", "/v1/operations/op%5Cx", "/v1/operations/op/../../identity/me"]) {
+    const asked: string[] = [];
+    const api = machinesClient({ endpoint: "https://edge.danil.ai/v1", transport: {
+      mutation: async () => Response.json({ operation: { operation_id: "op", status: "pending" } }, { status: 202, headers: { Location: location } }),
+      call: async (path) => { asked.push(path); return Response.json(machine); },
+    } });
+    assert.deepEqual(await api.start("cmp_1"), { kind: "error", status: 202, code: "invalid_operation_location" }, location);
+    assert.deepEqual(asked, [], location);
+  }
 });
 
 test("ticket: el origen del relay es configurable; 409 machine_unreachable conserva su código", async () => {
@@ -146,7 +157,7 @@ test("web transport owns cookie and CSRF; the shared client never requests a bea
     },
     mutation: async (path: string, init?: RequestInit) => {
       calls.push({ path, init });
-      return Response.json({ ticket: 'ticket', url: 'wss://machines.danil.ai/v1/machines/cmp_1/session', expires_at: 'expires', session_expires_at: 'session', protocol: 'danil.machine-session.v1' }, { status: 201 });
+      return Response.json({ ticket: 'ticket', url: 'wss://connect.danil.ai/v1/machines/cmp_1/session', expires_at: 'expires', session_expires_at: 'session', protocol: 'danil.machine-session.v1' }, { status: 201 });
     },
   };
   const api = machinesClient({ endpoint: 'https://edge.danil.ai/v1', transport, getToken: async () => { throw new Error('must not ask'); } });

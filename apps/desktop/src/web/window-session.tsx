@@ -19,7 +19,7 @@ import { createOrganizationSelection } from '../features/shell/organization-sele
 import { webOrganizationSource } from './organizations';
 import './phrases';
 
-declare const __DANIL_WEB_RELAY_ORIGIN__: string;
+declare const __DANIL_WEB_RELAY_ORIGINS__: string[];
 const FIRST_RETRY_MS = 1000;
 const POLL_MAX_MS = 30_000;
 
@@ -99,7 +99,7 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
       call: (path, init) => authorized(() => raw.call(path, init)),
       mutation: (path, init) => authorized(() => raw.mutation(path, init)),
     };
-    const machines = machinesClient({ endpoint: `${options.origin}/v1`, transport, relayOrigins: [__DANIL_WEB_RELAY_ORIGIN__, 'wss://*.danil.ai'] });
+    const machines = machinesClient({ endpoint: `${options.origin}/v1`, transport, relayOrigins: __DANIL_WEB_RELAY_ORIGINS__ });
     // Tras cambiar de organización la página se relee entera, como tras cambiar de workspace.
     const organizations = createOrganizationSelection(webOrganizationSource(transport), { onSelected: () => window.location.assign(home) });
     const [orgNeeded, setOrgNeeded] = createSignal(false);
@@ -197,7 +197,7 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
         disposeGate?.();
         disposeGate = undefined;
         mountedBefore = true;
-        windowApp = mountWindow({ machines, permits, relayOrigin: __DANIL_WEB_RELAY_ORIGIN__,
+        windowApp = mountWindow({ machines, permits, relayOrigin: __DANIL_WEB_RELAY_ORIGINS__[0],
           profile: webAccountProfile(transport), onUnauthorized: expired,
           onUnavailable: () => { setError('web.platform.unavailable'); gate(); later(); },
           workspaces: { rows, active, busy, uncertain, choose: id => void choose(id) },

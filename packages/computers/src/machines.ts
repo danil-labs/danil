@@ -50,7 +50,7 @@ export type MachinesConfig = {
   fetch?: MachinesFetch;
   /** La web inyecta el transporte con cookie y CSRF; con él nunca se pide un Bearer. */
   transport?: MachinesTransport;
-  /** Orígenes del relay que se aceptan en la URL del ticket (`RELAY_ORIGIN`). */
+  /** Orígenes exactos del relay que pueden recibir el ticket (`RELAY_ORIGIN`); sin lista, los del borde de producción. */
   relayOrigins?: readonly string[];
   now?: () => number;
   sleep?: (ms: number) => Promise<void>;
@@ -58,8 +58,12 @@ export type MachinesConfig = {
   operationTimeoutMs?: number;
 };
 
-/** Sin lista configurada, el relay puede vivir en cualquier subdominio de `danil.ai` (N2 de Mauricio); el host lo pone el ticket. */
-export const DEFAULT_RELAY_ORIGINS: readonly string[] = ["wss://*.danil.ai"];
+/**
+ * Los relays que sirven a `edge.danil.ai`, por origen exacto (machine-session.v1, Apertura §2): el puente de
+ * hoy (`computers`, `COMPUTE_RELAY_ORIGIN`) y el relay del contrato. Es la única lista para Desk y la web;
+ * un relay con otro nombre se añade aquí. Nunca un comodín: otro subdominio de Danil no recibe el ticket.
+ */
+export const DEFAULT_RELAY_ORIGINS: readonly string[] = ["wss://machines-session.danil.ai", "wss://connect.danil.ai"];
 export const OPERATION_TIMEOUT_MS = 330_000;
 const POLL_FIRST_MS = 500;
 const POLL_MAX_MS = 4_000;
@@ -115,9 +119,6 @@ export function admissionUrl(raw: unknown, machineId: string, origins: readonly 
   if (url.username || url.password || url.search || url.hash) return null;
   if (url.pathname !== `/v1/machines/${encodeURIComponent(machineId)}/session`) return null;
   const allowed = origins.some(origin => {
-    // `wss://*.danil.ai`: cualquier subdominio del relay, sin puerto (la web no se recompila si el relay cambia de nombre).
-    const wild = /^wss:\/\/\*\.([a-z0-9-]+(?:\.[a-z0-9-]+)+)$/i.exec(origin);
-    if (wild) return url.port === "" && new RegExp(`^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\\.${wild[1].replace(/\./g, "\\.")}$`, "i").test(url.hostname);
     try {
       const base = new URL(origin.replace(/^https?:/i, "wss:"));
       return base.protocol === "wss:" && base.pathname === "/" && !base.username && !base.password && !base.search && !base.hash && base.origin === url.origin;
@@ -179,7 +180,8 @@ export function machinesClient(config: MachinesConfig) {
     return Number.isFinite(at) ? Math.max(0, at - now()) : fallback;
   }
 
-  const operationPath = (location: string | null) => location && /^\/v1\/operations\/[^/?#]+$/.test(location) && !location.includes("..") ? location.slice("/v1".length) : null;
+  /** Solo `/v1/operations/{id}` con un id de caracteres seguros: sin `%`, `\\`, `.` ni separadores que el navegador normalice hacia otra ruta. */
+  const operationPath = (location: string | null) => location && /^\/v1\/operations\/[A-Za-z0-9_-]{1,128}$/.test(location) ? location.slice("/v1".length) : null;
 
   const readMachine = (body: unknown) => {
     const m = machineOf(body);
