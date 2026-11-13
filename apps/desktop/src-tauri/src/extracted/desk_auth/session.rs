@@ -557,6 +557,8 @@ impl<V: Vault> Desk<V> {
 
     /// Una llamada con el Bearer que conserva el status: solo un 401 se trata aquí
     /// (renueva una vez y repite). Un 404 o un 501 llegan tal cual a quien llama.
+    /// Un segundo 401 cierra la sesión solo si lo da `identity`: el de otro servicio
+    /// (máquinas, operaciones, tickets) llega como status y la sesión sigue.
     pub(crate) fn fetch(
         &self,
         method: &str,
@@ -572,7 +574,7 @@ impl<V: Vault> Desk<V> {
         }
         let live = self.access(true)?;
         let reply = request_keyed(&url, method, Some(&live.access_token), body, key)?;
-        if reply.status == 401 {
+        if reply.status == 401 && path.starts_with("/v1/identity/") {
             self.forget();
             return Err(Fail::NoSession);
         }

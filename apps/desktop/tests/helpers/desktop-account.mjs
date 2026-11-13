@@ -80,6 +80,7 @@ export async function open(name, { status = SIGNED_IN, token = TOKEN, computers 
   const renamed = [];
   const responses = local(calls, {
     danil_connect_status: status,
+    danil_session_status: status,
     ...(token ? { account_relay_token: token } : {}),
     ...extra,
   });

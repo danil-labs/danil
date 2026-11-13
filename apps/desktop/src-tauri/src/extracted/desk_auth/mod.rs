@@ -225,6 +225,8 @@ pub(super) fn danil_sign_out(app: tauri::AppHandle) -> Result<Value, Value> {
     CONNECT.fetch_add(1, Ordering::SeqCst);
     desk(&app).sign_out();
     super::agents_session::retire_legacy(&app);
+    // La cuenta del motor tampoco queda conectada; un motor sin la orden no impide salir.
+    let _ = super::proxy::engine_call(&app, "danil_disconnect", json!({}));
     *profile().lock().unwrap_or_else(PoisonError::into_inner) = None;
     let value = json!({ "state": "disconnected" });
     announce(&app, &value);

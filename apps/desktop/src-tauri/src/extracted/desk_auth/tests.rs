@@ -646,7 +646,7 @@ fn a_start_keeps_status_location_and_the_callers_key() {
 }
 
 #[test]
-fn fetch_renews_once_on_401_and_then_ends_the_session() {
+fn fetch_renews_once_on_401_and_only_identity_ends_the_session() {
     let (desk, log, vault) = signed_in(Arc::new(|r: &Req, _| match r.path.as_str() {
         "/v1/identity/desk/refresh" => (200, issued(2, 300)),
         "/v1/machines" if r.authorization.as_deref() == Some("Bearer acc_2") => {
@@ -662,12 +662,27 @@ fn fetch_renews_once_on_401_and_then_ends_the_session() {
         200
     );
     assert_eq!(count(&log, "/v1/identity/desk/refresh"), 1);
+    // Un 401 de máquinas u operaciones tras renovar no es de la sesión: llega como status.
+    for path in ["/v1/operations/op_9", "/v1/machines/cmp_1/tickets"] {
+        let method = if path.ends_with("tickets") {
+            "POST"
+        } else {
+            "GET"
+        };
+        assert_eq!(
+            desk.fetch(method, path, None, "k").unwrap().status,
+            401,
+            "{path}"
+        );
+        assert!(vault.load().is_some(), "{path}: la sesión sigue");
+    }
+    // El mismo 401 de identity, tras renovar, sí la cierra.
     assert_eq!(
-        desk.fetch("GET", "/v1/operations/op_9", None, "k")
-            .unwrap_err(),
+        desk.fetch("GET", "/v1/identity/me", None, "k").unwrap_err(),
         Fail::NoSession
     );
     assert!(vault.load().is_none());
+    assert!(!desk.has_session());
 }
 
 #[test]
