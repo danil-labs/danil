@@ -148,7 +148,7 @@ export default function Sidebar(props: {
    * `machine`, la del grupo partido por máquina (`""` es esta): la tarea se lanza en ella.
    */
   onNuevaTareaEn: (id: string, machine?: string) => void;
-  onDelete: (project: string, id: string) => Promise<boolean | void> | boolean | void;
+  onDelete: (project: string, id: string, members?: number) => Promise<boolean | void> | boolean | void;
   onMove: (project: string, id: string, to: string) => void;
   onEtapa: (project: string, id: string, etapa: Etapa | null) => void;
   onRenombrar: (project: string, id: string, title: string) => Promise<boolean | void> | boolean | void;
@@ -479,7 +479,7 @@ export default function Sidebar(props: {
         props.onPick(carpetaDe(s), s);
         setDesplegado(false);
       }}
-      onDelete={(s) => props.onDelete(carpetaDe(s), s)}
+      onDelete={(s, members) => props.onDelete(carpetaDe(s), s, members)}
       onEtapa={(s, etapa) => props.onEtapa(carpetaDe(s), s, etapa)}
       onRenombrar={(s, title) => props.onRenombrar(carpetaDe(s), s, title)}
       onPin={props.onPin ? (s, pinned) => props.onPin?.(carpetaDe(s), s, pinned) : undefined}
