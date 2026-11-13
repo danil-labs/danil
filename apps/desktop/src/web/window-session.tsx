@@ -4,10 +4,11 @@ import { machinesClient } from '@terminus/computers';
 import { aplicarLengua, t } from '../lib/i18n';
 import { setShellCacheScope } from '../lib/shellCache';
 import { seguirElTema } from '../lib/theme';
+import { Spinner } from '../ui/Spinner';
 import { Button } from '../ui/Button';
 import { ToastStack } from '../ui/Toast';
 import { webAccountProfile } from './account';
-import { platformSession, platformTransport, PlatformSessionError, type PlatformWorkspace, type PlatformProfile } from './platform-session';
+import { platformSession, platformTransport, PlatformSessionError, preparePlatformSession, type PlatformWorkspace, type PlatformProfile } from './platform-session';
 import type { WebSessionDeployment } from './session-config';
 import { workspaceSelection } from './workspace-selection';
 import { readCapabilities, supports, type CapabilitiesSnapshot } from './service-capabilities';
@@ -28,7 +29,9 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
     aplicarLengua();
     seguirElTema();
     const lifetime = new AbortController();
-    const request: typeof fetch = (input, init = {}) => lifetime.signal.aborted ? Promise.reject(new DOMException('The page was closed', 'AbortError')) : fetch(input, { ...init, signal: init.signal ? AbortSignal.any([init.signal, lifetime.signal]) : lifetime.signal });
+    let startupSignal: AbortSignal | undefined;
+    const [preparing, setPreparing] = createSignal(false);
+    const request: typeof fetch = (input, init = {}) => lifetime.signal.aborted ? Promise.reject(new DOMException('The page was closed', 'AbortError')) : fetch(input, { ...init, signal: AbortSignal.any([lifetime.signal, ...(startupSignal ? [startupSignal] : []), ...(init.signal ? [init.signal] : [])]) });
     const api = platformSession(options, request);
     const raw = platformTransport(options, request);
     const selection = workspaceSelection(api);
@@ -58,10 +61,10 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
       windowApp = undefined;
       disposeGate?.();
       root.replaceChildren();
-      disposeGate = render(() => <Show when={identified() && !signedOut()} fallback={<><ToastStack><UpdateNotice /></ToastStack><WorkosAuthPage loginUrl={api.loginUrl(home)} busy={!signedOut()} error={returnError} /></>}><main class="flex h-full flex-col gap-4 overflow-y-auto bg-bg p-10 text-neutral-950" data-web-gate="">
+      disposeGate = render(() => <Show when={(identified() || preparing()) && !signedOut()} fallback={<><ToastStack><UpdateNotice /></ToastStack><WorkosAuthPage loginUrl={api.loginUrl(home)} busy={!signedOut()} error={returnError} /></>}><main class="flex h-full flex-col gap-4 overflow-y-auto bg-bg p-10 text-neutral-950" data-web-gate="">
         <ToastStack><UpdateNotice /></ToastStack>
         <h1 class="m-0 font-display text-lead font-bold">{t('common.brand_name')}</h1>
-        <Show when={busy()}><p role="status">{t('web.auth.waiting')}</p></Show>
+        <Show when={busy()}><p class="flex items-center gap-2" role="status"><Spinner />{t(preparing() ? 'web.platform.preparing' : 'web.auth.waiting')}</p></Show>
         <Show when={error()}><p role="alert">{t(error())}</p><Button disabled={busy()} onClick={() => void load()}>{t('web.computers.retry')}</Button></Show>
         <Show when={!signedOut() && !busy()}>
           <Show when={orgNeeded() || noWorkspace() || error()}>
@@ -179,7 +182,8 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
     const redeemPromo = (code: string, key: string) => authorized(() => api.redeemPromo(code, key));
     async function logout() { await run(async () => { await api.logout(); expired(); }); }
     async function load() {
-      await run(async () => {
+      const read = async (signal?: AbortSignal) => {
+        startupSignal = signal;
         try { setCaps(await readCapabilities(transport)); }
         catch (cause) { if (cause instanceof PlatformSessionError && cause.status === 401) throw cause; }
         await selection.reconcile();
@@ -208,6 +212,15 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
           others: () => [], open: () => {}, add: () => {}, remove: async () => {}, signOut: () => void logout(),
         } });
         later(FIRST_RETRY_MS);
+      };
+      await run(async () => {
+        try {
+          if (mountedBefore) await read();
+          else await preparePlatformSession(read, lifetime.signal, () => {
+            setPreparing(true);
+            gate();
+          });
+        } finally { startupSignal = undefined; setPreparing(false); }
       });
     }
     const close = () => { stopped = true; clearTimeout(timer); lifetime.abort(); windowApp?.close(); disposeGate?.(); dispose(); };

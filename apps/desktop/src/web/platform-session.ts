@@ -91,3 +91,36 @@ export function platformSession(options: { origin: string; timeoutMs: number }, 
     async logout() { await mutation("identity/logout", { headers: { "Idempotency-Key": crypto.randomUUID() } }); },
   };
 }
+
+export async function preparePlatformSession<T>(read: (signal: AbortSignal) => Promise<T>, signal: AbortSignal, preparing: () => void): Promise<T> {
+  const deadline = Date.now() + 20_000;
+  const budget = AbortSignal.any([signal, AbortSignal.timeout(20_000)]);
+  let last: unknown;
+  for (let attempt = 0; ; attempt++) {
+    signal.throwIfAborted();
+    try { return await read(budget); }
+    catch (cause) {
+      signal.throwIfAborted();
+      if (budget.aborted && last) throw last;
+      if (!(cause instanceof PlatformSessionError) || ![403, 404].includes(cause.status) ||
+          ['workspace_selection_required', 'organization_selection_required'].includes(cause.code ?? '')) throw cause;
+      last = cause;
+      const remaining = deadline - Date.now();
+      if (remaining <= 0) throw cause;
+      preparing();
+      const hint = cause.retryAfter;
+      const seconds = hint && /^\d+$/.test(hint) ? Number(hint) * 1000 : NaN;
+      const retryAfter = hint ? (Number.isFinite(seconds) ? seconds : Date.parse(hint) - Date.now()) : 0;
+      const backoff = Math.min(500 * 2 ** attempt, 4000) * (1 + Math.random() / 4);
+      const delay = Math.max(backoff, Number.isFinite(retryAfter) ? retryAfter : 0);
+      await new Promise<void>((resolve, reject) => {
+        const finish = () => { signal.removeEventListener('abort', abort); resolve(); };
+        const timer = setTimeout(finish, Math.min(delay, remaining));
+        const abort = () => { clearTimeout(timer); signal.removeEventListener('abort', abort); reject(signal.reason); };
+        signal.addEventListener('abort', abort, { once: true });
+        if (signal.aborted) abort();
+      });
+      if (Date.now() >= deadline) throw cause;
+    }
+  }
+}

@@ -141,9 +141,13 @@ for (const status of [401, 403, 503]) test(`identity HTTP ${status} stays distin
   };
   fetcher.__jsdomApp = true; globalThis.fetch = fetcher;
   const app = await open(t, 'listo', `window-denied-${status}`, {}, undefined, { 'danil.web.previous.11.tasks': 'private' }, { web: true });
-  const selector = status === 401 ? 'a[href*="/v1/identity/login"]' : '[role="alert"]';
+  const selector = status === 401 ? 'a[href*="/v1/identity/login"]' : status === 403 ? '[role="status"] [data-spinner]' : '[role="alert"]';
   await until(() => app.w.document.querySelector(selector));
   assert.equal(app.w.document.querySelector('[data-tira]'), null);
+  if (status === 403) {
+    assert.match(app.w.document.querySelector('[role="status"]').textContent, /Preparando tu cuenta/);
+    assert.equal(app.w.document.querySelector('[role="alert"]'), null);
+  }
   assert.deepEqual(calls, ['/v1/capabilities', '/v1/identity/me']);
   assert.equal(app.w.localStorage.getItem('danil.web.previous.11.tasks'), status === 401 ? null : 'private');
   if (status !== 401) assert.equal(app.w.document.querySelector('a[href*="/login"]'), null);
@@ -261,4 +265,28 @@ for (const [label, me] of [
   assert.ok(gate().querySelector('[data-web-organization="org_B"][aria-pressed="true"]'), 'the active one is marked');
   assert.ok(gate().querySelector('[data-web-sign-out]'), 'sign out is offered');
   assert.ok(!calls.some(path => path.startsWith('/v1/compute')));
+});
+
+for (const status of [403, 404]) test(`startup HTTP ${status} shows preparation and recovers without an access error`, async t => {
+  let ready = false;
+  const fetcher = async input => {
+    const url = new URL(String(input));
+    if (url.origin === 'http://localhost' && url.pathname.includes('/assets/')) return new Response('');
+    if (url.pathname === '/v1/identity/me') {
+      if (!ready) return Response.json({ code: 'workspace_forbidden' }, { status, headers: { 'content-type': 'application/problem+json' } });
+      return Response.json({ id: 'user_A', name: 'Operator', workspace: '11', organizations: [] });
+    }
+    if (url.pathname === '/v1/workspaces') return Response.json({ items: [{ id: '11', org: 'org_A', name: 'Alpha', role: 'owner' }], next_cursor: null });
+    return new Response(null, { status: 404 });
+  };
+  fetcher.__jsdomApp = true; globalThis.fetch = fetcher;
+  const app = await open(t, 'listo', `account-preparing-${status}`, {}, undefined, {}, { web: true });
+  const doc = app.w.document;
+  await until(() => doc.querySelector('[role="status"] [data-spinner]'));
+  assert.match(doc.querySelector('[role="status"]').textContent, /Preparando tu cuenta/);
+  assert.equal(doc.querySelector('[role="alert"]'), null);
+  ready = true;
+  await until(() => doc.querySelector('[data-tira]'));
+  assert.equal(doc.querySelector('[data-web-gate]'), null);
+  assert.deepEqual(app.failures, []);
 });
