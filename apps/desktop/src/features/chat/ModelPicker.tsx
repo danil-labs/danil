@@ -43,7 +43,7 @@ type SelectorDeModeloProps = {
   disabled?: boolean;
   disabledReason?: string;
   onChange: (model: OpcionDeModelo) => void;
-  onCreditsPrepare?: () => void;
+  onCreditsPrepare?: () => Promise<void>;
   /** El agente de la tarea: los demás se ven, pero el candado dice por qué no se eligen. */
   lockedAgent?: string;
   lockedReason?: string | null;
@@ -322,7 +322,7 @@ export default function SelectorDeModelo(props: SelectorDeModeloProps) {
               aria-label={t("chat.credits.label")}
               aria-pressed={seccion() === "danil-credits"}
               title={t("chat.credits.label")}
-              onClick={() => { setSeccion("danil-credits"); setActivo(""); props.onCreditsPrepare?.(); }}
+              onClick={() => { setSeccion("danil-credits"); setActivo(""); }}
             >
               <MarcaAgente id="danil" size={17} />
             </button>
@@ -462,7 +462,7 @@ export default function SelectorDeModelo(props: SelectorDeModeloProps) {
               )}
             </For>
           </Show>
-          }><DanilCredits model={creditsModel()} disabled={props.disabled || !creditsModel() || !disponible(creditsModel()!)} onSelect={() => {
+          }><DanilCredits onPrepare={props.onCreditsPrepare} model={creditsModel()} disabled={props.disabled || !creditsModel() || !disponible(creditsModel()!)} onSelect={() => {
             const option = creditsModel();
             if (option) elegir(option.key);
           }} /></Show>

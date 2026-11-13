@@ -462,7 +462,6 @@
   "chat.credits.model": "DeepSeek V4.1 Flash",
   "chat.credits.select": "Select",
   "chat.credits.unavailable": "Unavailable",
-  "chat.credits.integration_pending": "Integration pending acceptance",
   "chat.credits.payer": "Paid by",
   "chat.credits.account": "Danil account",
   "chat.credits.balance": "Credit balance",
