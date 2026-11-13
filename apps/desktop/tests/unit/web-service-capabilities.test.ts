@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { readCapabilities, supports, type CapabilitiesSnapshot } from "../../src/web/service-capabilities.ts";
+import { capabilityList } from "@terminus/computers";
+import { readCapabilities, supports } from "../../src/web/service-capabilities.ts";
 import { PlatformSessionError } from "../../src/web/platform-session.ts";
 
 test("capabilities reads its versioned route and ignores unknown response fields", async () => {
@@ -31,7 +32,7 @@ for (const status of [404, 501]) {
 }
 
 test("a present snapshot disables omitted capabilities instead of guessing support", () => {
-  const snapshot: CapabilitiesSnapshot = { contract: "mvp-v1", items: [] };
+  const snapshot = capabilityList({ contract: "mvp-v1", items: [] });
   assert.equal(supports(snapshot, "machines"), false);
   assert.equal(supports(null, "machines"), true);
 });
@@ -40,7 +41,7 @@ for (const [version, status, expected] of [
   [1, "available", true], [1, "degraded", false], [1, "unavailable", false],
   [1, "future-status", false], [2, "available", false],
 ] as const) test(`capability v${version} ${status} has support ${expected}`, () => {
-  const snapshot: CapabilitiesSnapshot = { contract: "mvp-v1", items: [{ name: "machines", version, status }] };
+  const snapshot = capabilityList({ contract: "mvp-v1", items: [{ name: "machines", version, status }] });
   assert.equal(supports(snapshot, "machines"), expected);
 });
 
@@ -53,5 +54,12 @@ test("transport and malformed-response failures propagate without a legacy fallb
   const cause = new Error("network unavailable");
   await assert.rejects(readCapabilities({ call: async () => { throw cause; } }), error => error === cause);
   await assert.rejects(readCapabilities({ call: async () => Response.json({ contract: "mvp-v1" }) }));
-  await assert.rejects(readCapabilities({ call: async () => Response.json({ contract: "mvp-v1", items: [{ name: "machines", version: 0, status: "available" }] }) }));
+});
+
+test("one malformed item is ignored instead of discarding the whole list (unknown names and forms are ignored)", async () => {
+  const snapshot = await readCapabilities({ call: async () => Response.json({ contract: "mvp-v1", items: [
+    { name: "machines", version: 0, status: "available" }, { name: "workspaces", version: 1, status: "available" }, "noise", null,
+  ] }) });
+  assert.equal(supports(snapshot, "workspaces"), true);
+  assert.equal(supports(snapshot, "machines"), false);
 });

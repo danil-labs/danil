@@ -7,7 +7,7 @@
  * `GET /v1/capabilities` (Desk compilado no se recompila por cambios del servidor).
  * El canal de datos no pasa por aquí: va directo al relay con el ticket (`wss://*.danil.ai`).
  */
-import { type Computer, type Fetch, type MachinesAnswer, machineToComputer, machinesClient } from "@terminus/computers";
+import { type CapabilityList, type Computer, type Fetch, type MachinesAnswer, announces, capabilityList, machineToComputer, machinesClient, mayCall } from "@terminus/computers";
 
 /** Solo una base para armar rutas `/v1/...`; la webview no llama a este origen (lo hace Rust). */
 export const EDGE_ENDPOINT = "https://edge.danil.ai/v1";
@@ -46,14 +46,11 @@ export function edgeFetch(invoke: Invoke, onProblem?: (error: unknown) => void):
 export function createCloudMachines(invoke: Invoke, onProblem?: (error: unknown) => void, endpoint = EDGE_ENDPOINT) {
   const fetch = edgeFetch(invoke, onProblem);
   const client = machinesClient({ endpoint, fetch });
-  /** Lo que el borde anuncia como disponible; `null` si no sirve `/v1/capabilities` (entonces no guía nada). */
-  async function capabilities(): Promise<Set<string> | null> {
+  /** Lo que el borde anuncia (lectura común con la web, `@terminus/computers`); `null` si no sirve `/v1/capabilities`. */
+  async function capabilities(): Promise<CapabilityList | null> {
     try {
       const response = await fetch(`${endpoint}/capabilities`);
-      if (response.status !== 200) return null;
-      const items = ((await response.json()) as { items?: unknown } | null)?.items;
-      if (!Array.isArray(items)) return null;
-      return new Set(items.filter((c) => c?.status === "available" && typeof c.name === "string").map((c) => c.name as string));
+      return response.status === 200 ? capabilityList(await response.json()) : null;
     } catch {
       return null;
     }
@@ -64,9 +61,9 @@ export function createCloudMachines(invoke: Invoke, onProblem?: (error: unknown)
     /** Las máquinas como filas de flota; `available: false` cuando el servidor, la capacidad o la sesión aún no están (se reintenta solo). */
     async rows(): Promise<{ available: boolean; computers: Computer[]; renewInChannel: boolean }> {
       const caps = await capabilities();
-      if (caps && !caps.has("machines")) return { available: false, computers: [], renewInChannel: false };
+      if (!mayCall(caps, "machines")) return { available: false, computers: [], renewInChannel: false };
       const answer: MachinesAnswer<unknown> = await client.list();
-      if (answer.kind === "ok") return { available: true, computers: (answer.value as Parameters<typeof machineToComputer>[0][]).map(machineToComputer), renewInChannel: !!caps?.has("machines.session.renew") };
+      if (answer.kind === "ok") return { available: true, computers: (answer.value as Parameters<typeof machineToComputer>[0][]).map(machineToComputer), renewInChannel: announces(caps, "machines.session.renew") };
       return { available: false, computers: [], renewInChannel: false };
     },
   };

@@ -195,3 +195,4 @@ export { ACCOUNT_ASSET_MAX_BYTES, ACCOUNT_ASSET_TYPES, type AccountAssetKind, ty
 export { type PushDevice, type PushMode, type PushPreferences, type PushQuiet, forgetPushDevice, keyBytes, pushPreferences, pushPublicKey, savePushDevice, savePushPreferences, testPush } from "./push.ts";
 
 export { type Machine, type MachineOperation, type MachinesAnswer, type MachinesConfig, type MachinesTransport, type Admission as MachineAdmission, DEFAULT_RELAY_ORIGINS, admissionUrl, machineToComputer, machinesClient, retryUnavailable, wokeOf } from "./machines.ts";
+export { type CapabilityList, announces, capabilityList, mayCall } from "./capabilities.ts";

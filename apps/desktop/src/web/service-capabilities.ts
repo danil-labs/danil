@@ -1,10 +1,8 @@
-import { z } from "zod";
+import { type CapabilityList, capabilityList, mayCall } from "@terminus/computers";
 import { PlatformSessionError } from "./platform-session.ts";
 
-const capability = z.object({ name: z.string().min(1), version: z.number().int().min(1), status: z.string() });
-const snapshot = z.object({ contract: z.string(), items: z.array(capability) });
-export type ServiceCapability = z.infer<typeof capability>;
-export type CapabilitiesSnapshot = z.infer<typeof snapshot>;
+/** Lo que el borde anuncia, leído igual que en Desk (`@terminus/computers`, `capabilities.ts`). */
+export type CapabilitiesSnapshot = CapabilityList;
 export type CapabilitiesTransport = { call(path: string): Promise<Response> };
 
 /** An absent discovery route leaves the caller free to probe a preceding deployment. */
@@ -24,11 +22,11 @@ export async function readCapabilities(transport: CapabilitiesTransport): Promis
     await response.body?.cancel();
     throw new PlatformSessionError(response.status, response.headers.get("retry-after"));
   }
-  return snapshot.parse(await response.json());
+  const list = capabilityList(await response.json());
+  // Una respuesta 200 que no es una lista es un fallo del borde (se reintenta), no «sin descubrimiento».
+  if (list === null) throw new Error("invalid_capabilities");
+  return list;
 }
 
-export function supports(value: CapabilitiesSnapshot | null, name: string): boolean {
-  if (value === null) return true;
-  const item = value.items.find(item => item.name === name);
-  return item?.version === 1 && item.status === "available";
-}
+/** Anunciada en v1 y `available`, o sin lista publicada (la ruta misma contesta 404/501). */
+export const supports = mayCall;

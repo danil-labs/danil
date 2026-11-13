@@ -8,7 +8,7 @@ test("las llamadas van por danil_edge_fetch con la ruta y sin token", async () =
   const calls: { command: string; args?: Record<string, unknown> }[] = [];
   const cloud = createCloudMachines(async (command, args) => {
     calls.push({ command, args });
-    return { status: 200, body: args?.path === "/v1/capabilities" ? { items: [{ name: "machines", status: "available" }] } : { items: [machine] } };
+    return { status: 200, body: args?.path === "/v1/capabilities" ? { contract: "mvp-v1", items: [{ name: "machines", version: 1, status: "available" }] } : { items: [machine] } };
   });
   const rows = await cloud.rows();
   assert.equal(rows.available, true);
@@ -52,4 +52,26 @@ test("403 organization_selection_required llega al selector", async () => {
   const reply = await edgeFetch((async () => ({ status: 403, body })) as never, (e) => seen.push(e))("https://x/v1/machines");
   assert.equal(reply.status, 403);
   assert.deepEqual(seen, [{ detail: "organization_selection_required", status: 403, body }]);
+});
+
+test("Desk lee /v1/capabilities como la web: una versión que no conoce o un estado distinto de available no es «disponible» (edge.openapi Capability)", async () => {
+  for (const item of [{ name: "machines", version: 2, status: "available" }, { name: "machines", version: 1, status: "degraded" }, { name: "machines", status: "available" }]) {
+    const paths: unknown[] = [];
+    const cloud = createCloudMachines(async (_c, args) => {
+      paths.push(args?.path);
+      return { status: 200, body: args?.path === "/v1/capabilities" ? { contract: "mvp-v1", items: [item] } : { items: [machine], next_cursor: null } };
+    });
+    assert.equal((await cloud.rows()).available, false, JSON.stringify(item));
+    assert.deepEqual(paths, ["/v1/capabilities"], JSON.stringify(item));
+  }
+});
+
+test("la renovación en el canal solo vale anunciada en v1 y available; sin /v1/capabilities no se supone", async () => {
+  const caps = (renew: object | null) => async (_c: string, args?: Record<string, unknown>) =>
+    args?.path === "/v1/capabilities" ? (renew ? { status: 200, body: { contract: "mvp-v1", items: [{ name: "machines", version: 1, status: "available" }, renew] } } : { status: 404, body: null }) : { status: 200, body: { items: [machine], next_cursor: null } };
+  assert.equal((await createCloudMachines(caps({ name: "machines.session.renew", version: 1, status: "available" })).rows()).renewInChannel, true);
+  assert.equal((await createCloudMachines(caps({ name: "machines.session.renew", version: 2, status: "available" })).rows()).renewInChannel, false);
+  const absent = await createCloudMachines(caps(null)).rows();
+  assert.equal(absent.available, true, "sin descubrimiento se prueba la ruta");
+  assert.equal(absent.renewInChannel, false);
 });
