@@ -1,26 +1,8 @@
 #!/usr/bin/env node
 /**
- * **Que el front monte.** Arranca `dist/` de verdad y falla si el árbol no llega
- * a pintarse.
- *
- * Los guardas `mount-*` ejecutan el árbol en vez de leerlo, y esa es la clase
- * entera que cubre: **lo que solo se rompe al ejecutar**. Un prop compuesto con
- * `&&` dentro del JSX entrega `false` y no `null` —el compilador de Solid lo
- * booleaniza para memoizarlo—, así que el hijo lanza en el primer render y la
- * app abre en el esqueleto de `Setup`. `tsc` no puede verlo: para TypeScript esa
- * expresión es `T[] | null`, y la reescritura ocurre después, en Babel.
- *
- * **En jsdom y no en un navegador**, porque un guarda no puede abrirle una
- * ventana en la cara a nadie: con varias ramas en QA, una que aparece sola se
- * confunde con la que alguien está mirando. Lo que cuesta: jsdom no es WebKit ni
- * WebView2, así que esto afirma que **el árbol monta**, no que se vea bien.
- *
- * **El IPC va stubeado, y el stub es parte del guarda.** Sin
- * `__TAURI_INTERNALS__` el primer `invoke` rechaza y `Setup` no llega a montar
- * `App`, que es el código que hay que ejercitar. Un comando sin respuesta **no**
- * rompe el guarda: se rechaza igual que rechazaría un backend que falla. Se
- * arranca con la lista de superficies vacía a propósito, que es el instante en
- * que se rompió.
+ * Monta dist/ en jsdom con IPC simulado: cubre fallos de render que tsc no ve.
+ * La lista vacía de superficies ejercita el primer arranque.
+ * El aspecto nativo se verifica en la ventana real.
  */
 import assert from "node:assert/strict";
 import { sleep } from "../../tests/helpers/jsdom-app.mjs";
@@ -78,7 +60,7 @@ if (!broken) {
   const modelGroups = [...normal.w.document.querySelectorAll('[role="group"]')]
     .map((groupEl) => groupEl.getAttribute("aria-label"));
   const modelNote = normal.w.document.querySelector('[role="option"]')?.getAttribute("title");
-  assert.equal(modelNote, "en esta computadora, con Ollama", "a model note from the app goes through the catalogue");
+  assert.equal(modelNote, "el más capaz", "a model note from the app goes through the catalogue");
   if (separateSelector || modelButton?.getAttribute("aria-label") !== "Modelo: GPT-5.6") {
     console.error(
       `El chat no arrancó en el modelo usable del selector único: modelo=${JSON.stringify(modelButton?.getAttribute("aria-label"))}, grupos=${JSON.stringify(modelGroups)}.`,
