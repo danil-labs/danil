@@ -29,7 +29,7 @@ export type RelayConfig = {
   probe?: () => Promise<Blocked | null>;
 } & (
   | { getToken: () => string | Promise<string>; getAdmission?: never }
-  | { getAdmission: () => Promise<{ url: string; ticket: string }>; getToken?: never }
+  | { getAdmission: () => Promise<{ url: string; ticket: string; protocol?: string; session_expires_at?: string | null }>; getToken?: never }
 );
 
 /** Lo que detiene la sesión sin reintentar sola: la persona no tiene Terminus de pago (computers#22). */
@@ -64,6 +64,7 @@ export type EventsPage = {
 
 export type SocketLike = {
   readyState: number;
+  protocol?: string;
   send(data: string): void;
   close(code?: number, reason?: string): void;
   onopen: ((ev: unknown) => void) | null;
@@ -75,6 +76,7 @@ export type SocketLike = {
 export type SocketFactory = (url: string, protocols?: string[]) => SocketLike;
 
 export const SUBPROTOCOL = "danil.computers.v1";
+export const MACHINE_SESSION_PROTOCOL = "danil.machine-session.v1";
 const OPEN = 1;
 const BACKOFF = [500, 1000, 2000, 5000, 10000];
 const PING_EVERY = 20_000;
@@ -299,12 +301,17 @@ export class RelaySession {
       if (this.closed) return;
     }
     let token: string;
+    let protocol = SUBPROTOCOL;
+    let sessionExpires: number | null = null;
     let target = sessionUrl(this.config.endpoint, this.config.computerId, this.config.contracts);
     try {
       if (this.config.getAdmission) {
         const admission = await this.config.getAdmission();
         token = admission.ticket;
         target = admission.url;
+        protocol = admission.protocol ?? MACHINE_SESSION_PROTOCOL;
+        sessionExpires = timeOf(admission.session_expires_at);
+        if (protocol !== MACHINE_SESSION_PROTOCOL) throw new Error("unsupported_machine_protocol");
       } else if (this.config.getToken) token = await this.config.getToken();
       else throw new Error("relay_admission_required");
     } catch {
@@ -312,22 +319,35 @@ export class RelaySession {
     }
     if (this.closed) return;
     // Un WebSocket de navegador no puede poner Authorization; el relay rechaza el token en la query.
-    const protocols = [SUBPROTOCOL, `${this.config.getAdmission ? "ticket" : "bearer"}.${token}`];
+    const protocols = [protocol, `${this.config.getAdmission ? "ticket" : "bearer"}.${token}`];
     let socket: SocketLike;
     try {
       socket = this.factory(target, protocols);
     } catch {
       return this.reconnectLater();
     }
+    const previous = this.socket;
+    clearInterval(this.pinger);
     this.socket = socket;
     let opened = false;
     socket.onopen = () => {
       if (this.socket !== socket) return;
+      if (this.config.getAdmission && socket.protocol !== protocol) {
+        previous?.close(1000);
+        return this.close();
+      }
       opened = true;
+      previous?.close(1000);
       this.attempt = 0;
       this.missed = 0;
       this.token = token;
       if (!this.config.getAdmission) this.scheduleRenew(tokenExpiry(token));
+      else if (sessionExpires !== null) {
+        clearTimeout(this.renew);
+        const remaining = sessionExpires - Date.now();
+        const margin = Math.min(5000, Math.max(100, remaining / 10));
+        this.renew = setTimeout(() => { if (!this.closed && this.socket === socket) void this.connect(); }, Math.max(1, remaining - margin));
+      }
       clearInterval(this.pinger);
       this.pinger = setInterval(() => this.ping(), PING_EVERY);
       if (this.subscribed) this.send({ type: "subscribe", after: this.after });
@@ -341,6 +361,7 @@ export class RelaySession {
     socket.onclose = (event) => {
       if (this.socket !== socket) return;
       this.socket = null;
+      previous?.close(1000);
       clearInterval(this.pinger);
       clearTimeout(this.renew);
       for (const listener of this.linkListeners) listener(false);

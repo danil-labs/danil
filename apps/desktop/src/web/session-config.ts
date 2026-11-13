@@ -19,3 +19,11 @@ export function webSessionDeployment(env: Record<string, string | undefined>): W
   if (!Number.isInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > 60000) throw new Error("Invalid DANIL_WEB_API_TIMEOUT_MS");
   return { origin: url.origin, timeoutMs };
 }
+
+/** Only the configured secure relay origin can receive a one-use ticket. */
+export function webRelayOrigin(raw = "machines.danil.ai"): string {
+  const url = new URL(raw.includes("://") ? raw : `wss://${raw}`);
+  if (url.protocol === "https:") url.protocol = "wss:";
+  if (url.protocol !== "wss:" || url.username || url.password || url.pathname !== "/" || url.search || url.hash) throw new Error("Invalid RELAY_ORIGIN");
+  return url.origin;
+}

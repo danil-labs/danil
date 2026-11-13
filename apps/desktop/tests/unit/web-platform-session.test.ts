@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { platformSession, PlatformSessionError } from "../../src/web/platform-session.ts";
-import { webSessionDeployment } from "../../src/web/session-config.ts";
+import { webRelayOrigin, webSessionDeployment } from "../../src/web/session-config.ts";
 
 test("platform requires an explicit HTTPS edge origin and preserves its request budget", () => {
   for (const origin of ["https://edge.danil.ai", "https://edge.test:8443/"]) {
@@ -88,4 +88,10 @@ test("invalid bodies, repeated cursors and expired requests fail without partial
     init?.signal?.addEventListener("abort", () => { clearTimeout(deadline); reject(init.signal?.reason); }, { once: true });
   }));
   await assert.rejects(api.me(), { name: "TimeoutError" });
+});
+
+test("relay deployment only permits a secure ticket origin", () => {
+  assert.equal(webRelayOrigin(), "wss://machines.danil.ai");
+  for (const origin of ["relay.test:8443", "https://relay.test:8443/", "wss://relay.test:8443/"]) assert.equal(webRelayOrigin(origin), "wss://relay.test:8443");
+  for (const origin of ["ws://relay.test", "http://relay.test", "wss://user:secret@relay.test", "wss://relay.test/session", "wss://relay.test/?ticket=x", "wss://relay.test/#x"]) assert.throws(() => webRelayOrigin(origin), /Invalid RELAY_ORIGIN/);
 });

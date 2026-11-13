@@ -63,6 +63,8 @@ const rustSteps = [
 ];
 
 const steps = [
+  ["Organizations fall back and reconcile pending intents", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/web-organizations.test.ts")], root],
+  ["Service capabilities are optional and versioned", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/web-service-capabilities.test.ts")], root],
   ["Session caches are revoked and erased on logout", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/web-session-storage.test.ts")], root],
   ["Machine preferences stay with the browser person", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/web-machine-preferences.test.ts")], root],
   ["Messaging stays isolated from Desk and web", process.execPath, [join(root, "scripts/guards/messaging-isolation.mjs")], root],
@@ -679,7 +681,7 @@ const steps = [
   ["WSL detection reads English and Spanish states and maps failures", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/wsl-detection.test.ts")], root],
   ["WSL Linux user turns typed names into valid users", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/wsl-linux-user.test.ts")], root],
   ["Without an account the local guests are a fleet of their own and nothing goes to the account", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/local-fleet.test.mjs")], root],
-  ["Compute uses the edge session and relay tickets", process.execPath, ["--test", "--experimental-strip-types", join(root, "../../packages/computers/test/compute.test.ts")], root],
+  ["Machines follows the shared mvp-v1 contract", process.execPath, ["--test", "--experimental-strip-types", join(root, "../../packages/computers/test/machines.test.ts"), join(root, "../../packages/computers/test/machine-session.test.ts")], root],
   ["Danil Machines: session with contracts, token renewal, engine and tombstones", process.execPath, ["--test", "--experimental-strip-types", join(root, "../../packages/computers/test/computers.test.ts")], root],
   ["Danil Machines: an MCP block with written values, a URL with a password or an argument with a token does not cross the relay", process.execPath, ["--test", "--experimental-strip-types", join(root, "../../packages/computers/test/mcp-block.test.ts")], root],
   ["Danil Machines: account GitHub through the Worker, with its routes and codes", process.execPath, ["--test", "--experimental-strip-types", join(root, "../../packages/computers/test/github.test.ts")], root],

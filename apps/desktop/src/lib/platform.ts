@@ -24,6 +24,7 @@ export type AccountMachinesProps = {
 export type AccountComputersSource = {
   list: () => Promise<Answer<Computer[]>>;
   workspaces?: () => Promise<Answer<AccountWorkspace[]>>;
+  subscribe?: (changed: () => void) => () => void;
   rename?: (id: string, name: string) => Promise<Answer<{ computer_id: string; name: string }>>;
   /** Quien pinta nombres de máquina (la flota) toma el nuevo sin recargar. */
   onRenamed: (id: string, name: string) => void;
@@ -57,7 +58,10 @@ export type WebAccountsSource = {
   signOut: () => void;
 };
 
+export type OrganizationSource = { rows: () => { id: string; name: string }[]; active: () => string | null; busy: () => boolean; uncertain: () => boolean; choose: (id: string) => void };
+
 export type Capabilities = {
+  webOrganizations?: OrganizationSource;
   webWorkspaces?: { rows: () => { id: string; name: string }[]; active: () => string | null; busy: () => boolean; uncertain: () => boolean; choose: (id: string) => void };
 
   /** Saldo de la cuenta Danil desde un BFF autenticado; ausente hasta verificar el adaptador. */

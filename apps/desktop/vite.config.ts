@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 import { defineConfig, mergeConfig, type Plugin, type UserConfig } from "vite";
 import solid from "vite-plugin-solid";
 import tailwindcss from "@tailwindcss/vite";
-import { webSessionDeployment } from "./src/web/session-config";
+import { webSessionDeployment, webRelayOrigin } from "./src/web/session-config";
 
 const fonts = resolve(fileURLToPath(
   new URL("./node_modules/@excalidraw/excalidraw/dist/prod/fonts/", import.meta.url),
@@ -58,7 +58,8 @@ function webBuild(serve: boolean): UserConfig {
   const env = process.env;
   const session = webSessionDeployment(env);
   const base = `/${(env.TERMINUS_WEB_BASE ?? "/terminus/").replace(/^\/+|\/+$/g, "")}/`.replace("//", "/");
-  const connect = session.origin;
+  const relayOrigin = webRelayOrigin(env.RELAY_ORIGIN);
+  const connect = `${session.origin} ${relayOrigin}`;
   const version = JSON.parse(readFileSync(new URL("./package.json", import.meta.url), "utf8")).version as string;
   const root = fileURLToPath(new URL("./dist-web/", import.meta.url));
   const outDir = join(root, base);
@@ -99,6 +100,7 @@ function webBuild(serve: boolean): UserConfig {
     define: {
       __TERMINUS_VERSION__: JSON.stringify(version),
       __DANIL_WEB_API__: JSON.stringify(session),
+      __DANIL_WEB_RELAY_ORIGIN__: JSON.stringify(relayOrigin),
       "import.meta.env.TERMINUS_ALPHA": JSON.stringify(env.TERMINUS_WEB_ALPHA === "1"),
       "import.meta.env.TERMINUS_BROADCAST_WRITES": JSON.stringify(env.TERMINUS_WEB_BROADCAST_WRITES === "1"),
       "import.meta.env.TERMINUS_BROADCAST_DELIVERY": JSON.stringify(env.TERMINUS_WEB_BROADCAST_DELIVERY === "1"),

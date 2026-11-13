@@ -1,11 +1,15 @@
 import { z } from "zod";
 
-const workspaceId = z.string().regex(/^[1-9]\d*$/);
-const profile = z.object({ id: z.string().startsWith("user_"), name: z.string(), workspace: workspaceId, organizations: z.array(z.object({ id: z.string(), name: z.string() })) });
+const workspaceId = z.string().min(1);
+const organization = z.object({ id: z.string().min(1), name: z.string(), plan: z.string().optional(), type: z.string().optional(), role: z.string().optional() });
+const profile = z.object({ id: z.string().startsWith("user_"), name: z.string(), workspace: workspaceId.nullable(), organizations: z.array(organization), active_organization_id: z.string().nullable().optional() });
 const workspace = z.object({ id: workspaceId, org: z.string(), name: z.string(), role: z.string() });
 const page = z.object({ items: z.array(workspace), next_cursor: z.string().min(1).nullable() });
-const selection = z.object({ workspace: workspaceId, ctx: z.string().min(1), authz_ver: z.number().int().nonnegative() });
+const selection = z.object({ workspace: z.union([workspaceId, workspace]) });
+const organizationPage = z.object({ items: z.array(organization), next_cursor: z.string().nullable(), active_organization_id: z.string().nullable().optional() });
+const organizationSelection = z.object({ organization, workspace: workspaceId.nullable() });
 const csrf = z.object({ csrf_token: z.string().min(1).max(128) });
+export type PlatformOrganization = z.infer<typeof organization>;
 export type PlatformProfile = z.infer<typeof profile>;
 export type PlatformWorkspace = z.infer<typeof workspace>;
 
@@ -78,6 +82,27 @@ export function platformSession(options: { origin: string; timeoutMs: number }, 
       return selection.parse(await (await mutation("workspaces/select", {
         headers: { "Content-Type": "application/json", "Idempotency-Key": idempotencyKey },
         body: JSON.stringify({ workspace: id }),
+      })).json());
+    },
+    async organizations() {
+      const items: PlatformOrganization[] = [];
+      const cursors = new Set<string>();
+      let cursor: string | null = null;
+      let active: string | null = null;
+      do {
+        const result = organizationPage.parse(await (await call(`identity/organizations${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ""}`)).json());
+        items.push(...result.items);
+        if (result.active_organization_id !== undefined) active = result.active_organization_id;
+        cursor = result.next_cursor;
+        if (cursor && cursors.has(cursor)) throw new Error("Repeated organization cursor");
+        if (cursor) cursors.add(cursor);
+      } while (cursor);
+      return { items, active_organization_id: active };
+    },
+    async selectOrganization(id: string, idempotencyKey: string) {
+      return organizationSelection.parse(await (await mutation("identity/organizations/select", {
+        headers: { "Content-Type": "application/json", "Idempotency-Key": idempotencyKey },
+        body: JSON.stringify({ organization_id: id }),
       })).json());
     },
     async logout() { await mutation("identity/logout", { headers: { "Idempotency-Key": crypto.randomUUID() } }); },
