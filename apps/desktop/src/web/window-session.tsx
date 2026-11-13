@@ -12,6 +12,8 @@ import type { WebSessionDeployment } from './session-config';
 import { workspaceSelection } from './workspace-selection';
 import { UpdateNotice } from './UpdateNotice';
 import { mountWindow } from './window';
+import { createOrganizationSelection } from '../features/shell/organization-selection';
+import { webOrganizationSource } from './organizations';
 import './phrases';
 
 export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
@@ -43,6 +45,9 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
         <Show when={signedOut()}><Button as="a" href={api.loginUrl(home)}>{t('web.auth.signin')}</Button></Show>
         <Show when={busy()}><p role="status">{t('web.auth.waiting')}</p></Show>
         <Show when={error()}><p role="alert">{t(error())}</p><Button disabled={busy()} onClick={() => void load()}>{t('web.computers.retry')}</Button></Show>
+        <Show when={!signedOut() && !busy() && orgNeeded()}>
+          <For each={(() => { const s = organizations.state(); return s.kind === 'ready' ? s.items : []; })()}>{org => <Button onClick={() => void organizations.choose(org.id)}>{org.name}</Button>}</For>
+        </Show>
         <Show when={!signedOut() && !busy() && !error()}>
           <p>{t('web.platform.empty')}</p>
           <For each={rows()}>{row => <Button onClick={() => void choose(row.id)}>{row.name}</Button>}</For>
@@ -62,6 +67,7 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
       try { return await action(); }
       catch (cause) {
         if (cause instanceof PlatformSessionError && cause.status === 401) expired();
+        organizations.report(cause);
         throw cause;
       }
     }
@@ -70,6 +76,11 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
       mutation: (path, init) => authorized(() => raw.mutation(path, init)),
     };
     const compute = computeClient(transport);
+    // Tras cambiar de organización la página se relee entera, como tras cambiar de workspace.
+    const organizations = createOrganizationSelection(webOrganizationSource(transport), { onSelected: () => window.location.assign(home) });
+    const [orgNeeded, setOrgNeeded] = createSignal(false);
+    organizations.subscribe(() => setOrgNeeded(organizations.needed()));
+    const loadOrganizations = () => Promise.resolve(organizations);
     async function run(action: () => Promise<void>) {
       if (busy() || stopped) return;
       setBusy(true);
@@ -77,6 +88,7 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
       try { await action(); }
       catch (cause) {
         if (cause instanceof PlatformSessionError && cause.status === 401) expired();
+        else if (organizations.report(cause)) gate();
         else { setError(cause instanceof PlatformSessionError && cause.status === 403 ? 'web.platform.denied' : 'web.platform.unavailable'); gate(); }
       } finally {
         setActive(signedOut() ? null : selection.active());
@@ -124,6 +136,7 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
           compute, profile: webAccountProfile(transport), onUnauthorized: expired,
           onUnavailable: () => { setError("web.platform.unavailable"); gate(); },
           workspaces: { rows, active, busy, uncertain, choose: id => void choose(id) },
+          organizations: loadOrganizations,
         }, { storage, webAccounts: {
           current: { user_id: person.id, name: person.name, email: null, extra: false },
           others: () => [], open: () => {}, add: () => {}, remove: async () => {}, signOut: () => void logout(),
@@ -133,6 +146,7 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
     const close = () => { stopped = true; windowApp?.close(); disposeGate?.(); dispose(); };
     window.addEventListener('pagehide', close, { once: true });
     gate();
+    void organizations.load();
     void load();
     return close;
   });

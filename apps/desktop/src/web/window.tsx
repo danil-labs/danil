@@ -13,7 +13,7 @@ import type { MachineRow, MachineStatus } from "./SyncNote";
 import type { AccountProfileSource } from "../features/settings/account-profile";
 
 declare const __TERMINUS_VERSION__: string;
-type Base = { compute: ReturnType<typeof computeClient>; profile: AccountProfileSource; workspaces: NonNullable<Capabilities["webWorkspaces"]>; onUnauthorized: () => void; onUnavailable: () => void; };
+type Base = { compute: ReturnType<typeof computeClient>; profile: AccountProfileSource; workspaces: NonNullable<Capabilities["webWorkspaces"]>; organizations?: Capabilities["organizations"]; onUnauthorized: () => void; onUnavailable: () => void; };
 const RELIST_SOON = 1_000;
 const UNLINKED_AGAIN = 60_000;
 const Picker = lazy(() => import("../features/machines/MachinePicker").then(m => ({ default: m.MachinePicker })));
@@ -148,6 +148,7 @@ export function mountWindow(computers: Computer[], base: Base, mounted: Mounted)
     nativeWindow: false, updater: false, localSetup: false, computerStatus: true, browserFiles: true, appDownloads: true,
     accountProfile: base.profile,
     webWorkspaces: base.workspaces,
+    organizations: base.organizations,
     initialSettings: takeSettingsParam(),
     machineName: (id) => fleet.name(id),
     taskMachine: (id) => unwrap(id, fleet.remotes())?.machine ?? null,

@@ -79,6 +79,8 @@
   "shell.startup.not_private": "La selección del motor no es privada: otra cuenta del equipo puede leerla, o es un enlace. Créala de nuevo solo para tu usuario.",
   "shell.startup.title": "Danil no pudo abrir",
   "shell.profile.menu": "Tu cuenta y preferencias",
+  "shell.organization.title": "Organización",
+  "shell.organization.error": "No se pudo cambiar de organización. Inténtalo de nuevo.",
   "shell.profile.theme": "Tema",
   "shell.sidebar.actions": "Acciones",
   "shell.sidebar.clone_unnamed": "Proyecto sin nombre",

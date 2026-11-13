@@ -79,6 +79,8 @@
   "shell.startup.not_private": "The engine selection is not private: another account on this computer can read it, or it is a link. Create it again for your user only.",
   "shell.startup.title": "Danil could not open",
   "shell.profile.menu": "Your account and preferences",
+  "shell.organization.title": "Organization",
+  "shell.organization.error": "Could not switch organization. Try again.",
   "shell.profile.theme": "Theme",
   "shell.sidebar.actions": "Actions",
   "shell.sidebar.clone_unnamed": "Unnamed project",
