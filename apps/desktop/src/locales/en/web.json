@@ -112,6 +112,8 @@
   "web.auth.identity_unavailable": "Sign-in is not available right now. Try again in a few minutes.",
   "web.computers.no_account": "Your session is valid, but your Danil account could not be found. Try again or contact support; you do not need to create another identity.",
   "web.admin.title": "Harness",
+  "web.auth.access_hint": "Need access to Danil? Email us to request it.",
+  "web.auth.access_email_hint": "Your email app will open. If it does not, copy this address:",
   "web.auth.request_access": "Request access",
   "web.auth.access_subject": "Request access to Danil",
   "web.auth.access_contact": "Questions? Write to {email}",

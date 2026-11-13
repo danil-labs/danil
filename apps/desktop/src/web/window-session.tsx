@@ -12,6 +12,7 @@ import type { WebSessionDeployment } from './session-config';
 import { workspaceSelection } from './workspace-selection';
 import { readCapabilities, supports, type CapabilitiesSnapshot } from './service-capabilities';
 import { UpdateNotice } from './UpdateNotice';
+import { WorkosAuthPage, signInError } from './auth/workos';
 import { mountWindow } from './window';
 import { sessionStorageScope, clearWebCaches } from './session-storage';
 import { createOrganizationSelection } from '../features/shell/organization-selection';
@@ -38,6 +39,9 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
     const [uncertain, setUncertain] = createSignal(false);
     const [error, setError] = createSignal('');
     const [signedOut, setSignedOut] = createSignal(false);
+    // Hasta que identity contesta, la ventana muestra la pantalla de entrada original esperando.
+    const [identified, setIdentified] = createSignal(false);
+    const returnError = signInError(window.location.search);
     let windowApp: ReturnType<typeof mountWindow> | undefined;
     let disposeGate: (() => void) | undefined;
     let person: PlatformProfile | undefined;
@@ -54,10 +58,9 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
       windowApp = undefined;
       disposeGate?.();
       root.replaceChildren();
-      disposeGate = render(() => <main class="flex h-full flex-col gap-4 overflow-y-auto bg-bg p-10 text-neutral-950" data-web-gate="">
+      disposeGate = render(() => <Show when={identified() && !signedOut()} fallback={<WorkosAuthPage loginUrl={api.loginUrl(home)} busy={!signedOut()} error={returnError} />}><main class="flex h-full flex-col gap-4 overflow-y-auto bg-bg p-10 text-neutral-950" data-web-gate="">
         <ToastStack><UpdateNotice /></ToastStack>
         <h1 class="m-0 font-display text-lead font-bold">{t('common.brand_name')}</h1>
-        <Show when={signedOut()}><Button as="a" href={api.loginUrl(home)}>{t('web.auth.signin')}</Button></Show>
         <Show when={busy()}><p role="status">{t('web.auth.waiting')}</p></Show>
         <Show when={error()}><p role="alert">{t(error())}</p><Button disabled={busy()} onClick={() => void load()}>{t('web.computers.retry')}</Button></Show>
         <Show when={!signedOut() && !busy()}>
@@ -70,7 +73,7 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
           </Show>
           <Button variant="ghost" data-web-sign-out="" onClick={() => void logout()}>{t('web.platform.sign_out')}</Button>
         </Show>
-      </main>, root);
+      </main></Show>, root);
     }
     function expired() {
       if (stopped || signedOut()) return;
@@ -165,6 +168,7 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
         setActive(signedOut() ? null : selection.active());
         setUncertain(selection.uncertain());
         setBusy(false);
+        setIdentified(true);
       }
     }
     async function choose(id: string) {
