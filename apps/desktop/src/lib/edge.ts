@@ -18,6 +18,8 @@ export type Patience = {
   signal?: AbortSignal;
   /** Primera espera entre intentos (por defecto 1 s). */
   minDelayMs?: number;
+  idempotencyKey?: string;
+  retryBudgetMs?: number;
 };
 
 const CEILING_MS = 60_000;
@@ -32,7 +34,7 @@ export function nextDelay(attempt: number, hintMs: number | undefined, minDelayM
 export type EdgeReply<T = unknown> = { status: number; body: T; location?: string; idempotency_key?: string; retry_after_ms?: number };
 
 /** Un status que no es 2xx ni se reintenta: `detail` es el `code` del `problem+json`. */
-export type EdgeRefusal = { detail: string; status: number; body: unknown };
+export type EdgeRefusal = { detail: string; status: number; body: unknown; retry_after_ms?: number };
 
 const RETRIED_STATUS = new Set([404, 429, 501, 503]);
 
@@ -59,7 +61,13 @@ const sleep = (ms: number, signal?: AbortSignal) =>
       resolve(waited);
     };
     const abort = () => finish(false);
-    const timer = setTimeout(() => finish(true), ms);
+    const deadline = Date.now() + ms;
+    const tick = () => {
+      const remaining = deadline - Date.now();
+      if (remaining <= 0) finish(true);
+      else timer = setTimeout(tick, Math.min(remaining, 2 ** 31 - 1));
+    };
+    let timer = setTimeout(tick, Math.min(ms, 2 ** 31 - 1));
     signal?.addEventListener("abort", abort, { once: true });
   });
 
@@ -75,18 +83,19 @@ export function edgeFetch<T = unknown>(method: "GET" | "POST", path: string, bod
  * Reintenta hasta un 2xx (o hasta `signal`) y devuelve la respuesta entera
  * (`Location` incluida). Las escrituras repiten su `Idempotency-Key`.
  */
-export async function edgeUntil<T = unknown>(method: "GET" | "POST", path: string, body?: unknown, patience: Patience = {}): Promise<EdgeReply<T>> {
-  const key = method === "POST" ? crypto.randomUUID() : undefined;
+export async function edgeUntil<T = unknown>(method: "GET" | "POST", path: string, body?: unknown, patience: Patience = {}, send: typeof edgeFetch = edgeFetch): Promise<EdgeReply<T>> {
+  const key = method === "POST" ? patience.idempotencyKey ?? crypto.randomUUID() : undefined;
+  const deadline = Date.now() + (patience.retryBudgetMs ?? Infinity);
   let last: unknown;
   for (let attempt = 0; ; attempt++) {
     patience.signal?.throwIfAborted();
     let wait: number | undefined;
     try {
-      const reply = await edgeFetch<T>(method, path, body, key);
+      const reply = await send<T>(method, path, body, key);
       if (reply.status >= 200 && reply.status < 300) return reply;
       const code = (reply.body as { code?: unknown } | null)?.code;
-      last = { detail: typeof code === "string" ? code : `http_${reply.status}`, status: reply.status, body: reply.body } satisfies EdgeRefusal;
-      if (!RETRIED_STATUS.has(reply.status)) {
+      last = { detail: typeof code === "string" ? code : `http_${reply.status}`, status: reply.status, body: reply.body, retry_after_ms: reply.retry_after_ms } satisfies EdgeRefusal;
+      if (!RETRIED_STATUS.has(reply.status) || (reply.status === 404 && typeof code === "string" && code.endsWith("_not_found"))) {
         problemListener?.(last as EdgeRefusal);
         throw last;
       }
@@ -97,7 +106,9 @@ export async function edgeUntil<T = unknown>(method: "GET" | "POST", path: strin
       last = e;
       wait = hint(e);
     }
-    if (!(await sleep(nextDelay(attempt, wait, patience.minDelayMs) * (1 + Math.random() / 4), patience.signal))) throw last;
+    const delay = nextDelay(attempt, wait, patience.minDelayMs) * (1 + Math.random() / 4);
+    if (Date.now() + delay > deadline) throw last;
+    if (!(await sleep(delay, patience.signal))) throw last;
   }
 }
 

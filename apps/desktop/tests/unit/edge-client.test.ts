@@ -139,3 +139,25 @@ test("an already cancelled write never reaches the edge", async () => {
   await assert.rejects(selectWorkspace("ws_1", { signal: stop.signal }));
   assert.equal(calls.length, 0);
 });
+
+test("a missing resource is a refusal, distinct from a route not deployed yet", async () => {
+  const calls = window(() => ({ status: 404, body: { code: "workspace_not_found" } }));
+  const { selectWorkspace } = await edge();
+  await assert.rejects(selectWorkspace("gone"), (e: unknown) => (e as { detail: string }).detail === "workspace_not_found");
+  assert.equal(calls.length, 1);
+});
+
+test("a huge Retry-After never overflows the timer", async (t) => {
+  const stop = new AbortController();
+  const delays: number[] = [];
+  const original = globalThis.setTimeout;
+  t.mock.method(globalThis, "setTimeout", (_fn: () => void, ms: number) => {
+    delays.push(ms);
+    return original(() => stop.abort(), 0);
+  });
+  window(() => ({ status: 503, body: {}, retry_after_ms: 3_000_000_000 }));
+  const { me } = await edge();
+  await assert.rejects(me({ signal: stop.signal }));
+  assert.ok(delays.length > 0);
+  assert.ok(delays.every(ms => ms <= 2 ** 31 - 1));
+});
