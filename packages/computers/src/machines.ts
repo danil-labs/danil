@@ -76,6 +76,11 @@ export function machineToComputer(m: Machine): Computer {
   return { computer_id: m.machine_id, name: m.name ?? null, state, wakeable: true, provider: null };
 }
 
+/** `Location` como ruta bajo `/v1`, solo si es del mismo borde (sin host); si no, se ignora. */
+function locationOf(raw: string | null | undefined): string | null {
+  return typeof raw === "string" && /^\/v1\/[A-Za-z0-9_\-\/]+$/.test(raw) ? raw.slice(3) : null;
+}
+
 function machineOf(raw: unknown): Machine | null {
   const r = raw as Record<string, unknown> | null;
   if (!r || typeof r.machine_id !== "string" || !r.machine_id || typeof r.state !== "string") return null;
@@ -115,7 +120,7 @@ export function machinesClient(config: MachinesConfig) {
   const url = (path: string) => apiUrl(config.endpoint, path);
   const idPath = (id: string) => `/machines/${encodeURIComponent(id)}`;
 
-  async function call<T>(collection: boolean, method: string, path: string, read: (body: unknown) => T, ok: number[] = [200]): Promise<MachinesAnswer<T>> {
+  async function call<T>(collection: boolean, method: string, path: string, read: (body: unknown, response?: Awaited<ReturnType<Fetch>>) => T, ok: number[] = [200]): Promise<MachinesAnswer<T>> {
     let response: Awaited<ReturnType<Fetch>>;
     try {
       const headers: Record<string, string> = { authorization: `Bearer ${await config.getToken()}` };
@@ -139,7 +144,7 @@ export function machinesClient(config: MachinesConfig) {
       return code ? { kind: "error", status, code } : { kind: "error", status };
     }
     try {
-      return { kind: "ok", value: read(body) };
+      return { kind: "ok", value: read(body, response) };
     } catch {
       return { kind: "error", status };
     }
@@ -170,18 +175,20 @@ export function machinesClient(config: MachinesConfig) {
      * código de la operación; `409 not_remotely_startable` conserva su código.
      */
     async start(id: string): Promise<MachinesAnswer<Machine>> {
-      const accepted = await call(false, "POST", `${idPath(id)}/start`, (body) => ({ operation: operationOf(body), machine: machineOf((body as { machine?: unknown } | null)?.machine) }), [200, 202]);
+      const accepted = await call(false, "POST", `${idPath(id)}/start`, (body, response) => ({ operation: operationOf(body), machine: machineOf((body as { machine?: unknown } | null)?.machine), location: locationOf(response?.headers?.get("location")) }), [200, 202]);
       if (accepted.kind !== "ok") return accepted;
       const first = accepted.value.operation;
       if (!first) return { kind: "error", status: 202, code: "invalid_operation" };
       const deadline = now() + (config.operationTimeoutMs ?? OPERATION_TIMEOUT_MS);
+      // El cliente sigue `Location` (hoy `/v1/operations/{id}`); sin él, la ruta del contrato.
+      const operationPath = accepted.value.location ?? `/operations/${encodeURIComponent(first.operation_id)}`;
       let operation = first;
       let wait = POLL_FIRST_MS;
       while (!TERMINAL.has(operation.status)) {
         if (now() >= deadline) return { kind: "error", status: null, code: "operation_timeout" };
         await sleep(wait);
         wait = Math.min(wait * 2, POLL_MAX_MS);
-        const next = await call(false, "GET", `/machines/operations/${encodeURIComponent(operation.operation_id)}`, (body) => {
+        const next = await call(false, "GET", operationPath, (body) => {
           const op = operationOf(body);
           if (!op) throw new Error("invalid_operation");
           return op;

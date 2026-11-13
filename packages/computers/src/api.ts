@@ -46,6 +46,7 @@ export type Answer<T> =
 export type Fetch = (input: string, init?: { method?: string; headers?: Record<string, string>; body?: string }) => Promise<{
   status: number;
   ok: boolean;
+  headers?: { get(name: string): string | null };
   json(): Promise<unknown>;
 }>;
 
