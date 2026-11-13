@@ -128,3 +128,79 @@ test("sin sesión nativa, capacidades deniega la nube en vez de reintentar", asy
   const cloud = createCloudMachines(async () => { throw { detail: "no_session" }; });
   assert.deepEqual(await cloud.rows(), { state: "denied" });
 });
+
+test("the native adapter preserves the write key and Retry-After", async () => {
+  const calls: Record<string, unknown>[] = [];
+  const fetch = edgeFetch(async (_command, args) => {
+    calls.push(args ?? {});
+    return { status: 202, body: { accepted: true }, retry_after_ms: 120_000 };
+  });
+  const reply = await fetch("https://edge.danil.ai/v1/machines/cmp_1/start", {
+    method: "POST", headers: { "Idempotency-Key": "original-operation" }, body: "{}",
+  });
+  assert.equal(calls[0].idempotencyKey, "original-operation");
+  assert.equal(reply.headers?.get("Retry-After"), "120");
+});
+
+test("native failures keep Retry-After as well", async () => {
+  const fetch = edgeFetch(async () => { throw { detail: "unavailable", retry_after_ms: 120_000 }; });
+  const reply = await fetch("https://edge.danil.ai/v1/machines");
+  assert.equal(reply.status, 503);
+  assert.equal(reply.headers?.get("Retry-After"), "120");
+});
+
+test("one machine write retries the same intent after a lost native response", async () => {
+  const calls: Record<string, unknown>[] = [];
+  const fetch = edgeFetch(async (_command, args) => {
+    calls.push(args ?? {});
+    if (calls.length === 1) throw { detail: "unavailable" };
+    return { status: 202, body: { accepted: true } };
+  }, undefined, { minDelayMs: 1 });
+  const reply = await fetch("https://edge.danil.ai/v1/machines/cmp_1/start", {
+    method: "POST", headers: { "Idempotency-Key": "same-intent" }, body: "{}",
+  });
+  assert.equal(reply.status, 202);
+  assert.equal(calls.length, 2);
+  assert.deepEqual(calls.map(c => c.idempotencyKey), ["same-intent", "same-intent"]);
+});
+
+test("a deleted machine returns missing instead of retrying a generic not_found", async () => {
+  let calls = 0;
+  const cloud = createCloudMachines(async () => { calls++; return { status: 404, body: { code: "not_found" } }; });
+  assert.equal((await cloud.client.start("gone")).kind, "missing");
+  assert.equal(calls, 1);
+});
+
+test("a retry hint outside the machine intent budget returns without a delayed effect", async () => {
+  let calls = 0;
+  const cloud = createCloudMachines(async () => { calls++; return { status: 503, body: {}, retry_after_ms: 120_000 }; });
+  assert.equal((await cloud.client.start("cmp_1")).kind, "error");
+  assert.equal(calls, 1);
+});
+
+test("changing context cancels a pending machine write", async () => {
+  const { cancelEdgeWrites } = await import("../../src/lib/edge.ts");
+  let calls = 0;
+  const cloud = createCloudMachines(async () => {
+    calls++;
+    queueMicrotask(cancelEdgeWrites);
+    throw { detail: "unavailable" };
+  });
+  assert.equal((await cloud.client.start("cmp_1")).kind, "error");
+  assert.equal(calls, 1);
+});
+
+test("the organization selector cancels the previous machine intent before selecting", async () => {
+  const { cancelEdgeWrites } = await import("../../src/lib/edge.ts");
+  const { edgeOrganizationSource } = await import("../../src/features/shell/organization-edge.ts");
+  let entered!: () => void;
+  const firstAttempt = new Promise<void>(resolve => { entered = resolve; });
+  let writes = 0;
+  const cloud = createCloudMachines(async () => { writes++; entered(); throw { detail: "unavailable" }; });
+  const pending = cloud.client.start("cmp_1");
+  await firstAttempt;
+  const selector = edgeOrganizationSource(async () => ({ status: 200, body: { organization: { id: "org_other" }, workspace: null } }), cancelEdgeWrites);
+  await selector.select("org_other", "select-intent");
+  assert.equal((await pending).kind, "error");
+  assert.equal(writes, 1);
+});

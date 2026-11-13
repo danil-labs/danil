@@ -9,6 +9,8 @@
  */
 import { type CapabilityList, type Computer, type Fetch, type MachinesAnswer, announces, capabilityList, machineToComputer, machinesClient, mayCall } from "@terminus/computers";
 
+import { edgeUntil, type EdgeReply as NativeReply, type Patience } from "../../lib/edge.ts";
+
 /** Solo una base para armar rutas `/v1/...`; la webview no llama a este origen (lo hace Rust). */
 export const EDGE_ENDPOINT = "https://edge.danil.ai/v1";
 export const CLOUD_RETRY_MS = 30_000;
@@ -17,34 +19,44 @@ export const CLOUD_RETRY_INITIAL_MS = 1_000;
 type CloudRows = { state: "ready"; computers: Computer[]; renewInChannel: boolean } | { state: "unavailable" | "retrying" | "denied" };
 
 type Invoke = (command: string, args?: Record<string, unknown>) => Promise<unknown>;
-type EdgeError = { detail?: unknown; status?: unknown };
+type EdgeError = { detail?: unknown; status?: unknown; retry_after_ms?: number; body?: unknown };
 
 export type CloudMachines = ReturnType<typeof createCloudMachines>;
 
-/** Lo que contesta `danil_edge_fetch`: el status del borde tal cual, su cuerpo y `Location`. */
-type EdgeReply = { status: number; body: unknown; location?: string };
-
-/** `danil_edge_fetch` con la forma de un `fetch`. Sin sesión (`Err no_session`) es 401; sin red, 503; nunca lleva tokens. */
-export function edgeFetch(invoke: Invoke, onProblem?: (error: unknown) => void): Fetch {
+/** El adaptador conserva el recibo nativo; solo las escrituras necesitan reintento por intención. */
+export function edgeFetch(invoke: Invoke, onProblem?: (error: unknown) => void, patience: Patience = {}): Fetch {
+  const send = <T>(method: "GET" | "POST", path: string, body?: unknown, idempotencyKey?: string) =>
+    invoke("danil_edge_fetch", { method, path, ...(method === "POST" ? { body, idempotencyKey } : {}) }) as Promise<NativeReply<T>>;
   return async (input, init) => {
     const method = init?.method ?? "GET";
+    if (method !== "GET" && method !== "POST") return { status: 400, ok: false, json: async () => ({ code: "invalid_request" }) };
+    let body: unknown;
+    try { body = JSON.parse(init?.body ?? "{}"); }
+    catch { return { status: 400, ok: false, json: async () => ({ code: "invalid_request" }) }; }
     // Ruta y query (la página siguiente de `/v1/machines`); Rust solo deja pasar las del contrato.
     const url = new URL(input);
     const path = url.pathname + url.search;
-    let reply: EdgeReply;
+    let reply: NativeReply;
     try {
-      reply = (await invoke("danil_edge_fetch", method === "GET" ? { method, path } : { method, path, body: {} })) as EdgeReply;
+      reply = method === "GET" ? await send(method, path) : await edgeUntil(method, path, body, {
+        // Una escritura vive como máximo hasta la siguiente reconciliación del inventario.
+        retryBudgetMs: CLOUD_RETRY_MS, ...patience, idempotencyKey: init?.headers?.["Idempotency-Key"],
+      }, { send });
     } catch (raw) {
-      const code = raw && typeof raw === "object" ? (raw as EdgeError).detail : undefined;
-      const status = code === "no_session" ? 401 : 503;
-      return { status, ok: false, json: async () => null };
+      const error = raw as EdgeError | null;
+      const status = typeof error?.status === "number" ? error.status : error?.detail === "no_session" ? 401 : 503;
+      reply = { status, body: error?.body ?? (typeof error?.detail === "string" ? { code: error.detail } : null), retry_after_ms: error?.retry_after_ms };
     }
     const status = typeof reply?.status === "number" ? reply.status : 503;
-    // Un rechazo del contrato (p. ej. `403 organization_selection_required`) se lo cuenta a quien lo atiende.
-    const code = (reply?.body as { code?: unknown } | null)?.code;
+    const code = (reply?.body as { code?: unknown; detail?: unknown } | null)?.code ?? (reply?.body as EdgeError | null)?.detail;
     if (status === 403 && typeof code === "string") onProblem?.({ detail: code, status, body: reply.body });
     const location = typeof reply?.location === "string" ? reply.location : null;
-    return { status, ok: status < 400, headers: { get: (name: string) => (name.toLowerCase() === "location" ? location : null) }, json: async () => reply?.body ?? null };
+    const retryAfter = typeof reply?.retry_after_ms === "number" ? String(Math.ceil(reply.retry_after_ms / 1000)) : null;
+    return { status, ok: status < 400, headers: { get: (name: string) => {
+      if (name.toLowerCase() === "location") return location;
+      if (name.toLowerCase() === "retry-after") return retryAfter;
+      return null;
+    } }, json: async () => reply?.body ?? null };
   };
 }
 
