@@ -18,28 +18,28 @@ type EdgeError = { detail?: unknown; status?: unknown };
 
 export type CloudMachines = ReturnType<typeof createCloudMachines>;
 
-/** `danil_edge_fetch` con la forma de un `fetch`: el error de Rust vuelve a ser un estado HTTP, sin tokens. */
+/** Lo que contesta `danil_edge_fetch`: el status del borde tal cual, su cuerpo y `Location`. */
+type EdgeReply = { status: number; body: unknown; location?: string };
+
+/** `danil_edge_fetch` con la forma de un `fetch`. Sin sesión (`Err no_session`) es 401; sin red, 503; nunca lleva tokens. */
 export function edgeFetch(invoke: Invoke, onProblem?: (error: unknown) => void): Fetch {
   return async (input, init) => {
     const method = init?.method ?? "GET";
     const path = new URL(input).pathname;
-    const reply = (status: number, body: unknown = null) => ({ status, ok: status < 400, json: async () => body });
+    let reply: EdgeReply;
     try {
-      const body = await invoke("danil_edge_fetch", method === "GET" ? { method, path } : { method, path, body: {} });
-      return reply(200, body);
+      reply = (await invoke("danil_edge_fetch", method === "GET" ? { method, path } : { method, path, body: {} })) as EdgeReply;
     } catch (raw) {
-      const e = (raw && typeof raw === "object" ? raw : {}) as EdgeError;
-      const code = typeof e.detail === "string" ? e.detail : "";
-      if (code === "no_session") return reply(401);
-      if (code === "not_available_yet") return reply(501);
-      if (code === "unavailable") return reply(503);
-      if (typeof e.status === "number") {
-        // Un rechazo del contrato (p. ej. `403 organization_selection_required`) se lo cuenta a quien lo atiende, con la forma de Rust.
-        onProblem?.(raw);
-        return reply(e.status, { code });
-      }
-      throw raw;
+      const code = raw && typeof raw === "object" ? (raw as EdgeError).detail : undefined;
+      const status = code === "no_session" ? 401 : 503;
+      return { status, ok: false, json: async () => null };
     }
+    const status = typeof reply?.status === "number" ? reply.status : 503;
+    // Un rechazo del contrato (p. ej. `403 organization_selection_required`) se lo cuenta a quien lo atiende.
+    const code = (reply?.body as { code?: unknown } | null)?.code;
+    if (status === 403 && typeof code === "string") onProblem?.({ detail: code, status, body: reply.body });
+    const location = typeof reply?.location === "string" ? reply.location : null;
+    return { status, ok: status < 400, headers: { get: (name: string) => (name.toLowerCase() === "location" ? location : null) }, json: async () => reply?.body ?? null };
   };
 }
 
