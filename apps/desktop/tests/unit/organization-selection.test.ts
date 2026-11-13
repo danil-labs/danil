@@ -328,3 +328,40 @@ for (const [status, refused] of [[403, true], [404, true], [409, true], [408, fa
     assert.equal(state.kind === 'ready' && state.active, DANIL.id);
   });
 }
+
+test('a definitive automatic selection refusal is not sent again by later loads; only the person retries it', async () => {
+  const c = clock();
+  const keys: string[] = [];
+  const sel = createOrganizationSelection({
+    list: async () => ({ items: [DANIL], active_organization_id: null }),
+    select: async (_id, key) => { keys.push(key); throw problem(403, 'organization_forbidden'); },
+  }, { schedule: c.schedule, key: () => `key-${keys.length}` });
+  await sel.load();
+  await sel.load();
+  assert.equal(sel.report(problem(403, 'organization_selection_required')), true);
+  await c.fire();
+  const state = sel.state();
+  assert.equal(keys.length, 1, 'reloading the list must not repeat a refused selection');
+  assert.equal(state.kind === 'ready' && state.refused, true);
+  assert.equal(state.kind === 'ready' && state.error, 'organization_forbidden');
+  assert.equal(state.kind === 'ready' && state.errorStatus, 403);
+  assert.equal(hasActiveOrganization(state), false);
+  await sel.choose(DANIL.id);
+  assert.deepEqual(keys, ['key-0', 'key-1'], 'an explicit choice is a new intention with a new key');
+});
+
+test('a refused organization that the directory later reports active clears the refusal', async () => {
+  let active: string | null = null;
+  let selections = 0;
+  const sel = createOrganizationSelection({
+    list: async () => ({ items: [DANIL], active_organization_id: active }),
+    select: async () => { selections++; throw problem(409, 'organization_conflict'); },
+  });
+  await sel.load();
+  active = DANIL.id;
+  await sel.load();
+  const state = sel.state();
+  assert.equal(selections, 1);
+  assert.equal(state.kind === 'ready' && state.refused, false);
+  assert.equal(hasActiveOrganization(state), true);
+});

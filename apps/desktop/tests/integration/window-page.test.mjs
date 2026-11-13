@@ -380,6 +380,34 @@ for (const status of [403, 404, 409]) test(`free startup stops after definitive 
   if (status === 403) assert.match(doc.querySelector('[role="alert"]').textContent, /No tienes acceso/);
   await new Promise(resolve => setTimeout(resolve, 1600));
   assert.equal(posts, 1, 'a definitive rejection must not create another selection intent');
+  [...doc.querySelectorAll('button')].find(button => /Reintentar/.test(button.textContent)).click();
+  await until(() => doc.querySelector('[role="alert"]'), 4000);
+  await new Promise(resolve => setTimeout(resolve, 600));
+  assert.equal(posts, 1, 'retrying the startup rereads the directory without resending the refused selection');
+  assert.deepEqual(app.failures, []);
+});
+
+for (const kind of ['hang', 'not_found']) test(`free startup ends at its deadline when identity ${kind === 'hang' ? 'never answers' : 'keeps answering 404'} and does not restart`, async t => {
+  let reads = 0;
+  const fetcher = async (input, init) => {
+    const path = new URL(String(input)).pathname;
+    if (path === '/v1/capabilities') return Response.json({ contract: 'mvp-v1', items: ['workspaces', 'identity.organizations'].map(name => ({ name, version: 1, status: 'available' })) });
+    if (path === '/v1/identity/me') {
+      reads++;
+      if (kind === 'hang') return new Promise((_resolve, reject) => init.signal.addEventListener('abort', () => reject(init.signal.reason), { once: true }));
+      return Response.json({ code: 'route_not_found' }, { status: 404, headers: { 'content-type': 'application/problem+json' } });
+    }
+    return new Response(null, { status: 404 });
+  };
+  fetcher.__jsdomApp = true; globalThis.fetch = fetcher;
+  const app = await open(t, 'listo', `free-startup-deadline-${kind}`, {}, undefined, {}, { web: true });
+  const doc = app.w.document;
+  await until(() => doc.querySelector('[role="alert"]'), 25_000);
+  assert.equal(doc.querySelector('[data-spinner]'), null);
+  assert.ok([...doc.querySelectorAll('button')].some(button => /Reintentar/.test(button.textContent)));
+  const endedAt = reads;
+  await new Promise(resolve => setTimeout(resolve, 2500));
+  assert.equal(reads, endedAt, 'an exhausted preparation waits for the person instead of starting another budget');
   assert.deepEqual(app.failures, []);
 });
 

@@ -151,7 +151,9 @@ for (const retryAfter of ['30', new Date(30_000).toUTCString()]) test(`startup s
       headers: { 'content-type': 'application/problem+json', 'retry-after': retryAfter } });
   });
   const result = assert.rejects(preparePlatformSession(() => api.me(), new AbortController().signal, () => {}),
-    (e: unknown) => e instanceof PlatformSessionError && e.status === 403 && e.code === 'authorization_forbidden');
+    (e: unknown) => e instanceof Error && e.name === 'PreparationExpired' &&
+      (e as { last?: unknown }).last instanceof PlatformSessionError &&
+      (e as { last: PlatformSessionError }).last.status === 403 && (e as { last: PlatformSessionError }).last.code === 'authorization_forbidden');
   await new Promise(resolve => setImmediate(resolve));
   t.mock.timers.tick(20_000);
   await result;
@@ -219,9 +221,10 @@ test('a directory that stays empty exhausts startup after 20s and stops rereadin
   let calls = 0;
   const result = preparePlatformSession(async () => { calls++; return false; }, new AbortController().signal,
     () => {}, value => value);
+  const settled = assert.rejects(result, (e: unknown) => e instanceof Error && e.name === 'PreparationExpired');
   await new Promise(resolve => setImmediate(resolve));
   t.mock.timers.tick(20_000);
-  assert.equal(await result, false);
+  await settled;
   const stoppedAt = calls;
   t.mock.timers.tick(60_000);
   assert.equal(calls, stoppedAt);
@@ -243,7 +246,9 @@ test('pending startup preserves its result when an in-flight read crosses the de
   assert.equal(calls, 2);
   t.mock.timers.tick(19_000);
   deadline.abort(new DOMException('Startup deadline', 'TimeoutError'));
-  assert.deepEqual(await observed, { value: false });
+  const outcome = await observed as { error?: { name?: string; last?: unknown } };
+  assert.equal(outcome.error?.name, 'PreparationExpired', 'a pending read at the deadline is never presented as ready');
+  assert.equal(outcome.error?.last, undefined);
 });
 
 for (const latest of ['pending', 'error']) test(`the latest ${latest} outcome survives an in-flight deadline abort`, async t => {
@@ -266,5 +271,26 @@ for (const latest of ['pending', 'error']) test(`the latest ${latest} outcome su
   assert.equal(reads, 3);
   t.mock.timers.tick(17_000);
   deadline.abort(new DOMException('Startup deadline', 'TimeoutError'));
-  assert.deepEqual(await observed, latest === 'pending' ? { value: false } : { error: refusal });
+  const outcome = await observed as { error?: { name?: string; last?: unknown } };
+  assert.equal(outcome.error?.name, 'PreparationExpired');
+  assert.equal(outcome.error?.last, latest === 'pending' ? undefined : refusal);
+});
+
+for (const kind of ['hang', 'offline']) test(`a first read that ${kind === 'hang' ? 'crosses' : 'fails at'} the deadline ends preparation instead of failing the transport`, async t => {
+  t.mock.timers.enable({ apis: ['setTimeout', 'Date'], now: 0 });
+  const deadline = new AbortController();
+  t.mock.method(AbortSignal, 'timeout', () => deadline.signal);
+  let reads = 0;
+  const result = preparePlatformSession(async signal => {
+    reads++;
+    return new Promise<boolean>((_resolve, reject) => signal.addEventListener('abort', () =>
+      reject(kind === 'hang' ? signal.reason : new TypeError('Failed to fetch')), { once: true }));
+  }, new AbortController().signal, () => {}, value => value);
+  const observed = result.then(value => ({ value }), error => ({ error }));
+  t.mock.timers.tick(20_000);
+  deadline.abort(new DOMException('Startup deadline', 'TimeoutError'));
+  const outcome = await observed as { error?: { name?: string; last?: unknown } };
+  assert.equal(outcome.error?.name, 'PreparationExpired');
+  assert.equal(outcome.error?.last, undefined);
+  assert.equal(reads, 1);
 });
