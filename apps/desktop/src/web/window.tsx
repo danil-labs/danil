@@ -13,7 +13,7 @@ import type { MachineRow, MachineStatus } from "./SyncNote";
 import type { AccountProfileSource } from "../features/settings/account-profile";
 
 declare const __TERMINUS_VERSION__: string;
-type Base = { machines: ReturnType<typeof machinesClient>; relayOrigin: string; permits: (name: string) => boolean; organizations?: Capabilities["organizations"]; promo?: Capabilities["webPromo"]; onUnauthorized: () => void; profile: AccountProfileSource; workspaces: NonNullable<Capabilities["webWorkspaces"]>; onUnavailable: () => void; };
+type Base = { machines: ReturnType<typeof machinesClient>; initialMachines?: ReturnType<ReturnType<typeof machinesClient>["list"]>; relayOrigin: string; permits: (name: string) => boolean; organizations?: Capabilities["organizations"]; promo?: () => Capabilities["webPromo"]; onUnauthorized: () => void; profile: AccountProfileSource; workspaces: NonNullable<Capabilities["webWorkspaces"]>; onUnavailable: () => void; };
 const Picker = lazy(() => import("../features/machines/MachinePicker").then(m => ({ default: m.MachinePicker })));
 const AccountMachines = lazy(() => import("../features/machines/AccountMachines"));
 /** Another machine's slice changed: the window rereads just that. */
@@ -37,6 +37,7 @@ export function mountWindow(base: Base, mounted: Mounted) {
   const [missing, setMissing] = createSignal(true);
   const [revision, bump] = createSignal(0);
   let listed = new Map<string, Machine>();
+  let initialMachines = base.initialMachines;
   const powers = new Map<string, string>();
   const unavailable = () => ({ what: t("web.machines.unavailable"), detail: "machines_unavailable" });
   const fleet = new Fleet({ self: null, storage: mounted.storage,
@@ -106,7 +107,9 @@ export function mountWindow(base: Base, mounted: Mounted) {
   async function update() {
     if (stopped) return false;
     if (!base.permits("machines")) { setMissing(true); fleet.setMachines([]); return false; }
-    const answer = await base.machines.list();
+    const listing = initialMachines ?? base.machines.list();
+    initialMachines = undefined;
+    const answer = await listing;
     if (stopped) return false;
     if (answer.kind === "unauthorized") { base.onUnauthorized(); return false; }
     if (answer.kind !== "ok") { setMissing(true); fleet.setMachines([]); return false; }
@@ -159,7 +162,7 @@ export function mountWindow(base: Base, mounted: Mounted) {
     },
     accountComputers: { list: async () => { const answer = await base.machines.list(); return answer.kind === "ok" ? { kind: "ok", value: answer.value.map(machineToComputer) } : answer.kind === "unavailable" ? { kind: "error", status: answer.status } : answer; }, onRenamed: () => {}, subscribe: changed => { window.addEventListener("harness:machines", changed); return () => window.removeEventListener("harness:machines", changed); } },
     webAccounts: mounted.webAccounts,
-    webPromo: base.promo,
+    get webPromo() { return base.promo?.(); },
     retryMachines: () => { fleet.retry(); void refresh(); },
   });
   installIpc(window, createWebTransport(active, __TERMINUS_VERSION__, browser));
@@ -187,7 +190,7 @@ export function mountWindow(base: Base, mounted: Mounted) {
 }
 
 /** Paneles que se abren desde la URL (`?settings=`); el parámetro sale de la barra al leerlo. */
-const LINKED_SETTINGS = ["cuenta-danil", "emails", "business", "fiscal"];
+const LINKED_SETTINGS = ["plan", "cuenta-danil", "emails", "business", "fiscal"];
 
 function takeSettingsParam(): string | undefined {
   const params = new URLSearchParams(window.location.search);

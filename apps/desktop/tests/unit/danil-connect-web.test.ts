@@ -57,3 +57,8 @@ test("the installer script says nothing was installed", { skip: process.platform
   assert.match(run.stderr, /no se instaló nada/);
   assert.equal(run.stdout, "");
 });
+
+test("the account reuses the authenticated startup profile without another me request", async () => {
+  const source = webAccountProfile({ call: async () => { throw new Error("unexpected extra me request"); } }, () => ({ name: "Ana", email: "ana@example.test" }));
+  assert.deepEqual(await source.read(), { name: "Ana", email: "ana@example.test", photo: null, source: null });
+});

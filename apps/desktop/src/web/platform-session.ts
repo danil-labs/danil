@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 const workspaceId = z.string().regex(/^[1-9]\d*$/);
-const profile = z.object({ id: z.string().startsWith("user_"), name: z.string(), workspace: workspaceId.nullable(), organizations: z.array(z.object({ id: z.string(), name: z.string() })) });
+const profile = z.object({ id: z.string().startsWith("user_"), name: z.string(), email: z.string().nullable().optional(), workspace: workspaceId.nullable(), organizations: z.array(z.object({ id: z.string(), name: z.string() })) });
 const workspace = z.object({ id: workspaceId, org: z.string(), name: z.string(), role: z.string() });
 const page = z.object({ items: z.array(workspace), next_cursor: z.string().min(1).nullable() });
 /** `POST /v1/workspaces/select` → `{workspace: Workspace}` (mvp-v1 `WorkspaceSelection`); campos nuevos se ignoran. */
@@ -90,4 +90,45 @@ export function platformSession(options: { origin: string; timeoutMs: number }, 
     },
     async logout() { await mutation("identity/logout", { headers: { "Idempotency-Key": crypto.randomUUID() } }); },
   };
+}
+
+export async function preparePlatformSession<T>(read: (signal: AbortSignal) => Promise<T>, signal: AbortSignal, preparing: () => void, ready: (value: T) => boolean = () => true): Promise<T> {
+  const deadline = Date.now() + 20_000;
+  const budget = AbortSignal.any([signal, AbortSignal.timeout(20_000)]);
+  let last: PlatformSessionError | undefined;
+  let outcome: { kind: 'pending'; value: T } | { kind: 'error'; cause: PlatformSessionError };
+  let attempt = 0;
+  do {
+    signal.throwIfAborted();
+    try {
+      const value = await read(budget);
+      if (ready(value)) return value;
+      last = undefined;
+      outcome = { kind: 'pending', value };
+    } catch (cause) {
+      signal.throwIfAborted();
+      if (budget.aborted && last) throw last;
+      if (!(cause instanceof PlatformSessionError) || ![403, 404].includes(cause.status) ||
+          ['workspace_selection_required', 'organization_selection_required'].includes(cause.code ?? '')) throw cause;
+      last = cause;
+      outcome = { kind: 'error', cause };
+    }
+    const remaining = deadline - Date.now();
+    if (remaining <= 0) break;
+    preparing();
+    const hint = outcome.kind === 'error' ? outcome.cause.retryAfter : null;
+    const seconds = hint && /^\d+$/.test(hint) ? Number(hint) * 1000 : NaN;
+    const retryAfter = hint ? (Number.isFinite(seconds) ? seconds : Date.parse(hint) - Date.now()) : 0;
+    const backoff = Math.min(500 * 2 ** attempt++, 4000) * (1 + Math.random() / 4);
+    const delay = Math.max(backoff, Number.isFinite(retryAfter) ? retryAfter : 0);
+    await new Promise<void>((resolve, reject) => {
+      const finish = () => { signal.removeEventListener('abort', abort); resolve(); };
+      const timer = setTimeout(finish, Math.min(delay, remaining));
+      const abort = () => { clearTimeout(timer); signal.removeEventListener('abort', abort); reject(signal.reason); };
+      signal.addEventListener('abort', abort, { once: true });
+      if (signal.aborted) abort();
+    });
+  } while (Date.now() < deadline);
+  if (outcome.kind === 'error') throw outcome.cause;
+  return outcome.value;
 }
