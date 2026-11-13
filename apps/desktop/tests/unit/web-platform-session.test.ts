@@ -89,3 +89,37 @@ test("invalid bodies, repeated cursors and expired requests fail without partial
   }));
   await assert.rejects(api.me(), { name: "TimeoutError" });
 });
+
+for (const status of [200, 201]) test(`promo redemption HTTP ${status} uses the cookie organization and CSRF`, async () => {
+  const api = platformSession({ origin: 'https://edge.danil.ai', timeoutMs: 1000 }, async (input, init) => {
+    const req = new Request(input, init);
+    assert.equal(req.credentials, 'include');
+    assert.equal(req.headers.has('authorization'), false);
+    if (req.url.endsWith('/identity/csrf')) return Response.json({ csrf_token: 'csrf' });
+    assert.equal(req.url, 'https://edge.danil.ai/v1/workspaces/promo/redeem');
+    assert.equal(req.method, 'POST');
+    assert.equal(req.headers.get('x-csrf-token'), 'csrf');
+    assert.equal(req.headers.get('idempotency-key'), 'promo-attempt');
+    assert.deepEqual(await req.json(), { code: 'ABCDEFGHIJKLMNOP' });
+    return Response.json({ entitlement: { kind: 'ram_bonus', amount: { ram_gb: 2 }, state: 'active' },
+      ...(status === 200 ? { machine: { state: 'future-state', extra: true } } : {}), future: true }, { status });
+  });
+  assert.deepEqual(await api.redeemPromo('ABCDEFGHIJKLMNOP', 'promo-attempt'),
+    status === 200 ? { machine: { state: 'future-state' } } : {});
+});
+
+for (const [status, code] of [[422, 'promo_code_invalid'], [409, 'promo_already_active'],
+  [409, 'organization_has_machine'], [403, 'promo_admin_required'], [404, null], [501, null]] as const) {
+  test(`promo preserves HTTP ${status} ${code} without retrying`, async () => {
+    const api = platformSession({ origin: 'https://edge.danil.ai', timeoutMs: 1000 }, async (input) =>
+      String(input).endsWith('/csrf') ? Response.json({ csrf_token: 'csrf' }) :
+        Response.json({ code }, { status, headers: { 'content-type': 'application/problem+json' } }));
+    await assert.rejects(api.redeemPromo('ABCDEFGHIJKLMNOP', 'attempt'),
+      (e: unknown) => e instanceof PlatformSessionError && e.status === status && e.code === code);
+  });
+}
+
+test('promo network failure is observable', async () => {
+  const api = platformSession({ origin: 'https://edge.danil.ai', timeoutMs: 1000 }, async () => { throw new TypeError('offline'); });
+  await assert.rejects(api.redeemPromo('ABCDEFGHIJKLMNOP', 'attempt'), /offline/);
+});
