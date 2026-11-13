@@ -53,7 +53,7 @@ import { createEngineWorkspaces, railOf } from "./engine-workspaces";
 import { machineNamesChanged, refetchMachines, setCloudMachinesLoading } from "./store";
 import type { WslChild } from "./wsl";
 import { guestChannels } from "./guestChannels";
-import { CLOUD_RETRY_MS, createCloudMachines, EDGE_ENDPOINT } from "./cloud-machines";
+import { CLOUD_RETRY_INITIAL_MS, CLOUD_RETRY_MS, createCloudMachines, EDGE_ENDPOINT } from "./cloud-machines";
 import { createGuestLink, guestMachineInfo, isGuestMachine, wakeGuestMachine } from "./guestLink";
 
 type Internals = { invoke: Invoke };
@@ -159,31 +159,43 @@ export function startAccountMachines(target: Target = window) {
   /** `machines.session.renew` anunciada por el borde: el relay renueva dentro del canal. */
   let cloudRenew = false;
   let cloudRetry: ReturnType<typeof setTimeout> | null = null;
-  let cloudReads = 0;
-  async function readCloud(): Promise<Computer[]> {
-    cloudReads++;
+  let lastCloudRows: Computer[] = [];
+  let cloudRetrying = false;
+  let cloudRead: Promise<Computer[]> | null = null;
+  let cloudRetryDelay = CLOUD_RETRY_INITIAL_MS;
+  function readCloud(): Promise<Computer[]> {
+    if (cloudRead) return cloudRead;
     setCloudMachinesLoading(true);
-    try {
-      const { available, computers, renewInChannel } = await cloud.rows();
-      cloudRenew = renewInChannel;
-      cloudIds = new Set(computers.map((c) => c.computer_id));
-      if (!available && !cloudRetry) {
-        // «No disponible»: el servidor aún no la tiene o no hay sesión; se reintenta solo.
-        cloudRetry = setTimeout(() => {
-          cloudRetry = null;
-          // Solo la nube se relee; la flota se rehace únicamente cuando aparece algo (no se relista la cuenta cada 30 s).
-          void readCloud().then((rows) => {
-            if (rows.length) void sync();
-          });
-        }, CLOUD_RETRY_MS);
-        // Un reintento pendiente no mantiene vivo el proceso (pruebas en Node); en la webview no hace nada.
-        (cloudRetry as unknown as { unref?: () => void }).unref?.();
+    cloudRead = (async () => {
+      try {
+        const answer = await cloud.rows();
+        cloudRetrying = answer.state === "retrying";
+        if (answer.state === "ready") {
+          lastCloudRows = answer.computers;
+          cloudRenew = answer.renewInChannel;
+          cloudIds = new Set(lastCloudRows.map(c => c.computer_id));
+        } else if (!cloudRetrying) {
+          lastCloudRows = [];
+          cloudRenew = false;
+          cloudIds = new Set();
+        }
+        if (cloudRetry) { clearTimeout(cloudRetry); cloudRetry = null; }
+        if (cloudRetrying || answer.state === "unavailable") {
+          const delay = cloudRetrying ? cloudRetryDelay * (0.5 + Math.random() * 0.5) : CLOUD_RETRY_MS;
+          cloudRetryDelay = cloudRetrying ? Math.min(cloudRetryDelay * 2, CLOUD_RETRY_MS) : CLOUD_RETRY_INITIAL_MS;
+          cloudRetry = setTimeout(() => {
+            cloudRetry = null;
+            void readCloud().then(() => { if (!cloudRetrying) void sync(); });
+          }, delay);
+          (cloudRetry as unknown as { unref?: () => void }).unref?.();
+        } else cloudRetryDelay = CLOUD_RETRY_INITIAL_MS;
+        return lastCloudRows;
+      } finally {
+        cloudRead = null;
+        setCloudMachinesLoading(cloudRetrying);
       }
-      return computers;
-    } finally {
-      cloudReads--;
-      setCloudMachinesLoading(cloudReads > 0);
-    }
+    })();
+    return cloudRead;
   }
   /** Si esta computadora es una VM administrada, y su sistema. La lista los lee en cada `machine_list`. */
   let homeWakes = false;
@@ -451,6 +463,9 @@ export function startAccountMachines(target: Target = window) {
       if (installed?.key !== LOCAL_KEY) uninstall();
       account = who.account;
       token = null;
+      lastCloudRows = [];
+      cloudIds = new Set();
+      cloudRenew = false;
     }
     if (!self) {
       token = null;

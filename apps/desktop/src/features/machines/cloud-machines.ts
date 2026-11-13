@@ -12,6 +12,9 @@ import { type Computer, type Fetch, type MachinesAnswer, machineToComputer, mach
 /** Solo una base para armar rutas `/v1/...`; la webview no llama a este origen (lo hace Rust). */
 export const EDGE_ENDPOINT = "https://edge.danil.ai/v1";
 export const CLOUD_RETRY_MS = 30_000;
+// Primer reintento de una lectura transitoria; el techo conserva el sondeo existente.
+export const CLOUD_RETRY_INITIAL_MS = 1_000;
+type CloudRows = { state: "ready"; computers: Computer[]; renewInChannel: boolean } | { state: "unavailable" | "retrying" | "denied" };
 
 type Invoke = (command: string, args?: Record<string, unknown>) => Promise<unknown>;
 type EdgeError = { detail?: unknown; status?: unknown };
@@ -46,28 +49,32 @@ export function edgeFetch(invoke: Invoke, onProblem?: (error: unknown) => void):
 export function createCloudMachines(invoke: Invoke, onProblem?: (error: unknown) => void, endpoint = EDGE_ENDPOINT) {
   const fetch = edgeFetch(invoke, onProblem);
   const client = machinesClient({ endpoint, fetch });
-  /** Lo que el borde anuncia como disponible; `null` si no sirve `/v1/capabilities` (entonces no guía nada). */
-  async function capabilities(): Promise<Set<string> | null> {
+  /** `null`: servidor sin catálogo (404/501); `undefined`: lectura transitoria fallida. */
+  async function capabilities(): Promise<Set<string> | null | undefined> {
     try {
       const response = await fetch(`${endpoint}/capabilities`);
-      if (response.status !== 200) return null;
+      if (response.status === 404 || response.status === 501) return null;
+      if (response.status !== 200) return undefined;
       const items = ((await response.json()) as { items?: unknown } | null)?.items;
-      if (!Array.isArray(items)) return null;
+      if (!Array.isArray(items)) return undefined;
       return new Set(items.filter((c) => c?.status === "available" && typeof c.name === "string").map((c) => c.name as string));
     } catch {
-      return null;
+      return undefined;
     }
   }
   return {
     client,
     capabilities,
-    /** Las máquinas como filas de flota; `available: false` cuando el servidor, la capacidad o la sesión aún no están (se reintenta solo). */
-    async rows(): Promise<{ available: boolean; computers: Computer[]; renewInChannel: boolean }> {
+    /** Solo la ausencia explícita de la capacidad o de la ruta oculta la nube. */
+    async rows(): Promise<CloudRows> {
       const caps = await capabilities();
-      if (caps && !caps.has("machines")) return { available: false, computers: [], renewInChannel: false };
+      if (caps === undefined) return { state: "retrying" };
+      if (caps && !caps.has("machines")) return { state: "unavailable" };
       const answer: MachinesAnswer<unknown> = await client.list();
-      if (answer.kind === "ok") return { available: true, computers: (answer.value as Parameters<typeof machineToComputer>[0][]).map(machineToComputer), renewInChannel: !!caps?.has("machines.session.renew") };
-      return { available: false, computers: [], renewInChannel: false };
+      if (answer.kind === "ok") return { state: "ready", computers: (answer.value as Parameters<typeof machineToComputer>[0][]).map(machineToComputer), renewInChannel: !!caps?.has("machines.session.renew") };
+      if (answer.kind === "unavailable") return { state: "unavailable" };
+      if (answer.kind === "unauthorized" || answer.kind === "license" || answer.kind === "no_account") return { state: "denied" };
+      return { state: "retrying" };
     },
   };
 }
