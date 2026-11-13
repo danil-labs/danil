@@ -105,7 +105,7 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
     };
     const machines = machinesClient({ endpoint: `${options.origin}/v1`, transport, relayOrigins: __DANIL_WEB_RELAY_ORIGINS__ });
     // Tras cambiar de organización la página se relee entera, como tras cambiar de workspace.
-    const organizations = createOrganizationSelection(webOrganizationSource(transport, caps), { onSelected: () => window.location.assign(home) });
+    const organizations = createOrganizationSelection(webOrganizationSource(transport, () => ({ items: [...(caps() ?? [])].map(name => ({ name, version: 1, status: 'available' })) })), { onSelected: () => window.location.assign(home) });
     const [orgNeeded, setOrgNeeded] = createSignal(false);
     const [orgState, setOrgState] = createSignal(organizations.state());
     const [noWorkspace, setNoWorkspace] = createSignal(false);
@@ -188,6 +188,7 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
         // Las lecturas no dependen entre sí; identity sigue siendo quien decide la sesión.
         let initialMachines: ReturnType<typeof machines.list> | undefined;
         const discovered = readCapabilities(transport).then(snapshot => {
+          setCaps(snapshot);
           if (supports(snapshot, 'machines')) initialMachines = machines.list();
           return snapshot;
         });
