@@ -39,7 +39,7 @@ async function boot(name, { status = SIGNED_OUT, children = [CHILD], computers, 
     token: token ?? (() => ({ token: "client-tok", expires_at: Date.now() + 600_000, endpoint: "https://relay.test", computer_id: "cmp_home" })),
     ...(computers ? { computers } : {}),
     storage,
-    extra: { guest_channels: ["wsl"], guest_children: () => state.children, ...guest(guestCalls) },
+    extra: { danil_edge_fetch: () => ({ status: 401, body: null }), guest_channels: ["wsl"], guest_children: () => state.children, ...guest(guestCalls) },
   });
   return { ...opened, state, guestCalls };
 }

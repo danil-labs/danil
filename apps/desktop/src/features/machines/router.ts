@@ -748,6 +748,7 @@ export function createRouter(config: RouterConfig) {
           local: false,
           active: lead === m.id,
           on: fleet.power(m.id) === "on",
+          connection: fleet.state(m.id),
           power: fleet.power(m.id),
           hosts: workspace ? members.has(m.id) : null,
           materializes: adopts(m, workspace),

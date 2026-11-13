@@ -11,7 +11,7 @@ test("las llamadas van por danil_edge_fetch con la ruta y sin token", async () =
     return { status: 200, body: args?.path === "/v1/capabilities" ? { items: [{ name: "machines", status: "available" }] } : { items: [machine] } };
   });
   const rows = await cloud.rows();
-  assert.equal(rows.available, true);
+  assert.ok(rows.state === "ready");
   assert.equal(rows.renewInChannel, false);
   assert.equal(rows.computers[0].state, "online");
   assert.deepEqual(calls.map((c) => [c.command, c.args?.method, c.args?.path]), [["danil_edge_fetch", "GET", "/v1/capabilities"], ["danil_edge_fetch", "GET", "/v1/machines"]]);
@@ -24,7 +24,7 @@ test("sin la capacidad «machines» no se llama y se reintenta solo (no disponib
     paths.push(args?.path);
     return { status: 200, body: { items: [{ name: "machines", status: "unavailable" }] } };
   });
-  assert.deepEqual(await cloud.rows(), { available: false, computers: [], renewInChannel: false });
+  assert.deepEqual(await cloud.rows(), { state: "unavailable" });
   assert.deepEqual(paths, ["/v1/capabilities"]);
 });
 
@@ -52,4 +52,43 @@ test("403 organization_selection_required llega al selector", async () => {
   const reply = await edgeFetch((async () => ({ status: 403, body })) as never, (e) => seen.push(e))("https://x/v1/machines");
   assert.equal(reply.status, 403);
   assert.deepEqual(seen, [{ detail: "organization_selection_required", status: 403, body }]);
+});
+
+for (const status of [503, 504]) test(`un HTTP ${status} de machines conserva el estado transitorio`, async () => {
+  const cloud = createCloudMachines(async (_command, args) => ({ status: args?.path === "/v1/capabilities" ? 200 : status,
+    body: args?.path === "/v1/capabilities" ? { items: [{ name: "machines", status: "available" }] } : null }));
+  assert.equal((await cloud.rows()).state, "retrying");
+});
+for (const detail of ["unavailable", "timeout"]) test(`un fallo nativo ${detail} conserva el estado transitorio`, async () => {
+  const cloud = createCloudMachines(async (_command, args) => {
+    if (args?.path === "/v1/capabilities") return { status: 200, body: { items: [{ name: "machines", status: "available" }] } };
+    throw { detail };
+  });
+  assert.equal((await cloud.rows()).state, "retrying");
+});
+
+for (const status of [404, 501]) test(`HTTP ${status} de la colección es ausencia definitiva`, async () => {
+  const cloud = createCloudMachines(async (_command, args) => ({ status: args?.path === "/v1/capabilities" ? 200 : status,
+    body: args?.path === "/v1/capabilities" ? { items: [{ name: "machines", status: "available" }] } : null }));
+  assert.deepEqual(await cloud.rows(), { state: "unavailable" });
+});
+test("un fallo transitorio de capacidades no se confunde con una capacidad ausente", async () => {
+  const cloud = createCloudMachines(async () => ({ status: 503, body: null }));
+  assert.deepEqual(await cloud.rows(), { state: "retrying" });
+});
+test("una sesión inválida se distingue de un fallo transitorio", async () => {
+  const cloud = createCloudMachines(async (_command, args) => ({ status: args?.path === "/v1/capabilities" ? 200 : 401,
+    body: args?.path === "/v1/capabilities" ? { items: [{ name: "machines", status: "available" }] } : null }));
+  assert.deepEqual(await cloud.rows(), { state: "denied" });
+});
+
+for (const status of [401, 403]) test(`capacidades HTTP ${status} deniega la nube sin consultar máquinas`, async () => {
+  const paths: unknown[] = [];
+  const cloud = createCloudMachines(async (_command, args) => { paths.push(args?.path); return { status, body: null }; });
+  assert.deepEqual(await cloud.rows(), { state: "denied" });
+  assert.deepEqual(paths, ["/v1/capabilities"]);
+});
+test("sin sesión nativa, capacidades deniega la nube en vez de reintentar", async () => {
+  const cloud = createCloudMachines(async () => { throw { detail: "no_session" }; });
+  assert.deepEqual(await cloud.rows(), { state: "denied" });
 });
