@@ -1,0 +1,79 @@
+{
+  "description": "Vectores de la lista cerrada (§3.3) y la excepción exacta del JWKS (N4). Cada consumidor los copia desde un commit identificado de danil-contracts.",
+  "positive": [
+    [
+      "GET",
+      "/v1/workspaces/42/free-router"
+    ],
+    [
+      "PUT",
+      "/v1/workspaces/42/free-router/offer"
+    ],
+    [
+      "PUT",
+      "/v1/workspaces/42/free-router/consent"
+    ],
+    [
+      "DELETE",
+      "/v1/workspaces/42/free-router/consent"
+    ],
+    [
+      "POST",
+      "/v1/workspaces/42/free-router/engine-workspaces/q3ce37ff/challenge"
+    ],
+    [
+      "PUT",
+      "/v1/workspaces/42/free-router/engine-workspaces/q3ce37ff"
+    ],
+    [
+      "DELETE",
+      "/v1/workspaces/42/free-router/engine-workspaces/q3ce37ff"
+    ],
+    [
+      "DELETE",
+      "/v1/workspaces/42/free-router/engine-workspaces/q3ce37ff/bindings/0e7c3f0a-1b2c-4d5e-8f90-123456789abc"
+    ],
+    [
+      "POST",
+      "/v1/workspaces/42/free-router/grant"
+    ],
+    [
+      "GET",
+      "/v1/workspaces/.well-known/free-router-jwks.json"
+    ],
+    [
+      "HEAD",
+      "/v1/workspaces/.well-known/free-router-jwks.json"
+    ]
+  ],
+  "public": [
+    [
+      "GET",
+      "/v1/workspaces/.well-known/free-router-jwks.json"
+    ],
+    [
+      "HEAD",
+      "/v1/workspaces/.well-known/free-router-jwks.json"
+    ]
+  ],
+  "n4": [
+    "/v1/workspaces/.well-known/free-router-jwks.json/",
+    "/v1/workspaces/.well-known/free-router-jwks.json.bak",
+    "/v1/workspaces/%2ewell-known/free-router-jwks.json",
+    "/v1/workspaces/.well-known/../.well-known/free-router-jwks.json",
+    "/v1/workspaces/.well-known/free-router-jwks.json?x=1",
+    "/v1//workspaces/.well-known/free-router-jwks.json",
+    "/v1/workspaces/0/free-router",
+    "/v1/workspaces/11x/free-router",
+    "/v1/workspaces/12345678901234567890/free-router",
+    "/v1/workspaces/42/free-router/engine-workspaces/a.b/challenge",
+    "/v1/workspaces/42/free-router/engine-workspaces/%2e%2e",
+    "/v1/workspaces/42/free-router/other"
+  ],
+  "jwks_method_not_allowed": [
+    "POST",
+    "PUT",
+    "DELETE",
+    "OPTIONS"
+  ]
+}
