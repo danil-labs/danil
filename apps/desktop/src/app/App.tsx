@@ -423,13 +423,14 @@ export default function App() {
   });
   const [materialError, setMaterialError] = createSignal<string | null>(null);
   const [taskSourcesError, setTaskSourcesError] = createSignal<string | null>(null);
+  const [draftProjectError, setDraftProjectError] = createSignal<string | null>(null);
   const [projectReadError, setProjectReadError] = createSignal<string | null>(null);
   const [startupReadError, setStartupReadError] = createSignal<string | null>(null);
   const [connectionError, setConnectionError] = createSignal<string | null>(null);
   const [readRevision, setReadRevision] = createSignal(0);
   const draftMachineOn = () => machines().find(m => m.id === draftMachine())?.on;
+  createEffect(on([workspaceActivo, draftMachine], () => setDraftProjectError(null)));
   createEffect(on([workspaceActivo, draftMachine, draftMachineOn, projectList, readRevision], ([workspace, machine, encendida]) => {
-    setProjectReadError(null);
     setDraftProjects(previous => previous?.workspace === workspace && previous.machine === machine ? previous : null);
     if (!workspace || !machine || machines().find(m => m.id === machine)?.local) return;
     if (encendida === false) {
@@ -439,15 +440,15 @@ export default function App() {
     let current = true;
     onCleanup(() => { current = false; });
     void invoke<Project[]>("list_projects", {}, { headers: { "x-terminus-machine": machine } }).then(rows => {
-      if (current) setDraftProjects({ workspace, machine, rows: rows.map(row => ({
+      if (current) { setDraftProjectError(null); setDraftProjects({ workspace, machine, rows: rows.map(row => ({
         ...row, machines: projectList().find(p => p.id === row.id)?.machines ?? [machine],
-      })) });
+      })) }); }
     }).catch(e => {
       if (!current) return;
       // Se apagó entre la lista de máquinas y la pregunta, o la pregunta la está
       // encendiendo: lo mismo que apagada.
       if (asleep(e)) setDraftProjects({ workspace, machine, rows: null });
-      else setProjectReadError(prosaDe(e));
+      else setDraftProjectError(prosaDe(e));
     });
   }));
   createEffect(on(draftMachine, (machine, before) => {
@@ -2165,6 +2166,23 @@ export default function App() {
   // lo que el workspace tiene, no en qué workspace estás. Aquí un fallo no
   // vacía las listas, al revés que en `aplicar`: allá lo que quedara en
   // pantalla sería de otro cliente, aquí es de este.
+  let startupRetryRequest = 0;
+  async function retryStartupRead() {
+    const generation = sessionGeneration;
+    const workspace = workspaceActivo();
+    const request = ++startupRetryRequest;
+    const current = () => request === startupRetryRequest && generation === sessionGeneration && workspace === workspaceActivo();
+    try {
+      const startup = await invoke<Startup>("workspaces_startup");
+      if (!current()) return;
+      if (startup.bloqueo) { setBloqueo(startup.bloqueo); return; }
+      if (workspace === null) await aplicar(startup);
+      else if (startup.active === workspace) setStartupReadError(null);
+    } catch (cause) {
+      if (current() && !asleep(cause)) setStartupReadError(prosaDe(cause));
+    }
+  }
+
   async function recargarMaterial() {
     const generation = sessionGeneration;
     const request = ++materialRequest;
@@ -2180,7 +2198,7 @@ export default function App() {
       const root = current.context_root;
       const [, fuentes] = await Promise.all([
         invoke<Project[]>("list_projects").then(rows => {
-          if (generation === sessionGeneration && request === materialRequest) setProjectList(rows);
+          if (generation === sessionGeneration && request === materialRequest) { setProjectList(rows); setProjectReadError(null); }
           return rows;
         }),
         invoke<Source[]>("list_sources"),
@@ -8892,12 +8910,12 @@ export default function App() {
               aria-busy={enCache() || undefined}
               data-shell-cache={enCache() ? "" : undefined}
             >
-            <Show when={startupReadError() ?? projectReadError() ?? connectionError()}>{failure => <div class="flex shrink-0 items-center gap-2 px-3 py-2 text-caption text-neutral-500" data-read-status="" role="status">
+            <Show when={startupReadError() ?? draftProjectError() ?? projectReadError() ?? connectionError()}>{failure => <div class="flex shrink-0 items-center gap-2 px-3 py-2 text-caption text-neutral-500" data-read-status="" role="status">
               <span class="min-w-0 flex-1 break-words">{failure()}</span>
-              <Show when={startupReadError() || projectReadError()}><Button variant="ghost" size="compact" onClick={() => {
+              <Show when={startupReadError() || draftProjectError() || projectReadError()}><Button variant="ghost" size="compact" onClick={() => {
                 setReadRevision(n => n + 1);
-                if (startupReadError()) void invoke<Startup>("list_workspaces").then(aplicar).catch(cause => setStartupReadError(prosaDe(cause)));
-                else void recargarMaterial().then(() => { if (!materialError()) setProjectReadError(null); });
+                if (startupReadError()) void retryStartupRead();
+                else if (!draftProjectError()) void recargarMaterial();
               }}>{t("common.part.retry")}</Button></Show>
             </div>}</Show>
             <div class="min-h-0 flex-1">
