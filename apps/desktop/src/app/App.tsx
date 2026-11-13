@@ -7201,8 +7201,11 @@ export default function App() {
     const proyectoDeLaCelda = () =>
       (pp.sesion ? projectList() : composerProjects()).find((p) => p.id === (pp.proyecto ?? project()));
     // El panel de archivos de esta celda: el de su tarea, o el de la carpeta mientras no hay tarea.
+    // Sin tarea, la misma llave que el botón y la tarjeta de borrador: la lista del
+    // composer de una máquina remota llega sin carpeta, y con otra llave la fila no
+    // reservaría el hueco de la tarjeta y la caja quedaría encima de ella.
     const clavePanel = () => pp.sesion
-      ?? (carpetaDeTrabajo(proyectoDeLaCelda() ?? {}) ? llaveDeBorrador(proyectoDeLaCelda()?.id) : "");
+      ?? (carpetaDelProyecto() ? llaveDeBorrador(project()) : "");
     const [estadoDelTrabajo, { refetch: refreshWork }] = createTaskWork(() => pp.sesion
       ? { project: proyectoDeLaCelda()?.id ?? "", id: pp.sesion }
       : undefined);
