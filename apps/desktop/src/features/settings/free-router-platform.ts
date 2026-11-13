@@ -50,7 +50,8 @@ const record = (v: unknown): Record<string, unknown> | null => (v && typeof v ==
 const str = (v: unknown): string | undefined => (typeof v === "string" && v ? v : undefined);
 const int = (v: unknown): number | undefined => (Number.isInteger(v) ? (v as number) : undefined);
 const ID = /^[A-Za-z0-9_-]{1,128}$/;
-const codeOf = (e: unknown): string => str(record(e)?.code) ?? str(record(e)?.detail) ?? UNAVAILABLE;
+// El motor rechaza con `Err(String)`: el código puede llegar solo, como cadena.
+const codeOf = (e: unknown): string => str(e) ?? str(record(e)?.code) ?? str(record(e)?.detail) ?? UNAVAILABLE;
 const refusal = (code: string, status?: number): FreeRouterRefusal => ({ code, ...(status === undefined ? {} : { status }) });
 
 function policyOf(v: unknown): FreeRouterPolicy | null {

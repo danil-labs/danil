@@ -258,3 +258,8 @@ test("accepting sends one CAS intention and a revision conflict is not retried",
   assert.equal(puts.length, 1);
   assert.deepEqual(puts[0].body, { revision: 1, ...POLICY });
 });
+
+test("an engine refusal that arrives as a bare string keeps its closed code", async () => {
+  const { router } = lab({ engine: (c) => { if (c.command === "set_free_router_union") throw "free_router.interface_only"; return undefined; } });
+  await assert.rejects(router.link(SCOPE), (e: { code?: string }) => e.code === "free_router.interface_only");
+});
