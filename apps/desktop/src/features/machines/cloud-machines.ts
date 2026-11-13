@@ -49,10 +49,11 @@ export function edgeFetch(invoke: Invoke, onProblem?: (error: unknown) => void):
 export function createCloudMachines(invoke: Invoke, onProblem?: (error: unknown) => void, endpoint = EDGE_ENDPOINT) {
   const fetch = edgeFetch(invoke, onProblem);
   const client = machinesClient({ endpoint, fetch });
-  /** `null`: servidor sin catálogo (404/501); `undefined`: lectura transitoria fallida. */
-  async function capabilities(): Promise<Set<string> | null | undefined> {
+  /** `denied`: sin acceso; `null`: sin catálogo; `undefined`: fallo transitorio. */
+  async function capabilities(): Promise<Set<string> | null | undefined | "denied"> {
     try {
       const response = await fetch(`${endpoint}/capabilities`);
+      if (response.status === 401 || response.status === 403) return "denied";
       if (response.status === 404 || response.status === 501) return null;
       if (response.status !== 200) return undefined;
       const items = ((await response.json()) as { items?: unknown } | null)?.items;
@@ -68,6 +69,7 @@ export function createCloudMachines(invoke: Invoke, onProblem?: (error: unknown)
     /** Solo la ausencia explícita de la capacidad o de la ruta oculta la nube. */
     async rows(): Promise<CloudRows> {
       const caps = await capabilities();
+      if (caps === "denied") return { state: "denied" };
       if (caps === undefined) return { state: "retrying" };
       if (caps && !caps.has("machines")) return { state: "unavailable" };
       const answer: MachinesAnswer<unknown> = await client.list();

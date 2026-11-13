@@ -81,3 +81,14 @@ test("una sesión inválida se distingue de un fallo transitorio", async () => {
     body: args?.path === "/v1/capabilities" ? { items: [{ name: "machines", status: "available" }] } : null }));
   assert.deepEqual(await cloud.rows(), { state: "denied" });
 });
+
+for (const status of [401, 403]) test(`capacidades HTTP ${status} deniega la nube sin consultar máquinas`, async () => {
+  const paths: unknown[] = [];
+  const cloud = createCloudMachines(async (_command, args) => { paths.push(args?.path); return { status, body: null }; });
+  assert.deepEqual(await cloud.rows(), { state: "denied" });
+  assert.deepEqual(paths, ["/v1/capabilities"]);
+});
+test("sin sesión nativa, capacidades deniega la nube en vez de reintentar", async () => {
+  const cloud = createCloudMachines(async () => { throw { detail: "no_session" }; });
+  assert.deepEqual(await cloud.rows(), { state: "denied" });
+});
