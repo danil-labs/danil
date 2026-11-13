@@ -126,7 +126,7 @@ with sync_playwright() as p:
     assert state['writes'][0] == state['writes'][1]
     page.locator('[data-profile-menu] button').click()
     page.locator('[data-sign-out]').click()
-    expect(page.get_by_role('link', name='Iniciar sesión', exact=True)).to_be_visible()
+    expect(page.get_by_role('link', name='Continuar con tu correo', exact=True)).to_be_visible()
     expect(page.locator('[data-tira]')).to_have_count(0)
     assert not errors, errors
     print('PASS: real tasks, account, two API workspaces, uncertain selection recovery and logout; no messaging or bearer token')
