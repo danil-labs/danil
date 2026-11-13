@@ -1080,18 +1080,6 @@ pub(super) fn credits_captured_call(
         .and_then(reply)
 }
 
-/// Una orden del motor pedida desde el Rust de la ventana (`agents_session.rs`).
-pub(super) fn engine_call(
-    app: &tauri::AppHandle,
-    command: &str,
-    args: Value,
-) -> Result<Value, Value> {
-    let state = app
-        .try_state::<Arc<State>>()
-        .ok_or_else(|| failure(&Error::new("app_unavailable")))?;
-    invoke(&state, command, args)
-}
-
 /// La máquina de esta ventana. Las otras de la cuenta las suma la ventana por el
 /// relay (`features/machines/router.ts`).
 #[tauri::command(async)]

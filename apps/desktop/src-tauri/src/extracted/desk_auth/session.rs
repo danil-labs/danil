@@ -58,7 +58,6 @@ pub(crate) struct Live {
     pub(crate) access_token: String,
     pub(crate) expires_at: i64,
     pub(crate) refresh_token: String,
-    pub(crate) sid: String,
     /// Si el refresh quedó en el llavero.
     pub(crate) persisted: bool,
 }
@@ -323,14 +322,13 @@ impl<V: Vault> Desk<V> {
     fn accept(&self, access: String, expires_in: i64, refresh: String, sid: String) -> Live {
         let stored = Stored {
             refresh_token: refresh.clone(),
-            sid: sid.clone(),
+            sid,
         };
         let persisted = self.vault.save(&stored);
         let live = Live {
             access_token: access,
             expires_at: now() + expires_in,
             refresh_token: refresh,
-            sid,
             persisted,
         };
         *lock(&self.live) = Some(live.clone());

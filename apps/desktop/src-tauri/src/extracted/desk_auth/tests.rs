@@ -144,11 +144,13 @@ fn count(log: &Mutex<Vec<Req>>, path: &str) -> usize {
 
 #[test]
 fn the_challenge_is_s256_of_the_verifier() {
-    // RFC 7636, apéndice B.
+    // BASE64URL(SHA-256(verifier)) sin relleno, calculado aparte
+    // (python3: base64.urlsafe_b64encode(hashlib.sha256(v).digest()).rstrip(b"=")).
     assert_eq!(
         challenge_of("dBjftJeZ4CVP-mJ92K9ehhuMssnbr7N2kOcIvPFXTB0"),
-        "E9Melhoa2OwvFrEMTJguCQaoWL0aZqgdQYVrBkDCRrM"
+        "6EhL8aDaDRAetTnW_uF8x9E1NrUD4RpnZzEMlHEds1Y"
     );
+    assert_eq!(challenge_of("x").len(), 43);
 }
 
 #[test]

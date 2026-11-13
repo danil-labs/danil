@@ -6,6 +6,7 @@ use base64::engine::general_purpose::{STANDARD, URL_SAFE_NO_PAD};
 use base64::Engine as _;
 use serde_json::{json, Value};
 use std::collections::HashMap;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Mutex, OnceLock};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tauri::Emitter;
@@ -49,6 +50,10 @@ fn refreshing() -> &'static Mutex<()> {
     static R: OnceLock<Mutex<()>> = OnceLock::new();
     R.get_or_init(Default::default)
 }
+
+/// Época de la sesión de la ventana: cerrarla deja sin efecto lo que dependía de ella
+/// (el piloto de créditos la compara).
+static CONNECT: AtomicU64 = AtomicU64::new(0);
 
 /// Cuentas cuya sesión ya se comparó, en este proceso, con la persona de la cuenta del motor.
 fn verified() -> &'static Mutex<std::collections::HashSet<String>> {
@@ -451,6 +456,7 @@ pub(super) fn agents_session_sign_out(
     account: Option<String>,
 ) -> Result<(), Value> {
     credits::invalidate();
+    CONNECT.fetch_add(1, Ordering::SeqCst);
     sign_out(&app, &account)
 }
 
