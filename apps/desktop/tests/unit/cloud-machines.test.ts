@@ -97,11 +97,33 @@ test("the native adapter preserves the write key and Retry-After", async () => {
   const calls: Record<string, unknown>[] = [];
   const fetch = edgeFetch(async (_command, args) => {
     calls.push(args ?? {});
-    return { status: 503, body: { code: "service_unavailable" }, retry_after_ms: 120_000 };
+    return { status: 202, body: { accepted: true }, retry_after_ms: 120_000 };
   });
   const reply = await fetch("https://edge.danil.ai/v1/machines/cmp_1/start", {
     method: "POST", headers: { "Idempotency-Key": "original-operation" }, body: "{}",
   });
   assert.equal(calls[0].idempotencyKey, "original-operation");
   assert.equal(reply.headers?.get("Retry-After"), "120");
+});
+
+test("native failures keep Retry-After as well", async () => {
+  const fetch = edgeFetch(async () => { throw { detail: "unavailable", retry_after_ms: 120_000 }; });
+  const reply = await fetch("https://edge.danil.ai/v1/machines");
+  assert.equal(reply.status, 503);
+  assert.equal(reply.headers?.get("Retry-After"), "120");
+});
+
+test("one machine write retries the same intent after a lost native response", async () => {
+  const calls: Record<string, unknown>[] = [];
+  const fetch = edgeFetch(async (_command, args) => {
+    calls.push(args ?? {});
+    if (calls.length === 1) throw { detail: "unavailable" };
+    return { status: 202, body: { accepted: true } };
+  }, undefined, { minDelayMs: 1 });
+  const reply = await fetch("https://edge.danil.ai/v1/machines/cmp_1/start", {
+    method: "POST", headers: { "Idempotency-Key": "same-intent" }, body: "{}",
+  });
+  assert.equal(reply.status, 202);
+  assert.equal(calls.length, 2);
+  assert.deepEqual(calls.map(c => c.idempotencyKey), ["same-intent", "same-intent"]);
 });
