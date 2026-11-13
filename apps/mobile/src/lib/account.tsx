@@ -1,20 +1,41 @@
-import { type Session, isAuthRetryableFetchError } from "@supabase/supabase-js";
+import { isAuthRetryableFetchError } from "@supabase/supabase-js";
+import type { OrganizationState } from "@terminus/computers";
 import * as Linking from "expo-linking";
 import * as WebBrowser from "expo-web-browser";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { ALPHA_DEMO, demoDenied } from "./alpha-mode";
-import { supabase } from "./supabase";
-import { WorkosAccountProvider } from "./workos-account";
+import { type ControlPlane, computersControlPlane } from "./controlPlane";
+import { edgeDeployment } from "./edge";
+import { EdgeAccountProvider } from "./edge-account";
+import { COMPUTERS, supabase } from "./supabase";
 
-/** Alfa en el navegador entra con WorkOS por su Worker de entrada (build con `TERMINUS_WEB_WORKOS=1`). */
-const WORKOS = process.env.EXPO_PUBLIC_TERMINUS_WEB_WORKOS === "1";
+/**
+ * En el navegador con el borde de la compilación (`EXPO_PUBLIC_DANIL_EDGE_ORIGIN`), la cuenta y las
+ * máquinas van por `/v1`, como la web y Desk; sin él (iOS y Android), por Supabase y Danil Machines.
+ */
+// Expo solo sustituye `process.env.EXPO_PUBLIC_*` escritos tal cual: se leen uno por uno.
+const EDGE = edgeDeployment({
+  EXPO_PUBLIC_DANIL_EDGE_ORIGIN: process.env.EXPO_PUBLIC_DANIL_EDGE_ORIGIN,
+  EXPO_PUBLIC_DANIL_EDGE_TIMEOUT_MS: process.env.EXPO_PUBLIC_DANIL_EDGE_TIMEOUT_MS,
+});
 
 export type OAuthProvider = "google" | "azure";
 
+/** Lo que la app lee de una sesión: la persona y, si lo hay, su correo. */
+export type AccountSession = { user: { id: string; email?: string } };
+
 export type Account = {
   ready: boolean;
-  session: Session | null;
+  session: AccountSession | null;
   email: string | null;
+  /** El nombre de la persona, si el servicio de identidad lo dice. */
+  name: string | null;
+  /** De dónde salen sus máquinas (`controlPlane.ts`). */
+  plane: ControlPlane;
+  /** Sus organizaciones (`identity`) y elegir la activa, solo por el borde; `null` sin él. */
+  organizations: { state: OrganizationState; choose: (id: string) => void } | null;
+  /** La entrada web de identity con su vuelta, solo por el borde. */
+  loginUrl: ((returnTo: string) => string) | null;
   signInWithPassword: (email: string, password: string) => Promise<string | null>;
   signInWithProvider: (provider: OAuthProvider) => Promise<string | null>;
   signOut: () => Promise<void>;
@@ -46,15 +67,23 @@ export async function finishOAuth(url: string): Promise<string | null> {
   return exchange ? exchange.message : null;
 }
 
+const DEMO_PLANE: ControlPlane = {
+  computers: async () => { throw demoDenied(); },
+  workspaces: async () => null,
+  wake: async () => { throw demoDenied(); },
+  relay: { endpoint: COMPUTERS, getToken: async () => { throw demoDenied(); } },
+  bearerServices: false,
+};
+
 export function AccountProvider({ children }: { children: ReactNode }) {
-  if (ALPHA_DEMO) return <Context.Provider value={{ ready: true, session: null, email: null, signInWithPassword: async () => "demo_read_only", signInWithProvider: async () => "demo_read_only", signOut: async () => { throw demoDenied(); }, getToken: async () => { throw demoDenied(); }, unauthorized: async () => false }}>{children}</Context.Provider>;
-  if (WORKOS) return <WorkosAccountProvider context={Context}>{children}</WorkosAccountProvider>;
+  if (ALPHA_DEMO) return <Context.Provider value={{ ready: true, session: null, email: null, name: null, plane: DEMO_PLANE, organizations: null, loginUrl: null, signInWithPassword: async () => "demo_read_only", signInWithProvider: async () => "demo_read_only", signOut: async () => { throw demoDenied(); }, getToken: async () => { throw demoDenied(); }, unauthorized: async () => false }}>{children}</Context.Provider>;
+  if (EDGE) return <EdgeAccountProvider context={Context} deployment={EDGE}>{children}</EdgeAccountProvider>;
   return <LiveAccountProvider>{children}</LiveAccountProvider>;
 }
 
 function LiveAccountProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
-  const [session, setSession] = useState<Session | null>(null);
+  const [session, setSession] = useState<AccountSession | null>(null);
 
   useEffect(() => {
     void supabase.auth.getSession().then(({ data }) => {
@@ -102,18 +131,24 @@ function LiveAccountProvider({ children }: { children: ReactNode }) {
     return true;
   }, []);
 
+  const plane = useMemo(() => computersControlPlane(COMPUTERS, getToken, unauthorized), [getToken, unauthorized]);
+
   const value = useMemo<Account>(
     () => ({
       ready,
       session,
       email: session?.user.email ?? null,
+      name: null,
+      plane,
+      organizations: null,
+      loginUrl: null,
       signInWithPassword,
       signInWithProvider,
       signOut,
       getToken,
       unauthorized,
     }),
-    [ready, session, signInWithPassword, signInWithProvider, signOut, getToken, unauthorized],
+    [ready, session, plane, signInWithPassword, signInWithProvider, signOut, getToken, unauthorized],
   );
   return <Context.Provider value={value}>{children}</Context.Provider>;
 }

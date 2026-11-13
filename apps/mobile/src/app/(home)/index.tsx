@@ -62,7 +62,7 @@ export default function Home() {
   const insets = useSafeAreaInsets();
   const customization = useCustomization();
   const inbox = useInbox();
-  const { email } = useAccount();
+  const { email, name } = useAccount();
   const { attention, hosts, hostOf, fleet } = useMachines();
   const { list, current, snapshot, loading, reload, space, selectSpace, view } = useWorkspaces();
   const [askNotifications, setAskNotifications] = useState(false);
@@ -221,7 +221,7 @@ export default function Home() {
             </View>
             <Tap testID="profile" accessibilityRole="button" accessibilityLabel={t("profile.title")} onPress={() => router.push("/profile")} style={styles.avatarTap}>
               <View style={[styles.avatar, { backgroundColor: theme.merged }]}>
-                <Text style={styles.avatarText}>{initials(email)}</Text>
+                <Text style={styles.avatarText}>{initials(email ?? name)}</Text>
               </View>
               {otherPending ? <View style={[styles.avatarDot, { backgroundColor: theme.approving, borderColor: pageColor(theme) }]} /> : null}
             </Tap>

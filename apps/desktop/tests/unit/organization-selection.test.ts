@@ -5,7 +5,7 @@ import {
   createOrganizationSelection,
   isOrganizationSelectionRequired,
   type OrganizationSource,
-} from "../../src/features/shell/organization-selection.ts";
+} from "@terminus/computers";
 
 const DANIL = { id: "org_01M62PT11XGX8R8J883NZVYHR6", name: "Danil", plan: "enterprise", role: "owner" };
 const OTRA = { id: "org_otra", name: "Otra", plan: "team", role: "member", extra: { ignorado: true } };

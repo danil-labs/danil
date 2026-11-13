@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { createOrganizationSelection } from "../../src/features/shell/organization-selection.ts";
+import { createOrganizationSelection } from "@terminus/computers";
 import { platformTransport } from "../../src/web/platform-session.ts";
 import { webOrganizationSource } from "../../src/web/organizations.ts";
 

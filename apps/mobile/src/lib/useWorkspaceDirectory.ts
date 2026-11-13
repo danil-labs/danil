@@ -31,6 +31,8 @@ function failureOf(answer: Answer<unknown>): string {
 export function useWorkspaceDirectory(): WorkspaceDirectory {
   const account = useAccount();
   const signedIn = account.session !== null;
+  // El directorio es del plano de control de Danil Machines: por el borde aún no existe y no se pide.
+  const available = signedIn && account.plane.bearerServices;
   const [directory, setDirectory] = useState<Directory | null>(null);
   const [loading, setLoading] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
@@ -49,7 +51,7 @@ export function useWorkspaceDirectory(): WorkspaceDirectory {
   );
 
   const reload = useCallback(async () => {
-    if (!signedIn) {
+    if (!available) {
       setDirectory(null);
       setFailure(null);
       setLoading(false);
@@ -73,7 +75,7 @@ export function useWorkspaceDirectory(): WorkspaceDirectory {
     } finally {
       if (mine === asked.current) setLoading(false);
     }
-  }, [signedIn, call]);
+  }, [available, call]);
 
   useEffect(() => {
     void reload();
@@ -82,7 +84,7 @@ export function useWorkspaceDirectory(): WorkspaceDirectory {
   const pin = useCallback(
     async (entry: DirectoryEntry): Promise<string | null> => {
       const known = current.current;
-      if (!known || entry.support || !signedIn) return "not_allowed";
+      if (!known || entry.support || !available) return "not_allowed";
       const keys = pinKeys(known.workspaces, entry);
       // Se pinta antes de mandarlo; si el plano de control lo rechaza, la recarga lo deja como estaba.
       setDirectory({ ...known, workspaces: withPins(known.workspaces, keys) });
@@ -102,7 +104,7 @@ export function useWorkspaceDirectory(): WorkspaceDirectory {
         return "unreachable";
       }
     },
-    [signedIn, call, reload],
+    [available, call, reload],
   );
 
   return { directory, signedIn, loading, failure, reload, pin };

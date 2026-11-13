@@ -1,5 +1,5 @@
 import { ALPHA_DEMO, demoDenied } from "./alpha-mode";
-import { type AccountWorkspace, type Answer, type Computer, listComputers, listWorkspaces, startComputer } from "@terminus/computers";
+import type { AccountWorkspace, Answer, Computer } from "@terminus/computers";
 import { type EngineEvent, type WorkspaceAttention, mergeAttention } from "@terminus/protocol";
 import { store } from "./store";
 import { sliceStorage } from "./sliceStorage";
@@ -13,7 +13,6 @@ import { type AccountFleet, type Host, type Pairing, accountFleet, bridgeHost } 
 import { t } from "./i18n";
 import { Notifications } from "./notifications";
 import { renewPush } from "./push";
-import { COMPUTERS } from "./supabase";
 
 type Listener = (host: string, events: EngineEvent[], gap: boolean) => void;
 
@@ -93,12 +92,9 @@ async function failureReason(host: Host, notice: Notice): Promise<string> {
   }
 }
 
-/** La lista con un token que la API acepta: un token rechazado se refresca una vez. */
-async function computersOf(getToken: () => Promise<string>, unauthorized: () => Promise<boolean>): Promise<Answer<Computer[]>> {
-  const answer = await listComputers(COMPUTERS, await getToken());
-  if (answer.kind !== "unauthorized" || !(await unauthorized())) return answer;
-  return listComputers(COMPUTERS, await getToken());
-}
+/** Un plano de control que aún no contesta la lista se vuelve a leer solo, con espera creciente (regla 10). */
+const RETRY_FIRST_MS = 5_000;
+const RETRY_MAX_MS = 5 * 60_000;
 
 const demoHost: Host = {
   id: "demo-host", label: t("alpha.machine_demo"), kind: "computer", managed: false,
@@ -140,9 +136,10 @@ function LiveMachinesProvider({ children, active }: { children: ReactNode; activ
   const titles = useRef(new Map<string, string>());
 
   const signedInAs = account.session?.user.id;
+  const plane = account.plane;
   useEffect(() => {
-    if (signedIn) void renewPush(account.getToken);
-  }, [signedIn, signedInAs]);
+    if (signedIn && plane.bearerServices) void renewPush(account.getToken);
+  }, [signedIn, signedInAs, plane]);
 
   useEffect(() => {
     if (!active) { setPairing(null); setPairingLoaded(true); return; }
@@ -156,8 +153,12 @@ function LiveMachinesProvider({ children, active }: { children: ReactNode; activ
     }
   }, [active]);
 
+  const retryWait = useRef(RETRY_FIRST_MS);
+  const retryTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const reloadComputers = useCallback(async () => {
     const request = ++reloadGeneration.current;
+    if (retryTimer.current) clearTimeout(retryTimer.current);
+    retryTimer.current = null;
     if (!signedIn) {
       setComputers([]);
       setRegistry(null);
@@ -165,13 +166,14 @@ function LiveMachinesProvider({ children, active }: { children: ReactNode; activ
       return;
     }
     const [answer, workspaces] = await Promise.all([
-      computersOf(account.getToken, account.unauthorized).catch((): Answer<Computer[]> => ({ kind: "error", status: null })),
-      account.getToken().then((token) => listWorkspaces(COMPUTERS, token)).catch(() => null),
+      plane.computers().catch((): Answer<Computer[]> => ({ kind: "error", status: null })),
+      plane.workspaces().catch(() => null),
     ]);
     if (request !== reloadGeneration.current) return;
     // Un plano de control sin el registro, o un fallo de red, deja la lista de antes.
     if (workspaces?.kind === "ok") setRegistry((old) => (JSON.stringify(old) === JSON.stringify(workspaces.value) ? old : workspaces.value));
     if (answer.kind === "ok") {
+      retryWait.current = RETRY_FIRST_MS;
       setFleet("ok");
       // Solo cambia la lista si cambian las máquinas o sus workspaces vinculados: cada cambio vuelve a abrir sus sesiones.
       setComputers((old) => {
@@ -182,16 +184,14 @@ function LiveMachinesProvider({ children, active }: { children: ReactNode; activ
         return same ? old : answer.value;
       });
     } else if (answer.kind === "license" || answer.kind === "no_account") setFleet(answer.kind);
-    else if (answer.kind !== "unauthorized") setFleet("error");
-  }, [signedIn, account.getToken, account.unauthorized]);
-
-  useEffect(() => {
-    void reloadComputers();
-    // Al volver al frente, la lista (y su estado) puede haber cambiado. Nunca enciende nada.
-    const sub = AppState.addEventListener("change", (state) => state === "active" && void reloadComputers());
-    return () => { sub.remove(); reloadGeneration.current++; };
-  }, [reloadComputers]);
-
+    else if (answer.kind !== "unauthorized") {
+      setFleet("error");
+      // Sin la ruta todavía (404/501) o sin red: se reintenta solo, sin que la persona lo pida.
+      const wait = retryWait.current;
+      retryWait.current = Math.min(wait * 2, RETRY_MAX_MS);
+      retryTimer.current = setTimeout(() => void reloadComputers(), wait);
+    }
+  }, [signedIn, plane]);
   // Una sola flota por sesión de Danil (`@terminus/fleet`), como el escritorio y la web: una sesión de relay por computadora.
   const [machinesFleet, setMachinesFleet] = useState<AccountFleet | null>(null);
   useEffect(() => {
@@ -201,13 +201,12 @@ function LiveMachinesProvider({ children, active }: { children: ReactNode; activ
     void sliceStorage().then((storage) => {
       if (gone) return;
       made = accountFleet({
-        endpoint: COMPUTERS,
-        getToken: account.getToken,
+        ...plane.relay,
         onUnauthorized: () => void account.unauthorized(),
         // Fijar, archivar o cerrar una sesión no son intenciones del relay: la VM se enciende por aquí.
-        wake: async (computer) => (await startComputer(COMPUTERS, await account.getToken(), computer)).kind === "ok",
+        wake: plane.wake,
         beforeReconnect: (computer) => async () => {
-          const answer = await computersOf(account.getToken, account.unauthorized);
+          const answer = await plane.computers();
           if (answer.kind === "license" || answer.kind === "no_account") setFleet(answer.kind);
           if (answer.kind === "ok" && !answer.value.some((c) => c.computer_id === computer)) return false;
           return answer.kind !== "license" && answer.kind !== "no_account" && answer.kind !== "unauthorized";
@@ -223,7 +222,7 @@ function LiveMachinesProvider({ children, active }: { children: ReactNode; activ
       sub.remove();
       made?.close();
     };
-  }, [signedIn, account.getToken, account.unauthorized]);
+  }, [signedIn, plane, account.unauthorized]);
 
   // Las computadoras de la cuenta en la flota (altas y bajas en vivo) y el bridge si está emparejado.
   useEffect(() => {
