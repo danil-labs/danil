@@ -250,5 +250,13 @@
   "web.alpha.empty": "No conversations on this page.",
   "web.alpha.details": "Details",
   "web.machines.unavailable": "Machines unavailable.",
-  "web.platform.organization": "Organization"
+  "web.platform.organization": "Organization",
+  "web.promo.redeem": "Redeem code",
+  "web.promo.success": "Your 2 GB machine is being prepared",
+  "web.promo.ready": "Your 2 GB machine is ready",
+  "web.promo.invalid": "Invalid code",
+  "web.promo.used": "This code has already been redeemed or the organization already has an active promotion",
+  "web.promo.has_machine": "The organization already has a machine",
+  "web.promo.denied": "You do not have permission to redeem codes",
+  "web.promo.unavailable": "Not available yet. Try again"
 }

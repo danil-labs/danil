@@ -81,6 +81,13 @@ export function platformSession(options: { origin: string; timeoutMs: number }, 
         body: JSON.stringify({ workspace: id }),
       })).json());
     },
+    async redeemPromo(code: string, idempotencyKey: string) {
+      const response = await mutation("workspaces/promo/redeem", {
+        headers: { "Content-Type": "application/json", "Idempotency-Key": idempotencyKey },
+        body: JSON.stringify({ code }),
+      });
+      return z.object({ machine: z.object({ state: z.string().optional() }).optional() }).parse(await response.json());
+    },
     async logout() { await mutation("identity/logout", { headers: { "Idempotency-Key": crypto.randomUUID() } }); },
   };
 }
