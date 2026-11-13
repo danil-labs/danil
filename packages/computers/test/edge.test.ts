@@ -95,17 +95,27 @@ test("una petición que no contesta se corta en su plazo", async () => {
   await assert.rejects(edgeTransport({ origin: ORIGIN, timeoutMs: 10 }, request).call("identity/me"), { name: "TimeoutError" });
 });
 
-test("salir propaga los fallos de CSRF y logout para conservar la sesión y permitir reintentar", async () => {
-  for (const failure of ["csrf", "logout"]) {
+test("logout rechazado conserva sesión en otra pestaña; confirmado la revoca", async () => {
+  for (const failure of ["csrf", "logout", "network"]) {
     let fail = true;
+    let authenticated = true;
     const request: typeof fetch = async (input) => {
-      const csrf = String(input).endsWith("/csrf");
-      if (fail && (failure === "csrf" ? csrf : !csrf)) return Response.json({ code: "unavailable" }, { status: 503 });
-      return csrf ? Response.json({ csrf_token: "bound" }) : new Response(null, { status: 204 });
+      const path = new URL(String(input)).pathname;
+      if (path.endsWith("/me")) return authenticated ? Response.json({ id: "user_A" }) : new Response(null, { status: 401 });
+      const csrf = path.endsWith("/csrf");
+      if (fail && (failure === "csrf" ? csrf : !csrf)) {
+        if (failure === "network") throw new TypeError("network unavailable");
+        return Response.json({ code: "unavailable" }, { status: 503 });
+      }
+      if (csrf) return Response.json({ csrf_token: "bound" });
+      authenticated = false;
+      return new Response(null, { status: 204 });
     };
-    const identity = edgeIdentity(edgeTransport({ origin: ORIGIN, timeoutMs: 1000 }, request), ORIGIN);
-    await assert.rejects(identity.logout(), { status: 503 });
+    const tab = () => edgeIdentity(edgeTransport({ origin: ORIGIN, timeoutMs: 1000 }, request), ORIGIN);
+    await assert.rejects(tab().logout());
+    assert.equal((await tab().me()).id, "user_A", "otra pestaña o recarga conserva sesión tras fallo");
     fail = false;
-    await identity.logout();
+    await tab().logout();
+    await assert.rejects(tab().me(), { status: 401 }, "la salida confirmada revoca la sesión");
   }
 });

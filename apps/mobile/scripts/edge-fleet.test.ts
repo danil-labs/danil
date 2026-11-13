@@ -141,20 +141,42 @@ test("el plano de control del borde: 404 o 501 de la colección es «aún no»; 
   assert.equal(expired, 1);
 });
 
-test("una sesión con ticket nunca restaura listas privadas persistidas por otra persona", async () => {
-  const privateRows = [{ id: "workspace-only-A", name: "Private A" }];
-  const key = `mch_1\u0000${JSON.stringify(["list_workspaces", null, {}])}`;
-  const saved = JSON.stringify({ [key]: { at: Date.now(), value: JSON.stringify(privateRows) } });
-  const storage = { getItem: () => saved, setItem: () => {}, removeItem: () => {} };
-  const machines = accountFleet({
-    endpoint: "wss://connect.example",
+test("A sale y B en la misma máquina no recibe sus listas con el canal caído", async () => {
+  const items = new Map<string, string>();
+  const storage = {
+    getItem: (key: string) => items.get(key) ?? null,
+    setItem: (key: string, value: string) => { items.set(key, value); },
+    removeItem: (key: string) => { items.delete(key); },
+  };
+  const privateA = [{ id: "workspace-A", name: "Private A" }];
+  const privateB = [{ id: "workspace-B", name: "Private B" }];
+  class IdentitySocket extends FakeSocket {
+    constructor(url: string, protocols: string[], private rows: unknown) { super(url, protocols); }
+    send(data: string) {
+      const m = JSON.parse(data);
+      if (m.type === "call") setTimeout(() => this.push({ type: "result", id: m.id, value: this.rows }), 0);
+    }
+  }
+  async function readAs(person: string, rows: unknown) {
+    let socket: IdentitySocket | undefined;
+    const fleet = accountFleet({
+      endpoint: "wss://connect.example", storage,
+      admit: async () => ({ url: "wss://connect.example/v1/machines/mch_1/session", ticket: person, protocol: "danil.machine-session.v1" }),
+    }, (url, protocols) => (socket = new IdentitySocket(url, protocols ?? [], rows)));
+    const [host] = fleet.set([{ ...VM, state: "online" }]);
+    await sleep(5);
+    socket!.open("online");
+    try { assert.deepEqual((await host.call("list_workspaces", null)).value, rows); }
+    finally { fleet.close(); }
+  }
+  await readAs("person-A", privateA);
+  const b = accountFleet({
+    endpoint: "wss://connect.example", storage,
     admit: async () => { throw new Error("machine_unreachable"); },
-    storage,
   }, (url, protocols) => new FakeSocket(url, protocols));
   try {
-    const [host] = machines.set([VM]);
-    await assert.rejects(host.call("list_workspaces", null), "sin respuesta propia no se devuelve la copia de A");
-  } finally {
-    machines.close();
-  }
+    const [host] = b.set([VM]);
+    await assert.rejects(host.call("list_workspaces", null), "B no recibe datos privados de A");
+  } finally { b.close(); }
+  await readAs("person-B", privateB);
 });

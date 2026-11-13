@@ -285,3 +285,27 @@ test("organizaciones `degraded` en /v1/capabilities es «no disponible», como e
   assert.equal(announcesOrganizations({ contract: "mvp-v1", items: [{ name: "identity.organizations", version: 1, status: "degraded" }] }), false);
   assert.equal(announcesOrganizations({ contract: "mvp-v1", items: [{ name: "identity.organizations", version: 1, status: "available" }] }), true);
 });
+
+test("una organización única recupera select tras fallo transitorio con la misma intención", async () => {
+  const keys: string[] = [];
+  let selected = 0;
+  const sel = createOrganizationSelection({
+    list: async () => ({ items: [DANIL], next_cursor: null, active_organization_id: null }),
+    select: async (_id, key) => {
+      keys.push(key);
+      if (keys.length === 1) throw { status: 503 };
+      return { organization: DANIL, workspace: "12" };
+    },
+  }, { onSelected: () => { selected++; } });
+  await sel.load();
+  const failed = sel.state();
+  assert.equal(failed.kind === "ready" && failed.active, null);
+  assert.equal(selected, 0);
+  await sel.choose(DANIL.id);
+  const done = sel.state();
+  assert.equal(done.kind === "ready" && done.active, DANIL.id);
+  assert.equal(selected, 1, "recarga solo después de seleccionar");
+  assert.equal(keys.length, 2);
+  assert.equal(keys[0], keys[1]);
+  sel.stop();
+});
