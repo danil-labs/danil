@@ -127,6 +127,9 @@ export function admissionUrl(raw: unknown, machineId: string, origins: readonly 
   return allowed ? url.href : null;
 }
 
+/** El cursor opaco codificado según RFC 3986 (también `!'()*`), la forma que la lista de rutas de Desk admite. */
+const cursorParam = (cursor: string) => encodeURIComponent(cursor).replace(/[!'()*]/g, c => `%${c.charCodeAt(0).toString(16).toUpperCase()}`);
+
 export function machinesClient(config: MachinesConfig) {
   const f = config.fetch ?? globalFetch;
   const now = config.now ?? Date.now;
@@ -195,7 +198,7 @@ export function machinesClient(config: MachinesConfig) {
       const cursors = new Set<string>();
       let cursor: string | null = null;
       do {
-        const answer: MachinesAnswer<{ items: Machine[]; next: string | null }> = await call(true, "GET", `/machines${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ""}`, body => {
+        const answer: MachinesAnswer<{ items: Machine[]; next: string | null }> = await call(true, "GET", `/machines${cursor ? `?cursor=${cursorParam(cursor)}` : ""}`, body => {
           const page = body as { items?: unknown; next_cursor?: unknown } | null;
           if (!Array.isArray(page?.items) || (page.next_cursor != null && typeof page.next_cursor !== "string")) throw new Error("invalid_machines");
           const rows = page.items.map(machineOf);

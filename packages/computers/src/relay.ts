@@ -294,6 +294,8 @@ export class RelaySession {
     this.waiting = null;
     clearInterval(this.pinger);
     this.socket?.close(1000);
+    this.next?.close(1000);
+    this.next = null;
     for (const [id, call] of this.pending) {
       clearTimeout(call.timer);
       call.reject({ code: "app_unavailable" });
@@ -340,18 +342,26 @@ export class RelaySession {
     } catch {
       return this.reconnectLater();
     }
-    const previous = this.socket;
-    clearInterval(this.pinger);
-    this.socket = socket;
+    // Relevo (machine-session.v1, «sin renovación»): el socket vivo sigue recibiendo hasta que el nuevo abre.
+    const handover = this.socket !== null;
+    if (handover) {
+      this.next?.close(1000);
+      this.next = socket;
+    } else this.socket = socket;
     let opened = false;
     socket.onopen = () => {
-      if (this.socket !== socket) return;
-      if (this.config.getAdmission && socket.protocol !== protocol) {
-        previous?.close(1000);
-        return this.close();
-      }
+      if (this.socket !== socket && this.next !== socket) return;
+      if (this.config.getAdmission && socket.protocol !== protocol) return this.close();
       opened = true;
-      previous?.close(1000);
+      if (this.next === socket) {
+        const previous = this.socket;
+        this.next = null;
+        this.socket = socket;
+        clearInterval(this.pinger);
+        clearTimeout(this.waiting?.timer);
+        this.waiting = null;
+        previous?.close(1000);
+      }
       this.attempt = 0;
       this.missed = 0;
       this.token = token;
@@ -375,9 +385,19 @@ export class RelaySession {
     };
     socket.onerror = () => {};
     socket.onclose = (event) => {
-      if (this.socket !== socket) return;
+      if (this.next === socket) {
+        // El relevo falló antes de abrir: la sesión viva sigue y se reintenta con otro ticket.
+        this.next = null;
+        if (this.socket) return this.reconnectLater();
+      } else if (this.socket !== socket) return;
+      if (this.next && this.socket === socket) {
+        // El viejo cerró durante el relevo: el nuevo toma la sesión al abrir.
+        this.socket = null;
+        clearInterval(this.pinger);
+        for (const listener of this.linkListeners) listener(false);
+        return;
+      }
       this.socket = null;
-      previous?.close(1000);
       clearInterval(this.pinger);
       clearTimeout(this.renew);
       clearTimeout(this.waiting?.timer);
@@ -452,6 +472,8 @@ export class RelaySession {
   }
 
   private waiting: { socket: SocketLike; timer: ReturnType<typeof setTimeout> } | null = null;
+  /** El socket de un relevo, abierto mientras `socket` sigue vivo; toma la sesión cuando abre. */
+  private next: SocketLike | null = null;
 
   /** Antes de `session_expires_at`: renueva dentro del canal si el relay lo anuncia; si no, o si falla, reabre. */
   private async renewAdmission(socket: SocketLike, end: number) {

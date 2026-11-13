@@ -803,3 +803,48 @@ fn contract_examples_are_understood() {
         "identity_unavailable"
     );
 }
+
+#[test]
+fn machines_pagination_cursor_is_the_only_query_desk_sends() {
+    for path in [
+        "/v1/machines?cursor=opaque",
+        "/v1/machines?cursor=opaque%20%2F%3F",
+        "/v1/machines?cursor=a-b_c.d~e",
+    ] {
+        assert!(allowed("GET", path), "{path}");
+    }
+    for (m, p) in [
+        ("GET", "/v1/machines?cursor="),
+        ("GET", "/v1/machines?cursor=a&x=1"),
+        ("GET", "/v1/machines?cursor=a/b"),
+        ("GET", "/v1/machines?cursor=%zz"),
+        ("GET", "/v1/machines?cursor=a%2"),
+        ("GET", "/v1/machines?x=1"),
+        ("GET", "/v1/workspaces?cursor=a"),
+        ("POST", "/v1/machines?cursor=a"),
+        ("GET", "/v1/machines/cmp_1?cursor=a"),
+    ] {
+        assert!(!allowed(m, p), "{m} {p}");
+    }
+    assert!(!allowed(
+        "GET",
+        &format!("/v1/machines?cursor={}", "a".repeat(1025))
+    ));
+}
+
+#[test]
+fn capabilities_count_only_version_one_and_available() {
+    let caps = Capabilities(Capabilities::parse(&json!({
+        "contract": "mvp-v1",
+        "items": [
+            {"name": "machines", "version": 1, "status": "available"},
+            {"name": "workspaces", "version": 2, "status": "available"},
+            {"name": "identity.organizations", "version": 1, "status": "degraded"},
+            {"name": "identity.desk", "status": "available"}
+        ]
+    })));
+    assert_eq!(caps.announces("machines"), Some(true));
+    assert_eq!(caps.announces("workspaces"), Some(false));
+    assert_eq!(caps.announces("identity.organizations"), Some(false));
+    assert_eq!(caps.announces("identity.desk"), Some(false));
+}

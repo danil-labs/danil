@@ -39,7 +39,7 @@ def route_api(route):
             state['lose'] = False
             state['unavailable'] = True
             return route.abort('failed')
-        data = dict(workspace=state['workspace'], ctx='ctx', authz_ver=1)
+        data = dict(workspace=dict(id=state['workspace'], org='org_A', name={'11': 'Alpha', '12': 'Beta'}.get(state['workspace'], 'Workspace'), role='owner'))
     elif path == 'identity/logout':
         assert r.headers['x-csrf-token'] == 'bound'
         assert r.headers['idempotency-key']

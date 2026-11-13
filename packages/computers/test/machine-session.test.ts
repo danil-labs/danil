@@ -50,3 +50,49 @@ test('4005 reconnects with a fresh ticket; revocation stops and requests a conte
   assert.equal(app.tickets(), 2);
   assert.equal(app.revoked(), true);
 });
+
+test('during a ticket handover the old socket keeps answering, an answered call is not resent, and close() closes both', async t => {
+  t.mock.timers.enable({ apis: ['setTimeout', 'Date'] });
+  const app = setup('danil.machine-session.v1', 1000); t.after(() => app.session.close());
+  await turn(); app.sockets[0].onopen?.({});
+  const answered = app.session.call('a', 'list_projects', 'w', null, {});
+  const waiting = app.session.call('b', 'list_projects', 'w', null, {});
+  t.mock.timers.tick(950); await turn();
+  assert.equal(app.sockets.length, 2, 'the new ticket opens a second socket');
+  // The relay answers on the old socket before the new one opens: the answer arrives.
+  app.sockets[0].onmessage?.({ data: JSON.stringify({ type: 'result', id: 'a', value: 1 }) });
+  assert.deepEqual((await answered).value, 1);
+  app.sockets[1].onopen?.({});
+  assert.equal(app.sockets[0].closed, true);
+  const resent = app.sockets[1].sent.map(frame => JSON.parse(frame)).filter(frame => frame.type === 'call').map(frame => frame.id);
+  assert.deepEqual(resent, ['b'], 'only the unanswered call moves to the new socket');
+  app.sockets[1].onmessage?.({ data: JSON.stringify({ type: 'result', id: 'b', value: 2 }) });
+  assert.deepEqual((await waiting).value, 2);
+});
+
+test('close() during a handover closes the old and the pending socket', async t => {
+  t.mock.timers.enable({ apis: ['setTimeout', 'Date'] });
+  const app = setup('danil.machine-session.v1', 1000);
+  await turn(); app.sockets[0].onopen?.({});
+  t.mock.timers.tick(950); await turn();
+  assert.equal(app.sockets.length, 2);
+  app.session.close();
+  assert.equal(app.sockets[0].closed, true, 'old');
+  assert.equal(app.sockets[1].closed, true, 'pending');
+});
+
+test('a handover socket that fails keeps the live session and tries again', async t => {
+  t.mock.timers.enable({ apis: ['setTimeout', 'Date'] });
+  const app = setup('danil.machine-session.v1', 60_000); t.after(() => app.session.close());
+  await turn(); app.sockets[0].onopen?.({});
+  t.mock.timers.tick(54_500); await turn();
+  assert.equal(app.sockets.length, 2);
+  app.sockets[1].onclose?.({ code: 1006 });
+  assert.equal(app.sockets[0].closed, false, 'the live socket stays');
+  const call = app.session.call('c', 'list_projects', 'w', null, {});
+  assert.equal(JSON.parse(app.sockets[0].sent.at(-1)!).id, 'c', 'calls still go out on the live socket');
+  app.sockets[0].onmessage?.({ data: JSON.stringify({ type: 'result', id: 'c', value: 3 }) });
+  assert.deepEqual((await call).value, 3);
+  t.mock.timers.tick(2_000); await turn();
+  assert.ok(app.sockets.length >= 3, 'tries the handover again');
+});

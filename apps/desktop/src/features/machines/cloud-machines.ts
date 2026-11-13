@@ -25,7 +25,9 @@ type EdgeReply = { status: number; body: unknown; location?: string };
 export function edgeFetch(invoke: Invoke, onProblem?: (error: unknown) => void): Fetch {
   return async (input, init) => {
     const method = init?.method ?? "GET";
-    const path = new URL(input).pathname;
+    // Ruta y query (la página siguiente de `/v1/machines`); Rust solo deja pasar las del contrato.
+    const url = new URL(input);
+    const path = url.pathname + url.search;
     let reply: EdgeReply;
     try {
       reply = (await invoke("danil_edge_fetch", method === "GET" ? { method, path } : { method, path, body: {} })) as EdgeReply;

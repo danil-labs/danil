@@ -75,3 +75,18 @@ test("la renovación en el canal solo vale anunciada en v1 y available; sin /v1/
   assert.equal(absent.available, true, "sin descubrimiento se prueba la ruta");
   assert.equal(absent.renewInChannel, false);
 });
+
+test("Desk sigue next_cursor por danil_edge_fetch: dos páginas llegan completas, con el cursor codificado en la query", async () => {
+  const paths: unknown[] = [];
+  const cloud = createCloudMachines(async (_c, args) => {
+    paths.push(args?.path);
+    if (args?.path === "/v1/capabilities") return { status: 404, body: null };
+    if (args?.path === "/v1/machines") return { status: 200, body: { items: [machine], next_cursor: "p2 /?'!" } };
+    if (args?.path === "/v1/machines?cursor=p2%20%2F%3F%27%21") return { status: 200, body: { items: [{ ...machine, machine_id: "cmp_2" }], next_cursor: null } };
+    return { status: 400, body: { code: "invalid_request" } };
+  });
+  const rows = await cloud.rows();
+  assert.equal(rows.available, true);
+  assert.deepEqual(rows.computers.map((c) => c.computer_id), ["cmp_1", "cmp_2"]);
+  assert.deepEqual(paths, ["/v1/capabilities", "/v1/machines", "/v1/machines?cursor=p2%20%2F%3F%27%21"]);
+});
