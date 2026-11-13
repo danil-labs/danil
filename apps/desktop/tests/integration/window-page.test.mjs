@@ -81,6 +81,53 @@ test('the window mounts against an edge that has no /v1/compute and announces ma
 });
 
 
+for (const status of [501, 503]) test(`/v1/workspaces ${status} keeps sign out and the organization selector next to the error`, async t => {
+  const calls = [];
+  const fetcher = async input => {
+    const url = new URL(String(input));
+    if (url.origin === 'http://localhost' && url.pathname.includes('/assets/')) return new Response('');
+    calls.push(url.pathname);
+    if (url.pathname === '/v1/capabilities') return Response.json({ contract: 'mvp-v1', items: ['workspaces', 'identity.organizations'].map(name => ({ name, version: 1, status: 'available' })) });
+    if (url.pathname === '/v1/identity/me') return Response.json({ id: 'user_A', name: 'Operator', workspace: '11', organizations: [] });
+    if (url.pathname === '/v1/identity/organizations') return Response.json({ items: [{ id: 'org_A', name: 'Danil', plan: 'enterprise', role: 'owner' }, { id: 'org_B', name: 'Otra', plan: 'team', role: 'member' }], next_cursor: null, active_organization_id: 'org_A' });
+    if (url.pathname === '/v1/workspaces') return new Response(null, { status });
+    throw new Error(`Unexpected request ${url.pathname}`);
+  };
+  fetcher.__jsdomApp = true; globalThis.fetch = fetcher;
+  const app = await open(t, 'listo', `workspaces-${status}`, {}, undefined, {}, { web: true });
+  const gate = () => app.w.document.querySelector('[data-web-gate]');
+  await until(() => gate()?.querySelector('[role="alert"]') && gate()?.querySelector('[data-web-organization="org_B"]'));
+  assert.ok(gate().querySelector('[data-web-sign-out]'), 'sign out stays visible');
+  assert.ok(gate().querySelector('[data-web-organization="org_A"][aria-pressed="true"]'));
+  assert.equal(app.w.document.querySelector('[data-tira]'), null);
+  assert.deepEqual(app.failures, []);
+});
+
+test('machines 404 shows the cloud as unavailable, retries by itself and never falls back to «This computer»', async t => {
+  const calls = [];
+  const fake = relay();
+  const fetcher = async (input, init) => {
+    const url = new URL(String(input));
+    if (url.origin === 'http://localhost' && url.pathname.includes('/assets/')) return new Response('');
+    calls.push(`${init?.method ?? 'GET'} ${url.pathname}`);
+    if (url.pathname === '/v1/capabilities') return Response.json({ contract: 'mvp-v1', items: ['machines', 'machines.start', 'machines.session', 'workspaces'].map(name => ({ name, version: 1, status: 'available' })) });
+    if (url.pathname === '/v1/identity/me') return Response.json({ id: 'user_A', name: 'Operator', workspace: '11', organizations: [] });
+    if (url.pathname === '/v1/workspaces') return Response.json({ items: [{ id: '11', org: 'org_A', name: 'Alpha', role: 'owner' }], next_cursor: null });
+    if (url.pathname === '/v1/machines') return new Response(null, { status: 404 });
+    return new Response(null, { status: 404 });
+  };
+  fetcher.__jsdomApp = true; globalThis.fetch = fetcher;
+  const app = await open(t, 'listo', 'machines-404', {}, undefined, {}, { web: true, beforeImport(w) { w.WebSocket = fake.Socket; globalThis.WebSocket = fake.Socket; } });
+  await until(() => app.w.document.querySelector('[data-tira]'));
+  await until(() => app.w.document.querySelector('[data-machines-unavailable]'));
+  await until(() => calls.filter(call => call === 'GET /v1/machines').length >= 2);
+  await until(() => app.w.document.querySelector('[data-task-location-machine]'));
+  const label = app.w.document.querySelector('[data-task-location-machine]').textContent;
+  assert.ok(!/This computer|Este equipo|Este Mac|This Mac/.test(label), `the task header names a local computer: ${label}`);
+  assert.match(label, /Machines unavailable|Máquinas no disponibles/);
+  assert.deepEqual(app.failures, []);
+});
+
 for (const status of [401, 403, 503]) test(`identity HTTP ${status} stays distinct before mounting a machine`, async t => {
   const calls = [];
   const fetcher = async (input, init) => {

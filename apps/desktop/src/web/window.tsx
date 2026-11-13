@@ -1,17 +1,27 @@
 import { type Machine, type machinesClient, machineToComputer, RelaySession } from "@terminus/computers";
 import { classOf, Fleet, relayLink, unwrap } from "@terminus/fleet";
-import { createRouter } from "../features/machines/router";
-import { createSignal } from "solid-js";
+import { createRouter, type SliceChange } from "../features/machines/router";
+import { directoryEntries } from "../features/shell/workspace-directory";
+import { createSignal, lazy, Suspense } from "solid-js";
 import { leerPref } from "../lib/prefs";
 import { t } from "../lib/i18n";
 import { setCapabilities, type Capabilities, type WebAccountsSource } from "../lib/platform";
 import { deliver } from "../lib/serviceEvents";
 import { installIpc } from "./ipc";
 import { type BrowserHost, createWebTransport } from "./transport";
+import type { MachineRow, MachineStatus } from "./SyncNote";
 import type { AccountProfileSource } from "../features/settings/account-profile";
 
 declare const __TERMINUS_VERSION__: string;
 type Base = { machines: ReturnType<typeof machinesClient>; relayOrigin: string; permits: (name: string) => boolean; organizations?: Capabilities["organizations"]; onUnauthorized: () => void; profile: AccountProfileSource; workspaces: NonNullable<Capabilities["webWorkspaces"]>; onUnavailable: () => void; };
+const Picker = lazy(() => import("../features/machines/MachinePicker").then(m => ({ default: m.MachinePicker })));
+const AccountMachines = lazy(() => import("../features/machines/AccountMachines"));
+/** Another machine's slice changed: the window rereads just that. */
+function slicesChanged(changes: SliceChange[]) {
+  if (changes.includes("workspaces")) window.dispatchEvent(new CustomEvent("harness:workspace-name"));
+  window.dispatchEvent(new CustomEvent("harness:machine-slices", { detail: { changes } }));
+  if (changes.includes("attention")) window.dispatchEvent(new CustomEvent("harness:service-resync"));
+}
 const browser: BrowserHost = {
   openUrl: url => void window.open(url, "_blank", "noopener,noreferrer"), confirm: message => window.confirm(message),
   alert: message => window.alert(message), reload: () => window.location.reload(),
@@ -72,14 +82,27 @@ export function mountWindow(base: Base, mounted: Mounted) {
       if (events.length) active.events(_id, events);
       if (gap) window.dispatchEvent(new CustomEvent("harness:service-resync"));
     },
-    onSlice: () => window.dispatchEvent(new CustomEvent("harness:machine-slices", { detail: { changes: ["sessions", "projects", "workspaces"] } })),
+    onSlice: () => bump(n => n + 1),
   });
-  const active = createRouter({ self: null, fleet, native: null, deliver,
+  const active = createRouter({ self: null, fleet, native: null, deliver, onSlices: slicesChanged, directory: directoryEntries,
     pickedFor: workspace => {
       const picked: Record<string, string> = leerPref("machines.run_on", {});
       return workspace ? picked[workspace] ?? null : null;
     },
   });
+  const status = (id: string): MachineStatus => {
+    const power = fleet.power(id);
+    return power === "on" ? "online" : power === "off" ? "offline" : power;
+  };
+  const machines = (): MachineRow[] => {
+    revision();
+    const slices = fleet.sliceStatuses();
+    return fleet.machines().map(m => ({ id: m.id, name: m.name, status: status(m.id), at: slices[m.id]?.status === "cached" ? slices[m.id].at : null }));
+  };
+  const several = () => {
+    revision();
+    return fleet.machines().length > 1;
+  };
   async function update() {
     if (stopped) return false;
     if (!base.permits("machines")) { setMissing(true); fleet.setMachines([]); return false; }
@@ -111,13 +134,32 @@ export function mountWindow(base: Base, mounted: Mounted) {
     webWorkspaces: base.workspaces,
     organizations: base.organizations,
     initialSettings: takeSettingsParam(),
-    machineName: id => fleet.name(id),
+    machineName: id => id === "local" && missing() ? t("web.machines.unavailable") : fleet.name(id),
     taskMachine: id => unwrap(id, fleet.remotes())?.machine ?? null,
     windowMachine: () => { const id = active.createsOn(null)?.machine; return id ? { id, name: fleet.name(id), local: false } : undefined; },
     remoteCreate: workspace => active.createsOn(workspace),
+    machineOnCreate: workspace =>
+      several() ? (
+        <Suspense fallback={null}>
+          <div class="flex items-center gap-1 pt-2 text-xs text-neutral-500" data-create-on="">
+            <span>{t("web.machines.create_on")}</span>
+            <Picker workspace={workspace} />
+          </div>
+        </Suspense>
+      ) : null,
+    accountMachines: props =>
+      several() ? (
+        <Suspense fallback={null}>
+          <AccountMachines {...props} machines={machines} />
+        </Suspense>
+      ) : null,
+    machinesLicense: () => {
+      revision();
+      return fleet.license();
+    },
     accountComputers: { list: async () => { const answer = await base.machines.list(); return answer.kind === "ok" ? { kind: "ok", value: answer.value.map(machineToComputer) } : answer.kind === "unavailable" ? { kind: "error", status: answer.status } : answer; }, onRenamed: () => {}, subscribe: changed => { window.addEventListener("harness:machines", changed); return () => window.removeEventListener("harness:machines", changed); } },
     webAccounts: mounted.webAccounts,
-    retryMachines: () => void refresh(),
+    retryMachines: () => { fleet.retry(); void refresh(); },
   });
   installIpc(window, createWebTransport(active, __TERMINUS_VERSION__, browser));
   let disposeApp: (() => void) | undefined;
@@ -135,7 +177,7 @@ export function mountWindow(base: Base, mounted: Mounted) {
     document.body.append(layer);
     disposeNotice = render(() => (
       <>
-        <SyncNote machines={() => { revision(); return [...listed.values()].map(machine => ({ id: machine.machine_id, name: machine.name || machine.machine_id, status: machine.state === "starting" ? "starting" : machineToComputer(machine).state === "online" ? "online" : "offline", at: null })); }} unavailable={missing()} />
+        <SyncNote machines={machines} unavailable={missing()} />
         <UpdateNotice />
       </>
     ), layer);
@@ -144,7 +186,7 @@ export function mountWindow(base: Base, mounted: Mounted) {
 }
 
 /** Paneles que se abren desde la URL (`?settings=`); el parámetro sale de la barra al leerlo. */
-const LINKED_SETTINGS = ["cuenta-danil"];
+const LINKED_SETTINGS = ["cuenta-danil", "emails", "business", "fiscal"];
 
 function takeSettingsParam(): string | undefined {
   const params = new URLSearchParams(window.location.search);

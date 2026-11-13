@@ -27,7 +27,7 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
     aplicarLengua();
     seguirElTema();
     const lifetime = new AbortController();
-    const request: typeof fetch = (input, init = {}) => fetch(input, { ...init, signal: init.signal ? AbortSignal.any([init.signal, lifetime.signal]) : lifetime.signal });
+    const request: typeof fetch = (input, init = {}) => lifetime.signal.aborted ? Promise.reject(new DOMException('The page was closed', 'AbortError')) : fetch(input, { ...init, signal: init.signal ? AbortSignal.any([init.signal, lifetime.signal]) : lifetime.signal });
     const api = platformSession(options, request);
     const raw = platformTransport(options, request);
     const selection = workspaceSelection(api);
@@ -54,18 +54,20 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
       windowApp = undefined;
       disposeGate?.();
       root.replaceChildren();
-      disposeGate = render(() => <main class="flex h-full flex-col overflow-y-auto bg-bg px-10 py-10" data-web-gate="">
+      disposeGate = render(() => <main class="flex h-full flex-col gap-4 overflow-y-auto bg-bg p-10 text-neutral-950" data-web-gate="">
         <ToastStack><UpdateNotice /></ToastStack>
-        <h1 class="m-0 mb-5 text-3xl leading-tight font-display font-bold tracking-[-0.03em] text-neutral-950">{t('common.brand_name')}</h1>
+        <h1 class="m-0 font-display text-lead font-bold">{t('common.brand_name')}</h1>
         <Show when={signedOut()}><Button as="a" href={api.loginUrl(home)}>{t('web.auth.signin')}</Button></Show>
         <Show when={busy()}><p role="status">{t('web.auth.waiting')}</p></Show>
         <Show when={error()}><p role="alert">{t(error())}</p><Button disabled={busy()} onClick={() => void load()}>{t('web.computers.retry')}</Button></Show>
-        <Show when={!signedOut() && !busy() && (orgNeeded() || noWorkspace())}>
-          <For each={(() => { const s = orgState(); return s.kind === 'ready' ? s.items : []; })()}>{org => <Button variant="secondary" data-web-organization={org.id} aria-pressed={(() => { const s = orgState(); return s.kind === 'ready' && s.active === org.id; })()} onClick={() => void organizations.choose(org.id)}>{org.name}</Button>}</For>
-        </Show>
-        <Show when={!signedOut() && !busy() && !error()}>
-          <p>{t('web.platform.empty')}</p>
-          <For each={rows()}>{row => <Button onClick={() => void choose(row.id)}>{row.name}</Button>}</For>
+        <Show when={!signedOut() && !busy()}>
+          <Show when={orgNeeded() || noWorkspace() || error()}>
+            <For each={(() => { const s = orgState(); return s.kind === 'ready' ? s.items : []; })()}>{org => <Button variant="secondary" data-web-organization={org.id} aria-pressed={(() => { const s = orgState(); return s.kind === 'ready' && s.active === org.id; })()} onClick={() => void organizations.choose(org.id)}>{org.name}</Button>}</For>
+          </Show>
+          <Show when={!error()}>
+            <p>{t('web.platform.empty')}</p>
+            <For each={rows()}>{row => <Button onClick={() => void choose(row.id)}>{row.name}</Button>}</For>
+          </Show>
           <Button variant="ghost" data-web-sign-out="" onClick={() => void logout()}>{t('web.platform.sign_out')}</Button>
         </Show>
       </main>, root);
@@ -128,6 +130,7 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
       refreshing = true;
       try {
         setCaps(await readCapabilities(transport));
+        if (stopped || signedOut()) return;
         if (person) {
           const fresh = await api.me();
           if (fresh.id !== person.id || fresh.workspace !== person.workspace) { gate(); window.location.assign(home); return; }
