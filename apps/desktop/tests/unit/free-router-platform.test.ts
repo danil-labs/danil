@@ -165,7 +165,7 @@ test("a renewal rejected for a stale generation stops: a revoked generation is n
   refuse = true;
   await clock.advance(61_000);
   await clock.advance(600_000);
-  assert.equal(sent.filter((s) => s.path === `${BASE}/grant`).length, 2, "no further grant after the generation moved");
+  assert.equal(sent.filter((s) => s.path === `${BASE}/grant`).length, 3, "one retry with a fresh nonce, then it stops");
 });
 
 test("withdrawing is DELETE consent and then clear, and stops renewals", async () => {
@@ -262,4 +262,73 @@ test("accepting sends one CAS intention and a revision conflict is not retried",
 test("an engine refusal that arrives as a bare string keeps its closed code", async () => {
   const { router } = lab({ engine: (c) => { if (c.command === "set_free_router_union") throw "free_router.interface_only"; return undefined; } });
   await assert.rejects(router.link(SCOPE), (e: { code?: string }) => e.code === "free_router.interface_only");
+});
+
+const failOnce = (code: string, command = "set_free_router_grant") => {
+  let failed = false;
+  return (c: Called) => {
+    if (c.command === command && !failed) { failed = true; throw code; }
+    return undefined;
+  };
+};
+
+test("stale_nonce or not_fresh on install retries once with a fresh local nonce and grant", async () => {
+  for (const code of ["free_router.grant.stale_nonce", "free_router.grant.not_fresh"]) {
+    const { router, sent, called } = lab({ engine: failOnce(code) });
+    await router.link(SCOPE);
+    await router.grant(SCOPE);
+    assert.equal(sent.filter((s) => s.path === `${BASE}/grant`).length, 2, code);
+    assert.equal(called.filter((c) => c.command === "free_router_binding").length, 2, code);
+  }
+});
+
+test("no_pending (engine restarted) relinks with a new challenge, proof and PUT before the grant", async () => {
+  const { router, sent, called } = lab({ engine: failOnce("free_router.grant.no_pending") });
+  await router.link(SCOPE);
+  await router.grant(SCOPE);
+  assert.equal(sent.filter((s) => s.path.endsWith("/challenge")).length, 2);
+  assert.equal(called.filter((c) => c.command === "prove_free_router_binding").length, 2);
+  assert.equal(called.filter((c) => c.command === "set_free_router_grant").length, 2);
+});
+
+test("a different jkt from the engine means a restarted engine: relink before asking for a grant", async () => {
+  let restarted = false;
+  const { router, sent, clock } = lab({
+    engine: (c) => (c.command === "free_router_binding" ? { jkt: restarted ? "jkt-2" : "jkt-1", nonce: `n-${Math.random()}` } : undefined),
+  });
+  await router.link(SCOPE);
+  await router.grant(SCOPE);
+  restarted = true;
+  await clock.advance(61_000);
+  assert.equal(sent.filter((s) => s.path.endsWith("/challenge")).length, 2, "the renewal relinked");
+  assert.equal(sent.filter((s) => s.path === `${BASE}/grant`).length, 2);
+});
+
+test("wrong_owner or owner_required restores this session's union once and retries", async () => {
+  for (const [code, command] of [["free_router.grant.wrong_owner", "set_free_router_grant"], ["free_router.owner_required", "free_router_binding"]]) {
+    const { router, called } = lab({ engine: failOnce(code, command) });
+    await router.link(SCOPE);
+    await router.grant(SCOPE);
+    const unions = called.filter((c) => c.command === "set_free_router_union");
+    assert.equal(unions.length, 2, code);
+    assert.deepEqual(unions[1].args, { workspace: "q3ce37ff", platformAccount: "42", org: "org_A", sub: "user_A" });
+    assert.equal(called.filter((c) => c.command === "set_free_router_grant").at(-1) !== undefined, true);
+  }
+});
+
+test("mismatch and the other grant codes are not retried blindly", async () => {
+  for (const code of ["free_router.grant.mismatch", "free_router.grant.signature", "settings.accounts.free.unavailable"]) {
+    const { router, sent } = lab({ engine: failOnce(code) });
+    await router.link(SCOPE);
+    await assert.rejects(router.grant(SCOPE), (e: { code?: string }) => e.code === code);
+    assert.equal(sent.filter((s) => s.path === `${BASE}/grant`).length, 1, code);
+  }
+});
+
+test("sealed:false is a renewal of an installed grant, not a failure", async () => {
+  const { router, clock, sent } = lab({ engine: (c) => (c.command === "set_free_router_grant" ? { sealed: false } : undefined) });
+  await router.link(SCOPE);
+  await router.grant(SCOPE);
+  await clock.advance(61_000);
+  assert.equal(sent.filter((s) => s.path === `${BASE}/grant`).length, 2);
 });
