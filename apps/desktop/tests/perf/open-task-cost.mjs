@@ -14,7 +14,7 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import { join } from "node:path";
 import baseline from "./open-task-cost-baseline.json" with { type: "json" };
-import { boot, sleep } from "../helpers/jsdom-app.mjs";
+import { boot, cause, sleep } from "../helpers/jsdom-app.mjs";
 
 const BASELINE = join(import.meta.dirname, "open-task-cost-baseline.json");
 const args = process.argv.slice(2);
@@ -135,7 +135,7 @@ function responses(longTurns) {
     load_queue: [],
     session_usage: null,
     list_session_git: ({ remote }) => {
-      if (remote) remoteGit.calls++;
+      if (remote && cause.getStore() === "open-task") remoteGit.calls++;
       return {};
     },
   };
@@ -151,7 +151,7 @@ function counted(table) {
     cmd,
     PERIODIC.has(cmd) ? response : (a) => {
       const value = typeof response === "function" ? response(a) : response;
-      if (!(cmd === "list_session_git" && a?.remote)) ipc.bytes += Buffer.byteLength(JSON.stringify(value) ?? "");
+      if (cause.getStore() === "open-task" && !(cmd === "list_session_git" && a?.remote)) ipc.bytes += Buffer.byteLength(JSON.stringify(value) ?? "");
       return value;
     },
   ]));
@@ -236,12 +236,17 @@ async function openLong(turns, run, check) {
   const short = shown(doc, "Hola") && shown(doc, "Listo.");
   mutations = 0;
   addedNodes = 0;
-  const invokedBefore = app.commands.length;
   const remoteBefore = remoteGit.calls;
   const bytesBefore = ipc.bytes;
   const nodesBefore = doc.querySelectorAll("*").length;
+  // Una consulta ya programada de otra tarea no pertenece a la apertura.
+  let backgroundRead = false;
+  setTimeout(() => {
+    void app.w.__TAURI_INTERNALS__.invoke("session_folder", { project: "", id: "short" }).then(() => { backgroundRead = true; });
+  }, 0);
   const start = performance.now();
-  doc.querySelector('[data-sesion="long"]').click();
+  // Los relojes registrados al montar conservan su contexto: no son trabajo del gesto.
+  cause.run("open-task", () => doc.querySelector('[data-sesion="long"]').click());
   await settle(clock);
   const ms = lastMutation - start;
   const counters = {
@@ -249,12 +254,14 @@ async function openLong(turns, run, check) {
     addedNodes,
     mutations,
     invokes:
-      app.commands.slice(invokedBefore).filter((c) => !PERIODIC.has(c) && !c.startsWith("plugin:")).length -
+      app.commandsForCause("open-task").filter((c) => !PERIODIC.has(c) && !c.startsWith("plugin:")).length -
       (remoteGit.calls - remoteBefore),
     ipcBytes: ipc.bytes - bytesBefore,
   };
   const lastAgent = turns.findLast((t) => t.role === "agent")?.text.split("\n").at(-1) ?? "";
-  let failure = !short
+  let failure = !backgroundRead
+    ? "La consulta de fondo no se ejecutó durante la medición."
+    : !short
     ? "La tarea corta no pintó sus dos mensajes."
     : !shown(doc, plain(lastAgent))
       ? "Abrir la tarea larga no pintó su último mensaje."
