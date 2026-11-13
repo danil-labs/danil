@@ -555,7 +555,10 @@ export default function Sessions(props: {
   // commiteados en ningún lado: no tienen de dónde volver. Por eso la
   // confirmación vive en la propia fila, con lo que se pierde escrito.
   const [confirmando, setConfirmando] = createSignal<string | null>(null);
+  // Deleting a native child takes only that task, and the engine leaves pinned descendants out with their subtree.
   const subtasksOf = (row: SessionRow) => {
+    if (row.parent) return 0;
+    const count = (branch: RamaDeTareas<SessionRow>): number => branch.hijas.filter(h => !fijada(h.tarea)).reduce((n, h) => n + 1 + count(h), 0);
     const find = (branches: RamaDeTareas<SessionRow>[]): RamaDeTareas<SessionRow> | undefined => {
       for (const branch of branches) {
         if (taskIdentity(branch.tarea) === taskIdentity(row)) return branch;
@@ -564,7 +567,7 @@ export default function Sessions(props: {
       }
     };
     const branch = find(taskTree(props.relatedSessions ?? props.sessions, false));
-    return branch ? descendientes(branch).length : 0;
+    return branch ? count(branch) : 0;
   };
   // El menú va por portal: escapa del recorte deliberado del sidebar, y con
   // veinte proyectos la lista de destinos no desplaza lo que hay debajo.
