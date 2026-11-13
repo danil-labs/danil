@@ -209,7 +209,7 @@ export default function VistaDeProyecto(props: {
   onNueva: () => void;
   onAbrir: (id: string) => void;
   onHablarCon: (name: string) => void;
-  onDelete: (id: string) => void;
+  onDelete: (id: string, members?: number) => void;
   onMove: (id: string, to: string) => void;
   onEtapa: (id: string, etapa: Etapa | null) => void;
   onRenombrar: (id: string, title: string) => void;

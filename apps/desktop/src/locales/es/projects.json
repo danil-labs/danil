@@ -249,6 +249,10 @@
   "projects.sessions.blockers_unsaved": "Hay cambios sin guardar en Git: archivos modificados o nuevos. Descartarlos los borra de la carpeta y no hay deshacer; lo que no está en Git no se recupera.",
   "projects.sessions.delete": "Borrar la tarea",
   "projects.sessions.delete_confirm": "¿Borrar esta tarea? Se lleva la conversación y todo lo que el agente dejó en ella. No hay deshacer.",
+  "projects.sessions.delete_confirm_family": {
+    "one": "¿Borrar esta tarea y su subtarea? Se lleva sus conversaciones y todo lo que los agentes dejaron en ellas. No hay deshacer.",
+    "other": "¿Borrar esta tarea y sus {count} subtareas? Se lleva sus conversaciones y todo lo que los agentes dejaron en ellas. No hay deshacer."
+  },
   "projects.sessions.delete_work": "Revisa cada tarea y los archivos que se eliminarán. La pérdida no se puede deshacer. Los cambios de contenido o de familia exigen otra revisión.",
   "projects.sessions.delete_work_title": "Borrar tareas y sus archivos",
   "projects.sessions.finish": "Finalizar tarea",
@@ -417,6 +421,8 @@
   "projects.sessions.delete_inspection_failed": "No se pudo completar la inspección. No se puede confirmar.",
   "projects.sessions.delete_working": "Esta tarea tiene un turno activo. El borrado solicitará detenerlo.",
   "projects.sessions.delete_no_files": "No hay archivos pendientes que se perderían.",
+  "projects.sessions.delete_unmerged": "Su rama tiene commits sin integrar.",
+  "projects.sessions.delete_unmerged_unchecked": "No se pudo comprobar si su rama está integrada.",
   "projects.sessions.delete_buffers": "Hay cambios sin guardar en el editor. Cancela, guárdalos en el editor y vuelve a revisar antes de borrar.",
   "projects.sessions.delete_reviewed": "Revisé esta tarea y acepto las pérdidas indicadas.",
   "projects.sessions.delete_reviewed_all": "Revisé todas estas tareas y acepto las pérdidas indicadas.",

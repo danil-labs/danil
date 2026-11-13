@@ -249,6 +249,10 @@
   "projects.sessions.blockers_unsaved": "There are changes that aren't saved in Git: modified or new files. Discarding deletes them from the folder and there is no undo; what isn't in Git can't be recovered.",
   "projects.sessions.delete": "Delete the task",
   "projects.sessions.delete_confirm": "Delete this task? It takes the conversation and everything the agent left in it. There is no undo.",
+  "projects.sessions.delete_confirm_family": {
+    "one": "Delete this task and its subtask? It takes their conversations and everything the agents left in them. There is no undo.",
+    "other": "Delete this task and its {count} subtasks? It takes their conversations and everything the agents left in them. There is no undo."
+  },
   "projects.sessions.delete_work": "Review each task and the files that will be deleted. This loss cannot be undone. Changes to contents or family require another review.",
   "projects.sessions.delete_work_title": "Delete tasks and their files",
   "projects.sessions.finish": "Finish task",
@@ -417,6 +421,8 @@
   "projects.sessions.delete_inspection_failed": "Inspection could not be completed. Confirmation is blocked.",
   "projects.sessions.delete_working": "This task has an active turn. Deletion will request that it stop.",
   "projects.sessions.delete_no_files": "No pending files would be lost.",
+  "projects.sessions.delete_unmerged": "Its branch has commits that are not merged.",
+  "projects.sessions.delete_unmerged_unchecked": "Could not check whether its branch is merged.",
   "projects.sessions.delete_buffers": "There are unsaved editor changes. Cancel, save them in the editor, and review again before deleting.",
   "projects.sessions.delete_reviewed": "I reviewed this task and accept the listed losses.",
   "projects.sessions.delete_reviewed_all": "I reviewed all these tasks and accept the listed losses.",
