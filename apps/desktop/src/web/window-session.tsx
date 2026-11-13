@@ -218,8 +218,9 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
           current: { user_id: person.id, name: person.name, email: null, extra: false },
           others: () => [], open: () => {}, add: () => {}, remove: async () => {}, signOut: () => void logout(),
         } });
-        void windowApp.refresh();
-        later(POLL_MAX_MS);
+        void windowApp.refresh().then(ready => later(ready ? POLL_MAX_MS : FIRST_RETRY_MS)).catch(() => {
+          setError('web.platform.unavailable'); gate(); later();
+        });
       });
     }
     const close = () => { stopped = true; clearTimeout(timer); lifetime.abort(); windowApp?.close(); disposeGate?.(); dispose(); };
