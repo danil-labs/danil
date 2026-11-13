@@ -68,10 +68,10 @@ function lab(overrides: { edge?: (r: Sent, n: number) => Answer | Promise<Answer
         timers.shift();
         now = next.at;
         next.run();
-        for (let i = 0; i < 20; i++) await Promise.resolve();
+        for (let i = 0; i < 200; i++) await Promise.resolve();
       }
       now = until;
-      for (let i = 0; i < 20; i++) await Promise.resolve();
+      for (let i = 0; i < 200; i++) await Promise.resolve();
     },
   };
   let keys = 0;
@@ -215,7 +215,7 @@ test("a grant answer that arrives after logout is never installed", async () => 
   });
   await router.link(SCOPE);
   const pending = router.grant(SCOPE);
-  for (let i = 0; i < 20; i++) await Promise.resolve();
+  for (let i = 0; i < 200; i++) await Promise.resolve();
   await router.signOut("user_A");
   answer({ status: 200, body: { grant: "jws.late", expires_at: new Date(Date.now() + 120_000).toISOString() } });
   await assert.rejects(pending, (e: { code?: string }) => e.code === "stale");
