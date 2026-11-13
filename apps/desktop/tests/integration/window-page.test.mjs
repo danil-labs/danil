@@ -238,10 +238,12 @@ test('an authenticated session with no workspaces shows the plan empty state wit
 for (const end of ['logout', '401']) test(`${end} revokes the mounted person's cached workspaces`, async t => {
   const calls = [];
   let expired = false;
+  let unauthorized = 0;
   const fetcher = async (input, init) => {
     const url = new URL(String(input));
     if (url.origin === 'http://localhost' && url.pathname.includes('/assets/')) return new Response('');
     calls.push(url.pathname);
+    if (url.pathname === '/v1/machines' && expired) { unauthorized++; return new Response(null, { status: 401 }); }
     if (['/v1/capabilities', '/v1/identity/organizations', '/v1/machines'].includes(url.pathname)) return new Response(null, { status: 404 });
     if (url.pathname === '/v1/identity/me') return expired ? new Response(null, { status: 401 }) : Response.json({ id: 'user_A', name: 'Operator', workspace: '11', organizations: [] });
     if (url.pathname === '/v1/workspaces') return Response.json({ items: [{ id: '11', org: 'org_A', name: 'Alpha', role: 'owner' }], next_cursor: null });
@@ -263,10 +265,10 @@ for (const end of ['logout', '401']) test(`${end} revokes the mounted person's c
     doc.querySelector('[data-sign-out]').click();
   } else {
     expired = true;
-    doc.querySelector('button[aria-label="Configuración"]').click();
   }
   await until(() => doc.querySelector('a[href*="/v1/identity/login"]'));
   assert.equal(doc.querySelector('[data-tira]'), null);
+  if (end === '401') assert.ok(unauthorized > 0, 'a protected machine request observes the expired session');
   assert.equal(app.w.localStorage.getItem('danil.web.user_A.11.tasks'), null);
   assert.equal(app.w.localStorage.getItem('danil.web.user_A.12.tasks'), null);
   assert.equal(app.w.localStorage.getItem('danil.web.user_B.11.tasks'), 'another person');
