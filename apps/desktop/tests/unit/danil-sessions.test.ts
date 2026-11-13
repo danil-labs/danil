@@ -69,10 +69,16 @@ test("an engine without danil_sessions reads as null, so the window keeps the si
   assert.equal(await readWorkspaceAccount("w1"), null);
 });
 
+test("Desk has one account: the engine's sessions are not read, even if it has them", async () => {
+  const calls = engine({ danil_sessions: () => [ALBERTO, FUNDACION, PENDING] });
+  const { readSessions } = await sessions();
+  assert.equal(await readSessions(), null);
+  assert.ok(!calls.some((c) => c.command === "danil_sessions"));
+});
+
 test("the sessions split into signed-in accounts and the sign-in in progress", async () => {
-  engine({ danil_sessions: () => [ALBERTO, FUNDACION, PENDING] });
-  const { readSessions, connectedSessions, pendingSession, defaultSession, sessionOf } = await sessions();
-  const list = await readSessions();
+  const { connectedSessions, pendingSession, defaultSession, sessionOf } = await sessions();
+  const list = [ALBERTO, FUNDACION, PENDING] as never;
   assert.deepEqual(connectedSessions(list).map((s) => s.account), ["u_alberto", "u_fdb"]);
   assert.equal(pendingSession(list)?.user_code, "WDJB-MJHT");
   assert.equal(defaultSession(list)?.account, "u_alberto");
@@ -194,11 +200,9 @@ test("the account that just signed in is the first connected one that was not th
 test("a read failure never selects the legacy account model", async () => {
   const failure = { detail: "unauthorized" };
   engine({ danil_sessions: () => { throw failure; }, danil_workspace_account: () => { throw failure; } });
-  const { readSessions, readWorkspaceAccount } = await sessions();
-  await assert.rejects(readSessions(), (error) => error === failure);
+  const { readWorkspaceAccount } = await sessions();
   await assert.rejects(readWorkspaceAccount("w1"), (error) => error === failure);
-  engine({ danil_sessions: () => ({}), danil_workspace_account: () => ({}) });
-  await assert.rejects(readSessions(), { detail: "invalid_response" });
+  engine({ danil_workspace_account: () => ({}) });
   await assert.rejects(readWorkspaceAccount("w1"), { detail: "invalid_response" });
 });
 
