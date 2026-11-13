@@ -483,20 +483,18 @@ assert.ok([...discoveryDoc.querySelectorAll("button")].some(b => b.textContent?.
 discoverySelector.click();
 await sleep(50);
 const discovery = discoveryDoc.querySelector('section[aria-label="Router IA gratis"]');
-assert.ok(discovery, "La oferta del Router aparece sin un catálogo del motor.");
-assert.match(discovery.textContent, /Beam/);
-assert.match(discovery.textContent, /Reflection/);
+assert.ok(discovery, "El Router aparece en el panel Danil sin un catálogo del motor.");
+assert.doesNotMatch(discovery.parentElement.textContent, /Beam|Reflection|DeepSeek/, "Los servicios de Danil no nombran su modelo.");
 await sleep(2300);
 assert.match(discovery.textContent, /Actualiza el motor/, "Sin política del Router el motor no es compatible.");
 assert.doesNotMatch(discovery.textContent, /Requiere una máquina compatible/);
-assert.ok(discovery.querySelector('[aria-disabled="true"]'), "Beam informativo no es seleccionable.");
-assert.equal(discovery.querySelector("button"), null, "La ficha no tiene acciones de selección.");
+assert.equal(discovery.querySelector("button"), null, "Sin política el Router no ofrece acciones.");
 assert.equal(discoveryDoc.querySelector('[role="option"]'), null, "La oferta no inventa opciones del catálogo.");
 discovery.click();
 const discoverySearch = discoveryDoc.querySelector('input[placeholder="Buscar modelos"]');
 discoverySearch?.dispatchEvent(new noUsable.w.KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
 await sleep(20);
-assert.equal(discoverySends.length, 0, "Descubrir Beam no envía una inferencia.");
+assert.equal(discoverySends.length, 0, "Abrir el Router no envía una inferencia.");
 assert.equal(discoveryDoc.querySelector('button[aria-label="Preguntar"]:not(:disabled)'), null, "Sin modelos usables no se habilita el envío.");
 const routerPolicy = (accepted, acceptance_ref = "ref-1") => ({
   workspace_id: "w", version: 3, providers: ["kilo", "vercel", "reflection"], acceptance_ref, enabled: true, accepted,
