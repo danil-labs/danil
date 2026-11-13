@@ -6,3 +6,8 @@ export function accountKeyUrl(provider: Pick<AgentOpt, "id" | "api_key"> | undef
   if (provider && canonicalAgentId(provider.id) === OPENCODE) return null;
   return provider?.api_key ?? null;
 }
+
+/** Proveedor desconocido (máquina apagada) no bloquea: `add_account` la enciende. */
+export function addBlockedByExternal(provider: Pick<AgentOpt, "available" | "external_install_url"> | undefined): boolean {
+  return !!provider && !!provider.external_install_url && !provider.available;
+}

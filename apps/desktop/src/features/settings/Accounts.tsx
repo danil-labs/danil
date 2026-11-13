@@ -39,7 +39,7 @@ import { Skeleton } from "../../ui/Skeleton";
 import { Terminal, TerminalBody } from "../../ui/Terminal";
 import { machineOf } from "../machines/store";
 import AccountCard, { accountPresentation } from "./AccountCard";
-import { accountKeyUrl } from "./account-auth";
+import { accountKeyUrl, addBlockedByExternal } from "./account-auth";
 import {
   type Account,
   type AccountList,
@@ -184,6 +184,7 @@ export default function Accounts(props: {
   const externalInstallUrl = () => proveedor()?.external_install_url;
   const faltaExterno = () => !proveedor() || Boolean(externalInstallUrl()) && !proveedor()?.available;
   const [revisandoCli, setRevisandoCli] = createSignal(false);
+  const [agregando, setAgregando] = createSignal(false);
 
   async function comprobarCli() {
     setRevisandoCli(true);
@@ -576,12 +577,17 @@ export default function Accounts(props: {
   }
 
   async function agregar(options?: { headers: Record<string, string> }) {
-    if (faltaExterno()) return;
+    if (addBlockedByExternal(proveedor()) || agregando()) return;
+    setAgregando(true);
     try {
+      // Apagada, esto la enciende (intent del relay) antes de conectar.
       const a = await invoke<Account>("add_account", {
         provider: agente(),
         label: "",
       }, options);
+      if (!proveedor()) {
+        await invoke<AgentOpt[]>("list_providers").then(setAgentes).catch(() => {});
+      }
       // Agregar crea la carpeta antes del login: ahí escribe el CLI la
       // credencial. Si el login no llega a nada, esto permite deshacerlo en
       // vez de dejar un objeto vacío en la lista.
@@ -604,6 +610,8 @@ export default function Accounts(props: {
       await refrescar();
     } catch (e) {
       setFallo({ what: t("settings.accounts.error.create"), detail: detalleDe(e) });
+    } finally {
+      setAgregando(false);
     }
   }
 
@@ -833,7 +841,7 @@ export default function Accounts(props: {
       variant={forma === "aside" ? "ghost" : forma === "fila" ? "secondary" : "primary"}
       size={forma === "aside" ? "compact" : "sm"}
       onClick={() => void agregar()}
-      disabled={enCurso() !== null || segunda() !== null || faltaExterno()}
+      disabled={enCurso() !== null || segunda() !== null || agregando() || addBlockedByExternal(proveedor())}
       /* **La segunda cuenta de un agente que no aísla su credencial no se
          ofrece.** No es una advertencia encima del botón: el botón no se
          puede usar y dice por qué. Conectarla reemplazaría la sesión de la
