@@ -1,8 +1,7 @@
 export { DesktopCodeStore } from "./desktop-code-store.mjs";
-// Plataforma para la SPA; /alpha-api conserva los dominios pendientes de W5.
+// La SPA consume los dominios de mensajería por el borde de plataforma.
 import { upstreamSignal } from "./transport.mjs";
 import { dependencyProblem, logDependency } from "./dependency-error.mjs";
-import { broadcastRead, broadcastWrite } from "./broadcasts.mjs";
 
 const HOST = "alfa-app.danil.ai";
 // Pasada la puerta de `fetch`, `url.origin` es `https://<host>`: las escrituras comparan contra él.
@@ -24,88 +23,6 @@ const EMAIL_WRITES = {
 };
 const MAX_BODY = 1024;
 const WORKSPACE_KEY = /^(a:[1-9][0-9]{0,17}|w:[!-~]{1,128})$/;
-const positive = value => Number.isSafeInteger(value) && value > 0;
-const exact = (body, required, optional = []) => body && typeof body === "object" && !Array.isArray(body) && required.every(key => Object.hasOwn(body, key)) && Object.keys(body).every(key => required.includes(key) || optional.includes(key));
-
-function marketingRoute(path) {
-  if (path === "/api/marketing/campaigns") return "campaigns";
-  if (path === "/api/marketing/templates") return "templates";
-  if (path === "/api/contacts") return "contact-list";
-  const match = /^\/api\/marketing\/(?:templates\/([1-9]\d*)\/(channels)|campaigns\/([1-9]\d*)\/(stats|pause|cancel|contacts|start|resume|schedule))$/.exec(path);
-  return match && positive(Number(match[1] ?? match[3])) ? match[2] ?? match[4] : null;
-}
-
-/** Solo restringe; la firma y la autoridad del mismo Bearer se verifican después en el BFF. */
-function bearerAccount(authorization) {
-  try {
-    const token = authorization.split(" ")[1];
-    if (token.split(".").length !== 3) return null;
-    const payload = token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
-    const account = JSON.parse(atob(payload)).active_account_id;
-    return positive(account) ? account : null;
-  } catch { return null; }
-}
-
-/** Toda escritura de marketing lo pasa: las reglas de la base no cubren cada ruta ni cada fallo. */
-async function requireCampaignsManage(env, url, headers, account) {
-  const permissionsUrl = new URL(`/auth/account/my-permissions?account_id=${account}`, url.origin);
-  const response = await forward(env, new Request(permissionsUrl, { headers, redirect: "manual" }));
-  if (!response.ok) return response.status === 401 || response.status === 403
-    ? json("permissions_unavailable", response.status) : dependencyProblem("permissions_unavailable");
-  let permissions;
-  try { permissions = await response.json(); } catch (error) {
-    logDependency("permissions_parse", error);
-    return dependencyProblem("permissions_unavailable");
-  }
-  if (typeof permissions?.role !== "string" || !Array.isArray(permissions.permissions) || !permissions.permissions.every(value => typeof value === "string") || !Array.isArray(permissions.scoped) || !permissions.scoped.every(grant => grant && typeof grant.permission === "string" && typeof grant.scope_type === "string" && positive(grant.scope_id))) return dependencyProblem("permissions_unavailable");
-  if (!permissions.permissions.includes("campaigns.manage")) return json("forbidden_read_only", 403);
-  return null;
-}
-
-async function marketingProxy(request, env, url, path, route) {
-  const write = request.method === "POST";
-  if (!write && request.method !== "GET") return json("method_not_allowed", 405);
-  if ((!write && !["campaigns", "templates", "contact-list", "channels", "stats"].includes(route)) || (write && !["campaigns", "pause", "cancel", "contacts", "start", "resume", "schedule"].includes(route))) return json("method_not_allowed", 405);
-  if (write && request.headers.get("Origin") !== url.origin) return json("forbidden_origin", 403);
-  if (write && (request.headers.get("X-Danil-Actor") ?? "").trim().toLowerCase() === "ai") return json("identity_requires_person", 403);
-  const authorization = request.headers.get("Authorization");
-  if (!authorization || !/^Bearer \S+$/i.test(authorization)) return json("unauthorized", 401);
-  const keys = [...url.searchParams.keys()];
-  const templateList = !write && route === "templates" && keys.includes("status");
-  if (keys.length !== (templateList ? 2 : 1) || new Set(keys).size !== keys.length || !keys.includes("account_id") || (templateList && url.searchParams.get("status") !== "APPROVED")) return json("invalid_query", 400);
-  const rawAccount = url.searchParams.get("account_id");
-  const account = Number(rawAccount);
-  if (!/^\d+$/.test(rawAccount ?? "") || !positive(account)) return json("invalid_query", 400);
-  const active = bearerAccount(authorization);
-  if (active === null) return json("missing_active_account", 403);
-  if (active !== account) return json("account_mismatch", 403);
-  if (write && ["contacts", "start", "resume", "schedule"].includes(route)) return json("campaign_delivery_unavailable", 409);
-  if (!env.APPV2_BFF) return json("bff_unavailable", 503);
-  const headers = new Headers({ Authorization: authorization, Accept: "application/json", Origin: url.origin });
-  let body;
-  if (write) {
-    if (route === "campaigns") {
-      if (!/^application\/json(?:\s*;\s*charset=utf-8)?$/i.test(request.headers.get("Content-Type") ?? "")) return json("invalid_body", 400);
-      const bytes = await boundedBody(request, 20 * 1024);
-      let value;
-      try { value = bytes && JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes)); } catch { return json("invalid_body", 400); }
-      if (!exact(value, ["name", "template_id", "channel_id"], ["variable_mapping"]) || typeof value.name !== "string" || !value.name.trim() || value.name.trim().length > 200 || !positive(value.template_id) || !positive(value.channel_id)) return json("invalid_body", 400);
-      const mapping = value.variable_mapping;
-      if (mapping !== undefined && (!mapping || typeof mapping !== "object" || Array.isArray(mapping) || Object.keys(mapping).length > 50 || Object.entries(mapping).some(([key, val]) => !/^[a-zA-Z0-9_.]{1,64}$/.test(key) || key === "__header_media_url" || typeof val !== "string" || !val.trim() || val.length > 1024))) return json("invalid_body", 400);
-      body = JSON.stringify({ name: value.name.trim(), template_id: value.template_id, channel_id: value.channel_id, ...(mapping === undefined ? {} : { variable_mapping: Object.fromEntries(Object.entries(mapping)) }) });
-      headers.set("Content-Type", "application/json");
-    } else {
-      const bytes = await boundedBody(request, 0);
-      if (!bytes) return json("invalid_body", 400);
-    }
-    const denied = await requireCampaignsManage(env, url, headers, account);
-    if (denied) return denied;
-  }
-  url.pathname = path;
-  url.search = new URLSearchParams({ account_id: String(account), ...(templateList ? { status: "APPROVED" } : {}) }).toString();
-  return forward(env, new Request(url, { method: request.method, headers, ...(body === undefined ? {} : { body }), redirect: "manual" }));
-}
-
 /** Lee el cuerpo por partes y corta al pasar de `max` bytes: sin Content-Length no se carga entero. */
 async function boundedBody(request, max) {
   if (!request.body) return new Uint8Array();
@@ -207,41 +124,6 @@ async function emailWrite(request, env, url, path) {
   return forward(env, new Request(url, { method: "POST", headers, body: JSON.stringify(body), redirect: "manual" }));
 }
 
-/** Una escritura de Difusiones: las mismas barreras que los correos, más el interruptor. */
-async function writeBroadcast(request, env, url, path, route) {
-  if (request.headers.get("Origin") !== url.origin) return json("forbidden_origin", 403);
-  if ((request.headers.get("X-Danil-Actor") ?? "").trim().toLowerCase() === "ai") return json("identity_requires_person", 403);
-  const authorization = request.headers.get("Authorization");
-  if (!authorization || !/^Bearer \S+$/i.test(authorization)) return json("unauthorized", 401);
-  if (!route.delivery && env.BROADCAST_WRITES !== "on") return json("broadcast_writes_disabled", 403);
-  const account = bearerAccount(authorization);
-  if (account === null) return json("missing_active_account", 403);
-  if (route.delivery) {
-    const claimed = url.searchParams.get("account_id");
-    if ([...url.searchParams.keys()].length !== 1 || !/^\d+$/.test(claimed ?? "") || Number(claimed) !== account) return json("account_mismatch", 403);
-    url.search = "";
-  }
-  if (url.search) return json("invalid_query", 400);
-  const contentType = request.headers.get("Content-Type") ?? "";
-  const declared = Number(request.headers.get("Content-Length") ?? "0");
-  if (declared > route.max) return json("invalid_body", 400);
-  const bytes = route.parse === null ? new Uint8Array() : await boundedBody(request, route.max);
-  if (!bytes) return json("invalid_body", 400);
-  const body = route.parse === null ? undefined : await route.parse(bytes, contentType, { env, account });
-  if (body === null) return json("invalid_body", 400);
-  if (!env.APPV2_BFF) return json("bff_unavailable", 503);
-  const headers = new Headers({ Authorization: authorization, Accept: "application/json", Origin: url.origin });
-  if (!route.anyMember) {
-    const denied = await requireCampaignsManage(env, url, headers, account);
-    if (denied) return denied;
-  }
-  if (route.parse !== null && !route.multipart) headers.set("Content-Type", "application/json");
-  const referer = request.headers.get("Referer");
-  if (referer !== null) headers.set("Referer", referer);
-  url.pathname = path;
-  return forward(env, new Request(url, { method: request.method, headers, body, redirect: "manual" }));
-}
-
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -253,24 +135,18 @@ export default {
     }
     if (url.pathname === PREFIX || url.pathname.startsWith(`${PREFIX}/`)) {
       const path = url.pathname.slice(PREFIX.length);
-      if (path.startsWith("/auth/account/business/") || path === "/auth/organization/workspaces" || path === "/auth/profile" || path === "/api/workspace/enter" || path === "/api/messaging/reply" ||
-          /^\/api\/(inbox|agents|credits|http_tools|account_variables)(\/|$)/.test(path)) return json("not_found", 404);
+      if (path.startsWith("/auth/account/business/") || path === "/auth/organization/workspaces" || path === "/auth/profile" || path === "/api/workspace/enter" || path === "/api/messaging/reply" || path === "/auth/account/features" ||
+          /^\/api\/(inbox|agents|credits|http_tools|account_variables|marketing|contacts|channels|media)(\/|$)/.test(path)) return json("not_found", 404);
       // Cerrada también: el BFF compara la clave con el claim verificado. Nunca elige workspace.
       const workspaceKey = request.headers.get("X-Danil-Workspace");
       if (workspaceKey !== null && !WORKSPACE_KEY.test(workspaceKey)) return json("invalid_workspace_key", 400);
       if (workspaceKey !== null) env = { ...env, workspaceKey };
-      const write = broadcastWrite(request.method, path);
-      if (write && (!write.delivery || env.BROADCAST_DELIVERY === "on")) return writeBroadcast(request, env, url, path, write);
-      const marketing = marketingRoute(path);
-      if (marketing) return marketingProxy(request, env, url, path, marketing);
       if (request.method === "POST" && Object.hasOwn(EMAIL_WRITES, path)) return emailWrite(request, env, url, path);
       if (request.method !== "GET") return json("method_not_allowed", 405);
-      const read = broadcastRead(path);
-      const kind = read ? "broadcast" : path === "/auth/emails" ? "emails" :
-        path === "/api/channels" ? "channels" :
+      const kind = path === "/auth/emails" ? "emails" :
         ["/auth/account/support-access", "/auth/account/my-permissions"].includes(path) ? "support" : null;
       if (!kind) return json("not_found", 404);
-      const query = read ? read(url.searchParams) : queryFor(url, kind);
+      const query = queryFor(url, kind);
       if (!query) return json("invalid_query", 400);
       const authorization = request.headers.get("Authorization");
       if (!authorization || !/^Bearer \S+$/i.test(authorization)) return json("unauthorized", 401);

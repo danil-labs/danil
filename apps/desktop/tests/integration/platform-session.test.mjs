@@ -11,6 +11,7 @@ import { workspaceSelection } from "../../src/web/workspace-selection.ts";
 import { platformInbox } from "../../src/web/platform-inbox.ts";
 import { createMessaging } from "../../../../packages/attention/src/messaging.ts";
 import { inboxProgressBrowser } from "../helpers/inbox-progress-browser.mjs";
+import { messagingDomainsE2E } from "../helpers/messaging-domains-e2e.mjs";
 import { realMessagingServer } from "../helpers/real-messaging-server.mjs";
 import { messagingContractServer } from "../helpers/messaging-contract-server.mjs";
 import { platformSession, PlatformSessionError } from "../../src/web/platform-session.ts";
@@ -126,7 +127,7 @@ test("SPA cookie session against edge, identity and workspaces Workers with Post
       headers.set("origin", "https://alfa-app.danil.ai");
       headers.set("x-request-id", "req_spa_test");
       requests.push(r.url);
-      return runtime.dispatchFetch(r.url, { method: r.method, headers: Object.fromEntries(headers), body: r.method === "POST" ? await r.text() : undefined, signal: r.signal, redirect: "manual" });
+      return runtime.dispatchFetch(r.url, { method: r.method, headers: Object.fromEntries(headers), body: ["POST", "PATCH", "PUT", "DELETE"].includes(r.method) ? await r.text() : undefined, signal: r.signal, redirect: "manual" });
     };
     const api = platformSession({ origin: "https://api.danil.ai", timeoutMs: 5000 }, browserFetch);
     await t.test("PKCE login/callback issues cookie; callback replay fails", async () => {
@@ -186,6 +187,9 @@ test("SPA cookie session against edge, identity and workspaces Workers with Post
     if (real) {
       const inbox = platformInbox({ origin: 'https://api.danil.ai', timeoutMs: 5000 }, browserFetch);
       await messaging.syncProjection();
+      await t.test('W5 real messaging domains and Chromium', async () => {
+        t.diagnostic(await messagingDomainsE2E({ db, messaging, browserFetch }));
+      });
       let conversation;
       await t.test('real workers: opaque conversation/message cursors and response attribution', async () => {
         const page = await inbox.conversations();

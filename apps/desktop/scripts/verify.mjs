@@ -675,6 +675,7 @@ const steps = [
   ["The AI accounts panel mounts loading, failed or with the supported agents, never empty", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/ai-providers-states.test.mjs")], root],
   ["Workspace selection reconciles uncertain intents before another operation", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/web-workspace-selection.test.ts")], root],
   ["The platform page reconciles selection and keeps pending replies across remounts", process.execPath, ["--test", "--test-force-exit", join(root, "tests/integration/platform-page.test.mjs")], root],
+  ["Messaging domains use the platform edge", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/web-messaging-domains.test.ts")], root],
   ["The platform inbox uses opaque IDs, cursors and idempotent cookie writes", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/web-platform-inbox.test.ts")], root],
   ["The platform session always uses cookies, CSRF and a configured edge", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/web-platform-session.test.ts")], root],
   ["Broadcasts: the full panel, the Appv2 rules and what stays behind the switch", process.execPath, ["--test", "--experimental-strip-types", join(root, "../../packages/attention/test/broadcast-panel.test.ts")], root],
