@@ -119,7 +119,7 @@ test("one machine write retries the same intent after a lost native response", a
     calls.push(args ?? {});
     if (calls.length === 1) throw { detail: "unavailable" };
     return { status: 202, body: { accepted: true } };
-  }, undefined, { minDelayMs: 1 });
+  });
   const reply = await fetch("https://edge.danil.ai/v1/machines/cmp_1/start", {
     method: "POST", headers: { "Idempotency-Key": "same-intent" }, body: "{}",
   });
