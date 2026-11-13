@@ -96,3 +96,18 @@ test('a handover socket that fails keeps the live session and tries again', asyn
   t.mock.timers.tick(2_000); await turn();
   assert.ok(app.sockets.length >= 3, 'tries the handover again');
 });
+
+for (const code of [4003, 4008]) test(`a ${code} on the live socket during a handover stops the session, cancels the pending socket and never promotes it`, async t => {
+  t.mock.timers.enable({ apis: ['setTimeout', 'Date'] });
+  const app = setup('danil.machine-session.v1', 1000); t.after(() => app.session.close());
+  await turn(); app.sockets[0].onopen?.({});
+  t.mock.timers.tick(950); await turn();
+  assert.equal(app.sockets.length, 2, 'handover in progress');
+  app.sockets[0].onclose?.({ code });
+  assert.equal(app.revoked(), true, 'asks to reread /v1/machines');
+  assert.equal(app.sockets[1].closed, true, 'the pending socket is cancelled');
+  app.sockets[1].onopen?.({});
+  assert.equal(app.session.connected(), false, 'never promoted');
+  t.mock.timers.tick(10_000); await turn();
+  assert.equal(app.tickets(), 2, 'no new ticket after revocation');
+});

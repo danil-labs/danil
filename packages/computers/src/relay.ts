@@ -390,8 +390,15 @@ export class RelaySession {
         this.next = null;
         if (this.socket) return this.reconnectLater();
       } else if (this.socket !== socket) return;
+      // Revocación, licencia o reemplazo: terminales también durante un relevo (machine-session.v1,
+      // «Vida del socket»); el socket pendiente se cancela y nunca toma la sesión.
+      const terminal = event.code === REVOKED || event.code === REPLACED || (this.config.getAdmission !== undefined && event.code === TICKET_CONTEXT_REVOKED);
+      if (terminal && this.next) {
+        this.next.close(1000);
+        this.next = null;
+      }
       if (this.next && this.socket === socket) {
-        // El viejo cerró durante el relevo: el nuevo toma la sesión al abrir.
+        // El viejo cerró durante el relevo por otra causa: el nuevo toma la sesión al abrir.
         this.socket = null;
         clearInterval(this.pinger);
         for (const listener of this.linkListeners) listener(false);
