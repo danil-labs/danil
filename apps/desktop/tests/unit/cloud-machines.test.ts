@@ -92,3 +92,16 @@ test("sin sesión nativa, capacidades deniega la nube en vez de reintentar", asy
   const cloud = createCloudMachines(async () => { throw { detail: "no_session" }; });
   assert.deepEqual(await cloud.rows(), { state: "denied" });
 });
+
+test("the native adapter preserves the write key and Retry-After", async () => {
+  const calls: Record<string, unknown>[] = [];
+  const fetch = edgeFetch(async (_command, args) => {
+    calls.push(args ?? {});
+    return { status: 503, body: { code: "service_unavailable" }, retry_after_ms: 120_000 };
+  });
+  const reply = await fetch("https://edge.danil.ai/v1/machines/cmp_1/start", {
+    method: "POST", headers: { "Idempotency-Key": "original-operation" }, body: "{}",
+  });
+  assert.equal(calls[0].idempotencyKey, "original-operation");
+  assert.equal(reply.headers?.get("Retry-After"), "120");
+});

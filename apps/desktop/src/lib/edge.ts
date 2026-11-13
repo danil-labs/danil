@@ -22,10 +22,10 @@ export type Patience = {
 
 const CEILING_MS = 60_000;
 
-/** La espera antes del reintento `attempt`: crece al doble, respeta la del servidor y no pasa de un minuto. */
+/** La espera antes del reintento `attempt`: crece al doble, respeta la del servidor y limita el backoff local a un minuto. */
 export function nextDelay(attempt: number, hintMs: number | undefined, minDelayMs = 1000): number {
   const grown = minDelayMs * 2 ** Math.min(attempt, 16);
-  return Math.min(CEILING_MS, Math.max(grown, hintMs ?? 0));
+  return Math.max(Math.min(CEILING_MS, grown), hintMs ?? 0);
 }
 
 /** La respuesta del borde, sin tocar: el status, el cuerpo y `Location` si la hay. */
@@ -53,8 +53,14 @@ const hint = (e: unknown) => {
 const sleep = (ms: number, signal?: AbortSignal) =>
   new Promise<boolean>((resolve) => {
     if (signal?.aborted) return resolve(false);
-    const timer = setTimeout(() => resolve(true), ms);
-    signal?.addEventListener("abort", () => (clearTimeout(timer), resolve(false)), { once: true });
+    const finish = (waited: boolean) => {
+      clearTimeout(timer);
+      signal?.removeEventListener("abort", abort);
+      resolve(waited);
+    };
+    const abort = () => finish(false);
+    const timer = setTimeout(() => finish(true), ms);
+    signal?.addEventListener("abort", abort, { once: true });
   });
 
 /** Una llamada, sin reintentos: el status del borde tal cual. */
@@ -70,13 +76,13 @@ export function edgeFetch<T = unknown>(method: "GET" | "POST", path: string, bod
  * (`Location` incluida). Las escrituras repiten su `Idempotency-Key`.
  */
 export async function edgeUntil<T = unknown>(method: "GET" | "POST", path: string, body?: unknown, patience: Patience = {}): Promise<EdgeReply<T>> {
-  let key: string | undefined;
+  const key = method === "POST" ? crypto.randomUUID() : undefined;
   let last: unknown;
   for (let attempt = 0; ; attempt++) {
+    patience.signal?.throwIfAborted();
     let wait: number | undefined;
     try {
       const reply = await edgeFetch<T>(method, path, body, key);
-      key ??= reply.idempotency_key;
       if (reply.status >= 200 && reply.status < 300) return reply;
       const code = (reply.body as { code?: unknown } | null)?.code;
       last = { detail: typeof code === "string" ? code : `http_${reply.status}`, status: reply.status, body: reply.body } satisfies EdgeRefusal;
@@ -91,7 +97,7 @@ export async function edgeUntil<T = unknown>(method: "GET" | "POST", path: strin
       last = e;
       wait = hint(e);
     }
-    if (!(await sleep(nextDelay(attempt, wait, patience.minDelayMs), patience.signal))) throw last;
+    if (!(await sleep(nextDelay(attempt, wait, patience.minDelayMs) * (1 + Math.random() / 4), patience.signal))) throw last;
   }
 }
 

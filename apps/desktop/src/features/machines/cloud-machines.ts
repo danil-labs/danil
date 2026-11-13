@@ -22,7 +22,7 @@ type EdgeError = { detail?: unknown; status?: unknown };
 export type CloudMachines = ReturnType<typeof createCloudMachines>;
 
 /** Lo que contesta `danil_edge_fetch`: el status del borde tal cual, su cuerpo y `Location`. */
-type EdgeReply = { status: number; body: unknown; location?: string };
+type EdgeReply = { status: number; body: unknown; location?: string; retry_after_ms?: number };
 
 /** `danil_edge_fetch` con la forma de un `fetch`. Sin sesión (`Err no_session`) es 401; sin red, 503; nunca lleva tokens. */
 export function edgeFetch(invoke: Invoke, onProblem?: (error: unknown) => void): Fetch {
@@ -31,7 +31,7 @@ export function edgeFetch(invoke: Invoke, onProblem?: (error: unknown) => void):
     const path = new URL(input).pathname;
     let reply: EdgeReply;
     try {
-      reply = (await invoke("danil_edge_fetch", method === "GET" ? { method, path } : { method, path, body: {} })) as EdgeReply;
+      reply = (await invoke("danil_edge_fetch", method === "GET" ? { method, path } : { method, path, body: {}, idempotencyKey: init?.headers?.["Idempotency-Key"] })) as EdgeReply;
     } catch (raw) {
       const code = raw && typeof raw === "object" ? (raw as EdgeError).detail : undefined;
       const status = code === "no_session" ? 401 : 503;
@@ -42,7 +42,12 @@ export function edgeFetch(invoke: Invoke, onProblem?: (error: unknown) => void):
     const code = (reply?.body as { code?: unknown } | null)?.code;
     if (status === 403 && typeof code === "string") onProblem?.({ detail: code, status, body: reply.body });
     const location = typeof reply?.location === "string" ? reply.location : null;
-    return { status, ok: status < 400, headers: { get: (name: string) => (name.toLowerCase() === "location" ? location : null) }, json: async () => reply?.body ?? null };
+    const retryAfter = typeof reply.retry_after_ms === "number" ? String(reply.retry_after_ms / 1000) : null;
+    return { status, ok: status < 400, headers: { get: (name: string) => {
+      if (name.toLowerCase() === "location") return location;
+      if (name.toLowerCase() === "retry-after") return retryAfter;
+      return null;
+    } }, json: async () => reply?.body ?? null };
   };
 }
 

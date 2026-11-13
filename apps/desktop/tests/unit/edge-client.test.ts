@@ -62,8 +62,8 @@ test("a retried write keeps its Idempotency-Key and the Location reaches the cal
   const got = await edgeUntil("POST", "/v1/machines/cmp_1/start", {}, { minDelayMs: 1 });
   assert.equal(got.status, 202);
   assert.equal(got.location, "/v1/operations/op_1");
-  assert.equal(calls[0].args?.idempotencyKey, undefined, "the first call lets Rust choose");
-  assert.equal(calls[1].args?.idempotencyKey, "key-1");
+  assert.equal(typeof calls[0].args?.idempotencyKey, "string");
+  assert.equal(calls[1].args?.idempotencyKey, calls[0].args?.idempotencyKey);
 });
 
 test("edgeFetch gives the status as it came", async () => {
@@ -110,4 +110,32 @@ test("the backoff grows, honours the server hint and has a ceiling", async () =>
   assert.equal(nextDelay(1, undefined, 1000), 2000);
   assert.equal(nextDelay(0, 30_000, 1000), 30_000);
   assert.equal(nextDelay(20, undefined, 1000), 60_000);
+});
+
+
+test("a lost write response repeats the original key, including the first attempt", async () => {
+  const calls = window((_args, n) => {
+    if (n === 0) throw { detail: "unavailable" };
+    return ok({ workspace: { id: "ws_1" } });
+  });
+  const { selectWorkspace } = await edge();
+  await selectWorkspace("ws_1", { minDelayMs: 1 });
+  const key = calls[0].args?.idempotencyKey;
+  assert.equal(typeof key, "string");
+  assert.ok(String(key).length > 0);
+  assert.equal(calls[1].args?.idempotencyKey, key);
+});
+
+test("Retry-After is a minimum even when it exceeds the local ceiling", async () => {
+  const { nextDelay } = await edge();
+  assert.equal(nextDelay(20, 120_000), 120_000);
+});
+
+test("an already cancelled write never reaches the edge", async () => {
+  const calls = window(() => ok({}));
+  const { selectWorkspace } = await edge();
+  const stop = new AbortController();
+  stop.abort();
+  await assert.rejects(selectWorkspace("ws_1", { signal: stop.signal }));
+  assert.equal(calls.length, 0);
 });
