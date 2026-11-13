@@ -1,7 +1,7 @@
 {
   "files": {
     "src-tauri/src/extracted/agents_session.rs": {
-      "sha256": "3c46eed8b0ee20fffc0a292c47b6b34b4d2e96b7f21f4493954ae5216f7661f1",
+      "sha256": "46e13b7eb5455ccf738b639e427660a125ad53bc10a0fe388c528cc8aaee1b21",
       "pending": "(b): native identity exchange and grants; no native change authorized for web-only (a)"
     },
     "packages/attention/src/inbox.ts": {
@@ -43,6 +43,18 @@
     "packages/attention/src/customization.ts": {
       "sha256": "ad3c2e17ac52da1437ec9d5f65c924b3fc7b567d9427bb063d289463e106c34b",
       "pending": "Mobile-only legacy module; desktop/web imports remain forbidden"
+    },
+    "src-tauri/src/extracted/agents_session/credits.rs": {
+      "sha256": "06a5623d57e26c2cc5e5edbd97b6ebfb9739e67ed448140364a89f45103bd07a",
+      "pending": "(b): original dev native credits transport; not changed by web-only (a)"
+    },
+    "src-tauri/src/extracted/mod.rs": {
+      "sha256": "79184b3bbc0baebd1942572bcf18ef8437d60f636c353a205bd005a160473332",
+      "pending": "(b): original dev native command registration; not changed by web-only (a)"
+    },
+    "src-tauri/src/extracted/proxy.rs": {
+      "sha256": "907f35adab8474eb3ee85bc5b5269359ff8bb6346063c8a131ef755993a848d4",
+      "pending": "(b): original dev native command registration; not changed by web-only (a)"
     }
   }
 }

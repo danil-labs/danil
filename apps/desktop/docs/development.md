@@ -250,7 +250,7 @@ Logout and identity 401 revoke and erase the person's browser caches; an initial
 use a person prefix. The beta assets worker sets anti-framing headers itself.
 
 `messaging-isolation` scans frontend, native, packages and assets-worker sources.
-The manifest freezes the existing native grants pending the separate Desk
+The manifest freezes the original dev native transports pending the separate Desk
 retirement and mobile-only attention modules. Any new forbidden consumer, or
 an edit retaining one in those files, fails. Desk/web imports of the satellite
 remain forbidden; this is not a claim that the frozen legacy has been retired.

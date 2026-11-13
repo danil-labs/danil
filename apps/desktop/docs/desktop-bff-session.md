@@ -1,27 +1,21 @@
-# Sesión de Desk: limpieza y canje pendiente
+# Sesión de Desk: retiro separado de la ventana web
 
-La mensajería es un satélite separado. Desk y web no montan inbox, campañas,
-canales ni agentes de atención. Se retiran el transporte de la ventana, su
-proxy nativo, las concesiones de UI que dependían de él y el piloto de créditos
-que llamaba a esa superficie. El guard `scripts/guards/messaging-isolation.mjs`
-impide reintroducir esos montajes o consumidores.
+En `beta-web`, los cuatro archivos nativos de sesión, créditos, registro y
+proxy se conservan idénticos a `origin/dev`. Sus transportes heredados de
+mensajería, concesiones `/v1/bff` y canje sellado todavía existen en Desk.
+Su retiro pertenece a `beta-desk` y requiere cargo check, clippy y test;
+`verify --no-cargo` no acredita esa migración. No se prepara aquí esa rama.
 
-Se conservan los avisos del motor en `src/features/shell/attention.ts`:
-`list_workspace_attention` y `mark_task_seen`. También se conservan las filas
-de entregas entre tareas en `src/features/chat/inboxRows.ts`. No son mensajes
-de contactos ni consumen servicios de mensajería.
+La entrada web solo consume identity y workspaces por el borde, con cookie y
+CSRF. No instala la capacidad de mensajería ni usa los comandos nativos.
+Las máquinas quedan no disponibles hasta el contrato `/v1/machines`.
 
-El canje heredado de Desk en `src-tauri/src/extracted/agents_session.rs` sigue
-pendiente de L2 y del contrato de identity. Solo quedan los comandos nativos
-que todavía usa el inicio/cierre de sesión de la ventana; no se expone un proxy
-HTTP genérico. Esta limpieza no implementa una sesión nueva, perfiles ni
-sincronización local↔nube. La migración de ese canje y de sus concesiones
-heredadas requiere la parte de sesión nativa; no se restaura el BFF.
+El guard `messaging-isolation` escanea las fuentes y conserva hashes exactos
+para el legado nativo pendiente y los módulos que todavía usa mobile.
+Un consumidor nuevo o una modificación que conserve rutas prohibidas falla.
+El guard `commands` explica los registros nativos de dev sin llamadores;
+no se inventan llamadas desde el front para darlo por verde.
 
-Los lectores del prototipo de uso, organización y directorio se retiran.
-`src/features/settings/HarnessInsights.tsx` muestra un estado no disponible
-sin red. No se reemplazan por otra URL ni por datos fabricados.
-
-La web mantiene su sesión por cookie en `src/web/platform-session.ts` y las
-rutas existentes de identity y workspaces del borde. El adaptador compute
-anterior queda pendiente de Sprint 0: esta parte no amplía ni decide su contrato.
+Los avisos en `features/shell/attention.ts` y las entregas entre tareas de
+`features/chat/inboxRows.ts` pertenecen al motor y se conservan.
+Perfil por cuenta y modelo organización→N workspaces por decidir en sus detalles.
