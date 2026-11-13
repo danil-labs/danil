@@ -231,3 +231,25 @@ test("adaptador del borde: 404/501 → oculto y reintento; 403 organization_sele
   assert.equal(sel.visible(), true);
   assert.equal(isOrganizationSelectionRequired({ detail: "organization_selection_required", status: 403, body: {} }), true);
 });
+
+test("adaptador del borde: lee /v1/capabilities; sin `identity.organizations` no pide la ruta", async () => {
+  const { edgeOrganizationSource } = await import("../../src/features/shell/organization-edge.ts");
+  const c = clock();
+  const paths: string[] = [];
+  let caps: unknown = { contract: "mvp-v1", items: [{ name: "machines", version: 1, status: "available" }] };
+  const sel = createOrganizationSelection(
+    edgeOrganizationSource(async (_m, path) => {
+      paths.push(path);
+      if (path === "/v1/capabilities") return { status: 200, body: caps };
+      return { status: 200, body: { items: [DANIL], next_cursor: null, active_organization_id: DANIL.id } };
+    }),
+    { schedule: c.schedule },
+  );
+  await sel.load();
+  assert.deepEqual(paths, ["/v1/capabilities"]);
+  assert.equal(sel.visible(), false);
+  caps = { contract: "mvp-v1", items: [{ name: "identity.organizations", version: 1, status: "available" }] };
+  await c.fire();
+  assert.deepEqual(paths, ["/v1/capabilities", "/v1/capabilities", "/v1/identity/organizations"]);
+  assert.equal(sel.visible(), true);
+});
