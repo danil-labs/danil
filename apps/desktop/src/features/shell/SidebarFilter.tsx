@@ -176,10 +176,9 @@ export function SidebarFilterSections(props: SidebarFilterProps) {
 }
 
 /**
- * El único botón Personalizar de la franja: las secciones de la barra, cuando
- * las hay, y «Filtrar y agrupar». Cada parte guarda lo suyo donde siempre.
+ * El botón Personalizar de la franja abre los filtros y la agrupación del riel.
  */
-export function CustomizeMenu(props: { filter: SidebarFilterProps | null; catalog?: () => JSX.Element }) {
+export function CustomizeMenu(props: { filter: SidebarFilterProps | null }) {
   return (
     <Popover placement="bottom-end" gutter={4}>
       <PopoverTrigger
@@ -203,20 +202,9 @@ export function CustomizeMenu(props: { filter: SidebarFilterProps | null; catalo
         class="grid max-h-[var(--kb-popper-content-available-height)] w-72 gap-0.5 overflow-y-auto p-1.5"
         onOpenAutoFocus={(e: Event) => e.preventDefault()}
       >
-        <Show when={props.catalog}>
-          {(catalog) => (
-            <>
-              <div class={seccion}>{t("shell.customize.in_sidebar")}</div>
-              {catalog()()}
-            </>
-          )}
-        </Show>
         <Show when={props.filter}>
           {(filter) => (
             <>
-              <Show when={props.catalog}>
-                <span class="my-1 h-px bg-border" />
-              </Show>
               <div class={seccion}>{t("shell.sidebar.view.trigger")}</div>
               <SidebarFilterSections {...filter()} />
             </>

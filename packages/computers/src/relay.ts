@@ -35,7 +35,7 @@ export type RelayConfig = {
   probe?: () => Promise<Blocked | null>;
 } & (
   | { getToken: () => string | Promise<string>; getAdmission?: never }
-  | { getAdmission: () => Promise<{ url: string; ticket: string; session_expires_at?: string | null }>; getToken?: never }
+  | { getAdmission: () => Promise<{ url: string; ticket: string; protocol?: string; session_expires_at?: string | null }>; getToken?: never }
 );
 
 /** Lo que detiene la sesión sin reintentar sola: la persona no tiene Terminus de pago (computers#22). */
@@ -70,6 +70,7 @@ export type EventsPage = {
 
 export type SocketLike = {
   readyState: number;
+  protocol?: string;
   send(data: string): void;
   close(code?: number, reason?: string): void;
   onopen: ((ev: unknown) => void) | null;
@@ -81,8 +82,7 @@ export type SocketLike = {
 export type SocketFactory = (url: string, protocols?: string[]) => SocketLike;
 
 export const SUBPROTOCOL = "danil.computers.v1";
-/** El canal de datos de mvp-v1 (`machine-session.v1.md`); con ticket se ofrece primero y el puente de hoy elige el viejo. */
-export const MACHINE_SESSION_SUBPROTOCOL = "danil.machine-session.v1";
+export const MACHINE_SESSION_PROTOCOL = "danil.machine-session.v1";
 const OPEN = 1;
 const BACKOFF = [500, 1000, 2000, 5000, 10000];
 const PING_EVERY = 20_000;
@@ -270,6 +270,8 @@ export class RelaySession {
     if (history && [...this.pending.values()].filter(call => call.history).length >= 4) return Promise.reject({ code: "service_busy" });
     const message = JSON.stringify({ type: "call", id, command, workspace, folder, args: args ?? {} });
     if (this.stopped) return Promise.reject({ code: this.stopped });
+    // Cerrada (revocada, reemplazada o cancelada) es definitiva: una llamada no espera un socket que no vendrá.
+    if (this.closed) return Promise.reject({ code: "app_unavailable" });
     return new Promise((resolve, reject) => {
       const timer = setTimeout(() => {
         this.pending.delete(id);
@@ -294,6 +296,8 @@ export class RelaySession {
     this.waiting = null;
     clearInterval(this.pinger);
     this.socket?.close(1000);
+    this.next?.close(1000);
+    this.next = null;
     for (const [id, call] of this.pending) {
       clearTimeout(call.timer);
       call.reject({ code: "app_unavailable" });
@@ -313,17 +317,19 @@ export class RelaySession {
       if (this.closed) return;
     }
     let token: string;
+    let protocol = SUBPROTOCOL;
+    let sessionExpires: number | null = null;
     let target = sessionUrl(this.config.endpoint, this.config.computerId, this.config.contracts);
-    let sessionEnd: number | null = null;
     try {
       if (this.config.getAdmission) {
         const admission = await this.config.getAdmission();
         token = admission.ticket;
-        // La URL del ticket viene sin query: se le suma `?contracts=` como a la del puente.
+        // La URL validada del ticket viene sin query: se le suma `?contracts=` (opcional en machine-session.v1).
         const query = target.includes("?") ? target.slice(target.indexOf("?")) : "";
         target = admission.url + query;
-        const end = admission.session_expires_at ? Date.parse(admission.session_expires_at) : NaN;
-        sessionEnd = Number.isFinite(end) ? end : null;
+        protocol = admission.protocol ?? MACHINE_SESSION_PROTOCOL;
+        sessionExpires = timeOf(admission.session_expires_at);
+        if (protocol !== MACHINE_SESSION_PROTOCOL) throw new Error("unsupported_machine_protocol");
       } else if (this.config.getToken) token = await this.config.getToken();
       else throw new Error("relay_admission_required");
     } catch {
@@ -331,26 +337,44 @@ export class RelaySession {
     }
     if (this.closed) return;
     // Un WebSocket de navegador no puede poner Authorization; el relay rechaza el token en la query.
-    const protocols = this.config.getAdmission ? [MACHINE_SESSION_SUBPROTOCOL, SUBPROTOCOL, `ticket.${token}`] : [SUBPROTOCOL, `bearer.${token}`];
+    const protocols = [protocol, `${this.config.getAdmission ? "ticket" : "bearer"}.${token}`];
     let socket: SocketLike;
     try {
       socket = this.factory(target, protocols);
     } catch {
       return this.reconnectLater();
     }
-    this.socket = socket;
+    // Relevo (machine-session.v1, «sin renovación»): el socket vivo sigue recibiendo hasta que el nuevo abre.
+    const handover = this.socket !== null;
+    if (handover) {
+      this.next?.close(1000);
+      this.next = socket;
+    } else this.socket = socket;
     let opened = false;
     socket.onopen = () => {
-      if (this.socket !== socket) return;
+      if (this.socket !== socket && this.next !== socket) return;
+      if (this.config.getAdmission && socket.protocol !== protocol) return this.close();
       opened = true;
+      if (this.next === socket) {
+        const previous = this.socket;
+        this.next = null;
+        this.socket = socket;
+        clearInterval(this.pinger);
+        clearTimeout(this.waiting?.timer);
+        this.waiting = null;
+        previous?.close(1000);
+      }
       this.attempt = 0;
       this.missed = 0;
       this.token = token;
       if (!this.config.getAdmission) this.scheduleRenew(tokenExpiry(token));
-      else if (sessionEnd !== null) {
-        // Con ticket no hay `auth`: antes de `session_expires_at` se pide otro ticket y se reabre, sin esperar el cierre `4005`.
+      else if (sessionExpires !== null) {
+        // Antes de `session_expires_at`: renueva en el canal si el relay lo anuncia; si no, ticket nuevo y socket nuevo.
         clearTimeout(this.renew);
-        this.renew = setTimeout(() => void this.renewAdmission(socket, sessionEnd), Math.max(1_000, sessionEnd - Date.now() - ADMISSION_RENEW_BEFORE));
+        const end = sessionExpires;
+        const remaining = end - Date.now();
+        const margin = Math.min(ADMISSION_RENEW_BEFORE, Math.max(100, remaining / 10));
+        this.renew = setTimeout(() => void this.renewAdmission(socket, end), Math.max(1, remaining - margin));
       }
       clearInterval(this.pinger);
       this.pinger = setInterval(() => this.ping(), PING_EVERY);
@@ -363,7 +387,25 @@ export class RelaySession {
     };
     socket.onerror = () => {};
     socket.onclose = (event) => {
-      if (this.socket !== socket) return;
+      if (this.next === socket) {
+        // El relevo falló antes de abrir: la sesión viva sigue y se reintenta con otro ticket.
+        this.next = null;
+        if (this.socket) return this.reconnectLater();
+      } else if (this.socket !== socket) return;
+      // Revocación, licencia o reemplazo: terminales también durante un relevo (machine-session.v1,
+      // «Vida del socket»); el socket pendiente se cancela y nunca toma la sesión.
+      const terminal = event.code === REVOKED || event.code === REPLACED || (this.config.getAdmission !== undefined && event.code === TICKET_CONTEXT_REVOKED);
+      if (terminal && this.next) {
+        this.next.close(1000);
+        this.next = null;
+      }
+      if (this.next && this.socket === socket) {
+        // El viejo cerró durante el relevo por otra causa: el nuevo toma la sesión al abrir.
+        this.socket = null;
+        clearInterval(this.pinger);
+        for (const listener of this.linkListeners) listener(false);
+        return;
+      }
       this.socket = null;
       clearInterval(this.pinger);
       clearTimeout(this.renew);
@@ -439,6 +481,8 @@ export class RelaySession {
   }
 
   private waiting: { socket: SocketLike; timer: ReturnType<typeof setTimeout> } | null = null;
+  /** El socket de un relevo, abierto mientras `socket` sigue vivo; toma la sesión cuando abre. */
+  private next: SocketLike | null = null;
 
   /** Antes de `session_expires_at`: renueva dentro del canal si el relay lo anuncia; si no, o si falla, reabre. */
   private async renewAdmission(socket: SocketLike, end: number) {
@@ -470,13 +514,11 @@ export class RelaySession {
   }
 
   /** Cambia de sesión del puente antes de que venza: cierra esta (sin avisar de un corte) y abre otra con un ticket nuevo. */
+  /** Ticket nuevo y socket nuevo; el viejo sigue vivo hasta que el nuevo abre y entonces se cierra con `1000` (machine-session.v1). */
   private reopen(socket: SocketLike) {
     if (this.closed || this.socket !== socket) return;
-    this.socket = null;
-    clearInterval(this.pinger);
     clearTimeout(this.waiting?.timer);
     this.waiting = null;
-    socket.close(1000, "renew");
     void this.connect();
   }
 

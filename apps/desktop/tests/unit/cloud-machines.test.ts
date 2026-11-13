@@ -8,7 +8,7 @@ test("las llamadas van por danil_edge_fetch con la ruta y sin token", async () =
   const calls: { command: string; args?: Record<string, unknown> }[] = [];
   const cloud = createCloudMachines(async (command, args) => {
     calls.push({ command, args });
-    return { status: 200, body: args?.path === "/v1/capabilities" ? { items: [{ name: "machines", status: "available" }] } : { items: [machine] } };
+    return { status: 200, body: args?.path === "/v1/capabilities" ? { contract: "mvp-v1", items: [{ name: "machines", version: 1, status: "available" }] } : { items: [machine] } };
   });
   const rows = await cloud.rows();
   assert.ok(rows.state === "ready");
@@ -22,7 +22,7 @@ test("sin la capacidad «machines» no se llama y se reintenta solo (no disponib
   const paths: unknown[] = [];
   const cloud = createCloudMachines(async (_c, args) => {
     paths.push(args?.path);
-    return { status: 200, body: { items: [{ name: "machines", status: "unavailable" }] } };
+    return { status: 200, body: { contract: "mvp-v1", items: [{ name: "machines", version: 1, status: "unavailable" }] } };
   });
   assert.deepEqual(await cloud.rows(), { state: "unavailable" });
   assert.deepEqual(paths, ["/v1/capabilities"]);
@@ -54,14 +54,50 @@ test("403 organization_selection_required llega al selector", async () => {
   assert.deepEqual(seen, [{ detail: "organization_selection_required", status: 403, body }]);
 });
 
+test("Desk lee /v1/capabilities como la web: una versión que no conoce o un estado distinto de available no es «disponible» (edge.openapi Capability)", async () => {
+  for (const item of [{ name: "machines", version: 2, status: "available" }, { name: "machines", version: 1, status: "degraded" }, { name: "machines", status: "available" }]) {
+    const paths: unknown[] = [];
+    const cloud = createCloudMachines(async (_c, args) => {
+      paths.push(args?.path);
+      return { status: 200, body: args?.path === "/v1/capabilities" ? { contract: "mvp-v1", items: [item] } : { items: [machine], next_cursor: null } };
+    });
+    assert.deepEqual(await cloud.rows(), { state: "unavailable" }, JSON.stringify(item));
+    assert.deepEqual(paths, ["/v1/capabilities"], JSON.stringify(item));
+  }
+});
+
+test("la renovación en el canal solo vale anunciada en v1 y available; sin /v1/capabilities no se supone", async () => {
+  const caps = (renew: object | null) => async (_c: string, args?: Record<string, unknown>) =>
+    args?.path === "/v1/capabilities" ? (renew ? { status: 200, body: { contract: "mvp-v1", items: [{ name: "machines", version: 1, status: "available" }, renew] } } : { status: 404, body: null }) : { status: 200, body: { items: [machine], next_cursor: null } };
+  const renew = async (item: object | null) => { const rows = await createCloudMachines(caps(item)).rows(); assert.equal(rows.state, "ready"); return rows.state === "ready" && rows.renewInChannel; };
+  assert.equal(await renew({ name: "machines.session.renew", version: 1, status: "available" }), true);
+  assert.equal(await renew({ name: "machines.session.renew", version: 2, status: "available" }), false);
+  assert.equal(await renew(null), false, "sin descubrimiento se prueba la ruta y no se supone la renovación");
+});
+
+test("Desk sigue next_cursor por danil_edge_fetch: dos páginas llegan completas, con el cursor codificado en la query", async () => {
+  const paths: unknown[] = [];
+  const cloud = createCloudMachines(async (_c, args) => {
+    paths.push(args?.path);
+    if (args?.path === "/v1/capabilities") return { status: 404, body: null };
+    if (args?.path === "/v1/machines") return { status: 200, body: { items: [machine], next_cursor: "p2 /?'!" } };
+    if (args?.path === "/v1/machines?cursor=p2%20%2F%3F%27%21") return { status: 200, body: { items: [{ ...machine, machine_id: "cmp_2" }], next_cursor: null } };
+    return { status: 400, body: { code: "invalid_request" } };
+  });
+  const rows = await cloud.rows();
+  assert.equal(rows.state, "ready");
+  assert.deepEqual(rows.state === "ready" && rows.computers.map((c) => c.computer_id), ["cmp_1", "cmp_2"]);
+  assert.deepEqual(paths, ["/v1/capabilities", "/v1/machines", "/v1/machines?cursor=p2%20%2F%3F%27%21"]);
+});
+
 for (const status of [503, 504]) test(`un HTTP ${status} de machines conserva el estado transitorio`, async () => {
   const cloud = createCloudMachines(async (_command, args) => ({ status: args?.path === "/v1/capabilities" ? 200 : status,
-    body: args?.path === "/v1/capabilities" ? { items: [{ name: "machines", status: "available" }] } : null }));
+    body: args?.path === "/v1/capabilities" ? { contract: "mvp-v1", items: [{ name: "machines", version: 1, status: "available" }] } : null }));
   assert.equal((await cloud.rows()).state, "retrying");
 });
 for (const detail of ["unavailable", "timeout"]) test(`un fallo nativo ${detail} conserva el estado transitorio`, async () => {
   const cloud = createCloudMachines(async (_command, args) => {
-    if (args?.path === "/v1/capabilities") return { status: 200, body: { items: [{ name: "machines", status: "available" }] } };
+    if (args?.path === "/v1/capabilities") return { status: 200, body: { contract: "mvp-v1", items: [{ name: "machines", version: 1, status: "available" }] } };
     throw { detail };
   });
   assert.equal((await cloud.rows()).state, "retrying");
@@ -69,7 +105,7 @@ for (const detail of ["unavailable", "timeout"]) test(`un fallo nativo ${detail}
 
 for (const status of [404, 501]) test(`HTTP ${status} de la colección es ausencia definitiva`, async () => {
   const cloud = createCloudMachines(async (_command, args) => ({ status: args?.path === "/v1/capabilities" ? 200 : status,
-    body: args?.path === "/v1/capabilities" ? { items: [{ name: "machines", status: "available" }] } : null }));
+    body: args?.path === "/v1/capabilities" ? { contract: "mvp-v1", items: [{ name: "machines", version: 1, status: "available" }] } : null }));
   assert.deepEqual(await cloud.rows(), { state: "unavailable" });
 });
 test("un fallo transitorio de capacidades no se confunde con una capacidad ausente", async () => {
@@ -78,7 +114,7 @@ test("un fallo transitorio de capacidades no se confunde con una capacidad ausen
 });
 test("una sesión inválida se distingue de un fallo transitorio", async () => {
   const cloud = createCloudMachines(async (_command, args) => ({ status: args?.path === "/v1/capabilities" ? 200 : 401,
-    body: args?.path === "/v1/capabilities" ? { items: [{ name: "machines", status: "available" }] } : null }));
+    body: args?.path === "/v1/capabilities" ? { contract: "mvp-v1", items: [{ name: "machines", version: 1, status: "available" }] } : null }));
   assert.deepEqual(await cloud.rows(), { state: "denied" });
 });
 
@@ -91,4 +127,80 @@ for (const status of [401, 403]) test(`capacidades HTTP ${status} deniega la nub
 test("sin sesión nativa, capacidades deniega la nube en vez de reintentar", async () => {
   const cloud = createCloudMachines(async () => { throw { detail: "no_session" }; });
   assert.deepEqual(await cloud.rows(), { state: "denied" });
+});
+
+test("the native adapter preserves the write key and Retry-After", async () => {
+  const calls: Record<string, unknown>[] = [];
+  const fetch = edgeFetch(async (_command, args) => {
+    calls.push(args ?? {});
+    return { status: 202, body: { accepted: true }, retry_after_ms: 120_000 };
+  });
+  const reply = await fetch("https://edge.danil.ai/v1/machines/cmp_1/start", {
+    method: "POST", headers: { "Idempotency-Key": "original-operation" }, body: "{}",
+  });
+  assert.equal(calls[0].idempotencyKey, "original-operation");
+  assert.equal(reply.headers?.get("Retry-After"), "120");
+});
+
+test("native failures keep Retry-After as well", async () => {
+  const fetch = edgeFetch(async () => { throw { detail: "unavailable", retry_after_ms: 120_000 }; });
+  const reply = await fetch("https://edge.danil.ai/v1/machines");
+  assert.equal(reply.status, 503);
+  assert.equal(reply.headers?.get("Retry-After"), "120");
+});
+
+test("one machine write retries the same intent after a lost native response", async () => {
+  const calls: Record<string, unknown>[] = [];
+  const fetch = edgeFetch(async (_command, args) => {
+    calls.push(args ?? {});
+    if (calls.length === 1) throw { detail: "unavailable" };
+    return { status: 202, body: { accepted: true } };
+  }, undefined, { minDelayMs: 1 });
+  const reply = await fetch("https://edge.danil.ai/v1/machines/cmp_1/start", {
+    method: "POST", headers: { "Idempotency-Key": "same-intent" }, body: "{}",
+  });
+  assert.equal(reply.status, 202);
+  assert.equal(calls.length, 2);
+  assert.deepEqual(calls.map(c => c.idempotencyKey), ["same-intent", "same-intent"]);
+});
+
+test("a deleted machine returns missing instead of retrying a generic not_found", async () => {
+  let calls = 0;
+  const cloud = createCloudMachines(async () => { calls++; return { status: 404, body: { code: "not_found" } }; });
+  assert.equal((await cloud.client.start("gone")).kind, "missing");
+  assert.equal(calls, 1);
+});
+
+test("a retry hint outside the machine intent budget returns without a delayed effect", async () => {
+  let calls = 0;
+  const cloud = createCloudMachines(async () => { calls++; return { status: 503, body: {}, retry_after_ms: 120_000 }; });
+  assert.equal((await cloud.client.start("cmp_1")).kind, "error");
+  assert.equal(calls, 1);
+});
+
+test("changing context cancels a pending machine write", async () => {
+  const { cancelEdgeWrites } = await import("../../src/lib/edge.ts");
+  let calls = 0;
+  const cloud = createCloudMachines(async () => {
+    calls++;
+    queueMicrotask(cancelEdgeWrites);
+    throw { detail: "unavailable" };
+  });
+  assert.equal((await cloud.client.start("cmp_1")).kind, "error");
+  assert.equal(calls, 1);
+});
+
+test("the organization selector cancels the previous machine intent before selecting", async () => {
+  const { cancelEdgeWrites } = await import("../../src/lib/edge.ts");
+  const { edgeOrganizationSource } = await import("../../src/features/shell/organization-edge.ts");
+  let entered!: () => void;
+  const firstAttempt = new Promise<void>(resolve => { entered = resolve; });
+  let writes = 0;
+  const cloud = createCloudMachines(async () => { writes++; entered(); throw { detail: "unavailable" }; });
+  const pending = cloud.client.start("cmp_1");
+  await firstAttempt;
+  const selector = edgeOrganizationSource(async () => ({ status: 200, body: { organization: { id: "org_other" }, workspace: null } }), cancelEdgeWrites);
+  await selector.select("org_other", "select-intent");
+  assert.equal((await pending).kind, "error");
+  assert.equal(writes, 1);
 });

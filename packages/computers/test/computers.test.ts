@@ -38,6 +38,8 @@ class FakeSocket implements SocketLike {
   onerror: ((ev: unknown) => void) | null = null;
   url: string;
   protocols?: string[];
+  /** El servidor elige el primer subprotocolo ofrecido. */
+  get protocol() { return this.protocols?.[0] ?? ""; }
   constructor(url: string, protocols?: string[]) {
     this.url = url;
     this.protocols = protocols;
@@ -87,7 +89,7 @@ test("el JWT va en los subprotocolos, nunca en la URL", async () => {
   relay.close();
 });
 
-test("con ticket ofrece danil.machine-session.v1 y el viejo, nunca bearer.*", async () => {
+test("con ticket ofrece solo danil.machine-session.v1 y ticket.*, nunca bearer.* (machine-session.v1 § Apertura)", async () => {
   FakeSocket.all = [];
   const relay = new RelaySession(
     { endpoint: "https://computers.example", computerId: "cmp_a", getAdmission: async () => ({ url: "wss://machines.danil.ai/v1/machines/cmp_a/session", ticket: "t1" }) },
@@ -95,11 +97,12 @@ test("con ticket ofrece danil.machine-session.v1 y el viejo, nunca bearer.*", as
   );
   relay.start();
   await tick();
-  assert.deepEqual(FakeSocket.all[0].protocols, ["danil.machine-session.v1", SUBPROTOCOL, "ticket.t1"]);
+  assert.deepEqual(FakeSocket.all[0].protocols, ["danil.machine-session.v1", "ticket.t1"]);
   relay.close();
 });
 
-test("con ticket: conserva ?contracts= y cambia de ticket antes de session_expires_at, sin esperar el 4005", async () => {
+test("con ticket: conserva ?contracts= y cambia de ticket antes de session_expires_at, sin esperar el 4005", async (t) => {
+  t.mock.timers.enable({ apis: ["setTimeout", "Date"] });
   FakeSocket.all = [];
   let n = 0;
   const relay = new RelaySession(
@@ -107,20 +110,21 @@ test("con ticket: conserva ?contracts= y cambia de ticket antes de session_expir
       endpoint: "https://computers.example",
       computerId: "cmp_a",
       contracts: ["abc123"],
-      // Vence en 10,3 s: el cambio ocurre a los ~1 s (10 s de margen, mínimo 1 s).
-      getAdmission: async () => ({ url: "wss://machines.danil.ai/v1/machines/cmp_a/session", ticket: `t${++n}`, session_expires_at: new Date(Date.now() + 10_300).toISOString() }),
+      getAdmission: async () => ({ url: "wss://machines.danil.ai/v1/machines/cmp_a/session", ticket: `t${++n}`, session_expires_at: new Date(Date.now() + 60_000).toISOString() }),
     },
     (url, protocols) => new FakeSocket(url, protocols),
   );
+  t.after(() => relay.close());
   relay.start();
-  await tick();
+  for (let i = 0; i < 5; i++) await new Promise((r) => setImmediate(r));
   const first = FakeSocket.all[0];
   assert.equal(first.url, "wss://machines.danil.ai/v1/machines/cmp_a/session?contracts=abc123");
   first.open();
-  await new Promise((r) => setTimeout(r, 1_300));
+  t.mock.timers.tick(55_000);
+  for (let i = 0; i < 5; i++) await new Promise((r) => setImmediate(r));
   assert.equal(FakeSocket.all.length, 2, "reabrió sin cierre del servidor");
-  assert.deepEqual(FakeSocket.all[1].protocols, ["danil.machine-session.v1", SUBPROTOCOL, "ticket.t2"]);
-  relay.close();
+  assert.deepEqual(FakeSocket.all[1].protocols, ["danil.machine-session.v1", "ticket.t2"]);
+  assert.equal(FakeSocket.all[1].url, "wss://machines.danil.ai/v1/machines/cmp_a/session?contracts=abc123");
 });
 
 test("una llamada pendiente se reenvía con el mismo id al reconectar, y `cached` llega aparte", async () => {
@@ -463,7 +467,21 @@ test("un bloque MCP con valores escritos no sale al socket; uno con marcadores s
   relay.close();
 });
 
-/** Un relay con ticket que vence en `ms`, con un contador de tickets. */
+test('ticket context close code does not revoke a bearer session', async t => {
+  let unauthorized = false;
+  let socket: FakeSocket;
+  const relay = new RelaySession({ endpoint: 'https://computers.example', computerId: 'cmp_a',
+    getToken: () => 'jwt', onUnauthorized: () => { unauthorized = true; },
+  }, (url, protocols) => (socket = new FakeSocket(url, protocols)));
+  t.after(() => relay.close());
+  relay.start();
+  await tick();
+  socket!.open();
+  socket!.close(4008);
+  assert.equal(unauthorized, false);
+});
+
+/** Un relay con ticket que vence en `ms` (reloj simulado), con un contador de tickets. */
 function admissionSession(ms: number, extra: { renewInChannel?: () => boolean } = {}) {
   FakeSocket.all = [];
   let n = 0;
@@ -471,7 +489,7 @@ function admissionSession(ms: number, extra: { renewInChannel?: () => boolean } 
     {
       endpoint: "https://computers.example",
       computerId: "cmp_a",
-      getAdmission: async () => ({ url: "wss://machines.danil.ai/v1/machines/cmp_a/session", ticket: `t${++n}`, session_expires_at: new Date(Date.now() + ms).toISOString() }),
+      getAdmission: async () => ({ url: "wss://machines.danil.ai/v1/machines/cmp_a/session", ticket: `t${++n}`, protocol: "danil.machine-session.v1", session_expires_at: new Date(Date.now() + ms).toISOString() }),
       ...extra,
     },
     (url, protocols) => new FakeSocket(url, protocols),
@@ -479,48 +497,51 @@ function admissionSession(ms: number, extra: { renewInChannel?: () => boolean } 
   relay.start();
   return relay;
 }
+const turns = async () => { for (let i = 0; i < 5; i++) await new Promise((r) => setImmediate(r)); };
 
-test("renovación en el canal: manda {auth, ticket} por el mismo socket y no reabre si el relay confirma", async () => {
-  const relay = admissionSession(10_300, { renewInChannel: () => true });
-  await tick();
+test("renovación en el canal: manda {auth, ticket} por el mismo socket y no reabre si el relay confirma", async (t) => {
+  t.mock.timers.enable({ apis: ["setTimeout", "Date"] });
+  const relay = admissionSession(60_000, { renewInChannel: () => true });
+  t.after(() => relay.close());
+  await turns();
   const first = FakeSocket.all[0];
   first.open();
-  await new Promise((r) => setTimeout(r, 1_300));
-  const auth = first.sent.find((m) => m.type === "auth");
-  assert.deepEqual(auth, { type: "auth", ticket: "t2" });
+  t.mock.timers.tick(55_000); await turns();
+  assert.deepEqual(first.sent.find((m) => m.type === "auth"), { type: "auth", ticket: "t2" });
   first.receive({ type: "auth", expires_at: new Date(Date.now() + 60_000).toISOString() });
-  await new Promise((r) => setTimeout(r, 4_500));
+  t.mock.timers.tick(5_000); await turns();
   assert.equal(FakeSocket.all.length, 1, "sigue en el mismo socket");
-  relay.close();
 });
 
-test("renovación en el canal: si el relay no contesta, reabre con un ticket nuevo antes del fin", async () => {
-  const relay = admissionSession(7_000, { renewInChannel: () => true });
-  await tick();
+test("renovación en el canal: si el relay no contesta, abre un socket nuevo con otro ticket antes del fin", async (t) => {
+  t.mock.timers.enable({ apis: ["setTimeout", "Date"] });
+  const relay = admissionSession(60_000, { renewInChannel: () => true });
+  t.after(() => relay.close());
+  await turns();
   FakeSocket.all[0].open();
-  await new Promise((r) => setTimeout(r, 1_300));
+  t.mock.timers.tick(55_000); await turns();
   assert.ok(FakeSocket.all[0].sent.some((m) => m.type === "auth"));
   assert.equal(FakeSocket.all.length, 1);
-  await new Promise((r) => setTimeout(r, 4_800));
+  t.mock.timers.tick(4_000); await turns();
   assert.equal(FakeSocket.all.length, 2, "reabrió");
   assert.ok(FakeSocket.all[1].protocols?.includes("ticket.t3"));
-  relay.close();
 });
 
-test("renovación en el canal: un error del relay reabre; sin la capacidad, nunca manda auth", async () => {
-  const relay = admissionSession(10_300, { renewInChannel: () => true });
-  await tick();
+test("renovación en el canal: un error del relay reabre; sin la capacidad, nunca manda auth", async (t) => {
+  t.mock.timers.enable({ apis: ["setTimeout", "Date"] });
+  const relay = admissionSession(60_000, { renewInChannel: () => true });
+  await turns();
   FakeSocket.all[0].open();
-  await new Promise((r) => setTimeout(r, 1_300));
+  t.mock.timers.tick(55_000); await turns();
   FakeSocket.all[0].receive({ type: "auth", error: { code: "ticket_invalid" } });
-  await tick();
+  await turns();
   assert.equal(FakeSocket.all.length, 2);
   relay.close();
-  const plain = admissionSession(10_300);
-  await tick();
+  const plain = admissionSession(60_000);
+  t.after(() => plain.close());
+  await turns();
   FakeSocket.all[0].open();
-  await new Promise((r) => setTimeout(r, 1_300));
+  t.mock.timers.tick(55_000); await turns();
   assert.ok(!FakeSocket.all[0].sent.some((m) => m.type === "auth"));
   assert.equal(FakeSocket.all.length, 2);
-  plain.close();
 });

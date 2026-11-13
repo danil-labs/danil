@@ -1,4 +1,5 @@
 import { type Accessor, createSignal } from "solid-js";
+import { capabilities } from "./platform.ts";
 
 /**
  * Preferencias de esta máquina que sobreviven a cerrar la app: un solo
@@ -11,10 +12,14 @@ import { type Accessor, createSignal } from "solid-js";
  * migración sepa a dónde apuntaba la app anterior.
  */
 const NS = "harness.layout.";
+function storageKey(key: string) {
+  const person = key === "machines.run_on" && !capabilities().nativeWindow ? capabilities().webAccounts?.current.user_id : null;
+  return person ? `danil.web.${person}.preferences.${key}` : NS + key;
+}
 
 export function leerPref<T>(clave: string, porOmision: T): T {
   try {
-    const crudo = localStorage.getItem(NS + clave);
+    const crudo = localStorage.getItem(storageKey(clave));
     return crudo === null ? porOmision : (JSON.parse(crudo) as T);
   } catch {
     return porOmision;
@@ -23,7 +28,7 @@ export function leerPref<T>(clave: string, porOmision: T): T {
 
 export function escribirPref(clave: string, valor: unknown) {
   try {
-    localStorage.setItem(NS + clave, JSON.stringify(valor));
+    localStorage.setItem(storageKey(clave), JSON.stringify(valor));
   } catch {
     // Sin almacenamiento la app sigue: se pierde la preferencia, no el trabajo.
   }
@@ -31,7 +36,7 @@ export function escribirPref(clave: string, valor: unknown) {
 
 export function hayPref(clave: string): boolean {
   try {
-    return localStorage.getItem(NS + clave) !== null;
+    return localStorage.getItem(storageKey(clave)) !== null;
   } catch {
     return false;
   }
@@ -39,7 +44,7 @@ export function hayPref(clave: string): boolean {
 
 export function borrarPref(clave: string) {
   try {
-    localStorage.removeItem(NS + clave);
+    localStorage.removeItem(storageKey(clave));
   } catch {
     // Sin almacenamiento no hay nada que borrar.
   }
@@ -69,6 +74,13 @@ export function createPref<T>(
   clave: string,
   porOmision: T,
 ): [Accessor<T>, (valor: T) => void] {
+  if (clave === "machines.run_on") {
+    const [revision, changed] = createSignal(0);
+    return [() => { revision(); return leerPref(clave, porOmision); }, value => {
+      escribirPref(clave, value);
+      changed(n => n + 1);
+    }];
+  }
   const [valor, setValor] = createSignal<T>(leerPref(clave, porOmision));
 
   return [

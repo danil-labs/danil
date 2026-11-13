@@ -10,7 +10,7 @@ for (const status of [200]) test(`Desk muestra Conectando… durante /v1/machine
     danil_connect_status: { state: "disconnected", online: false },
     guest_machine_list: [],
     danil_edge_fetch: async ({ path }) => {
-      if (path === "/v1/capabilities") return { status: 200, body: { items: [{ name: "machines", status: "available" }] } };
+      if (path === "/v1/capabilities") return { status: 200, body: { contract: "mvp-v1", items: [{ name: "machines", version: 1, status: "available" }] } };
       if (path === "/v1/machines") {
         requested = true;
         await sleep(3000);
@@ -65,7 +65,7 @@ test("un 503 tras 3 s conserva Conectando y la máquina previa hasta recuperar l
   const responses = local([], {
     danil_connect_status: { state: "disconnected", online: false }, guest_machine_list: [],
     danil_edge_fetch: async ({ path }) => {
-      if (path === "/v1/capabilities") return { status: 200, body: { items: [{ name: "machines", status: "available" }] } };
+      if (path === "/v1/capabilities") return { status: 200, body: { contract: "mvp-v1", items: [{ name: "machines", version: 1, status: "available" }] } };
       if (path.endsWith("/tickets")) return { status: 201, body: { ticket: "qa", url: "wss://machines-session.danil.ai/v1/machines/cmp_cloud/session", session_expires_at: new Date(Date.now() + 60000).toISOString() } };
       if (path === "/v1/machines") {
         requests++;

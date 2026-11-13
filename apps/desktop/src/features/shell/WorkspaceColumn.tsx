@@ -78,8 +78,6 @@ export function AttentionBadge(props: { state: AttentionState; class?: string })
 export default function WorkspaceColumn(props: {
   attention: WorkspaceAttention[];
   onManage: () => void;
-  /** Abrió desde el menú un workspace que solo tiene agentes. */
-  onOpenAgents?: () => void;
   /** Ajustes, en su sección si se da. */
   onSettings: (panel?: string) => void;
   onReportarBug: () => void;
@@ -302,7 +300,7 @@ export default function WorkspaceColumn(props: {
           <AccountHeader id={accounts!.current.user_id} email={accounts!.current.email} extra={accounts!.current.extra} signedIn />
         </Show>
         <KeyedList each={visibles()} by={w => w.id}>{w => <Tile w={w()} />}</KeyedList>
-        <AddWorkspaceMenu onOpenAgents={props.onOpenAgents} />
+        <AddWorkspaceMenu />
         <For each={others()}>
           {(account) => (
             <>
@@ -312,13 +310,13 @@ export default function WorkspaceColumn(props: {
           )}
         </For>
       </div>
-      <ColumnFoot onOpenAgents={props.onOpenAgents} tools={props.tools} onSettings={props.onSettings} onReportarBug={props.onReportarBug} />
+      <ColumnFoot tools={props.tools} onSettings={props.onSettings} onReportarBug={props.onReportarBug} />
     </nav>
   );
 }
 
 /** El «+» del riel: crear uno nuevo o abrir el directorio para agregar uno existente. */
-function AddWorkspaceMenu(props: { onOpenAgents?: () => void }) {
+function AddWorkspaceMenu() {
   const [open, setOpen] = createSignal(false);
   const [step, setStep] = createSignal<"menu" | "directory">("menu");
   const close = () => {
@@ -350,10 +348,6 @@ function AddWorkspaceMenu(props: { onOpenAgents?: () => void }) {
             <Suspense fallback={null}>
               <WorkspaceDirectoryMenu
                 onClose={close}
-                onOpenAgents={() => {
-                  close();
-                  props.onOpenAgents?.();
-                }}
               />
             </Suspense>
           }
@@ -382,7 +376,6 @@ function AddWorkspaceMenu(props: { onOpenAgents?: () => void }) {
 
 /** Lo que avisa de algo, Configuración y el perfil, al pie de la columna. */
 function ColumnFoot(props: {
-  onOpenAgents?: () => void;
   tools?: JSX.Element;
   onSettings: (panel?: string) => void;
   onReportarBug: () => void;
@@ -401,7 +394,7 @@ function ColumnFoot(props: {
       <button type="button" class={boton} aria-label={t("settings.title")} title={t("settings.title")} onClick={() => props.onSettings()}>
         <SettingsIcon size={17} aria-hidden="true" />
       </button>
-      <ProfileMenu onOpenAgents={props.onOpenAgents} onAccount={() => props.onSettings("cuenta-danil")} onReportarBug={props.onReportarBug} />
+      <ProfileMenu onAccount={() => props.onSettings("cuenta-danil")} onReportarBug={props.onReportarBug} />
     </div>
   );
 }

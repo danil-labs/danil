@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  announcesOrganizations,
   createOrganizationSelection,
   isOrganizationSelectionRequired,
   type OrganizationSource,
@@ -91,7 +92,11 @@ test("capacidad ausente o de otra versión en /v1/capabilities: oculto, sin llam
   caps = { items: [{ name: "identity.organizations", version: 2, status: "available" }] };
   await c.fire();
   assert.equal(sel.state().kind, "hidden", "una versión mayor desconocida es no disponible");
-  caps = { items: [{ name: "identity.organizations", version: 1, status: "degraded", otro: 1 }] };
+  caps = { items: [{ name: "identity.organizations", version: 1, status: "degraded" }] };
+  await c.fire();
+  assert.equal(sel.state().kind, "hidden", "degraded es no disponible (edge.openapi Capability)");
+  assert.equal(listed, 0);
+  caps = { items: [{ name: "identity.organizations", version: 1, status: "available", otro: 1 }] };
   await c.fire();
   assert.equal(sel.state().kind, "ready");
   assert.equal(listed, 1);
@@ -274,4 +279,9 @@ test("report: solo `organization_selection_required` abre el selector; otro 403 
   assert.equal(changes, 0, "ni siquiera avisa");
   assert.equal(sel.report({ detail: "organization_selection_required", status: 403, body: { code: "organization_selection_required" } }), true);
   assert.equal(sel.needed(), true);
+});
+
+test("organizaciones `degraded` en /v1/capabilities es «no disponible», como en la web y en Machines (edge.openapi Capability)", () => {
+  assert.equal(announcesOrganizations({ contract: "mvp-v1", items: [{ name: "identity.organizations", version: 1, status: "degraded" }] }), false);
+  assert.equal(announcesOrganizations({ contract: "mvp-v1", items: [{ name: "identity.organizations", version: 1, status: "available" }] }), true);
 });

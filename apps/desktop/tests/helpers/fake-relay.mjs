@@ -55,7 +55,7 @@ export function relay({ state: initial = "online", wakeAfter = 300, cachedAt = n
   };
   class Socket {
     constructor(url, protocols) {
-      Object.assign(this, { url, protocols, readyState: 0, onopen: null, onmessage: null, onclose: null, onerror: null });
+      Object.assign(this, { url, protocols, protocol: protocols?.[0] ?? "", readyState: 0, onopen: null, onmessage: null, onclose: null, onerror: null });
       sockets.push(this);
       setTimeout(() => {
         this.readyState = 1;

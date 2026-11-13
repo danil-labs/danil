@@ -51,7 +51,7 @@ test("cookie session reads profile and all workspace pages, selects with CSRF an
       assert.equal(r.headers.get("x-csrf-token"), "bound-to-session");
       assert.equal(r.headers.get("idempotency-key"), "selection-1");
       assert.deepEqual(await r.json(), { workspace: "9007199254740993" });
-      return Response.json({ workspace: "9007199254740993", ctx: "ctx2", authz_ver: 2 });
+      return Response.json({ workspace: { id: "9007199254740993", org: "org_A", name: "Workspace", role: "owner" } });
     }
     if (url.pathname.endsWith("/logout")) {
       assert.equal(r.headers.get("x-csrf-token"), "bound-to-session");
@@ -64,7 +64,7 @@ test("cookie session reads profile and all workspace pages, selects with CSRF an
   assert.equal(new URL(api.loginUrl("https://app.danil.ai/")).searchParams.get("return_to"), "https://app.danil.ai/");
   assert.equal((await api.me()).id, "user_A");
   assert.deepEqual((await api.workspaces()).map(w => w.id), ["11", "9007199254740993"]);
-  assert.equal((await api.select("9007199254740993", "selection-1")).workspace, "9007199254740993");
+  assert.equal((await api.select("9007199254740993", "selection-1")).workspace.id, "9007199254740993");
   await api.logout();
   assert.equal(calls.filter(r => r.method === "POST").length, 2);
 });
@@ -88,4 +88,38 @@ test("invalid bodies, repeated cursors and expired requests fail without partial
     init?.signal?.addEventListener("abort", () => { clearTimeout(deadline); reject(init.signal?.reason); }, { once: true });
   }));
   await assert.rejects(api.me(), { name: "TimeoutError" });
+});
+
+for (const status of [200, 201]) test(`promo redemption HTTP ${status} uses the cookie organization and CSRF`, async () => {
+  const api = platformSession({ origin: 'https://edge.danil.ai', timeoutMs: 1000 }, async (input, init) => {
+    const req = new Request(input, init);
+    assert.equal(req.credentials, 'include');
+    assert.equal(req.headers.has('authorization'), false);
+    if (req.url.endsWith('/identity/csrf')) return Response.json({ csrf_token: 'csrf' });
+    assert.equal(req.url, 'https://edge.danil.ai/v1/workspaces/promo/redeem');
+    assert.equal(req.method, 'POST');
+    assert.equal(req.headers.get('x-csrf-token'), 'csrf');
+    assert.equal(req.headers.get('idempotency-key'), 'promo-attempt');
+    assert.deepEqual(await req.json(), { code: 'ABCDEFGHIJKLMNOP' });
+    return Response.json({ entitlement: { kind: 'ram_bonus', amount: { ram_gb: 2 }, state: 'active' },
+      ...(status === 200 ? { machine: { state: 'future-state', extra: true } } : {}), future: true }, { status });
+  });
+  assert.deepEqual(await api.redeemPromo('ABCDEFGHIJKLMNOP', 'promo-attempt'),
+    status === 200 ? { machine: { state: 'future-state' } } : {});
+});
+
+for (const [status, code] of [[422, 'promo_code_invalid'], [409, 'promo_already_active'],
+  [409, 'organization_has_machine'], [403, 'promo_admin_required'], [404, null], [501, null]] as const) {
+  test(`promo preserves HTTP ${status} ${code} without retrying`, async () => {
+    const api = platformSession({ origin: 'https://edge.danil.ai', timeoutMs: 1000 }, async (input) =>
+      String(input).endsWith('/csrf') ? Response.json({ csrf_token: 'csrf' }) :
+        Response.json({ code }, { status, headers: { 'content-type': 'application/problem+json' } }));
+    await assert.rejects(api.redeemPromo('ABCDEFGHIJKLMNOP', 'attempt'),
+      (e: unknown) => e instanceof PlatformSessionError && e.status === status && e.code === code);
+  });
+}
+
+test('promo network failure is observable', async () => {
+  const api = platformSession({ origin: 'https://edge.danil.ai', timeoutMs: 1000 }, async () => { throw new TypeError('offline'); });
+  await assert.rejects(api.redeemPromo('ABCDEFGHIJKLMNOP', 'attempt'), /offline/);
 });

@@ -16,10 +16,13 @@ async function bodyOf(reply: Promise<Reply>): Promise<unknown> {
   throw { status: r.status, code: typeof code === "string" ? code : `http_${r.status}`, retry_after_ms: r.retry_after_ms };
 }
 
-export function edgeOrganizationSource(edgeFetch: EdgeFetch): OrganizationSource {
+export function edgeOrganizationSource(edgeFetch: EdgeFetch, beforeSelect?: () => void): OrganizationSource {
   return {
     capabilities: () => bodyOf(edgeFetch("GET", "/v1/capabilities")),
     list: () => bodyOf(edgeFetch("GET", "/v1/identity/organizations")),
-    select: (id, key) => bodyOf(edgeFetch("POST", "/v1/identity/organizations/select", { organization_id: id }, key)),
+    select: (id, key) => {
+      beforeSelect?.();
+      return bodyOf(edgeFetch("POST", "/v1/identity/organizations/select", { organization_id: id }, key));
+    },
   };
 }

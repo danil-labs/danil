@@ -72,9 +72,6 @@ function WebAccount(props: { source: AccountProfileSource; part?: DanilAccountPa
       <Show when={props.part === "profile"}>
         <SettingsSection title={t("danil.account.title")} description={t("danil.account.web_description")}>
           <AccountIdentityBlock identity={identity} />
-          <Show when={!capabilities().accountEmails}>
-            <ManageEmailsRow web />
-          </Show>
         </SettingsSection>
       </Show>
       <Show when={emails()}>

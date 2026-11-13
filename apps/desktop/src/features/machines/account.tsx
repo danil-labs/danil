@@ -12,6 +12,7 @@
  * Lazy from `app/main.tsx`.
  */
 import "../../web/phrases";
+import { cancelEdgeWrites } from "../../lib/edge.ts";
 import {
   type Computer,
   createScreenAccess,
@@ -546,7 +547,7 @@ export function startAccountMachines(target: Target = window) {
   };
 
   void whenConnected().then(() => {
-    void listen("danil-connect", () => void sync());
+    void listen("danil-connect", () => { cancelEdgeWrites(); void sync(); });
     // Un motor sin el aviso de los workspaces de aquí: lo que cambia la ventana (crear, renombrar, logo) se vuelve a pedir con su versión.
     window.addEventListener("harness:workspace-name", () => void engineWorkspaces.refresh());
     window.addEventListener("harness:workspace", () => void engineWorkspaces.refresh());
@@ -558,7 +559,7 @@ export function startAccountMachines(target: Target = window) {
       void engineWorkspaces.refresh();
     });
     // Another workspace may belong to another account: its computers are others.
-    window.addEventListener("harness:workspace", () => void sync());
+    window.addEventListener("harness:workspace", () => { cancelEdgeWrites(); void sync(); });
     // Una máquina recién conectada («Conectar otra máquina») suma su rebanada sin desmontar las demás.
     window.addEventListener("harness:account-computers", () => void sync());
     // Una VM conectada o quitada en Configuración: con cuenta o sin ella, la flota la suma o la quita.

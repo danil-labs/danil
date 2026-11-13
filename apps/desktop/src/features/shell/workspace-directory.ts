@@ -4,9 +4,6 @@ import { escribirPref, leerPref } from "../../lib/prefs";
 import { capabilities } from "../../lib/platform";
 import { canCreateWorkspace } from "../settings/workspace-link";
 
-/** El workspace que solo tiene agentes abierto desde el menú; `null` con uno de Terminus. */
-export const [agentsWorkspace, setAgentsWorkspace] = createSignal<string | null>(null);
-
 // Una sola lista para el menú y la barra. `capabilities()` no es reactivo: se crea al primer uso, ya con la plataforma puesta.
 function createStore() {
   const [loaded, { refetch, mutate }] = createResource(

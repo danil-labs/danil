@@ -16,15 +16,12 @@ import { aplicarLengua, refreshLanguage, lenguasDisponibles, semillaDelAlta } fr
 import { cargarPaquetes } from "../locales/packs";
 import { mountAfterLanguagePacks } from "../locales/startup";
 import { capabilities, setCapabilities } from "../lib/platform";
-import { desktopWorkspaceDirectory } from "../features/shell/workspace-directory-desktop";
 import { askGuestChannels } from "../features/machines/guestChannels";
 import "../lib/sharedClock";
 // Errores y avisos de encargado se leen al fallar algo, ya con la ventana montada: entran por detrás.
 // Si el trozo no carga, caen a la prosa del motor; el panel de encargados lo vuelve a pedir.
 void import("../locales/failurePhrases").catch((e) => console.warn("[lenguas] failurePhrases", e));
 
-// El directorio de la cuenta también en la ventana: antes solo lo montaba la web.
-setCapabilities({ ...capabilities(), workspaceDirectory: desktopWorkspaceDirectory() });
 // Los canales de máquinas locales los dice la ventana (`guest_channels`), no el userAgent.
 // La web también carga este archivo: ahí `invoke` va por el relay y despertaría la máquina.
 if (capabilities().nativeWindow) {
@@ -84,12 +81,17 @@ function laQueTocaYaEstaDentro(): boolean {
   return registrada(pedido) || registrada(pedido.split("-")[0]);
 }
 
+let disposeApp: (() => void) | undefined;
+let stopped = false;
+export function disposeWindow() { stopped = true; disposeApp?.(); }
+
 const montar = () => {
+  if (stopped) return;
   const root = document.getElementById("root")!;
   // En la web el marco ya es hijo de `#root`. `render` de Solid, si hay un hijo,
   // inserta al final y lo deja: la ventana se vería dos veces.
   root.replaceChildren();
-  render(
+  disposeApp = render(
     () => (
       // El lanzador va antes que todo: sin motor conectado no hay a quién preguntar.
       // La preparación va por fuera de la app: si falta git no hay nada útil detrás.
@@ -104,23 +106,8 @@ const montar = () => {
 };
 
 const lenguasDeDisco = cargarPaquetes().then(refreshLanguage);
-// Las capacidades se leen al montar: Atención entra antes, en su trozo, solo con la bandera.
-const atencion: Promise<void> =
-  import.meta.env.DANIL_DESKTOP_ATTENTION && capabilities().nativeWindow
-    ? Promise.race([
-        import("../features/attention/desktop").then((m) => m.installDesktopAttention()),
-        // Un trozo que no llega no deja la ventana sin montar.
-        new Promise<void>((resolve) => setTimeout(resolve, 3000)),
-      ]).catch((e) => console.warn("[atencion]", e))
-    : Promise.resolve();
-// No un `await` de nivel superior: el objetivo del build es `es2020`, donde no
-// existe, y subirlo por esta línea cambiaría el objetivo de la app entera.
-void atencion.then(() => {
-  if (laQueTocaYaEstaDentro()) montar();
-  // Si la lectura falla o no acaba, se monta en el respaldo: el lanzador tiene que
-  // poder conectar el motor que desbloquea las lecturas pendientes.
-  else void mountAfterLanguagePacks(lenguasDeDisco, montar);
-});
+if (laQueTocaYaEstaDentro()) montar();
+else void mountAfterLanguagePacks(lenguasDeDisco, montar);
 
 // Las otras computadoras de la cuenta de Danil, en un trozo aparte: sin sesión no instala nada.
 // La web trae su propio transporte (`web/main.tsx`).

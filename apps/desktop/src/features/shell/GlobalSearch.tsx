@@ -1,6 +1,5 @@
 import Archive from "lucide-solid/icons/archive";
 import Folder from "lucide-solid/icons/folder";
-import MessageSquare from "lucide-solid/icons/message-square";
 import Plus from "lucide-solid/icons/plus";
 import Search from "lucide-solid/icons/search";
 import SquarePen from "lucide-solid/icons/square-pen";
@@ -16,10 +15,9 @@ import { Input } from "../../ui/Input";
 import type { SessionRow } from "../projects/Sessions";
 import { matchesTaskQuery } from "../projects/taskSearch";
 
-export type SearchFilter = "all" | "tasks" | "archived" | "folders" | "actions" | "inbox";
+export type SearchFilter = "all" | "tasks" | "archived" | "folders" | "actions";
 type Group = Exclude<SearchFilter, "all">;
 
-export type SearchConversation = { id: number; contact_name: string; channel_name: string; last_message: string };
 
 type Archivadas = { tasks: (SessionRow & { folder: string })[]; spaces: SpaceRef[] };
 
@@ -32,12 +30,11 @@ type Result = {
   run: () => void;
 };
 
-const GROUPS: Group[] = ["tasks", "archived", "folders", "inbox", "actions"];
+const GROUPS: Group[] = ["tasks", "archived", "folders", "actions"];
 const ICONS: Record<Group, (p: { size: number }) => JSX.Element> = {
   tasks: SquarePen,
   archived: Archive,
   folders: Folder,
-  inbox: MessageSquare,
   actions: Plus,
 };
 // En «Todo» cada grupo enseña unos pocos; con su chip, todos los que coinciden.
@@ -59,11 +56,9 @@ export default function GlobalSearch(props: {
   /** Todas las carpetas, para nombrar la de una archivada. */
   projects: Project[];
   spaces: Space[];
-  conversations?: () => SearchConversation[];
   onOpenTask: (project: string, id: string) => void;
   onOpenFolder: (id: string) => void;
   onNewTask: (folder: string) => void;
-  onOpenConversation?: (id: number) => void;
 }) {
   return (
     <Dialog open={props.open !== null} onOpenChange={(open) => { if (!open) props.onClose(); }}>
@@ -80,8 +75,7 @@ function Panel(props: Parameters<typeof GlobalSearch>[0] & { initial: SearchFilt
   const query = () => text().trim();
   // Leer un recurso fallido lanza: un fallo de Archivadas no apaga los demás grupos.
   const archivadas = () => (archived.error ? undefined : archived());
-  const withInbox = () => !!props.conversations;
-  const chips = (): SearchFilter[] => ["all", "tasks", "archived", "folders", ...(withInbox() ? (["inbox"] as const) : []), "actions"];
+  const chips = (): SearchFilter[] => ["all", "tasks", "archived", "folders", "actions"];
 
   const folderName = (id: string) => props.projects.find((p) => p.id === id)?.name ?? "";
   const live = (id: string | null | undefined) => props.spaces.find((s) => s.id === id) ?? null;
@@ -118,14 +112,6 @@ function Panel(props: Parameters<typeof GlobalSearch>[0] & { initial: SearchFilt
         key: `folder:${p.id}`, group, title: p.name, detail: "", run: close(() => props.onOpenFolder(p.id)),
       }));
     }
-    if (group === "inbox") {
-      return (props.conversations?.() ?? [])
-        .filter((c) => matchesTaskQuery([c.contact_name, c.last_message, c.channel_name], q))
-        .map((c) => ({
-          key: `inbox:${c.id}`, group, title: join(c.contact_name, c.last_message), detail: c.channel_name,
-          run: close(() => props.onOpenConversation?.(c.id)),
-        }));
-    }
     return props.folders
       .map((p) => ({ p, title: t("search.action.new_task", { name: p.name }) }))
       .filter((x) => matchesTaskQuery([x.title, x.p.name], q))
@@ -135,7 +121,7 @@ function Panel(props: Parameters<typeof GlobalSearch>[0] & { initial: SearchFilt
   const sections = createMemo(() => {
     const f = filter();
     if (f === "all" && !query()) return [{ group: "tasks" as Group, label: t("search.recent"), results: candidates("tasks").slice(0, RECENT) }];
-    return GROUPS.filter((g) => (f === "all" || f === g) && (g !== "inbox" || withInbox()))
+    return GROUPS.filter((g) => (f === "all" || f === g))
       .map((g) => ({ group: g, label: t(`search.group.${g}`), results: f === "all" ? candidates(g).slice(0, PER_GROUP) : candidates(g) }))
       .filter((s) => s.results.length > 0);
   });

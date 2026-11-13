@@ -62,8 +62,8 @@ test("a retried write keeps its Idempotency-Key and the Location reaches the cal
   const got = await edgeUntil("POST", "/v1/machines/cmp_1/start", {}, { minDelayMs: 1 });
   assert.equal(got.status, 202);
   assert.equal(got.location, "/v1/operations/op_1");
-  assert.equal(calls[0].args?.idempotencyKey, undefined, "the first call lets Rust choose");
-  assert.equal(calls[1].args?.idempotencyKey, "key-1");
+  assert.equal(typeof calls[0].args?.idempotencyKey, "string");
+  assert.equal(calls[1].args?.idempotencyKey, calls[0].args?.idempotencyKey);
 });
 
 test("edgeFetch gives the status as it came", async () => {
@@ -110,4 +110,65 @@ test("the backoff grows, honours the server hint and has a ceiling", async () =>
   assert.equal(nextDelay(1, undefined, 1000), 2000);
   assert.equal(nextDelay(0, 30_000, 1000), 30_000);
   assert.equal(nextDelay(20, undefined, 1000), 60_000);
+});
+
+
+test("a lost write response repeats the original key, including the first attempt", async () => {
+  const calls = window((_args, n) => {
+    if (n === 0) throw { detail: "unavailable" };
+    return ok({ workspace: { id: "ws_1" } });
+  });
+  const { selectWorkspace } = await edge();
+  await selectWorkspace("ws_1", { minDelayMs: 1 });
+  const key = calls[0].args?.idempotencyKey;
+  assert.equal(typeof key, "string");
+  assert.ok(String(key).length > 0);
+  assert.equal(calls[1].args?.idempotencyKey, key);
+});
+
+test("Retry-After is a minimum even when it exceeds the local ceiling", async () => {
+  const { nextDelay } = await edge();
+  assert.equal(nextDelay(20, 120_000), 120_000);
+});
+
+test("an already cancelled write never reaches the edge", async () => {
+  const calls = window(() => ok({}));
+  const { selectWorkspace } = await edge();
+  const stop = new AbortController();
+  stop.abort();
+  await assert.rejects(selectWorkspace("ws_1", { signal: stop.signal }));
+  assert.equal(calls.length, 0);
+});
+
+test("a missing resource is a refusal, distinct from a route not deployed yet", async () => {
+  const calls = window(() => ({ status: 404, body: { code: "workspace_not_found" } }));
+  const { selectWorkspace } = await edge();
+  await assert.rejects(selectWorkspace("gone"), (e: unknown) => (e as { detail: string }).detail === "workspace_not_found");
+  assert.equal(calls.length, 1);
+});
+
+test("a huge Retry-After never overflows the timer", async (t) => {
+  const stop = new AbortController();
+  const delays: number[] = [];
+  const original = globalThis.setTimeout;
+  t.mock.method(globalThis, "setTimeout", (_fn: () => void, ms: number) => {
+    delays.push(ms);
+    return original(() => stop.abort(), 0);
+  });
+  window(() => ({ status: 503, body: {}, retry_after_ms: 3_000_000_000 }));
+  const { me } = await edge();
+  await assert.rejects(me({ signal: stop.signal }));
+  assert.ok(delays.length > 0);
+  assert.ok(delays.every(ms => ms <= 2 ** 31 - 1));
+});
+
+test("an expired intent is not sent when the app resumes after its retry budget", async (t) => {
+  let now = 0;
+  t.mock.method(Date, "now", () => now);
+  const original = globalThis.setTimeout;
+  t.mock.method(globalThis, "setTimeout", (fn: () => void, ms: number) => original(() => { now = 1000; fn(); }, ms));
+  const calls = window((_args, n) => n === 0 ? { status: 503, body: {} } : ok({}));
+  const { edgeUntil } = await edge();
+  await assert.rejects(edgeUntil("POST", "/v1/machines/cmp_1/start", {}, { minDelayMs: 1, retryBudgetMs: 20 }));
+  assert.equal(calls.length, 1);
 });

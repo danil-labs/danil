@@ -5,7 +5,7 @@
  * Al iniciar o cerrar sesión (`danil-connect`) se vuelve a leer.
  */
 import { listen } from "../../lib/serviceEvents";
-import { edgeFetch, onEdgeProblem } from "../../lib/edge";
+import { cancelEdgeWrites, edgeFetch, onEdgeProblem } from "../../lib/edge";
 import { edgeOrganizationSource } from "./organization-edge";
 import { createOrganizationSelection, isOrganizationSelectionRequired, type OrganizationSelection } from "./organization-selection";
 
@@ -15,7 +15,7 @@ export const ORGANIZATION_CHANGED = "danil:organization-changed";
 export function desktopOrganizations(): OrganizationSelection {
   const selection = createOrganizationSelection(
     // Una llamada por intento; la clave de cada `select` se repite en sus reintentos.
-    edgeOrganizationSource(edgeFetch),
+    edgeOrganizationSource(edgeFetch, cancelEdgeWrites),
     {
       onSelected: (organization, workspace) => {
         window.dispatchEvent(new CustomEvent(ORGANIZATION_CHANGED, { detail: { organization: organization.id, workspace } }));

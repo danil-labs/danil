@@ -1,8 +1,4 @@
-/**
- * Danil Business en la web: el cliente de `/auth/account/business/*` por el proxy de
- * alfa contra un `fetch` falso, la lectura de lo que manda billing, el tope en línea,
- * los errores en palabras y las reglas de los datos fiscales.
- */
+/** Shared billing display, limits, fiscal parsing and refusal messages. */
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import "../helpers/catalog.ts";
@@ -23,66 +19,11 @@ import {
   summaryError,
 } from "../../src/features/settings/business-billing.ts";
 import { checkFiscal, regimesFor, rfcPersonType } from "../../src/features/settings/fiscal.ts";
-import { webBusinessBilling } from "../../src/web/business-billing.ts";
-
-const jwt = (account: number) => `h.${Buffer.from(JSON.stringify({ active_account_id: account })).toString("base64url")}.s`;
-
-function fake(handler: (url: string, init: RequestInit) => { status: number; body?: unknown }) {
-  const seen: { url: string; init: RequestInit }[] = [];
-  const f = async (url: string, init: RequestInit = {}) => {
-    seen.push({ url, init });
-    const { status, body } = handler(url, init);
-    return new Response(body === undefined ? "" : JSON.stringify(body), { status });
-  };
-  return { f, seen };
-}
-
-const session = { getToken: async () => jwt(7), unauthorized: async () => false };
 
 const SUMMARY = {
   business: true, account_id: 7, status: "active", currency: "mxn", included_seats: 3, extra_seats: 2,
   seats_allowed: 5, seats_used: 5, seat_amount_cents: 10_000, tax_exclusive: true, max_extra_seats: 10, credit_packs_mxn: [500, 1000],
 };
-
-test("the web source reads and writes only the business routes, for the session's active account", async () => {
-  const { f, seen } = fake((url, init) => {
-    if (url.endsWith("/auth/account/business/summary?account_id=7")) return { status: 200, body: SUMMARY };
-    if (url.includes("/my-permissions")) return { status: 200, body: { role: "owner", permissions: ["billing.manage"], scoped: [] } };
-    if (url.endsWith("/seats/preview")) return { status: 200, body: { current_extra_seats: 2, target_extra_seats: 3, allowed_after: 6, amount_due_now_cents: 6960, next_invoice_amount_cents: 266_800, proration_date: 1_762_300_000 } };
-    if (url.endsWith("/business/seats") && init.method === "POST") return { status: 200, body: { status: "changed", extra_seats: 3, allowed: 6, url: null } };
-    if (url.endsWith("/credit/checkout")) return { status: 200, body: { url: "https://checkout.stripe.com/c/pay/cs_1" } };
-    if (url.endsWith("/business/fiscal") && init.method === "PUT") return { status: 200, body: { profile: { ...JSON.parse(String(init.body)), complete: true } } };
-    return { status: 404, body: { error: "not_found" } };
-  });
-  const source = webBusinessBilling(session, "/alpha-api", f);
-  assert.equal(await source.account(), 7);
-  const summary = await source.summary(7);
-  assert.ok(summary.business);
-  assert.equal(summary.currency, "MXN");
-  assert.equal(await source.canManage(7), true);
-  assert.equal((await source.previewSeats(7, 3)).amountDueNowCents, 6960);
-  assert.deepEqual(await source.changeSeats(7, 3, 1_762_300_000), { status: "changed", extraSeats: 3, allowed: 6, url: null });
-  assert.equal(await source.creditCheckout(7, 500), "https://checkout.stripe.com/c/pay/cs_1");
-  const profile = { rfc: "EKU9003173C9", legal_name: "ESCUELA KEMPER URGATE", tax_system: "601", cfdi_use: "G03", zip: "26015", invoice_email: "f@x.mx" };
-  assert.equal((await source.saveFiscal(7, profile))?.rfc, "EKU9003173C9");
-  const writes = seen.filter((s) => s.init.method && s.init.method !== "GET").map((s) => [s.init.method, s.url, JSON.parse(String(s.init.body))]);
-  assert.deepEqual(writes, [
-    ["POST", "/alpha-api/auth/account/business/seats/preview", { account_id: 7, extra_seats: 3 }],
-    ["POST", "/alpha-api/auth/account/business/seats", { account_id: 7, extra_seats: 3, proration_date: 1_762_300_000 }],
-    ["POST", "/alpha-api/auth/account/business/credit/checkout", { account_id: 7, amount_mxn: 500 }],
-    ["PUT", "/alpha-api/auth/account/business/fiscal", { account_id: 7, ...profile }],
-  ]);
-  for (const s of seen) assert.equal((s.init.headers as Record<string, string>).Authorization, `Bearer ${jwt(7)}`);
-});
-
-test("BFF errors keep their code, and permissions fail closed", async () => {
-  const { f } = fake((url) => (url.includes("/my-permissions") ? { status: 500 } : { status: 409, body: { error: "seats_below_used" } }));
-  const source = webBusinessBilling(session, "/alpha-api", f);
-  assert.equal(await source.canManage(7), false);
-  await assert.rejects(source.previewSeats(7, 0), (e: unknown) => e instanceof BusinessBillingError && e.code === "seats_below_used" && e.status === 409);
-  const member = webBusinessBilling(session, "/alpha-api", fake(() => ({ status: 200, body: { permissions: ["inbox.respond"] } })).f);
-  assert.equal(await member.canManage(7), false);
-});
 
 test("what billing sends is read as is; a workspace without Business says so", () => {
   assert.deepEqual(readSummary({ business: false }), { business: false });

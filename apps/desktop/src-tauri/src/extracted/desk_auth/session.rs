@@ -131,9 +131,36 @@ fn opaque_id(segment: &str) -> bool {
             .all(|b| b.is_ascii_alphanumeric() || b == b'_' || b == b'-')
 }
 
+/// El cursor opaco de `GET /v1/machines?cursor=` tal como lo codifica el cliente
+/// (RFC 3986): letras, dígitos, `-._~` y `%XX`; nada que abra otra ruta o parámetro.
+fn opaque_cursor(raw: &str) -> bool {
+    let b = raw.as_bytes();
+    if !(1..=1024).contains(&b.len()) {
+        return false;
+    }
+    let mut i = 0;
+    while i < b.len() {
+        match b[i] {
+            b'%' if i + 2 < b.len()
+                && b[i + 1].is_ascii_hexdigit()
+                && b[i + 2].is_ascii_hexdigit() =>
+            {
+                i += 3
+            }
+            c if c.is_ascii_alphanumeric() || matches!(c, b'-' | b'.' | b'_' | b'~') => i += 1,
+            _ => return false,
+        }
+    }
+    true
+}
+
 /// Rutas del borde (contrato `mvp-v1`) que Desk llama con su Bearer. Lista
 /// cerrada con métodos y plantillas exactas, no un proxy abierto.
 pub(crate) fn allowed(method: &str, path: &str) -> bool {
+    // La única query: la página siguiente de máquinas (`next_cursor`, `machines.openapi`).
+    if let Some(cursor) = path.strip_prefix("/v1/machines?cursor=") {
+        return method == "GET" && opaque_cursor(cursor);
+    }
     let fixed = matches!(
         (method, path),
         ("GET", "/v1/capabilities")
@@ -166,8 +193,9 @@ impl Capabilities {
         let list = body["items"].as_array()?;
         Some(
             list.iter()
-                // Ausente o con otro `status` (enum abierto): no disponible.
-                .filter(|c| c["status"] == "available")
+                // Solo la versión mayor que Desk conoce y `available`; lo demás (también
+                // `degraded` y los estados desconocidos) es no disponible, como en la web.
+                .filter(|c| c["version"] == 1 && c["status"] == "available")
                 .filter_map(|c| c["name"].as_str())
                 .map(str::to_owned)
                 .collect(),

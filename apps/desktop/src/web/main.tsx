@@ -18,10 +18,5 @@ window.addEventListener("vite:preloadError", (event) => {
 });
 
 
-const query = new URLSearchParams(window.location.search);
 const root = document.getElementById("root") as HTMLElement;
-if (query.get("demo") === "1") {
-  const admin = window.location.pathname.replace(/\/+$/, "") === `${import.meta.env.BASE_URL}admin`;
-  if (admin) void import("./admin/main").then(m => m.startAdminDemo({ dark: query.get("theme") === "dark" }));
-  else void import("./attention/main").then(m => m.startAttention({ login: `${import.meta.env.BASE_URL}auth` }));
-} else void import("./PlatformEntry").then(m => m.startPlatform(__DANIL_WEB_API__, root));
+void import("./window-session").then(m => m.startWindow(__DANIL_WEB_API__, root));

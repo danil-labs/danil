@@ -69,6 +69,11 @@ const ARBOLES = [WEB].filter((d) => existsSync(d));
  * normal: el registro es la lista de lo que la app hace, no de lo que podría.
  */
 const SIN_INTERFAZ = {
+  ...Object.fromEntries([
+    "agents_bff_fetch", "agents_session_create_danil_workspace", "agents_session_directory",
+    "agents_session_link", "agents_session_refresh", "agents_session_sign_out", "agents_session_status",
+    "agents_session_unlink", "credits_pilot_prepare", "harness_org_fetch",
+  ].map(command => [command, "mensajería nativa de Desk tal como está en dev (RC 4691be0b); el front ya no la invoca (regla 7) y se retira con cargo en su propio cambio, congelada en messaging-isolation-legacy.json"])),
   change_agent_folders: "la configuración global solo administra workspace; el CLI conserva la asignación de carpetas y el contrato congelado",
   credits_pilot_install: "lo pide credits_captured_call desde Rust; el nonce del proxy local nunca entra en JavaScript",
   set_go_usage_key: "la conexión única de OpenCode reemplaza el campo de Go; se conserva el contrato y las claves guardadas de clientes anteriores",

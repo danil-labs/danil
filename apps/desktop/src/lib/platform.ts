@@ -7,7 +7,6 @@ import type { Answer, AccountWorkspace, Computer, CredentialSource, MemorySource
 import { createRoot, createSignal, type JSX } from "solid-js";
 import type { AccountEmailsSource } from "../features/settings/account-emails";
 import type { AccountProfileSource } from "../features/settings/account-profile";
-import type { SupportAccessSource } from "../features/settings/SupportAccess";
 import type { Account } from "../features/settings/accounts-store";
 import type { AuditLogSource } from "../web/audit-log";
 import type { WorkspaceAssetsSource } from "../web/workspace-assets";
@@ -25,7 +24,8 @@ export type AccountMachinesProps = {
 export type AccountComputersSource = {
   list: () => Promise<Answer<Computer[]>>;
   workspaces?: () => Promise<Answer<AccountWorkspace[]>>;
-  rename: (id: string, name: string) => Promise<Answer<{ computer_id: string; name: string }>>;
+  subscribe?: (changed: () => void) => () => void;
+  rename?: (id: string, name: string) => Promise<Answer<{ computer_id: string; name: string }>>;
   /** Quien pinta nombres de máquina (la flota) toma el nuevo sin recargar. */
   onRenamed: (id: string, name: string) => void;
   /**
@@ -59,9 +59,11 @@ export type WebAccountsSource = {
 };
 
 export type Capabilities = {
+  webPromo?: (code: string, idempotencyKey: string) => Promise<{ machine?: { state?: string } }>;
+  webWorkspaces?: { rows: () => { id: string; name: string }[]; active: () => string | null; busy: () => boolean; uncertain: () => boolean; choose: (id: string) => void };
+
   /** Saldo de la cuenta Danil desde un BFF autenticado; ausente hasta verificar el adaptador. */
   danilCredits?: import("../features/chat/danil-credits").DanilCreditsSource;
-  inbox?: { customization: typeof import("./customization").createCustomization; entries: typeof import("./attention-labels").featureEntries; demo: boolean; userId?: string | null; subscribe?: (clear: () => void) => () => void; sidebarMenu: typeof import("../web/attention/SidebarEntries").AttentionMenu; personalizeMenu: typeof import("../web/attention/SidebarEntries").PersonalizeMenu; catalog: (props: import("../web/attention/CustomizationSection").CustomizationSectionProps) => JSX.Element; broadcasts: (workspace: () => string | null) => JSX.Element; initial: boolean; render: (workspace: () => string | null) => JSX.Element; agentSettings: (name: string) => JSX.Element; customerAgents: (workspace: () => string | null) => JSX.Element; customerConnections: (workspace: () => string | null) => JSX.Element; search: { conversations: () => import("../features/shell/GlobalSearch").SearchConversation[]; open: (id: number) => void } };
   spaceOrder?: SpaceOrderSource;
   /** Controles de ventana propios, semáforo de macOS y bandeja. */
   nativeWindow: boolean;
@@ -107,7 +109,7 @@ export type Capabilities = {
   adminPage?: { href: string; allowed: () => Promise<boolean> };
   /** Lo de una cuenta personal en Configuración › Cuenta. `isPersonal` decide si se ofrece; sin `plan`, esa pestaña no sale. */
   personalAccount?: { isPersonal: () => Promise<boolean>; plan?: () => JSX.Element };
-  /** El consumo propio (`/v1/usage/me`) en Configuración › Cuenta. Sin fuente, la pestaña no sale. */
+  /** El consumo propio en Configuración › Cuenta. Sin fuente, la pestaña no sale. */
   accountUsage?: () => JSX.Element;
   /** Plan y cobro de Danil Business del workspace activo (solo la web). Sin esto, la entrada no sale. */
   businessBilling?: (part: "plan" | "fiscal") => JSX.Element;
@@ -161,8 +163,6 @@ export type Capabilities = {
    */
   /** Las computadoras de la cuenta con la sesión de la página (la web); el escritorio usa su token de cliente. */
   accountComputers?: AccountComputersSource;
-  /** El acceso de soporte de Danil a los workspaces de Danil que la persona administra (la web alfa), en Workspaces. */
-  supportAccess?: SupportAccessSource;
   /** Varias cuentas de Danil en una ventana (la web); el escritorio no la da. */
   webAccounts?: WebAccountsSource;
   connectMachine?: {

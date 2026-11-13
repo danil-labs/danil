@@ -84,37 +84,7 @@ test("Danil Credits exposes its sole model without execution or a fabricated bal
 });
 
 
-for (const [state, wallet, status, expected] of [
-  ["zero", { balance_credits: 0, available_credits: 0, status: "active" }, 200, "0 créditos"],
-  ["null", null, 200, "No disponible"],
-  ["error", null, 503, "No disponible"],
-  ["loading", null, 200, "Consultando…"],
-]) {
-  test(`the real Credits panel renders ${state} from the authenticated desktop transport`, async () => {
-    const requests = [];
-    let release;
-    const pending = new Promise((resolve) => { release = resolve; });
-    const reply = { status, content_type: "application/json", body: JSON.stringify({ account_id: 476, wallet, execution_available: false }) };
-    const { app, panel } = await open(`ai-credits-${state}`, [], {
-      agents_session_status: { state: "active", user: { user_id: "person", name: "Ana", email: "ana@example.test" }, active_account_id: 476 },
-      agents_bff_fetch: (args) => {
-        requests.push(args);
-        return state === "loading" ? pending : reply;
-      },
-    });
-    const section = panel().querySelector('section[aria-label="Danil Credits"]');
-    assert.ok(section);
-    assert.equal(section.querySelector('[role="status"]').textContent, expected);
-    assert.ok(section.querySelector("button").disabled);
-    assert.ok(requests.some((r) => r.path === "/api/credits/balance" && r.method === "GET"));
-    assert.ok(requests.every((r) => r.method === "GET"));
-    release(reply);
-    await sleep(20);
-    assert.deepEqual(app.failures, []);
-  });
-}
-
-test("the task selector chooses the engine-advertised Credits model through its existing agent", async () => {
+test("the task selector leaves Credits unavailable without preparing the retired pilot", async () => {
   const id = "danil-credits/deepseek/deepseek-v4.1-flash";
   const provider = "opencode";
   let ready = false;
@@ -146,14 +116,12 @@ test("the task selector chooses the engine-advertised Credits model through its 
     await sleep(250);
     doc.querySelector('nav button[aria-label="Danil Credits"]').click();
     await sleep(650);
-    assert.ok(ready, "opening Credits prepares the local engine without exposing a credential to JavaScript");
+    assert.equal(ready, false, "opening Credits never prepares the retired pilot");
+    assert.equal(app.commands.includes("credits_pilot_prepare"), false);
     const section = doc.querySelector('section[aria-label="Danil Credits"]');
     const select = section?.querySelector("button");
-    assert.ok(select && !select.disabled, "the model is selectable only when the engine advertises it");
-    select.click();
-    await sleep(250);
-    assert.match(doc.querySelector('button[aria-label^="Modelo:"]').textContent, /DeepSeek V4.1 Flash/);
-    assert.equal(doc.querySelector('section[aria-label="Danil Credits"]'), null, "selection closes the picker");
+    assert.ok(select?.disabled, "without a new billing source the model stays unavailable");
+    assert.equal(section.querySelector('[role="status"]').textContent, "No disponible");
     assert.deepEqual(app.failures, []);
   } finally {
     app.w.close();

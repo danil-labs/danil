@@ -467,9 +467,13 @@ workspaces ligados):
   un workspace del registro abre sin esperar: proyectos del registro, tareas,
   fuentes y spaces vacíos. Crear una tarea va a la máquina elegida o a la
   última (con `materialize_workspace` antes si no lo tiene) y la enciende.
-- La web usa `src/web/PlatformEntry.tsx`: lista y selecciona workspaces por el
-  borde. El alta y el fallback del registro legado están retirados. La
-  reconciliación de selección se prueba en `tests/integration/platform-page.test.mjs`.
+- La web usa `src/web/window-session.tsx`: autentica por cookie en el borde y
+  monta la ventana de tareas y la flota existentes (`src/web/window.tsx`). La
+  lista y selección de plataforma usan `/v1/workspaces` tal como está. El registro
+  del motor es independiente: mientras compute no lo publique, se descubre por
+  relay. La prueba de página es `tests/integration/window-page.test.mjs`.
+- Pendiente: **modelo organización→N workspaces por decidir**. No se deduce un
+  workspace de la organización ni se crean o asignan workspaces automáticamente.
 
 ### Fase 2 (fuera de esta entrega)
 

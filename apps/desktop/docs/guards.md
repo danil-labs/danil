@@ -90,7 +90,8 @@ sends).
 | `literals` | `scripts/guards/literals.mjs` | Interface text outside the catalog in files already migrated. |
 | `copy` | `scripts/guards/copy.mjs` | Help text in `src/locales/es` does not grow: keys ending in `description`, `hint`, `why`, `lede`, `intro`, `help`, `note`, `subtitle` or `tagline`, with a dot or an underscore. The baseline only goes down; `--list` audits them. The rule is in [copy.md](./copy.md). |
 | `comments` | `scripts/guards/comments.mjs` | Limits long blocks, Markdown, argument and history in comments. The baseline only goes down. |
-| `web-platform` | `scripts/guards/web-platform.mjs` | Rejects database credentials, direct database clients and retired session/inbox switches in web sources and alpha-entry. |
+| `messaging-isolation` | `scripts/guards/messaging-isolation.mjs` | Rejects messaging service routes, satellite imports, sidebar/tab mounts and the removed native proxy in Desk/web sources. Engine task attention and task delivery rows remain allowed. The frozen engine manifests are outside this source scan. |
+| `web-platform` | `scripts/guards/web-platform.mjs` | Rejects database credentials, direct database clients, appv2 bindings and retired session/inbox switches in web sources and alpha-entry. |
 | `test-policy` | `scripts/guards/test-policy.mjs` | Counts direct source reads in tests. |
 | `icons` | `scripts/icons.mjs` | File icons match the ones generated from the package. |
 | `theme-inversion` | `scripts/guards/theme-inversion.mjs` | Rejects colors outside the theme tokens. |

@@ -1,10 +1,11 @@
 import { z } from "zod";
 
 const workspaceId = z.string().regex(/^[1-9]\d*$/);
-const profile = z.object({ id: z.string().startsWith("user_"), name: z.string(), workspace: workspaceId, organizations: z.array(z.object({ id: z.string(), name: z.string() })) });
+const profile = z.object({ id: z.string().startsWith("user_"), name: z.string(), workspace: workspaceId.nullable(), organizations: z.array(z.object({ id: z.string(), name: z.string() })) });
 const workspace = z.object({ id: workspaceId, org: z.string(), name: z.string(), role: z.string() });
 const page = z.object({ items: z.array(workspace), next_cursor: z.string().min(1).nullable() });
-const selection = z.object({ workspace: workspaceId, ctx: z.string().min(1), authz_ver: z.number().int().nonnegative() });
+/** `POST /v1/workspaces/select` → `{workspace: Workspace}` (mvp-v1 `WorkspaceSelection`); campos nuevos se ignoran. */
+const selection = z.object({ workspace });
 const csrf = z.object({ csrf_token: z.string().min(1).max(128) });
 export type PlatformProfile = z.infer<typeof profile>;
 export type PlatformWorkspace = z.infer<typeof workspace>;
@@ -45,7 +46,7 @@ export function platformTransport(options: { origin: string; timeoutMs: number }
   }
   async function mutation(path: string, init: RequestInit = {}) {
     const token = csrf.parse(await (await call("identity/csrf", { signal: init.signal })).json());
-    return call(path, { ...init, method: "POST", headers: { ...init.headers, "X-CSRF-Token": token.csrf_token } });
+    return call(path, { ...init, method: init.method ?? "POST", headers: { ...init.headers, "X-CSRF-Token": token.csrf_token } });
   }
   return { call, mutation };
 }
@@ -80,6 +81,13 @@ export function platformSession(options: { origin: string; timeoutMs: number }, 
         body: JSON.stringify({ workspace: id }),
       })).json());
     },
-    async logout() { await mutation("identity/logout"); },
+    async redeemPromo(code: string, idempotencyKey: string) {
+      const response = await mutation("workspaces/promo/redeem", {
+        headers: { "Content-Type": "application/json", "Idempotency-Key": idempotencyKey },
+        body: JSON.stringify({ code }),
+      });
+      return z.object({ machine: z.object({ state: z.string().optional() }).optional() }).parse(await response.json());
+    },
+    async logout() { await mutation("identity/logout", { headers: { "Idempotency-Key": crypto.randomUUID() } }); },
   };
 }

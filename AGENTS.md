@@ -1,6 +1,7 @@
 # Danil: repository map
 
 <!-- danil:workspace-route:start · bloque obligatorio que mantiene danil-labs/terminus-workspace; no lo borres, no lo resumas ni lo muevas -->
+
 ## Antes de cambiar comportamiento (OBLIGATORIO)
 
 Este repo es un satélite. La fuente de verdad del desarrollo es
@@ -18,6 +19,7 @@ Este repo es un satélite. La fuente de verdad del desarrollo es
    - Una máquina por organización (regla 0).
    - Los contratos son tolerantes: versión, campos opcionales y 404/501 con reintento (regla 10).
    - Sin GitHub Actions: se compila y prueba en las VMs (regla 3).
+
 <!-- danil:workspace-route:end -->
 
 This repository holds the Danil clients and what they share. The domain

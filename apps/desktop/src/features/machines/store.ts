@@ -127,6 +127,8 @@ export const machineNamesChanged = () => setNamesRead((n) => n + 1);
 
 export const machineName = (id: string, local = id === "local") => {
   namesRead();
+  // En la web no existe «este equipo»: sin máquina de la nube, la ventana lo dice en vez de nombrar una local.
+  if (local && !capabilities().nativeWindow && capabilities().machineName) return capabilities().machineName!(id);
   return local ? (isMac() ? t("shell.machines.this_mac") : t("shell.machines.this_computer")) : (capabilities().machineName?.(id) ?? id);
 };
 
