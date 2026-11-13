@@ -39,6 +39,8 @@ test('session verification shows loading and reads me, capabilities and workspac
   assert.ok(pending.has('/v1/capabilities'), 'discovery starts without waiting for the profile');
   assert.ok(pending.has('/v1/workspaces'), 'directory starts without waiting for the profile');
   pending.get('/v1/capabilities')(new Response(null, { status: 404 }));
+  await until(() => calls.includes('/v1/machines'));
+  assert.ok(app.w.document.querySelector('[data-web-session-loading]'), 'machines starts while the profile is still pending');
   pending.get('/v1/workspaces')(Response.json({ items: [{ id: '11', org: 'org_A', name: 'Alpha', role: 'owner' }], next_cursor: null }));
   pending.get('/v1/identity/me')(Response.json({ id: 'user_A', name: 'Operator', workspace: '11', organizations: [] }));
   await until(() => app.w.document.querySelector('[data-tira]'));

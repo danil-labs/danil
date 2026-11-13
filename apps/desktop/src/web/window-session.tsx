@@ -183,7 +183,12 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
     async function load() {
       await run(async () => {
         // Las lecturas no dependen entre sí; identity sigue siendo quien decide la sesión.
-        const directory = Promise.allSettled([readCapabilities(transport), api.workspaces()]);
+        let initialMachines: ReturnType<typeof machines.list> | undefined;
+        const discovered = readCapabilities(transport).then(snapshot => {
+          if (supports(snapshot, 'machines')) initialMachines = machines.list();
+          return snapshot;
+        });
+        const directory = Promise.allSettled([discovered, api.workspaces()]);
         person = await api.me();
         await selection.reconcile(person);
         if (mountedBefore) { window.location.assign(home); return; }
@@ -204,7 +209,7 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
         disposeGate?.();
         disposeGate = undefined;
         mountedBefore = true;
-        windowApp = mountWindow({ machines, permits, relayOrigin: __DANIL_WEB_RELAY_ORIGINS__[0],
+        windowApp = mountWindow({ machines, initialMachines, permits, relayOrigin: __DANIL_WEB_RELAY_ORIGINS__[0],
           profile: webAccountProfile(transport), onUnauthorized: expired,
           onUnavailable: () => { setError('web.platform.unavailable'); gate(); later(); },
           workspaces: { rows, active, busy, uncertain, choose: id => void choose(id) },
