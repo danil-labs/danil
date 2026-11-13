@@ -180,6 +180,7 @@ impl Capabilities {
     }
 }
 
+#[derive(Debug)]
 pub(crate) struct Reply {
     pub(crate) status: u16,
     pub(crate) body: Value,
