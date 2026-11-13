@@ -700,6 +700,7 @@ const steps = [
   ["A task from another machine in an account space shows in that same space", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/spaces-remote-task.test.ts")], root],
   ["A pasted key, token, JWT or private key is recognized; a hash, id, path or clean URL is not; an MCP source hides its credentials", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/secret-scan.test.ts")], root],
   ["On the web everything is on other machines: saved data opens now, acting starts the VM and an off Mac says so", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/web-router.test.ts")], root],
+  ["Desk muestra Conectando mientras carga la lista de máquinas y conserva la local", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/desktop-machines-connecting.test.mjs")], root],
   ["With the Danil account the desktop joins tasks from all its computers", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/desktop-account-machines.test.mjs")], root],
   ["With the Danil account the desktop follows its session and each computer", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/desktop-account-sessions.test.mjs")], root],
   ["With the Danil account the desktop sorts the rail and lists its computers", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/desktop-account-rail.test.mjs")], root],

@@ -376,6 +376,7 @@
   "shell.machines.label": "Ejecutar en",
   "shell.machines.this_mac": "Esta Mac",
   "shell.machines.this_computer": "Esta computadora",
+  "shell.machines.connecting": "Conectando…",
   "shell.machines.on": "encendida",
   "shell.machines.off": "apagada",
   "shell.machines.unlinked": "sin este workspace",

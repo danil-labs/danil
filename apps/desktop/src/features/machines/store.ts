@@ -1,4 +1,4 @@
-import { type SystemId } from "@terminus/computers";
+import { type MachineState, type SystemId } from "@terminus/computers";
 import { SEP } from "@terminus/fleet";
 import { REMOTE_CHILD_FEATURE, type RemoteScope } from "@terminus/tasks";
 import { createRoot, createSignal } from "solid-js";
@@ -18,7 +18,7 @@ export { runsWorkspace } from "./runs-workspace";
  * `features`: lo que su motor anuncia (`status.service_features`). `power`, lo que
  * sabe la flota (`starting`: encendiéndose); `version`, su `host_version`, también apagada.
  */
-export type Machine = { id: string; local: boolean; active: boolean; on: boolean; power?: "on" | "off" | "starting" | "outdated"; version?: string; hosts: boolean | null; materializes?: boolean; refuses?: boolean; wakes?: boolean; os?: SystemId; features?: readonly string[] };
+export type Machine = { id: string; local: boolean; active: boolean; on: boolean; connection?: MachineState; power?: "on" | "off" | "starting" | "outdated"; version?: string; hosts: boolean | null; materializes?: boolean; refuses?: boolean; wakes?: boolean; os?: SystemId; features?: readonly string[] };
 
 /** Lo que el picker sabe del proyecto de la tarea nueva: las máquinas con su carpeta y su remoto. */
 export type ProjectPlace = { name: string; machines?: string[]; remote_url?: string | null } | null | undefined;
@@ -40,7 +40,8 @@ export function unavailable(m: Machine, project: ProjectPlace, all: Machine[] = 
 // Una sola lista para toda la ventana. Señal y no `createResource`, que
 // suspendería la vista entera mientras contestan.
 const [machines, setMachines] = createRoot(() => createSignal<Machine[]>([]));
-export { machines };
+const [cloudMachinesLoading, setCloudMachinesLoading] = createRoot(() => createSignal(false));
+export { machines, cloudMachinesLoading, setCloudMachinesLoading };
 
 export const refetchMachines = () =>
   invoke<Machine[]>("machine_list")

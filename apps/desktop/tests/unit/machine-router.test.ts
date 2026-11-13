@@ -18,7 +18,7 @@ type Args = Record<string, unknown>;
 type Call = { command: string; args: Args; workspace: string | null; id: string };
 
 /** Una sesión de relay en memoria; `silent` no contesta nunca, como una VM colgada. */
-function fakeLink(answers: Record<string, unknown>, state: "online" | "offline" | "stopped" = "online", silent = false) {
+function fakeLink(answers: Record<string, unknown>, state: "online" | "offline" | "stopped" | "unknown" = "online", silent = false) {
   const calls: Call[] = [];
   const link: Link & { calls: Call[] } = {
     calls,
@@ -913,4 +913,11 @@ test("without a copy, an archived open tab, or an engine without the index, the 
     assert.equal(native.filter((c) => c.command.startsWith("state_")).length, 0, "an engine without the features is never asked for its index");
     assert.equal(native.filter((c) => c.command === "list_live_sessions").length, 1);
   }
+});
+
+test("machine_list conserva el estado del canal para distinguir conexión pendiente de apagada", async () => {
+  const { router } = setup({ cmp_vm: fakeLink({}, "unknown"), cmp_mac: fakeLink({}, "offline") });
+  const list = await router.handle("machine_list") as { id: string; connection?: string }[];
+  assert.equal(list.find(m => m.id === "cmp_vm")?.connection, "unknown");
+  assert.equal(list.find(m => m.id === "cmp_mac")?.connection, "offline");
 });

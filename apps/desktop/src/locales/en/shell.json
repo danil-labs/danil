@@ -376,6 +376,7 @@
   "shell.machines.label": "Run on",
   "shell.machines.this_mac": "This Mac",
   "shell.machines.this_computer": "This computer",
+  "shell.machines.connecting": "Connecting…",
   "shell.machines.on": "on",
   "shell.machines.off": "off",
   "shell.machines.unlinked": "lacks this workspace",
