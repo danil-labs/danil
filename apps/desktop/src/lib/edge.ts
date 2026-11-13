@@ -23,6 +23,13 @@ export type Patience = {
 };
 
 const CEILING_MS = 60_000;
+let context = new AbortController();
+
+/** Una intención no sobrevive al cambio de sesión o tenant. */
+export function cancelEdgeWrites(): void {
+  context.abort();
+  context = new AbortController();
+}
 
 /** La espera antes del reintento `attempt`: crece al doble, respeta la del servidor y limita el backoff local a un minuto. */
 export function nextDelay(attempt: number, hintMs: number | undefined, minDelayMs = 1000): number {
@@ -83,20 +90,21 @@ export function edgeFetch<T = unknown>(method: "GET" | "POST", path: string, bod
  * Reintenta hasta un 2xx (o hasta `signal`) y devuelve la respuesta entera
  * (`Location` incluida). Las escrituras repiten su `Idempotency-Key`.
  */
-export async function edgeUntil<T = unknown>(method: "GET" | "POST", path: string, body?: unknown, patience: Patience = {}, send: typeof edgeFetch = edgeFetch): Promise<EdgeReply<T>> {
+export async function edgeUntil<T = unknown>(method: "GET" | "POST", path: string, body?: unknown, patience: Patience = {}, transport: { send: typeof edgeFetch; onProblem?: (e: EdgeRefusal) => void } = { send: edgeFetch, onProblem: e => problemListener?.(e) }): Promise<EdgeReply<T>> {
+  const signal = method === "POST" ? AbortSignal.any([context.signal, ...(patience.signal ? [patience.signal] : [])]) : patience.signal;
   const key = method === "POST" ? patience.idempotencyKey ?? crypto.randomUUID() : undefined;
   const deadline = Date.now() + (patience.retryBudgetMs ?? Infinity);
   let last: unknown;
   for (let attempt = 0; ; attempt++) {
-    patience.signal?.throwIfAborted();
+    signal?.throwIfAborted();
     let wait: number | undefined;
     try {
-      const reply = await send<T>(method, path, body, key);
+      const reply = await transport.send<T>(method, path, body, key);
       if (reply.status >= 200 && reply.status < 300) return reply;
       const code = (reply.body as { code?: unknown } | null)?.code;
       last = { detail: typeof code === "string" ? code : `http_${reply.status}`, status: reply.status, body: reply.body, retry_after_ms: reply.retry_after_ms } satisfies EdgeRefusal;
-      if (!RETRIED_STATUS.has(reply.status) || (reply.status === 404 && typeof code === "string" && code.endsWith("_not_found"))) {
-        problemListener?.(last as EdgeRefusal);
+      if (!RETRIED_STATUS.has(reply.status) || (reply.status === 404 && typeof code === "string" && (code === "not_found" || code.endsWith("_not_found")))) {
+        transport.onProblem?.(last as EdgeRefusal);
         throw last;
       }
       wait = reply.retry_after_ms;
@@ -108,7 +116,7 @@ export async function edgeUntil<T = unknown>(method: "GET" | "POST", path: strin
     }
     const delay = nextDelay(attempt, wait, patience.minDelayMs) * (1 + Math.random() / 4);
     if (Date.now() + delay > deadline) throw last;
-    if (!(await sleep(delay, patience.signal))) throw last;
+    if (!(await sleep(delay, signal))) throw last;
   }
 }
 
@@ -117,7 +125,11 @@ const bodyOf = <T>(method: "GET" | "POST", path: string, body: unknown, p?: Pati
 export const me = (p?: Patience) => bodyOf<Me>("GET", "/v1/identity/me", undefined, p);
 export const organizations = (p?: Patience) => bodyOf<OrganizationList>("GET", "/v1/identity/organizations", undefined, p);
 export const workspaces = (p?: Patience) => bodyOf<WorkspaceList>("GET", "/v1/workspaces", undefined, p);
-export const selectOrganization = (organizationId: string, p?: Patience) =>
-  bodyOf<{ organization: Organization; workspace: string | null }>("POST", "/v1/identity/organizations/select", { organization_id: organizationId }, p);
-export const selectWorkspace = (workspaceId: string, p?: Patience) =>
-  bodyOf<{ workspace: Workspace }>("POST", "/v1/workspaces/select", { workspace: workspaceId }, p);
+export const selectOrganization = (organizationId: string, p?: Patience) => {
+  cancelEdgeWrites();
+  return bodyOf<{ organization: Organization; workspace: string | null }>("POST", "/v1/identity/organizations/select", { organization_id: organizationId }, p);
+};
+export const selectWorkspace = (workspaceId: string, p?: Patience) => {
+  cancelEdgeWrites();
+  return bodyOf<{ workspace: Workspace }>("POST", "/v1/workspaces/select", { workspace: workspaceId }, p);
+};

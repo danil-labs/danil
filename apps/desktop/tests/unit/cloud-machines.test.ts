@@ -127,3 +127,29 @@ test("one machine write retries the same intent after a lost native response", a
   assert.equal(calls.length, 2);
   assert.deepEqual(calls.map(c => c.idempotencyKey), ["same-intent", "same-intent"]);
 });
+
+test("a deleted machine returns missing instead of retrying a generic not_found", async () => {
+  let calls = 0;
+  const cloud = createCloudMachines(async () => { calls++; return { status: 404, body: { code: "not_found" } }; });
+  assert.equal((await cloud.client.start("gone")).kind, "missing");
+  assert.equal(calls, 1);
+});
+
+test("a retry hint outside the machine intent budget returns without a delayed effect", async () => {
+  let calls = 0;
+  const cloud = createCloudMachines(async () => { calls++; return { status: 503, body: {}, retry_after_ms: 120_000 }; });
+  assert.equal((await cloud.client.start("cmp_1")).kind, "error");
+  assert.equal(calls, 1);
+});
+
+test("changing context cancels a pending machine write", async () => {
+  const { cancelEdgeWrites } = await import("../../src/lib/edge.ts");
+  let calls = 0;
+  const cloud = createCloudMachines(async () => {
+    calls++;
+    queueMicrotask(cancelEdgeWrites);
+    throw { detail: "unavailable" };
+  });
+  assert.equal((await cloud.client.start("cmp_1")).kind, "error");
+  assert.equal(calls, 1);
+});

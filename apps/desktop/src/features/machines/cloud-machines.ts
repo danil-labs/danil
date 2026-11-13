@@ -28,17 +28,22 @@ export function edgeFetch(invoke: Invoke, onProblem?: (error: unknown) => void, 
   const send = <T>(method: "GET" | "POST", path: string, body?: unknown, idempotencyKey?: string) =>
     invoke("danil_edge_fetch", { method, path, ...(method === "POST" ? { body, idempotencyKey } : {}) }) as Promise<NativeReply<T>>;
   return async (input, init) => {
-    const method = init?.method === "POST" ? "POST" : "GET";
+    const method = init?.method ?? "GET";
+    if (method !== "GET" && method !== "POST") return { status: 400, ok: false, json: async () => ({ code: "invalid_request" }) };
+    let body: unknown;
+    try { body = JSON.parse(init?.body ?? "{}"); }
+    catch { return { status: 400, ok: false, json: async () => ({ code: "invalid_request" }) }; }
     const path = new URL(input).pathname;
     let reply: NativeReply;
     try {
-      reply = method === "GET" ? await send(method, path) : await edgeUntil(method, path, JSON.parse(init?.body ?? "{}"), {
-        ...patience, idempotencyKey: init?.headers?.["Idempotency-Key"],
-      }, send);
+      reply = method === "GET" ? await send(method, path) : await edgeUntil(method, path, body, {
+        // Una escritura vive como máximo hasta la siguiente reconciliación del inventario.
+        retryBudgetMs: CLOUD_RETRY_MS, ...patience, idempotencyKey: init?.headers?.["Idempotency-Key"],
+      }, { send });
     } catch (raw) {
       const error = raw as EdgeError | null;
       const status = typeof error?.status === "number" ? error.status : error?.detail === "no_session" ? 401 : 503;
-      reply = { status, body: error?.body ?? raw, retry_after_ms: error?.retry_after_ms };
+      reply = { status, body: error?.body ?? (typeof error?.detail === "string" ? { code: error.detail } : null), retry_after_ms: error?.retry_after_ms };
     }
     const status = typeof reply?.status === "number" ? reply.status : 503;
     const code = (reply?.body as { code?: unknown; detail?: unknown } | null)?.code ?? (reply?.body as EdgeError | null)?.detail;
