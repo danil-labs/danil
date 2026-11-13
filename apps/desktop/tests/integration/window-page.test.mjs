@@ -273,7 +273,7 @@ const CAPS = { contract: 'mvp-v1', items: [{ name: 'identity.organizations', ver
 for (const [label, me] of [
   ['403 workspace_selection_required', () => new Response(JSON.stringify({ type: 'urn:danil:problem:workspace_selection_required', status: 403, code: 'workspace_selection_required' }), { status: 403, headers: { 'content-type': 'application/problem+json' } })],
   ['200 with workspace null', () => Response.json({ id: 'user_A', name: 'Operator', workspace: null, organizations: [] })],
-]) test(`an organization without a workspace (${label}) shows the empty state with the organization selector and sign out, not a dead end`, async () => {
+]) test(`an organization without a workspace (${label}) shows the empty state with the organization selector and sign out, not a dead end`, async t => {
   const calls = [];
   const fetcher = async input => {
     const url = new URL(String(input));
@@ -286,7 +286,7 @@ for (const [label, me] of [
     throw new Error(`Unexpected request ${url.pathname}`);
   };
   fetcher.__jsdomApp = true; globalThis.fetch = fetcher;
-  const app = await boot('listo', `org-without-workspace-${label.length}`, {}, undefined, {}, { web: true });
+  const app = await open(t, 'listo', `org-without-workspace-${label.length}`, {}, undefined, {}, { web: true });
   const gate = () => app.w.document.querySelector('[data-web-gate]');
   await until(() => gate()?.querySelector('[data-web-organization="org_A"]'));
   assert.equal(gate().querySelector('[role="alert"]'), null, 'no «No tienes acceso»');
