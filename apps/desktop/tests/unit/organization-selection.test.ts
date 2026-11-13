@@ -365,3 +365,23 @@ test('a refused organization that the directory later reports active clears the 
   assert.equal(state.kind === 'ready' && Boolean(state.refused), false);
   assert.equal(hasActiveOrganization(state), true);
 });
+
+test('concurrent loads share one directory read and one automatic selection', async () => {
+  let lists = 0;
+  let selections = 0;
+  let release!: () => void;
+  const gate = new Promise<void>(resolve => { release = resolve; });
+  const sel = createOrganizationSelection({
+    list: async () => { lists++; return { items: [DANIL], active_organization_id: null }; },
+    select: async () => { selections++; await gate; throw problem(403, 'organization_forbidden'); },
+  });
+  const first = sel.load();
+  const second = sel.load();
+  await new Promise(resolve => setTimeout(resolve, 0));
+  release();
+  await Promise.all([first, second]);
+  const state = sel.state();
+  assert.equal(lists, 1, 'a load in flight is reused, not repeated');
+  assert.equal(selections, 1, 'a second load must not overwrite the in-flight selection and post again');
+  assert.equal(state.kind === 'ready' && state.refused, true);
+});
