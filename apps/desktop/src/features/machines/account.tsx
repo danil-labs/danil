@@ -30,6 +30,7 @@ import {
   type MachineState,
   type SystemId,
   wakes,
+  wokeOf,
 } from "@terminus/computers";
 import { Fleet, type MachineInfo, unwrap } from "@terminus/fleet";
 import { createRoot, createSignal, For } from "solid-js";
@@ -52,6 +53,7 @@ import { createEngineWorkspaces, railOf } from "./engine-workspaces";
 import { machineNamesChanged, refetchMachines } from "./store";
 import type { WslChild } from "./wsl";
 import { guestChannels } from "./guestChannels";
+import { CLOUD_RETRY_MS, createCloudMachines, EDGE_ENDPOINT } from "./cloud-machines";
 import { createGuestLink, guestMachineInfo, isGuestMachine, wakeGuestMachine } from "./guestLink";
 
 type Internals = { invoke: Invoke };
@@ -147,6 +149,22 @@ export function startAccountMachines(target: Target = window) {
   // The window's own IPC under its usual name: the command guards read these two literally.
   const invoke = native;
   let token: ClientToken | null = null;
+  // Las máquinas de la organización por el borde (`/v1/machines`); el motor local sigue por su RPC.
+  const cloud = createCloudMachines(invoke);
+  let cloudIds = new Set<string>();
+  let cloudRetry: ReturnType<typeof setTimeout> | null = null;
+  async function readCloud(): Promise<Computer[]> {
+    const { available, computers } = await cloud.rows();
+    cloudIds = new Set(computers.map((c) => c.computer_id));
+    if (!available && !cloudRetry) {
+      // «No disponible»: el servidor aún no la tiene o no hay sesión; se reintenta solo.
+      cloudRetry = setTimeout(() => {
+        cloudRetry = null;
+        void sync();
+      }, CLOUD_RETRY_MS);
+    }
+    return computers;
+  }
   /** Si esta computadora es una VM administrada, y su sistema. La lista los lee en cada `machine_list`. */
   let homeWakes = false;
   let homeOs: SystemId = windowSystem();
@@ -214,6 +232,19 @@ export function startAccountMachines(target: Target = window) {
       self,
       connect: (info) => {
         if (isGuestMachine(info.id)) return createGuestLink(info.id);
+        if (cloudIds.has(info.id)) {
+          // Canal de datos con ticket de un solo uso (`ticket.*`), nunca `bearer.*`.
+          return new RelaySession({
+            endpoint: EDGE_ENDPOINT,
+            computerId: info.id,
+            getAdmission: async () => {
+              const answer = await cloud.client.admission(info.id);
+              if (answer.kind !== "ok") throw new Error(answer.kind);
+              return answer.value;
+            },
+            onUnauthorized: () => void sync(),
+          });
+        }
         if (endpoint === null) throw { code: "unknown_machine", detail: info.id };
         return new RelaySession({
               endpoint,
@@ -231,6 +262,7 @@ export function startAccountMachines(target: Target = window) {
       // sigue en servicio y solo falla la orden que no conoce (nunca la máquina entera).
       wake: async (id) => {
         if (isGuestMachine(id)) return wakeGuestMachine(id);
+        if (cloudIds.has(id)) return wokeOf(await cloud.client.start(id));
         if (endpoint === null) throw { code: "unknown_machine", detail: id };
         return startedOf(await startComputer(endpoint, (await getToken()).token, id));
       },
@@ -422,7 +454,8 @@ export function startAccountMachines(target: Target = window) {
     homeOs = systemOf(mine?.os) ?? windowSystem();
     homeFeatures = mine ? serviceFeatures(mine) : [];
     homeVersion = mine?.host_version ?? null;
-    const others = orderComputers(answer.value.filter((c) => c.computer_id !== self));
+    const cloudRows = await readCloud();
+    const others = orderComputers([...answer.value.filter((c) => c.computer_id !== self), ...cloudRows.filter((c) => !answer.value.some((o) => o.computer_id === c.computer_id))]);
     await readGuestMachines();
     const key = JSON.stringify([self, account, client.endpoint]);
 
@@ -440,9 +473,10 @@ export function startAccountMachines(target: Target = window) {
   /** Sin cuenta: la flota de los huéspedes, si hay alguno; si no, nada, como antes. */
   async function installLocal() {
     const guests = await readGuestMachines();
-    if (!guests.length) return disconnect();
+    const cloudRows = await readCloud();
+    if (!guests.length && !cloudRows.length) return disconnect();
     if (installed?.key === LOCAL_KEY) {
-      installed.fleet.setMachines([...guests]);
+      installed.fleet.setMachines([...cloudRows.map(infoOf), ...guests]);
       machineNamesChanged();
       return void refetchMachines();
     }
@@ -453,7 +487,7 @@ export function startAccountMachines(target: Target = window) {
     homeFeatures = [];
     homeVersion = null;
     uninstall();
-    install(LOCAL, null, [], LOCAL_KEY);
+    install(LOCAL, null, cloudRows, LOCAL_KEY);
   }
 
   let again = false;
