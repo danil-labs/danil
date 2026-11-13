@@ -42,9 +42,6 @@ export function platformSession(options: { origin: string; timeoutMs: number }, 
         body: JSON.stringify({ workspace: id }),
       })).json());
     },
-<<<<<<< HEAD
-    logout: identity.logout,
-=======
     async redeemPromo(code: string, idempotencyKey: string) {
       const response = await mutation("workspaces/promo/redeem", {
         headers: { "Content-Type": "application/json", "Idempotency-Key": idempotencyKey },
@@ -52,7 +49,6 @@ export function platformSession(options: { origin: string; timeoutMs: number }, 
       });
       return z.object({ machine: z.object({ state: z.string().optional() }).optional() }).parse(await response.json());
     },
-    async logout() { await mutation("identity/logout", { headers: { "Idempotency-Key": crypto.randomUUID() } }); },
->>>>>>> origin/dev
+    logout: identity.logout,
   };
 }
