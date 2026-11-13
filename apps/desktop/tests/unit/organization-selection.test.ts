@@ -1,0 +1,184 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+import {
+  createOrganizationSelection,
+  isOrganizationSelectionRequired,
+  type OrganizationSource,
+} from "../../src/features/shell/organization-selection.ts";
+
+const DANIL = { id: "org_01M62PT11XGX8R8J883NZVYHR6", name: "Danil", plan: "enterprise", role: "owner" };
+const OTRA = { id: "org_otra", name: "Otra", plan: "team", role: "member", extra: { ignorado: true } };
+
+/** Un reloj a mano: los reintentos se ven, no se esperan. */
+function clock() {
+  const timers: { at: number; run: () => void }[] = [];
+  return {
+    timers,
+    schedule: (run: () => void, ms: number) => {
+      timers.push({ at: ms, run });
+      return () => {
+        const i = timers.findIndex((x) => x.run === run);
+        if (i >= 0) timers.splice(i, 1);
+      };
+    },
+    fire: async () => {
+      const next = timers.shift();
+      next?.run();
+      await new Promise((r) => setTimeout(r, 0));
+    },
+  };
+}
+
+const problem = (status: number, code: string) => Object.assign(new Error(code), { status, code });
+
+test("404 de organizations: el selector queda oculto y se reintenta solo con backoff hasta que aparece", async () => {
+  const c = clock();
+  let calls = 0;
+  const source: OrganizationSource = {
+    list: async () => {
+      calls++;
+      if (calls < 3) throw problem(calls === 1 ? 404 : 501, "not_found");
+      return { items: [DANIL], next_cursor: null, active_organization_id: DANIL.id, nuevo: 1 };
+    },
+    select: async () => ({ organization: DANIL, workspace: null }),
+  };
+  const sel = createOrganizationSelection(source, { schedule: c.schedule, key: () => "k" });
+  await sel.load();
+  assert.equal(sel.state().kind, "hidden");
+  assert.equal(sel.visible(), false);
+  assert.equal(c.timers.length, 1, "un reintento programado");
+  const first = c.timers[0].at;
+  await c.fire();
+  assert.equal(sel.state().kind, "hidden");
+  assert.ok(c.timers[0].at > first, "la espera crece");
+  await c.fire();
+  const s = sel.state();
+  assert.equal(s.kind, "ready");
+  assert.deepEqual(s.kind === "ready" && s.items.map((o) => o.id), [DANIL.id]);
+  assert.equal(s.kind === "ready" && s.active, DANIL.id);
+  assert.equal(sel.visible(), true);
+  assert.equal(c.timers.length, 0, "sin reintentos cuando ya funciona");
+});
+
+test("el error de Desk `not_available_yet` (Rust ya reintentó) también oculta y reintenta", async () => {
+  const c = clock();
+  const sel = createOrganizationSelection(
+    { list: async () => { throw { detail: "not_available_yet", retry_after_ms: 30_000 }; }, select: async () => null },
+    { schedule: c.schedule },
+  );
+  await sel.load();
+  assert.equal(sel.state().kind, "hidden");
+  assert.ok(c.timers[0].at >= 30_000, "respeta la espera sugerida");
+});
+
+test("capacidad ausente o de otra versión en /v1/capabilities: oculto, sin llamar a la ruta, y se relee después", async () => {
+  const c = clock();
+  let listed = 0;
+  let caps: unknown = { contract: "mvp-v1", items: [{ name: "workspaces", version: 1, status: "available" }] };
+  const sel = createOrganizationSelection(
+    {
+      capabilities: async () => caps,
+      list: async () => { listed++; return { items: [DANIL, OTRA], next_cursor: null, active_organization_id: DANIL.id }; },
+      select: async () => null,
+    },
+    { schedule: c.schedule },
+  );
+  await sel.load();
+  assert.equal(sel.state().kind, "hidden");
+  assert.equal(listed, 0);
+  caps = { items: [{ name: "identity.organizations", version: 2, status: "available" }] };
+  await c.fire();
+  assert.equal(sel.state().kind, "hidden", "una versión mayor desconocida es no disponible");
+  caps = { items: [{ name: "identity.organizations", version: 1, status: "degraded", otro: 1 }] };
+  await c.fire();
+  assert.equal(sel.state().kind, "ready");
+  assert.equal(listed, 1);
+});
+
+test("200 con varias: lista, campos desconocidos ignorados y `select` cambia la organización y refresca workspaces y máquinas", async () => {
+  const sent: { id: string; key: string }[] = [];
+  const refreshed: string[] = [];
+  let active = DANIL.id;
+  const sel = createOrganizationSelection(
+    {
+      list: async () => ({ items: [DANIL, OTRA, { id: 7 }], next_cursor: null, active_organization_id: active }),
+      select: async (id, key) => { sent.push({ id, key }); active = id; return { organization: OTRA, workspace: null }; },
+    },
+    {
+      key: () => "clave-1",
+      onSelected: async (org, workspace) => {
+        refreshed.push(`workspaces:${org.id}:${workspace}`);
+        refreshed.push(`machines:${org.id}`);
+      },
+    },
+  );
+  await sel.load();
+  const s = sel.state();
+  assert.equal(s.kind, "ready");
+  assert.deepEqual(s.kind === "ready" && s.items.map((o) => o.name), ["Danil", "Otra"], "la fila inválida se descarta");
+  await sel.choose(OTRA.id);
+  assert.deepEqual(sent, [{ id: OTRA.id, key: "clave-1" }]);
+  const after = sel.state();
+  assert.equal(after.kind === "ready" && after.active, OTRA.id);
+  assert.deepEqual(refreshed, [`workspaces:${OTRA.id}:null`, `machines:${OTRA.id}`]);
+  await sel.choose(OTRA.id);
+  assert.equal(sent.length, 1, "elegir la activa no vuelve a escribir");
+});
+
+test("un `select` que falla con 404 deja la organización anterior y no refresca", async () => {
+  let refreshed = 0;
+  const sel = createOrganizationSelection(
+    {
+      list: async () => ({ items: [DANIL, OTRA], next_cursor: null, active_organization_id: DANIL.id }),
+      select: async () => { throw problem(404, "organization_not_found"); },
+    },
+    { onSelected: () => { refreshed++; } },
+  );
+  await sel.load();
+  await sel.choose(OTRA.id);
+  const s = sel.state();
+  assert.equal(s.kind === "ready" && s.active, DANIL.id);
+  assert.equal(s.kind === "ready" && s.error, "organization_not_found");
+  assert.equal(refreshed, 0);
+});
+
+test("403 organization_selection_required de otra ruta abre el selector; elegir lo cierra", async () => {
+  const sel = createOrganizationSelection(
+    {
+      list: async () => ({ items: [DANIL, OTRA], next_cursor: null, active_organization_id: null }),
+      select: async () => ({ organization: DANIL, workspace: null }),
+    },
+    { key: () => "k" },
+  );
+  await sel.load();
+  assert.equal(sel.needed(), true, "sin activa y con varias, se pide elegir");
+  await sel.choose(DANIL.id);
+  assert.equal(sel.needed(), false);
+  const problem403 = { type: "urn:danil:problem:organization_selection_required", status: 403, code: "organization_selection_required" };
+  assert.equal(isOrganizationSelectionRequired(problem403), true);
+  assert.equal(isOrganizationSelectionRequired({ detail: "organization_selection_required" }), true, "forma de error de Desk");
+  assert.equal(isOrganizationSelectionRequired(problem(403, "workspace_forbidden")), false);
+  assert.equal(sel.report(problem403), true);
+  assert.equal(sel.needed(), true);
+});
+
+test("sin activa y una sola organización: `select` directo, sin abrir el selector", async () => {
+  const sent: string[] = [];
+  const sel = createOrganizationSelection({
+    list: async () => ({ items: [DANIL], next_cursor: null, active_organization_id: null }),
+    select: async (id) => { sent.push(id); return { organization: DANIL, workspace: "12" }; },
+  });
+  await sel.load();
+  assert.deepEqual(sent, [DANIL.id]);
+  assert.equal(sel.needed(), false);
+  const s = sel.state();
+  assert.equal(s.kind === "ready" && s.active, DANIL.id);
+});
+
+test("lista vacía: el selector no se muestra (sin organizaciones con plan)", async () => {
+  const sel = createOrganizationSelection({ list: async () => ({ items: [], next_cursor: null }), select: async () => null });
+  await sel.load();
+  const s = sel.state();
+  assert.equal(s.kind === "ready" && s.items.length, 0);
+  assert.equal(sel.visible(), false);
+});
