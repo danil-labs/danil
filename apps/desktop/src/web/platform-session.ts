@@ -45,7 +45,7 @@ export function platformTransport(options: { origin: string; timeoutMs: number }
   }
   async function mutation(path: string, init: RequestInit = {}) {
     const token = csrf.parse(await (await call("identity/csrf", { signal: init.signal })).json());
-    return call(path, { ...init, method: "POST", headers: { ...init.headers, "X-CSRF-Token": token.csrf_token } });
+    return call(path, { ...init, method: init.method ?? "POST", headers: { ...init.headers, "X-CSRF-Token": token.csrf_token } });
   }
   return { call, mutation };
 }
@@ -80,6 +80,6 @@ export function platformSession(options: { origin: string; timeoutMs: number }, 
         body: JSON.stringify({ workspace: id }),
       })).json());
     },
-    async logout() { await mutation("identity/logout"); },
+    async logout() { await mutation("identity/logout", { headers: { "Idempotency-Key": crypto.randomUUID() } }); },
   };
 }

@@ -193,3 +193,5 @@ export { arrangeSpaces, spaceOrder, type SpaceOrderSource } from "./space-order.
 export { createSpaceOrderSource } from "./space-order-source.ts";
 export { ACCOUNT_ASSET_MAX_BYTES, ACCOUNT_ASSET_TYPES, type AccountAssetKind, type BlobFetch, accountAssetUrl, readAccountAsset } from "./assets.ts";
 export { type PushDevice, type PushMode, type PushPreferences, type PushQuiet, forgetPushDevice, keyBytes, pushPreferences, pushPublicKey, savePushDevice, savePushPreferences, testPush } from "./push.ts";
+
+export { computeClient, type ComputeTransport, type Admission } from "./compute.ts";

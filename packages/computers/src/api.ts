@@ -210,7 +210,7 @@ export type AccountWorkspace = {
 
 const strings = (v: unknown): string[] => (Array.isArray(v) ? v.filter((x): x is string => typeof x === "string" && x !== "") : []);
 
-function accountWorkspace(raw: unknown): AccountWorkspace | null {
+export function accountWorkspace(raw: unknown): AccountWorkspace | null {
   const w = raw as Record<string, unknown> | null;
   if (!w || typeof w !== "object" || typeof w.id !== "string" || !w.id) return null;
   const projects = (Array.isArray(w.projects) ? w.projects : []).filter(

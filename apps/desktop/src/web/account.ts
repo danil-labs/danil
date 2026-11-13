@@ -1,58 +1,15 @@
-/**
- * The person of the Danil account in the browser: name, email and photo from
- * the control plane (`GET /v1/me`), and changing or removing the photo
- * (`PUT`/`DELETE /v1/me/avatar`) with the person's session. The photo is read
- * as bytes and shown as a `data:` URI: the page's CSP loads no remote images.
- */
-import type { AccountProfile, AccountProfileSource, PreparedPhoto } from "../features/settings/account-profile.ts";
-import { blobToDataUrl, PHOTO_MAX_BYTES, PHOTO_TYPES } from "../features/settings/account-profile.ts";
-import { apiUrl } from "./computers.ts";
-import { type Fetch, refused, sessionCall } from "./control-plane.ts";
+import type { AccountProfileSource } from "../features/settings/account-profile.ts";
+import type { ComputeTransport } from "@terminus/computers";
 
-
-type Me = { name?: unknown; email?: unknown; avatar_url?: unknown; avatar_source?: unknown };
-
-const text = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : null);
-
-export function webAccountProfile(
-  endpoint: string,
-  getToken: () => string | Promise<string>,
-  onUnauthorized?: () => void,
-  f: Fetch = (input, init) => fetch(input, init),
-): AccountProfileSource {
-  const origin = new URL(apiUrl(endpoint, "/")).origin;
-
-  const call = sessionCall(getToken, onUnauthorized, f);
-
-  /** The photo only from the control plane's own origin: the session goes nowhere else. */
-  async function photo(url: string | null): Promise<string | null> {
-    if (!url) return null;
-    let target: URL;
-    try {
-      target = new URL(url);
-    } catch {
-      return null;
-    }
-    if (target.origin !== origin) return null;
-    const response = await call(target.href).catch(() => null);
-    if (!response?.ok) return null;
-    const blob = await response.blob();
-    if (!PHOTO_TYPES.includes(blob.type) || blob.size > PHOTO_MAX_BYTES) return null;
-    return blobToDataUrl(blob);
-  }
-
-  async function profile(response: Response): Promise<AccountProfile> {
-    const body = (await response.json().catch(() => null)) as (Me & { error?: { code?: unknown } }) | null;
-    if (!response.ok) throw refused(text(body?.error?.code) ?? "unavailable");
-    const shown = await photo(text(body?.avatar_url));
-    const source = body?.avatar_source === "danil" || body?.avatar_source === "provider" ? body.avatar_source : null;
-    return { name: text(body?.name), email: text(body?.email), photo: shown, source: shown ? source : null };
-  }
-
+/** Identity owns the person; photo editing is unavailable until identity publishes it. */
+export function webAccountProfile(transport: Pick<ComputeTransport, "call">): AccountProfileSource {
   return {
-    read: async () => profile(await call(apiUrl(endpoint, "/v1/me"))),
-    setPhoto: async (p: PreparedPhoto) =>
-      profile(await call(apiUrl(endpoint, "/v1/me/avatar"), { method: "PUT", headers: { "content-type": p.type }, body: p.blob })),
-    removePhoto: async () => profile(await call(apiUrl(endpoint, "/v1/me/avatar"), { method: "DELETE" })),
+    readonly: true,
+    async read() {
+      const body = await (await transport.call("identity/me")).json() as { name?: unknown; email?: unknown };
+      return { name: typeof body.name === "string" ? body.name : null, email: typeof body.email === "string" ? body.email : null, photo: null, source: null };
+    },
+    async setPhoto() { throw new Error("unavailable"); },
+    async removePhoto() { throw new Error("unavailable"); },
   };
 }

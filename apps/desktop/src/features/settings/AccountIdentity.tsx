@@ -79,6 +79,7 @@ export function createAccountIdentity(
 
   return {
     profile,
+    readonly: source.readonly,
     busy,
     problem,
     changePhoto: (file: File) => run(async () => source.setPhoto(await preparePhoto(file))),
@@ -106,7 +107,7 @@ export function AccountIdentityBlock(props: { identity: AccountIdentityState }) 
             <div class="min-w-0 truncate text-ui text-neutral-500">{id.profile()?.email}</div>
           </Show>
         </div>
-        <div class="flex shrink-0 items-center gap-2">
+        <Show when={!id.readonly}><div class="flex shrink-0 items-center gap-2">
           <input
             ref={picker}
             type="file"
@@ -127,9 +128,9 @@ export function AccountIdentityBlock(props: { identity: AccountIdentityState }) 
               {t("danil.account.photo_remove")}
             </Button>
           </Show>
-        </div>
+        </div></Show>
       </div>
-      <p class="m-0 text-ui text-neutral-500">{t("danil.account.photo_hint")}</p>
+      <Show when={!id.readonly}><p class="m-0 text-ui text-neutral-500">{t("danil.account.photo_hint")}</p></Show>
       <Show when={id.problem()}>
         {(text) => <p class="m-0 text-ui text-error-strong" role="alert">{text()}</p>}
       </Show>
