@@ -54,3 +54,22 @@ test("a rejected retry stays blocked until the real context can be read", async 
   assert.equal(selection.active(), "11");
   assert.equal(selection.uncertain(), false);
 });
+
+
+test("startup reconciles the already authenticated profile without rereading me", async () => {
+  let reads = 0;
+  const selection = workspaceSelection({ active: async () => { reads++; return "99"; }, select: async () => ({}) });
+  await selection.reconcile({ workspace: "11" });
+  assert.equal(selection.active(), "11");
+  assert.equal(reads, 0);
+  await selection.choose("12");
+  assert.equal(selection.active(), "99", "a mutation still rereads the authoritative context");
+  assert.equal(reads, 1);
+});
+
+test("an initial profile cannot settle a selection whose response was lost", async () => {
+  const selection = workspaceSelection({ active: async () => "12", select: async () => { throw new Error("offline"); } });
+  await assert.rejects(selection.choose("12"));
+  await assert.rejects(selection.reconcile({ workspace: "11" }));
+  assert.equal(selection.uncertain(), true);
+});

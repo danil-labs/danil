@@ -18,6 +18,36 @@ async function open(t, ...args) {
   return app;
 }
 
+test('session verification shows loading and reads me, capabilities and workspaces in parallel only once', async t => {
+  const calls = [];
+  const pending = new Map();
+  const fetcher = async input => {
+    const url = new URL(String(input));
+    if (url.origin === 'http://localhost' && url.pathname.includes('/assets/')) return new Response('');
+    calls.push(url.pathname);
+    if (['/v1/identity/me', '/v1/capabilities', '/v1/workspaces'].includes(url.pathname)) {
+      return new Promise(resolve => pending.set(url.pathname, resolve));
+    }
+    return new Response(null, { status: 404 });
+  };
+  fetcher.__jsdomApp = true; globalThis.fetch = fetcher;
+  const app = await open(t, 'listo', 'parallel-session-bootstrap', {}, undefined, {}, { web: true });
+  t.after(() => { for (const release of pending.values()) release(new Response(null, { status: 401 })); });
+  await until(() => calls.includes('/v1/identity/me'));
+  assert.ok(app.w.document.querySelector('[data-web-session-loading] [role="status"]'));
+  assert.equal(app.w.document.querySelector('[data-web-auth]'), null, 'login waits for an authoritative 401');
+  assert.ok(pending.has('/v1/capabilities'), 'discovery starts without waiting for the profile');
+  assert.ok(pending.has('/v1/workspaces'), 'directory starts without waiting for the profile');
+  pending.get('/v1/capabilities')(new Response(null, { status: 404 }));
+  pending.get('/v1/workspaces')(Response.json({ items: [{ id: '11', org: 'org_A', name: 'Alpha', role: 'owner' }], next_cursor: null }));
+  pending.get('/v1/identity/me')(Response.json({ id: 'user_A', name: 'Operator', workspace: '11', organizations: [] }));
+  await until(() => app.w.document.querySelector('[data-tira]'));
+  assert.equal(calls.filter(path => path === '/v1/identity/me').length, 1);
+  assert.equal(calls.filter(path => path === '/v1/workspaces').length, 1);
+  await until(() => calls.includes('/v1/machines'));
+  assert.deepEqual(app.failures, []);
+});
+
 test('identity and workspaces mount the real window without any compute or relay request', async t => {
   const calls = [];
   const fetcher = async (input, init) => {
@@ -135,7 +165,7 @@ for (const status of [401, 403, 503]) test(`identity HTTP ${status} stays distin
     if (url.origin === 'http://localhost' && url.pathname.includes('/assets/')) return new Response('');
     calls.push(url.pathname);
     if (['/v1/capabilities', '/v1/identity/organizations', '/v1/machines'].includes(url.pathname)) return new Response(null, { status: 404 });
-    assert.equal(url.pathname, '/v1/identity/me');
+    assert.ok(['/v1/identity/me', '/v1/workspaces'].includes(url.pathname));
     assert.equal(init.credentials, 'include');
     return new Response(null, { status });
   };
@@ -144,7 +174,7 @@ for (const status of [401, 403, 503]) test(`identity HTTP ${status} stays distin
   const selector = status === 401 ? 'a[href*="/v1/identity/login"]' : '[role="alert"]';
   await until(() => app.w.document.querySelector(selector));
   assert.equal(app.w.document.querySelector('[data-tira]'), null);
-  assert.deepEqual(calls, ['/v1/capabilities', '/v1/identity/me']);
+  assert.equal(calls.filter(path => path === '/v1/identity/me').length, 1);
   assert.equal(app.w.localStorage.getItem('danil.web.previous.11.tasks'), status === 401 ? null : 'private');
   if (status !== 401) assert.equal(app.w.document.querySelector('a[href*="/login"]'), null);
   assert.deepEqual(app.failures, []);
@@ -155,7 +185,7 @@ test('a window without a session shows the original WorkOS sign-in screen and it
     const url = new URL(String(input));
     if (url.origin === 'http://localhost' && url.pathname.includes('/assets/')) return new Response('');
     if (['/v1/capabilities', '/v1/identity/organizations', '/v1/machines'].includes(url.pathname)) return new Response(null, { status: 404 });
-    if (url.pathname === '/v1/identity/me') return new Response(null, { status: 401 });
+    if (['/v1/identity/me', '/v1/workspaces'].includes(url.pathname)) return new Response(null, { status: 401 });
     throw new Error(`Unexpected request ${url.pathname}`);
   };
   fetcher.__jsdomApp = true; globalThis.fetch = fetcher;
