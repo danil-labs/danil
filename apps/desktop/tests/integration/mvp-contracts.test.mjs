@@ -13,7 +13,7 @@ import { webOrganizationSource } from '../../src/web/organizations.ts';
 import { edgeOrganizationSource } from '../../src/features/shell/organization-edge.ts';
 import { createOrganizationSelection } from '../../src/features/shell/organization-selection.ts';
 import { createCloudMachines } from '../../src/features/machines/cloud-machines.ts';
-import { machinesClient } from '@terminus/computers';
+import { machineToComputer, machinesClient } from '@terminus/computers';
 
 const directory = process.env.DANIL_MVP_CONTRACTS ?? '/home/alejandro/danil/mvp/contracts/mvp-v1';
 const examples = `${directory}/examples/`;
@@ -110,8 +110,8 @@ run('máquinas: la web y Desk ven las mismas filas, y la web pide ticket y encie
   const listed = await web.machines.list();
   assert.equal(listed.kind, 'ok');
   const rows = await deskClients().cloud.rows();
-  assert.equal(rows.available, true);
-  assert.deepEqual(rows.computers.map(c => [c.computer_id, c.state]), listed.value.map(m => [m.machine_id, rows.computers[0].state]));
+  assert.equal(rows.state, 'ready');
+  assert.deepEqual(rows.computers.map(c => [c.computer_id, c.state]), listed.value.map(machineToComputer).map(c => [c.computer_id, c.state]));
   assert.equal((await web.machines.get(MACHINE)).kind, 'ok');
   const ticket = await web.machines.admission(MACHINE);
   assert.equal(ticket.kind === 'ok' && ticket.value.protocol, 'danil.machine-session.v1');
