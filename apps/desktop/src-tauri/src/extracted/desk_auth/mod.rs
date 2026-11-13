@@ -1,5 +1,5 @@
-//! Login de Desk por el navegador del sistema contra `identity` (S1,
-//! docs/decisions/2026-11-13-desk-auth.md en `terminus-workspace`):
+//! Login de Desk por el navegador del sistema contra `identity` (S1, decisión
+//! `desk-auth` y contrato `mvp-v1` en `terminus-workspace`):
 //! PKCE S256, retorno por loopback, canje en `POST /v1/identity/desk/token`,
 //! refresh en el llavero y Bearer al borde. La webview recibe perfil y estado,
 //! nunca tokens. No hay varias cuentas: cambiar de usuario es cerrar sesión.

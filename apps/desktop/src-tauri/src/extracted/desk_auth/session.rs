@@ -1,7 +1,7 @@
-//! La sesión de Desk en `identity` (S1, docs/decisions/2026-11-13-desk-auth.md):
-//! un access opaco solo en memoria y un refresh rotatorio en el llavero. Una
-//! renovación a la vez, porque `identity` revoca la familia si un refresh se usa
-//! dos veces. Sin Tauri: las pruebas lo usan contra un borde simulado.
+//! La sesión de Desk en `identity` (S1, decisión `desk-auth`): un access opaco
+//! solo en memoria y un refresh rotatorio en el llavero. Dos renovaciones a la
+//! vez usarían dos veces el mismo refresh, e `identity` revocaría la familia.
+//! Sin Tauri: las pruebas lo usan contra un borde simulado.
 
 use serde_json::{json, Value};
 use std::collections::HashSet;
