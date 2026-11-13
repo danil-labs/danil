@@ -150,6 +150,35 @@ for (const status of [401, 403, 503]) test(`identity HTTP ${status} stays distin
   assert.deepEqual(app.failures, []);
 });
 
+test('a window without a session shows the original WorkOS sign-in screen and its button goes to /v1/identity/login', async t => {
+  const fetcher = async input => {
+    const url = new URL(String(input));
+    if (url.origin === 'http://localhost' && url.pathname.includes('/assets/')) return new Response('');
+    if (['/v1/capabilities', '/v1/identity/organizations', '/v1/machines'].includes(url.pathname)) return new Response(null, { status: 404 });
+    if (url.pathname === '/v1/identity/me') return new Response(null, { status: 401 });
+    throw new Error(`Unexpected request ${url.pathname}`);
+  };
+  fetcher.__jsdomApp = true; globalThis.fetch = fetcher;
+  const app = await open(t, 'listo', 'window-original-signin', {}, undefined, {}, { web: true });
+  const doc = app.w.document;
+  await until(() => doc.querySelector('[data-web-auth="workos"]'));
+  const screen = doc.querySelector('[data-web-auth="workos"]');
+  assert.equal(screen.querySelector('h1').textContent, 'Danil');
+  assert.equal(screen.querySelector('h2').textContent, 'Inicia sesión en Danil');
+  assert.ok(screen.textContent.includes('Entra con tu cuenta de Danil.'));
+  assert.ok(screen.querySelector('[data-access-request]'));
+  const go = [...screen.querySelectorAll('a')].find(a => a.textContent === 'Continuar con tu correo');
+  assert.ok(go, 'the original «Continuar con tu correo» button');
+  const target = new URL(go.href);
+  assert.equal(`${target.origin}${target.pathname}`, `${origin}/v1/identity/login`);
+  assert.equal(new URL(target.searchParams.get('return_to')).origin, app.w.location.origin);
+  // Nothing of the minimal platform entry is left on the way in.
+  assert.equal(doc.querySelector('[data-web-gate]'), null);
+  assert.equal(doc.querySelector('[data-platform-session]'), null);
+  assert.equal(doc.querySelector('[data-tira]'), null);
+  assert.deepEqual(app.failures, []);
+});
+
 test('an authenticated session with no workspaces shows the plan empty state without asking compute', async t => {
   const calls = [];
   const fetcher = async input => {
