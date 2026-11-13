@@ -240,6 +240,7 @@ function LiveMachinesProvider({ children, active }: { children: ReactNode; activ
   // Las computadoras de la cuenta en la flota (altas y bajas en vivo) y el bridge si está emparejado.
   useEffect(() => {
     // En el orden de la web: las administradas primero; la primera encabeza un workspace compartido.
+    let gone = false;
     const next: Host[] = active && machinesFleet ? machinesFleet.set(computers) : [];
     // Sin la sesión de Danil no se sincroniza: el bridge también la pide, salvo el lab sin cuenta.
     if (active && pairing && (signedIn || BRIDGE_WITHOUT_ACCOUNT)) next.push(bridgeHost(pairing, t("machines.network")));
@@ -248,6 +249,7 @@ function LiveMachinesProvider({ children, active }: { children: ReactNode; activ
       const notices = noticer(host.id);
       const refreshAttention = () =>
         void attentionOf(host).then((list) => {
+          if (gone) return;
           notices.reset(list);
           setAttention((old) => ({ ...old, [host.id]: list }));
         });
@@ -273,9 +275,10 @@ function LiveMachinesProvider({ children, active }: { children: ReactNode; activ
               // La frase espera a la lectura, pero el aviso no se pierde si tarda.
               const soon = Promise.race([pending, new Promise<string>((resolve) => setTimeout(() => resolve(""), 3000))]);
               void soon.then(async (reason) => {
+                if (gone) return;
                 if (!open) await announce(notice, title, reason);
                 const sentence = reason || (await pending);
-                if (sentence) rememberReason(key, sentence);
+                if (!gone && sentence) rememberReason(key, sentence);
               });
             }
           }
@@ -284,6 +287,7 @@ function LiveMachinesProvider({ children, active }: { children: ReactNode; activ
       ];
     });
     return () => {
+      gone = true;
       for (const off of unsubscribe) off();
       // Las computadoras las cierra la flota cuando dejan la cuenta; el bridge, aquí.
       for (const host of next) if (host.kind === "bridge") host.close();
