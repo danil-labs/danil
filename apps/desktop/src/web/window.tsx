@@ -75,7 +75,10 @@ export function mountWindow(base: Base, mounted: Mounted) {
     onSlice: () => window.dispatchEvent(new CustomEvent("harness:machine-slices", { detail: { changes: ["sessions", "projects", "workspaces"] } })),
   });
   const active = createRouter({ self: null, fleet, native: null, deliver,
-    pickedFor: workspace => workspace ? leerPref<Record<string, string>>("machines.run_on", {})[workspace] ?? null : null,
+    pickedFor: workspace => {
+      const picked: Record<string, string> = leerPref("machines.run_on", {});
+      return workspace ? picked[workspace] ?? null : null;
+    },
   });
   async function update() {
     if (stopped) return false;
