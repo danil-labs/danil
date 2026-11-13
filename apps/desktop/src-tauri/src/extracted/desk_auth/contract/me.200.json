@@ -1,0 +1,15 @@
+{
+  "id": "user_01M62PSER5AJPC2751EECWQDEX",
+  "name": "Alejandro",
+  "state": "active",
+  "workspace": "1",
+  "organizations": [
+    {
+      "id": "org_01M62PT11XGX8R8J883NZVYHR6",
+      "name": "Danil",
+      "type": "business",
+      "role": "owner"
+    }
+  ],
+  "active_organization_id": "org_01M62PT11XGX8R8J883NZVYHR6"
+}

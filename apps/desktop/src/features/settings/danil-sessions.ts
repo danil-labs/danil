@@ -41,16 +41,12 @@ export type WorkspaceAccount = {
   error?: string | null;
 };
 
-/** `null`: el motor no conoce el comando; cualquier otro fallo se conserva. */
+/**
+ * Siempre `null`: Desk tiene una sola cuenta, la de `identity` (`danil-account.ts`).
+ * Cambiar de usuario no existe; las vistas vuelven a la cuenta única.
+ */
 export async function readSessions(): Promise<DanilSessionInfo[] | null> {
-  try {
-    const list = await invoke<DanilSessionInfo[]>("danil_sessions");
-    if (!Array.isArray(list)) throw { detail: "invalid_response" };
-    return list;
-  } catch (e) {
-    if (failureCode(e) === "command") return null;
-    throw e;
-  }
+  return null;
 }
 
 /** `null` con un motor anterior; la cuenta de `workspace` (sin él, el abierto). */
