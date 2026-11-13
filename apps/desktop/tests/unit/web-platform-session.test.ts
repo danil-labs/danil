@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { platformSession, PlatformSessionError } from "../../src/web/platform-session.ts";
+import { platformSession, PlatformSessionError, PreparationExpired, preparePlatformSession } from "../../src/web/platform-session.ts";
 import { webSessionDeployment } from "../../src/web/session-config.ts";
 
 test("platform requires an explicit HTTPS edge origin and preserves its request budget", () => {
@@ -122,4 +122,196 @@ for (const [status, code] of [[422, 'promo_code_invalid'], [409, 'promo_already_
 test('promo network failure is observable', async () => {
   const api = platformSession({ origin: 'https://edge.danil.ai', timeoutMs: 1000 }, async () => { throw new TypeError('offline'); });
   await assert.rejects(api.redeemPromo('ABCDEFGHIJKLMNOP', 'attempt'), /offline/);
+});
+
+for (const status of [403, 404]) test(`startup hides transient HTTP ${status} until identity is ready`, async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout', 'Date'] });
+  let calls = 0;
+  const api = platformSession({ origin: 'https://edge.test', timeoutMs: 1000 }, async () => {
+    if (++calls === 1) return Response.json({ code: 'authorization_forbidden' },
+      { status, headers: { 'content-type': 'application/problem+json', 'retry-after': '2' } });
+    return Response.json({ id: 'user_A', name: 'A', workspace: '11', organizations: [] });
+  });
+  let preparing = false;
+  const result = preparePlatformSession(() => api.me(), new AbortController().signal, () => { preparing = true; });
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(preparing, true);
+  t.mock.timers.tick(1999);
+  assert.equal(calls, 1);
+  t.mock.timers.tick(1);
+  assert.equal((await result).id, 'user_A');
+});
+
+for (const retryAfter of ['30', new Date(30_000).toUTCString()]) test(`startup stops after 20s without violating Retry-After ${retryAfter}`, async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout', 'Date'], now: 0 });
+  let calls = 0;
+  const api = platformSession({ origin: 'https://edge.test', timeoutMs: 1000 }, async () => {
+    calls++;
+    return Response.json({ code: 'authorization_forbidden' }, { status: 403,
+      headers: { 'content-type': 'application/problem+json', 'retry-after': retryAfter } });
+  });
+  const result = assert.rejects(preparePlatformSession(() => api.me(), new AbortController().signal, () => {}),
+    (e: unknown) => e instanceof PreparationExpired && e.last?.status === 403 && e.last.code === 'authorization_forbidden');
+  await new Promise(resolve => setImmediate(resolve));
+  t.mock.timers.tick(20_000);
+  await result;
+  assert.equal(calls, 1);
+});
+
+for (const [status, code] of [[401, 'invalid_session'], [403, 'workspace_selection_required'],
+  [403, 'organization_selection_required'], [503, 'dependency_unavailable']] as const) {
+  test(`startup preserves HTTP ${status} ${code} immediately`, async () => {
+    let preparing = false;
+    const refusal = new PlatformSessionError(status, null, code);
+    await assert.rejects(preparePlatformSession(async () => { throw refusal; }, new AbortController().signal,
+      () => { preparing = true; }), e => e === refusal);
+    assert.equal(preparing, false);
+  });
+}
+
+test('closing the page cancels startup backoff without another request', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout', 'Date'] });
+  const controller = new AbortController();
+  let calls = 0;
+  const result = assert.rejects(preparePlatformSession(async () => {
+    calls++;
+    throw new PlatformSessionError(403, '2', 'authorization_forbidden');
+  }, controller.signal, () => {}), { name: 'AbortError' });
+  await new Promise(resolve => setImmediate(resolve));
+  controller.abort();
+  await result;
+  t.mock.timers.tick(30_000);
+  assert.equal(calls, 1);
+});
+
+
+test("promo attempt survives closing Plan after an uncertain response, only in session memory", async () => {
+  const { sessionPromoRedemption } = await import("../../src/web/promo-redemption.ts");
+  const keys: string[] = [];
+  let calls = 0;
+  const redeem = sessionPromoRedemption(async (_code: string, key: string) => {
+    keys.push(key);
+    if (calls++ === 0) throw new TypeError("offline after send");
+    return {};
+  });
+  await assert.rejects(redeem("EXAMPLE", "first-component"), /offline/);
+  assert.deepEqual(await redeem("EXAMPLE", "reopened-component"), {});
+  assert.deepEqual(keys, ["first-component", "first-component"]);
+  await redeem("EXAMPLE", "next-attempt");
+  assert.equal(keys[2], "next-attempt");
+});
+
+test('a pending startup rereads until ready without manufacturing an HTTP refusal', async t => {
+  t.mock.timers.enable({ apis: ['setTimeout', 'Date'] });
+  let calls = 0;
+  let preparing = false;
+  const result = preparePlatformSession(async () => ++calls > 1, new AbortController().signal,
+    () => { preparing = true; }, value => value);
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(preparing, true);
+  t.mock.timers.tick(1000);
+  assert.equal(await result, true);
+  assert.equal(calls, 2);
+});
+
+test('a directory that stays empty exhausts startup after 20s and stops rereading', async t => {
+  t.mock.timers.enable({ apis: ['setTimeout', 'Date'], now: 0 });
+  let calls = 0;
+  const result = preparePlatformSession(async () => { calls++; return false; }, new AbortController().signal,
+    () => {}, value => value);
+  const settled = assert.rejects(result, (e: unknown) => e instanceof Error && e.name === 'PreparationExpired');
+  await new Promise(resolve => setImmediate(resolve));
+  t.mock.timers.tick(20_000);
+  await settled;
+  const stoppedAt = calls;
+  t.mock.timers.tick(60_000);
+  assert.equal(calls, stoppedAt);
+});
+
+test('pending startup preserves its result when an in-flight read crosses the deadline', async t => {
+  t.mock.timers.enable({ apis: ['setTimeout', 'Date'], now: 0 });
+  const deadline = new AbortController();
+  t.mock.method(AbortSignal, 'timeout', () => deadline.signal);
+  let calls = 0;
+  const result = preparePlatformSession(async signal => {
+    if (++calls === 1) return false;
+    return new Promise<boolean>((_resolve, reject) => signal.addEventListener('abort', () => reject(signal.reason), { once: true }));
+  }, new AbortController().signal, () => {}, value => value);
+  const observed = result.then(value => ({ value }), error => ({ error }));
+  await new Promise(resolve => setImmediate(resolve));
+  t.mock.timers.tick(1000);
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(calls, 2);
+  t.mock.timers.tick(19_000);
+  deadline.abort(new DOMException('Startup deadline', 'TimeoutError'));
+  const outcome = await observed as { error?: { name?: string; last?: unknown } };
+  assert.equal(outcome.error?.name, 'PreparationExpired', 'a pending read at the deadline is never presented as ready');
+  assert.equal(outcome.error?.last, undefined);
+});
+
+for (const latest of ['pending', 'error']) test(`the latest ${latest} outcome survives an in-flight deadline abort`, async t => {
+  t.mock.timers.enable({ apis: ['setTimeout', 'Date'], now: 0 });
+  const deadline = new AbortController();
+  t.mock.method(AbortSignal, 'timeout', () => deadline.signal);
+  const refusal = new PlatformSessionError(403, null, 'workspace_forbidden');
+  let reads = 0;
+  const result = preparePlatformSession(async signal => {
+    if (++reads === 3) return new Promise<boolean>((_resolve, reject) => signal.addEventListener('abort', () => reject(signal.reason), { once: true }));
+    if ((reads === 1) === (latest === 'pending')) throw refusal;
+    return false;
+  }, new AbortController().signal, () => {}, value => value);
+  const observed = result.then(value => ({ value }), error => ({ error }));
+  await new Promise(resolve => setImmediate(resolve));
+  t.mock.timers.tick(1000);
+  await new Promise(resolve => setImmediate(resolve));
+  t.mock.timers.tick(2000);
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(reads, 3);
+  t.mock.timers.tick(17_000);
+  deadline.abort(new DOMException('Startup deadline', 'TimeoutError'));
+  const outcome = await observed as { error?: { name?: string; last?: unknown } };
+  assert.equal(outcome.error?.name, 'PreparationExpired');
+  assert.equal(outcome.error?.last, latest === 'pending' ? undefined : refusal);
+});
+
+test('a transport failure after preparation started is retried within the same budget', async t => {
+  t.mock.timers.enable({ apis: ['setTimeout', 'Date'], now: 0 });
+  let reads = 0;
+  const result = preparePlatformSession(async () => {
+    reads++;
+    if (reads === 1) return false;
+    if (reads === 2) throw new DOMException('Request deadline', 'TimeoutError');
+    if (reads === 3) throw new TypeError('Failed to fetch');
+    return true;
+  }, new AbortController().signal, () => {}, value => value);
+  for (let i = 0; i < 4; i++) { await new Promise(resolve => setImmediate(resolve)); t.mock.timers.tick(5000); }
+  assert.equal(await result, true);
+  assert.equal(reads, 4);
+});
+
+test('a transport failure before preparation started keeps its own meaning', async () => {
+  const offline = new TypeError('Failed to fetch');
+  let preparing = false;
+  await assert.rejects(preparePlatformSession(async () => { throw offline; }, new AbortController().signal,
+    () => { preparing = true; }), e => e === offline);
+  assert.equal(preparing, false);
+});
+
+for (const kind of ['hang', 'offline']) test(`a first read that ${kind === 'hang' ? 'crosses' : 'fails at'} the deadline ends preparation instead of failing the transport`, async t => {
+  t.mock.timers.enable({ apis: ['setTimeout', 'Date'], now: 0 });
+  const deadline = new AbortController();
+  t.mock.method(AbortSignal, 'timeout', () => deadline.signal);
+  let reads = 0;
+  const result = preparePlatformSession(async signal => {
+    reads++;
+    return new Promise<boolean>((_resolve, reject) => signal.addEventListener('abort', () =>
+      reject(kind === 'hang' ? signal.reason : new TypeError('Failed to fetch')), { once: true }));
+  }, new AbortController().signal, () => {}, value => value);
+  const observed = result.then(value => ({ value }), error => ({ error }));
+  t.mock.timers.tick(20_000);
+  deadline.abort(new DOMException('Startup deadline', 'TimeoutError'));
+  const outcome = await observed as { error?: { name?: string; last?: unknown } };
+  assert.equal(outcome.error?.name, 'PreparationExpired');
+  assert.equal(outcome.error?.last, undefined);
+  assert.equal(reads, 1);
 });
