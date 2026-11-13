@@ -4,6 +4,7 @@
 mod agents_session;
 mod appearance;
 mod background_service;
+mod desk_auth;
 mod desktop;
 mod engine;
 mod engine_profile;
@@ -395,6 +396,7 @@ fn start(client: Option<Arc<Client>>, autostart: bool, launcher: launcher::Launc
         .on_window_event(move |window, event| {
             placement::track(window, event, &placed);
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                agents_session::credits_invalidate();
                 desktop::on_close_requested(window, api);
             }
         })
@@ -490,8 +492,20 @@ fn start(client: Option<Arc<Client>>, autostart: bool, launcher: launcher::Launc
             proxy::service_poll,
             proxy::machine_list,
             proxy::account_relay_token,
-            agents_session::danil_sign_in,
-            agents_session::danil_sign_out,
+            agents_session::agents_session_status,
+            agents_session::agents_session_sign_out,
+            desk_auth::danil_session_status,
+            desk_auth::danil_sign_in,
+            desk_auth::danil_sign_out,
+            desk_auth::danil_edge_fetch,
+            agents_session::agents_session_directory,
+            agents_session::agents_session_link,
+            agents_session::agents_session_unlink,
+            agents_session::agents_session_create_danil_workspace,
+            agents_session::agents_session_refresh,
+            agents_session::agents_bff_fetch,
+            agents_session::credits_pilot_prepare,
+            agents_session::harness_org_fetch,
             proxy::service_filter,
             proxy::load_history,
             handler_policy::handler_action,

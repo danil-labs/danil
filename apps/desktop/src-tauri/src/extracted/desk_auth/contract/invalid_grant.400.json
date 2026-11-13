@@ -1,0 +1,8 @@
+{
+  "type": "urn:danil:problem:invalid_grant",
+  "title": "invalid_grant",
+  "status": 400,
+  "detail": "invalid_grant",
+  "instance": "/v1/identity/desk/token",
+  "code": "invalid_grant"
+}

@@ -1,0 +1,8 @@
+{
+  "type": "urn:danil:problem:identity_unavailable",
+  "title": "identity_unavailable",
+  "status": 503,
+  "detail": "identity_unavailable",
+  "instance": "/v1/identity/desk/refresh",
+  "code": "identity_unavailable"
+}

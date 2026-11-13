@@ -42,7 +42,10 @@ type MachinesFetch = (url: string, init?: Parameters<Fetch>[1]) => Promise<Machi
 export type MachinesConfig = {
   /** El borde con su versión: `https://edge.danil.ai/v1`. */
   endpoint: string;
-  /** El portador de la sesión: el Bearer de Desk. La web usa su cookie y no pasa por aquí. */
+  /**
+   * El portador de la sesión, solo donde el token vive en JS. Sin él no se manda `Authorization`:
+   * Desk autentica en Rust (`danil_edge_fetch`) y la web usa su cookie (`transport`).
+   */
   getToken?: () => Promise<string>;
   fetch?: MachinesFetch;
   /** La web inyecta el transporte con cookie y CSRF; con él nunca se pide un Bearer. */
@@ -55,7 +58,7 @@ export type MachinesConfig = {
   operationTimeoutMs?: number;
 };
 
-/** Hoy, según el código del prototipo, el relay vive en estos dos nombres (N2 de Mauricio; es un parámetro). */
+/** Sin lista configurada, el relay puede vivir en cualquier subdominio de `danil.ai` (N2 de Mauricio); el host lo pone el ticket. */
 export const DEFAULT_RELAY_ORIGINS: readonly string[] = ["wss://*.danil.ai"];
 export const OPERATION_TIMEOUT_MS = 330_000;
 const POLL_FIRST_MS = 500;
@@ -149,8 +152,8 @@ export function machinesClient(config: MachinesConfig) {
         const route = path.replace(/^\//, "");
         response = method === "GET" ? await config.transport.call(route) : await config.transport.mutation(route, write);
       } else {
-        if (!config.getToken) throw new Error("no_session");
-        const headers = { ...(write?.headers ?? {}), authorization: `Bearer ${await config.getToken()}` };
+        const headers: Record<string, string> = { ...(write?.headers ?? {}) };
+        if (config.getToken) headers.authorization = `Bearer ${await config.getToken()}`;
         response = await f(url(path), { ...write, method, headers });
       }
     } catch (error) {
@@ -159,7 +162,7 @@ export function machinesClient(config: MachinesConfig) {
     }
     received?.(response);
     const status = response.status;
-    const retryAfter = response.headers?.get("Retry-After") ?? null;
+    const retryAfter = response.headers?.get("retry-after") ?? null;
     const body = await response.json().catch(() => null);
     if (!ok.includes(status)) return failure(collection, status, body, retryAfter);
     try {
@@ -215,7 +218,7 @@ export function machinesClient(config: MachinesConfig) {
      */
     async start(id: string): Promise<MachinesAnswer<Machine>> {
       let location: string | null = null;
-      const accepted = await call(false, "POST", `${idPath(id)}/start`, body => ({ operation: operationOf(body) }), [200, 202], response => { location = response.headers?.get("Location") ?? null; });
+      const accepted = await call(false, "POST", `${idPath(id)}/start`, body => ({ operation: operationOf(body) }), [200, 202], response => { location = response.headers?.get("location") ?? null; });
       if (accepted.kind !== "ok") return accepted;
       const first = accepted.value.operation;
       if (!first) return { kind: "error", status: 202, code: "invalid_operation" };

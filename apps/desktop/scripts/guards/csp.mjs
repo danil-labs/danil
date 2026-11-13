@@ -66,7 +66,7 @@ const PERMITIDO = {
   // caja de Tauri). Sin ellas cada `invoke` falla y cae a `postMessage`.
   // Y el plano de control de Danil Machines: con la cuenta abierta la ventana lista las
   // computadoras de la persona y abre su sesión del relay (`features/machines/account.tsx`).
-  "connect-src": ["'self'", "ipc:", "http://ipc.localhost", "https://machines.danil.ai", "wss://machines.danil.ai", "https://computers.danil.ai", "wss://computers.danil.ai"],
+  "connect-src": ["'self'", "ipc:", "http://ipc.localhost", "https://machines.danil.ai", "https://computers.danil.ai", "wss://*.danil.ai"],
   // El tercer candado del contenedor: a dónde puede navegar un marco hijo. Sin
   // esto el HTML del agente hace `location.href = "http://…/?" + contenido`.
   // `terminus-page` es la vista previa de un `.html` de la tarea (`page_preview.rs`):

@@ -9,6 +9,8 @@ import {
 const DANIL = { id: "org_01M62PT11XGX8R8J883NZVYHR6", name: "Danil", plan: "enterprise", role: "owner" };
 const OTRA = { id: "org_otra", name: "Otra", plan: "team", role: "member", extra: { ignorado: true } };
 
+const CAPS = { contract: "mvp-v1", items: [{ name: "identity.organizations", version: 1, status: "available" }] };
+
 /** Un reloj a mano: los reintentos se ven, no se esperan. */
 function clock() {
   const timers: { at: number; run: () => void }[] = [];
@@ -181,4 +183,95 @@ test("lista vacía: el selector no se muestra (sin organizaciones con plan)", as
   const s = sel.state();
   assert.equal(s.kind === "ready" && s.items.length, 0);
   assert.equal(sel.visible(), false);
+});
+
+test("Idempotency-Key: una clave por intento lógico de `select`, reutilizada en sus reintentos hasta llegar a danil_edge_fetch", async () => {
+  const { edgeOrganizationSource } = await import("../../src/features/shell/organization-edge.ts");
+  const calls: { method: string; path: string; body?: unknown; key?: string }[] = [];
+  let lose = 2;
+  const edgeFetch = async (method: "GET" | "POST", path: string, body?: unknown, key?: string) => {
+    calls.push({ method, path, body, key });
+    if (path === "/v1/capabilities") return { status: 200, body: CAPS };
+    if (method === "GET") return { status: 200, body: { items: [DANIL, OTRA], next_cursor: null, active_organization_id: DANIL.id } };
+    if (lose-- > 0) return lose === 1 ? { status: 503, body: { code: "unavailable" }, retry_after_ms: 10 } : Promise.reject({ detail: "unavailable" });
+    return { status: 200, body: { organization: OTRA, workspace: null } };
+  };
+  let n = 0;
+  const sel = createOrganizationSelection(edgeOrganizationSource(edgeFetch), { key: () => `clave-${++n}` });
+  await sel.load();
+  await sel.choose(OTRA.id); // 503
+  await sel.choose(OTRA.id); // sin red: la respuesta pudo perderse
+  await sel.choose(OTRA.id); // 200
+  const posts = calls.filter((c) => c.method === "POST");
+  assert.equal(posts.length, 3);
+  assert.deepEqual(posts.map((c) => c.key), ["clave-1", "clave-1", "clave-1"]);
+  assert.deepEqual(posts[0].body, { organization_id: OTRA.id });
+  assert.equal(posts[0].path, "/v1/identity/organizations/select");
+  const s = sel.state();
+  assert.equal(s.kind === "ready" && s.active, OTRA.id);
+  // Otra intención, otra clave.
+  await sel.choose(DANIL.id);
+  assert.equal(calls.filter((c) => c.method === "POST").at(-1)?.key, "clave-2");
+});
+
+test("adaptador del borde: 404/501 → oculto y reintento; 403 organization_selection_required se reconoce", async () => {
+  const { edgeOrganizationSource } = await import("../../src/features/shell/organization-edge.ts");
+  const c = clock();
+  let status = 404;
+  const source = edgeOrganizationSource(async (_m, path) =>
+    path === "/v1/capabilities" ? { status: 200, body: CAPS }
+    : status === 200
+      ? { status, body: { items: [DANIL], next_cursor: null, active_organization_id: DANIL.id } }
+      : { status, body: { type: "urn:danil:problem:not_found", status, code: "not_found" } },
+  );
+  const sel = createOrganizationSelection(source, { schedule: c.schedule });
+  await sel.load();
+  assert.equal(sel.state().kind, "hidden");
+  status = 501;
+  await c.fire();
+  assert.equal(sel.state().kind, "hidden");
+  status = 200;
+  await c.fire();
+  assert.equal(sel.visible(), true);
+  assert.equal(isOrganizationSelectionRequired({ detail: "organization_selection_required", status: 403, body: {} }), true);
+});
+
+test("adaptador del borde: lee /v1/capabilities; sin `identity.organizations` no pide la ruta", async () => {
+  const { edgeOrganizationSource } = await import("../../src/features/shell/organization-edge.ts");
+  const c = clock();
+  const paths: string[] = [];
+  let caps: unknown = { contract: "mvp-v1", items: [{ name: "machines", version: 1, status: "available" }] };
+  const sel = createOrganizationSelection(
+    edgeOrganizationSource(async (_m, path) => {
+      paths.push(path);
+      if (path === "/v1/capabilities") return { status: 200, body: caps };
+      return { status: 200, body: { items: [DANIL], next_cursor: null, active_organization_id: DANIL.id } };
+    }),
+    { schedule: c.schedule },
+  );
+  await sel.load();
+  assert.deepEqual(paths, ["/v1/capabilities"]);
+  assert.equal(sel.visible(), false);
+  caps = { contract: "mvp-v1", items: [{ name: "identity.organizations", version: 1, status: "available" }] };
+  await c.fire();
+  assert.deepEqual(paths, ["/v1/capabilities", "/v1/capabilities", "/v1/identity/organizations"]);
+  assert.equal(sel.visible(), true);
+});
+
+test("report: solo `organization_selection_required` abre el selector; otro 403 del borde (license_required, workspace_forbidden) se ignora", async () => {
+  const sel = createOrganizationSelection({
+    list: async () => ({ items: [DANIL, OTRA], next_cursor: null, active_organization_id: DANIL.id }),
+    select: async () => null,
+  });
+  await sel.load();
+  let changes = 0;
+  sel.subscribe(() => changes++);
+  for (const code of ["license_required", "workspace_forbidden", "csrf_failed"]) {
+    assert.equal(sel.report({ detail: code, status: 403, body: { code } }), false, code);
+  }
+  assert.equal(sel.report({ detail: "organization_selection_required", status: 404, body: {} }), false, "solo con 403");
+  assert.equal(sel.needed(), false);
+  assert.equal(changes, 0, "ni siquiera avisa");
+  assert.equal(sel.report({ detail: "organization_selection_required", status: 403, body: { code: "organization_selection_required" } }), true);
+  assert.equal(sel.needed(), true);
 });
