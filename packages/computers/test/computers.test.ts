@@ -99,6 +99,30 @@ test("con ticket ofrece danil.machine-session.v1 y el viejo, nunca bearer.*", as
   relay.close();
 });
 
+test("con ticket: conserva ?contracts= y cambia de ticket antes de session_expires_at, sin esperar el 4005", async () => {
+  FakeSocket.all = [];
+  let n = 0;
+  const relay = new RelaySession(
+    {
+      endpoint: "https://computers.example",
+      computerId: "cmp_a",
+      contracts: ["abc123"],
+      // Vence en 10,3 s: el cambio ocurre a los ~1 s (10 s de margen, mínimo 1 s).
+      getAdmission: async () => ({ url: "wss://machines.danil.ai/v1/machines/cmp_a/session", ticket: `t${++n}`, session_expires_at: new Date(Date.now() + 10_300).toISOString() }),
+    },
+    (url, protocols) => new FakeSocket(url, protocols),
+  );
+  relay.start();
+  await tick();
+  const first = FakeSocket.all[0];
+  assert.equal(first.url, "wss://machines.danil.ai/v1/machines/cmp_a/session?contracts=abc123");
+  first.open();
+  await new Promise((r) => setTimeout(r, 1_300));
+  assert.equal(FakeSocket.all.length, 2, "reabrió sin cierre del servidor");
+  assert.deepEqual(FakeSocket.all[1].protocols, ["danil.machine-session.v1", SUBPROTOCOL, "ticket.t2"]);
+  relay.close();
+});
+
 test("una llamada pendiente se reenvía con el mismo id al reconectar, y `cached` llega aparte", async () => {
   const relay = session();
   await tick();

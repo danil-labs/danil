@@ -35,10 +35,10 @@ export type MachinesAnswer<T> = Answer<T> | { kind: "unavailable"; status: numbe
 export type MachinesConfig = {
   /** El borde con su versión: `https://edge.danil.ai/v1`. */
   endpoint: string;
-  /** El portador de la sesión: el Bearer de Desk. La web usa su cookie y no pasa por aquí. */
-  getToken: () => Promise<string>;
+  /** El portador de la sesión, solo donde el token vive en JS. Desk no lo tiene: pasa por `danil_edge_fetch` (Rust) y la web usa su cookie. */
+  getToken?: () => Promise<string>;
   fetch?: Fetch;
-  /** Orígenes del relay que se aceptan en la URL del ticket (`RELAY_ORIGIN`). */
+  /** Orígenes del relay que se aceptan en la URL del ticket (`RELAY_ORIGIN`). Sin lista: cualquier `wss://*.danil.ai`. */
   relayOrigins?: readonly string[];
   now?: () => number;
   sleep?: (ms: number) => Promise<void>;
@@ -46,8 +46,8 @@ export type MachinesConfig = {
   operationTimeoutMs?: number;
 };
 
-/** Hoy, según el código del prototipo, el relay vive en estos dos nombres (N2 de Mauricio; es un parámetro). */
-export const DEFAULT_RELAY_ORIGINS: readonly string[] = ["wss://machines.danil.ai", "wss://computers.danil.ai"];
+/** Sin lista configurada, el relay puede vivir en cualquier subdominio de `danil.ai` (N2 de Mauricio); el host lo pone el ticket. */
+const danilHost = (u: URL) => u.port === "" && u.hostname.endsWith(".danil.ai") && u.hostname.length > ".danil.ai".length;
 export const OPERATION_TIMEOUT_MS = 330_000;
 const POLL_FIRST_MS = 500;
 const POLL_MAX_MS = 4_000;
@@ -96,7 +96,7 @@ function operationOf(raw: unknown): MachineOperation | null {
 }
 
 /** Una URL de ticket solo vale si es `wss:` (un `https:` del puente se normaliza), de un origen conocido, con la ruta de esa máquina y sin extras. */
-export function admissionUrl(raw: unknown, machineId: string, origins: readonly string[]): string | null {
+export function admissionUrl(raw: unknown, machineId: string, origins?: readonly string[]): string | null {
   if (typeof raw !== "string") return null;
   let url: URL;
   try {
@@ -108,6 +108,7 @@ export function admissionUrl(raw: unknown, machineId: string, origins: readonly 
   if (url.protocol !== "wss:") return null;
   if (url.username || url.password || url.search || url.hash) return null;
   if (url.pathname !== `/v1/machines/${encodeURIComponent(machineId)}/session`) return null;
+  if (!origins) return danilHost(url) ? url.href : null;
   const allowed = origins.map((o) => new URL(o.replace(/^https?:/i, "wss:")).origin);
   return allowed.includes(url.origin) ? url.href : null;
 }
@@ -116,14 +117,14 @@ export function machinesClient(config: MachinesConfig) {
   const f = config.fetch ?? globalFetch;
   const now = config.now ?? Date.now;
   const sleep = config.sleep ?? defaultSleep;
-  const origins = config.relayOrigins ?? DEFAULT_RELAY_ORIGINS;
+  const origins = config.relayOrigins;
   const url = (path: string) => apiUrl(config.endpoint, path);
   const idPath = (id: string) => `/machines/${encodeURIComponent(id)}`;
 
   async function call<T>(collection: boolean, method: string, path: string, read: (body: unknown, response?: Awaited<ReturnType<Fetch>>) => T, ok: number[] = [200]): Promise<MachinesAnswer<T>> {
     let response: Awaited<ReturnType<Fetch>>;
     try {
-      const headers: Record<string, string> = { authorization: `Bearer ${await config.getToken()}` };
+      const headers: Record<string, string> = config.getToken ? { authorization: `Bearer ${await config.getToken()}` } : {};
       if (method === "GET") response = await f(url(path), { method, headers });
       else response = await f(url(path), { method, headers: { ...headers, "content-type": "application/json", "Idempotency-Key": requestId() }, body: "{}" });
     } catch {
@@ -131,7 +132,8 @@ export function machinesClient(config: MachinesConfig) {
     }
     const status = response.status;
     if (status === 401) return { kind: "unauthorized" };
-    if (collection && (status === 404 || status === 501)) return { kind: "unavailable", status };
+    // 501: el servidor aún no tiene la ruta. 404 de una colección: igual. 404 de una máquina u operación: `missing`.
+    if (status === 501 || (collection && status === 404)) return { kind: "unavailable", status };
     if (status === 404) return { kind: "missing" };
     const body = await response.json().catch(() => null);
     if (status === 403) {

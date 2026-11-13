@@ -90,6 +90,9 @@ fn error(fail: &Fail) -> Value {
     if let Some(wait) = fail.retry_after() {
         value["retry_after_ms"] = json!(wait.as_millis() as u64);
     }
+    if let Fail::Refused { status, .. } = fail {
+        value["status"] = json!(status);
+    }
     value
 }
 
