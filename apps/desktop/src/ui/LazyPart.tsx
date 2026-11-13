@@ -16,7 +16,7 @@ export function retryableLazy<P extends object>(load: () => Promise<{ default: C
 }
 
 /** Un trozo perezoso con su propia espera y, si no carga, un aviso con reintento en su sitio. */
-export function LazyPart(props: { children: JSX.Element }) {
+export function LazyPart(props: { children: JSX.Element; fallback?: JSX.Element }) {
   return (
     <ErrorBoundary
       fallback={(_, reset) => (
@@ -26,7 +26,7 @@ export function LazyPart(props: { children: JSX.Element }) {
         </div>
       )}
     >
-      <Suspense>{props.children}</Suspense>
+      <Suspense fallback={props.fallback}>{props.children}</Suspense>
     </ErrorBoundary>
   );
 }
