@@ -921,3 +921,50 @@ test("machine_list conserva el estado del canal para distinguir conexión pendie
   assert.equal(list.find(m => m.id === "cmp_vm")?.connection, "unknown");
   assert.equal(list.find(m => m.id === "cmp_mac")?.connection, "offline");
 });
+
+
+for (const remoteOnly of [false, true]) {
+  test(`new remote open waits for its own response (${remoteOnly ? "remote-only" : "native"}) and confirmed absence stays authoritative`, async () => {
+    let release!: (value: unknown) => void;
+    const vm = fakeLink({ list_live_sessions: ({ open }: Args) => (open as string[]).includes("child")
+      ? new Promise(resolve => { release = resolve; }) : [] });
+    const { router, fleet } = setup({ cmp_vm: vm });
+    const workspace = remoteOnly ? "w2" : "w";
+    if (remoteOnly) fleet.setRegistry([{ id: workspace, name: "Remote", projects: [], computers: ["cmp_vm"] }]);
+    await router.handle("list_workspaces");
+    await router.handle("set_active_workspace", { id: workspace });
+    const args = { project: "p1", open: [] as string[] };
+    await fleet.read({ machine: "cmp_vm", workspace, command: "list_live_sessions", args });
+    await router.handle("list_live_sessions", args);
+    let settled = false;
+    const reading = router.handle("list_live_sessions", { ...args, open: ["cmp_vm~child"] }).then(value => { settled = true; return value as { id: string }[]; });
+    await sleep(10);
+    assert.equal(settled, false, "a previous slice cannot confirm absence for a new open request");
+    assert.equal(typeof release, "function");
+    release([row("child")]);
+    assert.ok((await reading).some(row => row.id === "cmp_vm~child"));
+    // La confirmación de open:[child,parent] sigue pendiente: la lista no contesta con lo anterior.
+    let closing = false;
+    const both = router.handle("list_live_sessions", { ...args, open: ["cmp_vm~child", "cmp_vm~parent"] }).then(value => { closing = true; return value as { id: string }[]; });
+    await sleep(10);
+    assert.equal(closing, false, "a pending confirmation cannot close the view with an older slice");
+    release([]);
+    const confirmed = await both;
+    assert.equal(confirmed.some(row => row.id === "cmp_vm~child"), false, "a valid exact response can confirm deletion; no previous child is restored");
+    router.close();
+  });
+
+  test(`failed new remote open is not an empty successful aggregate (${remoteOnly ? "remote-only" : "native"})`, async () => {
+    const vm = fakeLink({ list_live_sessions: ({ open }: Args) => (open as string[]).length ? Promise.reject({ code: "io" }) : [] });
+    const { router, fleet } = setup({ cmp_vm: vm });
+    const workspace = remoteOnly ? "w2" : "w";
+    if (remoteOnly) fleet.setRegistry([{ id: workspace, name: "Remote", projects: [], computers: ["cmp_vm"] }]);
+    await router.handle("list_workspaces");
+    await router.handle("set_active_workspace", { id: workspace });
+    const args = { project: "p1", open: [] };
+    await fleet.read({ machine: "cmp_vm", workspace, command: "list_live_sessions", args });
+    await router.handle("list_live_sessions", args);
+    await assert.rejects(router.handle("list_live_sessions", { ...args, open: ["cmp_vm~child"] }));
+    router.close();
+  });
+}
