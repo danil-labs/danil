@@ -182,3 +182,52 @@ test("lista vacía: el selector no se muestra (sin organizaciones con plan)", as
   assert.equal(s.kind === "ready" && s.items.length, 0);
   assert.equal(sel.visible(), false);
 });
+
+test("Idempotency-Key: una clave por intento lógico de `select`, reutilizada en sus reintentos hasta llegar a danil_edge_fetch", async () => {
+  const { edgeOrganizationSource } = await import("../../src/features/shell/organization-edge.ts");
+  const calls: { method: string; path: string; body?: unknown; key?: string }[] = [];
+  let lose = 2;
+  const edgeFetch = async (method: "GET" | "POST", path: string, body?: unknown, key?: string) => {
+    calls.push({ method, path, body, key });
+    if (method === "GET") return { status: 200, body: { items: [DANIL, OTRA], next_cursor: null, active_organization_id: DANIL.id } };
+    if (lose-- > 0) return lose === 1 ? { status: 503, body: { code: "unavailable" }, retry_after_ms: 10 } : Promise.reject({ detail: "unavailable" });
+    return { status: 200, body: { organization: OTRA, workspace: null } };
+  };
+  let n = 0;
+  const sel = createOrganizationSelection(edgeOrganizationSource(edgeFetch), { key: () => `clave-${++n}` });
+  await sel.load();
+  await sel.choose(OTRA.id); // 503
+  await sel.choose(OTRA.id); // sin red: la respuesta pudo perderse
+  await sel.choose(OTRA.id); // 200
+  const posts = calls.filter((c) => c.method === "POST");
+  assert.equal(posts.length, 3);
+  assert.deepEqual(posts.map((c) => c.key), ["clave-1", "clave-1", "clave-1"]);
+  assert.deepEqual(posts[0].body, { organization_id: OTRA.id });
+  assert.equal(posts[0].path, "/v1/identity/organizations/select");
+  const s = sel.state();
+  assert.equal(s.kind === "ready" && s.active, OTRA.id);
+  // Otra intención, otra clave.
+  await sel.choose(DANIL.id);
+  assert.equal(calls.filter((c) => c.method === "POST").at(-1)?.key, "clave-2");
+});
+
+test("adaptador del borde: 404/501 → oculto y reintento; 403 organization_selection_required se reconoce", async () => {
+  const { edgeOrganizationSource } = await import("../../src/features/shell/organization-edge.ts");
+  const c = clock();
+  let status = 404;
+  const source = edgeOrganizationSource(async () =>
+    status === 200
+      ? { status, body: { items: [DANIL], next_cursor: null, active_organization_id: DANIL.id } }
+      : { status, body: { type: "urn:danil:problem:not_found", status, code: "not_found" } },
+  );
+  const sel = createOrganizationSelection(source, { schedule: c.schedule });
+  await sel.load();
+  assert.equal(sel.state().kind, "hidden");
+  status = 501;
+  await c.fire();
+  assert.equal(sel.state().kind, "hidden");
+  status = 200;
+  await c.fire();
+  assert.equal(sel.visible(), true);
+  assert.equal(isOrganizationSelectionRequired({ detail: "organization_selection_required", status: 403, body: {} }), true);
+});
