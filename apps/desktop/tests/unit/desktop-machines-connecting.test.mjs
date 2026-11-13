@@ -25,6 +25,8 @@ for (const status of [200, 503]) test(`Desk muestra Conectando… durante /v1/ma
   assert.ok(await until(() => doc.querySelector('[data-machine-connecting]'), 500), "la espera de la lista es visible");
   assert.match(doc.querySelector('[data-machine-connecting]').textContent, /Conectando…/);
   assert.ok(!doc.body.textContent.includes("Máquinas no disponibles"));
+  const during = await app.w.__TAURI_INTERNALS__.invoke("machine_list");
+  assert.ok(during.some((row) => row.local && row.on), "la local ya está disponible durante la espera");
   assert.ok(await until(() => !doc.querySelector('[data-machine-connecting]'), 4000), "sale de Conectando cuando termina la lista");
   const rows = await app.w.__TAURI_INTERNALS__.invoke("machine_list");
   assert.ok(rows.some((row) => row.local && row.on), "la máquina local sigue disponible");
