@@ -1,16 +1,13 @@
 #!/usr/bin/env node
 /**
- * Compila el Danil del teléfono (`apps/mobile`, Expo para web) dentro de la
- * web: `dist-web/<base>m/`, después de `vite build --mode web`. La web manda
- * ahí a los teléfonos (`phone.ts`) y las dos comparten origen, borde y política
- * (`_headers` cubre `<base>*`).
+ * Compila el Danil del teléfono (`apps/mobile`, Expo para web) en `dist-web/<base>m/`,
+ * después de `vite build --mode web`. La web manda ahí a los teléfonos (`phone.ts`)
+ * y las dos comparten origen, borde y política (`_headers` cubre `<base>*`).
  *
- * Como la web, todo va por el borde `/v1` (`DANIL_WEB_API_ORIGIN`, obligatorio y
- * validado igual que en `vite.config.ts`) y el canal de datos solo a los relays
- * exactos (`RELAY_ORIGIN`); se le pasan a Expo como `EXPO_PUBLIC_DANIL_*`. Nada de
- * Supabase, del plano de control de `computers` ni de la mensajería.
- * Necesita `npm ci` en `apps/mobile`. Al final escribe el manifest de la PWA y
- * sus cabeceras (`web-phone-pwa.mjs`).
+ * Todo va por el borde `/v1` (`DANIL_WEB_API_ORIGIN`, obligatorio y validado como en
+ * `vite.config.ts`) y el canal de datos solo a los relays exactos (`RELAY_ORIGIN`):
+ * nada de Supabase, del plano de control de `computers` ni de mensajería.
+ * Necesita `npm ci` en `apps/mobile`; al final escribe el manifest y las cabeceras.
  */
 import { spawnSync } from "node:child_process";
 import { appendFileSync, cpSync, existsSync, readFileSync, writeFileSync } from "node:fs";
