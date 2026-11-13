@@ -192,6 +192,18 @@ function LiveMachinesProvider({ children, active }: { children: ReactNode; activ
       retryTimer.current = setTimeout(() => void reloadComputers(), wait);
     }
   }, [signedIn, plane]);
+
+  useEffect(() => {
+    void reloadComputers();
+    // Al volver al frente, la lista (y su estado) puede haber cambiado. Nunca enciende nada.
+    const sub = AppState.addEventListener("change", (state) => state === "active" && void reloadComputers());
+    return () => {
+      sub.remove();
+      reloadGeneration.current++;
+      if (retryTimer.current) clearTimeout(retryTimer.current);
+    };
+  }, [reloadComputers]);
+
   // Una sola flota por sesión de Danil (`@terminus/fleet`), como el escritorio y la web: una sesión de relay por computadora.
   const [machinesFleet, setMachinesFleet] = useState<AccountFleet | null>(null);
   useEffect(() => {
