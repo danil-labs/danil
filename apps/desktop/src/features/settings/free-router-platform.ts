@@ -74,6 +74,25 @@ function stateOf(body: unknown): FreeRouterState {
   return { kind: "ready", offered: b.offered, policy, consent: { accepted: consent.accepted, revision }, ...(b.legacy_hint === true ? { legacyHint: true as const } : {}) };
 }
 
+const ACCOUNT = /^[1-9][0-9]{0,18}$/;
+const ORG = /^org_[A-Za-z0-9]+$/;
+const SUB = /^user_[A-Za-z0-9]+$/;
+
+/**
+ * El ámbito de un account para el pase. El servidor usa siempre `claims.org` (la organización activa), y el listado
+ * trae accounts de todas las organizaciones: solo vale una fila con la org de la fila activa de esa misma respuesta.
+ */
+export function platformScope(list: unknown, account: string, sub: string, workspace: string): FreeRouterScope | null {
+  const l = record(list);
+  const rows = Array.isArray(l?.items) ? l.items.map(record) : [];
+  const active = rows.find((r) => r && str(r.id) === str(l?.active_workspace_id));
+  const row = rows.find((r) => r && str(r.id) === account);
+  const org = str(row?.org);
+  if (!active || !org || org !== str(active.org) || !ORG.test(org)) return null;
+  if (!ACCOUNT.test(account) || !SUB.test(sub) || !ID.test(workspace)) return null;
+  return { account, org, sub, workspace };
+}
+
 export type FreeRouterDeps = {
   edge: EdgeSend;
   engine: EngineCall;
