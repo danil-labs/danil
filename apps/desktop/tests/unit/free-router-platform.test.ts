@@ -332,3 +332,29 @@ test("sealed:false is a renewal of an installed grant, not a failure", async () 
   await clock.advance(61_000);
   assert.equal(sent.filter((s) => s.path === `${BASE}/grant`).length, 2);
 });
+
+test("the scope comes only from a row of the active organization of the same /v1/workspaces answer", async () => {
+  const { platformScope } = await import("../../src/features/settings/free-router-platform.ts");
+  const list = {
+    active_workspace_id: "42",
+    items: [
+      { id: "42", org: "org_A1", name: "Activa", role: "owner" },
+      { id: "43", org: "org_A1", name: "Misma org", role: "member" },
+      { id: "77", org: "org_B2", name: "Otra org", role: "owner" },
+    ],
+  };
+  assert.deepEqual(platformScope(list, "43", "user_A", "q3ce37ff"), { account: "43", org: "org_A1", sub: "user_A", workspace: "q3ce37ff" });
+  assert.equal(platformScope(list, "77", "user_A", "q3ce37ff"), null, "another organization needs an organization switch first");
+  assert.equal(platformScope({ ...list, active_workspace_id: null }, "42", "user_A", "q3ce37ff"), null, "without an active row there is no org to trust");
+  assert.equal(platformScope({ ...list, active_workspace_id: "999" }, "42", "user_A", "q3ce37ff"), null);
+  assert.equal(platformScope({ active_workspace_id: "42", items: [{ id: "42", org: "Danil", name: "x" }] }, "42", "user_A", "q3ce37ff"), null, "an org that is not a WorkOS id fails closed");
+  assert.equal(platformScope(list, "042", "user_A", "q3ce37ff"), null);
+  assert.equal(platformScope(list, "42", "persona", "q3ce37ff"), null);
+  assert.equal(platformScope(list, "42", "user_A", "a.b"), null, "an engine workspace outside the contract pattern cannot be assigned");
+});
+
+test("no_access is definitive: the challenge is not retried and does not burn more quota", async () => {
+  const { router, sent } = lab({ edge: (r) => (r.path.endsWith("/challenge") ? { status: 403, body: { code: "no_access" } } : undefined) });
+  await assert.rejects(router.link(SCOPE), (e: { code?: string }) => e.code === "no_access");
+  assert.equal(sent.filter((s) => s.path.endsWith("/challenge")).length, 1);
+});
