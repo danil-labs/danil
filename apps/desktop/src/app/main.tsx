@@ -18,6 +18,7 @@ import { mountAfterLanguagePacks } from "../locales/startup";
 import { capabilities, setCapabilities } from "../lib/platform";
 import { desktopWorkspaceDirectory } from "../features/shell/workspace-directory-desktop";
 import { askGuestChannels } from "../features/machines/guestChannels";
+import { desktopOrganizations } from "../features/shell/organization-desktop";
 import "../lib/sharedClock";
 // Errores y avisos de encargado se leen al fallar algo, ya con la ventana montada: entran por detrás.
 // Si el trozo no carga, caen a la prosa del motor; el panel de encargados lo vuelve a pedir.
@@ -28,6 +29,8 @@ setCapabilities({ ...capabilities(), workspaceDirectory: desktopWorkspaceDirecto
 // Los canales de máquinas locales los dice la ventana (`guest_channels`), no el userAgent.
 // La web también carga este archivo: ahí `invoke` va por el relay y despertaría la máquina.
 if (capabilities().nativeWindow) {
+  // El selector de organización de Desk, por el borde; oculto hasta que la ruta exista.
+  setCapabilities({ ...capabilities(), organizations: desktopOrganizations() });
   void askGuestChannels().then((channels) => setCapabilities({ ...capabilities(), wsl: channels.includes("wsl") }));
 }
 

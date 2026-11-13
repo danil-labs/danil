@@ -2,13 +2,14 @@ import Bug from "lucide-solid/icons/bug";
 import ChevronRight from "lucide-solid/icons/chevron-right";
 import LogOut from "lucide-solid/icons/log-out";
 import UserRound from "lucide-solid/icons/user-round";
-import { createSignal, For, lazy, Show, Suspense } from "solid-js";
+import { createEffect, createSignal, For, lazy, Show, Suspense } from "solid-js";
 import { t } from "../../lib/i18n";
 import { invoke } from "../../lib/invoke.ts";
 import { capabilities } from "../../lib/platform";
 import { type Apariencia, apariencia, elegirApariencia } from "../../lib/theme";
 import { cn } from "../../lib/utils";
 import { ITEM_DE_MENU, Popover, PopoverAnchor, PopoverContent } from "../../ui/Popover";
+import OrganizationMenu, { useOrganizations } from "./OrganizationMenu";
 
 const DanilFooterEntry = lazy(() => import("./DanilFooterEntry"));
 const WorkspaceDirectoryMenu = lazy(() => import("./WorkspaceDirectoryMenu"));
@@ -41,6 +42,14 @@ export default function ProfileMenu(props: {
   const [tema, setTema] = createSignal<Apariencia>(apariencia());
   const cuenta = () => capabilities().danilAccount || capabilities().accountProfile;
   const alternar = () => setOpen((o) => !o);
+  // Un `403 organization_selection_required` (o varias sin activa) abre el menú en el selector.
+  const organizaciones = capabilities().organizations;
+  if (organizaciones) {
+    const { needed } = useOrganizations(organizaciones);
+    createEffect(() => {
+      if (needed()) setOpen(true);
+    });
+  }
   const generico = () => (
     <button
       type="button"
@@ -55,7 +64,16 @@ export default function ProfileMenu(props: {
   );
 
   return (
-    <Popover open={open()} onOpenChange={setOpen} placement="right-end" gutter={8}>
+    <Popover
+      open={open()}
+      onOpenChange={(o) => {
+        setOpen(o);
+        // Cerrar sin elegir: el próximo 403 lo vuelve a abrir.
+        if (!o) capabilities().organizations?.dismiss();
+      }}
+      placement="right-end"
+      gutter={8}
+    >
       <PopoverAnchor class="relative grid size-8 place-items-center" data-profile-menu="">
         {/* Sin sesión de Danil la entrada no pinta a nadie; el avatar genérico sigue abriendo el menú. */}
         <Show when={cuenta()} fallback={generico()}>
@@ -71,6 +89,11 @@ export default function ProfileMenu(props: {
             <ChevronRight size={14} aria-hidden="true" class="shrink-0 text-neutral-500" />
           </button>
           <div class="my-1 h-px bg-border" />
+        </Show>
+        <Show when={capabilities().organizations}>
+          {(seleccion) => (
+            <OrganizationMenu selection={seleccion()} onClose={() => setOpen(false)} />
+          )}
         </Show>
         <Show when={capabilities().workspaceDirectory}>
           <Suspense fallback={null}>
