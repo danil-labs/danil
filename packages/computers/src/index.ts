@@ -205,5 +205,6 @@ export {
   type OrganizationState,
   announcesOrganizations,
   createOrganizationSelection,
+  hasActiveOrganization,
   isOrganizationSelectionRequired,
 } from "./organizations.ts";
