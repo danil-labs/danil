@@ -151,7 +151,8 @@ test("A sale y B en la misma máquina no recibe sus listas con el canal caído",
   const privateA = [{ id: "workspace-A", name: "Private A" }];
   const privateB = [{ id: "workspace-B", name: "Private B" }];
   class IdentitySocket extends FakeSocket {
-    constructor(url: string, protocols: string[], private rows: unknown) { super(url, protocols); }
+    private rows: unknown;
+    constructor(url: string, protocols: string[], rows: unknown) { super(url, protocols); this.rows = rows; }
     send(data: string) {
       const m = JSON.parse(data);
       if (m.type === "call") setTimeout(() => this.push({ type: "result", id: m.id, value: this.rows }), 0);
