@@ -1,7 +1,7 @@
 /**
  * Las llamadas de Desk al borde (`danil_edge_fetch` en Rust, con el Bearer):
- * un 404 o un 501 que Rust ya reintentó llega como `not_available_yet` y el
- * front vuelve a intentar solo, con backoff, hasta que la ruta aparece.
+ * Rust contesta el status tal cual; un 404 o un 501 se reintentan aquí solos,
+ * con backoff y la misma `Idempotency-Key`, hasta que la ruta aparece.
  */
 import assert from "node:assert/strict";
 import { test } from "node:test";
@@ -23,10 +23,11 @@ function window(reply: (args: Record<string, unknown> | undefined, n: number) =>
 }
 
 const edge = () => import("../../src/lib/edge.ts");
-const notYet = { what: { clave: "danil.error.not_available_yet" }, detail: "not_available_yet", retry_after_ms: 5 };
+const ok = (body: unknown, extra: Record<string, unknown> = {}) => ({ status: 200, body, ...extra });
+const missing = { status: 501, body: null, retry_after_ms: 5 };
 
-test("me, organizations and workspaces go through Rust with the closed paths", async () => {
-  const calls = window((args) => ({ path: args?.path }));
+test("me, organizations and workspaces go through Rust with the contract paths", async () => {
+  const calls = window((args) => ok({ path: args?.path }, args?.method === "POST" ? { idempotency_key: "k" } : {}));
   const { me, organizations, workspaces, selectOrganization, selectWorkspace } = await edge();
   await me();
   await organizations();
@@ -46,36 +47,58 @@ test("me, organizations and workspaces go through Rust with the closed paths", a
 });
 
 test("a route that does not exist yet is retried until it appears", async () => {
-  const calls = window((_args, n) => {
-    if (n < 3) throw notYet;
-    return { items: [{ id: "org_1", name: "Danil", plan: "enterprise", role: "admin" }] };
-  });
+  const calls = window((_args, n) => (n < 3 ? missing : ok({ items: [{ id: "org_1", name: "Danil", plan: "enterprise", role: "owner" }] })));
   const { organizations } = await edge();
   const got = await organizations({ minDelayMs: 1 });
   assert.equal(got.items[0].id, "org_1");
   assert.equal(calls.length, 4);
 });
 
-test("other refusals are not retried", async () => {
+test("a retried write keeps its Idempotency-Key and the Location reaches the caller", async () => {
+  const calls = window((_args, n) =>
+    n === 0 ? { status: 503, body: { code: "service_unavailable" }, idempotency_key: "key-1", retry_after_ms: 1 } : { status: 202, body: { operation: { operation_id: "op_1" } }, location: "/v1/operations/op_1", idempotency_key: "key-1" },
+  );
+  const { edgeUntil } = await edge();
+  const got = await edgeUntil("POST", "/v1/machines/cmp_1/start", {}, { minDelayMs: 1 });
+  assert.equal(got.status, 202);
+  assert.equal(got.location, "/v1/operations/op_1");
+  assert.equal(calls[0].args?.idempotencyKey, undefined, "the first call lets Rust choose");
+  assert.equal(calls[1].args?.idempotencyKey, "key-1");
+});
+
+test("edgeFetch gives the status as it came", async () => {
+  window(() => ({ status: 404, body: { code: "not_found" } }));
+  const { edgeFetch } = await edge();
+  assert.deepEqual(await edgeFetch("GET", "/v1/machines"), { status: 404, body: { code: "not_found" } });
+});
+
+test("a contract refusal is not retried and keeps its code and status", async () => {
+  const calls = window(() => ({ status: 403, body: { code: "organization_selection_required" } }));
+  const { workspaces } = await edge();
+  const refused = (await workspaces({ minDelayMs: 1 }).catch((e: unknown) => e)) as { detail: string; status: number };
+  assert.equal(refused.detail, "organization_selection_required");
+  assert.equal(refused.status, 403);
+  assert.equal(calls.length, 1);
+});
+
+test("without a session nothing is retried", async () => {
   const calls = window(() => {
     throw { detail: "no_session" };
   });
-  const { workspaces } = await edge();
-  const refused = await workspaces({ minDelayMs: 1 }).catch((e: unknown) => e);
+  const { me } = await edge();
+  const refused = await me({ minDelayMs: 1 }).catch((e: unknown) => e);
   assert.equal((refused as { detail: string }).detail, "no_session");
   assert.equal(calls.length, 1);
 });
 
 test("an aborted wait stops retrying", async () => {
-  const calls = window(() => {
-    throw notYet;
-  });
+  const calls = window(() => missing);
   const { me } = await edge();
   const stop = new AbortController();
   const pending = me({ signal: stop.signal, minDelayMs: 1 });
   setTimeout(() => stop.abort(), 30);
   const refused = await pending.catch((e: unknown) => e);
-  assert.equal((refused as { detail: string }).detail, "not_available_yet");
+  assert.equal((refused as { status: number }).status, 501);
   const seen = calls.length;
   await new Promise((r) => setTimeout(r, 40));
   assert.equal(calls.length, seen, "no more calls after abort");

@@ -123,16 +123,37 @@ pub(crate) fn capability_of(path: &str) -> &'static str {
     }
 }
 
-/// Rutas del borde que Desk llama con su Bearer. Lista cerrada, no un proxy abierto.
+/// Un id opaco del contrato en un segmento de ruta: sin `/`, `.`, `%` ni query.
+fn opaque_id(segment: &str) -> bool {
+    (1..=128).contains(&segment.len())
+        && segment
+            .bytes()
+            .all(|b| b.is_ascii_alphanumeric() || b == b'_' || b == b'-')
+}
+
+/// Rutas del borde (contrato `mvp-v1`) que Desk llama con su Bearer. Lista
+/// cerrada con métodos y plantillas exactas, no un proxy abierto.
 pub(crate) fn allowed(method: &str, path: &str) -> bool {
-    matches!(
+    let fixed = matches!(
         (method, path),
-        ("GET", "/v1/identity/me")
+        ("GET", "/v1/capabilities")
+            | ("GET", "/v1/identity/me")
             | ("GET", "/v1/identity/organizations")
             | ("POST", "/v1/identity/organizations/select")
             | ("GET", "/v1/workspaces")
             | ("POST", "/v1/workspaces/select")
-    )
+            | ("GET", "/v1/machines")
+    );
+    if fixed {
+        return true;
+    }
+    let parts: Vec<&str> = path.split('/').collect();
+    match (method, parts.as_slice()) {
+        ("GET", ["", "v1", "machines", id]) => opaque_id(id),
+        ("POST", ["", "v1", "machines", id, "start" | "tickets"]) => opaque_id(id),
+        ("GET", ["", "v1", "operations", id]) => opaque_id(id),
+        _ => false,
+    }
 }
 
 /// `/v1/capabilities` leída (`{contract, items: [{name, version, status}]}`):
@@ -163,6 +184,8 @@ pub(crate) struct Reply {
     pub(crate) status: u16,
     pub(crate) body: Value,
     pub(crate) retry_after: Option<Duration>,
+    /// `Location` (la operación de un `202`, por ejemplo).
+    pub(crate) location: Option<String>,
 }
 
 fn agent() -> ureq::Agent {
@@ -181,6 +204,18 @@ pub(crate) fn request(
     bearer: Option<&str>,
     body: Option<&Value>,
 ) -> Result<Reply, Fail> {
+    let key = super::pkce::random(18).unwrap_or_default();
+    request_keyed(url, method, bearer, body, &key)
+}
+
+/// Como `request`, con la `Idempotency-Key` de quien llama (los reintentos repiten la misma).
+pub(crate) fn request_keyed(
+    url: &str,
+    method: &str,
+    bearer: Option<&str>,
+    body: Option<&Value>,
+    key: &str,
+) -> Result<Reply, Fail> {
     let agent = agent();
     let auth = bearer.map(|t| format!("Bearer {t}"));
     let sent = if method == "GET" {
@@ -191,10 +226,9 @@ pub(crate) fn request(
         r.call()
     } else {
         let mut r = agent.post(url).header("Accept", "application/json");
-        // Las escrituras del contrato exigen `Idempotency-Key`; cada orden es una clave nueva.
-        let key = super::pkce::random(18).unwrap_or_default();
+        // Las escrituras del contrato exigen `Idempotency-Key`.
         if !key.is_empty() {
-            r = r.header("Idempotency-Key", &key);
+            r = r.header("Idempotency-Key", key);
         }
         if let Some(a) = &auth {
             r = r.header("Authorization", a);
@@ -211,6 +245,11 @@ pub(crate) fn request(
         .and_then(|v| v.to_str().ok())
         .and_then(|v| v.trim().parse::<u64>().ok())
         .map(Duration::from_secs);
+    let location = response
+        .headers()
+        .get("Location")
+        .and_then(|v| v.to_str().ok())
+        .map(str::to_owned);
     let text = response
         .body_mut()
         .with_config()
@@ -221,6 +260,7 @@ pub(crate) fn request(
         status,
         body: serde_json::from_str(&text).unwrap_or(Value::Null),
         retry_after,
+        location,
     })
 }
 
@@ -512,6 +552,30 @@ impl<V: Vault> Desk<V> {
                 Fail::Refused { .. } => return Err(fail),
             }
         }
+    }
+
+    /// Una llamada con el Bearer que conserva el status: solo un 401 se trata aquí
+    /// (renueva una vez y repite). Un 404 o un 501 llegan tal cual a quien llama.
+    pub(crate) fn fetch(
+        &self,
+        method: &str,
+        path: &str,
+        body: Option<&Value>,
+        key: &str,
+    ) -> Result<Reply, Fail> {
+        let url = format!("{}{path}", self.edge);
+        let live = self.access(false)?;
+        let reply = request_keyed(&url, method, Some(&live.access_token), body, key)?;
+        if reply.status != 401 {
+            return Ok(reply);
+        }
+        let live = self.access(true)?;
+        let reply = request_keyed(&url, method, Some(&live.access_token), body, key)?;
+        if reply.status == 401 {
+            self.forget();
+            return Err(Fail::NoSession);
+        }
+        Ok(reply)
     }
 
     /// Revoca la sesión en `identity` (mejor esfuerzo) y la olvida aquí.

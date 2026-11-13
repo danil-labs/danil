@@ -19,8 +19,6 @@ use tauri::Emitter;
 /// La única puerta: el borde `/v1`.
 const EDGE: &str = "https://edge.danil.ai";
 const LOGIN_WAIT: Duration = Duration::from_secs(600);
-/// Lo que una orden de la ventana espera reintentando antes de contestar «todavía no».
-const CALL_BUDGET: Duration = Duration::from_secs(10);
 const KEYCHAIN_ACCOUNT: &str = "danil";
 
 /// Un inicio de sesión nuevo deja sin efecto al que seguía esperando.
@@ -234,22 +232,29 @@ pub(super) fn danil_sign_out(app: tauri::AppHandle) -> Result<Value, Value> {
 }
 
 /// Una llamada al borde con el Bearer de Desk, solo a la lista cerrada de
-/// `session::allowed`. Un 404 o un 501 se reintenta con backoff; si sigue, el
-/// error `not_available_yet` lleva `retry_after_ms` y el front reintenta solo.
+/// `session::allowed`. Contesta `{status, body, location?, idempotency_key,
+/// retry_after_ms?}` con el status del borde tal cual: un 404 o un 501 no es un
+/// error de sesión, y el front reintenta solo. `Err` solo sin sesión, con una
+/// ruta fuera de la lista o sin red.
 #[tauri::command(async)]
 pub(super) fn danil_edge_fetch(
     app: tauri::AppHandle,
     method: String,
     path: String,
     body: Option<Value>,
+    idempotency_key: Option<String>,
 ) -> Result<Value, Value> {
     let method = method.to_ascii_uppercase();
     if !session::allowed(&method, &path) {
         return Err(coded("invalid_request"));
     }
-    let d = desk(&app);
-    match d.call(&method, &path, body.as_ref(), CALL_BUDGET) {
-        Ok(value) => Ok(value),
+    let key = match idempotency_key {
+        Some(k) if (1..=128).contains(&k.len()) && k.bytes().all(|b| b.is_ascii_graphic()) => k,
+        Some(_) => return Err(coded("invalid_request")),
+        None => pkce::random(18).ok_or_else(|| coded("unavailable"))?,
+    };
+    match desk(&app).fetch(&method, &path, body.as_ref(), &key) {
+        Ok(reply) => Ok(edge_reply(&method, &reply, &key)),
         Err(Fail::NoSession) => {
             *profile().lock().unwrap_or_else(PoisonError::into_inner) = None;
             announce(&app, &json!({ "state": "disconnected" }));
@@ -257,4 +262,18 @@ pub(super) fn danil_edge_fetch(
         }
         Err(f) => Err(error(&f)),
     }
+}
+
+pub(crate) fn edge_reply(method: &str, reply: &session::Reply, key: &str) -> Value {
+    let mut value = json!({ "status": reply.status, "body": reply.body });
+    if let Some(location) = &reply.location {
+        value["location"] = json!(location);
+    }
+    if method == "POST" {
+        value["idempotency_key"] = json!(key);
+    }
+    if let Some(wait) = reply.retry_after {
+        value["retry_after_ms"] = json!(wait.as_millis() as u64);
+    }
+    value
 }

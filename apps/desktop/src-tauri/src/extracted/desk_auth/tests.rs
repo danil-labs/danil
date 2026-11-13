@@ -91,7 +91,13 @@ fn answer(mut stream: TcpStream, handler: &Handler, seen: &Mutex<Vec<Req>>) {
         seen.push(req.clone());
         n
     };
-    let (status, value) = handler(&req, n);
+    let (status, mut value) = handler(&req, n);
+    // `__location` en la respuesta simulada sale como cabecera `Location`.
+    let location = value
+        .as_object_mut()
+        .and_then(|o| o.remove("__location"))
+        .and_then(|v| v.as_str().map(|l| format!("Location: {l}\r\n")))
+        .unwrap_or_default();
     let text = if value.is_null() {
         String::new()
     } else {
@@ -99,7 +105,7 @@ fn answer(mut stream: TcpStream, handler: &Handler, seen: &Mutex<Vec<Req>>) {
     };
     let _ = write!(
         stream,
-        "HTTP/1.1 {status} X\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{text}",
+        "HTTP/1.1 {status} X\r\nContent-Type: application/json\r\n{location}Content-Length: {}\r\nConnection: close\r\n\r\n{text}",
         text.len()
     );
 }
@@ -526,21 +532,142 @@ fn writes_carry_an_idempotency_key() {
 
 #[test]
 fn only_the_mvp_routes_are_callable() {
-    assert!(allowed("GET", "/v1/identity/me"));
-    assert!(allowed("GET", "/v1/identity/organizations"));
-    assert!(allowed("POST", "/v1/identity/organizations/select"));
-    assert!(allowed("GET", "/v1/workspaces"));
-    assert!(allowed("POST", "/v1/workspaces/select"));
+    for (m, p) in [
+        ("GET", "/v1/capabilities"),
+        ("GET", "/v1/identity/me"),
+        ("GET", "/v1/identity/organizations"),
+        ("POST", "/v1/identity/organizations/select"),
+        ("GET", "/v1/workspaces"),
+        ("POST", "/v1/workspaces/select"),
+        ("GET", "/v1/machines"),
+        ("GET", "/v1/machines/cmp_lvskjsw4bermfyqioznk5derth"),
+        ("POST", "/v1/machines/cmp_1/start"),
+        ("POST", "/v1/machines/cmp_1/tickets"),
+        ("GET", "/v1/operations/op_01JD7Q3W4E5R6T7Y8U9I0O1P2A"),
+    ] {
+        assert!(allowed(m, p), "{m} {p}");
+    }
     for (m, p) in [
         ("GET", "/v1/messaging/conversations"),
         ("GET", "/api/inbox/x"),
         ("POST", "/v1/identity/desk/confirm"),
+        ("POST", "/v1/identity/desk/token"),
         ("POST", "/v1/identity/me"),
         ("GET", "/v1/workspaces/../identity/me"),
         ("DELETE", "/v1/workspaces"),
+        ("GET", "/v1/machines/cmp_1/start"),
+        ("POST", "/v1/machines/cmp_1/stop"),
+        ("POST", "/v1/machines/cmp_1/ticket"),
+        ("GET", "/v1/machines/"),
+        ("GET", "/v1/machines/a/b"),
+        ("GET", "/v1/machines/..%2Fidentity"),
+        ("GET", "/v1/machines/cmp_1?x=1"),
+        ("GET", "/v1/operations/op_1/cancel"),
+        ("POST", "/v1/machines//start"),
     ] {
         assert!(!allowed(m, p), "{m} {p}");
     }
+    assert!(!allowed(
+        "GET",
+        &format!("/v1/machines/{}", "a".repeat(129))
+    ));
+}
+
+#[test]
+fn a_missing_route_reaches_the_window_with_its_status() {
+    let (desk, log, vault) = signed_in(Arc::new(|r: &Req, _| match r.path.as_str() {
+        "/v1/machines" => (
+            404,
+            json!({"type":"urn:danil:problem:not_found","title":"not_found","status":404,"code":"not_found"}),
+        ),
+        "/v1/operations/op_1" => (501, Value::Null),
+        _ => (404, Value::Null),
+    }));
+    let got = desk.fetch("GET", "/v1/machines", None, "k").unwrap();
+    assert_eq!(got.status, 404);
+    assert_eq!(got.body["code"], "not_found");
+    assert_eq!(
+        desk.fetch("GET", "/v1/operations/op_1", None, "k")
+            .unwrap()
+            .status,
+        501
+    );
+    assert!(vault.load().is_some(), "un 404/501 no toca la sesión");
+    assert_eq!(count(&log, "/v1/machines"), 1, "sin reintento escondido");
+}
+
+#[test]
+fn a_start_keeps_status_location_and_the_callers_key() {
+    let (desk, log, _) = signed_in(Arc::new(|r: &Req, _| match r.path.as_str() {
+        "/v1/machines/cmp_1/start" => (
+            202,
+            json!({"__location": "/v1/operations/op_1", "operation": {"operation_id": "op_1", "kind": "machine.start", "status": "pending", "created_at": "2026-11-13T00:00:00Z"}}),
+        ),
+        _ => (404, Value::Null),
+    }));
+    let got = desk
+        .fetch(
+            "POST",
+            "/v1/machines/cmp_1/start",
+            Some(&json!({})),
+            "key-1",
+        )
+        .unwrap();
+    assert_eq!(got.status, 202);
+    assert_eq!(got.location.as_deref(), Some("/v1/operations/op_1"));
+    assert_eq!(got.body["operation"]["operation_id"], "op_1");
+    // Un reintento de quien llama repite la misma clave: el borde no duplica el encendido.
+    desk.fetch(
+        "POST",
+        "/v1/machines/cmp_1/start",
+        Some(&json!({})),
+        "key-1",
+    )
+    .unwrap();
+    let keys: Vec<_> = log
+        .lock()
+        .unwrap()
+        .iter()
+        .filter(|r| r.path == "/v1/machines/cmp_1/start")
+        .map(|r| r.idempotency_key.clone())
+        .collect();
+    assert_eq!(
+        keys,
+        vec![Some("key-1".to_owned()), Some("key-1".to_owned())]
+    );
+    let window = super::edge_reply("POST", &got, "key-1");
+    assert_eq!(window["status"], 202);
+    assert_eq!(window["location"], "/v1/operations/op_1");
+    assert_eq!(window["idempotency_key"], "key-1");
+    assert!(
+        !window.to_string().contains("acc_1"),
+        "el token no sale a la ventana"
+    );
+}
+
+#[test]
+fn fetch_renews_once_on_401_and_then_ends_the_session() {
+    let (desk, log, vault) = signed_in(Arc::new(|r: &Req, _| match r.path.as_str() {
+        "/v1/identity/desk/refresh" => (200, issued(2, 300)),
+        "/v1/machines" if r.authorization.as_deref() == Some("Bearer acc_2") => {
+            (200, json!({"items": [], "next_cursor": null}))
+        }
+        _ => (
+            401,
+            json!({"type":"x","title":"x","status":401,"code":"invalid_session"}),
+        ),
+    }));
+    assert_eq!(
+        desk.fetch("GET", "/v1/machines", None, "k").unwrap().status,
+        200
+    );
+    assert_eq!(count(&log, "/v1/identity/desk/refresh"), 1);
+    assert_eq!(
+        desk.fetch("GET", "/v1/operations/op_9", None, "k")
+            .unwrap_err(),
+        Fail::NoSession
+    );
+    assert!(vault.load().is_none());
 }
 
 #[test]
