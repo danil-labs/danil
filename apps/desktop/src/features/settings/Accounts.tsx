@@ -580,13 +580,11 @@ export default function Accounts(props: {
     if (addBlockedByExternal(proveedor()) || agregando()) return;
     setAgregando(true);
     try {
-      // Con la máquina apagada esto la enciende (intent del relay) y espera a
-      // que conteste: el «+» primero enciende y luego conecta.
+      // Apagada, esto la enciende (intent del relay) antes de conectar.
       const a = await invoke<Account>("add_account", {
         provider: agente(),
         label: "",
       }, options);
-      // Si la lista de proveedores no llegó por estar apagada, ya se puede leer.
       if (!proveedor()) {
         await invoke<AgentOpt[]>("list_providers").then(setAgentes).catch(() => {});
       }
