@@ -187,7 +187,7 @@ export function mountWindow(base: Base, mounted: Mounted) {
 }
 
 /** Paneles que se abren desde la URL (`?settings=`); el parámetro sale de la barra al leerlo. */
-const LINKED_SETTINGS = ["cuenta-danil", "emails", "business", "fiscal"];
+const LINKED_SETTINGS = ["plan", "cuenta-danil", "emails", "business", "fiscal"];
 
 function takeSettingsParam(): string | undefined {
   const params = new URLSearchParams(window.location.search);

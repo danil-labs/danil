@@ -101,6 +101,8 @@ type ContextoDeAgentes = {
  * CLI esperando). Los nombres son getters por lo mismo: leídos aquí, cambiar
  * de lengua remontaría General antes de guardar la lengua.
  */
+const PromoRedeem = lazy(() => import("./PromoRedeem"));
+
 const pestanasDe = (
   superficies: () => Superficie[],
   agentes: ContextoDeAgentes,
@@ -114,7 +116,10 @@ const pestanasDe = (
     "cuenta-danil": cuenta ? tab("cuenta-danil", () => t("settings.tab.profile"), () => <Suspense fallback={null}><DanilAccount part="profile" /></Suspense>) : undefined,
     emails: capabilities().accountEmails ? tab("emails", () => t("settings.tab.emails"), () => <Suspense fallback={null}><DanilAccount part="emails" /></Suspense>) : undefined,
     usage: capabilities().accountUsage ? tab("usage", () => t("settings.tab.usage"), () => capabilities().accountUsage?.()) : undefined,
-    plan: capabilities().personalAccount?.plan ? tab("plan", () => t("settings.tab.plan"), () => capabilities().personalAccount?.plan?.()) : undefined,
+    plan: capabilities().personalAccount?.plan || capabilities().webPromo ? tab("plan", () => t("settings.tab.plan"), () => <>
+      {capabilities().personalAccount?.plan?.()}
+      <Show when={capabilities().webPromo}>{redeem => <SettingsPanel><SettingsSection title={t("settings.tab.plan")} data-promo-plan=""><Suspense fallback={null}><PromoRedeem redeem={redeem()} /></Suspense></SettingsSection></SettingsPanel>}</Show>
+    </>) : undefined,
     security: tab("security", () => t("settings.tab.security"), null),
     general: tab("general", () => t("settings.nav.general"), () => <General />),
     appearance: tab("appearance", () => t("settings.nav.appearance"), () => <Suspense fallback={null}><Appearance proyecto={agentes.proyecto} /></Suspense>),

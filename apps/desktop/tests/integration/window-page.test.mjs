@@ -290,3 +290,24 @@ for (const status of [403, 404]) test(`startup HTTP ${status} shows preparation 
   assert.equal(doc.querySelector('[data-web-gate]'), null);
   assert.deepEqual(app.failures, []);
 });
+
+test('promo redemption opens only in the active organization plan section', async t => {
+  const fetcher = async input => {
+    const path = new URL(String(input)).pathname;
+    if (path === '/v1/capabilities') return Response.json({ contract: 'mvp-v1', items: ['workspaces', 'identity.organizations'].map(name => ({ name, version: 1, status: 'available' })) });
+    if (path === '/v1/identity/me') return Response.json({ id: 'user_demo', name: 'Workshop', workspace: '11', organizations: [] });
+    if (path === '/v1/workspaces') return Response.json({ items: [{ id: '11', org: 'org_demo', name: 'Workshop', role: 'owner' }], next_cursor: null });
+    if (path === '/v1/identity/organizations') return Response.json({ items: [{ id: 'org_demo', name: 'Workshop', role: 'owner', plan: 'free' }], active_organization_id: 'org_demo' });
+    return new Response(null, { status: 404 });
+  };
+  fetcher.__jsdomApp = true;
+  globalThis.fetch = fetcher;
+  const app = await open(t, 'listo', 'promo-plan-location', {}, undefined, {}, { web: true, beforeImport(w) {
+    w.history.replaceState(null, '', '/?settings=plan');
+  } });
+  await until(() => app.w.document.querySelector('[data-promo-plan] #promo-code'));
+  assert.equal(app.w.document.querySelectorAll('#promo-code').length, 1);
+  assert.equal(app.w.document.querySelector('[data-web-gate] #promo-code'), null);
+  assert.equal(app.w.document.querySelector('[data-profile-menu] #promo-code'), null);
+  assert.deepEqual(app.failures, []);
+});
