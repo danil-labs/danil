@@ -71,6 +71,7 @@ const steps = [
   cliStep,
   ["The Danil launchers keep the CLI and refuse collisions", process.execPath, ["--test", join(root, "tests/unit/cli-path.test.mjs")], root],
   ["The project search merges repositories without duplicates", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/project-repositories.test.ts")], root],
+  ["The + of an AI account adds on the machine that serves the workspace, on or off", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/account-add-machine.test.ts")], root],
   ["Remote paths abbreviate the home directory and name the serving machine", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/remote-path.test.ts")], root],
   ["The scope of --quick comes from the diff and stops without a green when in doubt", process.execPath, ["--test", join(root, "tests/unit/verify-scope.test.mjs")], root],
   ["The pre-push hook checks what the push changes", process.execPath, ["--test", join(root, "tests/unit/pre-push.test.mjs")], root],
