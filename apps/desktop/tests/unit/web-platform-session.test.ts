@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { platformSession, PlatformSessionError, preparePlatformSession } from "../../src/web/platform-session.ts";
+import { platformSession, PlatformSessionError, PreparationExpired, preparePlatformSession } from "../../src/web/platform-session.ts";
 import { webSessionDeployment } from "../../src/web/session-config.ts";
 
 test("platform requires an explicit HTTPS edge origin and preserves its request budget", () => {
@@ -151,9 +151,7 @@ for (const retryAfter of ['30', new Date(30_000).toUTCString()]) test(`startup s
       headers: { 'content-type': 'application/problem+json', 'retry-after': retryAfter } });
   });
   const result = assert.rejects(preparePlatformSession(() => api.me(), new AbortController().signal, () => {}),
-    (e: unknown) => e instanceof Error && e.name === 'PreparationExpired' &&
-      (e as { last?: unknown }).last instanceof PlatformSessionError &&
-      (e as { last: PlatformSessionError }).last.status === 403 && (e as { last: PlatformSessionError }).last.code === 'authorization_forbidden');
+    (e: unknown) => e instanceof PreparationExpired && e.last?.status === 403 && e.last.code === 'authorization_forbidden');
   await new Promise(resolve => setImmediate(resolve));
   t.mock.timers.tick(20_000);
   await result;

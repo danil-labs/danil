@@ -98,9 +98,11 @@ export function platformSession(options: { origin: string; timeoutMs: number }, 
  * `last` es la última negativa leída, si la última lectura fue una negativa; un valor pendiente no viaja.
  */
 export class PreparationExpired extends Error {
-  constructor(readonly last?: PlatformSessionError) {
+  readonly last: PlatformSessionError | undefined;
+  constructor(last?: PlatformSessionError) {
     super('Account preparation did not finish within its budget');
     this.name = 'PreparationExpired';
+    this.last = last;
   }
 }
 

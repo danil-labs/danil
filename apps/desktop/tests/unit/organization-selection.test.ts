@@ -362,6 +362,6 @@ test('a refused organization that the directory later reports active clears the 
   await sel.load();
   const state = sel.state();
   assert.equal(selections, 1);
-  assert.equal(state.kind === 'ready' && state.refused, false);
+  assert.equal(state.kind === 'ready' && Boolean(state.refused), false);
   assert.equal(hasActiveOrganization(state), true);
 });
