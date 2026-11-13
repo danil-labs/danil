@@ -150,7 +150,11 @@ export function startAccountMachines(target: Target = window) {
   const invoke = native;
   let token: ClientToken | null = null;
   // Las máquinas de la organización por el borde (`/v1/machines`); el motor local sigue por su RPC.
-  const cloud = createCloudMachines(invoke);
+  const cloud = createCloudMachines(invoke, (e) => {
+    // `403 organization_selection_required`: se abre el selector de organización (si esta ventana lo tiene).
+    const organizations = (capabilities() as { organizations?: () => Promise<{ report: (e: unknown) => unknown }> }).organizations;
+    void organizations?.().then((selector) => selector.report(e));
+  });
   let cloudIds = new Set<string>();
   let cloudRetry: ReturnType<typeof setTimeout> | null = null;
   async function readCloud(): Promise<Computer[]> {

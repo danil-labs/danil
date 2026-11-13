@@ -19,7 +19,7 @@ type EdgeError = { detail?: unknown; status?: unknown };
 export type CloudMachines = ReturnType<typeof createCloudMachines>;
 
 /** `danil_edge_fetch` con la forma de un `fetch`: el error de Rust vuelve a ser un estado HTTP, sin tokens. */
-export function edgeFetch(invoke: Invoke): Fetch {
+export function edgeFetch(invoke: Invoke, onProblem?: (error: unknown) => void): Fetch {
   return async (input, init) => {
     const method = init?.method ?? "GET";
     const path = new URL(input).pathname;
@@ -33,14 +33,18 @@ export function edgeFetch(invoke: Invoke): Fetch {
       if (code === "no_session") return reply(401);
       if (code === "not_available_yet") return reply(501);
       if (code === "unavailable") return reply(503);
-      if (typeof e.status === "number") return reply(e.status, { code });
+      if (typeof e.status === "number") {
+        // Un rechazo del contrato (p. ej. `403 organization_selection_required`) se lo cuenta a quien lo atiende, con la forma de Rust.
+        onProblem?.(raw);
+        return reply(e.status, { code });
+      }
       throw raw;
     }
   };
 }
 
-export function createCloudMachines(invoke: Invoke, endpoint = EDGE_ENDPOINT) {
-  const fetch = edgeFetch(invoke);
+export function createCloudMachines(invoke: Invoke, onProblem?: (error: unknown) => void, endpoint = EDGE_ENDPOINT) {
+  const fetch = edgeFetch(invoke, onProblem);
   const client = machinesClient({ endpoint, fetch });
   /** Lo que el borde anuncia como disponible; `null` si no sirve `/v1/capabilities` (entonces no guía nada). */
   async function capabilities(): Promise<Set<string> | null> {
