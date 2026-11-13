@@ -10,7 +10,7 @@ import test from "node:test";
 
 const helper = fileURLToPath(new URL("../helpers/delete-task-ui.mjs", import.meta.url));
 
-for (const scenario of ["clean", "working", "cleanfailed", "cleanchanged", "concurrent", "unmerged", "unchecked", "extra", "enginenone", "engineunmerged", "engineunchecked", "mixed", "stale", "refresh", "busy", "partial", "inspection", "unsupported"]) {
+for (const scenario of ["clean", "working", "cleanfailed", "cleanchanged", "concurrent", "unmerged", "unchecked", "extra", "enginenone", "engineunmerged", "engineunchecked", "engineunknown", "mixed", "stale", "refresh", "busy", "partial", "inspection", "unsupported"]) {
   test(`delete dialog: ${scenario}`, () => {
     const output = execFileSync(process.execPath, [helper, scenario], { encoding: "utf8", timeout: 60_000 });
     assert.match(output, /PASS:/);

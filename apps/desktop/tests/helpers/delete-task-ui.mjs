@@ -18,7 +18,7 @@ const clean = (id, project) => ({ workspace: "w", project, id, title: `Task ${id
 // extra: the engine family has one more member than the subtask the rail announced.
 const family = () => ["clean", "concurrent", "unmerged", "unchecked"].includes(scenario) ? [clean("t1", "p1"), clean("child", "p2")]
   // engine*: a newer engine reports `integration` per member, so the finish check is not asked.
-  : scenario.startsWith("engine") ? [{ ...clean("t1", "p1"), integration: "none" }, { ...clean("child", "p2"), integration: { enginenone: "merged", engineunmerged: "unmerged", engineunchecked: "unchecked" }[scenario] }]
+  : scenario.startsWith("engine") ? [{ ...clean("t1", "p1"), integration: "none" }, { ...clean("child", "p2"), integration: { enginenone: "merged", engineunmerged: "unmerged", engineunchecked: "unchecked", engineunknown: "rebased" }[scenario] }]
   : scenario === "extra" ? [clean("t1", "p1"), clean("child", "p2"), clean("handoff", "p3")]
   : scenario === "working" ? [clean("t1", "p1"), { ...clean("child", "p2"), working: true }]
   : scenario === "cleanfailed" ? [clean("t1", "p1"), { ...clean("child", "p2"), inspection: { status: "failed", error: { message: "Cannot inspect owned files" } } }]
@@ -96,7 +96,7 @@ try {
     console.log(`PASS: ${scenario}: a family without losses is deleted directly`);
     process.exit(0);
   }
-  if (["unmerged", "unchecked", "extra", "engineunmerged", "engineunchecked"].includes(scenario)) {
+  if (["unmerged", "unchecked", "extra", "engineunmerged", "engineunchecked", "engineunknown"].includes(scenario)) {
     assert.ok(dialog(), `${scenario}: the review opens`);
     assert.equal(applications.length, 0);
     if (scenario === "extra") {

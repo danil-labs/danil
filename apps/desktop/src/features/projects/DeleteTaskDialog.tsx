@@ -54,7 +54,7 @@ export default function DeleteTaskDialog(props: {
   const members = () => preview()?.members ?? [];
   const key = (member: DeleteMember) => JSON.stringify([member.project, member.id]);
   const dirty = (member: DeleteMember) => props.dirty(props.target.panelId(member.id));
-  // The engine's finish check (`task_blockers` → `not_finished`) says whether a member's branch is integrated.
+  // Whether each member's branch is integrated: the preview's `integration`, or the fallback check below.
   const [integration, setIntegration] = createSignal<ReadonlyMap<string, Integration>>(new Map());
   const integrationOf = (member: DeleteMember) => integration().get(key(member)) ?? "unconfirmed";
   // Only a completed inspection with nothing listed and an integrated branch counts as losing nothing.
