@@ -246,5 +246,7 @@
   "web.alpha.older": "See earlier messages",
   "web.alpha.deleted": "Deleted message",
   "web.alpha.empty": "No conversations on this page.",
-  "web.alpha.details": "Details"
+  "web.alpha.details": "Details",
+  "web.machines.unavailable": "Machines unavailable.",
+  "web.platform.organization": "Organization"
 }

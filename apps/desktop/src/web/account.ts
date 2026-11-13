@@ -1,8 +1,8 @@
 import type { AccountProfileSource } from "../features/settings/account-profile.ts";
-import type { ComputeTransport } from "@terminus/computers";
+import type { platformTransport } from "./platform-session";
 
 /** Identity owns the person; photo editing is unavailable until identity publishes it. */
-export function webAccountProfile(transport: Pick<ComputeTransport, "call">): AccountProfileSource {
+export function webAccountProfile(transport: Pick<ReturnType<typeof platformTransport>, "call">): AccountProfileSource {
   return {
     readonly: true,
     async read() {
