@@ -313,3 +313,18 @@ test('a Desk selection refusal retains its detail without inventing an HTTP stat
   assert.equal(state.kind === 'ready' && state.active, DANIL.id);
   assert.equal(selections, 1);
 });
+
+for (const [status, refused] of [[403, true], [404, true], [409, true], [408, false], [429, false], [503, false]] as const) {
+  test(`the selector publishes its selection refusal decision for HTTP ${status}`, async () => {
+    const sel = createOrganizationSelection({
+      list: async () => ({ items: [DANIL, OTRA], active_organization_id: DANIL.id }),
+      select: async () => { throw problem(status, 'selection_failure'); },
+    });
+    await sel.load();
+    await sel.choose(OTRA.id);
+    const state = sel.state();
+    assert.equal(state.kind === 'ready' && state.errorStatus, status);
+    assert.equal(state.kind === 'ready' && state.refused, refused);
+    assert.equal(state.kind === 'ready' && state.active, DANIL.id);
+  });
+}

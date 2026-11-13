@@ -197,8 +197,7 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
           await organizations.load();
           organizationsLoaded = true;
           const state = organizations.state();
-          if (state.kind === 'ready' && state.error && state.errorStatus !== undefined &&
-              state.errorStatus >= 400 && state.errorStatus < 500 && ![408, 429].includes(state.errorStatus)) {
+          if (state.kind === 'ready' && state.refused && state.error && state.errorStatus !== undefined) {
             selectionRefusal = new OrganizationSelectionRefusal(state.errorStatus, null, state.error);
             return true;
           }
