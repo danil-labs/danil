@@ -15,7 +15,7 @@ import { UpdateNotice } from './UpdateNotice';
 import { WorkosAuthPage, signInError } from './auth/workos';
 import { mountWindow } from './window';
 import { sessionStorageScope, clearWebCaches } from './session-storage';
-import { createOrganizationSelection } from '../features/shell/organization-selection';
+import { createOrganizationSelection } from "@terminus/computers";
 import { webOrganizationSource } from './organizations';
 import PromoRedeem from '../features/shell/PromoRedeem';
 import './phrases';

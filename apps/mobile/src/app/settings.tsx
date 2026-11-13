@@ -12,7 +12,7 @@ import { useMachines } from "../lib/machines";
 import { disablePush, enablePush, PUSH_IOS, PUSH_TEST, type PushState, pushState, readPushPrefs, sendTestPush, writePushPrefs } from "../lib/push";
 import { Dot } from "../ui/components";
 import { Icon } from "../ui/Icon";
-import { Group, GroupHeader, LargeTitle, ListRow, NavBar, pageColor } from "../ui/list";
+import { Group, GroupFooter, GroupHeader, LargeTitle, ListRow, NavBar, pageColor } from "../ui/list";
 import { Sheet, SheetOption } from "../ui/Sheet";
 import { useTheme } from "../ui/theme";
 
@@ -51,7 +51,23 @@ export default function Settings() {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
   const { section } = useLocalSearchParams<{ section?: string }>();
-  const { email, signOut, session, getToken } = useAccount();
+  const { email, name, signOut, session, getToken, plane, organizations } = useAccount();
+  const [signOutError, setSignOutError] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
+  const leave = async () => {
+    setSignOutError(false);
+    setSigningOut(true);
+    try {
+      if (plane.bearerServices) await disablePush(getToken);
+      await signOut();
+      router.dismissAll();
+    } catch {
+      setSignOutError(true);
+    } finally {
+      setSigningOut(false);
+    }
+  };
+  const orgs = organizations?.state.kind === "ready" ? organizations.state : null;
   const { hosts, pairing, pair, registry } = useMachines();
   const account = section === "account";
   const power = (host: Host) =>
@@ -66,17 +82,36 @@ export default function Settings() {
         {account ? (
           <>
             <Group>
-              {session ? <ListRow title={email ?? ""} subtitle={t("account.title")} /> : null}
+              {session ? <ListRow title={email ?? name ?? ""} subtitle={t("account.title")} /> : null}
+              {signOutError ? <GroupFooter>{t("github.error")}</GroupFooter> : null}
               {session ? (
-                <ListRow testID="sign-out" title={t("account.sign_out")} destructive onPress={() => { router.dismissAll(); void disablePush(getToken).finally(signOut); }} />
+                <ListRow testID="sign-out" title={t("account.sign_out")} destructive disabled={signingOut} onPress={() => void leave()} />
               ) : (
                 <ListRow testID="sign-in" title={t("signin.title")} chevron onPress={() => router.push("/signin")} />
               )}
             </Group>
+            {session && orgs && orgs.items.length ? (
+              <>
+                <GroupHeader>{w("shell.organization.title")}</GroupHeader>
+                <Group>
+                  {orgs.items.map((org) => (
+                    <ListRow
+                      key={org.id}
+                      testID={`organization-${org.id}`}
+                      title={org.name}
+                      disabled={orgs.busy}
+                      onPress={orgs.items.length > 1 || orgs.active !== org.id || orgs.error ? () => organizations?.choose(org.id) : undefined}
+                      right={org.id === orgs.active ? <Icon name="check" size={18} color={theme.merged} /> : <View style={{ width: 18 }} />}
+                    />
+                  ))}
+                </Group>
+                {orgs.error ? <GroupFooter>{w("shell.organization.error")}</GroupFooter> : null}
+              </>
+            ) : null}
             {Platform.OS === "web" ? (
               <>
                 <View style={{ height: 20 }} />
-                {session ? <PushRow getToken={getToken} /> : null}
+                {session && plane.bearerServices ? <PushRow getToken={getToken} /> : null}
                 <Group>
                   <ListRow testID="desktop-layout" title={t("web.desktop_layout")} chevron onPress={() => { localStorage.setItem(WEB_LAYOUT_KEY, "desktop"); window.location.assign(desktopBase()); }} />
                 </Group>

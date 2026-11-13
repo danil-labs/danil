@@ -103,6 +103,7 @@ function webBuild(serve: boolean): UserConfig {
       __TERMINUS_VERSION__: JSON.stringify(version),
       __DANIL_WEB_API__: JSON.stringify(session),
       __DANIL_WEB_RELAY_ORIGINS__: JSON.stringify(relayOrigins),
+      __DANIL_WEB_PHONE__: JSON.stringify(env.DANIL_WEB_PHONE === "1"),
       "import.meta.env.TERMINUS_ALPHA": JSON.stringify(env.TERMINUS_WEB_ALPHA === "1"),
       "import.meta.env.TERMINUS_BROADCAST_WRITES": JSON.stringify(env.TERMINUS_WEB_BROADCAST_WRITES === "1"),
       "import.meta.env.TERMINUS_BROADCAST_DELIVERY": JSON.stringify(env.TERMINUS_WEB_BROADCAST_DELIVERY === "1"),

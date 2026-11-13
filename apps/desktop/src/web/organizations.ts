@@ -3,7 +3,7 @@
  * `GET /v1/capabilities`, `GET /v1/identity/organizations` y `POST …/select` con CSRF y la
  * `Idempotency-Key` del intento. Los errores llegan como `PlatformSessionError` (`status`, `code`).
  */
-import type { OrganizationSource } from "../features/shell/organization-selection.ts";
+import type { OrganizationSource } from "@terminus/computers";
 import type { platformTransport } from "./platform-session.ts";
 
 type Transport = Pick<ReturnType<typeof platformTransport>, "call" | "mutation">;

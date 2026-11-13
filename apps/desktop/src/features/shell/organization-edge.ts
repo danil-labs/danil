@@ -1,10 +1,10 @@
 /**
  * Fuente del selector sobre el borde, para Desk (`edgeFetch` → `danil_edge_fetch`).
  * Una sola llamada por intento: el backoff y la `Idempotency-Key` los lleva
- * `organization-selection.ts`, que repite la misma clave en los reintentos de un `select`.
+ * `@terminus/computers` (`organizations.ts`), que repite la misma clave en los reintentos de un `select`.
  * Un status que no es 2xx se vuelve `{status, code}`; uno desconocido se trata por su status.
  */
-import type { OrganizationSource } from "./organization-selection.ts";
+import type { OrganizationSource } from "@terminus/computers";
 
 type Reply = { status: number; body: unknown; retry_after_ms?: number };
 export type EdgeFetch = (method: "GET" | "POST", path: string, body?: unknown, idempotencyKey?: string) => Promise<Reply>;

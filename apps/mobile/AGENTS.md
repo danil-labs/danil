@@ -59,9 +59,15 @@ se agregan con `npx expo install <paquete>`, que elige la versión compatible.
   Una máquina propia apagada no se puede despertar: no se le manda la acción
   (`machine_asleep`) y se dice en tono neutro. Apagada nunca se pinta como
   error.
-- La cuenta de Danil es la sesión de Supabase y es lo único que se guarda de
+- En iOS y Android la cuenta de Danil es la sesión de Supabase y es lo único que se guarda de
   ella, en el llavero (`apps/mobile/src/lib/supabase.ts`). Nada de contraseñas ni tokens
   propios.
+- En la web (`<base>m/`, `web-mobile.mjs`) todo va por el borde `/v1`, como la web y Desk:
+  la cookie del borde, identity, organizaciones y `/v1/machines` con ticket de un solo uso
+  (`src/lib/edge.ts`, `src/lib/edge-account.tsx`). Las pantallas no eligen plano de control:
+  lo inyecta la cuenta (`src/lib/controlPlane.ts`), y lo que solo existe con el portador de
+  Danil Machines (push, memoria, directorio) no se ofrece por el borde. Nada de Supabase ni
+  de mensajería en ese camino.
 - Los nombres de comandos y campos son los del motor (`send_message`,
   `respond_permission`, `esperando`); no se traducen en la app.
 - Todo texto que se lee viene de `apps/mobile/src/lib/i18n.ts`, en `es` y `en`. Las palabras

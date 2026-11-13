@@ -11,6 +11,8 @@ export type Word = string | Plural;
 
 const es = {
   "common.brand_name": "Danil",
+  "shell.organization.title": "Organización",
+  "shell.organization.error": "No se pudo cambiar de organización. Inténtalo de nuevo.",
   "shell.sidebar.view.trigger": "Filtrar y agrupar",
   "shell.sidebar.view.folders": "Carpetas",
   "shell.sidebar.view.all_folders": "Todas las carpetas",
@@ -324,6 +326,8 @@ const es = {
 export type WordKey = keyof typeof es;
 
 const en: Record<WordKey, Word> = {
+  "shell.organization.title": "Organization",
+  "shell.organization.error": "Could not switch organization. Try again.",
   "common.brand_name": "Danil",
   "shell.sidebar.view.trigger": "Filter and group",
   "shell.sidebar.view.folders": "Folders",

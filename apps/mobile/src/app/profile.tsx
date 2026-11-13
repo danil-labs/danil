@@ -30,7 +30,9 @@ export default function Profile() {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
   const back = useHomeLabel();
-  const { email } = useAccount();
+  const { email, name, organizations } = useAccount();
+  const org = organizations?.state.kind === "ready" ? organizations.state.items.find((o) => o.id === (organizations.state as { active: string | null }).active) : undefined;
+  const handle = name ?? email?.split("@")[0] ?? null;
   const { hostOf } = useMachines();
   const { current } = useWorkspaces();
   const choice = useThemeChoice();
@@ -67,10 +69,11 @@ export default function Profile() {
       <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + 32 }}>
         <View style={styles.me}>
           <View style={[styles.avatar, { backgroundColor: theme.merged }]}>
-            <Text style={styles.avatarText}>{initials(email)}</Text>
+            <Text style={styles.avatarText}>{initials(email ?? name)}</Text>
           </View>
-          <Text style={[styles.name, { color: theme.text }]}>{email?.split("@")[0] ?? w("common.brand_name")}</Text>
+          <Text style={[styles.name, { color: theme.text }]}>{handle ?? w("common.brand_name")}</Text>
           {email ? <Text style={{ color: theme.textMuted, fontSize: TEXT.lead }}>{email}</Text> : null}
+          {org ? <Text testID="profile-organization" style={{ color: theme.textMuted, fontSize: TEXT.lead }}>{org.name}</Text> : null}
         </View>
 
         <Group inset={56}>

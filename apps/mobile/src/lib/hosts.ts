@@ -6,6 +6,7 @@
  * otro. Sin React Native: se prueba en Node.
  */
 import {
+  type MachineAdmission as Admission,
   type Computer,
   type MachineState,
   type Power,
@@ -18,7 +19,7 @@ import {
   orderComputers,
   wakes,
 } from "@terminus/computers";
-import { Fleet, relayLink, type FleetEvent, type Slice, type StorageLike, isFleetError, isRead } from "@terminus/fleet";
+import { Fleet, relayLink, type FleetEvent, type Slice, type StorageLike, classOf, isFleetError, isRead } from "@terminus/fleet";
 import { type AppCommand, type AppFeature, COMMAND_NOT_HERE, COMMAND_UNSUPPORTED, CommandSupport, type EngineError, type EngineEvent, type Support, isAppCommand, isScopeRefusal } from "@terminus/protocol";
 
 export class HostError extends Error {
@@ -109,12 +110,27 @@ export const WAKES_FIRST: ReadonlySet<string> = new Set([
   "set_keep_awake",
 ]);
 
-/** Pide al plano de control que encienda la computadora (`POST /v1/computers/:id/start`). */
-export type Waker = (computer: string) => Promise<boolean>;
+/**
+ * Pide al plano de control que encienda la computadora: `true` encendida, `false` no se pudo,
+ * `not_startable` la nube no la enciende (`409 not_remotely_startable` del borde).
+ */
+export type Waker = (computer: string) => Promise<boolean | "not_startable">;
 
-export type AccountFleetConfig = {
-  endpoint: string;
-  getToken: () => string | Promise<string>;
+/** El ticket de un solo uso del canal de datos (`POST /v1/machines/{id}/tickets`). */
+export type Admitter = (computer: string) => Promise<Admission>;
+
+/** Con qué abre la flota cada sesión de relay. */
+export type RelayAuth = { endpoint: string } & (
+  /** El relay de Danil Machines con el portador de la cuenta: una intención enciende la VM por sí sola. */
+  | { getToken: () => string | Promise<string>; admit?: never }
+  /**
+   * El borde (`/v1/machines`): cada conexión con un ticket nuevo (`ticket.*`), nunca un portador.
+   * El canal de tickets no enciende: una intención enciende antes por `wake`.
+   */
+  | { admit: Admitter; getToken?: never }
+);
+
+export type AccountFleetConfig = RelayAuth & {
   onUnauthorized?: () => void;
   /** Antes de reconectar la sesión de `computer`: `false` la deja parada. */
   beforeReconnect?: (computer: string) => () => Promise<boolean>;
@@ -171,19 +187,26 @@ export function accountFleet(config: AccountFleetConfig, factory?: SocketFactory
     self: null,
     panelIds: false,
     connect: (info) => {
-      const relay = new RelaySession(
-        { endpoint: config.endpoint, computerId: info.id, getToken: config.getToken, onUnauthorized: config.onUnauthorized, beforeReconnect: config.beforeReconnect?.(info.id) },
-        factory,
-      );
-      // Hasta que el relay diga su estado, vale el de la fila de `/v1/computers`.
+      const common = { endpoint: config.endpoint, computerId: info.id, onUnauthorized: config.onUnauthorized, beforeReconnect: config.beforeReconnect?.(info.id) };
+      const admit = config.admit;
+      const relay = admit
+        ? new RelaySession({ ...common, getAdmission: () => admit(info.id) }, factory)
+        : new RelaySession({ ...common, getToken: config.getToken }, factory);
+      // Hasta que el relay diga su estado, vale el de la fila de la lista de máquinas.
       const state = (): MachineState => (relay.state() === "unknown" ? ((rows.get(info.id)?.state as MachineState | undefined) ?? "unknown") : relay.state());
       const link = relayLink(relay, state);
       // Un cambio de enlace (socket abierto o cerrado) también repinta.
       relay.onLink(() => changed(info.id));
-      return link;
+      if (!admit) return link;
+      // Con ticket, la intención espera a que el plano de control encienda la VM, como la web.
+      return { ...link, call: async (...args: Parameters<typeof link.call>) => {
+        if (classOf(args[1]) === "intent") await fleet.wake(info.id);
+        return link.call(...args);
+      } };
     },
     wake: config.wake,
-    storage: config.storage ?? null,
+    // El borde no persiste lecturas privadas entre sesiones de personas.
+    storage: config.admit ? null : (config.storage ?? null),
     onChange: (machine) => changed(machine),
     // La cola de aplazadas cambió (aquí o en otro dispositivo): la lista se relee.
     onDeferred: (machine) => changed(machine),

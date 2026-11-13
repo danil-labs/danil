@@ -5,7 +5,7 @@ import {
   createOrganizationSelection,
   isOrganizationSelectionRequired,
   type OrganizationSource,
-} from "../../src/features/shell/organization-selection.ts";
+} from "@terminus/computers";
 
 const DANIL = { id: "org_01M62PT11XGX8R8J883NZVYHR6", name: "Danil", plan: "enterprise", role: "owner" };
 const OTRA = { id: "org_otra", name: "Otra", plan: "team", role: "member", extra: { ignorado: true } };
@@ -284,4 +284,28 @@ test("report: solo `organization_selection_required` abre el selector; otro 403 
 test("organizaciones `degraded` en /v1/capabilities es «no disponible», como en la web y en Machines (edge.openapi Capability)", () => {
   assert.equal(announcesOrganizations({ contract: "mvp-v1", items: [{ name: "identity.organizations", version: 1, status: "degraded" }] }), false);
   assert.equal(announcesOrganizations({ contract: "mvp-v1", items: [{ name: "identity.organizations", version: 1, status: "available" }] }), true);
+});
+
+test("una organización única recupera select tras fallo transitorio con la misma intención", async () => {
+  const keys: string[] = [];
+  let selected = 0;
+  const sel = createOrganizationSelection({
+    list: async () => ({ items: [DANIL], next_cursor: null, active_organization_id: null }),
+    select: async (_id, key) => {
+      keys.push(key);
+      if (keys.length === 1) throw { status: 503 };
+      return { organization: DANIL, workspace: "12" };
+    },
+  }, { onSelected: () => { selected++; } });
+  await sel.load();
+  const failed = sel.state();
+  assert.equal(failed.kind === "ready" && failed.active, null);
+  assert.equal(selected, 0);
+  await sel.choose(DANIL.id);
+  const done = sel.state();
+  assert.equal(done.kind === "ready" && done.active, DANIL.id);
+  assert.equal(selected, 1, "recarga solo después de seleccionar");
+  assert.equal(keys.length, 2);
+  assert.equal(keys[0], keys[1]);
+  sel.stop();
 });
