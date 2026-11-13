@@ -118,7 +118,15 @@ export function createOrganizationSelection(source: OrganizationSource, options:
     }, wait);
   }
 
-  async function load(): Promise<void> {
+  // Una sola lectura del directorio a la vez: una segunda carga concurrente reutiliza la que está en
+  // vuelo. Si no, volvería a fijar el estado (borrando `busy`) mientras la primera selecciona.
+  let loading: Promise<void> | null = null;
+  function load(): Promise<void> {
+    loading ??= loadOnce().finally(() => { loading = null; });
+    return loading;
+  }
+
+  async function loadOnce(): Promise<void> {
     try {
       if (source.capabilities && !announcesOrganizations(await source.capabilities())) {
         set({ kind: "hidden" });
