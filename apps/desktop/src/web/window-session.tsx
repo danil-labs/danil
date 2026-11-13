@@ -45,13 +45,13 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
         <Show when={signedOut()}><Button as="a" href={api.loginUrl(home)}>{t('web.auth.signin')}</Button></Show>
         <Show when={busy()}><p role="status">{t('web.auth.waiting')}</p></Show>
         <Show when={error()}><p role="alert">{t(error())}</p><Button disabled={busy()} onClick={() => void load()}>{t('web.computers.retry')}</Button></Show>
-        <Show when={!signedOut() && !busy() && orgNeeded()}>
-          <For each={(() => { const s = organizations.state(); return s.kind === 'ready' ? s.items : []; })()}>{org => <Button onClick={() => void organizations.choose(org.id)}>{org.name}</Button>}</For>
+        <Show when={!signedOut() && !busy() && (orgNeeded() || noWorkspace())}>
+          <For each={(() => { const s = orgState(); return s.kind === 'ready' ? s.items : []; })()}>{org => <Button variant="secondary" data-web-organization={org.id} aria-pressed={(() => { const s = orgState(); return s.kind === 'ready' && s.active === org.id; })()} onClick={() => void organizations.choose(org.id)}>{org.name}</Button>}</For>
         </Show>
         <Show when={!signedOut() && !busy() && !error()}>
           <p>{t('web.platform.empty')}</p>
           <For each={rows()}>{row => <Button onClick={() => void choose(row.id)}>{row.name}</Button>}</For>
-          <Button variant="ghost" onClick={() => void logout()}>{t('web.platform.sign_out')}</Button>
+          <Button variant="ghost" data-web-sign-out="" onClick={() => void logout()}>{t('web.platform.sign_out')}</Button>
         </Show>
       </main>, root);
     }
@@ -79,7 +79,21 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
     // Tras cambiar de organización la página se relee entera, como tras cambiar de workspace.
     const organizations = createOrganizationSelection(webOrganizationSource(transport), { onSelected: () => window.location.assign(home) });
     const [orgNeeded, setOrgNeeded] = createSignal(false);
-    organizations.subscribe(() => setOrgNeeded(organizations.needed()));
+    const [orgState, setOrgState] = createSignal(organizations.state());
+    const [noWorkspace, setNoWorkspace] = createSignal(false);
+    organizations.subscribe(() => { setOrgNeeded(organizations.needed()); setOrgState(organizations.state()); });
+    const readOrganizations = () => { if (!organizationsLoaded) { organizationsLoaded = true; void organizations.load(); } };
+    // Una organización sin workspace activo (`me` da 403 `workspace_selection_required` o `workspace: null`):
+    // el estado vacío con sus workspaces, el selector de organización y cerrar sesión; nunca «Reintentar» sin salida.
+    async function withoutWorkspace() {
+      readOrganizations();
+      const listed = await api.workspaces().catch(() => [] as PlatformWorkspace[]);
+      if (stopped) return;
+      setRows(listed);
+      setError('');
+      setNoWorkspace(true);
+      gate();
+    }
     const loadOrganizations = () => Promise.resolve(organizations);
     let organizationsLoaded = false;
     async function run(action: () => Promise<void>) {
@@ -89,6 +103,7 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
       try { await action(); }
       catch (cause) {
         if (cause instanceof PlatformSessionError && cause.status === 401) expired();
+        else if (cause instanceof PlatformSessionError && cause.code === 'workspace_selection_required') await withoutWorkspace();
         else if (organizations.report(cause)) gate();
         else { setError(cause instanceof PlatformSessionError && cause.status === 403 ? 'web.platform.denied' : 'web.platform.unavailable'); gate(); }
       } finally {
@@ -113,7 +128,8 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
         if (mountedBefore) { window.location.assign(home); return; }
         const person = await api.me();
         // Con sesión: el selector se lee una vez y, si la ruta aún no existe, se reintenta solo.
-        if (!organizationsLoaded) { organizationsLoaded = true; void organizations.load(); }
+        readOrganizations();
+        if (person.workspace === null) { await withoutWorkspace(); return; }
         const workspaces = await api.workspaces();
         if (stopped) return;
         setRows(workspaces);
