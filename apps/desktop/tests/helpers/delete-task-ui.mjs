@@ -4,22 +4,27 @@ import { responses } from "./push-fixture.mjs";
 
 const scenario = process.argv[2] ?? "stale";
 let generation = 0;
-let reject = true;
+// Families without losses are applied as soon as the preview returns.
+let reject = !["clean", "working"].includes(scenario);
 const applications = [];
 const member = (id, project) => ({ workspace: "w", project, id, title: `Task ${id}`, working: false,
   files: [{ path: `${id}/ignored.txt`, hash: String(generation) }, ...(generation > 0 ? [{ path: `${id}/new.txt`, hash: "new" }] : [])], inspection: { status: scenario === "inspection" && id === "child" ? "failed" : "complete", ...(scenario === "inspection" && id === "child" ? { error: { message: "Cannot inspect owned files" } } : {}) } });
-// clean: one task with nothing to lose; mixed: a family where only some members list losses.
+// clean: nothing to lose; working: an active turn and no files; cleanfailed: no files but one inspection failed;
+// cleanchanged: a file appears after the preview; mixed: only some members list losses.
 const clean = (id, project) => ({ workspace: "w", project, id, title: `Task ${id}`, working: false, files: [], inspection: { status: "complete" } });
-const family = () => scenario === "clean" ? [clean("t1", "p1")]
+const family = () => scenario === "clean" ? [clean("t1", "p1"), clean("child", "p2")]
+  : scenario === "working" ? [clean("t1", "p1"), { ...clean("child", "p2"), working: true }]
+  : scenario === "cleanfailed" ? [clean("t1", "p1"), { ...clean("child", "p2"), inspection: { status: "failed", error: { message: "Cannot inspect owned files" } } }]
+  : scenario === "cleanchanged" ? [clean("t1", "p1"), generation > 0 ? member("child", "p2") : clean("child", "p2")]
   : scenario === "mixed" ? [member("t1", "p1"), clean("quiet", "p1"), member("child", "p2"), { ...clean("runner", "p2"), working: true }]
   : [member("t1", "p1"), member("child", "p2")];
 const app = await boot("listo", "delete-task-consent", responses({
   machine_list: [{ id: "local", local: true, active: true, on: true, hosts: true, features: scenario === "unsupported" ? [] : ["task_lifecycle_v1"] }],
-  task_lifecycle_preview: () => ({ members: family(), consent: scenario === "inspection" ? null : `snapshot-${++generation}` }),
+  task_lifecycle_preview: () => ({ members: family(), consent: ["inspection", "cleanfailed"].includes(scenario) ? null : `snapshot-${++generation}` }),
   task_lifecycle_apply: args => {
     applications.push(args);
     if (scenario === "partial") return { status: "partial", applied: [{ project: "p2", id: "child" }], failures: [{ project: "p1", id: "t1", error: { message: "Disk removal failed" } }] };
-    if (reject) throw { code: scenario === "refresh" ? "task_family_consent_changed" : scenario === "busy" ? "task_family_busy" : "operation_failed", detail: "family", message: "Family contents changed" };
+    if (reject) throw { code: ["refresh", "cleanchanged"].includes(scenario) ? "task_family_consent_changed" : scenario === "busy" ? "task_family_busy" : "operation_failed", detail: "family", message: "Family contents changed" };
     return { status: "complete", applied: family().map(({ project, id }) => ({ project, id })), failures: [] };
   },
 }));
@@ -40,7 +45,7 @@ try {
   click(doc.querySelector('[data-session-confirm]'), 'button', "Borrar la tarea");
   await sleep(250);
   const dialog = () => doc.querySelector('[role="dialog"]');
-  assert.ok(dialog());
+  if (!["clean", "working"].includes(scenario)) assert.ok(dialog());
   if (scenario === "unsupported") {
     assert.match(dialog().textContent, /no admite el borrado/);
     assert.equal(app.commands.includes("task_lifecycle_preview"), false);
@@ -51,22 +56,35 @@ try {
   const remove = () => [...dialog().querySelectorAll('button')].find(el => el.textContent.trim() === "Borrar la tarea");
   const reviewAll = () => dialog().querySelector('[data-delete-review-all]');
   const boxes = () => [...dialog().querySelectorAll('input[type="checkbox"]:not([data-delete-review-all])')];
-  if (scenario === "clean") {
-    assert.match(dialog().textContent, /No hay archivos pendientes/);
-    assert.equal(boxes().length, 0, "a task without losses asks for no acceptance");
-    assert.equal(reviewAll(), null);
-    assert.equal(remove().disabled, false);
-    reject = false;
-    remove().click();
-    await sleep(150);
-    assert.equal(dialog(), null);
-    assert.deepEqual(applications.map(args => [args.consent, args.discard]), [["snapshot-1", true]]);
+  if (scenario === "clean" || scenario === "working") {
+    assert.equal(dialog(), null, "a family without losses opens no second window");
+    assert.deepEqual(applications.map(args => [args.consent, args.discard]), [["snapshot-1", false]]);
     assert.deepEqual(app.failures, []);
-    console.log("PASS: a task without losses is deleted without acceptance");
+    console.log(`PASS: ${scenario}: a family without losses is deleted directly`);
+    process.exit(0);
+  }
+  if (scenario === "cleanfailed") {
+    assert.ok(dialog(), "a failed inspection is not treated as having no losses");
+    assert.match(dialog().textContent, /No se pudo completar la inspección/);
+    assert.equal(remove().disabled, true);
+    assert.equal(applications.length, 0);
+    console.log("PASS: a failed inspection opens the review and deletes nothing");
+    process.exit(0);
+  }
+  if (scenario === "cleanchanged") {
+    assert.ok(dialog(), "a change after the inspection opens the review");
+    assert.equal(applications.length, 1, "the engine refusal is never reapplied automatically");
+    assert.equal(generation, 2);
+    assert.match(dialog().textContent, /child\/new.txt/);
+    assert.match(dialog().textContent, /La lista se actualizó/);
+    assert.equal(remove().disabled, true, "the new losses require acceptance");
+    assert.ok(boxes().length > 0);
+    console.log("PASS: a family that changes after its inspection keeps the protection");
     process.exit(0);
   }
   if (scenario === "mixed") {
-    assert.equal(boxes().length, 3, "only members with listed losses or an active turn ask for acceptance");
+    assert.equal(boxes().length, 2, "only members with listed files ask for acceptance");
+    assert.match(dialog().textContent, /turno activo/, "an active turn is reported without asking for acceptance");
     assert.ok(reviewAll(), "several members with losses offer accept all");
     assert.equal(remove().disabled, true);
     boxes()[0].click();
