@@ -8,6 +8,7 @@
   "settings.account_card.connected": "connected",
   "settings.account_card.disconnected": "not connected",
   "settings.account_card.in_use": "In use by a task; usage updates when it finishes.",
+  "settings.account_card.machine_off": "machine off",
   "settings.account_card.not_asked": "not asked yet",
   "settings.account_card.progress": "{name}: you have {left}% of {window} left, {when}",
   "settings.account_card.remaining": "left",

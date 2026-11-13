@@ -53,7 +53,7 @@ import { createEngineWorkspaces, railOf } from "./engine-workspaces";
 import { machineNamesChanged, refetchMachines } from "./store";
 import type { WslChild } from "./wsl";
 import { guestChannels } from "./guestChannels";
-import { CLOUD_RETRY_MS, createCloudMachines, EDGE_ENDPOINT } from "./cloud-machines";
+import { CLOUD_RETRY_MS, cloudInfo, cloudLink, createCloudMachines, EDGE_ENDPOINT } from "./cloud-machines";
 import { createGuestLink, guestMachineInfo, isGuestMachine, wakeGuestMachine } from "./guestLink";
 
 type Internals = { invoke: Invoke };
@@ -156,6 +156,9 @@ export function startAccountMachines(target: Target = window) {
     void organizations?.().then((selector) => selector.report(e));
   });
   let cloudIds = new Set<string>();
+  /** El estado de cada máquina de la nube según `/v1/machines`: vale mientras su canal no diga otro (un ticket no se emite con la máquina apagada). */
+  let cloudStates = new Map<string, MachineState>();
+  const machineInfo = (c: Computer): MachineInfo => (cloudIds.has(c.computer_id) ? cloudInfo(infoOf(c)) : infoOf(c));
   /** `machines.session.renew` anunciada por el borde: el relay renueva dentro del canal. */
   let cloudRenew = false;
   let cloudRetry: ReturnType<typeof setTimeout> | null = null;
@@ -163,6 +166,7 @@ export function startAccountMachines(target: Target = window) {
     const { available, computers, renewInChannel } = await cloud.rows();
     cloudRenew = renewInChannel;
     cloudIds = new Set(computers.map((c) => c.computer_id));
+    cloudStates = new Map(computers.map((c) => [c.computer_id, c.state as MachineState]));
     if (!available && !cloudRetry) {
       // «No disponible»: el servidor aún no la tiene o no hay sesión; se reintenta solo.
       cloudRetry = setTimeout(() => {
@@ -246,7 +250,7 @@ export function startAccountMachines(target: Target = window) {
         if (isGuestMachine(info.id)) return createGuestLink(info.id);
         if (cloudIds.has(info.id)) {
           // Canal de datos con ticket de un solo uso (`ticket.*`), nunca `bearer.*`.
-          return new RelaySession({
+          const relay = new RelaySession({
             endpoint: EDGE_ENDPOINT,
             computerId: info.id,
             getAdmission: async () => {
@@ -257,6 +261,7 @@ export function startAccountMachines(target: Target = window) {
             renewInChannel: () => cloudRenew,
             onUnauthorized: () => void sync(),
           });
+          return cloudLink(relay, () => cloudStates.get(info.id));
         }
         if (endpoint === null) throw { code: "unknown_machine", detail: info.id };
         return new RelaySession({
@@ -316,7 +321,7 @@ export function startAccountMachines(target: Target = window) {
       engineFeatures: engineWorkspaces.features,
       home: () => ({ wakes: homeWakes, os: homeOs, features: homeFeatures, version: homeVersion }),
     });
-    fleet.setMachines([...others.map(infoOf), ...guestMachines]);
+    fleet.setMachines([...others.map(machineInfo), ...guestMachines]);
     observeEngine(fleet);
     fleet.subscribeEvents();
     const screens =
@@ -474,7 +479,7 @@ export function startAccountMachines(target: Target = window) {
 
     // The same account: machines that came, left or changed name are applied live, without tearing the rest down.
     if (installed?.key === key) {
-      installed.fleet.setMachines([...others.map(infoOf), ...guestMachines]);
+      installed.fleet.setMachines([...others.map(machineInfo), ...guestMachines]);
       observeEngine(installed.fleet);
       machineNamesChanged();
       return void refetchMachines();
@@ -489,7 +494,7 @@ export function startAccountMachines(target: Target = window) {
     const cloudRows = await readCloud();
     if (!guests.length && !cloudRows.length) return disconnect();
     if (installed?.key === LOCAL_KEY) {
-      installed.fleet.setMachines([...cloudRows.map(infoOf), ...guests]);
+      installed.fleet.setMachines([...cloudRows.map(machineInfo), ...guests]);
       machineNamesChanged();
       return void refetchMachines();
     }

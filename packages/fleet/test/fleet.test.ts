@@ -9,8 +9,12 @@ import { type CallResult, type DeferredFrame, type EventsPage, INTENT_COMMANDS, 
 import { Fleet, type FleetError, type Link, type MachineInfo, PASSIVE, type Slice, SLICES_KEY, classOf } from "../src/index.ts";
 
 type Answer = unknown | ((args: Record<string, unknown>) => unknown);
-/** `errors`: what the relay answers the next calls, in order, before answering normally. */
-type FakeOptions = { state?: MachineState; answers?: Record<string, Answer>; delay?: number; cachedAt?: string | null; error?: string; errors?: string[] };
+/**
+ * `errors`: what the relay answers the next calls, in order, before answering normally.
+ * `ticket`: the MVP data channel (`machine-session.v1`): an intent never starts the machine,
+ * the call waits for a socket that cannot open until its deadline, like `RelaySession`.
+ */
+type FakeOptions = { state?: MachineState; answers?: Record<string, Answer>; delay?: number; cachedAt?: string | null; error?: string; errors?: string[]; ticket?: boolean };
 
 /** Una sesión de relay en memoria: contesta de `answers`, tarda `delay` y vence como `RelaySession` (`io/timeout`). */
 function fakeLink(options: FakeOptions = {}) {
@@ -81,6 +85,7 @@ function fakeLink(options: FakeOptions = {}) {
             link.queueFrame({ actions: [...queue.actions, { id, command, workspace, folder: null, args, queued_at }], done: [] });
             return resolve({ value: null, cached: null, deferred: { queued_at } });
           }
+          if (options.ticket && !isDeferrable(command)) return void setTimeout(() => reject({ code: "io", detail: "timeout" }), timeout);
           // Como el relay: un intent enciende la VM y se entrega con su `hello`.
           if (INTENT_COMMANDS.has(command)) {
             link.setState("starting");
@@ -343,6 +348,33 @@ test("an intent to an off VM goes to the relay, which starts it, with the intent
   assert.equal(link("cmp_vm").calls.length, 1, "sent once");
   assert.equal(link("cmp_vm").calls[0].timeout, 400);
   assert.equal(fleet.power("cmp_vm"), "on");
+});
+
+for (const command of ["send_message", "add_account", "login_account"]) {
+  test(`${command} to an off machine its control plane starts (MVP ticket channel) starts it first, then delivers it once`, async () => {
+    const woken: string[] = [];
+    const CLOUD: MachineInfo = { ...VM, starts: "control_plane" };
+    const { fleet, link } = setup({ cmp_vm: { state: "stopped", ticket: true, answers: { [command]: "a1" } } }, [CLOUD], {
+      wake: async (machine) => {
+        woken.push(machine);
+        setTimeout(() => link(machine).setState("online"), 20);
+        return true;
+      },
+    });
+    await fleet.call({ machine: "cmp_vm", workspace: "w", command, args: { provider: "claude" } });
+    assert.deepEqual(woken, ["cmp_vm"], "the ticket channel does not start it: the control plane does, before the call");
+    assert.equal(link("cmp_vm").calls.length, 1, "delivered once, after it came online");
+    assert.equal(fleet.power("cmp_vm"), "on");
+  });
+}
+
+test("an intent to an off control-plane machine that cannot be started fails at once with machine_off, never waits its deadline", async () => {
+  const CLOUD: MachineInfo = { ...VM, starts: "control_plane" };
+  const { fleet, link } = setup({ cmp_vm: { state: "stopped", ticket: true } }, [CLOUD], { wake: async () => "not_startable" });
+  const started = Date.now();
+  await assert.rejects(fleet.call({ machine: "cmp_vm", workspace: "w", command: "add_account", args: {} }), (e: FleetError) => e.code === "machine_off" && !e.canWake);
+  assert.ok(Date.now() - started < 200, "named failure before the intent deadline");
+  assert.equal(link("cmp_vm").calls.length, 0);
 });
 
 test("a machine whose engine speaks another contract is marked outdated and cleared by its next compatible hello", async () => {

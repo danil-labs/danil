@@ -8,6 +8,7 @@
   "settings.account_card.connected": "conectada",
   "settings.account_card.disconnected": "sin conectar",
   "settings.account_card.in_use": "En uso por una tarea; el consumo se actualiza al terminar.",
+  "settings.account_card.machine_off": "máquina apagada",
   "settings.account_card.not_asked": "todavía sin preguntar",
   "settings.account_card.progress": "{name}: te queda {left}% de {window}, {when}",
   "settings.account_card.remaining": "resta",
