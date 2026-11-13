@@ -412,6 +412,7 @@
   "projects.sessions.delete_busy": "Another operation is in progress. Wait a moment and try deleting again.",
   "projects.sessions.delete_partial": "Deletion completed partially. Review the remaining tasks again.",
   "projects.sessions.delete_inspecting": "Inspecting tasks and their files…",
+  "projects.sessions.deleting": "Deleting the task…",
   "projects.sessions.delete_inspected": "Inspection complete",
   "projects.sessions.delete_inspection_failed": "Inspection could not be completed. Confirmation is blocked.",
   "projects.sessions.delete_working": "This task has an active turn. Deletion will request that it stop.",

@@ -5,14 +5,15 @@ import { responses } from "./push-fixture.mjs";
 const scenario = process.argv[2] ?? "stale";
 let generation = 0;
 // Families without losses are applied as soon as the preview returns.
-let reject = !["clean", "working"].includes(scenario);
+let reject = !["clean", "working", "concurrent"].includes(scenario);
+const previews = [];
 const applications = [];
 const member = (id, project) => ({ workspace: "w", project, id, title: `Task ${id}`, working: false,
   files: [{ path: `${id}/ignored.txt`, hash: String(generation) }, ...(generation > 0 ? [{ path: `${id}/new.txt`, hash: "new" }] : [])], inspection: { status: scenario === "inspection" && id === "child" ? "failed" : "complete", ...(scenario === "inspection" && id === "child" ? { error: { message: "Cannot inspect owned files" } } : {}) } });
 // clean: nothing to lose; working: an active turn and no files; cleanfailed: no files but one inspection failed;
 // cleanchanged: a file appears after the preview; mixed: only some members list losses.
 const clean = (id, project) => ({ workspace: "w", project, id, title: `Task ${id}`, working: false, files: [], inspection: { status: "complete" } });
-const family = () => scenario === "clean" ? [clean("t1", "p1"), clean("child", "p2")]
+const family = () => ["clean", "concurrent"].includes(scenario) ? [clean("t1", "p1"), clean("child", "p2")]
   : scenario === "working" ? [clean("t1", "p1"), { ...clean("child", "p2"), working: true }]
   : scenario === "cleanfailed" ? [clean("t1", "p1"), { ...clean("child", "p2"), inspection: { status: "failed", error: { message: "Cannot inspect owned files" } } }]
   : scenario === "cleanchanged" ? [clean("t1", "p1"), generation > 0 ? member("child", "p2") : clean("child", "p2")]
@@ -20,7 +21,7 @@ const family = () => scenario === "clean" ? [clean("t1", "p1"), clean("child", "
   : [member("t1", "p1"), member("child", "p2")];
 const app = await boot("listo", "delete-task-consent", responses({
   machine_list: [{ id: "local", local: true, active: true, on: true, hosts: true, features: scenario === "unsupported" ? [] : ["task_lifecycle_v1"] }],
-  task_lifecycle_preview: () => ({ members: family(), consent: ["inspection", "cleanfailed"].includes(scenario) ? null : `snapshot-${++generation}` }),
+  task_lifecycle_preview: args => (previews.push(args.id), scenario === "concurrent" ? sleep(500) : Promise.resolve()).then(() => ({ members: family(), consent: ["inspection", "cleanfailed"].includes(scenario) ? null : `snapshot-${++generation}` })),
   task_lifecycle_apply: args => {
     applications.push(args);
     if (scenario === "partial") return { status: "partial", applied: [{ project: "p2", id: "child" }], failures: [{ project: "p1", id: "t1", error: { message: "Disk removal failed" } }] };
@@ -45,6 +46,22 @@ try {
   click(doc.querySelector('[data-session-confirm]'), 'button', "Borrar la tarea");
   await sleep(250);
   const dialog = () => doc.querySelector('[role="dialog"]');
+  if (scenario === "concurrent") {
+    assert.match(doc.body.textContent, /Borrando la tarea…/, "the hidden phase shows its progress");
+    doc.querySelector('[data-sesion="t2"] [aria-haspopup="menu"]').click();
+    await sleep(100);
+    click(doc, '[role="menuitem"]', "Borrar la tarea");
+    await sleep(100);
+    click(doc.querySelector('[data-session-confirm]'), 'button', "Borrar la tarea");
+    await sleep(700);
+    assert.deepEqual(previews, ["t1"], "a second deletion waits for the first one");
+    assert.deepEqual(applications.map(args => [args.id, args.consent]), [["t1", "snapshot-1"]]);
+    assert.equal(dialog(), null);
+    assert.doesNotMatch(doc.body.textContent, /Borrando la tarea…/);
+    assert.deepEqual(app.failures, []);
+    console.log("PASS: a second deletion does not take over the hidden one");
+    process.exit(0);
+  }
   if (!["clean", "working"].includes(scenario)) assert.ok(dialog());
   if (scenario === "unsupported") {
     assert.match(dialog().textContent, /no admite el borrado/);

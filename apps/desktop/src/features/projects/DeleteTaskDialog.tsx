@@ -6,6 +6,7 @@ import { t } from "../../lib/i18n";
 import { Button } from "../../ui/Button";
 import { Dialog, DialogContent, DialogTitle } from "../../ui/Dialog";
 import { detalleDe, prosaDe } from "../../ui/Failure";
+import { Toast, ToastPortal } from "../../ui/Toast";
 
 export type DeleteMember = {
   workspace: string;
@@ -108,7 +109,7 @@ export default function DeleteTaskDialog(props: {
     if (ready() && members().every(member => !needsReview(member))) await apply();
     else setShown(true);
   });
-  return <Show when={shown()}><Dialog open onOpenChange={open => { if (!open && !busy()) props.onClose(); }}>
+  return <Show when={shown()} fallback={<ToastPortal><Toast tone="status"><p class="m-0 text-ui text-neutral-700">{t("projects.sessions.deleting")}</p></Toast></ToastPortal>}><Dialog open onOpenChange={open => { if (!open && !busy()) props.onClose(); }}>
     <DialogContent class="flex flex-col gap-3">
       <DialogTitle class="text-body font-semibold">{t("projects.sessions.delete_work_title")}</DialogTitle>
       <p class="m-0 text-ui text-neutral-700">{t("projects.sessions.delete_work")}</p>
