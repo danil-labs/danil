@@ -1,15 +1,8 @@
-Danil 0.3.1 trae Danil Business, el acceso solo para personas aprobadas y el GitHub de cada persona. Es una pre-release: no reemplaza la versión estable hasta que se promueva.
+Danil 0.3.2 incorpora el acceso por navegador y la conexión a las máquinas de tu organización.
 
-- **Danil Business.** Al primer arranque la app conecta tu cuenta de Danil Business; en la web, Plan y cobro muestra tu plan y descarga la app.
-- **Solicitar acceso.** Solo entran las personas aprobadas. Si tu cuenta no tiene acceso, la app lo dice y te deja solicitarlo.
-- **Tu GitHub.** GitHub se conecta como tu cuenta de IA: es tuyo, no del dueño del workspace, y tus tareas lo usan en cualquier máquina tuya.
-- **Subir y sincronizar.** Un workspace de tu computadora se sube a Danil, se sincroniza y se desvincula desde Configuración.
-- **Máquinas apagadas.** Si la VM está apagada, puedes elegir proyecto y enviar: Danil la enciende y el turno dice «Encendiendo».
-- **Uso.** Configuración → Uso muestra el consumo medido de tu cuenta.
-- **Skills del repositorio.** Aparecen en Configuración y en el menú de `/`, también en medio del texto.
-- **Archivos.** Descarga archivos de una tarea que corre en otra máquina, y ve video, audio, PDF y Typst en la web y el teléfono.
-- **Modelo por tarea.** El modelo que eliges en el chip se guarda en la tarea.
-- **Lista de tareas.** Ordénala por fecha, actividad reciente o estado.
-- **Tauri 2.12.** El actualizador pasa a 2.14.1 y la firma de Windows queda ligada a la versión.
+- **Iniciar sesión.** Entra desde el navegador del sistema y continúa en Danil. El perfil Local sigue disponible sin sesión.
+- **Organizaciones y workspaces.** Elige tu organización y sus workspaces desde el selector. Para usar otro correo, cierra sesión y vuelve a entrar.
+- **Máquinas.** Consulta su estado, enciéndelas y conéctate. Danil muestra «Conectando…» mientras la lista o el canal están pendientes.
+- **Servicios en preparación.** Las rutas del borde que todavía no están disponibles se manejan de forma recuperable. Los reintentos conservan la identidad de las operaciones y respetan la espera del servidor.
 
-El motor y los recursos se fijan por versión y SHA-256. Esta pre-release no cambia el enlace de descargas de la versión estable ni la actualización automática de las copias instaladas: se instala desde su página de GitHub.
+El Router IA gratis con el motor nuevo se incorporará en el siguiente candidato.
