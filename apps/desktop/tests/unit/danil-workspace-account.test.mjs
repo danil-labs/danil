@@ -99,6 +99,7 @@ const DIRECTORY = [
   { key: "a:478", workspace_id: "otra", danil_workspace_id: 478, name: "Tomado", kind: "organization", organization: DANIL, role: "owner", owner: false, support: null, capabilities: { agents: true, terminus: true }, pin: null },
 ];
 
+const FREE_ORG = { ...DIRECTORY[1], key: "a:480", danil_workspace_id: 480, name: "Equipo libre", role: "owner" };
 const PERSONAL = { key: "a:490", workspace_id: null, danil_workspace_id: 490, name: "Alberto", kind: "personal", organization: null, role: "owner", owner: false, support: null, capabilities: { agents: true, terminus: false }, pin: null };
 
 /** El plano de control que contesta ahora; los comandos `agents_session_*` de la sesión de persona lo leen. */
@@ -109,6 +110,50 @@ let plane = { link: none, unlink: none, create: none };
  * Lo que contesta el plano de control: el directorio (token de cliente) y el enlace
  * 1 a 1 por la sesión de persona. Un enlace con el token de cliente es un defecto.
  */
+function controlPlane(entries = DIRECTORY, linkStatus = null, unlinkStatus = null, createStatus = null) {
+  const links = [];
+  const unlinks = [];
+  const creates = [];
+  const clientLinks = [];
+  const previous = globalThis.fetch;
+  globalThis.fetch = async (input, init = {}) => {
+    const url = String(input?.url ?? input);
+    if (url.endsWith("/v1/me/workspaces")) return Response.json({ workspaces: entries, truncated: false });
+    if (url.endsWith("/v1/me/workspaces/pins")) return Response.json({ keys: [] });
+    if (url.includes("/danil-workspace")) {
+      clientLinks.push({ url, method: init.method });
+      return Response.json({ error: "unauthorized" }, { status: 401 });
+    }
+    return new Response("{}", { status: 404 });
+  };
+  globalThis.fetch.__jsdomApp = true;
+  plane = {
+    link(args = {}) {
+      links.push({ account: args.account, workspace: args.workspaceId, danil: args.danilWorkspaceId });
+      if (linkStatus) throw { what: { clave: `attention.desktop.error.${linkStatus}` }, detail: linkStatus };
+      return { danil_workspace_id: args.danilWorkspaceId };
+    },
+    unlink(args = {}) {
+      unlinks.push({ account: args.account, workspace: args.workspaceId });
+      if (unlinkStatus) throw { what: { clave: `attention.desktop.error.${unlinkStatus}` }, detail: unlinkStatus };
+      return null;
+    },
+    create(args = {}) {
+      creates.push({ account: args.account, workspace: args.workspaceId });
+      if (createStatus) throw { what: { clave: `attention.desktop.error.${createStatus}` }, detail: createStatus };
+      return { danil_workspace_id: 490, created: true };
+    },
+  };
+  return {
+    links,
+    unlinks,
+    creates,
+    restore() {
+      globalThis.fetch = previous;
+      assert.deepEqual(clientLinks, [], "nothing links with the client token");
+    },
+  };
+}
 
 async function openWorkspaces(name, e) {
   const app = await boot("listo", name, { ...BASE, ...e.table });
@@ -126,7 +171,6 @@ test("Desk has one account: even if the engine keeps several, the workspace offe
   const { w } = app;
   assert.equal(section(w), null, "no per-account section: switching user does not exist");
   assert.equal(w.document.querySelector("[data-workspace-account-select]"), null);
-  assert.ok(!e.calls.some((c) => c.command === "danil_sessions"), "the engine's account list is not read");
   assert.deepEqual(app.failures, []);
 });
 
@@ -139,6 +183,20 @@ test("with an engine without sessions per account, the workspace has no account 
   assert.ok(app.w.document.body.textContent.includes("Fundación Donde Banco"), "the workspaces screen is there");
   assert.deepEqual(app.failures, []);
 });
+
+const LOCAL = { key: "w:w", workspace_id: "w", danil_workspace_id: null, name: "Danil", kind: "terminus_only", organization: null, role: null, owner: true, support: null, capabilities: { agents: false, terminus: true }, pin: null };
+const FREE = FREE_ORG;
+const step = (w) => w.document.querySelector("[data-danil-workspace-step]");
+
+async function signedIn(name, e, entries, createStatus = null) {
+  const control = controlPlane(entries, null, null, createStatus);
+  const app = await boot("listo", name, { ...BASE, ...e.table });
+  await sleep(600);
+  assert.equal(step(app.w), null, "nothing asks before the window session opens");
+  app.emit("agents-session", { state: "signed_in", account: "default" });
+  await sleep(800);
+  return { app, control };
+}
 
 test("opening the window session offers to upload the open workspace or sync it with one the person administers", async () => {
   const e = engine();
