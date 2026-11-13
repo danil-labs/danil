@@ -2,7 +2,6 @@ import { Channel } from "@tauri-apps/api/core";
 import { invoke } from "../../lib/invoke.ts";
 import { open } from "@tauri-apps/plugin-dialog";
 import { Show, createEffect, createMemo, createSignal, on } from "solid-js";
-import RepositoryPicker from "./RepositoryPicker";
 import { type ProjectRepository } from "../../lib/projectRepositories";
 import { Button } from "../../ui/Button";
 import { Dialog, DialogContent, DialogTitle } from "../../ui/Dialog";
@@ -14,7 +13,10 @@ import { t } from "../../lib/i18n";
 import { capabilities } from "../../lib/platform";
 import { leerPref } from "../../lib/prefs";
 import type { Project } from "../../lib/model";
+import { LazyPart, retryableLazy } from "../../ui/LazyPart";
 import { machineName, machines, runOn } from "../machines/store";
+
+const RepositoryPicker = retryableLazy(() => import("./RepositoryPicker"));
 
 /**
  * El clon que corre ahora mismo, tal y como lo pinta el riel.
@@ -342,10 +344,12 @@ export default function AnadirCarpeta(props: {
         <div class="grid gap-2 pt-3">
           <Show when={camino() === null}>
             <Show when={props.abierto ? props.workspace : null} keyed>{workspace =>
-              <RepositoryPicker workspace={workspace} disabled={trabajando()}
-                onUrl={() => { setProvider(null); setRepositoryName(""); void elegirCamino("clonar"); }}
-                onFolder={remota() ? undefined : () => void explorar()} onEmpty={() => void elegirCamino("vacia")}
-                onRepository={repo => void chooseRepository(repo)} />
+              <LazyPart fallback={<p role="status" class="m-0 text-xs text-neutral-500">{t("projects.add.loading_repositories")}</p>}>
+                <RepositoryPicker workspace={workspace} disabled={trabajando()}
+                  onUrl={() => { setProvider(null); setRepositoryName(""); void elegirCamino("clonar"); }}
+                  onFolder={remota() ? undefined : () => void explorar()} onEmpty={() => void elegirCamino("vacia")}
+                  onRepository={repo => void chooseRepository(repo)} />
+              </LazyPart>
             }</Show>
           </Show>
 

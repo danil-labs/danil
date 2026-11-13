@@ -1,30 +1,12 @@
 #!/usr/bin/env node
 /**
- * **Que el front monte.** Arranca `dist/` de verdad y falla si el árbol no llega
- * a pintarse.
- *
- * Los guardas `mount-*` ejecutan el árbol en vez de leerlo, y esa es la clase
- * entera que cubre: **lo que solo se rompe al ejecutar**. Un prop compuesto con
- * `&&` dentro del JSX entrega `false` y no `null` —el compilador de Solid lo
- * booleaniza para memoizarlo—, así que el hijo lanza en el primer render y la
- * app abre en el esqueleto de `Setup`. `tsc` no puede verlo: para TypeScript esa
- * expresión es `T[] | null`, y la reescritura ocurre después, en Babel.
- *
- * **En jsdom y no en un navegador**, porque un guarda no puede abrirle una
- * ventana en la cara a nadie: con varias ramas en QA, una que aparece sola se
- * confunde con la que alguien está mirando. Lo que cuesta: jsdom no es WebKit ni
- * WebView2, así que esto afirma que **el árbol monta**, no que se vea bien.
- *
- * **El IPC va stubeado, y el stub es parte del guarda.** Sin
- * `__TAURI_INTERNALS__` el primer `invoke` rechaza y `Setup` no llega a montar
- * `App`, que es el código que hay que ejercitar. Un comando sin respuesta **no**
- * rompe el guarda: se rechaza igual que rechazaría un backend que falla. Se
- * arranca con la lista de superficies vacía a propósito, que es el instante en
- * que se rompió.
+ * Monta dist/ en jsdom con IPC simulado y lista de superficies vacía (primer arranque).
+ * Solid convierte `a && <B/>` en `false` dentro del JSX y el hijo lanza: tsc no lo ve.
+ * Verifica que el árbol monta, no su aspecto nativo.
  */
 import assert from "node:assert/strict";
 import { sleep } from "../../tests/helpers/jsdom-app.mjs";
-import { WITH_TASK, boot, keepActiveView } from "../../tests/helpers/mount-guard.mjs";
+import { RESPONSES, WITH_TASK, boot, keepActiveView } from "../../tests/helpers/mount-guard.mjs";
 
 /**
  * **El esqueleto de `Setup` es el síntoma exacto**, no una pantalla más.
@@ -37,7 +19,12 @@ import { WITH_TASK, boot, keepActiveView } from "../../tests/helpers/mount-guard
 const inSkeleton = (html) => html.includes("setup-card") && html.includes("aria-busy");
 
 const t0 = Date.now();
-const normal = await boot("listo", 1);
+// A note-less model first: the note must be read from the option for its model, not from the first row.
+const models = [
+  { id: "gpt-5.5", label: "GPT-5.5", gratis: null, efforts: [], default_effort: null, note: null },
+  ...RESPONSES.list_models.models,
+];
+const normal = await boot("listo", 1, { ...RESPONSES, list_models: { ...RESPONSES.list_models, models } });
 
 const broken = normal.failures.length > 0 || !normal.painted.trim() || inSkeleton(normal.painted);
 
@@ -77,9 +64,10 @@ if (!broken) {
   await sleep(50);
   const modelGroups = [...normal.w.document.querySelectorAll('[role="group"]')]
     .map((groupEl) => groupEl.getAttribute("aria-label"));
-  const modelNote = normal.w.document.querySelector('[role="option"]')?.getAttribute("title");
-  assert.equal(modelNote, "en esta computadora, con Ollama", "a model note from the app goes through the catalogue");
-  if (separateSelector || modelButton?.getAttribute("aria-label") !== "Modelo: GPT-5.6") {
+  const modelNote = [...normal.w.document.querySelectorAll('[role="option"]')]
+    .find((option) => option.textContent.includes("GPT-5.6"))?.getAttribute("title");
+  assert.equal(modelNote, "el más capaz", "a model note from the app goes through the catalogue");
+  if (separateSelector || modelButton?.getAttribute("aria-label") !== "Modelo: GPT-5.5") {
     console.error(
       `El chat no arrancó en el modelo usable del selector único: modelo=${JSON.stringify(modelButton?.getAttribute("aria-label"))}, grupos=${JSON.stringify(modelGroups)}.`,
     );
@@ -101,7 +89,7 @@ if (!broken) {
     process.exit(1);
   }
   const modelAfterStart = normal.w.document.querySelector(
-    'button[aria-label="Modelo: GPT-5.6"]',
+    'button[aria-label="Modelo: GPT-5.5"]',
   );
   modelAfterStart?.dispatchEvent(new normal.w.MouseEvent("click", { bubbles: true }));
   await sleep(50);
