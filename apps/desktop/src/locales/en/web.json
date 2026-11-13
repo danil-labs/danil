@@ -231,6 +231,7 @@
   "web.platform.empty": "You have nothing yet. Create a plan.",
   "web.platform.active": "Active",
   "web.platform.sign_out": "Sign out",
+  "web.platform.preparing": "Preparing your account…",
   "web.platform.denied": "You do not have access to this resource.",
   "web.platform.unavailable": "The request could not be completed. Try again.",
   "web.alpha.ai_assistance": "AI assistance",

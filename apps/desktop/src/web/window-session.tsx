@@ -4,10 +4,11 @@ import { machinesClient } from '@terminus/computers';
 import { aplicarLengua, t } from '../lib/i18n';
 import { setShellCacheScope } from '../lib/shellCache';
 import { seguirElTema } from '../lib/theme';
+import { Spinner } from '../ui/Spinner';
 import { Button } from '../ui/Button';
 import { ToastStack } from '../ui/Toast';
 import { webAccountProfile } from './account';
-import { platformSession, platformTransport, PlatformSessionError, type PlatformWorkspace, type PlatformProfile } from './platform-session';
+import { platformSession, platformTransport, PlatformSessionError, preparePlatformSession, type PlatformWorkspace, type PlatformProfile } from './platform-session';
 import type { WebSessionDeployment } from './session-config';
 import { workspaceSelection } from './workspace-selection';
 import { readCapabilities, supports, type CapabilitiesSnapshot } from './service-capabilities';
@@ -15,9 +16,9 @@ import { UpdateNotice } from './UpdateNotice';
 import { WorkosAuthPage, signInError } from './auth/workos';
 import { mountWindow } from './window';
 import { sessionStorageScope, clearWebCaches } from './session-storage';
-import { createOrganizationSelection } from '../features/shell/organization-selection';
+import { createOrganizationSelection, hasActiveOrganization } from '../features/shell/organization-selection';
 import { webOrganizationSource } from './organizations';
-import PromoRedeem from '../features/shell/PromoRedeem';
+import { sessionPromoRedemption } from './promo-redemption';
 import './phrases';
 
 declare const __DANIL_WEB_RELAY_ORIGINS__: string[];
@@ -29,7 +30,9 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
     aplicarLengua();
     seguirElTema();
     const lifetime = new AbortController();
-    const request: typeof fetch = (input, init = {}) => lifetime.signal.aborted ? Promise.reject(new DOMException('The page was closed', 'AbortError')) : fetch(input, { ...init, signal: init.signal ? AbortSignal.any([init.signal, lifetime.signal]) : lifetime.signal });
+    let startupSignal: AbortSignal | undefined;
+    const [preparing, setPreparing] = createSignal(false);
+    const request: typeof fetch = (input, init = {}) => lifetime.signal.aborted ? Promise.reject(new DOMException('The page was closed', 'AbortError')) : fetch(input, { ...init, signal: AbortSignal.any([lifetime.signal, ...(startupSignal ? [startupSignal] : []), ...(init.signal ? [init.signal] : [])]) });
     const api = platformSession(options, request);
     const raw = platformTransport(options, request);
     const selection = workspaceSelection(api);
@@ -59,10 +62,10 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
       windowApp = undefined;
       disposeGate?.();
       root.replaceChildren();
-      disposeGate = render(() => <Show when={identified() && !signedOut()} fallback={<><ToastStack><UpdateNotice /></ToastStack><Show when={signedOut()} fallback={<main class="flex h-full flex-col items-center justify-center gap-4 bg-bg text-neutral-950" data-web-session-loading="" aria-busy="true"><h1 class="m-0 font-display text-lead font-bold">{t('common.brand_name')}</h1><p role="status">{t('web.auth.waiting')}</p></main>}><WorkosAuthPage loginUrl={api.loginUrl(home)} busy={false} error={returnError} /></Show></>}><main class="flex h-full flex-col gap-4 overflow-y-auto bg-bg p-10 text-neutral-950" data-web-gate="">
+      disposeGate = render(() => <Show when={(identified() || preparing()) && !signedOut()} fallback={<><ToastStack><UpdateNotice /></ToastStack><Show when={signedOut()} fallback={<main class="flex h-full flex-col items-center justify-center gap-4 bg-bg text-neutral-950" data-web-session-loading="" aria-busy="true"><h1 class="m-0 font-display text-lead font-bold">{t('common.brand_name')}</h1><p role="status">{t('web.auth.waiting')}</p></main>}><WorkosAuthPage loginUrl={api.loginUrl(home)} busy={false} error={returnError} /></Show></>}><main class="flex h-full flex-col gap-4 overflow-y-auto bg-bg p-10 text-neutral-950" data-web-gate="">
         <ToastStack><UpdateNotice /></ToastStack>
         <h1 class="m-0 font-display text-lead font-bold">{t('common.brand_name')}</h1>
-        <Show when={busy()}><p role="status">{t('web.auth.waiting')}</p></Show>
+        <Show when={busy()}><p class="flex items-center gap-2" role="status"><Spinner />{t(preparing() ? 'web.platform.preparing' : 'web.auth.waiting')}</p></Show>
         <Show when={error()}><p role="alert">{t(error())}</p><Button disabled={busy()} onClick={() => void load()}>{t('web.computers.retry')}</Button></Show>
         <Show when={!signedOut() && !busy()}>
           <Show when={orgNeeded() || noWorkspace() || error()}>
@@ -72,7 +75,6 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
             <p>{t('web.platform.empty')}</p>
             <For each={rows()}>{row => <Button onClick={() => void choose(row.id)}>{row.name}</Button>}</For>
           </Show>
-          <PromoRedeem redeem={redeemPromo} />
           <Button variant="ghost" data-web-sign-out="" onClick={() => void logout()}>{t('web.platform.sign_out')}</Button>
         </Show>
       </main></Show>, root);
@@ -178,10 +180,11 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
       gate();
       await run(async () => { await selection.choose(id); window.location.assign(home); });
     }
-    const redeemPromo = (code: string, key: string) => authorized(() => api.redeemPromo(code, key));
+    const redeemPromo = sessionPromoRedemption((code, key) => authorized(() => api.redeemPromo(code, key)));
     async function logout() { await run(async () => { await api.logout(); expired(); }); }
     async function load() {
-      await run(async () => {
+      const read = async (signal?: AbortSignal) => {
+        startupSignal = signal;
         // Las lecturas no dependen entre sí; identity sigue siendo quien decide la sesión.
         let initialMachines: ReturnType<typeof machines.list> | undefined;
         const discovered = readCapabilities(transport).then(snapshot => {
@@ -191,13 +194,19 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
         const directory = Promise.allSettled([discovered, api.workspaces()]);
         person = await api.me();
         await selection.reconcile(person);
-        if (mountedBefore) { window.location.assign(home); return; }
+        if (mountedBefore) { window.location.assign(home); return true; }
         const [capabilities, listed] = await directory;
         if (capabilities.status === 'fulfilled') setCaps(capabilities.value);
         else if (capabilities.reason instanceof PlatformSessionError && capabilities.reason.status === 401) throw capabilities.reason;
         // Con sesión: el selector se lee una vez y, si la ruta aún no existe, se reintenta solo.
         readOrganizations();
-        if (person.workspace === null) { await withoutWorkspace(listed.status === 'fulfilled' ? listed.value : undefined); return; }
+        if (person.workspace === null) {
+          await organizations.load();
+          organizationsLoaded = true;
+          await withoutWorkspace(listed.status === 'fulfilled' ? listed.value : undefined);
+          const state = organizations.state();
+          return state.kind === 'ready' && (state.active !== null || state.items.length > 1);
+        }
         if (permits('workspaces') && listed.status === 'rejected') throw listed.reason;
         const workspaces = permits('workspaces') && listed.status === 'fulfilled' ? listed.value : [];
         if (stopped || signedOut()) return;
@@ -213,7 +222,7 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
           profile: webAccountProfile(transport), onUnauthorized: expired,
           onUnavailable: () => { setError('web.platform.unavailable'); gate(); later(); },
           workspaces: { rows, active, busy, uncertain, choose: id => void choose(id) },
-          organizations: loadOrganizations, promo: redeemPromo,
+          organizations: loadOrganizations, promo: () => !orgNeeded() && hasActiveOrganization(orgState()) ? redeemPromo : undefined,
         }, { storage: cache.storage, webAccounts: {
           current: { user_id: person.id, name: person.name, email: null, extra: false },
           others: () => [], open: () => {}, add: () => {}, remove: async () => {}, signOut: () => void logout(),
@@ -221,6 +230,22 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
         void windowApp.refresh().then(ready => later(ready ? POLL_MAX_MS : FIRST_RETRY_MS)).catch(() => {
           setError('web.platform.unavailable'); gate(); later();
         });
+        return true;
+      };
+      await run(async () => {
+        try {
+          if (mountedBefore) await read();
+          else {
+            const ready = await preparePlatformSession(read, lifetime.signal, () => {
+              setPreparing(true);
+              gate();
+            }, value => value !== false);
+            if (ready === false && !stopped && !signedOut()) {
+              setError('web.platform.unavailable');
+              gate();
+            }
+          }
+        } finally { startupSignal = undefined; setPreparing(false); }
       });
     }
     const close = () => { stopped = true; clearTimeout(timer); lifetime.abort(); windowApp?.close(); disposeGate?.(); dispose(); };
