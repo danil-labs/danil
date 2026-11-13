@@ -11,7 +11,8 @@ import { ITEM_DE_MENU, Popover, PopoverAnchor, PopoverContent, PopoverTrigger } 
 import { RETARDO_TOOLTIP, TooltipContent, TooltipRoot, TooltipTrigger } from "../../ui/Tooltip";
 import { taskLabel } from "../projects/TaskStatus";
 import { SignalDot, taskSignalTone } from "../../ui/SignalDot";
-import { cerrarConEscape, createWorkspaces, type Workspace } from "../settings/workspaces-store";
+import { cerrarConEscape, createRail } from "../settings/workspaces-store";
+import type { RailWorkspace } from "../machines/engine-workspaces";
 import { topState, type AttentionState, type WorkspaceAttention } from "./attention";
 import KeepAwake from "./KeepAwake";
 import ProfileMenu from "./ProfileMenu";
@@ -85,7 +86,7 @@ export default function WorkspaceColumn(props: {
   /** Archivadas, Conexiones, Puertos y Almacenamiento: lo que avisa de algo. */
   tools?: JSX.Element;
 }) {
-  const ws = createWorkspaces();
+  const ws = createRail();
   // Con fijados, la barra muestra esos y el abierto; la persona cambia a cualquier otro desde el menú.
   const visibles = () => {
     const bar = workspaceBar(ws.activo() ?? null);
@@ -107,7 +108,7 @@ export default function WorkspaceColumn(props: {
   const stateOf = (id: string) =>
     topState(props.attention.find((w) => w.workspace === id)?.tasks ?? []);
 
-  const Tile = (p: { w: Workspace }) => {
+  const Tile = (p: { w: RailWorkspace }) => {
     const active = () => p.w.id === ws.activo();
     const state = () => stateOf(p.w.id);
     const label = () => {

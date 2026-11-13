@@ -1,3 +1,7 @@
+import { modelPresentation, routerDiscovery } from "../../../../packages/tasks/src/model-presentation.ts";
+export { modelPresentation, routerDiscovery };
+import { canonicalAgentId, isFreeRouterAgent, OPENCODE } from "../../../../packages/tasks/src/agents.ts";
+import { t } from "./i18n.ts";
 import type { AgentModels, ModelOption } from "./model";
 import { esDe, marcaDeSuperficie, type Superficie } from "./surfaces.ts";
 
@@ -42,17 +46,19 @@ export function proveedorDe(
   superficie: Superficie,
   model: ModelOption,
 ) {
-  if (superficie.provider === "opencode-zen") {
-    if (superficie.catalogo === "gratuitos") {
-      return { id: "opencode-free", label: "Danil Free AI", logo: marcaDeSuperficie(superficie) };
+  // El grupo del selector es uno solo para todo el Free Router, sea cual sea su motor.
+  if (isFreeRouterAgent(superficie.provider) || superficie.catalogo === "gratuitos") {
+    return { id: "opencode-free", label: t("surfaces.label.free"), logo: marcaDeSuperficie(superficie) };
+  }
+  // Una máquina con un motor anterior todavía publica `opencode-zen`.
+  if (canonicalAgentId(superficie.provider) === OPENCODE) {
+    if (model.id === "danil-credits/deepseek/deepseek-v4.1-flash") {
+      return { id: "danil-credits", label: t("chat.credits.label"), logo: "danil" };
     }
     if (model.id.startsWith("opencode-go/")) {
       return { id: "opencode-go", label: "OpenCode Go", logo: "opencode" };
     }
-    return { id: "opencode-zen", label: "OpenCode", logo: "opencode" };
-  }
-  if (superficie.provider === "opencode-local") {
-    return { id: "opencode-local", label: "OpenCode Local", logo: "opencode" };
+    return { id: OPENCODE, label: "OpenCode", logo: "opencode" };
   }
   return {
     id: superficie.id,
@@ -139,12 +145,34 @@ export function agruparModelos(
     ) {
       continue;
     }
-    const grupo = grupos.get(proveedor.id) ?? { ...proveedor, models: [] };
+    // Un solo OpenCode: Go. `surfaceHas` deja fuera los modelos que se cobraban
+    // contra el saldo de Zen antes de llegar aquí; el grupo conserva el id de la
+    // superficie y el nombre propio.
+    const visual =
+      proveedor.id === "opencode-go"
+        ? { id: OPENCODE, label: "OpenCode", logo: proveedor.logo }
+        : proveedor;
+    const grupo = grupos.get(visual.id) ?? { ...visual, models: [] };
     grupo.models.push(opcion);
-    grupos.set(proveedor.id, grupo);
+    grupos.set(visual.id, grupo);
   }
 
   return [...grupos.values()];
+}
+
+/**
+ * La sección que contiene el modelo elegido, para abrir el selector ahí.
+ *
+ * No sirve el proveedor tal cual: OpenCode y OpenCode Go comparten una sección,
+ * y buscarla en la lista agrupada es lo que garantiza que exista. `null` si el
+ * modelo guardado ya no está en el catálogo.
+ */
+export function seccionDeModelo(
+  grupos: readonly GrupoDeModelos[],
+  key: string | null | undefined,
+) {
+  if (!key) return null;
+  return grupos.find((grupo) => grupo.models.some((opcion) => opcion.key === key))?.id ?? null;
 }
 
 /**
@@ -187,5 +215,11 @@ export function nombreDeModelo(id: string, catalogo?: AgentModels | null): strin
     const nombre = `Claude ${familia[0].toUpperCase()}${familia.slice(1)}`;
     return version ? `${nombre} ${version.slice(1).replaceAll("-", ".")}` : nombre;
   }
-  return catalogo?.models.find((m) => m.id === limpio)?.label || limpio;
+  return modelPresentation(limpio, catalogo?.models.find((m) => m.id === limpio)?.label).label;
+}
+
+/** La marca del modelo observado no cambia la identidad de su ejecutor. */
+export function modelBrand(agent: string, id?: string | null, catalog?: AgentModels | null): string {
+  return id?.startsWith("danil-free/") || id?.startsWith("danil-credits/") || isFreeRouterAgent(agent) || catalog?.models.some((model) => model.id === id && model.gratis === true)
+    ? "danil" : canonicalAgentId(agent, id);
 }

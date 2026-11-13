@@ -1,25 +1,18 @@
 import { TEXT } from "@terminus/design";
-import type { ProviderInfo } from "@terminus/protocol";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
-import { type FreeModels as FreeRow, freeModelsOf, setProviderConsent } from "../lib/engine";
+import { Linking, Pressable, StyleSheet, Text, View } from "react-native";
+import { type FreeModels as FreeRow, freeModelsOf, changeFreeModels } from "../lib/engine";
 import type { Host } from "../lib/hosts";
-import { phrase, w } from "../lib/i18n";
+import { phrase, t, w } from "../lib/i18n";
 import { BrandMark } from "./BrandMark";
 import { Sheet } from "./Sheet";
 import { type Theme } from "./theme";
 
-type Row = FreeRow & { host: Host; workspace: string };
+export type FreeRouterRow = FreeRow & { host: Host; workspace: string };
+type Row = FreeRouterRow;
 
-/**
- * «Modelos gratuitos» de OpenCode, como el panel de la ventana
- * (`apps/desktop/src/features/settings/Accounts.tsx`, `ModelosGratuitos`): una
- * fila por máquina encendida con el aviso, y Activar o Desactivar. Activar abre
- * el texto del motor (`consent_text`, el mismo que firma la ventana y con su
- * versión) y solo guarda el sí si se pulsa Activar; Cancelar no es un fallo.
- * La clave de Go queda en la ventana.
- */
-export function FreeModels({ hosts, scopeOf, providers, theme, tick }: { hosts: readonly Host[]; scopeOf: (host: Host) => string | null; providers: readonly ProviderInfo[]; theme: Theme; tick: unknown }) {
+/** La aceptación se guarda sólo desde la hoja explícita; cancelar no cambia el workspace. */
+export function FreeModels({ hosts, scopeOf, theme, tick }: { hosts: readonly Host[]; scopeOf: (host: Host) => string | null; theme: Theme; tick: unknown }) {
   const [rows, setRows] = useState<Row[]>([]);
   const [asking, setAsking] = useState<Row | null>(null);
   const [saving, setSaving] = useState(false);
@@ -49,8 +42,8 @@ export function FreeModels({ hosts, scopeOf, providers, theme, tick }: { hosts: 
     setFailed(null);
     try {
       // Lo que quedó guardado, no lo pedido.
-      const saved = await setProviderConsent(row.host, row.workspace, row.provider, accepted);
-      setRows((now) => now.map((r) => (r.host.id === row.host.id && r.provider === row.provider ? { ...r, accepted: saved } : r)));
+      const refreshed = await changeFreeModels(row.host, row.workspace, row, accepted);
+      setRows((now) => [...now.filter((r) => r.host.id !== row.host.id || r.workspace !== row.workspace), ...refreshed.map((r) => ({ ...r, host: row.host, workspace: row.workspace }))]);
       setAsking(null);
       void load();
     } catch {
@@ -61,13 +54,12 @@ export function FreeModels({ hosts, scopeOf, providers, theme, tick }: { hosts: 
   }
 
   if (!rows.length) return null;
-  const nameOf = (provider: string) => providers.find((p) => p.id === provider)?.label ?? provider;
 
   return (
     <View style={styles.section} testID="free-models">
       <View style={styles.head}>
-        <BrandMark id={rows[0].provider} size={18} color={theme.text} />
-        <Text style={[styles.title, { color: theme.text }]}>{w("surfaces.label.free")}</Text>
+        <BrandMark id="danil" size={18} color={theme.text} />
+        <Text style={[styles.title, { color: theme.text }]}>{t("composer.free_models")}</Text>
         <Text style={{ color: theme.textMuted, fontSize: TEXT.ui }}>{w("settings.ai_providers.free_detail")}</Text>
       </View>
       {rows.map((row) => {
@@ -79,14 +71,14 @@ export function FreeModels({ hosts, scopeOf, providers, theme, tick }: { hosts: 
               <Text style={{ color: theme.textMuted, fontSize: TEXT.ui }}>{w("settings.accounts.free.warning_short")}</Text>
             ) : (
               <>
-                <Text style={{ color: theme.textMuted, fontSize: TEXT.ui }}>{w("settings.accounts.free.provider", { provider: nameOf(row.provider) })}</Text>
+                <Text style={{ color: theme.textMuted, fontSize: TEXT.ui }}>{w("settings.accounts.free.provider", { provider: w("settings.ai_providers.free_detail") })}</Text>
                 <Text style={{ color: theme.text, fontSize: TEXT.ui, fontWeight: "600" }}>{w("settings.accounts.free.warning")}</Text>
               </>
             )}
             {failed === id ? <Text accessibilityRole="alert" style={{ color: theme.error, fontSize: TEXT.ui }}>{w("settings.accounts.free.error_save")}</Text> : null}
             {row.accepted ? (
               <View style={styles.row}>
-                <Text style={{ color: theme.success, fontSize: TEXT.ui, fontWeight: "600" }}>{w("settings.accounts.free.active")}</Text>
+                <Text style={{ color: row.usable ? theme.success : theme.textMuted, fontSize: TEXT.ui, fontWeight: "600" }}>{t(row.usable ? "accounts.free_available" : "accounts.free_route_unavailable")}</Text>
                 <Pressable
                   testID={`free-off-${id}`}
                   accessibilityRole="button"
@@ -102,7 +94,7 @@ export function FreeModels({ hosts, scopeOf, providers, theme, tick }: { hosts: 
               <Pressable
                 testID={`free-on-${id}`}
                 accessibilityRole="button"
-                disabled={saving}
+                disabled={saving || !row.policy?.enabled}
                 onPress={() => setAsking(row)}
                 style={[styles.button, { backgroundColor: theme.primary, alignSelf: "flex-start", opacity: saving ? 0.5 : 1 }]}
               >
@@ -113,8 +105,49 @@ export function FreeModels({ hosts, scopeOf, providers, theme, tick }: { hosts: 
         );
       })}
 
+      <FreeConsentSheet
+        row={asking}
+        theme={theme}
+        onClose={() => setAsking(null)}
+        onSaved={(row, refreshed) => {
+          setRows((now) => [...now.filter((r) => r.host.id !== row.host.id || r.workspace !== row.workspace), ...refreshed.map((r) => ({ ...r, host: row.host, workspace: row.workspace }))]);
+          setAsking(null);
+          void load();
+        }}
+      />
+    </View>
+  );
+}
+
+/** La hoja del sí explícito; la usan Ajustes y el selector de modelos. Su error se queda dentro de la hoja. */
+export function FreeConsentSheet({ row, theme, onClose, onSaved }: { row: FreeRouterRow | null; theme: Theme; onClose: () => void; onSaved: (row: FreeRouterRow, refreshed: FreeRow[]) => void }) {
+  const [saving, setSaving] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const [current, setCurrent] = useState<FreeRouterRow | null>(row);
+  useEffect(() => { setFailed(false); setCurrent(row); }, [row]);
+  const asking = row ? current : null;
+
+  async function accept(row: FreeRouterRow) {
+    setSaving(true);
+    setFailed(false);
+    try {
+      // Lo que quedó guardado, no lo pedido.
+      onSaved(row, await changeFreeModels(row.host, row.workspace, row, true));
+    } catch {
+      setFailed(true);
+      // Con la política cambiada se relee y se pide confirmar de nuevo sobre el texto vigente.
+      const fresh = await freeModelsOf(row.host, row.workspace).catch(() => [] as FreeRow[]);
+      const same = fresh.find((r) => r.provider === row.provider);
+      if (same) setCurrent({ ...same, host: row.host, workspace: row.workspace });
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <>
       {/* Cancelar cierra y no activa nada, por cualquier vía: el sí solo existe si se pulsa Activar. */}
-      <Sheet visible={asking !== null} title={w("settings.accounts.consent.title")} onClose={() => setAsking(null)}>
+      <Sheet visible={asking !== null} title={w("settings.accounts.consent.title")} onClose={onClose}>
         {asking ? (
           <View style={styles.consent} testID="free-consent">
             {asking.text.lines.map((line, i) => (
@@ -122,19 +155,24 @@ export function FreeModels({ hosts, scopeOf, providers, theme, tick }: { hosts: 
                 {phrase(line)}
               </Text>
             ))}
-            {failed === `${asking.host.id}/${asking.provider}` ? <Text accessibilityRole="alert" style={{ color: theme.error }}>{w("settings.accounts.free.error_save")}</Text> : null}
+            {asking.policy?.terms.map((term) => (
+              <Pressable key={term.url} accessibilityRole="link" onPress={() => void Linking.openURL(term.url)}>
+                <Text style={{ color: theme.primary }}>{term.label}</Text>
+              </Pressable>
+            ))}
+            {failed ? <Text accessibilityRole="alert" style={{ color: theme.error }}>{w("settings.accounts.free.error_save")}</Text> : null}
             <View style={styles.row}>
-              <Pressable testID="free-consent-cancel" accessibilityRole="button" disabled={saving} onPress={() => setAsking(null)} style={[styles.button, { borderColor: theme.border, borderWidth: 1 }]}>
+              <Pressable testID="free-consent-cancel" accessibilityRole="button" disabled={saving} onPress={onClose} style={[styles.button, { borderColor: theme.border, borderWidth: 1 }]}>
                 <Text style={{ color: theme.text, fontWeight: "600" }}>{w("settings.accounts.consent.cancel")}</Text>
               </Pressable>
-              <Pressable testID="free-consent-accept" accessibilityRole="button" disabled={saving} onPress={() => void change(asking, true)} style={[styles.button, { backgroundColor: theme.primary, opacity: saving ? 0.5 : 1 }]}>
+              <Pressable testID="free-consent-accept" accessibilityRole="button" disabled={saving} onPress={() => void accept(asking)} style={[styles.button, { backgroundColor: theme.primary, opacity: saving ? 0.5 : 1 }]}>
                 <Text style={{ color: theme.onPrimary, fontWeight: "600" }}>{w("settings.accounts.consent.accept")}</Text>
               </Pressable>
             </View>
           </View>
         ) : null}
       </Sheet>
-    </View>
+    </>
   );
 }
 

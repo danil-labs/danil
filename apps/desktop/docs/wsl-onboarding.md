@@ -3,7 +3,7 @@
 **Estado:** PROPUESTA · 2026-11-03
 
 **Toca tres repositorios:** `danil-labs/terminus` (ventana y `packages/`),
-`danil-labs/computers` (plano de control y relay) y `danil-labs/seldon-host`
+`danil-labs/machines` (plano de control y relay) y `danil-labs/seldon-host`
 (motor e instalador).
 
 **Decisión en una línea:** un distro de WSL es una máquina normal de la cuenta:
@@ -273,7 +273,7 @@ comando exacto para copiar, como hace hoy la fila de un servidor de Dray.
   fase 2.
 - `danil-labs/seldon-host`: modo no interactivo del instalador, unidad systemd y
   soporte arm64.
-- `danil-labs/computers`: sin cambios de esquema más allá de lo que ya expone
+- `danil-labs/machines`: sin cambios de esquema más allá de lo que ya expone
   `kind`/`os`/`wakeable`; sí conviene exponer el transporte para la UI.
 
 ## Pruebas

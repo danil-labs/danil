@@ -2,7 +2,6 @@ import { Channel } from "@tauri-apps/api/core";
 import { invoke } from "../../lib/invoke.ts";
 import { open } from "@tauri-apps/plugin-dialog";
 import { Show, createEffect, createMemo, createSignal, on } from "solid-js";
-import RepositoryPicker from "./RepositoryPicker";
 import { type ProjectRepository } from "../../lib/projectRepositories";
 import { Button } from "../../ui/Button";
 import { Dialog, DialogContent, DialogTitle } from "../../ui/Dialog";
@@ -14,7 +13,10 @@ import { t } from "../../lib/i18n";
 import { capabilities } from "../../lib/platform";
 import { leerPref } from "../../lib/prefs";
 import type { Project } from "../../lib/model";
+import { LazyPart, retryableLazy } from "../../ui/LazyPart";
 import { machineName, machines, runOn } from "../machines/store";
+
+const RepositoryPicker = retryableLazy(() => import("./RepositoryPicker"));
 
 /**
  * El clon que corre ahora mismo, tal y como lo pinta el riel.
@@ -106,6 +108,9 @@ export default function AnadirCarpeta(props: {
     return capabilities().remoteCreate?.(props.workspace) ?? null;
   });
   const enRemota = () => (remota() ? { headers: { "x-terminus-machine": remota()?.machine as string } } : undefined);
+  /** La máquina elegida en «Creado en», también esta: sin la cabecera la orden iría a la del workspace. */
+  const enElegida = () => enRemota() ?? (aqui() ? { headers: { "x-terminus-machine": aqui() as string } } : undefined);
+  const aqui = () => machines().find((m) => m.local)?.id ?? null;
   const spaceAlli = () => (remota() && !remota()?.lead ? undefined : (props.space ?? undefined));
   // Un fallo del formulario —la dirección vacía— no es un clon fallido. Sin
   // esto el riel pintaría una fila por cada intento que no llegó a git.
@@ -136,6 +141,12 @@ export default function AnadirCarpeta(props: {
         : null,
     );
   });
+
+  createEffect(on(() => remota()?.machine ?? null, () => {
+    if (!camino() || operation() || trabajando()) return;
+    setDestino(null);
+    void elegirCamino(camino() as "clonar" | "vacia");
+  }, { defer: true }));
 
   createEffect(on(() => props.workspace, () => {
     if (operation()) return;
@@ -186,7 +197,7 @@ export default function AnadirCarpeta(props: {
       progress: new Channel<{ phase: string; percent: number | null }>(value => {
         if (operation() === id) setProgress(value);
       }),
-    }));
+    }, enElegida()));
     setOperation(null);
   }
 
@@ -256,7 +267,7 @@ export default function AnadirCarpeta(props: {
     if (typeof dir !== "string" || workspace !== props.workspace) return false;
     // Sin nombre, Rust usa el de la carpeta y lo recorta al tope (`projects::crear`).
     await terminar(
-      invoke<Project>("create_project", { name: "", workingDirectory: dir, space: props.space ?? undefined }),
+      invoke<Project>("create_project", { name: "", workingDirectory: dir, space: props.space ?? undefined }, enElegida()),
     );
     return true;
   }
@@ -277,7 +288,7 @@ export default function AnadirCarpeta(props: {
     setTrabajando(true);
     setFallo(null);
     try {
-      const directory = await invoke<string>("get_project_directory", {}, enRemota());
+      const directory = await invoke<string>("get_project_directory", {}, enElegida());
       if (workspace !== props.workspace) return;
       setDirectorio(directory);
       setCamino(value);
@@ -307,9 +318,10 @@ export default function AnadirCarpeta(props: {
   }
 
   async function chooseRepository(repo: ProjectRepository) {
-    // Ya está clonado para un proyecto de este workspace: se abre ese, no un
-    // segundo clon al lado.
-    if (repo.project && props.workspace) {
+    // Ya clonado en la máquina elegida: se abre ese. La lista sale de la máquina
+    // del workspace; en otra elegida se clona ahí.
+    const deLaElegida = remota() ? remota()?.lead === true : machines().find((m) => m.local)?.hosts !== false;
+    if (repo.project && props.workspace && deLaElegida) {
       await terminar(invoke<Project>("reuse_project", {
         workspace: props.workspace, project: repo.project, space: props.space ?? undefined,
       }));
@@ -332,10 +344,12 @@ export default function AnadirCarpeta(props: {
         <div class="grid gap-2 pt-3">
           <Show when={camino() === null}>
             <Show when={props.abierto ? props.workspace : null} keyed>{workspace =>
-              <RepositoryPicker workspace={workspace} disabled={trabajando()}
-                onUrl={() => { setProvider(null); setRepositoryName(""); void elegirCamino("clonar"); }}
-                onFolder={remota() ? undefined : () => void explorar()} onEmpty={() => void elegirCamino("vacia")}
-                onRepository={repo => void chooseRepository(repo)} />
+              <LazyPart fallback={<p role="status" class="m-0 text-xs text-neutral-500">{t("projects.add.loading_repositories")}</p>}>
+                <RepositoryPicker workspace={workspace} disabled={trabajando()}
+                  onUrl={() => { setProvider(null); setRepositoryName(""); void elegirCamino("clonar"); }}
+                  onFolder={remota() ? undefined : () => void explorar()} onEmpty={() => void elegirCamino("vacia")}
+                  onRepository={repo => void chooseRepository(repo)} />
+              </LazyPart>
             }</Show>
           </Show>
 
@@ -426,7 +440,7 @@ export default function AnadirCarpeta(props: {
                 void terminar(
                   invoke<Project>("create_project", {
                     name: nombre(), space: spaceAlli(), directory: remota() ? undefined : (destino() ?? undefined),
-                  }, enRemota()),
+                  }, enElegida()),
                 );
               }}
             >

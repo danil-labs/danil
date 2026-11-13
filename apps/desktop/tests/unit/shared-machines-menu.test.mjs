@@ -1,12 +1,10 @@
 /**
  * Las máquinas de la organización salen en «Ejecutar en», con su estado y el
- * encendido, y no se pueden elegir como destino de una tarea. Escritorio y web.
+ * encendido, y no se pueden elegir como destino de una tarea. Escritorio.
  */
 import assert from "node:assert/strict";
 import test from "node:test";
 import { HOME, localNewTask, open as openDesktop, until } from "../helpers/desktop-account.mjs";
-import { sleep } from "../helpers/jsdom-app.mjs";
-import { VM, open as openWeb, table } from "../helpers/web-machines.mjs";
 
 // La ventana pide el token de la cuenta de Danil del workspace abierto.
 const ACCOUNT = { danil_workspace_account: { account: "u_ana", email: "ana@danil.ai", signed_in: true, linked: true } };
@@ -64,23 +62,4 @@ test("en el escritorio, sin licencia, encender vm-verify se niega y sigue apagad
   assert.equal(doc.querySelector('[data-shared-machine="cmp_verify"]').getAttribute("data-shared-power"), "stopped");
   assert.ok(doc.querySelector('[data-shared-start="cmp_verify"]'));
   assert.deepEqual(app.failures, []);
-});
-
-test("en la web vm-verify se enciende desde el menú y no es destino de tareas", async () => {
-  const shared = [verify()];
-  const { app, doc, invoke } = await openWeb("web-shared-machines", [VM], {
-    cmp_vm: { table: table("Panel", "Tarea de la VM") },
-  }, undefined, { shared });
-  await openMenu(doc);
-  const row = doc.querySelector('[data-shared-machine="cmp_verify"]');
-  assert.equal(row.getAttribute("data-shared-power"), "stopped");
-  assert.ok(row.textContent.includes("apagada"));
-  assert.equal(doc.querySelector('[data-machine-option="cmp_verify"]'), null);
-  assert.equal(doc.querySelector('[data-machine-option="cmp_vm"]')?.disabled, false, "the personal machine stays a task target");
-  doc.querySelector('[data-shared-start="cmp_verify"]').click();
-  assert.ok(await until(() => doc.querySelector('[data-shared-machine="cmp_verify"]')?.getAttribute("data-shared-power") === "starting"));
-  assert.equal((await invoke("machine_list")).some((machine) => machine.id === "cmp_verify"), false);
-  assert.ok(!doc.querySelector('[aria-label="Ejecutar en"]').textContent.includes("vm-verify"));
-  assert.deepEqual(app.failures, []);
-  await sleep(50);
 });

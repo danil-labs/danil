@@ -1,5 +1,5 @@
 /**
- * Sin cuenta de Danil, las máquinas huésped (WSL, Lima) forman una flota local
+ * Sin cuenta de Danil, las máquinas huésped (WSL) forman una flota local
  * (`features/machines/account.tsx`): esta computadora es `"local"`, la VM entra
  * en «Ejecutar en» y sus órdenes van por `guest_call`, nunca al motor propio ni
  * a la cuenta. Monta `dist/` con el IPC simulado de la ventana.
@@ -10,8 +10,8 @@ import { engine } from "../helpers/fake-relay.mjs";
 import { HOME, localNewTask, open, row, until, VM, write } from "../helpers/desktop-account.mjs";
 import { sleep } from "../helpers/jsdom-app.mjs";
 
-const VMID = "lima:x";
-const CHILD = { id: VMID, channel: "lima", distro: "x", name: "VM de Lima", user: "u", home: "/home/u", online: true, features: [], contract: null, version: "0.3.1" };
+const VMID = "wsl:x";
+const CHILD = { id: VMID, channel: "wsl", distro: "x", name: "Ubuntu de prueba", user: "u", home: "/home/u", online: true, features: [], contract: null, version: "0.3.1" };
 const SIGNED_OUT = { state: "disconnected" };
 const SIGNED_IN = { state: "connected", computer_id: "cmp_home", name: "Mi Mac", online: true };
 
@@ -27,7 +27,6 @@ function guest(calls, overrides = {}) {
     guest_events: () => sleep(40).then(() => ({ cursor: 1, events: [], gap: false })),
     guest_sync_spaces: null,
     guest_start: true,
-    guest_job: null,
     list_spaces: [],
   };
 }
@@ -40,7 +39,7 @@ async function boot(name, { status = SIGNED_OUT, children = [CHILD], computers, 
     token: token ?? (() => ({ token: "client-tok", expires_at: Date.now() + 600_000, endpoint: "https://relay.test", computer_id: "cmp_home" })),
     ...(computers ? { computers } : {}),
     storage,
-    extra: { guest_channels: ["lima"], guest_children: () => state.children, ...guest(guestCalls) },
+    extra: { danil_edge_fetch: () => ({ status: 401, body: null }), guest_channels: ["wsl"], guest_children: () => state.children, ...guest(guestCalls) },
   });
   return { ...opened, state, guestCalls };
 }
@@ -77,7 +76,7 @@ test("2. (first: no other window of this file is alive yet) Without an account a
 test("1. Without an account and with a guest, the guest is a machine of a local fleet and gets its own orders", async () => {
   const { app, doc, native, listed, guestCalls, f } = await boot("local-fleet-guest");
   const offered = await pick(doc, VMID);
-  assert.deepEqual(offered.sort(), ["lima:x", "local"], "this computer is `local`, next to the VM");
+  assert.deepEqual(offered.sort(), ["local", "wsl:x"], "this computer is `local`, next to the VM");
   await write(app, "hola en la VM");
   assert.ok(await until(() => guestCalls.some((c) => c.command === "send_message")), "send_message reaches guest_call");
   assert.equal(native("send_message").length, 0, "the window's engine never gets the VM's message");
@@ -103,7 +102,7 @@ test("4. From local to signed in: the VM's task keeps its id, run_on keeps the V
     storage: { "machines.run_on": JSON.stringify({ w: VMID }) },
   });
   const rowOf = (id) => doc.querySelector(`[data-sesion="${id}"]`);
-  assert.ok(await until(() => rowOf("lima:x~t1")), "the VM's task, with the guest prefix");
+  assert.ok(await until(() => rowOf("wsl:x~t1")), "the VM's task, with the guest prefix");
   assert.ok(rowOf("t1"), "this computer's task, bare");
   const slices = () => {
     app.w.dispatchEvent(new app.w.Event("pagehide"));
@@ -114,11 +113,11 @@ test("4. From local to signed in: the VM's task keeps its id, run_on keeps the V
   state.status = SIGNED_IN;
   app.w.dispatchEvent(new app.w.CustomEvent("harness:workspace"));
   await sleep(1500);
-  assert.ok(await until(() => rowOf("lima:x~t1")), "same id signed in");
+  assert.ok(await until(() => rowOf("wsl:x~t1")), "same id signed in");
   assert.ok(rowOf("t1"), "own task still bare");
   assert.ok(slices().includes(VMID), "the VM's slices survive the switch");
   assert.equal(JSON.parse(app.w.localStorage.getItem("machines.run_on"))?.w, VMID, "run_on keeps the VM");
-  rowOf("lima:x~t1").click();
+  rowOf("wsl:x~t1").click();
   await sleep(400);
   assert.ok(doc.querySelector("textarea"), "the VM's task opens");
 });
@@ -131,7 +130,7 @@ test("5. From signed in to local: the window's own name goes back to this comput
   state.status = SIGNED_OUT;
   app.w.dispatchEvent(new app.w.CustomEvent("harness:workspace"));
   assert.ok(await until(() => !own().includes("Macbook m4") && /Esta (Mac|computadora)/.test(own())), own());
-  assert.ok(doc.querySelector('[data-sesion="lima:x~t1"]'), "the VM's task is still there");
+  assert.ok(doc.querySelector('[data-sesion="wsl:x~t1"]'), "the VM's task is still there");
   await sleep(500);
   assert.equal(sockets(f), before, "no relay session after signing out");
 });

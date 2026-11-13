@@ -129,6 +129,9 @@
   "chat.mode.unsupported": "Este agente no cambia de modo con un turno en marcha. El modo elegido corre a partir del siguiente.",
   "chat.model.aria": "Modelo: {model}",
   "chat.model.aria_effort": "Modelo: {model}. Razonamiento: {effort}",
+  "chat.model.router_route_unavailable": "No disponible por ahora",
+  "chat.model.router_update_engine": "Actualiza el motor",
+  "chat.model.router_activate": "Activar",
   "chat.model.empty": "No hay modelos",
   "chat.model.favorite": "Marcar {model} como favorito",
   "chat.model.favorites": "Favoritos",
@@ -141,8 +144,6 @@
   "chat.model.none": "ninguno",
   "chat.model.note.fable": "el más nuevo de la familia",
   "chat.model.note.haiku": "el más rápido",
-  "chat.model.note.local_cold": "en esta computadora — {engine} lo carga en la primera respuesta",
-  "chat.model.note.local_loaded": "en esta computadora, con {engine}",
   "chat.model.note.opus": "el más capaz",
   "chat.model.note.sonnet": "equilibrio entre capacidad y velocidad",
   "chat.model.placeholder": "modelo",
@@ -231,6 +232,7 @@
   "chat.commands.no_match": "Nada coincide.",
   "chat.suggestions.truncated": "Lo adjunto tiene más archivos de los que caben en esta lista.",
   "chat.surface.gone": "Esta tarea corrió con un agente que la app ya no ofrece. Elige otro para seguir.",
+  "chat.surface.local_retired": "Modelo local · ya no disponible. La tarea conserva su historia; elige otro agente para seguir.",
   "chat.rail.label": "Mensajes de entrada",
   "chat.thread.new_messages": {
     "one": "{count} mensaje nuevo",
@@ -455,5 +457,15 @@
   "chat.history.pieces": "Registro completo",
   "chat.history.content": "Contenido guardado",
   "chat.queue.stop_and_send": "Detener el turno y enviar",
-  "chat.queue.stop_and_send_aria": "Detener el turno y enviar el mensaje {n} de la cola"
+  "chat.queue.stop_and_send_aria": "Detener el turno y enviar el mensaje {n} de la cola",
+  "chat.credits.label": "Danil Credits",
+  "chat.credits.model": "DeepSeek V4.1 Flash",
+  "chat.credits.select": "Elegir",
+  "chat.credits.unavailable": "No disponible",
+  "chat.credits.integration_pending": "Integración pendiente de aceptación",
+  "chat.credits.payer": "Pagador",
+  "chat.credits.account": "Cuenta Danil",
+  "chat.credits.balance": "Saldo de créditos",
+  "chat.credits.loading": "Consultando…",
+  "chat.credits.amount": "{count} créditos"
 }

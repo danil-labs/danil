@@ -59,3 +59,16 @@ export { type TaskTreeRow, type TaskBranch, taskIdentity, taskParent, buildTaskT
 
 export { type WorkState, WORK_STATES, workStateOf } from "./workState.ts";
 export { type ModelSession, type Surface, type SurfaceModel, chipModel, menuSurfaces, surfaceHas, surfaceOf } from "./surfaces.ts";
+
+export { modelPresentation, routerDiscovery, routerAvailable, routerOfferState, type RouterOfferState } from "./model-presentation.ts";
+export {
+  FREE_ROUTER_MODEL,
+  FREE_ROUTER_OPENCODE,
+  FREE_ROUTER_PREFIX,
+  OPENCODE,
+  RETIRED_AGENTS,
+  canonicalAgentId,
+  isFreeRouterAgent,
+  isFreeRouterModel,
+  isRetiredAgent,
+} from "./agents.ts";

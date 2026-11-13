@@ -7,6 +7,7 @@ import { machineName, machineWakes } from "../machines/store";
 import { type JSX, Show } from "solid-js";
 import { createCopied } from "../../lib/clipboard";
 import { t } from "../../lib/i18n";
+import { abbreviateHomePath } from "../../lib/remote-path";
 import { capabilities, machineScreen } from "../../lib/platform";
 import { cn } from "../../lib/utils";
 import { RETARDO_TOOLTIP, TooltipContent, TooltipRoot, TooltipTrigger } from "../../ui/Tooltip";
@@ -80,7 +81,7 @@ export default function TaskLocation(props: TaskLocationProps) {
               class="max-w-[35%] shrink font-medium text-neutral-700"
               onClick={props.onFiles}
               label={props.onFiles ? t("shell.folder.view_on", { name: nombre() }) : undefined}
-              tip={<>{props.onFiles ? t("shell.folder.view_on", { name: nombre() }) : t("chat.location.project")}<Show when={props.path}>{(ruta) => <span class="block font-mono text-caption font-normal opacity-80">{ruta()}</span>}</Show></>}
+              tip={<>{props.onFiles ? t("shell.folder.view_on", { name: nombre() }) : t("chat.location.project")}<Show when={props.path}>{(ruta) => <span class="block font-mono text-caption font-normal opacity-80">{abbreviateHomePath(ruta())}</span>}</Show></>}
             >
               <Folder size={14} aria-hidden="true" class="shrink-0" />
               <span data-task-location-project="" class="min-w-0 truncate">{proyecto()}</span>

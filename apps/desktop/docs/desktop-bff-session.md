@@ -1,10 +1,25 @@
-# Atención en el escritorio: sesión de persona y ruta por Computers
+# Atención en el escritorio: sesión de persona y ruta por Machines
+
+Deuda exclusiva de Desk: el Worker privado `danil-legacy-desktop-auth`
+conserva GoTrue hasta migrar `agents_session.rs` a identity. `alpha-entry`
+delega solo `/auth/desktop*` y `/auth/workos/*` por `DESKTOP_AUTH` con plazo.
+La SPA usa siempre el borde de plataforma y `/auth/session` responde 404.
+El callback de compatibilidad guarda identidad sellada, sin abrir GoTrue;
+solo el canje PKCE de Rust abre la sesión.
+
+Antes de desplegar el nuevo binding, copiar WORKOS_API_KEY,
+SUPABASE_SERVICE_ROLE_KEY y SESSION_COOKIE_KEY al Worker privado sin cambiar
+el sello existente. Mantener el namespace DESKTOP_CODES de alpha-entry por
+binding remoto, para conservar los códigos consumidos durante la transición.
+Después, retirar los secretos de alpha-entry. No hay publicación ni migración
+de secretos ejecutada por este cambio.
+
 
 Decisión de la persona (2026-11-01) y revisión de arquitectura
 `desktop-bff-route-via-computers-review.md` (memoria del proyecto). La ventana
 de escritorio monta Atención, Difusiones y canales con un solo inicio de
 sesión. Guarda la sesión de la persona en el llavero del sistema y llama al
-BFF de Danil por Computers. El BFF nunca recibe el token de cliente ni el de
+BFF de Danil por Machines. El BFF nunca recibe el token de cliente ni el de
 máquina.
 
 Tres piezas, un contrato. Cambiar algo de aquí cambia las tres.
@@ -13,9 +28,9 @@ Tres piezas, un contrato. Cambiar algo de aquí cambia las tres.
 
 | Pieza | Repositorio | Qué hace |
 |---|---|---|
-| Ventana (Rust) | terminus `apps/desktop/src-tauri/src/extracted/agents_session.rs` | PKCE con loopback, llavero, renovación, llamadas al BFF por Computers. El token nunca llega al JavaScript. |
-| Worker de entrada | terminus `apps/desktop/alpha-entry/session.mjs` | Consentimiento en el navegador y la sesión de escritorio sellada. |
-| Computers | danil-labs/computers | Registro de concesiones de escritorio y `/v1/bff/*`. |
+| Ventana (Rust) | terminus `apps/desktop/src-tauri/src/extracted/agents_session.rs` | PKCE con loopback, llavero, renovación, llamadas al BFF por Machines. El token nunca llega al JavaScript. |
+| Worker de entrada | terminus `apps/desktop/legacy-desktop-auth/worker.mjs` | Consentimiento en el navegador y la sesión de escritorio sellada. |
+| Machines | danil-labs/machines | Registro de concesiones de escritorio y `/v1/bff/*`. |
 
 ## 1. Inicio de sesión (Worker de entrada)
 
@@ -72,13 +87,13 @@ con la cookie de otra persona. Rechazan `X-Danil-Actor: ai`. Errores:
 `session_ended`, `invalid_code`, 403 los de `resolvePerson`, 503
 `identity_unavailable`, `sign_in_unavailable`.
 
-## 2. Concesión de escritorio (Computers)
+## 2. Concesión de escritorio (Machines)
 
 El `session_id` de un JWT de GoTrue no cambia al renovar. La concesión dice
 «esta sesión de persona es la de la ventana de la computadora C».
 
 - `POST /v1/bff/grants`, `Authorization: Bearer <token de cliente>`, JSON
-  `{"access_token":"<JWT de persona>"}`. Computers verifica el token de
+  `{"access_token":"<JWT de persona>"}`. Machines verifica el token de
   cliente (persona `P1`, computadora `cid`) Y el JWT (persona `P2`,
   `session_id`). Exige `P1 == P2`. Inserta o reactiva
   `{session_id, user_id, computer_id, created_at, revoked_at null}`.
@@ -93,7 +108,7 @@ El `session_id` de un JWT de GoTrue no cambia al renovar. La concesión dice
 
 El token de cliente solo sirve aquí. Ninguna otra ruta `/v1/bff/*` lo acepta.
 
-## 3. `/v1/bff/<ruta del BFF>` (Computers)
+## 3. `/v1/bff/<ruta del BFF>` (Machines)
 
 - Solo `Authorization: Bearer <JWT de persona>`. Un token con forma de token
   de cliente, o sin JWT: 401 `person_session_required`.
@@ -119,18 +134,18 @@ El token de cliente solo sirve aquí. Ninguna otra ruta `/v1/bff/*` lo acepta.
   429 `rate_limited`, 502 `bff_unavailable`, `unexpected_redirect`, 504
   `bff_timeout`.
 - Destino: la lista cerrada del Worker de entrada (`<entrada>/alpha-api<ruta>`,
-  variable `BFF_UPSTREAM` de Computers), no el BFF directo. Así la validación
+  variable `BFF_UPSTREAM` de Machines), no el BFF directo. Así la validación
   fina de cada ruta, los interruptores `BROADCAST_WRITES` y
   `BROADCAST_DELIVERY` y la comprobación de `campaigns.manage` siguen en un
-  solo lugar (`alpha-entry/worker.mjs`, `broadcasts.mjs`). Computers manda
+  solo lugar (`alpha-entry/worker.mjs`, `broadcasts.mjs`). Machines manda
   `Origin: <origen de la entrada>`: el Bearer es explícito, así que no hay
-  riesgo de CSRF. La lista de Computers es solo de prefijos.
+  riesgo de CSRF. La lista de Machines es solo de prefijos.
 - Sin reintentos de POST, PATCH ni DELETE. Cuerpo JSON ≤ 1 MiB; `/api/media`
   por partes con el tope del BFF. Plazo al BFF de 30 s.
 - Auditoría: `caller {kind:"person", user_id, via:"window", computer_id}`.
   No se reenvía al BFF.
 
-Un 404 sin `X-Danil-Proxy` quiere decir que Computers no tiene la ruta: la
+Un 404 sin `X-Danil-Proxy` quiere decir que Machines no tiene la ruta: la
 ventana oculta Atención y no reintenta.
 
 ## 4. Ventana
@@ -144,7 +159,7 @@ ventana oculta Atención y no reintenta.
   `agents_session_directory` llama `GET /v1/me/workspaces` con el JWT de la persona
   y devuelve solo el arreglo `workspaces`. El token no sale de Rust.
 - Enlazar, subir y desenlazar van con el JWT de la persona, nunca con el token de
-  cliente: Computers solo lo acepta en `POST|DELETE /v1/workspaces/:id/danil-workspace`.
+  cliente: Machines solo lo acepta en `POST|DELETE /v1/workspaces/:id/danil-workspace`.
   `agents_session_link {workspaceId, danilWorkspaceId}` manda `{danil_workspace_id}`;
   `agents_session_create_danil_workspace {workspaceId}` manda `{create: true}`: crea el
   workspace personal de Danil de quien llama, con el nombre del local, y lo enlaza. Si
@@ -152,8 +167,8 @@ ventana oculta Atención y no reintenta.
   ese; ni un segundo workspace ni uno de organización se crean desde aquí.
   `agents_session_unlink {workspaceId}` manda `DELETE` (un 404 es que el registro no
   es de esa persona). Rust arma la ruta; el id solo admite `[A-Za-z0-9_-]`. Un
-  rechazo vuelve con el código de Computers en `detail`; sin sesión de ventana,
-  `no_session`. Desvincular en Configuración quita primero el enlace en Computers y
+  rechazo vuelve con el código de Machines en `detail`; sin sesión de ventana,
+  `no_session`. Desvincular en Configuración quita primero el enlace en Machines y
   después la cuenta en el motor. Leer y fijar el directorio siguen con el token de
   cliente (`src/features/shell/workspace-directory-desktop.ts`).
 - `agents_session_refresh` renueva ya el token. Atención lo usa como `unauthorized`:
@@ -169,7 +184,7 @@ ventana oculta Atención y no reintenta.
 - El llavero guarda `{"version":1,"user_id","session"}`, uno por cuenta: servicio
   `ai.danil.terminus.agents-session`, usuario la cuenta (`default` sin ella).
   Sin llavero disponible la sesión vive solo en memoria; nunca en un archivo.
-- La base de Computers es `endpoint` de `danil_client_token {account}`, y solo
+- La base de Machines es `endpoint` de `danil_client_token {account}`, y solo
   si es `https://computers.danil.ai` o `https://computers-dev.danil.ai`: el
   motor lo responde y un agente con el mismo usuario podría cambiarlo.
   `DANIL_ENTRY_URL` y `http://127.0.0.1:*` solo valen en builds de depuración.
@@ -191,11 +206,11 @@ ventana oculta Atención y no reintenta.
 
 - En macOS solo la app firmada lee el elemento del llavero. En Windows y Linux
   cualquier proceso del mismo usuario puede leerlo. El riesgo es del JWT, que
-  también sirve directo contra el BFF; la ruta por Computers no lo amplía.
+  también sirve directo contra el BFF; la ruta por Machines no lo amplía.
 - El Worker de entrada solo existe en alfa (`terminus-entry-alfa`).
 - Atención en la ventana sale en todos los builds (`vite.config.ts`). Un build
   con `DANIL_DESKTOP_ATTENTION=0` la apaga y la ventana queda como antes. Se
-  encendió el 2026-11-05: la entrada (`/auth/desktop*`), Computers
+  encendió el 2026-11-05: la entrada (`/auth/desktop*`), Machines
   (`/v1/bff/*`) y la migración `bff_window_grants` ya estaban en producción.
 - El regreso del navegador usa un puerto de `127.0.0.1` (RFC 8252), no un
   sondeo: el Worker de entrada no guarda estado. El código no sirve sin el
@@ -231,5 +246,5 @@ proyecto). Va siempre, también con `DANIL_DESKTOP_ATTENTION=0`.
   `danil_sign_out`: revoca la concesión, cierra la sesión de la ventana y
   después desconecta la cuenta principal del motor. «Agregar otra cuenta»
   sigue igual.
-- Pendiente: el motor no expone su endpoint de Computers; cuando lo haga
+- Pendiente: el motor no expone su endpoint de Machines; cuando lo haga
   (campo opcional en `Status`), la ventana rechazará un motor que apunte a otro.

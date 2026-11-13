@@ -8,7 +8,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import { APP_COMMANDS } from "@terminus/protocol";
-import { consentText, consented, freeModelsOf, setProviderConsent, setSessionModel, surfacesOf, type TaskView, taskDefaults } from "../src/lib/engine.ts";
+import { subscribeFreeCatalog, changeFreeModels, FREE_BEAM_MODEL, consentText, consented, freeModelsOf, setProviderConsent, setSessionModel, surfacesOf, type TaskView, taskDefaults } from "../src/lib/engine.ts";
 import { failureKey } from "../src/lib/failureNotice.ts";
 import type { Host } from "../src/lib/hosts.ts";
 
@@ -66,9 +66,9 @@ test("vale el sí de la versión de hoy: quien aceptó un texto anterior lo vuel
   assert.deepEqual((await surfacesOf(host, "w1")).map((s) => s.id), ["opencode-zen", "opencode-zen:free"]);
   assert.deepEqual(await consentText(host, "w1"), { lines, version: 2 });
   const rows = await freeModelsOf(host, "w1");
-  assert.deepEqual(rows.map((r) => ({ provider: r.provider, accepted: r.accepted, version: r.text.version })), [{ provider: "opencode-zen", accepted: false, version: 2 }]);
+  assert.deepEqual(rows, []);
   // En orden: primero el texto (la versión), luego el consentimiento guardado.
-  assert.deepEqual(calls.map((c) => c.command), ["list_surfaces", "consent_text", "list_surfaces", "consent_text", "list_workspaces"]);
+  assert.deepEqual(calls.map((c) => c.command), ["list_surfaces", "consent_text", "list_workspaces"]);
 });
 
 test("sin texto del consentimiento no se ofrece activar", async () => {
@@ -101,4 +101,81 @@ test("los rechazos de set_session_model y model_required tienen frase", () => {
   }
   assert.equal(failureKey({ detail: { what: { clave: "chat.session_model.not_offered" } } }), "chat.session_model.not_offered");
   assert.equal(failureKey({ message_key: "cli.error.model_required", detail: { free_models_accepted: false, account_connected: false } }), "cli.error.model_required");
+});
+
+const policy = { workspace_id: "w1", version: 3, providers: ["kilo", "vercel", "reflection"], lines: ["Terms"], acceptance_ref: "opaque-ref", enabled: true, accepted: true, terms: [{ label: "Kilo", url: "https://kilo.ai/terms" }] };
+const surface = { id: "free", provider: "opencode-zen", catalogo: "gratuitos", usable: true };
+function freeMachine(models: unknown[], extra: Record<string, unknown> = {}) {
+  return machine({ list_workspaces: { free_model_policy: policy }, list_surfaces: [surface, surface], list_models: { models }, ...extra });
+}
+test("v3 conserva aceptación sin Beam; no sustituye otro Beam ni acepta catálogo de pago", async () => {
+  for (const models of [[], [{ id: "reflection/beam", gratis: true }], [{ id: FREE_BEAM_MODEL, gratis: false }]]) {
+    const { host } = freeMachine(models);
+    const rows = await freeModelsOf(host, "w1");
+    assert.equal(rows.length, 1);
+    assert.equal(rows[0].accepted, true);
+    assert.equal(rows[0].usable, false);
+  }
+  const { host } = freeMachine([{ id: FREE_BEAM_MODEL, gratis: true }]);
+  assert.equal((await freeModelsOf(host, "w1"))[0].usable, true);
+});
+test("v3 envía acceptance_ref por la máquina y refresca superficies y modelos", async () => {
+  const { host, calls } = freeMachine([{ id: FREE_BEAM_MODEL, gratis: true }], {
+    set_provider_consent: { free_model_consent: { ...policy, policy_id: "policy", acceptance_id: "acceptance" } },
+  });
+  const row = (await freeModelsOf(host, "w1"))[0];
+  calls.length = 0;
+  const refreshed: string[] = [];
+  const unsubscribe = subscribeFreeCatalog((host, workspace) => refreshed.push(`${host}/${workspace}`));
+  assert.equal((await changeFreeModels(host, "w1", row, true))[0].usable, true);
+  unsubscribe();
+  assert.deepEqual(refreshed, ["mac/w1"]);
+  assert.deepEqual(calls.map((c) => c.command), ["list_workspaces", "set_provider_consent", "list_workspaces", "list_surfaces", "list_models"]);
+  assert.deepEqual(calls[1], { command: "set_provider_consent", workspace: "w1", args: { provider: "opaque-ref", accepted: true } });
+});
+test("v3 rechaza política cambiada y copias que puedan autorizar", async () => {
+  const { host } = freeMachine([{ id: FREE_BEAM_MODEL, gratis: true }]);
+  const row = (await freeModelsOf(host, "w1"))[0];
+  await assert.rejects(changeFreeModels(host, "w1", { ...row, policy: { ...policy, destination_host: "other-host" } }, true));
+  const liveCall = host.call.bind(host);
+  host.call = (async (...args: Parameters<Host["call"]>) => ({ ...await liveCall(...args), cachedAt: 10 })) as Host["call"];
+  assert.deepEqual(await freeModelsOf(host, "w1"), []);
+});
+
+test("una copia del catálogo nunca declara disponible la ruta", async () => {
+  const { host } = freeMachine([{ id: FREE_BEAM_MODEL, gratis: true }]);
+  const call = host.call.bind(host);
+  host.call = (async (...args: Parameters<Host["call"]>) => ({ ...await call(...args), cachedAt: args[0] === "list_models" ? 10 : null })) as Host["call"];
+  const row = (await freeModelsOf(host, "w1"))[0];
+  assert.equal(row.accepted, true);
+  assert.equal(row.usable, false);
+});
+
+test("la referencia mostrada sigue válida cuando una lectura emite otra oferta del mismo texto", async () => {
+  let reads = 0;
+  const { host, calls } = freeMachine([{ id: FREE_BEAM_MODEL, gratis: true }], {
+    list_workspaces: () => ({ active: "w1", free_model_policy: { ...policy, acceptance_ref: `offer-${++reads}` } }),
+    set_provider_consent: { free_model_consent: { ...policy, policy_id: "policy", acceptance_id: "acceptance" } },
+  });
+  const shown = (await freeModelsOf(host, "w1"))[0];
+  assert.equal(shown.policy?.acceptance_ref, "offer-1");
+  await changeFreeModels(host, "w1", shown, true);
+  const mutation = calls.find((call) => call.command === "set_provider_consent");
+  assert.deepEqual(mutation?.args, { provider: "offer-1", accepted: true });
+});
+
+test("una política sin referencia todavía se ofrece y al aceptar usa la que ya publicó el motor", async () => {
+  let published = false;
+  const { host, calls } = freeMachine([{ id: FREE_BEAM_MODEL, gratis: true }], {
+    list_workspaces: () => ({ active: "w1", free_model_policy: { ...policy, accepted: false, acceptance_ref: published ? "late-ref" : "" } }),
+    set_provider_consent: { free_model_consent: { ...policy, policy_id: "policy", acceptance_id: "acceptance" } },
+  });
+  const shown = (await freeModelsOf(host, "w1"))[0];
+  assert.ok(shown, "sin referencia el Router sigue ofrecido");
+  assert.equal(shown.accepted, false);
+  await assert.rejects(changeFreeModels(host, "w1", shown, true));
+  published = true;
+  await changeFreeModels(host, "w1", shown, true);
+  const mutation = calls.find((call) => call.command === "set_provider_consent");
+  assert.deepEqual(mutation?.args, { provider: "late-ref", accepted: true });
 });

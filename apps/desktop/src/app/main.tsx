@@ -28,7 +28,14 @@ setCapabilities({ ...capabilities(), workspaceDirectory: desktopWorkspaceDirecto
 // Los canales de máquinas locales los dice la ventana (`guest_channels`), no el userAgent.
 // La web también carga este archivo: ahí `invoke` va por el relay y despertaría la máquina.
 if (capabilities().nativeWindow) {
-  void askGuestChannels().then((channels) => setCapabilities({ ...capabilities(), wsl: channels.includes("wsl"), lima: channels.includes("lima") }));
+  // El selector de organización de Desk, por el borde; oculto hasta que la ruta exista.
+  // Fuera de la carga inicial: el módulo llega con el primer pintado del menú de la cuenta.
+  let organizations: ReturnType<NonNullable<ReturnType<typeof capabilities>["organizations"]>> | undefined;
+  setCapabilities({
+    ...capabilities(),
+    organizations: () => (organizations ??= import("../features/shell/organization-desktop").then((m) => m.desktopOrganizations())),
+  });
+  void askGuestChannels().then((channels) => setCapabilities({ ...capabilities(), wsl: channels.includes("wsl") }));
 }
 
 /**

@@ -16,8 +16,9 @@
  * no tiene se lee de sus miembros y actúa en el primero.
  */
 import { type AccountWorkspace, type SystemId, callWorkspace, isDeferrable, systemOf } from "@terminus/computers";
-import { AttentionBook, type Envelope, type Fleet, FleetError, type Slice, classOf, unwrap } from "@terminus/fleet";
+import { AttentionBook, type Envelope, type Fleet, FleetError, type MachineInfo, type Slice, classOf, registryRow, unwrap } from "@terminus/fleet";
 import { clavesConocidas, t } from "../../lib/i18n.ts";
+import type { EngineWorkspace } from "./engine-workspaces.ts";
 
 type Args = Record<string, unknown>;
 type Options = { headers?: HeadersInit } | undefined;
@@ -46,6 +47,8 @@ const OF_THIS_WINDOW = /^radiant_|^danil_|^account_relay_token$|^agents_session_
 /** Las órdenes con canal pierden el canal por el relay: vuelve solo la respuesta final. */
 const CHANNELS: Record<string, string> = { clone_project: "progress", list_session_git: "progress", watch_task_tree: "changes" };
 const UNKNOWN = new Set(["command", "unsupported", "command_not_allowed"]);
+/** El relay no deja usar ese workspace en esa máquina. */
+const REFUSED_WORKSPACE = new Set(["workspace_not_linked", "workspace_mismatch"]);
 /** Lo que abre un archivo en esta computadora: el de una tarea de otra máquina está allá. */
 const FILES = /^(site_|typst_live_)|^(open_file_external|tree_open_external)$/;
 /** Los demás códigos del relay, con la frase que la ventana ya conoce (los de `proxy.rs`). */
@@ -71,10 +74,18 @@ const FIRST_ANSWER_GRACE = 100;
 const PROGRESSIVE = new Set([...LISTING, "list_projects", "list_portfolios", "list_live_sessions", "list_spaces", "list_workspace_attention", "list_task_mentions"]);
 /** Lo que espera `service_poll` en la web: los eventos ya llegan solos (`events`). */
 const POLL_WAIT = 20_000;
-/** Cuánto espera una lectura para volver a pedir el encendido de la misma VM. */
-const WAKE_RETRY_AFTER = 60_000;
 /** En la web no hay instalador: lo que la ventana pregunta de él se contesta aquí. */
 const NO_SETUP: Record<string, unknown> = { setup_required: false, prepare_runtime: { stages: [], running: false }, list_live_turns: [] };
+
+/** El índice de estado ligero del motor de aquí (`light_state_v1`) y sus copias de las otras máquinas (`light_state_machines_v1`). */
+const LIGHT_STATE = "light_state_v1";
+const LIGHT_COPIES = "light_state_machines_v1";
+/** Lo que la barra lee del índice en vez de preguntar a cada máquina, y su recurso. */
+const INDEXED: Record<string, "tasks" | "projects"> = { list_live_sessions: "tasks", list_projects: "projects" };
+/** Cuánto vale lo leído del índice de aquí sin volver a preguntar (con la versión, `not_modified`). */
+const LOCAL_INDEX_FOR = 1_000;
+/** Una copia de otra máquina la rehace el motor y lo avisa (`state.copy_changed`); esto es solo por si un aviso se perdió. */
+const COPY_INDEX_FOR = 30_000;
 
 /** Qué vuelve a leer la ventana cuando cambia la rebanada de una lectura. */
 export type SliceChange = "sessions" | "projects" | "spaces" | "attention" | "mentions" | "workspaces";
@@ -104,6 +115,20 @@ export type RouterConfig = {
   deliver?: (events: { name: string; payload: unknown }[]) => void;
   /** «Ejecutar en» para `workspace`, si la persona eligió una máquina. */
   pickedFor?: (workspace: string | null) => string | null;
+  /** El directorio de la persona (`GET /v1/me/workspaces`) ya leído: nombra el workspace de una organización que la fila de su servidor no nombra. */
+  directory?: () => readonly { workspace_id: string | null; name: string; owner?: boolean }[];
+  /**
+   * Lo que el motor de esta computadora sabe de las otras máquinas de la persona
+   * (`state_machines`), de todas sus cuentas; `null` sin la función, y entonces
+   * los workspaces de una organización salen de la flota.
+   */
+  engineWorkspaces?: () => readonly EngineWorkspace[] | null;
+  /**
+   * Lo que anuncia el motor de aquí. Con `light_state_v1` la barra de esta máquina
+   * sale de su índice (`state_resource`) y, con `light_state_machines_v1`, la de
+   * las otras de sus copias (`state_copy`), sin preguntar a cada una por el relay.
+   */
+  engineFeatures?: () => readonly string[];
   /** La máquina de la ventana. `os` solo si se sabe; sin `wakes`, se pinta como laptop. */
   home?: () => { wakes?: boolean; os?: SystemId | null; features?: readonly string[]; version?: string | null };
 };
@@ -168,6 +193,84 @@ export function createRouter(config: RouterConfig) {
   }
 
   const attention = new AttentionBook();
+
+  /**
+   * Lo leído del índice por (workspace, máquina o `null` para esta, recurso), con
+   * su versión: se vuelve a pedir con ella (`not_modified`) solo si un aviso lo
+   * marcó o ya pasó su tiempo.
+   */
+  type Indexed = { version: string | null; rows: Args[]; at: number; stale: boolean };
+  const index = new Map<string, Indexed>();
+  const indexReads = new Map<string, Promise<Args[] | null>>();
+  const indexKey = (workspace: string, machine: string | null, resource: string) => JSON.stringify([workspace, machine, resource]);
+  const announces = (feature: string) => local && (config.engineFeatures?.() ?? []).includes(feature);
+  function indexed(workspace: string, machine: string | null, resource: "tasks" | "projects"): Promise<Args[] | null> {
+    const key = indexKey(workspace, machine, resource);
+    const known = index.get(key);
+    if (known && !known.stale && Date.now() - known.at < (machine === null ? LOCAL_INDEX_FOR : COPY_INDEX_FOR)) return Promise.resolve(known.rows);
+    const running = indexReads.get(key);
+    if (running) return running;
+    const version = known?.version ?? null;
+    const ask = machine === null
+      ? native("state_resource", { workspace, resource, version })
+      : native("state_copy", { workspace, machine, resource, version });
+    const read = ask
+      .then((raw) => {
+        const answer = raw as { version?: unknown; not_modified?: unknown; data?: unknown } | null;
+        if (answer?.not_modified === true && known) {
+          index.set(key, { ...known, at: Date.now(), stale: false });
+          return known.rows;
+        }
+        if (!Array.isArray(answer?.data)) return null;
+        const rows = (answer.data as unknown[]).filter((r): r is Args => !!r && typeof r === "object");
+        index.set(key, { version: typeof answer.version === "string" ? answer.version : null, rows, at: Date.now(), stale: false });
+        return rows;
+      })
+      // Sin copia o sin índice (otro motor), se lee como antes.
+      .catch(() => {
+        index.delete(key);
+        return null;
+      })
+      .finally(() => indexReads.delete(key));
+    indexReads.set(key, read);
+    return read;
+  }
+
+  /** Las filas del índice para una lectura de la barra; `null` si hay que leerla como antes (una pestaña archivada que el índice no trae). */
+  function fromIndex(command: string, rows: Args[], args: Args, machine: string): unknown[] | null {
+    if (command === "list_projects") return rows.map((p) => projectRow(p));
+    const project = typeof args.project === "string" ? args.project : "";
+    const mine = rows.filter((r) => (r.folder ?? "") === project);
+    const open = (fleet.argsFor(machine, args).open ?? []) as unknown[];
+    const all = new Set(rows.map((r) => r.id));
+    return open.every((id) => typeof id !== "string" || all.has(id)) ? mine : null;
+  }
+
+  /** Un proyecto de la copia de otra máquina (`ProjectEntry`) con los campos que la barra espera de `list_projects`. */
+  const projectRow = (p: Args): Args => ({
+    node: null, sources: [], created_at: 0, updated_at: 0, sessions: 0,
+    kind: typeof p.remote_url === "string" && p.remote_url ? "git" : "folder",
+    ...p,
+  });
+
+  /** La rebanada de otra máquina desde su copia en el motor de aquí; `null` si no la hay. */
+  async function copySlice(envelope: Envelope): Promise<Slice | null> {
+    const resource = INDEXED[envelope.command];
+    if (!resource || !envelope.workspace || !announces(LIGHT_COPIES)) return null;
+    const rows = await indexed(envelope.workspace, envelope.machine, resource);
+    const value = rows && fromIndex(envelope.command, rows, envelope.args ?? {}, envelope.machine);
+    if (!value) return null;
+    const at = index.get(indexKey(envelope.workspace, envelope.machine, resource))?.at ?? Date.now();
+    // Encendida, la copia es la de ahora; apagada, la última que dejó.
+    return { machine: envelope.machine, status: fleet.power(envelope.machine) === "on" ? "ok" : "cached", has: true, value, at };
+  }
+
+  /** La barra de esta máquina desde su índice; `null` sin él o si hay que leer el disco. */
+  async function localIndexed(command: string, args: Args, workspace: string | null): Promise<unknown[] | null> {
+    if (command !== "list_live_sessions" || !workspace || !announces(LIGHT_STATE)) return null;
+    const rows = await indexed(workspace, null, "tasks");
+    return rows && fromIndex(command, rows, args, self as string);
+  }
   /** Los workspaces que esta computadora tiene, según su última lista; `null` antes de leerla. */
   let listed: Set<string> | null = null;
   let active: string | null = null;
@@ -198,8 +301,8 @@ export function createRouter(config: RouterConfig) {
   };
 
   const hasHere = (workspace: string | null) => local && (!workspace || listed === null || listed.has(workspace));
-  /** Un workspace de la cuenta que esta computadora no tiene: vive en sus otras máquinas. En la web, todos. */
-  const elsewhere = (workspace: string | null) => !local || (!hasHere(workspace) && fleet.inRegistry(workspace));
+  /** Los workspaces de la cuenta que esta computadora no tiene viven en sus otras máquinas, y los de una organización en su servidor. En la web, todos. */
+  const elsewhere = (workspace: string | null) => !local || (!hasHere(workspace) && (fleet.inRegistry(workspace) || organizations().has(workspace as string)));
   /** Las máquinas de un workspace; sin workspace (en la web), todas. */
   const membersOf = (workspace: string | null) => (workspace ? fleet.membersOf(workspace) : fleet.machines().map((m) => m.id));
   /** La máquina que atiende un workspace que no está aquí: la primera encendida de sus miembros, o la primera. */
@@ -207,38 +310,60 @@ export function createRouter(config: RouterConfig) {
     const members = membersOf(workspace).filter((m) => fleet.power(m) !== "outdated");
     return members.find((m) => fleet.power(m) === "on") ?? members[0] ?? null;
   };
+  /** Los workspaces de `machine` que su fila dice y el registro no le atribuye: los que le da una organización. */
+  const givenTo = (info: MachineInfo): string[] => {
+    const registry = fleet.getRegistry();
+    if (!registry || !info.linked) return [];
+    return [...info.linked].filter((id) => !registry.find((w) => w.id === id)?.computers.includes(info.id));
+  };
+  /** Sin `organization` en su fila (un plano de control anterior), una VM con un workspace que el registro no le da es el servidor de una organización. */
+  const guessed = (info: MachineInfo) => (info.organization || !info.wakes ? [] : givenTo(info));
+  /** Lo que una organización (o, según el motor, otra cuenta de la persona) le da y su registro no tiene: cada workspace con su nombre y las máquinas que lo atienden. */
+  const organizations = (): Map<string, { name: string; machines: string[] }> => {
+    const names = new Map((config.directory?.() ?? []).filter((e) => e.workspace_id && !e.owner).map((e) => [e.workspace_id as string, e.name]));
+    const known = config.engineWorkspaces?.() ?? null;
+    // El motor manda: lo de todas las sesiones de aquí, que solo se va cuando él lo borra.
+    if (known) return fromEngine(known, names);
+    const found = new Map(fleet.organizationWorkspaces().map((w) => [w.id, { name: w.name, machines: w.machines }]));
+    for (const info of fleet.machines())
+      for (const id of guessed(info)) {
+        const name = found.get(id)?.name ?? names.get(id);
+        if (name) found.set(id, { name, machines: [...(found.get(id)?.machines ?? []), info.id] });
+      }
+    for (const id of found.keys()) if (fleet.inRegistry(id)) found.delete(id);
+    return found;
+  };
+  /** Los workspaces que esta computadora no tiene y otra máquina de la persona sirve, sin los del registro (esos ya vienen en la lista). */
+  const fromEngine = (known: readonly EngineWorkspace[], names: Map<string, string>) => {
+    const found = new Map<string, { name: string; machines: string[] }>();
+    for (const w of known) {
+      const name = w.name ?? names.get(w.id);
+      if (w.local || !w.machines.length || !name || fleet.inRegistry(w.id)) continue;
+      found.set(w.id, { name, machines: [...w.machines] });
+    }
+    return found;
+  };
+  /** El servidor de una organización solo atiende los workspaces de ella que su fila dice: no hace suyo otro. */
+  const confined = (info: MachineInfo) => !!info.organization || guessed(info).length > 0;
+  /** Si el relay deja a `machine` hacer suyo `workspace`: solo uno de la cuenta, y nunca el servidor de una organización. */
+  const permitted = (info: MachineInfo, workspace: string | null) =>
+    !confined(info) && (!workspace || organizations().has(workspace) || !fleet.getRegistry() || !info.linked || fleet.inRegistry(workspace));
+  /** Si `machine` puede hacer suyo `workspace` al crear ahí. */
+  const adopts = (info: MachineInfo, workspace: string | null) => !stale.has(info.id) && permitted(info, workspace);
+  /** La lista de workspaces con los de una organización que ninguna lectura trajo: la ventana puede abrirlos. */
+  function withOrganizations<T>(merged: T): T {
+    const rows = (merged as { workspaces?: { id?: unknown }[] } | null)?.workspaces;
+    if (!Array.isArray(rows)) return merged;
+    const extra = [...organizations()]
+      .filter(([id]) => !rows.some((w) => w?.id === id))
+      .map(([id, w]) => ({ ...registryRow({ id, name: w.name, projects: [], computers: [] }), machines: w.machines }));
+    return extra.length ? { ...merged, workspaces: [...rows, ...extra] } : merged;
+  }
   /** Sin elegir, lo nuevo nace en la máquina de la ventana; en un workspace que no está aquí, en su primera. */
   const defaultMachine = (workspace: string | null) => (elsewhere(workspace) ? (leadOf(workspace) ?? self) : self);
 
-  /** Cuándo se pidió encender cada VM por una lectura, y si ese intento falló. */
-  const wokenAt = new Map<string, number>();
-  const wakeFailed = new Set<string>();
-  /** Las que el plano de control dijo que no enciende (`not_remotely_startable`): son de la persona. */
-  const notStartable = new Set<string>();
-  /**
-   * Una VM de proveedor administrado apagada sin copia que enseñar: se enciende una
-   * vez por minuto como mucho, se dice «Encendiendo…» y, en línea, la ventana relee.
-   * Una computadora propia apagada no se enciende al abrir.
-   */
-  const managedOff = (machine: string, name: string): Failure => {
-    const off = { what: t("web.machines.off_action", { name }), detail: "machine_off" };
-    if (notStartable.has(machine) || fleet.power(machine) === "on") return off;
-    const at = wokenAt.get(machine);
-    if (at !== undefined && Date.now() - at < WAKE_RETRY_AFTER) {
-      return wakeFailed.has(machine) ? { what: t("web.machines.start_failed", { name }), detail: "start_failed" } : { what: t("web.machines.starting", { name }), detail: "machine_starting" };
-    }
-    wokenAt.set(machine, Date.now());
-    wakeFailed.delete(machine);
-    void fleet
-      .wake(machine)
-      .then(() => config.onSlices?.(["workspaces", "projects", "sessions", "spaces", "attention", "mentions"]))
-      .catch((error) => {
-        if (error instanceof FleetError && error.detail === "not_remotely_startable") notStartable.add(machine);
-        else wakeFailed.add(machine);
-      });
-    return { what: t("web.machines.starting", { name }), detail: "machine_starting" };
-  };
-
+  /** Las máquinas que ya se encienden y por las que la ventana espera para volver a leer. */
+  const rereadOnline = new Set<string>();
   const named = (error: FleetError): Failure => {
     const name = error.machine ? fleet.name(error.machine) : "";
     switch (error.code) {
@@ -253,6 +378,8 @@ export function createRouter(config: RouterConfig) {
         // Una VM que no se pudo encender no es lo mismo que una máquina propia apagada.
         if (error.canWake && error.detail === "start_failed") return { what: t("web.machines.start_failed", { name }), detail: "start_failed" };
         if (error.machine && fleet.power(error.machine) === "starting") return { what: t("web.machines.starting", { name }), detail: "machine_starting" };
+        // Una VM que Danil enciende no es «Danil cerrado»: despierta con un mensaje o una acción.
+        if (error.canWake !== false && error.machine && fleet.machines().some((m) => m.id === error.machine && m.wakes)) return { what: t("web.machines.off_wakes", { name }), detail: "machine_off" };
         return { what: t("web.machines.off_action", { name }), detail: "machine_off" };
       case "version_mismatch":
         return { what: t("web.machines.outdated_action", { name }), detail: "version_mismatch" };
@@ -394,8 +521,18 @@ export function createRouter(config: RouterConfig) {
     const failed = slices.find((s) => s.error) ?? slices[0];
     const code = failed?.status === "outdated" ? "version_mismatch" : failed?.error === "machine_off" || !failed ? "machine_off" : (failed.error ?? "machine_timeout");
     const machine = failed?.machine ?? leadOf(workspace);
-    if (code === "machine_off" && machine && fleet.machines().some((m) => m.id === machine && m.wakes && m.opensOnRead)) return managedOff(machine, fleet.name(machine));
-    return named(new FleetError(code, machine));
+    // Leer nunca enciende una máquina: la enciende un mensaje o una acción (`fleet.send`).
+    // Si ya se está encendiendo (la encendió otro), la ventana vuelve a leer cuando esté en línea.
+    if (code === "machine_off" && machine && fleet.power(machine) === "starting" && !rereadOnline.has(machine)) {
+      rereadOnline.add(machine);
+      void fleet
+        .untilOnline(machine)
+        .then(() => config.onSlices?.(["workspaces", "projects", "sessions", "spaces", "attention", "mentions"]))
+        .catch(() => {})
+        .finally(() => rereadOnline.delete(machine));
+    }
+    // Una lectura no sabe si el relay la encendería: lo dice la lista de la cuenta (`wakes`).
+    return named(new FleetError(code, machine, null, code === "machine_off"));
   }
 
   function previousSlice(envelope: Envelope): Slice | null {
@@ -417,17 +554,21 @@ export function createRouter(config: RouterConfig) {
     // El canal de avance se queda en la ventana: por el relay vuelve solo la respuesta final.
     const envelopes = members.map((machine) => ({ machine, workspace, command, args: withoutChannel(command, args) }));
     const slices: Slice[] = [];
+    // Lo que las copias del motor de aquí ya tienen no se pregunta a su máquina.
+    const copies = await Promise.all(envelopes.map((envelope) => copySlice(envelope)));
+    const asked = envelopes.filter((_, i) => !copies[i]);
+    slices.push(...copies.filter((slice): slice is Slice => !!slice));
     if (!elsewhere(workspace)) {
-      const value = await native(command, fleet.argsFor(self as string, args), options);
-      slices.push({ machine: self as string, status: "ok", has: true, value, at: Date.now() });
-      for (const envelope of envelopes) {
+      const value = (await localIndexed(command, args, workspace)) ?? (await native(command, fleet.argsFor(self as string, args), options));
+      slices.unshift({ machine: self as string, status: "ok", has: true, value, at: Date.now() });
+      for (const envelope of asked) {
         const before = previousSlice(envelope);
         if (before) slices.push(before);
         refresh(envelope, before);
       }
-    } else {
+    } else if (asked.length) {
       // El refresco remoto de Git depende de que la observación local haya terminado en el motor.
-      const result = command === "list_session_git" ? await Promise.all(envelopes.map(envelope => fleet.read(envelope))) : await gather(envelopes);
+      const result = command === "list_session_git" ? await Promise.all(asked.map(envelope => fleet.read(envelope))) : await gather(asked);
       slices.push(...result);
     }
     if (command === "list_workspace_attention") for (const s of slices) if (s.has) attention.set(s.machine, fleet.encode(s.machine, s.value));
@@ -436,8 +577,20 @@ export function createRouter(config: RouterConfig) {
     throw noAnswer(slices, workspace);
   }
 
-  /** Una llamada a otra máquina, con el workspace del sobre. Una lectura sale de su rebanada: apagada con copia, no se pregunta. */
+  /** Una llamada a otra máquina. Crear algo en un workspace que esa máquina no acepta se dice con su nombre. */
   async function remote(machine: string, command: string, args: Args, workspace: string | null): Promise<unknown> {
+    if (!CREATE.has(command)) return remoteCall(machine, command, args, workspace);
+    try {
+      return await remoteCall(machine, command, args, workspace);
+    } catch (error) {
+      if (error instanceof FleetError && REFUSED_WORKSPACE.has(error.code))
+        throw { what: t("web.machines.workspace_refused", { name: fleet.name(machine) }), detail: error.code };
+      throw error;
+    }
+  }
+
+  /** Una llamada a otra máquina, con el workspace del sobre. Una lectura sale de su rebanada: apagada con copia, no se pregunta. */
+  async function remoteCall(machine: string, command: string, args: Args, workspace: string | null): Promise<unknown> {
     args = withoutChannel(command, args);
     // Apagada o encendiéndose, el resumen de la máquina sale de su copia (la de
     // la flota o la del relay) con su hora, sin encenderla: es una lectura.
@@ -446,7 +599,7 @@ export function createRouter(config: RouterConfig) {
       if (!slice.has || !slice.value || typeof slice.value !== "object") throw new FleetError("machine_off", machine);
       return { ...(fleet.encode(machine, slice.value, command) as object), cached_at: slice.at };
     }
-    if (STORAGE.has(command) || command === "list_workspaces") {
+    if (STORAGE.has(command) || command === "list_workspaces" || command === "workspaces_startup" || command === "set_provider_consent") {
       if (fleet.power(machine) !== "on") throw new FleetError("machine_off", machine);
       if (STORAGE.has(command) && !workspace) throw missing(machine);
       return fleet.call({ machine, workspace: command === "list_workspaces" ? null : workspace, command, args });
@@ -454,7 +607,7 @@ export function createRouter(config: RouterConfig) {
     if (CREATE.has(command) && workspace && fleet.inRegistry(workspace) && !fleet.membersOf(workspace).includes(machine)) await materialize(machine, workspace);
     if (WITH_SPACE.has(command)) args = await withSharedSpace(machine, workspace, args);
     if (command === "load_history") {
-      const session = await remote(machine, "load_session", {
+      const session = await remoteCall(machine, "load_session", {
         project: args.project, id: args.id,
         history_request: { version: 1, before: args.before ?? null, revision: args.revision ?? null },
       }, workspace) as { turns?: unknown[]; history?: unknown } | null;
@@ -528,7 +681,7 @@ export function createRouter(config: RouterConfig) {
     const value = (await native(command, args, options)) as { workspaces?: { id?: unknown }[]; active?: unknown } | null;
     if (Array.isArray(value?.workspaces)) listed = new Set(value.workspaces.map((w) => w?.id).filter((id): id is string => typeof id === "string"));
     if (active === null && typeof value?.active === "string") active = value.active;
-    const merged = fleet.merge(command, [{ machine: self as string, status: "ok", has: true, value, at: Date.now() }], null) as { active?: unknown } | undefined;
+    const merged = withOrganizations(fleet.merge(command, [{ machine: self as string, status: "ok", has: true, value, at: Date.now() }], null) as { active?: unknown } | undefined);
     if (!merged) return value;
     // El activo es el de esta ventana, aunque sea un workspace que solo tienen otras máquinas.
     return active && elsewhere(active) ? { ...merged, active } : merged;
@@ -540,7 +693,7 @@ export function createRouter(config: RouterConfig) {
   async function webListing(command: string, args: Args): Promise<unknown> {
     const envelopes = fleet.machines().map((m) => ({ machine: m.id, workspace: null, command, args }));
     const slices = await gather(envelopes, { settles: !!fleet.getRegistry(), fresh: true });
-    const merged = fleet.merge(command, slices, null) as { workspaces?: { id?: unknown }[]; active?: unknown } | undefined;
+    const merged = withOrganizations(fleet.merge(command, slices, null) as { workspaces?: { id?: unknown }[]; active?: unknown } | undefined);
     unlisted = !merged;
     if (!merged) throw noAnswer(slices, null);
     const ids = (merged.workspaces ?? []).map((w) => w?.id).filter((id): id is string => typeof id === "string");
@@ -577,6 +730,8 @@ export function createRouter(config: RouterConfig) {
     });
   }
 
+  const selfMaterializes = (_workspace: string | null) => ({ materializes: true });
+
   function machineList() {
     const workspace = active;
     const lead = defaultMachine(workspace);
@@ -584,7 +739,7 @@ export function createRouter(config: RouterConfig) {
     const home = config.home?.();
     const selfOs = systemOf(home?.os);
     return [
-      ...(self !== null ? [{ id: self, local: true, active: lead === self, on: true, power: "on" as const, hosts: hasHere(workspace), materializes: true, wakes: home?.wakes ?? false, ...(home?.features?.length ? { features: [...home.features] } : {}), ...(home?.version ? { version: home.version } : {}), ...(selfOs ? { os: selfOs } : {}) }] : []),
+      ...(self !== null ? [{ id: self, local: true, active: lead === self, on: true, power: "on" as const, hosts: hasHere(workspace), ...selfMaterializes(workspace), wakes: home?.wakes ?? false, ...(home?.features?.length ? { features: [...home.features] } : {}), ...(home?.version ? { version: home.version } : {}), ...(selfOs ? { os: selfOs } : {}) }] : []),
       // Una de otro contrato no corre tareas nuevas hasta actualizarse.
       ...fleet.machines().filter((m) => fleet.power(m.id) !== "outdated").map((m) => {
         const os = systemOf(m.os);
@@ -593,9 +748,11 @@ export function createRouter(config: RouterConfig) {
           local: false,
           active: lead === m.id,
           on: fleet.power(m.id) === "on",
+          connection: fleet.state(m.id),
           power: fleet.power(m.id),
           hosts: workspace ? members.has(m.id) : null,
-          materializes: !stale.has(m.id),
+          materializes: adopts(m, workspace),
+          refuses: !permitted(m, workspace),
           wakes: m.wakes,
           ...(m.features?.length ? { features: [...m.features] } : {}),
           ...(m.version ? { version: m.version } : {}),
@@ -678,6 +835,8 @@ export function createRouter(config: RouterConfig) {
         const there = machine && machine !== self && fleet.has(machine) ? machine : homeOf(args);
         if (there && fleet.has(there)) return await remote(there, command, args, callWorkspace(workspace, args));
         if (machine && machine !== self) throw new FleetError("unknown_machine", machine);
+        // Workspace que vive en otra máquina (la VM de la organización): sus cuentas, allá.
+        if (!machine && elsewhere(workspace)) return await ofAMachine(command, args, workspace);
         if (command === "list_accounts" && fleet.machines().length) return await accountsHere(args, workspace, withoutHeader(options, "x-terminus-machine"));
       } catch (error) {
         if (error instanceof FleetError) throw named(error);
@@ -689,9 +848,18 @@ export function createRouter(config: RouterConfig) {
     if (FILES.test(command) && ((machine && machine !== self && fleet.has(machine)) || namesOther(args)))
       throw { what: t("shell.machines.local_only"), detail: "machine_files" };
     try {
-      if (machine && machine === self && (STORAGE.has(command) || command === "list_workspaces")) {
+      if (machine && machine === self && (STORAGE.has(command) || command === "list_workspaces" || command === "workspaces_startup" || command === "set_provider_consent")) {
         if (STORAGE.has(command) && !hasHere(workspace)) throw missing(machine);
         return await native(command, fleet.argsFor(machine, args), withoutHeader(options, "x-terminus-machine"));
+      }
+      // Elegida esta computadora para algo nuevo: se crea aquí aunque el workspace viva en otra.
+      if (local && machine && machine === self && (CREATE.has(command) || command === "get_project_directory")) {
+        const opts = withoutHeader(options, "x-terminus-machine");
+        if (CREATE.has(command) && workspace && !hasHere(workspace)) {
+          await native("materialize_workspace", { id: workspace }, opts);
+          listed?.add(workspace);
+        }
+        return await native(command, fleet.argsFor(self, args), opts);
       }
       if (machine && machine !== self && fleet.has(machine)) return await remote(machine, command, args, callWorkspace(workspace, args));
       // Una máquina que ya no es de la cuenta no se cambia por otra en silencio.
@@ -764,13 +932,36 @@ export function createRouter(config: RouterConfig) {
     const ws = workspace ?? active;
     const picked = config.pickedFor?.(ws) ?? null;
     const lead = defaultMachine(ws);
-    const machine = picked && (picked === self || fleet.has(picked)) ? picked : lead;
+    // Una elegida que no tiene permiso en este workspace no cuenta: «Ejecutar en» no la ofrece aquí.
+    const runs = (id: string) => (id === self ? true : !!fleet.info(id) && (!ws || fleet.membersOf(ws).includes(id) || permitted(fleet.info(id) as MachineInfo, ws)));
+    const machine = picked && runs(picked) ? picked : lead;
     return machine ? { machine, lead: machine === lead } : null;
+  }
+
+  /** `state.changed` de esta máquina: lo leído de ese recurso se vuelve a pedir con su versión. */
+  function stateChanged(payload: unknown) {
+    const { workspace, resource } = (payload ?? {}) as { workspace?: unknown; resource?: unknown };
+    if (typeof workspace !== "string" || typeof resource !== "string") return;
+    const known = index.get(indexKey(workspace, null, resource));
+    if (known) known.stale = true;
+  }
+
+  /** `state.copy_changed`: cambió la copia de otra máquina; solo ese recurso se vuelve a pedir y la barra lo relee. */
+  function copyChanged(payload: unknown) {
+    const { workspace, machine, resource } = (payload ?? {}) as { workspace?: unknown; machine?: unknown; resource?: unknown };
+    if (typeof workspace !== "string" || typeof machine !== "string" || typeof resource !== "string") return;
+    const known = index.get(indexKey(workspace, machine, resource));
+    if (known) known.stale = true;
+    if (workspace !== active) return;
+    if (resource === "tasks") notify("list_live_sessions");
+    if (resource === "projects") notify("list_projects");
   }
 
   return {
     handle,
     events,
+    stateChanged,
+    copyChanged,
     deferredChanged,
     createsOn,
     activeWorkspace: () => active,

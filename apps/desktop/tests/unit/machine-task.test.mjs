@@ -53,6 +53,58 @@ function responses(overrides) {
 }
 
 const text = (app) => app.w.document.body.textContent ?? "";
+
+test("cambiar de máquina limpia el proyecto y la rama del composer", async () => {
+  const app = await boot("listo", "machine-composer-reset", responses({
+    machine_list: [
+      { id: "local", local: true, active: true, on: true, hosts: true },
+      { id: "vm", local: false, active: false, on: true, hosts: true },
+    ],
+    list_live_sessions: [],
+    project_base_branches: {
+      branches: [{ reference: "refs/heads/main", name: "main", remote: false, commit: "abc", ahead: null, behind: null }],
+      selected: null,
+      fetched_at: null,
+    },
+  }));
+  await sleep(600);
+  const doc = app.w.document;
+  async function pickProject() {
+    doc.querySelector('[aria-label="Proyecto"]').click();
+    await sleep(100);
+    const option = [...doc.querySelectorAll("button")].find((b) => b.querySelector('span')?.textContent === "P1" && b.textContent.includes("sin tareas"));
+    assert.ok(option);
+    option.click();
+    await sleep(200);
+  }
+  async function pickMachine(id) {
+    doc.querySelector('[aria-label="Ejecutar en"]').click();
+    await sleep(150);
+    doc.querySelector(`[data-machine-option="${id}"]`).click();
+    await sleep(150);
+  }
+  await pickProject();
+  doc.querySelector('[aria-label="Rama base"]').click();
+  await sleep(150);
+  const branch = [...doc.querySelectorAll("button")].find((b) => b.textContent.trim() === "main");
+  assert.ok(branch);
+  branch.click();
+  await sleep(100);
+  assert.equal(doc.querySelector('[aria-label="Rama base"]').textContent.trim(), "main");
+  await pickMachine("local");
+  assert.equal(doc.querySelector('[aria-label="Proyecto"]').textContent.trim(), "P1");
+  assert.equal(doc.querySelector('[aria-label="Rama base"]').textContent.trim(), "main");
+  await pickMachine("vm");
+  assert.notEqual(doc.querySelector('[aria-label="Proyecto"]').textContent.trim(), "P1");
+  assert.equal(doc.querySelector('[aria-label="Rama base"]'), null);
+  await pickProject();
+  assert.equal(doc.querySelector('[aria-label="Rama base"]').textContent.trim(), "Elegir rama");
+  await pickMachine("local");
+  assert.notEqual(doc.querySelector('[aria-label="Proyecto"]').textContent.trim(), "P1");
+  assert.equal(doc.querySelector('[aria-label="Rama base"]'), null);
+  assert.deepEqual(app.failures, []);
+});
+
 async function openTask(app, id) {
   const el = app.w.document.querySelector(`[data-sesion="${id}"]`);
   assert.ok(el, `no está la fila de ${id}`);
@@ -97,7 +149,7 @@ test("una tarea de una máquina apagada abre sin fallo y mandarle algo la encien
 
   await openTask(app, "r1");
   assert.ok(text(app).includes("Respuesta guardada"), "no enseña la copia guardada");
-  assert.equal(doc.querySelector("[data-machine-notice]")?.textContent, "vm está apagada: se enciende cuando envíes un mensaje.");
+  assert.equal(doc.querySelector("[data-machine-notice]"), null, "no muestra un aviso por estar apagada");
   const location = doc.querySelector('[data-conversacion] [data-task-location][data-task-location-on="false"]');
   assert.equal(location?.querySelector("[data-task-location-machine]")?.textContent, "vm", "la ventana no dice en qué máquina corre");
 

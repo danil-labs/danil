@@ -1,3 +1,4 @@
+import { isRetiredAgent } from "@terminus/tasks";
 import type { HistoryRef } from "@terminus/protocol";
 import type { Preview } from "../artifacts/Preview";
 import { HistoryDetails } from "./HistoryDetails";
@@ -49,6 +50,7 @@ import { CHUNK, chunkAt, chunkIds, chunkOf, chunkStart, headChunk, tailChunk, ty
 import { workLabel } from "../projects/branchLabel";
 import { sangrarTerminal } from "./terminalIndent";
 import { ponerLanzamiento } from "./launchGroups";
+import { freeMcpNoticeAt } from "./free-mcp-notice.ts";
 import { FIN_DE_ARCHIVO, TECLAS_DE_TERMINAL, pideClave } from "./commandInput";
 import { claseDelTramo, finishEdit, highlightSpans, placeLabel, referenceId, searchPlaces, searchTasks, taskLabel, taskTarget, type MentionTarget, type PendingEdit, type PlaceCandidate, type TextEdit, type TaskCandidate, type TaskMention, tramosDelMensaje } from "../../lib/taskMentions";
 import {
@@ -84,6 +86,7 @@ import { AstroAvatar } from "../projects/AstroAvatar";
 import {
   type CatalogosDeModelos,
   nombreDeModelo,
+  modelBrand,
   type OpcionDeModelo,
   opcionesDeModelos,
 } from "../../lib/models";
@@ -153,7 +156,6 @@ import BloqueDeInterrupcion from "./InterruptionBlock";
 import ColaDeMensajes, { type ColaDeMensajesProps } from "./MessageQueue";
 import McpAppView from "./McpAppView";
 import { Select } from "../../ui/Select";
-import SelectorDeModelo from "./ModelPicker";
 import SelectorDeModo from "./ModePicker";
 import { AltoMonotono } from "./MonotonicHeight";
 import { MARCA_SIN_ELEGIR } from "./marks";
@@ -178,6 +180,7 @@ import { Spinner } from "../../ui/Spinner";
 
 // Chunk aparte: el bloque de razonamiento solo lo carga un turno que lo trae.
 const Reasoning = sharedLazy(() => import("./Reasoning"));
+const SelectorDeModelo = sharedLazy(() => import("./ModelPicker"));
 
 /**
  * Quién dijo un turno: lo arma Rust a partir de la cuenta del agente o del
@@ -524,6 +527,7 @@ export type ChatProps = {
   onVerCambios?: () => void;
   agent: string;
   modelOptions?: { headers: Record<string, string> };
+  onCreditsPrepare?: () => void;
   /**
    * Lo que se puede elegir para trabajar. `null` mientras no se ha leído.
    * Ya viene filtrado por `superficies.paraElMenu`: lo utilizable, más
@@ -1007,7 +1011,8 @@ export default function Chat(props: ChatProps) {
   const bloqueoDeSuperficie = () => {
     if (props.superficies === null || props.superficies.length === 0) return null;
     if (!actual()) {
-      return t("chat.surface.gone");
+      // Una tarea de los modelos locales retirados conserva su historia, pero no tiene con qué seguir.
+      return isRetiredAgent(props.agent) ? t("chat.surface.local_retired") : t("chat.surface.gone");
     }
     const falta = actual()!.porque;
     return falta ? prosa(falta) : null;
@@ -1600,6 +1605,13 @@ export default function Chat(props: ChatProps) {
   const bloques = createMemo<Bloque[]>(() => {
     const out: Bloque[] = [];
     props.msgs.forEach((m, i) => {
+      const freeNotice = freeMcpNoticeAt(props.msgs, i);
+      if (freeNotice) {
+        const names = freeNotice.names?.map((name) => JSON.stringify(name)).join(", ");
+        out.push({ tipo: "msg", msg: { ...m, text: [t("chat.notice.free_router_mcp_unavailable"), names].filter(Boolean).join("\n") }, i });
+        return;
+      }
+      if (freeMcpNoticeAt(props.msgs, i - 1)?.names) return;
       // Contestar no deja un turno suelto en el hilo: la respuesta se pinta
       // DENTRO de la pregunta que contesta, que es donde se lee lo que se
       // preguntó y lo que se decidió como una sola cosa.
@@ -2847,7 +2859,7 @@ export default function Chat(props: ChatProps) {
               </Button>
             </Show>
 
-            <Show when={(props.superficies?.length ?? 0) > 0 && !modoTerminal()}>
+            <Show when={props.superficies != null && !modoTerminal()}>
               {/* Una opción decide agente, superficie y modelo. Separarlos hacía
                   imposible buscar Claude, Codex y OpenCode en el mismo menú.
                   La marca sale del agente que sirve la superficie: «OpenCode»
@@ -2855,21 +2867,19 @@ export default function Chat(props: ChatProps) {
               <SelectorDeModelo
                 pildora
                 invokeOptions={props.modelOptions}
-                marca={actual()?.provider ?? props.agent}
+                marca={modelBrand(actual()?.provider ?? props.agent, props.model)}
                 models={opciones()}
                 superficie={props.superficie}
                 model={props.model}
                 missingModelLabel={props.nativeSubagent ? t("chat.model.unreported") : undefined}
-                disabled={
-                  props.modelLocked ||
-                  !opciones().some((opcion) => opcion.usable)
-                }
+                disabled={props.modelLocked}
                 disabledReason={
                   props.agentLocked && props.agentLockedReason
                     ? props.agentLockedReason
                     : props.nativeSubagent ? t("chat.model.native") : props.modelLocked ? t("chat.model.locked") : undefined
                 }
                 onChange={props.onModel}
+                onCreditsPrepare={props.onCreditsPrepare}
                 lockedAgent={props.agentLocked ? props.agent : undefined}
                 lockedReason={props.agentLocked ? props.agentLockedReason ?? t("chat.handover.unsupported") : null}
                 efforts={efforts()}
@@ -3158,7 +3168,7 @@ export default function Chat(props: ChatProps) {
                             class="flex size-11 items-center justify-center rounded-full bg-neutral-200"
                             title={sender().model ?? sender().provider}
                           >
-                            <MarcaAgente id={sender().provider} size={22} />
+                            <MarcaAgente id={modelBrand(sender().provider, sender().model)} size={22} />
                           </div>
                         </div>
                       )}
@@ -4373,7 +4383,7 @@ function LineaDeProveedor(props: {
 }) {
   // El nombre del proveedor no se escribe: el logo ya lo dice y el modelo va
   // solo. Queda en el `title` para quien pase el cursor por encima.
-  const titulo = () => props.provider ?? props.agentLabel;
+  const titulo = () => modelBrand(props.agent, props.model, props.catalogo) === "danil" ? t("surfaces.label.free") : props.provider ?? props.agentLabel;
   return (
     <span
       class="flex items-center gap-1 whitespace-nowrap rounded-sm px-1 text-caption leading-4 text-neutral-500"
@@ -4382,7 +4392,7 @@ function LineaDeProveedor(props: {
       data-provider={props.provider}
     >
       <span class="flex size-3.5 shrink-0 items-center justify-center">
-        <MarcaAgente id={props.agent} size={12} />
+        <MarcaAgente id={modelBrand(props.agent, props.model, props.catalogo)} size={12} />
       </span>
       <Show when={props.model}>
         {(id) => (

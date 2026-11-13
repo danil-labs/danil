@@ -41,16 +41,12 @@ export type WorkspaceAccount = {
   error?: string | null;
 };
 
-/** `null`: el motor no conoce el comando; cualquier otro fallo se conserva. */
+/**
+ * Siempre `null`: Desk tiene una sola cuenta, la de `identity` (`danil-account.ts`).
+ * Cambiar de usuario no existe; las vistas vuelven a la cuenta única.
+ */
 export async function readSessions(): Promise<DanilSessionInfo[] | null> {
-  try {
-    const list = await invoke<DanilSessionInfo[]>("danil_sessions");
-    if (!Array.isArray(list)) throw { detail: "invalid_response" };
-    return list;
-  } catch (e) {
-    if (failureCode(e) === "command") return null;
-    throw e;
-  }
+  return null;
 }
 
 /** `null` con un motor anterior; la cuenta de `workspace` (sin él, el abierto). */
@@ -127,6 +123,10 @@ export function sessionForWorkspace(list: DanilSessionInfo[] | null | undefined,
   if (!email) return null;
   return connectedSessions(list).find((s) => s.email?.trim().toLocaleLowerCase() === email) ?? null;
 }
+
+/** La sesión de las otras máquinas de la persona: la del workspace abierto; si no es de ninguna cuenta, la principal. Una cuenta sin sesión aquí no habla como otra. */
+export const railSession = (list: DanilSessionInfo[] | null | undefined, of: WorkspaceAccount | null) =>
+  sessionForWorkspace(list, of) ?? (of?.account ? null : defaultSession(list));
 
 /**
  * La línea de solo lectura del workspace: con quién se sincroniza; `unlinked`

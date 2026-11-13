@@ -89,7 +89,7 @@ test("una ruta nombrada cuenta como dependencia, también si es una carpeta", ()
 
 test("montar dist pide los builds; una prueba de fuente no", () => {
   const read = testReader(root);
-  assert.equal(read([join(root, "tests/unit/web-gate.test.mjs")]).needsBuild, true);
+  assert.equal(read([join(root, "tests/integration/platform-page.test.mjs")]).needsBuild, true);
   assert.equal(read([join(root, "tests/unit/tabs.test.ts")]).needsBuild, false);
 });
 

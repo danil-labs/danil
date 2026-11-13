@@ -15,7 +15,7 @@
  * suma su rebanada con `merge`.
  */
 import { type AccountWorkspace, type Blocked, type CallResult, type DeferredFrame, type EngineInfo, type EventsPage, type MachineState, type SystemId, cachedAt, callWorkspace, isDeferrable, linkedAttention, linkedEvents, linkedListing, requestId, unlinkedWorkspaces } from "../../computers/src/index.ts";
-import { DEADLINES, type Deadlines, classOf } from "./deadlines.ts";
+import { DEADLINES, type Deadlines, PASSIVE, classOf } from "./deadlines.ts";
 import { FleetError, fromRelay } from "./errors.ts";
 import { argsFor } from "./ids.ts";
 import { type MergeContext, encode, encodeEvent, merge } from "./merge.ts";
@@ -27,9 +27,27 @@ type Row = Record<string, unknown>;
 /** `os` solo si se sabe: la tarjeta de la tarea lo lee y, si falta, no inventa un sistema. */
 /** `features`: lo que su motor anuncia (`status.service_features`); cada función se enciende por máquina. */
 /** `version`: la `host_version` de su último `hello`, según el plano de control; se conserva apagada. */
-/** `opensOnRead`: una VM de un proveedor administrado que se enciende al abrir la web si no hay copia que enseñar. */
 /** `child`: una máquina hija de esta computadora (Linux en esta PC): no está en el registro de la cuenta y es de todos sus workspaces. */
-export type MachineInfo = { id: string; name: string; wakes: boolean; opensOnRead?: boolean; outdated?: boolean; linked?: ReadonlySet<string> | null; os?: SystemId; features?: readonly string[]; version?: string; child?: boolean };
+/** `organization`: es el endpoint de la persona en el servidor de una organización y atiende esos workspaces (`organization` de su fila). */
+export type MachineInfo = {
+  id: string;
+  name: string;
+  wakes: boolean;
+  outdated?: boolean;
+  linked?: ReadonlySet<string> | null;
+  os?: SystemId;
+  features?: readonly string[];
+  version?: string;
+  child?: boolean;
+  organization?: { id: string; workspaces: readonly { id: string; name: string }[] } | null;
+};
+
+/** Si `info` atiende `workspace` por una organización, según su fila. */
+const serves = (info: MachineInfo | undefined, workspace: string): boolean => !!info?.organization?.workspaces.some((w) => w.id === workspace);
+/** El endpoint de una organización vive en su servidor, siempre encendido: nunca se enciende desde aquí. */
+const alwaysOn = (info: MachineInfo): boolean => !!info.organization;
+/** La fila del plano de control dice `wakeable` para un endpoint (enciende su servidor); la flota no. */
+const normalized = (info: MachineInfo): MachineInfo => (alwaysOn(info) && info.wakes ? { ...info, wakes: false } : { ...info });
 export type Power = "on" | "off" | "starting" | "outdated";
 
 export type Envelope = { machine: string; workspace: string | null; command: string; args?: Row };
@@ -117,7 +135,12 @@ const RETRY_READ = new Set(["machine_lost", "machine_timeout", "io"]);
  * de la última rebanada guardada. Al apagarse, la VM deja en el relay su copia, más
  * nueva que lo leído aquí mientras estaba encendida (la respuesta que terminó al final).
  */
-type Member = { info: MachineInfo; link: Link; stops: (() => void)[]; was: MachineState; outdated: boolean; engine: boolean | null; fresh: Set<string> | null };
+/**
+ * `live`: contestó en vivo (sin `cached`) después del último `state` de su sesión,
+ * que entonces no decía `online`; lo más nuevo manda hasta el próximo `state`.
+ * `hint`: lo que dijo otra fuente (la vista del motor) antes del primer `state`.
+ */
+type Member = { info: MachineInfo; link: Link; stops: (() => void)[]; was: MachineState; outdated: boolean; engine: boolean | null; fresh: Set<string> | null; live: boolean; hint: MachineState | null };
 
 export class Fleet {
   readonly self: string | null;
@@ -148,7 +171,7 @@ export class Fleet {
    */
   setMachines(list: readonly MachineInfo[]) {
     if (this.closed) return;
-    const next = new Map(list.filter((m) => m.id !== this.self).map((m) => [m.id, m]));
+    const next = new Map(list.filter((m) => m.id !== this.self).map((m) => [m.id, normalized(m)]));
     for (const [id, member] of [...this.members])
       if (!next.has(id)) {
         this.drop(member);
@@ -160,15 +183,16 @@ export class Fleet {
     for (const info of next.values()) {
       const member = this.members.get(info.id);
       if (!member) {
-        this.add({ ...info });
+        this.add(info);
         continue;
       }
       const before = member.info;
-      const same = before.name === info.name && before.wakes === info.wakes && before.opensOnRead === info.opensOnRead && before.os === info.os && !!before.outdated === !!info.outdated && sameLinks(before.linked ?? null, info.linked ?? null)
-        && (before.features ?? []).join() === (info.features ?? []).join();
+      const same = before.name === info.name && before.wakes === info.wakes && before.os === info.os && !!before.outdated === !!info.outdated && sameLinks(before.linked ?? null, info.linked ?? null)
+        && (before.features ?? []).join() === (info.features ?? []).join()
+        && JSON.stringify(before.organization ?? null) === JSON.stringify(info.organization ?? null);
       // Un contrato que vuelve a ser compatible quita la marca que puso el relay.
       if (before.outdated && !info.outdated) member.outdated = false;
-      member.info = { ...info };
+      member.info = info;
       if (!same) this.config.onChange?.(info.id);
     }
   }
@@ -217,9 +241,10 @@ export class Fleet {
     return this.registry;
   }
 
-  /** Las otras máquinas, administradas primero y luego por nombre. */
+  /** Las otras máquinas, administradas (las VM y los servidores de organización) primero y luego por nombre. */
   machines(): MachineInfo[] {
-    return [...this.members.values()].map((m) => m.info).sort((a, b) => Number(b.wakes) - Number(a.wakes) || a.name.localeCompare(b.name));
+    const managed = (m: MachineInfo) => Number(m.wakes || alwaysOn(m));
+    return [...this.members.values()].map((m) => m.info).sort((a, b) => managed(b) - managed(a) || a.name.localeCompare(b.name));
   }
 
   has(machine: string | null | undefined): boolean {
@@ -242,24 +267,77 @@ export class Fleet {
     const member = this.members.get(machine);
     if (!member) return "off";
     if (this.isOutdated(member)) return "outdated";
-    const state = member.link.state();
-    return state === "online" ? "on" : state === "starting" ? "starting" : "off";
+    if (this.online(member)) return "on";
+    const state = this.stateOf(member);
+    // Un endpoint de organización no se enciende desde aquí: solo un `offline` de su relay lo apaga.
+    if (alwaysOn(member.info)) return OFF.includes(state) ? "off" : "on";
+    return state === "starting" ? "starting" : "off";
   }
 
   /**
-   * Las otras máquinas que tienen `workspace`, según el registro de la cuenta;
-   * sin registro, las que lo tienen vinculado. Nunca según quién contestó al final.
+   * Lo que otra fuente sabe del estado de `machine` (la vista del motor, de la
+   * lista de la cuenta). Solo vale mientras su sesión no dijo nada: el relay manda.
+   */
+  observe(machine: string, state: MachineState) {
+    const member = this.members.get(machine);
+    if (!member || member.hint === state) return;
+    const before = this.power(machine);
+    member.hint = state;
+    if (this.power(machine) !== before) this.config.onChange?.(machine);
+  }
+
+  /** El estado de la sesión, o el de otra fuente si la sesión aún no dijo ninguno. */
+  private stateOf(member: Member): MachineState {
+    const state = member.link.state();
+    return state === "unknown" && member.hint ? member.hint : state;
+  }
+
+  /**
+   * Si la flota no le pregunta por estar apagada: según su relay y sin una
+   * respuesta en vivo más nueva. A un endpoint de organización siempre se le
+   * pregunta: su relay contesta (en vivo, de su copia o `machine_off`).
+   */
+  private isOff(member: Member): boolean {
+    return !member.live && !alwaysOn(member.info) && OFF.includes(this.stateOf(member));
+  }
+
+  /** En línea según lo último que se supo: su sesión, o una respuesta en vivo más nueva que ella. */
+  private online(member: Member): boolean {
+    return member.live || this.stateOf(member) === "online";
+  }
+
+  /** Contestó el motor de allá (no la copia del relay): está en línea aunque su último `state` dijera otra cosa. */
+  private answered(member: Member) {
+    if (member.live || member.link.state() === "online") return;
+    member.live = true;
+    // Como al llegar su `online`: lo leído mientras parecía apagada se relee.
+    if (this.listening) this.config.onEvents?.(member.info.id, [], true);
+    this.config.onChange?.(member.info.id);
+  }
+
+  /** El relay dijo que no la alcanza: la evidencia en vivo ya no vale. */
+  private unanswered(member: Member) {
+    if (!member.live) return;
+    member.live = false;
+    this.config.onChange?.(member.info.id);
+  }
+
+  /**
+   * Las otras máquinas que tienen `workspace`, según el registro de la cuenta
+   * más las que su fila dice que lo tienen (el workspace de una organización no
+   * está en el registro de quien no es su dueña); sin registro, las que lo
+   * tienen vinculado. Nunca según quién contestó al final.
    */
   membersOf(workspace: string | null): string[] {
     if (!workspace) return [];
     const order = this.machines().map((m) => m.id);
     if (this.registry) {
       const w = this.registry.find((x) => x.id === workspace);
-      return order.filter((id) => (w?.computers.includes(id) ?? false) || this.info(id)?.child === true);
+      return order.filter((id) => (w?.computers.includes(id) ?? false) || this.info(id)?.child === true || (this.info(id)?.linked?.has(workspace) ?? false) || serves(this.info(id), workspace));
     }
     return order.filter((id) => {
       const linked = this.info(id)?.linked ?? null;
-      return linked === null || linked.has(workspace);
+      return linked === null || linked.has(workspace) || serves(this.info(id), workspace);
     });
   }
 
@@ -267,8 +345,21 @@ export class Fleet {
   private linkedAnywhere(workspace: string): boolean {
     return [...this.members.values()].some((m) => {
       const linked = m.info.linked ?? null;
-      return linked === null || linked.has(workspace);
+      return linked === null || linked.has(workspace) || serves(m.info, workspace);
     });
+  }
+
+  /** Los workspaces de organización que atienden las máquinas según sus filas, con su nombre y quién los atiende. */
+  organizationWorkspaces(): { id: string; name: string; machines: string[] }[] {
+    const found = new Map<string, { id: string; name: string; machines: string[] }>();
+    for (const m of this.machines()) {
+      for (const w of m.organization?.workspaces ?? []) {
+        const seen = found.get(w.id) ?? { id: w.id, name: w.name, machines: [] };
+        seen.machines.push(m.id);
+        found.set(w.id, seen);
+      }
+    }
+    return [...found.values()];
   }
 
   inRegistry(workspace: string | null): boolean {
@@ -392,9 +483,30 @@ export class Fleet {
   async wake(machine: string): Promise<void> {
     const member = this.members.get(machine);
     if (!member) throw new FleetError("unknown_machine", machine);
-    if (member.link.state() === "online") return;
+    if (this.online(member) || (alwaysOn(member.info) && !OFF.includes(this.stateOf(member)))) return;
     if (!member.info.wakes) throw new FleetError("machine_off", machine, null, false);
     await this.wakeMember(member);
+  }
+
+  /**
+   * Espera a que `machine`, que ya se está encendiendo, diga `online`, sin pedir
+   * que la enciendan: leer nunca enciende una máquina.
+   */
+  async untilOnline(machine: string): Promise<void> {
+    const member = this.members.get(machine);
+    if (!member) throw new FleetError("unknown_machine", machine);
+    if (this.online(member) || (alwaysOn(member.info) && !OFF.includes(this.stateOf(member)))) return;
+    if (member.link.state() !== "starting") throw new FleetError("machine_off", machine, null, member.info.wakes);
+    await new Promise<void>((resolve, reject) => {
+      const done = (ok: boolean) => {
+        clearTimeout(timer);
+        stop();
+        ok ? resolve() : reject(new FleetError("machine_timeout", machine, "start"));
+      };
+      const timer = setTimeout(() => done(false), this.deadlines.intent);
+      const stop = member.link.onState((state) => (state === "online" ? done(true) : OFF.includes(state) && done(false)));
+      if (member.link.state() === "online") done(true);
+    });
   }
 
   /** Las acciones aplazadas de `machine` que esperan a que se conecte. */
@@ -451,7 +563,7 @@ export class Fleet {
     const member = this.members.get(machine);
     // Salvo si cambió la cola de aplazadas: la copia del relay ya la refleja y la de aquí no.
     const settled = !member?.fresh || member.fresh.has(key);
-    if (before?.has && member && settled && classOf(envelope.command) === "read" && OFF.includes(member.link.state())) return { ...before, status: "cached", error: "machine_off" };
+    if (before?.has && member && settled && classOf(envelope.command) === "read" && this.isOff(member)) return { ...before, status: "cached", error: "machine_off" };
     // Con otro contrato no se le pregunta: lo dirá su próximo `hello` (R14) o la lista de la cuenta.
     if (member && this.isOutdated(member)) return this.settle(keep("outdated", "version_mismatch"), key);
     let slice: Slice;
@@ -490,8 +602,9 @@ export class Fleet {
     if (stopped) throw new FleetError(stopped, machine);
     const kind = classOf(command);
     if (kind !== "read" && this.isOutdated(member)) throw new FleetError("version_mismatch", machine);
-    const off = OFF.includes(member.link.state());
-    if (off && ["list_storage", "reclaim_storage", "empty_build_cache", "collect_orphans"].includes(command)) throw new FleetError("machine_off", machine);
+    const off = this.isOff(member);
+    // Lo que la ventana pide sola (`PASSIVE`) no enciende la VM: solo un mensaje o un gesto de la persona.
+    if (off && PASSIVE.has(command)) throw new FleetError("machine_off", machine);
     // Archivar, borrar, renombrar, fijar o mover de space: el relay la guarda sin encenderla.
     if (off && kind !== "read" && !this.defers(command, args)) {
       if (!member.info.wakes) throw new FleetError("machine_off", machine, null, false);
@@ -508,6 +621,7 @@ export class Fleet {
       } catch (error) {
         const e = fromRelay(error, machine);
         if (e.code === "version_mismatch") this.markOutdated(member);
+        if (e.code === "machine_off") this.unanswered(member);
         if (e.code === "not_remotely_startable") throw new FleetError("machine_off", machine, null, false);
         const again = kind === "read" ? RETRY_READ : RETRY_ACTION;
         if (retried || command === "list_storage" || !again.has(e.code)) throw e;
@@ -515,6 +629,7 @@ export class Fleet {
       }
     };
     const result = await attempt(false);
+    if (!result.cached && !result.deferred) this.answered(member);
     return { value: this.linkedOnly(member, command, result.value), cached: result.cached };
   }
 
@@ -531,6 +646,7 @@ export class Fleet {
   /** Enciende la VM y espera a que diga `online`, con el tope de un intent. */
   private async wakeMember(member: Member) {
     const { id } = member.info;
+    if (alwaysOn(member.info)) throw new FleetError("machine_off", id, null, false);
     if (!this.config.wake) throw new FleetError("machine_off", id, null, true);
     const started = member.link.state() === "starting" || (await this.config.wake(id).catch(() => false));
     if (started === "not_startable") throw new FleetError("machine_off", id, "not_remotely_startable", false);
@@ -568,9 +684,11 @@ export class Fleet {
 
   private add(info: MachineInfo) {
     const link = this.config.connect(info);
-    const member: Member = { info, link, stops: [], was: link.state(), outdated: false, engine: null, fresh: null };
+    const member: Member = { info, link, stops: [], was: link.state(), outdated: false, engine: null, fresh: null, live: false, hint: null };
     member.stops.push(
       link.onState((state) => {
+        // Cada `state` de la sesión es lo más nuevo: deja atrás la respuesta en vivo anterior.
+        member.live = false;
         if (OUTDATED.includes(state)) member.outdated = true;
         const cameOn = state === "online" && member.was !== "online";
         // Se apagó en esta sesión: cada lectura vuelve a pedirse una vez a la copia del relay (no la enciende).

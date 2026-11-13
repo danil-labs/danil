@@ -79,7 +79,6 @@ function AgentDetail(props: { source: ServiceSource; agent: ServiceAgent; onBack
         </Show>
       </SettingsSection>
       <SettingsSection title={t("web.service.detail_uses")}>
-        <SettingsRow label={t("web.service.calendars")} description={d().calendar ? (d().calendar!.email || d().calendar!.name) : t("web.service.none")} />
         <SettingsRow label={t("web.service.http_tools")} description={names(d().httpTools) || t("web.service.none")} />
       </SettingsSection>
       <SettingsSection title={t("web.service.detail_knows")}>
@@ -132,9 +131,6 @@ export function CustomerConnections(props: CustomerProps) {
     <Resolved source={s()} workspace={props.workspace}>
       <SettingsSection><SettingsRow label={t("web.service.edit_hint")}><OpenAgents /></SettingsRow></SettingsSection>
       <Suspense fallback={null}><Channels demo={props.demo} session={props.session} /></Suspense>
-      <Listed title={t("web.service.calendars")} description={t("web.service.calendars_hint")} empty={t("web.service.calendars_empty")} load={() => s().calendars()}>
-        {row => <SettingsRow label={row.email || row.name} description={row.provider}><Badge tone={row.connected ? 'success' : 'danger'}>{row.connected ? t("web.service.connected") : t("web.service.disconnected")}</Badge></SettingsRow>}
-      </Listed>
       <Listed title={t("web.service.http_tools")} description={t("web.service.http_tools_hint")} empty={t("web.service.http_tools_empty")} load={() => s().httpTools()}>
         {row => <SettingsRow label={<span class="inline-flex flex-wrap items-center gap-2">{row.name}<Show when={row.method}><Badge forma="dato">{row.method}</Badge></Show></span>} description={row.host}><Show when={!row.active}><Badge>{t("web.service.inactive")}</Badge></Show></SettingsRow>}
       </Listed>

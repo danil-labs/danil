@@ -12,7 +12,7 @@ import {
   type SlashMenu,
 } from "@terminus/protocol";
 import { replaceSlash, slashAt } from "@terminus/chat/slash";
-import { menuSurfaces, modelName, previewLabel, type Surface, surfaceHas, surfaceOf } from "@terminus/tasks";
+import { canonicalAgentId, isFreeRouterAgent, menuSurfaces, modelName, modelPresentation, routerDiscovery, previewLabel, type Surface, surfaceHas, surfaceOf } from "@terminus/tasks";
 import * as DocumentPicker from "expo-document-picker";
 import { File } from "expo-file-system";
 import * as ImagePicker from "expo-image-picker";
@@ -22,10 +22,13 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   ATTACHMENT_MIMES,
   type Draft,
+  type FreeModels,
+  freeModelsOf,
   IMAGE_MIMES,
   MAX_ATTACHMENT_BYTES,
   mentionsOf,
   modelsOf,
+  subscribeFreeCatalog,
   permissionModesOf,
   slashMenuOf,
   surfacesOf,
@@ -36,7 +39,10 @@ import type { Host } from "../lib/hosts";
 import { effectiveMode, enterAction, hasSomethingToSend } from "../lib/composer";
 import { promote, type Queued, queueMemory } from "../lib/steer";
 import { lang, phrase, t, w } from "../lib/i18n";
+import { surfacePresentation, selectedModelMark } from "../lib/model-presentation";
+import { freeRouterState } from "../lib/free-router";
 import { BrandMark } from "./BrandMark";
+import { FreeConsentSheet, type FreeRouterRow } from "./FreeModels";
 import { Icon } from "./Icon";
 import { matches, NoMatch } from "./Search";
 import { Sheet, SheetOption, SheetSection } from "./Sheet";
@@ -54,14 +60,6 @@ const MENTION = /(?:^|\s)@("?)([^\s"]*)$/;
 const EFFORT_LEVELS = ["minimal", "low", "medium", "high", "xhigh", "max"] as const;
 // Los modos de cada máquina y proveedor que ya se vieron: con la máquina apagada, el cuadro sigue sabiendo cuáles sostiene.
 const knownModes = new Map<string, PermissionModeOption[]>();
-
-/** El nombre de una superficie como en la ventana (`AIProviders.tsx`): «Zen y Go», «Modelos gratuitos», «Locales». */
-function surfaceLabel(s: Surface) {
-  if (s.provider === "opencode-zen" && s.catalogo === "de_pago") return t("composer.zen_go");
-  if (s.catalogo === "gratuitos") return w("surfaces.label.free");
-  if (s.provider === "opencode-local") return w("surfaces.label.local");
-  return s.label;
-}
 
 /** Por qué no se puede usar: la frase del motor si el catálogo la conoce; si no, la de los gratuitos o su marca. */
 function whyNot(s: Surface<Frase>) {
@@ -193,6 +191,8 @@ export function Composer({
   const [surface, setSurface] = useState<string | undefined>(undefined);
   const [busy, setBusy] = useState(false);
   const [sheet, setSheet] = useState<"model" | "attach" | "handover" | null>(null);
+  const [routerRows, setRouterRows] = useState<FreeModels[] | null>(null);
+  const [routerAsking, setRouterAsking] = useState<FreeRouterRow | null>(null);
   const input = useRef<ComponentRef<typeof TextInput>>(null);
   // El CLI elegido que espera la confirmación del traspaso.
   const [candidate, setCandidate] = useState<string | null>(null);
@@ -234,6 +234,25 @@ export function Composer({
   const pendingLabel = pendingProvider ? providerLabel(pendingProvider) : null;
   const candidateLabel = candidate ? providerLabel(candidate) : null;
 
+  const [catalogRevision, setCatalogRevision] = useState(0);
+  // Abrir no enciende: el estado del Router solo se pregunta a una máquina encendida.
+  useEffect(() => {
+    setRouterRows(null);
+    if (sheet !== "model" || !host || !workspace || host.power() !== "on") return;
+    let alive = true;
+    // El motor con consentimiento central publica la política completa tras un refresco: tres lecturas, un segundo entre cada una.
+    void (async () => {
+      for (let attempt = 1; alive; attempt++) {
+        const rows = await freeModelsOf(host, workspace).catch(() => [] as FreeModels[]);
+        if (rows.length || attempt >= 3) return alive && setRouterRows(rows);
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+      }
+    })();
+    return () => { alive = false; };
+  }, [sheet, host, workspace, catalogRevision]);
+  useEffect(() => subscribeFreeCatalog((machine, changedWorkspace) => {
+    if (machine === host?.id && changedWorkspace === workspace) setCatalogRevision((revision) => revision + 1);
+  }), [host?.id, workspace]);
   // Modelos y permisos del proveedor elegido; la barra de `/` se pide al usarla.
   useEffect(() => {
     const key = `${host?.id}/${current}`;
@@ -250,9 +269,9 @@ export function Composer({
     return () => {
       alive = false;
     };
-  }, [host, workspace, current, host?.power()]);
+  }, [host, workspace, current, host?.power(), catalogRevision]);
   useEffect(() => setMentions(null), [host, workspace, folder]);
-  // Las superficies de la máquina: OpenCode parte su catálogo en «Zen y Go» y «Modelos gratuitos».
+  // Las superficies mantienen sus ids aunque compartan el ejecutor.
   useEffect(() => {
     if (!host || !workspace || host.power() !== "on") return;
     let alive = true;
@@ -260,7 +279,7 @@ export function Composer({
     return () => {
       alive = false;
     };
-  }, [host, workspace, host?.power()]);
+  }, [host, workspace, host?.power(), catalogRevision]);
   // La superficie sigue al agente y al modelo, y no al revés (`surfaceOf`, la regla de la ventana).
   useEffect(() => {
     if (!current) return;
@@ -303,6 +322,9 @@ export function Composer({
   const menu = menuSurfaces(surfaces, surface);
   const surfaceModels = models?.models.filter((m) => surfaceHas(activeSurface, m)) ?? [];
   const chosen = models?.models.find((m) => m.id === model) ?? null;
+  const selectedSurface = ownSurfaces.find((s) => s.id === surface) ?? (ownSurfaces.length === 1 ? ownSurfaces[0] : undefined);
+  const selectedMark = selectedModelMark(current, model, selectedSurface);
+  const selectedProviderLabel = selectedSurface ? surfacePresentation(selectedSurface, { free: t("composer.free_models") }).label : providerLabel(current);
   const modelText = model ? modelName(model, models) : previewLabel(lang, "default_model");
   const efforts = chosen?.efforts ?? models?.models[0]?.efforts ?? [];
   // Lo que se ve es lo que se manda: el elegido, o el de la tarea o el workspace, o el del proveedor.
@@ -680,9 +702,9 @@ export function Composer({
             onSubmitEditing={Platform.OS === "web" ? undefined : () => void send()}
             onKeyPress={Platform.OS === "web" ? onWebKey : undefined}
           />
-          {!shell && current ? (
+          {!shell ? (
             <Pressable testID="model" onPress={() => setSheet("model")} style={styles.round} accessibilityLabel={`${w("chat.model.title")}: ${modelText}${efforts.length ? ` · ${effortLabel(effort)}` : ""}${modeOption ? ` · ${phrase(modeOption.label)}` : ""}`}>
-              <BrandMark id={current} size={20} color={theme.text} />
+              {selectedMark ? <BrandMark id={selectedMark} size={20} color={theme.text} /> : <Icon name="sliders-horizontal" size={20} color={theme.text} />}
             </Pressable>
           ) : null}
           {showStop ? (
@@ -707,8 +729,12 @@ export function Composer({
         <Text style={[styles.hint, { color: theme.textMuted, paddingHorizontal: 18, paddingTop: 8 }]}>{t("composer.unsupported_file")}</Text>
       </Sheet>
 
+      <FreeConsentSheet row={routerAsking} theme={theme} onClose={() => setRouterAsking(null)} onSaved={() => setRouterAsking(null)} />
+
       <Sheet visible={sheet === "model"} title={w("chat.model.title")} search={t("search.models")} onClose={() => setSheet(null)}>
         {(query) => {
+          const discovery = routerDiscovery(models?.models.map((m) => m.id) ?? [], query);
+          const routerState = freeRouterState(routerRows);
           const shownModels = surfaceModels.filter((m) => matches(query, m.label, m.id, modelName(m.id, models)));
           return (
             <>
@@ -717,30 +743,67 @@ export function Composer({
               {usable.map((p) => {
                 // Lo utilizable y lo de la tarea; los gratuitos sin activar también, para llevar a activarlos.
                 const own = surfaces.filter((s) => s.provider === p.id && (menu.includes(s) || s.catalogo === "gratuitos"));
-                if (own.length < 2)
+                if (!own.length) {
+                  const presentation = surfacePresentation({ provider: p.id, catalogo: "todo", label: p.label }, { free: t("composer.free_models") });
                   return (
                     <SheetOption
                       key={p.id}
-                      left={<BrandMark id={p.id} size={17} color={theme.text} />}
-                      label={p.label}
+                      left={presentation.mark ? <BrandMark id={presentation.mark} size={17} color={theme.text} /> : undefined}
+                      label={presentation.label}
                       selected={p.id === current}
                       disabled={locked && p.id !== current}
                       onPress={() => chooseProvider(p.id)}
                     />
                   );
-                return own.map((s) => (
+                }
+                return own.map((s) => {
+                  const presentation = surfacePresentation(s, { free: t("composer.free_models") });
+                  return (
                   <SheetOption
                     key={`${p.id}/${s.id}`}
                     testID={`surface-${s.id}`}
-                    left={<BrandMark id={p.id} size={17} color={theme.text} />}
-                    label={`${p.label} · ${surfaceLabel(s)}`}
+                    left={presentation.mark ? <BrandMark id={presentation.mark} size={17} color={theme.text} /> : undefined}
+                    label={presentation.label}
                     detail={s.usable ? null : whyNot(s)}
                     selected={p.id === current && s.id === surface}
                     disabled={(locked && p.id !== current) || (!s.usable && !onAccounts)}
                     onPress={() => chooseSurface(s)}
                   />
-                ));
+                  );
+                });
               })}
+              {discovery ? (
+                <View style={{ paddingHorizontal: 18, paddingVertical: 11, gap: 5 }} accessibilityLabel={t("composer.free_models")}>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                    <BrandMark id="danil" size={17} color={theme.text} />
+                    <Text style={{ color: theme.text, fontSize: TEXT.ui }}>{t("composer.free_models")}</Text>
+                  </View>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 8, minHeight: 32 }}>
+                    <Text style={{ color: theme.text, fontSize: TEXT.ui }}>{discovery.label}</Text>
+                    <Text style={{ color: theme.textMuted, fontSize: TEXT.label }}>{discovery.creator}</Text>
+                    <View style={{ flex: 1 }} />
+                    {routerState === "activate" ? (
+                      <Pressable
+                        testID="router-activate"
+                        accessibilityRole="button"
+                        onPress={() => {
+                          const row = routerRows?.find((r) => isFreeRouterAgent(canonicalAgentId(r.provider, "danil-free/")));
+                          if (!row || !host || !workspace) return;
+                          setSheet(null);
+                          setRouterAsking({ ...row, host, workspace });
+                        }}
+                        style={{ backgroundColor: theme.primary, borderRadius: RADIUS.sm, paddingHorizontal: 12, paddingVertical: 6 }}
+                      >
+                        <Text style={{ color: theme.onPrimary, fontSize: TEXT.ui, fontWeight: "600" }}>{w("chat.model.router_activate")}</Text>
+                      </Pressable>
+                    ) : routerState === "update_engine" || routerState === "unavailable" ? (
+                      <Text testID={`router-${routerState}`} style={{ color: theme.textMuted, fontSize: TEXT.ui }}>
+                        {w(routerState === "update_engine" ? "chat.model.router_update_engine" : "chat.model.router_route_unavailable")}
+                      </Text>
+                    ) : null}
+                  </View>
+                </View>
+              ) : null}
               <SheetSection>{w("chat.model.listbox")}</SheetSection>
               {!models ? <Text style={[styles.hint, { color: theme.textMuted, paddingHorizontal: 18 }]}>{t("composer.loading")}</Text> : null}
               {models && !surfaceModels.length ? <Text style={[styles.hint, { color: theme.textMuted, paddingHorizontal: 18 }]}>{w("chat.model.empty")}</Text> : null}
@@ -748,7 +811,8 @@ export function Composer({
               {shownModels.map((m) => (
                 <SheetOption
                   key={m.id}
-                  label={m.label || modelName(m.id, models)}
+                  label={modelPresentation(m.id, m.label || modelName(m.id, models)).label}
+                  tag={modelPresentation(m.id, m.label).creator}
                   detail={m.note ? phrase(m.note) : null}
                   selected={model === m.id}
                   onPress={() => {
@@ -807,8 +871,8 @@ export function Composer({
       <Sheet visible={sheet === "handover"} title={t("composer.handover_title")} onClose={() => { setCandidate(null); setSheet(null); }}>
         <View style={styles.handoverBody}>
           <View style={styles.handoverChange}>
-            <BrandMark id={current ?? ""} size={18} color={theme.text} />
-            <Text style={{ color: theme.text, fontSize: TEXT.ui, fontWeight: "600" }}>{providerLabel(current)}</Text>
+            {selectedMark ? <BrandMark id={selectedMark} size={18} color={theme.text} /> : null}
+            <Text style={{ color: theme.text, fontSize: TEXT.ui, fontWeight: "600" }}>{selectedProviderLabel}</Text>
             <Icon name="chevron-right" size={14} color={theme.textMuted} />
             <BrandMark id={candidate ?? ""} size={18} color={theme.text} />
             <Text style={{ color: theme.text, fontSize: TEXT.ui, fontWeight: "600" }}>{candidateLabel}</Text>

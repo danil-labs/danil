@@ -1,14 +1,15 @@
 /**
  * El directorio de la cuenta desde la ventana: el mismo `GET /v1/me/workspaces`
  * de la web, con el token de cliente del motor. La persona elige con qué sesión
- * (`account`); sin ella, la del workspace abierto. Enlazar, subir y desenlazar van por Rust
- * con la sesión de persona de la ventana: Computers no acepta ahí el token de cliente.
+ * (`account`); sin ella, la del workspace abierto o, si no es de ninguna
+ * cuenta, la principal. Enlazar, subir y desenlazar van por Rust con la sesión de
+ * persona de la ventana: Computers no acepta ahí el token de cliente.
  */
 import { type Answer, listDirectory, setDirectoryPins } from "@terminus/computers";
 import { invoke } from "../../lib/invoke.ts";
 import type { Capabilities } from "../../lib/platform.ts";
 import { listen } from "../../lib/serviceEvents";
-import type { DanilSessionInfo, WorkspaceAccount } from "../settings/danil-sessions.ts";
+import { type DanilSessionInfo, railSession, sessionKey, type WorkspaceAccount } from "../settings/danil-sessions.ts";
 
 type ClientToken = { token: string; expires_at: number; endpoint: string };
 
@@ -17,6 +18,12 @@ async function accountOf(account?: string | null): Promise<string> {
   if (!key) {
     const of = await invoke<WorkspaceAccount>("danil_workspace_account", {}).catch(() => null);
     key = of?.signed_in ? of.account : null;
+    // El directorio es de la persona: con un workspace abierto que no es de ninguna cuenta, el de la sesión principal.
+    if (!key && !of?.account) {
+      const sessions = await invoke<DanilSessionInfo[]>("danil_sessions", {}).catch(() => null);
+      const session = Array.isArray(sessions) ? railSession(sessions, of) : null;
+      key = session ? sessionKey(session) : null;
+    }
   }
   if (!key) throw Object.assign(new Error("no_account"), { detail: "no_account" });
   return key;

@@ -12,7 +12,7 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), "../..");
 const { TEXT } = await import(pathToFileURL(join(ROOT, "../../packages/design/src/scale.ts")).href);
 
 /** Baja cuando un valor suelto pasa a la escala; no sube para aceptar uno nuevo. */
-const TECHO_SUELTOS = 74;
+const TECHO_SUELTOS = 73;
 
 const pixeles = (valor, unidad) => Number(valor) * (unidad === "rem" ? 16 : 1);
 const escalones = new Map(Object.entries(TEXT).map(([nombre, px]) => [px, nombre]));

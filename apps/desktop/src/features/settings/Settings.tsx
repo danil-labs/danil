@@ -299,12 +299,6 @@ export default function Settings(props: {
     // igual que la dejaba instalar un CLI. `App.tsx` ya escuchaba este evento
     // para el menú del chat, con el motivo escrito ahí; faltaba aquí.
     const cuenta = listen("account", cargarSuperficies);
-    // La insignia de «Local» mira el motor y los pesos en disco
-    // (`surfaces::estado_local`), y los dos cambian desde esta misma pantalla.
-    const motor = listen("local-engine", cargarSuperficies);
-    const pesos = listen<{ kind: string }>("local-model", (e) => {
-      if (e.payload.kind === "done") cargarSuperficies();
-    });
     window.addEventListener("harness:consentimiento", cargarSuperficies);
     // Una máquina de la cuenta se encendió o trajo otra rebanada: su lista puede haber llegado.
     window.addEventListener("harness:machine-slices", cargarSuperficies);
@@ -313,8 +307,6 @@ export default function Settings(props: {
       window.removeEventListener("harness:machine-slices", cargarSuperficies);
       void cambios.then((f) => f());
       void cuenta.then((f) => f());
-      void motor.then((f) => f());
-      void pesos.then((f) => f());
     });
   });
   const pestanas = pestanasDe(superficies, {

@@ -66,6 +66,14 @@ function renameFailure(answer: Exclude<Answer<unknown>, { kind: "ok" }>): string
   return t("danil.computers.rename_failed.other");
 }
 
+/** Por qué no se quitó la máquina, en palabras de la persona. */
+function removeFailure(answer: Exclude<Answer<unknown>, { kind: "ok" | "missing" }>): string {
+  if (answer.kind === "unauthorized") return t("danil.computers.remove_failed.unauthorized");
+  if (answer.kind === "error" && answer.code === "not_self_computer") return t("danil.computers.remove_failed.managed");
+  if (answer.kind === "error" && answer.status === null) return t("danil.computers.rename_failed.offline");
+  return t("danil.computers.remove_failed.other");
+}
+
 export type AccountComputersProps = {
   source: AccountComputersSource;
   empty?: string;
@@ -83,6 +91,8 @@ export function AccountComputers(props: AccountComputersProps) {
   const [draft, setDraft] = createSignal("");
   const [saving, setSaving] = createSignal(false);
   const [problem, setProblem] = createSignal<{ id: string; text: string } | null>(null);
+  const [confirming, setConfirming] = createSignal<string | null>(null);
+  const [removing, setRemoving] = createSignal(false);
 
   async function load() {
     setList(null);
@@ -97,6 +107,8 @@ export function AccountComputers(props: AccountComputersProps) {
 
   const nameOf = (c: Computer) => c.name?.trim() || c.computer_id;
   const isSelf = (c: Computer) => !!props.self && c.computer_id === props.self;
+  // Una apagada que ya no existe (un clon, una laptop vendida) se queda en la cuenta hasta que alguien la quita.
+  const canRemove = (c: Computer) => !!props.source.remove && !isSelf(c) && c.state !== "online" && c.state !== "starting";
 
   const kind = (c: Computer) =>
     isSelf(c)
@@ -140,6 +152,24 @@ export function AccountComputers(props: AccountComputersProps) {
     setProblem(null);
     if (isSelf(c)) props.onSelfName?.(answer.value.name);
     props.source.onRenamed(c.computer_id, answer.value.name);
+    machineNamesChanged();
+  }
+
+  async function remove(c: Computer) {
+    const remove = props.source.remove;
+    if (!remove || removing()) return;
+    setRemoving(true);
+    const answer = await remove(c.computer_id).catch(() => ({ kind: "error", status: null }) as const);
+    setRemoving(false);
+    // `missing`: ya no estaba en la cuenta; el resultado es el mismo.
+    if (answer.kind !== "ok" && answer.kind !== "missing") {
+      setProblem({ id: c.computer_id, text: removeFailure(answer) });
+      return;
+    }
+    setConfirming(null);
+    setProblem(null);
+    setList((rows) => rows?.filter((r) => r.computer_id !== c.computer_id) ?? rows);
+    props.source.onRemoved?.(c.computer_id);
     machineNamesChanged();
   }
 
@@ -227,7 +257,37 @@ export function AccountComputers(props: AccountComputersProps) {
                 </Show>
               </>
             }
-          />
+          >
+            <Show when={canRemove(c)}>
+              <Show
+                when={confirming() === c.computer_id}
+                fallback={
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    data-computer-remove=""
+                    aria-label={t("danil.computers.remove_label", { name: nameOf(c) })}
+                    onClick={() => {
+                      setProblem(null);
+                      setConfirming(c.computer_id);
+                    }}
+                  >
+                    {t("danil.computers.remove")}
+                  </Button>
+                }
+              >
+                <div class="flex shrink-0 items-center gap-2" data-computer-remove-confirm="">
+                  <span class="text-sm text-neutral-500">{t("danil.computers.remove_confirm")}</span>
+                  <Button size="sm" variant="danger" disabled={removing()} onClick={() => void remove(c)}>
+                    {t("danil.computers.remove")}
+                  </Button>
+                  <Button size="sm" variant="ghost" disabled={removing()} onClick={() => setConfirming(null)}>
+                    {t("danil.computers.remove_cancel")}
+                  </Button>
+                </div>
+              </Show>
+            </Show>
+          </SettingsRow>
         )}
       </For>
     </div>

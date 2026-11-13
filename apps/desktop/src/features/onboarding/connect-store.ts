@@ -4,12 +4,15 @@
  * panel leen el mismo estado; las cuentas cuelgan del workspace activo.
  */
 
-import { batch, createEffect, createSignal, onCleanup, untrack } from "solid-js";
+import { batch, createSignal, onCleanup } from "solid-js";
 import { createStore } from "solid-js/store";
 import { t } from "../../lib/i18n";
 import { invoke } from "../../lib/invoke.ts";
+import { acceptedFreeModelPolicy, freeModelScope, sameFreeModelPolicy, type FreeModelConsent, type FreeModelStartup } from "../../lib/free-model-policy.ts";
+import { loadFreeModelPolicy } from "../../lib/free-model-policy-load.ts";
+import type { Consentimiento } from "../settings/free-router-consent";
 import { textoDeFalta } from "../../lib/no-space";
-import type { Frase } from "../../lib/prose";
+
 import { listen } from "../../lib/serviceEvents";
 import type { Superficie } from "../../lib/surfaces.ts";
 import { detalleDe, prosaDe } from "../../ui/Failure";
@@ -17,7 +20,7 @@ import { accountPresentation } from "../settings/AccountCard";
 import { accountKeyUrl } from "../settings/account-auth";
 import type { AccountList, AccountStatus, AgentOpt, LoginEvent } from "../settings/accounts-store";
 import { ORIGEN_SISTEMA } from "../settings/environment-store";
-import { crearModelosLocales } from "../settings/local-models-store";
+import { isFreeRouterAgent, OPENCODE } from "../../../../../packages/tasks/src/agents.ts";
 import "../../locales/settingsPhrases";
 
 type Agente = AgentOpt & { source: string | null; system_broken: boolean };
@@ -33,8 +36,8 @@ const CLAVES: Record<string, { url: string; placeholder: string }> = {
 const CANCELADA = "install.cancelled";
 const fueCancelada = (e: unknown) => `${prosaDe(e)} ${detalleDe(e)} ${String((e as { code?: string })?.code ?? "")}`.includes(CANCELADA);
 
-/** Cómo se conecta: iniciando sesión con su CLI, pegando una clave, aceptando el aviso o en la máquina. */
-export type Modo = "sesion" | "clave" | "consentimiento" | "local";
+/** Cómo se conecta: iniciando sesión con su CLI, pegando una clave o aceptando el aviso del Free Router. */
+export type Modo = "sesion" | "clave" | "consentimiento";
 
 export type Fila = {
   id: string;
@@ -66,7 +69,7 @@ export type Paso =
   | { k: "alta"; cuenta: string; url: string | null; revisando?: boolean };
 
 const EN_CURSO = new Set<Paso["k"]>(["descargando", "entrando", "clave", "comprobando", "saliendo", "alta"]);
-const ORDEN = ["claude", "codex", "antigravity", "grok", "opencode-zen", "opencode-local"];
+const ORDEN = ["claude", "codex", "antigravity", "grok", OPENCODE];
 /** ZCode va siempre al final, aunque esté en la computadora o el motor traiga proveedores nuevos. */
 export const AL_FINAL = "zcode";
 const posicion = (id: string) => {
@@ -78,7 +81,7 @@ const posicion = (id: string) => {
 /** El mapa pone los gratuitos entre Grok y OpenCode; el panel los deja debajo de OpenCode. */
 export const ordenDelMapa = (filas: Fila[]) =>
   [...filas].sort((a, b) => rangoEnMapa(a) - rangoEnMapa(b));
-const rangoEnMapa = (f: Fila) => (f.modo === "consentimiento" ? posicion("opencode-zen") - 0.5 : posicion(f.agente));
+const rangoEnMapa = (f: Fila) => (f.modo === "consentimiento" ? posicion(OPENCODE) - 0.5 : posicion(f.agente));
 
 const SIN_LLAVERO = /secret service|org\.freedesktop\.secrets|secret-service|no keyring|keyring/i;
 
@@ -88,10 +91,9 @@ export function explicar(e: unknown) {
   return SIN_LLAVERO.test(`${texto} ${detalleDe(e)}`) ? t("onboarding.ai.error.keyring") : texto;
 }
 
-/** El nombre de la fila; la de OpenCode con clave incluye Go, y la local nombra lo que da. */
+/** El nombre de la fila; la de OpenCode con clave incluye Go. */
 export function nombreDeFila(f: Fila) {
   if (f.modo === "consentimiento") return t("surfaces.label.free");
-  if (f.modo === "local") return t("onboarding.ai.local.name");
   if (f.agente === "antigravity" && f.modo === "sesion") return t("onboarding.ai.antigravity");
   if (f.agente.startsWith("opencode") && (f.modo === "clave" || f.modo === "sesion")) return "OpenCode";
   return f.label;
@@ -105,11 +107,8 @@ export function crearConexiones() {
   const [salidas, setSalidas] = createStore<Record<string, string[]>>({});
   const [falloDeCarga, setFalloDeCarga] = createSignal<string | null>(null);
   const [cargada, setCargada] = createSignal(false);
-  // La fila local cuyo panel de modelos está abierto debajo de su tarjeta.
-  const [localAbierto, setLocalAbierto] = createSignal<string | null>(null);
-  // Vive con la pantalla y no con el panel: una descarga que sigue con el panel cerrado también conecta.
-  const locales = crearModelosLocales();
-  const listoLocal = () => t("onboarding.ai.local.ready", { model: locales.activo()?.label ?? "" });
+  const [pregunta, setPregunta] = createSignal<{ fila: string; texto: Consentimiento } | null>(null);
+  const [guardando, setGuardando] = createSignal(false);
   let agentes: Agente[] = [];
   let sesiones: SesionDelSistema[] = [];
   let detectadas: Set<string> | null = null;
@@ -150,13 +149,9 @@ export function crearConexiones() {
     return { cuenta: plan ? `${name} · ${plan}` : name, id: activa.id };
   }
 
-  async function consentida(agent: string) {
-    const [, version] = await invoke<[Frase[], number]>("consent_text");
-    const s = await invoke<{ active: string | null; workspaces: { id: string; consents?: { provider: string; version: number }[] }[] }>(
-      "workspaces_startup",
-    );
-    const activo = s.workspaces.find((w) => w.id === s.active);
-    return activo?.consents?.some((c) => c.provider === agent && c.version === version) ?? false;
+  async function consentida() {
+    const policy = await loadFreeModelPolicy();
+    return policy?.accepted ? policy : null;
   }
 
   async function pasoGuardado(f: Fila): Promise<Paso> {
@@ -165,13 +160,10 @@ export function crearConexiones() {
     const base: Paso = a?.available && (f.detectada || f.modo !== "clave") ? { k: "instalada" } : { k: "falta" };
     try {
       if (f.modo === "consentimiento") {
-        return a?.available && (await consentida(f.agente))
-          ? { k: "conectada", cuenta: t("settings.accounts.free.warning_short"), id: null }
+        const policy = await consentida();
+        return a?.available && policy
+          ? { k: "conectada", cuenta: policy.enabled ? t("settings.accounts.free.warning_short") : t("settings.accounts.free.paused"), id: null }
           : base;
-      }
-      if (f.modo === "local") {
-        await locales.cargar();
-        return a?.available && locales.listo() ? { k: "conectada", cuenta: listoLocal(), id: null } : base;
       }
       const conectada = await cuentaConectada(f.agente);
       if (conectada) return { k: "conectada", ...conectada };
@@ -181,20 +173,6 @@ export function crearConexiones() {
       return base;
     }
   }
-
-  // La tarjeta local queda conectada cuando hay llama.cpp y un modelo bajado, y dice cuál usan las tareas.
-  createEffect(() => {
-    const listo = locales.listo();
-    const cuenta = listoLocal();
-    for (const f of filas().filter((x) => x.modo === "local")) {
-      const p = untrack(() => pasos[f.id]);
-      if (listo && agente(f.agente)?.available && (p?.k === "instalada" || (p?.k === "conectada" && p.cuenta !== cuenta))) {
-        poner(f.id, { k: "conectada", cuenta, id: null });
-      } else if (!listo && p?.k === "conectada") {
-        poner(f.id, { k: "instalada" });
-      }
-    }
-  });
 
   async function cargar() {
     let superficies: Superficie[] = [];
@@ -218,16 +196,16 @@ export function crearConexiones() {
     );
     const nuevas: Fila[] = [];
     for (const a of [...agentes].sort((x, y) => posicion(x.id) - posicion(y.id))) {
-      // Con superficie gratuita aparte, la fila del agente es la de pago: se conecta con su cuenta.
-      const gratuitas = superficies.filter((x) => x.provider === a.id && x.catalogo === "gratuitos");
+      // El Free Router (`free-router-<motor>`) no tiene cuenta: su fila es solo el consentimiento.
+      const router = isFreeRouterAgent(a.id) || a.free_router === true;
+      // Un motor anterior parte su fila de OpenCode en dos: la de pago y una superficie gratuita aparte.
+      const gratuitas = router ? [] : superficies.filter((x) => x.provider === a.id && x.catalogo === "gratuitos");
       const modo: Modo =
-        a.inferencia === "en_la_maquina"
-          ? "local"
-          : a.inferencia === "sin_pedir_nada" && gratuitas.length === 0
-            ? "consentimiento"
-            : accountKeyUrl(a) || CLAVES[a.id]
-              ? "clave"
-              : "sesion";
+        router || (a.inferencia === "sin_pedir_nada" && gratuitas.length === 0)
+          ? "consentimiento"
+          : accountKeyUrl(a) || CLAVES[a.id]
+            ? "clave"
+            : "sesion";
       const previa = filas().find((f) => f.id === a.id);
       nuevas.push({
         id: a.id,
@@ -303,7 +281,7 @@ export function crearConexiones() {
     const a = f && agente(f.agente);
     if (!f || !a || enCurso(id)) return;
     setErrores(id, null);
-    if (f.modo === "consentimiento") return void activar(id);
+    if (f.modo === "consentimiento") return void preguntar(id);
     if (!a.available) {
       if (a.external_install_url) {
         poner(id, { k: "externa" });
@@ -311,11 +289,6 @@ export function crearConexiones() {
         return;
       }
       if (!(await descargar(f))) return;
-    }
-    if (f.modo === "local") {
-      setLocalAbierto(id);
-      if (locales.listo()) poner(id, { k: "conectada", cuenta: listoLocal(), id: null });
-      return;
     }
     if (f.modo === "clave") return poner(id, { k: "clave" });
     await entrar(id);
@@ -467,19 +440,39 @@ export function crearConexiones() {
     poner(id, sesion ? { k: "sesion", identidad: sesion.identity ?? "" } : agente(f?.agente ?? "")?.available ? { k: "instalada" } : { k: "falta" });
   }
 
-  /** Activar los gratuitos: el aviso de la tarjeta ya se leyó; se descarga OpenCode si falta y se guarda el consentimiento. */
-  async function activar(id: string) {
-    const f = fila(id);
-    if (!f) return;
-    if (!agente(f.agente)?.available && !(await descargar(f))) return;
-    poner(id, { k: "comprobando" });
+  async function preguntar(id: string) {
     try {
-      await invoke("set_provider_consent", { provider: f.agente, accepted: true });
-      window.dispatchEvent(new CustomEvent("harness:consentimiento"));
-      poner(id, { k: "conectada", cuenta: t("settings.accounts.free.warning_short"), id: null });
+      const policy = await loadFreeModelPolicy();
+      if (!policy?.enabled) throw new Error(t("settings.accounts.free.unavailable"));
+      setErrores(id, null);
+      setPregunta({ fila: id, texto: { lineas: policy.lines, version: policy.version, policy } });
     } catch (e) {
-      setErrores(id, explicar(e));
-      poner(id, agente(f.agente)?.available ? { k: "instalada" } : { k: "falta" });
+      setErrores(id, prosaDe(e));
+    }
+  }
+
+  async function responder(acepta: boolean) {
+    const q = pregunta();
+    const f = q && fila(q.fila);
+    if (!q || !f) return;
+    if (!acepta) return void setPregunta(null);
+    setGuardando(true);
+    try {
+      const policy = q.texto.policy;
+      const startup = await invoke<FreeModelStartup>("workspaces_startup");
+      if (startup.active !== policy.workspace_id || !sameFreeModelPolicy(policy, await loadFreeModelPolicy(policy))) throw new Error(t("settings.accounts.free.policy_changed"));
+      const workspace = await invoke<{ free_model_consent?: FreeModelConsent }>("set_provider_consent", {
+        provider: policy.acceptance_ref, accepted: true,
+      }, freeModelScope(policy));
+      if (!acceptedFreeModelPolicy(policy, workspace.free_model_consent)) throw new Error(t("settings.accounts.free.policy_changed"));
+      setPregunta(null);
+      if (!agente(f.agente)?.available && !(await descargar(f))) return;
+      window.dispatchEvent(new CustomEvent("harness:consentimiento"));
+      poner(f.id, { k: "conectada", cuenta: t("settings.accounts.free.warning_short"), id: null });
+    } catch (e) {
+      setErrores(f.id, prosaDe(e));
+    } finally {
+      setGuardando(false);
     }
   }
 
@@ -491,12 +484,10 @@ export function crearConexiones() {
     poner(id, { k: "saliendo" });
     try {
       if (f.modo === "consentimiento") {
-        await invoke("set_provider_consent", { provider: f.agente, accepted: false });
+        const policy = await loadFreeModelPolicy();
+        if (!policy) throw new Error(t("settings.accounts.free.unavailable"));
+        await invoke("set_provider_consent", { provider: f.agente, accepted: false }, freeModelScope(policy));
         window.dispatchEvent(new CustomEvent("harness:consentimiento"));
-      } else if (f.modo === "local") {
-        await invoke("remove_local_runtime");
-        setLocalAbierto(null);
-        await locales.cargar();
       } else {
         const lista = await invoke<AccountList>("list_accounts", { provider: f.agente });
         for (const c of lista.accounts.filter((c) => c.authenticated_at !== null)) {
@@ -564,6 +555,9 @@ export function crearConexiones() {
 
   return {
     filas,
+    pregunta,
+    guardando,
+    responder,
     pasos,
     errores,
     salidas,
@@ -575,11 +569,6 @@ export function crearConexiones() {
     externa: (f: Fila) => Boolean(agente(f.agente)?.external_install_url && !agente(f.agente)?.available),
     cargar,
     conectar,
-    locales,
-    localAbierto,
-    /** Abre o cierra el panel de modelos debajo de la tarjeta local. */
-    alternarLocal: (id: string) => setLocalAbierto((a) => (a === id ? null : id)),
-    cerrarLocal: () => setLocalAbierto(null),
     usarSesion,
     cancelarDescarga,
     cancelar,

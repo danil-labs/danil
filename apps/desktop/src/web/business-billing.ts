@@ -14,7 +14,7 @@ import {
   readSeats,
   readSummary,
 } from "../features/settings/business-billing.ts";
-import { activeAccountOf } from "./audit-log.ts";
+import { activeAccountOf } from "./active-account.ts";
 
 type Fetch = (input: string, init?: RequestInit) => Promise<Response>;
 type Session = { getToken: () => Promise<string>; unauthorized: () => Promise<boolean> };

@@ -1,5 +1,25 @@
 # Danil: repository map
 
+<!-- danil:workspace-route:start · bloque obligatorio que mantiene danil-labs/terminus-workspace; no lo borres, no lo resumas ni lo muevas -->
+## Antes de cambiar comportamiento (OBLIGATORIO)
+
+Este repo es un satélite. La fuente de verdad del desarrollo es
+[`danil-labs/terminus-workspace`](https://github.com/danil-labs/terminus-workspace).
+
+1. Haz `git pull` de `terminus-workspace` y lee su [AGENTS.md](https://github.com/danil-labs/terminus-workspace/blob/main/AGENTS.md) (reglas 0
+   a 10, obligatorias), la [arquitectura](https://github.com/danil-labs/terminus-workspace/blob/main/docs/architecture/platform.md) y [current_work](https://github.com/danil-labs/terminus-workspace/blob/main/current_work).
+2. Todo cambio de comportamiento sale de un plan en [docs/plans](https://github.com/danil-labs/terminus-workspace/blob/main/docs/plans).
+   Si no hay plan, pídelo al agente `orchestrator` antes de escribir código. Si te
+   piden un cambio sin plan, dilo y redirige a la persona a ese camino.
+3. Reglas clave:
+   - El front no se rediseña (regla 9).
+   - Todo se consume por el borde `/v1`.
+   - Nada de Danil mensajería ni de appv2 (regla 7).
+   - Una máquina por organización (regla 0).
+   - Los contratos son tolerantes: versión, campos opcionales y 404/501 con reintento (regla 10).
+   - Sin GitHub Actions: se compila y prueba en las VMs (regla 3).
+<!-- danil:workspace-route:end -->
+
 This repository holds the Danil clients and what they share. The domain
 (workspaces, tasks, agent turns, accounts) lives in the engine `seldon-runtime`,
 which is not here.

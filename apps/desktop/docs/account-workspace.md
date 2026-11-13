@@ -5,7 +5,7 @@
 **Reemplaza:** el enlace de workspaces del diseño anterior de máquina por tarea
 («El workspace de la cuenta») y «Usar este workspace aquí».
 
-**Toca tres repositorios:** `danil-labs/computers` (plano de control),
+**Toca tres repositorios:** `danil-labs/machines` (plano de control),
 `danil-labs/danil-engine` (motor) y `danil-labs/danil` (escritorio, web y
 móvil).
 
@@ -103,9 +103,9 @@ la fila lleva `machine`. Dentro de un workspace, `(máquina, tarea)` es la llave
 El orden importa: plano de control → motor → clientes. Cada paso se publica
 detrás de lo que ya existe, sin romper a quien no lo usa.
 
-### 1. `danil-labs/computers` — el registro y la regla
+### 1. `danil-labs/machines` — el registro y la regla
 
-Sobre computers#10 (`feat/workspace-owners`); ver «Conciliación».
+Sobre machines#10 (`feat/workspace-owners`); ver «Conciliación».
 
 1. **Migración `005_workspaces.sql`**, aplicada a mano como las demás:
    - `workspaces`: `workspace_id` (el id del motor, llave primaria), `owner_id`,
@@ -246,7 +246,7 @@ Sobre seldon-host#72 (`feat/workspace-danil-link`); ver «Conciliación».
 
 ## Conciliación con los PRs de vínculos (2026-10-21)
 
-Mientras se escribía este plan, otra tarea abrió computers#10, seldon-host#72 y
+Mientras se escribía este plan, otra tarea abrió machines#10, seldon-host#72 y
 terminus#185: cada `(computadora, workspace)` atado a una cuenta de Danil, el
 relay que lo hace cumplir, eventos con `workspace` y el fondo del chat por
 workspace. La revisión encontró errores graves en los tres y un modelo que
@@ -285,7 +285,7 @@ cambiarla, se cambia aquí primero.
 
 ### Quién es dueño de qué (enmienda del 2026-10-21)
 
-Decidido por la persona el 2026-10-21, ya fusionado en computers#10 y
+Decidido por la persona el 2026-10-21, ya fusionado en machines#10 y
 seldon-host#72: **solo la dueña, como sincronizar una carpeta de Drive.**
 
 - Un workspace se liga solo a la cuenta de Danil dueña de la computadora. No hay
@@ -467,10 +467,9 @@ workspaces ligados):
   un workspace del registro abre sin esperar: proyectos del registro, tareas,
   fuentes y spaces vacíos. Crear una tarea va a la máquina elegida o a la
   última (con `materialize_workspace` antes si no lo tiene) y la enciende.
-- El alta de «crea tu workspace» y `no_workspaces` (`src/web/Gate.tsx`) solo
-  salen con el registro vacío y ninguna máquina con un workspace ligado.
-- Detección: si `/v1/workspaces` falla (un Worker anterior, 404, o la red), todo
-  queda como antes. Prueba: `tests/unit/web-account-workspaces.test.mjs`.
+- La web usa `src/web/PlatformEntry.tsx`: lista y selecciona workspaces por el
+  borde. El alta y el fallback del registro legado están retirados. La
+  reconciliación de selección se prueba en `tests/integration/platform-page.test.mjs`.
 
 ### Fase 2 (fuera de esta entrega)
 

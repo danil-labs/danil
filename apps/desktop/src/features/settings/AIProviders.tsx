@@ -1,4 +1,5 @@
 import { createMemo, For, Index, Match, Show, Switch } from "solid-js";
+import { FREE_ROUTER_OPENCODE, isFreeRouterAgent } from "@terminus/tasks";
 import { t } from "../../lib/i18n";
 import { Button } from "../../ui/Button";
 import { FailureNote } from "../../ui/Failure";
@@ -10,6 +11,7 @@ import { rotuloDeSuperficie } from "../../lib/surfaces";
 import { Badge } from "../../ui/Badge";
 import { rotuloDeMarca } from "../chat/marks";
 import Accounts from "./Accounts";
+import DanilCredits from "../chat/DanilCredits";
 import { GovernedNotice } from "./Governed";
 import { SettingsPanel } from "./layout";
 
@@ -20,9 +22,14 @@ import { SettingsPanel } from "./layout";
  */
 export default function AIProviders(props: { superficies: Superficie[]; agentesEnUso: string[]; estado?: SurfacesState; onRetry?: () => void }) {
   const vista = () => aiProvidersView(props.estado ?? { k: "ready" }, props.superficies.length);
+  // Una sección del Free Router por motor (`free-router-<motor>`); sin superficies todavía, la de OpenCode.
+  const routers = createMemo(() => {
+    const ids = [...new Set(props.superficies.map((s) => s.provider).filter(isFreeRouterAgent))];
+    return ids.length ? ids : [FREE_ROUTER_OPENCODE];
+  });
   const grupos = createMemo(() => {
     const vistos = new Map<string, Superficie[]>();
-    for (const superficie of props.superficies) {
+    for (const superficie of props.superficies.filter((s) => s.catalogo !== "gratuitos" && !isFreeRouterAgent(s.provider))) {
       const clave = superficie.catalogo === "gratuitos" ? superficie.id : superficie.provider;
       const grupo = vistos.get(clave);
       if (grupo) grupo.push(superficie);
@@ -40,6 +47,11 @@ export default function AIProviders(props: { superficies: Superficie[]; agentesE
   return (
     <SettingsPanel>
       <GovernedNotice section="models" />
+      <section class="grid gap-4" aria-label="Danil">
+        <h2 class="m-0 text-ui font-semibold text-neutral-950">Danil</h2>
+        <DanilCredits />
+        <For each={routers()}>{(id) => <Accounts agente={id} soloGratuitos titulo={t("surfaces.label.free")} />}</For>
+      </section>
       <Switch>
         <Match when={vista() === "loading"}>
           <div class="grid gap-3" data-ai-providers="loading">
@@ -75,7 +87,6 @@ export default function AIProviders(props: { superficies: Superficie[]; agentesE
             agente={grupo()[0].provider}
             soloGratuitos={grupo()[0].catalogo === "gratuitos"}
             titulo={grupo().length > 1 ? grupo()[0].label : rotuloDeSuperficie(grupo()[0])}
-            subtitulo={grupo()[0].catalogo === "gratuitos" ? t("settings.ai_providers.free_detail") : undefined}
             nombre={nombreDe(grupo()[0], grupo().length > 1)}
             marca={<Marca superficie={grupo()[0]} />}
             desplegado={props.agentesEnUso.includes(grupo()[0].provider)}

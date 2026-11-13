@@ -8,6 +8,7 @@ import { createEffect, createSignal, on, onCleanup, onMount } from "solid-js";
 import { invoke } from "../../lib/invoke";
 import { listen } from "../../lib/serviceEvents";
 import { failureCode } from "./danil-account";
+import { machines } from "../machines/store";
 import {
   addAccount,
   connectedSessions,
@@ -56,7 +57,12 @@ export function createDanilAccounts(options: { workspace?: (() => string | null 
       const next = await readWorkspaceAccount(workspace);
       if (mine === turn) setOf(next);
     } catch (e) {
-      if (mine === turn) {
+      if (mine !== turn) return;
+      // Un workspace que esta computadora no tiene (el de una organización en su Nube IA) es de la sesión de la persona.
+      const own = workspace && machines().find((m) => m.local)?.hosts === false ? connectedSessions(sessions())[0] : null;
+      if (own) {
+        setOf({ account: own.account, email: own.email, signed_in: true, linked: true });
+      } else {
         setOf(null);
         setProblem(failureCode(e) ?? "failed");
       }

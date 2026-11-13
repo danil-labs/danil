@@ -12,11 +12,15 @@ import { useTheme } from "../ui/theme";
 /** «Ver todos» del dock: cada agente con su estado, su chat y sus tareas. */
 export default function Agents() {
   const theme = useTheme();
-  const { current, snapshot, space, view, setView } = useWorkspaces();
+  const { current, snapshot, view, setView } = useWorkspaces();
   const [query, setQuery] = useState("");
+  // Sin carpeta de por medio, como el escritorio: solo los del workspace. Los de un
+  // proyecto o de su repositorio se ven al trabajar en esa carpeta.
+  const label = (a: { name: string; displayName?: string | null }) => a.displayName || a.name;
   const agents = orderDockAgents(
-    (snapshot?.agents ?? []).filter((a) => !space || a.places.some((p) => space.folders.includes(`${p.host}/${p.folder}`))),
-  ).filter((a) => matches(query, a.name));
+    (snapshot?.agents ?? []).filter((a) => a.workspace),
+    label,
+  ).filter((a) => matches(query, label(a)) || matches(query, a.name));
   return (
     <ScrollView contentInsetAdjustmentBehavior="automatic" keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingVertical: 8 }}>
       <SheetTitle>{w("shell.agent_dock.title")}</SheetTitle>
@@ -27,7 +31,7 @@ export default function Agents() {
           key={agent.name}
           testID={`agents-${agent.name}`}
           left={<AgentAvatar name={agent.name} size={36} />}
-          title={agent.name}
+          title={label(agent)}
           subtitle={dockStatusText(lang, agent)}
           onPress={() => {
             router.back();

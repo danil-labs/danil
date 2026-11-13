@@ -113,7 +113,9 @@ export default function Home() {
   });
   const groupFolderName = (id: string) => snapshot?.folders.find((f) => f.id === id)?.name ?? id;
   const machineName = (id: string) => hosts.find((h) => h.id === id)?.label ?? id;
-  const agents = (snapshot?.agents ?? []).filter((a) => a.places.some((p) => inSpace(`${p.host}/${p.folder}`)));
+  // El dock de la lista es el del workspace (los tres niveles: los de una carpeta
+  // o su repositorio se ven dentro de esa carpeta, no aquí).
+  const agents = (snapshot?.agents ?? []).filter((a) => a.workspace);
   const working = agents.filter((a) => a.status === "working").length;
 
   // Los espacios se crean, renombran y eliminan en la primera máquina del workspace (la VM administrada).

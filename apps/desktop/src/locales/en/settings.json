@@ -1,7 +1,7 @@
 {
   "settings.environment.engine_build": "Engine {build}",
   "settings.ai_providers.opencode_detail": "Pay-as-you-go models and Go",
-  "settings.ai_providers.free_detail": "by OpenCode · no account",
+  "settings.ai_providers.free_detail": "Kilo · Vercel · Reflection",
   "settings.account_card.active": "active",
   "settings.account_card.asking": "asking",
   "settings.account_card.checking": "checking…",
@@ -273,7 +273,7 @@
   "settings.agents.error.conflict": "{name} changed in the meantime. Check the list and try again.",
   "settings.agents.error.io": "Could not change where {name} works.",
   "settings.agents.error.missing": "That agent no longer exists.",
-  "settings.agents.own_title": "Operations and code",
+  "settings.agents.own_title": "Workspace agents",
   "settings.agents.new": "Add new agent",
   "settings.agents.new_no_folder": "Add a project first: the agent is born in one.",
   "settings.agents.own_empty": "You don't have agents of your own yet",
@@ -426,5 +426,7 @@
   "settings.ai_providers.agent_claude": "Claude Code",
   "settings.ai_providers.agent_codex": "Codex (ChatGPT)",
   "settings.ai_providers.agent_antigravity": "Gemini / Antigravity",
-  "settings.ai_providers.agent_grok": "Grok"
+  "settings.ai_providers.agent_grok": "Grok",
+  "settings.ai_providers.zen_go": "OpenCode",
+  "settings.agents.business": "Included with Business"
 }

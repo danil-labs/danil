@@ -76,7 +76,7 @@ export default function BrowserNavigation(props: { requirement?: Requirement; on
           </Show>
           <Show when={progress().bytes > 0}>
             <span class="text-xs text-neutral-500" role="status">
-              {running() ? t("settings.accounts.local.downloading", { done: peso(progress().done), total: peso(progress().bytes) }) : peso(progress().bytes)}
+              {running() ? t("settings.accounts.downloading", { done: peso(progress().done), total: peso(progress().bytes) }) : peso(progress().bytes)}
             </span>
           </Show>
         </div>

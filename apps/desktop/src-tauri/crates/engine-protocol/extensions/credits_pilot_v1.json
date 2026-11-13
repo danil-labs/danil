@@ -1,0 +1,50 @@
+{
+  "version": 1,
+  "name": "credits_pilot",
+  "description": "Delegación local efímera para el piloto Danil Credits; fuera de status.contract.",
+  "features": [
+    "credits_pilot_v1"
+  ],
+  "commands": [
+    {
+      "async": false,
+      "channel": null,
+      "kind": "invoke",
+      "name": "credits_pilot_install",
+      "output": "-> Result < serde_json :: Value , String >",
+      "parameters": [
+        {
+          "key": "workspaceId",
+          "name": "workspace_id",
+          "type": "String"
+        },
+        {
+          "key": "action",
+          "name": "action",
+          "type": "String"
+        },
+        {
+          "key": "capability",
+          "name": "capability",
+          "type": "Option < String >"
+        },
+        {
+          "key": "endpoint",
+          "name": "endpoint",
+          "type": "Option < String >"
+        },
+        {
+          "key": "expiresAt",
+          "name": "expires_at",
+          "type": "Option < u64 >"
+        }
+      ],
+      "path": "credits_model_router::credits_pilot_install",
+      "scope": "workspace",
+      "audience": "window",
+      "authority": "admin",
+      "durable": false,
+      "enforcement": "server"
+    }
+  ]
+}

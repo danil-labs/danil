@@ -4,7 +4,5 @@
   "workspaces.migration.too_old": "Estos datos vienen de una versión anterior de Danil que este binario ya no convierte. Instala primero la versión {version}, ábrela una vez para que migre el trabajo, y vuelve a actualizar.",
   "workspaces.permission_mode.save_failed": "No se pudieron guardar los permisos por defecto. Vuelve a intentarlo.",
   "workspaces.permission_mode.unknown": "Ese modo de permisos no existe: elige manual, ediciones o auto.",
-  "workspaces.directory.no_documents": "No encontré tu carpeta Documentos. Elige en Configuración → General dónde crear los proyectos.",
-  "workspaces.consent.free_models.accept": "Activo los modelos gratuitos de prueba.",
-  "workspaces.consent.free_models.responsibility": "Entiendo que no debo enviarles información confidencial ni datos personales, y que el uso que haga de ellos es mi responsabilidad."
+  "workspaces.directory.no_documents": "No encontré tu carpeta Documentos. Elige en Configuración → General dónde crear los proyectos."
 }

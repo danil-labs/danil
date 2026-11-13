@@ -14,6 +14,7 @@ export {
   listWorkspaces,
   listWorkspacesWithDeleted,
   purgeWorkspace,
+  removeComputer,
   renameComputer,
   restoreWorkspace,
   sessionProbe,
@@ -57,7 +58,7 @@ export {
   wakes,
 } from "./machine.ts";
 export { type WorkspaceGroup, type WorkspaceRow, groupWorkspaces, hasAccountWorkspaces, registryProjects, withRegistry } from "./fleet.ts";
-export { callWorkspace, hasLinkedWorkspaces, linkedAttention, linkedEvent, linkedEvents, linkedListing, linkedWorkspaces, onlyLinked, serviceFeatures, unlinkedWorkspaces } from "./links.ts";
+export { callWorkspace, hasLinkedWorkspaces, linkedAttention, linkedEvent, linkedEvents, linkedListing, linkedWorkspaces, onlyLinked, organizationOf, serviceFeatures, unlinkedWorkspaces } from "./links.ts";
 export { type Directory, type DirectoryEntry, type DirectoryGroup, barWorkspaceIds, groupDirectory, linkDanilWorkspace, listDirectory, setDirectoryPins } from "./directory.ts";
 export { type Compatibility, machineCompatibility, machineContracts } from "./compatibility.ts";
 export {
@@ -192,3 +193,5 @@ export { arrangeSpaces, spaceOrder, type SpaceOrderSource } from "./space-order.
 export { createSpaceOrderSource } from "./space-order-source.ts";
 export { ACCOUNT_ASSET_MAX_BYTES, ACCOUNT_ASSET_TYPES, type AccountAssetKind, type BlobFetch, accountAssetUrl, readAccountAsset } from "./assets.ts";
 export { type PushDevice, type PushMode, type PushPreferences, type PushQuiet, forgetPushDevice, keyBytes, pushPreferences, pushPublicKey, savePushDevice, savePushPreferences, testPush } from "./push.ts";
+
+export { type Machine, type MachineOperation, type MachinesAnswer, type MachinesConfig, type Admission as MachineAdmission, admissionUrl, machineToComputer, machinesClient, retryUnavailable, wokeOf } from "./machines.ts";

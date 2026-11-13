@@ -1,0 +1,17 @@
+name = "danil-legacy-desktop-auth"
+main = "worker.mjs"
+compatibility_date = "2026-10-01"
+workers_dev = false
+preview_urls = false
+
+# Deuda de Desk. Sin rutas públicas; alpha-entry solo delega /auth/desktop y su PKCE.
+# Secretos exclusivos: WORKOS_API_KEY, SUPABASE_SERVICE_ROLE_KEY, SESSION_COOKIE_KEY.
+# Migrar los secretos existentes antes de cambiar el binding; no rotar el sello de Desk.
+[vars]
+SUPABASE_URL = "https://sqonjbpvairwfksotadj.supabase.co"
+WORKOS_CLIENT_ID = "client_01M2HETZ89A209TH6NNPF6P8YC"
+
+[[durable_objects.bindings]]
+name = "DESKTOP_CODES"
+class_name = "DesktopCodeStore"
+script_name = "terminus-entry-alfa"

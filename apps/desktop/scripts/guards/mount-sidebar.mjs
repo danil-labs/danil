@@ -2,7 +2,9 @@
 /** El riel: filas de git, cierre con turnos vivos, selección, grupos, recientes y clonado. */
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { cause, sleep } from "../../tests/helpers/jsdom-app.mjs";
+import { existsSync, readdirSync, renameSync } from "node:fs";
+import { join } from "node:path";
+import { cause, dist, sleep } from "../../tests/helpers/jsdom-app.mjs";
 import { TASK_AFTER_QUEUE, UNGROUPED, openAddProject, openFromSearch, boot, bootByFolder, searchWindow, gitRow, keepActiveView, mount, task } from "../../tests/helpers/mount-guard.mjs";
 
 let gitLocalCalls = 0;
@@ -556,6 +558,26 @@ await sleep(50);
 assert.deepEqual(taskRenames, [{ project: "", id: "recent", title: "Nombre confirmado" }], "confirmar guarda una sola vez durante el turno");
 sidebarControls.emit("chat", { kind: "done", workspace: "w", session: "recent", ok: true });
 assert.ok(controlsDoc.querySelector('[data-sesion="recent"]'));
+// A failed picker chunk shows a recoverable notice, and the retry opens the picker.
+const assets = join(dist, "assets");
+const pickerChunk = readdirSync(assets).find(name => /^RepositoryPicker-.*\.js$/.test(name));
+assert.ok(pickerChunk, "the repository picker is its own chunk");
+renameSync(join(assets, pickerChunk), join(assets, `${pickerChunk}.off`));
+try {
+  await openAddProject(sidebarControls);
+  await sleep(100);
+  const chunkAlert = controlsDoc.querySelector('[role="dialog"] [role="alert"]');
+  assert.ok(chunkAlert, "a failed chunk load leaves a notice inside the dialog");
+  assert.equal(controlsDoc.querySelector('input[placeholder="Buscar proyecto"]'), null);
+  renameSync(join(assets, `${pickerChunk}.off`), join(assets, pickerChunk));
+  [...chunkAlert.querySelectorAll("button")].find(button => button.textContent.trim() === "Reintentar").click();
+  await sleep(200);
+  assert.ok(controlsDoc.querySelector('input[placeholder="Buscar proyecto"]'), "the second attempt opens the picker");
+} finally {
+  if (existsSync(join(assets, `${pickerChunk}.off`))) renameSync(join(assets, `${pickerChunk}.off`), join(assets, pickerChunk));
+}
+controlsDoc.dispatchEvent(new sidebarControls.w.KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+await sleep(50);
 await openAddProject(sidebarControls);
 const repositorySearch = controlsDoc.querySelector('input[placeholder="Buscar proyecto"]');
 assert.ok(repositorySearch);

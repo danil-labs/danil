@@ -39,6 +39,7 @@
   "web.local_files": "The browser cannot pick files or folders on this device. Use the Danil desktop app for that.",
   "web.machines.create_on": "Created on",
   "web.machines.off_action": "{name} is disconnected. Check that Danil is open and has internet access.",
+  "web.machines.off_wakes": "{name} is disconnected: it starts when you send it a message or act on it.",
   "web.machines.starting": "Starting {name}…",
   "web.machines.start_failed": "We could not start {name}. Try again in a minute; if it keeps failing, write to hola@danil.ai.",
   "web.machines.outdated_action": "{name} needs an update before you can use it from here.",
@@ -47,6 +48,7 @@
   "web.machines.timeout": "{name} didn't answer in time. You're seeing the last thing it said.",
   "web.machines.lost": "The connection to {name} was lost. Try again.",
   "web.machines.workspace_mismatch": "{name} won't allow this from here: it belongs to another workspace or account.",
+  "web.machines.workspace_refused": "{name} doesn't work in this workspace. Pick another machine in “Run on” or switch to a workspace it has.",
   "web.machines.license_required": "Using your other computers from here is part of paid Danil.",
   "web.onboarding.accounts.another": "Connect another",
   "web.onboarding.accounts.api_key": "Paste your API key",
@@ -327,9 +329,6 @@
   "web.service.directives": "Directives",
   "web.service.model": "Model",
   "web.service.role": "Role and goals",
-  "web.service.calendars": "Calendars",
-  "web.service.calendars_hint": "Where your agents book appointments.",
-  "web.service.calendars_empty": "No calendars yet.",
   "web.service.http_tools": "API connections",
   "web.service.http_tools_hint": "Systems your agents query during a conversation.",
   "web.service.http_tools_empty": "No API connections yet.",
@@ -571,5 +570,11 @@
   "web.admin.members_add_seats": "Add users",
   "web.admin.members_seats_full_plain": "Your plan has no free seats. To invite another person, add users to your plan.",
   "web.business.seats_pending": "Pending invitations also take a seat.",
-  "web.business.fiscal_error_legal_name_society": "Write the legal name without the company type («S.A. de C.V.»), as in your Constancia de Situación Fiscal."
+  "web.business.fiscal_error_legal_name_society": "Write the legal name without the company type («S.A. de C.V.»), as in your Constancia de Situación Fiscal.",
+  "web.platform.workspaces": "Workspaces",
+  "web.platform.empty": "You have no available workspaces.",
+  "web.platform.active": "Active",
+  "web.platform.sign_out": "Sign out",
+  "web.platform.denied": "You do not have access to this resource.",
+  "web.platform.unavailable": "The request could not be completed. Try again."
 }

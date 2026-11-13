@@ -4,8 +4,6 @@ export const FEATURES = [
   { id: 'agents', available: true },
   { id: 'channels', available: true },
   { id: 'contacts', available: false },
-  { id: 'funnels', available: false },
-  { id: 'calendar', available: false },
   { id: 'inventory', available: false },
 ] as const;
 

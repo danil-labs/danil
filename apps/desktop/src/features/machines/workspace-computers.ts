@@ -24,5 +24,8 @@ export function workspaceComputersSource(source: AccountComputersSource, workspa
       return { kind: "ok", value };
     },
     rename: (id, name) => allowed.has(id) ? source.rename(id, name) : Promise.resolve({ kind: "missing" }),
+    remove: source.remove
+      ? (id) => (allowed.has(id) ? source.remove!(id) : Promise.resolve({ kind: "missing" }))
+      : undefined,
   };
 }

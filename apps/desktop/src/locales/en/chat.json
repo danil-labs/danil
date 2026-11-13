@@ -129,6 +129,9 @@
   "chat.mode.unsupported": "This agent cannot change mode mid-turn. The mode you chose applies from the next one.",
   "chat.model.aria": "Model: {model}",
   "chat.model.aria_effort": "Model: {model}. Reasoning: {effort}",
+  "chat.model.router_route_unavailable": "Not available right now",
+  "chat.model.router_update_engine": "Update the engine",
+  "chat.model.router_activate": "Turn on",
   "chat.model.empty": "No models",
   "chat.model.favorite": "Add {model} to favorites",
   "chat.model.favorites": "Favorites",
@@ -141,8 +144,6 @@
   "chat.model.none": "none",
   "chat.model.note.fable": "the newest in the family",
   "chat.model.note.haiku": "the fastest",
-  "chat.model.note.local_cold": "on this computer — {engine} loads it on the first reply",
-  "chat.model.note.local_loaded": "on this computer, with {engine}",
   "chat.model.note.opus": "the most capable",
   "chat.model.note.sonnet": "balance of capability and speed",
   "chat.model.placeholder": "model",
@@ -231,6 +232,7 @@
   "chat.commands.no_match": "Nothing matches.",
   "chat.suggestions.truncated": "What is attached has more files than fit in this list.",
   "chat.surface.gone": "This task ran with an agent the app no longer offers. Pick another one to keep going.",
+  "chat.surface.local_retired": "Local model · no longer available. The task keeps its history; pick another agent to keep going.",
   "chat.rail.label": "Input messages",
   "chat.thread.new_messages": {
     "one": "{count} new message",
@@ -455,5 +457,15 @@
   "chat.history.pieces": "Full record",
   "chat.history.content": "Saved content",
   "chat.queue.stop_and_send": "Stop the turn and send",
-  "chat.queue.stop_and_send_aria": "Stop the turn and send queued message {n}"
+  "chat.queue.stop_and_send_aria": "Stop the turn and send queued message {n}",
+  "chat.credits.label": "Danil Credits",
+  "chat.credits.model": "DeepSeek V4.1 Flash",
+  "chat.credits.select": "Select",
+  "chat.credits.unavailable": "Unavailable",
+  "chat.credits.integration_pending": "Integration pending acceptance",
+  "chat.credits.payer": "Paid by",
+  "chat.credits.account": "Danil account",
+  "chat.credits.balance": "Credit balance",
+  "chat.credits.loading": "Loading…",
+  "chat.credits.amount": "{count} credits"
 }

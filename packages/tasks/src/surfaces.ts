@@ -1,3 +1,5 @@
+import { canonicalAgentId, OPENCODE } from "./agents.ts";
+
 /**
  * Con qué modelo y por qué superficie sigue una tarea: la misma regla en la
  * ventana y en el teléfono. La ventana la re-exporta desde
@@ -8,8 +10,8 @@
 
 /**
  * Un renglón elegible (`list_surfaces`, `surfaces::Superficie`). Una fila de
- * agente puede dar más de una: OpenCode da «Zen y Go» (de pago) y «Modelos
- * gratuitos». Los campos son los del cable.
+ * agente da una: `opencode` (Go) y `free-router-opencode` (Free Router). Un
+ * motor anterior todavía parte `opencode-zen` en dos. Los campos son los del cable.
  */
 export type Surface<Phrase = unknown> = {
   id: string;
@@ -33,10 +35,19 @@ export type SurfaceModel = { id: string; gratis?: boolean | null };
  * Si el modelo es de esa mitad del catálogo. Un sufijo `-free` no garantiza
  * gratuidad: el filtro usa el dato del catálogo. Sin superficie, o con una que
  * no parte el catálogo, todo vale.
+ *
+ * El login de OpenCode es uno solo, el de Go: los modelos que se cobraban
+ * contra el saldo de Zen (`opencode/…`) ya no se ofrecen. El motor todavía los
+ * publica; la partición los deja fuera aquí.
  */
 export function surfaceHas(s: Surface | undefined, m: SurfaceModel): boolean {
+  if (s?.id === "danil-credits") {
+    return canonicalAgentId(s.provider) === OPENCODE && m.id === "danil-credits/deepseek/deepseek-v4.1-flash" && m.gratis !== true;
+  }
+  if (m.id.startsWith("danil-credits/")) return false;
+  if (s && canonicalAgentId(s.provider) === OPENCODE && s.catalogo !== "gratuitos" && m.id.startsWith("opencode/")) return false;
   if (!s || s.catalogo === "todo") return true;
-  return s.catalogo === "gratuitos" ? m.gratis === true : m.gratis !== true;
+  return s.catalogo === "gratuitos" ? m.gratis === true && m.id === "danil-free/reflection/beam-free" : m.gratis !== true;
 }
 
 /**
@@ -68,7 +79,7 @@ export function surfaceOf(
   catalog: readonly SurfaceModel[],
   current: string | undefined,
 ): string | undefined {
-  const own = all.filter((s) => s.provider === agent);
+  const own = all.filter((s) => s.provider === agent || canonicalAgentId(s.provider, model) === canonicalAgentId(agent, model));
   if (own.length === 0) return undefined;
 
   const chosen = catalog.find((m) => m.id === model);

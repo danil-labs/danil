@@ -6,8 +6,8 @@ export type Account = { id: number; name: string };
  * opcionales los trae el BFF y el lector los rellena siempre; quedan opcionales para
  * que un ejemplo escrito a mano (demo, móvil) no tenga que repetirlos.
  */
-export type Conversation = {
-  id: number; account_id: number; contact_name: string; channel_name: string; last_message: string; ai_assistance: boolean; unread_count: number;
+export type Conversation<Id extends number | string = number> = {
+  id: Id; account_id: Id; contact_name: string; channel_name: string; last_message: string; ai_assistance: boolean; unread_count: number;
   /** Proveedor del canal (`whatsapp_cloud`, `web`…): da el ícono y las reglas de identidad. */
   active_provider?: string;
   last_message_at?: string | null;
@@ -27,7 +27,7 @@ export type Conversation = {
 };
 /** Totales de la cuenta que manda la misma GET para los filtros que son colas de trabajo. */
 export type ConversationCounts = { assistance: number | null; aiDisabled: number | null };
-export type Message = { id: number; conversation_id: number; content: string | null; direction: 'inbound' | 'outbound'; sender_type: string; deleted_at?: string | null };
+export type Message<Id extends number | string = number> = { id: Id; conversation_id: Id; content: string | null; direction: 'inbound' | 'outbound'; sender_type: string; deleted_at?: string | null };
 export type Page<T> = { rows: T[]; hasMore: boolean };
 export type InboxSession = {
   getToken(): Promise<string>; unauthorized(): Promise<boolean>;
@@ -137,7 +137,7 @@ export function formatPhoneNumber(phone: string): string {
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /** El identificador del contacto en su canal. En web el handle es un id interno y no se muestra. */
-export function contactIdentifier(row: Conversation): string | null {
+export function contactIdentifier(row: Conversation<number | string>): string | null {
   const provider = normalizeProvider(row.active_provider);
   if (provider === 'whatsapp') { const phone = row.contact_phone?.trim() || row.contact_handle?.trim(); return phone ? formatPhoneNumber(phone) : null; }
   if (provider === 'web') {
@@ -151,23 +151,23 @@ export function contactIdentifier(row: Conversation): string | null {
 }
 
 /** Nombre, si no el identificador, si no `fallback` («Contacto»). */
-export const contactDisplayName = (row: Conversation, fallback: string) => row.contact_name.trim() || contactIdentifier(row) || fallback;
+export const contactDisplayName = (row: Conversation<number | string>, fallback: string) => row.contact_name.trim() || contactIdentifier(row) || fallback;
 
 /** La segunda línea de identidad, solo si dice algo que el nombre no dice. El PSID de Messenger va siempre aquí. */
-export function contactSubIdentifier(row: Conversation): string | null {
+export function contactSubIdentifier(row: Conversation<number | string>): string | null {
   if (normalizeProvider(row.active_provider) === 'messenger') { const psid = row.contact_handle?.trim(); return psid ? `PSID ${psid}` : null; }
   const identifier = contactIdentifier(row);
   return identifier && identifier !== contactDisplayName(row, '') ? identifier : null;
 }
 
 /** Ya contestó una persona (respuesta del panel o eco desde el WhatsApp del dueño). */
-export const humanHasReplied = (row: Conversation) => row.last_message_direction === 'outbound' && row.last_message_sender_type === 'human-agent';
+export const humanHasReplied = (row: Conversation<number | string>) => row.last_message_direction === 'outbound' && row.last_message_sender_type === 'human-agent';
 
 /** Lleva la etiqueta «Humano requerido»: la IA pidió ayuda y nadie ha contestado. */
-export const needsHuman = (row: Conversation) => row.assistance_state != null && !humanHasReplied(row);
+export const needsHuman = (row: Conversation<number | string>) => row.assistance_state != null && !humanHasReplied(row);
 
 /** Las etiquetas de estado bajo la vista previa, en el orden de Appv2. */
-export function conversationLabels(row: Conversation): ConversationLabel[] {
+export function conversationLabels(row: Conversation<number | string>): ConversationLabel[] {
   const labels: ConversationLabel[] = [];
   if (!row.ai_assistance) labels.push(row.assist_reason ? 'ai_paused_loop' : 'ai_off');
   if (needsHuman(row)) labels.push('human_required');
@@ -178,7 +178,7 @@ export function conversationLabels(row: Conversation): ConversationLabel[] {
  * Los cuatro filtros de Appv2. Allí `assistance` lo corta el servidor con
  * `assistance_requested_at` no nulo y no se vuelve a filtrar con `needsHuman`.
  */
-export function matchesFilter(row: Conversation, filter: InboxFilter): boolean {
+export function matchesFilter(row: Conversation<number | string>, filter: InboxFilter): boolean {
   if (filter === 'assistance') return row.assistance_requested_at != null;
   if (filter === 'ai_disabled') return !row.ai_assistance && !row.contact_ai_blocked;
   if (filter === 'ai_blocked') return row.contact_ai_blocked === true;

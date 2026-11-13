@@ -69,7 +69,12 @@ const ARBOLES = [WEB].filter((d) => existsSync(d));
  * normal: el registro es la lista de lo que la app hace, no de lo que podría.
  */
 const SIN_INTERFAZ = {
+  change_agent_folders: "la configuración global solo administra workspace; el CLI conserva la asignación de carpetas y el contrato congelado",
+  credits_pilot_install: "lo pide credits_captured_call desde Rust; el nonce del proxy local nunca entra en JavaScript",
+  set_go_usage_key: "la conexión única de OpenCode reemplaza el campo de Go; se conserva el contrato y las claves guardadas de clientes anteriores",
+  consent_text: "el contrato conserva la lectura antigua; el router usa la política y referencia de aceptación de workspaces_startup",
   delete_session: "contrato legacy; la ventana exige task_lifecycle_v1 con previa y consentimiento",
+  danil_connect_options: "Desk tiene una sola cuenta (login por identity): no hay «Continuar como <correo>»; queda en el contrato del motor",
   // La columna derecha de la tarea nueva se quitó: sus archivos viven dentro de la tarea. Siguen en el contrato del motor.
   create_empty_session: "la pedía la columna derecha de la tarea nueva, que ya no existe; queda en el contrato del motor",
   // Extensión de orquestadores: las pide el relay de Danil Machines (MCP remoto), no una pantalla.
@@ -101,7 +106,17 @@ const SIN_INTERFAZ = {
   google_drive_desktop_status: "lo llama el alta de Drive con la app oficial (terminus#243)",
   install_google_drive_desktop: "lo llama el alta de Drive con la app oficial (terminus#243)",
   open_google_drive_desktop: "lo llama el alta de Drive con la app oficial (terminus#243)",
-  start_local_model: "elegir el modelo no lo carga: lo levanta el turno que lo usa (models::ensure_serving)",
+  list_local_models: "modelos locales retirados: el motor lo conserva en el contrato y contesta chat.failure.local_models_removed",
+  local_runtime: "modelos locales retirados: el motor lo conserva en el contrato y contesta chat.failure.local_models_removed",
+  install_local_runtime: "modelos locales retirados: el motor lo conserva en el contrato y contesta chat.failure.local_models_removed",
+  remove_local_runtime: "modelos locales retirados: el motor lo conserva en el contrato y contesta chat.failure.local_models_removed",
+  start_local_model: "modelos locales retirados: el motor lo conserva en el contrato y contesta chat.failure.local_models_removed",
+  stop_local_model: "modelos locales retirados: el motor lo conserva en el contrato y contesta chat.failure.local_models_removed",
+  install_local_model: "modelos locales retirados: el motor lo conserva en el contrato y contesta chat.failure.local_models_removed",
+  cancel_local_model: "modelos locales retirados: el motor lo conserva en el contrato y contesta chat.failure.local_models_removed",
+  local_downloads: "modelos locales retirados: el motor lo conserva en el contrato y contesta chat.failure.local_models_removed",
+  remove_local_model: "modelos locales retirados: el motor lo conserva en el contrato y contesta chat.failure.local_models_removed",
+  set_active_local_model: "modelos locales retirados: el motor lo conserva en el contrato y contesta chat.failure.local_models_removed",
   tree_typst_target: "lo pide typst_live::typst_live_open desde el Rust de la ventana: el webview nunca da la ruta de arranque",
   danil_client_token: "lo pide proxy::account_relay_token desde el Rust de la ventana: la credencial de máquina no sale del motor",
   import_chat_background_data: "lo usaba «Usar este workspace aquí», ya borrado; el fondo llegará desde la cuenta de Danil en la fase 2 (docs/account-workspace.md)",
@@ -124,6 +139,9 @@ const SIN_INTERFAZ = {
     "la sincronización sigue a la sesión de Danil: el motor vincula todos los workspaces; sin interruptor por workspace",
   danil_workspace_link_status:
     "la sincronización sigue a la sesión de Danil: el motor vincula todos los workspaces; sin interruptor por workspace",
+  state_copy: "lo pide el router de máquinas (features/machines/router.ts, `native`): la barra lee de esa copia las tareas y proyectos de otra máquina",
+  state_resource: "lo pide el router de máquinas (features/machines/router.ts, `native`): la barra de esta máquina sale de su índice con la versión que ya tiene",
+  state_manifest: "la ventana pide cada recurso con su versión (state_resource); el manifiesto lo leen los motores de otras máquinas para sus copias",
   tree_diff: "el diff de un turno se pintaba bajo cada turno del chat; ahora «Editó N archivos» abre el panel de la tarea en «Cambios» (tree_changes)",
   // `docs/agents.md` § Estado observable: el comando de agregación existe
   // para que el riel deje de sondear; el riel mismo no está construido.

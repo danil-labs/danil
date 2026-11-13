@@ -1,6 +1,4 @@
-# Web de staging (staging-app.danil.ai): la misma entrada que alfa contra la Supabase de
-# staging (rama `staging`) y computers-dev. Sin APPV2_BFF: /alpha-api responde 503.
-# Secretos: WORKOS_API_KEY, SUPABASE_SERVICE_ROLE_KEY (de staging) y SESSION_COOKIE_KEY.
+# Entrada de staging: sesión y datos de plataforma por el borde configurado en el build.
 name = "terminus-entry-staging"
 main = "worker.mjs"
 account_id = "e1f9a060a59fa8a648440321571892de"
@@ -14,5 +12,15 @@ custom_domain = true
 
 [vars]
 ENTRY_HOST = "staging-app.danil.ai"
-SUPABASE_URL = "https://nymvoxrejmriqfweutwj.supabase.co"
-WORKOS_CLIENT_ID = "client_01M2HETZ89A209TH6NNPF6P8YC"
+
+[[services]]
+binding = "DESKTOP_AUTH"
+service = "danil-legacy-desktop-auth-staging"
+
+[[durable_objects.bindings]]
+name = "DESKTOP_CODES"
+class_name = "DesktopCodeStore"
+
+[[migrations]]
+tag = "v1-desktop-codes"
+new_sqlite_classes = ["DesktopCodeStore"]

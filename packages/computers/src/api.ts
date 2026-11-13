@@ -30,6 +30,8 @@ export type Computer = {
   os?: string | null;
   /** Los workspaces de esta computadora vinculados a la cuenta. Sin el campo, un plano de control de antes. */
   workspaces?: string[] | null;
+  /** Solo en el endpoint de la persona en un servidor de organización: la organización, su workspace principal y los de la persona que atiende (el principal primero). Un plano de control anterior no lo manda, o no manda `workspaces`. */
+  organization?: { organization_id: string; workspace: { id: string; name: string }; workspaces?: { id: string; name: string }[] } | null;
 };
 
 export type Answer<T> =
@@ -44,6 +46,7 @@ export type Answer<T> =
 export type Fetch = (input: string, init?: { method?: string; headers?: Record<string, string>; body?: string }) => Promise<{
   status: number;
   ok: boolean;
+  headers?: { get(name: string): string | null };
   json(): Promise<unknown>;
 }>;
 
@@ -143,6 +146,24 @@ export function renameComputer(endpoint: string, token: string, id: string, name
   );
 }
 
+/**
+ * Quita de la cuenta una computadora conectada por la persona (`DELETE /v1/computers/:id`).
+ * Pide la sesión de la persona: el token de cliente del escritorio contesta `unauthorized`.
+ * Una VM que Danil administra contesta `error` con `not_self_computer`; una que ya no está, `missing`.
+ */
+export function removeComputer(endpoint: string, token: string, id: string, f: Fetch = globalFetch): Promise<Answer<{ computer_id: string }>> {
+  return request(
+    apiUrl(endpoint, `/v1/computers/${encodeURIComponent(id)}`),
+    token,
+    "DELETE",
+    (body) => {
+      const b = body as { computer_id?: unknown } | null;
+      return { computer_id: typeof b?.computer_id === "string" ? b.computer_id : id };
+    },
+    f,
+  );
+}
+
 /** El largo máximo del nombre de una computadora, el mismo que valida el plano de control. */
 export const COMPUTER_NAME_MAX = 60;
 
@@ -190,7 +211,7 @@ export type AccountWorkspace = {
 
 const strings = (v: unknown): string[] => (Array.isArray(v) ? v.filter((x): x is string => typeof x === "string" && x !== "") : []);
 
-function accountWorkspace(raw: unknown): AccountWorkspace | null {
+export function accountWorkspace(raw: unknown): AccountWorkspace | null {
   const w = raw as Record<string, unknown> | null;
   if (!w || typeof w !== "object" || typeof w.id !== "string" || !w.id) return null;
   const projects = (Array.isArray(w.projects) ? w.projects : []).filter(

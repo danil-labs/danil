@@ -25,6 +25,7 @@ type DeleteResult = {
 export type DeleteTarget = { project: string; id: string; workspace: string | null; supported: boolean; machineName: string; folderName: (project: string) => string; options: InvokeOptions; panelId: (id: string) => string };
 
 function failureText(failure: unknown): string {
+  if (errorCode(failure) === "task_family_busy") return t("projects.sessions.delete_busy");
   const message = prosaDe(failure);
   const detail = detalleDe(failure);
   return detail && detail !== message ? `${message}\n${detail}` : message;
@@ -86,7 +87,7 @@ export default function DeleteTaskDialog(props: {
       if (result.status === "complete" && result.failures.length === 0) props.onClose();
       else { setInvalid(true); setError([t("projects.sessions.delete_partial"), ...result.failures.map(failure => `${props.target.folderName(failure.project)} / ${members().find(member => member.id === failure.id && member.project === failure.project)?.title || failure.id}: ${failureText(failure.error)}`)].join("\n")); }
     } catch (failure) {
-      setInvalid(true);
+      if (errorCode(failure) !== "task_family_busy") setInvalid(true);
       if (errorCode(failure) === "task_family_consent_changed") await inspect(t("projects.sessions.delete_changed"));
       else setError(failureText(failure));
     } finally { props.lock([]); setBusy(false); }

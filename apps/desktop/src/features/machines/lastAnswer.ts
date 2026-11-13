@@ -8,7 +8,7 @@ import { errorCode } from "../../lib/errorCode";
 import { escribirPref, leerPref } from "../../lib/prefs";
 
 const KEY = "machines.last_answer";
-/** Apagada, o encendiéndose tras despertarla una lectura (`router.ts`, `managedOff`). */
+/** Apagada, o encendiéndose tras pedirle algo (`router.ts`). */
 const ASLEEP = new Set(["machine_off", "machine_starting"]);
 
 export const asleep = (error: unknown) => ASLEEP.has(errorCode(error) ?? "");

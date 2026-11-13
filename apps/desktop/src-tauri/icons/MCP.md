@@ -2,7 +2,7 @@
 
 El icono que Claude muestra junto a un conector lo declara el propio servidor en
 `serverInfo.icons` de la respuesta a `initialize`. Este repositorio sólo guarda la
-marca; el servicio `MCP` de `danil-labs/computers` es quien la devuelve.
+marca; el servicio `MCP` de `danil-labs/machines` es quien la devuelve.
 
 ## Marca
 

@@ -1,6 +1,6 @@
 {
   "accounts.error.active_missing": "The active account is no longer available. Select or connect a workspace account to continue.",
-  "accounts.error.go_key_missing": "The active account has no OpenCode session or Go key. Reconnect it or add a key in Settings.",
+  "accounts.error.go_key_missing": "The active account has no available OpenCode session. Reconnect it in Settings.",
   "accounts.error.home_other_app": "Another Danil window with this same data — or the previous version, if you just updated — is working with this agent. Wait for it to finish or close it, then send again.",
   "accounts.error.vault_unreadable": "I couldn't open the key your connections are stored with, so I couldn't check this account. Nothing was lost: try again and accept the permission your computer asks for.",
   "accounts.error.profile_unreadable": "Could not verify the email for this account. Check your connection and try again.",

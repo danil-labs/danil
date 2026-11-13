@@ -289,3 +289,16 @@ them answers that the command is unknown, and only that feature turns off.
   `session.effort` for the next turn, also through the relay (danil-engine#371,
   dev `1a3b4438`), SHA-256
   `b8ca109ae22758520341b5c2cca1911b2ccbfeee74e84c72595543eaae72d413`.
+- `light_state_machines_v1.json`: `state_machines`, `state_copy` and the
+  `state.copy_changed` event: the workspaces the other machines of every Danil
+  session on this engine serve, plus this engine's own with name and logo,
+  from a view rebuilt when something changes; the desktop rail comes only
+  from it, and the task bar reads the other machines' tasks and projects from
+  `state_copy`; local window only, `relay: false` (danil-engine#415, dev
+  `a4ae143f`; description updated by danil-engine `feat/state-machines-rail`),
+  SHA-256 `73815aefd12c12e3fcbb55e1e9e9f2dc1db2c603b509486b24e9f5b1d1b17282`.
+- `light_state_v1.json`: `state_manifest`, `state_resource` and the
+  `state.changed` event: this machine's task and project index per workspace,
+  with `not_modified` for the version the window already has; the task bar of
+  this machine reads `state_resource tasks` (danil-engine#406, dev `a4ae143f`),
+  SHA-256 `9cef09b72f6bbf2d7129bb93994959c56b15b1725d165d8f8dd0d472195d2cff`.

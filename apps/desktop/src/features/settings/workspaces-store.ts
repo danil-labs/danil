@@ -12,6 +12,8 @@ import { invoke } from "../../lib/invoke.ts";
 import { asFailure, type Failure } from "../../ui/Failure";
 import { t } from "../../lib/i18n";
 import { createNavigationOrder } from "../../lib/navigation-order";
+import { capabilities } from "../../lib/platform";
+import type { RailWorkspace } from "../machines/engine-workspaces";
 import type { Frase } from "../../lib/prose";
 
 export type Workspace = {
@@ -222,6 +224,37 @@ export function createWorkspaces() {
     turnosVivos,
     bloqueado,
   };
+}
+
+/**
+ * El riel: con el índice del motor (`state_machines`) la lista sale solo de él,
+ * los de aquí y los que sirven las otras máquinas de la persona; sin él, de
+ * `list_workspaces`, como Configuración. El abierto y cambiar de workspace son
+ * los de siempre.
+ */
+export function createRail() {
+  const ws = createWorkspaces();
+  const order = createNavigationOrder(() => "workspaces.order");
+  const [revision, setRevision] = createSignal(0);
+  const bump = () => setRevision((n) => n + 1);
+  onMount(() => {
+    window.addEventListener("harness:workspace-name", bump);
+    window.addEventListener("harness:workspace", bump);
+    onCleanup(() => {
+      window.removeEventListener("harness:workspace-name", bump);
+      window.removeEventListener("harness:workspace", bump);
+    });
+  });
+  const lista = createMemo((): RailWorkspace[] | null => {
+    revision();
+    const engine = capabilities().railWorkspaces?.() ?? null;
+    if (!engine) return ws.lista();
+    // El abierto se ve aunque el índice aún no lo traiga (recién creado, o de la cuenta sin máquina).
+    const open = ws.activo();
+    const extra = open && !engine.some((w) => w.id === open) ? (ws.lista() ?? []).filter((w) => w.id === open) : [];
+    return order.arrange([...engine, ...extra]);
+  });
+  return { ...ws, lista };
 }
 
 /**

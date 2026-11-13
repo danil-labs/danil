@@ -1,0 +1,70 @@
+{
+  "version": 1,
+  "name": "light_state_machines",
+  "description": "Estado ligero, etapa 3: las otras máquinas de la cuenta y sus copias. Desde GET /v1/computers (al arrancar, con workspace.changed y al cambiar las sesiones de Danil) el motor escribe workspaces/<ws>/machines/<computer_id>/machine.json ({schema, version, data} sin tokens) por cada workspace que sirve cada máquina, también los que aquí no existen (carpeta sin meta.json), y lo borra cuando deja de servirlo o con membership_revoked. Mientras alguien lee, se suscribe por el relay a los state.changed de esas máquinas y copia tasks.json y projects.json pidiendo solo el recurso que cambió con la versión que ya tiene. state_machines da, sin red, los workspaces (de aquí, con nombre, logo y logo_version, o solo de otras máquinas) con sus máquinas y la versión de cada copia, de una vista que se rehace al cambiar una copia o un workspace de aquí (alta, nombre, logo, baja) y no al preguntar; state_copy da una copia (machine, tasks o projects), con not_modified si la versión coincide. El evento state.copy_changed {workspace, machine, resource, version} avisa al cambiar una copia (version null: se borró) y, con machine local y resource workspace, al cambiar en la vista un workspace de aquí. Solo para la ventana local: relay false. Fuera del hash de compatibilidad (status.contract).",
+  "features": [
+    "light_state_machines_v1"
+  ],
+  "events": [
+    "state.copy_changed"
+  ],
+  "commands": [
+    {
+      "async": false,
+      "channel": null,
+      "kind": "invoke",
+      "name": "state_machines",
+      "output": "-> Result < Value , String >",
+      "parameters": [
+        {
+          "key": "version",
+          "name": "version",
+          "type": "Option < String >"
+        }
+      ],
+      "path": "fleet::state_machines",
+      "scope": "machine",
+      "relay": false,
+      "audience": "window",
+      "authority": "admin",
+      "durable": false,
+      "enforcement": "server"
+    },
+    {
+      "async": false,
+      "channel": null,
+      "kind": "invoke",
+      "name": "state_copy",
+      "output": "-> Result < Value , String >",
+      "parameters": [
+        {
+          "key": "workspace",
+          "name": "workspace",
+          "type": "String"
+        },
+        {
+          "key": "machine",
+          "name": "machine",
+          "type": "String"
+        },
+        {
+          "key": "resource",
+          "name": "resource",
+          "type": "String"
+        },
+        {
+          "key": "version",
+          "name": "version",
+          "type": "Option < String >"
+        }
+      ],
+      "path": "fleet::state_copy",
+      "scope": "machine",
+      "relay": false,
+      "audience": "window",
+      "authority": "admin",
+      "durable": false,
+      "enforcement": "server"
+    }
+  ]
+}

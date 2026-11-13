@@ -108,6 +108,12 @@ test("a new task is born on this computer unless «Ejecutar en» picks another f
   assert.ok(await until(() => doc.querySelector('[data-machine-option="cmp_vm"]')), "the picker lists the account's machines");
   doc.querySelector('[data-machine-option="cmp_vm"]').click();
   await sleep(200);
+  assert.equal(doc.querySelector('[aria-label="Proyecto"]').textContent.trim(), "Sin proyecto", "switching machines clears the previous folder");
+  doc.querySelector('[aria-label="Proyecto"]').click();
+  const remoteProject = () => [...doc.querySelectorAll("button")].find(b => b.querySelector("span")?.textContent === "Panel" && b.textContent.includes("tarea"));
+  assert.ok(await until(remoteProject), "the VM offers its own folders");
+  remoteProject().click();
+  await sleep(100);
   await write(app, "en la VM");
   assert.ok(await until(() => relayCalls("cmp_vm", "send_message").length === 1), "the picked machine gets it");
   assert.deepEqual(relayCalls("cmp_vm", "send_message").map((c) => [c.args.project, c.args.session, c.workspace]), [["p1", null, "w"]], "with the same project and workspace ids");
@@ -263,3 +269,48 @@ test("con la VM apagada, el composer ofrece los proyectos que puede abrir y envi
     app.w.close();
   }
 });
+
+for (const code of ["machine_off", "machine_starting", "operation_failed"]) {
+  test(`desktop startup keeps loaded tasks and reports only failures: ${code}`, async () => {
+    const message = "Macbook está sin conexión. Verifica que Danil esté abierto y tenga acceso a internet.";
+    const { app, doc, text } = await open(`desktop-startup-${code}`, {
+      status: { state: "disconnected", online: false },
+      extra: {
+        workspaces_startup: async () => {
+          await sleep(800);
+          throw { what: message, detail: code };
+        },
+      },
+    });
+    try {
+      assert.ok(doc.querySelector('[data-sesion="t1"]'), "the successful workspace list keeps its tasks");
+      assert.equal(text().includes(message), code === "operation_failed", "only a real failure raises an error");
+      assert.deepEqual(app.failures, []);
+    } finally {
+      app.w.close();
+    }
+  });
+}
+
+// Con la foto del sidebar de la vez anterior y la máquina dormida, el arranque
+// tiene que salir de la caché: si no, la ventana queda inerte con el estado
+// viejo y no se entera de cuando la máquina enciende.
+for (const code of ["machine_off", "machine_starting"]) {
+  test(`a sleeping machine at startup still leaves the shell cache: ${code}`, async () => {
+    const snapshot = { workspace: "w", projects: [], sessions: { "": [] }, spaces: [], desk: null };
+    const cache = { version: 2, last: "w", workspaces: { w: { saved: Date.now(), snapshot: JSON.stringify(snapshot) } } };
+    const { app, doc, text } = await open(`desktop-startup-cache-${code}`, {
+      storage: { "harness:shell-cache": JSON.stringify(cache) },
+      extra: {
+        list_projects: () => Promise.reject({ what: "La computadora está apagada.", detail: code }),
+      },
+    });
+    try {
+      assert.ok(await until(() => !doc.querySelector("[data-shell-cache]")), "the shell leaves the cache");
+      assert.ok(!text().includes("La computadora está apagada."), "a sleeping machine raises no error");
+      assert.deepEqual(app.failures, []);
+    } finally {
+      app.w.close();
+    }
+  });
+}

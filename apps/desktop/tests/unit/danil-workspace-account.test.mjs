@@ -10,7 +10,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { boot, sleep } from "../helpers/jsdom-app.mjs";
-import { engine as relayEngine, fleet as relayFleet } from "../helpers/fake-relay.mjs";
 
 const W = { id: "w", name: "Danil", context_root: null };
 const W2 = { id: "w2", name: "Fundación Donde Banco", context_root: null };
@@ -58,6 +57,8 @@ function engine({ sessions = [ALBERTO, FDB], map = { w: "u_alberto", w2: "u_fdb"
     return { account, email: emails[account] ?? null, signed_in: Boolean(s), linked: Boolean(s) };
   };
   const workspaces = { workspaces: [W, W2], active: state.active };
+  const account = () =>
+    status ?? (state.sessions.length ? { state: "connected", computer_id: "cmp_a", account: "u_alberto", email: "alberto@danil.ai", online: true } : { state: "disconnected", name: "Mac de Alberto" });
   return {
     state,
     calls,
@@ -68,8 +69,9 @@ function engine({ sessions = [ALBERTO, FDB], map = { w: "u_alberto", w2: "u_fdb"
         state.active = id;
         return null;
       }),
-      danil_connect_status: () =>
-        status ?? (state.sessions.length ? { state: "connected", computer_id: "cmp_a", account: "u_alberto", email: "alberto@danil.ai", online: true } : { state: "disconnected", name: "Mac de Alberto" }),
+      danil_connect_status: () => account(),
+      // La cuenta de Desk (login por identity) es la que lee la ventana.
+      danil_session_status: () => account(),
       danil_sessions: record("danil_sessions", () => state.sessions),
       danil_workspace_account: record("danil_workspace_account", ({ workspace } = {}) => of(workspace)),
       danil_workspace_set_account: record(
@@ -99,7 +101,6 @@ const DIRECTORY = [
 
 const FREE_ORG = { ...DIRECTORY[1], key: "a:480", danil_workspace_id: 480, name: "Equipo libre", role: "owner" };
 const PERSONAL = { key: "a:490", workspace_id: null, danil_workspace_id: 490, name: "Alberto", kind: "personal", organization: null, role: "owner", owner: false, support: null, capabilities: { agents: true, terminus: false }, pin: null };
-const ONLY_HERE = { key: "w:w", workspace_id: "w", danil_workspace_id: null, name: "Danil", kind: "terminus_only", organization: null, role: null, owner: true, support: null, capabilities: { agents: false, terminus: true }, pin: null };
 
 /** El plano de control que contesta ahora; los comandos `agents_session_*` de la sesión de persona lo leen. */
 const none = () => { throw new Error("no control plane"); };
@@ -161,321 +162,16 @@ async function openWorkspaces(name, e) {
   return app;
 }
 
-async function openDanilAccounts(name, e, antes, panel = "cuenta-danil") {
-  const app = await boot("listo", name, { ...BASE, ...e.table }, undefined, {}, { beforeImport: antes });
-  app.w.dispatchEvent(new app.w.CustomEvent("harness:open-settings", { detail: panel }));
-  await sleep(1000);
-  return app;
-}
 
 const section = (w) => w.document.querySelector("[data-workspace-account]");
-const buttonIn = (root, label) => [...(root?.querySelectorAll("button") ?? [])].find((b) => b.textContent.trim() === label);
-const option = (w, key) => w.document.querySelector(`[data-workspace-link-option="${key}"]`);
-const chooser = (w) => w.document.querySelector("[data-workspace-link-chooser]");
 
-test("the workspace shows its sync line and only explicit actions; changing asks first", async () => {
-  const control = controlPlane();
-  try {
-    const e = engine();
-    const app = await openWorkspaces("danil-workspace-account", e);
-    const { w } = app;
-    assert.ok(section(w), w.document.body.textContent.slice(0, 300));
-    assert.ok(section(w).textContent.includes("En la nube"));
-    assert.equal(section(w).dataset.workspaceCloud, "synced");
-    assert.ok(section(w).textContent.includes("Sincronizado con «Danil»"), section(w).textContent);
-    assert.ok(section(w).textContent.includes("alberto@danil.ai"));
-    assert.equal(w.document.querySelector("[data-workspace-account-select]"), null, "there is no free selector");
-    assert.ok(buttonIn(section(w), "Cambiar"));
-    assert.ok(buttonIn(section(w), "Desvincular"));
-
-    buttonIn(section(w), "Cambiar").click();
-    await sleep(400);
-    assert.ok(chooser(w), "the directory opens");
-    assert.ok(option(w, "a:477"));
-    assert.equal(option(w, "a:478")?.dataset.taken, "", "a workspace on another machine is marked");
-    assert.equal(control.links.length, 0, "nothing is linked until it is chosen");
-
-    option(w, "a:477").click();
-    await sleep(300);
-    const confirm = w.document.querySelector("[data-workspace-change-confirm]");
-    assert.ok(confirm, "changing asks first");
-    assert.ok(confirm.textContent.includes("Se mueven las máquinas, la memoria y los agentes"));
-    assert.equal(control.links.length, 0, "nothing moves before the confirmation");
-
-    confirm.querySelector("[data-workspace-change-yes]").click();
-    await sleep(500);
-    assert.deepEqual(control.links.map((l) => [l.workspace, l.danil, l.account]), [["w", 477, undefined]], "the main account's window session links");
-    assert.deepEqual(e.calls.filter((c) => c.command === "danil_workspace_set_account").map((c) => c.args), [{ workspace: "w", account: "u_alberto" }]);
-    assert.ok(section(w).textContent.includes("Sincronizado con «Danil»"));
-    assert.equal(w.document.querySelector("[role=alert]"), null);
-    assert.deepEqual(app.failures, []);
-  } finally {
-    control.restore();
-  }
-});
-
-test("a workspace without an account asks once, and cancelling leaves it without an account", async () => {
-  const control = controlPlane();
-  try {
-    const e = engine({ map: { w2: "u_fdb" } });
-    const app = await openWorkspaces("danil-workspace-account-none", e);
-    const { w } = app;
-    assert.equal(section(w).dataset.workspaceAccount, "none");
-    assert.ok(section(w).textContent.includes("Este workspace no es de ninguna cuenta"));
-    assert.equal(w.document.querySelector("[data-danil-foot]"), null, "the footer shows nobody");
-
-    buttonIn(section(w), "Sincronizar con Danil").click();
-    await sleep(400);
-    assert.ok(chooser(w));
-    buttonIn(chooser(w), "Cancelar").click();
-    await sleep(200);
-    assert.equal(chooser(w), null);
-    assert.ok(!e.calls.some((c) => c.command === "danil_workspace_set_account"), "cancel keeps it without an account");
-
-    buttonIn(section(w), "Sincronizar con Danil").click();
-    await sleep(400);
-    option(w, "a:477").click();
-    await sleep(500);
-    assert.deepEqual(control.links.map((l) => l.danil), [477]);
-    assert.deepEqual(e.calls.filter((c) => c.command === "danil_workspace_set_account").map((c) => c.args), [{ workspace: "w", account: "u_alberto" }]);
-    assert.ok(section(w).textContent.includes("Sincronizado con «Danil»"), section(w).textContent);
-    assert.deepEqual(app.failures, []);
-  } finally {
-    control.restore();
-  }
-});
-
-test("signing in from a workspace without one asks once and links the chosen workspace", async () => {
-  const control = controlPlane();
-  try {
-    const e = engine({ sessions: [], map: {} });
-    const app = await openDanilAccounts("danil-accounts-add-claims", e);
-    const { w } = app;
-    w.document.querySelector("[data-danil-manage]").click();
-    await sleep(300);
-    buttonIn(w.document.querySelector("[data-danil-account]"), "Iniciar sesión con Danil").click();
-    await sleep(300);
-    assert.ok(e.calls.some((c) => c.command === "danil_connect_start"));
-    assert.ok(!e.calls.some((c) => c.command === "danil_workspace_set_account"), "nothing links before choosing");
-
-    e.state.sessions = [ALBERTO];
-    app.emit("danil-sessions", e.state.sessions);
-    await sleep(600);
-    assert.ok(chooser(w), "the choice opens once the session arrives");
-    option(w, "a:477").click();
-    await sleep(500);
-    assert.deepEqual(control.links.map((l) => l.danil), [477]);
-    assert.deepEqual(e.calls.filter((c) => c.command === "danil_workspace_set_account").map((c) => c.args), [{ workspace: "w", account: "u_alberto" }]);
-    assert.deepEqual(app.failures, []);
-  } finally {
-    control.restore();
-  }
-});
-
-test("a workspace taken by another machine is explained and another one is offered", async () => {
-  const control = controlPlane();
-  try {
-    const e = engine({ map: {} });
-    const app = await openWorkspaces("danil-workspace-account-taken", e);
-    const { w } = app;
-    buttonIn(section(w), "Sincronizar con Danil").click();
-    await sleep(400);
-    option(w, "a:478").click();
-    await sleep(200);
-    assert.equal(w.document.querySelector("[data-workspace-account] [role=alert]")?.textContent, "Ese workspace de Danil ya está en otra máquina. Elige otro.");
-    assert.equal(control.links.length, 0, "a taken workspace is not linked");
-    option(w, "a:477").click();
-    await sleep(500);
-    assert.deepEqual(control.links.map((l) => l.danil), [477]);
-    assert.deepEqual(app.failures, []);
-  } finally {
-    control.restore();
-  }
-});
-
-test("the control plane refusing a taken workspace keeps the list open", async () => {
-  const control = controlPlane(DIRECTORY, "danil_workspace_taken");
-  try {
-    const e = engine({ map: {} });
-    const app = await openWorkspaces("danil-workspace-account-refused", e);
-    const { w } = app;
-    buttonIn(section(w), "Sincronizar con Danil").click();
-    await sleep(400);
-    option(w, "a:477").click();
-    await sleep(500);
-    assert.equal(w.document.querySelector("[data-workspace-account] [role=alert]")?.textContent, "Ese workspace de Danil ya está en otra máquina. Elige otro.");
-    assert.ok(chooser(w), "the list stays open to choose another");
-    assert.ok(!e.calls.some((c) => c.command === "danil_workspace_set_account"));
-    assert.deepEqual(app.failures, []);
-  } finally {
-    control.restore();
-  }
-});
-
-test("without a window session, linking asks to sign in and the engine keeps no account", async () => {
-  const control = controlPlane(DIRECTORY, "no_session");
-  try {
-    const e = engine({ map: {} });
-    const app = await openWorkspaces("danil-workspace-account-no-session", e);
-    const { w } = app;
-    buttonIn(section(w), "Sincronizar con Danil").click();
-    await sleep(400);
-    option(w, "a:477").click();
-    await sleep(500);
-    assert.equal(w.document.querySelector("[data-workspace-account] [role=alert]")?.textContent, "Inicia sesión con Danil en esta ventana para sincronizar este workspace.");
-    assert.ok(chooser(w), "the list stays open");
-    assert.ok(!e.calls.some((c) => c.command === "danil_workspace_set_account"));
-    assert.deepEqual(app.failures, []);
-  } finally {
-    control.restore();
-  }
-});
-
-test("a second account links with its own window session", async () => {
-  const control = controlPlane();
-  try {
-    const e = engine({ map: { w: "u_fdb", w2: "u_fdb" } });
-    const app = await openWorkspaces("danil-workspace-account-second", e);
-    const { w } = app;
-    buttonIn(section(w), "Cambiar").click();
-    await sleep(400);
-    option(w, "a:477").click();
-    await sleep(200);
-    w.document.querySelector("[data-workspace-change-yes]").click();
-    await sleep(500);
-    assert.deepEqual(control.links.map((l) => [l.account, l.danil]), [["u_fdb", 477]]);
-    assert.deepEqual(app.failures, []);
-  } finally {
-    control.restore();
-  }
-});
-
-test("a workspace only on this computer is uploaded with its name, by anyone signed in", async () => {
-  const control = controlPlane([ONLY_HERE, { ...DIRECTORY[1], role: "member" }]);
-  try {
-    const e = engine();
-    const app = await openWorkspaces("danil-workspace-cloud-upload", e);
-    const { w } = app;
-    assert.equal(section(w).dataset.workspaceCloud, "local", section(w).textContent);
-    assert.ok(section(w).textContent.includes("Solo en esta computadora"));
-    assert.equal(buttonIn(section(w), "Cambiar"), undefined, "nothing to change to");
-    assert.ok(buttonIn(section(w), "Desvincular"), "the engine still has the account: it can be unlinked");
-    assert.equal(w.document.querySelector("[data-workspace-cloud-sync]"), null, "a member's workspace is not offered to sync");
-    assert.equal(w.document.querySelector("[data-workspace-create]"), null, "no name is asked");
-    buttonIn(section(w), "Subir «Danil»").click();
-    await sleep(500);
-    assert.deepEqual(control.creates, [{ account: undefined, workspace: "w" }], "the main account's window session uploads it");
-    assert.deepEqual(control.links, []);
-    assert.equal(w.document.querySelector("[data-workspace-account] [role=alert]"), null);
-    assert.deepEqual(app.failures, []);
-  } finally {
-    control.restore();
-  }
-});
-
-test("a workspace only on this computer can be unlinked; without an engine account there is nothing to unlink", async () => {
-  const control = controlPlane([ONLY_HERE]);
-  try {
-    const e = engine();
-    const app = await openWorkspaces("danil-workspace-cloud-unlink-local", e);
-    const { w } = app;
-    assert.equal(section(w).dataset.workspaceCloud, "local");
-    buttonIn(section(w), "Desvincular").click();
-    w.document.querySelector("[data-workspace-leave-yes]").click();
-    await sleep(500);
-    assert.deepEqual(control.unlinks, [{ account: undefined, workspace: "w" }], "the DELETE is idempotent in Computers");
-    assert.deepEqual(e.calls.find((c) => c.command === "danil_workspace_set_account")?.args, { workspace: "w", account: null });
-    assert.equal(section(w).dataset.workspaceAccount, "none");
-    assert.equal(buttonIn(section(w), "Desvincular"), undefined, "nothing to unlink yet");
-    assert.deepEqual(app.failures, []);
-  } finally {
-    control.restore();
-  }
-});
-
-test("uploading when the person already has a workspace offers to sync with it", async () => {
-  const control = controlPlane([ONLY_HERE, FREE_ORG, PERSONAL], null, null, "personal_workspace_exists");
-  try {
-    const e = engine();
-    const app = await openWorkspaces("danil-workspace-cloud-exists", e);
-    const { w } = app;
-    buttonIn(section(w), "Subir «Danil»").click();
-    await sleep(500);
-    assert.equal(control.creates.length, 1);
-    assert.equal(w.document.querySelector("[data-workspace-account] [role=alert]")?.textContent, "Ya tienes un workspace propio en la nube. Sincroniza este con ese.");
-    assert.equal(w.document.querySelector("[data-workspace-cloud-pick]").value, "a:490", "its own workspace is picked");
-    w.document.querySelector("[data-workspace-cloud-sync]").click();
-    await sleep(500);
-    assert.deepEqual(control.links.map((l) => [l.workspace, l.danil]), [["w", 490]]);
-    assert.deepEqual(app.failures, []);
-  } finally {
-    control.restore();
-  }
-});
-
-test("unlinking asks first and only takes this workspace out of its account", async () => {
-  const control = controlPlane();
-  try {
-    const e = engine();
-    const app = await openWorkspaces("danil-workspace-account-leave", e);
-    const { w } = app;
-    buttonIn(section(w), "Desvincular").click();
-    const ask = () => w.document.querySelector("[data-workspace-leave]");
-    assert.ok(ask(), "it asks before unlinking");
-    assert.ok(ask().textContent.includes("Se quita de alberto@danil.ai"));
-    assert.ok(!e.calls.some((c) => c.command === "danil_workspace_set_account"));
-    buttonIn(ask(), "Cancelar").click();
-    await sleep(200);
-    assert.equal(ask(), null);
-    assert.ok(!e.calls.some((c) => c.command === "danil_workspace_set_account"), "cancel keeps it linked");
-
-    buttonIn(section(w), "Desvincular").click();
-    ask().querySelector("[data-workspace-leave-yes]").click();
-    await sleep(500);
-    assert.deepEqual(control.unlinks, [{ account: undefined, workspace: "w" }], "the control plane unlinks with the main window session");
-    const order = e.calls.map((c) => c.command).filter((c) => c === "agents_session_unlink" || c === "danil_workspace_set_account");
-    assert.deepEqual(order, ["agents_session_unlink", "danil_workspace_set_account"], "Computers first, then the engine");
-    assert.deepEqual(e.calls.find((c) => c.command === "danil_workspace_set_account")?.args, { workspace: "w", account: null });
-    assert.ok(!e.calls.some((c) => c.command === "danil_disconnect"), "the session stays signed in");
-    assert.ok(section(w).textContent.includes("no es de ninguna cuenta"), section(w).textContent);
-    assert.deepEqual(app.failures, []);
-  } finally {
-    control.restore();
-  }
-});
-
-test("if Computers refuses to unlink, the engine keeps the account and the reason shows", async () => {
-  const control = controlPlane(DIRECTORY, null, "no_session");
-  try {
-    const e = engine();
-    const app = await openWorkspaces("danil-workspace-account-leave-refused", e);
-    const { w } = app;
-    buttonIn(section(w), "Desvincular").click();
-    w.document.querySelector("[data-workspace-leave-yes]").click();
-    await sleep(500);
-    assert.equal(control.unlinks.length, 1);
-    assert.ok(!e.calls.some((c) => c.command === "danil_workspace_set_account"), "the engine is not touched");
-    assert.ok(section(w).textContent.includes("Sincronizado con «Danil»"));
-    assert.equal(w.document.querySelector("[data-workspace-account] [role=alert]")?.textContent, "Inicia sesión con Danil en esta ventana para sincronizar este workspace.");
-    assert.deepEqual(app.failures, []);
-  } finally {
-    control.restore();
-  }
-});
-
-test("a workspace whose account signed out says it is not synced", async () => {
-  const control = controlPlane();
-  try {
-    const e = engine({ sessions: [ALBERTO], map: { w: "u_ytw", w2: "u_alberto" } });
-    const app = await openWorkspaces("danil-workspace-account-signed-out", e);
-    const { w } = app;
-    assert.equal(section(w)?.dataset.workspaceAccount, "unsynced");
-    assert.ok(section(w).textContent.includes("Sin sincronizar: alberto@yucatantechweek.mx no tiene sesión en esta computadora."), section(w).textContent);
-    assert.ok(buttonIn(section(w), "Cambiar"), "it still offers an explicit change");
-    assert.deepEqual(app.failures, []);
-  } finally {
-    control.restore();
-  }
+test("Desk has one account: even if the engine keeps several, the workspace offers no account to pick", async () => {
+  const e = engine();
+  const app = await openWorkspaces("danil-workspace-one-account", e);
+  const { w } = app;
+  assert.equal(section(w), null, "no per-account section: switching user does not exist");
+  assert.equal(w.document.querySelector("[data-workspace-account-select]"), null);
+  assert.deepEqual(app.failures, []);
 });
 
 test("with an engine without sessions per account, the workspace has no account section", async () => {
@@ -486,151 +182,6 @@ test("with an engine without sessions per account, the workspace has no account 
   assert.equal(section(app.w), null);
   assert.ok(app.w.document.body.textContent.includes("Fundación Donde Banco"), "the workspaces screen is there");
   assert.deepEqual(app.failures, []);
-});
-
-test("the sidebar footer shows the open workspace's account and follows a switch", async () => {
-  const e = engine();
-  const app = await boot("listo", "danil-footer-workspace-account", { ...BASE, ...e.table });
-  const { w } = app;
-  await sleep(900);
-  const foot = () => w.document.querySelector("[data-danil-foot]");
-  assert.equal(foot()?.dataset.danilFoot, "connected", w.document.body.innerHTML.slice(0, 300));
-  assert.equal(foot().getAttribute("title"), "Alberto Ceballos · en línea con Danil");
-
-  e.state.active = "w2";
-  w.dispatchEvent(new w.CustomEvent("harness:workspace"));
-  await sleep(400);
-  assert.equal(foot().getAttribute("title"), "Alberto FDB · sin conexión con Danil por ahora");
-
-  e.state.sessions = [ALBERTO];
-  app.emit("danil-sessions", e.state.sessions);
-  await sleep(400);
-  assert.equal(foot(), null, "its account signed out: nobody, and not the other account");
-  assert.deepEqual(app.failures, []);
-});
-
-test("settings follows the workspace account and reads only its registry's machines", async () => {
-  const e = engine();
-  const asked = [];
-  const peers = relayFleet({ "not-linked": { table: relayEngine, state: "offline" } });
-  let app;
-  e.table.account_relay_token = ({ account } = {}) => {
-    if (!account) throw unknown();
-    asked.push(account);
-    return { token: account, endpoint: "https://settings.test" };
-  };
-  const previous = globalThis.fetch;
-  globalThis.fetch = async (url, init = {}) => {
-    const account = new Headers(init.headers).get("authorization")?.replace("Bearer ", "");
-    const id = account === "u_fdb" ? "cmp_b" : "cmp_a";
-    if (String(url).endsWith("/v1/workspaces")) return Response.json({ workspaces: [{ id: account === "u_fdb" ? "w2" : "w", computers: [id] }] });
-    if (String(url).endsWith("/v1/computers")) return Response.json([
-      { computer_id: id, name: `Machine ${account}`, state: "online" },
-      { computer_id: "not-linked", name: "Other workspace machine", state: "online" },
-    ]);
-    if (String(url).endsWith("/v1/me/workspaces")) return Response.json({ workspaces: DIRECTORY, truncated: false });
-    return new Response("{}", { status: 404 });
-  };
-  globalThis.fetch.__jsdomApp = true;
-  try {
-    app = await openDanilAccounts("danil-settings-machines-scope", e, () => { globalThis.WebSocket = peers.Socket; }, "machines");
-    const { w } = app;
-    const panel = () => w.document.querySelector("[data-danil-account]");
-    const rows = () => [...panel().querySelectorAll("[data-account-computer]")].map((el) => el.dataset.accountComputer);
-    assert.deepEqual(rows(), ["cmp_a"]);
-    assert.ok(!panel().textContent.includes(FDB.email));
-    assert.ok(asked.every((account) => account === "u_alberto"));
-    e.state.active = "w2";
-    w.dispatchEvent(new w.CustomEvent("harness:workspace"));
-    await sleep(800);
-    assert.deepEqual(rows(), ["cmp_b"]);
-    assert.ok(!panel().textContent.includes(ALBERTO.email));
-    assert.ok(asked.includes("u_fdb"));
-    assert.deepEqual(app.failures, []);
-  } finally {
-    if (app) app.w.dispatchEvent(new app.w.Event("pagehide"));
-    globalThis.fetch = previous;
-  }
-});
-
-test("a failed account lookup does not show the default account or its computers", async () => {
-  const e = engine();
-  e.table.danil_workspace_account = () => { throw Object.assign(new Error("unauthorized"), { detail: "unauthorized" }); };
-  const app = await openDanilAccounts("danil-settings-failed-authority", e);
-  const panel = app.w.document.querySelector("[data-danil-account]");
-  assert.ok(panel.textContent.includes("No se pudo verificar la cuenta de este workspace."));
-  assert.equal(panel.querySelector("[data-danil-session]"), null);
-  assert.equal(panel.querySelector("[data-account-computers]"), null);
-  assert.ok(buttonIn(panel, "Reintentar"));
-  assert.deepEqual(app.failures, []);
-});
-
-test("switching workspace inside the same account resets «Administrar» in Perfil", async () => {
-  const control = controlPlane();
-  try {
-    const e = engine({ map: { w: "u_alberto", w2: "u_alberto" } });
-    const app = await openDanilAccounts("danil-settings-manage-reset", e);
-    const { w } = app;
-    const panel = () => w.document.querySelector("[data-danil-account]");
-    panel().querySelector("[data-danil-manage]").click();
-    await sleep(200);
-    assert.ok(panel().querySelector("[data-workspace-change]"), "«Administrar» opens the explicit actions");
-    e.state.active = "w2";
-    w.dispatchEvent(new w.CustomEvent("harness:workspace"));
-    await sleep(700);
-    assert.ok(panel().querySelector("[data-danil-manage]"), "W2 shows its own account row");
-    assert.equal(panel().querySelector("[data-workspace-change]"), null, "manage state is new for W2");
-    assert.deepEqual(app.failures, []);
-  } finally {
-    control.restore();
-  }
-});
-
-test("workspace-list errors offer retry and recover instead of loading forever", async () => {
-  const e = engine();
-  let failed = true;
-  const read = e.table.list_workspaces;
-  e.table.list_workspaces = () => {
-    if (failed) throw Object.assign(new Error("unauthorized"), { detail: "unauthorized" });
-    return read();
-  };
-  const app = await openDanilAccounts("danil-settings-workspace-list-failure", e);
-  const panel = () => app.w.document.querySelector("[data-danil-account]");
-  assert.equal(panel().dataset.danilAccount, "failed");
-  failed = false;
-  buttonIn(panel(), "Reintentar").click();
-  await sleep(500);
-  assert.equal(panel().dataset.danilAccount, "workspace");
-  assert.ok(app.w.document.querySelector("[data-danil-here]")?.textContent.includes(W.name));
-  assert.deepEqual(app.failures, []);
-});
-
-test("a returned link error remains visible after the choice closes", async () => {
-  const control = controlPlane();
-  try {
-    const e = engine();
-    e.table.danil_workspace_set_account = ({ workspace, account }) => {
-      e.state.map[workspace] = account;
-      return { account, email: FDB.email, signed_in: true, linked: false, error: "workspace_id_taken" };
-    };
-    const read = e.table.danil_workspace_account;
-    e.table.danil_workspace_account = (args) => ({ ...read(args), linked: false });
-    const app = await openDanilAccounts("danil-settings-returned-link-error", e);
-    const { w } = app;
-    w.document.querySelector("[data-danil-manage]").click();
-    await sleep(200);
-    buttonIn(w.document.querySelector("[data-danil-account]"), "Cambiar").click();
-    await sleep(400);
-    option(w, "a:477").click();
-    await sleep(200);
-    w.document.querySelector("[data-workspace-change-yes]").click();
-    await sleep(500);
-    const panel = w.document.querySelector("[data-danil-account]");
-    assert.ok(panel.querySelector("[role=alert]")?.textContent.includes("Este workspace sigue siendo de la otra cuenta."));
-    assert.deepEqual(app.failures, []);
-  } finally {
-    control.restore();
-  }
 });
 
 const LOCAL = { key: "w:w", workspace_id: "w", danil_workspace_id: null, name: "Danil", kind: "terminus_only", organization: null, role: null, owner: true, support: null, capabilities: { agents: false, terminus: true }, pin: null };

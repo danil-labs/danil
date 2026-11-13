@@ -1,20 +1,15 @@
 {
   "surfaces.badge.no_account": "sin conectar",
   "surfaces.badge.no_driver": "sin conducir",
-  "surfaces.badge.no_engine": "sin motor",
-  "surfaces.badge.no_model": "sin modelo",
   "surfaces.badge.not_installed": "no instalado",
   "surfaces.badge.off": "sin activar",
   "surfaces.badge.unpicked": "sin elegir",
   "surfaces.free_off": "Los modelos gratuitos no están activados en este workspace",
-  "surfaces.label.free": "Danil IA gratuita",
-  "surfaces.label.free_short": "Danil IA gratuita",
-  "surfaces.label.local": "Locales",
+  "surfaces.label.free": "Router IA gratis",
+  "surfaces.label.free_short": "Router IA gratis",
   "surfaces.no_account": "Cuenta de {agent} sin conectar",
   "surfaces.no_driver": "Esta versión de la app todavía no sabe llevarle una tarea a {agent}",
-  "surfaces.no_engine": "No hay ningún motor local instalado en esta computadora",
   "surfaces.no_key": "Tu cuenta de {agent} no está conectada",
-  "surfaces.no_model": "El motor local no tiene ningún modelo descargado",
   "surfaces.not_installed": "{agent} no está en esta computadora",
   "surfaces.badge.harness": "Danil Teams"
 }

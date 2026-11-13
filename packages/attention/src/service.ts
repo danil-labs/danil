@@ -5,10 +5,8 @@ export type ServiceResource = { id: string; name: string };
 export type ServiceAgentDetail = ServiceAgent & {
   model: string; description: string;
   channels: (ServiceResource & { provider: string })[];
-  calendar: (ServiceResource & { email: string }) | null;
   httpTools: ServiceResource[]; inventories: ServiceResource[]; documents: ServiceResource[]; directives: ServiceResource[];
 };
-export type ServiceCalendar = { id: number; name: string; provider: string; email: string; connected: boolean };
 export type ServiceHttpTool = { id: string; name: string; method: string; host: string; active: boolean };
 /** Sin valor: un secreto llega nulo, y el valor de los demás no hace falta para listarlos. */
 export type ServiceVariable = { key: string; secret: boolean };
@@ -55,22 +53,14 @@ export function createService(session: InboxSession, request: typeof fetch = fet
     async agent(agent: number): Promise<ServiceAgentDetail> {
       const key = id(agent);
       const [detail, links] = await Promise.all([get(`/api/agents/${key}`), get(`/api/agents/${key}/connections`)]);
-      const calendar = links.calendar ? object(links.calendar) : null;
       return {
         ...agentOf(detail), model: text(detail.model), description: text(detail.description),
         channels: array(links.channels ?? []).map(value => ({ ...resource(value), provider: text(object(value).provider) })),
-        calendar: calendar ? { ...resource(calendar), email: text(calendar.email) } : null,
         httpTools: array(links.http_tools ?? []).map(value => resource(value)),
         inventories: array(links.inventories ?? []).map(value => resource(value)),
         documents: array(links.documents ?? []).map(value => resource(value, 'title')),
         directives: array(links.directive_collections ?? []).map(value => resource(value)),
       };
-    },
-    async calendars(): Promise<ServiceCalendar[]> {
-      return array((await get('/api/calendar/connections')).connections).map(value => {
-        const row = object(value);
-        return { id: id(row.id), name: text(row.name), provider: text(row.provider), email: text(row.email), connected: row.connected === true };
-      });
     },
     async httpTools(): Promise<ServiceHttpTool[]> {
       return array((await get('/api/http_tools')).items).map(value => {

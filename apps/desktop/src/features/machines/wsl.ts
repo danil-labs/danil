@@ -62,11 +62,6 @@ export function wslFailureCode(error: unknown): string {
 /** Comandos que se muestran tal cual: no se traducen. */
 export const WSL_INSTALL = "wsl --install";
 export const WSL_INSTALL_UBUNTU = "wsl --install -d Ubuntu";
-/** Lo que la persona copia si falta Lima en la Mac. */
-export const LIMA_INSTALL = "brew install lima";
-/** Danil no crea VMs de Lima: sin ninguna, la persona copia estos dos. */
-export const LIMA_CREATE = "limactl create --name=danil --mount-none --containerd=none template:ubuntu-lts";
-export const LIMA_START = "limactl start danil";
 
 /** El id de máquina de una distro conectada: `wsl:Ubuntu`. Sólo existe en esta PC. */
 export const WSL_MACHINE_PREFIX = "wsl:";
@@ -74,7 +69,7 @@ export const WSL_MACHINE_PREFIX = "wsl:";
 /** Una distro con motor de Danil, como la devuelve `guest_children`. */
 export type WslChild = {
   id: string;
-  /** `wsl` o `lima`. */
+  /** El canal: `wsl`. */
   channel: string;
   distro: string;
   name: string;
@@ -110,8 +105,6 @@ export type WslJob = {
   error: WslJobError | null;
   finished: boolean;
   started_at: number;
-  /** Lima: cuántas carpetas de esta Mac ve la VM, según el sondeo. */
-  mounts?: number | null;
 };
 
 export type WslDistroRow = { name: string; state: string; version: number | null; default: boolean; system: boolean; child: WslChild | null };

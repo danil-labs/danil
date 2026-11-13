@@ -33,6 +33,7 @@ export default function NewAgent(props: {
   onAbrir: (abierto: boolean) => void;
   /** En qué proyecto se está: es donde se declara. */
   project: string;
+  workspaceOnly?: boolean;
   modelos: ModelChoices;
   onCreado: () => void;
   /** Con esto se puede elegir dónde nace; `project` es la elegida al abrir.
@@ -52,7 +53,8 @@ export default function NewAgent(props: {
   const destino = () => carpeta() ?? props.project;
   // Dónde nace: solo en esta carpeta (proyecto) o en todo el espacio
   // (workspace). La opción de inicio es la carpeta; el espacio se elige.
-  const [alcance, setAlcance] = createSignal<"project" | "workspace">("project");
+  const initialScope = props.workspaceOnly || !props.project ? "workspace" : "project";
+  const [alcance, setAlcance] = createSignal<"project" | "workspace">(initialScope);
   const [guardando, setGuardando] = createSignal(false);
   const [fallo, setFallo] = createSignal<string | null>(null);
   // Se queda tras guardar: es lo último que la persona lee antes de cerrar.
@@ -77,7 +79,7 @@ export default function NewAgent(props: {
     setInstructions("");
     setBody(null);
     setCarpeta(null);
-    setAlcance("project");
+    setAlcance(initialScope);
     setModelo(null);
     setEffort("");
     setFallo(null);
@@ -197,7 +199,7 @@ export default function NewAgent(props: {
                   value={alcance()}
                   onChange={(e) => setAlcance(e.currentTarget.value as "project" | "workspace")}
                 >
-                  <option value="project">{t("projects.agents.new_scope_project")}</option>
+                  <Show when={!props.workspaceOnly && props.project}><option value="project">{t("projects.agents.new_scope_project")}</option></Show>
                   <option value="workspace">{t("projects.agents.new_scope_workspace")}</option>
                 </Select>
               </label>

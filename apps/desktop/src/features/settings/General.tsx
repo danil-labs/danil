@@ -8,6 +8,7 @@ import { createSignal, For, Match, onMount, Show, Switch } from "solid-js";
 import { df } from "../../lib/format";
 import { t } from "../../lib/i18n";
 import { invoke } from "../../lib/invoke.ts";
+import { abbreviateHomePath, remoteHost, remotePathLabel } from "../../lib/remote-path";
 import type { Source } from "../../lib/model";
 import { cn } from "../../lib/utils";
 import { Badge } from "../../ui/Badge";
@@ -15,6 +16,7 @@ import { Button } from "../../ui/Button";
 import { asFailure, type Failure, FailureNote, prosaDe } from "../../ui/Failure";
 import { Input } from "../../ui/Input";
 import { MarcaFuente, repoDe } from "../../ui/sources";
+import { machineName, machines } from "../machines/store";
 import { SalidaDelAgente } from "./AgentOutput";
 import { CloseBehavior } from "./CloseBehavior";
 import { DefaultPermissions } from "./DefaultPermissions";
@@ -186,6 +188,9 @@ export default function General() {
   const [directory, setDirectory] = createSignal<string | null>(null);
   const [savingDirectory, setSavingDirectory] = createSignal(false);
   const [directoryFailure, setDirectoryFailure] = createSignal<Failure | null>(null);
+  // Sin el workspace aquí, la carpeta es la de la máquina que lo atiende (la «Nube IA»
+  // de una organización): se muestra con su nombre y el selector local no aplica.
+  const remoteDirectory = () => remoteHost(machines());
   const [name, setName] = createSignal("");
   const [accountName, setAccountName] = createSignal<string | null>(null);
   const [storedName, setStoredName] = createSignal("");
@@ -360,7 +365,13 @@ export default function General() {
           label={t("settings.general.directory.title")}
           description={
             <>
-              <Show when={directory()}>{(path) => <span class="break-all">{path()}</span>}</Show>
+              <Show when={directory()}>
+                {(path) => (
+                  <span class="break-all" title={remoteDirectory() ? path() : undefined}>
+                    {remoteDirectory() ? remotePathLabel(path(), machineName(remoteDirectory() as string)) : abbreviateHomePath(path())}
+                  </span>
+                )}
+              </Show>
               <Show when={directoryFailure()}>{(f) => <FailureNote f={f()} />}</Show>
             </>
           }
@@ -376,7 +387,7 @@ export default function General() {
           <Button
             size="sm"
             variant="outline"
-            disabled={savingDirectory()}
+            disabled={savingDirectory() || !!remoteDirectory()}
             onClick={() => void changeDirectory(false)}
           >
             <FolderOpen size={15} />

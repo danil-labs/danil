@@ -1,7 +1,7 @@
 import Check from "lucide-solid/icons/check";
 import ChevronDown from "lucide-solid/icons/chevron-down";
 import Plus from "lucide-solid/icons/plus";
-import { createSignal, For, onMount, Show } from "solid-js";
+import { batch, createSignal, For, onMount, Show } from "solid-js";
 import { t } from "../../lib/i18n";
 import { Dialog, DialogContent, DialogTitle } from "../../ui/Dialog";
 import { ITEM_DE_MENU, Popover, PopoverContent, PopoverTrigger } from "../../ui/Popover";
@@ -9,18 +9,19 @@ import { SignalDot } from "../../ui/SignalDot";
 import { ConnectMachine, connectSource } from "./ConnectMachine";
 import { MachineIcon } from "./MachineIcon";
 import { refetchSharedMachines, sharedBusy, sharedMachines, sharedNotice, startSharedMachine } from "./shared";
-import { type Machine, machineName, machines, type ProjectPlace, refetchMachines, runOn, setRunOn, unavailable, wakesOf } from "./store";
+import { cloudMachinesLoading, type Machine, machineName, machines, type ProjectPlace, refetchMachines, runOn, runsWorkspace, setRunOn, unavailable, wakesOf } from "./store";
 
 let pedida = false;
 
 /**
  * «Ejecutar en»: la máquina de la tarea nueva, recordada por workspace. Elegir
  * una apagada no la enciende; la enciende enviar. Sin el workspace lo crea con
- * el mismo id; la que no puede se ve desactivada. Un proyecto sin remoto se
- * lleva desde su máquina encendida. Con `shared`, debajo van las de la
- * organización: estado y encendido, sin elegirlas.
+ * el mismo id; la que no puede se ve desactivada. La que no tiene permiso en
+ * este workspace no sale. Un proyecto sin remoto se lleva desde su máquina
+ * encendida. Con `shared`, debajo van las de la organización: estado y
+ * encendido, sin elegirlas.
  */
-export function MachinePicker(props: { workspace: string | null; project?: ProjectPlace; shared?: boolean }) {
+export function MachinePicker(props: { workspace: string | null; project?: ProjectPlace; shared?: boolean; onChange?: () => void }) {
   if (!pedida) {
     pedida = true;
     void refetchMachines();
@@ -32,15 +33,20 @@ export function MachinePicker(props: { workspace: string | null; project?: Proje
   const [abierto, setAbierto] = createSignal(false);
   const [conectando, setConectando] = createSignal(false);
   const fuente = connectSource();
+  const opciones = () => machines().filter(runsWorkspace);
   const elegida = () => {
     const id = runOn(props.workspace, props.project);
-    return machines().find((m) => (id ? m.id === id : m.active));
+    return opciones().find((m) => (id ? m.id === id : m.active));
   };
   const nombre = (m: Machine) => machineName(m.id, m.local);
 
   function elegir(m: Machine) {
     setAbierto(false);
-    setRunOn(props.workspace, m.active ? null : m.id);
+    if (!props.workspace || elegida()?.id === m.id) return;
+    batch(() => {
+      setRunOn(props.workspace, m.active ? null : m.id);
+      props.onChange?.();
+    });
   }
 
   const razon = (m: Machine) => {
@@ -50,7 +56,8 @@ export function MachinePicker(props: { workspace: string | null; project?: Proje
     return null;
   };
 
-  const muestra = () => machines().length > 1 || (!!props.shared && sharedMachines().length > 0);
+  // Con una sola opción aquí también sale: dice dónde corre la tarea.
+  const muestra = () => cloudMachinesLoading() || machines().length > 1 || (!!props.shared && sharedMachines().length > 0);
   const tono = (power: string) => (power === "running" ? "success" : power === "starting" ? "working" : power === "stopping" ? "warning" : power === "unknown" ? "neutral" : "off") as "success" | "working" | "warning" | "neutral" | "off";
   const estado = (power: string) => {
     switch (power) {
@@ -70,16 +77,18 @@ export function MachinePicker(props: { workspace: string | null; project?: Proje
           aria-label={t("shell.machines.label")}
         >
           <MachineIcon wakes={elegida() ? wakesOf(elegida() as Machine) : false} size={12} />
-          <span class="truncate">{elegida() ? nombre(elegida() as Machine) : t("shell.machines.label")}</span>
+          <Show when={cloudMachinesLoading() || elegida()?.connection === "unknown"} fallback={<span class="truncate">{elegida() ? nombre(elegida() as Machine) : t("shell.machines.label")}</span>}>
+            <span class="truncate" role="status" data-machine-connecting="">{t("shell.machines.connecting")}</span>
+          </Show>
           <Show when={elegida()}>
-            <SignalDot tone={(elegida() as Machine).on ? "success" : "off"} />
+            <SignalDot tone={(elegida() as Machine).connection === "unknown" ? "working" : (elegida() as Machine).on ? "success" : "off"} />
           </Show>
           <ChevronDown size={11} aria-hidden="true" />
         </PopoverTrigger>
         <PopoverContent class="w-[300px] overflow-hidden p-0 text-caption text-neutral-500 shadow-lg">
           <p class="m-0 border-b border-border px-2 py-1.5">{t("shell.machines.label")}</p>
           <div class="py-1">
-            <For each={machines()}>
+            <For each={opciones()}>
               {(m) => (
                 <button
                   class={`${ITEM_DE_MENU} flex items-center gap-2 disabled:opacity-50`}
@@ -89,10 +98,10 @@ export function MachinePicker(props: { workspace: string | null; project?: Proje
                   onClick={() => elegir(m)}
                 >
                   <MachineIcon wakes={wakesOf(m)} size={12} />
-                  <SignalDot tone={m.on ? "success" : "off"} />
+                  <SignalDot tone={m.connection === "unknown" ? "working" : m.on ? "success" : "off"} pulse={m.connection === "unknown"} />
                   <span class="flex-1 truncate">{nombre(m)}</span>
                   <span class="text-2xs" data-machine-reason={razon(m) ? "" : undefined}>
-                    {razon(m)?.label ?? (m.on ? t("shell.machines.on") : t("shell.machines.off"))}
+                    {m.connection === "unknown" ? t("shell.machines.connecting") : razon(m)?.label ?? (m.on ? t("shell.machines.on") : t("shell.machines.off"))}
                   </span>
                   <span class="flex w-3 shrink-0">
                     <Show when={elegida()?.id === m.id}>

@@ -6,7 +6,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { type CallResult, type DeferredFrame, type EventsPage, INTENT_COMMANDS, type MachineState, isDeferrable } from "../../computers/src/index.ts";
-import { Fleet, type FleetError, type Link, type MachineInfo, type Slice, SLICES_KEY, classOf } from "../src/index.ts";
+import { Fleet, type FleetError, type Link, type MachineInfo, PASSIVE, type Slice, SLICES_KEY, classOf } from "../src/index.ts";
 
 type Answer = unknown | ((args: Record<string, unknown>) => unknown);
 /** `errors`: what the relay answers the next calls, in order, before answering normally. */
@@ -266,6 +266,42 @@ test("workspace members come from the account registry, not from whoever answere
   fleet.setRegistry(null);
   fleet.setMachines([{ ...VM, linked: new Set(["w"]) }, { ...MAC, linked: new Set(["w2"]) }]);
   assert.deepEqual(fleet.membersOf("w"), ["cmp_vm"], "without a registry, the links say it");
+  fleet.setRegistry([{ id: "w", name: "W", projects: [], computers: ["cmp_home"] } as never]);
+  assert.deepEqual(fleet.membersOf("w2"), ["cmp_mac"], "a workspace outside the registry that a machine's row lists is still that machine's");
+});
+
+test("a member's endpoint on an organization's server serves its workspace, though the member's registry does not have it", () => {
+  const { fleet, changes } = setup({}, [VM, MAC]);
+  const org = { id: "fqgx1w8m", name: "Danil Workspace" };
+  fleet.setRegistry([{ id: "w", name: "W", projects: [], computers: ["cmp_home", "cmp_mac"] } as never]);
+  const endpoint = { ...VM, name: "Nube IA", linked: new Set<string>(), organization: { id: "org_01", workspaces: [org] } };
+  fleet.setMachines([endpoint, MAC]);
+  assert.deepEqual(fleet.membersOf(org.id), ["cmp_vm"], "the row's organization says it, even with no link listed");
+  assert.deepEqual(fleet.membersOf("w"), ["cmp_mac"]);
+  assert.deepEqual(fleet.organizationWorkspaces(), [{ ...org, machines: ["cmp_vm"] }]);
+  assert.equal(fleet.inRegistry(org.id), false, "it stays out of the account's own workspaces");
+  changes.length = 0;
+  fleet.setMachines([{ ...endpoint, name: "Nube IA", organization: { id: "org_01", workspaces: [{ ...org, name: "Danil" }] } }, MAC]);
+  assert.deepEqual(changes, ["cmp_vm"], "a renamed organization workspace is a change of that machine");
+  fleet.setMachines([VM, MAC]);
+  assert.deepEqual(fleet.organizationWorkspaces(), [], "without the field (an older control plane) the fleet knows none");
+});
+
+test("one endpoint serves every organization workspace of the member, and no other", () => {
+  const { fleet, changes } = setup({}, [VM, MAC]);
+  const primary = { id: "fqgx1w8m", name: "Danil Workspace" };
+  const foundation = { id: "fnd00001", name: "Danil Foundation" };
+  fleet.setRegistry([{ id: "w", name: "W", projects: [], computers: ["cmp_home", "cmp_mac"] } as never]);
+  const endpoint = { ...VM, name: "Nube IA", linked: new Set<string>(), organization: { id: "org_01", workspaces: [primary, foundation] } };
+  fleet.setMachines([endpoint, MAC]);
+  assert.deepEqual(fleet.membersOf(primary.id), ["cmp_vm"]);
+  assert.deepEqual(fleet.membersOf(foundation.id), ["cmp_vm"], "the second workspace is served by the same endpoint");
+  assert.deepEqual(fleet.membersOf("w"), ["cmp_mac"], "not the member's own workspace");
+  assert.deepEqual(fleet.organizationWorkspaces(), [{ ...primary, machines: ["cmp_vm"] }, { ...foundation, machines: ["cmp_vm"] }], "primary first");
+  changes.length = 0;
+  fleet.setMachines([{ ...endpoint, organization: { id: "org_01", workspaces: [primary] } }, MAC]);
+  assert.deepEqual(changes, ["cmp_vm"], "losing a workspace is a change of that machine");
+  assert.deepEqual(fleet.membersOf(foundation.id), []);
 });
 
 test("machines are added, removed and renamed live without reconnecting the others", async () => {
@@ -742,6 +778,45 @@ test("branches and usage reopen from their saved slices without waking an off VM
   }
 });
 
+test("opening a task of an off VM reads its tree, changes and previews without waking it", async () => {
+  const panel = ["tree_summary", "tree_changes", "tree_files", "tree_folder", "tree_show", "tree_diff", "tree_office_preview", "tree_typst_target", "session_worktree", "artifact_history", "attachment_preview", "office_preview"];
+  for (const command of panel) assert.equal(classOf(command), "read", command);
+  let wakes = 0;
+  const off = setup({ cmp_vm: { state: "stopped" } }, [VM], { wake: async () => { wakes++; return true; } });
+  try {
+    for (const command of panel) {
+      const slice = await off.fleet.read({ machine: VM.id, workspace: "w", command, args: { project: "p1" } });
+      assert.equal(slice.has, false, command);
+    }
+    assert.equal(wakes, 0, "only a message or an action starts the VM");
+  } finally { off.fleet.close(); }
+  for (const action of ["tree_write", "tree_delete", "tree_rename", "tree_patch", "tree_create_file"]) assert.equal(classOf(action), "action", action);
+});
+
+test("what the window asks on its own (mark seen, watch the tree, probes) never wakes an off VM; a gesture still does", async () => {
+  for (const command of PASSIVE) {
+    assert.ok(!INTENT_COMMANDS.has(command), `${command} is not an intent`);
+    assert.ok(!isDeferrable(command), `${command} is not queued by the relay`);
+  }
+  let wakes = 0;
+  const off = setup({ cmp_vm: { state: "stopped", answers: { set_session_stage: null } } }, [VM], {
+    wake: async () => {
+      wakes++;
+      setTimeout(() => off.link(VM.id).setState("online"), 10);
+      return true;
+    },
+  });
+  try {
+    for (const command of ["mark_task_seen", "watch_task_tree", "unwatch_task_tree", "kn_pending", "source_freshness", "tree_read_part", "list_storage"]) {
+      await assert.rejects(off.fleet.call({ machine: VM.id, workspace: "w", command, args: { project: "p1" } }), (e: FleetError) => e.code === "machine_off", command);
+    }
+    assert.equal(wakes, 0, "opening or focusing the web does not start the VM");
+    assert.equal(off.link(VM.id).calls.length, 0);
+    await off.fleet.call({ machine: VM.id, workspace: "w", command: "set_session_stage", args: { project: "p1", id: "cmp_vm~t1", stage: null } });
+    assert.equal(wakes, 1, "an action the person asked for still starts it");
+  } finally { off.fleet.close(); }
+});
+
 test("the in-memory slice cache evicts old pages and keeps the recently used one", async () => {
   const { SliceBook } = await import("../src/slices.ts");
   const book = new SliceBook();
@@ -771,4 +846,65 @@ test("delegated rows keep the panel ids, handoff parent included", () => {
   const { fleet } = setup({ cmp_vm: {} });
   const [encoded] = fleet.encode("cmp_vm", [{ ...row("b"), handoff_parent: "a" }], "list_delegated_sessions") as Row[];
   assert.deepEqual([encoded.id, encoded.handoff_parent], ["cmp_vm~b", "cmp_vm~a"]);
+});
+
+/** Un relay que ya contesta en vivo aunque el último `state` de la sesión no lo dijo (2026-11-12, «Nube IA»). */
+function answeringLink(state: MachineState, answers: Record<string, unknown>) {
+  const link = fakeLink({ state, answers });
+  link.call = (id, command, workspace, _folder, args) => {
+    link.calls.push({ id, command, workspace, args: args as Record<string, unknown> });
+    return Promise.resolve({ value: answers[command] ?? null, cached: null });
+  };
+  return link;
+}
+
+test("regression: a machine whose session last said offline or starting is on once it answers live, and the next state frame wins again", async () => {
+  for (const stale of ["offline", "starting", "unknown"] as const) {
+    const link = answeringLink(stale, { list_live_sessions: [row("t1")], rename_session: { ok: true } });
+    const changes: string[] = [];
+    let wakes = 0;
+    const fleet = new Fleet({ self: "cmp_home", connect: () => link, wake: async () => { wakes++; return true; }, deadlines: { read: 40, action: 200, intent: 400 }, onChange: (m) => changes.push(m) });
+    fleet.setMachines([VM]);
+    assert.notEqual(fleet.power("cmp_vm"), "on", `${stale}: before any answer, the session's state`);
+    const slice = await fleet.read({ machine: "cmp_vm", workspace: "w", command: "list_live_sessions", args: { project: "p1" } });
+    assert.equal(slice.status, "ok");
+    assert.equal(fleet.power("cmp_vm"), "on", `${stale}: a live answer corrects the power`);
+    assert.ok(changes.includes("cmp_vm"), "the window repaints it");
+    await fleet.call({ machine: "cmp_vm", workspace: "w", command: "rename_session", args: { id: "cmp_vm~t1", title: "x" } });
+    await fleet.wake("cmp_vm");
+    assert.equal(wakes, 0, `${stale}: a machine that answers is never woken`);
+    link.setState("offline");
+    assert.equal(fleet.power("cmp_vm"), "off", "a newer frame from the relay wins");
+    link.setState("online");
+    assert.equal(fleet.power("cmp_vm"), "on");
+  }
+});
+
+test("regression: an organization endpoint is always on: no «Encender», no wake, and a stale starting never blocks it", async () => {
+  const org = { id: "ws_org", name: "Danil Foundation" };
+  // La fila de un endpoint dice `wakeable: true` (el plano de control enciende su servidor).
+  const endpoint: MachineInfo = { id: "cmp_nube", name: "Nube IA", wakes: true, organization: { id: "org_01", workspaces: [org] } };
+  const link = answeringLink("starting", { send_message: { ok: true }, create_empty_session: { id: "t9" } });
+  let wakes = 0;
+  const fleet = new Fleet({ self: "cmp_home", connect: () => link, wake: async () => { wakes++; return true; }, deadlines: { read: 40, action: 200, intent: 400 } });
+  fleet.setMachines([endpoint]);
+  assert.equal(fleet.info("cmp_nube")?.wakes, false, "never offered to be turned on");
+  assert.equal(fleet.power("cmp_nube"), "on", "a stale starting is not «Encendiendo…»");
+  await fleet.untilOnline("cmp_nube");
+  link.setState("offline");
+  assert.equal(fleet.power("cmp_nube"), "off", "only its relay saying offline turns it off");
+  await assert.rejects(fleet.wake("cmp_nube"), (e: FleetError) => e.code === "machine_off" && e.canWake === false);
+  await fleet.call({ machine: "cmp_nube", workspace: org.id, command: "create_empty_session", args: { project: "p1" } });
+  assert.equal(wakes, 0, "no wake intent ever reaches the control plane");
+  assert.deepEqual(link.calls.map((c) => c.command), ["create_empty_session"], "the action went to its relay instead of being refused as off");
+  assert.equal(fleet.power("cmp_nube"), "on", "and its live answer corrected the power");
+});
+
+test("the engine's view of a machine counts only until its session says something", () => {
+  const { fleet, link } = setup({ cmp_vm: { state: "unknown" } }, [VM]);
+  assert.equal(fleet.power("cmp_vm"), "off");
+  fleet.observe("cmp_vm", "online");
+  assert.equal(fleet.power("cmp_vm"), "on");
+  link("cmp_vm").setState("offline");
+  assert.equal(fleet.power("cmp_vm"), "off", "the relay wins");
 });

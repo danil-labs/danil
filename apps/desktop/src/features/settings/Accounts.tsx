@@ -1,3 +1,4 @@
+import { canonicalAgentId, isFreeRouterAgent, OPENCODE } from "@terminus/tasks";
 import { marcaDeSuperficie } from "../../lib/surfaces";
 import { groupAccounts } from "@terminus/computers";
 import Check from "lucide-solid/icons/check";
@@ -13,10 +14,11 @@ import { createCopied } from "../../lib/clipboard";
 import { enfocar } from "../../lib/focus";
 import { t } from "../../lib/i18n";
 import { invoke } from "../../lib/invoke.ts";
+
 import { revocada } from "../../lib/limits";
 import { textoDeFalta } from "../../lib/no-space";
 import { capabilities } from "../../lib/platform";
-import { type Frase, prosa } from "../../lib/prose";
+import { prosa } from "../../lib/prose";
 import { listen } from "../../lib/serviceEvents";
 import { cn } from "../../lib/utils";
 import { Badge } from "../../ui/Badge";
@@ -37,7 +39,7 @@ import { Skeleton } from "../../ui/Skeleton";
 import { Terminal, TerminalBody } from "../../ui/Terminal";
 import { machineOf } from "../machines/store";
 import AccountCard, { accountPresentation } from "./AccountCard";
-import { accountKeyUrl } from "./account-auth";
+import { accountKeyUrl, addBlockedByExternal } from "./account-auth";
 import {
   type Account,
   type AccountList,
@@ -47,13 +49,12 @@ import {
   type EnEspera,
   type LoginEvent,
 } from "./accounts-store";
-import ListaDeModelosLocales from "./LocalModels";
 import { LoginCodeForm } from "./LoginCodeForm";
 import { SettingsBlock, SettingsRow, SettingsSection } from "./layout";
-import { crearModelosLocales } from "./local-models-store";
 import { Spinner } from "../../ui/Spinner";
 import { ExternalLink as EnlaceExterno } from "../../ui/ExternalLink";
 import "../../locales/settingsPhrases";
+import { createFreeRouterConsent } from "./free-router-consent";
 
 // Las claves en la cuenta de Danil: un trozo aparte, solo para agentes con API key.
 const CredentialsInUse = lazy(() => import("./credentials/AccountCredentials").then((m) => ({ default: m.CredentialsInUse })));
@@ -183,6 +184,7 @@ export default function Accounts(props: {
   const externalInstallUrl = () => proveedor()?.external_install_url;
   const faltaExterno = () => !proveedor() || Boolean(externalInstallUrl()) && !proveedor()?.available;
   const [revisandoCli, setRevisandoCli] = createSignal(false);
+  const [agregando, setAgregando] = createSignal(false);
 
   async function comprobarCli() {
     setRevisandoCli(true);
@@ -208,15 +210,9 @@ export default function Accounts(props: {
    */
   const inferencia = () => agentes().find((a) => a.id === agente())?.inferencia;
 
-  // Nombrar un proveedor durante la preparación local atribuiría una salida de datos.
   const acto = () =>
     !proveedor()
       ? { boton: t("settings.accounts.check_provider"), curso: t("settings.accounts.preparing") }
-      : inferencia() === "en_la_maquina"
-      ? {
-          boton: t("settings.accounts.local_models.prepare"),
-          curso: t("settings.accounts.preparing"),
-        }
       : {
           boton: externalInstallUrl() ? t("settings.accounts.official_download", { agent: etiqueta() }) : t("settings.accounts.install_agent", { agent: etiqueta() }),
           curso: t("settings.accounts.installing_agent", { agent: etiqueta() }),
@@ -241,26 +237,6 @@ export default function Accounts(props: {
   const [pidiendoClave, setPidiendoClave] = createSignal<string | null>(null);
   const [clave, setClave] = createSignal("");
   const [guardandoClave, setGuardandoClave] = createSignal(false);
-  const [pidiendoClaveGo, setPidiendoClaveGo] = createSignal<string | null>(null);
-  const [claveGo, setClaveGo] = createSignal("");
-  const [guardandoClaveGo, setGuardandoClaveGo] = createSignal(false);
-
-  async function guardarClaveGo() {
-    const id = pidiendoClaveGo();
-    if (!id) return;
-    setGuardandoClaveGo(true);
-    try {
-      await invoke("set_go_usage_key", { provider: agente(), id, key: claveGo() }, machineOf(id));
-      setPidiendoClaveGo(null);
-      setClaveGo("");
-      setConectadaVez((c) => ({ ...c, [id]: (c[id] ?? 0) + 1 }));
-    } catch (e) {
-      setFallo({ what: t("settings.accounts.go_key_error"), detail: detalleDe(e) });
-    } finally {
-      setGuardandoClaveGo(false);
-    }
-  }
-
   async function guardarClave() {
     const id = pidiendoClave();
     if (!id || !clave().trim()) return;
@@ -601,12 +577,17 @@ export default function Accounts(props: {
   }
 
   async function agregar(options?: { headers: Record<string, string> }) {
-    if (faltaExterno()) return;
+    if (addBlockedByExternal(proveedor()) || agregando()) return;
+    setAgregando(true);
     try {
+      // Apagada, esto la enciende (intent del relay) antes de conectar.
       const a = await invoke<Account>("add_account", {
         provider: agente(),
         label: "",
       }, options);
+      if (!proveedor()) {
+        await invoke<AgentOpt[]>("list_providers").then(setAgentes).catch(() => {});
+      }
       // Agregar crea la carpeta antes del login: ahí escribe el CLI la
       // credencial. Si el login no llega a nada, esto permite deshacerlo en
       // vez de dejar un objeto vacío en la lista.
@@ -629,6 +610,8 @@ export default function Accounts(props: {
       await refrescar();
     } catch (e) {
       setFallo({ what: t("settings.accounts.error.create"), detail: detalleDe(e) });
+    } finally {
+      setAgregando(false);
     }
   }
 
@@ -858,7 +841,7 @@ export default function Accounts(props: {
       variant={forma === "aside" ? "ghost" : forma === "fila" ? "secondary" : "primary"}
       size={forma === "aside" ? "compact" : "sm"}
       onClick={() => void agregar()}
-      disabled={enCurso() !== null || segunda() !== null || faltaExterno()}
+      disabled={enCurso() !== null || segunda() !== null || agregando() || addBlockedByExternal(proveedor())}
       /* **La segunda cuenta de un agente que no aísla su credencial no se
          ofrece.** No es una advertencia encima del botón: el botón no se
          puede usar y dice por qué. Conectarla reemplazaría la sesión de la
@@ -887,9 +870,9 @@ export default function Accounts(props: {
   if (props.soloGratuitos) {
     return envolver(
       <>
-        {/* El mismo bloque que las otras dos superficies, en el mismo sitio:
+        {/* El mismo bloque que la otra superficie, en el mismo sitio:
             regla de `AGENTS.md` para cuando algo no está en la máquina, y las
-            tres filas de OpenCode contestan igual.
+            dos filas de OpenCode contestan igual.
 
             Instalar y consentir siguen siendo dos actos, dos botones. Activar
             sigue trayendo el binario si falta —bajar cien megas antes de
@@ -897,8 +880,8 @@ export default function Accounts(props: {
             que no—; esto es para quien quiere el binario y no ha decidido lo
             otro.
 
-            Las tres comparten paquete y carpeta (`agents::Install::carpeta`):
-            instalar desde cualquiera las quita de las tres, con el evento
+            Las dos comparten paquete y carpeta (`agents::Install::carpeta`):
+            instalar desde cualquiera las quita de las dos, con el evento
             `providers` haciéndolas releer `list_providers`. */}
         <Show when={!agentes().find((a) => a.id === agente())?.available}>
           <SettingsBlock class="justify-items-start">
@@ -946,7 +929,7 @@ export default function Accounts(props: {
       {/* Lo que falta se nombra y se ofrece, también donde no hay cuenta que
           conectar: conectar ya instalaba el CLI si faltaba, pero un agente
           `sin_cuenta` no tiene ese botón, y su pantalla dejaba a la persona
-          sin ninguna salida para el modelo local. */}
+          sin ninguna salida. */}
       <Show when={!agentes().find((a) => a.id === agente())?.available}>
         <SettingsBlock class="justify-items-start">
           <Button
@@ -965,11 +948,6 @@ export default function Accounts(props: {
         </SettingsBlock>
       </Show>
 
-      {/* Nombrar el CLI aquí atribuiría una salida de datos a los modelos locales. */}
-      <Show when={inferencia() === "en_la_maquina"}>
-        <MotoresLocales />
-      </Show>
-
       {/* El consentimiento va antes que la lista de cuentas, no después: lo
           que se acepta aquí no es un ajuste, es que el material de un
           cliente salga de esta computadora. Conectar cuenta, que da el
@@ -986,7 +964,7 @@ export default function Accounts(props: {
                 Deshabilitarlo dejaría a quien llega con la máquina limpia sin
                 forma de elegir el agente que quiere. Lo que se dice es que
                 va a instalarse: consecuencia, no glosa. */}
-            <For each={agentes()}>
+            <For each={agentes().filter((a) => !a.sin_cuenta && !isFreeRouterAgent(a.id))}>
               {(a) => (
                 <option value={a.id}>
                   {a.label}
@@ -1079,11 +1057,6 @@ export default function Accounts(props: {
                   const dudosa = () => !caida() && info.sinComprobar;
                   return (
                     <>
-                      <Show when={agente() === "opencode-zen"}>
-                        <Button variant="outline" size="compact" onClick={() => setPidiendoClaveGo(a.id)}>
-                          {t("settings.accounts.go_key")}
-                        </Button>
-                      </Show>
                       <Show when={dudosa()}>
                         <Button
                           variant="outline"
@@ -1384,24 +1357,6 @@ export default function Accounts(props: {
       {/* Al modal por el mismo motivo que la conexión de arriba: se llega aquí
           pulsando «Agregar cuenta», que es justo el gesto que recrea la fila y
           plegaba la tarjeta con el campo dentro. */}
-      <Show when={pidiendoClaveGo()}>
-        <Dialog open onOpenChange={(open) => { if (!open) { setPidiendoClaveGo(null); setClaveGo(""); } }}>
-          <DialogContent class="w-[min(480px,100%)] max-w-[480px] p-4" aria-label={t("settings.accounts.go_key")}>
-            <div class="flex flex-col gap-3">
-              <DialogTitle>{t("settings.accounts.go_key")}</DialogTitle>
-              <p class="m-0 text-xs text-neutral-500">{t("settings.accounts.go_key_hint")}</p>
-              <Button variant="outline" size="compact" onClick={() => void invoke("open_external", { target: "https://opencode.ai/console" })}>
-                {t("settings.accounts.create_key")}
-              </Button>
-              <Input type="password" class="font-mono text-xs" value={claveGo()} placeholder={t("settings.accounts.key_placeholder")} onInput={(e) => setClaveGo(e.currentTarget.value)} onKeyDown={(e) => e.key === "Enter" && void guardarClaveGo()} />
-              <div class="flex gap-2">
-                <Button disabled={guardandoClaveGo() || !claveGo().trim()} onClick={() => void guardarClaveGo()}>{t("settings.accounts.save")}</Button>
-                <Button variant="outline" onClick={() => { setClaveGo(""); void guardarClaveGo(); }}>{t("settings.accounts.go_key_remove")}</Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
-      </Show>
       <Show when={pidiendoClave()}>
         <Dialog open>
         <DialogContent
@@ -1497,43 +1452,7 @@ export default function Accounts(props: {
   );
 }
 
-/**
- * Activar los modelos que OpenCode regala.
- *
- * Apagado por omisión, y el de omisión es el local: la diferencia no es de
- * calidad sino de a dónde va el material, el local no sale de la máquina y
- * estos sí. Se acepta una vez, explícitamente, y se puede retirar — un
- * consentimiento que no se puede revocar no es un consentimiento.
- *
- * El aviso dice las dos mitades: que sale, y qué hacen con ello. La segunda
- * no es igual para todos: los que entrenan con lo que les mandes se marcan
- * en la propia lista (`runtime/models.rs`).
- *
- * Es del workspace, no de la máquina: lo guarda `workspaces::set_provider_consent`,
- * y lo consultan el catálogo y el camino del chat. Lo que sale es material
- * de un cliente, y una decisión tomada para uno no aplica al trabajo de otro.
- */
-/**
- * Qué se puede mandar a estos modelos, en un solo sitio y para todos: la
- * restricción más estricta del conjunto, aplicada a la sección entera. Los
- * términos de datos son distintos modelo a modelo —hay quien entrena con lo
- * que le mandas, y dos que dicen «trial use only — do not submit personal or
- * confidential data»—, y aquí se afirma el peor caso de todos: nunca se
- * queda corta —el noveno modelo que OpenCode añada mañana ya está cubierto—
- * y no hay nada que mantener. Por qué no vuelve una marca por modelo, en
- * `models::Gobierno`.
- *
- * La app no puede hacerlo cumplir y no finge que sí: no sabe qué es
- * confidencial, informa y decide la persona, igual que con las fuentes que
- * adjunta a un proyecto. Un candado que no puede cerrar es peor que un
- * aviso que se lee.
- *
- * La consecuencia, para que nadie intente «arreglarlo»: esta sección es para
- * probar el producto, no para trabajar con clientes. Los siete modelos que
- * ofrece tienen excepción de datos, y la frase lo dice con esas palabras.
- * Quien trabaje con material de un cliente usa su cuenta de Claude, Codex,
- * Grok o Antigravity, o paga por modelos de OpenCode.
- */
+/** El aviso de uso acompaña la política versionada del motor. */
 const AVISO_DE_USO = () => t("settings.accounts.free.warning");
 
 /** Un paso de la conexión: el número, qué hacer, y con qué. */
@@ -1557,85 +1476,6 @@ function Paso(props: { numero: number; titulo: string; children: JSX.Element }) 
  * columna que dice por qué hace falta consentimiento). Con el id escrito
  * dentro, este bloque solo serviría a una fila.
  */
-/** El runtime que Terminus instala, el catálogo de modelos y cuál usan las tareas. */
-function MotoresLocales() {
-  const m = crearModelosLocales();
-  return (
-    <SettingsBlock>
-      <ListaDeModelosLocales m={m} memoria />
-    </SettingsBlock>
-  );
-}
-
-/**
- * Lo que hay que aceptar antes de activar, y a qué versión de texto. Los dos
- * llegan juntos del backend (`workspaces::consent_text`): quien cambie la
- * frase tiene el número al lado, y un guarda en Rust falla si el texto se
- * mueve sin que la versión suba.
- */
-export type Consentimiento = { lineas: Frase[]; version: number };
-
-/**
- * El sí explícito, antes de activar.
- *
- * No choca con «una interfaz que necesita explicarse está mal diseñada»
- * (AGENTS.md): la regla prohíbe la glosa, el párrafo que describe lo que la
- * sección es; un consentimiento es retroalimentación sobre lo que el sistema
- * va a hacer, que la misma regla permite.
- *
- * Cancelar es una salida de verdad, no un paso más: si la única forma de
- * cerrar fuera aceptar, la decisión ya estaría tomada. Se sale por tres
- * vías —el botón, Escape y pulsar fuera— y las tres dejan el mismo estado:
- * no se activa nada.
- *
- * Cancelar no es un fallo: ni mensaje de error ni nota roja. Es una
- * respuesta legítima a una pregunta legítima; tratarla como error empujaría
- * a aceptar, lo que un consentimiento no puede hacer.
- */
-export function Consentir(props: {
-  texto: Consentimiento;
-  guardando: boolean;
-  onAceptar: () => void;
-  onCancelar: () => void;
-}) {
-  return (
-    <Dialog open onOpenChange={(abierto) => !abierto && props.onCancelar()}>
-        <DialogContent
-          class="w-[min(520px,100%)] max-w-[520px] p-0"
-          aria-label={t("settings.accounts.consent.title")}
-        >
-          <div class="flex flex-col gap-3 p-5">
-            <For each={props.texto.lineas}>
-              {(linea, i) => (
-                <p class={cn("m-0 text-xs leading-6 text-neutral-500", i() === 0 && "font-medium text-neutral-950")}>{prosa(linea)}</p>
-              )}
-            </For>
-            <div class="mt-2 flex justify-end gap-2">
-              {/* Cancelar primero en el orden de lectura y sin peso visual: la
-                  acción que gasta algo es la otra, y esta tiene que poder
-                  pulsarse sin buscarla. */}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={props.onCancelar}
-                disabled={props.guardando}
-              >
-                {t("settings.accounts.consent.cancel")}
-              </Button>
-              <Button
-                size="sm"
-                onClick={props.onAceptar}
-                disabled={props.guardando}
-              >
-                {t("settings.accounts.consent.accept")}
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-    </Dialog>
-  );
-}
-
 function ModelosGratuitos(props: {
   nombre: string;
   marca?: JSX.Element;
@@ -1662,87 +1502,19 @@ function ModelosGratuitos(props: {
    */
   falta: boolean;
 }) {
-  const [aceptado, setAceptado] = createSignal(false);
-  const [guardando, setGuardando] = createSignal(false);
-  const [fallo, setFallo] = createSignal<string | null>(null);
-  const [texto, setTexto] = createSignal<Consentimiento | null>(null);
-  // El modal abierto. Se cierra sin activar nada por cualquiera de las tres
-  // vías; ver `Consentir`.
-  const [preguntando, setPreguntando] = createSignal(false);
-
-  // En orden y no en paralelo: saber si el sí guardado sigue valiendo
-  // necesita la versión del texto de hoy, que se pide primero. Lanzadas a
-  // la vez, la comparación se haría contra `undefined` la mitad de las
-  // veces y una cuenta ya aceptada aparecería sin aceptar, o al revés.
-  onMount(() => {
-    void (async () => {
-      try {
-        const [lineas, version] = await invoke<[Frase[], number]>("consent_text");
-        setTexto({ lineas, version });
-        const s = await invoke<{
-          active: string | null;
-          workspaces: {
-            id: string;
-            consents?: { provider: string; version: number }[];
-          }[];
-        }>("workspaces_startup");
-        const activo = s.workspaces.find((w) => w.id === s.active);
-        // Vale el sí de la versión de hoy, no cualquier sí: quien aceptó un
-        // texto anterior vuelve a verlo una vez, lo que aceptó decía otra
-        // cosa. Lo mismo lo comprueba el backend antes de dar catálogo o de
-        // lanzar un turno (`workspaces::consintio`); aquí solo se pinta.
-        setAceptado(
-          activo?.consents?.some(
-            (c) => c.provider === props.agente && c.version === version,
-          ) ?? false,
-        );
-      } catch {
-        /* Sin texto no se ofrece activar: el botón queda deshabilitado. */
-      }
-    })();
+  const consent = createFreeRouterConsent({
+    agente: () => props.agente,
+    despues: () => props.preparar?.(),
   });
-
-  async function cambiar(valor: boolean) {
-    setGuardando(true);
-    try {
-      const w = await invoke<{ consents?: { provider: string; version: number }[] }>(
-        "set_provider_consent",
-        { provider: props.agente, accepted: valor },
-      );
-      // Lo que quedó guardado, no lo que se pidió: si el backend rechaza algo,
-      // la pantalla tiene que enseñar su estado y no el nuestro.
-      setAceptado(w.consents?.some((c) => c.provider === props.agente) ?? false);
-      setPreguntando(false);
-      setFallo(null);
-      // Sin binario, activar deja el interruptor en verde y el chat sin poder
-      // usarlo. Su fallo lo pinta el panel de arriba, que es de quien es la
-      // instalación.
-      if (valor && props.preparar) await props.preparar();
-      // La caja de chat no ofrece modelos de un agente sin autorizar: tiene
-      // que enterarse ahora, no al cambiar de agente y volver.
-      window.dispatchEvent(new CustomEvent("harness:consentimiento"));
-    } catch (e) {
-      setFallo(prosaDe(e));
-    } finally {
-      setGuardando(false);
-    }
-  }
+  const { routeAvailable, aceptado, guardando, fallo, texto, preguntando, preguntar, cambiar } = consent;
+  onMount(() => void consent.cargar());
 
   return (
     <>
     {/* Cancelar cierra y no activa nada, por las tres vías. No deja el
         interruptor a medias ni escribe un estado intermedio: el sí solo
         existe si se pulsa Activar. */}
-    <Show when={preguntando() && texto()}>
-      {(pregunta) => (
-        <Consentir
-          texto={pregunta()}
-          guardando={guardando()}
-          onAceptar={() => void cambiar(true)}
-          onCancelar={() => setPreguntando(false)}
-        />
-      )}
-    </Show>
+    {consent.dialogo()}
     <SettingsRow
       label={
         props.nombre || props.marca ? (
@@ -1756,17 +1528,19 @@ function ModelosGratuitos(props: {
       <>
       {/* Omitir el proveedor o alejar el aviso oculta el destino de los datos al activar. */}
       <Show
-        when={!aceptado() || props.falta}
+        when={!aceptado() || props.falta || !texto()?.policy.enabled}
         fallback={<p class="m-0">{t("settings.accounts.free.warning_short")}</p>}
       >
         <p class="m-0">
-          {t("settings.accounts.free.provider", { provider: props.proveedor })}
+          {t("settings.accounts.free.provider", { provider: t("settings.ai_providers.free_detail") })}
         </p>
         <p class="m-0">
           <strong>{AVISO_DE_USO()}</strong>
         </p>
       </Show>
-      <Show when={fallo()}>
+      <Show when={aceptado() && routeAvailable() === false}><p class="m-0">{t("chat.model.router_route_unavailable")}</p></Show>
+      <Show when={!texto()}><p class="m-0">{t("settings.accounts.free.unavailable")}</p></Show>
+      <Show when={!preguntando() && fallo()}>
         {(f) => (
           <div class="mt-2">
             <FailureNote f={{ what: t("settings.accounts.free.error_save"), detail: f() }} />
@@ -1783,8 +1557,8 @@ function ModelosGratuitos(props: {
             size="sm"
             // Sin el texto no se puede pedir el sí, y tampoco se ofrece
             // activar: aceptar sin ver qué se acepta no es un consentimiento.
-            disabled={guardando() || props.preparando || !texto()}
-            onClick={() => setPreguntando(true)}
+            disabled={guardando() || props.preparando || !texto()?.policy.enabled}
+            onClick={() => void preguntar()}
           >
             {props.preparando
               ? t("settings.accounts.preparing")
@@ -1807,7 +1581,7 @@ function ModelosGratuitos(props: {
               superficies lo tienen. */}
           <Show
             when={props.falta}
-            fallback={<Badge tone="success">{t("settings.accounts.free.active")}</Badge>}
+            fallback={<Badge tone={texto()?.policy.enabled && routeAvailable() ? "success" : "neutral"}>{texto()?.policy.enabled && routeAvailable() ? t("settings.accounts.free.active") : t("settings.accounts.free.consented")}</Badge>}
           >
             <Badge tone="danger">{t("settings.accounts.free.missing")}</Badge>
           </Show>
@@ -1891,7 +1665,7 @@ function CuentaConfigurada(props: {
       checkingStatus={props.checkingStatus}
       statusUnknown={sinComprobar()}
       onRecheckStatus={props.onRecheckStatus}
-      noLimitsLabel={props.agent === "opencode-zen" ? t("settings.accounts.go_key_required") : undefined}
+      noLimitsLabel={canonicalAgentId(props.agent) === OPENCODE ? t("settings.accounts.go_key_required") : undefined}
       limits={lectura.limits}
       lastGood={lectura.lastGood}
       loadingLimits={lectura.loading}

@@ -3,7 +3,7 @@
  * la web, con la sesión de persona que guarda la ventana y el BFF por Computers.
  * El token nunca llega aquí: `agents_bff_fetch` lo pone en Rust.
  */
-import { createRoot, createSignal, Show, Suspense, lazy, type JSX } from "solid-js";
+import { createRoot, createSignal, createEffect, createMemo, on, Show, Suspense, lazy, type JSX } from "solid-js";
 import type { DirectoryEntry } from "@terminus/computers";
 import { invoke } from "../../lib/invoke.ts";
 import { windowSession } from "./desktop-session";
@@ -17,6 +17,7 @@ import { loadedConversations, requestConversation } from "../../web/attention/lo
 import { bffTransport, setBffTransport, type BffTransport } from "../../web/attention/transport";
 import type { AgentsSession } from "../../web/attention/workspace-sources";
 import { Button } from "../../ui/Button";
+import { webDanilCredits } from "../../web/danil-credits";
 import { desktopUsageMe } from "../settings/usage-source";
 import "../../web/phrases";
 
@@ -136,7 +137,9 @@ export function ConnectPanel(): JSX.Element {
     setWaiting(true);
     setError("");
     try {
-      changed(await invoke<DesktopStatus>("agents_session_connect", {}));
+      // El login de Desk es uno solo, por identity en el navegador (`desk_auth`).
+      await invoke("danil_sign_in", {});
+      changed(await invoke<DesktopStatus>("agents_session_status", {}).catch(() => ({ state: "unavailable" }) as DesktopStatus));
     } catch (cause) {
       const detail = detailOf(cause);
       if (detail !== "cancelled") setError(errorText(detail));
@@ -264,6 +267,21 @@ export function installDesktopAttention() {
   setCapabilities({
     ...capabilities(),
     inbox,
+    danilCredits: { ...webDanilCredits(session, PREFIX, windowFetch, (clear) => createRoot((dispose) => {
+      const identity = createMemo(() => {
+        const value = desktopStatus();
+        return value.state === "active"
+          ? `${value.user.user_id}:${value.active_account_id ?? ""}`
+          : value.state;
+      });
+      createEffect(on(identity, clear, { defer: true }));
+      return dispose;
+    })), prepare: async (headers) => {
+      const machine = headers["x-terminus-machine"];
+      const workspace = headers["x-terminus-workspace"];
+      if ((machine && machine !== "local") || !workspace) throw new Error("credits_local_engine_required");
+      return invoke("credits_pilot_prepare", { workspace });
+    } },
     accountUsage: () => (
       <Suspense fallback={null}>
         <UsageView source={desktopUsageMe()} />
