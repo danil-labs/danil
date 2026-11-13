@@ -1,18 +1,6 @@
 /**
- * Free router v8 (terminus-workspace `e5910500`, §3.1–§3.5), cliente de interfaz 1d.
- *
- * La autoridad del consentimiento es `workspaces`, por el borde (`/v1/workspaces/{account}/free-router…`).
- * El motor solo firma y comprueba, por RPC1 `free_router_platform_v1` (solo interfaz):
- * `set_free_router_union`, `prove_free_router_binding`, `free_router_binding`,
- * `set_free_router_grant` y `clear_free_router_grant`.
- *
- * Recorrido del contrato:
- * 1. unión de la sesión; 2. reto central; 3. prueba del motor sobre ese nonce; 4. alta (PUT);
- * 5. nonce de la generación local → pase → instalación; 6. renovación a media vida;
- * 7. retirar = DELETE del consentimiento y luego `clear`; 8. cerrar sesión = DELETE de los
- * bindings de esa sesión y unión en `null`.
- *
- * Sin DOM ni Solid: el borde, el motor, el reloj y la clave se inyectan (Desk y web).
+ * Free router v8 1d: la interfaz sigue el recorrido RPC1 `free_router_platform_v1`; la autoridad es `workspaces` por el borde.
+ * Un paso fuera de orden, una respuesta de antes de un logout o un valor desconocido dejan el Router cerrado.
  */
 import type { EdgeMethod } from "../../lib/edge.ts";
 
@@ -242,11 +230,7 @@ export function createFreeRouterPlatform(deps: FreeRouterDeps) {
     await engine("clear_free_router_grant", { workspace: scope.workspace });
   }
 
-  /**
-   * Paso 8: cerrar la sesión de `sub`. La autoridad local se pierde ya (unión en `null`, que sube la
-   * generación); los DELETE de sus bindings siguen en segundo plano con su presupuesto. No retira el
-   * consentimiento.
-   */
+  /** Paso 8: la unión pasa a `null` sin esperar a la nube; los DELETE de los bindings de esa sesión siguen con su presupuesto. No retira el consentimiento. */
   async function signOut(sub: string): Promise<void> {
     const mine = [...entries.values()].filter((e) => e.scope.sub === sub);
     for (const e of mine) {
