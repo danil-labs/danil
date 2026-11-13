@@ -302,6 +302,7 @@ import { Button } from "../ui/Button";
 import { LazyPart, retryableLazy } from "../ui/LazyPart";
 import { mergeGates } from "../features/chat/permissionGates";
 import { asleep, withLastAnswer } from "../features/machines/lastAnswer";
+import { unconfirmedOpen } from "../features/machines/router";
 import { Dialog, DialogContent, DialogTitle } from "../ui/Dialog";
 import { asFailure, claveDe, detalleDe, prosaDe } from "../ui/Failure";
 import { BotonConAtajo } from "../ui/Shortcut";
@@ -1998,8 +1999,11 @@ export default function App() {
     read: async (project) => {
       const open = sesionesConPestana();
       const rows = await invoke<SessionRow[]>("list_live_sessions", { project, open });
-      pedidas.set(project, new Set(open));
-      for (const id of open) esperandoFila.delete(id);
+      // La pestaña que su máquina no confirmó no cuenta como pedida: no se cierra ni se pide en bucle.
+      const sinConfirmar = new Set(unconfirmedOpen(rows));
+      const confirmadas = open.filter((id) => !sinConfirmar.has(id));
+      pedidas.set(project, new Set(confirmadas));
+      for (const id of confirmadas) esperandoFila.delete(id);
       return rows;
     },
     apply: (update) => setSesiones(update),

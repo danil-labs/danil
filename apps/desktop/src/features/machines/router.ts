@@ -16,7 +16,7 @@
  * no tiene se lee de sus miembros y actúa en el primero.
  */
 import { type AccountWorkspace, type SystemId, callWorkspace, isDeferrable, systemOf } from "@terminus/computers";
-import { AttentionBook, type Envelope, type Fleet, FleetError, type MachineInfo, type Slice, classOf, registryRow, unwrap } from "@terminus/fleet";
+import { AttentionBook, type Envelope, type Fleet, FleetError, type MachineInfo, type Slice, classOf, registryRow, unwrap, wrap } from "@terminus/fleet";
 import { clavesConocidas, t } from "../../lib/i18n.ts";
 import type { EngineWorkspace } from "./engine-workspaces.ts";
 
@@ -71,6 +71,13 @@ const REGISTRY_WAIT = 4_000;
 /** Cuánto espera lo que la ventana no relee sola (workspaces, cuentas) a lo vivo antes de contestar con lo guardado. */
 const FRESH_WAIT = 1_500;
 const FIRST_ANSWER_GRACE = 100;
+
+/** Las pestañas de `list_live_sessions` que su máquina no confirmó: la ventana no las cuenta como pedidas. */
+const UNCONFIRMED = Symbol("unconfirmedOpen");
+export function unconfirmedOpen(rows: unknown): readonly string[] {
+  const marked = rows && typeof rows === "object" ? (rows as { [UNCONFIRMED]?: string[] })[UNCONFIRMED] : undefined;
+  return marked ?? [];
+}
 const PROGRESSIVE = new Set([...LISTING, "list_projects", "list_portfolios", "list_live_sessions", "list_spaces", "list_workspace_attention", "list_task_mentions"]);
 /** Lo que espera `service_poll` en la web: los eventos ya llegan solos (`events`). */
 const POLL_WAIT = 20_000;
@@ -279,6 +286,8 @@ export function createRouter(config: RouterConfig) {
   const lastRead = new Map<string, number>();
   // Cambiar `open` no borra las filas ya vistas mientras llega la nueva lectura.
   const sessionReads = new Map<string, Envelope>();
+  // Las lecturas con pestañas nuevas que su máquina no contestó a tiempo: la siguiente no vuelve a esperar.
+  const unanswered = new Set<string>();
   let pending = new Set<SliceChange>();
   let notifyTimer: ReturnType<typeof setTimeout> | undefined;
 
@@ -494,7 +503,6 @@ export function createRouter(config: RouterConfig) {
 
   /** La primera máquina con datos libera la lista; las pendientes conservan su última rebanada y avisan al contestar. */
   async function gatherAvailable(envelopes: Envelope[], settles: boolean): Promise<Slice[]> {
-    const required = envelopes.map(needsOpenRead);
     const slices = envelopes.map(previousSlice);
     let returned = false;
     let finish!: () => void;
@@ -505,19 +513,15 @@ export function createRouter(config: RouterConfig) {
     const live = envelopes.map(async (envelope, i) => {
       const before = slices[i];
       const slice = await fleet.read(envelope);
-      if (required[i] && !slice.has) throw noAnswer([slice], envelope.workspace);
       slices[i] = slice;
       if (envelope.command === "list_live_sessions" && slice.has) sessionReads.set(JSON.stringify([envelope.machine, envelope.workspace, envelope.args?.project]), envelope);
       if (returned) {
         if (differs(before, slice)) notify(envelope.command);
       } else if (slice.has) soon();
     });
-    try {
-      await Promise.all([Promise.race([Promise.all(live), available]), ...live.filter((_, i) => required[i])]);
-    } finally {
-      returned = true;
-      clearTimeout(timer);
-    }
+    await Promise.race([Promise.all(live), available]);
+    returned = true;
+    clearTimeout(timer);
     return slices.filter((slice): slice is Slice => !!slice);
   }
 
@@ -541,14 +545,15 @@ export function createRouter(config: RouterConfig) {
   }
 
   /**
-   * Una pestaña sin fila en ninguna carpeta cierra la vista. Si la máquina ya
-   * contestó en este workspace y ninguna de sus rebanadas conoce la pestaña (una
-   * tarea recién creada), solo su respuesta a este `open` puede confirmarlo.
+   * Las pestañas de esa máquina que ninguna de sus rebanadas del workspace conoce
+   * (una tarea recién creada), con el id del panel. Una pestaña sin fila en
+   * ninguna carpeta cierra la vista: solo la respuesta de su máquina a este
+   * `open` puede confirmarlo. Una máquina sin lecturas aquí no retrasa la lista.
    */
-  function needsOpenRead(envelope: Envelope): boolean {
-    if (envelope.command !== "list_live_sessions") return false;
+  function unknownOpen(envelope: Envelope): string[] {
+    if (envelope.command !== "list_live_sessions") return [];
     const open = fleet.argsFor(envelope.machine, envelope.args ?? {}).open;
-    if (!Array.isArray(open) || open.length === 0 || fleet.peek(envelope)?.has) return false;
+    if (!Array.isArray(open) || open.length === 0 || fleet.peek(envelope)?.has) return [];
     let seen = false;
     const known = new Set<unknown>();
     for (const [key, read] of sessionReads) {
@@ -558,7 +563,32 @@ export function createRouter(config: RouterConfig) {
       seen = true;
       for (const row of slice.value) if (row && typeof row === "object") known.add((row as { id?: unknown }).id);
     }
-    return seen && !open.every(id => known.has(id));
+    return seen ? open.filter((id): id is string => typeof id === "string" && !known.has(id)).map(id => wrap(envelope.machine, id)) : [];
+  }
+
+  /**
+   * La lectura de una máquina con pestañas que nadie conoce: se espera su
+   * respuesta un momento (`FRESH_WAIT`). Si no llega o falla, contesta lo
+   * anterior de esa máquina, esas pestañas quedan sin confirmar y la siguiente
+   * lectura ya no espera; lo que llegue tarde avisa a la ventana para releer.
+   */
+  async function openRead(envelope: Envelope, unknown: string[], unconfirmed: string[]): Promise<Slice | null> {
+    const before = previousSlice(envelope);
+    const key = JSON.stringify([envelope.machine, envelope.workspace, fleet.argsFor(envelope.machine, envelope.args ?? {})]);
+    if (unanswered.has(key)) refresh(envelope, before);
+    else {
+      const live = fleet.read(envelope);
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      const slice = await Promise.race([live, new Promise<null>(done => { timer = setTimeout(() => done(null), FRESH_WAIT); })]).finally(() => clearTimeout(timer));
+      if (slice?.has) {
+        sessionReads.set(JSON.stringify([envelope.machine, envelope.workspace, envelope.args?.project]), envelope);
+        return slice;
+      }
+      unanswered.add(key);
+      if (!slice) void live.then(late => { if (late.has && differs(before, late)) notify(envelope.command); }, () => {});
+    }
+    unconfirmed.push(...unknown);
+    return before;
   }
 
   function previousSlice(envelope: Envelope): Slice | null {
@@ -580,6 +610,7 @@ export function createRouter(config: RouterConfig) {
     // El canal de avance se queda en la ventana: por el relay vuelve solo la respuesta final.
     const envelopes = members.map((machine) => ({ machine, workspace, command, args: withoutChannel(command, args) }));
     const slices: Slice[] = [];
+    const unconfirmed: string[] = [];
     // Lo que las copias del motor de aquí ya tienen no se pregunta a su máquina.
     const copies = await Promise.all(envelopes.map((envelope) => copySlice(envelope)));
     const asked = envelopes.filter((_, i) => !copies[i]);
@@ -588,11 +619,8 @@ export function createRouter(config: RouterConfig) {
       const value = (await localIndexed(command, args, workspace)) ?? (await native(command, fleet.argsFor(self as string, args), options));
       slices.unshift({ machine: self as string, status: "ok", has: true, value, at: Date.now() });
       const remoteSlices = await Promise.all(asked.map(async envelope => {
-        if (needsOpenRead(envelope)) {
-          const slice = await fleet.read(envelope);
-          if (!slice.has) throw noAnswer([slice], workspace);
-          return slice;
-        }
+        const unknown = unknownOpen(envelope);
+        if (unknown.length) return openRead(envelope, unknown, unconfirmed);
         const before = previousSlice(envelope);
         refresh(envelope, before);
         return before;
@@ -600,11 +628,18 @@ export function createRouter(config: RouterConfig) {
       slices.push(...remoteSlices.filter((slice): slice is Slice => !!slice));
     } else if (asked.length) {
       // El refresco remoto de Git depende de que la observación local haya terminado en el motor.
-      const result = command === "list_session_git" ? await Promise.all(asked.map(envelope => fleet.read(envelope))) : await gather(asked);
+      const opening = asked.map(unknownOpen);
+      const result = command === "list_session_git"
+        ? await Promise.all(asked.map(envelope => fleet.read(envelope)))
+        : (await Promise.all([
+            gather(asked.filter((_, i) => !opening[i].length)),
+            ...asked.map((envelope, i) => (opening[i].length ? openRead(envelope, opening[i], unconfirmed).then(slice => (slice ? [slice] : [])) : null)).filter(read => !!read),
+          ])).flat();
       slices.push(...result);
     }
     if (command === "list_workspace_attention") for (const s of slices) if (s.has) attention.set(s.machine, fleet.encode(s.machine, s.value));
     const merged = learning(() => fleet.merge(command, command === "list_session_git" ? slices.map(gitSlice) : slices, workspace));
+    if (Array.isArray(merged) && unconfirmed.length) Object.defineProperty(merged, UNCONFIRMED, { value: unconfirmed });
     if (merged !== undefined) return merged;
     throw noAnswer(slices, workspace);
   }
