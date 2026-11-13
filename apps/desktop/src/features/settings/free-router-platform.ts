@@ -87,7 +87,16 @@ export type FreeRouterDeps = {
   budgetMs?: number;
 };
 
-type Entry = { scope: FreeRouterScope; epoch: number; binding?: Binding; cancelRenewal?: () => void };
+type Entry = { scope: FreeRouterScope; epoch: number; binding?: Binding; jkt?: string; cancelRenewal?: () => void };
+
+/** Qué hacer ante cada código del pase (kb2w8vft, seldon-host ac5db131); lo que no está aquí corta. */
+const RECOVERY: Record<string, "retry" | "relink" | "union"> = {
+  "free_router.grant.stale_nonce": "retry",
+  "free_router.grant.not_fresh": "retry",
+  "free_router.grant.no_pending": "relink",
+  "free_router.grant.wrong_owner": "union",
+  "free_router.owner_required": "union",
+};
 
 export function createFreeRouterPlatform(deps: FreeRouterDeps) {
   const now = deps.now ?? Date.now;
@@ -164,12 +173,12 @@ export function createFreeRouterPlatform(deps: FreeRouterDeps) {
     return { accepted: true as const, revision: body.revision as number };
   }
 
-  /** Pasos 1 a 4: une la sesión, pide el reto, el motor firma y el servidor da de alta el binding. */
-  async function link(scope: FreeRouterScope): Promise<Binding> {
-    const e = entry(scope);
-    const epoch = e.epoch;
-    await engine("set_free_router_union", { workspace: scope.workspace, platformAccount: scope.account, org: scope.org, sub: scope.sub });
-    current(e, epoch);
+  const union = (scope: FreeRouterScope) =>
+    engine("set_free_router_union", { workspace: scope.workspace, platformAccount: scope.account, org: scope.org, sub: scope.sub });
+
+  /** Pasos 2 a 4: reto central, prueba del motor sobre ese nonce y alta del binding. */
+  async function bind(e: Entry, epoch: number): Promise<Binding> {
+    const { scope } = e;
     const path = `${base(scope.account)}/engine-workspaces/${scope.workspace}`;
     for (let proof = 0; ; proof++) {
       const challenge = record(await send("POST", `${path}/challenge`, {}, key()));
@@ -186,6 +195,7 @@ export function createFreeRouterPlatform(deps: FreeRouterDeps) {
         if (!assignmentId || !bindingId || !ID.test(assignmentId) || !ID.test(bindingId)) throw refusal(UNAVAILABLE);
         current(e, epoch);
         e.binding = { assignmentId, bindingId };
+        e.jkt = undefined;
         return e.binding;
       } catch (err) {
         // Un reto caducado o ya consumido: un reto nuevo, una vez. Nunca se reenvía la prueba vieja.
@@ -194,20 +204,32 @@ export function createFreeRouterPlatform(deps: FreeRouterDeps) {
     }
   }
 
-  /** Paso 5: el nonce de la generación local, el pase central y su instalación; programa la renovación. */
-  async function grant(scope: FreeRouterScope): Promise<void> {
-    const e = entries.get(idOf(scope));
-    if (!e?.binding) throw refusal("binding_required");
+  /** Paso 1 y después 2 a 4. */
+  async function link(scope: FreeRouterScope): Promise<Binding> {
+    const e = entry(scope);
     const epoch = e.epoch;
+    await union(scope);
+    current(e, epoch);
+    return bind(e, epoch);
+  }
+
+  /** Paso 5 una vez: nonce de la generación local, pase central e instalación; programa la renovación. */
+  async function grantOnce(e: Entry, epoch: number): Promise<void> {
+    const { scope } = e;
     const local = await engine("free_router_binding", { workspace: scope.workspace });
     const nonce = str(local.nonce);
-    if (!nonce) throw refusal(UNAVAILABLE);
+    const jkt = str(local.jkt);
+    if (!nonce || !jkt) throw refusal(UNAVAILABLE);
     current(e, epoch);
-    const reply = record(await send("POST", `${base(scope.account)}/grant`, { binding_id: e.binding.bindingId, nonce }, key()));
+    // Otra llave es otro motor (reinició): su binding ya no sirve y hay que vincular de nuevo.
+    if (e.jkt && e.jkt !== jkt) throw refusal("free_router.grant.no_pending");
+    e.jkt = jkt;
+    const reply = record(await send("POST", `${base(scope.account)}/grant`, { binding_id: e.binding!.bindingId, nonce }, key()));
     const token = str(reply?.grant);
     const expires = Date.parse(str(reply?.expires_at) ?? "");
     if (!token || !Number.isFinite(expires)) throw refusal(UNAVAILABLE);
     current(e, epoch);
+    // `{sealed:false}` es una renovación de un binding ya confirmado: también queda instalado.
     await engine("set_free_router_grant", { workspace: scope.workspace, token });
     current(e, epoch);
     // Paso 6: renovar con menos de media vida; la renovación nunca restaura una generación invalidada.
@@ -216,6 +238,27 @@ export function createFreeRouterPlatform(deps: FreeRouterDeps) {
       e.cancelRenewal = undefined;
       grant(scope).catch(() => {});
     }, Math.max(0, (expires - now()) / 2));
+  }
+
+  /** Paso 5 con la recuperación que admite cada código, una vez cada una; lo demás deja el Router cerrado. */
+  async function grant(scope: FreeRouterScope): Promise<void> {
+    const e = entries.get(idOf(scope));
+    if (!e?.binding) throw refusal("binding_required");
+    const epoch = e.epoch;
+    const used = new Set<string>();
+    for (;;) {
+      try {
+        return await grantOnce(e, epoch);
+      } catch (err) {
+        const recovery = RECOVERY[codeOf(err)];
+        if (!recovery || used.has(recovery)) throw err;
+        used.add(recovery);
+        current(e, epoch);
+        if (recovery === "relink") await bind(e, epoch);
+        else if (recovery === "union") await union(scope);
+        current(e, epoch);
+      }
+    }
   }
 
   function stop(e: Entry) {
