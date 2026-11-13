@@ -162,6 +162,8 @@ export function startAccountMachines(target: Target = window) {
         cloudRetry = null;
         void sync();
       }, CLOUD_RETRY_MS);
+      // Un reintento pendiente no mantiene vivo el proceso (pruebas en Node); en la webview no hace nada.
+      (cloudRetry as unknown as { unref?: () => void }).unref?.();
     }
     return computers;
   }
