@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 /**
- * Monta dist/ en jsdom con IPC simulado: cubre fallos de render que tsc no ve.
- * La lista vacía de superficies ejercita el primer arranque.
- * El aspecto nativo se verifica en la ventana real.
+ * Monta dist/ en jsdom con IPC simulado y lista de superficies vacía (primer arranque).
+ * Solid convierte `a && <B/>` en `false` dentro del JSX y el hijo lanza: tsc no lo ve.
+ * Verifica que el árbol monta, no su aspecto nativo.
  */
 import assert from "node:assert/strict";
 import { sleep } from "../../tests/helpers/jsdom-app.mjs";
-import { WITH_TASK, boot, keepActiveView } from "../../tests/helpers/mount-guard.mjs";
+import { RESPONSES, WITH_TASK, boot, keepActiveView } from "../../tests/helpers/mount-guard.mjs";
 
 /**
  * **El esqueleto de `Setup` es el síntoma exacto**, no una pantalla más.
@@ -19,7 +19,12 @@ import { WITH_TASK, boot, keepActiveView } from "../../tests/helpers/mount-guard
 const inSkeleton = (html) => html.includes("setup-card") && html.includes("aria-busy");
 
 const t0 = Date.now();
-const normal = await boot("listo", 1);
+// A note-less model first: the note must be read from the option for its model, not from the first row.
+const models = [
+  { id: "gpt-5.5", label: "GPT-5.5", gratis: null, efforts: [], default_effort: null, note: null },
+  ...RESPONSES.list_models.models,
+];
+const normal = await boot("listo", 1, { ...RESPONSES, list_models: { ...RESPONSES.list_models, models } });
 
 const broken = normal.failures.length > 0 || !normal.painted.trim() || inSkeleton(normal.painted);
 
@@ -59,9 +64,10 @@ if (!broken) {
   await sleep(50);
   const modelGroups = [...normal.w.document.querySelectorAll('[role="group"]')]
     .map((groupEl) => groupEl.getAttribute("aria-label"));
-  const modelNote = normal.w.document.querySelector('[role="option"]')?.getAttribute("title");
+  const modelNote = [...normal.w.document.querySelectorAll('[role="option"]')]
+    .find((option) => option.textContent.includes("GPT-5.6"))?.getAttribute("title");
   assert.equal(modelNote, "el más capaz", "a model note from the app goes through the catalogue");
-  if (separateSelector || modelButton?.getAttribute("aria-label") !== "Modelo: GPT-5.6") {
+  if (separateSelector || modelButton?.getAttribute("aria-label") !== "Modelo: GPT-5.5") {
     console.error(
       `El chat no arrancó en el modelo usable del selector único: modelo=${JSON.stringify(modelButton?.getAttribute("aria-label"))}, grupos=${JSON.stringify(modelGroups)}.`,
     );
@@ -83,7 +89,7 @@ if (!broken) {
     process.exit(1);
   }
   const modelAfterStart = normal.w.document.querySelector(
-    'button[aria-label="Modelo: GPT-5.6"]',
+    'button[aria-label="Modelo: GPT-5.5"]',
   );
   modelAfterStart?.dispatchEvent(new normal.w.MouseEvent("click", { bubbles: true }));
   await sleep(50);
