@@ -13,7 +13,7 @@ import type { MachineRow, MachineStatus } from "./SyncNote";
 import type { AccountProfileSource } from "../features/settings/account-profile";
 
 declare const __TERMINUS_VERSION__: string;
-type Base = { machines: ReturnType<typeof machinesClient>; relayOrigin: string; permits: (name: string) => boolean; organizations?: Capabilities["organizations"]; onUnauthorized: () => void; profile: AccountProfileSource; workspaces: NonNullable<Capabilities["webWorkspaces"]>; onUnavailable: () => void; };
+type Base = { machines: ReturnType<typeof machinesClient>; relayOrigin: string; permits: (name: string) => boolean; organizations?: Capabilities["organizations"]; promo?: Capabilities["webPromo"]; onUnauthorized: () => void; profile: AccountProfileSource; workspaces: NonNullable<Capabilities["webWorkspaces"]>; onUnavailable: () => void; };
 const Picker = lazy(() => import("../features/machines/MachinePicker").then(m => ({ default: m.MachinePicker })));
 const AccountMachines = lazy(() => import("../features/machines/AccountMachines"));
 /** Another machine's slice changed: the window rereads just that. */
@@ -159,6 +159,7 @@ export function mountWindow(base: Base, mounted: Mounted) {
     },
     accountComputers: { list: async () => { const answer = await base.machines.list(); return answer.kind === "ok" ? { kind: "ok", value: answer.value.map(machineToComputer) } : answer.kind === "unavailable" ? { kind: "error", status: answer.status } : answer; }, onRenamed: () => {}, subscribe: changed => { window.addEventListener("harness:machines", changed); return () => window.removeEventListener("harness:machines", changed); } },
     webAccounts: mounted.webAccounts,
+    webPromo: base.promo,
     retryMachines: () => { fleet.retry(); void refresh(); },
   });
   installIpc(window, createWebTransport(active, __TERMINUS_VERSION__, browser));

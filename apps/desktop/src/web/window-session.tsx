@@ -17,6 +17,7 @@ import { mountWindow } from './window';
 import { sessionStorageScope, clearWebCaches } from './session-storage';
 import { createOrganizationSelection } from "@terminus/computers";
 import { webOrganizationSource } from './organizations';
+import PromoRedeem from '../features/shell/PromoRedeem';
 import './phrases';
 
 declare const __DANIL_WEB_RELAY_ORIGINS__: string[];
@@ -71,6 +72,7 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
             <p>{t('web.platform.empty')}</p>
             <For each={rows()}>{row => <Button onClick={() => void choose(row.id)}>{row.name}</Button>}</For>
           </Show>
+          <PromoRedeem redeem={redeemPromo} />
           <Button variant="ghost" data-web-sign-out="" onClick={() => void logout()}>{t('web.platform.sign_out')}</Button>
         </Show>
       </main></Show>, root);
@@ -176,6 +178,7 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
       gate();
       await run(async () => { await selection.choose(id); window.location.assign(home); });
     }
+    const redeemPromo = (code: string, key: string) => authorized(() => api.redeemPromo(code, key));
     async function logout() { await run(async () => { await api.logout(); expired(); }); }
     async function load() {
       await run(async () => {
@@ -201,7 +204,7 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
           profile: webAccountProfile(transport), onUnauthorized: expired,
           onUnavailable: () => { setError('web.platform.unavailable'); gate(); later(); },
           workspaces: { rows, active, busy, uncertain, choose: id => void choose(id) },
-          organizations: loadOrganizations,
+          organizations: loadOrganizations, promo: redeemPromo,
         }, { storage: cache.storage, webAccounts: {
           current: { user_id: person.id, name: person.name, email: null, extra: false },
           others: () => [], open: () => {}, add: () => {}, remove: async () => {}, signOut: () => void logout(),

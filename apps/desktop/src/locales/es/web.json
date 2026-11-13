@@ -250,5 +250,13 @@
   "web.alpha.empty": "No hay conversaciones en esta página.",
   "web.alpha.details": "Detalles",
   "web.machines.unavailable": "Máquinas no disponibles.",
-  "web.platform.organization": "Organización"
+  "web.platform.organization": "Organización",
+  "web.promo.redeem": "Canjear código",
+  "web.promo.success": "Tu máquina de 2 GB se está preparando",
+  "web.promo.ready": "Tu máquina de 2 GB está lista",
+  "web.promo.invalid": "Código inválido",
+  "web.promo.used": "Este código ya se ha canjeado o la organización ya tiene una promoción activa",
+  "web.promo.has_machine": "La organización ya tiene una máquina",
+  "web.promo.denied": "No tienes permiso para canjear códigos",
+  "web.promo.unavailable": "No disponible todavía. Reintenta"
 }
