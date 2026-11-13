@@ -5185,6 +5185,8 @@ export default function App() {
   const editorDeletionLocked = (id: string) => deletingEditors()?.workspace === workspaceActivo() && deletingEditors()?.ids.includes(id) === true;
 
   function deleteTask(project: string, id: string) {
+    // One deletion at a time: its preview and consent belong to the task that started it.
+    if (deleteTarget()) return;
     const machine = deLaTarea(id)?.headers["x-terminus-machine"] ?? machines().find(item => item.local || item.active)?.id;
     const target = machines().find(item => item.id === machine);
     const folderNames = new Map(projectList().map(folder => [folder.id, folder.name]));

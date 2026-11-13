@@ -412,6 +412,7 @@
   "projects.sessions.delete_busy": "Otra operación está en curso. Espera un momento y vuelve a intentar el borrado.",
   "projects.sessions.delete_partial": "El borrado terminó parcialmente. Revisa de nuevo las tareas restantes.",
   "projects.sessions.delete_inspecting": "Revisando las tareas y sus archivos…",
+  "projects.sessions.deleting": "Borrando la tarea…",
   "projects.sessions.delete_inspected": "Inspección completa",
   "projects.sessions.delete_inspection_failed": "No se pudo completar la inspección. No se puede confirmar.",
   "projects.sessions.delete_working": "Esta tarea tiene un turno activo. El borrado solicitará detenerlo.",
