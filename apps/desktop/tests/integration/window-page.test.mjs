@@ -46,6 +46,7 @@ test('session verification shows loading and reads me, capabilities and workspac
   await until(() => app.w.document.querySelector('[data-tira]'));
   assert.equal(calls.filter(path => path === '/v1/identity/me').length, 1);
   assert.equal(calls.filter(path => path === '/v1/workspaces').length, 1);
+  assert.equal(calls.filter(path => path === '/v1/capabilities').length, 1);
   await until(() => calls.includes('/v1/machines'));
   assert.deepEqual(app.failures, []);
 });
