@@ -26,6 +26,10 @@ export type OrganizationState =
   | { kind: "hidden" }
   | { kind: "ready"; items: Organization[]; active: string | null; busy: boolean; error: string | null };
 
+export function hasActiveOrganization(state: OrganizationState): boolean {
+  return state.kind === "ready" && !state.busy && !state.error && state.items.some(org => org.id === state.active);
+}
+
 export type OrganizationOptions = {
   /** Programa un reintento; devuelve cómo cancelarlo. */
   schedule?: (run: () => void, ms: number) => () => void;

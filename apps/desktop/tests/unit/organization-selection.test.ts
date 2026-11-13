@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   announcesOrganizations,
+  hasActiveOrganization,
   createOrganizationSelection,
   isOrganizationSelectionRequired,
   type OrganizationSource,
@@ -284,4 +285,16 @@ test("report: solo `organization_selection_required` abre el selector; otro 403 
 test("organizaciones `degraded` en /v1/capabilities es «no disponible», como en la web y en Machines (edge.openapi Capability)", () => {
   assert.equal(announcesOrganizations({ contract: "mvp-v1", items: [{ name: "identity.organizations", version: 1, status: "degraded" }] }), false);
   assert.equal(announcesOrganizations({ contract: "mvp-v1", items: [{ name: "identity.organizations", version: 1, status: "available" }] }), true);
+});
+
+
+test("promo requires a settled active organization in the current membership list", () => {
+  assert.equal(hasActiveOrganization({ kind: "hidden" }), false);
+  const ready = { kind: "ready" as const, items: [DANIL], active: DANIL.id, busy: false, error: null };
+  assert.equal(hasActiveOrganization(ready), true);
+  assert.equal(hasActiveOrganization({ ...ready, active: null }), false);
+  assert.equal(hasActiveOrganization({ ...ready, active: "org_removed" }), false);
+  assert.equal(hasActiveOrganization({ ...ready, items: [] }), false);
+  assert.equal(hasActiveOrganization({ ...ready, busy: true }), false);
+  assert.equal(hasActiveOrganization({ ...ready, error: "forbidden" }), false);
 });
