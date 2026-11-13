@@ -183,3 +183,20 @@ test('closing the page cancels startup backoff without another request', async (
   t.mock.timers.tick(30_000);
   assert.equal(calls, 1);
 });
+
+
+test("promo attempt survives closing Plan after an uncertain response, only in session memory", async () => {
+  const { sessionPromoRedemption } = await import("../../src/web/promo-redemption.ts");
+  const keys: string[] = [];
+  let calls = 0;
+  const redeem = sessionPromoRedemption(async (_code: string, key: string) => {
+    keys.push(key);
+    if (calls++ === 0) throw new TypeError("offline after send");
+    return {};
+  });
+  await assert.rejects(redeem("EXAMPLE", "first-component"), /offline/);
+  assert.deepEqual(await redeem("EXAMPLE", "reopened-component"), {});
+  assert.deepEqual(keys, ["first-component", "first-component"]);
+  await redeem("EXAMPLE", "next-attempt");
+  assert.equal(keys[2], "next-attempt");
+});

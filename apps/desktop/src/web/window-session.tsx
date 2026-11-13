@@ -18,6 +18,7 @@ import { mountWindow } from './window';
 import { sessionStorageScope, clearWebCaches } from './session-storage';
 import { createOrganizationSelection, hasActiveOrganization } from '../features/shell/organization-selection';
 import { webOrganizationSource } from './organizations';
+import { sessionPromoRedemption } from './promo-redemption';
 import './phrases';
 
 declare const __DANIL_WEB_RELAY_ORIGINS__: string[];
@@ -179,7 +180,7 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
       gate();
       await run(async () => { await selection.choose(id); window.location.assign(home); });
     }
-    const redeemPromo = (code: string, key: string) => authorized(() => api.redeemPromo(code, key));
+    const redeemPromo = sessionPromoRedemption((code, key) => authorized(() => api.redeemPromo(code, key)));
     async function logout() { await run(async () => { await api.logout(); expired(); }); }
     async function load() {
       const read = async (signal?: AbortSignal) => {
