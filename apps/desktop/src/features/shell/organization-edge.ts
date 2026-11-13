@@ -18,6 +18,7 @@ async function bodyOf(reply: Promise<Reply>): Promise<unknown> {
 
 export function edgeOrganizationSource(edgeFetch: EdgeFetch): OrganizationSource {
   return {
+    capabilities: () => bodyOf(edgeFetch("GET", "/v1/capabilities")),
     list: () => bodyOf(edgeFetch("GET", "/v1/identity/organizations")),
     select: (id, key) => bodyOf(edgeFetch("POST", "/v1/identity/organizations/select", { organization_id: id }, key)),
   };

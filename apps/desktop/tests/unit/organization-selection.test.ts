@@ -9,6 +9,8 @@ import {
 const DANIL = { id: "org_01M62PT11XGX8R8J883NZVYHR6", name: "Danil", plan: "enterprise", role: "owner" };
 const OTRA = { id: "org_otra", name: "Otra", plan: "team", role: "member", extra: { ignorado: true } };
 
+const CAPS = { contract: "mvp-v1", items: [{ name: "identity.organizations", version: 1, status: "available" }] };
+
 /** Un reloj a mano: los reintentos se ven, no se esperan. */
 function clock() {
   const timers: { at: number; run: () => void }[] = [];
@@ -189,6 +191,7 @@ test("Idempotency-Key: una clave por intento lógico de `select`, reutilizada en
   let lose = 2;
   const edgeFetch = async (method: "GET" | "POST", path: string, body?: unknown, key?: string) => {
     calls.push({ method, path, body, key });
+    if (path === "/v1/capabilities") return { status: 200, body: CAPS };
     if (method === "GET") return { status: 200, body: { items: [DANIL, OTRA], next_cursor: null, active_organization_id: DANIL.id } };
     if (lose-- > 0) return lose === 1 ? { status: 503, body: { code: "unavailable" }, retry_after_ms: 10 } : Promise.reject({ detail: "unavailable" });
     return { status: 200, body: { organization: OTRA, workspace: null } };
@@ -215,8 +218,9 @@ test("adaptador del borde: 404/501 → oculto y reintento; 403 organization_sele
   const { edgeOrganizationSource } = await import("../../src/features/shell/organization-edge.ts");
   const c = clock();
   let status = 404;
-  const source = edgeOrganizationSource(async () =>
-    status === 200
+  const source = edgeOrganizationSource(async (_m, path) =>
+    path === "/v1/capabilities" ? { status: 200, body: CAPS }
+    : status === 200
       ? { status, body: { items: [DANIL], next_cursor: null, active_organization_id: DANIL.id } }
       : { status, body: { type: "urn:danil:problem:not_found", status, code: "not_found" } },
   );
