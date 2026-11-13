@@ -50,7 +50,7 @@ import AccountMachines from "./AccountMachines";
 import { MachinePicker } from "./MachinePicker";
 import { createRouter, type Invoke, type Router, type SliceChange } from "./router";
 import { createEngineWorkspaces, railOf } from "./engine-workspaces";
-import { machineNamesChanged, refetchMachines } from "./store";
+import { machineNamesChanged, refetchMachines, setCloudMachinesLoading } from "./store";
 import type { WslChild } from "./wsl";
 import { guestChannels } from "./guestChannels";
 import { CLOUD_RETRY_MS, createCloudMachines, EDGE_ENDPOINT } from "./cloud-machines";
@@ -159,23 +159,31 @@ export function startAccountMachines(target: Target = window) {
   /** `machines.session.renew` anunciada por el borde: el relay renueva dentro del canal. */
   let cloudRenew = false;
   let cloudRetry: ReturnType<typeof setTimeout> | null = null;
+  let cloudReads = 0;
   async function readCloud(): Promise<Computer[]> {
-    const { available, computers, renewInChannel } = await cloud.rows();
-    cloudRenew = renewInChannel;
-    cloudIds = new Set(computers.map((c) => c.computer_id));
-    if (!available && !cloudRetry) {
-      // «No disponible»: el servidor aún no la tiene o no hay sesión; se reintenta solo.
-      cloudRetry = setTimeout(() => {
-        cloudRetry = null;
-        // Solo la nube se relee; la flota se rehace únicamente cuando aparece algo (no se relista la cuenta cada 30 s).
-        void readCloud().then((rows) => {
-          if (rows.length) void sync();
-        });
-      }, CLOUD_RETRY_MS);
-      // Un reintento pendiente no mantiene vivo el proceso (pruebas en Node); en la webview no hace nada.
-      (cloudRetry as unknown as { unref?: () => void }).unref?.();
+    cloudReads++;
+    setCloudMachinesLoading(true);
+    try {
+      const { available, computers, renewInChannel } = await cloud.rows();
+      cloudRenew = renewInChannel;
+      cloudIds = new Set(computers.map((c) => c.computer_id));
+      if (!available && !cloudRetry) {
+        // «No disponible»: el servidor aún no la tiene o no hay sesión; se reintenta solo.
+        cloudRetry = setTimeout(() => {
+          cloudRetry = null;
+          // Solo la nube se relee; la flota se rehace únicamente cuando aparece algo (no se relista la cuenta cada 30 s).
+          void readCloud().then((rows) => {
+            if (rows.length) void sync();
+          });
+        }, CLOUD_RETRY_MS);
+        // Un reintento pendiente no mantiene vivo el proceso (pruebas en Node); en la webview no hace nada.
+        (cloudRetry as unknown as { unref?: () => void }).unref?.();
+      }
+      return computers;
+    } finally {
+      cloudReads--;
+      setCloudMachinesLoading(cloudReads > 0);
     }
-    return computers;
   }
   /** Si esta computadora es una VM administrada, y su sistema. La lista los lee en cada `machine_list`. */
   let homeWakes = false;

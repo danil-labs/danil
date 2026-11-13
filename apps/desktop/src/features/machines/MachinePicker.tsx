@@ -9,7 +9,7 @@ import { SignalDot } from "../../ui/SignalDot";
 import { ConnectMachine, connectSource } from "./ConnectMachine";
 import { MachineIcon } from "./MachineIcon";
 import { refetchSharedMachines, sharedBusy, sharedMachines, sharedNotice, startSharedMachine } from "./shared";
-import { type Machine, machineName, machines, type ProjectPlace, refetchMachines, runOn, runsWorkspace, setRunOn, unavailable, wakesOf } from "./store";
+import { cloudMachinesLoading, type Machine, machineName, machines, type ProjectPlace, refetchMachines, runOn, runsWorkspace, setRunOn, unavailable, wakesOf } from "./store";
 
 let pedida = false;
 
@@ -57,7 +57,7 @@ export function MachinePicker(props: { workspace: string | null; project?: Proje
   };
 
   // Con una sola opción aquí también sale: dice dónde corre la tarea.
-  const muestra = () => machines().length > 1 || (!!props.shared && sharedMachines().length > 0);
+  const muestra = () => cloudMachinesLoading() || machines().length > 1 || (!!props.shared && sharedMachines().length > 0);
   const tono = (power: string) => (power === "running" ? "success" : power === "starting" ? "working" : power === "stopping" ? "warning" : power === "unknown" ? "neutral" : "off") as "success" | "working" | "warning" | "neutral" | "off";
   const estado = (power: string) => {
     switch (power) {
@@ -77,9 +77,11 @@ export function MachinePicker(props: { workspace: string | null; project?: Proje
           aria-label={t("shell.machines.label")}
         >
           <MachineIcon wakes={elegida() ? wakesOf(elegida() as Machine) : false} size={12} />
-          <span class="truncate">{elegida() ? nombre(elegida() as Machine) : t("shell.machines.label")}</span>
+          <Show when={cloudMachinesLoading() || elegida()?.connection === "unknown"} fallback={<span class="truncate">{elegida() ? nombre(elegida() as Machine) : t("shell.machines.label")}</span>}>
+            <span class="truncate" role="status" data-machine-connecting="">{t("shell.machines.connecting")}</span>
+          </Show>
           <Show when={elegida()}>
-            <SignalDot tone={(elegida() as Machine).on ? "success" : "off"} />
+            <SignalDot tone={(elegida() as Machine).connection === "unknown" ? "working" : (elegida() as Machine).on ? "success" : "off"} />
           </Show>
           <ChevronDown size={11} aria-hidden="true" />
         </PopoverTrigger>
@@ -96,10 +98,10 @@ export function MachinePicker(props: { workspace: string | null; project?: Proje
                   onClick={() => elegir(m)}
                 >
                   <MachineIcon wakes={wakesOf(m)} size={12} />
-                  <SignalDot tone={m.on ? "success" : "off"} />
+                  <SignalDot tone={m.connection === "unknown" ? "working" : m.on ? "success" : "off"} pulse={m.connection === "unknown"} />
                   <span class="flex-1 truncate">{nombre(m)}</span>
                   <span class="text-2xs" data-machine-reason={razon(m) ? "" : undefined}>
-                    {razon(m)?.label ?? (m.on ? t("shell.machines.on") : t("shell.machines.off"))}
+                    {m.connection === "unknown" ? t("shell.machines.connecting") : razon(m)?.label ?? (m.on ? t("shell.machines.on") : t("shell.machines.off"))}
                   </span>
                   <span class="flex w-3 shrink-0">
                     <Show when={elegida()?.id === m.id}>
