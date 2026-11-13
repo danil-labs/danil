@@ -43,7 +43,7 @@ const OF_THIS_MACHINE = /(^|_)accounts?($|_)|login|^radiant_|^danil_|^account_re
 const ACCOUNT_CREDENTIALS = /^account_credentials?_|^github_account_/;
 const ofThisMachine = (command: string) => OF_THIS_MACHINE.test(command) && !ACCOUNT_CREDENTIALS.test(command);
 /** La sesión de Danil y Radiant son siempre de esta ventana; las cuentas de IA, de la máquina que nombra la cabecera o el id. */
-const OF_THIS_WINDOW = /^radiant_|^danil_|^account_relay_token$|^agents_session_|^agents_bff_fetch$/;
+const OF_THIS_WINDOW = /^radiant_|^danil_|^account_relay_token$|^agents_session_/;
 /** Las órdenes con canal pierden el canal por el relay: vuelve solo la respuesta final. */
 const CHANNELS: Record<string, string> = { clone_project: "progress", list_session_git: "progress", watch_task_tree: "changes" };
 const UNKNOWN = new Set(["command", "unsupported", "command_not_allowed"]);
@@ -115,7 +115,7 @@ export type RouterConfig = {
   deliver?: (events: { name: string; payload: unknown }[]) => void;
   /** «Ejecutar en» para `workspace`, si la persona eligió una máquina. */
   pickedFor?: (workspace: string | null) => string | null;
-  /** El directorio de la persona (`GET /v1/me/workspaces`) ya leído: nombra el workspace de una organización que la fila de su servidor no nombra. */
+  /** El directorio autorizado de la persona: nombra el workspace de una organización que la fila de su servidor no nombra. */
   directory?: () => readonly { workspace_id: string | null; name: string; owner?: boolean }[];
   /**
    * Lo que el motor de esta computadora sabe de las otras máquinas de la persona

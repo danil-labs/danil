@@ -101,6 +101,9 @@ with sync_playwright() as p:
     sent = next(f for f in frames if f.get('command') == 'send_message')
     assert sent['args']['prompt'] == 'Beta task probe'
     assert sent['workspace'] == 'w'
+    expect(page.locator('[data-attention-feature],[data-broadcasts],[data-inbox]')).to_have_count(0)
+    expect(page.get_by_role('tab', name='Inbox', exact=True)).to_have_count(0)
+    expect(page.get_by_role('tab', name='Difusiones', exact=True)).to_have_count(0)
     assert state['tickets'] > 0
     assert not any('messaging' in r.url or '/rest/v1' in r.url or 'alpha-api' in r.url for r in requests)
     page.get_by_role('button', name='Configuración', exact=True).click()

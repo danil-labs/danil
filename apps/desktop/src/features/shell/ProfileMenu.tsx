@@ -35,7 +35,6 @@ const ELEGIDA = "bg-surface-raised font-semibold text-neutral-950 shadow-sm";
 export default function ProfileMenu(props: {
   onAccount: () => void;
   onReportarBug: () => void;
-  onOpenAgents?: () => void;
 }) {
   const [open, setOpen] = createSignal(false);
   const [tema, setTema] = createSignal<Apariencia>(apariencia());
@@ -79,7 +78,7 @@ export default function ProfileMenu(props: {
         </>}</Show>
         <Show when={capabilities().workspaceDirectory}>
           <Suspense fallback={null}>
-            <WorkspaceDirectoryMenu onClose={() => setOpen(false)} onOpenAgents={props.onOpenAgents} />
+            <WorkspaceDirectoryMenu onClose={() => setOpen(false)} />
           </Suspense>
           <div class="my-1 h-px bg-border" />
         </Show>

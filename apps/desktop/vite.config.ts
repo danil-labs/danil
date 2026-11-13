@@ -124,8 +124,6 @@ const desktop: UserConfig = {
   plugins: [solid(), tailwindcss(), excalidrawFonts()],
   define: {
     __TERMINUS_CONTRACT__: CONTRACT,
-    // Atención en la ventana (docs/desktop-bff-session.md): encendida. `DANIL_DESKTOP_ATTENTION=0` la apaga.
-    "import.meta.env.DANIL_DESKTOP_ATTENTION": JSON.stringify(process.env.DANIL_DESKTOP_ATTENTION !== "0"),
   },
   // noVNC (la pantalla de una VM) usa `await` de nivel superior. Solo lo carga
   // su trozo perezoso: un webview sin soporte falla al abrir esa pestaña, no la app.

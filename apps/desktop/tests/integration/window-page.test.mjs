@@ -65,3 +65,20 @@ for (const status of [401, 403, 503]) test(`identity HTTP ${status} stays distin
   if (status !== 401) assert.equal(app.w.document.querySelector('a[href*="/login"]'), null);
   assert.deepEqual(app.failures, []);
 });
+
+test('an authenticated session with no workspaces shows the plan empty state without asking compute', async () => {
+  const calls = [];
+  const fetcher = async input => {
+    const url = new URL(String(input));
+    if (url.origin === 'http://localhost' && url.pathname.includes('/assets/')) return new Response('');
+    calls.push(url.pathname);
+    if (url.pathname === '/v1/identity/me') return Response.json({ id: 'user_A', name: 'Operator', workspace: '11', organizations: [] });
+    if (url.pathname === '/v1/workspaces') return Response.json({ items: [], next_cursor: null });
+    throw new Error(`Unexpected request ${url.pathname}`);
+  };
+  fetcher.__jsdomApp = true; globalThis.fetch = fetcher;
+  const app = await boot('listo', 'empty-cloud-workspaces', {}, undefined, {}, { web: true });
+  await until(() => app.w.document.querySelector('[data-web-gate]')?.textContent.includes('No tienes nada. Crea un plan.'));
+  assert.ok(!calls.some(path => path.startsWith('/v1/compute')));
+  assert.equal(app.w.document.querySelector('[data-tira]'), null);
+});

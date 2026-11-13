@@ -268,19 +268,8 @@ pub(super) fn desktop_command(name: &str) -> bool {
                 | "tray_notify"
                 | "machine_list"
                 | "account_relay_token"
-                | "agents_session_status"
-                | "agents_session_connect"
-                | "agents_session_sign_out"
                 | "danil_sign_in"
                 | "danil_sign_out"
-                | "agents_session_directory"
-                | "agents_session_link"
-                | "agents_session_unlink"
-                | "agents_session_create_danil_workspace"
-                | "agents_session_refresh"
-                | "agents_bff_fetch"
-                | "credits_pilot_prepare"
-                | "harness_org_fetch"
                 | "typst_live_complete"
                 | "service_filter"
                 | "load_history"
@@ -1039,44 +1028,6 @@ pub(super) fn account_relay_token(
         None => json!({}),
     };
     invoke(&state, "danil_client_token", args)
-}
-
-/// Una orden del motor pedida desde el Rust de la ventana (`agents_session.rs`).
-pub(super) fn credits_local_client(
-    app: &tauri::AppHandle,
-    workspace: &str,
-) -> Result<Arc<Client>, Value> {
-    let state = app
-        .try_state::<Arc<State>>()
-        .ok_or_else(|| failure(&Error::new("app_unavailable")))?;
-    let client = state.client();
-    if state.remote()
-        || state.workspace().as_deref() != Some(workspace)
-        || !client.status()["service_features"]
-            .as_array()
-            .is_some_and(|features| features.iter().any(|f| f == "credits_pilot_v1"))
-    {
-        return Err(failure(&Error::new("credits_local_engine_required")));
-    }
-    Ok(client)
-}
-
-pub(super) fn credits_local_engine(
-    app: &tauri::AppHandle,
-    workspace: &str,
-) -> Result<String, Value> {
-    credits_local_client(app, workspace).map(|client| client.runtime().to_owned())
-}
-
-pub(super) fn credits_captured_call(
-    client: &Arc<Client>,
-    workspace: &str,
-    args: Value,
-) -> Result<Value, Value> {
-    client
-        .invoke("credits_pilot_install", Some(workspace.to_owned()), args)
-        .map_err(|e| failure(&e))
-        .and_then(reply)
 }
 
 /// Una orden del motor pedida desde el Rust de la ventana (`agents_session.rs`).

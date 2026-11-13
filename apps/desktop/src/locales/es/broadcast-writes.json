@@ -1,7 +1,0 @@
-{
-  "broadcast-writes.write_error": "No se pudo confirmar la operación. Cierra y actualiza antes de repetirla para comprobar si se guardó.",
-  "broadcast-writes.account_mismatch": "La cuenta no coincide con la cuenta activa de tu sesión. Renueva tu sesión de Danil y vuelve a abrir esta vista.",
-  "broadcast-writes.missing_active_account": "Tu sesión no tiene una cuenta activa. Elige una cuenta en Danil y renueva tu sesión.",
-  "broadcast-writes.reconcile_required": "Hay una operación sin resultado confirmado para esta cuenta y recurso. Relee el servidor y revisa el estado antes de repetirla.",
-  "broadcast-writes.reread": "Releer estado del servidor"
-}

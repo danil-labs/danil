@@ -241,11 +241,16 @@ does not configure a deployment. For the local front verification chain, run
 `tests/integration/window-page.test.mjs` mounts the real task window against a
 simulated cookie edge and relay. `tests/integration/window.browser.py` exercises
 the built page with Chromium; `DANIL_WINDOW_BROWSER_URL` selects the served URL.
-The compute adapter follows the current front B contract: list/start under
+The existing compute adapter is provisional, awaiting Sprint 0; this cleanup adds no machine API. Its earlier stub uses: list/start under
 `/v1/compute/computers`, ticket at `POST /v1/compute/computers/:id/tickets`,
 WebSocket with the `ticket.*` subprotocol. The engine registry, shared machines,
 renaming, screen and account administration still depend on new service contracts;
-identity currently supplies a read-only profile. No messaging entry is mounted.
+identity currently supplies a read-only profile. Desk and web do not mount or
+transport the messaging satellite. `messaging-isolation` guards their source
+boundaries; engine task attention and task delivery rows remain.
+Prototype metrics and directory readers are retired; Harness displays its
+unavailable state. Empty platform workspace lists display the plan empty state
+without requesting compute or implementing purchase logic.
 
 The platform workspace list and selection use `/v1/workspaces` as published.
 Pending: **modelo organización→N workspaces por decidir** (detalle de negocio)
