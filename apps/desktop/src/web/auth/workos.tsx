@@ -12,14 +12,7 @@ export function signInError(search: string): string {
   return code ? (ERRORS.has(code) ? code : "callback_failed") : "";
 }
 
-/**
- * Sign-in with WorkOS (AuthKit), the original web screen (restored from
- * 80b251a8, design unchanged). Its button goes to the edge's
- * `/v1/identity/login`, which sends the person to AuthKit and, from its
- * `callback`, back here with the `__Host-danil_session` cookie. AuthKit's page
- * shows the methods enabled in WorkOS, so turning one on or off needs no build.
- * While the window still asks who is signed in, the button waits disabled.
- */
+/** The original sign-in (80b251a8); its button goes to the edge's `/v1/identity/login`. */
 export function WorkosAuthPage(props: { loginUrl: string; busy: boolean; error: string }) {
   document.title = "Danil";
   return (
