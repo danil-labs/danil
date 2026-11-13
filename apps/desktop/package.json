@@ -10,6 +10,7 @@
     "build": "tsc -b && vite build",
     "web:dev": "vite --mode web",
     "web:build": "tsc -b && vite build --mode web",
+    "web:phone": "node scripts/web-mobile.mjs",
     "verify": "node scripts/verify.mjs",
     "lint": "biome lint src scripts",
     "tauri": "tauri",

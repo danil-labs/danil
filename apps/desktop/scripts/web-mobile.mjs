@@ -1,20 +1,20 @@
 #!/usr/bin/env node
 /**
- * Compila el Terminus del teléfono (`apps/mobile`, Expo para web) dentro de la
- * web: `dist-web/<base>m/`, después de `vite build --mode web`. La web de
- * escritorio manda ahí a los teléfonos (`toPhone` en `src/web/main.tsx`), y
- * las dos comparten origen, sesión de la app de Danil y política (`_headers`
- * cubre `<base>*`).
+ * Compila el Danil del teléfono (`apps/mobile`, Expo para web) en `dist-web/<base>m/`,
+ * después de `vite build --mode web`. La web manda ahí a los teléfonos (`phone.ts`)
+ * y las dos comparten origen, borde y política (`_headers` cubre `<base>*`).
  *
- * Toma los mismos valores públicos que `vite.config.ts` (`TERMINUS_WEB_*`) y
- * se los pasa a Expo como `EXPO_PUBLIC_*`. Necesita `npm ci` en `apps/mobile`.
- * Al final escribe el manifest de la PWA y sus cabeceras (`web-phone-pwa.mjs`).
+ * Todo va por el borde `/v1` (`DANIL_WEB_API_ORIGIN`, obligatorio y validado como en
+ * `vite.config.ts`) y el canal de datos solo a los relays exactos (`RELAY_ORIGIN`):
+ * nada de Supabase, del plano de control de `computers` ni de mensajería.
+ * Necesita `npm ci` en `apps/mobile`; al final escribe el manifest y las cabeceras.
  */
 import { spawnSync } from "node:child_process";
 import { appendFileSync, cpSync, existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { PHONE_DIR, phoneHeaders, phoneManifest, phoneWorker } from "./web-phone-pwa.mjs";
+import { webRelayOrigins, webSessionDeployment } from "../src/web/session-config.ts";
 
 const env = process.env;
 const mobile = fileURLToPath(new URL("../../mobile/", import.meta.url));
@@ -31,27 +31,29 @@ if (!existsSync(join(root, base, "index.html"))) {
   process.exit(1);
 }
 
-const origin = (value) => (value ? new URL(value).origin : "");
+// Las mismas entradas que la web: sin borde válido no se publica nada.
+const edge = webSessionDeployment(env);
+const relays = webRelayOrigins(env.RELAY_ORIGIN);
 const expoEnv = {
   ...env,
   TERMINUS_MOBILE_WEB_BASE: `${base}${PHONE_DIR}`,
   // La raíz de la web de escritorio, para «Ver la versión de escritorio» sin adivinarla de la ruta.
   EXPO_PUBLIC_TERMINUS_WEB_BASE: base,
   EXPO_PUBLIC_TERMINUS_PHONE_BASE: `${base}${PHONE_DIR}/`,
-  EXPO_PUBLIC_TERMINUS_ALPHA: env.TERMINUS_WEB_ALPHA === "1" ? "1" : "0",
-  EXPO_PUBLIC_COMPUTERS_ENDPOINT: origin(env.TERMINUS_WEB_ENDPOINT || "https://machines.danil.ai"),
-  EXPO_PUBLIC_TERMINUS_WEB_LOGIN: env.TERMINUS_WEB_LOGIN || `${base}auth`,
-  EXPO_PUBLIC_TERMINUS_WEB_WORKOS: env.TERMINUS_WEB_WORKOS === "1" ? "1" : "0",
-  EXPO_PUBLIC_TERMINUS_PUSH_TEST: env.TERMINUS_WEB_PUSH_TEST === "1" ? "1" : "0",
-  ...(env.TERMINUS_WEB_SUPABASE_URL ? { EXPO_PUBLIC_SUPABASE_URL: origin(env.TERMINUS_WEB_SUPABASE_URL) } : {}),
-  ...(env.TERMINUS_WEB_SUPABASE_KEY ? { EXPO_PUBLIC_SUPABASE_KEY: env.TERMINUS_WEB_SUPABASE_KEY.trim() } : {}),
+  // Sin las secciones de alfa: la mensajería no se monta (regla 7).
+  EXPO_PUBLIC_TERMINUS_ALPHA: "0",
+  EXPO_PUBLIC_DANIL_EDGE_ORIGIN: edge.origin,
+  EXPO_PUBLIC_DANIL_EDGE_TIMEOUT_MS: String(edge.timeoutMs),
+  EXPO_PUBLIC_DANIL_RELAY_ORIGINS: relays.join(","),
+  EXPO_PUBLIC_TERMINUS_PUSH_TEST: "0",
 };
+for (const key of Object.keys(expoEnv)) if (/^EXPO_PUBLIC_(SUPABASE_|COMPUTERS_|TERMINUS_WEB_WORKOS|TERMINUS_WEB_LOGIN)/.test(key)) delete expoEnv[key];
 // El worker de pdf.js va en `public/` (lo copia el `postinstall`); por si el `npm ci` fue anterior.
 const worker = spawnSync(process.execPath, ["scripts/pdf-worker.mjs"], { cwd: mobile, stdio: "inherit" });
 if (worker.status !== 0) process.exit(worker.status ?? 1);
 
 const npx = process.platform === "win32" ? "npx.cmd" : "npx";
-const run = spawnSync(npx, ["expo", "export", "--platform", "web", ...(env.TERMINUS_WEB_ALPHA === "1" ? ["--clear"] : []), "--output-dir", out], {
+const run = spawnSync(npx, ["expo", "export", "--platform", "web", "--clear", "--output-dir", out], {
   cwd: mobile,
   env: expoEnv,
   stdio: "inherit",
@@ -62,7 +64,8 @@ if (run.status !== 0) process.exit(run.status ?? 1);
 // Las caras de los agentes Business y sus versiones planas: los mismos SVG del
 // escritorio, servidos junto al teléfono (`AgentAvatar` los pide por URL).
 cpSync(fileURLToPath(new URL("../src/features/projects/business-icons/", import.meta.url)), join(out, "agent-icons"), { recursive: true });
-writeFileSync(join(out, "sw.js"), phoneWorker(readFileSync(join(out, "sw.js"), "utf8"), expoEnv.EXPO_PUBLIC_TERMINUS_WEB_LOGIN, base));
+// Un aviso de «inicia sesión» abre la entrada del propio teléfono (`signin.web.tsx`).
+writeFileSync(join(out, "sw.js"), phoneWorker(readFileSync(join(out, "sw.js"), "utf8"), `${base}${PHONE_DIR}/signin`, base));
 writeFileSync(join(out, "manifest.webmanifest"), `${JSON.stringify(phoneManifest(base), null, 2)}\n`);
 appendFileSync(join(root, "_headers"), `\n${phoneHeaders(base).join("\n")}`);
 console.log(`web-mobile: ${out}`);

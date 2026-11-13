@@ -9,7 +9,7 @@
  *
  * Sin APIs del DOM ni de Solid: el reloj y la clave se inyectan; `subscribe` avisa cambios.
  */
-import { announces, capabilityList } from "@terminus/computers";
+import { announces, capabilityList } from "./capabilities.ts";
 
 export type Organization = { id: string; name: string; plan?: string; role?: string };
 

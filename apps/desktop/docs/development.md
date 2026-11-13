@@ -216,9 +216,15 @@ task window. The session is the edge's HttpOnly `__Host-danil_session` cookie. N
 WorkOS token, database token or database key reaches JavaScript.
 
 `DANIL_WEB_API_ORIGIN=https://edge.danil.ai corepack pnpm web:build` builds
-the responsive SPA. It no longer embeds the mobile app's legacy browser bundle.
-For beta, build with
-`TERMINUS_WEB_BASE=/ DANIL_WEB_API_ORIGIN=https://edge.danil.ai corepack pnpm -C apps/desktop web:build`.
+the responsive SPA. `corepack pnpm web:phone` then exports the phone version
+(`apps/mobile`, Expo for web, after `npm ci` there) into `dist-web/<base>m/`
+with the same edge and relay inputs: identity, organizations and `/v1/machines`
+with one-use tickets, never Supabase, the `computers` control plane or
+messaging. With `DANIL_WEB_PHONE=1` the SPA sends a phone that opens the web
+(also on its way back from identity, whose exact return URL is the root) to
+`<base>m/`. For beta, build with
+`TERMINUS_WEB_BASE=/ DANIL_WEB_API_ORIGIN=https://edge.danil.ai DANIL_WEB_PHONE=1 corepack pnpm -C apps/desktop web:build`
+followed by the same variables and `corepack pnpm -C apps/desktop web:phone`.
 `alpha-entry/wrangler.beta.toml` serves those assets on `beta.danil.ai` without a
 backend proxy. `TERMINUS_WEB_BASE=/` serves the root;
 `DANIL_WEB_API_ORIGIN` is required: the build fails if it is absent or is not

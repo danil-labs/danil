@@ -11,7 +11,7 @@ import { platformSession, platformTransport } from '../../src/web/platform-sessi
 import { readCapabilities, supports } from '../../src/web/service-capabilities.ts';
 import { webOrganizationSource } from '../../src/web/organizations.ts';
 import { edgeOrganizationSource } from '../../src/features/shell/organization-edge.ts';
-import { createOrganizationSelection } from '../../src/features/shell/organization-selection.ts';
+import { createOrganizationSelection } from "@terminus/computers";
 import { createCloudMachines } from '../../src/features/machines/cloud-machines.ts';
 import { machineToComputer, machinesClient } from '@terminus/computers';
 

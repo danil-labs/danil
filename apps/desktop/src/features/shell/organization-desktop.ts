@@ -1,13 +1,13 @@
 /**
  * El selector de organización de Desk: `edgeFetch` de `lib/edge.ts` (Bearer en Rust,
  * lista cerrada de rutas, status del borde tal cual). El backoff, con el selector oculto,
- * y la `Idempotency-Key` los lleva `organization-selection.ts`.
+ * y la `Idempotency-Key` los lleva `@terminus/computers` (`organizations.ts`).
  * Al iniciar o cerrar sesión (`danil-connect`) se vuelve a leer.
  */
 import { listen } from "../../lib/serviceEvents";
 import { cancelEdgeWrites, edgeFetch, onEdgeProblem } from "../../lib/edge";
 import { edgeOrganizationSource } from "./organization-edge";
-import { createOrganizationSelection, isOrganizationSelectionRequired, type OrganizationSelection } from "./organization-selection";
+import { createOrganizationSelection, isOrganizationSelectionRequired, type OrganizationSelection } from "@terminus/computers";
 
 /** Evento de ventana tras cambiar de organización: quien guarde datos de la anterior los suelta. */
 export const ORGANIZATION_CHANGED = "danil:organization-changed";

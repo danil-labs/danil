@@ -3,7 +3,7 @@ import { createEffect, createResource, createSignal, For, onCleanup, Show } from
 import { t } from "../../lib/i18n";
 import { cn } from "../../lib/utils";
 import { ITEM_DE_MENU } from "../../ui/Popover";
-import type { OrganizationSelection, OrganizationState } from "./organization-selection";
+import type { OrganizationSelection, OrganizationState } from "@terminus/computers";
 
 /** Lo mismo que un `createSignal` sobre el store, sin que el store dependa de Solid. */
 export function useOrganizations(selection: OrganizationSelection) {

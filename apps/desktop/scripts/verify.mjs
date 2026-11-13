@@ -641,6 +641,8 @@ const steps = [
   // Espera más de un minuto sin CPU: antes del build retenía a Vite; aquí corre junto a los demás.
   ["La cola remota corre uno a la vez, limpia entre corridas y devuelve el exit real", process.execPath, ["--test", join(root, "tests/unit/verify-queue.test.mjs")], root],
   ["The phone version installs as an app and always loads the latest", process.execPath, ["--test", join(root, "tests/unit/web-phone-pwa.test.mjs")], root],
+  ["A phone that opens the web goes to the phone version, also on its way back from identity", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/web-phone-route.test.ts")], root],
+  ["The edge from a browser: cookie, CSRF on writes, never a bearer, and a tolerant person", process.execPath, ["--test", "--experimental-strip-types", join(root, "../../packages/computers/test/edge.test.ts")], root],
   ["In the browser a new version is offered without a forced reload", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/web-stale-chunk.test.mjs")], root],
   ["Setup in progress lets a latecomer continue", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/setup-in-flight.test.mjs")], root],
   ["Setup does not open over a painted app and does not go blind", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/setup-repair.test.mjs")], root],
