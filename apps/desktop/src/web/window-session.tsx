@@ -81,6 +81,7 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
     const [orgNeeded, setOrgNeeded] = createSignal(false);
     organizations.subscribe(() => setOrgNeeded(organizations.needed()));
     const loadOrganizations = () => Promise.resolve(organizations);
+    let organizationsLoaded = false;
     async function run(action: () => Promise<void>) {
       if (busy() || stopped) return;
       setBusy(true);
@@ -111,6 +112,8 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
         await selection.reconcile();
         if (mountedBefore) { window.location.assign(home); return; }
         const person = await api.me();
+        // Con sesión: el selector se lee una vez y, si la ruta aún no existe, se reintenta solo.
+        if (!organizationsLoaded) { organizationsLoaded = true; void organizations.load(); }
         const workspaces = await api.workspaces();
         if (stopped) return;
         setRows(workspaces);
@@ -146,7 +149,6 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
     const close = () => { stopped = true; windowApp?.close(); disposeGate?.(); dispose(); };
     window.addEventListener('pagehide', close, { once: true });
     gate();
-    void organizations.load();
     void load();
     return close;
   });
