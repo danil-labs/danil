@@ -16,9 +16,11 @@ export type DeleteMember = {
   working: boolean;
   files: { path: string; hash: string }[];
   inspection: { status: "complete" | "failed"; error?: unknown };
+  /** Engines with per-member integration in the preview; older ones omit it. */
+  integration?: "none" | "merged" | "unmerged" | "unchecked";
 };
 type DeletePreview = { members: DeleteMember[]; consent?: string | null; expires_at?: number };
-type Integration = "merged" | "unconfirmed";
+type Integration = "merged" | "unmerged" | "unconfirmed";
 type DeleteResult = {
   status: "complete" | "partial";
   applied: { project: string; id: string }[];
@@ -85,11 +87,16 @@ export default function DeleteTaskDialog(props: {
     } catch (failure) { setError([message, failureText(failure)].filter(Boolean).join("\n")); setShown(true); }
     finally { setBusy(false); }
   }
-  // `not_finished` does not tell unmerged from unchecked; a member without an answer in time stays unconfirmed.
+  // The preview's `integration` decides. Older engines fall back to the finish check, whose `not_finished` also
+  // flags a worktree without commits of its own and does not tell unmerged from unchecked: those stay unconfirmed.
   async function integrationChecks(list: DeleteMember[]): Promise<ReadonlyMap<string, Integration>> {
     const result = new Map<string, Integration>();
+    for (const member of list) {
+      if (member.integration === "none" || member.integration === "merged") result.set(key(member), "merged");
+      else if (member.integration === "unmerged") result.set(key(member), "unmerged");
+    }
     const deadline = Date.now() + 20_000;
-    const queue = list.filter(member => member.inspection.status === "complete");
+    const queue = list.filter(member => member.inspection.status === "complete" && member.integration === undefined);
     const worker = async () => {
       for (let member = queue.shift(); member && Date.now() < deadline; member = queue.shift()) {
         const blockers = await invoke<{ not_finished: boolean }>("task_blockers", { project: member.project, id: member.id, finish: true }, props.target.options).catch(() => null);
@@ -158,7 +165,7 @@ export default function DeleteTaskDialog(props: {
           <Show when={member.inspection.error}><p class="m-0 break-all text-caption text-error-strong">{failureText(member.inspection.error)}</p></Show>
           <Show when={member.working}><p class="m-0 text-caption text-warning-strong">{t("projects.sessions.delete_working")}</p></Show>
           <ul class="m-0 list-none p-0"><For each={member.files}>{file => <li class="break-all font-mono text-caption text-neutral-500">{file.path}</li>}</For></ul>
-          <Show when={member.inspection.status === "complete" && integrationOf(member) !== "merged"}><p class="m-0 text-caption text-warning-strong">{t("projects.sessions.delete_unmerged")}</p></Show>
+          <Show when={member.inspection.status === "complete" && integrationOf(member) !== "merged"}><p class="m-0 text-caption text-warning-strong">{t(integrationOf(member) === "unmerged" ? "projects.sessions.delete_unmerged" : "projects.sessions.delete_unconfirmed")}</p></Show>
           <Show when={member.inspection.status === "complete" && member.files.length === 0}><p class="m-0 text-caption text-neutral-500">{t("projects.sessions.delete_no_files")}</p></Show>
           <Show when={dirty(member).length > 0}>
             <p class="m-0 text-caption text-warning-strong">{t("projects.sessions.delete_buffers")}</p>
