@@ -124,3 +124,28 @@ test("ya sin sesión, otra confirmación no vuelve a avisar", async () => {
   await s.recheck();
   assert.equal(changes, 1);
 });
+
+test("una lectura de identity en vuelo que llega después del logout confirmado no revive la sesión", async () => {
+  const waiting: (() => void)[] = [];
+  let calls = 0;
+  const s = edgeSession(
+    {
+      me: async () => {
+        calls++;
+        if (calls === 1) return ANA;
+        await new Promise<void>((r) => waiting.push(r));
+        return ANA;
+      },
+      logout: async () => {},
+    },
+    { schedule: clock().schedule },
+  );
+  await s.load();
+  const late = s.recheck();
+  const relate = s.load();
+  assert.equal(await s.signOut(), true);
+  for (const r of waiting) r();
+  await late;
+  await relate;
+  assert.equal(s.state().kind, "signed_out");
+});

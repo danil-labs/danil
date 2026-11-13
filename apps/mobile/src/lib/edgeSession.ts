@@ -32,6 +32,8 @@ export function edgeSession(identity: Identity, options: Options = {}) {
   let stopped = false;
   const listeners = new Set<() => void>();
   let asking: Promise<boolean> | null = null;
+  // Cada cierre confirmado abre una época nueva: lo que identity contestó antes ya no cuenta.
+  let epoch = 0;
   const set = (next: EdgeSessionState) => {
     if (next.kind === state.kind && next.kind !== "signed_in") return;
     state = next;
@@ -46,11 +48,14 @@ export function edgeSession(identity: Identity, options: Options = {}) {
   async function load(): Promise<void> {
     cancel?.();
     cancel = null;
+    const mine = epoch;
     try {
-      signedIn(await identity.me());
+      const person = await identity.me();
+      if (mine !== epoch) return;
+      signedIn(person);
       wait = first;
     } catch (error) {
-      if (stopped) return;
+      if (stopped || mine !== epoch) return;
       if (unauthorized(error)) {
         wait = first;
         set({ kind: "signed_out" });
@@ -70,15 +75,19 @@ export function edgeSession(identity: Identity, options: Options = {}) {
     recheck(): Promise<boolean> {
       // Un solo vuelo: varios rechazos a la vez son una sola pregunta.
       asking ??= (async () => {
+        const mine = epoch;
         try {
-          signedIn(await identity.me());
+          const person = await identity.me();
+          if (mine !== epoch) return state.kind === "signed_in";
+          signedIn(person);
           return true;
         } catch (error) {
+          if (mine !== epoch) return state.kind === "signed_in";
           if (!unauthorized(error)) return true;
           set({ kind: "signed_out" });
           return false;
         } finally {
-          asking = null;
+          if (mine === epoch) asking = null;
         }
       })();
       return asking;
@@ -90,6 +99,8 @@ export function edgeSession(identity: Identity, options: Options = {}) {
       } catch (error) {
         if (!unauthorized(error)) return false;
       }
+      epoch++;
+      asking = null;
       cancel?.();
       cancel = null;
       set({ kind: "signed_out" });
