@@ -8,7 +8,7 @@ test("las llamadas van por danil_edge_fetch con la ruta y sin token", async () =
   const calls: { command: string; args?: Record<string, unknown> }[] = [];
   const cloud = createCloudMachines(async (command, args) => {
     calls.push({ command, args });
-    return args?.path === "/v1/capabilities" ? { items: [{ name: "machines", status: "available" }] } : { items: [machine] };
+    return { status: 200, body: args?.path === "/v1/capabilities" ? { items: [{ name: "machines", status: "available" }] } : { items: [machine] } };
   });
   const rows = await cloud.rows();
   assert.equal(rows.available, true);
@@ -22,23 +22,34 @@ test("sin la capacidad «machines» no se llama y se reintenta solo (no disponib
   const paths: unknown[] = [];
   const cloud = createCloudMachines(async (_c, args) => {
     paths.push(args?.path);
-    return { items: [{ name: "machines", status: "unavailable" }] };
+    return { status: 200, body: { items: [{ name: "machines", status: "unavailable" }] } };
   });
   assert.deepEqual(await cloud.rows(), { available: false, computers: [], renewInChannel: false });
   assert.deepEqual(paths, ["/v1/capabilities"]);
 });
 
-test("not_available_yet y no_session se vuelven 501 y 401", async () => {
-  const f = (detail: string) => edgeFetch(async () => Promise.reject({ detail }));
-  assert.equal((await f("not_available_yet")("https://x/v1/machines")).status, 501);
-  assert.equal((await f("no_session")("https://x/v1/machines")).status, 401);
-  assert.equal((await f("unavailable")("https://x/v1/machines")).status, 503);
+test("el status del borde llega tal cual: 404 de la colección es «no disponible»; sin sesión, 401", async () => {
+  assert.equal((await edgeFetch((async () => ({ status: 501, body: null })) as never)("https://x/v1/machines")).status, 501);
+  assert.equal((await edgeFetch((async () => Promise.reject({ detail: "no_session" })) as never)("https://x/v1/machines")).status, 401);
+  assert.equal((await edgeFetch((async () => Promise.reject({ detail: "unavailable" })) as never)("https://x/v1/machines")).status, 503);
 });
 
-test("403 organization_selection_required llega al selector con la forma de Rust", async () => {
+test("start sigue el Location que da Rust", async () => {
+  const seen: string[] = [];
+  const cloud = createCloudMachines((async (_c: string, args: Record<string, unknown>) => {
+    seen.push(`${args.method} ${args.path}`);
+    if (args.method === "POST") return { status: 202, location: "/v1/operations/op_1", body: { operation: { operation_id: "op_1", status: "pending" }, machine } };
+    if (args.path === "/v1/operations/op_1") return { status: 200, body: { operation: { operation_id: "op_1", status: "succeeded" } } };
+    return { status: 200, body: machine };
+  }) as never);
+  assert.equal((await cloud.client.start("cmp_1")).kind, "ok");
+  assert.deepEqual(seen.slice(0, 2), ["POST /v1/machines/cmp_1/start", "GET /v1/operations/op_1"]);
+});
+
+test("403 organization_selection_required llega al selector", async () => {
   const seen: unknown[] = [];
-  const error = { detail: "organization_selection_required", status: 403 };
-  const reply = await edgeFetch(async () => Promise.reject(error), (e) => seen.push(e))("https://x/v1/machines");
+  const body = { code: "organization_selection_required" };
+  const reply = await edgeFetch((async () => ({ status: 403, body })) as never, (e) => seen.push(e))("https://x/v1/machines");
   assert.equal(reply.status, 403);
-  assert.deepEqual(seen, [error]);
+  assert.deepEqual(seen, [{ detail: "organization_selection_required", status: 403, body }]);
 });
