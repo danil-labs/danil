@@ -18,7 +18,7 @@ async function open(t) {
     if (url.endsWith("/terminus/") && page.html) return new Response(page.html, { status: 200 });
     if (url.endsWith("/v1/identity/me")) return Response.json({ id: "user_A", name: "Ana", workspace: "11", organizations: [] });
     if (url.endsWith("/v1/workspaces")) return Response.json({ items: [{ id: "11", org: "org_A", name: "Alpha", role: "owner" }], next_cursor: null });
-    if (url.includes("/v1/messaging/")) return Response.json({ data: [], page: { has_more: false, next_cursor: null } });
+    if (url.endsWith("/v1/compute/computers")) return new Response(null, { status: 503 });
     if (url.startsWith("http://localhost/") && url.includes("/assets/")) return new Response("");
     return own(input, init);
   };

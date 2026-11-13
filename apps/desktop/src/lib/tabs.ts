@@ -43,13 +43,6 @@ export type SiteTab = CommonTab & {
   navegador?: true;
 };
 
-export type InboxTab = CommonTab & {
-  clase: "inbox";
-  titulo: string;
-};
-
-export type BroadcastsTab = CommonTab & { clase: "broadcasts"; titulo: string };
-
 export type ObservabilityTab = CommonTab & {
   clase: "observabilidad";
   titulo: string;
@@ -68,8 +61,6 @@ export type Tab =
   | ArtifactTab
   | SiteTab
   | ObservabilityTab
-  | InboxTab
-  | BroadcastsTab
   | ScreenTab;
 export type ContentTab =
   | FileTab
@@ -97,8 +88,6 @@ export const siteTabId = (a: { session: string; url: string }) =>
 let browserSequence = 0;
 export const browserTabId = () => `navegador\u0000${Date.now()}\u0000${browserSequence++}`;
 
-export const INBOX_TAB_ID = "inbox";
-export const BROADCASTS_TAB_ID = "broadcasts";
 
 export const OBSERVABILITY_TAB_ID = "observabilidad";
 
@@ -379,16 +368,6 @@ export function createTabs(options: { transient?: boolean } = {}) {
       remapPinned([[draft, p.id]]);
       if (active() === draft) setActive(p.id);
       save();
-    },
-    openBroadcasts(title: string) {
-      const next: BroadcastsTab = { clase: "broadcasts", id: BROADCASTS_TAB_ID, project: "", session: "", titulo: title };
-      setOpenTabs(list => list.some(tab => tab.id === next.id) ? list : [...list, next]);
-      activateAndPersist(next.id);
-    },
-    openInbox(title: string) {
-      const next: InboxTab = { clase: "inbox", id: INBOX_TAB_ID, project: "", session: "", titulo: title };
-      setOpenTabs(list => list.some(tab => tab.id === next.id) ? list : [...list, next]);
-      activateAndPersist(next.id);
     },
     openObservability(title: string) {
       const next: ObservabilityTab = {

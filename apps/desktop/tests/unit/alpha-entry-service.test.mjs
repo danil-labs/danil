@@ -13,3 +13,14 @@ test("platform-owned routes cannot be revived by a Bearer, method or BFF binding
   }
   assert.equal(calls, 0);
 });
+
+test('every retired proxy and legacy login path is closed without contacting a backend', async () => {
+  let calls = 0;
+  const backend = { fetch: async () => { calls++; return Response.json({}); } };
+  const env = { APPV2_BFF: backend, DESKTOP_AUTH: backend, TERMINUS_WEB: backend };
+  for (const path of ['/alpha-api/auth/emails', '/alpha-api/api/channels', '/alpha-api/api/marketing/campaigns', '/alpha-api/api/contacts', '/auth/desktop', '/auth/workos/start']) {
+    const result = await worker.fetch(new Request(`https://alfa-app.danil.ai${path}`, { headers: { Authorization: 'Bearer old' } }), env);
+    assert.equal(result.status, 404, path);
+  }
+  assert.equal(calls, 0);
+});

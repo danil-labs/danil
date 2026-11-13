@@ -605,7 +605,7 @@ export default function Workspaces() {
 
           <Show when={agregandoExistente()}>
             <div class="max-w-md rounded-md border border-border bg-surface p-2" data-workspaces-directory="">
-              <WorkspaceDirectoryMenu localOnly onClose={() => setAgregandoExistente(false)} />
+              <WorkspaceDirectoryMenu onClose={() => setAgregandoExistente(false)} />
             </div>
           </Show>
 

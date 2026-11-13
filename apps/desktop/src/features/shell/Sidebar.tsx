@@ -154,7 +154,6 @@ export default function Sidebar(props: {
   onRenombrar: (project: string, id: string, title: string) => Promise<boolean | void> | boolean | void;
   onPin?: (project: string, id: string, pinned: boolean) => void | Promise<void>;
   onSettings: (panel?: string) => void;
-  attentionMenu?: (collapsed: boolean) => JSX.Element;
   /** Abre el chat con un agente de esa carpeta, como su fila de antes. */
   onHablarCon: (project: string, name: string) => void;
   onAgentProfile: (project: string, name: string) => void;
@@ -715,7 +714,6 @@ export default function Sidebar(props: {
                 </Show>
               </SidebarMenuButton>
             </SidebarMenuItem>
-            {props.attentionMenu?.(Boolean(props.collapsed))}
             <Show when={props.collapsed}>
               <SidebarMenuItem>
                 <SidebarMenuButton

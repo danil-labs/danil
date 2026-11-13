@@ -5,9 +5,9 @@
  * llega a la webview. Un 404 o un 501 llega como `not_available_yet` y la nube queda
  * «no disponible»: se oculta con gracia y se reintenta sola, guiada por
  * `GET /v1/capabilities` (Desk compilado no se recompila por cambios del servidor).
- * El canal de datos no pasa por aquí: va directo al relay con el ticket (`wss://*.danil.ai`).
+ * El canal de datos no pasa por aquí: va directo al relay con el ticket, solo a un origen exacto (`DEFAULT_RELAY_ORIGINS`).
  */
-import { type Computer, type Fetch, type MachinesAnswer, machineToComputer, machinesClient } from "@terminus/computers";
+import { type CapabilityList, type Computer, type Fetch, type MachinesAnswer, announces, capabilityList, machineToComputer, machinesClient, mayCall } from "@terminus/computers";
 
 import { edgeUntil, type EdgeReply as NativeReply, type Patience } from "../../lib/edge.ts";
 
@@ -33,7 +33,9 @@ export function edgeFetch(invoke: Invoke, onProblem?: (error: unknown) => void, 
     let body: unknown;
     try { body = JSON.parse(init?.body ?? "{}"); }
     catch { return { status: 400, ok: false, json: async () => ({ code: "invalid_request" }) }; }
-    const path = new URL(input).pathname;
+    // Ruta y query (la página siguiente de `/v1/machines`); Rust solo deja pasar las del contrato.
+    const url = new URL(input);
+    const path = url.pathname + url.search;
     let reply: NativeReply;
     try {
       reply = method === "GET" ? await send(method, path) : await edgeUntil(method, path, body, {
@@ -61,16 +63,18 @@ export function edgeFetch(invoke: Invoke, onProblem?: (error: unknown) => void, 
 export function createCloudMachines(invoke: Invoke, onProblem?: (error: unknown) => void, endpoint = EDGE_ENDPOINT) {
   const fetch = edgeFetch(invoke, onProblem);
   const client = machinesClient({ endpoint, fetch });
-  /** `denied`: sin acceso; `null`: sin catálogo; `undefined`: fallo transitorio. */
-  async function capabilities(): Promise<Set<string> | null | undefined | "denied"> {
+  /**
+   * Lo que el borde anuncia, con la lectura común de Desk y la web (`@terminus/computers`):
+   * `denied` sin acceso; `null` sin catálogo (404/501); `undefined` un fallo transitorio
+   * (otro status, red o un cuerpo que no es una lista).
+   */
+  async function capabilities(): Promise<CapabilityList | null | undefined | "denied"> {
     try {
       const response = await fetch(`${endpoint}/capabilities`);
       if (response.status === 401 || response.status === 403) return "denied";
       if (response.status === 404 || response.status === 501) return null;
       if (response.status !== 200) return undefined;
-      const items = ((await response.json()) as { items?: unknown } | null)?.items;
-      if (!Array.isArray(items)) return undefined;
-      return new Set(items.filter((c) => c?.status === "available" && typeof c.name === "string").map((c) => c.name as string));
+      return capabilityList(await response.json()) ?? undefined;
     } catch {
       return undefined;
     }
@@ -83,9 +87,9 @@ export function createCloudMachines(invoke: Invoke, onProblem?: (error: unknown)
       const caps = await capabilities();
       if (caps === "denied") return { state: "denied" };
       if (caps === undefined) return { state: "retrying" };
-      if (caps && !caps.has("machines")) return { state: "unavailable" };
+      if (!mayCall(caps, "machines")) return { state: "unavailable" };
       const answer: MachinesAnswer<unknown> = await client.list();
-      if (answer.kind === "ok") return { state: "ready", computers: (answer.value as Parameters<typeof machineToComputer>[0][]).map(machineToComputer), renewInChannel: !!caps?.has("machines.session.renew") };
+      if (answer.kind === "ok") return { state: "ready", computers: (answer.value as Parameters<typeof machineToComputer>[0][]).map(machineToComputer), renewInChannel: announces(caps, "machines.session.renew") };
       if (answer.kind === "unavailable") return { state: "unavailable" };
       if (answer.kind === "unauthorized" || answer.kind === "license" || answer.kind === "no_account") return { state: "denied" };
       return { state: "retrying" };

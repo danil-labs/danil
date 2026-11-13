@@ -17,6 +17,7 @@ export type AccountProfile = {
 
 /** Quien lee y cambia la persona donde corre el front. */
 export type AccountProfileSource = {
+  readonly?: boolean;
   read(): Promise<AccountProfile | null>;
   setPhoto(photo: PreparedPhoto): Promise<AccountProfile | null>;
   removePhoto(): Promise<AccountProfile | null>;

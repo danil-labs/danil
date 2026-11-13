@@ -37,7 +37,6 @@ import { asFailure } from "../../ui/Failure";
 import AIProviders from "./AIProviders";
 import Connections from "./Connections";
 import ConnectionsOperation from "./ConnectionsOperation";
-import { CustomerAgents, CustomerConnections } from "./CustomerService";
 import Environment from "./Environment";
 import { machines } from "../machines/store";
 import { secretsRoute } from "./secrets-support";
@@ -55,7 +54,6 @@ import { SettingsPanel, SettingsSection } from "./layout";
 import "../../locales/settingsPhrases";
 // Chunks aparte: solo los carga quien abre la sección.
 const DanilAccount = lazy(() => import("./DanilAccount"));
-const SupportAccess = lazy(() => import("./SupportAccess"));
 const ActivityLogs = lazy(() => import("./ActivityLogs"));
 const Appearance = lazy(() => import("./Appearance"));
 const ManageProjects = lazy(() => import("./ManageProjects"));
@@ -109,7 +107,6 @@ const pestanasDe = (
   proyectos: ContextoDeProyectos | undefined,
   workspace: () => string | null,
   activityMachine: () => string | null,
-  agentsWorkspace: () => string | null,
 ): Record<string, Pestana | undefined> => {
   const cuenta = capabilities().danilAccount || capabilities().accountProfile;
   const tab = (id: string, name: () => string, panel: Pestana["panel"]): Pestana => ({ id, get name() { return name(); }, panel });
@@ -118,7 +115,6 @@ const pestanasDe = (
     emails: capabilities().accountEmails ? tab("emails", () => t("settings.tab.emails"), () => <Suspense fallback={null}><DanilAccount part="emails" /></Suspense>) : undefined,
     usage: capabilities().accountUsage ? tab("usage", () => t("settings.tab.usage"), () => capabilities().accountUsage?.()) : undefined,
     plan: capabilities().personalAccount?.plan ? tab("plan", () => t("settings.tab.plan"), () => capabilities().personalAccount?.plan?.()) : undefined,
-    support: capabilities().personalAccount && capabilities().supportAccess ? tab("support", () => t("web.admin.support"), () => <Suspense fallback={null}><SettingsPanel><SupportAccess source={capabilities().supportAccess!} /></SettingsPanel></Suspense>) : undefined,
     security: tab("security", () => t("settings.tab.security"), null),
     general: tab("general", () => t("settings.nav.general"), () => <General />),
     appearance: tab("appearance", () => t("settings.nav.appearance"), () => <Suspense fallback={null}><Appearance proyecto={agentes.proyecto} /></Suspense>),
@@ -139,7 +135,6 @@ const pestanasDe = (
           modelos={agentes.modelos}
           proyecto={agentes.proyecto}
           onAgentProfile={agentes.onAgentProfile}
-          after={<CustomerAgents workspace={agentsWorkspace} />}
         />
       </Suspense>
     )),
@@ -148,7 +143,6 @@ const pestanasDe = (
     plugins: tab("plugins", () => t("settings.tab.plugins"), () => <SettingsPanel><Integrations /></SettingsPanel>),
     memory: tab("memory", () => t("settings.tab.memory"), () => <SettingsPanel><ProveedorDeMemoria /></SettingsPanel>),
     external: cuenta ? tab("external", () => t("settings.tab.external"), () => <Suspense fallback={null}><Connections workspace={workspace()} /></Suspense>) : undefined,
-    customers: tab("customers", () => t("settings.tab.customers"), () => <CustomerConnections workspace={agentsWorkspace} />),
     business: capabilities().businessBilling ? tab("business", () => t("settings.tab.business"), () => capabilities().businessBilling?.("plan")) : undefined,
     fiscal: capabilities().businessBilling ? tab("fiscal", () => t("settings.tab.fiscal"), () => capabilities().businessBilling?.("fiscal")) : undefined,
   };
@@ -225,10 +219,6 @@ function AdminLink() {
 
 export default function Settings(props: {
   workspace?: string | null;
-  /** Su nombre: con él se avisa si la atención que se ve es de otra cuenta. */
-  workspaceName?: string | null;
-  /** Id del workspace abierto, o la clave de uno que solo tiene agentes. */
-  agentsWorkspace?: string | null;
   activityMachine?: string | null;
   onClose: () => void;
   /** Con qué entrada o pestaña abrir: un id de `settings-entries.ts`, viejo o nuevo. */
@@ -327,7 +317,7 @@ export default function Settings(props: {
       setEstadoSuperficies({ k: "loading" });
       cargarSuperficies();
     },
-  }, props.proyectos, () => props.workspace ?? null, () => props.activityMachine ?? null, () => props.agentsWorkspace ?? null);
+  }, props.proyectos, () => props.workspace ?? null, () => props.activityMachine ?? null);
   const ENTRADAS = entradasDe(pestanas);
 
   // Sin soporte del motor activo, Secretos no se ofrece; su enlace directo sí abre el aviso.

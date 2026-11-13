@@ -1,7 +1,7 @@
 import { PlatformSessionError } from "./platform-session.ts";
 
 /** One unresolved intent at a time; a receipt acknowledges an operation, not current state. */
-export function workspaceSelection(api: { active(): Promise<string>; select(id: string, key: string): Promise<unknown> }, key: () => string = () => crypto.randomUUID()) {
+export function workspaceSelection(api: { active(): Promise<string | null>; select(id: string, key: string): Promise<unknown> }, key: () => string = () => crypto.randomUUID()) {
   let pending: { id: string; key: string; phase: "unknown" | "confirmed" } | null = null;
   let active: string | null = null;
   let running = false;

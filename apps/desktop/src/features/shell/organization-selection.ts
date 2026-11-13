@@ -9,6 +9,7 @@
  *
  * Sin APIs del DOM ni de Solid: el reloj y la clave se inyectan; `subscribe` avisa cambios.
  */
+import { announces, capabilityList } from "@terminus/computers";
 
 export type Organization = { id: string; name: string; plan?: string; role?: string };
 
@@ -74,14 +75,9 @@ export function isOrganizationSelectionRequired(e: unknown): boolean {
   return (status === undefined || status === 403) && codeOf(e) === SELECTION_REQUIRED;
 }
 
-/** `true` si la capacidad v1 está anunciada y no `unavailable`; enum de estado abierto (desconocido = no). */
+/** `true` si `identity.organizations` está anunciada en v1 y `available` (lectura común con la web y Machines). */
 export function announcesOrganizations(body: unknown): boolean {
-  const items = record(body)?.items;
-  if (!Array.isArray(items)) return false;
-  return items.some((raw) => {
-    const c = record(raw);
-    return c?.name === CAPABILITY && c.version === 1 && (c.status === "available" || c.status === "degraded");
-  });
+  return announces(capabilityList(body), CAPABILITY);
 }
 
 const defaultSchedule = (run: () => void, ms: number) => {

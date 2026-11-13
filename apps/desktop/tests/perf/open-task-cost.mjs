@@ -99,6 +99,10 @@ function responses(longTurns) {
     long: longTurns,
   };
   return {
+    // Sin sesión de Danil, Rust contesta como sin sesión (401 → `denied`, sin reintento), igual que
+    // `local-fleet`. Sin esto la orden fallaba y Desk reintentaba la nube cada ~1 s (#845): bajo carga
+    // ese reintento caía dentro de la medida y contaba como coste de abrir la tarea.
+    danil_edge_fetch: () => ({ status: 401, body: null }),
     window_ready: null,
     window_vitals: null,
     setup_required: false,
