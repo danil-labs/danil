@@ -75,6 +75,8 @@ export type SocketLike = {
 export type SocketFactory = (url: string, protocols?: string[]) => SocketLike;
 
 export const SUBPROTOCOL = "danil.computers.v1";
+/** El canal de datos de mvp-v1 (`machine-session.v1.md`); con ticket se ofrece primero y el puente de hoy elige el viejo. */
+export const MACHINE_SESSION_SUBPROTOCOL = "danil.machine-session.v1";
 const OPEN = 1;
 const BACKOFF = [500, 1000, 2000, 5000, 10000];
 const PING_EVERY = 20_000;
@@ -312,7 +314,7 @@ export class RelaySession {
     }
     if (this.closed) return;
     // Un WebSocket de navegador no puede poner Authorization; el relay rechaza el token en la query.
-    const protocols = [SUBPROTOCOL, `${this.config.getAdmission ? "ticket" : "bearer"}.${token}`];
+    const protocols = this.config.getAdmission ? [MACHINE_SESSION_SUBPROTOCOL, SUBPROTOCOL, `ticket.${token}`] : [SUBPROTOCOL, `bearer.${token}`];
     let socket: SocketLike;
     try {
       socket = this.factory(target, protocols);

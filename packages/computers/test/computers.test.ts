@@ -87,6 +87,18 @@ test("el JWT va en los subprotocolos, nunca en la URL", async () => {
   relay.close();
 });
 
+test("con ticket ofrece danil.machine-session.v1 y el viejo, nunca bearer.*", async () => {
+  FakeSocket.all = [];
+  const relay = new RelaySession(
+    { endpoint: "https://computers.example", computerId: "cmp_a", getAdmission: async () => ({ url: "wss://machines.danil.ai/v1/machines/cmp_a/session", ticket: "t1" }) },
+    (url, protocols) => new FakeSocket(url, protocols),
+  );
+  relay.start();
+  await tick();
+  assert.deepEqual(FakeSocket.all[0].protocols, ["danil.machine-session.v1", SUBPROTOCOL, "ticket.t1"]);
+  relay.close();
+});
+
 test("una llamada pendiente se reenvía con el mismo id al reconectar, y `cached` llega aparte", async () => {
   const relay = session();
   await tick();
