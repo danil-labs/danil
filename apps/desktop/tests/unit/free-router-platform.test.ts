@@ -201,7 +201,7 @@ test("signing out drops local authority at once, then deletes this session's bin
   await clock.advance(600_000);
   assert.equal(sent.filter((s) => s.path === `${BASE}/grant`).length, 1, "no renewal after logout");
   const deletes = sent.filter((s) => s.method === "DELETE" && s.path.includes("/bindings/"));
-  assert.ok(deletes.length >= 2, "the binding DELETE is retried in the background");
+  assert.ok(deletes.length >= 2, "the binding DELETE is retried within the logout budget");
   assert.ok(deletes.every((d) => d.key === deletes[0].key), "with one key");
   const bound = deletes.length;
   await clock.advance(24 * 3_600_000);
@@ -357,4 +357,16 @@ test("no_access is definitive: the challenge is not retried and does not burn mo
   const { router, sent } = lab({ edge: (r) => (r.path.endsWith("/challenge") ? { status: 403, body: { code: "no_access" } } : undefined) });
   await assert.rejects(router.link(SCOPE), (e: { code?: string }) => e.code === "no_access");
   assert.equal(sent.filter((s) => s.path.endsWith("/challenge")).length, 1);
+});
+
+test("sign-out closes every union before waiting for the cloud", async () => {
+  const order: string[] = [];
+  const { router } = lab({
+    edge: (r) => { if (r.method === "DELETE" && r.path.includes("/bindings/")) order.push("delete"); return undefined; },
+    engine: (c) => { if (c.command === "set_free_router_union" && !c.args.sub) order.push("union-null"); return undefined; },
+  });
+  await router.link(SCOPE);
+  await router.grant(SCOPE);
+  await router.signOut("user_A");
+  assert.deepEqual(order, ["union-null", "delete"]);
 });
