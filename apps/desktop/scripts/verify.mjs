@@ -713,6 +713,7 @@ const steps = [
   ["Successful maintenance does not notify and dismissed failures do not repeat", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/activity-notice.test.mjs")], root],
   ["With tasks working, restart or quit waits for them or stops the ones it names", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/update-wait.test.mjs")], root],
   ["A reply with a visual does not vanish from chat even if the turn is not saved or the visual cannot be read", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/chat-turn-unsaved.test.mjs")], root],
+  ["Deleting tasks asks to accept only the members with listed losses, offers accept all and resets the review on a new inspection", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/delete-task-dialog.test.mjs")], root],
   ["What is sent into the live turn goes out once, even on repeated presses or if the engine does not return the turn", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/chat-steer-once.test.mjs")], root],
   ["An agent that refuses a mid-turn message keeps it queued, stops offering the gesture and never shows the executor's internal code", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/chat-steer-refused.test.mjs")], root],
   ["«Stop and send» stops the turn and lets the queued message out instead of keeping it retained", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/chat-stop-and-send.test.mjs")], root],

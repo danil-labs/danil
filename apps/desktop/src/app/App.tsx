@@ -5223,14 +5223,16 @@ export default function App() {
   const [deletingEditors, setDeletingEditors] = createSignal<{ workspace: string | null; ids: string[] } | null>(null);
   const editorDeletionLocked = (id: string) => deletingEditors()?.workspace === workspaceActivo() && deletingEditors()?.ids.includes(id) === true;
 
-  function deleteTask(project: string, id: string) {
+  function deleteTask(project: string, id: string, members?: number) {
+    // One deletion at a time: its preview and consent belong to the task that started it.
+    if (deleteTarget()) return;
     const machine = deLaTarea(id)?.headers["x-terminus-machine"] ?? machines().find(item => item.local || item.active)?.id;
     const target = machines().find(item => item.id === machine);
     const folderNames = new Map(projectList().map(folder => [folder.id, folder.name]));
     setDeleteTarget({
       machineName: machine ? machineName(machine) : t("shell.machines.this_computer"),
       folderName: folder => folderNames.get(folder) || folder || t("shell.sidebar.view.no_folder"),
-      project, id, workspace: workspaceActivo(),
+      project, id, workspace: workspaceActivo(), members,
       supported: target?.features?.includes("task_lifecycle_v1") === true,
       options: opcionesDeLaTarea(id, workspaceActivo()),
       panelId: task => machine ? senderTaskId(machine, task) : task,
@@ -7251,7 +7253,7 @@ export default function App() {
       carpetaDe: () => projectList().find(item => item.id === folder)?.name,
       destinos: projectList().filter(item => item.id !== folder).map(item => ({ id: item.id, name: item.name })),
       onPick: id => { void abrirSesion(folder, id); },
-      onDelete: id => void deleteTask(folder, id),
+      onDelete: (id, members) => void deleteTask(folder, id, members),
       onMove: (id, destination) => void moverSesion(folder, id, destination),
       onEtapa: (id, stage) => void etaparSesion(folder, id, stage),
       onRenombrar: (id, title) => void renombrarSesion(folder, id, title),
@@ -7582,7 +7584,7 @@ export default function App() {
               projectOf: row => folderOf(row.id), destinosDe: row => projectList().filter(item => item.id !== folderOf(row.id)).map(item => ({ id: item.id, name: item.name })),
               de: de(), current: null, vivas: vivas(), aprobando: permissions().map(item => item.session),
               destinos: projectList().filter(item => item.id !== de()).map(item => ({ id: item.id, name: item.name })),
-              onDelete: id => void deleteTask(folderOf(id), id),
+              onDelete: (id, members) => void deleteTask(folderOf(id), id, members),
               onMove: (id, destination) => void moverSesion(folderOf(id), id, destination),
               onEtapa: (id, stage) => void etaparSesion(folderOf(id), id, stage),
               onRenombrar: (id, title) => void renombrarSesion(folderOf(id), id, title),
@@ -8331,7 +8333,7 @@ export default function App() {
               onNueva={() => nuevaSesion(p().id)}
               onAbrir={(id) => void abrirSesion(p().id, id)}
               onHablarCon={(name) => hablarConEncargado(p().id, name)}
-              onDelete={(id) => void deleteTask(p().id, id)}
+              onDelete={(id, members) => void deleteTask(p().id, id, members)}
               onMove={(id, a) => void moverSesion(p().id, id, a)}
               onEtapa={(id, etapa) => void etaparSesion(p().id, id, etapa)}
               onPin={(id, pinned) => fijarSesion(p().id, id, pinned)}
@@ -8972,7 +8974,7 @@ export default function App() {
               onAbrirProyecto={(id, machine) => { abrirProyecto(id); enLaMaquinaDelGrupo(machine); }}
               /* El proyecto viaja en el mismo gesto que abre el borrador. */
               onNuevaTareaEn={(id, machine) => { nuevaSesion(id); enLaMaquinaDelGrupo(machine); }}
-              onDelete={(p, id) => deleteTask(p, id)}
+              onDelete={(p, id, members) => deleteTask(p, id, members)}
               onMove={(p, id, a) => void moverSesion(p, id, a)}
               onEtapa={(p, id, etapa) => void etaparSesion(p, id, etapa)}
               onPin={fijarSesion}
