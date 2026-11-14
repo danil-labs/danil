@@ -19,6 +19,13 @@ export function freeRouterEngine(options?: InvokeOptions): EngineCall {
   return (command, args) => orders[command]?.(args) ?? Promise.reject("free_router.invalid_request");
 }
 
+/** Lo que anuncia el motor de la máquina de ese workspace, según `machine_list`; sin dato, nada. */
+export async function freeRouterFeatures(policy: { destination_machine?: string }): Promise<readonly string[]> {
+  const machines = await invoke<{ id: string; active?: boolean; features?: readonly string[] }[]>("machine_list");
+  const machine = machines.find((m) => (policy.destination_machine ? m.id === policy.destination_machine : m.active));
+  return machine?.features ?? [];
+}
+
 /** Desk: `danil_edge_fetch` pone el Bearer en Rust y contesta el status tal cual; sin red rechaza y se reintenta. */
 export const freeRouterDeskEdge: EdgeSend = async (method, path, body, key) => {
   const reply = await edgeFetch(method, path, body, key);

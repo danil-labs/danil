@@ -22,7 +22,7 @@ import { webOrganizationSource } from './organizations';
 import { sessionPromoRedemption } from './promo-redemption';
 import './phrases';
 import { freeModelScope } from '../lib/free-model-policy';
-import { freeRouterEngine, freeRouterWebEdge } from '../features/settings/free-router-adapters';
+import { freeRouterEngine, freeRouterFeatures, freeRouterWebEdge } from '../features/settings/free-router-adapters';
 import { setFreeRouterHost, signOutPlatform } from '../features/settings/free-router-session';
 
 declare const __DANIL_WEB_RELAY_ORIGINS__: string[];
@@ -240,7 +240,7 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
         disposeGate = undefined;
         mountedBefore = true;
         // El Free router de plataforma con la cookie de esta sesión y su workspace activo (`/me.workspace`).
-        setFreeRouterHost({ edge: freeRouterWebEdge(transport), engine: policy => freeRouterEngine(policy ? freeModelScope(policy) : undefined),
+        setFreeRouterHost({ edge: freeRouterWebEdge(transport), engine: policy => freeRouterEngine(policy ? freeModelScope(policy) : undefined), features: freeRouterFeatures,
           identity: async () => (person ? { sub: person.id, list: { active_workspace_id: person.workspace, items: rows() } } : null) });
         windowApp = mountWindow({ machines, initialMachines, permits, relayOrigin: __DANIL_WEB_RELAY_ORIGINS__[0],
           profile: webAccountProfile(transport, () => person), onUnauthorized: expired,

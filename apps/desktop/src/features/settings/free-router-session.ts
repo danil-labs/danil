@@ -1,6 +1,6 @@
 /** El Free router de plataforma de esta ventana: un anfitrión (Desk o web) y un cliente por motor; sin anfitrión, cerrado. */
 import type { FreeModelPolicy } from "../../lib/free-model-policy.ts";
-import { createFreeRouterPlatform, platformScope, type EdgeSend, type EngineCall, type FreeRouterPlatform, type FreeRouterScope } from "./free-router-platform.ts";
+import { createFreeRouterPlatform, PLATFORM_FEATURE, platformScope, type EdgeSend, type EngineCall, type FreeRouterPlatform, type FreeRouterScope } from "./free-router-platform.ts";
 
 export type FreeRouterHost = {
   edge: EdgeSend;
@@ -8,6 +8,8 @@ export type FreeRouterHost = {
   identity: () => Promise<{ sub: string; list: unknown } | null>;
   /** Las órdenes del motor que sirve ese workspace del motor; `null`, el motor de la máquina activa. */
   engine: (policy: FreeModelPolicy | null) => EngineCall;
+  /** Lo que anuncia el motor de ese workspace (`status.service_features`). */
+  features: (policy: FreeModelPolicy) => Promise<readonly string[]>;
 };
 
 /** El código con que el motor nuevo contesta `set_provider_consent` en un workspace que no es personal. */
@@ -47,15 +49,17 @@ async function scopeOf(policy: FreeModelPolicy, h: FreeRouterHost): Promise<Free
 /** Activar en un workspace de plataforma: el sí en `workspaces` sobre el texto que vio la persona, el vínculo y el pase. */
 export async function activatePlatform(policy: FreeModelPolicy): Promise<void> {
   const h = host;
-  if (!h) throw closed();
+  if (!h || !(await announced(policy, h))) throw closed();
   const scope = await scopeOf(policy, h);
   const router = routerFor(policy, h);
   const state = await router.read(scope.account);
   if (state.kind !== "ready") throw closed(state.kind === "unavailable" ? state.code : undefined);
   if (!state.offered) throw closed("not_offered");
   // Se acepta solo la política que la persona leyó: otra versión o proveedores es otro texto.
-  const same = state.policy.version === policy.version && state.policy.providers.length === policy.providers.length &&
-    state.policy.providers.every((p) => policy.providers.includes(p));
+  const shown = new Set(policy.providers);
+  const offered = new Set(state.policy.providers);
+  const same = state.policy.version === policy.version && shown.size === policy.providers.length &&
+    offered.size === state.policy.providers.length && offered.size === shown.size && [...offered].every((p) => shown.has(p));
   if (!same) throw closed("policy_changed");
   if (!state.consent.accepted) await router.accept(scope.account, { revision: state.consent.revision, ...state.policy });
   await router.link(scope);
@@ -72,8 +76,21 @@ export async function withdrawPlatform(policy: FreeModelPolicy): Promise<void> {
   scopes.delete(keyOf(policy));
 }
 
-/** Antes de soltar la sesión: cada motor conocido suelta a esta persona (también tras reiniciar la ventana) y se borran sus bindings. */
-export async function signOutPlatform(): Promise<void> {
+/**
+ * Antes de soltar la sesión: cada motor conocido suelta a esta persona (también tras reiniciar la ventana) y se borran sus
+ * bindings. Nunca rechaza y termina en `budgetMs`: la revocación de la sesión no puede esperar a un motor o un borde caídos.
+ */
+export async function signOutPlatform(budgetMs = 4_000): Promise<void> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const limit = new Promise<void>((resolve) => {
+    timer = setTimeout(resolve, budgetMs);
+    (timer as unknown as { unref?: () => void }).unref?.();
+  });
+  await Promise.race([release().catch(() => {}), limit]);
+  clearTimeout(timer);
+}
+
+async function release(): Promise<void> {
   const h = host;
   if (!h) return;
   const who = await h.identity().catch(() => null);
@@ -86,6 +103,15 @@ export async function signOutPlatform(): Promise<void> {
     await Promise.all([...subs].map((sub) => router.signOut(sub, workspaces).catch(() => {})));
   }));
   scopes.clear();
+}
+
+const announced = (policy: FreeModelPolicy, h: FreeRouterHost) =>
+  h.features(policy).then((f) => f.includes(PLATFORM_FEATURE), () => false);
+
+/** Camino de plataforma: el motor anuncia `free_router_platform_v1` y marca la política; si no, consentimiento local. */
+export async function usesPlatform(policy: FreeModelPolicy): Promise<boolean> {
+  const h = host;
+  return !!h && isPlatformPolicy(policy) && (await announced(policy, h));
 }
 
 /** El motor marca la política de un workspace que no es personal (campo aditivo); sin la marca, camino personal. */

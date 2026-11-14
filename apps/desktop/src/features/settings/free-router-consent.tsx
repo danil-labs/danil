@@ -6,7 +6,7 @@ import { acceptedFreeModelPolicy, freeModelScope, sameFreeModelPolicy, type Free
 import { loadFreeModelPolicy } from "../../lib/free-model-policy-load.ts";
 import type { Frase } from "../../lib/prose";
 import { prosaDe } from "../../ui/Failure";
-import { activatePlatform, isPlatformPolicy, needsPlatform, withdrawPlatform } from "./free-router-session.ts";
+import { activatePlatform, needsPlatform, usesPlatform, withdrawPlatform } from "./free-router-session.ts";
 
 const cargarDialogo = () => import("./FreeRouterConsentDialog");
 const DialogoDeConsentimiento = lazy(cargarDialogo);
@@ -74,8 +74,9 @@ export function createFreeRouterConsent(opts: { agente: () => string; despues?: 
       await cargarDialogo();
       // En un workspace de plataforma no hay oferta local: el texto se lee sin referencia y decide `workspaces`.
       const shown = texto()?.policy;
-      const policy = shown && isPlatformPolicy(shown) ? shown : await politicaConReintento();
-      if (!policy || (!policy.enabled && !isPlatformPolicy(policy))) throw new Error(t("settings.accounts.free.unavailable"));
+      const platformShown = !!shown && (await usesPlatform(shown));
+      const policy = platformShown ? shown : await politicaConReintento();
+      if (!policy || (!policy.enabled && !platformShown)) throw new Error(t("settings.accounts.free.unavailable"));
       setTexto({ lineas: policy.lines, version: policy.version, policy });
     } catch (e) {
       // Sin texto vigente el diálogo no ofrece aceptar; el error queda dentro.
@@ -94,7 +95,7 @@ export function createFreeRouterConsent(opts: { agente: () => string; despues?: 
       if (!policy) throw new Error(t("settings.accounts.free.unavailable"));
       const startup = await invoke<FreeModelStartup>("workspaces_startup");
       if (startup.active !== policy.workspace_id) throw new Error(t("settings.accounts.free.policy_changed"));
-      if (isPlatformPolicy(policy)) {
+      if (await usesPlatform(policy)) {
         await platform(valor, policy);
         return;
       }

@@ -97,8 +97,9 @@ export function signInWithWorkspace(name: string, _workspace: string): Promise<D
 }
 
 /** Cierra la sesión de esta instalación en `identity` y la borra del llavero; antes, el Free router suelta a la persona. */
-export async function signOut(): Promise<DanilConnectStatus> {
-  await signOutPlatform().catch(() => {});
+export async function signOut(budgetMs?: number): Promise<DanilConnectStatus> {
+  // Acotado y sin rechazo: la revocación corre aunque el motor siga conectando.
+  await signOutPlatform(budgetMs).catch(() => {});
   cancelEdgeWrites();
   forgetMachineNames();
   return invoke<DanilConnectStatus>("danil_sign_out");

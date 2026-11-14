@@ -277,7 +277,13 @@ pub(crate) fn request_keyed(
 ) -> Result<Reply, Fail> {
     let agent = agent();
     let auth = bearer.map(|t| format!("Bearer {t}"));
-    // Las escrituras del contrato exigen `Idempotency-Key`; cada método sale con el suyo.
+    // Las escrituras del contrato exigen `Idempotency-Key`: sin clave no salen, y cada método sale con el suyo.
+    if method != "GET" && key.is_empty() {
+        return Err(Fail::Refused {
+            status: 400,
+            code: "invalid_request".into(),
+        });
+    }
     let key = (!key.is_empty()).then_some(key);
     let sent = match method {
         "GET" => {
