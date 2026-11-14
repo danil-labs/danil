@@ -93,3 +93,16 @@ test("B4 G: Desk listComputers transitorio conserva lista previa", async () => {
   assert.ok(await until(() => failed)); await sleep(50);
   assert.ok(app.w.document.querySelector('[data-sesion="cmp_vm~t1"]')); assert.deepEqual(app.failures, []);
 });
+
+for (const [status, code] of [[401, null], [403, null], [404, null], [501, null], [403, "license_required"]]) test(`B5 G: lista válida seguida de ${status}/${code ?? "HTTP"} invalida la flota`, async t => {
+  const { app, f, reads, read } = await web(t, `B5-${status}-${code}`);
+  assert.deepEqual((await app.w.__TAURI_INTERNALS__.invoke("machine_list")).map(m => m.id).sort(), ["m1", "m2"], "parte de una flota válida");
+  const before = reads();
+  read(() => code ? Response.json({ code }, { status }) : new Response(null, { status }));
+  f.relays.m1.setState("offline");
+  assert.ok(await until(() => reads() > before)); await sleep(150);
+  assert.deepEqual(await app.w.__TAURI_INTERNALS__.invoke("machine_list"), [], "una respuesta definitiva no conserva máquinas revocadas");
+  if (status === 401) assert.equal(app.w.document.querySelector('[data-tira]'), null, "la sesión invalidada desmonta la ventana");
+  else assert.ok(app.w.document.querySelector('[data-machines-unavailable]'), "la falta de acceso o de servicio es visible");
+  assert.deepEqual(app.failures, []);
+});
