@@ -11,7 +11,7 @@ const picker = app => app.w.document.querySelector('[aria-label="Ejecutar en"]')
 const connecting = app => app.w.document.querySelector('[data-machine-connecting]');
 const rows = app => app.w.__TAURI_INTERNALS__.invoke("machine_list");
 const changed = (app, name = "harness:account-computers") => app.w.dispatchEvent(new app.w.CustomEvent(name));
-async function mount(name, read, { remembered = false, extra = {}, signed = false, nativeList } = {}) {
+async function mount(name, read, { remembered = false, extra = {}, signed = false, nativeList, relay = () => Response.json({ computers: [HOME] }) } = {}) {
   let requests = 0;
   const sends = [];
   const f = fleet({ cmp_cloud: { state: "online", table: remote("Nube", "Tarea nube", { send_message: args => { sends.push(args); return "t9"; } }) }, cmp_b: { state: "online", table: remote("B", "Tarea B") } });
@@ -28,7 +28,7 @@ async function mount(name, read, { remembered = false, extra = {}, signed = fals
   }), ...(extra.send_message ? { send_message: extra.send_message } : {}) }, undefined, remembered ? { "harness.layout.machines.run_on": JSON.stringify({ w: "cmp_cloud" }) } : {}, { beforeImport: () => {
     globalThis.WebSocket = class { constructor(url, protocols) { return new f.Socket(url.replace("/v1/machines/", "/v1/computers/"), protocols); } };
     const previous = globalThis.fetch;
-    const fetch = (url, init) => String(url).startsWith("https://relay.test/v1/computers") ? Promise.resolve(Response.json({ computers: [HOME] })) : previous(url, init);
+    const fetch = (url, init) => String(url).startsWith("https://relay.test/v1/computers") ? Promise.resolve(relay()) : previous(url, init);
     fetch.__jsdomApp = true;
     globalThis.fetch = fetch;
   } });
@@ -237,5 +237,51 @@ for (const order of ["old-first", "latest-first"]) test(`C14 R: whoAmI retenidos
   assert.ok(await until(() => app.w.document.querySelector('[data-machine-option="cmp_cloud"]')), "la identidad vigente mantiene su flota");
   assert.equal(app.w.document.querySelector('[data-machine-option="cmp_b"]'), null);
   assert.deepEqual(tokens, [SESSION_A.account], "una identidad vieja no invalida la época ni pide token de otra cuenta");
+  assert.deepEqual(app.failures, []);
+});
+
+test("C13b G: recordada resuelta con conexión unknown e inventario inicial sí muestra Conectando", async () => {
+  const gate = deferred();
+  const { app, requests } = await mount("C13b", () => gate.promise, { remembered: true, nativeList: [
+    { id: "local", local: true, active: false, on: true, hosts: true },
+    { id: "cmp_cloud", local: false, active: true, on: false, connection: "unknown", hosts: true },
+  ] });
+  assert.equal(requests(), 1, "el inventario inicial sigue pendiente");
+  const waiting = !!connecting(app);
+  gate.resolve(ok([])); await sleep(100);
+  assert.equal(waiting, true, "sin estado del canal la elegida espera aunque la fila esté resuelta");
+  assert.deepEqual(app.failures, []);
+});
+
+// H1 (#97): una salida definitiva de check() resuelve el inventario; si no, «Conectando…» y la cabecera al cmp_cloud ausente quedan para siempre.
+const DENIED = {
+  license: { relay: () => Response.json({ error: { code: "license_required" } }, { status: 403 }) },
+  unauthorized: { relay: () => Response.json({ error: { code: "unauthorized" } }, { status: 401 }) },
+  // El token vale lo justo para no guardarse: cada comprobación lo vuelve a pedir y el fallo llega también tras el evento.
+  token: { token: () => { throw Object.assign(new Error("command"), { detail: "command" }); }, fresh: () => ({ ...TOKEN(), expires_at: Date.now() }) },
+};
+for (const when of ["start", "danil:organization-changed"]) for (const [kind, deny] of Object.entries(DENIED)) test(`C15 G: ${kind} en ${when} resuelve inventario y envía local`, async () => {
+  let denied = when === "start"; const sends = [];
+  const { app } = await mount(`C15-${kind}-${when}`, () => ok(), { signed: true, remembered: true,
+    relay: () => denied && deny.relay ? deny.relay() : Response.json({ computers: [HOME] }),
+    extra: {
+      account_relay_token: () => denied && deny.token ? deny.token() : (deny.fresh ?? TOKEN)(),
+      send_message: (args, options) => { sends.push({ args, options }); if (options?.headers?.["x-terminus-machine"] === "cmp_cloud") throw { what: "unknown_machine", detail: "unknown_machine" }; return "t1"; },
+    } });
+  if (when !== "start") {
+    await ready(app);
+    app.w.document.querySelector('[data-machine-option="cmp_cloud"]').click();
+    assert.ok(await until(() => picker(app)?.textContent.includes("Nube")), "la nube elegida");
+    denied = true; changed(app, when);
+    assert.ok(await until(() => !app.w.document.querySelector('[data-machine-option="cmp_cloud"]') && !picker(app)?.textContent.includes("Nube")), "desaparece la nube");
+  }
+  await sleep(500);
+  const waiting = !!connecting(app);
+  const remembered = JSON.parse(app.w.localStorage.getItem("harness.layout.machines.run_on") ?? "{}").w;
+  await write(app, "Tras la salida");
+  assert.ok(await until(() => sends.length > 0), "la orden sale");
+  assert.equal(remembered, "cmp_cloud", "la recordada sigue siendo la nube ausente");
+  // Sin «Conectando…» por inventario y sin cabecera al cmp_cloud ausente: la orden cae a la activa, la local (`draftMachine`).
+  assert.deepEqual({ connecting: waiting, machine: sends[0].options?.headers?.["x-terminus-machine"] ?? null }, { connecting: false, machine: "local" });
   assert.deepEqual(app.failures, []);
 });
