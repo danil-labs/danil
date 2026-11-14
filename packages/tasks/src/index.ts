@@ -60,6 +60,7 @@ export { type TaskTreeRow, type TaskBranch, taskIdentity, taskParent, buildTaskT
 export { type WorkState, WORK_STATES, workStateOf } from "./workState.ts";
 export { type ModelSession, type Surface, type SurfaceModel, chipModel, menuSurfaces, surfaceHas, surfaceOf } from "./surfaces.ts";
 
+export { DANIL_CREDITS_MODEL, type CreditsBalanceState, type DanilService, creditsBalanceState, danilServiceOf } from "./danil-services.ts";
 export { modelPresentation, routerDiscovery, routerAvailable, routerOfferState, type RouterOfferState } from "./model-presentation.ts";
 export {
   FREE_ROUTER_MODEL,

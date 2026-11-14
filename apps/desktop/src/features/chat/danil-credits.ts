@@ -1,6 +1,8 @@
+import { DANIL_CREDITS_MODEL } from "../../../../../packages/tasks/src/danil-services.ts";
+
 // El engine anuncia este modelo solo con una delegación vigente del pagador.
 export const DANIL_CREDITS = Object.freeze({
-  modelId: "danil-credits/deepseek/deepseek-v4.1-flash",
+  modelId: DANIL_CREDITS_MODEL,
   upstreamModelId: "deepseek/deepseek-v4.1-flash",
 } as const);
 

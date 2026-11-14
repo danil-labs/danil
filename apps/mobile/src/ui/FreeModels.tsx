@@ -60,7 +60,6 @@ export function FreeModels({ hosts, scopeOf, theme, tick }: { hosts: readonly Ho
       <View style={styles.head}>
         <BrandMark id="danil" size={18} color={theme.text} />
         <Text style={[styles.title, { color: theme.text }]}>{t("composer.free_models")}</Text>
-        <Text style={{ color: theme.textMuted, fontSize: TEXT.ui }}>{w("settings.ai_providers.free_detail")}</Text>
       </View>
       {rows.map((row) => {
         const id = `${row.host.id}/${row.provider}`;

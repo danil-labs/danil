@@ -20,6 +20,7 @@ import { BrandMark } from "../ui/BrandMark";
 import { openTask } from "../ui/components";
 import { Icon } from "../ui/Icon";
 import { useTheme } from "../ui/theme";
+import { modelLabel } from "../lib/model-presentation";
 
 /**
  * La vista previa de una tarea al mantener pulsada su tarjeta: la tarjeta
@@ -89,7 +90,7 @@ export default function Preview() {
         <Field label={previewLabel(lang, "provider")}>
           <BrandMark id={task.provider} size={14} color={theme.text} />
           <Text numberOfLines={1} style={[styles.value, { color: theme.text }]}>
-            {preview.model ?? previewLabel(lang, "default_model")}
+            {task.model ? modelLabel(task.model, { credits: t("services.credits"), router: t("composer.free_models") }) : previewLabel(lang, "default_model")}
           </Text>
           <Text numberOfLines={1} style={[styles.value, { color: theme.textMuted, flex: 0 }]}>{provider?.label ?? task.provider}</Text>
         </Field>

@@ -1,4 +1,4 @@
-import { FREE_ROUTER_MODEL, FREE_ROUTER_OPENCODE, OPENCODE } from "@terminus/tasks";
+import { danilServiceOf, FREE_ROUTER_MODEL, FREE_ROUTER_OPENCODE, OPENCODE } from "@terminus/tasks";
 import Check from "lucide-solid/icons/check";
 import ChevronDown from "lucide-solid/icons/chevron-down";
 import Lock from "lucide-solid/icons/lock";
@@ -31,12 +31,12 @@ import { DANIL_CREDITS } from "./danil-credits";
 
 const DanilServices = lazy(() => import("./DanilServices"));
 
-/** Solo estos dos ids se presentan como servicios de Danil; otros gratuitos siguen en la lista. */
-const SERVICIOS = new Set<string>([DANIL_CREDITS.modelId, FREE_ROUTER_MODEL]);
-const esServicio = (opcion: OpcionDeModelo | undefined) => !!opcion && SERVICIOS.has(opcion.model.id);
+/** Solo los dos ids de `danilServiceOf` se presentan como servicios de Danil; otros gratuitos siguen en la lista. */
+const esServicio = (opcion: OpcionDeModelo | undefined) => !!opcion && danilServiceOf(opcion.model.id) !== null;
 function nombreDeServicio(id: string | undefined) {
-  if (id === DANIL_CREDITS.modelId) return t("chat.credits.label");
-  if (id === FREE_ROUTER_MODEL) return t("surfaces.label.free");
+  const servicio = danilServiceOf(id);
+  if (servicio === "credits") return t("chat.credits.label");
+  if (servicio === "router") return t("surfaces.label.free");
   return null;
 }
 const gruposDeModelos = (models: OpcionDeModelo[], query: string) =>
