@@ -107,7 +107,24 @@ for (const [status, code] of [[401, null], [403, null], [404, null], [501, null]
   assert.deepEqual(app.failures, []);
 });
 
+/** Reloj de los temporizadores largos (≥ 30 s, el sondeo de la sesión): se retienen y se disparan a demanda; los cortos siguen reales. */
+function longTimers(t) {
+  const real = globalThis.setTimeout;
+  const held = [];
+  globalThis.setTimeout = (fn, ms, ...args) => {
+    if (!(ms >= 30_000)) return real(fn, ms, ...args);
+    const entry = { fn, args, cleared: false, unref() { return this; }, ref() { return this; }, hasRef: () => false };
+    held.push(entry);
+    return entry;
+  };
+  const realClear = globalThis.clearTimeout;
+  globalThis.clearTimeout = timer => (held.includes(timer) ? (timer.cleared = true) : realClear(timer));
+  t.after(() => { globalThis.setTimeout = real; globalThis.clearTimeout = realClear; });
+  return { fire: () => { for (const e of held.splice(0)) if (!e.cleared) e.fn(...e.args); } };
+}
+
 test("B5 G: el aviso de sin acceso se abre aunque el aviso naciera sin él, y se va con una lista válida", async t => {
+  const clock = longTimers(t);
   const { app, f, reads, read } = await web(t, "B5-visible-after-mount");
   // El aviso ya está montado y la flota es válida: nace sin la falta de acceso.
   assert.ok(await until(() => app.w.document.querySelector("[data-web-sync]")));
@@ -119,8 +136,9 @@ test("B5 G: el aviso de sin acceso se abre aunque el aviso naciera sin él, y se
   assert.ok(await until(() => app.w.document.querySelector("[data-machines-unavailable]")), "pasa de false a true y se ve");
   before = reads();
   read(() => Response.json({ items: [machine("m1"), machine("m2")] }));
-  f.relays.m1.setState("online");
-  assert.ok(await until(() => reads() > before));
+  // Sin m1 en la flota nada local vuelve a leer: lo hace el sondeo de la sesión (window-session, POLL_MAX_MS).
+  clock.fire();
+  assert.ok(await until(() => reads() > before), "el sondeo vuelve a leer /v1/machines sin recargar");
   assert.ok(await until(() => app.w.document.querySelector('[data-machine-row="m2"]')));
   assert.ok(await until(() => app.w.document.querySelector("[data-machines-unavailable]") === null), "con una lista válida no se queda pegado");
   assert.deepEqual(app.failures, []);
