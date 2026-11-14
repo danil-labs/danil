@@ -119,7 +119,12 @@ const RECOVERY: Record<string, "retry" | "relink" | "union"> = {
 
 export function createFreeRouterPlatform(deps: FreeRouterDeps) {
   const now = deps.now ?? Date.now;
-  const schedule = deps.schedule ?? ((run, ms) => { const t = setTimeout(run, ms); return () => clearTimeout(t); });
+  const schedule = deps.schedule ?? ((run, ms) => {
+    const t = setTimeout(run, ms);
+    // La renovación no mantiene vivo un proceso que ya terminó (pruebas, Node).
+    (t as unknown as { unref?: () => void }).unref?.();
+    return () => clearTimeout(t);
+  });
   const sleep = deps.sleep ?? ((ms) => new Promise<void>((resolve) => setTimeout(resolve, ms)));
   const key = deps.key ?? (() => crypto.randomUUID());
   const budgetMs = deps.budgetMs ?? 20_000;
@@ -129,8 +134,8 @@ export function createFreeRouterPlatform(deps: FreeRouterDeps) {
   const idOf = (s: FreeRouterScope) => `${s.account}\n${s.workspace}\n${s.sub}`;
 
   /** Un intento con su clave: repite lo transitorio dentro del presupuesto y nunca lo definitivo. */
-  async function send(method: EdgeMethod, path: string, body?: unknown, intent?: string): Promise<unknown> {
-    const deadline = now() + budgetMs;
+  async function send(method: EdgeMethod, path: string, body?: unknown, intent?: string, budget = budgetMs): Promise<unknown> {
+    const deadline = now() + budget;
     for (let attempt = 0; ; attempt++) {
       let last: FreeRouterRefusal;
       let wait = 0;
@@ -293,21 +298,22 @@ export function createFreeRouterPlatform(deps: FreeRouterDeps) {
     await engine("clear_free_router_grant", { workspace: scope.workspace });
   }
 
-  /** Paso 8: la unión pasa a `null` sin esperar a la nube; los DELETE de los bindings de esa sesión siguen con su presupuesto. No retira el consentimiento. */
-  async function signOut(sub: string): Promise<void> {
+  /**
+   * Paso 8: la unión pasa a `null` antes de nada y luego se espera, con un presupuesto corto, la baja de los bindings de
+   * esa sesión: después del logout ya no hay token, y lo que quede cae solo a las 24 h. No retira el consentimiento.
+   */
+  async function signOut(sub: string, cloudBudgetMs = 3_000): Promise<void> {
     const mine = [...entries.values()].filter((e) => e.scope.sub === sub);
     for (const e of mine) {
       stop(e);
       entries.delete(idOf(e.scope));
       e.epoch = ++epochs;
     }
-    await Promise.all(mine.map(async (e) => {
-      const binding = e.binding;
-      if (binding) {
-        const path = `${base(e.scope.account)}/engine-workspaces/${e.scope.workspace}/bindings/${binding.bindingId}`;
-        void send("DELETE", path, undefined, key()).catch(() => {});
-      }
-      await engine("set_free_router_union", { workspace: e.scope.workspace }).catch(() => {});
+    await Promise.all(mine.map((e) => engine("set_free_router_union", { workspace: e.scope.workspace }).catch(() => {})));
+    await Promise.all(mine.map((e) => {
+      if (!e.binding) return undefined;
+      const path = `${base(e.scope.account)}/engine-workspaces/${e.scope.workspace}/bindings/${e.binding.bindingId}`;
+      return send("DELETE", path, undefined, key(), cloudBudgetMs).catch(() => {});
     }));
   }
 

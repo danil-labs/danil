@@ -19,6 +19,9 @@ import { createOrganizationSelection } from "@terminus/computers";
 import { webOrganizationSource } from './organizations';
 import PromoRedeem from '../features/shell/PromoRedeem';
 import './phrases';
+import { freeModelScope } from '../lib/free-model-policy';
+import { freeRouterEngine, freeRouterWebEdge } from '../features/settings/free-router-adapters';
+import { setFreeRouterHost, signOutPlatform } from '../features/settings/free-router-session';
 
 declare const __DANIL_WEB_RELAY_ORIGINS__: string[];
 const FIRST_RETRY_MS = 1000;
@@ -179,7 +182,8 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
       await run(async () => { await selection.choose(id); window.location.assign(home); });
     }
     const redeemPromo = (code: string, key: string) => authorized(() => api.redeemPromo(code, key));
-    async function logout() { await run(async () => { await api.logout(); expired(); }); }
+    // El Free router suelta a la persona antes de que la cookie deje de valer.
+    async function logout() { await run(async () => { await signOutPlatform().catch(() => {}); await api.logout(); expired(); }); }
     async function load() {
       await run(async () => {
         try { setCaps(await readCapabilities(transport)); }
@@ -200,6 +204,9 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
         disposeGate?.();
         disposeGate = undefined;
         mountedBefore = true;
+        // El Free router de plataforma con la cookie de esta sesión y su workspace activo (`/me.workspace`).
+        setFreeRouterHost({ edge: freeRouterWebEdge(transport), engine: policy => freeRouterEngine(freeModelScope(policy)),
+          identity: async () => (person ? { sub: person.id, list: { active_workspace_id: person.workspace, items: rows() } } : null) });
         windowApp = mountWindow({ machines, permits, relayOrigin: __DANIL_WEB_RELAY_ORIGINS__[0],
           profile: webAccountProfile(transport), onUnauthorized: expired,
           onUnavailable: () => { setError('web.platform.unavailable'); gate(); later(); },
