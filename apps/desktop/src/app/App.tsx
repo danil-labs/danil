@@ -302,6 +302,7 @@ import { Button } from "../ui/Button";
 import { LazyPart, retryableLazy } from "../ui/LazyPart";
 import { mergeGates } from "../features/chat/permissionGates";
 import { asleep, withLastAnswer } from "../features/machines/lastAnswer";
+import { unconfirmedOpen } from "../features/machines/unconfirmedOpen";
 import { Dialog, DialogContent, DialogTitle } from "../ui/Dialog";
 import { asFailure, claveDe, detalleDe, prosaDe } from "../ui/Failure";
 import { BotonConAtajo } from "../ui/Shortcut";
@@ -379,6 +380,7 @@ export default function App() {
     }
     setContextRoot(root);
     setContextConfirmed(true);
+    setMaterialError(null);
   }
   /** Con qué modo arranca lo nuevo de este workspace. `null` es el último elegido a mano. */
   const [workspaceMode, setWorkspaceMode] = createSignal<string | null>(null);
@@ -420,8 +422,16 @@ export default function App() {
     if (found?.machine !== machine || found.workspace !== workspaceActivo()) return [];
     return found.rows ?? projectsWhileOff(machine);
   });
+  const [materialError, setMaterialError] = createSignal<string | null>(null);
+  const [taskSourcesError, setTaskSourcesError] = createSignal<string | null>(null);
+  const [draftProjectError, setDraftProjectError] = createSignal<string | null>(null);
+  const [projectReadError, setProjectReadError] = createSignal<string | null>(null);
+  const [startupReadError, setStartupReadError] = createSignal<string | null>(null);
+  const [connectionError, setConnectionError] = createSignal<string | null>(null);
+  const [readRevision, setReadRevision] = createSignal(0);
   const draftMachineOn = () => machines().find(m => m.id === draftMachine())?.on;
-  createEffect(on([workspaceActivo, draftMachine, draftMachineOn, projectList], ([workspace, machine, encendida]) => {
+  createEffect(on([workspaceActivo, draftMachine], () => setDraftProjectError(null)));
+  createEffect(on([workspaceActivo, draftMachine, draftMachineOn, projectList, readRevision], ([workspace, machine, encendida]) => {
     setDraftProjects(previous => previous?.workspace === workspace && previous.machine === machine ? previous : null);
     if (!workspace || !machine || machines().find(m => m.id === machine)?.local) return;
     if (encendida === false) {
@@ -431,15 +441,15 @@ export default function App() {
     let current = true;
     onCleanup(() => { current = false; });
     void invoke<Project[]>("list_projects", {}, { headers: { "x-terminus-machine": machine } }).then(rows => {
-      if (current) setDraftProjects({ workspace, machine, rows: rows.map(row => ({
+      if (current) { setDraftProjectError(null); setDraftProjects({ workspace, machine, rows: rows.map(row => ({
         ...row, machines: projectList().find(p => p.id === row.id)?.machines ?? [machine],
-      })) });
+      })) }); }
     }).catch(e => {
       if (!current) return;
       // Se apagó entre la lista de máquinas y la pregunta, o la pregunta la está
       // encendiendo: lo mismo que apagada.
       if (asleep(e)) setDraftProjects({ workspace, machine, rows: null });
-      else setError(prosaDe(e));
+      else setDraftProjectError(prosaDe(e));
     });
   }));
   createEffect(on(draftMachine, (machine, before) => {
@@ -1998,8 +2008,11 @@ export default function App() {
     read: async (project) => {
       const open = sesionesConPestana();
       const rows = await invoke<SessionRow[]>("list_live_sessions", { project, open });
-      pedidas.set(project, new Set(open));
-      for (const id of open) esperandoFila.delete(id);
+      // La pestaña que su máquina no confirmó no cuenta como pedida: no se cierra ni se pide en bucle.
+      const sinConfirmar = new Set(unconfirmedOpen(rows));
+      const confirmadas = open.filter((id) => !sinConfirmar.has(id));
+      pedidas.set(project, new Set(confirmadas));
+      for (const id of confirmadas) esperandoFila.delete(id);
       return rows;
     },
     apply: (update) => setSesiones(update),
@@ -2157,12 +2170,30 @@ export default function App() {
   // lo que el workspace tiene, no en qué workspace estás. Aquí un fallo no
   // vacía las listas, al revés que en `aplicar`: allá lo que quedara en
   // pantalla sería de otro cliente, aquí es de este.
+  let startupRetryRequest = 0;
+  async function retryStartupRead() {
+    const generation = sessionGeneration;
+    const workspace = workspaceActivo();
+    const request = ++startupRetryRequest;
+    const current = () => request === startupRetryRequest && generation === sessionGeneration && workspace === workspaceActivo();
+    try {
+      const startup = await invoke<Startup>("workspaces_startup");
+      if (!current()) return;
+      if (startup.bloqueo) { setBloqueo(startup.bloqueo); return; }
+      if (workspace === null) await aplicar(startup);
+      else if (startup.active === workspace) setStartupReadError(null);
+    } catch (cause) {
+      if (current() && !asleep(cause)) setStartupReadError(prosaDe(cause));
+    }
+  }
+
   async function recargarMaterial() {
     const generation = sessionGeneration;
     const request = ++materialRequest;
     const workspace = workspaceActivo();
     if (!workspace) return;
     setContextConfirmed(false);
+    setMaterialError(null);
     try {
       const arranque = await invoke<Startup>("list_workspaces");
       if (generation !== sessionGeneration || request !== materialRequest) return;
@@ -2171,7 +2202,7 @@ export default function App() {
       const root = current.context_root;
       const [, fuentes] = await Promise.all([
         invoke<Project[]>("list_projects").then(rows => {
-          if (generation === sessionGeneration && request === materialRequest) setProjectList(rows);
+          if (generation === sessionGeneration && request === materialRequest) { setProjectList(rows); setProjectReadError(null); }
           return rows;
         }),
         invoke<Source[]>("list_sources"),
@@ -2182,7 +2213,7 @@ export default function App() {
       confirmContext(root, fuentes);
     } catch (e) {
       if (generation !== sessionGeneration || request !== materialRequest || asleep(e)) return;
-      setError(prosaDe(e));
+      setMaterialError(prosaDe(e));
     }
   }
 
@@ -2291,6 +2322,10 @@ export default function App() {
     // cliente ofrecería lo que este no tiene conectado.
     void cargarSuperficies(true);
     setError(null);
+    setMaterialError(null);
+    setTaskSourcesError(null);
+    setProjectReadError(null);
+    setStartupReadError(null);
     // Ni con un solo proyecto se preselecciona. Autoseleccionar cuando la lista
     // trae uno ahorra un clic y reintroduce la sorpresa.
     setProject("");
@@ -2325,7 +2360,7 @@ export default function App() {
         if (fuentes) {
           setSources(fuentes);
           confirmContext(activo?.context_root ?? null, fuentes);
-        } else setError(t("projects.context.unavailable"));
+        } else setMaterialError(t("projects.context.unavailable"));
       }
     } catch (e) {
       if (generation !== sessionGeneration || material !== materialRequest) return;
@@ -2335,7 +2370,7 @@ export default function App() {
       if (!asleep(e)) {
         setProjectList([]);
         setSources([]);
-        setError(prosaDe(e));
+        setMaterialError(prosaDe(e));
       }
     }
     if (primeras) {
@@ -2443,6 +2478,7 @@ export default function App() {
           return;
         }
         if (workspaceRequest !== 0) return;
+        setStartupReadError(null);
         // Lo que la lista ya pintó se queda si el arranque dice lo mismo:
         // volver a aplicar cerraría la tarea que la persona ya abrió.
         if (reconciliar(aplicadaDeLista, a) === "nada") return;
@@ -2454,7 +2490,7 @@ export default function App() {
           return;
         }
         // Una máquina apagada tiene su indicador; al conectarse trae sus workspaces.
-        if (!asleep(e)) setError(prosaDe(e));
+        if (!asleep(e)) setStartupReadError(prosaDe(e));
         // La lista ya abrió la ventana: se dice el error y no se vacía lo que se está usando.
         if (aplicadaDeLista) return;
         if (enCache()) {
@@ -2479,7 +2515,7 @@ export default function App() {
       const request = ++workspaceRequest;
       void invoke<Startup>("list_workspaces")
         .then((startup) => request === workspaceRequest ? aplicar(startup) : undefined)
-        .catch((e) => { if (request === workspaceRequest && !asleep(e)) setError(prosaDe(e)); });
+        .catch((e) => { if (request === workspaceRequest && !asleep(e)) setStartupReadError(prosaDe(e)); });
     };
     window.addEventListener("harness:workspace", alMudar);
     onCleanup(() => window.removeEventListener("harness:workspace", alMudar));
@@ -2695,6 +2731,7 @@ export default function App() {
         if (page.reset || page.gap || page.streams || failingSince !== null) window.dispatchEvent(new CustomEvent("harness:service-resync"));
         // Un stream de comando cortado (árbol, git) se relee, pero no es salida en vivo perdida.
         if (page.reset || page.gap || page.streams) releerTrasHueco();
+        const affectedTurns = vivas().length > 0;
         if (page.reset) {
           deltasPorCuadro.vaciar();
           liveThreads.clear();
@@ -2702,17 +2739,18 @@ export default function App() {
           workspaceThreads.clear();
           setHilos((threads) => Object.fromEntries(Object.entries(threads).map(([id, thread]) => [id, { ...thread, vivo: [] }])));
           setPermissions([]);
-          if (vivas().length > 0) setError(t("chat.error.service_restarted"));
+          if (affectedTurns) setError(t("chat.error.service_restarted"));
           void reconcileActiveTurns();
         }
         // Un reinicio sin turnos vivos también corta el stream (`page.gap`); sin
         // esta guarda el aviso de hueco sale sin que nada se haya perdido.
-        if (page.gap && vivas().length > 0) setError(t("chat.error.service_gap"));
+        if (page.gap && !page.reset && affectedTurns) setError(t("chat.error.service_gap"));
         if (failingSince !== null) {
           failingSince = null;
-          if (error() === t("chat.error.service_unavailable") || error() === t("shell.service.engine_down") || error() === t("shell.service.engine_missing") || error() === t("shell.service.managed") || error() === t("shell.service.machine_off") || error() === t("shell.service.machine_starting")) setError(null);
+          setConnectionError(null);
         }
       } catch (e) {
+        if (disposed) return;
         // Un sondeo suelto falla al empezar un turno y el siguiente ya contesta.
         failingSince ??= Date.now();
         const sinMotor = claveDe(e) === "shell.service.engine_missing";
@@ -2722,9 +2760,9 @@ export default function App() {
         const managed = claveDe(e) === "shell.service.managed";
         const caido = sinMotor || managed || apagada || encendiendo || claveDe(e) === "shell.service.engine_down";
         // La computadora en reposo tiene su indicador, también en escritorio.
-        if (apagada || encendiendo || asleep(e)) return;
+        if (apagada || encendiendo || asleep(e)) { setConnectionError(null); return; }
         if (!disposed && Date.now() - failingSince > (caido ? 2_000 : 10_000)) {
-          setError(sinMotor ? t("shell.service.engine_missing") : managed ? t("shell.service.managed") : apagada ? t("shell.service.machine_off") : encendiendo ? t("shell.service.machine_starting") : t(caido ? "shell.service.engine_down" : "chat.error.service_unavailable"));
+          setConnectionError(sinMotor ? t("shell.service.engine_missing") : managed ? t("shell.service.managed") : apagada ? t("shell.service.machine_off") : encendiendo ? t("shell.service.machine_starting") : t(caido ? "shell.service.engine_down" : "chat.error.service_unavailable"));
         }
       } finally {
         if (!disposed) timer = setTimeout(() => void poll(), pushed ? 0 : 250);
@@ -2797,7 +2835,7 @@ export default function App() {
 
   onMount(() => {
     const refresh = () => void reconcileActiveTurns();
-    const resync = () => reconcileSoon();
+    const resync = () => { reconcileSoon(); void recargarMaterial(); };
     const refrescarAgentes = () => {
       // Al volver a la ventana (o a la pestaña) se releen los agentes: pueden
       // haberse escrito o editado archivos en `.agents/` por fuera de la app.
@@ -3362,7 +3400,7 @@ export default function App() {
       if (changes.includes("projects")) {
         const workspace = workspaceActivo();
         void invoke<Project[]>("list_projects").then((items) => {
-          if (workspace === workspaceActivo()) setProjectList(items);
+          if (workspace === workspaceActivo()) { setProjectList(items); setProjectReadError(null); }
         }).catch(() => {});
       }
     };
@@ -3384,8 +3422,8 @@ export default function App() {
       if (!esDelWorkspaceAbierto(e.payload.workspace ?? undefined)) return;
       const workspace = workspaceActivo();
       void invoke<Project[]>("list_projects").then((items) => {
-        if (workspace === workspaceActivo()) setProjectList(items);
-      }).catch((error) => { if (!asleep(error)) setError(prosaDe(error)); });
+        if (workspace === workspaceActivo()) { setProjectList(items); setProjectReadError(null); }
+      }).catch((error) => { if (workspace === workspaceActivo() && !asleep(error)) setProjectReadError(prosaDe(error)); });
       void reloadSpaces();
       void cargarSuperficies(false);
       setCuentasTocadas((n) => n + 1);
@@ -3402,7 +3440,8 @@ export default function App() {
           const current = startup.workspaces.find((w) => w.id === workspace);
           aplicarLenguaDeWorkspace(current?.lengua ?? null);
           setWorkspaceMode(current?.default_permission_mode ?? null);
-        }).catch((error) => { if (!asleep(error)) setError(prosaDe(error)); });
+          setStartupReadError(null);
+        }).catch((error) => { if (workspace === workspaceActivo() && !asleep(error)) setStartupReadError(prosaDe(error)); });
       }
     });
     onCleanup(() => void cliChanged.then((stop) => stop()));
@@ -4362,7 +4401,7 @@ export default function App() {
     const workspace = workspaceActivo();
     try {
       const items = await invoke<Project[]>("list_projects");
-      if (workspace === workspaceActivo()) setProjectList(items);
+      if (workspace === workspaceActivo()) { setProjectList(items); setProjectReadError(null); }
     } catch {
       // La lista anterior sigue sirviendo: releer es una puesta al día.
     }
@@ -5380,6 +5419,7 @@ export default function App() {
   let taskSourcesRequest = 0;
   createEffect(on(() => ({
     target: materialTarget(),
+    retry: readRevision(),
     workspace: workspaceActivo(),
     options: taskMaterialOptions(),
     ready: !sessionId() || !!taskMaterialOptions(),
@@ -5389,6 +5429,7 @@ export default function App() {
   }), ({ workspace, options, ready, single, confirmed, catalog }) => {
     const request = ++taskSourcesRequest;
     setTaskSources(null);
+    setTaskSourcesError(null);
     if (!workspace || !ready) return;
     if (single) {
       if (confirmed) setTaskSources(catalog);
@@ -5398,7 +5439,7 @@ export default function App() {
     void invoke<Source[]>("list_sources", {}, options).then((listed) => {
       if (request === taskSourcesRequest) setTaskSources(listed);
     }).catch((e) => {
-      if (request === taskSourcesRequest) setError(prosaDe(e));
+      if (request === taskSourcesRequest) setTaskSourcesError(prosaDe(e));
     });
   }));
 
@@ -7015,6 +7056,10 @@ export default function App() {
       {/* A General, no a GitHub: la fuente principal del workspace se elige
           en Configuración → General; mandar a GitHub lleva a conectar un
           proveedor, dejando a la persona en una pantalla sin lo que buscaba. */}
+      <Show when={taskSourcesError() ?? materialError()}>{failure => <div class="flex items-center gap-2 text-caption text-neutral-500" data-material-status="" role="status">
+        <span>{failure()}</span>
+        <Button variant="ghost" size="compact" onClick={() => { setReadRevision(n => n + 1); void recargarMaterial(); }}>{t("common.part.retry")}</Button>
+      </div>}</Show>
       <Show when={contextConfirmed() && !contextRoot()}>
         <div class="justify-self-center">
           <EmptyContext
@@ -7246,7 +7291,9 @@ export default function App() {
     });
     const coordinatingTask = () => {
       const value = coordinator();
-      return value?.workspace === workspaceActivo() && value.id === pp.sesion ? value.reference : null;
+      if (value?.workspace !== workspaceActivo() || value.id !== pp.sesion) return null;
+      const reference = value.reference;
+      return reference?.machine ? { ...reference, task: senderTaskId(reference.machine, reference.task) } : reference;
     };
     const recuperable = () => !pp.soloLectura && !!estadoDelTrabajo()?.recreatable;
     const origenArchivada = () => (estadoDelTrabajo()?.history.archived ? origenes()[pp.sesion ?? ""] : undefined);
@@ -7468,7 +7515,8 @@ export default function App() {
               onContinue={seguirConElAgente} />
           </Show>
         </> : undefined}
-        delegatedTask={reference => <DelegatedLaunch reference={reference} rows={delegatedRows()}
+        delegatedTask={reference => <DelegatedLaunch reference={reference.machine
+          ? { ...reference, task: senderTaskId(reference.machine, reference.task) } : reference} rows={delegatedRows()}
           list={delegatedList} loading={delegation.loading} error={delegationData()?.error} />}
         coordinator={<>
           <Show when={coordinatingTask()}>
@@ -7634,16 +7682,16 @@ export default function App() {
         onAgregarAdjuntos={agregarArchivos}
         agent={agent()}
         modelOptions={composerOptions()}
-        onCreditsPrepare={() => {
+        onCreditsPrepare={async () => {
           const prepare = capabilities().danilCredits?.prepare;
           if (!prepare) return;
           const revision = composerRevision;
           const options = composerOptions();
-          void prepare(options.headers).then(async () => {
-            if (revision !== composerRevision) return;
-            await cargarSuperficies(false);
-            await cargarModelos(OPENCODE, true);
-          }).catch(() => setError(t("chat.credits.integration_pending")));
+          await prepare(options.headers);
+          if (revision !== composerRevision) return;
+          await cargarSuperficies(false);
+          if (revision !== composerRevision) return;
+          await cargarModelos(OPENCODE, true);
         }}
         /* Lo utilizable, más la superficie de la tarea abierta si dejó de
            serlo: una tarea viva no puede cambiar de agente en silencio. El
@@ -8610,7 +8658,7 @@ export default function App() {
             workspace. */}
         <Show when={errorVisible()}>
           {(e) => (
-            <Toast tone="error" onDismiss={() => setError(null)}>
+            <Toast data-toast-error="" tone="error" onDismiss={() => setError(null)}>
               <p class="m-0 break-words text-xs text-error-strong">{e()}</p>
             </Toast>
           )}
@@ -8864,11 +8912,20 @@ export default function App() {
               </div>
             </Show>
             <div
-              class="h-full min-h-0 w-full min-w-0"
+              class="flex h-full min-h-0 w-full min-w-0 flex-col"
               ref={(el) => createEffect(() => el.toggleAttribute("inert", enCache()))}
               aria-busy={enCache() || undefined}
               data-shell-cache={enCache() ? "" : undefined}
             >
+            <Show when={startupReadError() ?? draftProjectError() ?? projectReadError() ?? connectionError()}>{failure => <div class="flex shrink-0 items-center gap-2 px-3 py-2 text-caption text-neutral-500" data-read-status="" role="status">
+              <span class="min-w-0 flex-1 break-words">{failure()}</span>
+              <Show when={startupReadError() || draftProjectError() || projectReadError()}><Button variant="ghost" size="compact" onClick={() => {
+                setReadRevision(n => n + 1);
+                if (startupReadError()) void retryStartupRead();
+                else if (!draftProjectError()) void recargarMaterial();
+              }}>{t("common.part.retry")}</Button></Show>
+            </div>}</Show>
+            <div class="min-h-0 flex-1">
             <Sidebar
               projects={proyectosDelRiel()}
               modelos={modelosParaAgentes()}
@@ -8921,6 +8978,7 @@ export default function App() {
               }
               onSettings={(panel) => setSettings(panel ?? "")}
             />
+            </div>
             </div>
             </div>
           </ColumnaLateral>

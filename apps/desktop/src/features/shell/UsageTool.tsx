@@ -6,6 +6,7 @@ import { t } from "../../lib/i18n";
 import { left, legible, tono } from "../../lib/limits";
 import { sharedLazy } from "../../lib/sharedLazy";
 import { cn } from "../../lib/utils";
+import { capabilities } from "../../lib/platform";
 import { HEADER_HEIGHT } from "../../lib/window";
 import { Button } from "../../ui/Button";
 import { MarcaAgente } from "../../ui/icons";
@@ -13,6 +14,7 @@ import { ProgressBar } from "../../ui/ProgressBar";
 import { type Usage, usageKey } from "./usage";
 
 const AccountCard = sharedLazy(() => import("../settings/AccountCard"));
+const DanilCredits = sharedLazy(() => import("../chat/DanilCredits"));
 
 function orderedCards(usage: Usage, agent: string) {
   const all = usage.activeCards();
@@ -102,6 +104,9 @@ export function UsagePanel(props: { usage: Usage; agent: string; onManage: () =>
         <span class="text-xs font-semibold text-neutral-950">{t("usage.heading")}</span>
       </div>
       <div class="min-h-0 flex-1 overflow-y-auto">
+        <Show when={capabilities().danilCredits}>
+          <CreditsSection />
+        </Show>
         <For each={cards()}>
           {(p) => (
             <section class="border-b border-border last:border-b-0">
@@ -135,5 +140,20 @@ export function UsagePanel(props: { usage: Usage; agent: string; onManage: () =>
         </Button>
       </div>
     </>
+  );
+}
+
+/** Solo Danil Credits: el Router gratuito no consume de la cuenta. */
+function CreditsSection() {
+  return (
+    <section class="border-b border-border">
+      <h3 class="m-0 flex items-center gap-1.5 px-3 pt-2.5 pb-1 text-xs font-semibold text-neutral-500">
+        <MarcaAgente id="danil" size={14} />
+        {t("chat.services.label")}
+      </h3>
+      <div class="px-3 pb-2.5 pt-1">
+        <DanilCredits />
+      </div>
+    </section>
   );
 }

@@ -490,3 +490,37 @@ test('promo redemption opens only in the active organization plan section', asyn
   assert.equal(app.w.document.querySelector('[data-profile-menu] #promo-code'), null);
   assert.deepEqual(app.failures, []);
 });
+
+test('automatic material failure stays local and recovers through the beta machine-session window', async t => {
+  const { engine } = await import('../helpers/fake-relay.mjs');
+  const table = { ...engine, list_sources: undefined };
+  const fake = relay({ table });
+  const fetcher = async input => {
+    const url = new URL(String(input));
+    if (url.origin === 'http://localhost' && url.pathname.includes('/assets/')) return new Response('');
+    if (url.pathname === '/v1/capabilities') return Response.json({ contract: 'mvp-v1', items: ['machines', 'machines.session', 'workspaces'].map(name => ({ name, version: 1, status: 'available' })) });
+    if (url.pathname === '/v1/identity/me') return Response.json({ id: 'user_A', name: 'Operator', workspace: '11', organizations: [] });
+    if (url.pathname === '/v1/workspaces') return Response.json({ items: [{ id: '11', org: 'org_A', name: 'Alpha', role: 'owner' }], next_cursor: null });
+    if (url.pathname === '/v1/identity/csrf') return Response.json({ csrf_token: 'bound' });
+    if (url.pathname === '/v1/machines') return Response.json({ items: [{ machine_id: 'm1', name: 'Danil', state: 'running', connection: 'connected' }], next_cursor: null });
+    if (url.pathname === '/v1/machines/m1/tickets') return Response.json({ ticket: 'one-use', url: 'wss://connect.danil.ai/v1/machines/m1/session', expires_at: '2099-01-01T00:00:00Z' });
+    if (url.pathname === '/v1/identity/organizations') return new Response(null, { status: 404 });
+    throw new Error(`Unexpected request ${url.pathname}`);
+  };
+  fetcher.__jsdomApp = true;
+  globalThis.fetch = fetcher;
+  const app = await open(t, 'listo', 'beta-automatic-material', {}, undefined, {}, { web: true, beforeImport(w) {
+    w.WebSocket = fake.Socket;
+    globalThis.WebSocket = fake.Socket;
+  } });
+  await until(() => app.w.document.querySelector('[data-material-status]'));
+  assert.equal(app.w.document.querySelector('[data-toast-error]'), null);
+  table.list_sources = [];
+  const before = fake.calls.filter(call => call.command === 'list_sources').length;
+  app.w.document.querySelector('[data-material-status] button').click();
+  await until(() => fake.calls.filter(call => call.command === 'list_sources').length > before);
+  await new Promise(resolve => setTimeout(resolve, 100));
+  assert.equal(app.w.document.querySelector('[data-material-status]'), null);
+  assert.equal(app.w.document.querySelector('[data-toast-error]'), null);
+  assert.deepEqual(app.failures, []);
+});

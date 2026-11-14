@@ -71,15 +71,13 @@ test("a failed read says why and retries until the list arrives", async () => {
 });
 
 
-test("Danil Credits exposes its sole model without execution or a fabricated balance", async () => {
+test("Danil Credits shows its balance without a model, a payer or a fabricated amount", async () => {
   const { app, panel } = await open("ai-providers-credits", []);
-  const section = panel().querySelector('section[aria-label="Danil Credits"]');
-  assert.ok(section);
-  const model = section.querySelector("button");
-  assert.ok(model.disabled);
-  assert.ok(model.textContent.includes("DeepSeek V4.1 Flash"));
-  assert.ok(section.textContent.includes("Cuenta Danil"));
-  assert.equal(section.querySelector('[role="status"]').textContent, "No disponible");
+  const card = panel().querySelector('[aria-label="Danil Credits"]');
+  assert.ok(card);
+  assert.doesNotMatch(card.textContent, /DeepSeek|Pagador|Cuenta Danil/);
+  assert.equal(card.querySelector("button"), null, "without a recharge capability there is no Add credits");
+  assert.equal(card.querySelector('[role="status"]').textContent, "No disponible");
   assert.deepEqual(app.failures, []);
 });
 
@@ -114,7 +112,9 @@ test("the task selector leaves Credits unavailable without preparing the retired
     assert.ok(picker, "the existing task model selector");
     picker.click();
     await sleep(250);
-    doc.querySelector('nav button[aria-label="Danil Credits"]').click();
+    const rail = doc.querySelector('nav[aria-label="Proveedores de modelos"]');
+    assert.equal(rail.querySelector('button[aria-label="Router IA gratis"]'), null, "the free router has no rail entry of its own");
+    rail.querySelector('button[aria-label="Danil"]').click();
     await sleep(650);
     assert.equal(ready, false, "opening Credits never prepares the retired pilot");
     assert.equal(app.commands.includes("credits_pilot_prepare"), false);
@@ -122,6 +122,143 @@ test("the task selector leaves Credits unavailable without preparing the retired
     const select = section?.querySelector("button");
     assert.ok(select?.disabled, "without a new billing source the model stays unavailable");
     assert.equal(section.querySelector('[role="status"]').textContent, "No disponible");
+    const services = section.parentElement;
+    assert.ok(services.querySelector('section[aria-label="Router IA gratis"]'), "the free router sits under Credits in the Danil panel");
+    assert.doesNotMatch(services.textContent, /DeepSeek|Beam|Reflection|Pagador|Cuenta Danil/, "the services name no model and no payer");
+    assert.deepEqual(app.failures, []);
+  } finally {
+    app.w.close();
+  }
+});
+
+test("the free router is turned on and shown in use from the Danil panel without naming its model", async () => {
+  const beam = "danil-free/reflection/beam-free";
+  const free = "free-router-opencode";
+  let accepted = false;
+  const policy = () => ({ workspace_id: "w", version: 3, providers: ["kilo", "vercel", "reflection"], lines: [{ t: "Datos" }], acceptance_ref: "ref", enabled: true, terms: [], accepted });
+  const option = (id, label, gratis = false) => ({ id, label, gratis, note: null, efforts: [], default_effort: null });
+  const row = (id, provider, model) => ({ id, title: id, last_message: "", provider, model, refs: [], updated_at: 0, turns: 1, parent: null, esperando: false });
+  const app = await boot("listo", "free-router-danil-panel", {
+    ...BASE,
+    workspaces_startup: () => ({ workspaces: [W], active: "w", free_model_policy: policy() }),
+    machine_list: [{ id: "m1", active: true }],
+    list_providers: [{ id: "opencode", label: "OpenCode", available: true, driver: true }],
+    list_surfaces: () => [
+      { id: "opencode", provider: "opencode", label: "OpenCode", catalogo: "de_pago", usable: true, marca: null, porque: null },
+      { id: free, provider: free, label: "Free Router · OpenCode", catalogo: "gratuitos", usable: true, marca: null, porque: null },
+    ],
+    list_models: ({ provider }) => provider === free
+      ? { provider, models: [option(beam, "Beam", true)], fallback: false }
+      : { provider, models: [option("base", "Base")], fallback: false },
+    list_projects: [{ id: "p1", name: "P1", working_directory: "/lab/p1", kind: "git", portfolio: null, sources: [] }],
+    list_portfolios: [], list_agents: { agents: [], rechazados: [] }, list_agent_status: [],
+    list_live_sessions: [row("t1", "opencode", "base"), row("t2", free, beam)], list_mentions: { fuentes: [], archivos: [] },
+    list_active_turns: [], load_queue: [], queue_ready: true, session_usage: null,
+    session_folder: "/tmp", list_task_trees: [], watch_task_tree: "watch", list_session_git: {},
+    task_history: { history: { archived: false, events: [], recovery: null }, branch: null, path: "/lab", available: true, owned: false, restorable: false, recreatable: false, incomplete: false },
+    load_session: ({ id }) => ({ id, provider: id === "t2" ? free : "opencode", model: id === "t2" ? beam : "base", sources: [], effort: null, permission_mode: null, turns: [{ role: "user", id: "u0", at: 0, text: "hello" }] }),
+  });
+  const openDanil = async () => {
+    const doc = app.w.document;
+    doc.querySelector('button[aria-label^="Modelo:"]').click();
+    await sleep(400);
+    doc.querySelector('nav[aria-label="Proveedores de modelos"] button[aria-label="Danil"]').click();
+    await sleep(650);
+    return doc.querySelector('section[aria-label="Router IA gratis"]');
+  };
+  try {
+    await sleep(1200);
+    const doc = app.w.document;
+    doc.querySelector('[data-sesion="t1"]').click();
+    await sleep(600);
+    let router = await openDanil();
+    assert.equal(router?.dataset.routerState, "activate", "without consent the service offers to turn on");
+    assert.ok([...router.querySelectorAll("button")].some((b) => b.textContent.trim() === "Activar"));
+    assert.equal(doc.querySelector('[role="listbox"] [role="option"]')?.textContent.includes("Beam") ?? false, false);
+    doc.querySelector('button[aria-label^="Modelo:"]').click();
+    await sleep(300);
+    accepted = true;
+    router = await openDanil();
+    assert.equal(router?.dataset.routerState, "ready", "with consent the service is ready");
+    assert.doesNotMatch(router.parentElement.textContent, /Beam|Reflection|DeepSeek/);
+    const use = [...router.querySelectorAll("button")].find((b) => b.textContent.trim() === "Usar");
+    assert.ok(use?.disabled, "a task locked to another agent cannot switch to the service");
+    doc.querySelector('button[aria-label^="Modelo:"]').click();
+    await sleep(300);
+    doc.querySelector('[data-sesion="t2"]').click();
+    await sleep(600);
+    assert.equal(doc.querySelector('button[aria-label^="Modelo:"]').getAttribute("aria-label"), "Modelo: Router IA gratis");
+    doc.querySelector('button[aria-label^="Modelo:"]').click();
+    await sleep(650);
+    router = doc.querySelector('section[aria-label="Router IA gratis"]');
+    assert.ok(router, "a task on the service opens the picker on the Danil panel");
+    assert.equal(router.querySelector('button[aria-pressed="true"]')?.textContent.trim(), "En uso");
+    assert.deepEqual(app.failures, []);
+  } finally {
+    app.w.close();
+  }
+});
+
+test("Use on an unlocked task sends the exact Credits and free router ids", async () => {
+  const beam = "danil-free/reflection/beam-free";
+  const credits = "danil-credits/deepseek/deepseek-v4.1-flash";
+  const free = "free-router-opencode";
+  const sends = [];
+  const policy = { workspace_id: "w", version: 3, providers: ["kilo", "vercel", "reflection"], lines: [{ t: "Datos" }], acceptance_ref: "ref", enabled: true, terms: [], accepted: true };
+  const option = (id, label, gratis = false) => ({ id, label, gratis, note: null, efforts: [], default_effort: null });
+  const row = (id, provider, model) => ({ id, title: id, last_message: "", provider, model, refs: [], updated_at: 0, turns: 1, parent: null, esperando: false });
+  const sessions = { t1: ["opencode", "base"], t2: [free, "danil-free/retired"] };
+  const app = await boot("listo", "danil-services-use", {
+    ...BASE,
+    workspaces_startup: () => ({ workspaces: [W], active: "w", free_model_policy: policy }),
+    machine_list: [{ id: "m1", active: true }],
+    list_providers: [{ id: "opencode", label: "OpenCode", available: true, driver: true }],
+    list_surfaces: () => [
+      { id: "opencode", provider: "opencode", label: "OpenCode", catalogo: "de_pago", usable: true, marca: null, porque: null },
+      { id: "danil-credits", provider: "opencode", label: "Danil Credits", catalogo: "todo", usable: true, marca: null, porque: null },
+      { id: free, provider: free, label: "Free Router · OpenCode", catalogo: "gratuitos", usable: true, marca: null, porque: null },
+    ],
+    list_models: ({ provider }) => provider === free
+      ? { provider, models: [option(beam, "Beam", true)], fallback: false }
+      : { provider, models: [option("base", "Base"), option(credits, "DeepSeek V4.1 Flash")], fallback: false },
+    send_message: (args) => { sends.push(args); return args.session; },
+    list_projects: [{ id: "p1", name: "P1", working_directory: "/lab/p1", kind: "git", portfolio: null, sources: [] }],
+    list_portfolios: [], list_agents: { agents: [], rechazados: [] }, list_agent_status: [],
+    list_live_sessions: Object.entries(sessions).map(([id, [provider, model]]) => row(id, provider, model)),
+    list_mentions: { fuentes: [], archivos: [] },
+    list_active_turns: [], load_queue: [], queue_ready: true, session_usage: null,
+    session_folder: "/tmp", list_task_trees: [], watch_task_tree: "watch", list_session_git: {},
+    task_history: { history: { archived: false, events: [], recovery: null }, branch: null, path: "/lab", available: true, owned: false, restorable: false, recreatable: false, incomplete: false },
+    load_session: ({ id }) => ({ id, provider: sessions[id][0], model: sessions[id][1], sources: [], effort: null, permission_mode: null, turns: [{ role: "user", id: "u0", at: 0, text: "hello" }] }),
+  });
+  const doc = app.w.document;
+  const use = async (task, service) => {
+    doc.querySelector(`[data-sesion="${task}"]`).click();
+    await sleep(600);
+    doc.querySelector('button[aria-label^="Modelo:"]').click();
+    await sleep(400);
+    doc.querySelector('nav[aria-label="Proveedores de modelos"] button[aria-label="Danil"]').click();
+    await sleep(650);
+    const button = [...doc.querySelector(`section[aria-label="${service}"]`).querySelectorAll("button")].find((b) => b.textContent.trim() === "Usar");
+    assert.ok(button && !button.disabled, `${service}: Use is enabled on a task of the same agent`);
+    button.click();
+    await sleep(300);
+    assert.equal(doc.querySelector('button[aria-label^="Modelo:"]').getAttribute("aria-label"), `Modelo: ${service}`);
+    const field = doc.querySelector("textarea");
+    field.value = "hola";
+    field.dispatchEvent(new app.w.Event("input", { bubbles: true }));
+    field.closest("form").dispatchEvent(new app.w.Event("submit", { bubbles: true, cancelable: true }));
+    await sleep(300);
+    return sends.at(-1);
+  };
+  try {
+    await sleep(1200);
+    const creditsSend = await use("t1", "Danil Credits");
+    assert.equal(creditsSend?.session, "t1");
+    assert.equal(creditsSend?.model, credits);
+    const routerSend = await use("t2", "Router IA gratis");
+    assert.equal(routerSend?.session, "t2");
+    assert.equal(routerSend?.model, beam);
     assert.deepEqual(app.failures, []);
   } finally {
     app.w.close();

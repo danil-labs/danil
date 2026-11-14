@@ -5,6 +5,7 @@ import { createRoot, createSignal } from "solid-js";
 import { invoke } from "../../lib/invoke";
 import { t } from "../../lib/i18n";
 import { createPref, escribirPref, leerPref } from "../../lib/prefs";
+import { knownMachineName } from "./known-names";
 import { isMac } from "../../lib/window";
 import { capabilities } from "../../lib/platform";
 
@@ -40,13 +41,16 @@ export function unavailable(m: Machine, project: ProjectPlace, all: Machine[] = 
 // Una sola lista para toda la ventana. Señal y no `createResource`, que
 // suspendería la vista entera mientras contestan.
 const [machines, setMachines] = createRoot(() => createSignal<Machine[]>([]));
-const [cloudMachinesLoading, setCloudMachinesLoading] = createRoot(() => createSignal(false));
-export { machines, cloudMachinesLoading, setCloudMachinesLoading };
+const [cloudInventory, setCloudInventory] = createRoot(() => createSignal<"initial" | "settled">("settled"));
+export { machines, cloudInventory, setCloudInventory };
 
-export const refetchMachines = () =>
-  invoke<Machine[]>("machine_list")
-    .then(setMachines)
+let machinesRead = 0;
+export const refetchMachines = () => {
+  const read = ++machinesRead;
+  return invoke<Machine[]>("machine_list")
+    .then((rows) => { if (read === machinesRead) setMachines(rows); })
     .catch(() => setMachines([]));
+};
 
 /**
  * Dónde se crea la próxima tarea, por workspace; sin entrada, en la máquina de la
@@ -56,12 +60,15 @@ const [elegidas, guardarElegidas] = createRoot(() =>
   createPref<Record<string, string>>("machines.run_on", {}),
 );
 
+/** El destino recordado, antes de comprobar su presencia en el inventario. */
+export const rememberedRunOn = (workspace: string | null): string | null => workspace ? elegidas()[workspace] ?? null : null;
+
 /** La máquina elegida para `workspace`, si sigue en la lista y puede correr una tarea de `project`. */
 export function runOn(workspace: string | null, project?: ProjectPlace): string | null {
-  const id = workspace ? elegidas()[workspace] : undefined;
+  const id = rememberedRunOn(workspace);
   const machine = id ? machines().find((m) => m.id === id) : undefined;
   if (!id || machine?.active || (machine && unavailable(machine, project))) return null;
-  return machines().length === 0 || machine ? id : null;
+  return cloudInventory() === "initial" || machines().length === 0 || machine ? id : null;
 }
 
 export function setRunOn(workspace: string | null, id: string | null) {
@@ -129,7 +136,10 @@ export const machineName = (id: string, local = id === "local") => {
   namesRead();
   // En la web no existe «este equipo»: sin máquina de la nube, la ventana lo dice en vez de nombrar una local.
   if (local && !capabilities().nativeWindow && capabilities().machineName) return capabilities().machineName!(id);
-  return local ? (isMac() ? t("shell.machines.this_mac") : t("shell.machines.this_computer")) : (capabilities().machineName?.(id) ?? id);
+  if (local) return isMac() ? t("shell.machines.this_mac") : t("shell.machines.this_computer");
+  // Antes de que la flota la conozca, el último nombre guardado (`known-names.ts`) y no el id.
+  const name = capabilities().machineName?.(id);
+  return name && name !== id ? name : (knownMachineName(id) ?? name ?? id);
 };
 
 const ORIGINS = "machines.carry_origins";

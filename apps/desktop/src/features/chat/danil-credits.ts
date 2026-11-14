@@ -1,6 +1,8 @@
+import { DANIL_CREDITS_MODEL } from "../../../../../packages/tasks/src/danil-services.ts";
+
 // El engine anuncia este modelo solo con una delegación vigente del pagador.
 export const DANIL_CREDITS = Object.freeze({
-  modelId: "danil-credits/deepseek/deepseek-v4.1-flash",
+  modelId: DANIL_CREDITS_MODEL,
   upstreamModelId: "deepseek/deepseek-v4.1-flash",
 } as const);
 
@@ -9,6 +11,8 @@ export type DanilCreditsSource = {
   readBalance: () => Promise<unknown>;
   prepare?: (headers: Record<string, string>) => Promise<unknown>;
   subscribe?: (clear: () => void) => () => void;
+  /** Abre la recarga en el navegador para la cuenta autenticada; sin ella no se ofrece. */
+  recharge?: () => Promise<void>;
 };
 
 /** Proyección defensiva de los campos que muestra esta vista. */

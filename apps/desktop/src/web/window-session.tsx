@@ -15,6 +15,7 @@ import { readCapabilities, supports, type CapabilitiesSnapshot } from './service
 import { UpdateNotice } from './UpdateNotice';
 import { WorkosAuthPage, signInError } from './auth/workos';
 import { mountWindow } from './window';
+import { forgetMachineNames } from '../features/machines/known-names';
 import { sessionStorageScope, clearWebCaches } from './session-storage';
 import { createOrganizationSelection, hasActiveOrganization } from "@terminus/computers";
 import { webOrganizationSource } from './organizations';
@@ -194,7 +195,7 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
     }
     const redeemPromo = sessionPromoRedemption((code, key) => authorized(() => api.redeemPromo(code, key)));
     // El Free router suelta a la persona antes de que la cookie deje de valer.
-    async function logout() { await run(async () => { await signOutPlatform().catch(() => {}); await api.logout(); expired(); }); }
+    async function logout() { await run(async () => { await signOutPlatform().catch(() => {}); await api.logout(); forgetMachineNames(); expired(); }); }
     async function load() {
       const read = async (signal?: AbortSignal) => {
         startupSignal = signal;

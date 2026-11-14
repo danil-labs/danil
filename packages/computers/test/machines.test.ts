@@ -42,6 +42,19 @@ test("running sin conexión del motor no es «encendida»; un estado nuevo no ro
   assert.equal(machineToComputer({ ...machine, state: "reserved" }).state, "provisioning");
 });
 
+test("kind: la personal se lista junto a la de la organización y no se ofrece despertarla", async () => {
+  const mac = { ...machine, machine_id: "cmp_mac", name: "MacBook", state: "stopped", connection: "disconnected", kind: "personal" };
+  const { fetch } = edge({ "GET /machines": [{ status: 200, body: { items: [{ ...machine, kind: "organization" }, mac], next_cursor: null } }] });
+  const answer = await client(fetch).list();
+  assert.equal(answer.kind, "ok");
+  if (answer.kind !== "ok") return;
+  assert.deepEqual(answer.value.map((m) => [m.machine_id, m.kind]), [["cmp_1", "organization"], ["cmp_mac", "personal"]]);
+  assert.equal(machineToComputer(mac).wakeable, false);
+  // Sin kind o con uno desconocido cuenta como de organización.
+  assert.equal(machineToComputer({ ...mac, kind: undefined }).wakeable, true);
+  assert.equal(machineToComputer({ ...mac, kind: "shared" }).wakeable, true);
+});
+
 test("404 y 501 son «no disponible», no un error; 401 sigue siendo 401", async () => {
   for (const status of [404, 501]) assert.equal((await client(edge({ "GET /machines": [{ status }] }).fetch).list()).kind, "unavailable");
   assert.equal((await client(edge({ "GET /machines": [{ status: 401 }] }).fetch).list()).kind, "unauthorized");

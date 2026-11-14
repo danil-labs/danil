@@ -10,7 +10,7 @@ import { isDeferrable } from "@terminus/computers";
 import { Fleet, type Link, type MachineInfo, classOf } from "@terminus/fleet";
 import "../helpers/catalog.ts";
 import { withoutAbout } from "../../src/lib/taskMentions.ts";
-import { createRouter } from "../../src/features/machines/router.ts";
+import { createRouter, unconfirmedOpen } from "../../src/features/machines/router.ts";
 import type { EngineWorkspace } from "../../src/features/machines/engine-workspaces.ts";
 import { runsWorkspace } from "../../src/features/machines/runs-workspace.ts";
 
@@ -920,4 +920,105 @@ test("machine_list conserva el estado del canal para distinguir conexión pendie
   const list = await router.handle("machine_list") as { id: string; connection?: string }[];
   assert.equal(list.find(m => m.id === "cmp_vm")?.connection, "unknown");
   assert.equal(list.find(m => m.id === "cmp_mac")?.connection, "offline");
+});
+
+
+for (const remoteOnly of [false, true]) {
+  test(`new remote open waits for its own response (${remoteOnly ? "remote-only" : "native"}) and confirmed absence stays authoritative`, async () => {
+    let release!: (value: unknown) => void;
+    const vm = fakeLink({ list_live_sessions: ({ open }: Args) => (open as string[]).includes("child")
+      ? new Promise(resolve => { release = resolve; }) : [] });
+    const { router, fleet } = setup({ cmp_vm: vm });
+    const workspace = remoteOnly ? "w2" : "w";
+    if (remoteOnly) fleet.setRegistry([{ id: workspace, name: "Remote", projects: [], computers: ["cmp_vm"] }]);
+    await router.handle("list_workspaces");
+    await router.handle("set_active_workspace", { id: workspace });
+    const args = { project: "p1", open: [] as string[] };
+    await fleet.read({ machine: "cmp_vm", workspace, command: "list_live_sessions", args });
+    await router.handle("list_live_sessions", args);
+    let settled = false;
+    const reading = router.handle("list_live_sessions", { ...args, open: ["cmp_vm~child"] }).then(value => { settled = true; return value as { id: string }[]; });
+    await sleep(10);
+    assert.equal(settled, false, "a previous slice cannot confirm absence for a new open request");
+    assert.equal(typeof release, "function");
+    release([row("child")]);
+    assert.ok((await reading).some(row => row.id === "cmp_vm~child"));
+    // La confirmación de open:[child,parent] sigue pendiente: la lista no contesta con lo anterior.
+    let closing = false;
+    const both = router.handle("list_live_sessions", { ...args, open: ["cmp_vm~child", "cmp_vm~parent"] }).then(value => { closing = true; return value as { id: string }[]; });
+    await sleep(10);
+    assert.equal(closing, false, "a pending confirmation cannot close the view with an older slice");
+    release([]);
+    const confirmed = await both;
+    assert.equal(confirmed.some(row => row.id === "cmp_vm~child"), false, "a valid exact response can confirm deletion; no previous child is restored");
+    router.close();
+  });
+
+  test(`failed new remote open is never a confirmed absence (${remoteOnly ? "remote-only" : "native"})`, async () => {
+    const vm = fakeLink({ list_live_sessions: ({ open }: Args) => (open as string[]).length ? Promise.reject({ code: "io" }) : [] });
+    const { router, fleet } = setup({ cmp_vm: vm });
+    const workspace = remoteOnly ? "w2" : "w";
+    if (remoteOnly) fleet.setRegistry([{ id: workspace, name: "Remote", projects: [], computers: ["cmp_vm"] }]);
+    await router.handle("list_workspaces");
+    await router.handle("set_active_workspace", { id: workspace });
+    const args = { project: "p1", open: [] };
+    await fleet.read({ machine: "cmp_vm", workspace, command: "list_live_sessions", args });
+    await router.handle("list_live_sessions", args);
+    const rows = await router.handle("list_live_sessions", { ...args, open: ["cmp_vm~child"] });
+    assert.deepEqual(unconfirmedOpen(rows), ["cmp_vm~child"], "the window keeps the tab: its machine did not answer");
+    router.close();
+  });
+}
+
+for (const remoteOnly of [false, true]) {
+  test(`an unanswered open on one machine keeps the other machines and this computer (${remoteOnly ? "remote-only" : "native"})`, async () => {
+    const vm = fakeLink({ list_live_sessions: ({ open }: Args) => (open as string[]).includes("child") ? Promise.reject({ code: "io" }) : [row("v1")] });
+    const mac = fakeLink({ list_live_sessions: [row("m1")] });
+    const { router, fleet } = setup({ cmp_vm: vm, cmp_mac: mac });
+    const workspace = remoteOnly ? "w2" : "w";
+    if (remoteOnly) fleet.setRegistry([{ id: workspace, name: "Remote", projects: [], computers: ["cmp_vm", "cmp_mac"] }]);
+    await router.handle("list_workspaces");
+    await router.handle("set_active_workspace", { id: workspace });
+    const args = { project: "p1", open: [] as string[] };
+    for (const machine of ["cmp_vm", "cmp_mac"]) await fleet.read({ machine, workspace, command: "list_live_sessions", args });
+    await router.handle("list_live_sessions", args);
+    const opened = { ...args, open: ["cmp_vm~child"] };
+    const rows = await router.handle("list_live_sessions", opened) as { id: string }[];
+    const ids = rows.map(r => r.id);
+    assert.ok(ids.includes("cmp_mac~m1"), "the machine that answered is listed");
+    assert.ok(ids.includes("cmp_vm~v1"), "the failing machine keeps its last rows");
+    if (!remoteOnly) assert.ok(ids.includes("t1"), "this computer's tasks are listed");
+    assert.deepEqual(unconfirmedOpen(rows), ["cmp_vm~child"], "the window does not count the unanswered tab as asked");
+    const calls = vm.calls.length;
+    const started = Date.now();
+    const again = await router.handle("list_live_sessions", opened) as { id: string }[];
+    assert.ok(Date.now() - started < 30, "a remembered failure does not wait again");
+    assert.ok(vm.calls.length <= calls + 2, "the failing machine is asked again at most once, behind");
+    assert.deepEqual(unconfirmedOpen(again), ["cmp_vm~child"]);
+    router.close();
+  });
+}
+
+test("a slow machine with a new open tab delays the list at most FRESH_WAIT and announces its late answer", async () => {
+  let release!: (value: unknown) => void;
+  const vm = fakeLink({ list_live_sessions: ({ open }: Args) => (open as string[]).includes("child")
+    ? new Promise(resolve => { release = resolve; }) : [] });
+  const { router, fleet, changes } = setup({ cmp_vm: vm });
+  await router.handle("list_workspaces");
+  const args = { project: "p1", open: [] as string[] };
+  await fleet.read({ machine: "cmp_vm", workspace: "w", command: "list_live_sessions", args });
+  await router.handle("list_live_sessions", args);
+  const started = Date.now();
+  const rows = await router.handle("list_live_sessions", { ...args, open: ["cmp_vm~child"] }) as { id: string }[];
+  const waited = Date.now() - started;
+  assert.ok(waited >= 1_000 && waited < 3_000, `waited ${waited} ms`);
+  assert.deepEqual(rows.map(r => r.id), ["t1"]);
+  assert.deepEqual(unconfirmedOpen(rows), ["cmp_vm~child"]);
+  release([row("child")]);
+  await sleep(300);
+  assert.ok(changes.some(c => c.includes("sessions")), "the late answer makes the window read again");
+  const confirmed = await router.handle("list_live_sessions", { ...args, open: ["cmp_vm~child"] }) as { id: string }[];
+  assert.ok(confirmed.some(r => r.id === "cmp_vm~child"));
+  assert.deepEqual(unconfirmedOpen(confirmed), []);
+  router.close();
 });

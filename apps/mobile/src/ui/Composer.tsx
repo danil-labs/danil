@@ -12,7 +12,7 @@ import {
   type SlashMenu,
 } from "@terminus/protocol";
 import { replaceSlash, slashAt } from "@terminus/chat/slash";
-import { canonicalAgentId, isFreeRouterAgent, menuSurfaces, modelName, modelPresentation, routerDiscovery, previewLabel, type Surface, surfaceHas, surfaceOf } from "@terminus/tasks";
+import { canonicalAgentId, creditsBalanceState, DANIL_CREDITS_MODEL, danilServiceOf, FREE_ROUTER_MODEL, isFreeRouterAgent, menuSurfaces, modelName, modelPresentation, previewLabel, type CreditsBalanceState, type RouterOfferState, type Surface, surfaceHas, surfaceOf } from "@terminus/tasks";
 import * as DocumentPicker from "expo-document-picker";
 import { File } from "expo-file-system";
 import * as ImagePicker from "expo-image-picker";
@@ -39,7 +39,7 @@ import type { Host } from "../lib/hosts";
 import { effectiveMode, enterAction, hasSomethingToSend } from "../lib/composer";
 import { promote, type Queued, queueMemory } from "../lib/steer";
 import { lang, phrase, t, w } from "../lib/i18n";
-import { surfacePresentation, selectedModelMark } from "../lib/model-presentation";
+import { modelLabel, surfacePresentation, selectedModelMark } from "../lib/model-presentation";
 import { freeRouterState } from "../lib/free-router";
 import { BrandMark } from "./BrandMark";
 import { FreeConsentSheet, type FreeRouterRow } from "./FreeModels";
@@ -67,6 +67,76 @@ function whyNot(s: Surface<Frase>) {
   const known = said && !(typeof s.porque === "object" && s.porque && said === s.porque.clave);
   if (known) return said;
   return s.catalogo === "gratuitos" ? w("surfaces.free_off") : s.marca;
+}
+
+type Service = { ready: boolean; selected: boolean; onUse: () => void };
+
+/**
+ * La entrada Danil del selector, como el panel de la ventana (`DanilServices.tsx`):
+ * Danil Credits con su saldo y, debajo, el Router IA gratis. Ninguno nombra su modelo.
+ */
+function DanilServices({ balance, credits, router }: {
+  balance: CreditsBalanceState;
+  credits: Service;
+  router: Service & { state: RouterOfferState; onActivate: () => void };
+}) {
+  const theme = useTheme();
+  const amount = balance.kind === "amount" ? t("services.amount", { count: balance.count }) : t(balance.kind === "loading" ? "services.loading" : "services.unavailable");
+  const routerStatus = router.state === "loading" ? t("services.loading") : router.state === "update_engine" ? w("chat.model.router_update_engine") : w("chat.model.router_route_unavailable");
+  return (
+    <>
+      <SheetSection>{t("services.label")}</SheetSection>
+      <View testID="service-credits" accessibilityLabel={t("services.credits")} style={styles.service}>
+        <View style={styles.serviceHead}>
+          <BrandMark id="danil" size={17} color={theme.text} />
+          <Text style={{ color: theme.text, fontSize: TEXT.ui, fontWeight: "600", flex: 1 }}>{t("services.credits")}</Text>
+          <Text accessibilityRole="text" style={{ color: theme.textMuted, fontSize: TEXT.label }}>{t("services.balance")}</Text>
+          <Text testID="credits-balance" style={{ color: theme.text, fontSize: TEXT.ui, fontVariant: ["tabular-nums"] }}>{amount}</Text>
+        </View>
+        <ServiceButton testID="credits-use" service={credits} unavailable={t("services.unavailable")} />
+      </View>
+      <View testID="service-router" accessibilityLabel={t("composer.free_models")} style={styles.service}>
+        <View style={styles.serviceHead}>
+          <BrandMark id="danil" size={17} color={theme.text} />
+          <Text style={{ color: theme.text, fontSize: TEXT.ui, fontWeight: "600", flex: 1 }}>{t("composer.free_models")}</Text>
+          {router.state === "ready" ? <View accessible accessibilityRole="image" accessibilityLabel={t("services.active")}><Icon name="check" size={14} color={theme.textMuted} /></View> : null}
+        </View>
+        <Text style={{ color: theme.textMuted, fontSize: TEXT.label }}>{t("services.router_description")}</Text>
+        {router.state === "activate" ? (
+          <Pressable testID="router-activate" accessibilityRole="button" onPress={router.onActivate} style={[styles.serviceButton, { backgroundColor: theme.primary, borderColor: theme.primary }]}>
+            <Text style={{ color: theme.onPrimary, fontSize: TEXT.ui, fontWeight: "600" }}>{w("chat.model.router_activate")}</Text>
+          </Pressable>
+        ) : router.state === "ready" ? (
+          <ServiceButton testID="router-use" service={router} unavailable={w("chat.model.router_route_unavailable")} />
+        ) : (
+          <View testID={`router-${router.state}`} accessibilityRole="text" style={[styles.serviceButton, { borderColor: theme.border }]}>
+            <Text style={{ color: theme.textMuted, fontSize: TEXT.ui }}>{routerStatus}</Text>
+          </View>
+        )}
+      </View>
+    </>
+  );
+}
+
+function ServiceButton({ service, unavailable, testID }: { service: Service; unavailable: string; testID: string }) {
+  const theme = useTheme();
+  const off = !service.ready || service.selected;
+  return (
+    <Pressable
+      testID={testID}
+      accessibilityRole="button"
+      accessibilityState={{ disabled: off, selected: service.selected }}
+      accessibilityHint={service.ready ? undefined : unavailable}
+      disabled={off}
+      onPress={service.onUse}
+      style={[styles.serviceButton, { borderColor: theme.border, opacity: service.ready || service.selected ? 1 : 0.5 }]}
+    >
+      {service.selected ? <Icon name="check" size={14} color={theme.text} /> : null}
+      <Text style={{ color: theme.text, fontSize: TEXT.ui, fontWeight: "600" }}>
+        {service.selected ? t("services.in_use") : service.ready ? t("services.use") : unavailable}
+      </Text>
+    </Pressable>
+  );
 }
 
 function effortLabel(effort: string | null) {
@@ -325,7 +395,14 @@ export function Composer({
   const selectedSurface = ownSurfaces.find((s) => s.id === surface) ?? (ownSurfaces.length === 1 ? ownSurfaces[0] : undefined);
   const selectedMark = selectedModelMark(current, model, selectedSurface);
   const selectedProviderLabel = selectedSurface ? surfacePresentation(selectedSurface, { free: t("composer.free_models") }).label : providerLabel(current);
-  const modelText = model ? modelName(model, models) : previewLabel(lang, "default_model");
+  const serviceLabels = { credits: t("services.credits"), router: t("composer.free_models") };
+  const modelText = model ? modelLabel(model, serviceLabels, models) : previewLabel(lang, "default_model");
+  // El Router y Danil Credits viven en la sección Danil: ni su superficie ni sus modelos se repiten abajo.
+  const isRouterSurface = (s: Surface<Frase>) => s.catalogo === "gratuitos" && isFreeRouterAgent(canonicalAgentId(s.provider, FREE_ROUTER_MODEL));
+  // Solo el agente propio del Router; `opencode-zen` sigue siendo OpenCode de pago aunque también sirva el Router.
+  const isRouterProvider = (id: string) => isFreeRouterAgent(id);
+  const routerSurface = surfaces.find((s) => isRouterSurface(s) && s.usable);
+  const routerProvider = routerSurface?.provider ?? usable.find((p) => isRouterProvider(p.id))?.id ?? null;
   const efforts = chosen?.efforts ?? models?.models[0]?.efforts ?? [];
   // Lo que se ve es lo que se manda: el elegido, o el de la tarea o el workspace, o el del proveedor.
   const sentMode = effectiveMode(modes, mode, { saved: savedPermissionMode, workspace: permissionMode });
@@ -356,6 +433,23 @@ export function Composer({
       setModel(first?.id ?? null);
       setEffort(null);
     }
+  }
+
+  /** «Usar» un servicio de Danil: su agente (con traspaso si la tarea lo pide) y su id de modelo, sin nombrarlo. */
+  function pickService(id: string, provider: string | null) {
+    if (!provider) return;
+    if (provider !== current) {
+      if (locked) return;
+      chooseProvider(provider);
+      // El traspaso de una tarea abierta se confirma antes; el modelo se elige después.
+      if (session && canHandoff && provider !== initialProvider) return;
+    }
+    if (provider === routerSurface?.provider) setSurface(routerSurface.id);
+    setModel(id);
+    setEffort(null);
+    picked.current = id;
+    if (provider === current) onModelChoice?.({ provider, model: id, effort: null });
+    setSheet(null);
   }
 
   async function submit(body: string, paths: string[]) {
@@ -733,16 +827,21 @@ export function Composer({
 
       <Sheet visible={sheet === "model"} title={w("chat.model.title")} search={t("search.models")} onClose={() => setSheet(null)}>
         {(query) => {
-          const discovery = routerDiscovery(models?.models.map((m) => m.id) ?? [], query);
-          const routerState = freeRouterState(routerRows);
-          const shownModels = surfaceModels.filter((m) => matches(query, m.label, m.id, modelName(m.id, models)));
+          // Abrir no enciende: con la máquina apagada no se pregunta y el Router no está disponible, no «consultando».
+          const routerState: RouterOfferState = host?.power() === "on" ? freeRouterState(routerRows) : "unavailable";
+          const shownModels = surfaceModels.filter((m) => !danilServiceOf(m.id) && matches(query, m.label, m.id, modelName(m.id, models)));
+          const showServices = matches(query, t("services.label"), t("services.credits"), t("composer.free_models"), w("surfaces.label.free"));
+          // Credits se elige solo si el motor de esta máquina lo anuncia en el catálogo abierto; su saldo no llega al teléfono.
+          const creditsReady = !disabled && !!models?.models.some((m) => m.id === DANIL_CREDITS_MODEL);
+          const routerReady = !disabled && routerState === "ready" && !!routerProvider && !(locked && routerProvider !== current);
           return (
             <>
               <SheetSection>{w("chat.model.providers")}</SheetSection>
               {locked ? <Text style={[styles.hint, { color: theme.textMuted, paddingHorizontal: 18 }]}>{providerLockedReason ?? w("chat.model.locked")}</Text> : null}
               {usable.map((p) => {
-                // Lo utilizable y lo de la tarea; los gratuitos sin activar también, para llevar a activarlos.
-                const own = surfaces.filter((s) => s.provider === p.id && (menu.includes(s) || s.catalogo === "gratuitos"));
+                // Lo utilizable y lo de la tarea; los gratuitos sin activar también, para llevar a activarlos. El Router va en Danil.
+                const own = surfaces.filter((s) => s.provider === p.id && !isRouterSurface(s) && (menu.includes(s) || s.catalogo === "gratuitos"));
+                if (!own.length && isRouterProvider(p.id)) return null;
                 if (!own.length) {
                   const presentation = surfacePresentation({ provider: p.id, catalogo: "todo", label: p.label }, { free: t("composer.free_models") });
                   return (
@@ -772,37 +871,23 @@ export function Composer({
                   );
                 });
               })}
-              {discovery ? (
-                <View style={{ paddingHorizontal: 18, paddingVertical: 11, gap: 5 }} accessibilityLabel={t("composer.free_models")}>
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                    <BrandMark id="danil" size={17} color={theme.text} />
-                    <Text style={{ color: theme.text, fontSize: TEXT.ui }}>{t("composer.free_models")}</Text>
-                  </View>
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 8, minHeight: 32 }}>
-                    <Text style={{ color: theme.text, fontSize: TEXT.ui }}>{discovery.label}</Text>
-                    <Text style={{ color: theme.textMuted, fontSize: TEXT.label }}>{discovery.creator}</Text>
-                    <View style={{ flex: 1 }} />
-                    {routerState === "activate" ? (
-                      <Pressable
-                        testID="router-activate"
-                        accessibilityRole="button"
-                        onPress={() => {
-                          const row = routerRows?.find((r) => isFreeRouterAgent(canonicalAgentId(r.provider, "danil-free/")));
-                          if (!row || !host || !workspace) return;
-                          setSheet(null);
-                          setRouterAsking({ ...row, host, workspace });
-                        }}
-                        style={{ backgroundColor: theme.primary, borderRadius: RADIUS.sm, paddingHorizontal: 12, paddingVertical: 6 }}
-                      >
-                        <Text style={{ color: theme.onPrimary, fontSize: TEXT.ui, fontWeight: "600" }}>{w("chat.model.router_activate")}</Text>
-                      </Pressable>
-                    ) : routerState === "update_engine" || routerState === "unavailable" ? (
-                      <Text testID={`router-${routerState}`} style={{ color: theme.textMuted, fontSize: TEXT.ui }}>
-                        {w(routerState === "update_engine" ? "chat.model.router_update_engine" : "chat.model.router_route_unavailable")}
-                      </Text>
-                    ) : null}
-                  </View>
-                </View>
+              {showServices ? (
+                <DanilServices
+                  balance={creditsBalanceState(null)}
+                  credits={{ ready: creditsReady, selected: model === DANIL_CREDITS_MODEL, onUse: () => pickService(DANIL_CREDITS_MODEL, current) }}
+                  router={{
+                    state: routerState,
+                    ready: routerReady,
+                    selected: model === FREE_ROUTER_MODEL,
+                    onUse: () => pickService(FREE_ROUTER_MODEL, routerProvider),
+                    onActivate: () => {
+                      const row = routerRows?.find((r) => isFreeRouterAgent(canonicalAgentId(r.provider, "danil-free/")));
+                      if (!row || !host || !workspace) return;
+                      setSheet(null);
+                      setRouterAsking({ ...row, host, workspace });
+                    },
+                  }}
+                />
               ) : null}
               <SheetSection>{w("chat.model.listbox")}</SheetSection>
               {!models ? <Text style={[styles.hint, { color: theme.textMuted, paddingHorizontal: 18 }]}>{t("composer.loading")}</Text> : null}
@@ -919,6 +1004,9 @@ const INPUT_MIN = 36;
 const INPUT_MAX = 21 * 6 + 15;
 
 const styles = StyleSheet.create({
+  service: { paddingHorizontal: 18, paddingVertical: 10, gap: 8 },
+  serviceHead: { flexDirection: "row", alignItems: "center", gap: 8, minHeight: 24 },
+  serviceButton: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, minHeight: 36, borderRadius: RADIUS.sm, borderWidth: 1 },
   wrap: { paddingHorizontal: 10, paddingTop: 6, gap: 6 },
   // El contenedor no tiene fondo propio: el cuadro flota sobre el del chat con su sombra.
   box: {

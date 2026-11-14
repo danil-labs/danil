@@ -4,6 +4,7 @@ import { createRouter, type SliceChange } from "../features/machines/router";
 import { directoryEntries } from "../features/shell/workspace-directory";
 import { createSignal, lazy, Suspense } from "solid-js";
 import { leerPref } from "../lib/prefs";
+import { rememberMachineNames } from "../features/machines/known-names";
 import { t } from "../lib/i18n";
 import { setCapabilities, type Capabilities, type WebAccountsSource } from "../lib/platform";
 import { deliver } from "../lib/serviceEvents";
@@ -112,13 +113,17 @@ export function mountWindow(base: Base, mounted: Mounted) {
     const answer = await listing;
     if (stopped) return false;
     if (answer.kind === "unauthorized") { base.onUnauthorized(); return false; }
-    if (answer.kind !== "ok") { setMissing(true); fleet.setMachines([]); return false; }
+    if (answer.kind !== "ok") {
+      if (answer.kind === "error" && (answer.status === null || answer.status === 408 || answer.status === 429 || answer.status >= 500)) return false;
+      setMissing(true); fleet.setMachines([]); return false;
+    }
     listed = new Map(answer.value.map(machine => [machine.machine_id, machine]));
     setMissing(false);
     bump(n => n + 1);
     fleet.setMachines(answer.value.map(machine => ({ id: machine.machine_id, name: machine.name || machine.machine_id,
       wakes: machineToComputer(machine).wakeable === true && base.permits("machines.start"),
     })));
+    rememberMachineNames(fleet.machines());
     fleet.subscribeEvents();
     active.registryChanged();
     for (const name of ["harness:workspace-name", "harness:service-resync", "harness:machines"]) window.dispatchEvent(new CustomEvent(name));
