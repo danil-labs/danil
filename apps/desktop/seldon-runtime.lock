@@ -10,7 +10,7 @@
   "platforms": {
     "x86_64-pc-windows-msvc": {
       "url": "https://github.com/danil-labs/danil/releases/download/seldon-runtime-v0.3.1-9663913a/seldon-runtime-x86_64-pc-windows-msvc.exe",
-      "sha256": "PENDIENTE: sha256 del runtime Windows de 9663913a que compila el operador de OD 9pk9affn"
+      "sha256": "fbceaa77eca64b9683668457eece65c94550ee4e33c7d2ca3cbca773a0eca5b1"
     },
     "aarch64-apple-darwin": {
       "release": "seldon-runtime-v0.3.1-85335139",

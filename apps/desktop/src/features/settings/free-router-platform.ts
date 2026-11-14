@@ -134,9 +134,11 @@ export function createFreeRouterPlatform(deps: FreeRouterDeps) {
   const idOf = (s: FreeRouterScope) => `${s.account}\n${s.workspace}\n${s.sub}`;
 
   /** Un intento con su clave: repite lo transitorio dentro del presupuesto y nunca lo definitivo. */
-  async function send(method: EdgeMethod, path: string, body?: unknown, intent?: string, budget = budgetMs): Promise<unknown> {
+  async function send(method: EdgeMethod, path: string, body?: unknown, intent?: string, budget = budgetMs, signal?: AbortSignal): Promise<unknown> {
     const deadline = now() + budget;
     for (let attempt = 0; ; attempt++) {
+      // Un corte (logout vencido) no deja salir nada más, ni un reintento.
+      if (signal?.aborted) throw refusal("stale");
       let last: FreeRouterRefusal;
       let wait = 0;
       let answer: EdgeAnswer | undefined;
@@ -302,7 +304,7 @@ export function createFreeRouterPlatform(deps: FreeRouterDeps) {
    * Paso 8: el motor suelta a la persona en `workspaces` (sube la generación y corta sus turnos) y devuelve los bindings que
    * guarda, también tras un reinicio; luego se espera su baja con un presupuesto corto. No retira el consentimiento.
    */
-  async function signOut(sub: string, workspaces: string[], cloudBudgetMs = 3_000): Promise<void> {
+  async function signOut(sub: string, workspaces: string[], cloudBudgetMs = 3_000, signal?: AbortSignal): Promise<void> {
     const mine = [...entries.values()].filter((e) => e.scope.sub === sub);
     for (const e of mine) {
       stop(e);
@@ -325,7 +327,7 @@ export function createFreeRouterPlatform(deps: FreeRouterDeps) {
       released = mine.flatMap((e) => (e.binding ? [{ account: e.scope.account, workspace: e.scope.workspace, binding: e.binding.bindingId }] : []));
     }
     await Promise.all(released.map((r) =>
-      send("DELETE", `${base(r.account)}/engine-workspaces/${r.workspace}/bindings/${r.binding}`, undefined, key(), cloudBudgetMs).catch(() => {})));
+      send("DELETE", `${base(r.account)}/engine-workspaces/${r.workspace}/bindings/${r.binding}`, undefined, key(), cloudBudgetMs, signal).catch(() => {})));
   }
 
   return { read, accept, link, grant, withdraw, signOut };

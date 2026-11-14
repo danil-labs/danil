@@ -81,16 +81,18 @@ export async function withdrawPlatform(policy: FreeModelPolicy): Promise<void> {
  * bindings. Nunca rechaza y termina en `budgetMs`: la revocación de la sesión no puede esperar a un motor o un borde caídos.
  */
 export async function signOutPlatform(budgetMs = 4_000): Promise<void> {
+  // Al vencer el plazo se corta lo que quede: ningún DELETE sale ya con la sesión siguiente.
+  const cut = new AbortController();
   let timer: ReturnType<typeof setTimeout> | undefined;
   const limit = new Promise<void>((resolve) => {
-    timer = setTimeout(resolve, budgetMs);
+    timer = setTimeout(() => { cut.abort(); resolve(); }, budgetMs);
     (timer as unknown as { unref?: () => void }).unref?.();
   });
-  await Promise.race([release().catch(() => {}), limit]);
+  await Promise.race([release(cut.signal).catch(() => {}), limit]);
   clearTimeout(timer);
 }
 
-async function release(): Promise<void> {
+async function release(signal: AbortSignal): Promise<void> {
   const h = host;
   if (!h) return;
   const who = await h.identity().catch(() => null);
@@ -100,7 +102,8 @@ async function release(): Promise<void> {
     const engine = key ? h.engine(policies.get(key)!) : h.engine(null);
     const listed = (await engine("list_workspaces", {}).catch(() => null)) as { workspaces?: { id?: unknown }[] } | null;
     const workspaces = (listed?.workspaces ?? []).map((w) => w.id).filter((id): id is string => typeof id === "string");
-    await Promise.all([...subs].map((sub) => router.signOut(sub, workspaces).catch(() => {})));
+    if (signal.aborted) return;
+    await Promise.all([...subs].map((sub) => router.signOut(sub, workspaces, undefined, signal).catch(() => {})));
   }));
   scopes.clear();
 }

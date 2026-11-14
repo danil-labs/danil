@@ -175,3 +175,22 @@ test("a provider list with duplicates is not the policy that was shown (P3.3)", 
   });
   await assert.rejects(activatePlatform(POLICY), (e: { code?: string }) => e.code === "policy_changed");
 });
+
+test("after the sign-out budget, a late engine answer sends no binding DELETE with the next session (P3)", async () => {
+  let answer!: (v: unknown) => void;
+  const sent: string[] = [];
+  setFreeRouterHost({
+    edge: async (method, path) => { sent.push(`${method} ${path}`); return { status: 204 }; },
+    identity: async () => ({ sub: "user_A", list: LIST }),
+    features: async () => ["free_router_platform_v1"],
+    engine: () => async (command) => {
+      if (command === "list_workspaces") return { workspaces: [{ id: "q3ce37ff", name: "a" }], active: "q3ce37ff" };
+      if (command === "release_free_router_owner") return new Promise((resolve) => { answer = resolve; });
+      return {};
+    },
+  });
+  await signOutPlatform(30);
+  answer({ released: [{ workspace: "q3ce37ff", platformAccount: "42", bindings: ["frb_1"] }] });
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  assert.deepEqual(sent, [], "the release that arrives after the cut is discarded");
+});
