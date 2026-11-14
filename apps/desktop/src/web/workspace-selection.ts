@@ -30,7 +30,10 @@ export function workspaceSelection(api: { active(): Promise<string | null>; sele
   return {
     active: () => active,
     uncertain: () => pending !== null,
-    reconcile: () => exclusive(settle),
+    reconcile: (profile?: { workspace: string | null }) => exclusive(async () => {
+      if (profile && !pending) active = profile.workspace;
+      else await settle();
+    }),
     choose: (id: string) => exclusive(async () => {
       const retry = pending?.id === id;
       if (pending) await settle();

@@ -57,6 +57,7 @@
   "danil.error.unauthorized": "Danil no longer accepts this computer's credential. Sign in again.",
   "danil.error.unsupported": "Danil's server doesn't offer this yet.",
   "danil.error.unavailable": "Danil is not answering right now. Try again in a moment.",
+  "danil.error.browser": "Could not open the browser. Open this address to sign in: {url}",
   "danil.status.expired_token": "The code expired before it was confirmed. Sign in again.",
   "danil.status.access_denied": "The connection was declined in the browser.",
   "danil.status.revoked": "This computer was removed from your Danil account. Sign in again to reconnect it.",

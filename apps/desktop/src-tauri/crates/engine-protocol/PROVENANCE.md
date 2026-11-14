@@ -297,6 +297,13 @@ them answers that the command is unknown, and only that feature turns off.
   `state_copy`; local window only, `relay: false` (danil-engine#415, dev
   `a4ae143f`; description updated by danil-engine `feat/state-machines-rail`),
   SHA-256 `73815aefd12c12e3fcbb55e1e9e9f2dc1db2c603b509486b24e9f5b1d1b17282`.
+- `free_router_platform_v1.json`: the platform Free router (plan v8, window-only RPC1):
+  `set_free_router_union`, `free_router_binding`, `prove_free_router_binding`,
+  `set_free_router_grant`, `clear_free_router_grant` and `release_free_router_owner`
+  (machine scope, sign-out), plus `authority` in `free_model_policy`; feature
+  `free_router_platform_v1`, from danil-engine `feat/free-router-platform-grant-r2`
+  `5811ebb847240e64b4c4b76018b12f4a79cc77f4` (byte-identical to `be7e4846`; not yet
+  green there: compare again byte for byte once it is). SHA-256 `477ab9298ea8e74717d280f04385fc464d09bbd045ce73b23494392884f8a7ca`.
 - `light_state_v1.json`: `state_manifest`, `state_resource` and the
   `state.changed` event: this machine's task and project index per workspace,
   with `not_modified` for the version the window already has; the task bar of

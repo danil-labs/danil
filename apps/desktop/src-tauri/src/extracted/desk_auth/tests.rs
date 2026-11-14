@@ -848,3 +848,169 @@ fn capabilities_count_only_version_one_and_available() {
     assert_eq!(caps.announces("identity.organizations"), Some(false));
     assert_eq!(caps.announces("identity.desk"), Some(false));
 }
+
+/// Free router v8 §3.3: la lista cerrada sigue los vectores copiados de `danil-contracts`.
+#[test]
+fn free_router_routes_follow_the_contract_vectors() {
+    let vectors: Value =
+        serde_json::from_str(include_str!("contract/free-router-routes-v1.json")).unwrap();
+    let pairs = |key: &str| -> Vec<(String, String)> {
+        vectors[key]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|p| {
+                (
+                    p[0].as_str().unwrap().to_owned(),
+                    p[1].as_str().unwrap().to_owned(),
+                )
+            })
+            .collect()
+    };
+    let public = pairs("public");
+    for (m, p) in pairs("positive") {
+        if public.contains(&(m.clone(), p.clone())) {
+            // El JWKS es público y lo lee el motor desde su origen fijo: Desk no lo pide.
+            assert!(!allowed(&m, &p), "{m} {p}");
+        } else {
+            assert!(allowed(&m, &p), "{m} {p}");
+        }
+    }
+    for p in vectors["n4"].as_array().unwrap() {
+        let p = p.as_str().unwrap();
+        for m in ["GET", "HEAD", "POST", "PUT", "DELETE", "PATCH"] {
+            assert!(!allowed(m, p), "{m} {p}");
+        }
+    }
+    // Cada ruta solo con su método.
+    for (m, p) in [
+        ("POST", "/v1/workspaces/42/free-router"),
+        ("DELETE", "/v1/workspaces/42/free-router/offer"),
+        ("GET", "/v1/workspaces/42/free-router/consent"),
+        (
+            "PUT",
+            "/v1/workspaces/42/free-router/engine-workspaces/q3ce37ff/challenge",
+        ),
+        (
+            "POST",
+            "/v1/workspaces/42/free-router/engine-workspaces/q3ce37ff",
+        ),
+        ("GET", "/v1/workspaces/42/free-router/grant"),
+        (
+            "DELETE",
+            "/v1/workspaces/42/free-router/engine-workspaces/q3ce37ff/bindings/",
+        ),
+        ("PATCH", "/v1/workspaces/42/free-router/consent"),
+    ] {
+        assert!(!allowed(m, p), "{m} {p}");
+    }
+}
+
+/// PUT y DELETE salen con su método real (antes salían como POST), con la clave de quien llama.
+#[test]
+fn put_and_delete_reach_the_edge_with_their_method_and_key() {
+    let (desk, log, _) = signed_in(Arc::new(|r: &Req, _| {
+        match (r.method.as_str(), r.path.as_str()) {
+            ("PUT", "/v1/workspaces/42/free-router/consent") => {
+                (200, json!({"accepted": true, "revision": 2}))
+            }
+            ("DELETE", "/v1/workspaces/42/free-router/consent") => {
+                (200, json!({"accepted": false, "revision": 3}))
+            }
+            (
+                "DELETE",
+                "/v1/workspaces/42/free-router/engine-workspaces/q3ce37ff/bindings/frb_1",
+            ) => (204, Value::Null),
+            _ => (405, Value::Null),
+        }
+    }));
+    let consent = json!({"revision": 1, "version": 3, "policy_id": "p", "providers": ["kilo"]});
+    let put = desk
+        .fetch(
+            "PUT",
+            "/v1/workspaces/42/free-router/consent",
+            Some(&consent),
+            "key-put",
+        )
+        .unwrap();
+    assert_eq!((put.status, put.body["revision"].clone()), (200, json!(2)));
+    let delete = desk
+        .fetch(
+            "DELETE",
+            "/v1/workspaces/42/free-router/consent",
+            None,
+            "key-delete",
+        )
+        .unwrap();
+    assert_eq!(
+        (delete.status, delete.body["accepted"].clone()),
+        (200, json!(false))
+    );
+    let unbind = desk
+        .fetch(
+            "DELETE",
+            "/v1/workspaces/42/free-router/engine-workspaces/q3ce37ff/bindings/frb_1",
+            None,
+            "key-unbind",
+        )
+        .unwrap();
+    assert_eq!(unbind.status, 204);
+    let seen = log.lock().unwrap().clone();
+    let sent = |path: &str, method: &str| {
+        seen.iter()
+            .find(|r| r.path == path && r.method == method)
+            .cloned()
+            .unwrap_or_else(|| panic!("{method} {path} no llegó con su método"))
+    };
+    let put = sent("/v1/workspaces/42/free-router/consent", "PUT");
+    assert_eq!(put.idempotency_key.as_deref(), Some("key-put"));
+    assert_eq!(put.body, consent);
+    let delete = sent("/v1/workspaces/42/free-router/consent", "DELETE");
+    assert_eq!(delete.idempotency_key.as_deref(), Some("key-delete"));
+    assert_eq!(delete.body, Value::Null, "un DELETE no lleva cuerpo");
+    let unbind = sent(
+        "/v1/workspaces/42/free-router/engine-workspaces/q3ce37ff/bindings/frb_1",
+        "DELETE",
+    );
+    assert_eq!(unbind.idempotency_key.as_deref(), Some("key-unbind"));
+    assert!(!seen
+        .iter()
+        .any(|r| r.method == "POST" && r.path.contains("free-router")));
+    for method in ["PUT", "DELETE"] {
+        let reply = session::Reply {
+            status: 200,
+            body: Value::Null,
+            retry_after: None,
+            location: None,
+        };
+        assert_eq!(
+            super::edge_reply(method, &reply, "k")["idempotency_key"],
+            "k",
+            "{method}"
+        );
+    }
+}
+
+/// Una escritura sin clave no sale: el borde exige `Idempotency-Key` y un reintento sin ella no sería el mismo.
+#[test]
+fn a_write_without_a_key_never_reaches_the_edge() {
+    let (desk, log, _) = signed_in(Arc::new(|_: &Req, _| (200, json!({}))));
+    for method in ["POST", "PUT", "DELETE"] {
+        let got = desk.fetch(method, "/v1/workspaces/42/free-router/consent", None, "");
+        assert!(
+            matches!(got, Err(Fail::Refused { ref code, .. }) if code == "invalid_request"),
+            "{method}"
+        );
+    }
+    assert_eq!(count(&log, "/v1/workspaces/42/free-router/consent"), 0);
+}
+
+/// Sin navegador (Linux sin xdg-utils), la ventana recibe la dirección para copiarla y un error propio, no el genérico.
+#[test]
+fn a_browser_that_does_not_open_gives_the_sign_in_address() {
+    let url = "https://edge.test/v1/identity/desk/authorize?state=s";
+    let err = super::browser_failed(url);
+    assert_eq!(err["detail"], "browser");
+    assert_eq!(err["what"]["clave"], "danil.error.browser");
+    assert_eq!(err["what"]["datos"]["url"], url);
+}
