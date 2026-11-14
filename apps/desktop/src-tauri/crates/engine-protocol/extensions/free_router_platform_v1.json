@@ -1,7 +1,7 @@
 {
   "version": 1,
   "name": "free_router_platform",
-  "description": "Pase del Free router de plataforma (plan v8, terminus-workspace#72; contrato danil-contracts platform/free-router). set_free_router_union une el workspace a un account de plataforma con la persona de la sesión de la interfaz (null al cerrar sesión); free_router_binding da {jkt, nonce}; prove_free_router_binding firma la prueba del reto; set_free_router_grant instala el pase firmado por workspaces ({sealed}); clear_free_router_grant lo borra y sube la generación. Solo interfaz (ventana o relay con caller person). Fuera del hash de compatibilidad (status.contract): sin este rasgo, la interfaz deja el Router cerrado en lo que no es personal.",
+  "description": "Pase del Free router de plataforma (plan v8, terminus-workspace#72; contrato danil-contracts platform/free-router). set_free_router_union une el workspace a un account de plataforma con la persona de la sesión de la interfaz (null al cerrar sesión); free_router_binding da {jkt, nonce}; prove_free_router_binding firma la prueba del reto; set_free_router_grant instala el pase firmado por workspaces ({sealed}); clear_free_router_grant lo borra y sube la generación; release_free_router_owner suelta la dueña de un sub (cierre de sesión, también tras reiniciar la interfaz) y devuelve sus bindings para el DELETE. free_model_policy añade authority: platform|local. Solo interfaz (ventana o relay con caller person). Fuera del hash de compatibilidad (status.contract): sin este rasgo, la interfaz deja el Router cerrado en lo que no es personal.",
   "features": [
     "free_router_platform_v1"
   ],
@@ -151,6 +151,31 @@
       ],
       "path": "rpc::clear_free_router_grant",
       "scope": "workspace",
+      "audience": "window",
+      "authority": "admin",
+      "durable": false,
+      "enforcement": "server"
+    },
+    {
+      "async": false,
+      "channel": null,
+      "kind": "invoke",
+      "name": "release_free_router_owner",
+      "output": "-> Result < Value , String >",
+      "parameters": [
+        {
+          "key": "sub",
+          "name": "sub",
+          "type": "String"
+        },
+        {
+          "key": "workspaces",
+          "name": "workspaces",
+          "type": "Option < Vec < String > >"
+        }
+      ],
+      "path": "rpc::release_free_router_owner",
+      "scope": "machine",
       "audience": "window",
       "authority": "admin",
       "durable": false,

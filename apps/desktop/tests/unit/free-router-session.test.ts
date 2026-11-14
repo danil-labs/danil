@@ -26,6 +26,8 @@ function host(opts: { consent?: boolean; offered?: boolean; version?: number; id
       engine.push(`${command}${"sub" in args ? "" : ":null"}`);
       if (command === "prove_free_router_binding") return { jwk: {}, sig: "s" };
       if (command === "free_router_binding") return { jkt: "j", nonce: "local-nonce-0001" };
+      if (command === "list_workspaces") return { workspaces: [{ id: "q3ce37ff", name: "a" }, { id: "w2", name: "b" }], active: "q3ce37ff" };
+      if (command === "release_free_router_owner") return { released: [{ workspace: "q3ce37ff", platformAccount: "42", bindings: ["frb_1"] }] };
       return {};
     },
   });
@@ -77,7 +79,14 @@ test("withdrawing deletes the consent, then clears; signing out closes the union
   const again = host();
   await activatePlatform(POLICY);
   await signOutPlatform();
-  assert.ok(again.engine.includes("set_free_router_union:null"));
+  assert.ok(again.engine.includes("release_free_router_owner"));
   assert.ok(again.sent.includes("DELETE …/engine-workspaces/q3ce37ff/bindings/frb_1"));
   assert.equal(again.sent.includes("DELETE …/consent"), false);
+});
+
+test("signing out after a window restart still releases the person on the engine and deletes what it returns", async () => {
+  const { sent, engine } = host();
+  await signOutPlatform();
+  assert.deepEqual(engine, ["list_workspaces:null", "release_free_router_owner"]);
+  assert.deepEqual(sent, ["DELETE …/engine-workspaces/q3ce37ff/bindings/frb_1"]);
 });

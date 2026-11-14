@@ -50,6 +50,7 @@ function lab(overrides: { edge?: (r: Sent, n: number) => Answer | Promise<Answer
     if (command === "free_router_binding") return { jkt: "jkt", nonce: `local-nonce-${called.length}` };
     if (command === "set_free_router_grant") return { sealed: true };
     if (command === "clear_free_router_grant") return null;
+    if (command === "release_free_router_owner") return { released: [{ workspace: "q3ce37ff", platformAccount: "42", bindings: ["frb_1"] }] };
     throw { code: "free_router.invalid_request" };
   };
   const clock = {
@@ -193,9 +194,9 @@ test("signing out drops local authority at once, then deletes this session's bin
   });
   await router.link(SCOPE);
   await router.grant(SCOPE);
-  await router.signOut("user_A");
-  const union = called.filter((c) => c.command === "set_free_router_union").at(-1)!;
-  assert.deepEqual(union.args, { workspace: "q3ce37ff" }, "the union is closed without the platform values, while the cloud is still failing");
+  await router.signOut("user_A", ["q3ce37ff", "otro"]);
+  const release = called.find((c) => c.command === "release_free_router_owner")!;
+  assert.deepEqual(release.args, { sub: "user_A", workspaces: ["q3ce37ff", "otro"] }, "the engine releases this person, while the cloud is still failing");
   assert.ok(sent.some((s) => s.method === "DELETE" && s.path === `${BASE}/engine-workspaces/q3ce37ff/bindings/frb_1`));
   assert.equal(sent.some((s) => s.method === "DELETE" && s.path === `${BASE}/consent`), false, "logout is not a consent revocation");
   await clock.advance(600_000);
@@ -363,10 +364,32 @@ test("sign-out closes every union before waiting for the cloud", async () => {
   const order: string[] = [];
   const { router } = lab({
     edge: (r) => { if (r.method === "DELETE" && r.path.includes("/bindings/")) order.push("delete"); return undefined; },
-    engine: (c) => { if (c.command === "set_free_router_union" && !c.args.sub) order.push("union-null"); return undefined; },
+    engine: (c) => { if (c.command === "release_free_router_owner") order.push("release"); return undefined; },
   });
   await router.link(SCOPE);
   await router.grant(SCOPE);
-  await router.signOut("user_A");
-  assert.deepEqual(order, ["union-null", "delete"]);
+  await router.signOut("user_A", ["q3ce37ff"]);
+  assert.deepEqual(order, ["release", "delete"]);
+});
+
+test("after a window restart the engine's release names the bindings to delete, even ones this window never linked", async () => {
+  const { router, sent, called } = lab({
+    engine: (c) => (c.command === "release_free_router_owner"
+      ? { released: [{ workspace: "q3ce37ff", platformAccount: "42", bindings: ["frb_1", "frb_2"] }, { workspace: "bad.id", platformAccount: "42", bindings: ["x"] }, { workspace: "w2", platformAccount: "0", bindings: ["y"] }] }
+      : undefined),
+  });
+  await router.signOut("user_A", ["q3ce37ff", "w2"]);
+  assert.equal(called.filter((c) => c.command === "release_free_router_owner").length, 1);
+  assert.deepEqual(sent.filter((s) => s.method === "DELETE").map((s) => s.path).sort(), [
+    `${BASE}/engine-workspaces/q3ce37ff/bindings/frb_1`,
+    `${BASE}/engine-workspaces/q3ce37ff/bindings/frb_2`,
+  ], "ids outside the contract are never put in a path");
+});
+
+test("an engine without release_free_router_owner falls back to closing this window's unions", async () => {
+  const { router, called } = lab({ engine: (c) => { if (c.command === "release_free_router_owner") throw "unknown_command"; return undefined; } });
+  await router.link(SCOPE);
+  await router.signOut("user_A", ["q3ce37ff"]);
+  const union = called.filter((c) => c.command === "set_free_router_union").at(-1)!;
+  assert.deepEqual(union.args, { workspace: "q3ce37ff" });
 });

@@ -239,7 +239,7 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
         disposeGate = undefined;
         mountedBefore = true;
         // El Free router de plataforma con la cookie de esta sesión y su workspace activo (`/me.workspace`).
-        setFreeRouterHost({ edge: freeRouterWebEdge(transport), engine: policy => freeRouterEngine(freeModelScope(policy)),
+        setFreeRouterHost({ edge: freeRouterWebEdge(transport), engine: policy => freeRouterEngine(policy ? freeModelScope(policy) : undefined),
           identity: async () => (person ? { sub: person.id, list: { active_workspace_id: person.workspace, items: rows() } } : null) });
         windowApp = mountWindow({ machines, initialMachines, permits, relayOrigin: __DANIL_WEB_RELAY_ORIGINS__[0],
           profile: webAccountProfile(transport, () => person), onUnauthorized: expired,
