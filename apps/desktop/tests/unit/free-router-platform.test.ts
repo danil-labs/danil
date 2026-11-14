@@ -217,7 +217,7 @@ test("a grant answer that arrives after logout is never installed", async () => 
   await router.link(SCOPE);
   const pending = router.grant(SCOPE);
   for (let i = 0; i < 200; i++) await Promise.resolve();
-  await router.signOut("user_A");
+  await router.signOut("user_A", ["q3ce37ff"]);
   answer({ status: 200, body: { grant: "jws.late", expires_at: new Date(Date.now() + 120_000).toISOString() } });
   await assert.rejects(pending, (e: { code?: string }) => e.code === "stale");
   assert.equal(called.some((c) => c.command === "set_free_router_grant"), false);
