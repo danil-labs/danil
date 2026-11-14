@@ -59,7 +59,7 @@ export function MachinePicker(props: { workspace: string | null; project?: Proje
 
   const cloudInitial = () => {
     const id = rememberedRunOn(props.workspace);
-    return cloudInventory() === "initial" && !!id && id !== "local" && !isGuestMachine(id) && !machines().some((m) => m.id === id && m.local);
+    return cloudInventory() === "initial" && !!id && id !== "local" && !isGuestMachine(id) && !machines().some((m) => m.id === id);
   };
   const muestra = () => cloudInitial() || machines().length > 1 || (!!props.shared && sharedMachines().length > 0);
   const tono = (power: string) => (power === "running" ? "success" : power === "starting" ? "working" : power === "stopping" ? "warning" : power === "unknown" ? "neutral" : "off") as "success" | "working" | "warning" | "neutral" | "off";

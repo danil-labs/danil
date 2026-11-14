@@ -543,11 +543,13 @@ export function startAccountMachines(target: Target = window) {
   }
 
   let again = false;
+  let identityRead = 0;
   /** Una comprobación por época; otra petición del mismo alcance se repite al terminar. */
   const sync = async (): Promise<void> => {
+    const identity = ++identityRead;
     const epoch = cloudEpoch;
     const who = await whoAmI();
-    if (epoch !== cloudEpoch) return;
+    if (identity !== identityRead || epoch !== cloudEpoch) return;
     if (who.account !== account) {
       invalidateCloud();
       if (installed?.key !== LOCAL_KEY) uninstall();
