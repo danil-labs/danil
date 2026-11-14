@@ -90,3 +90,23 @@ test("signing out after a window restart still releases the person on the engine
   assert.deepEqual(engine, ["list_workspaces:null", "release_free_router_owner"]);
   assert.deepEqual(sent, ["DELETE …/engine-workspaces/q3ce37ff/bindings/frb_1"]);
 });
+
+test("against an engine without free_router_platform_v1 (9663913a) the window stays on the local consent and sign-out stays silent", async () => {
+  // La política de ese motor no trae `authority`: el consentimiento sigue el camino local de #434.
+  const legacy = { ...POLICY, authority: undefined, acceptance_ref: "danil-free-consent:x", enabled: true } as FreeModelPolicy;
+  assert.equal(isPlatformPolicy(legacy), false);
+  const sent: string[] = [];
+  const engine: string[] = [];
+  setFreeRouterHost({
+    edge: async (method, path) => { sent.push(`${method} ${path}`); return { status: 200, body: {} }; },
+    identity: async () => ({ sub: "user_A", list: LIST }),
+    engine: () => async (command) => {
+      engine.push(command);
+      if (command === "list_workspaces") return { workspaces: [{ id: "q3ce37ff", name: "a" }], active: "q3ce37ff" };
+      throw "unknown_command";
+    },
+  });
+  await signOutPlatform();
+  assert.deepEqual(sent, [], "nothing reaches the edge");
+  assert.ok(engine.every((c) => ["list_workspaces", "release_free_router_owner", "set_free_router_union"].includes(c)));
+});
