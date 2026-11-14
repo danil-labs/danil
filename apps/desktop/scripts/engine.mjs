@@ -17,7 +17,7 @@
  *
  * Everything lives under `.engine/` (ignored by git). The lab never touches the
  * data, keychain or accounts of an installed Terminus: the engine gets its own
- * data directory, HOME, temp folder and the identity `ai.danil.seldon.dev`.
+ * data directory, HOME, temp folder, keychain (macOS) and the identity `ai.danil.seldon.dev`.
  */
 import { spawn, spawnSync } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
@@ -243,11 +243,37 @@ function rpc(name, args = {}) {
   });
 }
 
+/**
+ * macOS resolves the default keychain from HOME. With the lab HOME there is none
+ * ("A default keychain could not be found"): the vault never opens, and a personal
+ * workspace cannot keep secrets or decide the Free Router consent. The lab gets its
+ * own throwaway keychain under HOME, without a password and without auto-lock; the
+ * person's keychain and search list are left alone (`security` runs with the lab HOME).
+ * Not `login.keychain-db`: macOS refuses an empty password for a keychain with that name.
+ */
+function labKeychain() {
+  if (process.platform !== "darwin") return;
+  const keychain = join(HOME, "Library", "Keychains", "lab.keychain-db");
+  mkdirSync(dirname(keychain), { recursive: true });
+  mkdirSync(join(HOME, "Library", "Preferences"), { recursive: true });
+  const security = (...args) => {
+    const result = spawnSync("security", args, { env: { ...process.env, HOME }, encoding: "utf8" });
+    if (result.status !== 0) fail(`security ${args[0]} (lab keychain ${keychain}): ${result.stdout}${result.stderr}`);
+  };
+  if (!existsSync(keychain)) {
+    security("create-keychain", "-p", "", keychain);
+    security("set-keychain-settings", keychain);
+  }
+  security("unlock-keychain", "-p", "", keychain);
+  security("default-keychain", "-d", "user", "-s", keychain);
+}
+
 async function startEngine() {
   if (!existsSync(ENGINE)) fail(`No engine at ${ENGINE}. Run: node scripts/engine.mjs download`);
   for (const dir of [join(LAB, "resources"), join(HOME, "AppData", "Roaming"), join(HOME, "AppData", "Local"), join(HOME, "Desktop"), TMP, WINDOW_DATA]) {
     mkdirSync(dir, { recursive: true });
   }
+  labKeychain();
   const log = openSync(join(LAB, "engine.log"), "a");
   const child = spawn(ENGINE, ["--data-dir", DATA, "--resource-dir", join(LAB, "resources"), "--identity", IDENTITY], {
     cwd: LAB,
