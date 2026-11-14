@@ -669,6 +669,7 @@ const steps = [
   ["The web organization selector goes by cookie, CSRF and one Idempotency-Key per intent", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/web-organizations.test.ts")], root],
   ["Desk retains engine attention without a messaging session", process.execPath, ["--test", "--test-force-exit", join(root, "tests/integration/messaging-isolation.test.mjs")], root],
   ["The cookie session mounts the real window with identity and workspaces, and machines from /v1/machines", process.execPath, ["--test", "--test-force-exit", join(root, "tests/integration/window-page.test.mjs")], root],
+  ["Web machine inventory preserves transient failures and invalidates definitive responses", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/web-machine-inventory.test.mjs")], root],
   ["The platform session always uses cookies, CSRF and a configured edge", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/web-platform-session.test.ts")], root],
   ["app.danil.ai/terminus answers 308 to the same alfa path and never leaves that host", process.execPath, ["--test", join(root, "web-redirect/worker.test.mjs")], root],
   ["The entry serves assets and closes every retired proxy", process.execPath, ["--test", join(root, "alpha-entry/worker.test.mjs")], root],
