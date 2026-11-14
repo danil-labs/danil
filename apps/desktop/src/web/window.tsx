@@ -5,6 +5,7 @@ import { directoryEntries } from "../features/shell/workspace-directory";
 import { createSignal, lazy, Suspense } from "solid-js";
 import { leerPref } from "../lib/prefs";
 import { rememberMachineNames } from "../features/machines/known-names";
+import { createMachinesRetry } from "./machines-retry";
 import { t } from "../lib/i18n";
 import { setCapabilities, type Capabilities, type WebAccountsSource } from "../lib/platform";
 import { deliver } from "../lib/serviceEvents";
@@ -39,6 +40,7 @@ export function mountWindow(base: Base, mounted: Mounted) {
   const [revision, bump] = createSignal(0);
   let listed = new Map<string, Machine>();
   let initialMachines = base.initialMachines;
+  const retry = createMachinesRetry(() => void refresh());
   const powers = new Map<string, string>();
   const unavailable = () => ({ what: t("web.machines.unavailable"), detail: "machines_unavailable" });
   const fleet = new Fleet({ self: null, storage: mounted.storage,
@@ -112,11 +114,13 @@ export function mountWindow(base: Base, mounted: Mounted) {
     initialMachines = undefined;
     const answer = await listing;
     if (stopped) return false;
-    if (answer.kind === "unauthorized") { base.onUnauthorized(); return false; }
+    if (answer.kind === "unauthorized") { retry.stop(); base.onUnauthorized(); return false; }
     if (answer.kind !== "ok") {
       if (answer.kind === "error" && (answer.status === null || answer.status === 408 || answer.status === 429 || answer.status >= 500)) return false;
-      setMissing(true); fleet.setMachines([]); return false;
+      // Definitiva: la flota no conserva máquinas revocadas, el aviso queda y la lista se vuelve a pedir sola (TW#126).
+      setMissing(true); fleet.setMachines([]); retry.failed(); return false;
     }
+    retry.succeeded();
     listed = new Map(answer.value.map(machine => [machine.machine_id, machine]));
     setMissing(false);
     bump(n => n + 1);
@@ -191,7 +195,7 @@ export function mountWindow(base: Base, mounted: Mounted) {
       </>
     ), layer);
   });
-  return { refresh, close: () => { stopped = true; fleet.close(); disposeApp?.(); disposeNotice?.(); noticeLayer?.remove(); } };
+  return { refresh, close: () => { stopped = true; retry.stop(); fleet.close(); disposeApp?.(); disposeNotice?.(); noticeLayer?.remove(); } };
 }
 
 /** Paneles que se abren desde la URL (`?settings=`); el parámetro sale de la barra al leerlo. */
