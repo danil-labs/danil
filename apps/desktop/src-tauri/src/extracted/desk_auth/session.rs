@@ -131,6 +131,13 @@ fn opaque_id(segment: &str) -> bool {
             .all(|b| b.is_ascii_alphanumeric() || b == b'_' || b == b'-')
 }
 
+/// `{account}` del Free router: el BIGINT de tenancy (`^[1-9][0-9]{0,18}$`, danil-contracts).
+fn tenancy_account(segment: &str) -> bool {
+    (1..=19).contains(&segment.len())
+        && !segment.starts_with('0')
+        && segment.bytes().all(|b| b.is_ascii_digit())
+}
+
 /// El cursor opaco de `GET /v1/machines?cursor=` tal como lo codifica el cliente
 /// (RFC 3986): letras, dígitos, `-._~` y `%XX`; nada que abra otra ruta o parámetro.
 fn opaque_cursor(raw: &str) -> bool {
@@ -179,6 +186,29 @@ pub(crate) fn allowed(method: &str, path: &str) -> bool {
         ("GET", ["", "v1", "machines", id]) => opaque_id(id),
         ("POST", ["", "v1", "machines", id, "start" | "tickets"]) => opaque_id(id),
         ("GET", ["", "v1", "operations", id]) => opaque_id(id),
+        // Free router v8 §3.3. El JWKS público no está: lo lee el motor desde su origen fijo.
+        ("GET", ["", "v1", "workspaces", account, "free-router"]) => tenancy_account(account),
+        ("PUT", ["", "v1", "workspaces", account, "free-router", "offer"]) => {
+            tenancy_account(account)
+        }
+        ("PUT" | "DELETE", ["", "v1", "workspaces", account, "free-router", "consent"]) => {
+            tenancy_account(account)
+        }
+        ("POST", ["", "v1", "workspaces", account, "free-router", "grant"]) => {
+            tenancy_account(account)
+        }
+        (
+            "POST",
+            ["", "v1", "workspaces", account, "free-router", "engine-workspaces", ws, "challenge"],
+        ) => tenancy_account(account) && opaque_id(ws),
+        (
+            "PUT" | "DELETE",
+            ["", "v1", "workspaces", account, "free-router", "engine-workspaces", ws],
+        ) => tenancy_account(account) && opaque_id(ws),
+        (
+            "DELETE",
+            ["", "v1", "workspaces", account, "free-router", "engine-workspaces", ws, "bindings", binding],
+        ) => tenancy_account(account) && opaque_id(ws) && opaque_id(binding),
         _ => false,
     }
 }
@@ -247,22 +277,48 @@ pub(crate) fn request_keyed(
 ) -> Result<Reply, Fail> {
     let agent = agent();
     let auth = bearer.map(|t| format!("Bearer {t}"));
-    let sent = if method == "GET" {
-        let mut r = agent.get(url).header("Accept", "application/json");
-        if let Some(a) = &auth {
-            r = r.header("Authorization", a);
+    // Las escrituras del contrato exigen `Idempotency-Key`; cada método sale con el suyo.
+    let key = (!key.is_empty()).then_some(key);
+    let sent = match method {
+        "GET" => {
+            let mut r = agent.get(url).header("Accept", "application/json");
+            if let Some(a) = &auth {
+                r = r.header("Authorization", a);
+            }
+            r.call()
         }
-        r.call()
-    } else {
-        let mut r = agent.post(url).header("Accept", "application/json");
-        // Las escrituras del contrato exigen `Idempotency-Key`.
-        if !key.is_empty() {
-            r = r.header("Idempotency-Key", key);
+        "DELETE" => {
+            let mut r = agent.delete(url).header("Accept", "application/json");
+            if let Some(k) = key {
+                r = r.header("Idempotency-Key", k);
+            }
+            if let Some(a) = &auth {
+                r = r.header("Authorization", a);
+            }
+            r.call()
         }
-        if let Some(a) = &auth {
-            r = r.header("Authorization", a);
+        "POST" | "PUT" => {
+            let mut r = if method == "PUT" {
+                agent.put(url)
+            } else {
+                agent.post(url)
+            }
+            .header("Accept", "application/json");
+            if let Some(k) = key {
+                r = r.header("Idempotency-Key", k);
+            }
+            if let Some(a) = &auth {
+                r = r.header("Authorization", a);
+            }
+            r.send_json(body.cloned().unwrap_or_else(|| json!({})))
         }
-        r.send_json(body.cloned().unwrap_or_else(|| json!({})))
+        // Un método que el transporte no sabe enviar no sale como otro.
+        _ => {
+            return Err(Fail::Refused {
+                status: 405,
+                code: "invalid_request".into(),
+            })
+        }
     };
     let mut response = sent.map_err(|_| Fail::Unavailable {
         retry_after: Duration::from_secs(1),

@@ -172,3 +172,25 @@ test("an expired intent is not sent when the app resumes after its retry budget"
   await assert.rejects(edgeUntil("POST", "/v1/machines/cmp_1/start", {}, { minDelayMs: 1, retryBudgetMs: 20 }));
   assert.equal(calls.length, 1);
 });
+
+test("PUT and DELETE are writes: they keep one Idempotency-Key across retries and a session change cancels them", async () => {
+  const calls = window((args, n) => (n === 0 || args?.idempotencyKey === "pending" ? missing : ok({ method: args?.method }, { idempotency_key: args?.idempotencyKey })));
+  const { edgeUntil, cancelEdgeWrites } = await edge();
+  const put = await edgeUntil("PUT", "/v1/workspaces/42/free-router/consent", { revision: 1 }, { minDelayMs: 1 });
+  assert.equal(put.status, 200);
+  assert.equal(calls.length, 2);
+  assert.equal(calls[0].args?.method, "PUT");
+  assert.deepEqual(calls[0].args?.body, { revision: 1 });
+  assert.ok(typeof calls[0].args?.idempotencyKey === "string" && calls[0].args?.idempotencyKey === calls[1].args?.idempotencyKey);
+  const deleted = await edgeUntil("DELETE", "/v1/workspaces/42/free-router/consent", undefined, { idempotencyKey: "fixed" });
+  assert.equal(deleted.status, 200);
+  assert.equal(calls[2].args?.method, "DELETE");
+  assert.equal(calls[2].args?.idempotencyKey, "fixed");
+  assert.equal("body" in (calls[2].args ?? {}), false, "a DELETE carries no body");
+  const before = calls.length;
+  const pending = edgeUntil("DELETE", "/v1/workspaces/42/free-router/consent", undefined, { minDelayMs: 50, idempotencyKey: "pending" });
+  await new Promise((resolve) => setTimeout(resolve, 10));
+  cancelEdgeWrites();
+  await assert.rejects(pending);
+  assert.ok(calls.length - before <= 1, "a cancelled DELETE is not retried after the session changes");
+});
