@@ -5,6 +5,7 @@ import { createRoot, createSignal } from "solid-js";
 import { invoke } from "../../lib/invoke";
 import { t } from "../../lib/i18n";
 import { createPref, escribirPref, leerPref } from "../../lib/prefs";
+import { knownMachineName } from "./known-names";
 import { isMac } from "../../lib/window";
 import { capabilities } from "../../lib/platform";
 
@@ -135,7 +136,10 @@ export const machineName = (id: string, local = id === "local") => {
   namesRead();
   // En la web no existe «este equipo»: sin máquina de la nube, la ventana lo dice en vez de nombrar una local.
   if (local && !capabilities().nativeWindow && capabilities().machineName) return capabilities().machineName!(id);
-  return local ? (isMac() ? t("shell.machines.this_mac") : t("shell.machines.this_computer")) : (capabilities().machineName?.(id) ?? id);
+  if (local) return isMac() ? t("shell.machines.this_mac") : t("shell.machines.this_computer");
+  // Antes de que la flota la conozca, el último nombre guardado (`known-names.ts`) y no el id.
+  const name = capabilities().machineName?.(id);
+  return name && name !== id ? name : (knownMachineName(id) ?? name ?? id);
 };
 
 const ORIGINS = "machines.carry_origins";

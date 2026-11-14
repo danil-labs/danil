@@ -6,6 +6,7 @@
  * Node lo importan.
  */
 import { invoke } from "../../lib/invoke.ts";
+import { forgetMachineNames } from "../machines/known-names.ts";
 import { type DanilConnectStatus, failureCode } from "./danil-account.ts";
 
 export type DanilSessionInfo = {
@@ -173,7 +174,11 @@ export async function addAccount(name?: string): Promise<DanilConnectStatus> {
 
 export const setDefaultAccount = (account: string) => invoke<DanilSessionInfo[]>("danil_set_default_account", { account });
 
-export const signOutAccount = (account: string) => invoke<DanilConnectStatus>("danil_disconnect", { account });
+export const signOutAccount = (account: string) => {
+  // Los nombres son de las flotas de todas las cuentas: se borran todos y la siguiente lectura los repone.
+  forgetMachineNames();
+  return invoke<DanilConnectStatus>("danil_disconnect", { account });
+};
 
 /**
  * `account: null` lo deja sin cuenta: sale de la anterior (de su web y su
