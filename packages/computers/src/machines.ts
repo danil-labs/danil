@@ -70,6 +70,8 @@ export const OPERATION_TIMEOUT_MS = 330_000;
 const POLL_FIRST_MS = 500;
 const POLL_MAX_MS = 4_000;
 const TERMINAL = new Set(["succeeded", "failed", "cancelled"]);
+/** Los `MachineState` del ciclo de encendido; desde otro (o uno desconocido) no se ofrece encenderla. */
+const POWER_STATES = new Set(["running", "starting", "stopping", "stopped"]);
 
 /** `application/problem+json` trae `code`; un cuerpo de antes, `{error}`. */
 const problemCode = (body: unknown): string | undefined => {
@@ -91,8 +93,8 @@ export function machineToComputer(m: Machine): Computer & { state: MachineState 
     : m.state === "starting" ? "starting"
     : m.state === "stopped" || m.state === "stopping" ? "stopped"
     : "unknown";
-  // Una computadora personal no se enciende desde la nube: no se ofrece despertarla.
-  return { computer_id: m.machine_id, name: m.name ?? null, state, wakeable: m.state === "stopped" && m.kind !== "personal", provider: null };
+  // `wakeable` es «VM administrada», no «apagada ahora»: se apaga sola sin que la lista lo sepa. Una personal no se enciende desde la nube.
+  return { computer_id: m.machine_id, name: m.name ?? null, state, wakeable: POWER_STATES.has(m.state) && m.kind !== "personal", provider: null };
 }
 
 function machineOf(raw: unknown): Machine | null {

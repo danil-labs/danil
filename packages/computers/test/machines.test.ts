@@ -301,3 +301,10 @@ withExamples("contrato: los ejemplos de mvp-v1 los entiende el módulo", async (
   });
   assert.deepEqual(await client(failed.fetch).start("cmp_1"), { kind: "error", status: null, code: "provider_unavailable" });
 });
+
+test("la máquina de la organización se puede encender aunque se haya listado encendida: wakeable es «VM administrada», no «apagada ahora»", () => {
+  // Listada encendida y apagada después por inactividad con la ventana abierta: la flota la enciende sin esperar otra lista.
+  for (const state of ["running", "starting", "stopping", "stopped"]) assert.equal(machineToComputer({ ...machine, state }).wakeable, true, state);
+  assert.equal(machineToComputer({ ...machine, state: "running", kind: "personal" }).wakeable, false);
+  for (const state of ["reserved", "deleting", "deleted", "suspended", "future"]) assert.equal(machineToComputer({ ...machine, state }).wakeable, false, state);
+});
