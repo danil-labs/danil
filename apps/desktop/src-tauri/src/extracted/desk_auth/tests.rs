@@ -990,3 +990,17 @@ fn put_and_delete_reach_the_edge_with_their_method_and_key() {
         );
     }
 }
+
+/// Una escritura sin clave no sale: el borde exige `Idempotency-Key` y un reintento sin ella no sería el mismo.
+#[test]
+fn a_write_without_a_key_never_reaches_the_edge() {
+    let (desk, log, _) = signed_in(Arc::new(|_: &Req, _| (200, json!({}))));
+    for method in ["POST", "PUT", "DELETE"] {
+        let got = desk.fetch(method, "/v1/workspaces/42/free-router/consent", None, "");
+        assert!(
+            matches!(got, Err(Fail::Refused { ref code, .. }) if code == "invalid_request"),
+            "{method}"
+        );
+    }
+    assert_eq!(count(&log, "/v1/workspaces/42/free-router/consent"), 0);
+}

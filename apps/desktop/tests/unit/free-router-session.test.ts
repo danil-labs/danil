@@ -22,6 +22,7 @@ function host(opts: { consent?: boolean; offered?: boolean; version?: number; id
       return { status: 200, body: { assignment_id: "fra_1", binding_id: "frb_1" } };
     },
     identity: async () => (opts.identity === false ? null : { sub: "user_A", list: LIST }),
+    features: async () => ["free_router_platform_v1"],
     engine: () => async (command, args) => {
       engine.push(`${command}${"sub" in args ? "" : ":null"}`);
       if (command === "prove_free_router_binding") return { jwk: {}, sig: "s" };
@@ -100,6 +101,7 @@ test("against an engine without free_router_platform_v1 (9663913a) the window st
   setFreeRouterHost({
     edge: async (method, path) => { sent.push(`${method} ${path}`); return { status: 200, body: {} }; },
     identity: async () => ({ sub: "user_A", list: LIST }),
+    features: async () => [],
     engine: () => async (command) => {
       engine.push(command);
       if (command === "list_workspaces") return { workspaces: [{ id: "q3ce37ff", name: "a" }], active: "q3ce37ff" };
@@ -109,4 +111,67 @@ test("against an engine without free_router_platform_v1 (9663913a) the window st
   await signOutPlatform();
   assert.deepEqual(sent, [], "nothing reaches the edge");
   assert.ok(engine.every((c) => ["list_workspaces", "release_free_router_owner", "set_free_router_union"].includes(c)));
+});
+
+test("sign-out is bounded: an engine and an edge that never answer cannot hold the revocation (P2)", async () => {
+  const { signOutPlatform: bounded } = await import("../../src/features/settings/free-router-session.ts");
+  setFreeRouterHost({
+    edge: () => new Promise(() => {}),
+    identity: () => new Promise(() => {}),
+    engine: () => () => new Promise(() => {}),
+    features: async () => ["free_router_platform_v1"],
+  });
+  const started = Date.now();
+  await bounded(50);
+  assert.ok(Date.now() - started < 1_000, "it settles within its budget");
+});
+
+test("Desk sign-out always reaches danil_sign_out, even with the engine stuck connecting (P2)", async () => {
+  const calls: string[] = [];
+  (globalThis as { window?: unknown }).window = {
+    __TAURI_INTERNALS__: {
+      invoke: (command: string) => {
+        calls.push(command);
+        return command === "danil_sign_out" ? Promise.resolve({ state: "disconnected" }) : new Promise(() => {});
+      },
+    },
+  };
+  setFreeRouterHost({
+    edge: () => new Promise(() => {}),
+    identity: () => new Promise(() => {}),
+    engine: () => () => new Promise(() => {}),
+    features: async () => ["free_router_platform_v1"],
+  });
+  const { signOut } = await import("../../src/features/settings/danil-account.ts");
+  const status = await signOut(50);
+  assert.deepEqual(status, { state: "disconnected" });
+  assert.ok(calls.includes("danil_sign_out"));
+});
+
+test("the platform path needs both the engine feature and authority platform (P3.1)", async () => {
+  const { usesPlatform } = await import("../../src/features/settings/free-router-session.ts");
+  const withFeatures = (features: string[]) => setFreeRouterHost({ edge: async () => ({ status: 200 }), identity: async () => null, engine: () => async () => ({}), features: async () => features });
+  withFeatures(["free_router_platform_v1"]);
+  assert.equal(await usesPlatform(POLICY), true);
+  assert.equal(await usesPlatform({ ...POLICY, authority: "local" } as FreeModelPolicy), false);
+  withFeatures([]);
+  assert.equal(await usesPlatform(POLICY), false, "an engine without the feature (9663913a) stays on the local consent");
+  setFreeRouterHost({ edge: async () => ({ status: 200 }), identity: async () => null, engine: () => async () => ({}), features: async () => { throw new Error("offline"); } });
+  assert.equal(await usesPlatform(POLICY), false);
+  setFreeRouterHost(null);
+  assert.equal(await usesPlatform(POLICY), false);
+});
+
+test("a provider list with duplicates is not the policy that was shown (P3.3)", async () => {
+  const { sent } = host();
+  setFreeRouterHost({
+    edge: async (method, path) => {
+      sent.push(`${method} ${path}`);
+      return { status: 200, body: { offered: true, policy: { version: 3, policy_id: "p", providers: ["kilo", "kilo", "vercel"] }, consent: { accepted: false, revision: 1 } } };
+    },
+    identity: async () => ({ sub: "user_A", list: LIST }),
+    engine: () => async () => ({}),
+    features: async () => ["free_router_platform_v1"],
+  });
+  await assert.rejects(activatePlatform(POLICY), (e: { code?: string }) => e.code === "policy_changed");
 });
