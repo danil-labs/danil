@@ -55,7 +55,7 @@ import { machineNamesChanged, refetchMachines, setCloudInventory } from "./store
 import { rememberMachineNames } from "./known-names";
 import type { WslChild } from "./wsl";
 import { guestChannels } from "./guestChannels";
-import { CLOUD_RETRY_INITIAL_MS, CLOUD_RETRY_MS, createCloudMachines, EDGE_ENDPOINT } from "./cloud-machines";
+import { CLOUD_RETRY_INITIAL_MS, CLOUD_RETRY_MS, cloudInfo, cloudLink, createCloudMachines, EDGE_ENDPOINT } from "./cloud-machines";
 import { createGuestLink, guestMachineInfo, isGuestMachine, wakeGuestMachine } from "./guestLink";
 
 type Internals = { invoke: Invoke };
@@ -167,6 +167,9 @@ export function startAccountMachines(target: Target = window) {
   let cloudRead: Promise<Computer[]> | null = null;
   let cloudRetryDelay = CLOUD_RETRY_INITIAL_MS;
   let cloudEpoch = 0;
+  /** El estado de una máquina de la nube según su fila de `/v1/machines`: vale mientras su canal no diga otro. */
+  const cloudState = (id: string) => lastCloudRows.find((c) => c.computer_id === id)?.state as MachineState | undefined;
+  const machineInfo = (c: Computer): MachineInfo => (cloudIds.has(c.computer_id) ? cloudInfo(infoOf(c)) : infoOf(c));
   function invalidateCloud() {
     cloudEpoch++;
     setCloudInventory("initial");
@@ -285,7 +288,7 @@ export function startAccountMachines(target: Target = window) {
         if (isGuestMachine(info.id)) return createGuestLink(info.id);
         if (cloudIds.has(info.id)) {
           // Canal de datos con ticket de un solo uso (`ticket.*`), nunca `bearer.*`.
-          return new RelaySession({
+          const relay = new RelaySession({
             endpoint: EDGE_ENDPOINT,
             computerId: info.id,
             getAdmission: async () => {
@@ -296,6 +299,7 @@ export function startAccountMachines(target: Target = window) {
             renewInChannel: () => cloudRenew,
             onUnauthorized: () => void sync(),
           });
+          return cloudLink(relay, () => cloudState(info.id));
         }
         if (endpoint === null) throw { code: "unknown_machine", detail: info.id };
         return new RelaySession({
@@ -355,7 +359,7 @@ export function startAccountMachines(target: Target = window) {
       engineFeatures: engineWorkspaces.features,
       home: () => ({ wakes: homeWakes, os: homeOs, features: homeFeatures, version: homeVersion }),
     });
-    fleet.setMachines([...others.map(infoOf), ...guestMachines]);
+    fleet.setMachines([...others.map(machineInfo), ...guestMachines]);
     observeEngine(fleet);
     rememberMachineNames(fleet.machines());
     fleet.subscribeEvents();
@@ -524,7 +528,7 @@ export function startAccountMachines(target: Target = window) {
 
     // The same account: machines that came, left or changed name are applied live, without tearing the rest down.
     if (installed?.key === key) {
-      installed.fleet.setMachines([...others.map(infoOf), ...guestMachines]);
+      installed.fleet.setMachines([...others.map(machineInfo), ...guestMachines]);
       observeEngine(installed.fleet);
       rememberMachineNames(installed.fleet.machines());
       machineNamesChanged();
@@ -542,7 +546,7 @@ export function startAccountMachines(target: Target = window) {
     if (epoch !== cloudEpoch) return;
     if (!guests.length && !cloudRows.length) return disconnect();
     if (installed?.key === LOCAL_KEY) {
-      installed.fleet.setMachines([...cloudRows.map(infoOf), ...guests]);
+      installed.fleet.setMachines([...cloudRows.map(machineInfo), ...guests]);
       rememberMachineNames(installed.fleet.machines());
       machineNamesChanged();
       return void refetchMachines();

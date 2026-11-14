@@ -29,10 +29,17 @@ type Row = Record<string, unknown>;
 /** `version`: la `host_version` de su último `hello`, según el plano de control; se conserva apagada. */
 /** `child`: una máquina hija de esta computadora (Linux en esta PC): no está en el registro de la cuenta y es de todos sus workspaces. */
 /** `organization`: es el endpoint de la persona en el servidor de una organización y atiende esos workspaces (`organization` de su fila). */
+/**
+ * `starts`: quién la enciende ante un intent. `relay` (lo de antes, `computers`): el
+ * relay la enciende al recibirlo. `control_plane` (`/v1/machines` del MVP): el canal
+ * con ticket no enciende nada, así que la flota la enciende antes por `wake`, como a
+ * una acción. Sin el dato vale `relay`.
+ */
 export type MachineInfo = {
   id: string;
   name: string;
   wakes: boolean;
+  starts?: "relay" | "control_plane";
   outdated?: boolean;
   linked?: ReadonlySet<string> | null;
   os?: SystemId;
@@ -608,8 +615,8 @@ export class Fleet {
     // Archivar, borrar, renombrar, fijar o mover de space: el relay la guarda sin encenderla.
     if (off && kind !== "read" && !this.defers(command, args)) {
       if (!member.info.wakes) throw new FleetError("machine_off", machine, null, false);
-      // El relay enciende la VM solo con un intent; otra acción la enciende antes el plano de control.
-      if (kind === "action") await this.wakeMember(member);
+      // Un intent lo enciende el relay si sabe hacerlo; lo demás, y todo en `control_plane`, antes el plano de control.
+      if (kind === "action" || member.info.starts === "control_plane") await this.wakeMember(member);
     }
     const workspace = callWorkspace(envelope.workspace, args);
     const timeout = envelope.command === "list_storage" ? this.deadlines.action : this.deadlines[kind];
@@ -643,8 +650,20 @@ export class Fleet {
     return !(command === "move_task_to_space" && typeof args.space === "string" && this.shared.has(args.space));
   }
 
+  /** Los encendidos en vuelo, uno por máquina: dos intents a la vez esperan el mismo, no piden otro (`409 operation_in_progress`). */
+  private starting = new Map<string, Promise<void>>();
+
   /** Enciende la VM y espera a que diga `online`, con el tope de un intent. */
-  private async wakeMember(member: Member) {
+  private wakeMember(member: Member): Promise<void> {
+    const { id } = member.info;
+    const running = this.starting.get(id);
+    if (running) return running;
+    const start = this.startMember(member).finally(() => this.starting.delete(id));
+    this.starting.set(id, start);
+    return start;
+  }
+
+  private async startMember(member: Member) {
     const { id } = member.info;
     if (alwaysOn(member.info)) throw new FleetError("machine_off", id, null, false);
     if (!this.config.wake) throw new FleetError("machine_off", id, null, true);
