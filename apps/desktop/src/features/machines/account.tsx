@@ -472,6 +472,16 @@ export function startAccountMachines(target: Target = window) {
     return { self: status?.state === "connected" ? (status.computer_id ?? null) : null, account: null };
   }
 
+  /**
+   * Una salida definitiva de la cuenta (sin token, `401`, licencia): sin nube que
+   * leer, el inventario de esta época queda resuelto y la recordada ausente cae
+   * a la local. Solo la llama `check` con su época aún vigente.
+   */
+  const settled = () => {
+    setCloudInventory("settled");
+    disconnect();
+  };
+
   /** Reads the account and its computers; installs, updates or removes the fan-out to match. */
   async function check(who: { self: string | null; account: string | null }) {
     const epoch = cloudEpoch;
@@ -485,7 +495,7 @@ export function startAccountMachines(target: Target = window) {
       client = await getToken();
     } catch {
       // An engine without `danil_client_token`, or a control plane without client tokens.
-      if (epoch === cloudEpoch) disconnect();
+      if (epoch === cloudEpoch) settled();
       return;
     }
     if (epoch !== cloudEpoch) return;
@@ -493,8 +503,9 @@ export function startAccountMachines(target: Target = window) {
     if (epoch !== cloudEpoch) return;
     if (answer.kind === "unauthorized" || answer.kind === "license") {
       token = null;
-      return disconnect();
+      return settled();
     }
+    // Otro error es transitorio: el inventario sigue sin resolver hasta el siguiente evento o `RELIST`.
     if (answer.kind !== "ok") return;
     const mine = answer.value.find((c) => c.computer_id === self);
     setSelfName(mine?.name?.trim() || null);
