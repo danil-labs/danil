@@ -9,6 +9,8 @@ export type DanilCreditsSource = {
   readBalance: () => Promise<unknown>;
   prepare?: (headers: Record<string, string>) => Promise<unknown>;
   subscribe?: (clear: () => void) => () => void;
+  /** Abre la recarga en el navegador para la cuenta autenticada; sin ella no se ofrece. */
+  recharge?: () => Promise<void>;
 };
 
 /** Proyección defensiva de los campos que muestra esta vista. */

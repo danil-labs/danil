@@ -1,5 +1,5 @@
-import { modelPresentation, routerDiscovery } from "../../../../packages/tasks/src/model-presentation.ts";
-export { modelPresentation, routerDiscovery };
+import { modelPresentation } from "../../../../packages/tasks/src/model-presentation.ts";
+export { modelPresentation };
 import { canonicalAgentId, isFreeRouterAgent, OPENCODE } from "../../../../packages/tasks/src/agents.ts";
 import { t } from "./i18n.ts";
 import type { AgentModels, ModelOption } from "./model";
