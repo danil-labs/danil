@@ -1,8 +1,5 @@
-Danil 0.3.2 adds browser sign-in and connections to your organization's machines.
+Danil 0.3.3 prepares the Free AI Router for organization workspaces and makes signing in sturdier.
 
-- **Sign in.** Use your system browser and continue in Danil. The Local profile remains available without signing in.
-- **Organizations and workspaces.** Choose your organization and its workspaces from the picker. To use another email, sign out and sign in again.
-- **Machines.** Check their state, start them, and connect. Danil shows “Connecting…” while the list or channel is pending.
-- **Services in preparation.** Edge routes that are not available yet remain recoverable. Retries preserve operation identity and respect the server's requested wait.
-
-The Free AI Router with the new engine will be included in the next candidate.
+- **Free AI Router in organizations.** In a workspace that belongs to an organization, accepting the Free AI Router is recorded for your account in Danil, not on this computer. Turning it off withdraws it there too. Personal workspaces work as before. It turns on with the engine that supports it; until then, it stays off in organization workspaces.
+- **Signing out.** Signing out of your Danil account also releases the Free AI Router you were using in each workspace.
+- **Choosing an organization.** If choosing an organization is refused, Danil no longer sends that choice again on its own. Choose it again to retry.
