@@ -23,6 +23,8 @@ export type Machine = {
   connection?: string | null;
   organization_id?: string | null;
   person_id?: string | null;
+  /** `organization | personal`, enum abierto; ausente o desconocido = `organization`. Una `personal` es la Mac o PC propia de la persona. */
+  kind?: string | null;
 };
 
 export type MachineOperation = { operation_id: string; kind?: string; status: string; created_at?: string; error?: { code?: string } | null };
@@ -89,7 +91,8 @@ export function machineToComputer(m: Machine): Computer & { state: MachineState 
     : m.state === "starting" ? "starting"
     : m.state === "stopped" || m.state === "stopping" ? "stopped"
     : "unknown";
-  return { computer_id: m.machine_id, name: m.name ?? null, state, wakeable: m.state === "stopped", provider: null };
+  // Una computadora personal no se enciende desde la nube: no se ofrece despertarla.
+  return { computer_id: m.machine_id, name: m.name ?? null, state, wakeable: m.state === "stopped" && m.kind !== "personal", provider: null };
 }
 
 function machineOf(raw: unknown): Machine | null {
