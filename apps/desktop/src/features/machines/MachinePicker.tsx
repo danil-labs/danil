@@ -8,8 +8,9 @@ import { ITEM_DE_MENU, Popover, PopoverContent, PopoverTrigger } from "../../ui/
 import { SignalDot } from "../../ui/SignalDot";
 import { ConnectMachine, connectSource } from "./ConnectMachine";
 import { MachineIcon } from "./MachineIcon";
+import { isGuestMachine } from "./guestLink";
 import { refetchSharedMachines, sharedBusy, sharedMachines, sharedNotice, startSharedMachine } from "./shared";
-import { cloudMachinesLoading, type Machine, machineName, machines, type ProjectPlace, refetchMachines, runOn, runsWorkspace, setRunOn, unavailable, wakesOf } from "./store";
+import { cloudInventory, rememberedRunOn, type Machine, machineName, machines, type ProjectPlace, refetchMachines, runOn, runsWorkspace, setRunOn, unavailable, wakesOf } from "./store";
 
 let pedida = false;
 
@@ -56,8 +57,11 @@ export function MachinePicker(props: { workspace: string | null; project?: Proje
     return null;
   };
 
-  // Con una sola opción aquí también sale: dice dónde corre la tarea.
-  const muestra = () => cloudMachinesLoading() || machines().length > 1 || (!!props.shared && sharedMachines().length > 0);
+  const cloudInitial = () => {
+    const id = rememberedRunOn(props.workspace);
+    return cloudInventory() === "initial" && !!id && id !== "local" && !isGuestMachine(id) && !machines().some((m) => m.id === id);
+  };
+  const muestra = () => cloudInitial() || machines().length > 1 || (!!props.shared && sharedMachines().length > 0);
   const tono = (power: string) => (power === "running" ? "success" : power === "starting" ? "working" : power === "stopping" ? "warning" : power === "unknown" ? "neutral" : "off") as "success" | "working" | "warning" | "neutral" | "off";
   const estado = (power: string) => {
     switch (power) {
@@ -77,7 +81,7 @@ export function MachinePicker(props: { workspace: string | null; project?: Proje
           aria-label={t("shell.machines.label")}
         >
           <MachineIcon wakes={elegida() ? wakesOf(elegida() as Machine) : false} size={12} />
-          <Show when={cloudMachinesLoading() || elegida()?.connection === "unknown"} fallback={<span class="truncate">{elegida() ? nombre(elegida() as Machine) : t("shell.machines.label")}</span>}>
+          <Show when={cloudInitial() || elegida()?.connection === "unknown"} fallback={<span class="truncate">{elegida() ? nombre(elegida() as Machine) : t("shell.machines.label")}</span>}>
             <span class="truncate" role="status" data-machine-connecting="">{t("shell.machines.connecting")}</span>
           </Show>
           <Show when={elegida()}>

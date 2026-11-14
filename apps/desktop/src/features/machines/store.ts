@@ -40,13 +40,16 @@ export function unavailable(m: Machine, project: ProjectPlace, all: Machine[] = 
 // Una sola lista para toda la ventana. Señal y no `createResource`, que
 // suspendería la vista entera mientras contestan.
 const [machines, setMachines] = createRoot(() => createSignal<Machine[]>([]));
-const [cloudMachinesLoading, setCloudMachinesLoading] = createRoot(() => createSignal(false));
-export { machines, cloudMachinesLoading, setCloudMachinesLoading };
+const [cloudInventory, setCloudInventory] = createRoot(() => createSignal<"initial" | "settled">("settled"));
+export { machines, cloudInventory, setCloudInventory };
 
-export const refetchMachines = () =>
-  invoke<Machine[]>("machine_list")
-    .then(setMachines)
+let machinesRead = 0;
+export const refetchMachines = () => {
+  const read = ++machinesRead;
+  return invoke<Machine[]>("machine_list")
+    .then((rows) => { if (read === machinesRead) setMachines(rows); })
     .catch(() => setMachines([]));
+};
 
 /**
  * Dónde se crea la próxima tarea, por workspace; sin entrada, en la máquina de la
@@ -56,12 +59,15 @@ const [elegidas, guardarElegidas] = createRoot(() =>
   createPref<Record<string, string>>("machines.run_on", {}),
 );
 
+/** El destino recordado, antes de comprobar su presencia en el inventario. */
+export const rememberedRunOn = (workspace: string | null): string | null => workspace ? elegidas()[workspace] ?? null : null;
+
 /** La máquina elegida para `workspace`, si sigue en la lista y puede correr una tarea de `project`. */
 export function runOn(workspace: string | null, project?: ProjectPlace): string | null {
-  const id = workspace ? elegidas()[workspace] : undefined;
+  const id = rememberedRunOn(workspace);
   const machine = id ? machines().find((m) => m.id === id) : undefined;
   if (!id || machine?.active || (machine && unavailable(machine, project))) return null;
-  return machines().length === 0 || machine ? id : null;
+  return cloudInventory() === "initial" || machines().length === 0 || machine ? id : null;
 }
 
 export function setRunOn(workspace: string | null, id: string | null) {

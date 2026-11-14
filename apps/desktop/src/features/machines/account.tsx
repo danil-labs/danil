@@ -51,7 +51,7 @@ import AccountMachines from "./AccountMachines";
 import { MachinePicker } from "./MachinePicker";
 import { createRouter, type Invoke, type Router, type SliceChange } from "./router";
 import { createEngineWorkspaces, railOf } from "./engine-workspaces";
-import { machineNamesChanged, refetchMachines, setCloudMachinesLoading } from "./store";
+import { machineNamesChanged, refetchMachines, setCloudInventory } from "./store";
 import type { WslChild } from "./wsl";
 import { guestChannels } from "./guestChannels";
 import { CLOUD_RETRY_INITIAL_MS, CLOUD_RETRY_MS, createCloudMachines, EDGE_ENDPOINT } from "./cloud-machines";
@@ -146,6 +146,7 @@ export function startAccountMachines(target: Target = window) {
   if (!found) return;
   const internals: Internals = found;
   started = true;
+  setCloudInventory("initial");
   const native: Invoke = internals.invoke.bind(internals);
   // The window's own IPC under its usual name: the command guards read these two literally.
   const invoke = native;
@@ -164,13 +165,30 @@ export function startAccountMachines(target: Target = window) {
   let cloudRetrying = false;
   let cloudRead: Promise<Computer[]> | null = null;
   let cloudRetryDelay = CLOUD_RETRY_INITIAL_MS;
+  let cloudEpoch = 0;
+  function invalidateCloud() {
+    cloudEpoch++;
+    setCloudInventory("initial");
+    if (cloudRetry) clearTimeout(cloudRetry);
+    cloudRetry = null;
+    cloudRead = null;
+    lastCloudRows = [];
+    cloudIds = new Set();
+    cloudRenew = false;
+    cloudRetrying = false;
+    cloudRetryDelay = CLOUD_RETRY_INITIAL_MS;
+    syncing = null;
+    again = false;
+  }
   function readCloud(): Promise<Computer[]> {
     if (cloudRead) return cloudRead;
-    setCloudMachinesLoading(true);
+    const epoch = cloudEpoch;
     cloudRead = (async () => {
       try {
         const answer = await cloud.rows();
+        if (epoch !== cloudEpoch) return [];
         cloudRetrying = answer.state === "retrying";
+        if (!cloudRetrying) setCloudInventory("settled");
         if (answer.state === "ready") {
           lastCloudRows = answer.computers;
           cloudRenew = answer.renewInChannel;
@@ -186,14 +204,13 @@ export function startAccountMachines(target: Target = window) {
           cloudRetryDelay = cloudRetrying ? Math.min(cloudRetryDelay * 2, CLOUD_RETRY_MS) : CLOUD_RETRY_INITIAL_MS;
           cloudRetry = setTimeout(() => {
             cloudRetry = null;
-            void readCloud().then(() => { if (!cloudRetrying) void sync(); });
+            void readCloud().then(() => { if (epoch === cloudEpoch && !cloudRetrying) void sync(); });
           }, delay);
           (cloudRetry as unknown as { unref?: () => void }).unref?.();
         } else cloudRetryDelay = CLOUD_RETRY_INITIAL_MS;
         return lastCloudRows;
       } finally {
-        cloudRead = null;
-        setCloudMachinesLoading(cloudRetrying);
+        if (epoch === cloudEpoch) cloudRead = null;
       }
     })();
     return cloudRead;
@@ -455,35 +472,40 @@ export function startAccountMachines(target: Target = window) {
     return { self: status?.state === "connected" ? (status.computer_id ?? null) : null, account: null };
   }
 
+  /**
+   * Una salida definitiva de la cuenta (sin token, `401`, licencia): sin nube que
+   * leer, el inventario de esta época queda resuelto y la recordada ausente cae
+   * a la local. Solo la llama `check` con su época aún vigente.
+   */
+  const settled = () => {
+    setCloudInventory("settled");
+    disconnect();
+  };
+
   /** Reads the account and its computers; installs, updates or removes the fan-out to match. */
-  async function check() {
-    const who = await whoAmI();
+  async function check(who: { self: string | null; account: string | null }) {
+    const epoch = cloudEpoch;
     const self = who.self;
-    if (who.account !== account) {
-      // La flota local no habla como ninguna cuenta: la de la cuenta la reemplaza en el mismo tick.
-      if (installed?.key !== LOCAL_KEY) uninstall();
-      account = who.account;
-      token = null;
-      lastCloudRows = [];
-      cloudIds = new Set();
-      cloudRenew = false;
-    }
     if (!self) {
       token = null;
-      return installLocal();
+      return installLocal(epoch);
     }
     let client: ClientToken;
     try {
       client = await getToken();
     } catch {
       // An engine without `danil_client_token`, or a control plane without client tokens.
-      return disconnect();
+      if (epoch === cloudEpoch) settled();
+      return;
     }
+    if (epoch !== cloudEpoch) return;
     const answer = await listComputers(client.endpoint, client.token);
+    if (epoch !== cloudEpoch) return;
     if (answer.kind === "unauthorized" || answer.kind === "license") {
       token = null;
-      return disconnect();
+      return settled();
     }
+    // Otro error es transitorio: el inventario sigue sin resolver hasta el siguiente evento o `RELIST`.
     if (answer.kind !== "ok") return;
     const mine = answer.value.find((c) => c.computer_id === self);
     setSelfName(mine?.name?.trim() || null);
@@ -492,8 +514,10 @@ export function startAccountMachines(target: Target = window) {
     homeFeatures = mine ? serviceFeatures(mine) : [];
     homeVersion = mine?.host_version ?? null;
     const cloudRows = await readCloud();
+    if (epoch !== cloudEpoch) return;
     const others = orderComputers([...answer.value.filter((c) => c.computer_id !== self), ...cloudRows.filter((c) => !answer.value.some((o) => o.computer_id === c.computer_id))]);
     await readGuestMachines();
+    if (epoch !== cloudEpoch) return;
     const key = JSON.stringify([self, account, client.endpoint]);
 
     // The same account: machines that came, left or changed name are applied live, without tearing the rest down.
@@ -508,9 +532,11 @@ export function startAccountMachines(target: Target = window) {
   }
 
   /** Sin cuenta: la flota de los huéspedes, si hay alguno; si no, nada, como antes. */
-  async function installLocal() {
+  async function installLocal(epoch: number) {
     const guests = await readGuestMachines();
+    if (epoch !== cloudEpoch) return;
     const cloudRows = await readCloud();
+    if (epoch !== cloudEpoch) return;
     if (!guests.length && !cloudRows.length) return disconnect();
     if (installed?.key === LOCAL_KEY) {
       installed.fleet.setMachines([...cloudRows.map(infoOf), ...guests]);
@@ -528,26 +554,40 @@ export function startAccountMachines(target: Target = window) {
   }
 
   let again = false;
-  /** One check at a time; a request during one runs again after it, so a workspace switch is never read stale. */
-  const sync = (): Promise<void> => {
+  let identityRead = 0;
+  /** Una comprobación por época; otra petición del mismo alcance se repite al terminar. */
+  const sync = async (): Promise<void> => {
+    const identity = ++identityRead;
+    const epoch = cloudEpoch;
+    const who = await whoAmI();
+    if (identity !== identityRead || epoch !== cloudEpoch) return;
+    if (who.account !== account) {
+      invalidateCloud();
+      if (installed?.key !== LOCAL_KEY) uninstall();
+      account = who.account;
+      token = null;
+    }
     if (syncing) {
       again = true;
       return syncing;
     }
-    syncing = check()
+    const pending = check(who)
       .catch(() => {})
       .finally(() => {
+        if (syncing !== pending) return;
         syncing = null;
         if (again) {
           again = false;
           void sync();
         }
       });
-    return syncing;
+    syncing = pending;
+    return pending;
   };
 
   void whenConnected().then(() => {
-    void listen("danil-connect", () => { cancelEdgeWrites(); void sync(); });
+    void listen("danil-connect", () => { cancelEdgeWrites(); invalidateCloud(); void sync(); });
+    window.addEventListener("danil:organization-changed", () => { invalidateCloud(); void sync(); });
     // Un motor sin el aviso de los workspaces de aquí: lo que cambia la ventana (crear, renombrar, logo) se vuelve a pedir con su versión.
     window.addEventListener("harness:workspace-name", () => void engineWorkspaces.refresh());
     window.addEventListener("harness:workspace", () => void engineWorkspaces.refresh());
