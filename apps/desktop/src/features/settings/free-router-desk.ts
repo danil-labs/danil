@@ -13,6 +13,6 @@ export function installDeskFreeRouter(): void {
       const [who, list] = await Promise.all([me(patience), workspaces(patience)]);
       return { sub: who.id, list };
     },
-    engine: (policy) => freeRouterEngine(freeModelScope(policy)),
+    engine: (policy) => freeRouterEngine(policy ? freeModelScope(policy) : undefined),
   });
 }

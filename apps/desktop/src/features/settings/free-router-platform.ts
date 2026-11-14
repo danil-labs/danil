@@ -299,22 +299,33 @@ export function createFreeRouterPlatform(deps: FreeRouterDeps) {
   }
 
   /**
-   * Paso 8: la unión pasa a `null` antes de nada y luego se espera, con un presupuesto corto, la baja de los bindings de
-   * esa sesión: después del logout ya no hay token, y lo que quede cae solo a las 24 h. No retira el consentimiento.
+   * Paso 8: el motor suelta a la persona en `workspaces` (sube la generación y corta sus turnos) y devuelve los bindings que
+   * guarda, también tras un reinicio; luego se espera su baja con un presupuesto corto. No retira el consentimiento.
    */
-  async function signOut(sub: string, cloudBudgetMs = 3_000): Promise<void> {
+  async function signOut(sub: string, workspaces: string[], cloudBudgetMs = 3_000): Promise<void> {
     const mine = [...entries.values()].filter((e) => e.scope.sub === sub);
     for (const e of mine) {
       stop(e);
       entries.delete(idOf(e.scope));
       e.epoch = ++epochs;
     }
-    await Promise.all(mine.map((e) => engine("set_free_router_union", { workspace: e.scope.workspace }).catch(() => {})));
-    await Promise.all(mine.map((e) => {
-      if (!e.binding) return undefined;
-      const path = `${base(e.scope.account)}/engine-workspaces/${e.scope.workspace}/bindings/${e.binding.bindingId}`;
-      return send("DELETE", path, undefined, key(), cloudBudgetMs).catch(() => {});
-    }));
+    let released: { account: string; workspace: string; binding: string }[];
+    try {
+      const reply = await engine("release_free_router_owner", { sub, workspaces });
+      released = (Array.isArray(reply.released) ? reply.released : []).flatMap((raw) => {
+        const r = record(raw);
+        const workspace = str(r?.workspace);
+        const account = str(r?.platformAccount);
+        if (!workspace || !account || !ID.test(workspace) || !ACCOUNT.test(account)) return [];
+        return (Array.isArray(r?.bindings) ? r.bindings : []).filter((b): b is string => typeof b === "string" && ID.test(b)).map((binding) => ({ account, workspace, binding }));
+      });
+    } catch {
+      // Un motor sin la orden: se cierran las uniones que esta ventana hizo.
+      await Promise.all(mine.map((e) => engine("set_free_router_union", { workspace: e.scope.workspace }).catch(() => {})));
+      released = mine.flatMap((e) => (e.binding ? [{ account: e.scope.account, workspace: e.scope.workspace, binding: e.binding.bindingId }] : []));
+    }
+    await Promise.all(released.map((r) =>
+      send("DELETE", `${base(r.account)}/engine-workspaces/${r.workspace}/bindings/${r.binding}`, undefined, key(), cloudBudgetMs).catch(() => {})));
   }
 
   return { read, accept, link, grant, withdraw, signOut };

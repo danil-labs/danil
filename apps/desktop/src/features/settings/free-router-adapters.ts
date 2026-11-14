@@ -5,7 +5,7 @@ import { edgeFetch } from "../../lib/edge.ts";
 import { invoke } from "../../lib/invoke.ts";
 import type { EdgeSend, EngineCall } from "./free-router-platform.ts";
 
-/** Las cinco órdenes RPC1 del pase, cada una por su nombre, al motor del workspace (`options` lleva su ámbito). */
+/** Las órdenes RPC1 del pase y la lista de workspaces, cada una por su nombre, al motor (`options` lleva su ámbito). */
 export function freeRouterEngine(options?: InvokeOptions): EngineCall {
   const orders: Record<string, (args: Record<string, unknown>) => Promise<unknown>> = {
     set_free_router_union: (args) => invoke("set_free_router_union", args, options),
@@ -13,6 +13,8 @@ export function freeRouterEngine(options?: InvokeOptions): EngineCall {
     prove_free_router_binding: (args) => invoke("prove_free_router_binding", args, options),
     set_free_router_grant: (args) => invoke("set_free_router_grant", args, options),
     clear_free_router_grant: (args) => invoke("clear_free_router_grant", args, options),
+    release_free_router_owner: (args) => invoke("release_free_router_owner", args, options),
+    list_workspaces: () => invoke("list_workspaces", undefined, options),
   };
   return (command, args) => orders[command]?.(args) ?? Promise.reject("free_router.invalid_request");
 }

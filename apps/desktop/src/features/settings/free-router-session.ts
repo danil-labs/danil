@@ -6,8 +6,8 @@ export type FreeRouterHost = {
   edge: EdgeSend;
   /** La persona (`/me.id`) y el listado de `/v1/workspaces` de la sesión de plataforma; `null` sin sesión. */
   identity: () => Promise<{ sub: string; list: unknown } | null>;
-  /** Las órdenes del motor que sirve ese workspace del motor. */
-  engine: (policy: FreeModelPolicy) => EngineCall;
+  /** Las órdenes del motor que sirve ese workspace del motor; `null`, el motor de la máquina activa. */
+  engine: (policy: FreeModelPolicy | null) => EngineCall;
 };
 
 /** El código con que el motor nuevo contesta `set_provider_consent` en un workspace que no es personal. */
@@ -15,11 +15,13 @@ export const PLATFORM_REQUIRED = "free_router.platform_required";
 
 let host: FreeRouterHost | null = null;
 const routers = new Map<string, FreeRouterPlatform>();
+const policies = new Map<string, FreeModelPolicy>();
 const scopes = new Map<string, FreeRouterScope>();
 
 export function setFreeRouterHost(next: FreeRouterHost | null): void {
   host = next;
   routers.clear();
+  policies.clear();
   scopes.clear();
 }
 
@@ -29,6 +31,7 @@ const closed = (code = "free_router_unavailable") => ({ code });
 function routerFor(policy: FreeModelPolicy, h: FreeRouterHost): FreeRouterPlatform {
   let router = routers.get(keyOf(policy));
   if (!router) routers.set(keyOf(policy), (router = createFreeRouterPlatform({ edge: h.edge, engine: h.engine(policy) })));
+  policies.set(keyOf(policy), policy);
   return router;
 }
 
@@ -69,10 +72,19 @@ export async function withdrawPlatform(policy: FreeModelPolicy): Promise<void> {
   scopes.delete(keyOf(policy));
 }
 
-/** Antes de soltar la sesión: cada motor pierde la autoridad de esta persona y se dan de baja sus bindings. */
+/** Antes de soltar la sesión: cada motor conocido suelta a esta persona (también tras reiniciar la ventana) y se borran sus bindings. */
 export async function signOutPlatform(): Promise<void> {
-  const subs = new Set([...scopes.values()].map((s) => s.sub));
-  await Promise.all([...routers.values()].flatMap((router) => [...subs].map((sub) => router.signOut(sub).catch(() => {}))));
+  const h = host;
+  if (!h) return;
+  const who = await h.identity().catch(() => null);
+  const subs = new Set([...scopes.values()].map((s) => s.sub).concat(who ? [who.sub] : []));
+  if (!routers.has("")) routers.set("", createFreeRouterPlatform({ edge: h.edge, engine: h.engine(null) }));
+  await Promise.all([...routers.entries()].map(async ([key, router]) => {
+    const engine = key ? h.engine(policies.get(key)!) : h.engine(null);
+    const listed = (await engine("list_workspaces", {}).catch(() => null)) as { workspaces?: { id?: unknown }[] } | null;
+    const workspaces = (listed?.workspaces ?? []).map((w) => w.id).filter((id): id is string => typeof id === "string");
+    await Promise.all([...subs].map((sub) => router.signOut(sub, workspaces).catch(() => {})));
+  }));
   scopes.clear();
 }
 
