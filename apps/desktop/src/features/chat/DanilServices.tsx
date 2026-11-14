@@ -1,19 +1,30 @@
 import Check from "lucide-solid/icons/check";
 import type { RouterOfferState } from "@terminus/tasks";
-import { Show, type JSX } from "solid-js";
+import { createResource, Show, type JSX } from "solid-js";
 import { t } from "../../lib/i18n";
 import { capabilities } from "../../lib/platform";
 import { Button } from "../../ui/Button";
+import { prosaDe } from "../../ui/Failure";
 import { createDanilCreditsBalance } from "./danil-credits-balance";
 
 type Service = { ready: boolean; selected: boolean; onUse: () => void };
 
 /** Los servicios de Danil eligen el modelo por su cuenta: aquí no se nombra ninguno. */
 export default function DanilServices(props: {
+  onPrepare?: () => Promise<void>;
   credits: Service;
   router: Service & { state: RouterOfferState; activating: boolean; onActivate: () => void };
 }) {
   const balance = createDanilCreditsBalance();
+  // Abrir la sección prepara Credits; su fallo se queda en la tarjeta y se reintenta aquí.
+  const [preparation, { refetch: retryPreparation }] = createResource(
+    () => props.onPrepare,
+    async (prepare) => {
+      try { await prepare(); return null; }
+      catch (cause) { return prosaDe(cause); }
+    },
+  );
+  const credits = (): Service => ({ ...props.credits, ready: props.credits.ready && !preparation.loading && !preparation() });
   const recharge = () => capabilities().danilCredits?.recharge;
   return (
     <div class="grid min-w-0 divide-y divide-border">
@@ -32,7 +43,15 @@ export default function DanilServices(props: {
             )}
           </Show>
         </div>
-        <UseButton service={props.credits} unavailable={t("chat.credits.integration_pending")} />
+        <Show when={!preparation.loading && preparation()}>
+          {(failure) => (
+            <div class="flex items-center justify-between gap-2" data-credits-status="">
+              <p class="m-0 min-w-0 text-caption text-neutral-500" role="status">{failure()}</p>
+              <Button variant="ghost" size="compact" onClick={() => void retryPreparation()}>{t("common.part.retry")}</Button>
+            </div>
+          )}
+        </Show>
+        <UseButton service={credits()} unavailable={t("chat.credits.unavailable")} />
       </section>
       <section class="grid min-w-0 gap-2 p-3" aria-label={t("surfaces.label.free")} data-router-state={props.router.state}>
         <div class="flex items-center justify-between gap-2">

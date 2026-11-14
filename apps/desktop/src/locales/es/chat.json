@@ -460,7 +460,6 @@
   "chat.queue.stop_and_send_aria": "Detener el turno y enviar el mensaje {n} de la cola",
   "chat.credits.label": "Danil Credits",
   "chat.credits.unavailable": "No disponible",
-  "chat.credits.integration_pending": "Integración pendiente de aceptación",
   "chat.credits.balance": "Saldo",
   "chat.credits.amount": "{count} créditos",
   "chat.credits.add": "Agregar créditos",
