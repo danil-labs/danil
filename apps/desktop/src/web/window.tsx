@@ -109,7 +109,10 @@ export function mountWindow(base: Base, mounted: Mounted) {
     const answer = await base.machines.list();
     if (stopped) return false;
     if (answer.kind === "unauthorized") { base.onUnauthorized(); return false; }
-    if (answer.kind !== "ok") { setMissing(true); fleet.setMachines([]); return false; }
+    if (answer.kind !== "ok") {
+      if (answer.kind === "error" && (answer.status === null || answer.status === 408 || answer.status === 429 || answer.status >= 500)) return false;
+      setMissing(true); fleet.setMachines([]); return false;
+    }
     listed = new Map(answer.value.map(machine => [machine.machine_id, machine]));
     setMissing(false);
     bump(n => n + 1);
