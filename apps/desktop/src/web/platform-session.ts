@@ -68,7 +68,7 @@ export class PreparationExpired extends Error {
 }
 
 const PREPARATION_MS = 20_000;
-/** Red caída o plazo propio de la petición: no dicen nada de la cuenta. Por nombre, porque el error puede venir de otro realm. */
+/** Red caída o plazo propio de la petición: no dicen nada de la cuenta. Se compara por nombre: el error puede venir de otro realm. */
 const transportFailure = (e: unknown) => ['TypeError', 'TimeoutError'].includes(String((e as { name?: unknown } | null)?.name));
 
 export async function preparePlatformSession<T>(read: (signal: AbortSignal) => Promise<T>, signal: AbortSignal, preparing: () => void, ready: (value: T) => boolean = () => true): Promise<T> {
