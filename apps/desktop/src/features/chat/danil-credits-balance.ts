@@ -3,7 +3,7 @@ import { t } from "../../lib/i18n";
 import { capabilities } from "../../lib/platform";
 import { availableDanilCredits } from "./danil-credits";
 
-/** Saldo leído de la capacidad; un saldo desconocido no es cero ni permite ejecutar. */
+/** Saldo leído de la capacidad; un saldo desconocido se muestra como tal, nunca como cero. */
 export function createDanilCreditsBalance() {
   const [revision, setRevision] = createSignal(0);
   createEffect(() => {

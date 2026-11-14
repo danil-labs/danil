@@ -38,7 +38,7 @@ export default function DanilServices(props: {
         <div class="flex items-center justify-between gap-2">
           <h3 class="m-0 text-ui font-semibold text-neutral-950">{t("surfaces.label.free")}</h3>
           <Show when={props.router.state === "ready"}>
-            <Check size={13} class="shrink-0 text-neutral-500" aria-label={t("chat.services.active")} />
+            <Check size={13} class="shrink-0 text-neutral-500" role="img" aria-label={t("chat.services.active")} />
           </Show>
         </div>
         <p class="m-0 text-xs text-neutral-500">{t("chat.services.router_description")}</p>

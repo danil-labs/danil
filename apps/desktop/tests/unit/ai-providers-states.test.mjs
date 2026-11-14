@@ -198,3 +198,69 @@ test("the free router is turned on and shown in use from the Danil panel without
     app.w.close();
   }
 });
+
+test("Use on an unlocked task sends the exact Credits and free router ids", async () => {
+  const beam = "danil-free/reflection/beam-free";
+  const credits = "danil-credits/deepseek/deepseek-v4.1-flash";
+  const free = "free-router-opencode";
+  const sends = [];
+  const policy = { workspace_id: "w", version: 3, providers: ["kilo", "vercel", "reflection"], lines: [{ t: "Datos" }], acceptance_ref: "ref", enabled: true, terms: [], accepted: true };
+  const option = (id, label, gratis = false) => ({ id, label, gratis, note: null, efforts: [], default_effort: null });
+  const row = (id, provider, model) => ({ id, title: id, last_message: "", provider, model, refs: [], updated_at: 0, turns: 1, parent: null, esperando: false });
+  const sessions = { t1: ["opencode", "base"], t2: [free, "danil-free/retired"] };
+  const app = await boot("listo", "danil-services-use", {
+    ...BASE,
+    workspaces_startup: () => ({ workspaces: [W], active: "w", free_model_policy: policy }),
+    machine_list: [{ id: "m1", active: true }],
+    list_providers: [{ id: "opencode", label: "OpenCode", available: true, driver: true }],
+    list_surfaces: () => [
+      { id: "opencode", provider: "opencode", label: "OpenCode", catalogo: "de_pago", usable: true, marca: null, porque: null },
+      { id: "danil-credits", provider: "opencode", label: "Danil Credits", catalogo: "todo", usable: true, marca: null, porque: null },
+      { id: free, provider: free, label: "Free Router · OpenCode", catalogo: "gratuitos", usable: true, marca: null, porque: null },
+    ],
+    list_models: ({ provider }) => provider === free
+      ? { provider, models: [option(beam, "Beam", true)], fallback: false }
+      : { provider, models: [option("base", "Base"), option(credits, "DeepSeek V4.1 Flash")], fallback: false },
+    send_message: (args) => { sends.push(args); return args.session; },
+    list_projects: [{ id: "p1", name: "P1", working_directory: "/lab/p1", kind: "git", portfolio: null, sources: [] }],
+    list_portfolios: [], list_agents: { agents: [], rechazados: [] }, list_agent_status: [],
+    list_live_sessions: Object.entries(sessions).map(([id, [provider, model]]) => row(id, provider, model)),
+    list_mentions: { fuentes: [], archivos: [] },
+    list_active_turns: [], load_queue: [], queue_ready: true, session_usage: null,
+    session_folder: "/tmp", list_task_trees: [], watch_task_tree: "watch", list_session_git: {},
+    task_history: { history: { archived: false, events: [], recovery: null }, branch: null, path: "/lab", available: true, owned: false, restorable: false, recreatable: false, incomplete: false },
+    load_session: ({ id }) => ({ id, provider: sessions[id][0], model: sessions[id][1], sources: [], effort: null, permission_mode: null, turns: [{ role: "user", id: "u0", at: 0, text: "hello" }] }),
+  });
+  const doc = app.w.document;
+  const use = async (task, service) => {
+    doc.querySelector(`[data-sesion="${task}"]`).click();
+    await sleep(600);
+    doc.querySelector('button[aria-label^="Modelo:"]').click();
+    await sleep(400);
+    doc.querySelector('nav[aria-label="Proveedores de modelos"] button[aria-label="Danil"]').click();
+    await sleep(650);
+    const button = [...doc.querySelector(`section[aria-label="${service}"]`).querySelectorAll("button")].find((b) => b.textContent.trim() === "Usar");
+    assert.ok(button && !button.disabled, `${service}: Use is enabled on a task of the same agent`);
+    button.click();
+    await sleep(300);
+    assert.equal(doc.querySelector('button[aria-label^="Modelo:"]').getAttribute("aria-label"), `Modelo: ${service}`);
+    const field = doc.querySelector("textarea");
+    field.value = "hola";
+    field.dispatchEvent(new app.w.Event("input", { bubbles: true }));
+    field.closest("form").dispatchEvent(new app.w.Event("submit", { bubbles: true, cancelable: true }));
+    await sleep(300);
+    return sends.at(-1);
+  };
+  try {
+    await sleep(1200);
+    const creditsSend = await use("t1", "Danil Credits");
+    assert.equal(creditsSend?.session, "t1");
+    assert.equal(creditsSend?.model, credits);
+    const routerSend = await use("t2", "Router IA gratis");
+    assert.equal(routerSend?.session, "t2");
+    assert.equal(routerSend?.model, beam);
+    assert.deepEqual(app.failures, []);
+  } finally {
+    app.w.close();
+  }
+});

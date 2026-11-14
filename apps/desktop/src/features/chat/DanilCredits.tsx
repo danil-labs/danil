@@ -9,7 +9,7 @@ export default function DanilCredits() {
   const balance = createDanilCreditsBalance();
   const recharge = () => capabilities().danilCredits?.recharge;
   return (
-    <div class="flex flex-col gap-1.5 rounded-md border border-border p-3" aria-label={t("chat.credits.label")}>
+    <div class="flex flex-col gap-1.5 rounded-md border border-border p-3" role="group" aria-label={t("chat.credits.label")}>
       <div class="flex min-h-6 items-center justify-between gap-3">
         <span class="text-xs font-semibold text-neutral-950">{t("chat.credits.label")}</span>
         <Show when={recharge()}>

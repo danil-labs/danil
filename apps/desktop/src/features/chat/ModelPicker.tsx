@@ -31,9 +31,14 @@ import { DANIL_CREDITS } from "./danil-credits";
 
 const DanilServices = lazy(() => import("./DanilServices"));
 
-/** Grupos que se presentan como servicios de Danil y no como lista de modelos. */
-const SERVICIOS = new Set(["danil-credits", "opencode-free"]);
-const esServicio = (opcion: OpcionDeModelo | undefined) => !!opcion && SERVICIOS.has(opcion.proveedor.id);
+/** Solo estos dos ids se presentan como servicios de Danil; otros gratuitos siguen en la lista. */
+const SERVICIOS = new Set<string>([DANIL_CREDITS.modelId, FREE_ROUTER_MODEL]);
+const esServicio = (opcion: OpcionDeModelo | undefined) => !!opcion && SERVICIOS.has(opcion.model.id);
+function nombreDeServicio(id: string | undefined) {
+  if (id === DANIL_CREDITS.modelId) return t("chat.credits.label");
+  if (id === FREE_ROUTER_MODEL) return t("surfaces.label.free");
+  return null;
+}
 const gruposDeModelos = (models: OpcionDeModelo[], query: string) =>
   agruparModelos(models.filter((opcion) => !esServicio(opcion)), query);
 
@@ -97,10 +102,13 @@ export default function SelectorDeModelo(props: SelectorDeModeloProps) {
   const bloqueado = (opcion: OpcionDeModelo) =>
     !!props.lockedAgent && opcion.agent !== props.lockedAgent;
   const disponible = (opcion: OpcionDeModelo) => opcion.usable && !bloqueado(opcion);
-  const creditsModel = () => props.models.find((option) => option.model.id === DANIL_CREDITS.modelId);
+  const creditsModel = () => {
+    const credits = props.models.filter((option) => option.model.id === DANIL_CREDITS.modelId);
+    return credits.find(disponible) ?? credits[0];
+  };
   const routerModel = () => {
-    const free = props.models.filter((option) => option.proveedor.id === "opencode-free");
-    return free.find((option) => option.model.id === FREE_ROUTER_MODEL) ?? free.find(disponible);
+    const router = props.models.filter((option) => option.model.id === FREE_ROUTER_MODEL);
+    return router.find(disponible) ?? router[0];
   };
   const servicio = (opcion: OpcionDeModelo | undefined) => ({
     ready: !props.disabled && !!opcion && disponible(opcion),
@@ -136,8 +144,8 @@ export default function SelectorDeModelo(props: SelectorDeModeloProps) {
   };
   const selectedName = () => {
     const option = elegido();
-    if (option?.proveedor.id === "danil-credits") return t("chat.credits.label");
-    if (option?.proveedor.id === "opencode-free") return t("surfaces.label.free");
+    const servicio = nombreDeServicio(option?.model.id ?? props.model);
+    if (servicio) return servicio;
     return option ? modelPresentation(option.model.id, option.model.label).label : props.model ? modelPresentation(props.model).label : null;
   };
   const nombre = () => selectedName() ?? (props.missingModelLabel || t("chat.model.none"));
@@ -294,7 +302,7 @@ export default function SelectorDeModelo(props: SelectorDeModeloProps) {
               } else if (event.key === "ArrowUp") {
                 event.preventDefault();
                 mover(-1);
-              } else if (event.key === "Enter" && activo()) {
+              } else if (event.key === "Enter" && visibles().some((opcion) => opcion.key === activo())) {
                 event.preventDefault();
                 elegir(activo());
               }
