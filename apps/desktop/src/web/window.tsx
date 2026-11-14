@@ -11,6 +11,7 @@ import { installIpc } from "./ipc";
 import { type BrowserHost, createWebTransport } from "./transport";
 import type { MachineRow, MachineStatus } from "./SyncNote";
 import type { AccountProfileSource } from "../features/settings/account-profile";
+import { createMachinesRetry } from "./machines-retry";
 
 declare const __TERMINUS_VERSION__: string;
 type Base = { machines: ReturnType<typeof machinesClient>; initialMachines?: ReturnType<ReturnType<typeof machinesClient>["list"]>; relayOrigin: string; permits: (name: string) => boolean; organizations?: Capabilities["organizations"]; promo?: () => Capabilities["webPromo"]; onUnauthorized: () => void; profile: AccountProfileSource; workspaces: NonNullable<Capabilities["webWorkspaces"]>; onUnavailable: () => void; };
@@ -38,6 +39,7 @@ export function mountWindow(base: Base, mounted: Mounted) {
   const [revision, bump] = createSignal(0);
   let listed = new Map<string, Machine>();
   let initialMachines = base.initialMachines;
+  const retry = createMachinesRetry(() => void refresh());
   const powers = new Map<string, string>();
   const unavailable = () => ({ what: t("web.machines.unavailable"), detail: "machines_unavailable" });
   const fleet = new Fleet({ self: null, storage: mounted.storage,
@@ -111,8 +113,10 @@ export function mountWindow(base: Base, mounted: Mounted) {
     initialMachines = undefined;
     const answer = await listing;
     if (stopped) return false;
-    if (answer.kind === "unauthorized") { base.onUnauthorized(); return false; }
-    if (answer.kind !== "ok") { setMissing(true); fleet.setMachines([]); return false; }
+    if (answer.kind === "unauthorized") { retry.stop(); base.onUnauthorized(); return false; }
+    // Sin lista válida la flota queda vacía, el aviso sigue y la lista se vuelve a pedir sola (TW#126).
+    if (answer.kind !== "ok") { setMissing(true); fleet.setMachines([]); retry.failed(); return false; }
+    retry.succeeded();
     listed = new Map(answer.value.map(machine => [machine.machine_id, machine]));
     setMissing(false);
     bump(n => n + 1);
@@ -186,7 +190,7 @@ export function mountWindow(base: Base, mounted: Mounted) {
       </>
     ), layer);
   });
-  return { refresh, close: () => { stopped = true; fleet.close(); disposeApp?.(); disposeNotice?.(); noticeLayer?.remove(); } };
+  return { refresh, close: () => { stopped = true; retry.stop(); fleet.close(); disposeApp?.(); disposeNotice?.(); noticeLayer?.remove(); } };
 }
 
 /** Paneles que se abren desde la URL (`?settings=`); el parámetro sale de la barra al leerlo. */

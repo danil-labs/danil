@@ -1,4 +1,4 @@
-/** Beta: el aviso de máquinas sigue a la falta de acceso aunque naciera sin ella (de 8fe33191, B5 G de dev). */
+/** Beta: el aviso de máquinas sigue a la falta de acceso y la lista se vuelve a pedir sola (de #874, B5 G de dev). */
 import assert from "node:assert/strict";
 import test from "node:test";
 import { boot, sleep } from "../helpers/jsdom-app.mjs";
@@ -41,39 +41,65 @@ async function web(t, name, { state = "online" } = {}) {
 }
 
 
-/** Reloj de los temporizadores largos (≥ 30 s, el sondeo de la sesión): se retienen y se disparan a demanda; los cortos siguen reales. */
+/** Reloj de los temporizadores desde 15 s (reintento de la lista, sondeo de la sesión): se retienen y se disparan a demanda. */
 function longTimers(t) {
   const real = globalThis.setTimeout;
+  const realClear = globalThis.clearTimeout;
   const held = [];
   globalThis.setTimeout = (fn, ms, ...args) => {
-    if (!(ms >= 30_000)) return real(fn, ms, ...args);
-    const entry = { fn, args, cleared: false, unref() { return this; }, ref() { return this; }, hasRef: () => false };
+    if (!(ms >= 15_000)) return real(fn, ms, ...args);
+    const entry = { fn, args, ms, cleared: false, unref() { return this; }, ref() { return this; }, hasRef: () => false };
     held.push(entry);
     return entry;
   };
-  const realClear = globalThis.clearTimeout;
   globalThis.clearTimeout = timer => (held.includes(timer) ? (timer.cleared = true) : realClear(timer));
   t.after(() => { globalThis.setTimeout = real; globalThis.clearTimeout = realClear; });
-  return { fire: () => { for (const e of held.splice(0)) if (!e.cleared) e.fn(...e.args); } };
+  const live = pick => held.filter(e => !e.cleared && pick(e.ms));
+  return {
+    pending: pick => live(pick).length,
+    fire: pick => { for (const e of live(pick)) { e.cleared = true; e.fn(...e.args); } },
+  };
 }
+/** El reintento de la lista tras «sin acceso» (13,5–16,5 s el primero); el sondeo de la sesión es de 30 s. */
+const retryTimer = ms => ms < 30_000;
 
-test("B5 G: el aviso de sin acceso se abre aunque el aviso naciera sin él, y se va con una lista válida", async t => {
+test("B5 G: tras sin acceso la lista se vuelve a pedir sola, y un 200 restaura la flota y quita el aviso", async t => {
   const clock = longTimers(t);
-  const { app, f, reads, read } = await web(t, "B5-visible-after-mount");
+  const { app, f, reads, read } = await web(t, "B5-retry-recovers");
   // El aviso ya está montado y la flota es válida: nace sin la falta de acceso.
   assert.ok(await until(() => app.w.document.querySelector("[data-web-sync]")));
   assert.equal(app.w.document.querySelector("[data-machines-unavailable]"), null);
+  assert.equal(clock.pending(retryTimer), 0, "con la flota válida no hay reintento");
   let before = reads();
   read(() => Response.json({ code: "license_required" }, { status: 403 }));
   f.relays.m1.setState("offline");
   assert.ok(await until(() => reads() > before));
   assert.ok(await until(() => app.w.document.querySelector("[data-machines-unavailable]")), "pasa de false a true y se ve");
+  assert.deepEqual(await app.w.__TAURI_INTERNALS__.invoke("machine_list"), [], "la flota de una respuesta definitiva queda vacía");
+  assert.ok(await until(() => clock.pending(retryTimer) === 1), "un solo reintento programado");
   before = reads();
   read(() => Response.json({ items: [machine("m1"), machine("m2")] }));
-  // Sin m1 en la flota nada local vuelve a leer: lo hace el sondeo de la sesión (window-session, POLL_MAX_MS).
-  clock.fire();
-  assert.ok(await until(() => reads() > before), "el sondeo vuelve a leer /v1/machines sin recargar");
+  clock.fire(retryTimer);
+  assert.ok(await until(() => reads() > before), "el reintento sale solo, sin recargar");
+  assert.ok(await until(() => app.w.document.querySelector('[data-machine-row="m1"]')), "vuelve m1");
   assert.ok(await until(() => app.w.document.querySelector('[data-machine-row="m2"]')));
   assert.ok(await until(() => app.w.document.querySelector("[data-machines-unavailable]") === null), "con una lista válida no se queda pegado");
+  assert.equal(clock.pending(retryTimer), 0, "vuelve al ciclo normal");
   assert.deepEqual(app.failures, []);
+});
+
+test("B5 G: cerrar la ventana para el reintento: ninguna lectura después", async t => {
+  const clock = longTimers(t);
+  const { app, f, reads, read } = await web(t, "B5-retry-stops");
+  const before = reads();
+  read(() => Response.json({ code: "license_required" }, { status: 403 }));
+  f.relays.m1.setState("offline");
+  assert.ok(await until(() => reads() > before));
+  assert.ok(await until(() => clock.pending(retryTimer) === 1));
+  app.w.dispatchEvent(new app.w.Event("pagehide"));
+  assert.equal(clock.pending(retryTimer), 0, "sin temporizador huérfano");
+  const closed = reads();
+  clock.fire(() => true);
+  await sleep(150);
+  assert.equal(reads(), closed, "sin lecturas después de cerrar");
 });
