@@ -106,3 +106,22 @@ for (const [status, code] of [[401, null], [403, null], [404, null], [501, null]
   else assert.ok(app.w.document.querySelector('[data-machines-unavailable]'), "la falta de acceso o de servicio es visible");
   assert.deepEqual(app.failures, []);
 });
+
+test("B5 G: el aviso de sin acceso se abre aunque el aviso naciera sin él, y se va con una lista válida", async t => {
+  const { app, f, reads, read } = await web(t, "B5-visible-after-mount");
+  // El aviso ya está montado y la flota es válida: nace sin la falta de acceso.
+  assert.ok(await until(() => app.w.document.querySelector("[data-web-sync]")));
+  assert.equal(app.w.document.querySelector("[data-machines-unavailable]"), null);
+  let before = reads();
+  read(() => Response.json({ code: "license_required" }, { status: 403 }));
+  f.relays.m1.setState("offline");
+  assert.ok(await until(() => reads() > before));
+  assert.ok(await until(() => app.w.document.querySelector("[data-machines-unavailable]")), "pasa de false a true y se ve");
+  before = reads();
+  read(() => Response.json({ items: [machine("m1"), machine("m2")] }));
+  f.relays.m1.setState("online");
+  assert.ok(await until(() => reads() > before));
+  assert.ok(await until(() => app.w.document.querySelector('[data-machine-row="m2"]')));
+  assert.ok(await until(() => app.w.document.querySelector("[data-machines-unavailable]") === null), "con una lista válida no se queda pegado");
+  assert.deepEqual(app.failures, []);
+});

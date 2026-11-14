@@ -47,6 +47,18 @@ export function SyncNote(props: { machines: Accessor<MachineRow[]>; unavailable?
       },
     ),
   );
+  // La falta de acceso o de servicio se ve al llegar, aunque el aviso naciera sin ella, y se va al volver una lista válida.
+  createEffect(
+    on(
+      () => Boolean(props.unavailable),
+      (now, before) => {
+        if (before === undefined || now === before) return;
+        clearTimeout(timer);
+        setOpen(true);
+        if (!now) timer = setTimeout(() => setOpen(false), VISIBLE_MS);
+      },
+    ),
+  );
   onCleanup(() => clearTimeout(timer));
 
   const tip = (m: MachineRow) =>
