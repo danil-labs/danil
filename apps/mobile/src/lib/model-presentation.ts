@@ -1,4 +1,6 @@
-import { canonicalAgentId, isFreeRouterAgent, isRetiredAgent, OPENCODE } from "@terminus/tasks";
+import { canonicalAgentId, danilServiceOf, isFreeRouterAgent, isRetiredAgent, modelName, OPENCODE } from "@terminus/tasks";
+
+type ModelCatalog = Parameters<typeof modelName>[1];
 
 type SurfaceIdentity = { provider: string; catalogo: string; label: string };
 
@@ -13,4 +15,11 @@ export function surfacePresentation(surface: SurfaceIdentity, labels: { free: st
 export function selectedModelMark(provider: string | null | undefined, model?: string | null, surface?: SurfaceIdentity) {
   if (model?.startsWith("danil-free/") || (!model && surface?.catalogo === "gratuitos") || isFreeRouterAgent(provider)) return "danil";
   return isRetiredAgent(provider) ? null : canonicalAgentId(provider, model);
+}
+
+/** Un servicio de Danil se nombra por el servicio, nunca por su modelo; los demás, por su modelo. */
+export function modelLabel(id: string, labels: { credits: string; router: string }, catalog?: ModelCatalog): string {
+  const service = danilServiceOf(id.split("[")[0]);
+  if (service) return labels[service];
+  return modelName(id, catalog);
 }
