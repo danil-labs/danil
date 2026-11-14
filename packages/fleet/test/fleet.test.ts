@@ -6,7 +6,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { type CallResult, type DeferredFrame, type EventsPage, INTENT_COMMANDS, type MachineState, isDeferrable } from "../../computers/src/index.ts";
-import { Fleet, type FleetError, type Link, type MachineInfo, PASSIVE, type Slice, SLICES_KEY, classOf } from "../src/index.ts";
+import { Fleet, type FleetError, type Link, type MachineInfo, PASSIVE, type Slice, SLICES_KEY, classOf, encodeEvent } from "../src/index.ts";
 
 type Answer = unknown | ((args: Record<string, unknown>) => unknown);
 /** `errors`: what the relay answers the next calls, in order, before answering normally. */
@@ -907,4 +907,46 @@ test("the engine's view of a machine counts only until its session says somethin
   assert.equal(fleet.power("cmp_vm"), "on");
   link("cmp_vm").setState("offline");
   assert.equal(fleet.power("cmp_vm"), "off", "the relay wins");
+});
+
+test("launched tasks and coordinators resolve to the same machine-qualified rows", async () => {
+  const child = { folder: "p1", task: "child", title: "New child", provider: "codex" };
+  const updated = Date.now();
+  const { fleet, link } = setup({ cmp_vm: { answers: {
+    load_session: { id: "parent", turns: [{ meta: "task_launched", from_task: child, reply_to: { folder: "p1", task: "parent" } }] },
+    list_delegated_sessions: [{ id: "child", folder: "p1", title: child.title, updated_at: updated, launched_by: "parent" }],
+    task_coordinator: { ...child, task: "parent" },
+  } } });
+  const call = (command: string, id = "cmp_vm~parent") => fleet.call({ machine: "cmp_vm", workspace: "w", command, args: { project: "p1", id } });
+  const session = await call("load_session") as { turns: { from_task: typeof child; reply_to: { task: string } }[] };
+  const rows = await call("list_delegated_sessions") as { id: string; machine: string; machine_on: boolean; updated_at: number }[];
+  const launch = session.turns[0].from_task;
+  const row = rows.find(row => row.id === launch.task);
+  assert.ok(row, "the launch card must find the real child instead of an epoch-dated placeholder");
+  assert.equal(row.machine, "cmp_vm");
+  assert.equal(row.machine_on, true);
+  assert.equal(row.updated_at, updated);
+  await call("load_session", launch.task);
+  assert.equal(link("cmp_vm").calls.at(-1)?.args.id, "child", "opening the card reaches the child on its machine");
+  const coordinator = await call("task_coordinator") as typeof child;
+  assert.equal(coordinator.task, "cmp_vm~parent");
+  assert.equal(session.turns[0].reply_to.task, coordinator.task);
+});
+
+test("task references use their explicit machine, including in locally saved messages", () => {
+  const { fleet } = setup({ cmp_vm: {}, cmp_mac: {} });
+  const ref = (machine?: string) => ({ folder: "p1", task: "same", title: "Task", provider: "codex", ...(machine ? { machine } : {}) });
+  const value = { turns: [
+    { from_task: ref() }, { from_task: ref("cmp_mac") }, { from_task: ref("cmp_home") },
+  ] };
+  const read = (machine: string) => (fleet.encode(machine, value, "load_session") as typeof value).turns.map(turn => turn.from_task.task);
+  assert.deepEqual(read("cmp_vm"), ["cmp_vm~same", "cmp_mac~same", "same"]);
+  assert.deepEqual(read("cmp_home"), ["same", "cmp_mac~same", "same"]);
+  const event = encodeEvent({ self: "cmp_home", on: () => true, order: ["cmp_home", "cmp_vm"], registry: null }, "cmp_vm", "chat", {
+    session: "parent", turn: { meta: "task_launched", from_task: ref(), reply_to: { folder: "p1", task: "parent" } },
+  }) as { session: string; turn: { from_task: { task: string }; reply_to: { task: string } } };
+  assert.deepEqual([event.session, event.turn.from_task.task, event.turn.reply_to.task], ["cmp_vm~parent", "cmp_vm~same", "cmp_vm~parent"], "live launches and reloaded history use the same identity");
+  assert.equal((fleet.encode("cmp_vm", ref("cmp_mac"), "task_coordinator") as ReturnType<typeof ref>).task, "cmp_mac~same");
+  assert.equal((fleet.encode("cmp_home", ref(), "task_coordinator") as ReturnType<typeof ref>).task, "same");
+  assert.deepEqual(fleet.encode("cmp_vm", { task: "unrelated" }), { task: "unrelated" }, "untyped task fields are not references");
 });
