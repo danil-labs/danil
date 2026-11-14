@@ -19,6 +19,9 @@ import { type AccountWorkspace, type SystemId, callWorkspace, isDeferrable, syst
 import { AttentionBook, type Envelope, type Fleet, FleetError, type MachineInfo, type Slice, classOf, registryRow, unwrap, wrap } from "@terminus/fleet";
 import { clavesConocidas, t } from "../../lib/i18n.ts";
 import type { EngineWorkspace } from "./engine-workspaces.ts";
+import { markUnconfirmedOpen } from "./unconfirmedOpen.ts";
+
+export { unconfirmedOpen } from "./unconfirmedOpen.ts";
 
 type Args = Record<string, unknown>;
 type Options = { headers?: HeadersInit } | undefined;
@@ -71,13 +74,6 @@ const REGISTRY_WAIT = 4_000;
 /** Cuánto espera lo que la ventana no relee sola (workspaces, cuentas) a lo vivo antes de contestar con lo guardado. */
 const FRESH_WAIT = 1_500;
 const FIRST_ANSWER_GRACE = 100;
-
-/** Las pestañas de `list_live_sessions` que su máquina no confirmó: la ventana no las cuenta como pedidas. */
-const UNCONFIRMED = Symbol("unconfirmedOpen");
-export function unconfirmedOpen(rows: unknown): readonly string[] {
-  const marked = rows && typeof rows === "object" ? (rows as { [UNCONFIRMED]?: string[] })[UNCONFIRMED] : undefined;
-  return marked ?? [];
-}
 const PROGRESSIVE = new Set([...LISTING, "list_projects", "list_portfolios", "list_live_sessions", "list_spaces", "list_workspace_attention", "list_task_mentions"]);
 /** Lo que espera `service_poll` en la web: los eventos ya llegan solos (`events`). */
 const POLL_WAIT = 20_000;
@@ -639,7 +635,7 @@ export function createRouter(config: RouterConfig) {
     }
     if (command === "list_workspace_attention") for (const s of slices) if (s.has) attention.set(s.machine, fleet.encode(s.machine, s.value));
     const merged = learning(() => fleet.merge(command, command === "list_session_git" ? slices.map(gitSlice) : slices, workspace));
-    if (Array.isArray(merged) && unconfirmed.length) Object.defineProperty(merged, UNCONFIRMED, { value: unconfirmed });
+    if (Array.isArray(merged) && unconfirmed.length) markUnconfirmedOpen(merged, unconfirmed);
     if (merged !== undefined) return merged;
     throw noAnswer(slices, workspace);
   }

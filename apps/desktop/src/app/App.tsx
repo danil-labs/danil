@@ -302,7 +302,7 @@ import { Button } from "../ui/Button";
 import { LazyPart, retryableLazy } from "../ui/LazyPart";
 import { mergeGates } from "../features/chat/permissionGates";
 import { asleep, withLastAnswer } from "../features/machines/lastAnswer";
-import { unconfirmedOpen } from "../features/machines/router";
+import { unconfirmedOpen } from "../features/machines/unconfirmedOpen";
 import { Dialog, DialogContent, DialogTitle } from "../ui/Dialog";
 import { asFailure, claveDe, detalleDe, prosaDe } from "../ui/Failure";
 import { BotonConAtajo } from "../ui/Shortcut";
