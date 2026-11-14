@@ -13,7 +13,7 @@ import { capabilities } from "./platform.ts";
  */
 const NS = "harness.layout.";
 function storageKey(key: string) {
-  const person = key === "machines.run_on" && !capabilities().nativeWindow ? capabilities().webAccounts?.current.user_id : null;
+  const person = (key === "machines.run_on" || key === "machines.known_names") && !capabilities().nativeWindow ? capabilities().webAccounts?.current.user_id : null;
   return person ? `danil.web.${person}.preferences.${key}` : NS + key;
 }
 

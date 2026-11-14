@@ -6,6 +6,7 @@
  */
 import { cancelEdgeWrites } from "../../lib/edge.ts";
 import { invoke } from "../../lib/invoke.ts";
+import { forgetMachineNames } from "../machines/known-names.ts";
 
 export type DanilConnectState = "disconnected" | "pending" | "connected" | "error";
 
@@ -97,5 +98,6 @@ export function signInWithWorkspace(name: string, _workspace: string): Promise<D
 /** Cierra la sesión de esta instalación en `identity` y la borra del llavero. */
 export function signOut(): Promise<DanilConnectStatus> {
   cancelEdgeWrites();
+  forgetMachineNames();
   return invoke<DanilConnectStatus>("danil_sign_out");
 }

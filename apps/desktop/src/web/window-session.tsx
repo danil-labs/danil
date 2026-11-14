@@ -14,6 +14,7 @@ import { readCapabilities, supports, type CapabilitiesSnapshot } from './service
 import { UpdateNotice } from './UpdateNotice';
 import { WorkosAuthPage, signInError } from './auth/workos';
 import { mountWindow } from './window';
+import { forgetMachineNames } from '../features/machines/known-names';
 import { sessionStorageScope, clearWebCaches } from './session-storage';
 import { createOrganizationSelection } from "@terminus/computers";
 import { webOrganizationSource } from './organizations';
@@ -179,7 +180,7 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
       await run(async () => { await selection.choose(id); window.location.assign(home); });
     }
     const redeemPromo = (code: string, key: string) => authorized(() => api.redeemPromo(code, key));
-    async function logout() { await run(async () => { await api.logout(); expired(); }); }
+    async function logout() { await run(async () => { await api.logout(); forgetMachineNames(); expired(); }); }
     async function load() {
       await run(async () => {
         try { setCaps(await readCapabilities(transport)); }

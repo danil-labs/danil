@@ -4,6 +4,7 @@ import { createRouter, type SliceChange } from "../features/machines/router";
 import { directoryEntries } from "../features/shell/workspace-directory";
 import { createSignal, lazy, Suspense } from "solid-js";
 import { leerPref } from "../lib/prefs";
+import { rememberMachineNames } from "../features/machines/known-names";
 import { t } from "../lib/i18n";
 import { setCapabilities, type Capabilities, type WebAccountsSource } from "../lib/platform";
 import { deliver } from "../lib/serviceEvents";
@@ -119,6 +120,7 @@ export function mountWindow(base: Base, mounted: Mounted) {
     fleet.setMachines(answer.value.map(machine => ({ id: machine.machine_id, name: machine.name || machine.machine_id,
       wakes: machineToComputer(machine).wakeable === true && base.permits("machines.start"),
     })));
+    rememberMachineNames(fleet.machines());
     fleet.subscribeEvents();
     active.registryChanged();
     for (const name of ["harness:workspace-name", "harness:service-resync", "harness:machines"]) window.dispatchEvent(new CustomEvent(name));

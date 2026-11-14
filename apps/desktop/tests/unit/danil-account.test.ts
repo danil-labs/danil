@@ -84,3 +84,17 @@ test("signing out closes the Desk session in one command", async () => {
   assert.equal((await signOut()).state, "disconnected");
   assert.deepEqual(calls.map((c) => c.command), ["danil_sign_out"]);
 });
+
+test("signing out forgets the saved machine names", async () => {
+  const saved = new Map<string, string>([["harness.layout.machines.known_names", JSON.stringify({ cmp_cloud: "Nube" })]]);
+  (globalThis as { localStorage?: unknown }).localStorage = {
+    getItem: (k: string) => saved.get(k) ?? null,
+    setItem: (k: string, v: string) => void saved.set(k, v),
+    removeItem: (k: string) => void saved.delete(k),
+  };
+  window({ danil_sign_out: () => ({ state: "disconnected" }) });
+  const { signOut } = await account();
+  await signOut();
+  assert.equal(saved.has("harness.layout.machines.known_names"), false);
+  delete (globalThis as { localStorage?: unknown }).localStorage;
+});

@@ -11,7 +11,7 @@ const picker = app => app.w.document.querySelector('[aria-label="Ejecutar en"]')
 const connecting = app => app.w.document.querySelector('[data-machine-connecting]');
 const rows = app => app.w.__TAURI_INTERNALS__.invoke("machine_list");
 const changed = (app, name = "harness:account-computers") => app.w.dispatchEvent(new app.w.CustomEvent(name));
-async function mount(name, read, { remembered = false, extra = {}, signed = false, nativeList, relay = () => Response.json({ computers: [HOME] }) } = {}) {
+async function mount(name, read, { remembered = false, known = null, extra = {}, signed = false, nativeList, relay = () => Response.json({ computers: [HOME] }) } = {}) {
   let requests = 0;
   const sends = [];
   const f = fleet({ cmp_cloud: { state: "online", table: remote("Nube", "Tarea nube", { send_message: args => { sends.push(args); return "t9"; } }) }, cmp_b: { state: "online", table: remote("B", "Tarea B") } });
@@ -25,7 +25,7 @@ async function mount(name, read, { remembered = false, extra = {}, signed = fals
       if (path === "/v1/machines") return read(++requests);
       return { status: 404, body: null };
     }, ...extra,
-  }), ...(extra.send_message ? { send_message: extra.send_message } : {}) }, undefined, remembered ? { "harness.layout.machines.run_on": JSON.stringify({ w: "cmp_cloud" }) } : {}, { beforeImport: () => {
+  }), ...(extra.send_message ? { send_message: extra.send_message } : {}) }, undefined, { ...(remembered ? { "harness.layout.machines.run_on": JSON.stringify({ w: "cmp_cloud" }) } : {}), ...(known ? { "harness.layout.machines.known_names": JSON.stringify(known) } : {}) }, { beforeImport: () => {
     globalThis.WebSocket = class { constructor(url, protocols) { return new f.Socket(url.replace("/v1/machines/", "/v1/computers/"), protocols); } };
     const previous = globalThis.fetch;
     const fetch = (url, init) => String(url).startsWith("https://relay.test/v1/computers") ? Promise.resolve(relay()) : previous(url, init);
@@ -283,5 +283,32 @@ for (const when of ["start", "danil:organization-changed"]) for (const [kind, de
   assert.equal(remembered, "cmp_cloud", "la recordada sigue siendo la nube ausente");
   // Sin «Conectando…» por inventario y sin cabecera al cmp_cloud ausente: la orden cae a la activa, la local (`draftMachine`).
   assert.deepEqual({ connecting: waiting, machine: sends[0].options?.headers?.["x-terminus-machine"] ?? null }, { connecting: false, machine: "local" });
+  assert.deepEqual(app.failures, []);
+});
+
+// Arranque en frío (light-state-sync): con el último nombre guardado, «Ejecutar en» abre con la máquina y solo el punto dice que se confirma.
+test("C16 G: recordada inicial con nombre guardado nunca muestra Conectando", async () => {
+  const gate = deferred();
+  const { app } = await mount("C16", () => gate.promise, { remembered: true, known: { cmp_cloud: "Nube" } });
+  const observed = watch(app);
+  const label = picker(app)?.textContent ?? "";
+  const tone = picker(app)?.querySelector("[data-tone]")?.getAttribute("data-tone");
+  await sleep(300);
+  gate.resolve(ok()); await ready(app);
+  assert.ok(await until(() => picker(app)?.textContent.includes("Nube")));
+  observed.stop();
+  assert.match(label, /Nube/, "el chip abre con el nombre guardado");
+  assert.equal(tone, "working", "el punto dice que se está confirmando");
+  assert.ok(observed.seen.every(s => !s.connecting), "el chip nunca muestra Conectando");
+  assert.deepEqual(app.failures, []);
+});
+
+test("C17 G: el inventario guarda id y nombre de sus máquinas, y nada más", async () => {
+  const { app } = await mount("C17", () => ok([cloud("cmp_cloud", "Nube nueva")]), { known: { cmp_cloud: "Nube", cmp_gone: "Ya no" } });
+  await ready(app);
+  assert.ok(await until(() => JSON.parse(app.w.localStorage.getItem("harness.layout.machines.known_names") ?? "{}").cmp_cloud === "Nube nueva"));
+  const saved = JSON.parse(app.w.localStorage.getItem("harness.layout.machines.known_names"));
+  assert.equal(saved.cmp_gone, undefined, "la que ya no está se olvida");
+  assert.ok(Object.values(saved).every(v => typeof v === "string"), "solo nombres");
   assert.deepEqual(app.failures, []);
 });
