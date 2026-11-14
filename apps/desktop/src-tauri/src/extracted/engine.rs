@@ -1,5 +1,5 @@
 //! Sin `--external-host`, la ventana usa el motor que viaja con ella: reutiliza
-//! uno vivo sobre su carpeta de datos o lanza `seldon-runtime` junto al
+//! uno vivo sobre su carpeta de datos o lanza `danil-engine` junto al
 //! ejecutable. Un release abre la raíz de `ai.danil.terminus`, la de 0.2.74; el
 //! laboratorio usa `ai.danil.seldon.dev` y nunca esa raíz. Un candado evita que
 //! dos ventanas arranquen dos motores. Ver `docs/engine-client.md`.
@@ -525,10 +525,9 @@ fn working(busy: &serde_json::Value) -> bool {
         })
 }
 
-/// `seldon-runtime` junto al ejecutable de la ventana.
+/// El motor junto al ejecutable de la ventana (`danil-engine`, o `seldon-runtime`).
 fn bundled_engine() -> Result<PathBuf> {
-    let exe = std::env::current_exe()?
-        .with_file_name(format!("seldon-runtime{}", std::env::consts::EXE_SUFFIX));
+    let exe = super::legacy::sibling_engine(&std::env::current_exe()?);
     if !exe.is_file() {
         return Err(Error {
             detail: serde_json::json!(exe),

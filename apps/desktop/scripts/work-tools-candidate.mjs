@@ -85,7 +85,8 @@ try {
 const binaries = join(output, "binaries");
 mkdirSync(binaries);
 const extension = process.platform === "win32" ? ".exe" : "";
-const sidecar = join(binaries, `seldon-runtime-${target}${extension}`);
+const sidecarName = process.platform === "darwin" ? "danil-engine" : "seldon-runtime";
+const sidecar = join(binaries, `${sidecarName}-${target}${extension}`);
 copyFileSync(engine, sidecar);
 if (hash(sidecar) !== expectedEngine) throw new Error("Candidate sidecar copy failed verification.");
 const config = {
@@ -94,7 +95,7 @@ const config = {
   // Los resources de Tauri copian el destino de cada symlink; macOS y AppImage `files`, no.
   bundle: {
     createUpdaterArtifacts: false,
-    externalBin: [join(binaries, "seldon-runtime")],
+    externalBin: [join(binaries, sidecarName)],
     ...(process.platform === "linux"
       ? { linux: { appimage: { files: { [`/usr/share/Danil/work-tools/${target}`]: stagedResources, "/usr/share/Danil/lenguas": join(root, "plugins", "languages"), "/usr/share/Danil/resources-inventory.json": join(output, "resources", "resources-inventory.json") } } } }
       : process.platform === "darwin"

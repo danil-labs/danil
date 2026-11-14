@@ -79,7 +79,7 @@ fn installation() -> io::Result<Installation> {
     {
         return Err(io::Error::other("background_signed_installation_required"));
     }
-    let engine = macos.join("seldon-runtime").canonicalize()?;
+    let engine = super::super::legacy::sibling_engine(&executable).canonicalize()?;
     let resources = bundle.join("Contents/Resources").canonicalize()?;
     if !engine.starts_with(macos)
         || !resources.starts_with(bundle)

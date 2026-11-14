@@ -87,10 +87,23 @@ pub fn dispatch() {
     }
 }
 
+/// El motor junto a la ventana: `danil-engine` en macOS; `seldon-runtime` en Windows,
+/// Linux y versiones anteriores.
+fn engine() -> std::io::Result<std::path::PathBuf> {
+    let exe = std::env::current_exe()?;
+    let named = |name: &str| exe.with_file_name(format!("{name}{}", std::env::consts::EXE_SUFFIX));
+    let current = named("danil-engine");
+    Ok(if current.is_file() {
+        current
+    } else {
+        named("seldon-runtime")
+    })
+}
+
 // exec conserva los descriptores, las señales y el código de salida sin iniciar Tauri.
 #[cfg(unix)]
 fn forward() -> std::io::Result<i32> {
-    let exe = std::env::current_exe()?.with_file_name("seldon-runtime");
+    let exe = engine()?;
     Err(std::process::Command::new(exe)
         .args(std::env::args_os().skip(1))
         .exec())
@@ -100,7 +113,7 @@ fn forward() -> std::io::Result<i32> {
 fn forward() -> std::io::Result<i32> {
     use std::process::{Command, Stdio};
     let attached = attach_parent()?;
-    let exe = std::env::current_exe()?.with_file_name("seldon-runtime.exe");
+    let exe = engine()?;
     let mut command = Command::new(exe);
     if !attached {
         crate::console::no_console_window(&mut command);
