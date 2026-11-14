@@ -25,8 +25,16 @@ const MOTOR_PENDIENTE = null;
 
 const vendored = createHash("sha256").update(readFileSync(CONTRACT)).digest("hex");
 const declared = /SHA-256:\s*`([0-9a-f]{64})`/.exec(readFileSync(PROVENANCE, "utf8"))?.[1];
-const pinned = JSON.parse(readFileSync(LOCK, "utf8")).contract;
+const lock = JSON.parse(readFileSync(LOCK, "utf8"));
+const pinned = lock.contract;
 const failures = [];
+
+// Un binario fijado sin su sha256 real no se compila: un marcador pendiente nunca llega a una ventana.
+for (const [triple, entry] of Object.entries(lock.platforms ?? {})) {
+  if (!/^[0-9a-f]{64}$/.test(entry?.sha256 ?? "")) {
+    failures.push(`seldon-runtime.lock: ${triple} no tiene un sha256 real (${entry?.sha256 ?? "nada"}); fíjalo con scripts/engine-lock-set.mjs.`);
+  }
+}
 
 if (declared !== vendored) {
   failures.push(

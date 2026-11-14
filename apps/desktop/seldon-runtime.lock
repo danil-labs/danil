@@ -2,16 +2,15 @@
   "version": 1,
   "name": "seldon-runtime",
   "engine_version": "0.3.1",
-  "commit": "d9edad4d81a19c6028ce091dba39e8fccd49897f",
-  "release": "seldon-runtime-v0.3.1-d9edad4d",
-  "manifest": "https://github.com/danil-labs/danil/releases/download/seldon-runtime-v0.3.1-d9edad4d/seldon-runtime.json",
-  "terms": "https://github.com/danil-labs/danil/releases/download/seldon-runtime-v0.3.1-d9edad4d/TERMS.md",
+  "commit": "9663913a8e771ae0ea26625d1b7f7b6d7ee06072",
+  "release": "seldon-runtime-v0.3.1-9663913a",
+  "manifest": "https://github.com/danil-labs/danil/releases/download/seldon-runtime-v0.3.1-9663913a/seldon-runtime.json",
+  "terms": "https://github.com/danil-labs/danil/releases/download/seldon-runtime-v0.3.1-9663913a/TERMS.md",
   "contract": "46798e8630db16622e62b79747cde5b02073681ca602d92adc6fdae559d802e5",
   "platforms": {
     "x86_64-pc-windows-msvc": {
-      "release": "seldon-runtime-v0.3.1-85335139",
-      "url": "https://github.com/danil-labs/danil/releases/download/seldon-runtime-v0.3.1-85335139/seldon-runtime-x86_64-pc-windows-msvc.exe",
-      "sha256": "fa50443107bcb15b1f968b59d98f770c24ed70e36e4ea5b8892c5e31b58d09eb"
+      "url": "https://github.com/danil-labs/danil/releases/download/seldon-runtime-v0.3.1-9663913a/seldon-runtime-x86_64-pc-windows-msvc.exe",
+      "sha256": "PENDIENTE: sha256 del runtime Windows de 9663913a que compila el operador de OD 9pk9affn"
     },
     "aarch64-apple-darwin": {
       "release": "seldon-runtime-v0.3.1-85335139",
@@ -24,8 +23,8 @@
       "sha256": "9dd888f35df481df49dc9fbd3a7bcb87df522d7e1115ec0f036dd8ee05ace370"
     },
     "x86_64-unknown-linux-gnu": {
-      "url": "https://github.com/danil-labs/danil/releases/download/seldon-runtime-v0.3.1-d9edad4d/seldon-runtime-x86_64-unknown-linux-gnu",
-      "sha256": "741ece451700fd533b427a0ff23339c45c1234e2544cee33506dcd46b77718c1"
+      "url": "https://github.com/danil-labs/danil/releases/download/seldon-runtime-v0.3.1-9663913a/seldon-runtime-x86_64-unknown-linux-gnu",
+      "sha256": "8ede4a82c03c8ea5ba73dc8865fa6c9cfd72bf7aa7476a225175afccfd42f505"
     }
   }
 }
