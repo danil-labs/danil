@@ -192,3 +192,50 @@ test("C12 R: refetchMachines tardío nativo no reemplaza lista de flota", async 
   stale.resolve([{ id: "local", local: true, active: true, on: true, hosts: true }]); await sleep(100);
   assert.ok(picker(app)); assert.ok(await has(app, "cmp_cloud")); assert.deepEqual(app.failures, []);
 });
+
+test("C13 R: recordada remota ya resuelta no espera al inventario inicial", async () => {
+  const gate = deferred();
+  const { app, requests } = await mount("C13", () => gate.promise, { remembered: true, nativeList: [
+    { id: "local", local: true, active: false, on: true, hosts: true },
+    { id: "cmp_cloud", local: false, active: true, on: true, connection: "online", hosts: true },
+  ] });
+  assert.equal(requests(), 1, "el inventario inicial sigue pendiente");
+  const waiting = !!connecting(app);
+  const selected = picker(app)?.textContent;
+  const remembered = JSON.parse(app.w.localStorage.getItem("harness.layout.machines.run_on")).w;
+  picker(app).click();
+  assert.ok(await until(() => app.w.document.querySelector('[data-machine-option="cmp_cloud"]')));
+  const row = app.w.document.querySelector('[data-machine-option="cmp_cloud"]').textContent;
+  gate.resolve(ok([])); await sleep(100);
+  assert.equal(waiting, false, "la conexión conocida no se reemplaza por la lectura de inventario");
+  assert.match(selected, /cmp_cloud/);
+  assert.equal(remembered, "cmp_cloud");
+  assert.match(row, /encendida/); assert.doesNotMatch(row, /Conectando/);
+  assert.deepEqual(app.failures, []);
+});
+
+for (const order of ["old-first", "latest-first"]) test(`C14 R: whoAmI retenidos ${order} conservan la identidad más reciente`, async () => {
+  const old = deferred(); const latest = deferred();
+  let held = false; let identities = 0; let current = SESSION_A.account;
+  const tokens = [];
+  const { app } = await mount(`C14-${order}`, () => ok([current === SESSION_A.account ? cloud() : cloud("cmp_b", "B")]), { signed: true, extra: {
+    danil_sessions: [SESSION_A, SESSION_B],
+    danil_workspace_account: () => held ? (++identities === 1 ? old.promise : latest.promise) : { account: SESSION_A.account },
+    account_relay_token: args => { current = args.account; tokens.push(current); return TOKEN(); },
+  } });
+  await ready(app);
+  held = true;
+  app.emit("danil-sessions", {}); app.emit("danil-sessions", {});
+  assert.ok(await until(() => identities === 2), "ambas lecturas de identidad están retenidas");
+  if (order === "old-first") old.resolve({ account: SESSION_B.account });
+  else latest.resolve({ account: SESSION_A.account });
+  await sleep(100);
+  if (order === "old-first") latest.resolve({ account: SESSION_A.account });
+  else old.resolve({ account: SESSION_B.account });
+  await sleep(200);
+  if (!app.w.document.querySelector('[data-machine-option]')) picker(app)?.click();
+  assert.ok(await until(() => app.w.document.querySelector('[data-machine-option="cmp_cloud"]')), "la identidad vigente mantiene su flota");
+  assert.equal(app.w.document.querySelector('[data-machine-option="cmp_b"]'), null);
+  assert.deepEqual(tokens, [SESSION_A.account], "una identidad vieja no invalida la época ni pide token de otra cuenta");
+  assert.deepEqual(app.failures, []);
+});
