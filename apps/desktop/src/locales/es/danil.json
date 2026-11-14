@@ -57,6 +57,7 @@
   "danil.error.unauthorized": "Danil ya no acepta la credencial de esta computadora. Vuelve a iniciar sesión.",
   "danil.error.unsupported": "El servidor de Danil todavía no ofrece esto.",
   "danil.error.unavailable": "Danil no responde ahora. Vuelve a intentarlo en un momento.",
+  "danil.error.browser": "No se pudo abrir el navegador. Abre esta dirección para iniciar sesión: {url}",
   "danil.status.expired_token": "El código venció antes de confirmarse. Inicia sesión de nuevo.",
   "danil.status.access_denied": "Se rechazó la conexión en el navegador.",
   "danil.status.revoked": "Esta computadora se quitó de tu cuenta de Danil. Inicia sesión de nuevo para volver a conectarla.",

@@ -93,6 +93,11 @@ fn error(fail: &Fail) -> Value {
     value
 }
 
+/// El navegador no se abrió (en Linux, sin `xdg-utils`): la ventana muestra la dirección para copiarla.
+pub(crate) fn browser_failed(url: &str) -> Value {
+    json!({ "what": { "clave": "danil.error.browser", "datos": { "url": url } }, "detail": "browser" })
+}
+
 fn coded(code: &str) -> Value {
     json!({ "what": { "clave": format!("danil.error.{code}") }, "detail": code })
 }
@@ -192,7 +197,7 @@ pub(super) fn danil_sign_in(app: tauri::AppHandle, name: Option<String>) -> Resu
     let pkce = pkce::Pkce::open().ok_or_else(|| coded("unavailable"))?;
     let redirect_uri = pkce.redirect_uri();
     let url = d.authorize_url(&pkce.challenge, &pkce.state, &redirect_uri);
-    super::env::open_external(url).map_err(|_| coded("browser"))?;
+    super::env::open_external(url.clone()).map_err(|_| browser_failed(&url))?;
     let deadline = Instant::now() + LOGIN_WAIT;
     let code = loop {
         if CONNECT.load(Ordering::SeqCst) != generation {

@@ -1004,3 +1004,13 @@ fn a_write_without_a_key_never_reaches_the_edge() {
     }
     assert_eq!(count(&log, "/v1/workspaces/42/free-router/consent"), 0);
 }
+
+/// Sin navegador (Linux sin xdg-utils), la ventana recibe la dirección para copiarla y un error propio, no el genérico.
+#[test]
+fn a_browser_that_does_not_open_gives_the_sign_in_address() {
+    let url = "https://edge.test/v1/identity/desk/authorize?state=s";
+    let err = super::browser_failed(url);
+    assert_eq!(err["detail"], "browser");
+    assert_eq!(err["what"]["clave"], "danil.error.browser");
+    assert_eq!(err["what"]["datos"]["url"], url);
+}

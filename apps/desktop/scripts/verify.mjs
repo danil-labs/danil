@@ -68,6 +68,7 @@ const steps = [
   ["Web and Desk read the published mvp-v1 examples the same way", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/integration/mvp-contracts.test.mjs")], root],
   ["Session caches are revoked and erased on logout", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/web-session-storage.test.ts")], root],
   ["Machine preferences stay with the browser person", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/web-machine-preferences.test.ts")], root],
+  ["The account computers list is asked again by itself within 30 s and stops on unmount", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/list-recovery.test.ts")], root],
   ["Messaging stays isolated from Desk and web", process.execPath, [join(root, "scripts/guards/messaging-isolation.mjs")], root],
   ["Messaging isolation guard rejects reintroduced transports", process.execPath, ["--test", join(root, "tests/unit/messaging-isolation.test.mjs")], root],
   ["Web uses platform without direct database dependencies", process.execPath, [join(root, "scripts/guards/web-platform.mjs")], root],

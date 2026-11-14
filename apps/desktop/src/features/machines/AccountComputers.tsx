@@ -11,6 +11,7 @@ import {
 } from "@terminus/computers";
 import Pencil from "lucide-solid/icons/pencil";
 import { createSignal, For, onMount, onCleanup, Show } from "solid-js";
+import { createListRecovery } from "./list-recovery";
 import { df } from "../../lib/format";
 import { t } from "../../lib/i18n";
 import { invoke } from "../../lib/invoke";
@@ -94,19 +95,35 @@ export function AccountComputers(props: AccountComputersProps) {
   const [confirming, setConfirming] = createSignal<string | null>(null);
   const [removing, setRemoving] = createSignal(false);
 
-  async function load() {
-    setList(null);
-    setFailed(null);
-    setEditing(null);
+  // Un fallo de lectura se reintenta solo; el reintento no vuelve a «cargando» y no hay dos lecturas a la vez.
+  const recovery = createListRecovery(() => void load(true));
+  let reading: Promise<void> | null = null;
+  const load = (quiet = false) => (reading ??= read(quiet).finally(() => { reading = null; }));
+  async function read(quiet: boolean) {
+    if (!quiet) {
+      setList(null);
+      setFailed(null);
+      setEditing(null);
+    }
     const answer = await props.source.list().catch(() => null);
     if (answer?.kind === "ok") {
+      recovery.succeeded();
+      setFailed(null);
       setList(orderComputers(answer.value));
-    } else setFailed(answer?.kind === "missing" ? "missing" : "failed");
+      return;
+    }
+    setFailed(answer?.kind === "missing" ? "missing" : "failed");
+    // Un workspace que ya no existe no vuelve; lo demás (red, relay, servicio) se pide de nuevo.
+    if (answer?.kind === "missing") recovery.stop();
+    else recovery.failed();
   }
   onMount(() => {
     void load();
     const stop = props.source.subscribe?.(() => void load());
-    onCleanup(() => stop?.());
+    onCleanup(() => {
+      stop?.();
+      recovery.stop();
+    });
   });
 
   const nameOf = (c: Computer) => c.name?.trim() || c.computer_id;
