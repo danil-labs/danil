@@ -7,7 +7,8 @@
  * `GET /v1/capabilities` (Desk compilado no se recompila por cambios del servidor).
  * El canal de datos no pasa por aquí: va directo al relay con el ticket, solo a un origen exacto (`DEFAULT_RELAY_ORIGINS`).
  */
-import { type CapabilityList, type Computer, type Fetch, type MachinesAnswer, announces, capabilityList, machineToComputer, machinesClient, mayCall } from "@terminus/computers";
+import { type CapabilityList, type Computer, type Fetch, type MachinesAnswer, type MachineState, announces, capabilityList, machineToComputer, machinesClient, mayCall } from "@terminus/computers";
+import { type Link, type MachineInfo, relayLink } from "@terminus/fleet";
 
 import { edgeUntil, type EdgeReply as NativeReply, type Patience } from "../../lib/edge.ts";
 
@@ -96,3 +97,14 @@ export function createCloudMachines(invoke: Invoke, onProblem?: (error: unknown)
     },
   };
 }
+
+/**
+ * Una máquina de `/v1/machines` en la flota. Apagada, el borde no emite ticket
+ * (`409 machine_unreachable`) y el canal no la enciende: la enciende el plano de control
+ * antes de mandar, igual un mensaje que el «+» de una cuenta.
+ */
+export const cloudInfo = (info: MachineInfo): MachineInfo => ({ ...info, starts: "control_plane" });
+
+/** Su estado: el del canal en cuanto diga uno; antes, el de su fila (apagada no hay canal que lo diga). */
+export const cloudLink = (relay: Required<Link>, row: () => MachineState | undefined): Link =>
+  relayLink(relay, () => (relay.state() === "unknown" ? (row() ?? "unknown") : relay.state()));
