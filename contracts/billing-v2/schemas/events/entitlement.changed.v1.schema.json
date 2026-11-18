@@ -1,0 +1,121 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.danil.ai/billing-v2/events/entitlement.changed.v1.schema.json",
+  "title": "ai.danil.billing.entitlement.changed.v1 — data",
+  "$comment": "Estado comercial vigente completo de la organización. aggregate_key = entitlement:<org>. retention_generation es INDEPENDIENTE de aggregate_seq: aggregate_seq ordena cualquier cambio; la generación solo sube cuando un pago o una compra invalidan un borrado pendiente, y nunca baja. state=terminated es una AUTORIZACIÓN de borrado para esa generación, no un borrado: el efecto irreversible exige el protocolo de confirmación (README § Destrucción), hoy con gate CERRADO. Para una organización reservada, reservation_id y checkout_id son obligatorios por protocolo y salen del vínculo local de treasury; activación no se deriva de metadata. No hay callback al productor.",
+  "type": "object",
+  "required": [
+    "organization_id",
+    "subscription_id",
+    "state",
+    "reason",
+    "retention_generation",
+    "plan_key",
+    "catalog_version",
+    "seats",
+    "max_members",
+    "resource_spec",
+    "purchaser_person_id"
+  ],
+  "properties": {
+    "organization_id": {
+      "$ref": "../common.v1.schema.json#/$defs/organization_id"
+    },
+    "subscription_id": {
+      "oneOf": [
+        {
+          "$ref": "../common.v1.schema.json#/$defs/subscription_id"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "state": {
+      "$ref": "../common.v1.schema.json#/$defs/subscription_state"
+    },
+    "reason": {
+      "type": "string",
+      "enum": [
+        "activated",
+        "changed",
+        "renewed",
+        "suspended",
+        "reactivated",
+        "canceled",
+        "resumed",
+        "terminated",
+        "downgraded_to_free"
+      ]
+    },
+    "suspension_reason": {
+      "$ref": "../common.v1.schema.json#/$defs/suspension_reason"
+    },
+    "retention_generation": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "suspended_at": {
+      "$ref": "../common.v1.schema.json#/$defs/timestamp"
+    },
+    "data_retention_until": {
+      "$ref": "../common.v1.schema.json#/$defs/timestamp"
+    },
+    "delete_not_before": {
+      "$ref": "../common.v1.schema.json#/$defs/timestamp"
+    },
+    "plan_key": {
+      "$ref": "../common.v1.schema.json#/$defs/plan_key"
+    },
+    "catalog_version": {
+      "$ref": "../common.v1.schema.json#/$defs/catalog_version"
+    },
+    "current_period_end": {
+      "$ref": "../common.v1.schema.json#/$defs/timestamp"
+    },
+    "seats": {
+      "type": "object",
+      "required": [
+        "included",
+        "extra"
+      ],
+      "properties": {
+        "included": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000
+        },
+        "extra": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000
+        }
+      }
+    },
+    "max_members": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 100000
+    },
+    "resource_spec": {
+      "$ref": "../common.v1.schema.json#/$defs/resource_spec"
+    },
+    "purchaser_person_id": {
+      "oneOf": [
+        {
+          "$ref": "../common.v1.schema.json#/$defs/person_id"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "reservation_id": {
+      "$ref": "../common.v1.schema.json#/$defs/organization_reservation_id"
+    },
+    "checkout_id": {
+      "$ref": "../common.v1.schema.json#/$defs/checkout_id"
+    }
+  }
+}

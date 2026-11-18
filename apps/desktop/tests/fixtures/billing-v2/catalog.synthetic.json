@@ -1,0 +1,148 @@
+{
+  "schema": "openapi/public.openapi.json#/components/schemas/Catalog",
+  "value": {
+    "realm": "danil-platform",
+    "catalog_version": 3,
+    "published_at": "2026-11-14T00:00:00Z",
+    "plans": [
+      {
+        "plan_key": "free",
+        "sellable": true,
+        "price": {
+          "currency": "MXN",
+          "amount_micro": "0"
+        },
+        "interval": "month",
+        "seats_included": 1,
+        "extra_seat_price": null,
+        "included_credits": {
+          "currency": "MXN",
+          "amount_micro": "0"
+        },
+        "resource_spec": {
+          "count": 0,
+          "os": "linux",
+          "ram_mib": 0,
+          "vcpu": 0,
+          "disk_gib_per_org": 0
+        },
+        "requires_card": false
+      },
+      {
+        "plan_key": "pro",
+        "sellable": false,
+        "price": {
+          "currency": "MXN",
+          "amount_micro": "599000000"
+        },
+        "interval": "month",
+        "seats_included": 1,
+        "extra_seat_price": null,
+        "included_credits": {
+          "currency": "MXN",
+          "amount_micro": "100000000"
+        },
+        "resource_spec": {
+          "count": 1,
+          "os": "linux",
+          "ram_mib": 4096,
+          "vcpu": null,
+          "disk_gib_per_org": 80
+        },
+        "requires_card": true
+      },
+      {
+        "plan_key": "team",
+        "sellable": false,
+        "price": null,
+        "interval": "month",
+        "seats_included": 3,
+        "extra_seat_price": null,
+        "included_credits": null,
+        "resource_spec": {
+          "count": 1,
+          "os": "linux",
+          "ram_mib": 8192,
+          "vcpu": null,
+          "disk_gib_per_org": 80
+        },
+        "requires_card": true
+      },
+      {
+        "plan_key": "enterprise",
+        "sellable": false,
+        "price": null,
+        "interval": "month",
+        "seats_included": 0,
+        "extra_seat_price": null,
+        "included_credits": null,
+        "resource_spec": {
+          "count": 0,
+          "os": "linux",
+          "ram_mib": 0,
+          "vcpu": null,
+          "disk_gib_per_org": 0
+        },
+        "requires_card": true
+      }
+    ],
+    "addons": [
+      {
+        "addon_key": "extra_vm",
+        "sellable": false,
+        "price": null
+      },
+      {
+        "addon_key": "os_windows",
+        "sellable": false,
+        "price": null
+      }
+    ],
+    "credit_packs": [
+      {
+        "pack_id": "pack_synthetic_100",
+        "sellable": false,
+        "price": {
+          "currency": "MXN",
+          "amount_micro": "100000000"
+        },
+        "credits": {
+          "currency": "MXN",
+          "amount_micro": "100000000"
+        }
+      }
+    ],
+    "inference_tiers": [
+      {
+        "id": "danil/ligero",
+        "label": "Ligero",
+        "provider_model": "xiaomi/mimo-v2.6-flash",
+        "default": false,
+        "factor": {
+          "num": "2",
+          "den": "1"
+        }
+      },
+      {
+        "id": "danil/equilibrado",
+        "label": "Equilibrado",
+        "provider_model": "deepseek/deepseek-v4.1-flash",
+        "default": true,
+        "factor": {
+          "num": "2",
+          "den": "1"
+        }
+      },
+      {
+        "id": "danil/avanzado",
+        "label": "Avanzado",
+        "provider_model": "deepseek/deepseek-v4-pro",
+        "default": false,
+        "factor": {
+          "num": "2",
+          "den": "1"
+        }
+      }
+    ]
+  }
+}

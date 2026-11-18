@@ -1,0 +1,22 @@
+{
+  "$comment": "JWS ES256 (RFC 7515, compacta) del evento: cabecera exactamente {alg, kid, typ=danil-billing-event+jws}; payload = UTF-8 de JCS(evento). La llave es SOLO DE PRUEBA: se generó para este vector, su parte privada se descartó, no firma nada real y no es E1 ni Free router. Cada consumidor debe verificar `compact` con `registry` y obtener exactamente examples/events/entitlement.changed.activated.json. Las llaves reales viven en el signer de billing; su parte pública se registra aquí por PR (hoy no hay ninguna).",
+  "registry": {
+    "keys": [
+      {
+        "kid": "billing-events-test-1",
+        "producer": "billing",
+        "alg": "ES256",
+        "use": "billing-events",
+        "status": "test-only",
+        "jwk": {
+          "kty": "EC",
+          "x": "V4sKcLGt8cwKyq2lHZ3MKBCgAASeD5wlxOUUXcuNrZk",
+          "y": "trPd5P5IL4TL0qxzeonOnUlTdzPrOQd683xA8WdXPTA",
+          "crv": "P-256"
+        }
+      }
+    ]
+  },
+  "production_keys": [],
+  "compact": "eyJhbGciOiJFUzI1NiIsImtpZCI6ImJpbGxpbmctZXZlbnRzLXRlc3QtMSIsInR5cCI6ImRhbmlsLWJpbGxpbmctZXZlbnQrandzIn0.eyJhY3RvciI6eyJpZCI6InN0cmlwZSIsInR5cGUiOiJzdHJpcGUifSwiYWdncmVnYXRlX2tleSI6ImVudGl0bGVtZW50Om9yZ18wMVNZTlRIRVRJQ09SR0EiLCJhZ2dyZWdhdGVfc2VxIjoxLCJjYXVzYXRpb25faWQiOiJzdHJpcGVfZXZlbnQ6ZXZ0X1NZTlRIRVRJQzAwMDEiLCJjb3JyZWxhdGlvbl9pZCI6IjBmOGUyYTY0LTZhMWItNGMzOS04ZjBlLTJiN2Q5YzFhNWUwMSIsImRhdGEiOnsiY2F0YWxvZ192ZXJzaW9uIjozLCJjdXJyZW50X3BlcmlvZF9lbmQiOiIyMDI2LTEyLTE0VDAwOjAwOjAwWiIsIm1heF9tZW1iZXJzIjoxLCJvcmdhbml6YXRpb25faWQiOiJvcmdfMDFTWU5USEVUSUNPUkdBIiwicGxhbl9rZXkiOiJwcm8iLCJwdXJjaGFzZXJfcGVyc29uX2lkIjoidXNlcl8wMVNZTlRIRVRJQ1BBWUVSIiwicmVhc29uIjoiYWN0aXZhdGVkIiwicmVzb3VyY2Vfc3BlYyI6eyJjb3VudCI6MSwiZGlza19naWJfcGVyX29yZyI6ODAsIm9zIjoibGludXgiLCJyYW1fbWliIjo0MDk2LCJ2Y3B1IjoyfSwicmV0ZW50aW9uX2dlbmVyYXRpb24iOjAsInNlYXRzIjp7ImV4dHJhIjowLCJpbmNsdWRlZCI6MX0sInN0YXRlIjoiYWN0aXZlIiwic3Vic2NyaXB0aW9uX2lkIjoiYnN1Yl8wMVNZTlRIRVRJQ1NVQjAwMDEifSwiZGF0YXNjaGVtYSI6Imh0dHBzOi8vY29udHJhY3RzLmRhbmlsLmFpL2JpbGxpbmctdjIvZXZlbnRzL2VudGl0bGVtZW50LmNoYW5nZWQudjEuc2NoZW1hLmpzb24iLCJpZCI6IjZmMWMyYjhlLTFkM2EtNGU1Zi05YTdiLTBjMWQyZTNmNGE1MSIsInByb2R1Y2VyIjoiYmlsbGluZyIsInNwZWN2ZXJzaW9uIjoiMS4wIiwic3ViamVjdCI6Im9yZ18wMVNZTlRIRVRJQ09SR0EiLCJ0aW1lIjoiMjAyNi0xMS0xNFQxNjowMDowMFoiLCJ0eXBlIjoiYWkuZGFuaWwuYmlsbGluZy5lbnRpdGxlbWVudC5jaGFuZ2VkLnYxIn0.g9s_vLyXmVMacb-H0x7rtLa_RCFkXsRofDOtm-QYoBjQ6FCdFKlzHGzAYf8aV_jdHnPtPLEkK-qAPf7IcLLx0g"
+}
