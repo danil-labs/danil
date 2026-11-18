@@ -94,6 +94,8 @@ export type ChatEvent = {
    * abrir uno nuevo. Ver `runtime/acp.rs`.
    */
   message_id?: string;
+  /** Identidad reservada por el motor antes de emitir; coincide con Turn.id al guardar. */
+  segment_id?: string;
   /** Solo en `tool`/`tool_done`: con qué paso empareja. */
   id?: string;
   /** Solo en `tool`: sobre qué actuó. */
@@ -140,6 +142,7 @@ export function anexarDelta(
   d: {
     text: string;
     messageId?: string;
+    segmentId?: string;
     startsMessage?: boolean;
     author: Author | null;
     /** Con qué se lanzó el turno; el cierre lo cambia por el observado. */
@@ -153,14 +156,15 @@ export function anexarDelta(
       text,
       author: d.author,
       nativeMessageId: d.messageId,
+      ...(d.segmentId ? { tramo: d.segmentId } : {}),
       ...(d.model ? { reported_model: d.model } : {}),
     },
   ];
   if (d.startsMessage) return nuevo(d.text.replace(/^\n+/, ""));
   if (d.messageId) {
     for (let i = msgs.length - 1; i >= 0; i--) {
-      if (msgs[i].meta === "task_launched" || msgs[i].tramo) break;
-      if (msgs[i].role === "agent" && msgs[i].nativeMessageId === d.messageId) {
+      if (!d.segmentId && (msgs[i].role === "user" || msgs[i].meta === "task_launched" || msgs[i].tramo)) break;
+      if (msgs[i].role === "agent" && msgs[i].tramo === d.segmentId && msgs[i].nativeMessageId === d.messageId) {
         const copia = [...msgs];
         copia[i] = { ...msgs[i], text: msgs[i].text + d.text };
         return copia;
@@ -172,6 +176,7 @@ export function anexarDelta(
     if (
       ultimo?.role === "agent" &&
       !ultimo.turno &&
+      ultimo.tramo === d.segmentId &&
       !ultimo.nativeMessageId &&
       !ultimo.text &&
       ultimo.images?.length
@@ -184,8 +189,8 @@ export function anexarDelta(
     return nuevo(d.text);
   }
   const ultimo = msgs[msgs.length - 1];
-  // Lo que ya está en un tramo guardado no crece: lo que sigue es del tramo siguiente.
-  if (ultimo?.role === "agent" && !ultimo.tramo) {
+  // Un ID nativo reutilizado por el proveedor no une segmentos distintos.
+  if (ultimo?.role === "agent" && ultimo.tramo === d.segmentId) {
     return [...msgs.slice(0, -1), { ...ultimo, text: ultimo.text + d.text }];
   }
   return nuevo(d.text);
@@ -209,6 +214,7 @@ export function anexarDeltas(msgs: Msg[], deltas: readonly Delta[]): Msg[] {
       // Un globo que abre solo con saltos se los quita: pegarle más texto cambiaría qué se quita.
       !(previo.startsMessage && /^\n*$/.test(previo.text)) &&
       d.messageId === previo.messageId &&
+      d.segmentId === previo.segmentId &&
       d.author === previo.author &&
       d.model === previo.model
     )
@@ -230,6 +236,7 @@ export function anexarRazonamiento(
   r: {
     text: string;
     messageId?: string;
+    segmentId?: string;
     author: Author | null;
   },
 ): Msg[] {
@@ -241,6 +248,7 @@ export function anexarRazonamiento(
       text: "",
       author: r.author,
       nativeMessageId: r.messageId,
+      ...(r.segmentId ? { tramo: r.segmentId } : {}),
       razonamiento: [bloque],
     },
   ];
@@ -256,8 +264,8 @@ export function anexarRazonamiento(
   };
   if (r.messageId) {
     for (let i = msgs.length - 1; i >= 0; i--) {
-      if (msgs[i].meta === "task_launched") break;
-      if (msgs[i].role === "agent" && msgs[i].nativeMessageId === r.messageId) {
+      if (!r.segmentId && (msgs[i].role === "user" || msgs[i].meta === "task_launched" || msgs[i].tramo)) break;
+      if (msgs[i].role === "agent" && msgs[i].tramo === r.segmentId && msgs[i].nativeMessageId === r.messageId) {
         const copia = [...msgs];
         copia[i] = pegar(msgs[i]);
         return copia;
@@ -266,7 +274,7 @@ export function anexarRazonamiento(
     return nuevo();
   }
   const ultimo = msgs[msgs.length - 1];
-  if (ultimo?.role === "agent" && !ultimo.text && ultimo.razonamiento?.length) {
+  if (ultimo?.role === "agent" && ultimo.tramo === r.segmentId && !ultimo.text && ultimo.razonamiento?.length) {
     return [...msgs.slice(0, -1), pegar(ultimo)];
   }
   return nuevo();
@@ -279,11 +287,11 @@ export function anexarRazonamiento(
  * terminó antes del primer token, el globo nace vacío y el delta siguiente
  * le escribe el texto: si no, la imagen y la frase quedan en dos mensajes.
  */
-export function anexarImagen(msgs: Msg[], images: string[]): Msg[] {
+export function anexarImagen(msgs: Msg[], images: string[], segmentId?: string): Msg[] {
   if (images.length === 0) return msgs;
   for (let i = msgs.length - 1; i >= 0; i--) {
     const m = msgs[i];
-    if (m.role !== "agent" || m.turno) continue;
+    if (m.role !== "agent" || m.turno || m.tramo !== segmentId) continue;
     const previas = m.images ?? [];
     const nuevas = images.filter((url) => !previas.includes(url));
     if (nuevas.length === 0) return msgs;
@@ -291,7 +299,7 @@ export function anexarImagen(msgs: Msg[], images: string[]): Msg[] {
     copia[i] = { ...m, images: [...previas, ...nuevas] };
     return copia;
   }
-  return [...msgs, { role: "agent", text: "", images: images.slice() }];
+  return [...msgs, { role: "agent", text: "", images: images.slice(), ...(segmentId ? { tramo: segmentId } : {}) }];
 }
 
 /** Marca lo vivo que el motor guardó en el tramo `turno`; no lo quita: un `tool_done` tardío busca su fila. */

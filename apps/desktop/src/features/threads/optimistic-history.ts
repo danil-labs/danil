@@ -3,7 +3,7 @@ import { conservarEnOrden, conservarPorClave } from "../../lib/sessionRefresh.ts
 
 type Optimistic = { original: Msg; row: Msg; acknowledged?: number };
 export type OptimisticHistoryState = { optimistic?: Optimistic[]; readRevision?: number };
-type HistoryState = OptimisticHistoryState & { base: Msg[] };
+type HistoryState = OptimisticHistoryState & { base: Msg[]; vivo: Msg[] };
 type ReadProvenance = { id: string; generation: number; revision: number };
 
 /** Owns send identity and the causal frontier required to replace it with durable history. */
@@ -13,13 +13,14 @@ export function createOptimisticHistory<T extends HistoryState>(deps: {
   settle: (fn: (all: Record<string, T>) => Record<string, T>) => void;
   generation: () => number;
   writeBase: (session: string, fn: (base: Msg[]) => Msg[]) => void;
+  writeLive: (session: string, fn: (live: Msg[]) => Msg[]) => void;
   disposed: () => boolean;
 }) {
   let revision = 0;
   const reads = new WeakMap<Session, ReadProvenance>();
   function appendOptimistic(session: string, messages: Msg[]) {
     if (deps.disposed() || !messages.length) return;
-    deps.writeBase(session, before => [...before, ...messages]);
+    deps.writeLive(session, before => [...before, ...messages]);
     deps.update(all => ({ ...all, [session]: { ...all[session], optimistic: [
       ...(all[session].optimistic ?? []), ...messages.map(row => ({ original: row, row })),
     ] } }));
@@ -41,7 +42,7 @@ export function createOptimisticHistory<T extends HistoryState>(deps: {
     const entry = deps.current()[session]?.optimistic?.find(row => row.original === target);
     const previous = entry?.row ?? target, next = { ...previous, ...patch };
     if (entry) entry.row = next;
-    if (!deps.disposed()) deps.writeBase(session, before => before.map(row => row === previous ? next : row));
+    if (!deps.disposed()) (entry ? deps.writeLive : deps.writeBase)(session, before => before.map(row => row === previous ? next : row));
   }
   function rejectOptimistic(session: string, messages: Msg[]) {
     if (deps.disposed()) return;
@@ -49,9 +50,10 @@ export function createOptimisticHistory<T extends HistoryState>(deps: {
       const thread = all[session];
       if (!thread) return all;
       const rejected = thread.optimistic?.filter(entry => messages.includes(entry.original)) ?? [];
-      const base = thread.base.filter(row => !messages.includes(row) && !rejected.some(entry => entry.row === row));
-      if (base.length === thread.base.length && !rejected.length) return all;
-      return { ...all, [session]: { ...thread, base, optimistic: thread.optimistic?.filter(entry => !rejected.includes(entry)) } };
+      const keep = (row: Msg) => !messages.includes(row) && !rejected.some(entry => entry.row === row);
+      const base = thread.base.filter(keep), vivo = thread.vivo.filter(keep);
+      if (base.length === thread.base.length && vivo.length === thread.vivo.length && !rejected.length) return all;
+      return { ...all, [session]: { ...thread, base, vivo, optimistic: thread.optimistic?.filter(entry => !rejected.includes(entry)) } };
     };
     deps.settle(reject);
   }
@@ -67,10 +69,8 @@ export function createOptimisticHistory<T extends HistoryState>(deps: {
     const optimistic = (previous?.optimistic ?? []).filter(entry =>
       !(entry.row.turno && persistedIds.has(entry.row.turno)) &&
       !(entry.acknowledged !== undefined && readRevision !== undefined && readRevision > entry.acknowledged));
-    const previousBase = previous?.optimistic?.length
-      ? previous.base.filter(row => !previous.optimistic?.some(entry => entry.row === row)) : previous?.base ?? [];
-    const persisted = (prepend ? conservarPorClave : conservarEnOrden)(previousBase, incoming);
-    return { base: optimistic.length ? [...persisted, ...optimistic.map(entry => entry.row)] : persisted, optimistic,
+    const persisted = (prepend ? conservarPorClave : conservarEnOrden)(previous?.base ?? [], incoming);
+    return { base: persisted, optimistic,
       readRevision: readRevision ?? previous?.readRevision };
   }
   const operations = new WeakMap<HistoryPager<Session["turns"][number]>, { recovery?: Session }>();

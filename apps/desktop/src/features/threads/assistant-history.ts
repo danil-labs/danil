@@ -39,12 +39,12 @@ export function createAssistantHistory(scope: { workspace: () => string | null; 
   }
   const detach = () => { pending.clear(); replaying.clear(); baselines.clear(); };
   return { prepare, paint, segment, detach,
-    replay: (id: string, messages: Msg[], workspace: string | null, replayId?: string) => {
+    replay: (id: string, messages: Msg[], workspace: string | null, replayId?: string, retained?: ReadonlySet<Msg>) => {
       const replayKey = JSON.stringify([workspace, id]);
       if (workspace === scope.workspace()) replaying.add(key(id));
       if (replayId && replayIds.get(replayKey) === replayId) return messages;
       if (replayId) replayIds.set(replayKey, replayId);
-      const kept = messages.filter(row => row.role === "user");
+      const kept = messages.filter(row => row.role === "user" || retained?.has(row));
       return kept.length === messages.length ? messages : kept;
     },
     begin: (id: string, base: readonly Msg[]) => {

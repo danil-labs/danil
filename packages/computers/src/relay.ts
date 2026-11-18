@@ -8,6 +8,7 @@
  */
 import type { MachineState } from "./machine.ts";
 import { relayArgs } from "./mcp-block.ts";
+import { EventRecovery, type RecoveryBoundary } from "./event-recovery.ts";
 
 export type RelayConfig = {
   /** Origen del relay: `relay.example`, `https://relay.example` o `wss://relay.example`. */
@@ -66,6 +67,7 @@ export type EventsPage = {
   /** Local subscription identity; never sent to the relay. */
   replayId?: string;
   runtime?: string;
+  recovery?: RecoveryBoundary | { id: string; failed: true };
   /** `workspace`: el del evento, para que el relay lo filtre por los vínculos de cada cuenta; `null` si no es de uno. */
   events?: { name: string; payload: unknown; workspace?: string | null; seq?: number }[];
 };
@@ -169,6 +171,8 @@ export class RelaySession {
   private replaying = false;
   private replayId: string | undefined;
   private deliveredCheckpoint: { runtime: string; cursor: number } | null = null;
+  private readonly eventRecovery = new EventRecovery();
+  private afterRuntime: string | null = null;
   private attempt = 0;
   private missed = 0;
   private pinger: ReturnType<typeof setInterval> | undefined;
@@ -289,15 +293,17 @@ export class RelaySession {
 
   subscribe(after: number | null) {
     this.subscribed = true;
+    if (this.after !== after) this.afterRuntime = null;
     this.after = after;
     if (this.connected()) this.resubscribe();
   }
 
   private resubscribe() {
+    this.eventRecovery.reset();
     this.deliveredCheckpoint = null;
     this.replaying = true;
     this.replayId = requestId();
-    this.send({ type: "subscribe", after: this.after });
+    this.send({ type: "subscribe", after: this.after, recovery: 1, ...(this.afterRuntime ? { runtime: this.afterRuntime } : {}) });
   }
 
   close() {
@@ -583,7 +589,12 @@ export class RelaySession {
         return;
       }
       case "events": {
-        const page = message as unknown as EventsPage;
+        const restored = this.eventRecovery.receive(message as unknown as EventsPage);
+        let page = message as unknown as EventsPage;
+        if (restored.handled) {
+          if (!restored.page) return;
+          page = restored.page;
+        }
         const cursor = typeof page.cursor === "number" && Number.isSafeInteger(page.cursor) && page.cursor >= 0 ? page.cursor : null;
         const runtime = typeof page.runtime === "string" && page.runtime.length ? page.runtime : null;
         const previous = this.deliveredCheckpoint;
@@ -594,11 +605,18 @@ export class RelaySession {
         if (!failed && runtime && cursor !== null && (!previous || restarted || cursor > previous.cursor)) {
           this.deliveredCheckpoint = { runtime, cursor };
           this.after = cursor;
+          this.afterRuntime = runtime;
         } else if (!failed && !previous && cursor !== null) this.after = cursor;
         if (failed) {
           for (const listener of this.eventListeners) listener(page);
           return;
         }
+        if (restored.handled) {
+          this.replaying = false;
+          for (const listener of this.eventListeners) listener({ ...page, replay: true, replayId: JSON.stringify([this.replayId, page.recovery?.id]) });
+          return;
+        }
+        if (runtime && previous?.runtime === runtime && page.events) page.events = page.events.filter(event => !Number.isSafeInteger(event.seq) || event.seq! > previous.cursor);
         if (restarted || page.gap) { this.replaying = true; this.replayId = requestId(); }
         if (!this.replaying && page.replay === true) this.replayId = requestId();
         const replay = this.replaying || page.replay === true;

@@ -72,7 +72,7 @@ export type Msg = {
   turno?: string;
   /** Su identidad entre lecturas: turno y pieza (`transcripcion`). Un mensaje vivo aún no la tiene. */
   clave?: string;
-  /** El turno guardado en el que el motor ya escribió este mensaje vivo (`segment_saved`). */
+  /** El segmento del motor al que pertenece este mensaje; se oculta cuando el historial ya lo contiene. */
   tramo?: string;
   /**
    * Lo que la persona metió en el turno vivo con un motor que no devuelve el

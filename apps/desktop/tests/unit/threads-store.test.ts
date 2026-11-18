@@ -415,3 +415,118 @@ test("retained replay prefixes survive navigation and continuation reactivates i
   f.store.event(event("segment_saved", "", { workspace: "A", id: "saved-one" }), metadata);
   assert.equal(f.store.messages().filter(row => row.text === "first second").length, 1); f.dispose();
 });
+
+for (const provider of ["codex", "claude", "gemini", "opencode"]) test(`producer segment identity prevents snapshot/replay duplication for ${provider} before its save marker`, () => {
+  const f = fixture();
+  try {
+    const saved = { id: "segment-A", role: "agent", text: "same answer" };
+    f.store.acceptSession("s", session([saved]), true, f.generation());
+    f.store.beginActivity("s", 1000);
+    f.store.event(event("delta", "same answer", { starts_message: true, message_id: "reused-native", segment_id: "segment-A" }), { author: null, provider });
+    f.store.flush();
+    assert.equal(f.store.messages().filter(row => row.text === "same answer").length, 1, "durable and live representations of one segment must not both paint");
+    f.store.event(event("delta", "same answer", { starts_message: true, message_id: "reused-native", segment_id: "segment-B" }), { author: null, provider });
+    f.store.flush();
+    assert.equal(f.store.messages().filter(row => row.text === "same answer").length, 2, "different segments may legitimately have equal text");
+  } finally { f.dispose(); }
+});
+
+test("tokens and native IDs remain within their producer segment before any save marker", () => {
+  const f = fixture();
+  try {
+    f.store.event(event("delta", "first", { message_id: "native", segment_id: "A" }), metadata);
+    f.store.event(event("delta", " chunk", { message_id: "native", segment_id: "A" }), metadata);
+    f.store.event(event("delta", "second", { message_id: "native", segment_id: "B" }), metadata);
+    f.store.flush();
+    assert.deepEqual(f.store.rows().s.vivo.map(row => [row.text, row.tramo]), [["first chunk", "A"], ["second", "B"]]);
+    f.store.event(event("segment_saved", "", { id: "A" }), metadata);
+    assert.equal(f.store.rows().s.vivo.at(-1)?.tramo, "B", "late marker cannot capture the next segment");
+  } finally { f.dispose(); }
+});
+
+test("a late tool result updates its bound segment even after the presentation stopped running", () => {
+  const f = fixture();
+  try {
+    f.store.event(event("tool", "Read", { id: "tool", target: "file.ts", segment_id: "A" }), metadata);
+    f.store.finishSteps("s");
+    f.store.event(event("tool_done", "Read", { id: "tool", segment_id: "A", ok: true }), metadata);
+    assert.equal(f.store.rows().s.vivo.filter(row => row.paso).length, 1);
+    assert.equal(f.store.rows().s.vivo[0].paso?.ok, true);
+  } finally { f.dispose(); }
+});
+
+
+test("a quick next input stays after the previous live answer and owns only the next activity", () => {
+  const f = fixture();
+  try {
+    f.store.replaceHistory("s", [{ role: "user", text: "hola", turno: "u1", clave: "u1:0" }], false);
+    f.store.beginActivity("s", 1000);
+    f.store.event(event("delta", "Hola, ¿en qué te ayudo?", { message_id: "first-answer" }), metadata);
+    f.store.flush(); f.store.finishActivity("s");
+    f.store.beginActivity("s", 2000);
+    const next = msg("qué haces?", "user");
+    f.store.appendOptimistic("s", [next]);
+    assert.deepEqual(f.store.messages().map(row => row.text), ["hola", "Hola, ¿en qué te ayudo?", "qué haces?"]);
+    const activities = f.store.activities("s", f.store.messages());
+    assert.equal(activities.length, 2);
+    assert.equal(activities[0].anchorIndex, 1);
+    assert.equal(activities[1].anchorIndex, 3);
+    f.store.event(event("delta", "Estoy listo", { starts_message: true, message_id: "second-answer" }), metadata); f.store.flush();
+    assert.deepEqual(f.store.messages().map(row => row.text), ["hola", "Hola, ¿en qué te ayudo?", "qué haces?", "Estoy listo"]);
+    f.store.rejectOptimistic("s", [next]);
+    assert.deepEqual(f.store.messages().map(row => row.text), ["hola", "Hola, ¿en qué te ayudo?", "Estoy listo"]);
+  } finally { f.dispose(); }
+});
+
+
+test("replay and service reset preserve all pending send rows until ACK or rejection", () => {
+  const f = fixture();
+  try {
+    const context = msg("attached context", "system"), own = msg("pending input", "user");
+    f.store.appendOptimistic("s", [context, own]);
+    f.store.appendLive("s", [msg("partial output")]);
+    f.store.replay("s", "A", "new-replay");
+    assert.deepEqual(f.store.messages(), [context, own]);
+    f.store.resetService();
+    assert.deepEqual(f.store.messages(), [context, own]);
+    f.store.rejectOptimistic("s", [context, own]);
+    assert.deepEqual(f.store.messages(), []);
+  } finally { f.dispose(); }
+});
+
+
+test("a tool result without provider ID cannot match an assistant row in its segment", () => {
+  const f = fixture();
+  try {
+    f.store.event(event("delta", "answer", { segment_id: "A" }), metadata); f.store.flush();
+    f.store.event(event("tool_done", "Read", { segment_id: "A", ok: true }), metadata);
+    assert.equal(f.store.messages()[0].text, "answer");
+    assert.equal(f.store.messages().filter(row => row.paso?.ok).length, 1);
+  } finally { f.dispose(); }
+});
+
+
+test("late identified tokens stay above the next input in their original segment", () => {
+  const f = fixture();
+  try {
+    f.store.event(event("delta", "first", { message_id: "native", segment_id: "A" }), metadata); f.store.flush();
+    f.store.appendOptimistic("s", [msg("next input", "user")]);
+    f.store.event(event("delta", " tail", { message_id: "native", segment_id: "A" }), metadata); f.store.flush();
+    assert.deepEqual(f.store.messages().map(row => row.text), ["first tail", "next input"]);
+  } finally { f.dispose(); }
+});
+
+test("a rapid next input stays ordered when its fresh history precedes the save marker", async () => {
+  let turns: Session["turns"] = [{ id: "u1", role: "user", text: "hola" }];
+  const f = fixture(async <T>() => session(turns) as T);
+  try {
+    f.store.acceptSession("s", await f.store.read("p", "s"), false, f.generation());
+    f.store.beginActivity("s", 1000);
+    f.store.event(event("delta", "respuesta", { segment_id: "A" }), metadata); f.store.flush(); f.store.finishActivity("s");
+    f.store.beginActivity("s", 2000);
+    const next = msg("qué haces?", "user"); f.store.appendOptimistic("s", [next]); f.store.acknowledgeOptimistic("s", [next]);
+    turns = [...turns, { id: "A", role: "agent", text: "respuesta" }, { id: "u2", role: "user", text: "qué haces?" }];
+    f.store.acceptSession("s", await f.store.read("p", "s"), false, f.generation());
+    assert.deepEqual(f.store.messages().map(row => row.text), ["hola", "respuesta", "qué haces?"]);
+  } finally { f.dispose(); }
+});

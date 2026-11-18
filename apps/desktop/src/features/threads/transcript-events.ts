@@ -5,7 +5,7 @@ import { clavesConocidas, t } from "../../lib/i18n.ts";
 export type TranscriptMetadata = { provider?: string; author: NonNullable<Msg["author"]> | null; model?: string | null };
 /** Paint-only facts. Turn lifecycle, gates and machine control remain with their owners. */
 export function transcriptEvent(messages: Msg[], event: ChatEvent, metadata: TranscriptMetadata): Msg[] {
-  const { kind, text, meta, id, target, detail, mcp_app, ok, task, message_id } = event;
+  const { kind, text, meta, id, target, detail, mcp_app, ok, task, message_id, segment_id } = event;
   let result = messages;
   const append = (update: (messages: Msg[]) => Msg[]) => { result = update(messages); };
       if (kind === "task_launched") {
@@ -28,6 +28,7 @@ export function transcriptEvent(messages: Msg[], event: ChatEvent, metadata: Tra
             role: "system",
             text,
             meta: "usó",
+            ...(segment_id ? { tramo: segment_id } : {}),
             paso: pasoDe(text, target ?? null, {
               id,
               detalle: detail ?? null,
@@ -50,7 +51,7 @@ export function transcriptEvent(messages: Msg[], event: ChatEvent, metadata: Tra
             mcpApp: mcp_app ? { ...p.mcpApp, ...mcp_app, arguments: mcp_app.arguments ?? p.mcpApp?.arguments } : p.mcpApp ?? mcpCallFromName(text),
           });
           let i = m.length - 1;
-          while (i >= 0 && !(m[i].paso?.corriendo && m[i].paso?.id === id)) i--;
+          while (i >= 0 && !(id !== undefined && m[i].paso && m[i].paso?.id === id && (segment_id ? m[i].tramo === segment_id : m[i].paso?.corriendo))) i--;
           const conPaso: Msg[] =
             i < 0
               ? [
@@ -59,6 +60,7 @@ export function transcriptEvent(messages: Msg[], event: ChatEvent, metadata: Tra
                     role: "system",
                     text,
                     meta: "usó",
+            ...(segment_id ? { tramo: segment_id } : {}),
                     paso: cerrado(pasoDe(text, target ?? null, { id })),
                   },
                 ]
@@ -67,7 +69,7 @@ export function transcriptEvent(messages: Msg[], event: ChatEvent, metadata: Tra
                   copia[i] = { ...m[i], paso: cerrado(m[i].paso as Paso) };
                   return copia;
                 })();
-          return imagenes?.length ? anexarImagen(conPaso, imagenes) : conPaso;
+          return imagenes?.length ? anexarImagen(conPaso, imagenes, segment_id) : conPaso;
         });
         return result;
       }
@@ -100,7 +102,7 @@ export function transcriptEvent(messages: Msg[], event: ChatEvent, metadata: Tra
 
       if (kind === "image") {
         const imagenes = detail?.kind === "output" ? detail.images ?? [] : [];
-        if (imagenes.length > 0) append((m) => anexarImagen(m, imagenes));
+        if (imagenes.length > 0) append((m) => anexarImagen(m, imagenes, segment_id));
         return result;
       }
 
@@ -109,6 +111,7 @@ export function transcriptEvent(messages: Msg[], event: ChatEvent, metadata: Tra
           anexarRazonamiento(m, {
             text,
             messageId: message_id,
+            segmentId: segment_id,
             author: metadata.author,
           }),
         );
