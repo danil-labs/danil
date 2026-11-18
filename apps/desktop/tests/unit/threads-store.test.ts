@@ -650,3 +650,26 @@ test("a marker received in another workspace cannot capture the successor output
     assert.deepEqual(f.store.messages().map(row => row.text), ["first", "previous", "next", "new output"]);
   } finally { f.dispose(); }
 });
+
+// Un mensaje metido en el turno que corre se guarda en disco al momento; lo que el
+// agente ya dijo en ese turno sigue vivo. Releer a mitad del turno no lo sube por encima.
+test("a message steered into the open turn stays after the live output it followed", () => {
+  const f = fixture();
+  f.store.acceptSession("s", session([{ id: "u1", role: "user", text: "first" }]), true, f.generation());
+  f.store.event(event("delta", "reply before the steer", { message_id: "m1", starts_message: true }), metadata); f.store.flush();
+  f.store.appendLive("s", [{ ...msg("steered", "user"), turno: "u2" }]);
+  f.store.acceptSession("s", session([{ id: "u1", role: "user", text: "first" }, { id: "u2", role: "user", text: "steered" }]), false, f.generation());
+  f.store.event(event("delta", "reply after the steer", { message_id: "m2", starts_message: true }), metadata); f.store.flush();
+  assert.deepEqual(f.store.messages().map(row => row.text), ["first", "reply before the steer", "steered", "reply after the steer"]);
+  f.dispose();
+});
+
+test("an injected message without a saved id keeps its place after the live output", () => {
+  const f = fixture();
+  f.store.acceptSession("s", session([{ id: "u1", role: "user", text: "first" }]), true, f.generation());
+  f.store.event(event("delta", "reply before the steer", { message_id: "m1", starts_message: true }), metadata); f.store.flush();
+  f.store.appendLive("s", [{ ...msg("steered", "user"), inyectado: { tras: "u1" } }]);
+  f.store.acceptSession("s", session([{ id: "u1", role: "user", text: "first" }, { id: "u2", role: "user", text: "steered" }]), false, f.generation());
+  assert.deepEqual(f.store.messages().map(row => row.text), ["first", "reply before the steer", "steered"]);
+  f.dispose();
+});

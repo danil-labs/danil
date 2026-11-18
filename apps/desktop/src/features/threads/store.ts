@@ -1,5 +1,5 @@
 import { batch, createMemo, createSignal, type Setter, untrack } from "solid-js";
-import { anexarDeltas, hasOlder, hasRecentGap, HistoryPager, lotesDeDeltas, mensajesDelHilo, transcripcion, type ChatEvent, type HandoverState, type Msg, type OlderState, type Session, type TranscriptOrigin } from "../chat/index.ts";
+import { anexarDeltas, hasOlder, hasRecentGap, HistoryPager, lotesDeDeltas, mensajesDelHilo, transcripcion, vivoTrasLeer, type ChatEvent, type HandoverState, type Msg, type OlderState, type Session, type TranscriptOrigin } from "../chat/index.ts";
 import { createOptimisticHistory, hasUnsettledPrefix, type OptimisticHistoryState } from "./optimistic-history.ts";
 import { createAssistantHistory, idsDeTurnos } from "./assistant-history.ts";
 import { createActivityProjection } from "./activity.ts";
@@ -109,8 +109,8 @@ export function createThreadsStore(deps: {
       activity.reconcile(deps.scope.workspace(), session, previo?.base ?? [], base, vaciarVivo, antepuesta);
       const pending = new Set(optimistic.map(entry => entry.row));
       const accepted = new Set(previo?.optimistic?.filter(entry => !pending.has(entry.row)).map(entry => entry.row));
-      const vivo = vivoPrevio.filter(message => pending.has(message) ||
-        (!vaciarVivo && !accepted.has(message) && (!message.turno || !persistidos.has(message.turno))));
+      const vivo = vivoTrasLeer(vivoPrevio, message => pending.has(message) || (!vaciarVivo && !accepted.has(message)),
+        message => !pending.has(message) && !!message.turno && persistidos.has(message.turno));
       const mismoVivo = vivo.length === vivoPrevio.length;
       const tramos = guardados ?? previo?.guardados;
       if (previo && base === previo.base && mismoVivo && tramos === previo.guardados && optimistic.length === (previo.optimistic?.length ?? 0) && readRevision === undefined) return hs;
