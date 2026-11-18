@@ -10,17 +10,7 @@ type Failure = { what: unknown; detail: string };
 
 /** Los códigos del Worker (y `offline` del motor) que la pantalla sabe decir. */
 const KNOWN = new Set([
-  "github_not_connected",
-  "workspace_not_linked",
-  "not_linked",
-  "github_machine_removed",
-  "github_reauthorize",
-  "github_unavailable",
-  "github_disabled",
-  "license_required",
-  "invalid_return_to",
-  "not_found",
-  "offline",
+  "github_not_connected", "workspace_not_linked", "not_linked", "github_machine_removed", "github_reauthorize", "github_unavailable", "github_disabled", "license_required", "invalid_return_to", "not_found", "offline",
 ]);
 
 /** Sin estos no hay GitHub de la cuenta aquí: un motor que aún no tiene los comandos, sin sesión, sin licencia o un Worker sin la App. */
@@ -42,13 +32,16 @@ export function githubAccountCode(e: unknown): string | null {
   return detail.startsWith("credentials.error.") ? detail.slice("credentials.error.".length) : detail;
 }
 
-/** Lo que se le enseña a la persona: con frase propia si el código es conocido. */
-export function githubAccountFailureOf(e: unknown): unknown {
+/** Lo que se le enseña a la persona: la frase del código conocido o la de la operación (`what`), nunca el código a secas. */
+export function githubAccountFailureOf(e: unknown, what?: unknown): unknown {
   const code = githubAccountCode(e);
-  return code && KNOWN.has(code) ? githubAccountFailure(code) : e;
+  if (!code || KNOWN.has(code)) return code ? githubAccountFailure(code) : e;
+  return { what: what ?? t("providers.github.account.error.generic"), detail: `credentials.error.${code}` };
 }
 
 export const notHere = (e: unknown): boolean => NOT_HERE.has(githubAccountCode(e) ?? "");
-
 /** Si el fallo se calla en vez de mostrarse. */
 export const silent = (e: unknown): boolean => SILENT.has(githubAccountCode(e) ?? "");
+/** El camino de la cuenta no llega (máquina de organización por el relay): si queda la conexión local, no es un error del panel. */
+export const accountPathDown = (e: unknown): boolean =>
+  silent(e) || ["command_failed", "unavailable", "not_linked", "workspace_not_linked"].includes(githubAccountCode(e) ?? "");

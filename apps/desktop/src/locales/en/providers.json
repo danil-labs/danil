@@ -127,6 +127,8 @@
   "providers.github.account.error.not_found": "Danil did not find this workspace in your account. Open it again and retry.",
   "providers.github.account.error.offline": "Could not reach your Danil account. Check your internet connection.",
   "providers.github.account.error.generic": "Could not finish with your GitHub. Try again.",
+  "providers.github.account.error.status": "Could not read your GitHub status from your Danil account. Try again.",
+  "providers.github.account.error.installations": "Could not read where your GitHub is installed. Try again.",
   "providers.github.account.add": "Add organization",
   "providers.github.account.change": "Change",
   "providers.github.account.change_on": "Change {name} on GitHub",
