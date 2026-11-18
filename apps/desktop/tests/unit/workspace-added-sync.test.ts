@@ -4,7 +4,7 @@ import { type AddedRecord, type AddedScope, createAddedSync, outcomeOf, parsePre
 
 const ID = /^[A-Za-z0-9_-]{1,128}$/;
 
-/** El servicio del plan 2026-11-18 § 5: `added` por (sub, org) y la siembra con `if_version: 0`. */
+/** El servicio del plan de agregar workspaces, § 5: `added` por (sub, org) y la siembra con `if_version: 0`. */
 function service(options: { down?: number | 'network' } = {}) {
   const rows = new Map<string, { version: number; added: string[] }>();
   let org = 'org_A';

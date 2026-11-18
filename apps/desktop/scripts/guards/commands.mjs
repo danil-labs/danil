@@ -138,12 +138,10 @@ const SIN_INTERFAZ = {
   ensure_project: "lo pide la web por el relay antes de crear una tarea en otra máquina; el motor lo llama solo en send_message y run_shell_command",
   sync_workspace: "lo llama el conector del motor al recibir workspace.changed del relay",
   share_space: "lo pide el router de máquinas (features/machines/router.ts, `native`) antes de crear algo en otra máquina desde un space de esta",
-  danil_workspace_link:
-    "la sincronización sigue a la sesión de Danil: el motor vincula todos los workspaces; sin interruptor por workspace",
-  danil_workspace_unlink:
-    "la sincronización sigue a la sesión de Danil: el motor vincula todos los workspaces; sin interruptor por workspace",
-  danil_workspace_link_status:
-    "la sincronización sigue a la sesión de Danil: el motor vincula todos los workspaces; sin interruptor por workspace",
+  danil_workspace_link: "vínculo del prototipo retirado en el motor (E1, danil-engine #455): contesta unsupported y queda en el contrato congelado",
+  danil_workspace_unlink: "vínculo del prototipo retirado en el motor (E1, danil-engine #455): contesta unsupported y queda en el contrato congelado",
+  danil_workspace_link_status: "vínculo del prototipo retirado en el motor (E1, danil-engine #455): contesta unsupported y queda en el contrato congelado",
+  danil_workspace_set_account: "vínculo del prototipo retirado en el motor (E1, danil-engine #455): contesta unsupported; la ventana dejó de llamarlo en #964",
   state_copy: "lo pide el router de máquinas (features/machines/router.ts, `native`): la barra lee de esa copia las tareas y proyectos de otra máquina",
   state_resource: "lo pide el router de máquinas (features/machines/router.ts, `native`): la barra de esta máquina sale de su índice con la versión que ya tiene",
   state_manifest: "la ventana pide cada recurso con su versión (state_resource); el manifiesto lo leen los motores de otras máquinas para sus copias",

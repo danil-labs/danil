@@ -4,7 +4,7 @@ import { availableInContext, contextSourceMatches } from "./context-source.ts";
 import { rememberMachineNames } from "./known-names.ts";
 
 /**
- * Los workspaces de Danil de una organización de pago (plan 2026-11-18, A2 y A3): lo que
+ * Los workspaces de Danil de una organización de pago (plan de agregar workspaces, A2 y A3): lo que
  * contesta `list_workspaces` en sus máquinas `kind=organization` de `/v1/machines`. Nada más
  * decide qué es de Danil: ni el índice del motor ni el vínculo del prototipo.
  */
