@@ -5,59 +5,26 @@ import { Button } from "../../ui/Button";
 import { aDireccion, corta, hayCapaEncima, seguirHueco, zonasEncima } from "../../lib/sites";
 import { t } from "../../lib/i18n";
 import { prosaDe } from "../../ui/Failure";
+import { capabilities } from "../../lib/platform";
+import type { SiteProps } from "./types";
+import WebSite from "./WebSite";
 
-/**
- * Un sitio dentro de la ventana. **Lo que este componente pinta es el hueco**;
- * la página la pinta una capa nativa que flota encima.
- *
- * El motivo de que sea una capa nativa y no un `<iframe>` está en
- * `src-tauri/src/environment/sites.rs`: la política de la ventana dice `frame-src 'self'`
- * y **no se afloja** —lo que impide está medido en `tests/security/window.mjs`—,
- * mientras que un webview hijo no es contenido de este documento y trae la
- * suya.
- *
- * **Este componente posee la capa y nada más**: la crea al montarse, la mueve
- * donde esté su hueco, la esconde cuando no toca y **la cierra al
- * desmontarse**. Una capa nativa que sobreviva a su pestaña se queda flotando
- * sobre la interfaz, tapándola, sin nada en pantalla que la explique ni un gesto
- * que la cierre.
- *
- * **Se enseña con tres condiciones a la vez**: la pestaña es la activa, la capa
- * ya existe —el servidor contestó— y el DOM no tiene nada abierto sobre su hueco
- * (`lib/sites.ts` · `hayCapaEncima`). En cuanto una falla, se esconde. Esconder
- * y enseñar es barato —la página no se recarga ni pierde el scroll o lo
- * escrito—, así que el criterio puede ser estricto sin costar nada; el error
- * caro es el contrario.
- *
- * **Un webview al que no le contestan no falla: se queda vacío**, y flotando
- * sobre el DOM no deja pintar debajo nada que lo explique. Por eso el estado
- * vive aquí y la capa solo existe cuando hay algo que enseñar:
- *
- * | Estado | Qué se ve | De dónde sale |
- * |---|---|---|
- * | `abriendo` | «Abriendo…» | Rust está preguntándole al puerto (`sites::responde`, 3 s) |
- * | `cargando` · `listo` | La capa | `on_page_load` del webview, por el evento `site` |
- * | `fallo` | La frase y **Reintentar** | El puerto no contestó, o la página no terminó de cargar |
- *
- * **«No hay red» no aplica**: lo que se abre aquí escucha en esta computadora,
- * así que lo que falla es el servidor de la tarea y la frase lo dice — «revisa
- * tu conexión» mandaría a mirar donde no hay nada que ver.
+/** La vista nativa posee la capa: la coloca sobre su hueco, la oculta bajo
+ * diálogos y la cierra al desmontarse. La web usa un iframe de otro sitio.
+ * La política nativa sigue medida en tests/security/window.mjs.
  */
-
 /** Cuánto se espera a que la página termine antes de dar la carga por perdida. */
 const PACIENCIA = 20_000;
 
 /** `inicio` es la pestaña de navegador recién abierta: no hay capa hasta que se teclea a dónde ir. */
 type Estado = "inicio" | "abriendo" | "cargando" | "listo" | "fallo";
 
-export default function Sitio(props: {
-  url: string;
-  visible: boolean;
-  /** Pestaña de navegador (`lib/tabs.ts`): la barra se edita y la vacía empieza en `inicio`. */
-  navegador?: boolean;
-  /** Cada página que carga la capa, para que la pestaña diga dónde está. */
-  onNavego?: (url: string) => void;
-}) {
+export default function Sitio(props: SiteProps) {
+  const Viewer = capabilities().nativeWindow ? NativeSite : WebSite;
+  return <Viewer {...props} />;
+}
+
+function NativeSite(props: SiteProps) {
   let hueco: HTMLDivElement | undefined;
   let barra: HTMLInputElement | undefined;
   const [estado, setEstado] = createSignal<Estado>(props.url ? "abriendo" : "inicio");

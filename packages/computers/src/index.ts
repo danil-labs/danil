@@ -197,6 +197,7 @@ export { type PushDevice, type PushMode, type PushPreferences, type PushQuiet, f
 export { type Machine, type MachineOperation, type MachinesAnswer, type MachinesConfig, type MachinesTransport, type Admission as MachineAdmission, DEFAULT_RELAY_ORIGINS, admissionUrl, machineToComputer, machinesClient, retryUnavailable, wokeOf } from "./machines.ts";
 export { type CapabilityList, announces, capabilityList, mayCall } from "./capabilities.ts";
 export { type EdgeDeployment, type EdgePerson, type EdgeTransport, EdgeError, edgeIdentity, edgeTransport, personOf } from "./edge.ts";
+export { type PreviewClient, type PreviewDomain, type PreviewLease, type PreviewScope, DEFAULT_PREVIEW_DOMAIN, localPreviewTarget, previewClient, previewUrl } from "./previews.ts";
 export {
   type Organization,
   type OrganizationOptions,

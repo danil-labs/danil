@@ -6,6 +6,7 @@ import { defineConfig, mergeConfig, type Plugin, type UserConfig } from "vite";
 import solid from "vite-plugin-solid";
 import tailwindcss from "@tailwindcss/vite";
 import { webConnectSources, webRelayOrigins, webSessionDeployment } from "./src/web/session-config";
+import { WEB_PREVIEW_FRAME_SOURCE } from "./src/web/preview-config";
 
 const fonts = resolve(fileURLToPath(
   new URL("./node_modules/@excalidraw/excalidraw/dist/prod/fonts/", import.meta.url),
@@ -71,7 +72,7 @@ function webBuild(serve: boolean): UserConfig {
       if (!serve) rmSync(root, { recursive: true, force: true });
     },
     transformIndexHtml(html) {
-      const out = html.replace("%TERMINUS_WEB_CONNECT%", connect);
+      const out = html.replace("%TERMINUS_WEB_CONNECT%", connect).replace("%DANIL_WEB_PREVIEW_FRAME%", WEB_PREVIEW_FRAME_SOURCE);
       policy = /http-equiv="Content-Security-Policy"\s*content="([^"]*)"/.exec(out)?.[1] ?? "";
       return out;
     },
