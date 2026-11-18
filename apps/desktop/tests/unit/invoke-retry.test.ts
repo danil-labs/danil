@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { actionFailure } from "../../src/features/projects/actionFailure.ts";
+import { asFailure } from "../../src/lib/failure.ts";
 import { canRepeat, neverRan, retrying, untilConnected, WAITS } from "../../src/lib/invoke.ts";
 
 function service(failures: number, code = "app_unavailable") {
@@ -88,4 +90,39 @@ test("a proxy failure with engine detail keeps its code inside detail", () => {
  test("explicit engine error code takes precedence over diagnostic text", () => {
   assert.equal(canRepeat("task_lifecycle_apply", { code: "task_family_consent_changed", detail: "service_busy" }), false);
   assert.equal(neverRan({ code: "service_busy", detail: "writers" }), true);
+});
+
+test("a lost response in the task list names the action and keeps its diagnostic", () => {
+  const failure = { what: { clave: "shell.service.unreachable" }, detail: "io" };
+  const actions = ["finish", "archive", "discard", "pin", "unpin"] as const;
+  for (const action of actions) {
+    assert.deepEqual(actionFailure(failure, action), {
+      what: { clave: `projects.sessions.unconfirmed_${action}` },
+      detail: "io",
+    });
+  }
+  assert.deepEqual(actionFailure(failure, "blockers"), {
+    what: { clave: "projects.sessions.unchecked_blockers" },
+    detail: "io",
+  });
+});
+
+test("a lost response reports an available request ID without adding action arguments", () => {
+  const what = { clave: "shell.service.unreachable" };
+  const project = "/private/work";
+  assert.equal(
+    actionFailure({ what, detail: "io", request_id: "r-1", project, files: [project] }, "archive").detail,
+    "io\nrequest_id: r-1",
+  );
+  const nested = { what, detail: { code: "io", detail: { request_id: "r-2" } } };
+  assert.equal(actionFailure(nested, "finish").detail, `${asFailure(nested).detail}\nrequest_id: r-2`);
+  const unsafe = { code: "io", request_id: `r-1\nproject: ${project}`, project };
+  assert.equal(actionFailure(unsafe, "archive").detail, "io");
+});
+
+test("other task errors keep the existing failure", () => {
+  for (const detail of ["service_busy", "version_mismatch", "invalid_token", "operation_failed"]) {
+    const failure = { what: { clave: "shell.service.busy" }, detail };
+    assert.deepEqual(actionFailure(failure, "finish"), asFailure(failure));
+  }
 });

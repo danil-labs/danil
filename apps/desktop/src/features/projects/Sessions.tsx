@@ -7,6 +7,7 @@ import TriangleAlert from "lucide-solid/icons/triangle-alert";
 import { createEffect, createMemo, createSignal, For, type JSX, lazy, mapArray, on, onCleanup, Show, Suspense } from "solid-js";
 import { Dynamic } from "solid-js/web";
 import { arrastrar, fueArrastre, tareaEnVuelo } from "../../lib/drag";
+import { errorCode } from "../../lib/errorCode";
 import { enfocarYSeleccionar } from "../../lib/focus";
 import { df } from "../../lib/format";
 import { t } from "../../lib/i18n";
@@ -15,7 +16,7 @@ import { SESSION_TITLE_MAX_LENGTH } from "../../lib/projectNames";
 import { esProvisional } from "../../lib/taskDraft";
 import { cn } from "../../lib/utils";
 import { Button } from "../../ui/Button";
-import { asFailure, type Failure, FailureNote } from "../../ui/Failure";
+import { type Failure, FailureNote } from "../../ui/Failure";
 import { celebrateFinishedTask, FinishTaskButton } from "../../ui/FinishTaskButton";
 import { KeyedList } from "../../ui/KeyedList";
 import { Input } from "../../ui/Input";
@@ -33,6 +34,7 @@ import { gitAppearance, RailPull, sessionGitDescription } from "./SessionGit";
 import { WithTaskHoverCard } from "./TaskHoverCardTrigger";
 import { MachineChip } from "../machines/MachineChip";
 import { bringHereLabel, canBringHere, machines } from "../machines/store";
+import { actionFailure as taskActionFailure } from "./actionFailure";
 import { createTaskHistories } from "./taskHistories";
 
 // Solo hace falta cuando algo estorba al terminar o archivar: fuera de la carga inicial.
@@ -424,39 +426,38 @@ export default function Sessions(props: {
   const [aviso, setAviso] = createSignal<Aviso | null>(null);
   const finishTask = async (id: string, rect: DOMRect) => {
     if (finishing().includes(id)) return;
+    const project = projectOfId(id);
     setFinishing(ids => [...ids, id]);
     setActionFailure(null);
     try {
-      const project = projectOfId(id);
       sacar(id);
-      // La fila sale y el cohete despega en el mismo gesto: esperar a que el
-      // motor mate turnos y tome los candados deja el estallido solo.
+      // La fila sale con el cohete, antes de esperar los candados del motor.
       celebrateFinishedTask(rect);
       await invoke("finish_task", { project, id }, enSuMaquina(id));
-      // `anunciar` no actualiza esta ventana: su firma es la de quien
-      // escribió, y el sondeo la descarta. Sin este aviso el archivado
-      // queda en disco y la lista de aquí sigue mostrando la fila.
+      // El sondeo descarta el aviso de su autor. Esta ventana relee su lista por separado.
       avisarCambio(project);
     } catch (error) {
       devolver(id);
-      setActionFailure(asFailure(error));
+      if (errorCode(error) === "io") avisarCambio(project);
+      setActionFailure(taskActionFailure(error, "finish"));
     } finally {
       setFinishing(ids => ids.filter(value => value !== id));
     }
   };
   const archiveTask = async (id: string) => {
     if (archiving().includes(id)) return;
+    const project = projectOfId(id);
     setArchiving(ids => [...ids, id]);
     setActionFailure(null);
     try {
-      const project = projectOfId(id);
       sacar(id);
       setMenu(null);
       await invoke("set_task_archived", { project, id, archived: true }, enSuMaquina(id));
       avisarCambio(project);
     } catch (error) {
       devolver(id);
-      setActionFailure(asFailure(error));
+      if (errorCode(error) === "io") avisarCambio(project);
+      setActionFailure(taskActionFailure(error, "archive"));
     } finally {
       setArchiving(ids => ids.filter(value => value !== id));
     }
@@ -475,14 +476,12 @@ export default function Sessions(props: {
     }
     marcar(ids => [...ids, id]);
     setActionFailure(null);
-    // La pregunta es corta; la fila se queda con la llama encendida mientras
-    // vuelve. Sacarla antes obligaría a devolverla, y el cohete despegaría por
-    // una tarea que todavía tiene algo en el camino.
+    // La fila conserva la llama mientras se comprueban los bloqueos.
     let blockers: Blockers;
     try {
       blockers = await invoke<Blockers>("task_blockers", { project: projectOfId(id), id, finish }, enSuMaquina(id));
     } catch (error) {
-      setActionFailure(asFailure(error));
+      setActionFailure(taskActionFailure(error, "blockers"));
       return;
     } finally {
       marcar(ids => ids.filter(value => value !== id));
@@ -504,7 +503,7 @@ export default function Sessions(props: {
         await invoke("discard_task_changes", { project: work.project ?? projectOfId(a.id), id: work.session, files: work.files }, enSuMaquina(a.id));
       }
     } catch (error) {
-      setActionFailure(asFailure(error));
+      setActionFailure(taskActionFailure(error, "discard"));
       return;
     } finally {
       marcar(ids => ids.filter(value => value !== a.id));
@@ -630,13 +629,14 @@ export default function Sessions(props: {
   const fijada = (row: SessionRow) => row.pinned ?? (row.chat_de_agente || row.inbox === true);
   const setPinned = async (row: SessionRow) => {
     if (!props.onPin) return;
+    const pinned = !fijada(row);
     setMenu(null);
     setActionFailure(null);
     try {
-      await props.onPin(row.id, !fijada(row));
+      await props.onPin(row.id, pinned);
       avisarCambio(projectOf(row));
     } catch (error) {
-      setActionFailure(asFailure(error));
+      setActionFailure(taskActionFailure(error, pinned ? "pin" : "unpin"));
     }
   };
 
