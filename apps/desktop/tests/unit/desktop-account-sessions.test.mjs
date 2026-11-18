@@ -9,8 +9,67 @@
  */
 import assert from "node:assert/strict";
 import test from "node:test";
-import { HOME, MAC, open, openTask, remote, reread, SESSION_A, SESSION_B, TOKEN, until, VM } from "../helpers/desktop-account.mjs";
+import { HOME, MAC, open, openTask, remote, reread, row, SAME, SESSION_A, SESSION_B, TOKEN, until, VM } from "../helpers/desktop-account.mjs";
 import { sleep } from "../helpers/jsdom-app.mjs";
+
+test("the last task's unconfirmed archive stays visible until the workspace changes", async () => {
+  const io = { what: { clave: "shell.service.unreachable" }, detail: "io" };
+  let active = SAME.id;
+  let archived = false;
+  let checkFailed = true;
+  const workspaces = () => ({
+    workspaces: [SAME, { ...SAME, id: "w2", name: "Otro workspace" }],
+    active,
+  });
+  const { doc, native } = await open("task-action-archive-last", {
+    status: { state: "disconnected", online: false },
+    extra: {
+      list_workspaces: workspaces,
+      workspaces_startup: workspaces,
+      set_active_workspace: ({ id }) => { active = id; return null; },
+      list_live_sessions: ({ project }) => !archived && project === "p1" ? [row("t1", "Tarea de prueba")] : [],
+      task_blockers: () => {
+        if (checkFailed) throw io;
+        return { unsaved: [], not_finished: false };
+      },
+      set_task_archived: () => {
+        archived = true;
+        throw { ...io, request_id: "lab-1" };
+      },
+    },
+  });
+  const task = () => doc.querySelector('[data-sesion="t1"]');
+  const byText = (selector, phrase) => [...doc.querySelectorAll(selector)].find((el) => el.textContent.includes(phrase));
+  const archiveButton = () => byText('[role="menuitem"]', "Archivar tarea");
+  const archive = async () => {
+    if (!archiveButton()) task().querySelector('button[aria-haspopup="menu"]').click();
+    assert.ok(await until(archiveButton));
+    archiveButton().click();
+  };
+  await archive();
+  const checkNotice = () => byText('[role="alert"]', "Danil no pudo comprobar");
+  assert.ok(await until(checkNotice));
+  assert.match(checkNotice().textContent, /La consulta no hizo cambios\. Puedes volver a intentarlo/);
+  assert.equal(native("set_task_archived").length, 0);
+  checkNotice().querySelector("button").click();
+  assert.equal(checkNotice(), undefined);
+
+  checkFailed = false;
+  const readsBeforeArchive = native("list_live_sessions").length;
+  await archive();
+  assert.ok(await until(() => native("list_live_sessions").length > readsBeforeArchive && !task()), "the refreshed list removes the last task");
+  const notice = byText('[role="alert"]', "Danil no confirmó si la tarea se archivó");
+  assert.ok(notice?.hasAttribute("data-action-failure"), "the failure remains after the group is removed");
+  assert.doesNotMatch(notice.textContent, /reinicia/);
+  assert.match(notice.querySelector("details").textContent, /request_id: lab-1/);
+  assert.equal(native("set_task_archived").length, 1);
+
+  const next = () => doc.querySelector('[data-workspace-tile="w2"]');
+  assert.ok(next());
+  next().click();
+  assert.ok(await until(() => next()?.getAttribute("aria-current") === "true"));
+  assert.ok(await until(() => !doc.querySelector("[data-action-failure]")));
+});
 
 test("a workspace of the account that only another machine has lists with the window's own", async () => {
   const registry = [

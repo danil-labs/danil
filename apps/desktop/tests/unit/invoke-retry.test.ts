@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { actionFailure } from "../../src/features/projects/actionFailure.ts";
+import { actionFailure, createActionFeedback } from "../../src/lib/actionFailure.ts";
 import { asFailure } from "../../src/lib/failure.ts";
 import { canRepeat, neverRan, retrying, untilConnected, WAITS } from "../../src/lib/invoke.ts";
 
@@ -125,4 +125,27 @@ test("other task errors keep the existing failure", () => {
     const failure = { what: { clave: "shell.service.busy" }, detail };
     assert.deepEqual(actionFailure(failure, "finish"), asFailure(failure));
   }
+});
+
+test("task action notices stay with the workspace generation that started the action", () => {
+  let generation = 1;
+  const feedback = createActionFeedback(() => generation);
+  const error = { what: { clave: "shell.service.unreachable" }, detail: "io" };
+  const first = feedback.begin();
+  first(error, "archive");
+  assert.deepEqual(feedback.notice(), actionFailure(error, "archive"));
+
+  const late = feedback.begin();
+  assert.equal(feedback.notice(), null);
+  generation++;
+  feedback.clear();
+  late(error, "finish");
+  assert.equal(feedback.notice(), null);
+
+  feedback.begin()(error, "pin");
+  assert.deepEqual(feedback.notice(), actionFailure(error, "pin"));
+  feedback.begin()(error, "unpin");
+  assert.deepEqual(feedback.notice(), actionFailure(error, "unpin"));
+  feedback.clear();
+  assert.equal(feedback.notice(), null);
 });

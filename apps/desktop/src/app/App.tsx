@@ -275,7 +275,8 @@ import { LazyPart, retryableLazy } from "../ui/LazyPart";
 import { mergeGates } from "../features/chat/permissionGates";
 import { asleep, withLastAnswer } from "../features/machines/lastAnswer";
 import { unconfirmedOpen } from "../features/machines/unconfirmedOpen";
-import { asFailure, claveDe, detalleDe, prosaDe } from "../ui/Failure";
+import { createActionFeedback, TaskActionReporter } from "../lib/actionFailure";
+import { asFailure, claveDe, detalleDe, FailureNote, prosaDe } from "../ui/Failure";
 import { BotonConAtajo } from "../ui/Shortcut";
 import type { ActivityEvent } from "@terminus/protocol";
 import { Toast, ToastStack } from "../ui/Toast";
@@ -345,6 +346,7 @@ export default function App() {
      celda y se pinta detrás del área de trabajo, no solo detrás de su chat. */
   const [fondoDelAgente, setFondoDelAgente] = createSignal<{ url: string; veil?: number } | null>(null);
   const workspaceContext = createWorkspaceStore();
+  const taskActionFeedback = createActionFeedback(workspaceContext.generation);
   const contextRoot = workspaceContext.root;
   const contextConfirmed = workspaceContext.confirmed;
   const workspaceMode = workspaceContext.mode;
@@ -1925,6 +1927,7 @@ export default function App() {
     // cliente ofrecería lo que este no tiene conectado.
     void composer.refreshSurfaces(true);
     setError(null);
+    taskActionFeedback.clear();
     setMaterialError(null);
     setTaskSourcesError(null);
     setProjectReadError(null);
@@ -7513,6 +7516,13 @@ export default function App() {
           title={(id) => filaDe(id)?.title}
           open={(project, id) => void abrirSesion(project, id)}
         />
+        <Show when={taskActionFeedback.notice()}>{failure => (
+          <Toast data-action-failure="" tone="error" onDismiss={taskActionFeedback.clear}>
+            <div class="max-h-[50vh] overflow-y-auto break-words">
+              <FailureNote f={failure()} />
+            </div>
+          </Toast>
+        )}</Show>
         {/* El error del último gesto, y no caduca solo: uno que se va a los
             segundos no se llega a leer. Lo quita su cruz o el cambio de
             workspace. */}
@@ -7865,7 +7875,11 @@ export default function App() {
   // la sustituye.** Un aviso encima dejaría debajo una app usable sobre la
   // carpeta que se acaba de negar a tocar. Ver `PantallaDeBloqueo`.
   return (
-    <Show when={bloqueo()} fallback={<Principal />}>
+    <Show when={bloqueo()} fallback={
+      <TaskActionReporter.Provider value={taskActionFeedback.begin}>
+        <Principal />
+      </TaskActionReporter.Provider>
+    }>
       {(b) => <PantallaDeBloqueo frase={b()} />}
     </Show>
   );

@@ -4,8 +4,9 @@ import MoreVertical from "lucide-solid/icons/more-vertical";
 import Pin from "lucide-solid/icons/pin";
 import PinOff from "lucide-solid/icons/pin-off";
 import TriangleAlert from "lucide-solid/icons/triangle-alert";
-import { createEffect, createMemo, createSignal, For, type JSX, lazy, mapArray, on, onCleanup, Show, Suspense } from "solid-js";
+import { createEffect, createMemo, createSignal, For, type JSX, lazy, mapArray, on, onCleanup, Show, Suspense, useContext } from "solid-js";
 import { Dynamic } from "solid-js/web";
+import { TaskActionReporter } from "../../lib/actionFailure";
 import { arrastrar, fueArrastre, tareaEnVuelo } from "../../lib/drag";
 import { errorCode } from "../../lib/errorCode";
 import { enfocarYSeleccionar } from "../../lib/focus";
@@ -16,11 +17,9 @@ import { SESSION_TITLE_MAX_LENGTH } from "../../lib/projectNames";
 import { esProvisional } from "../../lib/taskDraft";
 import { cn } from "../../lib/utils";
 import { Button } from "../../ui/Button";
-import { type Failure, FailureNote } from "../../ui/Failure";
 import { celebrateFinishedTask, FinishTaskButton } from "../../ui/FinishTaskButton";
 import { KeyedList } from "../../ui/KeyedList";
 import { Input } from "../../ui/Input";
-import { Toast, ToastPortal } from "../../ui/Toast";
 import { MarcaAgente } from "../../ui/icons";
 import {
   ITEM_DE_MENU,
@@ -34,7 +33,6 @@ import { gitAppearance, RailPull, sessionGitDescription } from "./SessionGit";
 import { WithTaskHoverCard } from "./TaskHoverCardTrigger";
 import { MachineChip } from "../machines/MachineChip";
 import { bringHereLabel, canBringHere, machines } from "../machines/store";
-import { actionFailure as taskActionFailure } from "./actionFailure";
 import { createTaskHistories } from "./taskHistories";
 
 // Solo hace falta cuando algo estorba al terminar o archivar: fuera de la carga inicial.
@@ -422,24 +420,27 @@ export default function Sessions(props: {
     const quedan = [...ids].filter((id) => filas.has(id) && !filas.get(id)?.archived);
     if (quedan.length !== ids.size) setSaliendo(new Set(quedan));
   });
-  const [actionFailure, setActionFailure] = createSignal<Failure | null>(null);
+  const beginAction = useContext(TaskActionReporter);
   const [aviso, setAviso] = createSignal<Aviso | null>(null);
   const finishTask = async (id: string, rect: DOMRect) => {
     if (finishing().includes(id)) return;
     const project = projectOfId(id);
     setFinishing(ids => [...ids, id]);
-    setActionFailure(null);
+    const reportFailure = beginAction();
     try {
       sacar(id);
-      // La fila sale con el cohete, antes de esperar los candados del motor.
+      // La fila sale y el cohete despega en el mismo gesto: esperar a que el
+      // motor mate turnos y tome los candados deja el estallido solo.
       celebrateFinishedTask(rect);
       await invoke("finish_task", { project, id }, enSuMaquina(id));
-      // El sondeo descarta el aviso de su autor. Esta ventana relee su lista por separado.
+      // `anunciar` no actualiza esta ventana: su firma es la de quien
+      // escribió, y el sondeo la descarta. Sin este aviso el archivado
+      // queda en disco y la lista de aquí sigue mostrando la fila.
       avisarCambio(project);
     } catch (error) {
       devolver(id);
       if (errorCode(error) === "io") avisarCambio(project);
-      setActionFailure(taskActionFailure(error, "finish"));
+      reportFailure(error, "finish");
     } finally {
       setFinishing(ids => ids.filter(value => value !== id));
     }
@@ -448,7 +449,7 @@ export default function Sessions(props: {
     if (archiving().includes(id)) return;
     const project = projectOfId(id);
     setArchiving(ids => [...ids, id]);
-    setActionFailure(null);
+    const reportFailure = beginAction();
     try {
       sacar(id);
       setMenu(null);
@@ -457,7 +458,7 @@ export default function Sessions(props: {
     } catch (error) {
       devolver(id);
       if (errorCode(error) === "io") avisarCambio(project);
-      setActionFailure(taskActionFailure(error, "archive"));
+      reportFailure(error, "archive");
     } finally {
       setArchiving(ids => ids.filter(value => value !== id));
     }
@@ -475,13 +476,15 @@ export default function Sessions(props: {
       return;
     }
     marcar(ids => [...ids, id]);
-    setActionFailure(null);
-    // La fila conserva la llama mientras se comprueban los bloqueos.
+    const reportFailure = beginAction();
+    // La pregunta es corta; la fila se queda con la llama encendida mientras
+    // vuelve. Sacarla antes obligaría a devolverla, y el cohete despegaría por
+    // una tarea que todavía tiene algo en el camino.
     let blockers: Blockers;
     try {
       blockers = await invoke<Blockers>("task_blockers", { project: projectOfId(id), id, finish }, enSuMaquina(id));
     } catch (error) {
-      setActionFailure(taskActionFailure(error, "blockers"));
+      reportFailure(error, "blockers");
       return;
     } finally {
       marcar(ids => ids.filter(value => value !== id));
@@ -498,12 +501,13 @@ export default function Sessions(props: {
     setAviso(null);
     const marcar = a.finish ? setFinishing : setArchiving;
     marcar(ids => [...ids, a.id]);
+    const reportFailure = beginAction();
     try {
       for (const work of a.blockers.unsaved) {
         await invoke("discard_task_changes", { project: work.project ?? projectOfId(a.id), id: work.session, files: work.files }, enSuMaquina(a.id));
       }
     } catch (error) {
-      setActionFailure(taskActionFailure(error, "discard"));
+      reportFailure(error, "discard");
       return;
     } finally {
       marcar(ids => ids.filter(value => value !== a.id));
@@ -631,12 +635,12 @@ export default function Sessions(props: {
     if (!props.onPin) return;
     const pinned = !fijada(row);
     setMenu(null);
-    setActionFailure(null);
+    const reportFailure = beginAction();
     try {
       await props.onPin(row.id, pinned);
       avisarCambio(projectOf(row));
     } catch (error) {
-      setActionFailure(taskActionFailure(error, pinned ? "pin" : "unpin"));
+      reportFailure(error, pinned ? "pin" : "unpin");
     }
   };
 
@@ -1421,15 +1425,6 @@ export default function Sessions(props: {
 
   return (
     <div class="flex min-w-0 flex-col gap-2">
-      <Show when={actionFailure()}>{failure => (
-        <ToastPortal>
-          <Toast tone="error" onDismiss={() => setActionFailure(null)}>
-            <div class="max-h-[50vh] overflow-y-auto break-words">
-              <FailureNote f={failure()} />
-            </div>
-          </Toast>
-        </ToastPortal>
-      )}</Show>
       <Show when={query()}>
         <p data-search-results class="m-0 px-2 text-caption text-neutral-500" aria-live="polite">
           {matchedSessions().length === 0 ? t("projects.agent_tasks.no_results") : t("projects.sessions.search_results", { count: matchedSessions().length })}

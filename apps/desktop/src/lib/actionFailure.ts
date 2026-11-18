@@ -1,5 +1,6 @@
-import { errorCode } from "../../lib/errorCode.ts";
-import { asFailure, type Failure } from "../../lib/failure.ts";
+import { createContext, createSignal } from "solid-js";
+import { errorCode } from "./errorCode.ts";
+import { asFailure, type Failure } from "./failure.ts";
 
 const actionKeys = {
   finish: "projects.sessions.unconfirmed_finish",
@@ -34,4 +35,20 @@ export function actionFailure(error: unknown, action: TaskAction): Failure {
   const { detail } = asFailure({ what, detail: envelope.detail ?? "io" });
   const id = requestId(envelope);
   return { what, detail: id ? `${detail}\nrequest_id: ${id}` : detail };
+}
+
+type ReportFailure = (error: unknown, action: TaskAction) => void;
+export const TaskActionReporter = createContext<() => ReportFailure>(() => () => {});
+
+export function createActionFeedback(generation: () => number) {
+  const [notice, setNotice] = createSignal<Failure | null>(null);
+  const clear = () => setNotice(null);
+  const begin = (): ReportFailure => {
+    const atStart = generation();
+    clear();
+    return (error, action) => {
+      if (generation() === atStart) setNotice(actionFailure(error, action));
+    };
+  };
+  return { notice, clear, begin };
 }
