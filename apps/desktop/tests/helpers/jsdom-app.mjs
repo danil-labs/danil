@@ -79,6 +79,11 @@ export async function boot(environment, version, responses, userAgent, storage =
   // la añade y espera un `load` que jsdom no emite. jsdom no la pide.
   const dom = new JSDOM(web ? page.replace(/<script\b[^>]*><\/script>/g, "") : HTML, { url: "http://localhost/", pretendToBeVisual: true, virtualConsole: virtualConsole });
   const w = dom.window;
+  // Un trozo perezoso con hoja propia (la actividad del chat) la añade y espera su `load`: jsdom no la baja ni lo emite.
+  if (web) new w.MutationObserver(changes => {
+    for (const { addedNodes } of changes) for (const node of addedNodes)
+      if (node.nodeName === "LINK" && node.rel === "stylesheet") node.dispatchEvent(new w.Event("load"));
+  }).observe(w.document.head, { childList: true });
   if (userAgent) Object.defineProperty(w.navigator, "userAgent", { value: userAgent, configurable: true });
 
   w.addEventListener("error", (e) => failures.push(String(e.error?.stack ?? e.message)));

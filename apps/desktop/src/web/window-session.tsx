@@ -10,7 +10,8 @@ import { platformSession, platformTransport, PlatformSessionError, type Platform
 import type { WebSessionDeployment } from './session-config';
 import { readCapabilities, supports, type CapabilitiesSnapshot } from './service-capabilities';
 import { UpdateNotice } from './UpdateNotice';
-import { SessionLoading, WorkosAuthPage, signInError } from './auth/workos';
+import { WorkosAuthPage, signInError } from './auth/workos';
+import { SessionLoading } from './auth/SessionLoading';
 import { mountWindow } from './window';
 import { forgetMachineNames } from '../features/machines/known-names';
 import { sessionStorageScope, clearWebCaches } from './session-storage';
@@ -62,7 +63,7 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
       windowApp = undefined;
       disposeGate?.();
       root.replaceChildren();
-      disposeGate = render(() => <Show when={identified() && !signedOut() && !preparing()} fallback={<><ToastStack><UpdateNotice /></ToastStack><Show when={signedOut() || returnError} fallback={<SessionLoading />}><WorkosAuthPage loginUrl={api.loginUrl(home)} error={returnError} /></Show></>}><main class="flex h-full flex-col gap-4 overflow-y-auto bg-bg p-10 text-neutral-950" data-web-gate="">
+      disposeGate = render(() => <Show when={identified() && !signedOut() && !preparing()} fallback={<><ToastStack><UpdateNotice /></ToastStack><Show when={signedOut() || returnError} fallback={<SessionLoading onSignOut={preparing() ? () => void logout() : undefined} />}><WorkosAuthPage loginUrl={api.loginUrl(home)} error={returnError} /></Show></>}><main class="flex h-full flex-col gap-4 overflow-y-auto bg-bg p-10 text-neutral-950" data-web-gate="">
         <ToastStack><UpdateNotice /></ToastStack>
         <h1 class="m-0 font-display text-lead font-bold">{t('common.brand_name')}</h1>
         <Show when={busy()}><p role="status">{t('web.auth.waiting')}</p></Show>
@@ -115,37 +116,24 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
     const [orgState, setOrgState] = createSignal(organizations.state());
     const [noWorkspace, setNoWorkspace] = createSignal(false);
     const unsubscribeOrganizations = organizations.subscribe(() => { if (!stopped && !lifetime.signal.aborted) { setOrgNeeded(organizations.needed()); setOrgState(organizations.state()); } });
-    // `me` da 403 `workspace_selection_required`: sus workspaces, el selector de organización y cerrar sesión.
+    // `me` da 403 `workspace_selection_required`: elegir entre sus workspaces; sin ninguno sigue la carga y se reintenta.
     async function withoutWorkspace() {
       organization.load(startup.reader()?.organizations);
       const listed = await (startup.reader()?.workspaces() ?? api.workspaces()).catch(() => [] as PlatformWorkspace[]);
       if (stopped || signedOut()) return;
-      setRows(listed);
-      setPreparing(false);
-      setError('');
-      setNoWorkspace(true);
-      gate();
-      if (listed.length === 0) later();
+      setRows(listed); setPreparing(listed.length === 0); setError(''); setNoWorkspace(true);
+      gate(); if (listed.length === 0) later();
     }
     /** La cuenta recién creada monta sin workspace; se sondea hasta que la plataforma lo tiene. */
     function waiting() { return person !== undefined && (person.workspace === null || (permits('workspaces') && rows().length === 0)); }
     /** La lista vacía o aún sin contexto (403/404/503) no impide montar; 401 sí sale. */
     async function listWorkspaces(read: () => Promise<PlatformWorkspace[]>, fallback: PlatformWorkspace[]) {
       try { return await read(); }
-      catch (cause) {
-        if (cause instanceof PlatformSessionError && cause.status === 401) throw cause;
-        organizations.report(cause);
-        return fallback;
-      }
+      catch (cause) { if (cause instanceof PlatformSessionError && cause.status === 401) throw cause; slower(cause); organizations.report(cause); return fallback; }
     }
-    /** Primer montaje: la membresía o el workspace aún no llegó; se espera en vez de enseñar un 403 fatal. */
-    function prepare() {
-      firstMountAttempts += 1;
-      setPreparing(true);
-      setError('');
-      gate();
-      later();
-    }
+    function slower(cause: unknown) { if (cause instanceof PlatformSessionError && cause.retryAfter) wait = Math.max(wait, Number(cause.retryAfter) * 1000 || wait); }
+    /** Primer montaje: identity aún no da el perfil; sigue la carga en vez de enseñar un 403 fatal. */
+    function prepare() { firstMountAttempts += 1; setPreparing(true); setError(''); gate(); later(); }
     function later(delay = wait) {
       clearTimeout(timer);
       if (stopped || signedOut()) return;
@@ -168,8 +156,7 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
           person = fresh;
           if (permits('workspaces') && fresh.workspace !== null) {
             const listed = await listWorkspaces(() => api.workspaces(), rows());
-            if (stopped || signedOut()) return;
-            setRows(listed);
+            if (stopped || signedOut()) return; setRows(listed);
           }
           if (arrived) setActive(fresh.workspace);
           startup.checked();
@@ -177,7 +164,7 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
         if (!stopped && !signedOut()) ready = await windowApp?.refresh() ?? false;
       } catch (cause) {
         if (cause instanceof PlatformSessionError && cause.status === 401) expired();
-        else if (cause instanceof PlatformSessionError && cause.retryAfter) wait = Math.max(wait, Number(cause.retryAfter) * 1000 || wait);
+        else slower(cause);
       } finally {
         refreshing = false;
         later(ready && !waiting() ? Math.min(POLL_MAX_MS, startup.refreshIn()) : wait);

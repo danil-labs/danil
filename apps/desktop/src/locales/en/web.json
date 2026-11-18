@@ -111,7 +111,7 @@
   "web.auth.identity_unavailable": "Sign-in is not available right now. Try again in a few minutes.",
   "web.computers.no_account": "Your session is valid, but your Danil account could not be found. Try again or contact support; you do not need to create another identity.",
   "web.admin.title": "Harness",
-  "web.auth.access_required": "You need approved access to Danil. You can request it by email.",
+  "web.auth.access_required": "This account cannot enter Danil yet. Sign in again.",
   "web.download.tab": "Get the app",
   "web.download.title": "Get the desktop app",
   "web.download.action": "Download",

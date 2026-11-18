@@ -185,7 +185,7 @@ test('an empty workspace list on the first mount mounts the window and adopts th
   const gate = () => app.w.document.querySelector('[data-web-gate]');
   const doc = app.w.document;
   await until(() => doc.querySelector('[data-tira]'));
-  assert.equal(listed, 1, 'the window mounts on the first, empty answer');
+  assert.ok(listed >= 1, 'the window mounts on the empty answer');
   assert.equal(gate(), null);
   await until(() => listed >= 2);
   doc.querySelector('[data-profile-menu] button').click();
@@ -276,6 +276,42 @@ test('an authenticated session with no workspaces mounts the window without the 
   assert.equal(app.w.document.querySelector('[data-web-gate]'), null);
   assert.ok(!app.w.document.body.textContent.includes('No tienes nada'));
   assert.ok(!calls.some(path => path.startsWith('/v1/compute')));
+  assert.deepEqual(app.failures, []);
+});
+
+// P2 de la revisión: la espera del primer montaje tiene salida, y agotada deja «Reintentar» y «Cerrar sesión».
+for (const end of ['sign out', 'exhausted']) test(`identity retried on the first mount offers a way out (${end})`, async t => {
+  const realTimeout = globalThis.setTimeout;
+  // Los ocho reintentos tardan unos dos minutos: aquí cada espera larga dura un instante.
+  if (end === 'exhausted') globalThis.setTimeout = (run, ms, ...rest) => realTimeout(run, ms >= 1000 ? 5 : ms, ...rest);
+  t.after(() => { globalThis.setTimeout = realTimeout; });
+  let meCalls = 0;
+  const calls = [];
+  const fetcher = async (input, init) => {
+    const url = new URL(String(input));
+    if (url.origin === 'http://localhost' && url.pathname.includes('/assets/')) return new Response('');
+    calls.push(`${init?.method ?? 'GET'} ${url.pathname}`);
+    if (['/v1/capabilities', '/v1/identity/organizations', '/v1/machines'].includes(url.pathname)) return new Response(null, { status: 404 });
+    if (url.pathname === '/v1/identity/me') { meCalls++; return new Response(JSON.stringify({ code: 'forbidden' }), { status: 403, headers: { 'content-type': 'application/problem+json' } }); }
+    if (url.pathname === '/v1/identity/csrf') return Response.json({ csrf_token: 'bound' });
+    if (url.pathname === '/v1/identity/logout') return new Response(null, { status: 204 });
+    throw new Error(`Unexpected request ${url.pathname}`);
+  };
+  fetcher.__jsdomApp = true; globalThis.fetch = fetcher;
+  const app = await open(t, 'listo', `first-mount-way-out-${end.length}`, {}, undefined, {}, { web: true });
+  const doc = app.w.document;
+  if (end === 'sign out') {
+    await until(() => doc.querySelector('[data-web-loading] [data-web-sign-out]'));
+    assert.equal(doc.querySelector('[data-web-auth]'), null);
+    doc.querySelector('[data-web-loading] [data-web-sign-out]').click();
+    await until(() => doc.querySelector('a[href*="/v1/identity/login"]'));
+    assert.ok(calls.includes('POST /v1/identity/logout'));
+  } else {
+    await until(() => doc.querySelector('[data-web-gate] [role="alert"]'));
+    assert.ok(meCalls >= 8, 'every first-mount attempt, then the error');
+    assert.ok([...doc.querySelectorAll('[data-web-gate] button')].some(b => /Reintentar|Retry/.test(b.textContent)), 'retry is offered');
+    assert.ok(doc.querySelector('[data-web-gate] [data-web-sign-out]'), 'sign out is offered');
+  }
   assert.deepEqual(app.failures, []);
 });
 
@@ -441,9 +477,12 @@ for (const end of ['logout', '401']) test(`${end} revokes the mounted person's c
 
 const ORGS = { items: [{ id: 'org_A', name: 'Danil', plan: 'enterprise', role: 'owner' }, { id: 'org_B', name: 'Otra', plan: 'team', role: 'member' }], next_cursor: null, active_organization_id: 'org_B' };
 const CAPS = { contract: 'mvp-v1', items: [{ name: 'identity.organizations', version: 1, status: 'available' }] };
-for (const [label, me] of [
-  ['403 workspace_selection_required', () => new Response(JSON.stringify({ type: 'urn:danil:problem:workspace_selection_required', status: 403, code: 'workspace_selection_required' }), { status: 403, headers: { 'content-type': 'application/problem+json' } })],
-  ['200 with workspace null', () => Response.json({ id: 'user_A', name: 'Operator', workspace: null, organizations: [] })],
+const SELECTION = () => new Response(JSON.stringify({ type: 'urn:danil:problem:workspace_selection_required', status: 403, code: 'workspace_selection_required' }), { status: 403, headers: { 'content-type': 'application/problem+json' } });
+const TWO = [{ id: '11', org: 'org_B', name: 'Alpha', role: 'owner' }, { id: '12', org: 'org_B', name: 'Beta', role: 'owner' }];
+for (const [label, me, workspaces] of [
+  ['403 workspace_selection_required', SELECTION, TWO],
+  ['403 workspace_selection_required and no workspaces', SELECTION, []],
+  ['200 with workspace null', () => Response.json({ id: 'user_A', name: 'Operator', workspace: null, organizations: [] }), []],
 ]) test(`an organization without a workspace (${label}) offers the organization selector and sign out, never «No tienes nada»`, async t => {
   const calls = [];
   const fetcher = async input => {
@@ -453,19 +492,25 @@ for (const [label, me] of [
     if (url.pathname === '/v1/identity/me') return me();
     if (url.pathname === '/v1/capabilities') return Response.json(CAPS);
     if (url.pathname === '/v1/identity/organizations') return Response.json(ORGS);
-    if (url.pathname === '/v1/workspaces') return Response.json({ items: [], next_cursor: null });
+    if (url.pathname === '/v1/workspaces') return Response.json({ items: workspaces, next_cursor: null });
     throw new Error(`Unexpected request ${url.pathname}`);
   };
   fetcher.__jsdomApp = true; globalThis.fetch = fetcher;
   const app = await open(t, 'listo', `org-without-workspace-${label.length}`, {}, undefined, {}, { web: true });
   const doc = app.w.document;
-  if (label.startsWith('403')) {
+  if (label.startsWith('403') && workspaces.length === 0) {
+    // Sin workspace que elegir no hay caja vacía: la carga, con cerrar sesión, y se reintenta.
+    await until(() => doc.querySelector('[data-web-loading] [data-web-sign-out]'));
+    assert.equal(doc.querySelector('[data-web-gate]'), null);
+    assert.equal(doc.querySelector('[data-web-auth]'), null);
+  } else if (label.startsWith('403')) {
     // Varios workspaces y ninguno elegido: identity no da perfil y se elige aquí.
     const gate = () => doc.querySelector('[data-web-gate]');
     await until(() => gate()?.querySelector('[data-web-organization="org_A"]'));
     assert.equal(gate().querySelector('[role="alert"]'), null, 'no «No tienes acceso»');
     assert.ok(gate().querySelector('[data-web-organization="org_B"][aria-pressed="true"]'), 'the active one is marked');
     assert.ok(gate().querySelector('[data-web-sign-out]'), 'sign out is offered');
+    assert.deepEqual([...gate().querySelectorAll('button')].map(b => b.textContent).filter(name => ['Alpha', 'Beta'].includes(name)), ['Alpha', 'Beta']);
   } else {
     await until(() => doc.querySelector('[data-tira]'));
     assert.equal(doc.querySelector('[data-web-gate]'), null);
