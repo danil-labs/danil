@@ -1,16 +1,16 @@
 import { Popover as Kobalte } from "@kobalte/core/popover";
-import { splitProps, type ComponentProps } from "solid-js";
+import { type ComponentProps, splitProps } from "solid-js";
 import { cn } from "../lib/utils";
 import { insideDialog } from "./layer";
+import { withPointerFocus } from "./pointer-focus";
 
 /**
  * Popover común sobre `@kobalte/core` **0.13.13**. Al subir esa versión hay que
  * volver a comprobar el portal, el posicionamiento y los atributos de estado.
  *
  * **`Portal` es la razón de que este átomo exista.** Sin él, el panel se recorta
- * dentro del contenedor que lo monta —el riel del sidebar tiene
- * `overflow:hidden`—; con él sale a `<body>` como hermano del riel, comprobado
- * en un DOM real.
+ * dentro del contenedor que lo monta —el riel del sidebar tiene `overflow:hidden`—;
+ * con él sale a `<body>` como hermano del riel, comprobado en un DOM real.
  *
  * **Los colores no salen de la escala cruda de Tailwind.** Aquí la escala de
  * neutros **ya se invierte con el tema**: en oscuro `neutral-900` es `#c6cbe2`,
@@ -53,7 +53,7 @@ export function PopoverContent(props: ComponentProps<typeof Kobalte.Content>) {
           "w-72 rounded-lg border border-border bg-surface-raised p-4 text-neutral-950 shadow-md outline-none",
           propios.class,
         )}
-        {...resto}
+        {...withPointerFocus(resto)}
       />
     </Kobalte.Portal>
   );
