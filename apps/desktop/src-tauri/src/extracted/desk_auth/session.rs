@@ -189,6 +189,25 @@ pub(crate) fn allowed(method: &str, path: &str) -> bool {
     }
 }
 
+pub(super) fn valid_promo_request(
+    method: &str,
+    path: &str,
+    body: Option<&Value>,
+    context: Option<&str>,
+) -> bool {
+    if (method, path) != ("POST", "/v1/workspaces/promo/redeem") {
+        return true;
+    }
+    context.is_some()
+        && body.and_then(Value::as_object).is_some_and(|body| {
+            body.len() == 1
+                && body
+                    .get("code")
+                    .and_then(Value::as_str)
+                    .is_some_and(|code| (1..=64).contains(&code.chars().take(65).count()))
+        })
+}
+
 /// `/v1/capabilities` leída (`{contract, items: [{name, version, status}]}`):
 /// `None` si el borde aún no la sirve, y entonces no guía nada.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -376,7 +395,11 @@ pub(super) fn request_context(
     Ok(Reply {
         status,
         body: if discard { Value::Null } else { body },
-        retry_after: if discard { None } else { retry_after },
+        retry_after: if discard && status != 429 {
+            None
+        } else {
+            retry_after
+        },
         location: if discard { None } else { location },
         code,
         rejection_code,

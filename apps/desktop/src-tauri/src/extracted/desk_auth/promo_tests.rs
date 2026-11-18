@@ -147,21 +147,10 @@ fn malformed_promo_problem_codes_are_not_forwarded() {
 }
 
 #[test]
-fn legacy_promo_requests_do_not_send_a_context_or_require_echo() {
+fn promo_without_explicit_context_is_rejected_before_any_network_request() {
     let vault = VaultSet::default();
     catalog(&vault);
-    let (edge, _) = serve(Arc::new(|req, n| match req.path.as_str() {
-        "/v1/identity/desk/refresh" => (200, refresh_for(req)),
-        PATH => {
-            assert!(req.context.is_none());
-            if n == 0 {
-                (200, json!({"machine":{"state":"ready"}}))
-            } else {
-                (422, json!({"code":"invalid_code","detail":"legacy body"}))
-            }
-        }
-        _ => (404, Value::Null),
-    }));
+    let (edge, seen) = serve(Arc::new(|_, _| (500, Value::Null)));
     let families = Families::new(edge, vault, || {});
     assert_eq!(
         families
@@ -172,21 +161,101 @@ fn legacy_promo_requests_do_not_send_a_context_or_require_echo() {
                 "key",
                 None
             )
-            .unwrap()
-            .status,
-        200
+            .unwrap_err()
+            .code(),
+        "invalid_request"
     );
-    let reply = families
-        .fetch(
-            "POST",
-            PATH,
-            Some(&json!({"code":"BAD"})),
-            "other-key",
-            None,
-        )
-        .unwrap();
-    assert_eq!(
-        super::super::super::edge_reply("POST", &reply, "other-key")["body"],
-        json!({"code":"invalid_code","detail":"legacy body"})
-    );
+    assert!(seen.lock().unwrap().is_empty());
+}
+
+#[test]
+fn malformed_promo_bodies_are_rejected_before_any_network_request() {
+    let vault = VaultSet::default();
+    catalog(&vault);
+    let (edge, seen) = serve(Arc::new(|_, _| (500, Value::Null)));
+    let families = Families::new(edge, vault, || {});
+    for body in [
+        None,
+        Some(Value::Null),
+        Some(json!([])),
+        Some(json!("CODE")),
+        Some(json!({})),
+        Some(json!({"code":null})),
+        Some(json!({"code":123})),
+        Some(json!({"code":""})),
+        Some(json!({"code":"x".repeat(65)})),
+        Some(json!({"code":"OK","organization":"other_org"})),
+    ] {
+        assert_eq!(
+            families
+                .fetch("POST", PATH, body.as_ref(), "key", Some("context_a"))
+                .unwrap_err()
+                .code(),
+            "invalid_request"
+        );
+    }
+    assert!(seen.lock().unwrap().is_empty());
+}
+
+#[test]
+fn promo_accepts_the_body_length_boundaries_and_keeps_the_explicit_context() {
+    let vault = VaultSet::default();
+    catalog(&vault);
+    let (edge, seen) = serve(Arc::new(|req, _| match req.path.as_str() {
+        "/v1/identity/desk/refresh" => (200, refresh_for(req)),
+        PATH => {
+            assert_eq!(req.context.as_deref(), Some("context_a"));
+            (
+                200,
+                json!({"__echo":"context_a","machine":{"state":"ready"}}),
+            )
+        }
+        _ => (404, Value::Null),
+    }));
+    let families = Families::new(edge, vault, || {});
+    for code in ["x".to_owned(), "x".repeat(64)] {
+        assert_eq!(
+            families
+                .fetch(
+                    "POST",
+                    PATH,
+                    Some(&json!({"code":code})),
+                    "key",
+                    Some("context_a")
+                )
+                .unwrap()
+                .status,
+            200
+        );
+    }
+    assert_eq!(count(&seen, PATH), 2);
+}
+
+#[test]
+fn scoped_rate_limit_keeps_retry_after_without_forwarding_error_details() {
+    let vault = VaultSet::default();
+    catalog(&vault);
+    let (edge, _) = serve(Arc::new(|req, _| match req.path.as_str() {
+        "/v1/identity/desk/refresh" => (200, refresh_for(req)),
+        _ => (
+            429,
+            json!({"__retry_after":"7","code":"rate_limited","detail":"private detail"}),
+        ),
+    }));
+    let families = Families::new(edge, vault, || {});
+    for path in [PATH, "/v1/workspaces/select"] {
+        let body = if path == PATH {
+            json!({"code":"TEST"})
+        } else {
+            json!({"workspace":"workspace_a"})
+        };
+        let reply = families
+            .fetch("POST", path, Some(&body), "key", Some("context_a"))
+            .unwrap();
+        assert_eq!(reply.status, 429);
+        assert!(reply.body.is_null());
+        let value = super::super::super::edge_reply("POST", &reply, "key");
+        assert_eq!(value["retry_after_ms"], 7000);
+        assert!(!value.to_string().contains("private detail"));
+    }
 }
