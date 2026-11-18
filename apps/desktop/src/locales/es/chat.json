@@ -172,6 +172,7 @@
   "chat.questions.send": "Enviar",
   "chat.questions.skip": "Omitir",
   "chat.questions.title": "El agente pregunta",
+  "chat.queue.delivery_unknown": "Entrega sin confirmar",
   "chat.queue.default_model": "por omisión",
   "chat.queue.discard": "descartar",
   "chat.queue.edit": "Editar",

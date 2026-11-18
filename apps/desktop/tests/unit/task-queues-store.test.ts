@@ -96,3 +96,14 @@ test("accepted queued saves survive view disposal without accepting new work", a
   const first = queue.persist("s1", "p1", [message("old")]), second = queue.persist("s1", "p1", [message("new")]);
   queue.dispose(); await queue.persist("s1", "p1", [message("late")]); pending[0](); await first; await Promise.resolve(); assert.equal(pending.length, 2); pending[1](); await second;
 });
+test("loaded uncertain deliveries retain their marker through edit and persistence", async () => {
+  const f = fixture(async () => [{ ...message("unknown"), uncertain: true }]); await f.queue.openSession("s1", "p1");
+  f.queue.retain(null); f.queue.edit("unknown", "edited text");
+  assert.equal(f.queue.items()[0].uncertain, true); await f.queue.persist("s1", "p1", f.queue.items());
+  assert.equal(f.writes.at(-1)?.items[0]?.uncertain, true); assert.equal(f.writes.at(-1)?.items[0]?.text, "edited text");
+  assert.equal(f.queue.next({ busy: false, waiting: false }), null); f.dispose();
+});
+test("hidden queue never resends a delivery the engine marked uncertain", async () => {
+  const f = fixture(async () => [{ ...message("unknown"), uncertain: true }]); await f.queue.openSession("s1", "p1"); f.queue.retain(null); f.queue.detach(); f.setScope({ ...f.scope(), session: "s2" });
+  assert.equal(f.queue.beginHidden("s1", false), null); assert.equal(f.queue.saved("s1")?.items[0]?.uncertain, true); f.dispose();
+});

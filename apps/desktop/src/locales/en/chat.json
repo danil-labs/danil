@@ -172,6 +172,7 @@
   "chat.questions.send": "Send",
   "chat.questions.skip": "Skip",
   "chat.questions.title": "The agent asks",
+  "chat.queue.delivery_unknown": "Delivery not confirmed",
   "chat.queue.default_model": "default",
   "chat.queue.discard": "discard",
   "chat.queue.edit": "Edit",

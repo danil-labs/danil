@@ -276,3 +276,16 @@ test("un `!` se manda sin superficie utilizable y un mensaje no", () => {
   // La caja entra en modo terminal con el `!` en la primera columna.
   assert.equal(sendsWithoutSurface(" !ls"), false);
 });
+test("an uncertain delivery cannot be sent again or injected into a running turn", () => {
+  const item = { id: "unknown", text: "may already be accepted", ...written, uncertain: true };
+  assert.equal(isInjectable(item), false);
+  assert.equal(groupQueue([item]), null);
+  assert.deepEqual(nextBatch([item]), { mensaje: null, lote: [], resto: [item] });
+});
+test("batching stops before an uncertain delivery and leaves later work in order", () => {
+  const ready = { id: "ready", text: "first", ...written };
+  const unknown = { id: "unknown", text: "ambiguous", ...written, uncertain: true };
+  const later = { id: "later", text: "last", ...written };
+  const next = nextBatch([ready, unknown, later]);
+  assert.deepEqual(next.lote, [ready]); assert.deepEqual(next.resto, [unknown, later]); assert.equal(next.mensaje?.text, "first");
+});

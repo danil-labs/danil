@@ -1,4 +1,3 @@
-import type { Recipient, ReplyTo, SenderTask } from "../../lib/recipients";
 import { editMentions, finishEdit, trimMentions, type PendingEdit, type TaskMention } from "../../lib/taskMentions";
 import CircleStop from "lucide-solid/icons/circle-stop";
 import CornerDownLeft from "lucide-solid/icons/corner-down-left";
@@ -15,50 +14,9 @@ import type { Agent } from "../../lib/model";
 import { Button } from "../../ui/Button";
 import { Textarea } from "../../ui/Textarea";
 import { deOtraTarea, esDeLaTerminal, inyectable } from "./queue";
+import { type Encolado } from "./queueTypes";
 
 // Conserva la configuración al encolar; el lote adopta la del último mensaje.
-export type Encolado = {
-  id: string;
-  text: string;
-  task_mentions?: TaskMention[];
-  provider: string;
-  model: string | null;
-  effort: string | null;
-  /**
-   * Con cuánta vigilancia se escribió, capturado al encolar como el modelo.
-   *
-   * Es del mensaje y no de la caja porque un turno encolado puede salir minutos
-   * después: si leyera el modo del momento de despacharse, alguien que cambiara
-   * a automático mientras espera se encontraría con que lo que escribió para
-   * aprobar a mano ya se hizo solo.
-   */
-  permission_mode: string | null;
-  attachments: string[];
-  /**
-   * A quién va dirigido. Sin él, lo que se escribió para un encargado sale
-   * como un turno más de esta conversación.
-   */
-  recipients?: Recipient[];
-  /**
-   * El sobre de una entrega que la cola guardó mientras el chat contestaba
-   * (`runtime/chat/queue.rs`). La cola la vacía la ventana: lo que no se
-   * devuelva aquí aterriza firmado como de la persona y sin dónde contestar.
-   */
-  agent?: string | null;
-  /** Por qué canal lo escribió la persona (`Turn::channel`). */
-  channel?: string | null;
-  reply_to?: ReplyTo | null;
-  /** Cuántos saltos entre encargados lleva. Se cuenta y se pinta, no se limita. */
-  hops?: number | null;
-  /** La tarea que lo mandó por el CLI (`Turn::from_task`). */
-  from_task?: SenderTask | null;
-  /**
-   * El escritorio activo al encolarlo, no al salir: lo que lance un chat de
-   * agente en ese turno cae ahí (`spaces::TurnDesk`).
-   */
-  space?: string | null;
-};
-
 export type ColaDeMensajesProps = {
   compact?: boolean;
   items: Encolado[];
@@ -194,6 +152,7 @@ export default function ColaDeMensajes(props: ColaDeMensajesProps) {
                 variant="secondary"
                 size="sm"
                 class="ml-auto min-h-7 gap-1.5 px-2 text-xs"
+                disabled={props.items[0]?.uncertain}
                 onClick={props.onMandar}
               >
                 <Play size={12} />
@@ -254,6 +213,11 @@ export default function ColaDeMensajes(props: ColaDeMensajesProps) {
                       >
                         {it.text}
                       </span>
+                      <Show when={it.uncertain}>
+                        <span class="text-xs text-neutral-500" role="status" data-queue-uncertain="">
+                          {t("chat.queue.delivery_unknown")}
+                        </span>
+                      </Show>
                     </span>
 
                     {/* Solo cuando difiere de lo que hay puesto ahora: eso es lo
@@ -319,7 +283,7 @@ export default function ColaDeMensajes(props: ColaDeMensajesProps) {
                         class="size-7"
                         aria-label={t("chat.queue.edit_aria", { n: i() + 1 })}
                         title={t("chat.queue.edit")}
-                        disabled={props.pending?.includes(it.id)}
+                        disabled={props.pending?.includes(it.id) || it.uncertain}
                         onClick={() => abrir(it)}
                       >
                         <Pencil size={13} />
@@ -413,3 +377,5 @@ export default function ColaDeMensajes(props: ColaDeMensajesProps) {
     </Show>
   );
 }
+
+export type { Encolado } from "./queueTypes";
