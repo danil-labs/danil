@@ -8,5 +8,6 @@ export { lotesDeDeltas, type Programar } from "./deltaFrames.ts";
 export { hasOlder, hasRecentGap, HistoryPager, type OlderState } from "./history.ts";
 export type { HandoverState } from "./handover.ts";
 export { anexarDeltas, anexarImagen, anexarRazonamiento, mcpCallFromName, mensajesDelHilo, tramoGuardado, transcripcion, type ChatEvent, type Session, type TranscriptOrigin, type Turn, type Delta } from "./transcript.ts";
+export { vivoTrasLeer } from "./threadOrder.ts";
 export type { PermissionRequest } from "./Chat.tsx";
 export { mergeGates, type PendingPermission } from "./permissionGates.ts";

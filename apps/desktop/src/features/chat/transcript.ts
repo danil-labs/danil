@@ -17,6 +17,7 @@ import type {
 } from "./failures";
 import type { Producido } from "./Delivery.tsx";
 import type { HistoryPage } from "./history.ts";
+import { escritosGuardados, ordenDelHilo } from "./threadOrder.ts";
 import type { Pregunta, Respuesta } from "./Questions.tsx";
 import type { Author, Msg, PermissionDecision, PermissionOrigin, Razonamiento } from "./messageTypes";
 
@@ -308,38 +309,12 @@ export function tramoGuardado(msgs: Msg[], turno: string): Msg[] {
   return msgs.some(suyo) ? msgs.map((m) => (suyo(m) ? { ...m, tramo: turno } : m)) : msgs;
 }
 
-/** Lo guardado y, detrás, lo vivo que el disco no trae: releer con el turno corriendo no repite sus tramos. */
+/** Lo guardado y lo vivo que el disco no trae, en su orden: releer con el turno corriendo no repite sus tramos. */
 export function mensajesDelHilo(h: { base: Msg[]; vivo: Msg[]; guardados?: ReadonlySet<string> }): Msg[] {
   const guardados = h.guardados;
   const enDisco = (id?: string) => id !== undefined && guardados!.has(id);
-  const vivo = sinInyectadosGuardados(
-    h.base,
-    guardados?.size ? h.vivo.filter((m) => !enDisco(m.turno) && !enDisco(m.tramo)) : h.vivo,
-  );
-  return vivo.length ? [...h.base, ...vivo] : h.base;
-}
-
-/**
- * Un mensaje metido sin id (`Msg.inyectado`) que el disco ya trae: el primer turno
- * de la persona con su texto guardado después de `tras`. Cada guardado cuenta
- * una vez, para que dos «sí» seguidos sigan siendo dos.
- */
-function sinInyectadosGuardados(base: Msg[], vivo: Msg[]): Msg[] {
-  if (!vivo.some((m) => m.inyectado && !m.turno)) return vivo;
-  const usados = new Set<number>();
-  return vivo.filter((m) => {
-    if (!m.inyectado || m.turno) return true;
-    const tras = m.inyectado.tras;
-    const desde = tras === null ? 0 : base.findIndex((b) => b.turno === tras) + 1;
-    if (desde === 0 && tras !== null) return true;
-    for (let i = desde; i < base.length; i++) {
-      const b = base[i];
-      if (usados.has(i) || b.role !== "user" || !b.turno || b.text !== m.text) continue;
-      usados.add(i);
-      return false;
-    }
-    return true;
-  });
+  const enBase = escritosGuardados(h.base, h.vivo);
+  return ordenDelHilo(h.base, guardados?.size ? h.vivo.filter((m) => enBase.has(m) || (!enDisco(m.turno) && !enDisco(m.tramo))) : h.vivo);
 }
 
 /**
