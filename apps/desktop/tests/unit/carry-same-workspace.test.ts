@@ -1,5 +1,5 @@
 /**
- * C1 (plan 2026-11-18 sesiones por organización, § 16): carry lleva un proyecto entre dos
+ * C1 (plan de sesiones por organización, § 16): carry lleva un proyecto entre dos
  * motores que tienen el MISMO id de workspace, con `@terminus/carry`, el router de la ventana
  * y la flota de verdad. Aquí ya se leyó `list_workspaces` (`hasHere` es cierto) y aun así cada
  * `work_*` va a la máquina que nombra su cabecera, con el workspace y el proyecto tal cual.

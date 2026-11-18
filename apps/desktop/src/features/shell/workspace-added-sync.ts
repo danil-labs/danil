@@ -1,6 +1,6 @@
 /**
  * Los workspaces de Danil que la persona agregó al riel, por (persona, organización),
- * según `workspace-preferences-v1` con `added` (plan 2026-11-18 § 5 y § 6):
+ * según `workspace-preferences-v1` con `added` (plan de agregar workspaces, § 5 y § 6):
  * `GET /v1/workspaces/preferences`, `PUT`/`DELETE …/added/{engine_id}` y la siembra
  * atómica `PUT /v1/workspaces/preferences {added, if_version: 0}` (`409 already_initialized`).
  *
