@@ -106,7 +106,7 @@ function wire(hidden: () => ReadonlySet<string>, onSeeded: (ids: readonly string
     });
   }
   return {
-    organizationNotice, notifyOrganization: () => { setOrganizationNotice(true); setMenuNotice(true); },
+    organizationNotice, clearOrganizationNotice: () => setOrganizationNotice(false), notifyOrganization: () => { setOrganizationNotice(true); setMenuNotice(true); },
     sessions, groups: rows, known, menuNotice, acknowledgeNotice: () => setMenuNotice(false), emptyReason: () => (revision(), sessions.emptyReason()), removed: () => (revision(), sessions.removed()), laterContext, acknowledgeLater: () => setLaterContext(null), ready: () => (revision(), sessions.ready()), connected: () => (revision(), sessions.connected()),
     createFree: async (context: string) => {
       const group = active(context);
@@ -118,7 +118,7 @@ function wire(hidden: () => ReadonlySet<string>, onSeeded: (ids: readonly string
     },
     add: (context: string, id: string) => records.get(context)?.sync.add(id),
     remove: (context: string, id: string) => records.get(context)?.sync.remove(id),
-    refreshContext: (context: string) => { const group = active(context); return group ? readDanilContext(group.org, context) : Promise.resolve(); },
+    refreshContext: (context: string) => { const group = active(context); return group ? readDanilContext(group.org, context, true) : Promise.resolve(); },
     refresh: () => { void refreshAccounts(); for (const g of groups() ?? []) void readDanilContext(g.org, g.context_id); },
   };
 }

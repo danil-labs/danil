@@ -87,11 +87,12 @@ export function danilAvailableContext(organization: string, context: string): Li
   return availableInContext(fleet, organization, context);
 }
 
-export function readDanilContext(organization: string, context: string): Promise<void> {
+export function readDanilContext(organization: string, context: string, fresh = false): Promise<void> {
   const current = fleet;
   if (!current) return Promise.resolve();
   return Promise.all(current.machines().filter((m) => m.kind === "organization" && m.organizationId === organization && m.context === context).map(async (m) => {
-    const reply = await current.read({ machine: m.id, workspace: null, command: "list_workspaces" }).catch(() => null);
+    const envelope = { machine: m.id, workspace: null, command: "list_workspaces" };
+    const reply = await (fresh ? current.raw(envelope).then(({ value }) => ({ has: true, value })) : current.read(envelope)).catch(() => null);
     if (reply?.has && fleet === current && current.info(m.id)?.context === context) noteListing(m.id, reply.value);
   })).then(() => undefined);
 }

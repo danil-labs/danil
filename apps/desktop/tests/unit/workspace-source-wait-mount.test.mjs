@@ -31,6 +31,8 @@ test("an unsettled organization machine times out in the picker, retries and pai
   await flush();
   [...doc.querySelectorAll('[role="menuitem"]')].find((b) => b.textContent === "Agregar workspace").click();
   await flush();
+  const railIds = () => [...doc.querySelectorAll("[data-workspace-tile]")].map((tile) => tile.dataset.workspaceTile).sort();
+  const beforeRail = railIds();
   const group = () => doc.querySelector('[data-session-context="a"]');
   assert.ok(group());
   t.mock.timers.tick(9999); await flush();
@@ -38,15 +40,18 @@ test("an unsettled organization machine times out in the picker, retries and pai
   t.mock.timers.tick(1); await flush();
   assert.ok(group().textContent.includes("La máquina de Acme no responde. Intenta de nuevo en un momento."));
   assert.ok(doc.querySelector('[data-workspace-tile="w"]'), "the local rail stays intact");
+  assert.deepEqual(railIds(), beforeRail);
   const before = fake.calls.filter((c) => c.command === "list_workspaces").length;
   [...group().querySelectorAll("button")].find((b) => b.textContent === "Reintentar").click();
   await flush();
   assert.ok(!group().textContent.includes("no responde"));
   assert.ok(group().textContent.includes("Cargando"));
+  assert.deepEqual(railIds(), beforeRail);
   assert.ok(fake.calls.filter((c) => c.command === "list_workspaces").length > before);
   assert.equal(typeof late, "function");
   late({ workspaces: [{ id: "late-workspace", name: "Late workspace" }] });
   await flush();
   assert.ok(group().querySelector('[data-add-danil="late-workspace"]'));
   assert.ok(!group().textContent.includes("no responde"));
+  assert.deepEqual(railIds(), beforeRail);
 });
