@@ -1920,13 +1920,9 @@ export default function App() {
     if (!desdeCache) setSesiones({});
     soltarCola();
     drafts.replaceAttached([]);
-    // Y las cuentas, que también son de este workspace: la franja de consumo las
-    // lee una vez y se quedaría enseñando las del cliente anterior —nombre,
-    // correo y cuánto le queda— sin que nada avise.
+    // La franja de consumo debe releer las cuentas del workspace entrante.
     setCuentasTocadas((n) => n + 1);
-    // Con qué se puede trabajar es del workspace por lo mismo: la
-    // credencial y el consentimiento cuelgan de él; el menú del otro
-    // cliente ofrecería lo que este no tiene conectado.
+    // Las credenciales y el consentimiento también dependen del workspace.
     void composer.refreshSurfaces(true);
     setError(null);
     taskActionFeedback.clear();
@@ -7470,16 +7466,7 @@ export default function App() {
     multipleSpaces() ? spaces().map((i) => ({ id: i.id, name: spaceName(i) })) : [];
 
   const Principal = () => (
-    // UNA superficie continua, no tres tarjetas flotando: las columnas
-    // pegan con el chat y se separan con hairline y divisor arrastrable
-    // (shells → surfaces → components).
-
-    // Continua no quiere decir de un solo tono: los rieles llevan `bg`
-    // y el chat `surface` (`ColumnaLateral`), y lo que la regla prohíbe
-    // —hueco, sombra, esquina redondeada— sigue prohibido.
-
-    // Sin cabecera y sin título de app, como Claude: la ventana ya se
-    // llama Terminus.
+    // Los rieles y el chat forman una superficie continua con divisores arrastrables.
     <div
       class="relative isolate flex h-full flex-col overflow-hidden bg-surface"
       // `.tab-active` repite este fondo dentro de la pestaña para fundirse con su panel.
@@ -7869,9 +7856,7 @@ export default function App() {
     </div>
   );
 
-  // **La ventana que no puede abrir estos datos no pinta la app,
-  // la sustituye.** Un aviso encima dejaría debajo una app usable sobre la
-  // carpeta que se acaba de negar a tocar. Ver `PantallaDeBloqueo`.
+  // El bloqueo sustituye la app para impedir el uso de una carpeta denegada.
   return (
     <Show when={bloqueo()} fallback={
       <TaskActionReporter.Provider value={taskActionFeedback.begin}>
