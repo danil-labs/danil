@@ -220,7 +220,7 @@ jobs:
 
           echo "Identidad intacta: misma llave, mismo identificador, mismo nombre."
 
-      # La ventana no trae motor: lo arranca desde el `seldon-runtime` empaquetado.
+      # La ventana no trae motor: lo arranca desde el `danil-engine` empaquetado.
       # Publicar sin él deja a toda copia instalada con una ventana que no abre,
       # y el updater la reparte sola. El ensayo también lo exige: es lo que prueba.
       # Que el archivo esté lo comprueba cada build, después de «Colocar el motor como sidecar».
@@ -244,8 +244,8 @@ jobs:
           for os in windows linux macos; do
             files=(src-tauri/tauri.conf.json)
             [ -f "src-tauri/tauri.$os.conf.json" ] && files+=("src-tauri/tauri.$os.conf.json")
-            jq -es 'map(.bundle.externalBin // []) | add | map(select(test("seldon-runtime"))) | length > 0' "${files[@]}" >/dev/null \
-              || { echo "::error title=Motor sin empaquetar::$os no declara seldon-runtime en bundle.externalBin (${files[*]})."; exit 1; }
+            jq -es 'map(.bundle.externalBin // []) | add | (index("binaries/danil-engine") != null and index("binaries/seldon-runtime") != null)' "${files[@]}" >/dev/null \
+              || { echo "::error title=Motor sin empaquetar::$os no declara danil-engine y su alias seldon-runtime en bundle.externalBin (${files[*]})."; exit 1; }
           done
 
       - name: Comparar con lo publicado
@@ -391,10 +391,12 @@ jobs:
           set -euo pipefail
           pnpm engine:sidecar
           case "${{ matrix.name }}" in
-            windows) expected=(seldon-runtime-x86_64-pc-windows-msvc.exe) ;;
-            macos) expected=(seldon-runtime-aarch64-apple-darwin seldon-runtime-x86_64-apple-darwin seldon-runtime-universal-apple-darwin) ;;
-            linux) expected=(seldon-runtime-x86_64-unknown-linux-gnu) ;;
+            windows) triples=(x86_64-pc-windows-msvc.exe) ;;
+            macos) triples=(aarch64-apple-darwin x86_64-apple-darwin universal-apple-darwin) ;;
+            linux) triples=(x86_64-unknown-linux-gnu) ;;
           esac
+          expected=()
+          for t in "${triples[@]}"; do expected+=("danil-engine-$t" "seldon-runtime-$t"); done
           for f in "${expected[@]}"; do
             [ -f "src-tauri/binaries/$f" ] || { echo "::error title=Motor sin empaquetar::falta src-tauri/binaries/$f."; exit 1; }
           done
@@ -461,7 +463,7 @@ jobs:
       # makensis lo regenera en cada build y no se descarga, así que SmartScreen
       # no lo evalúa; firmarlo costaba una firma por release.
       #
-      # **El motor viaja dentro.** `bundle.externalBin` declara `seldon-runtime` y
+      # **El motor viaja dentro.** `bundle.externalBin` declara `danil-engine` y su alias `seldon-runtime`, y
       # Tauri le pasa ese `.exe` a `signCommand` salvo que ya llegue firmado
       # (`signtool verify /pa`, `sign_binaries_if_needed`, tauri-bundler 2.9.4).
       # El lock fija el `.exe` de Windows ya firmado por Danil, así que el motor
@@ -600,7 +602,7 @@ jobs:
           : > "$T/signed.txt"
 
           # El motor como sidecar: Tauri lo busca en `src-tauri/<entrada>-<triple>.exe`
-          # y lo instala como `seldon-runtime.exe`. Si ya llega firmado por Danil,
+          # y lo instala como `danil-engine.exe` y su alias `seldon-runtime.exe` (mismos bytes). Si ya llega firmado por Danil,
           # Tauri no lo pasa por eSigner y no cuenta como firma de esta corrida.
           ENGINE_SIDECAR=""
           ENGINE_ENTRY=$(jq -rs 'map(.bundle.externalBin // []) | add | map(select(test("seldon-runtime"))) | .[0] // ""' \
@@ -685,7 +687,7 @@ jobs:
           $dir = Join-Path $env:LOCALAPPDATA $env:PRODUCT_NAME
           $failed = $false
           $required = @('terminus.exe', 'uninstall.exe')
-          if ($env:ENGINE_PACKAGED -eq 'true') { $required += 'seldon-runtime.exe' }
+          if ($env:ENGINE_PACKAGED -eq 'true') { $required += 'danil-engine.exe', 'seldon-runtime.exe' }
           foreach ($expected in $required) {
             if (-not (Test-Path (Join-Path $dir $expected))) {
               Write-Output "::error::El instalador no dejó $expected en $dir."
@@ -783,11 +785,11 @@ jobs:
             macOS)
               app=src-tauri/target/universal-apple-darwin/release/bundle/macos/Danil.app
               resources="$app/Contents/Resources/work-tools"
-              engine="$app/Contents/MacOS/seldon-runtime"
+              engine="$app/Contents/MacOS/danil-engine"
               ;;
             Windows)
               resources="$(cygpath -u "$LOCALAPPDATA")/$PRODUCT_NAME/work-tools"
-              engine="$(cygpath -u "$LOCALAPPDATA")/$PRODUCT_NAME/seldon-runtime.exe"
+              engine="$(cygpath -u "$LOCALAPPDATA")/$PRODUCT_NAME/danil-engine.exe"
               ;;
             Linux)
               image=$(find src-tauri/target/release/bundle -name '*.AppImage' -type f | head -1)
@@ -795,7 +797,7 @@ jobs:
               mkdir -p "$RUNNER_TEMP/work-tools-final"
               (cd "$RUNNER_TEMP/work-tools-final" && "$image" --appimage-extract >/dev/null)
               resources="$RUNNER_TEMP/work-tools-final/squashfs-root/usr/share/Danil/work-tools"
-              engine="$RUNNER_TEMP/work-tools-final/squashfs-root/usr/bin/seldon-runtime"
+              engine="$RUNNER_TEMP/work-tools-final/squashfs-root/usr/bin/danil-engine"
               ;;
           esac
           python3 scripts/work-tools-release.py verify --directory "$resources"
@@ -1094,13 +1096,17 @@ jobs:
           tar xzf release-assets/Danil.app.tar.gz
           lipo Danil.app/Contents/MacOS/terminus -verify_arch arm64 x86_64
           codesign --verify --deep --strict Danil.app
-          lipo Danil.app/Contents/MacOS/seldon-runtime -verify_arch arm64 x86_64
+          for engine in danil-engine seldon-runtime; do
+            lipo "Danil.app/Contents/MacOS/$engine" -verify_arch arm64 x86_64
+            codesign -dv "Danil.app/Contents/MacOS/$engine" 2>&1 | grep -qx 'Identifier=seldon-runtime' \
+              || { echo "::error title=Motor con otro identificador::$engine no está firmado como seldon-runtime."; exit 1; }
+          done
           # Sin argumentos arrancaría el motor empaquetado. Con uno que no entiende
           # sale con `cli.error.invalid_request`: el ejecutable carga; la interfaz no se prueba.
           out=$(Danil.app/Contents/MacOS/terminus --external-host 2>&1) && { echo "::error::Arrancó con un argumento inválido"; exit 1; }
           echo "$out" | grep -q invalid_request
           python3 apps/desktop/scripts/work-tools-release.py verify --directory Danil.app/Contents/Resources/work-tools
-          python3 apps/desktop/scripts/work-tools-runtime-smoke.py --engine Danil.app/Contents/MacOS/seldon-runtime --resources Danil.app/Contents/Resources --browser --clone --app Danil.app
+          python3 apps/desktop/scripts/work-tools-runtime-smoke.py --engine Danil.app/Contents/MacOS/danil-engine --resources Danil.app/Contents/Resources --browser --clone --app Danil.app
 
   # El AppImage que se va a publicar, en un Ubuntu limpio: la firma minisign
   # con el mismo verificador que usa `npx`, que lleve el motor, y que el binario
@@ -1144,8 +1150,10 @@ jobs:
           console.log('Firma minisign del AppImage verificada.');
           JS
           chmod +x "release-assets/$APP"
-          (cd "$RUNNER_TEMP" && "$GITHUB_WORKSPACE/release-assets/$APP" --appimage-extract usr/bin/seldon-runtime >/dev/null)
-          [ -x "$RUNNER_TEMP/squashfs-root/usr/bin/seldon-runtime" ] || { echo "::error title=Motor sin empaquetar::el AppImage no lleva usr/bin/seldon-runtime."; exit 1; }
+          for engine in danil-engine seldon-runtime; do
+            (cd "$RUNNER_TEMP" && "$GITHUB_WORKSPACE/release-assets/$APP" --appimage-extract "usr/bin/$engine" >/dev/null)
+            [ -x "$RUNNER_TEMP/squashfs-root/usr/bin/$engine" ] || { echo "::error title=Motor sin empaquetar::el AppImage no lleva usr/bin/$engine."; exit 1; }
+          done
           out=$(timeout 60s xvfb-run -a "release-assets/$APP" --appimage-extract-and-run --external-host 2>&1) && { echo "::error::Arrancó con un argumento inválido"; exit 1; }
           echo "$out" | grep -q invalid_request
 

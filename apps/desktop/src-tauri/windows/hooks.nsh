@@ -2,8 +2,10 @@
 ; the uninstaller asks it for `service stop`, which it refuses with live turns;
 ; then the uninstaller stops instead of cutting them. Only a silent engine is killed.
 ; NSIS is 32-bit: its PowerShell cannot read Process.Path of the 64-bit engine, WMI can.
+; The engine ships as danil-engine.exe and as its alias seldon-runtime.exe (same bytes): every
+; macro names both. `scripts/guards/engine-names.mjs` checks them against ENGINE_NAMES in engine.rs.
 !macro TERMINUS_KILL_ENGINE
-  nsExec::Exec `powershell -NoProfile -NonInteractive -Command "Get-CimInstance Win32_Process | Where-Object { $$_.Name -eq 'seldon-runtime.exe' -and $$_.ExecutablePath -like '$INSTDIR\*' } | ForEach-Object { Stop-Process -Id $$_.ProcessId -Force }"`
+  nsExec::Exec `powershell -NoProfile -NonInteractive -Command "Get-CimInstance Win32_Process | Where-Object { ($$_.Name -eq 'danil-engine.exe' -or $$_.Name -eq 'seldon-runtime.exe') -and $$_.ExecutablePath -like '$INSTDIR\*' } | ForEach-Object { Stop-Process -Id $$_.ProcessId -Force }"`
   Pop $0
 !macroend
 
@@ -20,8 +22,10 @@
 !macroend
 
 !macro TERMINUS_SWEEP
+  Delete "$INSTDIR\old_*danil-engine.exe"
   Delete "$INSTDIR\old_*seldon-runtime.exe"
-  ${IfNot} ${FileExists} "$INSTDIR\old_*seldon-runtime.exe"
+  ${IfNot} ${FileExists} "$INSTDIR\old_*danil-engine.exe"
+  ${AndIfNot} ${FileExists} "$INSTDIR\old_*seldon-runtime.exe"
     Delete "$INSTDIR\old_*.exe"
   ${EndIf}
 !macroend
@@ -34,12 +38,16 @@
   !insertmacro TERMINUS_SWEEP
   StrCpy $R8 "$INSTDIR\old_"
   ${If} ${FileExists} "$INSTDIR\old_${WINDOW}"
+  ${OrIf} ${FileExists} "$INSTDIR\old_danil-engine.exe"
   ${OrIf} ${FileExists} "$INSTDIR\old_seldon-runtime.exe"
     System::Call 'kernel32::GetTickCount()i.R9'
     StrCpy $R8 "$INSTDIR\old_$R9_"
   ${EndIf}
   ${If} ${FileExists} "$INSTDIR\${WINDOW}"
     Rename "$INSTDIR\${WINDOW}" "$R8${WINDOW}"
+  ${EndIf}
+  ${If} ${FileExists} "$INSTDIR\danil-engine.exe"
+    Rename "$INSTDIR\danil-engine.exe" "$R8danil-engine.exe"
   ${EndIf}
   ${If} ${FileExists} "$INSTDIR\seldon-runtime.exe"
     Rename "$INSTDIR\seldon-runtime.exe" "$R8seldon-runtime.exe"

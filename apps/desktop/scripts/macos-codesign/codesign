@@ -1,0 +1,20 @@
+#!/bin/sh
+# Tauri firma cada sidecar con `codesign --force -s` y el nombre del archivo como identificador.
+# El motor empaquetado como `danil-engine` conserva el identificador `seldon-runtime`, el que
+# exigen la ventana (`master_handoff.rs`) y el llavero. `desktop-build.mjs` pone esta carpeta
+# primero en el PATH en macOS; `DANIL_REAL_CODESIGN` es el codesign del sistema.
+real=${DANIL_REAL_CODESIGN:-/usr/bin/codesign}
+engine=0
+signing=0
+named=0
+for arg in "$@"; do
+  case $arg in
+    */Contents/MacOS/danil-engine) engine=1 ;;
+    -s | --sign | --sign=*) signing=1 ;;
+    -i | --identifier | --identifier=*) named=1 ;;
+  esac
+done
+if [ "$engine" = 1 ] && [ "$signing" = 1 ] && [ "$named" = 0 ]; then
+  exec "$real" --identifier seldon-runtime "$@"
+fi
+exec "$real" "$@"

@@ -40,6 +40,7 @@ use terminus_engine_client::Client;
 use terminus_engine_protocol::{Error, Result};
 
 pub use background_service::dispatch as background_dispatch;
+pub use engine::beside as bundled_engine;
 
 pub fn launch() -> Result<()> {
     let result = open();

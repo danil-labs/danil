@@ -36,7 +36,7 @@ The chain and the `pre-push` hook check types with `tsgo` (TypeScript 7,
 TypeScript 5 stays installed: `verify-scope.mjs` reads imports with its API, and
 the `build` scripts call `tsc`.
 
-The engine (`seldon-runtime`) is not in this repository. Guards that need to
+The engine (`danil-engine`, packaged with its alias `seldon-runtime`) is not in this repository. Guards that need to
 know what the engine registers or emits read its frozen contract:
 `src-tauri/crates/engine-protocol/commands.json` (commands and events) and
 `src-tauri/crates/engine-protocol/phrase-keys.json` (catalog keys the engine
@@ -46,7 +46,7 @@ sends).
 
 | Guard | File | Contract and limit |
 |---|---|---|
-| `engine` | `scripts/engine.mjs` | Before the Rust steps, places the engine pinned in `seldon-runtime.lock` (SHA-256 checked) as the `externalBin` sidecar of this platform (on macOS both architectures and their `lipo`); `tauri-build` refuses to compile without it. |
+| `engine` | `scripts/engine.mjs` | Before the Rust steps, places the engine pinned in `seldon-runtime.lock` (SHA-256 checked) as the `externalBin` sidecars of this platform, `danil-engine` and its alias `seldon-runtime` with the same bytes (on macOS both architectures and their `lipo`); `tauri-build` refuses to compile without it. |
 | `front-modularization` | `scripts/guards/front-modularization.mjs`, `tests/unit/front-modularization.test.mjs` | Ratchets private feature imports and cycles by identity, Solid-only ESLint findings per file/rule, source file lengths (new files <400 lines), App createEffect calls and harness CustomEvent counts per file/name. Baseline can only decrease with `node scripts/guards/front-modularization.mjs --update`; no automatic debt absorption. |
 | `web-network-budget` | `tests/integration/web-network-budget.test.mjs` | Mounts the built browser entry with simulated edge/relay and a fixed clock. Ratchets startup and 60 idle seconds by HTTP route, RPC command, new WebSocket count, and request/response plus sent/received payload bytes. Excludes headers, TLS and assets; the shell marker is distinct from socket opening and first engine result. Does not certify authenticated beta or native Desk. |
 | `reviewable` | `scripts/guards/reviewable.mjs` | Rejects control bytes that turn a diff binary. Needs git metadata. |
@@ -58,6 +58,7 @@ sends).
 | `window` | `scripts/guards/window.mjs` | Platform overrides keep the window structure (`label`, `create`). |
 | `console-window` | `scripts/guards/console-window.mjs` | Production processes use `no_console_window` on Windows. |
 | `product-name` | `scripts/guards/product-name.mjs` | The AppImage paths (`usr/lib`, `usr/share`, `.AppDir`) in the Rust code, the work-tools scripts and `publish.yml`, and `PRODUCT_NAME` in `publish.yml`, follow `productName` in `tauri.conf.json`. While it is not `Terminus`, `windows/hooks.nsh` must keep the migration of the 0.2.x Terminus copy. |
+| `engine-names` | `scripts/guards/engine-names.mjs` | `ENGINE_NAMES` in `src-tauri/src/extracted/engine.rs` (`danil-engine` and its alias `seldon-runtime`) is the only list of engine names: `bundle.externalBin` in `tauri.conf.json`, the `TERMINUS_KILL_ENGINE`, `TERMINUS_SWEEP` and `TERMINUS_SET_ASIDE` macros of `windows/hooks.nsh`, and the lists in `engine.mjs` and `desktop-release-verify.mjs` follow it. Sidecars already in `src-tauri/binaries/` carry every name with the same bytes, the SHA-256 of `seldon-runtime.lock`. |
 | `processes` | `scripts/guards/processes.mjs` | Finds processes awaited without a timeout. Unix `exec` replaces the caller without waiting for a child. The quota only goes down. |
 | `shared-design` | `scripts/guards/shared-design.mjs` | `packages/design` matches the desktop: theme tokens, the type scale, radii and channel colors against `src/styles/global.css` (Violeta and Grafito), status phrases against `projects.status.*` in `es` and `en`, the shared task-list, dock and machine words (`WORDS`) against the same keys in the catalogs, and mark icons against `TaskStatus.tsx`. |
 | `design-tokens` | `scripts/guards/design-tokens.mjs`, `tests/unit/cn-text-scale.test.ts` | Un tamaño de letra con escalón en `packages/design/src/scale.ts` usa el token, y `cn` lo reconoce como tamaño. Los valores sueltos tienen un techo que solo baja. |

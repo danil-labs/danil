@@ -3,7 +3,7 @@
 // preparación pedía «Reparar» sin poder hacerlo.
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync, existsSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { delimiter, join, resolve } from "node:path";
 import { test } from "node:test";
@@ -140,6 +140,25 @@ test("an AppImage build gets linuxdeploy's environment, or does not start withou
     assert.match(bundleEnvironment([], { ...linux, env: { PATH: join(l.dir, "none") } }).error, /patchelf/);
     assert.deepEqual(bundleEnvironment([], { platform: "win32", env: {} }).env, {});
     assert.deepEqual(bundleEnvironment(["--debug"], { ...linux, env: {} }).env, {});
+  } finally {
+    l.done();
+  }
+});
+
+test("a macOS bundle signs danil-engine with the identifier seldon-runtime", { skip: process.platform === "win32" && "the shim is POSIX sh" }, () => {
+  const l = lab();
+  try {
+    const { env } = bundleEnvironment(["--target", "universal-apple-darwin"], { platform: "darwin", cwd: root, env: { PATH: "/usr/bin" } });
+    const shim = join(env.PATH.split(delimiter)[0], "codesign");
+    assert.equal(env.PATH.split(delimiter)[1], "/usr/bin");
+    const real = join(l.dir, "real-codesign");
+    writeFileSync(real, '#!/bin/sh\necho "$@"\n', { mode: 0o755 });
+    const run = (...args) => spawnSync(shim, args, { encoding: "utf8", env: { ...env, DANIL_REAL_CODESIGN: real } }).stdout.trim();
+    const app = "/b/Danil.app/Contents/MacOS";
+    assert.equal(run("--force", "-s", "ID", `${app}/danil-engine`), `--identifier seldon-runtime --force -s ID ${app}/danil-engine`);
+    assert.equal(run("--force", "-s", "ID", `${app}/seldon-runtime`), `--force -s ID ${app}/seldon-runtime`);
+    assert.equal(run("--verify", `${app}/danil-engine`), `--verify ${app}/danil-engine`);
+    assert.equal(run("--force", "-s", "ID", "--identifier", "x", `${app}/danil-engine`), `--force -s ID --identifier x ${app}/danil-engine`);
   } finally {
     l.done();
   }

@@ -36,6 +36,7 @@
       "../plugins/languages": "lenguas"
     },
     "externalBin": [
+      "binaries/danil-engine",
       "binaries/seldon-runtime"
     ],
     "icon": [

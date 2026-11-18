@@ -87,10 +87,15 @@ pub fn dispatch() {
     }
 }
 
+fn engine() -> std::io::Result<std::path::PathBuf> {
+    app_lib::bundled_engine(&std::env::current_exe()?)
+        .ok_or_else(|| std::io::Error::from(std::io::ErrorKind::NotFound))
+}
+
 // exec conserva los descriptores, las señales y el código de salida sin iniciar Tauri.
 #[cfg(unix)]
 fn forward() -> std::io::Result<i32> {
-    let exe = std::env::current_exe()?.with_file_name("seldon-runtime");
+    let exe = engine()?;
     Err(std::process::Command::new(exe)
         .args(std::env::args_os().skip(1))
         .exec())
@@ -100,7 +105,7 @@ fn forward() -> std::io::Result<i32> {
 fn forward() -> std::io::Result<i32> {
     use std::process::{Command, Stdio};
     let attached = attach_parent()?;
-    let exe = std::env::current_exe()?.with_file_name("seldon-runtime.exe");
+    let exe = engine()?;
     let mut command = Command::new(exe);
     if !attached {
         crate::console::no_console_window(&mut command);

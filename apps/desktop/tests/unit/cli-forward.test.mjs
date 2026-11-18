@@ -15,7 +15,7 @@ const sidecar = fileURLToPath(new URL(`../../src-tauri/binaries/seldon-runtime-$
 test("el main de producción reenvía la CLI con pipes, archivos, salida descartada y sin consola nueva", async (t) => {
   const scratch = mkdtempSync(join(tmpdir(), "terminus-forward-"));
   const binary = join(scratch, windows ? "terminus.exe" : "terminus");
-  const engine = join(scratch, windows ? "seldon-runtime.exe" : "seldon-runtime");
+  const engine = join(scratch, windows ? "danil-engine.exe" : "danil-engine");
   const run = (args, options = {}) => {
     const result = spawnSync(binary, args, { encoding: "utf8", timeout: 10_000, windowsHide: true, ...options });
     assert.ifError(result.error);
@@ -28,6 +28,11 @@ test("el main de producción reenvía la CLI con pipes, archivos, salida descart
 pub fn background_dispatch() {}
 pub fn launch() -> Result<(), Error> { println!("window"); Ok(()) }
 pub fn stop_engine() -> i32 { println!("stop-engine"); 0 }
+pub fn bundled_engine(exe: &std::path::Path) -> Option<std::path::PathBuf> {
+    ["danil-engine", "seldon-runtime"].iter()
+        .map(|name| exe.with_file_name(format!("{name}{}", std::env::consts::EXE_SUFFIX)))
+        .find(|path| path.is_file())
+}
 `);
     execFileSync("rustc", ["--edition=2021", "--crate-name", "app_lib", "--crate-type=rlib", stub, "-o", library], { timeout: 60_000 });
     execFileSync("rustc", ["--edition=2021", "-C", "debug-assertions=no", main, "--extern", `app_lib=${library}`, "-o", binary], { timeout: 60_000 });

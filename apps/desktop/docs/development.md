@@ -355,6 +355,11 @@ person's explicit confirmation of the version and its type.
    --directory <dir>`; on macOS sign them with `python3
    scripts/work-tools-macos.py --directory <dir>/work-tools`.
 3. Build with `pnpm desktop:build --config <dir>/tauri.work-tools.json …`
+   On macOS `desktop-build.mjs` puts `scripts/macos-codesign/` first on the
+   `PATH`: Tauri signs each sidecar with `codesign --force -s` and the file name
+   as identifier, and that shim adds `--identifier seldon-runtime` when it signs
+   `Contents/MacOS/danil-engine`. The window trusts the engine by that
+   identifier (`master_handoff.rs`); do not sign the bundle by another path.
    (on Linux also `--config src-tauri/tauri.linux.conf.json`).
    `scripts/desktop-build.mjs` refuses a bundle without the tools and, on
    Linux, sets the linuxdeploy environment (`NO_STRIP`, `PATCHELF`,
@@ -366,7 +371,12 @@ person's explicit confirmation of the version and its type.
    `work-tools/<target>` with a schema 2 manifest (both architectures for
    the universal app), then runs `work-tools-release.py verify` and
    `work-tools-runtime-smoke.py --browser --clone` against the packaged
-   engine. Nothing is uploaded from an artifact that did not pass it. The
+   engine. It also requires `danil-engine` and its alias `seldon-runtime`
+   beside the window: on Windows both with the SHA-256 of
+   `seldon-runtime.lock`, on Linux that one or the same binary with
+   linuxdeploy's RUNPATH (`patchelf --set-rpath '$ORIGIN/../lib'`, needs the
+   sidecar from `node scripts/engine.mjs sidecar`), and on macOS both signed
+   with the identifier `seldon-runtime` (`codesign -dv`). Nothing is uploaded from an artifact that did not pass it. The
    browser phase needs a host where Chrome's sandbox starts (on Ubuntu 23.10+,
    unprivileged user namespaces allowed).
 

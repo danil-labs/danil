@@ -4,7 +4,7 @@
  * and runs the Terminus window against it with throwaway data.
  *
  *   node scripts/engine.mjs download [--from <seldon-runtime>]
- *   node scripts/engine.mjs sidecar   places the pinned engine in src-tauri/binaries/ for `bundle.externalBin`
+ *   node scripts/engine.mjs sidecar   places the pinned engine in src-tauri/binaries/ for `bundle.externalBin` (danil-engine and its alias)
  *   node scripts/engine.mjs start    [--window <terminus>] [--lab <dir>]
  *   node scripts/engine.mjs engine | select | window | status | stop  [--lab <dir>]
  *
@@ -21,7 +21,7 @@
  */
 import { spawn, spawnSync } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
-import { chmodSync, copyFileSync, existsSync, mkdirSync, openSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, copyFileSync, existsSync, mkdirSync, openSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createConnection } from "node:net";
 import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
@@ -148,21 +148,30 @@ async function download() {
 }
 
 /**
- * The engine the installer packages: Tauri looks for `src-tauri/binaries/seldon-runtime-<triple>`
- * on every platform. macOS also gets `universal-apple-darwin`, a `lipo` of both pinned binaries,
- * for the universal bundle.
+ * The engine the installer packages: Tauri looks for `src-tauri/binaries/<name>-<triple>` for every
+ * name in `bundle.externalBin`. The pinned binary is downloaded once and placed as `danil-engine`
+ * and as the alias `seldon-runtime`, byte for byte. macOS also
+ * gets `universal-apple-darwin`, a `lipo` of both pinned binaries, copied to both names.
  */
+const SIDECAR_NAMES = ["danil-engine", "seldon-runtime"];
+
 async function sidecar() {
   const triples = process.platform === "darwin" ? ["aarch64-apple-darwin", "x86_64-apple-darwin"] : [PLATFORM];
   const placed = [];
   for (const triple of triples) placed.push(await placeSidecar(triple));
   if (process.platform === "darwin") {
-    const universal = sidecarPath("universal-apple-darwin");
-    const result = spawnSync("lipo", ["-create", "-output", universal, ...placed], { stdio: "inherit" });
-    if (result.status !== 0) fail(`lipo could not build ${universal}.`);
-    chmodSync(universal, 0o755);
-    console.log(`Sidecar ready: ${universal} (lipo of ${triples.join(", ")}).`);
+    const [primary, ...aliases] = SIDECAR_NAMES.map((name) => sidecarPath("universal-apple-darwin", name));
+    const result = spawnSync("lipo", ["-create", "-output", primary, ...placed], { stdio: "inherit" });
+    if (result.status !== 0) fail(`lipo could not build ${primary}.`);
+    chmodSync(primary, 0o755);
+    for (const alias of aliases) copyExecutable(primary, alias);
+    console.log(`Sidecar ready: ${primary} and its alias (lipo of ${triples.join(", ")}).`);
   }
+}
+
+function copyExecutable(from, to) {
+  copyFileSync(from, to);
+  if (!to.endsWith(".exe")) chmodSync(to, 0o755);
 }
 
 async function fetchRetrying(url, attempts = 3) {
@@ -178,26 +187,33 @@ async function fetchRetrying(url, attempts = 3) {
   }
 }
 
-const sidecarPath = (triple) => join(ROOT, "src-tauri", "binaries", `seldon-runtime-${triple}${triple.includes("windows") ? ".exe" : ""}`);
+const sidecarPath = (triple, name = SIDECAR_NAMES[0]) =>
+  join(ROOT, "src-tauri", "binaries", `${name}-${triple}${triple.includes("windows") ? ".exe" : ""}`);
 
-/** One pinned engine, downloaded only when the copy in place does not match the lock. */
+/** One pinned engine under every name, downloaded only when a copy in place does not match the lock. */
 async function placeSidecar(triple) {
   const pinned = LOCK.platforms[triple];
   if (!pinned?.url || !pinned?.sha256) fail(`seldon-runtime.lock does not pin ${triple}: the bundle cannot carry the engine.`);
   if (/\.(zip|tar\.gz|tgz)$/.test(pinned.url)) fail(`The sidecar takes a bare executable; ${triple} is pinned as an archive.`);
-  const target = sidecarPath(triple);
-  if (existsSync(target) && sha256(target) === pinned.sha256) {
-    console.log(`Sidecar in place: ${target} (sha256 matches the lock).`);
-    return target;
+  const targets = SIDECAR_NAMES.map((name) => sidecarPath(triple, name));
+  const source = targets.find((target) => existsSync(target) && sha256(target) === pinned.sha256);
+  if (source) {
+    for (const target of targets) {
+      if (target !== source && !(existsSync(target) && sha256(target) === pinned.sha256)) copyExecutable(source, target);
+    }
+    console.log(`Sidecar in place: ${targets.join(", ")} (sha256 matches the lock).`);
+    return targets[0];
   }
   const bytes = await fetchRetrying(pinned.url);
   const got = createHash("sha256").update(bytes).digest("hex");
   if (got !== pinned.sha256) fail(`SHA-256 mismatch for ${triple}: expected ${pinned.sha256}, got ${got}. Nothing was placed.`);
-  mkdirSync(dirname(target), { recursive: true });
-  writeFileSync(target, bytes);
-  if (!triple.includes("windows")) chmodSync(target, 0o755);
-  console.log(`Sidecar ready: ${target} (sha256 ${got}).`);
-  return target;
+  mkdirSync(dirname(targets[0]), { recursive: true });
+  for (const target of targets) {
+    writeFileSync(target, bytes);
+    if (!triple.includes("windows")) chmodSync(target, 0o755);
+  }
+  console.log(`Sidecar ready: ${targets.join(", ")} (sha256 ${got}).`);
+  return targets[0];
 }
 
 function findFile(dir, name) {

@@ -1,12 +1,15 @@
 // La compuerta de una publicación manual: abre el instalador, AppImage o .app ya
 // construido y exige las herramientas con su inventario, como publish.yml tras empaquetar.
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, rmSync, statSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { copyFileSync, existsSync, mkdtempSync, readFileSync, rmSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, delimiter, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+// Igual que ENGINE_NAMES en src-tauri/src/extracted/engine.rs (guarda `engine-names`).
+export const ENGINE_NAMES = ["danil-engine", "seldon-runtime"];
 export const TARGETS = {
   win32: ["x86_64-pc-windows-msvc"],
   linux: ["x86_64-unknown-linux-gnu"],
@@ -22,11 +25,74 @@ export function artifactPlan(artifact, host = process.platform) {
     throw new Error(`${name} se verifica en ${platform}: su motor tiene que correr y el inventario se lee con las reglas de esa plataforma`);
   }
   const layout = {
-    linux: { resources: "squashfs-root/usr/share/Danil/work-tools", engine: "squashfs-root/usr/bin/seldon-runtime" },
-    win32: { resources: "work-tools", engine: "seldon-runtime.exe" },
-    darwin: { resources: "Contents/Resources/work-tools", engine: "Contents/MacOS/seldon-runtime" },
+    linux: { resources: "squashfs-root/usr/share/Danil/work-tools", engines: "squashfs-root/usr/bin", suffix: "" },
+    win32: { resources: "work-tools", engines: "", suffix: ".exe" },
+    darwin: { resources: "Contents/Resources/work-tools", engines: "Contents/MacOS", suffix: "" },
   }[platform];
-  return { platform, targets: TARGETS[platform], ...layout };
+  const engines = ENGINE_NAMES.map((name) => (layout.engines ? `${layout.engines}/${name}${layout.suffix}` : `${name}${layout.suffix}`));
+  return { platform, targets: TARGETS[platform], resources: layout.resources, engine: engines[0], engines };
+}
+
+const sha256 = (path) => createHash("sha256").update(readFileSync(path)).digest("hex");
+
+/**
+ * `danil-engine` y su alias tienen los mismos bytes y son los del lock (`accepted`: los SHA-256
+ * que valen en esta plataforma). En macOS la firma cambia los bytes: ahí se pide `accepted = null`
+ * y solo se exige que estén los dos.
+ */
+export function checkEngines(paths, accepted) {
+  const problems = [];
+  const present = paths.filter((path) => {
+    if (existsSync(path)) return true;
+    problems.push(`el paquete no trae ${basename(path)}`);
+    return false;
+  });
+  if (!accepted) return problems;
+  const hashes = new Map(present.map((path) => [path, sha256(path)]));
+  if (new Set(hashes.values()).size > 1) problems.push(`${present.map((path) => basename(path)).join(" y ")} no tienen los mismos bytes`);
+  for (const [path, hash] of hashes) {
+    if (!accepted.has(hash)) problems.push(`${basename(path)} (sha256 ${hash}) no es el motor fijado en seldon-runtime.lock`);
+  }
+  return problems;
+}
+
+/** En macOS los dos se firman con el identificador `seldon-runtime` que exige la ventana. */
+export function checkEngineIdentifiers(paths, describe = codesignDetails) {
+  return paths
+    .filter((path) => existsSync(path))
+    .flatMap((path) => {
+      const identifier = /^Identifier=(.+)$/m.exec(describe(path))?.[1];
+      return identifier === "seldon-runtime" ? [] : [`${basename(path)} está firmado como ${identifier ?? "nada"}, no como seldon-runtime`];
+    });
+}
+
+function codesignDetails(path) {
+  const result = spawnSync("codesign", ["-dv", path], { encoding: "utf8" });
+  return `${result.stdout}${result.stderr}`;
+}
+
+/**
+ * Los SHA-256 que vale el motor empaquetado: el del lock y, en un AppImage, el mismo binario con
+ * el RUNPATH que le pone linuxdeploy (`work-tools-candidate-verify.py`).
+ */
+function acceptedEngines(plan, scratch) {
+  if (plan.platform === "darwin") return null;
+  const lock = JSON.parse(readFileSync(join(ROOT, "seldon-runtime.lock"), "utf8"));
+  const [target] = plan.targets;
+  const pinned = lock.platforms?.[target]?.sha256;
+  if (!pinned) throw new Error(`seldon-runtime.lock no fija ${target}`);
+  const accepted = new Set([pinned]);
+  if (plan.platform !== "linux") return accepted;
+  const sidecar = join(ROOT, "src-tauri/binaries", `${ENGINE_NAMES[0]}-${target}`);
+  if (!existsSync(sidecar) || sha256(sidecar) !== pinned) {
+    throw new Error(`falta ${sidecar} con el motor del lock: corre node scripts/engine.mjs sidecar`);
+  }
+  const patchelf = process.env.TERMINUS_REAL_PATCHELF || "patchelf";
+  const expected = join(scratch, "expected-engine");
+  copyFileSync(sidecar, expected);
+  run(patchelf, ["--set-rpath", "$ORIGIN/../lib", expected]);
+  accepted.add(sha256(expected));
+  return accepted;
 }
 
 /** Cada árbol que el paquete tiene que traer, con un manifiesto de esta generación. */
@@ -93,6 +159,10 @@ export function verify(artifact) {
     const resources = join(opened.base, plan.resources);
     const problems = checkManifests(resources, plan.targets);
     if (problems.length) throw new Error(problems.join("; "));
+    const engines = plan.engines.map((engine) => join(opened.base, engine));
+    const engineProblems = checkEngines(engines, acceptedEngines(plan, scratch));
+    if (plan.platform === "darwin") engineProblems.push(...checkEngineIdentifiers(engines));
+    if (engineProblems.length) throw new Error(engineProblems.join("; "));
     const python = process.env.PYTHON || (process.platform === "win32" ? "python" : "python3");
     run(python, [join(ROOT, "scripts/work-tools-release.py"), "verify", "--directory", resources]);
     const app = plan.platform === "darwin" ? ["--app", opened.base] : [];

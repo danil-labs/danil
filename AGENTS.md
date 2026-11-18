@@ -23,7 +23,7 @@ Este repo es un satélite. La fuente de verdad del desarrollo es
 <!-- danil:workspace-route:end -->
 
 This repository holds the Danil clients and what they share. The domain
-(workspaces, tasks, agent turns, accounts) lives in the engine `seldon-runtime`,
+(workspaces, tasks, agent turns, accounts) lives in the engine `danil-engine`,
 which is not here.
 
 | Path | What it is | Guide |
@@ -64,6 +64,20 @@ contract: `ai.danil.terminus` and `ai.danil.terminus.mobile`, `terminus://task`,
 `::terminus-visual`, the `terminal_theme` id `terminus`, and RPC names such as
 `radiant_*`. Renaming any of them needs an architect-reviewed
 installed-update transition, not a find and replace.
+
+The engine binary is `danil-engine`. These keep `seldon` on purpose, because they are saved
+data, signing trust, the engine updater or the VM layout. Renaming any of them needs an
+architect-reviewed transition (`terminus-workspace` decision 2026-11-18, engine rename):
+- the data-root files `seldon-runtime.lock`, `seldon-endpoint.json` and `seldon-authority.json`;
+- the macOS code-signing identifier `seldon-runtime` of the bundled engine;
+- the bundled alias `seldon-runtime` beside the window, until the alias removal conditions are met;
+- the repo file `apps/desktop/seldon-runtime.lock` and its `name`;
+- engine releases `seldon-runtime-v*`, `seldon-runtime.json(.sig)` and `seldon-runtime-<triple>` assets;
+- identities `ai.danil.seldon.dev` (lab) and `ai.danil.seldon.vm`;
+- VM names `seldon-host@`, `/opt/seldon`, `/Users/Shared/seldon` and `SELDON_*` variables.
+
+Internal crate names (`seldon-existing-runtime`, `seldon_engine_manifest`) are not product
+names and may change freely.
 
 The desktop `productName` became `Danil` in 0.3.0 (artifacts `Danil_*`,
 stable downloads `Danil-*` at `danil.ai/download/`, with `Terminus-*` copies

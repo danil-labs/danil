@@ -1,5 +1,5 @@
 //! Sin `--external-host`, la ventana usa el motor que viaja con ella: reutiliza
-//! uno vivo sobre su carpeta de datos o lanza `seldon-runtime` junto al
+//! uno vivo sobre su carpeta de datos o lanza `danil-engine` junto al
 //! ejecutable. Un release abre la raíz de `ai.danil.terminus`, la de 0.2.74; el
 //! laboratorio usa `ai.danil.seldon.dev` y nunca esa raíz. Un candado evita que
 //! dos ventanas arranquen dos motores. Ver `docs/engine-client.md`.
@@ -14,6 +14,10 @@ use terminus_engine_protocol::{Error, Result, Selection, VERSION};
 
 pub const PRODUCTION: &str = "ai.danil.terminus";
 pub const LAB_IDENTITY: &str = "ai.danil.seldon.dev";
+/// El motor junto a la ventana, en el orden en que se busca: el que se lanza y el alias con los
+/// mismos bytes que conserva las rutas de los turnos de la 0.3.2. `scripts/guards/engine-names.mjs`
+/// los compara con `tauri.conf.json` y `windows/hooks.nsh`.
+pub const ENGINE_NAMES: [&str; 2] = ["danil-engine", "seldon-runtime"];
 // Un motor que rechaza o muere sale enseguida por `try_wait`; este plazo solo corta a uno vivo y lento.
 const START_TIMEOUT: Duration = Duration::from_secs(300);
 // Adoptar una raíz real de 0.2.74 tardó unos 25 s; el traspaso enseña el paso mientras tanto.
@@ -152,7 +156,7 @@ pub fn ensure(paths: &Paths, adopt: bool) -> Result<PathBuf> {
                 }
             } else if aside
                 // Uno que trabaja sigue con su versión; la nueva entra cuando lo dejen parar.
-                || !super::legacy::engine_replaced(found.pid, true)
+                || !replaced(found.pid, true)
                 || !retire(&endpoint, found.pid)
             {
                 if waited {
@@ -371,7 +375,7 @@ pub fn retire_if_replaced(paths: &Paths) {
     let Ok((found, status)) = previous(&endpoint) else {
         return;
     };
-    if super::legacy::engine_replaced(found.pid, false) && !working(&status["busy"]) {
+    if replaced(found.pid, false) && !working(&status["busy"]) {
         retire(&endpoint, found.pid);
     }
 }
@@ -525,17 +529,30 @@ fn working(busy: &serde_json::Value) -> bool {
         })
 }
 
-/// `seldon-runtime` junto al ejecutable de la ventana.
+/// El motor junto al ejecutable de la ventana: `danil-engine` y, si falta, el alias.
 fn bundled_engine() -> Result<PathBuf> {
-    let exe = std::env::current_exe()?
-        .with_file_name(format!("seldon-runtime{}", std::env::consts::EXE_SUFFIX));
-    if !exe.is_file() {
-        return Err(Error {
-            detail: serde_json::json!(exe),
-            ..Error::new("engine_missing")
-        });
-    }
-    Ok(exe)
+    let exe = std::env::current_exe()?;
+    beside(&exe).ok_or_else(|| Error {
+        detail: serde_json::json!(engine_file(&exe, ENGINE_NAMES[0])),
+        ..Error::new("engine_missing")
+    })
+}
+
+/// El primero de `ENGINE_NAMES` que existe junto a `exe`.
+pub fn beside(exe: &Path) -> Option<PathBuf> {
+    ENGINE_NAMES
+        .iter()
+        .map(|name| engine_file(exe, name))
+        .find(|path| path.is_file())
+}
+
+fn engine_file(exe: &Path, name: &str) -> PathBuf {
+    exe.with_file_name(format!("{name}{}", std::env::consts::EXE_SUFFIX))
+}
+
+/// El motor vivo no corre del binario que lanzaría esta ventana: otra versión lo dejó.
+fn replaced(pid: u32, deep: bool) -> bool {
+    bundled_engine().is_ok_and(|bundled| super::legacy::engine_replaced(pid, &bundled, deep))
 }
 
 /// El binario que arranca la ventana: en un AppImage, la copia estable que deja `stable_engine`.
@@ -548,7 +565,10 @@ fn engine_root(paths: &Paths) -> PathBuf {
 }
 
 fn installed_engine(paths: &Paths, bundled: PathBuf) -> PathBuf {
-    let copy = engine_root(paths).join("engine").join("seldon-runtime");
+    let Some(name) = bundled.file_name() else {
+        return bundled;
+    };
+    let copy = engine_root(paths).join("engine").join(name);
     if cfg!(target_os = "linux") && std::env::var_os("APPIMAGE").is_some() && copy.is_file() {
         return copy;
     }
@@ -744,8 +764,25 @@ fn private_file(path: &Path) -> Result<File> {
 
 #[cfg(test)]
 mod tests {
-    use super::{differs, only_operations, working};
+    use super::{beside, differs, only_operations, working, ENGINE_NAMES};
     use serde_json::json;
+
+    #[test]
+    fn the_window_launches_danil_engine_and_falls_back_to_the_alias() {
+        let folder = tempfile::tempdir().unwrap();
+        let exe = folder.path().join("terminus");
+        let file = |name: &str| {
+            folder
+                .path()
+                .join(format!("{name}{}", std::env::consts::EXE_SUFFIX))
+        };
+        assert_eq!(beside(&exe), None);
+        std::fs::write(file("seldon-runtime"), b"engine").unwrap();
+        assert_eq!(beside(&exe), Some(file("seldon-runtime")));
+        std::fs::write(file("danil-engine"), b"engine").unwrap();
+        assert_eq!(beside(&exe), Some(file("danil-engine")));
+        assert_eq!(ENGINE_NAMES, ["danil-engine", "seldon-runtime"]);
+    }
 
     #[test]
     fn an_engine_of_another_contract_is_old_only_against_the_bundled_one() {
