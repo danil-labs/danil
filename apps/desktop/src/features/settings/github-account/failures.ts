@@ -24,10 +24,10 @@ const KNOWN = new Set([
 ]);
 
 /** Sin estos no hay GitHub de la cuenta aquí: un motor que aún no tiene los comandos, sin sesión, sin licencia o un Worker sin la App. */
-const NOT_HERE = new Set(["command", "unsupported", "command_not_allowed", "not_found", "http_404", "not_linked", "workspace_not_linked", "github_disabled", "license_required"]);
+const NOT_HERE = new Set(["command", "unsupported", "command_failed", "command_not_allowed", "not_found", "http_404", "not_linked", "workspace_not_linked", "github_disabled", "license_required"]);
 
-/** Estos no se le dicen a la persona: el motor o el Worker aún no tienen GitHub de la cuenta. */
-const SILENT = new Set(["command", "unsupported", "command_not_allowed", "http_404", "github_disabled"]);
+/** Estos no se le dicen a la persona: el motor o el Worker aún no tienen GitHub de la cuenta (o no contesta: `command_failed` por el relay). */
+const SILENT = new Set(["command", "unsupported", "command_failed", "command_not_allowed", "http_404", "github_disabled"]);
 
 export function githubAccountFailure(code: string | null): Failure {
   const c = code ?? "offline";
@@ -37,7 +37,9 @@ export function githubAccountFailure(code: string | null): Failure {
 
 /** El código de un fallo del motor o de la web: `credentials.error.x` → `x`; los del puente (`command`) tal cual. */
 export function githubAccountCode(e: unknown): string | null {
-  const detail = e && typeof e === "object" && "detail" in e ? (e as { detail: unknown }).detail : null;
+  let detail = e && typeof e === "object" && "detail" in e ? (e as { detail: unknown }).detail : null;
+  // Por el relay, el `Failure` del motor de allá llega dentro de `detail`.
+  if (detail && typeof detail === "object" && "detail" in detail) detail = (detail as { detail: unknown }).detail;
   if (typeof detail !== "string" || !detail) return null;
   return detail.startsWith("credentials.error.") ? detail.slice("credentials.error.".length) : detail;
 }
