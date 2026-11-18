@@ -56,6 +56,12 @@ test("preferences have no global account entries, group menus scope credits and 
   assert.ok(await until(() => doc.querySelector('[data-account-header="b"] [data-tone="warning"]')));
   assert.equal(doc.querySelector('[data-account-header="a"] [data-tone="warning"]'), null);
   assert.ok(doc.body.textContent.includes("La organización requiere atención"));
+  assert.equal(doc.querySelector('[data-account-header="b"]').getAttribute("aria-label"), "one@example.com · Org b: requiere atención");
+  const bMenu = [...doc.querySelectorAll('[role="menu"]')].find((menu) => menu.textContent.includes("Cerrar sesión de Org b"));
+  const notice = [...bMenu.querySelectorAll('[role="status"]')].find((row) => row.textContent === "La organización requiere atención");
+  assert.equal(notice.previousElementSibling.textContent, "Org b", "group status follows the organization line");
+  assert.equal(notice.nextElementSibling.tagName, "SPAN", "group status precedes its first separator");
+  assert.equal(notice.nextElementSibling.getAttribute("aria-hidden"), "true");
   assert.ok(!doc.body.textContent.includes("Reportar un bug de Danil"), "organization refusal does not open preferences");
   escape(app); await sleep(50);
   app.w.dispatchEvent(new app.w.CustomEvent("harness:open-settings", { detail: "cuenta-danil" }));
@@ -72,7 +78,8 @@ test("preferences have no global account entries, group menus scope credits and 
   orgClose.click();
   assert.ok(await until(() => closed.length === 1));
   assert.ok(await until(() => !panel.textContent.includes("Org a")));
-  button("Cerrar sesión de todas").click();
+  assert.equal(button("Cerrar sesión de todas"), undefined, "a single remaining organization has no close-all aside");
+  button("Cerrar sesión").click();
   assert.ok(await until(() => closed.length === 2));
   assert.ok(await until(() => panel.textContent.includes("No hay sesiones abiertas.")));
   assert.ok(button("Agregar cuenta u organización"), "adding an account stays available after the last group closes");
@@ -115,6 +122,7 @@ test("the enabled Desk promo route sends a trimmed code and displays rejection c
   submit("SECOND");
   assert.ok(await until(() => doc.querySelector('[data-rejection-code="already_redeemed"]')));
   assert.ok(doc.body.textContent.includes("Este código ya fue canjeado"));
+  assert.ok(doc.querySelector('[data-rejection-code="already_redeemed"]').classList.contains("text-error-strong"));
   submit("THIRD");
   assert.ok(await until(() => doc.querySelector('[data-retry-after-ms="2500"]')));
   assert.ok(doc.body.textContent.includes("Espera 3 segundos antes de reintentar"));

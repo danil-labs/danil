@@ -35,9 +35,9 @@ export default function SessionAccounts() {
   return <SettingsPanel data-session-accounts="">
     <SettingsSection title={t("danil.accounts.title")} description={t("danil.accounts.description")} aside={<Show when={addAccount}><Button size="sm" variant="secondary" disabled={busy()} onClick={() => void run(() => addAccount?.())}>{t("shell.workspaces.add_session")}</Button></Show>}>
       <Show when={!rows().length}><SettingsBlock><p class="m-0 text-sm text-neutral-500">{t("danil.accounts.empty")}</p></SettingsBlock></Show>
-      <Show when={error()}>{(key) => <p role="alert" class="m-0 text-caption text-error-strong">{t(key())}</p>}</Show>
+      <Show when={error()}>{(key) => <SettingsBlock><p role="alert" class="m-0 text-caption text-error-strong">{t(key())}</p></SettingsBlock>}</Show>
     </SettingsSection>
-    <KeyedList each={emails()} by={([key]) => key}>{(entry) => { const [key, email] = entry(); return <SettingsSection title={email ?? t("danil.account.your_account")} aside={<Button size="sm" variant="ghost" disabled={busy()} onClick={() => mine(key).length > 1 ? setConfirm(key) : void closeAll(key)}>{t("danil.accounts.close_all")}</Button>}>
+    <KeyedList each={emails()} by={([key]) => key}>{(entry) => { const [key, email] = entry(); return <SettingsSection title={email ?? t("danil.account.your_account")} aside={<Show when={mine(key).length > 1}><Button size="sm" variant="ghost" disabled={busy()} onClick={() => setConfirm(key)}>{t("danil.accounts.close_all")}</Button></Show>}>
       <KeyedList each={mine(key)} by={(group) => group.context}>{(group) => <AccountOrganization group={group()} send={send} busy={busy()} onClose={() => void run(() => capabilities().nativeWindow ? rail()?.sessions.close({ context: group().context }) : capabilities().webAccounts?.signOut())} />}</KeyedList>
       <Show when={confirm() === key}><SettingsRow label={t("danil.accounts.close_all_confirm", { email: email ?? "", count: mine(key).length })}>
         <Button size="sm" variant="secondary" disabled={busy()} onClick={() => void closeAll(key)}>{t("danil.account.sign_out")}</Button>

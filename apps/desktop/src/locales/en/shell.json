@@ -463,5 +463,6 @@
   "shell.profile.preferences": "Preferences",
   "shell.workspaces.organization_required": "The organization needs attention",
   "shell.workspaces.machine_unresponsive": "The machine for {name} is not responding. Try again in a moment.",
-  "shell.workspaces.machine_retry": "Retry"
+  "shell.workspaces.machine_retry": "Retry",
+  "shell.workspaces.requires_attention": "needs attention"
 }
