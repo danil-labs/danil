@@ -1,3 +1,4 @@
+import { availableDanilCredits } from "./credits-balance.ts";
 import { normalizePromoCode } from "./promo-rejections.ts";
 
 export type GroupAccount = { context: string; org: string; name: string; plan: string | null };
@@ -12,12 +13,7 @@ export async function readGroupBalance(send: GroupSend, group: GroupAccount): Pr
   } catch { return null; }
 }
 
-export function availableCredits(value: unknown, organization: string): number | null {
-  const body = value as { organization_id?: unknown; available?: { currency?: unknown; amount_micro?: unknown } } | null;
-  const micro = body?.available?.amount_micro;
-  if (body?.organization_id !== organization || body.available?.currency !== "MXN" || typeof micro !== "string" || !/^(0|[1-9][0-9]{0,18})$/.test(micro) || BigInt(micro) > 9223372036854775807n) return null;
-  return Number(micro) / 1_000_000;
-}
+export const availableCredits = availableDanilCredits;
 
 export async function redeemGroupCode(send: GroupSend, group: GroupAccount, code: string, key: string) {
   const value = normalizePromoCode(code);

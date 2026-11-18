@@ -1,13 +1,15 @@
 import type { edgeTransport } from "@terminus/computers";
-import type { GroupAccount, GroupSend } from "../lib/group-account.ts";
+import type { GroupAccount, GroupReply, GroupSend } from "../lib/group-account.ts";
 
-export function webGroupAccount(transport: ReturnType<typeof edgeTransport>) {
+export function webGroupAccount(transport: ReturnType<typeof edgeTransport>, credits?: { read: (context: string) => Promise<GroupReply>; clear: () => void }) {
   let legacy = false;
   const send: GroupSend = async (context, method, path, body, key) => {
     if (!["/v1/credits/balance", "/v1/workspaces/promo/redeem"].includes(path)) throw { detail: "invalid_request" };
+    if (method === "GET" && path === "/v1/credits/balance" && credits) return credits.read(context);
     const init = { headers: { "X-Danil-Session": context, ...(key ? { "Idempotency-Key": key } : {}), ...(body ? { "Content-Type": "application/json" } : {}) }, ...(body ? { body: JSON.stringify(body) } : {}) };
     const response = await (method === "GET" ? transport.call(path.slice(4), init) : transport.mutation(path.slice(4), init));
     if (response.ok && response.headers.get("X-Danil-Session-Applied") !== context) throw { detail: "session_echo_mismatch" };
+    if (response.ok && method === "POST") credits?.clear();
     return { status: response.status, body: await response.json() };
   };
   return { send, legacy: () => legacy, async current(): Promise<GroupAccount | null> {
