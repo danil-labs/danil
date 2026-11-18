@@ -55,6 +55,8 @@ export function enqueue(pending: readonly PendingOp[], next: PendingOp): Pending
 }
 
 const keyOf = (scope: SyncScope) => `${scope.person}:${scope.organization}`;
+/** Los cambios hechos antes de saber persona y organización: el primer alcance toma los que sirve. */
+const UNSCOPED = "*";
 
 export function createHiddenSync(deps: {
   transport: PreferencesTransport;
@@ -104,6 +106,12 @@ export function createHiddenSync(deps: {
     }
     const key = keyOf(scope);
     if (account && account.key !== key) (account = null), deps.onChange();
+    const early = deps.store.read(UNSCOPED)?.pending ?? [];
+    if (early.length) {
+      const current = record(key);
+      deps.store.write(key, { ...current, pending: early.filter((p) => scope.served.has(p.id)).reduce(enqueue, current.pending) });
+      deps.store.write(UNSCOPED, { migrated: false, pending: [] });
+    }
     if (!(await flush(key))) return retry();
     const reply = await deps.transport.get();
     if (outcomeOf(reply) !== "ok") return retry();
@@ -140,8 +148,8 @@ export function createHiddenSync(deps: {
 
   function change(id: string, op: PendingOp["op"]) {
     const scope = deps.scope();
-    if (!scope?.served.has(id)) return;
-    const key = keyOf(scope);
+    if (scope && !scope.served.has(id)) return;
+    const key = scope ? keyOf(scope) : UNSCOPED;
     const current = record(key);
     deps.store.write(key, { ...current, pending: enqueue(current.pending, { op, id }) });
     if (account?.key === key) op === "add" ? account.hidden.add(id) : account.hidden.delete(id);

@@ -153,3 +153,20 @@ test('changing organization does not mix lists', async () => {
   assert.deepEqual([...(sync.account() ?? [])], [], 'org_B starts empty');
   assert.deepEqual(svc.rows.get('org_A')?.hidden, ['org1']);
 });
+
+test('a change made before the scope is known is not lost once the person is known', async () => {
+  const svc = service();
+  const scope = scopeA(['org1']);
+  const { sync, records } = setup(svc, scope);
+  await sync.sync();
+  const known = scope.current;
+  scope.current = null;
+  sync.hide('org1');
+  sync.hide('mine');
+  scope.current = known;
+  await sync.sync();
+  assert.deepEqual(svc.rows.get('org_A')?.hidden, ['org1'], 'the organization one is uploaded');
+  assert.ok(!svc.calls.includes('PUT mine'), 'a local one never travels');
+  assert.deepEqual([...(sync.account() ?? [])], ['org1']);
+  assert.deepEqual(records.get('*')?.pending ?? [], []);
+});
