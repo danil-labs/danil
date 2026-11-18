@@ -1,0 +1,7 @@
+{
+  "schema": "openapi/public.openapi.json#/components/schemas/PurchaseCreate",
+  "value": {
+    "pack_id": "pack_synthetic_100",
+    "catalog_version": 3
+  }
+}

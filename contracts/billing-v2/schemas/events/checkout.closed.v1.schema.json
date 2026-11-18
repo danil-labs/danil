@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.danil.ai/billing-v2/events/checkout.closed.v1.schema.json",
+  "title": "ai.danil.billing.checkout.closed.v1 — data",
+  "$comment": "aggregate_key = checkout:<checkout_id>. identity libera la organización reservada solo con outcome=expired; canceled conserva la reserva hasta expiración probada o reserved_until; completed no crea nada por sí solo (la activación es entitlement.changed). Para una organización reservada, reservation_id y checkout_id son obligatorios por protocolo y salen del vínculo local de treasury; activación no se deriva de metadata. No hay callback al productor.",
+  "type": "object",
+  "required": [
+    "checkout_id",
+    "organization_id",
+    "kind",
+    "outcome"
+  ],
+  "properties": {
+    "checkout_id": {
+      "$ref": "../common.v1.schema.json#/$defs/checkout_id"
+    },
+    "organization_id": {
+      "$ref": "../common.v1.schema.json#/$defs/organization_id"
+    },
+    "kind": {
+      "type": "string",
+      "enum": [
+        "plan",
+        "credits"
+      ]
+    },
+    "outcome": {
+      "type": "string",
+      "enum": [
+        "completed",
+        "expired",
+        "canceled"
+      ]
+    },
+    "reservation_id": {
+      "$ref": "../common.v1.schema.json#/$defs/organization_reservation_id"
+    }
+  }
+}

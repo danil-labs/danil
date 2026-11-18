@@ -1,0 +1,444 @@
+{
+  "$comment": "Reglas de autorización ejecutables. Las firmas (JWT del borde, Access, E1) las verifica el verificador común R1 con los vectores de edge `test/vectors/req.json` (edge 0af0a5b); aquí se prueban las decisiones sobre claims YA verificados.",
+  "event_producer": {
+    "$comment": "authenticated = sujeto E1 verificado de QUIEN ENTREGA (E1 autentica cada salto). Entrega directa: el sujeto debe ser del productor. Entrega por relé: E1 solo prueba al relé; el productor se prueba únicamente con el JWS del evento (vectors/event-jws-v1.json, attested). Sin JWS, un relé nunca vale como billing. `irreversible` es informativo: el efecto irreversible además exige el handshake de destrucción (gate cerrado).",
+    "cases": [
+      {
+        "authenticated": "svc:billing",
+        "delivery": "direct",
+        "type": "ai.danil.billing.entitlement.changed.v1",
+        "producer": "billing",
+        "irreversible": true,
+        "result": "ok"
+      },
+      {
+        "authenticated": "svc:billing",
+        "delivery": "direct",
+        "type": "ai.danil.billing.credits.changed.v1",
+        "producer": "billing",
+        "irreversible": false,
+        "result": "ok"
+      },
+      {
+        "authenticated": "svc:workspaces",
+        "delivery": "direct",
+        "type": "ai.danil.billing.entitlement.changed.v1",
+        "producer": "billing",
+        "irreversible": false,
+        "result": "producer_subject_mismatch"
+      },
+      {
+        "authenticated": "svc:identity",
+        "delivery": "direct",
+        "type": "ai.danil.billing.entitlement.changed.v1",
+        "producer": "identity",
+        "irreversible": false,
+        "result": "producer_type_mismatch"
+      },
+      {
+        "authenticated": "svc:unknown",
+        "delivery": "direct",
+        "type": "ai.danil.billing.entitlement.changed.v1",
+        "producer": "unknown",
+        "irreversible": false,
+        "result": "producer_unknown"
+      },
+      {
+        "authenticated": "svc:billing",
+        "delivery": "direct",
+        "type": "ai.danil.billing.purchase.paid.v1",
+        "producer": "billing",
+        "irreversible": false,
+        "result": "type_unknown"
+      },
+      {
+        "authenticated": "svc:events-relay",
+        "delivery": "relay",
+        "type": "ai.danil.billing.entitlement.changed.v1",
+        "producer": "billing",
+        "irreversible": true,
+        "result": "producer_unattested"
+      },
+      {
+        "authenticated": "svc:events-relay",
+        "delivery": "relay",
+        "type": "ai.danil.billing.entitlement.changed.v1",
+        "producer": "billing",
+        "irreversible": false,
+        "result": "producer_unattested"
+      },
+      {
+        "authenticated": null,
+        "delivery": "direct",
+        "type": "ai.danil.billing.entitlement.changed.v1",
+        "producer": "billing",
+        "irreversible": false,
+        "result": "unauthenticated"
+      }
+    ]
+  },
+  "usage": {
+    "$comment": "producer = derivado del JWT de Access verificado. authorizations = autorizaciones activas (organización, productor). Que la organización exista no autoriza.",
+    "authorizations": [
+      {
+        "organization_id": "org_01SYNTHETICORGA",
+        "producer": "messaging"
+      },
+      {
+        "organization_id": "org_01SYNTHETICORGA",
+        "producer": "danil-ai"
+      }
+    ],
+    "cases": [
+      {
+        "producer": "messaging",
+        "organization_id": "org_01SYNTHETICORGA",
+        "entry_point": "messaging",
+        "result": "ok"
+      },
+      {
+        "producer": "messaging",
+        "organization_id": "org_01SYNTHETICORGA",
+        "entry_point": "danil_ai_api",
+        "result": "entry_point_not_allowed"
+      },
+      {
+        "producer": "messaging",
+        "organization_id": "org_01SYNTHETICORGB",
+        "entry_point": "messaging",
+        "result": "producer_not_authorized"
+      },
+      {
+        "producer": "danil-ai",
+        "organization_id": "org_01SYNTHETICORGA",
+        "entry_point": "danil_ai_app",
+        "result": "ok"
+      },
+      {
+        "producer": "nobody",
+        "organization_id": "org_01SYNTHETICORGA",
+        "entry_point": "messaging",
+        "result": "producer_unknown"
+      },
+      {
+        "producer": null,
+        "organization_id": "org_01SYNTHETICORGA",
+        "entry_point": "messaging",
+        "result": "producer_unknown"
+      }
+    ],
+    "caps": {
+      "$comment": "El tope no pierde el reporte: queda `held` (guardado, sin aplicar, con alerta).",
+      "producer": "messaging",
+      "max_charge_micro_per_report": "50000000",
+      "max_charge_micro_per_org_hour": "500000000",
+      "cases": [
+        {
+          "charge_micro": "50000000",
+          "org_hour_micro": "0",
+          "result": "ok"
+        },
+        {
+          "charge_micro": "50000001",
+          "org_hour_micro": "0",
+          "result": "held"
+        },
+        {
+          "charge_micro": "1",
+          "org_hour_micro": "500000000",
+          "result": "held"
+        },
+        {
+          "charge_micro": "0",
+          "org_hour_micro": "500000000",
+          "result": "ok"
+        }
+      ]
+    }
+  },
+  "public": {
+    "$comment": "claims = JWT interno del borde YA verificado (firma, iss=edge-gateway, aud=billing, exp, jti de un uso, req atado a la petición). Aquí: typ, ctx, org, scopes y relación de pagador.",
+    "subscription": {
+      "organization_id": "org_01SYNTHETICORGA",
+      "payer_person_id": "user_01SYNTHETICPAYER"
+    },
+    "cases": [
+      {
+        "action": "catalog.read",
+        "claims": {
+          "typ": "JWT",
+          "sub": "user_01SYNTHETICANY",
+          "ctx": "none",
+          "scopes": []
+        },
+        "result": "ok"
+      },
+      {
+        "action": "organization.read",
+        "claims": {
+          "typ": "JWT",
+          "sub": "user_01SYNTHETICADMIN",
+          "org": "org_01SYNTHETICORGA",
+          "scopes": [
+            "billing.read"
+          ]
+        },
+        "result": "ok"
+      },
+      {
+        "action": "organization.read",
+        "claims": {
+          "typ": "JWT",
+          "sub": "user_01SYNTHETICANY",
+          "ctx": "none",
+          "scopes": []
+        },
+        "result": "insufficient_scope"
+      },
+      {
+        "action": "organization.read",
+        "claims": {
+          "typ": "danil-service+jwt",
+          "sub": "svc:workspaces",
+          "org": "org_01SYNTHETICORGA",
+          "scopes": [
+            "billing.read"
+          ]
+        },
+        "result": "unauthenticated"
+      },
+      {
+        "action": "checkout.create",
+        "claims": {
+          "typ": "JWT",
+          "sub": "user_01SYNTHETICADMIN",
+          "org": "org_01SYNTHETICORGA",
+          "scopes": [
+            "billing.read"
+          ]
+        },
+        "result": "insufficient_scope"
+      },
+      {
+        "action": "checkout.create",
+        "claims": {
+          "typ": "JWT",
+          "sub": "user_01SYNTHETICADMIN",
+          "org": "org_01SYNTHETICORGA",
+          "scopes": [
+            "billing.manage"
+          ]
+        },
+        "result": "ok"
+      },
+      {
+        "action": "portal.create",
+        "claims": {
+          "typ": "JWT",
+          "sub": "user_01SYNTHETICADMIN",
+          "org": "org_01SYNTHETICORGA",
+          "scopes": [
+            "billing.manage"
+          ]
+        },
+        "result": "not_payer"
+      },
+      {
+        "action": "portal.create",
+        "claims": {
+          "typ": "JWT",
+          "sub": "user_01SYNTHETICPAYER",
+          "org": "org_01SYNTHETICORGA",
+          "scopes": [
+            "billing.manage"
+          ]
+        },
+        "result": "ok"
+      },
+      {
+        "action": "portal.create",
+        "claims": {
+          "typ": "JWT",
+          "sub": "user_01SYNTHETICPAYER",
+          "org": "org_01SYNTHETICORGA",
+          "scopes": [
+            "billing.read"
+          ]
+        },
+        "result": "insufficient_scope"
+      },
+      {
+        "action": "subscription.cancel",
+        "claims": {
+          "typ": "JWT",
+          "sub": "user_01SYNTHETICPAYER",
+          "org": "org_01SYNTHETICORGA",
+          "scopes": [
+            "billing.manage"
+          ]
+        },
+        "result": "insufficient_scope"
+      },
+      {
+        "action": "subscription.cancel",
+        "claims": {
+          "typ": "JWT",
+          "sub": "user_01SYNTHETICOWNER",
+          "org": "org_01SYNTHETICORGA",
+          "scopes": [
+            "billing.manage",
+            "billing.subscription.cancel"
+          ]
+        },
+        "result": "ok"
+      },
+      {
+        "action": "invoice.pay_url",
+        "claims": {
+          "typ": "JWT",
+          "sub": "user_01SYNTHETICADMIN",
+          "org": "org_01SYNTHETICORGA",
+          "scopes": [
+            "billing.read"
+          ]
+        },
+        "result": "not_payer"
+      },
+      {
+        "action": "invoice.pay_url",
+        "claims": {
+          "typ": "JWT",
+          "sub": "user_01SYNTHETICPAYER",
+          "org": "org_01SYNTHETICORGA",
+          "scopes": [
+            "billing.read"
+          ]
+        },
+        "result": "ok"
+      },
+      {
+        "action": "credits.purchase",
+        "claims": {
+          "typ": "JWT",
+          "sub": "user_01SYNTHETICADMIN",
+          "org": "org_01SYNTHETICORGA",
+          "scopes": [
+            "credits.purchase"
+          ]
+        },
+        "result": "ok"
+      },
+      {
+        "action": "credits.refund",
+        "claims": {
+          "typ": "JWT",
+          "sub": "user_01SYNTHETICPAYER",
+          "org": "org_01SYNTHETICORGA",
+          "scopes": [
+            "credits.purchase",
+            "billing.manage"
+          ]
+        },
+        "result": "action_unknown"
+      },
+      {
+        "action": "usage_authorization.write",
+        "claims": {
+          "typ": "JWT",
+          "sub": "user_01SYNTHETICADMIN",
+          "org": "org_01SYNTHETICORGA",
+          "scopes": [
+            "billing.manage"
+          ]
+        },
+        "result": "ok"
+      }
+    ]
+  },
+  "export": {
+    "$comment": "Regla que debe aplicar machine-provisioning (dueño de la exportación). Solo el disco de la persona que pide, nunca el de otro miembro por ser owner. URL privada a un objeto, ≤ 300 s y nunca más allá de data_retention_until.",
+    "url_max_lifetime_s": 300,
+    "cases": [
+      {
+        "state": "suspended",
+        "requester": "user_01SYNTHETICMEMBER",
+        "volume_owner": "user_01SYNTHETICMEMBER",
+        "now": "2026-12-20T00:00:00Z",
+        "data_retention_until": "2027-01-13T00:05:00Z",
+        "result": "ok",
+        "url_expires_at": "2026-12-20T00:05:00Z"
+      },
+      {
+        "state": "suspended",
+        "requester": "user_01SYNTHETICOWNER",
+        "volume_owner": "user_01SYNTHETICMEMBER",
+        "now": "2026-12-20T00:00:00Z",
+        "data_retention_until": "2027-01-13T00:05:00Z",
+        "result": "not_volume_owner"
+      },
+      {
+        "state": "suspended",
+        "requester": "user_01SYNTHETICMEMBER",
+        "volume_owner": "user_01SYNTHETICMEMBER",
+        "now": "2027-01-13T00:03:00Z",
+        "data_retention_until": "2027-01-13T00:05:00Z",
+        "result": "ok",
+        "url_expires_at": "2027-01-13T00:05:00Z"
+      },
+      {
+        "state": "suspended",
+        "requester": "user_01SYNTHETICMEMBER",
+        "volume_owner": "user_01SYNTHETICMEMBER",
+        "now": "2027-01-13T00:05:00Z",
+        "data_retention_until": "2027-01-13T00:05:00Z",
+        "result": "retention_expired"
+      },
+      {
+        "state": "terminated",
+        "requester": "user_01SYNTHETICMEMBER",
+        "volume_owner": "user_01SYNTHETICMEMBER",
+        "now": "2027-01-20T00:00:00Z",
+        "data_retention_until": "2027-01-13T00:05:00Z",
+        "result": "retention_expired"
+      },
+      {
+        "state": "active",
+        "requester": "user_01SYNTHETICMEMBER",
+        "volume_owner": "user_01SYNTHETICMEMBER",
+        "now": "2026-12-20T00:00:00Z",
+        "data_retention_until": null,
+        "result": "ok",
+        "url_expires_at": "2026-12-20T00:05:00Z"
+      }
+    ],
+    "transfer_cutoff": {
+      "$comment": "Frontera de una transferencia YA INICIADA al llegar data_retention_until (plan §10): termina en ese instante. MP revoca el objeto exportado y corta las conexiones abiertas; una transferencia iniciada antes no extiende el plazo ni se deja terminar. Que la URL venza a tiempo no prueba por sí solo el corte de una conexión abierta: lo prueba mp con su arnés.",
+      "cases": [
+        {
+          "started_at": "2027-01-13T00:00:00Z",
+          "now": "2027-01-13T00:04:59Z",
+          "data_retention_until": "2027-01-13T00:05:00Z",
+          "result": "continue"
+        },
+        {
+          "started_at": "2027-01-13T00:00:00Z",
+          "now": "2027-01-13T00:05:00Z",
+          "data_retention_until": "2027-01-13T00:05:00Z",
+          "result": "abort_retention_expired"
+        },
+        {
+          "started_at": "2027-01-12T23:00:00Z",
+          "now": "2027-01-13T01:00:00Z",
+          "data_retention_until": "2027-01-13T00:05:00Z",
+          "result": "abort_retention_expired"
+        },
+        {
+          "started_at": "2026-12-20T00:00:00Z",
+          "now": "2026-12-20T00:10:00Z",
+          "data_retention_until": null,
+          "result": "continue"
+        }
+      ]
+    }
+  }
+}

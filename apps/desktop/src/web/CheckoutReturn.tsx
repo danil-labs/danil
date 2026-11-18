@@ -1,0 +1,77 @@
+import { createSignal, onCleanup, onMount, Show } from "solid-js";
+import { t } from "../lib/i18n";
+import { Button } from "../ui/Button";
+import { PlatformSessionError } from "./platform-session";
+import { checkoutReturn, followCheckout } from "./billing-v2-return";
+import type { billingV2 } from "./billing-v2-api";
+import { clearCreationCheckout } from "./billing-v2-idempotency";
+
+type Api = ReturnType<typeof billingV2>;
+const RETURN_KEY = "danil.billing.return";
+
+export default function CheckoutReturn(props: { api: Api; onActive?: (organizationId: string) => Promise<void> }) {
+  const [message, setMessage] = createSignal("");
+  const [failure, setFailure] = createSignal("");
+  const [busy, setBusy] = createSignal(false);
+  const lifetime = new AbortController();
+  let returned: { id: string; cancelled: boolean } | undefined;
+  let selectedOrganization: string | undefined;
+  onCleanup(() => lifetime.abort());
+  async function check() {
+    if (!returned || busy()) return;
+    setBusy(true); setFailure("");
+    setMessage(returned.cancelled ? "checkout_cancel_notice" : "checkout_pending");
+    const deadline = AbortSignal.timeout(returned.cancelled ? 10000 : 60000);
+    const signal = AbortSignal.any([lifetime.signal, deadline]);
+    let paid = false;
+    try {
+      const outcome = await followCheckout({
+        cancelled: returned.cancelled,
+        read: () => props.api.checkoutStatus(returned!.id, signal),
+        onState: state => { if (state === "paid") { paid = true; setMessage("checkout_paid_pending"); } },
+        wait: ms => new Promise<void>((resolve, reject) => {
+          signal.throwIfAborted();
+          const onAbort = () => { clearTimeout(timer); reject(signal.reason); };
+          const timer = setTimeout(() => { signal.removeEventListener("abort", onAbort); resolve(); }, ms);
+          signal.addEventListener("abort", onAbort, { once: true });
+        }),
+      });
+      if (lifetime.signal.aborted) return;
+      if (outcome.kind === "active" && outcome.organizationId && props.onActive) {
+        selectedOrganization = outcome.organizationId;
+        await props.onActive(outcome.organizationId);
+      }
+      setMessage(outcome.kind === "processing" && paid ? "checkout_paid_pending" : outcome.kind === "processing" && returned.cancelled ? "checkout_cancel_notice" : `checkout_${outcome.kind}`);
+      if (outcome.kind !== "processing") { sessionStorage.removeItem(RETURN_KEY); clearCreationCheckout(sessionStorage, returned.id); }
+    } catch (error) {
+      if (!lifetime.signal.aborted) {
+        if (deadline.aborted) setMessage(paid ? "checkout_paid_pending" : returned.cancelled ? "checkout_cancel_notice" : "checkout_processing");
+        else {
+          setMessage("");
+          setFailure(error instanceof PlatformSessionError && error.status === 403 ? "denied" : "unavailable");
+          if (error instanceof PlatformSessionError && [403, 404].includes(error.status)) sessionStorage.removeItem(RETURN_KEY);
+        }
+      }
+    } finally { if (!lifetime.signal.aborted) setBusy(false); }
+  }
+  onMount(() => {
+    const url = checkoutReturn(window.location.href);
+    if (url.clean !== window.location.href) history.replaceState(history.state, "", url.clean);
+    if (url.id) {
+      returned = { id: url.id, cancelled: url.cancelled };
+      sessionStorage.setItem(RETURN_KEY, JSON.stringify(returned));
+    } else {
+      try {
+        const stored = JSON.parse(sessionStorage.getItem(RETURN_KEY) ?? "null") as { id?: unknown; cancelled?: unknown } | null;
+        if (typeof stored?.id === "string" && /^bchk_[0-9A-Za-z]{16,40}$/.test(stored.id) && typeof stored.cancelled === "boolean") returned = { id: stored.id, cancelled: stored.cancelled };
+      } catch { sessionStorage.removeItem(RETURN_KEY); }
+    }
+    if (returned) void check();
+  });
+  return <>
+    <Show when={message()}><p role="status">{t(`web.billing_v2.${message()}`)}</p></Show>
+    <Show when={message() === "checkout_paid_pending" && !busy() && !returned?.cancelled}><p role="status">{t("web.billing_v2.checkout_processing")}</p></Show>
+    <Show when={failure()}><p role="alert">{t(`web.billing_v2.${failure()}`)}</p></Show>
+    <Show when={!busy() && returned && ((!returned.cancelled && ["checkout_processing", "checkout_paid_pending"].includes(message())) || selectedOrganization)}><Button onClick={() => void check()}>{t("web.billing_v2.check_again")}</Button></Show>
+  </>;
+}

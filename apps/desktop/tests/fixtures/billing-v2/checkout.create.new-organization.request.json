@@ -1,0 +1,9 @@
+{
+  "schema": "openapi/public.openapi.json#/components/schemas/CheckoutCreate",
+  "value": {
+    "plan_key": "pro",
+    "catalog_version": 3,
+    "intent": "new_organization",
+    "organization_name": "Café Danil"
+  }
+}

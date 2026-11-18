@@ -1,0 +1,87 @@
+import { createEffect, createResource, createSignal, For, onCleanup, Show } from "solid-js";
+import { t } from "../lib/i18n";
+import { Button } from "../ui/Button";
+import { Input } from "../ui/Input";
+import { Select } from "../ui/Select";
+import { SettingsRow, SettingsSection } from "../features/settings/index";
+import { PlatformSessionError } from "./platform-session";
+import type { billingV2 } from "./billing-v2-api";
+import { bindCreationCheckout, creationKey } from "./billing-v2-idempotency";
+
+type Api = ReturnType<typeof billingV2>;
+
+export default function NewOrganizationCheckout(props: { api: Api; onActive?: (organizationId: string) => Promise<void> }) {
+  const [open, setOpen] = createSignal(false);
+  const [catalog, { refetch }] = createResource(open, () => props.api.catalog());
+  const [name, setName] = createSignal("");
+  const [plan, setPlan] = createSignal<"pro" | "team">("pro");
+  const [busy, setBusy] = createSignal(false);
+  const [status, setStatus] = createSignal("");
+  const lifetime = new AbortController();
+  onCleanup(() => lifetime.abort());
+  let retryDelay = 1000;
+  createEffect(() => {
+    const error = catalog.error;
+    if (!open() || !error) { retryDelay = 1000; return; }
+    if (!(error instanceof PlatformSessionError) || ![404, 429, 501, 503].includes(error.status)) return;
+    const retryAfter = Math.max(0, Number(error.retryAfter) * 1000 || 0);
+    const timer = setTimeout(() => {
+      void Promise.resolve(refetch()).catch(cause => setStatus(cause instanceof PlatformSessionError && cause.status === 403 ? "denied" : "unavailable"));
+    }, Math.max(retryAfter, retryDelay * (0.75 + Math.random() * 0.5)));
+    retryDelay = Math.min(retryDelay * 2, 30000);
+    onCleanup(() => clearTimeout(timer));
+  });
+  async function submit() {
+    if (busy() || !catalog()) return;
+    setBusy(true); setStatus("");
+    const deadline = AbortSignal.timeout(60000);
+    const signal = AbortSignal.any([lifetime.signal, deadline]);
+    try {
+      const version = catalog()!.catalog_version;
+      const key = await creationKey(sessionStorage, plan(), version, name());
+      const created = await props.api.createOrganization(plan(), version, name(), key);
+      bindCreationCheckout(sessionStorage, key, created.checkout_id);
+      let url = created.url;
+      let delay = 1000;
+      while (!url) {
+        setStatus("checkout_preparing");
+        let retryAfter = 0;
+        try {
+          const state = await props.api.checkoutStatus(created.checkout_id, signal);
+          if (state.state === "active" && state.organization_id && props.onActive) { await props.onActive(state.organization_id); return; }
+          if (state.terminal) throw new Error("checkout_finished");
+          url = state.url;
+        } catch (error) {
+          if (!(error instanceof PlatformSessionError) || ![404, 429, 501, 503].includes(error.status)) throw error;
+          retryAfter = Math.max(0, Number(error.retryAfter) * 1000 || 0);
+        }
+        if (!url) await new Promise<void>((resolve, reject) => {
+          signal.throwIfAborted();
+          const onAbort = () => { clearTimeout(timer); reject(signal.reason); };
+          const timer = setTimeout(() => { signal.removeEventListener("abort", onAbort); resolve(); }, Math.max(retryAfter, delay * (0.75 + Math.random() * 0.5)));
+          signal.addEventListener("abort", onAbort, { once: true });
+        });
+        delay = Math.min(delay * 2, 8000);
+      }
+      const target = new URL(url);
+      if (target.protocol !== "https:" || target.username || target.password) throw new Error("invalid_checkout_url");
+      window.location.assign(target.href);
+    } catch (error) {
+      if (!lifetime.signal.aborted) setStatus(error instanceof Error && error.message === "invalid_organization_name" ? "invalid_name" : error instanceof PlatformSessionError && error.status === 403 ? "denied" : "unavailable");
+    } finally { if (!lifetime.signal.aborted) setBusy(false); }
+  }
+  return <SettingsSection title={t("web.billing_v2.new_org")}>
+    <Show when={open()} fallback={<Button variant="secondary" onClick={() => setOpen(true)}>{t("web.billing_v2.new_org")}</Button>}>
+      <Show when={!catalog.loading} fallback={<p>{t("web.billing_v2.loading")}</p>}>
+        <Show when={!catalog.error && catalog()} fallback={<p role="status">{t("web.billing_v2.unavailable")}</p>}>
+          {value => <>
+            <SettingsRow label={<label for="billing-org-name">{t("web.billing_v2.org_name")}</label>}><Input id="billing-org-name" value={name()} onInput={event => setName(event.currentTarget.value)} /></SettingsRow>
+            <SettingsRow label={<label for="billing-org-plan">{t("web.billing_v2.plan")}</label>}><Select id="billing-org-plan" value={plan()} onChange={event => setPlan(event.currentTarget.value as "pro" | "team")}><For each={value().plans.filter(item => item.sellable && (item.plan_key === "pro" || item.plan_key === "team"))}>{item => <option value={item.plan_key}>{item.plan_key}</option>}</For></Select></SettingsRow>
+            <Button disabled={busy() || !value().plans.some(item => item.sellable && item.plan_key === plan())} onClick={() => void submit()}>{t("web.billing_v2.continue")}</Button>
+          </>}
+        </Show>
+      </Show>
+    </Show>
+    <Show when={status()}><p role="status">{t(`web.billing_v2.${status()}`)}</p></Show>
+  </SettingsSection>;
+}
