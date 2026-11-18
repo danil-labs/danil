@@ -570,3 +570,83 @@ test("pending submission does not adopt earlier orphan output before confirmatio
     assert.deepEqual(f.store.activities("s", f.store.messages())[0].messages, [answer]);
   } finally { f.dispose(); }
 });
+
+
+for (const earlyNextOutput of [false, true]) test(`post-ACK history preserves the live prefix until terminal settlement: early output ${earlyNextOutput}`, async () => {
+  let saved = session([{ id: "u1", role: "user", text: "first" }]);
+  const f = fixture(async <T>() => structuredClone(saved) as T);
+  try {
+    f.store.acceptSession("s", await f.store.read("p", "s"), true, f.generation());
+    f.store.beginActivity("s", 1000, true);
+    f.store.event(event("delta", "previous answer", { message_id: "answer-a" }), metadata); f.store.flush();
+    f.store.finishActivity("s");
+    const next = msg("next input", "user");
+    f.store.beginActivity("s", 2000);
+    f.store.appendOptimistic("s", [next]);
+    f.store.acknowledgeOptimistic("s", [next]);
+    if (earlyNextOutput) { f.store.event(event("delta", "next answer", { message_id: "answer-b", starts_message: true }), metadata); f.store.flush(); }
+    saved = session([{ id: "u1", role: "user", text: "first" }, { id: "a1", role: "agent", text: "previous answer" }, { id: "u2", role: "user", text: "next input" }]);
+    f.store.acceptSession("s", await f.store.read("p", "s"), false, f.generation());
+    const expected = ["first", "previous answer", "next input", ...(earlyNextOutput ? ["next answer"] : [])];
+    assert.deepEqual(f.store.messages().map(row => row.text), expected);
+    f.store.event(event("segment_saved", "", { id: "a1" }), metadata);
+    assert.deepEqual(f.store.messages().map(row => row.text), expected, "late A marker cannot capture B or reorder input");
+    if (earlyNextOutput) saved.turns.push({ id: "a2", role: "agent", text: "next answer" });
+    f.store.finishActivity("s");
+    assert.equal(f.store.acceptSession("s", await f.store.read("p", "s"), true, f.generation()), true);
+    assert.deepEqual(f.store.messages().map(row => row.text), expected);
+    assert.equal(f.store.rows().s.optimistic?.length, 0);
+    assert.equal(f.store.rows().s.vivo.length, 0);
+  } finally { f.dispose(); }
+});
+
+test("rejecting the next input releases deferred history without losing previous output", async () => {
+  const f = fixture(async <T>() => session([{ id: "a1", role: "agent", text: "previous" }]) as T);
+  try {
+    f.store.event(event("delta", "previous"), metadata); f.store.flush(); f.store.finishActivity("s");
+    const next = msg("rejected", "user"); f.store.appendOptimistic("s", [next]);
+    f.store.rejectOptimistic("s", [next]);
+    assert.equal(f.store.acceptSession("s", await f.store.read("p", "s"), false, f.generation()), true);
+    f.store.event(event("segment_saved", "", { id: "a1" }), metadata);
+    assert.deepEqual(f.store.messages().map(row => row.text), ["previous"]);
+  } finally { f.dispose(); }
+});
+
+for (const clear of ["replay", "reset"] as const) test(`removing legacy output through ${clear} releases the history deferral`, async () => {
+  const f = fixture(async <T>() => session([{ id: "a1", role: "agent", text: "previous" }, { id: "u2", role: "user", text: "next" }]) as T);
+  try {
+    f.store.event(event("delta", "previous"), metadata); f.store.flush();
+    const next = msg("next", "user"); f.store.appendOptimistic("s", [next]); f.store.acknowledgeOptimistic("s", [next]);
+    if (clear === "replay") f.store.replay("s", "A", "recovered"); else f.store.resetService();
+    assert.equal(f.store.acceptSession("s", await f.store.read("p", "s"), false, f.generation()), true);
+    assert.deepEqual(f.store.messages().map(row => row.text), ["previous", "next"]);
+  } finally { f.dispose(); }
+});
+
+test("a post-ACK read cannot erase an unsaved previous reply", async () => {
+  const f = fixture(async <T>() => session([{ id: "u2", role: "user", text: "next" }]) as T);
+  try {
+    f.store.event(event("delta", "unsaved previous"), metadata); f.store.flush(); f.store.finishActivity("s");
+    f.store.appendLive("s", [{ role: "system", text: "could not save", meta: "fallo" }]);
+    const next = msg("next", "user"); f.store.appendOptimistic("s", [next]); f.store.acknowledgeOptimistic("s", [next]);
+    f.store.acceptSession("s", await f.store.read("p", "s"), false, f.generation());
+    assert.deepEqual(f.store.messages().map(row => row.text), ["unsaved previous", "could not save", "next"]);
+  } finally { f.dispose(); }
+});
+
+test("a marker received in another workspace cannot capture the successor output", async () => {
+  let saved = session([{ id: "u1", role: "user", text: "first" }]);
+  const f = fixture(async <T>() => structuredClone(saved) as T);
+  try {
+    f.store.acceptSession("s", await f.store.read("p", "s"), true, f.generation());
+    f.store.event(event("delta", "previous", { message_id: "a" }), metadata); f.store.flush(); f.store.finishActivity("s");
+    const next = msg("next", "user"); f.store.appendOptimistic("s", [next]); f.store.acknowledgeOptimistic("s", [next]);
+    f.store.event(event("delta", "new output", { starts_message: true, message_id: "b" }), metadata); f.store.flush();
+    f.live.add("A/s"); f.move("B");
+    f.store.event(event("segment_saved", "", { workspace: "A", id: "a1" }), metadata);
+    f.move("A");
+    saved = session([{ id: "u1", role: "user", text: "first" }, { id: "a1", role: "agent", text: "previous" }, { id: "u2", role: "user", text: "next" }]);
+    f.store.acceptSession("s", await f.store.read("p", "s"), false, f.generation());
+    assert.deepEqual(f.store.messages().map(row => row.text), ["first", "previous", "next", "new output"]);
+  } finally { f.dispose(); }
+});

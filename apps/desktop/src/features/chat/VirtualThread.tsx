@@ -182,7 +182,7 @@ export function VirtualThread(props: {
         );
   }) as unknown as Accessor<HTMLElement[]>;
 
-  // Una fila que sigue no se toca: `For` la reemplaza al saltar lejos, y sacarla del árbol colapsa la selección y le quita el foco.
+  // Conserva los nodos y solo mueve los que cambiaron de lugar al reconciliar sus claves.
   const end = document.createComment("");
   let mounted = new Set<HTMLElement>();
   createEffect(() => {
@@ -190,9 +190,13 @@ export function VirtualThread(props: {
     const kept = new Set(next);
     for (const row of mounted) if (!kept.has(row)) row.remove();
     let after: Node = end;
+    const parent = end.parentNode as (Node & { moveBefore?: (node: Node, child: Node | null) => void }) | null;
     for (let at = next.length - 1; at >= 0; at--) {
       const row = next[at];
-      if (!mounted.has(row)) end.parentNode?.insertBefore(row, after);
+      if (parent && row.nextSibling !== after) {
+        if (row.isConnected && typeof parent.moveBefore === "function") parent.moveBefore(row, after);
+        else parent.insertBefore(row, after);
+      }
       after = row;
     }
     mounted = kept;

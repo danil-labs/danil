@@ -6,6 +6,16 @@ export type OptimisticHistoryState = { optimistic?: Optimistic[]; readRevision?:
 type HistoryState = OptimisticHistoryState & { base: Msg[]; vivo: Msg[] };
 type ReadProvenance = { id: string; generation: number; revision: number };
 
+export function hasUnsettledPrefix(thread: HistoryState | undefined) {
+  const inputs = new Set(thread?.optimistic?.filter(entry => entry.row.role === "user").map(entry => entry.row));
+  let unbound = false;
+  return thread?.vivo.some(row => {
+    if (inputs.has(row) && unbound) return true;
+    if (!row.turno && !row.tramo && (row.role === "agent" || row.meta === "usó")) unbound = true;
+    return false;
+  }) ?? false;
+}
+
 /** Owns send identity and the causal frontier required to replace it with durable history. */
 export function createOptimisticHistory<T extends HistoryState>(deps: {
   current: () => Record<string, T>;
@@ -58,9 +68,12 @@ export function createOptimisticHistory<T extends HistoryState>(deps: {
     deps.settle(reject);
   }
 
-  function accepts(id: string, session: Session, generation: number) {
+  function accepts(id: string, session: Session, generation: number, terminal = false) {
     const read = reads.get(session), thread = deps.current()[id];
     if (read && (read.id !== id || read.generation !== generation || read.revision < (thread?.readRevision ?? 0))) return false;
+    // El historial no puede adelantar una entrada a la salida viva anterior.
+    // Sin identidad común, la lectura terminal consolida ambos de una vez.
+    if (!terminal && hasUnsettledPrefix(thread)) return false;
     // The ACK does not carry a durable ID. A read begun after every pending ACK
     // is the only evidence that all accepted inputs are present in its tail.
     return !(thread?.optimistic ?? []).some(entry => entry.acknowledged === undefined || !read || read.revision <= entry.acknowledged);

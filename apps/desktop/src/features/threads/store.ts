@@ -1,6 +1,6 @@
 import { batch, createMemo, createSignal, type Setter, untrack } from "solid-js";
 import { anexarDeltas, hasOlder, hasRecentGap, HistoryPager, lotesDeDeltas, mensajesDelHilo, transcripcion, type ChatEvent, type HandoverState, type Msg, type OlderState, type Session, type TranscriptOrigin } from "../chat/index.ts";
-import { createOptimisticHistory, type OptimisticHistoryState } from "./optimistic-history.ts";
+import { createOptimisticHistory, hasUnsettledPrefix, type OptimisticHistoryState } from "./optimistic-history.ts";
 import { createAssistantHistory, idsDeTurnos } from "./assistant-history.ts";
 import { createActivityProjection } from "./activity.ts";
 import { transcriptEvent, type TranscriptMetadata } from "./transcript-events.ts";
@@ -169,6 +169,7 @@ export function createThreadsStore(deps: {
   }
 
   function pintarHistoria(id: string, pager: HistoryPager<Session["turns"][number]>, antepuesta: boolean, clear = false, leidos?: ReadonlySet<string>, readRevision?: number) {
+    if (!clear && hasUnsettledPrefix(untrack(hilos)[id])) return;
     const loaded = pager.loaded;
     if (!loaded) return;
     const leida = assistantHistory.paint(id, loaded);
@@ -176,7 +177,7 @@ export function createThreadsStore(deps: {
   }
   function loadResult(id: string, session: Session, clear: boolean, generation: number, latest = false) {
     if (disposed || generation !== deps.scope.generation()) return false;
-    if (!optimisticHistory.accepts(id, session, generation)) return false;
+    if (!optimisticHistory.accepts(id, session, generation, clear)) return false;
     const read = optimisticHistory.provenance(session);
     anotar(setApagadas, id, session.offline?.machine ?? null);
     setTraspasos((all) => {
@@ -263,9 +264,11 @@ export function createThreadsStore(deps: {
   function event(payload: ChatEvent, metadata: TranscriptMetadata) {
     if (disposed || !["delta", "reasoning", "image", "tool", "tool_done", "notice", "task_launched", "segment_saved", "command_output", "command_running"].includes(payload.kind)) return;
     if (payload.kind === "task_launched" && (!payload.task || !payload.id)) return;
+    const workspace = payload.workspace ?? deps.scope.workspace();
+    const targetThreads = workspace && workspace !== deps.scope.workspace() ? workspaceThreads.get(workspace) : untrack(hilos);
+    if (payload.kind === "segment_saved" && hasUnsettledPrefix(targetThreads?.[payload.session])) return;
     if (payload.kind === "segment_saved" && (!payload.id || ((!payload.workspace || payload.workspace === deps.scope.workspace()) && !assistantHistory.segment(payload.session, payload.id, untrack(hilos)[payload.session]?.base ?? [])))) return;
     if (payload.kind === "image" && (payload.detail?.kind !== "output" || !payload.detail.images?.length)) return;
-    const workspace = payload.workspace ?? deps.scope.workspace();
     if (payload.kind === "delta") {
       deltasPorCuadro.meter(payload.session, workspace ?? undefined, { text: payload.text, messageId: payload.message_id, segmentId: payload.segment_id,
         startsMessage: payload.starts_message, author: metadata.author, model: metadata.model });
