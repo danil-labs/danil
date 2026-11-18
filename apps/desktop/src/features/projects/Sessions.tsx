@@ -15,11 +15,10 @@ import { SESSION_TITLE_MAX_LENGTH } from "../../lib/projectNames";
 import { esProvisional } from "../../lib/taskDraft";
 import { cn } from "../../lib/utils";
 import { Button } from "../../ui/Button";
-import { asFailure, type Failure, FailureNote } from "../../ui/Failure";
 import { celebrateFinishedTask, FinishTaskButton } from "../../ui/FinishTaskButton";
 import { KeyedList } from "../../ui/KeyedList";
 import { Input } from "../../ui/Input";
-import { Toast, ToastPortal } from "../../ui/Toast";
+import { TaskActionToast, type TaskActionFailure } from "./TaskActionToast";
 import { MarcaAgente } from "../../ui/icons";
 import {
   ITEM_DE_MENU,
@@ -420,7 +419,7 @@ export default function Sessions(props: {
     const quedan = [...ids].filter((id) => filas.has(id) && !filas.get(id)?.archived);
     if (quedan.length !== ids.size) setSaliendo(new Set(quedan));
   });
-  const [actionFailure, setActionFailure] = createSignal<Failure | null>(null);
+  const [actionFailure, setActionFailure] = createSignal<TaskActionFailure | null>(null);
   const [aviso, setAviso] = createSignal<Aviso | null>(null);
   const finishTask = async (id: string, rect: DOMRect) => {
     if (finishing().includes(id)) return;
@@ -439,7 +438,7 @@ export default function Sessions(props: {
       avisarCambio(project);
     } catch (error) {
       devolver(id);
-      setActionFailure(asFailure(error));
+      setActionFailure({ action: "finish", error, retry: () => void intentar(id, true, rect) });
     } finally {
       setFinishing(ids => ids.filter(value => value !== id));
     }
@@ -456,7 +455,7 @@ export default function Sessions(props: {
       avisarCambio(project);
     } catch (error) {
       devolver(id);
-      setActionFailure(asFailure(error));
+      setActionFailure({ action: "archive", error, retry: () => void intentar(id, false) });
     } finally {
       setArchiving(ids => ids.filter(value => value !== id));
     }
@@ -482,7 +481,7 @@ export default function Sessions(props: {
     try {
       blockers = await invoke<Blockers>("task_blockers", { project: projectOfId(id), id, finish }, enSuMaquina(id));
     } catch (error) {
-      setActionFailure(asFailure(error));
+      setActionFailure({ action: finish ? "finish" : "archive", error, retry: () => void intentar(id, finish, rect) });
       return;
     } finally {
       marcar(ids => ids.filter(value => value !== id));
@@ -504,7 +503,7 @@ export default function Sessions(props: {
         await invoke("discard_task_changes", { project: work.project ?? projectOfId(a.id), id: work.session, files: work.files }, enSuMaquina(a.id));
       }
     } catch (error) {
-      setActionFailure(asFailure(error));
+      setActionFailure({ action: "discard", error, retry: () => void intentar(a.id, a.finish, a.rect) });
       return;
     } finally {
       marcar(ids => ids.filter(value => value !== a.id));
@@ -636,7 +635,7 @@ export default function Sessions(props: {
       await props.onPin(row.id, !fijada(row));
       avisarCambio(projectOf(row));
     } catch (error) {
-      setActionFailure(asFailure(error));
+      setActionFailure({ action: "pin", error, retry: () => void setPinned(row) });
     }
   };
 
@@ -1421,15 +1420,7 @@ export default function Sessions(props: {
 
   return (
     <div class="flex min-w-0 flex-col gap-2">
-      <Show when={actionFailure()}>{failure => (
-        <ToastPortal>
-          <Toast tone="error" onDismiss={() => setActionFailure(null)}>
-            <div class="max-h-[50vh] overflow-y-auto break-words">
-              <FailureNote f={failure()} />
-            </div>
-          </Toast>
-        </ToastPortal>
-      )}</Show>
+      <TaskActionToast failure={actionFailure()} onDismiss={() => setActionFailure(null)} />
       <Show when={query()}>
         <p data-search-results class="m-0 px-2 text-caption text-neutral-500" aria-live="polite">
           {matchedSessions().length === 0 ? t("projects.agent_tasks.no_results") : t("projects.sessions.search_results", { count: matchedSessions().length })}

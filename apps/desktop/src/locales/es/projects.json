@@ -435,5 +435,10 @@
   "projects.agents.body.character-direccion": "Portapapeles",
   "projects.agents.body.character-diseno": "Estrella",
   "projects.agents.body.character-finanzas": "Calculadora",
-  "projects.agents.body.character-rh": "Lentes"
+  "projects.agents.body.character-rh": "Lentes",
+  "projects.sessions.action_failed.finish": "No se pudo finalizar la tarea.",
+  "projects.sessions.action_failed.archive": "No se pudo archivar la tarea.",
+  "projects.sessions.action_failed.discard": "No se pudieron descartar los cambios de la tarea.",
+  "projects.sessions.action_failed.pin": "No se pudo fijar la tarea.",
+  "projects.sessions.action_failed.busy": "Danil sigue con otra operación sobre esta tarea o sus subtareas. Espera un momento y reintenta."
 }
