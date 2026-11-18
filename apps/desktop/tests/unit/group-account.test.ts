@@ -114,4 +114,5 @@ test("native rejection codes and rate-limit metadata survive the context transpo
   assert.equal(rejection.delay, 1500);
   assert.equal(rejection.data.count, 2);
   assert.equal(promoRejection({ status: 429, retryAfter: "3" }).delay, 3000);
+  assert.equal(promoRejection({ status: 409, code: "constructor" }).key, "web.promo.rejected");
 });
