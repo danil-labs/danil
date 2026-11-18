@@ -529,13 +529,13 @@ function WorkspaceProviders(props: { solo?: string | string[] }) {
   const visibles = () => {
     const l = lista();
     if (!l) return [];
-    const solo = props.solo
-      ? Array.isArray(props.solo)
-        ? props.solo
-        : [props.solo]
-      : null;
-    const shown = solo ? l.filter((p) => solo.includes(p.id)) : l;
-    return [...shown].sort((a, b) => rankOf(a.id) - rankOf(b.id));
+    const solo = props.solo ? [props.solo].flat() : null;
+    // Uno por id, el conectado si hay: el estado va por id, y con dos `github` del motor la sección sale dos veces.
+    const unicos = new Map<string, Provider>();
+    for (const p of solo ? l.filter((p) => solo.includes(p.id)) : l) {
+      if (!unicos.has(p.id) || (p.connected && !unicos.get(p.id)!.connected)) unicos.set(p.id, p);
+    }
+    return [...unicos.values()].sort((a, b) => rankOf(a.id) - rankOf(b.id));
   };
 
   return (

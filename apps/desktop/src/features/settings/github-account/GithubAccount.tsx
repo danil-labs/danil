@@ -22,7 +22,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { FailureNote, type Failure } from "../../../ui/Failure";
 import { Skeleton } from "../../../ui/Skeleton";
 import { SettingsBlock, SettingsRow } from "../layout";
-import { githubAccountCode, githubAccountFailureOf, notHere, silent } from "./failures.ts";
+import { accountPathDown, githubAccountCode, githubAccountFailureOf, notHere, silent } from "./failures.ts";
 import { ENLACE } from "../../../ui/ExternalLink";
 
 /**
@@ -95,11 +95,11 @@ export default function GithubAccount(props: {
       connect: mode() === "account" && !connected() && !waiting() && !license() && !unavailable() && busy() === null ? () => void connect() : undefined,
     }),
   );
-  const fail = (e: unknown) => {
+  const fail = (e: unknown, what?: unknown) => {
     const c = githubAccountCode(e);
     setCode(c);
     // Estos tres se dicen en la fila de la cuenta, con su acción.
-    setFailure(c === "github_unavailable" || c === "github_reauthorize" || c === "license_required" ? null : (githubAccountFailureOf(e) as Failure));
+    setFailure(c === "github_unavailable" || c === "github_reauthorize" || c === "license_required" ? null : (githubAccountFailureOf(e, what) as Failure));
   };
   const clearFailure = () => {
     setFailure(null);
@@ -134,9 +134,9 @@ export default function GithubAccount(props: {
       return next;
     } catch (e) {
       if (disposed) return null;
-      // Sin GitHub de la cuenta aquí manda la conexión de esta máquina; un fallo al releer no la cambia.
+      // Sin GitHub de la cuenta aquí (o sin su camino por el relay) manda la conexión de esta máquina; un fallo al releer no la cambia.
       if (notHere(e) || available() !== true) setAvailable(false);
-      if (!silent(e)) fail(e);
+      if (!silent(e) && !(available() === false && accountPathDown(e))) fail(e, t("providers.github.account.error.status"));
       return null;
     }
   }
@@ -149,7 +149,7 @@ export default function GithubAccount(props: {
       if (listed.install_url) setInstallUrl(listed.install_url);
       return listed;
     } catch (e) {
-      if (!disposed) fail(e);
+      if (!disposed) fail(e, t("providers.github.account.error.installations"));
       return null;
     }
   }

@@ -466,5 +466,6 @@
   "shell.workspaces.machine_retry": "Retry",
   "shell.workspaces.requires_attention": "needs attention",
   "shell.workspaces.web_organization_required": "Choose which organization to work in",
-  "shell.workspaces.choose_organization": "Choose organization"
+  "shell.workspaces.choose_organization": "Choose organization",
+  "shell.read.failed": "Couldn't refresh the task list."
 }

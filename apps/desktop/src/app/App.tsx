@@ -7482,6 +7482,21 @@ export default function App() {
           title={(id) => filaDe(id)?.title}
           open={(project, id) => void abrirSesion(project, id)}
         />
+        {/* Una lectura que falló va a la pila y no al riel: encima de «Nueva
+            tarea» se quedaba fija tras un gesto fallido. La conexión no tiene
+            cruz: se quita sola al volver el motor. */}
+        <Show when={startupReadError() ?? draftProjectError() ?? projectReadError() ?? connectionError()}>{failure => {
+          const lectura = () => !!(startupReadError() || draftProjectError() || projectReadError());
+          return <Toast data-read-status="" onDismiss={lectura() ? () => { setStartupReadError(null); setDraftProjectError(null); setProjectReadError(null); } : undefined}>
+            <Show when={lectura()}><p class="m-0 text-xs font-medium text-neutral-950">{t("shell.read.failed")}</p></Show>
+            <Show when={!lectura() || failure() !== t("shell.service.failed")}><p class="m-0 break-words text-xs text-neutral-500">{failure()}</p></Show>
+            <Show when={lectura()}><div><Button variant="outline" size="compact" onClick={() => {
+              setReadRevision(n => n + 1);
+              if (startupReadError()) void retryStartupRead();
+              else if (!draftProjectError()) void recargarMaterial();
+            }}>{t("common.part.retry")}</Button></div></Show>
+          </Toast>;
+        }}</Show>
         {/* El error del último gesto, y no caduca solo: uno que se va a los
             segundos no se llega a leer. Lo quita su cruz o el cambio de
             workspace. */}
@@ -7680,14 +7695,6 @@ export default function App() {
               aria-busy={enCache() || undefined}
               data-shell-cache={enCache() ? "" : undefined}
             >
-            <Show when={startupReadError() ?? draftProjectError() ?? projectReadError() ?? connectionError()}>{failure => <div class="flex shrink-0 items-center gap-2 px-3 py-2 text-caption text-neutral-500" data-read-status="" role="status">
-              <span class="min-w-0 flex-1 break-words">{failure()}</span>
-              <Show when={startupReadError() || draftProjectError() || projectReadError()}><Button variant="ghost" size="compact" onClick={() => {
-                setReadRevision(n => n + 1);
-                if (startupReadError()) void retryStartupRead();
-                else if (!draftProjectError()) void recargarMaterial();
-              }}>{t("common.part.retry")}</Button></Show>
-            </div>}</Show>
             <div class="min-h-0 flex-1">
             <Sidebar
               projects={proyectosDelRiel()}
