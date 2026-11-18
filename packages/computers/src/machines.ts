@@ -94,7 +94,11 @@ export function machineToComputer(m: Machine): Computer & { state: MachineState 
     : m.state === "stopped" || m.state === "stopping" ? "stopped"
     : "unknown";
   // `wakeable` es «VM administrada», no «apagada ahora»: se apaga sola sin que la lista lo sepa. Una personal no se enciende desde la nube.
-  return { computer_id: m.machine_id, name: m.name ?? null, state, wakeable: POWER_STATES.has(m.state) && m.kind !== "personal", provider: null };
+  return {
+    computer_id: m.machine_id, name: m.name ?? null, state, wakeable: POWER_STATES.has(m.state) && m.kind !== "personal", provider: null,
+    ...(typeof m.kind === "string" ? { kind: m.kind } : {}),
+    ...(typeof m.organization_id === "string" && m.organization_id ? { organization_id: m.organization_id } : {}),
+  };
 }
 
 function machineOf(raw: unknown): Machine | null {

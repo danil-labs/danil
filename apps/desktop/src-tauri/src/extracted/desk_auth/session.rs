@@ -170,6 +170,8 @@ pub(crate) fn allowed(method: &str, path: &str) -> bool {
             | ("POST", "/v1/identity/organizations/select")
             | ("GET", "/v1/workspaces")
             | ("POST", "/v1/workspaces/select")
+            | ("GET", "/v1/workspaces/preferences")
+            | ("PUT", "/v1/workspaces/preferences")
             | ("GET", "/v1/machines")
     );
     if fixed {
@@ -180,6 +182,7 @@ pub(crate) fn allowed(method: &str, path: &str) -> bool {
         ("GET", ["", "v1", "machines", id]) => opaque_id(id),
         ("POST", ["", "v1", "machines", id, "start" | "tickets"]) => opaque_id(id),
         ("GET", ["", "v1", "operations", id]) => opaque_id(id),
+        ("PUT" | "DELETE", ["", "v1", "workspaces", "preferences", "added", id]) => opaque_id(id),
         _ => false,
     }
 }
@@ -248,12 +251,33 @@ pub(crate) fn request_keyed(
 ) -> Result<Reply, Fail> {
     let agent = agent();
     let auth = bearer.map(|t| format!("Bearer {t}"));
-    let sent = if method == "GET" {
-        let mut r = agent.get(url).header("Accept", "application/json");
+    let sent = if method == "GET" || method == "DELETE" {
+        let mut r = if method == "GET" {
+            agent.get(url)
+        } else {
+            agent.delete(url)
+        };
+        r = r.header("Accept", "application/json");
+        if method == "DELETE" && !key.is_empty() {
+            r = r.header("Idempotency-Key", key);
+        }
         if let Some(a) = &auth {
             r = r.header("Authorization", a);
         }
         r.call()
+    } else if method == "PUT" {
+        // `PUT …/preferences/added/{id}` no lleva cuerpo; la siembra (`PUT …/preferences`) sí.
+        let mut r = agent.put(url).header("Accept", "application/json");
+        if !key.is_empty() {
+            r = r.header("Idempotency-Key", key);
+        }
+        if let Some(a) = &auth {
+            r = r.header("Authorization", a);
+        }
+        match body {
+            Some(b) => r.send_json(b.clone()),
+            None => r.send_empty(),
+        }
     } else {
         let mut r = agent.post(url).header("Accept", "application/json");
         // Las escrituras del contrato exigen `Idempotency-Key`.

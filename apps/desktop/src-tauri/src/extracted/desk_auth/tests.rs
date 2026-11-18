@@ -874,6 +874,43 @@ fn machines_pagination_cursor_is_the_only_query_desk_sends() {
 }
 
 #[test]
+fn workspace_preferences_routes_are_the_only_put_and_delete() {
+    assert!(allowed("GET", "/v1/workspaces/preferences"));
+    assert!(
+        allowed("PUT", "/v1/workspaces/preferences"),
+        "the atomic seed"
+    );
+    assert!(!allowed("DELETE", "/v1/workspaces/preferences"));
+    assert!(
+        !allowed("PUT", "/v1/workspaces/preferences/hidden/ws_alpha"),
+        "hidden left the contract"
+    );
+    for m in ["PUT", "DELETE"] {
+        assert!(
+            allowed(m, "/v1/workspaces/preferences/added/ws_alpha"),
+            "{m}"
+        );
+        assert!(allowed(m, "/v1/workspaces/preferences/added/B-2"), "{m}");
+        assert!(
+            !allowed(m, "/v1/workspaces/preferences/added/no.dots"),
+            "{m}"
+        );
+        assert!(!allowed(m, "/v1/workspaces/preferences/added/"), "{m}");
+        assert!(!allowed(m, "/v1/workspaces/preferences/added/a/b"), "{m}");
+        assert!(!allowed(m, "/v1/machines/cmp_1"), "{m}");
+    }
+    assert!(!allowed(
+        "POST",
+        "/v1/workspaces/preferences/added/ws_alpha"
+    ));
+    assert!(!allowed("GET", "/v1/workspaces/preferences/added/ws_alpha"));
+    assert!(!allowed(
+        "PUT",
+        &format!("/v1/workspaces/preferences/added/{}", "a".repeat(129))
+    ));
+}
+
+#[test]
 fn capabilities_count_only_version_one_and_available() {
     let caps = Capabilities(Capabilities::parse(&json!({
         "contract": "mvp-v1",

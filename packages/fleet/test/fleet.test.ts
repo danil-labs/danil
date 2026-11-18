@@ -316,6 +316,28 @@ test("regression: an organization workspace goes only to the machines that serve
   assert.deepEqual(fleet.membersOf("w"), ["cmp_vm", "cmp_mac"]);
 });
 
+test("rows from /v1/machines: an added workspace goes only to its organization's machine once it lists it, never to a personal one", () => {
+  const org: MachineInfo = { id: "cmp_org", name: "Servidor Acme", wakes: false, kind: "organization", organizationId: "org_A" };
+  const other: MachineInfo = { id: "cmp_orgB", name: "Servidor Beta", wakes: false, kind: "organization", organizationId: "org_B" };
+  const personal: MachineInfo = { id: "cmp_vm", name: "Danil VM", wakes: true, kind: "personal" };
+  const { fleet, changes } = setup({}, [personal, org, other]);
+  assert.equal(fleet.available("org_A"), null, "before its machine answers, the source is not settled");
+  assert.deepEqual(fleet.membersOf("ws_acme"), ["cmp_vm", "cmp_org", "cmp_orgB"], "unknown yet: today's rule");
+  changes.length = 0;
+  fleet.setListing("cmp_org", [{ id: "ws_acme", name: "Acme" }, { id: "ws_ops", name: "Ops" }]);
+  assert.deepEqual(changes, ["cmp_org"]);
+  assert.deepEqual(fleet.membersOf("ws_acme"), ["cmp_org"], "once listed, only the organization's machine");
+  assert.deepEqual(fleet.available("org_A"), [{ id: "ws_acme", name: "Acme" }, { id: "ws_ops", name: "Ops" }]);
+  assert.equal(fleet.available("org_B"), null, "another organization stays unsettled");
+  fleet.setListing("cmp_vm", [{ id: "ws_acme", name: "Acme" }]);
+  assert.deepEqual(fleet.membersOf("ws_acme"), ["cmp_org"], "a personal machine listing it does not serve it");
+  assert.deepEqual(fleet.organizationMachines("org_A"), ["cmp_org"]);
+  fleet.setListing("cmp_org", []);
+  assert.deepEqual(fleet.available("org_A"), [], "an empty answer is settled and empty");
+  fleet.setMachines([personal, other]);
+  assert.equal(fleet.available("org_A"), null, "a machine that leaves takes its listing with it");
+});
+
 test("machines are added, removed and renamed live without reconnecting the others", async () => {
   const { fleet, made, changes } = setup({ cmp_vm: { answers: { list_live_sessions: [row("t1")] } } }, [VM, MAC]);
   await fleet.read({ machine: "cmp_vm", workspace: "w", command: "list_live_sessions", args: { project: "p1" } });

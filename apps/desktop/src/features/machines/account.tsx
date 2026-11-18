@@ -16,8 +16,6 @@ import { cancelEdgeWrites } from "../../lib/edge.ts";
 import {
   type Computer,
   createScreenAccess,
-  linkedWorkspaces,
-  organizationOf,
   serviceFeatures,
   listComputers,
   listWorkspaces,
@@ -54,6 +52,7 @@ import { createRouter, type Invoke, type Router, type SliceChange } from "./rout
 import { createEngineWorkspaces, railOf } from "./engine-workspaces";
 import { machineNamesChanged, refetchMachines, setCloudInventory } from "./store";
 import { rememberMachineNames } from "./known-names";
+import { infoOf } from "./machine-info";
 import type { WslChild } from "./wsl";
 import { guestChannels } from "./guestChannels";
 import { CLOUD_RETRY_INITIAL_MS, CLOUD_RETRY_MS, createCloudMachines, EDGE_ENDPOINT } from "./cloud-machines";
@@ -124,20 +123,6 @@ function slicesChanged(changes: SliceChange[]) {
   window.dispatchEvent(new CustomEvent("harness:machine-slices", { detail: { changes } }));
   if (changes.includes("attention")) window.dispatchEvent(new CustomEvent("harness:service-resync"));
 }
-
-const infoOf = (c: Computer): MachineInfo => {
-  const os = systemOf(c.os);
-  return {
-    id: c.computer_id,
-    name: c.name?.trim() || c.computer_id,
-    wakes: wakes(c),
-    linked: linkedWorkspaces(c),
-    organization: organizationOf(c),
-    features: serviceFeatures(c),
-    ...(c.host_version ? { version: c.host_version } : {}),
-    ...(os ? { os } : {}),
-  };
-};
 
 /** The machine picked in «Ejecutar en» for `workspace` (`store.ts`), remembered per workspace. */
 const pickedFor = (workspace: string | null) => (workspace ? (leerPref<Record<string, string>>("machines.run_on", {})[workspace] ?? null) : null);
