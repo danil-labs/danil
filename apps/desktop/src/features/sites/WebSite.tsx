@@ -6,7 +6,7 @@ import { t } from "../../lib/i18n";
 import { Button } from "../../ui/Button";
 import { previewSession, type PreviewState } from "./preview-session";
 import type { SiteProps } from "./types";
-import { unwrap } from "@terminus/fleet";
+import { previewScope } from "./scope";
 
 export default function WebSite(props: SiteProps) {
   const [state, setState] = createSignal<PreviewState>({ kind: "closed" });
@@ -36,16 +36,18 @@ export default function WebSite(props: SiteProps) {
     if (!target) return setState({ kind: "failed", code: "unsupported_url" });
     if (new URL(url).protocol === "https:") return setState({ kind: "failed", code: "tls_unsupported" });
     if (!session || !access) return setState({ kind: "unavailable" });
-    const context = props.context;
-    const machine = context?.machine ?? capabilities().taskMachine?.(context?.session ?? "") ?? capabilities().windowMachine?.()?.id;
-    if (!context?.workspace || !context.session || !machine) return setState({ kind: "failed", code: "scope_missing" });
-    void session.open({ machine, workspace: context.workspace, session: unwrap(context.session, [machine])?.id ?? context.session }, target.port, target.path);
+    const scope = previewScope(props.context, capabilities().taskMachine);
+    if (!scope) return setState({ kind: "failed", code: "scope_missing" });
+    void session.open(scope, target.port, target.path);
   }
   createEffect(on(() => [props.url, props.context?.workspace, props.context?.session, props.context?.machine], () => { setAddress(props.url); open(props.url); }));
   onCleanup(() => session?.close());
   const hide = () => session?.close();
   window.addEventListener("pagehide", hide);
   onCleanup(() => window.removeEventListener("pagehide", hide));
+  const resume = (event: PageTransitionEvent) => { if (event.persisted) open(props.url); };
+  window.addEventListener("pageshow", resume);
+  onCleanup(() => window.removeEventListener("pageshow", resume));
   return (
     <div class="relative flex h-full flex-col" data-web-site="" data-preview-state={state().kind}>
       <div class="flex items-center gap-1 border-b border-border bg-surface px-2 py-1">
@@ -71,6 +73,9 @@ export default function WebSite(props: SiteProps) {
           <div class="pointer-events-none absolute inset-0 flex items-center justify-center" role="status">
             <span class="text-ui text-neutral-500">{t("sites.opening", { site: corta(props.url) })}</span>
           </div>
+        </Show>
+        <Show when={state().kind === "loading" && (state() as { slow?: boolean }).slow}>
+          <div class="absolute bottom-3 left-3 rounded-sm border border-border bg-surface px-3 py-2 text-caption text-neutral-700" role="status">{t("sites.preview.slow")}</div>
         </Show>
         <Show when={state().kind === "closed"}>
           <div class="pointer-events-none absolute inset-0 flex items-center justify-center"><span class="text-ui text-neutral-500">{t("sites.start")}</span></div>

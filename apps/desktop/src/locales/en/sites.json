@@ -13,6 +13,7 @@
   "sites.preview.http_only": "Open the task server’s HTTP address.",
   "sites.preview.local_only": "This view supports local servers running in a task.",
   "sites.preview.offline": "The task server is not responding.",
+  "sites.preview.slow": "The server is taking a while to load. You can keep waiting or reload.",
   "sites.preview.task_required": "Open the server from the task running it.",
   "sites.preview.title": "Preview of {site}",
   "sites.preview.unavailable": "This machine does not support server previews yet. Retrying automatically.",

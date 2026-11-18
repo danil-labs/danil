@@ -18,6 +18,11 @@ dirección local de la tarea, y el token no se guarda en preferencias.
 `preview-session.ts` posee la apertura, renovación, caducidad y cierre. Renovar
 no cambia el `src` ni remonta el iframe. Cambiar de contexto o desmontar la
 pestaña cancela el intento y libera su arriendo; una respuesta tardía se cierra.
+El plazo usa `lease_ttl_ms` contado sobre el reloj monotónico del navegador,
+sin comparar su hora con la del servidor. Una renovación que falla por red o
+por un error temporal se reintenta con backoff y jitter hasta ese plazo. Los
+rechazos de autorización cierran la vista. Si cargar tarda más que los 30 s
+del plazo de HEAD, se muestra un aviso y se conserva el arriendo.
 Si no se puede enviar DELETE, el arriendo caduca sin renovaciones. El contenido
 del iframe nunca se interpreta como un mensaje de confianza de Danil.
 
@@ -26,6 +31,9 @@ nativa no cambia. El iframe permite scripts, formularios y su propio origen,
 sin navegación superior, popups ni descargas. No usa cookies de terceros para
 la autorización de la vista. Las cookies de la aplicación de la tarea siguen
 sujetas a las políticas del navegador.
+`daizero.com` debe alojar únicamente vistas: CSP permite todo el subdominio y
+no puede expresar el prefijo `prv-`. El botón de salida deja la URL temporal
+en el historial del navegador; su autorización sigue caducando sin renovación.
 
 La primera versión admite HTTP en el servidor local. HTTPS local, historial
 del iframe y sitios externos dentro de la pestaña quedan fuera. El botón de

@@ -13,6 +13,7 @@
   "sites.preview.http_only": "Abre la dirección HTTP del servidor de la tarea.",
   "sites.preview.local_only": "Esta vista admite servidores locales de la tarea.",
   "sites.preview.offline": "El servidor de la tarea no está respondiendo.",
+  "sites.preview.slow": "El servidor está tardando en cargar. Puedes seguir esperando o recargar.",
   "sites.preview.task_required": "Abre el servidor desde la tarea que lo está ejecutando.",
   "sites.preview.title": "Vista de {site}",
   "sites.preview.unavailable": "Esta máquina todavía no permite abrir servidores aquí. Se volverá a intentar automáticamente.",
