@@ -27,6 +27,7 @@
  * ya nadie sabe cuál es la política de verdad leyendo un archivo.
  */
 import { readFileSync } from "node:fs";
+import { WEB_PREVIEW_FRAME_SOURCE } from "../../src/web/preview-config.ts";
 import { fileURLToPath } from "node:url";
 
 const raiz = (p) => fileURLToPath(new URL(`../../${p}`, import.meta.url));
@@ -156,6 +157,12 @@ for (const crudo of ["href={p.href}", "src={p.src}"]) {
     failures.push(`src/ui/Markdown.tsx pinta \`${crudo}\` tal cual — eso es lo que dejaba salir la imagen sin un clic`);
   }
 }
+
+// La web admite un único sitio aislado para las vistas; Tauri conserva su política.
+const web = readFileSync(raiz("web.html"), "utf8").replace("%DANIL_WEB_PREVIEW_FRAME%", WEB_PREVIEW_FRAME_SOURCE);
+const webPolicy = web.match(/http-equiv="Content-Security-Policy"\s*content="([^"]*)"/)?.[1];
+const webFrames = webPolicy?.split(";").map(value => value.trim()).find(value => value.startsWith("frame-src "));
+if (webFrames !== "frame-src 'self' https://*.daizero.com") failures.push("web.html: frame-src debe admitir solo self y el sitio aislado de vistas daizero.com");
 
 if (failures.length === 0) {
   console.log("La política de la ventana dice lo mismo en los tres sitios, y el chat filtra el esquema.");

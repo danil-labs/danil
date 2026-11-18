@@ -1,4 +1,5 @@
-import { type Machine, type machinesClient, machineToComputer, RelaySession } from "@terminus/computers";
+import { browserHost as browser } from "./browser-host";
+import { type Machine, type machinesClient, type PreviewClient, machineToComputer, RelaySession } from "@terminus/computers";
 import { classOf, Fleet, relayLink, unwrap } from "@terminus/fleet";
 import { createRouter, type SliceChange } from "../features/machines/router";
 import { createSignal, lazy, Suspense } from "solid-js";
@@ -8,12 +9,12 @@ import { t } from "../lib/i18n";
 import { setCapabilities, type Capabilities, type WebAccountsSource } from "../lib/platform";
 import { deliver } from "../lib/serviceEvents";
 import { installIpc } from "./ipc";
-import { type BrowserHost, createWebTransport } from "./transport";
+import { createWebTransport } from "./transport";
 import type { MachineRow, MachineStatus } from "./SyncNote";
 import type { AccountProfileSource } from "../features/settings/account-profile";
 
 declare const __TERMINUS_VERSION__: string;
-type Base = { machines: ReturnType<typeof machinesClient>; relayOrigin: string; permits: (name: string) => boolean; organizations?: Capabilities["organizations"]; promo?: Capabilities["webPromo"]; onUnauthorized: () => void; profile: AccountProfileSource; workspaces: NonNullable<Capabilities["webWorkspaces"]>; onUnavailable: () => void; };
+type Base = { machines: ReturnType<typeof machinesClient>; previews?: PreviewClient; relayOrigin: string; permits: (name: string) => boolean; organizations?: Capabilities["organizations"]; promo?: Capabilities["webPromo"]; onUnauthorized: () => void; profile: AccountProfileSource; workspaces: NonNullable<Capabilities["webWorkspaces"]>; onUnavailable: () => void; };
 const Picker = lazy(() => import("../features/machines/MachinePicker").then(m => ({ default: m.MachinePicker })));
 const AccountMachines = lazy(() => import("../features/machines/AccountMachines"));
 /** Another machine's slice changed: the window rereads just that. */
@@ -22,11 +23,6 @@ function slicesChanged(changes: SliceChange[]) {
   window.dispatchEvent(new CustomEvent("harness:machine-slices", { detail: { changes } }));
   if (changes.includes("attention")) window.dispatchEvent(new CustomEvent("harness:service-resync"));
 }
-const browser: BrowserHost = {
-  openUrl: url => void window.open(url, "_blank", "noopener,noreferrer"), confirm: message => window.confirm(message),
-  alert: message => window.alert(message), reload: () => window.location.reload(),
-  writeText: text => navigator.clipboard.writeText(text), readText: () => navigator.clipboard.readText(),
-};
 /** Browser storage is scoped by the authenticated person and selected workspace. */
 type Mounted = { storage: import("@terminus/fleet").StorageLike | null; webAccounts?: WebAccountsSource };
 
@@ -135,6 +131,7 @@ export function mountWindow(base: Base, mounted: Mounted) {
   setCapabilities({
     nativeWindow: false, updater: false, localSetup: false, computerStatus: true, browserFiles: true, appDownloads: true,
     accountProfile: base.profile,
+    machinePreview: base.previews,
     webWorkspaces: base.workspaces,
     organizations: base.organizations,
     initialSettings: takeSettingsParam(),

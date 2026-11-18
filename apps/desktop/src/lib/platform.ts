@@ -3,7 +3,7 @@
  * el valor por defecto; la entrada web (`src/web/main.tsx`) lo fija antes de
  * importar la app y no cambia después.
  */
-import type { Answer, AccountWorkspace, Computer, CredentialSource, MemorySource, SpaceOrderSource } from "@terminus/computers";
+import type { Answer, AccountWorkspace, Computer, CredentialSource, MemorySource, PreviewClient, SpaceOrderSource } from "@terminus/computers";
 import { createRoot, createSignal, type JSX } from "solid-js";
 import type { AccountEmailsSource } from "../features/settings/account-emails";
 import type { AccountProfileSource } from "../features/settings/account-profile";
@@ -59,6 +59,8 @@ export type WebAccountsSource = {
 };
 
 export type Capabilities = {
+  /** La vista usa la máquina de la tarea; la URL local nunca apunta al navegador de la persona. */
+  machinePreview?: PreviewClient;
   webPromo?: (code: string, idempotencyKey: string) => Promise<{ machine?: { state?: string } }>;
   webWorkspaces?: { rows: () => { id: string; name: string }[]; active: () => string | null; busy: () => boolean; uncertain: () => boolean; choose: (id: string) => void };
 
@@ -142,11 +144,6 @@ export type Capabilities = {
   accountCredentials?: CredentialSource;
   /** Bajo la tarjeta de una cuenta: sus máquinas. */
   accountMachines?: (props: AccountMachinesProps) => JSX.Element;
-  /**
-   * «Conectar otra máquina» con la sesión de la página (la web): la lista de la
-   * cuenta y qué hacer cuando la nueva está en línea. El escritorio usa su token
-   * de cliente (`features/machines/ConnectMachine.tsx`).
-   */
   /** Las computadoras de la cuenta con la sesión de la página (la web); el escritorio usa su token de cliente. */
   accountComputers?: AccountComputersSource;
   /** Varias cuentas de Danil en una ventana (la web); el escritorio no la da. */

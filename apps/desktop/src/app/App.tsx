@@ -158,7 +158,7 @@ import { createUsage } from "../features/shell/usage";
 import AvisoDeVersion from "../features/shell/VersionNotice";
 import CloseGuard from "../features/shell/CloseGuard";
 import WorkspaceColumn from "../features/shell/WorkspaceColumn";
-import Sitio from "../features/sites/Site";
+import Sitio from "../features/sites";
 import { VELO_DE_FONDO } from "../lib/chat-background";
 import { fondoDeChat, fondoPropio, imagenDelWorkspace, veloDeFondo } from "../lib/chat-background-store";
 import { capabilities, openMachineScreen } from "../lib/platform";
@@ -7339,6 +7339,7 @@ export default function App() {
                           url={s().url}
                           visible={visible()}
                           navegador={s().navegador}
+                          context={{ workspace: workspaceActivo(), session: s().session, machine: machineOf(s().session)?.headers["x-terminus-machine"] }}
                           onNavego={(url) => s().navegador && pestanas.navigate(id, url)}
                         />
                       )}

@@ -1,6 +1,6 @@
 import { createRoot, createSignal, For, Show } from 'solid-js';
 import { render } from 'solid-js/web';
-import { machinesClient } from '@terminus/computers';
+import { machinesClient, previewClient, DEFAULT_PREVIEW_DOMAIN } from '@terminus/computers';
 import { aplicarLengua, t } from '../lib/i18n';
 import { setShellCacheScope } from '../lib/shellCache';
 import { seguirElTema } from '../lib/theme';
@@ -221,7 +221,7 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
         disposeGate = undefined;
         mountedBefore = true;
         firstMountAttempts = 0;
-        windowApp = mountWindow({ machines, permits, relayOrigin: __DANIL_WEB_RELAY_ORIGINS__[0],
+        windowApp = mountWindow({ machines, previews: previewClient(transport, DEFAULT_PREVIEW_DOMAIN), permits, relayOrigin: __DANIL_WEB_RELAY_ORIGINS__[0],
           profile: startup.accountProfile(lifetime.signal), onUnauthorized: expired,
           onUnavailable: () => { setError('web.platform.unavailable'); gate(); later(); },
           workspaces: { rows, active, busy, uncertain, choose: id => void choose(id) },
