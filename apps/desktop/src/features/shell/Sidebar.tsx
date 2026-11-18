@@ -306,12 +306,12 @@ export default function Sidebar(props: {
     .map((p) => ({ id: p.id, name: p.name, count: cuentas().get(p.id) ?? 0 })));
 
   /**
-   * Los agentes del dock: los de las carpetas que tienen tareas, con su
+   * Los agentes del dock: los de la carpeta que se está mirando, con su
    * presencia. Un mismo agente propio sale en cada carpeta y se junta por
    * nombre; manda el estado más despierto y se suman sus tareas vivas.
    */
   /** La carpeta de lo que se mira ahora: sus agentes son los del panel. */
-  const carpetaActual = () => props.current ? carpetaDe(props.current) || null : props.proyectoAbierto || null;
+  const carpetaActual = () => (props.current ? carpetaDe(props.current) : props.proyectoAbierto ?? props.carpetaDelBorrador) || null;
   const carpetasConTareas = createMemo(
     () => {
       const actual = carpetaActual();
