@@ -39,9 +39,11 @@ test("D2a mounts context headers, opens later for one organization, and signs ou
   [...doc.querySelectorAll('[role="menuitem"]')].find((b) => b.textContent === "Agregar cuenta u organización").click();
   assert.ok(await until(() => logins.length === 1));
   assert.equal(logins[0].mode, "add");
-  assert.ok(await until(() => [...doc.querySelectorAll('[role="alert"]')].some((p) => p.textContent === "Llegaste al máximo de 20 organizaciones conectadas. Cierra una para agregar otra.")), "the cause is visible inside the open add menu");
+  assert.ok(await until(() => [...doc.querySelectorAll('[role="alert"] p')].some((p) => p.textContent === "Llegaste al máximo de 20 organizaciones conectadas. Cierra una para agregar otra.")), "the cause stays visible in the error Toast after the menu closes");
   assert.equal(doc.querySelectorAll("[data-account-header]").length, 4);
   rejectLogin = false;
+  doc.querySelector("[data-add-workspace]").click();
+  assert.ok(await until(() => [...doc.querySelectorAll('[role="menuitem"]')].some((b) => b.textContent === "Agregar cuenta u organización")));
   [...doc.querySelectorAll('[role="menuitem"]')].find((b) => b.textContent === "Agregar cuenta u organización").click();
   assert.ok(await until(() => logins.length === 2));
   status.sessions[0].contexts = status.sessions[0].contexts.filter((c) => c.context_id !== "a");

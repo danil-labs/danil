@@ -3,6 +3,7 @@ import { t } from "../../lib/i18n";
 import { KeyedList } from "../../ui/KeyedList";
 import { ITEM_DE_MENU } from "../../ui/Popover";
 import { AccountHeader } from "./AccountHeader";
+import { NewAccountTile } from "./NewAccountTile";
 import { confirmEmailClose, emailContextCount } from "./session-close-confirm";
 import { emptyReasonKey } from "./session-empty";
 import type { SessionRailGroup, sessionRail } from "./session-groups";
@@ -13,7 +14,7 @@ type RowsProps = { sessions: ReturnType<typeof sessionRail>; rows: RailWorkspace
 export function SessionWorkspaceRows(props: RowsProps) {
   const local = () => props.sessions.groups() === null ? props.rows : props.rows.filter((w) => !props.sessions.known.has(w.id));
   return <>
-    <KeyedList each={local()} by={(w) => w.id}>{(w) => props.render(w)}</KeyedList>
+    <KeyedList each={local()} by={(w) => w.id}>{(w) => <NewAccountTile id={w().id}>{props.render(w)}</NewAccountTile>}</KeyedList>
     <KeyedList each={props.sessions.groups() ?? []} by={(g) => g.context_id}>{(g) => <SessionGroup {...props} group={g()} />}</KeyedList>
   </>;
 }
@@ -40,7 +41,7 @@ function SessionGroup(props: RowsProps & { group: SessionRailGroup }) {
       <Show when={error()}><p role="alert" class="m-0 px-2 py-1 text-caption text-error-strong">{t("shell.workspaces.sessions_failed")}</p></Show>
     </AccountHeader>
     <Show when={props.group.available}>
-      <KeyedList each={props.rows.filter((w) => props.group.available?.some((r) => r.id === w.id))} by={(w) => w.id}>{(w) => props.render(w)}</KeyedList>
+      <KeyedList each={props.rows.filter((w) => props.group.available?.some((r) => r.id === w.id))} by={(w) => w.id}>{(w) => <NewAccountTile id={w().id}>{props.render(w)}</NewAccountTile>}</KeyedList>
     </Show>
   </>;
 }
