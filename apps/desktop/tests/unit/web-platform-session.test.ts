@@ -1,3 +1,5 @@
+import { scopedCreditsRead } from "../../src/web/scoped-credits.ts";
+import { activeGroupCredits } from "../../src/web/active-group-credits.ts";
 import assert from "node:assert/strict";
 import test from "node:test";
 import { platformSession, PlatformSessionError } from "../../src/web/platform-session.ts";
@@ -157,4 +159,51 @@ for (const [status, code] of [[422, 'promo_code_invalid'], [409, 'promo_already_
 test('promo network failure is observable', async () => {
   const api = platformSession({ origin: 'https://edge.danil.ai', timeoutMs: 1000 }, async () => { throw new TypeError('offline'); });
   await assert.rejects(api.redeemPromo('ABCDEFGHIJKLMNOP', 'attempt'), /offline/);
+});
+
+test("composer and group share one scoped balance, validate organization and never reuse an unscoped response", async () => {
+  const headers: (string | null)[] = [];
+  const api = platformSession({ origin: "https://edge.test", timeoutMs: 1000 }, async (input, init) => {
+    const request = new Request(input, init);
+    if (request.url.endsWith("identity/sessions")) return Response.json({ default_context: "a", items: [{ contexts: [{ context_id: "a", org: "org_A", org_name: "A" }] }] });
+    const context = request.headers.get("X-Danil-Session");
+    headers.push(context);
+    return Response.json({ organization_id: context === "b" ? "org_B" : "org_A", available: { currency: "MXN", amount_micro: "1000000" } }, { headers: context ? { "X-Danil-Session-Applied": context } : {} });
+  });
+  const signal = new AbortController().signal;
+  assert.equal(await api.creditsBalance("org_A", signal), 1);
+  const [balance, reply] = await Promise.all([activeGroupCredits(api, "org_A").readBalance(signal), api.groupAccount.send("a", "GET", "/v1/credits/balance")]);
+  assert.equal(balance, 1); assert.equal(reply.status, 200);
+  assert.deepEqual(headers, [null, "a"]);
+  assert.equal(await api.creditsBalance("org_B", signal, "a"), null);
+  assert.equal(await api.creditsBalance("org_B", signal, "b"), 1);
+  assert.deepEqual(headers, [null, "a", "b"]);
+});
+test("both grouped consumers discard a response without the matching echo and can retry", async () => {
+  let echo = false;
+  const api = platformSession({ origin: "https://edge.test", timeoutMs: 1000 }, async () => Response.json({ organization_id: "org_A", available: { currency: "MXN", amount_micro: "1000000" } }, { headers: echo ? { "X-Danil-Session-Applied": "a" } : {} }));
+  await assert.rejects(api.creditsBalance("org_A", new AbortController().signal, "a"), { detail: "session_echo_mismatch" });
+  echo = true;
+  assert.equal((await api.groupAccount.send("a", "GET", "/v1/credits/balance")).status, 200);
+});
+
+for (const status of [404, 501]) test(`legacy sessions HTTP ${status} preserves the active organization balance without a workspace`, async () => {
+  let reads = 0;
+  const api = platformSession({ origin: "https://edge.test", timeoutMs: 1000 }, async (input, init) => {
+    const request = new Request(input, init);
+    if (request.url.endsWith("identity/sessions")) return Response.json({}, { status });
+    reads++; assert.equal(request.headers.has("X-Danil-Session"), false);
+    return Response.json({ organization_id: "org_A", available: { currency: "MXN", amount_micro: "1000000" } });
+  });
+  assert.equal(await activeGroupCredits(api, "org_A").readBalance(new AbortController().signal), 1);
+  assert.equal(reads, 1);
+});
+
+test("scoped reads expire without polling and explicit invalidation refreshes a balance", async () => {
+  let now = 0; let calls = 0;
+  const reader = scopedCreditsRead({ call: async () => { calls++; return Response.json({ organization_id: "org_A" }, { headers: { "X-Danil-Session-Applied": "a" } }); } } as never, () => now);
+  await reader.read("a"); await reader.read("a"); assert.equal(calls, 1);
+  now = 30_000; assert.equal(calls, 1);
+  await reader.read("a"); assert.equal(calls, 2);
+  reader.clear(); await reader.read("a"); assert.equal(calls, 3);
 });

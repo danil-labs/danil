@@ -72,19 +72,24 @@ test("D2a mounts context headers, opens later for one organization, and signs ou
 test("Free is offered only with E1 and a server engine id, creates locally and stays in its organization group", async () => {
   let created = false;
   const creations = [];
+  let active = "w";
+  const workspaceEvents = [];
   const app = await boot("listo", "session-free-workspace", {
     ...RESPONSES,
     machine_list: [{ id: "local", local: true, active: true, on: true, hosts: true, features: ["account_workspace_v1"] }],
-    list_workspaces: () => ({ active: "w", workspaces: [{ id: "w", name: "Local" }, { id: "sealed-paid-local", name: "Paid seal here", account: { org: "paid-org", account_id: "43" } }, ...(created ? [{ id: "engine-free", name: "My Free", account: { org: "free-org", account_id: "42" } }] : [])] }),
+    list_workspaces: () => ({ active, workspaces: [{ id: "w", name: "Local" }, { id: "sealed-paid-local", name: "Paid seal here", account: { org: "paid-org", account_id: "43" } }, ...(created ? [{ id: "engine-free", name: "My Free", account: { org: "free-org", account_id: "42" } }] : [])] }),
     danil_session_status: { state: "connected", sessions: [{ family: "free-family", email: "free@example.com", contexts: [context("free-context", "free-org", { plan: "free", workspaces: "later" }), context("paid-context", "paid-org")] }] },
     danil_edge_fetch: ({ path }) => ({ status: path === "/v1/identity/me" || path === "/v1/workspaces" ? 200 : 404, body: path === "/v1/identity/me" ? { id: "free-person" } : path === "/v1/workspaces" ? { items: [{ id: "42", org: "free-org", name: "My Free", engine_workspace_id: "engine-free" }] } : {} }),
+    set_active_workspace: ({ id }) => { active = id; },
     create_account_workspace: (args) => { creations.push(args); created = true; return { id: "engine-free", name: "My Free", account: { org: "free-org", account_id: "42" } }; },
   });
   const doc = app.w.document;
+  app.w.addEventListener("harness:workspace", () => workspaceEvents.push(active));
   assert.ok(await until(() => [...doc.querySelectorAll('[role="menuitem"]')].some((row) => row.textContent === "Tu workspace Free")));
   [...doc.querySelectorAll('[role="menuitem"]')].find((row) => row.textContent === "Tu workspace Free").click();
   assert.ok(await until(() => creations.length === 1));
   assert.equal(doc.querySelector('[data-workspace-tile="sealed-paid-local"]'), null, "a local paid seal cannot become a group destination");
+  assert.ok(await until(() => workspaceEvents.includes("engine-free")), "switching into the Free group invalidates the composer balance with the existing workspace event");
   assert.equal(creations[0].id, "engine-free");
   assert.deepEqual(creations[0].account, { org: "free-org", account_id: "42" });
   assert.ok(await until(() => doc.querySelector('[data-workspace-tile="engine-free"]')), "sealed Free enters the connected organization rail");

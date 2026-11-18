@@ -1,7 +1,7 @@
-export type EmptyReason = "no_organization" | "organization_access_denied" | "no_workspace_access" | "unknown";
+export type EmptyReason = "no_organization" | "organization_access_denied" | "no_workspace_access" | "organization_selection_required" | "unknown";
 export type RemovedContext = { context_id: string; org: string; reason: string };
 export type EmptyReply = { status: number; body?: unknown; empty_reason?: unknown; headers?: { get(name: string): string | null } };
-const REASONS = new Set<EmptyReason>(["no_organization", "organization_access_denied", "no_workspace_access", "unknown"]);
+const REASONS = new Set<EmptyReason>(["no_organization", "organization_access_denied", "no_workspace_access", "organization_selection_required", "unknown"]);
 
 export function normalizeEmptyReason(value: unknown): EmptyReason | null {
   if (typeof value !== "string" || !value.trim()) return null;
@@ -9,12 +9,12 @@ export function normalizeEmptyReason(value: unknown): EmptyReason | null {
 }
 
 export function emptyReasonKey(reason: EmptyReason): string {
-  return reason === "no_organization" ? "shell.workspaces.empty_no_org" : reason === "organization_access_denied" || reason === "no_workspace_access" ? "shell.workspaces.empty_no_access" : "shell.workspaces.empty_generic";
+  return reason === "organization_selection_required" ? "shell.workspaces.organization_required" : reason === "no_organization" ? "shell.workspaces.empty_no_org" : reason === "organization_access_denied" || reason === "no_workspace_access" ? "shell.workspaces.empty_no_access" : "shell.workspaces.empty_generic";
 }
 
 export function replyEmptyReason(reply: EmptyReply): EmptyReason | null {
   const body = reply.body as { empty_reason?: unknown; code?: unknown } | null;
-  return normalizeEmptyReason(reply.empty_reason ?? reply.headers?.get("X-Danil-Empty-Reason") ?? body?.empty_reason ?? (reply.status === 403 && body?.code === "organization_access_denied" ? "organization_access_denied" : null));
+  return normalizeEmptyReason(reply.empty_reason ?? reply.headers?.get("X-Danil-Empty-Reason") ?? body?.empty_reason ?? (reply.status === 403 && (body?.code === "organization_access_denied" || body?.code === "organization_selection_required") ? body.code : null));
 }
 
 export function refusalEmptyReason(value: unknown): EmptyReason | null {

@@ -460,5 +460,12 @@
   },
   "shell.workspaces.removed_org": "Se quitó {name}.",
   "shell.workspaces.dismiss_removed": "Descartar",
+  "shell.profile.preferences": "Preferencias",
+  "shell.workspaces.organization_required": "La organización requiere atención",
+  "shell.workspaces.machine_unresponsive": "La máquina de {name} no responde. Intenta de nuevo en un momento.",
+  "shell.workspaces.machine_retry": "Reintentar",
+  "shell.workspaces.requires_attention": "requiere atención",
+  "shell.workspaces.web_organization_required": "Elige con qué organización trabajar",
+  "shell.workspaces.choose_organization": "Elegir organización",
   "shell.read.failed": "No se pudo actualizar la lista de tareas."
 }

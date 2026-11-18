@@ -1,4 +1,5 @@
 import type { Computer } from "@terminus/computers";
+import { reportOrganizationProblem } from "../../lib/organization-problems.ts";
 import { createCloudMachines, EDGE_ENDPOINT } from "./cloud-machines.ts";
 
 type Invoke = (command: string, args?: Record<string, unknown>) => Promise<unknown>;
@@ -32,7 +33,7 @@ export function createSessionCloud(invoke: Invoke, onProblem?: (error: unknown) 
           if ((error as { detail?: string } | null)?.detail === "session_echo_mismatch") unsupported = true;
           throw error;
         }
-      }, onProblem, endpoint);
+      }, (error) => reportOrganizationProblem(context, error), endpoint);
       clients.set(context, client);
     }
     return client;

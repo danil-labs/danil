@@ -1,7 +1,5 @@
 import Bug from "lucide-solid/icons/bug";
-import ChevronRight from "lucide-solid/icons/chevron-right";
 import LogOut from "lucide-solid/icons/log-out";
-import UserRound from "lucide-solid/icons/user-round";
 import { createSignal, For, lazy, Show, Suspense } from "solid-js";
 import { t } from "../../lib/i18n";
 import { invoke } from "../../lib/invoke.ts";
@@ -9,12 +7,14 @@ import { capabilities } from "../../lib/platform";
 import { type Apariencia, apariencia, elegirApariencia } from "../../lib/theme";
 import { cn } from "../../lib/utils";
 import { ITEM_DE_MENU, Popover, PopoverAnchor, PopoverContent } from "../../ui/Popover";
+import DanilFooterEntry from "./DanilFooterEntry";
+import { GroupOrganizationWatch } from "./GroupOrganizationWatch";
+import { noteWebAccountMode, usesGroupAccounts } from "./session-menu-mode";
 
-const PromoRedeem = lazy(() => import("./PromoRedeem"));
+const LegacyProfileMenu = lazy(() => import("./LegacyProfileMenu"));
 
-const DanilFooterEntry = lazy(() => import("./DanilFooterEntry"));
-const OrganizationWatch = lazy(() => import("./OrganizationMenu").then((m) => ({ default: m.OrganizationWatch })));
-const OrganizationSection = lazy(() => import("./OrganizationMenu").then((m) => ({ default: m.OrganizationSection })));
+
+
 
 const BUG_REPORT_URL = "https://github.com/danil-labs/danil/issues/new?template=bug_report.yml";
 
@@ -34,70 +34,31 @@ const SEGMENTO = "flex min-w-0 gap-0.5 rounded-md bg-surface-muted p-0.5";
 const OPCION = "h-6 min-w-0 flex-1 truncate rounded-sm px-2 text-xs text-neutral-500 outline-none hover:text-neutral-950 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-primary";
 const ELEGIDA = "bg-surface-raised font-semibold text-neutral-950 shadow-sm";
 
-/** El avatar al pie de la columna: la cuenta, el tema, reportar un bug y, en la web, cerrar sesión. */
+/** Las preferencias del equipo y, en la web, sus controles de navegador. */
 export default function ProfileMenu(props: {
   onAccount: () => void;
   onReportarBug: () => void;
 }) {
   const [open, setOpen] = createSignal(false);
   const [tema, setTema] = createSignal<Apariencia>(apariencia());
-  const cuenta = () => capabilities().danilAccount || capabilities().accountProfile;
-  const alternar = () => setOpen((o) => !o);
-  const generico = () => (
-    <button
-      type="button"
-      class="grid size-8 place-items-center rounded-md text-neutral-500 outline-none hover:bg-neutral-200 hover:text-neutral-950 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-primary"
-      aria-label={t("shell.profile.menu")}
-      title={t("shell.profile.menu")}
-      aria-expanded={open()}
-      onClick={alternar}
-    >
-      <UserRound size={17} aria-hidden="true" />
-    </button>
-  );
+  const alternar = () => {
+    setOpen((o) => !o);
+    if (open() && !capabilities().nativeWindow) void capabilities().groupAccount?.current().then(noteWebAccountMode);
+  };
 
   return (
+    <Show when={usesGroupAccounts()} fallback={<Suspense fallback={null}><LegacyProfileMenu {...props} initialOpen={open()} /></Suspense>}>
+    <GroupOrganizationWatch />
     <Popover
       open={open()}
-      onOpenChange={(o) => {
-        setOpen(o);
-        // Cerrar sin elegir: el próximo 403 lo vuelve a abrir.
-        if (!o) void capabilities().organizations?.().then((s) => s.dismiss());
-      }}
+      onOpenChange={setOpen}
       placement="right-end"
       gutter={8}
     >
       <PopoverAnchor class="relative grid size-8 place-items-center" data-profile-menu="">
-        <Show when={capabilities().organizations}>
-          {(load) => (
-            <Suspense fallback={null}>
-              <OrganizationWatch load={load()} onNeeded={() => setOpen(true)} />
-            </Suspense>
-          )}
-        </Show>
-        {/* Sin sesión de Danil la entrada no pinta a nadie; el avatar genérico sigue abriendo el menú. */}
-        <Show when={cuenta()} fallback={generico()}>
-          <Suspense fallback={generico()}>
-            <DanilFooterEntry collapsed onOpen={alternar} fallback={generico()} />
-          </Suspense>
-        </Show>
+        <DanilFooterEntry collapsed onOpen={alternar} />
       </PopoverAnchor>
       <PopoverContent class="w-72 p-1" aria-label={t("shell.profile.menu")}>
-        <Show when={cuenta()}>
-          <button type="button" class={cn(ITEM_DE_MENU, "flex items-center gap-2")} onClick={() => { setOpen(false); props.onAccount(); }}>
-            <span class="min-w-0 flex-1 truncate">{t("settings.nav.danil_account")}</span>
-            <ChevronRight size={14} aria-hidden="true" class="shrink-0 text-neutral-500" />
-          </button>
-          <div class="my-1 h-px bg-border" />
-        </Show>
-        <Show when={capabilities().organizations}>
-          {(load) => (
-            <Suspense fallback={null}>
-              <OrganizationSection load={load()} onClose={() => setOpen(false)} />
-            </Suspense>
-          )}
-        </Show>
-        <Show when={capabilities().webPromo}>{redeem => <Suspense fallback={null}><PromoRedeem redeem={redeem()} /></Suspense>}</Show>
         <Show when={capabilities().webWorkspaces}>{session => <>
           <p class="m-0 px-2 pt-1 text-caption font-medium text-neutral-500">{t("web.platform.workspaces")}</p>
           <For each={session().rows()}>{row => <button type="button" class={ITEM_DE_MENU} aria-pressed={session().active() === row.id} disabled={session().busy() || session().uncertain()} onClick={() => { setOpen(false); session().choose(row.id); }}>{row.name}</button>}</For>
@@ -150,5 +111,6 @@ export default function ProfileMenu(props: {
         </Show>
       </PopoverContent>
     </Popover>
+    </Show>
   );
 }

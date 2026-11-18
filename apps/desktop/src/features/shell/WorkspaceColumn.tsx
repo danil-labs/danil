@@ -237,7 +237,7 @@ export default function WorkspaceColumn(props: {
           data-other-workspace-tile={p.w.id}
           class={cn("group relative grid h-10 w-full shrink-0 place-items-center outline-none select-none", !p.account.signedIn && "opacity-50")}
           aria-label={label()}
-          onClick={() => (p.account.signedIn ? accounts?.open(p.w.id) : accounts?.add(p.account.email))}
+          onClick={() => (p.account.signedIn ? accounts?.open(p.w.id) : accounts?.add?.(p.account.email))}
         >
           <span
             aria-hidden="true"

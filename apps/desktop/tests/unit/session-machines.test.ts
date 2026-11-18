@@ -6,6 +6,7 @@ import { createAccountWorkspaces } from "../../src/features/shell/session-accoun
 import { confirmEmailClose, emailContextCount } from "../../src/features/shell/session-close-confirm.ts";
 import { createSessionEmptyState } from "../../src/features/shell/session-empty.ts";
 import { sessionWorkspaceSource } from "../../src/features/shell/session-workspace-source.ts";
+import { subscribeOrganizationProblems } from "../../src/lib/organization-problems.ts";
 
 const contexts = [{ context_id: "a", org: "A" }, { context_id: "b", org: "B" }];
 const machine = (id: string, org: string) => ({ computer_id: id, organization_id: org, state: "online" });
@@ -139,4 +140,21 @@ test("status command failure falls back to legacy inventory and admission withou
   await cloud.client.admission("legacy");
   assert.ok(calls.length >= 3);
   assert.ok(calls.every((c) => !("context" in c)));
+});
+
+
+test("a scoped inventory refusal keeps its own organization instead of notifying the default selector", async () => {
+  const problems: string[] = [];
+  const legacyProblems: unknown[] = [];
+  const stop = subscribeOrganizationProblems((problem) => problems.push(problem.context));
+  try {
+    const cloud = createSessionCloud(async (command, args) => {
+      if (command === "danil_session_status") return { sessions: [{ contexts }] };
+      if (args?.path === "/v1/capabilities") return { status: 200, body: { contract: "mvp-v1", items: [{ name: "machines", version: 1, status: "available" }] } };
+      return args?.context === "b" ? { status: 403, body: { code: "organization_selection_required" } } : { status: 200, body: { items: [] } };
+    }, (problem) => legacyProblems.push(problem));
+    await cloud.rows();
+    assert.deepEqual(problems, ["b"]);
+    assert.deepEqual(legacyProblems, []);
+  } finally { stop(); }
 });

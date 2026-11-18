@@ -1,21 +1,21 @@
+import { machinesClient } from '@terminus/computers';
 import { createRoot, createSignal, For, Show } from 'solid-js';
 import { render } from 'solid-js/web';
-import { machinesClient } from '@terminus/computers';
+import { forgetMachineNames } from '../features/machines/known-names';
+import PromoRedeem from '../features/shell/PromoRedeem';
 import { aplicarLengua, t } from '../lib/i18n';
 import { setShellCacheScope } from '../lib/shellCache';
 import { seguirElTema } from '../lib/theme';
 import { Button } from '../ui/Button';
 import { ToastStack } from '../ui/Toast';
-import { platformSession, platformTransport, PlatformSessionError, type PlatformWorkspace, type PlatformProfile } from './platform-session';
-import type { WebSessionDeployment } from './session-config';
-import { readCapabilities, supports, type CapabilitiesSnapshot } from './service-capabilities';
-import { UpdateNotice } from './UpdateNotice';
-import { WorkosAuthPage, signInError } from './auth/workos';
-import { mountWindow } from './window';
-import { forgetMachineNames } from '../features/machines/known-names';
-import { sessionStorageScope, clearWebCaches } from './session-storage';
+import { signInError, WorkosAuthPage } from './auth/workos';
 import { organizationSession } from './organization-session';
-import PromoRedeem from '../features/shell/PromoRedeem';
+import { activeGroupCredits, type PlatformProfile, PlatformSessionError, type PlatformWorkspace, platformSession, platformTransport } from './platform-session';
+import { type CapabilitiesSnapshot, readCapabilities, supports } from './service-capabilities';
+import type { WebSessionDeployment } from './session-config';
+import { clearWebCaches, sessionStorageScope } from './session-storage';
+import { UpdateNotice } from './UpdateNotice';
+import { mountWindow } from './window';
 import './phrases';
 import { sessionStartup } from './startup-reader';
 
@@ -223,12 +223,12 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
           onUnavailable: () => { setError('web.platform.unavailable'); gate(); later(); },
           services: {
             webWorkspaces: { rows, active, busy, uncertain, choose: id => void choose(id) },
-            danilCredits: { readBalance: signal => api.creditsBalance(profile.active_organization_id, signal) },
+            danilCredits: activeGroupCredits(api, profile.active_organization_id),
           },
-          organizations: () => Promise.resolve(organizations), promo: redeemPromo,
+          organizations: () => Promise.resolve(organizations), promo: redeemPromo, groupAccount: { ...api.groupAccount, send: (...args) => authorized(() => api.groupAccount.send(...args)) },
         }, { storage: cache.storage, webAccounts: {
-          current: { user_id: person.id, name: person.name, email: null, extra: false },
-          others: () => [], open: () => {}, add: () => {}, remove: async () => {}, signOut: () => void logout(),
+          current: { user_id: person.id, name: person.name, email: typeof person.email === "string" ? person.email : null, extra: false },
+          others: () => [], open: () => {}, remove: async () => {}, signOut: () => void logout(),
         } });
         later(FIRST_RETRY_MS);
       }, true);
