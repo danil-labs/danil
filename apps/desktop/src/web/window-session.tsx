@@ -25,7 +25,6 @@ const POLL_MAX_MS = 30_000;
 /** Membresía y workspace pueden tardar minutos en llegar al central tras crear la organización. */
 const FIRST_MOUNT_ATTEMPTS = 8;
 const FIRST_MOUNT_TRANSIENT = [403, 404, 503];
-
 export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
   return createRoot(dispose => {
     aplicarLengua();
@@ -153,7 +152,7 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
           const [capabilities, fresh] = await Promise.all([readCapabilities(transport), api.me()]);
           if (stopped || signedOut()) return;
           setCaps(capabilities);
-          if (person && (fresh.id !== person.id || fresh.workspace !== person.workspace)) { gate(); window.location.assign(home); return; }
+          if (person && (fresh.id !== person.id || fresh.workspace !== person.workspace || fresh.active_organization_id !== person.active_organization_id)) { gate(); window.location.assign(home); return; }
           person = fresh;
           if (permits('workspaces')) { const listed = await api.workspaces(); if (stopped || signedOut()) return; setRows(listed); }
           startup.checked();
@@ -204,7 +203,6 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
         setCaps(capabilities);
         if (mountedBefore) { window.location.assign(home); return; }
         person = profile;
-        // Con sesión: el selector se lee una vez y, si la ruta aún no existe, se reintenta solo.
         organization.load(startup.reader()?.organizations);
         if (person.workspace === null) { await withoutWorkspace(); return; }
         const listed = permits('workspaces');
@@ -220,11 +218,13 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
         disposeGate?.();
         disposeGate = undefined;
         mountedBefore = true;
-        firstMountAttempts = 0;
         windowApp = mountWindow({ machines, permits, relayOrigin: __DANIL_WEB_RELAY_ORIGINS__[0],
           profile: startup.accountProfile(lifetime.signal), onUnauthorized: expired,
           onUnavailable: () => { setError('web.platform.unavailable'); gate(); later(); },
-          workspaces: { rows, active, busy, uncertain, choose: id => void choose(id) },
+          services: {
+            webWorkspaces: { rows, active, busy, uncertain, choose: id => void choose(id) },
+            danilCredits: { readBalance: signal => api.creditsBalance(profile.active_organization_id, signal) },
+          },
           organizations: () => Promise.resolve(organizations), promo: redeemPromo,
         }, { storage: cache.storage, webAccounts: {
           current: { user_id: person.id, name: person.name, email: null, extra: false },

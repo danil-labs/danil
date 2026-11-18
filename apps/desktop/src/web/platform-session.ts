@@ -1,14 +1,13 @@
 import { z } from "zod";
 import { edgeIdentity, edgeTransport } from "@terminus/computers";
+import { listWorkspaces, workspace, workspaceId } from "./platform-workspaces.ts";
+import { availableDanilCredits } from "../lib/credits-balance.ts";
 
-const workspaceId = z.string().regex(/^[1-9]\d*$/);
-const profile = z.object({ id: z.string().startsWith("user_"), name: z.string(), email: z.unknown().optional(), workspace: workspaceId.nullable(), organizations: z.array(z.object({ id: z.string(), name: z.string() })) });
-const workspace = z.object({ id: workspaceId, org: z.string(), name: z.string(), role: z.string() });
-const page = z.object({ items: z.array(workspace), next_cursor: z.string().min(1).nullable() });
+const profile = z.object({ id: z.string().startsWith("user_"), name: z.string(), email: z.unknown().optional(), workspace: workspaceId.nullable(), organizations: z.array(z.object({ id: z.string(), name: z.string() })), active_organization_id: z.string().min(1).nullish() });
 /** `POST /v1/workspaces/select` → `{workspace: Workspace}` (mvp-v1 `WorkspaceSelection`); campos nuevos se ignoran. */
 const selection = z.object({ workspace });
 export type PlatformProfile = z.infer<typeof profile>;
-export type PlatformWorkspace = z.infer<typeof workspace>;
+export type { PlatformWorkspace } from "./platform-workspaces.ts";
 
 /** The edge's cookie transport and its error are shared with the phone on the web (`@terminus/computers`). */
 export { EdgeError as PlatformSessionError } from "@terminus/computers";
@@ -22,19 +21,12 @@ export function platformSession(options: { origin: string; timeoutMs: number }, 
     loginUrl: identity.loginUrl,
     async me() { return profile.parse(await (await call("identity/me")).json()); },
     async active() { return profile.parse(await (await call("identity/me")).json()).workspace; },
-    async workspaces() {
-      const items: PlatformWorkspace[] = [];
-      const cursors = new Set<string>();
-      let cursor: string | null = null;
-      do {
-        const result = page.parse(await (await call(`workspaces${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ""}`)).json());
-        items.push(...result.items);
-        cursor = result.next_cursor;
-        if (cursor && cursors.has(cursor)) throw new Error("Repeated workspace cursor");
-        if (cursor) cursors.add(cursor);
-      } while (cursor);
-      return items;
+    async creditsBalance(organizationId: string | null | undefined, signal: AbortSignal) {
+      if (!organizationId || signal.aborted) return null;
+      const body = await (await call("credits/balance", { signal })).json();
+      return signal.aborted ? null : availableDanilCredits(body, organizationId);
     },
+    workspaces: () => listWorkspaces(call),
     async select(id: string, idempotencyKey: string) {
       workspaceId.parse(id);
       return selection.parse(await (await mutation("workspaces/select", {

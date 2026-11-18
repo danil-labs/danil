@@ -79,6 +79,41 @@ for (const status of [401, 403, 429, 503]) test(`HTTP ${status} stays distinct, 
   assert.equal(calls, 1);
 });
 
+test("credits use the authenticated organization even without a workspace", async () => {
+  const paths: string[] = [];
+  let balanceOrg = "org_A";
+  const api = platformSession({ origin: "https://edge.test", timeoutMs: 1000 }, async (input, init) => {
+    const request = new Request(input, init);
+    const path = new URL(request.url).pathname;
+    paths.push(path);
+    assert.equal(request.method, "GET");
+    assert.equal(request.credentials, "include");
+    assert.equal(request.headers.has("x-danil-workspace"), false);
+    if (path === "/v1/identity/me") return Response.json({
+      id: "user_A", name: "A", workspace: null, organizations: [], active_organization_id: "org_A",
+    });
+    assert.equal(path, "/v1/credits/balance");
+    return Response.json({ organization_id: balanceOrg, available: { currency: "MXN", amount_micro: "1000000000" } });
+  });
+  const profile = await api.me();
+  const signal = new AbortController().signal;
+  assert.equal(await api.creditsBalance(profile.active_organization_id, signal), 1000);
+  balanceOrg = "org_B";
+  assert.equal(await api.creditsBalance(profile.active_organization_id, signal), null);
+  assert.equal(await api.creditsBalance(null, signal), null);
+  assert.deepEqual(paths, ["/v1/identity/me", "/v1/credits/balance", "/v1/credits/balance"]);
+});
+
+test("credits discard a response when its organization session closes", async () => {
+  const controller = new AbortController();
+  const api = platformSession({ origin: "https://edge.test", timeoutMs: 1000 }, async (_input, init) => {
+    controller.abort();
+    assert.equal(init?.signal?.aborted, true);
+    return Response.json({ organization_id: "org_A", available: { currency: "MXN", amount_micro: "1000000000" } });
+  });
+  assert.equal(await api.creditsBalance("org_A", controller.signal), null);
+});
+
 test("invalid bodies, repeated cursors and expired requests fail without partial success", async () => {
   const options = { origin: "https://api.danil.ai", timeoutMs: 10 };
   await assert.rejects(platformSession(options, async () => Response.json({ access_token: "must-not-be-a-profile" })).me());
