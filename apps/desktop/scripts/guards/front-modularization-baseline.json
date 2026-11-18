@@ -892,7 +892,6 @@
     "src/web/account.ts": 15,
     "src/web/active-account.ts": 11,
     "src/web/audit-log.ts": 27,
-    "src/web/auth/AccessRequest.tsx": 15,
     "src/web/auth/workos.tsx": 36,
     "src/web/bootstrap.ts": 10,
     "src/web/computers.ts": 2,
