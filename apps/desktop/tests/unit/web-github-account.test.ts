@@ -142,3 +142,15 @@ test("las instalaciones llegan del Worker con su página, su número de repos y 
   assert.equal(listed.install_pending, true);
   assert.deepEqual(engine, []);
 });
+
+test("an account Worker that does not answer, seen through the relay, stays silent and keeps the local connection", async () => {
+  const { silent } = await import("../../src/features/settings/github-account/failures.ts");
+  for (const e of [
+    { what: { clave: "providers.github.account.unavailable" }, detail: "unsupported" },
+    { what: { clave: "shell.service.failed" }, detail: { what: { clave: "x.y" }, detail: "unsupported" } },
+    { what: { clave: "shell.service.failed" }, detail: "command_failed" },
+  ]) {
+    assert.ok(notHere(e), JSON.stringify(e));
+    assert.ok(silent(e), JSON.stringify(e));
+  }
+});
