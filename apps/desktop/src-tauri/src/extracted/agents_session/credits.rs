@@ -14,6 +14,71 @@ const MAX_OUTPUT: u64 = 1048576;
 const INFERENCE: &str = "https://app.danil.ai/api/credits/v1/chat/completions";
 static GENERATION: AtomicU64 = AtomicU64::new(0);
 
+fn v2_enabled() -> bool {
+    option_env!("DANIL_CREDITS_V2") == Some("1")
+}
+
+fn inference_endpoint(v2: bool, edge: &str) -> String {
+    if v2 {
+        format!("{edge}/v1/credits/inference/v1/chat/completions")
+    } else {
+        INFERENCE.to_owned()
+    }
+}
+
+fn inference_payload(v2: bool, model: &str, body: Vec<u8>) -> Result<Vec<u8>, ()> {
+    if !v2 {
+        return Ok(body);
+    }
+    let mut request: Value = serde_json::from_slice(&body).map_err(|_| ())?;
+    if !request["model"].is_string() {
+        return Err(());
+    }
+    request["model"] = json!(model);
+    serde_json::to_vec(&request).map_err(|_| ())
+}
+
+fn inference_tiers() -> &'static Value {
+    static TIERS: OnceLock<Value> = OnceLock::new();
+    TIERS.get_or_init(|| {
+        serde_json::from_str(include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../../contracts/billing-v2/registry/catalog-seed.v2.json"
+        )))
+        .expect("pinned billing catalog")
+    })
+}
+
+fn allowed_tier(model: &str) -> bool {
+    inference_tiers()["inference_tiers"]
+        .as_array()
+        .is_some_and(|tiers| tiers.iter().any(|tier| tier["id"] == model))
+}
+
+fn default_tier() -> Result<String, Value> {
+    inference_tiers()["inference_tiers"]
+        .as_array()
+        .and_then(|tiers| tiers.iter().find(|tier| tier["default"] == true))
+        .and_then(|tier| tier["id"].as_str())
+        .map(str::to_owned)
+        .ok_or_else(|| error("credits_unavailable"))
+}
+
+fn v2_identity(status: &Value) -> Result<Value, Value> {
+    if status["state"] != "connected" {
+        return Err(error("credits_unavailable"));
+    }
+    let account = status["account"]
+        .as_str()
+        .filter(|value| !value.is_empty())
+        .ok_or_else(|| error("credits_unavailable"))?;
+    let context = status["default_context"]
+        .as_str()
+        .filter(|value| !value.is_empty())
+        .ok_or_else(|| error("credits_unavailable"))?;
+    Ok(json!({"account":account,"default_context":context}))
+}
+
 fn active() -> &'static Mutex<Option<Arc<Binding>>> {
     static ACTIVE: OnceLock<Mutex<Option<Arc<Binding>>>> = OnceLock::new();
     ACTIVE.get_or_init(Default::default)
@@ -41,11 +106,18 @@ trait Context: Send + Sync {
     fn epoch(&self) -> u64;
     fn session(&self) -> Result<Live, Value>;
     fn readiness(&self, token: &str) -> Result<(), Value>;
+    fn v2(&self) -> bool {
+        false
+    }
+    fn endpoint(&self) -> Result<String, Value> {
+        Ok(INFERENCE.to_owned())
+    }
 }
 struct WindowContext {
     app: tauri::AppHandle,
     account: Option<String>,
     workspace: String,
+    v2: bool,
 }
 impl Context for WindowContext {
     fn capture(&self) -> Result<CapturedPeer, Value> {
@@ -63,12 +135,51 @@ impl Context for WindowContext {
         super::super::proxy::credits_local_engine(&self.app, &self.workspace)
     }
     fn epoch(&self) -> u64 {
-        CONNECT.load(Ordering::SeqCst)
+        if self.v2 {
+            0
+        } else {
+            CONNECT.load(Ordering::SeqCst)
+        }
     }
     fn session(&self) -> Result<Live, Value> {
-        checked(&self.app, &self.account)
+        if !self.v2 {
+            return checked(&self.app, &self.account);
+        }
+        let (edge, access_token) = super::super::desk_auth::bearer(&self.app)?;
+        let status = super::super::desk_auth::danil_session_status(self.app.clone());
+        Ok(Live {
+            session: edge,
+            access_token,
+            expires_at: now() + 600,
+            user: v2_identity(&status)?,
+        })
     }
     fn readiness(&self, token: &str) -> Result<(), Value> {
+        if self.v2 {
+            let status = super::super::desk_auth::danil_session_status(self.app.clone());
+            let context = status["default_context"]
+                .as_str()
+                .ok_or_else(|| error("credits_unavailable"))?;
+            let reply = super::super::desk_auth::danil_edge_fetch(
+                self.app.clone(),
+                "GET".into(),
+                "/v1/workspaces".into(),
+                None,
+                None,
+                Some(context.into()),
+            )?;
+            let bound = reply["status"] == 200
+                && reply["body"]["items"].as_array().is_some_and(|items| {
+                    items
+                        .iter()
+                        .any(|row| row["engine_workspace_id"] == self.workspace)
+                });
+            return if bound {
+                Ok(())
+            } else {
+                Err(error("credits_unavailable"))
+            };
+        }
         tauri::async_runtime::block_on(async {
             let client = reqwest::Client::builder()
                 .no_proxy()
@@ -117,6 +228,12 @@ impl Context for WindowContext {
             Ok(())
         })
     }
+    fn v2(&self) -> bool {
+        self.v2
+    }
+    fn endpoint(&self) -> Result<String, Value> {
+        Ok(inference_endpoint(self.v2, &self.session()?.session))
+    }
 }
 
 struct Binding {
@@ -134,6 +251,9 @@ struct Binding {
     capability: String,
     busy: AtomicBool,
     operations: Mutex<HashSet<String>>,
+    v2: bool,
+    endpoint: String,
+    model: Mutex<String>,
 }
 
 impl Binding {
@@ -167,7 +287,7 @@ impl Binding {
             return Err(error("credits_unavailable"));
         }
         let session = self.context.session()?;
-        if active_account(&session.access_token) != Some(476)
+        if (!self.v2 && active_account(&session.access_token) != Some(476))
             || session.user != self.person
             || !self.valid()
         {
@@ -186,8 +306,26 @@ pub(super) fn prepare(
         app,
         account: account.clone(),
         workspace: workspace.clone(),
+        v2: v2_enabled(),
     });
     prepare_context(context, account, workspace)
+}
+
+pub(super) fn select_tier(model: String) -> Result<Value, Value> {
+    if !v2_enabled() || !allowed_tier(&model) {
+        return Err(error("credits_unavailable"));
+    }
+    let guard = active().lock().map_err(|_| error("credits_unavailable"))?;
+    let binding = guard
+        .as_ref()
+        .filter(|binding| binding.v2)
+        .ok_or_else(|| error("credits_unavailable"))?;
+    binding.session()?;
+    *binding
+        .model
+        .lock()
+        .map_err(|_| error("credits_unavailable"))? = model.clone();
+    Ok(json!({"model": model}))
 }
 fn prepare_context(
     context: Arc<dyn Context>,
@@ -201,7 +339,7 @@ fn prepare_context(
     let engine = peer.runtime.clone();
     let session_epoch = context.epoch();
     let session = context.session()?;
-    if active_account(&session.access_token) != Some(476) {
+    if !context.v2() && active_account(&session.access_token) != Some(476) {
         return Err(error("credits_unavailable"));
     }
     {
@@ -214,6 +352,12 @@ fn prepare_context(
                 && existing.person == session.user
                 && existing.session_epoch == session_epoch
             {
+                if existing.v2 {
+                    *existing
+                        .model
+                        .lock()
+                        .map_err(|_| error("credits_unavailable"))? = default_tier()?;
+                }
                 return Ok(existing.public());
             }
             if existing.busy.load(Ordering::SeqCst) {
@@ -222,6 +366,9 @@ fn prepare_context(
         }
     }
     context.readiness(&session.access_token)?;
+    let v2 = context.v2();
+    let endpoint = context.endpoint()?;
+    let model = if v2 { default_tier()? } else { String::new() };
     invalidate();
     let listener = TcpListener::bind(("127.0.0.1", 0)).map_err(|_| error("credits_unavailable"))?;
     listener
@@ -247,6 +394,9 @@ fn prepare_context(
         capability: random(32)?,
         busy: AtomicBool::new(false),
         operations: Mutex::new(HashSet::new()),
+        v2,
+        endpoint,
+        model: Mutex::new(model),
     });
     *active().lock().map_err(|_| error("credits_unavailable"))? = Some(binding.clone());
     let worker = binding.clone();
@@ -434,7 +584,9 @@ fn serve(stream: &mut TcpStream, binding: &Binding) {
         {
             let mut operations = binding.operations.lock().map_err(|_| ())?;
             // Una respuesta perdida nunca produce un segundo envío, ni con otro cuerpo.
-            if operations.len() >= 2 || !operations.insert(input.operation.clone()) {
+            if operations.len() >= if binding.v2 { 10_000 } else { 2 }
+                || !operations.insert(input.operation.clone())
+            {
                 return Err(());
             }
         }
@@ -445,12 +597,21 @@ fn serve(stream: &mut TcpStream, binding: &Binding) {
                 return Err(());
             }
         }
+        let model = binding.model.lock().map_err(|_| ())?.clone();
+        let body = inference_payload(binding.v2, &model, input.body)?;
+        let context = if binding.v2 {
+            session.user["default_context"].as_str()
+        } else {
+            None
+        };
         let result = tauri::async_runtime::block_on(cancelable_forward(
             &mut cancelled,
-            INFERENCE,
+            &binding.endpoint,
             &session.access_token,
             &input.operation,
-            input.body,
+            body,
+            binding.v2,
+            context,
         ));
         let (content_type, body) = result?;
         if !binding.valid() {
@@ -475,6 +636,8 @@ async fn cancelable_forward(
     token: &str,
     operation: &str,
     input: Vec<u8>,
+    v2: bool,
+    context: Option<&str>,
 ) -> Result<(String, Vec<u8>), ()> {
     if *cancelled.borrow() {
         return Err(());
@@ -482,7 +645,7 @@ async fn cancelable_forward(
     tokio::select! {
         biased;
         _ = cancelled.changed() => Err(()),
-        result = forward(endpoint, token, operation, input) => result,
+        result = forward(endpoint, token, operation, input, v2, context) => result,
     }
 }
 
@@ -491,6 +654,8 @@ async fn forward(
     token: &str,
     operation: &str,
     input: Vec<u8>,
+    v2: bool,
+    context: Option<&str>,
 ) -> Result<(String, Vec<u8>), ()> {
     let client = reqwest::Client::builder()
         .no_proxy()
@@ -499,16 +664,30 @@ async fn forward(
         .timeout(Duration::from_secs(65))
         .build()
         .map_err(|_| ())?;
-    let mut response = client
-        .post(endpoint)
-        .bearer_auth(token)
-        .header("Content-Type", "application/json")
-        .header("Accept-Encoding", "identity")
-        .header("X-Danil-Operation", operation)
-        .body(input)
-        .send()
-        .await
-        .map_err(|_| ())?;
+    let mut response = {
+        let mut attempt = 0;
+        loop {
+            let mut request = client
+                .post(endpoint)
+                .bearer_auth(token)
+                .header("Content-Type", "application/json")
+                .header("Accept-Encoding", "identity");
+            if v2 {
+                request = request
+                    .header("Idempotency-Key", operation)
+                    .header("X-Danil-Session", context.ok_or(())?);
+            } else {
+                request = request.header("X-Danil-Operation", operation);
+            }
+            let reply = request.body(input.clone()).send().await.map_err(|_| ())?;
+            if v2 && matches!(reply.status().as_u16(), 404 | 501 | 503) && attempt < 2 {
+                attempt += 1;
+                tokio::time::sleep(Duration::from_millis(250 * attempt)).await;
+                continue;
+            }
+            break reply;
+        }
+    };
     if response.status().as_u16() != 200
         || response
             .headers()
@@ -552,6 +731,7 @@ mod tests {
         selected: Arc<Mutex<String>>,
         calls: Arc<Mutex<Vec<(String, String)>>>,
         switch_during_install: bool,
+        v2: bool,
     }
     impl Context for FakeContext {
         fn capture(&self) -> Result<CapturedPeer, Value> {
@@ -581,6 +761,9 @@ mod tests {
         fn epoch(&self) -> u64 {
             1
         }
+        fn v2(&self) -> bool {
+            self.v2
+        }
         fn readiness(&self, _: &str) -> Result<(), Value> {
             Ok(())
         }
@@ -603,7 +786,21 @@ mod tests {
             selected: Arc::new(Mutex::new("engine-old".into())),
             calls: Arc::new(Mutex::new(Vec::new())),
             switch_during_install: switch,
+            v2: false,
         })
+    }
+    #[test]
+    fn reopening_v2_picker_restores_the_tier_shown_as_default() {
+        let _test = binding_test_lock().lock().unwrap();
+        invalidate();
+        let mut context = fake(false);
+        Arc::get_mut(&mut context).unwrap().v2 = true;
+        prepare_context(context.clone(), None, "workspace".into()).unwrap();
+        let binding = active().lock().unwrap().clone().unwrap();
+        *binding.model.lock().unwrap() = "danil/avanzado".into();
+        prepare_context(context, None, "workspace".into()).unwrap();
+        assert_eq!(*binding.model.lock().unwrap(), "danil/equilibrado");
+        invalidate();
     }
     #[test]
     fn changing_engine_during_install_never_sends_capability_to_new_peer() {
@@ -681,6 +878,117 @@ mod tests {
         assert_eq!(input.operation, id);
     }
     #[test]
+    fn v2_uses_the_edge_and_the_selected_contract_tier() {
+        assert_eq!(
+            inference_endpoint(false, "https://edge.danil.ai"),
+            INFERENCE
+        );
+        assert_eq!(
+            inference_endpoint(true, "https://edge.danil.ai"),
+            "https://edge.danil.ai/v1/credits/inference/v1/chat/completions"
+        );
+        let body = br#"{"model":"deepseek/deepseek-v4.1-flash","messages":[]}"#.to_vec();
+        assert_eq!(
+            inference_payload(false, "danil/ligero", body.clone()).unwrap(),
+            body
+        );
+        let changed = inference_payload(true, "danil/ligero", body).unwrap();
+        let parsed: Value = serde_json::from_slice(&changed).unwrap();
+        assert_eq!(parsed["model"], "danil/ligero");
+        assert!(inference_payload(true, "danil/ligero", b"{}".to_vec()).is_err());
+    }
+    #[test]
+    fn v2_session_identity_ignores_changing_directory_metadata() {
+        let first = json!({"state":"connected","account":"user_1","default_context":"ctx_1","sessions":[{"available_contexts":1}]});
+        let later = json!({"state":"connected","account":"user_1","default_context":"ctx_1","sessions":[{"available_contexts":2}]});
+        assert_eq!(v2_identity(&first).unwrap(), v2_identity(&later).unwrap());
+        assert!(v2_identity(&json!({"state":"connected","default_context":"ctx_1"})).is_err());
+    }
+    #[test]
+    fn v2_retries_unavailable_routes_with_the_same_key_and_context() {
+        let vector: Value = serde_json::from_str(include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../../contracts/billing-v2/vectors/inference-v3.json"
+        )))
+        .unwrap();
+        let frames = vector["success_frames"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|frame| frame.as_str().unwrap())
+            .collect::<String>()
+            .into_bytes();
+        for unavailable in [404, 501, 503] {
+            let listener = TcpListener::bind(("127.0.0.1", 0)).unwrap();
+            let endpoint = format!(
+                "http://{}/v1/credits/inference/v1/chat/completions",
+                listener.local_addr().unwrap()
+            );
+            let key = uuid::Uuid::new_v4().to_string();
+            let expected_key = key.clone();
+            let expected_frames = frames.clone();
+            let server = std::thread::spawn(move || {
+                for status in [unavailable, 200] {
+                    let (mut stream, _) = listener.accept().unwrap();
+                    stream
+                        .set_read_timeout(Some(Duration::from_secs(3)))
+                        .unwrap();
+                    let mut request = Vec::new();
+                    let header_end = loop {
+                        let mut part = [0u8; 2048];
+                        let count = stream.read(&mut part).unwrap();
+                        assert!(count > 0);
+                        request.extend_from_slice(&part[..count]);
+                        if let Some(end) = request.windows(4).position(|bytes| bytes == b"\r\n\r\n")
+                        {
+                            break end + 4;
+                        }
+                    };
+                    let headers =
+                        String::from_utf8_lossy(&request[..header_end]).to_ascii_lowercase();
+                    assert!(headers
+                        .starts_with("post /v1/credits/inference/v1/chat/completions http/1.1"));
+                    assert!(headers.contains(&format!("idempotency-key: {expected_key}")));
+                    assert!(headers.contains("x-danil-session: ctx_1"));
+                    assert!(headers.contains("authorization: bearer synthetic"));
+                    let length: usize = headers
+                        .lines()
+                        .find_map(|line| line.strip_prefix("content-length: "))
+                        .unwrap()
+                        .trim()
+                        .parse()
+                        .unwrap();
+                    while request.len() < header_end + length {
+                        let mut part = [0u8; 2048];
+                        let count = stream.read(&mut part).unwrap();
+                        assert!(count > 0);
+                        request.extend_from_slice(&part[..count]);
+                    }
+                    let body: Value =
+                        serde_json::from_slice(&request[header_end..header_end + length]).unwrap();
+                    assert_eq!(body["model"], "danil/equilibrado");
+                    if status == 200 {
+                        write!(stream, "HTTP/1.1 200 Test\r\nContent-Type: text/event-stream\r\nContent-Length: {}\r\nConnection: close\r\n\r\n", expected_frames.len()).unwrap();
+                        stream.write_all(&expected_frames).unwrap();
+                    } else {
+                        write!(stream, "HTTP/1.1 {status} Test\r\nContent-Type: application/json\r\nContent-Length: 2\r\nConnection: close\r\n\r\n{{}}").unwrap();
+                    }
+                }
+            });
+            let body = br#"{"model":"danil/equilibrado","messages":[]}"#.to_vec();
+            let got = tauri::async_runtime::block_on(forward(
+                &endpoint,
+                "synthetic",
+                &key,
+                body,
+                true,
+                Some("ctx_1"),
+            ));
+            assert_eq!(got.unwrap(), ("text/event-stream".into(), frames.clone()));
+            server.join().unwrap();
+        }
+    }
+    #[test]
     fn cancellation_before_dispatch_sends_nothing() {
         let listener = TcpListener::bind(("127.0.0.1", 0)).unwrap();
         listener.set_nonblocking(true).unwrap();
@@ -694,7 +1002,9 @@ mod tests {
             &endpoint,
             "synthetic",
             &uuid::Uuid::new_v4().to_string(),
-            b"{}".to_vec()
+            b"{}".to_vec(),
+            false,
+            None,
         ))
         .is_err());
         assert_eq!(
@@ -738,6 +1048,8 @@ mod tests {
                 "synthetic",
                 &uuid::Uuid::new_v4().to_string(),
                 b"{}".to_vec(),
+                false,
+                None,
             ))
         });
         wait.recv_timeout(Duration::from_secs(3)).unwrap();

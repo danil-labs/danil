@@ -10,3 +10,5 @@ export type { HandoverState } from "./handover.ts";
 export { anexarDeltas, anexarImagen, anexarRazonamiento, mcpCallFromName, mensajesDelHilo, tramoGuardado, transcripcion, type ChatEvent, type Session, type TranscriptOrigin, type Turn, type Delta } from "./transcript.ts";
 export type { PermissionRequest } from "./Chat.tsx";
 export { mergeGates, type PendingPermission } from "./permissionGates.ts";
+export { desktopCredits } from "./danil-credits-desktop.ts";
+export { prepareCreditsV2 } from "./credits-v2.ts";

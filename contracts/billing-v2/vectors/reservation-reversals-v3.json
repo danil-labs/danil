@@ -1,0 +1,139 @@
+{"scenarios": [
+  {"name": "reembolso total antes de liberar nunca revive el pago", "steps": [
+    {"op": "purchase", "key": "purchase:pi_P", "lot": "P", "payment_intent": "pi_P", "amount_micro": "100"},
+    {"op": "reserve", "key": "reserve:R", "reservation_id": "R", "producer": "inference", "report_id": "report-R", "amount_micro": "100"},
+    {"op": "refund", "key": "refund:re_P", "payment_intent": "pi_P", "amount_micro": "100", "balances": {"purchased": "0", "inference_hold": "0", "dispute_hold": "0", "refund_obligation": "0", "unsettled_usage": "0"}},
+    {"op": "reservation_release", "key": "release:R", "reservation_id": "R", "producer": "inference", "report_id": "report-R", "no_usage": true, "balances": {"purchased": "0", "inference_hold": "0", "dispute_hold": "0", "refund_obligation": "0", "unsettled_usage": "0"}},
+    {"op": "reservation_release", "key": "release:R", "reservation_id": "R", "producer": "inference", "report_id": "report-R", "no_usage": true, "duplicate": true}
+  ]},
+  {"name": "liberar antes de reembolsar produce el mismo saldo", "steps": [
+    {"op": "purchase", "key": "purchase:pi_P", "lot": "P", "payment_intent": "pi_P", "amount_micro": "100"},
+    {"op": "reserve", "key": "reserve:R", "reservation_id": "R", "producer": "inference", "report_id": "report-R", "amount_micro": "100"},
+    {"op": "reservation_release", "key": "release:R", "reservation_id": "R", "producer": "inference", "report_id": "report-R", "no_usage": true, "balances": {"purchased": "100", "inference_hold": "0", "dispute_hold": "0", "refund_obligation": "0", "unsettled_usage": "0"}},
+    {"op": "refund", "key": "refund:re_P", "payment_intent": "pi_P", "amount_micro": "100", "balances": {"purchased": "0", "inference_hold": "0", "dispute_hold": "0", "refund_obligation": "0", "unsettled_usage": "0"}}
+  ]},
+  {"name": "reembolso parcial retira libre antes que reservado", "steps": [
+    {"op": "purchase", "key": "purchase:pi_P", "lot": "P", "payment_intent": "pi_P", "amount_micro": "100"},
+    {"op": "reserve", "key": "reserve:R", "reservation_id": "R", "producer": "inference", "report_id": "report-R", "amount_micro": "70"},
+    {"op": "refund", "key": "refund:re_P", "payment_intent": "pi_P", "amount_micro": "50", "balances": {"purchased": "0", "inference_hold": "50", "dispute_hold": "0", "refund_obligation": "0", "unsettled_usage": "0"}},
+    {"op": "reservation_release", "key": "release:R", "reservation_id": "R", "producer": "inference", "report_id": "report-R", "no_usage": true, "balances": {"purchased": "50", "inference_hold": "0", "dispute_hold": "0", "refund_obligation": "0", "unsettled_usage": "0"}}
+  ]},
+  {"name": "obligación de reembolso solo por consumo anterior", "steps": [
+    {"op": "purchase", "key": "purchase:pi_P", "lot": "P", "payment_intent": "pi_P", "amount_micro": "100"},
+    {"op": "debit", "key": "old-usage", "amount_micro": "20"},
+    {"op": "reserve", "key": "reserve:R", "reservation_id": "R", "producer": "inference", "report_id": "report-R", "amount_micro": "80"},
+    {"op": "refund", "key": "refund:re_P", "payment_intent": "pi_P", "amount_micro": "100", "balances": {"purchased": "0", "inference_hold": "0", "dispute_hold": "0", "refund_obligation": "20", "unsettled_usage": "0"}},
+    {"op": "reservation_release", "key": "release:R", "reservation_id": "R", "producer": "inference", "report_id": "report-R", "no_usage": true, "balances": {"purchased": "0", "inference_hold": "0", "dispute_hold": "0", "refund_obligation": "20", "unsettled_usage": "0"}}
+  ]},
+  {"name": "liquidación posterior a reembolso registra uso sin resucitar crédito", "steps": [
+    {"op": "purchase", "key": "purchase:pi_P", "lot": "P", "payment_intent": "pi_P", "amount_micro": "100"},
+    {"op": "reserve", "key": "reserve:R", "reservation_id": "R", "producer": "inference", "report_id": "report-R", "amount_micro": "100"},
+    {"op": "refund", "key": "refund:re_P", "payment_intent": "pi_P", "amount_micro": "100", "balances": {"purchased": "0", "inference_hold": "0", "dispute_hold": "0", "refund_obligation": "0", "unsettled_usage": "0"}},
+    {"op": "reservation_settle", "key": "usage:inference:report-R", "reservation_id": "R", "producer": "inference", "report_id": "report-R", "amount_micro": "40", "balances": {"purchased": "0", "inference_hold": "0", "dispute_hold": "0", "refund_obligation": "0", "unsettled_usage": "40"}},
+    {"op": "reservation_settle", "key": "usage:inference:report-R", "reservation_id": "R", "producer": "inference", "report_id": "report-R", "amount_micro": "40", "duplicate": true}
+  ]},
+  {"name": "reembolso tras liquidación parcial solo debe lo consumido", "steps": [
+    {"op": "purchase", "key": "purchase:pi_P", "lot": "P", "payment_intent": "pi_P", "amount_micro": "100"},
+    {"op": "reserve", "key": "reserve:R", "reservation_id": "R", "producer": "inference", "report_id": "report-R", "amount_micro": "100"},
+    {"op": "reservation_settle", "key": "usage:inference:report-R", "reservation_id": "R", "producer": "inference", "report_id": "report-R", "amount_micro": "40", "balances": {"purchased": "60", "inference_hold": "0", "dispute_hold": "0", "refund_obligation": "0", "unsettled_usage": "0"}},
+    {"op": "refund", "key": "refund:re_P", "payment_intent": "pi_P", "amount_micro": "100", "balances": {"purchased": "0", "inference_hold": "0", "dispute_hold": "0", "refund_obligation": "40", "unsettled_usage": "0"}},
+    {"op": "refund", "key": "refund:re_P", "payment_intent": "pi_P", "amount_micro": "100", "duplicate": true}
+  ]},
+  {"name": "reembolso solo retira asignaciones del mismo pago", "steps": [
+    {"op": "purchase", "key": "purchase:pi_P", "lot": "P", "payment_intent": "pi_P", "amount_micro": "100"},
+    {"op": "purchase", "key": "purchase:pi_Q", "lot": "Q", "payment_intent": "pi_Q", "amount_micro": "100"},
+    {"op": "reserve", "key": "reserve:R", "reservation_id": "R", "producer": "inference", "report_id": "report-R", "amount_micro": "150"},
+    {"op": "refund", "key": "refund:re_P", "payment_intent": "pi_P", "amount_micro": "100", "balances": {"purchased": "50", "inference_hold": "50", "dispute_hold": "0", "refund_obligation": "0", "unsettled_usage": "0"}},
+    {"op": "reservation_release", "key": "release:R", "reservation_id": "R", "producer": "inference", "report_id": "report-R", "no_usage": true, "balances": {"purchased": "100", "inference_hold": "0", "dispute_hold": "0", "refund_obligation": "0", "unsettled_usage": "0"}}
+  ]},
+  {"name": "liberar una reserva no elude una disputa abierta", "steps": [
+    {"op": "purchase", "key": "purchase:pi_P", "lot": "P", "payment_intent": "pi_P", "amount_micro": "100"},
+    {"op": "reserve", "key": "reserve:R", "reservation_id": "R", "producer": "inference", "report_id": "report-R", "amount_micro": "100"},
+    {"op": "dispute", "key": "dispute:D:hold", "payment_intent": "pi_P", "dispute": "D", "phase": "hold", "amount_micro": "100", "balances": {"purchased": "0", "inference_hold": "0", "dispute_hold": "100", "refund_obligation": "0", "unsettled_usage": "0"}},
+    {"op": "reservation_release", "key": "release:R", "reservation_id": "R", "producer": "inference", "report_id": "report-R", "no_usage": true, "balances": {"purchased": "0", "inference_hold": "0", "dispute_hold": "100", "refund_obligation": "0", "unsettled_usage": "0"}},
+    {"op": "reservation_release", "key": "release:R", "reservation_id": "R", "producer": "inference", "report_id": "report-R", "no_usage": true, "duplicate": true},
+    {"op": "dispute", "key": "dispute:D:release", "payment_intent": "pi_P", "dispute": "D", "phase": "release", "amount_micro": "100", "balances": {"purchased": "100", "inference_hold": "0", "dispute_hold": "0", "refund_obligation": "0", "unsettled_usage": "0"}}
+  ]},
+  {"name": "disputa perdida antes de liberar no genera deuda por fondos sin usar", "steps": [
+    {"op": "purchase", "key": "purchase:pi_P", "lot": "P", "payment_intent": "pi_P", "amount_micro": "100"},
+    {"op": "reserve", "key": "reserve:R", "reservation_id": "R", "producer": "inference", "report_id": "report-R", "amount_micro": "100"},
+    {"op": "dispute", "key": "dispute:D:hold", "payment_intent": "pi_P", "dispute": "D", "phase": "hold", "amount_micro": "100"},
+    {"op": "dispute", "key": "dispute:D:loss", "payment_intent": "pi_P", "dispute": "D", "phase": "loss", "amount_micro": "100", "balances": {"purchased": "0", "inference_hold": "0", "dispute_hold": "0", "refund_obligation": "0", "unsettled_usage": "0"}},
+    {"op": "reservation_release", "key": "release:R", "reservation_id": "R", "producer": "inference", "report_id": "report-R", "no_usage": true, "balances": {"purchased": "0", "inference_hold": "0", "dispute_hold": "0", "refund_obligation": "0", "unsettled_usage": "0"}}
+  ]},
+  {"name": "disputa ganada devuelve a la reserva activa antes que a libre", "steps": [
+    {"op": "purchase", "key": "purchase:pi_P", "lot": "P", "payment_intent": "pi_P", "amount_micro": "100"},
+    {"op": "reserve", "key": "reserve:R", "reservation_id": "R", "producer": "inference", "report_id": "report-R", "amount_micro": "100"},
+    {"op": "dispute", "key": "dispute:D:hold", "payment_intent": "pi_P", "dispute": "D", "phase": "hold", "amount_micro": "100"},
+    {"op": "dispute", "key": "dispute:D:release", "payment_intent": "pi_P", "dispute": "D", "phase": "release", "amount_micro": "100", "balances": {"purchased": "0", "inference_hold": "100", "dispute_hold": "0", "refund_obligation": "0", "unsettled_usage": "0"}},
+    {"op": "reservation_release", "key": "release:R", "reservation_id": "R", "producer": "inference", "report_id": "report-R", "no_usage": true, "balances": {"purchased": "100", "inference_hold": "0", "dispute_hold": "0", "refund_obligation": "0", "unsettled_usage": "0"}}
+  ]},
+  {"name": "disputa parcial toma libre primero y conserva el resto al liberar", "steps": [
+    {"op": "purchase", "key": "purchase:pi_P", "lot": "P", "payment_intent": "pi_P", "amount_micro": "100"},
+    {"op": "reserve", "key": "reserve:R", "reservation_id": "R", "producer": "inference", "report_id": "report-R", "amount_micro": "70"},
+    {"op": "dispute", "key": "dispute:D:hold", "payment_intent": "pi_P", "dispute": "D", "phase": "hold", "amount_micro": "50", "balances": {"purchased": "0", "inference_hold": "50", "dispute_hold": "50", "refund_obligation": "0", "unsettled_usage": "0"}},
+    {"op": "reservation_release", "key": "release:R", "reservation_id": "R", "producer": "inference", "report_id": "report-R", "no_usage": true, "balances": {"purchased": "50", "inference_hold": "0", "dispute_hold": "50", "refund_obligation": "0", "unsettled_usage": "0"}},
+    {"op": "dispute", "key": "dispute:D:loss", "payment_intent": "pi_P", "dispute": "D", "phase": "loss", "amount_micro": "50", "balances": {"purchased": "50", "inference_hold": "0", "dispute_hold": "0", "refund_obligation": "0", "unsettled_usage": "0"}}
+  ]},
+  {"name": "liquidar uso real retenido por disputa y ganarla no cobra dos veces", "steps": [
+    {"op": "purchase", "key": "purchase:pi_P", "lot": "P", "payment_intent": "pi_P", "amount_micro": "100"},
+    {"op": "reserve", "key": "reserve:R", "reservation_id": "R", "producer": "inference", "report_id": "report-R", "amount_micro": "100"},
+    {"op": "dispute", "key": "dispute:D:hold", "payment_intent": "pi_P", "dispute": "D", "phase": "hold", "amount_micro": "100"},
+    {"op": "reservation_settle", "key": "usage:inference:report-R", "reservation_id": "R", "producer": "inference", "report_id": "report-R", "amount_micro": "40", "balances": {"purchased": "0", "inference_hold": "0", "dispute_hold": "60", "refund_obligation": "0", "unsettled_usage": "0"}},
+    {"op": "reservation_settle", "key": "usage:inference:report-R", "reservation_id": "R", "producer": "inference", "report_id": "report-R", "amount_micro": "40", "duplicate": true},
+    {"op": "dispute", "key": "dispute:D:hold", "payment_intent": "pi_P", "dispute": "D", "phase": "hold", "amount_micro": "100", "duplicate": true},
+    {"op": "dispute", "key": "dispute:D:release", "payment_intent": "pi_P", "dispute": "D", "phase": "release", "amount_micro": "100", "balances": {"purchased": "60", "inference_hold": "0", "dispute_hold": "0", "refund_obligation": "0", "unsettled_usage": "0"}}
+  ]},
+  {"name": "liquidar uso real retenido y perder disputa debe solo lo usado", "steps": [
+    {"op": "purchase", "key": "purchase:pi_P", "lot": "P", "payment_intent": "pi_P", "amount_micro": "100"},
+    {"op": "reserve", "key": "reserve:R", "reservation_id": "R", "producer": "inference", "report_id": "report-R", "amount_micro": "100"},
+    {"op": "dispute", "key": "dispute:D:hold", "payment_intent": "pi_P", "dispute": "D", "phase": "hold", "amount_micro": "100"},
+    {"op": "reservation_settle", "key": "usage:inference:report-R", "reservation_id": "R", "producer": "inference", "report_id": "report-R", "amount_micro": "40", "balances": {"purchased": "0", "inference_hold": "0", "dispute_hold": "60", "refund_obligation": "0", "unsettled_usage": "0"}},
+    {"op": "dispute", "key": "dispute:D:loss", "payment_intent": "pi_P", "dispute": "D", "phase": "loss", "amount_micro": "100", "balances": {"purchased": "0", "inference_hold": "0", "dispute_hold": "0", "refund_obligation": "40", "unsettled_usage": "0"}}
+  ]},
+  {"name": "liquidación parcial separa fondos libres y reservados de disputa", "steps": [
+    {"op": "purchase", "key": "purchase:pi_P", "lot": "P", "payment_intent": "pi_P", "amount_micro": "100"},
+    {"op": "reserve", "key": "reserve:R", "reservation_id": "R", "producer": "inference", "report_id": "report-R", "amount_micro": "60"},
+    {"op": "dispute", "key": "dispute:D:hold", "payment_intent": "pi_P", "dispute": "D", "phase": "hold", "amount_micro": "80", "balances": {"purchased": "0", "inference_hold": "20", "dispute_hold": "80", "refund_obligation": "0", "unsettled_usage": "0"}},
+    {"op": "reservation_settle", "key": "usage:inference:report-R", "reservation_id": "R", "producer": "inference", "report_id": "report-R", "amount_micro": "30", "balances": {"purchased": "0", "inference_hold": "0", "dispute_hold": "70", "refund_obligation": "0", "unsettled_usage": "0"}},
+    {"op": "dispute", "key": "dispute:D:release", "payment_intent": "pi_P", "dispute": "D", "phase": "release", "amount_micro": "80", "balances": {"purchased": "70", "inference_hold": "0", "dispute_hold": "0", "refund_obligation": "0", "unsettled_usage": "0"}}
+  ]},
+  {"name": "refund no toca la porción ya retenida por disputa", "steps": [
+    {"op": "purchase", "key": "purchase:pi_P", "lot": "P", "payment_intent": "pi_P", "amount_micro": "100"},
+    {"op": "reserve", "key": "reserve:R", "reservation_id": "R", "producer": "inference", "report_id": "report-R", "amount_micro": "100"},
+    {"op": "dispute", "key": "dispute:D:hold", "payment_intent": "pi_P", "dispute": "D", "phase": "hold", "amount_micro": "40", "balances": {"purchased": "0", "inference_hold": "60", "dispute_hold": "40", "refund_obligation": "0", "unsettled_usage": "0"}},
+    {"op": "refund", "key": "refund:re_P", "payment_intent": "pi_P", "amount_micro": "100", "balances": {"purchased": "0", "inference_hold": "0", "dispute_hold": "40", "refund_obligation": "0", "unsettled_usage": "0"}},
+    {"op": "reservation_release", "key": "release:R", "reservation_id": "R", "producer": "inference", "report_id": "report-R", "no_usage": true, "balances": {"purchased": "0", "inference_hold": "0", "dispute_hold": "40", "refund_obligation": "0", "unsettled_usage": "0"}},
+    {"op": "dispute", "key": "dispute:D:release", "payment_intent": "pi_P", "dispute": "D", "phase": "release", "amount_micro": "40", "balances": {"purchased": "40", "inference_hold": "0", "dispute_hold": "0", "refund_obligation": "0", "unsettled_usage": "0"}}
+  ]},
+  {"name": "forfeit tampoco revive al ganar disputa y liberar reserva", "steps": [
+    {"op": "purchase", "key": "purchase:pi_P", "lot": "P", "payment_intent": "pi_P", "amount_micro": "100"},
+    {"op": "reserve", "key": "reserve:R", "reservation_id": "R", "producer": "inference", "report_id": "report-R", "amount_micro": "100"},
+    {"op": "dispute", "key": "dispute:D:hold", "payment_intent": "pi_P", "dispute": "D", "phase": "hold", "amount_micro": "100"},
+    {"op": "forfeit", "key": "forfeit:bsub_01SYNTHETICSUB0001:P", "subscription_id": "bsub_01SYNTHETICSUB0001", "lot": "P", "at": "2026-11-18T00:00:00Z", "effective_at": "2026-11-18T00:00:00Z"},
+    {"op": "dispute", "key": "dispute:D:release", "payment_intent": "pi_P", "dispute": "D", "phase": "release", "amount_micro": "100", "balances": {"purchased": "0", "inference_hold": "100", "dispute_hold": "0", "refund_obligation": "0", "unsettled_usage": "0"}},
+    {"op": "reservation_release", "key": "release:R", "reservation_id": "R", "producer": "inference", "report_id": "report-R", "no_usage": true, "balances": {"purchased": "0", "inference_hold": "0", "dispute_hold": "0", "refund_obligation": "0", "unsettled_usage": "0"}}
+  ]},
+  {"name": "refund después de ganar disputa retira el hold de inferencia", "steps": [
+    {"op": "purchase", "key": "purchase:pi_P", "lot": "P", "payment_intent": "pi_P", "amount_micro": "100"},
+    {"op": "reserve", "key": "reserve:R", "reservation_id": "R", "producer": "inference", "report_id": "report-R", "amount_micro": "100"},
+    {"op": "dispute", "key": "dispute:D:hold", "payment_intent": "pi_P", "dispute": "D", "phase": "hold", "amount_micro": "100"},
+    {"op": "dispute", "key": "dispute:D:release", "payment_intent": "pi_P", "dispute": "D", "phase": "release", "amount_micro": "100"},
+    {"op": "refund", "key": "refund:re_P", "payment_intent": "pi_P", "amount_micro": "100", "balances": {"purchased": "0", "inference_hold": "0", "dispute_hold": "0", "refund_obligation": "0", "unsettled_usage": "0"}},
+    {"op": "reservation_release", "key": "release:R", "reservation_id": "R", "producer": "inference", "report_id": "report-R", "no_usage": true, "balances": {"purchased": "0", "inference_hold": "0", "dispute_hold": "0", "refund_obligation": "0", "unsettled_usage": "0"}}
+  ]},
+  {"name": "reserva incierta reembolsada conserva identidad y no restaura", "steps": [
+    {"op": "purchase", "key": "purchase:pi_P", "lot": "P", "payment_intent": "pi_P", "amount_micro": "100"},
+    {"op": "reserve", "key": "reserve:R", "reservation_id": "R", "producer": "inference", "report_id": "report-R", "amount_micro": "100"},
+    {"op": "reservation_uncertain", "key": "uncertain:R", "reservation_id": "R", "producer": "inference", "report_id": "report-R"},
+    {"op": "refund", "key": "refund:re_P", "payment_intent": "pi_P", "amount_micro": "100", "balances": {"purchased": "0", "inference_hold": "0", "dispute_hold": "0", "refund_obligation": "0", "unsettled_usage": "0"}},
+    {"op": "reservation_release", "key": "release:R", "reservation_id": "R", "producer": "inference", "report_id": "report-R", "no_usage": true, "reconciled": true, "balances": {"purchased": "0", "inference_hold": "0", "dispute_hold": "0", "refund_obligation": "0", "unsettled_usage": "0"}}
+  ]},
+  {"name": "retirar la segunda compra conserva el origen de la primera", "steps": [
+    {"op": "purchase", "key": "purchase:pi_P", "lot": "P", "payment_intent": "pi_P", "amount_micro": "100"},
+    {"op": "purchase", "key": "purchase:pi_Q", "lot": "Q", "payment_intent": "pi_Q", "amount_micro": "100"},
+    {"op": "reserve", "key": "reserve:R", "reservation_id": "R", "producer": "inference", "report_id": "report-R", "amount_micro": "150"},
+    {"op": "refund", "key": "refund:re_Q", "payment_intent": "pi_Q", "amount_micro": "100", "balances": {"purchased": "0", "inference_hold": "100", "dispute_hold": "0", "refund_obligation": "0", "unsettled_usage": "0"}},
+    {"op": "reservation_release", "key": "release:R", "reservation_id": "R", "producer": "inference", "report_id": "report-R", "no_usage": true, "balances": {"purchased": "100", "inference_hold": "0", "dispute_hold": "0", "refund_obligation": "0", "unsettled_usage": "0"}, "remaining": {"P": "100", "Q": "0"}}
+  ]}
+]}

@@ -50,6 +50,9 @@ function excalidrawFonts(): Plugin {
 const CONTRACT = JSON.stringify(
   createHash("sha256").update(readFileSync(fileURLToPath(new URL("./src-tauri/crates/engine-protocol/commands.json", import.meta.url)))).digest("hex"),
 );
+const INFERENCE_LEVELS = (JSON.parse(readFileSync(new URL("../../contracts/billing-v2/registry/catalog-seed.v2.json", import.meta.url), "utf8")) as {
+  inference_tiers: Array<{ id: string; label: string; default: boolean }>;
+}).inference_tiers.map(({ id, label, default: selected }) => ({ id, label, default: selected }));
 
 // La entrada del navegador (`src/web/main.tsx`). Sale a `dist-web/<base>` para
 // que el Worker de assets sirva las mismas rutas que reenvía la app de Danil;
@@ -114,6 +117,8 @@ function webBuild(serve: boolean): UserConfig {
       "import.meta.env.TERMINUS_ALPHA": JSON.stringify(env.TERMINUS_WEB_ALPHA === "1"),
       "import.meta.env.TERMINUS_BROADCAST_WRITES": JSON.stringify(env.TERMINUS_WEB_BROADCAST_WRITES === "1"),
       "import.meta.env.TERMINUS_BROADCAST_DELIVERY": JSON.stringify(env.TERMINUS_WEB_BROADCAST_DELIVERY === "1"),
+      "import.meta.env.DANIL_CREDITS_V2": "false",
+      "import.meta.env.DANIL_CREDITS_TIERS": "[]",
     },
     plugins: [page],
     // Los iconos de la pestaña solo los usa la web; la ventana de escritorio no los copia.
@@ -136,6 +141,8 @@ const desktop: UserConfig = {
   plugins: [solid(), tailwindcss(), excalidrawFonts()],
   define: {
     __TERMINUS_CONTRACT__: CONTRACT,
+    "import.meta.env.DANIL_CREDITS_V2": JSON.stringify(process.env.DANIL_CREDITS_V2 === "1"),
+    "import.meta.env.DANIL_CREDITS_TIERS": JSON.stringify(INFERENCE_LEVELS),
   },
   // noVNC (la pantalla de una VM) usa `await` de nivel superior. Solo lo carga
   // su trozo perezoso: un webview sin soporte falla al abrir esa pestaña, no la app.

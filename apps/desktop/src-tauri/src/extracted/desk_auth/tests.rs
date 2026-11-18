@@ -609,11 +609,16 @@ fn only_the_mvp_routes_are_callable() {
     ] {
         assert!(allowed(m, p), "{m} {p}");
     }
+    assert_eq!(
+        allowed("GET", "/v1/credits/inference/v1/models"),
+        option_env!("DANIL_CREDITS_V2") == Some("1")
+    );
     for (m, p) in [
         ("GET", "/v1/messaging/conversations"),
         ("POST", "/v1/credits/balance"),
         ("GET", "/v1/credits/balance?organization=org_other"),
         ("POST", "/v1/credits/inference"),
+        ("POST", "/v1/credits/inference/v1/chat/completions"),
         ("GET", "/api/inbox/x"),
         ("POST", "/v1/identity/desk/confirm"),
         ("POST", "/v1/identity/desk/token"),

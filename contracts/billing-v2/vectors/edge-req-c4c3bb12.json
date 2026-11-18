@@ -1,0 +1,24 @@
+{
+  "request": {
+    "method": "POST",
+    "target": "/v1/messaging/conversations/cnv_1/messages?x=1&q=a%20b&q=%2F&x=+",
+    "body": "{\"text\":\"á\", \"workspace\":\"999\"}",
+    "headers": {
+      "content-type": "application/json; charset=utf-8",
+      "if-match": "\"v3\"",
+      "idempotency-key": "same-key",
+      "last-event-id": "cursor-1"
+    }
+  },
+  "req": {
+    "method": "POST",
+    "target": "/v1/messaging/conversations/cnv_1/messages?x=1&q=a%20b&q=%2F&x=+",
+    "body_sha256": "8cf5e3e44a1da762ce9ac5fcaeea5cfb2b0b64074233566e0b4f8f554af84d37",
+    "headers": {
+      "content-type": "application/json; charset=utf-8",
+      "if-match": "\"v3\"",
+      "idempotency-key": "same-key",
+      "last-event-id": "cursor-1"
+    }
+  }
+}

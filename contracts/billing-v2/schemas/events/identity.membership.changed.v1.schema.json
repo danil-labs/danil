@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.danil.ai/identity/events/membership.changed.v1.schema.json",
+  "title": "ai.danil.identity.membership.changed.v1 — data",
+  "$comment": "Identity es el único escritor. Estado de la membresía y conteo COMPLETO de miembros activos de la org, no delta. aggregate_key=membership:<org>; aggregate_seq y membership_version son la versión monotónica de esa org, persistida junto con la membresía y outbox. removed conserva el último rol. Invitaciones pendientes no son miembros; crear y aceptar verifican cupo actual bajo el mismo lock/CAS de org. Al aceptar se incrementa una sola vez, después de revalidar cupo. Aplicar entitlement.max_members no emite membership.changed: no hay ciclo de efectos.",
+  "type": "object",
+  "required": [
+    "organization_id",
+    "person_id",
+    "membership_id",
+    "role",
+    "state",
+    "member_count",
+    "membership_version"
+  ],
+  "properties": {
+    "organization_id": {
+      "$ref": "../common.v1.schema.json#/$defs/organization_id"
+    },
+    "person_id": {
+      "$ref": "../common.v1.schema.json#/$defs/person_id"
+    },
+    "membership_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "role": {
+      "type": "string",
+      "enum": [
+        "owner",
+        "admin",
+        "member"
+      ]
+    },
+    "state": {
+      "type": "string",
+      "enum": [
+        "active",
+        "removed"
+      ]
+    },
+    "member_count": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 100000
+    },
+    "membership_version": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9007199254740991
+    }
+  }
+}

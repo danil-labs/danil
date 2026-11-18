@@ -505,6 +505,7 @@ fn start(client: Option<Arc<Client>>, autostart: bool, launcher: launcher::Launc
             agents_session::agents_session_refresh,
             agents_session::agents_bff_fetch,
             agents_session::credits_pilot_prepare,
+            agents_session::credits_v2_select_tier,
             agents_session::harness_org_fetch,
             proxy::service_filter,
             proxy::load_history,

@@ -1,0 +1,148 @@
+{
+  "lifecycle": [
+    {
+      "name": "sin admisión no despacha",
+      "input": {
+        "stage": "before_dispatch",
+        "admitted": false,
+        "provider_available": true
+      },
+      "expected": {
+        "action": "deny",
+        "code": "inference_not_admitted",
+        "retry_elsewhere": false
+      }
+    },
+    {
+      "name": "proveedor caído antes de despacho",
+      "input": {
+        "stage": "before_dispatch",
+        "admitted": true,
+        "provider_available": false
+      },
+      "expected": {
+        "action": "deny",
+        "code": "inference_provider_unavailable",
+        "retry_elsewhere": false
+      }
+    },
+    {
+      "name": "reserva antes de despacho",
+      "input": {
+        "stage": "before_dispatch",
+        "admitted": true,
+        "provider_available": true
+      },
+      "expected": {
+        "action": "reserve",
+        "code": null,
+        "retry_elsewhere": false
+      }
+    },
+    {
+      "name": "desconexión con uso real liquida",
+      "input": {
+        "stage": "after_dispatch",
+        "usage": "known",
+        "client_closed": true
+      },
+      "expected": {
+        "action": "settle",
+        "code": null,
+        "retry_elsewhere": false
+      }
+    },
+    {
+      "name": "uso real liquida sin desconexión",
+      "input": {
+        "stage": "after_dispatch",
+        "usage": "known",
+        "client_closed": false
+      },
+      "expected": {
+        "action": "settle",
+        "code": null,
+        "retry_elsewhere": false
+      }
+    },
+    {
+      "name": "ausencia de uso probada libera",
+      "input": {
+        "stage": "after_dispatch",
+        "usage": "none",
+        "client_closed": true
+      },
+      "expected": {
+        "action": "release",
+        "code": null,
+        "retry_elsewhere": false
+      }
+    },
+    {
+      "name": "desconexión no prueba ausencia de uso",
+      "input": {
+        "stage": "after_dispatch",
+        "usage": "unknown",
+        "client_closed": true
+      },
+      "expected": {
+        "action": "retain",
+        "code": "inference_uncertain",
+        "retry_elsewhere": false
+      }
+    },
+    {
+      "name": "timeout desconocido retiene",
+      "input": {
+        "stage": "after_dispatch",
+        "usage": "unknown",
+        "client_closed": false
+      },
+      "expected": {
+        "action": "retain",
+        "code": "inference_uncertain",
+        "retry_elsewhere": false
+      }
+    }
+  ],
+  "chunks": [
+    {
+      "id": "chatcmpl_SYNTHETIC0001",
+      "object": "chat.completion.chunk",
+      "created": 1794000000,
+      "model": "danil/equilibrado",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "Hola"
+          },
+          "finish_reason": null
+        }
+      ]
+    },
+    {
+      "id": "chatcmpl_SYNTHETIC0001",
+      "object": "chat.completion.chunk",
+      "created": 1794000000,
+      "model": "danil/equilibrado",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {},
+          "finish_reason": "stop"
+        }
+      ]
+    }
+  ],
+  "success_frames": [
+    "data: {\"id\":\"chatcmpl_SYNTHETIC0001\",\"object\":\"chat.completion.chunk\",\"created\":1794000000,\"model\":\"danil/equilibrado\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"Hola\"},\"finish_reason\":null}]}\n\n",
+    "data: {\"id\":\"chatcmpl_SYNTHETIC0001\",\"object\":\"chat.completion.chunk\",\"created\":1794000000,\"model\":\"danil/equilibrado\",\"choices\":[{\"index\":0,\"delta\":{},\"finish_reason\":\"stop\"}]}\n\n",
+    "data: [DONE]\n\n"
+  ],
+  "error_frames": [
+    "data: {\"id\":\"chatcmpl_SYNTHETIC0001\",\"object\":\"chat.completion.chunk\",\"created\":1794000000,\"model\":\"danil/equilibrado\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"Hola\"},\"finish_reason\":null}]}\n\n",
+    "event: error\ndata: {\"type\":\"https://contracts.danil.ai/billing-v2/problems/inference_uncertain\",\"title\":\"inference uncertain\",\"status\":409,\"code\":\"inference_uncertain\"}\n\n"
+  ]
+}

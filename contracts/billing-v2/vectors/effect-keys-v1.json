@@ -1,0 +1,145 @@
+{
+  "$comment": "La identidad del efecto económico (clave única del ledger) NO es el event_id de Stripe ni el id del sobre. Dos eventos distintos del mismo cobro dan la misma clave y un solo efecto.",
+  "cases": [
+    {
+      "kind": "grant_included",
+      "args": {
+        "subscription_id": "bsub_01SYNTHETICSUB0001",
+        "period_start": "2026-11-14T00:00:00Z",
+        "catalog_version": 3
+      },
+      "key": "grant_included:bsub_01SYNTHETICSUB0001:2026-11-14T00:00:00Z:3"
+    },
+    {
+      "kind": "purchase",
+      "args": {
+        "payment_intent": "pi_SYNTHETIC0001"
+      },
+      "key": "purchase:pi_SYNTHETIC0001"
+    },
+    {
+      "kind": "usage",
+      "args": {
+        "producer": "messaging",
+        "report_id": "01JSYNTHREPORT0001"
+      },
+      "key": "usage:messaging:01JSYNTHREPORT0001"
+    },
+    {
+      "kind": "unsettled",
+      "args": {
+        "producer": "messaging",
+        "report_id": "01JSYNTHREPORT0001"
+      },
+      "key": "unsettled:messaging:01JSYNTHREPORT0001"
+    },
+    {
+      "kind": "expire",
+      "args": {
+        "lot_id": "blot_01SYNTHETICLOT0001"
+      },
+      "key": "expire:blot_01SYNTHETICLOT0001"
+    },
+    {
+      "kind": "refund",
+      "args": {
+        "refund": "re_SYNTHETIC0001"
+      },
+      "key": "refund:re_SYNTHETIC0001"
+    },
+    {
+      "kind": "dispute",
+      "args": {
+        "dispute": "dp_SYNTHETIC0001",
+        "phase": "hold"
+      },
+      "key": "dispute:dp_SYNTHETIC0001:hold"
+    },
+    {
+      "kind": "settle",
+      "args": {
+        "operation": "3d7c1a52-0d55-4a43-9a0c-6b8c3e7d2f10"
+      },
+      "key": "settle:3d7c1a52-0d55-4a43-9a0c-6b8c3e7d2f10"
+    },
+    {
+      "kind": "adjustment",
+      "args": {
+        "operation": "4e8d2b63-1e66-4b54-8b1d-7c9d4f8e3a21"
+      },
+      "key": "adjustment:4e8d2b63-1e66-4b54-8b1d-7c9d4f8e3a21"
+    },
+    {
+      "kind": "forfeit",
+      "args": {
+        "subscription_id": "bsub_01SYNTHETICSUB0001",
+        "lot_id": "blot_01SYNTHETICLOT0001"
+      },
+      "key": "forfeit:bsub_01SYNTHETICSUB0001:blot_01SYNTHETICLOT0001"
+    },
+    {
+      "kind": "gift",
+      "args": {
+        "operation": "3d7c1a52-0d55-4a43-9a0c-6b8c3e7d2f10"
+      },
+      "key": "gift:3d7c1a52-0d55-4a43-9a0c-6b8c3e7d2f10"
+    },
+    {
+      "kind": "compensation",
+      "args": {
+        "operation": "3d7c1a52-0d55-4a43-9a0c-6b8c3e7d2f10"
+      },
+      "key": "compensation:3d7c1a52-0d55-4a43-9a0c-6b8c3e7d2f10"
+    }
+  ],
+  "same_effect_different_events": [
+    {
+      "events": [
+        "checkout.session.completed",
+        "payment_intent.succeeded"
+      ],
+      "event_ids": [
+        "evt_SYNTHA",
+        "evt_SYNTHB"
+      ],
+      "payment_intent": "pi_SYNTHETIC0001",
+      "key": "purchase:pi_SYNTHETIC0001"
+    }
+  ],
+  "invalid": [
+    {
+      "kind": "purchase",
+      "args": {
+        "payment_intent": "evt_SYNTHA"
+      },
+      "why": "un event_id no es identidad económica"
+    },
+    {
+      "kind": "dispute",
+      "args": {
+        "dispute": "dp_SYNTHETIC0001",
+        "phase": "refund"
+      },
+      "why": "fase cerrada: hold, release, loss"
+    },
+    {
+      "kind": "grant_included",
+      "args": {
+        "subscription_id": "sub_SYNTHETIC",
+        "period_start": "2026-11-14T00:00:00Z",
+        "catalog_version": 3
+      },
+      "why": "la suscripción es el id local de billing, no el de Stripe"
+    },
+    {
+      "kind": "overage_cover",
+      "args": {},
+      "why": "no existe: una compra nunca salda deuda"
+    },
+    {
+      "kind": "refund_late",
+      "args": {},
+      "why": "no existe: no hay reembolso automático"
+    }
+  ]
+}

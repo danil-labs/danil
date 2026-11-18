@@ -17,20 +17,20 @@ import { cargarPaquetes } from "../locales/packs";
 import { mountAfterLanguagePacks } from "../locales/startup";
 import { capabilities, setCapabilities } from "../lib/platform";
 import { askGuestChannels } from "../features/machines/guestChannels";
+import { desktopCredits, prepareCreditsV2 } from "../features/chat";
 import "../lib/sharedClock";
 // Errores y avisos de encargado se leen al fallar algo, ya con la ventana montada: entran por detrás.
 // Si el trozo no carga, caen a la prosa del motor; el panel de encargados lo vuelve a pedir.
 void import("../locales/failurePhrases").catch((e) => console.warn("[lenguas] failurePhrases", e));
 
-// Los canales de máquinas locales los dice la ventana (`guest_channels`), no el userAgent.
-// La web también carga este archivo: ahí `invoke` va por el relay y despertaría la máquina.
+// Solo la ventana consulta canales locales; la web también carga este archivo.
 if (capabilities().nativeWindow) {
-  // El selector de organización de Desk, por el borde; oculto hasta que la ruta exista.
-  // Fuera de la carga inicial: el módulo llega con el primer pintado del menú de la cuenta.
+  // El selector de organización, por el borde, carga al abrir el menú de la cuenta.
   let organizations: ReturnType<NonNullable<ReturnType<typeof capabilities>["organizations"]>> | undefined;
   setCapabilities({
     ...capabilities(),
     organizations: () => (organizations ??= import("../features/shell/organization-desktop").then((m) => m.desktopOrganizations())),
+    ...(import.meta.env.DANIL_CREDITS_V2 ? { danilCredits: { ...desktopCredits, prepare: (headers: Record<string, string>) => prepareCreditsV2(headers, invoke) } } : {}),
   });
   void askGuestChannels().then((channels) => setCapabilities({ ...capabilities(), wsl: channels.includes("wsl") }));
 }
