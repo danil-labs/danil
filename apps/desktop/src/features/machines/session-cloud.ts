@@ -55,7 +55,11 @@ export function createSessionCloud(invoke: Invoke, onProblem?: (error: unknown) 
       unsupported = false;
       let status: Status;
       try { status = await invoke("danil_session_status") as Status; }
-      catch { return { state: "retrying" as const }; }
+      catch {
+        if (version !== epoch) return { state: "retrying" as const };
+        contexts = null; clients.clear(); current.clear();
+        return legacy.rows();
+      }
       if (version !== epoch) return { state: "retrying" as const };
       if (!Array.isArray(status.sessions)) {
         contexts = null;

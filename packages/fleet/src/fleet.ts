@@ -313,12 +313,6 @@ export class Fleet {
     return settled ? [...found.values()] : null;
   }
 
-  /** La cuenta sellada también clasifica workspaces fuera de la máquina de organización. */
-  accountAvailable(organization: string, context: string): Listed[] | null {
-    const rows = this.machines().filter((m) => m.context === context).flatMap((m) => this.listings.get(m.id) ?? []).filter((w) => w.account?.org === organization);
-    return rows.length ? rows : null;
-  }
-
   /** Si `info` atiende `workspace` por una organización: por su fila, o por su `list_workspaces` si es `kind=organization`. */
   private serves(info: MachineInfo | undefined, workspace: string): boolean {
     if (serves(info, workspace)) return true;

@@ -1,9 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { mergeBridgeInventory } from "../../src/features/machines/bridge-inventory.ts";
 import { createSessionCloud, mergeContextMachines } from "../../src/features/machines/session-cloud.ts";
 import { createAccountWorkspaces } from "../../src/features/shell/session-account-workspaces.ts";
 import { confirmEmailClose, emailContextCount } from "../../src/features/shell/session-close-confirm.ts";
 import { createSessionEmptyState } from "../../src/features/shell/session-empty.ts";
+import { sessionWorkspaceSource } from "../../src/features/shell/session-workspace-source.ts";
 
 const contexts = [{ context_id: "a", org: "A" }, { context_id: "b", org: "B" }];
 const machine = (id: string, org: string) => ({ computer_id: id, organization_id: org, state: "online" });
@@ -96,4 +98,45 @@ test("missing context echo discards every scoped inventory and falls back to uns
   assert.ok(result.state === "ready");
   assert.equal(result.computers[0].computer_id, "legacy");
   assert.equal("context" in result.computers[0], false);
+});
+
+
+test("paid groups never offer local seals, Free never offers another machine, and unknown plans use organization machines", () => {
+  const remote = [{ id: "org-machine", name: "Paid" }];
+  const local = [{ id: "here", name: "Sealed on this computer" }];
+  const group = (plan: string | null) => sessionWorkspaceSource(plan, () => remote, () => local);
+  assert.deepEqual(group("paid"), remote);
+  assert.deepEqual(group(null), remote);
+  assert.deepEqual(group("free"), local);
+  assert.equal(group("paid")?.some((w) => w.id === "here"), false);
+  assert.equal(group("free")?.some((w) => w.id === "org-machine"), false);
+  assert.deepEqual(sessionWorkspaceSource("paid", () => null, () => local), null);
+});
+
+test("the bridge remains the base without sessions, retaining organization and engine capabilities", () => {
+  const organization = { organization_id: "A", workspace: { id: "paid", name: "Paid" } };
+  const bridge = { computer_id: "same", state: "offline", name: "Bridge", organization, service_features: ["engine-feature"], os: "linux", host_version: "v1", workspaces: ["paid"] };
+  const merged = mergeBridgeInventory([bridge], [{ computer_id: "same", state: "online", kind: "organization", organization_id: "A", service_features: [] }]);
+  assert.deepEqual(merged, [{ ...bridge, state: "online", kind: "organization", organization_id: "A" }]);
+  assert.equal("context" in merged[0], false);
+  assert.equal(mergeBridgeInventory([bridge], [{ computer_id: "same", state: "online", context: "ctx" }])[0].context, "ctx");
+});
+
+test("status command failure falls back to legacy inventory and admission without a stale context", async () => {
+  let fail = false;
+  const calls: Record<string, unknown>[] = [];
+  const cloud = createSessionCloud(async (command, args) => {
+    if (command === "danil_session_status") { if (fail) throw new Error("IPC unavailable"); return { sessions: [{ contexts }] }; }
+    calls.push(args!);
+    return { status: 200, body: args?.path === "/v1/capabilities" ? { contract: "mvp-v1", items: [{ name: "machines", version: 1, status: "available" }] } : { items: [{ machine_id: "legacy", state: "running", connection: "connected" }] } };
+  });
+  await cloud.rows();
+  fail = true;
+  calls.length = 0;
+  const result = await cloud.rows();
+  assert.ok(result.state === "ready");
+  assert.equal(result.computers[0].computer_id, "legacy");
+  await cloud.client.admission("legacy");
+  assert.ok(calls.length >= 3);
+  assert.ok(calls.every((c) => !("context" in c)));
 });

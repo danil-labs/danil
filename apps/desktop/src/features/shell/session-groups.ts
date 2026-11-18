@@ -9,6 +9,7 @@ import { type ContextGroup, createSessionContexts } from "./session-contexts.ts"
 import type { EmptyReason } from "./session-empty.ts";
 import { coalesceSessionReturn as createSessionReturn } from "./session-return.ts";
 import { sessionSeedInputs, sessionSyncKey } from "./session-seeding.ts";
+import { sessionWorkspaceSource } from "./session-workspace-source.ts";
 import { createAddedSync } from "./workspace-added-sync.ts";
 import { ADDED_KEY, edgeAddedTransport, prefsAddedStore } from "./workspace-added-transport.ts";
 
@@ -34,9 +35,7 @@ function wire(hidden: () => ReadonlySet<string>, onSeeded: (ids: readonly string
   });
   const availableFor = (org: string, context: string) => {
     revision();
-    const source = danilAvailableContext(org, context);
-    const local = accounts.available(org);
-    return local.length ? [...new Map([...(source ?? []), ...local].map((w) => [w.id, w])).values()] : source;
+    return sessionWorkspaceSource(groups()?.find((g) => g.context_id === context)?.plan ?? null, () => danilAvailableContext(org, context), () => accounts.available(org));
   };
   const refreshAccounts = () => accounts.refresh(groups() ?? [], sessions.send);
   const accountKey = createMemo(() => JSON.stringify(groups()?.map((g) => [g.context_id, g.org, g.plan]) ?? null));

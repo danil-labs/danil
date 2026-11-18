@@ -1105,38 +1105,13 @@ test("changing a machine context replaces its link, clears its slices and reject
 	fleet.close();
 });
 
-test("sealed account metadata classifies a workspace on a personal machine only for its org and context", async () => {
-	const fleet = new Fleet({
-		self: "self",
-		connect: () =>
-			fakeLink({
-				answers: {
-					list_workspaces: {
-						workspaces: [
-							{
-								id: "free",
-								name: "Free",
-								account: { org: "org", account_id: "42" },
-							},
-							{ id: "local", name: "Local" },
-						],
-					},
-				},
-			}),
-	});
-	fleet.setMachines([
-		{ id: "personal", name: "Personal", wakes: false, context: "a" },
-	]);
-	await fleet.read({
-		machine: "personal",
-		workspace: null,
-		command: "list_workspaces",
-	});
-	assert.deepEqual(
-		fleet.accountAvailable("org", "a")?.map((w) => w.id),
-		["free"],
-	);
-	assert.equal(fleet.accountAvailable("other", "a"), null);
-	assert.equal(fleet.accountAvailable("org", "b"), null);
-	fleet.close();
+test("a sealed workspace on a personal machine does not become an organization source", async () => {
+  const fleet = new Fleet({ self: "self", connect: () => fakeLink({ answers: { list_workspaces: { workspaces: [
+    { id: "sealed", name: "Sealed", account: { org: "org", account_id: "42" } },
+  ] } } }) });
+  fleet.setMachines([{ id: "personal", name: "Personal", wakes: false, context: "a", kind: "personal" }]);
+  await fleet.read({ machine: "personal", workspace: null, command: "list_workspaces" });
+  assert.equal(fleet.available("org"), null);
+  assert.deepEqual(fleet.organizationMachines("org"), []);
+  fleet.close();
 });

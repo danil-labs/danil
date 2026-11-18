@@ -46,6 +46,7 @@ import { Toast, ToastPortal } from "../../ui/Toast";
 import type { MachineStatus } from "../../web/SyncNote";
 import { type DanilSessionInfo, railSession, type WorkspaceAccount } from "../settings/danil-sessions";
 import AccountMachines from "./AccountMachines";
+import { mergeBridgeInventory } from "./bridge-inventory";
 import { CLOUD_RETRY_INITIAL_MS, CLOUD_RETRY_MS, EDGE_ENDPOINT } from "./cloud-machines";
 import { machinesListed, setDanilFleet } from "./danil-source";
 import { createEngineWorkspaces, railOf } from "./engine-workspaces";
@@ -503,7 +504,7 @@ export function startAccountMachines(target: Target = window) {
     homeVersion = mine?.host_version ?? null;
     const cloudRows = await readCloud();
     if (epoch !== cloudEpoch) return;
-    const others = orderComputers([...cloudRows.filter((c) => c.computer_id !== self), ...answer.value.filter((c) => c.computer_id !== self && !cloudRows.some((o) => o.computer_id === c.computer_id))]);
+    const others = orderComputers(mergeBridgeInventory(answer.value, cloudRows).filter((c) => c.computer_id !== self));
     await readGuestMachines();
     if (epoch !== cloudEpoch) return;
     const key = JSON.stringify([self, account, client.endpoint]);
