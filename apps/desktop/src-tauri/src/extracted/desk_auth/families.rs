@@ -557,6 +557,9 @@ impl<V: FamilyVault> Families<V> {
         key: &str,
         context: Option<&str>,
     ) -> Result<Reply, Fail> {
+        if !session::valid_promo_request(method, path, body, context) {
+            return Err(refused("invalid_request"));
+        }
         if context.is_some_and(|c| !session::opaque_id(c)) {
             return Err(refused("session_not_in_set"));
         }

@@ -171,6 +171,7 @@ pub(crate) fn allowed(method: &str, path: &str) -> bool {
             | ("GET", "/v1/credits/balance")
             | ("GET", "/v1/workspaces")
             | ("POST", "/v1/workspaces/select")
+            | ("POST", "/v1/workspaces/promo/redeem")
             | ("GET", "/v1/workspaces/preferences")
             | ("PUT", "/v1/workspaces/preferences")
             | ("GET", "/v1/machines")
@@ -186,6 +187,25 @@ pub(crate) fn allowed(method: &str, path: &str) -> bool {
         ("PUT" | "DELETE", ["", "v1", "workspaces", "preferences", "added", id]) => opaque_id(id),
         _ => false,
     }
+}
+
+pub(super) fn valid_promo_request(
+    method: &str,
+    path: &str,
+    body: Option<&Value>,
+    context: Option<&str>,
+) -> bool {
+    if (method, path) != ("POST", "/v1/workspaces/promo/redeem") {
+        return true;
+    }
+    context.is_some()
+        && body.and_then(Value::as_object).is_some_and(|body| {
+            body.len() == 1
+                && body
+                    .get("code")
+                    .and_then(Value::as_str)
+                    .is_some_and(|code| (1..=64).contains(&code.chars().take(65).count()))
+        })
 }
 
 /// `/v1/capabilities` leída (`{contract, items: [{name, version, status}]}`):
@@ -221,6 +241,7 @@ pub(crate) struct Reply {
     /// `Location` (la operación de un `202`, por ejemplo).
     pub(crate) location: Option<String>,
     pub(super) code: Option<&'static str>,
+    pub(super) rejection_code: Option<String>,
     pub(crate) empty_reason: Option<&'static str>,
 }
 
@@ -357,13 +378,31 @@ pub(super) fn request_context(
         .headers()
         .get("X-Danil-Empty-Reason")
         .map(|h| h.to_str().ok().and_then(empty_reason).unwrap_or("unknown"));
+    let rejection_code = (method == "POST"
+        && url.ends_with("/v1/workspaces/promo/redeem")
+        && (400..600).contains(&status))
+    .then(|| {
+        body["code"]
+            .as_str()
+            .filter(|code| {
+                (1..=64).contains(&code.len())
+                    && code.bytes().all(|b| b.is_ascii_lowercase() || b == b'_')
+            })
+            .map(str::to_owned)
+    })
+    .flatten();
     let discard = context.is_some() && !(200..300).contains(&status);
     Ok(Reply {
         status,
         body: if discard { Value::Null } else { body },
-        retry_after: if discard { None } else { retry_after },
+        retry_after: if discard && status != 429 {
+            None
+        } else {
+            retry_after
+        },
         location: if discard { None } else { location },
         code,
+        rejection_code,
         empty_reason,
     })
 }

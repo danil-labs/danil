@@ -118,6 +118,11 @@ fn answer(mut stream: TcpStream, handler: &Handler, seen: &Mutex<Vec<Req>>) {
         .and_then(|o| o.remove("__empty_reason"))
         .and_then(|v| v.as_str().map(|s| format!("X-Danil-Empty-Reason: {s}\r\n")))
         .unwrap_or_default();
+    let retry_after = value
+        .as_object_mut()
+        .and_then(|o| o.remove("__retry_after"))
+        .and_then(|v| v.as_str().map(|s| format!("Retry-After: {s}\r\n")))
+        .unwrap_or_default();
     let text = if value.is_null() {
         String::new()
     } else {
@@ -125,7 +130,7 @@ fn answer(mut stream: TcpStream, handler: &Handler, seen: &Mutex<Vec<Req>>) {
     };
     let _ = write!(
         stream,
-        "HTTP/1.1 {status} X\r\nContent-Type: application/json\r\n{location}{echo}{empty_reason}Content-Length: {}\r\nConnection: close\r\n\r\n{text}",
+        "HTTP/1.1 {status} X\r\nContent-Type: application/json\r\n{location}{echo}{empty_reason}{retry_after}Content-Length: {}\r\nConnection: close\r\n\r\n{text}",
         text.len()
     );
 }
