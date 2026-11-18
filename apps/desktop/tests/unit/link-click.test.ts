@@ -1,6 +1,6 @@
 /**
- * El clic en un enlace web del chat: con el modificador de la plataforma sale
- * al navegador sin preguntar, y sin él ofrece la elección.
+ * Los servidores locales se abren en Danil; los demás enlaces conservan
+ * el selector y el modificador para abrir el navegador.
  *
  * Prueba `clicEnEnlaceWeb`, que es lo que llama el `onClick` del enlace en
  * `ui/Markdown.tsx`, con eventos de ratón de jsdom. No monta el popover.
@@ -31,6 +31,46 @@ function clic(mod: { metaKey?: boolean; ctrlKey?: boolean; shiftKey?: boolean },
   window.removeEventListener("harness:abrir-fuera", oir);
   return { fuera, panel, navega: !e.defaultPrevented };
 }
+
+test("los servidores locales se abren en Danil sin menú ni navegador", () => {
+  for (const destino of ["http://localhost:5173/", "https://LOCALHOST/app?q=1#x", "http://127.0.0.1:3000", "http://[::1]:8080/"]) {
+    for (const mac of [false, true]) {
+      for (const mod of [{}, { ctrlKey: true }, { metaKey: true }]) {
+        const dentro: string[] = [];
+        const fuera: string[] = [];
+        const local = (e: Event) => dentro.push((e as CustomEvent<string>).detail);
+        const externo = (e: Event) => fuera.push((e as CustomEvent<string>).detail);
+        window.addEventListener("harness:abrir-sitio", local);
+        window.addEventListener("harness:abrir-fuera", externo);
+        let panel = 0;
+        const e = new window.MouseEvent("click", { cancelable: true, ...mod });
+        try {
+          clicEnEnlaceWeb(e, destino, () => panel++, mac);
+          assert.deepEqual({ dentro, fuera, panel, navega: !e.defaultPrevented }, { dentro: [destino], fuera: [], panel: 0, navega: false }, destino);
+        } finally {
+          window.removeEventListener("harness:abrir-sitio", local);
+          window.removeEventListener("harness:abrir-fuera", externo);
+        }
+      }
+    }
+  }
+});
+
+test("los hosts parecidos y las demás direcciones conservan el selector", () => {
+  for (const destino of ["https://localhost.example/", "http://127.0.0.1.nip.io:5173", "https://example.test/?url=http://localhost", "http://0.0.0.0:5173", "http://127.0.0.2:5173", "http://local.lan:5173", "mailto:dev@localhost", "user@localhost", "http://user:pass@localhost:5173"]) {
+    const dentro: string[] = [];
+    const local = (e: Event) => dentro.push((e as CustomEvent<string>).detail);
+    window.addEventListener("harness:abrir-sitio", local);
+    let panel = 0;
+    const e = new window.MouseEvent("click", { cancelable: true });
+    try {
+      clicEnEnlaceWeb(e, destino, () => panel++, false);
+      assert.deepEqual({ dentro, panel, navega: !e.defaultPrevented }, { dentro: [], panel: 1, navega: false }, destino);
+    } finally {
+      window.removeEventListener("harness:abrir-sitio", local);
+    }
+  }
+});
 
 test("Ctrl+clic fuera de macOS abre en el navegador y no el panel", () => {
   assert.deepEqual(clic({ ctrlKey: true }, false), { fuera: [DESTINO], panel: 0, navega: false });

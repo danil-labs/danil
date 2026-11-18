@@ -101,9 +101,8 @@ export function imagenLocal(v: unknown): string | null {
 }
 
 /**
- * El clic en un enlace web del chat. Con el modificador de la plataforma —⌘ en
- * macOS, Ctrl en el resto— sale directo al navegador; sin él, `abrirPanel`
- * ofrece la elección. Ctrl no cuenta en macOS: allí Ctrl+clic es el clic derecho.
+ * Los servidores locales se abren en Danil. Para los demás destinos, el
+ * modificador de la plataforma abre el navegador y el clic simple el selector.
  */
 export function clicEnEnlaceWeb(
   e: MouseEvent,
@@ -112,11 +111,26 @@ export function clicEnEnlaceWeb(
   mac: boolean,
 ) {
   e.preventDefault();
+  if (isLocalServerUrl(destino)) {
+    window.dispatchEvent(new CustomEvent("harness:abrir-sitio", { detail: destino }));
+    return;
+  }
   if (mac ? e.metaKey : e.ctrlKey) {
     window.dispatchEvent(new CustomEvent("harness:abrir-fuera", { detail: destino }));
     return;
   }
   abrirPanel(e);
+}
+
+function isLocalServerUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return (url.protocol === "http:" || url.protocol === "https:") &&
+      !url.username && !url.password &&
+      (url.hostname === "localhost" || url.hostname === "127.0.0.1" || url.hostname === "[::1]");
+  } catch {
+    return false;
+  }
 }
 
 export type TrozoDeTexto = { texto: string; url: string | null };
