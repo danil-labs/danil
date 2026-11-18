@@ -1,12 +1,13 @@
 // La compuerta de una publicación manual rechaza un artefacto sin herramientas, como la 0.3.2.
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { chmodSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
-import { artifactPlan, checkManifests, TARGETS } from "../../scripts/desktop-release-verify.mjs";
+import { artifactPlan, checkEngineIdentifiers, checkEngines, checkManifests, TARGETS } from "../../scripts/desktop-release-verify.mjs";
 
 const root = resolve(fileURLToPath(import.meta.url), "../../..");
 
@@ -23,8 +24,11 @@ const good = (target) => ({ schema: 2, layout: "tree", target });
 
 test("each artifact opens on its own platform and names where its tools live", () => {
   assert.deepEqual(artifactPlan("/x/Danil_0.3.3_x64-setup.exe", "win32"), {
-    platform: "win32", targets: ["x86_64-pc-windows-msvc"], resources: "work-tools", engine: "seldon-runtime.exe",
+    platform: "win32", targets: ["x86_64-pc-windows-msvc"], resources: "work-tools", engine: "danil-engine.exe",
+    engines: ["danil-engine.exe", "seldon-runtime.exe"],
   });
+  assert.deepEqual(artifactPlan("/x/Danil_0.3.3_amd64.AppImage", "linux").engines, ["squashfs-root/usr/bin/danil-engine", "squashfs-root/usr/bin/seldon-runtime"]);
+  assert.deepEqual(artifactPlan("/x/Danil.app", "darwin").engines, ["Contents/MacOS/danil-engine", "Contents/MacOS/seldon-runtime"]);
   assert.equal(artifactPlan("/x/Danil_0.3.3_amd64.AppImage", "linux").resources, "squashfs-root/usr/share/Danil/work-tools");
   assert.deepEqual(artifactPlan("/x/Danil.app/", "darwin").targets, TARGETS.darwin);
   assert.equal(artifactPlan("/x/Danil_0.3.3_universal.dmg", "darwin").platform, "darwin");
@@ -55,6 +59,45 @@ test("the universal macOS app needs both architectures", () => {
     assert.deepEqual(checkManifests(both, TARGETS.darwin), []);
   } finally {
     for (const dir of [one, both]) rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("the engine travels as danil-engine and its alias, both with the pinned bytes", () => {
+  const dir = mkdtempSync(join(tmpdir(), "danil-release-gate-"));
+  try {
+    const engine = join(dir, "danil-engine.exe");
+    const alias = join(dir, "seldon-runtime.exe");
+    const pinned = new Set([createHash("sha256").update("pinned").digest("hex")]);
+    assert.match(checkEngines([engine, alias], pinned).join(), /no trae danil-engine.exe.*no trae seldon-runtime.exe/);
+    writeFileSync(engine, "pinned");
+    assert.match(checkEngines([engine, alias], pinned).join(), /no trae seldon-runtime.exe/);
+    writeFileSync(alias, "other");
+    const differ = checkEngines([engine, alias], pinned).join();
+    assert.match(differ, /no tienen los mismos bytes/);
+    assert.match(differ, /seldon-runtime.exe \(sha256 \w+\) no es el motor fijado/);
+    writeFileSync(alias, "pinned");
+    assert.deepEqual(checkEngines([engine, alias], pinned), []);
+    // Signed on macOS: both must be there, the bytes are not the lock's.
+    writeFileSync(alias, "signed");
+    assert.deepEqual(checkEngines([engine, alias], null), []);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("on macOS both copies are signed with the identifier seldon-runtime", () => {
+  const dir = mkdtempSync(join(tmpdir(), "danil-release-gate-"));
+  try {
+    const engine = join(dir, "danil-engine");
+    const alias = join(dir, "seldon-runtime");
+    writeFileSync(engine, "");
+    writeFileSync(alias, "");
+    const signed = { [engine]: "Executable=x\nIdentifier=seldon-runtime\n", [alias]: "Identifier=seldon-runtime\nFormat=Mach-O" };
+    assert.deepEqual(checkEngineIdentifiers([engine, alias], (path) => signed[path]), []);
+    signed[engine] = "Identifier=danil-engine\n";
+    assert.match(checkEngineIdentifiers([engine, alias], (path) => signed[path]).join(), /danil-engine está firmado como danil-engine/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
   }
 });
 

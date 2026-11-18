@@ -2,7 +2,7 @@
 
 `apps/desktop/` is the Danil window: a Tauri 2 desktop app (Rust) with a
 SolidJS front. The domain (workspaces, projects, tasks, agent turns, accounts)
-lives in the engine `seldon-runtime`, a proprietary binary that is not in this
+lives in the engine `danil-engine`, a proprietary binary that is not in this
 repository. The window reaches it over RPC1 through a frozen contract; see
 [docs/engine-client.md](docs/engine-client.md).
 

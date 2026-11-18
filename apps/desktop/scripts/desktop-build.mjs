@@ -97,6 +97,7 @@ function which(name, env) {
  */
 export function bundleEnvironment(args, { platform = process.platform, env = process.env, cwd = ROOT } = {}) {
   if (args.includes("--debug") || args.includes("-d") || args.includes("--no-bundle")) return { env: {} };
+  if (platformOf(args, platform) === "darwin") return { env: signingEnvironment(env, cwd) };
   if (env[ESCAPE] === "1" || platformOf(args, platform) !== "linux") return { env: {} };
   const real = env.TERMINUS_REAL_PATCHELF || which("patchelf", env);
   if (!real) return { error: "falta patchelf en el PATH: linuxdeploy lo necesita y work-tools-patchelf.py protege las herramientas con él." };
@@ -110,6 +111,18 @@ export function bundleEnvironment(args, { platform = process.platform, env = pro
       TERMINUS_REAL_PATCHELF: real,
       TERMINUS_WORK_TOOLS_ROOT: env.TERMINUS_WORK_TOOLS_ROOT || join(release, "bundle/appimage/Danil.AppDir/usr/share/Danil/work-tools"),
     },
+  };
+}
+
+/**
+ * Tauri llama a `codesign` por el PATH: el shim firma `Contents/MacOS/danil-engine` con
+ * `--identifier seldon-runtime`, el identificador que exige la ventana.
+ */
+export function signingEnvironment(env = process.env, cwd = ROOT) {
+  const shim = join(cwd, "scripts/macos-codesign");
+  return {
+    PATH: [shim, env.PATH].filter(Boolean).join(delimiter),
+    DANIL_REAL_CODESIGN: env.DANIL_REAL_CODESIGN || "/usr/bin/codesign",
   };
 }
 

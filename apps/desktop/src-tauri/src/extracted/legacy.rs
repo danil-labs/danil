@@ -234,43 +234,43 @@ pub fn image_path(_pid: u32) -> Option<PathBuf> {
     None
 }
 
-/// El motor vivo corre de un binario que ya no es el instalado. `deep` compara
-/// además el contenido de la copia del AppImage, que solo cambia al arrancar.
+/// El motor vivo corre de un binario que ya no es `launched`, el que lanzaría esta ventana.
+/// `deep` compara además el contenido de la copia del AppImage, que solo cambia al arrancar.
 #[cfg(windows)]
-pub fn engine_replaced(pid: u32, _deep: bool) -> bool {
+pub fn engine_replaced(pid: u32, _launched: &Path, _deep: bool) -> bool {
     set_aside(pid)
 }
 #[cfg(target_os = "linux")]
-pub fn engine_replaced(pid: u32, deep: bool) -> bool {
+pub fn engine_replaced(pid: u32, launched: &Path, deep: bool) -> bool {
     let Ok(running) = std::fs::read_link(format!("/proc/{pid}/exe")) else {
         return false;
     };
-    if running.to_string_lossy().ends_with(" (deleted)") {
+    if running.to_string_lossy().ends_with(" (deleted)") || other_name(&running, launched) {
         return true;
     }
-    let bundled = std::env::current_exe().map(|exe| exe.with_file_name("seldon-runtime"));
     deep && std::env::var_os("APPIMAGE").is_some()
-        && bundled.is_ok_and(|bundled| {
-            bundled != running && std::fs::read(&bundled).ok() != std::fs::read(&running).ok()
-        })
+        && launched != running
+        && std::fs::read(launched).ok() != std::fs::read(&running).ok()
 }
 #[cfg(target_os = "macos")]
-pub fn engine_replaced(pid: u32, _deep: bool) -> bool {
+pub fn engine_replaced(pid: u32, launched: &Path, _deep: bool) -> bool {
     let Ok(pid) = i32::try_from(pid) else {
         return false;
     };
     let mut path = vec![0u8; 4096];
     // SAFETY: el búfer es nuestro y se le pasa su tamaño.
     let length = unsafe { libc::proc_pidpath(pid, path.as_mut_ptr().cast(), path.len() as u32) };
-    let bundled = std::env::current_exe().map(|exe| exe.with_file_name("seldon-runtime"));
-    let Ok(bundled) = bundled else {
-        return false;
-    };
     if length <= 0 {
         return false;
     }
     let running = PathBuf::from(String::from_utf8_lossy(&path[..length as usize]).into_owned());
-    running != bundled && running.canonicalize().ok() != bundled.canonicalize().ok()
+    running != launched && running.canonicalize().ok() != launched.canonicalize().ok()
+}
+
+/// La copia estable del AppImage lleva el nombre del binario que la ventana lanza.
+#[cfg(any(target_os = "linux", test))]
+fn other_name(running: &Path, launched: &Path) -> bool {
+    running.file_name() != launched.file_name()
 }
 
 /// Dentro de un AppImage el motor vive en un montaje que desaparece con la ventana:
@@ -282,17 +282,47 @@ pub fn stable_engine(bundled: &Path, window: &Path) -> std::io::Result<PathBuf> 
         return Ok(bundled.to_path_buf());
     }
     let folder = window.join("engine");
-    let target = folder.join("seldon-runtime");
-    let bundled = std::fs::read(bundled)?;
-    if std::fs::read(&target).is_ok_and(|current| current == bundled) {
-        return Ok(target);
+    let name = bundled
+        .file_name()
+        .ok_or_else(|| std::io::Error::from(std::io::ErrorKind::InvalidInput))?;
+    let target = folder.join(name);
+    let bytes = std::fs::read(bundled)?;
+    if !std::fs::read(&target).is_ok_and(|current| current == bytes) {
+        std::fs::create_dir_all(&folder)?;
+        let staged = folder.join(format!("{}.next", name.to_string_lossy()));
+        std::fs::write(&staged, &bytes)?;
+        std::fs::set_permissions(&staged, std::fs::Permissions::from_mode(0o700))?;
+        std::fs::rename(&staged, &target)?;
     }
-    std::fs::create_dir_all(&folder)?;
-    let staged = folder.join("seldon-runtime.next");
-    std::fs::write(&staged, &bundled)?;
-    std::fs::set_permissions(&staged, std::fs::Permissions::from_mode(0o700))?;
-    std::fs::rename(&staged, &target)?;
+    // Los hooks de los turnos de un motor que corre de la copia vieja apuntan a ella.
+    for stale in super::engine::ENGINE_NAMES
+        .iter()
+        .filter(|stale| name != std::ffi::OsStr::new(stale))
+    {
+        let copy = folder.join(stale);
+        if copy.is_file() && !in_use(&copy) {
+            let _ = std::fs::remove_file(copy);
+        }
+    }
     Ok(target)
+}
+
+/// Algún proceso de esta cuenta corre del binario `path`.
+#[cfg(target_os = "linux")]
+fn in_use(path: &Path) -> bool {
+    let Ok(entries) = std::fs::read_dir("/proc") else {
+        return true;
+    };
+    entries
+        .flatten()
+        .filter(|entry| {
+            entry
+                .file_name()
+                .to_string_lossy()
+                .bytes()
+                .all(|b| b.is_ascii_digit())
+        })
+        .any(|entry| std::fs::read_link(entry.path().join("exe")).is_ok_and(|exe| exe == path))
 }
 
 /// Copia los recursos del montaje a `target`, entera y de una vez.
@@ -426,5 +456,29 @@ mod windows {
                 (created.dwHighDateTime as u64) << 32 | created.dwLowDateTime as u64,
             )
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::other_name;
+    use std::path::Path;
+
+    #[test]
+    fn an_engine_running_as_the_alias_was_launched_by_an_older_window() {
+        let launched = Path::new("/tmp/.mount_Danil/usr/bin/danil-engine");
+        assert!(other_name(
+            Path::new("/home/a/.local/share/ai.danil.terminus-window/engine/seldon-runtime"),
+            launched
+        ));
+        assert!(!other_name(
+            Path::new("/home/a/.local/share/ai.danil.terminus-window/engine/danil-engine"),
+            launched
+        ));
+        // Un build local sin `danil-engine` lanza el alias y no se retira a sí mismo.
+        assert!(!other_name(
+            Path::new("/opt/lab/seldon-runtime"),
+            Path::new("/tmp/build/seldon-runtime")
+        ));
     }
 }

@@ -16,7 +16,9 @@ use std::{
 };
 use zeroize::Zeroizing;
 
-const REQUIREMENT: &str = r#"identifier "seldon-runtime" and anchor apple generic and certificate leaf[subject.OU] = "ATG57AXYTS""#;
+// `danil-engine` se firma con `--identifier seldon-runtime` (`scripts/macos-codesign/codesign`);
+// aceptar también `danil-engine` deja cambiar el identificador sin otra ventana.
+const REQUIREMENT: &str = r#"(identifier "seldon-runtime" or identifier "danil-engine") and anchor apple generic and certificate leaf[subject.OU] = "ATG57AXYTS""#;
 const WINDOW_REQUIREMENT: &str = r#"identifier "ai.danil.terminus" and anchor apple generic and certificate leaf[subject.OU] = "ATG57AXYTS""#;
 
 pub fn prepare(exe: &Path, identity: &str, command: &mut Command) -> Option<File> {
@@ -199,4 +201,15 @@ fn help_output_with_timeout(exe: &Path) -> bool {
     let _ = child.kill();
     let _ = child.wait();
     found
+}
+
+#[cfg(test)]
+mod tests {
+    use security_framework::os::macos::code_signing::SecRequirement;
+
+    #[test]
+    fn the_engine_requirement_accepts_both_identifiers() {
+        assert!(super::REQUIREMENT.parse::<SecRequirement>().is_ok());
+        assert!(super::WINDOW_REQUIREMENT.parse::<SecRequirement>().is_ok());
+    }
 }

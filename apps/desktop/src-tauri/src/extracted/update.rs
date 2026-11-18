@@ -88,7 +88,13 @@ fn remove_set_aside(dir: &Path) -> bool {
     clear_set_aside(dir, |path| std::fs::remove_file(path).is_ok())
 }
 
-const ENGINE: &str = "seldon-runtime.exe";
+/// Un motor apartado, con cualquiera de sus nombres: `old_<tick>_<nombre>.exe` en minúsculas.
+#[cfg_attr(not(windows), allow(dead_code))]
+fn engine_prefix(name: &str) -> Option<&str> {
+    super::engine::ENGINE_NAMES
+        .iter()
+        .find_map(|engine| name.strip_suffix(&format!("{engine}.exe") as &str))
+}
 
 /// Primero los motores: mientras uno apartado siga vivo, su ventana apartada se queda
 /// para poder volver a abrirla (`previous_window`).
@@ -107,7 +113,7 @@ fn clear_set_aside(dir: &Path, mut remove: impl FnMut(&Path) -> bool) -> bool {
         })
         .partition(|path| {
             path.file_name()
-                .is_some_and(|name| name.to_string_lossy().to_lowercase().ends_with(ENGINE))
+                .is_some_and(|name| engine_prefix(&name.to_string_lossy().to_lowercase()).is_some())
         });
     let engines_left = engines.iter().filter(|path| !remove(path)).count();
     if engines_left > 0 {
@@ -141,7 +147,7 @@ fn installed_name(name: &str) -> String {
 #[cfg_attr(not(windows), allow(dead_code))]
 fn window_beside(engine: &Path, window: &str) -> Option<PathBuf> {
     let name = engine.file_name()?.to_string_lossy().to_lowercase();
-    let prefix = name.strip_suffix(ENGINE)?;
+    let prefix = engine_prefix(&name)?;
     prefix
         .starts_with("old_")
         .then(|| engine.with_file_name(format!("{prefix}{}", installed_name(window))))
@@ -181,6 +187,10 @@ mod tests {
         assert_eq!(
             window_beside(&dir.join("old_seldon-runtime.exe"), "old_5_terminus.exe"),
             Some(dir.join("old_terminus.exe"))
+        );
+        assert_eq!(
+            window_beside(&dir.join("old_7_danil-engine.exe"), "terminus.exe"),
+            Some(dir.join("old_7_terminus.exe"))
         );
         assert_eq!(
             window_beside(&dir.join("seldon-runtime.exe"), "terminus.exe"),
@@ -248,6 +258,25 @@ mod tests {
         assert_eq!(
             names(&asked),
             ["old_9_seldon-runtime.exe", "old_terminus.exe"]
+        );
+    }
+
+    #[test]
+    fn a_running_engine_of_either_name_keeps_the_windows_on_disk() {
+        let folder = folder(&[
+            "old_terminus.exe",
+            "old_seldon-runtime.exe",
+            "old_danil-engine.exe",
+        ]);
+        let mut asked = Vec::new();
+        let clean = clear_set_aside(folder.path(), |path| {
+            asked.push(path.to_path_buf());
+            !path.ends_with("old_danil-engine.exe")
+        });
+        assert!(!clean);
+        assert_eq!(
+            names(&asked),
+            ["old_danil-engine.exe", "old_seldon-runtime.exe"]
         );
     }
 

@@ -219,8 +219,21 @@ se registra en `EXTENSIONS`, fuera de la huella. Solo la ventana local
 ## Starting the engine
 
 Opened without arguments (a double click), the window uses the engine that
-ships with it: `seldon-runtime` next to the window executable, packaged as
-`bundle.externalBin` on every platform. Its `--resource-dir` is the
+ships with it: `danil-engine` next to the window executable, packaged as
+`bundle.externalBin` on every platform. The same bytes also ship as
+`seldon-runtime`, an alias the window never launches: hooks and launchers that
+a 0.3.2 engine wrote for its live turns point to that path. `ENGINE_NAMES` in
+`src-tauri/src/extracted/engine.rs` owns both names; without `danil-engine`
+(a local build) the window launches `seldon-runtime`. A live engine that does
+not run as the binary this window would launch counts as replaced (on macOS and
+Linux by path; on Windows by the `old_` prefix) and follows the same retirement
+as any other: stopped when it has no turns, used while it has them. On macOS
+`danil-engine` is signed with the identifier `seldon-runtime`
+(`scripts/macos-codesign/codesign`, put first on the `PATH` by
+`desktop-build.mjs`), and the window accepts `seldon-runtime` or
+`danil-engine` in its requirement. In an AppImage the stable copy is
+`engine/danil-engine`; `engine/seldon-runtime` is removed at start once no
+process runs from it. Its `--resource-dir` is the
 installation's resource folder, the one Tauri's `resource_dir()` names (the
 executable's folder on Windows, `Contents/Resources` on macOS), where the
 bundled language packs (`lenguas/`) and the bundled work tools (`work-tools/`)
@@ -596,8 +609,8 @@ Tinymist processes if the window dies.
 ## Updating on Windows
 
 Windows does not overwrite a running `.exe`, but it renames one. The installer
-(`src-tauri/windows/hooks.nsh`) renames `terminus.exe` and `seldon-runtime.exe`
-to `old_*` and writes the new ones, so the open window and its engine keep
+(`src-tauri/windows/hooks.nsh`) renames `terminus.exe`, `danil-engine.exe` and
+`seldon-runtime.exe` to `old_*` and writes the new ones, so the open window and its engine keep
 working. The template's step that closes Danil only runs on a real
 uninstall; an installer replacing the copy runs the uninstaller in place
 (`_?=$INSTDIR`), and that run also sets the files aside. The app does not use
@@ -618,7 +631,8 @@ window binary stays on disk while the engine of its contract runs.
 
 The old version keeps working whole until its tasks finish, and the new one
 comes in whole afterwards; a window and an engine of different versions are not
-mixed. On the next start, an engine running from `old_seldon-runtime.exe` gets
+mixed. On the next start, an engine running from `old_danil-engine.exe` or
+`old_seldon-runtime.exe` gets
 `service stop`; one of this contract that refuses keeps working and the new
 window uses it. An update usually changes the contract, and an engine that does not speak the
 contract of the bundled engine is from the previous version: the window asks
