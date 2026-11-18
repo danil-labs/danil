@@ -1,4 +1,6 @@
 import { createPref } from "../../lib/prefs.ts";
+import { effectiveHidden } from "./workspace-hidden-sync.ts";
+import { hiddenSync } from "./workspace-hidden-wiring.ts";
 
 /** Los workspaces que la persona quitó del riel, por id del motor. En la web, por persona. */
 export const HIDDEN_KEY = "workspaces.hidden";
@@ -31,21 +33,33 @@ export function keepSlots(full: readonly string[], visible: readonly string[]): 
   return [...placed, ...visible.filter((id) => !known.has(id))];
 }
 
+/**
+ * Los ocultos del riel. Los locales siguen en `workspaces.hidden`; para lo que sirve la máquina
+ * de la organización activa manda la cuenta cuando responde (`workspace-hidden-sync.ts`).
+ */
 export function createHiddenWorkspaces() {
   const [read, write] = createPref<unknown>(HIDDEN_KEY, []);
-  const ids = (): Set<string> => {
+  const local = (): Set<string> => {
     const value = read();
     return new Set(Array.isArray(value) ? value.filter((id): id is string => typeof id === "string") : []);
+  };
+  const sync = hiddenSync(local);
+  const ids = (): Set<string> => {
+    sync.revision();
+    const scope = sync.scope();
+    return scope ? effectiveHidden(local(), sync.account(), scope.served) : local();
   };
   return {
     ids,
     hide(id: string) {
-      const current = ids();
+      const current = local();
       if (!current.has(id)) write([...current, id]);
+      sync.hide(id);
     },
     show(id: string) {
-      const current = ids();
+      const current = local();
       if (current.delete(id)) write([...current]);
+      sync.show(id);
     },
   };
 }

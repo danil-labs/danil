@@ -16,6 +16,7 @@ import { forgetMachineNames } from '../features/machines/known-names';
 import { sessionStorageScope, clearWebCaches } from './session-storage';
 import { organizationSession } from './organization-session';
 import PromoRedeem from '../features/shell/PromoRedeem';
+import { setHiddenSyncWeb } from '../features/shell';
 import './phrases';
 import { sessionStartup } from './startup-reader';
 
@@ -34,6 +35,7 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
     const request: typeof fetch = (input, init = {}) => lifetime.signal.aborted ? Promise.reject(new DOMException('The page was closed', 'AbortError')) : fetch(input, { ...init, signal: init.signal ? AbortSignal.any([init.signal, lifetime.signal]) : lifetime.signal });
     const api = platformSession(options, request);
     const raw = platformTransport(options, request);
+    setHiddenSyncWeb(raw);
     const [rows, setRows] = createSignal<PlatformWorkspace[]>([]);
     const [caps, setCaps] = createSignal<CapabilitiesSnapshot | null>(null);
     const [active, setActive] = createSignal<string | null>(null);

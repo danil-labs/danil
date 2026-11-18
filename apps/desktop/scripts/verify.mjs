@@ -81,6 +81,7 @@ const steps = [
   ["Machine preferences stay with the browser person", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/web-machine-preferences.test.ts")], root],
   ["Hidden workspaces leave the rail, keep their place and stay with the browser person", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/hidden-workspaces.test.ts")], root],
   ["Hidden workspaces travel with the account only for the organization, and stay local on 404/501/403", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/workspace-hidden-sync.test.ts")], root],
+  ["The hidden workspaces sync is wired by cookie and CSRF on the web, edgeFetch on Desk, and the organization scope", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/workspace-hidden-wiring.test.ts")], root],
   ["Messaging stays isolated from Desk and web", process.execPath, [join(root, "scripts/guards/messaging-isolation.mjs")], root],
   ["Messaging isolation guard rejects reintroduced transports", process.execPath, ["--test", join(root, "tests/unit/messaging-isolation.test.mjs")], root],
   ["Web uses platform without direct database dependencies", process.execPath, [join(root, "scripts/guards/web-platform.mjs")], root],

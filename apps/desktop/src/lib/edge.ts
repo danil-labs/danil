@@ -79,7 +79,7 @@ const sleep = (ms: number, signal?: AbortSignal) =>
   });
 
 /** Una llamada, sin reintentos: el status del borde tal cual. */
-export function edgeFetch<T = unknown>(method: "GET" | "POST", path: string, body?: unknown, idempotencyKey?: string): Promise<EdgeReply<T>> {
+export function edgeFetch<T = unknown>(method: "GET" | "POST" | "PUT" | "DELETE", path: string, body?: unknown, idempotencyKey?: string): Promise<EdgeReply<T>> {
   const args: Record<string, unknown> = { method, path };
   if (body !== undefined) args.body = body;
   if (idempotencyKey) args.idempotencyKey = idempotencyKey;
@@ -90,7 +90,7 @@ export function edgeFetch<T = unknown>(method: "GET" | "POST", path: string, bod
  * Reintenta hasta un 2xx (o hasta `signal`) y devuelve la respuesta entera
  * (`Location` incluida). Las escrituras repiten su `Idempotency-Key`.
  */
-export async function edgeUntil<T = unknown>(method: "GET" | "POST", path: string, body?: unknown, patience: Patience = {}, transport: { send: typeof edgeFetch; onProblem?: (e: EdgeRefusal) => void } = { send: edgeFetch, onProblem: e => problemListener?.(e) }): Promise<EdgeReply<T>> {
+export async function edgeUntil<T = unknown>(method: "GET" | "POST", path: string, body?: unknown, patience: Patience = {}, transport: { send: <R>(method: "GET" | "POST", path: string, body?: unknown, idempotencyKey?: string) => Promise<EdgeReply<R>>; onProblem?: (e: EdgeRefusal) => void } = { send: edgeFetch, onProblem: e => problemListener?.(e) }): Promise<EdgeReply<T>> {
   const signal = method === "POST" ? AbortSignal.any([context.signal, ...(patience.signal ? [patience.signal] : [])]) : patience.signal;
   const key = method === "POST" ? patience.idempotencyKey ?? crypto.randomUUID() : undefined;
   const deadline = Date.now() + (patience.retryBudgetMs ?? Infinity);

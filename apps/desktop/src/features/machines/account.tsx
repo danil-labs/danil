@@ -52,7 +52,7 @@ import { MachinePicker } from "./MachinePicker";
 import { createRouter, type Invoke, type Router, type SliceChange } from "./router";
 import { createEngineWorkspaces, railOf } from "./engine-workspaces";
 import { machineNamesChanged, refetchMachines, setCloudInventory } from "./store";
-import { rememberMachineNames } from "./known-names";
+import { fleetRowsChanged } from "./fleet-rows";
 import type { WslChild } from "./wsl";
 import { guestChannels } from "./guestChannels";
 import { CLOUD_RETRY_INITIAL_MS, CLOUD_RETRY_MS, createCloudMachines, EDGE_ENDPOINT } from "./cloud-machines";
@@ -357,7 +357,7 @@ export function startAccountMachines(target: Target = window) {
     });
     fleet.setMachines([...others.map(infoOf), ...guestMachines]);
     observeEngine(fleet);
-    rememberMachineNames(fleet.machines());
+    fleetRowsChanged(fleet.machines());
     fleet.subscribeEvents();
     const screens =
       endpoint === null
@@ -526,7 +526,7 @@ export function startAccountMachines(target: Target = window) {
     if (installed?.key === key) {
       installed.fleet.setMachines([...others.map(infoOf), ...guestMachines]);
       observeEngine(installed.fleet);
-      rememberMachineNames(installed.fleet.machines());
+      fleetRowsChanged(installed.fleet.machines());
       machineNamesChanged();
       return void refetchMachines();
     }
@@ -543,7 +543,7 @@ export function startAccountMachines(target: Target = window) {
     if (!guests.length && !cloudRows.length) return disconnect();
     if (installed?.key === LOCAL_KEY) {
       installed.fleet.setMachines([...cloudRows.map(infoOf), ...guests]);
-      rememberMachineNames(installed.fleet.machines());
+      fleetRowsChanged(installed.fleet.machines());
       machineNamesChanged();
       return void refetchMachines();
     }
