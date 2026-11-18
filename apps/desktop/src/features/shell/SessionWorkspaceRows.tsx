@@ -3,6 +3,7 @@ import { t } from "../../lib/i18n";
 import { KeyedList } from "../../ui/KeyedList";
 import { ITEM_DE_MENU } from "../../ui/Popover";
 import { AccountHeader } from "./AccountHeader";
+import { confirmEmailClose, emailContextCount } from "./session-close-confirm";
 import type { SessionRailGroup, sessionRail } from "./session-groups";
 
 type RailWorkspace = { id: string; name: string; logo: string | null };
@@ -21,6 +22,7 @@ function SessionGroup(props: RowsProps & { group: SessionRailGroup }) {
   const [busy, setBusy] = createSignal(false);
   const close = async (target: { context: string } | { email: string | null; family: string }) => {
     if (busy()) return;
+    if ("email" in target && !confirmEmailClose(emailContextCount(props.sessions.sessions.families(), target.email, target.family), (count) => t("shell.workspaces.close_email_confirm", { count, email: target.email ?? "" }), window.confirm.bind(window))) return;
     setBusy(true);
     setError(false);
     try {

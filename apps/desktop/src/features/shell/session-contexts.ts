@@ -86,7 +86,7 @@ export function createSessionContexts(invoke: ContextInvoke, changed: () => void
     ready: () => ready, connected: () => connected,
     groups: () => unsupported ? null : groups,
     families: () => families,
-    emptyReason: empty.reason, removed: empty.removed,
+    emptyReason: empty.reason, removed: empty.removed, dismissRemoved: (context: string) => { empty.dismiss(context); changed(); },
     addAccount: async () => {
       let result: { error?: string | null };
       try { result = await invoke("danil_sign_in", { mode: "add" }); }

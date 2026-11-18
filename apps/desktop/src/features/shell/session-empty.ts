@@ -27,6 +27,7 @@ export function createSessionEmptyState() {
   let global: EmptyReason | null = null;
   const contexts = new Map<string, EmptyReason>();
   const removed = new Map<string, RemovedContext>();
+  const dismissed = new Set<string>();
   const remove = (context: string, org: string, reason: string) => {
     const next = { context_id: context, org, reason: normalizeEmptyReason(reason) ?? "unknown" };
     const changed = removed.get(context)?.reason !== next.reason;
@@ -47,7 +48,8 @@ export function createSessionEmptyState() {
       return previous !== (contexts.get(context) ?? null);
     },
     reason: (context?: string) => context ? contexts.get(context) ?? null : global,
-    removed: () => [...removed.values()],
+    removed: () => [...removed.values()].filter((r) => !dismissed.has(r.context_id)),
+    dismiss: (context: string) => dismissed.add(context),
     excludes: (context: string) => removed.has(context),
   };
 }

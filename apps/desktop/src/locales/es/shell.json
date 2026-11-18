@@ -453,5 +453,8 @@
   "shell.workspaces.new_available": "Hay workspaces nuevos para agregar",
   "shell.workspaces.empty_no_org": "No tienes una organización de Danil todavía",
   "shell.workspaces.empty_no_access": "No tienes acceso a los workspaces de esta organización",
-  "shell.workspaces.empty_generic": "No hay workspaces de Danil disponibles"
+  "shell.workspaces.empty_generic": "No hay workspaces de Danil disponibles",
+  "shell.workspaces.close_email_confirm": "Se cerrarán {count} organizaciones de {email}",
+  "shell.workspaces.removed_org": "Se quitó {name}.",
+  "shell.workspaces.dismiss_removed": "Descartar"
 }

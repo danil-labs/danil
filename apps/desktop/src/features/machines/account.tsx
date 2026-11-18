@@ -12,50 +12,51 @@
  * Lazy from `app/main.tsx`.
  */
 import "../../web/phrases";
-import { cancelEdgeWrites } from "../../lib/edge.ts";
 import {
   type Computer,
   createScreenAccess,
-  serviceFeatures,
+  createSpaceOrderSource,
   listComputers,
   listWorkspaces,
-  createSpaceOrderSource,
+  type MachineState,
   orderComputers,
   RelaySession,
+  type SystemId,
+  serviceFeatures,
   sessionProbe,
   startComputer,
   startedOf,
   systemOf,
-  type MachineState,
-  type SystemId,
   wakes,
   wokeOf,
 } from "@terminus/computers";
 import { Fleet, type MachineInfo, unwrap } from "@terminus/fleet";
 import { createRoot, createSignal, For } from "solid-js";
 import { render } from "solid-js/web";
+import { listenDanilConnectionChange } from "../../lib/danilConnectionEvents";
+import { cancelEdgeWrites } from "../../lib/edge.ts";
+import { whenConnected } from "../../lib/engineConnection";
 import { t } from "../../lib/i18n";
 import { setMachineRoute } from "../../lib/invoke";
-import { whenConnected } from "../../lib/engineConnection";
+import { type Capabilities, capabilities, setCapabilities } from "../../lib/platform";
 import { leerPref } from "../../lib/prefs";
-import { capabilities, setCapabilities, type Capabilities } from "../../lib/platform";
 import { deliver, listen } from "../../lib/serviceEvents";
-import { listenDanilConnectionChange } from "../../lib/danilConnectionEvents";
 import { isMac, isWindows } from "../../lib/window";
 import { Toast, ToastPortal } from "../../ui/Toast";
 import type { MachineStatus } from "../../web/SyncNote";
 import { type DanilSessionInfo, railSession, type WorkspaceAccount } from "../settings/danil-sessions";
 import AccountMachines from "./AccountMachines";
-import { MachinePicker } from "./MachinePicker";
-import { createRouter, type Invoke, type Router, type SliceChange } from "./router";
-import { createEngineWorkspaces, railOf } from "./engine-workspaces";
-import { machineNamesChanged, refetchMachines, setCloudInventory } from "./store";
+import { CLOUD_RETRY_INITIAL_MS, CLOUD_RETRY_MS, EDGE_ENDPOINT } from "./cloud-machines";
 import { machinesListed, setDanilFleet } from "./danil-source";
-import { infoOf } from "./machine-info";
-import type { WslChild } from "./wsl";
+import { createEngineWorkspaces, railOf } from "./engine-workspaces";
 import { guestChannels } from "./guestChannels";
-import { CLOUD_RETRY_INITIAL_MS, CLOUD_RETRY_MS, createCloudMachines, EDGE_ENDPOINT } from "./cloud-machines";
 import { createGuestLink, guestMachineInfo, isGuestMachine, wakeGuestMachine } from "./guestLink";
+import { MachinePicker } from "./MachinePicker";
+import { infoOf } from "./machine-info";
+import { createRouter, type Invoke, type Router, type SliceChange } from "./router";
+import { createSessionCloud } from "./session-cloud";
+import { machineNamesChanged, refetchMachines, setCloudInventory } from "./store";
+import type { WslChild } from "./wsl";
 
 type Internals = { invoke: Invoke };
 type Target = Window & { __TAURI_INTERNALS__?: Internals };
@@ -138,7 +139,7 @@ export function startAccountMachines(target: Target = window) {
   const invoke = native;
   let token: ClientToken | null = null;
   // Las máquinas de la organización por el borde (`/v1/machines`); el motor local sigue por su RPC.
-  const cloud = createCloudMachines(invoke, (e) => {
+  const cloud = createSessionCloud(invoke, (e) => {
     // `403 organization_selection_required`: se abre el selector de organización (si esta ventana lo tiene).
     const organizations = (capabilities() as { organizations?: () => Promise<{ report: (e: unknown) => unknown }> }).organizations;
     void organizations?.().then((selector) => selector.report(e));
@@ -173,7 +174,7 @@ export function startAccountMachines(target: Target = window) {
       try {
         const answer = await cloud.rows();
         if (epoch !== cloudEpoch) return [];
-        cloudRetrying = answer.state === "retrying";
+        cloudRetrying = answer.state === "retrying" || ("retrying" in answer && answer.retrying === true);
         if (!cloudRetrying) setCloudInventory("settled");
         if (answer.state === "ready") {
           lastCloudRows = answer.computers;
@@ -275,7 +276,7 @@ export function startAccountMachines(target: Target = window) {
             endpoint: EDGE_ENDPOINT,
             computerId: info.id,
             getAdmission: async () => {
-              const answer = await cloud.client.admission(info.id);
+              const answer = await cloud.client.admission(info.id, info.context);
               if (answer.kind !== "ok") throw new Error(answer.kind);
               return answer.value;
             },
@@ -502,7 +503,7 @@ export function startAccountMachines(target: Target = window) {
     homeVersion = mine?.host_version ?? null;
     const cloudRows = await readCloud();
     if (epoch !== cloudEpoch) return;
-    const others = orderComputers([...answer.value.filter((c) => c.computer_id !== self), ...cloudRows.filter((c) => !answer.value.some((o) => o.computer_id === c.computer_id))]);
+    const others = orderComputers([...cloudRows.filter((c) => c.computer_id !== self), ...answer.value.filter((c) => c.computer_id !== self && !cloudRows.some((o) => o.computer_id === c.computer_id))]);
     await readGuestMachines();
     if (epoch !== cloudEpoch) return;
     const key = JSON.stringify([self, account, client.endpoint]);

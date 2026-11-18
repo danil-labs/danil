@@ -90,6 +90,7 @@ const steps = [
   ["Session caches are revoked and erased on logout", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/web-session-storage.test.ts")], root],
   ["Machine preferences stay with the browser person", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/web-machine-preferences.test.ts")], root],
   ["Hidden workspaces leave the rail, keep their place and stay with the browser person", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/hidden-workspaces.test.ts")], root],
+  ["Session machines isolate inventory, admission and account workspaces", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/session-machines.test.ts")], root],
   ["Session contexts isolate calls, groups and partial logout", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/session-contexts.test.ts")], root],
   ["Danil workspaces are added by the person, seeded once atomically and kept local on 404/501/403", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/workspace-added-sync.test.ts")], root],
   ["Danil workspaces come only from the active organization's machines, never a personal one", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/danil-source.test.ts")], root],

@@ -3,6 +3,7 @@ import type { Listed } from "@terminus/fleet";
 type Source = {
   organizationMachines(organization: string): readonly string[];
   info(machine: string): { id: string; context?: unknown } | null | undefined;
+  accountAvailable?(organization: string, context: string): Listed[] | null;
   available(organization: string): Listed[] | null;
 };
 
@@ -13,5 +14,7 @@ export function contextSourceMatches(source: Source | null, organization: string
 }
 
 export function availableInContext(source: Source | null, organization: string, context: string): Listed[] | null {
-  return contextSourceMatches(source, organization, context) ? source?.available(organization) ?? null : null;
+  const base = contextSourceMatches(source, organization, context) ? source?.available(organization) ?? null : null;
+  const account = source?.accountAvailable?.(organization, context) ?? null;
+  return account ? [...new Map([...(base ?? []), ...account].map((w) => [w.id, w])).values()] : base;
 }

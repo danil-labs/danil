@@ -1056,3 +1056,87 @@ test("an explicit journal event sequence survives ID encoding without inventing 
     { name: "chat", payload: { session: "cmp_vm~t1", kind: "delta", text: "second" } },
   ]); fleet.close();
 });
+
+test("changing a machine context replaces its link, clears its slices and rejects a late response", async () => {
+	const links: ReturnType<typeof fakeLink>[] = [];
+	const fleet = new Fleet({
+		self: "self",
+		connect: () => {
+			const link = fakeLink({
+				delay: links.length ? 0 : 30,
+				answers: {
+					list_workspaces: {
+						workspaces: [{ id: links.length ? "new" : "old", name: "Remote" }],
+					},
+				},
+			});
+			links.push(link);
+			return link;
+		},
+	});
+	const info = {
+		id: "remote",
+		name: "Remote",
+		wakes: false,
+		kind: "organization",
+		organizationId: "org",
+	};
+	const query = {
+		machine: "remote",
+		workspace: null,
+		command: "list_workspaces",
+	};
+	fleet.setMachines([{ ...info, context: "a" }]);
+	const old = fleet.read(query);
+	fleet.setMachines([{ ...info, context: "b" }]);
+	assert.equal(links[0].closed(), true);
+	assert.equal(fleet.peek(query), null);
+	assert.equal(fleet.available("org"), null);
+	const next = fleet.read(query);
+	await assert.rejects(
+		old,
+		(e: unknown) => (e as FleetError).code === "unknown_machine",
+	);
+	assert.equal((await next).has, true);
+	assert.deepEqual(
+		fleet.available("org")?.map((w) => w.id),
+		["new"],
+	);
+	fleet.close();
+});
+
+test("sealed account metadata classifies a workspace on a personal machine only for its org and context", async () => {
+	const fleet = new Fleet({
+		self: "self",
+		connect: () =>
+			fakeLink({
+				answers: {
+					list_workspaces: {
+						workspaces: [
+							{
+								id: "free",
+								name: "Free",
+								account: { org: "org", account_id: "42" },
+							},
+							{ id: "local", name: "Local" },
+						],
+					},
+				},
+			}),
+	});
+	fleet.setMachines([
+		{ id: "personal", name: "Personal", wakes: false, context: "a" },
+	]);
+	await fleet.read({
+		machine: "personal",
+		workspace: null,
+		command: "list_workspaces",
+	});
+	assert.deepEqual(
+		fleet.accountAvailable("org", "a")?.map((w) => w.id),
+		["free"],
+	);
+	assert.equal(fleet.accountAvailable("other", "a"), null);
+	assert.equal(fleet.accountAvailable("org", "b"), null);
+	fleet.close();
+});
