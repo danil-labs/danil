@@ -111,7 +111,7 @@
   "web.auth.identity_unavailable": "No se puede entrar en este momento. Vuelve a intentarlo en unos minutos.",
   "web.computers.no_account": "Tu sesión es válida, pero no se encontró tu cuenta de Danil. Reintenta o contacta a soporte; no necesitas crear otra identidad.",
   "web.admin.title": "Harness",
-  "web.auth.access_required": "Necesitas acceso autorizado a Danil. Puedes solicitarlo por correo.",
+  "web.auth.access_required": "Esta cuenta todavía no puede entrar a Danil. Vuelve a iniciar sesión.",
   "web.download.tab": "Descarga la app",
   "web.download.title": "Descarga la app de escritorio",
   "web.download.action": "Descargar",
