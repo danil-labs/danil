@@ -435,5 +435,10 @@
   "projects.agents.body.character-direccion": "Clipboard",
   "projects.agents.body.character-diseno": "Star",
   "projects.agents.body.character-finanzas": "Calculator",
-  "projects.agents.body.character-rh": "Glasses"
+  "projects.agents.body.character-rh": "Glasses",
+  "projects.sessions.action_failed.finish": "Couldn't finish the task.",
+  "projects.sessions.action_failed.archive": "Couldn't archive the task.",
+  "projects.sessions.action_failed.discard": "Couldn't discard the task's changes.",
+  "projects.sessions.action_failed.pin": "Couldn't pin the task.",
+  "projects.sessions.action_failed.busy": "Danil is still running another operation on this task or its subtasks. Wait a moment and retry."
 }

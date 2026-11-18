@@ -459,5 +459,6 @@
     "other": "Se cerrarán {count} organizaciones de {email}"
   },
   "shell.workspaces.removed_org": "Se quitó {name}.",
-  "shell.workspaces.dismiss_removed": "Descartar"
+  "shell.workspaces.dismiss_removed": "Descartar",
+  "shell.read.failed": "No se pudo actualizar la lista de tareas."
 }
