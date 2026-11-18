@@ -4,6 +4,7 @@ import { createSessionContexts } from "../../src/features/shell/session-contexts
 import { createWorkspaceSourceWait } from "../../src/features/shell/workspace-source-wait.ts";
 import { createAccountAddAction } from "../../src/lib/account-add.ts";
 import { type GroupSend, readGroupBalance, redeemGroupCode } from "../../src/lib/group-account.ts";
+import { normalizePromoCode, promoRejection } from "../../src/lib/promo-rejections.ts";
 import { webGroupAccount } from "../../src/web/group-account.ts";
 
 const group = { context: "ctx-a", org: "org-a", name: "A", plan: "paid" };
@@ -90,4 +91,27 @@ test("the web exposes no add button action without login/add, while Desk dispatc
   let webAdds = 0;
   await createAccountAddAction(false, sessions.addAccount, () => { webAdds++; })!();
   assert.equal(webAdds, 1);
+});
+
+
+test("promo payload is trimmed, limited to sixty-four characters and rejected locally before IPC", async () => {
+  const sent: unknown[][] = [];
+  const send: GroupSend = async (...args) => { sent.push(args); return { status: 201, body: { machine: { state: "ready" } } }; };
+  await redeemGroupCode(send, group, "  CODE  ", "intent");
+  assert.deepEqual(sent[0], ["ctx-a", "POST", "/v1/workspaces/promo/redeem", { code: "CODE" }, "intent"]);
+  assert.equal(normalizePromoCode("🙂".repeat(64))?.length, 128, "the window counts Unicode characters, not UTF-16 units");
+  for (const code of ["  ", "x".repeat(65), "🙂".repeat(65)]) await assert.rejects(redeemGroupCode(send, group, code, "intent"), { status: 422, code: "invalid_code" });
+  assert.equal(sent.length, 1);
+});
+test("native rejection codes and rate-limit metadata survive the context transport", async () => {
+  for (const code of ["invalid_code", "already_redeemed"]) {
+    await assert.rejects(redeemGroupCode(async () => ({ status: 409, body: { code } }), group, "CODE", "intent"), { status: 409, code });
+  }
+  assert.equal(promoRejection({ status: 422, code: "already_redeemed" }).key, "web.promo.already_redeemed");
+  await assert.rejects(redeemGroupCode(async () => ({ status: 429, body: { code: "rate_limited" }, retry_after_ms: 1500 }), group, "CODE", "intent"), { status: 429, code: "rate_limited", retry_after_ms: 1500 });
+  const rejection = promoRejection({ status: 429, code: "rate_limited", retry_after_ms: 1500 });
+  assert.equal(rejection.code, "rate_limited");
+  assert.equal(rejection.delay, 1500);
+  assert.equal(rejection.data.count, 2);
+  assert.equal(promoRejection({ status: 429, retryAfter: "3" }).delay, 3000);
 });

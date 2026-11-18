@@ -259,5 +259,12 @@
   "web.promo.used": "Este código ya se ha canjeado o la organización ya tiene una promoción activa",
   "web.promo.has_machine": "La organización ya tiene una máquina",
   "web.promo.denied": "No tienes permiso para canjear códigos",
-  "web.promo.unavailable": "No disponible todavía. Reintenta"
+  "web.promo.unavailable": "No disponible todavía. Reintenta",
+  "web.promo.already_redeemed": "Este código ya fue canjeado",
+  "web.promo.rate_limited": {
+    "one": "Espera {count} segundo antes de reintentar",
+    "other": "Espera {count} segundos antes de reintentar"
+  },
+  "web.promo.rate_limited_unknown": "Espera un momento antes de reintentar",
+  "web.promo.rejected": "No se pudo canjear el código ({code})"
 }

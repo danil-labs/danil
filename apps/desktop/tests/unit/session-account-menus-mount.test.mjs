@@ -81,3 +81,44 @@ test("preferences have no global account entries, group menus scope credits and 
   assert.equal(logins[0].mode, "add");
 
 });
+
+test("the enabled Desk promo route sends a trimmed code and displays rejection codes and retry delay", async () => {
+  const sent = [];
+  const replies = [
+    { status: 422, body: { code: "invalid_code" } },
+    { status: 409, body: { code: "already_redeemed" } },
+    { status: 429, body: { code: "rate_limited" }, retry_after_ms: 2500 },
+    { status: 201, body: { machine: { state: "ready" } } },
+  ];
+  const app = await boot("listo", "promo-rejections-context", { ...RESPONSES,
+    danil_session_status: { state: "connected", sessions: [{ family: "family", email: "one@example.com", contexts: [{ context_id: "a", org: "org-a", org_name: "A", plan: "paid" }] }] },
+    danil_edge_fetch: (args) => {
+      if (args.path === "/v1/identity/me") return { status: 200, body: { id: "person" } };
+      if (args.path === "/v1/workspaces/promo/redeem") { sent.push(args); return replies.shift(); }
+      return { status: 404, body: {} };
+    },
+  });
+  const doc = app.w.document;
+  assert.ok(await until(() => doc.querySelector('[data-account-header="a"]')));
+  doc.querySelector('[data-account-header="a"]').click();
+  assert.ok(await until(() => [...doc.querySelectorAll('[role="menuitem"]')].some((b) => b.textContent === "Canjear código")));
+  [...doc.querySelectorAll('[role="menuitem"]')].find((b) => b.textContent === "Canjear código").click();
+  assert.ok(await until(() => doc.querySelector("#promo-code")));
+  const input = doc.querySelector("#promo-code");
+  const submit = (value) => { input.value = value; input.dispatchEvent(new app.w.Event("input", { bubbles: true })); input.closest("form").dispatchEvent(new app.w.Event("submit", { bubbles: true, cancelable: true })); };
+  submit("x".repeat(65));
+  assert.equal(sent.length, 0, "a too-long code never reaches the window");
+  submit("  FIRST  ");
+  assert.ok(await until(() => doc.querySelector('[data-rejection-code="invalid_code"]')));
+  assert.deepEqual(sent[0].body, { code: "FIRST" });
+  assert.equal(sent[0].context, "a");
+  submit("SECOND");
+  assert.ok(await until(() => doc.querySelector('[data-rejection-code="already_redeemed"]')));
+  assert.ok(doc.body.textContent.includes("Este código ya fue canjeado"));
+  submit("THIRD");
+  assert.ok(await until(() => doc.querySelector('[data-retry-after-ms="2500"]')));
+  assert.ok(doc.body.textContent.includes("Espera 3 segundos antes de reintentar"));
+  submit("THIRD");
+  assert.ok(await until(() => sent.length === 4 && input.closest("form").querySelector('[role="status"]')));
+  assert.equal(sent[2].idempotencyKey, sent[3].idempotencyKey, "the same code retry keeps its intention key");
+});
