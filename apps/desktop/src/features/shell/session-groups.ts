@@ -7,7 +7,7 @@ import { danilAvailable, danilAvailableContext, readDanilContext } from "../mach
 import { createAccountWorkspaces } from "./session-account-workspaces.ts";
 import { type ContextGroup, createSessionContexts } from "./session-contexts.ts";
 import type { EmptyReason } from "./session-empty.ts";
-import { coalesceSessionReturn } from "./session-return.ts";
+import { coalesceSessionReturn as createSessionReturn } from "./session-return.ts";
 import { sessionSeedInputs, sessionSyncKey } from "./session-seeding.ts";
 import { createAddedSync } from "./workspace-added-sync.ts";
 import { ADDED_KEY, edgeAddedTransport, prefsAddedStore } from "./workspace-added-transport.ts";
@@ -39,7 +39,8 @@ function wire(hidden: () => ReadonlySet<string>, onSeeded: (ids: readonly string
     return local.length ? [...new Map([...(source ?? []), ...local].map((w) => [w.id, w])).values()] : source;
   };
   const refreshAccounts = () => accounts.refresh(groups() ?? [], sessions.send);
-  createEffect(on(() => JSON.stringify(groups()?.map((g) => [g.context_id, g.org, g.plan]) ?? null), () => void refreshAccounts()));
+  const accountKey = createMemo(() => JSON.stringify(groups()?.map((g) => [g.context_id, g.org, g.plan]) ?? null));
+  createEffect(on(accountKey, () => void refreshAccounts()));
   const records = new Map<string, { person: string | null; asking: boolean; sync: ReturnType<typeof createAddedSync> }>();
   const known = new Set<string>();
   const active = (id: string) => groups()?.find((g) => g.context_id === id);
@@ -70,14 +71,18 @@ function wire(hidden: () => ReadonlySet<string>, onSeeded: (ids: readonly string
       }
     }).catch(() => {}).finally(() => { record.asking = false; });
   };
-  const rows = createMemo(() => groups()?.map((g): SessionRailGroup => {
+  const rows = createMemo(() => {
+    revision();
+    for (const id of accounts.known()) known.add(id);
+    return groups()?.map((g): SessionRailGroup => {
     const empty_reason = sessions.emptyReason(g.context_id);
     const available = empty_reason ? [] : availableFor(g.org, g.context_id);
     // Los ids sin atribuir solo evitan que reaparezcan como locales; no aportan filas al grupo.
     for (const w of danilAvailable(g.org) ?? []) known.add(w.id);
     for (const w of available ?? []) known.add(w.id);
     return { ...g, available, free: accounts.free(g.context_id), empty_reason, added: records.get(g.context_id)?.sync.added() ?? null, person: records.get(g.context_id)?.person ?? null };
-  }) ?? null);
+    }) ?? null;
+  });
   createEffect(() => {
     for (const g of groups() ?? []) ensure(g);
   });
@@ -88,7 +93,12 @@ function wire(hidden: () => ReadonlySet<string>, onSeeded: (ids: readonly string
   if (capabilities().nativeWindow) {
     void sessions.refresh();
     void listen("danil-connect", () => void sessions.refresh()).catch(() => {});
-    const returned = coalesceSessionReturn(sessions.refresh);
+    const refreshed = createSessionReturn(async () => {
+      await refreshAccounts();
+      for (const g of groups() ?? []) await readDanilContext(g.org, g.context_id);
+    });
+    window.addEventListener("harness:machines", refreshed);
+    const returned = createSessionReturn(async () => { await sessions.refresh(); refreshed(); });
     window.addEventListener("focus", returned);
     document.addEventListener("visibilitychange", () => {
       if (document.visibilityState === "visible") returned();
@@ -106,6 +116,6 @@ function wire(hidden: () => ReadonlySet<string>, onSeeded: (ids: readonly string
     },
     add: (context: string, id: string) => records.get(context)?.sync.add(id),
     remove: (context: string, id: string) => records.get(context)?.sync.remove(id),
-    refresh: () => { for (const g of groups() ?? []) void readDanilContext(g.org, g.context_id); },
+    refresh: () => { void refreshAccounts(); for (const g of groups() ?? []) void readDanilContext(g.org, g.context_id); },
   };
 }

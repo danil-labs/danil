@@ -40,7 +40,7 @@ export function createSessionContexts(invoke: ContextInvoke, changed: () => void
         if (read !== epoch) return;
       }
       families = status.sessions ?? [];
-      empty.update(status);
+      empty.update({ ...status, removed: status.removed?.map((item) => ({ ...item, org: groups?.find((g) => g.context_id === item.context_id)?.org_name ?? item.org })) });
       groups = contextGroups(status)?.filter((g) => !empty.excludes(g.context_id)) ?? null;
       unsupported = false;
       notify();

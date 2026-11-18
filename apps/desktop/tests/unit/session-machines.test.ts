@@ -85,3 +85,15 @@ test("closing one organization needs no confirmation; email count includes every
   assert.deepEqual(empty.removed(), []);
   assert.equal(empty.excludes("gone"), true);
 });
+
+test("missing context echo discards every scoped inventory and falls back to unscoped legacy rows", async () => {
+  const cloud = createSessionCloud(async (command, args) => {
+    if (command === "danil_session_status") return { sessions: [{ contexts }] };
+    if (args?.context) throw { detail: "session_echo_mismatch" };
+    return { status: 200, body: args?.path === "/v1/capabilities" ? { contract: "mvp-v1", items: [{ name: "machines", version: 1, status: "available" }] } : { items: [{ machine_id: "legacy", state: "running", connection: "connected" }] } };
+  });
+  const result = await cloud.rows();
+  assert.ok(result.state === "ready");
+  assert.equal(result.computers[0].computer_id, "legacy");
+  assert.equal("context" in result.computers[0], false);
+});

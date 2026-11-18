@@ -22,15 +22,18 @@ export function createAccountWorkspaces(invoke: Invoke, native: boolean, changed
   let free = new Map<string, FreeWorkspace>();
   const header = () => ({ "x-terminus-machine": local });
   return {
+    known: () => rows.map((w) => w.id),
     available: (org: string) => rows.filter((w) => w.account.org === org),
     free: (context: string) => extension ? free.get(context) : undefined,
     async refresh(groups: readonly Group[], send: Send) {
       if (!native) return;
       const epoch = ++version;
+      free = new Map();
       try {
         const machines = await invoke<{ id: string; local?: boolean; features?: string[] }[]>("machine_list");
         const self = machines.find((m) => m.local);
-        if (epoch !== version || !self) return;
+        if (epoch !== version) return;
+        if (!self) { local = null; extension = false; changed(); return; }
         local = self.id;
         extension = self.features?.includes("account_workspace_v1") ?? false;
         const value = await invoke("list_workspaces", header());

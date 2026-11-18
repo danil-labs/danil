@@ -3,7 +3,7 @@ import { createCloudMachines, EDGE_ENDPOINT } from "./cloud-machines.ts";
 
 type Invoke = (command: string, args?: Record<string, unknown>) => Promise<unknown>;
 type Context = { context_id: string; org: string };
-type Status = { sessions?: { contexts: Context[] }[] };
+type Status = { state?: string; sessions?: { contexts: Context[] }[] };
 export type ContextComputer = Computer & { context?: string };
 
 /** Una máquina repetida pertenece al contexto de su organización; sin coincidencia conserva el primero. */
@@ -61,7 +61,7 @@ export function createSessionCloud(invoke: Invoke, onProblem?: (error: unknown) 
         contexts = null;
         clients.clear();
         current.clear();
-        return legacy.rows();
+        return status.state === "disconnected" ? { state: "ready" as const, computers: [], renewInChannel: false } : legacy.rows();
       }
       const list = [...new Map(status.sessions.flatMap((s) => s.contexts).map((c) => [c.context_id, c])).values()];
       contexts = new Set(list.map((c) => c.context_id));
