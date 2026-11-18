@@ -59,3 +59,13 @@ La prueba remapea los hosts solo dentro de Chromium. Comprueba CSS, JS por ruta
 absoluta, fetch, WS, clic simple/Ctrl/Meta, ausencia de popover, estabilidad del
 iframe tras renovar y 410 al cerrar. No acredita DNS público, Safari ni el
 conector desplegado. Para eso hace falta el E2E con el relay y el conector reales.
+
+Para ese E2E, el mismo laboratorio acepta `--lab-control http://127.0.0.1:<puerto>`
+y `--fixture-dir <directorio-temporal>` en lugar de `--contracts`. El control
+pertenece a `relay/scripts/preview-lab.mjs`, arrancado con el conector Rust real
+y una identidad sintética que corresponda al login Linux de prueba. Configurar
+el relay con `PREVIEW_HOST_SUFFIX=daizero.com` y `WEB_ORIGINS=https://beta.danil.ai`.
+El adaptador `real-backend.mjs` simula únicamente el borde firmante y crea un
+Vite real en otro proceso que el conector. `check.py` añade una modificación de
+archivo y comprueba HMR a través del túnel, sin remontar el iframe. La salida
+identifica expresamente cuál de los dos backends se probó.

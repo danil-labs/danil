@@ -9,15 +9,16 @@ import { WEB_PREVIEW_DOMAIN } from "../../../src/web/preview-config";
 import "../../../src/locales/catalogs";
 import "../../../src/styles/global.css";
 
+const fixture = await fetch("/__lab/config").then(response => response.json());
 setCapabilities({ nativeWindow: false, updater: false, localSetup: false, computerStatus: true,
-  machinePreview: previewClient(edgeTransport({ origin: location.origin, timeoutMs: 15_000 }), WEB_PREVIEW_DOMAIN),
+  machinePreview: previewClient(edgeTransport({ origin: location.origin, timeoutMs: 15_000 }), WEB_PREVIEW_DOMAIN, { workspace: fixture.platformWorkspace }),
 });
 aplicarLengua();
 render(() => {
   const [url, setUrl] = createSignal("");
   window.addEventListener("harness:abrir-sitio", event => setUrl((event as CustomEvent<string>).detail));
   return <main class="flex h-screen flex-col bg-surface text-neutral-950">
-    <div class="flex gap-4 border-b border-border p-4"><Markdown>{"[Servidor](http://localhost:5173/)"}</Markdown><button type="button" onClick={() => setUrl("")}>Cerrar vista</button></div>
-    <div class="min-h-0 flex-1"><Show when={url()}><Site url={url()} visible context={{ machine: "mch_1", workspace: "ws_1", session: "task_1" }} /></Show></div>
+    <div class="flex gap-4 border-b border-border p-4"><Markdown>{`[Servidor](http://localhost:${fixture.port}/)`}</Markdown><button type="button" onClick={() => setUrl("")}>Cerrar vista</button></div>
+    <div class="min-h-0 flex-1"><Show when={url()}><Site url={url()} visible context={{ machine: fixture.machine, workspace: fixture.workspace, session: "task_1" }} /></Show></div>
   </main>;
 }, document.getElementById("root")!);

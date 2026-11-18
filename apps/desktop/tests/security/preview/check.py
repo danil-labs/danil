@@ -35,6 +35,12 @@ with sync_playwright() as playwright:
     assert page.locator("iframe").get_attribute("referrerpolicy") == "no-referrer"
     original_node = page.locator("iframe").element_handle()
     original_url = page.locator("iframe").get_attribute("src")
+    hmr = "Vite" in initial["backend"]
+    if hmr:
+        page.evaluate("fetch('/__lab/hmr', { method: 'POST' })")
+        frame.locator('#hmr[data-state="ok"]').wait_for()
+        assert frame.locator("#hmr").inner_text() == "hmr-updated"
+        assert page.evaluate("node => node === document.querySelector('iframe')", original_node)
     page.screenshot(path=str(output / "preview.png"), full_page=True)
     page.wait_for_function("n => fetch('/__lab/state').then(r => r.json()).then(s => s.renewed > n)", arg=initial["renewed"], timeout=40_000)
     assert page.evaluate("node => node === document.querySelector('iframe')", original_node)
@@ -57,7 +63,7 @@ with sync_playwright() as playwright:
     assert not errors, errors
     result = {"html": True, "css": True, "absolute_js": True, "fetch": True, "websocket": True,
               "local_clicks": 3, "popover": False, "renew_preserves_iframe": True, "close_status": 410,
-              "danil_cookie_in_view": False, "page_errors": errors, "backend": "contract mock with binary tunnel"}
+              "danil_cookie_in_view": False, "page_errors": errors, "hmr": hmr, "backend": initial["backend"]}
     (output / "browser.json").write_text(json.dumps(result, indent=2) + "\n")
     print(json.dumps(result, indent=2))
     browser.close()

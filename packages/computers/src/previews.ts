@@ -37,6 +37,7 @@ function leaseTtl(body: Record<string, unknown>, response: Response): number {
   }
   const expires = typeof body.lease_expires_at === "string" ? Date.parse(body.lease_expires_at) : NaN;
   if (!Number.isFinite(expires)) throw new Error("invalid_preview_response");
+  // Date solo se lee si CORS la expone; servidores antiguos usan el plazo conservador.
   const serverNow = Date.parse(response.headers.get("Date") ?? "");
   return Number.isFinite(serverNow) ? Math.max(0, Math.min(60_000, expires - serverNow)) : 30_000;
 }
