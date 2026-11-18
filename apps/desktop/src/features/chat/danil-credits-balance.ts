@@ -12,14 +12,14 @@ export function createDanilCreditsBalance() {
   });
   let pending: AbortController | undefined;
   onCleanup(() => pending?.abort());
-  const [balance] = createResource(
-    () => source() && { source: source()!, revision: revision() },
-    ({ source }) => {
-      pending?.abort();
-      pending = new AbortController();
-      return source.readBalance(pending.signal).catch(() => null);
-    },
-  );
+  const [balance, { refetch }] = createResource(() => source() && { source: source()!, revision: revision() }, ({ source }) => {
+    pending?.abort(); pending = new AbortController();
+    return source.readBalance(pending.signal).catch(() => null);
+  });
+  createEffect(() => {
+    if (!import.meta.env.DANIL_CREDITS_V2 || !capabilities().nativeWindow || !source() || balance.loading || balance() !== null) return;
+    const timer = setTimeout(() => void refetch(), 10_000); onCleanup(() => clearTimeout(timer));
+  });
   const amount = () => !source() ? null : balance.loading ? undefined : balance() ?? null;
   const label = () => {
     const value = amount();

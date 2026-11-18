@@ -26,6 +26,11 @@ pub(super) fn credits_pilot_prepare(
     credits::prepare(app, account, workspace)
 }
 
+#[tauri::command(async)]
+pub(super) fn credits_v2_select_tier(model: String) -> Result<Value, Value> {
+    credits::select_tier(model)
+}
+
 const ENTRY: &str = "https://alfa-app.danil.ai";
 const HTTP_WAIT: Duration = Duration::from_secs(35);
 /// Pide otro token este tiempo antes de que venza el actual.

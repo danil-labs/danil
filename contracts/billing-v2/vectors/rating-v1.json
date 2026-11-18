@@ -1,0 +1,258 @@
+{
+  "$comment": "Tarifado exacto con factor racional y residuo por (organización, versión de tarifa, punto de entrada). n = Σ tokens_k × precio_k × factor.num; D = 1000000 × factor.den (base rate_card) o D = factor.den (base provider_reported). Cargo de un reporte = ⌊(residuo + n) / D⌋; residuo' = (residuo + n) mod D. Nunca ceil por reporte.",
+  "rate_card": {
+    "realm": "danil-synthetic-test",
+    "version": 7,
+    "status": "published",
+    "effective_from": "2026-11-01T00:00:00Z",
+    "currency": "MXN",
+    "models": [
+      {
+        "provider": "synthetic",
+        "model": "syn-small",
+        "price_per_mtok_micro": {
+          "input": "3000000",
+          "output": "15000000",
+          "cache_read": "300000",
+          "cache_write": "3750000"
+        }
+      },
+      {
+        "provider": "synthetic",
+        "model": "syn-tiny",
+        "price_per_mtok_micro": {
+          "input": "1",
+          "output": "1",
+          "cache_read": "0",
+          "cache_write": "0"
+        }
+      }
+    ],
+    "entry_points": {
+      "messaging": {
+        "factor": {
+          "num": "3",
+          "den": "1"
+        },
+        "cost_basis": "rate_card"
+      },
+      "danil_ai_app": {
+        "factor": {
+          "num": "2",
+          "den": "1"
+        },
+        "cost_basis": "rate_card"
+      },
+      "danil_ai_api": {
+        "factor": {
+          "num": "2",
+          "den": "1"
+        },
+        "cost_basis": "rate_card"
+      }
+    }
+  },
+  "reports": [
+    {
+      "name": "mensajería factor 3, todos los tokens",
+      "entry_point": "messaging",
+      "provider": "synthetic",
+      "model": "syn-small",
+      "tokens": {
+        "input": 1200,
+        "output": 340,
+        "cache_read": 1000,
+        "cache_write": 10
+      },
+      "numerator": "27112500000",
+      "denominator": "1000000",
+      "from_residue": "0",
+      "charge_micro": "27112",
+      "residue": "500000"
+    },
+    {
+      "name": "proveedor de IA factor 2",
+      "entry_point": "danil_ai_api",
+      "provider": "synthetic",
+      "model": "syn-small",
+      "tokens": {
+        "input": 1000000,
+        "output": 0,
+        "cache_read": 0,
+        "cache_write": 0
+      },
+      "numerator": "6000000000000",
+      "denominator": "1000000",
+      "from_residue": "0",
+      "charge_micro": "6000000",
+      "residue": "0"
+    },
+    {
+      "name": "cero tokens no cobra",
+      "entry_point": "danil_ai_app",
+      "provider": "synthetic",
+      "model": "syn-small",
+      "tokens": {
+        "input": 0,
+        "output": 0,
+        "cache_read": 0,
+        "cache_write": 0
+      },
+      "numerator": "0",
+      "denominator": "1000000",
+      "from_residue": "0",
+      "charge_micro": "0",
+      "residue": "0"
+    }
+  ],
+  "partition_case": {
+    "$comment": "Caso de QA P1 6: dos reportes de 0.4 micro frente a uno de 0.8. Con residuo: 0 + 0 = 0 = ⌊0.8⌋. Con ceil por reporte serían 2 frente a 1.",
+    "entry_point": "danil_ai_app",
+    "provider": "synthetic",
+    "model": "syn-tiny",
+    "parts": [
+      {
+        "input": 200000,
+        "output": 0,
+        "cache_read": 0,
+        "cache_write": 0
+      },
+      {
+        "input": 200000,
+        "output": 0,
+        "cache_read": 0,
+        "cache_write": 0
+      }
+    ],
+    "union": {
+      "input": 400000,
+      "output": 0,
+      "cache_read": 0,
+      "cache_write": 0
+    },
+    "parts_charges_micro": [
+      "0",
+      "0"
+    ],
+    "union_charge_micro": "0",
+    "ceil_per_report_would_charge": [
+      "1",
+      "1"
+    ]
+  },
+  "pending_rate": {
+    "entry_point": "messaging",
+    "provider": "synthetic",
+    "model": "unknown-model"
+  },
+  "invalid_reports": [
+    {
+      "why": "tokens negativos",
+      "tokens": {
+        "input": -1,
+        "output": 0,
+        "cache_read": 0,
+        "cache_write": 0
+      }
+    },
+    {
+      "why": "tokens fraccionarios",
+      "tokens": {
+        "input": 1.5,
+        "output": 0,
+        "cache_read": 0,
+        "cache_write": 0
+      }
+    },
+    {
+      "why": "tokens como cadena",
+      "tokens": {
+        "input": "10",
+        "output": 0,
+        "cache_read": 0,
+        "cache_write": 0
+      }
+    },
+    {
+      "why": "falta un tipo",
+      "tokens": {
+        "input": 1,
+        "output": 0,
+        "cache_read": 0
+      }
+    },
+    {
+      "why": "excede el límite por tipo",
+      "tokens": {
+        "input": 10000000001,
+        "output": 0,
+        "cache_read": 0,
+        "cache_write": 0
+      }
+    }
+  ],
+  "invalid_factors": [
+    {
+      "num": "0",
+      "den": "1"
+    },
+    {
+      "num": "1",
+      "den": "0"
+    },
+    {
+      "num": "-1",
+      "den": "1"
+    },
+    {
+      "num": "1000001",
+      "den": "1"
+    },
+    {
+      "num": 2,
+      "den": 1
+    },
+    {
+      "num": "1.5",
+      "den": "1"
+    }
+  ],
+  "rate_card_selection": {
+    "$comment": "Se tasa con la versión publicada de mayor effective_from ≤ occurred_at, nunca con la actual si el consumo es anterior.",
+    "cards": [
+      {
+        "version": 6,
+        "effective_from": "2026-10-01T00:00:00Z",
+        "status": "published"
+      },
+      {
+        "version": 7,
+        "effective_from": "2026-11-01T00:00:00Z",
+        "status": "published"
+      },
+      {
+        "version": 8,
+        "effective_from": "2026-12-01T00:00:00Z",
+        "status": "draft"
+      }
+    ],
+    "cases": [
+      {
+        "occurred_at": "2026-10-31T23:59:59Z",
+        "version": 6
+      },
+      {
+        "occurred_at": "2026-11-01T00:00:00Z",
+        "version": 7
+      },
+      {
+        "occurred_at": "2026-12-15T00:00:00Z",
+        "version": 7
+      },
+      {
+        "occurred_at": "2026-09-01T00:00:00Z",
+        "version": null
+      }
+    ]
+  }
+}

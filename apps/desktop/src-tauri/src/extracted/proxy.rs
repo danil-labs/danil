@@ -284,6 +284,7 @@ pub(super) fn desktop_command(name: &str) -> bool {
                 | "agents_session_refresh"
                 | "agents_bff_fetch"
                 | "credits_pilot_prepare"
+                | "credits_v2_select_tier"
                 | "harness_org_fetch"
                 | "typst_live_complete"
                 | "service_filter"

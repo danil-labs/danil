@@ -11,3 +11,5 @@ export { anexarDeltas, anexarImagen, anexarRazonamiento, mcpCallFromName, mensaj
 export { vivoTrasLeer } from "./threadOrder.ts";
 export type { PermissionRequest } from "./Chat.tsx";
 export { mergeGates, type PendingPermission } from "./permissionGates.ts";
+export { desktopCredits } from "./danil-credits-desktop.ts";
+export { prepareCreditsV2 } from "./credits-v2.ts";

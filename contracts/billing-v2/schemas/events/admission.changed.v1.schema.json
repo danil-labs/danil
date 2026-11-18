@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.danil.ai/billing-v2/events/admission.changed.v1.schema.json",
+  "title": "ai.danil.billing.admission.changed.v1 — data",
+  "$comment": "Admisión de la organización; para una persona consultar admisión interna opcional con member_budgets. Una deuda no bloquea saldo nuevo.",
+  "type": "object",
+  "required": [
+    "organization_id",
+    "admitted",
+    "reasons",
+    "version"
+  ],
+  "properties": {
+    "organization_id": {
+      "$ref": "../common.v1.schema.json#/$defs/organization_id"
+    },
+    "admitted": {
+      "type": "boolean"
+    },
+    "reasons": {
+      "type": "array",
+      "maxItems": 3,
+      "items": {
+        "type": "string",
+        "enum": [
+          "balance_exhausted",
+          "suspended_nonpayment",
+          "suspended_dispute_lost"
+        ]
+      }
+    },
+    "version": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9007199254740991
+    }
+  }
+}

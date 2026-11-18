@@ -176,7 +176,11 @@ pub(crate) fn allowed(method: &str, path: &str) -> bool {
             | ("PUT", "/v1/workspaces/preferences")
             | ("GET", "/v1/machines")
     );
-    if fixed {
+    if fixed
+        || (option_env!("DANIL_CREDITS_V2") == Some("1")
+            && method == "GET"
+            && path == "/v1/credits/inference/v1/models")
+    {
         return true;
     }
     let parts: Vec<&str> = path.split('/').collect();

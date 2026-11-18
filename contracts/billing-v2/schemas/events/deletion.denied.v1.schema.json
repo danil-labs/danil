@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.danil.ai/billing-v2/events/deletion.denied.v1.schema.json",
+  "title": "ai.danil.billing.deletion.denied.v1 — data (PROPUESTA)",
+  "$comment": "Respuesta negativa a mp.deletion.requested. `deferred` no se emite: si la fuente Stripe no responde, billing reintenta y no concede.",
+  "type": "object",
+  "required": [
+    "organization_id",
+    "generation",
+    "request_id",
+    "mp_operation_id",
+    "reason",
+    "current_generation"
+  ],
+  "properties": {
+    "organization_id": {
+      "$ref": "../common.v1.schema.json#/$defs/organization_id"
+    },
+    "generation": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "current_generation": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "request_id": {
+      "$ref": "../common.v1.schema.json#/$defs/uuid"
+    },
+    "mp_operation_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{1,128}$"
+    },
+    "reason": {
+      "type": "string",
+      "enum": [
+        "generation_superseded",
+        "not_terminated",
+        "payment_found",
+        "purging_in_progress",
+        "request_aborted"
+      ]
+    }
+  }
+}
