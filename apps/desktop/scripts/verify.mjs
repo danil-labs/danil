@@ -685,6 +685,7 @@ const steps = [
   ["Danil accounts sign in through the browser, add up and sign out", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/danil-account-panel.test.mjs")], root],
   ["Context rail menus mount with the D1 contract", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/session-rail-mount.test.mjs")], root],
   ["Group account menus mount with scoped balances and organization attention", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/session-account-menus-mount.test.mjs")], root],
+  ["Web group header chooses an organization and closes only the email", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/web-group-header-mount.test.mjs")], root],
   ["Organization source timeout retries and accepts a late listing", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/workspace-source-wait-mount.test.mjs")], root],
   ["First run and the sidebar footer offer the Danil account", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/danil-sign-in-entry.test.mjs")], root],
   ["The first run continues locally without the retired workspace directory", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/account-welcome-first-run.test.mjs")], root],

@@ -16,6 +16,8 @@ import { menuArrows } from "./menu-focus";
 const monogram = (name: string) => name.trim().slice(0, 1).toUpperCase() || "?";
 /** La cuenta de un grupo: la inicial de su organización o correo; su menú la quita o vuelve a entrar. */
 export const AccountHeader = (p: { id: string; email: string | null; extra: boolean; signedIn: boolean; stale?: boolean; name?: string; initialName?: string; children?: JSX.Element; group?: GroupAccount; send?: GroupSend; attention?: boolean; notice?: JSX.Element; accounts?: ReturnType<typeof capabilities>["webAccounts"] }) => {
+    const [organizationPicker, setOrganizationPicker] = createSignal(false);
+    const inStep = () => promo() || organizationPicker();
     const [promo, setPromo] = createSignal(false);
     const [profileEmail, setProfileEmail] = createSignal<string | null>(null);
     const email = () => p.email ?? profileEmail();
@@ -25,7 +27,7 @@ export const AccountHeader = (p: { id: string; email: string | null; extra: bool
     const attention = () => !!p.attention || (!!accounts() && accounts()?.current.user_id === p.id && webOrganizationAttention());
     const label = () => attention() ? t("shell.workspaces.tile_with_state", { name: p.name ?? t("shell.workspaces.session_group", { email: email() ?? "", name: p.group?.name ?? webOrganizationName() ?? "" }), state: t("shell.workspaces.requires_attention") }) : p.name ?? t("shell.workspaces.account", { email: email() ?? "" });
     return (
-      <Popover open={accountMenu() === p.id} onOpenChange={(open) => { setAccountMenu(open ? p.id : null); if (!open) setPromo(false); }} placement="right-start" gutter={4}>
+      <Popover open={accountMenu() === p.id} onOpenChange={(open) => { setAccountMenu(open ? p.id : null); if (!open) { setPromo(false); setOrganizationPicker(false); } }} placement="right-start" gutter={4}>
         <PopoverAnchor class="w-full">
           <TooltipRoot openDelay={RETARDO_TOOLTIP} placement="right" gutter={6} disabled={accountMenu() === p.id}>
             <TooltipTrigger
@@ -34,7 +36,7 @@ export const AccountHeader = (p: { id: string; email: string | null; extra: bool
               data-account-header={p.id}
               class="mt-2 mb-0.5 flex w-full items-center gap-1 px-3 text-left outline-none focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-primary"
               aria-label={label()}
-              onClick={() => { setPromo(false); setAccountMenu(p.id); }}
+              onClick={() => { setPromo(false); setOrganizationPicker(false); setAccountMenu(p.id); }}
             >
               <span aria-hidden="true" class="grid size-4 shrink-0 place-items-center rounded-full bg-neutral-200 text-[0.5625rem] font-semibold text-neutral-700">
                 <GroupAvatar email={p.email} initial={monogram(p.initialName ?? p.email ?? "?").slice(0, 1)} opened={accountMenu() === p.id} current={!!accounts() && accounts()?.current.user_id === p.id} onEmail={setProfileEmail} />
@@ -45,10 +47,10 @@ export const AccountHeader = (p: { id: string; email: string | null; extra: bool
             <TooltipContent>{p.name ?? p.email}</TooltipContent>
           </TooltipRoot>
         </PopoverAnchor>
-        <PopoverContent role={promo() ? undefined : "menu"} class="w-64 p-1" onKeyDown={promo() ? undefined : menuArrows}>
-          <Show when={!promo()}><p class={cn("m-0", TITULO_DE_GRUPO)}>{email()}</p></Show>
-          <Show when={accountMenu() === p.id}><HeaderAccountDetails group={p.group} send={p.send} email={email()} notice={p.notice} webCurrent={!!accounts() && accounts()?.current.user_id === p.id} promo={promo()} onPromo={() => setPromo(true)} /></Show>
-          <Show when={!promo()}>
+        <PopoverContent role={inStep() ? undefined : "menu"} class="w-64 p-1" onKeyDown={inStep() ? undefined : menuArrows}>
+          <Show when={!inStep()}><p class={cn("m-0", TITULO_DE_GRUPO)}>{email()}</p></Show>
+          <Show when={accountMenu() === p.id}><HeaderAccountDetails group={p.group} send={p.send} email={email()} notice={p.notice} webCurrent={!!accounts() && accounts()?.current.user_id === p.id} promo={promo()} organizationPicker={organizationPicker()} onOrganization={() => setOrganizationPicker(true)} onOrganizationClose={() => { setOrganizationPicker(false); setAccountMenu(null); }} onPromo={() => setPromo(true)} /></Show>
+          <Show when={!inStep()}>
           {p.children}
           <Show when={p.stale && p.signedIn}>
             <p class="m-0 px-2 pb-1 text-caption text-neutral-500">{t("shell.workspaces.stale")}</p>
