@@ -128,3 +128,11 @@ test('regression: on entering, a Danil workspace the person did not add is not t
   assert.equal(openOnStart(list, 'ops', new Set(), { available: null, added: new Set() }), null, 'without the source nothing changes');
   assert.equal(openOnStart([{ id: 'ops' }], 'ops', new Set(), { available, added: new Set() }), null, 'with nowhere else to go it stays');
 });
+
+test('regression (beta): with unknown added ones the rail shows the organization workspaces and the + offers only the rest', () => {
+  const available = [{ id: 'acme', name: 'Acme' }, { id: 'ops', name: 'Ops' }];
+  const hiddenIds = new Set(['ops']);
+  const view = { available, added: new Set(available.map((w) => w.id).filter((id) => !hiddenIds.has(id))) };
+  assert.deepEqual(ids(railWithDanil([{ id: 'local', name: 'L' }], hiddenIds, 'local', view, make)), ['local', 'acme'], 'the organization one shows though the rail did not know it');
+  assert.deepEqual(danilToAdd(view)?.map((w) => w.id), ['ops'], 'only the hidden one is offered');
+});

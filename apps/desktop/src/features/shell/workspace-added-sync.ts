@@ -62,11 +62,21 @@ const apply = (base: Iterable<string>, pending: readonly PendingOp[]) => {
 
 /**
  * La siembra: los de Danil que la fuente asentada sirve y que el riel pintaba en este equipo,
- * menos los ocultos locales. Una cuenta sin evidencia previa da `[]`: empieza vacía.
+ * menos los ocultos locales. `null` sin evidencia previa: no se siembra nada y el riel sigue
+ * mostrando los de la organización, como antes. Nunca hay siembra vacía.
  */
-export function seedOf(available: readonly { id: string }[], shown: ReadonlySet<string>, hidden: ReadonlySet<string>): string[] {
-  return available.map((w) => w.id).filter((id) => shown.has(id) && !hidden.has(id) && ENGINE_ID.test(id)).slice(0, MAX);
+export function seedOf(available: readonly { id: string }[], shown: ReadonlySet<string>, hidden: ReadonlySet<string>): string[] | null {
+  const ids = available.map((w) => w.id).filter((id) => ENGINE_ID.test(id));
+  const seed = ids.filter((id) => shown.has(id) && !hidden.has(id)).slice(0, MAX);
+  return seed.length ? seed : null;
 }
+
+/** Lo que el riel muestra sin evidencia: todos los de la organización menos los ocultos. */
+const shownAll = (available: readonly { id: string }[], hidden: ReadonlySet<string>) =>
+  available.map((w) => w.id).filter((id) => ENGINE_ID.test(id) && !hidden.has(id)).slice(0, MAX);
+
+/** Una lista local vacía sin cambios de la persona viene de una siembra de antes, no de quitarlos: no cuenta. */
+const validLocal = (record: AddedRecord) => (record.local && (record.local.length > 0 || record.pending.length > 0) ? record.local : null);
 
 const keyOf = (scope: AddedScope) => `${scope.person}:${scope.organization}`;
 
@@ -100,14 +110,25 @@ export function createAddedSync(deps: {
     }, RETRY_MS);
   };
 
-  /** Sin la cuenta: la lista local nace de la misma siembra, una vez asentada la fuente. */
+  /**
+   * Con qué se siembra: la lista local, la evidencia de este equipo o, si la persona ya cambió
+   * algo, lo que el riel mostraba. `null` mientras no hay de dónde: el riel sigue como estaba.
+   */
+  function baseFor(key: string): string[] | null {
+    const current = record(key);
+    const local = validLocal(current);
+    if (local) return local;
+    const available = deps.available();
+    if (!available) return null;
+    return seedOf(available, deps.shown(), deps.hidden()) ?? (current.pending.length ? shownAll(available, deps.hidden()) : null);
+  }
+
+  /** Sin la cuenta: la lista local nace con la misma regla que la siembra, una vez asentada la fuente. */
   function keepLocal(key: string) {
     const current = record(key);
-    if (current.local) return;
-    const available = deps.available();
-    if (!available) return;
-    const seed = seedOf(available, deps.shown(), deps.hidden());
-    deps.store.write(key, { ...current, local: [...apply(seed, current.pending)] });
+    if (validLocal(current)) return;
+    const base = baseFor(key);
+    deps.store.write(key, { ...current, local: base ? [...apply(base, current.pending)] : null });
     deps.onChange();
   }
 
@@ -142,23 +163,34 @@ export function createAddedSync(deps: {
     const key = keyOf(scope);
     if (server && server.key !== key) (server = null), deps.onChange();
     // Un error de red cuenta como una ruta ausente.
+    let seeding: string[] | null = null;
     const reply = await deps.transport.get().catch((): PreferencesReply => ({ status: 0 }));
     const read = outcomeOf(reply) === "ok" ? parsePreferences(reply.body) : null;
     if (!read) {
       keepLocal(key);
       return retry();
     }
-    if (read.version === 0) {
+    // Sin fila, o una fila en `version` 1 sin ids: quitar uno exige haberlo agregado antes, así que nunca tuvo nada.
+    if (read.version === 0 || (read.version === 1 && read.added.length === 0)) {
+      const base = baseFor(key);
       const current = record(key);
-      const available = deps.available();
-      if (!current.local && !available) {
-        // Sin fuente asentada no se decide nada: el riel conserva lo que mostraba.
+      if (!base) {
+        // Sin evidencia (o sin fuente) no se siembra: el riel sigue mostrando los de la organización.
+        if (current.local) deps.store.write(key, { ...current, local: null });
         server = null;
-        return retry();
+        deps.onChange();
+        if (!deps.available()) retry();
+        return;
       }
-      const base = current.local ?? seedOf(available ?? [], deps.shown(), deps.hidden());
       const seed = [...apply(base, current.pending)];
-      if (seed.length) {
+      if (!seed.length) {
+        // La persona los quitó todos antes de tener cuenta: se queda la lista local vacía, sin sembrar.
+        deps.store.write(key, { ...current, local: [] });
+        server = null;
+        deps.onChange();
+        return;
+      }
+      if (read.version === 0) {
         const sent = await deps.transport.seed(seed).catch((): PreferencesReply => ({ status: 0 }));
         const outcome = outcomeOf(sent);
         if (outcome === "ok") {
@@ -169,13 +201,12 @@ export function createAddedSync(deps: {
           return;
         }
         if (outcome === "conflict") return void (again = true);
-        if (outcome === "local") {
-          keepLocal(key);
-          return retry();
-        }
+        keepLocal(key);
+        return retry();
       }
-      // Cuenta nueva o siembra vacía: nada en la cuenta todavía; lo que se agregue la crea.
-      deps.store.write(key, { ...record(key), local: null });
+      // La fila ya existe vacía: la siembra va id por id.
+      deps.store.write(key, { local: null, pending: seed.reduce((all, id) => enqueue(all, { op: "add", id }), current.pending.filter((p) => p.op !== "remove")) });
+      seeding = seed;
     }
     // La lectura es de antes de subir lo pendiente: se le aplica lo que estaba pendiente al leer.
     const uploaded = record(key).pending;
@@ -187,6 +218,7 @@ export function createAddedSync(deps: {
     const current = record(key);
     if (current.local) deps.store.write(key, { ...current, local: null });
     server = { key, added: apply(apply(read.added, uploaded), record(key).pending) };
+    if (seeding) deps.onSeeded?.(seeding);
     deps.onChange();
   }
 
@@ -212,7 +244,8 @@ export function createAddedSync(deps: {
     if (!scope) return;
     const key = keyOf(scope);
     const current = record(key);
-    const local = current.local ? [...apply(current.local, [{ op, id }])] : null;
+    const kept = validLocal(current);
+    const local = kept ? [...apply(kept, [{ op, id }])] : null;
     deps.store.write(key, { local, pending: enqueue(current.pending, { op, id }) });
     if (server?.key === key) op === "add" ? server.added.add(id) : server.added.delete(id);
     deps.onChange();
@@ -226,8 +259,8 @@ export function createAddedSync(deps: {
       if (!scope) return null;
       const key = keyOf(scope);
       if (server?.key === key) return server.added;
-      const current = record(key);
-      return current.local ? new Set(current.local) : null;
+      const local = validLocal(record(key));
+      return local ? new Set(local) : null;
     },
     sync,
     add: (id: string) => change(id, "add"),

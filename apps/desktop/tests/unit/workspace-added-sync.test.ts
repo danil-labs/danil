@@ -91,7 +91,8 @@ test('responses and the GET body are read tolerantly', () => {
 
 test('the seed keeps the Danil workspaces the rail showed, without the hidden ones', () => {
   assert.deepEqual(seedOf([{ id: 'acme' }, { id: 'ops' }, { id: 'labs' }], new Set(['acme', 'ops']), new Set(['ops'])), ['acme']);
-  assert.deepEqual(seedOf([{ id: 'acme' }], new Set(), new Set()), [], 'no previous evidence: a new account starts empty');
+  assert.equal(seedOf([{ id: 'acme' }], new Set(), new Set()), null, 'no previous evidence: nothing is seeded');
+  assert.equal(seedOf([{ id: 'acme' }], new Set(['acme']), new Set(['acme'])), null, 'never an empty seed');
 });
 
 test('criterion 3: the first start with a previous rail seeds atomically, and hidden Danil ids go only after a 204', async () => {
@@ -103,16 +104,16 @@ test('criterion 3: the first start with a previous rail seeds atomically, and hi
   assert.deepEqual(d.seeded, [['acme']]);
 });
 
-test('criterion 2: a new account starts empty and adding one creates the row', async () => {
+test('criterion 2 (beta rule): without evidence the organization workspaces keep showing; the first add seeds them with it', async () => {
   const svc = service();
   const d = device(svc, world({ shown: new Set() }));
   await d.sync.sync();
   assert.ok(!svc.calls.some((c) => c.startsWith('SEED')), 'an empty list is never seeded');
-  assert.deepEqual(list(d.sync.added()), []);
+  assert.equal(d.sync.added(), null, 'unknown: the rail shows them as before');
   d.sync.add('labs');
   await d.sync.sync();
-  assert.deepEqual(svc.rows.get('org_A')?.added, ['labs']);
-  assert.deepEqual(list(d.sync.added()), ['labs']);
+  assert.deepEqual(svc.rows.get('org_A')?.added, ['acme', 'labs'], 'what the rail showed (ops is hidden) plus the new one');
+  assert.deepEqual(list(d.sync.added()), ['acme', 'labs']);
 });
 
 test('criterion 10: with the source unsettled nothing is seeded and the rail keeps what it showed', async () => {
@@ -208,7 +209,7 @@ test('changing organization does not mix lists', async () => {
   w.scope = { person: 'user_1', organization: 'org_B' };
   w.available = [{ id: 'beta' }];
   await d.sync.sync();
-  assert.deepEqual(list(d.sync.added()), [], 'org_B has no evidence: empty');
+  assert.equal(d.sync.added(), null, 'org_B has no evidence: its workspaces keep showing');
   assert.deepEqual(svc.rows.get('org_A')?.added, ['acme']);
 });
 
@@ -231,4 +232,49 @@ test('regression: what the person adds or removes shows after a single round, wi
   await settled;
   assert.equal(rounds, before + 1, 'one round after the change');
   assert.deepEqual(list(d.sync.added()), ['labs'], 'the removal is not undone by the read taken before it was uploaded');
+});
+
+test('regression (beta): with an empty rail while the route answers 403, nothing is seeded and the Danil workspaces keep showing', async () => {
+  const svc = service({ down: 403 });
+  const d = device(svc, world({ shown: new Set(), hidden: new Set() }));
+  await d.sync.sync();
+  assert.equal(d.sync.added(), null, 'unknown: the rail shows the organization workspaces as before');
+  assert.equal(d.records.get('user_1:org_A')?.local ?? null, null, 'no empty local list is kept');
+  svc.up();
+  d.retries.shift()?.();
+  await d.sync.sync();
+  assert.ok(!svc.calls.some((c) => c.startsWith('SEED')), 'an empty list is never seeded');
+  assert.equal(d.sync.added(), null, 'still unknown without evidence');
+});
+
+test('regression (beta): an empty local list left by an earlier seed is dropped and seeded again with the new rule', async () => {
+  const svc = service();
+  const d = device(svc, world({ shown: new Set(['acme']), hidden: new Set() }));
+  d.records.set('user_1:org_A', { local: [], pending: [] });
+  await d.sync.sync();
+  assert.deepEqual(svc.calls, ['GET', 'SEED acme']);
+  assert.deepEqual(list(d.sync.added()), ['acme']);
+});
+
+test('regression (beta): an empty server row at version 1 with no removals counts as never seeded', async () => {
+  const svc = service();
+  svc.rows.set('org_A', { version: 1, added: [] });
+  const d = device(svc, world({ shown: new Set(), hidden: new Set() }));
+  await d.sync.sync();
+  assert.equal(d.sync.added(), null, 'unknown, so the organization workspaces show');
+  const e = device(svc, world({ shown: new Set(['acme', 'ops']), hidden: new Set(['ops']) }));
+  await e.sync.sync();
+  assert.deepEqual(list(e.sync.added()), ['acme'], 'with evidence it is seeded id by id, since the row already exists');
+  assert.deepEqual(svc.rows.get('org_A')?.added, ['acme']);
+});
+
+test('without evidence, the first change seeds what the rail was showing, so the others do not disappear', async () => {
+  const svc = service();
+  const d = device(svc, world({ shown: new Set(), hidden: new Set(['ops']) }));
+  await d.sync.sync();
+  assert.equal(d.sync.added(), null);
+  d.sync.remove('acme');
+  await d.sync.sync();
+  assert.deepEqual(svc.rows.get('org_A')?.added, ['labs'], 'all but the hidden one and the removed one');
+  assert.deepEqual(list(d.sync.added()), ['labs']);
 });
