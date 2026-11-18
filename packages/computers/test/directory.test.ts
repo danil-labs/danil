@@ -1,7 +1,7 @@
+// El directorio que lee móvil (`apps/mobile/src/lib/useWorkspaceDirectory.ts`); la ventana ya no lo usa.
 import assert from "node:assert/strict";
 import test from "node:test";
-import { barWorkspaceIds, type DirectoryEntry, groupDirectory, linkDanilWorkspace, listDirectory, setDirectoryPins } from "../../../../packages/computers/src/directory.ts";
-import { canCreateWorkspace, isTakenByAnother, linkCandidates, linkProblem } from "../../src/features/settings/workspace-link.ts";
+import { barWorkspaceIds, type DirectoryEntry, groupDirectory, linkDanilWorkspace, listDirectory, setDirectoryPins } from "../src/directory.ts";
 
 const entry = (key: string, patch: Partial<DirectoryEntry> = {}): DirectoryEntry => ({
   key, workspace_id: null, danil_workspace_id: null, name: key, kind: "personal", organization: null, role: "owner", owner: false,
@@ -57,32 +57,4 @@ test("linking posts the account to the workspace and passes the refusal code thr
   const taken = (async () => Response.json({ error: { code: "danil_workspace_taken" } }, { status: 409 })) as never;
   const refused = await linkDanilWorkspace("https://c.test", "t", "w", 476, taken);
   assert.deepEqual(refused, { kind: "error", status: 409, code: "danil_workspace_taken" });
-});
-
-test("a Danil workspace already on another machine is not offered; the current one is not a candidate", () => {
-  const current = entry("a:1", { workspace_id: "w", danil_workspace_id: 1 });
-  const free = entry("a:2", { danil_workspace_id: 2 });
-  const taken = entry("a:3", { workspace_id: "other", danil_workspace_id: 3 });
-  assert.equal(isTakenByAnother(taken, "w"), true);
-  assert.equal(isTakenByAnother(current, "w"), false);
-  assert.deepEqual(linkCandidates([current, free, taken, entry("w:local")], "w").map((e) => e.key), ["a:2", "a:3"]);
-});
-
-test("anyone can upload a workspace of theirs that is not in the cloud yet, and nothing else", () => {
-  const local = entry("w:w", { kind: "terminus_only", workspace_id: "w", owner: true, role: null });
-  assert.equal(canCreateWorkspace([local], "w"), true);
-  assert.equal(canCreateWorkspace([local], "otro"), false);
-  assert.equal(canCreateWorkspace([{ ...local, danil_workspace_id: 476 }], "w"), false, "already synced");
-  assert.equal(canCreateWorkspace([{ ...local, owner: false }], "w"), false, "someone else's record");
-  assert.equal(canCreateWorkspace([{ ...local, support: { level: "write", expires_at: "x" } }], "w"), false, "support access");
-  assert.equal(canCreateWorkspace([entry("a:1", { kind: "organization", organization: { id: 1, name: "Acme" }, role: "owner" })], "w"), false);
-});
-
-test("link refusals are grouped for the text the person reads", () => {
-  assert.equal(linkProblem("danil_workspace_taken"), "taken");
-  assert.equal(linkProblem("account_not_enabled"), "not_enabled");
-  assert.equal(linkProblem("workspace_id_taken"), "workspace_id_taken");
-  assert.equal(linkProblem("not_account_admin"), "not_admin");
-  assert.equal(linkProblem("account_not_found"), "account_not_found");
-  assert.equal(linkProblem(null), "failed");
 });

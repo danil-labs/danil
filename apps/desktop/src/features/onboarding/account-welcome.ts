@@ -1,6 +1,6 @@
 /**
  * «Conecta tu cuenta de Danil» en el primer arranque: si ya se respondió en
- * esta computadora. Va en la carga inicial; lo demás, en `welcome-workspace.ts`.
+ * esta computadora. Va en la carga inicial; la pantalla, en `ConnectAccount.tsx`.
  */
 
 /** Clave nueva, no heredada: guarda `connected` o `local`. */

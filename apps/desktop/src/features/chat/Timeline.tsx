@@ -5,7 +5,6 @@ import { t } from "../../lib/i18n";
 import { flechaDeLista } from "../../lib/shortcuts";
 import {
   agrupar,
-  comando,
   type Detalle,
   type Fila,
   type Paso,
@@ -16,7 +15,8 @@ import { AnsiText } from "../../ui/AnsiText";
 import BloqueDeDiff from "./DiffBlock";
 import { balance, comparado } from "./diff";
 import { Spinner } from "../../ui/Spinner";
-import { Glifo } from "./StepGlyph";
+import { Glifo, HUECO_DE_GLIFO } from "./StepGlyph";
+import { carpetaDe, desplegable, salidaDe, tituloDeFila, verboVisible } from "../../lib/stepRow";
 
 /**
  * El carril de un tramo: una raya bajo el chevron de su cabecera y ningún
@@ -26,13 +26,6 @@ import { Glifo } from "./StepGlyph";
  */
 export const SUPERFICIE_DE_EJECUCION = "min-w-0 ml-2.5 border-l border-border pl-1.5";
 
-
-/** Una fila con algo que enseñar debajo. Las demás son solo la línea. */
-function desplegable(fila: Fila) {
-  if (fila.clase === "aviso" || fila.clase === "gasto" || fila.clase === "fin")
-    return false;
-  return fila.pasos.some((p) => p.objetivo || p.detalle);
-}
 
 /** Con qué recuerda su pliegue una fila. Sin id del agente vale su sitio. */
 function claveDeFila(fila: Fila, i: number) {
@@ -44,12 +37,12 @@ function claveDeFila(fila: Fila, i: number) {
  * no en `FilaDePaso`: `agrupar` fabrica filas nuevas con cada delta, el `For`
  * remonta sus componentes y una fila abierta se cerraría sola.
  */
-export default function LineaDeTiempo(props: { pasos: Paso[]; presentation?: "inline" | "disclosure" }) {
+export default function LineaDeTiempo(props: { pasos: Paso[]; individual?: boolean }) {
   let marco: HTMLDivElement | undefined;
   const [foco, setFoco] = createSignal(0);
   const [abiertas, setAbiertas] = createRowSignal<Record<string, boolean>>("steps", {});
 
-  const filas = () => agrupar(props.pasos);
+  const filas = () => props.individual ? props.pasos.map(paso => ({ clase: paso.clase, pasos: [paso] })) : agrupar(props.pasos);
 
   const conIndice = () => {
     let n = 0;
@@ -105,7 +98,6 @@ export default function LineaDeTiempo(props: { pasos: Paso[]; presentation?: "in
       <For each={conIndice().lista}>
         {({ fila, clave, tecla }) => (
           <FilaDePaso
-              inline={props.presentation === "inline"}
             fila={fila}
             abierta={Boolean(abiertas()[clave])}
             enfocada={tecla === activo()}
@@ -122,7 +114,6 @@ export default function LineaDeTiempo(props: { pasos: Paso[]; presentation?: "in
 
 function FilaDePaso(props: {
   fila: Fila;
-  inline?: boolean;
   abierta: boolean;
   enfocada: boolean;
   onAlternar: () => void;
@@ -130,7 +121,10 @@ function FilaDePaso(props: {
 }) {
   const resumido = () => rotuloDeFila(props.fila);
   const corriendo = () => props.fila.pasos.some((p) => p.corriendo);
-  const abre = () => !props.inline && desplegable(props.fila);
+  // Sin presentación que fuerce el cuerpo abierto: con ella la fila perdía la
+  // flecha y el comando salía dos veces sin poder cerrarse.
+  const abre = () => desplegable(props.fila);
+  const titulo = () => tituloDeFila(props.fila);
 
   // `min-w-0` es lo que deja que el sujeto se recorte: sin él la fila reclama
   // el ancho de su contenido y el comando se sale de la ventana.
@@ -167,7 +161,9 @@ function FilaDePaso(props: {
         when={corriendo()}
         fallback={<Glifo fila={props.fila} abierta={abre()} />}
       >
-        <Spinner size={12} class="text-primary" />
+        <span class={cn(HUECO_DE_GLIFO, !abre() && "mt-px")}>
+          <Spinner size={12} class="text-primary" />
+        </span>
       </Show>
       {/* El dueño va antes del verbo: «GitHub · Usó create issue» dice en una
           línea lo que «Usó mcp__github__create_issue» no decía. */}
@@ -180,14 +176,17 @@ function FilaDePaso(props: {
         )}
       </Show>
       {/* En avisos, gasto y fin, resumen() coloca el mensaje entero en verbo y deja sujeto vacío. Impedir que verbo encoja o envuelva sacaría la prosa del ancho del hilo. */}
+      {/* Un comando no pinta su verbo: el tramo ya dice «Ejecutó N comandos».
+          El lector de pantalla sí lo dice. */}
       <span
         class={cn(
           "font-medium",
-          abre() ? "shrink-0" : "min-w-0 break-words",
+          !verboVisible(props.fila) ? "sr-only" : abre() ? "shrink-0" : "min-w-0 break-words",
           "text-neutral-700",
         )}
       >
-        {resumido().verbo}
+        {/* El espacio separa el verbo oculto del comando en el nombre accesible. */}
+        {verboVisible(props.fila) ? resumido().verbo : `${resumido().verbo} `}
       </span>
       <Show when={resumido().sujeto}>
         {(s) => (
@@ -203,7 +202,7 @@ function FilaDePaso(props: {
       <Show
         when={abre()}
         fallback={
-          <p class={cn(clases, "m-0")}>
+          <p class={cn(clases, "m-0")} title={titulo()}>
             <Cabecera />
           </p>
         }
@@ -213,6 +212,7 @@ function FilaDePaso(props: {
           data-fila
           tabindex={props.enfocada ? 0 : -1}
           aria-expanded={props.abierta}
+          title={titulo()}
           onClick={props.onAlternar}
           onFocus={props.onFoco}
           class={cn(clases, "rounded-sm hover:bg-surface-muted")}
@@ -221,7 +221,7 @@ function FilaDePaso(props: {
         </button>
       </Show>
 
-      <Show when={desplegable(props.fila) && (props.inline || props.abierta)}>
+      <Show when={abre() && props.abierta}>
         <div class="ml-5 grid gap-2 border-l border-border py-1 pl-3">
           <For each={props.fila.pasos}>{(p) => <Cuerpo paso={p} />}</For>
         </div>
@@ -286,13 +286,12 @@ function Marcas(props: { fila: Fila }) {
   );
 }
 
-/** El paso abierto: sobre qué actuó, y su cuerpo si lo tiene. */
+/**
+ * El paso abierto: sobre qué actuó, y su cuerpo si lo tiene. Un comando no
+ * repite su texto: el renglón ya lo dice y el `title` lleva el real.
+ */
 function Cuerpo(props: { paso: Paso }) {
   const es = () => props.paso.clase === "ejecutar";
-  const salida = () => {
-    const d = props.paso.detalle;
-    return d?.kind === "output" ? d : null;
-  };
   const edicion = () => {
     const d = props.paso.detalle;
     return d?.kind === "edit" ? d : null;
@@ -300,28 +299,24 @@ function Cuerpo(props: { paso: Paso }) {
 
   return (
     <div class="grid min-w-0 gap-1.5">
-      <Show when={props.paso.objetivo}>
-        {(o) => (
-          <div class={cn(es() && "border-l border-border pl-3")}>
-            <Show when={salida()?.cwd}>
-              {(cwd) => (
-                <p class="m-0 pb-1 font-mono text-2xs text-neutral-500">
-                  {cwd()}
-                </p>
-              )}
+      <Show
+        when={es()}
+        fallback={
+          <>
+            <Show when={props.paso.objetivo}>
+              {(o) => <p class="m-0 font-mono text-caption break-all text-neutral-700">{o()}</p>}
             </Show>
-            <Show
-              when={es()}
-              fallback={
-                <p class="m-0 font-mono text-caption break-all text-neutral-700">{o()}</p>
-              }
-            >
-              <Comando texto={comando(o())} />
+            <Show when={props.paso.detalle?.kind === "output" ? props.paso.detalle : null}>
+              {(s) => <Terminal salida={s()} />}
             </Show>
-          </div>
-        )}
+          </>
+        }
+      >
+        <Show when={carpetaDe(props.paso)}>
+          {(cwd) => <p class="m-0 font-mono text-2xs text-neutral-500">{cwd()}</p>}
+        </Show>
+        <Show when={salidaDe(props.paso)}>{(s) => <Terminal salida={s()} />}</Show>
       </Show>
-      <Show when={salida()}>{(s) => <Terminal salida={s()} />}</Show>
       <Show when={edicion()}>
         {(d) => <BloqueDeDiff cambio={d()} numerar={d().before === null} />}
       </Show>
@@ -341,38 +336,6 @@ function Cuerpo(props: { paso: Paso }) {
         </p>
       </Show>
     </div>
-  );
-}
-
-const LINEAS_DE_COMANDO = 8;
-const LETRAS_DE_COMANDO = 600;
-
-/** Recortado: un heredoc entero tapaba la salida, que es lo que dice por qué falló. */
-function Comando(props: { texto: string }) {
-  const [entero, setEntero] = createRowSignal("command", false);
-  const recorte = () => {
-    const lineas = props.texto.split("\n");
-    let corto = lineas.slice(0, LINEAS_DE_COMANDO).join("\n");
-    if (corto.length > LETRAS_DE_COMANDO) corto = corto.slice(0, LETRAS_DE_COMANDO);
-    return corto.length < props.texto.length ? `${corto.trimEnd()}…` : null;
-  };
-  const visible = () => (entero() ? props.texto : (recorte() ?? props.texto));
-
-  return (
-    <>
-      <p class="m-0 font-mono text-caption break-all whitespace-pre-wrap text-neutral-700">
-        {`$ ${visible()}`}
-      </p>
-      <Show when={recorte()}>
-        <button
-          type="button"
-          onClick={() => setEntero(!entero())}
-          class="mt-1 text-caption text-neutral-500 hover:text-neutral-700 hover:underline"
-        >
-          {entero() ? t("chat.timeline.command.show_less") : t("chat.timeline.command.show_all")}
-        </button>
-      </Show>
-    </>
   );
 }
 

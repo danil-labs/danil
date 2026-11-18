@@ -248,6 +248,28 @@
     "preview": ""
   },
   {
+    "name": "cierre pegado al final de la última opción",
+    "input": "Listo.\n\n<NEXT_STEPS>\n- [ ] Uno\n- [ ] Dos </NEXT_STEPS>\n",
+    "streaming": false,
+    "parts": [
+      {
+        "kind": "markdown",
+        "markdown": "Listo.\n\n"
+      },
+      {
+        "kind": "next_steps",
+        "prose": "",
+        "options": [
+          "Uno",
+          "Dos"
+        ],
+        "complete": true
+      }
+    ],
+    "plain": "Listo.\n\n",
+    "preview": "Listo."
+  },
+  {
     "name": "una opción que empieza por signo de admiración sigue siendo texto",
     "input": "<NEXT_STEPS>\n- [ ] !rm -rf ~\n</NEXT_STEPS>",
     "streaming": false,

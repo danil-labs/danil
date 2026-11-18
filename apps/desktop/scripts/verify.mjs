@@ -64,6 +64,7 @@ const rustSteps = [
 
 const steps = [
   ["Live activity shares one disclosure without crossing known turn boundaries", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/chat-activity.test.ts")], root],
+  ["Turn activity keeps lifecycle provenance and known start epochs", process.execPath, ["--conditions=browser", "--test", "--experimental-strip-types", join(root, "tests/unit/thread-activity.test.ts")], root],
   ["Front modularization debt only decreases", process.execPath, [join(root, "scripts/guards/front-modularization.mjs")], root],
   ["Front modularization gates reject injected regressions", process.execPath, ["--test", join(root, "tests/unit/front-modularization.test.mjs")], root],
   ["Service capabilities are optional and versioned", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/web-service-capabilities.test.ts")], root],
@@ -691,8 +692,8 @@ const steps = [
   ["The platform session always uses cookies, CSRF and a configured edge", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/web-platform-session.test.ts")], root],
   ["app.danil.ai/terminus answers 308 to the same alfa path and never leaves that host", process.execPath, ["--test", join(root, "web-redirect/worker.test.mjs")], root],
   ["The entry serves assets and closes every retired proxy", process.execPath, ["--test", join(root, "alpha-entry/worker.test.mjs")], root],
-  ["The directory groups what can be entered and the bar shows the pinned ones", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/workspace-directory.test.ts")]],
-  ["The first-run account choice is remembered and picks the Danil workspace", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/account-welcome.test.ts")]],
+  ["The directory mobile reads groups what can be entered and the bar shows the pinned ones", process.execPath, ["--test", "--experimental-strip-types", join(root, "../../packages/computers/test/directory.test.ts")], root],
+  ["The first-run account choice is remembered", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/account-welcome.test.ts")]],
   ["Desk compatibility keeps PKCE, consent and one-time codes isolated from the SPA", process.execPath, ["--test", join(root, "tests/unit/alpha-entry-session.test.mjs")], root],
   ["The alpha entry closes all routes that migrated to platform", process.execPath, ["--test", join(root, "tests/unit/alpha-entry-service.test.mjs")], root],
   ["On desktop account keys go through the engine and the notice uploads only the chosen ones", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/desktop-account-credentials.test.mjs")], root],

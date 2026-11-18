@@ -386,3 +386,18 @@ test("el razonamiento en vivo se ignora: llega al releer tras `done`", () => {
   assert.equal(applyLive(live, { kind: "reasoning", text: "Pienso." }), live, "el stream no lo concatena");
   assert.deepEqual(linesOfLive(live).map((l) => l.kind), ["message"]);
 });
+
+test("una fila de comando: sin verbo visible, sin flecha y VoiceOver oye el comando real", async () => {
+  const { opensBody, rowAccessibilityLabel, showsVerb } = await import("../src/lib/steps.ts");
+  const run = { kind: "run" as const, steps: [{ kind: "run" as const, name: "Bash", target: "/bin/bash -lc 'cd /repo && git log --oneline -3 --decorate --graph'", ok: false, running: false }] };
+  assert.equal(showsVerb(run), false, "el tramo ya dice «Ejecutó N comandos»");
+  assert.equal(opensBody(run), false, "el teléfono no recibe la salida: desplegar solo repetía el comando");
+  assert.equal(
+    rowAccessibilityLabel(run, "Ejecutó", "Git", "falló"),
+    "Git, Ejecutó cd /repo && git log --oneline -3 --decorate --graph, falló",
+  );
+  const read = { kind: "read" as const, steps: [{ kind: "read" as const, name: "Read", target: "/a.ts", ok: true, running: false }, { kind: "read" as const, name: "Read", target: "/b.ts", ok: true, running: false }] };
+  assert.equal(showsVerb(read), true);
+  assert.equal(opensBody(read), true, "las demás filas siguen abriéndose");
+  assert.equal(rowAccessibilityLabel(read, "Leyó 2 archivos"), null);
+});

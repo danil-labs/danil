@@ -6,7 +6,7 @@ import { type ComponentRef, type ReactNode, memo, useCallback, useEffect, useMem
 import { ActivityIndicator, type LayoutChangeEvent, type NativeScrollEvent, type NativeSyntheticEvent, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { OPENED, type Follow, type Metrics, measuredFollow, shouldStick } from "../../lib/follow";
 import { lang, t, w } from "../../lib/i18n";
-import { type Line, type Step, type StepRow, type WorkLine, type WorkRun, elapsed, fileName, hitOf, runningStep, workFocus } from "../../lib/steps";
+import { type Line, type Step, type StepRow, type WorkLine, type WorkRun, elapsed, fileName, hitOf, opensBody, rowAccessibilityLabel, runningStep, showsVerb, workFocus } from "../../lib/steps";
 import type { WorkSheetState } from "../../lib/workSheet";
 import { ToolBrandMark } from "../BrandMark";
 import { Icon, type IconName } from "../Icon";
@@ -219,8 +219,6 @@ export function TurnStatus({ run, since, waiting }: { run: WorkRun | undefined; 
   );
 }
 
-/** Si la fila tiene algo más que enseñar que su renglón. */
-const opensBody = (row: StepRow) => row.steps.length > 1 || (row.steps[0].target ?? "").includes("\n") || (row.steps[0].target ?? "").length > 30;
 const isLongBody = (text: string) => text.split("\n").length > 6 || text.length > 260;
 
 const WorkRow = memo(function WorkRow({ row, id, open, full, needle, onToggle, onLayout, theme }: { row: StepRow; id: string; open: boolean; full: boolean; needle: string; onToggle: (id: string) => void; onLayout: (id: string, y: number) => void; theme: Theme }) {
@@ -228,6 +226,7 @@ const WorkRow = memo(function WorkRow({ row, id, open, full, needle, onToggle, o
   const failed = row.steps.some((step) => step.ok === false);
   const running = row.steps.some((step) => step.running);
   const canOpen = opensBody(row);
+  const a11y = rowAccessibilityLabel(row, verb, command?.label, failed ? w("chat.timeline.failed") : undefined);
   const target = row.steps[0].target ?? "";
   const long = isLongBody(target);
   const head = (
@@ -244,7 +243,7 @@ const WorkRow = memo(function WorkRow({ row, id, open, full, needle, onToggle, o
       )}
       {origin ? <Text numberOfLines={1} style={[styles.who, { color: theme.textMuted }]}>{origin.label}</Text> : null}
       {origin ? <Text style={[styles.sep, { color: theme.textMuted }]}>·</Text> : null}
-      <Text numberOfLines={1} style={[styles.verb, { color: theme.text, flexShrink: subject ? 0 : 1 }]}>{verb}</Text>
+      {showsVerb(row) ? <Text numberOfLines={1} style={[styles.verb, { color: theme.text, flexShrink: subject ? 0 : 1 }]}>{verb}</Text> : null}
       {subject ? <Text numberOfLines={1} style={[styles.mono, styles.subject, { color: theme.textMuted }]}><Marked text={subject} needle={needle} theme={theme} /></Text> : <View style={{ flex: 1 }} />}
       {failed ? <Text style={[styles.failed, { color: theme.error }]}>{w("chat.timeline.failed")}</Text> : null}
     </>
@@ -256,7 +255,9 @@ const WorkRow = memo(function WorkRow({ row, id, open, full, needle, onToggle, o
           {head}
         </Pressable>
       ) : (
-        <View style={[styles.row, { borderBottomColor: theme.border }]}>{head}</View>
+        // Una fila de comando se lee entera: sin el verbo pintado, VoiceOver
+        // tomaría solo la marca y el resumen.
+        <View style={[styles.row, { borderBottomColor: theme.border }]} {...(a11y ? { accessible: true, accessibilityLabel: a11y } : {})}>{head}</View>
       )}
       {open ? (
         <View style={[styles.body, { borderLeftColor: theme.border }]}>

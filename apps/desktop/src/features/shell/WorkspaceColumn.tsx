@@ -15,7 +15,6 @@ import type { RailWorkspace } from "../machines/engine-workspaces";
 import { topState, type AttentionState, type WorkspaceAttention } from "./attention";
 import KeepAwake from "./KeepAwake";
 import ProfileMenu from "./ProfileMenu";
-import { workspaceBar } from "./workspace-directory";
 import AddWorkspaceMenu, { menuArrows } from "./AddWorkspaceMenu";
 import { createHiddenWorkspaces, keepSlots, railHidden, railVisible } from "./hidden-workspaces";
 
@@ -85,11 +84,8 @@ export default function WorkspaceColumn(props: {
 }) {
   const ws = createRail();
   const hidden = createHiddenWorkspaces();
-  // Con fijados, la barra muestra esos y el abierto; los ocultos solo se ven mientras están abiertos.
-  const visibles = () => {
-    const bar = workspaceBar(ws.activo() ?? null);
-    return railVisible((ws.lista() ?? []).filter(w => !bar || bar.has(w.id)), hidden.ids(), ws.activo() ?? null);
-  };
+  // Los ocultos solo se ven mientras están abiertos.
+  const visibles = () => railVisible(ws.lista() ?? [], hidden.ids(), ws.activo() ?? null);
   let list: HTMLDivElement | undefined;
   const reorder = createNavigationReorder({
     scope: () => ws.activo() ?? "",

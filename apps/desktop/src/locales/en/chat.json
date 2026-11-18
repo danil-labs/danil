@@ -279,6 +279,7 @@
   "chat.work.duration": "Worked for {duration}",
   "chat.work.open_changes": "View the changes in the task panel",
   "chat.work.running": "Working",
+  "chat.activity.syncing": "Synchronizing activity…",
   "chat.activity.title": "Activity",
   "chat.work.title": "Work",
   "chat.reasoning.title": "Reasoning",

@@ -13,7 +13,6 @@ import { ITEM_DE_MENU, Popover, PopoverAnchor, PopoverContent } from "../../ui/P
 const PromoRedeem = lazy(() => import("./PromoRedeem"));
 
 const DanilFooterEntry = lazy(() => import("./DanilFooterEntry"));
-const WorkspaceDirectoryMenu = lazy(() => import("./WorkspaceDirectoryMenu"));
 const OrganizationWatch = lazy(() => import("./OrganizationMenu").then((m) => ({ default: m.OrganizationWatch })));
 const OrganizationSection = lazy(() => import("./OrganizationMenu").then((m) => ({ default: m.OrganizationSection })));
 
@@ -104,12 +103,6 @@ export default function ProfileMenu(props: {
           <For each={session().rows()}>{row => <button type="button" class={ITEM_DE_MENU} aria-pressed={session().active() === row.id} disabled={session().busy() || session().uncertain()} onClick={() => { setOpen(false); session().choose(row.id); }}>{row.name}</button>}</For>
           <div class="my-1 h-px bg-border" />
         </>}</Show>
-        <Show when={capabilities().workspaceDirectory}>
-          <Suspense fallback={null}>
-            <WorkspaceDirectoryMenu onClose={() => setOpen(false)} />
-          </Suspense>
-          <div class="my-1 h-px bg-border" />
-        </Show>
         <p class="m-0 px-2 pt-1 pb-1 text-caption font-medium text-neutral-500">{t("shell.profile.theme")}</p>
         <div role="radiogroup" aria-label={t("shell.profile.theme")} class={cn(SEGMENTO, "mx-2 mb-2")}>
           <For each={TEMAS}>

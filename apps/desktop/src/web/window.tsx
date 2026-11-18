@@ -1,7 +1,6 @@
 import { type Machine, type machinesClient, machineToComputer, RelaySession } from "@terminus/computers";
 import { classOf, Fleet, relayLink, unwrap } from "@terminus/fleet";
 import { createRouter, type SliceChange } from "../features/machines/router";
-import { directoryEntries } from "../features/shell/workspace-directory";
 import { createSignal, lazy, Suspense } from "solid-js";
 import { leerPref } from "../lib/prefs";
 import { rememberMachineNames } from "../features/machines/known-names";
@@ -85,7 +84,7 @@ export function mountWindow(base: Base, mounted: Mounted) {
     },
     onSlice: () => bump(n => n + 1),
   });
-  const active = createRouter({ self: null, fleet, native: null, deliver, onSlices: slicesChanged, directory: directoryEntries,
+  const active = createRouter({ self: null, fleet, native: null, deliver, onSlices: slicesChanged,
     pickedFor: workspace => {
       const picked: Record<string, string> = leerPref("machines.run_on", {});
       return workspace ? picked[workspace] ?? null : null;

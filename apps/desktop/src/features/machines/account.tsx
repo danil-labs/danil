@@ -41,7 +41,6 @@ import { setMachineRoute } from "../../lib/invoke";
 import { whenConnected } from "../../lib/engineConnection";
 import { leerPref } from "../../lib/prefs";
 import { capabilities, setCapabilities, type Capabilities } from "../../lib/platform";
-import { directoryEntries } from "../shell/workspace-directory";
 import { deliver, listen } from "../../lib/serviceEvents";
 import { listenDanilConnectionChange } from "../../lib/danilConnectionEvents";
 import { isMac, isWindows } from "../../lib/window";
@@ -351,7 +350,6 @@ export function startAccountMachines(target: Target = window) {
       onSlices: slicesChanged,
       deliver,
       pickedFor,
-      directory: directoryEntries,
       engineWorkspaces: engineWorkspaces.workspaces,
       engineFeatures: engineWorkspaces.features,
       home: () => ({ wakes: homeWakes, os: homeOs, features: homeFeatures, version: homeVersion }),

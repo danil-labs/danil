@@ -118,8 +118,6 @@ export type RouterConfig = {
   deliver?: (events: { name: string; payload: unknown }[]) => void;
   /** «Ejecutar en» para `workspace`, si la persona eligió una máquina. */
   pickedFor?: (workspace: string | null) => string | null;
-  /** El directorio autorizado de la persona: nombra el workspace de una organización que la fila de su servidor no nombra. */
-  directory?: () => readonly { workspace_id: string | null; name: string; owner?: boolean }[];
   /**
    * Lo que el motor de esta computadora sabe de las otras máquinas de la persona
    * (`state_machines`), de todas sus cuentas; `null` sin la función, y entonces
@@ -325,24 +323,23 @@ export function createRouter(config: RouterConfig) {
   const guessed = (info: MachineInfo) => (info.organization || !info.wakes ? [] : givenTo(info));
   /** Lo que una organización (o, según el motor, otra cuenta de la persona) le da y su registro no tiene: cada workspace con su nombre y las máquinas que lo atienden. */
   const organizations = (): Map<string, { name: string; machines: string[] }> => {
-    const names = new Map((config.directory?.() ?? []).filter((e) => e.workspace_id && !e.owner).map((e) => [e.workspace_id as string, e.name]));
     const known = config.engineWorkspaces?.() ?? null;
     // El motor manda: lo de todas las sesiones de aquí, que solo se va cuando él lo borra.
-    if (known) return fromEngine(known, names);
+    if (known) return fromEngine(known);
     const found = new Map(fleet.organizationWorkspaces().map((w) => [w.id, { name: w.name, machines: w.machines }]));
     for (const info of fleet.machines())
       for (const id of guessed(info)) {
-        const name = found.get(id)?.name ?? names.get(id);
+        const name = found.get(id)?.name;
         if (name) found.set(id, { name, machines: [...(found.get(id)?.machines ?? []), info.id] });
       }
     for (const id of found.keys()) if (fleet.inRegistry(id)) found.delete(id);
     return found;
   };
   /** Los workspaces que esta computadora no tiene y otra máquina de la persona sirve, sin los del registro (esos ya vienen en la lista). */
-  const fromEngine = (known: readonly EngineWorkspace[], names: Map<string, string>) => {
+  const fromEngine = (known: readonly EngineWorkspace[]) => {
     const found = new Map<string, { name: string; machines: string[] }>();
     for (const w of known) {
-      const name = w.name ?? names.get(w.id);
+      const name = w.name;
       if (w.local || !w.machines.length || !name || fleet.inRegistry(w.id)) continue;
       found.set(w.id, { name, machines: [...w.machines] });
     }

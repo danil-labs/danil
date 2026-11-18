@@ -52,6 +52,20 @@ export function activityByProject<T>(tasks: Readonly<Record<string, readonly T[]
   return out;
 }
 
+const isMap = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+/** Lo guardado en `projects.last_picked`, sea cual sea su forma: `workspace → {id → epoch}` o vacío. */
+export function storedPicks(stored: unknown): Record<string, PickedAt> {
+  return isMap(stored) ? (stored as Record<string, PickedAt>) : {};
+}
+
+/** Las elecciones de un workspace; lo que no sea un mapa cuenta como ninguna. */
+export function picksIn(stored: unknown, workspace: string): PickedAt {
+  const here = storedPicks(stored)[workspace];
+  return isMap(here) ? (here as PickedAt) : {};
+}
+
 /** Anota la elección y descarta los ids que ya no existen. */
 export function rememberPick(picked: Readonly<PickedAt>, id: string, now: number, existing: Iterable<string>): PickedAt {
   const out: PickedAt = {};

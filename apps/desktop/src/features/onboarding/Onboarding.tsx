@@ -37,7 +37,6 @@ export default function Onboarding(props: Props) {
           <CabeceraDelAlta fase={0} />
           <Suspense fallback={null}>
             <ConectarCuenta
-              workspaceExistente={tomado()}
               onListo={(r) => {
                 setTomado(r.workspace ?? tomado());
                 setPuedeVolver(!r.connected);

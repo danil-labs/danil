@@ -57,6 +57,35 @@ export const groupSteps = (steps: readonly Step[]): StepRow[] => joinSteps(steps
 
 export { bareCommand, classify, fileName };
 
+/**
+ * Una fila de comando es su marca más el comando, **sin verbo visible**: el
+ * tramo ya dice «Ejecutó N comandos» (plan `2026-11-17-marcas-comandos-shell.md`
+ * § 3.11). El verbo sigue en lo que oye VoiceOver: ver `rowAccessibilityLabel`.
+ */
+export const showsVerb = (row: StepRow) => row.kind !== "run";
+
+/**
+ * Si la fila tiene algo más que enseñar que su renglón. **Un comando no**: el
+ * teléfono no recibe su salida y desplegarlo solo repetía el comando, así que
+ * no lleva flecha. Las demás se abren si agrupan o si su objetivo no cabe.
+ */
+export const opensBody = (row: StepRow) => {
+  if (row.kind === "run") return false;
+  const target = row.steps[0].target ?? "";
+  return row.steps.length > 1 || target.includes("\n") || target.length > 30;
+};
+
+/**
+ * Lo que dice VoiceOver de una fila de comando: la marca, el verbo y el comando
+ * real entero, que el renglón recorta, y «falló» si falló. `null` en las demás filas: su texto
+ * visible ya es lo que se lee.
+ */
+export function rowAccessibilityLabel(row: StepRow, verb: string, mark?: string, status?: string): string | null {
+  const target = row.steps[0]?.target;
+  if (row.kind !== "run" || row.steps.length !== 1 || !target) return null;
+  return [mark, `${verb} ${bareCommand(target)}`, status].filter(Boolean).join(", ");
+}
+
 /** La pregunta que el agente deja escrita no es un paso que enseñar. */
 const visible = (tool: TurnTool | undefined): tool is TurnTool => tool !== undefined && !isQuestionFile(tool.target);
 const toStep = (tool: TurnTool) => stepOf(tool.name ?? "", tool.target ?? null, tool.ok ?? null);

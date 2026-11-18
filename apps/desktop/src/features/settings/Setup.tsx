@@ -667,7 +667,6 @@ export default function Setup(props: { children: JSX.Element }) {
             fallback={
               <Suspense fallback={<TarjetaVacia />}>
                 <ConectarCuenta
-                  workspaceExistente={workspace()}
                   onListo={(r) => {
                     if (r.workspace) setWorkspace(r.workspace);
                     setPuedeVolverCuenta(!r.connected);

@@ -1,6 +1,6 @@
 import type { HistoryChunk, HistoryRef } from "@terminus/protocol";
 import { currentRef, readDetailText } from "@terminus/chat/historyDetail";
-import { createResource, createSignal, For, Show, onCleanup } from "solid-js";
+import { createResource, createSignal, For, Show, onCleanup, type JSX } from "solid-js";
 import { retainRowWhile } from "./threadRow";
 import { invoke } from "../../lib/invoke";
 import { t } from "../../lib/i18n";
@@ -14,8 +14,8 @@ const REREAD_MS = 150;
 const readTurns = (ref: HistoryRef) => (before: number) =>
   invoke<Session>("load_session", { project: ref.project, id: ref.session, history_request: { version: 1, before, revision: null } }, machineOf(ref.session));
 
-/** El texto del mensaje es la respuesta misma: se trae al montar la fila y se lee como cualquier otra. */
-function HistoryText(props: { reference: HistoryRef; turnId?: string; onUnavailable: () => void }) {
+/** El texto del mensaje es la respuesta misma: se trae al montar la fila y `render` lo pinta como cualquier otra. */
+function HistoryText(props: { reference: HistoryRef; turnId?: string; onUnavailable: () => void; render?: (text: string) => JSX.Element }) {
   const [text] = createResource(() => props.reference, (ref) => readDetailText<Session["turns"][number]>({
     part: (current, offset) => invoke<HistoryChunk>("load_session", { project: ref.project, id: ref.session, history_request: { ...current, kind: "detail", offset } }, machineOf(ref.session)),
     turns: readTurns(ref),
@@ -26,11 +26,11 @@ function HistoryText(props: { reference: HistoryRef; turnId?: string; onUnavaila
     props.onUnavailable();
     return null;
   }));
-  return <Show when={text()}>{(value) => <Markdown>{value()}</Markdown>}</Show>;
+  return <Show when={text()}>{(value) => props.render ? props.render(value()) : <Markdown>{value()}</Markdown>}</Show>;
 }
 
 /** Una sola página de contenido crudo en memoria, incluso con resultados de muchos MB. */
-export function HistoryDetails(props: { refs: HistoryRef[]; turnId?: string }) {
+export function HistoryDetails(props: { refs: HistoryRef[]; turnId?: string; renderText?: (text: string) => JSX.Element }) {
   const [selected, setSelected] = createSignal<HistoryRef | null>(null);
   const [chunk, setChunk] = createSignal<HistoryChunk | null>(null);
   retainRowWhile(() => selected() !== null);
@@ -79,7 +79,7 @@ export function HistoryDetails(props: { refs: HistoryRef[]; turnId?: string }) {
   const textRef = () => textFailed() ? undefined : props.refs.find((ref) => ref.pointer === "/text");
   const listed = () => props.refs.filter((ref) => ref !== textRef());
   return <>
-  <Show when={textRef()}>{(ref) => <HistoryText reference={ref()} turnId={props.turnId} onUnavailable={() => setTextFailed(true)} />}</Show>
+  <Show when={textRef()}>{(ref) => <HistoryText reference={ref()} turnId={props.turnId} render={props.renderText} onUnavailable={() => setTextFailed(true)} />}</Show>
   <Show when={listed().length > 0}>
   <div class="my-2 text-xs text-neutral-500">
     <For each={listed()}>{ref => <button type="button" class="mr-2 underline" onClick={() => void read(ref, 0)}>

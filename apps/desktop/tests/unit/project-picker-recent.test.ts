@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { activeTaskCounts, activityByProject, byRecent, hiddenIn, pickerSections, recentProjects, rememberPick, setHidden, taskCountOf } from "../../src/features/projects/recent.ts";
+import { activeTaskCounts, activityByProject, byRecent, hiddenIn, pickerSections, picksIn, recentProjects, rememberPick, setHidden, storedPicks, taskCountOf } from "../../src/features/projects/recent.ts";
 import { lastActivity } from "../../../../packages/tasks/src/view.ts";
 
 const DAY = 86_400_000;
@@ -135,4 +135,14 @@ test("the picker row and Settings → Projects read the same active count: archi
   assert.equal(taskCountOf(engine("archived"), counts), 0);
   assert.equal(taskCountOf(engine("off-machine"), counts), null, "no list read: no number, not 0 nor 363");
   assert.equal(taskCountOf(engine("app"), undefined), 363, "without counts, the engine's number as before");
+});
+
+test("a stored pref of another shape counts as no picks and does not break the picker", () => {
+  for (const stored of [null, 0, "x", [], [{ a: 1 }], { w: null }, { w: "x" }, { w: [1] }]) {
+    assert.deepEqual(picksIn(stored, "w"), {});
+  }
+  assert.deepEqual(picksIn({ w: { a: 1 }, v: { a: 2 } }, "w"), { a: 1 });
+  assert.deepEqual(picksIn({ w: { a: 1 } }, "v"), {});
+  assert.deepEqual(storedPicks("abc"), {});
+  assert.deepEqual(storedPicks({ w: { a: 1 } }), { w: { a: 1 } });
 });

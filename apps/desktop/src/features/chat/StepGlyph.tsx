@@ -34,36 +34,33 @@ const ICONO: Record<Clase, Icono> = {
 };
 
 /**
+ * El hueco del glifo, 14 px para todos: la marca mide 14 y el icono de clase
+ * 12, y sin hueco común el texto de una fila con marca empieza 2 px más lejos.
+ */
+export const HUECO_DE_GLIFO = "flex size-3.5 shrink-0 items-center justify-center text-neutral-500";
+
+/**
  * El glifo de la fila: el de su clase, o la marca del servicio cuando la
  * herramienta tiene dueño o el comando es de un CLI conocido.
  *
  * **Una sola marca por renglón, en el hueco del glifo.** Dos iconos de 12 px en
- * la misma línea se estorban, y el verbo ya dice qué se hizo: la marca dice
- * quién lo prestó. Un servidor que no conocemos cae en una baldosa con su
- * inicial, y su nombre va escrito al lado.
+ * la misma línea se estorban, y la marca dice quién lo prestó. Un servidor que
+ * no conocemos cae en una baldosa con su inicial, y su nombre va escrito al lado.
  */
 export function Glifo(props: { fila: Fila; abierta: boolean }) {
   const icono = () => <Dynamic component={ICONO[props.fila.clase]} size={14} class="text-neutral-500" aria-hidden={true} />;
-  const hueco = () => cn("flex shrink-0 text-neutral-500", !props.abierta && "mt-px");
+  // Centrado en el primer renglón, no en el bloque: con `items-start` el texto
+  // de 12 px vive en una línea de 16 y al hueco de 14 le sobra 1 px por lado.
+  const hueco = () => cn(HUECO_DE_GLIFO, !props.abierta && "mt-px");
   return (
     <Switch
       fallback={
-        <Dynamic
-          component={ICONO[props.fila.clase]}
-          size={12}
-          class={cn(
-            "shrink-0",
-            // Centrado en el primer renglón, no en el bloque: con
-            // `items-start` el icono queda pegado arriba y el texto de 12px
-            // vive en una línea de 16, así que sobran 2px por lado.
-            !props.abierta && "mt-0.5",
-            // Un paso fallido no se pinta entero de rojo: fallar y reintentar
-            // es parte normal del trabajo, y la marca de la derecha ya dice
-            // con qué código salió.
-            "text-neutral-500",
-          )}
-          aria-hidden={true}
-        />
+        <span class={hueco()}>
+          {/* Un paso fallido no se pinta entero de rojo: fallar y reintentar es
+              parte normal del trabajo, y la marca de la derecha ya dice con qué
+              código salió. */}
+          <Dynamic component={ICONO[props.fila.clase]} size={12} aria-hidden={true} />
+        </span>
       }
     >
       <Match when={origenDeFila(props.fila)}>

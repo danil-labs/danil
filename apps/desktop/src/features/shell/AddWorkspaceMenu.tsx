@@ -1,17 +1,14 @@
 import Eye from "lucide-solid/icons/eye";
 import Plus from "lucide-solid/icons/plus";
-import { type Component, createSignal, For, lazy, Show, Suspense } from "solid-js";
+import { type Component, createSignal, For, Show } from "solid-js";
 import { Dynamic } from "solid-js/web";
 import { t } from "../../lib/i18n";
-import { capabilities } from "../../lib/platform";
 import { cn } from "../../lib/utils";
 import { SEPARADOR_DE_MENU, TITULO_DE_GRUPO } from "../../ui/ContextMenu";
 import { ITEM_DE_MENU, Popover, PopoverContent, PopoverTrigger } from "../../ui/Popover";
 import { type AttentionState, type TaskAttention, topState } from "./attention";
 import { matchesName } from "./hidden-workspaces";
 import WorkspaceSearch, { SEARCH_FROM } from "./WorkspaceSearch";
-
-const WorkspaceDirectoryMenu = lazy(() => import("./WorkspaceDirectoryMenu"));
 
 /** Flechas arriba y abajo entre las filas de un menú; el buscador cuenta como la primera. */
 export function menuArrows(e: KeyboardEvent) {
@@ -49,11 +46,9 @@ export default function AddWorkspaceMenu(props: {
   onShow: (id: string) => void;
 }) {
   const [open, setOpen] = createSignal(false);
-  const [step, setStep] = createSignal<"menu" | "directory">("menu");
   const [query, setQuery] = createSignal("");
   const close = () => {
     setOpen(false);
-    setStep("menu");
     setQuery("");
   };
   const rows = () => props.hidden.filter((w) => matchesName(w.name, query()));
@@ -81,15 +76,7 @@ export default function AddWorkspaceMenu(props: {
         <Plus size={16} aria-hidden="true" />
         <Show when={waiting()}>{(s) => <Dynamic component={props.badge} state={s()} class="absolute -top-1 -right-1" />}</Show>
       </PopoverTrigger>
-      <PopoverContent role={step() === "menu" ? "menu" : undefined} class="w-64 p-1" onKeyDown={menuArrows}>
-        <Show
-          when={step() === "menu"}
-          fallback={
-            <Suspense fallback={null}>
-              <WorkspaceDirectoryMenu onClose={close} />
-            </Suspense>
-          }
-        >
+      <PopoverContent role="menu" class="w-64 p-1" onKeyDown={menuArrows}>
           <button
             type="button"
             role="menuitem"
@@ -101,11 +88,6 @@ export default function AddWorkspaceMenu(props: {
           >
             {t("shell.workspaces.create")}
           </button>
-          <Show when={capabilities().workspaceDirectory}>
-            <button type="button" role="menuitem" class={ITEM_DE_MENU} onClick={() => setStep("directory")}>
-              {t("shell.workspaces.add_existing")}
-            </button>
-          </Show>
           <Show when={props.hidden.length > 0}>
             <span aria-hidden="true" class={cn(SEPARADOR_DE_MENU, "block")} />
             <p class={cn("m-0", TITULO_DE_GRUPO)}>{t("shell.workspaces.hidden_title")}</p>
@@ -149,7 +131,6 @@ export default function AddWorkspaceMenu(props: {
               </For>
             </div>
           </Show>
-        </Show>
       </PopoverContent>
     </Popover>
   );

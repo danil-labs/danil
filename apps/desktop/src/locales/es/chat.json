@@ -279,6 +279,7 @@
   "chat.work.duration": "Trabajó durante {duration}",
   "chat.work.open_changes": "Ver los cambios en el panel de la tarea",
   "chat.work.running": "Trabajando",
+  "chat.activity.syncing": "Sincronizando actividad…",
   "chat.activity.title": "Actividad",
   "chat.work.title": "Trabajo",
   "chat.reasoning.title": "Razonamiento",

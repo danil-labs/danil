@@ -110,7 +110,7 @@ export function usedSince(at: ReadonlyMap<string, number>, text: string, since: 
 
 /**
  * Los bloques del texto, fuera de cercas de código. Una apertura cuenta solo al
- * principio de su línea; el cierre, solo en una línea propia. Un bloque sin
+ * principio de su línea; el cierre, al final de una línea. Un bloque sin
  * cierre llega hasta el final del texto.
  */
 function findBlocks(text: string): Block[] {
@@ -127,9 +127,13 @@ function findBlocks(text: string): Block[] {
     if (open === null) {
       const tag = /^[\t ]*<NEXT_STEPS>[\t ]*/.exec(content);
       if (tag) open = { from, bodyFrom: tag[0].length < content.length ? from + tag[0].length : to };
-    } else if (/^[\t ]*<\/NEXT_STEPS>[\t ]*$/.test(content)) {
-      blocks.push({ from: open.from, bodyFrom: open.bodyFrom, bodyTo: from, to, closed: true });
-      open = null;
+    } else {
+      // El modelo a veces pega el cierre al final de la última opción: también cierra.
+      const close = /[\t ]*<\/NEXT_STEPS>[\t ]*$/.exec(content);
+      if (close) {
+        blocks.push({ from: open.from, bodyFrom: open.bodyFrom, bodyTo: from + close.index, to, closed: true });
+        open = null;
+      }
     }
   }
   if (open) blocks.push({ from: open.from, bodyFrom: Math.min(open.bodyFrom, text.length), bodyTo: text.length, to: text.length, closed: false });

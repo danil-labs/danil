@@ -89,23 +89,9 @@ export type Capabilities = {
   initialSettings?: string;
   /** La bitácora de cambios de la cuenta de Danil activa, con la sesión (la web en alfa); la muestra `/admin`. */
   accountAuditLog?: AuditLogSource;
-  /** `/admin` dentro de esta web (alfa); `allowed` dice si la persona es owner o admin de algún workspace de Danil. Sin esto, el escritorio la abre en el navegador. */
-  /** Los workspaces que la persona puede entrar (la web y la ventana). Sin esto, el menú y la barra siguen como en el motor. */
-  workspaceDirectory?: {
-    /** `account`: con qué sesión se lee el directorio; sin él, la del workspace abierto. */
-    list: (account?: string | null) => Promise<import("@terminus/computers").Directory>;
-    pin: (keys: string[], account?: string | null) => Promise<void>;
-    /** Enlaza un workspace propio con un workspace de Danil; rechaza con el código del plano de control. */
-    link: (workspaceId: string, danilWorkspaceId: number, account?: string | null) => Promise<void>;
-    /** Quita el enlace en el plano de control; sin esto, desvincular solo cambia la cuenta en el motor. */
-    unlink?: (workspaceId: string, account?: string | null) => Promise<void>;
-    /** Avisa cuando se abre o se cierra la sesión de persona de esta ventana (el escritorio); devuelve cómo dejar de escuchar. */
-    onSession?: (listener: (state: "signed_in" | "signed_out") => void) => () => void;
-    /** Sube un workspace propio: crea el workspace personal de Danil de quien llama y lo enlaza; rechaza con el código (`personal_workspace_exists`, …). */
-    create?: (workspaceId: string, account?: string | null) => Promise<void>;
-  };
   /** El selector de organización (`identity.organizations`); sin esto, o sin la ruta en el servidor, no sale. */
   organizations?: () => Promise<import("@terminus/computers").OrganizationSelection>;
+  /** `/admin` dentro de esta web (alfa); `allowed` dice si la persona es owner o admin de algún workspace de Danil. Sin esto, el escritorio la abre en el navegador. */
   adminPage?: { href: string; allowed: () => Promise<boolean> };
   /** Lo de una cuenta personal en Configuración › Cuenta. `isPersonal` decide si se ofrece; sin `plan`, esa pestaña no sale. */
   personalAccount?: { isPersonal: () => Promise<boolean>; plan?: () => JSX.Element };

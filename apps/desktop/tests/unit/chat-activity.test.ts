@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { coalesceLiveActivity, visibleActivityMessages, type ActivityBlock } from "../../src/features/chat/activityBlocks.ts";
+import { coalesceLiveActivity, visibleActivityMessages, placeActivities, isActivityOnlyMessage, type ActivityBlock } from "../../src/features/chat/activityBlocks.ts";
 type Message = { nativeMessageId?: string; turno?: string; duration_ms?: number; text: string; preguntas?: unknown[] };
 const work = (i: number, msg: Message): ActivityBlock<Message> => ({ tipo: "trabajo", i, msg, pasos: [] });
 
@@ -56,4 +56,31 @@ test("search keeps both same-ID answers and answers before a tool tail, excludin
   const tail = coalesceLiveActivity([work(0, first), { tipo: "pasos", pasos: [], i: 1 }], true)[0];
   assert.deepEqual(visibleActivityMessages(tail), [first]);
   assert.deepEqual(visibleActivityMessages({ tipo: "trabajo", pasos: [], msg: last, i: 0, avance: [{ pasos: [], msg: first }] }), [last]);
+});
+
+test("a semantic activity anchor precedes every response without merging injected inputs or no-ID messages", () => {
+  const first = { text: "First answer without provider ID" }, second = { text: "Second answer" }, injected = { text: "Injected user input" };
+  const activity = { key: "scope:turn:1", anchor: first, anchorIndex: 1, active: true, startedAt: 100, durationMs: null, messages: [first, injected, second] };
+  const rows = [work(2, first), { tipo: "msg", i: 3, msg: injected } as ActivityBlock<Message>, work(5, second)];
+  const projected = placeActivities(rows, [activity]);
+  assert.equal(projected[0].activity, activity);
+  assert.equal(projected[1], rows[0]); assert.equal(projected[2], rows[1]); assert.equal(projected[3], rows[2]);
+  assert.equal(projected[1].tipo === "trabajo" && projected[1].msg, first);
+  assert.equal(projected[3].tipo === "trabajo" && projected[3].msg, second);
+});
+
+test("empty active turns and settled rows keep the supplied activity identity without guessing from prose", () => {
+  const active = { key: "stable", anchor: null, anchorIndex: 0, active: true, startedAt: null, durationMs: null, messages: [] as Message[] };
+  const empty = placeActivities<Message>([], [active]);
+  assert.equal(empty[0].activity?.key, "stable");
+  const answer = { text: "Final response" };
+  const settled = { ...active, active: false, anchor: answer, messages: [answer], durationMs: 12 };
+  const rows = placeActivities([work(0, answer)], [settled]);
+  assert.equal(rows[0].activity?.key, empty[0].activity?.key);
+  assert.equal(rows[1].tipo === "trabajo" && rows[1].msg, answer);
+});
+
+test("manual shell output remains a separate card even when it carries a tool step", () => {
+  assert.equal(isActivityOnlyMessage({ role: "system", meta: "usó", paso: {}, shell: { output: "manual command result" } }), false);
+  assert.equal(isActivityOnlyMessage({ role: "system", meta: "usó", paso: {} }), true);
 });
