@@ -467,5 +467,13 @@
   "shell.workspaces.requires_attention": "needs attention",
   "shell.workspaces.web_organization_required": "Choose which organization to work in",
   "shell.workspaces.choose_organization": "Choose organization",
-  "shell.read.failed": "Couldn't refresh the task list."
+  "shell.read.failed": "Couldn't refresh the task list.",
+  "shell.workspaces.add_failed_title": "Couldn’t add the account",
+  "shell.workspaces.add_failed_body": "Check your connection and try again.",
+  "shell.workspaces.add_retry": "Try again",
+  "shell.workspaces.added_toast_title": "You added {orgs}",
+  "shell.workspaces.added_toast_body": {
+    "one": "{n} new workspace in the sidebar.",
+    "other": "{n} new workspaces in the sidebar."
+  }
 }

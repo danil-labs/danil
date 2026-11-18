@@ -5,13 +5,13 @@ import { t } from "../../lib/i18n";
 import { capabilities } from "../../lib/platform";
 import { Button } from "../../ui/Button";
 import { KeyedList } from "../../ui/KeyedList";
-import { noteWebAccountMode, sessionRailState } from "../shell";
+import { accountReturn, noteWebAccountMode, sessionRailState } from "../shell";
 import { SettingsBlock, SettingsPanel, SettingsRow, SettingsSection } from "./layout";
 
 type Row = GroupAccount & { email: string | null; family: string };
 export default function SessionAccounts() {
   const rail = sessionRailState;
-  const addAccount = createAccountAddAction(capabilities().nativeWindow, () => rail()!.sessions.addAccount(), capabilities().webAccounts?.add);
+  const addAccount = createAccountAddAction(capabilities().nativeWindow, () => rail()!.sessions.addAccount(), capabilities().webAccounts?.add ? () => { accountReturn.begin(rows().map((r) => r.context)); capabilities().webAccounts?.add?.(); } : undefined);
   const [web] = createResource(() => !capabilities().nativeWindow && capabilities().groupAccount, async (source) => { const group = source ? await source.current() : null; noteWebAccountMode(); return group; });
   const rows = (): Row[] => capabilities().nativeWindow ? (rail()?.groups() ?? []).map((g) => ({ context: g.context_id, org: g.org, name: g.org_name ?? g.org, plan: g.plan, email: g.email, family: g.family })) : web() ? [{ ...web()!, email: capabilities().webAccounts?.current.email ?? null, family: "web" }] : [];
   const emails = () => [...new Map(rows().map((r) => [r.email?.trim().toLowerCase() ?? r.family, r.email])).entries()];
@@ -33,7 +33,7 @@ export default function SessionAccounts() {
   });
   const send: GroupSend = (context, method, path, body, key) => capabilities().nativeWindow ? rail()!.sessions.sendOptional(context, method, path, body, key) : capabilities().groupAccount!.send(context, method, path, body, key);
   return <SettingsPanel data-session-accounts="">
-    <SettingsSection title={t("danil.accounts.title")} description={t("danil.accounts.description")} aside={<Show when={addAccount}><Button size="sm" variant="secondary" disabled={busy()} onClick={() => void run(() => addAccount?.())}>{t("shell.workspaces.add_session")}</Button></Show>}>
+    <SettingsSection title={t("danil.accounts.title")} description={t("danil.accounts.description")} aside={<Show when={addAccount}><Button size="sm" variant="secondary" onClick={() => void Promise.resolve(addAccount?.()).catch(() => {})}>{t("shell.workspaces.add_session")}</Button></Show>}>
       <Show when={!rows().length}><SettingsBlock><p class="m-0 text-sm text-neutral-500">{t("danil.accounts.empty")}</p></SettingsBlock></Show>
       <Show when={error()}>{(key) => <SettingsBlock><p role="alert" class="m-0 text-caption text-error-strong">{t(key())}</p></SettingsBlock>}</Show>
     </SettingsSection>

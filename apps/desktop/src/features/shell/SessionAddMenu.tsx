@@ -14,7 +14,6 @@ import { WorkspaceSourceStatus } from "./WorkspaceSourceStatus";
 
 type Rail = ReturnType<typeof sessionRail>;
 const NOTE = "m-0 px-2 py-1.5 text-caption text-neutral-500";
-const isError = (key: string) => ["danil.error.too_many_contexts", "shell.workspaces.sessions_auth", "shell.workspaces.sessions_failed"].includes(key);
 const errorKey = (e: unknown) => {
   const empty = refusalEmptyReason(e);
   if (empty) return emptyReasonKey(empty);
@@ -22,27 +21,15 @@ const errorKey = (e: unknown) => {
   return detail === "too_many_contexts" ? "danil.error.too_many_contexts" : detail === "organization_auth_required" ? "shell.workspaces.sessions_auth" : detail === "cancelled" ? "shell.workspaces.sessions_cancelled" : "shell.workspaces.sessions_failed";
 };
 
-export function SessionAddEntries(props: { sessions: Rail; signedIn: boolean; onStep: () => void }) {
-  const [error, setError] = createSignal<string | null>(null);
-  const [busy, setBusy] = createSignal(false);
-  const run = async (action: () => Promise<unknown>) => {
-    if (busy()) return;
-    setBusy(true);
-    setError(null);
-    try { await action(); } catch (e) {
-      setError(errorKey(e));
-
-    }
-    finally { setBusy(false); }
-  };
+export function SessionAddEntries(props: { sessions: Rail; signedIn: boolean; onStep: () => void; onClose: () => void }) {
+  const run = () => { props.onClose(); void props.sessions.sessions.addAccount().catch(() => {}); };
   return <>
-    <button type="button" role="menuitem" class={ITEM_DE_MENU} disabled={busy()} data-add-danil-step="" onClick={() => {
+    <button type="button" role="menuitem" class={ITEM_DE_MENU} data-add-danil-step="" onClick={() => {
       if (props.sessions.groups()?.length || props.signedIn) { props.onStep(); props.sessions.refresh(); }
-      else void run(props.sessions.sessions.addAccount);
+      else run();
     }}>{t("shell.workspaces.add_danil")}</button>
     <Show when={props.sessions.groups()?.some((g) => (g.available_contexts ?? 0) > 0)}><p role="status" class={NOTE}>{t("shell.workspaces.new_available")}</p></Show>
-      <button type="button" role="menuitem" class={ITEM_DE_MENU} disabled={busy()} onClick={() => void run(props.sessions.sessions.addAccount)}>{t("shell.workspaces.add_session")}</button>
-    <Show when={error()}>{(key) => <p role={isError(key()) ? "alert" : "status"} class={cn(NOTE, isError(key()) && "text-error-strong")}>{t(key())}</p>}</Show>
+      <button type="button" role="menuitem" class={ITEM_DE_MENU} onClick={run}>{t("shell.workspaces.add_session")}</button>
   </>;
 }
 

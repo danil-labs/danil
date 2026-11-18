@@ -1,11 +1,9 @@
-import { createSessionEmptyState, type EmptyReply, type RemovedContext, refusalEmptyReason } from "./session-empty.ts";
+import { addSessionAccount } from "./add-session-account.ts";
+import { createSessionEmptyState, refusalEmptyReason } from "./session-empty.ts";
 
-export type SessionContext = { context_id: string; org: string; org_name: string | null; plan: string | null; workspaces?: "all" | "later" };
-export type SessionFamily = { family: string; email: string | null; contexts: SessionContext[]; available_contexts?: number };
-export type ContextGroup = SessionContext & { family: string; email: string | null; available_contexts?: number };
-export type SessionStatus = { state: string; sessions?: SessionFamily[]; default_context?: string | null; empty_reason?: string | null; removed?: RemovedContext[] };
-export type ContextReply = EmptyReply;
-export type ContextInvoke = <T>(command: string, args?: Record<string, unknown>) => Promise<T>;
+export type { ContextGroup, ContextInvoke, ContextReply, SessionContext, SessionFamily, SessionStatus } from "./session-context-types.ts";
+
+import type { ContextGroup, ContextInvoke, ContextReply, SessionFamily, SessionStatus } from "./session-context-types.ts";
 
 export function contextGroups(status: SessionStatus | null): ContextGroup[] | null {
   if (!status || !Array.isArray(status.sessions)) return null;
@@ -92,16 +90,6 @@ export function createSessionContexts(invoke: ContextInvoke, changed: () => void
     groups: () => unsupported ? null : groups,
     families: () => families,
     emptyReason: empty.reason, removed: empty.removed, dismissRemoved: (context: string) => { empty.dismiss(context); changed(); },
-    addAccount: async () => {
-      let result: { error?: string | null };
-      try { result = await invoke("danil_sign_in", { mode: "add" }); }
-      catch (e) {
-        const refusal = e as { detail?: string; status?: number } | null;
-        if (refusal?.detail !== "not_available_yet" && refusal?.status !== 404 && refusal?.status !== 501) throw e;
-        result = await invoke("danil_sign_in");
-      }
-      await refresh();
-      if (result.error) throw { detail: result.error };
-    },
+    addAccount: () => addSessionAccount(invoke, refresh, () => groups),
   };
 }

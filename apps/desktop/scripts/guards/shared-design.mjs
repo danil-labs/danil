@@ -13,6 +13,7 @@
  * - cada palabra de `WORDS` (lista de tareas, dock, máquinas) contra la misma
  *   clave en los catálogos de su lengua.
  */
+import { generateAuthPage } from "../../../../packages/design/scripts/auth-page.mjs";
 import { readdirSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -92,6 +93,7 @@ for (const [mode, selectors] of Object.entries(CSS_THEME_BLOCKS)) {
 }
 
 const hoja = readFileSync(join(ROOT, "src/styles/global.css"), "utf8");
+if (readFileSync(join(ROOT, "../../packages/design/auth-page.css"), "utf8") !== generateAuthPage(hoja)) failures.push("auth-page.css differs from global.css; run node packages/design/scripts/auth-page.mjs");
 const medida = (variable) => hoja.match(new RegExp(`${variable}:\\s*([\\d.]+)(rem|px);`));
 const enPx = (variable) => {
   const m = medida(variable);

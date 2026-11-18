@@ -467,5 +467,13 @@
   "shell.workspaces.requires_attention": "requiere atención",
   "shell.workspaces.web_organization_required": "Elige con qué organización trabajar",
   "shell.workspaces.choose_organization": "Elegir organización",
-  "shell.read.failed": "No se pudo actualizar la lista de tareas."
+  "shell.read.failed": "No se pudo actualizar la lista de tareas.",
+  "shell.workspaces.add_failed_title": "No se pudo agregar la cuenta",
+  "shell.workspaces.add_failed_body": "Revisa tu conexión e inténtalo otra vez.",
+  "shell.workspaces.add_retry": "Intentar de nuevo",
+  "shell.workspaces.added_toast_title": "Agregaste {orgs}",
+  "shell.workspaces.added_toast_body": {
+    "one": "{n} workspace nuevo en la barra.",
+    "other": "{n} workspaces nuevos en la barra."
+  }
 }
