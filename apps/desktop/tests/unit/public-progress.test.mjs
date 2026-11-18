@@ -48,6 +48,7 @@ for (const streaming of [false, true]) test(`public messages remain outside acti
     }
     assert.ok(await until(() => fixture.doc.querySelector("[data-chat-thread]")?.textContent.includes(FINAL)));
     publicMessages(fixture.doc);
+    assert.ok(await until(() => fixture.doc.querySelector("[data-activity-label]")?.textContent === "Trabajó durante 1s"), "settled activity uses saved duration before reopening");
     const disclosure = fixture.doc.querySelector("[data-activity-label]")?.closest("button");
     assert.ok(disclosure, "tools and reasoning retain their activity disclosure");
     if (!streaming) assert.equal(disclosure.textContent, "Trabajó durante 1s");
@@ -59,11 +60,15 @@ for (const streaming of [false, true]) test(`public messages remain outside acti
     assert.ok(panel.textContent.includes("first.ts")); assert.ok(panel.textContent.includes("second.ts"));
     for (const text of [FIRST, SECOND, FINAL]) assert.equal(panel.textContent.includes(text), false);
     publicMessages(fixture.doc);
+    disclosure.click();
+    assert.ok(await until(() => !fixture.doc.querySelector("[data-turn-activity-content]")), "completed activity closes");
+    disclosure.click();
+    assert.ok(await until(() => fixture.doc.querySelector("[data-turn-activity-content]")?.textContent.includes("first.ts")), "completed activity can reopen repeatedly");
     assert.deepEqual(fixture.app.failures, []);
   } finally { fixture.app.w.close(); }
 });
 
-test("public progress alone cannot leave an empty activity disclosure", async () => {
+test("filtered internal tools leave an explicit unavailable-details notice", async () => {
   const filtered = { ...saved, reasoning: [], tools: [{ name: "Read", target: "/lab/.preguntas.json", ok: true }], pieces: [{ text: FIRST }, { tool: 0 }, { text: FINAL }] };
   const fixture = await open("public-progress-no-internal-content", { computers: [HOME], extra: {
     list_live_sessions: () => [{ ...row("t1", "Mensajes sin herramientas visibles"), turns: 2 }],
@@ -74,8 +79,35 @@ test("public progress alone cannot leave an empty activity disclosure", async ()
     assert.ok(await until(() => fixture.doc.querySelector("[data-chat-thread]")?.textContent.includes(FINAL)));
     const thread = fixture.doc.querySelector("[data-chat-thread]");
     assert.ok(thread.textContent.includes(FIRST));
-    assert.equal(thread.querySelector("[data-activity-label]")?.closest("button") ?? null, null);
-    assert.equal(thread.querySelector("[data-turn-activity-content]"), null);
+    const disclosure = thread.querySelector("[data-activity-label]")?.closest("button");
+    assert.ok(disclosure);
+    disclosure.click();
+    assert.ok(await until(() => thread.querySelector("[data-turn-activity-content]")));
+    const panel = thread.querySelector("[data-turn-activity-content]");
+    assert.ok(panel.textContent.includes("No hay detalles de actividad disponibles para este turno."));
+    assert.equal(panel.textContent.includes(".preguntas.json"), false);
+    assert.equal(panel.textContent.includes(FIRST), false);
+    assert.deepEqual(fixture.app.failures, []);
+  } finally { fixture.app.w.close(); }
+});
+
+
+test("a finished duration remains inspectable when no internal details were saved", async () => {
+  const fixture = await open("finished-duration-only", { computers: [HOME], extra: {
+    list_live_sessions: () => [{ ...row("t1", "Duración sin detalles"), turns: 2 }],
+    load_session: () => ({ id: "t1", provider: "codex", sources: [], model: "gpt-5.6", turns: [human, { role: "agent", id: "answer", text: FINAL, duration_ms: 1500 }] }),
+  } });
+  try {
+    assert.ok(await until(() => fixture.doc.querySelector('[data-sesion="t1"]'))); await openTask(fixture.app, "t1");
+    assert.ok(await until(() => fixture.doc.querySelector("[data-chat-thread]")?.textContent.includes(FINAL)));
+    const disclosure = [...fixture.doc.querySelectorAll("button")].find(button => button.textContent === "Trabajó durante 1s");
+    assert.ok(disclosure, "finished duration must not become a dead label");
+    disclosure.click();
+    assert.ok(await until(() => fixture.doc.querySelector("[data-turn-activity-content]")));
+    assert.equal(disclosure.getAttribute("aria-expanded"), "true");
+    assert.ok(fixture.doc.querySelector("[data-turn-activity-content]").textContent.includes("No hay detalles de actividad disponibles para este turno."));
+    disclosure.click();
+    assert.ok(await until(() => !fixture.doc.querySelector("[data-turn-activity-content]")));
     assert.deepEqual(fixture.app.failures, []);
   } finally { fixture.app.w.close(); }
 });

@@ -290,6 +290,7 @@
   "chat.handoff.waiting_close": "Pending · stopping the previous turn…",
   "chat.handoff.submitting": "Preparing your message…",
   "chat.handoff.awaiting_start": "Waiting for the turn to start…",
+  "chat.work.no_details": "No activity details are available for this turn.",
   "chat.work.title": "Work",
   "chat.reasoning.title": "Reasoning",
   "chat.reasoning.summary": "Reasoning · {duration}",

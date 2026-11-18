@@ -1334,14 +1334,14 @@ export default function App() {
           : await invoke("stop_turn", { project: scope.project, session: id }, scope.route);
         if (current()) {
           if (shell && stopped === false) detenidos.delete(id);
-          if (!shell) { await reconcileActiveTurns(); if (current()) setPermissions(ps => ps.filter(p => p.session !== id)); }
+          if (!shell) { void reconcileActiveTurns(); setPermissions(ps => ps.filter(p => p.session !== id)); }
         }
         return shell ? stopped : undefined;
       } catch (error) {
         if (current()) {
           if (shell) detenidos.delete(id);
-          await reconcileActiveTurns();
-          if (current() && vivas().includes(id)) threads.appendLive(id, [{ role: "system", text: t("shell.turn.stop_failed", { error: prosaDe(error) }), meta: "fallo" }]);
+          void reconcileActiveTurns();
+          if (vivas().includes(id)) threads.appendLive(id, [{ role: "system", text: t("shell.turn.stop_failed", { error: prosaDe(error) }), meta: "fallo" }]);
         }
         throw error;
       }

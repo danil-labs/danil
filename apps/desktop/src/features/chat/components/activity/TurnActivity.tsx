@@ -45,6 +45,7 @@ export function RegistroDeTrabajo(props: {
   const presentation = createMemo(() => presentActivity({ active: props.corriendo, stopping: props.stopping, blocked: props.blocked, paused: props.animando === false, duration: props.duracion, action: props.latestAction, label: props.label }));
   const rotulo = () => presentation().label;
   const hasContent = () => todos().length > 0 || avance().some(chunk => chunk.msg.razonamiento?.length || (!chunk.outside && chunk.msg.text)) || Boolean(props.razonamiento?.length);
+  const inspectable = () => hasContent() || Boolean(!props.corriendo && props.duracion);
   const hasChanges = () => props.onVerCambios && partesDelTramo(todos(), props.corriendo).some(part => part.clase === "editar");
   const duracion = () =>
     !props.corriendo && props.duracion ? t("chat.work.duration", { duration: props.duracion }) : null;
@@ -69,12 +70,12 @@ export function RegistroDeTrabajo(props: {
     <>
       <span role="status" aria-live="polite" aria-atomic="true" class="sr-only">{props.corriendo && props.stopping ? t("chat.turn.stopping") : presentation().animate ? t("chat.turn.working_aria") : ""}</span>
       <Show
-        when={hasContent() || props.corriendo || props.observed}
+        when={inspectable() || props.corriendo || props.observed}
         fallback={<p class="m-0 mb-2 px-1 py-1.5 text-xs text-neutral-500">{duracion()}</p>}
       >
         <div class={cn("flex flex-wrap items-center gap-2", !desplegado() && "mb-2")}>
-          <Show when={!hasContent()}><span class={FILA_DEL_TRAMO}><span class="activity-label inline-flex min-w-0 items-center">{girando()}{caption()}</span><Show when={props.corriendo && !props.stopping && !props.blocked}>{props.status?.()}</Show></span></Show>
-          <Show when={hasContent()}>
+          <Show when={!inspectable()}><span class={FILA_DEL_TRAMO}><span class="activity-label inline-flex min-w-0 items-center">{girando()}{caption()}</span><Show when={props.corriendo && !props.stopping && !props.blocked}>{props.status?.()}</Show></span></Show>
+          <Show when={inspectable()}>
             <button type="button" aria-expanded={desplegado()} aria-controls={panelId} onClick={() => props.onAlternar(!desplegado())} class={FILA_DEL_TRAMO}>
               <span class="activity-label inline-flex min-w-0 items-center">{girando()}{caption()}</span><Show when={props.corriendo && !props.stopping && !props.blocked}>{props.status?.()}</Show>{chevron()}
             </button>
@@ -86,11 +87,12 @@ export function RegistroDeTrabajo(props: {
 
         <Show when={desplegado()}>
           <div id={panelId} class={cn(SUPERFICIE_DE_EJECUCION, "mb-2")} data-turn-activity-content="">
+            <Show when={!hasContent() && !props.corriendo}><p class="m-0 px-1 py-2 text-sm text-neutral-500">{t("chat.work.no_details")}</p></Show>
             <Index each={avance()}>
               {(tramo) => (
                 <>
                   <Show when={tramo().pasos.length > 0}>
-                    <LineaDeTiempo pasos={tramo().pasos} individual />
+                    <LineaDeTiempo pasos={tramo().pasos} active={presentation().animate} individual />
                   </Show>
                   {/* La fila de siempre y no prosa suelta: dentro del pliegue
                       una ráfaga sin su rótulo se lee como algo que el agente dijo. */}
@@ -104,7 +106,7 @@ export function RegistroDeTrabajo(props: {
               )}
             </Index>
             <Show when={props.pasos.length > 0}>
-              <LineaDeTiempo pasos={props.pasos} individual />
+              <LineaDeTiempo pasos={props.pasos} active={presentation().animate} individual />
             </Show>
             <Show when={props.razonamiento?.length ? props.razonamiento : null}>{(blocks) => <Reasoning bloques={blocks()} />}</Show>
       <Index each={todos()}>

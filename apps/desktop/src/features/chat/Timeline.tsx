@@ -37,7 +37,7 @@ function claveDeFila(fila: Fila, i: number) {
  * no en `FilaDePaso`: `agrupar` fabrica filas nuevas con cada delta, el `For`
  * remonta sus componentes y una fila abierta se cerraría sola.
  */
-export default function LineaDeTiempo(props: { pasos: Paso[]; individual?: boolean }) {
+export default function LineaDeTiempo(props: { pasos: Paso[]; individual?: boolean; active?: boolean }) {
   let marco: HTMLDivElement | undefined;
   const [foco, setFoco] = createSignal(0);
   const [abiertas, setAbiertas] = createRowSignal<Record<string, boolean>>("steps", {});
@@ -99,6 +99,7 @@ export default function LineaDeTiempo(props: { pasos: Paso[]; individual?: boole
         {({ fila, clave, tecla }) => (
           <FilaDePaso
             fila={fila}
+            active={props.active}
             abierta={Boolean(abiertas()[clave])}
             enfocada={tecla === activo()}
             onAlternar={() =>
@@ -114,13 +115,14 @@ export default function LineaDeTiempo(props: { pasos: Paso[]; individual?: boole
 
 function FilaDePaso(props: {
   fila: Fila;
+  active?: boolean;
   abierta: boolean;
   enfocada: boolean;
   onAlternar: () => void;
   onFoco: () => void;
 }) {
   const resumido = () => rotuloDeFila(props.fila);
-  const corriendo = () => props.fila.pasos.some((p) => p.corriendo);
+  const corriendo = () => props.active !== false && props.fila.pasos.some((p) => p.corriendo);
   // Sin presentación que fuerce el cuerpo abierto: con ella la fila perdía la
   // flecha y el comando salía dos veces sin poder cerrarse.
   const abre = () => desplegable(props.fila);

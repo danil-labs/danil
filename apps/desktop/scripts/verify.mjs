@@ -754,6 +754,8 @@ const steps = [
   ["Automatic background delivery enters the live turn once, including legacy engines", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/chat-steer-once.test.mjs")], root],
   ["Rejected automatic background delivery preserves the queue and explicit interruption", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/chat-steer-refused.test.mjs")], root],
   ["Queue arrow and keyboard interrupt before sending after both ack and terminal", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/queue-force-send.test.mjs")], root],
+  ["Cancellation acknowledgement and failure are independent of presence reconciliation", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/stop-reconciliation.test.mjs")], root],
+  ["Closed or paused activity cannot animate late tools and preserves inspection", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/completed-tool-activity.test.mjs")], root],
   ["«Stop and send» stops the turn and lets the queued message out instead of keeping it retained", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/chat-stop-and-send.test.mjs")], root],
   ["Opening a long task stays under its ceiling", process.execPath, [join(root, "tests/perf/open-task-cost.mjs")], root],
   ["Rereading an open task does not remount its thread", process.execPath, [join(root, "tests/perf/reread-thread.mjs")], root],
