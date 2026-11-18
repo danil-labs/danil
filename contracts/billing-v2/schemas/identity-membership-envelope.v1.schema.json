@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.danil.ai/identity/membership-envelope.v1.schema.json",
+  "title": "Sobre CloudEvents identity.membership.changed.v1",
+  "$comment": "Mismo sobre que promo-v1 (machine-provisioning feat/promo-consumer f72fd1e), más correlation_id, causation_id y actor. `id` es estable entre reintentos y NO es la identidad del efecto económico (ver effect keys). `data` lleva el estado vigente completo del agregado, nunca un delta.",
+  "type": "object",
+  "required": [
+    "specversion",
+    "id",
+    "producer",
+    "type",
+    "dataschema",
+    "subject",
+    "time",
+    "aggregate_key",
+    "aggregate_seq",
+    "correlation_id",
+    "causation_id",
+    "actor",
+    "data"
+  ],
+  "properties": {
+    "specversion": {
+      "const": "1.0"
+    },
+    "id": {
+      "$ref": "common.v1.schema.json#/$defs/uuid"
+    },
+    "producer": {
+      "const": "identity"
+    },
+    "type": {
+      "const": "ai.danil.identity.membership.changed.v1"
+    },
+    "dataschema": {
+      "const": "https://contracts.danil.ai/identity/events/membership.changed.v1.schema.json"
+    },
+    "subject": {
+      "$ref": "common.v1.schema.json#/$defs/organization_id"
+    },
+    "time": {
+      "$ref": "common.v1.schema.json#/$defs/timestamp"
+    },
+    "aggregate_key": {
+      "type": "string",
+      "pattern": "^membership:org_[A-Za-z0-9]{1,64}$"
+    },
+    "aggregate_seq": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9007199254740991
+    },
+    "correlation_id": {
+      "$ref": "common.v1.schema.json#/$defs/uuid"
+    },
+    "causation_id": {
+      "type": "string",
+      "pattern": "^(stripe_event:evt_[A-Za-z0-9]{1,255}|event:[a-z][a-z0-9-]{1,62}:[0-9a-f-]{36}|request:[0-9a-f-]{36}|job:[a-z][a-z0-9_-]{1,62}:[0-9a-f-]{36}|operator:[0-9a-f-]{36})$",
+      "$comment": "Qué causó el cambio: un evento de Stripe, un evento de plataforma consumido, una petición de persona, un trabajo o una acción de operador."
+    },
+    "actor": {
+      "$ref": "common.v1.schema.json#/$defs/actor"
+    },
+    "data": {
+      "$ref": "events/identity.membership.changed.v1.schema.json"
+    }
+  }
+}

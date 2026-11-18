@@ -1,0 +1,66 @@
+{
+  "schema": "openapi/public.openapi.json#/components/schemas/Balance",
+  "value": {
+    "organization_id": "org_01SYNTHETICORGA",
+    "available": {
+      "currency": "MXN",
+      "amount_micro": "100000000"
+    },
+    "included": {
+      "currency": "MXN",
+      "amount_micro": "0"
+    },
+    "purchased": {
+      "currency": "MXN",
+      "amount_micro": "100000000"
+    },
+    "dispute_hold": {
+      "currency": "MXN",
+      "amount_micro": "0"
+    },
+    "unsettled_usage": {
+      "currency": "MXN",
+      "amount_micro": "10000000"
+    },
+    "refund_obligation": {
+      "currency": "MXN",
+      "amount_micro": "0"
+    },
+    "included_expires_at": null,
+    "admission": {
+      "admitted": true,
+      "reasons": [],
+      "version": 7
+    },
+    "as_of": "2026-11-20T12:00:01Z",
+    "gift": {
+      "currency": "MXN",
+      "amount_micro": "0"
+    },
+    "compensation": {
+      "currency": "MXN",
+      "amount_micro": "0"
+    },
+    "inference_hold": {
+      "currency": "MXN",
+      "amount_micro": "0"
+    },
+    "lots": [
+      {
+        "lot_id": "blot_01SYNTHETICLOT0001",
+        "source": "purchase",
+        "initial": {
+          "currency": "MXN",
+          "amount_micro": "100000000"
+        },
+        "remaining": {
+          "currency": "MXN",
+          "amount_micro": "100000000"
+        },
+        "expires_at": null,
+        "created_at": "2026-11-20T12:00:00Z",
+        "payment_reference": "bpay_01SYNTHETICPAY0001"
+      }
+    ]
+  }
+}

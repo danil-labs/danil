@@ -1,0 +1,145 @@
+{
+  "$comment": "Huella = sha256 hex de JCS (RFC 8785) del objeto indicado. Público: {method, route, organization_id, body} con la plantilla de ruta, no la URL. Consumo: el reporte completo tal como llegó. Misma clave e igual huella → mismo resultado; otra huella → conflicto sin efecto. La clave vive ≥ 30 días (más que la retención de claves de Stripe).",
+  "key_valid": [
+    "0123456789abcdef",
+    "01JSYNTH-key_0001-ABCDEFGHIJ"
+  ],
+  "key_invalid": [
+    "short",
+    "has space 0123456789",
+    "ñ0123456789abcdef",
+    "",
+    "x"
+  ],
+  "public": [
+    {
+      "input": {
+        "method": "POST",
+        "route": "/v1/billing/checkout-sessions",
+        "organization_id": "org_01SYNTHETICORGA",
+        "body": {
+          "plan_key": "pro",
+          "catalog_version": 3
+        },
+        "params": {}
+      },
+      "jcs": "{\"body\":{\"catalog_version\":3,\"plan_key\":\"pro\"},\"method\":\"POST\",\"organization_id\":\"org_01SYNTHETICORGA\",\"params\":{},\"route\":\"/v1/billing/checkout-sessions\"}"
+    },
+    {
+      "input": {
+        "method": "POST",
+        "route": "/v1/billing/checkout-sessions",
+        "organization_id": "org_01SYNTHETICORGB",
+        "body": {
+          "plan_key": "pro",
+          "catalog_version": 3
+        },
+        "params": {}
+      },
+      "differs_from": 0,
+      "why": "misma clave en otra organización es otra operación"
+    }
+  ],
+  "report_reorder": {
+    "$comment": "Reordenar claves del JSON no cambia la huella; cambiar un token sí.",
+    "a": {
+      "report_id": "01JSYNTHREPORT0001",
+      "entry_point": "messaging",
+      "organization_id": "org_01SYNTHETICORGA",
+      "provider": "synthetic",
+      "model": "syn-small",
+      "tokens": {
+        "input": 10,
+        "output": 2,
+        "cache_read": 0,
+        "cache_write": 0
+      },
+      "occurred_at": "2026-11-14T03:21:09Z"
+    },
+    "b_same": {
+      "tokens": {
+        "cache_write": 0,
+        "cache_read": 0,
+        "output": 2,
+        "input": 10
+      },
+      "occurred_at": "2026-11-14T03:21:09Z",
+      "model": "syn-small",
+      "provider": "synthetic",
+      "organization_id": "org_01SYNTHETICORGA",
+      "entry_point": "messaging",
+      "report_id": "01JSYNTHREPORT0001"
+    },
+    "c_other": {
+      "report_id": "01JSYNTHREPORT0001",
+      "entry_point": "messaging",
+      "organization_id": "org_01SYNTHETICORGA",
+      "provider": "synthetic",
+      "model": "syn-small",
+      "tokens": {
+        "input": 11,
+        "output": 2,
+        "cache_read": 0,
+        "cache_write": 0
+      },
+      "occurred_at": "2026-11-14T03:21:09Z"
+    }
+  },
+  "route_params": {
+    "$comment": "Revisión 6zrx9rc2 P1: el recurso de la ruta forma parte de la operación. Misma org, misma clave, DELETE del productor A y luego del B → huellas distintas → la segunda es 409 idempotency_key_reused; nunca devuelve el éxito de A sin revocar B.",
+    "a": {
+      "method": "DELETE",
+      "route": "/v1/credits/usage-authorizations/{producer}",
+      "params": {
+        "producer": "messaging"
+      },
+      "organization_id": "org_01SYNTHETICORGA",
+      "body": null
+    },
+    "b": {
+      "method": "DELETE",
+      "route": "/v1/credits/usage-authorizations/{producer}",
+      "params": {
+        "producer": "danil-ai"
+      },
+      "organization_id": "org_01SYNTHETICORGA",
+      "body": null
+    },
+    "same_key_second_call": "idempotency_key_reused",
+    "invalid": [
+      {
+        "why": "faltan los parámetros de ruta",
+        "input": {
+          "method": "DELETE",
+          "route": "/v1/credits/usage-authorizations/{producer}",
+          "organization_id": "org_01SYNTHETICORGA",
+          "body": null
+        }
+      },
+      {
+        "why": "parámetro que la ruta no tiene",
+        "input": {
+          "method": "POST",
+          "route": "/v1/billing/checkout-sessions",
+          "params": {
+            "producer": "x"
+          },
+          "organization_id": "org_01SYNTHETICORGA",
+          "body": {}
+        }
+      },
+      {
+        "why": "parámetro vacío",
+        "input": {
+          "method": "PUT",
+          "route": "/v1/credits/usage-authorizations/{producer}",
+          "params": {
+            "producer": ""
+          },
+          "organization_id": "org_01SYNTHETICORGA",
+          "body": null
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "schema": "openapi/public.openapi.json#/components/schemas/Checkout",
+  "value": {
+    "checkout_id": "bchk_01SYNTHETICCHK0001",
+    "kind": "plan",
+    "state": "open",
+    "url": "https://checkout.stripe.com/c/pay/cs_test_SYNTH0001",
+    "expires_at": "2026-11-15T16:00:00Z"
+  }
+}

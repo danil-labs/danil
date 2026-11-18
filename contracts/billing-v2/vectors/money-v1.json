@@ -1,0 +1,114 @@
+{
+  "$comment": "Importes: micro-unidades enteras de la moneda como cadena decimal sin pérdida. 1 MXN = 1000000 micro; 1 centavo = 10000 micro. Un consumidor en cualquier lenguaje debe dar los mismos resultados.",
+  "valid_unsigned": [
+    "0",
+    "1",
+    "599000000",
+    "9223372036854775807"
+  ],
+  "invalid_unsigned": [
+    "-1",
+    "01",
+    "+1",
+    "1.0",
+    "1e3",
+    " 1",
+    "1 ",
+    "",
+    "9223372036854775808",
+    "-0",
+    "0x10",
+    "١",
+    1,
+    0,
+    null,
+    true,
+    "9999999999999999999",
+    "9223372036854775810"
+  ],
+  "valid_signed": [
+    "0",
+    "-1",
+    "1",
+    "-9223372036854775807",
+    "9223372036854775807"
+  ],
+  "invalid_signed": [
+    "-0",
+    "--1",
+    "-01",
+    "-9223372036854775808",
+    5,
+    "-9999999999999999999",
+    "9223372036854775808"
+  ],
+  "money_invalid": [
+    {
+      "currency": "USD",
+      "amount_micro": "1"
+    },
+    {
+      "currency": "mxn",
+      "amount_micro": "1"
+    },
+    {
+      "currency": "MXN",
+      "amount_micro": 1
+    },
+    {
+      "currency": "MXN"
+    },
+    {
+      "amount_micro": "1"
+    }
+  ],
+  "stripe_minor": [
+    {
+      "money": {
+        "currency": "MXN",
+        "amount_micro": "599000000"
+      },
+      "minor": "59900"
+    },
+    {
+      "money": {
+        "currency": "MXN",
+        "amount_micro": "10000"
+      },
+      "minor": "1"
+    },
+    {
+      "money": {
+        "currency": "MXN",
+        "amount_micro": "0"
+      },
+      "minor": "0"
+    }
+  ],
+  "stripe_minor_not_exact": [
+    {
+      "currency": "MXN",
+      "amount_micro": "1"
+    },
+    {
+      "currency": "MXN",
+      "amount_micro": "599000001"
+    },
+    {
+      "currency": "MXN",
+      "amount_micro": "9999"
+    }
+  ],
+  "sum_overflow": [
+    "9223372036854775807",
+    "1"
+  ],
+  "wire_bounds": {
+    "$comment": "El esquema (pattern) y parseAmount aceptan exactamente lo mismo: máximo sí, máximo+1 no, en eventos y en la API.",
+    "max": "9223372036854775807",
+    "over": [
+      "9223372036854775808",
+      "9999999999999999999"
+    ]
+  }
+}

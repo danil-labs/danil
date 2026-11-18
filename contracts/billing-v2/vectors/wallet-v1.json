@@ -1,0 +1,599 @@
+{
+  "$comment": "Bolsa por cuatro fuentes, doble entrada, sin sobregiro; compras no saldan deuda. forfeit se aplica cuando la cancelaci?n surte efecto.",
+  "scenarios": [
+    {
+      "name": "seguridad §1.1: reporte de 10 MXN con saldo 0 y después compra de 100",
+      "steps": [
+        {
+          "op": "debit",
+          "key": "usage:messaging:r-0001",
+          "charge_micro": "10000000",
+          "expect": {
+            "included": "0",
+            "purchased": "0",
+            "dispute_hold": "0",
+            "unsettled_usage": "10000000",
+            "refund_obligation": "0",
+            "gift": "0",
+            "compensation": "0",
+            "inference_hold": "0"
+          },
+          "admitted": false
+        },
+        {
+          "op": "purchase",
+          "key": "purchase:pi_s1",
+          "lot": "P1",
+          "payment_intent": "pi_s1",
+          "amount_micro": "100000000",
+          "expect": {
+            "included": "0",
+            "purchased": "100000000",
+            "dispute_hold": "0",
+            "unsettled_usage": "10000000",
+            "refund_obligation": "0",
+            "gift": "0",
+            "compensation": "0",
+            "inference_hold": "0"
+          },
+          "admitted": true
+        }
+      ]
+    },
+    {
+      "name": "primero incluidos, después comprados; el vencimiento no toca comprados",
+      "steps": [
+        {
+          "op": "grant_included",
+          "key": "grant_included:bsub_SYNTHETIC0001:2026-11-01T00:00:00Z:3",
+          "lot": "L1",
+          "amount_micro": "100000000",
+          "expires_at": "2026-12-01T00:00:00Z",
+          "expect": {
+            "included": "100000000",
+            "purchased": "0",
+            "dispute_hold": "0",
+            "unsettled_usage": "0",
+            "refund_obligation": "0",
+            "gift": "0",
+            "compensation": "0",
+            "inference_hold": "0"
+          },
+          "admitted": true
+        },
+        {
+          "op": "purchase",
+          "key": "purchase:pi_s2",
+          "lot": "P1",
+          "payment_intent": "pi_s2",
+          "amount_micro": "50000000",
+          "expect": {
+            "included": "100000000",
+            "purchased": "50000000",
+            "dispute_hold": "0",
+            "unsettled_usage": "0",
+            "refund_obligation": "0",
+            "gift": "0",
+            "compensation": "0",
+            "inference_hold": "0"
+          },
+          "admitted": true
+        },
+        {
+          "op": "debit",
+          "key": "usage:danil-ai:r-0002",
+          "charge_micro": "30000000",
+          "expect": {
+            "included": "70000000",
+            "purchased": "50000000",
+            "dispute_hold": "0",
+            "unsettled_usage": "0",
+            "refund_obligation": "0",
+            "gift": "0",
+            "compensation": "0",
+            "inference_hold": "0"
+          },
+          "admitted": true
+        },
+        {
+          "op": "expire",
+          "key": "expire:L1",
+          "lot": "L1",
+          "at": "2026-12-01T00:00:00Z",
+          "expect": {
+            "included": "0",
+            "purchased": "50000000",
+            "dispute_hold": "0",
+            "unsettled_usage": "0",
+            "refund_obligation": "0",
+            "gift": "0",
+            "compensation": "0",
+            "inference_hold": "0"
+          },
+          "admitted": true
+        },
+        {
+          "op": "debit",
+          "key": "usage:danil-ai:r-0003",
+          "charge_micro": "60000000",
+          "expect": {
+            "included": "0",
+            "purchased": "0",
+            "dispute_hold": "0",
+            "unsettled_usage": "10000000",
+            "refund_obligation": "0",
+            "gift": "0",
+            "compensation": "0",
+            "inference_hold": "0"
+          },
+          "admitted": false
+        }
+      ]
+    },
+    {
+      "name": "dos eventos de Stripe para el mismo pago: un solo efecto económico",
+      "steps": [
+        {
+          "op": "purchase",
+          "key": "purchase:pi_s3",
+          "lot": "P1",
+          "payment_intent": "pi_s3",
+          "amount_micro": "100000000",
+          "via_event": "evt_checkout_completed",
+          "expect": {
+            "included": "0",
+            "purchased": "100000000",
+            "dispute_hold": "0",
+            "unsettled_usage": "0",
+            "refund_obligation": "0",
+            "gift": "0",
+            "compensation": "0",
+            "inference_hold": "0"
+          },
+          "admitted": true
+        },
+        {
+          "op": "purchase",
+          "key": "purchase:pi_s3",
+          "lot": "P1",
+          "payment_intent": "pi_s3",
+          "amount_micro": "100000000",
+          "via_event": "evt_payment_intent_succeeded",
+          "duplicate": true,
+          "expect": {
+            "included": "0",
+            "purchased": "100000000",
+            "dispute_hold": "0",
+            "unsettled_usage": "0",
+            "refund_obligation": "0",
+            "gift": "0",
+            "compensation": "0",
+            "inference_hold": "0"
+          },
+          "admitted": true
+        }
+      ]
+    },
+    {
+      "name": "reembolso con parte ya gastada: tope en lo que queda del lote, el resto es obligación no gastable",
+      "steps": [
+        {
+          "op": "purchase",
+          "key": "purchase:pi_s4",
+          "lot": "P1",
+          "payment_intent": "pi_s4",
+          "amount_micro": "100000000",
+          "expect": {
+            "included": "0",
+            "purchased": "100000000",
+            "dispute_hold": "0",
+            "unsettled_usage": "0",
+            "refund_obligation": "0",
+            "gift": "0",
+            "compensation": "0",
+            "inference_hold": "0"
+          },
+          "admitted": true
+        },
+        {
+          "op": "debit",
+          "key": "usage:messaging:r-0004",
+          "charge_micro": "70000000",
+          "expect": {
+            "included": "0",
+            "purchased": "30000000",
+            "dispute_hold": "0",
+            "unsettled_usage": "0",
+            "refund_obligation": "0",
+            "gift": "0",
+            "compensation": "0",
+            "inference_hold": "0"
+          },
+          "admitted": true
+        },
+        {
+          "op": "refund",
+          "key": "refund:re_s4",
+          "payment_intent": "pi_s4",
+          "amount_micro": "100000000",
+          "expect": {
+            "included": "0",
+            "purchased": "0",
+            "dispute_hold": "0",
+            "unsettled_usage": "0",
+            "refund_obligation": "70000000",
+            "gift": "0",
+            "compensation": "0",
+            "inference_hold": "0"
+          },
+          "admitted": false
+        },
+        {
+          "op": "refund",
+          "key": "refund:re_s4",
+          "payment_intent": "pi_s4",
+          "amount_micro": "100000000",
+          "duplicate": true,
+          "expect": {
+            "included": "0",
+            "purchased": "0",
+            "dispute_hold": "0",
+            "unsettled_usage": "0",
+            "refund_obligation": "70000000",
+            "gift": "0",
+            "compensation": "0",
+            "inference_hold": "0"
+          },
+          "admitted": false
+        }
+      ]
+    },
+    {
+      "name": "reembolso parcial y después disputa del mismo cargo: nunca doble reverso",
+      "steps": [
+        {
+          "op": "purchase",
+          "key": "purchase:pi_s5",
+          "lot": "P1",
+          "payment_intent": "pi_s5",
+          "amount_micro": "100000000",
+          "expect": {
+            "included": "0",
+            "purchased": "100000000",
+            "dispute_hold": "0",
+            "unsettled_usage": "0",
+            "refund_obligation": "0",
+            "gift": "0",
+            "compensation": "0",
+            "inference_hold": "0"
+          },
+          "admitted": true
+        },
+        {
+          "op": "refund",
+          "key": "refund:re_s5",
+          "payment_intent": "pi_s5",
+          "amount_micro": "40000000",
+          "expect": {
+            "included": "0",
+            "purchased": "60000000",
+            "dispute_hold": "0",
+            "unsettled_usage": "0",
+            "refund_obligation": "0",
+            "gift": "0",
+            "compensation": "0",
+            "inference_hold": "0"
+          },
+          "admitted": true
+        },
+        {
+          "op": "dispute",
+          "phase": "hold",
+          "key": "dispute:dp_s5:hold",
+          "dispute": "dp_s5",
+          "payment_intent": "pi_s5",
+          "amount_micro": "100000000",
+          "expect": {
+            "included": "0",
+            "purchased": "0",
+            "dispute_hold": "60000000",
+            "unsettled_usage": "0",
+            "refund_obligation": "0",
+            "gift": "0",
+            "compensation": "0",
+            "inference_hold": "0"
+          },
+          "admitted": false
+        },
+        {
+          "op": "dispute",
+          "phase": "loss",
+          "key": "dispute:dp_s5:loss",
+          "dispute": "dp_s5",
+          "payment_intent": "pi_s5",
+          "expect": {
+            "included": "0",
+            "purchased": "0",
+            "dispute_hold": "0",
+            "unsettled_usage": "0",
+            "refund_obligation": "0",
+            "gift": "0",
+            "compensation": "0",
+            "inference_hold": "0"
+          },
+          "admitted": false
+        },
+        {
+          "op": "refund",
+          "key": "refund:re_s5b",
+          "payment_intent": "pi_s5",
+          "amount_micro": "60000000",
+          "expect": {
+            "included": "0",
+            "purchased": "0",
+            "dispute_hold": "0",
+            "unsettled_usage": "0",
+            "refund_obligation": "0",
+            "gift": "0",
+            "compensation": "0",
+            "inference_hold": "0"
+          },
+          "admitted": false
+        }
+      ]
+    },
+    {
+      "name": "disputa ganada: la retención vuelve al lote comprado",
+      "steps": [
+        {
+          "op": "purchase",
+          "key": "purchase:pi_s6",
+          "lot": "P1",
+          "payment_intent": "pi_s6",
+          "amount_micro": "100000000",
+          "expect": {
+            "included": "0",
+            "purchased": "100000000",
+            "dispute_hold": "0",
+            "unsettled_usage": "0",
+            "refund_obligation": "0",
+            "gift": "0",
+            "compensation": "0",
+            "inference_hold": "0"
+          },
+          "admitted": true
+        },
+        {
+          "op": "dispute",
+          "phase": "hold",
+          "key": "dispute:dp_s6:hold",
+          "dispute": "dp_s6",
+          "payment_intent": "pi_s6",
+          "amount_micro": "100000000",
+          "expect": {
+            "included": "0",
+            "purchased": "0",
+            "dispute_hold": "100000000",
+            "unsettled_usage": "0",
+            "refund_obligation": "0",
+            "gift": "0",
+            "compensation": "0",
+            "inference_hold": "0"
+          },
+          "admitted": false
+        },
+        {
+          "op": "dispute",
+          "phase": "release",
+          "key": "dispute:dp_s6:release",
+          "dispute": "dp_s6",
+          "payment_intent": "pi_s6",
+          "expect": {
+            "included": "0",
+            "purchased": "100000000",
+            "dispute_hold": "0",
+            "unsettled_usage": "0",
+            "refund_obligation": "0",
+            "gift": "0",
+            "compensation": "0",
+            "inference_hold": "0"
+          },
+          "admitted": true
+        }
+      ]
+    },
+    {
+      "name": "saldar deuda solo por operador autenticado y auditado",
+      "steps": [
+        {
+          "op": "debit",
+          "key": "usage:messaging:r-0007",
+          "charge_micro": "5000000",
+          "expect": {
+            "included": "0",
+            "purchased": "0",
+            "dispute_hold": "0",
+            "unsettled_usage": "5000000",
+            "refund_obligation": "0",
+            "gift": "0",
+            "compensation": "0",
+            "inference_hold": "0"
+          },
+          "admitted": false
+        },
+        {
+          "op": "settle",
+          "key": "settle:3d7c1a52-0d55-4a43-9a0c-6b8c3e7d2f10",
+          "account": "unsettled_usage",
+          "amount_micro": "5000000",
+          "actor": {
+            "type": "service",
+            "id": "svc:billing"
+          },
+          "error": "operator_required",
+          "expect": {
+            "included": "0",
+            "purchased": "0",
+            "dispute_hold": "0",
+            "unsettled_usage": "5000000",
+            "refund_obligation": "0",
+            "gift": "0",
+            "compensation": "0",
+            "inference_hold": "0"
+          },
+          "admitted": false
+        },
+        {
+          "op": "settle",
+          "key": "settle:3d7c1a52-0d55-4a43-9a0c-6b8c3e7d2f10",
+          "account": "unsettled_usage",
+          "amount_micro": "5000000",
+          "actor": {
+            "type": "operator",
+            "id": "user_01SYNTHETICOPERATOR"
+          },
+          "reason": "absorbida como pérdida registrada (sintético)",
+          "expect": {
+            "included": "0",
+            "purchased": "0",
+            "dispute_hold": "0",
+            "unsettled_usage": "0",
+            "refund_obligation": "0",
+            "gift": "0",
+            "compensation": "0",
+            "inference_hold": "0"
+          },
+          "admitted": false
+        }
+      ]
+    },
+    {
+      "name": "importes válidos uno a uno cuya suma sale de int64: se rechaza y se conserva el estado",
+      "steps": [
+        {
+          "op": "purchase",
+          "key": "purchase:pi_max1",
+          "lot": "PMAX1",
+          "payment_intent": "pi_max1",
+          "amount_micro": "9223372036854775807",
+          "expect": {
+            "included": "0",
+            "dispute_hold": "0",
+            "unsettled_usage": "0",
+            "refund_obligation": "0",
+            "purchased": "9223372036854775807",
+            "gift": "0",
+            "compensation": "0",
+            "inference_hold": "0"
+          },
+          "admitted": true
+        },
+        {
+          "op": "purchase",
+          "key": "purchase:pi_max2",
+          "lot": "PMAX2",
+          "payment_intent": "pi_max2",
+          "amount_micro": "1",
+          "error": "amount_out_of_range",
+          "expect": {
+            "included": "0",
+            "dispute_hold": "0",
+            "unsettled_usage": "0",
+            "refund_obligation": "0",
+            "purchased": "9223372036854775807",
+            "gift": "0",
+            "compensation": "0",
+            "inference_hold": "0"
+          },
+          "admitted": true
+        },
+        {
+          "op": "grant_included",
+          "key": "grant_included:bsub_01SYNTHETICSUB0009:2026-11-01T00:00:00Z:3",
+          "lot": "LMAX",
+          "amount_micro": "1",
+          "expires_at": "2026-12-01T00:00:00Z",
+          "error": "amount_out_of_range",
+          "expect": {
+            "included": "0",
+            "dispute_hold": "0",
+            "unsettled_usage": "0",
+            "refund_obligation": "0",
+            "purchased": "9223372036854775807",
+            "gift": "0",
+            "compensation": "0",
+            "inference_hold": "0"
+          },
+          "admitted": true
+        },
+        {
+          "op": "purchase",
+          "key": "purchase:pi_max2",
+          "lot": "PMAX2",
+          "payment_intent": "pi_max2",
+          "amount_micro": "1",
+          "error": "amount_out_of_range",
+          "$comment": "el rechazo no consumió la clave: reintentar da el mismo rechazo, no un duplicate",
+          "expect": {
+            "included": "0",
+            "dispute_hold": "0",
+            "unsettled_usage": "0",
+            "refund_obligation": "0",
+            "purchased": "9223372036854775807",
+            "gift": "0",
+            "compensation": "0",
+            "inference_hold": "0"
+          },
+          "admitted": true
+        }
+      ]
+    }
+  ],
+  "admission": [
+    {
+      "available_micro": "1",
+      "suspension": null,
+      "admitted": true,
+      "reasons": []
+    },
+    {
+      "available_micro": "0",
+      "suspension": null,
+      "admitted": false,
+      "reasons": [
+        "balance_exhausted"
+      ]
+    },
+    {
+      "available_micro": "100",
+      "suspension": "nonpayment",
+      "admitted": false,
+      "reasons": [
+        "suspended_nonpayment"
+      ]
+    },
+    {
+      "available_micro": "100",
+      "suspension": "dispute_lost",
+      "admitted": false,
+      "reasons": [
+        "suspended_dispute_lost"
+      ]
+    },
+    {
+      "available_micro": "0",
+      "suspension": "nonpayment",
+      "admitted": false,
+      "reasons": [
+        "balance_exhausted",
+        "suspended_nonpayment"
+      ]
+    },
+    {
+      "available_micro": "100",
+      "suspension": "cancellation",
+      "admitted": true,
+      "reasons": []
+    }
+  ]
+}

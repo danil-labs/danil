@@ -1,0 +1,37 @@
+{
+  "$comment": "Casos negativos del sobre, aplicados sobre examples/events/entitlement.changed.activated.json. `set` reemplaza (null = quitar). El consumidor rechaza sin efecto.",
+  "base": "entitlement.changed.activated.json",
+  "negative": [
+    { "why": "producer ajeno", "set": { "producer": "workspaces" }, "error": "schema_invalid" },
+    { "why": "tipo fuera del registro", "set": { "type": "ai.danil.billing.purchase.paid.v1" }, "error": "schema_invalid" },
+    { "why": "subject distinto de data.organization_id", "set": { "subject": "org_01SYNTHETICORGB" }, "error": "subject_mismatch" },
+    { "why": "aggregate_key de otra organización", "set": { "aggregate_key": "entitlement:org_01SYNTHETICORGB" }, "error": "aggregate_mismatch" },
+    { "why": "aggregate_key de otro agregado", "set": { "aggregate_key": "credits:org_01SYNTHETICORGA" }, "error": "aggregate_mismatch" },
+    { "why": "aggregate_seq 0", "set": { "aggregate_seq": 0 }, "error": "schema_invalid" },
+    { "why": "aggregate_seq como cadena", "set": { "aggregate_seq": "1" }, "error": "schema_invalid" },
+    { "why": "id no uuid", "set": { "id": "evt_1" }, "error": "schema_invalid" },
+    { "why": "sin actor", "set": { "actor": null }, "error": "schema_invalid" },
+    { "why": "actor con correo", "set": { "actor": { "type": "person", "id": "ana@example.com" } }, "error": "schema_invalid" },
+    { "why": "actor de tipo desconocido", "set": { "actor": { "type": "admin", "id": "user_01X" } }, "error": "schema_invalid" },
+    { "why": "sin correlation_id", "set": { "correlation_id": null }, "error": "schema_invalid" },
+    { "why": "causation_id libre", "set": { "causation_id": "porque sí" }, "error": "schema_invalid" },
+    { "why": "time sin zona", "set": { "time": "2026-11-14T16:00:00" }, "error": "schema_invalid" },
+    { "why": "dataschema de otro tipo", "set": { "dataschema": "https://contracts.danil.ai/billing-v2/events/credits.changed.v1.schema.json" }, "error": "dataschema_mismatch" },
+    { "why": "estado desconocido falla cerrado", "set": { "data.state": "deleted" }, "error": "schema_invalid" },
+    { "why": "generación negativa", "set": { "data.retention_generation": -1 }, "error": "schema_invalid" },
+    { "why": "terminated sin delete_not_before", "set": { "data.state": "terminated", "data.reason": "terminated" }, "error": "semantic_invalid" },
+    { "why": "delete_not_before fuera de terminated", "set": { "data.delete_not_before": "2027-02-13T00:05:00Z" }, "error": "semantic_invalid" },
+    { "why": "suspended sin plazo de retención", "set": { "data.state": "suspended", "data.reason": "suspended", "data.suspension_reason": "nonpayment" }, "error": "semantic_invalid" }
+  ],
+  "consumer_order": {
+    "$comment": "Por aggregate_key: aplica solo si aggregate_seq es mayor que el último aplicado. Igual seq e igual huella = duplicate; igual seq y otra huella = conflict (cuarentena). La generación nunca baja.",
+    "cases": [
+      { "last_seq": 0, "last_hash": null, "seq": 1, "same_body": null, "decision": "apply" },
+      { "last_seq": 3, "last_hash": "h", "seq": 3, "same_body": true, "decision": "duplicate" },
+      { "last_seq": 3, "last_hash": "h", "seq": 3, "same_body": false, "decision": "conflict" },
+      { "last_seq": 3, "last_hash": "h", "seq": 2, "same_body": null, "decision": "stale" },
+      { "last_seq": 3, "last_hash": "h", "seq": 9, "same_body": null, "decision": "apply" }
+    ],
+    "generation_regression": { "last_generation": 2, "event_generation": 1, "seq_newer": true, "decision": "conflict" }
+  }
+}

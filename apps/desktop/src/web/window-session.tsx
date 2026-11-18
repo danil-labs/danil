@@ -18,6 +18,7 @@ import { organizationSession } from './organization-session';
 import PromoRedeem from '../features/shell/PromoRedeem';
 import './phrases';
 import { sessionStartup } from './startup-reader';
+import { billingV2 } from './billing-v2-api';
 
 declare const __DANIL_WEB_RELAY_ORIGINS__: string[];
 const FIRST_RETRY_MS = 1000;
@@ -221,7 +222,11 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
         disposeGate = undefined;
         mountedBefore = true;
         firstMountAttempts = 0;
+        const selected = workspaces.find(row => row.id === selection.active());
         windowApp = mountWindow({ machines, permits, relayOrigin: __DANIL_WEB_RELAY_ORIGINS__[0],
+          billing: import.meta.env.VITE_DANIL_BILLING_V2 === 'true' && selected?.org ? {
+            api: billingV2(transport, selected.org), role: () => rows().find(row => row.id === selection.active())?.role ?? '', context: `${person.id}:${selected.org}`,
+          } : undefined,
           profile: startup.accountProfile(lifetime.signal), onUnauthorized: expired,
           onUnavailable: () => { setError('web.platform.unavailable'); gate(); later(); },
           workspaces: { rows, active, busy, uncertain, choose: id => void choose(id) },

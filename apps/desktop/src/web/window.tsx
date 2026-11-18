@@ -11,10 +11,12 @@ import { installIpc } from "./ipc";
 import { type BrowserHost, createWebTransport } from "./transport";
 import type { MachineRow, MachineStatus } from "./SyncNote";
 import type { AccountProfileSource } from "../features/settings/account-profile";
+import type { billingV2 } from "./billing-v2-api";
 
 declare const __TERMINUS_VERSION__: string;
-type Base = { machines: ReturnType<typeof machinesClient>; relayOrigin: string; permits: (name: string) => boolean; organizations?: Capabilities["organizations"]; promo?: Capabilities["webPromo"]; onUnauthorized: () => void; profile: AccountProfileSource; workspaces: NonNullable<Capabilities["webWorkspaces"]>; onUnavailable: () => void; };
+type Base = { machines: ReturnType<typeof machinesClient>; relayOrigin: string; permits: (name: string) => boolean; organizations?: Capabilities["organizations"]; promo?: Capabilities["webPromo"]; billing?: { api: ReturnType<typeof billingV2>; role: () => string; context: string }; onUnauthorized: () => void; profile: AccountProfileSource; workspaces: NonNullable<Capabilities["webWorkspaces"]>; onUnavailable: () => void; };
 const Picker = lazy(() => import("../features/machines/MachinePicker").then(m => ({ default: m.MachinePicker })));
+const BillingPlan = lazy(() => import("./BillingPlan"));
 const AccountMachines = lazy(() => import("../features/machines/AccountMachines"));
 /** Another machine's slice changed: the window rereads just that. */
 function slicesChanged(changes: SliceChange[]) {
@@ -135,9 +137,10 @@ export function mountWindow(base: Base, mounted: Mounted) {
   setCapabilities({
     nativeWindow: false, updater: false, localSetup: false, computerStatus: true, browserFiles: true, appDownloads: true,
     accountProfile: base.profile,
+    personalAccount: base.billing ? { isPersonal: async () => true, plan: () => <Suspense fallback={null}><BillingPlan api={base.billing!.api} role={base.billing!.role} context={base.billing!.context} /></Suspense> } : undefined,
     webWorkspaces: base.workspaces,
     organizations: base.organizations,
-    initialSettings: takeSettingsParam(),
+    initialSettings: takeSettingsParam(!!base.billing),
     machineName: id => id === "local" && missing() ? t("web.machines.unavailable") : fleet.name(id),
     taskMachine: id => unwrap(id, fleet.remotes())?.machine ?? null,
     windowMachine: () => { const id = active.createsOn(null)?.machine; return id ? { id, name: fleet.name(id), local: false } : undefined; },
@@ -193,13 +196,13 @@ export function mountWindow(base: Base, mounted: Mounted) {
 /** Paneles que se abren desde la URL (`?settings=`); el parámetro sale de la barra al leerlo. */
 const LINKED_SETTINGS = ["cuenta-danil", "emails", "business", "fiscal"];
 
-function takeSettingsParam(): string | undefined {
+function takeSettingsParam(billingV2: boolean): string | undefined {
   const params = new URLSearchParams(window.location.search);
   const wanted = params.get("settings");
   if (wanted === null) return undefined;
   params.delete("settings");
   const rest = params.toString();
   window.history.replaceState(null, "", `${window.location.pathname}${rest ? `?${rest}` : ""}${window.location.hash}`);
-  return LINKED_SETTINGS.includes(wanted) ? wanted : undefined;
+  return LINKED_SETTINGS.includes(wanted) || (billingV2 && wanted === "plan") ? wanted : undefined;
 }
 
