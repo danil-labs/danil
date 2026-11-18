@@ -10,19 +10,18 @@ import { platformSession, platformTransport, PlatformSessionError, type Platform
 import type { WebSessionDeployment } from './session-config';
 import { readCapabilities, supports, type CapabilitiesSnapshot } from './service-capabilities';
 import { UpdateNotice } from './UpdateNotice';
-import { WorkosAuthPage, signInError } from './auth/workos';
+import { SessionLoading, WorkosAuthPage, signInError } from './auth/workos';
 import { mountWindow } from './window';
 import { forgetMachineNames } from '../features/machines/known-names';
 import { sessionStorageScope, clearWebCaches } from './session-storage';
 import { organizationSession } from './organization-session';
-import PromoRedeem from '../features/shell/PromoRedeem';
 import './phrases';
 import { sessionStartup } from './startup-reader';
 
 declare const __DANIL_WEB_RELAY_ORIGINS__: string[];
 const FIRST_RETRY_MS = 1000;
 const POLL_MAX_MS = 30_000;
-/** Membresía y workspace pueden tardar minutos en llegar al central tras crear la organización. */
+/** Identity puede no contestar aún al primer montaje; la ventana monta en cuanto da el perfil. */
 const FIRST_MOUNT_ATTEMPTS = 8;
 const FIRST_MOUNT_TRANSIENT = [403, 404, 503];
 
@@ -40,9 +39,10 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
     const [busy, setBusy] = createSignal(false);
     const [uncertain, setUncertain] = createSignal(false);
     const [error, setError] = createSignal('');
+    // Identity aún no dio el perfil y se reintenta solo: sigue la carga, no una pantalla vacía.
     const [preparing, setPreparing] = createSignal(false);
     const [signedOut, setSignedOut] = createSignal(false);
-    // Hasta que identity contesta, la ventana muestra la pantalla de entrada original esperando.
+    // Hasta que identity contesta se ve la carga; la entrada solo sin sesión o con el error del retorno.
     const [identified, setIdentified] = createSignal(false);
     const returnError = signInError(window.location.search);
     let windowApp: ReturnType<typeof mountWindow> | undefined;
@@ -62,21 +62,18 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
       windowApp = undefined;
       disposeGate?.();
       root.replaceChildren();
-      disposeGate = render(() => <Show when={identified() && !signedOut()} fallback={<><ToastStack><UpdateNotice /></ToastStack><WorkosAuthPage loginUrl={api.loginUrl(home)} busy={!signedOut()} error={returnError} /></>}><main class="flex h-full flex-col gap-4 overflow-y-auto bg-bg p-10 text-neutral-950" data-web-gate="">
+      disposeGate = render(() => <Show when={identified() && !signedOut() && !preparing()} fallback={<><ToastStack><UpdateNotice /></ToastStack><Show when={signedOut() || returnError} fallback={<SessionLoading />}><WorkosAuthPage loginUrl={api.loginUrl(home)} error={returnError} /></Show></>}><main class="flex h-full flex-col gap-4 overflow-y-auto bg-bg p-10 text-neutral-950" data-web-gate="">
         <ToastStack><UpdateNotice /></ToastStack>
         <h1 class="m-0 font-display text-lead font-bold">{t('common.brand_name')}</h1>
         <Show when={busy()}><p role="status">{t('web.auth.waiting')}</p></Show>
-        <Show when={preparing()}><p role="status" data-web-preparing="">{t('web.platform.preparing')}</p></Show>
         <Show when={error()}><p role="alert">{t(error())}</p><Button disabled={busy()} onClick={() => void load()}>{t('web.computers.retry')}</Button></Show>
         <Show when={!signedOut() && !busy()}>
           <Show when={orgNeeded() || noWorkspace() || error()}>
             <For each={(() => { const s = orgState(); return s.kind === 'ready' ? s.items : []; })()}>{org => <Button variant="secondary" data-web-organization={org.id} aria-pressed={(() => { const s = orgState(); return s.kind === 'ready' && s.active === org.id; })()} onClick={() => void organizations.choose(org.id)}>{org.name}</Button>}</For>
           </Show>
           <Show when={!error()}>
-            <p>{t('web.platform.empty')}</p>
             <For each={rows()}>{row => <Button onClick={() => void choose(row.id)}>{row.name}</Button>}</For>
           </Show>
-          <PromoRedeem redeem={redeemPromo} />
           <Button variant="ghost" data-web-sign-out="" onClick={() => void logout()}>{t('web.platform.sign_out')}</Button>
         </Show>
       </main></Show>, root);
@@ -109,6 +106,8 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
     const selection = startup.selection;
     const machines = machinesClient({ endpoint: `${options.origin}/v1`, transport, relayOrigins: __DANIL_WEB_RELAY_ORIGINS__ });
     const organization = organizationSession(transport, lifetime.signal, () => {
+      // La organización que identity crea al darse de alta llega con la ventana ya montada: se adopta sin recargar.
+      if (mountedBefore && waiting()) { wait = FIRST_RETRY_MS; later(0); return; }
       stopped = true; stopServices(); windowApp?.close(); window.location.assign(home);
     });
     const organizations = organization.selection;
@@ -116,8 +115,7 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
     const [orgState, setOrgState] = createSignal(organizations.state());
     const [noWorkspace, setNoWorkspace] = createSignal(false);
     const unsubscribeOrganizations = organizations.subscribe(() => { if (!stopped && !lifetime.signal.aborted) { setOrgNeeded(organizations.needed()); setOrgState(organizations.state()); } });
-    // Una organización sin workspace activo (`me` da 403 `workspace_selection_required` o `workspace: null`):
-    // el estado vacío con sus workspaces, el selector de organización y cerrar sesión; nunca «Reintentar» sin salida.
+    // `me` da 403 `workspace_selection_required`: sus workspaces, el selector de organización y cerrar sesión.
     async function withoutWorkspace() {
       organization.load(startup.reader()?.organizations);
       const listed = await (startup.reader()?.workspaces() ?? api.workspaces()).catch(() => [] as PlatformWorkspace[]);
@@ -127,6 +125,18 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
       setError('');
       setNoWorkspace(true);
       gate();
+      if (listed.length === 0) later();
+    }
+    /** La cuenta recién creada monta sin workspace; se sondea hasta que la plataforma lo tiene. */
+    function waiting() { return person !== undefined && (person.workspace === null || (permits('workspaces') && rows().length === 0)); }
+    /** La lista vacía o aún sin contexto (403/404/503) no impide montar; 401 sí sale. */
+    async function listWorkspaces(read: () => Promise<PlatformWorkspace[]>, fallback: PlatformWorkspace[]) {
+      try { return await read(); }
+      catch (cause) {
+        if (cause instanceof PlatformSessionError && cause.status === 401) throw cause;
+        organizations.report(cause);
+        return fallback;
+      }
     }
     /** Primer montaje: la membresía o el workspace aún no llegó; se espera en vez de enseñar un 403 fatal. */
     function prepare() {
@@ -149,13 +159,19 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
       refreshing = true;
       let ready = false;
       try {
-        if (startup.refreshDue()) {
+        if (startup.refreshDue() || waiting()) {
           const [capabilities, fresh] = await Promise.all([readCapabilities(transport), api.me()]);
           if (stopped || signedOut()) return;
           setCaps(capabilities);
-          if (person && (fresh.id !== person.id || fresh.workspace !== person.workspace)) { gate(); window.location.assign(home); return; }
+          const arrived = person?.workspace === null && fresh.workspace !== null;
+          if (person && (fresh.id !== person.id || (!arrived && fresh.workspace !== person.workspace))) { gate(); window.location.assign(home); return; }
           person = fresh;
-          if (permits('workspaces')) { const listed = await api.workspaces(); if (stopped || signedOut()) return; setRows(listed); }
+          if (permits('workspaces') && fresh.workspace !== null) {
+            const listed = await listWorkspaces(() => api.workspaces(), rows());
+            if (stopped || signedOut()) return;
+            setRows(listed);
+          }
+          if (arrived) setActive(fresh.workspace);
           startup.checked();
         } else if (!permits('machines')) { const capabilities = await readCapabilities(transport); if (stopped || signedOut()) return; setCaps(capabilities); }
         if (!stopped && !signedOut()) ready = await windowApp?.refresh() ?? false;
@@ -164,7 +180,7 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
         else if (cause instanceof PlatformSessionError && cause.retryAfter) wait = Math.max(wait, Number(cause.retryAfter) * 1000 || wait);
       } finally {
         refreshing = false;
-        later(ready ? Math.min(POLL_MAX_MS, startup.refreshIn()) : wait);
+        later(ready && !waiting() ? Math.min(POLL_MAX_MS, startup.refreshIn()) : wait);
       }
     }
     async function run(action: () => Promise<void>, firstMountRetry = false) {
@@ -206,16 +222,12 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
         person = profile;
         // Con sesión: el selector se lee una vez y, si la ruta aún no existe, se reintenta solo.
         organization.load(startup.reader()?.organizations);
-        if (person.workspace === null) { await withoutWorkspace(); return; }
-        const listed = permits('workspaces');
-        const workspaces = listed ? await startup.reader()!.workspaces() : [];
+        const workspaces = person.workspace !== null && permits('workspaces') ? await listWorkspaces(() => startup.reader()!.workspaces(), []) : [];
         if (stopped || signedOut()) return;
         setRows(workspaces);
         setActive(selection.active());
         cache = sessionStorageScope(localStorage, person.id, person.workspace ?? 'unselected');
-        if (workspaces.length === 0 && listed && firstMountAttempts < FIRST_MOUNT_ATTEMPTS) { prepare(); return; }
         setPreparing(false);
-        if (workspaces.length === 0) { gate(); later(); return; }
         setShellCacheScope({ mine: () => false, prefer: null });
         disposeGate?.();
         disposeGate = undefined;
