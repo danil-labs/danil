@@ -77,6 +77,8 @@ const steps = [
   ["Billing role scopes are fail-closed", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/billing-v2-scopes.test.ts")], root],
   ["Billing edge requests use pinned examples", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/billing-v2-api.test.ts")], root],
   ["Billing checkout returns use authoritative state", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/billing-v2-return.test.ts")], root],
+  ["Uncertain organization checkouts keep their idempotency key", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/billing-v2-idempotency.test.ts")], root],
+  ["Billing plan links are gated and preserve checkout parameters", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/billing-v2-settings-link.test.ts")], root],
   ["Web startup shares reads within one attempt and isolates later selections", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/web-startup-reader.test.ts")], root],
   ["Workspace context owns transition and material validity", process.execPath, ["--conditions=browser", "--test", "--experimental-strip-types", join(root, "tests/unit/workspace-context.test.ts")], root],
   ["Composer selection and catalogs have one owner", process.execPath, ["--conditions=browser", "--test", "--experimental-strip-types", join(root, "tests/unit/composer-store.test.ts")], root],

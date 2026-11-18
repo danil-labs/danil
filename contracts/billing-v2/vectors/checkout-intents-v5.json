@@ -1,0 +1,45 @@
+{
+  "valid": [
+    {"body": {"plan_key": "pro", "catalog_version": 3, "intent": "new_organization", "organization_name": "Danil"}, "normalized": {"plan_key": "pro", "catalog_version": 3, "intent": "new_organization", "organization_name": "Danil"}},
+    {"body": {"plan_key": "pro", "catalog_version": 3, "intent": "new_organization", "organization_name": "  Café  "}, "normalized": {"plan_key": "pro", "catalog_version": 3, "intent": "new_organization", "organization_name": "Café"}},
+    {"body": {"plan_key": "pro", "catalog_version": 3, "intent": "new_organization", "organization_name": "A"}, "normalized": {"plan_key": "pro", "catalog_version": 3, "intent": "new_organization", "organization_name": "A"}},
+    {"body": {"plan_key": "pro", "catalog_version": 3, "intent": "new_organization", "organization_name": "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"}, "normalized": {"plan_key": "pro", "catalog_version": 3, "intent": "new_organization", "organization_name": "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"}},
+    {"body": {"plan_key": "pro", "catalog_version": 3, "intent": "new_organization", "organization_name": "😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀"}, "normalized": {"plan_key": "pro", "catalog_version": 3, "intent": "new_organization", "organization_name": "😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀"}},
+    {"body": {"plan_key": "pro", "catalog_version": 3, "intent": "new_organization", "organization_name": "éééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééé"}, "normalized": {"plan_key": "pro", "catalog_version": 3, "intent": "new_organization", "organization_name": "éééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééé"}},
+    {"body": {"plan_key": "pro", "catalog_version": 3, "intent": "new_organization", "organization_name": "  XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX  "}, "normalized": {"plan_key": "pro", "catalog_version": 3, "intent": "new_organization", "organization_name": "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"}},
+    {"body": {"plan_key": "team", "catalog_version": 3, "intent": "upgrade"}, "normalized": {"plan_key": "team", "catalog_version": 3, "intent": "upgrade"}}
+  ],
+  "invalid": [
+    {"plan_key": "pro", "catalog_version": 3, "intent": "new_organization"},
+    {"plan_key": "pro", "catalog_version": 3, "intent": "new_organization", "organization_name": ""},
+    {"plan_key": "pro", "catalog_version": 3, "intent": "new_organization", "organization_name": "   "},
+    {"plan_key": "pro", "catalog_version": 3, "intent": "new_organization", "organization_name": "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"},
+    {"plan_key": "pro", "catalog_version": 3, "intent": "new_organization", "organization_name": "😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀"},
+    {"plan_key": "pro", "catalog_version": 3, "intent": "new_organization", "organization_name": "a\nb"},
+    {"plan_key": "pro", "catalog_version": 3, "intent": "new_organization", "organization_name": "\nDanil"},
+    {"plan_key": "pro", "catalog_version": 3, "intent": "new_organization", "organization_name": "ab"},
+    {"plan_key": "pro", "catalog_version": 3, "intent": "new_organization", "organization_name": "<b>Danil</b>"},
+    {"plan_key": "pro", "catalog_version": 3, "intent": "new_organization", "organization_name": "a>b"},
+    {"plan_key": "team", "catalog_version": 3, "intent": "upgrade", "organization_name": "Danil"},
+    {"plan_key": "team", "catalog_version": 3, "intent": "upgrade", "organization_name": null},
+    {"plan_key": "pro", "catalog_version": 3},
+    {"plan_key": "pro", "catalog_version": 3, "intent": "purchase", "organization_name": "Danil"},
+    {"plan_key": "pro", "catalog_version": 3, "intent": "new_organization", "organization_name": "Danil", "owner_person_id": "user_FORGED"},
+    {"plan_key": "pro", "catalog_version": 3, "intent": "new_organization", "organization_name": "Danil", "success_url": "https://evil.example.test"},
+    {"plan_key": "pro", "catalog_version": 3, "intent": "new_organization", "organization_name": 123}
+  ],
+  "authorization": [
+    {"name": "persona ctx none alta", "body": {"plan_key": "pro", "catalog_version": 3, "intent": "new_organization", "organization_name": "Danil"}, "claims": {"typ": "JWT", "sub": "user_owner", "ctx": "none", "org": null, "scopes": []}, "expected": "ok"},
+    {"name": "persona con contexto sin scopes también alta", "body": {"plan_key": "pro", "catalog_version": 3, "intent": "new_organization", "organization_name": "Danil"}, "claims": {"typ": "JWT", "sub": "user_owner", "ctx": "org", "org": "org_OTHER", "scopes": []}, "expected": "ok"},
+    {"name": "upgrade ctx none prohibido", "body": {"plan_key": "team", "catalog_version": 3, "intent": "upgrade"}, "claims": {"typ": "JWT", "sub": "user_owner", "ctx": "none", "org": null, "scopes": []}, "expected": "insufficient_scope"},
+    {"name": "upgrade sin billing.manage", "body": {"plan_key": "team", "catalog_version": 3, "intent": "upgrade"}, "claims": {"typ": "JWT", "sub": "user_owner", "ctx": "org", "org": "org_OTHER", "scopes": []}, "expected": "insufficient_scope"},
+    {"name": "upgrade permitido", "body": {"plan_key": "team", "catalog_version": 3, "intent": "upgrade"}, "claims": {"typ": "JWT", "sub": "user_owner", "ctx": "org", "org": "org_OTHER", "scopes": ["billing.manage"]}, "expected": "ok"},
+    {"name": "servicio o falta persona", "body": {"plan_key": "pro", "catalog_version": 3, "intent": "new_organization", "organization_name": "Danil"}, "claims": {"typ": "danil-service+jwt", "sub": "svc:billing", "ctx": "none", "scopes": []}, "expected": "unauthenticated"},
+    {"name": "servicio o falta persona", "body": {"plan_key": "pro", "catalog_version": 3, "intent": "new_organization", "organization_name": "Danil"}, "claims": {"typ": "JWT", "sub": "svc:billing", "ctx": "none", "org": null, "scopes": []}, "expected": "unauthenticated"},
+    {"name": "servicio o falta persona", "body": {"plan_key": "pro", "catalog_version": 3, "intent": "new_organization", "organization_name": "Danil"}, "claims": null, "expected": "unauthenticated"}
+  ],
+  "person": {"typ": "JWT", "sub": "user_owner", "ctx": "none", "org": null, "scopes": []},
+  "checkout_id": "bchk_01SYNTHETICCHK0001",
+  "reservation": {"organization_id": "org_SYNTHETIC", "reservation_id": "borgres_01SYNTHETICRES0001", "checkout_id": "bchk_01SYNTHETICCHK0001", "owner_person_id": "user_owner", "reserved_until": "2026-11-20T00:00:00Z", "state": "reserved", "hidden": true},
+  "now": "2026-11-18T00:00:00Z"
+}
