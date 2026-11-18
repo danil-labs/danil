@@ -74,7 +74,7 @@ export function createThreadsStore(deps: {
     });
   };
   const optimisticHistory = createOptimisticHistory<Hilo>({
-    current: () => untrack(hilos), disposed: () => disposed, generation: deps.scope.generation, writeBase: asentar,
+    current: () => untrack(hilos), disposed: () => disposed, generation: deps.scope.generation, writeBase: asentar, writeLive: anexar,
     update: setHilos, settle: (fn) => {
       setHilos(fn);
       for (const [workspace, threads] of workspaceThreads) workspaceThreads.set(workspace, fn(threads));
@@ -107,9 +107,10 @@ export function createThreadsStore(deps: {
             );
       const { base, optimistic, readRevision: appliedRevision } = optimisticHistory.reconcile(previo, atada, persistidos, antepuesta, readRevision);
       activity.reconcile(deps.scope.workspace(), session, previo?.base ?? [], base, vaciarVivo, antepuesta);
-      const vivo = vaciarVivo
-        ? []
-        : vivoPrevio.filter((m) => !m.turno || !persistidos.has(m.turno));
+      const pending = new Set(optimistic.map(entry => entry.row));
+      const accepted = new Set(previo?.optimistic?.filter(entry => !pending.has(entry.row)).map(entry => entry.row));
+      const vivo = vivoPrevio.filter(message => pending.has(message) ||
+        (!vaciarVivo && !accepted.has(message) && (!message.turno || !persistidos.has(message.turno))));
       const mismoVivo = vivo.length === vivoPrevio.length;
       const tramos = guardados ?? previo?.guardados;
       if (previo && base === previo.base && mismoVivo && tramos === previo.guardados && optimistic.length === (previo.optimistic?.length ?? 0) && readRevision === undefined) return hs;
@@ -251,7 +252,9 @@ export function createThreadsStore(deps: {
     }, workspace);
   }
   function replay(session: string, workspace = deps.scope.workspace(), replayId?: string) {
-    if (!disposed) anexar(session, before => assistantHistory.replay(session, before, workspace, replayId), workspace);
+    const threads = workspace && workspace !== deps.scope.workspace() ? workspaceThreads.get(workspace) : untrack(hilos);
+    const pending = new Set(threads?.[session]?.optimistic?.map(entry => entry.row));
+    if (!disposed) anexar(session, before => assistantHistory.replay(session, before, workspace, replayId, pending), workspace);
   }
   function finishSteps(session: string) {
     if (!disposed) anexar(session, before => before.some(row => row.paso?.corriendo)
@@ -264,7 +267,7 @@ export function createThreadsStore(deps: {
     if (payload.kind === "image" && (payload.detail?.kind !== "output" || !payload.detail.images?.length)) return;
     const workspace = payload.workspace ?? deps.scope.workspace();
     if (payload.kind === "delta") {
-      deltasPorCuadro.meter(payload.session, workspace ?? undefined, { text: payload.text, messageId: payload.message_id,
+      deltasPorCuadro.meter(payload.session, workspace ?? undefined, { text: payload.text, messageId: payload.message_id, segmentId: payload.segment_id,
         startsMessage: payload.starts_message, author: metadata.author, model: metadata.model });
     } else batch(() => {
       anexar(payload.session, before => transcriptEvent(before, payload, metadata), workspace);
@@ -282,7 +285,7 @@ export function createThreadsStore(deps: {
   function resetService() {
     deltasPorCuadro.vaciar(); workspaceThreads.clear();
     assistantHistory.clear(); activity.clear(); activityChanged();
-    setHilos(before => Object.fromEntries(Object.entries(before).map(([id, thread]) => [id, { ...thread, vivo: [] }])));
+    setHilos(before => Object.fromEntries(Object.entries(before).map(([id, thread]) => [id, { ...thread, vivo: thread.optimistic?.map(entry => entry.row) ?? [] }])));
   }
   function adoptDraft(id: string) {
     deltasPorCuadro.vaciar();

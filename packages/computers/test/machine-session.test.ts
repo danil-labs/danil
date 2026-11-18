@@ -174,3 +174,19 @@ test('unverifiable pages and gap or error facts are delivered without replacing 
   assert.equal(seen[4].gap, false, 'a failed poll is not evidence that journal output was lost');
   assert.deepEqual(seen[4].error, { code: 'io' });
 });
+
+test('finite recovery paints one journal delivery and does not classify subsequent live output as replay', async t => {
+  const app = setup(); t.after(() => app.session.close());
+  const pages: import('../src/relay.ts').EventsPage[] = [];
+  app.session.onEvents(page => pages.push(page)); app.session.subscribe(0);
+  await turn(); app.sockets[0].onopen?.({});
+  const send = (cursor: number, complete: boolean, events: number[]) => app.sockets[0].onmessage?.({ data: JSON.stringify({ type: 'events', runtime: 'rt', cursor, replay: true,
+    recovery: { id: 'server-epoch', through: 9, complete }, events: events.map(seq => ({ seq, name: 'chat', payload: { text: 'same content' } })) }) });
+  send(3, false, [1, 2, 3]); send(6, false, []); assert.equal(pages.length, 0);
+  send(9, true, [7, 8, 9]); assert.equal(pages.length, 1); assert.equal(pages[0].replay, true);
+  assert.deepEqual(pages[0].events?.map(event => event.seq), [1, 2, 3, 7, 8, 9]);
+  app.sockets[0].onmessage?.({ data: JSON.stringify({ type: 'events', runtime: 'rt', cursor: 10, replay: false, events: [{ seq: 10, name: 'chat', payload: { text: 'same content' } }] }) });
+  assert.equal(pages[1].replay, false); assert.equal(pages[1].events?.length, 1);
+  const subscribe = app.sockets[0].sent.map(frame => JSON.parse(frame)).find(frame => frame.type === 'subscribe');
+  assert.equal(subscribe.recovery, 1);
+});
