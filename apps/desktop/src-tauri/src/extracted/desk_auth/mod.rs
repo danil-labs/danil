@@ -297,6 +297,11 @@ fn edge_fetch<V: Vault>(
 
 pub(crate) fn edge_reply(method: &str, reply: &session::Reply, key: &str) -> Value {
     let mut value = json!({ "status": reply.status, "body": reply.body });
+    if reply.body.is_null() {
+        if let Some(code) = &reply.rejection_code {
+            value["body"] = json!({"code":code});
+        }
+    }
     if let Some(reason) = reply.empty_reason {
         value["empty_reason"] = json!(reason);
     }

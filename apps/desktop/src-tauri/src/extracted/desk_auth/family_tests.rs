@@ -915,3 +915,6 @@ fn network_during_login_or_logout_does_not_hold_the_set_lock() {
 
 #[path = "family_death_tests.rs"]
 mod family_death_tests;
+
+#[path = "promo_tests.rs"]
+mod promo_tests;
