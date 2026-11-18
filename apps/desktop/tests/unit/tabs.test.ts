@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { createComputed, createRoot } from "solid-js";
 
 /**
  * **La tira única de pestañas, en lo que se rompe callado.**
@@ -1173,4 +1174,23 @@ test("an unchanged remote Git answer is asked less often until something changes
     Object.defineProperty(globalThis, "window", { configurable: true, value: previousWindow, writable: true });
     Object.defineProperty(globalThis, "document", { configurable: true, value: previousDocument, writable: true });
   }
+});
+
+
+test("committing a draft never exposes an active tab that no longer exists", () => {
+  createRoot((dispose) => {
+    const t = tira("draft-atomic");
+    const provisional = idProvisional();
+    t.ensure(tarea("previous"));
+    t.ensure(tarea(provisional));
+    t.activate(provisional);
+    const states: { active: string | null; ids: string[] }[] = [];
+    createComputed(() => {
+      states.push({ active: t.active(), ids: t.open().map(tab => tab.id) });
+    });
+    t.commitDraft(provisional, tarea("created"));
+    assert.equal(t.active(), "created");
+    assert.ok(states.every(({ active, ids }) => active === null || ids.includes(active)), JSON.stringify(states));
+    dispose();
+  });
 });

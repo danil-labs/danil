@@ -1,4 +1,4 @@
-import { createEffect, createSignal, on } from "solid-js";
+import { createEffect, createMemo, createSignal, on, onCleanup } from "solid-js";
 import { invoke } from "../../lib/invoke.ts";
 import { machineOf } from "../machines/store";
 import { FileMachine } from "../../ui/fileMachine";
@@ -29,22 +29,24 @@ export default function VisorDeArtefacto(props: {
   /** La tarea de la pestaña: si corre en otra máquina, el archivo está en su disco. */
   session?: string;
 }) {
-  const machine = () => machineOf(props.session)?.headers["x-terminus-machine"];
+  const machine = createMemo(() => machineOf(props.session)?.headers["x-terminus-machine"]);
   const [preview, setPreview] = createSignal<Preview | null>(null);
   const [fallo, setFallo] = createSignal<string | null>(null);
 
-  // Por `path` y no al montar a secas: la pestaña se identifica por su `rel`
-  // dentro de la tarea, y la carpeta de datos puede mudarse bajo ella.
+  // La misma ruta puede pertenecer a otra tarea o máquina. Una lectura vieja
+  // no puede reemplazar el documento que ya cambió de ámbito.
   createEffect(
     on(
-      () => props.path,
-      (path) => {
+      () => [props.path, props.rel, props.session, machine()] as const,
+      ([path, rel]) => {
+        let current = true;
+        onCleanup(() => { current = false; });
+        setPreview(null);
         setFallo(null);
-        invoke<Preview>("preview_file", { path, rel: props.rel }, machineOf(props.session))
-          .then(setPreview)
+        invoke<Preview>("preview_file", { path, rel }, machineOf(props.session))
+          .then((value) => { if (current) setPreview(value); })
           .catch((e) => {
-            setPreview(null);
-            setFallo(prosaDe(e));
+            if (current) setFallo(prosaDe(e));
           });
       },
     ),

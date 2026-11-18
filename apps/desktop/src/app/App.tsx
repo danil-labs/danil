@@ -4972,13 +4972,16 @@ export default function App() {
     // Y su borrador: lo que quedó sin mandar sigue con ella.
     drafts.promote(claveBorrador, id);
     if (provisional) {
-      // La fila antes que la pestaña: una pestaña sin fila pide la lista.
-      setNaciendo((ns) =>
-        ns.map((n) => (n.row.id === provisional ? { ...n, row: { ...n.row, id } } : n)),
-      );
-      mudarPestana(provisional, id);
-      pestanas.commitDraft(provisional, { id, project: proyecto, titulo: nacida.titulo });
-      olvidarPestana(provisional);
+      batch(() => {
+        // La fila antes que la pestaña: una pestaña sin fila pide la lista.
+        setNaciendo((ns) =>
+          ns.map((n) => (n.row.id === provisional ? { ...n, row: { ...n.row, id } } : n)),
+        );
+        mudarPestana(provisional, id);
+        pestanas.commitDraft(provisional, { id, project: proyecto, titulo: nacida.titulo });
+        paneles.renameTabs([[provisional, id]]);
+        olvidarPestana(provisional);
+      });
     } else pestanas.ensure({ id, project: proyecto, titulo: "" });
     void reatarVistaPrevia(proyecto, id);
   }
@@ -6652,7 +6655,7 @@ export default function App() {
         onRespuestaRapida={mandarTexto}
         visualScope={JSON.stringify([visualWorkspace, pp.proyecto ?? "", pp.sesion])}
         readVisual={(file) => readChatVisual({ workspace: visualWorkspace, project: pp.proyecto ?? "", session: pp.sesion ?? "" }, file)}
-        openVisual={(file) => openChatVisual({ workspace: visualWorkspace, project: pp.proyecto ?? "", session: pp.sesion ?? "" }, file)}
+        openVisual={capabilities().nativeWindow ? (file) => openChatVisual({ workspace: visualWorkspace, project: pp.proyecto ?? "", session: pp.sesion ?? "" }, file) : undefined}
         onMiniatura={miniaturaDeAdjunto}
         onPreview={previewDeAdjunto}
         onPegarImagen={pegarImagen}
