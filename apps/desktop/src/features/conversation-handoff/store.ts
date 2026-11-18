@@ -2,8 +2,8 @@ import { batch, createSignal } from "solid-js";
 
 export type ConversationScope = { workspace: string | null; generation: number; project: string; session: string; route?: { headers: Record<string, string> } };
 export type HandoffView = { stopping: boolean; pending: { queueItemId: string; phase: "waiting-close" | "submitting" | "awaiting-start" } | null; error: unknown | null; released: boolean };
-export type HandoffPresentation = { phase: "waiting-close"; pendingMessage: { text: string; attachments?: readonly string[] } }
-  | { phase: "submitting" | "awaiting-start" } | null;
+export type HandoffPresentation = ({ queueItemId: string } & ({ phase: "waiting-close"; pendingMessage: { text: string; attachments?: readonly string[] } }
+  | { phase: "submitting" | "awaiting-start" })) | null;
 export type HandoffFact = { scope: ConversationScope } & ({ kind: "terminal" | "started" | "accepted" } | { kind: "dispatching"; itemIds: readonly string[] } | { kind: "rejected"; error: unknown } | { kind: "queue-removed"; queueItemId: string });
 type Dependencies = {
   current: () => { workspace: string | null; generation: number };
@@ -130,9 +130,9 @@ export function createConversationHandoff(deps: Dependencies) {
   function presentation(scope: ConversationScope): HandoffPresentation {
     const state = view(scope), pending = state.pending;
     if (!pending || state.error !== null) return null;
-    if (pending.phase !== "waiting-close") return { phase: pending.phase };
+    if (pending.phase !== "waiting-close") return { phase: pending.phase, queueItemId: pending.queueItemId };
     const message = deps.queue.message(scope, pending.queueItemId);
-    return message ? { phase: "waiting-close", pendingMessage: message } : null;
+    return message ? { phase: "waiting-close", pendingMessage: message, queueItemId: pending.queueItemId } : null;
   }
   return { requestStop, replaceWithQueued, observe, view, presentation,
     blocked: (scope: ConversationScope) => { const state = view(scope); return state.stopping || !!state.pending && !state.released; },

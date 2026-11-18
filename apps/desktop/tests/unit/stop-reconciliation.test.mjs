@@ -22,6 +22,7 @@ test("stop acknowledgement and terminal release a forced message while presence 
     const button = await waitFor(() => [...app.w.document.querySelectorAll("button")].find(element => /^(Mandar ahora|Interrumpir y enviar|Detener el turno y enviar) el mensaje 1 de la cola$/.test(element.getAttribute("aria-label") ?? "")), "queue force action missing");
     button.click();
     await waitFor(() => acknowledge, "stop request missing");
+    assert.equal([...app.w.document.querySelectorAll("p, span")].filter(node => node.children.length === 0 && node.textContent === queued.text).length, 1, "the handoff input is rendered once, not repeated in the queue");
     holdPresence = true; acknowledge(null);
     await waitFor(() => presence.length, "stop did not request reconciliation");
     assert.equal(sent.length, 0, "stop acknowledgement must not invent a terminal");

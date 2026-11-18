@@ -1,6 +1,8 @@
 import { createEffect, createSignal, createUniqueId, For, Match, onCleanup, Show, Switch } from "solid-js";
 import { ACTIVITY_MOTIONS, createActivityMotionCycle, createActivityMotionPreference } from "./activityMotion";
 import "./activity-indicator.css";
+import { createNow } from "../../../../lib/sharedClock";
+import { t } from "../../../../lib/i18n";
 
 const PARTICLES = Array.from({ length: 13 }, (_, index) => index);
 
@@ -46,7 +48,13 @@ export function ActivityIndicator(props: { paused?: boolean; active?: boolean; m
   </span>;
 }
 
-export function ActivityCaption(props: { active: boolean; text: string }) {
+const THINKING_WORDS = ["thinking", "pondering", "mulling", "connecting_dots", "ruminating", "distilling", "polishing", "scheming", "splitting_hairs", "plotting", "cooking", "kneading"] as const;
+function ThinkingWords() {
+  const now = createNow();
+  return <>{t(`chat.turn.verb.${THINKING_WORDS[Math.floor(now() / 6000) % THINKING_WORDS.length]}`)}…</>;
+}
+
+export function ActivityCaption(props: { active: boolean; text: string; thinking?: boolean }) {
   const preference = createActivityMotionPreference(() => props.active);
-  return <span class="activity-caption min-w-0 truncate" classList={{ "activity-caption-running": props.active && preference() }} data-activity-label="">{props.text}</span>;
+  return <span class="activity-caption min-w-0 truncate" classList={{ "activity-caption-running": props.active && preference() }} data-activity-label=""><Show when={props.active && props.thinking} fallback={props.text}><ThinkingWords /></Show></span>;
 }

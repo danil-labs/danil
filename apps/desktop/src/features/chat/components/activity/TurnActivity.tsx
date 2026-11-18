@@ -10,7 +10,7 @@ import { ActivityIndicator, ActivityCaption } from "./ActivityIndicator";
 import McpAppView from "../../McpAppView";
 import type { Msg, Razonamiento } from "../../messageTypes";
 import LineaDeTiempo, { SUPERFICIE_DE_EJECUCION } from "../../Timeline";
-import { presentActivity, type ActivityAction } from "../../activityPresentation";
+import { currentActivityAction, presentActivity, type ActivityAction } from "../../activityPresentation";
 type Avance = ActivityChunk<Msg>;
 const SIN_AVANCE: Avance[] = [];
 /** La cabecera de un tramo, entera o partida (ver `RegistroDeTrabajo`). */
@@ -42,7 +42,8 @@ export function RegistroDeTrabajo(props: {
   // correcto, y «1 con error» alarmaba. El fallo del turno va aparte.
   const avance = () => props.avance ?? SIN_AVANCE;
   const todos = createMemo(() => [...avance().flatMap((a) => a.pasos), ...props.pasos]);
-  const presentation = createMemo(() => presentActivity({ active: props.corriendo, stopping: props.stopping, blocked: props.blocked, paused: props.animando === false, duration: props.duracion, action: props.latestAction, label: props.label }));
+  const action = createMemo(() => currentActivityAction(props.latestAction, todos()));
+  const presentation = createMemo(() => presentActivity({ active: props.corriendo, stopping: props.stopping, blocked: props.blocked, paused: props.animando === false, duration: props.duracion, action: action(), label: props.label }));
   const rotulo = () => presentation().label;
   const hasContent = () => todos().length > 0 || avance().some(chunk => chunk.msg.razonamiento?.length || (!chunk.outside && chunk.msg.text)) || Boolean(props.razonamiento?.length);
   const inspectable = () => hasContent() || Boolean(!props.corriendo && props.duracion);
@@ -61,7 +62,7 @@ export function RegistroDeTrabajo(props: {
   );
   const girando = () => <ActivityIndicator mode={!props.corriendo ? "finished" : presentation().animate ? "running" : "paused"} />;
   const blocked = () => props.corriendo && !props.stopping && props.blocked;
-  const caption = () => <Show when={!blocked()} fallback={props.status?.()}><ActivityCaption active={presentation().animate} text={rotulo()} /></Show>;
+  const caption = () => <Show when={!blocked()} fallback={props.status?.()}><ActivityCaption active={presentation().animate} thinking={action()?.kind === "thinking"} text={rotulo()} /></Show>;
 
 
   // Sin envoltorio y con los datos de la derecha en un solo texto: cada

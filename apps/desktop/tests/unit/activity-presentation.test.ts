@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import "../helpers/catalog.ts";
-import { observedActivityAction, presentActivity } from "../../src/features/chat/activityPresentation.ts";
+import { currentActivityAction, observedActivityAction, presentActivity } from "../../src/features/chat/activityPresentation.ts";
 import { pasoDe } from "../../src/lib/steps.ts";
 
 test("stop request suppresses animation and stale action before authoritative completion", () => {
@@ -26,7 +26,7 @@ test("unknown recovery cannot invent thinking or a command from queue inputs", (
 
 for (const corriendo of [false, undefined]) test(`a completed command is not the current work of an active turn (${corriendo})`, () => {
   const action = { kind: "step" as const, step: { ...pasoDe("command_execution", "pwd"), corriendo } };
-  assert.deepEqual(presentActivity({ active: true, action }), { label: "Continuando…", animate: true });
+  assert.deepEqual(presentActivity({ active: true, action }), { label: "Pensando…", animate: true });
   assert.deepEqual(presentActivity({ active: false, action }), { label: "Trabajo", animate: false });
   assert.deepEqual(presentActivity({ active: true, stopping: true, action }), { label: "Trabajo", animate: false });
   assert.deepEqual(presentActivity({ active: true, blocked: true, action }), { label: "Actividad", animate: false });
@@ -45,4 +45,14 @@ test("a stop quiets current work without claiming execution finished or fabricat
   assert.deepEqual(presentActivity({ active: true, stopping: true, blocked: true, action }), { label: "Trabajo", animate: false });
   assert.equal(action.step.corriendo, true);
   assert.deepEqual(presentActivity({ active: true }), { label: "Preparando…", animate: true });
+});
+
+
+test("completed tools resume thinking unless another tool remains active", () => {
+  const finished = pasoDe("Bash", "pwd", { corriendo: false });
+  const running = pasoDe("Read", "large-file.ts", { corriendo: true });
+  assert.deepEqual(currentActivityAction({ kind: "step", step: finished }, [finished]), { kind: "thinking" });
+  assert.deepEqual(currentActivityAction({ kind: "step", step: finished }, [running, finished]), { kind: "step", step: running });
+  assert.deepEqual(currentActivityAction({ kind: "responding" }, [running]), { kind: "responding" });
+  assert.equal(currentActivityAction(null, []), null);
 });

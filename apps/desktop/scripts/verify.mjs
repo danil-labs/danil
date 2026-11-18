@@ -756,6 +756,7 @@ const steps = [
   ["Queue arrow and keyboard interrupt before sending after both ack and terminal", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/queue-force-send.test.mjs")], root],
   ["Cancellation acknowledgement and failure are independent of presence reconciliation", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/stop-reconciliation.test.mjs")], root],
   ["Closed or paused activity cannot animate late tools and preserves inspection", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/completed-tool-activity.test.mjs")], root],
+  ["Late start delivery retains one activity and resumes thinking labels", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/activity-start-order.test.mjs")], root],
   ["«Stop and send» stops the turn and lets the queued message out instead of keeping it retained", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/chat-stop-and-send.test.mjs")], root],
   ["Opening a long task stays under its ceiling", process.execPath, [join(root, "tests/perf/open-task-cost.mjs")], root],
   ["Rereading an open task does not remount its thread", process.execPath, [join(root, "tests/perf/reread-thread.mjs")], root],

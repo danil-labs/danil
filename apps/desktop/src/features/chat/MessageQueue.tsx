@@ -62,6 +62,8 @@ export type ColaDeMensajesProps = {
   compact?: boolean;
   items: Encolado[];
   pending?: string[];
+  /** The transcript already presents this pending input; retain its queue controls without repeating its body. */
+  handoffItemId?: string;
   agentes: Agent[];
   /** Con qué se responde ahora mismo, para marcar lo que se escribió con otra cosa. */
   actual: { agent: string; model: string };
@@ -238,7 +240,7 @@ export default function ColaDeMensajes(props: ColaDeMensajesProps) {
                         )}
                         title={props.compact ? it.text : undefined}
                       >
-                        {it.text}
+                        {props.handoffItemId === it.id ? t("chat.activity.preparing") : it.text}
                       </span>
                     </span>
 

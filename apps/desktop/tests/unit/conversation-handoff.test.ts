@@ -95,7 +95,7 @@ for (const order of ["terminal-first", "ack-first"] as const) test(`the real que
   if (order === "terminal-first") { f.terminal(); assert.equal(f.sends(), 0); f.stopAck(); await pending; }
   else { f.stopAck(); await pending; assert.equal(f.sends(), 0); f.terminal(); }
   assert.equal(f.sends(), 1); assert.equal(f.handoff.view(scope).pending?.phase, "submitting");
-  assert.deepEqual(f.handoff.presentation(scope), { phase: "submitting" });
+  assert.deepEqual(f.handoff.presentation(scope), { phase: "submitting", queueItemId: original.id });
   f.handoff.observe({ kind: "accepted", scope }); assert.equal(f.handoff.view(scope).pending?.phase, "awaiting-start");
   f.handoff.observe({ kind: "terminal", scope }); assert.equal(f.sends(), 1); assert.equal(f.handoff.view(scope).pending, null); f.dispose();
 });

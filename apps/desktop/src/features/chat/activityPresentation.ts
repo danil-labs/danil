@@ -9,6 +9,16 @@ export type ActivityAction =
   | { kind: "responding" }
   | { kind: "delegated"; title: string };
 
+/** Tool completion returns to model work; a parallel tool still running takes precedence. */
+export function currentActivityAction(latest: ActivityAction | null | undefined, steps: readonly Paso[]): ActivityAction | null {
+  if (latest?.kind !== "step" || latest.step.corriendo) return latest ?? null;
+  for (let index = steps.length - 1; index >= 0; index--) {
+    const step = steps[index];
+    if (step?.corriendo) return { kind: "step", step };
+  }
+  return { kind: "thinking" };
+}
+
 /** The projection supplies the actual last update, including edits to older native messages. */
 export function observedActivityAction(message: Msg | null | undefined, observedKind?: ActivityObservationKind | null): ActivityAction | null {
   if (!message) return null;
@@ -39,7 +49,7 @@ export function presentActivity(input: {
   if (!action) return { label: input.label ?? t("chat.activity.preparing"), animate };
   switch (action.kind) {
     case "step": {
-      if (!action.step.corriendo) return { label: t("chat.activity.continuing"), animate };
+      if (!action.step.corriendo) return { label: t("chat.reasoning.thinking"), animate };
       const row = rotuloDeFila({ clase: action.step.clase, pasos: [action.step] });
       return { label: [row.verbo, row.sujeto].filter(Boolean).join(" "), animate };
     }
