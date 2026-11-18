@@ -75,7 +75,7 @@ add().click();
 await sleep(100);
 const hiddenRow = (id) => doc.querySelector(`[data-hidden-workspace="${id}"]`);
 assert.ok(hiddenRow("w3")?.querySelector('[data-attention-badge="asked"]'), "la fila del oculto lleva su distintivo");
-assert.deepEqual(items().slice(0, 2), ["Agregar workspace", "Crear workspace local"], "sin sesiones se puede entrar o crear un local");
+assert.deepEqual(items().slice(0, 3), ["Agregar workspace", "Agregar cuenta u organización", "Crear workspace local"], "sin sesiones se puede entrar o crear un local");
 assert.ok(doc.querySelector("[data-add-danil-step]"), "sin sesión, «Agregar workspace» ofrece el login");
 const eye = (id) => hiddenRow(id).querySelector("[data-show-workspace]");
 eye("w3").focus();
