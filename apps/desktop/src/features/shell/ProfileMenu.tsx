@@ -97,7 +97,7 @@ export default function ProfileMenu(props: {
             </Suspense>
           )}
         </Show>
-        <Show when={capabilities().webPromo}>{redeem => <Suspense fallback={null}><PromoRedeem redeem={redeem()} /></Suspense>}</Show>
+        <Show when={capabilities().webPromo}>{redeem => <Suspense fallback={null}><PromoRedeem redeem={redeem()} reauth={capabilities().webReauth} /></Suspense>}</Show>
         <Show when={capabilities().webWorkspaces}>{session => <>
           <p class="m-0 px-2 pt-1 text-caption font-medium text-neutral-500">{t("web.platform.workspaces")}</p>
           <For each={session().rows()}>{row => <button type="button" class={ITEM_DE_MENU} aria-pressed={session().active() === row.id} disabled={session().busy() || session().uncertain()} onClick={() => { setOpen(false); session().choose(row.id); }}>{row.name}</button>}</For>

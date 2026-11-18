@@ -251,5 +251,7 @@
   "web.promo.used": "This code has already been redeemed or the organization already has an active promotion",
   "web.promo.has_machine": "The organization already has a machine",
   "web.promo.denied": "You do not have permission to redeem codes",
-  "web.promo.unavailable": "Not available yet. Try again"
+  "web.promo.unavailable": "Not available yet. Try again",
+  "web.promo.reauth": "Sign in again to enter your organization.",
+  "web.promo.reauth_action": "Sign in again"
 }

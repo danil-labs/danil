@@ -579,3 +579,123 @@ for (const end of ['pagehide', '401']) test(`${end} during startup cannot mount 
   assert.equal(app.w.document.querySelector('[data-tira]'), null);
   assert.deepEqual(app.failures, []);
 });
+
+// H2: la ventana montada resuelve sola la organización de una cuenta nueva.
+const ORG_CAPS = { contract: 'mvp-v1', items: ['identity.organizations'].map(name => ({ name, version: 1, status: 'available' })) };
+const NEW_ORG = { id: 'org_N', name: 'Personal', plan: 'free', role: 'owner' };
+const problemOf = (status, code, extra = {}) => new Response(JSON.stringify({ type: `urn:danil:problem:${code}`, status, code, ...extra }), { status, headers: { 'content-type': 'application/problem+json' } });
+const navigations = app => app.failures.filter(f => f.includes('Not implemented: navigation'));
+const others = app => app.failures.filter(f => !f.includes('Not implemented: navigation'));
+
+/** Una cuenta nueva sin workspace; `select` contesta lo que diga la prueba y el canje exige contexto. */
+function newAccount({ orgs = [NEW_ORG], orgsAfter, select = () => Response.json({ organization: NEW_ORG, workspace: null }) } = {}) {
+  const edge = { calls: [], redeemed: [], selected: null, listed: 0 };
+  const fetcher = async (input, init) => {
+    const url = new URL(String(input));
+    if (url.origin === 'http://localhost' && url.pathname.includes('/assets/')) return new Response('');
+    edge.calls.push(`${init?.method ?? 'GET'} ${url.pathname}`);
+    if (url.pathname === '/v1/capabilities') return Response.json(ORG_CAPS);
+    if (url.pathname === '/v1/machines') return new Response(null, { status: 404 });
+    if (url.pathname === '/v1/identity/me') return Response.json({ id: 'user_N', name: 'New', workspace: null, organizations: [] });
+    if (url.pathname === '/v1/identity/csrf') return Response.json({ csrf_token: 'bound' });
+    if (url.pathname === '/v1/identity/organizations') {
+      edge.listed++;
+      const items = orgsAfter && edge.listed > 1 ? orgsAfter : orgs;
+      return Response.json({ items, next_cursor: null, active_organization_id: edge.selected });
+    }
+    if (url.pathname === '/v1/identity/organizations/select') {
+      const reply = await select(JSON.parse(init.body).organization_id);
+      if (reply.ok) edge.selected = JSON.parse(init.body).organization_id;
+      return reply;
+    }
+    if (url.pathname === '/v1/workspaces/promo/redeem') {
+      edge.redeemed.push(new Headers(init.headers).get('idempotency-key'));
+      return edge.selected ? Response.json({ machine: { state: 'provisioning' } }) : problemOf(403, 'organization_selection_required');
+    }
+    throw new Error(`Unexpected request ${url.pathname}`);
+  };
+  fetcher.__jsdomApp = true; globalThis.fetch = fetcher;
+  return edge;
+}
+
+async function redeemFromMenu(app, code = 'FREE-2026') {
+  const doc = app.w.document;
+  doc.querySelector('[data-profile-menu] button').click();
+  await until(() => doc.querySelector('#promo-code'));
+  const input = doc.querySelector('#promo-code');
+  input.value = code;
+  input.dispatchEvent(new app.w.Event('input', { bubbles: true }));
+  await until(() => !input.closest('form').querySelector('button[type="submit"]').disabled);
+  input.closest('form').querySelector('button[type="submit"]').click();
+  return input.closest('form');
+}
+
+test('Q1: a new account with one organization and none active selects it by itself and then redeems', async t => {
+  const edge = newAccount();
+  const app = await open(t, 'listo', 'h2-q1', {}, undefined, {}, { web: true });
+  await until(() => app.w.document.querySelector('[data-tira]'));
+  await until(() => edge.selected === 'org_N');
+  assert.equal(edge.calls.filter(c => c === 'POST /v1/identity/organizations/select').length, 1);
+  const form = await redeemFromMenu(app);
+  await until(() => form.querySelector('[role="status"]'));
+  assert.equal(edge.redeemed.length, 1, 'the context was already there: one redemption');
+  assert.deepEqual(navigations(app), [], 'no reload and no sign-in');
+  assert.deepEqual(others(app), []);
+});
+
+test('Q2: organization_auth_required on select goes to the sign-in once, without a blocking screen', async t => {
+  const edge = newAccount({ select: () => problemOf(409, 'organization_auth_required', { organization: 'org_N' }) });
+  const app = await open(t, 'listo', 'h2-q2', {}, undefined, {}, { web: true });
+  await until(() => navigations(app).length === 1);
+  assert.ok(app.w.sessionStorage.getItem('danil.web.org-auth.org_N'), 'the loop guard is marked for that organization');
+  await new Promise(resolve => setTimeout(resolve, 1500));
+  assert.equal(navigations(app).length, 1, 'a single redirect');
+  assert.equal(edge.calls.filter(c => c === 'POST /v1/identity/organizations/select').length, 1);
+  assert.equal(app.w.document.querySelector('[data-web-gate]'), null);
+  assert.deepEqual(others(app), []);
+});
+
+test('Q3: the same 409 right after coming back does not redirect again and offers to sign in again', async t => {
+  newAccount({ select: () => problemOf(409, 'organization_auth_required', { organization: 'org_N' }) });
+  const app = await open(t, 'listo', 'h2-q3', {}, undefined, {}, { web: true, beforeImport(w) { w.sessionStorage.setItem('danil.web.org-auth.org_N', String(Date.now() - 30_000)); } });
+  const doc = app.w.document;
+  await until(() => doc.querySelector('[data-tira]'));
+  doc.querySelector('[data-profile-menu] button').click();
+  await until(() => doc.querySelector('[data-web-reauth-sign-in]'));
+  const again = doc.querySelector('[data-web-reauth-sign-in]');
+  assert.equal(again.disabled, false, 'the button is active');
+  assert.match(again.textContent, /Volver a iniciar sesión/);
+  assert.deepEqual(navigations(app), [], 'no second redirect');
+  again.click();
+  await until(() => navigations(app).length === 1);
+  assert.deepEqual(others(app), []);
+});
+
+test('Q4: a redemption refused for organization context resolves it and retries once with the same key', async t => {
+  const edge = newAccount({ orgs: [], orgsAfter: [NEW_ORG] });
+  const app = await open(t, 'listo', 'h2-q4', {}, undefined, {}, { web: true });
+  await until(() => app.w.document.querySelector('[data-tira]'));
+  await until(() => edge.listed >= 1);
+  assert.equal(edge.selected, null, 'nothing to select before the organization exists');
+  const form = await redeemFromMenu(app);
+  await until(() => edge.redeemed.length === 2 && form.querySelector('[role="status"]'));
+  assert.equal(edge.selected, 'org_N');
+  assert.equal(edge.redeemed[0], edge.redeemed[1], 'the retry keeps its Idempotency-Key');
+  assert.ok(edge.redeemed[0]);
+  assert.deepEqual(navigations(app), []);
+  assert.deepEqual(others(app), []);
+});
+
+test('Q5: several organizations and none active keep the selector, without selecting by themselves', async t => {
+  const edge = newAccount({ orgs: [NEW_ORG, { id: 'org_O', name: 'Otra', plan: 'team', role: 'member' }] });
+  const app = await open(t, 'listo', 'h2-q5', {}, undefined, {}, { web: true });
+  const doc = app.w.document;
+  await until(() => doc.querySelector('[data-tira]'));
+  await until(() => edge.listed >= 1);
+  await new Promise(resolve => setTimeout(resolve, 1500));
+  assert.ok(!edge.calls.includes('POST /v1/identity/organizations/select'), 'no automatic selection');
+  const state = edge.calls.filter(c => c === 'GET /v1/identity/organizations').length;
+  assert.ok(state >= 1, 'the organizations were read');
+  assert.deepEqual(navigations(app), []);
+  assert.deepEqual(others(app), []);
+});

@@ -251,5 +251,7 @@
   "web.promo.used": "Este código ya se ha canjeado o la organización ya tiene una promoción activa",
   "web.promo.has_machine": "La organización ya tiene una máquina",
   "web.promo.denied": "No tienes permiso para canjear códigos",
-  "web.promo.unavailable": "No disponible todavía. Reintenta"
+  "web.promo.unavailable": "No disponible todavía. Reintenta",
+  "web.promo.reauth": "Vuelve a iniciar sesión para entrar a tu organización.",
+  "web.promo.reauth_action": "Volver a iniciar sesión"
 }

@@ -15,7 +15,7 @@ import { SessionLoading } from './auth/SessionLoading';
 import { mountWindow } from './window';
 import { forgetMachineNames } from '../features/machines/known-names';
 import { sessionStorageScope, clearWebCaches } from './session-storage';
-import { organizationSession } from './organization-session';
+import { webOrganizations } from './organization-context';
 import './phrases';
 import { sessionStartup } from './startup-reader';
 
@@ -95,7 +95,7 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
       try { return await action(); }
       catch (cause) {
         if (cause instanceof PlatformSessionError && cause.status === 401) expired();
-        organizations.report(cause);
+        organization.report(cause);
         throw cause;
       }
     }
@@ -106,11 +106,11 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
     const startup = sessionStartup(api, transport);
     const selection = startup.selection;
     const machines = machinesClient({ endpoint: `${options.origin}/v1`, transport, relayOrigins: __DANIL_WEB_RELAY_ORIGINS__ });
-    const organization = organizationSession(transport, lifetime.signal, () => {
+    const organization = webOrganizations(transport, { signal: lifetime.signal, store: window.sessionStorage, signIn: () => window.location.assign(api.loginUrl(home)), redeem: (code, key) => authorized(() => api.redeemPromo(code, key)), onSelected: () => {
       // La organización que identity crea al darse de alta llega con la ventana ya montada: se adopta sin recargar.
       if (mountedBefore && waiting()) { wait = FIRST_RETRY_MS; later(0); return; }
       stopped = true; stopServices(); windowApp?.close(); window.location.assign(home);
-    });
+    } });
     const organizations = organization.selection;
     const [orgNeeded, setOrgNeeded] = createSignal(false);
     const [orgState, setOrgState] = createSignal(organizations.state());
@@ -198,7 +198,6 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
       gate();
       await run(async () => { await selection.choose(id); window.location.assign(home); });
     }
-    const redeemPromo = (code: string, key: string) => authorized(() => api.redeemPromo(code, key));
     async function logout() { await run(async () => { await api.logout(); forgetMachineNames(); expired(); }); }
     async function load() {
       await run(async () => {
@@ -224,7 +223,7 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
           profile: startup.accountProfile(lifetime.signal), onUnauthorized: expired,
           onUnavailable: () => { setError('web.platform.unavailable'); gate(); later(); },
           workspaces: { rows, active, busy, uncertain, choose: id => void choose(id) },
-          organizations: () => Promise.resolve(organizations), promo: redeemPromo,
+          organizations: () => Promise.resolve(organizations), promo: organization.redeem, reauth: organization.reauth,
         }, { storage: cache.storage, webAccounts: {
           current: { user_id: person.id, name: person.name, email: null, extra: false },
           others: () => [], open: () => {}, add: () => {}, remove: async () => {}, signOut: () => void logout(),
@@ -232,7 +231,7 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
         later(FIRST_RETRY_MS);
       }, true);
     }
-    function stopServices() { clearTimeout(timer); lifetime.abort(); organizations.stop(); unsubscribeOrganizations(); }
+    function stopServices() { clearTimeout(timer); lifetime.abort(); organization.stop(); unsubscribeOrganizations(); }
     const close = () => { stopped = true; stopServices(); windowApp?.close(); disposeGate?.(); dispose(); };
     window.addEventListener('pagehide', close, { once: true });
     gate();
