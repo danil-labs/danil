@@ -24,6 +24,7 @@ export function createSessionContexts(invoke: ContextInvoke, changed: () => void
   let epoch = 0;
   let unsupported = false;
   let ready = false;
+  let defaultContext: string | null = null;
   let connected = false;
   const empty = createSessionEmptyState();
   const notify = () => changed();
@@ -33,6 +34,7 @@ export function createSessionContexts(invoke: ContextInvoke, changed: () => void
       const status = await invoke<SessionStatus>("danil_session_status");
       if (read !== epoch) return;
       ready = true;
+      defaultContext = status.default_context ?? null;
       connected = status.state === "connected";
       if (unsupported && status.sessions?.some((f) => f.contexts.length)) {
         const context = status.sessions.flatMap((f) => f.contexts)[0].context_id;
@@ -46,12 +48,12 @@ export function createSessionContexts(invoke: ContextInvoke, changed: () => void
       notify();
     } catch { if (read === epoch) { ready = true; notify(); } }
   }
-  const send = async (context: string, method: string, path: string, body?: unknown): Promise<ContextReply> => {
+  const send = async (context: string, method: string, path: string, body?: unknown, idempotencyKey?: string, optionalRoute = false): Promise<ContextReply> => {
     if (unsupported) throw { detail: "session_echo_mismatch" };
     const group = groups?.find((g) => g.context_id === context);
     if (!group) throw { detail: "session_not_in_set" };
     try {
-      const reply = await invoke<ContextReply>("danil_edge_fetch", { method, path, context, ...(body === undefined ? {} : { body }), ...(method === "GET" ? {} : { idempotencyKey: crypto.randomUUID() }) });
+      const reply = await invoke<ContextReply>("danil_edge_fetch", { method, path, context, ...(body === undefined ? {} : { body }), ...(method === "GET" ? {} : { idempotencyKey: idempotencyKey ?? crypto.randomUUID() }) });
       if (!groups?.some((g) => g.context_id === context)) throw { detail: "session_not_in_set" };
       if (empty.note(context, reply)) notify();
       return empty.reason(context) ? { ...reply, body: undefined, empty_reason: empty.reason(context) } : reply;
@@ -62,7 +64,7 @@ export function createSessionContexts(invoke: ContextInvoke, changed: () => void
         if (empty.note(context, reply)) notify();
         return reply;
       }
-      if ((e as { detail?: string } | null)?.detail === "session_echo_mismatch") {
+      if (!optionalRoute && (e as { detail?: string } | null)?.detail === "session_echo_mismatch") {
         unsupported = true;
         notify();
       }
@@ -79,6 +81,9 @@ export function createSessionContexts(invoke: ContextInvoke, changed: () => void
   }
   return {
     refresh, send, close,
+    sendOptional: (context: string, method: string, path: string, body?: unknown, key?: string) => send(context, method, path, body, key, true),
+    defaultContext: () => defaultContext,
+    noteOrganizationProblem: (context: string) => { if (empty.note(context, { status: 403, empty_reason: "organization_selection_required" })) notify(); },
     closeEmail: async (email: string | null, fallbackFamily: string) => {
       const ids = email ? families.filter((f) => f.email?.trim().toLowerCase() === email.trim().toLowerCase()).map((f) => f.family) : [fallbackFamily];
       for (const family of ids) await close({ family });

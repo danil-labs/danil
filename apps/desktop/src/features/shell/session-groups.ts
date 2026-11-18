@@ -15,8 +15,9 @@ import { ADDED_KEY, edgeAddedTransport, prefsAddedStore } from "./workspace-adde
 
 export type SessionRailGroup = ContextGroup & { available: readonly { id: string; name: string }[] | null; added: ReadonlySet<string> | null; person: string | null; free?: { id: string; name: string }; empty_reason?: EmptyReason | null };
 let instance: ReturnType<typeof wire> | undefined;
+export const [sessionRailState, setSessionRailState] = createRoot(() => createSignal<ReturnType<typeof wire>>());
 export const hasSessionGroups = () => !!instance?.groups();
-export const sessionRail = (hidden: () => ReadonlySet<string>, seeded: (ids: readonly string[]) => void, shown: () => readonly string[] = () => []) => instance ??= createRoot(() => wire(hidden, seeded, shown));
+export const sessionRail = (hidden: () => ReadonlySet<string>, seeded: (ids: readonly string[]) => void, shown: () => readonly string[] = () => []) => instance ??= createRoot(() => { const next = wire(hidden, seeded, shown); setSessionRailState(next); return next; });
 
 function wire(hidden: () => ReadonlySet<string>, onSeeded: (ids: readonly string[]) => void, shown: () => readonly string[]) {
   const [revision, bump] = createSignal(0);
@@ -25,6 +26,7 @@ function wire(hidden: () => ReadonlySet<string>, onSeeded: (ids: readonly string
   const accounts = createAccountWorkspaces(invoke, !!capabilities().nativeWindow, changed);
   const groups = () => (revision(), sessions.groups());
   const [laterContext, setLaterContext] = createSignal<string | null>(null);
+  const [organizationNotice, setOrganizationNotice] = createSignal(false);
   const [menuNotice, setMenuNotice] = createSignal(false);
   let seenRemoved = 0;
   createEffect(() => {
@@ -104,6 +106,7 @@ function wire(hidden: () => ReadonlySet<string>, onSeeded: (ids: readonly string
     });
   }
   return {
+    organizationNotice, notifyOrganization: () => { setOrganizationNotice(true); setMenuNotice(true); },
     sessions, groups: rows, known, menuNotice, acknowledgeNotice: () => setMenuNotice(false), emptyReason: () => (revision(), sessions.emptyReason()), removed: () => (revision(), sessions.removed()), laterContext, acknowledgeLater: () => setLaterContext(null), ready: () => (revision(), sessions.ready()), connected: () => (revision(), sessions.connected()),
     createFree: async (context: string) => {
       const group = active(context);
@@ -115,6 +118,7 @@ function wire(hidden: () => ReadonlySet<string>, onSeeded: (ids: readonly string
     },
     add: (context: string, id: string) => records.get(context)?.sync.add(id),
     remove: (context: string, id: string) => records.get(context)?.sync.remove(id),
+    refreshContext: (context: string) => { const group = active(context); return group ? readDanilContext(group.org, context) : Promise.resolve(); },
     refresh: () => { void refreshAccounts(); for (const g of groups() ?? []) void readDanilContext(g.org, g.context_id); },
   };
 }

@@ -20,9 +20,8 @@ export default function PromoRedeem(props: { redeem: NonNullable<Capabilities["w
     setFailed(false);
     try {
       const result = await props.redeem(value, attempt.key);
-      setMessage(result.machine?.state === "ready" || result.machine?.state === "running" ? "web.promo.ready" : "web.promo.success");
-      setCode("");
-      attempt = undefined;
+      setMessage(result.unavailable ? "web.promo.unavailable" : result.machine?.state === "ready" || result.machine?.state === "running" ? "web.promo.ready" : "web.promo.success");
+      if (!result.unavailable) { setCode(""); attempt = undefined; }
     } catch (cause) {
       const error = cause as { status?: number; code?: string } | null;
       setFailed(true);

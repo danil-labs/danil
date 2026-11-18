@@ -1,5 +1,7 @@
-import { z } from "zod";
 import { edgeIdentity, edgeTransport } from "@terminus/computers";
+import { z } from "zod";
+import { webGroupAccount } from "./group-account.ts";
+import { webRedeemPromo } from "./group-promo.ts";
 
 const workspaceId = z.string().regex(/^[1-9]\d*$/);
 const profile = z.object({ id: z.string().startsWith("user_"), name: z.string(), email: z.unknown().optional(), workspace: workspaceId.nullable(), organizations: z.array(z.object({ id: z.string(), name: z.string() })) });
@@ -20,6 +22,7 @@ export function platformSession(options: { origin: string; timeoutMs: number }, 
   const identity = edgeIdentity(transport, options.origin);
   return {
     loginUrl: identity.loginUrl,
+    groupAccount: webGroupAccount(transport),
     async me() { return profile.parse(await (await call("identity/me")).json()); },
     async active() { return profile.parse(await (await call("identity/me")).json()).workspace; },
     async workspaces() {
@@ -42,13 +45,7 @@ export function platformSession(options: { origin: string; timeoutMs: number }, 
         body: JSON.stringify({ workspace: id }),
       })).json());
     },
-    async redeemPromo(code: string, idempotencyKey: string) {
-      const response = await mutation("workspaces/promo/redeem", {
-        headers: { "Content-Type": "application/json", "Idempotency-Key": idempotencyKey },
-        body: JSON.stringify({ code }),
-      });
-      return z.object({ machine: z.object({ state: z.string().optional() }).optional() }).parse(await response.json());
-    },
+    redeemPromo: webRedeemPromo(transport),
     logout: identity.logout,
   };
 }

@@ -1,14 +1,14 @@
-import { createSignal, For, Match, onMount, Show, Switch } from "solid-js";
 import Check from "lucide-solid/icons/check";
+import { createSignal, For, Match, onMount, Show, Switch } from "solid-js";
 import { crearWorkspace } from "../features/onboarding/onboarding-store";
 import { Pantalla } from "../features/onboarding/Screen";
-import { invoke } from "../lib/invoke.ts";
 import { t } from "../lib/i18n";
+import { invoke } from "../lib/invoke.ts";
 import { capabilities } from "../lib/platform";
 import { cn } from "../lib/utils";
 import { HEADER_HEIGHT } from "../lib/window";
-import { Input } from "../ui/Input";
 import { Button } from "../ui/Button";
+import { Input } from "../ui/Input";
 import { OnboardingAccounts } from "./OnboardingAccounts";
 import "./phrases";
 
@@ -131,8 +131,8 @@ function Space(props: { nuevo: boolean; onCancelar?: () => void; onCreated: (nam
           <span class="text-ui font-semibold">{t("onboarding.workspace.name")}</span>
           <Input value={name()} onInput={(ev) => setName(ev.currentTarget.value)} />
         </label>
-        <Show when={props.nuevo && capabilities().webAccounts}>
-          <Button type="button" variant="ghost" class="justify-self-start" onClick={() => capabilities().webAccounts?.add()}>
+        <Show when={props.nuevo && capabilities().webAccounts?.add}>
+          <Button type="button" variant="ghost" class="justify-self-start" onClick={() => capabilities().webAccounts?.add?.()}>
             {t("web.add_account.use_another")}
           </Button>
         </Show>

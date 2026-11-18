@@ -4,6 +4,7 @@ import { KeyedList } from "../../ui/KeyedList";
 import { ITEM_DE_MENU } from "../../ui/Popover";
 import { AccountHeader } from "./AccountHeader";
 import { confirmEmailClose, emailContextCount } from "./session-close-confirm";
+import { emptyReasonKey } from "./session-empty";
 import type { SessionRailGroup, sessionRail } from "./session-groups";
 
 type RailWorkspace = { id: string; name: string; logo: string | null };
@@ -33,8 +34,8 @@ function SessionGroup(props: RowsProps & { group: SessionRailGroup }) {
     finally { setBusy(false); }
   };
   return <>
-    <AccountHeader id={props.group.context_id} email={props.group.email} initialName={props.group.org_name ?? props.group.org} name={t("shell.workspaces.session_group", { email: props.group.email ?? "", name: props.group.org_name ?? props.group.org })} extra={false} signedIn>
-      <p class="m-0 truncate px-2 py-1 text-caption text-neutral-500">{props.group.org_name ?? props.group.org}</p>
+    <AccountHeader id={props.group.context_id} email={props.group.email} initialName={props.group.org_name ?? props.group.org} name={t("shell.workspaces.session_group", { email: props.group.email ?? "", name: props.group.org_name ?? props.group.org })} group={{ context: props.group.context_id, org: props.group.org, name: props.group.org_name ?? props.group.org, plan: props.group.plan }} send={props.sessions.sessions.sendOptional} attention={!!props.group.empty_reason} extra={false} signedIn>
+      <Show when={props.group.empty_reason}>{(reason) => <p role="status" class="m-0 px-2 py-1 text-caption text-neutral-500">{t(emptyReasonKey(reason()))}</p>}</Show>
       <button role="menuitem" class={ITEM_DE_MENU} disabled={busy()} onClick={() => void close({ context: props.group.context_id })}>{t("shell.workspaces.close_org", { name: props.group.org_name ?? props.group.org })}</button>
       <button role="menuitem" class={ITEM_DE_MENU} disabled={busy()} onClick={() => void close({ email: props.group.email, family: props.group.family })}>{t("shell.workspaces.close_email", { email: props.group.email ?? "" })}</button>
       <Show when={error()}><p role="alert" class="m-0 px-2 py-1 text-caption text-error-strong">{t("shell.workspaces.sessions_failed")}</p></Show>
