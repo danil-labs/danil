@@ -1,5 +1,6 @@
-type CheckoutState = "creating" | "open" | "completed" | "expired" | "canceled";
-export type CheckoutOutcome = "active" | "processing" | "cancelled" | "expired";
+type CheckoutState = "pending" | "paid" | "active" | "expired" | "canceled" | "error";
+type CheckoutStatus = { state: CheckoutState; terminal: boolean; organization_id?: string };
+export type CheckoutOutcome = { kind: "active"; organizationId?: string } | { kind: "paid" | "processing" | "cancelled" | "expired" | "error" };
 
 export function checkoutReturn(href: string) {
   const url = new URL(href);
@@ -11,31 +12,37 @@ export function checkoutReturn(href: string) {
 }
 
 export async function followCheckout(options: {
-  read: () => Promise<CheckoutState>;
-  active: () => Promise<boolean>;
+  read: () => Promise<CheckoutStatus>;
   wait: (ms: number) => Promise<void>;
   cancelled: boolean;
+  onState?: (state: CheckoutState) => void;
 }): Promise<CheckoutOutcome> {
   let elapsed = 0;
   let delay = 1000;
   const start = Date.now();
+  const budget = options.cancelled ? 10000 : 60000;
   while (true) {
+    let retryAfter = 0;
     try {
-      const state = await options.read();
-      if (state === "expired") return "expired";
-      if (state === "canceled") return "cancelled";
-      if (state === "completed" && await options.active()) return "active";
-      if (options.cancelled) return state === "completed" ? "processing" : "cancelled";
+      const status = await options.read();
+      options.onState?.(status.state);
+      if (status.terminal) {
+        if (status.state === "active") return status.organization_id ? { kind: "active", organizationId: status.organization_id } : { kind: "active" };
+        if (status.state === "canceled") return { kind: "cancelled" };
+        if (status.state === "expired" || status.state === "error" || status.state === "paid") return { kind: status.state };
+        throw new Error("invalid_checkout_status");
+      }
     } catch (error) {
-      const status = (error as { status?: unknown })?.status;
-      if (options.cancelled || (status !== 501 && status !== 503)) throw error;
+      const problem = error as { status?: unknown; retryAfter?: unknown };
+      if (problem?.status !== 429 && problem?.status !== 501 && problem?.status !== 503) throw error;
+      if (typeof problem.retryAfter === "string") retryAfter = Math.max(0, Number(problem.retryAfter) * 1000 || 0);
     }
-    const remaining = 60000 - Math.max(elapsed, Date.now() - start);
-    if (remaining <= 0) return "processing";
-    const step = Math.min(delay, remaining);
+    const remaining = budget - Math.max(elapsed, Date.now() - start);
+    if (remaining <= 0) return { kind: "processing" };
+    const step = Math.min(Math.max(delay * (0.75 + Math.random() * 0.5), retryAfter), remaining);
     await options.wait(step);
     elapsed += step;
     delay = Math.min(delay * 2, 8000);
-    if (elapsed >= 60000 || Date.now() - start >= 60000) return "processing";
+    if (elapsed >= budget || Date.now() - start >= budget) return { kind: "processing" };
   }
 }

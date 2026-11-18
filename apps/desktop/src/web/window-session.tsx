@@ -1,24 +1,22 @@
-import { createRoot, createSignal, For, Show } from 'solid-js';
+import { createRoot, createSignal } from 'solid-js';
 import { render } from 'solid-js/web';
 import { machinesClient } from '@terminus/computers';
-import { aplicarLengua, t } from '../lib/i18n';
+import { aplicarLengua } from '../lib/i18n';
 import { setShellCacheScope } from '../lib/shellCache';
 import { seguirElTema } from '../lib/theme';
-import { Button } from '../ui/Button';
-import { ToastStack } from '../ui/Toast';
 import { platformSession, platformTransport, PlatformSessionError, type PlatformWorkspace, type PlatformProfile } from './platform-session';
 import type { WebSessionDeployment } from './session-config';
 import { readCapabilities, supports, type CapabilitiesSnapshot } from './service-capabilities';
-import { UpdateNotice } from './UpdateNotice';
-import { WorkosAuthPage, signInError } from './auth/workos';
+import { signInError } from './auth/workos';
 import { mountWindow } from './window';
 import { forgetMachineNames } from '../features/machines/known-names';
 import { sessionStorageScope, clearWebCaches } from './session-storage';
 import { organizationSession } from './organization-session';
-import PromoRedeem from '../features/shell/PromoRedeem';
 import './phrases';
 import { sessionStartup } from './startup-reader';
 import { billingV2 } from './billing-v2-api';
+import { webOrganizationSource } from './organizations';
+import SessionGate from './SessionGate';
 
 declare const __DANIL_WEB_RELAY_ORIGINS__: string[];
 const FIRST_RETRY_MS = 1000;
@@ -63,24 +61,7 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
       windowApp = undefined;
       disposeGate?.();
       root.replaceChildren();
-      disposeGate = render(() => <Show when={identified() && !signedOut()} fallback={<><ToastStack><UpdateNotice /></ToastStack><WorkosAuthPage loginUrl={api.loginUrl(home)} busy={!signedOut()} error={returnError} /></>}><main class="flex h-full flex-col gap-4 overflow-y-auto bg-bg p-10 text-neutral-950" data-web-gate="">
-        <ToastStack><UpdateNotice /></ToastStack>
-        <h1 class="m-0 font-display text-lead font-bold">{t('common.brand_name')}</h1>
-        <Show when={busy()}><p role="status">{t('web.auth.waiting')}</p></Show>
-        <Show when={preparing()}><p role="status" data-web-preparing="">{t('web.platform.preparing')}</p></Show>
-        <Show when={error()}><p role="alert">{t(error())}</p><Button disabled={busy()} onClick={() => void load()}>{t('web.computers.retry')}</Button></Show>
-        <Show when={!signedOut() && !busy()}>
-          <Show when={orgNeeded() || noWorkspace() || error()}>
-            <For each={(() => { const s = orgState(); return s.kind === 'ready' ? s.items : []; })()}>{org => <Button variant="secondary" data-web-organization={org.id} aria-pressed={(() => { const s = orgState(); return s.kind === 'ready' && s.active === org.id; })()} onClick={() => void organizations.choose(org.id)}>{org.name}</Button>}</For>
-          </Show>
-          <Show when={!error()}>
-            <p>{t('web.platform.empty')}</p>
-            <For each={rows()}>{row => <Button onClick={() => void choose(row.id)}>{row.name}</Button>}</For>
-          </Show>
-          <PromoRedeem redeem={redeemPromo} />
-          <Button variant="ghost" data-web-sign-out="" onClick={() => void logout()}>{t('web.platform.sign_out')}</Button>
-        </Show>
-      </main></Show>, root);
+      disposeGate = render(() => <SessionGate identified={identified} signedOut={signedOut} busy={busy} preparing={preparing} error={error} orgNeeded={orgNeeded} noWorkspace={noWorkspace} rows={rows} organizations={organizations} orgState={orgState} loginUrl={() => api.loginUrl(home)} returnError={returnError} load={() => void load()} choose={id => void choose(id)} logout={() => void logout()} redeem={redeemPromo} billing={import.meta.env.VITE_DANIL_BILLING_V2 === 'true' ? { api: billingWithoutOrganization, onActive: selectCreatedOrganization } : undefined} />, root);
     }
     function expired() {
       if (stopped || signedOut()) return;
@@ -106,6 +87,17 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
       call: (path, init) => authorized(() => raw.call(path, init)),
       mutation: (path, init) => authorized(() => raw.mutation(path, init)),
     };
+    const billingWithoutOrganization = billingV2(transport, null);
+    let checkoutSelection: { id: string; key: string } | undefined;
+    async function selectCreatedOrganization(id: string) {
+      if (rows().find(row => row.id === selection.active())?.org === id) return;
+      if (checkoutSelection?.id !== id) checkoutSelection = { id, key: crypto.randomUUID() };
+      await webOrganizationSource(transport).select(id, checkoutSelection.key);
+      checkoutSelection = undefined;
+      const target = new URL(home);
+      target.searchParams.set('settings', 'plan');
+      window.location.assign(target.href);
+    }
     const startup = sessionStartup(api, transport);
     const selection = startup.selection;
     const machines = machinesClient({ endpoint: `${options.origin}/v1`, transport, relayOrigins: __DANIL_WEB_RELAY_ORIGINS__ });
@@ -225,7 +217,7 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
         const selected = workspaces.find(row => row.id === selection.active());
         windowApp = mountWindow({ machines, permits, relayOrigin: __DANIL_WEB_RELAY_ORIGINS__[0],
           billing: import.meta.env.VITE_DANIL_BILLING_V2 === 'true' && selected?.org ? {
-            api: billingV2(transport, selected.org), role: () => rows().find(row => row.id === selection.active())?.role ?? '', context: `${person.id}:${selected.org}`,
+            api: billingV2(transport, selected.org), role: () => rows().find(row => row.id === selection.active())?.role ?? '', context: `${person.id}:${selected.org}`, onActive: selectCreatedOrganization,
           } : undefined,
           profile: startup.accountProfile(lifetime.signal), onUnauthorized: expired,
           onUnavailable: () => { setError('web.platform.unavailable'); gate(); later(); },
