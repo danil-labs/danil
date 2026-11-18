@@ -1,11 +1,13 @@
-import { type Computer, linkedWorkspaces, organizationOf, serviceFeatures, systemOf, wakes } from "@terminus/computers";
+import { linkedWorkspaces, organizationOf, serviceFeatures, systemOf, wakes } from "@terminus/computers";
 import type { MachineInfo } from "@terminus/fleet";
+import type { ContextComputer } from "./session-cloud";
 
 /** La fila de una computadora de la cuenta como la lee la flota; `kind` y `organizationId` salen de `/v1/machines`. */
-export const infoOf = (c: Computer): MachineInfo => {
+export const infoOf = (c: ContextComputer): MachineInfo => {
   const os = systemOf(c.os);
   return {
     id: c.computer_id,
+    ...(c.context ? { context: c.context } : {}),
     name: c.name?.trim() || c.computer_id,
     wakes: wakes(c),
     linked: linkedWorkspaces(c),

@@ -22,6 +22,8 @@ import { argsFor } from "./ids.ts";
 import { type MergeContext, encode, encodeEvent, merge } from "./merge.ts";
 import { type Slice, SliceBook, type StorageLike } from "./slices.ts";
 
+import { type ListedWorkspace, listedWorkspaces } from "./workspace-listing.ts";
+
 type Row = Record<string, unknown>;
 
 /** `outdated`: su motor habla otro contrato, sabido por el plano de control. `linked`: `null` enseña todos sus workspaces. */
@@ -44,10 +46,11 @@ export type MachineInfo = {
   organization?: { id: string; workspaces: readonly { id: string; name: string }[] } | null;
   kind?: string | null;
   organizationId?: string | null;
+  context?: string;
 };
 
 /** Un workspace que contestó una máquina en `list_workspaces`. */
-export type Listed = { id: string; name: string };
+export type Listed = ListedWorkspace;
 
 /** Si `info` atiende `workspace` por una organización, según su fila. */
 const serves = (info: MachineInfo | undefined, workspace: string): boolean => !!info?.organization?.workspaces.some((w) => w.id === workspace);
@@ -183,7 +186,7 @@ export class Fleet {
     if (this.closed) return;
     const next = new Map(list.filter((m) => m.id !== this.self).map((m) => [m.id, normalized(m)]));
     for (const [id, member] of [...this.members])
-      if (!next.has(id)) {
+      if (!next.has(id) || next.get(id)?.context !== member.info.context) {
         this.drop(member);
         this.members.delete(id);
         this.book.forget(id);
@@ -285,13 +288,8 @@ export class Fleet {
 
   /** Cada lectura de `list_workspaces` de otra máquina, sea de quien sea, queda como su lista. */
   private noteListing(machine: string, value: unknown) {
-    const rows = (value as { workspaces?: unknown } | null)?.workspaces;
-    if (!Array.isArray(rows)) return;
-    this.setListing(machine, rows.flatMap((w) => {
-      const id = (w as { id?: unknown } | null)?.id;
-      const name = (w as { name?: unknown } | null)?.name;
-      return typeof id === "string" && id ? [{ id, name: typeof name === "string" && name.trim() ? name : id }] : [];
-    }));
+    const rows = listedWorkspaces(value);
+    if (rows) this.setListing(machine, rows);
   }
 
   /** Las máquinas `kind=organization` de `organization`, según su fila de `/v1/machines`. */
@@ -310,7 +308,7 @@ export class Fleet {
       const listed = this.listings.get(id);
       if (!listed) continue;
       settled = true;
-      for (const w of listed) if (!found.has(w.id)) found.set(w.id, w);
+      for (const w of listed) if ((!w.account || w.account.org === organization) && !found.has(w.id)) found.set(w.id, w);
     }
     return settled ? [...found.values()] : null;
   }
@@ -550,7 +548,7 @@ export class Fleet {
       return Promise.reject(error);
     }
     if (key === null) return Promise.reject(new FleetError("unknown_machine", envelope.machine));
-    const id = `${envelope.machine}\u0000${key}`;
+    const id = `${envelope.machine}\u0000${this.info(envelope.machine)?.context ?? ""}\u0000${key}`;
     const running = this.inflight.get(id);
     if (running) return running;
     const run = this.readNow(envelope, key).finally(() => this.inflight.delete(id));
@@ -633,7 +631,8 @@ export class Fleet {
     if (!this.members.has(envelope.machine)) return null;
     // La llave es la lectura como la entiende esa máquina: las pestañas de otra no la cambian.
     const args = this.argsFor(envelope.machine, envelope.args ?? {});
-    return JSON.stringify([envelope.command, envelope.workspace, args]);
+    const scope = this.info(envelope.machine)?.context;
+    return JSON.stringify([...(scope ? [scope] : []), envelope.command, envelope.workspace, args]);
   }
 
   private async readNow(envelope: Envelope, key: string): Promise<Slice> {
@@ -651,6 +650,7 @@ export class Fleet {
     let slice: Slice;
     try {
       const { value, cached } = await this.send(envelope);
+      if (this.members.get(machine) !== member) throw new FleetError("unknown_machine", machine);
       const at = cachedAt(cached);
       slice = { machine, status: cached ? "cached" : "ok", has: true, value, at: at ?? Date.now() };
       if (envelope.command === "list_workspaces" && !cached) this.noteListing(machine, value);
@@ -714,6 +714,7 @@ export class Fleet {
       }
     };
     const result = await attempt(false);
+    if (this.members.get(machine) !== member) throw new FleetError("unknown_machine", machine);
     if (!result.cached && !result.deferred) this.answered(member);
     return { value: this.linkedOnly(member, command, result.value), cached: result.cached };
   }

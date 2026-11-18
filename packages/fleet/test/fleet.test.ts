@@ -1056,3 +1056,62 @@ test("an explicit journal event sequence survives ID encoding without inventing 
     { name: "chat", payload: { session: "cmp_vm~t1", kind: "delta", text: "second" } },
   ]); fleet.close();
 });
+
+test("changing a machine context replaces its link, clears its slices and rejects a late response", async () => {
+	const links: ReturnType<typeof fakeLink>[] = [];
+	const fleet = new Fleet({
+		self: "self",
+		connect: () => {
+			const link = fakeLink({
+				delay: links.length ? 0 : 30,
+				answers: {
+					list_workspaces: {
+						workspaces: [{ id: links.length ? "new" : "old", name: "Remote" }],
+					},
+				},
+			});
+			links.push(link);
+			return link;
+		},
+	});
+	const info = {
+		id: "remote",
+		name: "Remote",
+		wakes: false,
+		kind: "organization",
+		organizationId: "org",
+	};
+	const query = {
+		machine: "remote",
+		workspace: null,
+		command: "list_workspaces",
+	};
+	fleet.setMachines([{ ...info, context: "a" }]);
+	const old = fleet.read(query);
+	fleet.setMachines([{ ...info, context: "b" }]);
+	assert.equal(links[0].closed(), true);
+	assert.equal(fleet.peek(query), null);
+	assert.equal(fleet.available("org"), null);
+	const next = fleet.read(query);
+	await assert.rejects(
+		old,
+		(e: unknown) => (e as FleetError).code === "unknown_machine",
+	);
+	assert.equal((await next).has, true);
+	assert.deepEqual(
+		fleet.available("org")?.map((w) => w.id),
+		["new"],
+	);
+	fleet.close();
+});
+
+test("a sealed workspace on a personal machine does not become an organization source", async () => {
+  const fleet = new Fleet({ self: "self", connect: () => fakeLink({ answers: { list_workspaces: { workspaces: [
+    { id: "sealed", name: "Sealed", account: { org: "org", account_id: "42" } },
+  ] } } }) });
+  fleet.setMachines([{ id: "personal", name: "Personal", wakes: false, context: "a", kind: "personal" }]);
+  await fleet.read({ machine: "personal", workspace: null, command: "list_workspaces" });
+  assert.equal(fleet.available("org"), null);
+  assert.deepEqual(fleet.organizationMachines("org"), []);
+  fleet.close();
+});

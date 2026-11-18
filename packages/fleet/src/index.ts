@@ -4,3 +4,5 @@ export { type Envelope, type FleetConfig, type FleetEvent, type Link, type Liste
 export { OWN_KEYS, SEP, SPREAD_KEYS, argsFor, unwrap, wrap } from "./ids.ts";
 export { type MergeContext, AttentionBook, encode, encodeEvent, merge, registryRow } from "./merge.ts";
 export { type Slice, type SliceStatus, type StorageLike, SAVE_EVERY, SLICES_KEY, SliceBook } from "./slices.ts";
+
+export { listedWorkspaces } from "./workspace-listing.ts";

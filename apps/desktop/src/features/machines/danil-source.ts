@@ -1,6 +1,6 @@
-import type { Fleet, Listed } from "@terminus/fleet";
+import { type Fleet, type Listed, listedWorkspaces } from "@terminus/fleet";
 import { createRoot, createSignal } from "solid-js";
-import { availableInContext, contextSourceMatches } from "./context-source.ts";
+import { availableInContext } from "./context-source.ts";
 import { rememberMachineNames } from "./known-names.ts";
 
 /**
@@ -32,14 +32,7 @@ export function machinesListed(next: Fleet) {
 
 /** Una respuesta de `list_workspaces`, tolerante: solo filas con `id`. */
 export function listedOf(value: unknown): Listed[] | null {
-  const rows = (value as { workspaces?: unknown } | null)?.workspaces;
-  if (!Array.isArray(rows)) return null;
-  return rows.flatMap((w) => {
-    const id = (w as { id?: unknown } | null)?.id;
-    if (typeof id !== "string" || !id) return [];
-    const name = (w as { name?: unknown }).name;
-    return [{ id, name: typeof name === "string" && name.trim() ? name : id }];
-  });
+  return listedWorkspaces(value);
 }
 
 /** Lo que contestó `machine` en `list_workspaces` (la web lo atribuye desde `webListing`). */
@@ -70,8 +63,9 @@ export function readDanil(organization: string | null): Promise<void> {
   if (running) return running;
   const read = Promise.all(
     current.organizationMachines(organization).map(async (machine) => {
+      const owner = current.info(machine)?.context;
       const slice = await current.read({ machine, workspace: null, command: "list_workspaces" }).catch(() => null);
-      if (slice?.has && fleet === current) noteListing(machine, slice.value);
+      if (slice?.has && fleet === current && owner === current.info(machine)?.context) noteListing(machine, slice.value);
     }),
   ).then(() => undefined);
   reading.set(organization, read);
@@ -94,5 +88,10 @@ export function danilAvailableContext(organization: string, context: string): Li
 }
 
 export function readDanilContext(organization: string, context: string): Promise<void> {
-  return contextSourceMatches(fleet, organization, context) ? readDanil(organization) : Promise.resolve();
+  const current = fleet;
+  if (!current) return Promise.resolve();
+  return Promise.all(current.machines().filter((m) => m.kind === "organization" && m.organizationId === organization && m.context === context).map(async (m) => {
+    const reply = await current.read({ machine: m.id, workspace: null, command: "list_workspaces" }).catch(() => null);
+    if (reply?.has && fleet === current && current.info(m.id)?.context === context) noteListing(m.id, reply.value);
+  })).then(() => undefined);
 }

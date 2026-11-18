@@ -40,7 +40,7 @@ export function createSessionContexts(invoke: ContextInvoke, changed: () => void
         if (read !== epoch) return;
       }
       families = status.sessions ?? [];
-      empty.update(status);
+      empty.update({ ...status, removed: status.removed?.map((item) => ({ ...item, org: groups?.find((g) => g.context_id === item.context_id)?.org_name ?? item.org })) });
       groups = contextGroups(status)?.filter((g) => !empty.excludes(g.context_id)) ?? null;
       unsupported = false;
       notify();
@@ -86,7 +86,7 @@ export function createSessionContexts(invoke: ContextInvoke, changed: () => void
     ready: () => ready, connected: () => connected,
     groups: () => unsupported ? null : groups,
     families: () => families,
-    emptyReason: empty.reason, removed: empty.removed,
+    emptyReason: empty.reason, removed: empty.removed, dismissRemoved: (context: string) => { empty.dismiss(context); changed(); },
     addAccount: async () => {
       let result: { error?: string | null };
       try { result = await invoke("danil_sign_in", { mode: "add" }); }

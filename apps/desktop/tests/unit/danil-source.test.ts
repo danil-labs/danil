@@ -1,12 +1,12 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { Fleet, type MachineInfo } from '../../../../packages/fleet/src/index.ts';
-import { danilAvailable, danilMachines, isDanilWorkspace, listedOf, noteListing, readDanil, setDanilFleet } from '../../src/features/machines/danil-source.ts';
+import { danilAvailable, danilMachines, isDanilWorkspace, listedOf, noteListing, readDanil, readDanilContext, setDanilFleet } from '../../src/features/machines/danil-source.ts';
 
 const org: MachineInfo = { id: 'cmp_org', name: 'Servidor Acme', wakes: false, kind: 'organization', organizationId: 'org_A' };
 const personal: MachineInfo = { id: 'cmp_vm', name: 'Danil VM', wakes: false, kind: 'personal' };
 
-function fleetWith(answers: Record<string, unknown>) {
+function fleetWith(answers: Record<string, unknown>, machines: MachineInfo[] = [personal, org]) {
   const reads: string[] = [];
   const fleet = new Fleet({ connect: () => ({}) as never });
   (fleet as unknown as { add(info: MachineInfo): void }).add = function (this: Fleet, info: MachineInfo) {
@@ -16,7 +16,7 @@ function fleetWith(answers: Record<string, unknown>) {
     reads.push(`${envelope.machine} ${envelope.command}`);
     return { machine: envelope.machine, status: 'ok', has: true, value: answers[envelope.machine], at: 0 };
   }) as Fleet['read'];
-  fleet.setMachines([personal, org]);
+  fleet.setMachines(machines);
   return { fleet, reads };
 }
 
@@ -53,5 +53,19 @@ test('a local workspace is never Danil, so it never offers to sign in; one an or
   assert.equal(isDanilWorkspace('ws_acme'), true);
   assert.equal(isDanilWorkspace('mine'), false, 'what a personal machine lists stays local');
   assert.equal(isDanilWorkspace('created_here'), false);
+  setDanilFleet(null);
+});
+
+
+test('a context reads only the organization machine of its own organization', async () => {
+  const { fleet, reads } = fleetWith({}, [
+    { ...personal, context: 'a' }, { ...org, context: 'a' },
+    { ...org, id: 'other-org', organizationId: 'org_B', context: 'a' },
+    { ...org, id: 'other-context', organizationId: 'org_C', context: 'b' },
+  ]);
+  setDanilFleet(fleet);
+  await readDanilContext('org_A', 'a');
+  await readDanilContext('org_C', 'a');
+  assert.deepEqual(reads, ['cmp_org list_workspaces']);
   setDanilFleet(null);
 });
