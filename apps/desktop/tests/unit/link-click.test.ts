@@ -21,13 +21,13 @@ before(async () => {
   ({ clicEnEnlaceWeb } = await import("../../src/lib/links.ts"));
 });
 
-function clic(mod: { metaKey?: boolean; ctrlKey?: boolean; shiftKey?: boolean }, mac: boolean) {
+function clic(mod: { metaKey?: boolean; ctrlKey?: boolean; shiftKey?: boolean }, mac: boolean, destino = DESTINO) {
   const fuera: string[] = [];
   const oir = (e: Event) => fuera.push((e as CustomEvent<string>).detail);
   window.addEventListener("harness:abrir-fuera", oir);
   let panel = 0;
   const e = new window.MouseEvent("click", { bubbles: true, cancelable: true, ...mod });
-  clicEnEnlaceWeb(e, DESTINO, () => panel++, mac);
+  clicEnEnlaceWeb(e, destino, () => panel++, mac);
   window.removeEventListener("harness:abrir-fuera", oir);
   return { fuera, panel, navega: !e.defaultPrevented };
 }
@@ -70,6 +70,12 @@ test("los hosts parecidos y las demás direcciones conservan el selector", () =>
       window.removeEventListener("harness:abrir-sitio", local);
     }
   }
+});
+
+test("los hosts parecidos conservan Ctrl y Cmd para abrir fuera", () => {
+  const destino = "https://localhost.example/";
+  assert.deepEqual(clic({ ctrlKey: true }, false, destino), { fuera: [destino], panel: 0, navega: false });
+  assert.deepEqual(clic({ metaKey: true }, true, destino), { fuera: [destino], panel: 0, navega: false });
 });
 
 test("Ctrl+clic fuera de macOS abre en el navegador y no el panel", () => {
