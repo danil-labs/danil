@@ -13,5 +13,6 @@ test("auth page emits both system themes, local fonts and the shared atoms", () 
   assert.match(css, /font-family: "Geist"/); assert.match(css, /font-family: "Bricolage Grotesque"/);
   assert.match(css, /accent-color: var\(--color-primary\)/);
   assert.match(css, /focus-visible/);
+  assert.match(css, /\.auth-button-secondary \{ background: var\(--color-surface-raised\);.*border-color: var\(--color-border-strong\)/);
 });
 test("missing source themes cannot silently produce a divergent auth page", () => { assert.throws(() => generateAuthPage(""), /Missing theme/); });

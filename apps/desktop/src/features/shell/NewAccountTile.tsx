@@ -11,8 +11,8 @@ export function NewAccountTile(props: { id: string; children: JSX.Element }) {
     const motion = window.matchMedia("(prefers-reduced-motion: reduce)");
     setReduced(motion.matches); setFresh(true);
     const finish = () => setFresh(false);
-    const changed = () => { setReduced(motion.matches); if (motion.matches) clearTimeout(timer); };
-    const timer = motion.matches ? undefined : setTimeout(finish, 2180 + index * 30);
+    const changed = () => setReduced(motion.matches);
+    const timer = setTimeout(finish, 2180 + index * 30);
     motion.addEventListener("change", changed);
     onCleanup(() => { clearTimeout(timer); motion.removeEventListener("change", changed); });
   });

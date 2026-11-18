@@ -40,7 +40,7 @@ h1, h2 { font-family: var(--font-display); }
 .auth-button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 32px; padding: 6px 12px; border: 1px solid transparent; border-radius: var(--radius-md); font: inherit; font-weight: 500; background: var(--color-primary); color: var(--action-text); cursor: pointer; }
 .auth-button:hover { background: var(--color-primary-dark); }
 .auth-button:disabled { opacity: .5; cursor: default; }
-.auth-button-secondary { background: var(--color-surface); color: var(--color-neutral-950); border-color: var(--color-border); }
+.auth-button-secondary { background: var(--color-surface-raised); color: var(--color-neutral-950); border-color: var(--color-border-strong); }
 .auth-button-secondary:hover { background: var(--color-neutral-200); }
 .auth-checkbox { accent-color: var(--color-primary); width: 16px; height: 16px; }
 .auth-chip { display: inline-flex; align-items: center; gap: 6px; padding: 2px 10px; border: 1px solid var(--color-border); border-radius: 9999px; background: var(--color-surface-muted); color: var(--color-neutral-700); font-size: 11px; font-weight: 560; }

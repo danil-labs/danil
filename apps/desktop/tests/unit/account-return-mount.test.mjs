@@ -42,12 +42,35 @@ test("account return opens first, announces counts, retries errors and keeps can
   const tile = root.querySelector('[data-workspace-tile="first"]');
   assert.ok(tile.closest("[data-account-new][data-reduced-motion]"));
   assert.equal(app.w.getComputedStyle(tile.firstElementChild).animation, "none");
-  await sleep(50); assert.ok(tile.closest("[data-account-new]"), "reduced motion keeps the halo until click");
-  tile.click(); assert.equal(tile.closest("[data-account-new]"), null);
+  await sleep(50); assert.ok(tile.closest("[data-account-new]"), "the reduced-motion halo is initially visible");
+  await sleep(2200); assert.equal(tile.closest("[data-account-new]"), null, "the halo ends without a click even with reduced motion");
   mounted.dispose(); root.replaceChildren();
   app.w.matchMedia = () => ({ matches: false, addEventListener() {}, removeEventListener() {} });
   const normal = mountReturn(root); t.after(normal.dispose);
   add(); normal.success(); assert.ok(await until(() => normal.opened.length === 1));
   assert.match(app.w.getComputedStyle(root.querySelector('[data-workspace-tile="first"] > span')).animation, /(?:180ms|\.18s)/);
+
+  normal.dispose(); root.replaceChildren();
+  const limit = mountReturn(root); t.after(limit.dispose);
+  add(); limit.fail("too_many_contexts");
+  assert.ok(await until(() => doc.body.textContent.includes("Llegaste al máximo de 20")));
+  const alert = [...doc.querySelectorAll('[role="alert"]')].find((row) => row.textContent.includes("Llegaste al máximo de 20"));
+  assert.ok(alert);
+  assert.ok(!alert.textContent.includes("Revisa tu conexión"));
+  assert.ok(!alert.textContent.includes("Intentar de nuevo"));
+  assert.ok([...alert.querySelectorAll("p")].find((p) => p.textContent.startsWith("Llegaste al máximo de 20")).classList.contains("text-neutral-500"));
+  limit.dispose(); root.replaceChildren();
+  for (const [locale, names, expected] of [
+    ["es", ["IYEM", "Danil"], "Agregaste IYEM y Danil"],
+    ["es", ["IYEM", "Danil", "Acme"], "Agregaste IYEM, Danil y Acme"],
+    ["en", ["IYEM", "Danil"], "You added IYEM and Danil"],
+    ["en", ["IYEM", "Danil", "Acme"], "You added IYEM, Danil, and Acme"],
+  ]) {
+    const flow = mountReturn(root, locale);
+    [...root.querySelectorAll("button")].find((b) => b.textContent === (locale === "es" ? "Agregar cuenta u organización" : "Add account or organization")).click();
+    flow.success(names);
+    assert.ok(await until(() => doc.body.textContent.includes(expected)), expected);
+    flow.dispose(); root.replaceChildren();
+  }
 
 });

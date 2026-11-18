@@ -1,3 +1,4 @@
+import { elegirLengua } from "../../src/lib/i18n";
 import "../../src/locales/catalogs";
 import { createSignal } from "solid-js";
 import { render } from "solid-js/web";
@@ -9,7 +10,8 @@ import { accountReturn, setNewAccountTiles } from "../../src/features/shell/acco
 import { createSessionContexts } from "../../src/features/shell/session-contexts";
 import { ToastStack } from "../../src/ui/Toast";
 
-export function mountReturn(root: HTMLElement) {
+export function mountReturn(root: HTMLElement, language = "es") {
+  elegirLengua(language);
   setCapabilities({ nativeWindow: true } as never);
   accountReturn.clear(); setNewAccountTiles([]);
   let finish: (value: unknown) => void = () => {};
@@ -27,7 +29,7 @@ export function mountReturn(root: HTMLElement) {
   const dispose = render(() => <><ToastStack /><SessionAddEntries sessions={rail} signedIn onStep={() => {}} onClose={() => closes++} /><AccountReturnFeedback sessions={rail} onOpen={(id) => opened.push(id)} /><NewAccountTile id="first"><button data-workspace-tile="first"><span class="danil-mark" data-active="">First</span></button></NewAccountTile></>, root);
   return {
     opened, dispose, starts: () => starts, closes: () => closes,
-    success: () => { status = { state: "connected", sessions: [{ family: "new", email: "new@example.com", contexts: [{ context_id: "ctx", org: "org", org_name: "Acme", plan: "paid" }] }] }; finish(status); },
+    success: (names = ["Acme"]) => { status = { state: "connected", sessions: [{ family: "new", email: "new@example.com", contexts: names.map((name, index) => ({ context_id: `ctx-${index}`, org: `org-${index}`, org_name: name, plan: "paid" })) }] }; finish(status); },
     fail: (detail: string) => reject({ detail }),
   };
 }
