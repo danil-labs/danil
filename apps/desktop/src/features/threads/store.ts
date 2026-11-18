@@ -308,7 +308,14 @@ export function createThreadsStore(deps: {
   }
   return {
     activities: (id: string, visible: readonly Msg[]) => { activityRevision(); return activity.project(deps.scope.workspace(), id, visible); },
-    beginActivity: (id: string, startedAt: number | null) => { if (disposed) return; const thread = untrack(hilos)[id]; assistantHistory.begin(id, thread?.base ?? []); if (activity.begin(deps.scope.workspace(), id, startedAt, thread ? mensajesDelHilo(thread) : id === "" ? [] : null)) activityChanged(); },
+    beginActivity: (id: string, startedAt: number | null, startConfirmed = false) => {
+      if (disposed) return;
+      const thread = untrack(hilos)[id], workspace = deps.scope.workspace();
+      assistantHistory.begin(id, thread?.base ?? []);
+      if (!activity.begin(workspace, id, startedAt, thread ? mensajesDelHilo(thread) : id === "" ? [] : null, startConfirmed)) return;
+      if (startConfirmed && thread) activity.observe(workspace, id, [], thread.vivo);
+      activityChanged();
+    },
     finishActivity: (id: string, workspace = deps.scope.workspace()) => { if (!disposed && activity.finish(workspace, id)) { if (workspace === deps.scope.workspace()) assistantHistory.finish(id); activityChanged(); } },
     rows: hilos, current: hiloAbierto, messages: msgs, loading: cargandoHilo, origins: origenes, offline: apagadas, machineWaits, handovers: traspasos,
     olderAvailable: conAntiguos, recentAvailable: conRecientes, olderStatus: estadoAntiguos, recentTail: colaSuelta,

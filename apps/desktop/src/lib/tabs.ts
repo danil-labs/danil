@@ -358,15 +358,17 @@ export function createTabs(options: { transient?: boolean } = {}) {
     },
     // Cerrar y reabrir la pestaña provisional la movería al final de la tira.
     commitDraft(draft: string, p: { id: string; project: string; titulo: string }) {
-      setOpenTabs((list) => {
-        const i = list.findIndex((x) => x.id === draft);
-        if (i < 0) return list;
-        const copy = [...list];
-        copy[i] = { ...p, clase: "tarea", session: p.id };
-        return copy;
+      batch(() => {
+        setOpenTabs((list) => {
+          const i = list.findIndex((x) => x.id === draft);
+          if (i < 0) return list;
+          const copy = [...list];
+          copy[i] = { ...p, clase: "tarea", session: p.id };
+          return copy;
+        });
+        remapPinned([[draft, p.id]]);
+        if (active() === draft) setActive(p.id);
       });
-      remapPinned([[draft, p.id]]);
-      if (active() === draft) setActive(p.id);
       save();
     },
     openObservability(title: string) {

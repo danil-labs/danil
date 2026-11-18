@@ -530,3 +530,43 @@ test("a rapid next input stays ordered when its fresh history precedes the save 
     assert.deepEqual(f.store.messages().map(row => row.text), ["hola", "respuesta", "qué haces?"]);
   } finally { f.dispose(); }
 });
+
+
+test("runtime start confirmation reaches an existing activity without a timestamp", () => {
+  const f = fixture();
+  try {
+    f.store.beginActivity("s", null);
+    assert.equal(f.store.activities("s", [])[0].startConfirmed, false);
+    f.store.beginActivity("s", null, true);
+    assert.equal(f.store.activities("s", [])[0].startConfirmed, true);
+    assert.equal(f.store.activities("s", [])[0].startedAt, null);
+  } finally { f.dispose(); }
+});
+
+
+test("confirmed start adopts only orphan live output, not durable history", () => {
+  const f = fixture();
+  try {
+    const saved = { ...msg("saved answer"), turno: "saved" };
+    const answer = msg("output before started");
+    f.store.appendPersisted("s", [saved]);
+    f.store.appendLive("s", [answer]);
+    f.store.beginActivity("s", null, true);
+    const activity = f.store.activities("s", f.store.messages())[0];
+    assert.deepEqual(activity.messages, [answer]);
+    assert.equal(activity.observation?.message, answer);
+    assert.equal(activity.startConfirmed, true);
+  } finally { f.dispose(); }
+});
+
+test("pending submission does not adopt earlier orphan output before confirmation", () => {
+  const f = fixture();
+  try {
+    const answer = msg("output before confirmation");
+    f.store.appendLive("s", [answer]);
+    f.store.beginActivity("s", 1_000);
+    assert.deepEqual(f.store.activities("s", f.store.messages())[0].messages, []);
+    f.store.beginActivity("s", null, true);
+    assert.deepEqual(f.store.activities("s", f.store.messages())[0].messages, [answer]);
+  } finally { f.dispose(); }
+});

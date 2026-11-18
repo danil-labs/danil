@@ -2705,12 +2705,12 @@ export default function Chat(props: ChatProps) {
                     <RegistroDeTrabajo
                       observed
                       stopping={Boolean(b().activity?.active) && props.stopping}
-                      latestAction={observedActivityAction(b().activity?.observation?.message, b().activity?.observation?.kind)}
+                      latestAction={observedActivityAction(b().activity?.observation?.message, b().activity?.observation?.kind) ?? (b().activity?.startConfirmed ? { kind: "thinking" } : null)}
                       pasos={activitySteps(b().activity)}
                       razonamiento={b().activity?.messages.flatMap(message => message.razonamiento ?? []) ?? []}
                       corriendo={Boolean(b().activity?.active)}
                       blocked={isCurrentActivity(b().activity) && activityBlocked()}
-                      animando={!(b().activity?.startedAt === null && b().activity?.messages.length === 0) && !props.permission && !props.esperando && !props.reintento && !props.enFondo && !props.machineWait}
+                      animando={Boolean(b().activity?.startConfirmed || !(b().activity?.startedAt === null && b().activity?.messages.length === 0)) && !props.permission && !props.esperando && !props.reintento && !props.enFondo && !props.machineWait}
                       duracion={b().activity?.durationMs == null ? null : formatearDuracion(b().activity!.durationMs!)}
                       abierto={Boolean(trabajos()[`activity:${b().activity?.key ?? ""}`])}
                       onAlternar={(open) => setTrabajos({ ...trabajos(), [`activity:${b().activity?.key ?? ""}`]: open })}

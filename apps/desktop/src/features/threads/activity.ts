@@ -2,7 +2,7 @@ import { observedActivityUpdate, type ActivityObservationKind, type ObservedTurn
 import type { Msg } from "../chat/index.ts";
 import { ActivityAnchor, savedActivityTurn as savedTurn } from "./activityAnchor.ts";
 export type { TurnActivity } from "../../lib/turnActivity.ts";
-type RecordOfActivity = { key: string; active: boolean; startedAt: number | null; saved: Set<string>; baseline: readonly string[] | null; lastObserved: Msg | null; lastObservedKind: ActivityObservationKind | null; anchor: ActivityAnchor; alias?: RecordOfActivity };
+type RecordOfActivity = { key: string; active: boolean; startConfirmed: boolean; startedAt: number | null; saved: Set<string>; baseline: readonly string[] | null; lastObserved: Msg | null; lastObservedKind: ActivityObservationKind | null; anchor: ActivityAnchor; alias?: RecordOfActivity };
 const scopeKey = (workspace: string | null, session: string) => JSON.stringify([workspace, session]);
 const epoch = (value: number | null) => value !== null && Number.isFinite(value) && value > 0 ? value : null;
 /** Projection provenance, never execution state: only explicit lifecycle facts open/close it. */
@@ -12,28 +12,33 @@ export function createActivityProjection() {
   const owners = new WeakMap<Msg, RecordOfActivity>();
   const list = (workspace: string | null, session: string) => records.get(scopeKey(workspace, session)) ?? [];
   const current = (workspace: string | null, session: string) => list(workspace, session).at(-1);
-  function begin(workspace: string | null, session: string, startedAt: number | null, before: readonly Msg[] | null = null) {
+  function begin(workspace: string | null, session: string, startedAt: number | null, before: readonly Msg[] | null = null, startConfirmed = false) {
     const previous = current(workspace, session);
     if (previous?.active) {
-      if (previous.startedAt !== null || epoch(startedAt) === null) return false;
-      previous.startedAt = epoch(startedAt);
-      return true;
+      const confirmed = startConfirmed && !previous.startConfirmed;
+      const timed = previous.startedAt === null && epoch(startedAt) !== null;
+      if (confirmed) previous.startConfirmed = true;
+      if (timed) previous.startedAt = epoch(startedAt);
+      return confirmed || timed;
     }
     const key = scopeKey(workspace, session);
     const known = before?.map(savedTurn).filter((id): id is string => Boolean(id));
     const baseline = before === null || (before.length > 0 && !known?.length) ? null : known ?? [];
-    records.set(key, [...list(workspace, session), { key: `${key}:activity:${++serial}`, active: true, startedAt: epoch(startedAt), saved: new Set(), baseline, lastObserved: null, lastObservedKind: null, anchor: new ActivityAnchor(before) }]);
+    records.set(key, [...list(workspace, session), { key: `${key}:activity:${++serial}`, active: true, startConfirmed, startedAt: epoch(startedAt), saved: new Set(), baseline, lastObserved: null, lastObservedKind: null, anchor: new ActivityAnchor(before) }]);
     return true;
   }
   function observe(workspace: string | null, session: string, before: readonly Msg[], after: readonly Msg[]) {
     const active = current(workspace, session);
+    const saved = new Map(list(workspace, session).flatMap(record => [...record.saved].map(id => [id, record] as const)));
     const positions = new Map(before.map((message, index) => [message, index]));
     after.forEach((message, index) => {
       // Existing objects keep their owner even when deletion shifts their index.
       if (owners.has(message)) return;
       const previous = before[index];
       const inherited = before.length === after.length && !positions.has(message) && previous ? owners.get(previous) : undefined;
-      const owner = inherited?.alias ?? inherited ?? (active?.active ? active : undefined);
+      const known = (message.tramo ? saved.get(message.tramo) : undefined) ?? (message.turno ? saved.get(message.turno) : undefined);
+      const assigned = known ?? inherited;
+      const owner = assigned?.alias ?? assigned ?? (active?.active ? active : undefined);
       if (!owner || positions.has(message)) return;
       owners.set(message, owner);
       if (owner.active) owner.anchor.observe(message, previous);
@@ -79,7 +84,7 @@ export function createActivityProjection() {
       if (!record.active && !output) return [];
       const duration = [...messages].reverse().find(message => message.role === "agent" && message.duration_ms !== undefined)?.duration_ms;
       return [{ key: record.key, anchor: anchor ?? null, anchorIndex: anchor ? visible.indexOf(anchor) : visible.length,
-        active: record.active, startedAt: record.startedAt, durationMs: duration ?? null, messages, observation: record.lastObserved && record.lastObservedKind ? { message: record.lastObserved, kind: record.lastObservedKind } : null }];
+        active: record.active, startConfirmed: record.startConfirmed, startedAt: record.startedAt, durationMs: duration ?? null, messages, observation: record.lastObserved && record.lastObservedKind ? { message: record.lastObserved, kind: record.lastObservedKind } : null }];
     });
   }
   function adopt(workspace: string | null, from: string, to: string) {
@@ -89,6 +94,7 @@ export function createActivityProjection() {
     const draft = previous.at(-1), running = existing.at(-1);
     if (draft?.active && running?.active) {
       running.alias = draft;
+      draft.startConfirmed ||= running.startConfirmed;
       draft.anchor.inherit(running.anchor);
       if (running.lastObserved) { draft.lastObserved = running.lastObserved; draft.lastObservedKind = running.lastObservedKind; }
       for (const id of running.saved) draft.saved.add(id);

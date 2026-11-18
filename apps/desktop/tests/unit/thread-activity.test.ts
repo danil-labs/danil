@@ -307,3 +307,90 @@ test("revalidating cached history moves a recovered activity to its current inpu
   model.reconcile("A", "s", refreshed, later, false);
   assert.equal(model.project("A", "s", later)[0].anchor, answer);
 });
+
+
+test("execution confirmation upgrades a pending activity without inventing a timestamp or output", () => {
+  const model = createActivityProjection();
+  model.begin("A", "s", null);
+  const pending = model.project("A", "s", [])[0];
+  assert.equal(pending.startConfirmed, false);
+  assert.equal(model.begin("A", "s", null, null, true), true);
+  const confirmed = model.project("A", "s", [])[0];
+  assert.equal(confirmed.key, pending.key);
+  assert.equal(confirmed.startConfirmed, true);
+  assert.equal(confirmed.startedAt, null);
+  assert.equal(confirmed.observation, null);
+  assert.deepEqual(confirmed.messages, []);
+  assert.equal(model.begin("A", "s", null, null, true), false);
+  model.begin("A", "s", null);
+  assert.equal(model.project("A", "s", [])[0].startConfirmed, true);
+});
+
+for (const confirmedDraft of [false, true]) test(`adoption preserves execution confirmation from ${confirmedDraft ? "draft" : "runtime"}`, () => {
+  const model = createActivityProjection();
+  model.begin("A", "", null, [], confirmedDraft);
+  model.begin("A", "s", null, [], !confirmedDraft);
+  model.adopt("A", "", "s");
+  const activities = model.project("A", "s", []);
+  assert.equal(activities.length, 1);
+  assert.equal(activities[0].startConfirmed, true);
+  assert.equal(activities[0].startedAt, null);
+});
+
+test("content and history do not replace explicit runtime start confirmation", () => {
+  const model = createActivityProjection();
+  model.begin("A", "s", null);
+  const user = message("hello", { role: "user" });
+  model.observe("A", "s", [], [user]);
+  assert.equal(model.project("A", "s", [user])[0].startConfirmed, false);
+  const history = message("older output", { turno: "old" });
+  model.reconcile("A", "s", [], [history, user], false);
+  assert.equal(model.project("A", "s", [history, user])[0].startConfirmed, false);
+  const thinking = message("", { razonamiento: [{ text: "working" }] });
+  model.observe("A", "s", [user], [user, thinking]);
+  assert.equal(model.project("A", "s", [user, thinking])[0].startConfirmed, false);
+  assert.equal(model.project("A", "s", [user, thinking])[0].startedAt, null);
+});
+
+
+test("a late update owned by a closed activity does not confirm its successor", () => {
+  const model = createActivityProjection();
+  const old = message("old answer");
+  model.begin("A", "s", 1_000);
+  model.observe("A", "s", [], [old]);
+  model.finish("A", "s");
+  model.begin("A", "s", null, [old]);
+  const updated = { ...old, text: "late old answer" };
+  model.observe("A", "s", [old], [updated]);
+  assert.equal(model.project("A", "s", [updated]).at(-1)?.startConfirmed, false);
+});
+
+
+test("replayed content from a closed segment is not a runtime start confirmation", () => {
+  const model = createActivityProjection();
+  const old = message("old answer", { tramo: "segment-A" });
+  model.begin("A", "s", 1_000, [], true);
+  model.observe("A", "s", [], [old]);
+  model.finish("A", "s");
+  model.begin("A", "s", null, [old]);
+  const replay = { ...old };
+  model.observe("A", "s", [], [replay]);
+  assert.equal(model.project("A", "s", [replay]).at(-1)?.startConfirmed, false);
+});
+
+
+for (const field of ["turno", "tramo"] as const) test(`replayed output with a known ${field} keeps its closed owner`, () => {
+  const model = createActivityProjection();
+  const old = message("old output", { [field]: "old-segment" });
+  model.begin("A", "s", 1_000);
+  model.observe("A", "s", [], [old]);
+  const oldKey = model.project("A", "s", [old])[0].key;
+  model.finish("A", "s");
+  model.begin("A", "s", null, [], true);
+  const replay = { ...old };
+  const current = message("new output");
+  model.observe("A", "s", [], [replay, current]);
+  const activities = model.project("A", "s", [replay, current]);
+  assert.deepEqual(activities.find(activity => activity.key === oldKey)?.messages, [replay]);
+  assert.deepEqual(activities.find(activity => activity.active)?.messages, [current]);
+});

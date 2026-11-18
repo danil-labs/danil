@@ -1234,7 +1234,7 @@ export default function App() {
     const id = sessionId();
     return id ? vivas().includes(id) : arrancando();
   };
-  const marcarViva = (id: string, desde?: number) =>
+  const marcarViva = (id: string, desde?: number, startConfirmed = false) =>
     batch(() => {
       const workspace = workspaceActivo();
       if (workspace) liveThreads.add(liveThreadKey(workspace, id));
@@ -1243,7 +1243,7 @@ export default function App() {
       sinDesenlace.delete(id);
       setVivas((v) => (v.includes(id) ? v : [...v, id]));
       setDesdeDeTurno((d) => (id in d || desde === undefined ? d : { ...d, [id]: desde }));
-      threads.beginActivity(id, desdeDeTurno()[id] ?? null);
+      threads.beginActivity(id, desdeDeTurno()[id] ?? null, startConfirmed);
     });
   const marcarQuieta = (id: string) =>
     batch(() => {
@@ -2346,7 +2346,7 @@ export default function App() {
       const nuevas = active.filter((id) => !vivas().includes(id));
       const finished = vivas().filter((id) => !active.includes(id) && !pendingStarts.has(id) && !taskQueues.draining(id));
       for (const id of nuevas) void reponerGates(id);
-      for (const id of active) if (!settlingTurns().includes(id)) { marcarViva(id); handoff.observe({ kind: "started", scope: conversationScope(id) }); }
+      for (const id of active) if (!settlingTurns().includes(id)) { marcarViva(id, undefined, true); handoff.observe({ kind: "started", scope: conversationScope(id) }); }
       for (const id of finished) void settleTurn(id);
     } catch {
       // Un IPC fallido no demuestra que el turno haya terminado.
@@ -2491,7 +2491,7 @@ export default function App() {
           setSettlingTurns((ids) => ids.filter((id) => id !== session));
           finishedTurns.delete(session);
           setEnFondo((ids) => ids.filter((id) => id !== session));
-          marcarViva(session);
+          marcarViva(session, undefined, true);
         }
         if (esDelWorkspaceAbierto(workspace)) void refreshSessionsOnEvent(carpetasDeTarea(session));
       }
@@ -4972,13 +4972,16 @@ export default function App() {
     // Y su borrador: lo que quedó sin mandar sigue con ella.
     drafts.promote(claveBorrador, id);
     if (provisional) {
-      // La fila antes que la pestaña: una pestaña sin fila pide la lista.
-      setNaciendo((ns) =>
-        ns.map((n) => (n.row.id === provisional ? { ...n, row: { ...n.row, id } } : n)),
-      );
-      mudarPestana(provisional, id);
-      pestanas.commitDraft(provisional, { id, project: proyecto, titulo: nacida.titulo });
-      olvidarPestana(provisional);
+      batch(() => {
+        // La fila antes que la pestaña: una pestaña sin fila pide la lista.
+        setNaciendo((ns) =>
+          ns.map((n) => (n.row.id === provisional ? { ...n, row: { ...n.row, id } } : n)),
+        );
+        mudarPestana(provisional, id);
+        pestanas.commitDraft(provisional, { id, project: proyecto, titulo: nacida.titulo });
+        paneles.renameTabs([[provisional, id]]);
+        olvidarPestana(provisional);
+      });
     } else pestanas.ensure({ id, project: proyecto, titulo: "" });
     void reatarVistaPrevia(proyecto, id);
   }
@@ -6652,7 +6655,7 @@ export default function App() {
         onRespuestaRapida={mandarTexto}
         visualScope={JSON.stringify([visualWorkspace, pp.proyecto ?? "", pp.sesion])}
         readVisual={(file) => readChatVisual({ workspace: visualWorkspace, project: pp.proyecto ?? "", session: pp.sesion ?? "" }, file)}
-        openVisual={(file) => openChatVisual({ workspace: visualWorkspace, project: pp.proyecto ?? "", session: pp.sesion ?? "" }, file)}
+        openVisual={capabilities().nativeWindow ? (file) => openChatVisual({ workspace: visualWorkspace, project: pp.proyecto ?? "", session: pp.sesion ?? "" }, file) : undefined}
         onMiniatura={miniaturaDeAdjunto}
         onPreview={previewDeAdjunto}
         onPegarImagen={pegarImagen}
