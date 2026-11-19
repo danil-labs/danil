@@ -17,3 +17,16 @@ export function ReauthNote(props: { reauth?: Capabilities["webReauth"] }) {
     </Show>
   );
 }
+
+/** La cuenta recién creada monta sin workspace: un aviso que no interrumpe hasta que llega. */
+export function WorkspaceNote(props: { preparing?: () => boolean }) {
+  return (
+    <Show when={props.preparing?.()}>
+      <ToastPortal>
+        <Toast data-web-preparing-workspace="">
+          <p class="m-0 text-xs text-neutral-950">{t("web.platform.preparing_workspace")}</p>
+        </Toast>
+      </ToastPortal>
+    </Show>
+  );
+}

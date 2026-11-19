@@ -241,11 +241,11 @@ test('a window without a session shows the original WorkOS sign-in screen and it
   assert.equal(screen.querySelector('h1').textContent, 'Danil');
   assert.equal(screen.querySelector('h2').textContent, 'Inicia sesión en Danil');
   assert.ok(screen.textContent.includes('Entra con tu cuenta de Danil.'));
-  // P6: cualquiera puede darse de alta; nada de pedir acceso ni del código o la contraseña.
+  // P6: cualquiera puede darse de alta; nada de pedir acceso. El aviso del código y la contraseña se queda.
   assert.equal(screen.querySelector('[data-access-request]'), null);
   assert.ok(!screen.textContent.includes('Solicitar acceso'), screen.textContent);
   assert.ok(!screen.textContent.includes('hola@danil.ai'), screen.textContent);
-  assert.ok(!/contraseña|código/i.test(screen.textContent), screen.textContent);
+  assert.ok(screen.textContent.includes('Puedes entrar con un código que te enviamos por correo.'), 'the password hint stays (product-lead, 2026-11-19)');
   assert.equal(screen.querySelector('[aria-busy]'), null);
   const go = [...screen.querySelectorAll('a')].find(a => a.textContent === 'Continuar con tu correo');
   assert.ok(go, 'the original «Continuar con tu correo» button');
@@ -315,6 +315,57 @@ for (const end of ['sign out', 'exhausted']) test(`identity retried on the first
   assert.deepEqual(app.failures, []);
 });
 
+test('sign out stays active and stable through the retries, and a click during a read cancels and signs out', async t => {
+  const realTimeout = globalThis.setTimeout;
+  globalThis.setTimeout = (run, ms, ...rest) => realTimeout(run, ms >= 1000 ? 150 : ms, ...rest);
+  t.after(() => { globalThis.setTimeout = realTimeout; });
+  let meCalls = 0;
+  let hold = false;
+  let release;
+  const calls = [];
+  const fetcher = async (input, init) => {
+    const url = new URL(String(input));
+    if (url.origin === 'http://localhost' && url.pathname.includes('/assets/')) return new Response('');
+    calls.push(`${init?.method ?? 'GET'} ${url.pathname}`);
+    if (['/v1/capabilities', '/v1/identity/organizations', '/v1/machines'].includes(url.pathname)) return new Response(null, { status: 404 });
+    if (url.pathname === '/v1/identity/me') {
+      meCalls++;
+      if (hold) await new Promise(resolve => { release = resolve; });
+      return hold ? Response.json({ id: 'user_A', name: 'Operator', workspace: '11', organizations: [] })
+        : new Response(JSON.stringify({ code: 'forbidden' }), { status: 403, headers: { 'content-type': 'application/problem+json' } });
+    }
+    if (url.pathname === '/v1/workspaces') return Response.json({ items: [{ id: '11', org: 'org_A', name: 'Alpha', role: 'owner' }], next_cursor: null });
+    if (url.pathname === '/v1/identity/csrf') return Response.json({ csrf_token: 'bound' });
+    if (url.pathname === '/v1/identity/logout') return new Response(null, { status: 204 });
+    throw new Error(`Unexpected request ${url.pathname}`);
+  };
+  fetcher.__jsdomApp = true; globalThis.fetch = fetcher;
+  const app = await open(t, 'listo', 'loading-sign-out-stable', {}, undefined, {}, { web: true });
+  const doc = app.w.document;
+  await until(() => doc.querySelector('[data-web-loading] [data-web-sign-out]'));
+  const screen = doc.querySelector('[data-web-loading]');
+  const button = screen.querySelector('[data-web-sign-out]');
+  const seen = meCalls;
+  await until(() => meCalls >= seen + 2);
+  assert.equal(doc.querySelector('[data-web-loading]'), screen, 'the loading screen is not painted again on each retry');
+  assert.equal(screen.querySelector('[data-web-sign-out]'), button, 'the same button keeps its place and focus');
+  assert.equal(button.disabled, false, 'sign out stays active during the retries');
+  assert.equal(screen.getAttribute('aria-busy'), null);
+  hold = true;
+  await until(() => release);
+  assert.equal(button.disabled, false, 'still active while a read is in flight');
+  button.click();
+  await until(() => doc.querySelector('a[href*="/v1/identity/login"]'));
+  assert.ok(calls.includes('POST /v1/identity/logout'));
+  const after = meCalls;
+  release();
+  await new Promise(resolve => realTimeout(resolve, 400));
+  assert.equal(doc.querySelector('[data-tira]'), null, 'the late identity reply does not mount the window');
+  assert.equal(meCalls, after, 'no retry after signing out');
+  assert.ok(doc.querySelector('a[href*="/v1/identity/login"]'));
+  assert.deepEqual(app.failures, []);
+});
+
 // P1: identity crea la organización Free al darse de alta y workspaces la tiene ~40 s después.
 test('a brand-new account enters the window at once, without onboarding, and adopts its workspace in the background', async t => {
   const { engine } = await import('../helpers/fake-relay.mjs');
@@ -344,6 +395,9 @@ test('a brand-new account enters the window at once, without onboarding, and ado
   assert.equal(doc.querySelector('[data-web-gate]'), null, 'no blocking screen');
   assert.equal(doc.querySelector('[data-web-onboarding]'), null, 'no «Crea tu workspace» onboarding on the web');
   assert.ok(!doc.body.textContent.includes('Preparando tu espacio'));
+  await until(() => doc.querySelector('[data-web-preparing-workspace]'));
+  assert.equal(doc.querySelector('[data-web-preparing-workspace]').getAttribute('role'), 'status', 'a notice that does not interrupt');
+  assert.equal(doc.querySelector('[data-web-preparing-workspace]').textContent, 'Preparando tu workspace…');
   const meBefore = calls.filter(call => call === 'GET /v1/identity/me').length;
   await until(() => calls.filter(call => call === 'GET /v1/identity/me').length > meBefore);
   const tira = doc.querySelector('[data-tira]');
@@ -351,6 +405,7 @@ test('a brand-new account enters the window at once, without onboarding, and ado
   doc.querySelector('[data-profile-menu] button').click();
   await until(() => [...doc.querySelectorAll('button[aria-pressed="true"]')].some(b => b.textContent === 'Mi espacio'));
   assert.equal(doc.querySelector('[data-tira]'), tira, 'the same window stays mounted, without reloading');
+  await until(() => !doc.querySelector('[data-web-preparing-workspace]'));
   assert.equal(doc.querySelector('[data-web-gate]'), null);
   assert.equal(doc.querySelector('[data-web-onboarding]'), null);
   assert.deepEqual(app.failures, []);
@@ -553,15 +608,15 @@ const navigations = app => app.failures.filter(f => f.includes('Not implemented:
 const others = app => app.failures.filter(f => !f.includes('Not implemented: navigation'));
 
 /** Una cuenta nueva sin workspace; `select` contesta lo que diga la prueba y el canje exige contexto. */
-function newAccount({ orgs = [NEW_ORG], orgsAfter, after = edge => edge.listed > 1, machines, select = () => Response.json({ organization: NEW_ORG, workspace: null }) } = {}) {
-  const edge = { calls: [], redeemed: [], selected: null, listed: 0 };
+function newAccount({ orgs = [NEW_ORG], orgsAfter, after = edge => edge.listed > 1, machines, select = () => Response.json({ organization: NEW_ORG, workspace: null }), me = () => ({ id: 'user_N', name: 'New', workspace: null, organizations: [] }) } = {}) {
+  const edge = { calls: [], redeemed: [], selected: null, listed: 0, me: 0 };
   const fetcher = async (input, init) => {
     const url = new URL(String(input));
     if (url.origin === 'http://localhost' && url.pathname.includes('/assets/')) return new Response('');
     edge.calls.push(`${init?.method ?? 'GET'} ${url.pathname}`);
     if (url.pathname === '/v1/capabilities') return Response.json(machines ? { ...ORG_CAPS, items: [...ORG_CAPS.items, { name: 'machines', version: 1, status: 'available' }] } : ORG_CAPS);
     if (url.pathname === '/v1/machines') return machines ? machines(edge) : new Response(null, { status: 404 });
-    if (url.pathname === '/v1/identity/me') return Response.json({ id: 'user_N', name: 'New', workspace: null, organizations: [] });
+    if (url.pathname === '/v1/identity/me') { edge.me++; return Response.json(me(edge)); }
     if (url.pathname === '/v1/identity/csrf') return Response.json({ csrf_token: 'bound' });
     if (url.pathname === '/v1/identity/organizations') {
       edge.listed++;
@@ -590,6 +645,19 @@ test('Q1: a new account with one organization and none active selects it by itse
   await until(() => edge.selected === 'org_N');
   assert.equal(edge.calls.filter(c => c === 'POST /v1/identity/organizations/select').length, 1);
   assert.deepEqual(navigations(app), [], 'no sign-in');
+  assert.deepEqual(others(app), []);
+});
+
+test('Q1b: when me returns the selected organization as active the page reloads once, without a loop', async t => {
+  const edge = newAccount({ me: edge => ({ id: 'user_N', name: 'New', workspace: null, organizations: edge.selected ? [NEW_ORG] : [], active_organization_id: edge.selected }) });
+  const app = await open(t, 'listo', 'h2-q1b', {}, undefined, {}, { web: true });
+  await until(() => edge.selected === 'org_N');
+  await until(() => navigations(app).length === 1);
+  const me = edge.me;
+  await new Promise(resolve => setTimeout(resolve, 2500));
+  assert.equal(navigations(app).length, 1, 'one reload when the personal organization is chosen');
+  assert.equal(edge.me, me, 'nothing keeps polling after the reload');
+  assert.equal(edge.calls.filter(c => c === 'POST /v1/identity/organizations/select').length, 1);
   assert.deepEqual(others(app), []);
 });
 

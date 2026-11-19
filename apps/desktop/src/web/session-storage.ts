@@ -12,7 +12,7 @@ export const clearWebCaches = (store: BrowserCacheStorage) => clearPrefix(store,
 
 export function sessionStorageScope(store: BrowserCacheStorage, person: string, workspace: string) {
   const personPrefix = `danil.web.${person}.`;
-  const prefix = `${personPrefix}${workspace}.`;
+  let prefix = `${personPrefix}${workspace}.`;
   let revoked = false;
   return {
     storage: {
@@ -21,5 +21,7 @@ export function sessionStorageScope(store: BrowserCacheStorage, person: string, 
       removeItem: (key: string) => store.removeItem(prefix + key),
     },
     clear() { revoked = true; clearPrefix(store, personPrefix); },
+    /** Una cuenta nueva monta sin workspace; al llegar, lo que se lee y guarda va bajo él. */
+    rescope(next: string) { prefix = `${personPrefix}${next}.`; },
   };
 }

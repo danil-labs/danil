@@ -13,7 +13,7 @@ import type { MachineRow, MachineStatus } from "./SyncNote";
 import { type BrowserHost, createWebTransport } from "./transport";
 
 declare const __TERMINUS_VERSION__: string;
-type Base = { machines: ReturnType<typeof machinesClient>; relayOrigin: string; permits: (name: string) => boolean; organizations?: Capabilities["organizations"]; promo?: Capabilities["webPromo"]; groupAccount?: Capabilities["groupAccount"]; reauth?: Capabilities["webReauth"]; onUnauthorized: () => void; profile: AccountProfileSource; services: Pick<Capabilities, "webWorkspaces" | "danilCredits">; onUnavailable: () => void; };
+type Base = { machines: ReturnType<typeof machinesClient>; relayOrigin: string; permits: (name: string) => boolean; organizations?: Capabilities["organizations"]; promo?: Capabilities["webPromo"]; groupAccount?: Capabilities["groupAccount"]; reauth?: Capabilities["webReauth"]; preparing?: () => boolean; onUnauthorized: () => void; profile: AccountProfileSource; services: Pick<Capabilities, "webWorkspaces" | "danilCredits">; onUnavailable: () => void; };
 const Picker = lazy(() => import("../features/machines/MachinePicker").then(m => ({ default: m.MachinePicker })));
 const AccountMachines = lazy(() => import("../features/machines/AccountMachines"));
 /** Another machine's slice changed: the window rereads just that. */
@@ -175,7 +175,7 @@ export function mountWindow(base: Base, mounted: Mounted) {
     if (stopped) disposeApp();
   }).catch(base.onUnavailable);
   window.addEventListener("pagehide", () => fleet.close(), { once: true });
-  void Promise.all([import("solid-js/web"), import("./SyncNote"), import("./UpdateNotice"), import("./phrases"), import("./ReauthNote")]).then(([{ render }, { SyncNote }, { UpdateNotice }, , { ReauthNote }]) => {
+  void Promise.all([import("solid-js/web"), import("./SyncNote"), import("./UpdateNotice"), import("./phrases"), import("./ReauthNote")]).then(([{ render }, { SyncNote }, { UpdateNotice }, , { ReauthNote, WorkspaceNote }]) => {
     if (stopped) return;
     const layer = document.createElement("div");
     noticeLayer = layer;
@@ -183,7 +183,7 @@ export function mountWindow(base: Base, mounted: Mounted) {
     disposeNotice = render(() => (
       <>
         <SyncNote machines={machines} unavailable={missing()} />
-        <UpdateNotice /><ReauthNote reauth={base.reauth} />
+        <UpdateNotice /><ReauthNote reauth={base.reauth} /><WorkspaceNote preparing={base.preparing} />
       </>
     ), layer);
   });
