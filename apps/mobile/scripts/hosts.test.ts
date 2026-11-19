@@ -123,9 +123,9 @@ test("un mensaje a la VM apagada la enciende el relay y se entrega; a la Mac apa
   assert.equal(sent.value, "t9");
   assert.equal(calls("cmp_vm", "send_message").length, 1);
 
-  await assert.rejects(byId("cmp_mac").call("send_message", "w1", { project: "p1", session: "t1", prompt: "hola" }), (e: HostError) => e.code === "machine_asleep" && e.message.includes("Mac de Ana"));
+  await assert.rejects(byId("cmp_mac").call("send_message", "w1", { project: "p1", session: "t1", prompt: "hola" }), (e: HostError) => e.code === "machine_asleep" && e.message.includes("Mac de Ana") && e.notSent === undefined);
   assert.equal(calls("cmp_mac", "send_message").length, 0, "a una máquina propia apagada ni se manda");
-  await assert.rejects(byId("cmp_mac").call("mark_task_seen", "w1", { session: "t1" }), (e: HostError) => e.code === "machine_asleep");
+  await assert.rejects(byId("cmp_mac").call("mark_task_seen", "w1", { session: "t1" }), (e: HostError) => e.code === "machine_asleep" && e.notSent === true);
   machines.close();
 });
 
@@ -223,7 +223,7 @@ test("crear, renombrar y eliminar espacios y cambiar Mantener despierta enciende
   });
   socketOf("cmp_vm").open("offline");
   const vm = byId("cmp_vm");
-  await assert.rejects(vm.call("list_ports", "w1", {}), (e: HostError) => e.code === "machine_off");
+  await assert.rejects(vm.call("list_ports", "w1", {}), (e: HostError) => e.code === "machine_off" && e.notSent === undefined);
   await assert.rejects(vm.call("archived_tasks", "w1", {}), (e: HostError) => e.code === "machine_off");
   assert.deepEqual(woken, [], "leer no enciende");
   assert.equal(vm.available?.("ports"), "unknown", "apagada no dice si lo conoce");

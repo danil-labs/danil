@@ -4,19 +4,21 @@ import { InboxProvider } from "../lib/inbox";
 import type { NotificationResponse } from "expo-notifications";
 import { Stack, router, usePathname } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { Platform } from "react-native";
 import * as WebBrowser from "expo-web-browser";
-import { AccountProvider } from "../lib/account";
+import { AccountProvider, useAccount } from "../lib/account";
 import { MachinesProvider, useMachines } from "../lib/machines";
 import { Notifications } from "../lib/notifications";
 import { selectWordOnDoubleTap } from "../lib/selection";
 import { t, w } from "../lib/i18n";
-import { bindHosts, hydrate as hydrateTaskQueue } from "../lib/taskQueue";
+import { bindHosts, hydrate as hydrateTaskQueue, setAccount } from "../lib/taskQueue";
+import { createResolver } from "../lib/taskQueueHosts";
 import { pinToVisibleArea } from "../lib/viewport";
 import { WorkspacesProvider } from "../lib/workspaces";
 import { ActivityNotice } from "../ui/ActivityNotice";
+import { TaskQueueNotice } from "../ui/TaskQueueNotice";
 import { UpdateNotice } from "../ui/UpdateNotice";
 import { useTheme } from "../ui/theme";
 
@@ -52,9 +54,13 @@ function openTarget(response: NotificationResponse | null) {
  */
 function TaskQueueHosts() {
   const { hostOf, fleet, contextReady, hosts } = useMachines();
+  const account = useAccount();
+  const user = account.session?.user.id ?? null;
+  const resolver = useRef(createResolver()).current;
   useEffect(() => {
-    bindHosts((id) => hostOf(id) ?? (fleet === "ok" && contextReady ? "gone" : "pending"), t);
-  }, [hostOf, fleet, contextReady, hosts]);
+    setAccount(user);
+    bindHosts(resolver({ hostOf, user, fleet, contextReady }), t);
+  }, [hostOf, user, fleet, contextReady, hosts, resolver]);
   return null;
 }
 
@@ -146,6 +152,7 @@ export default function RootLayout() {
           <Stack.Screen name="auth/callback" options={{ headerShown: false }} />
         </Stack>
         <ActivityNotice />
+        <TaskQueueNotice />
         <UpdateNotice />
       </InboxProvider>
       </CustomizationProvider>

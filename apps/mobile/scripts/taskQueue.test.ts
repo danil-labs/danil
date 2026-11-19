@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import { beforeEach, test } from "node:test";
 import { HostError, type Host } from "../src/lib/hosts.ts";
-import { __entries, __kick, __reset, bindHosts, enqueue, hydrate, type HostLookup, type QueueEntry, type Storage } from "../src/lib/taskQueue.ts";
+import { __entries, __kick, __reset, bindHosts, clearError, enqueue, hydrate, setAccount, subscribe, type HostLookup, type QueueEntry, type QueueState, type Storage } from "../src/lib/taskQueue.ts";
+import { GONE_AFTER_MS, createResolver } from "../src/lib/taskQueueHosts.ts";
 
 const KEY = "terminus.taskQueue";
 
@@ -69,9 +70,13 @@ test("una máquina que dejó la cuenta se descarta con aviso; no se confunde con
   bindHosts(() => answer);
   await __kick();
   assert.equal(__entries().length, 1);
+  const seen: QueueState[] = [];
+  subscribe((state) => seen.push(state));
   answer = "gone";
   await __kick();
   assert.equal(__entries().length, 0);
+  assert.equal(seen.at(-1)?.notices.length, 1, "se avisa");
+  assert.match(seen.at(-1)!.notices[0], /task\.queue\.gone/);
 });
 
 test("un rechazo permanente de la máquina se avisa y se retira; no se reintenta", async () => {
@@ -132,8 +137,8 @@ test("encolar antes de hidratar no pisa la fila guardada", async () => {
   const m = machine("m1");
   enqueue(m.host, { ...task, id: "other" }, "archive");
   await hydrate();
-  assert.equal(store.raw().length === 2 || __entries().length <= 2, true);
-  assert.ok(__entries().concat(store.raw()).some((e) => e.id === "t"), "lo guardado sobrevive");
+  assert.deepEqual(__entries().map((e) => e.id).sort(), ["other", "t"].sort(), "lo guardado y lo nuevo conviven en memoria");
+  assert.deepEqual(store.raw().map((e) => e.id).sort(), ["other", "t"].sort(), "y en disco");
 });
 
 test("si no se puede guardar la marca de envío, finalizar y borrar no salen y la entrada se conserva", async () => {
@@ -197,10 +202,12 @@ test("escrituras serializadas: una instantánea vieja no pisa la marca `sent`", 
   release();
   await loading;
   await running;
-  const last = JSON.parse(writes.at(-1)!) as QueueEntry[];
-  assert.equal(last.some((e) => e.sent), false, "al final la entrada ya salió de la fila");
-  assert.ok(writes.some((w) => JSON.parse(w).some((e: QueueEntry) => e.sent)), "la marca se escribió");
-  assert.equal(writes.findIndex((w) => JSON.parse(w).some((e: QueueEntry) => e.sent)) > 0, true);
+  const sentAt = writes.findIndex((w) => JSON.parse(w).some((e: QueueEntry) => e.sent));
+  assert.ok(sentAt >= 0, "la marca se escribió");
+  assert.equal(m.mutations().length, 1);
+  // Ninguna escritura posterior a la marca vuelve a escribir la entrada sin ella mientras la entrada siga en la fila.
+  for (const w of writes.slice(sentAt)) for (const e of JSON.parse(w) as QueueEntry[]) assert.equal(e.sent, true);
+  assert.equal((JSON.parse(writes.at(-1)!) as QueueEntry[]).length, 0, "al final salió de la fila");
 });
 
 test("la guardia local (notSent) es preadmisión y espera; un machine_asleep del relay tras enviar es duda", async () => {
@@ -222,4 +229,105 @@ test("la guardia local (notSent) es preadmisión y espera; un machine_asleep del
   await __kick();
   assert.equal(__entries().length, 0, "sin garantía de que no entró: se avisa la duda y no se repite");
   assert.equal(b.mutations().length, 1);
+});
+
+test("una lectura fallida del disco no borra lo guardado: se vuelve a leer", async () => {
+  let reads = 0;
+  let value: string | null = JSON.stringify([entry()]);
+  const writes: string[] = [];
+  const store: Storage = { getItem: async () => { if (reads++ === 0) throw new Error("transient"); return value; }, setItem: async (_k, v) => { writes.push(v); value = v; } };
+  __reset({ storage: store });
+  const m = machine("m1");
+  bindHosts(() => m.host);
+  await hydrate();
+  assert.deepEqual(writes, [], "no se escribe nada encima");
+  assert.equal(m.calls.length, 0);
+  await hydrate(); // la relectura
+  await __kick();
+  assert.deepEqual(m.mutations().map((c) => c.command), ["delete_session"], "lo guardado sobrevivió");
+});
+
+test("contenido ilegible se guarda aparte antes de seguir", async () => {
+  const written: Record<string, string> = {};
+  const store: Storage = { getItem: async () => "{no es json", setItem: async (k, v) => { written[k] = v; } };
+  __reset({ storage: store });
+  await hydrate();
+  assert.equal(written["terminus.taskQueue.unreadable"], "{no es json");
+});
+
+test("todos los avisos se conservan hasta cerrarlos", async () => {
+  __reset({ storage: disk([entry({ sent: true }), entry({ sent: true, id: "u", key: "m1:w:f:u:finish", action: "finish", title: "U" })]) });
+  let last: QueueState | null = null;
+  subscribe((state) => (last = state));
+  await hydrate();
+  assert.equal(last!.notices.length, 2);
+  clearError();
+  assert.equal(last!.notices.length, 0);
+});
+
+test("la guardia local espera siempre, también con machine_off, antes o después de enviar", async () => {
+  for (const code of ["machine_off", "machine_outdated", "machine_asleep"]) {
+    const refused = new HostError(code, "m1");
+    refused.notSent = true;
+    __reset({ storage: disk() });
+    await hydrate();
+    const m = machine("m1", { fail: (c) => (c === "task_blockers" ? refused : null) });
+    bindHosts(() => m.host);
+    enqueue(m.host, task, "finish");
+    await __kick();
+    assert.equal(__entries().length, 1, code);
+    assert.equal(m.mutations().length, 0, code);
+  }
+});
+
+test("una caída de red antes de enviar espera con pausa: no se reintenta en cada cambio de la flota", async () => {
+  __reset({ storage: disk() });
+  await hydrate();
+  const m = machine("m1", { fail: (c) => (c === "task_blockers" ? new HostError("io", "down") : null) });
+  bindHosts(() => m.host);
+  enqueue(m.host, task, "finish");
+  await __kick();
+  for (let i = 0; i < 5; i++) { bindHosts(() => m.host); await __kick(); }
+  assert.equal(m.calls.filter((c) => c.command === "task_blockers").length, 1);
+  assert.equal(__entries().length, 1);
+});
+
+test("un error inesperado antes de enviar se avisa y se retira; no espera para siempre", async () => {
+  __reset({ storage: disk() });
+  await hydrate();
+  const m = machine("m1", { fail: (c) => (c === "task_blockers" ? new TypeError("bug") : null) });
+  bindHosts(() => m.host);
+  enqueue(m.host, task, "finish");
+  await __kick();
+  assert.equal(__entries().length, 0);
+});
+
+test("una entrada de otra cuenta espera; no se da por perdida", async () => {
+  __reset({ storage: disk([entry({ owner: "ana" })]) });
+  await hydrate();
+  const view = (user: string | null, hostOf: (id: string) => Host | undefined = () => undefined) => ({ hostOf, user, fleet: "ok", contextReady: true });
+  let now = 0;
+  const resolver = createResolver(() => now);
+  assert.equal(resolver(view("beto"))("m1", "ana"), "pending");
+  now += GONE_AFTER_MS * 3;
+  assert.equal(resolver(view("beto"))("m1", "ana"), "pending");
+  setAccount("ana");
+  assert.equal(__entries()[0].owner, "ana");
+});
+
+test("«gone» pide sesión, la flota cargada de esa cuenta y faltar un rato seguido; el bridge no", () => {
+  const base = { hostOf: () => undefined, user: "ana", fleet: "ok", contextReady: true };
+  let now = 1000;
+  const resolver = createResolver(() => now);
+  assert.equal(resolver({ ...base, user: null })("m1", "ana"), "pending", "sin sesión");
+  assert.equal(resolver({ ...base, fleet: "loading" })("m1", "ana"), "pending", "flota cargando");
+  assert.equal(resolver({ ...base, contextReady: false })("m1", "ana"), "pending", "contexto sin listo");
+  assert.equal(resolver(base)("bridge", "ana"), "pending", "el bridge depende del emparejamiento");
+  assert.equal(resolver(base)("m1", "ana"), "pending", "recién faltó");
+  now += GONE_AFTER_MS;
+  assert.equal(resolver(base)("m1", "ana"), "gone");
+  const host = { id: "m1" } as Host;
+  assert.equal(resolver({ ...base, hostOf: () => host })("m1", "ana"), host, "si vuelve, se usa");
+  now += 1;
+  assert.equal(resolver(base)("m1", "ana"), "pending", "el reloj de la ausencia se reinicia");
 });

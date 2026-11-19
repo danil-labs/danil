@@ -34,16 +34,22 @@ export type QueueEntry = {
   at?: number;
   /** La mutación ya salió hacia la máquina: sin acuse no se sabe si llegó. */
   sent?: boolean;
+  /** La cuenta que la pidió: las máquinas son de una cuenta y otra no puede darlas por perdidas. */
+  owner?: string;
 };
 
 export type QueueState = {
   pending: number;
-  /** Último aviso (rechazo, duda o caducidad), ya traducido. */
+  /** Último aviso (rechazo o duda), ya traducido. */
   error: string | null;
+  /** Todos los avisos que nadie ha cerrado, del más viejo al más nuevo. */
+  notices: string[];
 };
 
 /** Lo que la flota sabe de una máquina: lista, todavía sin resolver, o ya no existe en la cuenta. */
 export type HostLookup = Host | "pending" | "gone";
+/** Resuelve la máquina de una entrada: su id y la cuenta que la pidió. */
+export type Resolver = (id: string, owner: string | undefined) => HostLookup;
 
 export type Storage = {
   getItem(key: string): Promise<string | null>;
@@ -51,7 +57,7 @@ export type Storage = {
 };
 
 const STORAGE_KEY = "terminus.taskQueue";
-/** Fallos de red al archivar (que es idempotente) antes de dejarlo para otra ocasión. */
+/** Intentos de archivar con un error inesperado antes de avisar y soltarlo. */
 const MAX_ATTEMPTS = 3;
 /** Cada cuánto se reintenta lo que espera a una máquina dormida o sin respuesta. */
 const WAIT_MS = 30_000;
@@ -68,9 +74,13 @@ let hydrated = false;
 /** La fila guardada ya se leyó: antes de eso no se escribe, para no pisarla. */
 let loaded = false;
 let error: string | null = null;
+let notices: string[] = [];
+let account: string | null = null;
+/** Hasta cuándo no se reintenta una entrada tras una caída de red (en memoria). */
+const retryAt = new Map<string, number>();
 let timer: ReturnType<typeof setTimeout> | null = null;
 let storage: Storage | null = null;
-let lookup: (id: string) => HostLookup = () => "pending";
+let lookup: Resolver = () => "pending";
 type Say = (key: Key, vars?: Record<string, string | number>) => string;
 /** La app pone aquí su `t`; así la cola se prueba en Node sin cargar el catálogo. */
 let t: Say = (key, vars) => `${key} ${JSON.stringify(vars ?? {})}`;
@@ -85,7 +95,7 @@ async function disk(): Promise<Storage> {
 }
 
 function state(): QueueState {
-  return { pending: entries.length, error };
+  return { pending: entries.length, error, notices };
 }
 
 function notify() {
@@ -94,6 +104,7 @@ function notify() {
 
 function warn(text: string) {
   error = text;
+  notices = [...notices, text];
   notify();
 }
 
@@ -130,9 +141,19 @@ export async function hydrate() {
   let saved: QueueEntry[] = [];
   try {
     const raw = await (await disk()).getItem(STORAGE_KEY);
-    if (raw) saved = (JSON.parse(raw) as QueueEntry[]).filter((e) => e && e.key && e.host && e.id);
+    if (raw) {
+      try {
+        saved = (JSON.parse(raw) as QueueEntry[]).filter((e) => e && e.key && e.host && e.id);
+      } catch {
+        // Contenido que no se puede leer: se guarda aparte antes de seguir, nunca se pisa sin copia.
+        await (await disk()).setItem(`${STORAGE_KEY}.unreadable`, raw);
+      }
+    }
   } catch {
-    saved = [];
+    // El disco no contestó: no se escribe nada encima. Se vuelve a leer y mientras tanto la fila vive en memoria.
+    hydrated = false;
+    reread();
+    return;
   }
   // Lo que ya se encoló durante la carga va después de lo guardado, sin duplicar.
   const fresh = entries.filter((e) => !saved.some((s) => sameTask(s, e)));
@@ -149,16 +170,34 @@ export async function hydrate() {
   void kick();
 }
 
+let rereading: ReturnType<typeof setTimeout> | null = null;
+function reread() {
+  if (rereading) return;
+  rereading = setTimeout(() => {
+    rereading = null;
+    void hydrate();
+  }, WAIT_MS);
+  (rereading as { unref?: () => void }).unref?.();
+}
+
 export function subscribe(listener: (state: QueueState) => void) {
   listeners.add(listener);
   listener(state());
-  return () => listeners.delete(listener);
+  return () => { listeners.delete(listener); };
 }
 
 export function clearError() {
-  if (error === null) return;
+  if (error === null && notices.length === 0) return;
   error = null;
+  notices = [];
   notify();
+}
+
+/** La cuenta con sesión; las entradas nuevas la llevan y solo ella puede darlas por perdidas. */
+export function setAccount(id: string | null) {
+  account = id;
+  if (id) for (const entry of entries) entry.owner ??= id;
+  void kick();
 }
 
 export function pendingFor(id: string): TaskAction | null {
@@ -169,7 +208,7 @@ export function pendingFor(id: string): TaskAction | null {
  * Cómo resuelve la cola a qué máquina va cada entrada. La flota lo conecta al
  * montarse y avisa cada vez que cambia; sin esto la cola espera, no descarta.
  */
-export function bindHosts(resolve: (id: string) => HostLookup, say?: Say) {
+export function bindHosts(resolve: Resolver, say?: Say) {
   lookup = resolve;
   if (say) t = say;
   void kick();
@@ -183,13 +222,14 @@ export function enqueue(host: Host, task: Pick<Task, "workspace" | "folder" | "i
   const key = `${host.id}:${task.workspace}:${task.folder}:${task.id}:${action}`;
   const candidate = { host: host.id, workspace: task.workspace, folder: task.folder, id: task.id };
   if (entries.some((e) => sameTask(e, candidate))) return;
-  entries.push({ key, ...candidate, title: task.title ?? "", action, attempts: 0, at: Date.now() });
+  entries.push({ key, ...candidate, title: task.title ?? "", action, attempts: 0, at: Date.now(), ...(account ? { owner: account } : {}) });
   notify();
   void save();
   void kick();
 }
 
 function drop(entry: QueueEntry) {
+  retryAt.delete(entry.key);
   entries = entries.filter((e) => e.key !== entry.key);
 }
 
@@ -199,7 +239,7 @@ function message(failure: unknown) {
   return t("task.error", { detail: failure instanceof Error ? failure.message : String(failure) });
 }
 
-type Outcome = "done" | "wait" | "retry" | "skip";
+type Outcome = "done" | "wait";
 
 /** La máquina de la acción con el rastro de si la mutación ya salió. */
 function tracked(host: Host, entry: QueueEntry): Host {
@@ -219,7 +259,8 @@ function tracked(host: Host, entry: QueueEntry): Host {
 }
 
 async function run(entry: QueueEntry): Promise<Outcome> {
-  const found = lookup(entry.host);
+  if ((retryAt.get(entry.key) ?? 0) > Date.now()) return "wait";
+  const found = lookup(entry.host, entry.owner);
   if (found === "pending") return "wait";
   if (found === "gone") {
     warn(t("task.queue.gone", { title: label(entry) }));
@@ -240,21 +281,39 @@ async function run(entry: QueueEntry): Promise<Outcome> {
     return "done";
   } catch (failure) {
     const code = failure instanceof HostError ? failure.code : null;
+    // La guardia local negó la llamada: nunca salió, sea cual sea el motivo. Se quita la marca y se espera.
+    if (failure instanceof HostError && failure.notSent) {
+      if (entry.sent) {
+        entry.sent = false;
+        await save();
+      }
+      return "wait";
+    }
     if (!entry.sent) {
-      // No salió nada: dormida o sin comprobar espera; otra falla de red reintenta; el resto es un rechazo.
+      // No salió nada: dormida, sin comprobar o sin disco espera; una caída de red espera con pausa; el resto es un rechazo.
       if (code && BEFORE_MUTATION.has(code)) return "wait";
-      if (code === "io" || code === null) return entry.attempts + 1 < MAX_ATTEMPTS ? "retry" : "wait";
+      if (code === "io") {
+        retryAt.set(entry.key, Date.now() + WAIT_MS);
+        return "wait";
+      }
       warn(message(failure));
       return "done";
     }
-    // La guardia local negó la llamada: nunca salió. Se quita la marca y se espera.
-    if (failure instanceof HostError && failure.notSent) {
-      entry.sent = false;
-      await save();
+    // La mutación pudo salir y no hubo acuse (o el relay respondió algo que no confirma que no entró).
+    if (entry.action === "archive") {
+      // Archivar es idempotente: se repite con pausa; un error inesperado se suelta tras unos intentos.
+      if (code && REFUSED.has(code)) {
+        warn(message(failure));
+        return "done";
+      }
+      entry.attempts += 1;
+      if (code !== "io" && entry.attempts >= MAX_ATTEMPTS) {
+        warn(message(failure));
+        return "done";
+      }
+      retryAt.set(entry.key, Date.now() + WAIT_MS);
       return "wait";
     }
-    // La mutación pudo salir y no hubo acuse (o el relay respondió algo que no confirma que no entró). Archivar es idempotente: se repite. Lo demás, nunca a ciegas.
-    if (entry.action === "archive") return code && REFUSED.has(code) ? (warn(message(failure)), "done") : "wait";
     if (code && REFUSED.has(code)) {
       warn(message(failure));
       return "done";
@@ -291,6 +350,7 @@ function kick(): Promise<void> {
 
 /** Se libera `current` en el mismo turno en que se decide no repetir: así un aviso nunca cae en el hueco. */
 async function rounds() {
+  await null; // `current` ya está asignado antes de que corra nada.
   try {
     do {
       again = false;
@@ -313,11 +373,6 @@ async function drain() {
       waiting = true;
       continue;
     }
-    if (outcome === "retry") {
-      entry.attempts += 1;
-      await save();
-      continue;
-    }
     drop(entry);
     notify();
     await save();
@@ -332,6 +387,11 @@ export function __reset(options: { storage?: Storage } = {}) {
   hydrated = false;
   loaded = false;
   error = null;
+  notices = [];
+  account = null;
+  retryAt.clear();
+  if (rereading) clearTimeout(rereading);
+  rereading = null;
   if (timer) clearTimeout(timer);
   timer = null;
   storage = options.storage ?? null;
