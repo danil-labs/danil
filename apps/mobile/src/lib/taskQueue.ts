@@ -101,6 +101,7 @@ async function disk(): Promise<Storage> {
 /** Un aviso con título es de su cuenta y solo ella lo ve; uno genérico lo ve cualquier cuenta con sesión; sin sesión, solo lo de «sin sesión». */
 const visible = (notice: Notice) => (notice.owner === null ? account !== "" : notice.owner === account);
 
+/** `pending` cuenta solo lo de la cuenta activa: sin sesión (o durante una renovación) vale 0 aunque la fila tenga trabajo de otra; no sirve para decir «cola vacía». */
 function state(): QueueState {
   const shown = notices.filter(visible).map((n) => n.text);
   return { pending: entries.filter((e) => e.owner === account).length, error: shown.at(-1) ?? null, notices: shown };

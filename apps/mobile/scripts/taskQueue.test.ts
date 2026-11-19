@@ -483,3 +483,20 @@ test("los avisos de máquina perdida, bloqueo y rechazo también son de su cuent
     assert.equal(pending, 0);
   }
 });
+
+test("pending y pendingFor no cuentan lo de otra cuenta mientras la entrada sigue en la fila, y vuelven con su cuenta", async () => {
+  __reset({ storage: disk([entry({ owner: "ana" })]) });
+  let pending = -1;
+  subscribe((state) => (pending = state.pending));
+  setAccount("ana");
+  await hydrate();
+  assert.equal(pending, 1);
+  assert.equal(pendingFor("t"), "delete");
+  setAccount("beto");
+  assert.equal(__entries().length, 1, "la entrada sigue en la fila");
+  assert.equal(pending, 0);
+  assert.equal(pendingFor("t"), null);
+  setAccount("ana");
+  assert.equal(pending, 1);
+  assert.equal(pendingFor("t"), "delete");
+});
