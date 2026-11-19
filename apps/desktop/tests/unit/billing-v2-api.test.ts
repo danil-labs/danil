@@ -67,3 +67,49 @@ test("history requests preserve the server cursor for both collections", async (
   await api.invoices("invoice_next");
   assert.deepEqual(paths, ["credits/transactions?cursor=next_page", "billing/invoices?cursor=invoice_next"]);
 });
+
+test("Business is an advertised Team edition and the two checkout intents preserve it", async () => {
+  const { checkoutPlans } = await import("../../src/web/billing-v2-plans.ts");
+  const value = fixture("catalog.synthetic");
+  const requests: unknown[] = [];
+  const api = billingV2({
+    call: async () => Response.json(value),
+    mutation: async (_path, init) => { requests.push(JSON.parse(String(init?.body))); return Response.json(fixture("checkout.created")); },
+  }, null);
+  const legacy = checkoutPlans(await api.catalog());
+  assert.ok(legacy.find(plan => plan.id === "pro")?.price?.amount_micro);
+  assert.equal(legacy.find(plan => plan.id === "team")?.price, null);
+  assert.equal(legacy.find(plan => plan.id === "enterprise")?.choice, null);
+  assert.equal(legacy.some(plan => plan.id === "business"), false);
+  assert.equal(legacy.find(plan => plan.id === "team")?.choice, null);
+  value.plans = value.plans.map((plan: { plan_key: string }) => plan.plan_key === "team"
+    ? { ...plan, sellable: true, price: { currency: "MXN", amount_micro: "1999000000" } }
+    : plan);
+  value.display_variants = [{ variant: "business", plan_key: "team", edition: "business" }];
+  const business = checkoutPlans(await api.catalog()).find(plan => plan.id === "business")?.choice;
+  assert.deepEqual(business, { plan_key: "team", variant: "business" });
+  await api.checkout(business!.plan_key, 3, "upgrade", business!.variant);
+  await api.createOrganization(business!.plan_key, 3, "Org", "new", business!.variant);
+  assert.deepEqual(requests, [
+    { plan_key: "team", variant: "business", catalog_version: 3, intent: "upgrade" },
+    { plan_key: "team", variant: "business", catalog_version: 3, intent: "new_organization", organization_name: "Org" },
+  ]);
+});
+
+test("credits and customer portal carry idempotency keys on their edge routes", async () => {
+  const calls: unknown[] = [];
+  const api = billingV2({
+    call: async () => { throw new Error("unexpected read"); },
+    mutation: async (path, init) => {
+      calls.push([path, new Headers(init?.headers).get("Idempotency-Key"), init?.body]);
+      return Response.json({ purchase_id: "purchase", state: "open", url: "https://billing.stripe.com/" });
+    },
+  }, "org_A");
+  const request = fixture("purchase.create.request");
+  await api.purchase(request.pack_id, request.catalog_version, "credits-key");
+  await api.portal("portal-key");
+  assert.deepEqual(calls, [
+    ["credits/purchases", "credits-key", JSON.stringify(request)],
+    ["billing/portal-sessions", "portal-key", undefined],
+  ]);
+});

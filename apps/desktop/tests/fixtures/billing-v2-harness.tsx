@@ -27,7 +27,9 @@ if (params.get("short") === "1") {
 }
 Object.assign(window, { billingCalls: calls });
 const api = {
-  catalog: async () => { calls.push("catalog"); if (params.get("catalog") === "retry" && ++catalogReads === 1) throw new PlatformSessionError(503, null); return { ...catalog.value, plans: catalog.value.plans.map(plan => ({ ...plan, sellable: plan.plan_key === "team" })) }; },
+  catalog: async () => { calls.push("catalog"); if (params.get("catalog") === "retry" && ++catalogReads === 1) throw new PlatformSessionError(503, null); return { ...catalog.value, plans: catalog.value.plans.map(plan => plan.plan_key === "team" ? {
+      ...plan, sellable: true, price: { currency: "MXN", amount_micro: "1999000000" },
+    } : plan), display_variants: params.has("variants") ? [{ variant: "business", plan_key: "team", edition: "business" }] : undefined }; },
   organization: async () => ({ ...organization.value, payer: { is_you: params.get("payer") === "yes" } }),
   balance: async () => balance.value,
   transactions: async (cursor?: string) => {
@@ -38,10 +40,11 @@ const api = {
     if (params.get("invoices") === "unavailable") throw new PlatformSessionError(503, null);
     return invoices.value;
   },
-  checkout: async () => { calls.push("checkout"); return { checkout_id: "bchk_01SYNTHETICCHK0001", state: "creating", url: null }; },
+  checkout: async (plan: string, _version: number, _key: string, variant?: string) => { calls.push(`checkout:${plan}:${variant ?? ""}`); return { checkout_id: "bchk_01SYNTHETICCHK0001", state: "creating", url: null }; },
   createOrganization: async (plan: string, _version: number, name: string) => { calls.push(`new:${plan}:${name}`); return { checkout_id: "bchk_01SYNTHETICCHK0001", state: "creating", url: null }; },
   checkoutStatus: async () => {
     calls.push("checkout-status");
+    if (["expired", "canceled"].includes(params.get("return") ?? "")) return { state: params.get("return"), terminal: true };
     if (params.get("return") === "foreign") throw new PlatformSessionError(404, null);
     if (params.get("return") === "cancel-paid-pending") return { state: "paid", terminal: false };
     if (params.get("return") && ++checkoutReads >= 2) return { state: "active", terminal: true, organization_id: "org_NEW" };
@@ -54,4 +57,4 @@ const api = {
 } as unknown as ReturnType<typeof billingV2>;
 
 const organizations = { choose: async () => {} } as unknown as OrganizationSelection;
-render(() => params.has("gate") ? <SessionGate identified={() => true} signedOut={() => false} busy={() => false} preparing={() => false} error={() => ""} orgNeeded={() => false} noWorkspace={() => true} rows={() => []} organizations={organizations} orgState={() => ({ kind: "ready", items: [], active: null, busy: false, error: null })} loginUrl={() => "#"} returnError="" load={() => {}} choose={() => {}} logout={() => {}} redeem={async () => ({})} billing={params.get("gate") === "on" ? { api, onActive: async id => { calls.push(`select:${id}`); } } : undefined} /> : params.get("return") ? <CheckoutReturn api={api} onActive={async id => { calls.push(`select:${id}`); }} /> : params.get("new") === "1" ? <NewOrganizationCheckout api={api} /> : <BillingPlan api={api} role={() => params.get("role") ?? "owner"} context="test" />, document.getElementById("root")!);
+render(() => params.has("gate") ? <SessionGate identified={() => true} signedOut={() => false} busy={() => false} preparing={() => false} error={() => ""} orgNeeded={() => false} noWorkspace={() => true} rows={() => []} organizations={organizations} orgState={() => ({ kind: "ready", items: [], active: null, busy: false, error: null })} loginUrl={() => "#"} returnError="" load={() => {}} choose={() => {}} logout={() => {}} redeem={async () => ({})} billing={params.get("gate") === "on" ? { api, onActive: async id => { calls.push(`select:${id}`); } } : undefined} /> : params.get("return") ? <CheckoutReturn api={api} onActive={async id => { calls.push(`select:${id}`); }} /> : params.get("new") === "1" ? <NewOrganizationCheckout api={api} /> : <BillingPlan api={api} role={() => params.get("role") ?? "owner"} context="test" creationApi={api} />, document.getElementById("root")!);

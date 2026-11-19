@@ -16,7 +16,7 @@ import { selectEngineWorkspace, webMachineCall } from "./workspace-runtime";
 import { windowContext } from "./window-context";
 
 declare const __TERMINUS_VERSION__: string;
-type Base = { contextMachines?: (context: string) => ReturnType<typeof machinesClient>; machines: ReturnType<typeof machinesClient>; relayOrigin: string; permits: (name: string) => boolean; organizations?: Capabilities["organizations"]; promo?: Capabilities["webPromo"]; groupAccount?: Capabilities["groupAccount"]; reauth?: Capabilities["webReauth"]; preparing?: () => boolean; onUnauthorized: () => void; profile: AccountProfileSource; services: Pick<Capabilities, "webWorkspaces" | "webWorkspacePicker" | "danilCredits">; onUnavailable: () => void; };
+type Base = { billing?: ReturnType<typeof import("./window-billing").windowBilling>; contextMachines?: (context: string) => ReturnType<typeof machinesClient>; machines: ReturnType<typeof machinesClient>; relayOrigin: string; permits: (name: string) => boolean; organizations?: Capabilities["organizations"]; promo?: Capabilities["webPromo"]; groupAccount?: Capabilities["groupAccount"]; reauth?: Capabilities["webReauth"]; preparing?: () => boolean; onUnauthorized: () => void; profile: AccountProfileSource; services: Pick<Capabilities, "webWorkspaces" | "webWorkspacePicker" | "danilCredits">; onUnavailable: () => void; };
 const Picker = lazy(() => import("../features/machines/MachinePicker").then(m => ({ default: m.MachinePicker })));
 const AccountMachines = lazy(() => import("../features/machines/AccountMachines"));
 /** Another machine's slice changed: the window rereads just that. */
@@ -140,10 +140,10 @@ export function mountWindow(base: Base, mounted: Mounted) {
   for (const type of ["dragover", "drop"]) window.addEventListener(type, (e) => e.preventDefault());
   setCapabilities({
     nativeWindow: false, updater: false, localSetup: false, computerStatus: true, browserFiles: true, appDownloads: true,
-    accountProfile: base.profile,
+    accountProfile: base.profile, personalAccount: base.billing?.account,
     ...base.services,
     organizations: base.organizations,
-    initialSettings: takeSettingsParam(),
+    initialSettings: takeSettingsParam(!!base.billing),
     machineName: id => id === "local" && missing() ? t("web.machines.unavailable") : fleet.name(id, scope.current()?.context),
     taskWritable: id => {
       revision();
@@ -195,7 +195,7 @@ export function mountWindow(base: Base, mounted: Mounted) {
     disposeNotice = render(() => (
       <>
         <SyncNote machines={machines} unavailable={missing()} />
-        <UpdateNotice /><ReauthNote reauth={base.reauth} /><WorkspaceNote preparing={base.preparing} />
+        <UpdateNotice />{base.billing?.returned()}<ReauthNote reauth={base.reauth} /><WorkspaceNote preparing={base.preparing} />
       </>
     ), layer);
   });

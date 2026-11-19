@@ -5,6 +5,8 @@ import { Input } from "../ui/Input";
 import { Select } from "../ui/Select";
 import { SettingsRow, SettingsSection } from "../features/settings/index";
 import { PlatformSessionError } from "./platform-session";
+import { hostedCheckoutUrl } from "./billing-v2-return";
+import { checkoutPlans } from "./billing-v2-plans";
 import type { billingV2 } from "./billing-v2-api";
 import { bindCreationCheckout, creationKey } from "./billing-v2-idempotency";
 
@@ -14,7 +16,7 @@ export default function NewOrganizationCheckout(props: { api: Api; onActive?: (o
   const [open, setOpen] = createSignal(false);
   const [catalog, { refetch }] = createResource(open, () => props.api.catalog());
   const [name, setName] = createSignal("");
-  const [plan, setPlan] = createSignal<"pro" | "team">("pro");
+  const [plan, setPlan] = createSignal("pro");
   const [busy, setBusy] = createSignal(false);
   const [status, setStatus] = createSignal("");
   const lifetime = new AbortController();
@@ -32,14 +34,16 @@ export default function NewOrganizationCheckout(props: { api: Api; onActive?: (o
     onCleanup(() => clearTimeout(timer));
   });
   async function submit() {
-    if (busy() || !catalog()) return;
+    const current = catalog();
+    const choice = current && checkoutPlans(current).find(item => item.id === plan())?.choice;
+    if (busy() || !current || !choice) return;
     setBusy(true); setStatus("");
     const deadline = AbortSignal.timeout(60000);
     const signal = AbortSignal.any([lifetime.signal, deadline]);
     try {
-      const version = catalog()!.catalog_version;
+      const version = current.catalog_version;
       const key = await creationKey(sessionStorage, plan(), version, name());
-      const created = await props.api.createOrganization(plan(), version, name(), key);
+      const created = await props.api.createOrganization(choice.plan_key, version, name(), key, choice.variant);
       bindCreationCheckout(sessionStorage, key, created.checkout_id);
       let url = created.url;
       let delay = 1000;
@@ -63,9 +67,7 @@ export default function NewOrganizationCheckout(props: { api: Api; onActive?: (o
         });
         delay = Math.min(delay * 2, 8000);
       }
-      const target = new URL(url);
-      if (target.protocol !== "https:" || target.username || target.password) throw new Error("invalid_checkout_url");
-      window.location.assign(target.href);
+      window.location.assign(hostedCheckoutUrl(url));
     } catch (error) {
       if (!lifetime.signal.aborted) setStatus(error instanceof Error && error.message === "invalid_organization_name" ? "invalid_name" : error instanceof PlatformSessionError && error.status === 403 ? "denied" : "unavailable");
     } finally { if (!lifetime.signal.aborted) setBusy(false); }
@@ -76,8 +78,8 @@ export default function NewOrganizationCheckout(props: { api: Api; onActive?: (o
         <Show when={!catalog.error && catalog()} fallback={<p role="status">{t("web.billing_v2.unavailable")}</p>}>
           {value => <>
             <SettingsRow label={<label for="billing-org-name">{t("web.billing_v2.org_name")}</label>}><Input id="billing-org-name" value={name()} onInput={event => setName(event.currentTarget.value)} /></SettingsRow>
-            <SettingsRow label={<label for="billing-org-plan">{t("web.billing_v2.plan")}</label>}><Select id="billing-org-plan" value={plan()} onChange={event => setPlan(event.currentTarget.value as "pro" | "team")}><For each={value().plans.filter(item => item.sellable && (item.plan_key === "pro" || item.plan_key === "team"))}>{item => <option value={item.plan_key}>{item.plan_key}</option>}</For></Select></SettingsRow>
-            <Button disabled={busy() || !value().plans.some(item => item.sellable && item.plan_key === plan())} onClick={() => void submit()}>{t("web.billing_v2.continue")}</Button>
+            <SettingsRow label={<label for="billing-org-plan">{t("web.billing_v2.plan")}</label>}><Select id="billing-org-plan" value={plan()} onChange={event => setPlan(event.currentTarget.value)}><For each={checkoutPlans(value()).filter(item => item.choice)}>{item => <option value={item.id}>{t(`web.billing_v2.plan_${item.id}`)}</option>}</For></Select></SettingsRow>
+            <Button disabled={busy() || !checkoutPlans(value()).some(item => item.choice && item.id === plan())} onClick={() => void submit()}>{t("web.billing_v2.continue")}</Button>
           </>}
         </Show>
       </Show>

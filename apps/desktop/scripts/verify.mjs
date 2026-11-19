@@ -74,6 +74,7 @@ const steps = [
   ["Front modularization debt only decreases", process.execPath, [join(root, "scripts/guards/front-modularization.mjs")], root],
   ["Front modularization gates reject injected regressions", process.execPath, ["--test", join(root, "tests/unit/front-modularization.test.mjs")], root],
   ["Service capabilities are optional and versioned", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/web-service-capabilities.test.ts")], root],
+  ["No legacy billing route in clients", process.execPath, [join(root, "scripts/guards/no-legacy-billing.mjs")], root],
   ["Billing role scopes are fail-closed", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/billing-v2-scopes.test.ts")], root],
   ["Billing edge requests use pinned examples", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/billing-v2-api.test.ts")], root],
   ["Billing checkout returns use authoritative state", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/billing-v2-return.test.ts")], root],

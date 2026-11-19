@@ -46,3 +46,10 @@ export async function followCheckout(options: {
     if (elapsed >= budget || Date.now() - start >= budget) return { kind: "processing" };
   }
 }
+
+export function hostedCheckoutUrl(url: string | null) {
+  if (!url) throw new Error("checkout_not_ready");
+  const target = new URL(url);
+  if (target.protocol !== "https:" || target.username || target.password) throw new Error("invalid_checkout_url");
+  return target.href;
+}

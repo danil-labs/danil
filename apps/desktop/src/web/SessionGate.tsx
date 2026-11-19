@@ -21,7 +21,7 @@ type Props = {
 };
 
 export default function SessionGate(props: Props) {
-  return <Show when={props.identified() && !props.signedOut()} fallback={<><ToastStack><UpdateNotice /></ToastStack><WorkosAuthPage loginUrl={props.loginUrl()} busy={!props.signedOut()} error={props.returnError} /></>}><main class="flex h-full flex-col gap-4 overflow-y-auto bg-bg p-10 text-neutral-950" data-web-gate="">
+  return <Show when={props.identified() && !props.signedOut()} fallback={<><ToastStack><UpdateNotice /></ToastStack><WorkosAuthPage loginUrl={props.loginUrl()} error={props.returnError} /></>}><main class="flex h-full flex-col gap-4 overflow-y-auto bg-bg p-10 text-neutral-950" data-web-gate="">
     <ToastStack><UpdateNotice /></ToastStack>
     <h1 class="m-0 font-display text-lead font-bold">{t("common.brand_name")}</h1>
     <Show when={props.busy()}><p role="status">{t("web.auth.waiting")}</p></Show>

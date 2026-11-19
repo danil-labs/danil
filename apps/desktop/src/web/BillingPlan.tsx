@@ -1,11 +1,12 @@
 import { createResource, createSignal, For, onCleanup, onMount, Show } from "solid-js";
 import { t } from "../lib/i18n";
 import { Button } from "../ui/Button";
-import { SettingsPanel, SettingsRow, SettingsSection } from "../features/settings/index";
+import { BUSINESS_SALES_EMAIL, SettingsPanel, SettingsRow, SettingsSection } from "../features/settings/index";
 import { PlatformSessionError } from "./platform-session";
 import { billingScopes, type BillingScope } from "./billing-v2-scopes";
-import type { billingV2 } from "./billing-v2-api";
-import CheckoutReturn from "./CheckoutReturn";
+import { checkoutPlans } from "./billing-v2-plans";
+import type { billingV2, PlanChoice } from "./billing-v2-api";
+import { hostedCheckoutUrl } from "./billing-v2-return";
 import NewOrganizationCheckout from "./NewOrganizationCheckout";
 
 type Api = ReturnType<typeof billingV2>;
@@ -54,7 +55,7 @@ const fulfilled = <T,>(result: PromiseSettledResult<T>): T | null => result.stat
 const failed = (result: PromiseSettledResult<unknown>) => result.status === "rejected" ? result.reason : null;
 const message = (error: unknown) => error instanceof PlatformSessionError && error.status === 403 ? "web.billing_v2.denied" : "web.billing_v2.unavailable";
 
-export default function BillingPlan(props: { api: Api; role: () => string; context: string; onActive?: (organizationId: string) => Promise<void> }) {
+export default function BillingPlan(props: { api: Api; role: () => string; context: string; creationApi?: Api }) {
   const permitted = (scope: BillingScope) => billingScopes(props.role()).includes(scope);
   const [failure, setFailure] = createSignal("");
   const [busy, setBusy] = createSignal(false);
@@ -79,18 +80,15 @@ export default function BillingPlan(props: { api: Api; role: () => string; conte
     finally { setBusy(false); }
   }
   function redirect(url: string | null) {
-    if (!url) throw new Error("checkout_not_ready");
-    const target = new URL(url);
-    if (target.protocol !== "https:" || target.username || target.password) throw new Error("invalid_checkout_url");
-    window.location.assign(target.href);
+    window.location.assign(hostedCheckoutUrl(url));
   }
-  async function upgrade(plan: "pro" | "team", version: number) {
+  async function upgrade(plan: PlanChoice, version: number) {
     const api = props.api;
-    await run(`checkout:${plan}`, async key => redirect((await api.checkout(plan, version, key)).url));
+    await run(`checkout:${version}:${plan.variant ?? plan.plan_key}`, async key => redirect((await api.checkout(plan.plan_key, version, key, plan.variant)).url));
   }
   async function buy(pack: string, version: number) {
     const api = props.api;
-    await run(`purchase:${pack}`, async key => redirect((await api.purchase(pack, version, key)).url));
+    await run(`purchase:${version}:${pack}`, async key => redirect((await api.purchase(pack, version, key)).url));
   }
   async function portal() { const api = props.api; await run("portal", async key => redirect((await api.portal(key)).url)); }
   async function changeSubscription(cancelled: boolean) { const api = props.api; await run(cancelled ? "resume" : "cancel", key => cancelled ? api.resume(key) : api.cancel(key)); }
@@ -110,17 +108,24 @@ export default function BillingPlan(props: { api: Api; role: () => string; conte
   });
   return <SettingsPanel>
     <Show when={failure()}><p role="alert">{t(failure())}</p></Show>
-    <CheckoutReturn api={props.api} onActive={props.onActive} />
     <Show when={!data.loading || data.latest} fallback={<p>{t("web.billing_v2.loading")}</p>}>
       <Show when={!data.error} fallback={<p role="status">{t(message(data.error))}</p>}>
         <Show when={data()}>{value => <>
           <Show when={failed(value().organization)}>{error => <SettingsSection title={t("web.billing_v2.plan")}><p role="status">{t(message(error()))}</p></SettingsSection>}</Show>
           <Show when={failed(value().catalog)}>{error => <SettingsSection title={t("web.billing_v2.plan")}><p role="status">{t(message(error()))}</p></SettingsSection>}</Show>
+          <Show when={fulfilled(value().catalog)}>{catalog => <SettingsSection title={t("web.billing_v2.choose_plan")}>
+            <div class="grid gap-2 sm:grid-cols-2">
+              <For each={checkoutPlans(catalog())}>{plan => <article class="rounded-lg border border-line p-3">
+                <strong>{t(`web.billing_v2.plan_${plan.id}`)}</strong>
+                <Show when={plan.price}>{price => <p>{displayMoney(price())} MXN / {t("web.billing_v2.month")}</p>}</Show>
+                <Show when={plan.choice} fallback={<Show when={plan.id === "enterprise"} fallback={<p role="status">{t("web.billing_v2.unavailable")}</p>}><a href={`mailto:${BUSINESS_SALES_EMAIL}`}>{t("web.billing_v2.contact")}</a></Show>}>{choice =>
+                  <Show when={permitted("billing.manage")}><Button disabled={busy() || (!choice().variant && fulfilled(value().organization)?.plan_key === choice().plan_key)} onClick={() => void upgrade(choice(), catalog().catalog_version)}>{t("web.billing_v2.upgrade")}</Button></Show>
+                }</Show>
+              </article>}</For>
+            </div>
+          </SettingsSection>}</Show>
           <Show when={fulfilled(value().organization)}>{org => <SettingsSection title={t("web.billing_v2.plan")}>
             <SettingsRow label={t("web.billing_v2.plan")}><span>{org().plan_key} · {org().state}</span></SettingsRow>
-            <For each={fulfilled(value().catalog)?.plans.filter(p => p.sellable && (p.plan_key === "pro" || p.plan_key === "team") && p.plan_key !== org().plan_key)}>{plan =>
-              <Show when={permitted("billing.manage")}><SettingsRow label={plan.plan_key}><Button disabled={busy()} onClick={() => { const catalog = fulfilled(value().catalog); if (catalog) void upgrade(plan.plan_key as "pro" | "team", catalog.catalog_version); }}>{t("web.billing_v2.upgrade")}</Button></SettingsRow></Show>
-            }</For>
             <Show when={permitted("billing.manage") && org().payer.is_you}><SettingsRow label={t("web.billing_v2.payment")}><Button disabled={busy()} onClick={() => void portal()}>{t("web.billing_v2.open")}</Button></SettingsRow></Show>
             <Show when={permitted("billing.subscription.cancel")}><SettingsRow label={t(org().cancel_at_period_end ? "web.billing_v2.resume" : "web.billing_v2.cancel")}><Button disabled={busy()} onClick={() => void changeSubscription(org().cancel_at_period_end)}>{t(org().cancel_at_period_end ? "web.billing_v2.resume" : "web.billing_v2.cancel")}</Button></SettingsRow></Show>
           </SettingsSection>}</Show>
@@ -136,6 +141,6 @@ export default function BillingPlan(props: { api: Api; role: () => string; conte
         </>}</Show>
       </Show>
     </Show>
-    <NewOrganizationCheckout api={props.api} onActive={props.onActive} />
+    <Show when={props.creationApi}>{api => <NewOrganizationCheckout api={api()} />}</Show>
   </SettingsPanel>;
 }
