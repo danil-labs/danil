@@ -192,6 +192,15 @@ pub(crate) fn allowed(method: &str, path: &str) -> bool {
     }
 }
 
+/// Crear y adoptar workspaces no se repiten sin la llave de quien llama: una
+/// llave inventada aquí rompería la idempotencia de sus reintentos.
+pub(super) fn requires_caller_key(method: &str, path: &str) -> bool {
+    matches!(
+        (method, path),
+        ("POST", "/v1/workspaces") | ("POST", "/v1/workspaces/adopt")
+    )
+}
+
 pub(super) fn valid_promo_request(
     method: &str,
     path: &str,

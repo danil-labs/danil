@@ -275,6 +275,9 @@ pub(super) fn danil_edge_fetch(
     let key = match idempotency_key {
         Some(k) if (1..=128).contains(&k.len()) && k.bytes().all(|b| b.is_ascii_graphic()) => k,
         Some(_) => return Err(coded("invalid_request")),
+        None if session::requires_caller_key(&method, &path) => {
+            return Err(coded("invalid_request"))
+        }
         None => pkce::random(18).ok_or_else(|| coded("unavailable"))?,
     };
     desk(&app)

@@ -597,6 +597,15 @@ fn writes_carry_an_idempotency_key() {
 }
 
 #[test]
+fn creating_and_adopting_require_the_callers_key() {
+    use super::session::requires_caller_key;
+    assert!(requires_caller_key("POST", "/v1/workspaces"));
+    assert!(requires_caller_key("POST", "/v1/workspaces/adopt"));
+    assert!(!requires_caller_key("POST", "/v1/workspaces/select"));
+    assert!(!requires_caller_key("GET", "/v1/workspaces"));
+}
+
+#[test]
 fn only_the_mvp_routes_are_callable() {
     for (m, p) in [
         ("GET", "/v1/capabilities"),

@@ -1,5 +1,5 @@
 import { escribirPref, leerPref } from "../../lib/prefs.ts";
-import { adoptLocals, prefsAdoptionMemory } from "./account-adoption.ts";
+import { adoptionTarget, adoptLocals, prefsAdoptionMemory } from "./account-adoption.ts";
 import { applyMoves, movesFor, prefsPendingUnions, retryUnions } from "./account-transfers.ts";
 
 export type AccountWorkspace = { id: string; name: string; account: { org: string; account_id: string } };
@@ -65,7 +65,7 @@ export function createAccountWorkspaces(invoke: Invoke, native: boolean, changed
         transfer = self.features?.includes("account_transfer_v1") ?? false;
         adoption = self.features?.includes("account_adoption_v1") ?? false;
         // Al iniciar sesión, antes de lanzar turnos: los locales pasan a la organización personal Free.
-        const personal = groups.find((g) => g.plan === "free");
+        const personal = adoptionTarget(groups);
         if (adoption && personal && !adoptionUnavailable) {
           const done = await adoptLocals(invoke, header(), send, personal, adoptions, pending);
           if (epoch !== version) return;
