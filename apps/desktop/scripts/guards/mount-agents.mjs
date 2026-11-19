@@ -351,6 +351,8 @@ let threadRows = [
   { ...agentRow, id: "archived-work", title: "Old investigation", last_message: "Historical finding", archived: true, chat_de_agente: false, launched_by: "dm", launcher_name: "Holmes" },
   { ...agentRow, id: "dm-work", title: "DM task", chat_de_agente: false, launched_by: "dm", launcher_name: "Holmes" },
   { ...agentRow, id: "topic-work", title: "Topic task", last_message: "Topic task progress", chat_de_agente: false, pinned: true, launched_by: "topic", launcher_name: "Watson" },
+  { ...agentRow, id: "root-peer", title: "Root peer", chat_de_agente: false, pinned: false, launched_by: "topic", root_peer: true },
+  { ...agentRow, id: "peer-child", title: "Peer child", chat_de_agente: false, pinned: false, launched_by: "root-peer" },
   { ...agentRow, id: "topic-work-2", title: "Second topic task", chat_de_agente: false, pinned: false, launched_by: "topic", launcher_name: "Holmes" },
   { ...agentRow, id: "8cnv428n", title: "Revisa seguridad escrituras alfa Inbox y Broadcasts", chat_de_agente: false, pinned: false, launched_by: "n8tc0emm", launcher_available: false, launcher_name: "tech-lead" },
   { ...agentRow, id: "unrelated-work", title: "Other task", agent: null, chat_de_agente: false, launched_by: "other-chat", launcher_name: "Other agent" },
@@ -361,7 +363,7 @@ let threadProjects = bubbleResponses.list_projects;
 const threadApp = await bootByFolder("listo", "agent-threads", {
   ...bubbleResponses,
   list_projects: () => threadProjects,
-  list_delegated_sessions: ({ id }) => threadRows.filter(row => row.launched_by === id).map(row => ({ ...row, folder: "p" })),
+  list_delegated_sessions: ({ id }) => threadRows.filter(row => row.launched_by === id || (id === "topic" && row.id === "peer-child")).map(row => ({ ...row, folder: "p" })),
   task_coordinator: ({ id }) => {
     const row = threadRows.find(row => row.id === id);
     const root = threadRows.find(root => root.id === row?.launched_by);
@@ -493,6 +495,9 @@ assert.equal([...threadDoc.querySelectorAll('button')].find(button => button.tex
 [...threadDoc.querySelectorAll('button')].find(button => button.textContent === "Todas").click();
 await sleep(50);
 assert.ok(threadDoc.querySelector('[data-delegated-list] [data-sesion="topic-work"]'), "el desplegable conserva trabajo de turnos anteriores");
+assert.ok(sidebarTask("root-peer"), "el par raíz aparece en el riel");
+assert.equal(threadDoc.querySelector('[data-delegated-list] [data-sesion="root-peer"]'), null);
+assert.equal(threadDoc.querySelector('[data-delegated-list] [data-sesion="peer-child"]'), null);
 assert.equal(threadDoc.querySelector('[data-delegated-list] [data-folder-chip]'), null, "las delegadas no repiten la carpeta de su madre");
 threadDoc.querySelector('[data-delegated-list] [data-sesion="topic-work"]').click();
 await sleep(200);

@@ -190,6 +190,7 @@ export type SessionRow = {
   parent?: string | null;
   launched_by?: string | null;
   launcher_available?: boolean;
+  root_peer?: boolean;
   /** La ejecutora viva de la que continúa por handoff; un motor viejo no lo manda. */
   handoff_parent?: string | null;
   /** Por qué no cuelga de quien le cedió; un motor viejo no lo manda. */
