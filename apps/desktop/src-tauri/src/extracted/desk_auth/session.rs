@@ -173,6 +173,8 @@ pub(crate) fn allowed(method: &str, path: &str) -> bool {
             // Crear (peticiones de la CLI, account_requests_v1) y adoptar los locales (§ 7.2).
             | ("POST", "/v1/workspaces")
             | ("POST", "/v1/workspaces/adopt")
+            // El reto de posesión de la adopción (A17, plan de cuentas § 10.1).
+            | ("POST", "/v1/workspaces/adopt/challenge")
             | ("POST", "/v1/workspaces/select")
             | ("POST", "/v1/workspaces/promo/redeem")
             | ("GET", "/v1/workspaces/preferences")

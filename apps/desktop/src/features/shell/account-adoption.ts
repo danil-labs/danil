@@ -7,14 +7,50 @@ type Send = (context: string, method: string, path: string, body?: unknown, key?
 export type AdoptionMemory = { key: (id: string) => string; skip: (org: string, id: string) => boolean; refuse: (org: string, id: string) => void };
 export type AdoptionResult = { adopted: string[]; refused: string[]; unavailable: boolean };
 
+/** La prueba de posesión que firma el motor (`adoption_proof`, A17). */
+type AdoptionProof = { jwk: { kty: "EC"; crv: "P-256"; x: string; y: string }; jkt: string; sig: string };
+const B64 = /^[A-Za-z0-9_-]+$/;
+const NONCE = /^[A-Za-z0-9_-]{43}$/;
+
+function proofOf(value: unknown): AdoptionProof | null {
+  const p = value as { jwk?: Record<string, unknown>; jkt?: unknown; sig?: unknown } | null;
+  const jwk = p?.jwk;
+  if (!jwk || Object.keys(jwk).sort().join() !== "crv,kty,x,y" || jwk.kty !== "EC" || jwk.crv !== "P-256") return null;
+  const parts = [jwk.x, jwk.y, p.jkt, p.sig];
+  if (!parts.every((v) => typeof v === "string" && B64.test(v))) return null;
+  return { jwk: { kty: "EC", crv: "P-256", x: jwk.x as string, y: jwk.y as string }, jkt: p.jkt as string, sig: p.sig as string };
+}
+
+/**
+ * Sin la ruta (404, 501), con la adopción apagada (`503 adoption_disabled`) o sin
+ * organización personal marcada (`409 adoption_requires_personal`), los locales
+ * se quedan así y se vuelve a intentar en el siguiente inicio de sesión.
+ */
+function stops(reply: { status: number; body?: unknown }) {
+  const code = (reply.body as { code?: unknown } | undefined)?.code;
+  return reply.status === 404 || reply.status === 501 || (reply.status === 503 && code === "adoption_disabled") || (reply.status === 409 && code === "adoption_requires_personal");
+}
+
+/** El `sub` de la persona en ese contexto: el que firma la prueba y el servidor compara con la sesión. */
+async function personOf(send: Send, context: string, known: string | null) {
+  if (known) return known;
+  const reply = await send(context, "GET", "/v1/identity/me").catch(() => null);
+  const id = (reply?.body as { id?: unknown } | undefined)?.id;
+  return reply?.status === 200 && typeof id === "string" && id ? id : null;
+}
+
 /**
  * Adopta, una sola vez, los workspaces locales en la organización personal Free
- * del correo (plan de cuentas § 7.2, A11): primero el servidor (`POST
- * /v1/workspaces/adopt`, idempotente por llave), después el sello aquí con la
- * cuenta que devolvió. No mueve tareas. Un servidor sin la ruta (404, 501) corta
- * sin tocar nada; `409 id_taken` no se vuelve a pedir en esa organización. Otro
- * 409 es pasajero y se repite en el siguiente repaso. El sello no se deshace, así
- * que una respuesta que no corresponde a lo pedido no se sella.
+ * del correo (plan de cuentas § 7.2, A11, con la prueba de posesión de A17 §
+ * 10.1). Por cada candidato: el reto del servidor (`POST
+ * /v1/workspaces/adopt/challenge`), la prueba que firma el motor con la llave del
+ * workspace (`adoption_proof`), `POST /v1/workspaces/adopt` con esa prueba y, al
+ * final, el sello aquí con la cuenta que devolvió. Solo se sella si el servidor
+ * repite el `jkt` de este motor (`possession.jkt`): uno que ignoró la prueba no
+ * sella nada. No mueve tareas. `409 id_taken` no se vuelve a pedir en esa
+ * organización; otro 409 o una prueba rechazada se repiten en el siguiente
+ * repaso con un reto nuevo. El sello no se deshace, así que una respuesta que no
+ * corresponde a lo pedido no se sella.
  */
 export async function adoptLocals(
   invoke: Invoke,
@@ -23,6 +59,7 @@ export async function adoptLocals(
   free: { context_id: string; org: string },
   memory: AdoptionMemory,
   pending: PendingUnions,
+  person: string | null = null,
 ): Promise<AdoptionResult> {
   const adopted: string[] = [];
   const refused: string[] = [];
@@ -32,16 +69,31 @@ export async function adoptLocals(
   } catch {
     return { adopted, refused, unavailable: false };
   }
+  candidates = candidates.filter((c) => c.adoptable !== false && !memory.skip(free.org, c.id));
+  if (!candidates.length) return { adopted, refused, unavailable: false };
+  const sub = await personOf(send, free.context_id, person);
+  if (!sub) return { adopted, refused, unavailable: false };
   for (const c of candidates) {
-    if (c.adoptable === false || memory.skip(free.org, c.id)) continue;
     let reply: Awaited<ReturnType<Send>>;
+    let proof: AdoptionProof | null;
+    let nonce: string;
     try {
-      reply = await send(free.context_id, "POST", "/v1/workspaces/adopt", { engine_workspace_id: c.id, name: c.name }, memory.key(c.id));
+      const challenge = await send(free.context_id, "POST", "/v1/workspaces/adopt/challenge", { engine_workspace_id: c.id });
+      if (stops(challenge)) return { adopted, refused, unavailable: true };
+      const value = (challenge.body as { nonce?: unknown } | undefined)?.nonce;
+      if (challenge.status !== 200 || challenge.empty_reason || typeof value !== "string" || !NONCE.test(value)) continue;
+      nonce = value;
+      proof = proofOf(await invoke("adoption_proof", { ...header, id: c.id, nonce, org: free.org, sub }));
+      if (!proof) continue;
+      // Cada intento lleva un reto distinto, así que su llave también: la repetición segura entre intentos
+      // la da el servidor (mismo id, misma llave de posesión y misma organización responden la misma cuenta).
+      const body = { engine_workspace_id: c.id, name: c.name, proof: { nonce, jwk: proof.jwk, sig: proof.sig } };
+      reply = await send(free.context_id, "POST", "/v1/workspaces/adopt", body, `${memory.key(c.id)}.${nonce}`);
     } catch {
       continue;
     }
-    if (reply.status === 404 || reply.status === 501) return { adopted, refused, unavailable: true };
-    const body = reply.body as { id?: unknown; code?: unknown; engine_workspace_id?: unknown; org?: unknown } | undefined;
+    if (stops(reply)) return { adopted, refused, unavailable: true };
+    const body = reply.body as { id?: unknown; code?: unknown; engine_workspace_id?: unknown; org?: unknown; possession?: { jkt?: unknown } } | undefined;
     if (reply.status === 409) {
       if (body?.code === "id_taken") {
         memory.refuse(free.org, c.id);
@@ -52,6 +104,7 @@ export async function adoptLocals(
     const accountId = asAccountId(body?.id);
     if (reply.status < 200 || reply.status >= 300 || reply.empty_reason || !accountId) continue;
     if ((body?.engine_workspace_id !== undefined && body.engine_workspace_id !== c.id) || (body?.org !== undefined && body.org !== free.org)) continue;
+    if (body?.possession?.jkt !== proof.jkt) continue;
     try {
       await invoke("adopt_account_workspace", { ...header, id: c.id, account: { org: free.org, account_id: accountId } });
     } catch {

@@ -312,3 +312,5 @@ them answers that the command is unknown, and only that feature turns off.
   SHA-256 `477ab9298ea8e74717d280f04385fc464d09bbd045ce73b23494392884f8a7ca`.
 - `account_adoption_v1.json`: `adoption_candidates` and `adopt_account_workspace` (danil-engine#469), copied from danil-engine dev `2cf5e5bb`,
   SHA-256 `ab06a5f1a733a8a1e9533151db8e44b3de35cbaec21119a122ed161e1ba1f976`.
+- `account_adoption_proof_v1.json`: `adoption_proof`, the possession proof for `POST /v1/workspaces/adopt` (A17), copied from danil-engine `feat/account-adoption-proof` `b823a3c4`,
+  SHA-256 `26614c4d7612bdd1651e11a7fab56cec06bf6214604972884fd66867a89b4aa8`.

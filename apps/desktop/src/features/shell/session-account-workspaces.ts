@@ -63,11 +63,12 @@ export function createAccountWorkspaces(invoke: Invoke, native: boolean, changed
         local = self.id;
         extension = self.features?.includes("account_workspace_v1") ?? false;
         transfer = self.features?.includes("account_transfer_v1") ?? false;
-        adoption = self.features?.includes("account_adoption_v1") ?? false;
+        // Sin la prueba de posesión (A17) el servidor no adopta: hace falta el rasgo nuevo del motor.
+        adoption = !!(self.features?.includes("account_adoption_v1") && self.features.includes("account_adoption_proof_v1"));
         // Al iniciar sesión, antes de lanzar turnos: los locales pasan a la organización personal Free.
         const personal = adoptionTarget(groups);
         if (adoption && personal && !adoptionUnavailable) {
-          const done = await adoptLocals(invoke, header(), send, personal, adoptions, pending);
+          const done = await adoptLocals(invoke, header(), send, personal, adoptions, pending, personOf(personal.context_id));
           if (epoch !== version) return;
           adoptionUnavailable = done.unavailable;
         }
