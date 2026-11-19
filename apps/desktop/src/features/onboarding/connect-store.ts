@@ -20,7 +20,7 @@ import { accountPresentation } from "../settings/AccountCard";
 import { accountKeyUrl } from "../settings/account-auth";
 import type { AccountList, AccountStatus, AgentOpt, LoginEvent } from "../settings/accounts-store";
 import { ORIGEN_SISTEMA } from "../settings/environment-store";
-import { isFreeRouterAgent, OPENCODE } from "../../../../../packages/tasks/src/agents.ts";
+import { canonicalAgentId, isFreeRouterAgent, isRetiredAgent, OPENCODE } from "../../../../../packages/tasks/src/agents.ts";
 import "../../locales/settingsPhrases";
 
 type Agente = AgentOpt & { source: string | null; system_broken: boolean };
@@ -195,7 +195,11 @@ export function crearConexiones() {
       ],
     );
     const nuevas: Fila[] = [];
-    for (const a of [...agentes].sort((x, y) => posicion(x.id) - posicion(y.id))) {
+    // Un motor anterior aún manda `opencode-local` (retirado) y `opencode-zen`: la fila usa el id actual.
+    const vigentes = agentes.filter((a) => !isRetiredAgent(a.id));
+    for (const a of vigentes.sort((x, y) => posicion(canonicalAgentId(x.id)) - posicion(canonicalAgentId(y.id)))) {
+      const id = canonicalAgentId(a.id);
+      if (nuevas.some((f) => f.id === id)) continue;
       // El Free Router (`free-router-<motor>`) no tiene cuenta: su fila es solo el consentimiento.
       const router = isFreeRouterAgent(a.id) || a.free_router === true;
       // Un motor anterior parte su fila de OpenCode en dos: la de pago y una superficie gratuita aparte.
@@ -206,9 +210,9 @@ export function crearConexiones() {
           : accountKeyUrl(a) || CLAVES[a.id]
             ? "clave"
             : "sesion";
-      const previa = filas().find((f) => f.id === a.id);
+      const previa = filas().find((f) => f.id === id);
       nuevas.push({
-        id: a.id,
+        id,
         agente: a.id,
         label: a.label,
         modo,
