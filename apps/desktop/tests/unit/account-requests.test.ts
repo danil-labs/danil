@@ -5,7 +5,7 @@
  */
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { createAccountRequests, listOrgs, pickGroup, runAccountRequest, type AccountRequest } from "../../src/features/shell/account-requests.ts";
+import { type AccountRequest, createAccountRequests, listOrgs, pickGroup, runAccountRequest } from "../../src/features/shell/account-requests.ts";
 import type { ContextGroup, ContextReply } from "../../src/features/shell/session-context-types.ts";
 
 const group = (context_id: string, org: string, org_name: string, plan: string | null, role: string | null, email = "a@example.com"): ContextGroup =>
@@ -24,7 +24,8 @@ function server(status = 201) {
     posts.push({ context, key, body });
     if (status !== 201) return { status, body: status === 409 ? { code: "workspace_limit" } : {} };
     if (!key) throw new Error("sin llave");
-    if (!created.has(key)) created.set(key, { id: 1000 + created.size, name: (body as { name: string }).name, engine_workspace_id: `qw${created.size}xyz0` });
+    const placement = (body as { placement?: unknown }).placement ?? { kind: "organization_machine" };
+    if (!created.has(key)) created.set(key, { id: 1000 + created.size, name: (body as { name: string }).name, engine_workspace_id: `qw${created.size}xyz0`, placement });
     return { status: 201, body: created.get(key) };
   };
   return { send, posts, created };
@@ -47,7 +48,7 @@ test("the org comes from --org by id or name, the personal Free without it, and 
   assert.deepEqual(pickGroup([free, acme], "org_acme"), { group: acme });
   assert.deepEqual(pickGroup([free, acme], "acme"), { group: acme });
   assert.deepEqual(pickGroup([], undefined), { error: { code: "no_session" } });
-  assert.deepEqual(pickGroup([acme], undefined), { error: { code: "no_session" } });
+  assert.deepEqual(pickGroup([acme], undefined), { error: { code: "ambiguous", options: [{ org: "org_acme", name: "Acme", email: "a@example.com" }] } });
   const twin = group("c-acme2", "org_acme2", "Acme", "paid", "admin", "b@example.com");
   const picked = pickGroup([acme, twin], "Acme");
   assert.ok("error" in picked && picked.error.code === "ambiguous" && picked.error.options?.length === 2);
@@ -57,15 +58,41 @@ test("creating sends the CLI key as Idempotency-Key, seals here and two dispatch
   const api = server();
   const sealed: unknown[] = [];
   const deps = { groups: () => [free, acme], send: api.send, createHere: async (...args: unknown[]) => { sealed.push(args); } };
-  const first = await runAccountRequest(request({ name: "Docs", org: "Acme" }), deps);
-  const second = await runAccountRequest(request({ name: "Docs", org: "Acme" }), deps);
+  const first = await runAccountRequest(request({ name: "Docs" }), deps);
+  const second = await runAccountRequest(request({ name: "Docs" }), deps);
   assert.equal(api.created.size, 1, "una sola creación con la misma llave");
-  assert.deepEqual(api.posts.map((p) => [p.context, p.key]), [["c-acme", "key-1"], ["c-acme", "key-1"]]);
+  assert.deepEqual(api.posts.map((p) => [p.context, p.key]), [["c-free", "key-1"], ["c-free", "key-1"]]);
   assert.deepEqual(api.posts[0].body, { name: "Docs", placement: { kind: "member_computer" } });
-  assert.deepEqual(first.outcome, { result: { workspace: { id: "qw0xyz0", name: "Docs", org: "org_acme", account_id: "1000" } } });
+  assert.deepEqual(first.outcome, { result: { workspace: { id: "qw0xyz0", name: "Docs", org: "org_free", account_id: "1000" }, materialized: true } });
   assert.deepEqual(second.outcome, first.outcome);
-  assert.deepEqual(sealed[0], ["org_acme", "1000", "qw0xyz0", "Docs"]);
-  assert.deepEqual(first.created, { name: "Docs", org: "Acme", task: "task-9" });
+  assert.deepEqual(sealed[0], ["org_free", "1000", "qw0xyz0", "Docs"]);
+  assert.deepEqual(first.created, { name: "Docs", org: "Personal", task: "task-9", materialized: true });
+});
+
+test("a paid org leaves the placement to its admin and only a member computer workspace is sealed here", async () => {
+  const api = server();
+  const sealed: unknown[] = [];
+  const got = await runAccountRequest(request({ name: "Docs", org: "Acme" }, "workspace.create", "key-paid"), { groups: () => [free, acme], send: api.send, createHere: async (...a: unknown[]) => { sealed.push(a); } });
+  assert.deepEqual(api.posts[0].body, { name: "Docs" });
+  assert.equal(sealed.length, 0, "corre en la máquina de la organización");
+  assert.ok("result" in got.outcome);
+});
+
+test("two emails in the same org pick the admin context, and a failed local seal reports materialized: false", async () => {
+  const member = group("c-x1", "org_x", "X", "paid", "member");
+  const admin = group("c-x2", "org_x", "X", "paid", "admin", "b@example.com");
+  assert.deepEqual(pickGroup([member, admin], "org_x"), { group: admin });
+  assert.deepEqual(pickGroup([member, admin], "X"), { group: admin });
+  const failing = await runAccountRequest(request({ name: "Docs" }, "workspace.create", "key-fail"), { groups: () => [free], send: server().send, createHere: async () => { throw new Error("motor"); } });
+  assert.ok("result" in failing.outcome && (failing.outcome.result as { materialized: boolean }).materialized === false);
+  assert.equal(failing.created?.materialized, false);
+});
+
+test("without a Free and without --org, the orgs where the person is admin are the options", () => {
+  const picked = pickGroup([acme, beta], undefined);
+  assert.ok("error" in picked && picked.error.code === "ambiguous");
+  assert.deepEqual("error" in picked && picked.error.options, [{ org: "org_acme", name: "Acme", email: "a@example.com" }]);
+  assert.deepEqual(pickGroup([beta], undefined), { error: { code: "admin_required", options: undefined } });
 });
 
 test("a member is told admin_required, and server refusals, missing routes and unknown ops settle with their code", async () => {
@@ -93,5 +120,5 @@ test("pump takes and settles each request once and notifies what an agent create
   await Promise.all([requests.pump(), requests.pump()]);
   assert.deepEqual(settled.map((s) => s.requestId), ["r-key-pump", "r-key-orgs"]);
   assert.ok("result" in settled[0] && "result" in settled[1]);
-  assert.deepEqual(notices, [{ name: "Docs", org: "Personal", task: "task-9" }]);
+  assert.deepEqual(notices, [{ name: "Docs", org: "Personal", task: "task-9", materialized: true }]);
 });

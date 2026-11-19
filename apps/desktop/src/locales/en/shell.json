@@ -460,6 +460,7 @@
   },
   "shell.workspaces.removed_org": "{name} was removed.",
   "shell.workspaces.agent_created": "An agent created “{name}” in {org}.",
+  "shell.workspaces.agent_created_elsewhere": "An agent created “{name}” in {org}. Add it from “Add workspace” on this computer.",
   "shell.workspaces.dismiss_removed": "Dismiss",
   "shell.profile.preferences": "Preferences",
   "shell.workspaces.organization_required": "The organization needs attention",

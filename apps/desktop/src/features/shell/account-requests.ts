@@ -4,7 +4,7 @@ import type { ContextGroup, ContextReply } from "./session-context-types.ts";
 export type AccountRequest = { request_id: string; op: string; args?: { name?: string; org?: string }; key: string; caller_task?: string | null };
 export type AccountError = { code: string; options?: unknown[] };
 export type AccountOutcome = { result: unknown } | { error: AccountError };
-export type CreatedNotice = { name: string; org: string; task: string | null };
+export type CreatedNotice = { name: string; org: string; task: string | null; materialized: boolean };
 
 type Send = (context: string, method: string, path: string, body?: unknown, key?: string) => Promise<ContextReply>;
 type Invoke = <T>(command: string, args?: Record<string, unknown>) => Promise<T>;
@@ -30,15 +30,35 @@ export function listOrgs(groups: readonly ContextGroup[]) {
   });
 }
 
-/** El contexto donde crear: el de `--org` (id o nombre) o el Free personal. */
+/** De varios contextos de una misma organización (dos correos), uno con rol de admin y en orden fijo. */
+function oneOf(groups: readonly ContextGroup[]) {
+  const sorted = [...groups].sort((a, b) => Number(!ADMIN.has(a.role ?? "")) - Number(!ADMIN.has(b.role ?? "")) || a.context_id.localeCompare(b.context_id));
+  return sorted[0];
+}
+
+/**
+ * El contexto donde crear: el de `--org` (id o nombre) o el Free personal. Crear es
+ * de la organización, así que da igual con qué correo: `ambiguous` es solo para
+ * organizaciones distintas con el mismo nombre.
+ */
 export function pickGroup(groups: readonly ContextGroup[], org: string | undefined): { group: ContextGroup } | { error: AccountError } {
   if (!groups.length) return { error: { code: "no_session" } };
   const matches = org
     ? groups.filter((g) => g.org === org || (g.org_name ?? "").toLowerCase() === org.toLowerCase())
     : groups.filter((g) => g.plan === "free");
-  if (matches.length === 1) return { group: matches[0] };
-  if (!org && !matches.length) return { error: { code: "no_session" } };
-  return { error: { code: "ambiguous", options: (matches.length ? matches : groups).map(option) } };
+  const orgs = new Set(matches.map((g) => g.org));
+  if (orgs.size === 1) return { group: oneOf(matches) };
+  if (orgs.size > 1) {
+    const seen = new Set<string>();
+    return { error: { code: "ambiguous", options: matches.filter((g) => !seen.has(g.org) && seen.add(g.org)).map(option) } };
+  }
+  // Sin Free: las organizaciones donde puede crear, para elegir con `--org`.
+  const admin = groups.filter((g) => ADMIN.has(g.role ?? ""));
+  if (!org && admin.length) {
+    const seen = new Set<string>();
+    return { error: { code: "ambiguous", options: admin.filter((g) => !seen.has(g.org) && seen.add(g.org)).map(option) } };
+  }
+  return { error: { code: org ? "ambiguous" : "admin_required", options: org ? groups.map(option) : undefined } };
 }
 
 function failed(reply: ContextReply): AccountError {
@@ -65,21 +85,26 @@ export async function runAccountRequest(row: AccountRequest, deps: AccountReques
   let reply: ContextReply;
   try {
     // La llave de la CLI es la del servidor: dos despachos de la misma petición crean un solo workspace.
-    reply = await deps.send(group.context_id, "POST", "/v1/workspaces", { name, placement: { kind: "member_computer" } }, row.key);
+    // El Free corre en la computadora de la persona; en una organización de pago decide su admin (el valor por omisión del servidor).
+    const body = group.plan === "free" ? { name, placement: { kind: "member_computer" } } : { name };
+    reply = await deps.send(group.context_id, "POST", "/v1/workspaces", body, row.key);
   } catch {
     return { outcome: { error: { code: "operation_failed" } } };
   }
   if (reply.status < 200 || reply.status >= 300 || reply.empty_reason) return { outcome: { error: failed(reply) } };
-  const body = (reply.body ?? {}) as { id?: unknown; name?: unknown; engine_workspace_id?: unknown };
+  const body = (reply.body ?? {}) as { id?: unknown; name?: unknown; engine_workspace_id?: unknown; placement?: { kind?: unknown } };
   if (typeof body.id !== "string" && typeof body.id !== "number") return { outcome: { error: { code: "operation_failed" } } };
   const accountId = String(body.id);
   const created = typeof body.name === "string" && body.name.trim() ? body.name : name;
   const engineId = typeof body.engine_workspace_id === "string" && body.engine_workspace_id ? body.engine_workspace_id : null;
-  // En la computadora de la persona el workspace vive aquí; si el motor no lo admite, el servidor ya lo tiene.
-  if (engineId) await deps.createHere(group.org, accountId, engineId, created).catch(() => {});
+  // Solo lo que corre en la computadora de la persona vive aquí. Si sellarlo falla, el servidor ya lo tiene:
+  // no es un error, pero la persona tiene que agregarlo desde «Agregar workspace».
+  const here = (body.placement?.kind ?? (group.plan === "free" ? "member_computer" : null)) === "member_computer";
+  let materialized = !here;
+  if (here && engineId) materialized = await deps.createHere(group.org, accountId, engineId, created).then(() => true, () => false);
   return {
-    outcome: { result: { workspace: { id: engineId ?? accountId, name: created, org: group.org, account_id: accountId } } },
-    created: { name: created, org: group.org_name ?? group.org, task: row.caller_task ?? null },
+    outcome: { result: { workspace: { id: engineId ?? accountId, name: created, org: group.org, account_id: accountId }, materialized } },
+    created: { name: created, org: group.org_name ?? group.org, task: row.caller_task ?? null, materialized },
   };
 }
 
