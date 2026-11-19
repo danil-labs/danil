@@ -42,7 +42,7 @@ export function edgeTransport(options: EdgeDeployment, request: typeof fetch = f
       cache: "no-store",
       redirect: "error",
       signal: init.signal ? AbortSignal.any([init.signal, deadline]) : deadline,
-      headers: { Accept: "application/json", ...init.headers },
+      headers: withHeaders(init.headers, { Accept: "application/json" }, false),
     });
     if (!response.ok) {
       const problem =
@@ -63,7 +63,7 @@ export function edgeTransport(options: EdgeDeployment, request: typeof fetch = f
     const body = (await (await call("identity/csrf", { signal: init.signal })).json().catch(() => null)) as { csrf_token?: unknown } | null;
     const token = body?.csrf_token;
     if (typeof token !== "string" || !token || token.length > 128) throw new Error("invalid_csrf");
-    return call(path, { ...init, method: init.method ?? "POST", headers: { ...init.headers, "X-CSRF-Token": token } });
+    return call(path, { ...init, method: init.method ?? "POST", headers: withHeaders(init.headers, { "X-CSRF-Token": token }, true) });
   }
   return { call, mutation };
 }
@@ -108,4 +108,11 @@ export function edgeIdentity(transport: EdgeTransport, origin: string) {
       await transport.mutation("identity/logout", { headers: { "Idempotency-Key": crypto.randomUUID() } });
     },
   };
+}
+
+/** Combina cualquier `HeadersInit` (objeto, `Headers` o pares); un `Headers` esparcido con `...` queda vacío. */
+function withHeaders(from: HeadersInit | undefined, extra: Record<string, string>, override: boolean): Headers {
+  const headers = new Headers(from);
+  for (const [name, value] of Object.entries(extra)) if (override || !headers.has(name)) headers.set(name, value);
+  return headers;
 }
