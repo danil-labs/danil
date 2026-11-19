@@ -13,7 +13,7 @@ import { webOrganizations } from './organization-context';
 import { activeGroupCredits, type PlatformProfile, PlatformSessionError, type PlatformWorkspace, platformSession, platformTransport } from './platform-session';
 import { type CapabilitiesSnapshot, readCapabilities, supports } from './service-capabilities';
 import type { WebSessionDeployment } from './session-config';
-import { clearWebCaches, sessionStorageScope } from './session-storage';
+import { awaitingWorkspace, clearWebCaches, readWorkspaces, retryWait, sessionExit, workspaceCache } from './session-wait';
 import { UpdateNotice } from './UpdateNotice';
 import { mountWindow } from './window';
 import './phrases';
@@ -41,7 +41,8 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
     const [error, setError] = createSignal('');
     // Identity aún no dio el perfil y se reintenta solo: sigue la carga, no una pantalla vacía.
     const [preparing, setPreparing] = createSignal(false);
-    const [signedOut, setSignedOut] = createSignal(false); const [awaitingWorkspace, setAwaitingWorkspace] = createSignal(false);
+    const [signedOut, setSignedOut] = createSignal(false);
+    const [preparingWorkspace, setPreparingWorkspace] = createSignal(false);
     // Hasta que identity contesta se ve la carga; la entrada solo sin sesión o con el error del retorno.
     const [identified, setIdentified] = createSignal(false);
     const returnError = signInError(window.location.search);
@@ -49,8 +50,8 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
     let disposeGate: (() => void) | undefined;
     let person: PlatformProfile | undefined;
     let stopped = false;
-    let leaving = false; const gone = () => stopped || signedOut() || leaving; // «Cerrar sesión» en un reintento: lo que llegue tarde ya no monta.
-    let cache: ReturnType<typeof sessionStorageScope> | undefined;
+    const gone = () => stopped || signedOut() || exit.leaving();
+    let cache: ReturnType<typeof workspaceCache> | undefined;
     let mountedBefore = false;
     let firstMountAttempts = 0;
     let timer: ReturnType<typeof setTimeout> | undefined;
@@ -63,7 +64,7 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
       windowApp = undefined;
       disposeGate?.();
       root.replaceChildren();
-      disposeGate = render(() => <Show when={identified() && !signedOut() && !preparing()} fallback={<><ToastStack><UpdateNotice /></ToastStack><Show when={signedOut() || returnError} fallback={<SessionLoading onSignOut={preparing() ? () => void logout() : undefined} />}><WorkosAuthPage loginUrl={api.loginUrl(home)} error={returnError} /></Show></>}><main class="flex h-full flex-col gap-4 overflow-y-auto bg-bg p-10 text-neutral-950" data-web-gate="">
+      disposeGate = render(() => <Show when={identified() && !signedOut() && !preparing()} fallback={<><ToastStack><UpdateNotice /></ToastStack><Show when={signedOut() || returnError} fallback={<SessionLoading onSignOut={preparing() ? () => void exit.leave() : undefined} />}><WorkosAuthPage loginUrl={api.loginUrl(home)} error={returnError} /></Show></>}><main class="flex h-full flex-col gap-4 overflow-y-auto bg-bg p-10 text-neutral-950" data-web-gate="">
         <ToastStack><UpdateNotice /></ToastStack>
         <h1 class="m-0 font-display text-lead font-bold">{t('common.brand_name')}</h1>
         <Show when={busy()}><p role="status">{t('web.auth.waiting')}</p></Show>
@@ -75,7 +76,7 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
           <Show when={!error()}>
             <For each={rows()}>{row => <Button onClick={() => void choose(row.id)}>{row.name}</Button>}</For>
           </Show>
-          <Button variant="ghost" data-web-sign-out="" onClick={() => void logout()}>{t('web.platform.sign_out')}</Button>
+          <Button variant="ghost" data-web-sign-out="" onClick={() => void exit.leave()}>{t('web.platform.sign_out')}</Button>
         </Show>
       </main></Show>, root);
     }
@@ -124,19 +125,14 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
       setRows(listed); setPreparing(listed.length === 0); setError(''); setNoWorkspace(true);
       gate(); if (listed.length === 0) later();
     }
-    /** La cuenta recién creada monta sin workspace; se sondea hasta que la plataforma lo tiene. */
-    function waiting() { return person !== undefined && (person.workspace === null || (permits('workspaces') && rows().length === 0)); }
-    /** La lista vacía o aún sin contexto (403/404/503) no impide montar; 401 sí sale. */
-    async function listWorkspaces(read: () => Promise<PlatformWorkspace[]>, fallback: PlatformWorkspace[]) {
-      try { return await read(); }
-      catch (cause) { if (cause instanceof PlatformSessionError && cause.status === 401) throw cause; slower(cause); organization.report(cause); return fallback; }
-    }
-    function slower(cause: unknown) { if (cause instanceof PlatformSessionError && cause.retryAfter) wait = Math.max(wait, Number(cause.retryAfter) * 1000 || wait); }
+    const waiting = () => awaitingWorkspace(person, permits('workspaces'), rows().length);
+    const unlisted = (cause: unknown) => { wait = retryWait(cause, wait); organization.report(cause); };
     /** Primer montaje: identity aún no da el perfil; sigue la carga en vez de enseñar un 403 fatal. */
     function prepare() { firstMountAttempts += 1; const shown = preparing() && !windowApp; setPreparing(true); setError(''); if (!shown) gate(); later(); }
     function later(delay = wait) {
       clearTimeout(timer);
       if (gone()) return;
+      setPreparingWorkspace(mountedBefore && waiting());
       timer = setTimeout(() => void refreshServices(), delay);
       wait = Math.min(wait * 2, POLL_MAX_MS);
     }
@@ -156,16 +152,16 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
           if (person && (fresh.id !== person.id || (!arrived && fresh.workspace !== person.workspace) || fresh.active_organization_id !== person.active_organization_id)) { stopped = true; stopServices(); gate(); window.location.assign(home); return; }
           person = fresh;
           if (permits('workspaces') && fresh.workspace !== null) {
-            const listed = await listWorkspaces(() => api.workspaces(), rows());
+            const listed = await readWorkspaces(() => api.workspaces(), rows(), unlisted);
             if (gone()) return; setRows(listed);
           }
-          if (arrived && fresh.workspace !== null) { setActive(fresh.workspace); cache?.rescope(fresh.workspace); } setAwaitingWorkspace(waiting());
+          if (arrived && fresh.workspace !== null) { setActive(fresh.workspace); cache?.rescope(fresh.workspace); }
           startup.checked();
         } else if (!permits('machines')) { const capabilities = await readCapabilities(transport); if (gone()) return; setCaps(capabilities); }
         if (!gone()) ready = await windowApp?.refresh() ?? false;
       } catch (cause) {
         if (cause instanceof PlatformSessionError && cause.status === 401) expired();
-        else slower(cause);
+        else wait = retryWait(cause, wait);
       } finally {
         refreshing = false;
         later(ready && !waiting() ? Math.min(POLL_MAX_MS, startup.refreshIn()) : wait);
@@ -199,7 +195,11 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
       gate();
       await run(async () => { await selection.choose(id); window.location.assign(home); });
     }
-    async function logout() { if (gone()) return; leaving = true; clearTimeout(timer); try { await api.logout(); forgetMachineNames(); leaving = false; expired(); } catch (cause) { leaving = false; if (cause instanceof PlatformSessionError && cause.status === 401) expired(); else if (!gone()) { setPreparing(false); setError('web.platform.unavailable'); gate(); } } }
+    const exit = sessionExit({
+      closed: () => stopped || signedOut(), cancel: () => clearTimeout(timer), logout: () => api.logout(),
+      signedOut: () => { forgetMachineNames(); expired(); },
+      unavailable: () => { if (!gone()) { setPreparing(false); setError('web.platform.unavailable'); gate(); } },
+    });
     async function load() {
       await run(async () => {
         const { profile, capabilities } = await startup.read(caps());
@@ -208,11 +208,11 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
         if (mountedBefore) { window.location.assign(home); return; }
         person = profile;
         organization.load(startup.reader()?.organizations);
-        const workspaces = person.workspace !== null && permits('workspaces') ? await listWorkspaces(() => startup.reader()!.workspaces(), []) : [];
+        const workspaces = person.workspace !== null && permits('workspaces') ? await readWorkspaces(() => startup.reader()!.workspaces(), [], unlisted) : [];
         if (gone()) return;
         setRows(workspaces);
         setActive(selection.active());
-        cache = sessionStorageScope(localStorage, person.id, person.workspace ?? 'unselected');
+        cache = workspaceCache(localStorage, person.id, person.workspace ?? 'unselected');
         setPreparing(false);
         setShellCacheScope({ mine: () => false, prefer: null });
         disposeGate?.();
@@ -225,12 +225,12 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
             webWorkspaces: { rows, active, busy, uncertain, choose: id => void choose(id) },
             danilCredits: activeGroupCredits(api, profile.active_organization_id),
           },
-          organizations: () => Promise.resolve(organizations), promo: organization.redeem, reauth: organization.reauth, preparing: awaitingWorkspace, groupAccount: { ...api.groupAccount, send: (...args) => authorized(() => api.groupAccount.send(...args)) }, // `promo` sigue hasta que la sesión de Alejandro lo retire.
+          organizations: () => Promise.resolve(organizations), promo: organization.redeem, reauth: organization.reauth, preparing: preparingWorkspace, groupAccount: { ...api.groupAccount, send: (...args) => authorized(() => api.groupAccount.send(...args)) },
         }, { storage: cache.storage, webAccounts: {
           current: { user_id: person.id, name: person.name, email: typeof person.email === "string" ? person.email : null, extra: false },
-          others: () => [], open: () => {}, remove: async () => {}, signOut: () => void logout(),
+          others: () => [], open: () => {}, remove: async () => {}, signOut: () => void exit.leave(),
         } });
-        setAwaitingWorkspace(waiting()); later(FIRST_RETRY_MS);
+        later(FIRST_RETRY_MS);
       }, true);
     }
     function stopServices() { clearTimeout(timer); lifetime.abort(); organization.stop(); unsubscribeOrganizations(); }

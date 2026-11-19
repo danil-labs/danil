@@ -91,7 +91,7 @@ export function webOrganizations(transport: Transport, options: Options) {
     void resolve();
     return true;
   }
-  /** El canje sin contexto lo resuelve y se repite una vez con la misma clave. */
+  /** El canje sin contexto lo resuelve y se repite una vez con la misma clave; sigue hasta que la sesión de Alejandro lo retire. */
   async function redeem(code: string, key: string): Promise<Redeemed> {
     try { return await options.redeem(code, key); }
     catch (cause) {

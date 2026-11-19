@@ -608,6 +608,14 @@ const navigations = app => app.failures.filter(f => f.includes('Not implemented:
 const others = app => app.failures.filter(f => !f.includes('Not implemented: navigation'));
 
 /** Una cuenta nueva sin workspace; `select` contesta lo que diga la prueba y el canje exige contexto. */
+// Las esperas de la página (1 s en adelante) duran un instante; la prueba espera en tiempo real lo que equivale a varias rondas.
+function fastClock(t) {
+  const realTimeout = globalThis.setTimeout;
+  globalThis.setTimeout = (run, ms, ...rest) => realTimeout(run, ms >= 1000 ? 20 : ms, ...rest);
+  t.after(() => { globalThis.setTimeout = realTimeout; });
+  return ms => new Promise(resolve => realTimeout(resolve, ms));
+}
+
 function newAccount({ orgs = [NEW_ORG], orgsAfter, after = edge => edge.listed > 1, machines, select = () => Response.json({ organization: NEW_ORG, workspace: null }), me = () => ({ id: 'user_N', name: 'New', workspace: null, organizations: [] }) } = {}) {
   const edge = { calls: [], redeemed: [], selected: null, listed: 0, me: 0 };
   const fetcher = async (input, init) => {
@@ -649,12 +657,13 @@ test('Q1: a new account with one organization and none active selects it by itse
 });
 
 test('Q1b: when me returns the selected organization as active the page reloads once, without a loop', async t => {
+  const pause = fastClock(t);
   const edge = newAccount({ me: edge => ({ id: 'user_N', name: 'New', workspace: null, organizations: edge.selected ? [NEW_ORG] : [], active_organization_id: edge.selected }) });
   const app = await open(t, 'listo', 'h2-q1b', {}, undefined, {}, { web: true });
   await until(() => edge.selected === 'org_N');
   await until(() => navigations(app).length === 1);
   const me = edge.me;
-  await new Promise(resolve => setTimeout(resolve, 2500));
+  await pause(400);
   assert.equal(navigations(app).length, 1, 'one reload when the personal organization is chosen');
   assert.equal(edge.me, me, 'nothing keeps polling after the reload');
   assert.equal(edge.calls.filter(c => c === 'POST /v1/identity/organizations/select').length, 1);
@@ -662,11 +671,12 @@ test('Q1b: when me returns the selected organization as active the page reloads 
 });
 
 test('Q2: organization_auth_required on select goes to the sign-in once, without a blocking screen', async t => {
+  const pause = fastClock(t);
   const edge = newAccount({ select: () => problemOf(409, 'organization_auth_required', { organization: 'org_N' }) });
   const app = await open(t, 'listo', 'h2-q2', {}, undefined, {}, { web: true });
   await until(() => navigations(app).length === 1);
   assert.ok(app.w.sessionStorage.getItem('danil.web.org-auth.org_N'), 'the loop guard is marked for that organization');
-  await new Promise(resolve => setTimeout(resolve, 1500));
+  await pause(400);
   assert.equal(navigations(app).length, 1, 'a single redirect');
   assert.equal(edge.calls.filter(c => c === 'POST /v1/identity/organizations/select').length, 1);
   assert.equal(app.w.document.querySelector('[data-web-gate]'), null);
@@ -690,12 +700,13 @@ test('Q3: the same 409 right after coming back does not redirect again and offer
 });
 
 test('Q5: several organizations and none active keep the selector, without selecting by themselves', async t => {
+  const pause = fastClock(t);
   const edge = newAccount({ orgs: [NEW_ORG, { id: 'org_O', name: 'Otra', plan: 'team', role: 'member' }] });
   const app = await open(t, 'listo', 'h2-q5', {}, undefined, {}, { web: true });
   const doc = app.w.document;
   await until(() => doc.querySelector('[data-tira]'));
   await until(() => edge.listed >= 1);
-  await new Promise(resolve => setTimeout(resolve, 1500));
+  await pause(400);
   assert.ok(!edge.calls.includes('POST /v1/identity/organizations/select'), 'no automatic selection');
   const state = edge.calls.filter(c => c === 'GET /v1/identity/organizations').length;
   assert.ok(state >= 1, 'the organizations were read');
