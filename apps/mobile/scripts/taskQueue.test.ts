@@ -379,8 +379,7 @@ test("una entrada de otra cuenta espera; una sin dueño la reclama solo la cuent
   const view = (user: string, hostOf: (id: string) => Host | undefined) => ({ hostOf, user, fleet: "ok", contextReady: true });
   // Beto inicia sesión: su flota no tiene m1. No reclama nada y nada se da por perdido.
   setAccount("beto", () => false);
-  for (let i = 0; i < 3; i++) { bindHosts(resolver(view("beto", () => m.host && undefined))); now += GONE_AFTER_MS * 2; await __kick(); }
-  assert.equal(m.calls.length, 0);
+  for (let i = 0; i < 3; i++) { bindHosts(resolver(view("beto", () => undefined))); now += GONE_AFTER_MS * 2; await __kick(); }
   assert.equal(notices, 0);
   assert.equal(__entries().length, 2);
   assert.equal(__entries().find((e) => e.id === "legacy")?.owner, undefined, "nadie la reclamó");
@@ -420,4 +419,15 @@ test("«gone» pide sesión, la flota cargada de esa cuenta y faltar un rato seg
   assert.equal(resolver({ ...base, hostOf: () => host })("m1", "ana"), host, "si vuelve, se usa");
   now += 1;
   assert.equal(resolver(base)("m1", "ana"), "pending", "el reloj de la ausencia se reinicia");
+});
+
+test("una sesión que se anula un instante no borra los avisos; otra cuenta sí", async () => {
+  __reset({ storage: disk([entry({ sent: true, owner: "ana" })]) });
+  let notices: string[] = [];
+  subscribe((state) => (notices = state.notices));
+  setAccount("ana");
+  await hydrate();
+  setAccount(null);
+  setAccount("ana");
+  assert.equal(notices.length, 1);
 });

@@ -200,17 +200,22 @@ export function clearError() {
  * esta cuenta; si no, esperan. Al pasar de una cuenta a otra se limpian los
  * avisos: nombran tareas de la anterior.
  */
-export function setAccount(id: string | null, owns: (host: string) => boolean = () => true) {
-  if (account && id !== account && notices.length > 0) {
+export function setAccount(id: string | null, owns: (host: string) => boolean = () => false) {
+  // Una sesión que se anula un instante (renovar el token) no borra los avisos: solo otra cuenta.
+  if (account && id && id !== account && notices.length > 0) {
     error = null;
     notices = [];
     notify();
   }
-  account = id;
+  if (id) account = id;
   let claimed = false;
   if (id) for (const entry of entries) if (!entry.owner && owns(entry.host)) { entry.owner = id; claimed = true; }
   if (claimed) void save();
   void kick();
+}
+
+export function pendingFor(id: string): TaskAction | null {
+  return entries.find((e) => e.id === id)?.action ?? null;
 }
 
 /**
@@ -398,6 +403,7 @@ export function __reset(options: { storage?: Storage; now?: () => number } = {})
   loaded = false;
   error = null;
   notices = [];
+  listeners.clear();
   account = null;
   retryAt.clear();
   if (rereading) clearTimeout(rereading);
