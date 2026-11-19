@@ -306,3 +306,7 @@ them answers that the command is unknown, and only that feature turns off.
   SHA-256 `ee559348f09454bd3dd702eeff5cea2a259cc509ce6f3841a8bfe17edc3f2444`.
 - `account_requests_v1.json`: the CLI route `account request`, `account_request_take`, `account_request_settle` and the `account.request` event (danil-engine#471, #473), copied from danil-engine dev `e46f5d7c`,
   SHA-256 `7d9b6eb4a020104a5798cff816f7b14f27d262d46d2266ec3e03c9c5c542d3de`.
+- `account_transfer_v1.json`: `reseal_account_workspace` (danil-engine#470), copied from danil-engine dev `e46f5d7c`,
+  SHA-256 `2a914059b1b5a04700b48511f6caa355ccb2ea2e2c57533b93cb50a5a9f5c5d9`.
+- `free_router_platform_v1.json`: the TW#72 platform pass: `set_free_router_union`, `free_router_binding`, `prove_free_router_binding`, `set_free_router_grant`, `clear_free_router_grant`, `release_free_router_owner` (danil-engine#468), copied from danil-engine dev `e46f5d7c`,
+  SHA-256 `477ab9298ea8e74717d280f04385fc464d09bbd045ce73b23494392884f8a7ca`.

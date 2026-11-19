@@ -42,7 +42,7 @@ function wire(hidden: () => ReadonlySet<string>, onSeeded: (ids: readonly string
     revision();
     return sessionWorkspaceSource(groups()?.find((g) => g.context_id === context)?.plan ?? null, () => danilAvailableContext(org, context), () => accounts.available(org));
   };
-  const refreshAccounts = () => accounts.refresh(groups() ?? [], sessions.send);
+  const refreshAccounts = () => accounts.refresh(groups() ?? [], sessions.send, (context) => records.get(context)?.person ?? null);
   const accountKey = createMemo(() => JSON.stringify(groups()?.map((g) => [g.context_id, g.org, g.plan]) ?? null));
   createEffect(on(accountKey, () => void refreshAccounts()));
   const records = new Map<string, { person: string | null; asking: boolean; sync: ReturnType<typeof createAddedSync> }>();
