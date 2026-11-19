@@ -32,7 +32,7 @@ export default function CheckoutReturn(props: { api: Api; onActive?: (organizati
         if (result) { setMachine(result); if (result.state !== "creating" && result.state !== "provisioning") return; }
         await wait(2500, signal);
       }
-    } catch (error) {
+    } catch {
       if (!signal.aborted) setFailure("unavailable");
     } finally { if (!lifetime.signal.aborted) setCheckingMachine(false); }
   }

@@ -72,6 +72,14 @@ with sync_playwright() as p:
     page.get_by_label("Nombre de la organización").wait_for(timeout=5000)
     page.goto(BASE + "?gate=off", wait_until="networkidle")
     assert page.get_by_role("button", name="Crear organización").count() == 0
+    retry = browser.new_page()
+    retry.add_init_script("""
+      const interval = window.setInterval.bind(window);
+      window.setInterval = (run, delay, ...args) => interval(run, delay === 30000 ? 100 : delay, ...args);
+    """)
+    retry.goto(BASE + "?catalog=retry")
+    retry.locator("article").get_by_text("Pro", exact=True).wait_for(timeout=5000)
+    assert retry.evaluate("window.billingCalls").count("catalog") >= 2
     browser.close()
 
-print("billing interface: 16 cases passed")
+print("billing interface: 17 cases passed")
