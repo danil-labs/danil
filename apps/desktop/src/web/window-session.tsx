@@ -41,8 +41,7 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
     const [error, setError] = createSignal('');
     // Identity aún no dio el perfil y se reintenta solo: sigue la carga, no una pantalla vacía.
     const [preparing, setPreparing] = createSignal(false);
-    const [signedOut, setSignedOut] = createSignal(false);
-    const [awaitingWorkspace, setAwaitingWorkspace] = createSignal(false);
+    const [signedOut, setSignedOut] = createSignal(false); const [awaitingWorkspace, setAwaitingWorkspace] = createSignal(false);
     // Hasta que identity contesta se ve la carga; la entrada solo sin sesión o con el error del retorno.
     const [identified, setIdentified] = createSignal(false);
     const returnError = signInError(window.location.search);
@@ -50,9 +49,7 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
     let disposeGate: (() => void) | undefined;
     let person: PlatformProfile | undefined;
     let stopped = false;
-    // «Cerrar sesión» durante un reintento: la lectura en curso ya no monta ni reprograma nada.
-    let leaving = false;
-    const gone = () => stopped || signedOut() || leaving;
+    let leaving = false; const gone = () => stopped || signedOut() || leaving; // «Cerrar sesión» en un reintento: lo que llegue tarde ya no monta.
     let cache: ReturnType<typeof sessionStorageScope> | undefined;
     let mountedBefore = false;
     let firstMountAttempts = 0;
@@ -162,8 +159,7 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
             const listed = await listWorkspaces(() => api.workspaces(), rows());
             if (gone()) return; setRows(listed);
           }
-          if (arrived && fresh.workspace !== null) { setActive(fresh.workspace); cache?.rescope(fresh.workspace); }
-          setAwaitingWorkspace(waiting());
+          if (arrived && fresh.workspace !== null) { setActive(fresh.workspace); cache?.rescope(fresh.workspace); } setAwaitingWorkspace(waiting());
           startup.checked();
         } else if (!permits('machines')) { const capabilities = await readCapabilities(transport); if (gone()) return; setCaps(capabilities); }
         if (!gone()) ready = await windowApp?.refresh() ?? false;
@@ -203,17 +199,7 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
       gate();
       await run(async () => { await selection.choose(id); window.location.assign(home); });
     }
-    async function logout() {
-      if (gone()) return;
-      leaving = true;
-      clearTimeout(timer);
-      try { await api.logout(); forgetMachineNames(); leaving = false; expired(); }
-      catch (cause) {
-        leaving = false;
-        if (cause instanceof PlatformSessionError && cause.status === 401) expired();
-        else if (!gone()) { setPreparing(false); setError('web.platform.unavailable'); gate(); }
-      }
-    }
+    async function logout() { if (gone()) return; leaving = true; clearTimeout(timer); try { await api.logout(); forgetMachineNames(); leaving = false; expired(); } catch (cause) { leaving = false; if (cause instanceof PlatformSessionError && cause.status === 401) expired(); else if (!gone()) { setPreparing(false); setError('web.platform.unavailable'); gate(); } } }
     async function load() {
       await run(async () => {
         const { profile, capabilities } = await startup.read(caps());
@@ -239,14 +225,12 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
             webWorkspaces: { rows, active, busy, uncertain, choose: id => void choose(id) },
             danilCredits: activeGroupCredits(api, profile.active_organization_id),
           },
-          // `promo`: la vía del canje sigue viva hasta que la sesión de Alejandro la retire.
-          organizations: () => Promise.resolve(organizations), promo: organization.redeem, reauth: organization.reauth, preparing: awaitingWorkspace, groupAccount: { ...api.groupAccount, send: (...args) => authorized(() => api.groupAccount.send(...args)) },
+          organizations: () => Promise.resolve(organizations), promo: organization.redeem, reauth: organization.reauth, preparing: awaitingWorkspace, groupAccount: { ...api.groupAccount, send: (...args) => authorized(() => api.groupAccount.send(...args)) }, // `promo` sigue hasta que la sesión de Alejandro lo retire.
         }, { storage: cache.storage, webAccounts: {
           current: { user_id: person.id, name: person.name, email: typeof person.email === "string" ? person.email : null, extra: false },
           others: () => [], open: () => {}, remove: async () => {}, signOut: () => void logout(),
         } });
-        setAwaitingWorkspace(waiting());
-        later(FIRST_RETRY_MS);
+        setAwaitingWorkspace(waiting()); later(FIRST_RETRY_MS);
       }, true);
     }
     function stopServices() { clearTimeout(timer); lifetime.abort(); organization.stop(); unsubscribeOrganizations(); }

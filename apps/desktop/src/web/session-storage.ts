@@ -20,8 +20,6 @@ export function sessionStorageScope(store: BrowserCacheStorage, person: string, 
       setItem: (key: string, value: string) => { if (!revoked) store.setItem(prefix + key, value); },
       removeItem: (key: string) => store.removeItem(prefix + key),
     },
-    clear() { revoked = true; clearPrefix(store, personPrefix); },
-    /** Una cuenta nueva monta sin workspace; al llegar, lo que se lee y guarda va bajo él. */
-    rescope(next: string) { prefix = `${personPrefix}${next}.`; },
+    clear() { revoked = true; clearPrefix(store, personPrefix); }, rescope(next: string) { prefix = `${personPrefix}${next}.`; },
   };
 }
