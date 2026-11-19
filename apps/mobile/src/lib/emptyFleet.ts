@@ -3,12 +3,20 @@
  * corren en Danil en la computadora de la persona. El estado vacío dice qué hacer:
  * descargar Danil o abrirlo e iniciar sesión con el correo de esta sesión.
  */
-export const DOWNLOAD_URL = "https://danil.ai/download";
+import type { Fleet } from "./machines";
+
+/** La página canónica (`apps/desktop/docs/download-urls.md`), con la barra final. */
+export const DOWNLOAD_URL = "https://danil.ai/download/";
 
 export type EmptyFleet = { download: string; email: string | null };
 
-export function emptyFleet(fleet: string, hosts: number, email: string | null | undefined): EmptyFleet | null {
-  if (fleet !== "ok" || hosts > 0) return null;
+/**
+ * `ready` es `contextReady` del proveedor: `fleet` y la lista de computadoras llegan antes que
+ * sus hosts, así que una cuenta con computadoras pasa un momento por `ok` sin hosts. Sin esa
+ * espera vería «Instala Danil» al abrir la app.
+ */
+export function emptyFleet(fleet: Fleet, ready: boolean, hosts: number, email: string | null | undefined): EmptyFleet | null {
+  if (fleet !== "ok" || !ready || hosts > 0) return null;
   const clean = email?.trim();
   return { download: DOWNLOAD_URL, email: clean ? clean : null };
 }

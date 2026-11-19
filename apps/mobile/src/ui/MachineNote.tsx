@@ -14,10 +14,10 @@ import { useTheme } from "./theme";
  */
 export function MachineNote({ hosts, fleet }: { hosts: Host[]; fleet: Fleet }) {
   const theme = useTheme();
-  const { reloadComputers } = useMachines();
+  const { reloadComputers, contextReady } = useMachines();
   const { email } = useAccount();
   if (fleet === "license") return <LicenseNote />;
-  const empty = emptyFleet(fleet, hosts.length, email);
+  const empty = emptyFleet(fleet, contextReady, hosts.length, email);
   if (empty) return <EmptyNote empty={empty} retry={() => void reloadComputers()} />;
   const lines: string[] = [];
   if (fleet === "no_account") lines.push(w("web.computers.no_account"));
@@ -88,7 +88,8 @@ function EmptyNote({ empty, retry }: { empty: EmptyFleet; retry: () => void }) {
         testID="machines-download"
         accessibilityRole="link"
         style={[styles.cta, { backgroundColor: theme.primary }]}
-        onPress={() => void Linking.openURL(empty.download)}
+        // Con https siempre hay quien abra el enlace (navegador del sistema o pestaña nueva): el rechazo no se espera.
+        onPress={() => void Linking.openURL(empty.download).catch(() => undefined)}
       >
         <Text style={{ color: theme.onPrimary, fontWeight: "600" }}>{t("machines.empty.download")}</Text>
       </Pressable>
@@ -103,7 +104,7 @@ function EmptyNote({ empty, retry }: { empty: EmptyFleet; retry: () => void }) {
           t("machines.empty.have_it_no_email")
         )}
       </Text>
-      <Pressable testID="machines-retry" onPress={retry}>
+      <Pressable testID="machines-retry" accessibilityRole="button" onPress={retry}>
         <Text style={{ color: theme.primary, fontWeight: "600" }}>{w("web.computers.retry")}</Text>
       </Pressable>
     </View>
