@@ -34,10 +34,15 @@
       "alg": "ES256",
       "aud": "billing-operator",
       "iss": "configured operator issuer",
-      "scope": "credits.grant",
       "max_lifetime_s": 60,
       "req": true,
-      "one_use_jti": true
+      "one_use_jti": true,
+      "scope_by_route": {
+        "POST /operator/v1/credit-lots": "credits.grant",
+        "POST /operator/v1/refunds/{refund_id}/allocation": "credits.refund.allocate"
+      },
+      "scope_required": true,
+      "scope_rule": "Receptor configura scope por ruta; si lo omite o es vacío, insufficient_scope. Sin valor por omisión."
     },
     "producer": {
       "typ": "JWT",
@@ -49,6 +54,21 @@
       "req": false,
       "one_use_jti": false,
       "note": "Access no es un JWT de persona, operador ni E1; valida certificados del equipo, issuer y aud de la aplicación. No se exige req o jti de edge a Access."
+    },
+    "entitlement_reader": {
+      "typ": "danil-service+jwt",
+      "alg": "ES256",
+      "aud": "billing",
+      "iss": "edge-gateway",
+      "subjects": [
+        "svc:machine-provisioning",
+        "svc:identity",
+        "svc:workspaces"
+      ],
+      "max_lifetime_s": 60,
+      "req": true,
+      "one_use_jti": true,
+      "note": "Rev. 12. E1 para GET /internal/v1/entitlements/{organization_id} y GET /internal/v1/entitlements (services.yaml). sub en la lista cerrada; svc:billing no se lee a sí mismo. req liga método, target literal con su query y el SHA-256 del cuerpo vacío."
     }
   },
   "production_keys": []

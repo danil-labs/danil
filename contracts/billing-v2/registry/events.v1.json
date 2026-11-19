@@ -28,7 +28,28 @@
         "workspaces",
         "machine-provisioning"
       ],
-      "irreversible": true
+      "irreversible": true,
+      "optional_fields_since": {
+        "source": 12,
+        "features": 12,
+        "max_workspaces": 12
+      },
+      "emission_conditions": {
+        "downgraded_to_free": {
+          "min_consumer_revision": 12,
+          "consumers": [
+            "machine-provisioning",
+            "identity",
+            "workspaces"
+          ],
+          "rule": "treasury solo emite reason=downgraded_to_free cuando los tres consumidores declaran en su configuración haber adoptado al menos la revisión 12; ausente = no adoptada. Un consumidor rev. 11 lo rechaza como semantic_invalid permanente y se quedaría en el estado pagado."
+        }
+      },
+      "feed_position": {
+        "counter": "gapless_row_counter",
+        "postgres_sequence": "forbidden",
+        "rule": "La posición global del feed de entitlements se asigna en la misma transacción que la fila del outbox, con una fila contador bloqueada (UPDATE … SET last = last + 1 RETURNING last). Una SEQUENCE no sirve: un rollback deja un hueco y la marca de agua no lo pasa. Las páginas se ordenan por esta posición, nunca por aggregate_seq."
+      }
     },
     {
       "type": "ai.danil.billing.credits.changed.v1",
@@ -146,5 +167,6 @@
     "future": "danil-events",
     "migration_preserves_types": true,
     "reference": "workspaces src/promo-publisher.ts d3250e1; plan consolidado 2026-11-18 ?5"
-  }
+  },
+  "refund_allocation": "B-11 C: compensación de factura sin asignación solo registra el pago y alerta pending_allocation. La asignación de operador auditada que cambia créditos usa credits.changed/admission.changed existentes, con outbox atómico; no añade tipos ni reembolsa dinero."
 }

@@ -90,6 +90,20 @@
         "operation": "3d7c1a52-0d55-4a43-9a0c-6b8c3e7d2f10"
       },
       "key": "compensation:3d7c1a52-0d55-4a43-9a0c-6b8c3e7d2f10"
+    },
+    {
+      "kind": "plan_payment",
+      "args": {
+        "payment_intent": "pi_Plan"
+      },
+      "key": "plan_payment:pi_Plan"
+    },
+    {
+      "kind": "refund_allocation",
+      "args": {
+        "refund": "re_Plan"
+      },
+      "key": "refund_allocation:re_Plan"
     }
   ],
   "same_effect_different_events": [

@@ -60,5 +60,16 @@
         "den": "1"
       }
     }
-  ]
+  ],
+  "fx_policy": {
+    "fx_buffer": {
+      "num": "3",
+      "den": "100"
+    },
+    "update_frequency": "daily",
+    "fx_source_example": "banxico_fix",
+    "rate_schema": "schemas/rate-card.v1.schema.json",
+    "publication": "Una tarea diaria publica datos nuevos e inmutables; no hay valor de FX comercial semilla inventado. Guardar fuente, observación y versión; fijar al reservar y persistir en cada uso USD.",
+    "validity": "Ventana explícita [max(effective_from, fx_observed_at), fx_valid_until). La tarea diaria debe publicar fecha final; no hay TTL implícito ni fallback vencido."
+  }
 }

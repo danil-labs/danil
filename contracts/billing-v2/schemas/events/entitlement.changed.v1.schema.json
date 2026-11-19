@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://contracts.danil.ai/billing-v2/events/entitlement.changed.v1.schema.json",
   "title": "ai.danil.billing.entitlement.changed.v1 — data",
-  "$comment": "Estado comercial vigente completo de la organización. aggregate_key = entitlement:<org>. retention_generation es INDEPENDIENTE de aggregate_seq: aggregate_seq ordena cualquier cambio; la generación solo sube cuando un pago o una compra invalidan un borrado pendiente, y nunca baja. state=terminated es una AUTORIZACIÓN de borrado para esa generación, no un borrado: el efecto irreversible exige el protocolo de confirmación (README § Destrucción), hoy con gate CERRADO. Para una organización reservada, reservation_id y checkout_id son obligatorios por protocolo y salen del vínculo local de treasury; activación no se deriva de metadata. No hay callback al productor.",
+  "$comment": "Estado comercial vigente completo de la organización. aggregate_key = entitlement:<org>. retention_generation es INDEPENDIENTE de aggregate_seq: aggregate_seq ordena cualquier cambio; la generación solo sube cuando un pago o una compra invalidan un borrado pendiente, y nunca baja. state=terminated es una AUTORIZACIÓN de borrado para esa generación, no un borrado: el efecto irreversible exige el protocolo de confirmación (README § Destrucción), hoy con gate CERRADO. Para una organización reservada, reservation_id y checkout_id son obligatorios por protocolo y salen del vínculo local de treasury; activación no se deriva de metadata. No hay callback al productor. Rev. 12 añade source, features y max_workspaces, OPCIONALES (registry/events.v1.json optional_fields_since): un consumidor rev. 11 los ignora. reason=downgraded_to_free es la vuelta a Free: state=none, plan_key=free, subscription_id=null, resource_spec.count=0 y data_retention_until obligatorio (el disco se conserva hasta esa fecha); es el único caso de state=none con plazo.",
   "type": "object",
   "required": [
     "organization_id",
@@ -116,6 +116,39 @@
     },
     "checkout_id": {
       "$ref": "../common.v1.schema.json#/$defs/checkout_id"
+    },
+    "source": {
+      "type": "string",
+      "enum": [
+        "stripe",
+        "operator"
+      ],
+      "$comment": "Rev. 12. Origen del derecho: stripe (suscripción pagada en Stripe) u operator (derecho de operador sin Stripe). Solo auditoría y UI: ningún consumidor ramifica por él. Ausente = productor rev. 11."
+    },
+    "features": {
+      "type": "array",
+      "maxItems": 2,
+      "items": {
+        "type": "string",
+        "enum": [
+          "sso",
+          "directory_sync"
+        ]
+      },
+      "$comment": "Rev. 12. Capacidades del plan, lista cerrada y sin repetir. Ausente = productor rev. 11, equivale a []. Un valor desconocido no valida."
+    },
+    "max_workspaces": {
+      "oneOf": [
+        {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "$comment": "Rev. 12. Tope de workspaces del plan (dato del catálogo de treasury; lo aplica workspaces). null = sin tope. Ausente = productor rev. 11: el consumidor conserva su comportamiento anterior."
     }
   }
 }

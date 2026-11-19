@@ -808,7 +808,8 @@
           "edge-test"
         ],
         "expected_issuer": "operator-test-authority",
-        "expected_audience": "billing-operator"
+        "expected_audience": "billing-operator",
+        "required_scope": "credits.grant"
       },
       "expected": "ok"
     },
@@ -862,7 +863,8 @@
           "edge-test"
         ],
         "expected_issuer": "operator-test-authority",
-        "expected_audience": "billing-operator"
+        "expected_audience": "billing-operator",
+        "required_scope": "credits.grant"
       },
       "expected": "unauthenticated"
     },
@@ -916,7 +918,8 @@
           "edge-test"
         ],
         "expected_issuer": "operator-test-authority",
-        "expected_audience": "billing-operator"
+        "expected_audience": "billing-operator",
+        "required_scope": "credits.grant"
       },
       "expected": "unauthenticated"
     },
@@ -968,7 +971,8 @@
           "edge-test"
         ],
         "expected_issuer": "operator-test-authority",
-        "expected_audience": "billing-operator"
+        "expected_audience": "billing-operator",
+        "required_scope": "credits.grant"
       },
       "expected": "insufficient_scope"
     },
@@ -1620,6 +1624,225 @@
         "expected_audience": "billing"
       },
       "expected": "unauthenticated"
+    },
+    {
+      "profile": "operator",
+      "name": "operador de asignación verifica scope fijado por la ruta",
+      "input": {
+        "verified": true,
+        "header": {
+          "alg": "ES256",
+          "typ": "danil-operator+jwt",
+          "kid": "edge-test"
+        },
+        "claims": {
+          "iss": "operator-test-authority",
+          "aud": "billing-operator",
+          "sub": "user_owner",
+          "org": "org_SYNTHETIC",
+          "iat": 1000,
+          "exp": 1060,
+          "jti": "0f8e2a64-6a1b-4c39-8f0e-2b7d9c1a5e01",
+          "req": {
+            "method": "POST",
+            "target": "/v1/messaging/conversations/cnv_1/messages?x=1&q=a%20b&q=%2F&x=+",
+            "body_sha256": "8cf5e3e44a1da762ce9ac5fcaeea5cfb2b0b64074233566e0b4f8f554af84d37",
+            "headers": {
+              "content-type": "application/json; charset=utf-8",
+              "if-match": "\"v3\"",
+              "idempotency-key": "same-key",
+              "last-event-id": "cursor-1"
+            }
+          },
+          "scopes": [
+            "credits.refund.allocate"
+          ]
+        },
+        "now": 1010,
+        "request": {
+          "method": "POST",
+          "target": "/v1/messaging/conversations/cnv_1/messages?x=1&q=a%20b&q=%2F&x=+",
+          "body": "{\"text\":\"á\", \"workspace\":\"999\"}",
+          "headers": {
+            "content-type": "application/json; charset=utf-8",
+            "if-match": "\"v3\"",
+            "idempotency-key": "same-key",
+            "last-event-id": "cursor-1"
+          }
+        },
+        "seen_jtis": [],
+        "allowed_kids": [
+          "edge-test"
+        ],
+        "expected_issuer": "operator-test-authority",
+        "expected_audience": "billing-operator",
+        "required_scope": "credits.refund.allocate"
+      },
+      "expected": "ok"
+    },
+    {
+      "profile": "operator",
+      "name": "permiso de grant no autoriza asignar reembolso",
+      "input": {
+        "verified": true,
+        "header": {
+          "alg": "ES256",
+          "typ": "danil-operator+jwt",
+          "kid": "edge-test"
+        },
+        "claims": {
+          "iss": "operator-test-authority",
+          "aud": "billing-operator",
+          "sub": "user_owner",
+          "org": "org_SYNTHETIC",
+          "iat": 1000,
+          "exp": 1060,
+          "jti": "0f8e2a64-6a1b-4c39-8f0e-2b7d9c1a5e01",
+          "req": {
+            "method": "POST",
+            "target": "/v1/messaging/conversations/cnv_1/messages?x=1&q=a%20b&q=%2F&x=+",
+            "body_sha256": "8cf5e3e44a1da762ce9ac5fcaeea5cfb2b0b64074233566e0b4f8f554af84d37",
+            "headers": {
+              "content-type": "application/json; charset=utf-8",
+              "if-match": "\"v3\"",
+              "idempotency-key": "same-key",
+              "last-event-id": "cursor-1"
+            }
+          },
+          "scopes": [
+            "credits.grant"
+          ]
+        },
+        "now": 1010,
+        "request": {
+          "method": "POST",
+          "target": "/v1/messaging/conversations/cnv_1/messages?x=1&q=a%20b&q=%2F&x=+",
+          "body": "{\"text\":\"á\", \"workspace\":\"999\"}",
+          "headers": {
+            "content-type": "application/json; charset=utf-8",
+            "if-match": "\"v3\"",
+            "idempotency-key": "same-key",
+            "last-event-id": "cursor-1"
+          }
+        },
+        "seen_jtis": [],
+        "allowed_kids": [
+          "edge-test"
+        ],
+        "expected_issuer": "operator-test-authority",
+        "expected_audience": "billing-operator",
+        "required_scope": "credits.refund.allocate"
+      },
+      "expected": "insufficient_scope"
+    },
+    {
+      "profile": "operator",
+      "name": "scope del receptor ausente",
+      "input": {
+        "verified": true,
+        "header": {
+          "alg": "ES256",
+          "typ": "danil-operator+jwt",
+          "kid": "edge-test"
+        },
+        "claims": {
+          "iss": "operator-test-authority",
+          "aud": "billing-operator",
+          "sub": "user_owner",
+          "org": "org_SYNTHETIC",
+          "iat": 1000,
+          "exp": 1060,
+          "jti": "0f8e2a64-6a1b-4c39-8f0e-2b7d9c1a5e01",
+          "req": {
+            "method": "POST",
+            "target": "/v1/messaging/conversations/cnv_1/messages?x=1&q=a%20b&q=%2F&x=+",
+            "body_sha256": "8cf5e3e44a1da762ce9ac5fcaeea5cfb2b0b64074233566e0b4f8f554af84d37",
+            "headers": {
+              "content-type": "application/json; charset=utf-8",
+              "if-match": "\"v3\"",
+              "idempotency-key": "same-key",
+              "last-event-id": "cursor-1"
+            }
+          },
+          "scopes": [
+            "credits.grant"
+          ]
+        },
+        "now": 1010,
+        "request": {
+          "method": "POST",
+          "target": "/v1/messaging/conversations/cnv_1/messages?x=1&q=a%20b&q=%2F&x=+",
+          "body": "{\"text\":\"á\", \"workspace\":\"999\"}",
+          "headers": {
+            "content-type": "application/json; charset=utf-8",
+            "if-match": "\"v3\"",
+            "idempotency-key": "same-key",
+            "last-event-id": "cursor-1"
+          }
+        },
+        "seen_jtis": [],
+        "allowed_kids": [
+          "edge-test"
+        ],
+        "expected_issuer": "operator-test-authority",
+        "expected_audience": "billing-operator"
+      },
+      "expected": "insufficient_scope"
+    },
+    {
+      "profile": "operator",
+      "name": "scope del receptor vacío",
+      "input": {
+        "verified": true,
+        "header": {
+          "alg": "ES256",
+          "typ": "danil-operator+jwt",
+          "kid": "edge-test"
+        },
+        "claims": {
+          "iss": "operator-test-authority",
+          "aud": "billing-operator",
+          "sub": "user_owner",
+          "org": "org_SYNTHETIC",
+          "iat": 1000,
+          "exp": 1060,
+          "jti": "0f8e2a64-6a1b-4c39-8f0e-2b7d9c1a5e01",
+          "req": {
+            "method": "POST",
+            "target": "/v1/messaging/conversations/cnv_1/messages?x=1&q=a%20b&q=%2F&x=+",
+            "body_sha256": "8cf5e3e44a1da762ce9ac5fcaeea5cfb2b0b64074233566e0b4f8f554af84d37",
+            "headers": {
+              "content-type": "application/json; charset=utf-8",
+              "if-match": "\"v3\"",
+              "idempotency-key": "same-key",
+              "last-event-id": "cursor-1"
+            }
+          },
+          "scopes": [
+            "credits.grant"
+          ]
+        },
+        "now": 1010,
+        "request": {
+          "method": "POST",
+          "target": "/v1/messaging/conversations/cnv_1/messages?x=1&q=a%20b&q=%2F&x=+",
+          "body": "{\"text\":\"á\", \"workspace\":\"999\"}",
+          "headers": {
+            "content-type": "application/json; charset=utf-8",
+            "if-match": "\"v3\"",
+            "idempotency-key": "same-key",
+            "last-event-id": "cursor-1"
+          }
+        },
+        "seen_jtis": [],
+        "allowed_kids": [
+          "edge-test"
+        ],
+        "expected_issuer": "operator-test-authority",
+        "expected_audience": "billing-operator",
+        "required_scope": ""
+      },
+      "expected": "insufficient_scope"
     }
   ]
 }

@@ -377,7 +377,9 @@
             "purchased": "3",
             "inference_hold": "7"
           },
-          "reservation_state": "reserved"
+          "reservation_state": "reserved",
+          "rate_card_version": 7,
+          "cost_currency": "MXN"
         },
         {
           "op": "reserve",
@@ -386,7 +388,9 @@
           "producer": "danil-ai",
           "report_id": "report_00000001",
           "amount_micro": "7",
-          "duplicate": true
+          "duplicate": true,
+          "rate_card_version": 7,
+          "cost_currency": "MXN"
         },
         {
           "op": "reserve",
@@ -395,7 +399,9 @@
           "producer": "danil-ai",
           "report_id": "report_00000002",
           "amount_micro": "4",
-          "error": "insufficient_funds"
+          "error": "insufficient_funds",
+          "rate_card_version": 7,
+          "cost_currency": "MXN"
         },
         {
           "op": "reserve",
@@ -404,7 +410,9 @@
           "producer": "danil-ai",
           "report_id": "report_00000001",
           "amount_micro": "1",
-          "error": "report_already_reserved"
+          "error": "report_already_reserved",
+          "rate_card_version": 7,
+          "cost_currency": "MXN"
         }
       ]
     },
@@ -426,7 +434,9 @@
           "reservation_id": "bres_0000000000000001",
           "producer": "danil-ai",
           "report_id": "report_00000001",
-          "amount_micro": "7"
+          "amount_micro": "7",
+          "rate_card_version": 7,
+          "cost_currency": "MXN"
         },
         {
           "op": "reservation_uncertain",
@@ -481,7 +491,10 @@
           "producer": "danil-ai",
           "report_id": "report_00000001",
           "charge_micro": "5",
-          "error": "reservation_terminal"
+          "error": "reservation_terminal",
+          "report": {
+            "rate_card_version": 7
+          }
         }
       ]
     },
@@ -503,7 +516,9 @@
           "reservation_id": "bres_0000000000000001",
           "producer": "danil-ai",
           "report_id": "report_00000001",
-          "amount_micro": "7"
+          "amount_micro": "7",
+          "rate_card_version": 7,
+          "cost_currency": "MXN"
         },
         {
           "op": "debit",
@@ -524,7 +539,10 @@
             "purchased": "5",
             "inference_hold": "0"
           },
-          "reservation_state": "settled"
+          "reservation_state": "settled",
+          "report": {
+            "rate_card_version": 7
+          }
         },
         {
           "op": "reservation_settle",
@@ -533,7 +551,10 @@
           "producer": "danil-ai",
           "report_id": "report_00000001",
           "charge_micro": "5",
-          "duplicate": true
+          "duplicate": true,
+          "report": {
+            "rate_card_version": 7
+          }
         },
         {
           "op": "debit",
@@ -542,7 +563,10 @@
           "report_id": "report_00000001",
           "reservation_id": "bres_0000000000000001",
           "charge_micro": "5",
-          "duplicate": true
+          "duplicate": true,
+          "report": {
+            "rate_card_version": 7
+          }
         },
         {
           "op": "reservation_settle",
@@ -551,7 +575,10 @@
           "producer": "danil-ai",
           "report_id": "report_00000001",
           "charge_micro": "6",
-          "error": "effect_conflict"
+          "error": "effect_conflict",
+          "report": {
+            "rate_card_version": 7
+          }
         },
         {
           "op": "reservation_release",
@@ -582,7 +609,9 @@
           "reservation_id": "bres_0000000000000001",
           "producer": "danil-ai",
           "report_id": "report_00000001",
-          "amount_micro": "7"
+          "amount_micro": "7",
+          "rate_card_version": 7,
+          "cost_currency": "MXN"
         },
         {
           "op": "reservation_settle",
@@ -591,7 +620,10 @@
           "producer": "messaging",
           "report_id": "report_00000001",
           "charge_micro": "5",
-          "error": "reservation_binding_mismatch"
+          "error": "reservation_binding_mismatch",
+          "report": {
+            "rate_card_version": 7
+          }
         }
       ]
     },
@@ -613,7 +645,9 @@
           "reservation_id": "bres_0000000000000001",
           "producer": "danil-ai",
           "report_id": "report_00000001",
-          "amount_micro": "7"
+          "amount_micro": "7",
+          "rate_card_version": 7,
+          "cost_currency": "MXN"
         },
         {
           "op": "reservation_release",
@@ -639,7 +673,7 @@
       ]
     },
     {
-      "name": "costo real mayor que reserva conserva uso y registra faltante",
+      "name": "costo real mayor que reserva queda retenido para revisión, sin cargo ni deuda (rev. 12)",
       "steps": [
         {
           "op": "purchase",
@@ -656,7 +690,9 @@
           "reservation_id": "bres_0000000000000001",
           "producer": "danil-ai",
           "report_id": "report_00000001",
-          "amount_micro": "7"
+          "amount_micro": "7",
+          "rate_card_version": 7,
+          "cost_currency": "MXN"
         },
         {
           "op": "reservation_settle",
@@ -666,9 +702,13 @@
           "report_id": "report_00000001",
           "charge_micro": "12",
           "balances": {
-            "purchased": "0",
-            "inference_hold": "0",
-            "unsettled_usage": "2"
+            "purchased": "3",
+            "inference_hold": "7",
+            "unsettled_usage": "0"
+          },
+          "reservation_state": "held",
+          "report": {
+            "rate_card_version": 7
           }
         }
       ]
@@ -691,7 +731,9 @@
           "reservation_id": "bres_0000000000000001",
           "producer": "danil-ai",
           "report_id": "report_00000001",
-          "amount_micro": "7"
+          "amount_micro": "7",
+          "rate_card_version": 7,
+          "cost_currency": "MXN"
         },
         {
           "op": "forfeit",
@@ -780,7 +822,9 @@
           "report_id": "report_00000001",
           "amount_micro": "7",
           "organization_id": "org_A",
-          "person_id": "user_A"
+          "person_id": "user_A",
+          "rate_card_version": 7,
+          "cost_currency": "MXN"
         },
         {
           "op": "reservation_settle",
@@ -791,7 +835,10 @@
           "charge_micro": "5",
           "organization_id": "org_B",
           "person_id": "user_A",
-          "error": "reservation_binding_mismatch"
+          "error": "reservation_binding_mismatch",
+          "report": {
+            "rate_card_version": 7
+          }
         },
         {
           "op": "reservation_settle",
@@ -802,7 +849,10 @@
           "charge_micro": "5",
           "organization_id": "org_A",
           "person_id": "user_B",
-          "error": "reservation_binding_mismatch"
+          "error": "reservation_binding_mismatch",
+          "report": {
+            "rate_card_version": 7
+          }
         },
         {
           "op": "reservation_settle",
@@ -812,7 +862,10 @@
           "report_id": "report_00000001",
           "charge_micro": "5",
           "organization_id": "org_A",
-          "person_id": "user_A"
+          "person_id": "user_A",
+          "report": {
+            "rate_card_version": 7
+          }
         }
       ]
     },
@@ -842,7 +895,9 @@
           "producer": "danil-ai",
           "report_id": "report_00000001",
           "amount_micro": "7",
-          "error": "report_already_reserved"
+          "error": "report_already_reserved",
+          "rate_card_version": 7,
+          "cost_currency": "MXN"
         }
       ]
     },
@@ -864,7 +919,9 @@
           "reservation_id": "bres_0000000000000001",
           "producer": "danil-ai",
           "report_id": "report_00000001",
-          "amount_micro": "7"
+          "amount_micro": "7",
+          "rate_card_version": 7,
+          "cost_currency": "MXN"
         },
         {
           "op": "reservation_settle",
@@ -880,7 +937,8 @@
             },
             "tokens": {
               "input": 2
-            }
+            },
+            "rate_card_version": 7
           }
         },
         {
@@ -897,7 +955,8 @@
             },
             "tokens": {
               "input": 3
-            }
+            },
+            "rate_card_version": 7
           },
           "error": "effect_conflict"
         }
@@ -921,7 +980,9 @@
           "reservation_id": "bres_0000000000000001",
           "producer": "danil-ai",
           "report_id": "report_00000001",
-          "amount_micro": "7"
+          "amount_micro": "7",
+          "rate_card_version": 7,
+          "cost_currency": "MXN"
         },
         {
           "op": "expire",
