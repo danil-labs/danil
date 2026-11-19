@@ -459,6 +459,8 @@
     "other": "Se cerrarán {count} organizaciones de {email}"
   },
   "shell.workspaces.removed_org": "Se quitó {name}.",
+  "shell.workspaces.agent_created": "Un agente creó «{name}» en {org}.",
+  "shell.workspaces.agent_created_elsewhere": "Un agente creó «{name}» en {org}. Agrégalo desde «Agregar workspace» en este equipo.",
   "shell.workspaces.dismiss_removed": "Descartar",
   "shell.profile.preferences": "Preferencias",
   "shell.workspaces.organization_required": "La organización requiere atención",
