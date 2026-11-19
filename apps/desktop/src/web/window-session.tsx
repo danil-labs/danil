@@ -1,8 +1,7 @@
-import { machinesClient } from '@terminus/computers';
+import { announcesOrganizations, machinesClient } from '@terminus/computers';
 import { createRoot, createSignal, For, Show } from 'solid-js';
 import { render } from 'solid-js/web';
 import { forgetMachineNames } from '../features/machines/known-names';
-import PromoRedeem from '../features/shell/PromoRedeem';
 import { aplicarLengua, t } from '../lib/i18n';
 import { setShellCacheScope } from '../lib/shellCache';
 import { seguirElTema } from '../lib/theme';
@@ -40,6 +39,7 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
     const [uncertain, setUncertain] = createSignal(false);
     const [error, setError] = createSignal('');
     const [preparing, setPreparing] = createSignal(false);
+    const [personal, setPersonal] = createSignal(false);
     const [signedOut, setSignedOut] = createSignal(false);
     // Hasta que identity contesta, la ventana muestra la pantalla de entrada original esperando.
     const [identified, setIdentified] = createSignal(false);
@@ -65,17 +65,16 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
         <ToastStack><UpdateNotice /></ToastStack>
         <h1 class="m-0 font-display text-lead font-bold">{t('common.brand_name')}</h1>
         <Show when={busy()}><p role="status">{t('web.auth.waiting')}</p></Show>
-        <Show when={preparing()}><p role="status" data-web-preparing="">{t('web.platform.preparing')}</p></Show>
-        <Show when={error()}><p role="alert">{t(error())}</p><Button disabled={busy()} onClick={() => void load()}>{t('web.computers.retry')}</Button></Show>
+        <Show when={preparing()}><p role="status" data-web-preparing="">{t(personal() ? 'web.platform.preparing_personal' : 'web.platform.preparing')}</p><Button variant="secondary" disabled={busy()} data-web-retry="" onClick={() => void retry()}>{t('web.computers.retry')}</Button></Show>
+        <Show when={error()}><p role="alert">{t(error())}</p><Button disabled={busy()} data-web-retry="" onClick={() => void retry()}>{t('web.computers.retry')}</Button></Show>
         <Show when={!signedOut() && !busy()}>
           <Show when={orgNeeded() || noWorkspace() || error()}>
             <For each={(() => { const s = orgState(); return s.kind === 'ready' ? s.items : []; })()}>{org => <Button variant="secondary" data-web-organization={org.id} aria-pressed={(() => { const s = orgState(); return s.kind === 'ready' && s.active === org.id; })()} onClick={() => void organizations.choose(org.id)}>{org.name}</Button>}</For>
           </Show>
-          <Show when={!error()}>
-            <p>{t('web.platform.empty')}</p>
+          <Show when={!error() && !preparing()}>
+            <p data-web-empty="">{t('web.platform.empty')}</p>
             <For each={rows()}>{row => <Button onClick={() => void choose(row.id)}>{row.name}</Button>}</For>
           </Show>
-          <PromoRedeem redeem={redeemPromo} />
           <Button variant="ghost" data-web-sign-out="" onClick={() => void logout()}>{t('web.platform.sign_out')}</Button>
         </Show>
       </main></Show>, root);
@@ -135,6 +134,20 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
       gate();
       later();
     }
+    /** Sin ninguna organización (ni en `me` ni en la lista) aún falta la personal Free que identity crea en el primer login. */
+    async function personalPending(profile: PlatformProfile) {
+      if (profile.workspace !== null || profile.organizations.length > 0 || profile.active_organization_id) return false;
+      const source = startup.reader()?.organizations;
+      if (!source?.capabilities || !announcesOrganizations(await source.capabilities().catch(() => null))) return true;
+      const body = await source.list().catch(() => null) as { items?: unknown } | null;
+      return !(Array.isArray(body?.items) && body.items.length > 0);
+    }
+    function awaitPersonal() {
+      if (firstMountAttempts < FIRST_MOUNT_ATTEMPTS) { prepare(); return; }
+      setPreparing(false);
+      setError('web.platform.personal_missing');
+      gate();
+    }
     function later(delay = wait) {
       clearTimeout(timer);
       if (stopped || signedOut()) return;
@@ -189,6 +202,13 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
         setIdentified(true);
       }
     }
+    /** La persona pide otra ronda: el reintento automático vuelve a empezar desde la espera corta. */
+    function retry() {
+      clearTimeout(timer);
+      firstMountAttempts = 0;
+      wait = FIRST_RETRY_MS;
+      return load();
+    }
     async function choose(id: string) {
       if (id === active() && !uncertain()) return;
       gate();
@@ -203,6 +223,10 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
         setCaps(capabilities);
         if (mountedBefore) { window.location.assign(home); return; }
         person = profile;
+        const pending = await personalPending(person);
+        if (stopped || signedOut()) return;
+        setPersonal(pending);
+        if (pending) { awaitPersonal(); return; }
         organization.load(startup.reader()?.organizations);
         if (person.workspace === null) { await withoutWorkspace(); return; }
         const listed = permits('workspaces');

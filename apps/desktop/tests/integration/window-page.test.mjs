@@ -254,7 +254,8 @@ test('a window without a session shows the original WorkOS sign-in screen and it
   assert.deepEqual(app.failures, []);
 });
 
-test('an authenticated session with no workspaces shows the plan empty state without asking compute', async t => {
+test('an authenticated session with no workspaces shows the empty state without a plan or promo code and without asking compute', async t => {
+  quickRetries(t);
   const calls = [];
   const fetcher = async input => {
     const url = new URL(String(input));
@@ -267,7 +268,11 @@ test('an authenticated session with no workspaces shows the plan empty state wit
   };
   fetcher.__jsdomApp = true; globalThis.fetch = fetcher;
   const app = await open(t, 'listo', 'empty-cloud-workspaces', {}, undefined, {}, { web: true });
-  await until(() => app.w.document.querySelector('[data-web-gate]')?.textContent.includes('No tienes nada. Crea un plan.'));
+  await until(() => app.w.document.querySelector('[data-web-gate] [data-web-empty]'));
+  const gate = app.w.document.querySelector('[data-web-gate]');
+  assert.equal(gate.querySelector('[data-web-empty]').textContent, 'Esta organización no tiene workspaces.');
+  assert.ok(!/Crea un plan/.test(gate.textContent));
+  assert.equal(gate.querySelector('#promo-code'), null, 'no promo code on the empty gate');
   assert.ok(!calls.some(path => path.startsWith('/v1/compute')));
   assert.equal(app.w.document.querySelector('[data-tira]'), null);
 });
@@ -394,5 +399,75 @@ for (const end of ['pagehide', '401']) test(`${end} during startup cannot mount 
   assert.ok(signals.every(signal => signal.aborted));
   assert.deepEqual([...calls].sort(), ['/v1/capabilities', '/v1/identity/me']);
   assert.equal(app.w.document.querySelector('[data-tira]'), null);
+  assert.deepEqual(app.failures, []);
+});
+
+// La espera de la organización personal crece hasta 30 s; aquí se acorta sin cambiar cuántos intentos hay.
+function quickRetries(t) {
+  const original = globalThis.setTimeout;
+  globalThis.setTimeout = (run, ms, ...rest) => original(run, ms >= 1000 ? 5 : ms, ...rest);
+  t.after(() => { globalThis.setTimeout = original; });
+}
+const NO_ORG = { id: 'user_A', name: 'Operator', workspace: null, organizations: [], active_organization_id: null };
+
+test('a new account without its personal organization waits for it with retry and sign out, and mounts when it arrives', async t => {
+  let meCalls = 0;
+  const calls = [];
+  const fetcher = async input => {
+    const url = new URL(String(input));
+    if (url.origin === 'http://localhost' && url.pathname.includes('/assets/')) return new Response('');
+    calls.push(url.pathname);
+    if (['/v1/capabilities', '/v1/identity/organizations', '/v1/machines'].includes(url.pathname)) return new Response(null, { status: 404 });
+    if (url.pathname === '/v1/identity/me') {
+      meCalls++;
+      return Response.json(meCalls < 3 ? NO_ORG : { id: 'user_A', name: 'Operator', workspace: '11', organizations: [{ id: 'org_P', name: 'Personal' }], active_organization_id: 'org_P' });
+    }
+    if (url.pathname === '/v1/workspaces') return Response.json({ items: [{ id: '11', org: 'org_P', name: 'Personal', role: 'owner' }], next_cursor: null });
+    throw new Error(`Unexpected request ${url.pathname}`);
+  };
+  fetcher.__jsdomApp = true; globalThis.fetch = fetcher;
+  const app = await open(t, 'listo', 'personal-org-pending', {}, undefined, {}, { web: true, beforeImport(w) {
+    w.WebSocket = class { constructor() { throw new Error('No relay is approved'); } };
+    globalThis.WebSocket = w.WebSocket;
+  } });
+  const gate = () => app.w.document.querySelector('[data-web-gate]');
+  await until(() => gate()?.querySelector('[data-web-preparing]') && gate()?.querySelector('[data-web-sign-out]'));
+  assert.equal(gate().querySelector('[data-web-preparing]').textContent, 'Preparando tu organización personal…');
+  assert.ok(gate().querySelector('[data-web-retry]'), 'retry is offered while preparing');
+  assert.equal(gate().querySelector('[data-web-empty]'), null, 'no empty state while preparing');
+  assert.equal(gate().querySelector('#promo-code'), null);
+  assert.equal(gate().querySelector('[role="alert"]'), null);
+  assert.ok(!/Crea un plan/.test(gate().textContent));
+  gate().querySelector('[data-web-retry]').click();
+  await until(() => app.w.document.querySelector('[data-tira]'));
+  assert.ok(meCalls >= 3);
+  assert.equal(gate(), null);
+  assert.deepEqual(app.failures, []);
+});
+
+test('a personal organization that never arrives ends in a clear error with retry and sign out', async t => {
+  quickRetries(t);
+  let meCalls = 0;
+  const fetcher = async input => {
+    const url = new URL(String(input));
+    if (url.origin === 'http://localhost' && url.pathname.includes('/assets/')) return new Response('');
+    if (['/v1/capabilities', '/v1/identity/organizations', '/v1/machines'].includes(url.pathname)) return new Response(null, { status: 404 });
+    if (url.pathname === '/v1/identity/me') { meCalls++; return Response.json(NO_ORG); }
+    throw new Error(`Unexpected request ${url.pathname}`);
+  };
+  fetcher.__jsdomApp = true; globalThis.fetch = fetcher;
+  const app = await open(t, 'listo', 'personal-org-missing', {}, undefined, {}, { web: true });
+  const gate = () => app.w.document.querySelector('[data-web-gate]');
+  await until(() => gate()?.querySelector('[role="alert"]') && gate()?.querySelector('[data-web-sign-out]'));
+  assert.equal(gate().querySelector('[role="alert"]').textContent, 'Tu organización personal no está lista. Vuelve a intentarlo en unos minutos.');
+  assert.equal(gate().querySelector('[data-web-preparing]'), null);
+  assert.equal(gate().querySelector('[data-web-empty]'), null);
+  assert.equal(gate().querySelector('#promo-code'), null);
+  const tries = meCalls;
+  assert.ok(tries >= 8, `retried by itself before failing (${tries})`);
+  await new Promise(resolve => setTimeout(resolve, 100));
+  assert.equal(meCalls, tries, 'automatic retries stop after the error');
+  gate().querySelector('[data-web-retry]').click();
+  await until(() => meCalls > tries);
   assert.deepEqual(app.failures, []);
 });
