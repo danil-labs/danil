@@ -7,7 +7,7 @@
  */
 // Con extensión: este módulo se carga también desde `node --test`.
 import { isFreeRouterAgent } from "../../../../../packages/tasks/src/agents.ts";
-import type { Frase } from "../../lib/prose.ts";
+import type { Prosa } from "../../lib/prose.ts";
 import type { Superficie } from "../../lib/surfaces.ts";
 import { SUPPORTED_AGENTS } from "./ai-providers-view.ts";
 
@@ -15,7 +15,7 @@ import { SUPPORTED_AGENTS } from "./ai-providers-view.ts";
 export type BloqueoAlta =
   | null
   | { k: "ocupado" }
-  | { k: "segunda"; porque: Frase }
+  | { k: "segunda"; porque: Prosa }
   | { k: "externo" };
 
 /** Lo que cada `Accounts` avisa de su proveedor. */
@@ -84,7 +84,7 @@ export type OpcionDeAlta = {
   /** Por qué no se puede, o por qué se abre el grupo: el `k` de `bloqueoAlta`. */
   motivo: null | "ocupado" | "segunda" | "externo";
   /** El texto de `segunda` (`shared_credential`), literal, para pintarlo visible. */
-  porque: Frase | null;
+  porque: Prosa | null;
   /** `agregar`: llama `add_account`. `abrir`: despliega el grupo. `instalar`: Q4, provisional. */
   accion: "agregar" | "abrir" | "instalar";
 };
