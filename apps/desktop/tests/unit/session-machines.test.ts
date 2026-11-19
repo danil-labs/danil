@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { mergeBridgeInventory } from "../../src/features/machines/bridge-inventory.ts";
+import { createContextRelayPool } from "../../src/features/machines/context-relay-pool.ts";
 import { createSessionCloud, mergeContextMachines } from "../../src/features/machines/session-cloud.ts";
 import { createAccountWorkspaces } from "../../src/features/shell/session-account-workspaces.ts";
 import { confirmEmailClose, emailContextCount } from "../../src/features/shell/session-close-confirm.ts";
@@ -10,8 +11,9 @@ import { subscribeOrganizationProblems } from "../../src/lib/organization-proble
 
 const contexts = [{ context_id: "a", org: "A" }, { context_id: "b", org: "B" }];
 const machine = (id: string, org: string) => ({ computer_id: id, organization_id: org, state: "online" });
-test("duplicate machines prefer their organization context, otherwise the first listing", () => {
-  assert.deepEqual(mergeContextMachines(contexts.map((context) => ({ context, computers: [machine("same", "B"), machine("first", "C")] }))).map((m) => [m.computer_id, m.context]), [["same", "b"], ["first", "a"]]);
+test("one machine retains each context and rejects mismatched organization endpoints", () => {
+  const contexts = [{ context_id: "a", org: "A" }, { context_id: "b", org: "A" }];
+  assert.deepEqual(mergeContextMachines(contexts.map((context) => ({ context, computers: [{ ...machine("same", "A"), kind: "organization" }, { ...machine("alien", "B"), kind: "organization" }] }))).map((m) => [m.computer_id, m.context]), [["same", "a"], ["same", "b"]]);
 });
 
 test("one inventory per context, admission and wake use the selected row, expired contexts cannot buy tickets", async () => {
@@ -28,7 +30,7 @@ test("one inventory per context, admission and wake use the selected row, expire
   assert.equal(rows.computers[0].context, "b");
   assert.deepEqual(calls.filter((c) => c.path === "/v1/machines").map((c) => c.context).sort(), ["a", "b"]);
   await cloud.client.admission("same", "b");
-  await cloud.client.start("same");
+  await cloud.client.start("same", "b");
   assert.ok(calls.filter((c) => c.method === "POST").every((c) => c.context === "b"));
   connected = [];
   await cloud.rows();
@@ -157,4 +159,251 @@ test("a scoped inventory refusal keeps its own organization instead of notifying
     assert.deepEqual(problems, ["b"]);
     assert.deepEqual(legacyProblems, []);
   } finally { stop(); }
+});
+
+test("two people on the same organization buy tickets with their own context", async () => {
+  const calls: Record<string, unknown>[] = [];
+  const contexts = [{ context_id: "ana", org: "A" }, { context_id: "bea", org: "A" }];
+  const cloud = createSessionCloud(async (command, args) => {
+    if (command === "danil_session_status") return { sessions: [{ contexts }] };
+    calls.push(args!);
+    return { status: 200, body: args?.path === "/v1/capabilities" ? { contract: "mvp-v1", items: [{ name: "machines", version: 1, status: "available" }] } : { items: [{ machine_id: "same", organization_id: "A", kind: "organization", state: "running", connection: "connected" }] } };
+  });
+  const answer = await cloud.rows();
+  assert.ok(answer.state === "ready");
+  assert.deepEqual(answer.computers.map((row) => row.context), ["ana", "bea"]);
+  await cloud.client.admission("same", "ana");
+  await cloud.client.admission("same", "bea");
+  assert.deepEqual(calls.filter((call) => call.method === "POST").map((call) => call.context), ["ana", "bea"]);
+  assert.throws(() => cloud.client.admission("same"), { detail: "no_session" });
+  const merged = mergeBridgeInventory([{ computer_id: "same", state: "online", service_features: ["known"] }], answer.computers);
+  assert.deepEqual(merged.map((row) => [row.context, row.service_features]), [["ana", ["known"]], ["bea", ["known"]]]);
+});
+
+test("the context relay pool caps physical connections, reopens the correct identity and keeps quiet connections subscribed", async () => {
+  let now = 0;
+  let serial = 0;
+  const timers = new Map<number, { at: number; run(): void }>();
+  const time = { now: () => now, set: (run: () => void, ms: number) => { const id = ++serial; timers.set(id, { at: now + ms, run }); return id; }, clear: (id: unknown) => { timers.delete(id as number); } };
+  const tick = (ms: number) => { now += ms; for (const [id, timer] of [...timers]) if (timer.at <= now) { timers.delete(id); timer.run(); } };
+  const pool = createContextRelayPool(time);
+  let active = 0;
+  let peak = 0;
+  const opened: string[] = [];
+  const calls: string[] = [];
+  const links = ["a", "b", "c", "d", "e"].map((context) => pool.link("machine", () => {
+    let started = false;
+    return {
+      state: () => "online", onState: () => () => {}, onEvents: () => () => {}, subscribe: () => {},
+      start() { if (!started) { started = true; active++; peak = Math.max(peak, active); opened.push(context); } },
+      close() { if (started) { started = false; active--; } },
+      async call() { calls.push(context); return { value: context, cached: null }; },
+    };
+  }));
+  for (const link of links) link.start();
+  assert.equal(active, 4);
+  await links[4].call("request", "list_workspaces", null, null, {});
+  assert.equal(active, 4);
+  assert.equal(peak, 4);
+  assert.equal(calls.at(-1), "e");
+  await links[0].call("request", "list_workspaces", null, null, {});
+  assert.equal(calls.at(-1), "a");
+  assert.equal(opened.filter((context) => context === "a").length, 2);
+  tick(5 * 60_000 - 1);
+  assert.equal(active, 4);
+  tick(1);
+  assert.equal(active, 4);
+  await links[4].call("request", "list_workspaces", null, null, {});
+  assert.equal(active, 4);
+  assert.equal(calls.at(-1), "e");
+  for (const link of links) link.close();
+  assert.equal(active, 0);
+  assert.equal(timers.size, 0);
+});
+
+test("busy relay sessions are not evicted and queued work keeps its own context", async () => {
+  const pool = createContextRelayPool();
+  const finish = new Map<string, () => void>();
+  let active = 0;
+  const calls: string[] = [];
+  const links = ["a", "b", "c", "d", "e"].map((context) => pool.link("machine", () => ({
+    state: () => "online", onState: () => () => {}, onEvents: () => () => {}, subscribe: () => {},
+    start() { active++; assert.ok(active <= 4); }, close() { active--; },
+    async call() { calls.push(context); await new Promise<void>((resolve) => finish.set(context, resolve)); return { value: context, cached: null }; },
+  })));
+  const pending = links.map((link) => link.call("request", "list_workspaces", null, null, {}));
+  await Promise.resolve();
+  assert.deepEqual(calls, ["a", "b", "c", "d"]);
+  finish.get("b")!();
+  await pending[1];
+  await Promise.resolve();
+  assert.deepEqual(calls, ["a", "b", "c", "d", "e"]);
+  assert.equal(active, 4);
+  for (const resolve of finish.values()) resolve();
+  await Promise.all(pending);
+  for (const link of links) link.close();
+  assert.equal(active, 0);
+});
+
+test("a synchronous relay factory failure releases its reservation and preserves other member state", { timeout: 1_000 }, async () => {
+  const pool = createContextRelayPool(undefined, 1);
+  const error = new Error("factory unavailable");
+  let fail = true;
+  const make = (value: string) => ({
+    state: () => "online" as const, onState: () => () => {}, onEvents: () => () => {}, subscribe: () => {}, start() {}, close() {},
+    async call() { return { value, cached: null }; },
+  });
+  const first = pool.link("machine", () => make("first"));
+  const failing = pool.link("machine", () => { if (fail) throw error; return make("retry"); });
+  try {
+    first.start();
+    await assert.rejects(failing.call("request", "list_workspaces", null, null, {}, 50), (failure) => failure === error);
+    assert.equal(first.state(), "online");
+    fail = false;
+    assert.equal((await failing.call("request", "list_workspaces", null, null, {}, 50)).value, "retry");
+    assert.equal((await first.call("request", "list_workspaces", null, null, {}, 50)).value, "first");
+  } finally { first.close(); failing.close(); }
+});
+
+test("a factory failure while waking a queued caller rejects it and permits a later retry", { timeout: 1_000 }, async () => {
+  const pool = createContextRelayPool(undefined, 1);
+  let release!: () => void;
+  let fail = true;
+  const error = new Error("queued factory unavailable");
+  const make = (value: string, wait = false) => ({
+    state: () => "online" as const, onState: () => () => {}, onEvents: () => () => {}, subscribe: () => {}, start() {}, close() {},
+    async call() { if (wait) await new Promise<void>((resolve) => { release = resolve; }); return { value, cached: null }; },
+  });
+  const first = pool.link("machine", () => make("busy", true));
+  const queued = pool.link("machine", () => { if (fail) throw error; return make("retry"); });
+  try {
+    const active = first.call("request", "list_workspaces", null, null, {}, 50);
+    await Promise.resolve();
+    const rejected = assert.rejects(queued.call("request", "list_workspaces", null, null, {}, 50), (failure) => failure === error);
+    release();
+    await active;
+    await rejected;
+    fail = false;
+    assert.equal((await queued.call("request", "list_workspaces", null, null, {}, 50)).value, "retry");
+  } finally { first.close(); queued.close(); }
+});
+
+test("a quiet relay remains subscribed beyond five minutes and receives new attention", () => {
+  let now = 0;
+  const time = { now: () => now, set: () => { throw new Error("no idle timer"); }, clear: () => {} };
+  const pool = createContextRelayPool(time);
+  let active = 0;
+  let emit!: (page: { cursor: number | null; events?: { name: string; payload: unknown }[] }) => void;
+  const received: unknown[] = [];
+  const link = pool.link("machine", () => ({
+    state: () => "online", onState: () => () => {}, onEvents: (listener) => { emit = listener; return () => {}; }, subscribe: () => {},
+    start() { active++; }, close() { active--; }, async call() { return { value: null, cached: null }; },
+  }));
+  link.onEvents(page => received.push(page));
+  link.subscribe(null);
+  link.start();
+  now = 10 * 60_000;
+  emit({ cursor: 1, events: [{ name: "attention", payload: [{ workspace: "shared", tasks: [{ id: "new" }] }] }] });
+  assert.equal(active, 1);
+  assert.equal(received.length, 1);
+  link.close();
+  assert.equal(active, 0);
+});
+
+test("the fifth context marks its victim stale and recovery reads attention before releasing events", async () => {
+  const pool = createContextRelayPool();
+  const order: string[] = [];
+  const stale = new Set<string>();
+  let anaStarts = 0;
+  let finishAttention!: (answer: { value: unknown; cached: null }) => void;
+  const links = ["ana", "bea", "c", "d", "e"].map(context => pool.link("machine", () => {
+    let events!: (page: { cursor: number | null; events?: { name: string; payload: unknown }[] }) => void;
+    return {
+      state: () => "online", onState: () => () => {}, onEvents: listener => { events = listener; return () => {}; },
+      subscribe() { if (context === "ana" && anaStarts > 1) order.push("subscribe"); },
+      start() { if (context === "ana" && ++anaStarts > 1) events({ cursor: 2, events: [{ name: "attention", payload: [{ workspace: "shared", tasks: [] }] }] }); },
+      close() {},
+      async call(_id, command) {
+        if (context === "ana" && command === "list_workspace_attention") {
+          order.push("read-attention");
+          return await new Promise<{ value: unknown; cached: null }>(resolve => { finishAttention = resolve; });
+        }
+        if (context === "ana") order.push("call");
+        return { value: context, cached: null };
+      },
+    };
+  }, {
+    onSuspend() { stale.add(context); },
+    onResume(value) { if (context === "ana") { assert.deepEqual(value, [{ workspace: "shared", tasks: [{ id: "fresh" }] }]); order.push("fresh"); } stale.delete(context); },
+  }));
+  try {
+    links[0].onEvents(() => order.push("event"));
+    for (const link of links) { link.subscribe(null); link.start(); }
+    await links[4].call("request", "list_workspaces", null, null, {});
+    assert.equal(stale.has("ana"), true);
+    const resumed = links[0].call("request", "list_workspaces", null, null, {});
+    await Promise.resolve(); await Promise.resolve();
+    assert.deepEqual(order, ["read-attention"]);
+    assert.equal(stale.has("ana"), true);
+    finishAttention({ value: [{ workspace: "shared", tasks: [{ id: "fresh" }] }], cached: null });
+    await resumed;
+    assert.equal(stale.has("ana"), false);
+    assert.deepEqual(order, ["read-attention", "fresh", "event", "subscribe", "call"]);
+  } finally { for (const link of links) link.close(); }
+});
+
+test("settled session ids revoke immediately before slow inventory, without treating failures or legacy as authoritative", async () => {
+  const revoked: string[][] = [];
+  let release!: () => void;
+  let status: unknown = { sessions: [{ contexts: [{ context_id: "live", org: "A" }] }] };
+  let block = true;
+  const cloud = createSessionCloud(async (command, args) => {
+    if (command === "danil_session_status") { if (status instanceof Error) throw status; return status; }
+    if (block) await new Promise<void>(resolve => { release = resolve; });
+    return { status: 200, body: args?.path === "/v1/capabilities" ? { contract: "mvp-v1", items: [{ name: "machines", version: 1, status: "available" }] } : { items: [] } };
+  }, undefined, undefined, ids => { revoked.push([...ids]); });
+  const pending = cloud.rows();
+  await new Promise(resolve => setTimeout(resolve, 0));
+  assert.deepEqual(revoked, [["live"]]);
+  assert.deepEqual(cloud.validatedContexts(), ["live"]);
+  block = false; release(); await pending;
+  for (status of [null, new Error("offline"), { state: "connected" }, { sessions: [{ contexts: "malformed" }] }]) {
+    await cloud.rows();
+    assert.equal(cloud.validatedContexts(), null);
+    assert.equal(revoked.length, 1);
+  }
+  status = { sessions: [] };
+  await cloud.rows();
+  assert.deepEqual(revoked, [["live"], []]);
+  assert.deepEqual(cloud.validatedContexts(), []);
+});
+
+test("valid session authority survives an unavailable machine inventory", async () => {
+  const settled: string[][] = [];
+  const cloud = createSessionCloud(async (command) => command === "danil_session_status"
+    ? { sessions: [{ contexts: [{ context_id: "live", org: "A" }] }] }
+    : { status: 503, body: { code: "temporarily_unavailable" } }, undefined, undefined, ids => { settled.push([...ids]); });
+  await cloud.rows();
+  assert.deepEqual(settled, [["live"]]);
+  assert.deepEqual(cloud.validatedContexts(), ["live"]);
+});
+
+test("a caller waiting on a reopened relay's attention read gives up at its own deadline", { timeout: 2_000 }, async () => {
+  const pool = createContextRelayPool(undefined, 1);
+  let attentionReads = 0;
+  const links = ["ana", "bea"].map(context => pool.link("machine", () => ({
+    state: () => "online", onState: () => () => {}, onEvents: () => () => {}, subscribe() {}, start() {}, close() {},
+    async call(_id, command) {
+      if (context === "ana" && command === "list_workspace_attention") { attentionReads++; return await new Promise<never>(() => {}); }
+      return { value: context, cached: null };
+    },
+  })));
+  try {
+    await links[0].call("first", "list_workspaces", null, null, {});
+    await links[1].call("evict", "list_workspaces", null, null, {});
+    const started = Date.now();
+    await assert.rejects(links[0].call("reopen", "list_workspaces", null, null, {}, 50), { code: "machine_timeout" });
+    assert.equal(attentionReads, 1);
+    assert.ok(Date.now() - started < 1_000, "the reopen read's 30 s limit does not extend the caller's 50 ms");
+  } finally { for (const link of links) link.close(); }
 });

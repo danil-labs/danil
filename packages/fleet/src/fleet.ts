@@ -1,6 +1,6 @@
 /**
  * Las otras máquinas de la cuenta detrás de un panel: una sesión de relay por
- * máquina, cada llamada con su sobre `{machine, workspace, command, args}` y
+ * pareja (máquina, contexto), cada llamada con su sobre explícito y
  * cada lectura como una rebanada con estado (`slices.ts`).
  *
  * - La máquina sale solo del sobre; los argumentos nunca la eligen (`ids.ts`).
@@ -14,14 +14,14 @@
  * La máquina de la ventana no pasa por aquí: quien la tiene la lee nativa y
  * suma su rebanada con `merge`.
  */
-import { type AccountWorkspace, type Blocked, type CallResult, type DeferredFrame, type EngineInfo, type EventsPage, type MachineState, type SystemId, cachedAt, callWorkspace, isDeferrable, linkedAttention, linkedEvents, linkedListing, requestId, unlinkedWorkspaces } from "../../computers/src/index.ts";
+import { type AccountWorkspace, type Blocked, type CallResult, cachedAt, callWorkspace, type DeferredFrame, type EngineInfo, type EventsPage, isDeferrable, linkedAttention, linkedEvents, linkedListing, type MachineState, requestId, type SystemId, unlinkedWorkspaces } from "../../computers/src/index.ts";
 import { COMMAND_NOT_HERE, isScopeRefusal, isUnknownCommand } from "../../protocol/src/index.ts";
-import { DEADLINES, type Deadlines, PASSIVE, classOf } from "./deadlines.ts";
+import { classOf, DEADLINES, type Deadlines, PASSIVE } from "./deadlines.ts";
 import { FleetError, fromRelay } from "./errors.ts";
 import { argsFor } from "./ids.ts";
-import { type MergeContext, encode, encodeEvent, merge } from "./merge.ts";
+import { memberKey, sameContext } from "./member-key.ts";
+import { encode, encodeEvent, type MergeContext, merge } from "./merge.ts";
 import { type Slice, SliceBook, type StorageLike } from "./slices.ts";
-
 import { type ListedWorkspace, listedWorkspaces } from "./workspace-listing.ts";
 
 type Row = Record<string, unknown>;
@@ -57,10 +57,14 @@ const serves = (info: MachineInfo | undefined, workspace: string): boolean => !!
 /** El endpoint de una organización vive en su servidor, siempre encendido: nunca se enciende desde aquí. */
 const alwaysOn = (info: MachineInfo): boolean => !!info.organization;
 /** La fila del plano de control dice `wakeable` para un endpoint (enciende su servidor); la flota no. */
-const normalized = (info: MachineInfo): MachineInfo => (alwaysOn(info) && info.wakes ? { ...info, wakes: false } : { ...info });
+const normalized = (info: MachineInfo): MachineInfo => {
+  const next = alwaysOn(info) && info.wakes ? { ...info, wakes: false } : { ...info };
+  if (next.context === "") delete next.context;
+  return next;
+};
 export type Power = "on" | "off" | "starting" | "outdated";
 
-export type Envelope = { machine: string; workspace: string | null; command: string; args?: Row };
+export type Envelope = { context?: string; machine: string; workspace: string | null; command: string; args?: Row };
 
 /** Lo que la flota usa de una sesión de relay (`RelaySession` de `@terminus/computers`). */
 export type Link = {
@@ -110,23 +114,23 @@ export type FleetConfig = {
   /** Si este cliente habla el contrato de un motor: `null` si no se sabe (`machineCompatibility`). */
   compatible?(contract: string | null): boolean | null;
   /** Enciende una VM por el plano de control; `false` si no se pudo, `not_startable` si no es suya de encender. */
-  wake?(machine: string): Promise<boolean | "not_startable">;
+  wake?(machine: string, context?: string): Promise<boolean | "not_startable">;
   storage?: StorageLike | null;
   deadlines?: Partial<Deadlines>;
   /** Una máquina cambió de estado, o se agregó, quitó o renombró. */
-  onChange?(machine: string): void;
+  onChange?(machine: string, context?: string): void;
   /** Cambió el estado de la última rebanada de una máquina (`sliceStatuses`): solo para repintarlo. */
-  onSlice?(machine: string): void;
+  onSlice?(machine: string, context?: string): void;
   /** Eventos de otra máquina, ya con los ids del panel. `gap`: se perdieron algunos y hay que releer. */
-  onEvents?(machine: string, events: FleetEvent[], gap: boolean, context?: Pick<EventsPage, "cursor" | "runtime" | "replay" | "replayId">): void;
+  onEvents?(machine: string, events: FleetEvent[], gap: boolean, context?: Pick<EventsPage, "cursor" | "runtime" | "replay" | "replayId">, sessionContext?: string): void;
   /** Cambió la cola de acciones aplazadas de `machine` (se encoló o se aplicó una): la lista se relee. */
-  onDeferred?(machine: string, frame: DeferredFrame): void;
+  onDeferred?(machine: string, frame: DeferredFrame, context?: string): void;
   /**
    * Llegaron eventos de `workspaces` que ninguna máquina tiene vinculados según
    * su fila (`MachineInfo.linked`). El relay ya los dejó pasar: se vincularon
    * después de listar las computadoras, y la lista se relee para verlos.
    */
-  onUnlinked?(machine: string, workspaces: string[]): void;
+  onUnlinked?(machine: string, workspaces: string[], context?: string): void;
   /** `false`: los eventos llegan con los ids de su máquina (el teléfono nombra cada tarea con su máquina aparte). */
   panelIds?: boolean;
 };
@@ -157,10 +161,10 @@ export class Fleet {
   private members = new Map<string, Member>();
   /** Lo último que cada máquina contestó en `list_workspaces`; sin entrada, aún no se sabe. */
   private listings = new Map<string, readonly Listed[]>();
-  private listingListeners = new Set<(machine: string) => void>();
-  private registry: AccountWorkspace[] | null = null;
+  private listingListeners = new Set<(machine: string, context?: string) => void>();
+  private registries = new Map<string, AccountWorkspace[]>();
   /** Los spaces compartidos con la cuenta que se conocen: del registro y de las respuestas con `account`. */
-  private shared = new Set<string>();
+  private sharedSpaces = new Map<string, Set<string>>();
   private readonly book: SliceBook;
   private readonly deadlines: Deadlines;
   private readonly inflight = new Map<string, Promise<Slice>>();
@@ -177,6 +181,32 @@ export class Fleet {
     this.deadlines = { ...DEADLINES, ...config.deadlines };
   }
 
+  private member(machine: string, context?: string): Member | undefined {
+    return this.members.get(memberKey(machine, context));
+  }
+
+  private forgetInflight(machine: string, context?: string) {
+    const prefix = `${machine}\u0000${context ?? ""}\u0000`;
+    for (const key of this.inflight.keys()) if (key.startsWith(prefix)) this.inflight.delete(key);
+  }
+
+  private purgeAbsentScopes() {
+    const current = new Set(this.machines().map((m) => m.context ?? ""));
+    for (const scope of this.registries.keys()) if (scope && !current.has(scope)) this.registries.delete(scope);
+    for (const scope of this.sharedSpaces.keys()) if (scope && !current.has(scope)) this.sharedSpaces.delete(scope);
+  }
+
+  private scoped(context?: string): MachineInfo[] {
+    return this.machines().filter((info) => sameContext(info.context, context));
+  }
+
+  private shared(context?: string): Set<string> {
+    const key = context ?? "";
+    let value = this.sharedSpaces.get(key);
+    if (!value) { value = new Set(); this.sharedSpaces.set(key, value); }
+    return value;
+  }
+
   /**
    * Las máquinas de la cuenta como las dice ahora `GET /v1/computers`: las nuevas
    * se conectan, las que ya no están se cierran y olvidan, y a las demás se les
@@ -184,18 +214,19 @@ export class Fleet {
    */
   setMachines(list: readonly MachineInfo[]) {
     if (this.closed) return;
-    const next = new Map(list.filter((m) => m.id !== this.self).map((m) => [m.id, normalized(m)]));
+    const next = new Map(list.filter((m) => m.id !== this.self).map((m) => [memberKey(m.id, m.context), normalized(m)]));
     for (const [id, member] of [...this.members])
       if (!next.has(id) || next.get(id)?.context !== member.info.context) {
         this.drop(member);
         this.members.delete(id);
-        this.book.forget(id);
+        this.forgetInflight(member.info.id, member.info.context);
+        this.book.forget(member.info.id, member.info.context);
         this.contextRows.delete(id);
         this.listings.delete(id);
-        this.config.onChange?.(id);
+        this.config.onChange?.(member.info.id, member.info.context);
       }
     for (const info of next.values()) {
-      const member = this.members.get(info.id);
+      const member = this.member(info.id, info.context);
       if (!member) {
         this.add(info);
         continue;
@@ -208,32 +239,33 @@ export class Fleet {
       // Un contrato que vuelve a ser compatible quita la marca que puso el relay.
       if (before.outdated && !info.outdated) member.outdated = false;
       member.info = info;
-      if (!same) this.config.onChange?.(info.id);
+      if (!same) this.config.onChange?.(info.id, info.context);
     }
+    this.purgeAbsentScopes();
   }
 
   /** Una máquina renombrada en la cuenta (`PATCH /v1/computers/:id`): sus etiquetas leen el nombre nuevo. `true` si cambió. */
-  rename(machine: string, name: string): boolean {
-    const member = this.members.get(machine);
+  rename(machine: string, name: string, context?: string): boolean {
+    const member = this.member(machine, context);
     const next = name.trim();
     if (!member || !next || member.info.name === next) return false;
     member.info = { ...member.info, name: next };
-    this.config.onChange?.(machine);
+    this.config.onChange?.(machine, context);
     return true;
   }
 
-  setRegistry(list: AccountWorkspace[] | null) {
-    this.registry = list;
-    for (const w of list ?? []) for (const s of w.spaces ?? []) this.shared.add(s.id);
+  setRegistry(list: AccountWorkspace[] | null, context?: string) {
+    if (list) this.registries.set(context ?? "", list); else this.registries.delete(context ?? "");
+    for (const w of list ?? []) for (const s of w.spaces ?? []) this.shared(context).add(s.id);
   }
 
   /** Un space que ya es de la cuenta (`share_space`): viaja sin prefijo a cualquier máquina. */
-  markShared(space: string) {
-    if (space) this.shared.add(space);
+  markShared(space: string, context?: string) {
+    if (space) this.shared(context).add(space);
   }
 
-  isShared(space: string): boolean {
-    return this.shared.has(space);
+  isShared(space: string, context?: string): boolean {
+    return this.shared(context).has(space);
   }
 
   /**
@@ -241,71 +273,72 @@ export class Fleet {
    * las tareas de otra máquina leídas antes nombraban con prefijo un space que
    * ya es de la cuenta (al migrar sus spaces): la ventana las relee.
    */
-  sharedCount(): number {
-    return this.shared.size;
+  sharedCount(context?: string): number {
+    return this.shared(context).size;
   }
 
   /** Aprende los spaces compartidos de una respuesta (`account: true`). */
-  private learn(command: string, value: unknown) {
+  private learn(command: string, value: unknown, context?: string) {
     if (!/space/.test(command)) return;
     for (const r of Array.isArray(value) ? value : [value])
-      if (r && typeof r === "object" && (r as Row).account === true && typeof (r as Row).id === "string") this.shared.add((r as Row).id as string);
+      if (r && typeof r === "object" && (r as Row).account === true && typeof (r as Row).id === "string") this.shared(context).add((r as Row).id as string);
   }
 
-  getRegistry(): AccountWorkspace[] | null {
-    return this.registry;
+  getRegistry(context?: string): AccountWorkspace[] | null {
+    return this.registries.get(context ?? "") ?? null;
   }
 
   /** Las otras máquinas, administradas (las VM y los servidores de organización) primero y luego por nombre. */
-  machines(): MachineInfo[] {
+  machines(context?: string): MachineInfo[] {
     const managed = (m: MachineInfo) => Number(m.wakes || alwaysOn(m));
-    return [...this.members.values()].map((m) => m.info).sort((a, b) => managed(b) - managed(a) || a.name.localeCompare(b.name));
+    return [...this.members.values()].map((m) => m.info).filter((m) => context === undefined || sameContext(m.context, context)).sort((a, b) => managed(b) - managed(a) || a.name.localeCompare(b.name));
   }
 
-  has(machine: string | null | undefined): boolean {
-    return !!machine && this.members.has(machine);
+  has(machine: string | null | undefined, context?: string): boolean {
+    return !!machine && !!this.member(machine, context);
   }
 
-  info(machine: string): MachineInfo | undefined {
-    return this.members.get(machine)?.info;
+  info(machine: string, context?: string): MachineInfo | undefined {
+    return this.member(machine, context)?.info;
   }
 
   /** Lo que `machine` contestó en `list_workspaces`; una respuesta sin lista no borra la anterior. */
-  setListing(machine: string, workspaces: readonly Listed[]) {
-    if (!this.members.has(machine)) return;
-    const before = this.listings.get(machine);
-    this.listings.set(machine, workspaces);
+  setListing(machine: string, workspaces: readonly Listed[], context?: string) {
+    if (!this.member(machine, context)) return;
+    const id = memberKey(machine, context);
+    const before = this.listings.get(id);
+    this.listings.set(id, workspaces);
     if (JSON.stringify(before ?? null) === JSON.stringify(workspaces)) return;
-    this.config.onChange?.(machine);
-    for (const listener of this.listingListeners) listener(machine);
+    this.config.onChange?.(machine, context);
+    for (const listener of this.listingListeners) listener(machine, context);
   }
 
   /** Avisa cada vez que cambia lo que una máquina lista; devuelve cómo dejar de escuchar. */
-  onListing(listener: (machine: string) => void): () => void {
+  onListing(listener: (machine: string, context?: string) => void): () => void {
     this.listingListeners.add(listener);
     return () => void this.listingListeners.delete(listener);
   }
 
   /** Cada lectura de `list_workspaces` de otra máquina, sea de quien sea, queda como su lista. */
-  private noteListing(machine: string, value: unknown) {
+  private noteListing(machine: string, value: unknown, context?: string) {
     const rows = listedWorkspaces(value);
-    if (rows) this.setListing(machine, rows);
+    if (rows) this.setListing(machine, rows, context);
   }
 
   /** Las máquinas `kind=organization` de `organization`, según su fila de `/v1/machines`. */
-  organizationMachines(organization: string): string[] {
-    return this.machines().filter((m) => m.kind === "organization" && m.organizationId === organization).map((m) => m.id);
+  organizationMachines(organization: string, context?: string): string[] {
+    return this.scoped(context).filter((m) => m.kind === "organization" && m.organizationId === organization).map((m) => m.id);
   }
 
   /**
    * Los workspaces que sirven las máquinas de `organization`, de su `list_workspaces`.
    * `null` mientras ninguna contestó: la fuente no está asentada y nada se decide con ella.
    */
-  available(organization: string): Listed[] | null {
+  available(organization: string, context?: string): Listed[] | null {
     const found = new Map<string, Listed>();
     let settled = false;
-    for (const id of this.organizationMachines(organization)) {
-      const listed = this.listings.get(id);
+    for (const id of this.organizationMachines(organization, context)) {
+      const listed = this.listings.get(memberKey(id, context));
       if (!listed) continue;
       settled = true;
       for (const w of listed) if ((!w.account || w.account.org === organization) && !found.has(w.id)) found.set(w.id, w);
@@ -316,19 +349,19 @@ export class Fleet {
   /** Si `info` atiende `workspace` por una organización: por su fila, o por su `list_workspaces` si es `kind=organization`. */
   private serves(info: MachineInfo | undefined, workspace: string): boolean {
     if (serves(info, workspace)) return true;
-    return !!info && info.kind === "organization" && !!info.organizationId && !!this.listings.get(info.id)?.some((w) => w.id === workspace);
+    return !!info && info.kind === "organization" && !!info.organizationId && !!this.listings.get(memberKey(info.id, info.context))?.some((w) => w.id === workspace);
   }
 
-  name(machine: string): string {
-    return this.info(machine)?.name ?? machine;
+  name(machine: string, context?: string): string {
+    return this.info(machine, context)?.name ?? machine;
   }
 
-  state(machine: string): MachineState {
-    return this.members.get(machine)?.link.state() ?? "unknown";
+  state(machine: string, context?: string): MachineState {
+    return this.member(machine, context)?.link.state() ?? "unknown";
   }
 
-  power(machine: string): Power {
-    const member = this.members.get(machine);
+  power(machine: string, context?: string): Power {
+    const member = this.member(machine, context);
     if (!member) return "off";
     if (this.isOutdated(member)) return "outdated";
     if (this.online(member)) return "on";
@@ -342,12 +375,12 @@ export class Fleet {
    * Lo que otra fuente sabe del estado de `machine` (la vista del motor, de la
    * lista de la cuenta). Solo vale mientras su sesión no dijo nada: el relay manda.
    */
-  observe(machine: string, state: MachineState) {
-    const member = this.members.get(machine);
+  observe(machine: string, state: MachineState, context?: string) {
+    const member = this.member(machine, context);
     if (!member || member.hint === state) return;
-    const before = this.power(machine);
+    const before = this.power(machine, context);
     member.hint = state;
-    if (this.power(machine) !== before) this.config.onChange?.(machine);
+    if (this.power(machine, context) !== before) this.config.onChange?.(machine, context);
   }
 
   /** El estado de la sesión, o el de otra fuente si la sesión aún no dijo ninguno. */
@@ -375,15 +408,15 @@ export class Fleet {
     if (member.live || member.link.state() === "online") return;
     member.live = true;
     // Como al llegar su `online`: lo leído mientras parecía apagada se relee.
-    if (this.listening) this.config.onEvents?.(member.info.id, [], true);
-    this.config.onChange?.(member.info.id);
+    if (this.listening) this.config.onEvents?.(member.info.id, [], true, undefined, member.info.context);
+    this.config.onChange?.(member.info.id, member.info.context);
   }
 
   /** El relay dijo que no la alcanza: la evidencia en vivo ya no vale. */
   private unanswered(member: Member) {
     if (!member.live) return;
     member.live = false;
-    this.config.onChange?.(member.info.id);
+    this.config.onChange?.(member.info.id, member.info.context);
   }
 
   /**
@@ -393,39 +426,67 @@ export class Fleet {
    * tienen vinculado. Nunca según quién contestó al final.
    * Si alguna fila lo sirve por una organización, solo esas: vive en su servidor.
    */
-  membersOf(workspace: string | null): string[] {
+  membersOf(workspace: string | null, context?: string): string[] {
     if (!workspace) return [];
-    const order = this.machines().map((m) => m.id);
-    const servers = order.filter((id) => this.serves(this.info(id), workspace));
+    const order = this.scoped(context).map((m) => m.id);
+    const servers = order.filter((id) => this.serves(this.info(id, context), workspace));
     if (servers.length) return servers;
     // Lo que una máquina contestó en `list_workspaces` manda; las hijas son de todos.
-    const lists = (id: string) => !!this.listings.get(id)?.some((w) => w.id === workspace);
-    const listed = order.filter((id) => lists(id) || this.info(id)?.child === true);
-    const registered = this.registry?.find(row => row.id === workspace);
-    if (order.some(lists)) return order.filter(id => listed.includes(id) || (!this.listings.has(id) && (registered?.computers.includes(id) ?? false)));
+    const lists = (id: string) => !!this.listings.get(memberKey(id, context))?.some((w) => w.id === workspace);
+    const listed = order.filter((id) => lists(id) || this.info(id, context)?.child === true);
+    const registered = this.getRegistry(context)?.find(row => row.id === workspace);
+    if (order.some(lists)) return order.filter(id => listed.includes(id) || (!this.listings.has(memberKey(id, context)) && (registered?.computers.includes(id) ?? false)));
     // Una máquina de organización cuya lista ya se conoce no toma lo que no lista.
-    const known = (id: string) => this.info(id)?.kind === "organization" && this.listings.has(id);
-    if (this.registry) {
-      return order.filter((id) => !known(id) && ((registered?.computers.includes(id) ?? false) || this.info(id)?.child === true || (this.info(id)?.linked?.has(workspace) ?? false)));
+    const known = (id: string) => this.info(id, context)?.kind === "organization" && this.listings.has(memberKey(id, context));
+    if (this.getRegistry(context)) {
+      return order.filter((id) => !known(id) && ((registered?.computers.includes(id) ?? false) || this.info(id, context)?.child === true || (this.info(id, context)?.linked?.has(workspace) ?? false)));
     }
     return order.filter((id) => {
-      const linked = this.info(id)?.linked ?? null;
+      const linked = this.info(id, context)?.linked ?? null;
       return !known(id) && (linked === null || linked.has(workspace));
     });
   }
 
+  leadOf(workspace: string | null, context?: string): string | null {
+    const members = this.membersOf(workspace, context).filter((id) => this.power(id, context) !== "outdated");
+    return members.find((id) => this.power(id, context) === "on") ?? members[0] ?? null;
+  }
+
+  /** Solo un conjunto de sesiones asentado puede revocar contextos; el inventario no basta. */
+  pruneContexts(validContexts: Iterable<string>) {
+    const valid = new Set(validContexts);
+    for (const member of [...this.members.values()]) if (member.info.context && !valid.has(member.info.context)) this.closeMember(member.info.id, member.info.context);
+    for (const scope of this.registries.keys()) if (scope && !valid.has(scope)) this.registries.delete(scope);
+    for (const scope of this.sharedSpaces.keys()) if (scope && !valid.has(scope)) this.sharedSpaces.delete(scope);
+    this.book.pruneContexts(valid);
+  }
+
+  closeMember(machine: string, context?: string) {
+    const key = memberKey(machine, context);
+    const member = this.members.get(key);
+    if (!member) return;
+    this.drop(member);
+    this.members.delete(key);
+    this.forgetInflight(machine, context);
+    this.listings.delete(key);
+    this.contextRows.delete(key);
+    this.book.forget(machine, context);
+    this.purgeAbsentScopes();
+    this.config.onChange?.(machine, context);
+  }
+
   /** Si alguna máquina tiene `workspace` vinculado según su fila (o no dice cuáles tiene). */
-  private linkedAnywhere(workspace: string): boolean {
-    return [...this.members.values()].some((m) => {
+  private linkedAnywhere(workspace: string, context?: string): boolean {
+    return [...this.members.values()].filter((m) => sameContext(m.info.context, context)).some((m) => {
       const linked = m.info.linked ?? null;
       return linked === null || linked.has(workspace) || this.serves(m.info, workspace);
     });
   }
 
   /** Los workspaces de organización que atienden las máquinas según sus filas, con su nombre y quién los atiende. */
-  organizationWorkspaces(): { id: string; name: string; machines: string[] }[] {
+  organizationWorkspaces(context?: string): { id: string; name: string; machines: string[] }[] {
     const found = new Map<string, { id: string; name: string; machines: string[] }>();
-    for (const m of this.machines()) {
+    for (const m of this.scoped(context)) {
       for (const w of m.organization?.workspaces ?? []) {
         const seen = found.get(w.id) ?? { id: w.id, name: w.name, machines: [] };
         seen.machines.push(m.id);
@@ -435,70 +496,72 @@ export class Fleet {
     return [...found.values()];
   }
 
-  inRegistry(workspace: string | null): boolean {
-    return !!workspace && !!this.registry?.some((w) => w.id === workspace);
+  inRegistry(workspace: string | null, context?: string): boolean {
+    return !!workspace && !!this.getRegistry(context)?.some((w) => w.id === workspace);
   }
 
   /** Los ids que van con prefijo: los de las otras máquinas. */
-  remotes(): ReadonlySet<string> {
-    return new Set(this.members.keys());
+  remotes(context?: string): ReadonlySet<string> {
+    return new Set(this.scoped(context).map((m) => m.id));
   }
 
   /** `args` para `machine`; lanza `cross_machine` si nombran algo de otra. */
-  argsFor(machine: string, args: Row): Row {
-    return argsFor(args, machine, this.remotes(), this.self, (s) => this.shared.has(s));
+  argsFor(machine: string, args: Row, context?: string): Row {
+    return argsFor(args, machine, this.remotes(context), this.self, (s) => this.shared(context).has(s));
   }
 
-  context(): MergeContext {
+  context(context?: string): MergeContext {
     return {
       self: this.self,
-      on: (m) => m === this.self || this.power(m) === "on",
-      order: this.machines().map((m) => m.id),
-      registry: this.registry,
-      shared: (s) => this.shared.has(s),
-      name: (m) => this.name(m),
-      workspaceContext: (workspace) => this.workspaceContext(workspace),
+      on: (m) => m === this.self || this.power(m, context) === "on",
+      order: this.scoped(context).map((m) => m.id),
+      registry: this.getRegistry(context),
+      shared: (s) => this.shared(context).has(s),
+      name: (m) => this.name(m, context),
+      workspaceContext: (workspace) => this.workspaceContext(workspace, context),
     };
   }
 
-  encode(machine: string, value: unknown, command = ""): unknown {
-    this.learn(command, value);
-    return encode(this.context(), machine, value, command);
+  encode(machine: string, value: unknown, command = "", context?: string): unknown {
+    this.learn(command, value, context);
+    return encode(this.context(context), machine, value, command);
   }
 
-  private workspaceContext(workspace: string): { machine: string; row: Row } | null {
-    const members = new Set([...(this.self ? [this.self] : []), ...this.membersOf(workspace)]);
+  private workspaceContext(workspace: string, context?: string): { machine: string; row: Row } | null {
+    const members = new Set([...(this.self ? [this.self] : []), ...this.membersOf(workspace, context)]);
     const primary = (machine: string) => {
-      const row = this.contextRows.get(machine)?.get(workspace);
+      const row = this.contextRows.get(memberKey(machine, context))?.get(workspace);
       return row && typeof row.context_root === "string" && row.context_root.trim() ? row : null;
     };
-    const previous = this.contextOwners.get(workspace);
-    const machine = previous && members.has(previous) && this.power(previous) === "outdated" && primary(previous)
+    const ownerKey = memberKey(workspace, context);
+    const previous = this.contextOwners.get(ownerKey);
+    const machine = previous && members.has(previous) && this.power(previous, context) === "outdated" && primary(previous)
       ? previous
       : [...members].find((id) => primary(id));
     if (!machine) {
-      this.contextOwners.delete(workspace);
+      this.contextOwners.delete(ownerKey);
       return null;
     }
-    this.contextOwners.set(workspace, machine);
+    this.contextOwners.set(ownerKey, machine);
     return { machine, row: primary(machine)! };
   }
 
   /** Las rebanadas juntas; `undefined` si ninguna trae valor (`merge.ts`). */
-  merge(command: string, slices: readonly Slice[], workspace: string | null = null): unknown {
-    for (const s of slices) if (s.has) {
-      this.learn(command, s.value);
+  merge(command: string, slices: readonly Slice[], workspace: string | null = null, context?: string): unknown {
+    const scoped = slices.filter((s) => s.machine === this.self || sameContext(s.context, context));
+    for (const s of scoped) if (s.has) {
+      this.learn(command, s.value, context);
       if (command === "list_workspaces" || command === "workspaces_startup") {
         const rows = (s.value as { workspaces?: Row[] } | null)?.workspaces;
-        if (Array.isArray(rows)) this.contextRows.set(s.machine, new Map(rows.filter((row) => typeof row?.id === "string").map((row) => [row.id as string, row])));
+        if (Array.isArray(rows)) this.contextRows.set(memberKey(s.machine, context), new Map(rows.filter((row) => typeof row?.id === "string").map((row) => [row.id as string, row])));
       }
     }
-    return merge(this.context(), command, slices, workspace);
+    return merge(this.context(context), command, scoped, workspace);
   }
 
   /** El estado de cada máquina en su lectura más reciente, para la barra y su caché. */
-  sliceStatuses() {
-    return this.book.statuses();
+  sliceStatuses(context?: string) {
+    return this.book.statuses(context);
   }
 
   /**
@@ -508,9 +571,9 @@ export class Fleet {
    * puede, o falla con `machine_off` (con `canWake`) sin esperar.
    */
   async call(envelope: Envelope): Promise<unknown> {
-    const { machine, command } = envelope;
+    const { machine, command, context } = envelope;
     const { value } = await this.send(envelope);
-    return this.encode(machine, value, command);
+    return this.encode(machine, value, command, context);
   }
 
   /**
@@ -524,15 +587,16 @@ export class Fleet {
 
   /** An execution fact cannot come from a relay copy or a prior in-flight display read. */
   async readLive(envelope: Envelope): Promise<unknown> {
+    const { machine, command, context } = envelope;
     const { value, cached } = await this.send(envelope);
     if (cached !== null) throw new FleetError("machine_off", envelope.machine, envelope.command);
-    return this.encode(envelope.machine, value, envelope.command);
+    return this.encode(machine, value, command, context);
   }
 
   /** La última rebanada de una lectura de `machine`, sin preguntar. */
   peek(envelope: Envelope): Slice | null {
     const key = this.keyOf(envelope);
-    return key === null ? null : this.book.get(envelope.machine, key);
+    return key === null ? null : this.book.get(envelope.machine, key, envelope.context);
   }
 
   /**
@@ -548,10 +612,10 @@ export class Fleet {
       return Promise.reject(error);
     }
     if (key === null) return Promise.reject(new FleetError("unknown_machine", envelope.machine));
-    const id = `${envelope.machine}\u0000${this.info(envelope.machine)?.context ?? ""}\u0000${key}`;
+    const id = `${envelope.machine}\u0000${envelope.context ?? ""}\u0000${key}`;
     const running = this.inflight.get(id);
     if (running) return running;
-    const run = this.readNow(envelope, key).finally(() => this.inflight.delete(id));
+    const run = this.readNow(envelope, key).finally(() => { if (this.inflight.get(id) === run) this.inflight.delete(id); });
     this.inflight.set(id, run);
     return run;
   }
@@ -560,8 +624,8 @@ export class Fleet {
    * Enciende `machine` y espera a que diga `online`, con el tope de un intent.
    * Una máquina propia apagada, o sin plano de control para encenderla, es `machine_off`.
    */
-  async wake(machine: string): Promise<void> {
-    const member = this.members.get(machine);
+  async wake(machine: string, context?: string): Promise<void> {
+    const member = this.member(machine, context);
     if (!member) throw new FleetError("unknown_machine", machine);
     if (this.online(member) || (alwaysOn(member.info) && !OFF.includes(this.stateOf(member)))) return;
     if (!member.info.wakes) throw new FleetError("machine_off", machine, null, false);
@@ -572,8 +636,8 @@ export class Fleet {
    * Espera a que `machine`, que ya se está encendiendo, diga `online`, sin pedir
    * que la enciendan: leer nunca enciende una máquina.
    */
-  async untilOnline(machine: string): Promise<void> {
-    const member = this.members.get(machine);
+  async untilOnline(machine: string, context?: string): Promise<void> {
+    const member = this.member(machine, context);
     if (!member) throw new FleetError("unknown_machine", machine);
     if (this.online(member) || (alwaysOn(member.info) && !OFF.includes(this.stateOf(member)))) return;
     if (member.link.state() !== "starting") throw new FleetError("machine_off", machine, null, member.info.wakes);
@@ -590,18 +654,18 @@ export class Fleet {
   }
 
   /** Las acciones aplazadas de `machine` que esperan a que se conecte. */
-  deferred(machine: string): DeferredFrame["actions"] {
-    return this.members.get(machine)?.link.deferred?.().actions ?? [];
+  deferred(machine: string, context?: string): DeferredFrame["actions"] {
+    return this.member(machine, context)?.link.deferred?.().actions ?? [];
   }
 
   /** Por qué está detenida la sesión con `machine` (`license_required`), o `null`. */
-  blocked(machine: string): Blocked | null {
-    return this.members.get(machine)?.link.blocked?.() ?? null;
+  blocked(machine: string, context?: string): Blocked | null {
+    return this.member(machine, context)?.link.blocked?.() ?? null;
   }
 
   /** `license_required` si alguna máquina está detenida por la licencia: la UI enseña el aviso de Terminus de pago. */
-  license(): Blocked | null {
-    return [...this.members.keys()].map((id) => this.blocked(id)).find(Boolean) ?? null;
+  license(context?: string): Blocked | null {
+    return this.scoped(context).map((m) => this.blocked(m.id, context)).find(Boolean) ?? null;
   }
 
   /** «Reintentar»: vuelve a abrir las sesiones detenidas. */
@@ -628,20 +692,20 @@ export class Fleet {
   }
 
   private keyOf(envelope: Envelope): string | null {
-    if (!this.members.has(envelope.machine)) return null;
+    if (!this.member(envelope.machine, envelope.context)) return null;
     // La llave es la lectura como la entiende esa máquina: las pestañas de otra no la cambian.
-    const args = this.argsFor(envelope.machine, envelope.args ?? {});
-    const scope = this.info(envelope.machine)?.context;
+    const args = this.argsFor(envelope.machine, envelope.args ?? {}, envelope.context);
+    const scope = envelope.context;
     return JSON.stringify([...(scope ? [scope] : []), envelope.command, envelope.workspace, args]);
   }
 
   private async readNow(envelope: Envelope, key: string): Promise<Slice> {
-    const { machine } = envelope;
-    const before = this.book.get(machine, key);
+    const { machine, context } = envelope;
+    const before = this.book.get(machine, key, context);
     const keep = (status: Slice["status"], error?: string): Slice =>
-      before?.has ? { ...before, status, error } : { machine, status, has: false, value: null, at: null, error };
+      before?.has ? { ...before, status, error } : { machine, ...(context ? { context } : {}), status, has: false, value: null, at: null, error };
     // Una máquina apagada no contesta: su última rebanada es la respuesta, sin salir a la red.
-    const member = this.members.get(machine);
+    const member = this.member(machine, context);
     // Salvo si cambió la cola de aplazadas: la copia del relay ya la refleja y la de aquí no.
     const settled = !member?.fresh || member.fresh.has(key);
     if (before?.has && member && settled && classOf(envelope.command) === "read" && this.isOff(member)) return { ...before, status: "cached", error: "machine_off" };
@@ -650,12 +714,13 @@ export class Fleet {
     let slice: Slice;
     try {
       const { value, cached } = await this.send(envelope);
-      if (this.members.get(machine) !== member) throw new FleetError("unknown_machine", machine);
+      if (this.member(machine, context) !== member) throw new FleetError("unknown_machine", machine);
       const at = cachedAt(cached);
-      slice = { machine, status: cached ? "cached" : "ok", has: true, value, at: at ?? Date.now() };
-      if (envelope.command === "list_workspaces" && !cached) this.noteListing(machine, value);
+      slice = { machine, ...(context ? { context } : {}), status: cached ? "cached" : "ok", has: true, value, at: at ?? Date.now() };
+      if (envelope.command === "list_workspaces" && !cached) this.noteListing(machine, value, context);
       member?.fresh?.add(key);
     } catch (error) {
+      if (this.member(machine, context) !== member) throw new FleetError("unknown_machine", machine);
       const e = fromRelay(error, machine);
       if (e.code === "cross_machine" || e.code === "unknown_machine") throw e;
       if (e.code === "machine_off") slice = before?.has ? { ...before, status: "cached", error: e.code } : keep("off", e.code);
@@ -670,18 +735,18 @@ export class Fleet {
 
   /** Guarda la rebanada; si cambia el estado que la barra enseña de su máquina, avisa para repintarlo. */
   private settle(slice: Slice, key: string): Slice {
-    const last = this.book.statuses()[slice.machine]?.status;
+    const last = this.book.statuses(slice.context)[slice.machine]?.status;
     this.book.put(slice, key);
-    if (this.book.statuses()[slice.machine]?.status !== last) this.config.onSlice?.(slice.machine);
+    if (this.book.statuses(slice.context)[slice.machine]?.status !== last) this.config.onSlice?.(slice.machine, slice.context);
     return slice;
   }
 
   /** Una llamada con el sobre: plazo por clase, un reintento y la VM encendida antes si hace falta. */
   private async send(envelope: Envelope): Promise<{ value: unknown; cached: CallResult["cached"] }> {
-    const { machine, command } = envelope;
-    const member = this.members.get(machine);
+    const { machine, command, context } = envelope;
+    const member = this.member(machine, context);
     if (!member) throw new FleetError("unknown_machine", machine);
-    const args = this.argsFor(machine, envelope.args ?? {});
+    const args = this.argsFor(machine, envelope.args ?? {}, context);
     // Sin licencia no se pregunta nada: la sesión espera a «Reintentar».
     const stopped = member.link.blocked?.();
     if (stopped) throw new FleetError(stopped, machine);
@@ -691,7 +756,7 @@ export class Fleet {
     // Lo que la ventana pide sola (`PASSIVE`) no enciende la VM: solo un mensaje o un gesto de la persona.
     if (off && PASSIVE.has(command)) throw new FleetError("machine_off", machine);
     // Archivar, borrar, renombrar, fijar o mover de space: el relay la guarda sin encenderla.
-    if (off && kind !== "read" && !this.defers(command, args)) {
+    if (off && kind !== "read" && !this.defers(command, args, context)) {
       if (!member.info.wakes) throw new FleetError("machine_off", machine, null, false);
       // El relay enciende la VM solo con un intent; otra acción la enciende antes el plano de control.
       if (kind === "action") await this.wakeMember(member);
@@ -714,7 +779,7 @@ export class Fleet {
       }
     };
     const result = await attempt(false);
-    if (this.members.get(machine) !== member) throw new FleetError("unknown_machine", machine);
+    if (this.member(machine, context) !== member) throw new FleetError("unknown_machine", machine);
     if (!result.cached && !result.deferred) this.answered(member);
     return { value: this.linkedOnly(member, command, result.value), cached: result.cached };
   }
@@ -724,9 +789,9 @@ export class Fleet {
    * la cuenta no: ese space es de la cuenta (`share_space`), no de la cola de
    * una máquina, y sigue el camino de cualquier acción.
    */
-  private defers(command: string, args: Row): boolean {
+  private defers(command: string, args: Row, context?: string): boolean {
     if (!isDeferrable(command)) return false;
-    return !(command === "move_task_to_space" && typeof args.space === "string" && this.shared.has(args.space));
+    return !(command === "move_task_to_space" && typeof args.space === "string" && this.shared(context).has(args.space));
   }
 
   /** Enciende la VM y espera a que diga `online`, con el tope de un intent. */
@@ -734,7 +799,7 @@ export class Fleet {
     const { id } = member.info;
     if (alwaysOn(member.info)) throw new FleetError("machine_off", id, null, false);
     if (!this.config.wake) throw new FleetError("machine_off", id, null, true);
-    const started = member.link.state() === "starting" || (await this.config.wake(id).catch(() => false));
+    const started = member.link.state() === "starting" || (await this.config.wake(id, member.info.context).catch(() => false));
     if (started === "not_startable") throw new FleetError("machine_off", id, "not_remotely_startable", false);
     if (!started) throw new FleetError("machine_off", id, "start_failed", true);
     await new Promise<void>((resolve, reject) => {
@@ -765,7 +830,7 @@ export class Fleet {
   private markOutdated(member: Member) {
     if (member.outdated) return;
     member.outdated = true;
-    this.config.onChange?.(member.info.id);
+    this.config.onChange?.(member.info.id, member.info.context);
   }
 
   private add(info: MachineInfo) {
@@ -780,8 +845,8 @@ export class Fleet {
         // Se apagó en esta sesión: cada lectura vuelve a pedirse una vez a la copia del relay (no la enciende).
         if (OFF.includes(state) && (member.was === "online" || member.was === "starting")) member.fresh = new Set();
         member.was = state;
-        if (cameOn && this.listening) this.config.onEvents?.(info.id, [], true);
-        this.config.onChange?.(info.id);
+        if (cameOn && this.listening) this.config.onEvents?.(info.id, [], true, undefined, info.context);
+        this.config.onChange?.(info.id, info.context);
       }),
       // Un `hello` nuevo: si ya habla este contrato, se quita la marca de desactualizada (R14).
       link.onEngine?.((engine) => {
@@ -789,28 +854,28 @@ export class Fleet {
         if (verdict === null) return;
         member.engine = verdict;
         if (verdict) member.outdated = false;
-        this.config.onChange?.(info.id);
+        this.config.onChange?.(info.id, info.context);
       }) ?? (() => {}),
       link.onBlocked?.(() => this.config.onChange?.(info.id)) ?? (() => {}),
       link.onDeferred?.((frame) => {
         if (!frame.actions.length && !frame.done.length && !member.fresh) return;
         member.fresh = new Set();
-        this.config.onDeferred?.(info.id, frame);
+        this.config.onDeferred?.(info.id, frame, info.context);
       }) ?? (() => {}),
       link.onEvents((page) => {
         if (!this.listening || this.isOutdated(member)) return;
         // Uno vinculado en otra máquina de la cuenta también llega por esta (el `account` del relay): eso no es una lista vieja.
-        const unknown = unlinkedWorkspaces(page.events ?? [], member.info.linked ?? null).filter((w) => !this.linkedAnywhere(w));
-        if (unknown.length) this.config.onUnlinked?.(info.id, unknown);
+        const unknown = unlinkedWorkspaces(page.events ?? [], member.info.linked ?? null).filter((w) => !this.linkedAnywhere(w, info.context));
+        if (unknown.length) this.config.onUnlinked?.(info.id, unknown, info.context);
         const linked = linkedEvents(page.events ?? [], member.info.linked ?? null);
-        const events = this.config.panelIds === false ? linked.map((e) => ({ name: e.name, payload: e.payload, ...(e.seq === undefined ? {} : { seq: e.seq }) })) : linked.map((e) => ({ name: e.name, payload: encodeEvent(this.context(), info.id, e.name, e.payload), ...(e.seq === undefined ? {} : { seq: e.seq }) }));
-        this.config.onEvents?.(info.id, events, page.gap === true, { cursor: page.cursor, runtime: page.runtime, replay: page.replay, replayId: page.replayId });
+        const events = this.config.panelIds === false ? linked.map((e) => ({ name: e.name, payload: e.payload, ...(e.seq === undefined ? {} : { seq: e.seq }) })) : linked.map((e) => ({ name: e.name, payload: encodeEvent(this.context(info.context), info.id, e.name, e.payload), ...(e.seq === undefined ? {} : { seq: e.seq }) }));
+        this.config.onEvents?.(info.id, events, page.gap === true, { cursor: page.cursor, runtime: page.runtime, replay: page.replay, replayId: page.replayId }, info.context);
       }),
     );
-    this.members.set(info.id, member);
+    this.members.set(memberKey(info.id, info.context), member);
     link.start();
     if (this.listening) link.subscribe(null);
-    this.config.onChange?.(info.id);
+    this.config.onChange?.(info.id, info.context);
   }
 
   private drop(member: Member) {

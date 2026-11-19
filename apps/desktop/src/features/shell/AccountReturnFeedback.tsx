@@ -7,10 +7,11 @@ import { capabilities } from "../../lib/platform";
 import { Button } from "../../ui/Button";
 import { Toast, ToastPortal } from "../../ui/Toast";
 import { accountReturn, accountReturnRevision, setNewAccountTiles } from "./account-return-state";
+import { accountReturnTarget } from "./account-return-target";
 import type { sessionRail } from "./session-groups";
 import { danilRail } from "./workspace-added-wiring";
 
-export function AccountReturnFeedback(props: { sessions: ReturnType<typeof sessionRail>; onOpen: (id: string) => void }) {
+export function AccountReturnFeedback(props: { sessions: ReturnType<typeof sessionRail>; onOpen: (id: string, context?: string) => void }) {
   const [web] = createResource(() => (accountReturnRevision(), !capabilities().nativeWindow && !!accountReturn.state() && capabilities().groupAccount), async (source) => source ? source.current() : null);
   const groups = () => {
     if (capabilities().nativeWindow) return props.sessions.groups();
@@ -23,10 +24,10 @@ export function AccountReturnFeedback(props: { sessions: ReturnType<typeof sessi
   createEffect(() => {
     accountReturnRevision();
     if (accountReturn.state()?.phase === "pending") setSuccess(null);
-    const result = accountReturn.take(groups());
+    const target = accountReturnTarget(groups(), accountReturn.state()?.before ?? []), result = accountReturn.take(groups());
     if (!result) return;
     setNewAccountTiles(result.ids);
-    if (result.ids[0]) props.onOpen(result.ids[0]);
+    if (result.ids[0]) props.onOpen(result.ids[0], target?.context);
     setSuccess({ organizations: result.organizations, n: result.ids.length });
   });
   return <ToastPortal>

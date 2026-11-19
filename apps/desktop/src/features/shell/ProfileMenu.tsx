@@ -8,6 +8,7 @@ import { type Apariencia, apariencia, elegirApariencia } from "../../lib/theme";
 import { cn } from "../../lib/utils";
 import { ITEM_DE_MENU, Popover, PopoverAnchor, PopoverContent } from "../../ui/Popover";
 import DanilFooterEntry from "./DanilFooterEntry";
+import { EmptySessionSignOut } from "./EmptySessionSignOut";
 import { GroupOrganizationWatch } from "./GroupOrganizationWatch";
 import { noteWebAccountMode, usesGroupAccounts } from "./session-menu-mode";
 
@@ -38,6 +39,8 @@ const ELEGIDA = "bg-surface-raised font-semibold text-neutral-950 shadow-sm";
 export default function ProfileMenu(props: {
   onAccount: () => void;
   onReportarBug: () => void;
+  /** El workspace abierto: también tiene cuadro aunque no esté agregado. */
+  open?: string | null;
 }) {
   const [open, setOpen] = createSignal(false);
   const [tema, setTema] = createSignal<Apariencia>(apariencia());
@@ -98,6 +101,7 @@ export default function ProfileMenu(props: {
         >
           {t("usage.bug_report.open_web")}
         </button>
+        <Show when={capabilities().nativeWindow}><EmptySessionSignOut open={props.open ?? null} onDone={() => setOpen(false)} /></Show>
         <Show when={capabilities().webAccounts}>
           {(cuentas) => (
             <>

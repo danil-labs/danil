@@ -33,13 +33,13 @@ export function SessionAddEntries(props: { sessions: Rail; signedIn: boolean; on
   </>;
 }
 
-export function SessionAddStep(props: { sessions: Rail; context?: string | null; query: string; onQuery: (s: string) => void; onClose: () => void; onOpen: (id: string) => void }) {
+export function SessionAddStep(props: { sessions: Rail; context?: string | null; query: string; onQuery: (s: string) => void; onClose: () => void; onOpen: (id: string, context?: string) => void }) {
   const [error, setError] = createSignal<string | null>(null);
   const [creating, setCreating] = createSignal(false);
   const createFree = async (context: string) => {
     if (creating()) return;
     setCreating(true); setError(null);
-    try { const id = await props.sessions.createFree(context); props.onClose(); props.onOpen(id); }
+    try { const id = await props.sessions.createFree(context); props.onClose(); props.onOpen(id, context); }
     catch (e) { setError(errorKey(e)); }
     finally { setCreating(false); }
   };
@@ -54,7 +54,7 @@ export function SessionAddStep(props: { sessions: Rail; context?: string | null;
         <Show when={g().empty_reason}>{(reason) => <p role="status" class={NOTE}>{t(emptyReasonKey(reason()))}</p>}</Show>
         <Show when={!g().added?.has(g().free?.id ?? "") && freeSessionRow(g())}><button type="button" role="menuitem" class={ITEM_DE_MENU} disabled={creating()} onClick={() => void createFree(g().context_id)}>{t("shell.workspaces.free_workspace")}</button></Show>
         <Show when={g().available} fallback={<WorkspaceSourceStatus organization={g().org_name ?? g().org} available={g().available} onRetry={() => props.sessions.refreshContext(g().context_id)} />}>
-          <For each={(g().available ?? []).filter((w) => w.id !== freeSessionRow(g())?.id && !g().added?.has(w.id) && matchesName(w.name, props.query))}>{(w) => <button type="button" role="menuitem" class={cn(ITEM_DE_MENU, "flex min-w-0 items-center gap-2")} aria-label={t("shell.workspaces.add_named", { name: w.name })} data-add-danil={w.id} onClick={() => { props.sessions.add(g().context_id, w.id); props.onClose(); props.onOpen(w.id); }}><span class="min-w-0 flex-1 truncate">{w.name}</span><span class="shrink-0 text-caption text-neutral-500">{t("shell.workspaces.add_row")}</span></button>}</For>
+          <For each={(g().available ?? []).filter((w) => w.id !== freeSessionRow(g())?.id && !g().added?.has(w.id) && matchesName(w.name, props.query))}>{(w) => <button type="button" role="menuitem" class={cn(ITEM_DE_MENU, "flex min-w-0 items-center gap-2")} aria-label={t("shell.workspaces.add_named", { name: w.name })} data-add-danil={w.id} onClick={() => { props.sessions.add(g().context_id, w.id); props.onClose(); props.onOpen(w.id, g().context_id); }}><span class="min-w-0 flex-1 truncate">{w.name}</span><span class="shrink-0 text-caption text-neutral-500">{t("shell.workspaces.add_row")}</span></button>}</For>
         </Show>
       </div>}</KeyedList>
     </div>

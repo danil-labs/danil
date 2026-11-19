@@ -476,5 +476,18 @@
   "shell.workspaces.added_toast_body": {
     "one": "{n} workspace nuevo en la barra.",
     "other": "{n} workspaces nuevos en la barra."
-  }
+  },
+  "shell.rail.stack_label": "{org}, {n} workspaces",
+  "shell.rail.pin_named": "Fijar {name} en la barra",
+  "shell.rail.pin": "Fijar en la barra",
+  "shell.rail.unpin": "Dejar de fijar",
+  "shell.rail.move_org_up": "Subir organización",
+  "shell.rail.move_org_down": "Bajar organización",
+  "shell.rail.pinned_suffix": ", fijada",
+  "shell.rail.tip_account": "{org} · {email}",
+  "shell.rail.tip_balance": "Saldo: {amount} en Danil Credits",
+  "shell.rail.tip_balance_loading": "Saldo: …",
+  "shell.rail.tip_balance_unavailable": "Saldo: No disponible",
+  "shell.rail.open": "Abrir",
+  "shell.rail.attention_stale": "Atención sin actualizar"
 }

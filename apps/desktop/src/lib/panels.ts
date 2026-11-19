@@ -1,5 +1,6 @@
 import { batch, createSignal } from "solid-js";
 import { borrarPref, escribirPref, leerPref, prefsQueEmpiezan } from "./prefs.ts";
+import { panelViewKey as layoutKey, workspaceViewKey } from "./workspace-view-scope.ts";
 
 // Reparte las pestañas de lib/tabs.ts en una rejilla por espacio.
 // La ventana activa comparte las señales globales del compositor; solo ella puede escribir.
@@ -33,8 +34,6 @@ export type Layout = {
   activo: PanelSite;
 };
 
-const layoutKey = (workspace: string, space: string) =>
-  `panels.${workspace}.${space}`;
 
 export function saveLayout(workspace: string, space: string, r: Layout) {
   escribirPref(layoutKey(workspace, space), r);
@@ -51,7 +50,7 @@ export const deleteLayout = (workspace: string, space: string) =>
   borrarPref(layoutKey(workspace, space));
 
 export const spacesWithLayout = (workspace: string) => {
-  const prefix = `panels.${workspace}.`;
+  const prefix = `panels.${workspaceViewKey(workspace)}.`;
   return prefsQueEmpiezan(prefix).map((k) => k.slice(prefix.length));
 };
 
@@ -513,7 +512,7 @@ export function createPanels(restorable?: () => readonly string[]) {
     },
     // Cambiar de workspace sin soltar el encuadre guardaría la rejilla bajo el cliente anterior.
     bindTo(workspace: string | null, space: string | null) {
-      bound = workspace && space ? { workspace, space } : null;
+      bound = workspace && space ? { workspace: workspaceViewKey(workspace), space } : null;
       persist();
     },
     reset() {

@@ -476,5 +476,18 @@
   "shell.workspaces.added_toast_body": {
     "one": "{n} new workspace in the sidebar.",
     "other": "{n} new workspaces in the sidebar."
-  }
+  },
+  "shell.rail.stack_label": "{org}, {n} workspaces",
+  "shell.rail.pin_named": "Pin {name} to the bar",
+  "shell.rail.pin": "Pin to the bar",
+  "shell.rail.unpin": "Unpin",
+  "shell.rail.move_org_up": "Move organization up",
+  "shell.rail.move_org_down": "Move organization down",
+  "shell.rail.pinned_suffix": ", pinned",
+  "shell.rail.tip_account": "{org} · {email}",
+  "shell.rail.tip_balance": "Balance: {amount} in Danil Credits",
+  "shell.rail.tip_balance_loading": "Balance: …",
+  "shell.rail.tip_balance_unavailable": "Balance: Unavailable",
+  "shell.rail.open": "Open",
+  "shell.rail.attention_stale": "Attention not up to date"
 }

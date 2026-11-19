@@ -116,3 +116,113 @@ test("native rejection codes and rate-limit metadata survive the context transpo
   assert.equal(promoRejection({ status: 429, retryAfter: "3" }).delay, 3000);
   assert.equal(promoRejection({ status: 409, code: "constructor" }).key, "web.promo.rejected");
 });
+
+test("web machine inventory and tickets use cookie context, require echo before reading a body", async () => {
+  const { contextMachines } = await import("../../src/web/context-machines.ts");
+  const calls: { path: string; headers: Headers }[] = [];
+  let echo: string | null = "ctx";
+  let reads = 0;
+  const request = async (path: string, init?: RequestInit) => {
+    calls.push({ path, headers: new Headers(init?.headers) });
+    return { ok: true, status: 200, headers: new Headers(echo ? { "X-Danil-Session-Applied": echo } : {}), json: async () => {
+      reads++;
+      return path === "machines" ? { items: [{ machine_id: "m", state: "online", organization_id: "org" }] } : { url: "wss://relay.example/v1/machines/m/session", ticket: "ticket" };
+    } } as Response;
+  };
+  const client = contextMachines("https://api.example/v1", { call: request, mutation: request }, ["wss://relay.example"], "ctx");
+  assert.equal((await client.list()).kind, "ok");
+  assert.equal((await client.admission("m")).kind, "ok");
+  assert.ok(calls.every(call => call.headers.get("X-Danil-Session") === "ctx"));
+  assert.ok(calls[1].headers.has("Idempotency-Key"));
+  const before = reads;
+  for (echo of [null, "other"]) {
+    const result = await client.list();
+    assert.equal(result.kind, "error");
+    if (result.kind === "error") assert.equal(result.code, "session_echo_mismatch");
+  }
+  assert.equal(reads, before);
+});
+
+test("web grouped source only exposes verified inventory and exact scoped workspace listings; legacy echo fallback stays ungrouped", async () => {
+  const { windowContext } = await import("../../src/web/window-context.ts");
+  const group = { context: "ctx", org: "org", name: "Org", plan: "teams" };
+  const fleet = { available: (org: string, context: string) => { assert.equal(org, "org"); assert.equal(context, "ctx"); return [{ id: "scoped", name: "Scoped" }]; } } as never;
+  let legacyReads = 0;
+  let answer: unknown = { kind: "ok", value: [{ machine_id: "m", organization_id: "org", state: "online" }, { machine_id: "alien", organization_id: "other", state: "online" }] };
+  const source = windowContext({ legacy: { list: async () => { legacyReads++; return { kind: "ok", value: [] }; } } as never, factory: () => ({ list: async () => answer }) as never, account: { current: async () => group, send: async () => ({ status: 404 }) }, fleet: () => fleet, revision: () => {} });
+  assert.equal(source.source.group(), null);
+  const result = await source.inventory();
+  assert.deepEqual(result?.answer.kind === "ok" ? result.answer.value.map(row => row.machine_id) : [], ["m"]);
+  assert.deepEqual(source.source.group(), group);
+  assert.deepEqual(source.source.workspaces(), [{ id: "scoped", name: "Scoped" }]);
+  const calls: Headers[] = [];
+  const engine = source.engine({ handle: async (_command, _args, options) => { calls.push(new Headers(options?.headers)); return []; } });
+  await engine.handle("list_workspaces");
+  await engine.handle("read_task", {}, { headers: { "x-danil-context": "captured" } });
+  assert.equal(calls[0].get("x-danil-context"), "ctx");
+  assert.equal(calls[1].get("x-danil-context"), "captured");
+  answer = { kind: "error", status: null, code: "session_echo_mismatch" };
+  await source.inventory();
+  assert.equal(source.source.group(), null);
+  assert.equal(source.source.workspaces(), null);
+  assert.equal(legacyReads, 1);
+  await engine.handle("list_workspaces");
+  assert.equal(calls[2].get("x-danil-context"), "");
+});
+
+test('successful scoped redemption invalidates the existing organization balance event, unavailable does not', async (t) => {
+  const previous = globalThis.window;
+  const target = new EventTarget();
+  Object.defineProperty(globalThis, 'window', { configurable: true, value: target });
+  t.after(() => { if (previous === undefined) Reflect.deleteProperty(globalThis, 'window'); else Object.defineProperty(globalThis, 'window', { configurable: true, value: previous }); });
+  let changed = 0;
+  target.addEventListener('danil:organization-changed', () => changed++);
+  const group = { context: 'b', org: 'org-b', name: 'B', plan: 'paid' };
+  await redeemGroupCode(async () => ({ status: 201, body: {} }), group, 'CODE', 'key');
+  assert.equal(changed, 1);
+  await redeemGroupCode(async () => ({ status: 501 }), group, 'CODE', 'key2');
+  assert.equal(changed, 1);
+});
+
+test("web GC uses every settled context including inactive ones, never an erroneous or malformed sessions response", async () => {
+  const { webGroupAccount } = await import("../../src/web/group-account.ts");
+  const { windowContext } = await import("../../src/web/window-context.ts");
+  let body: unknown = { default_context: "selected", items: [{ contexts: [{ context_id: "selected", org: "A" }, { context_id: "inactive", org: "B" }] }] };
+  let failure: number | null = null;
+  const account = webGroupAccount({ call: async () => { if (failure) throw { status: failure }; return new Response(JSON.stringify(body)); }, mutation: async () => new Response() });
+  const pruned: string[][] = [];
+  const source = windowContext({ legacy: { list: async () => ({ kind: "ok", value: [] }) } as never, factory: () => ({ list: async () => ({ kind: "error", status: 503 }) }) as never,
+    account, fleet: () => ({ pruneContexts: ids => pruned.push([...ids]) }) as never, revision: () => {} });
+  await source.inventory();
+  assert.deepEqual(pruned, [["selected", "inactive"]]);
+  for (failure of [404, 501, 503]) { await source.inventory(); assert.equal(account.contexts(), null); }
+  failure = null; body = { items: [{ contexts: "malformed" }] };
+  await source.inventory(); assert.equal(account.contexts(), null);
+  assert.equal(pruned.length, 1);
+  body = { items: [] };
+  await source.inventory();
+  assert.deepEqual(pruned, [["selected", "inactive"], []]);
+});
+
+test("revoked web group disappears before its replacement machine inventory answers", async () => {
+  const { windowContext } = await import("../../src/web/window-context.ts");
+  let group = { context: "old", org: "A", name: "A", plan: "teams" };
+  let release!: () => void;
+  let delayed = false;
+  let changes = 0;
+  const source = windowContext({ legacy: {} as never, factory: () => ({ list: async () => {
+    if (delayed) await new Promise<void>(resolve => { release = resolve; });
+    return { kind: "ok", value: [] };
+  } }) as never, account: { current: async () => group, contexts: () => [group.context], send: async () => ({ status: 404 }) },
+    fleet: () => ({ pruneContexts: () => {}, available: () => null }) as never, revision: () => {}, onContextsSettled: () => { changes++; } });
+  await source.inventory();
+  assert.equal(source.source.group()?.context, "old");
+  group = { ...group, context: "new", org: "B", name: "B" }; delayed = true;
+  const pending = source.inventory();
+  await new Promise(resolve => setTimeout(resolve, 0));
+  assert.equal(changes, 2);
+  assert.equal(source.source.group(), null);
+  assert.equal(source.source.workspaces(), null);
+  release(); await pending;
+  assert.equal(source.source.group()?.context, "new");
+});

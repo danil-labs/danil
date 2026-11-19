@@ -1,6 +1,10 @@
-import { invoke as tauri, type InvokeArgs, type InvokeOptions } from "@tauri-apps/api/core";
+import { type InvokeArgs, type InvokeOptions, invoke as tauri } from "@tauri-apps/api/core";
 import { connected, whenConnected } from "./engineConnection.ts";
 import { withoutAbout } from "./taskMentions.ts";
+import { captureWorkspaceContext } from "./workspace-context.ts";
+
+export { captureWorkspaceContext, displayWorkspaceSnapshot, requestedWorkspaceSnapshot } from "./workspace-context.ts";
+
 import { errorCode } from "./errorCode.ts";
 
 /**
@@ -11,57 +15,9 @@ import { errorCode } from "./errorCode.ts";
  * existe— cruza tal cual y sin demora.
  */
 
-/**
- * Los códigos con los que el backend afirma que la orden no llegó a correr.
- * Viajan en el `detail` del `Failure` (`para_la_ventana`). `io` no está: ahí la
- * orden pudo ejecutarse y perderse la respuesta, y repetirla la duplicaría.
- */
-const NEVER_RAN = new Set(["app_unavailable", "invalid_token", "service_busy"]);
+export { canRepeat, neverRan, retrying, WAITS } from "./invoke-retries.ts";
 
-/** Cinco esperas que suman unos cuatro segundos y medio. */
-export const WAITS = [150, 300, 600, 1200, 2400];
-
-export function neverRan(e: unknown): boolean {
-  const code = errorCode(e);
-  return code !== null && NEVER_RAN.has(code);
-}
-
-/**
- * Una lectura se repite también tras `io`: repetirla no duplica nada. Sin esto,
- * la lista que falló una vez —workspaces, cuentas— deja su panel muerto hasta
- * que algo lo recargue.
- */
-const READ = /^(list_|load_|read_|get_)|_status$/;
-
-/**
- * Lecturas que tras `io` siguen corriendo en el motor: el barrido de disco pasa
- * de los 30 s del transporte, y repetirlo lo forma detrás de sí mismo.
- */
-const SLOW_READS = new Set(["list_storage"]);
-
-export function canRepeat(command: string, e: unknown): boolean {
-  if (neverRan(e)) return true;
-  return READ.test(command) && !SLOW_READS.has(command) && errorCode(e) === "io";
-}
-
-const sleep = (ms: number) => new Promise((done) => setTimeout(done, ms));
-
-/** El reintento suelto del transporte que usa `invoke`, para poder probarlo. */
-export async function retrying<T>(
-  call: () => Promise<T>,
-  wait: (ms: number) => Promise<unknown> = sleep,
-  repeatable: (e: unknown) => boolean = neverRan,
-): Promise<T> {
-  for (const ms of WAITS) {
-    try {
-      return await call();
-    } catch (e) {
-      if (!repeatable(e)) throw e;
-      await wait(ms);
-    }
-  }
-  return await call();
-}
+import { canRepeat, retrying, sleep } from "./invoke-retries.ts";
 
 /**
  * Antes de que la ventana tenga motor (`launcher.rs`, fase `connecting`) el proxy
@@ -81,6 +37,8 @@ export async function untilConnected<T>(
   }
 }
 
+const GLOBAL_READS = new Set(["list_workspaces", "workspaces_startup", "list_workspace_attention", "service_poll"]);
+
 type Route = (command: string, args?: InvokeArgs, options?: InvokeOptions) => Promise<unknown>;
 let route: Route | null = null;
 
@@ -96,5 +54,7 @@ export function setMachineRoute(next: Route | null) {
 const call = <T>(command: string, args?: InvokeArgs, options?: InvokeOptions): Promise<T> =>
   (route ? route(command, args, options) : tauri<T>(command, withoutAbout(args as Record<string, unknown> | undefined) as InvokeArgs | undefined, options)) as Promise<T>;
 
-export const invoke = <T>(command: string, args?: InvokeArgs, options?: InvokeOptions): Promise<T> =>
-  untilConnected(() => retrying(() => call<T>(command, args, options), sleep, (e) => canRepeat(command, e)));
+export const invoke = <T>(command: string, args?: InvokeArgs, options?: InvokeOptions): Promise<T> => {
+  const captured = route && !GLOBAL_READS.has(command) ? captureWorkspaceContext(options) : options;
+  return untilConnected(() => retrying(() => call<T>(command, args, captured), sleep, (e) => canRepeat(command, e)));
+};

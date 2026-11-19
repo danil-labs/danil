@@ -7,14 +7,15 @@
  * sistema de archivos no distingue mayúsculas y `tsc` falla con TS1261 — en
  * Linux no, así que el CI de Ubuntu daría verde.
  */
-import { createEffect, createMemo, createSignal, on, onCleanup, onMount } from "solid-js";
-import { invoke } from "../../lib/invoke.ts";
-import { asFailure, type Failure } from "../../ui/Failure";
+import { createMemo, createSignal, onCleanup, onMount } from "solid-js";
 import { t } from "../../lib/i18n";
+import { invoke } from "../../lib/invoke.ts";
 import { createNavigationOrder } from "../../lib/navigation-order";
 import { capabilities } from "../../lib/platform";
-import type { RailWorkspace } from "../machines/engine-workspaces";
 import type { Frase } from "../../lib/prose";
+import { activeWorkspaceContext, workspaceContextOptions } from "../../lib/workspace-context.ts";
+import { asFailure, type Failure } from "../../ui/Failure";
+import type { RailWorkspace } from "../machines/engine-workspaces";
 
 export type Workspace = {
   id: string;
@@ -188,10 +189,10 @@ export function createWorkspaces() {
     onCleanup(() => window.removeEventListener("harness:turn", alTurno));
   });
 
-  async function cambiarA(id: string) {
-    if (id === activo()) return;
+  async function cambiarA(id: string | null, context?: string) {
+    if (id === activo() && (context ?? null) === activeWorkspaceContext()) return;
     try {
-      await invoke("set_active_workspace", { id });
+      await invoke("set_active_workspace", { id }, workspaceContextOptions(context ?? null));
       // Una lista pedida antes del cambio trae el anterior como activo; los
       // demás montajes la heredarían y un clic de vuelta a él no haría nada.
       enVuelo = null;
@@ -215,12 +216,14 @@ export function createWorkspaces() {
     lista: orderedList,
     reorder: order.save,
     activo,
+    activoContexto: activeWorkspaceContext,
     actual: () => lista()?.find((w) => w.id === activo()) ?? null,
     cargando,
     fallo,
     setFallo,
     cargar,
     cambiarA,
+    clearActive: () => cambiarA(null),
     turnosVivos,
     bloqueado,
   };
@@ -257,23 +260,4 @@ export function createRail() {
   return { ...ws, lista };
 }
 
-/**
- * Cierra un menú con Escape antes que quien esté detrás. Se escucha en fase de
- * captura para llegar antes que la hoja de Configuración; si no, Esc cierra la
- * hoja entera en vez del menú. El clic fuera lo maneja el popover.
- */
-export function cerrarConEscape(abierto: () => boolean, cerrar: () => void) {
-  createEffect(
-    on(abierto, (a) => {
-      if (!a) return;
-      const tecla = (e: KeyboardEvent) => {
-        if (e.key === "Escape") {
-          e.stopPropagation();
-          cerrar();
-        }
-      };
-      window.addEventListener("keydown", tecla, true);
-      onCleanup(() => window.removeEventListener("keydown", tecla, true));
-    }),
-  );
-}
+export { cerrarConEscape } from "./workspace-menu-escape.ts";

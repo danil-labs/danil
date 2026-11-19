@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { createEffect, createRoot, createSignal } from "solid-js";
 import { createDraftsStore } from "../../src/features/drafts/index.ts";
+
 function fixture(prepareAttachments: (paths: string[], project: string) => Promise<string[]> = async paths => paths) {
   return createRoot(dispose => {
     const [key, setKey] = createSignal("draft:p1");
@@ -79,4 +80,17 @@ test("equal source memberships do not notify readers while text changes", async 
 test("disposed draft store never begins attachment preparation", async () => {
   let reads = 0; const f = fixture(async paths => { reads++; return paths; });
   f.store.dispose(); await f.store.addFiles(["source"]); assert.equal(reads, 0); f.dispose();
+});
+
+test("a context transition resets drafts and rejects attachments even when the workspace id is unchanged", async () => {
+  let resolve!: (value: string[]) => void;
+  const f = fixture(() => new Promise(done => { resolve = done; }));
+  f.store.changeText("Private draft");
+  const pending = f.store.addFiles(["private-source"]);
+  f.switchWorkspace("A");
+  resolve(["private-attachment"]);
+  await pending;
+  assert.equal(f.store.input(), "");
+  assert.deepEqual(f.store.files(), []);
+  f.dispose();
 });

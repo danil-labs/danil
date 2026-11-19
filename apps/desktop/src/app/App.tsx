@@ -1,10 +1,3 @@
-import { createThreadsStore } from "../features/threads";
-import { createComposerStore } from "../features/composer";
-import { createWorkspaceStore } from "../features/workspace";
-import { createProjectsStore } from "../features/projects";
-import type { DeleteTarget } from "../features/projects/DeleteTaskDialog";
-import type { HandlerTarget } from "../features/settings/HandlerPolicy";
-import { deliver, listen } from "../lib/serviceEvents";
 import { open } from "@tauri-apps/plugin-dialog";
 import ArrowLeft from "lucide-solid/icons/arrow-left";
 import Columns2 from "lucide-solid/icons/columns-2";
@@ -18,6 +11,7 @@ import {
   For,
   Index,
   type JSX,
+  lazy,
   Match,
   on,
   onCleanup,
@@ -25,7 +19,6 @@ import {
   Show,
   Suspense,
   Switch,
-  lazy,
 } from "solid-js";
 import VisorDeArtefacto from "../features/artifacts/ArtifactViewer";
 import type { Preview } from "../features/artifacts/Preview";
@@ -36,23 +29,23 @@ import Chat, {
   type VistaDeLaConversacion,
   vistaNueva,
 } from "../features/chat/Chat";
+import { DelegatedLaunch, type DelegatedListProps, DelegatedNone, type DelegatedPanelModel, DelegatedToolbar, delegatedAttention, delegatedDescendants, delegatedFamilies } from "../features/chat/DelegatedTasks";
+import { agentSwitchBlocked, canHandOverTask, type HandoverPending, handoverInForce, handoverMatches, MACHINE_UNANNOUNCED, shellCli } from "../features/chat/handover";
 import McpSignInNotice, { noteMcpSignIn } from "../features/chat/McpSignInNotice";
 import type { Encolado } from "../features/chat/MessageQueue";
 import {
   MODO_AUTOMATICO,
 } from "../features/chat/modes";
-import { DelegatedLaunch, DelegatedNone, DelegatedToolbar, delegatedAttention, delegatedDescendants, delegatedFamilies, type DelegatedListProps, type DelegatedPanelModel } from "../features/chat/DelegatedTasks";
 import PreviousAgentChat from "../features/chat/PreviousAgentChat";
 import type { AlmacenDePreguntas, PreguntasAMedias, Respuesta, RespuestaEnviada } from "../features/chat/Questions";
 import { contestaALaTerminal, ENTREGA_SIN_CONFIRMAR, interrumpible, inyectable } from "../features/chat/queue";
 import type { ComandoEnVivo } from "../features/chat/ShellCard";
-import { comandoDeTerminal } from "../features/chat/terminalIndent";
 import type { AlMargen } from "../features/chat/SideQuestion";
 import { comandoEscrito } from "../features/chat/slashOutput";
-import { ThreadSearch, type SearchSurface, type ThreadSearchTarget } from "../features/chat/ThreadSearch";
+import { type SearchSurface, ThreadSearch, type ThreadSearchTarget } from "../features/chat/ThreadSearch";
 import TranscriptSource from "../features/chat/TranscriptSource";
+import { comandoDeTerminal } from "../features/chat/terminalIndent";
 import type { Lectura } from "../features/chat/threadWindow";
-import { agentSwitchBlocked, canHandOverTask, handoverInForce, handoverMatches, MACHINE_UNANNOUNCED, shellCli, type HandoverPending } from "../features/chat/handover";
 import {
   type ChatEvent,
   type ChatExportado,
@@ -65,20 +58,32 @@ import {
   type Signatures,
   type Turn,
 } from "../features/chat/transcript";
+import { createComposerStore } from "../features/composer";
+import { createProjectsStore } from "../features/projects";
+import type { DeleteTarget } from "../features/projects/DeleteTaskDialog";
+import type { HandlerTarget } from "../features/settings/HandlerPolicy";
+import { createThreadsStore } from "../features/threads";
+import { createWorkspaceStore } from "../features/workspace";
+import { deliver, listen } from "../lib/serviceEvents";
+
 const VisorDeArchivo = lazy(() => import("../features/code/FileViewer"));
+
 import { avisarDeLosArboles } from "../features/code/refresh";
-import { arbolesDe, contiene, ubicar } from "../features/code/treeKind";
 import TaskFilesRow, { taskFilesWidth } from "../features/code/TaskFilesRow";
 import { TaskSide, TaskSideShell } from "../features/code/TaskSide";
+import { arbolesDe, contiene, ubicar } from "../features/code/treeKind";
 import { moviendoHueco } from "../lib/sites";
+
 const DeleteTaskDialog = lazy(() => import("../features/projects/DeleteTaskDialog"));
 const HandoverDialog = lazy(() => import("../features/chat/HandoverDialog"));
 const TaskFilesCard = lazy(() => import("../features/code/TaskFiles"));
-import { createTaskFiles, type TaskSideMode } from "../lib/taskFiles";
+
 import { esDeCodigo } from "../features/code/workdirKind";
 import Observability from "../features/observability/Observability";
 import AnadirCarpeta, { type ClonEnCurso, type InicioDeCarpeta } from "../features/projects/AddWorkdir";
 import AgentPageTasks from "../features/projects/AgentPageTasks";
+import { createTaskFiles, type TaskSideMode } from "../lib/taskFiles";
+
 // Chunk aparte: el perfil completo de un agente solo se carga al abrirlo.
 const AgentProfile = retryableLazy(() => import("../features/projects/AgentProfile"));
 // El alta solo se abre sin workspace o al agregar otro: no entra en la carga inicial.
@@ -94,14 +99,16 @@ const MachinesLicense = lazy(() =>
     ),
   })),
 );
+
+import { canonicalAgentId, isFreeRouterModel, lastActivity, launcherOf, OPENCODE, withRemoteLaunchers } from "@terminus/tasks";
+import type { CarriedBase, CarryCheck } from "../features/machines/carry";
+import { bringHereLabel, canBringHere, carryOrigin, machineName, machineOf, machines, machineWakes, refetchMachines, remoteChildScope, runOn, senderTaskId, setRunOn, setTaskRowMachine } from "../features/machines/store";
+import { activeTaskCounts, activityByProject, type HiddenProjects, hiddenIn, type PickedAt, picksIn, rememberPick, setHidden, storedPicks, taskCountOf } from "../features/projects";
 import { createdTasks } from "../features/projects/agentPageFilters";
 import BaseBranchPicker from "../features/projects/BaseBranchPicker";
 import { watchHandlerStatus, watchHandlerStatuses } from "../features/projects/handlerPresence";
 import { EmptyContext, ProjectPicker } from "../features/projects/Projects";
-import { activeTaskCounts, activityByProject, type HiddenProjects, hiddenIn, type PickedAt, picksIn, rememberPick, setHidden, storedPicks, taskCountOf } from "../features/projects";
-import { bringHereLabel, canBringHere, carryOrigin, machineName, machineOf, machineWakes, machines, refetchMachines, remoteChildScope, runOn, senderTaskId, setRunOn, setTaskRowMachine } from "../features/machines/store";
-import { canonicalAgentId, isFreeRouterModel, lastActivity, launcherOf, OPENCODE, withRemoteLaunchers } from "@terminus/tasks";
-import type { CarriedBase, CarryCheck } from "../features/machines/carry";
+
 // Chunk aparte: solo lo carga quien crea una tarea, no la carga inicial.
 const MachinePicker = lazy(() =>
   import("../features/machines/MachinePicker").then((m) => ({ default: m.MachinePicker })),
@@ -116,13 +123,14 @@ type CarryModule = typeof import("../features/machines/carry");
 /** Lo que corta un envío cuya copia se detuvo: el fallo y su arreglo quedan en el encabezado. */
 const CARRY_STOPPED = Symbol("carry-stopped");
 const VistaDeProyecto = lazy(() => import("../features/projects/ProjectView"));
+
+import { mensajeDeFallo } from "../features/chat/failures";
+import { workLabel } from "../features/projects/branchLabel";
 import { DEFAULT_PROFILE, displayName, notifyProfiles, watchProfiles } from "../features/projects/profiles";
 import RecentAgentChats from "../features/projects/RecentAgentChats";
 import { type SessionRow, threadTitle } from "../features/projects/Sessions";
 import TabStrip, { NewTabButton } from "../features/projects/Tabs";
 import { createTaskWork, ResumeTask } from "../features/projects/TaskHistory";
-import { workLabel } from "../features/projects/branchLabel";
-import { mensajeDeFallo } from "../features/chat/failures";
 import type { Etapa } from "../features/projects/TaskStage";
 import { esChatDeAgente } from "../features/projects/taskTree";
 import {
@@ -130,47 +138,57 @@ import {
   type DefaultPermissionModeChange,
 } from "../features/settings/DefaultPermissions";
 import type { ContextoDeProyectos } from "../features/settings/ManageProjects";
+
 // Configuración solo se abre a pedido: no entra en la carga inicial.
 const Settings = lazy(() => import("../features/settings/Settings"));
-import { createWorkspaces, type Startup } from "../features/settings/workspaces-store";
+
 import { listaBasta, reconciliar } from "../features/settings/early-startup";
+import { createWorkspaces, type Startup } from "../features/settings/workspaces-store";
 import { createAttention, topState } from "../features/shell/attention";
 import TaskNotifier from "../features/shell/TaskNotifier";
+
 const DeleteSpace = lazy(() => import("../features/shell/DeleteSpace"));
+
+import type { ActivityEvent } from "@terminus/protocol";
+import { ATTACHMENT_DOCUMENTS_FEATURE, PROVIDER_HANDOFF_FEATURE, SESSION_MODEL_FEATURE } from "@terminus/protocol";
+import { mergeGates } from "../features/chat/permissionGates";
+import { openChatVisual, readChatVisual } from "../features/chat/readVisual";
+import { apagarVistasDe, hayVistasDe, soltarVistasHuerfanas } from "../features/code/typst";
+import { type ConversationScope, createConversationHandoff } from "../features/conversation-handoff";
+import { createDraftsStore } from "../features/drafts";
+import { asleep, withLastAnswer } from "../features/machines/lastAnswer";
+import { unconfirmedOpen } from "../features/machines/unconfirmedOpen";
+import { createBatchDelivery, createServiceStream, type ServicePage } from "../features/service-stream";
+import { ConexionesMenu } from "../features/settings/Tools";
+import { TitleBarSection } from "../features/shell";
+import AppTools from "../features/shell/AppTools";
+import CloseGuard from "../features/shell/CloseGuard";
 import AvisoDeCarpeta from "../features/shell/FolderNotice";
+import GlobalSearch, { type SearchFilter } from "../features/shell/GlobalSearch";
 import PantallaDeBloqueo from "../features/shell/LockScreen";
 import AvisoDeMaterial from "../features/shell/MaterialNotice";
 import Paneles from "../features/shell/Panels";
 import Sidebar, { createSidebar } from "../features/shell/Sidebar";
 import type { SidebarFilterProps } from "../features/shell/SidebarFilter";
-import { sidebarViewKey } from "../lib/sidebarView";
-import { recordarCarpetas } from "../lib/folderKinds";
-import { lista } from "../lib/format";
 import ColumnaLateral from "../features/shell/SideColumn";
-import { createSpaceNavigationOrder } from "../lib/space-navigation-order";
-import GlobalSearch, { type SearchFilter } from "../features/shell/GlobalSearch";
-import { flattenTasks } from "../features/shell/sidebarTasks";
-import AppTools from "../features/shell/AppTools";
-import { ConexionesMenu } from "../features/settings/Tools";
 import SpaceMenu from "../features/shell/SpaceMenu";
+import { flattenTasks } from "../features/shell/sidebarTasks";
 import UsageTool from "../features/shell/UsageTool";
 import { createUsage } from "../features/shell/usage";
 import AvisoDeVersion from "../features/shell/VersionNotice";
-import CloseGuard from "../features/shell/CloseGuard";
 import WorkspaceColumn from "../features/shell/WorkspaceColumn";
 import Sitio from "../features/sites/Site";
+import { DragOverlay, UnsavedCloseDialog } from "../features/tabs";
+import { createTaskQueues } from "../features/task-queues";
 import { VELO_DE_FONDO } from "../lib/chat-background";
 import { fondoDeChat, fondoPropio, imagenDelWorkspace, veloDeFondo } from "../lib/chat-background-store";
-import { capabilities, openMachineScreen } from "../lib/platform";
+import { connected } from "../lib/engineConnection";
 import { pedirElCampo } from "../lib/focus";
+import { recordarCarpetas } from "../lib/folderKinds";
+import { lista } from "../lib/format";
 import { lastRoster, rememberRoster } from "../lib/handlerRoster";
 import { aplicarLenguaDeWorkspace, t } from "../lib/i18n";
-import { attachmentsOn, NotMovable } from "../lib/remoteAttachments";
-import { ATTACHMENT_DOCUMENTS_FEATURE, PROVIDER_HANDOFF_FEATURE, SESSION_MODEL_FEATURE } from "@terminus/protocol";
-import { invoke } from "../lib/invoke.ts";
-import { connected } from "../lib/engineConnection";
-import { openChatVisual, readChatVisual } from "../features/chat/readVisual";
-import { createPointerDrag } from "../lib/pointer-drag";
+import { captureWorkspaceContext, displayWorkspaceSnapshot, invoke, requestedWorkspaceSnapshot } from "../lib/invoke.ts";
 import type { InternalTaskLink } from "../lib/links";
 import type { MentionSources } from "../lib/mentions";
 import type {
@@ -199,11 +217,14 @@ import {
   sameSite,
   spacesWithLayout,
 } from "../lib/panels";
+import { capabilities, openMachineScreen } from "../lib/platform";
+import { createPointerDrag } from "../lib/pointer-drag";
 import { createPref, escribirPref, leerPref } from "../lib/prefs";
 import type { Frase } from "../lib/prose";
 import { type Recipient, type RecipientCandidate, recipientCandidatesOf, type SenderTask, trimDraft } from "../lib/recipients";
+import { attachmentsOn, NotMovable } from "../lib/remoteAttachments";
 import { conservar, sessionRefresh } from "../lib/sessionRefresh";
-import { readShellCache, shellCacheWriter } from "../lib/shellCache";
+import { readShellCache, shellCacheMatches, shellCacheWriter } from "../lib/shellCache";
 import {
   accionDeAtajo,
   destinoDePestana,
@@ -212,6 +233,8 @@ import {
   ventanaVecina,
 } from "../lib/shortcuts";
 import { alHilo, comandosConAlMargen, preguntaAlMargen } from "../lib/side-question";
+import { sidebarViewKey } from "../lib/sidebarView";
+import { createSpaceNavigationOrder } from "../lib/space-navigation-order";
 import {
   carpetasDelEscritorio,
   enEscritorio,
@@ -234,8 +257,8 @@ import {
   migrateLegacyStrip,
   OBSERVABILITY_TAB_ID,
   type ScreenTab,
-  screenTabId,
   type SiteTab,
+  screenTabId,
   siteTabId,
   spacesWithStoredStrip,
   storedStrip,
@@ -262,28 +285,17 @@ import {
 import { cn } from "../lib/utils";
 import {
   BELOW_LOCATION,
-  LOCATION_BAR,
   createCompactViewport,
   HEADER_HEIGHT,
   isWindows,
+  LOCATION_BAR,
   toggleMaximizeFromHeader,
 } from "../lib/window";
 import { Button } from "../ui/Button";
-import { LazyPart, retryableLazy } from "../ui/LazyPart";
-import { mergeGates } from "../features/chat/permissionGates";
-import { asleep, withLastAnswer } from "../features/machines/lastAnswer";
-import { unconfirmedOpen } from "../features/machines/unconfirmedOpen";
 import { asFailure, claveDe, detalleDe, prosaDe } from "../ui/Failure";
+import { LazyPart, retryableLazy } from "../ui/LazyPart";
 import { BotonConAtajo } from "../ui/Shortcut";
-import type { ActivityEvent } from "@terminus/protocol";
 import { Toast, ToastStack } from "../ui/Toast";
-import { apagarVistasDe, hayVistasDe, soltarVistasHuerfanas } from "../features/code/typst";
-import { DragOverlay, UnsavedCloseDialog } from "../features/tabs";
-import { TitleBarSection } from "../features/shell";
-import { createDraftsStore } from "../features/drafts";
-import { createConversationHandoff, type ConversationScope } from "../features/conversation-handoff";
-import { createTaskQueues } from "../features/task-queues";
-import { createServiceStream, type ServicePage, createBatchDelivery } from "../features/service-stream";
 
 // Lo que falla en el camino a la ventana y no en el comando: se vuelve a
 // preguntar en vez de pintarlo (`cli/service/mod.rs`, `para_la_ventana`).
@@ -734,7 +746,7 @@ export default function App() {
   const deLaTarea = (id: string | null | undefined) => machineOf(id);
   /** La máquina de esa tarea o carpeta y su workspace, para lo que responde o actúa en ellas. */
   const opcionesDeLaTarea = (id: string | null | undefined, workspace: string | null | undefined) =>
-    ({ headers: { ...machineOf(id)?.headers, ...(workspace ? { "x-terminus-workspace": workspace } : {}) } });
+    captureWorkspaceContext({ headers: { ...machineOf(id)?.headers, ...(workspace ? { "x-terminus-workspace": workspace } : {}) } });
   const enMaquina = (machine: string | undefined) => (machine ? { headers: { "x-terminus-machine": machine } } : undefined);
   // En qué máquina vive cada adjunto que no está en el motor de la ventana:
   // la imagen pegada recién guardada y su copia ya preparada.
@@ -1889,6 +1901,7 @@ export default function App() {
   // eso está `recargarMaterial`.
 
   async function aplicar(a: Startup) {
+    if (!requestedWorkspaceSnapshot(a)) return;
     guardarCache.flush();
     const activo = a.workspaces.find((w) => w.id === a.active);
   // Sin workspace se abre el alta. Si ya estaba abierta no se toca: el paso 1
@@ -1903,67 +1916,71 @@ export default function App() {
   // en qué cliente se está sin leer el nombre.
     aplicarTemaDeTerminal(activo?.terminal_theme ?? null);
     threads.saveWorkspace(transition.previous);
-    sessionLists.reset();
     const generation = workspaceContext.generation();
     const previousWorkspace = transition.previous;
-    taskQueues.workspaceChanged(previousWorkspace);
-    handoff.reset();
-    workspaceContext.activate(transition);
-    // «Ejecutar en» dice qué tiene cada máquina del workspace abierto: con otro, se relee.
-    void refetchMachines();
-    setDraftBases({});
-    // Sale la tira del anterior antes que `setSessionId(null)`, que apuntaría
-    // «ninguna activa» en la que siga cargada. La nueva es la del escritorio y
-    // entra abajo, al leer los espacios, con qué tarea tenía abierta.
-    // El reparto de la que se va ya está guardado por espacio; se corta antes
-    // de vaciar la tira, para que soltar sus pestañas no pise su rejilla.
-    paneles.bindTo(null, null);
-    pestanas.load(null);
-    // El mismo workspace que la caché: sus filas se quedan hasta que lleguen las de verdad.
-    const desdeCache = enCache() && shellCache?.workspace === a.active;
-    projectCatalog.workspaceChanged(desdeCache);
-    if (!desdeCache) setEnCache(false);
+    let desdeCache = false;
     batch(() => {
-      if (!desdeCache) {
-        setSpaces([]);
-        setEscritorio(null);
-      }
-      setAviso(null);
+      displayWorkspaceSnapshot(a);
+      sessionLists.reset();
+      taskQueues.workspaceChanged(previousWorkspace);
+      handoff.reset();
+      workspaceContext.activate(transition);
+      // «Ejecutar en» dice qué tiene cada máquina del workspace abierto: con otro, se relee.
+      void refetchMachines();
+      setDraftBases({});
+      // Sale la tira del anterior antes que `setSessionId(null)`, que apuntaría
+      // «ninguna activa» en la que siga cargada. La nueva es la del escritorio y
+      // entra abajo, al leer los espacios, con qué tarea tenía abierta.
+      // El reparto de la que se va ya está guardado por espacio; se corta antes
+      // de vaciar la tira, para que soltar sus pestañas no pise su rejilla.
+      paneles.bindTo(null, null);
+      pestanas.load(null);
+      // El mismo workspace que la caché: sus filas se quedan hasta que lleguen las de verdad.
+      desdeCache = enCache() && shellCacheMatches(shellCache, a.active);
+      projectCatalog.workspaceChanged(desdeCache);
+      if (!desdeCache) setEnCache(false);
+      batch(() => {
+        if (!desdeCache) {
+          setSpaces([]);
+          setEscritorio(null);
+        }
+        setAviso(null);
+      });
+      // Y la pantalla vuelve a una ventana: la rejilla que había era la del
+      // cliente que se deja, y la del que llega la pone `asentarEscritorio`.
+      paneles.reset();
+      setSessionId(null);
+      setProyectoAbierto(null);
+      threads.activateWorkspace(a.active);
+      setDesdeDeTurno({});
+      drafts.reset();
+      setVivas([]);
+      setSettlingTurns([]);
+      finishedTurns.clear();
+      sinDesenlace.clear();
+      lifecycleRevision++;
+      setFolder(null);
+      setVentana(null);
+      if (!desdeCache) setSesiones({});
+      soltarCola();
+      drafts.replaceAttached([]);
+      // Y las cuentas, que también son de este workspace: la franja de consumo las
+      // lee una vez y se quedaría enseñando las del cliente anterior —nombre,
+      // correo y cuánto le queda— sin que nada avise.
+      setCuentasTocadas((n) => n + 1);
+      // Con qué se puede trabajar es del workspace por lo mismo: la
+      // credencial y el consentimiento cuelgan de él; el menú del otro
+      // cliente ofrecería lo que este no tiene conectado.
+      void composer.refreshSurfaces(true);
+      setError(null);
+      setMaterialError(null);
+      setTaskSourcesError(null);
+      setProjectReadError(null);
+      setStartupReadError(null);
+      // Ni con un solo proyecto se preselecciona. Autoseleccionar cuando la lista
+      // trae uno ahorra un clic y reintroduce la sorpresa.
+      setProject("");
     });
-    // Y la pantalla vuelve a una ventana: la rejilla que había era la del
-    // cliente que se deja, y la del que llega la pone `asentarEscritorio`.
-    paneles.reset();
-    setSessionId(null);
-    setProyectoAbierto(null);
-    threads.activateWorkspace(a.active);
-    setDesdeDeTurno({});
-    drafts.reset();
-    setVivas([]);
-    setSettlingTurns([]);
-    finishedTurns.clear();
-    sinDesenlace.clear();
-    lifecycleRevision++;
-    setFolder(null);
-    setVentana(null);
-    if (!desdeCache) setSesiones({});
-    soltarCola();
-    drafts.replaceAttached([]);
-    // Y las cuentas, que también son de este workspace: la franja de consumo las
-    // lee una vez y se quedaría enseñando las del cliente anterior —nombre,
-    // correo y cuánto le queda— sin que nada avise.
-    setCuentasTocadas((n) => n + 1);
-    // Con qué se puede trabajar es del workspace por lo mismo: la
-    // credencial y el consentimiento cuelgan de él; el menú del otro
-    // cliente ofrecería lo que este no tiene conectado.
-    void composer.refreshSurfaces(true);
-    setError(null);
-    setMaterialError(null);
-    setTaskSourcesError(null);
-    setProjectReadError(null);
-    setStartupReadError(null);
-    // Ni con un solo proyecto se preselecciona. Autoseleccionar cuando la lista
-    // trae uno ahorra un clic y reintroduce la sorpresa.
-    setProject("");
     // Sin workspace no se pregunta por lo que cuelga de él: preguntarlo
     // devolvía «Todavía no hay ningún workspace», pintado como error rojo
     // encima del primer arranque —la app avisando de que falta lo que esa

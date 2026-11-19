@@ -1,3 +1,4 @@
+import { memberContext, memberKey } from "./member-key.ts";
 /**
  * Lo que contestó cada máquina a cada lectura: una rebanada con su estado.
  *
@@ -16,6 +17,7 @@ export type SliceStatus = "ok" | "cached" | "no_answer" | "off" | "outdated" | "
 
 export type Slice = {
   machine: string;
+  context?: string;
   status: SliceStatus;
   /** Si `value` es una respuesta de la máquina; sin ella la rebanada no aporta nada. */
   has: boolean;
@@ -39,7 +41,7 @@ export const SAVE_EVERY = 30_000;
 export const SLICES_KEY = "terminus-fleet:slices:v1";
 
 /**
- * Las rebanadas por máquina y lectura. Las que traen valor se guardan en el
+ * Las rebanadas por máquina, contexto y lectura. Las que traen valor se guardan en el
  * almacenamiento de la página (acotadas, con espera) y al arrancar vuelven
  * como `cached` con su hora: sin red se ve lo último de cada máquina.
  */
@@ -61,37 +63,39 @@ export class SliceBook {
     } catch {}
   }
 
-  get(machine: string, key: string): Slice | null {
-    const live = this.slices.get(machine)?.get(key);
+  get(machine: string, key: string, context?: string): Slice | null {
+    const member = memberKey(machine, context);
+    const live = this.slices.get(member)?.get(key);
     if (live) {
-      const id = storeKey(machine, key);
+      const id = storeKey(member, key);
       const bytes = this.liveSizes.get(id);
       if (bytes !== undefined) { this.liveSizes.delete(id); this.liveSizes.set(id, bytes); }
       return live;
     }
-    const entry = this.saved.get(storeKey(machine, key));
+    const entry = this.saved.get(storeKey(member, key));
     if (!entry) return null;
     try {
-      return { machine, status: "cached", has: true, value: JSON.parse(entry.value), at: entry.at };
+      return { machine, ...(context ? { context } : {}), status: "cached", has: true, value: JSON.parse(entry.value), at: entry.at };
     } catch {
       return null;
     }
   }
 
   put(slice: Slice, key: string) {
-    const id = storeKey(slice.machine, key);
+    const member = memberKey(slice.machine, slice.context);
+    const id = storeKey(member, key);
     const bytes = new TextEncoder().encode(JSON.stringify(slice)).length;
     this.liveBytes -= this.liveSizes.get(id) ?? 0;
     this.liveSizes.delete(id);
-    this.slices.get(slice.machine)?.delete(key);
+    this.slices.get(member)?.delete(key);
     if (bytes > LIVE_ENTRY_BYTES) return;
     this.liveSizes.set(id, bytes);
     this.liveBytes += bytes;
-    const of = this.slices.get(slice.machine) ?? new Map<string, Slice>();
+    const of = this.slices.get(member) ?? new Map<string, Slice>();
     // La más reciente al final: `statuses` lee la última.
     of.delete(key);
     of.set(key, slice);
-    this.slices.set(slice.machine, of);
+    this.slices.set(member, of);
     while (this.liveBytes > LIVE_BYTES || this.liveSizes.size > LIVE_ENTRIES) {
       const oldest = this.liveSizes.entries().next().value;
       if (!oldest) break;
@@ -117,13 +121,27 @@ export class SliceBook {
   }
 
   /** La máquina ya no es de la cuenta: nada suyo se queda, ni guardado. */
-  forget(machine: string) {
-    this.slices.delete(machine);
-    for (const [id, bytes] of this.liveSizes) if (id.startsWith(`${machine}\u0000`)) {
+  forget(machine: string, context?: string) {
+    const member = memberKey(machine, context);
+    this.slices.delete(member);
+    for (const [id, bytes] of this.liveSizes) if (id.startsWith(`${member}\u0000`)) {
       this.liveSizes.delete(id); this.liveBytes -= bytes;
     }
-    for (const id of [...this.saved.keys()]) if (id.startsWith(`${machine}\u0000`)) this.saved.delete(id);
+    for (const id of [...this.saved.keys()]) if (id.startsWith(`${member}\u0000`)) this.saved.delete(id);
     this.flush();
+  }
+
+  /** El conjunto de sesiones asentado revoca también copias de máquinas no inventariadas. */
+  pruneContexts(validContexts: Iterable<string>) {
+    const valid = new Set(validContexts);
+    const revoked = (member: string) => { const context = memberContext(member); return context !== null && !valid.has(context); };
+    for (const member of this.slices.keys()) if (revoked(member)) this.slices.delete(member);
+    for (const [id, bytes] of this.liveSizes) if (revoked(id.split("\u0000")[0])) {
+      this.liveSizes.delete(id); this.liveBytes -= bytes;
+    }
+    let changed = false;
+    for (const id of this.saved.keys()) if (revoked(id.split("\u0000")[0])) { this.saved.delete(id); changed = true; }
+    if (changed) this.flush();
   }
 
   /**
@@ -131,10 +149,12 @@ export class SliceBook {
    * sea de ahora ni diga otro contrato o licencia y haya algo guardado: entonces
    * `cached` con la hora de la copia más nueva. Una lectura sin copia no tapa las que sí la tienen.
    */
-  statuses(): Record<string, { status: SliceStatus; at: number | null }> {
+  statuses(context?: string): Record<string, { status: SliceStatus; at: number | null }> {
     const out: Record<string, { status: SliceStatus; at: number | null }> = {};
-    for (const [machine, of] of this.slices) {
-      const all = [...of.values()];
+    for (const of of this.slices.values()) {
+      const all = [...of.values()].filter((slice) => (slice.context ?? "") === (context ?? ""));
+      const machine = all[0]?.machine;
+      if (!machine) continue;
       const last = all.at(-1);
       if (!last) continue;
       const saved = all.filter((s) => s.has && s.status !== "ok" && s.at !== null);
