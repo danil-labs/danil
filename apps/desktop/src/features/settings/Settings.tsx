@@ -451,10 +451,10 @@ export default function Settings(props: {
   return (
     <Dialog open onOpenChange={(abierto) => !abierto && props.onClose()}>
         <DialogContent
-          // El ancho conserva tope porque el panel es prosa y controles; el alto
-          // crece con la ventana.
+          // El ancho conserva tope porque el panel es prosa y controles; el alto crece con la ventana. Proveedores
+          // de IA es la excepción: su cuadrícula de cuentas necesita 1400 px de diálogo para llegar a 3 columnas.
           ref={hoja}
-          class="flex h-[min(900px,100%)] w-[min(1120px,100%)] max-w-[1120px] flex-col overflow-hidden p-0"
+          class={cn("flex h-[min(900px,100%)] flex-col overflow-hidden p-0", pestana().id === "proveedores-ia" ? "w-[min(1400px,100%)] max-w-[1400px]" : "w-[min(1120px,100%)] max-w-[1120px]")}
           aria-label={t("settings.title")}
         >
           {/* **La fila tiene que ser `minmax(0,1fr)` y no la implícita.** Con

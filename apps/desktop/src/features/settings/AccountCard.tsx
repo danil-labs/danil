@@ -140,8 +140,8 @@ export default function AccountCard(props: {
       )}
     >
       <div class={cn("flex", fila() ? "items-center gap-2" : "items-start gap-3")}>
-        <div class={cn("min-w-0 flex-1", fila() && "mr-6 grid gap-[3px]")}>
-          <div class={cn("flex flex-wrap items-center", fila() ? "gap-2" : "gap-1.5")}>
+        <div class={cn("min-w-0 flex-1", fila() && "mr-6 grid grid-cols-[minmax(0,1fr)] gap-[3px]")}>
+          <div class={cn("flex items-center", fila() ? "min-w-0 gap-2" : "flex-wrap gap-1.5")}>
             <span
               class={cn(
                 "min-w-0 truncate",
