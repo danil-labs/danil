@@ -7,7 +7,6 @@ import { invoke } from "../lib/invoke.ts";
 import { capabilities } from "../lib/platform";
 import { cn } from "../lib/utils";
 import { HEADER_HEIGHT } from "../lib/window";
-import { Button } from "../ui/Button";
 import { Input } from "../ui/Input";
 import { OnboardingAccounts } from "./OnboardingAccounts";
 import "./phrases";
@@ -21,7 +20,7 @@ import "./phrases";
 type Step = "space" | "accounts";
 type Machine = { id: string; active: boolean };
 
-export default function WebOnboarding(props: { nuevo?: boolean; onListo: () => void; onCancelar?: () => void }) {
+export default function WebOnboarding(props: { onListo: () => void }) {
   const [step, setStep] = createSignal<Step>("space");
   const [workspace, setWorkspace] = createSignal<string | null>(null);
   const [machine, setMachine] = createSignal<string | null>(null);
@@ -48,8 +47,6 @@ export default function WebOnboarding(props: { nuevo?: boolean; onListo: () => v
       <Switch>
         <Match when={step() === "space"}>
           <Space
-            nuevo={Boolean(props.nuevo)}
-            onCancelar={props.onCancelar}
             onCreated={(name) => {
               setWorkspace(name);
               setStep("accounts");
@@ -86,8 +83,8 @@ function Steps(props: { current: number }) {
 }
 
 /** The workspace only needs a name; organizations will come through Terminus Computers. */
-function Space(props: { nuevo: boolean; onCancelar?: () => void; onCreated: (name: string) => void }) {
-  const [name, setName] = createSignal(props.nuevo ? "" : t("onboarding.manual.default_name"));
+function Space(props: { onCreated: (name: string) => void }) {
+  const [name, setName] = createSignal(t("onboarding.manual.default_name"));
   const [busy, setBusy] = createSignal(false);
   const [error, setError] = createSignal<unknown>(null);
 
@@ -115,8 +112,6 @@ function Space(props: { nuevo: boolean; onCancelar?: () => void; onCreated: (nam
   return (
     <Pantalla
       titulo={t("web.onboarding.space.title")}
-      atras={props.nuevo ? props.onCancelar : undefined}
-      atrasRotulo={t("onboarding.cancel")}
       primario={primary()}
       error={error()}
     >
@@ -131,11 +126,6 @@ function Space(props: { nuevo: boolean; onCancelar?: () => void; onCreated: (nam
           <span class="text-ui font-semibold">{t("onboarding.workspace.name")}</span>
           <Input value={name()} onInput={(ev) => setName(ev.currentTarget.value)} />
         </label>
-        <Show when={props.nuevo && capabilities().webAccounts?.add}>
-          <Button type="button" variant="ghost" class="justify-self-start" onClick={() => capabilities().webAccounts?.add?.()}>
-            {t("web.add_account.use_another")}
-          </Button>
-        </Show>
       </form>
     </Pantalla>
   );

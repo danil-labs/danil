@@ -1,6 +1,5 @@
 import { createSignal, lazy, onMount, Show, Suspense } from "solid-js";
 import { t } from "../../lib/i18n";
-import { invoke } from "../../lib/invoke.ts";
 import { capabilities } from "../../lib/platform";
 import { Button } from "../../ui/Button";
 import { FailureNote, asFailure, prosaDe } from "../../ui/Failure";
@@ -14,19 +13,18 @@ import { Escenario, TituloCambiante } from "./Stage";
 
 /**
  * El alta sin preparación pendiente: conectar la IA y personalizar. La primera
- * vez la pinta `Setup.tsx` tras preparar; aquí llegan la app sin workspace y
- * «Agregar un workspace», que necesita lo mismo: sus cuentas cuelgan de él.
+ * vez la pinta `Setup.tsx` tras preparar; aquí llega la app sin workspace.
  */
 // Una computadora gestionada llega preparada y con sus asistentes: en el navegador el alta es otra.
 const AltaGestionada = lazy(() => import("../../web/Onboarding"));
 const ConectarCuenta = lazy(() => import("./ConnectAccount"));
 
-type Props = { nuevo?: boolean; onListo: () => void; onCancelar?: () => void };
+type Props = { onListo: () => void };
 
-/** La primera alta de esta computadora pregunta antes por la cuenta de Danil; agregar otro workspace no. */
+/** La primera alta de esta computadora pregunta antes por la cuenta de Danil. */
 export default function Onboarding(props: Props) {
   if (!capabilities().localSetup) return <AltaGestionada {...props} />;
-  const [respondida, setRespondida] = createSignal(Boolean(props.nuevo) || accountWelcomeAnswered());
+  const [respondida, setRespondida] = createSignal(accountWelcomeAnswered());
   const [puedeVolver, setPuedeVolver] = createSignal(false);
   const [tomado, setTomado] = createSignal<{ id: string; nombre: string } | null>(null);
   return (
@@ -56,18 +54,15 @@ function AltaLocal(props: Props & { tomado: { id: string; nombre: string } | nul
   const [paso, setPaso] = createSignal<"ia" | "personalizar">("ia");
   const [workspace, setWorkspace] = createSignal<{ id: string; nombre: string } | null>(null);
   const [fallo, setFallo] = createSignal<string | null>(null);
-  const [cancelando, setCancelando] = createSignal(false);
   const conexiones = crearConexiones();
-  let anterior: string | null = null;
 
   async function crear() {
     setFallo(null);
     try {
-      anterior = (await invoke<{ active: string | null }>("list_workspaces")).active;
       if (props.tomado) {
         setWorkspace(props.tomado);
       } else {
-        const nombre = props.nuevo ? t("onboarding.workspace.default_new") : t("onboarding.workspace.default");
+        const nombre = t("onboarding.workspace.default");
         const w = await crearWorkspace(nombre);
         setWorkspace({ id: w.id, nombre });
         props.onWorkspace({ id: w.id, nombre });
@@ -78,21 +73,6 @@ function AltaLocal(props: Props & { tomado: { id: string; nombre: string } | nul
     }
   }
   onMount(() => void crear());
-
-  /** Cancelar el alta de otro workspace lo borra y deja activo el de antes. */
-  async function cancelar() {
-    setCancelando(true);
-    try {
-      const w = workspace();
-      if (anterior) await invoke("set_active_workspace", { id: anterior });
-      if (w) await invoke("remove_workspace", { id: w.id });
-      window.dispatchEvent(new CustomEvent("harness:workspace"));
-      props.onCancelar?.();
-    } catch (e) {
-      setFallo(prosaDe(e));
-      setCancelando(false);
-    }
-  }
 
   const conectadas = () => conexiones.conectadas();
 
@@ -143,11 +123,6 @@ function AltaLocal(props: Props & { tomado: { id: string; nombre: string } | nul
               <Show when={props.onAtras && workspace()}>
                 <Button size="sm" variant="ghost" onClick={props.onAtras}>
                   {t("onboarding.back")}
-                </Button>
-              </Show>
-              <Show when={props.nuevo}>
-                <Button size="sm" variant="ghost" disabled={cancelando()} onClick={() => void cancelar()}>
-                  {t("onboarding.cancel")}
                 </Button>
               </Show>
               <span class="flex-1" />
