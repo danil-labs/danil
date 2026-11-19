@@ -64,47 +64,40 @@ export function sinCuentas(estados: EstadosPorProveedor, ids: readonly string[])
   });
 }
 
-/** Los grupos a la vista, en el orden dado, y por qué no hay ninguno. */
-export function visibles(ids: readonly string[], estados: EstadosPorProveedor): { ids: string[]; vacio: null | "cargando" | "sin-cuentas" } {
-  const unicos = [...new Set(ids)];
-  const vistos = unicos.filter((id) => {
+/** Los ids de proveedor de la pantalla: los de `list_surfaces` y, sin grupos de proveedor (ni superficies, o solo gratuitas y Free Router), `SUPPORTED_AGENTS`. Una sola lista para `visibles` y `opcionesDeAlta`. */
+export function idsDeProveedor(superficies: readonly Superficie[]): string[] {
+  const ids = idsDeGrupos(superficies);
+  return ids.length ? ids : [...SUPPORTED_AGENTS];
+}
+
+/** Los grupos a la vista, en el orden de `list_surfaces`, y por qué no hay ninguno. */
+export function visibles(superficies: readonly Superficie[], estados: EstadosPorProveedor): { ids: string[]; vacio: null | "cargando" | "sin-cuentas" } {
+  const ids = idsDeProveedor(superficies);
+  const vistos = ids.filter((id) => {
     const e = estados[id];
     return !!e && visible(e);
   });
   if (vistos.length) return { ids: vistos, vacio: null };
-  return { ids: vistos, vacio: sinCuentas(estados, unicos) ? "sin-cuentas" : "cargando" };
+  return { ids: vistos, vacio: sinCuentas(estados, ids) ? "sin-cuentas" : "cargando" };
 }
 
-/** Lo que la máquina dice de un agente que no se conecta con cuenta (`sin_cuenta`). */
-export type AgenteInstalable = { sin_cuenta?: boolean; instalado?: boolean };
-
-export type OpcionDeAlta = {
-  id: string;
-  habilitada: boolean;
-  /** Por qué no se puede, o por qué se abre el grupo: el `k` de `bloqueoAlta`. */
-  motivo: null | "ocupado" | "segunda" | "externo";
-  /** El texto de `segunda` (`shared_credential`), literal, para pintarlo visible. */
-  porque: Prosa | null;
-  /** `agregar`: llama `add_account`. `abrir`: despliega el grupo. `instalar`: Q4, provisional. */
-  accion: "agregar" | "abrir" | "instalar";
-};
-
 /**
- * Lo que ofrece el selector: los proveedores no gratuitos de `list_surfaces` y,
- * sin superficies, `SUPPORTED_AGENTS`. Copia `bloqueoAlta` de cada uno sin recalcularlo.
+ * Una opción del selector. `bloqueada` lleva su motivo; `segunda` lleva el texto
+ * literal de `shared_credential`. No hay combinaciones ilegales.
  */
-export function opcionesDeAlta(
-  superficies: readonly Superficie[],
-  estados: EstadosPorProveedor,
-  agentes: Readonly<Record<string, AgenteInstalable | undefined>> = {},
-): OpcionDeAlta[] {
-  const ids = superficies.length ? idsDeGrupos(superficies) : [...SUPPORTED_AGENTS];
-  return ids.map((id): OpcionDeAlta => {
-    const a = agentes[id];
-    if (a?.sin_cuenta && !a.instalado) return { id, habilitada: true, motivo: null, porque: null, accion: "instalar" };
+export type OpcionDeAlta =
+  | { id: string; accion: "agregar" }
+  | { id: string; accion: "abrir" } // descarga externa: despliega el grupo, no llama `add_account`
+  | { id: string; accion: "bloqueada"; motivo: "ocupado" }
+  | { id: string; accion: "bloqueada"; motivo: "segunda"; porque: Prosa };
+
+/** Lo que ofrece el selector. Copia `bloqueoAlta` de cada proveedor sin recalcularlo. */
+export function opcionesDeAlta(superficies: readonly Superficie[], estados: EstadosPorProveedor): OpcionDeAlta[] {
+  return idsDeProveedor(superficies).map((id): OpcionDeAlta => {
     const b = estados[id]?.bloqueoAlta ?? null;
-    if (!b) return { id, habilitada: true, motivo: null, porque: null, accion: "agregar" };
-    if (b.k === "externo") return { id, habilitada: true, motivo: "externo", porque: null, accion: "abrir" };
-    return { id, habilitada: false, motivo: b.k, porque: b.k === "segunda" ? b.porque : null, accion: "agregar" };
+    if (!b) return { id, accion: "agregar" };
+    if (b.k === "externo") return { id, accion: "abrir" };
+    if (b.k === "segunda") return { id, accion: "bloqueada", motivo: "segunda", porque: b.porque };
+    return { id, accion: "bloqueada", motivo: "ocupado" };
   });
 }
