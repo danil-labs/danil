@@ -8,12 +8,14 @@ function memory() {
   return { getItem: (k: string) => data.get(k) ?? null, setItem: (k: string, v: string) => void data.set(k, v), data };
 }
 
-test("the choice is remembered once per computer", () => {
+test("the sign-in is remembered once per computer; the retired «local» answer asks again", () => {
   const store = memory();
   assert.equal(accountWelcomeAnswered(store), false);
-  rememberAccountWelcome("local", store);
-  assert.equal(store.data.get(ACCOUNT_WELCOME_KEY), "local");
+  rememberAccountWelcome("connected", store);
+  assert.equal(store.data.get(ACCOUNT_WELCOME_KEY), "connected");
   assert.equal(accountWelcomeAnswered(store), true);
+  store.setItem(ACCOUNT_WELCOME_KEY, "local");
+  assert.equal(accountWelcomeAnswered(store), false, "«Continuar sin cuenta» no longer exists (F1.2)");
   store.setItem(ACCOUNT_WELCOME_KEY, "otra cosa");
   assert.equal(accountWelcomeAnswered(store), false, "an unknown value asks again");
 });

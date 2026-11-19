@@ -171,6 +171,8 @@
   "onboarding.workspace.create": "Create workspace",
   "onboarding.workspace.creating": "Creating…",
   "onboarding.workspace.name": "Workspace name",
+  "onboarding.workspace.no_session": "Sign in to Danil to continue.",
+  "onboarding.workspace.not_available_yet": "Your Danil workspace isn't ready yet. Try again in a moment.",
   "onboarding.login.opening_browser": "Opening the browser so you can sign in…",
   "onboarding.login.waiting_code": "Waiting for the code the browser gives you…",
   "onboarding.login.waiting_browser": "Waiting for you to finish in the browser…",

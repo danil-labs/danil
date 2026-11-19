@@ -3,10 +3,14 @@
  * esta computadora. Va en la carga inicial; la pantalla, en `ConnectAccount.tsx`.
  */
 
-/** Clave nueva, no heredada: guarda `connected` o `local`. */
+/**
+ * Clave nueva, no heredada: guarda `connected`. Las versiones con «Continuar
+ * sin cuenta» guardaban también `local`; ya no cuenta como respuesta, así que
+ * esa computadora vuelve a pedir la sesión (plan de cuentas F1.2).
+ */
 export const ACCOUNT_WELCOME_KEY = "danil.onboarding.account_choice";
 
-export type AccountWelcomeChoice = "connected" | "local";
+export type AccountWelcomeChoice = "connected";
 
 function storage(): Storage | null {
   try {
@@ -19,7 +23,7 @@ function storage(): Storage | null {
 /** Ya se eligió una vez en esta computadora: la pantalla no vuelve. */
 export function accountWelcomeAnswered(store: Pick<Storage, "getItem"> | null = storage()): boolean {
   const value = store?.getItem(ACCOUNT_WELCOME_KEY);
-  return value === "connected" || value === "local";
+  return value === "connected";
 }
 
 export function rememberAccountWelcome(choice: AccountWelcomeChoice, store: Pick<Storage, "setItem"> | null = storage()) {

@@ -7,6 +7,7 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { freeSession, SIGNED_IN } from "../helpers/free-session.mjs";
 import { boot, sleep } from "../helpers/jsdom-app.mjs";
 
 // Cada caso en su propio proceso: el arnés deja `window` en la última ventana, y los
@@ -176,6 +177,7 @@ caso("un corte del servicio a mitad de la corrida no deja error cuando termina b
 
 caso("la primera preparación sana abre Conecta tu IA sin una parada técnica", async () => {
   let creados = 0;
+  const free = freeSession();
   const s = servicio({
     setupRequired: true, entorno: reporte(false, []), preparar: terminada,
     extra: {
@@ -185,15 +187,17 @@ caso("la primera preparación sana abre Conecta tu IA sin una parada técnica", 
       set_active_workspace: null,
       set_workspace_language: null,
       list_system_sessions: [],
+      ...free.table,
     },
   });
-  // La cuenta de Danil ya se respondió: la prueba es de la preparación.
-  const app = await boot("listo", "primera-sin-parada-tecnica", s.respuestas, undefined, { "danil.onboarding.account_choice": "local" });
+  // La sesión de Danil ya está: la prueba es de la preparación.
+  const app = await boot("listo", "primera-sin-parada-tecnica", s.respuestas, undefined, SIGNED_IN);
   s.conectar(app);
   await sleep(1500);
 
   assert.ok([...app.w.document.querySelectorAll("h1")].some((h) => h.textContent === "Conecta tu IA."));
-  assert.equal(creados, 1, "la transición duplicó el workspace");
+  assert.equal(creados, 0, "la ventana no crea workspaces locales");
+  assert.deepEqual(free.sealed, ["n"], "la transición duplicó el workspace Free");
   assert.equal(app.w.document.querySelector('[role="radiogroup"]'), null);
   assert.equal(app.w.document.querySelector('[role="log"]'), null);
   assert.ok(!acciones(app).includes("Ver la preparación"));
