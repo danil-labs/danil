@@ -304,5 +304,5 @@ them answers that the command is unknown, and only that feature turns off.
   SHA-256 `9cef09b72f6bbf2d7129bb93994959c56b15b1725d165d8f8dd0d472195d2cff`.
 - `account_workspace_v1.json`: `create_account_workspace` and `account` on `list_workspaces` rows (danil-engine#455), copied from danil-engine dev `8926eb0a`,
   SHA-256 `ee559348f09454bd3dd702eeff5cea2a259cc509ce6f3841a8bfe17edc3f2444`.
-- `account_requests_v1.json`: the CLI route `account request`, `account_request_take`, `account_request_settle` and the `account.request` event (danil-engine#471), copied from danil-engine dev `8926eb0a`,
-  SHA-256 `ea3a959ea9f6cf98b3f7eb545e5b914ee985ff398f4061969711a6bf1d93a17e`.
+- `account_requests_v1.json`: the CLI route `account request`, `account_request_take`, `account_request_settle` and the `account.request` event (danil-engine#471, #473), copied from danil-engine dev `e46f5d7c`,
+  SHA-256 `7d9b6eb4a020104a5798cff816f7b14f27d262d46d2266ec3e03c9c5c542d3de`.
