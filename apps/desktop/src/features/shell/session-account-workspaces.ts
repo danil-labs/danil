@@ -42,7 +42,8 @@ export function createAccountWorkspaces(invoke: Invoke, native: boolean, changed
   const pending = prefsPendingUnions(leerPref, escribirPref);
   const adoptions = prefsAdoptionMemory(leerPref, escribirPref, () => crypto.randomUUID());
   let adoption = false;
-  let adoptionUnavailable = false;
+  // El contexto (un inicio de sesión) donde el servidor dijo que hoy no adopta: uno nuevo vuelve a intentar.
+  let adoptionUnavailable: string | null = null;
   let version = 0;
   let rows: AccountWorkspace[] = [];
   let free = new Map<string, FreeWorkspace>();
@@ -63,13 +64,14 @@ export function createAccountWorkspaces(invoke: Invoke, native: boolean, changed
         local = self.id;
         extension = self.features?.includes("account_workspace_v1") ?? false;
         transfer = self.features?.includes("account_transfer_v1") ?? false;
-        adoption = self.features?.includes("account_adoption_v1") ?? false;
+        // Sin la prueba de posesión (A17) el servidor no adopta: hace falta el rasgo nuevo del motor.
+        adoption = !!(self.features?.includes("account_adoption_v1") && self.features.includes("account_adoption_proof_v1"));
         // Al iniciar sesión, antes de lanzar turnos: los locales pasan a la organización personal Free.
         const personal = adoptionTarget(groups);
-        if (adoption && personal && !adoptionUnavailable) {
-          const done = await adoptLocals(invoke, header(), send, personal, adoptions, pending);
+        if (adoption && personal && adoptionUnavailable !== personal.context_id) {
+          const done = await adoptLocals(invoke, header(), send, personal, adoptions, pending, personOf(personal.context_id));
           if (epoch !== version) return;
-          adoptionUnavailable = done.unavailable;
+          adoptionUnavailable = done.unavailable ? personal.context_id : null;
         }
         const value = await invoke("list_workspaces", header());
         if (epoch !== version) return;
