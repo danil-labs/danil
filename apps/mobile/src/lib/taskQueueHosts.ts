@@ -23,14 +23,19 @@ export function createResolver(now: () => number = Date.now) {
   const missing = new Map<string, number>();
   return (view: FleetView): Resolver =>
     (id, owner): HostLookup => {
+      const key = `${owner}:${id}`;
+      // Primero el dueño: una máquina compartida entre cuentas no ejecuta lo que pidió otra, y una entrada sin dueño
+      // espera a que una cuenta la reclame con su máquina.
+      if (!view.user || !owner || owner !== view.user) {
+        missing.delete(key);
+        return "pending";
+      }
       const host = view.hostOf(id);
       if (host) {
-        missing.delete(`${owner}:${id}`);
+        missing.delete(key);
         return host;
       }
-      const key = `${owner}:${id}`;
-      // Sin dueño no se sabe de quién es: espera hasta que una cuenta la reclame con su máquina.
-      if (!view.user || !owner || owner !== view.user || id === "bridge" || !(view.fleet === "ok" && view.contextReady)) {
+      if (id === "bridge" || !(view.fleet === "ok" && view.contextReady)) {
         missing.delete(key);
         return "pending";
       }

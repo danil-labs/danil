@@ -77,6 +77,7 @@ let error: string | null = null;
 let notices: string[] = [];
 let account: string | null = null;
 let clock: () => number = Date.now;
+let owns: (host: string) => boolean = () => false;
 /** Hasta cuándo no se reintenta una entrada tras una caída de red (en memoria). */
 const retryAt = new Map<string, number>();
 let timer: ReturnType<typeof setTimeout> | null = null;
@@ -166,9 +167,17 @@ export async function hydrate() {
     }
   }
   loaded = true;
+  claim(); // lo recién cargado puede traer entradas sin dueño que `setAccount` aún no vio
   notify();
   await save();
   void kick();
+}
+
+/** Las entradas sin dueño pasan a la cuenta con sesión solo si su máquina es de esa cuenta. */
+function claim(): boolean {
+  let claimed = false;
+  if (account) for (const entry of entries) if (!entry.owner && owns(entry.host)) { entry.owner = account; claimed = true; }
+  return claimed;
 }
 
 let rereading: ReturnType<typeof setTimeout> | null = null;
@@ -200,7 +209,7 @@ export function clearError() {
  * esta cuenta; si no, esperan. Al pasar de una cuenta a otra se limpian los
  * avisos: nombran tareas de la anterior.
  */
-export function setAccount(id: string | null, owns: (host: string) => boolean = () => false) {
+export function setAccount(id: string | null, mine: (host: string) => boolean = () => false) {
   // Una sesión que se anula un instante (renovar el token) no borra los avisos: solo otra cuenta.
   if (account && id && id !== account && notices.length > 0) {
     error = null;
@@ -208,9 +217,8 @@ export function setAccount(id: string | null, owns: (host: string) => boolean = 
     notify();
   }
   if (id) account = id;
-  let claimed = false;
-  if (id) for (const entry of entries) if (!entry.owner && owns(entry.host)) { entry.owner = id; claimed = true; }
-  if (claimed) void save();
+  owns = mine;
+  if (claim()) void save();
   void kick();
 }
 
@@ -405,6 +413,7 @@ export function __reset(options: { storage?: Storage; now?: () => number } = {})
   notices = [];
   listeners.clear();
   account = null;
+  owns = () => false;
   retryAt.clear();
   if (rereading) clearTimeout(rereading);
   rereading = null;

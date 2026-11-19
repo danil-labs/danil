@@ -363,7 +363,8 @@ test("una entrada de otra cuenta espera; una sin dueño la reclama solo la cuent
   assert.equal(__entries().find((e) => e.id === "legacy")?.owner, "ana");
   bindHosts(resolver(view("ana", (id) => (id === "m1" ? m.host : undefined))));
   await __kick();
-  assert.equal(store.raw().length, 0, "con su cuenta se ejecutan y salen");
+  assert.equal(store.raw().find((e) => e.id === "legacy")?.owner ?? "ya salió", "ya salió", "con su cuenta se ejecutan y salen");
+  assert.equal(store.raw().length, 0);
   assert.equal(m.mutations().length, 2);
 });
 
@@ -405,4 +406,43 @@ test("una sesión que se anula un instante no borra los avisos; otra cuenta sí"
   setAccount(null);
   setAccount("ana");
   assert.equal(notices.length, 1);
+});
+
+test("una máquina compartida no ejecuta lo que pidió otra cuenta, aunque resuelva", async () => {
+  const store = disk([entry({ owner: "ana" })]);
+  __reset({ storage: store });
+  const m = machine("m1");
+  const resolver = createResolver();
+  await hydrate();
+  const view = (user: string) => ({ hostOf: () => m.host, user, fleet: "ok", contextReady: true });
+  bindHosts(resolver(view("beto")));
+  await __kick();
+  assert.equal(m.calls.length, 0, "Beto no ejecuta lo de Ana");
+  assert.equal(__entries().length, 1);
+  bindHosts(resolver(view("ana")));
+  await __kick();
+  assert.equal(m.mutations().length, 1, "Ana sí");
+});
+
+test("lo sin dueño que llega al hidratar, después de setAccount, lo reclama su cuenta y se ejecuta; queda guardado", async () => {
+  const store = disk([entry()]);
+  __reset({ storage: store });
+  const m = machine("m1");
+  setAccount("ana", (host) => host === "m1");
+  bindHosts(createResolver()({ hostOf: () => m.host, user: "ana", fleet: "ok", contextReady: true }));
+  await hydrate();
+  await __kick();
+  assert.equal(m.mutations().length, 1);
+});
+
+test("A→null→B limpia los avisos de A; A→null→A no", async () => {
+  __reset({ storage: disk([entry({ sent: true, owner: "ana" })]) });
+  let notices: string[] = [];
+  subscribe((state) => (notices = state.notices));
+  setAccount("ana");
+  await hydrate();
+  setAccount(null);
+  assert.equal(notices.length, 1);
+  setAccount("beto");
+  assert.equal(notices.length, 0);
 });
