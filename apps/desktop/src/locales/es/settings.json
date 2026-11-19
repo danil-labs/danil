@@ -422,6 +422,10 @@
   "settings.ai_providers.agent_codex": "Codex (ChatGPT)",
   "settings.ai_providers.agent_antigravity": "Gemini / Antigravity",
   "settings.ai_providers.agent_grok": "Grok",
+  "settings.ai_providers.accounts": "Cuentas",
+  "settings.ai_providers.pick_provider": "Elige el proveedor",
+  "settings.ai_providers.no_accounts": "Todavía no hay cuentas. Usa «Agregar cuenta» para conectar la primera.",
+  "settings.ai_providers.add_unavailable": "Podrás agregar una cuenta cuando la máquina diga qué proveedores tiene.",
   "settings.ai_providers.zen_go": "OpenCode",
   "settings.agents.business": "Incluido en Business"
 }

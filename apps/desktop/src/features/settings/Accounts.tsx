@@ -760,7 +760,7 @@ export default function Accounts(props: {
     bloqueoAlta: bloqueoAlta(),
     falloDeLectura: lista() === null && !cargando() && fallo() !== null,
   }));
-  onMount(() => props.onControl?.({ agregar: () => void agregar() }));
+  onMount(() => props.onControl?.({ agregar: () => { setAbierto(true); void agregar(); } })); // Desde el selector: primero se despliega.
   createEffect(on(agentes, () => !faltaExterno() && setPidioExterno(false))); // Instalado: nada pendiente de «Ya lo instalé».
 
   function cancelarConexion() {
@@ -951,7 +951,7 @@ export default function Accounts(props: {
       <Show when={fallo()}>
         {(f) => (
           <SettingsBlock>
-            <FailureNote f={f()} />
+            <FailureNote f={f()} />{/* La lista caída se vuelve a pedir aquí (S6). */}<Show when={lista() === null && !cargando()}><Button size="sm" variant="secondary" class="justify-self-start" onClick={() => void refrescar()}>{t("settings.accounts.retry")}</Button></Show>
           </SettingsBlock>
         )}
       </Show>

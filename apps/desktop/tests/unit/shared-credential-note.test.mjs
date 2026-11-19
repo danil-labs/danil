@@ -62,7 +62,11 @@ const nota = (app) => app.w.document.querySelector("[data-shared-credential]");
 test("con una cuenta que comparte credencial, el motivo de no poder agregar otra se ve", async () => {
   const app = await abrir(PORQUE, [{ id: "c1", label: "Cuenta 1", created_at: 1, email: null }]);
   const add = await waitFor(() => button(app, "+ Agregar cuenta"), "Falta «+ Agregar cuenta»");
-  assert.equal(add.disabled, true);
+  // Desde T3 hay un solo «Agregar cuenta» con selector: lo que no se puede es la opción del agente, con su motivo.
+  add.dispatchEvent(new app.w.KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }));
+  const opcion = await waitFor(() => app.w.document.querySelector('[data-add-option="antigravity"]'), "Falta la opción de Antigravity");
+  assert.equal(opcion.getAttribute("aria-disabled"), "true");
+  assert.ok(opcion.textContent.includes(PORQUE), opcion.textContent);
   const texto = (await waitFor(() => nota(app), "El motivo no se ve en la tarjeta")).textContent;
   assert.ok(texto.includes(PORQUE), `la nota no dice el motivo del motor: ${texto}`);
   assert.ok(texto.includes("quita primero la que está"), `la nota no dice qué hacer: ${texto}`);

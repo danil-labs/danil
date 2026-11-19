@@ -122,7 +122,7 @@ const pestanasDe = (
     languages: tab("languages", () => t("settings.languages.title"), () => <SettingsPanel><PaquetesDeLengua /></SettingsPanel>),
     workspaces: tab("workspaces", () => t("settings.tab.workspace_bar"), () => <Workspaces />),
     download: capabilities().appDownloads ? tab("download", () => t("web.download.tab"), () => <Suspense fallback={null}><AppDownloads /></Suspense>) : undefined,
-    "proveedores-ia": tab("proveedores-ia", () => t("settings.nav.ai_providers"), () => <AIProviders superficies={superficies()} agentesEnUso={agentes.agentesEnUso} estado={agentes.estadoSuperficies} onRetry={agentes.reintentarSuperficies} />),
+    "proveedores-ia": tab("proveedores-ia", () => t("settings.nav.ai_providers"), () => <AIProviders superficies={superficies()} estado={agentes.estadoSuperficies} onRetry={agentes.reintentarSuperficies} />),
     machines: cuenta ? tab("machines", () => t("settings.tab.machines"), () => <Suspense fallback={null}><DanilAccount part="machines" /></Suspense>) : undefined,
     entorno: tab("entorno", () => t("settings.nav.environment"), () => <Environment />),
     activity: tab("activity", () => t("activity.title"), () => <Suspense fallback={null}><ActivityLogs workspace={workspace()} machine={activityMachine()} /></Suspense>),
@@ -246,7 +246,7 @@ export default function Settings(props: {
    *
    * **Es la tercera de tres defensas, y sola no bastaba.** Las otras dos son
    * `destinosDe`, que recibe el accesor para que el panel no se monte de nuevo,
-   * y el `Index` de `AIProviders`, que reutiliza la fila cuando el contenido sí
+   * y el `For` por id de proveedor de `AIProviders`, que reutiliza la fila cuando el contenido sí
    * cambia. Esta solo cubre el caso fácil —que no haya cambiado nada— y no el
    * otro: **añadir una cuenta cambia la lista de verdad**, porque la insignia del
    * proveedor sale de `surfaces::sin_cuenta`.
