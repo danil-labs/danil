@@ -170,6 +170,9 @@ pub(crate) fn allowed(method: &str, path: &str) -> bool {
             | ("POST", "/v1/identity/organizations/select")
             | ("GET", "/v1/credits/balance")
             | ("GET", "/v1/workspaces")
+            // Crear (peticiones de la CLI, account_requests_v1) y adoptar los locales (§ 7.2).
+            | ("POST", "/v1/workspaces")
+            | ("POST", "/v1/workspaces/adopt")
             | ("POST", "/v1/workspaces/select")
             | ("POST", "/v1/workspaces/promo/redeem")
             | ("GET", "/v1/workspaces/preferences")
