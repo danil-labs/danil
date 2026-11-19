@@ -28,3 +28,15 @@ test('an initial 401 with no known identity erases all web caches', () => {
   clearWebCaches(store);
   assert.deepEqual([...store.entries.keys()], ['unrelated']);
 });
+test('a workspace that arrives after mounting moves reads and writes out of «unselected»', () => {
+  const store = memory();
+  const scope = sessionStorageScope(store, 'user_N', 'unselected');
+  scope.storage.setItem('tasks', 'before');
+  scope.rescope('21');
+  assert.equal(scope.storage.getItem('tasks'), null, 'the unselected entry is not read as the workspace');
+  scope.storage.setItem('tasks', 'after');
+  assert.equal(store.getItem('danil.web.user_N.21.tasks'), 'after');
+  assert.equal(store.getItem('danil.web.user_N.unselected.tasks'), 'before');
+  scope.clear();
+  assert.deepEqual([...store.entries.keys()], []);
+});

@@ -23,6 +23,7 @@ export function WorkosAuthPage(props: { loginUrl: string; error: string }) {
           <p class="m-0 text-sm text-neutral-500" role="status">{t("web.auth.workos_hint")}</p>
         </div>
         <Button as="a" class="min-h-11" href={props.loginUrl}>{t("web.auth.workos_email")}</Button>
+        <p class="m-0 text-sm text-neutral-500">{t("web.auth.workos_password_hint")}</p>
         <Show when={props.error}><p class="m-0 text-sm text-error-strong" role="alert">{t(`web.auth.${props.error}`)}</p></Show>
       </div>
     </main>

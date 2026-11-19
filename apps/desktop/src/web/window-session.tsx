@@ -41,7 +41,7 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
     const [error, setError] = createSignal('');
     // Identity aún no dio el perfil y se reintenta solo: sigue la carga, no una pantalla vacía.
     const [preparing, setPreparing] = createSignal(false), [reloading, setReloading] = createSignal(false);
-    const [signedOut, setSignedOut] = createSignal(false);
+    const [signedOut, setSignedOut] = createSignal(false); const [awaitingWorkspace, setAwaitingWorkspace] = createSignal(false);
     // Hasta que identity contesta se ve la carga; la entrada solo sin sesión o con el error del retorno.
     const [identified, setIdentified] = createSignal(false);
     const returnError = signInError(window.location.search);
@@ -49,6 +49,7 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
     let disposeGate: (() => void) | undefined;
     let person: PlatformProfile | undefined;
     let stopped = false;
+    let leaving = false; const gone = () => stopped || signedOut() || leaving; // «Cerrar sesión» en un reintento: lo que llegue tarde ya no monta.
     let cache: ReturnType<typeof sessionStorageScope> | undefined;
     let mountedBefore = false;
     let firstMountAttempts = 0;
@@ -62,7 +63,7 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
       windowApp = undefined;
       disposeGate?.();
       root.replaceChildren();
-      disposeGate = render(() => <Show when={identified() && !signedOut() && !preparing() && !reloading()} fallback={<><ToastStack><UpdateNotice /></ToastStack><Show when={!reloading() && (signedOut() || returnError)} fallback={<SessionLoading busy={busy()} onSignOut={preparing() && !reloading() ? () => void logout() : undefined} />}><WorkosAuthPage loginUrl={api.loginUrl(home)} error={returnError} /></Show></>}><main class="flex h-full flex-col gap-4 overflow-y-auto bg-bg p-10 text-neutral-950" data-web-gate="">
+      disposeGate = render(() => <Show when={identified() && !signedOut() && !preparing() && !reloading()} fallback={<><ToastStack><UpdateNotice /></ToastStack><Show when={!reloading() && (signedOut() || returnError)} fallback={<SessionLoading onSignOut={preparing() && !reloading() ? () => void logout() : undefined} />}><WorkosAuthPage loginUrl={api.loginUrl(home)} error={returnError} /></Show></>}><main class="flex h-full flex-col gap-4 overflow-y-auto bg-bg p-10 text-neutral-950" data-web-gate="">
         <ToastStack><UpdateNotice /></ToastStack>
         <h1 class="m-0 font-display text-lead font-bold">{t('common.brand_name')}</h1>
         <Show when={busy()}><p role="status">{t('web.auth.waiting')}</p></Show>
@@ -78,8 +79,7 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
         </Show>
       </main></Show>, root);
     }
-    /** La recarga que hace el sistema: se ve la carga, sin botones, hasta que navega. `gate` cierra y pinta en el mismo turno. */
-    function reload() { setReloading(true); gate(); stopped = true; stopServices(); window.location.assign(home); }
+    function reload() { setReloading(true); gate(); stopped = true; stopServices(); window.location.assign(home); } // La recarga del sistema: solo la carga, sin botones; `gate` cierra y pinta en el mismo turno.
     function expired() {
       if (stopped || signedOut()) return;
       stopServices();
@@ -108,7 +108,7 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
     const selection = startup.selection;
     const machines = machinesClient({ endpoint: `${options.origin}/v1`, transport, relayOrigins: __DANIL_WEB_RELAY_ORIGINS__ });
     const organization = webOrganizations(transport, { signal: lifetime.signal, store: window.sessionStorage, signIn: () => window.location.assign(api.loginUrl(home)), redeem: (code, key) => authorized(() => api.redeemPromo(code, key)), onSelected: () => {
-      // La organización que identity crea al darse de alta llega con la ventana ya montada: se adopta sin recargar.
+      // La organización de una cuenta nueva llega con la ventana montada: se relee `me` y, al quedar activa, la página recarga una sola vez.
       if (mountedBefore && waiting()) { wait = FIRST_RETRY_MS; later(0); } else reload();
     } });
     const organizations = organization.selection;
@@ -120,7 +120,7 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
     async function withoutWorkspace() {
       organization.load(startup.reader()?.organizations);
       const listed = await (startup.reader()?.workspaces() ?? api.workspaces()).catch(() => [] as PlatformWorkspace[]);
-      if (stopped || signedOut()) return;
+      if (gone()) return;
       setRows(listed); setPreparing(listed.length === 0); setError(''); setNoWorkspace(true);
       gate(); if (listed.length === 0) later();
     }
@@ -133,15 +133,15 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
     }
     function slower(cause: unknown) { if (cause instanceof PlatformSessionError && cause.retryAfter) wait = Math.max(wait, Number(cause.retryAfter) * 1000 || wait); }
     /** Primer montaje: identity aún no da el perfil; sigue la carga en vez de enseñar un 403 fatal. */
-    function prepare() { firstMountAttempts += 1; setPreparing(true); setError(''); gate(); later(); }
+    function prepare() { firstMountAttempts += 1; const shown = preparing() && !windowApp; setPreparing(true); setError(''); if (!shown) gate(); later(); }
     function later(delay = wait) {
       clearTimeout(timer);
-      if (stopped || signedOut()) return;
+      if (gone()) return;
       timer = setTimeout(() => void refreshServices(), delay);
       wait = Math.min(wait * 2, POLL_MAX_MS);
     }
     async function refreshServices() {
-      if (stopped || signedOut()) return;
+      if (gone()) return;
       if (busy() || refreshing) { later(); return; }
       if (!mountedBefore) { await load(); return; }
       refreshing = true;
@@ -149,7 +149,7 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
       try {
         if (startup.refreshDue() || waiting()) {
           const [capabilities, fresh] = await Promise.all([readCapabilities(transport), api.me()]);
-          if (stopped || signedOut()) return;
+          if (gone()) return;
           setCaps(capabilities);
           const arrived = person?.workspace === null && fresh.workspace !== null;
           // Los créditos se atan a la organización al montar: cambiarla recarga una vez.
@@ -157,12 +157,12 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
           person = fresh;
           if (permits('workspaces') && fresh.workspace !== null) {
             const listed = await listWorkspaces(() => api.workspaces(), rows());
-            if (stopped || signedOut()) return; setRows(listed);
+            if (gone()) return; setRows(listed);
           }
-          if (arrived) setActive(fresh.workspace);
+          if (arrived && fresh.workspace !== null) { setActive(fresh.workspace); cache?.rescope(fresh.workspace); } setAwaitingWorkspace(waiting());
           startup.checked();
-        } else if (!permits('machines')) { const capabilities = await readCapabilities(transport); if (stopped || signedOut()) return; setCaps(capabilities); }
-        if (!stopped && !signedOut()) ready = await windowApp?.refresh() ?? false;
+        } else if (!permits('machines')) { const capabilities = await readCapabilities(transport); if (gone()) return; setCaps(capabilities); }
+        if (!gone()) ready = await windowApp?.refresh() ?? false;
       } catch (cause) {
         if (cause instanceof PlatformSessionError && cause.status === 401) expired();
         else slower(cause);
@@ -172,7 +172,7 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
       }
     }
     async function run(action: () => Promise<void>, firstMountRetry = false) {
-      if (busy() || stopped || signedOut()) return;
+      if (busy() || gone()) return;
       setBusy(true);
       setError('');
       try { await action(); }
@@ -181,8 +181,8 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
         else if (cause instanceof PlatformSessionError && cause.code === 'workspace_selection_required') await withoutWorkspace();
         else if (firstMountRetry && !mountedBefore && cause instanceof PlatformSessionError
           && FIRST_MOUNT_TRANSIENT.includes(cause.status) && firstMountAttempts < FIRST_MOUNT_ATTEMPTS) prepare();
-        else if (!stopped && !signedOut() && organization.report(cause)) gate();
-        else if (!stopped && !signedOut()) {
+        else if (!gone() && organization.report(cause)) gate();
+        else if (!gone()) {
           setPreparing(false);
           setError(cause instanceof PlatformSessionError && cause.status === 403 ? 'web.platform.denied' : 'web.platform.unavailable'); gate();
           if (!(cause instanceof PlatformSessionError) || [404, 408, 429, 501, 503].includes(cause.status)) later();
@@ -199,17 +199,17 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
       gate();
       await run(async () => { await selection.choose(id); window.location.assign(home); });
     }
-    async function logout() { await run(async () => { await api.logout(); forgetMachineNames(); expired(); }); }
+    async function logout() { if (gone()) return; leaving = true; clearTimeout(timer); try { await api.logout(); forgetMachineNames(); leaving = false; expired(); } catch (cause) { leaving = false; if (cause instanceof PlatformSessionError && cause.status === 401) expired(); else if (!gone()) { setPreparing(false); setError('web.platform.unavailable'); gate(); } } }
     async function load() {
       await run(async () => {
         const { profile, capabilities } = await startup.read(caps());
-        if (stopped || signedOut()) return;
+        if (gone()) return;
         setCaps(capabilities);
         if (mountedBefore) { reload(); return; }
         person = profile;
         organization.load(startup.reader()?.organizations);
         const workspaces = person.workspace !== null && permits('workspaces') ? await listWorkspaces(() => startup.reader()!.workspaces(), []) : [];
-        if (stopped || signedOut()) return;
+        if (gone()) return;
         setRows(workspaces);
         setActive(selection.active());
         cache = sessionStorageScope(localStorage, person.id, person.workspace ?? 'unselected');
@@ -225,12 +225,12 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
             webWorkspaces: { rows, active, busy, uncertain, choose: id => void choose(id) },
             danilCredits: activeGroupCredits(api, profile.active_organization_id),
           },
-          organizations: () => Promise.resolve(organizations), promo: organization.redeem, reauth: organization.reauth, groupAccount: { ...api.groupAccount, send: (...args) => authorized(() => api.groupAccount.send(...args)) },
+          organizations: () => Promise.resolve(organizations), promo: organization.redeem, reauth: organization.reauth, preparing: awaitingWorkspace, groupAccount: { ...api.groupAccount, send: (...args) => authorized(() => api.groupAccount.send(...args)) }, // `promo` sigue hasta que la sesión de Alejandro lo retire.
         }, { storage: cache.storage, webAccounts: {
           current: { user_id: person.id, name: person.name, email: typeof person.email === "string" ? person.email : null, extra: false },
           others: () => [], open: () => {}, remove: async () => {}, signOut: () => void logout(),
         } });
-        later(FIRST_RETRY_MS);
+        setAwaitingWorkspace(waiting()); later(FIRST_RETRY_MS);
       }, true);
     }
     function stopServices() { clearTimeout(timer); lifetime.abort(); organization.stop(); unsubscribeOrganizations(); }

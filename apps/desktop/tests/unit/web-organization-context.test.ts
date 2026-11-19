@@ -78,3 +78,29 @@ test("signing in again from the menu writes the mark for that organization", asy
   assert.equal(signIns, 1);
   assert.equal(store.map.get("danil.web.org-auth.current"), "5000");
 });
+
+test("a redemption refused for organization context resolves it and retries once with the same key", async () => {
+  const keys: string[] = [];
+  let selected = false;
+  const refused = Object.assign(new Error("Edge HTTP 403"), { status: 403, code: "organization_selection_required" });
+  const orgs = webOrganizations(edge(async () => { selected = true; return ok({ organization: NEW_ORG, workspace: null }); }) as never, {
+    signal: new AbortController().signal, store: memoryStore(), signIn: () => assert.fail("no sign-in"), onSelected: () => {},
+    redeem: async (_code, key) => { keys.push(key); if (!selected) throw refused; return { machine: { state: "provisioning" } } as never; },
+  });
+  const reply = await orgs.redeem("FREE-2026", "attempt-1");
+  assert.deepEqual(reply, { machine: { state: "provisioning" } });
+  assert.deepEqual(keys, ["attempt-1", "attempt-1"], "one retry, with the same Idempotency-Key");
+  orgs.stop();
+});
+
+test("a redemption refused for any other reason is not retried", async () => {
+  const keys: string[] = [];
+  const denied = Object.assign(new Error("Edge HTTP 403"), { status: 403, code: "admin_required" });
+  const orgs = webOrganizations(edge(async () => ok({ organization: NEW_ORG, workspace: null })) as never, {
+    signal: new AbortController().signal, store: memoryStore(), signIn: () => {}, onSelected: () => {},
+    redeem: async (_code, key) => { keys.push(key); throw denied; },
+  });
+  await assert.rejects(orgs.redeem("FREE-2026", "attempt-2"), /403/);
+  assert.deepEqual(keys, ["attempt-2"]);
+  orgs.stop();
+});

@@ -12,7 +12,7 @@ export const clearWebCaches = (store: BrowserCacheStorage) => clearPrefix(store,
 
 export function sessionStorageScope(store: BrowserCacheStorage, person: string, workspace: string) {
   const personPrefix = `danil.web.${person}.`;
-  const prefix = `${personPrefix}${workspace}.`;
+  let prefix = `${personPrefix}${workspace}.`;
   let revoked = false;
   return {
     storage: {
@@ -20,6 +20,6 @@ export function sessionStorageScope(store: BrowserCacheStorage, person: string, 
       setItem: (key: string, value: string) => { if (!revoked) store.setItem(prefix + key, value); },
       removeItem: (key: string) => store.removeItem(prefix + key),
     },
-    clear() { revoked = true; clearPrefix(store, personPrefix); },
+    clear() { revoked = true; clearPrefix(store, personPrefix); }, rescope(next: string) { prefix = `${personPrefix}${next}.`; },
   };
 }
