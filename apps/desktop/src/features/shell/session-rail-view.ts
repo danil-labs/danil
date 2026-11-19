@@ -1,4 +1,5 @@
 import type { SessionRailGroup } from "./session-groups.ts";
+import { isPersonal } from "../../lib/personal-org.ts";
 
 /** Los workspaces de un grupo que tienen cuadro en el riel: los agregados y el abierto. */
 export function railTileWorkspaces<W extends { id: string }>(group: { available: readonly W[] | null; added: ReadonlySet<string> | null }, open: string | null): readonly W[] {
@@ -13,8 +14,8 @@ export function sessionVisible<T extends { id: string; name: string; logo: strin
 }
 
 /** `free` solo lo puede aportar la unión de E1 y W1a; el nombre o la máquina no lo clasifican. */
-export function freeSessionRow(group: Pick<SessionRailGroup, "plan" | "free" | "empty_reason">) {
-  return !group.empty_reason && group.plan === "free" ? group.free ?? null : null;
+export function freeSessionRow(group: Pick<SessionRailGroup, "plan" | "personal" | "free" | "empty_reason">) {
+  return !group.empty_reason && isPersonal(group) ? group.free ?? null : null;
 }
 
 export function sessionStartTarget(list: readonly { id: string }[], open: string | null, hidden: ReadonlySet<string>, groups: readonly SessionRailGroup[]): string | null {

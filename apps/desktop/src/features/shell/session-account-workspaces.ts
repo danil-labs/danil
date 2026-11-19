@@ -1,10 +1,10 @@
 import { escribirPref, leerPref } from "../../lib/prefs.ts";
-import { adoptionTarget, adoptLocals, prefsAdoptionMemory } from "./account-adoption.ts";
+import { adoptionTarget, adoptLocals, isPersonal, prefsAdoptionMemory } from "./account-adoption.ts";
 import { applyMoves, movesFor, prefsPendingUnions, retryUnions } from "./account-transfers.ts";
 
 export type AccountWorkspace = { id: string; name: string; account: { org: string; account_id: string } };
 export type FreeWorkspace = { id: string; name: string; account_id: string };
-type Group = { context_id: string; org: string; plan: string | null };
+type Group = { context_id: string; org: string; plan: string | null; personal?: boolean };
 type Invoke = <T>(command: string, args?: Record<string, unknown>) => Promise<T>;
 type Send = (context: string, method: string, path: string, body?: unknown, key?: string) => Promise<{ status: number; body?: unknown; empty_reason?: unknown }>;
 
@@ -16,6 +16,9 @@ export function accountWorkspaces(value: unknown): AccountWorkspace[] {
     return typeof w?.id === "string" && typeof w.account?.org === "string" && typeof w.account.account_id === "string" ? [{ id: w.id, name: typeof w.name === "string" && w.name.trim() ? w.name : w.id, account: w.account }] : [];
   });
 }
+
+/** Cuándo volver a leer las cuentas: también si identity empieza a decir (o corrige) cuál es la personal con el mismo plan. */
+export const accountRefreshKey = (groups: readonly Group[] | null) => JSON.stringify(groups?.map((g) => [g.context_id, g.org, g.plan, isPersonal(g)]) ?? null);
 
 /** Las filas del catálogo de una organización, página a página. Un error corta y devuelve lo leído. */
 async function catalog(send: Send, context: string) {
@@ -95,7 +98,7 @@ export function createAccountWorkspaces(invoke: Invoke, native: boolean, changed
         // La unión del Free router va aparte del traslado: si falló, el repaso la vuelve a pedir.
         if (transfer || adoption) await retryUnions(invoke, header(), pending, personOf);
         const next = new Map<string, FreeWorkspace>();
-        if (extension) for (const group of groups.filter((g) => g.plan === "free")) {
+        if (extension) for (const group of groups.filter(isPersonal)) {
           let cursor: string | null = null;
           const seen = new Set<string>();
           do {
@@ -121,7 +124,7 @@ export function createAccountWorkspaces(invoke: Invoke, native: boolean, changed
     },
     async create(group: Group, refresh: () => Promise<void>) {
       const row = free.get(group.context_id);
-      if (!native || !extension || !local || !row || group.plan !== "free") throw { detail: "not_available_yet" };
+      if (!native || !extension || !local || !row || !isPersonal(group)) throw { detail: "not_available_yet" };
       await invoke("create_account_workspace", { ...header(), id: row.id, name: row.name, account: { org: group.org, account_id: row.account_id } });
       await refresh();
       return row.id;

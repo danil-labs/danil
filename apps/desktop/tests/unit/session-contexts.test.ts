@@ -129,6 +129,8 @@ test("the Free menu row needs resolved E1/W1a data; no classification from a nam
   assert.equal(freeSessionRow({ plan: "paid", free: { id: "local", name: "Free" } }), null);
   const free = { id: "server-engine-id", name: "Personal" };
   assert.deepEqual(freeSessionRow({ plan: "free", free }), free);
+  assert.deepEqual(freeSessionRow({ plan: "pro", personal: true, free }), free, "the personal org upgraded to Pro keeps its row");
+  assert.equal(freeSessionRow({ plan: "free", personal: false, free }), null);
 });
 
 test("the initial engine selection cannot open an unadded organization workspace", () => {
