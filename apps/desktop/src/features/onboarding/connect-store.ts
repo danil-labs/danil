@@ -81,7 +81,7 @@ const posicion = (id: string) => {
 /** El mapa pone los gratuitos entre Grok y OpenCode; el panel los deja debajo de OpenCode. */
 export const ordenDelMapa = (filas: Fila[]) =>
   [...filas].sort((a, b) => rangoEnMapa(a) - rangoEnMapa(b));
-const rangoEnMapa = (f: Fila) => (f.modo === "consentimiento" ? posicion(OPENCODE) - 0.5 : posicion(f.agente));
+const rangoEnMapa = (f: Fila) => (f.modo === "consentimiento" ? posicion(OPENCODE) - 0.5 : posicion(canonicalAgentId(f.agente)));
 
 const SIN_LLAVERO = /secret service|org\.freedesktop\.secrets|secret-service|no keyring|keyring/i;
 
