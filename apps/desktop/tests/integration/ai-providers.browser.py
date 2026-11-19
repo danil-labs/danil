@@ -4,7 +4,7 @@ Sirve la web construida (`pnpm web:build`, carpeta `dist-web/`) con un servidor
 estático propio, responde el borde (`route_api`) y el relay (`route_web_socket`)
 con el patrón de `window.browser.py`, y mide la pantalla real.
 
-Escenarios (docs/testing/2026-11-19-proveedores-ia.md § anchos W1–W7):
+Escenarios (docs/testing/2026-11-19-proveedores-ia.md § anchos W1–W7; desde la ronda 4 de T3, W1–W8 con el mínimo de la tarjeta):
   none, one, four, reconnect, list-fails.
 
 Las columnas de la cuadrícula no existen todavía: contra `dev` esas aserciones van
@@ -39,7 +39,12 @@ root = Path(__file__).resolve().parents[4]
 desktop = root / 'apps' / 'desktop'
 strict = os.environ.get('DANIL_PV2_STRICT') == '1'
 MACHINE = 'cmp_abcdefghijklmnopqrstuvwxyz'
-WIDTHS = [('W1', 960, 3), ('W2', 768, 3), ('W3', 767, 2), ('W4', 640, 2), ('W5', 512, 2), ('W6', 511, 1), ('W7', 320, 1)]
+# Mínimo de la tarjeta: 28rem (448 px), lo que pide la composición de `AccountCard` `row` de `9e345462` sin recortar
+# ni partir líneas (medido: la tarjeta caída del escenario `reconnect` mide 444 px de ancho natural). Con 8 px de hueco:
+# 1 columna < 904 px, 2 desde 904 y 3 desde 1360; nunca más de 3. Solo escritorio: no se mide por debajo del mínimo.
+CARD_MIN = 448
+# Se fija el ancho del cuerpo del grupo, que lleva `pl-6` (24 px): los cortes de la lista caen 24 px más arriba.
+WIDTHS = [('W1', 1440, 3), ('W2', 1384, 3), ('W3', 1383, 2), ('W4', 960, 2), ('W5', 928, 2), ('W6', 927, 1), ('W7', 640, 1), ('W8', 472, 1)]
 
 def head():
     return subprocess.check_output(['git', 'rev-parse', '--short=8', 'HEAD'], cwd=root, text=True).strip()
@@ -273,6 +278,23 @@ def columns(page, identity):
     }""", identity)
 
 
+def header(page, identity):
+    """La cabecera de la tarjeta (composición de `AccountCard` `row`): su fila, su ancho natural y sus recortes."""
+    return page.evaluate("""(identity) => {
+        const li = [...document.querySelectorAll('li')].find(x => x.textContent.includes(identity));
+        const card = li.firstElementChild;
+        const head = card.firstElementChild;
+        const tops = [...head.querySelectorAll('button, [class*="rounded-full"], [data-status-tag]')]
+            .filter(e => e.getBoundingClientRect().width > 0)
+            .map(e => ({ text: (e.getAttribute('aria-label') || e.textContent || '').trim().slice(0, 30), mid: Math.round((e.getBoundingClientRect().top + e.getBoundingClientRect().bottom) / 2) }));
+        const before = card.style.width;
+        card.style.width = 'max-content';
+        const natural = Math.ceil(card.getBoundingClientRect().width);
+        card.style.width = before;
+        return { tops, natural, width: Math.round(card.getBoundingClientRect().width), height: Math.round(head.getBoundingClientRect().height) };
+    }""", identity)
+
+
 def set_width(page, identity, width):
     page.evaluate("""([identity, width]) => {
         const li = [...document.querySelectorAll('li')].find(x => x.textContent.includes(identity));
@@ -367,6 +389,20 @@ def run(browser, base, name):
         expect(dialog.get_by_role('button', name='Reconectar').first).to_be_visible()
     if name != 'none':
         shoot(page, name)
+    if name == 'reconnect':
+        # La tarjeta caída es la más ancha: su estado y «Reconectar» van en la fila de la cabecera, como en `9e345462`.
+        identity = 'persona2@ejemplo.com'
+        for width in (1440, 960, 640, CARD_MIN + 24):
+            set_width(page, identity, width)
+            got = header(page, identity)
+            print(f'reconnect {width}px: ancho natural de la tarjeta {got["natural"]} px, ancho {got["width"]} px, {got["tops"]}')
+            mids = [t['mid'] for t in got['tops']]
+            assert any('Reconectar' in t['text'] for t in got['tops']), got
+            _eq_true(max(mids) - min(mids) <= 4, f'{width}px: el estado y las acciones no van en una sola fila: {got}')
+            cols = columns(page, identity)
+            _eq_true(not cols['clipped'], f'{width}px recortados: {cols["clipped"]}')
+            _eq_true(not cols['overflow'], f'{width}px desborde: {cols}')
+        results.append(('PASS', 'reconnect: el estado y «Reconectar» en la fila de la cabecera, sin recortes ni desborde, a 1440, 960, 640 y 472 px de grupo'))
     if name == 'four':
         identity = 'persona1@ejemplo.com'
         for label, width, expected in WIDTHS:
@@ -374,9 +410,8 @@ def run(browser, base, name):
             got = columns(page, identity)
             assert got['cards'] >= 4, got
             pending(f'{label} {width}px → {expected} columnas (hoy {got["cols"]})', lambda: _eq(got['cols'], expected))
-            pending(f'{label} {width}px tarjetas de al menos 240 px', lambda: _eq_true(got['minCard'] >= 240, got))
-            # DEFECTO CONOCIDO de `dev` (medido con minCard 331 a 320 px): el contenedor desborda en horizontal.
-            pending(f'{label} {width}px sin desborde horizontal' + (' (DEFECTO CONOCIDO de dev, minCard 331)' if width == 320 else ''), lambda: _eq_true(not got['overflow'], got))
+            pending(f'{label} {width}px tarjetas de al menos {CARD_MIN} px', lambda: _eq_true(got['minCard'] >= CARD_MIN - 1, got))
+            pending(f'{label} {width}px sin desborde horizontal', lambda: _eq_true(not got['overflow'], got))
             pending(f'{label} {width}px ningún botón de acción queda recortado', lambda: _eq_true(not got['clipped'], got['clipped']))
             if label == 'W1':
                 pending('el contenedor del grupo lleva [data-provider-group]', lambda: _eq_true(got['tagged'], 'falta [data-provider-group]'))

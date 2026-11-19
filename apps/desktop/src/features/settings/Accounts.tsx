@@ -999,7 +999,7 @@ export default function Accounts(props: {
 
       {/* Por el ancho del grupo, no de la ventana: 2 columnas desde 512 px y 3 desde 768 px de cuerpo, que mide 24 px más que su contenido (`pl-6`). */}
       <Show when={hayCuentas()}>
-      <ul class="m-0 grid list-none grid-cols-1 gap-2 p-0 @min-[488px]:grid-cols-2 @min-[744px]:grid-cols-3" data-account-grid="">
+      <ul class="m-0 grid list-none grid-cols-[repeat(auto-fill,minmax(min(100%,max(28rem,calc((100%_-_1rem)/3_-_1px))),1fr))] gap-2 p-0" data-account-grid="">
         <For each={tarjetas}>
           {(a, i) => {
             const activa = () => a.id === lista()?.active || !!a.machines?.some((m) => m.id === lista()?.active);

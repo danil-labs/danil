@@ -128,7 +128,7 @@ export default function AccountCard(props: {
       class={cn(
         fila()
           ? [
-              "@container/card flex min-w-0 flex-col gap-3 rounded-lg border bg-surface px-3.5 pt-3 pb-5",
+              "flex flex-col gap-3 rounded-lg border bg-surface px-3.5 pt-3 pb-5",
               props.active ? "border-border-strong" : "border-border",
             ]
           : [
@@ -139,8 +139,8 @@ export default function AccountCard(props: {
             ],
       )}
     >
-      <div class={cn("flex", fila() ? "flex-wrap items-center gap-2" : "items-start gap-3")}>
-        <div class={cn("min-w-0", fila() ? "grid flex-[1_1_10rem] gap-[3px] @xs/card:mr-6" : "flex-1")}>
+      <div class={cn("flex", fila() ? "items-center gap-2" : "items-start gap-3")}>
+        <div class={cn("min-w-0 flex-1", fila() && "mr-6 grid gap-[3px]")}>
           <div class={cn("flex flex-wrap items-center", fila() ? "gap-2" : "gap-1.5")}>
             <span
               class={cn(
