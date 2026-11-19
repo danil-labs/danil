@@ -41,15 +41,16 @@ strict = os.environ.get('DANIL_PV2_STRICT') == '1'
 MACHINE = 'cmp_abcdefghijklmnopqrstuvwxyz'
 # La segunda máquina del escenario `machines`: con dos, la web junta las cuentas de las dos (`fleet.merge`) y pinta su fila de máquinas.
 MACBOOK = 'cmp_zyxwvutsrqponmlkjihgfedcba'
-# Mínimo de la tarjeta: 28rem (448 px), el ancho natural de la tarjeta caída de `reconnect` con su correo completo
-# (444 px medidos en el modal real). Con 8 px de hueco: 1 columna < 904 px de lista, 2 desde 904 y 3 desde 1360; nunca más de 3.
-CARD_MIN = 448
-# Se mide en el modal real de Configuración, cambiando solo el viewport: riel de 224 px y tope de 1680 px de diálogo en
-# Proveedores de IA (1120 px en las demás secciones). Antes se fijaba a mano el ancho del grupo y por eso no se vio que
+# Mínimo de la tarjeta: 24rem (384 px). La tarjeta caída cabe con su estado, «Reconectar» y «…» completos desde 266 px;
+# su correo completo pide 444 px y, si no cabe, se trunca con elipsis y `title`. Con 8 px de hueco: 1 columna < 776 px
+# de lista, 2 desde 776 y 3 desde 1168; nunca más de 3. El diálogo de Configuración es el común (1120 px) en todas las secciones.
+CARD_MIN = 384
+# Se mide en el modal real de Configuración, cambiando solo el viewport: riel de 224 px y tope común de 1120 px de diálogo
+# (el mismo en todas las secciones). Antes se fijaba a mano el ancho del grupo y por eso no se vio que
 # en beta la lista nunca pasaba de 806 px.
 VIEWPORTS = [(1920, 1080), (1440, 900), (1280, 800), (900, 800)]
 # Columnas esperadas por número de cuentas y ancho de viewport.
-COLUMNS = {1: {1920: 1, 1440: 1, 1280: 1, 900: 1}, 2: {1920: 2, 1440: 2, 1280: 2, 900: 1}, 4: {1920: 3, 1440: 2, 1280: 2, 900: 1}}
+COLUMNS = {1: {1920: 1, 1440: 1, 1280: 1, 900: 1}, 2: {1920: 2, 1440: 2, 1280: 2, 900: 1}, 4: {1920: 2, 1440: 2, 1280: 2, 900: 1}}
 
 def head():
     return subprocess.check_output(['git', 'rev-parse', '--short=8', 'HEAD'], cwd=root, text=True).strip()
@@ -110,6 +111,9 @@ class Harness:
         self.unexpected = set()
         self.cursor = 0
         self.where = []
+        # Órdenes cuya respuesta el relay retiene hasta `release()` (medición de `no_machine`).
+        self.hold = set()
+        self.held = []
 
     def table(self, command, args, machine=MACHINE):
         s = self.scenario
@@ -190,12 +194,24 @@ class Harness:
                 return
             self.calls.append((m['command'], m.get('args') or {}))
             self.where.append((m['command'], machine))
+            if m['command'] in self.hold:
+                self.held.append((ws, m, machine))
+                return
             kind, value = self.table(m['command'], m.get('args') or {}, machine)
             if kind == 'error':
                 return ws.send(json.dumps(dict(type='result', id=m['id'], error=value)))
             ws.send(json.dumps(dict(type='result', id=m['id'], value=value)))
         ws.on_message(receive)
         ws.send(json.dumps(dict(type='state', state='online')))
+
+    def release(self):
+        """Contesta lo retenido y deja de retener."""
+        self.hold = set()
+        held, self.held = self.held, []
+        for ws, m, machine in held:
+            kind, value = self.table(m['command'], m.get('args') or {}, machine)
+            ws.send(json.dumps(dict(type='result', id=m['id'], **({'error': value} if kind == 'error' else {'value': value}))))
+        return len(held)
 
     def push_event(self, name, payload):
         """Un `events` del relay (protocolo v1): lo que el motor publica en su diario."""
@@ -332,7 +348,7 @@ def names(page):
         const pieces = [...line.children].map(e => e.getBoundingClientRect()).filter(r => r.width > 0);
         const spill = [...line.children].some(e => e.getBoundingClientRect().right > b.right + 1);
         const label = line.querySelector('span[title]');
-        return { name: line.textContent.trim().slice(0, 30), full: !!label && label.scrollWidth <= label.clientWidth, overlaps: acts.some(a => a.left < b.right - 1), spill,
+        return { name: line.textContent.trim().slice(0, 30), full: !!label && label.scrollWidth <= label.clientWidth, titled: !!label && label.title === label.textContent.trim() && label.title.includes('@'), overlaps: acts.some(a => a.left < b.right - 1), spill,
           oneLine: pieces.every(r => Math.abs(r.top - pieces[0].top) < 6) };
     })""")
 
@@ -376,10 +392,28 @@ def classic(page, on):
         if (!on) return;
         const s = document.createElement('style');
         s.id = 'pv2-classic';
-        s.textContent = '#cfg-subpanel { overflow-y: scroll !important } #cfg-subpanel::-webkit-scrollbar { width: 16px } #cfg-subpanel::-webkit-scrollbar-thumb { background: #999 }';
+        // `global.css` pone `scrollbar-width: thin`, que en Chromium anula `::-webkit-scrollbar`: aquí vuelve a `auto`.
+        s.textContent = '#cfg-subpanel { overflow-y: scroll !important; scrollbar-width: auto !important; scrollbar-color: auto !important } #cfg-subpanel::-webkit-scrollbar { width: 16px } #cfg-subpanel::-webkit-scrollbar-thumb { background: #999 }';
         document.head.append(s);
     }""", on)
     page.wait_for_timeout(100)
+
+
+def dialog_rects(page):
+    """El rectángulo de Configuración en Proveedores de IA, en otra sección y al volver: tiene que ser el mismo.
+
+    La otra sección es Control de código: Preferencias pide `get_profile`, paquetes de idioma y otras rutas que este
+    arnés no simula, y sus rechazos sin respuesta ensucian `pageerror`."""
+    rect = "() => { const b = document.querySelector('[role=dialog]').getBoundingClientRect(); return [Math.round(b.left), Math.round(b.top), Math.round(b.width), Math.round(b.height)]; }"
+    first = page.evaluate(rect)
+    page.locator('#cfg-tab-source-control').click()
+    expect(page.locator('[data-account-grid]')).to_have_count(0)
+    shoot_one(page, f'control-de-codigo-{page.viewport_size["width"]}')
+    prefs = page.evaluate(rect)
+    page.locator('#cfg-tab-ai-accounts').click()
+    expect(page.locator('[data-account-grid] > li').first).to_be_visible()
+    page.wait_for_timeout(300)
+    return [first, prefs, page.evaluate(rect)]
 
 
 def shoot_one(page, label):
@@ -474,9 +508,9 @@ def run(browser, base, name):
                 page.wait_for_timeout(200)
                 got = columns(page, identity)
                 expected = COLUMNS[got['cards']][vw]
-                panel = page.evaluate("() => { const p = document.querySelector('#cfg-subpanel'); return { overflow: p.scrollWidth > p.clientWidth + 1, list: Math.round(document.querySelector('[data-account-grid]').getBoundingClientRect().width), dialog: Math.round(document.querySelector('[role=dialog]').getBoundingClientRect().width) }; }")
+                panel = page.evaluate("() => { const p = document.querySelector('#cfg-subpanel'); return { bar: p.offsetWidth - p.clientWidth, overflow: p.scrollWidth > p.clientWidth + 1, list: Math.round(document.querySelector('[data-account-grid]').getBoundingClientRect().width), dialog: Math.round(document.querySelector('[role=dialog]').getBoundingClientRect().width) }; }")
                 margins = cut_margins(panel['list'], got['cards'], expected)
-                print(f'{name} {vw}x{vh} barras {mode}: diálogo {panel["dialog"]} px, lista {panel["list"]} px, {got["cols"]} columnas, {margins["text"]}')
+                print(f'{name} {vw}x{vh} barras {mode} (barra de {panel["bar"]} px): diálogo {panel["dialog"]} px, lista {panel["list"]} px, {got["cols"]} columnas, {margins["text"]}')
                 _eq_true(margins['ok'], f'{name} {vw}px barras {mode}: menos de {MARGIN} px de margen sobre un corte: {margins["text"]}')
                 _eq_true(got['tagged'], f'{vw}px: falta [data-provider-group]')
                 _eq_true(got['cols'] == expected, f'{name} {vw}px {mode}: {got["cols"]} columnas, se esperaban {expected} (lista {panel["list"]} px)')
@@ -485,9 +519,16 @@ def run(browser, base, name):
                 _eq_true(not got['clipped'], f'{name} {vw}px {mode}: acciones recortadas: {got["clipped"]}')
                 bad = [n for n in names(page) if n['overlaps'] or n['spill'] or not n['oneLine']]
                 _eq_true(not bad, f'{name} {vw}px {mode}: el nombre pisa las acciones, se sale de su bloque o parte su línea: {bad}')
-                if got['cols'] >= 2:
-                    cut = [n['name'] for n in names(page) if not n['full']]
-                    _eq_true(not cut, f'{name} {vw}px {mode}: con {got["cols"]} columnas el correo se trunca: {cut}')
+                # El correo se ve completo cuando cabe su ancho natural; si se trunca, su `title` lo lleva entero.
+                cut = [n['name'] for n in names(page) if not n['full'] and not n['titled']]
+                _eq_true(not cut, f'{name} {vw}px {mode}: correo truncado sin `title` completo: {cut}')
+                if got['cols'] == 1:
+                    _eq_true(all(n['full'] for n in names(page)), f'{name} {vw}px {mode}: con una columna el correo cabe y no debe truncarse: {names(page)}')
+                if mode == 'sistema':
+                    rects = dialog_rects(page)
+                    print(f'{name} {vw}x{vh}: rectángulo de Configuración en Proveedores de IA {rects[0]}, en Control de código {rects[1]}, al volver {rects[2]}')
+                    _eq_true(rects[0] == rects[1] == rects[2], f'{name} {vw}px: Configuración cambia de tamaño entre secciones: {rects}')
+                    got = columns(page, identity)
                 if mode == 'clásicas':
                     shoot_one(page, f'{name}-{vw}-clasicas')
                 if name == 'reconnect':
@@ -500,7 +541,7 @@ def run(browser, base, name):
                     row = machine_row(page, 'persona2@ejemplo.com')
                     _eq_true(row['row'] and row['button'] and row['rowInside'] and row['buttonInside'] and not row['overlaps'], f'{vw}px: la fila de máquinas no queda en su celda: {row}')
         classic(page, False)
-        results.append(('PASS', f'{name}: en el modal real a ' + ', '.join(f'{vw}x{vh}' for vw, vh in VIEWPORTS) + ', con barras del sistema y clásicas: columnas, margen de 16 px sobre los cortes, mínimo, sin desborde ni recortes' + ', correo completo con 2 o más columnas' + (', cabecera de la caída en una fila' if name == 'reconnect' else '') + (', fila de máquinas en su celda' if name == 'machines' else '')))
+        results.append(('PASS', f'{name}: en el modal real a ' + ', '.join(f'{vw}x{vh}' for vw, vh in VIEWPORTS) + ', con barras del sistema y clásicas: columnas, margen de 16 px sobre los cortes, mínimo, sin desborde ni recortes' + ', correo completo o con `title`, mismo rectángulo en Control de código' + (', cabecera de la caída en una fila' if name == 'reconnect' else '') + (', fila de máquinas en su celda' if name == 'machines' else '')))
         page.set_viewport_size({'width': 1440, 'height': 900})
     if name == 'machines':
         expect(dialog.locator('[data-account-machines]').first).to_be_visible()
@@ -520,6 +561,46 @@ def run(browser, base, name):
     return h
 
 
+def measure_no_machine(browser, base):
+    h = Harness(SCENARIOS['one'])
+    h.hold = {'list_workspaces'}
+    page = browser.new_page(locale='es-MX', viewport={'width': 1440, 'height': 900})
+    page.route('https://edge.danil.ai/v1/**', h.api)
+    page.route_web_socket('wss://connect.danil.ai/**', h.relay)
+    page.goto(base)
+    expect(page.locator('[data-tira]').first).to_be_visible()
+    page.get_by_role('button', name='Configuración', exact=True).click()
+    page.locator('#cfg-tab-ai-accounts').click()
+    page.wait_for_timeout(2500)
+
+    def look(stage):
+        got = page.evaluate("""() => { const p = document.querySelector('#cfg-panel'); const t = p ? p.textContent : '';
+            return { no_machine: t.includes('no_machine'), ninguna: t.includes('Ninguna máquina de la cuenta tiene este workspace'),
+              leer: (t.match(/No se pudieron leer las cuentas/g) || []).length, state: p?.querySelector('[data-ai-providers]')?.dataset.aiProviders ?? null,
+              grupos: [...(p?.querySelectorAll('[data-provider-slot]:not(.hidden)') ?? [])].map(x => x.dataset.providerSlot),
+              cuentas: (t.match(/persona\\d@ejemplo.com/g) || []).length, retry: [...(p?.querySelectorAll('button') ?? [])].filter(b => b.textContent.trim() === 'Reintentar').length }; }""")
+        failing = sorted({c for c, _ in h.calls if c in ('list_accounts', 'list_surfaces', 'list_providers', 'account_status', 'account_limits')})
+        print(f'MEDIDO no_machine · {stage}: {got} · retenidas {len(h.held)} · órdenes de cuentas que llegaron al relay {failing}')
+        return got
+
+    before = look('list_workspaces retenido')
+    released = h.release()
+    until(page, lambda: any(c == 'list_session_git' for c, _ in h.calls), lambda: 'el workspace no llegó tras soltar list_workspaces', seconds=15)
+    page.wait_for_timeout(3000)
+    after = look(f'list_workspaces contestado ({released}) y 3 s después')
+    retry = page.locator('#cfg-panel button', has_text='Reintentar')
+    if retry.count():
+        retry.first.click()
+        page.wait_for_timeout(2000)
+        look('tras «Reintentar»')
+    page.locator('#cfg-tab-source-control').click()
+    page.locator('#cfg-tab-ai-accounts').click()
+    page.wait_for_timeout(2500)
+    look('tras salir y volver a la sección')
+    results.append(('PASS', f'medición no_machine: antes {before}, después {after} (ver líneas MEDIDO)'))
+    page.close()
+
+
 def _eq(got, expected):
     assert got == expected, f'{got} != {expected}'
 
@@ -535,7 +616,8 @@ with sync_playwright() as p:
     if not base:
         server = serve()
         base = f'http://127.0.0.1:{server.server_address[1]}/terminus/'
-    browser = p.chromium.launch(headless=True)
+    # Sin `--hide-scrollbars` (Playwright lo pone por omisión): las barras ocupan su sitio como en un escritorio real.
+    browser = p.chromium.launch(headless=True, ignore_default_args=['--hide-scrollbars'])
     try:
         absent_seen = set()
         for name in SCENARIOS:
@@ -556,6 +638,9 @@ with sync_playwright() as p:
         results.append(('PASS', 'el relay simulado entrega el evento `account` (kind confirm) al modal de login'))
         assert_edge(h)
         absent_seen |= h.absent
+        # `no_machine`: se retiene `list_workspaces` en el relay (el router web no sabe qué máquina tiene el workspace),
+        # se abre Proveedores de IA, se suelta y se mide si el error aparece, si persiste, y si se recupera.
+        measure_no_machine(browser, base)
     finally:
         browser.close()
         if server:
