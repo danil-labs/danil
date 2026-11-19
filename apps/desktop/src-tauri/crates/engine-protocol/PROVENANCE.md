@@ -302,3 +302,13 @@ them answers that the command is unknown, and only that feature turns off.
   with `not_modified` for the version the window already has; the task bar of
   this machine reads `state_resource tasks` (danil-engine#406, dev `a4ae143f`),
   SHA-256 `9cef09b72f6bbf2d7129bb93994959c56b15b1725d165d8f8dd0d472195d2cff`.
+- `account_workspace_v1.json`: `create_account_workspace` and `account` on `list_workspaces` rows (danil-engine#455), copied from danil-engine dev `8926eb0a`,
+  SHA-256 `ee559348f09454bd3dd702eeff5cea2a259cc509ce6f3841a8bfe17edc3f2444`.
+- `account_adoption_v1.json`: `adoption_candidates` and `adopt_account_workspace` (danil-engine#469), copied from danil-engine dev `8926eb0a`,
+  SHA-256 `ab06a5f1a733a8a1e9533151db8e44b3de35cbaec21119a122ed161e1ba1f976`.
+- `account_transfer_v1.json`: `reseal_account_workspace` (danil-engine#470), copied from danil-engine dev `8926eb0a`,
+  SHA-256 `2a914059b1b5a04700b48511f6caa355ccb2ea2e2c57533b93cb50a5a9f5c5d9`.
+- `account_requests_v1.json`: the CLI route `account request`, `account_request_take`, `account_request_settle` and the `account.request` event (danil-engine#471), copied from danil-engine dev `8926eb0a`,
+  SHA-256 `ea3a959ea9f6cf98b3f7eb545e5b914ee985ff398f4061969711a6bf1d93a17e`.
+- `free_router_platform_v1.json`: the TW#72 platform pass: `set_free_router_union`, `free_router_binding`, `prove_free_router_binding`, `set_free_router_grant`, `clear_free_router_grant`, `release_free_router_owner` (danil-engine#468), copied from danil-engine dev `8926eb0a`,
+  SHA-256 `477ab9298ea8e74717d280f04385fc464d09bbd045ce73b23494392884f8a7ca`.

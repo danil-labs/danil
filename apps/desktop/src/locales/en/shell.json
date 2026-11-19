@@ -459,6 +459,7 @@
     "other": "{count} organizations for {email} will be signed out"
   },
   "shell.workspaces.removed_org": "{name} was removed.",
+  "shell.workspaces.agent_created": "An agent created “{name}” in {org}.",
   "shell.workspaces.dismiss_removed": "Dismiss",
   "shell.profile.preferences": "Preferences",
   "shell.workspaces.organization_required": "The organization needs attention",
