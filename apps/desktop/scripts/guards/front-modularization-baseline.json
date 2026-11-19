@@ -604,7 +604,7 @@
     "src/features/settings/AIProviders.tsx": 125,
     "src/features/settings/AccountCard.tsx": 469,
     "src/features/settings/AccountIdentity.tsx": 139,
-    "src/features/settings/Accounts.tsx": 1679,
+    "src/features/settings/Accounts.tsx": 1511,
     "src/features/settings/ActivityLogs.tsx": 102,
     "src/features/settings/AgentOutput.tsx": 140,
     "src/features/settings/Agents.tsx": 93,
