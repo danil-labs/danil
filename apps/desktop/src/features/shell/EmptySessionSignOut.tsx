@@ -7,11 +7,11 @@ import { emptySessionEmails } from "./empty-session-emails";
 import { confirmEmailClose, emailContextCount } from "./session-close-confirm";
 import { sessionRailState } from "./session-groups";
 
-/** Un correo sin ningún workspace no tiene cuadro en el riel: su «Cerrar sesión» queda en el pie. */
-export function EmptySessionSignOut(props: { onDone: () => void }) {
+/** Un correo sin ningún cuadro en el riel pierde su menú de cuenta: su «Cerrar sesión» queda en el pie. */
+export function EmptySessionSignOut(props: { open: string | null; onDone: () => void }) {
   const [busy, setBusy] = createSignal(false);
   const [failed, setFailed] = createSignal(false);
-  const rows = () => emptySessionEmails(sessionRailState()?.groups() ?? null);
+  const rows = () => emptySessionEmails(sessionRailState()?.groups() ?? null, props.open);
   const close = async (row: { email: string | null; family: string }) => {
     const rail = sessionRailState();
     if (!rail || busy()) return;

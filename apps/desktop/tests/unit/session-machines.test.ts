@@ -387,3 +387,23 @@ test("valid session authority survives an unavailable machine inventory", async 
   assert.deepEqual(settled, [["live"]]);
   assert.deepEqual(cloud.validatedContexts(), ["live"]);
 });
+
+test("a caller waiting on a reopened relay's attention read gives up at its own deadline", { timeout: 2_000 }, async () => {
+  const pool = createContextRelayPool(undefined, 1);
+  let attentionReads = 0;
+  const links = ["ana", "bea"].map(context => pool.link("machine", () => ({
+    state: () => "online", onState: () => () => {}, onEvents: () => () => {}, subscribe() {}, start() {}, close() {},
+    async call(_id, command) {
+      if (context === "ana" && command === "list_workspace_attention") { attentionReads++; return await new Promise<never>(() => {}); }
+      return { value: context, cached: null };
+    },
+  })));
+  try {
+    await links[0].call("first", "list_workspaces", null, null, {});
+    await links[1].call("evict", "list_workspaces", null, null, {});
+    const started = Date.now();
+    await assert.rejects(links[0].call("reopen", "list_workspaces", null, null, {}, 50), { code: "machine_timeout" });
+    assert.equal(attentionReads, 1);
+    assert.ok(Date.now() - started < 1_000, "the reopen read's 30 s limit does not extend the caller's 50 ms");
+  } finally { for (const link of links) link.close(); }
+});

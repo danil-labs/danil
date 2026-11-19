@@ -107,6 +107,11 @@ export function createContextRelayPool(time: Clock = clock, limit = 4) {
           waiting.add(finish);
         });
       };
+      // La reapertura lee la atención con su propio plazo; quien llama no espera más que el suyo.
+      const within = (wait: Promise<void>, timeout: number) => new Promise<void>((resolve, reject) => {
+        const timer = time.set(() => reject({ code: "machine_timeout", detail: machine }), timeout);
+        wait.then(resolve, reject).finally(() => time.clear(timer));
+      });
       const subscribeHook = <T>(listeners: Set<(value: T) => void>, listener: (value: T) => void) => { listeners.add(listener); return () => { listeners.delete(listener); }; };
       return {
         state: () => entry.relay?.state() ?? state,
@@ -114,7 +119,7 @@ export function createContextRelayPool(time: Clock = clock, limit = 4) {
           const relay = await acquire(timeout);
           entry.used = time.now();
           try {
-            if (recovering) await ready;
+            if (recovering) await within(ready, timeout);
             if (closed || entry.relay !== relay) throw { code: "unknown_machine", detail: machine };
             return await relay.call(id, command, workspace, folder, args, timeout);
           }

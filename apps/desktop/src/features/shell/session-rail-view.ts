@@ -1,9 +1,14 @@
 import type { SessionRailGroup } from "./session-groups.ts";
 
+/** Los workspaces de un grupo que tienen cuadro en el riel: los agregados y el abierto. */
+export function railTileWorkspaces<W extends { id: string }>(group: { available: readonly W[] | null; added: ReadonlySet<string> | null }, open: string | null): readonly W[] {
+  return (group.available ?? []).filter((w) => group.added?.has(w.id) || w.id === open);
+}
+
 /** Los ids de sesiones cerradas no se convierten en locales, aunque aún estén en el índice. */
 export function sessionVisible<T extends { id: string; name: string; logo: string | null }>(list: readonly T[], open: string | null, hidden: ReadonlySet<string>, groups: readonly SessionRailGroup[], known: ReadonlySet<string>): T[] {
   const local = list.filter((w) => !known.has(w.id) && (w.id === open || !hidden.has(w.id)));
-  const remote = groups.flatMap((g) => (g.available ?? []).filter((w) => g.added?.has(w.id) || w.id === open).map((w) => list.find((row) => row.id === w.id) ?? { ...w, logo: null } as T));
+  const remote = groups.flatMap((g) => railTileWorkspaces(g, open).map((w) => list.find((row) => row.id === w.id) ?? { ...w, logo: null } as T));
   return [...local, ...remote.filter((w, i) => remote.findIndex((row) => row.id === w.id) === i)];
 }
 

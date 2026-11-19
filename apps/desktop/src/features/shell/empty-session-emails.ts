@@ -1,10 +1,12 @@
-type Group = { family: string; email: string | null; available: readonly unknown[] | null };
+import { railTileWorkspaces } from "./session-rail-view.ts";
 
-/** Los correos sin ningún workspace en el riel (lista vacía o sin fuente, como una organización de pago sin VM): una fila por correo. */
-export function emptySessionEmails(groups: readonly Group[] | null): { email: string | null; family: string }[] {
+type Group = { family: string; email: string | null; available: readonly { id: string }[] | null; added: ReadonlySet<string> | null };
+
+/** Los correos sin ningún cuadro en el riel (misma regla que `sessionVisible`): una fila por correo. */
+export function emptySessionEmails(groups: readonly Group[] | null, open: string | null): { email: string | null; family: string }[] {
   const key = (g: Group) => g.email?.trim().toLowerCase() || `family:${g.family}`;
-  const withWorkspaces = new Set((groups ?? []).filter((g) => g.available?.length).map(key));
+  const withTiles = new Set((groups ?? []).filter((g) => railTileWorkspaces(g, open).length).map(key));
   const rows = new Map<string, { email: string | null; family: string }>();
-  for (const g of groups ?? []) if (!withWorkspaces.has(key(g)) && !rows.has(key(g))) rows.set(key(g), { email: g.email, family: g.family });
+  for (const g of groups ?? []) if (!withTiles.has(key(g)) && !rows.has(key(g))) rows.set(key(g), { email: g.email, family: g.family });
   return [...rows.values()];
 }

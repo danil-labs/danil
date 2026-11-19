@@ -85,13 +85,18 @@ test("tile metadata comes only from its contextual listing, never from the globa
   assert.equal(org.tiles[0].logo, null);
 });
 
-test("an email with no workspace in the rail keeps a footer sign-out, once per email", () => {
-  const group = (family: string, email: string | null, available: readonly unknown[] | null) => ({ family, email, available });
-  assert.deepEqual(emptySessionEmails([
-    group("f1", "Empty@example.com", []), group("f1b", "empty@example.com", []),
-    group("f2", "busy@example.com", []), group("f2", "busy@example.com", [{ id: "w" }]),
-    group("f3", "loading@example.com", null),
-    group("f4", null, []),
-  ]), [{ email: "Empty@example.com", family: "f1" }, { email: "loading@example.com", family: "f3" }, { email: null, family: "f4" }]);
-  assert.deepEqual(emptySessionEmails(null), []);
+test("an email with no tile in the rail keeps a footer sign-out, by the same rule as the rail, once per email", () => {
+  const group = (family: string, email: string | null, available: readonly { id: string }[] | null, added: string[] | null) => ({ family, email, available, added: added ? new Set(added) : null });
+  const groups = [
+    group("f1", "Empty@example.com", [], []), group("f1b", "empty@example.com", [], []),
+    group("f2", "busy@example.com", [], []), group("f2", "busy@example.com", [{ id: "w" }], ["w"]),
+    group("f3", "loading@example.com", null, null),
+    group("f4", null, [], []),
+    group("f5", "later@example.com", [{ id: "l1" }, { id: "l2" }], []),
+    group("f6", "hidden@example.com", [{ id: "h" }], null),
+    group("f7", "open@example.com", [{ id: "opened" }], []),
+  ];
+  assert.deepEqual(emptySessionEmails(groups, "opened").map((row) => row.family), ["f1", "f3", "f4", "f5", "f6"]);
+  assert.deepEqual(emptySessionEmails(groups, null).map((row) => row.family), ["f1", "f3", "f4", "f5", "f6", "f7"]);
+  assert.deepEqual(emptySessionEmails(null, null), []);
 });

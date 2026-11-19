@@ -241,7 +241,7 @@ export default function WorkspaceColumn(props: {
           )}
         </For>
       </div>
-      <ColumnFoot tools={props.tools} onSettings={props.onSettings} onReportarBug={props.onReportarBug} />
+      <ColumnFoot tools={props.tools} open={ws.activo() ?? null} onSettings={props.onSettings} onReportarBug={props.onReportarBug} />
     </nav>
   );
 }
@@ -251,6 +251,7 @@ function ColumnFoot(props: {
   tools?: JSX.Element;
   onSettings: (panel?: string) => void;
   onReportarBug: () => void;
+  open: string | null;
 }) {
   const boton = "grid size-8 shrink-0 place-items-center rounded-md text-neutral-500 outline-none hover:bg-neutral-200 hover:text-neutral-950 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary";
   // Leer `props.tools` dos veces montaría dos copias, y cada una consulta por su cuenta.
@@ -266,7 +267,7 @@ function ColumnFoot(props: {
       <button type="button" class={boton} aria-label={t("settings.title")} title={t("settings.title")} onClick={() => props.onSettings()}>
         <SettingsIcon size={17} aria-hidden="true" />
       </button>
-      <ProfileMenu onAccount={() => props.onSettings("cuenta-danil")} onReportarBug={props.onReportarBug} />
+      <ProfileMenu open={props.open} onAccount={() => props.onSettings("cuenta-danil")} onReportarBug={props.onReportarBug} />
     </div>
   );
 }
