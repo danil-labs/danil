@@ -46,7 +46,7 @@ test("the web header offers organization choice before the separator and only si
   assert.deepEqual(mounted.signedOut, ["email"]);
   mounted.dispose(); root.replaceChildren();
   for (const role of ["owner", "admin", undefined, "future-role", "member", "guest"]) {
-    const visible = role !== "member" && role !== "guest";
+    const visible = role === "owner" || role === "admin";
     const flow = mountWebGroup(root, role);
     doc.querySelector('[data-account-header="web-person"]').click();
     assert.ok(await until(() => [...doc.querySelectorAll('[role="menuitem"]')].some((b) => b.textContent === "Cerrar sesión de one@example.com")));
