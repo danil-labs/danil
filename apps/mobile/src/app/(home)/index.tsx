@@ -357,7 +357,8 @@ export default function Home() {
             </View>
             );
           })}
-          {list.length === 0 && !loading && fleet === "ok" ? (
+          {/* Sin hosts, `MachineNote` ya dice qué hacer: «Este Danil no tiene workspaces» hablaría de un Danil que no hay. */}
+          {list.length === 0 && !loading && fleet === "ok" && hosts.length > 0 ? (
             <Text style={[styles.empty, { color: theme.textMuted }]}>{t(hosts.some((h) => h.linked) ? "home.no_linked_workspaces" : "home.no_workspaces")}</Text>
           ) : null}
         </View>
