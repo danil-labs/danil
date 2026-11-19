@@ -262,6 +262,21 @@ test("P65: the free router row in the Danil block offers to turn it on with toda
   s.fin();
 });
 
+test("the free router row is named 'Router IA gratis' even when the engine does not declare it, and its list failure sits under that name", async () => {
+  const m = motor();
+  m.provs.claude = { cuentas: [cuenta("c1")], active: "c1" };
+  const base = m.responses.list_providers;
+  const sinRouter = (args) => base(args).filter((p) => !p.id.startsWith("free-router"));
+  m.on.list_accounts = (args) => (args.provider.startsWith("free-router") ? Promise.reject({ what: "caída", detail: "command" }) : { provider: args.provider, env_var: "", shared_credential: null, secret_note: null, active: "c1", accounts: [cuenta("c1")] });
+  const s = await abrir("router-name", m, [sup("claude", "Claude Code")], { list_providers: sinRouter });
+  const danil = await waitFor(() => s.panel.querySelector('section[aria-label="Danil"]'), "bloque Danil");
+  const fila = await waitFor(() => [...danil.querySelectorAll("div")].find((d) => d.textContent.trim() === "Router IA gratis" && d.closest(".border-b")), "la fila del Router con nombre");
+  assert.ok(fila.closest(".border-b").textContent.includes("Comprobar proveedor"), "el nombre va en la fila de su acción");
+  const texto = await waitFor(() => danil.textContent.includes("No se pudieron leer las cuentas.") && danil.textContent, "el fallo del Router");
+  assert.ok(texto.indexOf("Router IA gratis") < texto.indexOf("No se pudieron leer las cuentas."), "el fallo va bajo el nombre");
+  s.fin();
+});
+
 test("P38/P39: removing the last account hides the group, even with tasks waiting, and focus returns to Add account", async () => {
   const m = motor();
   m.provs.claude = { cuentas: [cuenta("c1")], active: "c1", espera: [{ id: "t1" }] };

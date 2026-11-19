@@ -883,15 +883,12 @@ export default function Accounts(props: {
             instalar desde cualquiera las quita de las dos, con el evento
             `providers` haciéndolas releer `list_providers`. */}
         <Show when={!agentes().find((a) => a.id === agente())?.available}>
-          <SettingsBlock class="justify-items-start">
-            <Button
-              size="sm"
-              disabled={Boolean(instalando()) || revisandoCli()}
-              onClick={() => void instalarCli()}
-            >
+          {/* Sin la fila de abajo (motor que no declara el agente) esta lleva el nombre: la fila nunca queda anónima. */}
+          <SettingsRow label={inferencia() === "sin_pedir_nada" ? "" : props.nombre ?? ""}>
+            <Button size="sm" disabled={Boolean(instalando()) || revisandoCli()} onClick={() => void instalarCli()}>
               {instalando() ? acto().curso : acto().boton}
             </Button>
-          </SettingsBlock>
+          </SettingsRow>
         </Show>
 
         <Show when={inferencia() === "sin_pedir_nada"}>

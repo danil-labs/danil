@@ -329,6 +329,13 @@ def run(browser, base, name):
     assert any(c == 'list_surfaces' for c, _ in h.calls), h.calls
     dialog = page.locator('[role="dialog"]')
     accounts = h.scenario['accounts']
+    # Este motor no declara el Router en `list_providers`: su fila del bloque Danil se nombra igual.
+    danil = dialog.locator('section[aria-label="Danil"]')
+    expect(danil.get_by_text('Router IA gratis', exact=True)).to_be_visible()
+    if name == 'list-fails':
+        expect(danil.get_by_text('No se pudieron leer las cuentas.')).to_be_visible()
+        order = danil.inner_text()
+        assert order.index('Router IA gratis') < order.index('No se pudieron leer las cuentas.'), order
     if name != 'none':
         expand(page, name)
     if name == 'none':
