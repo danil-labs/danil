@@ -20,11 +20,12 @@ export function orderedOrganizations(groups: readonly SessionRailGroup[], rows: 
     org.contexts.push(group);
     for (const workspace of group.available ?? []) {
       const row = rows.find((w) => w.id === workspace.id);
-      if (row && !org.tiles.some((w) => w.id === row.id && w.context.context_id === group.context_id)) org.tiles.push({ ...row, key: JSON.stringify([group.context_id, row.id]), context: group });
+      if (row && !org.tiles.some((w) => w.id === row.id && w.context.context_id === group.context_id)) org.tiles.push({ id: workspace.id, name: workspace.name, logo: workspace.logo ?? null, key: JSON.stringify([group.context_id, row.id]), context: group });
     }
     organizations.set(group.org, org);
   }
   const result = [...organizations.values()].filter((org) => org.tiles.length);
+  for (const org of result) org.tiles.sort((a, b) => rows.findIndex((row) => row.id === a.id) - rows.findIndex((row) => row.id === b.id));
   const rank = (id: string) => { const i = preference.orgs.findIndex((r) => r.org_id === id); return i < 0 ? preference.orgs.length : i; };
   return result.sort((a, b) => rank(a.id) - rank(b.id));
 }

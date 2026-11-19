@@ -13,7 +13,7 @@ import { sessionWorkspaceSource } from "./session-workspace-source.ts";
 import { createAddedSync } from "./workspace-added-sync.ts";
 import { ADDED_KEY, edgeAddedTransport, prefsAddedStore } from "./workspace-added-transport.ts";
 
-export type SessionRailGroup = ContextGroup & { available: readonly { id: string; name: string }[] | null; added: ReadonlySet<string> | null; person: string | null; free?: { id: string; name: string }; empty_reason?: EmptyReason | null };
+export type SessionRailGroup = ContextGroup & { available: readonly { id: string; name: string; logo?: string | null }[] | null; added: ReadonlySet<string> | null; person: string | null; free?: { id: string; name: string }; empty_reason?: EmptyReason | null };
 let instance: ReturnType<typeof wire> | undefined;
 export const [sessionRailState, setSessionRailState] = createRoot(() => createSignal<ReturnType<typeof wire>>());
 export const hasSessionGroups = () => !!instance?.groups();

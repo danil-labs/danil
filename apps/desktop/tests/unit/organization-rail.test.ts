@@ -1,7 +1,8 @@
-import test from "node:test";
 import assert from "node:assert/strict";
+import test from "node:test";
 import { changeOrgPreference, orderedOrganizations, parseOrgPreference, stackedOrganizations } from "../../src/features/shell/organization-rail-model.ts";
 import type { SessionRailGroup } from "../../src/features/shell/session-groups.ts";
+
 const group = (org: string, context: string, ids: string[]): SessionRailGroup => ({ org, context_id: context, family: context, email: `${context}@example.test`, org_name: org, plan: "paid", available: ids.map((id) => ({ id, name: id })), added: new Set(ids), person: context });
 const rows = (ids: string[]) => ids.map((id) => ({ id, name: id, logo: null }));
 test("versioned organization preference accepts only unique, valid rows and never includes session identity", () => {
@@ -55,4 +56,30 @@ test("tooltip balance shares a context read, rejects the wrong organization and 
   assert.deepEqual(calls, ["one", "two", "one", "one"]);
   cache.clear();
   assert.equal(await cache.read(group, async () => { throw { detail: "session_echo_mismatch" }; }), null);
+});
+
+test("attention for the same workspace stays personal and organization priority combines both contexts", async () => {
+  const { mergeContextAttention } = await import("../../src/features/shell/context-attention.ts");
+  const rows = mergeContextAttention([{ workspace: "shared", context: "one", tasks: [{ session: "a", project: "p", state: "asked" }] }], [{ workspace: "shared", context: "two", tasks: [{ session: "b", project: "p", state: "failed" }] }]);
+  assert.deepEqual(rows.map((row) => [row.context, row.tasks[0].session]), [["one", "a"], ["two", "b"]]);
+  const changed = mergeContextAttention(rows, [{ workspace: "shared", context: "two", tasks: [] }]);
+  assert.equal(changed.find((row) => row.context === "one")?.tasks.length, 1);
+  assert.equal(changed.find((row) => row.context === "two")?.tasks.length, 0);
+});
+
+test("startup and login return select an explicit context even when two contexts share an id", async () => {
+  const { organizationStartTarget } = await import("../../src/features/shell/organization-start-target.ts");
+  const { accountReturnTarget } = await import("../../src/features/shell/account-return-target.ts");
+  const groups = [group("org", "one", ["shared"]), group("org", "two", ["shared"])];
+  assert.deepEqual(organizationStartTarget(groups, "shared", null, "two"), { id: "shared", context: "two" });
+  assert.deepEqual(organizationStartTarget(groups, "shared", "one", "two"), { id: "shared", context: "one" });
+  assert.deepEqual(accountReturnTarget(groups, ["one"]), { id: "shared", context: "two" });
+});
+
+test("tile metadata comes only from its contextual listing, never from the global engine index", () => {
+  const scoped = group("org", "two", ["shared"]);
+  scoped.available = [{ id: "shared", name: "B's workspace" }];
+  const [org] = orderedOrganizations([scoped], [{ id: "shared", name: "A's workspace", logo: "private/path.png" }], { version: 1, orgs: [] });
+  assert.equal(org.tiles[0].name, "B's workspace");
+  assert.equal(org.tiles[0].logo, null);
 });

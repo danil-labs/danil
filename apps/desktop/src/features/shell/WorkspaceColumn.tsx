@@ -1,11 +1,10 @@
 import SettingsIcon from "lucide-solid/icons/settings";
-import { children, createEffect, createSignal, For, type JSX, onCleanup, Show } from "solid-js";
+import { children, createEffect, createSignal, For, type JSX, Show } from "solid-js";
 import { t } from "../../lib/i18n";
 import { createNavigationReorder } from "../../lib/navigation-order";
 import { capabilities, type OtherAccount, type OtherWorkspace } from "../../lib/platform";
 import { cn } from "../../lib/utils";
 import { ITEM_DE_MENU, Popover, PopoverAnchor, PopoverContent } from "../../ui/Popover";
-import { SignalDot, taskSignalTone } from "../../ui/SignalDot";
 import { RETARDO_TOOLTIP, TooltipContent, TooltipRoot, TooltipTrigger } from "../../ui/Tooltip";
 import type { RailWorkspace } from "../machines/engine-workspaces";
 import { taskLabel } from "../projects/TaskStatus";
@@ -16,64 +15,16 @@ import { type AttentionState, topState, type WorkspaceAttention } from "./attent
 import { columnDanil, danilMenuOf, tileLabel } from "./danil-rail";
 import { createHiddenWorkspaces, keepSlots } from "./hidden-workspaces";
 import KeepAwake from "./KeepAwake";
-import { generacionDeLogo, urlDeLogo } from "./logo-src";
+import { AttentionBadge, MarcaDeWorkspace } from "./WorkspaceMarks";
+
+export { AttentionBadge, MarcaDeWorkspace, monogram } from "./WorkspaceMarks";
+
+import { organizationStartTarget } from "./organization-start-target";
 import ProfileMenu from "./ProfileMenu";
 import { SessionWorkspaceRows } from "./SessionWorkspaceRows";
 import { sessionRail } from "./session-groups";
-import { sessionStartTarget, sessionVisible } from "./session-rail-view";
-
-/** Las iniciales de las dos primeras palabras; una sola palabra da una letra. */
-export function monogram(name: string) {
-  const words = name.trim().split(/[\s\-_.]+/).filter(Boolean);
-  return words.slice(0, 2).map((word) => [...word][0] ?? "").join("").toUpperCase() || "?";
-}
-
-/** El logo del workspace, o sus iniciales si no hay imagen o todavía no carga. */
-/** `id`: en la web, el logo de un workspace de la cuenta sale de la cuenta (`urlDeLogo`). */
-export function MarcaDeWorkspace(props: { id?: string; name: string; logo?: string | null; load?: () => Promise<string | null> }) {
-  const [url, setUrl] = createSignal<string | null>(null);
-  createEffect(() => {
-    // Un workspace de otra cuenta trae su propio lector, con el token de su cuenta.
-    if (props.load) {
-      let vivo = true;
-      onCleanup(() => {
-        vivo = false;
-      });
-      void props.load().then((siguiente) => {
-        if (vivo) setUrl(siguiente);
-      }, () => undefined);
-      return;
-    }
-    const path = props.logo ?? null;
-    const workspace = props.id ?? null;
-    const gen = generacionDeLogo();
-    if (!path && !workspace) {
-      setUrl(null);
-      return;
-    }
-    let vivo = true;
-    onCleanup(() => {
-      vivo = false;
-    });
-    void urlDeLogo(path, workspace).then((siguiente) => {
-      if (vivo && generacionDeLogo() === gen) setUrl(siguiente);
-    });
-  });
-  return (
-    <Show when={url()} fallback={<>{monogram(props.name)}</>}>
-      {(src) => <img src={src()} alt="" draggable={false} class="absolute inset-0 size-full object-cover" />}
-    </Show>
-  );
-}
-
-/** Lo más urgente de un workspace: la señal común sobre un disco de superficie. */
-export function AttentionBadge(props: { state: AttentionState; class?: string }) {
-  return (
-    <span data-attention-badge={props.state} class={cn("grid size-3 shrink-0 place-items-center rounded-full bg-surface", props.class)}>
-      <SignalDot tone={taskSignalTone(props.state)} />
-    </span>
-  );
-}
+import { sessionVisible } from "./session-rail-view";
+import { WebOrganizationRows } from "./WebOrganizationRows";
 
 /** Cambiar de workspace con un clic y ver, sin entrar, qué espera en cada uno. */
 
@@ -96,15 +47,15 @@ export default function WorkspaceColumn(props: {
     const open = ws.activo();
     if (sessions.groups() === null || !open || !sessions.known.has(open)) return;
     const rows = visibles();
-    if (!rows.some((w) => w.id === open) && rows[0]) void ws.cambiarA(rows[0].id);
+    if (!rows.some((w) => w.id === open) || (ws.activoContexto() && !sessions.groups()?.some((group) => group.context_id === ws.activoContexto()))) { const target = organizationStartTarget(sessions.groups() ?? [], open, ws.activoContexto(), sessions.sessions.defaultContext()); void ws.cambiarA(target?.id ?? rows.find((row) => !sessions.known.has(row.id))?.id ?? null, target?.context); }
   });
   let sessionsSettled = false;
   createEffect(() => {
     const groups = sessions.groups();
     if (sessionsSettled || !groups?.length || groups.some((g) => !g.available || !g.added) || !ws.activo()) return;
     sessionsSettled = true;
-    const next = sessionStartTarget(ws.lista() ?? [], ws.activo() ?? null, hidden.ids(), groups);
-    if (next) void ws.cambiarA(next);
+    const next = sessions.known.has(ws.activo()!) ? organizationStartTarget(groups, ws.activo()!, ws.activoContexto(), sessions.sessions.defaultContext()) : null;
+    if (next && (next.id !== ws.activo() || next.context !== ws.activoContexto())) void ws.cambiarA(next.id, next.context);
   });
   let list: HTMLDivElement | undefined;
   const reorder = createNavigationReorder({
@@ -263,10 +214,13 @@ export default function WorkspaceColumn(props: {
       class="flex h-full w-12 shrink-0 flex-col"
     >
       <div ref={list} class="flex min-h-0 flex-1 flex-col items-center gap-1 overflow-x-hidden overflow-y-auto pt-2 pb-2">
-        <Show when={accounts && others().length > 0}>
+        <Show when={capabilities().groupAccount && !capabilities().nativeWindow} fallback={<>        <Show when={accounts && others().length > 0}>
           <AccountHeader accounts={accounts} id={accounts!.current.user_id} email={accounts!.current.email} extra={accounts!.current.extra} signedIn />
         </Show>
-        <SessionWorkspaceRows sessions={sessions} rows={visibles()} render={(w) => <Tile w={w()} />} />
+        <SessionWorkspaceRows sessions={sessions} rows={visibles()} render={(w) => <Tile w={w()} />} active={ws.activo() && ws.activoContexto() ? { workspace: ws.activo()!, context: ws.activoContexto()! } : null} tasksOf={(id, context) => props.attention.find((row) => row.workspace === id && row.context === context)?.tasks ?? []} stateLabel={(state) => state ? taskLabel(state, true) : ""} onOpen={(id, context) => void ws.cambiarA(id, context)} onManage={() => props.onManage()} />
+</>}>
+          <WebOrganizationRows rows={visibles()} active={ws.activo() ?? null} tasksOf={tasksOf} stateLabel={(state) => state ? taskLabel(state, true) : ""} onOpen={(id, context) => void ws.cambiarA(id, context)} onManage={() => props.onManage()} onRemove={(id) => danil.remove(id)} fallback={<SessionWorkspaceRows sessions={sessions} rows={visibles()} render={(w) => <Tile w={w()} />} active={null} tasksOf={(id) => tasksOf(id)} stateLabel={(state) => state ? taskLabel(state, true) : ""} onOpen={(id) => void ws.cambiarA(id)} onManage={() => props.onManage()} />} />
+        </Show>
         <AddWorkspaceMenu
           sessions={sessions}
           hidden={hiddenRows(ws.lista() ?? [])}
@@ -276,7 +230,7 @@ export default function WorkspaceColumn(props: {
           badge={AttentionBadge}
           labelOf={(s) => taskLabel(s, true)}
           onCreate={() => window.dispatchEvent(new CustomEvent("harness:new-workspace"))}
-          onOpen={(id) => void ws.cambiarA(id)}
+          onOpen={(id, context) => void ws.cambiarA(id, context)}
           onShow={hidden.show}
         />
         <For each={others()}>

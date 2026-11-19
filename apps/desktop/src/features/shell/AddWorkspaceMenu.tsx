@@ -32,7 +32,7 @@ export default function AddWorkspaceMenu(props: {
   /** Cómo se dice un estado junto al nombre, para quien no ve el distintivo. */
   labelOf: (state: AttentionState) => string;
   onCreate: () => void;
-  onOpen: (id: string) => void;
+  onOpen: (id: string, context?: string) => void;
   onShow: (id: string) => void;
 }) {
   const { open, setOpen, step, setStep, context, setContext, query, setQuery, close } = createAddWorkspaceMenuState();

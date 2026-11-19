@@ -169,3 +169,17 @@ test("web grouped source only exposes verified inventory and exact scoped worksp
   await engine.handle("list_workspaces");
   assert.equal(calls[2].get("x-danil-context"), "");
 });
+
+test('successful scoped redemption invalidates the existing organization balance event, unavailable does not', async (t) => {
+  const previous = globalThis.window;
+  const target = new EventTarget();
+  Object.defineProperty(globalThis, 'window', { configurable: true, value: target });
+  t.after(() => { if (previous === undefined) Reflect.deleteProperty(globalThis, 'window'); else Object.defineProperty(globalThis, 'window', { configurable: true, value: previous }); });
+  let changed = 0;
+  target.addEventListener('danil:organization-changed', () => changed++);
+  const group = { context: 'b', org: 'org-b', name: 'B', plan: 'paid' };
+  await redeemGroupCode(async () => ({ status: 201, body: {} }), group, 'CODE', 'key');
+  assert.equal(changed, 1);
+  await redeemGroupCode(async () => ({ status: 501 }), group, 'CODE', 'key2');
+  assert.equal(changed, 1);
+});

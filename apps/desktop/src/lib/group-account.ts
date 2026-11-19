@@ -1,4 +1,5 @@
 import { availableDanilCredits } from "./credits-balance.ts";
+import { groupPromoReply } from "./group-promo-reply.ts";
 import { normalizePromoCode } from "./promo-rejections.ts";
 
 export type GroupAccount = { context: string; org: string; name: string; plan: string | null; role?: string | null };
@@ -20,9 +21,7 @@ export async function redeemGroupCode(send: GroupSend, group: GroupAccount, code
   if (!value) throw { status: 422, code: "invalid_code" };
   try {
     const reply = await send(group.context, "POST", "/v1/workspaces/promo/redeem", { code: value }, key);
-    if (reply.status >= 200 && reply.status < 300) return (reply.body ?? {}) as { machine?: { state?: string } };
-    if (reply.status === 404 || reply.status === 501) return { unavailable: true as const };
-    throw { status: reply.status, code: (reply.body as { code?: string } | null)?.code, ...(reply.retry_after_ms === undefined ? {} : { retry_after_ms: reply.retry_after_ms }) };
+    return groupPromoReply(reply);
   } catch (error) {
     const refusal = error as { detail?: string; status?: number } | null;
     if (["session_echo_mismatch", "not_available_yet", "command_not_allowed", "path_not_allowed", "not_allowed", "invalid_request"].includes(refusal?.detail ?? "") || refusal?.status === 404 || refusal?.status === 501) return { unavailable: true as const };

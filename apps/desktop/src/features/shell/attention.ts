@@ -1,15 +1,15 @@
-import { machineOf } from "../machines/store";
-import { mergeAttention } from "@terminus/protocol";
-import { listen } from "../../lib/serviceEvents";
 import { createSignal, onCleanup, onMount, untrack } from "solid-js";
 import { invoke } from "../../lib/invoke.ts";
+import { listen } from "../../lib/serviceEvents";
+import { machineOf } from "../machines/store";
+import { contextAttentionOf, mergeContextAttention } from "./context-attention";
 
 /** Espejo de `workspace/attention.rs`. El orden es la prioridad. */
 export const ATTENTION_STATES = ["approving", "asked", "failed", "unseen"] as const;
 export type AttentionState = (typeof ATTENTION_STATES)[number];
 
 export type TaskAttention = { session: string; project: string; state: AttentionState };
-export type WorkspaceAttention = { workspace: string; tasks: TaskAttention[] };
+export type WorkspaceAttention = { context?: string; workspace: string; tasks: TaskAttention[] };
 
 /** Un servicio más nuevo puede mandar un estado que esta ventana no sabe pintar. */
 const known = (list: WorkspaceAttention[]) =>
@@ -40,7 +40,7 @@ export function createAttention() {
     const unlisten = listen<WorkspaceAttention[]>("attention", (e) => {
       asked++;
       // La lista entera reemplaza; una entrada suelta solo cambia su workspace.
-      setList((now) => mergeAttention(now, known(e.payload)));
+      setList((now) => mergeContextAttention(now, known(e.payload)));
     });
     onCleanup(() => void unlisten.then((stop) => stop()));
     window.addEventListener("harness:workspace", reload);
@@ -51,7 +51,7 @@ export function createAttention() {
     });
   });
 
-  const of = (workspace: string | null) => list().find((w) => w.workspace === workspace)?.tasks ?? [];
+  const of = (workspace: string | null) => contextAttentionOf(list(), workspace);
 
   return {
     list,
