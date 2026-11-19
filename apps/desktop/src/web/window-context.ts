@@ -4,7 +4,7 @@ import type { GroupAccount, GroupAccountCapabilities } from "../lib/group-accoun
 
 type Client = ReturnType<typeof machinesClient>;
 /** Solo publica la organización después de verificar el inventario con su eco. */
-export function windowContext(options: { legacy: Client; factory?: (context: string) => Client; account?: GroupAccountCapabilities["groupAccount"]; fleet: () => Fleet; revision: () => unknown }) {
+export function windowContext(options: { legacy: Client; factory?: (context: string) => Client; account?: GroupAccountCapabilities["groupAccount"]; fleet: () => Fleet; revision: () => unknown; onContextsSettled?: (contexts: readonly string[]) => void }) {
   let verified: GroupAccount | null = null;
   let pending: GroupAccount | null = null;
   const clients = new Map<string, Client>();
@@ -22,6 +22,12 @@ export function windowContext(options: { legacy: Client; factory?: (context: str
     info: (context: string) => pending?.context === context ? pending : verified?.context === context ? verified : null,
     async inventory() {
       const group = await options.account?.current(); pending = group ?? null;
+      const settled = options.account?.contexts?.();
+      if (settled !== undefined && settled !== null) {
+        if (verified?.context !== group?.context || verified && !settled.includes(verified.context)) verified = null;
+        options.fleet().pruneContexts(settled);
+        options.onContextsSettled?.(settled);
+      }
       const legacy = !group && (!options.account || options.account.legacy?.());
       if (!legacy && (!group || !options.factory)) { verified = null; return null; }
       const answer = await client(group?.context).list();

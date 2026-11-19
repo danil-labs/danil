@@ -145,7 +145,7 @@ export function startAccountMachines(target: Target = window) {
     // `403 organization_selection_required`: se abre el selector de organización (si esta ventana lo tiene).
     const organizations = (capabilities() as { organizations?: () => Promise<{ report: (e: unknown) => unknown }> }).organizations;
     void organizations?.().then((selector) => selector.report(e));
-  });
+  }, undefined, contexts => { installed?.router.pruneContexts(contexts); installed?.fleet.pruneContexts(contexts); });
   let cloudIds = new Set<string>();
   /** `machines.session.renew` anunciada por el borde: el relay renueva dentro del canal. */
   let cloudRenew = false;
@@ -268,7 +268,7 @@ export function startAccountMachines(target: Target = window) {
   /** `endpoint` null: modo local, solo huéspedes, sin nada de la cuenta (token, relay, registro, pantallas, espacios). */
   function install(self: string, endpoint: string | null, others: Computer[], key: string) {
     const [changed, bump] = createSignal(0);
-    const cloudRelay = createCloudRelayFactory(cloud, () => cloudRenew, () => void sync());
+    const cloudRelay = createCloudRelayFactory(cloud, () => cloudRenew, () => void sync(), { suspended: info => router.attentionSuspended(info.id, info.context), resumed: (info, value) => router.attentionResumed(info.id, info.context, value) });
     const fleet = new Fleet({
       self,
       connect: (info) => {
@@ -332,6 +332,8 @@ export function startAccountMachines(target: Target = window) {
       home: () => ({ wakes: homeWakes, os: homeOs, features: homeFeatures, version: homeVersion }),
     });
     fleet.setMachines([...others.map(infoOf), ...guestMachines]);
+    const validatedContexts = cloud.validatedContexts();
+    if (validatedContexts !== null) { router.pruneContexts(validatedContexts); fleet.pruneContexts(validatedContexts); }
     observeEngine(fleet);
     machinesListed(fleet);
     fleet.subscribeEvents();

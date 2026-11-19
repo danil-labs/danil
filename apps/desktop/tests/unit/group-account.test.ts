@@ -183,3 +183,46 @@ test('successful scoped redemption invalidates the existing organization balance
   await redeemGroupCode(async () => ({ status: 501 }), group, 'CODE', 'key2');
   assert.equal(changed, 1);
 });
+
+test("web GC uses every settled context including inactive ones, never an erroneous or malformed sessions response", async () => {
+  const { webGroupAccount } = await import("../../src/web/group-account.ts");
+  const { windowContext } = await import("../../src/web/window-context.ts");
+  let body: unknown = { default_context: "selected", items: [{ contexts: [{ context_id: "selected", org: "A" }, { context_id: "inactive", org: "B" }] }] };
+  let failure: number | null = null;
+  const account = webGroupAccount({ call: async () => { if (failure) throw { status: failure }; return new Response(JSON.stringify(body)); }, mutation: async () => new Response() });
+  const pruned: string[][] = [];
+  const source = windowContext({ legacy: { list: async () => ({ kind: "ok", value: [] }) } as never, factory: () => ({ list: async () => ({ kind: "error", status: 503 }) }) as never,
+    account, fleet: () => ({ pruneContexts: ids => pruned.push([...ids]) }) as never, revision: () => {} });
+  await source.inventory();
+  assert.deepEqual(pruned, [["selected", "inactive"]]);
+  for (failure of [404, 501, 503]) { await source.inventory(); assert.equal(account.contexts(), null); }
+  failure = null; body = { items: [{ contexts: "malformed" }] };
+  await source.inventory(); assert.equal(account.contexts(), null);
+  assert.equal(pruned.length, 1);
+  body = { items: [] };
+  await source.inventory();
+  assert.deepEqual(pruned, [["selected", "inactive"], []]);
+});
+
+test("revoked web group disappears before its replacement machine inventory answers", async () => {
+  const { windowContext } = await import("../../src/web/window-context.ts");
+  let group = { context: "old", org: "A", name: "A", plan: "teams" };
+  let release!: () => void;
+  let delayed = false;
+  let changes = 0;
+  const source = windowContext({ legacy: {} as never, factory: () => ({ list: async () => {
+    if (delayed) await new Promise<void>(resolve => { release = resolve; });
+    return { kind: "ok", value: [] };
+  } }) as never, account: { current: async () => group, contexts: () => [group.context], send: async () => ({ status: 404 }) },
+    fleet: () => ({ pruneContexts: () => {}, available: () => null }) as never, revision: () => {}, onContextsSettled: () => { changes++; } });
+  await source.inventory();
+  assert.equal(source.source.group()?.context, "old");
+  group = { ...group, context: "new", org: "B", name: "B" }; delayed = true;
+  const pending = source.inventory();
+  await new Promise(resolve => setTimeout(resolve, 0));
+  assert.equal(changes, 2);
+  assert.equal(source.source.group(), null);
+  assert.equal(source.source.workspaces(), null);
+  release(); await pending;
+  assert.equal(source.source.group()?.context, "new");
+});

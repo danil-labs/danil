@@ -37,7 +37,7 @@ export function mountWindow(base: Base, mounted: Mounted) {
   const powers = new Map<string, string>();
   const unavailable = () => ({ what: t("web.machines.unavailable"), detail: "machines_unavailable" });
   const pool = createContextRelayPool();
-  const scope = windowContext({ legacy: base.machines, factory: base.contextMachines, account: base.groupAccount, fleet: () => fleet, revision });
+  const scope = windowContext({ legacy: base.machines, factory: base.contextMachines, account: base.groupAccount, fleet: () => fleet, revision, onContextsSettled: contexts => { active.pruneContexts(contexts); bump(n => n + 1); } });
   const fleet = new Fleet({ self: null, storage: mounted.storage,
     connect: info => {
       const create = () => {
@@ -58,7 +58,7 @@ export function mountWindow(base: Base, mounted: Mounted) {
           return link.call(...args);
         } };
       };
-      return info.context ? pool.link(info.id, create) : create();
+      return info.context ? pool.link(info.id, create, { onSuspend: () => active.attentionSuspended(info.id, info.context), onResume: (value) => active.attentionResumed(info.id, info.context, value) }) : create();
     },
     wake: async (id, context) => {
       if (!base.permits("machines.start")) return "not_startable";

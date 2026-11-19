@@ -452,6 +452,15 @@ export class Fleet {
     return members.find((id) => this.power(id, context) === "on") ?? members[0] ?? null;
   }
 
+  /** Solo un conjunto de sesiones asentado puede revocar contextos; el inventario no basta. */
+  pruneContexts(validContexts: Iterable<string>) {
+    const valid = new Set(validContexts);
+    for (const member of [...this.members.values()]) if (member.info.context && !valid.has(member.info.context)) this.closeMember(member.info.id, member.info.context);
+    for (const scope of this.registries.keys()) if (scope && !valid.has(scope)) this.registries.delete(scope);
+    for (const scope of this.sharedSpaces.keys()) if (scope && !valid.has(scope)) this.sharedSpaces.delete(scope);
+    this.book.pruneContexts(valid);
+  }
+
   closeMember(machine: string, context?: string) {
     const key = memberKey(machine, context);
     const member = this.members.get(key);
@@ -711,6 +720,7 @@ export class Fleet {
       if (envelope.command === "list_workspaces" && !cached) this.noteListing(machine, value, context);
       member?.fresh?.add(key);
     } catch (error) {
+      if (this.member(machine, context) !== member) throw new FleetError("unknown_machine", machine);
       const e = fromRelay(error, machine);
       if (e.code === "cross_machine" || e.code === "unknown_machine") throw e;
       if (e.code === "machine_off") slice = before?.has ? { ...before, status: "cached", error: e.code } : keep("off", e.code);

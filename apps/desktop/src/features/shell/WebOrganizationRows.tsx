@@ -7,7 +7,7 @@ import { watchOrganizationCredits } from "./organization-credits-watch";
 import { organizationRailPreferences } from "./organization-rail-preferences";
 import type { SessionRailGroup } from "./session-groups";
 
-export function WebOrganizationRows(props: { rows: readonly { id: string; name: string; logo: string | null }[]; active: string | null; tasksOf: (id: string) => TaskAttention[]; stateLabel: (state: AttentionState | null) => string; onOpen: (id: string, context?: string) => void; onManage: () => void; onRemove: (id: string) => void; fallback: JSX.Element }) {
+export function WebOrganizationRows(props: { rows: readonly { id: string; name: string; logo: string | null }[]; active: string | null; tasksOf: (id: string, context: string) => TaskAttention[]; staleOf?: (id: string, context: string) => boolean; stateLabel: (state: AttentionState | null) => string; onOpen: (id: string, context?: string) => void; onManage: () => void; onRemove: (id: string) => void; fallback: JSX.Element }) {
   const source = capabilities().groupAccount;
   const verified = capabilities().webRailSource;
   const accounts = capabilities().webAccounts;
@@ -23,6 +23,6 @@ export function WebOrganizationRows(props: { rows: readonly { id: string; name: 
     close: async () => { accounts?.signOut(); }, closeEmail: async () => { accounts?.signOut(); },
   }, remove: (_context, id) => { props.onRemove(id); } };
   return <Show when={verified?.group()} fallback={props.fallback}>
-    <OrganizationRailLayout groups={groups()} rows={props.rows} preference={prefs.preference()} used={prefs.used} active={props.active && verified?.group() ? { workspace: props.active, context: verified!.group()!.context } : null} render={(org, stacked) => <OrganizationRailGroup web org={org()} stacked={stacked()} sessions={actions} active={props.active ? { workspace: props.active, context: verified!.group()!.context } : null} tasksOf={(id) => props.tasksOf(id)} stateLabel={props.stateLabel} onOpen={(tile) => { prefs.use(tile.context.org); props.onOpen(tile.id, tile.context.context_id); }} onManage={() => props.onManage()} onChange={(action) => prefs.change([org().id], org().id, action)} index={0} count={1} credits={credits} />} />
+    <OrganizationRailLayout groups={groups()} rows={props.rows} preference={prefs.preference()} used={prefs.used} active={props.active && verified?.group() ? { workspace: props.active, context: verified!.group()!.context } : null} render={(org, stacked) => <OrganizationRailGroup web org={org()} stacked={stacked()} sessions={actions} active={props.active ? { workspace: props.active, context: verified!.group()!.context } : null} tasksOf={props.tasksOf} staleOf={props.staleOf} stateLabel={props.stateLabel} onOpen={(tile) => { prefs.use(tile.context.org); props.onOpen(tile.id, tile.context.context_id); }} onManage={() => props.onManage()} onChange={(action) => prefs.change([org().id], org().id, action)} index={0} count={1} credits={credits} />} />
   </Show>;
 }

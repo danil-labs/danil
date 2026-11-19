@@ -15,9 +15,22 @@ export function scopedFleet(fleet: Fleet, scope: Scope): Fleet {
   const machines = () => fleet.machines().filter(row => row.context === scope.context && !scope.localOnly &&
     (!scope.context || row.kind === "organization" && row.organizationId === scope.org));
   const allowed = (machine: string) => machines().some(row => row.id === machine);
+  const members = (workspace: string | null) => fleet.membersOf(workspace, scope.context).filter(allowed);
   return new Proxy(fleet, {
     get(target, property) {
       if (property === "machines") return machines;
+      if (property === "has") return (machine: string) => allowed(machine) && fleet.has(machine, scope.context);
+      if (property === "info") return (machine: string) => allowed(machine) ? fleet.info(machine, scope.context) : undefined;
+      if (property === "membersOf") return members;
+      if (property === "leadOf") return (workspace: string | null) => {
+        const rows = members(workspace).filter(machine => fleet.power(machine, scope.context) !== "outdated");
+        return rows.find(machine => fleet.power(machine, scope.context) === "on") ?? rows[0] ?? null;
+      };
+      if (property === "license") return () => machines().map(machine => fleet.blocked(machine.id, scope.context)).find(Boolean) ?? null;
+      if (property === "remotes") return () => new Set(machines().map(machine => machine.id));
+      if (property === "organizationMachines") return (org: string) => fleet.organizationMachines(org, scope.context).filter(allowed);
+      if (property === "available") return (org: string) => scope.localOnly || scope.org && org !== scope.org ? null : fleet.available(org, scope.context);
+      if (property === "organizationWorkspaces") return () => fleet.organizationWorkspaces(scope.context).map(row => ({ ...row, machines: row.machines.filter(allowed) })).filter(row => row.machines.length);
       if (property === "close") return () => {};
       const method = Reflect.get(target, property);
       if (typeof method !== "function" || typeof property !== "string") return method;

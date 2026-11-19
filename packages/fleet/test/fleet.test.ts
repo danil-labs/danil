@@ -1238,3 +1238,59 @@ test("an empty context is the unchanged legacy member, not another connection", 
   assert.deepEqual(fleet.info("physical"), info);
   fleet.close();
 });
+
+test("settled session pruning revokes persisted contexts unseen by this inventory and preserves legacy copies", () => {
+  const storage = memoryStorage();
+  const saved = new SliceBook(storage);
+  for (const machine of ["missing-one", "missing-two"]) saved.put({ machine, context: "closed-while-away", status: "ok", has: true, value: { private: machine }, at: 1 }, "query");
+  saved.put({ machine: "current", context: "valid", status: "ok", has: true, value: "keep-valid", at: 2 }, "query");
+  saved.put({ machine: "legacy", status: "ok", has: true, value: "keep-legacy", at: 3 }, "query");
+  saved.flush();
+  const fleet = new Fleet({ storage, connect: () => fakeLink() });
+  // Un inventario transitorio vacío no es autoridad para revocar sesiones persistidas.
+  fleet.setMachines([]);
+  assert.equal(new SliceBook(storage).get("missing-one", "query", "closed-while-away")?.has, true);
+  fleet.pruneContexts(["valid"]);
+  const restored = new SliceBook(storage);
+  assert.equal(restored.get("missing-one", "query", "closed-while-away"), null);
+  assert.equal(restored.get("missing-two", "query", "closed-while-away"), null);
+  assert.equal(restored.get("current", "query", "valid")?.value, "keep-valid");
+  assert.equal(restored.get("legacy", "query")?.value, "keep-legacy");
+  fleet.close();
+});
+
+test("closing one context prunes all its live and unlisted cached machines, facts and late failures", async () => {
+  const storage = memoryStorage();
+  const saved = new SliceBook(storage);
+  saved.put({ machine: "not-in-inventory", context: "closed", status: "ok", has: true, value: "private", at: 1 }, "query");
+  saved.flush();
+  const links = new Map<string, ReturnType<typeof fakeLink>>();
+  const fleet = new Fleet({ storage, connect: (info) => {
+    const link = fakeLink({ answers: { list_tasks: [{ id: info.context ?? "legacy" }] } });
+    links.set(memberKey(info.id, info.context), link); return link;
+  } });
+  const row = { id: "physical", name: "Server", wakes: false };
+  fleet.setMachines([row, { ...row, context: "closed" }, { ...row, id: "second", context: "closed" }, { ...row, context: "valid" }]);
+  const query = { machine: "physical", workspace: "w", command: "list_tasks" };
+  await Promise.all([fleet.read(query), fleet.read({ ...query, context: "closed" }), fleet.read({ ...query, context: "valid" })]);
+  fleet.flush();
+  fleet.setRegistry([{ id: "private-workspace", name: "Private" }], "closed");
+  fleet.markShared("private-space", "closed");
+  let rejectLate!: (reason: unknown) => void;
+  links.get(memberKey("physical", "closed"))!.call = () => new Promise((_resolve, reject) => { rejectLate = reject; });
+  const late = fleet.read({ ...query, context: "closed" });
+  await new Promise(resolve => setTimeout(resolve, 0));
+  fleet.pruneContexts(["valid"]);
+  rejectLate({ code: "license_required" });
+  await assert.rejects(late, { code: "unknown_machine" });
+  assert.equal(links.get(memberKey("physical", "closed"))?.closed(), true);
+  assert.equal(links.get(memberKey("second", "closed"))?.closed(), true);
+  assert.equal(fleet.has("physical", "closed"), false);
+  assert.equal(fleet.getRegistry("closed"), null);
+  assert.equal(fleet.sharedCount("closed"), 0);
+  assert.equal(fleet.peek({ ...query, context: "closed" }), null);
+  assert.equal(new SliceBook(storage).get("not-in-inventory", "query", "closed"), null);
+  assert.equal(fleet.peek(query)?.has, true);
+  assert.equal(fleet.peek({ ...query, context: "valid" })?.has, true);
+  fleet.close();
+});

@@ -85,4 +85,5 @@ test("Free is offered only with E1 and a server engine id, creates locally and s
   assert.equal(creations[0].id, "engine-free");
   assert.deepEqual(creations[0].account, { org: "free-org", account_id: "42" });
   assert.ok(await until(() => doc.querySelector('[data-workspace-tile="engine-free"]')), "sealed Free enters the connected organization rail");
+  assert.ok(await until(() => doc.querySelector('[data-workspace-context="free-context"][aria-current="true"]')), "a Free-only window keeps the context of the active tile even without an organization machine");
 });

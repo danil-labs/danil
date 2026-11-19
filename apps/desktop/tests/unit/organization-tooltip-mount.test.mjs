@@ -125,6 +125,12 @@ test("organization tooltip shares hover reads, refreshes on existing events and 
   assert.equal(copies.length, 2);
   assert.match(copies[0].getAttribute("aria-label"), /ana@example.test/);
   assert.match(copies[1].getAttribute("aria-label"), /bea@example.test/);
+  integrated.stale();
+  assert.equal(copies[1].getAttribute("data-attention-stale"), "");
+  assert.match(copies[1].getAttribute("aria-label"), /Atención sin actualizar/);
+  assert.equal(copies[0].hasAttribute("data-attention-stale"), false);
+  integrated.fresh();
+  assert.equal(copies[1].hasAttribute("data-attention-stale"), false);
   copies[1].click();
   assert.ok(integrated.actions.includes("open/bea/shared"));
   copies[1].dispatchEvent(new app.w.KeyboardEvent("keydown", { key: "ContextMenu", bubbles: true }));

@@ -3,10 +3,10 @@ import type { Link } from "@terminus/fleet";
 
 type Clock = { now(): number; set(callback: () => void, ms: number): unknown; clear(timer: unknown): void };
 const clock: Clock = { now: Date.now, set: setTimeout, clear: (timer) => clearTimeout(timer as ReturnType<typeof setTimeout>) };
-type Entry = { machine: string; relay: Link | null; busy: number; used: number; timer?: unknown; open(): Link; suspend(): void };
+type Entry = { machine: string; relay: Link | null; busy: number; used: number; open(): Link; suspend(): void };
 
 /** El límite es por máquina física; los enlaces y sus listeners siguen perteneciendo a cada contexto. */
-export function createContextRelayPool(time: Clock = clock, limit = 4, idleMs = 5 * 60_000) {
+export function createContextRelayPool(time: Clock = clock, limit = 4) {
   const entries = new Set<Entry>();
   const waiting = new Set<() => void>();
   const signal = () => { for (const wake of [...waiting]) wake(); };
@@ -19,7 +19,7 @@ export function createContextRelayPool(time: Clock = clock, limit = 4, idleMs = 
     return true;
   };
   return {
-    link(machine: string, create: () => Link): Link {
+    link(machine: string, create: () => Link, hooks: { onSuspend?(): void; onResume?(attention: unknown): void | Promise<void> } = {}): Link {
       let closed = false;
       let after: number | null | undefined;
       let state: MachineState = "unknown";
@@ -29,22 +29,27 @@ export function createContextRelayPool(time: Clock = clock, limit = 4, idleMs = 
       const blocked = new Set<(value: Blocked | null) => void>();
       const deferred = new Set<(value: DeferredFrame) => void>();
       let stops: (() => void)[] = [];
-      const arm = () => {
-        if (closed) return;
-        if (entry.timer !== undefined) time.clear(entry.timer);
-        entry.timer = time.set(() => { if (!entry.busy) { entry.suspend(); signal(); } }, idleMs);
-        (entry.timer as { unref?: () => void })?.unref?.();
+      let opened = false;
+      let recovering = false;
+      let ready: Promise<void> = Promise.resolve();
+      let buffered: EventsPage[] = [];
+      const deliver = (value: EventsPage) => {
+        if (recovering) { buffered.push(value); return; }
+        if (value.events?.length) entry.used = time.now();
+        if (value.cursor !== null) after = value.cursor;
+        for (const listener of events) listener(value);
       };
       const entry: Entry = {
         machine, relay: null, busy: 0, used: time.now(),
         suspend() {
-          if (entry.timer !== undefined) time.clear(entry.timer);
-          entry.timer = undefined;
           for (const stop of stops) stop();
           stops = [];
           if (entry.relay) state = entry.relay.state();
+          const hadRelay = !!entry.relay;
           entry.relay?.close();
           entry.relay = null;
+          buffered = [];
+          if (hadRelay && !closed) hooks.onSuspend?.();
         },
         open() {
           if (closed) throw { code: "unknown_machine", detail: machine };
@@ -53,16 +58,28 @@ export function createContextRelayPool(time: Clock = clock, limit = 4, idleMs = 
           entry.relay = relay;
           try {
             stops.push(relay.onState((value) => { state = value; for (const listener of states) listener(value); }));
-            stops.push(relay.onEvents((value) => {
-              if (value.events?.length) { entry.used = time.now(); arm(); }
-              for (const listener of events) listener(value);
-            }));
+            stops.push(relay.onEvents(deliver));
             if (relay.onEngine) stops.push(relay.onEngine((value) => { for (const listener of engines) listener(value); }));
             if (relay.onBlocked) stops.push(relay.onBlocked((value) => { for (const listener of blocked) listener(value); }));
             if (relay.onDeferred) stops.push(relay.onDeferred((value) => { for (const listener of deferred) listener(value); }));
-            if (after !== undefined) relay.subscribe(after);
+            recovering = opened;
+            opened = true;
             relay.start();
-            arm();
+            if (recovering) {
+              entry.busy++;
+              ready = Promise.resolve().then(async () => {
+                const answer = await relay.call(crypto.randomUUID(), "list_workspace_attention", null, null, {}, 30_000);
+                if (closed || entry.relay !== relay) throw { code: "unknown_machine", detail: machine };
+                if (answer.cached) throw { code: "machine_off", detail: machine };
+                if (hooks.onResume) await hooks.onResume(answer.value);
+                else for (const listener of events) listener({ cursor: after ?? null, events: [{ name: "attention", payload: answer.value }] });
+                recovering = false;
+                const pending = buffered; buffered = [];
+                for (const page of pending) deliver(page);
+                if (after !== undefined) relay.subscribe(after);
+              }).catch(error => { entry.suspend(); throw error; }).finally(() => { entry.busy--; signal(); });
+              void ready.catch(() => {});
+            } else { ready = Promise.resolve(); if (after !== undefined) relay.subscribe(after); }
             return relay;
           } catch (error) { entry.suspend(); throw error; }
         },
@@ -96,14 +113,18 @@ export function createContextRelayPool(time: Clock = clock, limit = 4, idleMs = 
         async call(id, command, workspace, folder, args, timeout = 30_000) {
           const relay = await acquire(timeout);
           entry.used = time.now();
-          try { return await relay.call(id, command, workspace, folder, args, timeout); }
-          finally { entry.busy--; arm(); signal(); }
+          try {
+            if (recovering) await ready;
+            if (closed || entry.relay !== relay) throw { code: "unknown_machine", detail: machine };
+            return await relay.call(id, command, workspace, folder, args, timeout);
+          }
+          finally { entry.busy--; signal(); }
         },
         onState: (listener) => subscribeHook(states, listener), onEvents: (listener) => subscribeHook(events, listener),
         onEngine: (listener) => subscribeHook(engines, listener), onBlocked: (listener) => subscribeHook(blocked, listener), onDeferred: (listener) => subscribeHook(deferred, listener),
         blocked: () => entry.relay?.blocked?.() ?? null,
         deferred: () => entry.relay?.deferred?.() ?? { actions: [], done: [] },
-        subscribe(value) { after = value; entry.relay?.subscribe(value); },
+        subscribe(value) { after = value; if (!recovering) entry.relay?.subscribe(value); },
         start() { if (!closed && !entry.relay && [...entries].filter((other) => other.machine === machine && other.relay).length < limit) entry.open(); },
         retry() { if (entry.relay) entry.relay.retry?.(); else if (!closed && capacity(entry)) entry.open(); },
         close() { closed = true; entry.suspend(); entries.delete(entry); signal(); },

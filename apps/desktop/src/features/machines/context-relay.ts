@@ -5,7 +5,7 @@ import { createContextRelayPool } from "./context-relay-pool.ts";
 import type { createSessionCloud } from "./session-cloud.ts";
 
 /** Los tickets son de un solo uso y nunca se comparten entre identidades de la misma máquina. */
-export function createCloudRelayFactory(cloud: ReturnType<typeof createSessionCloud>, renew: () => boolean, unauthorized: () => void) {
+export function createCloudRelayFactory(cloud: ReturnType<typeof createSessionCloud>, renew: () => boolean, unauthorized: () => void, attention?: { suspended(info: MachineInfo): void; resumed(info: MachineInfo, value: unknown): void }) {
   const pool = createContextRelayPool();
   return (info: MachineInfo) => {
     // Canal de datos con ticket de un solo uso (`ticket.*`), nunca `bearer.*`.
@@ -18,6 +18,6 @@ export function createCloudRelayFactory(cloud: ReturnType<typeof createSessionCl
       },
       renewInChannel: renew, onUnauthorized: unauthorized,
     });
-    return info.context ? pool.link(info.id, create) : create();
+    return info.context ? pool.link(info.id, create, attention ? { onSuspend: () => attention.suspended(info), onResume: (value) => attention.resumed(info, value) } : undefined) : create();
   };
 }

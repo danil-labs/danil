@@ -180,7 +180,7 @@ test("two people on the same organization buy tickets with their own context", a
   assert.deepEqual(merged.map((row) => [row.context, row.service_features]), [["ana", ["known"]], ["bea", ["known"]]]);
 });
 
-test("the context relay pool caps physical connections, reopens the correct identity and expires idle links", async () => {
+test("the context relay pool caps physical connections, reopens the correct identity and keeps quiet connections subscribed", async () => {
   let now = 0;
   let serial = 0;
   const timers = new Map<number, { at: number; run(): void }>();
@@ -212,9 +212,9 @@ test("the context relay pool caps physical connections, reopens the correct iden
   tick(5 * 60_000 - 1);
   assert.equal(active, 4);
   tick(1);
-  assert.equal(active, 0);
+  assert.equal(active, 4);
   await links[4].call("request", "list_workspaces", null, null, {});
-  assert.equal(active, 1);
+  assert.equal(active, 4);
   assert.equal(calls.at(-1), "e");
   for (const link of links) link.close();
   assert.equal(active, 0);
@@ -288,30 +288,102 @@ test("a factory failure while waking a queued caller rejects it and permits a la
   } finally { first.close(); queued.close(); }
 });
 
-test("real streamed events refresh relay use while empty heartbeat pages do not", () => {
+test("a quiet relay remains subscribed beyond five minutes and receives new attention", () => {
   let now = 0;
-  let serial = 0;
-  const timers = new Map<number, { at: number; run(): void }>();
-  const time = { now: () => now, set: (run: () => void, ms: number) => { const id = ++serial; timers.set(id, { at: now + ms, run }); return id; }, clear: (id: unknown) => { timers.delete(id as number); } };
-  const tick = (ms: number) => { now += ms; for (const [id, timer] of [...timers]) if (timer.at <= now) { timers.delete(id); timer.run(); } };
+  const time = { now: () => now, set: () => { throw new Error("no idle timer"); }, clear: () => {} };
   const pool = createContextRelayPool(time);
   let active = 0;
   let emit!: (page: { cursor: number | null; events?: { name: string; payload: unknown }[] }) => void;
+  const received: unknown[] = [];
   const link = pool.link("machine", () => ({
     state: () => "online", onState: () => () => {}, onEvents: (listener) => { emit = listener; return () => {}; }, subscribe: () => {},
     start() { active++; }, close() { active--; }, async call() { return { value: null, cached: null }; },
   }));
+  link.onEvents(page => received.push(page));
+  link.subscribe(null);
   link.start();
-  tick(4 * 60_000);
-  emit({ cursor: 1, events: [{ name: "chat", payload: { text: "still working" } }] });
-  tick(60_000);
+  now = 10 * 60_000;
+  emit({ cursor: 1, events: [{ name: "attention", payload: [{ workspace: "shared", tasks: [{ id: "new" }] }] }] });
   assert.equal(active, 1);
-  emit({ cursor: 1, events: [] });
-  emit({ cursor: 1 });
-  tick(4 * 60_000 - 1);
-  assert.equal(active, 1);
-  tick(1);
-  assert.equal(active, 0);
+  assert.equal(received.length, 1);
   link.close();
-  assert.equal(timers.size, 0);
+  assert.equal(active, 0);
+});
+
+test("the fifth context marks its victim stale and recovery reads attention before releasing events", async () => {
+  const pool = createContextRelayPool();
+  const order: string[] = [];
+  const stale = new Set<string>();
+  let anaStarts = 0;
+  let finishAttention!: (answer: { value: unknown; cached: null }) => void;
+  const links = ["ana", "bea", "c", "d", "e"].map(context => pool.link("machine", () => {
+    let events!: (page: { cursor: number | null; events?: { name: string; payload: unknown }[] }) => void;
+    return {
+      state: () => "online", onState: () => () => {}, onEvents: listener => { events = listener; return () => {}; },
+      subscribe() { if (context === "ana" && anaStarts > 1) order.push("subscribe"); },
+      start() { if (context === "ana" && ++anaStarts > 1) events({ cursor: 2, events: [{ name: "attention", payload: [{ workspace: "shared", tasks: [] }] }] }); },
+      close() {},
+      async call(_id, command) {
+        if (context === "ana" && command === "list_workspace_attention") {
+          order.push("read-attention");
+          return await new Promise<{ value: unknown; cached: null }>(resolve => { finishAttention = resolve; });
+        }
+        if (context === "ana") order.push("call");
+        return { value: context, cached: null };
+      },
+    };
+  }, {
+    onSuspend() { stale.add(context); },
+    onResume(value) { if (context === "ana") { assert.deepEqual(value, [{ workspace: "shared", tasks: [{ id: "fresh" }] }]); order.push("fresh"); } stale.delete(context); },
+  }));
+  try {
+    links[0].onEvents(() => order.push("event"));
+    for (const link of links) { link.subscribe(null); link.start(); }
+    await links[4].call("request", "list_workspaces", null, null, {});
+    assert.equal(stale.has("ana"), true);
+    const resumed = links[0].call("request", "list_workspaces", null, null, {});
+    await Promise.resolve(); await Promise.resolve();
+    assert.deepEqual(order, ["read-attention"]);
+    assert.equal(stale.has("ana"), true);
+    finishAttention({ value: [{ workspace: "shared", tasks: [{ id: "fresh" }] }], cached: null });
+    await resumed;
+    assert.equal(stale.has("ana"), false);
+    assert.deepEqual(order, ["read-attention", "fresh", "event", "subscribe", "call"]);
+  } finally { for (const link of links) link.close(); }
+});
+
+test("settled session ids revoke immediately before slow inventory, without treating failures or legacy as authoritative", async () => {
+  const revoked: string[][] = [];
+  let release!: () => void;
+  let status: unknown = { sessions: [{ contexts: [{ context_id: "live", org: "A" }] }] };
+  let block = true;
+  const cloud = createSessionCloud(async (command, args) => {
+    if (command === "danil_session_status") { if (status instanceof Error) throw status; return status; }
+    if (block) await new Promise<void>(resolve => { release = resolve; });
+    return { status: 200, body: args?.path === "/v1/capabilities" ? { contract: "mvp-v1", items: [{ name: "machines", version: 1, status: "available" }] } : { items: [] } };
+  }, undefined, undefined, ids => { revoked.push([...ids]); });
+  const pending = cloud.rows();
+  await new Promise(resolve => setTimeout(resolve, 0));
+  assert.deepEqual(revoked, [["live"]]);
+  assert.deepEqual(cloud.validatedContexts(), ["live"]);
+  block = false; release(); await pending;
+  for (status of [null, new Error("offline"), { state: "connected" }, { sessions: [{ contexts: "malformed" }] }]) {
+    await cloud.rows();
+    assert.equal(cloud.validatedContexts(), null);
+    assert.equal(revoked.length, 1);
+  }
+  status = { sessions: [] };
+  await cloud.rows();
+  assert.deepEqual(revoked, [["live"], []]);
+  assert.deepEqual(cloud.validatedContexts(), []);
+});
+
+test("valid session authority survives an unavailable machine inventory", async () => {
+  const settled: string[][] = [];
+  const cloud = createSessionCloud(async (command) => command === "danil_session_status"
+    ? { sessions: [{ contexts: [{ context_id: "live", org: "A" }] }] }
+    : { status: 503, body: { code: "temporarily_unavailable" } }, undefined, undefined, ids => { settled.push([...ids]); });
+  await cloud.rows();
+  assert.deepEqual(settled, [["live"]]);
+  assert.deepEqual(cloud.validatedContexts(), ["live"]);
 });

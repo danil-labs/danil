@@ -29,4 +29,4 @@ export async function redeemGroupCode(send: GroupSend, group: GroupAccount, code
   }
 }
 
-export type GroupAccountCapabilities = { webRailSource?: { group: () => GroupAccount | null; workspaces: () => readonly { id: string; name: string; logo?: string | null }[] | null }; webPromoRole?: string | null; groupAccount?: { send: GroupSend; current: () => Promise<GroupAccount | null>; legacy?: () => boolean } };
+export type GroupAccountCapabilities = { webRailSource?: { group: () => GroupAccount | null; workspaces: () => readonly { id: string; name: string; logo?: string | null }[] | null }; webPromoRole?: string | null; groupAccount?: { send: GroupSend; current: () => Promise<GroupAccount | null>; legacy?: () => boolean; contexts?: () => readonly string[] | null } };

@@ -487,5 +487,6 @@
   "shell.rail.tip_balance": "Saldo: {amount} en Danil Credits",
   "shell.rail.tip_balance_loading": "Saldo: …",
   "shell.rail.tip_balance_unavailable": "Saldo: No disponible",
-  "shell.rail.open": "Abrir"
+  "shell.rail.open": "Abrir",
+  "shell.rail.attention_stale": "Atención sin actualizar"
 }

@@ -2,6 +2,7 @@ import { type Accessor, createMemo, createSignal, Show } from "solid-js";
 import { t } from "../../lib/i18n";
 import { KeyedList } from "../../ui/KeyedList";
 import { ITEM_DE_MENU, Popover, PopoverAnchor, PopoverContent } from "../../ui/Popover";
+import { contextAttentionStale } from "../machines/index";
 import { cerrarConEscape as createEscapeCloser } from "../settings/index";
 import { menuArrows } from "./AddWorkspaceMenu";
 import { type TaskAttention, topState } from "./attention";
@@ -20,7 +21,7 @@ export type OrganizationRailActions = { sessions: Pick<ReturnType<typeof session
 
 import { AttentionBadge } from "./WorkspaceMarks";
 
-export function OrganizationRailGroup(props: { org: RailOrganization; web?: boolean; stacked: boolean; sessions: OrganizationRailActions; active: { workspace: string; context: string } | null; tasksOf: (id: string, context: string) => TaskAttention[]; stateLabel: (state: ReturnType<typeof topState>) => string; onOpen: (tile: OrgTile) => void; onManage: () => void; onChange: (action: "pin" | "up" | "down") => void; index: number; count: number; credits: ReturnType<typeof watchOrganizationCredits> }) {
+export function OrganizationRailGroup(props: { org: RailOrganization; web?: boolean; stacked: boolean; sessions: OrganizationRailActions; active: { workspace: string; context: string } | null; tasksOf: (id: string, context: string) => TaskAttention[]; staleOf?: (id: string, context: string) => boolean; stateLabel: (state: ReturnType<typeof topState>) => string; onOpen: (tile: OrgTile) => void; onManage: () => void; onChange: (action: "pin" | "up" | "down") => void; index: number; count: number; credits: ReturnType<typeof watchOrganizationCredits> }) {
   const [menu, setMenu] = createSignal<{ key: string; stack: boolean; target: HTMLElement; rect: DOMRect } | null>(null);
   const [promo, setPromo] = createSignal<string | null>(null);
   const [organizationPicker, setOrganizationPicker] = createSignal(false);
@@ -30,6 +31,7 @@ export function OrganizationRailGroup(props: { org: RailOrganization; web?: bool
   const active = (row: OrgTile) => props.active?.workspace === row.id && props.active.context === row.context.context_id;
   const dismiss = () => { setMenu(null); setPromo(null); setOrganizationPicker(false); };
   const show = (row: OrgTile, target: HTMLElement, stack = false) => { setPromo(null); setOrganizationPicker(false); returnFocus = target; setMenu({ key: row.key, stack, target, rect: target.getBoundingClientRect() }); };
+  const stale = () => props.org.tiles.some((row) => contextAttentionStale(row.context.context_id) || props.staleOf?.(row.id, row.context.context_id));
   const state = () => topState(props.org.tiles.flatMap((row) => props.tasksOf(row.id, row.context.context_id)));
   createEscapeCloser(() => menu() !== null, () => dismiss());
   const closeEmail = async (email: string | null, context: string) => {
@@ -38,10 +40,10 @@ export function OrganizationRailGroup(props: { org: RailOrganization; web?: bool
     if (!confirmEmailClose(emailContextCount(props.sessions.sessions.families(), email, group.family), (count) => t("shell.workspaces.close_email_confirm", { count, email: email ?? "" }), window.confirm.bind(window))) return;
     await props.sessions.sessions.closeEmail(email, group.family);
   };
-  const render = (row: Accessor<OrgTile>) => <OrganizationWorkspaceTile tile={row()} active={active(row())} state={topState(props.tasksOf(row().id, row().context.context_id))} stateLabel={props.stateLabel(topState(props.tasksOf(row().id, row().context.context_id)))} credits={props.credits} send={props.sessions.sessions.sendOptional} onOpen={() => props.onOpen(row())} onMenu={(target) => show(row(), target)} onMove={(step) => props.onChange(step === -1 ? "up" : "down")} />;
+  const render = (row: Accessor<OrgTile>) => <OrganizationWorkspaceTile stale={contextAttentionStale(row().context.context_id) || props.staleOf?.(row().id, row().context.context_id)} tile={row()} active={active(row())} state={topState(props.tasksOf(row().id, row().context.context_id))} stateLabel={props.stateLabel(topState(props.tasksOf(row().id, row().context.context_id)))} credits={props.credits} send={props.sessions.sessions.sendOptional} onOpen={() => props.onOpen(row())} onMenu={(target) => show(row(), target)} onMove={(step) => props.onChange(step === -1 ? "up" : "down")} />;
   return <>
     <Show when={props.stacked} fallback={<KeyedList each={props.org.tiles} by={(row) => row.key}>{render}</KeyedList>}>
-      <OrganizationStack organization={props.org} state={state()} stateLabel={props.stateLabel(state())} badge={AttentionBadge} render={render} onPin={() => props.onChange("pin")} onMove={(step) => props.onChange(step === -1 ? "up" : "down")} onContextMenu={(event) => { event.preventDefault(); const first = props.org.tiles[0]; if (first) show(first, event.currentTarget as HTMLElement, true); }} />
+      <OrganizationStack organization={props.org} stale={stale()} state={state()} stateLabel={stale() ? t("shell.rail.attention_stale") : props.stateLabel(state())} badge={AttentionBadge} render={render} onPin={() => props.onChange("pin")} onMove={(step) => props.onChange(step === -1 ? "up" : "down")} onContextMenu={(event) => { event.preventDefault(); const first = props.org.tiles[0]; if (first) show(first, event.currentTarget as HTMLElement, true); }} />
     </Show>
     <Popover open={!!menu() && !!tile()} onOpenChange={(open) => { if (!open) dismiss(); }} placement="right-start" gutter={4}>
       <PopoverAnchor style={{ position: "fixed", left: `${menu()?.rect.left ?? 0}px`, top: `${menu()?.rect.top ?? 0}px`, width: `${menu()?.rect.width ?? 0}px`, height: `${menu()?.rect.height ?? 0}px`, "pointer-events": "none" }} />

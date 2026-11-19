@@ -1,4 +1,4 @@
-import { memberKey } from "./member-key.ts";
+import { memberContext, memberKey } from "./member-key.ts";
 /**
  * Lo que contestó cada máquina a cada lectura: una rebanada con su estado.
  *
@@ -129,6 +129,19 @@ export class SliceBook {
     }
     for (const id of [...this.saved.keys()]) if (id.startsWith(`${member}\u0000`)) this.saved.delete(id);
     this.flush();
+  }
+
+  /** El conjunto de sesiones asentado revoca también copias de máquinas no inventariadas. */
+  pruneContexts(validContexts: Iterable<string>) {
+    const valid = new Set(validContexts);
+    const revoked = (member: string) => { const context = memberContext(member); return context !== null && !valid.has(context); };
+    for (const member of this.slices.keys()) if (revoked(member)) this.slices.delete(member);
+    for (const [id, bytes] of this.liveSizes) if (revoked(id.split("\u0000")[0])) {
+      this.liveSizes.delete(id); this.liveBytes -= bytes;
+    }
+    let changed = false;
+    for (const id of this.saved.keys()) if (revoked(id.split("\u0000")[0])) { this.saved.delete(id); changed = true; }
+    if (changed) this.flush();
   }
 
   /**

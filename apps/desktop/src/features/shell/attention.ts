@@ -9,7 +9,7 @@ export const ATTENTION_STATES = ["approving", "asked", "failed", "unseen"] as co
 export type AttentionState = (typeof ATTENTION_STATES)[number];
 
 export type TaskAttention = { session: string; project: string; state: AttentionState };
-export type WorkspaceAttention = { context?: string; workspace: string; tasks: TaskAttention[] };
+export type WorkspaceAttention = { context?: string; stale?: boolean; workspace: string; tasks: TaskAttention[] };
 
 /** Un servicio más nuevo puede mandar un estado que esta ventana no sabe pintar. */
 const known = (list: WorkspaceAttention[]) =>

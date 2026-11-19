@@ -1,5 +1,6 @@
 import type { Computer } from "@terminus/computers";
 import { reportOrganizationProblem } from "../../lib/organization-problems.ts";
+import { settledContextIds } from "../../lib/settled-contexts.ts";
 import { createCloudMachines, EDGE_ENDPOINT } from "./cloud-machines.ts";
 
 type Invoke = (command: string, args?: Record<string, unknown>) => Promise<unknown>;
@@ -19,11 +20,12 @@ export function mergeContextMachines(groups: { context: Context; computers: Comp
 
 export const contextMachineKey = (machine: string, context?: string) => JSON.stringify([machine, context ?? ""]);
 
-export function createSessionCloud(invoke: Invoke, onProblem?: (error: unknown) => void, endpoint = EDGE_ENDPOINT) {
+export function createSessionCloud(invoke: Invoke, onProblem?: (error: unknown) => void, endpoint = EDGE_ENDPOINT, onContextsSettled?: (contexts: readonly string[]) => void) {
   const legacy = createCloudMachines(invoke, onProblem, endpoint);
   let clients = new Map<string, ReturnType<typeof createCloudMachines>>();
   let current = new Map<string, ContextComputer>();
   let contexts: Map<string, Context> | null = null;
+  let validated: readonly string[] | null = null;
   let epoch = 0;
   let unsupported = false;
   const child = (context: string) => {
@@ -49,6 +51,7 @@ export function createSessionCloud(invoke: Invoke, onProblem?: (error: unknown) 
     return legacy.client;
   };
   return {
+    validatedContexts: () => validated,
     contextInfo: (id: string) => contexts?.get(id) ?? null,
     client: {
       admission: (id: string, context?: string) => target(id, context).admission(id),
@@ -57,6 +60,7 @@ export function createSessionCloud(invoke: Invoke, onProblem?: (error: unknown) 
     async rows() {
       const version = ++epoch;
       unsupported = false;
+      validated = null;
       let status: Status;
       try { status = await invoke("danil_session_status") as Status; }
       catch {
@@ -65,13 +69,16 @@ export function createSessionCloud(invoke: Invoke, onProblem?: (error: unknown) 
         return legacy.rows();
       }
       if (version !== epoch) return { state: "retrying" as const };
-      if (!Array.isArray(status.sessions)) {
+      const settled = settledContextIds(status?.sessions);
+      if (settled === null) {
         contexts = null;
         clients.clear();
         current.clear();
-        return status.state === "disconnected" ? { state: "ready" as const, computers: [], renewInChannel: false } : legacy.rows();
+        return status?.state === "disconnected" ? { state: "ready" as const, computers: [], renewInChannel: false } : legacy.rows();
       }
-      const list = [...new Map(status.sessions.flatMap((s) => s.contexts).map((c) => [c.context_id, c])).values()];
+      validated = settled;
+      onContextsSettled?.(settled);
+      const list = [...new Map(status.sessions!.flatMap((s) => s.contexts).map((c) => [c.context_id, c])).values()];
       contexts = new Map(list.map((c) => [c.context_id, c]));
       clients = new Map([...clients].filter(([id]) => contexts?.has(id)));
       const answers = await Promise.all(list.map(async (context) => ({ context, answer: await child(context.context_id).rows() })));
