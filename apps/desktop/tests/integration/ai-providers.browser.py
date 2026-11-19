@@ -45,8 +45,14 @@ def built_at():
     return datetime.datetime.fromtimestamp(index.stat().st_mtime).isoformat(timespec='seconds') if index.exists() else 'sin dist-web'
 
 
-# Rutas del borde que `dev` puede pedir y que este arnés contesta 404 a propósito; cualquier otra falla.
-ROUTER_SETTLE_MS = int(os.environ.get("DANIL_PV2_SETTLE_MS", "500"))
+# Margen tras las primeras lecturas del workspace. 0 por omisión (3 de 3 corridas pasaron con 0);
+# `DANIL_PV2_SETTLE_MS` lo sube para depurar la carrera del router web.
+ROUTER_SETTLE_MS = int(os.environ.get('DANIL_PV2_SETTLE_MS', '0'))
+# Rutas del borde que `dev` puede pedir y que este arnés contesta 404 a propósito; cualquier otra
+# ruta rompe la corrida (`assert_edge`). Cada una puede faltar por esto:
+#  - identity/sessions: la ventana la pide para listar sesiones y este arnés no la simula.
+#  - identity/organizations: está en el contrato `mvp-v1`, pero esta pantalla no la necesita
+#    (una sola organización) y la ventana trata su ausencia como «sin selector».
 ABSENT_OK = {'identity/sessions', 'identity/organizations'}
 
 fixture = subprocess.check_output(['node', '--input-type=module', '-e', "import { engine } from './apps/desktop/tests/helpers/fake-relay.mjs'; console.log(JSON.stringify(Object.fromEntries(Object.entries(engine).map(([k,v])=>[k,typeof v === 'function' ? v({project:'p1',id:'t1'}) : v]))));"], cwd=root, text=True)
@@ -132,11 +138,10 @@ class Harness:
         elif path == 'capabilities':
             data = dict(contract='mvp-v1', items=[dict(name=n, version=1, status='available') for n in ('machines', 'machines.start', 'machines.session', 'workspaces')])
         elif path == 'machines':
-            data = dict(items=[dict(machine_id=MACHINE, name='Danil', state='running', connection='connected', organization_id='org_A', person_id='user_A', kind='organization')], next_cursor=None)
+            data = dict(items=[dict(machine_id=MACHINE, name='Danil', state='running', connection='connected', organization_id='org_A', kind='organization')], next_cursor=None)
         elif path == f'machines/{MACHINE}/tickets':
             data = dict(ticket='one-use', url='wss://connect.danil.ai/v1/machines/' + MACHINE + '/session', expires_at='2099-01-01T00:00:00Z')
         else:
-            # Solo las rutas de ABSENT_OK pueden faltar; cualquier otra rompe la corrida (`assert_edge`).
             if path in ABSENT_OK:
                 self.absent.add(path)
             else:
@@ -223,8 +228,8 @@ def open_providers(page, base, h):
     # Carrera del router web (medida): sin esperar, la primera `list_accounts` llegó antes de que el
     # router supiera qué máquina tiene el workspace y cayó en «Ninguna máquina de la cuenta tiene
     # este workspace». No hay señal observable de eso (vive en el cierre del router). Esperar a
-    # `list_session_git` la quitó en 3 de 3 corridas con DANIL_PV2_SETTLE_MS=0; los 500 ms por
-    # omisión son margen, el único tiempo fijo del arnés.
+    # `list_session_git` la quitó en 3 de 3 corridas con DANIL_PV2_SETTLE_MS=0; el margen
+    # fijo es ROUTER_SETTLE_MS (0 por omisión).
     until(page, lambda: any(c == 'list_session_git' for c, _ in h.calls), lambda: f'el relay no contestó las lecturas del workspace: {h.calls}')
     page.wait_for_timeout(ROUTER_SETTLE_MS)
     page.get_by_role('button', name='Configuración', exact=True).click()
