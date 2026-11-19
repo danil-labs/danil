@@ -54,6 +54,7 @@ import { Spinner } from "../../ui/Spinner";
 import { ExternalLink as EnlaceExterno } from "../../ui/ExternalLink";
 import "../../locales/settingsPhrases";
 import { ModelosGratuitos } from "./FreeRouterRow";
+import type { BloqueoAlta, EstadoDeProveedor } from "./ai-providers-groups";
 
 // Las claves en la cuenta de Danil: un trozo aparte, solo para agentes con API key.
 const CredentialsInUse = lazy(() => import("./credentials/AccountCredentials").then((m) => ({ default: m.CredentialsInUse })));
@@ -88,6 +89,8 @@ export default function Accounts(props: {
   children?: JSX.Element;
   /** Con título, si la sección llega desplegada. Se lee al montar. */
   desplegado?: boolean;
+  /** Para la pantalla (`ai-providers-groups.ts`): lo que decide si el grupo se ve, el mismo `agregar()` del botón para su selector, y sin botón propio. */
+  onEstado?: (e: EstadoDeProveedor) => void; onControl?: (c: { agregar: () => void }) => void; sinAgregar?: boolean;
 }) {
   const [agentes, setAgentes] = createSignal<AgentOpt[]>([]);
   const [agente] = createSignal(props.agente);
@@ -179,6 +182,8 @@ export default function Accounts(props: {
   const faltaExterno = () => !proveedor() || Boolean(externalInstallUrl()) && !proveedor()?.available;
   const [revisandoCli, setRevisandoCli] = createSignal(false);
   const [agregando, setAgregando] = createSignal(false);
+  // Se abrió la descarga oficial: «Ya lo instalé» queda pendiente y el grupo no se oculta.
+  const [pidioExterno, setPidioExterno] = createSignal(false);
 
   async function comprobarCli() {
     setRevisandoCli(true);
@@ -193,8 +198,7 @@ export default function Accounts(props: {
     }
   }
 
-  const etiqueta = () =>
-    agentes().find((a) => a.id === agente())?.label ?? t("settings.accounts.agent_fallback");
+  const etiqueta = () => proveedor()?.label ?? t("settings.accounts.agent_fallback");
 
   /**
    * Dónde corre este agente, que es lo que decide qué se monta aquí dentro.
@@ -218,8 +222,7 @@ export default function Accounts(props: {
    * suscripción, sin alta que ofrecer ni credencial que aislar. Montar la
    * lista vacía diría lo contrario: que todavía no has conectado ninguna.
    */
-  const sinCuenta = () =>
-    agentes().find((a) => a.id === agente())?.sin_cuenta ?? false;
+  const sinCuenta = () => proveedor()?.sin_cuenta ?? false;
 
   /**
    * Dónde se consigue la API key de este agente, o `null` si se conecta
@@ -256,10 +259,7 @@ export default function Accounts(props: {
   }
 
   onMount(() => {
-    invoke<AgentOpt[]>("list_providers")
-      .then((a) => {
-        setAgentes(a);
-      })
+    invoke<AgentOpt[]>("list_providers").then(setAgentes)
       .catch((e) => setFallo({ what: t("settings.accounts.error.check_provider"), detail: detalleDe(e) }));
   });
 
@@ -279,6 +279,7 @@ export default function Accounts(props: {
       const external = externalInstallUrl();
       if (external) {
         await invoke("open_external", { target: external });
+        setPidioExterno(true);
         setFallo(null);
         return;
       }
@@ -354,9 +355,7 @@ export default function Accounts(props: {
       );
       if (pendientes.length === 0) return;
       let vivo = true;
-      onCleanup(() => {
-        vivo = false;
-      });
+      onCleanup(() => (vivo = false));
       // Se marcan antes de esperar: si no, la siguiente vuelta las encuentra
       // pendientes y se lanzan dos procesos por la misma cuenta.
       pendientes.forEach((a) => comprobadas.add(a.id));
@@ -568,7 +567,7 @@ export default function Accounts(props: {
   }
 
   async function agregar(options?: { headers: Record<string, string> }) {
-    if (addBlockedByExternal(proveedor()) || agregando()) return;
+    if (bloqueoAlta()) return;
     setAgregando(true);
     try {
       // Apagada, esto la enciende (intent del relay) antes de conectar.
@@ -747,6 +746,20 @@ export default function Accounts(props: {
     if (!l?.shared_credential || l.accounts.length === 0) return null;
     return l.shared_credential;
   };
+  /** El único dueño de «se puede agregar»: el botón, el selector y `agregar()` preguntan aquí. */
+  const bloqueoAlta = (): BloqueoAlta => {
+    const porque = segunda();
+    if (enCurso() !== null || agregando()) return { k: "ocupado" };
+    return porque ? { k: "segunda", porque } : addBlockedByExternal(proveedor()) ? { k: "externo" } : null;
+  };
+  createEffect(() => props.onEstado?.({
+    cuentas: lista() === null ? null : tarjetas.length,
+    vivo: agregando() || enCurso() !== null || instalando() !== null || fallo() !== null || conexionFallida() !== null
+      || esperando().length > 0 || repuestas() !== null || (pidioExterno() && faltaExterno()),
+    bloqueoAlta: bloqueoAlta(),
+    falloDeLectura: lista() === null && !cargando() && fallo() !== null,
+  }));
+  onMount(() => props.onControl?.({ agregar }));
 
   function cancelarConexion() {
     const id = enCurso();
@@ -791,21 +804,17 @@ export default function Accounts(props: {
               </Show>
             </span>
             <span class="flex shrink-0 items-center font-normal">{props.marca}</span>
-            {/* Plegada, la cabecera dice con qué cuenta trabaja el proveedor. */}
-            <Show when={!abierto() && !props.soloGratuitos ? cuentaActiva() : undefined}>
-              {(activa) => (
-                <span class="flex min-w-0 items-center gap-1.5 text-xs font-normal text-neutral-500">
-                  <span class="truncate font-medium text-neutral-700">
-                    {accountPresentation(activa(), estados()[activa().id]).name}
-                  </span>
-                  <Badge tone="success" class="shrink-0">
-                    {t("settings.account_card.active")}
-                  </Badge>
-                  <span class="shrink-0">
-                    {t("settings.accounts.count", { count: tarjetas.length })}
-                  </span>
-                </span>
-              )}
+            {/* Plegada, la cabecera dice con qué cuenta trabaja el proveedor; el conteo se ve siempre. */}
+            <Show when={!props.soloGratuitos && lista()}>
+              <span class="flex min-w-0 items-center gap-1.5 text-xs font-normal text-neutral-500">
+                <Show when={!abierto() ? cuentaActiva() : undefined}>
+                  {(activa) => (<>
+                    <span class="truncate font-medium text-neutral-700">{accountPresentation(activa(), estados()[activa().id]).name}</span>
+                    <Badge tone="success" class="shrink-0">{t("settings.account_card.active")}</Badge>
+                  </>)}
+                </Show>
+                <span class="shrink-0" data-account-count="">{t("settings.accounts.count", { count: tarjetas.length })}</span>
+              </span>
             </Show>
             <ChevronRight
               size={16}
@@ -832,7 +841,7 @@ export default function Accounts(props: {
       variant={forma === "aside" ? "ghost" : forma === "fila" ? "secondary" : "primary"}
       size={forma === "aside" ? "compact" : "sm"}
       onClick={() => void agregar()}
-      disabled={enCurso() !== null || segunda() !== null || agregando() || addBlockedByExternal(proveedor())}
+      disabled={bloqueoAlta() !== null}
       /* **La segunda cuenta de un agente que no aísla su credencial no se
          ofrece.** No es una advertencia encima del botón: el botón no se
          puede usar y dice por qué. Conectarla reemplazaría la sesión de la
@@ -893,11 +902,7 @@ export default function Accounts(props: {
             agente={agente()}
             proveedor={etiqueta()}
             falta={!agentes().find((a) => a.id === agente())?.available}
-            preparar={
-              agentes().find((a) => a.id === agente())?.available
-                ? undefined
-                : instalarCli
-            }
+            preparar={proveedor()?.available ? undefined : instalarCli}
             preparando={Boolean(instalando())}
           />
         </Show>
@@ -981,7 +986,7 @@ export default function Accounts(props: {
         </SettingsBlock>
       </Show>
 
-      <Show when={!cargando() && !hayCuentas()}>
+      <Show when={!cargando() && !hayCuentas() && !props.sinAgregar}>
         <SettingsRow
           label={props.nombre ?? t("settings.accounts.connect_agent", { agent: etiqueta() })}
         >
@@ -995,15 +1000,16 @@ export default function Accounts(props: {
         </Suspense>
       </Show>
 
+      {/* Por el ancho del grupo, no de la ventana: 1 columna, 2 desde 512 px y 3 desde 768 px. */}
       <Show when={hayCuentas()}>
-      <ul class="m-0 grid list-none gap-2 p-0">
+      <div class="@container min-w-0"><ul class="m-0 grid list-none grid-cols-1 gap-2 p-0 @lg:grid-cols-2 @3xl:grid-cols-3" data-account-grid="">
         <For each={tarjetas}>
           {(a, i) => {
             const activa = () => a.id === lista()?.active || !!a.machines?.some((m) => m.id === lista()?.active);
             const estado = () => estados()[a.id];
 
             return (
-              <>
+              <li class="grid min-w-0 content-start gap-2">
               <CuentaConfigurada
                 account={a}
                 agent={agente()}
@@ -1013,9 +1019,7 @@ export default function Accounts(props: {
                 checkingStatus={comprobando()[a.id]}
                 statusUnknown={sinComprobar()[a.id] && a.authenticated_at !== null}
                 onRecheckStatus={() => comprobar(a.id)}
-                supportsLimits={
-                  agentes().find((x) => x.id === agente())?.limits ?? false
-                }
+                supportsLimits={proveedor()?.limits ?? false}
                 order={i()}
                 afterStatusChange={conectadaVez()[a.id] ?? 0}
                 actions={(info) => {
@@ -1069,12 +1073,8 @@ export default function Accounts(props: {
                       </Show>
                       <DropdownMenu>
                         <DropdownMenuTrigger
-                          aria-label={t("settings.accounts.more_actions", {
-                            name: accountPresentation(a, estado()).name,
-                          })}
-                          title={t("settings.accounts.more_actions", {
-                            name: accountPresentation(a, estado()).name,
-                          })}
+                          aria-label={t("settings.accounts.more_actions", { name: accountPresentation(a, estado()).name })}
+                          title={t("settings.accounts.more_actions", { name: accountPresentation(a, estado()).name })}
                           class="grid size-6 shrink-0 place-items-center rounded-sm text-neutral-500 outline-none hover:bg-surface-muted hover:text-neutral-950 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-primary data-[expanded]:bg-surface-muted data-[expanded]:text-neutral-950"
                         >
                           <Ellipsis size={16} />
@@ -1135,11 +1135,11 @@ export default function Accounts(props: {
                   <CredentialsInUse match={(c) => c.kind === "api_key" && c.config.agent === agente() && c.config.account === a.id} />
                 </Suspense>
               </Show>
-              </>
+              </li>
             );
           }}
         </For>
-      </ul>
+      </ul></div>
       </Show>
 
       {/* Dónde acaba el secreto de este agente, cuando no es el llavero. No
@@ -1412,7 +1412,7 @@ export default function Accounts(props: {
       </Show>
       </Show>
     </>,
-    <Show when={!sinCuenta() && hayCuentas()}>
+    <Show when={!sinCuenta() && hayCuentas() && !props.sinAgregar}>
       <div class="flex pt-2">{botonAgregar("aside")}</div>
     </Show>,
   );

@@ -124,11 +124,11 @@ export default function AccountCard(props: {
   return (
     // Sin este borde y fondo, la tarjeta en uso vuelve a verse igual a las
     // otras dos: la insignia sola no alcanza a distinguirla.
-    <li
+    <div
       class={cn(
         fila()
           ? [
-              "flex flex-col gap-3 rounded-lg border bg-surface px-3.5 pt-3 pb-5",
+              "@container/card flex min-w-0 flex-col gap-3 rounded-lg border bg-surface px-3.5 pt-3 pb-5",
               props.active ? "border-border-strong" : "border-border",
             ]
           : [
@@ -139,8 +139,8 @@ export default function AccountCard(props: {
             ],
       )}
     >
-      <div class={cn("flex", fila() ? "items-center gap-2" : "items-start gap-3")}>
-        <div class={cn("min-w-0 flex-1", fila() && "mr-6 grid gap-[3px]")}>
+      <div class={cn("flex", fila() ? "flex-wrap items-center gap-2" : "items-start gap-3")}>
+        <div class={cn("min-w-0", fila() ? "grid flex-[1_1_10rem] gap-[3px] @xs/card:mr-6" : "flex-1")}>
           <div class={cn("flex flex-wrap items-center", fila() ? "gap-2" : "gap-1.5")}>
             <span
               class={cn(
@@ -393,7 +393,7 @@ export default function AccountCard(props: {
           {props.destructiveAction}
         </div>
       </Show>
-    </li>
+    </div>
   );
 }
 
