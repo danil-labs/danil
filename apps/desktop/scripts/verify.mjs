@@ -88,6 +88,7 @@ const steps = [
   ["The web hands a ticket only to exact relay origins", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/web-relay-origins.test.ts")], root],
   ["Web and Desk read the published mvp-v1 examples the same way", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/integration/mvp-contracts.test.mjs")], root],
   ["Session caches are revoked and erased on logout", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/web-session-storage.test.ts")], root],
+  ["A new account resolves its organization once and redeems with one retry", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/web-organization-context.test.ts")], root],
   ["Machine preferences stay with the browser person", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/web-machine-preferences.test.ts")], root],
   ["Hidden workspaces leave the rail, keep their place and stay with the browser person", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/hidden-workspaces.test.ts")], root],
   ["Account menus keep balances and redemption in their organization context", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/group-account.test.ts")], root],
