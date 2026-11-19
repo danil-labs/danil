@@ -997,16 +997,16 @@ export default function Accounts(props: {
         </Suspense>
       </Show>
 
-      {/* Por el ancho del grupo, no de la ventana: tarjetas de 28rem como mínimo (la composición de `AccountCard` sin partir), 2 columnas desde 904 px y 3 desde 1360 px de lista (928 y 1384 px de cuerpo, que mide 24 px más por `pl-6`); nunca más de 3. */}
+      {/* Por el ancho del grupo, no de la ventana: tarjetas de 28rem como mínimo (la tarjeta caída con su correo completo mide 444 px), 2 columnas desde 904 px y 3 desde 1360 px de lista; nunca más de 3. La lista recupera la sangría `pl-6` del cuerpo (`-ml-6`) para dejar margen sobre esos cortes. */}
       <Show when={hayCuentas()}>
-      <ul class="m-0 grid list-none grid-cols-[repeat(auto-fill,minmax(min(100%,max(28rem,calc((100%_-_1rem)/3_-_1px))),1fr))] gap-2 p-0" data-account-grid="">
+      <ul class="m-0 -ml-6 grid list-none grid-cols-[repeat(auto-fit,minmax(min(100%,max(28rem,calc((100%_-_1rem)/3_-_1px))),1fr))] gap-2 p-0" data-account-grid="">
         <For each={tarjetas}>
           {(a, i) => {
             const activa = () => a.id === lista()?.active || !!a.machines?.some((m) => m.id === lista()?.active);
             const estado = () => estados()[a.id];
 
             return (
-              <li class="grid min-w-0 content-start gap-2">
+              <li class="grid min-w-0 grid-cols-[minmax(0,1fr)] content-start gap-2">
               <CuentaConfigurada
                 account={a}
                 agent={agente()}

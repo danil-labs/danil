@@ -4,7 +4,7 @@ Sirve la web construida (`pnpm web:build`, carpeta `dist-web/`) con un servidor
 estático propio, responde el borde (`route_api`) y el relay (`route_web_socket`)
 con el patrón de `window.browser.py`, y mide la pantalla real.
 
-Escenarios (docs/testing/2026-11-19-proveedores-ia.md § anchos W1–W7; desde la ronda 4 de T3, W1–W8 con el mínimo de la tarjeta):
+Escenarios (docs/testing/2026-11-19-proveedores-ia.md § anchos; desde la ronda 5 de T3 se mide en el modal real a 1920, 1440, 1280 y 900 px de viewport):
   none, one, four, reconnect, list-fails.
 
 Las columnas de la cuadrícula no existen todavía: contra `dev` esas aserciones van
@@ -41,12 +41,15 @@ strict = os.environ.get('DANIL_PV2_STRICT') == '1'
 MACHINE = 'cmp_abcdefghijklmnopqrstuvwxyz'
 # La segunda máquina del escenario `machines`: con dos, la web junta las cuentas de las dos (`fleet.merge`) y pinta su fila de máquinas.
 MACBOOK = 'cmp_zyxwvutsrqponmlkjihgfedcba'
-# Mínimo de la tarjeta: 28rem (448 px), lo que pide la composición de `AccountCard` `row` de `9e345462` sin recortar
-# ni partir líneas (medido: la tarjeta caída del escenario `reconnect` mide 444 px de ancho natural). Con 8 px de hueco:
-# 1 columna < 904 px, 2 desde 904 y 3 desde 1360; nunca más de 3. Solo escritorio: no se mide por debajo del mínimo.
+# Mínimo de la tarjeta: 28rem (448 px), el ancho natural de la tarjeta caída de `reconnect` con su correo completo
+# (444 px medidos en el modal real). Con 8 px de hueco: 1 columna < 904 px de lista, 2 desde 904 y 3 desde 1360; nunca más de 3.
 CARD_MIN = 448
-# Se fija el ancho del cuerpo del grupo, que lleva `pl-6` (24 px): los cortes de la lista caen 24 px más arriba.
-WIDTHS = [('W1', 1440, 3), ('W2', 1384, 3), ('W3', 1383, 2), ('W4', 960, 2), ('W5', 928, 2), ('W6', 927, 1), ('W7', 640, 1), ('W8', 472, 1)]
+# Se mide en el modal real de Configuración, cambiando solo el viewport: riel de 224 px y tope de 1680 px de diálogo en
+# Proveedores de IA (1120 px en las demás secciones). Antes se fijaba a mano el ancho del grupo y por eso no se vio que
+# en beta la lista nunca pasaba de 806 px.
+VIEWPORTS = [(1920, 1080), (1440, 900), (1280, 800), (900, 800)]
+# Columnas esperadas por número de cuentas y ancho de viewport.
+COLUMNS = {1: {1920: 1, 1440: 1, 1280: 1, 900: 1}, 2: {1920: 2, 1440: 2, 1280: 2, 900: 1}, 4: {1920: 3, 1440: 2, 1280: 2, 900: 1}}
 
 def head():
     return subprocess.check_output(['git', 'rev-parse', '--short=8', 'HEAD'], cwd=root, text=True).strip()
@@ -308,16 +311,6 @@ def header(page, identity):
     }""", identity)
 
 
-def set_width(page, identity, width):
-    page.evaluate("""([identity, width]) => {
-        const li = [...document.querySelectorAll('li')].find(x => x.textContent.includes(identity));
-        const list = li.parentElement;
-        const box = list.closest('[data-provider-group]') || list.closest('.\\\\@container') || list.parentElement;
-        box.style.width = width + 'px'; box.style.maxWidth = 'none'; box.style.boxSizing = 'border-box';
-    }""", [identity, width])
-    page.wait_for_timeout(60)
-
-
 def choose(page, label):
     """El único «Agregar cuenta» abre el selector; se elige el proveedor por su nombre."""
     dialog = page.locator('[role="dialog"]').first
@@ -326,6 +319,22 @@ def choose(page, label):
     trigger.click()
     page.locator('[data-add-account-menu] [role="menuitem"]').filter(has_text=label).first.click()
     expect(page.locator('[data-add-account-menu]')).to_have_count(0)
+
+
+def names(page):
+    """En cada tarjeta, el nombre se trunca dentro de su bloque: no pisa el estado ni las acciones, y el plan sigue en su línea."""
+    return page.evaluate("""() => [...document.querySelectorAll('[data-account-grid] > li')].map(li => {
+        const head = li.firstElementChild.firstElementChild;
+        const block = head.firstElementChild;
+        const line = block.firstElementChild;
+        const acts = [...head.children].slice(1).map(e => e.getBoundingClientRect()).filter(b => b.width > 0);
+        const b = block.getBoundingClientRect();
+        const pieces = [...line.children].map(e => e.getBoundingClientRect()).filter(r => r.width > 0);
+        const spill = [...line.children].some(e => e.getBoundingClientRect().right > b.right + 1);
+        const label = line.querySelector('span[title]');
+        return { name: line.textContent.trim().slice(0, 30), full: !!label && label.scrollWidth <= label.clientWidth, overlaps: acts.some(a => a.left < b.right - 1), spill,
+          oneLine: pieces.every(r => Math.abs(r.top - pieces[0].top) < 6) };
+    })""")
 
 
 def machine_row(page, identity):
@@ -345,14 +354,49 @@ def machine_row(page, identity):
     }""", identity)
 
 
+MARGIN = 16
+
+
+def need(k):
+    """Lista mínima para k columnas de CARD_MIN con 8 px de hueco."""
+    return k * CARD_MIN + (k - 1) * 8
+
+
+def cut_margins(width, cards, expected):
+    """Cuánto sobra sobre el corte de las columnas que hay, y cuánto falta para la siguiente (si habría tarjetas para ella)."""
+    over = width - need(expected) if expected > 1 else None
+    under = need(expected + 1) - width if expected + 1 <= min(3, cards) else None
+    parts = ([f'+{over} px sobre el corte de {expected} ({need(expected)})'] if over is not None else []) + ([f'{under} px bajo el de {expected + 1} ({need(expected + 1)})'] if under is not None else [])
+    return {'ok': all(m >= MARGIN for m in (over, under) if m is not None), 'text': '; '.join(parts) or 'sin corte cercano'}
+
+
+def classic(page, on):
+    page.evaluate("""(on) => {
+        document.getElementById('pv2-classic')?.remove();
+        if (!on) return;
+        const s = document.createElement('style');
+        s.id = 'pv2-classic';
+        s.textContent = '#cfg-subpanel { overflow-y: scroll !important } #cfg-subpanel::-webkit-scrollbar { width: 16px } #cfg-subpanel::-webkit-scrollbar-thumb { background: #999 }';
+        document.head.append(s);
+    }""", on)
+    page.wait_for_timeout(100)
+
+
+def shoot_one(page, label):
+    folder = os.environ.get('DANIL_PV2_SHOTS')
+    if folder:
+        Path(folder).mkdir(parents=True, exist_ok=True)
+        page.screenshot(path=str(Path(folder) / f'{label}.png'))
+
+
 def shoot(page, name):
     folder = os.environ.get('DANIL_PV2_SHOTS')
     if not folder:
         return
     Path(folder).mkdir(parents=True, exist_ok=True)
-    for width, height in ((1440, 900), (1024, 768)):
+    for width, height in VIEWPORTS:
         page.set_viewport_size({'width': width, 'height': height})
-        page.wait_for_timeout(150)
+        page.wait_for_timeout(200)
         page.screenshot(path=str(Path(folder) / f'{name}-{width}.png'))
     page.set_viewport_size({'width': 1440, 'height': 900})
 
@@ -419,56 +463,57 @@ def run(browser, base, name):
         expect(dialog.get_by_role('button', name='Reconectar').first).to_be_visible()
     if name != 'none':
         shoot(page, name)
-    if name == 'reconnect':
-        # La tarjeta caída es la más ancha: su estado y «Reconectar» van en la fila de la cabecera, como en `9e345462`.
-        identity = 'persona2@ejemplo.com'
-        for width in (1440, 960, 640, CARD_MIN + 24):
-            set_width(page, identity, width)
-            got = header(page, identity)
-            print(f'reconnect {width}px: ancho natural de la tarjeta {got["natural"]} px, ancho {got["width"]} px, {got["tops"]}')
-            mids = [t['mid'] for t in got['tops']]
-            assert any('Reconectar' in t['text'] for t in got['tops']), got
-            _eq_true(max(mids) - min(mids) <= 4, f'{width}px: el estado y las acciones no van en una sola fila: {got}')
-            cols = columns(page, identity)
-            _eq_true(not cols['clipped'], f'{width}px recortados: {cols["clipped"]}')
-            _eq_true(not cols['overflow'], f'{width}px desborde: {cols}')
-        results.append(('PASS', 'reconnect: el estado y «Reconectar» en la fila de la cabecera, sin recortes ni desborde, a 1440, 960, 640 y 472 px de grupo'))
+    if name in ('one', 'four', 'reconnect', 'machines'):
+        # En el modal real, a cada viewport: columnas, mínimo de tarjeta, sin desborde ni acciones recortadas.
+        identity = accounts[0]['identity']
+        for mode in ('sistema', 'clásicas'):
+            # «clásicas»: barras de 16 px que ocupan sitio (Windows, Linux, macOS con ratón), con la vertical siempre puesta.
+            classic(page, mode == 'clásicas')
+            for vw, vh in VIEWPORTS:
+                page.set_viewport_size({'width': vw, 'height': vh})
+                page.wait_for_timeout(200)
+                got = columns(page, identity)
+                expected = COLUMNS[got['cards']][vw]
+                panel = page.evaluate("() => { const p = document.querySelector('#cfg-subpanel'); return { overflow: p.scrollWidth > p.clientWidth + 1, list: Math.round(document.querySelector('[data-account-grid]').getBoundingClientRect().width), dialog: Math.round(document.querySelector('[role=dialog]').getBoundingClientRect().width) }; }")
+                margins = cut_margins(panel['list'], got['cards'], expected)
+                print(f'{name} {vw}x{vh} barras {mode}: diálogo {panel["dialog"]} px, lista {panel["list"]} px, {got["cols"]} columnas, {margins["text"]}')
+                _eq_true(margins['ok'], f'{name} {vw}px barras {mode}: menos de {MARGIN} px de margen sobre un corte: {margins["text"]}')
+                _eq_true(got['tagged'], f'{vw}px: falta [data-provider-group]')
+                _eq_true(got['cols'] == expected, f'{name} {vw}px {mode}: {got["cols"]} columnas, se esperaban {expected} (lista {panel["list"]} px)')
+                _eq_true(got['minCard'] >= min(CARD_MIN, panel['list']) - 1, f'{name} {vw}px {mode}: tarjeta por debajo del mínimo: {got}')
+                _eq_true(not got['overflow'] and not panel['overflow'], f'{name} {vw}px {mode}: desborde horizontal: {got} {panel}')
+                _eq_true(not got['clipped'], f'{name} {vw}px {mode}: acciones recortadas: {got["clipped"]}')
+                bad = [n for n in names(page) if n['overlaps'] or n['spill'] or not n['oneLine']]
+                _eq_true(not bad, f'{name} {vw}px {mode}: el nombre pisa las acciones, se sale de su bloque o parte su línea: {bad}')
+                if got['cols'] >= 2:
+                    cut = [n['name'] for n in names(page) if not n['full']]
+                    _eq_true(not cut, f'{name} {vw}px {mode}: con {got["cols"]} columnas el correo se trunca: {cut}')
+                if mode == 'clásicas':
+                    shoot_one(page, f'{name}-{vw}-clasicas')
+                if name == 'reconnect':
+                    # La tarjeta caída: su estado, «Reconectar» y «…» en la fila de la cabecera, como en `9e345462`.
+                    head_row = header(page, 'persona2@ejemplo.com')
+                    mids = [t['mid'] for t in head_row['tops']]
+                    _eq_true(any('Reconectar' in t['text'] for t in head_row['tops']) and max(mids) - min(mids) <= 4, f'{vw}px: el estado y las acciones no van en una fila: {head_row}')
+                if name == 'machines':
+                    # La fila de máquinas y «Iniciar sesión en otra máquina» son de su cuenta: dentro de su celda, sin tocar otra.
+                    row = machine_row(page, 'persona2@ejemplo.com')
+                    _eq_true(row['row'] and row['button'] and row['rowInside'] and row['buttonInside'] and not row['overlaps'], f'{vw}px: la fila de máquinas no queda en su celda: {row}')
+        classic(page, False)
+        results.append(('PASS', f'{name}: en el modal real a ' + ', '.join(f'{vw}x{vh}' for vw, vh in VIEWPORTS) + ', con barras del sistema y clásicas: columnas, margen de 16 px sobre los cortes, mínimo, sin desborde ni recortes' + ', correo completo con 2 o más columnas' + (', cabecera de la caída en una fila' if name == 'reconnect' else '') + (', fila de máquinas en su celda' if name == 'machines' else '')))
+        page.set_viewport_size({'width': 1440, 'height': 900})
     if name == 'machines':
-        # La fila de máquinas y «Iniciar sesión en otra máquina» son de su cuenta: dentro de su celda, sin tocar otra.
         expect(dialog.locator('[data-account-machines]').first).to_be_visible()
         expect(dialog.locator('[data-account-machine]').filter(has_text='Macbook').first).to_be_visible()
         _eq_true(sorted(machine_row(page, 'persona1@ejemplo.com')['chips']) == ['Danil', 'Macbook'], machine_row(page, 'persona1@ejemplo.com'))
         expect(dialog.locator('[data-account-grid] > li')).to_have_count(2)
-        identity = 'persona2@ejemplo.com'
-        for label, width, _ in WIDTHS:
-            set_width(page, identity, width)
-            got = machine_row(page, identity)
-            _eq_true(got['row'] and got['button'], f'{label} {width}px: sin fila de máquinas o sin botón: {got}')
-            _eq_true(got['rowInside'] and got['buttonInside'], f'{label} {width}px: la fila de máquinas sale de su celda: {got}')
-            _eq_true(not got['overlaps'], f'{label} {width}px: la fila de máquinas toca otra celda: {got}')
-            cols = columns(page, identity)
-            _eq_true(not cols['clipped'], f'{label} {width}px recortados: {cols["clipped"]}')
-        results.append(('PASS', 'machines: la fila de máquinas y su botón quedan en la celda de su cuenta, sin recortes ni solapes, en W1–W8'))
-        set_width(page, identity, 960)
-        cell = dialog.locator('[data-account-grid] > li').filter(has_text=identity)
+        cell = dialog.locator('[data-account-grid] > li').filter(has_text='persona2@ejemplo.com')
         cell.locator('[data-sign-in-elsewhere]').click()
         expect(page.locator('[data-sign-in-on]').filter(has_text='Macbook')).to_be_visible()
         expect(page.locator('[data-add-account-menu]')).to_have_count(0)
         page.locator('[data-sign-in-on]').filter(has_text='Macbook').click()
         until(page, lambda: ('add_account', MACBOOK) in h.where, lambda: f'add_account no salió en la Macbook: {[w for w in h.where if "account" in w[0]]}')
         results.append(('PASS', 'machines: «Iniciar sesión en otra máquina» abre su menú de máquinas, no el selector global, y el alta sale en esa máquina'))
-    if name == 'four':
-        identity = 'persona1@ejemplo.com'
-        for label, width, expected in WIDTHS:
-            set_width(page, identity, width)
-            got = columns(page, identity)
-            assert got['cards'] >= 4, got
-            pending(f'{label} {width}px → {expected} columnas (hoy {got["cols"]})', lambda: _eq(got['cols'], expected))
-            pending(f'{label} {width}px tarjetas de al menos {CARD_MIN} px', lambda: _eq_true(got['minCard'] >= CARD_MIN - 1, got))
-            pending(f'{label} {width}px sin desborde horizontal', lambda: _eq_true(not got['overflow'], got))
-            pending(f'{label} {width}px ningún botón de acción queda recortado', lambda: _eq_true(not got['clipped'], got['clipped']))
-            if label == 'W1':
-                pending('el contenedor del grupo lleva [data-provider-group]', lambda: _eq_true(got['tagged'], 'falta [data-provider-group]'))
     assert not errors, (errors, sorted(missing))
     assert_edge(h)
     results.append(('PASS', f'{name}: pantalla cargada, grupos y cuotas'))
