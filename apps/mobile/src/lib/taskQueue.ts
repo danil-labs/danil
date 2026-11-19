@@ -62,7 +62,7 @@ const MAX_ATTEMPTS = 3;
 /** Cada cuánto se reintenta lo que espera a una máquina dormida o sin respuesta. */
 const WAIT_MS = 30_000;
 /** Fallos pasajeros: la máquina duerme, tarda, no despierta o no se alcanza. Repetir es seguro si nada salió, y esperar no pierde la intención. */
-const TRANSIENT = new Set(["machine_asleep", "machine_off", "machine_timeout", "start_failed", "start_timeout", "unreachable", "io", "task_status_unavailable", "queue_storage"]);
+const TRANSIENT = new Set(["machine_asleep", "machine_off", "machine_timeout", "start_failed", "start_timeout", "unreachable", "io", "task_status_unavailable", "queue_storage", "unknown_machine"]);
 /** Rechazos que la máquina da por regla y que dicen que no se ejecutó. Cualquier otro error tras enviar es duda. */
 const REFUSED = new Set(["command_unsupported", "command_not_here", "command_not_allowed", "machine_outdated"]);
 const MUTATIONS = new Set(["set_task_archived", "finish_task", "delete_session"]);
@@ -76,6 +76,7 @@ let loaded = false;
 let error: string | null = null;
 let notices: string[] = [];
 let account: string | null = null;
+let clock: () => number = Date.now;
 /** Hasta cuándo no se reintenta una entrada tras una caída de red (en memoria). */
 const retryAt = new Map<string, number>();
 let timer: ReturnType<typeof setTimeout> | null = null;
@@ -193,17 +194,23 @@ export function clearError() {
   notify();
 }
 
-/** La cuenta con sesión; las entradas nuevas la llevan y solo ella puede darlas por perdidas. */
-export function setAccount(id: string | null) {
+/**
+ * La cuenta con sesión. Las entradas nuevas la llevan. Las que no tienen dueño
+ * (de una versión anterior) las reclama solo si `owns` dice que su máquina es de
+ * esta cuenta; si no, esperan. Al pasar de una cuenta a otra se limpian los
+ * avisos: nombran tareas de la anterior.
+ */
+export function setAccount(id: string | null, owns: (host: string) => boolean = () => true) {
+  if (account && id !== account && notices.length > 0) {
+    error = null;
+    notices = [];
+    notify();
+  }
   account = id;
   let claimed = false;
-  if (id) for (const entry of entries) if (!entry.owner) { entry.owner = id; claimed = true; }
+  if (id) for (const entry of entries) if (!entry.owner && owns(entry.host)) { entry.owner = id; claimed = true; }
   if (claimed) void save();
   void kick();
-}
-
-export function pendingFor(id: string): TaskAction | null {
-  return entries.find((e) => e.id === id)?.action ?? null;
 }
 
 /**
@@ -261,7 +268,7 @@ function tracked(host: Host, entry: QueueEntry): Host {
 }
 
 async function run(entry: QueueEntry): Promise<Outcome> {
-  if ((retryAt.get(entry.key) ?? 0) > Date.now()) return "wait";
+  if ((retryAt.get(entry.key) ?? 0) > clock()) return "wait";
   const found = lookup(entry.host, entry.owner);
   if (found === "pending") return "wait";
   if (found === "gone") {
@@ -295,7 +302,7 @@ async function run(entry: QueueEntry): Promise<Outcome> {
       // No salió nada: dormida, sin comprobar o sin disco espera; una caída de red espera con pausa; el resto es un rechazo.
       if (code && TRANSIENT.has(code)) {
         // Sin llamada nueva hasta pasar la pausa, salvo lo que no toca a la máquina.
-        if (code !== "machine_asleep" && code !== "task_status_unavailable" && code !== "queue_storage") retryAt.set(entry.key, Date.now() + WAIT_MS);
+        if (code !== "machine_asleep" && code !== "task_status_unavailable" && code !== "queue_storage") retryAt.set(entry.key, clock() + WAIT_MS);
         return "wait";
       }
       warn(message(failure));
@@ -313,7 +320,7 @@ async function run(entry: QueueEntry): Promise<Outcome> {
         warn(message(failure));
         return "done";
       }
-      retryAt.set(entry.key, Date.now() + WAIT_MS);
+      retryAt.set(entry.key, clock() + WAIT_MS);
       return "wait";
     }
     if (code && REFUSED.has(code)) {
@@ -383,7 +390,8 @@ async function drain() {
 }
 
 /** Solo para pruebas. */
-export function __reset(options: { storage?: Storage } = {}) {
+export function __reset(options: { storage?: Storage; now?: () => number } = {}) {
+  clock = options.now ?? Date.now;
   entries = [];
   current = null;
   hydrated = false;

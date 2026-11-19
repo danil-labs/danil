@@ -58,7 +58,8 @@ function TaskQueueHosts() {
   const user = account.session?.user.id ?? null;
   const resolver = useRef(createResolver()).current;
   useEffect(() => {
-    setAccount(user);
+    // Va antes de bindHosts: `setAccount` y `bindHosts` empujan la cola, que corre después de ambos.
+    setAccount(user, (id) => Boolean(hostOf(id)));
     bindHosts(resolver({ hostOf, user, fleet, contextReady }), t);
   }, [hostOf, user, fleet, contextReady, hosts, resolver]);
   return null;

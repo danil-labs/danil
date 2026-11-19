@@ -327,8 +327,8 @@ test("una entrada de otra cuenta espera sin llamadas ni avisos; una sin dueño l
   assert.equal(m.mutations().length, 2, "con su cuenta, sí se ejecutan");
 });
 
-test("los fallos pasajeros esperan y no descartan; un rechazo por regla o un error ajeno sí avisa", async () => {
-  for (const code of ["machine_timeout", "machine_off", "start_failed", "start_timeout", "unreachable"]) {
+test("los fallos pasajeros esperan y no descartan; el archivado enviado repite sin tope al pasar la pausa", async () => {
+  for (const code of ["machine_timeout", "machine_off", "start_failed", "start_timeout", "unreachable", "unknown_machine"]) {
     __reset({ storage: disk() });
     await hydrate();
     const m = machine("m1", { fail: (c) => (c === "task_blockers" ? new HostError(code) : null) });
@@ -336,25 +336,74 @@ test("los fallos pasajeros esperan y no descartan; un rechazo por regla o un err
     enqueue(m.host, task, "finish");
     await __kick();
     assert.equal(__entries().length, 1, code);
-    // y archivar con la mutación ya enviada: repetir no tiene tope por fallos pasajeros
-    __reset({ storage: disk() });
+    assert.equal(m.mutations().length, 0, code);
+
+    let now = 1_000;
+    __reset({ storage: disk(), now: () => now });
     await hydrate();
     const a = machine("m1", { fail: (c) => (c === "set_task_archived" ? new HostError(code) : null) });
     bindHosts(() => a.host);
     enqueue(a.host, task, "archive");
-    for (let i = 0; i < 5; i++) { await __kick(); }
+    for (let i = 0; i < 6; i++) { await __kick(); now += 31_000; }
+    assert.equal(a.mutations().length, 6, `${code}: un intento por pausa, sin tope`);
     assert.equal(__entries().length, 1, `${code} archivar`);
+    assert.equal(__entries()[0].attempts, 0, `${code}: no cuenta contra el tope`);
   }
+});
+
+test("un rechazo por regla o un código ajeno antes de enviar se avisa y se retira", async () => {
   for (const code of ["command_unsupported", "algo_raro"]) {
     __reset({ storage: disk() });
+    let notices: string[] = [];
+    subscribe((state) => (notices = state.notices));
     await hydrate();
     const m = machine("m1", { fail: (c) => (c === "task_blockers" ? new HostError(code) : null) });
     bindHosts(() => m.host);
     enqueue(m.host, task, "finish");
     await __kick();
     assert.equal(__entries().length, 0, code);
+    assert.equal(notices.length, 1, `${code} avisa`);
+    assert.match(notices[0], /task\.error/);
   }
 });
+
+test("una entrada de otra cuenta espera; una sin dueño la reclama solo la cuenta cuya flota tiene su máquina", async () => {
+  const store = disk([entry({ owner: "ana" }), entry({ id: "legacy", key: "m1:w:f:legacy:delete" })]);
+  __reset({ storage: store });
+  let now = 0;
+  const resolver = createResolver(() => now);
+  let notices = 0;
+  subscribe((state) => (notices = state.notices.length));
+  await hydrate();
+  const m = machine("m1");
+  const view = (user: string, hostOf: (id: string) => Host | undefined) => ({ hostOf, user, fleet: "ok", contextReady: true });
+  // Beto inicia sesión: su flota no tiene m1. No reclama nada y nada se da por perdido.
+  setAccount("beto", () => false);
+  for (let i = 0; i < 3; i++) { bindHosts(resolver(view("beto", () => m.host && undefined))); now += GONE_AFTER_MS * 2; await __kick(); }
+  assert.equal(m.calls.length, 0);
+  assert.equal(notices, 0);
+  assert.equal(__entries().length, 2);
+  assert.equal(__entries().find((e) => e.id === "legacy")?.owner, undefined, "nadie la reclamó");
+  // Ana: su flota tiene m1, la reclama y se guarda.
+  setAccount("ana", (host) => host === "m1");
+  assert.equal(__entries().find((e) => e.id === "legacy")?.owner, "ana");
+  bindHosts(resolver(view("ana", (id) => (id === "m1" ? m.host : undefined))));
+  await __kick();
+  assert.equal(store.raw().length, 0, "con su cuenta se ejecutan y salen");
+  assert.equal(m.mutations().length, 2);
+});
+
+test("al cambiar de cuenta se limpian los avisos de la anterior", async () => {
+  __reset({ storage: disk([entry({ sent: true, owner: "ana" })]) });
+  let notices: string[] = [];
+  subscribe((state) => (notices = state.notices));
+  setAccount("ana");
+  await hydrate();
+  assert.equal(notices.length, 1);
+  setAccount("beto");
+  assert.equal(notices.length, 0);
+});
+
 test("«gone» pide sesión, la flota cargada de esa cuenta y faltar un rato seguido; el bridge no", () => {
   const base = { hostOf: () => undefined, user: "ana", fleet: "ok", contextReady: true };
   let now = 1000;
@@ -363,6 +412,7 @@ test("«gone» pide sesión, la flota cargada de esa cuenta y faltar un rato seg
   assert.equal(resolver({ ...base, fleet: "loading" })("m1", "ana"), "pending", "flota cargando");
   assert.equal(resolver({ ...base, contextReady: false })("m1", "ana"), "pending", "contexto sin listo");
   assert.equal(resolver(base)("bridge", "ana"), "pending", "el bridge depende del emparejamiento");
+  assert.equal(resolver(base)("m1", undefined), "pending", "sin dueño nunca es gone");
   assert.equal(resolver(base)("m1", "ana"), "pending", "recién faltó");
   now += GONE_AFTER_MS;
   assert.equal(resolver(base)("m1", "ana"), "gone");

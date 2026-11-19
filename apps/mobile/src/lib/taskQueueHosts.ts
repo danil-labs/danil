@@ -25,15 +25,17 @@ export function createResolver(now: () => number = Date.now) {
     (id, owner): HostLookup => {
       const host = view.hostOf(id);
       if (host) {
-        missing.delete(id);
+        missing.delete(`${owner}:${id}`);
         return host;
       }
-      if (!view.user || (owner && owner !== view.user) || id === "bridge" || !(view.fleet === "ok" && view.contextReady)) {
-        missing.delete(id);
+      const key = `${owner}:${id}`;
+      // Sin dueño no se sabe de quién es: espera hasta que una cuenta la reclame con su máquina.
+      if (!view.user || !owner || owner !== view.user || id === "bridge" || !(view.fleet === "ok" && view.contextReady)) {
+        missing.delete(key);
         return "pending";
       }
-      const since = missing.get(id) ?? now();
-      missing.set(id, since);
+      const since = missing.get(key) ?? now();
+      missing.set(key, since);
       return now() - since >= GONE_AFTER_MS ? "gone" : "pending";
     };
 }
