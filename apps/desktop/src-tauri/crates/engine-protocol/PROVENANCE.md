@@ -310,3 +310,5 @@ them answers that the command is unknown, and only that feature turns off.
   SHA-256 `2a914059b1b5a04700b48511f6caa355ccb2ea2e2c57533b93cb50a5a9f5c5d9`.
 - `free_router_platform_v1.json`: the TW#72 platform pass: `set_free_router_union`, `free_router_binding`, `prove_free_router_binding`, `set_free_router_grant`, `clear_free_router_grant`, `release_free_router_owner` (danil-engine#468), copied from danil-engine dev `e46f5d7c`,
   SHA-256 `477ab9298ea8e74717d280f04385fc464d09bbd045ce73b23494392884f8a7ca`.
+- `account_adoption_v1.json`: `adoption_candidates` and `adopt_account_workspace` (danil-engine#469), copied from danil-engine dev `2cf5e5bb`,
+  SHA-256 `ab06a5f1a733a8a1e9533151db8e44b3de35cbaec21119a122ed161e1ba1f976`.

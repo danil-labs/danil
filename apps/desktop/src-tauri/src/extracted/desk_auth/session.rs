@@ -170,6 +170,9 @@ pub(crate) fn allowed(method: &str, path: &str) -> bool {
             | ("POST", "/v1/identity/organizations/select")
             | ("GET", "/v1/credits/balance")
             | ("GET", "/v1/workspaces")
+            // Crear (peticiones de la CLI, account_requests_v1) y adoptar los locales (§ 7.2).
+            | ("POST", "/v1/workspaces")
+            | ("POST", "/v1/workspaces/adopt")
             | ("POST", "/v1/workspaces/select")
             | ("POST", "/v1/workspaces/promo/redeem")
             | ("GET", "/v1/workspaces/preferences")
@@ -187,6 +190,15 @@ pub(crate) fn allowed(method: &str, path: &str) -> bool {
         ("PUT" | "DELETE", ["", "v1", "workspaces", "preferences", "added", id]) => opaque_id(id),
         _ => false,
     }
+}
+
+/// Crear y adoptar workspaces no se repiten sin la llave de quien llama: una
+/// llave inventada aquí rompería la idempotencia de sus reintentos.
+pub(super) fn requires_caller_key(method: &str, path: &str) -> bool {
+    matches!(
+        (method, path),
+        ("POST", "/v1/workspaces") | ("POST", "/v1/workspaces/adopt")
+    )
 }
 
 pub(super) fn valid_promo_request(

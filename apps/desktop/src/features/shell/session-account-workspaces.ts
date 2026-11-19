@@ -1,11 +1,12 @@
 import { escribirPref, leerPref } from "../../lib/prefs.ts";
+import { adoptionTarget, adoptLocals, prefsAdoptionMemory } from "./account-adoption.ts";
 import { applyMoves, movesFor, prefsPendingUnions, retryUnions } from "./account-transfers.ts";
 
 export type AccountWorkspace = { id: string; name: string; account: { org: string; account_id: string } };
 export type FreeWorkspace = { id: string; name: string; account_id: string };
 type Group = { context_id: string; org: string; plan: string | null };
 type Invoke = <T>(command: string, args?: Record<string, unknown>) => Promise<T>;
-type Send = (context: string, method: "GET", path: string) => Promise<{ status: number; body?: unknown }>;
+type Send = (context: string, method: string, path: string, body?: unknown, key?: string) => Promise<{ status: number; body?: unknown; empty_reason?: unknown }>;
 
 export function accountWorkspaces(value: unknown): AccountWorkspace[] {
   const rows = (value as { workspaces?: unknown } | null)?.workspaces;
@@ -39,6 +40,9 @@ export function createAccountWorkspaces(invoke: Invoke, native: boolean, changed
   let extension = false;
   let transfer = false;
   const pending = prefsPendingUnions(leerPref, escribirPref);
+  const adoptions = prefsAdoptionMemory(leerPref, escribirPref, () => crypto.randomUUID());
+  let adoption = false;
+  let adoptionUnavailable = false;
   let version = 0;
   let rows: AccountWorkspace[] = [];
   let free = new Map<string, FreeWorkspace>();
@@ -59,6 +63,14 @@ export function createAccountWorkspaces(invoke: Invoke, native: boolean, changed
         local = self.id;
         extension = self.features?.includes("account_workspace_v1") ?? false;
         transfer = self.features?.includes("account_transfer_v1") ?? false;
+        adoption = self.features?.includes("account_adoption_v1") ?? false;
+        // Al iniciar sesión, antes de lanzar turnos: los locales pasan a la organización personal Free.
+        const personal = adoptionTarget(groups);
+        if (adoption && personal && !adoptionUnavailable) {
+          const done = await adoptLocals(invoke, header(), send, personal, adoptions, pending);
+          if (epoch !== version) return;
+          adoptionUnavailable = done.unavailable;
+        }
         const value = await invoke("list_workspaces", header());
         if (epoch !== version) return;
         rows = accountWorkspaces(value);
@@ -74,7 +86,7 @@ export function createAccountWorkspaces(invoke: Invoke, native: boolean, changed
           if (moved && epoch === version) { rows = accountWorkspaces(await invoke("list_workspaces", header())); changed(); }
         }
         // La unión del Free router va aparte del traslado: si falló, el repaso la vuelve a pedir.
-        if (transfer) await retryUnions(invoke, header(), pending, personOf);
+        if (transfer || adoption) await retryUnions(invoke, header(), pending, personOf);
         const next = new Map<string, FreeWorkspace>();
         if (extension) for (const group of groups.filter((g) => g.plan === "free")) {
           let cursor: string | null = null;

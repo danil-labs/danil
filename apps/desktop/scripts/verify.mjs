@@ -711,6 +711,7 @@ const steps = [
   ["Each workspace talks to its Danil account, and an older engine leaves the single account", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/danil-sessions.test.ts")], root],
   ["CLI account requests run with the right session and the CLI key as Idempotency-Key", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/account-requests.test.ts")], root],
   ["A workspace moved between organizations is resealed and its Free router union follows", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/account-transfers.test.ts")], root],
+  ["Local workspaces are adopted into the personal Free org once, server first, without moving tasks", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/account-adoption.test.ts")], root],
   ["Cuentas de IA is never blank: loading, failed with retry, or the agents Danil installs", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/ai-providers-view.test.ts")], root],
   ["The AI accounts panel mounts loading, failed or with the supported agents, never empty", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/ai-providers-states.test.mjs")], root],
   ["Remote paths preserve their machine context", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/remote-path.test.ts")], root],
