@@ -361,6 +361,13 @@ const es = {
   "task.questions_next_label": "Siguiente",
   "task.free_text": "Otra respuesta…",
   "task.error": "Algo falló: {detail}",
+  "task.queue.verb.archive": "archivó",
+  "task.queue.verb.finish": "finalizó",
+  "task.queue.verb.delete": "eliminó",
+  "task.queue.uncertain": "No se pudo confirmar si «{title}» se {action}. Revisa la tarea antes de repetirlo.",
+  "task.queue.expired": "Pasó demasiado tiempo y «{title}» no se {action}. Pídelo de nuevo si lo quieres.",
+  "task.queue.gone": "La máquina de «{title}» ya no está en tu cuenta; no se hizo nada.",
+  "task.queue.blocked": "«{title}» tiene cambios sin guardar o trabajo sin integrar; no se {action}.",
   "task.queued": "En cola: {ahead} antes",
   "chat.visual.failed": "No se pudo abrir la visualización.",
   "chat.visual.title": "Visualización interactiva",
@@ -629,7 +636,7 @@ const es = {
   "space.delete_empty": "No tiene tareas abiertas.",
 } as const;
 
-type Key = keyof typeof es;
+export type Key = keyof typeof es;
 
 const en: Record<Key, string> = {
   "github.title": "GitHub",
@@ -991,6 +998,13 @@ const en: Record<Key, string> = {
   "task.questions_next_label": "Next",
   "task.free_text": "Another answer…",
   "task.error": "Something failed: {detail}",
+  "task.queue.verb.archive": "archived",
+  "task.queue.verb.finish": "finished",
+  "task.queue.verb.delete": "deleted",
+  "task.queue.uncertain": "Could not confirm whether “{title}” was {action}. Check the task before trying again.",
+  "task.queue.expired": "Too much time passed and “{title}” was not {action}. Ask again if you still want it.",
+  "task.queue.gone": "The machine for “{title}” is no longer in your account; nothing was done.",
+  "task.queue.blocked": "“{title}” has unsaved changes or unmerged work; it was not {action}.",
   "task.queued": "Queued: {ahead} ahead",
   "chat.visual.failed": "Couldn't open the visualization.",
   "chat.visual.title": "Interactive visualization",

@@ -9,11 +9,11 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { Platform } from "react-native";
 import * as WebBrowser from "expo-web-browser";
 import { AccountProvider } from "../lib/account";
-import { MachinesProvider } from "../lib/machines";
+import { MachinesProvider, useMachines } from "../lib/machines";
 import { Notifications } from "../lib/notifications";
 import { selectWordOnDoubleTap } from "../lib/selection";
 import { t, w } from "../lib/i18n";
-import { hydrate as hydrateTaskQueue } from "../lib/taskQueue";
+import { bindHosts, hydrate as hydrateTaskQueue } from "../lib/taskQueue";
 import { pinToVisibleArea } from "../lib/viewport";
 import { WorkspacesProvider } from "../lib/workspaces";
 import { ActivityNotice } from "../ui/ActivityNotice";
@@ -42,6 +42,20 @@ function openTarget(response: NotificationResponse | null) {
     pathname: "/task/[host]/[workspace]/[folder]/[id]",
     params: { host: target.host, workspace: target.workspace, folder: target.folder || "_", id: target.task },
   });
+}
+
+/**
+ * Le dice a la cola de archivar/finalizar/borrar qué máquinas tiene la cuenta.
+ * Una máquina que la flota aún no resuelve (arranque, sin sesión, sin red) hace
+ * esperar la petición guardada; solo la que la flota ya cargó y no incluye es
+ * una máquina que dejó la cuenta.
+ */
+function TaskQueueHosts() {
+  const { hostOf, fleet, contextReady, hosts } = useMachines();
+  useEffect(() => {
+    bindHosts((id) => hostOf(id) ?? (fleet === "ok" && contextReady ? "gone" : "pending"), t);
+  }, [hostOf, fleet, contextReady, hosts]);
+  return null;
 }
 
 export default function RootLayout() {
@@ -84,6 +98,7 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
     <AccountProvider>
     <MachinesProvider>
+      <TaskQueueHosts />
       <WorkspacesProvider>
       <CustomizationProvider>
       <InboxProvider>
