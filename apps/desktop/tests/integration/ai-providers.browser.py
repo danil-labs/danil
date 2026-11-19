@@ -41,16 +41,15 @@ strict = os.environ.get('DANIL_PV2_STRICT') == '1'
 MACHINE = 'cmp_abcdefghijklmnopqrstuvwxyz'
 # La segunda máquina del escenario `machines`: con dos, la web junta las cuentas de las dos (`fleet.merge`) y pinta su fila de máquinas.
 MACBOOK = 'cmp_zyxwvutsrqponmlkjihgfedcba'
-# Mínimo de la tarjeta: 22rem (352 px). Medido en el modal real: la tarjeta caída de `reconnect` tiene su estado,
-# «Reconectar» y «…» completos en una fila desde 266 px, con el correo truncado; 22rem le deja unos 86 px al correo.
-# Con 8 px de hueco: 1 columna < 712 px de lista, 2 desde 712 y 3 desde 1072; nunca más de 3.
-CARD_MIN = 352
-# Se mide en el modal real de Configuración, cambiando solo el viewport: riel de 224 px y tope de 1400 px de diálogo en
+# Mínimo de la tarjeta: 28rem (448 px), el ancho natural de la tarjeta caída de `reconnect` con su correo completo
+# (444 px medidos en el modal real). Con 8 px de hueco: 1 columna < 904 px de lista, 2 desde 904 y 3 desde 1360; nunca más de 3.
+CARD_MIN = 448
+# Se mide en el modal real de Configuración, cambiando solo el viewport: riel de 224 px y tope de 1680 px de diálogo en
 # Proveedores de IA (1120 px en las demás secciones). Antes se fijaba a mano el ancho del grupo y por eso no se vio que
 # en beta la lista nunca pasaba de 806 px.
 VIEWPORTS = [(1920, 1080), (1440, 900), (1280, 800), (900, 800)]
 # Columnas esperadas por número de cuentas y ancho de viewport.
-COLUMNS = {1: {1920: 1, 1440: 1, 1280: 1, 900: 1}, 2: {1920: 2, 1440: 2, 1280: 2, 900: 1}, 4: {1920: 3, 1440: 3, 1280: 2, 900: 1}}
+COLUMNS = {1: {1920: 1, 1440: 1, 1280: 1, 900: 1}, 2: {1920: 2, 1440: 2, 1280: 2, 900: 1}, 4: {1920: 3, 1440: 2, 1280: 2, 900: 1}}
 
 def head():
     return subprocess.check_output(['git', 'rev-parse', '--short=8', 'HEAD'], cwd=root, text=True).strip()
@@ -332,7 +331,8 @@ def names(page):
         const b = block.getBoundingClientRect();
         const pieces = [...line.children].map(e => e.getBoundingClientRect()).filter(r => r.width > 0);
         const spill = [...line.children].some(e => e.getBoundingClientRect().right > b.right + 1);
-        return { name: line.textContent.trim().slice(0, 30), overlaps: acts.some(a => a.left < b.right - 1), spill,
+        const label = line.querySelector('span[title]');
+        return { name: line.textContent.trim().slice(0, 30), full: !!label && label.scrollWidth <= label.clientWidth, overlaps: acts.some(a => a.left < b.right - 1), spill,
           oneLine: pieces.every(r => Math.abs(r.top - pieces[0].top) < 6) };
     })""")
 
@@ -445,6 +445,9 @@ def run(browser, base, name):
             _eq_true(not got['clipped'], f'{name} {vw}px: acciones recortadas: {got["clipped"]}')
             bad = [n for n in names(page) if n['overlaps'] or n['spill'] or not n['oneLine']]
             _eq_true(not bad, f'{name} {vw}px: el nombre pisa las acciones, se sale de su bloque o parte su línea: {bad}')
+            if got['cols'] >= 2:
+                cut = [n['name'] for n in names(page) if not n['full']]
+                _eq_true(not cut, f'{name} {vw}px: con {got["cols"]} columnas el correo se trunca: {cut}')
             if name == 'reconnect':
                 # La tarjeta caída: su estado, «Reconectar» y «…» en la fila de la cabecera, como en `9e345462`.
                 head_row = header(page, 'persona2@ejemplo.com')
@@ -454,7 +457,7 @@ def run(browser, base, name):
                 # La fila de máquinas y «Iniciar sesión en otra máquina» son de su cuenta: dentro de su celda, sin tocar otra.
                 row = machine_row(page, 'persona2@ejemplo.com')
                 _eq_true(row['row'] and row['button'] and row['rowInside'] and row['buttonInside'] and not row['overlaps'], f'{vw}px: la fila de máquinas no queda en su celda: {row}')
-        results.append(('PASS', f'{name}: en el modal real a ' + ', '.join(f'{vw}x{vh}' for vw, vh in VIEWPORTS) + ': columnas, mínimo, sin desborde ni recortes' + (', cabecera de la caída en una fila' if name == 'reconnect' else '') + (', fila de máquinas en su celda' if name == 'machines' else '')))
+        results.append(('PASS', f'{name}: en el modal real a ' + ', '.join(f'{vw}x{vh}' for vw, vh in VIEWPORTS) + ': columnas, mínimo, sin desborde ni recortes' + ', correo completo con 2 o más columnas' + (', cabecera de la caída en una fila' if name == 'reconnect' else '') + (', fila de máquinas en su celda' if name == 'machines' else '')))
         page.set_viewport_size({'width': 1440, 'height': 900})
     if name == 'machines':
         expect(dialog.locator('[data-account-machines]').first).to_be_visible()
