@@ -41,6 +41,7 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
     const [error, setError] = createSignal('');
     // Identity aún no dio el perfil y se reintenta solo: sigue la carga, no una pantalla vacía.
     const [preparing, setPreparing] = createSignal(false);
+    const [reloading, setReloading] = createSignal(false);
     const [signedOut, setSignedOut] = createSignal(false);
     const [preparingWorkspace, setPreparingWorkspace] = createSignal(false);
     // Hasta que identity contesta se ve la carga; la entrada solo sin sesión o con el error del retorno.
@@ -64,7 +65,7 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
       windowApp = undefined;
       disposeGate?.();
       root.replaceChildren();
-      disposeGate = render(() => <Show when={identified() && !signedOut() && !preparing()} fallback={<><ToastStack><UpdateNotice /></ToastStack><Show when={signedOut() || returnError} fallback={<SessionLoading onSignOut={preparing() ? () => void exit.leave() : undefined} />}><WorkosAuthPage loginUrl={api.loginUrl(home)} error={returnError} /></Show></>}><main class="flex h-full flex-col gap-4 overflow-y-auto bg-bg p-10 text-neutral-950" data-web-gate="">
+      disposeGate = render(() => <Show when={identified() && !signedOut() && !preparing() && !reloading()} fallback={<><ToastStack><UpdateNotice /></ToastStack><Show when={!reloading() && (signedOut() || returnError)} fallback={<SessionLoading onSignOut={preparing() && !reloading() ? () => void exit.leave() : undefined} />}><WorkosAuthPage loginUrl={api.loginUrl(home)} error={returnError} /></Show></>}><main class="flex h-full flex-col gap-4 overflow-y-auto bg-bg p-10 text-neutral-950" data-web-gate="">
         <ToastStack><UpdateNotice /></ToastStack>
         <h1 class="m-0 font-display text-lead font-bold">{t('common.brand_name')}</h1>
         <Show when={busy()}><p role="status">{t('web.auth.waiting')}</p></Show>
@@ -80,6 +81,7 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
         </Show>
       </main></Show>, root);
     }
+    function reload() { setReloading(true); gate(); stopped = true; stopServices(); window.location.assign(home); } // La recarga del sistema: solo la carga, sin botones; `gate` cierra y pinta en el mismo turno.
     function expired() {
       if (stopped || signedOut()) return;
       stopServices();
@@ -109,8 +111,7 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
     const machines = machinesClient({ endpoint: `${options.origin}/v1`, transport, relayOrigins: __DANIL_WEB_RELAY_ORIGINS__ });
     const organization = webOrganizations(transport, { signal: lifetime.signal, store: window.sessionStorage, signIn: () => window.location.assign(api.loginUrl(home)), redeem: (code, key) => authorized(() => api.redeemPromo(code, key)), onSelected: () => {
       // La organización de una cuenta nueva llega con la ventana montada: se relee `me` y, al quedar activa, la página recarga una sola vez.
-      if (mountedBefore && waiting()) { wait = FIRST_RETRY_MS; later(0); return; }
-      stopped = true; stopServices(); windowApp?.close(); window.location.assign(home);
+      if (mountedBefore && waiting()) { wait = FIRST_RETRY_MS; later(0); } else reload();
     } });
     const organizations = organization.selection;
     const [orgNeeded, setOrgNeeded] = createSignal(false);
@@ -149,7 +150,7 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
           setCaps(capabilities);
           const arrived = person?.workspace === null && fresh.workspace !== null;
           // Los créditos se atan a la organización al montar: cambiarla recarga una vez.
-          if (person && (fresh.id !== person.id || (!arrived && fresh.workspace !== person.workspace) || fresh.active_organization_id !== person.active_organization_id)) { stopped = true; stopServices(); gate(); window.location.assign(home); return; }
+          if (person && (fresh.id !== person.id || (!arrived && fresh.workspace !== person.workspace) || fresh.active_organization_id !== person.active_organization_id)) { reload(); return; }
           person = fresh;
           if (permits('workspaces') && fresh.workspace !== null) {
             const listed = await readWorkspaces(() => api.workspaces(), rows(), unlisted);
@@ -196,8 +197,7 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
       await run(async () => { await selection.choose(id); window.location.assign(home); });
     }
     const exit = sessionExit({
-      closed: () => stopped || signedOut(), cancel: () => clearTimeout(timer), logout: () => api.logout(),
-      signedOut: () => { forgetMachineNames(); expired(); },
+      closed: () => stopped || signedOut(), cancel: () => clearTimeout(timer), logout: () => api.logout(), signedOut: () => { forgetMachineNames(); expired(); },
       unavailable: () => { if (!gone()) { setPreparing(false); setError('web.platform.unavailable'); gate(); } },
     });
     async function load() {
@@ -205,7 +205,7 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
         const { profile, capabilities } = await startup.read(caps());
         if (gone()) return;
         setCaps(capabilities);
-        if (mountedBefore) { window.location.assign(home); return; }
+        if (mountedBefore) { reload(); return; }
         person = profile;
         organization.load(startup.reader()?.organizations);
         const workspaces = person.workspace !== null && permits('workspaces') ? await readWorkspaces(() => startup.reader()!.workspaces(), [], unlisted) : [];

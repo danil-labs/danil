@@ -607,7 +607,6 @@ const problemOf = (status, code, extra = {}) => new Response(JSON.stringify({ ty
 const navigations = app => app.failures.filter(f => f.includes('Not implemented: navigation'));
 const others = app => app.failures.filter(f => !f.includes('Not implemented: navigation'));
 
-/** Una cuenta nueva sin workspace; `select` contesta lo que diga la prueba y el canje exige contexto. */
 // Las esperas de la página (1 s en adelante) duran un instante; la prueba espera en tiempo real lo que equivale a varias rondas.
 function fastClock(t) {
   const realTimeout = globalThis.setTimeout;
@@ -616,8 +615,9 @@ function fastClock(t) {
   return ms => new Promise(resolve => realTimeout(resolve, ms));
 }
 
+/** Una cuenta nueva sin workspace; `select` contesta lo que diga la prueba. */
 function newAccount({ orgs = [NEW_ORG], orgsAfter, after = edge => edge.listed > 1, machines, select = () => Response.json({ organization: NEW_ORG, workspace: null }), me = () => ({ id: 'user_N', name: 'New', workspace: null, organizations: [] }) } = {}) {
-  const edge = { calls: [], redeemed: [], selected: null, listed: 0, me: 0 };
+  const edge = { calls: [], selected: null, listed: 0, me: 0 };
   const fetcher = async (input, init) => {
     const url = new URL(String(input));
     if (url.origin === 'http://localhost' && url.pathname.includes('/assets/')) return new Response('');
@@ -635,10 +635,6 @@ function newAccount({ orgs = [NEW_ORG], orgsAfter, after = edge => edge.listed >
       const reply = await select(JSON.parse(init.body).organization_id);
       if (reply.ok) edge.selected = JSON.parse(init.body).organization_id;
       return reply;
-    }
-    if (url.pathname === '/v1/workspaces/promo/redeem') {
-      edge.redeemed.push(new Headers(init.headers).get('idempotency-key'));
-      return edge.selected ? Response.json({ machine: { state: 'provisioning' } }) : problemOf(403, 'organization_selection_required');
     }
     throw new Error(`Unexpected request ${url.pathname}`);
   };
@@ -724,7 +720,30 @@ for (const [label, machines] of [
   await until(() => app.w.document.querySelector('[data-tira]'));
   await until(() => edge.selected === 'org_N');
   assert.ok(edge.listed >= 2, 'the list was read again');
-  assert.deepEqual(edge.redeemed, [], 'nobody redeemed');
   assert.deepEqual(navigations(app), []);
+  assert.deepEqual(others(app), []);
+});
+
+// P1 de la revisión 3 de H2: la recarga que hace el sistema al cambiar la organización se ve como carga.
+test('a change of active organization reloads once behind the loading screen, without buttons', async t => {
+  let me = 0;
+  const fetcher = async input => {
+    const url = new URL(String(input));
+    if (url.origin === 'http://localhost' && url.pathname.includes('/assets/')) return new Response('');
+    if (['/v1/capabilities', '/v1/identity/organizations', '/v1/machines'].includes(url.pathname)) return new Response(null, { status: 404 });
+    if (url.pathname === '/v1/identity/me') return Response.json({ id: 'user_N', name: 'New', workspace: null, organizations: [], active_organization_id: me++ === 0 ? null : 'org_N' });
+    throw new Error(`Unexpected request ${url.pathname}`);
+  };
+  fetcher.__jsdomApp = true; globalThis.fetch = fetcher;
+  const app = await open(t, 'listo', 'h2-org-reload', {}, undefined, {}, { web: true });
+  const doc = app.w.document;
+  await until(() => doc.querySelector('[data-tira]'));
+  await until(() => navigations(app).length === 1);
+  assert.ok(doc.querySelector('[data-web-loading]'), 'the loading screen covers the reload');
+  assert.equal(doc.querySelector('[data-web-gate]'), null);
+  assert.equal(doc.querySelector('[data-web-sign-out]'), null);
+  assert.equal(doc.querySelector('[data-tira]'), null);
+  await new Promise(resolve => setTimeout(resolve, 1500));
+  assert.equal(navigations(app).length, 1, 'exactly one navigation');
   assert.deepEqual(others(app), []);
 });
