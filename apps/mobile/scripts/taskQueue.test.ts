@@ -252,7 +252,7 @@ test("contenido ilegible se guarda aparte antes de seguir", async () => {
   const store: Storage = { getItem: async () => "{no es json", setItem: async (k, v) => { written[k] = v; } };
   __reset({ storage: store });
   await hydrate();
-  assert.equal(written["terminus.taskQueue.unreadable"], "{no es json");
+  assert.deepEqual(Object.entries(written).filter(([k]) => k.startsWith("terminus.taskQueue.unreadable.")).map(([, v]) => v), ["{no es json"]);
 });
 
 test("todos los avisos se conservan hasta cerrarlos", async () => {
@@ -302,19 +302,59 @@ test("un error inesperado antes de enviar se avisa y se retira; no espera para s
   assert.equal(__entries().length, 0);
 });
 
-test("una entrada de otra cuenta espera; no se da por perdida", async () => {
-  __reset({ storage: disk([entry({ owner: "ana" })]) });
-  await hydrate();
-  const view = (user: string | null, hostOf: (id: string) => Host | undefined = () => undefined) => ({ hostOf, user, fleet: "ok", contextReady: true });
+test("una entrada de otra cuenta espera sin llamadas ni avisos; una sin dueño la reclama quien inicia sesión y queda guardada", async () => {
+  const store = disk([entry({ owner: "ana" }), entry({ id: "legacy", key: "m1:w:f:legacy:delete" })]);
+  __reset({ storage: store });
   let now = 0;
   const resolver = createResolver(() => now);
-  assert.equal(resolver(view("beto"))("m1", "ana"), "pending");
+  let notices = 0;
+  subscribe((state) => (notices = state.notices.length));
+  await hydrate();
+  const m = machine("m1");
+  const view = (user: string, hostOf: (id: string) => Host | undefined) => ({ hostOf, user, fleet: "ok", contextReady: true });
+  bindHosts(resolver(view("beto", () => undefined)));
   now += GONE_AFTER_MS * 3;
-  assert.equal(resolver(view("beto"))("m1", "ana"), "pending");
+  bindHosts(resolver(view("beto", () => undefined)));
+  await __kick();
+  assert.equal(m.calls.length, 0);
+  assert.equal(notices, 0);
+  assert.equal(__entries().length, 2, "ninguna se da por perdida");
   setAccount("ana");
-  assert.equal(__entries()[0].owner, "ana");
+  await __kick();
+  assert.equal(store.raw().find((e) => e.id === "legacy")?.owner, "ana", "el dueño quedó en disco");
+  bindHosts(resolver(view("ana", (id) => (id === "m1" ? m.host : undefined))));
+  await __kick();
+  assert.equal(m.mutations().length, 2, "con su cuenta, sí se ejecutan");
 });
 
+test("los fallos pasajeros esperan y no descartan; un rechazo por regla o un error ajeno sí avisa", async () => {
+  for (const code of ["machine_timeout", "machine_off", "start_failed", "start_timeout", "unreachable"]) {
+    __reset({ storage: disk() });
+    await hydrate();
+    const m = machine("m1", { fail: (c) => (c === "task_blockers" ? new HostError(code) : null) });
+    bindHosts(() => m.host);
+    enqueue(m.host, task, "finish");
+    await __kick();
+    assert.equal(__entries().length, 1, code);
+    // y archivar con la mutación ya enviada: repetir no tiene tope por fallos pasajeros
+    __reset({ storage: disk() });
+    await hydrate();
+    const a = machine("m1", { fail: (c) => (c === "set_task_archived" ? new HostError(code) : null) });
+    bindHosts(() => a.host);
+    enqueue(a.host, task, "archive");
+    for (let i = 0; i < 5; i++) { await __kick(); }
+    assert.equal(__entries().length, 1, `${code} archivar`);
+  }
+  for (const code of ["command_unsupported", "algo_raro"]) {
+    __reset({ storage: disk() });
+    await hydrate();
+    const m = machine("m1", { fail: (c) => (c === "task_blockers" ? new HostError(code) : null) });
+    bindHosts(() => m.host);
+    enqueue(m.host, task, "finish");
+    await __kick();
+    assert.equal(__entries().length, 0, code);
+  }
+});
 test("«gone» pide sesión, la flota cargada de esa cuenta y faltar un rato seguido; el bridge no", () => {
   const base = { hostOf: () => undefined, user: "ana", fleet: "ok", contextReady: true };
   let now = 1000;

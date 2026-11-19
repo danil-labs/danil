@@ -61,8 +61,8 @@ const STORAGE_KEY = "terminus.taskQueue";
 const MAX_ATTEMPTS = 3;
 /** Cada cuánto se reintenta lo que espera a una máquina dormida o sin respuesta. */
 const WAIT_MS = 30_000;
-/** Lo que la máquina acepta antes de la mutación y no la ejecuta todavía. */
-const BEFORE_MUTATION = new Set(["machine_asleep", "task_status_unavailable", "queue_storage"]);
+/** Fallos pasajeros: la máquina duerme, tarda, no despierta o no se alcanza. Repetir es seguro si nada salió, y esperar no pierde la intención. */
+const TRANSIENT = new Set(["machine_asleep", "machine_off", "machine_timeout", "start_failed", "start_timeout", "unreachable", "io", "task_status_unavailable", "queue_storage"]);
 /** Rechazos que la máquina da por regla y que dicen que no se ejecutó. Cualquier otro error tras enviar es duda. */
 const REFUSED = new Set(["command_unsupported", "command_not_here", "command_not_allowed", "machine_outdated"]);
 const MUTATIONS = new Set(["set_task_archived", "finish_task", "delete_session"]);
@@ -146,7 +146,7 @@ export async function hydrate() {
         saved = (JSON.parse(raw) as QueueEntry[]).filter((e) => e && e.key && e.host && e.id);
       } catch {
         // Contenido que no se puede leer: se guarda aparte antes de seguir, nunca se pisa sin copia.
-        await (await disk()).setItem(`${STORAGE_KEY}.unreadable`, raw);
+        await (await disk()).setItem(`${STORAGE_KEY}.unreadable.${Date.now()}`, raw);
       }
     }
   } catch {
@@ -196,7 +196,9 @@ export function clearError() {
 /** La cuenta con sesión; las entradas nuevas la llevan y solo ella puede darlas por perdidas. */
 export function setAccount(id: string | null) {
   account = id;
-  if (id) for (const entry of entries) entry.owner ??= id;
+  let claimed = false;
+  if (id) for (const entry of entries) if (!entry.owner) { entry.owner = id; claimed = true; }
+  if (claimed) void save();
   void kick();
 }
 
@@ -291,9 +293,9 @@ async function run(entry: QueueEntry): Promise<Outcome> {
     }
     if (!entry.sent) {
       // No salió nada: dormida, sin comprobar o sin disco espera; una caída de red espera con pausa; el resto es un rechazo.
-      if (code && BEFORE_MUTATION.has(code)) return "wait";
-      if (code === "io") {
-        retryAt.set(entry.key, Date.now() + WAIT_MS);
+      if (code && TRANSIENT.has(code)) {
+        // Sin llamada nueva hasta pasar la pausa, salvo lo que no toca a la máquina.
+        if (code !== "machine_asleep" && code !== "task_status_unavailable" && code !== "queue_storage") retryAt.set(entry.key, Date.now() + WAIT_MS);
         return "wait";
       }
       warn(message(failure));
@@ -306,8 +308,8 @@ async function run(entry: QueueEntry): Promise<Outcome> {
         warn(message(failure));
         return "done";
       }
-      entry.attempts += 1;
-      if (code !== "io" && entry.attempts >= MAX_ATTEMPTS) {
+      if (!(code && TRANSIENT.has(code))) entry.attempts += 1;
+      if (!(code && TRANSIENT.has(code)) && entry.attempts >= MAX_ATTEMPTS) {
         warn(message(failure));
         return "done";
       }
