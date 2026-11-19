@@ -1,3 +1,4 @@
+import LegacyProfileMenu from "../../src/features/shell/LegacyProfileMenu";
 import "../../src/locales/catalogs";
 import "../../src/web/phrases";
 import { render } from "solid-js/web";
@@ -5,7 +6,7 @@ import { setCapabilities } from "../../src/lib/platform";
 import { AccountHeader } from "../../src/features/shell/AccountHeader";
 import { setWebOrganizationAttention, setWebOrganizationName } from "../../src/features/shell/GroupOrganizationWatch";
 
-export function mountWebGroup(root: HTMLElement) {
+export function mountWebGroup(root: HTMLElement, role?: string) {
   const chosen: string[] = [];
   const signedOut: string[] = [];
   const listeners = new Set<() => void>();
@@ -18,11 +19,16 @@ export function mountWebGroup(root: HTMLElement) {
   };
   const accounts = { current: { user_id: "web-person", email: "one@example.com", name: null, extra: false }, others: () => [], open: () => {}, remove: async () => {}, signOut: () => { signedOut.push("email"); } };
   setCapabilities({ nativeWindow: false, webAccounts: accounts, organizations: async () => selection as never, groupAccount: {
-    current: async () => ({ context: "ctx-a", org: "org-a", name: "Acme", plan: "paid" }),
+    current: async () => ({ context: "ctx-a", org: "org-a", name: "Acme", plan: "paid", role }),
     send: async () => ({ status: 200, body: { organization_id: "org-a", available: { currency: "MXN", amount_micro: "1000000" } } }),
   } } as never);
   setWebOrganizationName("Acme");
   setWebOrganizationAttention(true);
   const dispose = render(() => <AccountHeader id="web-person" email="one@example.com" accounts={accounts} extra={false} signedIn />, root);
   return { chosen, signedOut, dispose };
+}
+
+export function mountLegacyPromo(root: HTMLElement, role?: string) {
+  setCapabilities({ nativeWindow: false, webPromoRole: role, webPromo: async () => ({}) } as never);
+  return render(() => <LegacyProfileMenu initialOpen onAccount={() => {}} onReportarBug={() => {}} />, root);
 }

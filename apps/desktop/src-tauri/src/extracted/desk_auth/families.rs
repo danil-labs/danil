@@ -18,6 +18,12 @@ pub(super) struct Context {
     pub plan: Option<String>,
     #[serde(
         default,
+        deserialize_with = "super::context_role::deserialize",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub role: Option<String>,
+    #[serde(
+        default,
         deserialize_with = "session::deserialize_empty_reason",
         skip_serializing_if = "Option::is_none"
     )]

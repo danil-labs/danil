@@ -18,7 +18,7 @@ test("the web header offers organization choice before the separator and only si
   const app = await boot("listo", "web-header-host", RESPONSES);
   const root = app.w.document.createElement("div");
   app.w.document.body.append(root);
-  const { mountWebGroup } = await import(pathToFileURL(join(dir, "fixture.mjs")).href);
+  const { mountWebGroup, mountLegacyPromo } = await import(pathToFileURL(join(dir, "fixture.mjs")).href);
   const mounted = mountWebGroup(root);
   t.after(mounted.dispose);
   const doc = app.w.document;
@@ -44,4 +44,19 @@ test("the web header offers organization choice before the separator and only si
   assert.ok(await until(() => [...doc.querySelectorAll('[role="menuitem"]')].some((b) => b.textContent === "Cerrar sesión de one@example.com")));
   [...doc.querySelectorAll('[role="menuitem"]')].find((b) => b.textContent === "Cerrar sesión de one@example.com").click();
   assert.deepEqual(mounted.signedOut, ["email"]);
+  mounted.dispose(); root.replaceChildren();
+  for (const role of ["owner", "admin", undefined, "future-role", "member", "guest"]) {
+    const visible = role !== "member" && role !== "guest";
+    const flow = mountWebGroup(root, role);
+    doc.querySelector('[data-account-header="web-person"]').click();
+    assert.ok(await until(() => [...doc.querySelectorAll('[role="menuitem"]')].some((b) => b.textContent === "Cerrar sesión de one@example.com")));
+    assert.equal([...doc.querySelectorAll('[role="menuitem"]')].some((b) => b.textContent === "Canjear código"), visible, `web role ${role}`);
+    flow.dispose(); root.replaceChildren();
+    const disposeLegacy = mountLegacyPromo(root, role);
+    assert.ok(await until(() => doc.body.textContent.includes("Reportar un bug")));
+    if (visible) assert.ok(await until(() => doc.querySelector("#promo-code")), `legacy role ${role}`);
+    else assert.equal(doc.querySelector("#promo-code"), null, `legacy role ${role}`);
+    disposeLegacy(); root.replaceChildren();
+  }
+
 });

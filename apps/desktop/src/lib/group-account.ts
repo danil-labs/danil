@@ -1,7 +1,7 @@
 import { availableDanilCredits } from "./credits-balance.ts";
 import { normalizePromoCode } from "./promo-rejections.ts";
 
-export type GroupAccount = { context: string; org: string; name: string; plan: string | null };
+export type GroupAccount = { context: string; org: string; name: string; plan: string | null; role?: string | null };
 export type GroupReply = { status: number; body?: unknown; retry_after_ms?: number };
 export type GroupSend = (context: string, method: "GET" | "POST", path: string, body?: unknown, key?: string) => Promise<GroupReply>;
 
@@ -30,4 +30,4 @@ export async function redeemGroupCode(send: GroupSend, group: GroupAccount, code
   }
 }
 
-export type GroupAccountCapabilities = { groupAccount?: { send: GroupSend; current: () => Promise<GroupAccount | null>; legacy?: () => boolean } };
+export type GroupAccountCapabilities = { webPromoRole?: string | null; groupAccount?: { send: GroupSend; current: () => Promise<GroupAccount | null>; legacy?: () => boolean } };

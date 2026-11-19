@@ -16,10 +16,10 @@ export function webGroupAccount(transport: ReturnType<typeof edgeTransport>, cre
     try {
       const response = await transport.call("identity/sessions");
       legacy = false;
-      const body = await response.json() as { items?: { contexts?: { context_id: string; org: string; org_name?: string; plan?: string }[] }[]; default_context?: string };
+      const body = await response.json() as { items?: { contexts?: { context_id: string; org: string; org_name?: string; plan?: string; role?: unknown }[] }[]; default_context?: string };
       const contexts = body.items?.flatMap((f) => f.contexts ?? []) ?? [];
       const context = contexts.find((c) => c.context_id === body.default_context) ?? (!body.default_context && contexts.length === 1 ? contexts[0] : undefined);
-      return context ? { context: context.context_id, org: context.org, name: context.org_name ?? context.org, plan: context.plan ?? null } : null;
+      return context ? { context: context.context_id, org: context.org, name: context.org_name ?? context.org, plan: context.plan ?? null, role: typeof context.role === "string" && [...context.role].length <= 128 ? context.role : undefined } : null;
     } catch (error) { legacy = [404, 501].includes((error as { status?: number } | null)?.status ?? 0); return null; }
   } };
 }
