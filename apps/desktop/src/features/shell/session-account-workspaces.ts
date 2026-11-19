@@ -17,6 +17,9 @@ export function accountWorkspaces(value: unknown): AccountWorkspace[] {
   });
 }
 
+/** Cuándo volver a leer las cuentas: también si identity empieza a decir (o corrige) cuál es la personal con el mismo plan. */
+export const accountRefreshKey = (groups: readonly Group[] | null) => JSON.stringify(groups?.map((g) => [g.context_id, g.org, g.plan, isPersonal(g)]) ?? null);
+
 /** Las filas del catálogo de una organización, página a página. Un error corta y devuelve lo leído. */
 async function catalog(send: Send, context: string) {
   const items: unknown[] = [];

@@ -5,7 +5,7 @@ import { escribirPref, leerPref } from "../../lib/prefs.ts";
 import { listen } from "../../lib/serviceEvents.ts";
 import { danilAvailable, danilAvailableContext, readDanilContext } from "../machines/index.ts";
 import { type CreatedNotice, createAccountRequests } from "./account-requests.ts";
-import { createAccountWorkspaces } from "./session-account-workspaces.ts";
+import { accountRefreshKey, createAccountWorkspaces } from "./session-account-workspaces.ts";
 import { type ContextGroup, createSessionContexts } from "./session-contexts.ts";
 import type { EmptyReason } from "./session-empty.ts";
 import { coalesceSessionReturn as createSessionReturn } from "./session-return.ts";
@@ -43,7 +43,7 @@ function wire(hidden: () => ReadonlySet<string>, onSeeded: (ids: readonly string
     return sessionWorkspaceSource(groups()?.find((g) => g.context_id === context) ?? null, () => danilAvailableContext(org, context), () => accounts.available(org));
   };
   const refreshAccounts = () => accounts.refresh(groups() ?? [], sessions.send, (context) => records.get(context)?.person ?? null);
-  const accountKey = createMemo(() => JSON.stringify(groups()?.map((g) => [g.context_id, g.org, g.plan]) ?? null));
+  const accountKey = createMemo(() => accountRefreshKey(groups()));
   createEffect(on(accountKey, () => void refreshAccounts()));
   const records = new Map<string, { person: string | null; asking: boolean; sync: ReturnType<typeof createAddedSync> }>();
   const known = new Set<string>();
