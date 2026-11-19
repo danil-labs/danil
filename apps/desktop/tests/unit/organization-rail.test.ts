@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { emptySessionEmails } from "../../src/features/shell/empty-session-emails.ts";
 import { changeOrgPreference, orderedOrganizations, parseOrgPreference, stackedOrganizations } from "../../src/features/shell/organization-rail-model.ts";
 import type { SessionRailGroup } from "../../src/features/shell/session-groups.ts";
 
@@ -82,4 +83,15 @@ test("tile metadata comes only from its contextual listing, never from the globa
   const [org] = orderedOrganizations([scoped], [{ id: "shared", name: "A's workspace", logo: "private/path.png" }], { version: 1, orgs: [] });
   assert.equal(org.tiles[0].name, "B's workspace");
   assert.equal(org.tiles[0].logo, null);
+});
+
+test("an email with no workspace in the rail keeps a footer sign-out, once per email", () => {
+  const group = (family: string, email: string | null, available: readonly unknown[] | null) => ({ family, email, available });
+  assert.deepEqual(emptySessionEmails([
+    group("f1", "Empty@example.com", []), group("f1b", "empty@example.com", []),
+    group("f2", "busy@example.com", []), group("f2", "busy@example.com", [{ id: "w" }]),
+    group("f3", "loading@example.com", null),
+    group("f4", null, []),
+  ]), [{ email: "Empty@example.com", family: "f1" }, { email: "loading@example.com", family: "f3" }, { email: null, family: "f4" }]);
+  assert.deepEqual(emptySessionEmails(null), []);
 });

@@ -130,7 +130,7 @@ test("the enabled Desk promo route sends a trimmed code and displays rejection c
   assert.equal(sent[2].idempotencyKey, sent[3].idempotencyKey, "the same code retry keeps its intention key");
 });
 
-test("Desk group can redeem unless its context explicitly says member or guest", async () => {
+test("Desk group can redeem only when its context says owner or admin", async () => {
   const roles = ["owner", "admin", undefined, "future-role", "member", "guest"];
   const roleContexts = roles.map((role, i) => ({ context_id: `role-${i}`, org: `org-${i}`, org_name: `Org ${i}`, plan: "free", workspaces: "all", role }));
   const app = await boot("listo", "promo-context-roles", { ...RESPONSES, ...contextWorkspaces(roleContexts),
@@ -142,7 +142,7 @@ test("Desk group can redeem unless its context explicitly says member or guest",
   for (let i = 0; i < roles.length; i++) {
     openContextMenu(app, `role-${i}`);
     assert.ok(await until(() => [...doc.querySelectorAll('[role="menuitem"]')].some((b) => b.textContent === `Cerrar sesión de Org ${i}`)));
-    assert.equal([...doc.querySelectorAll('[role="menuitem"]')].some((b) => b.textContent === "Canjear código"), roles[i] !== "member" && roles[i] !== "guest", `Desk role ${roles[i]}`);
+    assert.equal([...doc.querySelectorAll('[role="menuitem"]')].some((b) => b.textContent === "Canjear código"), roles[i] === "owner" || roles[i] === "admin", `Desk role ${roles[i]}`);
     escape(app); await sleep(50);
   }
 });

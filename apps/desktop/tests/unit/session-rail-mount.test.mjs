@@ -87,3 +87,23 @@ test("Free is offered only with E1 and a server engine id, creates locally and s
   assert.ok(await until(() => doc.querySelector('[data-workspace-tile="engine-free"]')), "sealed Free enters the connected organization rail");
   assert.ok(await until(() => doc.querySelector('[data-workspace-context="free-context"][aria-current="true"]')), "a Free-only window keeps the context of the active tile even without an organization machine");
 });
+
+test("an email without any workspace keeps its sign-out in the footer profile menu", async () => {
+  const closed = [];
+  let status = { state: "connected", sessions: [{ family: "empty-family", email: "empty@example.com", contexts: [context("empty-context", "Empty Org")] }] };
+  const app = await boot("listo", "session-empty-sign-out", {
+    ...RESPONSES,
+    list_workspaces: { active: "w", workspaces: [{ id: "w", name: "Local" }] },
+    danil_session_status: () => structuredClone(status),
+    danil_edge_fetch: ({ path }) => path === "/v1/identity/me" ? { status: 200, body: { id: "person-empty" } } : path === "/v1/workspaces" ? { status: 200, body: { items: [] } } : { status: 404, body: {} },
+    danil_sign_out: ({ family }) => { closed.push(family); status = { state: "connected", sessions: [] }; return structuredClone(status); },
+  });
+  const doc = app.w.document;
+  assert.equal(doc.querySelector('[data-workspace-context="empty-context"]'), null, "the empty organization has no tile");
+  doc.querySelector("[data-profile-menu] button").click();
+  assert.ok(await until(() => doc.querySelector('[data-empty-session-sign-out="empty-family"]')), "the footer offers the sign-out of the empty email");
+  assert.equal(doc.querySelector('[data-empty-session-sign-out="empty-family"]').textContent, "Cerrar sesión de empty@example.com");
+  doc.querySelector('[data-empty-session-sign-out="empty-family"]').click();
+  assert.ok(await until(() => closed.length === 1));
+  assert.deepEqual(closed, ["empty-family"]);
+});

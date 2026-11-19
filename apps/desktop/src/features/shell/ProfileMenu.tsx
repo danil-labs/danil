@@ -8,6 +8,7 @@ import { type Apariencia, apariencia, elegirApariencia } from "../../lib/theme";
 import { cn } from "../../lib/utils";
 import { ITEM_DE_MENU, Popover, PopoverAnchor, PopoverContent } from "../../ui/Popover";
 import DanilFooterEntry from "./DanilFooterEntry";
+import { EmptySessionSignOut } from "./EmptySessionSignOut";
 import { GroupOrganizationWatch } from "./GroupOrganizationWatch";
 import { noteWebAccountMode, usesGroupAccounts } from "./session-menu-mode";
 
@@ -98,6 +99,7 @@ export default function ProfileMenu(props: {
         >
           {t("usage.bug_report.open_web")}
         </button>
+        <Show when={capabilities().nativeWindow}><EmptySessionSignOut onDone={() => setOpen(false)} /></Show>
         <Show when={capabilities().webAccounts}>
           {(cuentas) => (
             <>
