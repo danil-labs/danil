@@ -1,4 +1,5 @@
-import { applyMoves, movesFor } from "./account-transfers.ts";
+import { escribirPref, leerPref } from "../../lib/prefs.ts";
+import { applyMoves, movesFor, prefsPendingUnions, retryUnions } from "./account-transfers.ts";
 
 export type AccountWorkspace = { id: string; name: string; account: { org: string; account_id: string } };
 export type FreeWorkspace = { id: string; name: string; account_id: string };
@@ -37,6 +38,7 @@ export function createAccountWorkspaces(invoke: Invoke, native: boolean, changed
   let local: string | null = null;
   let extension = false;
   let transfer = false;
+  const pending = prefsPendingUnions(leerPref, escribirPref);
   let version = 0;
   let rows: AccountWorkspace[] = [];
   let free = new Map<string, FreeWorkspace>();
@@ -67,10 +69,12 @@ export function createAccountWorkspaces(invoke: Invoke, native: boolean, changed
           for (const group of groups) {
             const items = await catalog(send, group.context_id);
             if (epoch !== version) return;
-            moved += await applyMoves(invoke, header(), movesFor(rows, group.org, items), personOf(group.context_id));
+            moved += await applyMoves(invoke, header(), movesFor(rows, group.org, group.context_id, items), pending);
           }
           if (moved && epoch === version) { rows = accountWorkspaces(await invoke("list_workspaces", header())); changed(); }
         }
+        // La unión del Free router va aparte del traslado: si falló, el repaso la vuelve a pedir.
+        if (transfer) await retryUnions(invoke, header(), pending, personOf);
         const next = new Map<string, FreeWorkspace>();
         if (extension) for (const group of groups.filter((g) => g.plan === "free")) {
           let cursor: string | null = null;
