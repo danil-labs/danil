@@ -69,6 +69,14 @@ test("S9+S10: sin superficies, con claude vivo, se ve claude; nunca «cargando»
   assert.deepEqual(visibles([], { claude: est({ vivo: true }), codex: est() }).ids, ["claude"], "los que no avisaron no cambian el orden");
 });
 
+test("solo gratuitos y Free Router: el fallback es SUPPORTED_AGENTS, y visibles no se queda en «cargando»", () => {
+  const solo = [sup("opencode", { catalogo: "gratuitos" }), sup("free-router-opencode")];
+  assert.deepEqual(opcionesDeAlta(solo, {}).map((o) => o.id), [...SUPPORTED_AGENTS]);
+  const todos = Object.fromEntries(SUPPORTED_AGENTS.map((id) => [id, est()]));
+  assert.deepEqual(visibles(solo, todos), { ids: [], vacio: "sin-cuentas" });
+  assert.deepEqual(visibles(solo, { ...todos, codex: est({ vivo: true }) }), { ids: ["codex"], vacio: null });
+});
+
 test("P8 S11: segunda cuenta sin aislamiento: bloqueada con el motivo literal", () => {
   const bloqueoAlta: BloqueoAlta = { k: "segunda", porque: FRASE };
   const o = opcionesDeAlta([sup("antigravity")], { antigravity: est({ cuentas: 1, bloqueoAlta }) })[0];
@@ -122,8 +130,8 @@ function prng(seed: number) {
 }
 type Paso = { op: string; id: string; n?: number } | { op: "superficies"; orden: string[] };
 const PROVS = ["claude", "codex", "antigravity", "grok", "kimi"];
-type Senales = { cuentas: number | undefined; falloLectura: boolean; alta: boolean; aviso: boolean; esperando: number };
-const nuevas = (): Senales => ({ cuentas: undefined, falloLectura: false, alta: false, aviso: false, esperando: 0 });
+type Senales = { cuentas: number | undefined; falloLectura: boolean; alta: boolean; aviso: boolean; esperando: number; segunda: boolean; externo: boolean };
+const nuevas = (): Senales => ({ cuentas: undefined, falloLectura: false, alta: false, aviso: false, esperando: 0, segunda: false, externo: false });
 
 /** Lo que `Accounts` avisaría dadas las señales: la traducción, no la regla. */
 function avisoDe(s: Senales): EstadoDeProveedor {
@@ -131,7 +139,7 @@ function avisoDe(s: Senales): EstadoDeProveedor {
     cuentas: s.cuentas ?? null,
     falloDeLectura: s.falloLectura,
     vivo: s.alta || s.aviso || s.esperando > 0,
-    bloqueoAlta: s.alta ? { k: "ocupado" } : null,
+    bloqueoAlta: s.alta ? { k: "ocupado" } : s.segunda ? { k: "segunda", porque: FRASE } : s.externo ? { k: "externo" } : null,
   };
 }
 
@@ -147,6 +155,8 @@ function aplicar(m: Record<string, Senales>, orden: string[], p: Paso): string[]
     case "cerrarAviso": s.aviso = false; break;
     case "quitar": s.cuentas = Math.max(0, (s.cuentas ?? 0) - 1); break;
     case "esperaCambia": s.esperando = p.n!; break;
+    case "segundaCambia": s.segunda = p.n! > 0; break;
+    case "externoCambia": s.externo = p.n! > 0; break;
   }
   return orden;
 }
@@ -171,6 +181,17 @@ function revisar(m: Record<string, Senales>, orden: string[]): string | null {
   if (new Set(v.ids).size !== v.ids.length) return "duplicados";
   const orden2 = ids.filter((i) => v.ids.includes(i));
   if (v.ids.some((x, i) => x !== orden2[i]) || v.ids.length !== orden2.length) return `orden roto ${v.ids} vs ${ids}`;
+  // El selector ofrece los mismos ids y copia cada bloqueo.
+  const op = opcionesDeAlta(surfs, estados);
+  if (JSON.stringify(op.map((o) => o.id)) !== JSON.stringify(ids)) return `opciones ${op.map((o) => o.id)} vs ${ids}`;
+  for (const o of op) {
+    const s = m[o.id];
+    const esperada = s?.alta ? { id: o.id, accion: "bloqueada", motivo: "ocupado" }
+      : s?.segunda ? { id: o.id, accion: "bloqueada", motivo: "segunda", porque: FRASE }
+      : s?.externo ? { id: o.id, accion: "abrir" }
+      : { id: o.id, accion: "agregar" };
+    if (JSON.stringify(o) !== JSON.stringify(esperada)) return `opción de ${o.id}: ${JSON.stringify(o)} vs ${JSON.stringify(esperada)}`;
+  }
   // I5
   if (v.ids.length === 0) {
     if (v.vacio !== "cargando" && v.vacio !== "sin-cuentas") return "vacío sin razón";
@@ -191,7 +212,7 @@ function fallaCon(pasos: Paso[]): string | null {
 }
 
 test("PROP-T1: sobre 500 secuencias aleatorias visibles cumple I1, I2, I5, sin duplicados y en orden", () => {
-  const OPS = ["listaOk", "listaFalla", "altaEmpieza", "loginDone", "descartar", "cerrarAviso", "quitar", "esperaCambia", "superficies"];
+  const OPS = ["listaOk", "listaFalla", "altaEmpieza", "loginDone", "descartar", "cerrarAviso", "quitar", "esperaCambia", "segundaCambia", "externoCambia", "superficies"];
   for (let seed = 1; seed <= 500; seed++) {
     const r = prng(seed);
     const pick = <T,>(a: T[]) => a[Math.floor(r() * a.length)];

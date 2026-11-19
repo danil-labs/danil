@@ -64,9 +64,11 @@ export function sinCuentas(estados: EstadosPorProveedor, ids: readonly string[])
   });
 }
 
-/** Los ids de proveedor de la pantalla: los de `list_surfaces` y, sin superficies, `SUPPORTED_AGENTS`. Una sola lista para `visibles` y `opcionesDeAlta`. */
-export const idsDeProveedor = (superficies: readonly Superficie[]): string[] =>
-  superficies.length ? idsDeGrupos(superficies) : [...SUPPORTED_AGENTS];
+/** Los ids de proveedor de la pantalla: los de `list_surfaces` y, sin grupos de proveedor (ni superficies, o solo gratuitas y Free Router), `SUPPORTED_AGENTS`. Una sola lista para `visibles` y `opcionesDeAlta`. */
+export function idsDeProveedor(superficies: readonly Superficie[]): string[] {
+  const ids = idsDeGrupos(superficies);
+  return ids.length ? ids : [...SUPPORTED_AGENTS];
+}
 
 /** Los grupos a la vista, en el orden de `list_surfaces`, y por qué no hay ninguno. */
 export function visibles(superficies: readonly Superficie[], estados: EstadosPorProveedor): { ids: string[]; vacio: null | "cargando" | "sin-cuentas" } {
