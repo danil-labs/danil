@@ -97,7 +97,7 @@ export async function montar({ url }, nombre, m, ids, options) {
   app.w.document.body.append(root);
   const { mountAccounts } = await import(`${url}?v=${nombre}`);
   const g = mountAccounts(root, ids, options);
-  const grupo = (id) => root.querySelector(`[data-provider-group="${id}"]`);
+  const grupo = (id) => root.querySelector(`[data-test-group="${id}"]`);
   const boton = (id, texto) => [...(grupo(id)?.querySelectorAll("button") ?? [])].find((b) => b.textContent.trim() === texto || b.getAttribute("aria-label") === texto);
   const enDialogo = (texto) => [...app.w.document.querySelectorAll('[role="dialog"] button')].find((b) => b.textContent.trim() === texto);
   return { app, root, g, grupo, boton, enDialogo, texto: (id) => grupo(id)?.textContent ?? "", cerrar: () => { g.dispose(); root.remove(); } };

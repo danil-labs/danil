@@ -170,10 +170,8 @@ export default function Accounts(props: {
   const comprobadas = new Set<string>();
 
   function cancelarEspera() {
-    if (espera !== null) {
-      clearTimeout(espera);
-      espera = null;
-    }
+    if (espera !== null) clearTimeout(espera);
+    espera = null;
   }
 
   const proveedor = () => agentes().find((a) => a.id === agente());
@@ -752,10 +750,12 @@ export default function Accounts(props: {
     if (enCurso() !== null || agregando()) return { k: "ocupado" };
     return porque ? { k: "segunda", porque } : addBlockedByExternal(proveedor()) ? { k: "externo" } : null;
   };
+  // PROVISIONAL hasta que se decida Q2: el fallo de un alta o de su login también deja el grupo a la vista.
+  const falloALaVista = () => fallo() !== null || conexionFallida() !== null;
+  // Las tareas en espera de cupo no lo mantienen: sin cuentas, la persona cambia el proveedor de la tarea.
   createEffect(() => props.onEstado?.({
     cuentas: lista() === null ? null : tarjetas.length,
-    vivo: agregando() || enCurso() !== null || instalando() !== null || fallo() !== null || conexionFallida() !== null
-      || esperando().length > 0 || repuestas() !== null || (pidioExterno() && faltaExterno()),
+    vivo: agregando() || enCurso() !== null || instalando() !== null || (pidioExterno() && faltaExterno()) || falloALaVista(),
     bloqueoAlta: bloqueoAlta(),
     falloDeLectura: lista() === null && !cargando() && fallo() !== null,
   }));
@@ -1002,7 +1002,7 @@ export default function Accounts(props: {
 
       {/* Por el ancho del grupo, no de la ventana: 1 columna, 2 desde 512 px y 3 desde 768 px. */}
       <Show when={hayCuentas()}>
-      <div class="@container min-w-0"><ul class="m-0 grid list-none grid-cols-1 gap-2 p-0 @lg:grid-cols-2 @3xl:grid-cols-3" data-account-grid="">
+      <div class="@container min-w-0" data-provider-group={agente()}><ul class="m-0 grid list-none grid-cols-1 gap-2 p-0 @lg:grid-cols-2 @3xl:grid-cols-3" data-account-grid="">
         <For each={tarjetas}>
           {(a, i) => {
             const activa = () => a.id === lista()?.active || !!a.machines?.some((m) => m.id === lista()?.active);

@@ -1,7 +1,7 @@
 /**
  * Las altas y logins de un grupo de Proveedores de IA (T2,
  * `docs/testing/2026-11-19-proveedores-ia.md` § 2): mientras hay algo que la
- * persona tiene que ver (alta, instalación, fallo del login, tareas en espera)
+ * persona tiene que ver (alta, instalación, fallo del alta o del login)
  * el grupo avisa `vivo`, y plegarlo, ocultarlo o reordenarlo no corta el login.
  * Monta los grupos sobre `dist/`.
  */
@@ -187,16 +187,15 @@ test("P38: removing the only account leaves the provider at 0 with nothing alive
   sinFallos(s);
 });
 
-test("P39: with tasks waiting for quota the provider stays alive after removing its account, with Resume", async () => {
+// Decisión de Alberto (2026-11-19): las tareas en espera no sostienen un grupo sin cuentas.
+test("P39: removing the last account leaves the provider with nothing alive even with tasks waiting for quota", async () => {
   const m = motor();
   m.provs.claude = { cuentas: [cuenta("c1")], active: "c1", espera: [{ project: "p", session: "t1", title: "T1", account: "c1" }] };
   const s = await montar(fixture, "p39", m, ["claude"]);
-  await waitFor(() => s.g.ultimo("claude")?.cuentas === 1, "1 cuenta");
+  await waitFor(() => s.g.ultimo("claude")?.cuentas === 1 && s.texto("claude").includes("1 tarea se quedó sin cupo"), "1 cuenta y la espera");
   (await quitarCuenta(s, "c1@ejemplo.test")).click();
   await waitFor(() => s.g.ultimo("claude").cuentas === 0, "0 cuentas");
-  assert.equal(vivo(s, "claude"), true);
-  assert.ok(s.texto("claude").includes("1 tarea se quedó sin cupo"));
-  assert.ok(boton(s.grupo("claude"), "reanudarla"), "Reanudar");
+  assert.equal(vivo(s, "claude"), false, "la espera no mantiene el grupo");
   sinFallos(s);
 });
 
@@ -215,15 +214,15 @@ test("P40: the first remove click only asks; the second removes and the header s
   sinFallos(s);
 });
 
-test("P41: Resume sends one resume_awaiting_quota and the result keeps the provider alive", async () => {
+test("P41: with accounts, Resume sends one resume_awaiting_quota and says how many resumed", async () => {
   const m = motor();
-  m.provs.claude = { cuentas: [], espera: [{ project: "p", session: "t1", title: "T1", account: null }, { project: "p", session: "t2", title: "T2", account: null }] };
+  m.provs.claude = { cuentas: [cuenta("c1")], active: "c1", espera: [{ project: "p", session: "t1", title: "T1", account: null }, { project: "p", session: "t2", title: "T2", account: null }] };
   const s = await montar(fixture, "p41", m, ["claude"]);
-  await waitFor(() => vivo(s, "claude"), "vivo por la espera");
-  boton(s.grupo("claude"), "reanudarlas").click();
+  (await waitFor(() => boton(s.grupo("claude"), "reanudarlas"), "Reanudar")).click();
   await waitFor(() => s.texto("claude").includes("Se reanudaron 2 tareas."), "repuestas");
   assert.equal(m.de("resume_awaiting_quota").length, 1);
-  assert.equal(vivo(s, "claude"), true);
+  assert.equal(vivo(s, "claude"), false, "reanudar no es algo vivo");
+  assert.equal(s.g.ultimo("claude").cuentas, 1);
   sinFallos(s);
 });
 

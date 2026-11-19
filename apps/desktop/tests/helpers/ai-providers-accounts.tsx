@@ -1,7 +1,7 @@
 /**
  * Monta un `Accounts` por proveedor como lo hará Configuración › Proveedores de
  * IA: un `For` sobre ids de proveedor, cada grupo dentro de un nodo
- * `data-provider-group` que se oculta con clase y nunca se desmonta. Guarda
+ * `data-test-group` que se oculta con clase y nunca se desmonta. Guarda
  * cada `EstadoDeProveedor` que avisa la instancia y el control que entrega.
  */
 import { elegirLengua } from "../../src/lib/i18n";
@@ -23,7 +23,7 @@ export function mountAccounts(root: HTMLElement, ids: string[], options: { sinAg
     () => (
       <For each={orden()}>
         {(id) => (
-          <div data-provider-group={id} class={ocultos().includes(id) ? "hidden" : "grid"}>
+          <div data-test-group={id} class={ocultos().includes(id) ? "hidden" : "grid"}>
             <Accounts
               agente={id}
               titulo={id}
