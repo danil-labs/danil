@@ -21,7 +21,7 @@ import WorkspaceSearch, { SEARCH_FROM } from "./WorkspaceSearch";
 export { menuArrows };
 
 type Hidden = { id: string; name: string };
-/** El «+» del riel: agregar uno de Danil, crear uno local y, debajo, los ocultos para abrirlos o devolverlos a la barra. */
+/** El «+» del riel: agregar uno de Danil y, debajo, los ocultos para abrirlos o devolverlos a la barra. */
 export default function AddWorkspaceMenu(props: {
   danil: DanilMenu;
   sessions: ReturnType<typeof sessionRail>;
@@ -31,7 +31,6 @@ export default function AddWorkspaceMenu(props: {
   badge: Component<{ state: AttentionState; class?: string }>;
   /** Cómo se dice un estado junto al nombre, para quien no ve el distintivo. */
   labelOf: (state: AttentionState) => string;
-  onCreate: () => void;
   onOpen: (id: string) => void;
   onShow: (id: string) => void;
 }) {
@@ -70,17 +69,6 @@ export default function AddWorkspaceMenu(props: {
           fallback={props.sessions.groups() !== null ? <SessionAddStep sessions={props.sessions} context={context()} query={query()} onQuery={setQuery} onClose={close} onOpen={props.onOpen} /> : <DanilStep danil={props.danil} query={query()} onQuery={setQuery} tasksOf={props.tasksOf} badge={props.badge} onClose={close} />}
         >
           <Show when={usesSessionMenu(props.sessions, props.danil.signedIn)} fallback={<DanilAddEntry danil={props.danil} onStep={() => (setContext(null), setStep("danil"))} />}><SessionAddEntries sessions={props.sessions} signedIn={props.danil.signedIn} onStep={() => (setContext(null), setStep("danil"))} onClose={close} /></Show>
-          <button
-            type="button"
-            role="menuitem"
-            class={ITEM_DE_MENU}
-            onClick={() => {
-              close();
-              props.onCreate();
-            }}
-          >
-            {t("shell.workspaces.create")}
-          </button>
           <Show when={props.sessions.groups() === null}><DanilSwitchRows danil={props.danil} onClose={close} /></Show>
           <Show when={props.hidden.length > 0}>
             <span aria-hidden="true" class={cn(SEPARADOR_DE_MENU, "block")} />

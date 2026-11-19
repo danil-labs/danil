@@ -275,7 +275,6 @@ export default function WorkspaceColumn(props: {
           tasksOf={tasksOf}
           badge={AttentionBadge}
           labelOf={(s) => taskLabel(s, true)}
-          onCreate={() => window.dispatchEvent(new CustomEvent("harness:new-workspace"))}
           onOpen={(id) => void ws.cambiarA(id)}
           onShow={hidden.show}
         />
