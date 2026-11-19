@@ -3,11 +3,7 @@
  * esta computadora. Va en la carga inicial; la pantalla, en `ConnectAccount.tsx`.
  */
 
-/**
- * Clave nueva, no heredada: guarda `connected`. Las versiones con «Continuar
- * sin cuenta» guardaban también `local`; ya no cuenta como respuesta, así que
- * esa computadora vuelve a pedir la sesión (plan de cuentas F1.2).
- */
+/** Guarda `connected`. El `local` de «Continuar sin cuenta» ya no cuenta: vuelve a pedir la sesión (F1.2). */
 export const ACCOUNT_WELCOME_KEY = "danil.onboarding.account_choice";
 
 export type AccountWelcomeChoice = "connected";
