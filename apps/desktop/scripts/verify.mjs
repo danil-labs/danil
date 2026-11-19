@@ -415,6 +415,12 @@ const steps = [
     root,
   ],
   [
+    "A usage window whose reset already passed reads as reset, not with the old usage",
+    process.execPath,
+    ["--test", "--experimental-strip-types", join(root, "tests/unit/limits-window-left.test.ts"), join(root, "../../packages/computers/test/accounts.test.ts")],
+    root,
+  ],
+  [
     "The selector keeps the provider",
     process.execPath,
     ["--test", "--experimental-strip-types", join(root, "tests/unit/models.test.ts")],
@@ -691,6 +697,7 @@ const steps = [
   ["Account return waits for added rows and ignores cancellation", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/account-add-return.test.ts")], root],
   ["Web group header chooses an organization and closes only the email", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/web-group-header-mount.test.mjs")], root],
   ["Organization source timeout retries and accepts a late listing", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/workspace-source-wait-mount.test.mjs")], root],
+  ["A rail menu opened with the pointer focuses its panel, with the keyboard its first row", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/popover-pointer-focus-mount.test.mjs")], root],
   ["First run and the sidebar footer offer the Danil account", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/danil-sign-in-entry.test.mjs")], root],
   ["The first run continues locally without the retired workspace directory", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/account-welcome-first-run.test.mjs")], root],
   ["First-run Google Drive reconnects after disconnecting", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/onboarding-drive-reconnect.test.mjs")], root],

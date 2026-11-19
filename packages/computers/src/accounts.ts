@@ -76,8 +76,12 @@ export function groupAccounts<R extends AccountRowLike>(
   });
 }
 
-/** Lo que queda de una ventana, de 0 a 100: el motor da lo usado. */
-export function windowLeft(window: { used_pct: number }): number {
+/**
+ * Lo que queda de una ventana, de 0 a 100: el motor da lo usado. Una ventana
+ * cuyo `resets_at` ya pasó volvió a empezar y queda entera: su uso es viejo.
+ */
+export function windowLeft(window: { used_pct: number; resets_at?: number | null }, now = Date.now()): number {
+  if (typeof window.resets_at === "number" && window.resets_at <= now) return 100;
   const left = Math.round(100 - (Number.isFinite(window.used_pct) ? window.used_pct : 0));
   return Math.max(0, Math.min(100, left));
 }
@@ -120,5 +124,5 @@ export function resetLabel(lang: Lang, resetsAt: number | null, usedPct: number,
 
 /** «resta 62% · reset en 3 h». */
 export function windowLabel(lang: Lang, window: { used_pct: number; resets_at: number | null }, now = Date.now()): string {
-  return word(lang, "settings.account_card.window_left", { left: windowLeft(window), when: resetLabel(lang, window.resets_at, window.used_pct, now) });
+  return word(lang, "settings.account_card.window_left", { left: windowLeft(window, now), when: resetLabel(lang, window.resets_at, window.used_pct, now) });
 }
