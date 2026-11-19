@@ -6,8 +6,8 @@ export const GONE_AFTER_MS = 5_000;
 
 export type FleetView = {
   hostOf(id: string): Host | undefined;
-  /** El usuario con sesión; `null` sin sesión. */
-  user: string | null;
+  /** El usuario con sesión; `""` sin sesión (laboratorio o demo con una máquina sin cuenta). */
+  user: string;
   fleet: string;
   contextReady: boolean;
 };
@@ -24,9 +24,9 @@ export function createResolver(now: () => number = Date.now) {
   return (view: FleetView): Resolver =>
     (id, owner): HostLookup => {
       const key = `${owner}:${id}`;
-      // Primero el dueño: una máquina compartida entre cuentas no ejecuta lo que pidió otra, y una entrada sin dueño
-      // espera a que una cuenta la reclame con su máquina.
-      if (!view.user || !owner || owner !== view.user) {
+      // Primero el dueño: una máquina compartida entre cuentas no ejecuta lo que pidió otra. Lo pedido sin sesión (`""`)
+      // solo corre sin sesión y con la máquina ya resuelta.
+      if (owner === undefined || owner !== view.user) {
         missing.delete(key);
         return "pending";
       }
@@ -35,7 +35,7 @@ export function createResolver(now: () => number = Date.now) {
         missing.delete(key);
         return host;
       }
-      if (id === "bridge" || !(view.fleet === "ok" && view.contextReady)) {
+      if (!view.user || id === "bridge" || !(view.fleet === "ok" && view.contextReady)) {
         missing.delete(key);
         return "pending";
       }

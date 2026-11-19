@@ -34,17 +34,20 @@ export type QueueEntry = {
   at?: number;
   /** La mutación ya salió hacia la máquina: sin acuse no se sabe si llegó. */
   sent?: boolean;
-  /** La cuenta que la pidió: las máquinas son de una cuenta y otra no puede darlas por perdidas. */
+  /** La cuenta que la pidió (`""` sin sesión). Ausente solo en lo guardado por una versión anterior: no se atribuye. */
   owner?: string;
 };
 
 export type QueueState = {
   pending: number;
-  /** Último aviso (rechazo o duda), ya traducido. */
+  /** Último aviso visible (rechazo o duda), ya traducido. */
   error: string | null;
-  /** Todos los avisos que nadie ha cerrado, del más viejo al más nuevo. */
+  /** Los avisos de la cuenta activa que nadie ha cerrado, del más viejo al más nuevo. */
   notices: string[];
 };
+
+/** Un aviso con su dueño: `null` es genérico, sin datos de ninguna tarea. */
+type Notice = { text: string; owner: string | null };
 
 /** Lo que la flota sabe de una máquina: lista, todavía sin resolver, o ya no existe en la cuenta. */
 export type HostLookup = Host | "pending" | "gone";
@@ -73,11 +76,10 @@ let again = false;
 let hydrated = false;
 /** La fila guardada ya se leyó: antes de eso no se escribe, para no pisarla. */
 let loaded = false;
-let error: string | null = null;
-let notices: string[] = [];
-let account: string | null = null;
+let notices: Notice[] = [];
+/** La cuenta activa: el id del usuario, o `""` sin sesión (modo de laboratorio o pantalla de inicio de sesión). */
+let account = "";
 let clock: () => number = Date.now;
-let owns: (host: string) => boolean = () => false;
 /** Hasta cuándo no se reintenta una entrada tras una caída de red (en memoria). */
 const retryAt = new Map<string, number>();
 let timer: ReturnType<typeof setTimeout> | null = null;
@@ -96,17 +98,20 @@ async function disk(): Promise<Storage> {
   return storage;
 }
 
+/** Un aviso con título es de su cuenta y solo ella lo ve; uno genérico lo ve cualquier cuenta con sesión; sin sesión, solo lo de «sin sesión». */
+const visible = (notice: Notice) => (notice.owner === null ? account !== "" : notice.owner === account);
+
 function state(): QueueState {
-  return { pending: entries.length, error, notices };
+  const shown = notices.filter(visible).map((n) => n.text);
+  return { pending: entries.length, error: shown.at(-1) ?? null, notices: shown };
 }
 
 function notify() {
   for (const listener of listeners) listener(state());
 }
 
-function warn(text: string) {
-  error = text;
-  notices = [...notices, text];
+function warn(text: string, owner: string | null) {
+  notices = [...notices, { text, owner }];
   notify();
 }
 
@@ -160,24 +165,21 @@ export async function hydrate() {
   // Lo que ya se encoló durante la carga va después de lo guardado, sin duplicar.
   const fresh = entries.filter((e) => !saved.some((s) => sameTask(s, e)));
   entries = [...saved, ...fresh];
+  // Sin dueño no se sabe de qué cuenta es: nada la atribuye por coincidir en una máquina compartida ni se muestra su título.
+  // Se retiran y se avisa sin datos privados que hay que repetirlas.
+  const legacy = entries.filter((e) => e.owner === undefined);
+  for (const entry of legacy) drop(entry);
+  if (legacy.length > 0) warn(t("task.queue.legacy", { count: legacy.length }), null);
   for (const entry of [...entries]) {
     if (entry.sent && entry.action !== "archive") {
       drop(entry);
-      warn(t("task.queue.uncertain", { title: label(entry), action: verb(entry.action) }));
+      warn(t("task.queue.uncertain", { title: label(entry), action: verb(entry.action) }), entry.owner ?? null);
     }
   }
   loaded = true;
-  claim(); // lo recién cargado puede traer entradas sin dueño que `setAccount` aún no vio
   notify();
   await save();
   void kick();
-}
-
-/** Las entradas sin dueño pasan a la cuenta con sesión solo si su máquina es de esa cuenta. */
-function claim(): boolean {
-  let claimed = false;
-  if (account) for (const entry of entries) if (!entry.owner && owns(entry.host)) { entry.owner = account; claimed = true; }
-  return claimed;
 }
 
 let rereading: ReturnType<typeof setTimeout> | null = null;
@@ -196,29 +198,22 @@ export function subscribe(listener: (state: QueueState) => void) {
   return () => { listeners.delete(listener); };
 }
 
+/** Cierra los avisos que la cuenta activa está viendo; los de otras cuentas quedan para ellas. */
 export function clearError() {
-  if (error === null && notices.length === 0) return;
-  error = null;
-  notices = [];
-  notify();
+  const before = notices.length;
+  notices = notices.filter((n) => !visible(n));
+  if (notices.length !== before) notify();
 }
 
 /**
- * La cuenta con sesión. Las entradas nuevas la llevan. Las que no tienen dueño
- * (de una versión anterior) las reclama solo si `owns` dice que su máquina es de
- * esta cuenta; si no, esperan. Al pasar de una cuenta a otra se limpian los
- * avisos: nombran tareas de la anterior.
+ * La cuenta activa (`""` sin sesión). Las entradas nuevas la llevan y solo ella
+ * las ejecuta; los avisos con título solo los ve su cuenta. Que la sesión se
+ * anule un instante (renovar el token) los oculta y vuelven con la misma cuenta.
  */
-export function setAccount(id: string | null, mine: (host: string) => boolean = () => false) {
-  // Una sesión que se anula un instante (renovar el token) no borra los avisos: solo otra cuenta.
-  if (account && id && id !== account && notices.length > 0) {
-    error = null;
-    notices = [];
-    notify();
-  }
-  if (id) account = id;
-  owns = mine;
-  if (claim()) void save();
+export function setAccount(id: string) {
+  if (id === account) return;
+  account = id;
+  notify();
   void kick();
 }
 
@@ -244,7 +239,7 @@ export function enqueue(host: Host, task: Pick<Task, "workspace" | "folder" | "i
   const key = `${host.id}:${task.workspace}:${task.folder}:${task.id}:${action}`;
   const candidate = { host: host.id, workspace: task.workspace, folder: task.folder, id: task.id };
   if (entries.some((e) => sameTask(e, candidate))) return;
-  entries.push({ key, ...candidate, title: task.title ?? "", action, attempts: 0, at: Date.now(), ...(account ? { owner: account } : {}) });
+  entries.push({ key, ...candidate, title: task.title ?? "", action, attempts: 0, at: Date.now(), owner: account });
   notify();
   void save();
   void kick();
@@ -285,7 +280,7 @@ async function run(entry: QueueEntry): Promise<Outcome> {
   const found = lookup(entry.host, entry.owner);
   if (found === "pending") return "wait";
   if (found === "gone") {
-    warn(t("task.queue.gone", { title: label(entry) }));
+    warn(t("task.queue.gone", { title: label(entry) }), entry.owner ?? null);
     return "done";
   }
   const host = tracked(found, entry);
@@ -298,7 +293,7 @@ async function run(entry: QueueEntry): Promise<Outcome> {
           : await deleteTask(host, entry.workspace, entry.folder, entry.id);
     if (result && typeof result === "object" && "blocked" in result) {
       // La regla de la máquina lo detuvo: no se ejecutó y se dice.
-      warn(t("task.queue.blocked", { title: label(entry), action: verb(entry.action) }));
+      warn(t("task.queue.blocked", { title: label(entry), action: verb(entry.action) }), entry.owner ?? null);
     }
     return "done";
   } catch (failure) {
@@ -318,29 +313,29 @@ async function run(entry: QueueEntry): Promise<Outcome> {
         if (code !== "machine_asleep" && code !== "task_status_unavailable" && code !== "queue_storage") retryAt.set(entry.key, clock() + WAIT_MS);
         return "wait";
       }
-      warn(message(failure));
+      warn(message(failure), entry.owner ?? null);
       return "done";
     }
     // La mutación pudo salir y no hubo acuse (o el relay respondió algo que no confirma que no entró).
     if (entry.action === "archive") {
       // Archivar es idempotente: se repite con pausa; un error inesperado se suelta tras unos intentos.
       if (code && REFUSED.has(code)) {
-        warn(message(failure));
+        warn(message(failure), entry.owner ?? null);
         return "done";
       }
       if (!(code && TRANSIENT.has(code))) entry.attempts += 1;
       if (!(code && TRANSIENT.has(code)) && entry.attempts >= MAX_ATTEMPTS) {
-        warn(message(failure));
+        warn(message(failure), entry.owner ?? null);
         return "done";
       }
       retryAt.set(entry.key, clock() + WAIT_MS);
       return "wait";
     }
     if (code && REFUSED.has(code)) {
-      warn(message(failure));
+      warn(message(failure), entry.owner ?? null);
       return "done";
     }
-    warn(t("task.queue.uncertain", { title: label(entry), action: verb(entry.action) }));
+    warn(t("task.queue.uncertain", { title: label(entry), action: verb(entry.action) }), entry.owner ?? null);
     return "done";
   }
 }
@@ -409,11 +404,9 @@ export function __reset(options: { storage?: Storage; now?: () => number } = {})
   current = null;
   hydrated = false;
   loaded = false;
-  error = null;
   notices = [];
   listeners.clear();
-  account = null;
-  owns = () => false;
+  account = "";
   retryAt.clear();
   if (rereading) clearTimeout(rereading);
   rereading = null;

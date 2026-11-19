@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { beforeEach, test } from "node:test";
 import { HostError, type Host } from "../src/lib/hosts.ts";
-import { __entries, __kick, __reset, bindHosts, clearError, enqueue, hydrate, setAccount, subscribe, type HostLookup, type QueueEntry, type QueueState, type Storage } from "../src/lib/taskQueue.ts";
+import { __entries, __kick, __reset, bindHosts, clearError, enqueue, hydrate, pendingFor, setAccount, subscribe, type HostLookup, type QueueEntry, type QueueState, type Storage } from "../src/lib/taskQueue.ts";
 import { GONE_AFTER_MS, createResolver } from "../src/lib/taskQueueHosts.ts";
 
 const KEY = "terminus.taskQueue";
@@ -26,7 +26,7 @@ function machine(id: string, behaviour: Behaviour = {}) {
   return { host, calls, mutations: () => calls.filter((c) => ["set_task_archived", "finish_task", "delete_session"].includes(c.command)) };
 }
 
-const entry = (over: Partial<QueueEntry> = {}): QueueEntry => ({ key: "m1:w:f:t:delete", host: "m1", workspace: "w", folder: "f", id: "t", title: "T", action: "delete", attempts: 0, at: Date.now(), ...over });
+const entry = (over: Partial<QueueEntry> = {}): QueueEntry => ({ key: "m1:w:f:t:delete", host: "m1", workspace: "w", folder: "f", id: "t", title: "T", action: "delete", attempts: 0, at: Date.now(), owner: "", ...over });
 const task = { workspace: "w", folder: "f", id: "t", title: "T" };
 
 beforeEach(() => __reset());
@@ -342,48 +342,11 @@ test("un rechazo por regla o un código ajeno antes de enviar se avisa y se reti
   }
 });
 
-test("una entrada de otra cuenta espera; una sin dueño la reclama solo la cuenta cuya flota tiene su máquina", async () => {
-  const store = disk([entry({ owner: "ana" }), entry({ id: "legacy", key: "m1:w:f:legacy:delete" })]);
-  __reset({ storage: store });
-  let now = 0;
-  const resolver = createResolver(() => now);
-  let notices = 0;
-  subscribe((state) => (notices = state.notices.length));
-  await hydrate();
-  const m = machine("m1");
-  const view = (user: string, hostOf: (id: string) => Host | undefined) => ({ hostOf, user, fleet: "ok", contextReady: true });
-  // Beto inicia sesión: su flota no tiene m1. No reclama nada y nada se da por perdido.
-  setAccount("beto", () => false);
-  for (let i = 0; i < 3; i++) { bindHosts(resolver(view("beto", () => undefined))); now += GONE_AFTER_MS * 2; await __kick(); }
-  assert.equal(notices, 0);
-  assert.equal(__entries().length, 2);
-  assert.equal(__entries().find((e) => e.id === "legacy")?.owner, undefined, "nadie la reclamó");
-  // Ana: su flota tiene m1, la reclama y se guarda.
-  setAccount("ana", (host) => host === "m1");
-  assert.equal(__entries().find((e) => e.id === "legacy")?.owner, "ana");
-  bindHosts(resolver(view("ana", (id) => (id === "m1" ? m.host : undefined))));
-  await __kick();
-  assert.equal(store.raw().find((e) => e.id === "legacy")?.owner ?? "ya salió", "ya salió", "con su cuenta se ejecutan y salen");
-  assert.equal(store.raw().length, 0);
-  assert.equal(m.mutations().length, 2);
-});
-
-test("al cambiar de cuenta se limpian los avisos de la anterior", async () => {
-  __reset({ storage: disk([entry({ sent: true, owner: "ana" })]) });
-  let notices: string[] = [];
-  subscribe((state) => (notices = state.notices));
-  setAccount("ana");
-  await hydrate();
-  assert.equal(notices.length, 1);
-  setAccount("beto");
-  assert.equal(notices.length, 0);
-});
-
 test("«gone» pide sesión, la flota cargada de esa cuenta y faltar un rato seguido; el bridge no", () => {
   const base = { hostOf: () => undefined, user: "ana", fleet: "ok", contextReady: true };
   let now = 1000;
   const resolver = createResolver(() => now);
-  assert.equal(resolver({ ...base, user: null })("m1", "ana"), "pending", "sin sesión");
+  assert.equal(resolver({ ...base, user: "" })("m1", "ana"), "pending", "sin sesión");
   assert.equal(resolver({ ...base, fleet: "loading" })("m1", "ana"), "pending", "flota cargando");
   assert.equal(resolver({ ...base, contextReady: false })("m1", "ana"), "pending", "contexto sin listo");
   assert.equal(resolver(base)("bridge", "ana"), "pending", "el bridge depende del emparejamiento");
@@ -397,52 +360,105 @@ test("«gone» pide sesión, la flota cargada de esa cuenta y faltar un rato seg
   assert.equal(resolver(base)("m1", "ana"), "pending", "el reloj de la ausencia se reinicia");
 });
 
-test("una sesión que se anula un instante no borra los avisos; otra cuenta sí", async () => {
-  __reset({ storage: disk([entry({ sent: true, owner: "ana" })]) });
-  let notices: string[] = [];
-  subscribe((state) => (notices = state.notices));
-  setAccount("ana");
-  await hydrate();
-  setAccount(null);
-  setAccount("ana");
-  assert.equal(notices.length, 1);
-});
+
+const shared = (m: ReturnType<typeof machine>, user: string) => ({ hostOf: () => m.host, user, fleet: "ok", contextReady: true });
 
 test("una máquina compartida no ejecuta lo que pidió otra cuenta, aunque resuelva", async () => {
-  const store = disk([entry({ owner: "ana" })]);
-  __reset({ storage: store });
+  __reset({ storage: disk([entry({ owner: "ana" })]) });
   const m = machine("m1");
   const resolver = createResolver();
   await hydrate();
-  const view = (user: string) => ({ hostOf: () => m.host, user, fleet: "ok", contextReady: true });
-  bindHosts(resolver(view("beto")));
+  bindHosts(resolver(shared(m, "beto")));
   await __kick();
   assert.equal(m.calls.length, 0, "Beto no ejecuta lo de Ana");
   assert.equal(__entries().length, 1);
-  bindHosts(resolver(view("ana")));
+  bindHosts(resolver(shared(m, "ana")));
   await __kick();
   assert.equal(m.mutations().length, 1, "Ana sí");
 });
 
-test("lo sin dueño que llega al hidratar, después de setAccount, lo reclama su cuenta y se ejecuta; queda guardado", async () => {
-  const store = disk([entry()]);
+test("A→B en la misma VM con una entrada legada sin dueño: no se atribuye, no se ejecuta y no se muestra su título", async () => {
+  const store = disk([entry({ owner: undefined, title: "Plan secreto de Ana" })]);
   __reset({ storage: store });
   const m = machine("m1");
-  setAccount("ana", (host) => host === "m1");
-  bindHosts(createResolver()({ hostOf: () => m.host, user: "ana", fleet: "ok", contextReady: true }));
+  let seen: string[] = [];
+  subscribe((state) => (seen = state.notices));
+  setAccount("ana");
+  bindHosts(createResolver()(shared(m, "ana")));
   await hydrate();
   await __kick();
-  assert.equal(m.mutations().length, 1);
+  assert.equal(m.calls.length, 0, "ni con la VM resuelta ni con la primera cuenta");
+  assert.equal(__entries().length, 0);
+  assert.equal(store.raw().length, 0);
+  assert.equal(seen.length, 1, "un aviso genérico");
+  assert.equal(seen.join("").includes("Plan secreto"), false);
+  setAccount("beto");
+  bindHosts(createResolver()(shared(m, "beto")));
+  await __kick();
+  assert.equal(m.calls.length, 0);
+  assert.equal(seen.length, 1);
+  assert.equal(seen.join("").includes("Plan secreto"), false);
 });
 
-test("A→null→B limpia los avisos de A; A→null→A no", async () => {
-  __reset({ storage: disk([entry({ sent: true, owner: "ana" })]) });
-  let notices: string[] = [];
-  subscribe((state) => (notices = state.notices));
+test("los avisos con título son de su cuenta: B no ve los de A (arranque en frío), A los recupera tras A→null→A", async () => {
+  __reset({ storage: disk([entry({ sent: true, owner: "ana", title: "Tarea de Ana" })]) });
+  let seen: string[] = [];
+  subscribe((state) => (seen = state.notices));
+  setAccount("beto"); // arranque en frío: la sesión activa es otra
+  await hydrate();
+  assert.deepEqual(seen, [], "B no ve el título de A");
+  setAccount("");
+  assert.deepEqual(seen, [], "tampoco la pantalla sin sesión");
+  setAccount("ana");
+  assert.equal(seen.length, 1, "A lo recupera");
+  assert.match(seen[0], /Tarea de Ana/);
+  setAccount("");
+  assert.deepEqual(seen, [], "la renovación de sesión lo oculta un momento");
+  setAccount("ana");
+  assert.equal(seen.length, 1, "y vuelve con la misma cuenta");
+  clearError();
+  assert.deepEqual(seen, []);
+});
+
+test("cerrar los avisos de una cuenta no borra los de otra", async () => {
+  __reset({ storage: disk([entry({ sent: true, owner: "ana" }), entry({ sent: true, owner: "beto", id: "u", key: "m1:w:f:u:delete", title: "U" })]) });
+  let seen: string[] = [];
+  subscribe((state) => (seen = state.notices));
   setAccount("ana");
   await hydrate();
-  setAccount(null);
-  assert.equal(notices.length, 1);
+  assert.equal(seen.length, 1);
+  clearError();
+  assert.deepEqual(seen, []);
   setAccount("beto");
-  assert.equal(notices.length, 0);
+  assert.equal(seen.length, 1, "los de B seguían ahí");
+});
+
+test("sin sesión (laboratorio o demo): lo pedido sin sesión corre con la máquina resuelta; nunca con la sesión de otra persona", async () => {
+  __reset({ storage: disk() });
+  const m = machine("m1");
+  const resolver = createResolver();
+  await hydrate();
+  setAccount("");
+  bindHosts(resolver(shared(m, "")));
+  enqueue(m.host, task, "delete");
+  assert.equal(__entries()[0].owner, "");
+  await __kick();
+  assert.equal(m.mutations().length, 1, "corre sin sesión");
+  // una entrada sin sesión no la ejecuta una persona con sesión
+  __reset({ storage: disk([entry({ owner: "" })]) });
+  const n = machine("m1");
+  await hydrate();
+  bindHosts(resolver(shared(n, "ana")));
+  await __kick();
+  assert.equal(n.calls.length, 0);
+});
+
+test("pendingFor sigue diciendo qué acción espera por tarea", async () => {
+  __reset({ storage: disk() });
+  await hydrate();
+  const m = machine("m1", { power: "off" });
+  bindHosts(() => m.host);
+  enqueue(m.host, task, "archive");
+  assert.equal(pendingFor("t"), "archive");
+  assert.equal(pendingFor("otra"), null);
 });

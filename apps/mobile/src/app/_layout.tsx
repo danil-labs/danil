@@ -55,11 +55,11 @@ function openTarget(response: NotificationResponse | null) {
 function TaskQueueHosts() {
   const { hostOf, fleet, contextReady, hosts } = useMachines();
   const account = useAccount();
-  const user = account.session?.user.id ?? null;
+  const user = account.session?.user.id ?? "";
   const resolver = useRef(createResolver()).current;
   useEffect(() => {
-    // Va antes de bindHosts: `setAccount` y `bindHosts` empujan la cola, que corre después de ambos.
-    setAccount(user, (id) => Boolean(hostOf(id)));
+    // La cola corre después de ambos: `setAccount` y `bindHosts` solo la empujan.
+    setAccount(user);
     bindHosts(resolver({ hostOf, user, fleet, contextReady }), t);
   }, [hostOf, user, fleet, contextReady, hosts, resolver]);
   return null;
