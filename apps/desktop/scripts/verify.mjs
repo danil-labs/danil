@@ -415,6 +415,12 @@ const steps = [
     root,
   ],
   [
+    "A usage window whose reset already passed reads as reset, not with the old usage",
+    process.execPath,
+    ["--test", "--experimental-strip-types", join(root, "tests/unit/limits-window-left.test.ts"), join(root, "../../packages/computers/test/accounts.test.ts")],
+    root,
+  ],
+  [
     "The selector keeps the provider",
     process.execPath,
     ["--test", "--experimental-strip-types", join(root, "tests/unit/models.test.ts")],

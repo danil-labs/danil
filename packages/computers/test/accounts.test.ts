@@ -78,7 +78,7 @@ test("la barra mide la ventana que corre ahora, no la que queda más apretada", 
     { label: "esta semana", used_pct: 91, resets_at: now + 4 * 86_400_000 },
   ];
   assert.equal(immediateWindow(windows, now)?.label, "últimas 5 horas");
-  assert.equal(windowLeft(immediateWindow(windows, now)!), 90);
+  assert.equal(windowLeft(immediateWindow(windows, now)!, now), 90);
   // La semana ya reseteada no tapa a la de cinco horas, que sigue corriendo.
   assert.equal(immediateWindow([windows[1], { ...windows[1], resets_at: now - 1 }, windows[0]], now)?.label, "últimas 5 horas");
   // Sin fechas manda el orden del proveedor.
@@ -100,4 +100,14 @@ test("lo que queda, su tono y cuándo vuelve, con las palabras del escritorio", 
   assert.equal(resetLabel("es", now + 3 * 3_600_000, 3, now), "reset en 3 h");
   assert.equal(resetLabel("es", now + 5 * 86_400_000, 3, now), "reset en 5 días");
   assert.equal(windowLabel("es", { used_pct: 38, resets_at: now + 3 * 3_600_000 }, now), "resta 62% · reset en 3 h");
+
+});
+
+test("una ventana cuyo reset ya pasó se ve entera, no con el uso viejo", () => {
+  const now = 1_000_000_000_000;
+  assert.equal(windowLeft({ used_pct: 100, resets_at: now - 1 }, now), 100);
+  assert.equal(windowLeft({ used_pct: 100, resets_at: now }, now), 100);
+  assert.equal(windowLeft({ used_pct: 100, resets_at: now + 60_000 }, now), 0);
+  assert.equal(windowLeft({ used_pct: 100, resets_at: null }, now), 0);
+  assert.equal(windowLabel("es", { used_pct: 97, resets_at: now - 60_000 }, now), "resta 100% · ya reseteó");
 });
