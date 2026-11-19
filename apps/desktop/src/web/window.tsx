@@ -175,7 +175,7 @@ export function mountWindow(base: Base, mounted: Mounted) {
     if (stopped) disposeApp();
   }).catch(base.onUnavailable);
   window.addEventListener("pagehide", () => fleet.close(), { once: true });
-  void Promise.all([import("solid-js/web"), import("./SyncNote"), import("./UpdateNotice"), import("./phrases"), import("./ReauthNote")]).then(([{ render }, { SyncNote }, { UpdateNotice }, , { ReauthNote }]) => {
+  void Promise.all([import("solid-js/web"), import("./SyncNote"), import("./UpdateNotice"), import("./ReauthNote"), import("./phrases")]).then(([{ render }, { SyncNote }, { UpdateNotice }, { ReauthNote }]) => {
     if (stopped) return;
     const layer = document.createElement("div");
     noticeLayer = layer;
