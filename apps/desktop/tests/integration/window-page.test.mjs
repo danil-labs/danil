@@ -588,19 +588,19 @@ const navigations = app => app.failures.filter(f => f.includes('Not implemented:
 const others = app => app.failures.filter(f => !f.includes('Not implemented: navigation'));
 
 /** Una cuenta nueva sin workspace; `select` contesta lo que diga la prueba y el canje exige contexto. */
-function newAccount({ orgs = [NEW_ORG], orgsAfter, select = () => Response.json({ organization: NEW_ORG, workspace: null }) } = {}) {
+function newAccount({ orgs = [NEW_ORG], orgsAfter, after = edge => edge.listed > 1, machines, select = () => Response.json({ organization: NEW_ORG, workspace: null }) } = {}) {
   const edge = { calls: [], redeemed: [], selected: null, listed: 0 };
   const fetcher = async (input, init) => {
     const url = new URL(String(input));
     if (url.origin === 'http://localhost' && url.pathname.includes('/assets/')) return new Response('');
     edge.calls.push(`${init?.method ?? 'GET'} ${url.pathname}`);
-    if (url.pathname === '/v1/capabilities') return Response.json(ORG_CAPS);
-    if (url.pathname === '/v1/machines') return new Response(null, { status: 404 });
+    if (url.pathname === '/v1/capabilities') return Response.json(machines ? { ...ORG_CAPS, items: [...ORG_CAPS.items, { name: 'machines', version: 1, status: 'available' }] } : ORG_CAPS);
+    if (url.pathname === '/v1/machines') return machines ? machines(edge) : new Response(null, { status: 404 });
     if (url.pathname === '/v1/identity/me') return Response.json({ id: 'user_N', name: 'New', workspace: null, organizations: [] });
     if (url.pathname === '/v1/identity/csrf') return Response.json({ csrf_token: 'bound' });
     if (url.pathname === '/v1/identity/organizations') {
       edge.listed++;
-      const items = orgsAfter && edge.listed > 1 ? orgsAfter : orgs;
+      const items = orgsAfter && after(edge) ? orgsAfter : orgs;
       return Response.json({ items, next_cursor: null, active_organization_id: edge.selected });
     }
     if (url.pathname === '/v1/identity/organizations/select') {
@@ -672,7 +672,8 @@ test('Q3: the same 409 right after coming back does not redirect again and offer
 });
 
 test('Q4: a redemption refused for organization context resolves it and retries once with the same key', async t => {
-  const edge = newAccount({ orgs: [], orgsAfter: [NEW_ORG] });
+  // La organización aparece solo tras el primer canje: mide la vía del canje, no el reintento propio.
+  const edge = newAccount({ orgs: [], orgsAfter: [NEW_ORG], after: edge => edge.redeemed.length > 0 });
   const app = await open(t, 'listo', 'h2-q4', {}, undefined, {}, { web: true });
   await until(() => app.w.document.querySelector('[data-tira]'));
   await until(() => edge.listed >= 1);
@@ -696,6 +697,21 @@ test('Q5: several organizations and none active keep the selector, without selec
   assert.ok(!edge.calls.includes('POST /v1/identity/organizations/select'), 'no automatic selection');
   const state = edge.calls.filter(c => c === 'GET /v1/identity/organizations').length;
   assert.ok(state >= 1, 'the organizations were read');
+  assert.deepEqual(navigations(app), []);
+  assert.deepEqual(others(app), []);
+});
+
+// P2 de la revisión de H2: la organización llega después de montar y la ventana la elige sola, sin canjear.
+for (const [label, machines] of [
+  ['/v1/machines answers 403 organization_selection_required', edge => edge.selected ? Response.json({ items: [], next_cursor: null }) : problemOf(403, 'organization_selection_required')],
+  ['no route answers 403', null],
+]) test(`an organization created after mounting is selected by itself (${label})`, async t => {
+  const edge = newAccount({ orgs: [], orgsAfter: [NEW_ORG], ...(machines ? { machines } : {}) });
+  const app = await open(t, 'listo', `h2-late-org-${label.length}`, {}, undefined, {}, { web: true });
+  await until(() => app.w.document.querySelector('[data-tira]'));
+  await until(() => edge.selected === 'org_N');
+  assert.ok(edge.listed >= 2, 'the list was read again');
+  assert.deepEqual(edge.redeemed, [], 'nobody redeemed');
   assert.deepEqual(navigations(app), []);
   assert.deepEqual(others(app), []);
 });

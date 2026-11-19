@@ -55,3 +55,26 @@ test("reaching the organization context clears the guard", async () => {
   assert.equal(store.map.get("other"), "kept");
   orgs.stop();
 });
+
+test("once blocked, the same 409 three minutes later still does not redirect by itself", async () => {
+  const store = memoryStore();
+  store.setItem("danil.web.org-auth.current", String(1_000_000));
+  let clock = 1_000_000 + 60_000;
+  let signIns = 0;
+  const orgs = webOrganizations(edge(() => Promise.reject(authRequired)) as never, { signal: new AbortController().signal, store, signIn: () => signIns++, onSelected: () => {}, redeem: async () => ({}), now: () => clock });
+  orgs.report(authRequired);
+  assert.equal(orgs.reauth.needed(), true);
+  clock = 1_000_000 + 60_000 + 180_000;
+  orgs.report(authRequired);
+  assert.equal(signIns, 0, "no automatic redirect while blocked");
+  assert.equal(orgs.reauth.needed(), true);
+});
+
+test("signing in again from the menu writes the mark for that organization", async () => {
+  const store = memoryStore();
+  let signIns = 0;
+  const orgs = webOrganizations(edge(() => Promise.reject(authRequired)) as never, { signal: new AbortController().signal, store, signIn: () => signIns++, onSelected: () => {}, redeem: async () => ({}), now: () => 5_000 });
+  orgs.reauth.signIn();
+  assert.equal(signIns, 1);
+  assert.equal(store.map.get("danil.web.org-auth.current"), "5000");
+});

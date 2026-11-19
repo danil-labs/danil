@@ -63,7 +63,7 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
       windowApp = undefined;
       disposeGate?.();
       root.replaceChildren();
-      disposeGate = render(() => <Show when={identified() && !signedOut() && !preparing()} fallback={<><ToastStack><UpdateNotice /></ToastStack><Show when={signedOut() || returnError} fallback={<SessionLoading onSignOut={preparing() ? () => void logout() : undefined} />}><WorkosAuthPage loginUrl={api.loginUrl(home)} error={returnError} /></Show></>}><main class="flex h-full flex-col gap-4 overflow-y-auto bg-bg p-10 text-neutral-950" data-web-gate="">
+      disposeGate = render(() => <Show when={identified() && !signedOut() && !preparing()} fallback={<><ToastStack><UpdateNotice /></ToastStack><Show when={signedOut() || returnError} fallback={<SessionLoading busy={busy()} onSignOut={preparing() ? () => void logout() : undefined} />}><WorkosAuthPage loginUrl={api.loginUrl(home)} error={returnError} /></Show></>}><main class="flex h-full flex-col gap-4 overflow-y-auto bg-bg p-10 text-neutral-950" data-web-gate="">
         <ToastStack><UpdateNotice /></ToastStack>
         <h1 class="m-0 font-display text-lead font-bold">{t('common.brand_name')}</h1>
         <Show when={busy()}><p role="status">{t('web.auth.waiting')}</p></Show>
@@ -129,7 +129,7 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
     /** La lista vacía o aún sin contexto (403/404/503) no impide montar; 401 sí sale. */
     async function listWorkspaces(read: () => Promise<PlatformWorkspace[]>, fallback: PlatformWorkspace[]) {
       try { return await read(); }
-      catch (cause) { if (cause instanceof PlatformSessionError && cause.status === 401) throw cause; slower(cause); organizations.report(cause); return fallback; }
+      catch (cause) { if (cause instanceof PlatformSessionError && cause.status === 401) throw cause; slower(cause); organization.report(cause); return fallback; }
     }
     function slower(cause: unknown) { if (cause instanceof PlatformSessionError && cause.retryAfter) wait = Math.max(wait, Number(cause.retryAfter) * 1000 || wait); }
     /** Primer montaje: identity aún no da el perfil; sigue la carga en vez de enseñar un 403 fatal. */
@@ -180,7 +180,7 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
         else if (cause instanceof PlatformSessionError && cause.code === 'workspace_selection_required') await withoutWorkspace();
         else if (firstMountRetry && !mountedBefore && cause instanceof PlatformSessionError
           && FIRST_MOUNT_TRANSIENT.includes(cause.status) && firstMountAttempts < FIRST_MOUNT_ATTEMPTS) prepare();
-        else if (!stopped && !signedOut() && organizations.report(cause)) gate();
+        else if (!stopped && !signedOut() && organization.report(cause)) gate();
         else if (!stopped && !signedOut()) {
           setPreparing(false);
           setError(cause instanceof PlatformSessionError && cause.status === 403 ? 'web.platform.denied' : 'web.platform.unavailable'); gate();
