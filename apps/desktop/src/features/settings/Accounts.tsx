@@ -1165,7 +1165,7 @@ export default function Accounts(props: {
         )}
       </Show>
 
-      <Show when={props.titulo === undefined && hayCuentas()}>
+      <Show when={props.titulo === undefined && hayCuentas() && !props.sinAgregar}>
         <SettingsBlock class="justify-items-start">{botonAgregar("bloque")}</SettingsBlock>
       </Show>
 
