@@ -1,3 +1,5 @@
+import { applyMoves, movesFor } from "./account-transfers.ts";
+
 export type AccountWorkspace = { id: string; name: string; account: { org: string; account_id: string } };
 export type FreeWorkspace = { id: string; name: string; account_id: string };
 type Group = { context_id: string; org: string; plan: string | null };
@@ -13,10 +15,28 @@ export function accountWorkspaces(value: unknown): AccountWorkspace[] {
   });
 }
 
+/** Las filas del catálogo de una organización, página a página. Un error corta y devuelve lo leído. */
+async function catalog(send: Send, context: string) {
+  const items: unknown[] = [];
+  const seen = new Set<string>();
+  let cursor: string | null = null;
+  do {
+    const reply = await send(context, "GET", `/v1/workspaces${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ""}`).catch(() => null);
+    if (!reply || reply.status !== 200) break;
+    const body = reply.body as { items?: unknown[]; next_cursor?: string | null };
+    items.push(...(body.items ?? []));
+    cursor = typeof body.next_cursor === "string" ? body.next_cursor : null;
+    if (cursor && seen.has(cursor)) break;
+    if (cursor) seen.add(cursor);
+  } while (cursor);
+  return items;
+}
+
 /** El destino local se fija explícitamente: abrir un workspace remoto no puede desviar la creación. */
 export function createAccountWorkspaces(invoke: Invoke, native: boolean, changed: () => void) {
   let local: string | null = null;
   let extension = false;
+  let transfer = false;
   let version = 0;
   let rows: AccountWorkspace[] = [];
   let free = new Map<string, FreeWorkspace>();
@@ -25,7 +45,7 @@ export function createAccountWorkspaces(invoke: Invoke, native: boolean, changed
     known: () => rows.map((w) => w.id),
     available: (org: string) => rows.filter((w) => w.account.org === org),
     free: (context: string) => extension ? free.get(context) : undefined,
-    async refresh(groups: readonly Group[], send: Send) {
+    async refresh(groups: readonly Group[], send: Send, personOf: (context: string) => string | null = () => null) {
       if (!native) return;
       const epoch = ++version;
       free = new Map();
@@ -33,13 +53,24 @@ export function createAccountWorkspaces(invoke: Invoke, native: boolean, changed
         const machines = await invoke<{ id: string; local?: boolean; features?: string[] }[]>("machine_list");
         const self = machines.find((m) => m.local);
         if (epoch !== version) return;
-        if (!self) { local = null; extension = false; changed(); return; }
+        if (!self) { local = null; extension = false; transfer = false; changed(); return; }
         local = self.id;
         extension = self.features?.includes("account_workspace_v1") ?? false;
+        transfer = self.features?.includes("account_transfer_v1") ?? false;
         const value = await invoke("list_workspaces", header());
         if (epoch !== version) return;
         rows = accountWorkspaces(value);
         changed();
+        // Traslados entre organizaciones (plan de cuentas § 8): solo con workspaces sellados aquí.
+        if (transfer && rows.length) {
+          let moved = 0;
+          for (const group of groups) {
+            const items = await catalog(send, group.context_id);
+            if (epoch !== version) return;
+            moved += await applyMoves(invoke, header(), movesFor(rows, group.org, items), personOf(group.context_id));
+          }
+          if (moved && epoch === version) { rows = accountWorkspaces(await invoke("list_workspaces", header())); changed(); }
+        }
         const next = new Map<string, FreeWorkspace>();
         if (extension) for (const group of groups.filter((g) => g.plan === "free")) {
           let cursor: string | null = null;
