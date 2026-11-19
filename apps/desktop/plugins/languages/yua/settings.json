@@ -229,7 +229,6 @@
   "settings.update.unreachable": "Maʼ páajchaj in wilik wa yaan jumpʼéel túumben téenel.",
   "settings.update.unreachable_hint": "Ilej a nupʼil tiʼ internet ka beetej tu kaʼatéen.",
   "settings.update.uptodate": "Yaan teech le téenel maas túumbenoʼ.",
-  "settings.workspaces.add": "Tsʼáaʼ kúuchil meyaj",
   "settings.workspaces.blocked": {
     "other": "Yaan {count} meyaj táan u núukik bejlaʼeʼ. Wa ka lukʼsik le kúuchil meyajoʼ ku bisik le kúuchil tuʼux táan u tsʼíibtoʼ."
   },
