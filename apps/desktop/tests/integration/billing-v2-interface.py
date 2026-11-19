@@ -12,6 +12,7 @@ if not BROWSER and os.name == "nt":
 with sync_playwright() as p:
     browser = p.chromium.launch(headless=True, **({"executable_path": BROWSER} if BROWSER else {}))
     page = browser.new_page()
+    page.set_default_navigation_timeout(120000)
     page.goto(BASE + "?role=owner&variants=1", wait_until="networkidle")
     for name in ["Pro", "Team", "Business", "Enterprise"]:
         page.locator("article").get_by_text(name, exact=True).wait_for()
