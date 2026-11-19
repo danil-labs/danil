@@ -11,7 +11,7 @@ export function mountMenus(root: HTMLElement) {
           <PopoverContent role="menu" data-panel="rows">
             <p>Hay workspaces nuevos para agregar</p>
             <button type="button" role="menuitem" class={ITEM_DE_MENU}>Agregar cuenta u organización</button>
-            <button type="button" role="menuitem" class={ITEM_DE_MENU}>Crear workspace local</button>
+            <button type="button" role="menuitem" class={ITEM_DE_MENU}>Otra opción</button>
           </PopoverContent>
         </Popover>
         <Popover placement="bottom-start">

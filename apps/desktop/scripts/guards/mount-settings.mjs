@@ -739,6 +739,8 @@ const pencil = (name) =>
 const nameField = (name) =>
   renameApp.w.document.querySelector(`input[aria-label="Nuevo nombre de «${name}»"]`);
 assert.ok(pencil("Beta"), "renombrar el workspace que no es el activo tiene que ser un gesto visible");
+assert.ok(![...renameApp.w.document.querySelectorAll("button")].some((b) => b.textContent?.trim() === "Crear workspace"),
+  "Configuración ya no crea un workspace local (F1.3)");
 assert.ok(pencil("Acme"), "y el activo también");
 pencil("Beta").click();
 await sleep(50);
