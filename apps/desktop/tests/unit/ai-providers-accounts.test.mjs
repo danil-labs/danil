@@ -8,10 +8,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { sleep } from "../helpers/jsdom-app.mjs";
-import { compilar, cuenta, diferido, montar, motor, waitFor } from "../helpers/ai-providers-fixture.mjs";
+import { cerrarTodo, compilar, cuenta, diferido, montar, motor, waitFor } from "../helpers/ai-providers-fixture.mjs";
 
 let fixture;
 test.before(async () => { fixture = await compilar(); });
+test.afterEach(cerrarTodo);
 test.after(() => fixture?.limpiar());
 
 const RESET = Date.now() + 3 * 3_600_000;

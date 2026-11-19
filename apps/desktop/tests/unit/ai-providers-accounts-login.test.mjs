@@ -8,10 +8,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { sleep } from "../helpers/jsdom-app.mjs";
-import { compilar, cuenta, diferido, montar, motor, waitFor } from "../helpers/ai-providers-fixture.mjs";
+import { cerrarTodo, compilar, cuenta, diferido, montar, motor, waitFor } from "../helpers/ai-providers-fixture.mjs";
 
 let fixture;
 test.before(async () => { fixture = await compilar(); });
+test.afterEach(cerrarTodo);
 test.after(() => fixture?.limpiar());
 
 const dialogo = (s) => s.app.w.document.querySelector('[role="dialog"]');
@@ -59,9 +60,9 @@ test("P47: Open in Terminal inside the modal cancels the piped login, relaunches
   const m = motor();
   m.provs.codex = { cuentas: [] };
   const s = await montar(fixture, "p47-modal", m, ["codex"]);
-  // La Terminal se ofrece a los 15 s sin respuesta; aquí ese plazo es inmediato.
+  // La Terminal se ofrece tras `ESPERA_ANTES_DE_LA_TERMINAL_MS` sin respuesta; aquí ese plazo es inmediato.
   const original = s.app.w.setTimeout;
-  s.app.w.setTimeout = (fn, ms, ...rest) => original(fn, ms === 15_000 ? 0 : ms, ...rest);
+  s.app.w.setTimeout = (fn, ms, ...rest) => original(fn, ms === s.esperaTerminal ? 0 : ms, ...rest);
   const id = await altaConModal(s, m, "codex");
   (await waitFor(() => enDialogo(s, "Abrir en la Terminal"), "Terminal en el modal")).click();
   await waitFor(() => !dialogo(s), "modal cerrado");

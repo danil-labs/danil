@@ -61,7 +61,7 @@ const CredentialsInUse = lazy(() => import("./credentials/AccountCredentials").t
 const LocalKeysBanner = lazy(() => import("./credentials/AccountCredentials").then((m) => ({ default: m.LocalKeysBanner })));
 
 /** Cuánto se espera a que el CLI diga algo antes de ofrecer la Terminal. */
-const ESPERA_ANTES_DE_LA_TERMINAL_MS = 15_000;
+export const ESPERA_ANTES_DE_LA_TERMINAL_MS = 15_000;
 
 /**
  * Vive dentro de la configuración: pregunta por los agentes y se queda con

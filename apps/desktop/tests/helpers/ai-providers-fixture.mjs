@@ -12,6 +12,32 @@ import { build } from "vite";
 import solid from "vite-plugin-solid";
 import { boot, sleep } from "./jsdom-app.mjs";
 
+/**
+ * La app de `dist/` programa sus sondeos con los temporizadores de Node, que
+ * `boot` no pisa, y cerrar la ventana de jsdom no los cancela: sin esto el
+ * proceso no termina solo. Se anotan los que siguen pendientes para cancelarlos
+ * al cerrar cada montaje.
+ */
+const reloj = { setTimeout: globalThis.setTimeout, clearTimeout: globalThis.clearTimeout, setInterval: globalThis.setInterval, clearInterval: globalThis.clearInterval };
+const pendientes = new Set();
+globalThis.setTimeout = (fn, ms, ...rest) => {
+  const h = reloj.setTimeout((...a) => { pendientes.delete(h); return typeof fn === "function" ? fn(...a) : undefined; }, ms, ...rest);
+  pendientes.add(h);
+  return h;
+};
+globalThis.clearTimeout = (h) => { pendientes.delete(h); reloj.clearTimeout(h); };
+globalThis.setInterval = (...args) => { const h = reloj.setInterval(...args); pendientes.add(h); return h; };
+globalThis.clearInterval = (h) => { pendientes.delete(h); reloj.clearInterval(h); };
+/** Los montajes abiertos: `cerrarTodo` va en el `afterEach` de cada archivo, así una aserción que falla no deja el proceso vivo. */
+const abiertos = new Set();
+export function cerrarTodo() {
+  for (const cerrar of [...abiertos]) cerrar();
+}
+function cancelarRelojes() {
+  for (const h of pendientes) { reloj.clearTimeout(h); reloj.clearInterval(h); }
+  pendientes.clear();
+}
+
 const W = { id: "w", name: "Danil", context_root: null };
 const BASE = {
   window_ready: null,
@@ -95,14 +121,19 @@ export async function montar({ url }, nombre, m, ids, options) {
   m.llamadas.length = 0;
   const root = app.w.document.createElement("div");
   app.w.document.body.append(root);
-  const { mountAccounts } = await import(`${url}?v=${nombre}`);
+  const { mountAccounts, ESPERA_ANTES_DE_LA_TERMINAL_MS } = await import(`${url}?v=${nombre}`);
   const g = mountAccounts(root, ids, options);
   const grupo = (id) => root.querySelector(`[data-test-group="${id}"]`);
   // El cuerpo del grupo que monta `Accounts`: el que lleva `@container` y siempre existe.
   const cuerpo = (id) => root.querySelector(`[data-provider-group="${id}"]`);
   const boton = (id, texto) => [...(grupo(id)?.querySelectorAll("button") ?? [])].find((b) => b.textContent.trim() === texto || b.getAttribute("aria-label") === texto);
   const enDialogo = (texto) => [...app.w.document.querySelectorAll('[role="dialog"] button')].find((b) => b.textContent.trim() === texto);
-  return { app, root, g, grupo, cuerpo, boton, enDialogo, texto: (id) => grupo(id)?.textContent ?? "", cerrar: () => { g.dispose(); root.remove(); } };
+  const cerrar = () => {
+    if (!abiertos.delete(cerrar)) return;
+    g.dispose(); root.remove(); app.w.close(); cancelarRelojes();
+  };
+  abiertos.add(cerrar);
+  return { app, root, g, grupo, cuerpo, boton, enDialogo, esperaTerminal: ESPERA_ANTES_DE_LA_TERMINAL_MS, texto: (id) => grupo(id)?.textContent ?? "", cerrar };
 }
 
 /** Sondea hasta que `read()` dé algo, con plazo; nunca una espera fija. */

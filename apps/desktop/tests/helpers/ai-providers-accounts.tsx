@@ -10,6 +10,7 @@ import { createSignal, For } from "solid-js";
 import { render } from "solid-js/web";
 import { setCapabilities } from "../../src/lib/platform";
 import Accounts from "../../src/features/settings/Accounts";
+export { ESPERA_ANTES_DE_LA_TERMINAL_MS } from "../../src/features/settings/Accounts";
 import type { EstadoDeProveedor } from "../../src/features/settings/ai-providers-groups";
 
 export function mountAccounts(root: HTMLElement, ids: string[], options: { sinAgregar?: boolean; desplegado?: boolean } = {}) {
