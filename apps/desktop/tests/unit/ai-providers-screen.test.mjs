@@ -8,7 +8,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { boot, sleep } from "../helpers/jsdom-app.mjs";
-import { cuenta, diferido, motor, waitFor } from "../helpers/ai-providers-fixture.mjs";
+import { alCerrar, cerrarTodo, cuenta, diferido, motor, waitFor } from "../helpers/ai-providers-fixture.mjs";
+
+test.afterEach(cerrarTodo);
 
 const sup = (id, label = id) => ({ id, provider: id, label, catalogo: "todo", usable: true, marca: null, porque: null });
 const LABEL = { claude: "Claude Code", codex: "Codex (ChatGPT)", antigravity: "Gemini / Antigravity", grok: "Grok" };
@@ -23,6 +25,7 @@ async function abrir(nombre, m, surfaces, extra = {}) {
   const app = await boot("listo", nombre, { ...m.responses, list_providers, list_surfaces: surfaces, ...extra });
   await sleep(600);
   app.w.dispatchEvent(new app.w.CustomEvent("harness:open-settings", { detail: "proveedores-ia" }));
+  const cerrar = alCerrar(() => app.w.close());
   const panel = await waitFor(() => app.w.document.querySelector("#cfg-panel"), "el panel");
   const doc = app.w.document;
   const s = {
@@ -37,7 +40,7 @@ async function abrir(nombre, m, surfaces, extra = {}) {
     boton: (el, texto) => [...(el?.querySelectorAll("button") ?? [])].find((b) => b.textContent.trim() === texto || b.getAttribute("aria-label") === texto),
     // El de Configuración es el primero; el login va en otro.
     login: () => [...doc.querySelectorAll('[role="dialog"]')].find((d) => !d.querySelector("#cfg-panel")),
-    fin: () => { assert.deepEqual(app.failures, []); app.w.close(); },
+    fin: () => { assert.deepEqual(app.failures, []); cerrar(); },
   };
   return s;
 }
@@ -274,6 +277,40 @@ test("the free router row is named 'Router IA gratis' even when the engine does 
   assert.ok(fila.closest(".border-b").textContent.includes("Comprobar proveedor"), "el nombre va en la fila de su acción");
   const texto = await waitFor(() => danil.textContent.includes("No se pudieron leer las cuentas.") && danil.textContent, "el fallo del Router");
   assert.ok(texto.indexOf("Router IA gratis") < texto.indexOf("No se pudieron leer las cuentas."), "el fallo va bajo el nombre");
+  s.fin();
+});
+
+test("P2-b: two surfaces of the same provider share one group and the screen still has a single Add account", async () => {
+  const m = motor();
+  m.provs.opencode = { cuentas: [cuenta("o1")], active: "o1" };
+  const s = await abrir("two-surfaces", m, [sup("opencode", "OpenCode"), { ...sup("opencode", "OpenCode"), id: "opencode-zen", label: "OpenCode Zen" }]);
+  await waitFor(() => s.seVe("opencode") && s.hueco("opencode").textContent.includes("o1@ejemplo.test"), "el grupo con su cuenta");
+  await sleep(300);
+  const agregar = [...s.panel.querySelectorAll("button")].filter((b) => /Agregar cuenta/.test(b.textContent));
+  assert.equal(agregar.length, 1, agregar.map((b) => b.outerHTML.slice(0, 80)).join("\n"));
+  assert.ok(agregar[0].matches("[data-add-account]"));
+  assert.doesNotMatch(s.hueco("opencode").textContent, /Conectar /);
+  assert.equal(s.panel.querySelectorAll("[data-provider-slot]").length, 1, "un grupo por proveedor");
+  s.fin();
+});
+
+test("P66: an account added outside this screen while Configuration is open shows its group when Configuration opens again", async () => {
+  // No hay alta desde el popover del chat en `src` (solo Accounts, onboarding y WslMachine llaman `add_account`):
+  // se prueba lo observable, una cuenta que el motor publica fuera de esta pantalla.
+  const m = motor();
+  m.provs.claude = { cuentas: [cuenta("c1")], active: "c1" };
+  m.provs.codex = { cuentas: [] };
+  const s = await abrir("p66", m, [sup("claude", "Claude Code"), sup("codex", "Codex")]);
+  await waitFor(() => s.seVe("claude"), "claude");
+  assert.equal(s.seVe("codex"), false);
+  m.provs.codex.cuentas.push(cuenta("x1"));
+  m.provs.codex.active = "x1";
+  s.app.emit("account", { account: "x1", kind: "done", text: "" });
+  [...s.doc.querySelectorAll("button")].find((b) => b.getAttribute("aria-label") === "Cerrar configuración (Esc)").click();
+  await waitFor(() => !s.doc.querySelector("#cfg-panel"), "Configuración cerrada");
+  s.app.w.dispatchEvent(new s.app.w.CustomEvent("harness:open-settings", { detail: "proveedores-ia" }));
+  const slot = await waitFor(() => { const h = s.doc.querySelector('#cfg-panel [data-provider-slot="codex"]'); return h && !h.classList.contains("hidden") && h; }, "el grupo codex al reabrir");
+  await waitFor(() => slot.querySelector("[data-account-count]")?.textContent.includes("1 cuenta"), "1 cuenta");
   s.fin();
 });
 

@@ -4,7 +4,7 @@ Sirve la web construida (`pnpm web:build`, carpeta `dist-web/`) con un servidor
 estático propio, responde el borde (`route_api`) y el relay (`route_web_socket`)
 con el patrón de `window.browser.py`, y mide la pantalla real.
 
-Escenarios (docs/testing/2026-11-19-proveedores-ia.md § anchos W1–W7):
+Escenarios (docs/testing/2026-11-19-proveedores-ia.md § anchos W1–W7; desde la ronda 4 de T3, W1–W8 con el mínimo de la tarjeta):
   none, one, four, reconnect, list-fails.
 
 Las columnas de la cuadrícula no existen todavía: contra `dev` esas aserciones van
@@ -39,7 +39,14 @@ root = Path(__file__).resolve().parents[4]
 desktop = root / 'apps' / 'desktop'
 strict = os.environ.get('DANIL_PV2_STRICT') == '1'
 MACHINE = 'cmp_abcdefghijklmnopqrstuvwxyz'
-WIDTHS = [('W1', 960, 3), ('W2', 768, 3), ('W3', 767, 2), ('W4', 640, 2), ('W5', 512, 2), ('W6', 511, 1), ('W7', 320, 1)]
+# La segunda máquina del escenario `machines`: con dos, la web junta las cuentas de las dos (`fleet.merge`) y pinta su fila de máquinas.
+MACBOOK = 'cmp_zyxwvutsrqponmlkjihgfedcba'
+# Mínimo de la tarjeta: 28rem (448 px), lo que pide la composición de `AccountCard` `row` de `9e345462` sin recortar
+# ni partir líneas (medido: la tarjeta caída del escenario `reconnect` mide 444 px de ancho natural). Con 8 px de hueco:
+# 1 columna < 904 px, 2 desde 904 y 3 desde 1360; nunca más de 3. Solo escritorio: no se mide por debajo del mínimo.
+CARD_MIN = 448
+# Se fija el ancho del cuerpo del grupo, que lleva `pl-6` (24 px): los cortes de la lista caen 24 px más arriba.
+WIDTHS = [('W1', 1440, 3), ('W2', 1384, 3), ('W3', 1383, 2), ('W4', 960, 2), ('W5', 928, 2), ('W6', 927, 1), ('W7', 640, 1), ('W8', 472, 1)]
 
 def head():
     return subprocess.check_output(['git', 'rev-parse', '--short=8', 'HEAD'], cwd=root, text=True).strip()
@@ -84,6 +91,9 @@ SCENARIOS = {
     'one': dict(accounts=[account(1)]),
     'four': dict(accounts=[account(n) for n in range(1, 5)]),
     'reconnect': dict(accounts=[account(1), account(2)], revoked={'acc2'}),
+    # persona1 tiene sesión en las dos máquinas; persona2 solo en Danil, así que ofrece «Iniciar sesión en otra máquina».
+    # `credential_group` (contrato `AiAccount`) junta la misma cuenta de dos máquinas en una tarjeta, como `groupAccounts`.
+    'machines': dict(accounts=[dict(account(1), credential_group='g1'), dict(account(2), credential_group='g2')], machines={MACHINE: 'Danil', MACBOOK: 'Macbook'}, on={MACBOOK: [dict(account(1), credential_group='g1')]}),
     'list-fails': dict(accounts=[], fail_list=True),
 }
 
@@ -96,15 +106,17 @@ class Harness:
         self.absent = set()
         self.unexpected = set()
         self.cursor = 0
+        self.where = []
 
-    def table(self, command, args):
+    def table(self, command, args, machine=MACHINE):
         s = self.scenario
         provider = args.get('provider')
         if command == 'list_accounts':
             if s.get('fail_list'):
                 return ('error', dict(code='command'))
-            # Solo Codex tiene cuentas; cada proveedor contesta con su propio nombre.
-            return ('ok', dict(listing(s['accounts'] if provider == 'codex' else []), provider=provider))
+            # Solo Codex tiene cuentas; cada proveedor contesta con su propio nombre. Cada máquina, las suyas.
+            mine = s.get('on', {}).get(machine, s['accounts']) if machine != MACHINE else s['accounts']
+            return ('ok', dict(listing(mine if provider == 'codex' else []), provider=provider))
         if command == 'account_status' and provider != 'codex':
             return ('ok', dict(id=args.get('id'), authenticated=False, detail=''))
         if command == 'account_limits' and provider != 'codex':
@@ -143,9 +155,10 @@ class Harness:
         elif path == 'capabilities':
             data = dict(contract='mvp-v1', items=[dict(name=n, version=1, status='available') for n in ('machines', 'machines.start', 'machines.session', 'workspaces')])
         elif path == 'machines':
-            data = dict(items=[dict(machine_id=MACHINE, name='Danil', state='running', connection='connected', organization_id='org_A', kind='organization')], next_cursor=None)
-        elif path == f'machines/{MACHINE}/tickets':
-            data = dict(ticket='one-use', url='wss://connect.danil.ai/v1/machines/' + MACHINE + '/session', expires_at='2099-01-01T00:00:00Z')
+            data = dict(items=[dict(machine_id=m, name=n, state='running', connection='connected', organization_id='org_A', kind='organization') for m, n in self.machines().items()], next_cursor=None)
+        elif path.startswith('machines/') and path.endswith('/tickets') and path.split('/')[1] in self.machines():
+            machine = path.split('/')[1]
+            data = dict(ticket='one-use', url='wss://connect.danil.ai/v1/machines/' + machine + '/session', expires_at='2099-01-01T00:00:00Z')
         else:
             if path in ABSENT_OK:
                 self.absent.add(path)
@@ -154,8 +167,12 @@ class Harness:
             return route.fulfill(status=404, body='')
         route.fulfill(status=200, content_type='application/json', body=json.dumps(data))
 
+    def machines(self):
+        return self.scenario.get('machines', {MACHINE: 'Danil'})
+
     def relay(self, ws):
         self.sockets.append(ws)
+        machine = next((m for m in self.machines() if m in ws.url), MACHINE)
 
         def receive(raw):
             m = json.loads(raw)
@@ -169,7 +186,8 @@ class Harness:
             if m['type'] != 'call':
                 return
             self.calls.append((m['command'], m.get('args') or {}))
-            kind, value = self.table(m['command'], m.get('args') or {})
+            self.where.append((m['command'], machine))
+            kind, value = self.table(m['command'], m.get('args') or {}, machine)
             if kind == 'error':
                 return ws.send(json.dumps(dict(type='result', id=m['id'], error=value)))
             ws.send(json.dumps(dict(type='result', id=m['id'], value=value)))
@@ -273,6 +291,23 @@ def columns(page, identity):
     }""", identity)
 
 
+def header(page, identity):
+    """La cabecera de la tarjeta (composición de `AccountCard` `row`): su fila, su ancho natural y sus recortes."""
+    return page.evaluate("""(identity) => {
+        const li = [...document.querySelectorAll('li')].find(x => x.textContent.includes(identity));
+        const card = li.firstElementChild;
+        const head = card.firstElementChild;
+        const tops = [...head.querySelectorAll('button, [class*="rounded-full"], [data-status-tag]')]
+            .filter(e => e.getBoundingClientRect().width > 0)
+            .map(e => ({ text: (e.getAttribute('aria-label') || e.textContent || '').trim().slice(0, 30), mid: Math.round((e.getBoundingClientRect().top + e.getBoundingClientRect().bottom) / 2) }));
+        const before = card.style.width;
+        card.style.width = 'max-content';
+        const natural = Math.ceil(card.getBoundingClientRect().width);
+        card.style.width = before;
+        return { tops, natural, width: Math.round(card.getBoundingClientRect().width), height: Math.round(head.getBoundingClientRect().height) };
+    }""", identity)
+
+
 def set_width(page, identity, width):
     page.evaluate("""([identity, width]) => {
         const li = [...document.querySelectorAll('li')].find(x => x.textContent.includes(identity));
@@ -291,6 +326,23 @@ def choose(page, label):
     trigger.click()
     page.locator('[data-add-account-menu] [role="menuitem"]').filter(has_text=label).first.click()
     expect(page.locator('[data-add-account-menu]')).to_have_count(0)
+
+
+def machine_row(page, identity):
+    """La fila de máquinas de una cuenta (`AccountMachines`) frente a la celda de su cuenta y a las demás celdas."""
+    return page.evaluate("""(identity) => {
+        const grid = document.querySelector('[data-account-grid]');
+        const cells = [...grid.children].filter(x => x.tagName === 'LI');
+        const cell = cells.find(c => c.textContent.includes(identity));
+        const row = cell.querySelector('[data-account-machines]');
+        const button = row?.querySelector('[data-sign-in-elsewhere]');
+        const r = (e) => { const b = e.getBoundingClientRect(); return { left: b.left, right: b.right, top: b.top, bottom: b.bottom, width: b.width }; };
+        const inside = (b, c) => b.left >= c.left - 1 && b.right <= c.right + 1 && b.top >= c.top - 1 && b.bottom <= c.bottom + 1;
+        const meets = (a, b) => a.left < b.right - 1 && b.left < a.right - 1 && a.top < b.bottom - 1 && b.top < a.bottom - 1;
+        const others = cells.filter(c => c !== cell).map(r);
+        return { row: !!row, button: !!button && r(button).width > 0, rowInside: !!row && inside(r(row), r(cell)), buttonInside: !!button && inside(r(button), r(cell)),
+          overlaps: !!row && others.some(o => meets(r(row), o)), chips: row ? [...row.querySelectorAll('[data-account-machine]')].map(c => c.textContent.trim()) : [] };
+    }""", identity)
 
 
 def shoot(page, name):
@@ -367,6 +419,44 @@ def run(browser, base, name):
         expect(dialog.get_by_role('button', name='Reconectar').first).to_be_visible()
     if name != 'none':
         shoot(page, name)
+    if name == 'reconnect':
+        # La tarjeta caída es la más ancha: su estado y «Reconectar» van en la fila de la cabecera, como en `9e345462`.
+        identity = 'persona2@ejemplo.com'
+        for width in (1440, 960, 640, CARD_MIN + 24):
+            set_width(page, identity, width)
+            got = header(page, identity)
+            print(f'reconnect {width}px: ancho natural de la tarjeta {got["natural"]} px, ancho {got["width"]} px, {got["tops"]}')
+            mids = [t['mid'] for t in got['tops']]
+            assert any('Reconectar' in t['text'] for t in got['tops']), got
+            _eq_true(max(mids) - min(mids) <= 4, f'{width}px: el estado y las acciones no van en una sola fila: {got}')
+            cols = columns(page, identity)
+            _eq_true(not cols['clipped'], f'{width}px recortados: {cols["clipped"]}')
+            _eq_true(not cols['overflow'], f'{width}px desborde: {cols}')
+        results.append(('PASS', 'reconnect: el estado y «Reconectar» en la fila de la cabecera, sin recortes ni desborde, a 1440, 960, 640 y 472 px de grupo'))
+    if name == 'machines':
+        # La fila de máquinas y «Iniciar sesión en otra máquina» son de su cuenta: dentro de su celda, sin tocar otra.
+        expect(dialog.locator('[data-account-machines]').first).to_be_visible()
+        expect(dialog.locator('[data-account-machine]').filter(has_text='Macbook').first).to_be_visible()
+        _eq_true(sorted(machine_row(page, 'persona1@ejemplo.com')['chips']) == ['Danil', 'Macbook'], machine_row(page, 'persona1@ejemplo.com'))
+        expect(dialog.locator('[data-account-grid] > li')).to_have_count(2)
+        identity = 'persona2@ejemplo.com'
+        for label, width, _ in WIDTHS:
+            set_width(page, identity, width)
+            got = machine_row(page, identity)
+            _eq_true(got['row'] and got['button'], f'{label} {width}px: sin fila de máquinas o sin botón: {got}')
+            _eq_true(got['rowInside'] and got['buttonInside'], f'{label} {width}px: la fila de máquinas sale de su celda: {got}')
+            _eq_true(not got['overlaps'], f'{label} {width}px: la fila de máquinas toca otra celda: {got}')
+            cols = columns(page, identity)
+            _eq_true(not cols['clipped'], f'{label} {width}px recortados: {cols["clipped"]}')
+        results.append(('PASS', 'machines: la fila de máquinas y su botón quedan en la celda de su cuenta, sin recortes ni solapes, en W1–W8'))
+        set_width(page, identity, 960)
+        cell = dialog.locator('[data-account-grid] > li').filter(has_text=identity)
+        cell.locator('[data-sign-in-elsewhere]').click()
+        expect(page.locator('[data-sign-in-on]').filter(has_text='Macbook')).to_be_visible()
+        expect(page.locator('[data-add-account-menu]')).to_have_count(0)
+        page.locator('[data-sign-in-on]').filter(has_text='Macbook').click()
+        until(page, lambda: ('add_account', MACBOOK) in h.where, lambda: f'add_account no salió en la Macbook: {[w for w in h.where if "account" in w[0]]}')
+        results.append(('PASS', 'machines: «Iniciar sesión en otra máquina» abre su menú de máquinas, no el selector global, y el alta sale en esa máquina'))
     if name == 'four':
         identity = 'persona1@ejemplo.com'
         for label, width, expected in WIDTHS:
@@ -374,9 +464,8 @@ def run(browser, base, name):
             got = columns(page, identity)
             assert got['cards'] >= 4, got
             pending(f'{label} {width}px → {expected} columnas (hoy {got["cols"]})', lambda: _eq(got['cols'], expected))
-            pending(f'{label} {width}px tarjetas de al menos 240 px', lambda: _eq_true(got['minCard'] >= 240, got))
-            # DEFECTO CONOCIDO de `dev` (medido con minCard 331 a 320 px): el contenedor desborda en horizontal.
-            pending(f'{label} {width}px sin desborde horizontal' + (' (DEFECTO CONOCIDO de dev, minCard 331)' if width == 320 else ''), lambda: _eq_true(not got['overflow'], got))
+            pending(f'{label} {width}px tarjetas de al menos {CARD_MIN} px', lambda: _eq_true(got['minCard'] >= CARD_MIN - 1, got))
+            pending(f'{label} {width}px sin desborde horizontal', lambda: _eq_true(not got['overflow'], got))
             pending(f'{label} {width}px ningún botón de acción queda recortado', lambda: _eq_true(not got['clipped'], got['clipped']))
             if label == 'W1':
                 pending('el contenedor del grupo lleva [data-provider-group]', lambda: _eq_true(got['tagged'], 'falta [data-provider-group]'))

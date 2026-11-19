@@ -33,6 +33,12 @@ const abiertos = new Set();
 export function cerrarTodo() {
   for (const cerrar of [...abiertos]) cerrar();
 }
+/** Para las pruebas que arrancan la app entera (`boot`): su cierre entra en `cerrarTodo`. */
+export function alCerrar(fn) {
+  const cerrar = () => { if (!abiertos.delete(cerrar)) return; fn(); cancelarRelojes(); };
+  abiertos.add(cerrar);
+  return cerrar;
+}
 function cancelarRelojes() {
   for (const h of pendientes) { reloj.clearTimeout(h); reloj.clearInterval(h); }
   pendientes.clear();
