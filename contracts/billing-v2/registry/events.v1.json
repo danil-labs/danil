@@ -32,7 +32,8 @@
       "optional_fields_since": {
         "source": 12,
         "features": 12,
-        "max_workspaces": 12
+        "max_workspaces": 12,
+        "edition": 13
       },
       "emission_conditions": {
         "downgraded_to_free": {

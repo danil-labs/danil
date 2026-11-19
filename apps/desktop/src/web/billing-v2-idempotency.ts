@@ -8,11 +8,16 @@ function storedCreations(storage: Pick<Storage, "getItem">): Record<string, Crea
   } catch { return {}; }
 }
 
-export async function creationKey(storage: Pick<Storage, "getItem" | "setItem">, plan: string, version: number, name: string): Promise<string> {
-  const input = JSON.stringify([plan, version, name.normalize("NFC").trim()]);
+export async function billingFingerprint(input: string): Promise<string> {
   const bytes = new TextEncoder().encode(input);
   const digest = new Uint8Array(await crypto.subtle.digest("SHA-256", bytes));
-  const fingerprint = Array.from(digest, byte => byte.toString(16).padStart(2, "0")).join("");
+  return Array.from(digest, byte => byte.toString(16).padStart(2, "0")).join("");
+}
+
+export async function creationKey(storage: Pick<Storage, "getItem" | "setItem">, plan: string, version: number, name: string, promotionCode?: string): Promise<string> {
+  const values = [plan, version, name.normalize("NFC").trim()];
+  if (promotionCode) values.push(promotionCode);
+  const fingerprint = await billingFingerprint(JSON.stringify(values));
   const entries = storedCreations(storage);
   const prior = entries[fingerprint];
   if (prior && /^[0-9a-f-]{36}$/i.test(prior.key)) return prior.key;

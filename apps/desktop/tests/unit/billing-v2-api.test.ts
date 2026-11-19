@@ -71,6 +71,7 @@ test("history requests preserve the server cursor for both collections", async (
 test("Business is an advertised Team edition and the two checkout intents preserve it", async () => {
   const { checkoutPlans } = await import("../../src/web/billing-v2-plans.ts");
   const value = fixture("catalog.synthetic");
+  delete value.display_variants;
   const requests: unknown[] = [];
   const api = billingV2({
     call: async () => Response.json(value),
@@ -112,4 +113,21 @@ test("credits and customer portal carry idempotency keys on their edge routes", 
     ["credits/purchases", "credits-key", JSON.stringify(request)],
     ["billing/portal-sessions", "portal-key", undefined],
   ]);
+});
+
+
+test("only explicit promotion codes are sent for both checkout intents", async () => {
+  const bodies: Record<string, unknown>[] = [];
+  const api = billingV2({
+    call: async () => { throw new Error("unexpected read"); },
+    mutation: async (_path, init) => {
+      bodies.push(JSON.parse(String(init?.body)));
+      return Response.json(fixture("checkout.created"));
+    },
+  }, null);
+  await api.checkout("team", 3, "upgrade", "business", "DANIL1MES");
+  await api.createOrganization("team", 3, "Org", "new", "business", "DANIL1MES");
+  await api.checkout("team", 3, "no-code");
+  assert.deepEqual(bodies.map(body => body.promotion_code), ["DANIL1MES", "DANIL1MES", undefined]);
+  assert.deepEqual(bodies.map(body => body.intent), ["upgrade", "new_organization", "upgrade"]);
 });

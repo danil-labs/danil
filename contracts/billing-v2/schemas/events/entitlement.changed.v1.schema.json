@@ -149,6 +149,18 @@
         }
       ],
       "$comment": "Rev. 12. Tope de workspaces del plan (dato del catálogo de treasury; lo aplica workspaces). null = sin tope. Ausente = productor rev. 11: el consumidor conserva su comportamiento anterior."
+    },
+    "edition": {
+      "oneOf": [
+        {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]{0,31}$"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "$comment": "Rev. 13. Llave técnica del perfil de paquetes de la edición (no el nombre comercial); null sin edición. Solo sale hacia consumidores que declaran revision: 13 (a los demás no les llega el campo); mismo aggregate_seq para todos. machine-provisioning acepta una edición desconocida con 2xx y aplica el resto (edition_pending). Con plan_key=free siempre null. resource_spec lleva los totales: lo incluido en el nivel más los complementos."
     }
   }
 }

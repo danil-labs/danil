@@ -72,6 +72,21 @@ with sync_playwright() as p:
     page.get_by_label("Nombre de la organización").wait_for(timeout=5000)
     page.goto(BASE + "?gate=off", wait_until="networkidle")
     assert page.get_by_role("button", name="Crear organización").count() == 0
+    for new_organization in [False, True]:
+        page.goto(BASE + "?promo-error=1" + ("&new=1" if new_organization else ""))
+        if new_organization:
+            page.get_by_role("button", name="Crear organización").click()
+            page.get_by_label("Nombre de la organización").fill("Danil test")
+        code = page.get_by_label("Código de promoción")
+        code.fill("  INVALIDO  ")
+        page.get_by_role("button", name="Continuar al pago" if new_organization else "Cambiar de plan").click()
+        page.get_by_text("Este código de promoción no es válido para el plan.", exact=True).wait_for()
+        assert code.get_attribute("aria-invalid") == "true"
+        calls = page.evaluate("window.billingCalls")
+        assert "promo:INVALIDO" in calls and "checkout-status" not in calls
+        assert page.url.startswith(BASE)
+        code.fill("OTRO")
+        assert code.get_attribute("aria-invalid") is None
     retry = browser.new_page()
     retry.add_init_script("""
       const interval = window.setInterval.bind(window);
@@ -82,4 +97,4 @@ with sync_playwright() as p:
     assert retry.evaluate("window.billingCalls").count("catalog") >= 2
     browser.close()
 
-print("billing interface: 17 cases passed")
+print("billing interface: 19 cases passed")

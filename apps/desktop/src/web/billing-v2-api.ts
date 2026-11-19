@@ -36,12 +36,12 @@ export function billingV2(transport: Transport, organizationId: string | null) {
     },
     transactions: (cursor?: string) => read(pagePath("credits/transactions", cursor), page),
     invoices: (cursor?: string) => read(pagePath("billing/invoices", cursor), page),
-    checkout: (plan_key: "pro" | "team", catalog_version: number, key: string, variant?: "business") => write("billing/checkout-sessions", { plan_key, variant, catalog_version, intent: "upgrade" }, key, checkout),
-    async createOrganization(plan_key: "pro" | "team", catalog_version: number, name: string, key: string, variant?: "business") {
+    checkout: (plan_key: "pro" | "team", catalog_version: number, key: string, variant?: "business", promotion_code?: string) => write("billing/checkout-sessions", { plan_key, variant, promotion_code, catalog_version, intent: "upgrade" }, key, checkout),
+    async createOrganization(plan_key: "pro" | "team", catalog_version: number, name: string, key: string, variant?: "business", promotion_code?: string) {
       if (/[\u0000-\u001f\u007f-\u009f<>]/u.test(name)) throw new Error("invalid_organization_name");
       const organization_name = name.normalize("NFC").trim();
       if ([...organization_name].length < 1 || [...organization_name].length > 80) throw new Error("invalid_organization_name");
-      return write("billing/checkout-sessions", { plan_key, variant, catalog_version, intent: "new_organization", organization_name }, key, checkout);
+      return write("billing/checkout-sessions", { plan_key, variant, promotion_code, catalog_version, intent: "new_organization", organization_name }, key, checkout);
     },
     async checkoutStatus(id: string, signal?: AbortSignal) {
       const status = await read(`billing/checkout-sessions/${encodeURIComponent(id)}`, checkoutStatus, signal);

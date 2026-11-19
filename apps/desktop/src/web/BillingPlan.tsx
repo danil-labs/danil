@@ -4,6 +4,8 @@ import { Button } from "../ui/Button";
 import { BUSINESS_SALES_EMAIL, SettingsPanel, SettingsRow, SettingsSection } from "../features/settings/index";
 import { PlatformSessionError } from "./platform-session";
 import { billingScopes, type BillingScope } from "./billing-v2-scopes";
+import { BillingPromotionField, promotionCodeInvalid } from "./BillingPromotionField";
+import { billingFingerprint } from "./billing-v2-idempotency";
 import { checkoutPlans } from "./billing-v2-plans";
 import type { billingV2, PlanChoice } from "./billing-v2-api";
 import { hostedCheckoutUrl } from "./billing-v2-return";
@@ -57,6 +59,8 @@ const message = (error: unknown) => error instanceof PlatformSessionError && err
 
 export default function BillingPlan(props: { api: Api; role: () => string; context: string; creationApi?: Api }) {
   const permitted = (scope: BillingScope) => billingScopes(props.role()).includes(scope);
+  const [promotion, setPromotion] = createSignal("");
+  const [promotionInvalid, setPromotionInvalid] = createSignal(false);
   const [failure, setFailure] = createSignal("");
   const [busy, setBusy] = createSignal(false);
   const [revision, refresh] = createSignal(0);
@@ -71,11 +75,18 @@ export default function BillingPlan(props: { api: Api; role: () => string; conte
   });
   const pendingPrefix = () => `danil.billing.${props.context}.`;
   const keyFor = (action: string) => { const storageKey = `${pendingPrefix()}key.${action}`; const key = sessionStorage.getItem(storageKey) ?? crypto.randomUUID(); sessionStorage.setItem(storageKey, key); return key; };
-  async function run(action: string, operation: (key: string) => Promise<unknown>) {
+  async function run(action: string, operation: (key: string) => Promise<unknown>, promotionCode?: string) {
     if (busy()) return;
-    setBusy(true); setFailure("");
-    try { await operation(keyFor(action)); sessionStorage.removeItem(`${pendingPrefix()}key.${action}`); refresh(n => n + 1); }
-    catch (error) { setFailure(message(error)); }
+    setBusy(true); setFailure(""); setPromotionInvalid(false);
+    try {
+      const scopedAction = promotionCode ? `${action}:${await billingFingerprint(promotionCode)}` : action;
+      await operation(keyFor(scopedAction));
+      sessionStorage.removeItem(`${pendingPrefix()}key.${scopedAction}`);
+      refresh(n => n + 1);
+    } catch (error) {
+      if (promotionCodeInvalid(error)) setPromotionInvalid(true);
+      else setFailure(message(error));
+    }
     finally { setBusy(false); }
   }
   function redirect(url: string | null) {
@@ -83,7 +94,8 @@ export default function BillingPlan(props: { api: Api; role: () => string; conte
   }
   async function upgrade(plan: PlanChoice, version: number) {
     const api = props.api;
-    await run(`checkout:${version}:${plan.variant ?? plan.plan_key}`, async key => redirect((await api.checkout(plan.plan_key, version, key, plan.variant)).url));
+    const code = promotion().trim() || undefined;
+    await run(`checkout:${version}:${plan.variant ?? plan.plan_key}`, async key => redirect((await api.checkout(plan.plan_key, version, key, plan.variant, code)).url), code);
   }
   async function buy(pack: string, version: number) {
     const api = props.api;
@@ -110,6 +122,10 @@ export default function BillingPlan(props: { api: Api; role: () => string; conte
           <Show when={failed(value().organization)}>{error => <SettingsSection title={t("web.billing_v2.plan")}><p role="status">{t(message(error()))}</p></SettingsSection>}</Show>
           <Show when={failed(value().catalog)}>{error => <SettingsSection title={t("web.billing_v2.plan")}><p role="status">{t(message(error()))}</p></SettingsSection>}</Show>
           <Show when={fulfilled(value().catalog)}>{catalog => <SettingsSection title={t("web.billing_v2.choose_plan")}>
+            <Show when={permitted("billing.manage") && checkoutPlans(catalog()).some(plan => plan.choice)}>
+              <BillingPromotionField value={promotion()} disabled={busy()} invalid={promotionInvalid()}
+                onEdit={value => { setPromotion(value); setPromotionInvalid(false); }} />
+            </Show>
             <div class="grid gap-2 sm:grid-cols-2">
               <For each={checkoutPlans(catalog())}>{plan => <article class="rounded-lg border border-line p-3">
                 <strong>{t(`web.billing_v2.plan_${plan.id}`)}</strong>

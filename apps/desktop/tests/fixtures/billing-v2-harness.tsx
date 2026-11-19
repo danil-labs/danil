@@ -40,8 +40,8 @@ const api = {
     if (params.get("invoices") === "unavailable") throw new PlatformSessionError(503, null);
     return invoices.value;
   },
-  checkout: async (plan: string, _version: number, _key: string, variant?: string) => { calls.push(`checkout:${plan}:${variant ?? ""}`); return { checkout_id: "bchk_01SYNTHETICCHK0001", state: "creating", url: null }; },
-  createOrganization: async (plan: string, _version: number, name: string) => { calls.push(`new:${plan}:${name}`); return { checkout_id: "bchk_01SYNTHETICCHK0001", state: "creating", url: null }; },
+  checkout: async (plan: string, _version: number, _key: string, variant?: string, code?: string) => { calls.push(`checkout:${plan}:${variant ?? ""}`); if (params.has("promo-error") && code) { calls.push(`promo:${code}`); throw new PlatformSessionError(422, null, "promotion_code_invalid"); } return { checkout_id: "bchk_01SYNTHETICCHK0001", state: "creating", url: null }; },
+  createOrganization: async (plan: string, _version: number, name: string, _key: string, _variant?: string, code?: string) => { calls.push(`new:${plan}:${name}`); if (params.has("promo-error") && code) { calls.push(`promo:${code}`); throw new PlatformSessionError(422, null, "promotion_code_invalid"); } return { checkout_id: "bchk_01SYNTHETICCHK0001", state: "creating", url: null }; },
   checkoutStatus: async () => {
     calls.push("checkout-status");
     if (["expired", "canceled"].includes(params.get("return") ?? "")) return { state: params.get("return"), terminal: true };
