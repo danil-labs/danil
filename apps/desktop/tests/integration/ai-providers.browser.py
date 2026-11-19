@@ -17,6 +17,11 @@ se mide el ancestro `@container` o, si no, el padre de la lista.
   uv run --with playwright python tests/integration/ai-providers.browser.py
 
 `DANIL_PV2_URL` apunta a otra instancia ya servida en vez de levantar la propia.
+`DANIL_PV2_SHOTS=<carpeta>` guarda capturas de cada escenario a 1440 y 1024 px.
+
+Desde T3 (2026-11-19) la pantalla tiene un solo «Agregar cuenta» con selector y
+solo enseña los grupos con cuentas, algo vivo o un fallo de lectura: `none` ya no
+tiene grupo Codex y el alta entra por el selector (`choose`).
 Se necesita `playwright install chromium` una vez.
 """
 import functools
@@ -278,6 +283,28 @@ def set_width(page, identity, width):
     page.wait_for_timeout(60)
 
 
+def choose(page, label):
+    """El único «Agregar cuenta» abre el selector; se elige el proveedor por su nombre."""
+    dialog = page.locator('[role="dialog"]').first
+    trigger = dialog.locator('[data-add-account]')
+    expect(trigger).to_have_count(1)
+    trigger.click()
+    page.locator('[data-add-account-menu] [role="menuitem"]').filter(has_text=label).first.click()
+    expect(page.locator('[data-add-account-menu]')).to_have_count(0)
+
+
+def shoot(page, name):
+    folder = os.environ.get('DANIL_PV2_SHOTS')
+    if not folder:
+        return
+    Path(folder).mkdir(parents=True, exist_ok=True)
+    for width, height in ((1440, 900), (1024, 768)):
+        page.set_viewport_size({'width': width, 'height': height})
+        page.wait_for_timeout(150)
+        page.screenshot(path=str(Path(folder) / f'{name}-{width}.png'))
+    page.set_viewport_size({'width': 1440, 'height': 900})
+
+
 def expand(page, name):
     dialog = page.locator('[role="dialog"]')
     # Los grupos de proveedor llegan plegados si ninguna tarea abierta usa ese agente.
@@ -301,11 +328,27 @@ def run(browser, base, name):
     until(page, lambda: any(c == 'list_accounts' and a.get('provider') == 'codex' for c, a in h.calls), lambda: f'sin list_accounts de codex: {[c for c, _ in h.calls if "account" in c]}')
     assert any(c == 'list_surfaces' for c, _ in h.calls), h.calls
     dialog = page.locator('[role="dialog"]')
-    expand(page, name)
     accounts = h.scenario['accounts']
+    # Este motor no declara el Router en `list_providers`: su fila del bloque Danil se nombra igual.
+    danil = dialog.locator('section[aria-label="Danil"]')
+    expect(danil.get_by_text('Router IA gratis', exact=True)).to_be_visible()
+    if name == 'list-fails':
+        expect(danil.get_by_text('No se pudieron leer las cuentas.')).to_be_visible()
+        order = danil.inner_text()
+        assert order.index('Router IA gratis') < order.index('No se pudieron leer las cuentas.'), order
+    if name != 'none':
+        expand(page, name)
     if name == 'none':
-        expect(dialog.get_by_text('Conectar Codex', exact=True)).to_be_visible()
-        expect(dialog.get_by_role('button', name='Agregar cuenta')).to_be_visible()
+        # Sin cuentas no hay grupo: el texto de la pantalla y un solo «Agregar cuenta» (P50).
+        expect(dialog.get_by_text('Todavía no hay cuentas', exact=False)).to_be_visible()
+        expect(dialog.get_by_role('button', name='Agregar cuenta')).to_have_count(1)
+        expect(dialog.locator('[data-provider-slot]:not(.hidden)')).to_have_count(0)
+        shoot(page, name)
+        # P68: selector → Codex → el grupo aparece desplegado y el alta sale una vez.
+        choose(page, 'Codex')
+        until(page, lambda: any(c == 'add_account' and a.get('provider') == 'codex' for c, a in h.calls), lambda: 'add_account de codex no llegó')
+        expect(dialog.locator('[data-provider-slot="codex"]')).to_be_visible()
+        assert sum(1 for c, a in h.calls if c == 'add_account') == 1, [c for c, _ in h.calls if 'account' in c]
     elif name == 'list-fails':
         expect(dialog.get_by_text('persona1@ejemplo.com')).to_have_count(0)
         # Falla la lista de Codex (y la del Router): el mensaje queda en el grupo y no hay cuentas inventadas.
@@ -322,6 +365,8 @@ def run(browser, base, name):
         until(page, lambda: dialog.locator('[role="progressbar"]').count() >= 2 * len(live), lambda: f'{dialog.locator("[role=progressbar]").count()} barras para {len(live)} cuentas')
     if name == 'reconnect':
         expect(dialog.get_by_role('button', name='Reconectar').first).to_be_visible()
+    if name != 'none':
+        shoot(page, name)
     if name == 'four':
         identity = 'persona1@ejemplo.com'
         for label, width, expected in WIDTHS:
@@ -369,7 +414,7 @@ with sync_playwright() as p:
         open_providers(page, base, h)
         until(page, lambda: any(c == 'list_accounts' and a.get('provider') == 'codex' for c, a in h.calls), lambda: 'sin list_accounts de codex')
         expand(page, 'event')
-        page.locator('[role="dialog"]').get_by_role('button', name='Agregar cuenta').first.click(timeout=8000)
+        choose(page, 'Codex')
         until(page, lambda: any(c == 'login_account' for c, _ in h.calls), lambda: f'login_account no llegó: {[c for c, _ in h.calls if "account" in c]}')
         login = next(a for c, a in h.calls if c == 'login_account')['id']
         h.push_event('account', dict(account=login, kind='confirm', text='ABCD-1234'))

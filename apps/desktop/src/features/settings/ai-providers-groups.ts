@@ -7,7 +7,7 @@
  */
 // Con extensión: este módulo se carga también desde `node --test`.
 import { isFreeRouterAgent } from "../../../../../packages/tasks/src/agents.ts";
-import type { Frase } from "../../lib/prose.ts";
+import type { Prosa } from "../../lib/prose.ts";
 import type { Superficie } from "../../lib/surfaces.ts";
 import { SUPPORTED_AGENTS } from "./ai-providers-view.ts";
 
@@ -15,7 +15,7 @@ import { SUPPORTED_AGENTS } from "./ai-providers-view.ts";
 export type BloqueoAlta =
   | null
   | { k: "ocupado" }
-  | { k: "segunda"; porque: Frase }
+  | { k: "segunda"; porque: Prosa }
   | { k: "externo" };
 
 /** Lo que cada `Accounts` avisa de su proveedor. */
@@ -89,7 +89,7 @@ export type OpcionDeAlta =
   | { id: string; accion: "agregar" }
   | { id: string; accion: "abrir" } // descarga externa: despliega el grupo, no llama `add_account`
   | { id: string; accion: "bloqueada"; motivo: "ocupado" }
-  | { id: string; accion: "bloqueada"; motivo: "segunda"; porque: Frase };
+  | { id: string; accion: "bloqueada"; motivo: "segunda"; porque: Prosa };
 
 /** Lo que ofrece el selector. Copia `bloqueoAlta` de cada proveedor sin recalcularlo. */
 export function opcionesDeAlta(superficies: readonly Superficie[], estados: EstadosPorProveedor): OpcionDeAlta[] {
