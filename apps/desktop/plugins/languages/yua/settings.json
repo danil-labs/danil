@@ -43,7 +43,6 @@
   "settings.accounts.free.warning": "Modeloʼob siibal utiʼal ilaj: maʼ a meyajtikoʼob utiʼal a túuxtik taʼakbil tʼaan mix u datosil máak.",
   "settings.accounts.install_agent": "Oksej {agent}",
   "settings.accounts.installing_agent": "Táan u yoksaʼal {agent}…",
-  "settings.accounts.installs_on_connect": " (ku yoksaʼal ken nupʼuk)",
   "settings.accounts.key_placeholder": "Tsʼáaʼ wayeʼ a API key",
   "settings.accounts.no_response": "{agent} maʼ tu núukaj tak bejlaʼeʼ. Maʼ xaan kʼaʼabet u jeʼesaʼal tiʼ jumpʼéel terminal utiʼal u tsʼoʼoksik u nupʼul.",
   "settings.accounts.open_browser": "Jeʼej le navegadoroʼ",

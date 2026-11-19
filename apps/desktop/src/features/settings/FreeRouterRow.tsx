@@ -7,7 +7,7 @@ import { createFreeRouterConsent } from "./free-router-consent";
 import { SettingsRow } from "./layout";
 
 /** El aviso de uso acompaña la política versionada del motor. */
-export const AVISO_DE_USO = () => t("settings.accounts.free.warning");
+const AVISO_DE_USO = () => t("settings.accounts.free.warning");
 
 /**
  * Cuál es ese agente no se escribe aquí: llega por `props.agente`, y quién lo
