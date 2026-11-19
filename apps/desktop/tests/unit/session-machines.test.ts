@@ -107,13 +107,16 @@ test("missing context echo discards every scoped inventory and falls back to uns
 test("paid groups never offer local seals, Free never offers another machine, and unknown plans use organization machines", () => {
   const remote = [{ id: "org-machine", name: "Paid" }];
   const local = [{ id: "here", name: "Sealed on this computer" }];
-  const group = (plan: string | null) => sessionWorkspaceSource(plan, () => remote, () => local);
+  const group = (plan: string | null, personal?: boolean) => sessionWorkspaceSource({ plan, ...(personal === undefined ? {} : { personal }) }, () => remote, () => local);
   assert.deepEqual(group("paid"), remote);
   assert.deepEqual(group(null), remote);
   assert.deepEqual(group("free"), local);
   assert.equal(group("paid")?.some((w) => w.id === "here"), false);
   assert.equal(group("free")?.some((w) => w.id === "org-machine"), false);
-  assert.deepEqual(sessionWorkspaceSource("paid", () => null, () => local), null);
+  assert.deepEqual(sessionWorkspaceSource({ plan: "paid" }, () => null, () => local), null);
+  assert.deepEqual(sessionWorkspaceSource(null, () => remote, () => local), remote);
+  assert.deepEqual(group("pro", true), local, "the personal org upgraded to Pro keeps running on this computer");
+  assert.deepEqual(group("free", false), remote, "identity saying it is not personal wins over the plan");
 });
 
 test("the bridge remains the base without sessions, retaining organization and engine capabilities", () => {

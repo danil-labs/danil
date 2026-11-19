@@ -1,10 +1,11 @@
 import { FleetError } from "@terminus/fleet";
 import { rememberWorkspaceSnapshot, setActiveWorkspaceContext } from "../../lib/workspace-context.ts";
+import { isPersonal } from "../../lib/personal-org.ts";
 import { createContextAttention } from "./context-attention.ts";
 import type { Invoke, RouterConfig } from "./router-config.ts";
 import { scopedFleet } from "./scoped-fleet.ts";
 
-type ContextInfo = { org: string; plan?: string | null };
+type ContextInfo = { org: string; plan?: string | null; personal?: boolean };
 export type ContextRouterConfig = RouterConfig & { contextInfo?: (context: string) => ContextInfo | null };
 type Core = {
   handle: Invoke; events(machine: string, events: {name:string; payload:unknown}[], metadata?: EventMetadata): void;
@@ -24,7 +25,7 @@ export function createContextRouter(config: ContextRouterConfig, createRouterCor
   const sourceMachine = (machine: string, context?: string) => {
     if (!context) return true;
     const info = config.contextInfo?.(context), row = config.fleet.info(machine, context);
-    return !!info && info.plan !== "free" && row?.kind === "organization" && row.organizationId === info.org;
+    return !!info && !isPersonal(info) && row?.kind === "organization" && row.organizationId === info.org;
   };
   let activeContext: string | undefined;
   let cleared = false;
@@ -33,14 +34,14 @@ export function createContextRouter(config: ContextRouterConfig, createRouterCor
     const info = config.contextInfo?.(context);
     if (!info) throw new FleetError("unknown_machine", null);
     let router = contexts.get(context);
-    const fingerprint = JSON.stringify([info.org, info.plan === "free"]);
+    const fingerprint = JSON.stringify([info.org, isPersonal(info)]);
     if (router && placement.get(context) !== fingerprint) {
       const workspace = router.activeWorkspace();
       if (workspace) selectedWorkspaces.set(context, workspace);
       router.close(); contexts.delete(context); attention.forget(context); router = undefined;
     }
     if (!router) {
-      const free = info.plan === "free";
+      const free = isPersonal(info);
       router = createRouterCore({ ...config,
         fleet: scopedFleet(config.fleet, { context, org: info.org, localOnly: free }),
         self: free ? config.self : null, native: free ? config.native : null,

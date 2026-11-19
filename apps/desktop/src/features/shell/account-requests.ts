@@ -1,4 +1,5 @@
 import type { ContextGroup, ContextReply } from "./session-context-types.ts";
+import { isPersonal } from "../../lib/personal-org.ts";
 
 /** Una petición de la CLI (`account_requests_v1`), como la entrega `account_request_take`. */
 export type AccountRequest = { request_id: string; op: string; args?: { name?: string; org?: string }; key: string; caller_task?: string | null };
@@ -45,7 +46,7 @@ export function pickGroup(groups: readonly ContextGroup[], org: string | undefin
   if (!groups.length) return { error: { code: "no_session" } };
   const matches = org
     ? groups.filter((g) => g.org === org || (g.org_name ?? "").toLowerCase() === org.toLowerCase())
-    : groups.filter((g) => g.plan === "free");
+    : groups.filter(isPersonal);
   const orgs = new Set(matches.map((g) => g.org));
   if (orgs.size === 1) return { group: oneOf(matches) };
   if (orgs.size > 1) {
@@ -87,12 +88,12 @@ export async function runAccountRequest(row: AccountRequest, deps: AccountReques
   const picked = pickGroup(groups, row.args?.org);
   if ("error" in picked) return { outcome: { error: picked.error } };
   const { group } = picked;
-  if (group.plan !== "free" && group.role && !ADMIN.has(group.role)) return { outcome: { error: { code: "admin_required" } } };
+  if (!isPersonal(group) && group.role && !ADMIN.has(group.role)) return { outcome: { error: { code: "admin_required" } } };
   let reply: ContextReply;
   try {
     // La llave de la CLI es la del servidor: dos despachos de la misma petición crean un solo workspace.
-    // El Free corre en la computadora de la persona; en una organización de pago decide su admin (el valor por omisión del servidor).
-    const body = group.plan === "free" ? { name, placement: { kind: "member_computer" } } : { name };
+    // La personal (Free o ya en Pro) corre en la computadora de la persona; en otra organización decide su admin (el valor por omisión del servidor).
+    const body = isPersonal(group) ? { name, placement: { kind: "member_computer" } } : { name };
     reply = await deps.send(group.context_id, "POST", "/v1/workspaces", body, row.key);
   } catch {
     return { outcome: { error: { code: "operation_failed" } } };
@@ -105,7 +106,7 @@ export async function runAccountRequest(row: AccountRequest, deps: AccountReques
   const engineId = typeof body.engine_workspace_id === "string" && body.engine_workspace_id ? body.engine_workspace_id : null;
   // Solo lo que corre en la computadora de la persona vive aquí. Si sellarlo falla, el servidor ya lo tiene:
   // no es un error, pero la persona tiene que agregarlo desde «Agregar workspace».
-  const here = (body.placement?.kind ?? (group.plan === "free" ? "member_computer" : null)) === "member_computer";
+  const here = (body.placement?.kind ?? (isPersonal(group) ? "member_computer" : null)) === "member_computer";
   let materialized = !here;
   if (here && engineId) materialized = await deps.createHere(group.org, accountId, engineId, created).then(() => true, () => false);
   return {

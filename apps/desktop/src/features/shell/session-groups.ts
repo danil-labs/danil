@@ -40,7 +40,7 @@ function wire(hidden: () => ReadonlySet<string>, onSeeded: (ids: readonly string
   });
   const availableFor = (org: string, context: string) => {
     revision();
-    return sessionWorkspaceSource(groups()?.find((g) => g.context_id === context)?.plan ?? null, () => danilAvailableContext(org, context), () => accounts.available(org));
+    return sessionWorkspaceSource(groups()?.find((g) => g.context_id === context) ?? null, () => danilAvailableContext(org, context), () => accounts.available(org));
   };
   const refreshAccounts = () => accounts.refresh(groups() ?? [], sessions.send, (context) => records.get(context)?.person ?? null);
   const accountKey = createMemo(() => JSON.stringify(groups()?.map((g) => [g.context_id, g.org, g.plan]) ?? null));

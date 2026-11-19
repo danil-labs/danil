@@ -1,4 +1,5 @@
 import { accountId as asAccountId, type PendingUnions } from "./account-transfers.ts";
+import { isPersonal, type PersonalSignal } from "../../lib/personal-org.ts";
 
 /** Un workspace local que se puede adoptar en la organización personal (`adoption_candidates`). */
 export type AdoptionCandidate = { id: string; name: string; created_at?: number; adoptable?: boolean; reason?: string };
@@ -121,13 +122,16 @@ export async function adoptLocals(
   return { adopted, refused, unavailable: false };
 }
 
+type PersonalGroup = PersonalSignal & { org: string };
+export { isPersonal };
+
 /**
  * El Free donde adoptar: solo si hay uno. Con dos correos, cada uno con su Free,
  * el destino lo tiene que elegir la persona (pendiente, con diseño), porque el
  * sello no se deshace; mientras tanto no se adopta.
  */
-export function adoptionTarget<G extends { org: string; plan?: string | null }>(groups: readonly G[]): G | undefined {
-  const personals = groups.filter((g) => g.plan === "free");
+export function adoptionTarget<G extends PersonalGroup>(groups: readonly G[]): G | undefined {
+  const personals = groups.filter(isPersonal);
   return new Set(personals.map((g) => g.org)).size === 1 ? personals[0] : undefined;
 }
 

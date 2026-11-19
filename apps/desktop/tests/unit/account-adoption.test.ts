@@ -6,7 +6,7 @@
  */
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { adoptionTarget, adoptLocals, prefsAdoptionMemory } from "../../src/features/shell/account-adoption.ts";
+import { adoptionTarget, adoptLocals, isPersonal, prefsAdoptionMemory } from "../../src/features/shell/account-adoption.ts";
 import { prefsPendingUnions } from "../../src/features/shell/account-transfers.ts";
 import { createAccountWorkspaces } from "../../src/features/shell/session-account-workspaces.ts";
 
@@ -239,4 +239,12 @@ test("locals are adopted only when there is exactly one Free org", () => {
   assert.equal(adoptionTarget([g("org_free", "free"), g("org_acme", "paid")])?.org, "org_free");
   assert.equal(adoptionTarget([g("org_a", "free"), g("org_b", "free")]), undefined, "dos correos con su Free: elige la persona");
   assert.equal(adoptionTarget([g("org_acme", "paid")]), undefined);
+});
+
+test("the personal org is recognized by `personal`, whatever its plan, and by Free only when identity does not say", () => {
+  const g = (org: string, plan: string | null, personal?: boolean) => ({ context_id: `c-${org}`, org, plan, ...(personal === undefined ? {} : { personal }) });
+  assert.equal(adoptionTarget([g("org_mine", "pro", true), g("org_acme", "team", false)])?.org, "org_mine", "a personal org upgraded to Pro is still the target");
+  assert.equal(adoptionTarget([g("org_free", "free", false)]), undefined, "identity saying it is not personal wins over the plan");
+  assert.equal(isPersonal(g("org_old", "free")), true, "an older identity without the field falls back to the Free plan");
+  assert.equal(isPersonal(g("org_old", "pro")), false);
 });

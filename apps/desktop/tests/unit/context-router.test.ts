@@ -22,7 +22,7 @@ function setup(plans: Record<string, string> = {}) {
   } });
   fleet.setMachines(["a", "b"].map(context => ({ id: "vm", name: "Org", wakes: true, kind: "organization", organizationId: "org", context, linked: new Set(["same"]) })));
   for (const context of ["a", "b"]) fleet.setListing("vm", [{ id: "same", name: "Shared" }], context);
-  const router = createRouter({ self: "local", fleet, contextInfo: context => context === "free" ? { org: "free-org", plan: "free" } : ["a", "b"].includes(context) ? { org: "org", plan: plans[context] ?? "teams" } : null,
+  const router = createRouter({ self: "local", fleet, contextInfo: context => context === "free" ? { org: "free-org", plan: "free" } : context === "pro-personal" ? { org: "mine-org", plan: "pro", personal: true } : ["a", "b"].includes(context) ? { org: "org", plan: plans[context] ?? "teams" } : null,
     deliver: events => delivered.push(...events),
     native: async (command, args, options) => { native.push({ command, args, options }); return command === "list_workspaces" ? { workspaces: [{ id: "local", name: "Local" }], active: "local" } : null; },
   });
@@ -80,6 +80,15 @@ test("captured task options retain their context after the active organization c
 test("a Free context executes only on this computer", async () => {
   const {router,calls,native}=setup();
   await router.handle("set_active_workspace",{id:"same"},contextOptions("free"));
+  await router.handle("send_message",{text:"local"});
+  assert.deepEqual(native.map(call=>call.command),["set_active_workspace","send_message"]);
+  assert.equal(calls.length,0);
+  router.close();
+});
+
+test("a personal context upgraded to Pro still executes only on this computer", async () => {
+  const {router,calls,native}=setup();
+  await router.handle("set_active_workspace",{id:"same"},contextOptions("pro-personal"));
   await router.handle("send_message",{text:"local"});
   assert.deepEqual(native.map(call=>call.command),["set_active_workspace","send_message"]);
   assert.equal(calls.length,0);

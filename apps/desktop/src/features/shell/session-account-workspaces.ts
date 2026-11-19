@@ -1,10 +1,10 @@
 import { escribirPref, leerPref } from "../../lib/prefs.ts";
-import { adoptionTarget, adoptLocals, prefsAdoptionMemory } from "./account-adoption.ts";
+import { adoptionTarget, adoptLocals, isPersonal, prefsAdoptionMemory } from "./account-adoption.ts";
 import { applyMoves, movesFor, prefsPendingUnions, retryUnions } from "./account-transfers.ts";
 
 export type AccountWorkspace = { id: string; name: string; account: { org: string; account_id: string } };
 export type FreeWorkspace = { id: string; name: string; account_id: string };
-type Group = { context_id: string; org: string; plan: string | null };
+type Group = { context_id: string; org: string; plan: string | null; personal?: boolean };
 type Invoke = <T>(command: string, args?: Record<string, unknown>) => Promise<T>;
 type Send = (context: string, method: string, path: string, body?: unknown, key?: string) => Promise<{ status: number; body?: unknown; empty_reason?: unknown }>;
 
@@ -95,7 +95,7 @@ export function createAccountWorkspaces(invoke: Invoke, native: boolean, changed
         // La unión del Free router va aparte del traslado: si falló, el repaso la vuelve a pedir.
         if (transfer || adoption) await retryUnions(invoke, header(), pending, personOf);
         const next = new Map<string, FreeWorkspace>();
-        if (extension) for (const group of groups.filter((g) => g.plan === "free")) {
+        if (extension) for (const group of groups.filter(isPersonal)) {
           let cursor: string | null = null;
           const seen = new Set<string>();
           do {
@@ -121,7 +121,7 @@ export function createAccountWorkspaces(invoke: Invoke, native: boolean, changed
     },
     async create(group: Group, refresh: () => Promise<void>) {
       const row = free.get(group.context_id);
-      if (!native || !extension || !local || !row || group.plan !== "free") throw { detail: "not_available_yet" };
+      if (!native || !extension || !local || !row || !isPersonal(group)) throw { detail: "not_available_yet" };
       await invoke("create_account_workspace", { ...header(), id: row.id, name: row.name, account: { org: group.org, account_id: row.account_id } });
       await refresh();
       return row.id;
