@@ -25,7 +25,7 @@ export function mountOrganizationTooltip(root: HTMLElement) {
 
 export { mountOrganizationStack } from "./organization-stack";
 
-export { mountOrganizationMenu } from "./organization-menu";
+export { mountGroupAccountMenu, mountOrganizationMenu } from "./organization-menu";
 
 export { mountOrganizationLayout } from "./organization-layout";
 

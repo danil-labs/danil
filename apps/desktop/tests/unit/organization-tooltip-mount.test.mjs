@@ -17,7 +17,7 @@ test("organization tooltip shares hover reads, refreshes on existing events and 
   const doc = app.w.document;
   const style = doc.createElement("style"); style.textContent = (await Promise.all((await readdir(dir)).filter((file) => file.endsWith(".css")).map((file) => readFile(join(dir, file), "utf8")))).join("\n"); doc.head.append(style);
   const root = doc.createElement("div"); doc.body.append(root);
-  const { mountOrganizationTooltip, mountOrganizationStack, mountOrganizationMenu, mountOrganizationLayout, mountOrganizationGroup, mountWebOrganization } = await import(pathToFileURL(join(dir, "fixture.mjs")).href);
+  const { mountOrganizationTooltip, mountOrganizationStack, mountOrganizationMenu, mountGroupAccountMenu, mountOrganizationLayout, mountOrganizationGroup, mountWebOrganization } = await import(pathToFileURL(join(dir, "fixture.mjs")).href);
   const mounted = mountOrganizationTooltip(root); t.after(mounted.dispose);
   const trigger = doc.querySelector("#org-tooltip-tile");
   const hover = (inside) => trigger.dispatchEvent(new app.w.PointerEvent(inside ? "pointerenter" : "pointerleave", { bubbles: true, pointerType: "mouse" }));
@@ -80,10 +80,19 @@ test("organization tooltip shares hover reads, refreshes on existing events and 
   outside.remove();
 
   reduced.dispose(); root.replaceChildren();
-  for (const role of ["admin", "member"]) {
+  // «Canjear código» solo para owner y admin: sin rol todavía o con uno desconocido, no.
+  for (const role of ["owner", "admin", "member", "guest", undefined, "future-role"]) {
+    const group = mountGroupAccountMenu(root, role);
+    const redeem = [...root.querySelectorAll('[role="menuitem"]')].find((button) => button.textContent === "Canjear código");
+    assert.equal(!!redeem, role === "owner" || role === "admin", `group menu, role ${role}`);
+    redeem?.click();
+    assert.deepEqual(group.actions, redeem ? ["redeem"] : []);
+    group.dispose(); root.replaceChildren();
+  }
+  for (const role of ["owner", "admin", "member", "guest", undefined, "future-role"]) {
     const menu = mountOrganizationMenu(root, role);
     const labels = [...root.querySelectorAll('[role="menuitem"]')].map((button) => button.textContent);
-    assert.deepEqual(labels, ["Abrir", "Administrar workspaces", "Ocultar de la barra", ...(role === "admin" ? ["Canjear código"] : []), "Fijar en la barra", "Subir organización⌥↑", "Bajar organización⌥↓", "Cerrar sesión de Acme", "Cerrar sesión de one@example.com"]);
+    assert.deepEqual(labels, ["Abrir", "Administrar workspaces", "Ocultar de la barra", ...(role === "owner" || role === "admin" ? ["Canjear código"] : []), "Fijar en la barra", "Subir organización⌥↑", "Bajar organización⌥↓", "Cerrar sesión de Acme", "Cerrar sesión de one@example.com"]);
     assert.ok(!root.textContent.includes("Danil Credits"), "the balance belongs in the tooltip, not the menu");
     assert.equal(menu.reads(), 0);
     [...root.querySelectorAll("button")].find((button) => button.textContent === "Fijar en la barra").click();

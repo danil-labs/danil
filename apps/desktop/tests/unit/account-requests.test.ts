@@ -104,6 +104,10 @@ test("a member is told admin_required, and server refusals, missing routes and u
   for (const status of [404, 501]) assert.deepEqual((await runAccountRequest(request({ name: "X" }), deps(status))).outcome, { error: { code: "unavailable" } });
   assert.deepEqual((await runAccountRequest(request({}, "task.delete"), deps())).outcome, { error: { code: "unsupported_op" } });
   assert.deepEqual((await runAccountRequest(request({}, "orgs.list"), { ...deps(), groups: () => [] })).outcome, { error: { code: "no_session" } });
+  // Con sesión, un rechazo del borde al POST no es `no_session`: ese código devuelve el cupo de la CLI.
+  const refused = (reply: { status: number; empty_reason: string }) => ({ ...deps(), send: async () => reply });
+  assert.deepEqual((await runAccountRequest(request({ name: "X", org: "Acme" }), refused({ status: 403, empty_reason: "organization_access_denied" }))).outcome, { error: { code: "admin_required" } });
+  assert.deepEqual((await runAccountRequest(request({ name: "X" }), refused({ status: 200, empty_reason: "organization_selection_required" }))).outcome, { error: { code: "operation_failed" } });
 });
 
 test("pump takes and settles each request once and notifies what an agent created", async () => {
