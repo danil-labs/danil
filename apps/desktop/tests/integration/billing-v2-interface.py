@@ -34,7 +34,8 @@ with sync_playwright() as p:
     assert "transactions:next_page" in page.evaluate("window.billingCalls")
     page.goto(BASE + "?role=owner&invoices=unavailable", wait_until="networkidle")
     page.get_by_text("Comprados", exact=True).wait_for(timeout=5000)
-    assert page.get_by_text("No disponible", exact=True).count() == 1
+    invoices = page.locator("section").filter(has=page.get_by_text("Facturas", exact=True))
+    assert invoices.get_by_text("No disponible", exact=True).count() == 1
     page.goto(BASE + "?new=1&role=member", wait_until="networkidle")
     page.get_by_role("button", name="Crear organización").click()
     page.get_by_label("Nombre de la organización").fill("Café Danil")
@@ -51,9 +52,9 @@ with sync_playwright() as p:
     page.get_by_text("No se completó el pago, puedes intentarlo de nuevo", exact=True).wait_for()
     page.get_by_text("Pago confirmado y plan activo", exact=True).wait_for(timeout=12000)
     assert "select:org_NEW" in page.evaluate("window.billingCalls")
-    for terminal in ["expired", "canceled"]:
+    for terminal, copy in [("expired", "El pago expiró"), ("canceled", "Pago cancelado")]:
         page.goto(BASE + f"?return={terminal}&checkout=bchk_01SYNTHETICCHK0001&result=success")
-        page.wait_for_function("window.billingCalls.includes('checkout-status')")
+        page.get_by_text(copy, exact=True).wait_for()
         assert page.get_by_text("Creando máquina", exact=True).count() == 0
         assert "select:org_NEW" not in page.evaluate("window.billingCalls")
     page.goto(BASE + "?return=foreign&checkout=bchk_01SYNTHETICCHK0001&result=success", wait_until="networkidle")
