@@ -112,12 +112,7 @@
   "web.auth.identity_unavailable": "No se puede entrar en este momento. Vuelve a intentarlo en unos minutos.",
   "web.computers.no_account": "Tu sesión es válida, pero no se encontró tu cuenta de Danil. Reintenta o contacta a soporte; no necesitas crear otra identidad.",
   "web.admin.title": "Harness",
-  "web.auth.access_hint": "¿Todavía no tienes acceso a Danil? Escríbenos para solicitarlo.",
-  "web.auth.access_email_hint": "Se abrirá tu aplicación de correo. Si no se abre, copia esta dirección:",
-  "web.auth.request_access": "Solicitar acceso",
-  "web.auth.access_subject": "Solicitar acceso a Danil",
-  "web.auth.access_contact": "¿Dudas? Escríbenos a {email}",
-  "web.auth.access_required": "Necesitas acceso autorizado a Danil. Puedes solicitarlo por correo.",
+  "web.auth.access_required": "Tu cuenta de Danil todavía no puede entrar. Vuelve a iniciar sesión en unos minutos. Si sigue igual, contacta a soporte de Danil.",
   "web.download.tab": "Descarga la app",
   "web.download.title": "Descarga la app de escritorio",
   "web.download.action": "Descargar",
@@ -228,11 +223,10 @@
   "web.business.seats_pending": "Las invitaciones pendientes también ocupan un lugar.",
   "web.business.fiscal_error_legal_name_society": "Escribe la razón social sin el régimen societario («S.A. de C.V.»), como en tu Constancia de Situación Fiscal.",
   "web.platform.workspaces": "Workspaces",
-  "web.platform.empty": "No tienes nada. Crea un plan.",
   "web.platform.active": "Activo",
   "web.platform.sign_out": "Cerrar sesión",
+  "web.platform.preparing_workspace": "Preparando tu workspace…",
   "web.platform.denied": "No tienes acceso a este recurso.",
-  "web.platform.preparing": "Preparando tu espacio…",
   "web.platform.unavailable": "No se pudo completar la solicitud. Vuelve a intentarlo.",
   "web.alpha.ai_assistance": "Asistencia IA",
   "web.alpha.ai_off": "IA apagada",
@@ -266,5 +260,7 @@
     "other": "Espera {count} segundos antes de reintentar"
   },
   "web.promo.rate_limited_unknown": "Espera un momento antes de reintentar",
-  "web.promo.rejected": "No se pudo canjear el código ({code})"
+  "web.promo.rejected": "No se pudo canjear el código ({code})",
+  "web.organization.reauth": "Vuelve a iniciar sesión para entrar a tu organización.",
+  "web.organization.reauth_action": "Volver a iniciar sesión"
 }
