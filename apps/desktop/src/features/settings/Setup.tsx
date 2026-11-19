@@ -451,9 +451,9 @@ export default function Setup(props: { children: JSX.Element }) {
       await prepararConexiones();
       setPaso("ia");
     } catch (e) {
-      // Sin sesión no hay workspace: vuelve la pantalla de inicio de sesión.
+      // Sin sesión no hay workspace: la única reacción es volver a la pantalla de inicio de sesión.
       if ((e as { detail?: unknown } | null)?.detail === "no_session") setCuentaRespondida(false);
-      setFallo(prosaDe(e));
+      else setFallo(prosaDe(e));
     } finally {
       setEntrando(false);
     }
@@ -664,7 +664,10 @@ export default function Setup(props: { children: JSX.Element }) {
             fallback={
               <Suspense fallback={<TarjetaVacia />}>
                 <ConectarCuenta
-                  onListo={() => setCuentaRespondida(true)}
+                  onListo={() => {
+                    setFallo(null);
+                    setCuentaRespondida(true);
+                  }}
                 />
               </Suspense>
             }
