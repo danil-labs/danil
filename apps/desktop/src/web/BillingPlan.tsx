@@ -69,7 +69,6 @@ export default function BillingPlan(props: { api: Api; role: () => string; conte
     ]);
     return { catalog, organization, balance, transactions, invoices };
   });
-  let retry: ReturnType<typeof setTimeout> | undefined;
   const pendingPrefix = () => `danil.billing.${props.context}.`;
   const keyFor = (action: string) => { const storageKey = `${pendingPrefix()}key.${action}`; const key = sessionStorage.getItem(storageKey) ?? crypto.randomUUID(); sessionStorage.setItem(storageKey, key); return key; };
   async function run(action: string, operation: (key: string) => Promise<unknown>) {
@@ -92,19 +91,16 @@ export default function BillingPlan(props: { api: Api; role: () => string; conte
   }
   async function portal() { const api = props.api; await run("portal", async key => redirect((await api.portal(key)).url)); }
   async function changeSubscription(cancelled: boolean) { const api = props.api; await run(cancelled ? "resume" : "cancel", key => cancelled ? api.resume(key) : api.cancel(key)); }
-  function later() {
-    clearTimeout(retry);
-    retry = setTimeout(() => refresh(n => n + 1), 30000);
-  }
   onMount(() => {
     const timer = setInterval(() => {
+      if (data.loading) return;
       const results = data.latest;
       if (results && Object.values(results).some(result => {
         const error = failed(result);
         return error && (!(error instanceof PlatformSessionError) || [404, 501, 503].includes(error.status));
-      })) later();
+      })) refresh(n => n + 1);
     }, 30000);
-    onCleanup(() => { clearInterval(timer); clearTimeout(retry); });
+    onCleanup(() => clearInterval(timer));
   });
   return <SettingsPanel>
     <Show when={failure()}><p role="alert">{t(failure())}</p></Show>
