@@ -1,11 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { createRoot, createSignal } from "solid-js";
-import { createThreadsStore } from "../../src/features/threads/index.ts";
 import type { ChatEvent, Msg, Session } from "../../src/features/chat/index.ts";
+import { createThreadsStore } from "../../src/features/threads/index.ts";
 
 const msg = (text: string, role: Msg["role"] = "agent"): Msg => ({ role, text });
 const session = (turns: Session["turns"] = [], extra: Partial<Session> = {}): Session => ({ turns, provider: "claude", ...extra }) as Session;
+
 import commentaryFixture from "../fixtures/assistant-durable-commentary.json" with { type: "json" };
 
 const metadata = { author: null };
@@ -672,4 +673,61 @@ test("an injected message without a saved id keeps its place after the live outp
   f.store.acceptSession("s", session([{ id: "u1", role: "user", text: "first" }, { id: "u2", role: "user", text: "steered" }]), false, f.generation());
   assert.deepEqual(f.store.messages().map(row => row.text), ["first", "reply before the steer", "steered"]);
   f.dispose();
+});
+
+test("the same workspace and conversation keep separate views for two session contexts", async () => {
+  const { setDisplayWorkspaceContext } = await import("../../src/lib/workspace-context.ts");
+  setDisplayWorkspaceContext("ana");
+  const f = fixture();
+  try {
+    f.live.add("A/s");
+    f.store.appendLive("s", [msg("Ana private")]);
+    setDisplayWorkspaceContext("bea");
+    f.move("A");
+    assert.deepEqual(f.store.messages(), []);
+    f.store.appendLive("s", [msg("Bea private")]);
+    await f.store.read("p", "s");
+    assert.equal((f.calls.at(-1) as { options: { headers: Record<string, string> } }).options.headers["x-danil-context"], "bea");
+    setDisplayWorkspaceContext("ana");
+    f.move("A");
+    assert.deepEqual(f.store.messages().map((row) => row.text), ["Ana private"]);
+    await f.store.read("p", "s");
+    assert.equal((f.calls.at(-1) as { options: { headers: Record<string, string> } }).options.headers["x-danil-context"], "ana");
+    setDisplayWorkspaceContext("bea");
+    f.move("A");
+    assert.deepEqual(f.store.messages().map((row) => row.text), ["Bea private"]);
+  } finally { f.dispose(); setDisplayWorkspaceContext(null); }
+});
+
+test("a read returned from another context cannot paint even with the new generation", async () => {
+  const { setDisplayWorkspaceContext } = await import("../../src/lib/workspace-context.ts");
+  let resolve!: (value: Session) => void;
+  setDisplayWorkspaceContext("ana");
+  const f = fixture(async <T>() => await new Promise<Session>((done) => { resolve = done; }) as T);
+  try {
+    const pending = f.store.read("p", "s");
+    setDisplayWorkspaceContext("bea"); f.move("A");
+    resolve(session([{ turn_id: "private", user: "Ana private" } as Session["turns"][number]]));
+    const result = await pending;
+    assert.equal(f.store.acceptSession("s", result, true, f.generation()), false);
+    assert.deepEqual(f.store.messages(), []);
+  } finally { f.dispose(); setDisplayWorkspaceContext(null); }
+});
+
+test("a pending context selection keeps the displayed conversation routed to its own identity", async () => {
+  const { setActiveWorkspaceContext, setDisplayWorkspaceContext } = await import("../../src/lib/workspace-context.ts");
+  let resolve!: (value: Session) => void;
+  setActiveWorkspaceContext("ana"); setDisplayWorkspaceContext("ana");
+  const f = fixture(async <T>() => await new Promise<Session>((done) => { resolve = done; }) as T);
+  try {
+    f.store.appendLive("s", [msg("Ana visible")]);
+    setActiveWorkspaceContext("bea");
+    assert.deepEqual(f.store.messages().map((row) => row.text), ["Ana visible"]);
+    const pending = f.store.read("p", "s");
+    assert.equal((f.calls.at(-1) as { options: { headers: Record<string, string> } }).options.headers["x-danil-context"], "ana");
+    setDisplayWorkspaceContext("bea"); f.move("A");
+    resolve(session());
+    assert.equal(f.store.acceptSession("s", await pending, true, f.generation()), false);
+    assert.deepEqual(f.store.messages(), []);
+  } finally { f.dispose(); setActiveWorkspaceContext(null); setDisplayWorkspaceContext(null); }
 });

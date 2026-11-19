@@ -47,7 +47,8 @@ import type { MachineStatus } from "../../web/SyncNote";
 import { type DanilSessionInfo, railSession, type WorkspaceAccount } from "../settings/danil-sessions";
 import AccountMachines from "./AccountMachines";
 import { mergeBridgeInventory } from "./bridge-inventory";
-import { CLOUD_RETRY_INITIAL_MS, CLOUD_RETRY_MS, EDGE_ENDPOINT } from "./cloud-machines";
+import { CLOUD_RETRY_INITIAL_MS, CLOUD_RETRY_MS } from "./cloud-machines";
+import { createCloudRelayFactory } from "./context-relay";
 import { machinesListed, setDanilFleet } from "./danil-source";
 import { createEngineWorkspaces, railOf } from "./engine-workspaces";
 import { guestChannels } from "./guestChannels";
@@ -267,24 +268,12 @@ export function startAccountMachines(target: Target = window) {
   /** `endpoint` null: modo local, solo huéspedes, sin nada de la cuenta (token, relay, registro, pantallas, espacios). */
   function install(self: string, endpoint: string | null, others: Computer[], key: string) {
     const [changed, bump] = createSignal(0);
+    const cloudRelay = createCloudRelayFactory(cloud, () => cloudRenew, () => void sync());
     const fleet = new Fleet({
       self,
       connect: (info) => {
         if (isGuestMachine(info.id)) return createGuestLink(info.id);
-        if (cloudIds.has(info.id)) {
-          // Canal de datos con ticket de un solo uso (`ticket.*`), nunca `bearer.*`.
-          return new RelaySession({
-            endpoint: EDGE_ENDPOINT,
-            computerId: info.id,
-            getAdmission: async () => {
-              const answer = await cloud.client.admission(info.id, info.context);
-              if (answer.kind !== "ok") throw new Error(answer.kind);
-              return answer.value;
-            },
-            renewInChannel: () => cloudRenew,
-            onUnauthorized: () => void sync(),
-          });
-        }
+        if (cloudIds.has(info.id)) return cloudRelay(info);
         if (endpoint === null) throw { code: "unknown_machine", detail: info.id };
         return new RelaySession({
               endpoint,
@@ -300,9 +289,9 @@ export function startAccountMachines(target: Target = window) {
       },
       // Sin `contracts` ni `compatible`, como el teléfono: un motor con otro contrato
       // sigue en servicio y solo falla la orden que no conoce (nunca la máquina entera).
-      wake: async (id) => {
+      wake: async (id, context) => {
         if (isGuestMachine(id)) return wakeGuestMachine(id);
-        if (cloudIds.has(id)) return wokeOf(await cloud.client.start(id));
+        if (cloudIds.has(id)) return wokeOf(await cloud.client.start(id, context));
         if (endpoint === null) throw { code: "unknown_machine", detail: id };
         return startedOf(await startComputer(endpoint, (await getToken()).token, id));
       },
@@ -312,10 +301,10 @@ export function startAccountMachines(target: Target = window) {
         window.dispatchEvent(new CustomEvent("harness:machines"));
       },
       // La cola de aplazadas cambió (aquí, en la web o en el teléfono): la lista se relee.
-      onDeferred: (machine) => router.deferredChanged(machine),
+      onDeferred: (machine, _frame, context) => router.deferredChanged(machine, context),
       onSlice: () => bump((n) => n + 1),
-      onEvents: (machine, events, gap) => {
-        if (events.length) router.events(machine, events);
+      onEvents: (machine, events, gap, metadata, context) => {
+        if (events.length) router.events(machine, events, metadata, context);
         if (gap) {
           window.dispatchEvent(new CustomEvent("harness:service-resync"));
           window.dispatchEvent(new CustomEvent("harness:service-gap"));
@@ -323,7 +312,7 @@ export function startAccountMachines(target: Target = window) {
       },
     });
     const router = createRouter({
-      self,
+      self, contextInfo: cloud.contextInfo,
       fleet,
       native,
       ...(endpoint === null

@@ -1,4 +1,5 @@
 import type { SessionRow } from "../features/projects/Sessions";
+import { contextSnapshotKey, contextualSnapshot, createSnapshotWriter, snapshotMatchesContext, snapshotStorageKey } from "./context-snapshot.ts";
 import type { Project } from "./model";
 import type { Space } from "./spaces";
 
@@ -10,6 +11,7 @@ import type { Space } from "./spaces";
  */
 export type ShellSnapshot = {
   workspace: string;
+  context?: string;
   projects: Project[];
   sessions: Record<string, SessionRow[]>;
   spaces: Space[];
@@ -25,9 +27,9 @@ const ROWS = [80, 30, 10];
 const BYTES = 400_000;
 export const SAVE_DELAY = 500;
 
-function stored(): Stored | null {
+function stored(key = contextSnapshotKey(KEY)): Stored | null {
   try {
-    const raw = localStorage.getItem(KEY);
+    const raw = localStorage.getItem(key);
     const value = raw === null ? null : (JSON.parse(raw) as Stored);
     return value?.version === 2 && typeof value.last === "string" ? value : null;
   } catch {
@@ -58,11 +60,13 @@ export function readShellCache(): ShellSnapshot | null {
     // Una foto no es una respuesta: lo que otra máquina dijo vuelve como copia de esa hora.
     const copy = (row: SessionRow): SessionRow => (row.machine && row.machine_status === "ok" ? { ...row, machine_status: "cached" } : row);
     const sessions = Object.fromEntries(Object.entries(snapshot.sessions).map(([folder, rows]) => [folder, rows.map(copy)]));
-    return { ...snapshot, sessions };
+    return contextualSnapshot({ ...snapshot, sessions });
   } catch {
     return null;
   }
 }
+
+export const shellCacheMatches = (snapshot: ShellSnapshot | null, workspace: string | null) => snapshot?.workspace === workspace && snapshotMatchesContext(snapshot);
 
 export function hasShellCache(): boolean {
   return readShellCache() !== null;
@@ -88,8 +92,9 @@ export function encodeSnapshot(snapshot: ShellSnapshot, rows: number): string {
 }
 
 export function writeShellCache(snapshot: ShellSnapshot, now = Date.now()) {
+  const key = snapshotStorageKey(KEY, snapshot);
   const text = ROWS.map((rows) => encodeSnapshot(snapshot, rows)).find((t) => t.length <= BYTES);
-  const value = stored() ?? { version: 2 as const, last: snapshot.workspace, workspaces: {} };
+  const value = stored(key) ?? { version: 2 as const, last: snapshot.workspace, workspaces: {} };
   // La misma foto ya guardada no se reescribe: cada escritura rehace todo el valor.
   if (value.last === snapshot.workspace && value.workspaces[snapshot.workspace]?.snapshot === text) return;
   if (text === undefined) {
@@ -103,11 +108,11 @@ export function writeShellCache(snapshot: ShellSnapshot, now = Date.now()) {
     .slice(0, WORKSPACES);
   value.workspaces = Object.fromEntries(kept);
   try {
-    localStorage.setItem(KEY, JSON.stringify(value));
+    localStorage.setItem(key, JSON.stringify(value));
   } catch {
     // Sin espacio se pierde la foto, no el trabajo: el siguiente arranque espera al motor.
     try {
-      localStorage.removeItem(KEY);
+      localStorage.removeItem(key);
     } catch {
       // Sin almacenamiento no hay nada que borrar.
     }
@@ -120,7 +125,7 @@ export function forgetShellCache(workspaces: readonly string[]) {
   if (!value || !workspaces.some((w) => w in value.workspaces)) return;
   for (const w of workspaces) delete value.workspaces[w];
   try {
-    localStorage.setItem(KEY, JSON.stringify(value));
+    localStorage.setItem(contextSnapshotKey(KEY), JSON.stringify(value));
   } catch {
     // Sin almacenamiento no hay nada que borrar.
   }
@@ -132,26 +137,5 @@ export function shellCacheWriter(
   schedule: (run: () => void, ms: number) => unknown = (run, ms) => setTimeout(run, ms),
   cancel: (handle: unknown) => void = (handle) => clearTimeout(handle as ReturnType<typeof setTimeout>),
 ) {
-  let pending: ShellSnapshot | null = null;
-  let handle: unknown;
-  const flush = () => {
-    if (handle !== undefined) cancel(handle);
-    handle = undefined;
-    const snapshot = pending;
-    pending = null;
-    if (snapshot) write(snapshot);
-  };
-  return {
-    save(snapshot: ShellSnapshot) {
-      pending = snapshot;
-      if (handle !== undefined) cancel(handle);
-      handle = schedule(flush, SAVE_DELAY);
-    },
-    flush,
-    cancel() {
-      if (handle !== undefined) cancel(handle);
-      handle = undefined;
-      pending = null;
-    },
-  };
+  return createSnapshotWriter(write, SAVE_DELAY, schedule, cancel);
 }

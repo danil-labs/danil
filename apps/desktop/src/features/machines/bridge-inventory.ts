@@ -1,12 +1,14 @@
 import type { Computer } from "@terminus/computers";
-import type { ContextComputer } from "./session-cloud.ts";
+import { type ContextComputer, contextMachineKey } from "./session-cloud.ts";
 
 /** El puente conserva las capacidades del motor; el borde aporta la atribución y el estado actual. */
 export function mergeBridgeInventory(bridge: readonly Computer[], edge: readonly ContextComputer[]): ContextComputer[] {
-  const rows = new Map<string, ContextComputer>(bridge.map((row) => [row.computer_id, row]));
+  const byMachine = new Map(bridge.map((row) => [row.computer_id, row]));
+  const scoped = new Set(edge.filter((row) => row.context).map((row) => row.computer_id));
+  const rows = new Map<string, ContextComputer>(bridge.filter((row) => !scoped.has(row.computer_id)).map((row) => [contextMachineKey(row.computer_id), row]));
   for (const row of edge) {
-    const previous = rows.get(row.computer_id);
-    rows.set(row.computer_id, previous ? {
+    const previous = byMachine.get(row.computer_id);
+    rows.set(contextMachineKey(row.computer_id, row.context), previous ? {
       ...previous, state: row.state,
       ...(row.context ? { context: row.context } : {}),
       ...(row.kind !== undefined ? { kind: row.kind } : {}),

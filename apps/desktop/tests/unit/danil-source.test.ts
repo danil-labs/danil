@@ -69,3 +69,24 @@ test('a context reads only the organization machine of its own organization', as
   assert.deepEqual(reads, ['cmp_org list_workspaces']);
   setDanilFleet(null);
 });
+
+test('the same machine keeps separate contextual source answers and classification', async () => {
+  const reads: string[] = [];
+  const fleet = new Fleet({ connect: () => ({ state: () => 'online', start() {}, close() {}, subscribe() {}, onState: () => () => {}, onEvents: () => () => {}, call: async () => ({ value: null, cached: null }) }) });
+  fleet.setMachines(['a', 'b'].map(context => ({ ...org, context })));
+  fleet.read = async envelope => {
+    reads.push(`${envelope.machine}/${envelope.context}`);
+    return {machine: envelope.machine,context: envelope.context,status:'ok',has:true,value:{workspaces:[{id: `ws_${envelope.context}`,name:`Account ${envelope.context}`}]},at:0};
+  };
+  setDanilFleet(fleet);
+  await readDanilContext('org_A', 'b');
+  assert.deepEqual(reads, ['cmp_org/b']);
+  assert.equal(fleet.available('org_A', 'a'), null);
+  assert.deepEqual(fleet.available('org_A', 'b'), [{id:'ws_b',name:'Account b'}]);
+  assert.equal(isDanilWorkspace('ws_b'),true);
+  assert.equal(isDanilWorkspace('ws_a'),false);
+  await readDanilContext('org_A','a',true);
+  noteListing('cmp_org',{workspaces:[{id:'ws_a',name:'Account a'}]},'a');
+  assert.deepEqual(fleet.available('org_A','b'),[{id:'ws_b',name:'Account b'}]);
+  setDanilFleet(null);fleet.close();
+});

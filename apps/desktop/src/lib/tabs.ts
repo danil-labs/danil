@@ -2,6 +2,7 @@ import { batch, createSignal } from "solid-js";
 // Node con strip-types necesita la extensión para resolver este import.
 import { borrarPref, escribirPref, hayPref, leerPref, prefsQueEmpiezan } from "./prefs.ts";
 import { esProvisional } from "./taskDraft.ts";
+import { tabViewKey as key, workspaceViewKey } from "./workspace-view-scope.ts";
 
 // Pestañas por workspace y espacio; cerrar una vista no termina su tarea.
 // Solo se guardan las de tarea: documentos y sitios dependen de recursos de la ejecución.
@@ -146,8 +147,6 @@ type ClosedBlock = { tabs: { tab: Tab; index: number }[]; active: string | null 
 
 const MAX_CLOSED_BLOCKS = 20;
 
-const key = (workspace: string, space: string | null) =>
-  space ? `pestanas.${workspace}.${space}` : `pestanas.${workspace}`;
 
 const readStoredTabs = (k: string): StoredTabs => {
   const g = leerPref<StoredTabs | null>(k, null);
@@ -173,7 +172,7 @@ export const storedStrip = (ws: string, space: string) =>
 export const deleteStoredStrip = (ws: string, space: string) => borrarPref(key(ws, space));
 
 export const spacesWithStoredStrip = (ws: string) =>
-  prefsQueEmpiezan(`pestanas.${ws}.`).map((k) => k.slice(`pestanas.${ws}.`.length));
+  prefsQueEmpiezan(`pestanas.${workspaceViewKey(ws)}.`).map((k) => k.slice(`pestanas.${workspaceViewKey(ws)}.`.length));
 
 export function appendToStoredStrip(ws: string, space: string, p: { id: string; project: string; titulo: string }) {
   const g = readStoredTabs(key(ws, space));
@@ -322,7 +321,7 @@ export function createTabs(options: { transient?: boolean } = {}) {
     active: active,
     activeTab: () => openTabs().find((p) => p.id === active()) ?? null,
     load(ws: string | null, desk: string | null = null): string | null {
-      workspace = ws;
+      workspace = ws = ws ? workspaceViewKey(ws) : null;
       space = desk;
       setActive(null);
       setPinned(new Set<string>());

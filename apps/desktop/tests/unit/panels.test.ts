@@ -566,3 +566,14 @@ test("la tarea conservada vuelve delante aunque su ventana guardada estuviera ap
   assert.equal(restored.activeTabAt(uno), "saved");
   sano(restored);
 });
+
+test("panel layouts for the same workspace are isolated by session context", async () => {
+  const { setDisplayWorkspaceContext } = await import("../../src/lib/workspace-context.ts");
+  const layout = (id: string) => ({ columnas: [[{ pestanas: [id], activa: id }]], anchos: [1], altos: [1], activo: { col: 0, fila: 0 } });
+  try {
+    setDisplayWorkspaceContext("ana"); saveLayout("same-context-workspace", "desk", layout("ana-task"));
+    setDisplayWorkspaceContext("bea"); assert.equal(readLayout("same-context-workspace", "desk"), null); saveLayout("same-context-workspace", "desk", layout("bea-task"));
+    setDisplayWorkspaceContext("ana"); assert.deepEqual(readLayout("same-context-workspace", "desk"), layout("ana-task"));
+    setDisplayWorkspaceContext("bea"); assert.deepEqual(readLayout("same-context-workspace", "desk"), layout("bea-task"));
+  } finally { setDisplayWorkspaceContext(null); }
+});

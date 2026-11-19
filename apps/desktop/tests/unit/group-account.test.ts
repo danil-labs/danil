@@ -116,3 +116,56 @@ test("native rejection codes and rate-limit metadata survive the context transpo
   assert.equal(promoRejection({ status: 429, retryAfter: "3" }).delay, 3000);
   assert.equal(promoRejection({ status: 409, code: "constructor" }).key, "web.promo.rejected");
 });
+
+test("web machine inventory and tickets use cookie context, require echo before reading a body", async () => {
+  const { contextMachines } = await import("../../src/web/context-machines.ts");
+  const calls: { path: string; headers: Headers }[] = [];
+  let echo: string | null = "ctx";
+  let reads = 0;
+  const request = async (path: string, init?: RequestInit) => {
+    calls.push({ path, headers: new Headers(init?.headers) });
+    return { ok: true, status: 200, headers: new Headers(echo ? { "X-Danil-Session-Applied": echo } : {}), json: async () => {
+      reads++;
+      return path === "machines" ? { items: [{ machine_id: "m", state: "online", organization_id: "org" }] } : { url: "wss://relay.example/v1/machines/m/session", ticket: "ticket" };
+    } } as Response;
+  };
+  const client = contextMachines("https://api.example/v1", { call: request, mutation: request }, ["wss://relay.example"], "ctx");
+  assert.equal((await client.list()).kind, "ok");
+  assert.equal((await client.admission("m")).kind, "ok");
+  assert.ok(calls.every(call => call.headers.get("X-Danil-Session") === "ctx"));
+  assert.ok(calls[1].headers.has("Idempotency-Key"));
+  const before = reads;
+  for (echo of [null, "other"]) {
+    const result = await client.list();
+    assert.equal(result.kind, "error");
+    if (result.kind === "error") assert.equal(result.code, "session_echo_mismatch");
+  }
+  assert.equal(reads, before);
+});
+
+test("web grouped source only exposes verified inventory and exact scoped workspace listings; legacy echo fallback stays ungrouped", async () => {
+  const { windowContext } = await import("../../src/web/window-context.ts");
+  const group = { context: "ctx", org: "org", name: "Org", plan: "teams" };
+  const fleet = { available: (org: string, context: string) => { assert.equal(org, "org"); assert.equal(context, "ctx"); return [{ id: "scoped", name: "Scoped" }]; } } as never;
+  let legacyReads = 0;
+  let answer: unknown = { kind: "ok", value: [{ machine_id: "m", organization_id: "org", state: "online" }, { machine_id: "alien", organization_id: "other", state: "online" }] };
+  const source = windowContext({ legacy: { list: async () => { legacyReads++; return { kind: "ok", value: [] }; } } as never, factory: () => ({ list: async () => answer }) as never, account: { current: async () => group, send: async () => ({ status: 404 }) }, fleet: () => fleet, revision: () => {} });
+  assert.equal(source.source.group(), null);
+  const result = await source.inventory();
+  assert.deepEqual(result?.answer.kind === "ok" ? result.answer.value.map(row => row.machine_id) : [], ["m"]);
+  assert.deepEqual(source.source.group(), group);
+  assert.deepEqual(source.source.workspaces(), [{ id: "scoped", name: "Scoped" }]);
+  const calls: Headers[] = [];
+  const engine = source.engine({ handle: async (_command, _args, options) => { calls.push(new Headers(options?.headers)); return []; } });
+  await engine.handle("list_workspaces");
+  await engine.handle("read_task", {}, { headers: { "x-danil-context": "captured" } });
+  assert.equal(calls[0].get("x-danil-context"), "ctx");
+  assert.equal(calls[1].get("x-danil-context"), "captured");
+  answer = { kind: "error", status: null, code: "session_echo_mismatch" };
+  await source.inventory();
+  assert.equal(source.source.group(), null);
+  assert.equal(source.source.workspaces(), null);
+  assert.equal(legacyReads, 1);
+  await engine.handle("list_workspaces");
+  assert.equal(calls[2].get("x-danil-context"), "");
+});

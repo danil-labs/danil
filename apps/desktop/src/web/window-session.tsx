@@ -10,7 +10,7 @@ import { Button } from '../ui/Button';
 import { ToastStack } from '../ui/Toast';
 import { signInError, WorkosAuthPage } from './auth/workos';
 import { organizationSession } from './organization-session';
-import { activeGroupCredits, type PlatformProfile, PlatformSessionError, type PlatformWorkspace, platformSession, platformTransport } from './platform-session';
+import { activeGroupCredits, contextMachines, type PlatformProfile, PlatformSessionError, type PlatformWorkspace, platformSession, platformTransport } from './platform-session';
 import { type CapabilitiesSnapshot, readCapabilities, supports } from './service-capabilities';
 import type { WebSessionDeployment } from './session-config';
 import { clearWebCaches, sessionStorageScope } from './session-storage';
@@ -218,7 +218,7 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
         disposeGate?.();
         disposeGate = undefined;
         mountedBefore = true;
-        windowApp = mountWindow({ machines, permits, relayOrigin: __DANIL_WEB_RELAY_ORIGINS__[0],
+        windowApp = mountWindow({ machines, contextMachines: context => contextMachines(`${options.origin}/v1`, transport, __DANIL_WEB_RELAY_ORIGINS__, context), permits, relayOrigin: __DANIL_WEB_RELAY_ORIGINS__[0],
           profile: startup.accountProfile(lifetime.signal), onUnauthorized: expired,
           onUnavailable: () => { setError('web.platform.unavailable'); gate(); later(); },
           services: {

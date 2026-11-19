@@ -36,10 +36,10 @@ export function listedOf(value: unknown): Listed[] | null {
 }
 
 /** Lo que contestó `machine` en `list_workspaces` (la web lo atribuye desde `webListing`). */
-export function noteListing(machine: string, value: unknown) {
+export function noteListing(machine: string, value: unknown, context?: string) {
   const listed = listedOf(value);
   if (!fleet || !listed) return;
-  fleet.setListing(machine, listed);
+  fleet.setListing(machine, listed, context);
   bump((n) => n + 1);
 }
 
@@ -77,8 +77,8 @@ export function isDanilWorkspace(workspace: string): boolean {
   revision();
   const current = fleet;
   if (!current) return false;
-  const organizations = new Set(current.machines().flatMap((m) => (m.kind === "organization" && m.organizationId ? [m.organizationId] : [])));
-  return [...organizations].some((org) => !!current.available(org)?.some((w) => w.id === workspace));
+  return current.machines().some((machine) => machine.kind === "organization" && !!machine.organizationId &&
+    !!current.available(machine.organizationId, machine.context)?.some((row) => row.id === workspace));
 }
 
 /** Solo una fuente atribuida al contexto puede aportar datos a su grupo. */
@@ -91,8 +91,8 @@ export function readDanilContext(organization: string, context: string, fresh = 
   const current = fleet;
   if (!current) return Promise.resolve();
   return Promise.all(current.machines().filter((m) => m.kind === "organization" && m.organizationId === organization && m.context === context).map(async (m) => {
-    const envelope = { machine: m.id, workspace: null, command: "list_workspaces" };
+    const envelope = { machine: m.id, context, workspace: null, command: "list_workspaces" };
     const reply = await (fresh ? current.raw(envelope).then(({ value }) => ({ has: true, value })) : current.read(envelope)).catch(() => null);
-    if (reply?.has && fleet === current && current.info(m.id)?.context === context) noteListing(m.id, reply.value);
+    if (reply?.has && fleet === current && current.info(m.id, context)?.context === context) noteListing(m.id, reply.value, context);
   })).then(() => undefined);
 }

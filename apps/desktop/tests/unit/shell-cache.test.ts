@@ -10,7 +10,7 @@ Object.defineProperty(globalThis, "localStorage", {
     removeItem: (key: string) => void store.delete(key),
   },
 });
-const { forgetShellCache, readShellCache, setShellCacheScope, shellCacheWriter, writeShellCache, SAVE_DELAY } = await import("../../src/lib/shellCache.ts");
+const { forgetShellCache, readShellCache, setShellCacheScope, shellCacheMatches, shellCacheWriter, writeShellCache, SAVE_DELAY } = await import("../../src/lib/shellCache.ts");
 
 type Snapshot = Parameters<typeof writeShellCache>[0];
 const row = (id: string, text = "") => ({ id, title: `Tarea ${id}`, last_message: text }) as unknown as Snapshot["sessions"][string][number];
@@ -110,4 +110,23 @@ test("quitar una cuenta olvida las fotos de sus workspaces", () => {
   forgetShellCache(["b"]);
   const stored = JSON.parse(store.get("harness:shell-cache") ?? "{}");
   assert.deepEqual(Object.keys(stored.workspaces), ["a"]);
+});
+
+test("shell snapshots and delayed flushes stay in the context that produced them", async () => {
+  const { setDisplayWorkspaceContext } = await import("../../src/lib/workspace-context.ts");
+  try {
+    setDisplayWorkspaceContext("ana");
+    const pending = shellCacheWriter(writeShellCache, () => 1, () => {});
+    pending.save(snapshot("same", 1, "Ana private"));
+    setDisplayWorkspaceContext("bea");
+    pending.flush();
+    assert.equal(readShellCache(), null);
+    writeShellCache(snapshot("same", 1, "Bea private"));
+    assert.equal(readShellCache()?.sessions[""][0].last_message, "Bea private");
+    const beaSnapshot = readShellCache();
+    assert.equal(shellCacheMatches(beaSnapshot, "same"), true);
+    setDisplayWorkspaceContext("ana");
+    assert.equal(shellCacheMatches(beaSnapshot, "same"), false);
+    assert.equal(readShellCache()?.sessions[""][0].last_message, "Ana private");
+  } finally { setDisplayWorkspaceContext(null); }
 });

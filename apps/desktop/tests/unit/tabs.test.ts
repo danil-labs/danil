@@ -1194,3 +1194,14 @@ test("committing a draft never exposes an active tab that no longer exists", () 
     dispose();
   });
 });
+
+test("saved tabs for the same workspace belong to their session context", async () => {
+  const { setDisplayWorkspaceContext } = await import("../../src/lib/workspace-context.ts");
+  const tabs = createRoot(() => createTabs());
+  try {
+    setDisplayWorkspaceContext("ana"); tabs.load("same-context-workspace"); tabs.ensure(tarea("ana-task"));
+    setDisplayWorkspaceContext("bea"); tabs.load("same-context-workspace"); assert.equal(tabs.open().length, 0); tabs.ensure(tarea("bea-task"));
+    setDisplayWorkspaceContext("ana"); tabs.load("same-context-workspace"); assert.deepEqual(tabs.open().map((tab) => tab.id), ["ana-task"]);
+    setDisplayWorkspaceContext("bea"); tabs.load("same-context-workspace"); assert.deepEqual(tabs.open().map((tab) => tab.id), ["bea-task"]);
+  } finally { setDisplayWorkspaceContext(null); }
+});

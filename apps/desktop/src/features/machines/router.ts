@@ -15,13 +15,16 @@
  * id, y su lista junta las de todas. Un workspace de la cuenta que esta computadora
  * no tiene se lee de sus miembros y actúa en el primero.
  */
-import { type AccountWorkspace, type SystemId, callWorkspace, isDeferrable, systemOf } from "@terminus/computers";
-import { AttentionBook, type Envelope, type Fleet, FleetError, type MachineInfo, type Slice, classOf, registryRow, unwrap, wrap } from "@terminus/fleet";
+import { callWorkspace, isDeferrable, systemOf } from "@terminus/computers";
+import { AttentionBook, classOf, type Envelope, FleetError, type MachineInfo, registryRow, type Slice, unwrap, wrap } from "@terminus/fleet";
 import { clavesConocidas, t } from "../../lib/i18n.ts";
 import { readActiveTurns } from "./active-turns-read.ts";
-import { createWebEventQueue } from "./web-event-queue.ts";
+import { type ContextRouterConfig, createContextRouter } from "./context-router.ts";
 import type { EngineWorkspace } from "./engine-workspaces.ts";
+import type { RouterConfig } from "./router-config.ts";
+import { headerOf, withoutHeader } from "./router-headers.ts";
 import { markUnconfirmedOpen } from "./unconfirmedOpen.ts";
+import { createWebEventQueue } from "./web-event-queue.ts";
 
 export { unconfirmedOpen } from "./unconfirmedOpen.ts";
 
@@ -100,50 +103,7 @@ const CHANGES: Record<string, SliceChange> = {
   list_task_mentions: "mentions",
 };
 
-export type RouterConfig = {
-  /** La máquina de la ventana; `null` en la web. */
-  self: string | null;
-  fleet: Fleet;
-  /** El IPC de la ventana: el motor de esta computadora; `null` en la web. */
-  native: Invoke | null;
-  /** El registro de la cuenta (`GET /v1/workspaces`), o `null` si no se pudo leer. */
-  registry?: () => Promise<AccountWorkspace[] | null>;
-  /** Cambió la rebanada de otra máquina: la ventana vuelve a leer eso. */
-  onSlices?: (changes: SliceChange[]) => void;
-  /** Los eventos de otra máquina, ya con los ids del panel. */
-  deliver?: (events: { name: string; payload: unknown }[]) => void;
-  /** «Ejecutar en» para `workspace`, si la persona eligió una máquina. */
-  pickedFor?: (workspace: string | null) => string | null;
-  /**
-   * Lo que el motor de esta computadora sabe de las otras máquinas de la persona
-   * (`state_machines`), de todas sus cuentas; `null` sin la función, y entonces
-   * los workspaces de una organización salen de la flota.
-   */
-  engineWorkspaces?: () => readonly EngineWorkspace[] | null;
-  /**
-   * Lo que anuncia el motor de aquí. Con `light_state_v1` la barra de esta máquina
-   * sale de su índice (`state_resource`) y, con `light_state_machines_v1`, la de
-   * las otras de sus copias (`state_copy`), sin preguntar a cada una por el relay.
-   */
-  engineFeatures?: () => readonly string[];
-  /** La máquina de la ventana. `os` solo si se sabe; sin `wakes`, se pinta como laptop. */
-  home?: () => { wakes?: boolean; os?: SystemId | null; features?: readonly string[]; version?: string | null };
-};
-
-function headerOf(options: Options, name: string): string | null {
-  try {
-    return new Headers(options?.headers).get(name) || null;
-  } catch {
-    return null;
-  }
-}
-
-function withoutHeader(options: Options, name: string): Options {
-  if (!options?.headers) return options;
-  const headers = new Headers(options.headers);
-  headers.delete(name);
-  return { ...options, headers: Object.fromEntries(headers.entries()) };
-}
+export type { RouterConfig } from "./router-config.ts";
 
 function withoutChannel(command: string, args: Args): Args {
   const channel = CHANNELS[command];
@@ -159,7 +119,7 @@ function gitSlice(slice: Slice): Slice {
     [id, row && typeof row === "object" ? { ...row, stale: true } : row])) };
 }
 
-export function createRouter(config: RouterConfig) {
+export function createRouterCore(config: RouterConfig) {
   const { self, fleet } = config;
   const rawNative: Invoke = config.native ?? (() => Promise.reject(new FleetError("unknown_machine", null)));
   const native: Invoke = (command, args, options) => rawNative(command, args, withoutHeader(options, "x-terminus-machine"));
@@ -969,7 +929,7 @@ export function createRouter(config: RouterConfig) {
     // `machine-usage` no dice de qué máquina es: el panel «Máquinas» relee la suya.
     const mapped = list.map((e) => (e.name === "attention" ? { ...e, payload: attention.update(machine, e.payload) }
       : e.name === "machine-usage" && e.payload && typeof e.payload === "object" ? { ...e, payload: { ...e.payload, machine } } : e));
-    if (local) config.deliver?.(mapped);
+    if (local || config.deliverRemote) config.deliver?.(mapped);
     else webEvents.push(mapped, context);
   }
 
@@ -1030,4 +990,5 @@ export function createRouter(config: RouterConfig) {
   };
 }
 
+export const createRouter = (config: ContextRouterConfig) => createContextRouter(config, createRouterCore);
 export type Router = ReturnType<typeof createRouter>;
