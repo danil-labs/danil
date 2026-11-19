@@ -1,8 +1,9 @@
 /**
- * «Conecta tu cuenta de Danil» en el primer arranque, contra un motor simulado:
- * seguir sin cuenta o entrar y continuar con el alta local, sin consultar ni
- * adoptar el directorio retirado en L3. La elección no vuelve a preguntarse.
- * Monta `dist/`.
+ * «Conecta tu cuenta de Danil» en el primer arranque, contra un motor simulado
+ * (plan de cuentas F1.2): no hay camino sin cuenta, y con la sesión el alta
+ * entra al workspace de la organización personal Free sellándolo aquí. La
+ * ventana nunca crea un workspace local (`add_workspace`), ni consulta el
+ * directorio retirado en L3. Monta `dist/`.
  */
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -19,8 +20,9 @@ const ALBERTO = {
   account: "u_1", email: "alberto@norte.mx", name: "Alberto", photo: null, computer_id: "cmp_1", computer_name: "Mac",
   default: true, workspaces: [], status: "connected", online: true,
 };
+const FAMILY = { family: "f1", email: "alberto@norte.mx", contexts: [{ context_id: "c1", org: "org_1", org_name: "Alberto", plan: "free" }] };
 const PENDING = { state: "pending", user_code: "WDJB-MJHT", verification_uri_complete: "https://app.danil.ai/terminus/connect?code=WDJB-MJHT" };
-const CONNECTED = { state: "connected", account: "u_1", computer_id: "cmp_1", email: "alberto@norte.mx", online: true };
+const CONNECTED = { state: "connected", account: "u_1", computer_id: "cmp_1", email: "alberto@norte.mx", online: true, sessions: [FAMILY], default_context: "c1" };
 
 const BASE = {
   window_ready: null,
@@ -32,7 +34,6 @@ const BASE = {
   list_live_turns: [],
   list_surfaces: [],
   service_poll: { cursor: 0, gap: false, replay: false, runtime: "test-service", reset: false },
-  list_workspaces: { workspaces: [], active: null },
   workspaces_startup: { workspaces: [], active: null },
   list_providers: [
     { id: "codex", label: "Codex", available: true, sin_cuenta: false, source: null, system_broken: false, api_key: null, inferencia: "con_cuenta" },
@@ -48,9 +49,9 @@ const BASE = {
   list_integrations: { workspace: "n", plugins: [] },
 };
 
-/** El motor y el plano de control: quién entró, qué workspaces locales nacen y qué se enlaza. */
+/** El motor y el plano de control: quién entró, qué se sella aquí y qué nacería local. */
 function engine({ directory = [], status = { state: "disconnected", name: "Mac" } } = {}) {
-  const state = { status, sessions: [], created: [], links: [], accounts: [], signIns: 0, requests: [] };
+  const state = { status, sessions: [], created: [], sealed: [], active: null, links: [], accounts: [], signIns: 0, requests: [] };
   const previous = globalThis.fetch;
   globalThis.fetch = async (input) => {
     const url = String(input?.url ?? input);
@@ -59,8 +60,11 @@ function engine({ directory = [], status = { state: "disconnected", name: "Mac" 
     return new Response("{}", { status: 404 });
   };
   globalThis.fetch.__jsdomApp = true;
+  const workspaces = () => ({ workspaces: state.sealed.map((w) => ({ ...w, account: { org: "org_1", account_id: "42" } })), active: state.active });
   const table = {
     ...BASE,
+    list_workspaces: workspaces,
+    workspaces_startup: workspaces,
     danil_connect_status: () => state.status,
     danil_session_status: () => state.status,
     danil_sessions: () => state.sessions,
@@ -80,11 +84,21 @@ function engine({ directory = [], status = { state: "disconnected", name: "Mac" 
       state.accounts.push([workspace, account]);
       return { account, email: "alberto@norte.mx", signed_in: true, linked: true };
     },
+    machine_list: [{ id: "m_local", local: true, features: ["account_workspace_v1"] }],
+    danil_edge_fetch: ({ method, path }) => {
+      if (method === "GET" && path === "/v1/workspaces") return { status: 200, body: { items: [{ id: "42", org: "org_1", name: "Personal", engine_workspace_id: "ws_free" }], next_cursor: null } };
+      if (method === "GET" && path === "/v1/identity/me") return { status: 200, body: { id: "p1" } };
+      return { status: 404, body: null };
+    },
+    create_account_workspace: ({ id, name, account }) => {
+      state.sealed.push({ id, name });
+      return { id, account };
+    },
     add_workspace: ({ name }) => {
       state.created.push(name);
       return { id: `n${state.created.length}`, name };
     },
-    set_active_workspace: null,
+    set_active_workspace: ({ id }) => void (state.active = id),
     open_external: null,
   };
   return {
@@ -103,37 +117,39 @@ function engine({ directory = [], status = { state: "disconnected", name: "Mac" 
 const screen = (w) => w.document.querySelector("[data-account-welcome]");
 const heading = (w) => w.document.querySelector("h1")?.textContent ?? "";
 
-function assertRetiredDirectoryUnused(app, state) {
+function assertNoLocalWorkspace(app, state) {
+  assert.deepEqual(state.created, [], "the window never creates a local workspace");
+  assert.equal(app.commands.includes("add_workspace"), false);
   assert.deepEqual(state.requests.filter(url => new URL(url).pathname.startsWith("/v1/me")), [], "no request goes to the retired directory");
-  assert.deepEqual(state.links, [], "no local workspace is linked to the prototype");
-  assert.deepEqual(state.accounts, [], "no cloud account is assigned to the local workspace");
+  assert.deepEqual(state.links, [], "nothing is linked to the prototype");
+  assert.deepEqual(state.accounts, [], "no cloud account is assigned to a local workspace");
   assert.equal(app.commands.some(command => command.startsWith("agents_session_")), false, "the retired directory transport stays unused");
 }
 
-test("the first run asks for the Danil account; continuing without one keeps today's local onboarding", async () => {
+function assertEnteredFree(state) {
+  assert.deepEqual(state.sealed, [{ id: "ws_free", name: "Personal" }], "the personal Free workspace is sealed here");
+  assert.equal(state.active, "ws_free", "and becomes the active one");
+}
+
+test("the first run asks only for the Danil account: there is no way to continue without one", async () => {
   const e = engine();
   try {
-    const app = await boot("listo", "account-welcome-local", e.table);
+    const app = await boot("listo", "account-welcome-required", e.table);
     const { w } = app;
     await sleep(800);
     assert.equal(screen(w)?.dataset.accountWelcome, "choose", w.document.body.textContent.slice(0, 400));
     assert.equal(heading(w), "Conecta tu cuenta de Danil");
-    assert.deepEqual(e.state.created, [], "no workspace is created before the answer");
-
-    w.document.querySelector("[data-account-welcome-local]").click();
-    await sleep(800);
-    assert.equal(screen(w), null);
-    assert.equal(w.localStorage.getItem(KEY), "local");
-    assert.equal(heading(w), "Conecta tu IA.");
-    assert.deepEqual(e.state.created, ["Personal"]);
-    assert.equal(e.state.signIns, 0, "nothing signs in");
+    assert.equal(w.document.querySelector("[data-account-welcome-local]"), null, "«Continuar sin cuenta» is gone");
+    assert.ok(!w.document.body.textContent.includes("Continuar sin cuenta"));
+    assertNoLocalWorkspace(app, e.state);
+    assert.deepEqual(e.state.sealed, []);
     assert.deepEqual(app.failures, []);
   } finally {
     e.restore();
   }
 });
 
-test("signing in continues locally without querying or adopting the retired directory", async () => {
+test("signing in enters the personal Free workspace without creating a local one", async () => {
   const e = engine({ directory: [entry("a:476", 476, "Norte MX")] });
   try {
     const app = await boot("listo", "account-welcome-one", e.table);
@@ -146,9 +162,9 @@ test("signing in continues locally without querying or adopting the retired dire
     assert.ok(w.document.body.textContent.includes("WDJB-MJHT"), "the code to confirm");
 
     e.approve(app);
-    await sleep(1200);
-    assert.deepEqual(e.state.created, ["Personal"], "the local onboarding creates its own workspace");
-    assertRetiredDirectoryUnused(app, e.state);
+    await sleep(1500);
+    assertEnteredFree(e.state);
+    assertNoLocalWorkspace(app, e.state);
     assert.equal(w.localStorage.getItem(KEY), "connected");
     assert.equal(screen(w), null);
     assert.equal(heading(w), "Conecta tu IA.");
@@ -158,7 +174,7 @@ test("signing in continues locally without querying or adopting the retired dire
   }
 });
 
-test("an existing session continues locally without the retired cloud workspace chooser", async () => {
+test("an existing session is reused and enters the personal Free workspace", async () => {
   const e = engine({
     status: CONNECTED,
     directory: [entry("a:1", 1, "Norte MX"), entry("a:2", 2, "Norte USA", null, "member"), entry("a:3", 3, "Tomado", "otra")],
@@ -169,13 +185,13 @@ test("an existing session continues locally without the retired cloud workspace 
     const { w } = app;
     await sleep(800);
     w.document.querySelector("[data-account-welcome-connect]").click();
-    await sleep(800);
+    await sleep(1500);
     assert.equal(e.state.signIns, 0, "an existing session is reused");
-    assert.equal(screen(w), null, "the account step completes without a cloud adoption choice");
+    assert.equal(screen(w), null);
     assert.equal(w.document.querySelector("[data-account-welcome-pick]"), null);
     assert.equal(w.localStorage.getItem(KEY), "connected");
-    assert.deepEqual(e.state.created, ["Personal"]);
-    assertRetiredDirectoryUnused(app, e.state);
+    assertEnteredFree(e.state);
+    assertNoLocalWorkspace(app, e.state);
     assert.equal(heading(w), "Conecta tu IA.");
     assert.deepEqual(app.failures, []);
   } finally {
@@ -183,14 +199,36 @@ test("an existing session continues locally without the retired cloud workspace 
   }
 });
 
-test("once answered it does not come back, and the window has no «Descarga la app»", async () => {
+test("a computer that chose «local» before is asked for the session again", async () => {
+  const e = engine();
+  try {
+    const app = await boot("listo", "account-welcome-was-local", e.table, undefined, { [KEY]: "local" });
+    const { w } = app;
+    await sleep(800);
+    assert.equal(screen(w)?.dataset.accountWelcome, "choose");
+    assertNoLocalWorkspace(app, e.state);
+  } finally {
+    e.restore();
+  }
+});
+
+test("answered «connected» but without a session: no local workspace, and it can go back to sign in", async () => {
   const e = engine();
   try {
     const app = await boot("listo", "account-welcome-answered", e.table, undefined, { [KEY]: "connected" });
     const { w } = app;
-    await sleep(800);
+    await sleep(1000);
     assert.equal(screen(w), null);
     assert.equal(heading(w), "Conecta tu IA.");
+    assert.ok(w.document.body.textContent.includes("Inicia sesión en Danil para continuar."), w.document.body.textContent.slice(0, 600));
+    assert.ok(w.document.querySelector("[data-onboarding-retry]"), "a retry is offered");
+    assertNoLocalWorkspace(app, e.state);
+
+    const atras = [...w.document.querySelectorAll("footer button")].find((b) => b.textContent === "Atrás");
+    assert.ok(atras, "«Atrás» goes back to sign in");
+    atras.click();
+    await sleep(600);
+    assert.equal(screen(w)?.dataset.accountWelcome, "choose");
 
     w.dispatchEvent(new w.CustomEvent("harness:open-settings", { detail: "download" }));
     await sleep(600);
@@ -201,7 +239,7 @@ test("once answered it does not come back, and the window has no «Descarga la a
   }
 });
 
-test("on a computer that still prepares, the account comes first and the onboarding waits for it", async () => {
+test("on a computer that still prepares, the account comes first and then the personal Free workspace", async () => {
   const e = engine();
   try {
     const app = await boot("listo", "account-welcome-setup", {
@@ -213,12 +251,16 @@ test("on a computer that still prepares, the account comes first and the onboard
     await sleep(1000);
     assert.ok(app.commands.includes("prepare_runtime"), "preparing does not wait for the answer");
     assert.equal(screen(w)?.dataset.accountWelcome, "choose", w.document.body.textContent.slice(0, 400));
-    assert.deepEqual(e.state.created, [], "the finished preparation does not create «Personal» behind the screen");
+    assert.equal(w.document.querySelector("[data-account-welcome-local]"), null);
+    assert.deepEqual(e.state.sealed, [], "the finished preparation does not enter a workspace behind the screen");
 
-    w.document.querySelector("[data-account-welcome-local]").click();
-    await sleep(1000);
+    w.document.querySelector("[data-account-welcome-connect]").click();
+    await sleep(300);
+    e.approve(app);
+    await sleep(1500);
     assert.equal(screen(w), null);
-    assert.deepEqual(e.state.created, ["Personal"]);
+    assertEnteredFree(e.state);
+    assertNoLocalWorkspace(app, e.state);
     assert.equal(heading(w), "Conecta tu IA.");
     assert.deepEqual(app.failures, []);
   } finally {

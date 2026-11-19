@@ -4,6 +4,7 @@
  */
 import assert from "node:assert/strict";
 import test from "node:test";
+import { freeSession, SIGNED_IN } from "../helpers/free-session.mjs";
 import { boot, sleep } from "../helpers/jsdom-app.mjs";
 
 const BASE = {
@@ -30,7 +31,7 @@ const TO_PERSONALIZE = {
     provider: "codex", env_var: "", shared_credential: null, secret_note: null, active: "a1",
     accounts: [{ id: "a1", label: "", created_at: 1, identity: "yo@norte.mx", authenticated_at: 2 }],
   },
-  add_workspace: ({ name }) => ({ id: "n", name }),
+  ...freeSession().table,
   set_active_workspace: null,
   set_workspace_language: null,
   list_git_hosts: [],
@@ -65,7 +66,7 @@ test("Drive con su CLI ya instalado vuelve a conectar después de desconectar", 
       return status();
     },
     open_external: null,
-  }, undefined, { "danil.onboarding.account_choice": "local" });
+  }, undefined, SIGNED_IN);
   await sleep(800);
   button(app.w.document, "Continuar").click();
   await sleep(500);

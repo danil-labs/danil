@@ -28,7 +28,7 @@ import { Toast, ToastPortal } from "../../ui/Toast";
 import { esIncluida, fallasIncluidas, funcion } from "../onboarding/bundled";
 import type { Conexiones } from "../onboarding/connect-store";
 import { accountWelcomeAnswered, offerAccountWelcome } from "../onboarding/account-welcome";
-import { crearWorkspace } from "../onboarding/onboarding-store";
+import { entrarAlWorkspaceFree } from "../onboarding/onboarding-store";
 import { CabeceraDelAlta } from "../onboarding/Phases";
 import type { EstadoDeEtapa, Instalacion } from "../onboarding/Prepare";
 import { Escenario, QUIETO, TituloCambiante } from "../onboarding/Stage";
@@ -126,7 +126,6 @@ export default function Setup(props: { children: JSX.Element }) {
   const [entrando, setEntrando] = createSignal(false);
   const [workspace, setWorkspace] = createSignal<{ id: string; nombre: string } | null>(null);
   const [cuentaRespondida, setCuentaRespondida] = createSignal(accountWelcomeAnswered());
-  const [puedeVolverCuenta, setPuedeVolverCuenta] = createSignal(false);
   let tope = { total: -1, valor: 0 };
 
   const [conexiones, setConexiones] = createSignal<Conexiones | null>(null);
@@ -422,14 +421,15 @@ export default function Setup(props: { children: JSX.Element }) {
     }
   }
 
-  /** El workspace «Personal» nace aquí, que es de quien cuelgan las cuentas de la IA, y los proveedores se cargan. */
+  /**
+   * Aquí se entra al workspace de la organización personal Free, de quien
+   * cuelgan las cuentas de la IA, y se cargan los proveedores. Nunca nace uno
+   * local (plan de cuentas F1.2).
+   */
   let preparadas: Promise<void> | null = null;
   function prepararConexiones() {
     preparadas ??= (async () => {
-      if (!workspace()) {
-        const w = await crearWorkspace(t("onboarding.workspace.default"));
-        setWorkspace({ id: w.id, nombre: t("onboarding.workspace.default") });
-      }
+      if (!workspace()) setWorkspace(await entrarAlWorkspaceFree());
       if (!conexiones()) {
         const [{ crearConexiones }] = await Promise.all([import("../onboarding/connect-store"), import("../onboarding/ConnectAI")]);
         runWithOwner(dueño, () => setConexiones(crearConexiones()));
@@ -451,7 +451,9 @@ export default function Setup(props: { children: JSX.Element }) {
       await prepararConexiones();
       setPaso("ia");
     } catch (e) {
-      setFallo(prosaDe(e));
+      // Sin sesión no hay workspace: la única reacción es volver a la pantalla de inicio de sesión.
+      if ((e as { detail?: unknown } | null)?.detail === "no_session") setCuentaRespondida(false);
+      else setFallo(prosaDe(e));
     } finally {
       setEntrando(false);
     }
@@ -613,11 +615,6 @@ export default function Setup(props: { children: JSX.Element }) {
           </>
         }
       >
-        <Show when={puedeVolverCuenta()}>
-          <Button size="sm" variant="ghost" onClick={() => setCuentaRespondida(false)}>
-            {t("onboarding.back")}
-          </Button>
-        </Show>
         <span class="flex-1" />
         <Button size="sm" disabled={conectadas().length === 0} onClick={() => setPaso("personalizar")}>
           {t("onboarding.continue")}
@@ -667,9 +664,8 @@ export default function Setup(props: { children: JSX.Element }) {
             fallback={
               <Suspense fallback={<TarjetaVacia />}>
                 <ConectarCuenta
-                  onListo={(r) => {
-                    if (r.workspace) setWorkspace(r.workspace);
-                    setPuedeVolverCuenta(!r.connected);
+                  onListo={() => {
+                    setFallo(null);
                     setCuentaRespondida(true);
                   }}
                 />

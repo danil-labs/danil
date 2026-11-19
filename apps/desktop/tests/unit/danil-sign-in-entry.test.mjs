@@ -4,6 +4,7 @@
  */
 import assert from "node:assert/strict";
 import test from "node:test";
+import { freeSession, SIGNED_IN } from "../helpers/free-session.mjs";
 import { boot, sleep } from "../helpers/jsdom-app.mjs";
 
 const SPACE = { id: "w", name: "W", context_root: null };
@@ -77,7 +78,6 @@ const TO_PERSONALIZE = {
     provider: "codex", env_var: "", shared_credential: null, secret_note: null, active: "a1",
     accounts: [{ id: "a1", label: "", created_at: 1, identity: "yo@norte.mx", authenticated_at: 2 }],
   },
-  add_workspace: ({ name }) => ({ id: "n", name }),
   set_active_workspace: null,
   set_workspace_language: null,
   list_git_hosts: [],
@@ -88,7 +88,7 @@ const TO_PERSONALIZE = {
 
 async function personalize(name, table) {
   // La pantalla de la cuenta ya se respondió: la prueba es de «Personaliza».
-  const app = await boot("listo", name, { ...TO_PERSONALIZE, ...table }, undefined, { "danil.onboarding.account_choice": "local" });
+  const app = await boot("listo", name, { ...TO_PERSONALIZE, ...table, ...freeSession().table }, undefined, SIGNED_IN);
   await sleep(800);
   button(app.w, "Continuar").click();
   await sleep(500);

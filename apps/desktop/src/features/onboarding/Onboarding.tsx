@@ -6,7 +6,7 @@ import { FailureNote, asFailure, prosaDe } from "../../ui/Failure";
 import { crearConexiones } from "./connect-store";
 import { Comprobacion, MapaDeConexiones, PanelDeIA } from "./ConnectAI";
 import { accountWelcomeAnswered } from "./account-welcome";
-import { crearWorkspace } from "./onboarding-store";
+import { entrarAlWorkspaceFree } from "./onboarding-store";
 import Personalizar from "./Personalize";
 import { CabeceraDelAlta } from "./Phases";
 import { Escenario, TituloCambiante } from "./Stage";
@@ -14,6 +14,8 @@ import { Escenario, TituloCambiante } from "./Stage";
 /**
  * El alta sin preparación pendiente: conectar la IA y personalizar. La primera
  * vez la pinta `Setup.tsx` tras preparar; aquí llega la app sin workspace.
+ * Exige la sesión de Danil y entra al workspace de la organización personal
+ * Free; nunca crea uno local (plan de cuentas F1.2).
  */
 // Una computadora gestionada llega preparada y con sus asistentes: en el navegador el alta es otra.
 const AltaGestionada = lazy(() => import("../../web/Onboarding"));
@@ -21,11 +23,10 @@ const ConectarCuenta = lazy(() => import("./ConnectAccount"));
 
 type Props = { onListo: () => void };
 
-/** La primera alta de esta computadora pregunta antes por la cuenta de Danil. */
+/** La primera alta de esta computadora pide antes la sesión de Danil. */
 export default function Onboarding(props: Props) {
   if (!capabilities().localSetup) return <AltaGestionada {...props} />;
   const [respondida, setRespondida] = createSignal(accountWelcomeAnswered());
-  const [puedeVolver, setPuedeVolver] = createSignal(false);
   const [tomado, setTomado] = createSignal<{ id: string; nombre: string } | null>(null);
   return (
     <Show
@@ -35,22 +36,18 @@ export default function Onboarding(props: Props) {
           <CabeceraDelAlta fase={0} />
           <Suspense fallback={null}>
             <ConectarCuenta
-              onListo={(r) => {
-                setTomado(r.workspace ?? tomado());
-                setPuedeVolver(!r.connected);
-                setRespondida(true);
-              }}
+              onListo={() => setRespondida(true)}
             />
           </Suspense>
         </div>
       }
     >
-      <AltaLocal {...props} tomado={tomado()} onWorkspace={setTomado} onAtras={puedeVolver() ? () => setRespondida(false) : undefined} />
+      <AltaConSesion {...props} tomado={tomado()} onWorkspace={setTomado} onAtras={() => setRespondida(false)} />
     </Show>
   );
 }
 
-function AltaLocal(props: Props & { tomado: { id: string; nombre: string } | null; onWorkspace: (w: { id: string; nombre: string }) => void; onAtras?: () => void }) {
+function AltaConSesion(props: Props & { tomado: { id: string; nombre: string } | null; onWorkspace: (w: { id: string; nombre: string }) => void; onAtras?: () => void }) {
   const [paso, setPaso] = createSignal<"ia" | "personalizar">("ia");
   const [workspace, setWorkspace] = createSignal<{ id: string; nombre: string } | null>(null);
   const [fallo, setFallo] = createSignal<string | null>(null);
@@ -62,10 +59,9 @@ function AltaLocal(props: Props & { tomado: { id: string; nombre: string } | nul
       if (props.tomado) {
         setWorkspace(props.tomado);
       } else {
-        const nombre = t("onboarding.workspace.default");
-        const w = await crearWorkspace(nombre);
-        setWorkspace({ id: w.id, nombre });
-        props.onWorkspace({ id: w.id, nombre });
+        const w = await entrarAlWorkspaceFree();
+        setWorkspace(w);
+        props.onWorkspace(w);
       }
       await conexiones.cargar();
     } catch (e) {
@@ -120,9 +116,15 @@ function AltaLocal(props: Props & { tomado: { id: string; nombre: string } | nul
               derecha={<PanelDeIA c={conexiones} />}
             />
             <footer class="flex flex-wrap items-center gap-2.5 border-t border-border px-5 py-3.5">
-              <Show when={props.onAtras && workspace()}>
-                <Button size="sm" variant="ghost" onClick={props.onAtras}>
-                  {t("onboarding.back")}
+              {/* Sin el workspace Free no hay alta: se reintenta o se vuelve a iniciar sesión. */}
+              <Show when={fallo() && !workspace()}>
+                <Show when={props.onAtras}>
+                  <Button size="sm" variant="ghost" onClick={props.onAtras}>
+                    {t("onboarding.back")}
+                  </Button>
+                </Show>
+                <Button size="sm" variant="secondary" onClick={() => void crear()} data-onboarding-retry="">
+                  {t("setup.retry")}
                 </Button>
               </Show>
               <span class="flex-1" />

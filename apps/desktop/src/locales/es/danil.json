@@ -450,8 +450,6 @@
   "danil.welcome.title": "Conecta tu cuenta de Danil",
   "danil.welcome.connect": "Conectar cuenta",
   "danil.welcome.connect_effect": "Usa tu workspace, tus agentes y tus máquinas de Danil.",
-  "danil.welcome.local": "Continuar sin cuenta",
-  "danil.welcome.local_effect": "Todo queda en esta computadora.",
   "danil.welcome.waiting": "Termina de entrar en el navegador.",
   "danil.error.too_many_contexts": "Llegaste al máximo de 20 organizaciones conectadas. Cierra una para agregar otra.",
   "danil.accounts.title": "Cuentas de Danil",

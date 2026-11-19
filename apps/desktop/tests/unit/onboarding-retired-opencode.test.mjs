@@ -5,6 +5,7 @@
  */
 import assert from "node:assert/strict";
 import test from "node:test";
+import { freeSession, SIGNED_IN } from "../helpers/free-session.mjs";
 import { boot, sleep } from "../helpers/jsdom-app.mjs";
 
 const fila = (id, label, extra = {}) => ({
@@ -24,7 +25,7 @@ const MOTOR_ANTERIOR = {
   service_poll: { cursor: 0, gap: false, replay: false, runtime: "test-service", reset: false },
   list_workspaces: { workspaces: [], active: null },
   workspaces_startup: { workspaces: [], active: null },
-  add_workspace: ({ name }) => ({ id: "n", name }),
+  ...freeSession().table,
   set_active_workspace: null,
   set_workspace_language: null,
   list_providers: [
@@ -38,7 +39,7 @@ const MOTOR_ANTERIOR = {
 };
 
 test("un motor anterior con opencode-zen y opencode-local da una sola tarjeta de OpenCode", async () => {
-  const app = await boot("listo", "conecta-opencode-retirado", MOTOR_ANTERIOR, undefined, { "danil.onboarding.account_choice": "local" });
+  const app = await boot("listo", "conecta-opencode-retirado", MOTOR_ANTERIOR, undefined, SIGNED_IN);
   await sleep(1200);
   const nombres = [...app.w.document.querySelectorAll("strong")].map((s) => s.textContent.trim());
   assert.ok(nombres.includes("Codex"), `no se pintó «Conecta tu IA»: ${nombres}`);

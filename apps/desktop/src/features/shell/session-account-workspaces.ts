@@ -45,6 +45,8 @@ export function createAccountWorkspaces(invoke: Invoke, native: boolean, changed
   // El contexto (un inicio de sesión) donde el servidor dijo que hoy no adopta: uno nuevo vuelve a intentar.
   let adoptionUnavailable: string | null = null;
   let version = 0;
+  // El último repaso no terminó (un error o una página del catálogo que no fue 200): `free` no es confiable.
+  let failed = false;
   let rows: AccountWorkspace[] = [];
   let free = new Map<string, FreeWorkspace>();
   const header = () => ({ "x-terminus-machine": local });
@@ -52,10 +54,13 @@ export function createAccountWorkspaces(invoke: Invoke, native: boolean, changed
     known: () => rows.map((w) => w.id),
     available: (org: string) => rows.filter((w) => w.account.org === org),
     free: (context: string) => extension ? free.get(context) : undefined,
+    /** Lo que el primer arranque necesita para distinguir un rechazo permanente de «todavía no». */
+    status: () => ({ machine: !!local, extension, failed }),
     async refresh(groups: readonly Group[], send: Send, personOf: (context: string) => string | null = () => null) {
       if (!native) return;
       const epoch = ++version;
       free = new Map();
+      failed = false;
       try {
         const machines = await invoke<{ id: string; local?: boolean; features?: string[] }[]>("machine_list");
         const self = machines.find((m) => m.local);
@@ -96,7 +101,7 @@ export function createAccountWorkspaces(invoke: Invoke, native: boolean, changed
           do {
             const reply = await send(group.context_id, "GET", `/v1/workspaces${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ""}`);
             if (epoch !== version) return;
-            if (reply.status !== 200) break;
+            if (reply.status !== 200) { failed = true; break; }
             const body = reply.body as { items?: { id?: unknown; org?: unknown; name?: unknown; engine_workspace_id?: unknown }[]; next_cursor?: string | null };
             const row = body.items?.find((w) => w.org === group.org && typeof w.id === "string" && typeof w.engine_workspace_id === "string" && !!w.engine_workspace_id);
             if (row) { next.set(group.context_id, { id: row.engine_workspace_id as string, name: typeof row.name === "string" ? row.name : row.engine_workspace_id as string, account_id: row.id as string }); break; }
@@ -107,7 +112,7 @@ export function createAccountWorkspaces(invoke: Invoke, native: boolean, changed
         }
         free = next;
         changed();
-      } catch { /* Un motor anterior conserva su riel; no ofrece crear sin capacidad anunciada. */ }
+      } catch { failed = true; /* Un motor anterior conserva su riel; no ofrece crear sin capacidad anunciada. */ }
     },
     /** Lo que el servidor creó para esta computadora (una petición de la CLI) queda sellado aquí. */
     async createHere(org: string, accountId: string, id: string, name: string) {

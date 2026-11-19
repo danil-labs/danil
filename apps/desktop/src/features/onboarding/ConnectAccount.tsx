@@ -1,9 +1,9 @@
 /**
- * El primer paso del alta en la ventana: conectar la cuenta de Danil o seguir
- * sin ella. Conectar usa el mismo inicio de sesión de Configuración.
+ * El primer paso del alta en la ventana: iniciar sesión en Danil. No hay
+ * camino sin cuenta (plan de cuentas F1.2). Usa el mismo inicio de sesión de
+ * Configuración.
  */
 import Cloud from "lucide-solid/icons/cloud";
-import Laptop from "lucide-solid/icons/laptop";
 import { createEffect, createSignal, type JSX, on, Show } from "solid-js";
 import { t } from "../../lib/i18n";
 import { Button } from "../../ui/Button";
@@ -14,7 +14,7 @@ import { rememberAccountWelcome } from "./account-welcome";
 
 type Step = "choose" | "signing";
 
-export type ConnectAccountResult = { workspace: { id: string; nombre: string } | null; connected: boolean };
+export type ConnectAccountResult = { connected: true };
 
 function Opcion(props: { icono: JSX.Element; titulo: string; efecto: string; disabled?: boolean; onClick: () => void; data: string }) {
   return (
@@ -39,11 +39,11 @@ export default function ConnectAccount(props: { onListo: (result: ConnectAccount
   const [step, setStep] = createSignal<Step>("choose");
 
   const finish = (result: ConnectAccountResult) => {
-    rememberAccountWelcome(result.connected ? "connected" : "local");
+    rememberAccountWelcome("connected");
     props.onListo(result);
   };
 
-  const afterConnected = () => finish({ workspace: null, connected: true });
+  const afterConnected = () => finish({ connected: true });
 
   function connect() {
     if (session.status()?.state === "connected") return afterConnected();
@@ -83,13 +83,6 @@ export default function ConnectAccount(props: { onListo: (result: ConnectAccount
               efecto={t("danil.welcome.connect_effect")}
               disabled={session.busy() || session.view().t === "loading"}
               onClick={connect}
-            />
-            <Opcion
-              data="data-account-welcome-local"
-              icono={<Laptop size={18} />}
-              titulo={t("danil.welcome.local")}
-              efecto={t("danil.welcome.local_effect")}
-              onClick={() => finish({ workspace: null, connected: false })}
             />
           </div>
         </Show>

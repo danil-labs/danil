@@ -5,6 +5,7 @@
  */
 import assert from "node:assert/strict";
 import test from "node:test";
+import { freeSession, SIGNED_IN } from "../helpers/free-session.mjs";
 import { boot, sleep } from "../helpers/jsdom-app.mjs";
 
 const WINDOWS = "Mozilla/5.0 (Windows NT 10.0; Win64; x64)";
@@ -29,7 +30,7 @@ const BASE = {
     provider: "codex", env_var: "", shared_credential: null, secret_note: null, active: "a1",
     accounts: [{ id: "a1", label: "", created_at: 1, identity: "yo@norte.mx", authenticated_at: 2 }],
   },
-  add_workspace: ({ name }) => ({ id: "n", name }),
+  ...freeSession().table,
   set_active_workspace: null,
   set_workspace_language: null,
   list_git_hosts: [],
@@ -84,8 +85,8 @@ const button = (root, label) =>
   [...root.querySelectorAll("button")].find((b) => b.textContent.trim() === label || b.getAttribute("aria-label") === label);
 
 async function aPersonaliza(m, nombre, ua = WINDOWS) {
-  // La cuenta de Danil ya se respondió: la prueba es de «Personaliza».
-  const app = await boot("listo", nombre, m.respuestas, ua, { "danil.onboarding.account_choice": "local" });
+  // La sesión de Danil ya está: la prueba es de «Personaliza».
+  const app = await boot("listo", nombre, m.respuestas, ua, SIGNED_IN);
   m.emit = app.emit;
   await sleep(800);
   button(app.w.document, "Continuar").click();
