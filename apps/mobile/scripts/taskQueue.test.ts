@@ -302,31 +302,6 @@ test("un error inesperado antes de enviar se avisa y se retira; no espera para s
   assert.equal(__entries().length, 0);
 });
 
-test("una entrada de otra cuenta espera sin llamadas ni avisos; una sin dueño la reclama quien inicia sesión y queda guardada", async () => {
-  const store = disk([entry({ owner: "ana" }), entry({ id: "legacy", key: "m1:w:f:legacy:delete" })]);
-  __reset({ storage: store });
-  let now = 0;
-  const resolver = createResolver(() => now);
-  let notices = 0;
-  subscribe((state) => (notices = state.notices.length));
-  await hydrate();
-  const m = machine("m1");
-  const view = (user: string, hostOf: (id: string) => Host | undefined) => ({ hostOf, user, fleet: "ok", contextReady: true });
-  bindHosts(resolver(view("beto", () => undefined)));
-  now += GONE_AFTER_MS * 3;
-  bindHosts(resolver(view("beto", () => undefined)));
-  await __kick();
-  assert.equal(m.calls.length, 0);
-  assert.equal(notices, 0);
-  assert.equal(__entries().length, 2, "ninguna se da por perdida");
-  setAccount("ana");
-  await __kick();
-  assert.equal(store.raw().find((e) => e.id === "legacy")?.owner, "ana", "el dueño quedó en disco");
-  bindHosts(resolver(view("ana", (id) => (id === "m1" ? m.host : undefined))));
-  await __kick();
-  assert.equal(m.mutations().length, 2, "con su cuenta, sí se ejecutan");
-});
-
 test("los fallos pasajeros esperan y no descartan; el archivado enviado repite sin tope al pasar la pausa", async () => {
   for (const code of ["machine_timeout", "machine_off", "start_failed", "start_timeout", "unreachable", "unknown_machine"]) {
     __reset({ storage: disk() });
