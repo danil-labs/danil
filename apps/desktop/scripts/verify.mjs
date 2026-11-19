@@ -713,6 +713,7 @@ const steps = [
   ["A workspace moved between organizations is resealed and its Free router union follows", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/account-transfers.test.ts")], root],
   ["Local workspaces are adopted into the personal Free org once, with the engine's possession proof and its echo, without moving tasks", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/account-adoption.test.ts")], root],
   ["Cuentas de IA is never blank: loading, failed with retry, or the agents Danil installs", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/ai-providers-view.test.ts")], root],
+  ["The AI provider groups show only providers with accounts, something alive or a read failure, and the picker copies each provider's add block", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/ai-providers-groups.test.ts")], root],
   ["The AI accounts panel mounts loading, failed or with the supported agents, never empty", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/ai-providers-states.test.mjs")], root],
   ["Remote paths preserve their machine context", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/remote-path.test.ts")], root],
   ["Workspace selection reconciles uncertain intents before another operation", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/web-workspace-selection.test.ts")], root],
