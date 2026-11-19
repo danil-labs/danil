@@ -3,6 +3,7 @@ export type TaskTreeRow = {
   parent?: string | null;
   launched_by?: string | null;
   launcher_available?: boolean;
+  root_peer?: boolean;
   /** El motor ya la resolvió viva: `launcher_available` no la condiciona. */
   handoff_parent?: string | null;
   machine?: string | null;
@@ -18,6 +19,7 @@ function localParent(row: TaskTreeRow): string | null {
 }
 
 export function taskParent(row: TaskTreeRow): string | null {
+  if (row.root_peer) return null;
   const local = localParent(row) ?? row.handoff_parent ?? null;
   return local ?? (row.parent || row.launched_by ? null : row.remote_launcher ?? null);
 }

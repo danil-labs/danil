@@ -110,6 +110,7 @@ export type SessionRow = {
   handoff_parent?: string | null;
   handoff_issue?: "missing_source" | "contradictory" | "cycle" | null;
   launcher_available?: boolean;
+  root_peer?: boolean;
   /** Hija de una delegación entre máquinas: su coordinador vive allá (`@terminus/tasks` `remote.ts`). */
   remote_parent?: unknown;
   remote_launcher?: string | null;

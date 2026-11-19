@@ -8,6 +8,7 @@ export type LauncherRow = {
   launched_by?: string | null;
   parent?: string | null;
   launcher_available?: boolean;
+  root_peer?: boolean;
   /** La ejecutora viva de la que continúa por handoff: familia, no destino de respuestas. */
   handoff_parent?: string | null;
   /** El coordinador en otra máquina, ya con el id de la lista (`withRemoteLaunchers`). */
@@ -24,12 +25,12 @@ export function launcherOf(session: LauncherRow): string | null {
 }
 
 /**
- * Si la tarea es subtarea de otra: el riel solo enseña las que abrió la persona.
+ * Si la tarea es subtarea de otra: el riel incluye los pares de nivel raíz.
  * No depende de que el lanzador esté en la lista: archivado, en otra carpeta o
  * sin cargar todavía, la subtarea sigue siendo suya y no sube al riel.
  */
 export function isSubtask(session: LauncherRow): boolean {
-  return launcherOf(session) !== null;
+  return !session.root_peer && launcherOf(session) !== null;
 }
 
 /** Lo mínimo de una tarea para juntarla con las de las demás carpetas. */
@@ -76,7 +77,7 @@ export function flattenTasks<R extends FlatRow>(
  * la lista esconde bajo él (el panel «N tareas delegadas» del escritorio).
  */
 export function delegatedOf<R extends FlatRow>(rows: readonly R[], launcher: string): R[] {
-  return rows.filter((row) => !row.archived && row.id !== launcher && launcherOf(row) === launcher)
+  return rows.filter((row) => !row.archived && row.id !== launcher && isSubtask(row) && launcherOf(row) === launcher)
     .sort((a, b) => b.created_at - a.created_at);
 }
 

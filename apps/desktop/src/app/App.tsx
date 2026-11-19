@@ -100,7 +100,7 @@ const MachinesLicense = lazy(() =>
   })),
 );
 
-import { canonicalAgentId, isFreeRouterModel, lastActivity, launcherOf, OPENCODE, withRemoteLaunchers } from "@terminus/tasks";
+import { canonicalAgentId, isFreeRouterModel, lastActivity, launcherOf, OPENCODE, taskDescendants, withRemoteLaunchers } from "@terminus/tasks";
 import type { CarriedBase, CarryCheck } from "../features/machines/carry";
 import { bringHereLabel, canBringHere, carryOrigin, machineName, machineOf, machines, machineWakes, refetchMachines, remoteChildScope, runOn, senderTaskId, setRunOn, setTaskRowMachine } from "../features/machines/store";
 import { activeTaskCounts, activityByProject, type HiddenProjects, hiddenIn, type PickedAt, picksIn, rememberPick, setHidden, storedPicks, taskCountOf } from "../features/projects";
@@ -6159,9 +6159,16 @@ export default function App() {
       onRenombrar: (id, title) => void renombrarSesion(folder, id, title),
       onPin: (id, pinned) => fijarSesion(folder, id, pinned),
     });
+    const delegatedPanelRows = createMemo(() => {
+      const rows = delegatedRows();
+      const peers = rows.filter(row => row.root_peer);
+      if (!peers.length) return rows;
+      const outside = new Set([...peers, ...taskDescendants(rows, peers)].map(row => row.id));
+      return rows.filter(row => !outside.has(row.id));
+    });
     const delegatedModel = (): DelegatedPanelModel => ({
       context: `${workspaceActivo()}/${pp.sesion}`,
-      rows: delegatedRows(),
+      rows: delegatedPanelRows(),
       list: delegatedList,
       live: vivas(),
       approvals: permissions().map(item => item.session),
