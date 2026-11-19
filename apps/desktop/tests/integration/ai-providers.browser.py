@@ -354,6 +354,41 @@ def machine_row(page, identity):
     }""", identity)
 
 
+MARGIN = 16
+
+
+def need(k):
+    """Lista mínima para k columnas de CARD_MIN con 8 px de hueco."""
+    return k * CARD_MIN + (k - 1) * 8
+
+
+def cut_margins(width, cards, expected):
+    """Cuánto sobra sobre el corte de las columnas que hay, y cuánto falta para la siguiente (si habría tarjetas para ella)."""
+    over = width - need(expected) if expected > 1 else None
+    under = need(expected + 1) - width if expected + 1 <= min(3, cards) else None
+    parts = ([f'+{over} px sobre el corte de {expected} ({need(expected)})'] if over is not None else []) + ([f'{under} px bajo el de {expected + 1} ({need(expected + 1)})'] if under is not None else [])
+    return {'ok': all(m >= MARGIN for m in (over, under) if m is not None), 'text': '; '.join(parts) or 'sin corte cercano'}
+
+
+def classic(page, on):
+    page.evaluate("""(on) => {
+        document.getElementById('pv2-classic')?.remove();
+        if (!on) return;
+        const s = document.createElement('style');
+        s.id = 'pv2-classic';
+        s.textContent = '#cfg-subpanel { overflow-y: scroll !important } #cfg-subpanel::-webkit-scrollbar { width: 16px } #cfg-subpanel::-webkit-scrollbar-thumb { background: #999 }';
+        document.head.append(s);
+    }""", on)
+    page.wait_for_timeout(100)
+
+
+def shoot_one(page, label):
+    folder = os.environ.get('DANIL_PV2_SHOTS')
+    if folder:
+        Path(folder).mkdir(parents=True, exist_ok=True)
+        page.screenshot(path=str(Path(folder) / f'{label}.png'))
+
+
 def shoot(page, name):
     folder = os.environ.get('DANIL_PV2_SHOTS')
     if not folder:
@@ -431,33 +466,41 @@ def run(browser, base, name):
     if name in ('one', 'four', 'reconnect', 'machines'):
         # En el modal real, a cada viewport: columnas, mínimo de tarjeta, sin desborde ni acciones recortadas.
         identity = accounts[0]['identity']
-        for vw, vh in VIEWPORTS:
-            page.set_viewport_size({'width': vw, 'height': vh})
-            page.wait_for_timeout(200)
-            got = columns(page, identity)
-            expected = COLUMNS[got['cards']][vw]
-            panel = page.evaluate("() => { const p = document.querySelector('#cfg-subpanel'); return { overflow: p.scrollWidth > p.clientWidth + 1, list: Math.round(document.querySelector('[data-account-grid]').getBoundingClientRect().width), dialog: Math.round(document.querySelector('[role=dialog]').getBoundingClientRect().width) }; }")
-            print(f'{name} {vw}x{vh}: diálogo {panel["dialog"]} px, lista {panel["list"]} px, {got["cols"]} columnas')
-            _eq_true(got['tagged'], f'{vw}px: falta [data-provider-group]')
-            _eq_true(got['cols'] == expected, f'{name} {vw}px: {got["cols"]} columnas, se esperaban {expected} (lista {panel["list"]} px)')
-            _eq_true(got['minCard'] >= min(CARD_MIN, panel['list']) - 1, f'{name} {vw}px: tarjeta por debajo del mínimo: {got}')
-            _eq_true(not got['overflow'] and not panel['overflow'], f'{name} {vw}px: desborde horizontal: {got} {panel}')
-            _eq_true(not got['clipped'], f'{name} {vw}px: acciones recortadas: {got["clipped"]}')
-            bad = [n for n in names(page) if n['overlaps'] or n['spill'] or not n['oneLine']]
-            _eq_true(not bad, f'{name} {vw}px: el nombre pisa las acciones, se sale de su bloque o parte su línea: {bad}')
-            if got['cols'] >= 2:
-                cut = [n['name'] for n in names(page) if not n['full']]
-                _eq_true(not cut, f'{name} {vw}px: con {got["cols"]} columnas el correo se trunca: {cut}')
-            if name == 'reconnect':
-                # La tarjeta caída: su estado, «Reconectar» y «…» en la fila de la cabecera, como en `9e345462`.
-                head_row = header(page, 'persona2@ejemplo.com')
-                mids = [t['mid'] for t in head_row['tops']]
-                _eq_true(any('Reconectar' in t['text'] for t in head_row['tops']) and max(mids) - min(mids) <= 4, f'{vw}px: el estado y las acciones no van en una fila: {head_row}')
-            if name == 'machines':
-                # La fila de máquinas y «Iniciar sesión en otra máquina» son de su cuenta: dentro de su celda, sin tocar otra.
-                row = machine_row(page, 'persona2@ejemplo.com')
-                _eq_true(row['row'] and row['button'] and row['rowInside'] and row['buttonInside'] and not row['overlaps'], f'{vw}px: la fila de máquinas no queda en su celda: {row}')
-        results.append(('PASS', f'{name}: en el modal real a ' + ', '.join(f'{vw}x{vh}' for vw, vh in VIEWPORTS) + ': columnas, mínimo, sin desborde ni recortes' + ', correo completo con 2 o más columnas' + (', cabecera de la caída en una fila' if name == 'reconnect' else '') + (', fila de máquinas en su celda' if name == 'machines' else '')))
+        for mode in ('sistema', 'clásicas'):
+            # «clásicas»: barras de 16 px que ocupan sitio (Windows, Linux, macOS con ratón), con la vertical siempre puesta.
+            classic(page, mode == 'clásicas')
+            for vw, vh in VIEWPORTS:
+                page.set_viewport_size({'width': vw, 'height': vh})
+                page.wait_for_timeout(200)
+                got = columns(page, identity)
+                expected = COLUMNS[got['cards']][vw]
+                panel = page.evaluate("() => { const p = document.querySelector('#cfg-subpanel'); return { overflow: p.scrollWidth > p.clientWidth + 1, list: Math.round(document.querySelector('[data-account-grid]').getBoundingClientRect().width), dialog: Math.round(document.querySelector('[role=dialog]').getBoundingClientRect().width) }; }")
+                margins = cut_margins(panel['list'], got['cards'], expected)
+                print(f'{name} {vw}x{vh} barras {mode}: diálogo {panel["dialog"]} px, lista {panel["list"]} px, {got["cols"]} columnas, {margins["text"]}')
+                _eq_true(margins['ok'], f'{name} {vw}px barras {mode}: menos de {MARGIN} px de margen sobre un corte: {margins["text"]}')
+                _eq_true(got['tagged'], f'{vw}px: falta [data-provider-group]')
+                _eq_true(got['cols'] == expected, f'{name} {vw}px {mode}: {got["cols"]} columnas, se esperaban {expected} (lista {panel["list"]} px)')
+                _eq_true(got['minCard'] >= min(CARD_MIN, panel['list']) - 1, f'{name} {vw}px {mode}: tarjeta por debajo del mínimo: {got}')
+                _eq_true(not got['overflow'] and not panel['overflow'], f'{name} {vw}px {mode}: desborde horizontal: {got} {panel}')
+                _eq_true(not got['clipped'], f'{name} {vw}px {mode}: acciones recortadas: {got["clipped"]}')
+                bad = [n for n in names(page) if n['overlaps'] or n['spill'] or not n['oneLine']]
+                _eq_true(not bad, f'{name} {vw}px {mode}: el nombre pisa las acciones, se sale de su bloque o parte su línea: {bad}')
+                if got['cols'] >= 2:
+                    cut = [n['name'] for n in names(page) if not n['full']]
+                    _eq_true(not cut, f'{name} {vw}px {mode}: con {got["cols"]} columnas el correo se trunca: {cut}')
+                if mode == 'clásicas':
+                    shoot_one(page, f'{name}-{vw}-clasicas')
+                if name == 'reconnect':
+                    # La tarjeta caída: su estado, «Reconectar» y «…» en la fila de la cabecera, como en `9e345462`.
+                    head_row = header(page, 'persona2@ejemplo.com')
+                    mids = [t['mid'] for t in head_row['tops']]
+                    _eq_true(any('Reconectar' in t['text'] for t in head_row['tops']) and max(mids) - min(mids) <= 4, f'{vw}px: el estado y las acciones no van en una fila: {head_row}')
+                if name == 'machines':
+                    # La fila de máquinas y «Iniciar sesión en otra máquina» son de su cuenta: dentro de su celda, sin tocar otra.
+                    row = machine_row(page, 'persona2@ejemplo.com')
+                    _eq_true(row['row'] and row['button'] and row['rowInside'] and row['buttonInside'] and not row['overlaps'], f'{vw}px: la fila de máquinas no queda en su celda: {row}')
+        classic(page, False)
+        results.append(('PASS', f'{name}: en el modal real a ' + ', '.join(f'{vw}x{vh}' for vw, vh in VIEWPORTS) + ', con barras del sistema y clásicas: columnas, margen de 16 px sobre los cortes, mínimo, sin desborde ni recortes' + ', correo completo con 2 o más columnas' + (', cabecera de la caída en una fila' if name == 'reconnect' else '') + (', fila de máquinas en su celda' if name == 'machines' else '')))
         page.set_viewport_size({'width': 1440, 'height': 900})
     if name == 'machines':
         expect(dialog.locator('[data-account-machines]').first).to_be_visible()

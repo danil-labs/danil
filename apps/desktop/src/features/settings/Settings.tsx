@@ -452,9 +452,9 @@ export default function Settings(props: {
     <Dialog open onOpenChange={(abierto) => !abierto && props.onClose()}>
         <DialogContent
           // El ancho conserva tope porque el panel es prosa y controles; el alto crece con la ventana. Proveedores
-          // de IA es la excepción: su cuadrícula de cuentas necesita 1680 px de diálogo para 3 columnas sin truncar el correo.
+          // de IA es la excepción: su cuadrícula necesita 1696 px de diálogo para 3 columnas sin truncar el correo, con la barra reservada.
           ref={hoja}
-          class={cn("flex h-[min(900px,100%)] flex-col overflow-hidden p-0", pestana().id === "proveedores-ia" ? "w-[min(1680px,100%)] max-w-[1680px]" : "w-[min(1120px,100%)] max-w-[1120px]")}
+          class={cn("flex h-[min(900px,100%)] flex-col overflow-hidden p-0", pestana().id === "proveedores-ia" ? "w-[min(1696px,100%)] max-w-[1696px]" : "w-[min(1120px,100%)] max-w-[1120px]")}
           aria-label={t("settings.title")}
         >
           {/* **La fila tiene que ser `minmax(0,1fr)` y no la implícita.** Con
@@ -570,7 +570,7 @@ export default function Settings(props: {
                   </div>
                 </Show>
                 </div>
-                <div id="cfg-subpanel" role={entrada().tabs.length > 1 ? "tabpanel" : undefined} aria-labelledby={entrada().tabs.length > 1 ? idSub(pestana().id) : undefined} class="min-w-0 px-4 pb-10 pt-5 md:min-h-0 md:flex-1 md:overflow-auto md:px-8">
+                <div id="cfg-subpanel" role={entrada().tabs.length > 1 ? "tabpanel" : undefined} aria-labelledby={entrada().tabs.length > 1 ? idSub(pestana().id) : undefined} class={cn("min-w-0 px-4 pb-10 pt-5 md:min-h-0 md:flex-1 md:overflow-auto md:px-8", pestana().id === "proveedores-ia" && "[scrollbar-gutter:stable]")}>
                   <Dynamic component={pestana().panel ?? (() => null)} />
                 </div>
               </div>
