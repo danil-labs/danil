@@ -6,7 +6,6 @@
   "onboarding.cancel": "Cancelar",
   "onboarding.continue": "Continuar",
   "onboarding.workspace.default": "Personal",
-  "onboarding.workspace.default_new": "Nuevo workspace",
   "onboarding.workspace.label": "Workspace",
   "onboarding.check.environment": "Entorno listo",
   "onboarding.check.ai_connected": {

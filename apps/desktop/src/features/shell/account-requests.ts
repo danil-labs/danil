@@ -62,7 +62,13 @@ export function pickGroup(groups: readonly ContextGroup[], org: string | undefin
 }
 
 function failed(reply: ContextReply): AccountError {
-  if (reply.empty_reason) return { code: "no_session" };
+  // Un `empty_reason` en la respuesta al POST no es «sin sesión»: la sesión existe y el
+  // borde rechazó esa organización. `no_session` devuelve el cupo del tope de la CLI, así
+  // que solo vale cuando no hay sesión (`pickGroup` sin grupos).
+  if (reply.empty_reason) {
+    const denied = reply.status === 403 || reply.empty_reason === "organization_access_denied" || reply.empty_reason === "no_workspace_access";
+    return { code: denied ? "admin_required" : "operation_failed" };
+  }
   const code = (reply.body as { code?: unknown } | undefined)?.code;
   if (reply.status === 403) return { code: "admin_required" };
   if (reply.status === 409 && code === "workspace_limit") return { code: "workspace_limit" };

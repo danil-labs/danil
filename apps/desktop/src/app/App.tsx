@@ -347,11 +347,11 @@ export async function sleepSession(project: string, session: string) {
 export default function App() {
   /**
    * El alta en curso: un pestillo a propósito, que se enciende cuando no
-   * hay workspace y se apaga solo al terminar o cancelar. Derivarlo de
+   * hay workspace y se apaga solo al terminar. Derivarlo de
    * «¿hay workspace?» desmontaría el asistente en cuanto el paso 1 crea el
    * primero, antes de pedir proveedores de IA y source control.
    */
-  const [alta, setAlta] = createSignal<null | "primera" | "nueva">(null);
+  const [alta, setAlta] = createSignal(false);
   /* El fondo propio del agente de la conversación con el mando: lo publica su
      celda y se pinta detrás del área de trabajo, no solo detrás de su chat. */
   const [fondoDelAgente, setFondoDelAgente] = createSignal<{ url: string; veil?: number } | null>(null);
@@ -1514,7 +1514,7 @@ export default function App() {
   onMount(() => {
     const alTeclear = (e: KeyboardEvent) => {
       if (e.defaultPrevented || !(e.metaKey || e.ctrlKey)) return;
-      if (settings() !== null || alta() !== null) return;
+      if (settings() !== null || alta()) return;
       const accion = accionDeAtajo(e);
       if (accion) {
         e.preventDefault();
@@ -1907,7 +1907,7 @@ export default function App() {
   // Sin workspace se abre el alta. Si ya estaba abierta no se toca: el paso 1
   // acaba de crear uno, y volver a mirar aquí la cerraría a mitad.
   // En la web el workspace lo crea la plataforma al darse de alta: la ventana espera sin pedirlo.
-    if (a.active === null && capabilities().localSetup) setAlta((x) => x ?? "primera");
+    if (a.active === null && capabilities().localSetup) setAlta(true);
     const transition = workspaceContext.beginTransition(a);
   // La lengua es del workspace, y cambia al cambiar de cliente: eso es lo que
   // se pidió, no un efecto secundario. `null` hereda la de la máquina.
@@ -3810,7 +3810,7 @@ export default function App() {
   }
 
   function closeActiveTab() {
-    if (settings() !== null || alta() !== null) return;
+    if (settings() !== null || alta()) return;
     const id = pestanaActiva();
     if (id) cerrarPestana(id);
     else if (enBorrador(paneles.activeSite())) cerrarBorrador(paneles.activeSite());
@@ -6898,7 +6898,7 @@ export default function App() {
           ? agent()
           : (filaDe(task()?.session ?? "")?.agent ?? agent());
         const idDePanel = () => task()?.session || (carpetaDelProyecto() ? llaveDeBorrador(project()) : "");
-        const herramientas = () => <ThreadSearch conversation={task()?.session ?? ""} active={sameSite(site(), paneles.activeSite()) && settings() === null && alta() === null}
+        const herramientas = () => <ThreadSearch conversation={task()?.session ?? ""} active={sameSite(site(), paneles.activeSite()) && settings() === null && !alta()}
               disabled={!task()?.session}
               open={muestra(task()?.session ?? "", "search")}
               messages={target()?.messages() ?? []} thread={() => target()?.thread()}
@@ -7584,17 +7584,11 @@ export default function App() {
         fallback={
           <Suspense fallback={null}>
             <Onboarding
-              /* Agregar un workspace es la misma alta, no un formulario aparte: el
-                 segundo cliente necesita lo mismo que el primero —sus cuentas y su
-                 material, que cuelgan de él— y tener dos altas distintas garantiza
-                 que una se quede corta. */
-              nuevo={alta() === "nueva"}
-              onCancelar={alta() === "nueva" ? () => setAlta(null) : undefined}
               /* Por el mismo evento que usa el selector de workspace: quien acaba
                  de crear el primero no tiene por qué saber cómo se recarga esta
                  pantalla. */
               onListo={() => {
-                setAlta(null);
+                setAlta(false);
                 window.dispatchEvent(new CustomEvent("harness:workspace"));
               }}
             />

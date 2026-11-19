@@ -1,7 +1,7 @@
 import { createSignal, type JSX, Show } from "solid-js";
 import { type GroupAccount, type GroupSend, redeemGroupCode } from "../../lib/group-account";
 import { t } from "../../lib/i18n";
-import { canRedeemGroupCode } from "../../lib/promo-role";
+import { canRedeemPromo } from "../../lib/promo-role";
 import { cn } from "../../lib/utils";
 import { SEPARADOR_DE_MENU, TITULO_DE_GRUPO } from "../../ui/ContextMenu";
 import { ITEM_DE_MENU } from "../../ui/Popover";
@@ -16,7 +16,7 @@ export function OrganizationAccountMenu(props: { group: GroupAccount; email: str
     setBusy(true); setFailed(false);
     try { await action(); props.onDismiss(); } catch { setFailed(true); } finally { setBusy(false); }
   };
-  return <Show when={!props.promo || !canRedeemGroupCode(props.group.role)} fallback={<PromoRedeem redeem={(code, key) => redeemGroupCode(props.send, props.group, code, key)} />}>
+  return <Show when={!props.promo || !canRedeemPromo(props.group.role)} fallback={<PromoRedeem redeem={(code, key) => redeemGroupCode(props.send, props.group, code, key)} />}>
     <div class="contents" data-account-menu-context={props.group.context} onKeyDown={(event) => { if (event.altKey && ["ArrowUp", "ArrowDown"].includes(event.key)) { event.preventDefault(); event.stopPropagation(); props.onMove(event.key === "ArrowUp" ? -1 : 1); } }}>
       <Show when={!props.stack}>
         <p class={cn("m-0", TITULO_DE_GRUPO)}>{props.workspace}</p>
@@ -27,7 +27,7 @@ export function OrganizationAccountMenu(props: { group: GroupAccount; email: str
       </Show>
       <p class={cn("m-0", TITULO_DE_GRUPO)}>{t("shell.rail.tip_account", { org: props.group.name, email: props.email ?? "" })}</p>
       {props.notice}
-      <Show when={canRedeemGroupCode(props.group.role)}><button type="button" role="menuitem" class={ITEM_DE_MENU} onClick={() => props.onPromo()}>{t("web.promo.redeem")}</button></Show>
+      <Show when={canRedeemPromo(props.group.role)}><button type="button" role="menuitem" class={ITEM_DE_MENU} onClick={() => props.onPromo()}>{t("web.promo.redeem")}</button></Show>
       <Show when={props.organizationControls !== false}><OrganizationPositionMenu pinned={props.pinned} index={props.index} count={props.count} onPin={() => props.onPin()} onMove={(step) => props.onMove(step)} /></Show>
       <Show when={!props.web}><button type="button" role="menuitem" class={ITEM_DE_MENU} disabled={busy()} onClick={() => void close(() => props.onCloseOrg(props.group.context))}>{t("shell.workspaces.close_org", { name: props.group.name })}</button></Show>
       <button type="button" role="menuitem" class={ITEM_DE_MENU} disabled={busy()} onClick={() => void close(() => props.onCloseEmail(props.email, props.group.context))}>{t("shell.workspaces.close_email", { email: props.email ?? "" })}</button>
