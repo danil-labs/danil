@@ -512,13 +512,14 @@ export function startAccountMachines(target: Target = window) {
     install(self, client.endpoint, others, key);
   }
 
-  /** Sin cuenta: la flota de los huéspedes, si hay alguno; si no, nada, como antes. */
+  /** Sin cuenta: la flota de los huéspedes y los contextos de la sesión; sin ninguno, nada, como antes. */
   async function installLocal(epoch: number) {
     const guests = await readGuestMachines();
     if (epoch !== cloudEpoch) return;
     const cloudRows = await readCloud();
     if (epoch !== cloudEpoch) return;
-    if (!guests.length && !cloudRows.length) return disconnect();
+    // Un contexto Free corre en este motor: sin VM ni huéspedes, el router sigue para conservar la pareja activa de la ventana.
+    if (!guests.length && !cloudRows.length && !cloud.validatedContexts()?.length) return disconnect();
     if (installed?.key === LOCAL_KEY) {
       installed.fleet.setMachines([...cloudRows.map(infoOf), ...guests]);
       machinesListed(installed.fleet);

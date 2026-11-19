@@ -219,3 +219,15 @@ test("changing placement for the same context rebuilds its route without migrati
   assert.equal(router.activeWorkspace(),"same");
   router.close();
 });
+
+test("closing the router forgets the window's active context so a reinstalled fleet starts without it", async () => {
+  const { router } = setup();
+  await router.handle("set_active_workspace", { id: "same" }, contextOptions("a"));
+  assert.equal(activeWorkspaceContext(), "a");
+  router.close();
+  assert.equal(activeWorkspaceContext(), null);
+  const next = setup().router;
+  assert.equal(next.activeContext(), null);
+  assert.equal(activeWorkspaceContext(), null);
+  next.close();
+});

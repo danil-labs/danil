@@ -109,7 +109,7 @@ export function createContextRouter(config: ContextRouterConfig, createRouterCor
     createsOn(workspace: string | null) { return cleared || activeContext && !config.contextInfo?.(activeContext) ? null : core(activeContext).createsOn(workspace ?? (activeContext ? selectedWorkspaces.get(activeContext) ?? null : null)); },
     activeWorkspace: currentWorkspace,
     activeContext: () => activeContext ?? null,
-    close() { attention.close(); legacy.close(); for (const router of contexts.values()) router.close(); contexts.clear(); placement.clear(); selectedWorkspaces.clear(); config.fleet.close(); },
+    close() { activeContext = undefined; setActiveWorkspaceContext(null); attention.close(); legacy.close(); for (const router of contexts.values()) router.close(); contexts.clear(); placement.clear(); selectedWorkspaces.clear(); config.fleet.close(); },
   };
 }
 
