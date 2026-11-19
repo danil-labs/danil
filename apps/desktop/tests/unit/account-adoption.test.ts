@@ -8,6 +8,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { adoptionTarget, adoptLocals, prefsAdoptionMemory } from "../../src/features/shell/account-adoption.ts";
 import { prefsPendingUnions } from "../../src/features/shell/account-transfers.ts";
+import { createAccountWorkspaces } from "../../src/features/shell/session-account-workspaces.ts";
 
 function prefs() {
   const store = new Map<string, unknown>();
@@ -19,7 +20,7 @@ function prefs() {
 
 const free = { context_id: "c-free", org: "org_free" };
 const SUB = "user_01A";
-const JKT = "jkt_of_this_engine_aaaaaaaaaaaaaaaaaaaaaaaa";
+const JKT = "jkt_of_this_engine_aaaaaaaaaaaaaaaaaaaaaaaa".slice(0, 43);
 const JWK = { kty: "EC", crv: "P-256", x: "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx", y: "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy" };
 const candidates = [
   { id: "qlocal01", name: "Uno", adoptable: true },
@@ -110,6 +111,7 @@ test("a server without the route, with adoption off or without a personal org cu
     ["501", { status: 501 }],
     ["503 adoption_disabled", { status: 503, body: { code: "adoption_disabled" } }],
     ["409 adoption_requires_personal", { status: 409, body: { code: "adoption_requires_personal" } }],
+    ["409 adoption_requires_free", { status: 409, body: { code: "adoption_requires_free" } }],
   ];
   for (const [name, reply] of cases) {
     // En el reto.
@@ -165,7 +167,7 @@ test("a bad challenge or a bad engine proof is not sent, and a reply that does n
     await adoptLocals(engine(candidates.slice(0, 1)).invoke, {}, s.send, free, p.memory, p.pending, SUB);
     assert.equal(s.adopts().length, 0, JSON.stringify(challenge));
   }
-  for (const proof of [{ jwk: { ...JWK, d: "secreto" }, jkt: JKT, sig: "s" }, { jwk: JWK, sig: "s" }, { jwk: { ...JWK, crv: "P-384" }, jkt: JKT, sig: "s" }, null]) {
+  for (const proof of [{ jwk: { ...JWK, d: "secreto" }, jkt: JKT, sig: "s" }, { jwk: JWK, sig: "s" }, { jwk: JWK, jkt: "corto", sig: "s" }, { jwk: JWK, jkt: `${JKT}x`, sig: "s" }, { jwk: { ...JWK, x: "corta" }, jkt: JKT, sig: "s" }, { jwk: { ...JWK, crv: "P-384" }, jkt: JKT, sig: "s" }, null]) {
     const s = server(ok);
     const p = prefs();
     await adoptLocals(engine(candidates.slice(0, 1), proof ?? "nada").invoke, {}, s.send, free, p.memory, p.pending, SUB);
@@ -183,6 +185,40 @@ test("a bad challenge or a bad engine proof is not sent, and a reply that does n
   assert.equal(e.sealed().length, 0, "ninguna de esas respuestas se sella");
   await adoptLocals(e.invoke, {}, server(() => ({ status: 201, body: { id: 5001, engine_workspace_id: "qlocal01", org: "org_free", possession: { jkt: JKT } } })).send, free, p.memory, p.pending, SUB);
   assert.equal(e.sealed().length, 1);
+});
+
+test("a 429 on the challenge ends this pass without marking adoption unavailable", async () => {
+  const e = engine();
+  const s = server(ok, () => ({ status: 429, body: { code: "rate_limited" } }));
+  const p = prefs();
+  assert.deepEqual(await adoptLocals(e.invoke, {}, s.send, free, p.memory, p.pending, SUB), { adopted: [], refused: [], unavailable: false });
+  assert.equal(s.posts.length, 1, "no pide más retos en este repaso");
+  assert.equal(e.calls.filter(([c]) => c === "adoption_proof").length, 0);
+  // El siguiente repaso lo vuelve a intentar.
+  assert.deepEqual((await adoptLocals(e.invoke, {}, server(ok).send, free, p.memory, p.pending, SUB)).adopted, ["qlocal01", "qlocal02"]);
+});
+
+test("adoption that the server turned off is retried after a new sign-in, not in the same one", async () => {
+  globalThis.localStorage ??= (() => {
+    const m = new Map<string, string>();
+    return { getItem: (k: string) => m.get(k) ?? null, setItem: (k: string, v: string) => void m.set(k, v), removeItem: (k: string) => void m.delete(k), clear: () => m.clear(), key: () => null, length: 0 } as Storage;
+  })();
+  const invoke = async <T>(command: string): Promise<T> =>
+    (command === "machine_list" ? [{ id: "local", local: true, features: ["account_workspace_v1", "account_adoption_v1", "account_adoption_proof_v1"] }]
+      : command === "adoption_candidates" ? candidates.slice(0, 1)
+      : command === "list_workspaces" ? { workspaces: [] } : undefined) as T;
+  let challenges = 0;
+  const send = async (_c: string, method: string, path: string) => {
+    if (path === "/v1/workspaces/adopt/challenge") { challenges++; return { status: 503, body: { code: "adoption_disabled" } }; }
+    return method === "GET" ? { status: 200, body: path === "/v1/identity/me" ? { id: SUB } : { items: [] } } : { status: 500 };
+  };
+  const accounts = createAccountWorkspaces(invoke, true, () => {});
+  const group = (context_id: string) => [{ context_id, org: "org_free", plan: "free" }];
+  await accounts.refresh(group("ctx-1"), send, () => SUB);
+  await accounts.refresh(group("ctx-1"), send, () => SUB);
+  assert.equal(challenges, 1, "en la misma sesión no se repite");
+  await accounts.refresh(group("ctx-2"), send, () => SUB);
+  assert.equal(challenges, 2, "un inicio de sesión nuevo vuelve a intentar");
 });
 
 test("without a known person the sub comes from /v1/identity/me, and without it nothing is asked", async () => {

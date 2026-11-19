@@ -10,25 +10,27 @@ export type AdoptionResult = { adopted: string[]; refused: string[]; unavailable
 /** La prueba de posesión que firma el motor (`adoption_proof`, A17). */
 type AdoptionProof = { jwk: { kty: "EC"; crv: "P-256"; x: string; y: string }; jkt: string; sig: string };
 const B64 = /^[A-Za-z0-9_-]+$/;
-const NONCE = /^[A-Za-z0-9_-]{43}$/;
+/** 32 bytes en base64url sin relleno: el reto y la huella RFC 7638 (SHA-256). */
+const B64_32 = /^[A-Za-z0-9_-]{43}$/;
 
 function proofOf(value: unknown): AdoptionProof | null {
   const p = value as { jwk?: Record<string, unknown>; jkt?: unknown; sig?: unknown } | null;
   const jwk = p?.jwk;
   if (!jwk || Object.keys(jwk).sort().join() !== "crv,kty,x,y" || jwk.kty !== "EC" || jwk.crv !== "P-256") return null;
-  const parts = [jwk.x, jwk.y, p.jkt, p.sig];
-  if (!parts.every((v) => typeof v === "string" && B64.test(v))) return null;
+  if (![jwk.x, jwk.y, p.jkt].every((v) => typeof v === "string" && B64_32.test(v))) return null;
+  if (typeof p.sig !== "string" || !B64.test(p.sig)) return null;
   return { jwk: { kty: "EC", crv: "P-256", x: jwk.x as string, y: jwk.y as string }, jkt: p.jkt as string, sig: p.sig as string };
 }
 
 /**
- * Sin la ruta (404, 501), con la adopción apagada (`503 adoption_disabled`) o sin
- * organización personal marcada (`409 adoption_requires_personal`), los locales
- * se quedan así y se vuelve a intentar en el siguiente inicio de sesión.
+ * Sin la ruta (404, 501), con la adopción apagada (`503 adoption_disabled`), sin
+ * organización personal marcada (`409 adoption_requires_personal`) o sin plan
+ * Free (`409 adoption_requires_free`), los locales se quedan así y se vuelve a
+ * intentar en el siguiente inicio de sesión.
  */
 function stops(reply: { status: number; body?: unknown }) {
   const code = (reply.body as { code?: unknown } | undefined)?.code;
-  return reply.status === 404 || reply.status === 501 || (reply.status === 503 && code === "adoption_disabled") || (reply.status === 409 && code === "adoption_requires_personal");
+  return reply.status === 404 || reply.status === 501 || (reply.status === 503 && code === "adoption_disabled") || (reply.status === 409 && (code === "adoption_requires_personal" || code === "adoption_requires_free"));
 }
 
 /** El `sub` de la persona en ese contexto: el que firma la prueba y el servidor compara con la sesión. */
@@ -49,7 +51,7 @@ async function personOf(send: Send, context: string, known: string | null) {
  * repite el `jkt` de este motor (`possession.jkt`): uno que ignoró la prueba no
  * sella nada. No mueve tareas. `409 id_taken` no se vuelve a pedir en esa
  * organización; otro 409 o una prueba rechazada se repiten en el siguiente
- * repaso con un reto nuevo. El sello no se deshace, así que una respuesta que no
+ * repaso con un reto nuevo; un 429 del reto termina el repaso. El sello no se deshace, así que una respuesta que no
  * corresponde a lo pedido no se sella.
  */
 export async function adoptLocals(
@@ -80,8 +82,10 @@ export async function adoptLocals(
     try {
       const challenge = await send(free.context_id, "POST", "/v1/workspaces/adopt/challenge", { engine_workspace_id: c.id });
       if (stops(challenge)) return { adopted, refused, unavailable: true };
+      // El límite de retos: este repaso termina y el siguiente lo vuelve a intentar.
+      if (challenge.status === 429) break;
       const value = (challenge.body as { nonce?: unknown } | undefined)?.nonce;
-      if (challenge.status !== 200 || challenge.empty_reason || typeof value !== "string" || !NONCE.test(value)) continue;
+      if (challenge.status !== 200 || challenge.empty_reason || typeof value !== "string" || !B64_32.test(value)) continue;
       nonce = value;
       proof = proofOf(await invoke("adoption_proof", { ...header, id: c.id, nonce, org: free.org, sub }));
       if (!proof) continue;
