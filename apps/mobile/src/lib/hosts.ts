@@ -25,6 +25,8 @@ import { type AppCommand, type AppFeature, COMMAND_NOT_HERE, COMMAND_UNSUPPORTED
 export class HostError extends Error {
   code: string;
   detail?: unknown;
+  /** Verdadero solo si la guardia local negó la llamada antes de mandarla: seguro de repetir. Ausente, no se sabe. */
+  notSent?: true;
 
   constructor(code: string, detail?: unknown) {
     super(detail && typeof detail === "string" ? `${code}: ${detail}` : code);
@@ -277,7 +279,10 @@ export function accountFleet(config: AccountFleetConfig, factory?: SocketFactory
         const deferred = isDeferrable(command) && power() === "off";
         // Lo que no es intención ni enciende antes la VM no se le manda apagada.
         if (!deferred && !INTENT_COMMANDS.has(command) && !WAKES_FIRST.has(command) && power() !== "on" && power() !== "starting") {
-          throw new HostError(canAct() === "outdated" ? "machine_outdated" : canAct() === "asleep" ? "machine_asleep" : "machine_off", label());
+          const refused = new HostError(canAct() === "outdated" ? "machine_outdated" : canAct() === "asleep" ? "machine_asleep" : "machine_off", label());
+          // Lo negó esta guardia local: nada salió hacia el relay.
+          refused.notSent = true;
+          throw refused;
         }
         try {
           const { value, at } = await fleet.raw(envelope);

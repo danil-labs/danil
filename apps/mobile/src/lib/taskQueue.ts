@@ -30,7 +30,7 @@ export type QueueEntry = {
   title: string;
   action: TaskAction;
   attempts: number;
-  /** Cuándo se pidió, en ms. Una petición vieja ya no es lo que la persona quiere. */
+  /** Cuándo se pidió, en ms. Solo se guarda: si las peticiones caducan es una decisión aparte. */
   at?: number;
   /** La mutación ya salió hacia la máquina: sin acuse no se sabe si llegó. */
   sent?: boolean;
@@ -53,12 +53,12 @@ export type Storage = {
 const STORAGE_KEY = "terminus.taskQueue";
 /** Fallos de red al archivar (que es idempotente) antes de dejarlo para otra ocasión. */
 const MAX_ATTEMPTS = 3;
-/** Cuánto vale una petición guardada. Borrar y finalizar caducan antes: son las que no se deshacen. */
-const MAX_AGE: Record<TaskAction, number> = { archive: 7 * 864e5, finish: 864e5, delete: 864e5 };
 /** Cada cuánto se reintenta lo que espera a una máquina dormida o sin respuesta. */
 const WAIT_MS = 30_000;
 /** Lo que la máquina acepta antes de la mutación y no la ejecuta todavía. */
-const BEFORE_MUTATION = new Set(["machine_asleep", "task_status_unavailable"]);
+const BEFORE_MUTATION = new Set(["machine_asleep", "task_status_unavailable", "queue_storage"]);
+/** Rechazos que la máquina da por regla y que dicen que no se ejecutó. Cualquier otro error tras enviar es duda. */
+const REFUSED = new Set(["command_unsupported", "command_not_here", "command_not_allowed", "machine_outdated"]);
 const MUTATIONS = new Set(["set_task_archived", "finish_task", "delete_session"]);
 
 let entries: QueueEntry[] = [];
@@ -97,13 +97,24 @@ function warn(text: string) {
   notify();
 }
 
-async function save() {
-  if (!loaded) return;
-  try {
-    await (await disk()).setItem(STORAGE_KEY, JSON.stringify(entries));
-  } catch {
-    // Sin disco la fila sigue en memoria: se pierde al cerrar, no bloquea.
-  }
+/**
+ * Una sola escritura a la vez, y cada una escribe la fila de ese momento: un
+ * instante viejo nunca pisa una marca `sent` más nueva. Dice si quedó en disco.
+ */
+let writing: Promise<unknown> = Promise.resolve();
+function save(): Promise<boolean> {
+  if (!loaded) return Promise.resolve(true);
+  const write = async () => {
+    try {
+      await (await disk()).setItem(STORAGE_KEY, JSON.stringify(entries));
+      return true;
+    } catch {
+      return false;
+    }
+  };
+  const result = writing.then(write);
+  writing = result;
+  return result;
 }
 
 const verb = (action: TaskAction) => t(`task.queue.verb.${action}` as Key);
@@ -126,8 +137,6 @@ export async function hydrate() {
   // Lo que ya se encoló durante la carga va después de lo guardado, sin duplicar.
   const fresh = entries.filter((e) => !saved.some((s) => sameTask(s, e)));
   entries = [...saved, ...fresh];
-  const now = Date.now();
-  for (const entry of entries) entry.at ??= now;
   for (const entry of [...entries]) {
     if (entry.sent && entry.action !== "archive") {
       drop(entry);
@@ -197,8 +206,12 @@ function tracked(host: Host, entry: QueueEntry): Host {
   const proxy = Object.create(host) as Host;
   proxy.call = async (command, workspace, args) => {
     if (MUTATIONS.has(command) && !entry.sent) {
+      // Sin la marca en disco no se envía una mutación que no se puede repetir: tras un reinicio no sabríamos que salió.
       entry.sent = true;
-      await save();
+      if (!(await save()) && entry.action !== "archive") {
+        entry.sent = false;
+        throw new HostError("queue_storage");
+      }
     }
     return host.call(command, workspace, args);
   };
@@ -206,10 +219,6 @@ function tracked(host: Host, entry: QueueEntry): Host {
 }
 
 async function run(entry: QueueEntry): Promise<Outcome> {
-  if (Date.now() - (entry.at ?? Date.now()) > MAX_AGE[entry.action]) {
-    warn(t("task.queue.expired", { title: label(entry), action: verb(entry.action) }));
-    return "done";
-  }
   const found = lookup(entry.host);
   if (found === "pending") return "wait";
   if (found === "gone") {
@@ -238,9 +247,15 @@ async function run(entry: QueueEntry): Promise<Outcome> {
       warn(message(failure));
       return "done";
     }
-    // La mutación salió y no hubo acuse. Archivar es idempotente: se repite. Lo demás, nunca a ciegas.
-    if (entry.action === "archive") return code === "io" || code === null ? "wait" : (warn(message(failure)), "done");
-    if (code && code !== "io") {
+    // La guardia local negó la llamada: nunca salió. Se quita la marca y se espera.
+    if (failure instanceof HostError && failure.notSent) {
+      entry.sent = false;
+      await save();
+      return "wait";
+    }
+    // La mutación pudo salir y no hubo acuse (o el relay respondió algo que no confirma que no entró). Archivar es idempotente: se repite. Lo demás, nunca a ciegas.
+    if (entry.action === "archive") return code && REFUSED.has(code) ? (warn(message(failure)), "done") : "wait";
+    if (code && REFUSED.has(code)) {
       warn(message(failure));
       return "done";
     }

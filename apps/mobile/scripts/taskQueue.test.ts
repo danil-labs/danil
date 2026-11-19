@@ -116,15 +116,6 @@ test("un reinicio con la mutación ya enviada sin acuse no la repite", async () 
   assert.equal(store.raw().length, 0);
 });
 
-test("una petición caducada no se ejecuta", async () => {
-  __reset({ storage: disk([entry({ at: Date.now() - 2 * 864e5 })]) });
-  const m = machine("m1");
-  bindHosts(() => m.host);
-  await hydrate();
-  assert.equal(m.calls.length, 0);
-  assert.equal(__entries().length, 0);
-});
-
 test("aislamiento: una máquina que espera no frena a otra y cada acción solo toca su máquina y workspace", async () => {
   __reset({ storage: disk([entry({ host: "m1", key: "m1:w:f:t:delete" }), entry({ host: "m2", workspace: "w2", key: "m2:w2:f:t:archive", action: "archive" })]) });
   const m2 = machine("m2");
@@ -143,4 +134,92 @@ test("encolar antes de hidratar no pisa la fila guardada", async () => {
   await hydrate();
   assert.equal(store.raw().length === 2 || __entries().length <= 2, true);
   assert.ok(__entries().concat(store.raw()).some((e) => e.id === "t"), "lo guardado sobrevive");
+});
+
+test("si no se puede guardar la marca de envío, finalizar y borrar no salen y la entrada se conserva", async () => {
+  const initial = [entry()];
+  let value: string | null = JSON.stringify(initial);
+  let failWrites = true;
+  const store: Storage = { getItem: async () => value, setItem: async (_k, v) => { if (failWrites) throw new Error("disk full"); value = v; } };
+  __reset({ storage: store });
+  const m = machine("m1");
+  bindHosts(() => m.host);
+  await hydrate();
+  await __kick();
+  assert.equal(m.mutations().length, 0, "no se envía sin la marca en disco");
+  assert.equal(__entries().length, 1);
+  assert.equal(JSON.parse(value!).length, 1);
+  failWrites = false;
+  await __kick();
+  assert.equal(m.mutations().length, 1, "con disco otra vez, se envía una vez");
+});
+
+test("disco que falla al guardar `sent` + acuse perdido + reinicio: la mutación no se repite", async () => {
+  // Primera vida: el disco guarda la entrada inicial, falla al guardar `sent`: no se manda nada.
+  let value: string | null = JSON.stringify([entry({ action: "finish", key: "m1:w:f:t:finish" })]);
+  let failWrites = true;
+  const store: Storage = { getItem: async () => value, setItem: async (_k, v) => { if (failWrites) throw new Error("x"); value = v; } };
+  __reset({ storage: store });
+  const first = machine("m1", { fail: (c) => (c === "finish_task" ? new HostError("io", "timeout") : null) });
+  bindHosts(() => first.host);
+  await hydrate();
+  await __kick();
+  assert.equal(first.mutations().length, 0);
+  // Segunda vida: disco bien, sale y se pierde el acuse; la marca quedó en disco.
+  failWrites = false;
+  await __kick();
+  assert.equal(first.mutations().length, 1);
+  assert.equal(__entries().length, 0, "dudoso: se avisa y se retira");
+  // Reinicio: lo que quedó en disco no puede volver a ejecutarse.
+  value = JSON.stringify([entry({ action: "finish", key: "m1:w:f:t:finish", sent: true })]);
+  __reset({ storage: store });
+  const second = machine("m1");
+  bindHosts(() => second.host);
+  await hydrate();
+  await __kick();
+  assert.equal(second.calls.length, 0);
+});
+
+test("escrituras serializadas: una instantánea vieja no pisa la marca `sent`", async () => {
+  const writes: string[] = [];
+  let release!: () => void;
+  const gate = new Promise<void>((r) => (release = r));
+  let first = true;
+  const store: Storage = { getItem: async () => null, setItem: async (_k, v) => { if (first) { first = false; await gate; } writes.push(v); } };
+  __reset({ storage: store });
+  const loading = hydrate(); // su escritura queda retenida
+  const m = machine("m1");
+  bindHosts(() => m.host);
+  await new Promise((r) => setTimeout(r, 5));
+  enqueue(m.host, task, "finish");
+  const running = __kick();
+  await new Promise((r) => setTimeout(r, 5));
+  release();
+  await loading;
+  await running;
+  const last = JSON.parse(writes.at(-1)!) as QueueEntry[];
+  assert.equal(last.some((e) => e.sent), false, "al final la entrada ya salió de la fila");
+  assert.ok(writes.some((w) => JSON.parse(w).some((e: QueueEntry) => e.sent)), "la marca se escribió");
+  assert.equal(writes.findIndex((w) => JSON.parse(w).some((e: QueueEntry) => e.sent)) > 0, true);
+});
+
+test("la guardia local (notSent) es preadmisión y espera; un machine_asleep del relay tras enviar es duda", async () => {
+  const local = new HostError("machine_asleep", "m1");
+  local.notSent = true;
+  __reset({ storage: disk() });
+  await hydrate();
+  const a = machine("m1", { fail: (c) => (c === "delete_session" ? local : null) });
+  bindHosts(() => a.host);
+  enqueue(a.host, task, "delete");
+  await __kick();
+  assert.equal(__entries().length, 1, "preadmisión: conserva y espera");
+  assert.equal(__entries()[0].sent, false);
+  __reset({ storage: disk() });
+  await hydrate();
+  const b = machine("m1", { fail: (c) => (c === "delete_session" ? new HostError("machine_asleep", "m1") : null) });
+  bindHosts(() => b.host);
+  enqueue(b.host, task, "delete");
+  await __kick();
+  assert.equal(__entries().length, 0, "sin garantía de que no entró: se avisa la duda y no se repite");
+  assert.equal(b.mutations().length, 1);
 });
