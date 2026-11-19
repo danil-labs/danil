@@ -1,7 +1,9 @@
 import { accessMailto, RADIUS, TEXT } from "@terminus/design";
-import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import { Linking, Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import { useAccount } from "../lib/account";
+import { EMAIL_MARK, type EmptyFleet, aroundEmail, emptyFleet } from "../lib/emptyFleet";
 import type { Host } from "../lib/hosts";
-import { w } from "../lib/i18n";
+import { t, w } from "../lib/i18n";
 import { type Fleet, useMachines } from "../lib/machines";
 import { useTheme } from "./theme";
 
@@ -13,11 +15,13 @@ import { useTheme } from "./theme";
 export function MachineNote({ hosts, fleet }: { hosts: Host[]; fleet: Fleet }) {
   const theme = useTheme();
   const { reloadComputers } = useMachines();
+  const { email } = useAccount();
   if (fleet === "license") return <LicenseNote />;
+  const empty = emptyFleet(fleet, hosts.length, email);
+  if (empty) return <EmptyNote empty={empty} retry={() => void reloadComputers()} />;
   const lines: string[] = [];
   if (fleet === "no_account") lines.push(w("web.computers.no_account"));
   if (fleet === "error") lines.push(w("web.computers.error"));
-  if (fleet === "ok" && !hosts.length) lines.push(w("web.computers.none"));
   for (const host of hosts) {
     if (host.power() === "starting") lines.push(w("shell.machines.waking", { name: host.label }));
     else if (host.power() === "outdated") lines.push(w("web.machines.outdated_action", { name: host.label }));
@@ -30,7 +34,7 @@ export function MachineNote({ hosts, fleet }: { hosts: Host[]; fleet: Fleet }) {
           {line}
         </Text>
       ))}
-      {fleet === "error" || fleet === "no_account" || (fleet === "ok" && !hosts.length) ? (
+      {fleet === "error" || fleet === "no_account" ? (
         <Pressable onPress={() => void reloadComputers()}>
           <Text style={{ color: theme.primary, fontWeight: "600" }}>{w("web.computers.retry")}</Text>
         </Pressable>
@@ -64,6 +68,43 @@ function LicenseNote() {
       ) : null}
       <Pressable testID="license-retry" onPress={retryLicense}>
         <Text style={{ color: theme.primary, fontWeight: "600" }}>{web ? w("danil.license.retry") : w("web.computers.retry")}</Text>
+      </Pressable>
+    </View>
+  );
+}
+
+/**
+ * Sin computadoras (una organización Free no tiene VM): qué hacer. Descargar Danil es lo
+ * primario; quien ya lo tiene lo abre con el correo de esta sesión y vuelve a revisar aquí.
+ */
+function EmptyNote({ empty, retry }: { empty: EmptyFleet; retry: () => void }) {
+  const theme = useTheme();
+  const [before, after] = aroundEmail(t("machines.empty.have_it", { email: EMAIL_MARK }));
+  return (
+    <View style={[styles.note, { backgroundColor: theme.muted }]} testID="machine-note-empty">
+      <Text style={{ color: theme.text, fontSize: TEXT.lead, fontWeight: "600" }}>{t("machines.empty.title")}</Text>
+      <Text style={{ color: theme.textMuted, fontSize: TEXT.ui }}>{t("machines.empty.body")}</Text>
+      <Pressable
+        testID="machines-download"
+        accessibilityRole="link"
+        style={[styles.cta, { backgroundColor: theme.primary }]}
+        onPress={() => void Linking.openURL(empty.download)}
+      >
+        <Text style={{ color: theme.onPrimary, fontWeight: "600" }}>{t("machines.empty.download")}</Text>
+      </Pressable>
+      <Text testID="machines-have-it" style={{ color: theme.textMuted, fontSize: TEXT.ui }}>
+        {empty.email ? (
+          <>
+            {before}
+            <Text style={{ color: theme.text, fontWeight: "600" }}>{empty.email}</Text>
+            {after}
+          </>
+        ) : (
+          t("machines.empty.have_it_no_email")
+        )}
+      </Text>
+      <Pressable testID="machines-retry" onPress={retry}>
+        <Text style={{ color: theme.primary, fontWeight: "600" }}>{w("web.computers.retry")}</Text>
       </Pressable>
     </View>
   );
