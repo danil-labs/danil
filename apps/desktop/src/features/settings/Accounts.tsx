@@ -1,4 +1,4 @@
-import { canonicalAgentId, isFreeRouterAgent, OPENCODE } from "@terminus/tasks";
+import { canonicalAgentId, OPENCODE } from "@terminus/tasks";
 import { marcaDeSuperficie } from "../../lib/surfaces";
 import { groupAccounts } from "@terminus/computers";
 import Check from "lucide-solid/icons/check";
@@ -34,7 +34,6 @@ import {
 import { detalleDe, type Failure, FailureNote, prosaDe } from "../../ui/Failure";
 import { Input } from "../../ui/Input";
 import { MarcaAgente } from "../../ui/icons";
-import { Select } from "../../ui/Select";
 import { Skeleton } from "../../ui/Skeleton";
 import { Terminal, TerminalBody } from "../../ui/Terminal";
 import { machineOf } from "../machines/store";
@@ -54,7 +53,7 @@ import { SettingsBlock, SettingsRow, SettingsSection } from "./layout";
 import { Spinner } from "../../ui/Spinner";
 import { ExternalLink as EnlaceExterno } from "../../ui/ExternalLink";
 import "../../locales/settingsPhrases";
-import { createFreeRouterConsent } from "./free-router-consent";
+import { ModelosGratuitos } from "./FreeRouterRow";
 
 // Las claves en la cuenta de Danil: un trozo aparte, solo para agentes con API key.
 const CredentialsInUse = lazy(() => import("./credentials/AccountCredentials").then((m) => ({ default: m.CredentialsInUse })));
@@ -67,20 +66,15 @@ const ESPERA_ANTES_DE_LA_TERMINAL_MS = 15_000;
  * Vive dentro de la configuración: pregunta por los agentes y se queda con
  * el suyo.
  *
- * `agente` fija cuál y quita el selector interno; lo usa la navegación de
- * `Settings.tsx`, donde cada agente es un destino propio. Sin la prop elige
- * el primero disponible.
- *
- * `enAlta` es el primer arranque: la cuenta se acaba de crear y los
- * controles de gobierno viven en Configuración.
+ * `agente` fija cuál; lo usa `AIProviders.tsx`, donde cada agente es una fila
+ * propia.
  *
  * `soloGratuitos` monta únicamente la activación, sin la lista de cuentas:
  * con qué clave trabajas y que tu material salga de la máquina son dos
  * decisiones distintas.
  */
 export default function Accounts(props: {
-  agente?: string;
-  enAlta?: boolean;
+  agente: string;
   soloGratuitos?: boolean;
   /** Con título, las filas van en su propia sección y «Agregar cuenta» a su derecha. */
   titulo?: string;
@@ -96,7 +90,7 @@ export default function Accounts(props: {
   desplegado?: boolean;
 }) {
   const [agentes, setAgentes] = createSignal<AgentOpt[]>([]);
-  const [agente, setAgente] = createSignal(props.agente ?? "claude");
+  const [agente] = createSignal(props.agente);
   const [lista, setLista] = createSignal<AccountList | null>(null);
   const [cargando, setCargando] = createSignal(true);
   const [estados, setEstados] = createSignal<Record<string, AccountStatus>>({});
@@ -265,9 +259,6 @@ export default function Accounts(props: {
     invoke<AgentOpt[]>("list_providers")
       .then((a) => {
         setAgentes(a);
-        if (props.agente) return;
-        const primero = a.find((x) => x.available);
-        if (primero) setAgente(primero.id);
       })
       .catch((e) => setFallo({ what: t("settings.accounts.error.check_provider"), detail: detalleDe(e) }));
   });
@@ -953,29 +944,6 @@ export default function Accounts(props: {
           cliente salga de esta computadora. Conectar cuenta, que da el
           catálogo completo, es el bloque de abajo y es otra decisión. */}
       <Show when={!sinCuenta()}>
-      <Show when={!props.agente}>
-        <SettingsBlock>
-          <Select
-            class="min-h-8 text-xs"
-            value={agente()}
-            onChange={(e) => setAgente(e.currentTarget.value)}
-          >
-            {/* No se deshabilita el que falta: conectarlo lo instala.
-                Deshabilitarlo dejaría a quien llega con la máquina limpia sin
-                forma de elegir el agente que quiere. Lo que se dice es que
-                va a instalarse: consecuencia, no glosa. */}
-            <For each={agentes().filter((a) => !a.sin_cuenta && !isFreeRouterAgent(a.id))}>
-              {(a) => (
-                <option value={a.id}>
-                  {a.label}
-                  {a.available ? "" : (a.external_install_url ? t("settings.accounts.external_missing") : t("settings.accounts.installs_on_connect"))}
-                </option>
-              )}
-            </For>
-          </Select>
-        </SettingsBlock>
-      </Show>
-
       <Show when={fallo()}>
         {(f) => (
           <SettingsBlock>
@@ -1021,7 +989,7 @@ export default function Accounts(props: {
         </SettingsRow>
       </Show>
 
-      <Show when={claveDe() && !props.enAlta}>
+      <Show when={claveDe()}>
         <Suspense fallback={null}>
           <LocalKeysBanner kinds={["api_key"]} />
         </Suspense>
@@ -1099,47 +1067,45 @@ export default function Accounts(props: {
                             : t("settings.accounts.connect")}
                         </Button>
                       </Show>
-                      <Show when={!(caida() || dudosa()) || !props.enAlta}>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger
-                            aria-label={t("settings.accounts.more_actions", {
-                              name: accountPresentation(a, estado()).name,
-                            })}
-                            title={t("settings.accounts.more_actions", {
-                              name: accountPresentation(a, estado()).name,
-                            })}
-                            class="grid size-6 shrink-0 place-items-center rounded-sm text-neutral-500 outline-none hover:bg-surface-muted hover:text-neutral-950 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-primary data-[expanded]:bg-surface-muted data-[expanded]:text-neutral-950"
-                          >
-                            <Ellipsis size={16} />
-                          </DropdownMenuTrigger>
-                          {/* Configuración es un Dialog en z-[80] que cierra con Esc salvo dentro de data-owns-escape. */}
-                          <DropdownMenuContent class="z-[90]" data-owns-escape>
-                            {/* Reconectar reescribe la credencial en su carpeta; quitar la borra. */}
-                            <Show when={!caida() && !dudosa()}>
-                              <DropdownMenuItem
-                                class="flex items-center gap-2"
-                                disabled={enCurso() !== null}
-                                onSelect={() => void conectar(a.id)}
-                              >
-                                <RefreshCw size={14} aria-hidden />
-                                {t("settings.accounts.reconnect")}
-                              </DropdownMenuItem>
-                            </Show>
-                            <Show when={!caida() && !dudosa() && !props.enAlta}>
-                              <DropdownMenuSeparator />
-                            </Show>
-                            <Show when={!props.enAlta && !a.machines}>
-                              <DropdownMenuItem
-                                class="flex items-center gap-2 text-error-strong"
-                                onSelect={() => setPorQuitar(a.id)}
-                              >
-                                <Trash2 size={14} aria-hidden />
-                                {t("settings.accounts.remove")}
-                              </DropdownMenuItem>
-                            </Show>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </Show>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger
+                          aria-label={t("settings.accounts.more_actions", {
+                            name: accountPresentation(a, estado()).name,
+                          })}
+                          title={t("settings.accounts.more_actions", {
+                            name: accountPresentation(a, estado()).name,
+                          })}
+                          class="grid size-6 shrink-0 place-items-center rounded-sm text-neutral-500 outline-none hover:bg-surface-muted hover:text-neutral-950 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-primary data-[expanded]:bg-surface-muted data-[expanded]:text-neutral-950"
+                        >
+                          <Ellipsis size={16} />
+                        </DropdownMenuTrigger>
+                        {/* Configuración es un Dialog en z-[80] que cierra con Esc salvo dentro de data-owns-escape. */}
+                        <DropdownMenuContent class="z-[90]" data-owns-escape>
+                          {/* Reconectar reescribe la credencial en su carpeta; quitar la borra. */}
+                          <Show when={!caida() && !dudosa()}>
+                            <DropdownMenuItem
+                              class="flex items-center gap-2"
+                              disabled={enCurso() !== null}
+                              onSelect={() => void conectar(a.id)}
+                            >
+                              <RefreshCw size={14} aria-hidden />
+                              {t("settings.accounts.reconnect")}
+                            </DropdownMenuItem>
+                          </Show>
+                          <Show when={!caida() && !dudosa()}>
+                            <DropdownMenuSeparator />
+                          </Show>
+                          <Show when={!a.machines}>
+                            <DropdownMenuItem
+                              class="flex items-center gap-2 text-error-strong"
+                              onSelect={() => setPorQuitar(a.id)}
+                            >
+                              <Trash2 size={14} aria-hidden />
+                              {t("settings.accounts.remove")}
+                            </DropdownMenuItem>
+                          </Show>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </>
                   );
                 }}
@@ -1164,7 +1130,7 @@ export default function Accounts(props: {
                 }
               />
               {capabilities().accountMachines?.({ account: a, provider: agente(), add: agregar, refresh: () => void refrescar() })}
-              <Show when={claveDe() && !props.enAlta}>
+              <Show when={claveDe()}>
                 <Suspense fallback={null}>
                   <CredentialsInUse match={(c) => c.kind === "api_key" && c.config.agent === agente() && c.config.account === a.id} />
                 </Suspense>
@@ -1452,9 +1418,6 @@ export default function Accounts(props: {
   );
 }
 
-/** El aviso de uso acompaña la política versionada del motor. */
-const AVISO_DE_USO = () => t("settings.accounts.free.warning");
-
 /** Un paso de la conexión: el número, qué hacer, y con qué. */
 function Paso(props: { numero: number; titulo: string; children: JSX.Element }) {
   return (
@@ -1467,137 +1430,6 @@ function Paso(props: { numero: number; titulo: string; children: JSX.Element }) 
         {props.children}
       </div>
     </section>
-  );
-}
-
-/**
- * Cuál es ese agente no se escribe aquí: llega por `props.agente`, y quién lo
- * monta lo decide la tabla (`inferencia === "sin_pedir_nada"`, la misma
- * columna que dice por qué hace falta consentimiento). Con el id escrito
- * dentro, este bloque solo serviría a una fila.
- */
-function ModelosGratuitos(props: {
-  nombre: string;
-  marca?: JSX.Element;
-  agente: string;
-  proveedor: string;
-  /**
-   * Trae el CLI que sirve estos modelos, o `undefined` si ya está.
-   *
-   * Corre después de guardar el sí, no antes: se decide aquí que el material
-   * salga de esta computadora, y bajar cien megas antes de aceptar gastaría
-   * el disco por una pregunta que puede contestarse que no.
-   *
-   * Que esté definido es también cómo esta pantalla sabe que falta el
-   * binario, y de eso depende que no diga «activados» sobre algo que no
-   * puede correr.
-   */
-  preparar?: () => Promise<void>;
-  preparando?: boolean;
-  /**
-   * Si el binario no está en la máquina. Es un dato, no se deduce de que
-   * `preparar` esté definido: traerlo es del panel de arriba, que monta el
-   * botón junto al de las otras dos superficies; aquí solo decide qué
-   * afirma la etiqueta.
-   */
-  falta: boolean;
-}) {
-  const consent = createFreeRouterConsent({
-    agente: () => props.agente,
-    despues: () => props.preparar?.(),
-  });
-  const { routeAvailable, aceptado, guardando, fallo, texto, preguntando, preguntar, cambiar } = consent;
-  onMount(() => void consent.cargar());
-
-  return (
-    <>
-    {/* Cancelar cierra y no activa nada, por las tres vías. No deja el
-        interruptor a medias ni escribe un estado intermedio: el sí solo
-        existe si se pulsa Activar. */}
-    {consent.dialogo()}
-    <SettingsRow
-      label={
-        props.nombre || props.marca ? (
-          <span class="flex flex-wrap items-center gap-2">
-            {props.nombre}
-            {props.marca}
-          </span>
-        ) : ""
-      }
-      description={
-      <>
-      {/* Omitir el proveedor o alejar el aviso oculta el destino de los datos al activar. */}
-      <Show
-        when={!aceptado() || props.falta || !texto()?.policy.enabled}
-        fallback={<p class="m-0">{t("settings.accounts.free.warning_short")}</p>}
-      >
-        <p class="m-0">
-          {t("settings.accounts.free.provider", { provider: t("settings.ai_providers.free_detail") })}
-        </p>
-        <p class="m-0">
-          <strong>{AVISO_DE_USO()}</strong>
-        </p>
-      </Show>
-      <Show when={aceptado() && routeAvailable() === false}><p class="m-0">{t("chat.model.router_route_unavailable")}</p></Show>
-      <Show when={!texto()}><p class="m-0">{t("settings.accounts.free.unavailable")}</p></Show>
-      <Show when={!preguntando() && fallo()}>
-        {(f) => (
-          <div class="mt-2">
-            <FailureNote f={{ what: t("settings.accounts.free.error_save"), detail: f() }} />
-          </div>
-        )}
-      </Show>
-      </>
-      }
-    >
-      <Show
-        when={aceptado()}
-        fallback={
-          <Button
-            size="sm"
-            // Sin el texto no se puede pedir el sí, y tampoco se ofrece
-            // activar: aceptar sin ver qué se acepta no es un consentimiento.
-            disabled={guardando() || props.preparando || !texto()?.policy.enabled}
-            onClick={() => void preguntar()}
-          >
-            {props.preparando
-              ? t("settings.accounts.preparing")
-              : t("settings.accounts.free.activate")}
-          </Button>
-        }
-      >
-        <div class="flex items-center gap-2">
-          {/* «Activados» solo cuando de verdad se pueden usar. Con el sí
-              guardado y sin binario, esta etiqueta afirmaría algo que el
-              chat contradice tres clics más allá, donde la superficie sale
-              «no instalado» y no deja empezar una tarea. Consentimiento y
-              binario son dos cosas distintas —no se mezclan al guardarlas,
-              retiraría un sí ya dado— pero lo que la pantalla afirma tiene
-              que ser las dos.
-
-              Lo que falta se nombra y se ofrece: regla de `AGENTS.md` para
-              cuando algo desaparece de la máquina. Nombrarlo se quedó aquí;
-              ofrecerlo está en el bloque de arriba, donde las otras dos
-              superficies lo tienen. */}
-          <Show
-            when={props.falta}
-            fallback={<Badge tone={texto()?.policy.enabled && routeAvailable() ? "success" : "neutral"}>{texto()?.policy.enabled && routeAvailable() ? t("settings.accounts.free.active") : t("settings.accounts.free.consented")}</Badge>}
-          >
-            <Badge tone="danger">{t("settings.accounts.free.missing")}</Badge>
-          </Show>
-          <Button
-            variant="outline"
-            size="compact"
-            disabled={guardando() || props.preparando}
-            onClick={() => cambiar(false)}
-            title={t("settings.accounts.free.deactivate_title")}
-          >
-            {t("settings.accounts.free.deactivate")}
-          </Button>
-        </div>
-      </Show>
-    </SettingsRow>
-    </>
   );
 }
 
