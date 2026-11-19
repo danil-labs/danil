@@ -726,6 +726,7 @@ export default function Accounts(props: {
     setPorQuitar(null);
     try {
       await invoke("remove_account", { provider: agente(), id }, machineOf(id));
+      setConexionFallida((f) => (f?.id === id ? null : f)); // Su panel ofrecería «Reintentar» sobre una cuenta que ya no existe.
       await refrescar();
     } catch (e) {
       setFallo({ what: t("settings.accounts.error.remove"), detail: detalleDe(e) });
@@ -750,16 +751,17 @@ export default function Accounts(props: {
     if (enCurso() !== null || agregando()) return { k: "ocupado" };
     return porque ? { k: "segunda", porque } : addBlockedByExternal(proveedor()) ? { k: "externo" } : null;
   };
-  // PROVISIONAL hasta que se decida Q2: el fallo de un alta o de su login también deja el grupo a la vista.
-  const falloALaVista = () => fallo() !== null || conexionFallida() !== null;
+  // PROVISIONAL hasta que se decida Q2: el panel de un alta cuyo login falló también deja el grupo a la vista.
+  const falloALaVista = () => conexionFallida() !== null;
   // Las tareas en espera de cupo no lo mantienen: sin cuentas, la persona cambia el proveedor de la tarea.
   createEffect(() => props.onEstado?.({
     cuentas: lista() === null ? null : tarjetas.length,
-    vivo: agregando() || enCurso() !== null || instalando() !== null || (pidioExterno() && faltaExterno()) || falloALaVista(),
+    vivo: agregando() || enCurso() !== null || instalando() !== null || (pidioExterno() && faltaExterno()) || fallo() !== null || falloALaVista(),
     bloqueoAlta: bloqueoAlta(),
     falloDeLectura: lista() === null && !cargando() && fallo() !== null,
   }));
-  onMount(() => props.onControl?.({ agregar }));
+  onMount(() => props.onControl?.({ agregar: () => void agregar() }));
+  createEffect(on(agentes, () => !faltaExterno() && setPidioExterno(false))); // Instalado: nada pendiente de «Ya lo instalé».
 
   function cancelarConexion() {
     const id = enCurso();
@@ -773,10 +775,7 @@ export default function Accounts(props: {
 
   const [abierto, setAbierto] = createSignal(untrack(() => props.desplegado ?? true));
   const idCuerpo = createUniqueId();
-  const cuentaActiva = () => {
-    const l = lista();
-    return l?.accounts.find((a) => a.id === l.active);
-  };
+  const cuentaActiva = () => lista()?.accounts.find((a) => a.id === lista()?.active);
 
   const envolver = (cuerpo: JSX.Element, accion?: JSX.Element) =>
     props.titulo === undefined ? (
@@ -828,7 +827,7 @@ export default function Accounts(props: {
         }
       >
         {/* Plegada se oculta y no se desmonta: una conexión en curso vive aquí. */}
-        <div id={idCuerpo} class={cn("min-w-0 pl-6", abierto() ? "grid" : "hidden")}>
+        <div id={idCuerpo} class={cn("@container min-w-0 pl-6", abierto() ? "grid" : "hidden")} data-provider-group={agente()}>
           {cuerpo}
           {props.children}
           {accion}
@@ -986,7 +985,8 @@ export default function Accounts(props: {
         </SettingsBlock>
       </Show>
 
-      <Show when={!cargando() && !hayCuentas() && !props.sinAgregar}>
+      {/* Con la lista caída no se sabe si hay cuentas: ofrecer la primera diría que hay 0. */}
+      <Show when={lista()?.accounts.length === 0 && !props.sinAgregar}>
         <SettingsRow
           label={props.nombre ?? t("settings.accounts.connect_agent", { agent: etiqueta() })}
         >
@@ -1000,9 +1000,9 @@ export default function Accounts(props: {
         </Suspense>
       </Show>
 
-      {/* Por el ancho del grupo, no de la ventana: 1 columna, 2 desde 512 px y 3 desde 768 px. */}
+      {/* Por el ancho del grupo, no de la ventana: 2 columnas desde 512 px y 3 desde 768 px de cuerpo, que mide 24 px más que su contenido (`pl-6`). */}
       <Show when={hayCuentas()}>
-      <div class="@container min-w-0" data-provider-group={agente()}><ul class="m-0 grid list-none grid-cols-1 gap-2 p-0 @lg:grid-cols-2 @3xl:grid-cols-3" data-account-grid="">
+      <ul class="m-0 grid list-none grid-cols-1 gap-2 p-0 @min-[488px]:grid-cols-2 @min-[744px]:grid-cols-3" data-account-grid="">
         <For each={tarjetas}>
           {(a, i) => {
             const activa = () => a.id === lista()?.active || !!a.machines?.some((m) => m.id === lista()?.active);
@@ -1139,7 +1139,7 @@ export default function Accounts(props: {
             );
           }}
         </For>
-      </ul></div>
+      </ul>
       </Show>
 
       {/* Dónde acaba el secreto de este agente, cuando no es el llavero. No

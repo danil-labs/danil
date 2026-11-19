@@ -94,6 +94,8 @@ test("P24: list_accounts failing on entry is unknown, not zero, and says why", a
   assert.equal(s.g.ultimo("claude").cuentas, null);
   assert.ok(s.texto("claude").includes("No se pudieron leer las cuentas."), s.texto("claude"));
   assert.ok(s.texto("claude").includes("disco ilegible"));
+  assert.ok(!/sin cuentas/i.test(s.texto("claude")), "no dice «sin cuentas»");
+  assert.ok(!s.texto("claude").includes("Conectar claude"), "no ofrece la primera cuenta como si hubiera 0");
   sinFallos(s);
 });
 
@@ -224,13 +226,13 @@ test("P42/P43: one account_limits per account, inactive ones of a provider 200 m
   }
   cabecera(s, "claude").click(); await sleep(20);
   cabecera(s, "claude").click(); await sleep(20);
-  const nodo = s.grupo("codex");
+  const nodo = s.cuerpo("codex");
   s.g.ocultar("codex", true); await sleep(20);
   s.g.ocultar("codex", false);
   s.g.reordenar(["codex", "claude"]); await sleep(20);
   s.g.reordenar(["claude", "codex"]);
   await sleep(1000);
   assert.equal(m.de("account_limits").length, 7, "plegar, ocultar y reordenar no vuelven a preguntar");
-  assert.equal(s.grupo("codex"), nodo, "el grupo es el mismo nodo");
+  assert.equal(s.cuerpo("codex"), nodo, "el cuerpo del grupo es el mismo nodo");
   sinFallos(s);
 });

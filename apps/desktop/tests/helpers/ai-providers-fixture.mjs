@@ -98,9 +98,11 @@ export async function montar({ url }, nombre, m, ids, options) {
   const { mountAccounts } = await import(`${url}?v=${nombre}`);
   const g = mountAccounts(root, ids, options);
   const grupo = (id) => root.querySelector(`[data-test-group="${id}"]`);
+  // El cuerpo del grupo que monta `Accounts`: el que lleva `@container` y siempre existe.
+  const cuerpo = (id) => root.querySelector(`[data-provider-group="${id}"]`);
   const boton = (id, texto) => [...(grupo(id)?.querySelectorAll("button") ?? [])].find((b) => b.textContent.trim() === texto || b.getAttribute("aria-label") === texto);
   const enDialogo = (texto) => [...app.w.document.querySelectorAll('[role="dialog"] button')].find((b) => b.textContent.trim() === texto);
-  return { app, root, g, grupo, boton, enDialogo, texto: (id) => grupo(id)?.textContent ?? "", cerrar: () => { g.dispose(); root.remove(); } };
+  return { app, root, g, grupo, cuerpo, boton, enDialogo, texto: (id) => grupo(id)?.textContent ?? "", cerrar: () => { g.dispose(); root.remove(); } };
 }
 
 /** Sondea hasta que `read()` dé algo, con plazo; nunca una espera fija. */

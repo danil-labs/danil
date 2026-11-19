@@ -55,10 +55,46 @@ test("P47: Open in Terminal from the failure panel starts the login in terminal 
   sinFallos(s);
 });
 
+test("P47: Open in Terminal inside the modal cancels the piped login, relaunches it in terminal mode and closes the modal", async () => {
+  const m = motor();
+  m.provs.codex = { cuentas: [] };
+  const s = await montar(fixture, "p47-modal", m, ["codex"]);
+  // La Terminal se ofrece a los 15 s sin respuesta; aquí ese plazo es inmediato.
+  const original = s.app.w.setTimeout;
+  s.app.w.setTimeout = (fn, ms, ...rest) => original(fn, ms === 15_000 ? 0 : ms, ...rest);
+  const id = await altaConModal(s, m, "codex");
+  (await waitFor(() => enDialogo(s, "Abrir en la Terminal"), "Terminal en el modal")).click();
+  await waitFor(() => !dialogo(s), "modal cerrado");
+  assert.deepEqual(m.de("cancel_login").map((c) => c.args), [{ id }]);
+  assert.deepEqual(m.de("login_account").at(-1).args, { provider: "codex", id, mode: "terminal" });
+  s.app.w.setTimeout = original;
+  sinFallos(s);
+});
+
+test("removing the last account after its reconnect failed leaves nothing alive and no Retry", async () => {
+  const m = motor();
+  m.provs.claude = { limits: false, cuentas: [cuenta("c1")], active: "c1", status: { c1: { id: "c1", authenticated: false, detail: "" } } };
+  const s = await montar(fixture, "p1b", m, ["claude"]);
+  const li = () => s.root.querySelector("[data-account-grid] > li");
+  (await waitFor(() => boton(li(), "Reconectar"), "Reconectar")).click();
+  await waitFor(() => m.de("login_account").length === 1 && dialogo(s), "modal");
+  s.app.emit("account", { account: "c1", kind: "done", text: "login failed: 1" });
+  await waitFor(() => s.texto("claude").includes("login failed: 1"), "panel del fallo");
+  assert.equal(vivo(s, "claude"), true);
+  (await quitarCuenta(s, "c1@ejemplo.test")).click();
+  await waitFor(() => s.g.ultimo("claude").cuentas === 0, "0 cuentas");
+  assert.equal(vivo(s, "claude"), false, "sin cuentas ni nada en curso");
+  assert.ok(!boton(s.grupo("claude"), "Reintentar"), "sin «Reintentar» sobre una cuenta que ya no existe");
+  assert.ok(!s.texto("claude").includes("login failed: 1"));
+  sinFallos(s);
+});
+
 test("P30: install_provider failing keeps the group alive with the install failure", async () => {
   const m = motor();
   m.provs.grok = { cuentas: [], available: false };
   m.on.install_provider = () => Promise.reject({ what: "disco", detail: "ENOSPC" });
+  // Sin el CLI el login no llega a nada; el fixture no lo da por bueno.
+  m.on.login_account = () => new Promise(() => {});
   const s = await montar(fixture, "p30", m, ["grok"]);
   await waitFor(() => s.g.ultimo("grok")?.cuentas === 0, "0 cuentas");
   s.g.agregar("grok");
@@ -108,13 +144,14 @@ test("P34: collapsing the group with the login open keeps the modal, cancels not
   m.provs.claude = { cuentas: [] };
   const s = await montar(fixture, "p34", m, ["claude"]);
   await altaConModal(s, m, "claude");
-  const nodo = s.grupo("claude");
+  const nodo = s.cuerpo("claude");
+  assert.ok(nodo, "el cuerpo existe con 0 cuentas");
   cabecera(s, "claude").click();
   await sleep(50);
   assert.equal(cabecera(s, "claude").getAttribute("aria-expanded"), "false");
   assert.ok(dialogo(s), "el modal sigue");
   assert.equal(m.de("cancel_login").length, 0);
-  assert.equal(s.grupo("claude"), nodo);
+  assert.equal(s.cuerpo("claude"), nodo);
   sinFallos(s);
 });
 
@@ -127,7 +164,8 @@ for (const antes of [true, false]) {
     m.on.add_account = (args) => pausa.promise.then(() => { m.on.add_account = undefined; return m.responses.add_account(args); });
     const s = await montar(fixture, `p35-${antes}`, m, ["claude", "codex"]);
     await waitFor(() => s.g.ultimo("codex")?.cuentas === 0, "0 cuentas");
-    const nodo = s.grupo("codex");
+    const nodo = s.cuerpo("codex");
+    assert.ok(nodo, "el cuerpo existe con 0 cuentas");
     s.g.agregar("codex");
     if (antes) pausa.resolve();
     s.g.ocultar("codex", true);
@@ -135,7 +173,7 @@ for (const antes of [true, false]) {
     if (!antes) pausa.resolve();
     await waitFor(() => m.de("login_account", "codex").length === 1 && dialogo(s), "login y modal");
     assert.equal(m.de("cancel_login").length, 0);
-    assert.equal(s.grupo("codex"), nodo, "mismo nodo");
+    assert.equal(s.cuerpo("codex"), nodo, "mismo nodo");
     assert.ok(dialogo(s).textContent.includes("codex"), "el modal es del mismo proveedor");
     sinFallos(s);
   });
@@ -175,7 +213,8 @@ async function quitarCuenta(s, quien) {
   return waitFor(() => boton(li(), "Sí, quitar"), "Sí, quitar");
 }
 
-test("P38: removing the only account leaves the provider at 0 with nothing alive (the focus waits for Q1)", async () => {
+// El foco en «Agregar cuenta» lo implementa T3: ese botón vive en el selector de la pantalla.
+test("P38: removing the only account leaves the provider at 0 with nothing alive", async () => {
   const m = motor();
   m.provs.claude = { cuentas: [cuenta("c1")], active: "c1" };
   const s = await montar(fixture, "p38", m, ["claude"]);
