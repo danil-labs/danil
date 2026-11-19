@@ -997,9 +997,9 @@ export default function Accounts(props: {
         </Suspense>
       </Show>
 
-      {/* Por el ancho del grupo, no de la ventana: tarjetas de 28rem como mínimo (la tarjeta caída con su correo completo mide 444 px), 2 columnas desde 904 px y 3 desde 1360 px de lista; nunca más de 3. La lista recupera la sangría `pl-6` del cuerpo (`-ml-6`) para dejar margen sobre esos cortes. */}
+      {/* Por el ancho del grupo, no de la ventana: tarjetas de 24rem como mínimo (la tarjeta caída cabe con sus acciones completas desde 266 px; su correo completo pide 444 y se trunca con `title` si no cabe), 2 columnas desde 776 px y 3 desde 1168 px de lista; nunca más de 3. La lista recupera la sangría `pl-6` del cuerpo (`-ml-6`) para dejar margen sobre esos cortes. */}
       <Show when={hayCuentas()}>
-      <ul class="m-0 -ml-6 grid list-none grid-cols-[repeat(auto-fit,minmax(min(100%,max(28rem,calc((100%_-_1rem)/3_-_1px))),1fr))] gap-2 p-0" data-account-grid="">
+      <ul class="m-0 -ml-6 grid list-none grid-cols-[repeat(auto-fit,minmax(min(100%,max(24rem,calc((100%_-_1rem)/3_-_1px))),1fr))] gap-2 p-0" data-account-grid="">
         <For each={tarjetas}>
           {(a, i) => {
             const activa = () => a.id === lista()?.active || !!a.machines?.some((m) => m.id === lista()?.active);
