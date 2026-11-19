@@ -1906,7 +1906,8 @@ export default function App() {
     const activo = a.workspaces.find((w) => w.id === a.active);
   // Sin workspace se abre el alta. Si ya estaba abierta no se toca: el paso 1
   // acaba de crear uno, y volver a mirar aquí la cerraría a mitad.
-    if (a.active === null) setAlta((x) => x ?? "primera");
+  // En la web el workspace lo crea la plataforma al darse de alta: la ventana espera sin pedirlo.
+    if (a.active === null && capabilities().localSetup) setAlta((x) => x ?? "primera");
     const transition = workspaceContext.beginTransition(a);
   // La lengua es del workspace, y cambia al cambiar de cliente: eso es lo que
   // se pidió, no un efecto secundario. `null` hereda la de la máquina.

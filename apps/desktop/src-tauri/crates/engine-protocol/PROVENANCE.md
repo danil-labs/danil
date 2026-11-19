@@ -302,3 +302,15 @@ them answers that the command is unknown, and only that feature turns off.
   with `not_modified` for the version the window already has; the task bar of
   this machine reads `state_resource tasks` (danil-engine#406, dev `a4ae143f`),
   SHA-256 `9cef09b72f6bbf2d7129bb93994959c56b15b1725d165d8f8dd0d472195d2cff`.
+- `account_workspace_v1.json`: `create_account_workspace` and `account` on `list_workspaces` rows (danil-engine#455), copied from danil-engine dev `8926eb0a`,
+  SHA-256 `ee559348f09454bd3dd702eeff5cea2a259cc509ce6f3841a8bfe17edc3f2444`.
+- `account_requests_v1.json`: the CLI route `account request`, `account_request_take`, `account_request_settle` and the `account.request` event (danil-engine#471, #473), copied from danil-engine dev `e46f5d7c`,
+  SHA-256 `7d9b6eb4a020104a5798cff816f7b14f27d262d46d2266ec3e03c9c5c542d3de`.
+- `account_transfer_v1.json`: `reseal_account_workspace` (danil-engine#470), copied from danil-engine dev `e46f5d7c`,
+  SHA-256 `2a914059b1b5a04700b48511f6caa355ccb2ea2e2c57533b93cb50a5a9f5c5d9`.
+- `free_router_platform_v1.json`: the TW#72 platform pass: `set_free_router_union`, `free_router_binding`, `prove_free_router_binding`, `set_free_router_grant`, `clear_free_router_grant`, `release_free_router_owner` (danil-engine#468), copied from danil-engine dev `e46f5d7c`,
+  SHA-256 `477ab9298ea8e74717d280f04385fc464d09bbd045ce73b23494392884f8a7ca`.
+- `account_adoption_v1.json`: `adoption_candidates` and `adopt_account_workspace` (danil-engine#469), copied from danil-engine dev `2cf5e5bb`,
+  SHA-256 `ab06a5f1a733a8a1e9533151db8e44b3de35cbaec21119a122ed161e1ba1f976`.
+- `account_adoption_proof_v1.json`: `adoption_proof`, the possession proof for `POST /v1/workspaces/adopt` (A17), (danil-engine#481), copied from danil-engine dev `40f5bc9c`,
+  SHA-256 `3c957da1463df967f551f8f82746e99158511bdf7ee2787f587fd9564f36d5d6`.

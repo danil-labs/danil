@@ -46,12 +46,15 @@ export function createSessionContexts(invoke: ContextInvoke, changed: () => void
       notify();
     } catch { if (read === epoch) { ready = true; notify(); } }
   }
+  // Crear y adoptar exigen la llave de quien llama (Rust lo rechaza sin ella): inventarla aquí rompería sus reintentos.
+  const callerKey = (method: string, path: string, key?: string) =>
+    key || !(method === "POST" && (path === "/v1/workspaces" || path === "/v1/workspaces/adopt")) ? { idempotencyKey: key ?? crypto.randomUUID() } : {};
   const send = async (context: string, method: string, path: string, body?: unknown, idempotencyKey?: string, optionalRoute = false): Promise<ContextReply> => {
     if (unsupported) throw { detail: "session_echo_mismatch" };
     const group = groups?.find((g) => g.context_id === context);
     if (!group) throw { detail: "session_not_in_set" };
     try {
-      const reply = await invoke<ContextReply>("danil_edge_fetch", { method, path, context, ...(body === undefined ? {} : { body }), ...(method === "GET" ? {} : { idempotencyKey: idempotencyKey ?? crypto.randomUUID() }) });
+      const reply = await invoke<ContextReply>("danil_edge_fetch", { method, path, context, ...(body === undefined ? {} : { body }), ...(method === "GET" ? {} : callerKey(method, path, idempotencyKey)) });
       if (!groups?.some((g) => g.context_id === context)) throw { detail: "session_not_in_set" };
       if (empty.note(context, reply)) notify();
       return empty.reason(context) ? { ...reply, body: undefined, empty_reason: empty.reason(context) } : reply;

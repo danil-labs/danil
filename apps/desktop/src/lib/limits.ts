@@ -72,9 +72,9 @@ export function legible(q: Query | undefined): Read | undefined {
   return undefined;
 }
 
-/** Lo que queda, redondeado. Rust reporta lo **gastado**; se muestra al revés. */
+/** Lo que queda; Rust da lo gastado. Si `resets_at` ya pasó, la ventana volvió a empezar: entera. */
 export function left(w: Window): number {
-  return Math.max(0, Math.min(100, Math.round(100 - w.used_pct)));
+  return w.resets_at !== null && w.resets_at <= Date.now() ? 100 : Math.max(0, Math.min(100, Math.round(100 - w.used_pct)));
 }
 
 /**

@@ -26,9 +26,6 @@ export type ActiveCard = AccountsByAgent & { cuenta: Account };
 
 export const usageKey = (agent: string, id: string) => `${agent}\u0000${id}`;
 
-// Forzar una consulta por cada turno corto puede agotar el límite del proveedor.
-const AUTO_REFRESH_MIN_MS = 60_000;
-
 // El reloj consulta el caché; forzarlo cada cinco minutos provoca límites del proveedor.
 const REFRESH_INTERVAL_MS = 5 * 60_000;
 
@@ -47,7 +44,6 @@ export function createUsage(props: {
   const [statuses, setStatuses] = createSignal<Record<string, AccountStatus>>({});
   const [inProgress, setInProgress] = createSignal<Record<string, boolean>>({});
 
-  const lastForcedRefresh: Record<string, number> = {};
   let running = props.busy();
 
   const accountLabel = (id: string) =>
@@ -84,7 +80,6 @@ export function createUsage(props: {
   // Consultar las cuentas a la vez puede hacer que el proveedor limite todas las solicitudes.
   async function querySequentially(pairs: [string, string][], force: boolean) {
     for (const [a, id] of pairs) {
-      if (force) lastForcedRefresh[usageKey(a, id)] = Date.now();
       await queryAccount(a, id, force);
     }
   }
@@ -178,14 +173,8 @@ export function createUsage(props: {
       const agent = props.agent();
       const id = accountsByAgent().find((p) => p.agent === agent)?.active;
       if (!id) return;
-      // Claude publica el consumo durante el turno; forzar aquí gastaría una consulta sin dato nuevo.
-      if (agent === "claude") {
-        void querySequentially([[agent, id]], false);
-        return;
-      }
-      const from = lastForcedRefresh[usageKey(agent, id)] ?? 0;
-      if (Date.now() - from < AUTO_REFRESH_MIN_MS) return;
-      void querySequentially([[agent, id]], true);
+      // Forzar aquí salta el caché y consulta al proveedor en cada turno: da 429.
+      void querySequentially([[agent, id]], false);
     }),
   );
 

@@ -15,7 +15,7 @@ import { browser, takeSettingsParam } from "./window-browser";
 import { windowContext } from "./window-context";
 
 declare const __TERMINUS_VERSION__: string;
-type Base = { contextMachines?: (context: string) => ReturnType<typeof machinesClient>; machines: ReturnType<typeof machinesClient>; relayOrigin: string; permits: (name: string) => boolean; organizations?: Capabilities["organizations"]; promo?: Capabilities["webPromo"]; groupAccount?: Capabilities["groupAccount"]; onUnauthorized: () => void; profile: AccountProfileSource; services: Pick<Capabilities, "webWorkspaces" | "danilCredits">; onUnavailable: () => void; };
+type Base = { contextMachines?: (context: string) => ReturnType<typeof machinesClient>; machines: ReturnType<typeof machinesClient>; relayOrigin: string; permits: (name: string) => boolean; organizations?: Capabilities["organizations"]; promo?: Capabilities["webPromo"]; groupAccount?: Capabilities["groupAccount"]; reauth?: Capabilities["webReauth"]; preparing?: () => boolean; onUnauthorized: () => void; profile: AccountProfileSource; services: Pick<Capabilities, "webWorkspaces" | "danilCredits">; onUnavailable: () => void; };
 const Picker = lazy(() => import("../features/machines/MachinePicker").then(m => ({ default: m.MachinePicker })));
 const AccountMachines = lazy(() => import("../features/machines/AccountMachines"));
 /** Another machine's slice changed: the window rereads just that. */
@@ -171,7 +171,7 @@ export function mountWindow(base: Base, mounted: Mounted) {
     },
     accountComputers: { list: async () => { const answer = await scope.client(scope.current()?.context).list(); return answer.kind === "ok" ? { kind: "ok", value: answer.value.map(machineToComputer) } : answer.kind === "unavailable" ? { kind: "error", status: answer.status } : answer; }, onRenamed: () => {}, subscribe: changed => { window.addEventListener("harness:machines", changed); return () => window.removeEventListener("harness:machines", changed); } },
     webAccounts: mounted.webAccounts,
-    webRailSource: scope.source, webPromo: base.promo, groupAccount: base.groupAccount,
+    webRailSource: scope.source, webPromo: base.promo, groupAccount: base.groupAccount, webReauth: base.reauth,
     retryMachines: () => { fleet.retry(); void refresh(); },
   });
   installIpc(window, createWebTransport(scope.engine(active), __TERMINUS_VERSION__, browser));
@@ -183,7 +183,7 @@ export function mountWindow(base: Base, mounted: Mounted) {
     if (stopped) disposeApp();
   }).catch(base.onUnavailable);
   window.addEventListener("pagehide", () => fleet.close(), { once: true });
-  void Promise.all([import("solid-js/web"), import("./SyncNote"), import("./UpdateNotice"), import("./phrases")]).then(([{ render }, { SyncNote }, { UpdateNotice }]) => {
+  void Promise.all([import("solid-js/web"), import("./SyncNote"), import("./UpdateNotice"), import("./ReauthNote"), import("./phrases")]).then(([{ render }, { SyncNote }, { UpdateNotice }, { ReauthNote, WorkspaceNote }]) => {
     if (stopped) return;
     const layer = document.createElement("div");
     noticeLayer = layer;
@@ -191,7 +191,7 @@ export function mountWindow(base: Base, mounted: Mounted) {
     disposeNotice = render(() => (
       <>
         <SyncNote machines={machines} unavailable={missing()} />
-        <UpdateNotice />
+        <UpdateNotice /><ReauthNote reauth={base.reauth} /><WorkspaceNote preparing={base.preparing} />
       </>
     ), layer);
   });

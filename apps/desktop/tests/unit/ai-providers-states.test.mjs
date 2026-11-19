@@ -43,11 +43,15 @@ test("while the machine has not answered the panel says it is loading", async ()
   assert.deepEqual(app.failures, []);
 });
 
-test("a machine with no agents shows the ones Danil can install, each with its own section", async () => {
+test("a machine with no agents offers the ones Danil can install in Add account", async () => {
   const { app, panel, text } = await open("ai-providers-none", []);
   assert.ok(panel().querySelector('[data-ai-providers="supported"]'), panel()?.innerHTML.slice(0, 300));
   assert.ok(text().includes("Esta máquina todavía no tiene asistentes de IA instalados."));
-  for (const name of ["Claude Code", "Codex (ChatGPT)", "Gemini / Antigravity", "Grok"]) assert.ok(text().includes(name), name);
+  // Desde 2026-11-19 (T3) los nombres salen en el selector de «Agregar cuenta», no como secciones.
+  panel().querySelector("[data-add-account]").dispatchEvent(new app.w.KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }));
+  await sleep(300);
+  const menu = app.w.document.querySelector("[data-add-account-menu]")?.textContent ?? "";
+  for (const name of ["Claude Code", "Codex (ChatGPT)", "Gemini / Antigravity", "Grok"]) assert.ok(menu.includes(name), name);
   assert.deepEqual(app.failures, []);
 });
 

@@ -2,18 +2,18 @@ import { machinesClient } from '@terminus/computers';
 import { createRoot, createSignal, For, Show } from 'solid-js';
 import { render } from 'solid-js/web';
 import { forgetMachineNames } from '../features/machines/known-names';
-import PromoRedeem from '../features/shell/PromoRedeem';
 import { aplicarLengua, t } from '../lib/i18n';
 import { setShellCacheScope } from '../lib/shellCache';
 import { seguirElTema } from '../lib/theme';
 import { Button } from '../ui/Button';
 import { ToastStack } from '../ui/Toast';
+import { SessionLoading } from './auth/SessionLoading';
 import { signInError, WorkosAuthPage } from './auth/workos';
-import { organizationSession } from './organization-session';
+import { webOrganizations } from './organization-context';
 import { activeGroupCredits, contextMachines, type PlatformProfile, PlatformSessionError, type PlatformWorkspace, platformSession, platformTransport } from './platform-session';
 import { type CapabilitiesSnapshot, readCapabilities, supports } from './service-capabilities';
 import type { WebSessionDeployment } from './session-config';
-import { clearWebCaches, sessionStorageScope } from './session-storage';
+import { awaitingWorkspace, clearWebCaches, readWorkspaces, retryWait, sessionExit, workspaceCache } from './session-wait';
 import { UpdateNotice } from './UpdateNotice';
 import { mountWindow } from './window';
 import './phrases';
@@ -22,7 +22,7 @@ import { sessionStartup } from './startup-reader';
 declare const __DANIL_WEB_RELAY_ORIGINS__: string[];
 const FIRST_RETRY_MS = 1000;
 const POLL_MAX_MS = 30_000;
-/** Membresía y workspace pueden tardar minutos en llegar al central tras crear la organización. */
+/** Identity puede no contestar aún al primer montaje; la ventana monta en cuanto da el perfil. */
 const FIRST_MOUNT_ATTEMPTS = 8;
 const FIRST_MOUNT_TRANSIENT = [403, 404, 503];
 export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
@@ -39,16 +39,20 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
     const [busy, setBusy] = createSignal(false);
     const [uncertain, setUncertain] = createSignal(false);
     const [error, setError] = createSignal('');
+    // Identity aún no dio el perfil y se reintenta solo: sigue la carga, no una pantalla vacía.
     const [preparing, setPreparing] = createSignal(false);
+    const [reloading, setReloading] = createSignal(false);
     const [signedOut, setSignedOut] = createSignal(false);
-    // Hasta que identity contesta, la ventana muestra la pantalla de entrada original esperando.
+    const [preparingWorkspace, setPreparingWorkspace] = createSignal(false);
+    // Hasta que identity contesta se ve la carga; la entrada solo sin sesión o con el error del retorno.
     const [identified, setIdentified] = createSignal(false);
     const returnError = signInError(window.location.search);
     let windowApp: ReturnType<typeof mountWindow> | undefined;
     let disposeGate: (() => void) | undefined;
     let person: PlatformProfile | undefined;
     let stopped = false;
-    let cache: ReturnType<typeof sessionStorageScope> | undefined;
+    const gone = () => stopped || signedOut() || exit.leaving();
+    let cache: ReturnType<typeof workspaceCache> | undefined;
     let mountedBefore = false;
     let firstMountAttempts = 0;
     let timer: ReturnType<typeof setTimeout> | undefined;
@@ -61,25 +65,23 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
       windowApp = undefined;
       disposeGate?.();
       root.replaceChildren();
-      disposeGate = render(() => <Show when={identified() && !signedOut()} fallback={<><ToastStack><UpdateNotice /></ToastStack><WorkosAuthPage loginUrl={api.loginUrl(home)} busy={!signedOut()} error={returnError} /></>}><main class="flex h-full flex-col gap-4 overflow-y-auto bg-bg p-10 text-neutral-950" data-web-gate="">
+      disposeGate = render(() => <Show when={identified() && !signedOut() && !preparing() && !reloading()} fallback={<><ToastStack><UpdateNotice /></ToastStack><Show when={!reloading() && (signedOut() || returnError)} fallback={<SessionLoading onSignOut={preparing() && !reloading() ? () => void exit.leave() : undefined} />}><WorkosAuthPage loginUrl={api.loginUrl(home)} error={returnError} /></Show></>}><main class="flex h-full flex-col gap-4 overflow-y-auto bg-bg p-10 text-neutral-950" data-web-gate="">
         <ToastStack><UpdateNotice /></ToastStack>
         <h1 class="m-0 font-display text-lead font-bold">{t('common.brand_name')}</h1>
         <Show when={busy()}><p role="status">{t('web.auth.waiting')}</p></Show>
-        <Show when={preparing()}><p role="status" data-web-preparing="">{t('web.platform.preparing')}</p></Show>
         <Show when={error()}><p role="alert">{t(error())}</p><Button disabled={busy()} onClick={() => void load()}>{t('web.computers.retry')}</Button></Show>
         <Show when={!signedOut() && !busy()}>
           <Show when={orgNeeded() || noWorkspace() || error()}>
             <For each={(() => { const s = orgState(); return s.kind === 'ready' ? s.items : []; })()}>{org => <Button variant="secondary" data-web-organization={org.id} aria-pressed={(() => { const s = orgState(); return s.kind === 'ready' && s.active === org.id; })()} onClick={() => void organizations.choose(org.id)}>{org.name}</Button>}</For>
           </Show>
           <Show when={!error()}>
-            <p>{t('web.platform.empty')}</p>
             <For each={rows()}>{row => <Button onClick={() => void choose(row.id)}>{row.name}</Button>}</For>
           </Show>
-          <PromoRedeem redeem={redeemPromo} />
-          <Button variant="ghost" data-web-sign-out="" onClick={() => void logout()}>{t('web.platform.sign_out')}</Button>
+          <Button variant="ghost" data-web-sign-out="" onClick={() => void exit.leave()}>{t('web.platform.sign_out')}</Button>
         </Show>
       </main></Show>, root);
     }
+    function reload() { setReloading(true); gate(); stopped = true; stopServices(); window.location.assign(home); } // La recarga del sistema: solo la carga, sin botones; `gate` cierra y pinta en el mismo turno.
     function expired() {
       if (stopped || signedOut()) return;
       stopServices();
@@ -96,7 +98,7 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
       try { return await action(); }
       catch (cause) {
         if (cause instanceof PlatformSessionError && cause.status === 401) expired();
-        organizations.report(cause);
+        organization.report(cause);
         throw cause;
       }
     }
@@ -107,67 +109,67 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
     const startup = sessionStartup(api, transport);
     const selection = startup.selection;
     const machines = machinesClient({ endpoint: `${options.origin}/v1`, transport, relayOrigins: __DANIL_WEB_RELAY_ORIGINS__ });
-    const organization = organizationSession(transport, lifetime.signal, () => {
-      stopped = true; stopServices(); windowApp?.close(); window.location.assign(home);
-    });
+    const organization = webOrganizations(transport, { signal: lifetime.signal, store: window.sessionStorage, signIn: () => window.location.assign(api.loginUrl(home)), redeem: (code, key) => authorized(() => api.redeemPromo(code, key)), onSelected: () => {
+      // La organización de una cuenta nueva llega con la ventana montada: se relee `me` y, al quedar activa, la página recarga una sola vez.
+      if (mountedBefore && waiting()) { wait = FIRST_RETRY_MS; later(0); } else reload();
+    } });
     const organizations = organization.selection;
     const [orgNeeded, setOrgNeeded] = createSignal(false);
     const [orgState, setOrgState] = createSignal(organizations.state());
     const [noWorkspace, setNoWorkspace] = createSignal(false);
     const unsubscribeOrganizations = organizations.subscribe(() => { if (!stopped && !lifetime.signal.aborted) { setOrgNeeded(organizations.needed()); setOrgState(organizations.state()); } });
-    // Una organización sin workspace activo (`me` da 403 `workspace_selection_required` o `workspace: null`):
-    // el estado vacío con sus workspaces, el selector de organización y cerrar sesión; nunca «Reintentar» sin salida.
+    // `me` da 403 `workspace_selection_required`: elegir entre sus workspaces; sin ninguno sigue la carga y se reintenta.
     async function withoutWorkspace() {
       organization.load(startup.reader()?.organizations);
       const listed = await (startup.reader()?.workspaces() ?? api.workspaces()).catch(() => [] as PlatformWorkspace[]);
-      if (stopped || signedOut()) return;
-      setRows(listed);
-      setPreparing(false);
-      setError('');
-      setNoWorkspace(true);
-      gate();
+      if (gone()) return;
+      setRows(listed); setPreparing(listed.length === 0); setError(''); setNoWorkspace(true);
+      gate(); if (listed.length === 0) later();
     }
-    /** Primer montaje: la membresía o el workspace aún no llegó; se espera en vez de enseñar un 403 fatal. */
-    function prepare() {
-      firstMountAttempts += 1;
-      setPreparing(true);
-      setError('');
-      gate();
-      later();
-    }
+    const waiting = () => awaitingWorkspace(person, permits('workspaces'), rows().length);
+    const unlisted = (cause: unknown) => { wait = retryWait(cause, wait); organization.report(cause); };
+    /** Primer montaje: identity aún no da el perfil; sigue la carga en vez de enseñar un 403 fatal. */
+    function prepare() { firstMountAttempts += 1; const shown = preparing() && !windowApp; setPreparing(true); setError(''); if (!shown) gate(); later(); }
     function later(delay = wait) {
       clearTimeout(timer);
-      if (stopped || signedOut()) return;
+      if (gone()) return;
+      setPreparingWorkspace(mountedBefore && waiting());
       timer = setTimeout(() => void refreshServices(), delay);
       wait = Math.min(wait * 2, POLL_MAX_MS);
     }
     async function refreshServices() {
-      if (stopped || signedOut()) return;
+      if (gone()) return;
       if (busy() || refreshing) { later(); return; }
       if (!mountedBefore) { await load(); return; }
       refreshing = true;
       let ready = false;
       try {
-        if (startup.refreshDue()) {
+        if (startup.refreshDue() || waiting()) {
           const [capabilities, fresh] = await Promise.all([readCapabilities(transport), api.me()]);
-          if (stopped || signedOut()) return;
+          if (gone()) return;
           setCaps(capabilities);
-          if (person && (fresh.id !== person.id || fresh.workspace !== person.workspace || fresh.active_organization_id !== person.active_organization_id)) { gate(); window.location.assign(home); return; }
+          const arrived = person?.workspace === null && fresh.workspace !== null;
+          // Los créditos se atan a la organización al montar: cambiarla recarga una vez.
+          if (person && (fresh.id !== person.id || (!arrived && fresh.workspace !== person.workspace) || fresh.active_organization_id !== person.active_organization_id)) { reload(); return; }
           person = fresh;
-          if (permits('workspaces')) { const listed = await api.workspaces(); if (stopped || signedOut()) return; setRows(listed); }
+          if (permits('workspaces') && fresh.workspace !== null) {
+            const listed = await readWorkspaces(() => api.workspaces(), rows(), unlisted);
+            if (gone()) return; setRows(listed);
+          }
+          if (arrived && fresh.workspace !== null) { setActive(fresh.workspace); cache?.rescope(fresh.workspace); }
           startup.checked();
-        } else if (!permits('machines')) { const capabilities = await readCapabilities(transport); if (stopped || signedOut()) return; setCaps(capabilities); }
-        if (!stopped && !signedOut()) ready = await windowApp?.refresh() ?? false;
+        } else if (!permits('machines')) { const capabilities = await readCapabilities(transport); if (gone()) return; setCaps(capabilities); }
+        if (!gone()) ready = await windowApp?.refresh() ?? false;
       } catch (cause) {
         if (cause instanceof PlatformSessionError && cause.status === 401) expired();
-        else if (cause instanceof PlatformSessionError && cause.retryAfter) wait = Math.max(wait, Number(cause.retryAfter) * 1000 || wait);
+        else wait = retryWait(cause, wait);
       } finally {
         refreshing = false;
-        later(ready ? Math.min(POLL_MAX_MS, startup.refreshIn()) : wait);
+        later(ready && !waiting() ? Math.min(POLL_MAX_MS, startup.refreshIn()) : wait);
       }
     }
     async function run(action: () => Promise<void>, firstMountRetry = false) {
-      if (busy() || stopped || signedOut()) return;
+      if (busy() || gone()) return;
       setBusy(true);
       setError('');
       try { await action(); }
@@ -176,8 +178,8 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
         else if (cause instanceof PlatformSessionError && cause.code === 'workspace_selection_required') await withoutWorkspace();
         else if (firstMountRetry && !mountedBefore && cause instanceof PlatformSessionError
           && FIRST_MOUNT_TRANSIENT.includes(cause.status) && firstMountAttempts < FIRST_MOUNT_ATTEMPTS) prepare();
-        else if (!stopped && !signedOut() && organizations.report(cause)) gate();
-        else if (!stopped && !signedOut()) {
+        else if (!gone() && organization.report(cause)) gate();
+        else if (!gone()) {
           setPreparing(false);
           setError(cause instanceof PlatformSessionError && cause.status === 403 ? 'web.platform.denied' : 'web.platform.unavailable'); gate();
           if (!(cause instanceof PlatformSessionError) || [404, 408, 429, 501, 503].includes(cause.status)) later();
@@ -194,26 +196,24 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
       gate();
       await run(async () => { await selection.choose(id); window.location.assign(home); });
     }
-    const redeemPromo = (code: string, key: string) => authorized(() => api.redeemPromo(code, key));
-    async function logout() { await run(async () => { await api.logout(); forgetMachineNames(); expired(); }); }
+    const exit = sessionExit({
+      closed: () => stopped || signedOut(), cancel: () => clearTimeout(timer), logout: () => api.logout(), signedOut: () => { forgetMachineNames(); expired(); },
+      unavailable: () => { if (!gone()) { setPreparing(false); setError('web.platform.unavailable'); gate(); } },
+    });
     async function load() {
       await run(async () => {
         const { profile, capabilities } = await startup.read(caps());
-        if (stopped || signedOut()) return;
+        if (gone()) return;
         setCaps(capabilities);
-        if (mountedBefore) { window.location.assign(home); return; }
+        if (mountedBefore) { reload(); return; }
         person = profile;
         organization.load(startup.reader()?.organizations);
-        if (person.workspace === null) { await withoutWorkspace(); return; }
-        const listed = permits('workspaces');
-        const workspaces = listed ? await startup.reader()!.workspaces() : [];
-        if (stopped || signedOut()) return;
+        const workspaces = person.workspace !== null && permits('workspaces') ? await readWorkspaces(() => startup.reader()!.workspaces(), [], unlisted) : [];
+        if (gone()) return;
         setRows(workspaces);
         setActive(selection.active());
-        cache = sessionStorageScope(localStorage, person.id, person.workspace ?? 'unselected');
-        if (workspaces.length === 0 && listed && firstMountAttempts < FIRST_MOUNT_ATTEMPTS) { prepare(); return; }
+        cache = workspaceCache(localStorage, person.id, person.workspace ?? 'unselected');
         setPreparing(false);
-        if (workspaces.length === 0) { gate(); later(); return; }
         setShellCacheScope({ mine: () => false, prefer: null });
         disposeGate?.();
         disposeGate = undefined;
@@ -225,15 +225,15 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
             webWorkspaces: { rows, active, busy, uncertain, choose: id => void choose(id) },
             danilCredits: activeGroupCredits(api, profile.active_organization_id),
           },
-          organizations: () => Promise.resolve(organizations), promo: redeemPromo, groupAccount: { ...api.groupAccount, send: (...args) => authorized(() => api.groupAccount.send(...args)) },
+          organizations: () => Promise.resolve(organizations), promo: organization.redeem, reauth: organization.reauth, preparing: preparingWorkspace, groupAccount: { ...api.groupAccount, send: (...args) => authorized(() => api.groupAccount.send(...args)) },
         }, { storage: cache.storage, webAccounts: {
           current: { user_id: person.id, name: person.name, email: typeof person.email === "string" ? person.email : null, extra: false },
-          others: () => [], open: () => {}, remove: async () => {}, signOut: () => void logout(),
+          others: () => [], open: () => {}, remove: async () => {}, signOut: () => void exit.leave(),
         } });
         later(FIRST_RETRY_MS);
       }, true);
     }
-    function stopServices() { clearTimeout(timer); lifetime.abort(); organizations.stop(); unsubscribeOrganizations(); }
+    function stopServices() { clearTimeout(timer); lifetime.abort(); organization.stop(); unsubscribeOrganizations(); }
     const close = () => { stopped = true; stopServices(); windowApp?.close(); disposeGate?.(); dispose(); };
     window.addEventListener('pagehide', close, { once: true });
     gate();

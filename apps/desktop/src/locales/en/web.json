@@ -112,12 +112,7 @@
   "web.auth.identity_unavailable": "Sign-in is not available right now. Try again in a few minutes.",
   "web.computers.no_account": "Your session is valid, but your Danil account could not be found. Try again or contact support; you do not need to create another identity.",
   "web.admin.title": "Harness",
-  "web.auth.access_hint": "Need access to Danil? Email us to request it.",
-  "web.auth.access_email_hint": "Your email app will open. If it does not, copy this address:",
-  "web.auth.request_access": "Request access",
-  "web.auth.access_subject": "Request access to Danil",
-  "web.auth.access_contact": "Questions? Write to {email}",
-  "web.auth.access_required": "You need approved access to Danil. You can request it by email.",
+  "web.auth.access_required": "Your Danil account cannot sign in yet. Sign in again in a few minutes. If it still fails, contact Danil support.",
   "web.download.tab": "Get the app",
   "web.download.title": "Get the desktop app",
   "web.download.action": "Download",
@@ -228,11 +223,10 @@
   "web.business.seats_pending": "Pending invitations also take a seat.",
   "web.business.fiscal_error_legal_name_society": "Write the legal name without the company type («S.A. de C.V.»), as in your Constancia de Situación Fiscal.",
   "web.platform.workspaces": "Workspaces",
-  "web.platform.empty": "You have nothing yet. Create a plan.",
   "web.platform.active": "Active",
   "web.platform.sign_out": "Sign out",
+  "web.platform.preparing_workspace": "Getting your workspace ready…",
   "web.platform.denied": "You do not have access to this resource.",
-  "web.platform.preparing": "Getting your space ready…",
   "web.platform.unavailable": "The request could not be completed. Try again.",
   "web.alpha.ai_assistance": "AI assistance",
   "web.alpha.ai_off": "AI off",
@@ -266,5 +260,7 @@
     "other": "Wait {count} seconds before retrying"
   },
   "web.promo.rate_limited_unknown": "Wait a moment before retrying",
-  "web.promo.rejected": "The code could not be redeemed ({code})"
+  "web.promo.rejected": "The code could not be redeemed ({code})",
+  "web.organization.reauth": "Sign in again to enter your organization.",
+  "web.organization.reauth_action": "Sign in again"
 }

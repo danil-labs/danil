@@ -114,7 +114,7 @@ export function UsagePanel(props: { usage: Usage; agent: string; onManage: () =>
                 <MarcaAgente id={p.agent} size={14} />
                 {p.label}
               </h3>
-              <ul class="m-0 list-none px-3 pb-2.5 pt-1">
+              <div class="px-3 pb-2.5 pt-1">
                 <AccountCard
                   account={p.cuenta}
                   active
@@ -125,7 +125,7 @@ export function UsagePanel(props: { usage: Usage; agent: string; onManage: () =>
                   refreshingLimits={props.usage.inProgress()[usageKey(p.agent, p.cuenta.id)]}
                   onRefreshLimits={() => props.usage.refresh(p.agent, p.cuenta.id)}
                 />
-              </ul>
+              </div>
             </section>
           )}
         </For>
