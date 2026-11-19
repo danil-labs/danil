@@ -11,7 +11,7 @@ function disk(initial?: QueueEntry[]): Storage & { raw(): QueueEntry[] } {
   return { getItem: async () => value, setItem: async (_k, v) => { value = v; }, raw: () => (value ? JSON.parse(value) : []) };
 }
 
-type Behaviour = { power?: string; fail?: (command: string) => unknown };
+type Behaviour = { power?: string; fail?: (command: string) => unknown; blockers?: unknown };
 function machine(id: string, behaviour: Behaviour = {}) {
   const calls: { command: string; workspace: string | null }[] = [];
   const host = {
@@ -20,7 +20,7 @@ function machine(id: string, behaviour: Behaviour = {}) {
       calls.push({ command, workspace });
       const failure = behaviour.fail?.(command);
       if (failure) throw failure;
-      return { value: command === "task_blockers" ? { unsaved: [], not_finished: false } : null, cachedAt: null };
+      return { value: command === "task_blockers" ? (behaviour.blockers ?? { unsaved: [], not_finished: false }) : null, cachedAt: null };
     },
   } as unknown as Host;
   return { host, calls, mutations: () => calls.filter((c) => ["set_task_archived", "finish_task", "delete_session"].includes(c.command)) };
@@ -461,4 +461,25 @@ test("pendingFor sigue diciendo qué acción espera por tarea", async () => {
   enqueue(m.host, task, "archive");
   assert.equal(pendingFor("t"), "archive");
   assert.equal(pendingFor("otra"), null);
+});
+
+test("los avisos de máquina perdida, bloqueo y rechazo también son de su cuenta; pending y pendingFor no cuentan lo de otra", async () => {
+  for (const kind of ["gone", "blocked", "refused"]) {
+    __reset({ storage: disk([entry({ owner: "ana", title: "Tarea de Ana", action: kind === "blocked" ? "finish" : "delete", key: `m1:w:f:t:${kind}` })]) });
+    let seen: string[] = [];
+    let pending = -1;
+    subscribe((state) => { seen = state.notices; pending = state.pending; });
+    const m = machine("m1", kind === "blocked" ? { blockers: { unsaved: [{ session: "t", title: "T", files: ["a"] }], not_finished: false } } : { fail: (c) => (kind === "refused" ? new HostError("command_unsupported", c) : null) });
+    setAccount("ana");
+    await hydrate();
+    assert.equal(pendingFor("t"), kind === "blocked" ? "finish" : "delete");
+    bindHosts(kind === "gone" ? () => "gone" : () => m.host);
+    await __kick();
+    if (kind !== "refused") assert.match(seen.join(" "), /Tarea de Ana/, `${kind}: A lo ve`);
+    assert.equal(seen.length, 1, kind);
+    setAccount("beto");
+    assert.deepEqual(seen, [], `${kind}: B no ve nada de A`);
+    assert.equal(pendingFor("t"), null);
+    assert.equal(pending, 0);
+  }
 });

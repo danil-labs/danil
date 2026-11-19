@@ -103,7 +103,7 @@ const visible = (notice: Notice) => (notice.owner === null ? account !== "" : no
 
 function state(): QueueState {
   const shown = notices.filter(visible).map((n) => n.text);
-  return { pending: entries.length, error: shown.at(-1) ?? null, notices: shown };
+  return { pending: entries.filter((e) => e.owner === account).length, error: shown.at(-1) ?? null, notices: shown };
 }
 
 function notify() {
@@ -218,7 +218,7 @@ export function setAccount(id: string) {
 }
 
 export function pendingFor(id: string): TaskAction | null {
-  return entries.find((e) => e.id === id)?.action ?? null;
+  return entries.find((e) => e.id === id && e.owner === account)?.action ?? null;
 }
 
 /**
