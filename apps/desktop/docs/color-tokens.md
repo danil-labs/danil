@@ -84,7 +84,7 @@ Dentro del globo de la persona, la línea «Para: …» va en `neutral-900` y no
 | `--color-success-strong` | `#166534` | = violeta | = azul | `#4ade80` | Texto de éxito |
 | `--color-error-strong` | `#dc2626` | = violeta | = azul | `#f87171` | Texto de error |
 | `--color-warning-strong` | `#92400e` | = violeta | = azul | `#fbbf24` | Texto de aviso |
-| `--color-info-strong` | `#2563eb` | = violeta | = azul | `#60a5fa` | Texto informativo |
+| `--color-info-strong` | `#1d4ed8` | = violeta | = azul | `#93c5fd` | Texto informativo |
 
 El relleno (`success`, `error`…) es igual en todos los temas; el texto (`-strong`) cambia de escalón para pasar AA sobre su fondo.
 

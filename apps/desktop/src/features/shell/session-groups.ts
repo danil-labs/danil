@@ -4,6 +4,7 @@ import { capabilities } from "../../lib/platform.ts";
 import { escribirPref, leerPref } from "../../lib/prefs.ts";
 import { listen } from "../../lib/serviceEvents.ts";
 import { danilAvailable, danilAvailableContext, readDanilContext } from "../machines/index.ts";
+import { type CreatedNotice, createAccountRequests } from "./account-requests.ts";
 import { createAccountWorkspaces } from "./session-account-workspaces.ts";
 import { type ContextGroup, createSessionContexts } from "./session-contexts.ts";
 import type { EmptyReason } from "./session-empty.ts";
@@ -15,8 +16,9 @@ import { ADDED_KEY, edgeAddedTransport, prefsAddedStore } from "./workspace-adde
 
 export type SessionRailGroup = ContextGroup & { available: readonly { id: string; name: string }[] | null; added: ReadonlySet<string> | null; person: string | null; free?: { id: string; name: string }; empty_reason?: EmptyReason | null };
 let instance: ReturnType<typeof wire> | undefined;
+export const [sessionRailState, setSessionRailState] = createRoot(() => createSignal<ReturnType<typeof wire>>());
 export const hasSessionGroups = () => !!instance?.groups();
-export const sessionRail = (hidden: () => ReadonlySet<string>, seeded: (ids: readonly string[]) => void, shown: () => readonly string[] = () => []) => instance ??= createRoot(() => wire(hidden, seeded, shown));
+export const sessionRail = (hidden: () => ReadonlySet<string>, seeded: (ids: readonly string[]) => void, shown: () => readonly string[] = () => []) => instance ??= createRoot(() => { const next = wire(hidden, seeded, shown); setSessionRailState(next); return next; });
 
 function wire(hidden: () => ReadonlySet<string>, onSeeded: (ids: readonly string[]) => void, shown: () => readonly string[]) {
   const [revision, bump] = createSignal(0);
@@ -25,7 +27,10 @@ function wire(hidden: () => ReadonlySet<string>, onSeeded: (ids: readonly string
   const accounts = createAccountWorkspaces(invoke, !!capabilities().nativeWindow, changed);
   const groups = () => (revision(), sessions.groups());
   const [laterContext, setLaterContext] = createSignal<string | null>(null);
+  const [organizationNotice, setOrganizationNotice] = createSignal(false);
   const [menuNotice, setMenuNotice] = createSignal(false);
+  const [agentCreated, setAgentCreated] = createSignal<CreatedNotice | null>(null);
+  const requests = createAccountRequests(invoke, { groups: () => sessions.groups(), send: sessions.sendOptional, createHere: accounts.createHere }, (notice) => { setAgentCreated(notice); void refreshAccounts(); });
   let seenRemoved = 0;
   createEffect(() => {
     revision();
@@ -37,7 +42,7 @@ function wire(hidden: () => ReadonlySet<string>, onSeeded: (ids: readonly string
     revision();
     return sessionWorkspaceSource(groups()?.find((g) => g.context_id === context)?.plan ?? null, () => danilAvailableContext(org, context), () => accounts.available(org));
   };
-  const refreshAccounts = () => accounts.refresh(groups() ?? [], sessions.send);
+  const refreshAccounts = () => accounts.refresh(groups() ?? [], sessions.send, (context) => records.get(context)?.person ?? null);
   const accountKey = createMemo(() => JSON.stringify(groups()?.map((g) => [g.context_id, g.org, g.plan]) ?? null));
   createEffect(on(accountKey, () => void refreshAccounts()));
   const records = new Map<string, { person: string | null; asking: boolean; sync: ReturnType<typeof createAddedSync> }>();
@@ -90,8 +95,10 @@ function wire(hidden: () => ReadonlySet<string>, onSeeded: (ids: readonly string
     for (const g of rows() ?? []) if (g.available && g.person) void records.get(g.context_id)?.sync.sync();
   }));
   if (capabilities().nativeWindow) {
-    void sessions.refresh();
+    // Las peticiones de la CLI (`account.request`); al arrancar se drenan las que llegaron antes.
+    void sessions.refresh().then(() => requests.pump());
     void listen("danil-connect", () => void sessions.refresh()).catch(() => {});
+    void listen("account.request", () => void requests.pump()).catch(() => {});
     const refreshed = createSessionReturn(async () => {
       await refreshAccounts();
       for (const g of groups() ?? []) await readDanilContext(g.org, g.context_id);
@@ -104,6 +111,8 @@ function wire(hidden: () => ReadonlySet<string>, onSeeded: (ids: readonly string
     });
   }
   return {
+    agentCreated, clearAgentCreated: () => setAgentCreated(null),
+    organizationNotice, clearOrganizationNotice: () => setOrganizationNotice(false), notifyOrganization: () => { setOrganizationNotice(true); setMenuNotice(true); },
     sessions, groups: rows, known, menuNotice, acknowledgeNotice: () => setMenuNotice(false), emptyReason: () => (revision(), sessions.emptyReason()), removed: () => (revision(), sessions.removed()), laterContext, acknowledgeLater: () => setLaterContext(null), ready: () => (revision(), sessions.ready()), connected: () => (revision(), sessions.connected()),
     createFree: async (context: string) => {
       const group = active(context);
@@ -115,6 +124,7 @@ function wire(hidden: () => ReadonlySet<string>, onSeeded: (ids: readonly string
     },
     add: (context: string, id: string) => records.get(context)?.sync.add(id),
     remove: (context: string, id: string) => records.get(context)?.sync.remove(id),
+    refreshContext: (context: string) => { const group = active(context); return group ? readDanilContext(group.org, context, true) : Promise.resolve(); },
     refresh: () => { void refreshAccounts(); for (const g of groups() ?? []) void readDanilContext(g.org, g.context_id); },
   };
 }

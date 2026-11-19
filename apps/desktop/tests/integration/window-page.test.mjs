@@ -356,41 +356,6 @@ test('a brand-new account enters the window at once, without onboarding, and ado
   assert.deepEqual(app.failures, []);
 });
 
-// P3: el canje vive en el menú del perfil de la ventana montada, sin workspace ni máquina.
-test('a promo code is redeemed from the profile menu of a window without workspace or machine', async t => {
-  const redeemed = [];
-  const fetcher = async (input, init) => {
-    const url = new URL(String(input));
-    if (url.origin === 'http://localhost' && url.pathname.includes('/assets/')) return new Response('');
-    if (['/v1/capabilities', '/v1/identity/organizations', '/v1/machines'].includes(url.pathname)) return new Response(null, { status: 404 });
-    if (url.pathname === '/v1/identity/me') return Response.json({ id: 'user_N', name: 'New', workspace: null, organizations: [] });
-    if (url.pathname === '/v1/identity/csrf') return Response.json({ csrf_token: 'bound' });
-    if (url.pathname === '/v1/workspaces/promo/redeem') {
-      const headers = new Headers(init.headers);
-      redeemed.push({ method: init.method, body: JSON.parse(init.body), key: headers.get('idempotency-key') });
-      return Response.json({ machine: { state: 'provisioning' } });
-    }
-    throw new Error(`Unexpected request ${url.pathname}`);
-  };
-  fetcher.__jsdomApp = true; globalThis.fetch = fetcher;
-  const app = await open(t, 'listo', 'promo-without-workspace', {}, undefined, {}, { web: true });
-  const doc = app.w.document;
-  await until(() => doc.querySelector('[data-tira]'));
-  assert.equal(doc.querySelector('[data-web-gate]'), null);
-  doc.querySelector('[data-profile-menu] button').click();
-  await until(() => doc.querySelector('#promo-code'));
-  const input = doc.querySelector('#promo-code');
-  input.value = 'FREE-2026';
-  input.dispatchEvent(new app.w.Event('input', { bubbles: true }));
-  await until(() => !input.closest('form').querySelector('button[type="submit"]').disabled);
-  input.closest('form').querySelector('button[type="submit"]').click();
-  await until(() => redeemed.length === 1 && input.closest('form')?.querySelector('[role="status"]'));
-  assert.equal(redeemed[0].method, 'POST');
-  assert.deepEqual(redeemed[0].body, { code: 'FREE-2026' });
-  assert.ok(redeemed[0].key, 'the redemption carries an Idempotency-Key');
-  assert.deepEqual(app.failures, []);
-});
-
 // P5: con sesión válida, mientras se comprueba se ve la carga y nunca la entrada.
 test('a valid session shows only the loading screen while it is checked and then the window, never the sign-in', async t => {
   let release;
@@ -618,28 +583,13 @@ function newAccount({ orgs = [NEW_ORG], orgsAfter, after = edge => edge.listed >
   return edge;
 }
 
-async function redeemFromMenu(app, code = 'FREE-2026') {
-  const doc = app.w.document;
-  doc.querySelector('[data-profile-menu] button').click();
-  await until(() => doc.querySelector('#promo-code'));
-  const input = doc.querySelector('#promo-code');
-  input.value = code;
-  input.dispatchEvent(new app.w.Event('input', { bubbles: true }));
-  await until(() => !input.closest('form').querySelector('button[type="submit"]').disabled);
-  input.closest('form').querySelector('button[type="submit"]').click();
-  return input.closest('form');
-}
-
-test('Q1: a new account with one organization and none active selects it by itself and then redeems', async t => {
+test('Q1: a new account with one organization and none active selects it by itself', async t => {
   const edge = newAccount();
   const app = await open(t, 'listo', 'h2-q1', {}, undefined, {}, { web: true });
   await until(() => app.w.document.querySelector('[data-tira]'));
   await until(() => edge.selected === 'org_N');
   assert.equal(edge.calls.filter(c => c === 'POST /v1/identity/organizations/select').length, 1);
-  const form = await redeemFromMenu(app);
-  await until(() => form.querySelector('[role="status"]'));
-  assert.equal(edge.redeemed.length, 1, 'the context was already there: one redemption');
-  assert.deepEqual(navigations(app), [], 'no reload and no sign-in');
+  assert.deepEqual(navigations(app), [], 'no sign-in');
   assert.deepEqual(others(app), []);
 });
 
@@ -668,22 +618,6 @@ test('Q3: the same 409 right after coming back does not redirect again and offer
   assert.deepEqual(navigations(app), [], 'no second redirect');
   again.click();
   await until(() => navigations(app).length === 1);
-  assert.deepEqual(others(app), []);
-});
-
-test('Q4: a redemption refused for organization context resolves it and retries once with the same key', async t => {
-  // La organización aparece solo tras el primer canje: mide la vía del canje, no el reintento propio.
-  const edge = newAccount({ orgs: [], orgsAfter: [NEW_ORG], after: edge => edge.redeemed.length > 0 });
-  const app = await open(t, 'listo', 'h2-q4', {}, undefined, {}, { web: true });
-  await until(() => app.w.document.querySelector('[data-tira]'));
-  await until(() => edge.listed >= 1);
-  assert.equal(edge.selected, null, 'nothing to select before the organization exists');
-  const form = await redeemFromMenu(app);
-  await until(() => edge.redeemed.length === 2 && form.querySelector('[role="status"]'));
-  assert.equal(edge.selected, 'org_N');
-  assert.equal(edge.redeemed[0], edge.redeemed[1], 'the retry keeps its Idempotency-Key');
-  assert.ok(edge.redeemed[0]);
-  assert.deepEqual(navigations(app), []);
   assert.deepEqual(others(app), []);
 });
 

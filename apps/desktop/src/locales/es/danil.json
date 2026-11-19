@@ -453,5 +453,12 @@
   "danil.welcome.local": "Continuar sin cuenta",
   "danil.welcome.local_effect": "Todo queda en esta computadora.",
   "danil.welcome.waiting": "Termina de entrar en el navegador.",
-  "danil.error.too_many_contexts": "Llegaste al máximo de 20 organizaciones conectadas. Cierra una para agregar otra."
+  "danil.error.too_many_contexts": "Llegaste al máximo de 20 organizaciones conectadas. Cierra una para agregar otra.",
+  "danil.accounts.title": "Cuentas de Danil",
+  "danil.accounts.description": "Las cuentas y organizaciones con sesión abierta en esta computadora.",
+  "danil.accounts.empty": "No hay sesiones abiertas.",
+  "danil.accounts.credits": "Danil Credits: {balance}",
+  "danil.accounts.close_all": "Cerrar sesión de todas",
+  "danil.accounts.close_all_confirm": "¿Cerrar la sesión de {email} en sus {count} organizaciones?",
+  "danil.accounts.close_no": "No"
 }

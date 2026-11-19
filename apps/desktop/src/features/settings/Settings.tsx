@@ -1,4 +1,3 @@
-import { invoke } from "../../lib/invoke.ts";
 import Bot from "lucide-solid/icons/bot";
 import CircleUserRound from "lucide-solid/icons/circle-user-round";
 import CreditCard from "lucide-solid/icons/credit-card";
@@ -10,19 +9,21 @@ import Plug from "lucide-solid/icons/plug";
 import Shield from "lucide-solid/icons/shield";
 import SlidersHorizontal from "lucide-solid/icons/sliders-horizontal";
 import Sparkles from "lucide-solid/icons/sparkles";
-import { listen } from "../../lib/serviceEvents";
 import { createResource, createSignal, For, type JSX, lazy, onCleanup, onMount, Show, Suspense } from "solid-js";
 import { Dynamic } from "solid-js/web";
-import { capabilities } from "../../lib/platform";
 import { t } from "../../lib/i18n";
+import { invoke } from "../../lib/invoke.ts";
+import { capabilities } from "../../lib/platform";
+import { listen } from "../../lib/serviceEvents";
 import { flechaDeLista } from "../../lib/shortcuts";
 import { type Superficie } from "../../lib/surfaces";
 import { cn } from "../../lib/utils";
 import { Badge } from "../../ui/Badge";
 import { Button } from "../../ui/Button";
-import { Select } from "../../ui/Select";
 import { Dialog, DialogContent, DialogTitle } from "../../ui/Dialog";
+import { asFailure } from "../../ui/Failure";
 import { Close } from "../../ui/icons";
+import { Select } from "../../ui/Select";
 import {
   Sidebar,
   SidebarContent,
@@ -31,30 +32,30 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "../../ui/sidebar";
+import { machines } from "../machines/store";
 import type { ModelChoices } from "../projects/NewAgent";
-import type { SurfacesState } from "./ai-providers-view";
-import { asFailure } from "../../ui/Failure";
 import AIProviders from "./AIProviders";
+import type { SurfacesState } from "./ai-providers-view";
 import Connections from "./Connections";
 import ConnectionsOperation from "./ConnectionsOperation";
 import Environment from "./Environment";
-import { machines } from "../machines/store";
-import { secretsRoute } from "./secrets-support";
 import General from "./General";
 import Integrations from "./Integrations";
 import { PaquetesDeLengua } from "./LanguagePacks";
+import { SettingsPanel, SettingsSection } from "./layout";
 import type { ContextoDeProyectos } from "./ManageProjects";
 import ProveedorDeMemoria from "./MemoryProvider";
 import { NotifyBehavior } from "./NotifyBehavior";
 import Providers from "./Providers";
-import { SETTINGS_ENTRIES, type SettingsEntryId, type SettingsGroup, settingsTarget } from "./settings-entries";
 import Skills from "./Skills";
+import { secretsRoute } from "./secrets-support";
+import { SETTINGS_ENTRIES, type SettingsEntryId, type SettingsGroup, settingsTarget } from "./settings-entries";
+import { ActivityLogs, Secrets } from "./settings-panels";
 import Workspaces from "./Workspaces";
-import { SettingsPanel, SettingsSection } from "./layout";
 import "../../locales/settingsPhrases";
+
 // Chunks aparte: solo los carga quien abre la sección.
-const DanilAccount = lazy(() => import("./DanilAccount"));
-const ActivityLogs = lazy(() => import("./ActivityLogs"));
+const DanilAccount = lazy(() => import("./DanilAccountsEntry"));
 const Appearance = lazy(() => import("./Appearance"));
 const ManageProjects = lazy(() => import("./ManageProjects"));
 const Agents = lazy(() => import("./Agents"));
@@ -62,7 +63,6 @@ const AppDownloads = lazy(() => import("./AppDownloads"));
 
 /** Portal del Harness, servicio aparte; el escritorio lo abre en el navegador. */
 const HARNESS_URL = "https://harness.danil.ai/";
-const Secrets = lazy(() => import("./Secrets"));
 
 /**
  * Configuración: siete entradas, y lo que eran secciones sueltas va en
@@ -111,7 +111,7 @@ const pestanasDe = (
   const cuenta = capabilities().danilAccount || capabilities().accountProfile;
   const tab = (id: string, name: () => string, panel: Pestana["panel"]): Pestana => ({ id, get name() { return name(); }, panel });
   return {
-    "cuenta-danil": cuenta ? tab("cuenta-danil", () => t("settings.tab.profile"), () => <Suspense fallback={null}><DanilAccount part="profile" /></Suspense>) : undefined,
+    "cuenta-danil": cuenta ? tab("cuenta-danil", () => t("settings.nav.danil_account"), () => <Suspense fallback={null}><DanilAccount part="profile" /></Suspense>) : undefined,
     emails: capabilities().accountEmails ? tab("emails", () => t("settings.tab.emails"), () => <Suspense fallback={null}><DanilAccount part="emails" /></Suspense>) : undefined,
     usage: capabilities().accountUsage ? tab("usage", () => t("settings.tab.usage"), () => capabilities().accountUsage?.()) : undefined,
     plan: capabilities().personalAccount?.plan ? tab("plan", () => t("settings.tab.plan"), () => capabilities().personalAccount?.plan?.()) : undefined,

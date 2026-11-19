@@ -453,5 +453,12 @@
   "danil.welcome.local": "Continue without an account",
   "danil.welcome.local_effect": "Everything stays on this computer.",
   "danil.welcome.waiting": "Finish signing in in your browser.",
-  "danil.error.too_many_contexts": "You reached the maximum of 20 connected organizations. Close one to add another."
+  "danil.error.too_many_contexts": "You reached the maximum of 20 connected organizations. Close one to add another.",
+  "danil.accounts.title": "Danil accounts",
+  "danil.accounts.description": "The accounts and organizations signed in on this computer.",
+  "danil.accounts.empty": "No one is signed in.",
+  "danil.accounts.credits": "Danil Credits: {balance}",
+  "danil.accounts.close_all": "Sign out of all",
+  "danil.accounts.close_all_confirm": "Sign {email} out of its {count} organizations?",
+  "danil.accounts.close_no": "No"
 }

@@ -252,6 +252,13 @@
   "web.promo.has_machine": "The organization already has a machine",
   "web.promo.denied": "You do not have permission to redeem codes",
   "web.promo.unavailable": "Not available yet. Try again",
-  "web.promo.reauth": "Sign in again to enter your organization.",
-  "web.promo.reauth_action": "Sign in again"
+  "web.promo.already_redeemed": "This code has already been redeemed",
+  "web.promo.rate_limited": {
+    "one": "Wait {count} second before retrying",
+    "other": "Wait {count} seconds before retrying"
+  },
+  "web.promo.rate_limited_unknown": "Wait a moment before retrying",
+  "web.promo.rejected": "The code could not be redeemed ({code})",
+  "web.organization.reauth": "Sign in again to enter your organization.",
+  "web.organization.reauth_action": "Sign in again"
 }

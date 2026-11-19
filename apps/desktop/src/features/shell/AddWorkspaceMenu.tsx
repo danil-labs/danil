@@ -1,11 +1,13 @@
 import Eye from "lucide-solid/icons/eye";
 import Plus from "lucide-solid/icons/plus";
-import { type Component, createEffect, createSignal, For, Show } from "solid-js";
+import { type Component, createEffect, For, Show } from "solid-js";
 import { Dynamic } from "solid-js/web";
 import { t } from "../../lib/i18n";
 import { cn } from "../../lib/utils";
 import { SEPARADOR_DE_MENU, TITULO_DE_GRUPO } from "../../ui/ContextMenu";
 import { ITEM_DE_MENU, Popover, PopoverContent, PopoverTrigger } from "../../ui/Popover";
+import { AccountReturnFeedback } from "./AccountReturnFeedback";
+import { createAddWorkspaceMenuState } from "./add-workspace-menu-state";
 import { type AttentionState, type TaskAttention, topState } from "./attention";
 import { DanilAddEntry, type DanilMenu, DanilStep, DanilSwitchRows } from "./DanilAddMenu";
 import { matchesName } from "./hidden-workspaces";
@@ -33,16 +35,8 @@ export default function AddWorkspaceMenu(props: {
   onOpen: (id: string) => void;
   onShow: (id: string) => void;
 }) {
-  const [open, setOpen] = createSignal(false);
-  const [step, setStep] = createSignal<"menu" | "danil">("menu");
-  const [context, setContext] = createSignal<string | null>(null);
+  const { open, setOpen, step, setStep, context, setContext, query, setQuery, close } = createAddWorkspaceMenuState();
   createEffect(() => openRequestedSessionMenu(props.sessions, { context: setContext, step: setStep, open: setOpen }));
-  const [query, setQuery] = createSignal("");
-  const close = () => {
-    setOpen(false);
-    setStep("menu");
-    setQuery("");
-  };
   const rows = () => props.hidden.filter((w) => matchesName(w.name, query()));
   // El abierto ya enseña su distintivo en su cuadro; los de Danil sin agregar también avisan.
   const waiting = () => topState([...props.hidden, ...(props.danil.toAdd ?? [])].filter((w) => w.id !== props.open).flatMap((w) => props.tasksOf(w.id)));
@@ -50,7 +44,8 @@ export default function AddWorkspaceMenu(props: {
     const state = waiting();
     return state ? t("shell.workspaces.add_hidden_state", { state: props.labelOf(state) }) : t("shell.workspaces.add");
   };
-  return (
+  return (<>
+    <AccountReturnFeedback sessions={props.sessions} onOpen={props.onOpen} />
     <Popover
       open={open()}
       onOpenChange={(value) => (value ? setOpen(true) : close())}
@@ -74,7 +69,7 @@ export default function AddWorkspaceMenu(props: {
           when={step() === "menu"}
           fallback={props.sessions.groups() !== null ? <SessionAddStep sessions={props.sessions} context={context()} query={query()} onQuery={setQuery} onClose={close} onOpen={props.onOpen} /> : <DanilStep danil={props.danil} query={query()} onQuery={setQuery} tasksOf={props.tasksOf} badge={props.badge} onClose={close} />}
         >
-          <Show when={usesSessionMenu(props.sessions, props.danil.signedIn)} fallback={<DanilAddEntry danil={props.danil} onStep={() => (setContext(null), setStep("danil"))} />}><SessionAddEntries sessions={props.sessions} signedIn={props.danil.signedIn} onStep={() => (setContext(null), setStep("danil"))} /></Show>
+          <Show when={usesSessionMenu(props.sessions, props.danil.signedIn)} fallback={<DanilAddEntry danil={props.danil} onStep={() => (setContext(null), setStep("danil"))} />}><SessionAddEntries sessions={props.sessions} signedIn={props.danil.signedIn} onStep={() => (setContext(null), setStep("danil"))} onClose={close} /></Show>
           <button
             type="button"
             role="menuitem"
@@ -132,6 +127,6 @@ export default function AddWorkspaceMenu(props: {
           </Show>
         </Show>
       </PopoverContent>
-    </Popover>
+    </Popover></>
   );
 }

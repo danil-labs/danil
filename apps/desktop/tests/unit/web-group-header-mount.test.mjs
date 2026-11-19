@@ -1,0 +1,62 @@
+import assert from "node:assert/strict";
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import test from "node:test";
+import { fileURLToPath, pathToFileURL } from "node:url";
+import { build } from "vite";
+import solid from "vite-plugin-solid";
+import { boot, sleep } from "../helpers/jsdom-app.mjs";
+import { RESPONSES } from "../helpers/mount-guard.mjs";
+
+const until = async (read) => { for (let i = 0; i < 80; i++) { if (read()) return true; await sleep(50); } return false; };
+test("the web header offers organization choice before the separator and only signs out the email", async (t) => {
+  const dir = await mkdtemp(join(tmpdir(), "danil-web-header-"));
+  t.after(() => rm(dir, { recursive: true, force: true }));
+  const entry = fileURLToPath(new URL("../helpers/web-group-header.tsx", import.meta.url));
+  await build({ configFile: false, root: fileURLToPath(new URL("../../", import.meta.url)), plugins: [solid()], logLevel: "silent", define: { __TERMINUS_VERSION__: JSON.stringify("test") }, build: { outDir: dir, emptyOutDir: true, lib: { entry, formats: ["es"], fileName: () => "fixture.mjs" }, rollupOptions: { output: { inlineDynamicImports: true } } } });
+  const app = await boot("listo", "web-header-host", RESPONSES);
+  const root = app.w.document.createElement("div");
+  app.w.document.body.append(root);
+  const { mountWebGroup, mountLegacyPromo } = await import(pathToFileURL(join(dir, "fixture.mjs")).href);
+  const mounted = mountWebGroup(root);
+  t.after(mounted.dispose);
+  const doc = app.w.document;
+  doc.querySelector('[data-account-header="web-person"]').click();
+  assert.ok(await until(() => doc.body.textContent.includes("Elige con qué organización trabajar")));
+  let menu = [...doc.querySelectorAll('[role="menu"]')].find((m) => m.textContent.includes("Elige con qué organización trabajar"));
+  const notice = [...menu.querySelectorAll('[role="status"]')].find((p) => p.textContent === "Elige con qué organización trabajar");
+  assert.equal(notice.previousElementSibling.textContent, "Acme");
+  const choose = notice.nextElementSibling;
+  assert.equal(choose.textContent, "Elegir organización");
+  assert.equal(choose.getAttribute("role"), "menuitem");
+  assert.equal(choose.nextElementSibling.getAttribute("aria-hidden"), "true");
+  const closes = [...menu.querySelectorAll('button')].filter((b) => b.textContent.startsWith("Cerrar sesión"));
+  assert.deepEqual(closes.map((b) => b.textContent), ["Cerrar sesión de one@example.com"]);
+  choose.click();
+  assert.ok(await until(() => doc.querySelector('[data-organization-menu]')));
+  assert.ok(!doc.body.textContent.includes("Canjear código"), "organization choice replaces the account menu");
+  doc.querySelector('[data-organization="org-b"]').click();
+  assert.ok(await until(() => mounted.chosen.length === 1));
+  assert.deepEqual(mounted.chosen, ["org-b"]);
+  assert.deepEqual(mounted.signedOut, []);
+  doc.querySelector('[data-account-header="web-person"]').click();
+  assert.ok(await until(() => [...doc.querySelectorAll('[role="menuitem"]')].some((b) => b.textContent === "Cerrar sesión de one@example.com")));
+  [...doc.querySelectorAll('[role="menuitem"]')].find((b) => b.textContent === "Cerrar sesión de one@example.com").click();
+  assert.deepEqual(mounted.signedOut, ["email"]);
+  mounted.dispose(); root.replaceChildren();
+  for (const role of ["owner", "admin", undefined, "future-role", "member", "guest"]) {
+    const visible = role !== "member" && role !== "guest";
+    const flow = mountWebGroup(root, role);
+    doc.querySelector('[data-account-header="web-person"]').click();
+    assert.ok(await until(() => [...doc.querySelectorAll('[role="menuitem"]')].some((b) => b.textContent === "Cerrar sesión de one@example.com")));
+    assert.equal([...doc.querySelectorAll('[role="menuitem"]')].some((b) => b.textContent === "Canjear código"), visible, `web role ${role}`);
+    flow.dispose(); root.replaceChildren();
+    const disposeLegacy = mountLegacyPromo(root, role);
+    assert.ok(await until(() => doc.body.textContent.includes("Reportar un bug")));
+    if (visible) assert.ok(await until(() => doc.querySelector("#promo-code")), `legacy role ${role}`);
+    else assert.equal(doc.querySelector("#promo-code"), null, `legacy role ${role}`);
+    disposeLegacy(); root.replaceChildren();
+  }
+
+});

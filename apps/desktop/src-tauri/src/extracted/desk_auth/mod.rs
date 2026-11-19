@@ -4,6 +4,7 @@
 //! refresh en el llavero y Bearer al borde. La webview recibe perfil y estado,
 //! nunca tokens. Cada familia conserva su propia renovación y sus contextos.
 
+mod context_role;
 mod families;
 mod login_browser;
 pub(crate) mod pkce;
@@ -274,6 +275,9 @@ pub(super) fn danil_edge_fetch(
     let key = match idempotency_key {
         Some(k) if (1..=128).contains(&k.len()) && k.bytes().all(|b| b.is_ascii_graphic()) => k,
         Some(_) => return Err(coded("invalid_request")),
+        None if session::requires_caller_key(&method, &path) => {
+            return Err(coded("invalid_request"))
+        }
         None => pkce::random(18).ok_or_else(|| coded("unavailable"))?,
     };
     desk(&app)

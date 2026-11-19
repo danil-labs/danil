@@ -1,21 +1,21 @@
+import { machinesClient } from '@terminus/computers';
 import { createRoot, createSignal, For, Show } from 'solid-js';
 import { render } from 'solid-js/web';
-import { machinesClient } from '@terminus/computers';
+import { forgetMachineNames } from '../features/machines/known-names';
 import { aplicarLengua, t } from '../lib/i18n';
 import { setShellCacheScope } from '../lib/shellCache';
 import { seguirElTema } from '../lib/theme';
 import { Button } from '../ui/Button';
 import { ToastStack } from '../ui/Toast';
-import { platformSession, platformTransport, PlatformSessionError, type PlatformWorkspace, type PlatformProfile } from './platform-session';
-import type { WebSessionDeployment } from './session-config';
-import { readCapabilities, supports, type CapabilitiesSnapshot } from './service-capabilities';
-import { UpdateNotice } from './UpdateNotice';
-import { WorkosAuthPage, signInError } from './auth/workos';
 import { SessionLoading } from './auth/SessionLoading';
-import { mountWindow } from './window';
-import { forgetMachineNames } from '../features/machines/known-names';
-import { sessionStorageScope, clearWebCaches } from './session-storage';
+import { signInError, WorkosAuthPage } from './auth/workos';
 import { webOrganizations } from './organization-context';
+import { activeGroupCredits, type PlatformProfile, PlatformSessionError, type PlatformWorkspace, platformSession, platformTransport } from './platform-session';
+import { type CapabilitiesSnapshot, readCapabilities, supports } from './service-capabilities';
+import type { WebSessionDeployment } from './session-config';
+import { clearWebCaches, sessionStorageScope } from './session-storage';
+import { UpdateNotice } from './UpdateNotice';
+import { mountWindow } from './window';
 import './phrases';
 import { sessionStartup } from './startup-reader';
 
@@ -25,7 +25,6 @@ const POLL_MAX_MS = 30_000;
 /** Identity puede no contestar aún al primer montaje; la ventana monta en cuanto da el perfil. */
 const FIRST_MOUNT_ATTEMPTS = 8;
 const FIRST_MOUNT_TRANSIENT = [403, 404, 503];
-
 export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
   return createRoot(dispose => {
     aplicarLengua();
@@ -152,7 +151,8 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
           if (stopped || signedOut()) return;
           setCaps(capabilities);
           const arrived = person?.workspace === null && fresh.workspace !== null;
-          if (person && (fresh.id !== person.id || (!arrived && fresh.workspace !== person.workspace))) { gate(); window.location.assign(home); return; }
+          // Los créditos se atan a la organización al montar: cambiarla recarga una vez.
+          if (person && (fresh.id !== person.id || (!arrived && fresh.workspace !== person.workspace) || fresh.active_organization_id !== person.active_organization_id)) { gate(); window.location.assign(home); return; }
           person = fresh;
           if (permits('workspaces') && fresh.workspace !== null) {
             const listed = await listWorkspaces(() => api.workspaces(), rows());
@@ -206,7 +206,6 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
         setCaps(capabilities);
         if (mountedBefore) { window.location.assign(home); return; }
         person = profile;
-        // Con sesión: el selector se lee una vez y, si la ruta aún no existe, se reintenta solo.
         organization.load(startup.reader()?.organizations);
         const workspaces = person.workspace !== null && permits('workspaces') ? await listWorkspaces(() => startup.reader()!.workspaces(), []) : [];
         if (stopped || signedOut()) return;
@@ -218,15 +217,17 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
         disposeGate?.();
         disposeGate = undefined;
         mountedBefore = true;
-        firstMountAttempts = 0;
         windowApp = mountWindow({ machines, permits, relayOrigin: __DANIL_WEB_RELAY_ORIGINS__[0],
           profile: startup.accountProfile(lifetime.signal), onUnauthorized: expired,
           onUnavailable: () => { setError('web.platform.unavailable'); gate(); later(); },
-          workspaces: { rows, active, busy, uncertain, choose: id => void choose(id) },
-          organizations: () => Promise.resolve(organizations), promo: organization.redeem, reauth: organization.reauth,
+          services: {
+            webWorkspaces: { rows, active, busy, uncertain, choose: id => void choose(id) },
+            danilCredits: activeGroupCredits(api, profile.active_organization_id),
+          },
+          organizations: () => Promise.resolve(organizations), promo: organization.redeem, reauth: organization.reauth, groupAccount: { ...api.groupAccount, send: (...args) => authorized(() => api.groupAccount.send(...args)) },
         }, { storage: cache.storage, webAccounts: {
-          current: { user_id: person.id, name: person.name, email: null, extra: false },
-          others: () => [], open: () => {}, add: () => {}, remove: async () => {}, signOut: () => void logout(),
+          current: { user_id: person.id, name: person.name, email: typeof person.email === "string" ? person.email : null, extra: false },
+          others: () => [], open: () => {}, remove: async () => {}, signOut: () => void logout(),
         } });
         later(FIRST_RETRY_MS);
       }, true);

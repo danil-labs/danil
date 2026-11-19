@@ -157,12 +157,13 @@
      4,52): se descartó porque un margen de 0,02 lo rompe el día que alguien suba
      el tinte del chip del 15 % al 20 %.
 
-     `error` e `info` se quedan donde estaban: 4,83 y 5,17 sobre `surface`. No se
-     toca lo que pasa. */
+     `error` se queda donde estaba: 4,83 sobre `surface`. `info` baja al 700 porque
+     su `Badge` (texto sobre `info` al 15 %) daba 4,35: ahora 5,64 sobre `surface`
+     y 4,86 en el peor fondo claro. */
   --color-success-strong: #166534;
   --color-error-strong: #dc2626;
   --color-warning-strong: #92400e;
-  --color-info-strong: #2563eb;
+  --color-info-strong: #1d4ed8;
 
   /* El enlace lleva el matiz y la saturación exactos del verde de marca
      `#5fcc79`, bajado hasta pasar AA: **4,74:1** en el peor caso claro. Sin
@@ -513,7 +514,8 @@
   --color-success-strong: #4ade80;
   --color-error-strong: #f87171;
   --color-warning-strong: #fbbf24;
-  --color-info-strong: #60a5fa;
+  /* `info` sube al 300: en el 400, su `Badge` daba 4,29 sobre `surface-raised`; ahora 6,06 en el peor fondo. */
+  --color-info-strong: #93c5fd;
 
   /* La negrita lleva el teal de marca y el enlace se queda en el ámbar. El
      verde que lleva el enlace en claro cae aquí a un paso del teal —135° y

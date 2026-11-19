@@ -302,7 +302,7 @@ const es = {
   // OpenCode en el teléfono: el steer que se niega, Reintentar, sus superficies y el consentimiento de los gratuitos.
   "chat.steer.unsupported": "Este agente no recibe mensajes a mitad del turno. Se enviará cuando termine el turno.",
   "chat.steer.unconfirmed": "No se pudo confirmar la entrega del mensaje al agente. Revisa la conversación antes de reenviarlo.",
-  "chat.queue.stop_and_send": "Detener el turno y enviar",
+  "chat.queue.stop_and_send": "Interrumpir y enviar",
   "chat.failure.retry": "Reintentar",
   "settings.ai_providers.opencode_detail": "Modelos de pago y Go",
   "settings.ai_providers.zen_go": "OpenCode",
@@ -618,7 +618,7 @@ const en: Record<WordKey, Word> = {
   // OpenCode en el teléfono: el steer que se niega, Reintentar, sus superficies y el consentimiento de los gratuitos.
   "chat.steer.unsupported": "This agent does not take messages mid-turn. It will be sent when the turn ends.",
   "chat.steer.unconfirmed": "Message delivery to the agent could not be confirmed. Check the conversation before resending.",
-  "chat.queue.stop_and_send": "Stop the turn and send",
+  "chat.queue.stop_and_send": "Interrupt and send",
   "chat.failure.retry": "Try again",
   "settings.ai_providers.opencode_detail": "Pay-as-you-go models and Go",
   "settings.ai_providers.zen_go": "OpenCode",

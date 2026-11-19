@@ -1,11 +1,9 @@
-import { createSessionEmptyState, type EmptyReply, type RemovedContext, refusalEmptyReason } from "./session-empty.ts";
+import { addSessionAccount } from "./add-session-account.ts";
+import { createSessionEmptyState, refusalEmptyReason } from "./session-empty.ts";
 
-export type SessionContext = { context_id: string; org: string; org_name: string | null; plan: string | null; workspaces?: "all" | "later" };
-export type SessionFamily = { family: string; email: string | null; contexts: SessionContext[]; available_contexts?: number };
-export type ContextGroup = SessionContext & { family: string; email: string | null; available_contexts?: number };
-export type SessionStatus = { state: string; sessions?: SessionFamily[]; default_context?: string | null; empty_reason?: string | null; removed?: RemovedContext[] };
-export type ContextReply = EmptyReply;
-export type ContextInvoke = <T>(command: string, args?: Record<string, unknown>) => Promise<T>;
+export type { ContextGroup, ContextInvoke, ContextReply, SessionContext, SessionFamily, SessionStatus } from "./session-context-types.ts";
+
+import type { ContextGroup, ContextInvoke, ContextReply, SessionFamily, SessionStatus } from "./session-context-types.ts";
 
 export function contextGroups(status: SessionStatus | null): ContextGroup[] | null {
   if (!status || !Array.isArray(status.sessions)) return null;
@@ -24,6 +22,7 @@ export function createSessionContexts(invoke: ContextInvoke, changed: () => void
   let epoch = 0;
   let unsupported = false;
   let ready = false;
+  let defaultContext: string | null = null;
   let connected = false;
   const empty = createSessionEmptyState();
   const notify = () => changed();
@@ -33,6 +32,7 @@ export function createSessionContexts(invoke: ContextInvoke, changed: () => void
       const status = await invoke<SessionStatus>("danil_session_status");
       if (read !== epoch) return;
       ready = true;
+      defaultContext = status.default_context ?? null;
       connected = status.state === "connected";
       if (unsupported && status.sessions?.some((f) => f.contexts.length)) {
         const context = status.sessions.flatMap((f) => f.contexts)[0].context_id;
@@ -46,12 +46,15 @@ export function createSessionContexts(invoke: ContextInvoke, changed: () => void
       notify();
     } catch { if (read === epoch) { ready = true; notify(); } }
   }
-  const send = async (context: string, method: string, path: string, body?: unknown): Promise<ContextReply> => {
+  // Crear y adoptar exigen la llave de quien llama (Rust lo rechaza sin ella): inventarla aquí rompería sus reintentos.
+  const callerKey = (method: string, path: string, key?: string) =>
+    key || !(method === "POST" && (path === "/v1/workspaces" || path === "/v1/workspaces/adopt")) ? { idempotencyKey: key ?? crypto.randomUUID() } : {};
+  const send = async (context: string, method: string, path: string, body?: unknown, idempotencyKey?: string, optionalRoute = false): Promise<ContextReply> => {
     if (unsupported) throw { detail: "session_echo_mismatch" };
     const group = groups?.find((g) => g.context_id === context);
     if (!group) throw { detail: "session_not_in_set" };
     try {
-      const reply = await invoke<ContextReply>("danil_edge_fetch", { method, path, context, ...(body === undefined ? {} : { body }), ...(method === "GET" ? {} : { idempotencyKey: crypto.randomUUID() }) });
+      const reply = await invoke<ContextReply>("danil_edge_fetch", { method, path, context, ...(body === undefined ? {} : { body }), ...(method === "GET" ? {} : callerKey(method, path, idempotencyKey)) });
       if (!groups?.some((g) => g.context_id === context)) throw { detail: "session_not_in_set" };
       if (empty.note(context, reply)) notify();
       return empty.reason(context) ? { ...reply, body: undefined, empty_reason: empty.reason(context) } : reply;
@@ -62,7 +65,7 @@ export function createSessionContexts(invoke: ContextInvoke, changed: () => void
         if (empty.note(context, reply)) notify();
         return reply;
       }
-      if ((e as { detail?: string } | null)?.detail === "session_echo_mismatch") {
+      if (!optionalRoute && (e as { detail?: string } | null)?.detail === "session_echo_mismatch") {
         unsupported = true;
         notify();
       }
@@ -79,6 +82,9 @@ export function createSessionContexts(invoke: ContextInvoke, changed: () => void
   }
   return {
     refresh, send, close,
+    sendOptional: (context: string, method: string, path: string, body?: unknown, key?: string) => send(context, method, path, body, key, true),
+    defaultContext: () => defaultContext,
+    noteOrganizationProblem: (context: string) => { if (empty.note(context, { status: 403, empty_reason: "organization_selection_required" })) notify(); },
     closeEmail: async (email: string | null, fallbackFamily: string) => {
       const ids = email ? families.filter((f) => f.email?.trim().toLowerCase() === email.trim().toLowerCase()).map((f) => f.family) : [fallbackFamily];
       for (const family of ids) await close({ family });
@@ -87,16 +93,6 @@ export function createSessionContexts(invoke: ContextInvoke, changed: () => void
     groups: () => unsupported ? null : groups,
     families: () => families,
     emptyReason: empty.reason, removed: empty.removed, dismissRemoved: (context: string) => { empty.dismiss(context); changed(); },
-    addAccount: async () => {
-      let result: { error?: string | null };
-      try { result = await invoke("danil_sign_in", { mode: "add" }); }
-      catch (e) {
-        const refusal = e as { detail?: string; status?: number } | null;
-        if (refusal?.detail !== "not_available_yet" && refusal?.status !== 404 && refusal?.status !== 501) throw e;
-        result = await invoke("danil_sign_in");
-      }
-      await refresh();
-      if (result.error) throw { detail: result.error };
-    },
+    addAccount: () => addSessionAccount(invoke, refresh, () => groups),
   };
 }

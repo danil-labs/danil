@@ -3,7 +3,7 @@
  * el valor por defecto; la entrada web (`src/web/main.tsx`) lo fija antes de
  * importar la app y no cambia después.
  */
-import type { Answer, AccountWorkspace, Computer, CredentialSource, MemorySource, SpaceOrderSource } from "@terminus/computers";
+import type { AccountWorkspace, Answer, Computer, CredentialSource, MemorySource, SpaceOrderSource } from "@terminus/computers";
 import { createRoot, createSignal, type JSX } from "solid-js";
 import type { AccountEmailsSource } from "../features/settings/account-emails";
 import type { AccountProfileSource } from "../features/settings/account-profile";
@@ -51,15 +51,15 @@ export type WebAccountsSource = {
   /** Abre un workspace de otra cuenta: la página se recarga con esa cuenta. */
   open: (workspace: string) => void;
   /** «Agregar cuenta»; `email`, para volver a entrar con una que caducó. */
-  add: (email?: string | null) => void;
+  add?: (email?: string | null) => void;
   /** Olvida una cuenta extra en este navegador. */
   remove: (userId: string) => Promise<void>;
   /** Cierra la sesión de la cuenta abierta y vuelve a la entrada. */
   signOut: () => void;
 };
 
-export type Capabilities = {
-  webPromo?: (code: string, idempotencyKey: string) => Promise<{ machine?: { state?: string } }>;
+export type Capabilities = import("./group-account").GroupAccountCapabilities & {
+  webPromo?: (code: string, idempotencyKey: string) => Promise<{ machine?: { state?: string }; unavailable?: boolean }>;
   webWorkspaces?: { rows: () => { id: string; name: string }[]; active: () => string | null; busy: () => boolean; uncertain: () => boolean; choose: (id: string) => void };
   webReauth?: { needed: () => boolean; signIn: () => void };
   /** Saldo de la cuenta Danil desde un BFF autenticado; ausente hasta verificar el adaptador. */
