@@ -94,3 +94,18 @@ test("una petición que no contesta se corta en su plazo", async () => {
     });
   await assert.rejects(edgeTransport({ origin: ORIGIN, timeoutMs: 10 }, request).call("identity/me"), { name: "TimeoutError" });
 });
+
+test("las cabeceras en un objeto Headers llegan al borde junto con CSRF y Accept", async () => {
+  const { calls, request } = recorder(async (r) => {
+    if (new URL(r.url).pathname === "/v1/identity/csrf") return Response.json({ csrf_token: "bound" });
+    return Response.json({ ok: true }, { status: 201 });
+  });
+  const edge = edgeTransport({ origin: ORIGIN, timeoutMs: 1000 }, request);
+  const headers = new Headers({ "content-type": "application/json", "X-Danil-Session": "ctx-1" });
+  await edge.mutation("machines/m1/tickets", { body: "{}", headers });
+  const post = calls.find((r) => new URL(r.url).pathname === "/v1/machines/m1/tickets")!;
+  assert.equal(post.headers.get("content-type"), "application/json");
+  assert.equal(post.headers.get("x-danil-session"), "ctx-1");
+  assert.equal(post.headers.get("x-csrf-token"), "bound");
+  assert.equal(post.headers.get("accept"), "application/json");
+});
