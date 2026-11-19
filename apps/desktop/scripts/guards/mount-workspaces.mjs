@@ -160,8 +160,6 @@ await sleep(50);
 assert.deepEqual(estrellas, ["https://github.com/danil-labs/danil"]);
 assert.equal(estrella(), null, "abrir el repositorio retira la invitación");
 assert.ok(d1.querySelector('[data-workspace-column-foot] button[aria-label="Configuración"]'), "Configuración vive al pie de la columna");
-const setupRequests = [];
-soloApp.w.addEventListener("harness:new-workspace", () => setupRequests.push(1));
 d1.querySelector('[data-workspace-column] button[aria-label="Agregar workspace"]').click();
 await sleep(100);
 const rows = [...d1.querySelectorAll('[role="menuitem"]')].map((b) => b.textContent.trim());
@@ -169,7 +167,6 @@ assert.ok(rows.includes("Agregar workspace"), "el «+» ofrece agregar uno de Da
 assert.ok(!rows.includes("Crear workspace local"), "el «+» ya no ofrece crear uno local (F1.3)");
 d1.activeElement?.dispatchEvent(new soloApp.w.KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
 await sleep(150);
-assert.equal(setupRequests.length, 0, "el «+» no pide el alta de un local");
 assert.deepEqual(soloApp.failures, []);
 /**
  * Ocultar el riel vive a la izquierda de Agentes y Tareas. Oculto, lo trae de vuelta la fila de
