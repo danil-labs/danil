@@ -918,3 +918,40 @@ mod family_death_tests;
 
 #[path = "promo_tests.rs"]
 mod promo_tests;
+
+#[test]
+fn sessions_list_passes_short_roles_to_status_and_discards_oversized_roles() {
+    let vault = VaultSet::default();
+    catalog(&vault);
+    let (edge, _) = serve(Arc::new(|req, _| match req.path.as_str() {
+        "/v1/identity/desk/refresh" => (200, refresh_for(req)),
+        "/v1/identity/me" => (
+            200,
+            json!({"id":"same_person","email":"same@example.test","__echo":req.context}),
+        ),
+        "/v1/identity/sessions" => {
+            let family = req
+                .authorization
+                .as_deref()
+                .unwrap()
+                .strip_prefix("Bearer access_")
+                .unwrap();
+            let (context, org, role) = if family == "family_a" {
+                ("context_a", "org_a", "future-role".to_owned())
+            } else {
+                ("context_b", "org_b", "x".repeat(129))
+            };
+            (
+                200,
+                json!({"items":[{"session_id":family,"contexts":[{"context_id":context,"org":org,"role":role}]}]}),
+            )
+        }
+        _ => (404, Value::Null),
+    }));
+    let status = Families::new(edge, vault, || {}).status();
+    let rows = status["sessions"].as_array().unwrap();
+    let a = rows.iter().find(|row| row["family"] == "family_a").unwrap();
+    let b = rows.iter().find(|row| row["family"] == "family_b").unwrap();
+    assert_eq!(a["contexts"][0]["role"], "future-role");
+    assert!(b["contexts"][0].get("role").is_none());
+}

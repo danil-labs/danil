@@ -207,3 +207,8 @@ test("scoped reads expire without polling and explicit invalidation refreshes a 
   await reader.read("a"); assert.equal(calls, 2);
   reader.clear(); await reader.read("a"); assert.equal(calls, 3);
 });
+
+for (const role of ["owner", "admin", undefined, "future-role", "member", "guest", "x".repeat(129)]) test(`web context preserves a short role: ${role?.slice(0, 20)}`, async () => {
+  const api = platformSession({ origin: "https://edge.test", timeoutMs: 1000 }, async () => Response.json({ default_context: "a", items: [{ contexts: [{ context_id: "a", org: "org_A", role }] }] }));
+  assert.equal((await api.groupAccount.current())?.role, role && role.length > 128 ? undefined : role);
+});

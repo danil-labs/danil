@@ -4,6 +4,7 @@
 //! refresh en el llavero y Bearer al borde. La webview recibe perfil y estado,
 //! nunca tokens. Cada familia conserva su propia renovación y sus contextos.
 
+mod context_role;
 mod families;
 mod login_browser;
 pub(crate) mod pkce;

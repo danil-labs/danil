@@ -8,7 +8,7 @@ const escape = (app) => app.w.document.activeElement?.dispatchEvent(new app.w.Ke
 
 test("preferences have no global account entries, group menus scope credits and redemption, and 403 marks only its organization", async () => {
   const calls = [];
-  const contexts = ["a", "b"].map((context_id) => ({ context_id, org: `org-${context_id}`, org_name: `Org ${context_id}`, plan: "paid" }));
+  const contexts = ["a", "b"].map((context_id) => ({ context_id, org: `org-${context_id}`, org_name: `Org ${context_id}`, plan: "paid", role: "admin" }));
   let status = { state: "connected", default_context: "a", sessions: [{ family: "family", email: "one@example.com", contexts }] };
   const closed = [];
   const logins = [];
@@ -98,7 +98,7 @@ test("the enabled Desk promo route sends a trimmed code and displays rejection c
     { status: 201, body: { machine: { state: "ready" } } },
   ];
   const app = await boot("listo", "promo-rejections-context", { ...RESPONSES,
-    danil_session_status: { state: "connected", sessions: [{ family: "family", email: "one@example.com", contexts: [{ context_id: "a", org: "org-a", org_name: "A", plan: "paid" }] }] },
+    danil_session_status: { state: "connected", sessions: [{ family: "family", email: "one@example.com", contexts: [{ context_id: "a", org: "org-a", org_name: "A", plan: "paid", role: "admin" }] }] },
     danil_edge_fetch: (args) => {
       if (args.path === "/v1/identity/me") return { status: 200, body: { id: "person" } };
       if (args.path === "/v1/workspaces/promo/redeem") { sent.push(args); return replies.shift(); }
@@ -129,4 +129,20 @@ test("the enabled Desk promo route sends a trimmed code and displays rejection c
   submit("THIRD");
   assert.ok(await until(() => sent.length === 4 && input.closest("form").querySelector('[role="status"]')));
   assert.equal(sent[2].idempotencyKey, sent[3].idempotencyKey, "the same code retry keeps its intention key");
+});
+
+test("Desk group can redeem unless its context explicitly says member or guest", async () => {
+  const roles = ["owner", "admin", undefined, "future-role", "member", "guest"];
+  const app = await boot("listo", "promo-context-roles", { ...RESPONSES,
+    danil_session_status: { state: "connected", sessions: [{ family: "f", email: "one@example.com", contexts: roles.map((role, i) => ({ context_id: `role-${i}`, org: `org-${i}`, org_name: `Org ${i}`, plan: "paid", role })) }] },
+    danil_edge_fetch: ({ path }) => path === "/v1/identity/me" ? { status: 200, body: { id: "person" } } : { status: 404 },
+  });
+  const doc = app.w.document;
+  assert.ok(await until(() => doc.querySelectorAll("[data-account-header]").length === roles.length));
+  for (let i = 0; i < roles.length; i++) {
+    doc.querySelector(`[data-account-header="role-${i}"]`).click();
+    assert.ok(await until(() => [...doc.querySelectorAll('[role="menuitem"]')].some((b) => b.textContent === `Cerrar sesión de Org ${i}`)));
+    assert.equal([...doc.querySelectorAll('[role="menuitem"]')].some((b) => b.textContent === "Canjear código"), roles[i] !== "member" && roles[i] !== "guest", `Desk role ${roles[i]}`);
+    escape(app); await sleep(50);
+  }
 });
