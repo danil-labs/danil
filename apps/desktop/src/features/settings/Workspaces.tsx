@@ -5,7 +5,6 @@ import Cloud from "lucide-solid/icons/cloud";
 import ImagePlus from "lucide-solid/icons/image-plus";
 import Laptop from "lucide-solid/icons/laptop";
 import Pencil from "lucide-solid/icons/pencil";
-import Plus from "lucide-solid/icons/plus";
 import Trash2 from "lucide-solid/icons/trash-2";
 import { Button } from "../../ui/Button";
 import { Input } from "../../ui/Input";
@@ -568,27 +567,6 @@ export default function Workspaces() {
             </For>
           </ul>
 
-          {/* Agregar un workspace **corre el alta entera**, la misma del primer
-              arranque: nombre, proveedores de IA y source control. Aquí había un
-              formulario de una línea, y se quedaba corto desde que las cuentas
-              cuelgan del workspace — el segundo cliente nace sin ninguna, y con
-              solo un campo de nombre eso no se ve hasta que se intenta preguntar
-              algo.
-
-              Lo monta `App.tsx`, que es quien tiene la ventana entera; esta
-              pantalla solo lo pide, como todo lo demás que hace. */}
-          <div class="flex flex-wrap items-center gap-2">
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() =>
-                window.dispatchEvent(new CustomEvent("harness:new-workspace"))
-              }
-            >
-              <Plus size={15} />
-              {t("settings.workspaces.add")}
-            </Button>
-          </div>
 
           <Show when={ws.fallo()}>{(f) => <FailureNote f={f()} />}</Show>
 

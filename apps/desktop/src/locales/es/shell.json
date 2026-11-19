@@ -125,7 +125,6 @@
   "shell.sidebar.hide": "Ocultar el historial",
   "shell.workspaces.label": "Workspaces",
   "shell.workspaces.add": "Agregar workspace",
-  "shell.workspaces.create": "Crear workspace local",
   "shell.workspaces.tile_with_state": "{name}: {state}",
   "shell.workspaces.account": "Cuenta {email}",
   "shell.workspaces.other_tile": "{name} · {email}",

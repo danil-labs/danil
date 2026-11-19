@@ -2180,19 +2180,6 @@ export default function App() {
       window.removeEventListener("harness:sources", alCambiarMaterial),
     );
 
-    // Agregar un workspace lo pide quien lo ofrece —el panel de
-    // Configuración— y lo monta esta pantalla: el alta ocupa la ventana
-    // entera.
-    const alPedirAlta = () => {
-      // La hoja de Configuración se cierra: el alta va debajo de ella y
-      // quedaría tapada por la pantalla desde la que se pidió.
-      setSettings(null);
-      setAlta("nueva");
-    };
-    window.addEventListener("harness:new-workspace", alPedirAlta);
-    onCleanup(() =>
-      window.removeEventListener("harness:new-workspace", alPedirAlta),
-    );
     // Lo piden las vistas que necesitan un plugin: `DrawioMcpCanvas.tsx`.
     const alPedirAjustes = (e: Event) => {
       const panel = (e as CustomEvent<unknown>).detail;

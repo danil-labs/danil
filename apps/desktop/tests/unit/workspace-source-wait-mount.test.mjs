@@ -29,6 +29,9 @@ test("an unsettled organization machine times out in the picker, retries and pai
   const flush = async () => { for (let i = 0; i < 12; i++) { t.mock.timers.tick(0); await immediate(); } };
   doc.querySelector("[data-add-workspace]").click();
   await flush();
+  const items = [...doc.querySelectorAll('[role="menuitem"]')].map((b) => b.textContent);
+  assert.ok(items.includes("Agregar workspace"));
+  assert.ok(!items.some((text) => text.includes("local")), "the «+» no longer offers a local workspace");
   [...doc.querySelectorAll('[role="menuitem"]')].find((b) => b.textContent === "Agregar workspace").click();
   await flush();
   const railIds = () => [...doc.querySelectorAll("[data-workspace-tile]")].map((tile) => tile.dataset.workspaceTile).sort();
