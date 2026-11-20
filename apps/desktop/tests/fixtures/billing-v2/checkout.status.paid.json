@@ -1,0 +1,11 @@
+{
+  "schema": "openapi/public.openapi.json#/components/schemas/CheckoutStatus",
+  "value": {
+    "checkout_id": "bchk_01SYNTHETICCHK0001",
+    "kind": "plan",
+    "state": "paid",
+    "terminal": false,
+    "url": null,
+    "expires_at": null
+  }
+}

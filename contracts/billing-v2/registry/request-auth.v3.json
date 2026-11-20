@@ -1,0 +1,75 @@
+{
+  "edge": {
+    "repo": "danil-labs/edge",
+    "commit": "c4c3bb12db75c632525405973eecf3078d24139c",
+    "source": "src/auth.ts",
+    "source_sha256_lf": "7b688fac0dcf07a22606e66da32ad5461719c94a9ae2accedcd453411d0359d4",
+    "upstream_vectors": "test/vectors/req.json",
+    "vectors": "vectors/edge-req-c4c3bb12.json",
+    "vectors_sha256": "57af5f9e6a80411b2af3d6bcd1c9bd30cb51f518131588af149a6814d3b511fc"
+  },
+  "rule": "No hay paquete común R1: cada servicio porta src/auth.ts fijado, comprueba req contra el fixture sin editar y añade el verificador de origen JOSE con firma, JWKS de confianza, issuer, aud, typ, exp, iat, jti y req. contract.mjs solo expresa política sobre una firma YA verificada; no se importa en producción.",
+  "profiles": {
+    "person": {
+      "typ": "JWT",
+      "alg": "ES256",
+      "aud": "billing",
+      "iss": "edge-gateway",
+      "max_lifetime_s": 60,
+      "req": true,
+      "one_use_jti": true
+    },
+    "service": {
+      "typ": "danil-service+jwt",
+      "alg": "ES256",
+      "aud": "identity",
+      "iss": "edge-gateway",
+      "subject": "svc:billing",
+      "max_lifetime_s": 60,
+      "req": true,
+      "one_use_jti": true
+    },
+    "operator": {
+      "typ": "danil-operator+jwt",
+      "alg": "ES256",
+      "aud": "billing-operator",
+      "iss": "configured operator issuer",
+      "max_lifetime_s": 60,
+      "req": true,
+      "one_use_jti": true,
+      "scope_by_route": {
+        "POST /operator/v1/credit-lots": "credits.grant",
+        "POST /operator/v1/refunds/{refund_id}/allocation": "credits.refund.allocate"
+      },
+      "scope_required": true,
+      "scope_rule": "Receptor configura scope por ruta; si lo omite o es vacío, insufficient_scope. Sin valor por omisión."
+    },
+    "producer": {
+      "typ": "JWT",
+      "alg": "RS256",
+      "iss": "configured Cloudflare Access team",
+      "aud": "configured internal Access application",
+      "identity": "common_name from verified JWT",
+      "organization_authorization": "usage_authorizations",
+      "req": false,
+      "one_use_jti": false,
+      "note": "Access no es un JWT de persona, operador ni E1; valida certificados del equipo, issuer y aud de la aplicación. No se exige req o jti de edge a Access."
+    },
+    "entitlement_reader": {
+      "typ": "danil-service+jwt",
+      "alg": "ES256",
+      "aud": "billing",
+      "iss": "edge-gateway",
+      "subjects": [
+        "svc:machine-provisioning",
+        "svc:identity",
+        "svc:workspaces"
+      ],
+      "max_lifetime_s": 60,
+      "req": true,
+      "one_use_jti": true,
+      "note": "Rev. 12. E1 para GET /internal/v1/entitlements/{organization_id} y GET /internal/v1/entitlements (services.yaml). sub en la lista cerrada; svc:billing no se lee a sí mismo. req liga método, target literal con su query y el SHA-256 del cuerpo vacío."
+    }
+  },
+  "production_keys": []
+}

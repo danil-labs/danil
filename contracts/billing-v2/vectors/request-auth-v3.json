@@ -1,0 +1,1848 @@
+{
+  "cases": [
+    {
+      "profile": "person",
+      "name": "persona del borde válida",
+      "input": {
+        "verified": true,
+        "header": {
+          "alg": "ES256",
+          "typ": "JWT",
+          "kid": "edge-test"
+        },
+        "claims": {
+          "iss": "edge-gateway",
+          "aud": "billing",
+          "sub": "user_owner",
+          "org": "org_SYNTHETIC",
+          "iat": 1000,
+          "exp": 1060,
+          "jti": "0f8e2a64-6a1b-4c39-8f0e-2b7d9c1a5e01",
+          "req": {
+            "method": "POST",
+            "target": "/v1/messaging/conversations/cnv_1/messages?x=1&q=a%20b&q=%2F&x=+",
+            "body_sha256": "8cf5e3e44a1da762ce9ac5fcaeea5cfb2b0b64074233566e0b4f8f554af84d37",
+            "headers": {
+              "content-type": "application/json; charset=utf-8",
+              "if-match": "\"v3\"",
+              "idempotency-key": "same-key",
+              "last-event-id": "cursor-1"
+            }
+          },
+          "scopes": [
+            "credits.read"
+          ]
+        },
+        "now": 1010,
+        "request": {
+          "method": "POST",
+          "target": "/v1/messaging/conversations/cnv_1/messages?x=1&q=a%20b&q=%2F&x=+",
+          "body": "{\"text\":\"á\", \"workspace\":\"999\"}",
+          "headers": {
+            "content-type": "application/json; charset=utf-8",
+            "if-match": "\"v3\"",
+            "idempotency-key": "same-key",
+            "last-event-id": "cursor-1"
+          }
+        },
+        "seen_jtis": [],
+        "allowed_kids": [
+          "edge-test"
+        ],
+        "expected_issuer": "edge-gateway",
+        "expected_audience": "billing"
+      },
+      "expected": "ok"
+    },
+    {
+      "profile": "person",
+      "name": "firma no verificada",
+      "input": {
+        "verified": false,
+        "header": {
+          "alg": "ES256",
+          "typ": "JWT",
+          "kid": "edge-test"
+        },
+        "claims": {
+          "iss": "edge-gateway",
+          "aud": "billing",
+          "sub": "user_owner",
+          "org": "org_SYNTHETIC",
+          "iat": 1000,
+          "exp": 1060,
+          "jti": "0f8e2a64-6a1b-4c39-8f0e-2b7d9c1a5e01",
+          "req": {
+            "method": "POST",
+            "target": "/v1/messaging/conversations/cnv_1/messages?x=1&q=a%20b&q=%2F&x=+",
+            "body_sha256": "8cf5e3e44a1da762ce9ac5fcaeea5cfb2b0b64074233566e0b4f8f554af84d37",
+            "headers": {
+              "content-type": "application/json; charset=utf-8",
+              "if-match": "\"v3\"",
+              "idempotency-key": "same-key",
+              "last-event-id": "cursor-1"
+            }
+          },
+          "scopes": [
+            "credits.read"
+          ]
+        },
+        "now": 1010,
+        "request": {
+          "method": "POST",
+          "target": "/v1/messaging/conversations/cnv_1/messages?x=1&q=a%20b&q=%2F&x=+",
+          "body": "{\"text\":\"á\", \"workspace\":\"999\"}",
+          "headers": {
+            "content-type": "application/json; charset=utf-8",
+            "if-match": "\"v3\"",
+            "idempotency-key": "same-key",
+            "last-event-id": "cursor-1"
+          }
+        },
+        "seen_jtis": [],
+        "allowed_kids": [
+          "edge-test"
+        ],
+        "expected_issuer": "edge-gateway",
+        "expected_audience": "billing"
+      },
+      "expected": "unauthenticated"
+    },
+    {
+      "profile": "person",
+      "name": "jti repetido",
+      "input": {
+        "verified": true,
+        "header": {
+          "alg": "ES256",
+          "typ": "JWT",
+          "kid": "edge-test"
+        },
+        "claims": {
+          "iss": "edge-gateway",
+          "aud": "billing",
+          "sub": "user_owner",
+          "org": "org_SYNTHETIC",
+          "iat": 1000,
+          "exp": 1060,
+          "jti": "0f8e2a64-6a1b-4c39-8f0e-2b7d9c1a5e01",
+          "req": {
+            "method": "POST",
+            "target": "/v1/messaging/conversations/cnv_1/messages?x=1&q=a%20b&q=%2F&x=+",
+            "body_sha256": "8cf5e3e44a1da762ce9ac5fcaeea5cfb2b0b64074233566e0b4f8f554af84d37",
+            "headers": {
+              "content-type": "application/json; charset=utf-8",
+              "if-match": "\"v3\"",
+              "idempotency-key": "same-key",
+              "last-event-id": "cursor-1"
+            }
+          },
+          "scopes": [
+            "credits.read"
+          ]
+        },
+        "now": 1010,
+        "request": {
+          "method": "POST",
+          "target": "/v1/messaging/conversations/cnv_1/messages?x=1&q=a%20b&q=%2F&x=+",
+          "body": "{\"text\":\"á\", \"workspace\":\"999\"}",
+          "headers": {
+            "content-type": "application/json; charset=utf-8",
+            "if-match": "\"v3\"",
+            "idempotency-key": "same-key",
+            "last-event-id": "cursor-1"
+          }
+        },
+        "seen_jtis": [
+          "0f8e2a64-6a1b-4c39-8f0e-2b7d9c1a5e01"
+        ],
+        "allowed_kids": [
+          "edge-test"
+        ],
+        "expected_issuer": "edge-gateway",
+        "expected_audience": "billing"
+      },
+      "expected": "replay"
+    },
+    {
+      "profile": "person",
+      "name": "cuerpo alterado",
+      "input": {
+        "verified": true,
+        "header": {
+          "alg": "ES256",
+          "typ": "JWT",
+          "kid": "edge-test"
+        },
+        "claims": {
+          "iss": "edge-gateway",
+          "aud": "billing",
+          "sub": "user_owner",
+          "org": "org_SYNTHETIC",
+          "iat": 1000,
+          "exp": 1060,
+          "jti": "0f8e2a64-6a1b-4c39-8f0e-2b7d9c1a5e01",
+          "req": {
+            "method": "POST",
+            "target": "/v1/messaging/conversations/cnv_1/messages?x=1&q=a%20b&q=%2F&x=+",
+            "body_sha256": "8cf5e3e44a1da762ce9ac5fcaeea5cfb2b0b64074233566e0b4f8f554af84d37",
+            "headers": {
+              "content-type": "application/json; charset=utf-8",
+              "if-match": "\"v3\"",
+              "idempotency-key": "same-key",
+              "last-event-id": "cursor-1"
+            }
+          },
+          "scopes": [
+            "credits.read"
+          ]
+        },
+        "now": 1010,
+        "request": {
+          "method": "POST",
+          "target": "/v1/messaging/conversations/cnv_1/messages?x=1&q=a%20b&q=%2F&x=+",
+          "body": "{}",
+          "headers": {
+            "content-type": "application/json; charset=utf-8",
+            "if-match": "\"v3\"",
+            "idempotency-key": "same-key",
+            "last-event-id": "cursor-1"
+          }
+        },
+        "seen_jtis": [],
+        "allowed_kids": [
+          "edge-test"
+        ],
+        "expected_issuer": "edge-gateway",
+        "expected_audience": "billing"
+      },
+      "expected": "request_mismatch"
+    },
+    {
+      "profile": "person",
+      "name": "cabecera ajena typdanil-service+jwt",
+      "input": {
+        "verified": true,
+        "header": {
+          "alg": "ES256",
+          "typ": "danil-service+jwt",
+          "kid": "edge-test"
+        },
+        "claims": {
+          "iss": "edge-gateway",
+          "aud": "billing",
+          "sub": "user_owner",
+          "org": "org_SYNTHETIC",
+          "iat": 1000,
+          "exp": 1060,
+          "jti": "0f8e2a64-6a1b-4c39-8f0e-2b7d9c1a5e01",
+          "req": {
+            "method": "POST",
+            "target": "/v1/messaging/conversations/cnv_1/messages?x=1&q=a%20b&q=%2F&x=+",
+            "body_sha256": "8cf5e3e44a1da762ce9ac5fcaeea5cfb2b0b64074233566e0b4f8f554af84d37",
+            "headers": {
+              "content-type": "application/json; charset=utf-8",
+              "if-match": "\"v3\"",
+              "idempotency-key": "same-key",
+              "last-event-id": "cursor-1"
+            }
+          },
+          "scopes": [
+            "credits.read"
+          ]
+        },
+        "now": 1010,
+        "request": {
+          "method": "POST",
+          "target": "/v1/messaging/conversations/cnv_1/messages?x=1&q=a%20b&q=%2F&x=+",
+          "body": "{\"text\":\"á\", \"workspace\":\"999\"}",
+          "headers": {
+            "content-type": "application/json; charset=utf-8",
+            "if-match": "\"v3\"",
+            "idempotency-key": "same-key",
+            "last-event-id": "cursor-1"
+          }
+        },
+        "seen_jtis": [],
+        "allowed_kids": [
+          "edge-test"
+        ],
+        "expected_issuer": "edge-gateway",
+        "expected_audience": "billing"
+      },
+      "expected": "unauthenticated"
+    },
+    {
+      "profile": "person",
+      "name": "cabecera ajena typdanil-operator+jwt",
+      "input": {
+        "verified": true,
+        "header": {
+          "alg": "ES256",
+          "typ": "danil-operator+jwt",
+          "kid": "edge-test"
+        },
+        "claims": {
+          "iss": "edge-gateway",
+          "aud": "billing",
+          "sub": "user_owner",
+          "org": "org_SYNTHETIC",
+          "iat": 1000,
+          "exp": 1060,
+          "jti": "0f8e2a64-6a1b-4c39-8f0e-2b7d9c1a5e01",
+          "req": {
+            "method": "POST",
+            "target": "/v1/messaging/conversations/cnv_1/messages?x=1&q=a%20b&q=%2F&x=+",
+            "body_sha256": "8cf5e3e44a1da762ce9ac5fcaeea5cfb2b0b64074233566e0b4f8f554af84d37",
+            "headers": {
+              "content-type": "application/json; charset=utf-8",
+              "if-match": "\"v3\"",
+              "idempotency-key": "same-key",
+              "last-event-id": "cursor-1"
+            }
+          },
+          "scopes": [
+            "credits.read"
+          ]
+        },
+        "now": 1010,
+        "request": {
+          "method": "POST",
+          "target": "/v1/messaging/conversations/cnv_1/messages?x=1&q=a%20b&q=%2F&x=+",
+          "body": "{\"text\":\"á\", \"workspace\":\"999\"}",
+          "headers": {
+            "content-type": "application/json; charset=utf-8",
+            "if-match": "\"v3\"",
+            "idempotency-key": "same-key",
+            "last-event-id": "cursor-1"
+          }
+        },
+        "seen_jtis": [],
+        "allowed_kids": [
+          "edge-test"
+        ],
+        "expected_issuer": "edge-gateway",
+        "expected_audience": "billing"
+      },
+      "expected": "unauthenticated"
+    },
+    {
+      "profile": "person",
+      "name": "cabecera ajena algnone",
+      "input": {
+        "verified": true,
+        "header": {
+          "alg": "none",
+          "typ": "JWT",
+          "kid": "edge-test"
+        },
+        "claims": {
+          "iss": "edge-gateway",
+          "aud": "billing",
+          "sub": "user_owner",
+          "org": "org_SYNTHETIC",
+          "iat": 1000,
+          "exp": 1060,
+          "jti": "0f8e2a64-6a1b-4c39-8f0e-2b7d9c1a5e01",
+          "req": {
+            "method": "POST",
+            "target": "/v1/messaging/conversations/cnv_1/messages?x=1&q=a%20b&q=%2F&x=+",
+            "body_sha256": "8cf5e3e44a1da762ce9ac5fcaeea5cfb2b0b64074233566e0b4f8f554af84d37",
+            "headers": {
+              "content-type": "application/json; charset=utf-8",
+              "if-match": "\"v3\"",
+              "idempotency-key": "same-key",
+              "last-event-id": "cursor-1"
+            }
+          },
+          "scopes": [
+            "credits.read"
+          ]
+        },
+        "now": 1010,
+        "request": {
+          "method": "POST",
+          "target": "/v1/messaging/conversations/cnv_1/messages?x=1&q=a%20b&q=%2F&x=+",
+          "body": "{\"text\":\"á\", \"workspace\":\"999\"}",
+          "headers": {
+            "content-type": "application/json; charset=utf-8",
+            "if-match": "\"v3\"",
+            "idempotency-key": "same-key",
+            "last-event-id": "cursor-1"
+          }
+        },
+        "seen_jtis": [],
+        "allowed_kids": [
+          "edge-test"
+        ],
+        "expected_issuer": "edge-gateway",
+        "expected_audience": "billing"
+      },
+      "expected": "unauthenticated"
+    },
+    {
+      "profile": "person",
+      "name": "cabecera ajena kidother",
+      "input": {
+        "verified": true,
+        "header": {
+          "alg": "ES256",
+          "typ": "JWT",
+          "kid": "other"
+        },
+        "claims": {
+          "iss": "edge-gateway",
+          "aud": "billing",
+          "sub": "user_owner",
+          "org": "org_SYNTHETIC",
+          "iat": 1000,
+          "exp": 1060,
+          "jti": "0f8e2a64-6a1b-4c39-8f0e-2b7d9c1a5e01",
+          "req": {
+            "method": "POST",
+            "target": "/v1/messaging/conversations/cnv_1/messages?x=1&q=a%20b&q=%2F&x=+",
+            "body_sha256": "8cf5e3e44a1da762ce9ac5fcaeea5cfb2b0b64074233566e0b4f8f554af84d37",
+            "headers": {
+              "content-type": "application/json; charset=utf-8",
+              "if-match": "\"v3\"",
+              "idempotency-key": "same-key",
+              "last-event-id": "cursor-1"
+            }
+          },
+          "scopes": [
+            "credits.read"
+          ]
+        },
+        "now": 1010,
+        "request": {
+          "method": "POST",
+          "target": "/v1/messaging/conversations/cnv_1/messages?x=1&q=a%20b&q=%2F&x=+",
+          "body": "{\"text\":\"á\", \"workspace\":\"999\"}",
+          "headers": {
+            "content-type": "application/json; charset=utf-8",
+            "if-match": "\"v3\"",
+            "idempotency-key": "same-key",
+            "last-event-id": "cursor-1"
+          }
+        },
+        "seen_jtis": [],
+        "allowed_kids": [
+          "edge-test"
+        ],
+        "expected_issuer": "edge-gateway",
+        "expected_audience": "billing"
+      },
+      "expected": "unauthenticated"
+    },
+    {
+      "profile": "person",
+      "name": "claim inválido audidentity",
+      "input": {
+        "verified": true,
+        "header": {
+          "alg": "ES256",
+          "typ": "JWT",
+          "kid": "edge-test"
+        },
+        "claims": {
+          "iss": "edge-gateway",
+          "aud": "identity",
+          "sub": "user_owner",
+          "org": "org_SYNTHETIC",
+          "iat": 1000,
+          "exp": 1060,
+          "jti": "0f8e2a64-6a1b-4c39-8f0e-2b7d9c1a5e01",
+          "req": {
+            "method": "POST",
+            "target": "/v1/messaging/conversations/cnv_1/messages?x=1&q=a%20b&q=%2F&x=+",
+            "body_sha256": "8cf5e3e44a1da762ce9ac5fcaeea5cfb2b0b64074233566e0b4f8f554af84d37",
+            "headers": {
+              "content-type": "application/json; charset=utf-8",
+              "if-match": "\"v3\"",
+              "idempotency-key": "same-key",
+              "last-event-id": "cursor-1"
+            }
+          },
+          "scopes": [
+            "credits.read"
+          ]
+        },
+        "now": 1010,
+        "request": {
+          "method": "POST",
+          "target": "/v1/messaging/conversations/cnv_1/messages?x=1&q=a%20b&q=%2F&x=+",
+          "body": "{\"text\":\"á\", \"workspace\":\"999\"}",
+          "headers": {
+            "content-type": "application/json; charset=utf-8",
+            "if-match": "\"v3\"",
+            "idempotency-key": "same-key",
+            "last-event-id": "cursor-1"
+          }
+        },
+        "seen_jtis": [],
+        "allowed_kids": [
+          "edge-test"
+        ],
+        "expected_issuer": "edge-gateway",
+        "expected_audience": "billing"
+      },
+      "expected": "unauthenticated"
+    },
+    {
+      "profile": "person",
+      "name": "claim inválido issuntrusted",
+      "input": {
+        "verified": true,
+        "header": {
+          "alg": "ES256",
+          "typ": "JWT",
+          "kid": "edge-test"
+        },
+        "claims": {
+          "iss": "untrusted",
+          "aud": "billing",
+          "sub": "user_owner",
+          "org": "org_SYNTHETIC",
+          "iat": 1000,
+          "exp": 1060,
+          "jti": "0f8e2a64-6a1b-4c39-8f0e-2b7d9c1a5e01",
+          "req": {
+            "method": "POST",
+            "target": "/v1/messaging/conversations/cnv_1/messages?x=1&q=a%20b&q=%2F&x=+",
+            "body_sha256": "8cf5e3e44a1da762ce9ac5fcaeea5cfb2b0b64074233566e0b4f8f554af84d37",
+            "headers": {
+              "content-type": "application/json; charset=utf-8",
+              "if-match": "\"v3\"",
+              "idempotency-key": "same-key",
+              "last-event-id": "cursor-1"
+            }
+          },
+          "scopes": [
+            "credits.read"
+          ]
+        },
+        "now": 1010,
+        "request": {
+          "method": "POST",
+          "target": "/v1/messaging/conversations/cnv_1/messages?x=1&q=a%20b&q=%2F&x=+",
+          "body": "{\"text\":\"á\", \"workspace\":\"999\"}",
+          "headers": {
+            "content-type": "application/json; charset=utf-8",
+            "if-match": "\"v3\"",
+            "idempotency-key": "same-key",
+            "last-event-id": "cursor-1"
+          }
+        },
+        "seen_jtis": [],
+        "allowed_kids": [
+          "edge-test"
+        ],
+        "expected_issuer": "edge-gateway",
+        "expected_audience": "billing"
+      },
+      "expected": "unauthenticated"
+    },
+    {
+      "profile": "person",
+      "name": "claim inválido exp1005",
+      "input": {
+        "verified": true,
+        "header": {
+          "alg": "ES256",
+          "typ": "JWT",
+          "kid": "edge-test"
+        },
+        "claims": {
+          "iss": "edge-gateway",
+          "aud": "billing",
+          "sub": "user_owner",
+          "org": "org_SYNTHETIC",
+          "iat": 1000,
+          "exp": 1005,
+          "jti": "0f8e2a64-6a1b-4c39-8f0e-2b7d9c1a5e01",
+          "req": {
+            "method": "POST",
+            "target": "/v1/messaging/conversations/cnv_1/messages?x=1&q=a%20b&q=%2F&x=+",
+            "body_sha256": "8cf5e3e44a1da762ce9ac5fcaeea5cfb2b0b64074233566e0b4f8f554af84d37",
+            "headers": {
+              "content-type": "application/json; charset=utf-8",
+              "if-match": "\"v3\"",
+              "idempotency-key": "same-key",
+              "last-event-id": "cursor-1"
+            }
+          },
+          "scopes": [
+            "credits.read"
+          ]
+        },
+        "now": 1010,
+        "request": {
+          "method": "POST",
+          "target": "/v1/messaging/conversations/cnv_1/messages?x=1&q=a%20b&q=%2F&x=+",
+          "body": "{\"text\":\"á\", \"workspace\":\"999\"}",
+          "headers": {
+            "content-type": "application/json; charset=utf-8",
+            "if-match": "\"v3\"",
+            "idempotency-key": "same-key",
+            "last-event-id": "cursor-1"
+          }
+        },
+        "seen_jtis": [],
+        "allowed_kids": [
+          "edge-test"
+        ],
+        "expected_issuer": "edge-gateway",
+        "expected_audience": "billing"
+      },
+      "expected": "unauthenticated"
+    },
+    {
+      "profile": "person",
+      "name": "claim inválido exp1061",
+      "input": {
+        "verified": true,
+        "header": {
+          "alg": "ES256",
+          "typ": "JWT",
+          "kid": "edge-test"
+        },
+        "claims": {
+          "iss": "edge-gateway",
+          "aud": "billing",
+          "sub": "user_owner",
+          "org": "org_SYNTHETIC",
+          "iat": 1000,
+          "exp": 1061,
+          "jti": "0f8e2a64-6a1b-4c39-8f0e-2b7d9c1a5e01",
+          "req": {
+            "method": "POST",
+            "target": "/v1/messaging/conversations/cnv_1/messages?x=1&q=a%20b&q=%2F&x=+",
+            "body_sha256": "8cf5e3e44a1da762ce9ac5fcaeea5cfb2b0b64074233566e0b4f8f554af84d37",
+            "headers": {
+              "content-type": "application/json; charset=utf-8",
+              "if-match": "\"v3\"",
+              "idempotency-key": "same-key",
+              "last-event-id": "cursor-1"
+            }
+          },
+          "scopes": [
+            "credits.read"
+          ]
+        },
+        "now": 1010,
+        "request": {
+          "method": "POST",
+          "target": "/v1/messaging/conversations/cnv_1/messages?x=1&q=a%20b&q=%2F&x=+",
+          "body": "{\"text\":\"á\", \"workspace\":\"999\"}",
+          "headers": {
+            "content-type": "application/json; charset=utf-8",
+            "if-match": "\"v3\"",
+            "idempotency-key": "same-key",
+            "last-event-id": "cursor-1"
+          }
+        },
+        "seen_jtis": [],
+        "allowed_kids": [
+          "edge-test"
+        ],
+        "expected_issuer": "edge-gateway",
+        "expected_audience": "billing"
+      },
+      "expected": "unauthenticated"
+    },
+    {
+      "profile": "person",
+      "name": "claim inválido iat1020",
+      "input": {
+        "verified": true,
+        "header": {
+          "alg": "ES256",
+          "typ": "JWT",
+          "kid": "edge-test"
+        },
+        "claims": {
+          "iss": "edge-gateway",
+          "aud": "billing",
+          "sub": "user_owner",
+          "org": "org_SYNTHETIC",
+          "iat": 1020,
+          "exp": 1060,
+          "jti": "0f8e2a64-6a1b-4c39-8f0e-2b7d9c1a5e01",
+          "req": {
+            "method": "POST",
+            "target": "/v1/messaging/conversations/cnv_1/messages?x=1&q=a%20b&q=%2F&x=+",
+            "body_sha256": "8cf5e3e44a1da762ce9ac5fcaeea5cfb2b0b64074233566e0b4f8f554af84d37",
+            "headers": {
+              "content-type": "application/json; charset=utf-8",
+              "if-match": "\"v3\"",
+              "idempotency-key": "same-key",
+              "last-event-id": "cursor-1"
+            }
+          },
+          "scopes": [
+            "credits.read"
+          ]
+        },
+        "now": 1010,
+        "request": {
+          "method": "POST",
+          "target": "/v1/messaging/conversations/cnv_1/messages?x=1&q=a%20b&q=%2F&x=+",
+          "body": "{\"text\":\"á\", \"workspace\":\"999\"}",
+          "headers": {
+            "content-type": "application/json; charset=utf-8",
+            "if-match": "\"v3\"",
+            "idempotency-key": "same-key",
+            "last-event-id": "cursor-1"
+          }
+        },
+        "seen_jtis": [],
+        "allowed_kids": [
+          "edge-test"
+        ],
+        "expected_issuer": "edge-gateway",
+        "expected_audience": "billing"
+      },
+      "expected": "unauthenticated"
+    },
+    {
+      "profile": "person",
+      "name": "claim inválido subsvc:billing",
+      "input": {
+        "verified": true,
+        "header": {
+          "alg": "ES256",
+          "typ": "JWT",
+          "kid": "edge-test"
+        },
+        "claims": {
+          "iss": "edge-gateway",
+          "aud": "billing",
+          "sub": "svc:billing",
+          "org": "org_SYNTHETIC",
+          "iat": 1000,
+          "exp": 1060,
+          "jti": "0f8e2a64-6a1b-4c39-8f0e-2b7d9c1a5e01",
+          "req": {
+            "method": "POST",
+            "target": "/v1/messaging/conversations/cnv_1/messages?x=1&q=a%20b&q=%2F&x=+",
+            "body_sha256": "8cf5e3e44a1da762ce9ac5fcaeea5cfb2b0b64074233566e0b4f8f554af84d37",
+            "headers": {
+              "content-type": "application/json; charset=utf-8",
+              "if-match": "\"v3\"",
+              "idempotency-key": "same-key",
+              "last-event-id": "cursor-1"
+            }
+          },
+          "scopes": [
+            "credits.read"
+          ]
+        },
+        "now": 1010,
+        "request": {
+          "method": "POST",
+          "target": "/v1/messaging/conversations/cnv_1/messages?x=1&q=a%20b&q=%2F&x=+",
+          "body": "{\"text\":\"á\", \"workspace\":\"999\"}",
+          "headers": {
+            "content-type": "application/json; charset=utf-8",
+            "if-match": "\"v3\"",
+            "idempotency-key": "same-key",
+            "last-event-id": "cursor-1"
+          }
+        },
+        "seen_jtis": [],
+        "allowed_kids": [
+          "edge-test"
+        ],
+        "expected_issuer": "edge-gateway",
+        "expected_audience": "billing"
+      },
+      "expected": "unauthenticated"
+    },
+    {
+      "profile": "operator",
+      "name": "operador interno válido",
+      "input": {
+        "verified": true,
+        "header": {
+          "alg": "ES256",
+          "typ": "danil-operator+jwt",
+          "kid": "edge-test"
+        },
+        "claims": {
+          "iss": "operator-test-authority",
+          "aud": "billing-operator",
+          "sub": "user_owner",
+          "org": "org_SYNTHETIC",
+          "iat": 1000,
+          "exp": 1060,
+          "jti": "0f8e2a64-6a1b-4c39-8f0e-2b7d9c1a5e01",
+          "req": {
+            "method": "POST",
+            "target": "/v1/messaging/conversations/cnv_1/messages?x=1&q=a%20b&q=%2F&x=+",
+            "body_sha256": "8cf5e3e44a1da762ce9ac5fcaeea5cfb2b0b64074233566e0b4f8f554af84d37",
+            "headers": {
+              "content-type": "application/json; charset=utf-8",
+              "if-match": "\"v3\"",
+              "idempotency-key": "same-key",
+              "last-event-id": "cursor-1"
+            }
+          },
+          "scopes": [
+            "credits.grant"
+          ]
+        },
+        "now": 1010,
+        "request": {
+          "method": "POST",
+          "target": "/v1/messaging/conversations/cnv_1/messages?x=1&q=a%20b&q=%2F&x=+",
+          "body": "{\"text\":\"á\", \"workspace\":\"999\"}",
+          "headers": {
+            "content-type": "application/json; charset=utf-8",
+            "if-match": "\"v3\"",
+            "idempotency-key": "same-key",
+            "last-event-id": "cursor-1"
+          }
+        },
+        "seen_jtis": [],
+        "allowed_kids": [
+          "edge-test"
+        ],
+        "expected_issuer": "operator-test-authority",
+        "expected_audience": "billing-operator",
+        "required_scope": "credits.grant"
+      },
+      "expected": "ok"
+    },
+    {
+      "profile": "operator",
+      "name": "operador no admite JWT",
+      "input": {
+        "verified": true,
+        "header": {
+          "alg": "ES256",
+          "typ": "JWT",
+          "kid": "edge-test"
+        },
+        "claims": {
+          "iss": "operator-test-authority",
+          "aud": "billing-operator",
+          "sub": "user_owner",
+          "org": "org_SYNTHETIC",
+          "iat": 1000,
+          "exp": 1060,
+          "jti": "0f8e2a64-6a1b-4c39-8f0e-2b7d9c1a5e01",
+          "req": {
+            "method": "POST",
+            "target": "/v1/messaging/conversations/cnv_1/messages?x=1&q=a%20b&q=%2F&x=+",
+            "body_sha256": "8cf5e3e44a1da762ce9ac5fcaeea5cfb2b0b64074233566e0b4f8f554af84d37",
+            "headers": {
+              "content-type": "application/json; charset=utf-8",
+              "if-match": "\"v3\"",
+              "idempotency-key": "same-key",
+              "last-event-id": "cursor-1"
+            }
+          },
+          "scopes": [
+            "credits.grant"
+          ]
+        },
+        "now": 1010,
+        "request": {
+          "method": "POST",
+          "target": "/v1/messaging/conversations/cnv_1/messages?x=1&q=a%20b&q=%2F&x=+",
+          "body": "{\"text\":\"á\", \"workspace\":\"999\"}",
+          "headers": {
+            "content-type": "application/json; charset=utf-8",
+            "if-match": "\"v3\"",
+            "idempotency-key": "same-key",
+            "last-event-id": "cursor-1"
+          }
+        },
+        "seen_jtis": [],
+        "allowed_kids": [
+          "edge-test"
+        ],
+        "expected_issuer": "operator-test-authority",
+        "expected_audience": "billing-operator",
+        "required_scope": "credits.grant"
+      },
+      "expected": "unauthenticated"
+    },
+    {
+      "profile": "operator",
+      "name": "operador no admite danil-service+jwt",
+      "input": {
+        "verified": true,
+        "header": {
+          "alg": "ES256",
+          "typ": "danil-service+jwt",
+          "kid": "edge-test"
+        },
+        "claims": {
+          "iss": "operator-test-authority",
+          "aud": "billing-operator",
+          "sub": "user_owner",
+          "org": "org_SYNTHETIC",
+          "iat": 1000,
+          "exp": 1060,
+          "jti": "0f8e2a64-6a1b-4c39-8f0e-2b7d9c1a5e01",
+          "req": {
+            "method": "POST",
+            "target": "/v1/messaging/conversations/cnv_1/messages?x=1&q=a%20b&q=%2F&x=+",
+            "body_sha256": "8cf5e3e44a1da762ce9ac5fcaeea5cfb2b0b64074233566e0b4f8f554af84d37",
+            "headers": {
+              "content-type": "application/json; charset=utf-8",
+              "if-match": "\"v3\"",
+              "idempotency-key": "same-key",
+              "last-event-id": "cursor-1"
+            }
+          },
+          "scopes": [
+            "credits.grant"
+          ]
+        },
+        "now": 1010,
+        "request": {
+          "method": "POST",
+          "target": "/v1/messaging/conversations/cnv_1/messages?x=1&q=a%20b&q=%2F&x=+",
+          "body": "{\"text\":\"á\", \"workspace\":\"999\"}",
+          "headers": {
+            "content-type": "application/json; charset=utf-8",
+            "if-match": "\"v3\"",
+            "idempotency-key": "same-key",
+            "last-event-id": "cursor-1"
+          }
+        },
+        "seen_jtis": [],
+        "allowed_kids": [
+          "edge-test"
+        ],
+        "expected_issuer": "operator-test-authority",
+        "expected_audience": "billing-operator",
+        "required_scope": "credits.grant"
+      },
+      "expected": "unauthenticated"
+    },
+    {
+      "profile": "operator",
+      "name": "operador sin permiso",
+      "input": {
+        "verified": true,
+        "header": {
+          "alg": "ES256",
+          "typ": "danil-operator+jwt",
+          "kid": "edge-test"
+        },
+        "claims": {
+          "iss": "operator-test-authority",
+          "aud": "billing-operator",
+          "sub": "user_owner",
+          "org": "org_SYNTHETIC",
+          "iat": 1000,
+          "exp": 1060,
+          "jti": "0f8e2a64-6a1b-4c39-8f0e-2b7d9c1a5e01",
+          "req": {
+            "method": "POST",
+            "target": "/v1/messaging/conversations/cnv_1/messages?x=1&q=a%20b&q=%2F&x=+",
+            "body_sha256": "8cf5e3e44a1da762ce9ac5fcaeea5cfb2b0b64074233566e0b4f8f554af84d37",
+            "headers": {
+              "content-type": "application/json; charset=utf-8",
+              "if-match": "\"v3\"",
+              "idempotency-key": "same-key",
+              "last-event-id": "cursor-1"
+            }
+          },
+          "scopes": []
+        },
+        "now": 1010,
+        "request": {
+          "method": "POST",
+          "target": "/v1/messaging/conversations/cnv_1/messages?x=1&q=a%20b&q=%2F&x=+",
+          "body": "{\"text\":\"á\", \"workspace\":\"999\"}",
+          "headers": {
+            "content-type": "application/json; charset=utf-8",
+            "if-match": "\"v3\"",
+            "idempotency-key": "same-key",
+            "last-event-id": "cursor-1"
+          }
+        },
+        "seen_jtis": [],
+        "allowed_kids": [
+          "edge-test"
+        ],
+        "expected_issuer": "operator-test-authority",
+        "expected_audience": "billing-operator",
+        "required_scope": "credits.grant"
+      },
+      "expected": "insufficient_scope"
+    },
+    {
+      "profile": "service",
+      "name": "treasury a identity válido",
+      "input": {
+        "verified": true,
+        "header": {
+          "alg": "ES256",
+          "typ": "danil-service+jwt",
+          "kid": "edge-test"
+        },
+        "claims": {
+          "iss": "edge-gateway",
+          "aud": "identity",
+          "sub": "svc:billing",
+          "iat": 1000,
+          "exp": 1060,
+          "jti": "0f8e2a64-6a1b-4c39-8f0e-2b7d9c1a5e01",
+          "req": {
+            "method": "POST",
+            "target": "/v1/messaging/conversations/cnv_1/messages?x=1&q=a%20b&q=%2F&x=+",
+            "body_sha256": "8cf5e3e44a1da762ce9ac5fcaeea5cfb2b0b64074233566e0b4f8f554af84d37",
+            "headers": {
+              "content-type": "application/json; charset=utf-8",
+              "if-match": "\"v3\"",
+              "idempotency-key": "same-key",
+              "last-event-id": "cursor-1"
+            }
+          }
+        },
+        "now": 1010,
+        "request": {
+          "method": "POST",
+          "target": "/v1/messaging/conversations/cnv_1/messages?x=1&q=a%20b&q=%2F&x=+",
+          "body": "{\"text\":\"á\", \"workspace\":\"999\"}",
+          "headers": {
+            "content-type": "application/json; charset=utf-8",
+            "if-match": "\"v3\"",
+            "idempotency-key": "same-key",
+            "last-event-id": "cursor-1"
+          }
+        },
+        "seen_jtis": [],
+        "allowed_kids": [
+          "edge-test"
+        ],
+        "expected_issuer": "edge-gateway",
+        "expected_audience": "identity",
+        "expected_subject": "svc:billing"
+      },
+      "expected": "ok"
+    },
+    {
+      "profile": "service",
+      "name": "otro servicio no reserva organización",
+      "input": {
+        "verified": true,
+        "header": {
+          "alg": "ES256",
+          "typ": "danil-service+jwt",
+          "kid": "edge-test"
+        },
+        "claims": {
+          "iss": "edge-gateway",
+          "aud": "identity",
+          "sub": "svc:other",
+          "iat": 1000,
+          "exp": 1060,
+          "jti": "0f8e2a64-6a1b-4c39-8f0e-2b7d9c1a5e01",
+          "req": {
+            "method": "POST",
+            "target": "/v1/messaging/conversations/cnv_1/messages?x=1&q=a%20b&q=%2F&x=+",
+            "body_sha256": "8cf5e3e44a1da762ce9ac5fcaeea5cfb2b0b64074233566e0b4f8f554af84d37",
+            "headers": {
+              "content-type": "application/json; charset=utf-8",
+              "if-match": "\"v3\"",
+              "idempotency-key": "same-key",
+              "last-event-id": "cursor-1"
+            }
+          }
+        },
+        "now": 1010,
+        "request": {
+          "method": "POST",
+          "target": "/v1/messaging/conversations/cnv_1/messages?x=1&q=a%20b&q=%2F&x=+",
+          "body": "{\"text\":\"á\", \"workspace\":\"999\"}",
+          "headers": {
+            "content-type": "application/json; charset=utf-8",
+            "if-match": "\"v3\"",
+            "idempotency-key": "same-key",
+            "last-event-id": "cursor-1"
+          }
+        },
+        "seen_jtis": [],
+        "allowed_kids": [
+          "edge-test"
+        ],
+        "expected_issuer": "edge-gateway",
+        "expected_audience": "identity",
+        "expected_subject": "svc:billing"
+      },
+      "expected": "unauthenticated"
+    },
+    {
+      "profile": "producer",
+      "name": "Access reutilizable autorizado",
+      "input": {
+        "verified": true,
+        "header": {
+          "alg": "RS256",
+          "typ": "JWT",
+          "kid": "access-test"
+        },
+        "claims": {
+          "iss": "https://team.cloudflareaccess.com",
+          "aud": [
+            "access-application-test"
+          ],
+          "iat": 900,
+          "exp": 4000,
+          "common_name": "danil-ai-test"
+        },
+        "expected_issuer": "https://team.cloudflareaccess.com",
+        "expected_audience": "access-application-test",
+        "allowed_kids": [
+          "access-test"
+        ],
+        "now": 1010,
+        "registry": {
+          "$comment": "Productores de consumo. El productor se obtiene del JWT de Cloudflare Access verificado en el origen (aud de la aplicación interna; `common_name` del token de servicio) y NUNCA del cuerpo. Además del registro estático, cada organización debe tener una autorización activa para ese productor (PUT /v1/credits/usage-authorizations/{producer}); que la organización exista no basta. Los topes son DATOS por entorno: estos valores son un borrador de beta, no SLO ni precios.",
+          "status": "draft",
+          "producers": {
+            "messaging": {
+              "access_common_names": [],
+              "entry_points": [
+                "messaging"
+              ],
+              "max_reports_per_batch": 100,
+              "max_charge_micro_per_report": "50000000",
+              "max_charge_micro_per_org_hour": "500000000",
+              "adoption": "Mensajería no se toca en este trabajo; el token de Access se le entrega después, en su repo."
+            },
+            "danil-ai": {
+              "access_common_names": [
+                "danil-ai-test"
+              ],
+              "entry_points": [
+                "danil_ai_app",
+                "danil_ai_api"
+              ],
+              "max_reports_per_batch": 100,
+              "max_charge_micro_per_report": "50000000",
+              "max_charge_micro_per_org_hour": "500000000",
+              "adoption": "Proveedor de IA de Danil, por crear."
+            }
+          }
+        },
+        "authorizations": [
+          {
+            "organization_id": "org_SYNTHETIC",
+            "producer": "danil-ai"
+          }
+        ],
+        "organization_id": "org_SYNTHETIC",
+        "entry_point": "danil_ai_app"
+      },
+      "expected": "ok"
+    },
+    {
+      "profile": "producer",
+      "name": "organización no autorizada",
+      "input": {
+        "verified": true,
+        "header": {
+          "alg": "RS256",
+          "typ": "JWT",
+          "kid": "access-test"
+        },
+        "claims": {
+          "iss": "https://team.cloudflareaccess.com",
+          "aud": [
+            "access-application-test"
+          ],
+          "iat": 900,
+          "exp": 4000,
+          "common_name": "danil-ai-test"
+        },
+        "expected_issuer": "https://team.cloudflareaccess.com",
+        "expected_audience": "access-application-test",
+        "allowed_kids": [
+          "access-test"
+        ],
+        "now": 1010,
+        "registry": {
+          "$comment": "Productores de consumo. El productor se obtiene del JWT de Cloudflare Access verificado en el origen (aud de la aplicación interna; `common_name` del token de servicio) y NUNCA del cuerpo. Además del registro estático, cada organización debe tener una autorización activa para ese productor (PUT /v1/credits/usage-authorizations/{producer}); que la organización exista no basta. Los topes son DATOS por entorno: estos valores son un borrador de beta, no SLO ni precios.",
+          "status": "draft",
+          "producers": {
+            "messaging": {
+              "access_common_names": [],
+              "entry_points": [
+                "messaging"
+              ],
+              "max_reports_per_batch": 100,
+              "max_charge_micro_per_report": "50000000",
+              "max_charge_micro_per_org_hour": "500000000",
+              "adoption": "Mensajería no se toca en este trabajo; el token de Access se le entrega después, en su repo."
+            },
+            "danil-ai": {
+              "access_common_names": [
+                "danil-ai-test"
+              ],
+              "entry_points": [
+                "danil_ai_app",
+                "danil_ai_api"
+              ],
+              "max_reports_per_batch": 100,
+              "max_charge_micro_per_report": "50000000",
+              "max_charge_micro_per_org_hour": "500000000",
+              "adoption": "Proveedor de IA de Danil, por crear."
+            }
+          }
+        },
+        "authorizations": [
+          {
+            "organization_id": "org_SYNTHETIC",
+            "producer": "danil-ai"
+          }
+        ],
+        "organization_id": "org_OTHER",
+        "entry_point": "danil_ai_app"
+      },
+      "expected": "producer_not_authorized"
+    },
+    {
+      "profile": "producer",
+      "name": "firma Access no verificada",
+      "input": {
+        "verified": false,
+        "header": {
+          "alg": "RS256",
+          "typ": "JWT",
+          "kid": "access-test"
+        },
+        "claims": {
+          "iss": "https://team.cloudflareaccess.com",
+          "aud": [
+            "access-application-test"
+          ],
+          "iat": 900,
+          "exp": 4000,
+          "common_name": "danil-ai-test"
+        },
+        "expected_issuer": "https://team.cloudflareaccess.com",
+        "expected_audience": "access-application-test",
+        "allowed_kids": [
+          "access-test"
+        ],
+        "now": 1010,
+        "registry": {
+          "$comment": "Productores de consumo. El productor se obtiene del JWT de Cloudflare Access verificado en el origen (aud de la aplicación interna; `common_name` del token de servicio) y NUNCA del cuerpo. Además del registro estático, cada organización debe tener una autorización activa para ese productor (PUT /v1/credits/usage-authorizations/{producer}); que la organización exista no basta. Los topes son DATOS por entorno: estos valores son un borrador de beta, no SLO ni precios.",
+          "status": "draft",
+          "producers": {
+            "messaging": {
+              "access_common_names": [],
+              "entry_points": [
+                "messaging"
+              ],
+              "max_reports_per_batch": 100,
+              "max_charge_micro_per_report": "50000000",
+              "max_charge_micro_per_org_hour": "500000000",
+              "adoption": "Mensajería no se toca en este trabajo; el token de Access se le entrega después, en su repo."
+            },
+            "danil-ai": {
+              "access_common_names": [
+                "danil-ai-test"
+              ],
+              "entry_points": [
+                "danil_ai_app",
+                "danil_ai_api"
+              ],
+              "max_reports_per_batch": 100,
+              "max_charge_micro_per_report": "50000000",
+              "max_charge_micro_per_org_hour": "500000000",
+              "adoption": "Proveedor de IA de Danil, por crear."
+            }
+          }
+        },
+        "authorizations": [
+          {
+            "organization_id": "org_SYNTHETIC",
+            "producer": "danil-ai"
+          }
+        ],
+        "organization_id": "org_SYNTHETIC",
+        "entry_point": "danil_ai_app"
+      },
+      "expected": "unauthenticated"
+    },
+    {
+      "profile": "producer",
+      "name": "Access aud ajeno",
+      "input": {
+        "verified": true,
+        "header": {
+          "alg": "RS256",
+          "typ": "JWT",
+          "kid": "access-test"
+        },
+        "claims": {
+          "iss": "https://team.cloudflareaccess.com",
+          "aud": [
+            "other-app"
+          ],
+          "iat": 900,
+          "exp": 4000,
+          "common_name": "danil-ai-test"
+        },
+        "expected_issuer": "https://team.cloudflareaccess.com",
+        "expected_audience": "access-application-test",
+        "allowed_kids": [
+          "access-test"
+        ],
+        "now": 1010,
+        "registry": {
+          "$comment": "Productores de consumo. El productor se obtiene del JWT de Cloudflare Access verificado en el origen (aud de la aplicación interna; `common_name` del token de servicio) y NUNCA del cuerpo. Además del registro estático, cada organización debe tener una autorización activa para ese productor (PUT /v1/credits/usage-authorizations/{producer}); que la organización exista no basta. Los topes son DATOS por entorno: estos valores son un borrador de beta, no SLO ni precios.",
+          "status": "draft",
+          "producers": {
+            "messaging": {
+              "access_common_names": [],
+              "entry_points": [
+                "messaging"
+              ],
+              "max_reports_per_batch": 100,
+              "max_charge_micro_per_report": "50000000",
+              "max_charge_micro_per_org_hour": "500000000",
+              "adoption": "Mensajería no se toca en este trabajo; el token de Access se le entrega después, en su repo."
+            },
+            "danil-ai": {
+              "access_common_names": [
+                "danil-ai-test"
+              ],
+              "entry_points": [
+                "danil_ai_app",
+                "danil_ai_api"
+              ],
+              "max_reports_per_batch": 100,
+              "max_charge_micro_per_report": "50000000",
+              "max_charge_micro_per_org_hour": "500000000",
+              "adoption": "Proveedor de IA de Danil, por crear."
+            }
+          }
+        },
+        "authorizations": [
+          {
+            "organization_id": "org_SYNTHETIC",
+            "producer": "danil-ai"
+          }
+        ],
+        "organization_id": "org_SYNTHETIC",
+        "entry_point": "danil_ai_app"
+      },
+      "expected": "unauthenticated"
+    },
+    {
+      "profile": "producer",
+      "name": "Access iss ajeno",
+      "input": {
+        "verified": true,
+        "header": {
+          "alg": "RS256",
+          "typ": "JWT",
+          "kid": "access-test"
+        },
+        "claims": {
+          "iss": "https://wrong.cloudflareaccess.com",
+          "aud": [
+            "access-application-test"
+          ],
+          "iat": 900,
+          "exp": 4000,
+          "common_name": "danil-ai-test"
+        },
+        "expected_issuer": "https://team.cloudflareaccess.com",
+        "expected_audience": "access-application-test",
+        "allowed_kids": [
+          "access-test"
+        ],
+        "now": 1010,
+        "registry": {
+          "$comment": "Productores de consumo. El productor se obtiene del JWT de Cloudflare Access verificado en el origen (aud de la aplicación interna; `common_name` del token de servicio) y NUNCA del cuerpo. Además del registro estático, cada organización debe tener una autorización activa para ese productor (PUT /v1/credits/usage-authorizations/{producer}); que la organización exista no basta. Los topes son DATOS por entorno: estos valores son un borrador de beta, no SLO ni precios.",
+          "status": "draft",
+          "producers": {
+            "messaging": {
+              "access_common_names": [],
+              "entry_points": [
+                "messaging"
+              ],
+              "max_reports_per_batch": 100,
+              "max_charge_micro_per_report": "50000000",
+              "max_charge_micro_per_org_hour": "500000000",
+              "adoption": "Mensajería no se toca en este trabajo; el token de Access se le entrega después, en su repo."
+            },
+            "danil-ai": {
+              "access_common_names": [
+                "danil-ai-test"
+              ],
+              "entry_points": [
+                "danil_ai_app",
+                "danil_ai_api"
+              ],
+              "max_reports_per_batch": 100,
+              "max_charge_micro_per_report": "50000000",
+              "max_charge_micro_per_org_hour": "500000000",
+              "adoption": "Proveedor de IA de Danil, por crear."
+            }
+          }
+        },
+        "authorizations": [
+          {
+            "organization_id": "org_SYNTHETIC",
+            "producer": "danil-ai"
+          }
+        ],
+        "organization_id": "org_SYNTHETIC",
+        "entry_point": "danil_ai_app"
+      },
+      "expected": "unauthenticated"
+    },
+    {
+      "profile": "producer",
+      "name": "Access common_name ajeno",
+      "input": {
+        "verified": true,
+        "header": {
+          "alg": "RS256",
+          "typ": "JWT",
+          "kid": "access-test"
+        },
+        "claims": {
+          "iss": "https://team.cloudflareaccess.com",
+          "aud": [
+            "access-application-test"
+          ],
+          "iat": 900,
+          "exp": 4000,
+          "common_name": "other-producer"
+        },
+        "expected_issuer": "https://team.cloudflareaccess.com",
+        "expected_audience": "access-application-test",
+        "allowed_kids": [
+          "access-test"
+        ],
+        "now": 1010,
+        "registry": {
+          "$comment": "Productores de consumo. El productor se obtiene del JWT de Cloudflare Access verificado en el origen (aud de la aplicación interna; `common_name` del token de servicio) y NUNCA del cuerpo. Además del registro estático, cada organización debe tener una autorización activa para ese productor (PUT /v1/credits/usage-authorizations/{producer}); que la organización exista no basta. Los topes son DATOS por entorno: estos valores son un borrador de beta, no SLO ni precios.",
+          "status": "draft",
+          "producers": {
+            "messaging": {
+              "access_common_names": [],
+              "entry_points": [
+                "messaging"
+              ],
+              "max_reports_per_batch": 100,
+              "max_charge_micro_per_report": "50000000",
+              "max_charge_micro_per_org_hour": "500000000",
+              "adoption": "Mensajería no se toca en este trabajo; el token de Access se le entrega después, en su repo."
+            },
+            "danil-ai": {
+              "access_common_names": [
+                "danil-ai-test"
+              ],
+              "entry_points": [
+                "danil_ai_app",
+                "danil_ai_api"
+              ],
+              "max_reports_per_batch": 100,
+              "max_charge_micro_per_report": "50000000",
+              "max_charge_micro_per_org_hour": "500000000",
+              "adoption": "Proveedor de IA de Danil, por crear."
+            }
+          }
+        },
+        "authorizations": [
+          {
+            "organization_id": "org_SYNTHETIC",
+            "producer": "danil-ai"
+          }
+        ],
+        "organization_id": "org_SYNTHETIC",
+        "entry_point": "danil_ai_app"
+      },
+      "expected": "producer_unknown"
+    },
+    {
+      "name": "Receptor sin expected_issuer",
+      "profile": "person",
+      "input": {
+        "verified": true,
+        "header": {
+          "alg": "ES256",
+          "typ": "JWT",
+          "kid": "edge-test"
+        },
+        "claims": {
+          "aud": "billing",
+          "sub": "user_owner",
+          "org": "org_SYNTHETIC",
+          "iat": 1000,
+          "exp": 1060,
+          "jti": "0f8e2a64-6a1b-4c39-8f0e-2b7d9c1a5e01",
+          "req": {
+            "method": "POST",
+            "target": "/v1/messaging/conversations/cnv_1/messages?x=1&q=a%20b&q=%2F&x=+",
+            "body_sha256": "8cf5e3e44a1da762ce9ac5fcaeea5cfb2b0b64074233566e0b4f8f554af84d37",
+            "headers": {
+              "content-type": "application/json; charset=utf-8",
+              "if-match": "\"v3\"",
+              "idempotency-key": "same-key",
+              "last-event-id": "cursor-1"
+            }
+          },
+          "scopes": [
+            "credits.read"
+          ]
+        },
+        "now": 1010,
+        "request": {
+          "method": "POST",
+          "target": "/v1/messaging/conversations/cnv_1/messages?x=1&q=a%20b&q=%2F&x=+",
+          "body": "{\"text\":\"á\", \"workspace\":\"999\"}",
+          "headers": {
+            "content-type": "application/json; charset=utf-8",
+            "if-match": "\"v3\"",
+            "idempotency-key": "same-key",
+            "last-event-id": "cursor-1"
+          }
+        },
+        "seen_jtis": [],
+        "allowed_kids": [
+          "edge-test"
+        ],
+        "expected_audience": "billing"
+      },
+      "expected": "unauthenticated"
+    },
+    {
+      "name": "Receptor sin expected_audience",
+      "profile": "person",
+      "input": {
+        "verified": true,
+        "header": {
+          "alg": "ES256",
+          "typ": "JWT",
+          "kid": "edge-test"
+        },
+        "claims": {
+          "iss": "edge-gateway",
+          "sub": "user_owner",
+          "org": "org_SYNTHETIC",
+          "iat": 1000,
+          "exp": 1060,
+          "jti": "0f8e2a64-6a1b-4c39-8f0e-2b7d9c1a5e01",
+          "req": {
+            "method": "POST",
+            "target": "/v1/messaging/conversations/cnv_1/messages?x=1&q=a%20b&q=%2F&x=+",
+            "body_sha256": "8cf5e3e44a1da762ce9ac5fcaeea5cfb2b0b64074233566e0b4f8f554af84d37",
+            "headers": {
+              "content-type": "application/json; charset=utf-8",
+              "if-match": "\"v3\"",
+              "idempotency-key": "same-key",
+              "last-event-id": "cursor-1"
+            }
+          },
+          "scopes": [
+            "credits.read"
+          ]
+        },
+        "now": 1010,
+        "request": {
+          "method": "POST",
+          "target": "/v1/messaging/conversations/cnv_1/messages?x=1&q=a%20b&q=%2F&x=+",
+          "body": "{\"text\":\"á\", \"workspace\":\"999\"}",
+          "headers": {
+            "content-type": "application/json; charset=utf-8",
+            "if-match": "\"v3\"",
+            "idempotency-key": "same-key",
+            "last-event-id": "cursor-1"
+          }
+        },
+        "seen_jtis": [],
+        "allowed_kids": [
+          "edge-test"
+        ],
+        "expected_issuer": "edge-gateway"
+      },
+      "expected": "unauthenticated"
+    },
+    {
+      "name": "Receptor sin now",
+      "profile": "person",
+      "input": {
+        "verified": true,
+        "header": {
+          "alg": "ES256",
+          "typ": "JWT",
+          "kid": "edge-test"
+        },
+        "claims": {
+          "iss": "edge-gateway",
+          "aud": "billing",
+          "sub": "user_owner",
+          "org": "org_SYNTHETIC",
+          "iat": 1000,
+          "exp": 1060,
+          "jti": "0f8e2a64-6a1b-4c39-8f0e-2b7d9c1a5e01",
+          "req": {
+            "method": "POST",
+            "target": "/v1/messaging/conversations/cnv_1/messages?x=1&q=a%20b&q=%2F&x=+",
+            "body_sha256": "8cf5e3e44a1da762ce9ac5fcaeea5cfb2b0b64074233566e0b4f8f554af84d37",
+            "headers": {
+              "content-type": "application/json; charset=utf-8",
+              "if-match": "\"v3\"",
+              "idempotency-key": "same-key",
+              "last-event-id": "cursor-1"
+            }
+          },
+          "scopes": [
+            "credits.read"
+          ]
+        },
+        "request": {
+          "method": "POST",
+          "target": "/v1/messaging/conversations/cnv_1/messages?x=1&q=a%20b&q=%2F&x=+",
+          "body": "{\"text\":\"á\", \"workspace\":\"999\"}",
+          "headers": {
+            "content-type": "application/json; charset=utf-8",
+            "if-match": "\"v3\"",
+            "idempotency-key": "same-key",
+            "last-event-id": "cursor-1"
+          }
+        },
+        "seen_jtis": [],
+        "allowed_kids": [
+          "edge-test"
+        ],
+        "expected_issuer": "edge-gateway",
+        "expected_audience": "billing"
+      },
+      "expected": "unauthenticated"
+    },
+    {
+      "profile": "operator",
+      "name": "operador de asignación verifica scope fijado por la ruta",
+      "input": {
+        "verified": true,
+        "header": {
+          "alg": "ES256",
+          "typ": "danil-operator+jwt",
+          "kid": "edge-test"
+        },
+        "claims": {
+          "iss": "operator-test-authority",
+          "aud": "billing-operator",
+          "sub": "user_owner",
+          "org": "org_SYNTHETIC",
+          "iat": 1000,
+          "exp": 1060,
+          "jti": "0f8e2a64-6a1b-4c39-8f0e-2b7d9c1a5e01",
+          "req": {
+            "method": "POST",
+            "target": "/v1/messaging/conversations/cnv_1/messages?x=1&q=a%20b&q=%2F&x=+",
+            "body_sha256": "8cf5e3e44a1da762ce9ac5fcaeea5cfb2b0b64074233566e0b4f8f554af84d37",
+            "headers": {
+              "content-type": "application/json; charset=utf-8",
+              "if-match": "\"v3\"",
+              "idempotency-key": "same-key",
+              "last-event-id": "cursor-1"
+            }
+          },
+          "scopes": [
+            "credits.refund.allocate"
+          ]
+        },
+        "now": 1010,
+        "request": {
+          "method": "POST",
+          "target": "/v1/messaging/conversations/cnv_1/messages?x=1&q=a%20b&q=%2F&x=+",
+          "body": "{\"text\":\"á\", \"workspace\":\"999\"}",
+          "headers": {
+            "content-type": "application/json; charset=utf-8",
+            "if-match": "\"v3\"",
+            "idempotency-key": "same-key",
+            "last-event-id": "cursor-1"
+          }
+        },
+        "seen_jtis": [],
+        "allowed_kids": [
+          "edge-test"
+        ],
+        "expected_issuer": "operator-test-authority",
+        "expected_audience": "billing-operator",
+        "required_scope": "credits.refund.allocate"
+      },
+      "expected": "ok"
+    },
+    {
+      "profile": "operator",
+      "name": "permiso de grant no autoriza asignar reembolso",
+      "input": {
+        "verified": true,
+        "header": {
+          "alg": "ES256",
+          "typ": "danil-operator+jwt",
+          "kid": "edge-test"
+        },
+        "claims": {
+          "iss": "operator-test-authority",
+          "aud": "billing-operator",
+          "sub": "user_owner",
+          "org": "org_SYNTHETIC",
+          "iat": 1000,
+          "exp": 1060,
+          "jti": "0f8e2a64-6a1b-4c39-8f0e-2b7d9c1a5e01",
+          "req": {
+            "method": "POST",
+            "target": "/v1/messaging/conversations/cnv_1/messages?x=1&q=a%20b&q=%2F&x=+",
+            "body_sha256": "8cf5e3e44a1da762ce9ac5fcaeea5cfb2b0b64074233566e0b4f8f554af84d37",
+            "headers": {
+              "content-type": "application/json; charset=utf-8",
+              "if-match": "\"v3\"",
+              "idempotency-key": "same-key",
+              "last-event-id": "cursor-1"
+            }
+          },
+          "scopes": [
+            "credits.grant"
+          ]
+        },
+        "now": 1010,
+        "request": {
+          "method": "POST",
+          "target": "/v1/messaging/conversations/cnv_1/messages?x=1&q=a%20b&q=%2F&x=+",
+          "body": "{\"text\":\"á\", \"workspace\":\"999\"}",
+          "headers": {
+            "content-type": "application/json; charset=utf-8",
+            "if-match": "\"v3\"",
+            "idempotency-key": "same-key",
+            "last-event-id": "cursor-1"
+          }
+        },
+        "seen_jtis": [],
+        "allowed_kids": [
+          "edge-test"
+        ],
+        "expected_issuer": "operator-test-authority",
+        "expected_audience": "billing-operator",
+        "required_scope": "credits.refund.allocate"
+      },
+      "expected": "insufficient_scope"
+    },
+    {
+      "profile": "operator",
+      "name": "scope del receptor ausente",
+      "input": {
+        "verified": true,
+        "header": {
+          "alg": "ES256",
+          "typ": "danil-operator+jwt",
+          "kid": "edge-test"
+        },
+        "claims": {
+          "iss": "operator-test-authority",
+          "aud": "billing-operator",
+          "sub": "user_owner",
+          "org": "org_SYNTHETIC",
+          "iat": 1000,
+          "exp": 1060,
+          "jti": "0f8e2a64-6a1b-4c39-8f0e-2b7d9c1a5e01",
+          "req": {
+            "method": "POST",
+            "target": "/v1/messaging/conversations/cnv_1/messages?x=1&q=a%20b&q=%2F&x=+",
+            "body_sha256": "8cf5e3e44a1da762ce9ac5fcaeea5cfb2b0b64074233566e0b4f8f554af84d37",
+            "headers": {
+              "content-type": "application/json; charset=utf-8",
+              "if-match": "\"v3\"",
+              "idempotency-key": "same-key",
+              "last-event-id": "cursor-1"
+            }
+          },
+          "scopes": [
+            "credits.grant"
+          ]
+        },
+        "now": 1010,
+        "request": {
+          "method": "POST",
+          "target": "/v1/messaging/conversations/cnv_1/messages?x=1&q=a%20b&q=%2F&x=+",
+          "body": "{\"text\":\"á\", \"workspace\":\"999\"}",
+          "headers": {
+            "content-type": "application/json; charset=utf-8",
+            "if-match": "\"v3\"",
+            "idempotency-key": "same-key",
+            "last-event-id": "cursor-1"
+          }
+        },
+        "seen_jtis": [],
+        "allowed_kids": [
+          "edge-test"
+        ],
+        "expected_issuer": "operator-test-authority",
+        "expected_audience": "billing-operator"
+      },
+      "expected": "insufficient_scope"
+    },
+    {
+      "profile": "operator",
+      "name": "scope del receptor vacío",
+      "input": {
+        "verified": true,
+        "header": {
+          "alg": "ES256",
+          "typ": "danil-operator+jwt",
+          "kid": "edge-test"
+        },
+        "claims": {
+          "iss": "operator-test-authority",
+          "aud": "billing-operator",
+          "sub": "user_owner",
+          "org": "org_SYNTHETIC",
+          "iat": 1000,
+          "exp": 1060,
+          "jti": "0f8e2a64-6a1b-4c39-8f0e-2b7d9c1a5e01",
+          "req": {
+            "method": "POST",
+            "target": "/v1/messaging/conversations/cnv_1/messages?x=1&q=a%20b&q=%2F&x=+",
+            "body_sha256": "8cf5e3e44a1da762ce9ac5fcaeea5cfb2b0b64074233566e0b4f8f554af84d37",
+            "headers": {
+              "content-type": "application/json; charset=utf-8",
+              "if-match": "\"v3\"",
+              "idempotency-key": "same-key",
+              "last-event-id": "cursor-1"
+            }
+          },
+          "scopes": [
+            "credits.grant"
+          ]
+        },
+        "now": 1010,
+        "request": {
+          "method": "POST",
+          "target": "/v1/messaging/conversations/cnv_1/messages?x=1&q=a%20b&q=%2F&x=+",
+          "body": "{\"text\":\"á\", \"workspace\":\"999\"}",
+          "headers": {
+            "content-type": "application/json; charset=utf-8",
+            "if-match": "\"v3\"",
+            "idempotency-key": "same-key",
+            "last-event-id": "cursor-1"
+          }
+        },
+        "seen_jtis": [],
+        "allowed_kids": [
+          "edge-test"
+        ],
+        "expected_issuer": "operator-test-authority",
+        "expected_audience": "billing-operator",
+        "required_scope": ""
+      },
+      "expected": "insufficient_scope"
+    }
+  ]
+}

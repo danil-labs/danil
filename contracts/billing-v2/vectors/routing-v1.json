@@ -1,0 +1,32 @@
+{
+  "$comment": "Gate de activación de routing (plan §10, C3). aud=billing coincide con el legado: el MISMO cambio que activa treasury en el borde retira el destino legado de /v1/billing y /v1/credits. Ninguna ruta v2 ni fallback alcanza el billing viejo; si treasury no responde, el borde falla cerrado (503 billing_unavailable). Este vector no activa nada: preparar contratos no habilita rutas. No toca el repo, datos, productos ni planes del legado.",
+  "prefixes": ["/v1/billing", "/v1/credits"],
+  "configs": [
+    { "why": "activación correcta: un solo destino treasury, sin fallback",
+      "config": { "/v1/billing": { "destinations": [ { "repo": "treasury", "aud": "billing" } ] }, "/v1/credits": { "destinations": [ { "repo": "treasury", "aud": "billing" } ] } },
+      "result": "ok" },
+    { "why": "treasury activado pero el destino legado sigue para el mismo prefijo",
+      "config": { "/v1/billing": { "destinations": [ { "repo": "treasury", "aud": "billing" }, { "repo": "billing", "aud": "billing" } ] }, "/v1/credits": { "destinations": [ { "repo": "treasury", "aud": "billing" } ] } },
+      "result": "legacy_destination_forbidden" },
+    { "why": "fallback declarado al legado",
+      "config": { "/v1/billing": { "destinations": [ { "repo": "treasury", "aud": "billing" } ], "fallback": { "repo": "billing", "aud": "billing" } }, "/v1/credits": { "destinations": [ { "repo": "treasury", "aud": "billing" } ] } },
+      "result": "fallback_forbidden" },
+    { "why": "fallback a cualquier destino, aunque no sea el legado",
+      "config": { "/v1/billing": { "destinations": [ { "repo": "treasury", "aud": "billing" } ], "fallback": { "repo": "treasury", "aud": "billing" } }, "/v1/credits": { "destinations": [ { "repo": "treasury", "aud": "billing" } ] } },
+      "result": "fallback_forbidden" },
+    { "why": "activación parcial: un prefijo queda en el legado",
+      "config": { "/v1/billing": { "destinations": [ { "repo": "treasury", "aud": "billing" } ] }, "/v1/credits": { "destinations": [ { "repo": "billing", "aud": "billing" } ] } },
+      "result": "legacy_destination_forbidden" },
+    { "why": "prefijo sin destino",
+      "config": { "/v1/billing": { "destinations": [ { "repo": "treasury", "aud": "billing" } ] } },
+      "result": "prefix_unrouted" },
+    { "why": "aud distinto",
+      "config": { "/v1/billing": { "destinations": [ { "repo": "treasury", "aud": "billing-v2" } ] }, "/v1/credits": { "destinations": [ { "repo": "treasury", "aud": "billing" } ] } },
+      "result": "aud_mismatch" }
+  ],
+  "requests": [
+    { "path": "/v1/billing/organization", "treasury_healthy": true, "result": "treasury" },
+    { "path": "/v1/credits/balance", "treasury_healthy": false, "result": "billing_unavailable" },
+    { "path": "/v1/billingx", "treasury_healthy": true, "result": "not_billing_v2" }
+  ]
+}

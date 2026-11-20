@@ -5,3 +5,4 @@ export { createDanilAccounts, type DanilAccounts } from "./danil-accounts";
 export { createDanilSession } from "./danil-session";
 export { sessionForWorkspace, statusOf } from "./danil-sessions";
 export { cerrarConEscape } from "./workspaces-store";
+export { SettingsPanel, SettingsRow, SettingsSection } from "./layout.tsx";

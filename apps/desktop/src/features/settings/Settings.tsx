@@ -143,8 +143,6 @@ const pestanasDe = (
     plugins: tab("plugins", () => t("settings.tab.plugins"), () => <SettingsPanel><Integrations /></SettingsPanel>),
     memory: tab("memory", () => t("settings.tab.memory"), () => <SettingsPanel><ProveedorDeMemoria /></SettingsPanel>),
     external: cuenta ? tab("external", () => t("settings.tab.external"), () => <Suspense fallback={null}><Connections workspace={workspace()} /></Suspense>) : undefined,
-    business: capabilities().businessBilling ? tab("business", () => t("settings.tab.business"), () => capabilities().businessBilling?.("plan")) : undefined,
-    fiscal: capabilities().businessBilling ? tab("fiscal", () => t("settings.tab.fiscal"), () => capabilities().businessBilling?.("fiscal")) : undefined,
   };
 };
 

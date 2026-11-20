@@ -1,0 +1,75 @@
+{
+  "credit_unit": {
+    "credits": "1",
+    "mxn": "1",
+    "micro_mxn": "1000000"
+  },
+  "entry_point_factors": {
+    "messaging": {
+      "num": "3",
+      "den": "1"
+    },
+    "danil_ai_app": {
+      "num": "2",
+      "den": "1"
+    },
+    "danil_ai_api": {
+      "num": "2",
+      "den": "1"
+    }
+  },
+  "internal_pilot": {
+    "organization_name": "Danil",
+    "organization_id": "org_01M62PT11XGX8R8J883NZVYHR6",
+    "source": "gift",
+    "amount_micro": "1000000000",
+    "expires_at": null,
+    "reference": "terminus-workspace#207",
+    "provisioning": "Un único gift para la organización Danil, compartido por Danil Workspace y Danil Foundation. El operador resuelve y audita el user_* de Alejandro desde su credencial; no se inventa un ID de persona.",
+    "author": "Alejandro (persona), decisión #207",
+    "idempotency_key": "pilot-207-danil-gift-1000"
+  },
+  "inference_tiers": [
+    {
+      "id": "danil/ligero",
+      "label": "Ligero",
+      "provider_model": "xiaomi/mimo-v2.6-flash",
+      "default": false,
+      "factor": {
+        "num": "2",
+        "den": "1"
+      }
+    },
+    {
+      "id": "danil/equilibrado",
+      "label": "Equilibrado",
+      "provider_model": "deepseek/deepseek-v4.1-flash",
+      "default": true,
+      "factor": {
+        "num": "2",
+        "den": "1"
+      }
+    },
+    {
+      "id": "danil/avanzado",
+      "label": "Avanzado",
+      "provider_model": "deepseek/deepseek-v4-pro",
+      "default": false,
+      "factor": {
+        "num": "2",
+        "den": "1"
+      }
+    }
+  ],
+  "fx_policy": {
+    "fx_buffer": {
+      "num": "3",
+      "den": "100"
+    },
+    "update_frequency": "daily",
+    "fx_source_example": "banxico_fix",
+    "rate_schema": "schemas/rate-card.v1.schema.json",
+    "publication": "Una tarea diaria publica datos nuevos e inmutables; no hay valor de FX comercial semilla inventado. Guardar fuente, observación y versión; fijar al reservar y persistir en cada uso USD.",
+    "validity": "Ventana explícita [max(effective_from, fx_observed_at), fx_valid_until). La tarea diaria debe publicar fecha final; no hay TTL implícito ni fallback vencido."
+  }
+}

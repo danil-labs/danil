@@ -1,0 +1,162 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.danil.ai/billing-v2/events/checkout.closed.v1.schema.json",
+  "title": "ai.danil.billing.checkout.closed.v1 — data",
+  "$comment": "aggregate_key=checkout:<checkout_id>. Para plan, intent obligatorio: new_organization requiere reservation_id del vínculo local y upgrade lo prohíbe incluso null. Créditos sin reserva conservan formato anterior (intent ausente o upgrade). Identity libera solo con outcome=expired; completed/canceled no activan ni prueban expiración. Tipos y transporte no cambian.",
+  "type": "object",
+  "required": [
+    "checkout_id",
+    "organization_id",
+    "kind",
+    "outcome"
+  ],
+  "properties": {
+    "checkout_id": {
+      "$ref": "../common.v1.schema.json#/$defs/checkout_id"
+    },
+    "organization_id": {
+      "$ref": "../common.v1.schema.json#/$defs/organization_id"
+    },
+    "kind": {
+      "type": "string",
+      "enum": [
+        "plan",
+        "credits"
+      ]
+    },
+    "outcome": {
+      "type": "string",
+      "enum": [
+        "completed",
+        "expired",
+        "canceled"
+      ]
+    },
+    "reservation_id": {
+      "$ref": "../common.v1.schema.json#/$defs/organization_reservation_id"
+    },
+    "intent": {
+      "type": "string",
+      "enum": [
+        "new_organization",
+        "upgrade"
+      ]
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "new_organization": {
+      "type": "object",
+      "required": [
+        "checkout_id",
+        "organization_id",
+        "kind",
+        "outcome",
+        "intent",
+        "reservation_id"
+      ],
+      "properties": {
+        "checkout_id": {
+          "$ref": "../common.v1.schema.json#/$defs/checkout_id"
+        },
+        "organization_id": {
+          "$ref": "../common.v1.schema.json#/$defs/organization_id"
+        },
+        "kind": {
+          "const": "plan"
+        },
+        "outcome": {
+          "type": "string",
+          "enum": [
+            "completed",
+            "expired",
+            "canceled"
+          ]
+        },
+        "reservation_id": {
+          "$ref": "../common.v1.schema.json#/$defs/organization_reservation_id"
+        },
+        "intent": {
+          "const": "new_organization"
+        }
+      },
+      "additionalProperties": false
+    },
+    "upgrade": {
+      "type": "object",
+      "required": [
+        "checkout_id",
+        "organization_id",
+        "kind",
+        "outcome",
+        "intent"
+      ],
+      "properties": {
+        "checkout_id": {
+          "$ref": "../common.v1.schema.json#/$defs/checkout_id"
+        },
+        "organization_id": {
+          "$ref": "../common.v1.schema.json#/$defs/organization_id"
+        },
+        "kind": {
+          "const": "plan"
+        },
+        "outcome": {
+          "type": "string",
+          "enum": [
+            "completed",
+            "expired",
+            "canceled"
+          ]
+        },
+        "intent": {
+          "const": "upgrade"
+        }
+      },
+      "additionalProperties": false
+    },
+    "credits": {
+      "type": "object",
+      "required": [
+        "checkout_id",
+        "organization_id",
+        "kind",
+        "outcome"
+      ],
+      "properties": {
+        "checkout_id": {
+          "$ref": "../common.v1.schema.json#/$defs/checkout_id"
+        },
+        "organization_id": {
+          "$ref": "../common.v1.schema.json#/$defs/organization_id"
+        },
+        "kind": {
+          "const": "credits"
+        },
+        "outcome": {
+          "type": "string",
+          "enum": [
+            "completed",
+            "expired",
+            "canceled"
+          ]
+        },
+        "intent": {
+          "const": "upgrade"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "oneOf": [
+    {
+      "$ref": "#/$defs/new_organization"
+    },
+    {
+      "$ref": "#/$defs/upgrade"
+    },
+    {
+      "$ref": "#/$defs/credits"
+    }
+  ]
+}

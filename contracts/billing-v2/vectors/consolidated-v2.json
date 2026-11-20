@@ -1,0 +1,1329 @@
+{
+  "scenarios": [
+    {
+      "name": "vencimiento primero, comprados siempre al final, empate por creación",
+      "steps": [
+        {
+          "op": "purchase",
+          "key": "purchase:pi_P",
+          "lot": "P",
+          "payment_intent": "pi_P",
+          "amount_micro": "10",
+          "expires_at": "2026-11-10T00:00:00Z",
+          "created_at": "2026-10-01T00:00:00Z"
+        },
+        {
+          "op": "grant_included",
+          "key": "included:I",
+          "lot": "I",
+          "amount_micro": "10",
+          "expires_at": "2026-12-01T00:00:00Z"
+        },
+        {
+          "op": "gift",
+          "key": "gift:Gnew",
+          "lot": "Gnew",
+          "amount_micro": "10",
+          "expires_at": "2026-11-20T00:00:00Z",
+          "created_at": "2026-11-02T00:00:00Z",
+          "actor": {
+            "type": "operator",
+            "id": "user_operator"
+          },
+          "reason": "incidente sintético"
+        },
+        {
+          "op": "gift",
+          "key": "gift:Gold",
+          "lot": "Gold",
+          "amount_micro": "10",
+          "expires_at": "2026-11-20T00:00:00Z",
+          "created_at": "2026-11-01T00:00:00Z",
+          "actor": {
+            "type": "operator",
+            "id": "user_operator"
+          },
+          "reason": "incidente sintético"
+        },
+        {
+          "op": "compensation",
+          "key": "compensation:C",
+          "lot": "C",
+          "amount_micro": "10",
+          "expires_at": null,
+          "created_at": "2026-11-01T00:00:00Z",
+          "actor": {
+            "type": "operator",
+            "id": "user_operator"
+          },
+          "reason": "incidente sintético"
+        },
+        {
+          "op": "debit",
+          "key": "usage:x:sort1",
+          "charge_micro": "11",
+          "remaining": {
+            "P": "10",
+            "I": "10",
+            "Gnew": "9",
+            "Gold": "0",
+            "C": "10"
+          }
+        },
+        {
+          "op": "debit",
+          "key": "usage:x:sort2",
+          "charge_micro": "20",
+          "remaining": {
+            "P": "10",
+            "I": "0",
+            "Gnew": "0",
+            "Gold": "0",
+            "C": "9"
+          }
+        }
+      ]
+    },
+    {
+      "name": "sin vencimiento por creación antes de comprados antiguos",
+      "steps": [
+        {
+          "op": "purchase",
+          "key": "purchase:pi_P",
+          "lot": "P",
+          "payment_intent": "pi_P",
+          "amount_micro": "10",
+          "expires_at": null,
+          "created_at": "2026-10-01T00:00:00Z"
+        },
+        {
+          "op": "compensation",
+          "key": "compensation:Cnew",
+          "lot": "Cnew",
+          "amount_micro": "10",
+          "expires_at": null,
+          "created_at": "2026-11-02T00:00:00Z",
+          "actor": {
+            "type": "operator",
+            "id": "user_operator"
+          },
+          "reason": "incidente sintético"
+        },
+        {
+          "op": "gift",
+          "key": "gift:Gold",
+          "lot": "Gold",
+          "amount_micro": "10",
+          "expires_at": null,
+          "created_at": "2026-11-01T00:00:00Z",
+          "actor": {
+            "type": "operator",
+            "id": "user_operator"
+          },
+          "reason": "incidente sintético"
+        },
+        {
+          "op": "debit",
+          "key": "usage:x:nullsort",
+          "charge_micro": "11",
+          "remaining": {
+            "P": "10",
+            "Cnew": "9",
+            "Gold": "0"
+          }
+        }
+      ]
+    },
+    {
+      "name": "forfeit al surtir efecto, pago preservado, sin reembolso y sin tocar regalo",
+      "steps": [
+        {
+          "op": "purchase",
+          "key": "purchase:pi_P",
+          "lot": "P",
+          "payment_intent": "pi_P",
+          "amount_micro": "10",
+          "expires_at": null,
+          "created_at": "2026-10-01T00:00:00Z"
+        },
+        {
+          "op": "grant_included",
+          "key": "included:I",
+          "lot": "I",
+          "amount_micro": "10",
+          "expires_at": "2026-12-01T00:00:00Z"
+        },
+        {
+          "op": "gift",
+          "key": "gift:G",
+          "lot": "G",
+          "amount_micro": "10",
+          "expires_at": null,
+          "created_at": "2026-11-01T00:00:00Z",
+          "actor": {
+            "type": "operator",
+            "id": "user_operator"
+          },
+          "reason": "incidente sintético"
+        },
+        {
+          "op": "forfeit",
+          "key": "forfeit:bsub_0000000000000001:P",
+          "lot": "P",
+          "subscription_id": "bsub_0000000000000001",
+          "effective_at": "2026-12-01T00:00:00Z",
+          "at": "2026-11-30T00:00:00Z",
+          "transaction_payment": null,
+          "transaction_source": null,
+          "error": "cancellation_not_effective"
+        },
+        {
+          "op": "forfeit",
+          "key": "forfeit:bsub_0000000000000001:P",
+          "lot": "P",
+          "subscription_id": "bsub_0000000000000001",
+          "effective_at": "2026-12-01T00:00:00Z",
+          "at": "2026-12-01T00:00:00Z",
+          "transaction_payment": "pi_P",
+          "transaction_source": "purchase"
+        },
+        {
+          "op": "forfeit",
+          "key": "forfeit:bsub_0000000000000001:P",
+          "lot": "P",
+          "subscription_id": "bsub_0000000000000001",
+          "effective_at": "2026-12-01T00:00:00Z",
+          "at": "2026-12-02T00:00:00Z",
+          "transaction_payment": null,
+          "transaction_source": null,
+          "duplicate": true
+        },
+        {
+          "op": "forfeit",
+          "key": "forfeit:bsub_0000000000000001:I",
+          "lot": "I",
+          "subscription_id": "bsub_0000000000000001",
+          "effective_at": "2026-12-01T00:00:00Z",
+          "at": "2026-12-02T00:00:00Z",
+          "balances": {
+            "included": "0",
+            "purchased": "0",
+            "gift": "10",
+            "refund_obligation": "0"
+          }
+        },
+        {
+          "op": "forfeit",
+          "key": "forfeit:bsub_0000000000000001:G",
+          "lot": "G",
+          "subscription_id": "bsub_0000000000000001",
+          "effective_at": "2026-12-01T00:00:00Z",
+          "at": "2026-12-01T00:00:00Z",
+          "error": "source_not_forfeitable"
+        }
+      ]
+    },
+    {
+      "name": "regalo y compra fechados vencen; lote sin fecha no vence",
+      "steps": [
+        {
+          "op": "gift",
+          "key": "gift:G",
+          "lot": "G",
+          "amount_micro": "10",
+          "expires_at": "2026-12-01T00:00:00Z",
+          "created_at": "2026-11-01T00:00:00Z",
+          "actor": {
+            "type": "operator",
+            "id": "user_operator"
+          },
+          "reason": "incidente sintético"
+        },
+        {
+          "op": "purchase",
+          "key": "purchase:pi_P",
+          "lot": "P",
+          "payment_intent": "pi_P",
+          "amount_micro": "10",
+          "expires_at": "2026-12-01T00:00:00Z",
+          "created_at": "2026-10-01T00:00:00Z"
+        },
+        {
+          "op": "compensation",
+          "key": "compensation:C",
+          "lot": "C",
+          "amount_micro": "10",
+          "expires_at": null,
+          "created_at": "2026-11-01T00:00:00Z",
+          "actor": {
+            "type": "operator",
+            "id": "user_operator"
+          },
+          "reason": "incidente sintético"
+        },
+        {
+          "op": "expire",
+          "key": "expire:G",
+          "lot": "G",
+          "at": "2026-11-30T00:00:00Z",
+          "error": "not_expired"
+        },
+        {
+          "op": "expire",
+          "key": "expire:G",
+          "lot": "G",
+          "at": "2026-12-01T00:00:00Z"
+        },
+        {
+          "op": "expire",
+          "key": "expire:P",
+          "lot": "P",
+          "at": "2026-12-01T00:00:00Z",
+          "balances": {
+            "gift": "0",
+            "purchased": "0",
+            "compensation": "10"
+          }
+        },
+        {
+          "op": "expire",
+          "key": "expire:C",
+          "lot": "C",
+          "at": "2030-01-01T00:00:00Z",
+          "error": "lot_has_no_expiry"
+        }
+      ]
+    },
+    {
+      "name": "lotes operador con auditoría e idempotencia",
+      "steps": [
+        {
+          "op": "gift",
+          "key": "gift:G",
+          "lot": "G",
+          "amount_micro": "10",
+          "expires_at": null,
+          "created_at": "2026-11-01T00:00:00Z",
+          "actor": {
+            "type": "operator",
+            "id": "user_operator"
+          },
+          "reason": "incidente sintético"
+        },
+        {
+          "op": "gift",
+          "key": "gift:G",
+          "lot": "G",
+          "amount_micro": "10",
+          "expires_at": null,
+          "created_at": "2026-11-01T00:00:00Z",
+          "actor": {
+            "type": "operator",
+            "id": "user_operator"
+          },
+          "reason": "incidente sintético",
+          "duplicate": true
+        },
+        {
+          "op": "gift",
+          "key": "gift:G",
+          "lot": "G",
+          "amount_micro": "10",
+          "expires_at": null,
+          "created_at": "2026-11-01T00:00:00Z",
+          "actor": {
+            "type": "operator",
+            "id": "user_operator"
+          },
+          "reason": "otra razón",
+          "error": "effect_conflict"
+        },
+        {
+          "op": "compensation",
+          "key": "compensation:C",
+          "lot": "C",
+          "amount_micro": "10",
+          "expires_at": null,
+          "created_at": "2026-11-01T00:00:00Z",
+          "actor": {
+            "type": "person",
+            "id": "user_operator"
+          },
+          "reason": "incidente sintético",
+          "error": "operator_required"
+        }
+      ]
+    },
+    {
+      "name": "reservar antes del despacho no permite sobregiro ni doble reserva",
+      "steps": [
+        {
+          "op": "purchase",
+          "key": "purchase:pi_P",
+          "lot": "P",
+          "payment_intent": "pi_P",
+          "amount_micro": "10",
+          "expires_at": null,
+          "created_at": "2026-10-01T00:00:00Z"
+        },
+        {
+          "op": "reserve",
+          "key": "reserve:00000001",
+          "reservation_id": "bres_0000000000000001",
+          "producer": "danil-ai",
+          "report_id": "report_00000001",
+          "amount_micro": "7",
+          "balances": {
+            "purchased": "3",
+            "inference_hold": "7"
+          },
+          "reservation_state": "reserved",
+          "rate_card_version": 7,
+          "cost_currency": "MXN"
+        },
+        {
+          "op": "reserve",
+          "key": "reserve:00000001",
+          "reservation_id": "bres_0000000000000001",
+          "producer": "danil-ai",
+          "report_id": "report_00000001",
+          "amount_micro": "7",
+          "duplicate": true,
+          "rate_card_version": 7,
+          "cost_currency": "MXN"
+        },
+        {
+          "op": "reserve",
+          "key": "reserve:otherkey1",
+          "reservation_id": "bres_0000000000000002",
+          "producer": "danil-ai",
+          "report_id": "report_00000002",
+          "amount_micro": "4",
+          "error": "insufficient_funds",
+          "rate_card_version": 7,
+          "cost_currency": "MXN"
+        },
+        {
+          "op": "reserve",
+          "key": "reserve:otherkey2",
+          "reservation_id": "bres_0000000000000002",
+          "producer": "danil-ai",
+          "report_id": "report_00000001",
+          "amount_micro": "1",
+          "error": "report_already_reserved",
+          "rate_card_version": 7,
+          "cost_currency": "MXN"
+        }
+      ]
+    },
+    {
+      "name": "incierto retiene fondos hasta conciliación sin uso",
+      "steps": [
+        {
+          "op": "purchase",
+          "key": "purchase:pi_P",
+          "lot": "P",
+          "payment_intent": "pi_P",
+          "amount_micro": "10",
+          "expires_at": null,
+          "created_at": "2026-10-01T00:00:00Z"
+        },
+        {
+          "op": "reserve",
+          "key": "reserve:00000001",
+          "reservation_id": "bres_0000000000000001",
+          "producer": "danil-ai",
+          "report_id": "report_00000001",
+          "amount_micro": "7",
+          "rate_card_version": 7,
+          "cost_currency": "MXN"
+        },
+        {
+          "op": "reservation_uncertain",
+          "key": "reservation_uncertain:00000001",
+          "reservation_id": "bres_0000000000000001",
+          "producer": "danil-ai",
+          "report_id": "report_00000001",
+          "reason": "timeout",
+          "reservation_state": "uncertain",
+          "balances": {
+            "purchased": "3",
+            "inference_hold": "7"
+          }
+        },
+        {
+          "op": "reservation_release",
+          "key": "reservation_release:00000001",
+          "reservation_id": "bres_0000000000000001",
+          "producer": "danil-ai",
+          "report_id": "report_00000001",
+          "no_usage": true,
+          "error": "reconciliation_required"
+        },
+        {
+          "op": "reservation_release",
+          "key": "reservation_release:00000001",
+          "reservation_id": "bres_0000000000000001",
+          "producer": "danil-ai",
+          "report_id": "report_00000001",
+          "no_usage": false,
+          "reconciled": true,
+          "error": "no_usage_proof_required"
+        },
+        {
+          "op": "reservation_release",
+          "key": "reservation_release:00000001",
+          "reservation_id": "bres_0000000000000001",
+          "producer": "danil-ai",
+          "report_id": "report_00000001",
+          "no_usage": true,
+          "reconciled": true,
+          "reservation_state": "released",
+          "balances": {
+            "purchased": "10",
+            "inference_hold": "0"
+          }
+        },
+        {
+          "op": "reservation_settle",
+          "key": "usage:danil-ai:report_00000001",
+          "reservation_id": "bres_0000000000000001",
+          "producer": "danil-ai",
+          "report_id": "report_00000001",
+          "charge_micro": "5",
+          "error": "reservation_terminal",
+          "report": {
+            "rate_card_version": 7
+          }
+        }
+      ]
+    },
+    {
+      "name": "liquidación ?nica y usage-reports comparten identidad sin doble cobro",
+      "steps": [
+        {
+          "op": "purchase",
+          "key": "purchase:pi_P",
+          "lot": "P",
+          "payment_intent": "pi_P",
+          "amount_micro": "10",
+          "expires_at": null,
+          "created_at": "2026-10-01T00:00:00Z"
+        },
+        {
+          "op": "reserve",
+          "key": "reserve:00000001",
+          "reservation_id": "bres_0000000000000001",
+          "producer": "danil-ai",
+          "report_id": "report_00000001",
+          "amount_micro": "7",
+          "rate_card_version": 7,
+          "cost_currency": "MXN"
+        },
+        {
+          "op": "debit",
+          "key": "usage:danil-ai:report_00000001",
+          "producer": "danil-ai",
+          "report_id": "report_00000001",
+          "charge_micro": "5",
+          "error": "reservation_required"
+        },
+        {
+          "op": "reservation_settle",
+          "key": "usage:danil-ai:report_00000001",
+          "reservation_id": "bres_0000000000000001",
+          "producer": "danil-ai",
+          "report_id": "report_00000001",
+          "charge_micro": "5",
+          "balances": {
+            "purchased": "5",
+            "inference_hold": "0"
+          },
+          "reservation_state": "settled",
+          "report": {
+            "rate_card_version": 7
+          }
+        },
+        {
+          "op": "reservation_settle",
+          "key": "usage:danil-ai:report_00000001",
+          "reservation_id": "bres_0000000000000001",
+          "producer": "danil-ai",
+          "report_id": "report_00000001",
+          "charge_micro": "5",
+          "duplicate": true,
+          "report": {
+            "rate_card_version": 7
+          }
+        },
+        {
+          "op": "debit",
+          "key": "usage:danil-ai:report_00000001",
+          "producer": "danil-ai",
+          "report_id": "report_00000001",
+          "reservation_id": "bres_0000000000000001",
+          "charge_micro": "5",
+          "duplicate": true,
+          "report": {
+            "rate_card_version": 7
+          }
+        },
+        {
+          "op": "reservation_settle",
+          "key": "usage:danil-ai:report_00000001",
+          "reservation_id": "bres_0000000000000001",
+          "producer": "danil-ai",
+          "report_id": "report_00000001",
+          "charge_micro": "6",
+          "error": "effect_conflict",
+          "report": {
+            "rate_card_version": 7
+          }
+        },
+        {
+          "op": "reservation_release",
+          "key": "reservation_release:00000001",
+          "reservation_id": "bres_0000000000000001",
+          "producer": "danil-ai",
+          "report_id": "report_00000001",
+          "no_usage": true,
+          "error": "reservation_terminal"
+        }
+      ]
+    },
+    {
+      "name": "reserva aislada por productor",
+      "steps": [
+        {
+          "op": "purchase",
+          "key": "purchase:pi_P",
+          "lot": "P",
+          "payment_intent": "pi_P",
+          "amount_micro": "10",
+          "expires_at": null,
+          "created_at": "2026-10-01T00:00:00Z"
+        },
+        {
+          "op": "reserve",
+          "key": "reserve:00000001",
+          "reservation_id": "bres_0000000000000001",
+          "producer": "danil-ai",
+          "report_id": "report_00000001",
+          "amount_micro": "7",
+          "rate_card_version": 7,
+          "cost_currency": "MXN"
+        },
+        {
+          "op": "reservation_settle",
+          "key": "usage:messaging:report_00000001",
+          "reservation_id": "bres_0000000000000001",
+          "producer": "messaging",
+          "report_id": "report_00000001",
+          "charge_micro": "5",
+          "error": "reservation_binding_mismatch",
+          "report": {
+            "rate_card_version": 7
+          }
+        }
+      ]
+    },
+    {
+      "name": "liberar solo con prueba de que no hubo uso",
+      "steps": [
+        {
+          "op": "purchase",
+          "key": "purchase:pi_P",
+          "lot": "P",
+          "payment_intent": "pi_P",
+          "amount_micro": "10",
+          "expires_at": null,
+          "created_at": "2026-10-01T00:00:00Z"
+        },
+        {
+          "op": "reserve",
+          "key": "reserve:00000001",
+          "reservation_id": "bres_0000000000000001",
+          "producer": "danil-ai",
+          "report_id": "report_00000001",
+          "amount_micro": "7",
+          "rate_card_version": 7,
+          "cost_currency": "MXN"
+        },
+        {
+          "op": "reservation_release",
+          "key": "reservation_release:00000001",
+          "reservation_id": "bres_0000000000000001",
+          "producer": "danil-ai",
+          "report_id": "report_00000001",
+          "no_usage": false,
+          "error": "no_usage_proof_required"
+        },
+        {
+          "op": "reservation_release",
+          "key": "reservation_release:00000001",
+          "reservation_id": "bres_0000000000000001",
+          "producer": "danil-ai",
+          "report_id": "report_00000001",
+          "no_usage": true,
+          "balances": {
+            "purchased": "10",
+            "inference_hold": "0"
+          }
+        }
+      ]
+    },
+    {
+      "name": "costo real mayor que reserva queda retenido para revisión, sin cargo ni deuda (rev. 12)",
+      "steps": [
+        {
+          "op": "purchase",
+          "key": "purchase:pi_P",
+          "lot": "P",
+          "payment_intent": "pi_P",
+          "amount_micro": "10",
+          "expires_at": null,
+          "created_at": "2026-10-01T00:00:00Z"
+        },
+        {
+          "op": "reserve",
+          "key": "reserve:00000001",
+          "reservation_id": "bres_0000000000000001",
+          "producer": "danil-ai",
+          "report_id": "report_00000001",
+          "amount_micro": "7",
+          "rate_card_version": 7,
+          "cost_currency": "MXN"
+        },
+        {
+          "op": "reservation_settle",
+          "key": "usage:danil-ai:report_00000001",
+          "reservation_id": "bres_0000000000000001",
+          "producer": "danil-ai",
+          "report_id": "report_00000001",
+          "charge_micro": "12",
+          "balances": {
+            "purchased": "3",
+            "inference_hold": "7",
+            "unsettled_usage": "0"
+          },
+          "reservation_state": "held",
+          "report": {
+            "rate_card_version": 7
+          }
+        }
+      ]
+    },
+    {
+      "name": "cancelación no resucita reserva liberada",
+      "steps": [
+        {
+          "op": "purchase",
+          "key": "purchase:pi_P",
+          "lot": "P",
+          "payment_intent": "pi_P",
+          "amount_micro": "10",
+          "expires_at": null,
+          "created_at": "2026-10-01T00:00:00Z"
+        },
+        {
+          "op": "reserve",
+          "key": "reserve:00000001",
+          "reservation_id": "bres_0000000000000001",
+          "producer": "danil-ai",
+          "report_id": "report_00000001",
+          "amount_micro": "7",
+          "rate_card_version": 7,
+          "cost_currency": "MXN"
+        },
+        {
+          "op": "forfeit",
+          "key": "forfeit:bsub_0000000000000001:P",
+          "lot": "P",
+          "subscription_id": "bsub_0000000000000001",
+          "effective_at": "2026-12-01T00:00:00Z",
+          "at": "2026-12-01T00:00:00Z",
+          "transaction_payment": "pi_P",
+          "transaction_source": "purchase"
+        },
+        {
+          "op": "reservation_release",
+          "key": "reservation_release:00000001",
+          "reservation_id": "bres_0000000000000001",
+          "producer": "danil-ai",
+          "report_id": "report_00000001",
+          "no_usage": true,
+          "balances": {
+            "purchased": "0",
+            "inference_hold": "0"
+          }
+        }
+      ]
+    },
+    {
+      "name": "disputa liberada tras cancelación no resucita comprados",
+      "steps": [
+        {
+          "op": "purchase",
+          "key": "purchase:pi_P",
+          "lot": "P",
+          "payment_intent": "pi_P",
+          "amount_micro": "10",
+          "expires_at": null,
+          "created_at": "2026-10-01T00:00:00Z"
+        },
+        {
+          "op": "dispute",
+          "key": "dispute:dp_1:hold",
+          "payment_intent": "pi_P",
+          "dispute": "dp_1",
+          "phase": "hold",
+          "amount_micro": "5"
+        },
+        {
+          "op": "forfeit",
+          "key": "forfeit:bsub_0000000000000001:P",
+          "lot": "P",
+          "subscription_id": "bsub_0000000000000001",
+          "effective_at": "2026-12-01T00:00:00Z",
+          "at": "2026-12-01T00:00:00Z",
+          "transaction_payment": "pi_P",
+          "transaction_source": "purchase"
+        },
+        {
+          "op": "dispute",
+          "key": "dispute:dp_1:release",
+          "payment_intent": "pi_P",
+          "dispute": "dp_1",
+          "phase": "release",
+          "balances": {
+            "purchased": "0",
+            "dispute_hold": "0"
+          }
+        }
+      ]
+    },
+    {
+      "name": "reserva ligada a organización y persona",
+      "steps": [
+        {
+          "op": "purchase",
+          "key": "purchase:pi_P",
+          "lot": "P",
+          "payment_intent": "pi_P",
+          "amount_micro": "10",
+          "expires_at": null,
+          "created_at": "2026-10-01T00:00:00Z"
+        },
+        {
+          "op": "reserve",
+          "key": "reserve:00000001",
+          "reservation_id": "bres_0000000000000001",
+          "producer": "danil-ai",
+          "report_id": "report_00000001",
+          "amount_micro": "7",
+          "organization_id": "org_A",
+          "person_id": "user_A",
+          "rate_card_version": 7,
+          "cost_currency": "MXN"
+        },
+        {
+          "op": "reservation_settle",
+          "key": "usage:danil-ai:report_00000001",
+          "reservation_id": "bres_0000000000000001",
+          "producer": "danil-ai",
+          "report_id": "report_00000001",
+          "charge_micro": "5",
+          "organization_id": "org_B",
+          "person_id": "user_A",
+          "error": "reservation_binding_mismatch",
+          "report": {
+            "rate_card_version": 7
+          }
+        },
+        {
+          "op": "reservation_settle",
+          "key": "usage:danil-ai:report_00000001",
+          "reservation_id": "bres_0000000000000001",
+          "producer": "danil-ai",
+          "report_id": "report_00000001",
+          "charge_micro": "5",
+          "organization_id": "org_A",
+          "person_id": "user_B",
+          "error": "reservation_binding_mismatch",
+          "report": {
+            "rate_card_version": 7
+          }
+        },
+        {
+          "op": "reservation_settle",
+          "key": "usage:danil-ai:report_00000001",
+          "reservation_id": "bres_0000000000000001",
+          "producer": "danil-ai",
+          "report_id": "report_00000001",
+          "charge_micro": "5",
+          "organization_id": "org_A",
+          "person_id": "user_A",
+          "report": {
+            "rate_card_version": 7
+          }
+        }
+      ]
+    },
+    {
+      "name": "no reservar un reporte ya cobrado",
+      "steps": [
+        {
+          "op": "purchase",
+          "key": "purchase:pi_P",
+          "lot": "P",
+          "payment_intent": "pi_P",
+          "amount_micro": "10",
+          "expires_at": null,
+          "created_at": "2026-10-01T00:00:00Z"
+        },
+        {
+          "op": "debit",
+          "key": "usage:danil-ai:report_00000001",
+          "producer": "danil-ai",
+          "report_id": "report_00000001",
+          "charge_micro": "1"
+        },
+        {
+          "op": "reserve",
+          "key": "reserve:00000001",
+          "reservation_id": "bres_0000000000000001",
+          "producer": "danil-ai",
+          "report_id": "report_00000001",
+          "amount_micro": "7",
+          "error": "report_already_reserved",
+          "rate_card_version": 7,
+          "cost_currency": "MXN"
+        }
+      ]
+    },
+    {
+      "name": "huella del reporte completo, aun si el importe coincide",
+      "steps": [
+        {
+          "op": "purchase",
+          "key": "purchase:pi_P",
+          "lot": "P",
+          "payment_intent": "pi_P",
+          "amount_micro": "10",
+          "expires_at": null,
+          "created_at": "2026-10-01T00:00:00Z"
+        },
+        {
+          "op": "reserve",
+          "key": "reserve:00000001",
+          "reservation_id": "bres_0000000000000001",
+          "producer": "danil-ai",
+          "report_id": "report_00000001",
+          "amount_micro": "7",
+          "rate_card_version": 7,
+          "cost_currency": "MXN"
+        },
+        {
+          "op": "reservation_settle",
+          "key": "usage:danil-ai:report_00000001",
+          "reservation_id": "bres_0000000000000001",
+          "producer": "danil-ai",
+          "report_id": "report_00000001",
+          "charge_micro": "5",
+          "report": {
+            "provider_cost": {
+              "currency": "MXN",
+              "amount_micro": "5"
+            },
+            "tokens": {
+              "input": 2
+            },
+            "rate_card_version": 7
+          }
+        },
+        {
+          "op": "reservation_settle",
+          "key": "usage:danil-ai:report_00000001",
+          "reservation_id": "bres_0000000000000001",
+          "producer": "danil-ai",
+          "report_id": "report_00000001",
+          "charge_micro": "5",
+          "report": {
+            "provider_cost": {
+              "currency": "MXN",
+              "amount_micro": "5"
+            },
+            "tokens": {
+              "input": 3
+            },
+            "rate_card_version": 7
+          },
+          "error": "effect_conflict"
+        }
+      ]
+    },
+    {
+      "name": "reserva liberada no resucita lote vencido",
+      "steps": [
+        {
+          "op": "purchase",
+          "key": "purchase:pi_P",
+          "lot": "P",
+          "payment_intent": "pi_P",
+          "amount_micro": "10",
+          "expires_at": "2026-12-01T00:00:00Z",
+          "created_at": "2026-10-01T00:00:00Z"
+        },
+        {
+          "op": "reserve",
+          "key": "reserve:00000001",
+          "reservation_id": "bres_0000000000000001",
+          "producer": "danil-ai",
+          "report_id": "report_00000001",
+          "amount_micro": "7",
+          "rate_card_version": 7,
+          "cost_currency": "MXN"
+        },
+        {
+          "op": "expire",
+          "key": "expire:P",
+          "lot": "P",
+          "at": "2026-12-01T00:00:00Z"
+        },
+        {
+          "op": "reservation_release",
+          "key": "release:extra",
+          "producer": "danil-ai",
+          "report_id": "report_00000001",
+          "reservation_id": "bres_0000000000000001",
+          "no_usage": true,
+          "balances": {
+            "purchased": "0",
+            "inference_hold": "0"
+          }
+        }
+      ]
+    },
+    {
+      "name": "operador no crea monto cero",
+      "steps": [
+        {
+          "op": "gift",
+          "key": "gift:G",
+          "lot": "G",
+          "amount_micro": "0",
+          "expires_at": null,
+          "created_at": "2026-11-01T00:00:00Z",
+          "actor": {
+            "type": "operator",
+            "id": "user_operator"
+          },
+          "reason": "incidente sintético",
+          "error": "amount_must_be_positive"
+        }
+      ]
+    },
+    {
+      "name": "disputa liberada no resucita compra vencida",
+      "steps": [
+        {
+          "op": "purchase",
+          "key": "purchase:pi_P",
+          "lot": "P",
+          "payment_intent": "pi_P",
+          "amount_micro": "10",
+          "expires_at": "2026-12-01T00:00:00Z",
+          "created_at": "2026-10-01T00:00:00Z"
+        },
+        {
+          "op": "dispute",
+          "key": "dispute:dp_1:hold",
+          "payment_intent": "pi_P",
+          "dispute": "dp_1",
+          "phase": "hold",
+          "amount_micro": "5"
+        },
+        {
+          "op": "expire",
+          "key": "expire:P",
+          "lot": "P",
+          "at": "2026-12-01T00:00:00Z"
+        },
+        {
+          "op": "dispute",
+          "key": "dispute:dp_1:release",
+          "payment_intent": "pi_P",
+          "dispute": "dp_1",
+          "phase": "release",
+          "balances": {
+            "purchased": "0",
+            "dispute_hold": "0"
+          }
+        }
+      ]
+    }
+  ],
+  "operator_authorization": [
+    {
+      "claims": {
+        "typ": "danil-operator+jwt",
+        "aud": "billing-operator",
+        "sub": "user_operator",
+        "scopes": [
+          "credits.grant"
+        ]
+      },
+      "body": {
+        "source": "gift",
+        "reason": "incidente"
+      },
+      "result": "ok"
+    },
+    {
+      "claims": {
+        "typ": "JWT",
+        "aud": "billing-operator",
+        "sub": "user_operator",
+        "scopes": [
+          "credits.grant"
+        ]
+      },
+      "body": {
+        "source": "gift",
+        "reason": "incidente"
+      },
+      "result": "operator_required"
+    },
+    {
+      "claims": {
+        "typ": "danil-operator+jwt",
+        "aud": "billing",
+        "sub": "user_operator",
+        "scopes": [
+          "credits.grant"
+        ]
+      },
+      "body": {
+        "source": "gift",
+        "reason": "incidente"
+      },
+      "result": "operator_required"
+    },
+    {
+      "claims": {
+        "typ": "danil-operator+jwt",
+        "aud": "billing-operator",
+        "sub": "svc:billing",
+        "scopes": [
+          "credits.grant"
+        ]
+      },
+      "body": {
+        "source": "gift",
+        "reason": "incidente"
+      },
+      "result": "operator_required"
+    },
+    {
+      "claims": {
+        "typ": "danil-operator+jwt",
+        "aud": "billing-operator",
+        "sub": "user_operator",
+        "scopes": []
+      },
+      "body": {
+        "source": "gift",
+        "reason": "incidente"
+      },
+      "result": "operator_required"
+    },
+    {
+      "claims": {
+        "typ": "danil-operator+jwt",
+        "aud": "billing-operator",
+        "sub": "user_operator",
+        "scopes": [
+          "credits.grant"
+        ]
+      },
+      "body": {
+        "source": "purchase",
+        "reason": "incidente"
+      },
+      "result": "invalid_request"
+    },
+    {
+      "claims": {
+        "typ": "danil-operator+jwt",
+        "aud": "billing-operator",
+        "sub": "user_operator",
+        "scopes": [
+          "credits.grant"
+        ]
+      },
+      "body": {
+        "source": "gift",
+        "reason": ""
+      },
+      "result": "invalid_request"
+    }
+  ],
+  "lot_schema": [
+    {
+      "name": "plan_included",
+      "value": {
+        "lot_id": "blot_0000000000000001",
+        "source": "plan_included",
+        "initial": {
+          "currency": "MXN",
+          "amount_micro": "10"
+        },
+        "remaining": {
+          "currency": "MXN",
+          "amount_micro": "5"
+        },
+        "expires_at": null,
+        "created_at": "2026-11-01T00:00:00Z",
+        "payment_reference": null
+      },
+      "valid": false
+    },
+    {
+      "name": "purchase",
+      "value": {
+        "lot_id": "blot_0000000000000001",
+        "source": "purchase",
+        "initial": {
+          "currency": "MXN",
+          "amount_micro": "10"
+        },
+        "remaining": {
+          "currency": "MXN",
+          "amount_micro": "5"
+        },
+        "expires_at": null,
+        "created_at": "2026-11-01T00:00:00Z",
+        "payment_reference": null
+      },
+      "valid": true
+    },
+    {
+      "name": "gift",
+      "value": {
+        "lot_id": "blot_0000000000000001",
+        "source": "gift",
+        "initial": {
+          "currency": "MXN",
+          "amount_micro": "10"
+        },
+        "remaining": {
+          "currency": "MXN",
+          "amount_micro": "5"
+        },
+        "expires_at": null,
+        "created_at": "2026-11-01T00:00:00Z",
+        "payment_reference": null
+      },
+      "valid": true
+    },
+    {
+      "name": "compensation",
+      "value": {
+        "lot_id": "blot_0000000000000001",
+        "source": "compensation",
+        "initial": {
+          "currency": "MXN",
+          "amount_micro": "10"
+        },
+        "remaining": {
+          "currency": "MXN",
+          "amount_micro": "5"
+        },
+        "expires_at": null,
+        "created_at": "2026-11-01T00:00:00Z",
+        "payment_reference": null
+      },
+      "valid": true
+    },
+    {
+      "name": "unknown",
+      "value": {
+        "lot_id": "blot_0000000000000001",
+        "source": "unknown",
+        "initial": {
+          "currency": "MXN",
+          "amount_micro": "10"
+        },
+        "remaining": {
+          "currency": "MXN",
+          "amount_micro": "5"
+        },
+        "expires_at": null,
+        "created_at": "2026-11-01T00:00:00Z",
+        "payment_reference": null
+      },
+      "valid": false
+    },
+    {
+      "name": "included con fecha",
+      "value": {
+        "lot_id": "blot_0000000000000001",
+        "source": "plan_included",
+        "initial": {
+          "currency": "MXN",
+          "amount_micro": "10"
+        },
+        "remaining": {
+          "currency": "MXN",
+          "amount_micro": "5"
+        },
+        "expires_at": "2026-12-01T00:00:00Z",
+        "created_at": "2026-11-01T00:00:00Z",
+        "payment_reference": null
+      },
+      "valid": true
+    }
+  ],
+  "member_admission": [
+    {
+      "available_micro": "10",
+      "suspension": null,
+      "budget": null,
+      "admitted": true,
+      "reasons": []
+    },
+    {
+      "available_micro": "10",
+      "suspension": null,
+      "budget": {
+        "limit_micro": "5",
+        "spent_micro": "3",
+        "reserved_micro": "2"
+      },
+      "admitted": false,
+      "reasons": [
+        "member_budget_exhausted"
+      ]
+    },
+    {
+      "available_micro": "10",
+      "suspension": null,
+      "budget": {
+        "limit_micro": "5",
+        "spent_micro": "3",
+        "reserved_micro": "1"
+      },
+      "admitted": true,
+      "reasons": []
+    },
+    {
+      "available_micro": "0",
+      "suspension": null,
+      "budget": null,
+      "admitted": false,
+      "reasons": [
+        "balance_exhausted"
+      ]
+    }
+  ]
+}

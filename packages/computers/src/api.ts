@@ -45,7 +45,7 @@ export type Answer<T> =
   | { kind: "error"; status: number | null; code?: string };
 
 /** Lo mínimo de `fetch` que usa el cliente. */
-export type Fetch = (input: string, init?: { method?: string; headers?: Record<string, string>; body?: string }) => Promise<{
+export type Fetch = (input: string, init?: { method?: string; headers?: Record<string, string>; body?: string; signal?: AbortSignal }) => Promise<{
   status: number;
   ok: boolean;
   headers?: { get(name: string): string | null };

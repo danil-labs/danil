@@ -1,0 +1,875 @@
+{
+  "$comment": "La organización de un objeto de Stripe sale SOLO del registro local que escribió el servidor (operación local) o de su grafo de objetos en la API fijada 2026-10-28.endive (≥ 2025-03-31.basil): charge/refund/dispute/early fraud warning → PaymentIntent → compra local, o → InvoicePayment pagadas (leídas de Stripe y guardadas por billing) → factura → parent.subscription_details.subscription. Un PaymentIntent puede estar en varias facturas: si llevan a más de una organización, cuarentena. La metadata solo se compara. livemode=true se rechaza. Cuenta: modo de prueba COMPARTIDO de Danil MEX (decisión del supervisor evj7mgcc, 2026-11-14). Solo se ignora (foreign_object) lo que, CON la fuente leída (`source.read=true`), no tiene padre local, ni relación local parcial, ni marca v2 propia (metadata.danil_billing=v2, client_reference_id bchk_*, precio danil_v2:*) ni heredada de la fuente (metadata del PaymentIntent, price_lookup_keys de las facturas del PaymentIntent). Reembolsos, disputas y alertas no llevan marca propia: la heredan. Sin fuente leída → pending_source (reintento). Con marca → cuarentena (seguridad § 1.5; revisión 6zrx9rc2 sobre 6395027). Fuente: docs.stripe.com/billing/subscriptions/webhooks#refund-events (leída con stripe docs el 2026-11-14).",
+  "local": {
+    "checkouts": {
+      "bchk_01SYNTHETICCHK0001": {
+        "organization_id": "org_01SYNTHETICORGA",
+        "kind": "plan",
+        "plan_key": "pro",
+        "catalog_version": 3,
+        "amount_micro": "599000000",
+        "currency": "MXN",
+        "stripe_session_id": "cs_test_SYNTH0001",
+        "stripe_price_id": "price_SYNTHPRO3"
+      },
+      "bchk_01SYNTHETICCHK0002": {
+        "organization_id": "org_01SYNTHETICORGA",
+        "kind": "credits",
+        "pack_id": "pack_100",
+        "catalog_version": 3,
+        "amount_micro": "100000000",
+        "currency": "MXN",
+        "stripe_session_id": "cs_test_SYNTH0002"
+      }
+    },
+    "subscriptions": {
+      "sub_SYNTH0001": {
+        "subscription_id": "bsub_01SYNTHETICSUB0001",
+        "organization_id": "org_01SYNTHETICORGA"
+      },
+      "sub_SYNTHB001": {
+        "subscription_id": "bsub_01SYNTHETICSUB0002",
+        "organization_id": "org_01SYNTHETICORGB"
+      }
+    },
+    "payment_intents": {
+      "pi_SYNTH0002": {
+        "purchase_id": "bpur_01SYNTHETICPUR0001",
+        "organization_id": "org_01SYNTHETICORGA"
+      },
+      "pi_MIXEDA": {
+        "purchase_id": "bpur_01SYNTHETICPUR0003",
+        "organization_id": "org_01SYNTHETICORGA"
+      },
+      "pi_MIXEDSAME": {
+        "purchase_id": "bpur_01SYNTHETICPUR0004",
+        "organization_id": "org_01SYNTHETICORGA"
+      }
+    },
+    "invoices": {
+      "in_SYNTH0001": {
+        "stripe_subscription": "sub_SYNTH0001"
+      },
+      "in_SYNTHB001": {
+        "stripe_subscription": "sub_SYNTHB001"
+      },
+      "in_SYNTH0001B": {
+        "stripe_subscription": "sub_SYNTH0001"
+      }
+    },
+    "charges": {
+      "ch_SYNTH0002": {
+        "payment_intent": "pi_SYNTH0002"
+      },
+      "ch_SYNTH0003": {
+        "payment_intent": "pi_SYNTHINV1"
+      },
+      "ch_LOCALONLY": {
+        "payment_intent": null
+      }
+    },
+    "invoice_payments": {
+      "pi_SYNTHINV1": [
+        "in_SYNTH0001"
+      ],
+      "pi_SYNTHAMBIG": [
+        "in_SYNTH0001",
+        "in_SYNTHB001"
+      ],
+      "pi_SYNTHPARTIAL": [
+        "in_SYNTH0001",
+        "in_UNKNOWNPARTIAL"
+      ],
+      "pi_MIXEDA": [
+        "in_SYNTHB001"
+      ],
+      "pi_MIXEDSAME": [
+        "in_SYNTH0001"
+      ],
+      "pi_TWOINVSAME": [
+        "in_SYNTH0001",
+        "in_SYNTH0001B"
+      ]
+    }
+  },
+  "cases": [
+    {
+      "why": "sesión de plan propia, metadata coincide",
+      "object": {
+        "object": "checkout.session",
+        "id": "cs_test_SYNTH0001",
+        "livemode": false,
+        "client_reference_id": "bchk_01SYNTHETICCHK0001",
+        "amount_total_minor": "59900",
+        "currency": "mxn",
+        "metadata": {
+          "danil_billing": "v2",
+          "organization_id": "org_01SYNTHETICORGA",
+          "checkout_id": "bchk_01SYNTHETICCHK0001",
+          "plan_key": "pro",
+          "catalog_version": "3"
+        }
+      },
+      "result": {
+        "status": "linked",
+        "organization_id": "org_01SYNTHETICORGA",
+        "via": "checkout"
+      }
+    },
+    {
+      "why": "evento firmado con metadata de O2 sobre una sesión de O1 (seguridad §1.5)",
+      "object": {
+        "object": "checkout.session",
+        "id": "cs_test_SYNTH0001",
+        "livemode": false,
+        "client_reference_id": "bchk_01SYNTHETICCHK0001",
+        "amount_total_minor": "59900",
+        "currency": "mxn",
+        "metadata": {
+          "danil_billing": "v2",
+          "organization_id": "org_01SYNTHETICORGB",
+          "checkout_id": "bchk_01SYNTHETICCHK0001",
+          "plan_key": "pro",
+          "catalog_version": "3"
+        }
+      },
+      "result": {
+        "status": "quarantined",
+        "reason": "metadata_mismatch"
+      }
+    },
+    {
+      "why": "importe distinto del de la operación local",
+      "object": {
+        "object": "checkout.session",
+        "id": "cs_test_SYNTH0001",
+        "livemode": false,
+        "client_reference_id": "bchk_01SYNTHETICCHK0001",
+        "amount_total_minor": "100",
+        "currency": "mxn",
+        "metadata": {}
+      },
+      "result": {
+        "status": "quarantined",
+        "reason": "amount_mismatch"
+      }
+    },
+    {
+      "why": "client_reference_id con forma de checkout v2 que apunta a un checkout cuya sesión es otra: marca v2, cuarentena",
+      "object": {
+        "object": "checkout.session",
+        "id": "cs_test_OTHER",
+        "livemode": false,
+        "client_reference_id": "bchk_01SYNTHETICCHK0001",
+        "amount_total_minor": "59900",
+        "currency": "mxn",
+        "metadata": {}
+      },
+      "result": {
+        "status": "quarantined",
+        "reason": "unknown_parent"
+      }
+    },
+    {
+      "why": "suscripción creada a mano con metadata v2 y sin checkout local",
+      "object": {
+        "object": "subscription",
+        "id": "sub_MANUAL",
+        "livemode": false,
+        "metadata": {
+          "danil_billing": "v2",
+          "organization_id": "org_01SYNTHETICORGA"
+        }
+      },
+      "result": {
+        "status": "quarantined",
+        "reason": "unknown_parent"
+      }
+    },
+    {
+      "why": "factura sin metadata resuelta por su suscripción local",
+      "object": {
+        "object": "invoice",
+        "id": "in_SYNTH0001",
+        "livemode": false,
+        "parent": {
+          "type": "subscription_details",
+          "subscription_details": {
+            "subscription": "sub_SYNTH0001"
+          }
+        }
+      },
+      "result": {
+        "status": "linked",
+        "organization_id": "org_01SYNTHETICORGA",
+        "via": "subscription"
+      }
+    },
+    {
+      "why": "reembolso sin metadata de una compra v2, por cargo → payment_intent",
+      "object": {
+        "object": "refund",
+        "id": "re_SYNTH0002",
+        "livemode": false,
+        "charge": "ch_SYNTH0002",
+        "payment_intent": null
+      },
+      "result": {
+        "status": "linked",
+        "organization_id": "org_01SYNTHETICORGA",
+        "via": "payment_intent"
+      }
+    },
+    {
+      "why": "disputa de un cargo de factura, por cargo → factura → suscripción",
+      "object": {
+        "object": "dispute",
+        "id": "dp_SYNTH0003",
+        "livemode": false,
+        "charge": "ch_SYNTH0003",
+        "payment_intent": null
+      },
+      "result": {
+        "status": "linked",
+        "organization_id": "org_01SYNTHETICORGA",
+        "via": "subscription"
+      }
+    },
+    {
+      "why": "cargo de un padre desconocido (sin marca v2: ajeno, se ignora)",
+      "object": {
+        "object": "charge",
+        "id": "ch_UNKNOWN",
+        "livemode": false,
+        "payment_intent": "pi_UNKNOWN",
+        "metadata": {
+          "organization_id": "org_01SYNTHETICORGA"
+        },
+        "source": {
+          "read": true,
+          "payment_intent_metadata": {},
+          "price_lookup_keys": []
+        }
+      },
+      "result": {
+        "status": "ignored",
+        "reason": "foreign_object"
+      }
+    },
+    {
+      "why": "modo live",
+      "object": {
+        "object": "invoice",
+        "id": "in_SYNTH0001",
+        "livemode": true,
+        "parent": {
+          "type": "subscription_details",
+          "subscription_details": {
+            "subscription": "sub_SYNTH0001"
+          }
+        }
+      },
+      "result": {
+        "status": "rejected",
+        "reason": "livemode_forbidden"
+      }
+    },
+    {
+      "why": "tipo de objeto no contratado",
+      "object": {
+        "object": "customer",
+        "id": "cus_SYNTH",
+        "livemode": false
+      },
+      "result": {
+        "status": "quarantined",
+        "reason": "object_not_supported"
+      }
+    },
+    {
+      "why": "factura con el grafo viejo (invoice.subscription) y sin parent: no se usa (sin marca v2: ajeno, se ignora)",
+      "object": {
+        "object": "invoice",
+        "id": "in_OLDSHAPE",
+        "livemode": false,
+        "subscription": "sub_SYNTH0001",
+        "source": {
+          "read": true,
+          "payment_intent_metadata": {},
+          "price_lookup_keys": []
+        }
+      },
+      "result": {
+        "status": "ignored",
+        "reason": "foreign_object"
+      }
+    },
+    {
+      "why": "factura sin suscripción padre (parent.type distinto) (sin marca v2: ajeno, se ignora)",
+      "object": {
+        "object": "invoice",
+        "id": "in_QUOTE",
+        "livemode": false,
+        "parent": {
+          "type": "quote_details",
+          "quote_details": {
+            "quote": "qt_X"
+          }
+        },
+        "source": {
+          "read": true,
+          "payment_intent_metadata": {},
+          "price_lookup_keys": []
+        }
+      },
+      "result": {
+        "status": "ignored",
+        "reason": "foreign_object"
+      }
+    },
+    {
+      "why": "alerta temprana de fraude con payment_intent directo de una factura de suscripción",
+      "object": {
+        "object": "radar.early_fraud_warning",
+        "id": "issfr_SYNTH1",
+        "livemode": false,
+        "charge": "ch_SYNTH0003",
+        "payment_intent": "pi_SYNTHINV1"
+      },
+      "result": {
+        "status": "linked",
+        "organization_id": "org_01SYNTHETICORGA",
+        "via": "subscription"
+      }
+    },
+    {
+      "why": "PaymentIntent asociado a facturas de dos organizaciones: ambiguo",
+      "object": {
+        "object": "charge",
+        "id": "ch_AMBIG",
+        "livemode": false,
+        "payment_intent": "pi_SYNTHAMBIG"
+      },
+      "result": {
+        "status": "quarantined",
+        "reason": "ambiguous_parent"
+      }
+    },
+    {
+      "why": "cargo sin payment_intent (no aplica el procedimiento) (sin marca v2: ajeno, se ignora)",
+      "object": {
+        "object": "charge",
+        "id": "ch_NOPI",
+        "livemode": false,
+        "payment_intent": null,
+        "source": {
+          "read": true,
+          "payment_intent_metadata": {},
+          "price_lookup_keys": []
+        }
+      },
+      "result": {
+        "status": "ignored",
+        "reason": "foreign_object"
+      }
+    },
+    {
+      "why": "disputa con payment_intent directo de una compra de créditos",
+      "object": {
+        "object": "dispute",
+        "id": "dp_SYNTHPI",
+        "livemode": false,
+        "charge": "ch_IGNORED",
+        "payment_intent": "pi_SYNTH0002"
+      },
+      "result": {
+        "status": "linked",
+        "organization_id": "org_01SYNTHETICORGA",
+        "via": "payment_intent"
+      }
+    },
+    {
+      "why": "cargo de un padre desconocido CON metadata v2: cuarentena, no se ignora",
+      "object": {
+        "object": "charge",
+        "id": "ch_UNKNOWN_V2",
+        "livemode": false,
+        "payment_intent": "pi_UNKNOWN_V2",
+        "metadata": {
+          "danil_billing": "v2",
+          "organization_id": "org_01SYNTHETICORGA"
+        }
+      },
+      "result": {
+        "status": "quarantined",
+        "reason": "unknown_parent"
+      }
+    },
+    {
+      "why": "factura de un padre desconocido con precio danil_v2:*: cuarentena",
+      "object": {
+        "object": "invoice",
+        "id": "in_UNKNOWN_V2",
+        "livemode": false,
+        "parent": {
+          "type": "subscription_details",
+          "subscription_details": {
+            "subscription": "sub_UNKNOWN"
+          }
+        },
+        "price_lookup_keys": [
+          "danil_v2:danil-platform:plan:pro:v3"
+        ]
+      },
+      "result": {
+        "status": "quarantined",
+        "reason": "unknown_parent"
+      }
+    },
+    {
+      "why": "factura del billing viejo en la cuenta compartida (precio sin danil_v2): se ignora",
+      "object": {
+        "object": "invoice",
+        "id": "in_LEGACY",
+        "livemode": false,
+        "parent": {
+          "type": "subscription_details",
+          "subscription_details": {
+            "subscription": "sub_LEGACY"
+          }
+        },
+        "price_lookup_keys": [
+          "legacy_pro_monthly"
+        ],
+        "source": {
+          "read": true,
+          "payment_intent_metadata": {},
+          "price_lookup_keys": [
+            "legacy_pro_monthly"
+          ]
+        }
+      },
+      "result": {
+        "status": "ignored",
+        "reason": "foreign_object"
+      }
+    },
+    {
+      "why": "metadata v2 que no coincide con el registro local: sigue en cuarentena aunque haya padre",
+      "object": {
+        "object": "invoice",
+        "id": "in_SYNTH0001",
+        "livemode": false,
+        "parent": {
+          "type": "subscription_details",
+          "subscription_details": {
+            "subscription": "sub_SYNTH0001"
+          }
+        },
+        "metadata": {
+          "danil_billing": "v2",
+          "organization_id": "org_01SYNTHETICORGB"
+        }
+      },
+      "result": {
+        "status": "quarantined",
+        "reason": "metadata_mismatch"
+      }
+    },
+    {
+      "why": "6zrx9rc2: disputa v2 cuya factura aún no procesó invoice.paid: hereda la marca de las líneas de la factura → cuarentena, no ignorada",
+      "object": {
+        "object": "dispute",
+        "id": "dp_PENDINGINV",
+        "livemode": false,
+        "charge": "ch_NEW",
+        "payment_intent": "pi_NEWINV",
+        "source": {
+          "read": true,
+          "payment_intent_metadata": {},
+          "price_lookup_keys": [
+            "danil_v2:danil-platform:plan:pro:v3"
+          ]
+        }
+      },
+      "result": {
+        "status": "quarantined",
+        "reason": "unknown_parent"
+      }
+    },
+    {
+      "why": "6zrx9rc2: reembolso de una compra de créditos v2 no registrada localmente: hereda danil_billing=v2 del PaymentIntent → cuarentena",
+      "object": {
+        "object": "refund",
+        "id": "re_NEWPI",
+        "livemode": false,
+        "charge": "ch_NEWPI",
+        "payment_intent": "pi_NEWCREDITS",
+        "source": {
+          "read": true,
+          "payment_intent_metadata": {
+            "danil_billing": "v2"
+          },
+          "price_lookup_keys": []
+        }
+      },
+      "result": {
+        "status": "quarantined",
+        "reason": "unknown_parent"
+      }
+    },
+    {
+      "why": "6zrx9rc2: alerta de fraude sin fuente leída todavía: reintento, nunca ajena",
+      "object": {
+        "object": "radar.early_fraud_warning",
+        "id": "issfr_UNREAD",
+        "livemode": false,
+        "charge": "ch_X",
+        "payment_intent": "pi_X"
+      },
+      "result": {
+        "status": "pending_source",
+        "reason": "source_not_read"
+      }
+    },
+    {
+      "why": "6zrx9rc2: PaymentIntent con una factura v2 conocida y otra desconocida → relación parcial, cuarentena",
+      "object": {
+        "object": "charge",
+        "id": "ch_PARTIAL",
+        "livemode": false,
+        "payment_intent": "pi_SYNTHPARTIAL",
+        "source": {
+          "read": true
+        }
+      },
+      "result": {
+        "status": "quarantined",
+        "reason": "partial_parent"
+      }
+    },
+    {
+      "why": "6zrx9rc2: cargo guardado localmente cuyo PaymentIntent no se resuelve → relación parcial, cuarentena",
+      "object": {
+        "object": "refund",
+        "id": "re_LOCALCH",
+        "livemode": false,
+        "charge": "ch_LOCALONLY",
+        "payment_intent": null,
+        "source": {
+          "read": true
+        }
+      },
+      "result": {
+        "status": "quarantined",
+        "reason": "partial_parent"
+      }
+    },
+    {
+      "why": "disputa del billing viejo con fuente leída y sin ninguna marca v2: ajena, se ignora",
+      "object": {
+        "object": "dispute",
+        "id": "dp_LEGACY",
+        "livemode": false,
+        "charge": "ch_LEGACY",
+        "payment_intent": "pi_LEGACY",
+        "source": {
+          "read": true,
+          "payment_intent_metadata": {
+            "app": "legacy"
+          },
+          "price_lookup_keys": [
+            "legacy_pro_monthly"
+          ]
+        }
+      },
+      "result": {
+        "status": "ignored",
+        "reason": "foreign_object"
+      }
+    },
+    {
+      "why": "revisiones fb5e759: charge con compra local de O1 y factura pagada de O2 en el mismo PaymentIntent → ambiguo, no se elige O1",
+      "object": {
+        "object": "charge",
+        "id": "x_MIXED_charge",
+        "livemode": false,
+        "payment_intent": "pi_MIXEDA"
+      },
+      "result": {
+        "status": "quarantined",
+        "reason": "ambiguous_parent"
+      }
+    },
+    {
+      "why": "revisiones fb5e759: refund con compra local de O1 y factura pagada de O2 en el mismo PaymentIntent → ambiguo, no se elige O1",
+      "object": {
+        "object": "refund",
+        "id": "x_MIXED_refund",
+        "livemode": false,
+        "charge": "ch_MIXED",
+        "payment_intent": "pi_MIXEDA"
+      },
+      "result": {
+        "status": "quarantined",
+        "reason": "ambiguous_parent"
+      }
+    },
+    {
+      "why": "revisiones fb5e759: dispute con compra local de O1 y factura pagada de O2 en el mismo PaymentIntent → ambiguo, no se elige O1",
+      "object": {
+        "object": "dispute",
+        "id": "x_MIXED_dispute",
+        "livemode": false,
+        "charge": "ch_MIXED",
+        "payment_intent": "pi_MIXEDA"
+      },
+      "result": {
+        "status": "quarantined",
+        "reason": "ambiguous_parent"
+      }
+    },
+    {
+      "why": "revisiones fb5e759: radar.early_fraud_warning con compra local de O1 y factura pagada de O2 en el mismo PaymentIntent → ambiguo, no se elige O1",
+      "object": {
+        "object": "radar.early_fraud_warning",
+        "id": "x_MIXED_radar.early_fraud_warning",
+        "livemode": false,
+        "charge": "ch_MIXED",
+        "payment_intent": "pi_MIXEDA"
+      },
+      "result": {
+        "status": "quarantined",
+        "reason": "ambiguous_parent"
+      }
+    },
+    {
+      "why": "compra local y factura de la MISMA org en un PaymentIntent: colisión de clases de vínculo → cuarentena",
+      "object": {
+        "object": "charge",
+        "id": "ch_MIXEDSAME",
+        "livemode": false,
+        "payment_intent": "pi_MIXEDSAME"
+      },
+      "result": {
+        "status": "quarantined",
+        "reason": "ambiguous_parent"
+      }
+    },
+    {
+      "why": "varias facturas de la misma organización en un PaymentIntent → se liga",
+      "object": {
+        "object": "charge",
+        "id": "ch_TWOINVSAME",
+        "livemode": false,
+        "payment_intent": "pi_TWOINVSAME"
+      },
+      "result": {
+        "status": "linked",
+        "organization_id": "org_01SYNTHETICORGA",
+        "via": "subscription"
+      }
+    },
+    {
+      "why": "solo compra local (sin facturas) → se liga por la compra",
+      "object": {
+        "object": "charge",
+        "id": "ch_ONLYPURCHASE",
+        "livemode": false,
+        "payment_intent": "pi_SYNTH0002"
+      },
+      "result": {
+        "status": "linked",
+        "organization_id": "org_01SYNTHETICORGA",
+        "via": "payment_intent"
+      }
+    },
+    {
+      "why": "solo una factura → se liga por la suscripción",
+      "object": {
+        "object": "charge",
+        "id": "ch_ONLYINVOICE",
+        "livemode": false,
+        "payment_intent": "pi_SYNTHINV1"
+      },
+      "result": {
+        "status": "linked",
+        "organization_id": "org_01SYNTHETICORGA",
+        "via": "subscription"
+      }
+    }
+  ],
+  "webhook_events": {
+    "$comment": "Eventos suscritos (pedido § 4 completado por BA/architect, más radar.early_fraud_warning.created según la guía oficial de webhooks de suscripciones). El endpoint se crea con api_version 2026-10-28.endive. No se suscribe a lo que no se usa: customer.updated no hace falta porque billing no guarda datos del customer (ni correo ni dirección).",
+    "subscribed": [
+      "checkout.session.completed",
+      "checkout.session.async_payment_succeeded",
+      "checkout.session.async_payment_failed",
+      "checkout.session.expired",
+      "customer.subscription.created",
+      "customer.subscription.updated",
+      "customer.subscription.deleted",
+      "customer.subscription.paused",
+      "customer.subscription.resumed",
+      "invoice.paid",
+      "invoice.payment_failed",
+      "invoice.payment_action_required",
+      "invoice.finalized",
+      "invoice.marked_uncollectible",
+      "invoice.voided",
+      "payment_intent.succeeded",
+      "payment_intent.payment_failed",
+      "charge.refunded",
+      "charge.refund.updated",
+      "charge.dispute.created",
+      "charge.dispute.updated",
+      "charge.dispute.closed",
+      "charge.dispute.funds_withdrawn",
+      "charge.dispute.funds_reinstated",
+      "customer.deleted",
+      "radar.early_fraud_warning.created"
+    ]
+  },
+  "api_version": "2026-10-28.endive",
+  "event_acceptance": [
+    {
+      "event": {
+        "type": "invoice.paid",
+        "livemode": false,
+        "api_version": "2026-10-28.endive"
+      },
+      "result": "accept"
+    },
+    {
+      "event": {
+        "type": "invoice.paid",
+        "livemode": true,
+        "api_version": "2026-10-28.endive"
+      },
+      "result": "livemode_forbidden"
+    },
+    {
+      "event": {
+        "type": "invoice.paid",
+        "livemode": false,
+        "api_version": "2025-02-24.acacia"
+      },
+      "result": "api_version_mismatch"
+    },
+    {
+      "event": {
+        "type": "customer.updated",
+        "livemode": false,
+        "api_version": "2026-10-28.endive"
+      },
+      "result": "ignored_type"
+    },
+    {
+      "event": {
+        "type": "radar.early_fraud_warning.created",
+        "livemode": false,
+        "api_version": "2026-10-28.endive"
+      },
+      "result": "accept"
+    }
+  ],
+  "checkout_fulfillment": [
+    {
+      "event": "checkout.session.completed",
+      "payment_status": "paid",
+      "result": "fulfill"
+    },
+    {
+      "event": "checkout.session.completed",
+      "payment_status": "no_payment_required",
+      "result": "fulfill"
+    },
+    {
+      "event": "checkout.session.completed",
+      "payment_status": "unpaid",
+      "result": "await_async"
+    },
+    {
+      "event": "checkout.session.async_payment_succeeded",
+      "payment_status": "paid",
+      "result": "fulfill"
+    },
+    {
+      "event": "checkout.session.async_payment_succeeded",
+      "payment_status": "unpaid",
+      "result": "quarantine"
+    },
+    {
+      "event": "checkout.session.async_payment_failed",
+      "payment_status": "unpaid",
+      "result": "payment_failed"
+    },
+    {
+      "event": "checkout.session.expired",
+      "payment_status": "unpaid",
+      "result": "expired"
+    }
+  ],
+  "lookup_keys": {
+    "cases": [
+      {
+        "args": {
+          "realm": "danil-platform",
+          "kind": "plan",
+          "key": "pro",
+          "catalog_version": 3
+        },
+        "key": "danil_v2:danil-platform:plan:pro:v3"
+      },
+      {
+        "args": {
+          "realm": "danil-platform",
+          "kind": "pack",
+          "key": "pack_synthetic_100",
+          "catalog_version": 3
+        },
+        "key": "danil_v2:danil-platform:pack:pack_synthetic_100:v3"
+      },
+      {
+        "args": {
+          "realm": "danil-platform",
+          "kind": "seat",
+          "key": "team",
+          "catalog_version": 4
+        },
+        "key": "danil_v2:danil-platform:seat:team:v4"
+      }
+    ],
+    "invalid": [
+      {
+        "realm": "otro",
+        "kind": "plan",
+        "key": "pro",
+        "catalog_version": 3
+      },
+      {
+        "realm": "danil-platform",
+        "kind": "product",
+        "key": "pro",
+        "catalog_version": 3
+      },
+      {
+        "realm": "danil-platform",
+        "kind": "plan",
+        "key": "Pro Plan",
+        "catalog_version": 3
+      },
+      {
+        "realm": "danil-platform",
+        "kind": "plan",
+        "key": "pro",
+        "catalog_version": 0
+      }
+    ]
+  },
+  "account_mode": "shared_test_mode",
+  "tax": {
+    "automatic_tax": false,
+    "status": "por_confirmar"
+  }
+}

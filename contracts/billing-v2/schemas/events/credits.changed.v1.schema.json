@@ -1,0 +1,80 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.danil.ai/billing-v2/events/credits.changed.v1.schema.json",
+  "title": "ai.danil.billing.credits.changed.v1 — data",
+  "$comment": "Estado completo de la bolsa por source; incluidos, regalos, abonos y comprados son gastables. Retenciones, deuda y obligación no lo son.",
+  "type": "object",
+  "required": [
+    "organization_id",
+    "balances",
+    "cause"
+  ],
+  "properties": {
+    "organization_id": {
+      "$ref": "../common.v1.schema.json#/$defs/organization_id"
+    },
+    "balances": {
+      "type": "object",
+      "required": [
+        "included",
+        "purchased",
+        "dispute_hold",
+        "unsettled_usage",
+        "refund_obligation",
+        "gift",
+        "compensation",
+        "inference_hold"
+      ],
+      "properties": {
+        "included": {
+          "$ref": "../common.v1.schema.json#/$defs/money"
+        },
+        "purchased": {
+          "$ref": "../common.v1.schema.json#/$defs/money"
+        },
+        "dispute_hold": {
+          "$ref": "../common.v1.schema.json#/$defs/money"
+        },
+        "unsettled_usage": {
+          "$ref": "../common.v1.schema.json#/$defs/money"
+        },
+        "refund_obligation": {
+          "$ref": "../common.v1.schema.json#/$defs/money"
+        },
+        "gift": {
+          "$ref": "../common.v1.schema.json#/$defs/money"
+        },
+        "compensation": {
+          "$ref": "../common.v1.schema.json#/$defs/money"
+        },
+        "inference_hold": {
+          "$ref": "../common.v1.schema.json#/$defs/money"
+        }
+      }
+    },
+    "included_expires_at": {
+      "$ref": "../common.v1.schema.json#/$defs/timestamp"
+    },
+    "cause": {
+      "type": "string",
+      "enum": [
+        "granted",
+        "expired",
+        "purchased",
+        "refunded",
+        "disputed",
+        "dispute_released",
+        "dispute_lost",
+        "settled",
+        "adjusted",
+        "unsettled_recorded",
+        "gift",
+        "compensation",
+        "forfeit",
+        "reservation_created",
+        "reservation_settled",
+        "reservation_released"
+      ]
+    }
+  }
+}

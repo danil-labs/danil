@@ -1,0 +1,173 @@
+{
+  "$comment": "Registro CERRADO de tipos que billing emite y consume. Un tipo, productor o sujeto que no esté aquí no se aplica. `irreversible` marca tipos cuyo consumo puede llevar a un efecto irreversible: exigen productor autenticado de punta a punta (ver authorizeEventProducer).",
+  "producers": {
+    "billing": {
+      "subjects": [
+        "svc:billing"
+      ]
+    },
+    "identity": {
+      "subjects": [
+        "svc:identity"
+      ]
+    },
+    "machine-provisioning": {
+      "subjects": [
+        "svc:machine-provisioning"
+      ]
+    }
+  },
+  "emitted": [
+    {
+      "type": "ai.danil.billing.entitlement.changed.v1",
+      "producer": "billing",
+      "aggregate": "entitlement",
+      "schema": "schemas/events/entitlement.changed.v1.schema.json",
+      "consumers": [
+        "identity",
+        "workspaces",
+        "machine-provisioning"
+      ],
+      "irreversible": true,
+      "optional_fields_since": {
+        "source": 12,
+        "features": 12,
+        "max_workspaces": 12,
+        "edition": 13
+      },
+      "emission_conditions": {
+        "downgraded_to_free": {
+          "min_consumer_revision": 12,
+          "consumers": [
+            "machine-provisioning",
+            "identity",
+            "workspaces"
+          ],
+          "rule": "treasury solo emite reason=downgraded_to_free cuando los tres consumidores declaran en su configuración haber adoptado al menos la revisión 12; ausente = no adoptada. Un consumidor rev. 11 lo rechaza como semantic_invalid permanente y se quedaría en el estado pagado."
+        }
+      },
+      "feed_position": {
+        "counter": "gapless_row_counter",
+        "postgres_sequence": "forbidden",
+        "rule": "La posición global del feed de entitlements se asigna en la misma transacción que la fila del outbox, con una fila contador bloqueada (UPDATE … SET last = last + 1 RETURNING last). Una SEQUENCE no sirve: un rollback deja un hueco y la marca de agua no lo pasa. Las páginas se ordenan por esta posición, nunca por aggregate_seq."
+      }
+    },
+    {
+      "type": "ai.danil.billing.credits.changed.v1",
+      "producer": "billing",
+      "aggregate": "credits",
+      "schema": "schemas/events/credits.changed.v1.schema.json",
+      "consumers": [],
+      "irreversible": false
+    },
+    {
+      "type": "ai.danil.billing.admission.changed.v1",
+      "producer": "billing",
+      "aggregate": "admission",
+      "schema": "schemas/events/admission.changed.v1.schema.json",
+      "consumers": [],
+      "irreversible": false
+    },
+    {
+      "type": "ai.danil.billing.checkout.closed.v1",
+      "producer": "billing",
+      "aggregate": "checkout",
+      "schema": "schemas/events/checkout.closed.v1.schema.json",
+      "consumers": [
+        "identity"
+      ],
+      "irreversible": false
+    },
+    {
+      "type": "ai.danil.billing.deletion.granted.v1",
+      "producer": "billing",
+      "aggregate": "deletion",
+      "schema": "schemas/events/deletion.granted.v1.schema.json",
+      "consumers": [
+        "machine-provisioning"
+      ],
+      "irreversible": true,
+      "status": "proposal_gate_closed"
+    },
+    {
+      "type": "ai.danil.billing.deletion.denied.v1",
+      "producer": "billing",
+      "aggregate": "deletion",
+      "schema": "schemas/events/deletion.denied.v1.schema.json",
+      "consumers": [
+        "machine-provisioning"
+      ],
+      "irreversible": false,
+      "status": "proposal_gate_closed"
+    }
+  ],
+  "consumed": [
+    {
+      "type": "ai.danil.identity.membership.changed.v1",
+      "producer": "identity",
+      "purpose": "Conteo de asientos; identity aplica el máximo al invitar y aceptar. Workspaces materializa scopes, sin lógica de dinero.",
+      "schema": "schemas/events/identity.membership.changed.v1.schema.json",
+      "status": "contract_defined",
+      "envelope": "schemas/identity-membership-envelope.v1.schema.json"
+    },
+    {
+      "type": "ai.danil.machine-provisioning.deletion.requested.v1",
+      "producer": "machine-provisioning",
+      "purpose": "pedir concesión de borrado para (org, generation, request_id, mp_operation_id)",
+      "required_fields": [
+        "organization_id",
+        "generation",
+        "request_id",
+        "mp_operation_id"
+      ],
+      "schema": null,
+      "status": "pending_owner_contract"
+    },
+    {
+      "type": "ai.danil.machine-provisioning.data.deleted.v1",
+      "producer": "machine-provisioning",
+      "purpose": "resultado real tras el borrado; ligado a grant_id",
+      "required_fields": [
+        "organization_id",
+        "generation",
+        "grant_id",
+        "mp_operation_id",
+        "volume_ids"
+      ],
+      "schema": null,
+      "status": "pending_owner_contract"
+    },
+    {
+      "type": "ai.danil.machine-provisioning.deletion.aborted.v1",
+      "producer": "machine-provisioning",
+      "purpose": "prueba de que el borrado no empezó; ligado a grant_id",
+      "required_fields": [
+        "organization_id",
+        "generation",
+        "grant_id",
+        "mp_operation_id",
+        "not_started"
+      ],
+      "schema": null,
+      "status": "pending_owner_contract"
+    }
+  ],
+  "transport": {
+    "current": "outbox_private_post",
+    "envelope": "CloudEvents_1.0",
+    "hop_auth": "cloudflare_access",
+    "producer_proof": "JWS_ES256",
+    "ordering": [
+      "aggregate_key",
+      "aggregate_seq"
+    ],
+    "deduplication": [
+      "producer",
+      "id"
+    ],
+    "future": "danil-events",
+    "migration_preserves_types": true,
+    "reference": "workspaces src/promo-publisher.ts d3250e1; plan consolidado 2026-11-18 ?5"
+  },
+  "refund_allocation": "B-11 C: compensación de factura sin asignación solo registra el pago y alerta pending_allocation. La asignación de operador auditada que cambia créditos usa credits.changed/admission.changed existentes, con outbox atómico; no añade tipos ni reembolsa dinero."
+}

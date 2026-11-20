@@ -1,0 +1,95 @@
+{
+  "schema": "openapi/public.openapi.json#/components/schemas/TransactionPage",
+  "value": {
+    "items": [
+      {
+        "transaction_id": "btx_01SYNTHETICTX000003",
+        "kind": "forfeit",
+        "occurred_at": "2026-12-20T12:00:00Z",
+        "recorded_at": "2026-12-20T12:00:01Z",
+        "changes": {
+          "purchased": {
+            "currency": "MXN",
+            "amount_micro": "-100000000"
+          }
+        },
+        "actor": {
+          "type": "scheduler",
+          "id": "job:cancellation"
+        },
+        "usage": null,
+        "lot_changes": [
+          {
+            "lot_id": "blot_01SYNTHETICLOT0001",
+            "source": "purchase",
+            "amount": {
+              "currency": "MXN",
+              "amount_micro": "-100000000"
+            },
+            "payment_reference": "bpay_01SYNTHETICPAY0001"
+          }
+        ],
+        "reason": "Cancelación efectiva"
+      },
+      {
+        "transaction_id": "btx_01SYNTHETICTX000002",
+        "kind": "purchase",
+        "occurred_at": "2026-11-20T12:00:00Z",
+        "recorded_at": "2026-11-20T12:00:01Z",
+        "changes": {
+          "purchased": {
+            "currency": "MXN",
+            "amount_micro": "100000000"
+          }
+        },
+        "actor": {
+          "type": "stripe",
+          "id": "stripe"
+        },
+        "usage": null,
+        "lot_changes": [
+          {
+            "lot_id": "blot_01SYNTHETICLOT0001",
+            "source": "purchase",
+            "amount": {
+              "currency": "MXN",
+              "amount_micro": "100000000"
+            },
+            "payment_reference": "bpay_01SYNTHETICPAY0001"
+          }
+        ]
+      },
+      {
+        "transaction_id": "btx_01SYNTHETICTX000001",
+        "kind": "unsettled_recorded",
+        "occurred_at": "2026-11-20T11:59:00Z",
+        "recorded_at": "2026-11-20T11:59:02Z",
+        "changes": {
+          "unsettled_usage": {
+            "currency": "MXN",
+            "amount_micro": "10000000"
+          }
+        },
+        "actor": {
+          "type": "service",
+          "id": "svc:billing"
+        },
+        "usage": {
+          "entry_point": "messaging",
+          "provider": "synthetic",
+          "model": "syn-small",
+          "rate_card_version": 7,
+          "tokens": {
+            "input": 1200,
+            "output": 340,
+            "cache_read": 0,
+            "cache_write": 0
+          },
+          "workspace_id": null
+        },
+        "lot_changes": []
+      }
+    ],
+    "next_cursor": null
+  }
+}

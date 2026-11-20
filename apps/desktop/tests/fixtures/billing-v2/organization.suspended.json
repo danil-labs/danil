@@ -1,0 +1,24 @@
+{
+  "schema": "openapi/public.openapi.json#/components/schemas/OrganizationBilling",
+  "value": {
+    "organization_id": "org_01SYNTHETICORGA",
+    "state": "suspended",
+    "suspension_reason": "nonpayment",
+    "plan_key": "pro",
+    "catalog_version": 3,
+    "subscription_id": "bsub_01SYNTHETICSUB0001",
+    "current_period_end": "2027-01-14T00:00:00Z",
+    "cancel_at_period_end": false,
+    "suspended_at": "2026-12-14T00:05:00Z",
+    "data_retention_until": "2027-01-13T00:05:00Z",
+    "seats": {
+      "included": 1,
+      "extra": 0
+    },
+    "max_members": 1,
+    "payer": {
+      "is_you": false
+    },
+    "pending": null
+  }
+}

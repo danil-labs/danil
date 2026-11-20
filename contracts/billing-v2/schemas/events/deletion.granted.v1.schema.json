@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.danil.ai/billing-v2/events/deletion.granted.v1.schema.json",
+  "title": "ai.danil.billing.deletion.granted.v1 — data (PROPUESTA, gate destructivo cerrado)",
+  "$comment": "Concesión de borrado ligada a una petición concreta de MP. aggregate_key = deletion:<org>. Solo vale firmada (JWS del productor billing) y solo para (organization_id, generation, request_id, mp_operation_id) y antes de valid_until. No es un borrado: MP informa el resultado real.",
+  "type": "object",
+  "required": ["grant_id", "organization_id", "generation", "request_id", "mp_operation_id", "delete_not_before", "valid_until"],
+  "properties": {
+    "grant_id": { "$ref": "../common.v1.schema.json#/$defs/uuid" },
+    "organization_id": { "$ref": "../common.v1.schema.json#/$defs/organization_id" },
+    "generation": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
+    "request_id": { "$ref": "../common.v1.schema.json#/$defs/uuid" },
+    "mp_operation_id": { "type": "string", "pattern": "^[A-Za-z0-9_-]{1,128}$" },
+    "delete_not_before": { "$ref": "../common.v1.schema.json#/$defs/timestamp" },
+    "valid_until": { "$ref": "../common.v1.schema.json#/$defs/timestamp" }
+  }
+}

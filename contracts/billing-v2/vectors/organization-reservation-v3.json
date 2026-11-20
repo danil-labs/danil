@@ -1,0 +1,336 @@
+{
+  "initial": {
+    "reservation_id": "borgres_01SYNTHETICRES0001",
+    "organization_id": "org_SYNTHETIC",
+    "owner_person_id": "user_owner",
+    "checkout_id": "bchk_01SYNTHETICCHK0001",
+    "state": "reserved",
+    "hidden": true,
+    "has_workspaces": false,
+    "reserved_until": "2026-11-20T00:00:00Z",
+    "retain_until": "2026-12-20T00:00:00Z",
+    "late_activation": false
+  },
+  "bindings": [
+    {
+      "name": "mismo vínculo local y metadata",
+      "reservation": {
+        "reservation_id": "borgres_01SYNTHETICRES0001",
+        "organization_id": "org_SYNTHETIC",
+        "owner_person_id": "user_owner",
+        "checkout_id": "bchk_01SYNTHETICCHK0001",
+        "state": "reserved",
+        "hidden": true,
+        "has_workspaces": false,
+        "reserved_until": "2026-11-20T00:00:00Z",
+        "retain_until": "2026-12-20T00:00:00Z",
+        "late_activation": false
+      },
+      "checkout": {
+        "checkout_id": "bchk_01SYNTHETICCHK0001",
+        "organization_id": "org_SYNTHETIC",
+        "owner_person_id": "user_owner",
+        "reservation_id": "borgres_01SYNTHETICRES0001",
+        "expires_at": "2026-11-19T00:00:00Z"
+      },
+      "metadata": {
+        "checkout_id": "bchk_01SYNTHETICCHK0001",
+        "organization_id": "org_SYNTHETIC",
+        "reservation_id": "borgres_01SYNTHETICRES0001"
+      },
+      "expected": "ok"
+    },
+    {
+      "name": "metadata ajena checkout_id",
+      "reservation": {
+        "reservation_id": "borgres_01SYNTHETICRES0001",
+        "organization_id": "org_SYNTHETIC",
+        "owner_person_id": "user_owner",
+        "checkout_id": "bchk_01SYNTHETICCHK0001",
+        "state": "reserved",
+        "hidden": true,
+        "has_workspaces": false,
+        "reserved_until": "2026-11-20T00:00:00Z",
+        "retain_until": "2026-12-20T00:00:00Z",
+        "late_activation": false
+      },
+      "checkout": {
+        "checkout_id": "bchk_01SYNTHETICCHK0001",
+        "organization_id": "org_SYNTHETIC",
+        "owner_person_id": "user_owner",
+        "reservation_id": "borgres_01SYNTHETICRES0001",
+        "expires_at": "2026-11-19T00:00:00Z"
+      },
+      "metadata": {
+        "checkout_id": "other",
+        "organization_id": "org_SYNTHETIC",
+        "reservation_id": "borgres_01SYNTHETICRES0001"
+      },
+      "expected": "reservation_mismatch"
+    },
+    {
+      "name": "metadata ajena organization_id",
+      "reservation": {
+        "reservation_id": "borgres_01SYNTHETICRES0001",
+        "organization_id": "org_SYNTHETIC",
+        "owner_person_id": "user_owner",
+        "checkout_id": "bchk_01SYNTHETICCHK0001",
+        "state": "reserved",
+        "hidden": true,
+        "has_workspaces": false,
+        "reserved_until": "2026-11-20T00:00:00Z",
+        "retain_until": "2026-12-20T00:00:00Z",
+        "late_activation": false
+      },
+      "checkout": {
+        "checkout_id": "bchk_01SYNTHETICCHK0001",
+        "organization_id": "org_SYNTHETIC",
+        "owner_person_id": "user_owner",
+        "reservation_id": "borgres_01SYNTHETICRES0001",
+        "expires_at": "2026-11-19T00:00:00Z"
+      },
+      "metadata": {
+        "checkout_id": "bchk_01SYNTHETICCHK0001",
+        "organization_id": "other",
+        "reservation_id": "borgres_01SYNTHETICRES0001"
+      },
+      "expected": "reservation_mismatch"
+    },
+    {
+      "name": "metadata ajena reservation_id",
+      "reservation": {
+        "reservation_id": "borgres_01SYNTHETICRES0001",
+        "organization_id": "org_SYNTHETIC",
+        "owner_person_id": "user_owner",
+        "checkout_id": "bchk_01SYNTHETICCHK0001",
+        "state": "reserved",
+        "hidden": true,
+        "has_workspaces": false,
+        "reserved_until": "2026-11-20T00:00:00Z",
+        "retain_until": "2026-12-20T00:00:00Z",
+        "late_activation": false
+      },
+      "checkout": {
+        "checkout_id": "bchk_01SYNTHETICCHK0001",
+        "organization_id": "org_SYNTHETIC",
+        "owner_person_id": "user_owner",
+        "reservation_id": "borgres_01SYNTHETICRES0001",
+        "expires_at": "2026-11-19T00:00:00Z"
+      },
+      "metadata": {
+        "checkout_id": "bchk_01SYNTHETICCHK0001",
+        "organization_id": "org_SYNTHETIC",
+        "reservation_id": "other"
+      },
+      "expected": "reservation_mismatch"
+    },
+    {
+      "name": "owner ajeno",
+      "reservation": {
+        "reservation_id": "borgres_01SYNTHETICRES0001",
+        "organization_id": "org_SYNTHETIC",
+        "owner_person_id": "user_owner",
+        "checkout_id": "bchk_01SYNTHETICCHK0001",
+        "state": "reserved",
+        "hidden": true,
+        "has_workspaces": false,
+        "reserved_until": "2026-11-20T00:00:00Z",
+        "retain_until": "2026-12-20T00:00:00Z",
+        "late_activation": false
+      },
+      "checkout": {
+        "checkout_id": "bchk_01SYNTHETICCHK0001",
+        "organization_id": "org_SYNTHETIC",
+        "owner_person_id": "user_other",
+        "reservation_id": "borgres_01SYNTHETICRES0001",
+        "expires_at": "2026-11-19T00:00:00Z"
+      },
+      "metadata": {
+        "checkout_id": "bchk_01SYNTHETICCHK0001",
+        "organization_id": "org_SYNTHETIC",
+        "reservation_id": "borgres_01SYNTHETICRES0001"
+      },
+      "expected": "reservation_mismatch"
+    },
+    {
+      "name": "plazo menor que checkout",
+      "reservation": {
+        "reservation_id": "borgres_01SYNTHETICRES0001",
+        "organization_id": "org_SYNTHETIC",
+        "owner_person_id": "user_owner",
+        "checkout_id": "bchk_01SYNTHETICCHK0001",
+        "state": "reserved",
+        "hidden": true,
+        "has_workspaces": false,
+        "reserved_until": "2026-11-20T00:00:00Z",
+        "retain_until": "2026-12-20T00:00:00Z",
+        "late_activation": false
+      },
+      "checkout": {
+        "checkout_id": "bchk_01SYNTHETICCHK0001",
+        "organization_id": "org_SYNTHETIC",
+        "owner_person_id": "user_owner",
+        "reservation_id": "borgres_01SYNTHETICRES0001",
+        "expires_at": "2026-11-21T00:00:00Z"
+      },
+      "metadata": {
+        "checkout_id": "bchk_01SYNTHETICCHK0001",
+        "organization_id": "org_SYNTHETIC",
+        "reservation_id": "borgres_01SYNTHETICRES0001"
+      },
+      "expected": "reservation_window_invalid"
+    }
+  ],
+  "lifecycle": [
+    {
+      "name": "completed no activa y canceled no libera sin expiración probada",
+      "steps": [
+        {
+          "event": {
+            "type": "checkout.closed",
+            "organization_id": "org_SYNTHETIC",
+            "reservation_id": "borgres_01SYNTHETICRES0001",
+            "checkout_id": "bchk_01SYNTHETICCHK0001",
+            "outcome": "completed"
+          },
+          "expected": {
+            "state": "reserved",
+            "hidden": true,
+            "has_workspaces": false
+          }
+        },
+        {
+          "event": {
+            "type": "checkout.closed",
+            "organization_id": "org_SYNTHETIC",
+            "reservation_id": "borgres_01SYNTHETICRES0001",
+            "checkout_id": "bchk_01SYNTHETICCHK0001",
+            "outcome": "canceled"
+          },
+          "expected": {
+            "state": "reserved",
+            "hidden": true,
+            "has_workspaces": false
+          }
+        }
+      ]
+    },
+    {
+      "name": "checkout vencido libera sin borrar",
+      "steps": [
+        {
+          "event": {
+            "type": "checkout.closed",
+            "organization_id": "org_SYNTHETIC",
+            "reservation_id": "borgres_01SYNTHETICRES0001",
+            "checkout_id": "bchk_01SYNTHETICCHK0001",
+            "outcome": "expired"
+          },
+          "expected": {
+            "state": "released",
+            "hidden": true,
+            "has_workspaces": false,
+            "retain_until": "2026-12-20T00:00:00Z"
+          }
+        }
+      ]
+    },
+    {
+      "name": "deadline oculta y pago posterior activa con alerta",
+      "steps": [
+        {
+          "event": {
+            "type": "deadline",
+            "organization_id": "org_SYNTHETIC",
+            "reservation_id": "borgres_01SYNTHETICRES0001",
+            "checkout_id": "bchk_01SYNTHETICCHK0001",
+            "now": "2026-11-20T00:00:00Z"
+          },
+          "expected": {
+            "state": "released",
+            "hidden": true
+          }
+        },
+        {
+          "event": {
+            "type": "entitlement.changed",
+            "organization_id": "org_SYNTHETIC",
+            "reservation_id": "borgres_01SYNTHETICRES0001",
+            "checkout_id": "bchk_01SYNTHETICCHK0001",
+            "state": "active",
+            "reason": "activated",
+            "now": "2026-11-21T00:00:00Z"
+          },
+          "expected": {
+            "state": "active",
+            "hidden": false,
+            "late_activation": true
+          }
+        },
+        {
+          "event": {
+            "type": "deadline",
+            "organization_id": "org_SYNTHETIC",
+            "reservation_id": "borgres_01SYNTHETICRES0001",
+            "checkout_id": "bchk_01SYNTHETICCHK0001",
+            "now": "2026-11-20T00:00:00Z"
+          },
+          "expected": {
+            "state": "active",
+            "hidden": false
+          }
+        }
+      ]
+    },
+    {
+      "name": "cierre atrasado no desactiva una organización activa",
+      "steps": [
+        {
+          "event": {
+            "type": "entitlement.changed",
+            "organization_id": "org_SYNTHETIC",
+            "reservation_id": "borgres_01SYNTHETICRES0001",
+            "checkout_id": "bchk_01SYNTHETICCHK0001",
+            "state": "active",
+            "reason": "activated",
+            "now": "2026-11-19T00:00:00Z"
+          },
+          "expected": {
+            "state": "active",
+            "hidden": false
+          }
+        },
+        {
+          "event": {
+            "type": "checkout.closed",
+            "organization_id": "org_SYNTHETIC",
+            "reservation_id": "borgres_01SYNTHETICRES0001",
+            "checkout_id": "bchk_01SYNTHETICCHK0001",
+            "outcome": "expired"
+          },
+          "expected": {
+            "state": "active",
+            "hidden": false
+          }
+        }
+      ]
+    },
+    {
+      "name": "otro checkout no libera",
+      "steps": [
+        {
+          "event": {
+            "type": "checkout.closed",
+            "organization_id": "org_SYNTHETIC",
+            "reservation_id": "borgres_01SYNTHETICRES0001",
+            "checkout_id": "bchk_OTHER",
+            "outcome": "expired"
+          },
+          "expected": {
+            "state": "reserved"
+          }
+        }
+      ]
+    }
+  ]
+}

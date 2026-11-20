@@ -18,6 +18,7 @@ import { awaitingWorkspace, canListWorkspaces, clearWebCaches, readWorkspaces, r
 import { UpdateNotice } from './UpdateNotice';
 import { mountWindow } from './window';
 import './phrases';
+import { organizationMachine, webBillingEnabled, windowBilling } from './window-billing';
 import { sessionStartup } from './startup-reader';
 import { freeModelScope } from '../lib/free-model-policy';
 import { freeRouterEngine, freeRouterWebEdge } from '../features/settings/free-router-adapters';
@@ -54,12 +55,10 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
     const [busy, setBusy] = createSignal(false);
     const [uncertain, setUncertain] = createSignal(false);
     const [error, setError] = createSignal('');
-    // Identity aún no dio el perfil y se reintenta solo: sigue la carga, no una pantalla vacía.
     const [preparing, setPreparing] = createSignal(false);
     const [reloading, setReloading] = createSignal(false);
     const [signedOut, setSignedOut] = createSignal(false);
     const [preparingWorkspace, setPreparingWorkspace] = createSignal(false);
-    // Hasta que identity contesta se ve la carga; la entrada solo sin sesión o con el error del retorno.
     const [identified, setIdentified] = createSignal(false);
     const returnError = signInError(window.location.search);
     let windowApp: ReturnType<typeof mountWindow> | undefined;
@@ -82,6 +81,7 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
       root.replaceChildren();
       disposeGate = render(() => <Show when={identified() && !signedOut() && !preparing() && !reloading()} fallback={<><ToastStack><UpdateNotice /></ToastStack><Show when={!reloading() && (signedOut() || returnError)} fallback={<SessionLoading onSignOut={preparing() && !reloading() ? () => void exit.leave() : undefined} />}><WorkosAuthPage loginUrl={api.loginUrl(home, lastOrganization())} error={returnError} /></Show></>}><main class="flex h-full flex-col gap-4 overflow-y-auto bg-bg p-10 text-neutral-950" data-web-gate="">
         <ToastStack><UpdateNotice /></ToastStack>
+        <Show when={person}>{profile => billing(profile()).returned()}</Show>
         <h1 class="m-0 font-display text-lead font-bold">{t('common.brand_name')}</h1>
         <Show when={busy()}><p role="status">{t('web.auth.waiting')}</p></Show>
         <Show when={error()}><p role="alert">{t(error())}</p><Button disabled={busy()} onClick={() => void load()}>{t('web.computers.retry')}</Button></Show>
@@ -132,6 +132,7 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
     const [orgNeeded, setOrgNeeded] = createSignal(false);
     const [orgState, setOrgState] = createSignal(organizations.state());
     const [noWorkspace, setNoWorkspace] = createSignal(false);
+    const billing = (profile: PlatformProfile) => windowBilling(transport, profile, organizations, () => rows().find(row => row.id === selection.active() && row.org === profile.active_organization_id), async (id, signal) => { if (person?.active_organization_id !== id) return null; const result = await machines.list(signal); return result.kind === 'ok' ? organizationMachine(id, result.value) : null; });
     const unsubscribeOrganizations = organizations.subscribe(() => { if (!stopped && !lifetime.signal.aborted) { setOrgNeeded(organizations.needed()); setOrgState(organizations.state()); } });
     // `me` da 403 `workspace_selection_required`: elegir entre sus workspaces; sin ninguno sigue la carga y se reintenta.
     async function withoutWorkspace() {
@@ -249,7 +250,7 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
             }),
             danilCredits: activeGroupCredits(api, profile.active_organization_id),
           },
-          organizations: () => Promise.resolve(organizations), promo: organization.redeem, reauth: organization.reauth, preparing: preparingWorkspace, groupAccount: { ...api.groupAccount, send: (...args) => authorized(() => api.groupAccount.send(...args)) },
+          organizations: () => Promise.resolve(organizations), billing: webBillingEnabled ? billing(profile) : undefined, reauth: organization.reauth, preparing: preparingWorkspace, groupAccount: { ...api.groupAccount, send: (...args) => authorized(() => api.groupAccount.send(...args)) },
         }, { storage: cache.storage, webAccounts: {
           current: { user_id: person.id, name: person.name, email: typeof person.email === "string" ? person.email : null, extra: false },
           others: () => [], open: () => {}, remove: async () => {}, signOut: () => void exit.leave(),
