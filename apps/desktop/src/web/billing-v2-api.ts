@@ -9,8 +9,8 @@ const checkoutStatus = z.object({ checkout_id: z.string(), kind: z.enum(["plan",
   if (value.terminal !== terminal || (value.organization_id && value.state !== "active") || (value.state === "active" && (value.kind !== "plan" || !value.organization_id))) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "invalid_checkout_status" });
 });
 const organization = z.object({ organization_id: z.string(), plan_key: z.string(), edition: z.string().nullish(), state: z.string(), payer: z.object({ is_you: z.boolean() }) });
-export type PlanChoice = { plan_key: "pro" | "team"; variant?: "business" };
-const catalog = z.object({ catalog_version: z.number().int(), plans: z.array(z.object({ plan_key: z.string(), sellable: z.boolean(), price: money.nullable(), display_variants: z.array(z.object({ variant: z.string(), plan_key: z.string(), edition: z.string(), display_name: z.string() })).optional() })), credit_packs: z.array(z.object({ pack_id: z.string(), sellable: z.boolean(), credits: money })) });
+export type PlanChoice = { plan_key: "pro" | "team"; variant?: string };
+const catalog = z.object({ catalog_version: z.number().int(), plans: z.array(z.object({ plan_key: z.string(), sellable: z.boolean(), price: money.nullable(), price_pending: z.boolean().optional(), display_variants: z.array(z.object({ variant: z.string(), plan_key: z.string(), edition: z.string(), display_name: z.string() })).optional() })), credit_packs: z.array(z.object({ pack_id: z.string(), sellable: z.boolean(), credits: money })) });
 const balance = z.object({ organization_id: z.string(), available: money, included: money, gift: money, purchased: money });
 const page = z.object({ items: z.array(z.record(z.string(), z.unknown())), next_cursor: z.string().nullable() });
 const purchase = z.object({ purchase_id: z.string(), state: z.enum(["creating", "open", "paid", "failed", "expired"]), url: z.string().url().nullable() });
@@ -46,8 +46,8 @@ export function billingV2(transport: Transport, organizationId: string | null) {
       return result;
     },
     transactions: (cursor?: string) => read(pagePath("credits/transactions", cursor), page),
-    checkout: async (plan_key: "pro" | "team", catalog_version: number, key: string, variant?: "business", promotion_code?: string) => write("billing/checkout-sessions", { plan_key, variant, promotion_code: promotionCode(promotion_code), catalog_version, intent: "upgrade" }, key, checkout),
-    async createOrganization(plan_key: "pro" | "team", catalog_version: number, name: string, key: string, variant?: "business", promotion_code?: string) {
+    checkout: async (plan_key: "pro" | "team", catalog_version: number, key: string, variant?: string, promotion_code?: string) => write("billing/checkout-sessions", { plan_key, variant, promotion_code: promotionCode(promotion_code), catalog_version, intent: "upgrade" }, key, checkout),
+    async createOrganization(plan_key: "pro" | "team", catalog_version: number, name: string, key: string, variant?: string, promotion_code?: string) {
       if (/[\u0000-\u001f\u007f-\u009f<>]/u.test(name)) throw new Error("invalid_organization_name");
       const organization_name = name.normalize("NFC").trim();
       if ([...organization_name].length < 1 || [...organization_name].length > 80) throw new Error("invalid_organization_name");

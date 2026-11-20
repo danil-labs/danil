@@ -6,8 +6,8 @@ const PAYMENT = "danil.billing.payment";
 const MAX_AGE_MS = 60 * 60_000;
 const billingPath = () => `${import.meta.env.BASE_URL}billing`;
 
-export function billingHref(org: string) {
-  return `${billingPath()}?${new URLSearchParams({ org })}`;
+export function billingHref() {
+  return billingPath();
 }
 
 export function rememberBillingLogin() {

@@ -31,7 +31,7 @@ export function windowBilling(transport: ReturnType<typeof platformTransport>, p
         const current = state();
         return (current.kind === "ready" && current.items.find(item => item.id === org)?.role) || workspace()?.role || "";
       };
-      return <Suspense><Plan api={billingV2(transport, org)} summaryHref={billingHref(org)} role={role} context={`${profile.id}:${org}`} /></Suspense>;
+      return <Suspense><Plan api={billingV2(transport, org)} summaryHref={billingHref()} role={role} context={`${profile.id}:${org}`} /></Suspense>;
     } : undefined,
   };
   const returned = () => <BillingReturnGate api={personApi} onActive={select} machine={machine} plan={id => billingV2(transport, id).organization()} />;

@@ -66,5 +66,5 @@ const select = async (id: string) => { calls.push(`select:${id}`); };
 render(() => params.has("gate") ? <BillingReturnGate enabled={params.get("gate") === "on" ? true : undefined} api={api} onActive={select} />
   : params.get("return") ? <CheckoutReturn api={api} onActive={select} />
   : params.get("new") === "1" ? <NewOrganizationCheckout api={api} />
-  : <BillingPlan api={api} role={() => params.get("role") ?? "owner"} context="test" creationApi={api} />,
+  : <BillingPlan api={api} role={() => params.get("role") ?? "owner"} context="test" />,
   document.getElementById("root")!);
