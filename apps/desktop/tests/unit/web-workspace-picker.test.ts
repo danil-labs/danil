@@ -26,6 +26,12 @@ function fixture() {
     },
     async mutation(path, init) {
       const c = new Headers(init?.headers).get("X-Danil-Session")!;
+      if (path === "workspaces/select") {
+        assert.equal(init?.method, "POST");
+        const id = JSON.parse(String(init.body)).workspace;
+        writes.push({ path, context: c });
+        return Response.json({ workspace: {id, org: "org_" + c, name: "Proyecto", role: "owner"} }, {headers: headers(c)});
+      }
       assert.equal(init?.method, "PUT");
       writes.push({ path, context: c });
       if (deny) throw new Error("revoked");
@@ -46,7 +52,7 @@ test("two signed-in identities and three organizations share a read-only picker"
   ]);
   assert.deepEqual(f.writes, []);
   await f.picker.add(rows[3]);
-  assert.deepEqual(f.writes, [{ path: "workspaces/preferences/added/engine4", context: "C" }]);
+  assert.deepEqual(f.writes, [{ path: "workspaces/preferences/added/engine4", context: "C" }, { path: "workspaces/select", context: "C" }]);
   assert.deepEqual(await f.picker.pinned(), [rows[3]]);
 });
 
@@ -69,4 +75,88 @@ test("a partial directory preserves verified rows and an additive return reopens
   assert.equal(got.partial, true); assert.equal(got.rows.length, 2);
   assert.equal(f.picker.resume(), false); await f.picker.connect();
   assert.equal(f.connections(), 1); assert.equal(f.picker.resume(), true); assert.equal(f.picker.resume(), false);
+});
+
+test("a workspace without an engine opens by account ID and remains visible on a fresh mount", async () => {
+  let selected: string | null = null;
+  const writes: string[] = [];
+  const account = { account_id: "1000000000000", engine_workspace_id: null, name: "Danil" };
+  const headers = { "X-Danil-Session-Applied": "A", "X-Danil-Session-Applied-Org": "org_A" };
+  const make = () => webWorkspacePicker({
+    async call(path) {
+      if (path === "identity/sessions/catalog") return Response.json({version: 1, items: [
+        { session_id: "first", sub: "user_A", contexts: [{context_id: "A", org: "org_A", workspaces: [account]}] }
+      ]});
+      if (path === "workspaces") return Response.json({active_workspace_id: selected}, {headers});
+      throw new Error("unexpected request " + path);
+    },
+    async mutation(path, init) {
+      assert.equal(path, "workspaces/select");
+      assert.equal(new Headers(init?.headers).get("X-Danil-Session"), "A");
+      assert.equal(init?.method, "POST");
+      selected = JSON.parse(String(init.body)).workspace;
+      assert.equal(selected, account.account_id);
+      writes.push(path);
+      return Response.json({workspace: {id: selected, org: "org_A", name: "Danil", role: "owner"}}, {headers});
+    },
+  }, {store: {} as Storage});
+  const picker = make();
+  const row = (await picker.catalog()).rows[0];
+  await picker.add(row);
+  assert.deepEqual(writes, ["workspaces/select"]);
+  assert.deepEqual(await make().pinned(), [row]);
+});
+
+test("an organization without a context is listed once and admitted on its own", async () => {
+  const account = { account_id: "41", engine_workspace_id: "engine41", name: "Catálogo" };
+  const events: string[] = [];
+  const store = new Map<string, string>();
+  let admitted: { organization: string; session_id: string } | null = null;
+  const body = { version: 1, items: [{ session_id: "s1", sub: "user_A", email: "a@example.test", contexts: [
+    { context_id: "c1", org: "org_A", org_name: "Danil", workspaces: [account], catalog_state: "listed" },
+    { context_id: null, org: "org_B", org_name: "Azul", workspaces: null, admission_required: true, catalog_state: "listed" },
+    { context_id: null, org: "org_C", org_name: "Cero", workspaces: null, admission_required: true, catalog_state: "empty" },
+    { context_id: "c2", org: "org_D", org_name: "Opaca", workspaces: null, catalog_state: "unavailable" },
+  ] }] };
+  const picker = webWorkspacePicker({
+    async call(path) { assert.equal(path, "identity/sessions/catalog"); return Response.json(body); },
+    async mutation(path, init) {
+      assert.equal(path, "identity/contexts");
+      admitted = JSON.parse(String(init.body));
+      assert.match(new Headers(init.headers).get("Idempotency-Key") ?? "", /./);
+      events.push("admitted");
+      return Response.json({ context_id: "c9", org: "org_B" });
+    },
+  }, { store: { getItem: k => store.get(k) ?? null, setItem: (k, v) => void store.set(k, v), removeItem: k => void store.delete(k) } as Storage });
+
+  const { rows, organizations, partial } = await picker.catalog();
+  assert.equal(partial, true, "una organización admitida sin lista no es una lista vacía");
+  assert.deepEqual(rows.map(row => [row.name, row.organization]), [["Catálogo", "Danil"]]);
+  assert.deepEqual(organizations.map(org => [org.org, org.admission_required, org.catalog_state]), [
+    ["org_A", false, "listed"], ["org_B", true, "listed"], ["org_C", true, "empty"], ["org_D", false, "unavailable"],
+  ]);
+  // Solo esa organización, con la sesión que la enumeró.
+  await picker.admit(organizations[1]!);
+  assert.deepEqual(admitted, { organization: "org_B", session_id: "s1" });
+  assert.deepEqual(events, ["admitted"]);
+  assert.equal(
+    store.get("danil.web.resume-add-workspace"),
+    undefined,
+    "una admisión sin salir de la página no reabre el selector al recargar",
+  );
+  assert.equal(picker.resume(), false);
+});
+
+test("an organization that needs SSO or MFA sends the login with that organization", async () => {
+  const store = new Map<string, string>();
+  let signedIn = "";
+  const org = { session: "s1", sub: "user_A", email: "", org: "org_B", organization: "Azul", context: null, admission_required: true, catalog_state: "listed" as const };
+  const picker = webWorkspacePicker({
+    async call() { throw new Error("no reads"); },
+    async mutation() { const error = Object.assign(new Error("denied"), { code: "organization_auth_required" }); throw error; },
+  }, { store: { getItem: k => store.get(k) ?? null, setItem: (k, v) => void store.set(k, v), removeItem: k => void store.delete(k) } as Storage,
+    signIn: organization => { signedIn = organization; } });
+  await picker.admit(org);
+  assert.equal(signedIn, "org_B");
+  assert.equal(picker.resume(), true, "la marca sobrevive para reabrir el selector al volver");
 });

@@ -15,7 +15,7 @@ export function WebPinnedWorkspaces(props: { shown: readonly { id: string }[] })
   const current = (sub: string, org: string) => sub === capabilities().webAccounts?.current.user_id && org === session?.organization?.();
   return <For each={pinned()?.filter(row => !current(row.sub, row.org) || !props.shown.some(item => item.id === row.engine_workspace_id))}>{row => {
     const label = () => [row.name, distinguish(pinned() ?? [], row)].filter(Boolean).join(" · ");
-    return <button type="button" data-web-pinned-workspace={row.engine_workspace_id} aria-label={label()} title={label()}
+    return <button type="button" data-web-pinned-workspace={row.account_id} aria-label={label()} title={label()}
       aria-pressed={current(row.sub, row.org) && session?.active() === row.account_id}
       disabled={!current(row.sub, row.org) || session?.busy() || session?.uncertain()}
       class="grid size-8 shrink-0 place-items-center rounded-md border border-border bg-surface text-label font-semibold hover:bg-neutral-200"
