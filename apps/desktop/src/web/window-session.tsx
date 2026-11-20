@@ -10,14 +10,18 @@ import { ToastStack } from '../ui/Toast';
 import { SessionLoading } from './auth/SessionLoading';
 import { signInError, WorkosAuthPage } from './auth/workos';
 import { webOrganizations } from './organization-context';
+import { webWorkspacePicker } from './workspace-picker';
 import { activeGroupCredits, contextMachines, type PlatformProfile, PlatformSessionError, type PlatformWorkspace, platformSession, platformTransport } from './platform-session';
 import { type CapabilitiesSnapshot, readCapabilities, supports } from './service-capabilities';
 import type { WebSessionDeployment } from './session-config';
-import { awaitingWorkspace, clearWebCaches, readWorkspaces, retryWait, sessionExit, workspaceCache } from './session-wait';
+import { awaitingWorkspace, canListWorkspaces, clearWebCaches, readWorkspaces, retryWait, sessionExit, workspaceCache } from './session-wait';
 import { UpdateNotice } from './UpdateNotice';
 import { mountWindow } from './window';
 import './phrases';
 import { sessionStartup } from './startup-reader';
+import { freeModelScope } from '../lib/free-model-policy';
+import { freeRouterEngine, freeRouterWebEdge } from '../features/settings/free-router-adapters';
+import { setFreeRouterHost, signOutPlatform } from '../features/settings/free-router-session';
 
 declare const __DANIL_WEB_RELAY_ORIGINS__: string[];
 const FIRST_RETRY_MS = 1000;
@@ -152,7 +156,7 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
           // Los créditos se atan a la organización al montar: cambiarla recarga una vez.
           if (person && (fresh.id !== person.id || (!arrived && fresh.workspace !== person.workspace) || fresh.active_organization_id !== person.active_organization_id)) { reload(); return; }
           person = fresh;
-          if (permits('workspaces') && fresh.workspace !== null) {
+          if (canListWorkspaces(fresh, permits('workspaces'))) {
             const listed = await readWorkspaces(() => api.workspaces(), rows(), unlisted);
             if (gone()) return; setRows(listed);
           }
@@ -197,7 +201,7 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
       await run(async () => { await selection.choose(id); window.location.assign(home); });
     }
     const exit = sessionExit({
-      closed: () => stopped || signedOut(), cancel: () => clearTimeout(timer), logout: () => api.logout(), signedOut: () => { forgetMachineNames(); expired(); },
+      closed: () => stopped || signedOut(), cancel: () => clearTimeout(timer), logout: async () => { await signOutPlatform().catch(() => {}); await api.logout(); }, signedOut: () => { forgetMachineNames(); expired(); },
       unavailable: () => { if (!gone()) { setPreparing(false); setError('web.platform.unavailable'); gate(); } },
     });
     async function load() {
@@ -208,9 +212,9 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
         if (mountedBefore) { reload(); return; }
         person = profile;
         organization.load(startup.reader()?.organizations);
-        const workspaces = person.workspace !== null && permits('workspaces') ? await readWorkspaces(() => startup.reader()!.workspaces(), [], unlisted) : [];
+        const listed = canListWorkspaces(profile, permits('workspaces')) ? await readWorkspaces(() => startup.reader()!.workspaces(), [], unlisted) : [];
         if (gone()) return;
-        setRows(workspaces);
+        setRows(listed);
         setActive(selection.active());
         cache = workspaceCache(localStorage, person.id, person.workspace ?? 'unselected');
         setPreparing(false);
@@ -218,11 +222,17 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
         disposeGate?.();
         disposeGate = undefined;
         mountedBefore = true;
+        // El Free router de plataforma con la cookie de esta sesión y su workspace activo (`/me.workspace`).
+        setFreeRouterHost({ edge: freeRouterWebEdge(transport), engine: policy => freeRouterEngine(policy ? freeModelScope(policy) : undefined),
+          identity: async () => (person ? { sub: person.id, list: { active_workspace_id: person.workspace, items: rows() } } : null) });
         windowApp = mountWindow({ machines, contextMachines: context => contextMachines(`${options.origin}/v1`, transport, __DANIL_WEB_RELAY_ORIGINS__, context), permits, relayOrigin: __DANIL_WEB_RELAY_ORIGINS__[0],
           profile: startup.accountProfile(lifetime.signal), onUnauthorized: expired,
           onUnavailable: () => { setError('web.platform.unavailable'); gate(); later(); },
           services: {
-            webWorkspaces: { rows, active, busy, uncertain, choose: id => void choose(id) },
+            webWorkspaces: { rows, organization: () => profile.active_organization_id ?? null, active, busy, uncertain, choose: id => void choose(id) },
+            webWorkspacePicker: webWorkspacePicker(transport, {
+              store: window.sessionStorage,
+            }),
             danilCredits: activeGroupCredits(api, profile.active_organization_id),
           },
           organizations: () => Promise.resolve(organizations), promo: organization.redeem, reauth: organization.reauth, preparing: preparingWorkspace, groupAccount: { ...api.groupAccount, send: (...args) => authorized(() => api.groupAccount.send(...args)) },

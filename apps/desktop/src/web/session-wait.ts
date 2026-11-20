@@ -29,9 +29,13 @@ export function sessionExit(steps: { closed: () => boolean; cancel: () => void; 
   };
 }
 
+export function canListWorkspaces(profile: { workspace: string | null; active_organization_id?: string | null }, listsWorkspaces: boolean) {
+  return listsWorkspaces && (profile.workspace !== null || !!profile.active_organization_id);
+}
+
 /** Una cuenta nueva monta sin workspace; la ventana sondea y avisa hasta que la plataforma tiene uno. */
 export function awaitingWorkspace(person: { workspace: string | null } | undefined, listsWorkspaces: boolean, listed: number) {
-  return person !== undefined && (person.workspace === null || (listsWorkspaces && listed === 0));
+  return person !== undefined && (listsWorkspaces ? listed === 0 : person.workspace === null);
 }
 
 /** La caché local de la persona; si el workspace llega sin recargar, lo que se lee y guarda pasa a él. */

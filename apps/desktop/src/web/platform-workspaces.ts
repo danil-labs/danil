@@ -2,7 +2,7 @@ import { z } from "zod";
 import type { EdgeTransport } from "@terminus/computers";
 
 export const workspaceId = z.string().regex(/^[1-9]\d*$/);
-export const workspace = z.object({ id: workspaceId, org: z.string(), name: z.string(), role: z.string() });
+export const workspace = z.object({ id: workspaceId, org: z.string(), name: z.string(), role: z.string(), engine_workspace_id: z.string().min(1).nullish() });
 const page = z.object({ items: z.array(workspace), next_cursor: z.string().min(1).nullable() });
 export type PlatformWorkspace = z.infer<typeof workspace>;
 

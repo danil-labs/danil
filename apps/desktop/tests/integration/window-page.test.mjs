@@ -747,3 +747,69 @@ test('a change of active organization reloads once behind the loading screen, wi
   assert.equal(navigations(app).length, 1, 'exactly one navigation');
   assert.deepEqual(others(app), []);
 });
+
+for (const timing of ['on entry', 'after refresh']) test(`Danil lists a transferred workspace ${timing} before an account workspace is selected`, async t => {
+  let reads = 0;
+  const row = { id: '25', org: 'org_Danil', name: 'Proyecto transferido', role: 'owner',
+    engine_workspace_id: 'abcdef12', placement: { kind: 'member_computer' }, moved_from: { org: 'org_Origen', account_id: '11' } };
+  const fetcher = async input => {
+    const { pathname } = new URL(String(input));
+    if (pathname === '/v1/identity/me') return Response.json({ id: 'user_A', name: 'Operator', workspace: null, active_organization_id: 'org_Danil', organizations: [{ id: 'org_Danil', name: 'Danil' }] });
+    if (pathname === '/v1/capabilities') return Response.json({ contract: 'mvp-v1', items: [{ name: 'workspaces', version: 1, status: 'available' }] });
+    if (pathname === '/v1/workspaces') {
+      reads++;
+      return Response.json({ items: timing === 'on entry' || reads > 1 ? [row] : [], next_cursor: null });
+    }
+    return new Response(null, { status: 404 });
+  };
+  fetcher.__jsdomApp = true;
+  globalThis.fetch = fetcher;
+  const app = await open(t, 'listo', `transferred-catalog-${timing.replace(' ', '-')}`, {}, undefined, {}, { web: true });
+  const doc = app.w.document;
+  await until(() => doc.querySelector('[data-profile-menu] button'));
+  doc.querySelector('[data-profile-menu] button').click();
+  await until(() => [...doc.querySelectorAll('button[aria-pressed="false"]')].some(b => b.textContent === 'Proyecto transferido'));
+  assert.deepEqual(app.failures, []);
+});
+
+for (const scenario of ['one account with two organizations', 'two accounts', 'return to the picker']) test(`the flat workspace picker opens for ${scenario}`, async t => {
+  const single = scenario === 'one account with two organizations';
+  const returning = scenario === 'return to the picker';
+  const writes = [];
+  const dirs = [
+    { session_id: 's1', sub: 'user_A', email: 'a@example.test', contexts: [
+      { context_id: 'c1', org: 'org_A', org_name: 'Danil', workspaces: [{ account_id: '41', engine_workspace_id: 'engine41', name: 'Catálogo' }] },
+      { context_id: 'c2', org: 'org_B', org_name: 'Azul', workspaces: [{ account_id: '42', engine_workspace_id: 'engine42', name: 'Entregas' }] },
+    ] },
+    { session_id: 's2', sub: 'user_B', email: 'b@example.test', contexts: [
+      { context_id: 'c3', org: 'org_C', org_name: 'Danil', workspaces: [{ account_id: '43', engine_workspace_id: 'engine43', name: 'Catálogo' }] },
+    ] },
+  ];
+  if (single) dirs.pop();
+  const fetcher = async (input, init) => {
+    const { pathname } = new URL(String(input));
+    if (init?.method && init.method !== 'GET') writes.push(pathname);
+    if (pathname === '/v1/identity/me') return Response.json({ id: 'user_A', name: 'QA', workspace: null, active_organization_id: null, organizations: [] });
+    if (pathname === '/v1/identity/sessions/catalog') return Response.json({ version: 1, items: dirs });
+    if (pathname === '/v1/capabilities') return Response.json({ contract: 'mvp-v1', items: [{ name: 'workspaces', version: 1, status: 'available' }] });
+    return new Response(null, { status: 404 });
+  };
+  fetcher.__jsdomApp = true; globalThis.fetch = fetcher;
+  const app = await open(t, 'listo', 'web-flat-picker-' + scenario.replaceAll(' ', '-'), {}, undefined, {}, { web: true, beforeImport(w) {
+    if (returning) w.sessionStorage.setItem('danil.web.resume-add-workspace', '1');
+  } });
+  const doc = app.w.document;
+  await until(() => doc.querySelector('[data-add-workspace]'));
+  if (!returning) doc.querySelector('[data-add-workspace]').click();
+  await until(() => doc.querySelectorAll('[data-picker-workspace]').length === (single ? 2 : 3));
+  assert.deepEqual([...doc.querySelectorAll('[data-picker-workspace]')].map(w => w.textContent),
+    single ? ['Catálogo', 'Entregas'] : ['Catálogoa@example.test', 'Entregas', 'Catálogob@example.test']);
+  assert.equal(doc.querySelector('[data-picker-account]'), null);
+  assert.doesNotMatch(doc.querySelector('[data-web-workspace-picker]').textContent, /engine4|org_|WorkOS|Elige una organización/);
+  assert.deepEqual(writes, []);
+  if (single) dirs[0].contexts.pop(); else dirs.pop();
+  doc.querySelectorAll('[data-picker-workspace]')[single ? 1 : 2].click();
+  await until(() => doc.querySelectorAll('[data-picker-workspace]').length === (single ? 1 : 2));
+  assert.ok(doc.querySelector('[data-web-workspace-picker] [role="alert"]'));
+  assert.deepEqual(writes, [], 'revocation before selection prevents any write');
+});
