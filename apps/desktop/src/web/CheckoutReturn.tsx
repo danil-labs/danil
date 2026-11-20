@@ -10,7 +10,7 @@ import { clearCreationCheckout } from "./billing-v2-idempotency";
 type Api = ReturnType<typeof billingV2>;
 const RETURN_KEY = "danil.billing.return";
 
-export default function CheckoutReturn(props: { api: Api; onActive?: (organizationId: string) => Promise<void>; machine?: (organizationId: string, signal: AbortSignal) => Promise<Machine | null>; plan?: (organizationId: string) => ReturnType<Api["organization"]>; dismiss?: () => void }) {
+export default function CheckoutReturn(props: { api: Api; onActive?: (organizationId: string) => Promise<void>; machine?: (organizationId: string, signal: AbortSignal) => Promise<Machine | null>; plan?: (organizationId: string) => ReturnType<Api["organization"]>; dismiss?: () => void; onSettled?: () => void }) {
   const [message, setMessage] = createSignal("");
   const [failure, setFailure] = createSignal("");
   const [plan, setPlan] = createSignal<string>();
@@ -66,7 +66,7 @@ export default function CheckoutReturn(props: { api: Api; onActive?: (organizati
           catch { if (!lifetime.signal.aborted) setFailure("unavailable"); }
         }
       }
-      if (outcome.kind !== "processing" && !lifetime.signal.aborted) { sessionStorage.removeItem(RETURN_KEY); clearCreationCheckout(sessionStorage, returned.id); }
+      if (outcome.kind !== "processing" && !lifetime.signal.aborted) { sessionStorage.removeItem(RETURN_KEY); clearCreationCheckout(sessionStorage, returned.id); props.onSettled?.(); }
     } catch (error) {
       if (!lifetime.signal.aborted) {
         if (deadline.aborted) setMessage(paid ? "checkout_paid_pending" : returned.cancelled ? "checkout_cancel_notice" : "checkout_processing");
@@ -97,7 +97,7 @@ export default function CheckoutReturn(props: { api: Api; onActive?: (organizati
       <section class="rounded-lg border border-line bg-bg p-3" role="status">
         <strong>{t("web.billing_v2.checkout_active")}</strong>
         <Show when={plan()}>{key => <p>{t(`web.billing_v2.plan_${key()}`)}</p>}</Show>
-        <p>{!machine() || ["creating", "provisioning"].includes(machine()!.state) ? t("web.billing_v2.machine_creating") : machine()!.name || t("web.billing_v2.machine")}</p>
+        <Show when={props.machine}><p>{!machine() || ["creating", "provisioning"].includes(machine()!.state) ? t("web.billing_v2.machine_creating") : machine()!.name || t("web.billing_v2.machine")}</p></Show>
       </section>
     </Show>
     <Show when={message() === "checkout_paid_pending" && !busy() && !returned?.cancelled}><p role="status">{t("web.billing_v2.checkout_processing")}</p></Show>

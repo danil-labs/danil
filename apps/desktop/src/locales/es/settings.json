@@ -1,4 +1,7 @@
 {
+  "settings.billing.unavailable": "No se pudo abrir el plan.",
+  "settings.billing.change_plan": "Cambiar plan",
+  "settings.billing.upgrade_plan": "Mejorar plan",
   "settings.environment.engine_build": "Motor {build}",
   "settings.ai_providers.opencode_detail": "Modelos de pago y Go",
   "settings.ai_providers.free_detail": "Kilo · Vercel · Reflection",

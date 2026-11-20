@@ -114,7 +114,7 @@ const pestanasDe = (
     "cuenta-danil": cuenta ? tab("cuenta-danil", () => t("settings.nav.danil_account"), () => <Suspense fallback={null}><DanilAccount part="profile" /></Suspense>) : undefined,
     emails: capabilities().accountEmails ? tab("emails", () => t("settings.tab.emails"), () => <Suspense fallback={null}><DanilAccount part="emails" /></Suspense>) : undefined,
     usage: capabilities().accountUsage ? tab("usage", () => t("settings.tab.usage"), () => capabilities().accountUsage?.()) : undefined,
-    plan: capabilities().personalAccount?.plan ? tab("plan", () => t("settings.tab.plan"), () => capabilities().personalAccount?.plan?.()) : undefined,
+    plan: capabilities().nativeWindow || capabilities().personalAccount?.plan ? tab("plan", () => t("settings.tab.plan"), () => capabilities().nativeWindow ? <Suspense><DeskPlan workspace={workspace()} /></Suspense> : capabilities().personalAccount?.plan?.()) : undefined,
     security: tab("security", () => t("settings.tab.security"), null),
     general: tab("general", () => t("settings.nav.general"), () => <General />),
     appearance: tab("appearance", () => t("settings.nav.appearance"), () => <Suspense fallback={null}><Appearance proyecto={agentes.proyecto} /></Suspense>),
@@ -214,6 +214,8 @@ function AdminLink() {
     </Show>
   );
 }
+
+const DeskPlan = lazy(() => import("./DeskPlan"));
 
 export default function Settings(props: {
   workspace?: string | null;
@@ -320,7 +322,7 @@ export default function Settings(props: {
 
   // Sin soporte del motor activo, Secretos no se ofrece; su enlace directo sí abre el aviso.
   const [personal] = createResource(async () => (await capabilities().personalAccount?.isPersonal().catch(() => false)) ?? false);
-  const dePersonal = (p: Pestana) => ["plan", "support"].includes(p.id);
+  const dePersonal = (p: Pestana) => p.id === "support" || (p.id === "plan" && !capabilities().nativeWindow);
   const pestanaVisible = (p: Pestana) => (dePersonal(p) ? personal() === true : p.id !== "secrets" || secretsRoute(capabilities().accountCredentials ? "worker" : "engine", machines()) !== "unsupported");
   const pedido = settingsTarget(props.panel);
   const inicial = ENTRADAS.find((e) => e.id === pedido?.entry) ?? ENTRADAS[0];
