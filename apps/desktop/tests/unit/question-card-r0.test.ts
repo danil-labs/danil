@@ -215,3 +215,25 @@ test("una copia atrasada que trae la pregunta que llegó en vivo no suelta la fi
   assert.equal(preguntaPendiente(f.store.messages()), undefined, "la tarjeta reaparece: el turno de la pregunta en vivo contó como turno nuevo");
   f.dispose();
 });
+
+
+test("reviseOptimistic sobre una fila confirmada la corrige en base, donde está pintada", async () => {
+  const f = fixture();
+  await f.open([T_USER, T_PREGUNTA]);
+  const fila = filaDelAcuse();
+  f.store.appendPersisted("s", [fila]);
+  const corregida = [{ ...RESPUESTA, text: "Postgres 17" }];
+  f.store.reviseOptimistic("s", fila, { respuestas: corregida });
+  assert.deepEqual(f.store.messages().find((m) => m.turno === "u2")?.respuestas, corregida, "la corrección no llegó a la fila pintada");
+  f.dispose();
+});
+
+test("resetService no copia una fila confirmada a vivo: la respuesta no se duplica tras reiniciar el servicio", async () => {
+  const f = fixture();
+  await f.open([T_USER, T_PREGUNTA]);
+  f.store.appendPersisted("s", [filaDelAcuse()]);
+  f.store.resetService();
+  assert.deepEqual(f.store.rows().s.vivo, [], "la fila confirmada se copió a vivo");
+  assert.equal(f.store.messages().filter((m) => m.turno === "u2").length, 1);
+  f.dispose();
+});
