@@ -131,3 +131,20 @@ test("only explicit promotion codes are sent for both checkout intents", async (
   assert.deepEqual(bodies.map(body => body.promotion_code), ["DANIL1MES", "DANIL1MES", undefined]);
   assert.deepEqual(bodies.map(body => body.intent), ["upgrade", "new_organization", "upgrade"]);
 });
+
+test("both checkout intents reject malformed promotion codes before contacting treasury", async () => {
+  let writes = 0;
+  const api = billingV2({
+    call: async () => { throw new Error("unexpected read"); },
+    mutation: async () => { writes++; return Response.json(fixture("checkout.created")); },
+  }, null);
+  for (const code of ["", "contains a space", "A".repeat(65), "DÁNIL", "DANIL\n"]) {
+    await assert.rejects(api.checkout("pro", 3, "upgrade", undefined, code), /promotion_code_invalid/);
+    await assert.rejects(api.createOrganization("team", 3, "Org", "new", undefined, code), /promotion_code_invalid/);
+  }
+  assert.equal(writes, 0);
+  const valid = "Aa0_-".padEnd(64, "A");
+  await api.checkout("pro", 3, "upgrade", undefined, valid);
+  await api.createOrganization("team", 3, "Org", "new", undefined, valid);
+  assert.equal(writes, 2);
+});

@@ -2,10 +2,11 @@ import { createUniqueId, Show } from "solid-js";
 import { SettingsRow } from "../features/settings/index";
 import { t } from "../lib/i18n";
 import { Input } from "../ui/Input";
+import { PromotionCodeFormatError } from "./billing-v2-api";
 import { PlatformSessionError } from "./platform-session";
 
 export function promotionCodeInvalid(error: unknown) {
-  return error instanceof PlatformSessionError && error.status === 422 && error.code === "promotion_code_invalid";
+  return error instanceof PromotionCodeFormatError || error instanceof PlatformSessionError && error.status === 422 && error.code === "promotion_code_invalid";
 }
 
 export function BillingPromotionField(props: { value: string; disabled: boolean; invalid: boolean; onEdit: (value: string) => void }) {
