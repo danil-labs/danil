@@ -1,6 +1,6 @@
 /**
- * Las máquinas personales en la lista de Desk (plan terminus-workspace
- * 2026-11-20-maquinas-por-organizacion, v3, T6, con la decisión «la sesión vive en el motor»):
+ * Las máquinas personales en la lista de Desk (plan «máquinas por organización», v3, T6, con
+ * la decisión «la sesión vive en el motor»):
  * Desk no inscribe nada; lee lo que el motor reporta (`danil_connected_status`) y la lista
  * muestra las otras personales con su nombre y sin despertar, sin repetir esta computadora.
  */
