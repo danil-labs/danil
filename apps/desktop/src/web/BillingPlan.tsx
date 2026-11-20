@@ -151,21 +151,35 @@ export default function BillingPlan(props: { api: Api; role: () => string; conte
           </SettingsSection></Show>
           <Show when={failed(value().organization)}>{error => <SettingsSection title={t("web.billing_v2.plan")}><p role="status">{t(message(error()))}</p></SettingsSection>}</Show>
           <Show when={failed(value().catalog)}>{error => <SettingsSection title={t("web.billing_v2.plan")}><p role="status">{t(error() instanceof PlatformSessionError && (error().status === 503 || error().code === "plan_price_pending") ? "web.billing_v2.unavailable" : message(error()))}</p></SettingsSection>}</Show>
-          <Show when={fulfilled(value().catalog)}>{catalog => <SettingsSection title={t("web.billing_v2.choose_plan")}>
-            <Show when={permitted("billing.manage") && checkoutPlans(catalog()).some(plan => plan.choice)}>
-              <BillingPromotionField value={promotion()} disabled={busy()} invalid={promotionInvalid()}
-                onEdit={value => { setPromotion(value); setPromotionInvalid(false); }} />
-            </Show>
-            <div class="grid gap-2 sm:grid-cols-2">
-              <For each={checkoutPlans(catalog())}>{plan => <article class="rounded-lg border p-3" classList={{ "border-primary": selected() === plan.id, "border-line": selected() !== plan.id }} aria-current={selected() === plan.id ? "true" : undefined}>
-                <strong>{t(`web.billing_v2.plan_${plan.id}`)}</strong>
-                <Show when={plan.price}>{price => <p>{displayMoney(price())} MXN / {t("web.billing_v2.month")}</p>}</Show>
-                <Show when={plan.choice} fallback={<Show when={plan.id === "enterprise"} fallback={plan.pricePending ? <p role="status">{t("web.billing_v2.unavailable")}</p> : null}><a href={`mailto:${BUSINESS_SALES_EMAIL}`}>{t("web.billing_v2.contact")}</a></Show>}>{choice =>
-                  <Show when={permitted("billing.manage")}><Button disabled={busy() || currentPlan(value()).id === plan.id} onClick={() => { setSelected(plan.id); void upgrade(choice(), catalog().catalog_version); }}>{t(currentPlan(value()).id === "free" ? "web.billing_v2.choose" : "web.billing_v2.upgrade")}</Button></Show>
-                }</Show>
-              </article>}</For>
-            </div>
-          </SettingsSection>}</Show>
+          <Show when={fulfilled(value().catalog)}>{catalog => {
+            const plans = () => checkoutPlans(catalog());
+            const review = () => {
+              const plan = plans().find(item => item.id === selected());
+              if (!permitted("billing.manage") || !plan?.choice || !plan.price || plan.id === currentPlan(value()).id) return;
+              return { id: plan.id, choice: plan.choice, price: plan.price };
+            };
+            return <Show when={review()} fallback={<SettingsSection title={t("web.billing_v2.choose_plan")}>
+              <div class="grid gap-2 sm:grid-cols-2">
+                <For each={plans()}>{plan => <article class="rounded-lg border border-line p-3">
+                  <strong>{t(`web.billing_v2.plan_${plan.id}`)}</strong>
+                  <Show when={plan.price}>{price => <p>{displayMoney(price())} MXN / {t("web.billing_v2.month")}</p>}</Show>
+                  <Show when={plan.choice} fallback={<Show when={plan.id === "enterprise"} fallback={plan.pricePending ? <p role="status">{t("web.billing_v2.unavailable")}</p> : null}><a href={`mailto:${BUSINESS_SALES_EMAIL}`}>{t("web.billing_v2.contact")}</a></Show>}>
+                    <Show when={permitted("billing.manage")}><Button disabled={busy() || currentPlan(value()).id === plan.id} onClick={() => setSelected(plan.id)}>{t(currentPlan(value()).id === "free" ? "web.billing_v2.choose" : "web.billing_v2.upgrade")}</Button></Show>
+                  </Show>
+                </article>}</For>
+              </div>
+            </SettingsSection>}>{plan =>
+              <SettingsSection title={t(`web.billing_v2.plan_${plan().id}`)}>
+                <p>{displayMoney(plan().price)} MXN / {t("web.billing_v2.month")}</p>
+                <BillingPromotionField label={t("web.billing_v2.have_code")} value={promotion()} disabled={busy()} invalid={promotionInvalid()}
+                  onEdit={value => { setPromotion(value); setPromotionInvalid(false); }} />
+                <div class="flex flex-wrap gap-2">
+                  <Button disabled={busy()} onClick={() => void upgrade(plan().choice, catalog().catalog_version)}>{t("web.billing_v2.continue")}</Button>
+                  <Button variant="ghost" disabled={busy()} onClick={() => { setSelected(undefined); setPromotionInvalid(false); setFailure(""); }}>{t("web.billing_v2.choose_another_plan")}</Button>
+                </div>
+              </SettingsSection>
+            }</Show>;
+          }}</Show>
           <Show when={fulfilled(value().organization)}>{org => <SettingsSection>
             <Show when={!summary() && permitted("billing.manage") && org().payer.is_you}><SettingsRow label={t("web.billing_v2.payment")}><Button disabled={busy()} onClick={() => void portal()}>{t("web.billing_v2.open")}</Button></SettingsRow></Show>
           </SettingsSection>}</Show>

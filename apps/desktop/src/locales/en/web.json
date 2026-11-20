@@ -5,6 +5,8 @@
   "web.billing_v2.month": "month",
   "web.billing_v2.machine_creating": "Creating machine",
   "web.billing_v2.machine": "Machine",
+  "web.billing_v2.have_code": "Have a code?",
+  "web.billing_v2.choose_another_plan": "Choose another plan",
   "web.billing_v2.promotion_code": "Promotion code",
   "web.billing_v2.promotion_code_invalid": "This promotion code is not valid for this plan.",
   "web.billing_v2.close": "Close",

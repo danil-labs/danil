@@ -5,6 +5,8 @@
   "web.billing_v2.month": "mes",
   "web.billing_v2.machine_creating": "Creando máquina",
   "web.billing_v2.machine": "Máquina",
+  "web.billing_v2.have_code": "?Tienes un c?digo?",
+  "web.billing_v2.choose_another_plan": "Elegir otro plan",
   "web.billing_v2.promotion_code": "Código de promoción",
   "web.billing_v2.promotion_code_invalid": "Este código de promoción no es válido para el plan.",
   "web.billing_v2.close": "Cerrar",
