@@ -17,7 +17,8 @@ import type { WebSessionDeployment } from './session-config';
 import { awaitingWorkspace, canListWorkspaces, clearWebCaches, readWorkspaces, retryWait, sessionExit, workspaceCache } from './session-wait';
 import { UpdateNotice } from './UpdateNotice';
 import { mountWindow } from './window';
-import './phrases'; import { organizationMachine, webBillingEnabled, windowBilling } from './window-billing';
+import './phrases';
+import { organizationMachine, webBillingEnabled, windowBilling } from './window-billing';
 import { sessionStartup } from './startup-reader';
 import { freeModelScope } from '../lib/free-model-policy';
 import { freeRouterEngine, freeRouterWebEdge } from '../features/settings/free-router-adapters';
@@ -54,12 +55,10 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
     const [busy, setBusy] = createSignal(false);
     const [uncertain, setUncertain] = createSignal(false);
     const [error, setError] = createSignal('');
-    // Identity aún no dio el perfil y se reintenta solo: sigue la carga, no una pantalla vacía.
     const [preparing, setPreparing] = createSignal(false);
     const [reloading, setReloading] = createSignal(false);
     const [signedOut, setSignedOut] = createSignal(false);
     const [preparingWorkspace, setPreparingWorkspace] = createSignal(false);
-    // Hasta que identity contesta se ve la carga; la entrada solo sin sesión o con el error del retorno.
     const [identified, setIdentified] = createSignal(false);
     const returnError = signInError(window.location.search);
     let windowApp: ReturnType<typeof mountWindow> | undefined;
