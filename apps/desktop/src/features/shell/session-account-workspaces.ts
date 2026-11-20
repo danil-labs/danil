@@ -2,6 +2,7 @@ import { createSignal } from "solid-js";
 import { escribirPref, leerPref } from "../../lib/prefs.ts";
 import { adoptionTarget, adoptionTargetOf, adoptLocals, prefsAdoptionMemory, type AdoptionClaimed, type AdoptionFailure } from "./account-adoption.ts";
 import { applyMoves, movesFor, prefsPendingUnions, retryUnions } from "./account-transfers.ts";
+import { engineOwnsAdoption } from "./engine-adoption.ts";
 import { engineFeatures } from "./engine-features.ts";
 import type { AdoptionProgress } from "./first-login.ts";
 import type { PersonalOpener, PersonalOutcome } from "./personal-open.ts";
@@ -59,6 +60,8 @@ export function createAccountWorkspaces(invoke: Invoke, native: boolean, changed
   const adoptions = prefsAdoptionMemory(leerPref, escribirPref, () => crypto.randomUUID());
   let adoption = false;
   let adopting = false;
+  // El motor adopta solo: la ventana no pide retos, pruebas ni sellos.
+  let engineAdopts = false;
   // Hasta que la persona confirma la cuenta en el primer login: el sello no se deshace.
   let held = false;
   // El contexto (un inicio de sesión) donde el servidor dijo que hoy no adopta: uno nuevo vuelve a intentar.
@@ -81,7 +84,7 @@ export function createAccountWorkspaces(invoke: Invoke, native: boolean, changed
   const header = () => ({ "x-terminus-machine": local });
   async function hasAdoptionCandidates() {
     // Con el servidor diciendo que hoy no adopta, no se insiste: el aviso ofrece reintentar.
-    if (!native || !extension || !adoption || adoptionUnavailable) return false;
+    if (!native || !extension || !adoption || engineAdopts || adoptionUnavailable) return false;
     try {
       return (await invoke<{ adoptable?: boolean }[]>("adoption_candidates", header())).some((candidate) => candidate.adoptable !== false);
     } catch {
@@ -123,6 +126,7 @@ export function createAccountWorkspaces(invoke: Invoke, native: boolean, changed
         const self = machines.find((m) => m.local);
         const announced = self && features ? await features().catch(() => null) : null;
         if (self && announced) self.features = [...announced];
+        engineAdopts ||= engineOwnsAdoption(announced);
         if (epoch !== version) return;
         if (!self) { local = null; extension = false; transfer = false; changed(); return; }
         local = self.id;
@@ -132,16 +136,16 @@ export function createAccountWorkspaces(invoke: Invoke, native: boolean, changed
         // Sin la prueba de posesión (A17) el servidor no adopta: hace falta el rasgo nuevo del motor.
         adoption ||= !!(self.features?.includes("account_adoption_v1") && self.features.includes("account_adoption_proof_v1"));
         // Al iniciar sesión, antes de lanzar turnos: los locales pasan a la organización personal.
-        const personal = adoption ? await adoptionTargetOf(groups, send) : adoptionTarget(groups);
-        skip(!adoption ? "engine_features" : !groups.length ? "no_session" : held ? null : !personal && !opener ? "no_personal" : null);
+        const personal = adoption && !engineAdopts ? await adoptionTargetOf(groups, send) : engineAdopts ? undefined : adoptionTarget(groups);
+        skip(engineAdopts ? null : !adoption ? "engine_features" : !groups.length ? "no_session" : held ? null : !personal && !opener ? "no_personal" : null);
         // Sin la personal abierta no se adoptaba nada: se abre y el repaso con la lista nueva liga.
-        if (adoption && !held && !personal && opener && !adopting && (await hasAdoptionCandidates())) {
+        if (adoption && !engineAdopts && !held && !personal && opener && !adopting && (await hasAdoptionCandidates())) {
           const opened = await opener.open(groups);
           setPersonalOutcome(opened);
           if (opened.kind !== "open") skip(`personal_${opened.kind}:${opened.cause}`);
           if (opened.kind === "open" || epoch !== version) return;
         }
-        if (adoption && !held && personal && !adopting && adoptionUnavailable !== personal.context_id) {
+        if (adoption && !engineAdopts && !held && personal && !adopting && adoptionUnavailable !== personal.context_id) {
           adopting = true;
           try {
             const done = await adoptLocals(invoke, header(), send, personal, adoptions, pending, personOf(personal.context_id), step(personal.org));
