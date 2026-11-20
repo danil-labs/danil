@@ -6,6 +6,7 @@ import { captureWorkspaceContext } from "./workspace-context.ts";
 export { captureWorkspaceContext, displayWorkspaceSnapshot, requestedWorkspaceSnapshot } from "./workspace-context.ts";
 
 import { errorCode } from "./errorCode.ts";
+import { capabilities } from "./platform.ts";
 
 /**
  * El único `invoke` de la ventana: el de Tauri, que espera al servicio en vez
@@ -51,8 +52,13 @@ export function setMachineRoute(next: Route | null) {
   route = next;
 }
 
-const call = <T>(command: string, args?: InvokeArgs, options?: InvokeOptions): Promise<T> =>
-  (route ? route(command, args, options) : tauri<T>(command, withoutAbout(args as Record<string, unknown> | undefined) as InvokeArgs | undefined, options)) as Promise<T>;
+const call = <T>(command: string, args?: InvokeArgs, options?: InvokeOptions): Promise<T> => {
+  if (route) return route(command, args, options) as Promise<T>;
+  const machine = new Headers(options?.headers).get("x-terminus-machine");
+  if (capabilities().nativeWindow && machine && machine !== "local")
+    return Promise.reject({ what: { clave: "shell.service.failed" }, detail: "unknown_machine" });
+  return tauri<T>(command, withoutAbout(args as Record<string, unknown> | undefined) as InvokeArgs | undefined, options);
+};
 
 export const invoke = <T>(command: string, args?: InvokeArgs, options?: InvokeOptions): Promise<T> => {
   const captured = route && !GLOBAL_READS.has(command) ? captureWorkspaceContext(options) : options;

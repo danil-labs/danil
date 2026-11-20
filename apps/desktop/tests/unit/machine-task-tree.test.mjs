@@ -6,7 +6,9 @@
  */
 import assert from "node:assert/strict";
 import test from "node:test";
-import { boot, sleep } from "../helpers/jsdom-app.mjs";
+import { sleep } from "../helpers/jsdom-app.mjs";
+import { open } from "../helpers/desktop-account.mjs";
+import { engine } from "../helpers/fake-relay.mjs";
 
 const row = (id, extra) => ({ id, title: `Tarea ${id}`, last_message: "", provider: "codex", model: "gpt-5.6", refs: [], created_at: 0, updated_at: 0, turns: 2, parent: null, esperando: false, ...extra });
 const turns = [{ role: "user", id: "u0", at: 0, text: "crea un md hablando de danil" }, { role: "agent", id: "a1", at: 1, text: "Creé DANIL.md." }];
@@ -61,18 +63,31 @@ test("el árbol de una tarea de otra máquina se pide a esa máquina y enseña l
   const asked = [];
   // El motor de la ventana no tiene la tarea: solo contesta la máquina donde corre.
   const there = (command, value) => (args, options) => {
-    const machine = options?.headers?.["x-terminus-machine"] ?? null;
+    const machine = options?.machine ?? null;
     asked.push({ command, machine });
-    if (machine !== "vm") throw { what: { clave: "development.error.task_folder_open" }, detail: "not_found" };
+    if (machine !== "lima:vm") throw { what: { clave: "development.error.task_folder_open" }, detail: "not_found" };
     return value;
   };
   const values = responses(there);
   let external = 0;
   values.open_external = () => { external++; return null; };
-  const app = await boot("listo", "machine-task-tree", values, undefined, { "harness.layout.shell.right.open": "false" });
+  const remote = responses(there);
+  const { app } = await open("machine-task-tree", {
+    status: { state: "disconnected" }, storage: { "harness.layout.shell.right.open": "false" },
+    extra: { ...values, list_live_sessions: () => [], guest_channels: ["lima"],
+      guest_children: [{ id: "lima:vm", channel: "lima", distro: "vm", name: "vm", user: "u", home: "/home/u", online: true, features: [], contract: null, version: "0.3.1" }],
+      guest_events: () => sleep(40).then(() => ({ cursor: 1, events: [], gap: false })), guest_sync_spaces: null,
+      guest_call: ({ machine, command, args }) => {
+        if (command === "list_projects") return values.list_projects();
+        if (command === "list_live_sessions") return args?.project === "p1" ? [row("r1")] : [];
+        const value = remote[command] ?? engine[command];
+        return typeof value === "function" ? value(args ?? {}, { machine }) : (value ?? null);
+      },
+    },
+  });
   await sleep(600);
   const doc = app.w.document;
-  const fila = doc.querySelector('[data-sesion="r1"]');
+  const fila = doc.querySelector('[data-sesion="lima:vm~r1"]');
   assert.ok(fila, "no está la fila de la tarea de la VM");
   fila.click();
   await sleep(800);
@@ -86,7 +101,7 @@ test("el árbol de una tarea de otra máquina se pide a esa máquina y enseña l
   for (const command of ["list_task_trees", "tree_files", "kn_status"]) {
     const calls = asked.filter((c) => c.command === command);
     assert.ok(calls.length > 0, `no pidió ${command}`);
-    assert.deepEqual(calls.map((c) => c.machine), calls.map(() => "vm"), `${command} fue al motor de la ventana`);
+    assert.deepEqual(calls.map((c) => c.machine), calls.map(() => "lima:vm"), `${command} fue al motor de la ventana`);
   }
   assert.ok(doc.querySelector('[data-ruta="DANIL.md"]'), "el árbol no enseña el archivo que creó el agente");
   assert.equal(external, 0, "la ruta remota no debe abrirse en el explorador local");

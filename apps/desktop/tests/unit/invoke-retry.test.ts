@@ -1,6 +1,36 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { canRepeat, neverRan, retrying, untilConnected, WAITS } from "../../src/lib/invoke.ts";
+import { canRepeat, invoke, neverRan, retrying, setMachineRoute, untilConnected, WAITS } from "../../src/lib/invoke.ts";
+import { capabilities, setCapabilities } from "../../src/lib/platform.ts";
+
+test("sin ruta una orden dirigida a otra máquina no llega al motor local", async () => {
+  const calls: string[] = [];
+  const previous = Object.getOwnPropertyDescriptor(globalThis, "window");
+  const originalCapabilities = capabilities();
+  Object.defineProperty(globalThis, "window", { configurable: true, value: { __TAURI_INTERNALS__: { invoke: async (command: string) => { calls.push(command); return "local"; } } } });
+  try {
+    setMachineRoute(null);
+    for (const machine of ["lima:danil", "wsl:Ubuntu", "cmp_remote"]) {
+      await assert.rejects(invoke("send_message", {}, { headers: { "x-terminus-machine": machine } }), (error: unknown) => (error as { detail?: string }).detail === "unknown_machine");
+    }
+    assert.deepEqual(calls, []);
+    assert.equal(await invoke("status", {}, { headers: { "x-terminus-machine": "local" } }), "local");
+    assert.equal(await invoke("status"), "local");
+    assert.deepEqual(calls, ["status", "status"]);
+    setMachineRoute(async (_command, _args, options) => new Headers(options?.headers).get("x-terminus-machine"));
+    assert.equal(await invoke("status", {}, { headers: { "x-terminus-machine": "lima:danil" } }), "lima:danil");
+    assert.deepEqual(calls, ["status", "status"]);
+    setMachineRoute(null);
+    setCapabilities({ ...originalCapabilities, nativeWindow: false });
+    assert.equal(await invoke("status", {}, { headers: { "x-terminus-machine": "cmp_remote" } }), "local");
+    assert.deepEqual(calls, ["status", "status", "status"]);
+  } finally {
+    setMachineRoute(null);
+    setCapabilities(originalCapabilities);
+    if (previous) Object.defineProperty(globalThis, "window", previous);
+    else Reflect.deleteProperty(globalThis, "window");
+  }
+});
 
 function service(failures: number, code = "app_unavailable") {
   const waits: number[] = [];
