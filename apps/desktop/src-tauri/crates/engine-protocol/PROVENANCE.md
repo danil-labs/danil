@@ -318,3 +318,5 @@ them answers that the command is unknown, and only that feature turns off.
   SHA-256 `b1593d7d55434f07a0b4b7e306b1df9ce5486b171e4bd6fd66163364483606de`.
 - `engine_adoption_v1.json`: `engine_adoption_status`, `engine_adoption_retry` and the `engine-adoption` event: the engine adopts the local workspaces into the personal org by itself (decision 2026-11-20 «la sesión vive en el motor» § 2.5) (danil-engine#504), copied from danil-engine `feat/maquinas-conectadas` `1e96f512`,
   SHA-256 `67bbaf7c85962e7d19275dcf40310bfe98eb257355951e1e1dbb05f0c7ad510f`.
+- `connected_machines_v1.json`: `danil_connected_status` (the window reads it; it never calls `danil_connected_attach` or `danil_connected_detach`: the engine enrolls itself, decision 2026-11-20 «la sesión vive en el motor»). **Provisional:** copied from the uncommitted work of danil-engine `feat/maquinas-conectadas` (T5, base `605cf7f9`, SHA-256 `4ee489725594f72de67d6ff6db518083123f1dfaaff6d3a25e561d7bb7e82052`), keeping only `danil_connected_status`; replace it with the published copy,
+  SHA-256 `f7ba7d5e531e074550bd473d891fb516422fe4cebb100caffb064fb67f7d6733`.
