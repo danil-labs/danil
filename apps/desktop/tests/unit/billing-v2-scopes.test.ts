@@ -2,11 +2,11 @@ import { strict as assert } from "node:assert";
 import { test } from "node:test";
 import { billingScopes } from "../../src/web/billing-v2-scopes.ts";
 
-test("owner can read and manage billing, cancel and use credits", () => {
-  assert.deepEqual(billingScopes("owner"), ["billing.read", "billing.manage", "billing.subscription.cancel", "credits.read", "credits.purchase"]);
+test("owner can read and manage billing and use credits", () => {
+  assert.deepEqual(billingScopes("owner"), ["billing.read", "billing.manage", "credits.read", "credits.purchase"]);
 });
 
-test("admin can manage billing and credits but cannot cancel", () => {
+test("admin can manage billing and credits", () => {
   assert.deepEqual(billingScopes("admin"), ["billing.read", "billing.manage", "credits.read", "credits.purchase"]);
 });
 

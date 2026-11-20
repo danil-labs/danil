@@ -27,16 +27,25 @@ with sync_playwright() as p:
     assert page.get_by_role("button", name="Cancelar suscripción").count() == 0
     page.goto(BASE + "?role=owner&payer=yes", wait_until="networkidle")
     page.get_by_role("button", name="Cambiar de plan").wait_for()
-    assert page.get_by_role("button", name="Cancelar suscripción").count() == 1
+    assert page.get_by_role("button", name="Cancelar suscripción").count() == 0
     assert page.get_by_role("button", name="Abrir").count() == 1
+    assert page.get_by_text("Facturas", exact=True).count() == 0
+    assert page.get_by_role("button", name="Reanudar suscripción").count() == 0
+    for operation, label in [
+        ("plan", "Cambiar de plan"),
+        ("credits", "Comprar créditos"),
+    ]:
+        payment = browser.new_page()
+        payment.route("https://checkout.stripe.com/**", lambda route: route.fulfill(body="Pago simulado"))
+        payment.goto(BASE + f"?pending={operation}")
+        payment.get_by_role("button", name=label).click()
+        payment.get_by_text("Preparando el pago", exact=True).wait_for()
+        payment.wait_for_url("https://checkout.stripe.com/c/pay/synthetic")
+        payment.close()
     page.goto(BASE + "?role=owner", wait_until="networkidle")
     page.get_by_role("button", name="Mostrar más").first.click(timeout=5000)
     page.get_by_text("2026-11-22", exact=True).wait_for()
     assert "transactions:next_page" in page.evaluate("window.billingCalls")
-    page.goto(BASE + "?role=owner&invoices=unavailable", wait_until="networkidle")
-    page.get_by_text("Comprados", exact=True).wait_for(timeout=5000)
-    invoices = page.locator("section").filter(has=page.get_by_text("Facturas", exact=True))
-    assert invoices.get_by_text("No disponible", exact=True).count() == 1
     page.goto(BASE + "?new=1&role=member", wait_until="networkidle")
     page.get_by_role("button", name="Crear organización").click()
     page.get_by_label("Nombre de la organización").fill("Café Danil")
@@ -68,11 +77,13 @@ with sync_playwright() as p:
     page.get_by_role("button", name="Crear organización").click()
     page.get_by_label("Nombre de la organización").wait_for(timeout=5000)
     assert page.evaluate("window.billingCalls").count("catalog") == 2
-    page.goto(BASE + "?gate=on", wait_until="networkidle")
-    page.get_by_role("button", name="Crear organización").click()
-    page.get_by_label("Nombre de la organización").wait_for(timeout=5000)
-    page.goto(BASE + "?gate=off", wait_until="networkidle")
-    assert page.get_by_role("button", name="Crear organización").count() == 0
+    checkout = "&return=success&checkout=bchk_01SYNTHETICCHK0001&result=success"
+    page.goto(BASE + "?gate=on" + checkout)
+    page.get_by_text("Pago confirmado y plan activo", exact=True).wait_for(timeout=12000)
+    assert "select:org_NEW" in page.evaluate("window.billingCalls")
+    page.goto(BASE + "?gate=off" + checkout, wait_until="networkidle")
+    assert page.evaluate("window.billingCalls") == []
+    assert "checkout=" in page.url
     for new_organization in [False, True]:
         page.goto(BASE + "?promo-error=1" + ("&new=1" if new_organization else ""))
         if new_organization:
@@ -98,4 +109,4 @@ with sync_playwright() as p:
     assert retry.evaluate("window.billingCalls").count("catalog") >= 2
     browser.close()
 
-print("billing interface: 19 cases passed")
+print("billing interface: 20 cases passed")

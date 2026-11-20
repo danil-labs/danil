@@ -8,12 +8,12 @@ const checkoutStatus = z.object({ checkout_id: z.string(), kind: z.enum(["plan",
   const terminal = value.state === "active" || value.state === "canceled" || value.state === "expired" || value.state === "error" || (value.state === "paid" && value.kind === "credits");
   if (value.terminal !== terminal || (value.organization_id && value.state !== "active") || (value.state === "active" && (value.kind !== "plan" || !value.organization_id))) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "invalid_checkout_status" });
 });
-const organization = z.object({ organization_id: z.string(), plan_key: z.string(), edition: z.string().nullish(), state: z.string(), cancel_at_period_end: z.boolean(), payer: z.object({ is_you: z.boolean() }) });
+const organization = z.object({ organization_id: z.string(), plan_key: z.string(), edition: z.string().nullish(), state: z.string(), payer: z.object({ is_you: z.boolean() }) });
 export type PlanChoice = { plan_key: "pro" | "team"; variant?: "business" };
-const catalog = z.object({ catalog_version: z.number().int(), plans: z.array(z.object({ plan_key: z.string(), sellable: z.boolean(), price: money.nullable() })), display_variants: z.array(z.object({ variant: z.string(), plan_key: z.string(), edition: z.string() })).optional(), credit_packs: z.array(z.object({ pack_id: z.string(), sellable: z.boolean(), credits: money })) });
+const catalog = z.object({ catalog_version: z.number().int(), plans: z.array(z.object({ plan_key: z.string(), sellable: z.boolean(), price: money.nullable(), display_variants: z.array(z.object({ variant: z.string(), plan_key: z.string(), edition: z.string(), display_name: z.string() })).optional() })), credit_packs: z.array(z.object({ pack_id: z.string(), sellable: z.boolean(), credits: money })) });
 const balance = z.object({ organization_id: z.string(), available: money, included: money, gift: money, purchased: money });
 const page = z.object({ items: z.array(z.record(z.string(), z.unknown())), next_cursor: z.string().nullable() });
-const purchase = z.object({ purchase_id: z.string(), state: z.string(), url: z.string().url().nullable() });
+const purchase = z.object({ purchase_id: z.string(), state: z.enum(["creating", "open", "paid", "failed", "expired"]), url: z.string().url().nullable() });
 const portal = z.object({ url: z.string().url() });
 
 export class PromotionCodeFormatError extends Error {
@@ -46,7 +46,6 @@ export function billingV2(transport: Transport, organizationId: string | null) {
       return result;
     },
     transactions: (cursor?: string) => read(pagePath("credits/transactions", cursor), page),
-    invoices: (cursor?: string) => read(pagePath("billing/invoices", cursor), page),
     checkout: async (plan_key: "pro" | "team", catalog_version: number, key: string, variant?: "business", promotion_code?: string) => write("billing/checkout-sessions", { plan_key, variant, promotion_code: promotionCode(promotion_code), catalog_version, intent: "upgrade" }, key, checkout),
     async createOrganization(plan_key: "pro" | "team", catalog_version: number, name: string, key: string, variant?: "business", promotion_code?: string) {
       if (/[\u0000-\u001f\u007f-\u009f<>]/u.test(name)) throw new Error("invalid_organization_name");
@@ -60,8 +59,11 @@ export function billingV2(transport: Transport, organizationId: string | null) {
       return status;
     },
     purchase: (pack_id: string, catalog_version: number, key: string) => write("credits/purchases", { pack_id, catalog_version }, key, purchase),
+    async purchaseStatus(id: string, signal: AbortSignal) {
+      const status = await read(`credits/purchases/${encodeURIComponent(id)}`, purchase, signal);
+      if (status.purchase_id !== id) throw new Error("purchase_id_mismatch");
+      return status;
+    },
     portal: (key: string) => write("billing/portal-sessions", undefined, key, portal),
-    cancel: (key: string) => write("billing/subscription/cancel", undefined, key, organization),
-    resume: (key: string) => write("billing/subscription/resume", undefined, key, organization),
   };
 }

@@ -5,7 +5,7 @@ import { Input } from "../ui/Input";
 import { Select } from "../ui/Select";
 import { SettingsRow, SettingsSection } from "../features/settings/index";
 import { PlatformSessionError } from "./platform-session";
-import { hostedCheckoutUrl } from "./billing-v2-return";
+import { PAYMENT_URL_DEADLINE_MS, waitForPaymentUrl } from "./billing-v2-return";
 import { BillingPromotionField, promotionCodeInvalid } from "./BillingPromotionField";
 import { checkoutPlans } from "./billing-v2-plans";
 import type { billingV2 } from "./billing-v2-api";
@@ -13,7 +13,7 @@ import { bindCreationCheckout, creationKey } from "./billing-v2-idempotency";
 
 type Api = ReturnType<typeof billingV2>;
 
-export default function NewOrganizationCheckout(props: { api: Api; onActive?: (organizationId: string) => Promise<void> }) {
+export default function NewOrganizationCheckout(props: { api: Api }) {
   const [open, setOpen] = createSignal(false);
   const [catalog, { refetch }] = createResource(open, () => props.api.catalog());
   const [name, setName] = createSignal("");
@@ -47,38 +47,18 @@ export default function NewOrganizationCheckout(props: { api: Api; onActive?: (o
     const choice = option?.choice;
     if (busy() || !current || !option || !choice) return;
     setBusy(true); setStatus(""); setPromotionInvalid(false);
-    const deadline = AbortSignal.timeout(60000);
+    const deadline = AbortSignal.timeout(PAYMENT_URL_DEADLINE_MS);
     const signal = AbortSignal.any([lifetime.signal, deadline]);
     try {
       const version = current.catalog_version;
       const code = promotion().trim() || undefined;
       const organizationName = name();
       const key = await creationKey(sessionStorage, option.id, version, organizationName, code);
+      signal.throwIfAborted();
       const created = await props.api.createOrganization(choice.plan_key, version, organizationName, key, choice.variant, code);
       bindCreationCheckout(sessionStorage, key, created.checkout_id);
-      let url = created.url;
-      let delay = 1000;
-      while (!url) {
-        setStatus("checkout_preparing");
-        let retryAfter = 0;
-        try {
-          const state = await props.api.checkoutStatus(created.checkout_id, signal);
-          if (state.state === "active" && state.organization_id && props.onActive) { await props.onActive(state.organization_id); return; }
-          if (state.terminal) throw new Error("checkout_finished");
-          url = state.url;
-        } catch (error) {
-          if (!(error instanceof PlatformSessionError) || ![404, 429, 501, 503].includes(error.status)) throw error;
-          retryAfter = Math.max(0, Number(error.retryAfter) * 1000 || 0);
-        }
-        if (!url) await new Promise<void>((resolve, reject) => {
-          signal.throwIfAborted();
-          const onAbort = () => { clearTimeout(timer); reject(signal.reason); };
-          const timer = setTimeout(() => { signal.removeEventListener("abort", onAbort); resolve(); }, Math.max(retryAfter, delay * (0.75 + Math.random() * 0.5)));
-          signal.addEventListener("abort", onAbort, { once: true });
-        });
-        delay = Math.min(delay * 2, 8000);
-      }
-      window.location.assign(hostedCheckoutUrl(url));
+      const url = await waitForPaymentUrl(created, () => props.api.checkoutStatus(created.checkout_id, signal), signal, () => setStatus("checkout_preparing"));
+      window.location.assign(url);
     } catch (error) {
       if (lifetime.signal.aborted) return;
       if (promotionCodeInvalid(error)) setPromotionInvalid(true);
@@ -91,7 +71,7 @@ export default function NewOrganizationCheckout(props: { api: Api; onActive?: (o
         <Show when={!catalog.error && catalog()} fallback={<p role="status">{t("web.billing_v2.unavailable")}</p>}>
           <>
             <SettingsRow label={<label for="billing-org-name">{t("web.billing_v2.org_name")}</label>}><Input id="billing-org-name" value={name()} onInput={event => setName(event.currentTarget.value)} /></SettingsRow>
-            <SettingsRow label={<label for="billing-org-plan">{t("web.billing_v2.plan")}</label>}><Select id="billing-org-plan" value={selected()?.id ?? ""} disabled={busy()} onChange={event => { setPlan(event.currentTarget.value); setPromotionInvalid(false); }}><For each={plans()}>{item => <option value={item.id}>{t(`web.billing_v2.plan_${item.id}`)}</option>}</For></Select></SettingsRow>
+            <SettingsRow label={<label for="billing-org-plan">{t("web.billing_v2.plan")}</label>}><Select id="billing-org-plan" value={selected()?.id ?? ""} disabled={busy()} onChange={event => { setPlan(event.currentTarget.value); setPromotionInvalid(false); }}><For each={plans()}>{item => <option value={item.id}>{item.displayName ?? t(`web.billing_v2.plan_${item.id}`)}</option>}</For></Select></SettingsRow>
             <Show when={selected()}><BillingPromotionField value={promotion()} disabled={busy()} invalid={promotionInvalid()}
               onEdit={value => { setPromotion(value); setPromotionInvalid(false); }} /></Show>
             <Button disabled={busy() || !selected()} onClick={() => void submit()}>{t("web.billing_v2.continue")}</Button>

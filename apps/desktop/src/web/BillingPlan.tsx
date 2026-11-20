@@ -8,7 +8,7 @@ import { BillingPromotionField, promotionCodeInvalid } from "./BillingPromotionF
 import { billingFingerprint } from "./billing-v2-idempotency";
 import { checkoutPlans } from "./billing-v2-plans";
 import type { billingV2, PlanChoice } from "./billing-v2-api";
-import { hostedCheckoutUrl } from "./billing-v2-return";
+import { hostedCheckoutUrl, PAYMENT_URL_DEADLINE_MS, paymentInProgress, waitForPaymentUrl } from "./billing-v2-return";
 import NewOrganizationCheckout from "./NewOrganizationCheckout";
 
 type Api = ReturnType<typeof billingV2>;
@@ -59,50 +59,64 @@ const message = (error: unknown) => error instanceof PlatformSessionError && err
 
 export default function BillingPlan(props: { api: Api; role: () => string; context: string; creationApi?: Api }) {
   const permitted = (scope: BillingScope) => billingScopes(props.role()).includes(scope);
+  const lifetime = new AbortController();
+  onCleanup(() => lifetime.abort());
+  const [preparing, setPreparing] = createSignal(false);
   const [promotion, setPromotion] = createSignal("");
   const [promotionInvalid, setPromotionInvalid] = createSignal(false);
   const [failure, setFailure] = createSignal("");
   const [busy, setBusy] = createSignal(false);
   const [revision, refresh] = createSignal(0);
   const [data] = createResource(revision, async () => {
-    const [catalog, organization, balance, transactions, invoices] = await Promise.allSettled([
+    const [catalog, organization, balance, transactions] = await Promise.allSettled([
       props.api.catalog(), permitted("billing.read") ? props.api.organization() : null,
       permitted("credits.read") ? props.api.balance() : null,
       permitted("credits.read") ? props.api.transactions() : null,
-      permitted("billing.read") ? props.api.invoices() : null,
     ]);
-    return { catalog, organization, balance, transactions, invoices };
+    return { catalog, organization, balance, transactions };
   });
   const pendingPrefix = () => `danil.billing.${props.context}.`;
   const keyFor = (action: string) => { const storageKey = `${pendingPrefix()}key.${action}`; const key = sessionStorage.getItem(storageKey) ?? crypto.randomUUID(); sessionStorage.setItem(storageKey, key); return key; };
-  async function run(action: string, operation: (key: string) => Promise<unknown>, promotionCode?: string) {
+  async function run(action: string, operation: (key: string, signal: AbortSignal) => Promise<unknown>, promotionCode?: string) {
     if (busy()) return;
     setBusy(true); setFailure(""); setPromotionInvalid(false);
+    const signal = AbortSignal.any([lifetime.signal, AbortSignal.timeout(PAYMENT_URL_DEADLINE_MS)]);
     try {
       const scopedAction = promotionCode ? `${action}:${await billingFingerprint(promotionCode)}` : action;
-      await operation(keyFor(scopedAction));
+      signal.throwIfAborted();
+      await operation(keyFor(scopedAction), signal);
       sessionStorage.removeItem(`${pendingPrefix()}key.${scopedAction}`);
       refresh(n => n + 1);
     } catch (error) {
+      if (lifetime.signal.aborted) return;
       if (promotionCodeInvalid(error)) setPromotionInvalid(true);
       else setFailure(message(error));
     }
-    finally { setBusy(false); }
+    finally { if (!lifetime.signal.aborted) { setPreparing(false); setBusy(false); } }
   }
   function redirect(url: string | null) {
+    lifetime.signal.throwIfAborted();
     window.location.assign(hostedCheckoutUrl(url));
   }
   async function upgrade(plan: PlanChoice, version: number) {
     const api = props.api;
     const code = promotion().trim() || undefined;
-    await run(`checkout:${version}:${plan.variant ?? plan.plan_key}`, async key => redirect((await api.checkout(plan.plan_key, version, key, plan.variant, code)).url), code);
+    await run(`checkout:${version}:${plan.variant ?? plan.plan_key}`, async (key, signal) => {
+      const created = await api.checkout(plan.plan_key, version, key, plan.variant, code);
+      redirect(await waitForPaymentUrl(created, () => api.checkoutStatus(created.checkout_id, signal), signal, () => setPreparing(true)));
+    }, code);
   }
   async function buy(pack: string, version: number) {
     const api = props.api;
-    await run(`purchase:${version}:${pack}`, async key => redirect((await api.purchase(pack, version, key)).url));
+    await run(`purchase:${version}:${pack}`, async (key, signal) => {
+      const created = await api.purchase(pack, version, key);
+      redirect(await waitForPaymentUrl(created, async () => {
+        const purchase = await api.purchaseStatus(created.purchase_id, signal);
+        return { url: purchase.url, terminal: !paymentInProgress(purchase.state) };
+      }, signal, () => setPreparing(true)));
+    });
   }
   async function portal() { const api = props.api; await run("portal", async key => redirect((await api.portal(key)).url)); }
-  async function changeSubscription(cancelled: boolean) { const api = props.api; await run(cancelled ? "resume" : "cancel", key => cancelled ? api.resume(key) : api.cancel(key)); }
   onMount(() => {
     const timer = setInterval(() => {
       if (data.loading) return;
@@ -115,6 +129,7 @@ export default function BillingPlan(props: { api: Api; role: () => string; conte
     onCleanup(() => clearInterval(timer));
   });
   return <SettingsPanel>
+    <Show when={preparing()}><p role="status">{t("web.billing_v2.checkout_preparing")}</p></Show>
     <Show when={failure()}><p role="alert">{t(failure())}</p></Show>
     <Show when={!data.loading || data.latest} fallback={<p>{t("web.billing_v2.loading")}</p>}>
       <Show when={!data.error} fallback={<p role="status">{t(message(data.error))}</p>}>
@@ -128,7 +143,7 @@ export default function BillingPlan(props: { api: Api; role: () => string; conte
             </Show>
             <div class="grid gap-2 sm:grid-cols-2">
               <For each={checkoutPlans(catalog())}>{plan => <article class="rounded-lg border border-line p-3">
-                <strong>{t(`web.billing_v2.plan_${plan.id}`)}</strong>
+                <strong>{plan.displayName ?? t(`web.billing_v2.plan_${plan.id}`)}</strong>
                 <Show when={plan.price}>{price => <p>{displayMoney(price())} MXN / {t("web.billing_v2.month")}</p>}</Show>
                 <Show when={plan.choice} fallback={<Show when={plan.id === "enterprise"} fallback={<p role="status">{t("web.billing_v2.unavailable")}</p>}><a href={`mailto:${BUSINESS_SALES_EMAIL}`}>{t("web.billing_v2.contact")}</a></Show>}>{choice =>
                   <Show when={permitted("billing.manage")}><Button disabled={busy() || (!choice().variant && fulfilled(value().organization)?.plan_key === choice().plan_key)} onClick={() => void upgrade(choice(), catalog().catalog_version)}>{t("web.billing_v2.upgrade")}</Button></Show>
@@ -139,7 +154,6 @@ export default function BillingPlan(props: { api: Api; role: () => string; conte
           <Show when={fulfilled(value().organization)}>{org => <SettingsSection title={t("web.billing_v2.plan")}>
             <SettingsRow label={t("web.billing_v2.plan")}><span>{org().plan_key} · {org().state}</span></SettingsRow>
             <Show when={permitted("billing.manage") && org().payer.is_you}><SettingsRow label={t("web.billing_v2.payment")}><Button disabled={busy()} onClick={() => void portal()}>{t("web.billing_v2.open")}</Button></SettingsRow></Show>
-            <Show when={permitted("billing.subscription.cancel")}><SettingsRow label={t(org().cancel_at_period_end ? "web.billing_v2.resume" : "web.billing_v2.cancel")}><Button disabled={busy()} onClick={() => void changeSubscription(org().cancel_at_period_end)}>{t(org().cancel_at_period_end ? "web.billing_v2.resume" : "web.billing_v2.cancel")}</Button></SettingsRow></Show>
           </SettingsSection>}</Show>
           <Show when={failed(value().balance)}>{error => <SettingsSection title={t("web.billing_v2.balance")}><p role="status">{t(message(error()))}</p></SettingsSection>}</Show>
           <Show when={fulfilled(value().balance)}>{balance => <SettingsSection title={t("web.billing_v2.balance")}>
@@ -148,8 +162,6 @@ export default function BillingPlan(props: { api: Api; role: () => string; conte
           </SettingsSection>}</Show>
           <Show when={failed(value().transactions)}>{error => <SettingsSection title={t("web.billing_v2.transactions")}><p role="status">{t(message(error()))}</p></SettingsSection>}</Show>
           <Show when={fulfilled(value().transactions)}>{page => <PagedRows title={t("web.billing_v2.transactions")} initial={page()} load={props.api.transactions} />}</Show>
-          <Show when={failed(value().invoices)}>{error => <SettingsSection title={t("web.billing_v2.invoices")}><p role="status">{t(message(error()))}</p></SettingsSection>}</Show>
-          <Show when={fulfilled(value().invoices)}>{page => <PagedRows title={t("web.billing_v2.invoices")} initial={page()} load={props.api.invoices} />}</Show>
         </>}</Show>
       </Show>
     </Show>

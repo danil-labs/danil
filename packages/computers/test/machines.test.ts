@@ -308,3 +308,22 @@ test("la máquina de la organización se puede encender aunque se haya listado e
   assert.equal(machineToComputer({ ...machine, state: "running", kind: "personal" }).wakeable, false);
   for (const state of ["reserved", "deleting", "deleted", "suspended", "future"]) assert.equal(machineToComputer({ ...machine, state }).wakeable, false, state);
 });
+
+test("the machines list aborts a slow edge read at the caller's deadline", async () => {
+  const deadline = new AbortController();
+  let canceled = false;
+  const api = machinesClient({ endpoint: "https://edge.danil.ai/v1", transport: {
+    call: async (_path, init) => {
+      const signal = init?.signal;
+      if (!signal) return Response.json({ items: [], next_cursor: null });
+      return new Promise<Response>((_resolve, reject) => {
+        signal.addEventListener("abort", () => { canceled = true; reject(signal.reason); }, { once: true });
+      });
+    },
+    mutation: async () => { throw new Error("unexpected write"); },
+  } });
+  const pending = api.list(deadline.signal);
+  deadline.abort();
+  assert.equal((await pending).kind, "error");
+  assert.equal(canceled, true);
+});

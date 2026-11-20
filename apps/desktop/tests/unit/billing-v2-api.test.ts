@@ -60,18 +60,16 @@ test("only an active plan exposes a valid organization, and active requires one"
   await assert.rejects(api.checkoutStatus("bchk_01SYNTHETICCHK0001"));
 });
 
-test("history requests preserve the server cursor for both collections", async () => {
+test("credit transaction history preserves the server cursor", async () => {
   const paths: string[] = [];
   const api = billingV2({ call: async path => { paths.push(path); return Response.json({ items: [], next_cursor: null }); }, mutation: async () => { throw new Error("unexpected mutation"); } }, "org_A");
   await api.transactions("next_page");
-  await api.invoices("invoice_next");
-  assert.deepEqual(paths, ["credits/transactions?cursor=next_page", "billing/invoices?cursor=invoice_next"]);
+  assert.deepEqual(paths, ["credits/transactions?cursor=next_page"]);
 });
 
 test("Business is an advertised Team edition and the two checkout intents preserve it", async () => {
   const { checkoutPlans } = await import("../../src/web/billing-v2-plans.ts");
   const value = fixture("catalog.synthetic");
-  delete value.display_variants;
   const requests: unknown[] = [];
   const api = billingV2({
     call: async () => Response.json(value),
@@ -84,9 +82,8 @@ test("Business is an advertised Team edition and the two checkout intents preser
   assert.equal(legacy.some(plan => plan.id === "business"), false);
   assert.equal(legacy.find(plan => plan.id === "team")?.choice, null);
   value.plans = value.plans.map((plan: { plan_key: string }) => plan.plan_key === "team"
-    ? { ...plan, sellable: true, price: { currency: "MXN", amount_micro: "1999000000" } }
+    ? { ...plan, sellable: true, price: { currency: "MXN", amount_micro: "1999000000" }, display_variants: [{ variant: "business", plan_key: "team", edition: "business", display_name: "Business" }] }
     : plan);
-  value.display_variants = [{ variant: "business", plan_key: "team", edition: "business" }];
   const business = checkoutPlans(await api.catalog()).find(plan => plan.id === "business")?.choice;
   assert.deepEqual(business, { plan_key: "team", variant: "business" });
   await api.checkout(business!.plan_key, 3, "upgrade", business!.variant);
@@ -147,4 +144,22 @@ test("both checkout intents reject malformed promotion codes before contacting t
   await api.checkout("pro", 3, "upgrade", undefined, valid);
   await api.createOrganization("team", 3, "Org", "new", undefined, valid);
   assert.equal(writes, 2);
+});
+
+test("a durable purchase is read by its purchase ID and shares the caller's deadline", async () => {
+  const purchase = {
+    purchase_id: "bpur_01SYNTHETICPURCHASE1", checkout_id: "bchk_01SYNTHETICCHK0001",
+    state: "open", url: "https://checkout.stripe.com/c/pay/synthetic", expires_at: null,
+    credits: { currency: "MXN", amount_micro: "1000000" },
+  };
+  const deadline = AbortSignal.timeout(5000);
+  const api = billingV2({
+    call: async (path, init) => {
+      assert.equal(path, `credits/purchases/${purchase.purchase_id}`);
+      assert.equal(init?.signal, deadline);
+      return Response.json(purchase);
+    },
+    mutation: async () => { throw new Error("unexpected write"); },
+  }, "org_A");
+  assert.equal((await api.purchaseStatus(purchase.purchase_id, deadline)).url, purchase.url);
 });

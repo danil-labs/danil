@@ -53,3 +53,50 @@ export function hostedCheckoutUrl(url: string | null) {
   if (target.protocol !== "https:" || target.username || target.password) throw new Error("invalid_checkout_url");
   return target.href;
 }
+
+export const PAYMENT_URL_DEADLINE_MS = 60_000;
+
+export function paymentInProgress(state: string) {
+  return state === "creating" || state === "open";
+}
+
+export async function waitForPaymentUrl(
+  initial: { state: string; url: string | null },
+  read: () => Promise<{ terminal: boolean; url: string | null }>,
+  signal: AbortSignal,
+  preparing: () => void,
+): Promise<string> {
+  signal.throwIfAborted();
+  if (!paymentInProgress(initial.state)) throw new Error("checkout_finished");
+  if (initial.url) return hostedCheckoutUrl(initial.url);
+  preparing();
+
+  let delay = 1000;
+  for (;;) {
+    signal.throwIfAborted();
+    let retryAfter = 0;
+    try {
+      const status = await read();
+      signal.throwIfAborted();
+      if (status.terminal) throw new Error("checkout_finished");
+      if (status.url) return hostedCheckoutUrl(status.url);
+    } catch (error) {
+      signal.throwIfAborted();
+      const problem = error as { status?: number; retryAfter?: string } | null;
+      if (!problem?.status || ![404, 429, 501, 503].includes(problem.status)) throw error;
+      const header = problem.retryAfter;
+      if (header) retryAfter = /^\d+$/.test(header) ? Number(header) * 1000 : Math.max(0, Date.parse(header) - Date.now()) || 0;
+    }
+    await waitWithSignal(Math.min(2_147_483_647, Math.max(retryAfter, delay * (0.75 + Math.random() * 0.5))), signal);
+    delay = Math.min(delay * 2, 8000);
+  }
+}
+
+export function waitWithSignal(ms: number, signal: AbortSignal) {
+  return new Promise<void>((resolve, reject) => {
+    signal.throwIfAborted();
+    const abort = () => { clearTimeout(timer); reject(signal.reason); };
+    const timer = setTimeout(() => { signal.removeEventListener("abort", abort); resolve(); }, ms);
+    signal.addEventListener("abort", abort, { once: true });
+  });
+}

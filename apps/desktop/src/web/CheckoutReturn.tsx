@@ -3,7 +3,7 @@ import { createSignal, onCleanup, onMount, Show } from "solid-js";
 import { t } from "../lib/i18n";
 import { Button } from "../ui/Button";
 import { PlatformSessionError } from "./platform-session";
-import { checkoutReturn, followCheckout } from "./billing-v2-return";
+import { checkoutReturn, followCheckout, waitWithSignal } from "./billing-v2-return";
 import type { billingV2 } from "./billing-v2-api";
 import { clearCreationCheckout } from "./billing-v2-idempotency";
 
@@ -30,7 +30,7 @@ export default function CheckoutReturn(props: { api: Api; onActive?: (organizati
         const result = await props.machine(id, signal);
         signal.throwIfAborted();
         if (result) { setMachine(result); if (result.state !== "creating" && result.state !== "provisioning") return; }
-        await wait(2500, signal);
+        await waitWithSignal(2500, signal);
       }
     } catch {
       if (!signal.aborted) setFailure("unavailable");
@@ -48,7 +48,7 @@ export default function CheckoutReturn(props: { api: Api; onActive?: (organizati
         cancelled: returned.cancelled,
         read: () => props.api.checkoutStatus(returned!.id, signal),
         onState: state => { if (state === "paid") { paid = true; setMessage("checkout_paid_pending"); } },
-        wait: ms => wait(ms, signal),
+        wait: ms => waitWithSignal(ms, signal),
       });
       if (lifetime.signal.aborted) return;
       if (outcome.kind === "active" && outcome.organizationId && props.onActive) {
@@ -105,13 +105,4 @@ export default function CheckoutReturn(props: { api: Api; onActive?: (organizati
     <Show when={!busy() && returned && ((!returned.cancelled && ["checkout_processing", "checkout_paid_pending"].includes(message())) || (selectedOrganization && failure())) && !checkingMachine()}><Button onClick={() => void check()}>{t("web.billing_v2.check_again")}</Button></Show>
     <Show when={props.dismiss && (message() || failure())}><Button variant="ghost" onClick={() => props.dismiss?.()}>{t("web.billing_v2.close")}</Button></Show>
   </>;
-}
-
-function wait(ms: number, signal: AbortSignal) {
-  return new Promise<void>((resolve, reject) => {
-    signal.throwIfAborted();
-    const abort = () => { clearTimeout(timer); reject(signal.reason); };
-    const timer = setTimeout(() => { signal.removeEventListener("abort", abort); resolve(); }, ms);
-    signal.addEventListener("abort", abort, { once: true });
-  });
 }

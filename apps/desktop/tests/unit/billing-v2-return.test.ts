@@ -44,3 +44,23 @@ test("terminal error and expiry never become successful payments", async () => {
     assert.deepEqual(result, { kind: state === "canceled" ? "cancelled" : state });
   }
 });
+test("a terminal payment cannot open a previously available URL", async () => {
+  const { waitForPaymentUrl } = await import("../../src/web/billing-v2-return.ts");
+  const signal = new AbortController().signal;
+  await assert.rejects(
+    waitForPaymentUrl({ state: "creating", url: null },
+      async () => ({ terminal: true, url: "https://checkout.stripe.com/c/pay/stale" }), signal, () => {}),
+    /checkout_finished/,
+  );
+});
+
+test("payment preparation honors expiry during a pending read", async () => {
+  const { waitForPaymentUrl } = await import("../../src/web/billing-v2-return.ts");
+  const controller = new AbortController();
+  const expired = new DOMException("Payment preparation expired", "TimeoutError");
+  const pending = waitForPaymentUrl({ state: "creating", url: null }, async () => {
+    controller.abort(expired);
+    return { terminal: false, url: "https://checkout.stripe.com/c/pay/too-late" };
+  }, controller.signal, () => {});
+  await assert.rejects(pending, error => error === expired);
+});

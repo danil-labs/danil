@@ -28,14 +28,17 @@ export function windowBilling(transport: ReturnType<typeof platformTransport>, p
     isPersonal: async () => true,
     plan: () => <Suspense><Plan api={billingV2(transport, org)} creationApi={personApi} role={role} context={`${profile.id}:${org}`} /></Suspense>,
   };
-  const returned = () => pending() ? <ReturnNotice /> : undefined;
-  function ReturnNotice() {
-    const [open, setOpen] = createSignal(true);
-    return <Show when={open()}><aside class="fixed right-4 bottom-4 z-50 w-80 max-w-[calc(100vw-2rem)] rounded-lg border border-line bg-bg p-3 shadow-lg">
-      <Suspense><Return api={personApi} onActive={select} machine={machine} plan={id => billingV2(transport, id).organization()} dismiss={() => setOpen(false)} /></Suspense>
-    </aside></Show>;
-  }
+  const returned = () => <BillingReturnGate api={personApi} onActive={select} machine={machine} plan={id => billingV2(transport, id).organization()} />;
   return { account, returned };
+}
+
+export function BillingReturnGate(props: Omit<BillingReturnProps, "dismiss"> & { enabled?: boolean }) {
+  const [open, setOpen] = createSignal(true);
+  return <Show when={(props.enabled ?? webBillingEnabled) && open() && pending()}>
+    <aside class="fixed right-4 bottom-4 z-50 w-80 max-w-[calc(100vw-2rem)] rounded-lg border border-line bg-bg p-3 shadow-lg">
+      <Suspense><Return api={props.api} onActive={props.onActive} machine={props.machine} plan={props.plan} dismiss={() => setOpen(false)} /></Suspense>
+    </aside>
+  </Show>;
 }
 
 export function organizationMachine(id: string, machines: Machine[]) {

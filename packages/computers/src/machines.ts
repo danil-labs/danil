@@ -157,17 +157,18 @@ export function machinesClient(config: MachinesConfig) {
     return { kind: "error", status, ...(code ? { code } : {}), ...meta };
   }
 
-  async function call<T>(collection: boolean, method: string, path: string, read: (body: unknown) => T, ok: number[] = [200], received?: (response: MachinesResponse) => void): Promise<MachinesAnswer<T>> {
+  async function call<T>(collection: boolean, method: string, path: string, read: (body: unknown) => T, { ok = [200], received, signal }: { ok?: number[]; received?: (response: MachinesResponse) => void; signal?: AbortSignal } = {}): Promise<MachinesAnswer<T>> {
     let response: MachinesResponse;
     try {
+      signal?.throwIfAborted();
       const write = method === "GET" ? undefined : { method, headers: { "content-type": "application/json", "Idempotency-Key": requestId() }, body: "{}" };
       if (config.transport) {
         const route = path.replace(/^\//, "");
-        response = method === "GET" ? await config.transport.call(route) : await config.transport.mutation(route, write);
+        response = method === "GET" ? await config.transport.call(route, signal ? { signal } : undefined) : await config.transport.mutation(route, write);
       } else {
         const headers: Record<string, string> = { ...(write?.headers ?? {}) };
         if (config.getToken) headers.authorization = `Bearer ${await config.getToken()}`;
-        response = await f(url(path), { ...write, method, headers });
+        response = await f(url(path), { ...write, method, headers, ...(signal ? { signal } : {}) });
       }
     } catch (error) {
       const problem = error as { status?: number; code?: string; retryAfter?: string } | null;
@@ -202,7 +203,7 @@ export function machinesClient(config: MachinesConfig) {
   };
 
   return {
-    async list(): Promise<MachinesAnswer<Machine[]>> {
+    async list(signal?: AbortSignal): Promise<MachinesAnswer<Machine[]>> {
       const items: Machine[] = [];
       const cursors = new Set<string>();
       let cursor: string | null = null;
@@ -213,7 +214,7 @@ export function machinesClient(config: MachinesConfig) {
           const rows = page.items.map(machineOf);
           if (rows.some(row => !row)) throw new Error("invalid_machine");
           return { items: rows as Machine[], next: typeof page.next_cursor === "string" ? page.next_cursor : null };
-        });
+        }, { signal });
         if (answer.kind !== "ok") return answer;
         items.push(...answer.value.items);
         cursor = answer.value.next;
@@ -232,7 +233,7 @@ export function machinesClient(config: MachinesConfig) {
      */
     async start(id: string): Promise<MachinesAnswer<Machine>> {
       let location: string | null = null;
-      const accepted = await call(false, "POST", `${idPath(id)}/start`, body => ({ operation: operationOf(body) }), [200, 202], response => { location = response.headers?.get("location") ?? null; });
+      const accepted = await call(false, "POST", `${idPath(id)}/start`, body => ({ operation: operationOf(body) }), { ok: [200, 202], received: response => { location = response.headers?.get("location") ?? null; } });
       if (accepted.kind !== "ok") return accepted;
       const first = accepted.value.operation;
       if (!first) return { kind: "error", status: 202, code: "invalid_operation" };
@@ -272,7 +273,7 @@ export function machinesClient(config: MachinesConfig) {
           return { ticket: b.ticket, url: b.url, session_expires_at: typeof b.session_expires_at === "string" ? b.session_expires_at : null,
             ...(typeof b.protocol === "string" ? { protocol: b.protocol } : {}), ...(typeof b.expires_at === "string" ? { expires_at: b.expires_at } : {}) };
         },
-        [200, 201],
+        { ok: [200, 201] },
       );
       if (issued.kind !== "ok") return issued;
       const url = admissionUrl(issued.value.url, id, origins);

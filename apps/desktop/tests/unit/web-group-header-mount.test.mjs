@@ -50,7 +50,7 @@ test("the web header offers organization choice before the separator and only si
     const flow = mountWebGroup(root, role);
     doc.querySelector('[data-account-header="web-person"]').click();
     assert.ok(await until(() => [...doc.querySelectorAll('[role="menuitem"]')].some((b) => b.textContent === "Cerrar sesión de one@example.com")));
-    assert.equal([...doc.querySelectorAll('[role="menuitem"]')].some((b) => b.textContent === "Canjear código"), visible, `web role ${role}`);
+    assert.equal([...doc.querySelectorAll('[role="menuitem"]')].some((b) => b.textContent === "Canjear código"), false, `web role ${role}`);
     flow.dispose(); root.replaceChildren();
     const disposeLegacy = mountLegacyPromo(root, role);
     assert.ok(await until(() => doc.body.textContent.includes("Reportar un bug")));

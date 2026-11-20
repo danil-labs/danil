@@ -81,7 +81,7 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
       root.replaceChildren();
       disposeGate = render(() => <Show when={identified() && !signedOut() && !preparing() && !reloading()} fallback={<><ToastStack><UpdateNotice /></ToastStack><Show when={!reloading() && (signedOut() || returnError)} fallback={<SessionLoading onSignOut={preparing() && !reloading() ? () => void exit.leave() : undefined} />}><WorkosAuthPage loginUrl={api.loginUrl(home, lastOrganization())} error={returnError} /></Show></>}><main class="flex h-full flex-col gap-4 overflow-y-auto bg-bg p-10 text-neutral-950" data-web-gate="">
         <ToastStack><UpdateNotice /></ToastStack>
-        <Show when={webBillingEnabled && person}>{profile => billing(profile()).returned()}</Show>
+        <Show when={person}>{profile => billing(profile()).returned()}</Show>
         <h1 class="m-0 font-display text-lead font-bold">{t('common.brand_name')}</h1>
         <Show when={busy()}><p role="status">{t('web.auth.waiting')}</p></Show>
         <Show when={error()}><p role="alert">{t(error())}</p><Button disabled={busy()} onClick={() => void load()}>{t('web.computers.retry')}</Button></Show>
@@ -132,7 +132,7 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
     const [orgNeeded, setOrgNeeded] = createSignal(false);
     const [orgState, setOrgState] = createSignal(organizations.state());
     const [noWorkspace, setNoWorkspace] = createSignal(false);
-    const billing = (profile: PlatformProfile) => windowBilling(transport, profile, organizations, () => rows().find(row => row.id === selection.active() && row.org === profile.active_organization_id), async (id, signal) => { if (person?.active_organization_id !== id) return null; signal.throwIfAborted(); const result = await machines.list(); return result.kind === 'ok' ? organizationMachine(id, result.value) : null; });
+    const billing = (profile: PlatformProfile) => windowBilling(transport, profile, organizations, () => rows().find(row => row.id === selection.active() && row.org === profile.active_organization_id), async (id, signal) => { if (person?.active_organization_id !== id) return null; const result = await machines.list(signal); return result.kind === 'ok' ? organizationMachine(id, result.value) : null; });
     const unsubscribeOrganizations = organizations.subscribe(() => { if (!stopped && !lifetime.signal.aborted) { setOrgNeeded(organizations.needed()); setOrgState(organizations.state()); } });
     // `me` da 403 `workspace_selection_required`: elegir entre sus workspaces; sin ninguno sigue la carga y se reintenta.
     async function withoutWorkspace() {
