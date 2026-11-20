@@ -47,10 +47,11 @@ export async function followCheckout(options: {
   }
 }
 
-export function hostedCheckoutUrl(url: string | null) {
+export function hostedCheckoutUrl(url: string | null, kind: "checkout" | "portal" = "checkout") {
   if (!url) throw new Error("checkout_not_ready");
   const target = new URL(url);
-  if (target.protocol !== "https:" || target.username || target.password) throw new Error("invalid_checkout_url");
+  const origin = kind === "checkout" ? "https://checkout.stripe.com" : "https://billing.stripe.com";
+  if (target.protocol !== "https:" || target.origin !== origin || target.username || target.password) throw new Error("invalid_checkout_url");
   return target.href;
 }
 

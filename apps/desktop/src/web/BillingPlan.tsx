@@ -1,7 +1,8 @@
 import { createResource, createSignal, For, onCleanup, onMount, Show } from "solid-js";
 import { t } from "../lib/i18n";
 import { Button } from "../ui/Button";
-import { BUSINESS_SALES_EMAIL, SettingsPanel, SettingsRow, SettingsSection } from "../features/settings/index";
+import { BUSINESS_SALES_EMAIL } from "../lib/sales-contact";
+import { SettingsPanel, SettingsRow, SettingsSection } from "../features/settings/index";
 import { PlatformSessionError } from "./platform-session";
 import { billingScopes, type BillingScope } from "./billing-v2-scopes";
 import { BillingPromotionField, promotionCodeInvalid } from "./BillingPromotionField";
@@ -94,9 +95,9 @@ export default function BillingPlan(props: { api: Api; role: () => string; conte
     }
     finally { if (!lifetime.signal.aborted) { setPreparing(false); setBusy(false); } }
   }
-  function redirect(url: string | null) {
+  function redirect(url: string) {
     lifetime.signal.throwIfAborted();
-    window.location.assign(hostedCheckoutUrl(url));
+    window.location.assign(url);
   }
   async function upgrade(plan: PlanChoice, version: number) {
     const api = props.api;
@@ -116,7 +117,7 @@ export default function BillingPlan(props: { api: Api; role: () => string; conte
       }, signal, () => setPreparing(true)));
     });
   }
-  async function portal() { const api = props.api; await run("portal", async key => redirect((await api.portal(key)).url)); }
+  async function portal() { const api = props.api; await run("portal", async key => redirect(hostedCheckoutUrl((await api.portal(key)).url, "portal"))); }
   onMount(() => {
     const timer = setInterval(() => {
       if (data.loading) return;

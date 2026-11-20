@@ -64,3 +64,22 @@ test("payment preparation honors expiry during a pending read", async () => {
   }, controller.signal, () => {});
   await assert.rejects(pending, error => error === expired);
 });
+
+test("Stripe checkout and the customer portal accept only their exact HTTPS origins", async () => {
+  const { hostedCheckoutUrl } = await import("../../src/web/billing-v2-return.ts");
+  const checkout = "https://checkout.stripe.com/c/pay/example";
+  const portal = "https://billing.stripe.com/p/session/example";
+  assert.equal(hostedCheckoutUrl(checkout), checkout);
+  assert.equal(hostedCheckoutUrl(portal, "portal"), portal);
+  for (const invalid of [
+    "https://example.test/pay",
+    "https://checkout.stripe.com.example.test/pay",
+    "https://billing.stripe.com.example.test/pay",
+    "https://checkout.stripe.com:444/pay",
+    "http://checkout.stripe.com/pay",
+    "blob:https://checkout.stripe.com/pay",
+    "https://someone@checkout.stripe.com/pay",
+    portal,
+  ]) assert.throws(() => hostedCheckoutUrl(invalid), /invalid_checkout_url/);
+  assert.throws(() => hostedCheckoutUrl(checkout, "portal"), /invalid_checkout_url/);
+});

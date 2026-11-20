@@ -7,6 +7,7 @@ import Minus from "lucide-solid/icons/minus";
 import Plus from "lucide-solid/icons/plus";
 import { createMemo, createResource, createSignal, For, type JSX, onMount, Show } from "solid-js";
 import { manifiesto, t } from "../../lib/i18n";
+import { BUSINESS_SALES_EMAIL } from "../../lib/sales-contact";
 import { Badge } from "../../ui/Badge";
 import { Button } from "../../ui/Button";
 import { Dialog, DialogContent, DialogTitle } from "../../ui/Dialog";
@@ -17,7 +18,6 @@ import { Skeleton } from "../../ui/Skeleton";
 import {
   type ActiveBusiness,
   addableSeats,
-  BUSINESS_SALES_EMAIL,
   type BusinessBillingSource,
   creditError,
   creditReturnOf,

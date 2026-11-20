@@ -7,7 +7,6 @@
 /** Tope de usuarios adicionales en la compra en línea; billing aplica el mismo (`too_many_seats`). */
 export const BUSINESS_MAX_EXTRA_SEATS = 10;
 export const BUSINESS_INCLUDED_SEATS = 3;
-export const BUSINESS_SALES_EMAIL = "hola@danil.ai";
 /** Los paquetes si billing no manda los suyos. */
 export const AI_CREDIT_PACKS_MXN: readonly number[] = [500, 1000, 2500];
 
