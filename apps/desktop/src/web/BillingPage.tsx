@@ -87,10 +87,6 @@ function BillingPage(props: { options: WebSessionDeployment }) {
     return type ? type === "personal" : org.plan === "free" || org.plan === "pro";
   };
   const personal = () => ready()?.items.find(isPersonal);
-  const defaultTeamName = () => {
-    const name = identifiedProfile()?.name.replace(/[\u0000-\u001f\u007f-\u009f<>]/gu, "").trim() ?? "";
-    return [...name].slice(0, 75).join("").trimEnd() + (name ? " Team" : "Team");
-  };
   createEffect(() => {
     const current = ready();
     const id = personal()?.id;
@@ -118,9 +114,9 @@ function BillingPage(props: { options: WebSessionDeployment }) {
               <BillingReturnGate api={personApi} onActive={select} onSettled={() => refreshBilling(n => n + 1)} plan={id => billingV2(transport, id).organization()} />
               <Show when={current().error && !current().busy}><p role="alert">{t("web.billing_v2.error")}</p><Button onClick={() => { setAttemptedPersonal(undefined); void selection.load(); }}>{t("web.computers.retry")}</Button></Show>
               <Show when={!current().busy && !current().error && (!current().active || active())}><Show when={active()} keyed fallback={
-                <BillingPlan api={personApi} newTeam={{ api: personApi, name: defaultTeamName() }} fallbackPlan="free" role={() => ""} context={identifiedProfile()?.id ?? "unselected"} revision={revision()} initialPlan={initialPlan} initialPromotion={initialPromotion} />
+                <BillingPlan api={personApi} fallbackPlan="free" role={() => ""} context={identifiedProfile()?.id ?? "unselected"} revision={revision()} initialPlan={initialPlan} initialPromotion={initialPromotion} />
               }>{org =>
-                <BillingPlan api={billingV2(transport, org.id)} newTeam={isPersonal(org) ? { api: personApi, name: defaultTeamName() } : undefined} fallbackPlan={org.plan} role={() => org.role ?? ""} context={`${identifiedProfile()?.id ?? "unselected"}:${org.id}`} revision={revision()} initialPlan={initialPlan} initialPromotion={initialPromotion} />
+                <BillingPlan api={billingV2(transport, org.id)} fallbackPlan={org.plan} role={() => org.role ?? ""} context={`${identifiedProfile()?.id ?? "unselected"}:${org.id}`} revision={revision()} initialPlan={initialPlan} initialPromotion={initialPromotion} />
               }</Show></Show>
             </>}</Show>
           </Show>
