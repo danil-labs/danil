@@ -46,7 +46,7 @@ import { sangrarTerminal } from "./terminalIndent";
 import { ponerLanzamiento } from "./launchGroups";
 import { freeMcpNoticeAt } from "./free-mcp-notice.ts";
 import { FIN_DE_ARCHIVO, TECLAS_DE_TERMINAL, pideClave } from "./commandInput";
-import { claseDelTramo, finishEdit, highlightSpans, placeLabel, referenceId, searchPlaces, searchTasks, taskLabel, taskTarget, type MentionTarget, type PendingEdit, type PlaceCandidate, type TextEdit, type TaskCandidate, type TaskMention, tramosDelMensaje } from "../../lib/taskMentions";
+import { claseDelTramo, finishEdit, highlightSpans, placeLabel, referenceId, searchPlaces, searchTasks, taskLabel, taskTarget, type MentionTarget, type PendingEdit, type PlaceCandidate, type TextEdit, type TaskCandidate, type TaskMention } from "../../lib/taskMentions";
 import {
   groupRecipients,
   type Recipient,
@@ -136,6 +136,7 @@ import SalidaDeComando from "./CommandOutput";
 import { claseDeSalida, comandoDe, esSalidaDeComando } from "./slashOutput";
 import BloqueDeInterrupcion from "./InterruptionBlock";
 import ColaDeMensajes, { type ColaDeMensajesProps } from "./MessageQueue";
+import { MessageText } from "./MessageText";
 import { Select } from "../../ui/Select";
 import SelectorDeModo from "./ModePicker";
 import { AltoMonotono } from "./MonotonicHeight";
@@ -155,7 +156,6 @@ import Alcance from "./Scope";
 import Suggestions, { type Suggestion } from "./Suggestions";
 import EstadoDelTurno, { type MachineWaitStatus } from "./TurnStatus";
 import { coalesceLiveActivity, visibleActivityMessages, placeActivities, isActivityOnlyMessage, type PresentedActivityBlock, type ActivityChunk } from "./activityBlocks";
-import { WithMentions } from "./WithMentions";
 import { Interrupcion, LineaDeSistema, TraspasoDeProveedor, SiguioTrasElCupo } from "./components/thread/SystemMarkers";
 import { HoraDelTurno, LineaDeProveedor, BotonCopiar, CambioDeContexto } from "./components/thread/MessageDecorations";
 import { TextoConSiguientes, ImagenesEntregadas, type RespuestaRapida } from "./components/thread/AgentAnswer";
@@ -1887,11 +1887,6 @@ export default function Chat(props: ChatProps) {
   // La salida de un `!` viaja con lo siguiente que lea el agente.
   const salidaSinLeer = (i: number) =>
     !props.msgs.slice(i + 1).some((m) => m.role === "user" || m.role === "agent" || m.meta === "shell_reply");
-  // Las menciones cuentan desde el principio del mensaje; el tramo sin comando empieza más adelante.
-  const mencionesDesde = (menciones: TaskMention[] | undefined, desde: number) =>
-    menciones
-      ?.filter((x) => x.start >= desde)
-      .map((x) => ({ ...x, start: x.start - desde, end: x.end - desde }));
   const pieDeTerminal = (i: number) => {
     const respuesta = props.msgs.slice(i + 1).find((m) => m.role === "user" || m.role === "agent" || m.meta === "shell_reply" || m.shell);
     if (respuesta?.meta === "shell_reply") return t("chat.shell.reply", { agent: nombreDelAgente(respuesta.agent) });
@@ -3017,39 +3012,15 @@ export default function Chat(props: ChatProps) {
                             a ser texto plano, la estructura solo existiría
                             mientras se escribe. */}
                         <Show when={m().text}>
-                          <Show
-                            when={entrante()}
-                            fallback={
-                              <p data-thread-search-text={indice()} class="m-0 leading-[1.5] break-words whitespace-pre-wrap">
-                                {/* Index y no For: los tramos se recalculan con objetos nuevos en cada cambio del hilo, y For recrearía cada etiqueta. */}
-                                <Index each={tramosDelMensaje(m().text, commandNames(), skillNames())}>
-                                  {(tramo) => (
-                                    <Show
-                                      when={tramo().kind}
-                                      fallback={
-                                        <WithMentions
-                                          taskMentions={mencionesDesde(m().task_mentions, m().text.length - tramo().text.length)}
-                                          onOpenTask={props.onOpenTask}
-                                        >
-                                          {tramo().text}
-                                        </WithMentions>
-                                      }
-                                    >
-                                      {(kind) => (
-                                        <span data-kind={kind()} class={claseDelTramo(kind(), "enviado")}>
-                                          {tramo().text}
-                                        </span>
-                                      )}
-                                    </Show>
-                                  )}
-                                </Index>
-                              </p>
-                            }
-                          >
-                            <div data-thread-search-text={indice()}>
-                              <Markdown>{m().text}</Markdown>
-                            </div>
-                          </Show>
+                          <MessageText
+                            incoming={entrante()}
+                            text={m().text}
+                            searchBlock={indice()}
+                            taskMentions={m().task_mentions}
+                            commands={commandNames()}
+                            skills={skillNames()}
+                            onOpenTask={props.onOpenTask}
+                          />
                         </Show>
                         <Show when={!m().text && m().meta === "hidden_task"}>
                           <p class="m-0 leading-[1.5] italic text-neutral-500">
