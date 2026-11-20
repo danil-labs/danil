@@ -176,8 +176,6 @@ for (const phase of ["submitting", "awaiting-start"] as const) test(`an authorit
 });
 
 // Con el motor falso de la cola: el traspaso real contra `stop_turn` y `send_message` del falso.
-const STRICT = process.env.R0_STRICT === "1";
-const red = (why: string) => (STRICT ? {} : { todo: why });
 function overFakeEngine() {
   return createRoot(dispose => {
     const engine = createFakeEngine(); engine.start("s", { id: "A", project: "p" });
@@ -199,11 +197,18 @@ test("over the fake engine, interrupt-and-send stops once and the engine accepts
   const f = overFakeEngine(); await f.queue.openSession("s", "p");
   f.queue.enqueue({ id: "q", text: "queued message", provider: "codex", model: null, effort: null, permission_mode: null, attachments: [] });
   await f.handoff.replaceWithQueued(scope, "q"); f.close(); await Promise.resolve();
-  assert.deepEqual(f.engine.stopped, ["A"]); assert.deepEqual(f.engine.history("s").map(entry => entry.prompt), ["queued message"]);
+  assert.deepEqual(f.engine.stopped, ["A"]); assert.deepEqual(f.engine.history("s").map((entry: { prompt: string }) => entry.prompt), ["queued message"]);
   assert.equal(f.engine.calls("send_message").length, 1); f.dispose();
 });
-test("R-Rot over the fake engine: a stop requested after A rotated to B does not stop B", red("Riesgo documentado: runtime.stop llama stop_turn sin turn_id; el motor detiene B (C0/Q1b)"), async () => {
+// Riesgo documentado, no un rojo: `runtime.stop` llama `stop_turn` sin
+// `turn_id` y un motor viejo detiene lo que haya (C0/Q1b; política a1/a2 sin
+// decidir). Se afirma lo de hoy: B se detiene y el traspaso enseña la detención.
+test("R-Rot risk over the fake engine: a stop requested after A rotated to B stops B, and the handoff shows it stopping until B closes", async () => {
   const f = overFakeEngine(); f.engine.close("s", { event: false }); f.engine.start("s", { id: "B", project: "p" });
-  await f.handoff.requestStop(scope);
-  assert.deepEqual(f.engine.stopped, []); f.dispose();
+  const stopping = f.handoff.requestStop(scope);
+  assert.equal(f.handoff.view(scope).stopping, true);
+  await stopping;
+  assert.deepEqual(f.engine.calls("stop_turn").map((entry: { args: unknown }) => entry.args), [{ project: "p", session: "s" }]);
+  assert.deepEqual(f.engine.stopped, ["B"]);
+  f.close(); assert.equal(f.handoff.view(scope).stopping, false); f.dispose();
 });

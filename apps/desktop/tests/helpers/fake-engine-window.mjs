@@ -4,6 +4,14 @@
  * reintento de las colas ocultas (1 s) y la reconciliación de turnos (5 s)
  * solo avanzan con `tick(ms)`. Los `setTimeout` siguen siendo reales: con ellos
  * se asientan las promesas del IPC entre tic y tic.
+ *
+ * Una aserción negativa («no envía», «no detiene») espera antes un hecho que se
+ * ve: una llamada en `ipc` (cada orden que la ventana mandó, con sus argumentos)
+ * o en la bitácora del falso, o un evento de la ventana. Nunca una espera fija.
+ *
+ * Fuera de alcance (anotado por la revisión de la ronda 1): `boot()` no desmonta
+ * la App de la ventana anterior, y por eso cada caso corre en su proceso
+ * (`windowCase`). Desmontarla en `jsdom-app.mjs` es un corte de pruebas aparte.
  */
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -25,22 +33,26 @@ export async function mountWindow(name, { features, probe, before = () => {} } =
   // Una ventana desmontada sigue en este proceso con sus relojes reales: su IPC
   // deja de contestar para que no toque el estado de la prueba siguiente.
   let closed = false;
+  const ipc = [];
   const answers = responses({ service_poll: stream.poll, service_filter: null, load_history: ({ id }) => session(id, turns(0, 4)), ...engine.responses() });
   const live = Object.fromEntries(Object.entries(answers).map(([command, answer]) =>
-    [command, (...args) => (closed ? new Promise(() => {}) : typeof answer === "function" ? answer(...args) : answer)]));
+    [command, (...args) => {
+      if (closed) return new Promise(() => {});
+      if (command !== "service_poll") ipc.push({ command, args: args[0] ?? {} });
+      return typeof answer === "function" ? answer(...args) : answer;
+    }]));
   const app = await boot("listo", `fake-engine-${name}-${++mounted}`, live);
   const document = app.w.document;
   let closes = 0;
   app.w.addEventListener("harness:turno-cerrado", () => { closes++; });
   const window = {
-    app, engine, document,
+    app, engine, document, ipc,
     text: () => document.body.textContent ?? "",
     open: (id) => openTask(app, id),
     /** Avanza el reloj simulado de segundo en segundo, dejando asentarse cada tic. */
     async tick(ms) {
       for (let elapsed = 0; elapsed < ms; elapsed += 1000) { mock.timers.tick(Math.min(1000, ms - elapsed)); await sleep(40); }
     },
-    settle: (ms = 150) => sleep(ms),
     /** Escribe en la caja y pulsa Enter, como la persona. */
     async type(text) {
       const input = document.querySelector("textarea");
@@ -62,6 +74,8 @@ export async function mountWindow(name, { features, probe, before = () => {} } =
     sends: (session, since = 0) => engine.log.slice(since).filter((entry) => entry.command === "send_message" && entry.args.session === session),
     accepted: (session, since = 0) => window.sends(session, since).filter((entry) => typeof entry.outcome === "string"),
     mark: () => engine.log.length,
+    /** Las órdenes `command` que la ventana mandó desde `since` (índice de `ipc`). */
+    sent: (command, since = 0) => ipc.slice(since).filter((entry) => entry.command === command),
     /** Cuántos `done` procesó la ventana (`harness:turno-cerrado`). */
     closes: () => closes,
     unmount: () => { closed = true; mock.timers.reset(); app.w.close(); },
@@ -76,6 +90,13 @@ export const red = (why) => (STRICT ? {} : { todo: why });
 const CASE = process.env.FAKE_ENGINE_WINDOW_CASE;
 /** Si este proceso corre un solo caso de `windowCase`: las demás pruebas del archivo no se declaran. */
 export const inWindowCase = CASE !== undefined;
+let matched = false;
+// Un caso pedido que no existe no puede pasar en verde con cero pruebas.
+if (inWindowCase) process.once("exit", () => {
+  if (matched) return;
+  process.stderr.write(`FAKE_ENGINE_WINDOW_CASE=${JSON.stringify(CASE)} no coincide con ningún caso de este archivo\n`);
+  process.exitCode = 1;
+});
 /**
  * Un caso con ventana, en su propio proceso. Dos ventanas en un proceso se
  * pisan: `boot()` reescribe los globales (`document`, `window`…) y la anterior
@@ -89,7 +110,7 @@ function childEnv(name) {
   return { ...env, FAKE_ENGINE_WINDOW_CASE: name };
 }
 export function windowCase(file, name, options, body) {
-  if (CASE !== undefined) { if (CASE === name) test(name, body); return; }
+  if (CASE !== undefined) { if (CASE === name) { matched = true; test(name, body); } return; }
   test(name, options, async () => {
     const child = spawn(process.execPath, ["--test", "--test-force-exit", "--test-reporter=spec", fileURLToPath(file)], { env: childEnv(name) });
     let output = "";
