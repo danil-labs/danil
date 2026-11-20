@@ -4,16 +4,14 @@
  * `pending_requests` → `answer_question` → `appendPersisted`), y luego los
  * eventos `chat` del agente que reanuda.
  *
- * Las pruebas que reproducen el fallo van como `todo`: corren y enseñan su
- * rojo, pero no rompen la cadena. Con `R0_STRICT=1` corren como normales.
+ * Invariante (B1): tras el acuse, la tarjeta no vuelve con los repintados
+ * siguientes. H2 registra el comportamiento actual de un fallo.
  * Monta `dist/`.
  */
 import assert from "node:assert/strict";
 import test from "node:test";
 import { boot, sleep } from "../helpers/jsdom-app.mjs";
 
-const STRICT = process.env.R0_STRICT === "1";
-const rojo = (why) => (STRICT ? {} : { todo: why });
 
 const PREGUNTA = { id: "q", question: "¿Qué base de datos?", header: null, options: [{ value: "pg", label: "Postgres" }, { value: "sqlite", label: "SQLite" }], multiple: false, free_text: false };
 const RESPUESTA = { turn: "a1", question: "q", question_text: PREGUNTA.question, chosen: ["pg"], text: "Postgres", source: "persona", when: 2 };
@@ -95,7 +93,7 @@ test("control: con el acuse de answer_question la tarjeta se va", async () => {
   assert.equal(card(app), null, "la tarjeta sigue tras el acuse");
 });
 
-test("regresión (ventana): tras contestar con acuse, la tarjeta no reaparece con el siguiente segment_saved", rojo("roja mientras H1 se reproduzca"), async () => {
+test("regresión (ventana): tras contestar con acuse, la tarjeta no reaparece con el siguiente segment_saved", async () => {
   // El disco ya trae la respuesta: si la ventana releyera, la tarjeta no volvería.
   let disk = [USER, ASK];
   const app = await boot("listo", "question-card-segment", responses({

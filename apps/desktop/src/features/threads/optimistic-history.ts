@@ -1,7 +1,9 @@
 import type { HistoryPager, Msg, Session } from "../chat/index.ts";
 import { conservarEnOrden, conservarPorClave } from "../../lib/sessionRefresh.ts";
 
-type Optimistic = { original: Msg; row: Msg; acknowledged?: number };
+// `persisted`: a row the engine already confirmed, painted in `base`. It keeps its
+// confirmation revision until a read begun after it brings its turn.
+type Optimistic = { original: Msg; row: Msg; acknowledged?: number; persisted?: true };
 export type OptimisticHistoryState = { optimistic?: Optimistic[]; readRevision?: number };
 type HistoryState = OptimisticHistoryState & { base: Msg[]; vivo: Msg[] };
 type ReadProvenance = { id: string; generation: number; revision: number };
@@ -14,6 +16,14 @@ export function hasUnsettledPrefix(thread: HistoryState | undefined) {
     if (!row.turno && !row.tramo && (row.role === "agent" || row.meta === "usó")) unbound = true;
     return false;
   }) ?? false;
+}
+
+/** A confirmed row the read does not bring yet stays at the end of the durable history. */
+function keepConfirmed(previous: Msg[], read: Msg[], entries: Optimistic[]) {
+  const kept = entries.flatMap(entry => entry.persisted && !read.includes(entry.row) ? [entry.row] : []);
+  if (!kept.length) return read;
+  const base = [...read, ...kept];
+  return base.length === previous.length && base.every((row, i) => row === previous[i]) ? previous : base;
 }
 
 /** Owns send identity and the causal frontier required to replace it with durable history. */
@@ -35,6 +45,14 @@ export function createOptimisticHistory<T extends HistoryState>(deps: {
       ...(all[session].optimistic ?? []), ...messages.map(row => ({ original: row, row })),
     ] } }));
   }
+  function appendConfirmed(session: string, messages: Msg[]) {
+    if (deps.disposed() || !messages.length) return;
+    const acknowledged = ++revision;
+    deps.writeBase(session, before => [...before, ...messages]);
+    deps.update(all => ({ ...all, [session]: { ...all[session], optimistic: [
+      ...(all[session].optimistic ?? []), ...messages.map(row => ({ original: row, row, acknowledged, persisted: true as const })),
+    ] } }));
+  }
   function acknowledgeOptimistic(session: string, messages: Msg[]) {
     if (deps.disposed()) return;
     const acknowledged = ++revision;
@@ -52,7 +70,7 @@ export function createOptimisticHistory<T extends HistoryState>(deps: {
     const entry = deps.current()[session]?.optimistic?.find(row => row.original === target);
     const previous = entry?.row ?? target, next = { ...previous, ...patch };
     if (entry) entry.row = next;
-    if (!deps.disposed()) (entry ? deps.writeLive : deps.writeBase)(session, before => before.map(row => row === previous ? next : row));
+    if (!deps.disposed()) (entry && !entry.persisted ? deps.writeLive : deps.writeBase)(session, before => before.map(row => row === previous ? next : row));
   }
   function rejectOptimistic(session: string, messages: Msg[]) {
     if (deps.disposed()) return;
@@ -81,9 +99,9 @@ export function createOptimisticHistory<T extends HistoryState>(deps: {
   function reconcile(previous: T | undefined, incoming: Msg[], persistedIds: ReadonlySet<string>, prepend: boolean, readRevision?: number) {
     const optimistic = (previous?.optimistic ?? []).filter(entry =>
       !(entry.row.turno && persistedIds.has(entry.row.turno)) &&
-      !(entry.acknowledged !== undefined && readRevision !== undefined && readRevision > entry.acknowledged));
-    const persisted = (prepend ? conservarPorClave : conservarEnOrden)(previous?.base ?? [], incoming);
-    return { base: persisted, optimistic,
+      !(entry.acknowledged !== undefined && readRevision !== undefined && readRevision > entry.acknowledged && !(entry.persisted && entry.row.turno)));
+    const read = (prepend ? conservarPorClave : conservarEnOrden)(previous?.base ?? [], incoming);
+    return { base: keepConfirmed(previous?.base ?? [], read, optimistic), optimistic,
       readRevision: readRevision ?? previous?.readRevision };
   }
   const operations = new WeakMap<HistoryPager<Session["turns"][number]>, { recovery?: Session }>();
@@ -116,7 +134,7 @@ export function createOptimisticHistory<T extends HistoryState>(deps: {
     }));
     return session;
   }
-  return { appendOptimistic, acknowledgeOptimistic, reviseOptimistic, rejectOptimistic, accepts, reconcile, readPage, older, read,
+  return { appendOptimistic, appendConfirmed, acknowledgeOptimistic, reviseOptimistic, rejectOptimistic, accepts, reconcile, readPage, older, read,
     close: (pager: HistoryPager<Session["turns"][number]>) => { operations.delete(pager); pager.close(); },
     provenance: (session: Session) => reads.get(session) };
 }

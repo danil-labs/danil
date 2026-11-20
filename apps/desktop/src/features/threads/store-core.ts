@@ -234,9 +234,8 @@ export function createThreadsCore(deps: {
     if (disposed || messages.length === 0) return;
     anexar(session, before => [...before, ...messages], workspace);
   }
-  function appendPersisted(session: string, messages: Msg[]) {
-    if (!disposed && messages.length) asentar(session, before => [...before, ...messages]);
-  }
+  /** A row the engine confirmed: it survives repaints until a read begun after it brings its turn. */
+  const appendPersisted = optimisticHistory.appendConfirmed;
   function commitUniqueTurn(session: string, message: Msg) {
     if (!disposed) asentar(session, before => before.some(row => row.turno === message.turno) ? before : [...before, message]);
   }
@@ -288,7 +287,7 @@ export function createThreadsCore(deps: {
   function resetService() {
     deltasPorCuadro.vaciar(); workspaceThreads.clear();
     assistantHistory.clear(); activity.clear(); activityChanged();
-    setHilos(before => Object.fromEntries(Object.entries(before).map(([id, thread]) => [id, { ...thread, vivo: thread.optimistic?.map(entry => entry.row) ?? [] }])));
+    setHilos(before => Object.fromEntries(Object.entries(before).map(([id, thread]) => [id, { ...thread, vivo: thread.optimistic?.flatMap(entry => entry.persisted ? [] : [entry.row]) ?? [] }])));
   }
   function adoptDraft(id: string) {
     deltasPorCuadro.vaciar();

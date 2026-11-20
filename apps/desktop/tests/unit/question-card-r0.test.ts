@@ -8,9 +8,9 @@
  * dos derivados viven dentro de sus componentes: aquí van copiados sin
  * cambios, no extraídos, para no tocar código de producto.
  *
- * Las pruebas que reproducen el fallo van como `todo`: corren y enseñan su
- * rojo en la salida, pero no rompen la cadena. Con `R0_STRICT=1` corren como
- * pruebas normales, para ver el rojo con su código de salida.
+ * Invariante (B1): la fila que `appendPersisted` anexa tras el acuse sobrevive
+ * a cualquier repintado o lectura hasta que la trae una lectura iniciada
+ * después del acuse.
  */
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -19,8 +19,6 @@ import type { ChatEvent, Msg, Session } from "../../src/features/chat/index.ts";
 import type { Respuesta } from "../../src/features/chat/Questions.tsx";
 import { createThreadsCore } from "../../src/features/threads/store-core.ts";
 
-const STRICT = process.env.R0_STRICT === "1";
-const rojo = (why: string) => (STRICT ? {} : { todo: why });
 
 // Copia literal del derivado de `Chat.tsx:1856-1874`.
 function preguntaPendiente(msgs: readonly Msg[]): Msg | undefined {
@@ -100,7 +98,7 @@ test("control: el acuse de answer_question (appendPersisted) quita la tarjeta en
   f.dispose();
 });
 
-test("H1: un segment_saved tras el acuse repinta desde pager.loaded y la tarjeta vuelve", rojo("H1 reproducida: pintarHistoria reemplaza base con la lectura vieja"), async () => {
+test("H1: un segment_saved tras el acuse repinta desde pager.loaded y la tarjeta no vuelve", async () => {
   const f = fixture();
   await f.open([T_USER, T_PREGUNTA]);
   f.store.appendPersisted("s", [filaDelAcuse()]);
@@ -124,7 +122,7 @@ test("H1 (control del invariante): si pager.loaded trae la respuesta, el mismo s
   f.dispose();
 });
 
-test("H3: una lectura iniciada antes de la respuesta y asentada después pisa la fila del acuse", rojo("H3 reproducida: la fila del acuse no tiene frontera causal"), async () => {
+test("H3: una lectura iniciada antes de la respuesta y asentada después no pisa la fila del acuse", async () => {
   const f = fixture();
   await f.open([T_USER, T_PREGUNTA]);
   const resolve = f.nextRead()!;
@@ -144,20 +142,26 @@ test("H3 (control): una lectura iniciada después de la respuesta la trae y la t
   f.nextRead([T_USER, T_PREGUNTA, T_RESPUESTA]);
   assert.equal(f.store.acceptSession("s", await f.store.read("p", "s"), false, 1), true);
   assert.equal(preguntaPendiente(f.store.messages()), undefined);
+  assert.deepEqual(f.store.rows().s.base.map((m) => m.turno), ["u1", "a1", "u2"], "la lectura que la trae suelta la fila del acuse sin duplicarla");
+  assert.deepEqual(f.store.rows().s.optimistic, []);
   f.dispose();
 });
 
-test("H3 (copia atrasada): latest() con una copia que aún no trae la respuesta también devuelve la tarjeta", rojo("H3 reproducida con una fuente atrasada (copia del relay)"), async () => {
+test("H3 (copia atrasada): latest() con una copia que aún no trae la respuesta no devuelve la tarjeta", async () => {
   const f = fixture();
   await f.open([T_USER, T_PREGUNTA]);
   f.store.appendPersisted("s", [filaDelAcuse()]);
   f.nextRead([T_USER, T_PREGUNTA]); // el relay o el disco todavía no tienen el turno u2
   await f.store.latest("s");
   assert.equal(preguntaPendiente(f.store.messages()), undefined, "la tarjeta reaparece con una lectura sin el turno de la respuesta");
+  f.nextRead([T_USER, T_PREGUNTA, T_RESPUESTA]); // la copia se pone al día
+  await f.store.latest("s");
+  assert.deepEqual(f.store.rows().s.base.map((m) => m.turno), ["u1", "a1", "u2"], "la lectura que la trae suelta la fila del acuse sin duplicarla");
+  assert.deepEqual(f.store.rows().s.optimistic, []);
   f.dispose();
 });
 
-test("regresión: tras contestar con acuse, la tarjeta desaparece y no reaparece con el siguiente segment_saved", rojo("roja mientras H1 se reproduzca"), async () => {
+test("regresión: tras contestar con acuse, la tarjeta desaparece y no reaparece con el siguiente segment_saved", async () => {
   const f = fixture();
   await f.open([T_USER, T_PREGUNTA]);
   f.store.appendPersisted("s", [filaDelAcuse()]);
