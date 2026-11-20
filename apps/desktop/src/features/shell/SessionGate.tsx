@@ -79,6 +79,10 @@ export function SessionGate(props: { children: JSX.Element }) {
     }
   }
   createEffect(() => { if (view().t === "linking" && !linker()) void link(); });
+  // Con la sesión confirmada aquí, el alta no vuelve a preguntar por la cuenta.
+  createEffect(() => { if (view().t === "open" && status()?.state === "connected") rememberAccountWelcome("connected"); });
+  // Un login por código termina con `danil-connect`, no al volver de `signIn`.
+  createEffect(() => { if (signing() && status()?.state === "connected") { setSigning(false); setConfirmed(true); } });
 
   async function signIn() {
     setSigning(true);
@@ -87,10 +91,10 @@ export function SessionGate(props: { children: JSX.Element }) {
       await (await origin()).signIn();
       await read();
       // Recién entrado: no se vuelve a preguntar «Continuar como».
-      if (status()?.state === "connected") setConfirmed(true);
+      if (status()?.state === "connected") { setConfirmed(true); setSigning(false); }
+      else if (status()?.state !== "pending") setSigning(false);
     } catch (e) {
       setProblem((e as { detail?: string; code?: string } | null)?.detail ?? (e as { code?: string } | null)?.code ?? "failed");
-    } finally {
       setSigning(false);
     }
   }
@@ -148,6 +152,7 @@ export function SessionGate(props: { children: JSX.Element }) {
                     </div>
                   }>
                     <p class="m-0 flex items-center gap-2 text-sm text-neutral-700" role="status"><Spinner size={14} />{t("danil.welcome.waiting")}</p>
+                    <Show when={status()?.user_code}>{(code) => <strong class="self-start select-all rounded-sm bg-surface-muted px-3 py-2 font-mono text-2xl font-semibold tracking-[0.12em] text-neutral-950">{code()}</strong>}</Show>
                   </Show>
                   <Show when={problem()}>{(code) => <p class="m-0 text-xs text-error-strong" role="alert">{said(code())}</p>}</Show>
                 </Match>
