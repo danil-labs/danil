@@ -2,6 +2,7 @@ import { createSignal } from "solid-js";
 import { escribirPref, leerPref } from "../../lib/prefs.ts";
 import { adoptionTarget, adoptionTargetOf, adoptLocals, prefsAdoptionMemory, type AdoptionClaimed, type AdoptionFailure } from "./account-adoption.ts";
 import { applyMoves, movesFor, prefsPendingUnions, retryUnions } from "./account-transfers.ts";
+import { engineFeatures } from "./engine-features.ts";
 import type { AdoptionProgress } from "./first-login.ts";
 import type { PersonalOpener, PersonalOutcome } from "./personal-open.ts";
 
@@ -49,8 +50,8 @@ async function catalog(send: Send, context: string) {
 }
 
 /** El destino local se fija explícitamente: abrir un workspace remoto no puede desviar la creación. */
-/** `features`: lo que anuncia el motor de esta ventana; sin él se usa la fila de `machine_list`, que por la flota puede venir sin rasgos. */
-export function createAccountWorkspaces(invoke: Invoke, native: boolean, changed: () => void, features?: () => Promise<readonly string[] | null>) {
+/** `features`: lo que anuncia el motor de esta ventana; si no contesta, la fila de `machine_list`, que por la flota puede venir sin rasgos. */
+export function createAccountWorkspaces(invoke: Invoke, native: boolean, changed: () => void, features: () => Promise<readonly string[] | null> = engineFeatures) {
   let local: string | null = null;
   let extension = false;
   let transfer = false;

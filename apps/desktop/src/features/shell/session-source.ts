@@ -2,7 +2,7 @@
  * La única interfaz de la sesión de la persona para la ventana. Sin `person_session_v1` la da
  * `desk_auth`; con él, la da el motor y la del llavero de Desk no cuenta.
  */
-export type PersonSession = { state?: string; email?: string | null; sessions?: { email?: string | null }[] } | null;
+export type PersonSession = { state?: string; email?: string | null; sessions?: { email?: string | null }[]; user_code?: string | null } | null;
 export type SessionSource = {
   origin: "desk" | "engine";
   read: () => Promise<PersonSession>;
