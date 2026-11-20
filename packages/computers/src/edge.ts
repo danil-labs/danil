@@ -96,9 +96,10 @@ export function personOf(body: unknown): EdgePerson {
 export function edgeIdentity(transport: EdgeTransport, origin: string) {
   return {
     /** La entrada de identity (WorkOS); `returnTo` debe ser una de sus vueltas exactas (`WEB_RETURN_URLS`). */
-    loginUrl(returnTo: string) {
+    loginUrl(returnTo: string, prompt?: "select_account") {
       const url = new URL(`${origin}/v1/identity/login`);
       url.searchParams.set("return_to", returnTo);
+      if (prompt) url.searchParams.set("prompt", prompt);
       return url.href;
     },
     async me(): Promise<EdgePerson> {

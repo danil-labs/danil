@@ -24,9 +24,9 @@ export type DanilMenu = {
 const NOTE = "m-0 px-2 py-1.5 text-caption text-neutral-500";
 
 /** «Agregar workspace» en el «+»: solo con sesión. */
-export function DanilAddEntry(props: { danil: DanilMenu; onStep: () => void }) {
+export function DanilAddEntry(props: { danil: DanilMenu; web?: boolean; onStep: () => void }) {
   return (
-    <Show when={props.danil.signedIn}>
+    <Show when={props.web || props.danil.signedIn}>
       <button
         type="button"
         role="menuitem"
@@ -34,7 +34,7 @@ export function DanilAddEntry(props: { danil: DanilMenu; onStep: () => void }) {
         data-add-danil-step=""
         onClick={() => {
           props.onStep();
-          props.danil.onList();
+          if (!props.web) props.danil.onList();
         }}
       >
         {t("shell.workspaces.add_danil")}
