@@ -18,6 +18,9 @@ import { UpdateNotice } from './UpdateNotice';
 import { mountWindow } from './window';
 import './phrases';
 import { sessionStartup } from './startup-reader';
+import { freeModelScope } from '../lib/free-model-policy';
+import { freeRouterEngine, freeRouterWebEdge } from '../features/settings/free-router-adapters';
+import { setFreeRouterHost, signOutPlatform } from '../features/settings/free-router-session';
 
 declare const __DANIL_WEB_RELAY_ORIGINS__: string[];
 const FIRST_RETRY_MS = 1000;
@@ -197,7 +200,7 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
       await run(async () => { await selection.choose(id); window.location.assign(home); });
     }
     const exit = sessionExit({
-      closed: () => stopped || signedOut(), cancel: () => clearTimeout(timer), logout: () => api.logout(), signedOut: () => { forgetMachineNames(); expired(); },
+      closed: () => stopped || signedOut(), cancel: () => clearTimeout(timer), logout: async () => { await signOutPlatform().catch(() => {}); await api.logout(); }, signedOut: () => { forgetMachineNames(); expired(); },
       unavailable: () => { if (!gone()) { setPreparing(false); setError('web.platform.unavailable'); gate(); } },
     });
     async function load() {
@@ -218,6 +221,9 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
         disposeGate?.();
         disposeGate = undefined;
         mountedBefore = true;
+        // El Free router de plataforma con la cookie de esta sesión y su workspace activo (`/me.workspace`).
+        setFreeRouterHost({ edge: freeRouterWebEdge(transport), engine: policy => freeRouterEngine(policy ? freeModelScope(policy) : undefined),
+          identity: async () => (person ? { sub: person.id, list: { active_workspace_id: person.workspace, items: rows() } } : null) });
         windowApp = mountWindow({ machines, contextMachines: context => contextMachines(`${options.origin}/v1`, transport, __DANIL_WEB_RELAY_ORIGINS__, context), permits, relayOrigin: __DANIL_WEB_RELAY_ORIGINS__[0],
           profile: startup.accountProfile(lifetime.signal), onUnauthorized: expired,
           onUnavailable: () => { setError('web.platform.unavailable'); gate(); later(); },

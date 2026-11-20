@@ -33,6 +33,8 @@ if (capabilities().nativeWindow) {
     organizations: () => (organizations ??= import("../features/shell/organization-desktop").then((m) => m.desktopOrganizations())),
   });
   void askGuestChannels().then((channels) => setCapabilities({ ...capabilities(), wsl: channels.includes("wsl") }));
+  // El Free router de plataforma con la sesión de Desk; fuera de la carga inicial.
+  void import("../features/settings/free-router-desk").then((m) => m.installDeskFreeRouter());
 }
 
 /**

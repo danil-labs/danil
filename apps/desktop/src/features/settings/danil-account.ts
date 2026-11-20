@@ -5,6 +5,7 @@
  * entrar con otra. La ventana nunca ve tokens.
  */
 import { cancelEdgeWrites } from "../../lib/edge.ts";
+import { signOutPlatform } from "./free-router-session.ts";
 import { invoke } from "../../lib/invoke.ts";
 import { forgetMachineNames } from "../machines/known-names.ts";
 
@@ -95,8 +96,9 @@ export function signInWithWorkspace(name: string, _workspace: string): Promise<D
   return signInWithBrowser(name);
 }
 
-/** Cierra la sesión de esta instalación en `identity` y la borra del llavero. */
-export function signOut(): Promise<DanilConnectStatus> {
+/** Cierra la sesión de esta instalación en `identity` y la borra del llavero; antes, el Free router suelta a la persona. */
+export async function signOut(): Promise<DanilConnectStatus> {
+  await signOutPlatform().catch(() => {});
   cancelEdgeWrites();
   forgetMachineNames();
   return invoke<DanilConnectStatus>("danil_sign_out");
