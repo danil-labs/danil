@@ -49,7 +49,8 @@ async function catalog(send: Send, context: string) {
 }
 
 /** El destino local se fija explícitamente: abrir un workspace remoto no puede desviar la creación. */
-export function createAccountWorkspaces(invoke: Invoke, native: boolean, changed: () => void) {
+/** `features`: lo que anuncia el motor de esta ventana; sin él se usa la fila de `machine_list`, que por la flota puede venir sin rasgos. */
+export function createAccountWorkspaces(invoke: Invoke, native: boolean, changed: () => void, features?: () => Promise<readonly string[] | null>) {
   let local: string | null = null;
   let extension = false;
   let transfer = false;
@@ -65,6 +66,12 @@ export function createAccountWorkspaces(invoke: Invoke, native: boolean, changed
   const [adoptionProgress, setAdoptionProgress] = createSignal<AdoptionProgress | null>(null);
   const [personalOutcome, setPersonalOutcome] = createSignal<PersonalOutcome | null>(null);
   let reported: string | null = null;
+  // Por qué no se adoptó en el último repaso: se registra una vez por causa, nunca en silencio.
+  let skipped: string | null = null;
+  const skip = (cause: string | null) => {
+    if (cause && cause !== skipped) console.warn("[adoption] not run", { cause });
+    skipped = cause;
+  };
   let version = 0;
   // El último repaso no terminó (un error o una página del catálogo que no fue 200): `free` no es confiable.
   let failed = false;
@@ -113,6 +120,8 @@ export function createAccountWorkspaces(invoke: Invoke, native: boolean, changed
       try {
         const machines = await invoke<{ id: string; local?: boolean; features?: string[] }[]>("machine_list");
         const self = machines.find((m) => m.local);
+        const announced = self && features ? await features().catch(() => null) : null;
+        if (self && announced) self.features = [...announced];
         if (epoch !== version) return;
         if (!self) { local = null; extension = false; transfer = false; changed(); return; }
         local = self.id;
@@ -123,10 +132,12 @@ export function createAccountWorkspaces(invoke: Invoke, native: boolean, changed
         adoption ||= !!(self.features?.includes("account_adoption_v1") && self.features.includes("account_adoption_proof_v1"));
         // Al iniciar sesión, antes de lanzar turnos: los locales pasan a la organización personal.
         const personal = adoption ? await adoptionTargetOf(groups, send) : adoptionTarget(groups);
+        skip(!adoption ? "engine_features" : !groups.length ? "no_session" : held ? null : !personal && !opener ? "no_personal" : null);
         // Sin la personal abierta no se adoptaba nada: se abre y el repaso con la lista nueva liga.
         if (adoption && !held && !personal && opener && !adopting && (await hasAdoptionCandidates())) {
           const opened = await opener.open(groups);
           setPersonalOutcome(opened);
+          if (opened.kind !== "open") skip(`personal_${opened.kind}:${opened.cause}`);
           if (opened.kind === "open" || epoch !== version) return;
         }
         if (adoption && !held && personal && !adopting && adoptionUnavailable !== personal.context_id) {
