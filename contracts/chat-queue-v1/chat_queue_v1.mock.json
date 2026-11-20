@@ -1,0 +1,361 @@
+{
+  "_comment": "Mock con guion de chat_queue_v1 para el arnés de la ventana (T0 en danil) y para la prueba del manifiesto. Valores de mentira.",
+  "format": {
+    "version": 1,
+    "features": [
+      "chat_queue_v1"
+    ],
+    "scenario": "{name, description, steps: [step], expect: {launched_turns, stop_requested}}",
+    "call_step": "{call: {command, args}, result} o {call: {command, args}, error}: el arnés espera esta llamada en este orden; command debe ser igual y args debe contener cada clave y valor del paso (la llamada puede traer más claves). Contesta result como respuesta correcta o error como error RPC. starts_turn: el send_message lanzó ese turno (running).",
+    "engine_step": "{engine, turn_id?}: lo que pasa en el motor entre dos llamadas, sin llamada del cliente. El arnés no contesta nada: avanza al paso siguiente. engine: turn_starting, turn_running, turn_closing, turn_closed (con turn_id) o engine_restart (los turnos no sobreviven; las claves de clientMessageId sí).",
+    "end": "Una llamada que no coincide con el paso siguiente, o que llega después del último, es un fallo del escenario.",
+    "expect": "launched_turns: cuántos turnos lanzó send_message en todo el escenario; stop_requested: los turn_id con stop_turn_if aceptado. Lo comprueba quien replica el guion, no el arnés."
+  },
+  "scenarios": [
+    {
+      "name": "running_a",
+      "description": "Turno running con turn_id A: Detener lo pide, A cierra y la tarea queda idle.",
+      "steps": [
+        {
+          "engine": "turn_running",
+          "turn_id": "7f3c2a1e-0b4d-4c8e-9a51-2d6f0e8b1a01"
+        },
+        {
+          "call": {
+            "command": "get_turn",
+            "args": {
+              "project": "prj_fixture",
+              "session": "ses_fixture"
+            }
+          },
+          "result": {
+            "state": "running",
+            "turn_id": "7f3c2a1e-0b4d-4c8e-9a51-2d6f0e8b1a01"
+          }
+        },
+        {
+          "call": {
+            "command": "stop_turn_if",
+            "args": {
+              "project": "prj_fixture",
+              "session": "ses_fixture",
+              "turnId": "7f3c2a1e-0b4d-4c8e-9a51-2d6f0e8b1a01"
+            }
+          },
+          "result": {
+            "outcome": "stop_requested"
+          }
+        },
+        {
+          "engine": "turn_closing",
+          "turn_id": "7f3c2a1e-0b4d-4c8e-9a51-2d6f0e8b1a01"
+        },
+        {
+          "call": {
+            "command": "get_turn",
+            "args": {
+              "project": "prj_fixture",
+              "session": "ses_fixture"
+            }
+          },
+          "result": {
+            "state": "closing",
+            "turn_id": "7f3c2a1e-0b4d-4c8e-9a51-2d6f0e8b1a01"
+          }
+        },
+        {
+          "call": {
+            "command": "stop_turn_if",
+            "args": {
+              "project": "prj_fixture",
+              "session": "ses_fixture",
+              "turnId": "7f3c2a1e-0b4d-4c8e-9a51-2d6f0e8b1a01"
+            }
+          },
+          "result": {
+            "outcome": "closing"
+          }
+        },
+        {
+          "engine": "turn_closed",
+          "turn_id": "7f3c2a1e-0b4d-4c8e-9a51-2d6f0e8b1a01"
+        },
+        {
+          "call": {
+            "command": "get_turn",
+            "args": {
+              "project": "prj_fixture",
+              "session": "ses_fixture"
+            }
+          },
+          "result": {
+            "state": "idle"
+          }
+        }
+      ],
+      "expect": {
+        "launched_turns": 0,
+        "stop_requested": [
+          "7f3c2a1e-0b4d-4c8e-9a51-2d6f0e8b1a01"
+        ]
+      }
+    },
+    {
+      "name": "rotation_a_to_b",
+      "description": "La ventana lee A; antes de que llegue Detener, A cierra y otro cliente lanza B. stop_turn_if(A) da turn_changed y B sigue vivo.",
+      "steps": [
+        {
+          "engine": "turn_running",
+          "turn_id": "7f3c2a1e-0b4d-4c8e-9a51-2d6f0e8b1a01"
+        },
+        {
+          "call": {
+            "command": "get_turn",
+            "args": {
+              "project": "prj_fixture",
+              "session": "ses_fixture"
+            }
+          },
+          "result": {
+            "state": "running",
+            "turn_id": "7f3c2a1e-0b4d-4c8e-9a51-2d6f0e8b1a01"
+          }
+        },
+        {
+          "engine": "turn_closed",
+          "turn_id": "7f3c2a1e-0b4d-4c8e-9a51-2d6f0e8b1a01"
+        },
+        {
+          "engine": "turn_running",
+          "turn_id": "c41d9e70-5a2b-4f63-8e1c-9b7a3d2f6e02"
+        },
+        {
+          "call": {
+            "command": "stop_turn_if",
+            "args": {
+              "project": "prj_fixture",
+              "session": "ses_fixture",
+              "turnId": "7f3c2a1e-0b4d-4c8e-9a51-2d6f0e8b1a01"
+            }
+          },
+          "result": {
+            "outcome": "turn_changed"
+          }
+        },
+        {
+          "call": {
+            "command": "get_turn",
+            "args": {
+              "project": "prj_fixture",
+              "session": "ses_fixture"
+            }
+          },
+          "result": {
+            "state": "running",
+            "turn_id": "c41d9e70-5a2b-4f63-8e1c-9b7a3d2f6e02"
+          }
+        }
+      ],
+      "expect": {
+        "launched_turns": 0,
+        "stop_requested": []
+      }
+    },
+    {
+      "name": "starting_not_controllable",
+      "description": "Turno reservado sin control: get_turn da starting y stop_turn_if no lo detiene.",
+      "steps": [
+        {
+          "engine": "turn_starting",
+          "turn_id": "7f3c2a1e-0b4d-4c8e-9a51-2d6f0e8b1a01"
+        },
+        {
+          "call": {
+            "command": "get_turn",
+            "args": {
+              "project": "prj_fixture",
+              "session": "ses_fixture"
+            }
+          },
+          "result": {
+            "state": "starting",
+            "turn_id": "7f3c2a1e-0b4d-4c8e-9a51-2d6f0e8b1a01"
+          }
+        },
+        {
+          "call": {
+            "command": "stop_turn_if",
+            "args": {
+              "project": "prj_fixture",
+              "session": "ses_fixture",
+              "turnId": "7f3c2a1e-0b4d-4c8e-9a51-2d6f0e8b1a01"
+            }
+          },
+          "result": {
+            "outcome": "not_controllable"
+          }
+        },
+        {
+          "engine": "turn_running",
+          "turn_id": "7f3c2a1e-0b4d-4c8e-9a51-2d6f0e8b1a01"
+        },
+        {
+          "call": {
+            "command": "get_turn",
+            "args": {
+              "project": "prj_fixture",
+              "session": "ses_fixture"
+            }
+          },
+          "result": {
+            "state": "running",
+            "turn_id": "7f3c2a1e-0b4d-4c8e-9a51-2d6f0e8b1a01"
+          }
+        }
+      ],
+      "expect": {
+        "launched_turns": 0,
+        "stop_requested": []
+      }
+    },
+    {
+      "name": "idle",
+      "description": "Sin turno: get_turn da idle, stop_turn_if da not_running sin efectos y queue_ready da true.",
+      "steps": [
+        {
+          "call": {
+            "command": "get_turn",
+            "args": {
+              "project": "prj_fixture",
+              "session": "ses_fixture"
+            }
+          },
+          "result": {
+            "state": "idle"
+          }
+        },
+        {
+          "call": {
+            "command": "stop_turn_if",
+            "args": {
+              "project": "prj_fixture",
+              "session": "ses_fixture",
+              "turnId": "7f3c2a1e-0b4d-4c8e-9a51-2d6f0e8b1a01"
+            }
+          },
+          "result": {
+            "outcome": "not_running"
+          }
+        },
+        {
+          "call": {
+            "command": "queue_ready",
+            "args": {
+              "project": "prj_fixture",
+              "session": "ses_fixture"
+            }
+          },
+          "result": true
+        }
+      ],
+      "expect": {
+        "launched_turns": 0,
+        "stop_requested": []
+      }
+    },
+    {
+      "name": "send_message_duplicate",
+      "description": "Reenvío de send_message con el mismo clientMessageId: mismo desenlace y un solo turno, también con el primero en curso y tras reiniciar el motor.",
+      "steps": [
+        {
+          "call": {
+            "command": "get_turn",
+            "args": {
+              "project": "prj_fixture",
+              "session": "ses_fixture"
+            }
+          },
+          "result": {
+            "state": "idle"
+          }
+        },
+        {
+          "call": {
+            "command": "send_message",
+            "args": {
+              "provider": "claude",
+              "project": "prj_fixture",
+              "session": "ses_fixture",
+              "prompt": "Revisa el PR",
+              "clientMessageId": "msg_fixture_0001"
+            }
+          },
+          "result": "ses_fixture",
+          "starts_turn": "0e9b5c3a-6d41-4b7f-a2c8-5f1e7d9a3b03"
+        },
+        {
+          "call": {
+            "command": "get_turn",
+            "args": {
+              "project": "prj_fixture",
+              "session": "ses_fixture"
+            }
+          },
+          "result": {
+            "state": "running",
+            "turn_id": "0e9b5c3a-6d41-4b7f-a2c8-5f1e7d9a3b03"
+          }
+        },
+        {
+          "call": {
+            "command": "send_message",
+            "args": {
+              "provider": "claude",
+              "project": "prj_fixture",
+              "session": "ses_fixture",
+              "prompt": "Revisa el PR",
+              "clientMessageId": "msg_fixture_0001"
+            }
+          },
+          "result": "ses_fixture"
+        },
+        {
+          "engine": "turn_closed",
+          "turn_id": "0e9b5c3a-6d41-4b7f-a2c8-5f1e7d9a3b03"
+        },
+        {
+          "engine": "engine_restart"
+        },
+        {
+          "call": {
+            "command": "send_message",
+            "args": {
+              "provider": "claude",
+              "project": "prj_fixture",
+              "session": "ses_fixture",
+              "prompt": "Revisa el PR",
+              "clientMessageId": "msg_fixture_0001"
+            }
+          },
+          "result": "ses_fixture"
+        },
+        {
+          "call": {
+            "command": "get_turn",
+            "args": {
+              "project": "prj_fixture",
+              "session": "ses_fixture"
+            }
+          },
+          "result": {
+            "state": "idle"
+          }
+        }
+      ],
+      "expect": {
+        "launched_turns": 1,
+        "stop_requested": []
+      }
+    }
+  ]
+}

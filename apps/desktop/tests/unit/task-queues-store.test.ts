@@ -3,6 +3,7 @@ import test from "node:test";
 import { createRoot, createSignal } from "solid-js";
 import { createTaskQueues, type QueueScope } from "../../src/features/task-queues/index.ts";
 import type { Encolado } from "../../src/features/chat/index.ts";
+import { createFakeEngine } from "../helpers/fake-engine.mjs";
 const message = (id: string, text = id): Encolado => ({ id, text, provider: "codex", model: null, effort: null, permission_mode: null, attachments: [] });
 function fixture(read: (scope: QueueScope) => Promise<Encolado[]> = async () => []) {
   return createRoot(dispose => {
@@ -95,4 +96,26 @@ test("accepted queued saves survive view disposal without accepting new work", a
   const queue = createRoot(() => createTaskQueues({ scope: () => ({ workspace: "A", generation: 1, session: null, project: "p1" }), readQueue: async () => [], writeQueue: async () => new Promise<void>(done => pending.push(done)), onSaveFailure: () => {} }));
   const first = queue.persist("s1", "p1", [message("old")]), second = queue.persist("s1", "p1", [message("new")]);
   queue.dispose(); await queue.persist("s1", "p1", [message("late")]); pending[0](); await first; await Promise.resolve(); assert.equal(pending.length, 2); pending[1](); await second;
+});
+
+// T0 de la cola de chat: la retención `session` frente a los cierres, con el motor falso.
+const STRICT = process.env.R0_STRICT === "1";
+const red = (why: string) => (STRICT ? {} : { todo: why });
+test("H7: a close without done (App passes borrador for ok absent) keeps the session retention", red("H7: turnClosed sobrescribe session con borrador (task-queues/store.ts, turnClosed)"), async () => {
+  const f = fixture(); await f.queue.openSession("s1", "p1"); f.queue.prependBusy(message("busy"));
+  assert.equal(f.queue.retained(), "session");
+  f.queue.turnClosed("s1", "borrador", false);
+  assert.equal(f.queue.retained(), "session"); f.dispose();
+});
+test("an explicit failure (ok false) still retains the queue as fallo", async () => {
+  const f = fixture(); await f.queue.openSession("s1", "p1"); f.queue.prependBusy(message("busy"));
+  f.queue.turnClosed("s1", "fallo", false); assert.equal(f.queue.retained(), "fallo"); f.dispose();
+});
+test("a hidden session-retained queue reserves its batch once and the fake engine accepts it once", async () => {
+  const engine = createFakeEngine(); const f = fixture(); await f.queue.openSession("s1", "p1"); f.queue.prependBusy(message("busy"));
+  f.queue.detach(); f.setScope({ ...f.scope(), session: "s2" });
+  const batch = f.queue.beginHidden("s1", false); assert.ok(batch); assert.equal(f.queue.beginHidden("s1", false), null);
+  await engine.handlers.send_message({ provider: "codex", project: batch.project, session: batch.session, prompt: batch.message.text }); f.queue.endHidden("s1");
+  assert.equal(f.queue.beginHidden("s1", false), null, "nothing left to dispatch");
+  assert.deepEqual(engine.history("s1").map(entry => entry.prompt), ["busy"]); f.dispose();
 });

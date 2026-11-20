@@ -1,0 +1,214 @@
+{
+  "_comment": "Ejemplos de chat_queue_v1 (extensions/chat_queue_v1.json). Valores de mentira: ningún id es real. Cada ejemplo es {command, args, result} o {command, args, error}; args usa las claves del manifiesto (camelCase). Los prueba crates/engine-manifest/tests/chat_queue_v1.rs.",
+  "get_turn": {
+    "idle": {
+      "command": "get_turn",
+      "args": {
+        "project": "prj_fixture",
+        "session": "ses_fixture"
+      },
+      "result": {
+        "state": "idle"
+      }
+    },
+    "starting": {
+      "command": "get_turn",
+      "args": {
+        "project": "prj_fixture",
+        "session": "ses_fixture"
+      },
+      "result": {
+        "state": "starting",
+        "turn_id": "7f3c2a1e-0b4d-4c8e-9a51-2d6f0e8b1a01"
+      }
+    },
+    "running": {
+      "command": "get_turn",
+      "args": {
+        "project": "prj_fixture",
+        "session": "ses_fixture"
+      },
+      "result": {
+        "state": "running",
+        "turn_id": "7f3c2a1e-0b4d-4c8e-9a51-2d6f0e8b1a01"
+      }
+    },
+    "closing": {
+      "command": "get_turn",
+      "args": {
+        "project": "prj_fixture",
+        "session": "ses_fixture"
+      },
+      "result": {
+        "state": "closing",
+        "turn_id": "7f3c2a1e-0b4d-4c8e-9a51-2d6f0e8b1a01"
+      }
+    },
+    "relieved": {
+      "command": "get_turn",
+      "args": {
+        "project": "prj_fixture",
+        "session": "ses_fixture"
+      },
+      "result": {
+        "state": "relieved"
+      }
+    }
+  },
+  "stop_turn_if": {
+    "stop_requested": {
+      "command": "stop_turn_if",
+      "args": {
+        "project": "prj_fixture",
+        "session": "ses_fixture",
+        "turnId": "7f3c2a1e-0b4d-4c8e-9a51-2d6f0e8b1a01"
+      },
+      "result": {
+        "outcome": "stop_requested"
+      }
+    },
+    "turn_changed": {
+      "command": "stop_turn_if",
+      "args": {
+        "project": "prj_fixture",
+        "session": "ses_fixture",
+        "turnId": "7f3c2a1e-0b4d-4c8e-9a51-2d6f0e8b1a01"
+      },
+      "result": {
+        "outcome": "turn_changed"
+      }
+    },
+    "not_running": {
+      "command": "stop_turn_if",
+      "args": {
+        "project": "prj_fixture",
+        "session": "ses_fixture",
+        "turnId": "7f3c2a1e-0b4d-4c8e-9a51-2d6f0e8b1a01"
+      },
+      "result": {
+        "outcome": "not_running"
+      }
+    },
+    "closing": {
+      "command": "stop_turn_if",
+      "args": {
+        "project": "prj_fixture",
+        "session": "ses_fixture",
+        "turnId": "7f3c2a1e-0b4d-4c8e-9a51-2d6f0e8b1a01"
+      },
+      "result": {
+        "outcome": "closing"
+      }
+    },
+    "not_controllable": {
+      "command": "stop_turn_if",
+      "args": {
+        "project": "prj_fixture",
+        "session": "ses_fixture",
+        "turnId": "7f3c2a1e-0b4d-4c8e-9a51-2d6f0e8b1a01"
+      },
+      "result": {
+        "outcome": "not_controllable"
+      }
+    }
+  },
+  "queue_ready": {
+    "idle": {
+      "command": "queue_ready",
+      "args": {
+        "project": "prj_fixture",
+        "session": "ses_fixture"
+      },
+      "result": true
+    },
+    "busy": {
+      "command": "queue_ready",
+      "args": {
+        "project": "prj_fixture",
+        "session": "ses_fixture"
+      },
+      "result": false
+    }
+  },
+  "send_message": {
+    "without_client_message_id": {
+      "command": "send_message",
+      "args": {
+        "provider": "claude",
+        "project": "prj_fixture",
+        "prompt": "Revisa el PR",
+        "session": "ses_fixture"
+      },
+      "result": "ses_fixture"
+    },
+    "with_client_message_id": {
+      "command": "send_message",
+      "args": {
+        "provider": "claude",
+        "project": "prj_fixture",
+        "prompt": "Revisa el PR",
+        "session": "ses_fixture",
+        "clientMessageId": "msg_fixture_0001"
+      },
+      "result": "ses_fixture"
+    },
+    "duplicate": {
+      "command": "send_message",
+      "args": {
+        "provider": "claude",
+        "project": "prj_fixture",
+        "prompt": "Revisa el PR",
+        "session": "ses_fixture",
+        "clientMessageId": "msg_fixture_0001"
+      },
+      "result": "ses_fixture"
+    },
+    "creates_task": {
+      "command": "send_message",
+      "args": {
+        "provider": "claude",
+        "project": "prj_fixture",
+        "prompt": "Revisa el PR",
+        "clientMessageId": "msg_fixture_0002"
+      },
+      "result": "ses_fixture_new"
+    },
+    "creates_task_duplicate": {
+      "command": "send_message",
+      "args": {
+        "provider": "claude",
+        "project": "prj_fixture",
+        "prompt": "Revisa el PR",
+        "clientMessageId": "msg_fixture_0002"
+      },
+      "result": "ses_fixture_new"
+    }
+  },
+  "errors": {
+    "invalid_turn_id": {
+      "command": "stop_turn_if",
+      "args": {
+        "project": "prj_fixture",
+        "session": "ses_fixture",
+        "turnId": ""
+      },
+      "error": {
+        "what": {
+          "clave": "chat_queue.error.invalid_turn_id"
+        },
+        "detail": "invalid_turn_id"
+      }
+    },
+    "invalid_client_message_id": {
+      "command": "send_message",
+      "args": {
+        "provider": "claude",
+        "project": "prj_fixture",
+        "prompt": "Revisa el PR",
+        "session": "ses_fixture",
+        "clientMessageId": "no válido/espacios"
+      },
+      "error": "chat.error.invalid_client_message_id"
+    }
+  }
+}

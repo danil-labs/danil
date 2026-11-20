@@ -1,10 +1,12 @@
 import assert from "node:assert/strict";
-import test from "node:test";
+import nodeTest from "node:test";
 import { boot, sleep } from "../helpers/jsdom-app.mjs";
 import { chat, openTask, pushedPoll, responses, session, turns } from "../helpers/push-fixture.mjs";
 import { waitFor } from "../helpers/wait-for.mjs";
+import { FEATURE } from "../helpers/fake-engine.mjs";
+import { inWindowCase, mountWindow, red, windowCase } from "../helpers/fake-engine-window.mjs";
 
-for (const [terminalFirst, payload, keyboard] of [[false, false, false], [true, false, false], [false, true, false], [false, false, true]]) test(`forcing the queue interrupts before sending (${terminalFirst ? "terminal first" : "ack first"}, ${payload ? "mention and attachment" : "plain"}, ${keyboard ? "keyboard" : "arrow"})`, async () => {
+if (!inWindowCase) for (const [terminalFirst, payload, keyboard] of [[false, false, false], [true, false, false], [false, true, false], [false, false, true]]) nodeTest(`forcing the queue interrupts before sending (${terminalFirst ? "terminal first" : "ack first"}, ${payload ? "mention and attachment" : "plain"}, ${keyboard ? "keyboard" : "arrow"})`, async () => {
   const stream = pushedPoll();
   let active = true, acknowledge;
   const sent = [], saved = [];
@@ -49,3 +51,67 @@ for (const [terminalFirst, payload, keyboard] of [[false, false, false], [true, 
   assert.equal(app.commands.filter(command => command === "stop_turn").length, 1);
   assert.equal(app.commands.filter(command => command === "inject_message").length, 0);
 });
+
+// Con el motor falso de la cola (`tests/helpers/fake-engine.mjs`): los controles
+// que no cambian (C) y la rotación A→B (R-Rot). La aserción va en el motor. Van
+// cada una en su proceso (`windowCase`): dos ventanas en un proceso se pisan.
+const test = (name, ...rest) => windowCase(import.meta.url, name, ...(rest.length === 1 ? [{}, rest[0]] : rest));
+const CONTROL_TEXT = "siguiente instrucción";
+
+test("C: the first Enter during a live turn queues and sends nothing", async () => {
+  const w = await mountWindow("c-first-enter", { before: engine => engine.start("t1", { id: "A" }) });
+  try {
+    await w.open("t1");
+    assert.ok(w.stopButton(), "the live turn is not visible");
+    await w.type(CONTROL_TEXT);
+    assert.equal(w.sends("t1").length, 0);
+    assert.deepEqual(w.engine.saved("p1", "t1").map(item => item.text), [CONTROL_TEXT]);
+    assert.equal(w.engine.stopped.length, 0);
+  } finally { w.unmount(); }
+});
+
+test("C: a double Enter with an empty box stops once and sends the queued message once", async () => {
+  const w = await mountWindow("c-double-enter", { before: engine => engine.start("t1", { id: "A" }) });
+  try {
+    await w.open("t1");
+    await w.type(CONTROL_TEXT);
+    await w.enter(); await w.enter();
+    assert.equal(w.engine.calls("stop_turn", "t1").length, 1);
+    w.engine.close("t1", { ok: false });
+    await waitFor(() => w.accepted("t1").length > 0, "the queued message was not sent after the close");
+    await w.tick(2000);
+    assert.deepEqual(w.accepted("t1").map(entry => entry.args.prompt), [CONTROL_TEXT]);
+    assert.equal(w.engine.calls("stop_turn").length, 1);
+  } finally { w.unmount(); }
+});
+
+test("C: stopping one task does not stop another concurrent turn", async () => {
+  const w = await mountWindow("c-concurrent", { before: engine => { engine.start("t1", { id: "A" }); engine.start("t2", { id: "B" }); } });
+  try {
+    await w.open("t1");
+    w.stopButton()?.click();
+    await waitFor(() => w.engine.calls("stop_turn").length > 0, "Stop did not reach the engine");
+    await w.settle(200);
+    assert.deepEqual(w.engine.stopped, ["A"]);
+    assert.deepEqual(w.engine.log.filter(entry => entry.command.startsWith("stop_turn")).map(entry => entry.args.session), ["t1"]);
+  } finally { w.unmount(); }
+});
+
+for (const features of [[], [FEATURE]]) {
+  const reason = features.length
+    ? "C0/Q1b: la ventana no lee get_turn ni usa stop_turn_if; con el rasgo el motor contestaría turn_changed"
+    : "Riesgo documentado: stop_turn legado no lleva identidad de turno y detiene B (política a1/a2 sin decidir)";
+  test(`R-Rot (${features.length ? "chat_queue_v1" : "legacy stop_turn"}): after A closes and B starts, Stop read on A does not stop B`, red(reason), async () => {
+    const w = await mountWindow(`rot-${features.length}`, { features, before: engine => engine.start("t1", { id: "A" }) });
+    try {
+      await w.open("t1");
+      assert.ok(w.stopButton(), "Stop is not offered for A");
+      w.engine.close("t1", { event: false });
+      w.engine.start("t1", { id: "B" });
+      w.stopButton()?.click();
+      await waitFor(() => w.engine.log.some(entry => entry.command.startsWith("stop_turn")), "Stop did not reach the engine");
+      await w.settle(200);
+      assert.deepEqual({ stopped: w.engine.stopped, running: w.engine.turn("t1")?.id }, { stopped: [], running: "B" });
+    } finally { w.unmount(); }
+  });
+}
