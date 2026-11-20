@@ -6,8 +6,8 @@ const money = z.object({ currency: z.literal("MXN"), amount_micro: z.string().re
 const checkout = z.object({ checkout_id: z.string(), state: z.enum(["creating", "open", "completed", "expired", "canceled"]), url: z.string().url().nullable() });
 const checkoutStatusBase = { checkout_id: z.string(), url: z.string().url().nullable(), expires_at: z.string().nullable() };
 const checkoutStatus = z.union([
-  z.strictObject({ ...checkoutStatusBase, kind: z.literal("plan"), state: z.literal("active"), terminal: z.literal(true), organization_id: z.string().regex(/^org_[A-Za-z0-9]{1,64}$/) }),
-  z.strictObject({ ...checkoutStatusBase, kind: z.enum(["plan", "credits"]), state: z.enum(["pending", "paid", "canceled", "expired", "error"]), terminal: z.boolean() }),
+  z.object({ ...checkoutStatusBase, kind: z.literal("plan"), state: z.literal("active"), terminal: z.literal(true), organization_id: z.string().regex(/^org_[A-Za-z0-9]{1,64}$/) }),
+  z.object({ ...checkoutStatusBase, kind: z.enum(["plan", "credits"]), state: z.enum(["pending", "paid", "canceled", "expired", "error"]), terminal: z.boolean(), organization_id: z.never().optional() }),
 ]);
 const organization = z.object({ organization_id: z.string(), plan_key: z.string(), edition: z.string().nullish(), state: z.string(), payer: z.object({ is_you: z.boolean() }) });
 export type PlanChoice = { plan_key: "pro" | "team"; variant?: string };
