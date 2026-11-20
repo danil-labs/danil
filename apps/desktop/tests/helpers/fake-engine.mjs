@@ -15,10 +15,11 @@
  *
  * `probe` fija la semántica de `queue_ready`: `"take-and-release"` toma y suelta
  * la reserva de la tarea, como `runtime/chat/queue.rs:346` en el motor de hoy;
- * `"read-only"` solo lee, como pide `chat_queue_v1`. Con el rasgo es siempre
- * `"read-only"`. `gate(command)` deja la próxima llamada pendiente hasta
- * `open()`; en `queue_ready` con toma y suelta, la puerta cae **dentro** de la
- * sección crítica, con la reserva tomada.
+ * `"read-only"` solo lee, como pide `chat_queue_v1`: da `false` con turno y
+ * `true` sin él, porque una reserva de archivo sin turno no se ve. Con el rasgo
+ * es siempre `"read-only"`. `gate(command)` deja la próxima llamada pendiente
+ * hasta `open()`; en `queue_ready` con toma y suelta, la puerta cae **dentro** de
+ * la sección crítica, con la reserva tomada.
  */
 
 import { readFileSync } from "node:fs";
@@ -27,17 +28,32 @@ import { readFileSync } from "node:fs";
 export const CONTRACT = new URL("../../../../contracts/chat-queue-v1/", import.meta.url);
 export const contractFile = (name) => JSON.parse(readFileSync(new URL(name, CONTRACT), "utf8"));
 const EXAMPLES = contractFile("chat_queue_v1.examples.json");
+export const MOCK = contractFile("chat_queue_v1.mock.json");
 // Los errores cerrados salen de los ejemplos copiados, no de aquí: cambian con el contrato.
 const INVALID_TURN_ID = EXAMPLES.errors.invalid_turn_id.error;
 const INVALID_CLIENT_MESSAGE_ID = EXAMPLES.errors.invalid_client_message_id.error;
 export const FEATURE = "chat_queue_v1";
-export const BUSY = "history.error.busy";
+/** Sin el rasgo: el error de ocupado del motor de hoy. */
+export const LEGACY_BUSY = "history.error.busy";
+/**
+ * Con el rasgo: el error de ocupado sale del contrato copiado. Los ejemplos no
+ * traen un `send_message` ocupado; el manifiesto nombra el código como la
+ * autoridad del despacho. Si la copia deja de nombrarlo, el falso con el rasgo
+ * no arranca.
+ */
+export const CONTRACT_BUSY = contractFile("chat_queue_v1.json").description.match(/send_message, que es la autoridad \(([a-z_.]+)\)/u)?.[1];
+/** Los pasos de motor y las claves de `expect` que admite el formato del mock copiado. */
+export const ENGINE_STEPS = new Set(MOCK.format.engine_step.match(/\b(?:turn_(?!id\b)[a-z]+|engine_restart)\b/gu));
+export const EXPECT_KEYS = MOCK.format.scenario.match(/expect: \{([^}]*)\}/u)?.[1].split(/,\s*/u) ?? [];
 const TURN_ID = /^.{1,128}$/su;
 const CLIENT_MESSAGE_ID = /^[A-Za-z0-9_-]{1,128}$/u;
 
 /** @param {{ features?: string[], probe?: "take-and-release" | "read-only", workspace?: string, emit?: (event: unknown) => void }} [options] */
 export function createFakeEngine({ features = [], probe = "take-and-release", workspace = "w", emit = () => {} } = {}) {
   const v1 = features.includes(FEATURE);
+  if (v1 && !CONTRACT_BUSY) throw new Error("la copia de chat_queue_v1 ya no nombra el error de ocupado de send_message");
+  const busy = v1 ? CONTRACT_BUSY : LEGACY_BUSY;
+  const readOnly = v1 || probe === "read-only";
   const turns = new Map(); // sesión → { id, state, project, startedAt, stop }
   const reservations = new Map(); // sesión → dueño: "external" | "probe"
   const history = new Map(); // sesión → [{ prompt, clientMessageId, turnId }]
@@ -45,6 +61,7 @@ export function createFakeEngine({ features = [], probe = "take-and-release", wo
   const queues = new Map(); // `${project}/${session}` → Encolado[]
   const gates = new Map(); // comando → [{ arrived, open }]
   const failures = new Map(); // comando → errores pendientes, uno por llamada
+  const polling = new Map(), peakPolls = new Map(); // sesión → consultas `queue_ready` en vuelo, y su máximo
   const log = [], stopped = [], stopRequested = [];
   let launched = 0, serial = 0, nextTurn = null, clock = 0;
 
@@ -91,13 +108,20 @@ export function createFakeEngine({ features = [], probe = "take-and-release", wo
     list_active_turns: () => record("list_active_turns", {}, [...turns.keys()]),
     list_live_turns: () => record("list_live_turns", {}, [...turns].map(([session, turn]) => ({ workspace, session, project: turn.project, started_at: turn.startedAt }))),
     async queue_ready(args) {
-      const error = failing("queue_ready");
-      if (error !== undefined) { record("queue_ready", args, { error }); throw error; }
-      if (occupied(args.session)) return record("queue_ready", args, false);
-      if (v1 || probe === "read-only") { await pass("queue_ready"); return record("queue_ready", args, !occupied(args.session)); }
-      reservations.set(args.session, "probe");
-      try { await pass("queue_ready"); } finally { if (reservations.get(args.session) === "probe") reservations.delete(args.session); }
-      return record("queue_ready", args, true);
+      const session = args.session ?? "";
+      polling.set(session, (polling.get(session) ?? 0) + 1);
+      peakPolls.set(session, Math.max(peakPolls.get(session) ?? 0, polling.get(session)));
+      try {
+        const error = failing("queue_ready");
+        if (error !== undefined) { record("queue_ready", args, { error }); throw error; }
+        if (!readOnly && !occupied(session)) {
+          reservations.set(session, "probe");
+          try { await pass("queue_ready"); } finally { if (reservations.get(session) === "probe") reservations.delete(session); }
+          return record("queue_ready", args, true);
+        }
+        await pass("queue_ready");
+        return record("queue_ready", args, readOnly ? turnOf(session) === undefined : !occupied(session));
+      } finally { polling.set(session, polling.get(session) - 1); }
     },
     async send_message(args) {
       await pass("send_message");
@@ -111,8 +135,8 @@ export function createFakeEngine({ features = [], probe = "take-and-release", wo
       const key = clientMessageId && JSON.stringify([workspace, args.project, args.session ?? null, clientMessageId]);
       if (key && keys.has(key)) return record("send_message", args, keys.get(key));
       if (args.session && occupied(args.session)) {
-        record("send_message", args, { error: BUSY, holder: reservations.get(args.session) ?? "turn" });
-        throw BUSY;
+        record("send_message", args, { error: busy, holder: reservations.get(args.session) ?? "turn" });
+        throw busy;
       }
       const session = args.session ?? `ses-${++serial}`;
       const turnId = start(session, { project: args.project });
@@ -179,6 +203,8 @@ export function createFakeEngine({ features = [], probe = "take-and-release", wo
     history: (session) => (history.get(session) ?? []).map((entry) => ({ ...entry })),
     log, stopped, stopRequested,
     get launched() { return launched; },
+    /** El máximo de consultas `queue_ready` en vuelo a la vez para `session` (I8). */
+    peakPolls: (session) => peakPolls.get(session) ?? 0,
     /** Las llamadas a `command` (para la sesión `session`, si se da) con su desenlace. */
     calls: (command, session) => log.filter((entry) => entry.command === command && (session === undefined || entry.args.session === session)),
   };
@@ -191,14 +217,18 @@ export function createFakeEngine({ features = [], probe = "take-and-release", wo
  * guion, y lo que el escenario espera al final.
  */
 export async function replayOnFake(scenario, features = [FEATURE]) {
+  const unknown = Object.keys(scenario.expect).filter((key) => !EXPECT_KEYS.includes(key));
+  if (unknown.length) throw new Error(`${scenario.name}: expect trae claves que el falso no conoce: ${unknown.join(", ")}`);
   const engine = createFakeEngine({ features });
   const steps = [];
   for (const step of scenario.steps) {
     if ("engine" in step) {
-      const session = "ses_fixture";
+      const session = "ses_fixture", current = engine.turn(session)?.id;
+      if (!ENGINE_STEPS.has(step.engine)) throw new Error(`${scenario.name}: paso de motor desconocido ${JSON.stringify(step.engine)}`);
       if (step.engine === "engine_restart") engine.restart();
-      else if (step.engine === "turn_closed") engine.close(session, { event: false });
-      else if (engine.turn(session)?.id === step.turn_id) engine.shift(session, step.engine.slice("turn_".length));
+      else if (current !== undefined && current !== step.turn_id) throw new Error(`${scenario.name}: ${step.engine} de ${step.turn_id} con el turno ${current} sin cerrar`);
+      else if (step.engine === "turn_closed") { if (current === undefined) throw new Error(`${scenario.name}: turn_closed sin turno`); engine.close(session, { event: false }); }
+      else if (current === step.turn_id) engine.shift(session, step.engine.slice("turn_".length));
       else engine.start(session, { id: step.turn_id, state: step.engine.slice("turn_".length), project: "prj_fixture" });
       continue;
     }
@@ -207,7 +237,10 @@ export async function replayOnFake(scenario, features = [FEATURE]) {
     try { got = { result: await engine.handlers[step.call.command](step.call.args) }; } catch (error) { got = { error }; }
     steps.push({ command: step.call.command, got, want: "error" in step ? { error: step.error } : { result: step.result } });
   }
-  return { steps, launched_turns: engine.launched, stop_requested: engine.stopRequested };
+  const produced = { launched_turns: engine.launched, stop_requested: engine.stopRequested };
+  const missing = EXPECT_KEYS.filter((key) => !(key in produced));
+  if (missing.length) throw new Error(`el formato del mock espera claves que el falso no produce: ${missing.join(", ")}`);
+  return { steps, expect: Object.fromEntries(Object.keys(scenario.expect).map((key) => [key, produced[key]])) };
 }
 
 /**

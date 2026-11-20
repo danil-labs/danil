@@ -1,0 +1,75 @@
+{
+  "_comment": "Coherencia del motor falso de la cola (tests/helpers/fake-engine.mjs) con el motor lab. Origen: docs/testing/2026-11-19-cola-de-chat-un-solo-comportamiento.md § 2 (danil-labs/terminus-workspace): busy con turno, busy con reserva y queue_ready en cada caso, más dos filas que trae el contrato chat_queue_v1. expect.legacy es el motor de hoy (queue_ready toma y suelta la reserva); expect.chat_queue_v1, el motor que anuncia el rasgo; null es que en ese motor el caso no tiene respuesta fija. La prueba chat-queue-v1-fake-engine.test.mjs corre cada fila contra el falso. Contra el motor lab la corre R0, fila a fila, con tests/helpers/chat-queue-coherence-lab.mjs, después de montar el estado de lab_setup. Si el falso y el lab discrepan, se corrige el falso.",
+  "placeholders": {
+    "$project": "el proyecto de la tarea (--project)",
+    "$session": "la tarea (--session)",
+    "$provider": "la CLI de prueba controlable por archivo-señal de R0 (--provider)"
+  },
+  "lab_call": "RPC1 al endpoint del motor lab (<data>/services/*/*/endpoint.json: address y token_file): una línea JSON {version: 1, token, workspace, folder: null, command: \"service invoke\", args: {command, arguments}, request_id}. La respuesta trae result.value (correcta) o result.error (error del comando); result.pending se reintenta como scripts/e2e-remote-delegation.py en danil-engine.",
+  "states": {
+    "free": "La tarea sin turno ni reserva: list_active_turns no la trae.",
+    "turn": "La tarea con un turno vivo de la CLI de prueba, lanzado con send_message y sin soltar su señal: list_active_turns la trae.",
+    "reservation": "La tarea sin turno y con su reserva de historial tomada (history::reserve, <control_dir>/history-reservation) por una operación que la retiene: restaurar, renombrar o worktree (manifiesto chat_queue_v1, GET_TURN). Cómo se fuerza en el lab lo fija R0. list_active_turns no la trae.",
+    "probe_in_flight": "Un queue_ready de la misma tarea dentro de su sección crítica, con la reserva tomada. No se fuerza por RPC: es una carrera. La prueba con la puerta dentro de la sección crítica es del motor (C0, Rust)."
+  },
+  "cases": [
+    {
+      "id": "send-busy-turn",
+      "state": "turn",
+      "call": { "command": "send_message", "arguments": { "provider": "$provider", "project": "$project", "session": "$session", "prompt": "coherencia T0" } },
+      "expect": { "legacy": { "error": "history.error.busy" }, "chat_queue_v1": { "error": "history.error.busy" } }
+    },
+    {
+      "id": "send-busy-reservation",
+      "state": "reservation",
+      "call": { "command": "send_message", "arguments": { "provider": "$provider", "project": "$project", "session": "$session", "prompt": "coherencia T0" } },
+      "expect": { "legacy": { "error": "history.error.busy" }, "chat_queue_v1": { "error": "history.error.busy" } }
+    },
+    {
+      "id": "send-free",
+      "state": "free",
+      "call": { "command": "send_message", "arguments": { "provider": "$provider", "project": "$project", "session": "$session", "prompt": "coherencia T0" } },
+      "expect": { "legacy": { "result": "$session" }, "chat_queue_v1": { "result": "$session" } },
+      "lab_note": "Lanza un turno de la CLI de prueba: suelta su señal antes de la fila siguiente."
+    },
+    {
+      "id": "ready-turn",
+      "state": "turn",
+      "call": { "command": "queue_ready", "arguments": { "project": "$project", "session": "$session" } },
+      "expect": { "legacy": { "result": false }, "chat_queue_v1": { "result": false } }
+    },
+    {
+      "id": "ready-reservation",
+      "state": "reservation",
+      "call": { "command": "queue_ready", "arguments": { "project": "$project", "session": "$session" } },
+      "expect": { "legacy": { "result": false }, "chat_queue_v1": { "result": true } },
+      "lab_note": "Con el rasgo, queue_ready ya no toma la reserva y una reserva de archivo sin turno no se ve: da true, y send_message seguiría dando busy (send-busy-reservation)."
+    },
+    {
+      "id": "ready-free",
+      "state": "free",
+      "call": { "command": "queue_ready", "arguments": { "project": "$project", "session": "$session" } },
+      "expect": { "legacy": { "result": true }, "chat_queue_v1": { "result": true } },
+      "then": {
+        "call": { "command": "send_message", "arguments": { "provider": "$provider", "project": "$project", "session": "$session", "prompt": "coherencia T0" } },
+        "expect": { "legacy": { "result": "$session" }, "chat_queue_v1": { "result": "$session" } }
+      },
+      "lab_note": "El send_message de después prueba que el sondeo soltó la reserva. Lanza un turno: suelta su señal al terminar."
+    },
+    {
+      "id": "get-turn-reservation",
+      "state": "reservation",
+      "call": { "command": "get_turn", "arguments": { "project": "$project", "session": "$session" } },
+      "expect": { "legacy": null, "chat_queue_v1": { "result": { "state": "idle" } } },
+      "lab_note": "Sin el rasgo, cualquier respuesta a get_turn es estado desconocido (manifiesto, RASGO)."
+    },
+    {
+      "id": "send-during-probe",
+      "state": "probe_in_flight",
+      "lab": false,
+      "call": { "command": "send_message", "arguments": { "provider": "$provider", "project": "$project", "session": "$session", "prompt": "coherencia T0" } },
+      "expect": { "legacy": { "error": "history.error.busy" }, "chat_queue_v1": { "result": "$session" } },
+      "lab_note": "El busy falso de R-S (H6). En el lab no se reproduce por RPC: queda para la prueba del motor."
+    }
+  ]
+}
