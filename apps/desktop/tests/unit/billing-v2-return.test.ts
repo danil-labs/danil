@@ -83,3 +83,16 @@ test("Stripe checkout and the customer portal accept only their exact HTTPS orig
   ]) assert.throws(() => hostedCheckoutUrl(invalid), /invalid_checkout_url/);
   assert.throws(() => hostedCheckoutUrl(checkout, "portal"), /invalid_checkout_url/);
 });
+
+test("a timed-out read retries while the payment deadline is open", async () => {
+  const { waitForPaymentUrl } = await import("../../src/web/billing-v2-return.ts");
+  const signal = AbortSignal.timeout(5000);
+  const url = "https://checkout.stripe.com/c/pay/example";
+  let reads = 0;
+  const result = await waitForPaymentUrl({ state: "creating", url: null }, async () => {
+    if (++reads === 1) throw new DOMException("Edge read timed out", "TimeoutError");
+    return { terminal: false, url };
+  }, signal, () => {});
+  assert.equal(result, url);
+  assert.equal(reads, 2);
+});

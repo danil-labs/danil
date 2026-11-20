@@ -83,8 +83,8 @@ export async function waitForPaymentUrl(
       if (status.url) return hostedCheckoutUrl(status.url);
     } catch (error) {
       signal.throwIfAborted();
-      const problem = error as { status?: number; retryAfter?: string } | null;
-      if (!problem?.status || ![404, 429, 501, 503].includes(problem.status)) throw error;
+      const problem = error as { name?: string; status?: number; retryAfter?: string } | null;
+      if (problem?.name !== "TimeoutError" && (!problem?.status || ![404, 429, 501, 503].includes(problem.status))) throw error;
       const header = problem.retryAfter;
       if (header) retryAfter = /^\d+$/.test(header) ? Number(header) * 1000 : Math.max(0, Date.parse(header) - Date.now()) || 0;
     }
