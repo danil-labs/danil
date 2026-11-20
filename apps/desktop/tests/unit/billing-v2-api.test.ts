@@ -53,7 +53,8 @@ test("only an active plan exposes a valid organization, and active requires one"
   const api = billingV2({ call: async () => Response.json(value), mutation: async () => { throw new Error("unexpected mutation"); } }, null);
   await assert.rejects(api.checkoutStatus("bchk_01SYNTHETICCHK0001"));
   value = { ...value, organization_id: "org_ABC123" };
-  assert.equal((await api.checkoutStatus("bchk_01SYNTHETICCHK0001")).organization_id, "org_ABC123");
+  const active = await api.checkoutStatus("bchk_01SYNTHETICCHK0001");
+  assert.equal(active.state === "active" ? active.organization_id : null, "org_ABC123");
   value = { ...value, state: "pending", terminal: false };
   await assert.rejects(api.checkoutStatus("bchk_01SYNTHETICCHK0001"));
   value = { ...value, state: "paid", terminal: true };
