@@ -2,7 +2,7 @@ import { readAccountAsset } from "@terminus/computers";
 import { useEffect, useState } from "react";
 import { useAccount } from "./account";
 import { useMachines } from "./machines";
-import { COMPUTERS } from "./supabase";
+import { COMPUTERS } from "./computersEndpoint";
 
 /**
  * El logo de un workspace de la cuenta (`logo_url` de `GET /v1/workspaces`),

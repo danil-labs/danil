@@ -1,9 +1,5 @@
 {
   "files": {
-    "src-tauri/src/extracted/agents_session.rs": {
-      "sha256": "68b2cfdf3c66532af04f7858d9323c9e1bf1e62c1b3115839c9317fbfb53b319",
-      "pending": "Desk native messaging session, as on dev 4691be0b (Desk RC); retired with cargo in its own change, not in web parity"
-    },
     "packages/attention/src/inbox.ts": {
       "sha256": "6cd391eb6595d06fabf8f620f7a299ce9d221f10a79afcf6bee4b7701474b682",
       "pending": "Mobile-only legacy module; desktop/web imports remain forbidden"
@@ -27,18 +23,6 @@
     "packages/attention/src/service.ts": {
       "sha256": "e95ac5930bc1fff5db3333195603ee8f060040a932c99eb82f44ec0f1e76cea1",
       "pending": "Mobile-only legacy module; desktop/web imports remain forbidden"
-    },
-    "src-tauri/src/extracted/agents_session/credits.rs": {
-      "sha256": "3b17faec22f38b0a2175421154ccc90d996aac6ffffdcb63455b4c201bb53cb1",
-      "pending": "Desk native credits transport, as on dev; retired with cargo in its own change"
-    },
-    "src-tauri/src/extracted/mod.rs": {
-      "sha256": "565be89030feeb3fa2249fa5da1224a090156d3040ad58587b7a3c43a661c953",
-      "pending": "Desk native command registration, as on dev; retired with cargo in its own change"
-    },
-    "src-tauri/src/extracted/proxy.rs": {
-      "sha256": "54417e96da0aae8422e6e9fdb79f428827c436b49c186e3e2a089f2ca7daa5a2",
-      "pending": "Desk native command registration, as on dev; retired with cargo in its own change"
     }
   }
 }

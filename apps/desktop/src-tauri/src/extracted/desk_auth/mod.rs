@@ -226,8 +226,7 @@ pub(super) fn danil_sign_in(
     drop(pkce);
     d.exchange(attempt, &code, &verifier, &redirect_uri, add)
         .map_err(|f| error(&f))?;
-    // La sesión de antes (WorkOS a Supabase) no convive con la nueva.
-    super::agents_session::retire_legacy(&app);
+    forget_legacy_session(&app);
     let value = d.status();
     announce(&app, &value);
     Ok(value)
@@ -245,7 +244,7 @@ pub(super) fn danil_sign_out(
     d.sign_out(family.as_deref(), context.as_deref(), &key)
         .map_err(|e| error(&e))?;
     if family.is_none() && context.is_none() {
-        super::agents_session::retire_legacy(&app);
+        forget_legacy_session(&app);
         // La cuenta del motor tampoco queda conectada; un motor sin la orden no impide salir.
         let _ = super::proxy::engine_call(&app, "danil_disconnect", json!({}));
     }
@@ -319,4 +318,12 @@ pub(crate) fn edge_reply(method: &str, reply: &session::Reply, key: &str) -> Val
         value["retry_after_ms"] = json!(wait.as_millis() as u64);
     }
     value
+}
+
+/// Borra la entrada de la sesión anterior cuando Desk entra o sale del borde.
+fn forget_legacy_session(app: &tauri::AppHandle) {
+    let service = format!("{}.agents-session", app.config().identifier);
+    if let Ok(entry) = keyring::Entry::new(&service, "default") {
+        let _ = entry.delete_credential();
+    }
 }

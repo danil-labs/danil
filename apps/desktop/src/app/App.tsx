@@ -5943,7 +5943,6 @@ export default function App() {
               {/* Su propio límite: mientras carga, el resto de la vista sigue. */}
               <Suspense fallback={null}>
                 <MachinePicker
-                  shared
                   workspace={workspaceActivo()}
                   project={projectList().find((p) => p.id === project())}
                   onChange={() => {

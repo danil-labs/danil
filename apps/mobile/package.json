@@ -6,7 +6,6 @@
     "@expo/metro-runtime": "~58.0.14",
     "@expo/ui": "~58.0.25",
     "@react-native-async-storage/async-storage": "2.2.0",
-    "@supabase/supabase-js": "^2.118.0",
     "@terminus/carry": "file:../../packages/carry",
     "@terminus/chat": "file:../../packages/chat",
     "@terminus/computers": "file:../../packages/computers",

@@ -37,9 +37,9 @@ export async function sealFirstFreeWorkspace(invoke: ContextInvoke, { delays = F
   const noop = () => {};
   // El `state` de la última lectura: sin `sessions`, `connected` es «todavía cargando» y lo demás, «sin sesión».
   let state: string | null = null;
-  const reading: ContextInvoke = (command, args) => command !== "danil_session_status" ? invoke(command, args)
-    : invoke<{ state?: unknown }>(command, args).then((r) => ((state = typeof r?.state === "string" ? r.state : null), r as never), (e) => { state = null; throw e; });
-  const sessions = createSessionContexts(reading, noop);
+  const sessions = createSessionContexts(invoke, noop, (status) => {
+    state = typeof status?.state === "string" ? status.state : null;
+  });
   const accounts = createAccountWorkspaces(invoke, true, noop);
   for (let attempt = 0; ; attempt++) {
     if (attempt) await wait(delays[attempt - 1]);

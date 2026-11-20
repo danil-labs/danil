@@ -16,7 +16,7 @@ export function contextGroups(status: SessionStatus | null): ContextGroup[] | nu
 }
 
 /** El portador se queda en Rust; una lectura vieja nunca repone un contexto cerrado. */
-export function createSessionContexts(invoke: ContextInvoke, changed: () => void) {
+export function createSessionContexts(invoke: ContextInvoke, changed: () => void, onStatus?: (status: SessionStatus | null) => void) {
   let groups: ContextGroup[] | null = null;
   let families: SessionFamily[] = [];
   let epoch = 0;
@@ -31,6 +31,7 @@ export function createSessionContexts(invoke: ContextInvoke, changed: () => void
     try {
       const status = await invoke<SessionStatus>("danil_session_status");
       if (read !== epoch) return;
+      onStatus?.(status);
       ready = true;
       defaultContext = status.default_context ?? null;
       connected = status.state === "connected";
@@ -44,7 +45,9 @@ export function createSessionContexts(invoke: ContextInvoke, changed: () => void
       groups = contextGroups(status)?.filter((g) => !empty.excludes(g.context_id)) ?? null;
       unsupported = false;
       notify();
-    } catch { if (read === epoch) { ready = true; notify(); } }
+    } catch {
+      if (read === epoch) { onStatus?.(null); ready = true; notify(); }
+    }
   }
   // Crear y adoptar exigen la llave de quien llama (Rust lo rechaza sin ella): inventarla aquí rompería sus reintentos.
   const callerKey = (method: string, path: string, key?: string) =>

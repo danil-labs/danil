@@ -6,7 +6,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAccount } from "../../lib/account";
 import { t } from "../../lib/i18n";
 import { useMachines } from "../../lib/machines";
-import { COMPUTERS } from "../../lib/supabase";
+import { COMPUTERS } from "../../lib/computersEndpoint";
 import { Icon } from "../../ui/Icon";
 import { Group, GroupHeader, LargeTitle, ListRow, NavBar, pageColor } from "../../ui/list";
 import { useTheme } from "../../ui/theme";

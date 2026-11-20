@@ -7,7 +7,6 @@ import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { Platform } from "react-native";
-import * as WebBrowser from "expo-web-browser";
 import { AccountProvider } from "../lib/account";
 import { MachinesProvider } from "../lib/machines";
 import { Notifications } from "../lib/notifications";
@@ -30,7 +29,6 @@ Notifications?.setNotificationHandler({
 });
 
 // Cierra la ventana del navegador del inicio de sesión si vuelve aquí (solo hace algo en web).
-if (!ALPHA_DEMO) WebBrowser.maybeCompleteAuthSession();
 selectWordOnDoubleTap();
 
 type Target = { host?: string; workspace?: string; folder?: string | null; task?: string };
@@ -128,7 +126,6 @@ export default function RootLayout() {
           <Stack.Screen name="activity" options={{ title: t("activity.title") }} />
           <Stack.Screen name="accounts" options={{ title: w("settings.nav.ai_providers") }} />
           <Stack.Screen name="signin" options={{ headerShown: false }} />
-          <Stack.Screen name="auth/callback" options={{ headerShown: false }} />
         </Stack>
         <ActivityNotice />
         <UpdateNotice />
