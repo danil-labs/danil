@@ -6,12 +6,11 @@ import { SettingsPanel, SettingsRow, SettingsSection } from "../features/setting
 import { PlatformSessionError } from "./platform-session";
 import { billingScopes, type BillingScope } from "./billing-v2-scopes";
 import { BillingPromotionField, promotionCodeInvalid } from "./BillingPromotionField";
-import { billingFingerprint } from "./billing-v2-idempotency";
+import { billingFingerprint, bindCreationCheckout, creationKey } from "./billing-v2-idempotency";
 import { checkoutPlans } from "./billing-v2-plans";
 import type { billingV2, PlanChoice } from "./billing-v2-api";
 import { hostedCheckoutUrl, PAYMENT_URL_DEADLINE_MS, paymentInProgress, waitForPaymentUrl } from "./billing-v2-return";
 import { rememberBillingReturn } from "./billing-route";
-import NewOrganizationCheckout from "./NewOrganizationCheckout";
 
 type Api = ReturnType<typeof billingV2>;
 type Money = { currency: "MXN"; amount_micro: string };
@@ -37,7 +36,7 @@ function PagedRows(props: { title: string; initial: Page; load: (cursor: string)
       setPage(old => ({ items: [...old.items, ...next.items], next_cursor: next.next_cursor }));
     } catch (cause) {
       if (disposed) return;
-      setError(cause instanceof PlatformSessionError && cause.status === 403 ? "web.billing_v2.denied" : "web.billing_v2.unavailable");
+      setError(cause instanceof PlatformSessionError && cause.status === 403 ? "web.billing_v2.denied" : "web.billing_v2.error");
       if (cause instanceof PlatformSessionError && [404, 501, 503].includes(cause.status)) timer = setTimeout(() => void more(), 30000);
     } finally { if (!disposed) setBusy(false); }
   }
@@ -57,9 +56,11 @@ function displayMoney(value: Money) {
 
 const fulfilled = <T,>(result: PromiseSettledResult<T>): T | null => result.status === "fulfilled" ? result.value : null;
 const failed = (result: PromiseSettledResult<unknown>) => result.status === "rejected" ? result.reason : null;
-const message = (error: unknown) => error instanceof PlatformSessionError && error.status === 403 ? "web.billing_v2.denied" : "web.billing_v2.unavailable";
+const message = (error: unknown) => error instanceof PlatformSessionError && error.status === 403 ? "web.billing_v2.denied" : "web.billing_v2.error";
 
-export default function BillingPlan(props: { api: Api; role: () => string; context: string; creationApi?: Api; summaryHref?: string; initialPlan?: string; initialPromotion?: string; revision?: number }) {
+export default function BillingPlan(props: { api: Api; role: () => string; context: string; newTeam?: { api: Api; name: string }; fallbackPlan?: string; summaryHref?: string; initialPlan?: string; initialPromotion?: string; revision?: number }) {
+  const firstTeam = (plan: PlanChoice) => plan.plan_key === "team" ? props.newTeam : undefined;
+  const canChoose = (plan: PlanChoice) => !!firstTeam(plan) || permitted("billing.manage");
   const summary = () => props.summaryHref !== undefined;
   const permitted = (scope: BillingScope) => billingScopes(props.role()).includes(scope);
   const lifetime = new AbortController();
@@ -79,6 +80,12 @@ export default function BillingPlan(props: { api: Api; role: () => string; conte
     ]);
     return { catalog, organization, balance, transactions };
   });
+  const currentPlan = (value: NonNullable<ReturnType<typeof data>>) => {
+    const org = fulfilled(value.organization);
+    const key = org?.plan_key ?? props.fallbackPlan;
+    const variant = fulfilled(value.catalog)?.plans.find(plan => plan.plan_key === key)?.display_variants?.find(item => item.plan_key === key && item.edition === org?.edition);
+    return { id: variant?.variant ?? key, label: variant?.display_name ?? (key ? t(`web.billing_v2.plan_${key}`) : "") };
+  };
   const pendingPrefix = () => `danil.billing.${props.context}.`;
   const keyFor = (action: string) => { const storageKey = `${pendingPrefix()}key.${action}`; const key = sessionStorage.getItem(storageKey) ?? crypto.randomUUID(); sessionStorage.setItem(storageKey, key); return key; };
   async function run(action: string, operation: (key: string, signal: AbortSignal) => Promise<unknown>, promotionCode?: string) {
@@ -106,9 +113,18 @@ export default function BillingPlan(props: { api: Api; role: () => string; conte
   async function upgrade(plan: PlanChoice, version: number) {
     const api = props.api;
     const code = promotion().trim() || undefined;
-    await run(`checkout:${version}:${plan.variant ?? plan.plan_key}`, async (key, signal) => {
-      const created = await api.checkout(plan.plan_key, version, key, plan.variant, code);
-      redirect(await waitForPaymentUrl(created, () => api.checkoutStatus(created.checkout_id, signal), signal, () => setPreparing(true)), created.checkout_id);
+    const team = firstTeam(plan);
+    const checkoutApi = team?.api ?? api;
+    const intent = team ? "new_organization" : "upgrade";
+    const option = plan.variant ?? plan.plan_key;
+    await run(`checkout:${intent}:${version}:${option}`, async (key, signal) => {
+      const checkoutKey = team ? await creationKey(sessionStorage, `${props.context}:${option}`, version, team.name, code) : key;
+      signal.throwIfAborted();
+      const created = team
+        ? await checkoutApi.createOrganization(plan.plan_key, version, team.name, checkoutKey, plan.variant, code)
+        : await checkoutApi.checkout(plan.plan_key, version, key, plan.variant, code);
+      if (team) bindCreationCheckout(sessionStorage, checkoutKey, created.checkout_id);
+      redirect(await waitForPaymentUrl(created, () => checkoutApi.checkoutStatus(created.checkout_id, signal), signal, () => setPreparing(true)), created.checkout_id);
     }, code);
   }
   async function buy(pack: string, version: number) {
@@ -140,10 +156,13 @@ export default function BillingPlan(props: { api: Api; role: () => string; conte
     <Show when={!data.loading || data.latest} fallback={<p>{t("web.billing_v2.loading")}</p>}>
       <Show when={!data.error} fallback={<p role="status">{t(message(data.error))}</p>}>
         <Show when={data()}>{value => <>
+          <Show when={currentPlan(value()).id}><SettingsSection>
+            <SettingsRow label={t("web.billing_v2.your_plan")}><span>{currentPlan(value()).label}</span></SettingsRow>
+          </SettingsSection></Show>
           <Show when={failed(value().organization)}>{error => <SettingsSection title={t("web.billing_v2.plan")}><p role="status">{t(message(error()))}</p></SettingsSection>}</Show>
-          <Show when={failed(value().catalog)}>{error => <SettingsSection title={t("web.billing_v2.plan")}><p role="status">{t(message(error()))}</p></SettingsSection>}</Show>
+          <Show when={failed(value().catalog)}>{error => <SettingsSection title={t("web.billing_v2.plan")}><p role="status">{t(error() instanceof PlatformSessionError && (error().status === 503 || error().code === "plan_price_pending") ? "web.billing_v2.unavailable" : message(error()))}</p></SettingsSection>}</Show>
           <Show when={fulfilled(value().catalog)}>{catalog => <SettingsSection title={t("web.billing_v2.choose_plan")}>
-            <Show when={permitted("billing.manage") && checkoutPlans(catalog()).some(plan => plan.choice)}>
+            <Show when={checkoutPlans(catalog()).some(plan => plan.choice && canChoose(plan.choice))}>
               <BillingPromotionField value={promotion()} disabled={busy()} invalid={promotionInvalid()}
                 onEdit={value => { setPromotion(value); setPromotionInvalid(false); }} />
             </Show>
@@ -151,14 +170,13 @@ export default function BillingPlan(props: { api: Api; role: () => string; conte
               <For each={checkoutPlans(catalog())}>{plan => <article class="rounded-lg border p-3" classList={{ "border-primary": selected() === plan.id, "border-line": selected() !== plan.id }} aria-current={selected() === plan.id ? "true" : undefined}>
                 <strong>{plan.displayName ?? t(`web.billing_v2.plan_${plan.id}`)}</strong>
                 <Show when={plan.price}>{price => <p>{displayMoney(price())} MXN / {t("web.billing_v2.month")}</p>}</Show>
-                <Show when={plan.choice} fallback={<Show when={plan.id === "enterprise"} fallback={<p role="status">{t("web.billing_v2.unavailable")}</p>}><a href={`mailto:${BUSINESS_SALES_EMAIL}`}>{t("web.billing_v2.contact")}</a></Show>}>{choice =>
-                  <Show when={permitted("billing.manage")}><Button disabled={busy() || (!choice().variant && fulfilled(value().organization)?.plan_key === choice().plan_key)} onClick={() => { setSelected(plan.id); void upgrade(choice(), catalog().catalog_version); }}>{t("web.billing_v2.upgrade")}</Button></Show>
+                <Show when={plan.choice} fallback={<Show when={plan.id === "enterprise"} fallback={plan.pricePending ? <p role="status">{t("web.billing_v2.unavailable")}</p> : null}><a href={`mailto:${BUSINESS_SALES_EMAIL}`}>{t("web.billing_v2.contact")}</a></Show>}>{choice =>
+                  <Show when={canChoose(choice())}><Button disabled={busy() || (!firstTeam(choice()) && currentPlan(value()).id === plan.id)} onClick={() => { setSelected(plan.id); void upgrade(choice(), catalog().catalog_version); }}>{t(currentPlan(value()).id === "free" ? "web.billing_v2.choose" : "web.billing_v2.upgrade")}</Button></Show>
                 }</Show>
               </article>}</For>
             </div>
           </SettingsSection>}</Show>
           <Show when={fulfilled(value().organization)}>{org => <SettingsSection>
-            <SettingsRow label={t("web.billing_v2.plan")}><span>{org().plan_key} · {org().state}</span></SettingsRow>
             <Show when={!summary() && permitted("billing.manage") && org().payer.is_you}><SettingsRow label={t("web.billing_v2.payment")}><Button disabled={busy()} onClick={() => void portal()}>{t("web.billing_v2.open")}</Button></SettingsRow></Show>
           </SettingsSection>}</Show>
           <Show when={failed(value().balance)}>{error => <SettingsSection title={t("web.billing_v2.balance")}><p role="status">{t(message(error()))}</p></SettingsSection>}</Show>
@@ -171,6 +189,5 @@ export default function BillingPlan(props: { api: Api; role: () => string; conte
         </>}</Show>
       </Show>
     </Show>
-    <Show when={props.creationApi}>{api => <NewOrganizationCheckout api={api()} initialPlan={props.initialPlan} initialPromotion={props.initialPromotion} />}</Show>
   </SettingsPanel>;
 }

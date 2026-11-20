@@ -1,10 +1,9 @@
 import { isOrganizationSelectionRequired } from "@terminus/computers";
-import { createEffect, createResource, createSignal, For, onCleanup, Show } from "solid-js";
+import { createEffect, createResource, createSignal, onCleanup, Show } from "solid-js";
 import { render } from "solid-js/web";
 import { aplicarLengua, t } from "../lib/i18n";
 import { seguirElTema } from "../lib/theme";
 import { Button } from "../ui/Button";
-import { Select } from "../ui/Select";
 import { SessionLoading } from "./auth/SessionLoading";
 import { signInError, WorkosAuthPage } from "./auth/workos";
 import BillingPlan from "./BillingPlan";
@@ -28,14 +27,12 @@ function BillingPage(props: { options: WebSessionDeployment }) {
   const home = new URL(import.meta.env.BASE_URL, location.origin).href;
   const query = new URLSearchParams(location.search);
   const plan = query.get("plan") ?? "";
-  const initialPlan = ["pro", "team", "business"].includes(plan) ? plan : undefined;
+  const initialPlan = plan || undefined;
   const initialPromotion = query.get("promo") ?? undefined;
-  const requestedOrg = query.get("org");
   const returnError = signInError(location.search);
   const [expired, setExpired] = createSignal(false);
   const [authOrg, setAuthOrg] = createSignal<string>();
-  const [preferred, setPreferred] = createSignal(requestedOrg);
-  const [intended, setIntended] = createSignal(requestedOrg);
+  const [attemptedPersonal, setAttemptedPersonal] = createSignal<string>();
   const [revision, refreshBilling] = createSignal(0);
   const lifetime = new AbortController();
   const request: typeof fetch = (input, init) => fetch(input, {
@@ -84,28 +81,27 @@ function BillingPage(props: { options: WebSessionDeployment }) {
     return current?.items.find(org => org.id === current.active);
   };
   const personApi = billingV2(transport, null);
+  const identifiedProfile = () => profile.error ? null : profile();
+  const isPersonal = (org: { id: string; plan?: string }) => {
+    const type = identifiedProfile()?.organizations.find(item => item.id === org.id)?.type;
+    return type ? type === "personal" : org.plan === "free" || org.plan === "pro";
+  };
+  const personal = () => ready()?.items.find(isPersonal);
+  const defaultTeamName = () => {
+    const name = identifiedProfile()?.name.replace(/[\u0000-\u001f\u007f-\u009f<>]/gu, "").trim() ?? "";
+    return [...name].slice(0, 75).join("").trimEnd() + (name ? " Team" : "Team");
+  };
   createEffect(() => {
     const current = ready();
-    const id = preferred();
-    if (!current || current.busy || !id) return;
-    setPreferred(null);
-    if (id !== current.active && current.items.some(org => org.id === id)) void selection.choose(id);
+    const id = personal()?.id;
+    if (!current || current.busy || current.active || !id || attemptedPersonal() === id) return;
+    setAttemptedPersonal(id);
+    void selection.choose(id);
   });
   async function select(id: string) {
     if (ready()?.active !== id) await selection.choose(id);
     if (ready()?.active !== id) throw new Error("billing_selection_pending");
-    rememberOrg(id);
     if (!active()) await selection.load();
-  }
-  function rememberOrg(id: string) {
-    setIntended(id);
-    const url = new URL(location.href);
-    url.searchParams.set("org", id);
-    history.replaceState(history.state, "", url);
-  }
-  function changeOrg(id: string) {
-    rememberOrg(id);
-    void selection.choose(id);
   }
   return <Show when={!(expired() || authOrg() || returnError)} fallback={
     <WorkosAuthPage loginUrl={api.loginUrl(home, authOrg())} error={returnError} onLogin={rememberBillingLogin} />
@@ -117,23 +113,14 @@ function BillingPage(props: { options: WebSessionDeployment }) {
             <h1 class="m-0 font-display text-lead font-bold">{t("settings.tab.plan")}</h1>
             <Button as="a" variant="ghost" href={home}>{t("common.brand_name")}</Button>
           </header>
-          <Show when={!profile.error} fallback={<div role="alert"><p>{t("web.billing_v2.unavailable")}</p><Button onClick={() => void refetch()}>{t("web.computers.retry")}</Button></div>}>
+          <Show when={!profile.error} fallback={<div role="alert"><p>{t("web.billing_v2.error")}</p><Button onClick={() => void refetch()}>{t("web.computers.retry")}</Button></div>}>
             <Show when={ready()} fallback={<p role="status">{t("web.billing_v2.loading")}</p>}>{current => <>
-              <Show when={current().items.length}>
-                <label class="grid max-w-xs gap-1 text-ui">
-                  {t("web.billing_v2.organization")}
-                  <Select value={current().active ?? ""} disabled={current().busy} onChange={event => changeOrg(event.currentTarget.value)}>
-                    <option value="" disabled>{t("web.billing_v2.organization")}</option>
-                    <For each={current().items}>{org => <option value={org.id}>{org.name}</option>}</For>
-                  </Select>
-                </label>
-              </Show>
               <BillingReturnGate api={personApi} onActive={select} onSettled={() => refreshBilling(n => n + 1)} plan={id => billingV2(transport, id).organization()} />
-              <Show when={!current().busy && (current().error || (intended() && intended() !== current().active))}><p role="alert">{t("web.billing_v2.unavailable")}</p></Show>
-              <Show when={!current().busy && !preferred() && (!intended() || intended() === current().active)}><Show when={active()} keyed fallback={
-                <BillingPlan api={personApi} creationApi={personApi} role={() => ""} context={profile()?.id ?? "unselected"} revision={revision()} initialPlan={initialPlan} initialPromotion={initialPromotion} />
+              <Show when={current().error && !current().busy}><p role="alert">{t("web.billing_v2.error")}</p><Button onClick={() => { setAttemptedPersonal(undefined); void selection.load(); }}>{t("web.computers.retry")}</Button></Show>
+              <Show when={!current().busy && !current().error && (!current().active || active())}><Show when={active()} keyed fallback={
+                <BillingPlan api={personApi} newTeam={{ api: personApi, name: defaultTeamName() }} fallbackPlan="free" role={() => ""} context={identifiedProfile()?.id ?? "unselected"} revision={revision()} initialPlan={initialPlan} initialPromotion={initialPromotion} />
               }>{org =>
-                <BillingPlan api={billingV2(transport, org.id)} creationApi={personApi} role={() => org.role ?? ""} context={`${profile()?.id ?? "unselected"}:${org.id}`} revision={revision()} initialPlan={initialPlan} initialPromotion={initialPromotion} />
+                <BillingPlan api={billingV2(transport, org.id)} newTeam={isPersonal(org) ? { api: personApi, name: defaultTeamName() } : undefined} fallbackPlan={org.plan} role={() => org.role ?? ""} context={`${identifiedProfile()?.id ?? "unselected"}:${org.id}`} revision={revision()} initialPlan={initialPlan} initialPromotion={initialPromotion} />
               }</Show></Show>
             </>}</Show>
           </Show>
