@@ -44,6 +44,45 @@ test("terminal error and expiry never become successful payments", async () => {
     assert.deepEqual(result, { kind: state === "canceled" ? "cancelled" : state });
   }
 });
+test("paid credits stop on the server's terminal flag", async () => {
+  let reads = 0;
+  const result = await followCheckout({ read: async () => { reads++; return { state: "paid", terminal: true }; }, wait: async () => {}, cancelled: false });
+  assert.deepEqual(result, { kind: "paid" });
+  assert.equal(reads, 1);
+});
+test("a non-terminal error keeps polling until the budget and ends as processing", async () => {
+  let elapsed = 0;
+  let reads = 0;
+  const result = await followCheckout({ read: async () => { reads++; return { state: "error", terminal: false }; }, wait: async ms => { elapsed += ms; }, cancelled: false });
+  assert.deepEqual(result, { kind: "processing" });
+  assert.equal(elapsed, 60000);
+  assert.ok(reads > 1);
+});
+test("a terminal state without an outcome stops as processing without throwing", async () => {
+  let reads = 0;
+  const result = await followCheckout({ read: async () => { reads++; return { state: "pending", terminal: true }; }, wait: async () => { throw new Error("unexpected wait"); }, cancelled: false });
+  assert.deepEqual(result, { kind: "processing" });
+  assert.equal(reads, 1);
+});
+test("pinned checkout status vectors stop polling exactly when the server says terminal", async () => {
+  const { readFileSync } = await import("node:fs");
+  const vectors = JSON.parse(readFileSync(new URL("../../../../contracts/billing-v2/vectors/checkout-return-v3.json", import.meta.url), "utf8"));
+  for (const vector of vectors.statuses.filter((vector: { expected: { status: number } }) => vector.expected.status === 200)) {
+    const body = vector.expected.body;
+    let reads = 0;
+    await followCheckout({ read: async () => { reads++; return body; }, wait: async () => {}, cancelled: vector.return_result === "cancel" });
+    assert.equal(reads === 1, body.terminal, vector.name);
+  }
+});
+test("payment preparation keeps polling a non-terminal error until the URL arrives", async () => {
+  const { waitForPaymentUrl } = await import("../../src/web/billing-v2-return.ts");
+  const url = "https://checkout.stripe.com/c/pay/example";
+  let reads = 0;
+  const result = await waitForPaymentUrl({ state: "creating", url: null }, async () => ++reads === 1 ? { state: "error", terminal: false, url: null } : { state: "error", terminal: false, url },
+    AbortSignal.timeout(20000), () => {});
+  assert.equal(result, url);
+  assert.equal(reads, 2);
+});
 test("a terminal payment cannot open a previously available URL", async () => {
   const { waitForPaymentUrl } = await import("../../src/web/billing-v2-return.ts");
   const signal = new AbortController().signal;

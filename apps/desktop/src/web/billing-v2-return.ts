@@ -30,7 +30,7 @@ export async function followCheckout(options: {
         if (status.state === "active") return status.organization_id ? { kind: "active", organizationId: status.organization_id } : { kind: "active" };
         if (status.state === "canceled") return { kind: "cancelled" };
         if (status.state === "expired" || status.state === "error" || status.state === "paid") return { kind: status.state };
-        throw new Error("invalid_checkout_status");
+        return { kind: "processing" };
       }
     } catch (error) {
       const problem = error as { status?: unknown; retryAfter?: unknown };
