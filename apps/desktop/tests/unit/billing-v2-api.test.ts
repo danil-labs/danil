@@ -53,11 +53,61 @@ test("only an active plan exposes a valid organization, and active requires one"
   const api = billingV2({ call: async () => Response.json(value), mutation: async () => { throw new Error("unexpected mutation"); } }, null);
   await assert.rejects(api.checkoutStatus("bchk_01SYNTHETICCHK0001"));
   value = { ...value, organization_id: "org_ABC123" };
-  assert.equal((await api.checkoutStatus("bchk_01SYNTHETICCHK0001")).organization_id, "org_ABC123");
+  const active = await api.checkoutStatus("bchk_01SYNTHETICCHK0001");
+  assert.equal(active.state === "active" ? active.organization_id : null, "org_ABC123");
   value = { ...value, state: "pending", terminal: false };
+  await assert.rejects(api.checkoutStatus("bchk_01SYNTHETICCHK0001"));
+  value = { ...value, state: "paid", terminal: true };
   await assert.rejects(api.checkoutStatus("bchk_01SYNTHETICCHK0001"));
   value = { ...value, kind: "credits", state: "active", terminal: true };
   await assert.rejects(api.checkoutStatus("bchk_01SYNTHETICCHK0001"));
+  value = { ...value, kind: "plan", state: "active", terminal: false };
+  await assert.rejects(api.checkoutStatus("bchk_01SYNTHETICCHK0001"));
+});
+
+test("checkout status ignores unknown fields in both variants", async () => {
+  let value: Record<string, unknown> = {};
+  const api = billingV2({ call: async () => Response.json(value), mutation: async () => { throw new Error("unexpected mutation"); } }, null);
+  for (const known of [fixture("checkout.status.paid"), { ...fixture("checkout.status.paid"), state: "active", terminal: true, organization_id: "org_ABC123" }]) {
+    value = { ...known, unexpected: true };
+    const status = await api.checkoutStatus("bchk_01SYNTHETICCHK0001");
+    assert.deepEqual(status, known);
+    assert.equal("unexpected" in status, false);
+  }
+});
+
+test("checkout status reads a Stripe url and an expiry as sent in both variants", async () => {
+  let value: Record<string, unknown> = {};
+  const api = billingV2({ call: async () => Response.json(value), mutation: async () => { throw new Error("unexpected mutation"); } }, null);
+  const live = { url: "https://checkout.stripe.com/c/pay/cs_test_SYNTHETIC0001", expires_at: "2026-11-21T18:30:00Z" };
+  for (const known of [{ ...fixture("checkout.status.paid"), state: "pending", ...live }, { ...fixture("checkout.status.paid"), state: "active", terminal: true, organization_id: "org_ABC123", ...live }]) {
+    value = known;
+    const status = await api.checkoutStatus("bchk_01SYNTHETICCHK0001");
+    assert.deepEqual(status, known);
+    assert.equal(status.url, live.url);
+    assert.equal(status.expires_at, live.expires_at);
+  }
+});
+
+test("checkout status keeps the server's terminal flag for every non-active state", async () => {
+  let value: Record<string, unknown> = {};
+  const api = billingV2({ call: async () => Response.json(value), mutation: async () => { throw new Error("unexpected mutation"); } }, null);
+  for (const [state, terminal] of [["error", false], ["pending", true]] as const) {
+    value = { ...fixture("checkout.status.paid"), state, terminal };
+    assert.deepEqual(await api.checkoutStatus("bchk_01SYNTHETICCHK0001"), value);
+  }
+});
+
+test("every pinned checkout status vector is accepted as the server sent it", async () => {
+  const vectors = JSON.parse(readFileSync(new URL("../../../../contracts/billing-v2/vectors/checkout-return-v3.json", import.meta.url), "utf8"));
+  const bodies = vectors.statuses.filter((vector: { expected: { status: number } }) => vector.expected.status === 200).map((vector: { expected: { body: unknown } }) => vector.expected.body);
+  let value: unknown;
+  const api = billingV2({ call: async () => Response.json(value), mutation: async () => { throw new Error("unexpected mutation"); } }, null);
+  assert.ok(bodies.length > 0);
+  for (const body of bodies) {
+    value = body;
+    assert.deepEqual(await api.checkoutStatus(vectors.checkout_id), body);
+  }
 });
 
 test("credit transaction history preserves the server cursor", async () => {

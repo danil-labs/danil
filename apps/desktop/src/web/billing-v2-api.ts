@@ -4,10 +4,11 @@ import { availableDanilCredits } from "../lib/credits-balance.ts";
 type Transport = { call(path: string, init?: RequestInit): Promise<Response>; mutation(path: string, init?: RequestInit): Promise<Response> };
 const money = z.object({ currency: z.literal("MXN"), amount_micro: z.string().regex(/^-?(0|[1-9]\d{0,18})$/) });
 const checkout = z.object({ checkout_id: z.string(), state: z.enum(["creating", "open", "completed", "expired", "canceled"]), url: z.string().url().nullable() });
-const checkoutStatus = z.object({ checkout_id: z.string(), kind: z.enum(["plan", "credits"]), state: z.enum(["pending", "paid", "active", "canceled", "expired", "error"]), terminal: z.boolean(), url: z.string().url().nullable(), expires_at: z.string().nullable(), organization_id: z.string().regex(/^org_[A-Za-z0-9]{1,64}$/).optional() }).superRefine((value, ctx) => {
-  const terminal = value.state === "active" || value.state === "canceled" || value.state === "expired" || value.state === "error" || (value.state === "paid" && value.kind === "credits");
-  if (value.terminal !== terminal || (value.organization_id && value.state !== "active") || (value.state === "active" && (value.kind !== "plan" || !value.organization_id))) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "invalid_checkout_status" });
-});
+const checkoutStatusBase = { checkout_id: z.string(), url: z.string().url().nullable(), expires_at: z.string().nullable() };
+const checkoutStatus = z.union([
+  z.object({ ...checkoutStatusBase, kind: z.literal("plan"), state: z.literal("active"), terminal: z.literal(true), organization_id: z.string().regex(/^org_[A-Za-z0-9]{1,64}$/) }),
+  z.object({ ...checkoutStatusBase, kind: z.enum(["plan", "credits"]), state: z.enum(["pending", "paid", "canceled", "expired", "error"]), terminal: z.boolean(), organization_id: z.never().optional() }),
+]);
 const organization = z.object({ organization_id: z.string(), plan_key: z.string(), edition: z.string().nullish(), state: z.string(), payer: z.object({ is_you: z.boolean() }) });
 export type PlanChoice = { plan_key: "pro" | "team"; variant?: string };
 const catalog = z.object({ catalog_version: z.number().int(), plans: z.array(z.object({ plan_key: z.string(), sellable: z.boolean(), price: money.nullable(), price_pending: z.boolean().optional(), display_variants: z.array(z.object({ variant: z.string(), plan_key: z.string(), edition: z.string(), display_name: z.string() })).optional() })), credit_packs: z.array(z.object({ pack_id: z.string(), sellable: z.boolean(), credits: money })) });
