@@ -107,6 +107,7 @@ pub const EXTENSIONS: &[&str] = &[
     include_str!("../extensions/account_adoption_v1.json"),
     include_str!("../extensions/account_adoption_proof_v1.json"),
     include_str!("../extensions/chat_queue_v1.json"),
+    include_str!("../extensions/engine_adoption_v1.json"),
 ];
 
 /// Las órdenes del contrato más las de las extensiones. La huella sigue siendo

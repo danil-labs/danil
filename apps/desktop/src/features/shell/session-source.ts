@@ -25,20 +25,15 @@ export function deskSessionSource(invoke: Invoke, listen?: Listen): SessionSourc
 }
 
 let engineSource: SessionSource | null = null;
-/** Para T6: el origen del motor, cuando sus comandos de sesión existan. */
+/** Un origen propio del motor en el front, si algún día no pasa por `desk_auth`. */
 export const registerEngineSessionSource = (source: SessionSource | null) => { engineSource = source; };
 
-/** Un motor dueño de la sesión sin adaptador todavía: sin sesión, y el login no se finge. */
-const engineWithoutAdapter: SessionSource = {
-  origin: "engine",
-  read: async () => ({ state: "disconnected" }),
-  signIn: async () => { throw { detail: "not_available_yet" }; },
-  changes: async () => () => {},
-};
-
+/**
+ * Con `person_session_v1`, `desk_auth` es el adaptador del motor (`engine_session.rs`): los mismos
+ * comandos leen y abren la sesión del motor, y la del llavero de Desk ya no cuenta.
+ */
 export async function personSessionSource(invoke: Invoke, features: () => Promise<readonly string[] | null>, listen?: Listen): Promise<SessionSource> {
   const announced = await features().catch(() => null);
   if (!announced?.includes(ENGINE_SESSION_FEATURE)) return deskSessionSource(invoke, listen);
-  if (!engineSource) console.warn("[session] the engine owns the session but its adapter is not installed");
-  return engineSource ?? engineWithoutAdapter;
+  return engineSource ?? { ...deskSessionSource(invoke, listen), origin: "engine" };
 }

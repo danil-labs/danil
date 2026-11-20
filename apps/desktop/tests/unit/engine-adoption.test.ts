@@ -1,6 +1,7 @@
 /**
- * Con el rasgo de adopción del motor (decisión «la sesión vive en el motor» § 2.5) la ventana no
- * orquesta nada: pinta el estado y el evento del motor. Sin el rasgo, sigue `adoptLocals`.
+ * Con `engine_adoption_v1` y la sesión en el motor (`person_session_v1`), el motor adopta solo
+ * (decisión «la sesión vive en el motor» § 2.5): la ventana pinta su estado y su evento y no
+ * orquesta nada. Sin el rasgo, sigue `adoptLocals`.
  */
 import assert from "node:assert/strict";
 import { test } from "node:test";
@@ -13,44 +14,43 @@ globalThis.localStorage ??= (() => {
 })();
 
 const FEATURES = ["account_workspace_v1", "account_adoption_v1", "account_adoption_proof_v1"];
+const ENGINE = [...FEATURES, ENGINE_ADOPTION_FEATURE, "person_session_v1"];
 const PERSONAL = { context_id: "ctx-personal", org: "org_personal", org_name: "Cuenta de Ana", plan: "free" };
-const RUNNING = {
-  state: "running", org: "org_personal", org_name: "Cuenta de Ana", pending: 1,
-  items: [
-    { id: "q1", name: "Personal", step: "done" },
-    { id: "q2", name: "Maayataan", step: "working" },
-    { id: "q3", name: "Donde Banco", step: "waiting" },
-    { id: "qd", name: "Danil Workspace", step: "stays", org_name: "Danil" },
-  ],
-};
+const LOCALS = [{ id: "q1", name: "Personal" }, { id: "q2", name: "Maayataan" }, { id: "q3", name: "Donde Banco" }];
+/** La forma de `engine_adoption_status` en danil-engine 1e96f512 (`danil/adoption.rs`). */
+const status = (state: string, extra: Record<string, unknown> = {}) => ({ state, org: "org_personal", adopted: [], already: [], failed: [], attempted: 0, updated_at: 1, ...extra });
 
-test("the engine's adoption state becomes the linking rows, the staying rows and the existing notice", () => {
-  const a = engineAdoptionOf(RUNNING)!;
-  assert.deepEqual(engineAdoptionProgress(a), { org: "org_personal", finished: false, rows: [
-    { id: "q1", name: "Personal", step: "done" }, { id: "q2", name: "Maayataan", step: "working" }, { id: "q3", name: "Donde Banco", step: "waiting" },
+test("the engine's state becomes the linking rows and the existing notice", () => {
+  const running = engineAdoptionOf(status("running"))!;
+  assert.deepEqual(engineAdoptionProgress(running, LOCALS).rows.map((r) => r.step), ["working", "working", "working"], "the engine does not report per workspace");
+  assert.equal(engineAdoptionReport(running), null, "no notice while it runs");
+  const partial = engineAdoptionOf(status("partial", { adopted: [LOCALS[0]], already: [LOCALS[1]], failed: [{ ...LOCALS[2], reason: "network" }], attempted: 3, cause: null }))!;
+  assert.deepEqual(engineAdoptionProgress(partial, LOCALS), { org: "org_personal", finished: true, rows: [
+    { id: "q1", name: "Personal", step: "done" }, { id: "q2", name: "Maayataan", step: "done" }, { id: "q3", name: "Donde Banco", step: "later" },
   ] });
-  assert.deepEqual(a.kept, [{ id: "qd", name: "Danil Workspace", org_name: "Danil" }]);
-  assert.equal(engineAdoptionReport(a), null, "no notice while it runs");
-  const done = engineAdoptionOf({ ...RUNNING, state: "done", pending: 0, items: RUNNING.items.map((i) => i.step === "stays" ? i : { ...i, step: "done" }) })!;
-  assert.equal(engineAdoptionProgress(done).finished, true);
-  assert.deepEqual(engineAdoptionReport(done, "ctx-personal")?.adopted.map((w) => w.name), ["Personal", "Maayataan", "Donde Banco"]);
-  assert.equal(engineAdoptionReport(done, "ctx-personal")?.org_name, "Cuenta de Ana");
-  assert.equal(engineAdoptionReport(done, "ctx-personal")?.context, "ctx-personal");
-  // Un paso que la ventana no conoce no rompe: queda en espera.
-  assert.equal(engineAdoptionOf({ state: "running", items: [{ id: "x", name: "X", step: "quantum" }] })!.items[0].step, "waiting");
-  assert.equal(engineAdoptionOf(null), null);
+  const report = engineAdoptionReport(partial, "ctx-personal", "Cuenta de Ana")!;
+  assert.deepEqual(report.adopted, [LOCALS[0]], "what the platform already had is not counted as brought");
+  assert.deepEqual(report.failed.map((f) => f.reason), ["network"]);
+  assert.equal(report.org_name, "Cuenta de Ana");
+  assert.deepEqual(engineAdoptionReport(engineAdoptionOf(status("partial", { failed: [{ id: "q9", name: "X", reason: "id_taken" }] }))!)?.refused.map((r) => r.reason), ["id_taken"]);
   assert.equal(engineAdoptionOf({ state: "nope" }), null);
+  assert.equal(engineAdoptionOf(null), null);
 });
 
-test("the first login is done when the engine reports done, or partial with nothing left", () => {
-  const of = (state: string, pending: number) => engineAdoptionOf({ state, pending, items: [] })!;
-  assert.equal(engineAdoptionDone(of("done", 0)), true);
-  assert.equal(engineAdoptionDone(of("partial", 0)), true);
-  assert.equal(engineAdoptionDone(of("partial", 2)), false);
-  assert.equal(engineAdoptionDone(of("running", 0)), false);
-  assert.equal(engineAdoptionDone(of("failed", 0)), false);
-  assert.equal(engineAdoptionDone(of("idle", 0)), true, "nothing to adopt");
-  assert.equal(engineAdoptionDone(of("idle", 3)), false);
+test("the first login is done when the engine reports done, or partial with no locals left", () => {
+  const of = (state: string) => engineAdoptionOf(status(state))!;
+  assert.equal(engineAdoptionDone(of("done"), 3), true);
+  assert.equal(engineAdoptionDone(of("partial"), 0), true);
+  assert.equal(engineAdoptionDone(of("partial"), 2), false);
+  assert.equal(engineAdoptionDone(of("partial"), null), false, "unknown is not done");
+  assert.equal(engineAdoptionDone(of("running"), 0), false);
+  assert.equal(engineAdoptionDone(of("idle"), 0), true, "nothing to adopt");
+});
+
+test("the engine owns adoption only with its own session too", () => {
+  assert.equal(engineOwnsAdoption(ENGINE), true);
+  assert.equal(engineOwnsAdoption([...FEATURES, ENGINE_ADOPTION_FEATURE]), false, "without person_session_v1 the engine has no session to adopt with");
+  assert.equal(engineOwnsAdoption(FEATURES), false);
 });
 
 test("with the engine feature the window does not orchestrate: no challenge, no adopt, no adoption proof", async () => {
@@ -67,9 +67,7 @@ test("with the engine feature the window does not orchestrate: no challenge, no 
     if (method !== "GET") posts.push(path);
     return { status: 200, body: method === "GET" && path === "/v1/identity/me" ? { id: "p", organizations: [{ id: "org_personal", type: "personal" }] } : { items: [], next_cursor: null } };
   };
-  assert.equal(engineOwnsAdoption([...FEATURES, ENGINE_ADOPTION_FEATURE]), true);
-  assert.equal(engineOwnsAdoption(FEATURES), false);
-  const accounts = createAccountWorkspaces(invoke, true, () => {}, async () => [...FEATURES, ENGINE_ADOPTION_FEATURE]);
+  const accounts = createAccountWorkspaces(invoke, true, () => {}, async () => ENGINE);
   await accounts.refresh([PERSONAL], send, () => "p");
   assert.deepEqual(calls.filter((c) => ["adoption_proof", "adopt_account_workspace"].includes(c)), []);
   assert.deepEqual(posts.filter((p) => p.startsWith("/v1/workspaces/adopt") || p === "/v1/identity/organizations/select"), []);

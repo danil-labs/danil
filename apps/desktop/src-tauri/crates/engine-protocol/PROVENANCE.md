@@ -316,3 +316,5 @@ them answers that the command is unknown, and only that feature turns off.
   SHA-256 `3c957da1463df967f551f8f82746e99158511bdf7ee2787f587fd9564f36d5d6`.
 - `chat_queue_v1.json`: `get_turn`, `stop_turn_if`, `queue_resume`, `clientMessageId` on `send_message` and `engineDispatch` on `save_queue`; the engine dispatches a task's queue only with `chat_queue_dispatch_v1` and when the window asks for it, and stops only the visible turn (terminus-workspace#357), copied from danil-engine `feat/cola-en-el-motor` `315e2266`,
   SHA-256 `b1593d7d55434f07a0b4b7e306b1df9ce5486b171e4bd6fd66163364483606de`.
+- `engine_adoption_v1.json`: `engine_adoption_status`, `engine_adoption_retry` and the `engine-adoption` event: the engine adopts the local workspaces into the personal org by itself (decision 2026-11-20 «la sesión vive en el motor» § 2.5) (danil-engine#504), copied from danil-engine `feat/maquinas-conectadas` `1e96f512`,
+  SHA-256 `67bbaf7c85962e7d19275dcf40310bfe98eb257355951e1e1dbb05f0c7ad510f`.

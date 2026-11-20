@@ -292,18 +292,17 @@ test("the gate shows loading until the session is known, the login without one, 
   assert.deepEqual(gateView({ status: { state: "connected", email: "ana@danil.ai" }, done: false, signedInThisRun: false, linked: true }), { t: "open" }, "ligado en esta ejecución, aunque quede algo para el siguiente arranque");
 });
 
-test("the session is read through one source: desk_auth today, and the engine once it announces person_session_v1", async () => {
+test("the session is read through one source: desk_auth, which is the engine adapter once it announces person_session_v1", async () => {
   const deskConnected = { state: "connected", email: "ana@danil.ai" };
   const calls: string[] = [];
   const invoke = async <T>(command: string): Promise<T> => { calls.push(command); return (command === "danil_session_status" ? deskConnected : undefined) as T; };
   const today = await personSessionSource(invoke, async () => FEATURES);
   assert.equal(today.origin, "desk");
   assert.deepEqual(await today.read(), deskConnected);
-  // El motor ya es dueño de la sesión: lo que guarde el llavero de Desk no cuenta (decisión § 2.6).
+  // Con la sesión en el motor, `desk_auth` es su adaptador (engine_session.rs): los mismos comandos.
   const engineOwned = await personSessionSource(invoke, async () => [...FEATURES, "person_session_v1"]);
   assert.equal(engineOwned.origin, "engine");
-  assert.deepEqual(await engineOwned.read(), { state: "disconnected" }, "sin el adaptador del motor, sin sesión: no se abre con la del llavero");
-  await assert.rejects(engineOwned.signIn(), (e: { detail?: string }) => e.detail === "not_available_yet");
+  assert.deepEqual(await engineOwned.read(), deskConnected, "read through danil_session_status, which the Rust adapter sends to the engine");
   registerEngineSessionSource({ origin: "engine", read: async () => ({ state: "connected", email: "cli@danil.ai" }), signIn: async () => {}, changes: async () => () => {} });
   assert.deepEqual(await (await personSessionSource(invoke, async () => ["person_session_v1"])).read(), { state: "connected", email: "cli@danil.ai" }, "T6 cambia el origen sin tocar el gate");
   registerEngineSessionSource(null);

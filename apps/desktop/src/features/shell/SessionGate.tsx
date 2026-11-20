@@ -9,7 +9,8 @@ import { Button } from "../../ui/Button";
 import { Spinner } from "../../ui/Spinner";
 import { CabeceraDelAlta, rememberAccountWelcome } from "../onboarding";
 import { said } from "../settings";
-import { type EngineAdoption, engineAdoptionDone, engineAdoptionProgress, engineAdoptionReport, engineOwnsAdoption, onEngineAdoption, readEngineAdoption } from "./engine-adoption";
+import { type EngineAdoption, engineAdoptionDone, engineAdoptionFinished, engineAdoptionProgress, engineAdoptionReport, engineOwnsAdoption, onEngineAdoption, readEngineAdoption } from "./engine-adoption";
+import { accountWorkspaces } from "./session-account-workspaces";
 import { engineFeatures } from "./engine-features";
 import { type AdoptionStep, FIRST_LOGIN_KEY, firstLoginSignedIn, localCandidateCount, shouldMarkFirstLoginDone } from "./first-login";
 import { createLinker } from "./first-login-link";
@@ -36,6 +37,9 @@ export function SessionGate(props: { children: JSX.Element }) {
   const [linker, setLinker] = createSignal<ReturnType<typeof createLinker> | null>(null);
   // Con el rasgo de adopción del motor, «Ligando…» es lo que el motor reporta.
   const [engineRun, setEngineRun] = createSignal<EngineAdoption | null>(null);
+  // Lo que el motor no reporta por workspace: los locales al empezar y lo que ya es de otra organización.
+  const [engineLocals, setEngineLocals] = createSignal<{ id: string; name: string }[]>([]);
+  const [engineKept, setEngineKept] = createSignal<{ id: string; name: string; org: string }[]>([]);
   const [count, setCount] = createSignal(0);
   const [signing, setSigning] = createSignal(false);
   const [problem, setProblem] = createSignal<string | null>(null);
@@ -59,33 +63,45 @@ export function SessionGate(props: { children: JSX.Element }) {
     : { t: "open" as const });
 
   const markDone = () => { escribirPref(FIRST_LOGIN_KEY, true); setDone(true); };
-  const contextOf = (org: string | null) => ((status() as { sessions?: { contexts?: { context_id: string; org: string }[] }[] } | null)?.sessions ?? []).flatMap((s) => s.contexts ?? []).find((c) => c.org === org)?.context_id ?? "";
-  /** El motor adopta solo: se espera su estado final y se pinta lo que reporta. */
-  async function linkByEngine() {
+  const contexts = () => ((status() as { sessions?: { contexts?: { context_id: string; org: string; org_name?: string | null }[] }[] } | null)?.sessions ?? []).flatMap((s) => s.contexts ?? []);
+  const contextOf = (org: string | null) => contexts().find((c) => c.org === org);
+  /** El motor adopta solo: se espera a que cierre su repaso y se pinta lo que reporta. */
+  async function linkByEngine(locals: number) {
     const first = await readEngineAdoption(invoke);
     if (!first) return void console.warn("[first-login] the engine owns adoption but reports no state");
-    if (engineAdoptionDone(first)) return markDone();
+    // Sin locales no hay nada que esperar; con locales, un `done` de antes del login no basta.
+    if (locals === 0) return markDone();
+    const candidates = await invoke<{ id: string; name: string; adoptable?: boolean }[]>("adoption_candidates").catch(() => []);
+    setEngineLocals(candidates.filter((c) => c.adoptable !== false).map(({ id, name }) => ({ id, name })));
+    setEngineKept(accountWorkspaces(await invoke("list_workspaces").catch(() => null)).map((w) => ({ id: w.id, name: w.name, org: w.account.org })));
+    // Un repaso que ya cerró antes del login no cuenta: se espera el que corre ahora.
+    let settled = first.state === "running" ? null : first;
     setEngineRun(first);
     let off: (() => void) | undefined;
     await new Promise<void>((resolve) => {
       const timer = setTimeout(resolve, LINKING_LIMIT_MS);
-      const settle = (a: EngineAdoption) => { setEngineRun(a); if (engineAdoptionProgress(a).finished) { clearTimeout(timer); resolve(); } };
-      void onEngineAdoption(listen, settle).then((stop) => { off = stop; });
-      if (engineAdoptionProgress(first).finished) settle(first);
+      void onEngineAdoption(listen, (a) => {
+        setEngineRun(a);
+        if (a.state === "running") settled = null;
+        else if (engineAdoptionFinished(a) && a !== settled) { clearTimeout(timer); resolve(); }
+      }).then((stop) => { off = stop; });
+      if (!settled && engineAdoptionFinished(first)) { clearTimeout(timer); resolve(); }
     });
     off?.();
     const last = engineRun();
     if (!last) return;
-    handAdoptionReport(engineAdoptionReport(last, contextOf(last.org)));
-    if (engineAdoptionDone(last)) markDone();
-    else console.warn("[first-login] the engine has not finished linking", { state: last.state, pending: last.pending });
+    const remaining = await localCandidateCount(invoke, engineFeatures);
+    const target = contextOf(last.org);
+    handAdoptionReport(engineAdoptionReport(last, target?.context_id, target?.org_name ?? null));
+    if (engineAdoptionDone(last, remaining)) markDone();
+    else console.warn("[first-login] the engine has not finished linking", { state: last.state, cause: last.cause, remaining });
   }
   async function link() {
     if (running) return;
     running = true;
     rememberAccountWelcome("connected");
     try {
-      if (engineOwnsAdoption(await engineFeatures())) return void (await linkByEngine());
+      if (engineOwnsAdoption(await engineFeatures())) return void (await linkByEngine(await localCandidateCount(invoke, engineFeatures) ?? -1));
       const n = await localCandidateCount(invoke, engineFeatures);
       if (n === null) console.warn("[first-login] engine features unknown: the rail keeps trying");
       if (n) {
@@ -126,12 +142,17 @@ export function SessionGate(props: { children: JSX.Element }) {
     }
   }
 
-  const rows = () => engineRun()?.items ?? linker()?.progress()?.rows ?? [];
+  const rows = () => { const e = engineRun(); return e ? engineAdoptionProgress(e, engineLocals()).rows : linker()?.progress()?.rows ?? []; };
   const groupOf = (org: string | undefined) => linker()?.groups()?.find((g) => g.org === org);
-  const personalName = () => { const e = engineRun(); if (e) return e.org_name ?? e.org ?? ""; const g = groupOf(linker()?.progress()?.org); return g?.org_name ?? g?.org ?? ""; };
+  const personalName = () => {
+    const e = engineRun();
+    if (e) return e.org ? contextOf(e.org)?.org_name ?? "" : "";
+    const g = groupOf(linker()?.progress()?.org);
+    return g?.org_name ?? g?.org ?? "";
+  };
   const stays = () => {
     const e = engineRun();
-    if (e) return e.kept.map((w) => ({ id: w.id, name: w.name, org_name: w.org_name }));
+    if (e) return e.org ? engineKept().filter((w) => w.org !== e.org).map((w) => ({ id: w.id, name: w.name, org_name: contextOf(w.org)?.org_name ?? null })) : [];
     const org = linker()?.progress()?.org;
     return org ? (linker()?.sealedElsewhere(org) ?? []).map((w) => ({ id: w.id, name: w.name, org_name: groupOf(w.org)?.org_name ?? null })) : [];
   };
