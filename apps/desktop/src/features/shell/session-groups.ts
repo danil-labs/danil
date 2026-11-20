@@ -5,10 +5,11 @@ import { escribirPref, leerPref } from "../../lib/prefs.ts";
 import { listen } from "../../lib/serviceEvents.ts";
 import { danilAvailable, danilAvailableContext, readDanilContext } from "../machines/index.ts";
 import { type CreatedNotice, createAccountRequests } from "./account-requests.ts";
-import { FIRST_LOGIN_KEY } from "./first-login.ts";
+import { engineFeatures } from "./engine-features.ts";
 import { createPersonalOpener } from "./personal-open.ts";
 import { createAccountWorkspaces } from "./session-account-workspaces.ts";
 import { type ContextGroup, createSessionContexts } from "./session-contexts.ts";
+import { handAdoptionReport, handedReport } from "./session-gate.ts";
 import type { EmptyReason } from "./session-empty.ts";
 import { coalesceSessionReturn as createSessionReturn } from "./session-return.ts";
 import { sessionSeedInputs, sessionSyncKey } from "./session-seeding.ts";
@@ -26,8 +27,7 @@ function wire(hidden: () => ReadonlySet<string>, onSeeded: (ids: readonly string
   const [revision, bump] = createSignal(0);
   const changed = () => bump((n) => n + 1);
   const sessions = createSessionContexts(invoke, changed);
-  const accounts = createAccountWorkspaces(invoke, !!capabilities().nativeWindow, changed);
-  accounts.hold(!!capabilities().nativeWindow && leerPref<boolean>(FIRST_LOGIN_KEY, false) !== true);
+  const accounts = createAccountWorkspaces(invoke, !!capabilities().nativeWindow, changed, engineFeatures);
   accounts.forgetRefusals();
   const groups = () => (revision(), sessions.groups());
   const [laterContext, setLaterContext] = createSignal<string | null>(null);
@@ -155,10 +155,9 @@ function wire(hidden: () => ReadonlySet<string>, onSeeded: (ids: readonly string
   }
   return {
     agentCreated, clearAgentCreated: () => setAgentCreated(null),
-    adoptionReport: accounts.adoptionReport, clearAdoptionReport: accounts.clearAdoptionReport,
+    adoptionReport: () => accounts.adoptionReport() ?? handedReport(), clearAdoptionReport: () => { accounts.clearAdoptionReport(); handAdoptionReport(null); },
     retryAdoption: () => { accounts.clearAdoptionUnavailable(); void adoption.retry(); },
     adoptionProgress: accounts.adoptionProgress, personalOutcome: accounts.personalOutcome, sealedElsewhere: (org: string) => (revision(), accounts.sealedElsewhere(org)), hasAdoptionCandidates: accounts.hasAdoptionCandidates,
-    releaseAdoption: () => { accounts.hold(false); accounts.clearAdoptionUnavailable(); void adoption.retry(); },
     organizationNotice, clearOrganizationNotice: () => setOrganizationNotice(false), notifyOrganization: () => { setOrganizationNotice(true); setMenuNotice(true); },
     sessions, groups: rows, known, menuNotice, acknowledgeNotice: () => setMenuNotice(false), emptyReason: () => (revision(), sessions.emptyReason()), removed: () => (revision(), sessions.removed()), laterContext, acknowledgeLater: () => setLaterContext(null), ready: () => (revision(), sessions.ready()), connected: () => (revision(), sessions.connected()),
     createFree: async (context: string) => {
