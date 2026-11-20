@@ -9,7 +9,7 @@
  */
 import { type CapabilityList, type Computer, type Fetch, type MachinesAnswer, announces, capabilityList, machineToComputer, machinesClient, mayCall } from "@terminus/computers";
 
-import { edgeUntil, type EdgeReply as NativeReply, type Patience } from "../../lib/edge.ts";
+import { edgeUntil, type EdgeMethod, type EdgeReply as NativeReply, type Patience } from "../../lib/edge.ts";
 
 /** Solo una base para armar rutas `/v1/...`; la webview no llama a este origen (lo hace Rust). */
 export const EDGE_ENDPOINT = "https://edge.danil.ai/v1";
@@ -25,8 +25,9 @@ export type CloudMachines = ReturnType<typeof createCloudMachines>;
 
 /** El adaptador conserva el recibo nativo; solo las escrituras necesitan reintento por intención. */
 export function edgeFetch(invoke: Invoke, onProblem?: (error: unknown) => void, patience: Patience = {}): Fetch {
-  const send = <T>(method: "GET" | "POST", path: string, body?: unknown, idempotencyKey?: string) =>
-    invoke("danil_edge_fetch", { method, path, ...(method === "POST" ? { body, idempotencyKey } : {}) }) as Promise<NativeReply<T>>;
+  // Máquinas solo pide GET y POST (más abajo se rechaza lo demás); el tipo es el del transporte común.
+  const send = <T>(method: EdgeMethod, path: string, body?: unknown, idempotencyKey?: string) =>
+    invoke("danil_edge_fetch", { method, path, ...(method !== "GET" ? { body, idempotencyKey } : {}) }) as Promise<NativeReply<T>>;
   return async (input, init) => {
     const method = init?.method ?? "GET";
     if (method !== "GET" && method !== "POST") return { status: 400, ok: false, json: async () => ({ code: "invalid_request" }) };

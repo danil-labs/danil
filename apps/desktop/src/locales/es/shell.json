@@ -140,6 +140,14 @@
   "shell.workspaces.add_row": "Agregar",
   "shell.workspaces.danil_empty": "No hay más workspaces de Danil en esta organización",
   "shell.workspaces.danil_loading": "Cargando…",
+  "shell.workspaces.choose_org": "Elegir organización",
+  "shell.workspaces.no_authorized_orgs": "Esta cuenta no tiene organizaciones.",
+  "shell.workspaces.no_workspace_here": "No tienes workspaces disponibles en esta organización.",
+  "shell.workspaces.connect_failed": "No se pudo conectar la cuenta. Inténtalo de nuevo.",
+  "shell.workspaces.connect_account": "Conectar otra cuenta",
+  "shell.workspaces.no_accessible": "No tienes workspaces disponibles.",
+  "shell.workspaces.catalog_error": "No se pudo cargar la lista.",
+  "shell.workspaces.add_failed": "No se pudo agregar el workspace. Inténtalo de nuevo.",
   "shell.workspaces.danil_none": "No tienes workspaces de Danil",
   "shell.workspaces.danil_tile": "{name}, workspace de Danil",
   "shell.workspaces.remove": "Quitar de la barra",
@@ -489,5 +497,10 @@
   "shell.rail.tip_balance_loading": "Saldo: …",
   "shell.rail.tip_balance_unavailable": "Saldo: No disponible",
   "shell.rail.open": "Abrir",
-  "shell.rail.attention_stale": "Atención sin actualizar"
+  "shell.rail.attention_stale": "Atención sin actualizar",
+  "shell.workspaces.admission_required": "Requiere admisión",
+  "shell.workspaces.admit": "Admitir",
+  "shell.workspaces.catalog_empty": "Sin workspaces accesibles",
+  "shell.workspaces.catalog_unavailable": "No se pudo comprobar",
+  "shell.workspaces.admission_failed": "No se pudo admitir la organización. Inténtalo de nuevo."
 }

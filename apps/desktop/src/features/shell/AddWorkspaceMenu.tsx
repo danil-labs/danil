@@ -2,6 +2,8 @@ import Eye from "lucide-solid/icons/eye";
 import Plus from "lucide-solid/icons/plus";
 import { type Component, createEffect, For, Show } from "solid-js";
 import { Dynamic } from "solid-js/web";
+import { capabilities } from "../../lib/platform";
+import { WebWorkspacePicker } from "./WebWorkspacePicker";
 import { t } from "../../lib/i18n";
 import { cn } from "../../lib/utils";
 import { SEPARADOR_DE_MENU, TITULO_DE_GRUPO } from "../../ui/ContextMenu";
@@ -34,7 +36,10 @@ export default function AddWorkspaceMenu(props: {
   onOpen: (id: string, context?: string) => void;
   onShow: (id: string) => void;
 }) {
+  const picker = () => capabilities().webWorkspacePicker;
+  const resume = picker()?.resume() ?? null;
   const { open, setOpen, step, setStep, context, setContext, query, setQuery, close } = createAddWorkspaceMenuState();
+  if (resume) setOpen(true);
   createEffect(() => openRequestedSessionMenu(props.sessions, { context: setContext, step: setStep, open: setOpen }));
   const rows = () => props.hidden.filter((w) => matchesName(w.name, query()));
   // El abierto ya enseña su distintivo en su cuadro; los de Danil sin agregar también avisan.
@@ -63,12 +68,13 @@ export default function AddWorkspaceMenu(props: {
         <Show when={waiting()}>{(s) => <Dynamic component={props.badge} state={s()} class="absolute -top-1 -right-1" />}</Show>
       </PopoverTrigger>
       <PopoverContent role="menu" class="w-64 p-1" onKeyDown={menuArrows}>
+        <Show when={picker()} fallback={<>
         <SessionEmptyNotice sessions={props.sessions} />
         <Show
           when={step() === "menu"}
           fallback={props.sessions.groups() !== null ? <SessionAddStep sessions={props.sessions} context={context()} query={query()} onQuery={setQuery} onClose={close} onOpen={props.onOpen} /> : <DanilStep danil={props.danil} query={query()} onQuery={setQuery} tasksOf={props.tasksOf} badge={props.badge} onClose={close} />}
         >
-          <Show when={usesSessionMenu(props.sessions, props.danil.signedIn)} fallback={<DanilAddEntry danil={props.danil} onStep={() => (setContext(null), setStep("danil"))} />}><SessionAddEntries sessions={props.sessions} signedIn={props.danil.signedIn} onStep={() => (setContext(null), setStep("danil"))} onClose={close} /></Show>
+          <Show when={usesSessionMenu(props.sessions, props.danil.signedIn)} fallback={<DanilAddEntry danil={props.danil} web={!!picker()} onStep={() => (setContext(null), setStep("danil"))} />}><SessionAddEntries sessions={props.sessions} signedIn={props.danil.signedIn} onStep={() => (setContext(null), setStep("danil"))} onClose={close} /></Show>
           <Show when={props.sessions.groups() === null}><DanilSwitchRows danil={props.danil} onClose={close} /></Show>
           <Show when={props.hidden.length > 0}>
             <span aria-hidden="true" class={cn(SEPARADOR_DE_MENU, "block")} />
@@ -114,6 +120,7 @@ export default function AddWorkspaceMenu(props: {
             </div>
           </Show>
         </Show>
+        </>}>{web => <WebWorkspacePicker picker={web()} close={close} />}</Show>
       </PopoverContent>
     </Popover></>
   );

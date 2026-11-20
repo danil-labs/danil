@@ -1,5 +1,5 @@
 import { type Machine, type machinesClient, machineToComputer, RelaySession } from "@terminus/computers";
-import { classOf, Fleet, memberKey, relayLink, unwrap } from "@terminus/fleet";
+import { Fleet, memberKey, relayLink, unwrap } from "@terminus/fleet";
 import { createSignal, lazy, Suspense } from "solid-js";
 import { createContextRelayPool, machinesListed } from "../features/machines";
 import { createRouter, type SliceChange } from "../features/machines/router";
@@ -12,10 +12,11 @@ import { installIpc } from "./ipc";
 import type { MachineRow, MachineStatus } from "./SyncNote";
 import { createWebTransport } from "./transport";
 import { browser, takeSettingsParam } from "./window-browser";
+import { selectEngineWorkspace, webMachineCall } from "./workspace-runtime";
 import { windowContext } from "./window-context";
 
 declare const __TERMINUS_VERSION__: string;
-type Base = { contextMachines?: (context: string) => ReturnType<typeof machinesClient>; machines: ReturnType<typeof machinesClient>; relayOrigin: string; permits: (name: string) => boolean; organizations?: Capabilities["organizations"]; promo?: Capabilities["webPromo"]; groupAccount?: Capabilities["groupAccount"]; reauth?: Capabilities["webReauth"]; preparing?: () => boolean; onUnauthorized: () => void; profile: AccountProfileSource; services: Pick<Capabilities, "webWorkspaces" | "danilCredits">; onUnavailable: () => void; };
+type Base = { contextMachines?: (context: string) => ReturnType<typeof machinesClient>; machines: ReturnType<typeof machinesClient>; relayOrigin: string; permits: (name: string) => boolean; organizations?: Capabilities["organizations"]; promo?: Capabilities["webPromo"]; groupAccount?: Capabilities["groupAccount"]; reauth?: Capabilities["webReauth"]; preparing?: () => boolean; onUnauthorized: () => void; profile: AccountProfileSource; services: Pick<Capabilities, "webWorkspaces" | "webWorkspacePicker" | "danilCredits">; onUnavailable: () => void; };
 const Picker = lazy(() => import("../features/machines/MachinePicker").then(m => ({ default: m.MachinePicker })));
 const AccountMachines = lazy(() => import("../features/machines/AccountMachines"));
 /** Another machine's slice changed: the window rereads just that. */
@@ -38,7 +39,7 @@ export function mountWindow(base: Base, mounted: Mounted) {
   const unavailable = () => ({ what: t("web.machines.unavailable"), detail: "machines_unavailable" });
   const pool = createContextRelayPool();
   const scope = windowContext({ legacy: base.machines, factory: base.contextMachines, account: base.groupAccount, fleet: () => fleet, revision, onContextsSettled: contexts => { active.pruneContexts(contexts); bump(n => n + 1); } });
-  const fleet = new Fleet({ self: null, storage: mounted.storage,
+  const fleet: Fleet = new Fleet({ self: null, storage: mounted.storage,
     connect: info => {
       const create = () => {
         const relay = new RelaySession({ endpoint: base.relayOrigin, computerId: info.id,
@@ -52,11 +53,7 @@ export function mountWindow(base: Base, mounted: Mounted) {
           onUnauthorized: () => void refresh(),
         });
         const link = relayLink(relay, () => relay.state() === "unknown" ? machineToComputer(listed.get(memberKey(info.id, info.context))!).state : relay.state());
-        return { ...link, call: async (...args: Parameters<typeof link.call>) => {
-          // El canal de tickets no enciende: la intención espera al plano de control.
-          if (classOf(args[1]) === "intent") await fleet.wake(info.id, info.context);
-          return link.call(...args);
-        } };
+        return { ...link, call: webMachineCall(link, fleet, info.id, info.context) };
       };
       return info.context ? pool.link(info.id, create, { onSuspend: () => active.attentionSuspended(info.id, info.context), onResume: (value) => active.attentionResumed(info.id, info.context, value) }) : create();
     },
@@ -75,6 +72,7 @@ export function mountWindow(base: Base, mounted: Mounted) {
       if (power === "on" && powers.get(key) !== "on" && active.unlisted()) window.dispatchEvent(new CustomEvent("harness:workspace"));
       powers.set(key, power);
       if (changed) void refresh();
+      bump(n => n + 1);
       void import("../features/machines/store").then(({ machineNamesChanged, refetchMachines }) => {
         if (stopped) return;
         machineNamesChanged();
@@ -128,7 +126,7 @@ export function mountWindow(base: Base, mounted: Mounted) {
     })));
     machinesListed(fleet);
     fleet.subscribeEvents();
-    if (active.activeContext() !== (group?.context ?? null)) await active.handle("set_active_workspace", { id: base.services.webWorkspaces?.active() ?? null }, { headers: { "x-danil-context": group?.context ?? "" } });
+    await selectEngineWorkspace(active, base.services.webWorkspaces, group);
     active.registryChanged();
     for (const name of ["harness:workspace-name", "harness:service-resync", "harness:machines"]) window.dispatchEvent(new CustomEvent(name));
     return true;
@@ -147,6 +145,12 @@ export function mountWindow(base: Base, mounted: Mounted) {
     organizations: base.organizations,
     initialSettings: takeSettingsParam(),
     machineName: id => id === "local" && missing() ? t("web.machines.unavailable") : fleet.name(id, scope.current()?.context),
+    taskWritable: id => {
+      revision();
+      const context = scope.current()?.context;
+      const task = unwrap(id, fleet.remotes(context));
+      return !!task && fleet.canContinue(task.machine, context);
+    },
     taskMachine: id => unwrap(id, fleet.remotes(scope.current()?.context))?.machine ?? null,
     windowMachine: () => { const id = active.createsOn(null)?.machine; return id ? { id, name: fleet.name(id, scope.current()?.context), local: false } : undefined; },
     remoteCreate: workspace => active.createsOn(workspace),

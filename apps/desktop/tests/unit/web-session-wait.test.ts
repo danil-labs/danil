@@ -60,6 +60,7 @@ test("Retry-After only lengthens the wait", () => {
 test("the window waits for a workspace while identity has none or the list is still empty", () => {
   assert.equal(awaitingWorkspace(undefined, true, 0), false, "no profile yet: not mounted");
   assert.equal(awaitingWorkspace({ workspace: null }, false, 0), true);
+  assert.equal(awaitingWorkspace({ workspace: null }, true, 1), false, "a listed workspace is ready to select");
   assert.equal(awaitingWorkspace({ workspace: "21" }, true, 0), true);
   assert.equal(awaitingWorkspace({ workspace: "21" }, false, 0), false, "without the workspaces route the list does not count");
   assert.equal(awaitingWorkspace({ workspace: "21" }, true, 1), false);

@@ -6,6 +6,7 @@ import { acceptedFreeModelPolicy, freeModelScope, sameFreeModelPolicy, type Free
 import { loadFreeModelPolicy } from "../../lib/free-model-policy-load.ts";
 import type { Frase } from "../../lib/prose";
 import { prosaDe } from "../../ui/Failure";
+import { activatePlatform, isPlatformPolicy, needsPlatform, withdrawPlatform } from "./free-router-session.ts";
 
 const cargarDialogo = () => import("./FreeRouterConsentDialog");
 const DialogoDeConsentimiento = lazy(cargarDialogo);
@@ -71,8 +72,10 @@ export function createFreeRouterConsent(opts: { agente: () => string; despues?: 
     setPreguntando(true);
     try {
       await cargarDialogo();
-      const policy = await politicaConReintento();
-      if (!policy?.enabled) throw new Error(t("settings.accounts.free.unavailable"));
+      // En un workspace de plataforma no hay oferta local: el texto se lee sin referencia y decide `workspaces`.
+      const shown = texto()?.policy;
+      const policy = shown && isPlatformPolicy(shown) ? shown : await politicaConReintento();
+      if (!policy || (!policy.enabled && !isPlatformPolicy(policy))) throw new Error(t("settings.accounts.free.unavailable"));
       setTexto({ lineas: policy.lines, version: policy.version, policy });
     } catch (e) {
       // Sin texto vigente el diálogo no ofrece aceptar; el error queda dentro.
@@ -91,6 +94,10 @@ export function createFreeRouterConsent(opts: { agente: () => string; despues?: 
       if (!policy) throw new Error(t("settings.accounts.free.unavailable"));
       const startup = await invoke<FreeModelStartup>("workspaces_startup");
       if (startup.active !== policy.workspace_id) throw new Error(t("settings.accounts.free.policy_changed"));
+      if (isPlatformPolicy(policy)) {
+        await platform(valor, policy);
+        return;
+      }
       // La referencia sale siempre de la relectura estricta, nunca de la política mostrada.
       const fresh = valor ? await loadFreeModelPolicy(policy) : null;
       if (valor && (!fresh?.acceptance_ref || !sameFreeModelPolicy(policy, fresh))) {
@@ -100,7 +107,12 @@ export function createFreeRouterConsent(opts: { agente: () => string; despues?: 
         "set_provider_consent",
         { provider: valor ? fresh!.acceptance_ref : opts.agente(), accepted: valor },
         freeModelScope(policy),
-      );
+      ).catch((e: unknown) => (needsPlatform(e) ? null : Promise.reject(e)));
+      // El motor dice que el workspace no es personal: decide la plataforma y el motor no selló nada.
+      if (w === null) {
+        await platform(valor, policy);
+        return;
+      }
       const accepted = acceptedFreeModelPolicy(policy, w.free_model_consent);
       setAceptado(accepted);
       if (valor && !accepted) throw new Error(t("settings.accounts.free.policy_changed"));
@@ -120,6 +132,22 @@ export function createFreeRouterConsent(opts: { agente: () => string; despues?: 
     } finally {
       setGuardando(false);
     }
+  }
+
+  /** El sí o la retirada en `workspaces`; si falla, el Router queda como estaba y sin pase nuevo. */
+  async function platform(valor: boolean, policy: FreeModelPolicy) {
+    try {
+      if (valor) await activatePlatform(policy);
+      else await withdrawPlatform(policy);
+    } catch {
+      throw new Error(t("settings.accounts.free.unavailable"));
+    }
+    setAceptado(valor);
+    await refreshRoute(policy);
+    setPreguntando(false);
+    setFallo(null);
+    if (valor) await opts.despues?.();
+    window.dispatchEvent(new CustomEvent("harness:consentimiento"));
   }
 
   // Cancelar cierra y no activa nada, por las tres vías; el sí solo existe si se pulsa Activar.

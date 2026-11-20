@@ -140,6 +140,14 @@
   "shell.workspaces.add_row": "Add",
   "shell.workspaces.danil_empty": "No more Danil workspaces in this organization",
   "shell.workspaces.danil_loading": "Loading…",
+  "shell.workspaces.choose_org": "Choose an organization",
+  "shell.workspaces.no_authorized_orgs": "This account has no organizations.",
+  "shell.workspaces.no_workspace_here": "No workspaces are available to you in this organization.",
+  "shell.workspaces.connect_failed": "Could not connect the account. Try again.",
+  "shell.workspaces.connect_account": "Connect another account",
+  "shell.workspaces.no_accessible": "No workspaces are available.",
+  "shell.workspaces.catalog_error": "Could not load the list.",
+  "shell.workspaces.add_failed": "Could not add this workspace. Try again.",
   "shell.workspaces.danil_none": "You have no Danil workspaces",
   "shell.workspaces.danil_tile": "{name}, Danil workspace",
   "shell.workspaces.remove": "Remove from the bar",
@@ -489,5 +497,10 @@
   "shell.rail.tip_balance_loading": "Balance: …",
   "shell.rail.tip_balance_unavailable": "Balance: Unavailable",
   "shell.rail.open": "Open",
-  "shell.rail.attention_stale": "Attention not up to date"
+  "shell.rail.attention_stale": "Attention not up to date",
+  "shell.workspaces.admission_required": "Needs admission",
+  "shell.workspaces.admit": "Admit",
+  "shell.workspaces.catalog_empty": "No accessible workspaces",
+  "shell.workspaces.catalog_unavailable": "Could not check",
+  "shell.workspaces.admission_failed": "Could not admit the organization. Try again."
 }
