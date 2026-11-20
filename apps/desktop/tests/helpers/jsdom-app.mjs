@@ -334,6 +334,8 @@ export async function boot(environment, version, responses, userAgent, storage =
    * respaldo por clave— es una ampliación pendiente.
    */
   w.localStorage.setItem("harness:lengua", "es");
+  // El login del primer arranque tapa el riel; quien lo prueba pasa `false` en `storage`.
+  w.localStorage.setItem("harness.layout.onboarding.first_login_v1", "true");
   // Lo que dejó una ventana anterior: el arranque en caliente lee de aquí antes del primer IPC.
   for (const [key, value] of Object.entries(storage)) w.localStorage.setItem(key, value);
 

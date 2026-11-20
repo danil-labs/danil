@@ -4,7 +4,7 @@ import { accountId as asAccountId, type PendingUnions } from "./account-transfer
 export type AdoptionCandidate = { id: string; name: string; created_at?: number; adoptable?: boolean; reason?: string };
 type Invoke = <T>(command: string, args?: Record<string, unknown>) => Promise<T>;
 type Send = (context: string, method: string, path: string, body?: unknown, key?: string) => Promise<{ status: number; body?: unknown; empty_reason?: unknown }>;
-export type AdoptionMemory = { key: (id: string) => string; skip: (org: string, id: string) => boolean; refuse: (org: string, id: string) => void };
+export type AdoptionMemory = { key: (id: string) => string; skip: (org: string, id: string) => boolean; refuse: (org: string, id: string) => void; forget?: () => void };
 export type AdoptionClaimed = { id: string; name: string };
 /** Un local que no se pudo traer, con la causa que el aviso enseña. */
 export type AdoptionFailure = { id: string; name: string; reason: string };
@@ -102,6 +102,7 @@ export async function adoptLocals(
   memory: AdoptionMemory,
   pending: PendingUnions,
   person: string | null = null,
+  progress: (id: string, name: string, step: "waiting" | "working" | "done") => void = () => {},
 ): Promise<AdoptionResult> {
   const adopted: AdoptionClaimed[] = [];
   const already: AdoptionClaimed[] = [];
@@ -119,18 +120,21 @@ export async function adoptLocals(
   }
   candidates = candidates.filter((c) => c.adoptable !== false && !memory.skip(free.org, c.id));
   if (!candidates.length) return empty;
+  for (const c of candidates) progress(c.id, c.name, "waiting");
   const sub = await personOf(send, free.context_id, person);
   if (!sub) return { ...empty, cause: "no_person", attempted: 0 };
   const platform = await platformByEngine(send, free.context_id);
   let attempted = 0;
   for (const c of candidates) {
     attempted++;
+    progress(c.id, c.name, "working");
     const known = platform?.get(c.id);
     if (known) {
       // La plataforma ya la tiene: no se reclama otra vez, solo se recupera el sello local.
       try {
         await invoke("adopt_account_workspace", { ...header, id: c.id, account: { org: free.org, account_id: known } });
         already.push({ id: c.id, name: c.name });
+        progress(c.id, c.name, "done");
         pending.add({ id: c.id, context: free.context_id, org: free.org, account_id: known });
       } catch {
         failed.push({ id: c.id, name: c.name, reason: "seal" });
@@ -193,6 +197,7 @@ export async function adoptLocals(
       continue;
     }
     adopted.push({ id: c.id, name: c.name });
+    progress(c.id, c.name, "done");
     // La unión del Free router con la cuenta nueva va aparte y se reintenta (`retryUnions`).
     pending.add({ id: c.id, context: free.context_id, org: free.org, account_id: accountId });
   }
@@ -241,5 +246,7 @@ export function prefsAdoptionMemory(read: <T>(key: string, fallback: T) => T, wr
     // El rechazo es de esa organización: con el Free de otro correo se puede intentar.
     skip: (org, id) => read<string[]>(REFUSED, []).includes(`${org}:${id}`),
     refuse: (org, id) => write(REFUSED, [...new Set([...read<string[]>(REFUSED, []), `${org}:${id}`])]),
+    // Un rechazo inesperado se vuelve a intentar en el siguiente arranque (plan de ligar locales § 2.6).
+    forget: () => write(REFUSED, []),
   };
 }

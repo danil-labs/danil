@@ -2,6 +2,8 @@ import { createSignal } from "solid-js";
 import { escribirPref, leerPref } from "../../lib/prefs.ts";
 import { adoptionTarget, adoptionTargetOf, adoptLocals, prefsAdoptionMemory, type AdoptionClaimed, type AdoptionFailure } from "./account-adoption.ts";
 import { applyMoves, movesFor, prefsPendingUnions, retryUnions } from "./account-transfers.ts";
+import type { AdoptionProgress } from "./first-login.ts";
+import type { PersonalOpener, PersonalOutcome } from "./personal-open.ts";
 
 export type AccountWorkspace = { id: string; name: string; account: { org: string; account_id: string } };
 export type FreeWorkspace = { id: string; name: string; account_id: string };
@@ -16,7 +18,7 @@ export type AdoptionReport = {
   unavailable: boolean;
   cause: string | null;
 };
-type Group = { context_id: string; org: string; org_name?: string | null; plan: string | null };
+type Group = { context_id: string; org: string; org_name?: string | null; plan: string | null; email?: string | null };
 type Invoke = <T>(command: string, args?: Record<string, unknown>) => Promise<T>;
 type Send = (context: string, method: string, path: string, body?: unknown, key?: string) => Promise<{ status: number; body?: unknown; empty_reason?: unknown }>;
 
@@ -55,9 +57,13 @@ export function createAccountWorkspaces(invoke: Invoke, native: boolean, changed
   const adoptions = prefsAdoptionMemory(leerPref, escribirPref, () => crypto.randomUUID());
   let adoption = false;
   let adopting = false;
+  // Hasta que la persona confirma la cuenta en el primer login: el sello no se deshace.
+  let held = false;
   // El contexto (un inicio de sesión) donde el servidor dijo que hoy no adopta: uno nuevo vuelve a intentar.
   let adoptionUnavailable: string | null = null;
   const [adoptionReport, setAdoptionReport] = createSignal<AdoptionReport | null>(null);
+  const [adoptionProgress, setAdoptionProgress] = createSignal<AdoptionProgress | null>(null);
+  const [personalOutcome, setPersonalOutcome] = createSignal<PersonalOutcome | null>(null);
   let reported: string | null = null;
   let version = 0;
   // El último repaso no terminó (un error o una página del catálogo que no fue 200): `free` no es confiable.
@@ -65,27 +71,41 @@ export function createAccountWorkspaces(invoke: Invoke, native: boolean, changed
   let rows: AccountWorkspace[] = [];
   let free = new Map<string, FreeWorkspace>();
   const header = () => ({ "x-terminus-machine": local });
+  async function hasAdoptionCandidates() {
+    // Con el servidor diciendo que hoy no adopta, no se insiste: el aviso ofrece reintentar.
+    if (!native || !extension || !adoption || adoptionUnavailable) return false;
+    try {
+      return (await invoke<{ adoptable?: boolean }[]>("adoption_candidates", header())).some((candidate) => candidate.adoptable !== false);
+    } catch {
+      return false;
+    }
+  }
+  const step = (org: string) => (id: string, name: string, next: "waiting" | "working" | "done") => setAdoptionProgress((now) => {
+    const rows = (now?.org === org && !now.finished ? now.rows : []).filter((r) => r.id !== id);
+    const at = now?.org === org && !now.finished ? now.rows.findIndex((r) => r.id === id) : -1;
+    rows.splice(at < 0 ? rows.length : at, 0, { id, name, step: next });
+    return { org, finished: false, rows };
+  });
   return {
     adoptionReport,
     clearAdoptionReport: () => setAdoptionReport(null),
     /** Un reintento del aviso no espera al siguiente inicio de sesión. */
     clearAdoptionUnavailable: () => { adoptionUnavailable = null; },
+    /** El avance de cada local en la pantalla del primer login, y si abrir la personal quedó pendiente. */
+    adoptionProgress,
+    personalOutcome,
+    hold: (value: boolean) => { held = value; },
+    forgetRefusals: () => adoptions.forget?.(),
     /** ¿Queda algo por traer? El alta espera a que identity ligue la organización personal. */
-    async hasAdoptionCandidates() {
-      // Con el servidor diciendo que hoy no adopta, no se insiste: el aviso ofrece reintentar.
-      if (!native || !extension || !adoption || adoptionUnavailable) return false;
-      try {
-        return (await invoke<{ adoptable?: boolean }[]>("adoption_candidates", header())).some((candidate) => candidate.adoptable !== false);
-      } catch {
-        return false;
-      }
-    },
+    hasAdoptionCandidates,
     known: () => rows.map((w) => w.id),
     available: (org: string) => rows.filter((w) => w.account.org === org),
+    /** Los sellados aquí en otra organización: se quedan en ella. */
+    sealedElsewhere: (org: string) => rows.filter((w) => w.account.org !== org).map((w) => ({ id: w.id, name: w.name, org: w.account.org })),
     free: (context: string) => extension ? free.get(context) : undefined,
     /** Lo que el primer arranque necesita para distinguir un rechazo permanente de «todavía no». */
     status: () => ({ machine: !!local, extension, failed }),
-    async refresh(groups: readonly Group[], send: Send, personOf: (context: string) => string | null = () => null) {
+    async refresh(groups: readonly Group[], send: Send, personOf: (context: string) => string | null = () => null, opener?: PersonalOpener) {
       if (!native) return;
       const epoch = ++version;
       free = new Map();
@@ -96,16 +116,26 @@ export function createAccountWorkspaces(invoke: Invoke, native: boolean, changed
         if (epoch !== version) return;
         if (!self) { local = null; extension = false; transfer = false; changed(); return; }
         local = self.id;
-        extension = self.features?.includes("account_workspace_v1") ?? false;
+        // La fila propia por la flota puede venir sin `features`: lo que el motor anunció en esta ejecución se conserva.
+        extension ||= self.features?.includes("account_workspace_v1") ?? false;
         transfer = self.features?.includes("account_transfer_v1") ?? false;
         // Sin la prueba de posesión (A17) el servidor no adopta: hace falta el rasgo nuevo del motor.
-        adoption = !!(self.features?.includes("account_adoption_v1") && self.features.includes("account_adoption_proof_v1"));
+        adoption ||= !!(self.features?.includes("account_adoption_v1") && self.features.includes("account_adoption_proof_v1"));
         // Al iniciar sesión, antes de lanzar turnos: los locales pasan a la organización personal.
         const personal = adoption ? await adoptionTargetOf(groups, send) : adoptionTarget(groups);
-        if (adoption && personal && !adopting && adoptionUnavailable !== personal.context_id) {
+        // Sin la personal abierta no se adoptaba nada: se abre y el repaso con la lista nueva liga.
+        if (adoption && !held && !personal && opener && !adopting && (await hasAdoptionCandidates())) {
+          const opened = await opener.open(groups);
+          setPersonalOutcome(opened);
+          if (opened.kind === "open" || epoch !== version) return;
+        }
+        if (adoption && !held && personal && !adopting && adoptionUnavailable !== personal.context_id) {
           adopting = true;
           try {
-            const done = await adoptLocals(invoke, header(), send, personal, adoptions, pending, personOf(personal.context_id));
+            const done = await adoptLocals(invoke, header(), send, personal, adoptions, pending, personOf(personal.context_id), step(personal.org));
+            setAdoptionProgress((now) => now && now.org === personal.org ? { ...now, finished: true, rows: now.rows.map((r) => r.step === "done" ? r : { ...r, step: "later" }) } : now);
+            for (const f of [...done.refused, ...done.failed]) console.warn("[adoption] local not linked", { id: f.id, reason: f.reason });
+            if (done.attempted > 0) await opener?.adopted();
             if (epoch !== version) return;
             adoptionUnavailable = done.unavailable ? personal.context_id : null;
             // Un aviso, nunca una pregunta. Si no se trajo nada y todo está en orden, no hay aviso.
