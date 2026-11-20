@@ -9,6 +9,7 @@ import { Button } from "../../ui/Button";
 import { Spinner } from "../../ui/Spinner";
 import { CabeceraDelAlta, rememberAccountWelcome } from "../onboarding";
 import { said } from "../settings";
+import { type EngineAdoption, engineAdoptionDone, engineAdoptionProgress, engineAdoptionReport, engineOwnsAdoption, onEngineAdoption, readEngineAdoption } from "./engine-adoption";
 import { engineFeatures } from "./engine-features";
 import { type AdoptionStep, FIRST_LOGIN_KEY, firstLoginSignedIn, localCandidateCount, shouldMarkFirstLoginDone } from "./first-login";
 import { createLinker } from "./first-login-link";
@@ -33,6 +34,8 @@ export function SessionGate(props: { children: JSX.Element }) {
   const [confirmed, setConfirmed] = createSignal(false);
   const [linked, setLinked] = createSignal(false);
   const [linker, setLinker] = createSignal<ReturnType<typeof createLinker> | null>(null);
+  // Con el rasgo de adopción del motor, «Ligando…» es lo que el motor reporta.
+  const [engineRun, setEngineRun] = createSignal<EngineAdoption | null>(null);
   const [count, setCount] = createSignal(0);
   const [signing, setSigning] = createSignal(false);
   const [problem, setProblem] = createSignal<string | null>(null);
@@ -52,14 +55,37 @@ export function SessionGate(props: { children: JSX.Element }) {
   });
 
   const view = createMemo(() => capabilities().nativeWindow
-    ? linker() ? { t: "linking" as const } : gateView({ status: status(), done: done(), signedInThisRun: firstLoginSignedIn() || confirmed(), linked: linked() })
+    ? linker() || engineRun() ? { t: "linking" as const } : gateView({ status: status(), done: done(), signedInThisRun: firstLoginSignedIn() || confirmed(), linked: linked() })
     : { t: "open" as const });
 
+  const markDone = () => { escribirPref(FIRST_LOGIN_KEY, true); setDone(true); };
+  const contextOf = (org: string | null) => ((status() as { sessions?: { contexts?: { context_id: string; org: string }[] }[] } | null)?.sessions ?? []).flatMap((s) => s.contexts ?? []).find((c) => c.org === org)?.context_id ?? "";
+  /** El motor adopta solo: se espera su estado final y se pinta lo que reporta. */
+  async function linkByEngine() {
+    const first = await readEngineAdoption(invoke);
+    if (!first) return void console.warn("[first-login] the engine owns adoption but reports no state");
+    if (engineAdoptionDone(first)) return markDone();
+    setEngineRun(first);
+    let off: (() => void) | undefined;
+    await new Promise<void>((resolve) => {
+      const timer = setTimeout(resolve, LINKING_LIMIT_MS);
+      const settle = (a: EngineAdoption) => { setEngineRun(a); if (engineAdoptionProgress(a).finished) { clearTimeout(timer); resolve(); } };
+      void onEngineAdoption(listen, settle).then((stop) => { off = stop; });
+      if (engineAdoptionProgress(first).finished) settle(first);
+    });
+    off?.();
+    const last = engineRun();
+    if (!last) return;
+    handAdoptionReport(engineAdoptionReport(last, contextOf(last.org)));
+    if (engineAdoptionDone(last)) markDone();
+    else console.warn("[first-login] the engine has not finished linking", { state: last.state, pending: last.pending });
+  }
   async function link() {
     if (running) return;
     running = true;
     rememberAccountWelcome("connected");
     try {
+      if (engineOwnsAdoption(await engineFeatures())) return void (await linkByEngine());
       const n = await localCandidateCount(invoke, engineFeatures);
       if (n === null) console.warn("[first-login] engine features unknown: the rail keeps trying");
       if (n) {
@@ -71,14 +97,15 @@ export function SessionGate(props: { children: JSX.Element }) {
         if (outcome === "background") console.warn("[first-login] linking continues in the background");
       }
       const remaining = n ? await localCandidateCount(invoke, engineFeatures) : n;
-      if (shouldMarkFirstLoginDone({ signedIn: true, remaining })) { escribirPref(FIRST_LOGIN_KEY, true); setDone(true); }
+      if (shouldMarkFirstLoginDone({ signedIn: true, remaining })) markDone();
     } finally {
       setLinker(null);
+      setEngineRun(null);
       setLinked(true);
       running = false;
     }
   }
-  createEffect(() => { if (view().t === "linking" && !linker()) void link(); });
+  createEffect(() => { if (view().t === "linking" && !linker() && !engineRun()) void link(); });
   // Con la sesión confirmada aquí, el alta no vuelve a preguntar por la cuenta.
   createEffect(() => { if (view().t === "open" && status()?.state === "connected") rememberAccountWelcome("connected"); });
   // Un login por código termina con `danil-connect`, no al volver de `signIn`.
@@ -99,10 +126,15 @@ export function SessionGate(props: { children: JSX.Element }) {
     }
   }
 
-  const rows = () => linker()?.progress()?.rows ?? [];
+  const rows = () => engineRun()?.items ?? linker()?.progress()?.rows ?? [];
   const groupOf = (org: string | undefined) => linker()?.groups()?.find((g) => g.org === org);
-  const personalName = () => { const g = groupOf(linker()?.progress()?.org); return g?.org_name ?? g?.org ?? ""; };
-  const stays = () => { const org = linker()?.progress()?.org; return org ? linker()?.sealedElsewhere(org) ?? [] : []; };
+  const personalName = () => { const e = engineRun(); if (e) return e.org_name ?? e.org ?? ""; const g = groupOf(linker()?.progress()?.org); return g?.org_name ?? g?.org ?? ""; };
+  const stays = () => {
+    const e = engineRun();
+    if (e) return e.kept.map((w) => ({ id: w.id, name: w.name, org_name: w.org_name }));
+    const org = linker()?.progress()?.org;
+    return org ? (linker()?.sealedElsewhere(org) ?? []).map((w) => ({ id: w.id, name: w.name, org_name: groupOf(w.org)?.org_name ?? null })) : [];
+  };
 
   return (
     <Switch>
@@ -123,7 +155,7 @@ export function SessionGate(props: { children: JSX.Element }) {
                     <For each={stays()}>{(w) => (
                       <li class={ROW} data-first-login-row={w.id} data-step="stays">
                         <span class="min-w-0 truncate text-neutral-950">{w.name}</span>
-                        <span class="shrink-0 text-xs text-neutral-500">{groupOf(w.org)?.org_name ? t("shell.first_login.stays", { org: groupOf(w.org)!.org_name! }) : t("shell.first_login.stays_other")}</span>
+                        <span class="shrink-0 text-xs text-neutral-500">{w.org_name ? t("shell.first_login.stays", { org: w.org_name }) : t("shell.first_login.stays_other")}</span>
                       </li>
                     )}</For>
                     <For each={rows()}>{(row) => (

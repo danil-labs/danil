@@ -146,3 +146,36 @@ test("an engine that does not say what it announces opens the app but leaves the
   assert.ok(await until(() => rail(doc)));
   assert.equal(app.w.localStorage.getItem(DONE_KEY), "false", "not marked: it comes back on the next start");
 });
+
+test("when the engine owns adoption the window only paints its state and event, and orchestrates nothing", async () => {
+  const items = (step) => Array.from({ length: 7 }, (_, i) => ({ id: `qlocal0${i + 1}`, name: `Local ${i + 1}`, step: i === 0 ? "done" : step }));
+  const posts = [];
+  const app = await boot("listo", "gate-engine-adoption", {
+    ...RESPONSES,
+    machine_list: [{ id: "local", local: true, active: true, on: true, hosts: true, features: [...FEATURES, "engine_adoption_v1"] }],
+    list_workspaces: { active: "w", workspaces: [{ id: "w", name: "Local" }] },
+    adoption_candidates: Array.from({ length: 7 }, (_, i) => ({ id: `qlocal0${i + 1}`, name: `Local ${i + 1}`, adoptable: true })),
+    adoption_status: { state: "running", org: "org_personal", org_name: "Cuenta de Ana", pending: 6, items: [...items("waiting"), { id: "qdanil01", name: "Danil Workspace", step: "stays", org_name: "Danil" }] },
+    danil_session_status: { ...connected, sessions: [{ ...connected.sessions[0], contexts: [context("ctx-danil", "org_danil", { org_name: "Danil" }), context("ctx-personal", "org_personal", { org_name: "Cuenta de Ana", plan: "free" })] }] },
+    danil_edge_fetch: ({ method, path }) => {
+      if (method !== "GET") posts.push(path);
+      return path === "/v1/identity/me" ? { status: 200, body: { id: "person-ana", organizations: [{ id: "org_personal", type: "personal" }] } } : { status: 200, body: { items: [], next_cursor: null } };
+    },
+  }, undefined, PENDING);
+  const doc = app.w.document;
+  assert.ok(await until(() => doc.querySelector("[data-first-login-continue]")));
+  doc.querySelector("[data-first-login-continue]").click();
+  assert.ok(await until(() => doc.querySelector('[data-session-gate="linking"]')), "«Ligando…» from the engine state");
+  assert.ok(await until(() => doc.querySelector('[data-first-login-row="qlocal01"]')), textOf(doc, "[data-session-gate]"));
+  assert.equal(doc.querySelector('[data-first-login-row="qlocal01"]')?.dataset.step, "done");
+  assert.equal(doc.querySelector('[data-first-login-row="qlocal02"]')?.dataset.step, "waiting");
+  assert.ok(textOf(doc, '[data-first-login-row="qdanil01"]').includes("ya está en Danil · se queda"));
+  assert.ok(textOf(doc, "[data-session-gate]").includes("Van a «Cuenta de Ana»."));
+  assert.equal(rail(doc), null, "the rail waits for the engine");
+  app.emit("adoption.changed", { state: "done", org: "org_personal", org_name: "Cuenta de Ana", pending: 0, items: items("done") });
+  assert.ok(await until(() => rail(doc)), "the engine's done hands back the rail");
+  assert.equal(app.w.localStorage.getItem(DONE_KEY), "true");
+  assert.ok(await until(() => textOf(doc, "[data-adoption-report]").includes("Trajimos 7 workspaces")), "the existing notice, from the engine's result");
+  assert.deepEqual(app.commands.filter((c) => ["adoption_proof", "adopt_account_workspace"].includes(c)), [], "no proof or seal from the window");
+  assert.deepEqual(posts.filter((p) => p.startsWith("/v1/workspaces/adopt") || p === "/v1/identity/organizations/select"), [], "no challenge, adopt or select from the window");
+});

@@ -5,6 +5,7 @@ import { escribirPref, leerPref } from "../../lib/prefs.ts";
 import { listen } from "../../lib/serviceEvents.ts";
 import { danilAvailable, danilAvailableContext, readDanilContext } from "../machines/index.ts";
 import { type CreatedNotice, createAccountRequests } from "./account-requests.ts";
+import { engineAdoptionReport, engineOwnsAdoption, onEngineAdoption } from "./engine-adoption.ts";
 import { engineFeatures } from "./engine-features.ts";
 import { createPersonalOpener } from "./personal-open.ts";
 import { createAccountWorkspaces } from "./session-account-workspaces.ts";
@@ -142,6 +143,14 @@ function wire(hidden: () => ReadonlySet<string>, onSeeded: (ids: readonly string
     void sessions.refresh().then(() => requests.pump());
     void listen("danil-connect", () => { void adoption.retry(); }).catch(() => {});
     void listen("account.request", () => void requests.pump()).catch(() => {});
+    // Lo que el motor liga después, en segundo plano, llega al mismo aviso.
+    void engineFeatures().then((f) => {
+      if (!engineOwnsAdoption(f)) return;
+      void onEngineAdoption(listen, (a) => {
+        const report = engineAdoptionReport(a, groups()?.find((g) => g.org === a.org)?.context_id);
+        if (report?.adopted.length) handAdoptionReport(report);
+      }).catch(() => {});
+    });
     const refreshed = createSessionReturn(async () => {
       await refreshAccounts();
       for (const g of groups() ?? []) await readDanilContext(g.org, g.context_id);
