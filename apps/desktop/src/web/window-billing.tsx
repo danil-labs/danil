@@ -4,12 +4,11 @@ import type { Capabilities } from "../lib/platform";
 import { billingV2 } from "./billing-v2-api";
 import type { PlatformProfile, PlatformWorkspace, platformTransport } from "./platform-session";
 
-import { billingHref, webBillingEnabled } from "./billing-route";
+import { billingHref } from "./billing-route";
 
 const Plan = lazy(() => import("./BillingPlan"));
 const Return = lazy(() => import("./CheckoutReturn"));
 
-export { webBillingEnabled };
 const pending = () => new URLSearchParams(window.location.search).has("checkout") || !!sessionStorage.getItem("danil.billing.return");
 
 export function windowBilling(transport: ReturnType<typeof platformTransport>, profile: PlatformProfile, organizations: OrganizationSelection, workspace: () => PlatformWorkspace | undefined, machine: BillingReturnProps["machine"]) {
@@ -38,9 +37,9 @@ export function windowBilling(transport: ReturnType<typeof platformTransport>, p
   return { account, returned };
 }
 
-export function BillingReturnGate(props: Omit<BillingReturnProps, "dismiss"> & { enabled?: boolean }) {
+export function BillingReturnGate(props: Omit<BillingReturnProps, "dismiss">) {
   const [open, setOpen] = createSignal(true);
-  return <Show when={(props.enabled ?? webBillingEnabled) && open() && pending()}>
+  return <Show when={open() && pending()}>
     <aside class="fixed right-4 bottom-4 z-50 w-80 max-w-[calc(100vw-2rem)] rounded-lg border border-line bg-bg p-3 shadow-lg">
       <Suspense><Return api={props.api} onActive={props.onActive} onSettled={props.onSettled} machine={props.machine} plan={props.plan} dismiss={() => setOpen(false)} /></Suspense>
     </aside>

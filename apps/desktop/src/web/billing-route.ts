@@ -1,6 +1,5 @@
 import { checkoutReturn } from "./billing-v2-return";
 
-export const webBillingEnabled = import.meta.env.VITE_DANIL_BILLING_V2 === "true";
 const LOGIN = "danil.billing.login";
 const PAYMENT = "danil.billing.payment";
 const MAX_AGE_MS = 60 * 60_000;
