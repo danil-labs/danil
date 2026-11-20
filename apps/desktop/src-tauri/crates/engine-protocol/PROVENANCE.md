@@ -314,3 +314,5 @@ them answers that the command is unknown, and only that feature turns off.
   SHA-256 `ab06a5f1a733a8a1e9533151db8e44b3de35cbaec21119a122ed161e1ba1f976`.
 - `account_adoption_proof_v1.json`: `adoption_proof`, the possession proof for `POST /v1/workspaces/adopt` (A17), (danil-engine#481), copied from danil-engine dev `40f5bc9c`,
   SHA-256 `3c957da1463df967f551f8f82746e99158511bdf7ee2787f587fd9564f36d5d6`.
+- `connected_machines_v1.json`: `danil_connected_status` (the window reads it; it never calls `danil_connected_attach` or `danil_connected_detach`: the engine enrolls itself, decision 2026-11-20 «la sesión vive en el motor»). **Provisional:** copied from the uncommitted work of danil-engine `feat/maquinas-conectadas` (T5, base `605cf7f9`, SHA-256 `4ee489725594f72de67d6ff6db518083123f1dfaaff6d3a25e561d7bb7e82052`), keeping only `danil_connected_status`; replace it with the published copy,
+  SHA-256 `f7ba7d5e531e074550bd473d891fb516422fe4cebb100caffb064fb67f7d6733`.

@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "name": "connected_machines",
+  "description": "Máquinas conectadas por organización (plan 2026-11-20-maquinas-por-organizacion § 5 «Contrato v3» de terminus-workspace). danil_connected_attach {organization_id, machine_id, machine_credential} -> ConnectedMachine: Desk o `danil login` entregan la inscripción que devolvió POST /v1/machines/self/enroll; el motor guarda machine_credential en su bóveda (Clase::Danil, ámbito danil-computers, ranura connected-<organization_id>) y en connected.json solo lo que no es secreto. Con ella pide POST {connect}/v1/connect/boot-credential {machine_id, machine_credential} -> {token, expires_at} (danil-boot+jwt, iss=machine-provisioning, aud=relay), lo renueva antes de que venza y mantiene un relay GET {connect}/v1/connect con Bearer <token> por organización. Volver a entregar la misma organización reemplaza la anterior. danil_connected_status -> ConnectedStatus {install_id, hostname, platform, organizations: [ConnectedMachine]}: install_id, hostname y platform son los que Desk y danil login mandan a self/enroll (el mismo install_id reinscribe la misma máquina); ConnectedMachine es {organization_id, machine_id, state: connecting|connected|error, online, error?, expires_at?} (expires_at en ms de época de la credencial de arranque vigente). danil_connected_detach {organization_id} -> ConnectedStatus: corta el relay y olvida la credencial; no avisa a la central. Errores (detail): invalid_organization si organization_id no es org_…; invalid_machine si machine_id o machine_credential no tienen forma; vault si la bóveda no se abre; unsupported en una VM con el conector aparte. error de la fila: invalid_machine_credential (la central no la reconoce o se quitó la máquina: deja de intentar), owner_not_authorized (reintenta cada 5 min), unavailable. Por el relay de una máquina conectada solo se ven y tocan los workspaces sellados con esa organización (tenancy); nada de toda la máquina. Ningún comando devuelve la credencial ni el token. Solo la ventana y la CLI local (relay: false). Fuera del hash de compatibilidad (status.contract).",
+  "features": [
+    "connected_machines_v1"
+  ],
+  "commands": [
+    {
+      "async": false,
+      "channel": null,
+      "kind": "invoke",
+      "name": "danil_connected_status",
+      "output": "-> Result < ConnectedStatus , Failure >",
+      "parameters": [],
+      "path": "danil::connected::danil_connected_status",
+      "relay": false,
+      "audience": "window",
+      "authority": "admin",
+      "durable": false,
+      "enforcement": "server"
+    }
+  ]
+}
