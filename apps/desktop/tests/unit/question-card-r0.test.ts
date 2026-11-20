@@ -173,3 +173,18 @@ test("regresión: tras contestar con acuse, la tarjeta desaparece y no reaparece
   }
   f.dispose();
 });
+
+/** La fila sin turno de `App.tsx:4379` (falla `detach_session_source`): solo existe en la ventana. */
+const avisoSinTurno = (): Msg => ({ role: "system", text: "No se pudo quitar la fuente", meta: "fallo" });
+
+test("una fila sin turno no detiene una lectura iniciada antes: la primera lectura de la tarea no deja el aviso solo", async () => {
+  const f = fixture();
+  const resolve = f.nextRead()!;
+  const primera = f.store.read("p", "s"); // se abre la tarea; su primera lectura sigue en curso
+  f.store.appendPersisted("s", [avisoSinTurno()]);
+  resolve(sesion([T_USER, T_PREGUNTA]));
+  assert.equal(f.store.acceptSession("s", await primera, false, 1), true, "la lectura iniciada antes del aviso sin turno se rechazó");
+  assert.deepEqual(f.store.messages().map((m) => m.turno), ["u1", "a1"], "el hilo quedó sin la historia que trajo la lectura");
+  assert.deepEqual(f.store.rows().s.optimistic ?? [], [], "la fila sin turno no lleva marca de confirmación");
+  f.dispose();
+});
