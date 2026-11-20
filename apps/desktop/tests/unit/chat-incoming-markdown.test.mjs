@@ -73,3 +73,56 @@ test("los mensajes entrantes de agentes en globos de diálogo se muestran format
     if (app) app.w.close();
   }
 });
+
+const ENTRANTE = "/revisa el corte de @t2 y lee @docs/plan.md\n\n**Listo** con `/probar` y luego /probar\n\n<img src=x onerror=\"window.__xss=1\"><script>window.__xss=2</script> [mal](javascript:window.__xss=3)";
+
+test("un mensaje entrante en Markdown conserva menciones, chips y la política de enlaces", async () => {
+  let app;
+  try {
+    app = await boot("listo", "chat-incoming-marcas", {
+      ...TASK_AFTER_QUEUE,
+      list_slash_menu: { commands: [{ name: "revisa", description: "" }], skills: [{ name: "probar", description: "" }] },
+      load_session: {
+        ...TASK_AFTER_QUEUE.load_session,
+        turns: [
+          { role: "user", id: "u-humano", text: "Texto **sin formato** de la persona" },
+          {
+            role: "user",
+            id: "u-agente",
+            text: ENTRANTE,
+            agent: "orchestrator",
+            from_task: { folder: "p1", task: "t2", title: "Mover flujos" },
+            task_mentions: [{ target: { kind: "task", projectId: "p1", sessionId: "t2" }, text: "@t2", start: ENTRANTE.indexOf("@t2"), end: ENTRANTE.indexOf("@t2") + 3 }],
+          },
+          { role: "agent", id: "a-respuesta", text: "Entendido." },
+        ],
+      },
+    });
+    const doc = app.w.document;
+    doc.querySelector('[data-sesion="s1"]').click();
+    await sleep(300);
+
+    const globo = doc.querySelector('[data-sender="agent"]').closest("article");
+    assert.equal(globo.querySelector("strong")?.textContent, "Listo", "el Markdown sigue pintándose");
+    assert.equal(globo.querySelector("[data-kind='command']")?.textContent, "/revisa", "el comando inicial conserva su chip");
+    const chips = [...globo.querySelectorAll("[data-kind='command']")].map((chip) => chip.textContent);
+    assert.deepEqual(chips, ["/revisa", "/probar"], "la skill en medio del texto es chip; dentro de código no");
+    assert.equal(globo.querySelector("code")?.textContent, "/probar");
+    const tarea = [...globo.querySelectorAll("button")].find((b) => b.textContent === "@t2");
+    assert.ok(tarea, "la mención a una tarea se puede abrir");
+    assert.ok([...globo.querySelectorAll("span.font-mono")].some((s) => s.textContent === "@docs/plan.md"), "la mención a un archivo conserva su chip");
+
+    assert.equal(globo.querySelector("img, script"), null, "el HTML crudo no se emite");
+    assert.equal([...globo.querySelectorAll("a")].filter((a) => /^javascript:/i.test(a.getAttribute("href") ?? "")).length, 0);
+    assert.equal(app.w.__xss, undefined);
+
+    const buscable = globo.querySelector("[data-thread-search-text]");
+    assert.ok(buscable?.textContent.includes("Listo"), "la búsqueda en el hilo lee el globo entrante");
+
+    const persona = [...doc.querySelectorAll("p.whitespace-pre-wrap")].find((p) => p.textContent.includes("de la persona"));
+    assert.ok(persona?.textContent.includes("**sin formato**"), "lo que escribe la persona no pasa por Markdown");
+    assert.deepEqual(app.failures, []);
+  } finally {
+    if (app) app.w.close();
+  }
+});

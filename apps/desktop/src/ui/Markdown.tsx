@@ -33,6 +33,7 @@ import { MermaidDiagram } from "./Mermaid";
 import { partidorDeBloques } from "./markdown-blocks";
 import { textoDelBloque } from "./markdown-code";
 import { remarkMatematicas } from "./markdown-math";
+import { conTexto, type PintarTexto, preserveSoftBreaks } from "./markdown-text";
 import { ITEM_DE_MENU, Popover, PopoverContent, PopoverTrigger } from "./Popover";
 
 /**
@@ -433,22 +434,12 @@ function Formula(props: { tex: string; bloque: boolean }) {
   );
 }
 
-// solid-markdown descarta los nodos de texto que valen exactamente un salto.
-function preserveSoftBreaks() {
-  const visit = (node: MarkdownNode) => {
-    if (node.tagName === "pre" || node.tagName === "code") return;
-    for (const child of node.children ?? []) {
-      if (child.type === "text" && child.value === "\n") child.value = " ";
-      else visit(child);
-    }
-  };
-  return visit;
-}
-
 export function Markdown(props: {
   children: string;
   /** Se compone con el envoltorio. Deja a quien lo usa cambiar la escala. */
   class?: string;
+  /** Pinta cada texto que no es código ni enlace. */
+  texto?: PintarTexto;
 }) {
   /** Sin el memo, el texto entero se volvería a partir en cada lectura; el partidor solo lee lo que llegó. */
   const partir = partidorDeBloques();
@@ -483,7 +474,7 @@ export function Markdown(props: {
               class="contents"
               remarkPlugins={[remarkGfm, remarkMatematicas]}
               rehypePlugins={[preserveSoftBreaks]}
-              components={COMPONENTES}
+              components={props.texto ? conTexto(COMPONENTES, props.texto) : COMPONENTES}
             >
               {b()}
             </SolidMarkdown>
