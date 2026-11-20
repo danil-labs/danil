@@ -237,3 +237,36 @@ test("resetService no copia una fila confirmada a vivo: la respuesta no se dupli
   assert.equal(f.store.messages().filter((m) => m.turno === "u2").length, 1);
   f.dispose();
 });
+
+// Turnos del disco que no dejan ninguna fila con `turno`: `known` debe contarlos por su id de turno.
+const T_SHELL = { id: "a0", role: "agent", at: 0.5, text: "ls", shell: { cwd: "/p", output: "src", exit_code: 0, duration_ms: 3, truncated: false } } as Session["turns"][number];
+const T_SOLO_HERRAMIENTAS = { id: "a0", role: "agent", at: 0.5, text: "", tools: [{ name: "Read", target: "src/app.ts" }] } as Session["turns"][number];
+
+for (const [nombre, a0] of [["solo shell", T_SHELL], ["solo herramientas", T_SOLO_HERRAMIENTAS]] as const) {
+  test(`una relectura idéntica no suelta la fila confirmada cuando el hilo tiene un turno ${nombre}`, async () => {
+    const f = fixture();
+    await f.open([T_USER, a0, T_PREGUNTA]);
+    assert.equal(f.store.rows().s.base.some((m) => m.turno === "a0"), false, `precondición: el turno ${nombre} no deja fila con turno`);
+    f.store.appendPersisted("s", [filaDelAcuse()]);
+    f.nextRead([T_USER, a0, T_PREGUNTA]); // el mismo disco: todavía sin la respuesta
+    await f.store.latest("s");
+    assert.equal(preguntaPendiente(f.store.messages()), undefined, `la tarjeta reaparece: el turno ${nombre} contó como turno nuevo`);
+    assert.equal(f.store.rows().s.optimistic?.length, 1, "la fila confirmada se soltó con una lectura que no siguió de largo");
+    f.dispose();
+  });
+}
+
+test("una copia que trae el tramo guardado en vivo y la pregunta no suelta la fila confirmada", async () => {
+  const f = fixture();
+  await f.open([T_USER]);
+  f.store.event(delta("Reviso el repo."), { author: null }); f.store.flush();
+  f.store.event(segmentSaved("a0"), { author: null }); // el tramo vivo queda con `tramo: a0`, sin `turno`
+  f.store.question("s", { turno: "a1", preguntas: [PREGUNTA], questionRequestId: "r1", agent: "claude" });
+  assert.equal(preguntaPendiente(f.store.messages())?.turno, "a1", "precondición: la pregunta en vivo pinta la tarjeta");
+  f.store.appendPersisted("s", [filaDelAcuse()]);
+  const T_TRAMO = { id: "a0", role: "agent", at: 0.5, text: "Reviso el repo." } as Session["turns"][number];
+  f.nextRead([T_USER, T_TRAMO, T_PREGUNTA]); // la copia ya tiene el tramo y la pregunta, todavía no la respuesta
+  await f.store.latest("s");
+  assert.equal(preguntaPendiente(f.store.messages()), undefined, "la tarjeta reaparece: el tramo guardado en vivo contó como turno nuevo");
+  f.dispose();
+});

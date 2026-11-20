@@ -6,7 +6,7 @@ import { conservarEnOrden, conservarPorClave } from "../../lib/sessionRefresh.ts
 // begun after it brings its turn, or brings newer turns without it (the disk moved on).
 type Optimistic = { original: Msg; row: Msg; acknowledged?: number; persisted?: ReadonlySet<string> };
 export type OptimisticHistoryState = { optimistic?: Optimistic[]; readRevision?: number };
-type HistoryState = OptimisticHistoryState & { base: Msg[]; vivo: Msg[] };
+type HistoryState = OptimisticHistoryState & { base: Msg[]; vivo: Msg[]; guardados?: ReadonlySet<string> };
 type ReadProvenance = { id: string; generation: number; revision: number };
 
 export function hasUnsettledPrefix(thread: HistoryState | undefined) {
@@ -49,9 +49,12 @@ export function createOptimisticHistory<T extends HistoryState>(deps: {
   /** Only a row with a turn can be brought by a later read; any other row stays a plain base row. */
   function appendConfirmed(session: string, messages: Msg[]) {
     if (deps.disposed() || !messages.length) return;
-    // Turns the window already knew, live ones too: a read that brings only these has not moved on.
+    // Turn ids the window already knew, in the identity reads use (`persistedIds`): the loaded
+    // turns, including shell and tool-only ones that paint no `turno`, plus live turns and saved
+    // live segments (`tramo`). A read that brings only these has not moved on.
     const thread = deps.current()[session];
-    const known = new Set([...(thread?.base ?? []), ...(thread?.vivo ?? [])].flatMap(row => row.turno ? [row.turno] : []));
+    const known = new Set([...(thread?.guardados ?? []), ...[...(thread?.base ?? []), ...(thread?.vivo ?? [])]
+      .flatMap(row => [row.turno, row.tramo].filter((id): id is string => !!id))]);
     deps.writeBase(session, before => [...before, ...messages]);
     const confirmed = messages.filter(row => row.turno);
     if (!confirmed.length) return;
