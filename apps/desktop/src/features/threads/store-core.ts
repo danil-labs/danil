@@ -234,7 +234,7 @@ export function createThreadsCore(deps: {
     if (disposed || messages.length === 0) return;
     anexar(session, before => [...before, ...messages], workspace);
   }
-  /** A row the engine confirmed: it survives repaints until a read begun after it brings its turn. */
+  /** A row the engine confirmed; when it is released is described on `Optimistic` in optimistic-history.ts. */
   const appendPersisted = optimisticHistory.appendConfirmed;
   function commitUniqueTurn(session: string, message: Msg) {
     if (!disposed) asentar(session, before => before.some(row => row.turno === message.turno) ? before : [...before, message]);
