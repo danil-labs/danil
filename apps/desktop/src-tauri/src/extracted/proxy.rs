@@ -1056,6 +1056,19 @@ pub(super) fn engine_call(
     invoke(&state, command, args)
 }
 
+/// Los rasgos que anuncia el motor de esta ventana; `[]` sin motor.
+pub(super) fn engine_features(app: &tauri::AppHandle) -> Value {
+    let Some(state) = app.try_state::<Arc<State>>() else {
+        return json!([]);
+    };
+    let features = state.client().status()["service_features"].clone();
+    if features.is_array() {
+        features
+    } else {
+        json!([])
+    }
+}
+
 /// La máquina de esta ventana. Las otras de la cuenta las suma la ventana por el
 /// relay (`features/machines/router.ts`).
 #[tauri::command(async)]

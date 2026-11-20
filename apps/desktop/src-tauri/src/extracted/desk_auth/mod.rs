@@ -5,6 +5,7 @@
 //! nunca tokens. Cada familia conserva su propia renovación y sus contextos.
 
 mod context_role;
+mod engine_session;
 mod families;
 mod login_browser;
 pub(crate) mod pkce;
@@ -175,8 +176,27 @@ pub(crate) fn bearer(app: &tauri::AppHandle) -> Result<(String, String), Value> 
     Ok((d.edge().to_owned(), live.access_token))
 }
 
+/// El motor de esta ventana, para `engine_session`.
+struct WindowEngine<'a>(&'a tauri::AppHandle);
+
+impl engine_session::Engine for WindowEngine<'_> {
+    fn features(&self) -> Value {
+        super::proxy::engine_features(self.0)
+    }
+    fn call(&self, command: &str, args: Value) -> Result<Value, Value> {
+        super::proxy::engine_call(self.0, command, args)
+    }
+}
+
+fn owner(app: &tauri::AppHandle) -> engine_session::Owner<WindowEngine<'_>> {
+    engine_session::owner(Some(WindowEngine(app)))
+}
+
 #[tauri::command(async)]
 pub(super) fn danil_session_status(app: tauri::AppHandle) -> Value {
+    if let engine_session::Owner::Engine(engine) = owner(&app) {
+        return engine_session::status(&engine);
+    }
     desk(&app).status()
 }
 
@@ -194,6 +214,11 @@ pub(super) fn danil_sign_in(
         return Err(coded("invalid_request"));
     }
     let add = mode.as_deref() == Some("add");
+    if let engine_session::Owner::Engine(engine) = owner(&app) {
+        let value = engine_session::sign_in(&engine, add)?;
+        announce(&app, &value);
+        return Ok(value);
+    }
     let d = desk(&app);
     let attempt = d.begin_sign_in();
     if d.capabilities()
@@ -239,6 +264,11 @@ pub(super) fn danil_sign_out(
     family: Option<String>,
     context: Option<String>,
 ) -> Result<Value, Value> {
+    if let engine_session::Owner::Engine(engine) = owner(&app) {
+        let value = engine_session::sign_out(&engine, family.as_deref(), context.as_deref())?;
+        announce(&app, &value);
+        return Ok(value);
+    }
     let d = desk(&app);
     let key = pkce::random(18).ok_or_else(|| coded("unavailable"))?;
     d.sign_out(family.as_deref(), context.as_deref(), &key)
@@ -279,6 +309,16 @@ pub(super) fn danil_edge_fetch(
         }
         None => pkce::random(18).ok_or_else(|| coded("unavailable"))?,
     };
+    if let engine_session::Owner::Engine(engine) = owner(&app) {
+        return engine_session::fetch(
+            &engine,
+            &method,
+            &path,
+            body.as_ref(),
+            &key,
+            context.as_deref(),
+        );
+    }
     desk(&app)
         .fetch(&method, &path, body.as_ref(), &key, context.as_deref())
         .map(|reply| edge_reply(&method, &reply, &key))
