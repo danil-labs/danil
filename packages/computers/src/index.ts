@@ -8,9 +8,7 @@ export {
   COMPUTERS_ENDPOINT,
   COMPUTER_NAME_MAX,
   apiUrl,
-  type SharedComputer,
   listComputers,
-  listSharedComputers,
   listWorkspaces,
   listWorkspacesWithDeleted,
   purgeWorkspace,
@@ -20,7 +18,6 @@ export {
   sessionProbe,
   startComputer,
   startedOf,
-  startSharedComputer,
 } from "./api.ts";
 export {
   type AuditEntry,

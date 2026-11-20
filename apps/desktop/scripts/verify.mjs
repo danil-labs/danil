@@ -785,7 +785,6 @@ const steps = [
   ["With the Danil account the desktop joins tasks from all its computers", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/desktop-account-machines.test.mjs")], root],
   ["With the Danil account the desktop follows its session and each computer", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/desktop-account-sessions.test.mjs")], root],
   ["With the Danil account the desktop sorts the rail and lists its computers", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/desktop-account-rail.test.mjs")], root],
-  ["On desktop shared machines show status and start, and are not task targets", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/shared-machines-menu.test.mjs")], root],
   ["The viewer waits for noVNC and frees each connection on close or retry", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/screen-connection.test.ts"), join(root, "../../packages/computers/test/screen.test.ts")], root],
   ["Without the pushed stream the window polls as always", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/push-fallback.test.mjs")], root],
   ["The agent's reasoning never sticks to its answer", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/reasoning-stream.test.mjs")], root],
