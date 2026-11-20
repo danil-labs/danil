@@ -73,7 +73,7 @@ export default function NewOrganizationCheckout(props: { api: Api; initialPlan?:
         <Show when={!catalog.error && catalog()} fallback={<p role="status">{t("web.billing_v2.unavailable")}</p>}>
           <>
             <SettingsRow label={<label for="billing-org-name">{t("web.billing_v2.org_name")}</label>}><Input id="billing-org-name" value={name()} onInput={event => setName(event.currentTarget.value)} /></SettingsRow>
-            <SettingsRow label={<label for="billing-org-plan">{t("web.billing_v2.plan")}</label>}><Select id="billing-org-plan" value={selected()?.id ?? ""} disabled={busy()} onChange={event => { setPlan(event.currentTarget.value); setPromotionInvalid(false); }}><For each={plans()}>{item => <option value={item.id}>{item.displayName ?? t(`web.billing_v2.plan_${item.id}`)}</option>}</For></Select></SettingsRow>
+            <SettingsRow label={<label for="billing-org-plan">{t("web.billing_v2.plan")}</label>}><Select id="billing-org-plan" value={selected()?.id ?? ""} disabled={busy()} onChange={event => { setPlan(event.currentTarget.value); setPromotionInvalid(false); }}><For each={plans()}>{item => <option value={item.id}>{t(`web.billing_v2.plan_${item.id}`)}</option>}</For></Select></SettingsRow>
             <Show when={selected()}><BillingPromotionField value={promotion()} disabled={busy()} invalid={promotionInvalid()}
               onEdit={value => { setPromotion(value); setPromotionInvalid(false); }} /></Show>
             <Button disabled={busy() || !selected()} onClick={() => void submit()}>{t("web.billing_v2.continue")}</Button>

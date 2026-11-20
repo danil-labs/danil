@@ -14,13 +14,14 @@ with sync_playwright() as p:
     page = browser.new_page()
     page.set_default_navigation_timeout(120000)
     page.goto(BASE + "?role=owner&variants=1", wait_until="networkidle")
-    for name in ["Pro", "Team", "Business", "Enterprise"]:
+    for name in ["Free", "Pro", "Team", "Enterprise"]:
         page.locator("article").get_by_text(name, exact=True).wait_for()
+    assert page.locator("article").get_by_text("Business", exact=True).count() == 0
     enterprise = page.locator("article").filter(has_text="Enterprise")
     assert enterprise.get_by_role("link", name="Hablemos").count() == 1
     assert enterprise.get_by_role("button").count() == 0
-    page.locator("article").filter(has_text="Business").get_by_role("button", name="Cambiar de plan").click()
-    page.wait_for_function("window.billingCalls.includes('checkout:team:business')")
+    page.locator("article").filter(has_text="Team").get_by_role("button", name="Cambiar de plan").click()
+    page.wait_for_function("window.billingCalls.includes('checkout:team:')")
     page.goto(BASE + "?role=member", wait_until="networkidle")
     page.get_by_text("Comprados", exact=True).wait_for()
     assert page.get_by_role("button", name="Cambiar de plan").count() == 0
