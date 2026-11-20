@@ -1,7 +1,7 @@
 /**
  * La adopción que hace el motor (`engine_adoption_v1`, danil-engine `danil/adoption.rs`): la
- * ventana solo pinta su estado y su evento. El motor adopta con su propia sesión, así que solo
- * es suya cuando también anuncia `person_session_v1`.
+ * ventana solo pinta su estado y su evento. El motor adopta con su propia sesión: solo es
+ * suya cuando también anuncia `person_session_v1`.
  */
 import type { AdoptionProgress } from "./first-login.ts";
 import { ENGINE_SESSION_FEATURE } from "./session-source.ts";
@@ -37,7 +37,7 @@ export const engineAdoptionFinished = (a: EngineAdoption) => a.state === "done" 
 
 /**
  * Las filas de «Ligando…»: los locales que había al empezar, con lo que el motor ya reportó.
- * El motor no avisa por workspace, así que mientras corre los demás están «ligando».
+ * El motor no avisa por workspace: mientras corre, los demás están «ligando».
  */
 export function engineAdoptionProgress(a: EngineAdoption, locals: readonly Row[]): AdoptionProgress {
   const done = new Set([...a.adopted, ...a.already].map((r) => r.id));
