@@ -9,12 +9,8 @@ export {
   COMPUTER_NAME_MAX,
   apiUrl,
   listComputers,
-  listWorkspaces,
-  listWorkspacesWithDeleted,
-  purgeWorkspace,
   removeComputer,
   renameComputer,
-  restoreWorkspace,
   sessionProbe,
   startComputer,
   startedOf,
@@ -186,7 +182,6 @@ export { type McpBlockCheck, MCP_BLOCK_ARGS, checkMcpBlock, relayArgs, urlWithCr
 export { type SealOptions, type SealRecipient, SEAL_MAX_BYTES, canSeal, fromBase64, sealCredential, sealForRecipients, toBase64 } from "./seal.ts";
 
 export { arrangeSpaces, spaceOrder, type SpaceOrderSource } from "./space-order.ts";
-export { createSpaceOrderSource } from "./space-order-source.ts";
 export { ACCOUNT_ASSET_MAX_BYTES, ACCOUNT_ASSET_TYPES, type AccountAssetKind, type BlobFetch, accountAssetUrl, readAccountAsset } from "./assets.ts";
 
 export { type Machine, type MachineOperation, type MachinesAnswer, type MachinesConfig, type MachinesTransport, type Admission as MachineAdmission, DEFAULT_RELAY_ORIGINS, admissionUrl, machineToComputer, machinesClient, retryUnavailable, wokeOf } from "./machines.ts";

@@ -3,7 +3,7 @@
  * sabe si habla con el plano de control de Danil Machines (portador de la cuenta, iOS y
  * Android) o con el borde `/v1` (cookie, el teléfono en la web). Sin React Native.
  */
-import { type AccountWorkspace, type Answer, type Computer, listComputers, listWorkspaces, startComputer } from "@terminus/computers";
+import type { AccountWorkspace, Answer, Computer } from "@terminus/computers";
 import type { EdgeControlPlane } from "./edge.ts";
 import type { RelayAuth, Waker } from "./hosts.ts";
 
@@ -20,21 +20,6 @@ export type ControlPlane = {
    */
   bearerServices: boolean;
 };
-
-/** Danil Machines con el portador de la cuenta: un portador rechazado se refresca una vez. */
-export function computersControlPlane(endpoint: string, getToken: () => Promise<string>, unauthorized: () => Promise<boolean>): ControlPlane {
-  return {
-    async computers() {
-      const answer = await listComputers(endpoint, await getToken());
-      if (answer.kind !== "unauthorized" || !(await unauthorized())) return answer;
-      return listComputers(endpoint, await getToken());
-    },
-    workspaces: () => getToken().then((token) => listWorkspaces(endpoint, token)),
-    wake: async (computer) => (await startComputer(endpoint, await getToken(), computer)).kind === "ok",
-    relay: { endpoint, getToken },
-    bearerServices: true,
-  };
-}
 
 /** El borde: la máquina de la organización por `/v1/machines`, el canal con ticket. */
 export function edgeMachinesPlane(edge: EdgeControlPlane): ControlPlane {

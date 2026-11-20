@@ -15,9 +15,7 @@ import "../../web/phrases";
 import {
   type Computer,
   createScreenAccess,
-  createSpaceOrderSource,
   listComputers,
-  listWorkspaces,
   type MachineState,
   orderComputers,
   RelaySession,
@@ -315,15 +313,6 @@ export function startAccountMachines(target: Target = window) {
       self, contextInfo: cloud.contextInfo,
       fleet,
       native,
-      ...(endpoint === null
-        ? {}
-        : {
-            registry: async () => {
-              const answer = await listWorkspaces(endpoint, (await getToken()).token);
-              if (answer.kind === "unauthorized") token = null;
-              return answer.kind === "ok" ? answer.value : null;
-            },
-          }),
       onSlices: slicesChanged,
       deliver,
       pickedFor,
@@ -353,7 +342,6 @@ export function startAccountMachines(target: Target = window) {
     const previous: Capabilities = capabilities();
     setCapabilities({
       ...previous,
-      ...(endpoint === null ? {} : { spaceOrder: createSpaceOrderSource(endpoint, async () => (await getToken()).token) }),
       machineName: (id) => (id === self ? homeName() : fleet.name(id)),
       taskMachine: (id) => unwrap(id, fleet.remotes())?.machine ?? null,
       windowMachine: () => ({ id: self, name: homeName(), local: true }),

@@ -243,52 +243,6 @@ export function accountWorkspace(raw: unknown): AccountWorkspace | null {
 }
 
 /**
- * Los workspaces de la cuenta, con sus proyectos y computadoras. Acepta el JWT de
- * la persona o el token de cliente del escritorio. Un plano de control anterior
- * al registro contesta `missing` (404): quien llama sigue sin él.
- */
-export function listWorkspaces(endpoint: string, token: string, f: Fetch = globalFetch): Promise<Answer<AccountWorkspace[]>> {
-  return request(
-    apiUrl(endpoint, "/v1/workspaces"),
-    token,
-    "GET",
-    (body) => {
-      const list = (body as { workspaces?: unknown } | null)?.workspaces;
-      if (!Array.isArray(list)) throw new Error("bad_registry");
-      return list.map(accountWorkspace).filter((w): w is AccountWorkspace => w !== null);
-    },
-    f,
-  );
-}
-
-const registryList = (list: unknown): AccountWorkspace[] => (Array.isArray(list) ? list.map(accountWorkspace).filter((w): w is AccountWorkspace => w !== null) : []);
-
-/** Los vivos y, aparte, los que tienen lápida (`GET /v1/workspaces?include_deleted=1`), para ofrecer restaurarlos. */
-export function listWorkspacesWithDeleted(endpoint: string, token: string, f: Fetch = globalFetch): Promise<Answer<{ workspaces: AccountWorkspace[]; deleted: AccountWorkspace[] }>> {
-  return request(
-    apiUrl(endpoint, "/v1/workspaces?include_deleted=1"),
-    token,
-    "GET",
-    (body) => {
-      const b = body as { workspaces?: unknown; deleted?: unknown } | null;
-      if (!Array.isArray(b?.workspaces)) throw new Error("bad_registry");
-      return { workspaces: registryList(b.workspaces), deleted: registryList(b.deleted) };
-    },
-    f,
-  );
-}
-
-/** Saca un workspace de la lápida con sus proyectos y su memoria. */
-export function restoreWorkspace(endpoint: string, token: string, id: string, f: Fetch = globalFetch): Promise<Answer<AccountWorkspace | null>> {
-  return request(apiUrl(endpoint, `/v1/workspaces/${encodeURIComponent(id)}/restore`), token, "POST", accountWorkspace, f);
-}
-
-/** Borra para siempre uno con lápida (su repo de memoria y sus respaldos); uno vivo contesta `409 workspace_not_deleted`. */
-export function purgeWorkspace(endpoint: string, token: string, id: string, f: Fetch = globalFetch): Promise<Answer<null>> {
-  return request(apiUrl(endpoint, `/v1/workspaces/${encodeURIComponent(id)}/purge`), token, "POST", () => null, f);
-}
-
-/**
  * Por qué no abrió la sesión de una computadora: un upgrade fallido no trae
  * cuerpo en el navegador, así que se pregunta por HTTP. `license_required`
  * (`403`, computers#22) o `null` si no lo dice.

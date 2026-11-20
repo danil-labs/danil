@@ -7,7 +7,6 @@ import {
   PERMISSION_MODES,
   listComputers,
   listConnections,
-  listWorkspaces,
   connectionCapabilities,
   mcpUrl,
   revokeConnection,
@@ -41,11 +40,11 @@ async function token(): Promise<ClientToken> {
 async function load(): Promise<Loaded> {
   try {
     const { token: tok, endpoint } = await token();
-    const [connections, computers, workspaces, capabilities] = await Promise.all([listConnections(endpoint, tok), listComputers(endpoint, tok), listWorkspaces(endpoint, tok), connectionCapabilities(endpoint, tok)]);
+    const [connections, computers, capabilities] = await Promise.all([listConnections(endpoint, tok), listComputers(endpoint, tok), connectionCapabilities(endpoint, tok)]);
     if (connections.kind !== "ok") return { failed: connections.kind };
     if (computers.kind !== "ok") return { failed: computers.kind };
     if (capabilities.kind !== "ok" && capabilities.kind !== "missing") return { failed: capabilities.kind };
-    return { endpoint, capabilities: capabilities.kind === "ok" ? capabilities.value : null, connections: connections.value, computers: computers.value, workspaces: workspaces.kind === "ok" ? workspaces.value : [] };
+    return { endpoint, capabilities: capabilities.kind === "ok" ? capabilities.value : null, connections: connections.value, computers: computers.value, workspaces: [] };
   } catch {
     return { failed: "no_account" };
   }
