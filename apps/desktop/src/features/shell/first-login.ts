@@ -22,7 +22,8 @@ export function firstLoginPhase(input: { done: boolean; status: Status; signedIn
   return email ? { t: "continue", email } : { t: "sign_in" };
 }
 
-export const shouldMarkFirstLoginDone = (input: { signedIn: boolean; remaining: number }) => input.signedIn && input.remaining === 0;
+/** `remaining: null` es «no se sabe» (el motor no dijo qué anuncia): no se marca. */
+export const shouldMarkFirstLoginDone = (input: { signedIn: boolean; remaining: number | null }) => input.signedIn && input.remaining === 0;
 
 /** `background`: no hay pantalla de error; lo pendiente sigue solo y el riel queda libre. */
 export function linkingOutcome(progress: AdoptionProgress | null, outcome: PersonalOutcome | null): "waiting" | "done" | "background" {
@@ -31,16 +32,18 @@ export function linkingOutcome(progress: AdoptionProgress | null, outcome: Perso
 }
 
 type Invoke = <T>(command: string, args?: Record<string, unknown>) => Promise<T>;
-// La fila propia por la flota puede llegar sin `features`; lo que el motor anunció en esta ejecución vale.
-let adopts = false;
-/** Los locales sin organización que este motor puede ligar; `0` si no sabe adoptar o no contesta. */
-export async function localCandidateCount(invoke: Invoke): Promise<number> {
+/**
+ * Los locales sin organización que este motor puede ligar. `0` con un motor que no sabe adoptar;
+ * `null` si no se sabe (sin respuesta del motor): quien marca el login como hecho no debe adivinar.
+ */
+export async function localCandidateCount(invoke: Invoke, features?: () => Promise<readonly string[] | null>): Promise<number | null> {
   try {
     const self = (await invoke<{ id: string; local?: boolean; features?: string[] }[]>("machine_list")).find((m) => m.local);
-    adopts ||= !!(self?.features?.includes("account_adoption_v1") && self.features.includes("account_adoption_proof_v1"));
-    if (!self || !adopts) return 0;
+    const announced = features ? await features().catch(() => null) : self?.features ?? null;
+    if (!self || !announced) return null;
+    if (!announced.includes("account_adoption_v1") || !announced.includes("account_adoption_proof_v1")) return 0;
     return (await invoke<{ adoptable?: boolean }[]>("adoption_candidates", { "x-terminus-machine": self.id })).filter((c) => c.adoptable !== false).length;
   } catch {
-    return 0;
+    return null;
   }
 }
