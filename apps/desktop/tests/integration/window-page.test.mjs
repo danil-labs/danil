@@ -747,3 +747,27 @@ test('a change of active organization reloads once behind the loading screen, wi
   assert.equal(navigations(app).length, 1, 'exactly one navigation');
   assert.deepEqual(others(app), []);
 });
+
+for (const timing of ['on entry', 'after refresh']) test(`Danil lists a transferred workspace ${timing} before an account workspace is selected`, async t => {
+  let reads = 0;
+  const row = { id: '25', org: 'org_Danil', name: 'Proyecto transferido', role: 'owner',
+    engine_workspace_id: 'abcdef12', placement: { kind: 'member_computer' }, moved_from: { org: 'org_Origen', account_id: '11' } };
+  const fetcher = async input => {
+    const { pathname } = new URL(String(input));
+    if (pathname === '/v1/identity/me') return Response.json({ id: 'user_A', name: 'Operator', workspace: null, active_organization_id: 'org_Danil', organizations: [{ id: 'org_Danil', name: 'Danil' }] });
+    if (pathname === '/v1/capabilities') return Response.json({ contract: 'mvp-v1', items: [{ name: 'workspaces', version: 1, status: 'available' }] });
+    if (pathname === '/v1/workspaces') {
+      reads++;
+      return Response.json({ items: timing === 'on entry' || reads > 1 ? [row] : [], next_cursor: null });
+    }
+    return new Response(null, { status: 404 });
+  };
+  fetcher.__jsdomApp = true;
+  globalThis.fetch = fetcher;
+  const app = await open(t, 'listo', `transferred-catalog-${timing.replace(' ', '-')}`, {}, undefined, {}, { web: true });
+  const doc = app.w.document;
+  await until(() => doc.querySelector('[data-profile-menu] button'));
+  doc.querySelector('[data-profile-menu] button').click();
+  await until(() => [...doc.querySelectorAll('button[aria-pressed="false"]')].some(b => b.textContent === 'Proyecto transferido'));
+  assert.deepEqual(app.failures, []);
+});

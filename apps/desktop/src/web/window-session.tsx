@@ -13,7 +13,7 @@ import { webOrganizations } from './organization-context';
 import { activeGroupCredits, contextMachines, type PlatformProfile, PlatformSessionError, type PlatformWorkspace, platformSession, platformTransport } from './platform-session';
 import { type CapabilitiesSnapshot, readCapabilities, supports } from './service-capabilities';
 import type { WebSessionDeployment } from './session-config';
-import { awaitingWorkspace, clearWebCaches, readWorkspaces, retryWait, sessionExit, workspaceCache } from './session-wait';
+import { awaitingWorkspace, canListWorkspaces, clearWebCaches, readWorkspaces, retryWait, sessionExit, workspaceCache } from './session-wait';
 import { UpdateNotice } from './UpdateNotice';
 import { mountWindow } from './window';
 import './phrases';
@@ -152,7 +152,7 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
           // Los créditos se atan a la organización al montar: cambiarla recarga una vez.
           if (person && (fresh.id !== person.id || (!arrived && fresh.workspace !== person.workspace) || fresh.active_organization_id !== person.active_organization_id)) { reload(); return; }
           person = fresh;
-          if (permits('workspaces') && fresh.workspace !== null) {
+          if (canListWorkspaces(fresh, permits('workspaces'))) {
             const listed = await readWorkspaces(() => api.workspaces(), rows(), unlisted);
             if (gone()) return; setRows(listed);
           }
@@ -208,9 +208,9 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
         if (mountedBefore) { reload(); return; }
         person = profile;
         organization.load(startup.reader()?.organizations);
-        const workspaces = person.workspace !== null && permits('workspaces') ? await readWorkspaces(() => startup.reader()!.workspaces(), [], unlisted) : [];
+        const listed = canListWorkspaces(profile, permits('workspaces')) ? await readWorkspaces(() => startup.reader()!.workspaces(), [], unlisted) : [];
         if (gone()) return;
-        setRows(workspaces);
+        setRows(listed);
         setActive(selection.active());
         cache = workspaceCache(localStorage, person.id, person.workspace ?? 'unselected');
         setPreparing(false);
