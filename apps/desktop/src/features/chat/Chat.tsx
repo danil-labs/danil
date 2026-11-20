@@ -3017,30 +3017,39 @@ export default function Chat(props: ChatProps) {
                             a ser texto plano, la estructura solo existiría
                             mientras se escribe. */}
                         <Show when={m().text}>
-                          <p data-thread-search-text={indice()} class="m-0 leading-[1.5] break-words whitespace-pre-wrap">
-                            {/* Index y no For: los tramos se recalculan con objetos nuevos en cada cambio del hilo, y For recrearía cada etiqueta. */}
-                            <Index each={tramosDelMensaje(m().text, commandNames(), skillNames())}>
-                              {(tramo) => (
-                                <Show
-                                  when={tramo().kind}
-                                  fallback={
-                                    <WithMentions
-                                      taskMentions={mencionesDesde(m().task_mentions, m().text.length - tramo().text.length)}
-                                      onOpenTask={props.onOpenTask}
+                          <Show
+                            when={entrante()}
+                            fallback={
+                              <p data-thread-search-text={indice()} class="m-0 leading-[1.5] break-words whitespace-pre-wrap">
+                                {/* Index y no For: los tramos se recalculan con objetos nuevos en cada cambio del hilo, y For recrearía cada etiqueta. */}
+                                <Index each={tramosDelMensaje(m().text, commandNames(), skillNames())}>
+                                  {(tramo) => (
+                                    <Show
+                                      when={tramo().kind}
+                                      fallback={
+                                        <WithMentions
+                                          taskMentions={mencionesDesde(m().task_mentions, m().text.length - tramo().text.length)}
+                                          onOpenTask={props.onOpenTask}
+                                        >
+                                          {tramo().text}
+                                        </WithMentions>
+                                      }
                                     >
-                                      {tramo().text}
-                                    </WithMentions>
-                                  }
-                                >
-                                  {(kind) => (
-                                    <span data-kind={kind()} class={claseDelTramo(kind(), "enviado")}>
-                                      {tramo().text}
-                                    </span>
+                                      {(kind) => (
+                                        <span data-kind={kind()} class={claseDelTramo(kind(), "enviado")}>
+                                          {tramo().text}
+                                        </span>
+                                      )}
+                                    </Show>
                                   )}
-                                </Show>
-                              )}
-                            </Index>
-                          </p>
+                                </Index>
+                              </p>
+                            }
+                          >
+                            <div data-thread-search-text={indice()}>
+                              <Markdown>{m().text}</Markdown>
+                            </div>
+                          </Show>
                         </Show>
                         <Show when={!m().text && m().meta === "hidden_task"}>
                           <p class="m-0 leading-[1.5] italic text-neutral-500">
