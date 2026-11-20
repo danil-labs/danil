@@ -42,8 +42,8 @@ const T_RESPUESTA = { id: "u2", role: "user", at: 2, text: "Postgres", answers: 
 /** La fila que `App.tsx:5404-5410` anexa con `appendPersisted` tras el acuse de `answer_question`. */
 const filaDelAcuse = (): Msg => ({ role: "user", text: "Postgres", turno: "u2", respuestas: [RESPUESTA] });
 const sesion = (turns: Session["turns"]): Session => ({ turns, provider: "claude" }) as Session;
-const segmentSaved = (id: string): ChatEvent => ({ kind: "segment_saved", text: "", session: "s", meta: null, id });
-const delta = (text: string): ChatEvent => ({ kind: "delta", text, session: "s", meta: null });
+const segmentSaved = (id: string) => ({ kind: "segment_saved", text: "", session: "s", meta: null, id }) as ChatEvent;
+const delta = (text: string) => ({ kind: "delta", text, session: "s", meta: null }) as ChatEvent;
 
 type Read = () => Promise<Session>;
 function fixture() {
