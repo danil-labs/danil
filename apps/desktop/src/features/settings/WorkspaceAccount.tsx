@@ -8,6 +8,7 @@ import { t } from "../../lib/i18n";
 import { Button } from "../../ui/Button";
 import { cn } from "../../lib/utils";
 import { isDanilWorkspace } from "../machines";
+import { MoveWorkspaceDialog, sessionRailState } from "../shell";
 import { createDanilAccounts, type DanilAccounts } from "./danil-accounts";
 import { said } from "./danil-session";
 import { connectedSessions, syncLine } from "./danil-sessions";
@@ -18,6 +19,7 @@ export default function WorkspaceAccount(props: { workspace: string; name: strin
   const accounts = props.state ?? createDanilAccounts({ workspace: () => props.workspace });
 
   const [problem, setProblem] = createSignal<string | null>(null);
+  const [moving, setMoving] = createSignal(false);
 
   createEffect(on(() => props.workspace, () => reset(), { defer: true }));
 
@@ -59,6 +61,16 @@ export default function WorkspaceAccount(props: { workspace: string; name: strin
         <p class="m-0 text-neutral-500" data-workspace-sync="">
           {lineText()}
         </p>
+        <Show when={hasAccount() && sessionRailState()}>
+          <div>
+            <Button size="sm" variant="ghost" data-workspace-move="" onClick={() => setMoving(true)}>
+              {t("shell.workspaces.move.entry")}
+            </Button>
+          </div>
+        </Show>
+        <Show when={moving() && sessionRailState()}>{(rail) => (
+          <MoveWorkspaceDialog sessions={rail()} workspace={{ id: props.workspace, name: props.name }} onClose={() => { setMoving(false); props.onChanged?.(null); }} />
+        )}</Show>
         {/* El vínculo de cuenta lo retiró el motor (E1): sin cuenta, solo un workspace de Danil ofrece iniciar sesión. */}
         <Show when={!hasAccount() && !signedIn().length && isDanilWorkspace(props.workspace)}>
           <div class="flex flex-wrap items-center gap-2">

@@ -6,7 +6,7 @@
  */
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { adoptionTarget, adoptLocals, prefsAdoptionMemory } from "../../src/features/shell/account-adoption.ts";
+import { adoptionTarget, adoptionTargetOf, adoptLocals, prefsAdoptionMemory } from "../../src/features/shell/account-adoption.ts";
 import { prefsPendingUnions } from "../../src/features/shell/account-transfers.ts";
 import { createAccountWorkspaces } from "../../src/features/shell/session-account-workspaces.ts";
 
@@ -42,11 +42,13 @@ function engine(list = candidates, proof: unknown = undefined) {
 
 type Reply = { status: number; body?: unknown };
 /** El servidor: un reto nuevo por petición y la respuesta de `adopt` que se le pida. */
-function server(adopt: (body: Record<string, unknown>) => Reply, challenge: () => Reply = () => ({ status: 200 })) {
+function server(adopt: (body: Record<string, unknown>) => Reply, challenge: () => Reply = () => ({ status: 200 }), platform: unknown[] = []) {
   let n = 0;
   const posts: { path: string; body: Record<string, unknown>; key?: string }[] = [];
   const send = async (_c: string, method: string, path: string, body?: unknown, key?: string) => {
     if (method === "GET" && path === "/v1/identity/me") return { status: 200, body: { id: SUB } };
+    // La plataforma ya tiene estos workspaces (GET /v1/workspaces`.
+    if (method === "GET" && path.startsWith("/v1/workspaces")) return { status: 200, body: { items: platform, next_cursor: null } };
     assert.equal(method, "POST");
     posts.push({ path, body: body as Record<string, unknown>, key });
     if (path === "/v1/workspaces/adopt/challenge") {
@@ -69,7 +71,7 @@ test("each local goes challenge, engine proof, adopt with the proof, then the se
   const s = server(ok);
   const { memory, pending } = prefs();
   const result = await adoptLocals(e.invoke, { "x-terminus-machine": "m1" }, s.send, free, memory, pending, SUB);
-  assert.deepEqual(result, { adopted: ["qlocal01", "qlocal02"], refused: [], unavailable: false });
+  assert.deepEqual(result, { adopted: [{ id: "qlocal01", name: "Uno" }, { id: "qlocal02", name: "Dos" }], already: [], refused: [], failed: [{ id: "old.ws1", name: "Viejo", reason: "id_format" }], unavailable: false, cause: null, attempted: 2 });
   assert.deepEqual(s.posts.map((p) => [p.path, p.body.engine_workspace_id]), [
     ["/v1/workspaces/adopt/challenge", "qlocal01"], ["/v1/workspaces/adopt", "qlocal01"],
     ["/v1/workspaces/adopt/challenge", "qlocal02"], ["/v1/workspaces/adopt", "qlocal02"],
@@ -115,17 +117,20 @@ test("a server without the route, with adoption off or without a personal org cu
   ];
   for (const [name, reply] of cases) {
     // En el reto.
+    const cause = reply.status === 404 || reply.status === 501 ? "adoption_route_missing" : (reply.body as { code: string }).code;
     let e = engine();
     let s = server(ok, () => reply);
     let { memory, pending } = prefs();
-    assert.deepEqual(await adoptLocals(e.invoke, {}, s.send, free, memory, pending, SUB), { adopted: [], refused: [], unavailable: true }, `reto ${name}`);
+    const atChallenge = await adoptLocals(e.invoke, {}, s.send, free, memory, pending, SUB);
+    assert.deepEqual({ ...atChallenge, failed: [] }, { adopted: [], already: [], refused: [], failed: [], unavailable: true, cause, attempted: 1 }, `reto ${name}`);
     assert.equal(s.posts.length, 1, "corta en el primero");
     assert.equal(e.calls.filter(([c]) => c === "adoption_proof").length, 0, "sin reto no se firma");
     // En la adopción.
     e = engine();
     s = server(() => reply);
     ({ memory, pending } = prefs());
-    assert.deepEqual(await adoptLocals(e.invoke, {}, s.send, free, memory, pending, SUB), { adopted: [], refused: [], unavailable: true }, `adopt ${name}`);
+    const atAdopt = await adoptLocals(e.invoke, {}, s.send, free, memory, pending, SUB);
+    assert.deepEqual({ ...atAdopt, failed: [] }, { adopted: [], already: [], refused: [], failed: [], unavailable: true, cause, attempted: 1 }, `adopt ${name}`);
     assert.equal(e.sealed().length, 0);
     assert.deepEqual(pending.list(), []);
   }
@@ -141,7 +146,7 @@ test("409 id_taken is not asked again, and a rejected proof or another 409 is re
   const e = engine();
   const { memory, pending } = prefs();
   const taken = server(() => ({ status: 409, body: { code: "id_taken" } }));
-  assert.deepEqual((await adoptLocals(e.invoke, {}, taken.send, free, memory, pending, SUB)).refused, ["Uno", "Dos"], "se dice cuáles");
+  assert.deepEqual((await adoptLocals(e.invoke, {}, taken.send, free, memory, pending, SUB)).refused.map((failure) => failure.name), ["Uno", "Dos"], "se dice cuáles");
   await adoptLocals(e.invoke, {}, taken.send, free, memory, pending, SUB);
   assert.equal(taken.adopts().length, 2, "una vez por cada candidato, y no se repite");
   // El rechazo es de esa organización: con el Free de otro correo se intenta.
@@ -191,11 +196,14 @@ test("a 429 on the challenge ends this pass without marking adoption unavailable
   const e = engine();
   const s = server(ok, () => ({ status: 429, body: { code: "rate_limited" } }));
   const p = prefs();
-  assert.deepEqual(await adoptLocals(e.invoke, {}, s.send, free, p.memory, p.pending, SUB), { adopted: [], refused: [], unavailable: false });
+  const limited = await adoptLocals(e.invoke, {}, s.send, free, p.memory, p.pending, SUB);
+  assert.equal(limited.adopted.length, 0);
+  assert.equal(limited.unavailable, false);
+  assert.equal(limited.attempted, 1);
   assert.equal(s.posts.length, 1, "no pide más retos en este repaso");
   assert.equal(e.calls.filter(([c]) => c === "adoption_proof").length, 0);
   // El siguiente repaso lo vuelve a intentar.
-  assert.deepEqual((await adoptLocals(e.invoke, {}, server(ok).send, free, p.memory, p.pending, SUB)).adopted, ["qlocal01", "qlocal02"]);
+  assert.deepEqual((await adoptLocals(e.invoke, {}, server(ok).send, free, p.memory, p.pending, SUB)).adopted.map((claimed) => claimed.id), ["qlocal01", "qlocal02"]);
 });
 
 test("adoption that the server turned off is retried after a new sign-in, not in the same one", async () => {
@@ -225,13 +233,95 @@ test("without a known person the sub comes from /v1/identity/me, and without it 
   const e = engine(candidates.slice(0, 1));
   const s = server(ok);
   const p = prefs();
-  assert.deepEqual((await adoptLocals(e.invoke, {}, s.send, free, p.memory, p.pending)).adopted, ["qlocal01"]);
+  assert.deepEqual((await adoptLocals(e.invoke, {}, s.send, free, p.memory, p.pending)).adopted.map((claimed) => claimed.id), ["qlocal01"]);
   assert.equal(e.calls.find(([c]) => c === "adoption_proof")?.[1]?.sub, SUB);
   let asked = 0;
   const nobody = async (_c: string, method: string) => { asked++; return method === "GET" ? { status: 401 } : { status: 200 }; };
   const q = prefs();
-  assert.deepEqual(await adoptLocals(engine().invoke, {}, nobody, free, q.memory, q.pending), { adopted: [], refused: [], unavailable: false });
+  assert.deepEqual(await adoptLocals(engine().invoke, {}, nobody, free, q.memory, q.pending), { adopted: [], already: [], refused: [], failed: [{ id: "old.ws1", name: "Viejo", reason: "id_format" }], unavailable: false, cause: "no_person", attempted: 0 });
   assert.equal(asked, 1, "solo la lectura de la persona");
+});
+
+test("a local the platform already has is not claimed again: only its seal is recovered", async () => {
+  const e = engine([{ id: "qlocal01", name: "Uno", adoptable: true }]);
+  const s = server(ok, undefined, [{ id: "5001", engine_workspace_id: "qlocal01", version: 1 }]);
+  const { memory, pending } = prefs();
+  const result = await adoptLocals(e.invoke, { "x-terminus-machine": "m1" }, s.send, free, memory, pending, SUB);
+  assert.deepEqual(result.already, [{ id: "qlocal01", name: "Uno" }]);
+  assert.equal(result.adopted.length, 0, "no se vuelve a reclamar");
+  assert.equal(s.adopts().length, 0, "no pide reto ni adopción");
+  assert.deepEqual(e.sealed(), [{ "x-terminus-machine": "m1", id: "qlocal01", account: { org: "org_free", account_id: "5001" } }]);
+  assert.deepEqual(pending.list().map((union) => [union.id, union.account_id]), [["qlocal01", "5001"]], "la unión del Free router también se pide");
+});
+
+test("the window keeps the adoption report for the notice, with names, causes and retry", async () => {
+  globalThis.localStorage ??= (() => {
+    const m = new Map<string, string>();
+    return { getItem: (k: string) => m.get(k) ?? null, setItem: (k: string, v: string) => void m.set(k, v), removeItem: (k: string) => void m.delete(k), clear: () => m.clear(), key: () => null, length: 0 } as Storage;
+  })();
+  const list = [{ id: "qlocal01", name: "Uno", adoptable: true }, { id: "qlocal02", name: "Dos", adoptable: true }];
+  const invoke = async <T>(command: string, args?: Record<string, unknown>): Promise<T> =>
+    (command === "machine_list" ? [{ id: "local", local: true, features: ["account_workspace_v1", "account_adoption_v1", "account_adoption_proof_v1"] }]
+      : command === "adoption_candidates" ? list
+      : command === "adoption_proof" ? { jwk: JWK, jkt: JKT, sig: `sig-${args?.nonce}` }
+      : command === "list_workspaces" ? { workspaces: [] } : undefined) as T;
+  let challenge = 503;
+  let n = 0;
+  const send = async (_c: string, method: string, path: string, body?: unknown) => {
+    if (method === "GET" && path === "/v1/identity/me") return { status: 200, body: { id: SUB } };
+    if (method === "GET" && path.startsWith("/v1/workspaces")) return { status: 200, body: { items: [], next_cursor: null } };
+    if (path === "/v1/workspaces/adopt/challenge") return challenge === 503 ? { status: 503, body: { code: "adoption_disabled" } } : { status: 200, body: { nonce: String(++n).padStart(43, "N") } };
+    return { status: 201, body: { id: String(5000 + n), engine_workspace_id: (body as { engine_workspace_id: string }).engine_workspace_id, org: "org_free", possession: { jkt: JKT } } };
+  };
+  const accounts = createAccountWorkspaces(invoke, true, () => {});
+  const groups = [{ context_id: "ctx-1", org: "org_free", org_name: "Cuenta de Ana", plan: "free" }];
+  await accounts.refresh(groups, send, () => SUB);
+  assert.equal(accounts.adoptionReport()?.cause, "adoption_disabled");
+  assert.equal(accounts.adoptionReport()?.unavailable, true);
+  assert.equal(accounts.adoptionReport()?.org_name, "Cuenta de Ana");
+  // Reintentar en la misma sesión: el aviso no espera al siguiente inicio de sesión.
+  challenge = 200;
+  accounts.clearAdoptionUnavailable();
+  await accounts.refresh(groups, send, () => SUB);
+  assert.deepEqual(accounts.adoptionReport()?.adopted.map((claimed) => claimed.name), ["Uno", "Dos"]);
+  assert.equal(accounts.adoptionReport()?.unavailable, false);
+});
+
+test("one already in the platform and one new: only the new one is claimed", async () => {
+  const e = engine([{ id: "qlocal01", name: "Viejo", adoptable: true }, { id: "qlocal02", name: "Nuevo", adoptable: true }]);
+  const s = server(ok, undefined, [{ id: "5001", engine_workspace_id: "qlocal01", version: 1 }]);
+  const { memory, pending } = prefs();
+  const result = await adoptLocals(e.invoke, {}, s.send, free, memory, pending, SUB);
+  assert.deepEqual(result.already.map((claimed) => claimed.id), ["qlocal01"], "el que ya está solo se sella");
+  assert.deepEqual(result.adopted.map((claimed) => claimed.id), ["qlocal02"], "el nuevo sí se reclama");
+  assert.deepEqual(s.adopts().map((post) => post.body.engine_workspace_id), ["qlocal02"], "no se duplica el que ya estaba");
+});
+
+test("a second pass with nothing to claim leaves no notice", async () => {
+  globalThis.localStorage ??= (() => {
+    const m = new Map<string, string>();
+    return { getItem: (k: string) => m.get(k) ?? null, setItem: (k: string, v: string) => void m.set(k, v), removeItem: (k: string) => void m.delete(k), clear: () => m.clear(), key: () => null, length: 0 } as Storage;
+  })();
+  const invoke = async <T>(command: string): Promise<T> =>
+    (command === "machine_list" ? [{ id: "local", local: true, features: ["account_workspace_v1", "account_adoption_v1", "account_adoption_proof_v1"] }]
+      : command === "adoption_candidates" ? []
+      : command === "list_workspaces" ? { workspaces: [] } : undefined) as T;
+  const send = async () => ({ status: 200, body: { id: SUB, items: [], next_cursor: null } });
+  const accounts = createAccountWorkspaces(invoke, true, () => {});
+  await accounts.refresh([{ context_id: "ctx-1", org: "org_free", plan: "free" }], send, () => SUB);
+  assert.equal(accounts.adoptionReport(), null, "cero reclamos, cero avisos");
+});
+
+test("the adoption target is the personal organization, never a team that happens to be Free", async () => {
+  const groups = [
+    { context_id: "c-team", org: "org_team", plan: "free", org_name: "Equipo" },
+    { context_id: "c-personal", org: "org_personal", plan: "pro", org_name: "Cuenta de Ana" },
+  ];
+  const me = (organizations: unknown[]) => async () => ({ status: 200, body: { id: SUB, organizations } });
+  assert.equal((await adoptionTargetOf(groups, me([{ id: "org_team", type: "team" }, { id: "org_personal", type: "personal" }])) as { org: string }).org, "org_personal", "no depende del plan");
+  assert.equal(await adoptionTargetOf(groups, me([{ id: "org_team", type: "team" }, { id: "org_personal", type: "personal" }, { id: "org_other", type: "personal" }])), undefined, "dos personales: elige la persona");
+  // Un identity anterior no manda `type`: se conserva el plan Free de siempre.
+  assert.equal((await adoptionTargetOf([{ context_id: "c", org: "org_free", plan: "free" }], me([{ id: "org_free" }])) as { org: string }).org, "org_free");
 });
 
 test("locals are adopted only when there is exactly one Free org", () => {

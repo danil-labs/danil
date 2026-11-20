@@ -25,11 +25,14 @@ export function mountReturn(root: HTMLElement, language = "es") {
     if (name === "danil_sign_in") { starts++; return await new Promise((resolve, fail) => { finish = resolve; reject = fail; }) as never; }
     throw new Error(name);
   }, () => update((n) => n + 1));
-  const rail = { sessions, groups: () => (rev(), sessions.groups()?.map((g) => ({ ...g, available: [{ id: "first" }, { id: "second" }], added: new Set(["first", "second"]) }))) } as never;
+  const [adoption, setAdoption] = createSignal<unknown>(null);
+  let retries = 0;
+  const rail = { sessions, groups: () => (rev(), sessions.groups()?.map((g) => ({ ...g, available: [{ id: "first" }, { id: "second" }], added: new Set(["first", "second"]) }))), adoptionReport: adoption, clearAdoptionReport: () => setAdoption(null), retryAdoption: () => { retries++; } } as never;
   const dispose = render(() => <><ToastStack /><SessionAddEntries sessions={rail} signedIn onStep={() => {}} onClose={() => closes++} /><AccountReturnFeedback sessions={rail} onOpen={(id) => opened.push(id)} /><NewAccountTile id="first"><button data-workspace-tile="first"><span class="danil-mark" data-active="">First</span></button></NewAccountTile></>, root);
   return {
-    opened, dispose, starts: () => starts, closes: () => closes,
+    opened, dispose, starts: () => starts, closes: () => closes, retries: () => retries,
     success: (names = ["Acme"]) => { status = { state: "connected", sessions: [{ family: "new", email: "new@example.com", contexts: names.map((name, index) => ({ context_id: `ctx-${index}`, org: `org-${index}`, org_name: name, plan: "paid" })) }] }; finish(status); },
     fail: (detail: string) => reject({ detail }),
+    adopt: (report: unknown) => setAdoption(report),
   };
 }
