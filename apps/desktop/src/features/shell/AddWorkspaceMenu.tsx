@@ -39,7 +39,7 @@ export default function AddWorkspaceMenu(props: {
   const picker = () => capabilities().webWorkspacePicker;
   const resume = picker()?.resume() ?? null;
   const { open, setOpen, step, setStep, context, setContext, query, setQuery, close } = createAddWorkspaceMenuState();
-  if (resume) { setContext(resume); setStep("danil"); setOpen(true); }
+  if (resume) setOpen(true);
   createEffect(() => openRequestedSessionMenu(props.sessions, { context: setContext, step: setStep, open: setOpen }));
   const rows = () => props.hidden.filter((w) => matchesName(w.name, query()));
   // El abierto ya enseña su distintivo en su cuadro; los de Danil sin agregar también avisan.
@@ -68,10 +68,11 @@ export default function AddWorkspaceMenu(props: {
         <Show when={waiting()}>{(s) => <Dynamic component={props.badge} state={s()} class="absolute -top-1 -right-1" />}</Show>
       </PopoverTrigger>
       <PopoverContent role="menu" class="w-64 p-1" onKeyDown={menuArrows}>
+        <Show when={picker()} fallback={<>
         <SessionEmptyNotice sessions={props.sessions} />
         <Show
           when={step() === "menu"}
-          fallback={picker() ? <WebWorkspacePicker picker={picker()!} initial={context()} /> : props.sessions.groups() !== null ? <SessionAddStep sessions={props.sessions} context={context()} query={query()} onQuery={setQuery} onClose={close} onOpen={props.onOpen} /> : <DanilStep danil={props.danil} query={query()} onQuery={setQuery} tasksOf={props.tasksOf} badge={props.badge} onClose={close} />}
+          fallback={props.sessions.groups() !== null ? <SessionAddStep sessions={props.sessions} context={context()} query={query()} onQuery={setQuery} onClose={close} onOpen={props.onOpen} /> : <DanilStep danil={props.danil} query={query()} onQuery={setQuery} tasksOf={props.tasksOf} badge={props.badge} onClose={close} />}
         >
           <Show when={usesSessionMenu(props.sessions, props.danil.signedIn)} fallback={<DanilAddEntry danil={props.danil} web={!!picker()} onStep={() => (setContext(null), setStep("danil"))} />}><SessionAddEntries sessions={props.sessions} signedIn={props.danil.signedIn} onStep={() => (setContext(null), setStep("danil"))} onClose={close} /></Show>
           <Show when={props.sessions.groups() === null}><DanilSwitchRows danil={props.danil} onClose={close} /></Show>
@@ -119,6 +120,7 @@ export default function AddWorkspaceMenu(props: {
             </div>
           </Show>
         </Show>
+        </>}>{web => <WebWorkspacePicker picker={web()} close={close} />}</Show>
       </PopoverContent>
     </Popover></>
   );

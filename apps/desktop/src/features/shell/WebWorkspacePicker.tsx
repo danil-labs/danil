@@ -1,59 +1,42 @@
-import { createResource, createSignal, For, Match, Show, Switch } from "solid-js";
+import { createResource, createSignal, For, onCleanup, Show } from "solid-js";
 import { t } from "../../lib/i18n";
 import { ITEM_DE_MENU } from "../../ui/Popover";
-import type { WorkspacePicker } from "../../web/workspace-picker";
-import type { PlatformWorkspace } from "../../web/platform-workspaces";
+import { distinguish, type PickerRow, type WorkspacePicker } from "../../web/workspace-picker";
 
-const note = "m-0 px-2 py-1.5 text-caption text-neutral-500";
-
-export function WebWorkspacePicker(props: { picker: WorkspacePicker; initial: string | null }) {
-  const [organization, setOrganization] = createSignal(props.initial);
-  const [organizations, orgActions] = createResource(() => props.picker.organizations());
-  const [workspaces, workspaceActions] = createResource(organization, org => props.picker.catalog(org));
-  const [saving, setSaving] = createSignal(false);
-  const [failedAdd, setFailedAdd] = createSignal(false);
-  const empty = (key: string) => <>
-    <p role="status" class={note} data-picker-empty="">{t(key)}</p>
-  </>;
-  const loading = () => <p role="status" class={note}>{t("shell.workspaces.danil_loading")}</p>;
-  const error = (retry: () => unknown) => <>
-    <p role="alert" data-picker-error="" class={note}>{t("shell.workspaces.catalog_error")}</p>
-    <button type="button" data-picker-retry="" role="menuitem" class={ITEM_DE_MENU} onClick={() => void retry()}>{t("common.part.retry")}</button>
-  </>;
-  async function add(row: PlatformWorkspace) {
-    const org = organization();
-    if (!org || saving()) return;
-    setSaving(true); setFailedAdd(false);
-    try { await props.picker.add(org, row.id); }
-    catch { setFailedAdd(true); }
-    finally { setSaving(false); }
+export function WebWorkspacePicker(props: { picker: WorkspacePicker; close: () => void }) {
+  const [data, { refetch }] = createResource(() => props.picker.catalog());
+  const [busy, setBusy] = createSignal(false);
+  const [error, setError] = createSignal("");
+  const refresh = () => { if (!document.hidden) void refetch(); };
+  window.addEventListener("focus", refresh);
+  document.addEventListener("visibilitychange", refresh);
+  onCleanup(() => { window.removeEventListener("focus", refresh); document.removeEventListener("visibilitychange", refresh); });
+  async function choose(row?: PickerRow) {
+    if (busy()) return;
+    setError(""); setBusy(true);
+    try {
+      if (row) { await props.picker.add(row); props.close(); }
+      else await props.picker.connect();
+    } catch { setError(row ? "shell.workspaces.add_failed" : "shell.workspaces.connect_failed"); void refetch(); }
+    finally { setBusy(false); }
   }
   return <div data-web-workspace-picker="">
-    <Show when={organization()} fallback={<>
-      <p class={note}>{t("shell.workspaces.choose_org")}</p>
-      <Switch>
-        <Match when={organizations.loading}>{loading()}</Match>
-        <Match when={organizations.error}>{error(orgActions.refetch)}</Match>
-        <Match when={organizations()?.items.length}><For each={organizations()?.items}>{group =>
-          <button type="button" role="menuitem" data-picker-org={group.id} class={ITEM_DE_MENU} onClick={() => setOrganization(group.id)}>{group.name}</button>
-        }</For></Match>
-        <Match when={true}>{empty("shell.workspaces.no_authorized_orgs")}</Match>
-      </Switch>
-    </>}>
-      <button type="button" role="menuitem" class={ITEM_DE_MENU} disabled={saving()} onClick={() => { setFailedAdd(false); setOrganization(null); }}>{t("shell.workspaces.choose_org")}</button>
-      <p class={note}>{(organizations.error ? undefined : organizations.latest)?.items.find(group => group.id === organization())?.name}</p>
-      <Show when={failedAdd()}><p role="alert" class={note}>{t("shell.workspaces.add_failed")}</p></Show>
-      <Switch>
-        <Match when={workspaces.loading}>{loading()}</Match>
-        <Match when={workspaces.error}>{error(workspaceActions.refetch)}</Match>
-        <Match when={workspaces()?.length}><div class="max-h-64 overflow-y-auto"><For each={workspaces()}>{row =>
-          <button type="button" role="menuitem" data-picker-workspace={row.id} disabled={saving() || !row.engine_workspace_id} class={ITEM_DE_MENU} onClick={() => void add(row)}>
-            <span class="flex min-w-0 flex-col text-left"><span class="truncate">{row.name}</span><span class="text-caption text-neutral-500">{row.engine_workspace_id ? row.engine_workspace_id + " · " : ""}{row.id}</span></span>
-          </button>
-        }</For></div></Match>
-        <Match when={true}>{empty("shell.workspaces.no_workspace_here")}</Match>
-      </Switch>
+    <p class="m-0 px-2 py-1.5 text-label font-semibold">{t("shell.workspaces.add")}</p>
+    <Show when={data.loading}><p role="status">{t("shell.workspaces.danil_loading")}</p></Show>
+    <Show when={data.error || (!data.loading && data()?.partial)}>
+      <p role="alert">{t("shell.workspaces.catalog_error")}</p>
+      <button type="button" role="menuitem" class={ITEM_DE_MENU} onClick={() => void refetch()}>{t("common.part.retry")}</button>
     </Show>
-    <Show when={!saving()}><a role="menuitem" data-picker-account="" class={ITEM_DE_MENU} href={props.picker.accountLoginUrl} onClick={event => { try { props.picker.beginAccountChoice(); } catch { event.preventDefault(); setFailedAdd(true); } }}>{t("shell.workspaces.other_login")}</a></Show>
+    <Show when={!data.loading && !data.error && data()}>{result => <>
+      <Show when={!result().rows.length && !result().partial}><p role="status">{t("shell.workspaces.no_accessible")}</p></Show>
+      <div class="max-h-64 overflow-y-auto"><For each={result().rows}>{row =>
+        <button type="button" role="menuitem" data-picker-workspace="" disabled={busy() || !row.engine_workspace_id} class={ITEM_DE_MENU} onClick={() => void choose(row)}>
+          <span class="flex min-w-0 flex-col text-left"><span class="truncate">{row.name}</span>
+          <Show when={distinguish(result().rows, row)}>{label => <span class="text-caption text-neutral-500">{label()}</span>}</Show></span>
+        </button>
+      }</For></div>
+    </>}</Show>
+    <Show when={error()}>{key => <p role="alert">{t(key())}</p>}</Show>
+    <button type="button" role="menuitem" data-picker-account="" disabled={busy()} class={ITEM_DE_MENU} onClick={() => void choose()}>{t("shell.workspaces.connect_account")}</button>
   </div>;
 }

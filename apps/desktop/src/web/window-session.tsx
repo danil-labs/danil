@@ -10,7 +10,7 @@ import { ToastStack } from '../ui/Toast';
 import { SessionLoading } from './auth/SessionLoading';
 import { signInError, WorkosAuthPage } from './auth/workos';
 import { webOrganizations } from './organization-context';
-import { confirmAccountReturn, markAccountChoice, sameAccountReturned } from './auth/account-return';
+import { connectWebAccount } from './connect-account';
 import { webWorkspacePicker } from './workspace-picker';
 import { activeGroupCredits, contextMachines, type PlatformProfile, PlatformSessionError, type PlatformWorkspace, platformSession, platformTransport } from './platform-session';
 import { type CapabilitiesSnapshot, readCapabilities, supports } from './service-capabilities';
@@ -211,11 +211,6 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
         if (gone()) return;
         setCaps(capabilities);
         if (mountedBefore) { reload(); return; }
-        if (sameAccountReturned(window.sessionStorage, profile.id)) {
-          disposeGate?.();
-          disposeGate = confirmAccountReturn(root, window.sessionStorage, typeof profile.email === 'string' ? profile.email : profile.name, api.loginUrl(home, "select_account"), reload);
-          return;
-        }
         person = profile;
         organization.load(startup.reader()?.organizations);
         const listed = canListWorkspaces(profile, permits('workspaces')) ? await readWorkspaces(() => startup.reader()!.workspaces(), [], unlisted) : [];
@@ -237,10 +232,8 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
           services: {
             webWorkspaces: { rows, organization: () => profile.active_organization_id ?? null, active, busy, uncertain, choose: id => void choose(id) },
             webWorkspacePicker: webWorkspacePicker(transport, {
-              sub: profile.id, store: window.sessionStorage, reload,
-              beginAccountChoice: () => markAccountChoice(window.sessionStorage, profile.id),
-              accountLoginUrl: api.loginUrl(home, "select_account"),
-              select: id => selection.choose(id), active: selection.active,
+              store: window.sessionStorage,
+              connect: () => connectWebAccount(transport, home),
             }),
             danilCredits: activeGroupCredits(api, profile.active_organization_id),
           },

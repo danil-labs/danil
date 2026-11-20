@@ -1,83 +1,72 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { webWorkspacePicker } from "../../src/web/workspace-picker.ts";
+import { distinguish, webWorkspacePicker } from "../../src/web/workspace-picker.ts";
 
+const workspace = (account_id: string, name: string) => ({ account_id, name, engine_workspace_id: "engine" + account_id });
+const ctx = (context_id: string, org_name: string, workspaces: ReturnType<typeof workspace>[] | null) => ({ context_id, org: "org_" + context_id, org_name, workspaces });
 function fixture() {
-  let activeOrg = "org_A"; let selected: string | null = null; let reloads = 0;
-  const store = new Map<string,string>(); const writes: string[] = [];
-  const organizations = [{id:"org_A", name:"A"}, {id:"org_B", name:"B"}];
-  const row = { id:"42", name:"Archivo", org:"org_B", role:"member", engine_workspace_id:"abcdef12" };
-  const data = (body: unknown) => Promise.resolve(Response.json(body));
-  const transport = {
-    call(path: string) {
-      if (path === "identity/organizations") return data({items:organizations,active_organization_id:activeOrg});
-      if (path === "workspaces") return data({items:[row],next_cursor:null});
-      throw new Error(path);
-    },
-    mutation(path: string, init?: RequestInit) {
-      writes.push(path);
-      if (path === "identity/organizations/select") {
-        activeOrg = JSON.parse(String(init?.body)).organization_id;
-        return data({organization:organizations.find(o=>o.id===activeOrg)});
+  const families = [
+    { session_id: "first", sub: "user_A", email: "a@example.test", contexts: [ctx("A", "Norte", [workspace("1", "Proyecto"), workspace("2", "Diseño")]), ctx("B", "Sur", [workspace("3", "Proyecto")])] },
+    { session_id: "second", sub: "user_B", email: "b@example.test", contexts: [ctx("C", "Sur", [workspace("4", "Proyecto")])] },
+  ];
+  const writes: { path: string; context: string | null }[] = [];
+  const prefs = new Map<string, Set<string>>();
+  const store = new Map<string, string>();
+  let mismatch = false, deny = false, connections = 0;
+  const headers = (context: string) => ({ "X-Danil-Session-Applied": mismatch ? "other" : context, "X-Danil-Session-Applied-Org": "org_" + context });
+  const picker = webWorkspacePicker({
+    async call(path, init) {
+      if (path === "identity/sessions/catalog") {
+        assert.equal(init, undefined);
+        return Response.json({ version: 1, items: families });
       }
-      return Promise.resolve(new Response(null,{status:204}));
-    }
-  };
-  const create = (sub:string) => webWorkspacePicker(transport, {
-    sub, reload:()=>{reloads++;}, beginAccountChoice: () => {}, accountLoginUrl:"https://edge.example.test/v1/identity/login?prompt=select_account", select:async id=>{selected=id;}, active:()=>selected,
-    store:{getItem:(k:string)=>store.get(k)??null,setItem:(k:string,v:string)=>store.set(k,v),removeItem:(k:string)=>store.delete(k)} as Storage,
-  });
-  return {create,writes,reloads:()=>reloads,selected:()=>selected};
+      assert.equal(path, "workspaces/preferences");
+      const c = new Headers(init?.headers).get("X-Danil-Session")!;
+      return Response.json({ added: [...(prefs.get(c) ?? [])], version: 1 }, { headers: headers(c) });
+    },
+    async mutation(path, init) {
+      const c = new Headers(init?.headers).get("X-Danil-Session")!;
+      assert.equal(init?.method, "PUT");
+      writes.push({ path, context: c });
+      if (deny) throw new Error("revoked");
+      prefs.set(c, new Set([path.split("/").at(-1)!]));
+      return new Response(null, { status: 204, headers: headers(c) });
+    },
+  }, { store: { getItem: (k: string) => store.get(k), setItem: (k: string, v: string) => store.set(k,v), removeItem: (k: string) => store.delete(k) } as Storage,
+    connect: async () => { connections++; } });
+  return { picker, writes, families, mismatch: () => { mismatch = true; }, deny: () => { deny = true; }, connections: () => connections };
 }
 
-test("only server organizations can be chosen, switching resumes once for the same person", async () => {
-  const f=fixture();const picker=f.create("user_A");
-  await assert.rejects(picker.catalog("org_outside"),/organization_not_available/);
-  assert.deepEqual(f.writes,[]);
-  assert.deepEqual(await picker.catalog("org_A"),[]);
-  await assert.rejects(picker.catalog("org_B"),/organization_changed/);
-  assert.equal(f.reloads(),1);assert.equal(picker.resume(),"org_B");assert.equal(picker.resume(),null);
-  assert.deepEqual((await picker.catalog("org_B")).map(w=>[w.name,w.id]),[["Archivo","42"]]);
-  await assert.rejects(picker.add("org_A","42"),/organization_changed/);
-  await assert.rejects(picker.add("org_B","999"),/workspace_not_available/);
-  await picker.add("org_B","42");
-  assert.equal(f.selected(),"42");
-  assert.deepEqual(f.writes,["identity/organizations/select","workspaces/preferences/added/abcdef12"]);
-  assert.equal(f.reloads(),2);
+test("two signed-in identities and three organizations share a read-only picker", async () => {
+  const f = fixture();
+  const { rows, partial } = await f.picker.catalog();
+  assert.equal(partial, false);
+  assert.deepEqual(rows.map(w => [w.name, distinguish(rows, w)]), [
+    ["Proyecto", "Norte"], ["Diseño", ""], ["Proyecto", "Sur · a@example.test"], ["Proyecto", "Sur · b@example.test"],
+  ]);
+  assert.deepEqual(f.writes, []);
+  await f.picker.add(rows[3]);
+  assert.deepEqual(f.writes, [{ path: "workspaces/preferences/added/engine4", context: "C" }]);
+  assert.deepEqual(await f.picker.pinned(), [rows[3]]);
 });
 
-test("a pending organization from another person never reopens their catalog", async () => {
-  const f=fixture();await assert.rejects(f.create("user_A").catalog("org_B"));
-  assert.equal(f.create("user_B").resume(),null);
+test("revocation after display, missing echo and refusal never confirm a pin", async () => {
+  const f = fixture(), row = (await f.picker.catalog()).rows[3];
+  f.families.pop();
+  await assert.rejects(f.picker.add(row), /not_available/);
+  assert.deepEqual(f.writes, []);
+  const other = (await f.picker.catalog()).rows[0];
+  let confirmed = 0; f.picker.subscribe(() => { confirmed++; });
+  f.mismatch(); await assert.rejects(f.picker.add(other), /echo/);
+  f.deny(); await assert.rejects(f.picker.add(other), /revoked/);
+  assert.equal(confirmed, 0);
 });
 
-test("a fresh picker restores only authorized, pinned engine ids in the active organization", async () => {
-  const writes: { method?: string; path: string }[] = [];
-  const preferences = new Set<string>();
-  let fail = true;
-  let reloads = 0;
-  let active: string | null = null;
-  const row = { id: "42", engine_workspace_id: "abcdef12", org: "org_B", role: "member", name: "QA" };
-  const rows = [row, { ...row, org: "org_A", id: "9" }, { ...row, engine_workspace_id: "unlisted", id: "43" }];
-  const make = () => webWorkspacePicker({
-    call: async path => Response.json(path === "identity/organizations"
-      ? { items: [{ id: "org_B", name: "B" }], active_organization_id: "org_B" }
-      : path === "workspaces/preferences" ? { added: [...preferences], version: 2 } : { items: rows, next_cursor: null }),
-    mutation: async (path, init) => {
-      writes.push({ method: init?.method, path });
-      if (fail) return new Response(null, { status: 503 });
-      preferences.add(path.split("/").at(-1)!);
-      return new Response(null, { status: 204 });
-    },
-  }, { sub: "user_A", store: {} as Storage, select: async id => { active = id; }, active: () => active,
-    reload: () => { reloads++; }, beginAccountChoice: () => {}, accountLoginUrl: "https://edge.example.test/v1/identity/login?prompt=select_account" });
-  await assert.rejects(make().add("org_B", "42"), /workspace_preference_not_saved/);
-  assert.equal(reloads, 0);
-  assert.deepEqual(await make().pinned("org_B", rows), []);
-  fail = false;
-  await make().add("org_B", "42");
-  assert.equal(active, "42");
-  assert.equal(reloads, 1);
-  assert.deepEqual(writes, Array(2).fill({ method: "PUT", path: "workspaces/preferences/added/abcdef12" }));
-  assert.deepEqual(await make().pinned("org_B", rows), [row]);
+test("a partial directory preserves verified rows and an additive return reopens once", async () => {
+  const f = fixture();
+  f.families[0].contexts[0].workspaces = null;
+  const got = await f.picker.catalog();
+  assert.equal(got.partial, true); assert.equal(got.rows.length, 2);
+  assert.equal(f.picker.resume(), false); await f.picker.connect();
+  assert.equal(f.connections(), 1); assert.equal(f.picker.resume(), true); assert.equal(f.picker.resume(), false);
 });

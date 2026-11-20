@@ -1,67 +1,90 @@
-import { parsePreferences } from "../features/shell/workspace-added-sync.ts";
-import { webAddedTransport } from "../features/shell/workspace-added-transport.ts";
 import { z } from "zod";
 import type { EdgeTransport } from "@terminus/computers";
-import { listWorkspaces, type PlatformWorkspace } from "./platform-workspaces.ts";
+import { parsePreferences } from "../features/shell/workspace-added-sync.ts";
+import { webAddedTransport } from "../features/shell/workspace-added-transport.ts";
+import { workspaceId } from "./platform-workspaces.ts";
 
-const groups = z.object({
-  items: z.array(z.object({ id: z.string().min(1), name: z.string() })),
-  active_organization_id: z.string().nullable(),
-});
-const selected = z.object({ organization: z.object({ id: z.string() }) });
-const resumeKey = "danil.web.add-workspace";
+const id = z.string().min(1);
+const workspace = z.object({ account_id: workspaceId, engine_workspace_id: id.nullish(), name: id });
+const context = z.object({ context_id: id, org: id, org_name: z.string().nullish(), workspaces: workspace.array().nullable() });
+const family = z.object({ session_id: id, sub: id, email: z.string().nullish(), contexts: context.array() });
+const directory = z.object({ version: z.literal(1), items: family.array() });
+const resumeKey = "danil.web.resume-add-workspace";
+export type PickerRow = z.infer<typeof workspace> & { context: string; session: string; sub: string; org: string; organization: string; email: string };
 export type WorkspacePicker = ReturnType<typeof webWorkspacePicker>;
 
-export function webWorkspacePicker(transport: EdgeTransport, options: {
-  sub: string; store: Storage; reload: () => void; accountLoginUrl: string; beginAccountChoice: () => void;
-  select: (id: string) => Promise<void>; active: () => string | null;
-}) {
-  const preferences = webAddedTransport(transport);
-  const organizations = async () => groups.parse(await (await transport.call("identity/organizations")).json());
-  let intent: { org: string; key: string } | undefined;
-  const catalog = async (org: string): Promise<PlatformWorkspace[]> => {
-    const { items, active_organization_id: active } = await organizations();
-    if (!items.some(group => group.id === org)) throw new Error("organization_not_available");
-    if (active !== org) {
-      if (intent?.org !== org) intent = { org, key: crypto.randomUUID() };
-      const result = await transport.mutation("identity/organizations/select", {
-        headers: { "Content-Type": "application/json", "Idempotency-Key": intent.key },
-        body: JSON.stringify({ organization_id: org }),
-      });
-      if (selected.parse(await result.json()).organization.id !== org) throw new Error("organization_not_selected");
-      options.store.setItem(resumeKey, JSON.stringify({ sub: options.sub, org }));
-      options.reload();
-      throw new Error("organization_changed");
-    }
-    return (await listWorkspaces(transport.call)).filter(row => row.org === org);
+function scoped(transport: EdgeTransport, row: PickerRow): EdgeTransport {
+  const send = async (method: keyof EdgeTransport, path: string, init?: RequestInit) => {
+    const headers = new Headers(init?.headers);
+    headers.set("X-Danil-Session", row.context);
+    const response = await transport[method](path, { ...init, headers });
+    if (response.headers.get("X-Danil-Session-Applied") !== row.context || response.headers.get("X-Danil-Session-Applied-Org") !== row.org)
+      throw new Error("session_echo_mismatch");
+    return response;
   };
+  return { call: (path, init) => send("call", path, init), mutation: (path, init) => send("mutation", path, init) };
+}
+
+export function webWorkspacePicker(transport: EdgeTransport, options: { store: Storage; connect: () => Promise<void> }) {
+  const subscribers = new Set<() => void>();
+  async function catalog() {
+    const body = directory.parse(await (await transport.call("identity/sessions/catalog")).json());
+    const rows: PickerRow[] = [];
+    const seen = new Set<string>();
+    let partial = false;
+    for (const f of body.items) for (const c of f.contexts) {
+      if (seen.has(c.context_id)) throw new Error("ambiguous_catalog_context");
+      seen.add(c.context_id);
+      if (!c.workspaces) { partial = true; continue; }
+      for (const w of c.workspaces) rows.push({ ...w, context: c.context_id, session: f.session_id, sub: f.sub, org: c.org, organization: c.org_name && c.org_name !== c.org ? c.org_name : "", email: f.email ?? "" });
+    }
+    return { rows, partial };
+  }
+  async function admitted(chosen: PickerRow) {
+    const { rows } = await catalog();
+    const row = rows.find(w => w.session === chosen.session && w.context === chosen.context && w.sub === chosen.sub && w.org === chosen.org && w.account_id === chosen.account_id && w.engine_workspace_id === chosen.engine_workspace_id);
+    if (!row?.engine_workspace_id) throw new Error("workspace_not_available");
+    return row;
+  }
   return {
-    organizations, catalog, accountLoginUrl: options.accountLoginUrl, beginAccountChoice: options.beginAccountChoice,
-    async pinned(org: string, rows: readonly PlatformWorkspace[]) {
-      const reply = await preferences.get();
-      if (reply.status !== 200) return [];
-      const added = new Set(parsePreferences(reply.body)?.added);
-      return rows.filter(row => row.org === org && row.engine_workspace_id && added.has(row.engine_workspace_id));
+    catalog,
+    async connect() {
+      options.store.setItem(resumeKey, "1");
+      try { await options.connect(); } catch (error) { options.store.removeItem(resumeKey); throw error; }
     },
     resume() {
-      const raw = options.store.getItem(resumeKey);
-      options.store.removeItem(resumeKey);
-      if (!raw) return null;
-      try {
-        const value = JSON.parse(raw);
-        return value?.sub === options.sub && typeof value.org === "string" ? value.org : null;
-      } catch { return null; }
+      const resume = options.store.getItem(resumeKey) === "1";
+      if (resume) options.store.removeItem(resumeKey);
+      return resume;
     },
-    async add(org: string, id: string) {
-      const current = await organizations();
-      if (current.active_organization_id !== org || !current.items.some(group => group.id === org)) throw new Error("organization_changed");
-      const row = (await listWorkspaces(transport.call)).find(item => item.id === id && item.org === org);
-      if (!row?.engine_workspace_id) throw new Error("workspace_not_available");
-      await options.select(row.id);
-      if (options.active() !== row.id) throw new Error("workspace_not_selected");
-      const reply = await preferences.put(row.engine_workspace_id);
-      if (reply.status !== 204) throw new Error("workspace_preference_not_saved");
-      options.reload();
+    subscribe(fn: () => void) { subscribers.add(fn); return () => { subscribers.delete(fn); }; },
+    async pinned() {
+      const { rows } = await catalog();
+      const groups = new Map<string, PickerRow[]>();
+      for (const row of rows) {
+        const group = groups.get(row.context);
+        if (group) group.push(row); else groups.set(row.context, [row]);
+      }
+      return (await Promise.all([...groups.values()].map(async group => {
+        const prefs = await webAddedTransport(scoped(transport, group[0])).get().catch(() => null);
+        if (!prefs) return [];
+        const added = new Set(prefs.status === 200 ? parsePreferences(prefs.body)?.added : []);
+        return group.filter(row => row.engine_workspace_id && added.has(row.engine_workspace_id));
+      }))).flat();
+    },
+    async add(chosen: PickerRow) {
+      const row = await admitted(chosen);
+      const result = await webAddedTransport(scoped(transport, row)).put(row.engine_workspace_id!);
+      if (result.status !== 204) throw new Error("workspace_preference_not_saved");
+      for (const fn of subscribers) fn();
     },
   };
+}
+
+export function distinguish(rows: readonly PickerRow[], row: PickerRow) {
+  const same = rows.filter(w => w.name === row.name);
+  if (same.length < 2) return "";
+  const labels = new Set(same.map(w => w.organization));
+  if (row.organization && same.filter(w => w.organization === row.organization).length === 1) return row.organization;
+  return [labels.size > 1 ? row.organization : "", row.email].filter(Boolean).join(" · ");
 }
