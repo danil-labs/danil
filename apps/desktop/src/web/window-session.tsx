@@ -10,6 +10,7 @@ import { ToastStack } from '../ui/Toast';
 import { SessionLoading } from './auth/SessionLoading';
 import { signInError, WorkosAuthPage } from './auth/workos';
 import { webOrganizations } from './organization-context';
+import { webWorkspacePicker } from './workspace-picker';
 import { activeGroupCredits, contextMachines, type PlatformProfile, PlatformSessionError, type PlatformWorkspace, platformSession, platformTransport } from './platform-session';
 import { type CapabilitiesSnapshot, readCapabilities, supports } from './service-capabilities';
 import type { WebSessionDeployment } from './session-config';
@@ -228,7 +229,12 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
           profile: startup.accountProfile(lifetime.signal), onUnauthorized: expired,
           onUnavailable: () => { setError('web.platform.unavailable'); gate(); later(); },
           services: {
-            webWorkspaces: { rows, active, busy, uncertain, choose: id => void choose(id) },
+            webWorkspaces: { rows, organization: () => profile.active_organization_id ?? null, active, busy, uncertain, choose: id => void choose(id) },
+            webWorkspacePicker: webWorkspacePicker(transport, {
+              sub: profile.id, store: window.sessionStorage, reload,
+              accountLoginUrl: api.loginUrl(home, "select_account"),
+              select: id => selection.choose(id), active: selection.active,
+            }),
             danilCredits: activeGroupCredits(api, profile.active_organization_id),
           },
           organizations: () => Promise.resolve(organizations), promo: organization.redeem, reauth: organization.reauth, preparing: preparingWorkspace, groupAccount: { ...api.groupAccount, send: (...args) => authorized(() => api.groupAccount.send(...args)) },

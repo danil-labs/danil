@@ -2,6 +2,7 @@ import { createMemo, type JSX, Show } from "solid-js";
 import { capabilities } from "../../lib/platform";
 import type { AttentionState, TaskAttention } from "./attention";
 import { type OrganizationRailActions, OrganizationRailGroup } from "./OrganizationRailGroup";
+import { WebPinnedWorkspaces } from "./WebPinnedWorkspaces";
 import { OrganizationRailLayout } from "./OrganizationRailLayout";
 import { watchOrganizationCredits } from "./organization-credits-watch";
 import { organizationRailPreferences } from "./organization-rail-preferences";
@@ -22,7 +23,7 @@ export function WebOrganizationRows(props: { rows: readonly { id: string; name: 
     families: () => [{ family: "web", email: accounts?.current.email ?? null, contexts: groups() }],
     close: async () => { accounts?.signOut(); }, closeEmail: async () => { accounts?.signOut(); },
   }, remove: (_context, id) => { props.onRemove(id); } };
-  return <Show when={verified?.group()} fallback={props.fallback}>
+  return <><WebPinnedWorkspaces shown={props.rows} /><Show when={verified?.group()} fallback={props.fallback}>
     <OrganizationRailLayout groups={groups()} rows={props.rows} preference={prefs.preference()} used={prefs.used} active={props.active && verified?.group() ? { workspace: props.active, context: verified!.group()!.context } : null} render={(org, stacked) => <OrganizationRailGroup web org={org()} stacked={stacked()} sessions={actions} active={props.active ? { workspace: props.active, context: verified!.group()!.context } : null} tasksOf={props.tasksOf} staleOf={props.staleOf} stateLabel={props.stateLabel} onOpen={(tile) => { prefs.use(tile.context.org); props.onOpen(tile.id, tile.context.context_id); }} onManage={() => props.onManage()} onChange={(action) => prefs.change([org().id], org().id, action)} index={0} count={1} credits={credits} />} />
-  </Show>;
+  </Show></>;
 }

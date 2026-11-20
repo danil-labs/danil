@@ -771,3 +771,76 @@ for (const timing of ['on entry', 'after refresh']) test(`Danil lists a transfer
   await until(() => [...doc.querySelectorAll('button[aria-pressed="false"]')].some(b => b.textContent === 'Proyecto transferido'));
   assert.deepEqual(app.failures, []);
 });
+
+test('the rail plus lists authorized organizations and the selected catalog without machines', async t => {
+  let fail = false;
+  const orgs = [{ id: 'org_A', name: 'Alfa' }, { id: 'org_B', name: 'Beta' }];
+  const fetcher = async input => {
+    const { pathname } = new URL(String(input));
+    if (pathname === '/v1/identity/me') return Response.json({ id: 'user_A', name: 'QA', workspace: null, active_organization_id: 'org_B', organizations: orgs });
+    if (pathname === '/v1/identity/organizations') return Response.json({ items: orgs, active_organization_id: 'org_B', next_cursor: null });
+    if (pathname === '/v1/capabilities') return Response.json({ contract: 'mvp-v1', items: [{ name: 'workspaces', version: 1, status: 'available' }] });
+    if (pathname === '/v1/workspaces/preferences') return Response.json({ version: 2, added: ['abcdef12', 'absent01'] });
+    if (pathname === '/v1/workspaces') return fail ? new Response(null, {status: 503}) : Response.json({ items: [{ id: '25', name: 'Archivo QA', org: 'org_B', role: 'member', engine_workspace_id: 'abcdef12' }], next_cursor: null });
+    return new Response(null, { status: 404 });
+  };
+  fetcher.__jsdomApp = true; globalThis.fetch = fetcher;
+  const app = await open(t, 'listo', 'web-rail-plus', {}, undefined, {}, { web: true });
+  const doc = app.w.document;
+  await until(() => doc.querySelector('[data-add-workspace]'));
+  await until(() => doc.querySelector('[data-web-pinned-workspace="abcdef12"]'));
+  assert.equal(doc.querySelector('[data-web-pinned-workspace="abcdef12"]').getAttribute('aria-label'), 'Archivo QA');
+  assert.equal(doc.querySelector('[data-web-pinned-workspace="absent01"]'), null);
+  doc.querySelector('[data-add-workspace]').click();
+  await until(() => doc.querySelector('[data-add-danil-step]'));
+  doc.querySelector('[data-add-danil-step]').click();
+  await until(() => doc.querySelector('[data-picker-org="org_B"]'));
+  assert.equal(doc.querySelector('[data-picker-org="org_A"]').textContent.includes('Alfa'), true);
+  fail = true;
+  doc.querySelector('[data-picker-org="org_B"]').click();
+  await until(() => doc.querySelector('[data-picker-error]'));
+  assert.equal(doc.querySelector('[data-picker-empty]'), null);
+  fail = false;
+  doc.querySelector('[data-picker-retry]').click();
+  await until(() => doc.querySelector('[data-picker-workspace="25"]'));
+  const row = doc.querySelector('[data-picker-workspace="25"]').textContent;
+  assert.match(row, /Archivo QA/); assert.match(row, /abcdef12/);
+  assert.equal(doc.querySelector('[data-picker-workspace="25"]').disabled, false);
+});
+
+test('the plus offers every membership and another account before choosing an organization', async t => {
+  const orgs = [{ id: 'org_A', name: 'Alfa' }, { id: 'org_B', name: 'Danil' }];
+  const writes = [];
+  const calls = [];
+  const fetcher = async (input, init) => {
+    const { pathname } = new URL(String(input));
+    calls.push(pathname);
+    if (init?.method === 'POST') writes.push([pathname, JSON.parse(init.body ?? '{}')]);
+    if (pathname === '/v1/identity/me') return Response.json({ id: 'user_A', name: 'QA', workspace: null, active_organization_id: null, organizations: orgs });
+    if (pathname === '/v1/identity/organizations') return Response.json({ items: orgs, active_organization_id: null, next_cursor: null });
+    if (pathname === '/v1/capabilities') return Response.json({ contract: 'mvp-v1', items: [{ name: 'workspaces', version: 1, status: 'available' }] });
+    if (pathname === '/v1/identity/csrf') return Response.json({ csrf_token: 'bound' });
+    if (pathname === '/v1/identity/organizations/select') return Response.json({ organization: orgs[1], workspace: null });
+    return new Response(null, { status: 404 });
+  };
+  fetcher.__jsdomApp = true; globalThis.fetch = fetcher;
+  const app = await open(t, 'listo', 'web-rail-no-org', {}, undefined, {}, { web: true });
+  const doc = app.w.document;
+  await until(() => doc.querySelector('[data-add-workspace]'));
+  doc.querySelector('[data-add-workspace]').click();
+  await until(() => doc.querySelector('[data-add-danil-step]'));
+  doc.querySelector('[data-add-danil-step]').click();
+  await until(() => doc.querySelector('[data-picker-org="org_B"]'));
+  assert.deepEqual([...doc.querySelectorAll('[data-picker-org]')].map(el => el.textContent), ['Alfa', 'Danil']);
+  const login = new URL(doc.querySelector('[data-picker-account]').href);
+  assert.equal(login.origin, origin);
+  assert.equal(login.pathname, '/v1/identity/login');
+  assert.equal(login.searchParams.get('prompt'), 'select_account');
+  assert.equal(login.searchParams.get('return_to'), 'http://localhost/');
+  assert.deepEqual(writes, []);
+  assert.equal(calls.includes('/v1/identity/logout'), false);
+  doc.querySelector('[data-picker-org="org_B"]').click();
+  await until(() => app.w.sessionStorage.getItem('danil.web.add-workspace'));
+  assert.deepEqual(writes, [['/v1/identity/organizations/select', { organization_id: 'org_B' }]]);
+  assert.equal(calls.includes('/v1/workspaces'), false);
+});
