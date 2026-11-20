@@ -512,7 +512,7 @@
     "other": "We found {n} workspaces on this computer without an organization. When you sign in, we link them to your personal account."
   },
   "shell.first_login.linking_title": "Linking your workspaces",
-  "shell.first_login.linking_target": "They go to “{org}”. Only you can see them.",
+  "shell.first_login.linking_target": "They go to “{org}”.",
   "shell.first_login.linking_note": "Your files don’t move: they stay on this computer. If the network drops, we continue on our own when it’s back.",
   "shell.first_login.stays": "already in {org} · stays",
   "shell.first_login.stays_other": "already in another organization · stays",

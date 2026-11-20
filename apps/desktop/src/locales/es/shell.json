@@ -512,7 +512,7 @@
     "other": "Encontramos {n} workspaces de esta computadora sin organización. Al entrar, los ligamos a tu cuenta personal."
   },
   "shell.first_login.linking_title": "Ligando tus workspaces",
-  "shell.first_login.linking_target": "Van a «{org}». Solo tú los ves.",
+  "shell.first_login.linking_target": "Van a «{org}».",
   "shell.first_login.linking_note": "Tus archivos no se mueven: siguen en esta computadora. Si se corta la red, seguimos solos al volver.",
   "shell.first_login.stays": "ya está en {org} · se queda",
   "shell.first_login.stays_other": "ya está en otra organización · se queda",
