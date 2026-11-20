@@ -56,8 +56,35 @@ test("only an active plan exposes a valid organization, and active requires one"
   assert.equal((await api.checkoutStatus("bchk_01SYNTHETICCHK0001")).organization_id, "org_ABC123");
   value = { ...value, state: "pending", terminal: false };
   await assert.rejects(api.checkoutStatus("bchk_01SYNTHETICCHK0001"));
+  value = { ...value, state: "paid", terminal: true };
+  await assert.rejects(api.checkoutStatus("bchk_01SYNTHETICCHK0001"));
   value = { ...value, kind: "credits", state: "active", terminal: true };
   await assert.rejects(api.checkoutStatus("bchk_01SYNTHETICCHK0001"));
+  value = { ...value, kind: "plan", state: "active", terminal: false };
+  await assert.rejects(api.checkoutStatus("bchk_01SYNTHETICCHK0001"));
+  value = { ...fixture("checkout.status.paid"), unexpected: true };
+  await assert.rejects(api.checkoutStatus("bchk_01SYNTHETICCHK0001"));
+});
+
+test("checkout status keeps the server's terminal flag for every non-active state", async () => {
+  let value: Record<string, unknown> = {};
+  const api = billingV2({ call: async () => Response.json(value), mutation: async () => { throw new Error("unexpected mutation"); } }, null);
+  for (const [state, terminal] of [["error", false], ["pending", true]] as const) {
+    value = { ...fixture("checkout.status.paid"), state, terminal };
+    assert.deepEqual(await api.checkoutStatus("bchk_01SYNTHETICCHK0001"), value);
+  }
+});
+
+test("every pinned checkout status vector is accepted as the server sent it", async () => {
+  const vectors = JSON.parse(readFileSync(new URL("../../../../contracts/billing-v2/vectors/checkout-return-v3.json", import.meta.url), "utf8"));
+  const bodies = vectors.statuses.filter((vector: { expected: { status: number } }) => vector.expected.status === 200).map((vector: { expected: { body: unknown } }) => vector.expected.body);
+  let value: unknown;
+  const api = billingV2({ call: async () => Response.json(value), mutation: async () => { throw new Error("unexpected mutation"); } }, null);
+  assert.ok(bodies.length > 0);
+  for (const body of bodies) {
+    value = body;
+    assert.deepEqual(await api.checkoutStatus(vectors.checkout_id), body);
+  }
 });
 
 test("credit transaction history preserves the server cursor", async () => {
