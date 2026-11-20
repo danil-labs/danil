@@ -45,6 +45,30 @@ function wire(hidden: () => ReadonlySet<string>, onSeeded: (ids: readonly string
   const refreshAccounts = () => accounts.refresh(groups() ?? [], sessions.send, (context) => records.get(context)?.person ?? null);
   const accountKey = createMemo(() => JSON.stringify(groups()?.map((g) => [g.context_id, g.org, g.plan]) ?? null));
   createEffect(on(accountKey, () => void refreshAccounts()));
+  // Una persona nueva recibe su organización personal después del login. Se reintenta sin otro
+  // inicio de sesión hasta que identity liga el contexto y el reclamo se hace, o se agota el plazo.
+  const adoption = {
+    attempt: null as Promise<void> | null,
+    retry() {
+      this.attempt ??= (async () => {
+        for (let attempt = 0; attempt < 5; attempt++) {
+          await sessions.refresh();
+          // Sin sesión (un cierre de sesión también emite `danil-connect`) no hay nada que reclamar.
+          if (!groups()?.length) return;
+          await refreshAccounts();
+          if (!(await accounts.hasAdoptionCandidates())) break;
+          await new Promise((resolve) => setTimeout(resolve, 1000 * 2 ** attempt));
+        }
+      })().finally(() => { adoption.attempt = null; });
+      return this.attempt;
+    },
+  };
+  let adoptionStarted = false;
+  createEffect(() => {
+    if (adoptionStarted || !groups()?.length) return;
+    adoptionStarted = true;
+    void adoption.retry();
+  });
   const records = new Map<string, { person: string | null; asking: boolean; sync: ReturnType<typeof createAddedSync> }>();
   const known = new Set<string>();
   const active = (id: string) => groups()?.find((g) => g.context_id === id);
@@ -97,7 +121,7 @@ function wire(hidden: () => ReadonlySet<string>, onSeeded: (ids: readonly string
   if (capabilities().nativeWindow) {
     // Las peticiones de la CLI (`account.request`); al arrancar se drenan las que llegaron antes.
     void sessions.refresh().then(() => requests.pump());
-    void listen("danil-connect", () => void sessions.refresh()).catch(() => {});
+    void listen("danil-connect", () => { void adoption.retry(); }).catch(() => {});
     void listen("account.request", () => void requests.pump()).catch(() => {});
     const refreshed = createSessionReturn(async () => {
       await refreshAccounts();
@@ -112,6 +136,8 @@ function wire(hidden: () => ReadonlySet<string>, onSeeded: (ids: readonly string
   }
   return {
     agentCreated, clearAgentCreated: () => setAgentCreated(null),
+    adoptionReport: accounts.adoptionReport, clearAdoptionReport: accounts.clearAdoptionReport,
+    retryAdoption: () => { accounts.clearAdoptionUnavailable(); void adoption.retry(); },
     organizationNotice, clearOrganizationNotice: () => setOrganizationNotice(false), notifyOrganization: () => { setOrganizationNotice(true); setMenuNotice(true); },
     sessions, groups: rows, known, menuNotice, acknowledgeNotice: () => setMenuNotice(false), emptyReason: () => (revision(), sessions.emptyReason()), removed: () => (revision(), sessions.removed()), laterContext, acknowledgeLater: () => setLaterContext(null), ready: () => (revision(), sessions.ready()), connected: () => (revision(), sessions.connected()),
     createFree: async (context: string) => {

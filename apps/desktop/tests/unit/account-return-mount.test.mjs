@@ -73,4 +73,20 @@ test("account return opens first, announces counts, retries errors and keeps can
     flow.dispose(); root.replaceChildren();
   }
 
+  // El aviso de la adopción: cuenta lo traído, deja verlo y reintentar lo que falló.
+  const notice = mountReturn(root); t.after(notice.dispose);
+  notice.adopt({ context: "ctx-0", org: "org-0", org_name: "Cuenta de Ana", adopted: [{ id: "first", name: "Uno" }, { id: "second", name: "Dos" }], refused: [], failed: [], unavailable: false, cause: null });
+  assert.ok(await until(() => doc.body.textContent.includes("Trajimos 2 workspaces a Cuenta de Ana")), "el aviso dice cuántos y a dónde");
+  const see = [...doc.querySelectorAll("[data-adoption-report] button")].find((b) => b.textContent === "Ver");
+  assert.ok(see); see.click();
+  assert.deepEqual(notice.opened, ["first"]);
+  notice.adopt({ context: "ctx-0", org: "org-0", org_name: "Cuenta de Ana", adopted: [], refused: [{ id: "qlocal01", name: "Uno", reason: "id_taken" }], failed: [{ id: "qlocal02", name: "Dos", reason: "id_format" }], unavailable: true, cause: "adoption_disabled" });
+  assert.ok(await until(() => doc.body.textContent.includes("No se pudieron traer tus workspaces")), "el fallo no es un diálogo: es un aviso");
+  assert.ok(doc.body.textContent.includes("ya está en otra cuenta"));
+  assert.ok(doc.body.textContent.includes("La adopción está apagada en el servidor."));
+  const retryAdoption = [...doc.querySelectorAll("[data-adoption-report] button")].find((b) => b.textContent === "Reintentar");
+  assert.ok(retryAdoption); retryAdoption.click();
+  assert.equal(notice.retries(), 1);
+  notice.dispose(); root.replaceChildren();
+
 });

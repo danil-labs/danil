@@ -132,6 +132,18 @@ pub(super) fn opaque_id(segment: &str) -> bool {
             .all(|b| b.is_ascii_alphanumeric() || b == b'_' || b == b'-')
 }
 
+/// El id de un traspaso: UUID en minúsculas, como lo emite `workspaces`.
+fn opaque_transfer(segment: &str) -> bool {
+    let groups: Vec<&str> = segment.split('-').collect();
+    groups.len() == 5
+        && [8, 4, 4, 4, 12].iter().zip(&groups).all(|(len, group)| {
+            group.len() == *len
+                && group
+                    .bytes()
+                    .all(|b| b.is_ascii_hexdigit() && !b.is_ascii_uppercase())
+        })
+}
+
 /// El cursor opaco de `GET /v1/machines?cursor=` tal como lo codifica el cliente
 /// (RFC 3986): letras, dígitos, `-._~` y `%XX`; nada que abra otra ruta o parámetro.
 fn opaque_cursor(raw: &str) -> bool {
@@ -155,8 +167,9 @@ fn opaque_cursor(raw: &str) -> bool {
     true
 }
 
-/// Rutas del borde (contrato `mvp-v1`) que Desk llama con su Bearer. Lista
-/// cerrada con métodos y plantillas exactas, no un proxy abierto.
+/// Rutas del borde (contrato `mvp-v1`, y el de administración de workspaces
+/// para el traspaso) que Desk llama con su Bearer. Lista cerrada con métodos y
+/// plantillas exactas, no un proxy abierto.
 pub(crate) fn allowed(method: &str, path: &str) -> bool {
     // La única query: la página siguiente de máquinas (`next_cursor`, `machines.openapi`).
     if let Some(cursor) = path.strip_prefix("/v1/machines?cursor=") {
@@ -190,6 +203,10 @@ pub(crate) fn allowed(method: &str, path: &str) -> bool {
         ("POST", ["", "v1", "machines", id, "start" | "tickets"]) => opaque_id(id),
         ("GET", ["", "v1", "operations", id]) => opaque_id(id),
         ("PUT" | "DELETE", ["", "v1", "workspaces", "preferences", "added", id]) => opaque_id(id),
+        // Traspaso a otra organización (plan de cuentas § 8): se pide con el contexto de origen y
+        // se acepta con el del destino.
+        ("POST", ["", "v1", "workspaces", id, "transfers"]) => opaque_id(id),
+        ("POST", ["", "v1", "workspaces", "transfers", id, "accept"]) => opaque_transfer(id),
         _ => false,
     }
 }
@@ -197,10 +214,21 @@ pub(crate) fn allowed(method: &str, path: &str) -> bool {
 /// Crear y adoptar workspaces no se repiten sin la llave de quien llama: una
 /// llave inventada aquí rompería la idempotencia de sus reintentos.
 pub(super) fn requires_caller_key(method: &str, path: &str) -> bool {
-    matches!(
+    if matches!(
         (method, path),
         ("POST", "/v1/workspaces") | ("POST", "/v1/workspaces/adopt")
-    )
+    ) {
+        return true;
+    }
+    if method != "POST" {
+        return false;
+    }
+    let parts: Vec<&str> = path.split('/').collect();
+    match parts.as_slice() {
+        ["", "v1", "workspaces", id, "transfers"] => opaque_id(id),
+        ["", "v1", "workspaces", "transfers", id, "accept"] => opaque_transfer(id),
+        _ => false,
+    }
 }
 
 pub(super) fn valid_promo_request(

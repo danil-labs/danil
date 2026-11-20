@@ -602,6 +602,13 @@ fn creating_and_adopting_require_the_callers_key() {
     assert!(requires_caller_key("POST", "/v1/workspaces"));
     assert!(requires_caller_key("POST", "/v1/workspaces/adopt"));
     assert!(!requires_caller_key("POST", "/v1/workspaces/select"));
+    // Los dos pasos del traspaso se repiten con la misma llave.
+    assert!(requires_caller_key("POST", "/v1/workspaces/42/transfers"));
+    assert!(requires_caller_key(
+        "POST",
+        "/v1/workspaces/transfers/8e32f46e-1111-2222-3333-444444444444/accept"
+    ));
+    assert!(!requires_caller_key("GET", "/v1/workspaces/42/transfers"));
     // Cada reto es nuevo: no se repite con la llave de quien llama.
     assert!(!requires_caller_key(
         "POST",
@@ -623,6 +630,11 @@ fn only_the_mvp_routes_are_callable() {
         ("POST", "/v1/workspaces"),
         ("POST", "/v1/workspaces/adopt"),
         ("POST", "/v1/workspaces/adopt/challenge"),
+        ("POST", "/v1/workspaces/42/transfers"),
+        (
+            "POST",
+            "/v1/workspaces/transfers/8e32f46e-1111-2222-3333-444444444444/accept",
+        ),
         ("GET", "/v1/machines"),
         ("GET", "/v1/machines/cmp_lvskjsw4bermfyqioznk5derth"),
         ("POST", "/v1/machines/cmp_1/start"),
@@ -647,6 +659,13 @@ fn only_the_mvp_routes_are_callable() {
         ("POST", "/v1/workspaces/adopt/x"),
         ("GET", "/v1/workspaces/adopt/challenge"),
         ("POST", "/v1/workspaces/adopt/challenge/x"),
+        ("POST", "/v1/workspaces/42/transfers/x"),
+        ("GET", "/v1/workspaces/42/transfers"),
+        (
+            "POST",
+            "/v1/workspaces/transfers/8e32f46e-1111-2222-3333-444444444444/decline",
+        ),
+        ("POST", "/v1/workspaces/transfers/incoming/accept"),
         ("POST", "/v1/workspaces/"),
         ("GET", "/v1/machines/cmp_1/start"),
         ("POST", "/v1/machines/cmp_1/stop"),
