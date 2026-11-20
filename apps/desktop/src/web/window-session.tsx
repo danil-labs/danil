@@ -26,6 +26,17 @@ import { setFreeRouterHost, signOutPlatform } from '../features/settings/free-ro
 declare const __DANIL_WEB_RELAY_ORIGINS__: string[];
 const FIRST_RETRY_MS = 1000;
 const POLL_MAX_MS = 30_000;
+/** La última organización usada (una de WorkOS) para que AuthKit no repita su selector. */
+const LAST_ORGANIZATION = "danil.web.last-organization";
+function lastOrganization(): string | undefined {
+  try { return localStorage.getItem(LAST_ORGANIZATION) ?? undefined; } catch { return undefined; }
+}
+function rememberOrganization(profile: PlatformProfile) {
+  const organization = profile.organizations.find(org => org.id === profile.active_organization_id);
+  // La organización personal no vive en WorkOS: mandarla a AuthKit fallaría.
+  if (!organization || organization.type === "personal") return;
+  try { localStorage.setItem(LAST_ORGANIZATION, organization.id); } catch { /* sin almacenamiento */ }
+}
 /** Identity puede no contestar aún al primer montaje; la ventana monta en cuanto da el perfil. */
 const FIRST_MOUNT_ATTEMPTS = 8;
 const FIRST_MOUNT_TRANSIENT = [403, 404, 503];
@@ -69,7 +80,7 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
       windowApp = undefined;
       disposeGate?.();
       root.replaceChildren();
-      disposeGate = render(() => <Show when={identified() && !signedOut() && !preparing() && !reloading()} fallback={<><ToastStack><UpdateNotice /></ToastStack><Show when={!reloading() && (signedOut() || returnError)} fallback={<SessionLoading onSignOut={preparing() && !reloading() ? () => void exit.leave() : undefined} />}><WorkosAuthPage loginUrl={api.loginUrl(home)} error={returnError} /></Show></>}><main class="flex h-full flex-col gap-4 overflow-y-auto bg-bg p-10 text-neutral-950" data-web-gate="">
+      disposeGate = render(() => <Show when={identified() && !signedOut() && !preparing() && !reloading()} fallback={<><ToastStack><UpdateNotice /></ToastStack><Show when={!reloading() && (signedOut() || returnError)} fallback={<SessionLoading onSignOut={preparing() && !reloading() ? () => void exit.leave() : undefined} />}><WorkosAuthPage loginUrl={api.loginUrl(home, lastOrganization())} error={returnError} /></Show></>}><main class="flex h-full flex-col gap-4 overflow-y-auto bg-bg p-10 text-neutral-950" data-web-gate="">
         <ToastStack><UpdateNotice /></ToastStack>
         <h1 class="m-0 font-display text-lead font-bold">{t('common.brand_name')}</h1>
         <Show when={busy()}><p role="status">{t('web.auth.waiting')}</p></Show>
@@ -113,7 +124,7 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
     const startup = sessionStartup(api, transport);
     const selection = startup.selection;
     const machines = machinesClient({ endpoint: `${options.origin}/v1`, transport, relayOrigins: __DANIL_WEB_RELAY_ORIGINS__ });
-    const organization = webOrganizations(transport, { signal: lifetime.signal, store: window.sessionStorage, signIn: () => window.location.assign(api.loginUrl(home)), redeem: (code, key) => authorized(() => api.redeemPromo(code, key)), onSelected: () => {
+    const organization = webOrganizations(transport, { signal: lifetime.signal, store: window.sessionStorage, signIn: () => window.location.assign(api.loginUrl(home, lastOrganization())), redeem: (code, key) => authorized(() => api.redeemPromo(code, key)), onSelected: () => {
       // La organización de una cuenta nueva llega con la ventana montada: se relee `me` y, al quedar activa, la página recarga una sola vez.
       if (mountedBefore && waiting()) { wait = FIRST_RETRY_MS; later(0); } else reload();
     } });
@@ -156,6 +167,7 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
           // Los créditos se atan a la organización al montar: cambiarla recarga una vez.
           if (person && (fresh.id !== person.id || (!arrived && fresh.workspace !== person.workspace) || fresh.active_organization_id !== person.active_organization_id)) { reload(); return; }
           person = fresh;
+          rememberOrganization(fresh);
           if (canListWorkspaces(fresh, permits('workspaces'))) {
             const listed = await readWorkspaces(() => api.workspaces(), rows(), unlisted);
             if (gone()) return; setRows(listed);
@@ -211,6 +223,7 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
         setCaps(capabilities);
         if (mountedBefore) { reload(); return; }
         person = profile;
+        rememberOrganization(profile);
         organization.load(startup.reader()?.organizations);
         const listed = canListWorkspaces(profile, permits('workspaces')) ? await readWorkspaces(() => startup.reader()!.workspaces(), [], unlisted) : [];
         if (gone()) return;
@@ -232,6 +245,7 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
             webWorkspaces: { rows, organization: () => profile.active_organization_id ?? null, active, busy, uncertain, choose: id => void choose(id) },
             webWorkspacePicker: webWorkspacePicker(transport, { store: window.sessionStorage,
               selected: row => { if (row.sub === profile.id && row.org === profile.active_organization_id && active() !== row.account_id) reload(); },
+              signIn: organization => window.location.assign(api.loginUrl(home, organization)),
             }),
             danilCredits: activeGroupCredits(api, profile.active_organization_id),
           },

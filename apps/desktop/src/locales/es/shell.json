@@ -497,5 +497,10 @@
   "shell.rail.tip_balance_loading": "Saldo: …",
   "shell.rail.tip_balance_unavailable": "Saldo: No disponible",
   "shell.rail.open": "Abrir",
-  "shell.rail.attention_stale": "Atención sin actualizar"
+  "shell.rail.attention_stale": "Atención sin actualizar",
+  "shell.workspaces.admission_required": "Requiere admisión",
+  "shell.workspaces.admit": "Admitir",
+  "shell.workspaces.catalog_empty": "Sin workspaces accesibles",
+  "shell.workspaces.catalog_unavailable": "No se pudo comprobar",
+  "shell.workspaces.admission_failed": "No se pudo admitir la organización. Inténtalo de nuevo."
 }

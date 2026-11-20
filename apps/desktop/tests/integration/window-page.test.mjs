@@ -803,7 +803,7 @@ for (const scenario of ['one account with two organizations', 'two accounts', 'r
   if (!returning) doc.querySelector('[data-add-workspace]').click();
   await until(() => doc.querySelectorAll('[data-picker-workspace]').length === (single ? 2 : 3));
   assert.deepEqual([...doc.querySelectorAll('[data-picker-workspace]')].map(w => w.textContent),
-    single ? ['Catálogo', 'Entregas'] : ['Catálogoa@example.test', 'Entregas', 'Catálogob@example.test']);
+    single ? ['CatálogoDanil', 'EntregasAzul'] : ['CatálogoDanil · a@example.test', 'EntregasAzul', 'CatálogoDanil · b@example.test']);
   assert.equal(doc.querySelector('[data-picker-account]'), null);
   assert.doesNotMatch(doc.querySelector('[data-web-workspace-picker]').textContent, /engine4|org_|WorkOS|Elige una organización/);
   assert.deepEqual(writes, []);
@@ -812,4 +812,45 @@ for (const scenario of ['one account with two organizations', 'two accounts', 'r
   await until(() => doc.querySelectorAll('[data-picker-workspace]').length === (single ? 1 : 2));
   assert.ok(doc.querySelector('[data-web-workspace-picker] [role="alert"]'));
   assert.deepEqual(writes, [], 'revocation before selection prevents any write');
+});
+
+test('the picker lists an organization that needs admission in the same list and admits only that one', async t => {
+  let admitted = false;
+  const writes = [];
+  const contexts = () => [
+    { context_id: 'c1', org: 'org_A', org_name: 'Danil', workspaces: [{ account_id: '41', engine_workspace_id: 'engine41', name: 'Catálogo' }], catalog_state: 'listed' },
+    admitted
+      ? { context_id: 'c2', org: 'org_B', org_name: 'Azul', workspaces: [{ account_id: '42', engine_workspace_id: 'engine42', name: 'Entregas' }], catalog_state: 'listed' }
+      : { context_id: null, org: 'org_B', org_name: 'Azul', workspaces: null, admission_required: true, catalog_state: 'listed' },
+    { context_id: null, org: 'org_C', org_name: 'Cero', workspaces: null, admission_required: true, catalog_state: 'empty' },
+  ];
+  const fetcher = async (input, init) => {
+    const { pathname } = new URL(String(input));
+    if (pathname.includes('/assets/')) return new Response('');
+    if (init?.method && init.method !== 'GET') writes.push(`${init.method} ${pathname} ${String(init.body ?? '')}`);
+    if (pathname === '/v1/capabilities') return new Response(null, { status: 404 });
+    if (pathname === '/v1/identity/me') return Response.json({ id: 'user_A', name: 'QA', workspace: null, active_organization_id: null, organizations: [] });
+    if (pathname === '/v1/identity/organizations') return new Response(null, { status: 404 });
+    if (pathname === '/v1/identity/sessions/catalog') return Response.json({ version: 1, items: [{ session_id: 's1', sub: 'user_A', email: 'a@example.test', contexts: contexts() }] });
+    if (pathname === '/v1/identity/csrf') return Response.json({ csrf_token: 'bound' });
+    if (pathname === '/v1/identity/contexts') { admitted = true; return Response.json({ context_id: 'c2', org: 'org_B' }); }
+    if (pathname === '/v1/workspaces') return Response.json({ items: [], next_cursor: null });
+    if (pathname === '/v1/machines') return Response.json({ items: [], next_cursor: null });
+    throw new Error(`Unexpected request ${pathname}`);
+  };
+  fetcher.__jsdomApp = true;
+  globalThis.fetch = fetcher;
+  const app = await open(t, 'listo', 'web-picker-admission', {}, undefined, {}, { web: true });
+  const doc = app.w.document;
+  await until(() => doc.querySelector('[data-add-workspace]'));
+  doc.querySelector('[data-add-workspace]').click();
+  await until(() => doc.querySelector('[data-picker-organization="org_B"]'));
+  assert.equal(doc.querySelectorAll('[data-picker-workspace]').length, 1, 'una sola lista: el admitido y la organización pendiente');
+  assert.match(doc.querySelector('[data-picker-organization="org_B"]').textContent, /Azul.*Requiere admisión/);
+  assert.match(doc.querySelector('[data-picker-state="empty"]').textContent, /Sin workspaces accesibles/);
+  doc.querySelector('[data-picker-organization="org_B"]').click();
+  await until(() => doc.querySelectorAll('[data-picker-workspace]').length === 2 && !doc.querySelector('[data-picker-organization="org_B"]'));
+  assert.deepEqual(writes.filter(w => w.startsWith('POST /v1/identity/contexts')), ['POST /v1/identity/contexts {"organization":"org_B","session_id":"s1"}']);
+  assert.deepEqual([...doc.querySelectorAll('[data-picker-workspace]')].map(w => w.textContent), ['CatálogoDanil', 'EntregasAzul']);
+  assert.deepEqual(app.failures, []);
 });

@@ -79,6 +79,9 @@ test("entrar es la página de identity con la vuelta exacta; salir es una escrit
   const login = new URL(identity.loginUrl("https://web.example/"));
   assert.equal(login.href.split("?")[0], `${ORIGIN}/v1/identity/login`);
   assert.equal(login.searchParams.get("return_to"), "https://web.example/");
+  assert.equal(login.searchParams.get("organization_id"), null);
+  const remembered = new URL(identity.loginUrl("https://web.example/", "org_A"));
+  assert.equal(remembered.searchParams.get("organization_id"), "org_A", "la última organización evita el selector de AuthKit");
   await identity.logout();
   const logout = calls.find((r) => r.url.endsWith("/identity/logout"))!;
   assert.equal(logout.method, "POST");

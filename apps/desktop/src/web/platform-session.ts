@@ -6,7 +6,7 @@ import { webRedeemPromo } from "./group-promo.ts";
 import { listWorkspaces, workspace, workspaceId } from "./platform-workspaces.ts";
 import { scopedCreditsRead } from "./scoped-credits.ts";
 
-const profile = z.object({ id: z.string().startsWith("user_"), name: z.string(), email: z.unknown().optional(), workspace: workspaceId.nullable(), organizations: z.array(z.object({ id: z.string(), name: z.string() })), active_organization_id: z.string().min(1).nullish() });
+const profile = z.object({ id: z.string().startsWith("user_"), name: z.string(), email: z.unknown().optional(), workspace: workspaceId.nullable(), organizations: z.array(z.object({ id: z.string(), name: z.string(), type: z.string().nullish() })), active_organization_id: z.string().min(1).nullish() });
 /** `POST /v1/workspaces/select` → `{workspace: Workspace}` (mvp-v1 `WorkspaceSelection`); campos nuevos se ignoran. */
 const selection = z.object({ workspace });
 export type PlatformProfile = z.infer<typeof profile>;
