@@ -188,3 +188,30 @@ test("una fila sin turno no detiene una lectura iniciada antes: la primera lectu
   assert.deepEqual(f.store.rows().s.optimistic ?? [], [], "la fila sin turno no lleva marca de confirmación");
   f.dispose();
 });
+
+test("una fila confirmada se suelta cuando una lectura posterior trae turnos nuevos y no el suyo", async () => {
+  const f = fixture();
+  await f.open([T_USER, T_PREGUNTA]);
+  f.store.appendPersisted("s", [filaDelAcuse()]);
+  // El disco siguió de largo: guardó la respuesta con otro id y el agente ya contestó.
+  const guardadaConOtroId = { ...T_RESPUESTA, id: "u2-disco" } as Session["turns"][number];
+  const siguiente = { id: "a2", role: "agent", at: 3, text: "Perfecto, uso Postgres." } as Session["turns"][number];
+  f.nextRead([T_USER, T_PREGUNTA, guardadaConOtroId, siguiente]);
+  await f.store.latest("s");
+  assert.deepEqual(f.store.rows().s.base.map((m) => m.turno), ["u1", "a1", "u2-disco", "a2"], "la fila del acuse sigue al final o duplicada");
+  assert.deepEqual(f.store.rows().s.optimistic, []);
+  assert.equal(preguntaPendiente(f.store.messages()), undefined);
+  f.dispose();
+});
+
+test("una copia atrasada que trae la pregunta que llegó en vivo no suelta la fila confirmada", async () => {
+  const f = fixture();
+  await f.open([T_USER]);
+  f.store.question("s", { turno: "a1", preguntas: [PREGUNTA], questionRequestId: "r1", agent: "claude" });
+  assert.equal(preguntaPendiente(f.store.messages())?.turno, "a1", "precondición: la pregunta en vivo pinta la tarjeta");
+  f.store.appendPersisted("s", [filaDelAcuse()]);
+  f.nextRead([T_USER, T_PREGUNTA]); // el disco ya tiene la pregunta, todavía no la respuesta
+  await f.store.latest("s");
+  assert.equal(preguntaPendiente(f.store.messages()), undefined, "la tarjeta reaparece: el turno de la pregunta en vivo contó como turno nuevo");
+  f.dispose();
+});

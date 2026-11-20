@@ -2,8 +2,9 @@ import type { HistoryPager, Msg, Session } from "../chat/index.ts";
 import { conservarEnOrden, conservarPorClave } from "../../lib/sessionRefresh.ts";
 
 // `persisted`: a row with a turn the engine already confirmed, painted in `base`. It
-// keeps its confirmation revision until a read begun after it brings its turn.
-type Optimistic = { original: Msg; row: Msg; acknowledged?: number; persisted?: true };
+// holds the turns the thread had at confirmation: the row survives until a read
+// begun after it brings its turn, or brings newer turns without it (the disk moved on).
+type Optimistic = { original: Msg; row: Msg; acknowledged?: number; persisted?: ReadonlySet<string> };
 export type OptimisticHistoryState = { optimistic?: Optimistic[]; readRevision?: number };
 type HistoryState = OptimisticHistoryState & { base: Msg[]; vivo: Msg[] };
 type ReadProvenance = { id: string; generation: number; revision: number };
@@ -48,12 +49,15 @@ export function createOptimisticHistory<T extends HistoryState>(deps: {
   /** Only a row with a turn can be brought by a later read; any other row stays a plain base row. */
   function appendConfirmed(session: string, messages: Msg[]) {
     if (deps.disposed() || !messages.length) return;
+    // Turns the window already knew, live ones too: a read that brings only these has not moved on.
+    const thread = deps.current()[session];
+    const known = new Set([...(thread?.base ?? []), ...(thread?.vivo ?? [])].flatMap(row => row.turno ? [row.turno] : []));
     deps.writeBase(session, before => [...before, ...messages]);
     const confirmed = messages.filter(row => row.turno);
     if (!confirmed.length) return;
     const acknowledged = ++revision;
     deps.update(all => ({ ...all, [session]: { ...all[session], optimistic: [
-      ...(all[session].optimistic ?? []), ...confirmed.map(row => ({ original: row, row, acknowledged, persisted: true as const })),
+      ...(all[session].optimistic ?? []), ...confirmed.map(row => ({ original: row, row, acknowledged, persisted: known })),
     ] } }));
   }
   function acknowledgeOptimistic(session: string, messages: Msg[]) {
@@ -100,9 +104,10 @@ export function createOptimisticHistory<T extends HistoryState>(deps: {
     return !(thread?.optimistic ?? []).some(entry => entry.acknowledged === undefined || !read || read.revision <= entry.acknowledged);
   }
   function reconcile(previous: T | undefined, incoming: Msg[], persistedIds: ReadonlySet<string>, prepend: boolean, readRevision?: number) {
+    const overtaken = (known: ReadonlySet<string>) => [...persistedIds].some(id => !known.has(id));
     const optimistic = (previous?.optimistic ?? []).filter(entry =>
       !(entry.row.turno && persistedIds.has(entry.row.turno)) &&
-      !(entry.acknowledged !== undefined && readRevision !== undefined && readRevision > entry.acknowledged && !entry.persisted));
+      !(entry.acknowledged !== undefined && readRevision !== undefined && readRevision > entry.acknowledged && (!entry.persisted || overtaken(entry.persisted))));
     const read = (prepend ? conservarPorClave : conservarEnOrden)(previous?.base ?? [], incoming);
     return { base: keepConfirmed(previous?.base ?? [], read, optimistic), optimistic,
       readRevision: readRevision ?? previous?.readRevision };
