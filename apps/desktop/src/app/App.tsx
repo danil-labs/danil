@@ -160,7 +160,7 @@ import { asleep, withLastAnswer } from "../features/machines/lastAnswer";
 import { unconfirmedOpen } from "../features/machines/unconfirmedOpen";
 import { createBatchDelivery, createServiceStream, type ServicePage } from "../features/service-stream";
 import { ConexionesMenu } from "../features/settings/Tools";
-import { TitleBarSection } from "../features/shell";
+import { noteFirstLoginSignedIn, TitleBarSection } from "../features/shell";
 import AppTools from "../features/shell/AppTools";
 import CloseGuard from "../features/shell/CloseGuard";
 import AvisoDeCarpeta from "../features/shell/FolderNotice";
@@ -7594,6 +7594,7 @@ export default function App() {
                  de crear el primero no tiene por qué saber cómo se recarga esta
                  pantalla. */
               onListo={() => {
+                noteFirstLoginSignedIn();
                 setAlta(false);
                 window.dispatchEvent(new CustomEvent("harness:workspace"));
               }}
