@@ -314,3 +314,9 @@ them answers that the command is unknown, and only that feature turns off.
   SHA-256 `ab06a5f1a733a8a1e9533151db8e44b3de35cbaec21119a122ed161e1ba1f976`.
 - `account_adoption_proof_v1.json`: `adoption_proof`, the possession proof for `POST /v1/workspaces/adopt` (A17), (danil-engine#481), copied from danil-engine dev `40f5bc9c`,
   SHA-256 `3c957da1463df967f551f8f82746e99158511bdf7ee2787f587fd9564f36d5d6`.
+- `person_session_v1.json`: `person_session_login`, `person_session_login_complete`, `person_session_status`, `person_session_logout`, `person_session_select_organization`, `person_session_fetch` and the `person-session` event: the person's session lives in the engine (terminus-workspace decision 2026-11-20-sesion-en-el-motor; danil-engine#504), copied from danil-engine `feat/maquinas-conectadas` `1e96f512`,
+  SHA-256 `fd6c0371c4269e904c9f6a90c453493c1cd4c189a32227634ce42e4f481f9c11`.
+- `connected_machines_v1.json`: `danil_connected_status` and `danil_connected_detach`: the engine enrolls itself in each organization of the session (danil-engine#504), copied from danil-engine `feat/maquinas-conectadas` `1e96f512`,
+  SHA-256 `c9fe6c5231d7367319baef17eb42219c5c1d92d8b7bfc0a23f97a30504d0b678`.
+- `engine_adoption_v1.json`: `engine_adoption_status`, `engine_adoption_retry` and the `engine-adoption` event: the engine adopts its local workspaces into the personal organization (danil-engine#504), copied from danil-engine `feat/maquinas-conectadas` `1e96f512`,
+  SHA-256 `67bbaf7c85962e7d19275dcf40310bfe98eb257355951e1e1dbb05f0c7ad510f`.
