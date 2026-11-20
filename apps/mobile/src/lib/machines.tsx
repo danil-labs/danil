@@ -12,7 +12,6 @@ import { latestFailureSentence } from "./failureNotice";
 import { type AccountFleet, type Host, type Pairing, accountFleet, bridgeHost } from "./hosts";
 import { t } from "./i18n";
 import { Notifications } from "./notifications";
-import { renewPush } from "./push";
 import { retryingRead } from "./reload";
 
 type Listener = (host: string, events: EngineEvent[], gap: boolean) => void;
@@ -137,9 +136,6 @@ function LiveMachinesProvider({ children, active }: { children: ReactNode; activ
 
   const signedInAs = account.session?.user.id;
   const plane = account.plane;
-  useEffect(() => {
-    if (signedIn && plane.bearerServices) void renewPush(account.getToken);
-  }, [signedIn, signedInAs, plane]);
 
   useEffect(() => {
     if (!active) { setPairing(null); setPairingLoaded(true); return; }

@@ -4,7 +4,7 @@ import subprocess
 from pathlib import Path
 
 RETIRED = re.compile(
-    r"/v1/(?:bff(?:/|[\x22\x27`])|shared-computers\b|admin/computers\b|"
+    r"/v1/(?:bff(?:/|[\x22\x27`])|push/|shared-computers\b|admin/computers\b|"
     r"git-hosts/(?!github\b)|computers/self/git-hosts/(?!github\b)|"
     r"workspaces/[^\s\x22\x27`]+/free-router-consent\b)"
     r"|/auth/account/business\b"
