@@ -5,7 +5,7 @@ import { escribirPref, leerPref } from "../../lib/prefs.ts";
 import { listen } from "../../lib/serviceEvents.ts";
 import { danilAvailable, danilAvailableContext, readDanilContext } from "../machines/index.ts";
 import { type CreatedNotice, createAccountRequests } from "./account-requests.ts";
-import { engineAdoptionReport, engineOwnsAdoption, onEngineAdoption } from "./engine-adoption.ts";
+import { engineAdoptionReport, engineOwnsAdoption, onEngineAdoption, retryEngineAdoption } from "./engine-adoption.ts";
 import { engineFeatures } from "./engine-features.ts";
 import { createPersonalOpener } from "./personal-open.ts";
 import { createAccountWorkspaces } from "./session-account-workspaces.ts";
@@ -70,6 +70,8 @@ function wire(hidden: () => ReadonlySet<string>, onSeeded: (ids: readonly string
     },
   };
   let adoptionStarted = false;
+  // Con `engine_adoption_v1` (y la sesión en el motor) el reintento lo hace el motor.
+  let engineAdopts = false;
   createEffect(() => {
     if (adoptionStarted || !groups()?.length) return;
     adoptionStarted = true;
@@ -132,8 +134,10 @@ function wire(hidden: () => ReadonlySet<string>, onSeeded: (ids: readonly string
     // Lo que el motor liga después, en segundo plano, llega al mismo aviso.
     void engineFeatures().then((f) => {
       if (!engineOwnsAdoption(f)) return;
+      engineAdopts = true;
       void onEngineAdoption(listen, (a) => {
-        const report = engineAdoptionReport(a, groups()?.find((g) => g.org === a.org)?.context_id);
+        const group = groups()?.find((g) => g.org === a.org);
+        const report = engineAdoptionReport(a, group?.context_id, group?.org_name ?? null);
         if (report?.adopted.length) handAdoptionReport(report);
       }).catch(() => {});
     });
@@ -151,7 +155,7 @@ function wire(hidden: () => ReadonlySet<string>, onSeeded: (ids: readonly string
   return {
     agentCreated, clearAgentCreated: () => setAgentCreated(null),
     adoptionReport: () => accounts.adoptionReport() ?? handedReport(), clearAdoptionReport: () => { accounts.clearAdoptionReport(); handAdoptionReport(null); },
-    retryAdoption: () => { accounts.clearAdoptionUnavailable(); void adoption.retry(); },
+    retryAdoption: () => { if (engineAdopts) return void retryEngineAdoption(invoke); accounts.clearAdoptionUnavailable(); void adoption.retry(); },
     adoptionProgress: accounts.adoptionProgress, personalOutcome: accounts.personalOutcome, sealedElsewhere: (org: string) => (revision(), accounts.sealedElsewhere(org)), hasAdoptionCandidates: accounts.hasAdoptionCandidates,
     organizationNotice, clearOrganizationNotice: () => setOrganizationNotice(false), notifyOrganization: () => { setOrganizationNotice(true); setMenuNotice(true); },
     sessions, groups: rows, known, menuNotice, acknowledgeNotice: () => setMenuNotice(false), emptyReason: () => (revision(), sessions.emptyReason()), removed: () => (revision(), sessions.removed()), laterContext, acknowledgeLater: () => setLaterContext(null), ready: () => (revision(), sessions.ready()), connected: () => (revision(), sessions.connected()),
