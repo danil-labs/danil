@@ -67,7 +67,7 @@ test("credit transaction history preserves the server cursor", async () => {
   assert.deepEqual(paths, ["credits/transactions?cursor=next_page"]);
 });
 
-test("Business is an advertised Team edition and the two checkout intents preserve it", async () => {
+test("Plan cards omit advertised editions and Team requests an upgrade", async () => {
   const { checkoutPlans } = await import("../../src/web/billing-v2-plans.ts");
   const value = fixture("catalog.synthetic");
   const requests: unknown[] = [];
@@ -84,14 +84,13 @@ test("Business is an advertised Team edition and the two checkout intents preser
   value.plans = value.plans.map((plan: { plan_key: string }) => plan.plan_key === "team"
     ? { ...plan, sellable: true, price: { currency: "MXN", amount_micro: "1999000000" }, display_variants: [{ variant: "business", plan_key: "team", edition: "business", display_name: "Business" }] }
     : plan);
-  const business = checkoutPlans(await api.catalog()).find(plan => plan.id === "business")?.choice;
-  assert.deepEqual(business, { plan_key: "team", variant: "business" });
-  await api.checkout(business!.plan_key, 3, "upgrade", business!.variant);
-  await api.createOrganization(business!.plan_key, 3, "Org", "new", business!.variant);
-  assert.deepEqual(requests, [
-    { plan_key: "team", variant: "business", catalog_version: 3, intent: "upgrade" },
-    { plan_key: "team", variant: "business", catalog_version: 3, intent: "new_organization", organization_name: "Org" },
-  ]);
+  const cards = checkoutPlans(await api.catalog());
+  assert.deepEqual(cards.map(plan => plan.id), ["free", "pro", "team", "enterprise"]);
+  assert.equal(cards.find(plan => plan.id === "free")?.choice, null);
+  const team = cards.find(plan => plan.id === "team")?.choice;
+  assert.deepEqual(team, { plan_key: "team" });
+  await api.checkout(team!.plan_key, 3, "upgrade", team!.variant);
+  assert.deepEqual(requests, [{ plan_key: "team", catalog_version: 3, intent: "upgrade" }]);
 });
 
 test("credits and customer portal carry idempotency keys on their edge routes", async () => {

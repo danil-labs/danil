@@ -81,8 +81,7 @@ export default function BillingPlan(props: { api: Api; role: () => string; conte
   const currentPlan = (value: NonNullable<ReturnType<typeof data>>) => {
     const org = fulfilled(value.organization);
     const key = org?.plan_key ?? props.fallbackPlan;
-    const variant = fulfilled(value.catalog)?.plans.find(plan => plan.plan_key === key)?.display_variants?.find(item => item.plan_key === key && item.edition === org?.edition);
-    return { id: variant?.variant ?? key, label: variant?.display_name ?? (key ? t(`web.billing_v2.plan_${key}`) : "") };
+    return { id: key, label: key ? t(`web.billing_v2.plan_${key}`) : "" };
   };
   const pendingPrefix = () => `danil.billing.${props.context}.`;
   const keyFor = (action: string) => { const storageKey = `${pendingPrefix()}key.${action}`; const key = sessionStorage.getItem(storageKey) ?? crypto.randomUUID(); sessionStorage.setItem(storageKey, key); return key; };
@@ -159,7 +158,7 @@ export default function BillingPlan(props: { api: Api; role: () => string; conte
             </Show>
             <div class="grid gap-2 sm:grid-cols-2">
               <For each={checkoutPlans(catalog())}>{plan => <article class="rounded-lg border p-3" classList={{ "border-primary": selected() === plan.id, "border-line": selected() !== plan.id }} aria-current={selected() === plan.id ? "true" : undefined}>
-                <strong>{plan.displayName ?? t(`web.billing_v2.plan_${plan.id}`)}</strong>
+                <strong>{t(`web.billing_v2.plan_${plan.id}`)}</strong>
                 <Show when={plan.price}>{price => <p>{displayMoney(price())} MXN / {t("web.billing_v2.month")}</p>}</Show>
                 <Show when={plan.choice} fallback={<Show when={plan.id === "enterprise"} fallback={plan.pricePending ? <p role="status">{t("web.billing_v2.unavailable")}</p> : null}><a href={`mailto:${BUSINESS_SALES_EMAIL}`}>{t("web.billing_v2.contact")}</a></Show>}>{choice =>
                   <Show when={permitted("billing.manage")}><Button disabled={busy() || currentPlan(value()).id === plan.id} onClick={() => { setSelected(plan.id); void upgrade(choice(), catalog().catalog_version); }}>{t(currentPlan(value()).id === "free" ? "web.billing_v2.choose" : "web.billing_v2.upgrade")}</Button></Show>
