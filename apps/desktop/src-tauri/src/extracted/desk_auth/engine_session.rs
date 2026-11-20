@@ -1,5 +1,5 @@
-//! La interfaz única de la sesión de la persona (decisión 2026-11-20 «la sesión vive en el
-//! motor»). Si el motor anuncia `person_session_v1`, el login, el estado, la salida y las
+//! La interfaz única de la sesión de la persona (decisión «la sesión vive en el motor»).
+//! Si el motor anuncia `person_session_v1`, el login, el estado, la salida y las
 //! llamadas al borde son suyos; si no, sigue la sesión de Desk (`session.rs`).
 
 use serde_json::{json, Value};
