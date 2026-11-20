@@ -67,8 +67,6 @@ export function EdgeAccountProvider({ children, context: Provided, deployment }:
   }, [selection]);
   const organizations = useMemo(() => (selection ? { state: orgState, choose: (id: string) => void selection.choose(id) } : null), [selection, orgState]);
 
-  // Entrar es la página de identity (`signin.web.tsx`): aquí no hay contraseña ni proveedor.
-  const elsewhere = useCallback(async () => "sign_in_on_web", []);
   // El borde no da portador a JS: lo que lo pide no se ofrece (`plane.bearerServices`).
   const getToken = useCallback(async (): Promise<string> => {
     throw new Error("bearer_unavailable");
@@ -86,13 +84,11 @@ export function EdgeAccountProvider({ children, context: Provided, deployment }:
       plane,
       organizations,
       loginUrl: edge.identity.loginUrl,
-      signInWithPassword: elsewhere,
-      signInWithProvider: elsewhere,
       signOut,
       getToken,
       unauthorized,
     }),
-    [state, accountSession, retry, person, plane, organizations, edge, elsewhere, signOut, getToken, unauthorized],
+    [state, accountSession, retry, person, plane, organizations, edge, signOut, getToken, unauthorized],
   );
   return <Provided.Provider value={value}>{children}</Provided.Provider>;
 }

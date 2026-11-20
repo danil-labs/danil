@@ -16,7 +16,7 @@ import { useAccount } from "../../lib/account";
 import { lang, t } from "../../lib/i18n";
 import { useMachines } from "../../lib/machines";
 import { type MemoryItem, type MemoryOutcome, type MemoryProblem, entryFileName, loadMemory, memoryScopes, outcomeOf } from "../../lib/memory";
-import { COMPUTERS } from "../../lib/supabase";
+import { COMPUTERS } from "../../lib/computersEndpoint";
 import { Icon } from "../../ui/Icon";
 import { useTheme } from "../../ui/theme";
 

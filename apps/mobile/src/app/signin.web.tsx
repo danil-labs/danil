@@ -5,14 +5,13 @@ import { useAccount } from "../lib/account";
 import { WEB_BASE } from "../lib/alpha-mode";
 import { SIGNED_OUT } from "../lib/edge-account";
 import { t, w } from "../lib/i18n";
-import { WEB_LOGIN } from "../lib/supabase.web";
 import { useTheme } from "../ui/theme";
+import { MobileLoginUnavailable } from "../ui/MobileLoginUnavailable";
 
 /**
  * La entrada en el navegador. Por el borde es la de identity (WorkOS), como la web: vuelve a la
  * raíz de la web, que es una vuelta exacta de identity, y la raíz manda el teléfono aquí. Tras
  * salir a propósito, o si identity no contesta, no se abre sola: se ofrece entrar o reintentar.
- * Sin borde, la entrada común de la web conserva el destino del teléfono.
  */
 export default function SignIn() {
   const theme = useTheme();
@@ -21,16 +20,11 @@ export default function SignIn() {
   const enter = () => {
     if (loginUrl) {
       window.location.assign(loginUrl(new URL(WEB_BASE, window.location.origin).href));
-      return;
     }
-    const base = process.env.EXPO_PUBLIC_TERMINUS_WEB_BASE || "/terminus/";
-    const url = new URL(WEB_LOGIN, window.location.origin);
-    url.searchParams.set("next", window.sessionStorage.getItem("terminus.web.return") || `${base}m/${window.location.search}`);
-    window.location.assign(url.toString());
   };
   useEffect(() => {
-    if (!session && !signedOut && !unavailable) enter();
-  }, [unavailable]);
+    if (loginUrl && !session && !signedOut && !unavailable) enter();
+  }, [loginUrl, session, signedOut, unavailable]);
   if (session) return <Redirect href="/" />;
   if (unavailable) {
     return (
@@ -42,6 +36,7 @@ export default function SignIn() {
       </View>
     );
   }
+  if (!loginUrl) return <MobileLoginUnavailable />;
   if (!signedOut) return null;
   return (
     <View style={[styles.page, { backgroundColor: theme.bg }]}>

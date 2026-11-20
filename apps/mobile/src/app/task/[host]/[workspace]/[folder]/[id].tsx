@@ -41,7 +41,7 @@ import { type ScrollAnchor, anchorOf, restoreAnchor, scrollToEnd } from "../../.
 import { type Follow, MARGIN, OPENED, fromTop, jumped, scrolled, showJump, unseen } from "../../../../../lib/follow";
 import { useAccount } from "../../../../../lib/account";
 import { useMachines } from "../../../../../lib/machines";
-import { COMPUTERS } from "../../../../../lib/supabase";
+import { COMPUTERS } from "../../../../../lib/computersEndpoint";
 import { useWorkspaces } from "../../../../../lib/workspaces";
 import { HistoryDetail } from "../../../../../ui/chat/HistoryDetail";
 import { Attachments, MessageBody, toolImages } from "../../../../../ui/chat/Message";

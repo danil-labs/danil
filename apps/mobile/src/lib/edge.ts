@@ -34,7 +34,7 @@ export type EdgeOptions = {
 
 /**
  * El borde que fijó la compilación (`EXPO_PUBLIC_DANIL_EDGE_ORIGIN`, desde `DANIL_WEB_API_ORIGIN`),
- * o `null`: sin él, la app sigue con la cuenta y las máquinas de antes (iOS y Android).
+ * o null si la compilacion no configura el borde.
  */
 export function edgeDeployment(env: Record<string, string | undefined>): EdgeDeployment | null {
   const raw = env.EXPO_PUBLIC_DANIL_EDGE_ORIGIN?.trim();
