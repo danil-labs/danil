@@ -1294,3 +1294,15 @@ test("closing one context prunes all its live and unlisted cached machines, fact
   assert.equal(fleet.peek({ ...query, context: "valid" })?.has, true);
   fleet.close();
 });
+
+test("continuation follows each machine and stops when that machine is removed", () => {
+  const { fleet, link } = setup({cmp_vm: {state: "online"}, cmp_mac: {state: "offline"}});
+  assert.equal(fleet.canContinue("cmp_vm"), true);
+  assert.equal(fleet.canContinue("cmp_mac"), false);
+  link("cmp_mac").setState("online");
+  link("cmp_vm").setState("offline");
+  assert.equal(fleet.canContinue("cmp_vm"), false);
+  assert.equal(fleet.canContinue("cmp_mac"), true);
+  fleet.setMachines([VM]);
+  assert.equal(fleet.canContinue("cmp_mac"), false);
+});

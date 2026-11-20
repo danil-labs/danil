@@ -230,8 +230,8 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
           onUnavailable: () => { setError('web.platform.unavailable'); gate(); later(); },
           services: {
             webWorkspaces: { rows, organization: () => profile.active_organization_id ?? null, active, busy, uncertain, choose: id => void choose(id) },
-            webWorkspacePicker: webWorkspacePicker(transport, {
-              store: window.sessionStorage,
+            webWorkspacePicker: webWorkspacePicker(transport, { store: window.sessionStorage,
+              selected: row => { if (row.sub === profile.id && row.org === profile.active_organization_id && active() !== row.account_id) reload(); },
             }),
             danilCredits: activeGroupCredits(api, profile.active_organization_id),
           },

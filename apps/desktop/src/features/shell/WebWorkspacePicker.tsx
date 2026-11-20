@@ -30,7 +30,7 @@ export function WebWorkspacePicker(props: { picker: WorkspacePicker; close: () =
     <Show when={!data.loading && !data.error && data()}>{result => <>
       <Show when={!result().rows.length && !result().partial}><p role="status">{t("shell.workspaces.no_accessible")}</p></Show>
       <div class="max-h-64 overflow-y-auto"><For each={result().rows}>{row =>
-        <button type="button" role="menuitem" data-picker-workspace="" disabled={busy() || !row.engine_workspace_id} class={ITEM_DE_MENU} onClick={() => void choose(row)}>
+        <button type="button" role="menuitem" data-picker-workspace="" disabled={busy()} class={ITEM_DE_MENU} onClick={() => void choose(row)}>
           <span class="flex min-w-0 flex-col text-left"><span class="truncate">{row.name}</span>
           <Show when={distinguish(result().rows, row)}>{label => <span class="text-caption text-neutral-500">{label()}</span>}</Show></span>
         </button>

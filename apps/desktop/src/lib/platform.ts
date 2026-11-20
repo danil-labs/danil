@@ -110,10 +110,10 @@ export type Capabilities = import("./group-account").GroupAccountCapabilities & 
    * `null` sin ese índice: el riel sale de `list_workspaces`.
    */
   railWorkspaces?: () => readonly import("../features/machines/engine-workspaces").RailWorkspace[] | null;
-  /** El nombre de una máquina por su id. */
   machineName?: (id: string) => string;
   /** La máquina de la cuenta que guarda una tarea o un space por su id de panel (`<máquina>~<id>`); `null` si es de la ventana. */
   taskMachine?: (id: string) => string | null;
+  taskWritable?: (id: string) => boolean;
   /** La que corre las tareas que llegan sin `machine`; sin esto, la de la ventana. */
   windowMachine?: () => { id: string; name: string; local: boolean } | undefined;
   /** Dónde se crea un proyecto nuevo, en el diálogo de añadirlo. */

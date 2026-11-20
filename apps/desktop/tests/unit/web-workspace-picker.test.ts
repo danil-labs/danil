@@ -26,6 +26,12 @@ function fixture() {
     },
     async mutation(path, init) {
       const c = new Headers(init?.headers).get("X-Danil-Session")!;
+      if (path === "workspaces/select") {
+        assert.equal(init?.method, "POST");
+        const id = JSON.parse(String(init.body)).workspace;
+        writes.push({ path, context: c });
+        return Response.json({ workspace: {id, org: "org_" + c, name: "Proyecto", role: "owner"} }, {headers: headers(c)});
+      }
       assert.equal(init?.method, "PUT");
       writes.push({ path, context: c });
       if (deny) throw new Error("revoked");
@@ -46,7 +52,7 @@ test("two signed-in identities and three organizations share a read-only picker"
   ]);
   assert.deepEqual(f.writes, []);
   await f.picker.add(rows[3]);
-  assert.deepEqual(f.writes, [{ path: "workspaces/preferences/added/engine4", context: "C" }]);
+  assert.deepEqual(f.writes, [{ path: "workspaces/preferences/added/engine4", context: "C" }, { path: "workspaces/select", context: "C" }]);
   assert.deepEqual(await f.picker.pinned(), [rows[3]]);
 });
 
@@ -69,4 +75,34 @@ test("a partial directory preserves verified rows and an additive return reopens
   assert.equal(got.partial, true); assert.equal(got.rows.length, 2);
   assert.equal(f.picker.resume(), false); await f.picker.connect();
   assert.equal(f.connections(), 1); assert.equal(f.picker.resume(), true); assert.equal(f.picker.resume(), false);
+});
+
+test("a workspace without an engine opens by account ID and remains visible on a fresh mount", async () => {
+  let selected: string | null = null;
+  const writes: string[] = [];
+  const account = { account_id: "1000000000000", engine_workspace_id: null, name: "Danil" };
+  const headers = { "X-Danil-Session-Applied": "A", "X-Danil-Session-Applied-Org": "org_A" };
+  const make = () => webWorkspacePicker({
+    async call(path) {
+      if (path === "identity/sessions/catalog") return Response.json({version: 1, items: [
+        { session_id: "first", sub: "user_A", contexts: [{context_id: "A", org: "org_A", workspaces: [account]}] }
+      ]});
+      if (path === "workspaces") return Response.json({active_workspace_id: selected}, {headers});
+      throw new Error("unexpected request " + path);
+    },
+    async mutation(path, init) {
+      assert.equal(path, "workspaces/select");
+      assert.equal(new Headers(init?.headers).get("X-Danil-Session"), "A");
+      assert.equal(init?.method, "POST");
+      selected = JSON.parse(String(init.body)).workspace;
+      assert.equal(selected, account.account_id);
+      writes.push(path);
+      return Response.json({workspace: {id: selected, org: "org_A", name: "Danil", role: "owner"}}, {headers});
+    },
+  }, {store: {} as Storage});
+  const picker = make();
+  const row = (await picker.catalog()).rows[0];
+  await picker.add(row);
+  assert.deepEqual(writes, ["workspaces/select"]);
+  assert.deepEqual(await make().pinned(), [row]);
 });

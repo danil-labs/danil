@@ -360,6 +360,11 @@ export class Fleet {
     return this.member(machine, context)?.link.state() ?? "unknown";
   }
 
+  canContinue(machine: string, context?: string): boolean {
+    const member = this.member(machine, context);
+    return !!member && !this.isOutdated(member) && this.online(member);
+  }
+
   power(machine: string, context?: string): Power {
     const member = this.member(machine, context);
     if (!member) return "off";

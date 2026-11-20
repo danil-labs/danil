@@ -5015,12 +5015,12 @@ export default function App() {
     }
     // Antes de cualquier `await`: es lo que impide que el despacho de
     // la cola saque dos mensajes en el mismo respiro.
-
     // Se marca la sesión si ya existe, y si no, la ventana sin id: un
     // turno que reanuda tiene su id desde el principio; el primero de
     // una tarea nueva lo recibe al volver de Rust, más abajo.
     const generation = workspaceContext.generation();
     const abierta = destination?.session ?? sessionId();
+    if (abierta && !esProvisional(abierta) && capabilities().taskWritable?.(abierta) === false) return false;
     const creationOptions = abierta ? undefined : draftOptions();
     if (abierta) advanceTurn(abierta);
     else lifecycleRevision++;
@@ -6401,7 +6401,7 @@ export default function App() {
             return next;
           });
         }}
-        soloLectura={pp.soloLectura || !!estadoDelTrabajo()?.history.archived || estadoDelTrabajo()?.available === false || historialAnteriorEnReposo()}
+        soloLectura={pp.soloLectura || (!!pp.sesion && !esProvisional(pp.sesion) && capabilities().taskWritable?.(pp.sesion) === false) || !!estadoDelTrabajo()?.history.archived || estadoDelTrabajo()?.available === false || historialAnteriorEnReposo()}
         recovery={pp.sesion && (recuperable() || origenArchivada() !== undefined || soloPorSerAnterior()) ? <>
           <Show when={recuperable()}>
             <ResumeTask project={proyectoDeLaCelda()?.id ?? ""} id={pp.sesion ?? ""} onChanged={() => {

@@ -2,7 +2,7 @@ import { z } from "zod";
 import type { EdgeTransport } from "@terminus/computers";
 import { parsePreferences } from "../features/shell/workspace-added-sync.ts";
 import { webAddedTransport } from "../features/shell/workspace-added-transport.ts";
-import { workspaceId } from "./platform-workspaces.ts";
+import { workspace as platformWorkspace, workspaceId } from "./platform-workspaces.ts";
 
 const id = z.string().min(1);
 const workspace = z.object({ account_id: workspaceId, engine_workspace_id: id.nullish(), name: id });
@@ -25,7 +25,7 @@ function scoped(transport: EdgeTransport, row: PickerRow): EdgeTransport {
   return { call: (path, init) => send("call", path, init), mutation: (path, init) => send("mutation", path, init) };
 }
 
-export function webWorkspacePicker(transport: EdgeTransport, options: { store: Storage; connect?: () => Promise<void> }) {
+export function webWorkspacePicker(transport: EdgeTransport, options: { store: Storage; connect?: () => Promise<void>; selected?: (row: PickerRow) => void }) {
   const subscribers = new Set<() => void>();
   async function catalog() {
     const body = directory.parse(await (await transport.call("identity/sessions/catalog")).json());
@@ -42,8 +42,8 @@ export function webWorkspacePicker(transport: EdgeTransport, options: { store: S
   }
   async function admitted(chosen: PickerRow) {
     const { rows } = await catalog();
-    const row = rows.find(w => w.session === chosen.session && w.context === chosen.context && w.sub === chosen.sub && w.org === chosen.org && w.account_id === chosen.account_id && w.engine_workspace_id === chosen.engine_workspace_id);
-    if (!row?.engine_workspace_id) throw new Error("workspace_not_available");
+    const row = rows.find(w => w.session === chosen.session && w.context === chosen.context && w.sub === chosen.sub && w.org === chosen.org && w.account_id === chosen.account_id);
+    if (!row) throw new Error("workspace_not_available");
     return row;
   }
   return {
@@ -68,16 +68,31 @@ export function webWorkspacePicker(transport: EdgeTransport, options: { store: S
         if (group) group.push(row); else groups.set(row.context, [row]);
       }
       return (await Promise.all([...groups.values()].map(async group => {
-        const prefs = await webAddedTransport(scoped(transport, group[0])).get().catch(() => null);
-        if (!prefs) return [];
-        const added = new Set(prefs.status === 200 ? parsePreferences(prefs.body)?.added : []);
-        return group.filter(row => row.engine_workspace_id && added.has(row.engine_workspace_id));
+        const client = scoped(transport, group[0]);
+        const [prefs, active] = await Promise.all([
+          group.some(row => row.engine_workspace_id) ? webAddedTransport(client).get().catch(() => null) : null,
+          client.call("workspaces").then(async response => z.object({ active_workspace_id: workspaceId.nullable() }).parse(await response.json()).active_workspace_id).catch(() => null),
+        ]);
+        const added = new Set(prefs?.status === 200 ? parsePreferences(prefs.body)?.added : []);
+        return group.filter(row => row.account_id === active || (row.engine_workspace_id && added.has(row.engine_workspace_id)));
       }))).flat();
     },
     async add(chosen: PickerRow) {
       const row = await admitted(chosen);
-      const result = await webAddedTransport(scoped(transport, row)).put(row.engine_workspace_id!);
-      if (result.status !== 204) throw new Error("workspace_preference_not_saved");
+      const client = scoped(transport, row);
+      if (row.engine_workspace_id) {
+        const result = await webAddedTransport(client).put(row.engine_workspace_id);
+        if (result.status !== 204) throw new Error("workspace_preference_not_saved");
+      }
+      const response = await client.mutation("workspaces/select", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Idempotency-Key": crypto.randomUUID() },
+        body: JSON.stringify({ workspace: row.account_id }),
+      });
+      const selection = z.object({ workspace: platformWorkspace }).parse(await response.json());
+      if (!response.ok || selection.workspace.id !== row.account_id || selection.workspace.org !== row.org)
+        throw new Error("workspace_selection_mismatch");
+      options.selected?.(row);
       for (const fn of subscribers) fn();
     },
   };
