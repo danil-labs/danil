@@ -804,7 +804,7 @@ for (const scenario of ['one account with two organizations', 'two accounts', 'r
   await until(() => doc.querySelectorAll('[data-picker-workspace]').length === (single ? 2 : 3));
   assert.deepEqual([...doc.querySelectorAll('[data-picker-workspace]')].map(w => w.textContent),
     single ? ['Catálogo', 'Entregas'] : ['Catálogoa@example.test', 'Entregas', 'Catálogob@example.test']);
-  assert.equal(doc.querySelector('[data-picker-account]').textContent, 'Conectar otra cuenta');
+  assert.equal(doc.querySelector('[data-picker-account]'), null);
   assert.doesNotMatch(doc.querySelector('[data-web-workspace-picker]').textContent, /engine4|org_|WorkOS|Elige una organización/);
   assert.deepEqual(writes, []);
   if (single) dirs[0].contexts.pop(); else dirs.pop();

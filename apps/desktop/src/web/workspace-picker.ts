@@ -25,7 +25,7 @@ function scoped(transport: EdgeTransport, row: PickerRow): EdgeTransport {
   return { call: (path, init) => send("call", path, init), mutation: (path, init) => send("mutation", path, init) };
 }
 
-export function webWorkspacePicker(transport: EdgeTransport, options: { store: Storage; connect: () => Promise<void> }) {
+export function webWorkspacePicker(transport: EdgeTransport, options: { store: Storage; connect?: () => Promise<void> }) {
   const subscribers = new Set<() => void>();
   async function catalog() {
     const body = directory.parse(await (await transport.call("identity/sessions/catalog")).json());
@@ -48,7 +48,9 @@ export function webWorkspacePicker(transport: EdgeTransport, options: { store: S
   }
   return {
     catalog,
+    canConnect: Boolean(options.connect),
     async connect() {
+      if (!options.connect) return;
       options.store.setItem(resumeKey, "1");
       try { await options.connect(); } catch (error) { options.store.removeItem(resumeKey); throw error; }
     },

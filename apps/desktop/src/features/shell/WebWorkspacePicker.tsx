@@ -37,6 +37,6 @@ export function WebWorkspacePicker(props: { picker: WorkspacePicker; close: () =
       }</For></div>
     </>}</Show>
     <Show when={error()}>{key => <p role="alert">{t(key())}</p>}</Show>
-    <button type="button" role="menuitem" data-picker-account="" disabled={busy()} class={ITEM_DE_MENU} onClick={() => void choose()}>{t("shell.workspaces.connect_account")}</button>
+    <Show when={props.picker.canConnect}><button type="button" role="menuitem" data-picker-account="" disabled={busy()} class={ITEM_DE_MENU} onClick={() => void choose()}>{t("shell.workspaces.connect_account")}</button></Show>
   </div>;
 }

@@ -10,7 +10,6 @@ import { ToastStack } from '../ui/Toast';
 import { SessionLoading } from './auth/SessionLoading';
 import { signInError, WorkosAuthPage } from './auth/workos';
 import { webOrganizations } from './organization-context';
-import { connectWebAccount } from './connect-account';
 import { webWorkspacePicker } from './workspace-picker';
 import { activeGroupCredits, contextMachines, type PlatformProfile, PlatformSessionError, type PlatformWorkspace, platformSession, platformTransport } from './platform-session';
 import { type CapabilitiesSnapshot, readCapabilities, supports } from './service-capabilities';
@@ -233,7 +232,6 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
             webWorkspaces: { rows, organization: () => profile.active_organization_id ?? null, active, busy, uncertain, choose: id => void choose(id) },
             webWorkspacePicker: webWorkspacePicker(transport, {
               store: window.sessionStorage,
-              connect: () => connectWebAccount(transport, home),
             }),
             danilCredits: activeGroupCredits(api, profile.active_organization_id),
           },
