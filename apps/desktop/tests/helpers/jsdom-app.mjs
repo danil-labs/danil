@@ -158,6 +158,8 @@ export async function boot(environment, version, responses, userAgent, storage =
           ? Promise.resolve({ ready: true, blocked: false, reason: null, items: [] })
           : Promise.reject(new Error("el guarda entra a mano"));
       }
+      // El gate de la sesión (`SessionGate`) no monta la app sin sesión: quien prueba «sin sesión» lo dice.
+      if (cmd === "danil_session_status" && !(cmd in responses)) return Promise.resolve({ state: "connected" });
       if (cmd in responses) {
         const response = responses[cmd];
         if (response instanceof Error) return Promise.reject(response);

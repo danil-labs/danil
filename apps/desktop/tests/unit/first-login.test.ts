@@ -6,6 +6,9 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { firstLoginPhase, FIRST_LOGIN_KEY, linkingOutcome, localCandidateCount, shouldMarkFirstLoginDone } from "../../src/features/shell/first-login.ts";
+import { createLinker } from "../../src/features/shell/first-login-link.ts";
+import { gateView } from "../../src/features/shell/session-gate.ts";
+import { personSessionSource, registerEngineSessionSource } from "../../src/features/shell/session-source.ts";
 import { createPersonalOpener, openPersonal, personalOrgOf } from "../../src/features/shell/personal-open.ts";
 import { createAccountWorkspaces } from "../../src/features/shell/session-account-workspaces.ts";
 
@@ -202,7 +205,6 @@ test("until the person confirms the account nothing is sealed, and the count onl
   accounts.hold(false);
   await accounts.refresh([DANIL, PERSONAL], s.send, () => SUB);
   assert.deepEqual(e.sealed(), ["qlocal01", "qlocal02"]);
-  // Primero el motor anterior: lo que un motor anuncia se conserva el resto de la ejecución.
   const old = async <T>(command: string): Promise<T> => (command === "machine_list" ? [{ id: "local", local: true, features: ["account_workspace_v1"] }] : [{ id: "x" }]) as T;
   assert.equal(await localCandidateCount(old), 0, "un motor sin la prueba de posesión no liga");
   assert.equal(await localCandidateCount(engine().invoke), 2);
@@ -221,5 +223,90 @@ test("a later fleet read of this machine without features does not turn adoption
   accounts.hold(false);
   await accounts.refresh([DANIL, PERSONAL], s.send, () => SUB);
   assert.deepEqual(e.sealed(), ["qlocal01", "qlocal02"]);
-  assert.equal(await localCandidateCount(invoke), 0, "ya ligados, no queda nada");
+  assert.equal(await localCandidateCount(invoke, async () => FEATURES), 0, "ya ligados, no queda nada");
+});
+
+test("adoption reads the features from the engine, not from the fleet row, which may come without them", async () => {
+  const e = engine();
+  // La fila propia por la flota: sin `features` (el inventario de computers no responde en esa Mac).
+  const fleet = async <T>(command: string, args?: Record<string, unknown>): Promise<T> =>
+    command === "machine_list" ? [{ id: "local", local: true, active: true, on: true, hosts: true }] as T : e.invoke<T>(command, args);
+  const s = edge();
+  const accounts = createAccountWorkspaces(fleet, true, () => {}, async () => FEATURES);
+  await accounts.refresh([DANIL, PERSONAL], s.send, () => SUB);
+  assert.deepEqual(e.sealed(), ["qlocal01", "qlocal02"], "con el motor anunciando la prueba de posesión, se adopta");
+  assert.equal(await localCandidateCount(fleet, async () => FEATURES), 0);
+});
+
+test("when adoption cannot run it says why, and the first login is not marked done", async () => {
+  const e = engine();
+  const fleet = async <T>(command: string, args?: Record<string, unknown>): Promise<T> =>
+    command === "machine_list" ? [{ id: "local", local: true }] as T : e.invoke<T>(command, args);
+  const warned: unknown[][] = [];
+  const warn = console.warn;
+  console.warn = (...args: unknown[]) => void warned.push(args);
+  try {
+    const accounts = createAccountWorkspaces(fleet, true, () => {}, async () => null);
+    await accounts.refresh([DANIL, PERSONAL], edge().send, () => SUB);
+    await accounts.refresh([DANIL, PERSONAL], edge().send, () => SUB);
+    assert.deepEqual(warned.filter(([m]) => m === "[adoption] not run").map(([, d]) => d), [{ cause: "engine_features" }], "una vez por causa");
+    const none = createAccountWorkspaces(engine().invoke, true, () => {}, async () => FEATURES);
+    await none.refresh([], edge().send, () => SUB);
+    assert.ok(warned.some(([m, d]) => m === "[adoption] not run" && (d as { cause: string }).cause === "no_session"));
+  } finally {
+    console.warn = warn;
+  }
+  assert.equal(await localCandidateCount(fleet, async () => null), null, "sin saber qué anuncia el motor no se sabe cuántos quedan");
+  assert.equal(shouldMarkFirstLoginDone({ signedIn: true, remaining: null }), false);
+});
+
+test("the linker opens the personal org, links the seven locals and reports, with an empty fleet inventory", async () => {
+  const seven = Array.from({ length: 7 }, (_, i) => ({ id: `qlocal0${i + 1}`, name: `Local ${i + 1}`, adoptable: true }));
+  const e = engine(seven);
+  let opened = false;
+  const status = () => ({ state: "connected", default_context: opened ? "ctx-personal" : "ctx-danil", sessions: [{ family: "f1", email: "ana@danil.ai", contexts: [DANIL, ...(opened ? [PERSONAL] : [])] }] });
+  const base = edge(() => { opened = true; return { status: 200, body: {} }; });
+  const invoke = async <T>(command: string, args?: Record<string, unknown>): Promise<T> => {
+    if (command === "machine_list") return [{ id: "local", local: true }] as T;
+    if (command === "danil_session_status") return status() as T;
+    if (command === "danil_edge_fetch") {
+      const a = args as { method: string; path: string; body?: unknown; context: string };
+      return base.send(a.context, a.method, a.path, a.body) as Promise<T>;
+    }
+    return e.invoke<T>(command, args);
+  };
+  const linker = createLinker(invoke, async () => FEATURES, { wait: async () => {} });
+  assert.equal(await linker.run(), "done");
+  assert.equal(e.sealed().length, 7);
+  assert.equal(linker.report()?.adopted.length, 7);
+  assert.equal(linker.report()?.org, "org_personal");
+  assert.deepEqual(base.selects().map((p) => p.body.organization_id), ["org_personal", "org_danil"]);
+});
+
+test("the gate shows loading until the session is known, the login without one, and the app only with one", () => {
+  assert.deepEqual(gateView({ status: undefined, done: true, signedInThisRun: false, linked: false }), { t: "loading" });
+  assert.deepEqual(gateView({ status: null, done: true, signedInThisRun: false, linked: false }), { t: "sign_in" }, "sin poder leer la sesión se pide, no se abre");
+  assert.deepEqual(gateView({ status: { state: "disconnected" }, done: true, signedInThisRun: false, linked: false }), { t: "sign_in" }, "cerrar sesión con la app abierta vuelve al login");
+  assert.deepEqual(gateView({ status: { state: "connected", email: "ana@danil.ai" }, done: true, signedInThisRun: false, linked: false }), { t: "open" });
+  assert.deepEqual(gateView({ status: { state: "connected", email: "ana@danil.ai" }, done: false, signedInThisRun: false, linked: false }), { t: "continue", email: "ana@danil.ai" });
+  assert.deepEqual(gateView({ status: { state: "connected", email: "ana@danil.ai" }, done: false, signedInThisRun: false, linked: true }), { t: "open" }, "ligado en esta ejecución, aunque quede algo para el siguiente arranque");
+});
+
+test("the session is read through one source: desk_auth today, and the engine once it announces person_session_v1", async () => {
+  const deskConnected = { state: "connected", email: "ana@danil.ai" };
+  const calls: string[] = [];
+  const invoke = async <T>(command: string): Promise<T> => { calls.push(command); return (command === "danil_session_status" ? deskConnected : undefined) as T; };
+  const today = await personSessionSource(invoke, async () => FEATURES);
+  assert.equal(today.origin, "desk");
+  assert.deepEqual(await today.read(), deskConnected);
+  // El motor ya es dueño de la sesión: lo que guarde el llavero de Desk no cuenta (decisión § 2.6).
+  const engineOwned = await personSessionSource(invoke, async () => [...FEATURES, "person_session_v1"]);
+  assert.equal(engineOwned.origin, "engine");
+  assert.deepEqual(await engineOwned.read(), { state: "disconnected" }, "sin el adaptador del motor, sin sesión: no se abre con la del llavero");
+  await assert.rejects(engineOwned.signIn(), (e: { detail?: string }) => e.detail === "not_available_yet");
+  registerEngineSessionSource({ origin: "engine", read: async () => ({ state: "connected", email: "cli@danil.ai" }), signIn: async () => {}, changes: async () => () => {} });
+  assert.deepEqual(await (await personSessionSource(invoke, async () => ["person_session_v1"])).read(), { state: "connected", email: "cli@danil.ai" }, "T6 cambia el origen sin tocar el gate");
+  registerEngineSessionSource(null);
+  // Sin saber qué anuncia el motor, se queda el origen de hoy.
+  assert.equal((await personSessionSource(invoke, async () => null)).origin, "desk");
 });

@@ -11,7 +11,6 @@ import { taskLabel } from "../projects/TaskStatus";
 import { cerrarConEscape, createRail } from "../settings/workspaces-store";
 import { AccountHeader } from "./AccountHeader";
 import AddWorkspaceMenu, { menuArrows } from "./AddWorkspaceMenu";
-import { FirstLogin } from "./FirstLogin";
 import { type AttentionState, topState, type WorkspaceAttention } from "./attention";
 import { columnDanil, danilMenuOf, tileLabel } from "./danil-rail";
 import { createHiddenWorkspaces, keepSlots } from "./hidden-workspaces";
@@ -233,7 +232,6 @@ export default function WorkspaceColumn(props: {
           onOpen={(id, context) => void ws.cambiarA(id, context)}
           onShow={hidden.show}
         />
-        <Show when={capabilities().nativeWindow}><FirstLogin sessions={sessions} active={() => ws.activo() ?? null} onOpen={(id, context) => void ws.cambiarA(id, context)} /></Show>
         <For each={others()}>
           {(account) => (
             <>
