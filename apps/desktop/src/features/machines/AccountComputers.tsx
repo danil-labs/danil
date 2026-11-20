@@ -3,10 +3,7 @@ import {
   type Answer,
   type Computer,
   COMPUTER_NAME_MAX,
-  listComputers,
-  listWorkspaces,
   orderComputers,
-  renameComputer,
   wakes,
 } from "@terminus/computers";
 import Pencil from "lucide-solid/icons/pencil";
@@ -21,32 +18,32 @@ import { Input } from "../../ui/Input";
 import { SettingsBlock, SettingsRow, SettingsSection } from "../settings/layout";
 import { workspaceComputersSource } from "./workspace-computers";
 import { machineNamesChanged } from "./store";
+import { createCloudMachines } from "./cloud-machines";
 
 /**
  * Dónde se leen y renombran las computadoras: lo que da la plataforma (la web)
  * o, en el escritorio, el token de cliente de esa cuenta.
  */
-export function accountComputersSource(account: string | null = null): AccountComputersSource | null {
+export function accountComputersSource(account: string | null = null, workspace?: string): AccountComputersSource | null {
   const given = capabilities().accountComputers;
   if (given) return given;
   if (!capabilities().danilAccount) return null;
-  const client = () => invoke<{ token: string; endpoint: string }>("account_relay_token", account ? { account } : {}).catch(() => null);
-  return {
-    workspaces: async () => {
-      const c = await client();
-      return c ? listWorkspaces(c.endpoint, c.token) : { kind: "error", status: null };
-    },
-    list: async () => {
-      const c = await client();
-      return c ? listComputers(c.endpoint, c.token) : { kind: "error", status: null };
-    },
-    rename: async (id, name) => {
-      const c = await client();
-      return c ? renameComputer(c.endpoint, c.token, id, name) : { kind: "error", status: null };
-    },
-    // La flota del escritorio vuelve a leer la cuenta (`account.tsx`) y toma el nombre nuevo.
-    onRenamed: () => window.dispatchEvent(new CustomEvent("harness:account-computers")),
-  };
+  if (!account && !workspace) {
+    const cloud = createCloudMachines(invoke);
+    return {
+      onRenamed: () => {},
+      list: async () => {
+        const rows = await cloud.rows();
+        switch (rows.state) {
+          case "ready": return { kind: "ok", value: rows.computers };
+          case "denied": return { kind: "unauthorized" };
+          case "unavailable": return { kind: "missing" };
+          case "retrying": return { kind: "error", status: null };
+        }
+      },
+    };
+  }
+  return null;
 }
 
 const sameDay = (a: Date, b: Date) => a.toDateString() === b.toDateString();
@@ -308,7 +305,7 @@ export function AccountComputersSection(props: {
   self?: string | null;
   onSelfName?: (name: string) => void;
 }) {
-  const accountSource = accountComputersSource(props.account ?? null);
+  const accountSource = accountComputersSource(props.account ?? null, props.workspace);
   const source = accountSource?.workspaces && props.workspace ? workspaceComputersSource(accountSource, props.workspace) : accountSource;
   return (
     <Show when={source}>

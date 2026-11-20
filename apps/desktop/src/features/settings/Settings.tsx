@@ -61,8 +61,6 @@ const ManageProjects = lazy(() => import("./ManageProjects"));
 const Agents = lazy(() => import("./Agents"));
 const AppDownloads = lazy(() => import("./AppDownloads"));
 
-/** Portal del Harness, servicio aparte; el escritorio lo abre en el navegador. */
-const HARNESS_URL = "https://harness.danil.ai/";
 
 /**
  * Configuración: siete entradas, y lo que eran secciones sueltas va en
@@ -178,17 +176,10 @@ const SIN_PESTANA: Pestana = { id: "", name: "", panel: null };
 const idTab = (id: string) => `cfg-tab-${id}`;
 const idSub = (id: string) => `cfg-sub-${id}`;
 
-/** El enlace al Harness: en la web de alfa, solo para owner y admin; el escritorio no sabe el rol y la ofrece siempre. Es un enlace de verdad: siempre a `/admin`, en otra pestaña. */
+/** Enlace de administracion cuando la plataforma web lo ofrece. */
 function AdminLink() {
   const page = capabilities().adminPage;
-  const [allowed] = createResource(async () => (page ? await page.allowed().catch(() => false) : capabilities().nativeWindow));
-  const href = page?.href ?? HARNESS_URL;
-  /** El escritorio no abre pestañas: lo manda al navegador. */
-  const open = (event: MouseEvent) => {
-    if (page) return;
-    event.preventDefault();
-    void invoke("open_external", { target: HARNESS_URL }).catch(() => {});
-  };
+  const [allowed] = createResource(async () => page ? await page.allowed().catch(() => false) : false);
   return (
     <Show when={allowed()}>
       <div class="mt-auto border-0 border-t border-solid border-border px-0 pb-3 pl-2 pt-2">
@@ -196,13 +187,12 @@ function AdminLink() {
           <SidebarMenuItem role="presentation">
             <SidebarMenuButton
               as="a"
-              href={href}
+              href={page?.href}
               target="_blank"
               rel="noopener"
               data-settings-admin=""
               selectionMark={false}
               class="h-10 min-h-10 grid-cols-[18px_minmax(0,1fr)_auto] gap-2.5 rounded-l-[10px] rounded-r-none border-0 py-0 pl-3.5 pr-3"
-              onClick={open}
             >
               <span class="flex size-4 items-center justify-center"><Shield size={15} /></span>
               <span class="truncate">{t("web.admin.title")}</span>
