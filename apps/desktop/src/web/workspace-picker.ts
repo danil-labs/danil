@@ -13,7 +13,7 @@ const resumeKey = "danil.web.add-workspace";
 export type WorkspacePicker = ReturnType<typeof webWorkspacePicker>;
 
 export function webWorkspacePicker(transport: EdgeTransport, options: {
-  sub: string; store: Storage; reload: () => void; accountLoginUrl: string;
+  sub: string; store: Storage; reload: () => void; accountLoginUrl: string; beginAccountChoice: () => void;
   select: (id: string) => Promise<void>; active: () => string | null;
 }) {
   const preferences = webAddedTransport(transport);
@@ -36,7 +36,7 @@ export function webWorkspacePicker(transport: EdgeTransport, options: {
     return (await listWorkspaces(transport.call)).filter(row => row.org === org);
   };
   return {
-    organizations, catalog, accountLoginUrl: options.accountLoginUrl,
+    organizations, catalog, accountLoginUrl: options.accountLoginUrl, beginAccountChoice: options.beginAccountChoice,
     async pinned(org: string, rows: readonly PlatformWorkspace[]) {
       const reply = await preferences.get();
       if (reply.status !== 200) return [];

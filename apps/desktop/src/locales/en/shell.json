@@ -143,6 +143,8 @@
   "shell.workspaces.choose_org": "Choose an organization",
   "shell.workspaces.no_authorized_orgs": "This account has no organizations.",
   "shell.workspaces.no_workspace_here": "No workspaces are available to you in this organization.",
+  "shell.workspaces.same_account": "WorkOS returned the same account: {account}.",
+  "shell.workspaces.keep_account": "Continue with this account",
   "shell.workspaces.other_login": "Another account",
   "shell.workspaces.catalog_error": "Could not load the list.",
   "shell.workspaces.add_failed": "Could not add this workspace. Try again.",

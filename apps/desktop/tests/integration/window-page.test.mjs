@@ -844,3 +844,25 @@ test('the plus offers every membership and another account before choosing an or
   assert.deepEqual(writes, [['/v1/identity/organizations/select', { organization_id: 'org_B' }]]);
   assert.equal(calls.includes('/v1/workspaces'), false);
 });
+
+test('returning from WorkOS as the previous person requires an explicit choice', async t => {
+  const profile = { id: 'user_A', name: 'QA', email: 'qa@example.test', workspace: null, organizations: [] };
+  const calls = [];
+  const fetcher = async input => {
+    const { pathname } = new URL(String(input)); calls.push(pathname);
+    if (pathname === '/v1/identity/me') return Response.json(profile);
+    return new Response(null, { status: 404 });
+  };
+  fetcher.__jsdomApp = true; globalThis.fetch = fetcher;
+  const app = await open(t, 'listo', 'same-account-return', {}, undefined, {}, { web: true, beforeImport(w) {
+    w.sessionStorage.setItem('danil.web.switch-from', profile.id);
+  } });
+  const doc = app.w.document;
+  await until(() => doc.querySelector('[data-account-return]'));
+  assert.match(doc.querySelector('[data-account-return]').textContent, /qa@example\.test/);
+  assert.equal(doc.querySelector('[data-workspace-column]'), null);
+  assert.equal(calls.includes('/v1/identity/logout'), false);
+  assert.equal(new URL(doc.querySelector('[data-account-return] a').href).searchParams.get('prompt'), 'select_account');
+  doc.querySelector('[data-account-return] button').click();
+  assert.equal(app.w.sessionStorage.getItem('danil.web.switch-from'), null);
+});

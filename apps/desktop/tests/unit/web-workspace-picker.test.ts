@@ -24,7 +24,7 @@ function fixture() {
     }
   };
   const create = (sub:string) => webWorkspacePicker(transport, {
-    sub, reload:()=>{reloads++;}, accountLoginUrl:"https://edge.example.test/v1/identity/login?prompt=select_account", select:async id=>{selected=id;}, active:()=>selected,
+    sub, reload:()=>{reloads++;}, beginAccountChoice: () => {}, accountLoginUrl:"https://edge.example.test/v1/identity/login?prompt=select_account", select:async id=>{selected=id;}, active:()=>selected,
     store:{getItem:(k:string)=>store.get(k)??null,setItem:(k:string,v:string)=>store.set(k,v),removeItem:(k:string)=>store.delete(k)} as Storage,
   });
   return {create,writes,reloads:()=>reloads,selected:()=>selected};
@@ -70,7 +70,7 @@ test("a fresh picker restores only authorized, pinned engine ids in the active o
       return new Response(null, { status: 204 });
     },
   }, { sub: "user_A", store: {} as Storage, select: async id => { active = id; }, active: () => active,
-    reload: () => { reloads++; }, accountLoginUrl: "https://edge.example.test/v1/identity/login?prompt=select_account" });
+    reload: () => { reloads++; }, beginAccountChoice: () => {}, accountLoginUrl: "https://edge.example.test/v1/identity/login?prompt=select_account" });
   await assert.rejects(make().add("org_B", "42"), /workspace_preference_not_saved/);
   assert.equal(reloads, 0);
   assert.deepEqual(await make().pinned("org_B", rows), []);

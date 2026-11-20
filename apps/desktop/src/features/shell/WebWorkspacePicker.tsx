@@ -54,6 +54,6 @@ export function WebWorkspacePicker(props: { picker: WorkspacePicker; initial: st
         <Match when={true}>{empty("shell.workspaces.no_workspace_here")}</Match>
       </Switch>
     </Show>
-    <Show when={!saving()}><a role="menuitem" data-picker-account="" class={ITEM_DE_MENU} href={props.picker.accountLoginUrl}>{t("shell.workspaces.other_login")}</a></Show>
+    <Show when={!saving()}><a role="menuitem" data-picker-account="" class={ITEM_DE_MENU} href={props.picker.accountLoginUrl} onClick={event => { try { props.picker.beginAccountChoice(); } catch { event.preventDefault(); setFailedAdd(true); } }}>{t("shell.workspaces.other_login")}</a></Show>
   </div>;
 }
