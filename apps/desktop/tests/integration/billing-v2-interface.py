@@ -78,12 +78,9 @@ with sync_playwright() as p:
     page.get_by_label("Nombre de la organización").wait_for(timeout=5000)
     assert page.evaluate("window.billingCalls").count("catalog") == 2
     checkout = "&return=success&checkout=bchk_01SYNTHETICCHK0001&result=success"
-    page.goto(BASE + "?gate=on" + checkout)
+    page.goto(BASE + "?gate=1" + checkout)
     page.get_by_text("Pago confirmado y plan activo", exact=True).wait_for(timeout=12000)
     assert "select:org_NEW" in page.evaluate("window.billingCalls")
-    page.goto(BASE + "?gate=off" + checkout, wait_until="networkidle")
-    assert page.evaluate("window.billingCalls") == []
-    assert "checkout=" in page.url
     for new_organization in [False, True]:
         page.goto(BASE + "?promo-error=1" + ("&new=1" if new_organization else ""))
         if new_organization:

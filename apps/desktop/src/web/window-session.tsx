@@ -18,7 +18,7 @@ import { awaitingWorkspace, canListWorkspaces, clearWebCaches, readWorkspaces, r
 import { UpdateNotice } from './UpdateNotice';
 import { mountWindow } from './window';
 import './phrases';
-import { organizationMachine, webBillingEnabled, windowBilling } from './window-billing';
+import { organizationMachine, windowBilling } from './window-billing';
 import { sessionStartup } from './startup-reader';
 import { freeModelScope } from '../lib/free-model-policy';
 import { freeRouterEngine, freeRouterWebEdge } from '../features/settings/free-router-adapters';
@@ -250,7 +250,7 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
             }),
             danilCredits: activeGroupCredits(api, profile.active_organization_id),
           },
-          organizations: () => Promise.resolve(organizations), billing: webBillingEnabled ? billing(profile) : undefined, reauth: organization.reauth, preparing: preparingWorkspace, groupAccount: { ...api.groupAccount, send: (...args) => authorized(() => api.groupAccount.send(...args)) },
+          organizations: () => Promise.resolve(organizations), billing: billing(profile), reauth: organization.reauth, preparing: preparingWorkspace, groupAccount: { ...api.groupAccount, send: (...args) => authorized(() => api.groupAccount.send(...args)) },
         }, { storage: cache.storage, webAccounts: {
           current: { user_id: person.id, name: person.name, email: typeof person.email === "string" ? person.email : null, extra: false },
           others: () => [], open: () => {}, remove: async () => {}, signOut: () => void exit.leave(),
