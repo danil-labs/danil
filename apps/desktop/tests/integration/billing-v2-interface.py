@@ -21,6 +21,8 @@ with sync_playwright() as p:
     assert enterprise.get_by_role("link", name="Hablemos").count() == 1
     assert enterprise.get_by_role("button").count() == 0
     page.locator("article").filter(has_text="Team").get_by_role("button", name="Cambiar de plan").click()
+    assert "checkout:team:" not in page.evaluate("window.billingCalls")
+    page.get_by_role("button", name="Continuar al pago").click()
     page.wait_for_function("window.billingCalls.includes('checkout:team:')")
     page.goto(BASE + "?role=member", wait_until="networkidle")
     page.get_by_text("Comprados", exact=True).wait_for()
@@ -40,6 +42,8 @@ with sync_playwright() as p:
         payment.route("https://checkout.stripe.com/**", lambda route: route.fulfill(body="Pago simulado"))
         payment.goto(BASE + f"?pending={operation}")
         payment.get_by_role("button", name=label).click()
+        if operation == "plan":
+            payment.get_by_role("button", name="Continuar al pago").click()
         payment.get_by_text("Preparando el pago", exact=True).wait_for()
         payment.wait_for_url("https://checkout.stripe.com/c/pay/synthetic")
         payment.close()
@@ -83,13 +87,13 @@ with sync_playwright() as p:
     page.get_by_text("Pago confirmado y plan activo", exact=True).wait_for(timeout=12000)
     assert "select:org_NEW" in page.evaluate("window.billingCalls")
     for new_organization in [False, True]:
-        page.goto(BASE + "?promo-error=1" + ("&new=1" if new_organization else ""))
+        page.goto(BASE + "?promo-error=1" + ("&new=1" if new_organization else "&plan=team&promo=INVALIDO"))
         if new_organization:
             page.get_by_role("button", name="Crear organización").click()
             page.get_by_label("Nombre de la organización").fill("Danil test")
         code = page.get_by_label("Código de promoción")
         code.fill("  INVALIDO  ")
-        page.get_by_role("button", name="Continuar al pago" if new_organization else "Cambiar de plan").click()
+        page.get_by_role("button", name="Continuar al pago").click()
         page.get_by_text("Este código de promoción no es válido para el plan.", exact=True).wait_for()
         assert code.get_attribute("aria-invalid") == "true"
         calls = page.evaluate("window.billingCalls")
