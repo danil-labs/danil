@@ -4,12 +4,14 @@
 
 use serde_json::{json, Value};
 
-/// Lo fija T5 en `danil-engine`; provisional hasta que lo publique.
 pub(crate) const FEATURE: &str = "person_session_v1";
 const STATUS: &str = "person_session_status";
 const LOGIN: &str = "person_session_login";
+const LOGIN_COMPLETE: &str = "person_session_login_complete";
 const LOGOUT: &str = "person_session_logout";
+const SELECT: &str = "person_session_select_organization";
 const FETCH: &str = "person_session_fetch";
+const SELECT_PATH: &str = "/v1/identity/organizations/select";
 
 /// El motor visto desde la ventana: sus rasgos y una orden.
 pub(crate) trait Engine {
@@ -36,6 +38,10 @@ fn announces(features: &Value) -> bool {
         .is_some_and(|list| list.iter().any(|f| f.as_str() == Some(FEATURE)))
 }
 
+fn coded(code: &str) -> Value {
+    json!({ "what": { "clave": format!("danil.error.{code}") }, "detail": code })
+}
+
 /// Sin respuesta del motor, la ventana se ve sin sesión y muestra solo el login.
 pub(crate) fn status<E: Engine>(engine: &E) -> Value {
     match engine.call(STATUS, json!({})) {
@@ -47,11 +53,40 @@ pub(crate) fn status<E: Engine>(engine: &E) -> Value {
     }
 }
 
-pub(crate) fn sign_in<E: Engine>(engine: &E, add: bool) -> Result<Value, Value> {
-    engine.call(
+/// Primer paso: la liga que abre quien la muestra; el motor recibe la vuelta en su loopback.
+pub(crate) fn start_login<E: Engine>(engine: &E, add: bool) -> Result<String, Value> {
+    let started = engine.call(
         LOGIN,
         json!({ "mode": if add { Some("add") } else { None } }),
-    )
+    )?;
+    started["url"]
+        .as_str()
+        .filter(|url| url.starts_with("https://") || url.starts_with("http://127.0.0.1:"))
+        .map(str::to_owned)
+        .ok_or_else(|| coded("unavailable"))
+}
+
+/// `None` mientras el login sigue pendiente.
+pub(crate) fn login_outcome(status: &Value) -> Option<Result<(), Value>> {
+    match status["login"]["state"].as_str() {
+        Some("done") => Some(Ok(())),
+        Some("error") => Some(Err(coded(
+            status["login"]["error"].as_str().unwrap_or("unavailable"),
+        ))),
+        Some(_) => None,
+        // Sin `login` el motor ya no tiene un flujo abierto: vale el estado de la sesión.
+        None if status["state"] == "connected" => Some(Ok(())),
+        None => None,
+    }
+}
+
+/// Segundo paso cuando la vuelta no llegó al loopback: la dirección o el código pegado.
+pub(crate) fn complete_login<E: Engine>(engine: &E, pasted: &str) -> Result<Value, Value> {
+    let pasted = pasted.trim();
+    if pasted.is_empty() || pasted.len() > 4096 {
+        return Err(coded("invalid_request"));
+    }
+    engine.call(LOGIN_COMPLETE, json!({ "pasted": pasted }))
 }
 
 pub(crate) fn sign_out<E: Engine>(
@@ -71,19 +106,46 @@ pub(crate) fn fetch<E: Engine>(
     key: &str,
     context: Option<&str>,
 ) -> Result<Value, Value> {
+    if (method, path) == ("POST", SELECT_PATH) {
+        return select(engine, body, key, context);
+    }
     let mut reply = engine.call(
         FETCH,
         json!({ "method": method, "path": path, "body": body, "idempotencyKey": key, "context": context }),
     )?;
     if !reply.get("status").is_some_and(Value::is_u64) {
-        return Err(
-            json!({ "what": { "clave": "danil.error.unavailable" }, "detail": "unavailable" }),
-        );
+        return Err(coded("unavailable"));
     }
-    if method == "POST" && reply.get("idempotency_key").is_none() {
-        reply["idempotency_key"] = json!(key);
+    // El front lee la forma de `edge_reply`: `idempotency_key` solo en un POST.
+    let echoed = reply
+        .as_object_mut()
+        .and_then(|o| o.remove("idempotencyKey"));
+    if method == "POST" {
+        reply["idempotency_key"] = echoed.unwrap_or_else(|| json!(key));
     }
     Ok(reply)
+}
+
+/// Elegir organización es una orden propia del motor; contesta con la forma de `edge_reply`.
+fn select<E: Engine>(
+    engine: &E,
+    body: Option<&Value>,
+    key: &str,
+    context: Option<&str>,
+) -> Result<Value, Value> {
+    let Some(organization) = body
+        .and_then(|b| b["organization_id"].as_str())
+        .filter(|o| !o.is_empty())
+    else {
+        return Ok(
+            json!({ "status": 400, "body": { "code": "invalid_request" }, "idempotency_key": key }),
+        );
+    };
+    let answer = engine.call(
+        SELECT,
+        json!({ "organizationId": organization, "context": context }),
+    )?;
+    Ok(json!({ "status": 200, "body": answer, "idempotency_key": key }))
 }
 
 #[cfg(test)]
@@ -148,16 +210,84 @@ mod tests {
     }
 
     #[test]
-    fn entrar_y_salir_son_ordenes_del_motor() {
-        let e = fake(json!([FEATURE]), |_, _| Ok(json!({"state": "connected"})));
-        sign_in(&&e, false).unwrap();
-        sign_in(&&e, true).unwrap();
-        sign_out(&&e, Some("fam-1"), None).unwrap();
-        let calls = e.calls.borrow();
-        assert_eq!(calls[0], (LOGIN.into(), json!({"mode": null})));
-        assert_eq!(calls[1], (LOGIN.into(), json!({"mode": "add"})));
+    fn el_login_empieza_en_el_motor_y_devuelve_solo_una_liga_valida() {
+        let e = fake(json!([FEATURE]), |_, _| {
+            Ok(
+                json!({"url": "https://edge.danil.ai/v1/identity/desk/authorize?x=1", "redirect_uri": "http://127.0.0.1:5000/callback", "expires_at": 1}),
+            )
+        });
         assert_eq!(
-            calls[2],
+            start_login(&&e, false).unwrap(),
+            "https://edge.danil.ai/v1/identity/desk/authorize?x=1"
+        );
+        start_login(&&e, true).unwrap();
+        assert_eq!(e.calls.borrow()[0], (LOGIN.into(), json!({"mode": null})));
+        assert_eq!(e.calls.borrow()[1], (LOGIN.into(), json!({"mode": "add"})));
+        let bad = fake(json!([FEATURE]), |_, _| {
+            Ok(json!({"url": "file:///etc/passwd"}))
+        });
+        assert_eq!(
+            start_login(&&bad, false).unwrap_err()["detail"],
+            "unavailable"
+        );
+        let fails = fake(json!([FEATURE]), |_, _| Err(coded("not_available_yet")));
+        assert_eq!(
+            start_login(&&fails, false).unwrap_err()["detail"],
+            "not_available_yet"
+        );
+    }
+
+    #[test]
+    fn el_login_termina_cuando_el_motor_lo_dice() {
+        assert!(
+            login_outcome(&json!({"state": "disconnected", "login": {"state": "pending"}}))
+                .is_none()
+        );
+        assert!(matches!(
+            login_outcome(&json!({"state": "connected", "login": {"state": "done"}})),
+            Some(Ok(()))
+        ));
+        let failed = login_outcome(
+            &json!({"state": "disconnected", "login": {"state": "error", "error": "access_denied"}}),
+        );
+        assert_eq!(failed.unwrap().unwrap_err()["detail"], "access_denied");
+        assert!(matches!(
+            login_outcome(&json!({"state": "connected"})),
+            Some(Ok(()))
+        ));
+        assert!(login_outcome(&json!({"state": "disconnected"})).is_none());
+    }
+
+    #[test]
+    fn lo_pegado_se_manda_al_motor_recortado_y_con_limite() {
+        let e = fake(json!([FEATURE]), |_, _| Ok(json!({"state": "connected"})));
+        complete_login(&&e, "  http://127.0.0.1:5000/callback?code=abc&state=s  ").unwrap();
+        assert_eq!(
+            e.calls.borrow()[0],
+            (
+                LOGIN_COMPLETE.into(),
+                json!({"pasted": "http://127.0.0.1:5000/callback?code=abc&state=s"})
+            )
+        );
+        assert_eq!(
+            complete_login(&&e, "   ").unwrap_err()["detail"],
+            "invalid_request"
+        );
+        assert_eq!(
+            complete_login(&&e, &"a".repeat(4097)).unwrap_err()["detail"],
+            "invalid_request"
+        );
+        assert_eq!(e.calls.borrow().len(), 1);
+    }
+
+    #[test]
+    fn salir_es_una_orden_del_motor() {
+        let e = fake(json!([FEATURE]), |_, _| {
+            Ok(json!({"state": "disconnected"}))
+        });
+        sign_out(&&e, Some("fam-1"), None).unwrap();
+        assert_eq!(
+            e.calls.borrow()[0],
             (LOGOUT.into(), json!({"family": "fam-1", "context": null}))
         );
     }
@@ -165,13 +295,13 @@ mod tests {
     #[test]
     fn una_llamada_al_borde_pasa_por_el_motor_con_la_llave_y_el_contexto() {
         let e = fake(json!([FEATURE]), |_, _| {
-            Ok(json!({"status": 201, "body": {"id": "ws_1"}}))
+            Ok(json!({"status": 201, "body": {"id": "ws_1"}, "idempotencyKey": "k-1"}))
         });
-        let body = json!({"organization_id": "org_1"});
+        let body = json!({"name": "Nuevo"});
         let reply = fetch(
             &&e,
             "POST",
-            "/v1/identity/organizations/select",
+            "/v1/workspaces",
             Some(&body),
             "k-1",
             Some("ctx-1"),
@@ -185,11 +315,35 @@ mod tests {
             e.calls.borrow()[0],
             (
                 FETCH.into(),
-                json!({"method": "POST", "path": "/v1/identity/organizations/select", "body": body, "idempotencyKey": "k-1", "context": "ctx-1"})
+                json!({"method": "POST", "path": "/v1/workspaces", "body": body, "idempotencyKey": "k-1", "context": "ctx-1"})
             )
         );
         let get = fetch(&&e, "GET", "/v1/machines", None, "k-2", None).unwrap();
         assert!(get.get("idempotency_key").is_none());
+        assert!(get.get("idempotencyKey").is_none());
+    }
+
+    #[test]
+    fn elegir_organizacion_va_por_su_orden_del_motor() {
+        let e = fake(json!([FEATURE]), |_, _| {
+            Ok(json!({"default_context": "ctx-2"}))
+        });
+        let body = json!({"organization_id": "org_personal"});
+        let reply = fetch(&&e, "POST", SELECT_PATH, Some(&body), "k-1", Some("ctx-1")).unwrap();
+        assert_eq!(
+            reply,
+            json!({"status": 200, "body": {"default_context": "ctx-2"}, "idempotency_key": "k-1"})
+        );
+        assert_eq!(
+            e.calls.borrow()[0],
+            (
+                SELECT.into(),
+                json!({"organizationId": "org_personal", "context": "ctx-1"})
+            )
+        );
+        let empty = fetch(&&e, "POST", SELECT_PATH, Some(&json!({})), "k-2", None).unwrap();
+        assert_eq!(empty["status"], 400);
+        assert_eq!(e.calls.borrow().len(), 1);
     }
 
     #[test]

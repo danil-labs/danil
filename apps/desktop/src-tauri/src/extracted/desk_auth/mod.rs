@@ -215,9 +215,7 @@ pub(super) fn danil_sign_in(
     }
     let add = mode.as_deref() == Some("add");
     if let engine_session::Owner::Engine(engine) = owner(&app) {
-        let value = engine_session::sign_in(&engine, add)?;
-        announce(&app, &value);
-        return Ok(value);
+        return engine_sign_in(&app, &engine, add);
     }
     let d = desk(&app);
     let attempt = d.begin_sign_in();
@@ -253,6 +251,50 @@ pub(super) fn danil_sign_in(
         .map_err(|f| error(&f))?;
     forget_legacy_session(&app);
     let value = d.status();
+    announce(&app, &value);
+    Ok(value)
+}
+
+/// El motor da la liga y recibe la vuelta en su loopback; aquí solo se abre y se espera.
+fn engine_sign_in(
+    app: &tauri::AppHandle,
+    engine: &WindowEngine<'_>,
+    add: bool,
+) -> Result<Value, Value> {
+    let url = engine_session::start_login(engine, add)?;
+    let browser = login_browser::LoginBrowser::open(app, url, add)?;
+    let deadline = Instant::now() + LOGIN_WAIT;
+    loop {
+        if browser.cancelled() {
+            return Err(coded("cancelled"));
+        }
+        if Instant::now() > deadline {
+            return Err(coded("timeout"));
+        }
+        let value = engine_session::status(engine);
+        match engine_session::login_outcome(&value) {
+            Some(Ok(())) => {
+                announce(app, &value);
+                return Ok(value);
+            }
+            Some(Err(fail)) => return Err(fail),
+            None => std::thread::sleep(Duration::from_millis(500)),
+        }
+    }
+}
+
+/// La dirección o el código que la persona pegó cuando la vuelta no llegó al loopback del
+/// motor. Solo con la sesión en el motor.
+#[tauri::command(async)]
+pub(super) fn danil_sign_in_complete(
+    app: tauri::AppHandle,
+    pasted: String,
+) -> Result<Value, Value> {
+    let engine_session::Owner::Engine(engine) = owner(&app) else {
+        return Err(coded("not_available_yet"));
+    };
+    engine_session::complete_login(&engine, &pasted)?;
+    let value = engine_session::status(&engine);
     announce(&app, &value);
     Ok(value)
 }
