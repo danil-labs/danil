@@ -72,6 +72,7 @@ const SIN_INTERFAZ = {
   ...Object.fromEntries([
     "free_router_binding", "prove_free_router_binding", "set_free_router_grant", "clear_free_router_grant", "release_free_router_owner",
   ].map(command => [command, "el pase de plataforma del Free router (TW#72 1d): la ventana lo pide y lo renueva en su propio cambio; hoy solo fija la unión al re-sellar"])),
+  credits_pilot_install: "extensión del contrato del motor que conservan los clientes anteriores",
   change_agent_folders: "la configuración global solo administra workspace; el CLI conserva la asignación de carpetas y el contrato congelado",
   set_go_usage_key: "la conexión única de OpenCode reemplaza el campo de Go; se conserva el contrato y las claves guardadas de clientes anteriores",
   consent_text: "el contrato conserva la lectura antigua; el router usa la política y referencia de aceptación de workspaces_startup",
