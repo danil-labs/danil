@@ -1,5 +1,6 @@
 import { createEffect, createMemo, createRoot, createSignal, on } from "solid-js";
 import { invoke } from "../../lib/invoke.ts";
+import { bridgePersonSession } from "../../lib/person-session.ts";
 import { capabilities } from "../../lib/platform.ts";
 import { escribirPref, leerPref } from "../../lib/prefs.ts";
 import { listen } from "../../lib/serviceEvents.ts";
@@ -144,6 +145,8 @@ function wire(hidden: () => ReadonlySet<string>, onSeeded: (ids: readonly string
     // Las peticiones de la CLI (`account.request`); al arrancar se drenan las que llegaron antes.
     void sessions.refresh().then(() => requests.pump());
     void listen("danil-connect", () => { void adoption.retry(); }).catch(() => {});
+    // Un login de `danil login` llega del motor; los oyentes de la sesión escuchan `danil-connect`.
+    void bridgePersonSession().catch(() => {});
     void listen("account.request", () => void requests.pump()).catch(() => {});
     // Lo que el motor liga después, en segundo plano, llega al mismo aviso.
     void engineFeatures().then((f) => {

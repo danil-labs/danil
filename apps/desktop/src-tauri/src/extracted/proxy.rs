@@ -273,6 +273,7 @@ pub(super) fn desktop_command(name: &str) -> bool {
                 | "account_relay_token"
                 | "danil_session_status"
                 | "danil_sign_in"
+                | "danil_sign_in_complete"
                 | "danil_sign_out"
                 | "danil_edge_fetch"
                 | "typst_live_complete"

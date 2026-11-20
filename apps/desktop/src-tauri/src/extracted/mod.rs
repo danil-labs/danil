@@ -493,6 +493,7 @@ fn start(client: Option<Arc<Client>>, autostart: bool, launcher: launcher::Launc
             proxy::account_relay_token,
             desk_auth::danil_session_status,
             desk_auth::danil_sign_in,
+            desk_auth::danil_sign_in_complete,
             desk_auth::danil_sign_out,
             desk_auth::danil_edge_fetch,
             proxy::service_filter,
