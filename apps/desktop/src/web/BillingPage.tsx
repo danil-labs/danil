@@ -1,0 +1,144 @@
+import { isOrganizationSelectionRequired } from "@terminus/computers";
+import { createEffect, createResource, createSignal, For, onCleanup, Show } from "solid-js";
+import { render } from "solid-js/web";
+import { aplicarLengua, t } from "../lib/i18n";
+import { seguirElTema } from "../lib/theme";
+import { Button } from "../ui/Button";
+import { Select } from "../ui/Select";
+import { SessionLoading } from "./auth/SessionLoading";
+import { signInError, WorkosAuthPage } from "./auth/workos";
+import BillingPlan from "./BillingPlan";
+import { rememberBillingLogin } from "./billing-route";
+import { billingV2 } from "./billing-v2-api";
+import { organizationSession } from "./organization-session";
+import { isOrganizationAuthRequired } from "./organization-context";
+import { PlatformSessionError, platformSession, platformTransport } from "./platform-session";
+import type { WebSessionDeployment } from "./session-config";
+import { BillingReturnGate } from "./window-billing";
+import "./phrases";
+
+export function startBilling(options: WebSessionDeployment, root: HTMLElement) {
+  aplicarLengua();
+  seguirElTema();
+  const dispose = render(() => <BillingPage options={options} />, root);
+  window.addEventListener("pagehide", event => { if (!event.persisted) dispose(); });
+}
+
+function BillingPage(props: { options: WebSessionDeployment }) {
+  const home = new URL(import.meta.env.BASE_URL, location.origin).href;
+  const query = new URLSearchParams(location.search);
+  const plan = query.get("plan") ?? "";
+  const initialPlan = ["pro", "team", "business"].includes(plan) ? plan : undefined;
+  const initialPromotion = query.get("promo") ?? undefined;
+  const requestedOrg = query.get("org");
+  const returnError = signInError(location.search);
+  const [expired, setExpired] = createSignal(false);
+  const [authOrg, setAuthOrg] = createSignal<string>();
+  const [preferred, setPreferred] = createSignal(requestedOrg);
+  const [intended, setIntended] = createSignal(requestedOrg);
+  const [revision, refreshBilling] = createSignal(0);
+  const lifetime = new AbortController();
+  const request: typeof fetch = (input, init) => fetch(input, {
+    ...init,
+    signal: init?.signal ? AbortSignal.any([init.signal, lifetime.signal]) : lifetime.signal,
+  });
+  const raw = platformTransport(props.options, request);
+  const api = platformSession(props.options, request);
+  async function authorized<T>(call: () => Promise<T>): Promise<T> {
+    try { return await call(); }
+    catch (error) {
+      if (error instanceof PlatformSessionError && error.status === 401) setExpired(true);
+      throw error;
+    }
+  }
+  const transport = {
+    call: (path: string, init?: RequestInit) => authorized(() => raw.call(path, init)),
+    mutation: (path: string, init?: RequestInit) => authorized(async () => {
+      try { return await raw.mutation(path, init); }
+      catch (error) {
+        if (path === "identity/organizations/select" && isOrganizationAuthRequired(error)) {
+          setAuthOrg(JSON.parse(String(init?.body)).organization_id);
+        }
+        throw error;
+      }
+    }),
+  };
+  const session = organizationSession(transport, lifetime.signal, () => {});
+  const selection = session.selection;
+  const [state, setState] = createSignal(selection.state());
+  const unsubscribe = selection.subscribe(() => setState(selection.state()));
+  onCleanup(() => { lifetime.abort(); unsubscribe(); selection.stop(); });
+  const [profile, { refetch }] = createResource(async () => {
+    try { return await authorized(() => api.me()); }
+    catch (error) {
+      if (isOrganizationSelectionRequired(error) || (error instanceof PlatformSessionError && error.code === "workspace_selection_required")) return null;
+      throw error;
+    }
+  });
+  createEffect(() => {
+    if (!profile.loading && !profile.error && !expired()) session.load();
+  });
+  const ready = () => { const current = state(); return current.kind === "ready" ? current : undefined; };
+  const active = () => {
+    const current = ready();
+    return current?.items.find(org => org.id === current.active);
+  };
+  const personApi = billingV2(transport, null);
+  createEffect(() => {
+    const current = ready();
+    const id = preferred();
+    if (!current || current.busy || !id) return;
+    setPreferred(null);
+    if (id !== current.active && current.items.some(org => org.id === id)) void selection.choose(id);
+  });
+  async function select(id: string) {
+    if (ready()?.active !== id) await selection.choose(id);
+    if (ready()?.active !== id) throw new Error("billing_selection_pending");
+    rememberOrg(id);
+    if (!active()) await selection.load();
+  }
+  function rememberOrg(id: string) {
+    setIntended(id);
+    const url = new URL(location.href);
+    url.searchParams.set("org", id);
+    history.replaceState(history.state, "", url);
+  }
+  function changeOrg(id: string) {
+    rememberOrg(id);
+    void selection.choose(id);
+  }
+  return <Show when={!(expired() || authOrg() || returnError)} fallback={
+    <WorkosAuthPage loginUrl={api.loginUrl(home, authOrg())} error={returnError} onLogin={rememberBillingLogin} />
+  }>
+    <Show when={!profile.loading} fallback={<SessionLoading />}>
+      <main class="h-full overflow-y-auto bg-bg px-4 py-8 text-neutral-950">
+        <div class="mx-auto grid max-w-3xl gap-6">
+          <header class="flex flex-wrap items-center justify-between gap-3">
+            <h1 class="m-0 font-display text-lead font-bold">{t("settings.tab.plan")}</h1>
+            <Button as="a" variant="ghost" href={home}>{t("common.brand_name")}</Button>
+          </header>
+          <Show when={!profile.error} fallback={<div role="alert"><p>{t("web.billing_v2.unavailable")}</p><Button onClick={() => void refetch()}>{t("web.computers.retry")}</Button></div>}>
+            <Show when={ready()} fallback={<p role="status">{t("web.billing_v2.loading")}</p>}>{current => <>
+              <Show when={current().items.length}>
+                <label class="grid max-w-xs gap-1 text-ui">
+                  {t("web.billing_v2.organization")}
+                  <Select value={current().active ?? ""} disabled={current().busy} onChange={event => changeOrg(event.currentTarget.value)}>
+                    <option value="" disabled>{t("web.billing_v2.organization")}</option>
+                    <For each={current().items}>{org => <option value={org.id}>{org.name}</option>}</For>
+                  </Select>
+                </label>
+              </Show>
+              <BillingReturnGate api={personApi} onActive={select} onSettled={() => refreshBilling(n => n + 1)} plan={id => billingV2(transport, id).organization()} />
+              <Show when={!current().busy && (current().error || (intended() && intended() !== current().active))}><p role="alert">{t("web.billing_v2.unavailable")}</p></Show>
+              <Show when={!current().busy && !preferred() && (!intended() || intended() === current().active)}><Show when={active()} keyed fallback={
+                <BillingPlan api={personApi} creationApi={personApi} role={() => ""} context={profile()?.id ?? "unselected"} revision={revision()} initialPlan={initialPlan} initialPromotion={initialPromotion} />
+              }>{org =>
+                <BillingPlan api={billingV2(transport, org.id)} creationApi={personApi} role={() => org.role ?? ""} context={`${profile()?.id ?? "unselected"}:${org.id}`} revision={revision()} initialPlan={initialPlan} initialPromotion={initialPromotion} />
+              }</Show></Show>
+            </>}</Show>
+          </Show>
+        </div>
+      </main>
+    </Show>
+  </Show>;
+}

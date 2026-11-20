@@ -12,7 +12,7 @@ export function signInError(search: string): string {
 }
 
 /** The original sign-in (80b251a8); its button goes to the edge's `/v1/identity/login`. */
-export function WorkosAuthPage(props: { loginUrl: string; error: string }) {
+export function WorkosAuthPage(props: { loginUrl: string; error: string; onLogin?: () => void }) {
   document.title = "Danil";
   return (
     <main class="flex h-full flex-col items-center overflow-y-auto bg-bg px-6 py-10 text-neutral-950" data-web-auth="workos">
@@ -22,7 +22,7 @@ export function WorkosAuthPage(props: { loginUrl: string; error: string }) {
           <h2 class="m-0 text-xl font-semibold">{t("web.auth.signin_title")}</h2>
           <p class="m-0 text-sm text-neutral-500" role="status">{t("web.auth.workos_hint")}</p>
         </div>
-        <Button as="a" class="min-h-11" href={props.loginUrl}>{t("web.auth.workos_email")}</Button>
+        <Button as="a" class="min-h-11" href={props.loginUrl} onClick={props.onLogin}>{t("web.auth.workos_email")}</Button>
         <p class="m-0 text-sm text-neutral-500">{t("web.auth.workos_password_hint")}</p>
         <Show when={props.error}><p class="m-0 text-sm text-error-strong" role="alert">{t(`web.auth.${props.error}`)}</p></Show>
       </div>

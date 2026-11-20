@@ -9,16 +9,17 @@ import { PAYMENT_URL_DEADLINE_MS, waitForPaymentUrl } from "./billing-v2-return"
 import { BillingPromotionField, promotionCodeInvalid } from "./BillingPromotionField";
 import { checkoutPlans } from "./billing-v2-plans";
 import type { billingV2 } from "./billing-v2-api";
+import { rememberBillingReturn } from "./billing-route";
 import { bindCreationCheckout, creationKey } from "./billing-v2-idempotency";
 
 type Api = ReturnType<typeof billingV2>;
 
-export default function NewOrganizationCheckout(props: { api: Api }) {
+export default function NewOrganizationCheckout(props: { api: Api; initialPlan?: string; initialPromotion?: string }) {
   const [open, setOpen] = createSignal(false);
   const [catalog, { refetch }] = createResource(open, () => props.api.catalog());
   const [name, setName] = createSignal("");
-  const [plan, setPlan] = createSignal("pro");
-  const [promotion, setPromotion] = createSignal("");
+  const [plan, setPlan] = createSignal(props.initialPlan ?? "pro");
+  const [promotion, setPromotion] = createSignal(props.initialPromotion ?? "");
   const [promotionInvalid, setPromotionInvalid] = createSignal(false);
   const plans = createMemo(() => {
     const data = catalog.error ? undefined : catalog();
@@ -58,6 +59,7 @@ export default function NewOrganizationCheckout(props: { api: Api }) {
       const created = await props.api.createOrganization(choice.plan_key, version, organizationName, key, choice.variant, code);
       bindCreationCheckout(sessionStorage, key, created.checkout_id);
       const url = await waitForPaymentUrl(created, () => props.api.checkoutStatus(created.checkout_id, signal), signal, () => setStatus("checkout_preparing"));
+      rememberBillingReturn(created.checkout_id);
       window.location.assign(url);
     } catch (error) {
       if (lifetime.signal.aborted) return;

@@ -1,5 +1,6 @@
 import "../styles/global.css";
 import "../lib/sharedClock";
+import { billingEntry, webBillingEnabled } from "./billing-route";
 import { phoneRoute } from "./phone";
 import { announceStaleTab, updateNoticeReady } from "./update-state";
 
@@ -21,7 +22,13 @@ window.addEventListener("vite:preloadError", (event) => {
 });
 
 const phone = __DANIL_WEB_PHONE__ ? phoneRoute(window.location, import.meta.env.BASE_URL, window) : null;
-if (phone) window.location.replace(phone);
+const billing = webBillingEnabled ? billingEntry(window.location, sessionStorage) : null;
+if (billing && billing.href !== window.location.href) window.location.replace(billing.href);
+else if (billing) {
+  const root = document.getElementById("root") as HTMLElement;
+  void import("./BillingPage").then(m => m.startBilling(__DANIL_WEB_API__, root));
+}
+else if (phone) window.location.replace(phone);
 else {
   document.querySelector("link[data-app-preload]")?.setAttribute("rel", "modulepreload");
   const root = document.getElementById("root") as HTMLElement;

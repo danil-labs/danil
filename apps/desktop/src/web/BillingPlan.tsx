@@ -10,6 +10,7 @@ import { billingFingerprint } from "./billing-v2-idempotency";
 import { checkoutPlans } from "./billing-v2-plans";
 import type { billingV2, PlanChoice } from "./billing-v2-api";
 import { hostedCheckoutUrl, PAYMENT_URL_DEADLINE_MS, paymentInProgress, waitForPaymentUrl } from "./billing-v2-return";
+import { rememberBillingReturn } from "./billing-route";
 import NewOrganizationCheckout from "./NewOrganizationCheckout";
 
 type Api = ReturnType<typeof billingV2>;
@@ -58,21 +59,23 @@ const fulfilled = <T,>(result: PromiseSettledResult<T>): T | null => result.stat
 const failed = (result: PromiseSettledResult<unknown>) => result.status === "rejected" ? result.reason : null;
 const message = (error: unknown) => error instanceof PlatformSessionError && error.status === 403 ? "web.billing_v2.denied" : "web.billing_v2.unavailable";
 
-export default function BillingPlan(props: { api: Api; role: () => string; context: string; creationApi?: Api }) {
+export default function BillingPlan(props: { api: Api; role: () => string; context: string; creationApi?: Api; summaryHref?: string; initialPlan?: string; initialPromotion?: string; revision?: number }) {
+  const summary = () => props.summaryHref !== undefined;
   const permitted = (scope: BillingScope) => billingScopes(props.role()).includes(scope);
   const lifetime = new AbortController();
   onCleanup(() => lifetime.abort());
   const [preparing, setPreparing] = createSignal(false);
-  const [promotion, setPromotion] = createSignal("");
+  const [promotion, setPromotion] = createSignal(props.initialPromotion ?? "");
+  const [selected, setSelected] = createSignal(props.initialPlan);
   const [promotionInvalid, setPromotionInvalid] = createSignal(false);
   const [failure, setFailure] = createSignal("");
   const [busy, setBusy] = createSignal(false);
   const [revision, refresh] = createSignal(0);
-  const [data] = createResource(revision, async () => {
+  const [data] = createResource(() => [revision(), props.revision, props.role()] as const, async () => {
     const [catalog, organization, balance, transactions] = await Promise.allSettled([
-      props.api.catalog(), permitted("billing.read") ? props.api.organization() : null,
+      summary() ? null : props.api.catalog(), permitted("billing.read") ? props.api.organization() : null,
       permitted("credits.read") ? props.api.balance() : null,
-      permitted("credits.read") ? props.api.transactions() : null,
+      !summary() && permitted("credits.read") ? props.api.transactions() : null,
     ]);
     return { catalog, organization, balance, transactions };
   });
@@ -95,8 +98,9 @@ export default function BillingPlan(props: { api: Api; role: () => string; conte
     }
     finally { if (!lifetime.signal.aborted) { setPreparing(false); setBusy(false); } }
   }
-  function redirect(url: string) {
+  function redirect(url: string, checkoutId?: string) {
     lifetime.signal.throwIfAborted();
+    rememberBillingReturn(checkoutId);
     window.location.assign(url);
   }
   async function upgrade(plan: PlanChoice, version: number) {
@@ -104,7 +108,7 @@ export default function BillingPlan(props: { api: Api; role: () => string; conte
     const code = promotion().trim() || undefined;
     await run(`checkout:${version}:${plan.variant ?? plan.plan_key}`, async (key, signal) => {
       const created = await api.checkout(plan.plan_key, version, key, plan.variant, code);
-      redirect(await waitForPaymentUrl(created, () => api.checkoutStatus(created.checkout_id, signal), signal, () => setPreparing(true)));
+      redirect(await waitForPaymentUrl(created, () => api.checkoutStatus(created.checkout_id, signal), signal, () => setPreparing(true)), created.checkout_id);
     }, code);
   }
   async function buy(pack: string, version: number) {
@@ -130,6 +134,7 @@ export default function BillingPlan(props: { api: Api; role: () => string; conte
     onCleanup(() => clearInterval(timer));
   });
   return <SettingsPanel>
+    <Show when={props.summaryHref}>{href => <div><Button as="a" href={href()}>{t("settings.billing.change_plan")}</Button></div>}</Show>
     <Show when={preparing()}><p role="status">{t("web.billing_v2.checkout_preparing")}</p></Show>
     <Show when={failure()}><p role="alert">{t(failure())}</p></Show>
     <Show when={!data.loading || data.latest} fallback={<p>{t("web.billing_v2.loading")}</p>}>
@@ -143,29 +148,29 @@ export default function BillingPlan(props: { api: Api; role: () => string; conte
                 onEdit={value => { setPromotion(value); setPromotionInvalid(false); }} />
             </Show>
             <div class="grid gap-2 sm:grid-cols-2">
-              <For each={checkoutPlans(catalog())}>{plan => <article class="rounded-lg border border-line p-3">
+              <For each={checkoutPlans(catalog())}>{plan => <article class="rounded-lg border p-3" classList={{ "border-primary": selected() === plan.id, "border-line": selected() !== plan.id }} aria-current={selected() === plan.id ? "true" : undefined}>
                 <strong>{plan.displayName ?? t(`web.billing_v2.plan_${plan.id}`)}</strong>
                 <Show when={plan.price}>{price => <p>{displayMoney(price())} MXN / {t("web.billing_v2.month")}</p>}</Show>
                 <Show when={plan.choice} fallback={<Show when={plan.id === "enterprise"} fallback={<p role="status">{t("web.billing_v2.unavailable")}</p>}><a href={`mailto:${BUSINESS_SALES_EMAIL}`}>{t("web.billing_v2.contact")}</a></Show>}>{choice =>
-                  <Show when={permitted("billing.manage")}><Button disabled={busy() || (!choice().variant && fulfilled(value().organization)?.plan_key === choice().plan_key)} onClick={() => void upgrade(choice(), catalog().catalog_version)}>{t("web.billing_v2.upgrade")}</Button></Show>
+                  <Show when={permitted("billing.manage")}><Button disabled={busy() || (!choice().variant && fulfilled(value().organization)?.plan_key === choice().plan_key)} onClick={() => { setSelected(plan.id); void upgrade(choice(), catalog().catalog_version); }}>{t("web.billing_v2.upgrade")}</Button></Show>
                 }</Show>
               </article>}</For>
             </div>
           </SettingsSection>}</Show>
-          <Show when={fulfilled(value().organization)}>{org => <SettingsSection title={t("web.billing_v2.plan")}>
+          <Show when={fulfilled(value().organization)}>{org => <SettingsSection>
             <SettingsRow label={t("web.billing_v2.plan")}><span>{org().plan_key} · {org().state}</span></SettingsRow>
-            <Show when={permitted("billing.manage") && org().payer.is_you}><SettingsRow label={t("web.billing_v2.payment")}><Button disabled={busy()} onClick={() => void portal()}>{t("web.billing_v2.open")}</Button></SettingsRow></Show>
+            <Show when={!summary() && permitted("billing.manage") && org().payer.is_you}><SettingsRow label={t("web.billing_v2.payment")}><Button disabled={busy()} onClick={() => void portal()}>{t("web.billing_v2.open")}</Button></SettingsRow></Show>
           </SettingsSection>}</Show>
           <Show when={failed(value().balance)}>{error => <SettingsSection title={t("web.billing_v2.balance")}><p role="status">{t(message(error()))}</p></SettingsSection>}</Show>
           <Show when={fulfilled(value().balance)}>{balance => <SettingsSection title={t("web.billing_v2.balance")}>
             <For each={(["available", "included", "gift", "purchased"] as const)}>{kind => <SettingsRow label={t(`web.billing_v2.${kind}`)}><span>{displayMoney(balance()[kind])}</span></SettingsRow>}</For>
-            <Show when={permitted("credits.purchase")}><For each={fulfilled(value().catalog)?.credit_packs.filter(p => p.sellable)}>{pack => <SettingsRow label={displayMoney(pack.credits)}><Button disabled={busy()} onClick={() => { const catalog = fulfilled(value().catalog); if (catalog) void buy(pack.pack_id, catalog.catalog_version); }}>{t("web.billing_v2.buy")}</Button></SettingsRow>}</For></Show>
+            <Show when={!summary() && permitted("credits.purchase")}><For each={fulfilled(value().catalog)?.credit_packs.filter(p => p.sellable)}>{pack => <SettingsRow label={displayMoney(pack.credits)}><Button disabled={busy()} onClick={() => { const catalog = fulfilled(value().catalog); if (catalog) void buy(pack.pack_id, catalog.catalog_version); }}>{t("web.billing_v2.buy")}</Button></SettingsRow>}</For></Show>
           </SettingsSection>}</Show>
           <Show when={failed(value().transactions)}>{error => <SettingsSection title={t("web.billing_v2.transactions")}><p role="status">{t(message(error()))}</p></SettingsSection>}</Show>
           <Show when={fulfilled(value().transactions)}>{page => <PagedRows title={t("web.billing_v2.transactions")} initial={page()} load={props.api.transactions} />}</Show>
         </>}</Show>
       </Show>
     </Show>
-    <Show when={props.creationApi}>{api => <NewOrganizationCheckout api={api()} />}</Show>
+    <Show when={props.creationApi}>{api => <NewOrganizationCheckout api={api()} initialPlan={props.initialPlan} initialPromotion={props.initialPromotion} />}</Show>
   </SettingsPanel>;
 }
