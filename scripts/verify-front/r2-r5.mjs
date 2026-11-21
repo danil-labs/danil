@@ -5,7 +5,8 @@ const inFeature = (f) => featureOf(f.path) !== null;
 const isModel = (f) => /\/model\.ts$/.test(f.path) && f.path.split("/").length === 5;
 
 export function r2(files) {
-  return scan(files, (f) => inFeature(f) && !isModel(f),
+  // Features fuera de model.ts, y también shell y session (RV1 #39): ningún tipo de recurso a mano.
+  return scan(files, (f) => (inFeature(f) && !isModel(f)) || /^packages\/(shell|session)\//.test(f.path),
     /\b(?:type|interface)\s+(?:Machine|Workspace|Organization|Profile|Ticket|Operation)\b/,
     "R2: tipo de recurso declarado fuera de model.ts (derívalo de los clientes generados en model.ts)")
     .concat(scan(files, (f) => !/^(packages\/(shell|platform-client)|apps)\//.test(f.path),
