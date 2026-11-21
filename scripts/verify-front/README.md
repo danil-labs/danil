@@ -37,3 +37,7 @@ Todo texto visible sale del catálogo único `@danil/ui/i18n` (`packages/ui/src/
 4. una frase del catálogo nuevo que no es idéntica a la de `apps/desktop` (texto inventado).
 
 **Trinquete:** `r13.allow` guarda las violaciones que existían al crear el gate (`ruta cuenta`). Un archivo nuevo con violaciones o una cuenta que sube rompe la compilación, y una cuenta que baja exige actualizar `r13.allow` en el mismo commit. La escuadra dueña de un archivo lo deja en 0 y borra su línea. `R13_RAW=1 node scripts/verify-front.mjs` muestra todas.
+
+## R6 y el portado mecánico (2026-11-21)
+
+Un archivo cuya primera línea es `// port: apps/desktop/…` es una copia mecánica del original (`port.sh`) y queda fuera del tope de 400 líneas de R6: partirlo obligaría a reescribirlo. Su fidelidad la controlan los gates de portado (similitud ≥ 0,85 con el original, mismas clases, misma estructura, sin valores inventados, sin líneas `PORT-DATA` pendientes).
