@@ -5,6 +5,11 @@ export interface RemoveAccountParams {
 }
 export type RemoveAccountOutput = null;
 
+export interface RemoveAccountProjectParams {
+  id: string;
+}
+export type RemoveAccountProjectOutput = null;
+
 export type RemoveGhParams = Record<string, never>;
 export type RemoveGhOutput = null;
 
@@ -56,6 +61,7 @@ export type RemoveWorkspaceOutput = null;
 
 export const COMMANDS_REMOVE = {
   remove_account: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
+  remove_account_project: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
   remove_gh: { kind: "invoke", scope: "machine", authority: "admin", channel: null },
   remove_google_drive: { kind: "invoke", scope: "machine", authority: "admin", channel: null },
   remove_language_pack: { kind: "invoke", scope: "machine", authority: "admin", channel: null },

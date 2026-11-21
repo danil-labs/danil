@@ -1,4 +1,37 @@
 // GENERADO por packages/engine-client/scripts/generate.mjs. No editar a mano.
+export interface HasMcpAppParams {
+  server: string;
+  tool: string;
+}
+export type HasMcpAppOutput = boolean;
+
+export interface ImportChatBackgroundParams {
+  source: string;
+}
+export type ImportChatBackgroundOutput = string;
+
+export interface ImportChatBackgroundDataParams {
+  dataUrl: string;
+}
+export type ImportChatBackgroundDataOutput = string;
+
+export type CliInboxListParams = Record<string, never>;
+export type CliInboxListOutput = null;
+
+export type CliInboxTakeParams = Record<string, never>;
+export type CliInboxTakeOutput = null;
+
+export interface InjectMessageParams {
+  project: string;
+  session: string;
+  prompt: string;
+  queueId?: string | null;
+  attachments?: string[] | null;
+  taskMentions?: unknown[] | null;
+  recipients?: unknown[] | null;
+}
+export type InjectMessageOutput = null;
+
 export type InstancesParams = Record<string, never>;
 export type InstancesOutput = null;
 
@@ -25,6 +58,20 @@ export type LoadSessionOutput = unknown;
 
 export type LocalDownloadsParams = Record<string, never>;
 export type LocalDownloadsOutput = unknown[];
+
+export interface LocalOrchestratorConnectParams {
+  workspace: string;
+  folder?: string | null;
+  label: string;
+  permissionMode?: string | null;
+}
+export type LocalOrchestratorConnectOutput = unknown;
+
+export interface LocalOrchestratorDisconnectParams {
+  workspace: string;
+  id: string;
+}
+export type LocalOrchestratorDisconnectOutput = unknown;
 
 export type LocalRuntimeParams = Record<string, never>;
 export type LocalRuntimeOutput = unknown;
@@ -61,37 +108,13 @@ export interface MoveTaskToSpaceParams {
 }
 export type MoveTaskToSpaceOutput = unknown;
 
-export type CliNoticeFetchParams = Record<string, never>;
-export type CliNoticeFetchOutput = null;
-
-export type CliNoticeTakeParams = Record<string, never>;
-export type CliNoticeTakeOutput = null;
-
-export type NotifyParams = Record<string, never>;
-export type NotifyOutput = null;
-
-export type ObservabilityConnectParams = Record<string, never>;
-export type ObservabilityConnectOutput = unknown;
-
-export type ObservabilityDisconnectParams = Record<string, never>;
-export type ObservabilityDisconnectOutput = null;
-
-export interface OfficePreviewParams {
-  path: string;
-}
-export type OfficePreviewOutput = unknown;
-
-export interface OpenExternalParams {
-  target: string;
-}
-export type OpenExternalOutput = null;
-
-export interface OpenFileExternalParams {
-  target: string;
-}
-export type OpenFileExternalOutput = null;
-
 export const COMMANDS_MISC_6 = {
+  has_mcp_app: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
+  import_chat_background: { kind: "invoke", scope: null, authority: "admin", channel: null },
+  import_chat_background_data: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
+  "inbox list": { kind: "cli", scope: null, authority: "read", channel: null },
+  "inbox take": { kind: "cli", scope: null, authority: "task", channel: null },
+  inject_message: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
   instances: { kind: "cli", scope: null, authority: "admin", channel: null },
   keep_awake_status: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
   "keep-awake set": { kind: "cli", scope: null, authority: "admin", channel: null },
@@ -99,18 +122,12 @@ export const COMMANDS_MISC_6 = {
   load_queue: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
   load_session: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
   local_downloads: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
+  local_orchestrator_connect: { kind: "invoke", scope: null, authority: "admin", channel: null },
+  local_orchestrator_disconnect: { kind: "invoke", scope: null, authority: "admin", channel: null },
   local_runtime: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
   login_account: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
   mark_task_seen: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
   materialize_workspace: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
   move_session: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
   move_task_to_space: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
-  "notice fetch": { kind: "cli", scope: null, authority: "read", channel: null },
-  "notice take": { kind: "cli", scope: null, authority: "read", channel: null },
-  notify: { kind: "cli", scope: null, authority: "task", channel: null },
-  observability_connect: { kind: "invoke", scope: "machine", authority: "admin", channel: null },
-  observability_disconnect: { kind: "invoke", scope: "machine", authority: "admin", channel: null },
-  office_preview: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
-  open_external: { kind: "invoke", scope: "machine", authority: "admin", channel: null },
-  open_file_external: { kind: "invoke", scope: "machine", authority: "admin", channel: null },
 } as const;

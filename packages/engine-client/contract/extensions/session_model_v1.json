@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "name": "session_model",
+  "description": "Guardar en la tarea el modelo y el esfuerzo que la persona eligió en el selector: set_session_model escribe session.model y session.effort para el siguiente turno, sin tocar uno en curso; None borra la elección. Solo modelos que list_models ofrece al agente de la tarea. Fuera del hash de compatibilidad (status.contract).",
+  "features": [
+    "session_model_v1"
+  ],
+  "commands": [
+    {
+      "async": false,
+      "channel": null,
+      "kind": "invoke",
+      "name": "set_session_model",
+      "output": "-> Result < () , Failure >",
+      "parameters": [
+        {
+          "key": "project",
+          "name": "project",
+          "type": "String"
+        },
+        {
+          "key": "id",
+          "name": "id",
+          "type": "String"
+        },
+        {
+          "key": "model",
+          "name": "model",
+          "type": "Option < String >"
+        },
+        {
+          "key": "effort",
+          "name": "effort",
+          "type": "Option < String >"
+        }
+      ],
+      "path": "chat::set_session_model",
+      "scope": "workspace",
+      "audience": "window",
+      "authority": "admin",
+      "durable": false,
+      "enforcement": "server"
+    }
+  ]
+}

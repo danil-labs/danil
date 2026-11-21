@@ -11,10 +11,27 @@ export type CliActivityRunOutput = null;
 export type CliActivityShowParams = Record<string, never>;
 export type CliActivityShowOutput = null;
 
+export interface AdoptAccountWorkspaceParams {
+  id: string;
+  account: unknown;
+}
+export type AdoptAccountWorkspaceOutput = unknown;
+
 export interface AdoptSystemSessionParams {
   provider: string;
 }
 export type AdoptSystemSessionOutput = unknown;
+
+export type AdoptionCandidatesParams = Record<string, never>;
+export type AdoptionCandidatesOutput = unknown[];
+
+export interface AdoptionProofParams {
+  id: string;
+  nonce: string;
+  org: string;
+  sub: string;
+}
+export type AdoptionProofOutput = unknown;
 
 export type CliAgentInstallParams = Record<string, never>;
 export type CliAgentInstallOutput = null;
@@ -57,6 +74,13 @@ export interface ArtifactHistoryParams {
 }
 export type ArtifactHistoryOutput = unknown;
 
+export interface ArtifactReadPartParams {
+  referencia: unknown;
+  offset: number;
+  size: number;
+}
+export type ArtifactReadPartOutput = unknown;
+
 export interface AskSideQuestionParams {
   project: string;
   session: string;
@@ -79,39 +103,15 @@ export interface AttachRepoParams {
 }
 export type AttachRepoOutput = unknown;
 
-export interface AttachmentPreviewParams {
-  project: string;
-  id: string;
-  rel: string;
-}
-export type AttachmentPreviewOutput = unknown;
-
-export interface BackupTaskWorkParams {
-  project: string;
-  id: string;
-}
-export type BackupTaskWorkOutput = null;
-
-export interface CallMcpAppToolParams {
-  connectionId: string;
-  name: string;
-  arguments: unknown;
-}
-export type CallMcpAppToolOutput = unknown;
-
-export interface ChangeAgentFoldersParams {
-  scope: unknown;
-  name: string;
-  change: unknown;
-}
-export type ChangeAgentFoldersOutput = string[] | null;
-
 export const COMMANDS_MISC_1 = {
   "activity list": { kind: "cli", scope: null, authority: "admin", channel: null },
   "activity log": { kind: "cli", scope: null, authority: "admin", channel: null },
   "activity run": { kind: "cli", scope: null, authority: "admin", channel: null },
   "activity show": { kind: "cli", scope: null, authority: "admin", channel: null },
+  adopt_account_workspace: { kind: "invoke", scope: null, authority: "admin", channel: null },
   adopt_system_session: { kind: "invoke", scope: "machine", authority: "admin", channel: null },
+  adoption_candidates: { kind: "invoke", scope: null, authority: "admin", channel: null },
+  adoption_proof: { kind: "invoke", scope: null, authority: "admin", channel: null },
   "agent install": { kind: "cli", scope: null, authority: "admin", channel: null },
   "agent list": { kind: "cli", scope: null, authority: "read", channel: null },
   "agent models": { kind: "cli", scope: null, authority: "read", channel: null },
@@ -121,11 +121,8 @@ export const COMMANDS_MISC_1 = {
   answer_shell_output: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
   archived_tasks: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
   artifact_history: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
+  artifact_read_part: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
   ask_side_question: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
   attach_known_source: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
   attach_repo: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
-  attachment_preview: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
-  backup_task_work: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
-  call_mcp_app_tool: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
-  change_agent_folders: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
 } as const;

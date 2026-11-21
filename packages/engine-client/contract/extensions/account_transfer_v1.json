@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "name": "account_transfer",
+  "description": "Traslado de un workspace entre organizaciones (plan 2026-11-18-modelo-cuentas-organizaciones-workspaces § 8, A12, de terminus-workspace): reseal_account_workspace {id, from: {org, account_id}, to: {org, account_id}} vuelve a sellar danil/tenancy-account de la cuenta archivada from a la cuenta nueva to con el mismo engine_workspace_id, cuando el catálogo muestra moved_from/moved_to. Idempotente: con el sello ya en to responde el workspace; en from sella to, escribe account en meta.json y deja la marca sellada danil/tenancy-moved; con otro valor o sin sello, danil.error.account_conflict. No mueve tareas, carpetas ni el id; corta el pase del Free router de la cuenta vieja (la ventana fija después la unión con la nueva). Junto con la adopción, el único cambio de sello. Solo la ventana; una VM responde danil.error.unsupported y no anuncia el rasgo. Fuera del hash de compatibilidad (status.contract).",
+  "features": [
+    "account_transfer_v1"
+  ],
+  "commands": [
+    {
+      "async": false,
+      "channel": null,
+      "ids": {
+        "workspace": [
+          "id"
+        ]
+      },
+      "kind": "invoke",
+      "name": "reseal_account_workspace",
+      "output": "-> Result < Wire < Workspace > , Failure >",
+      "parameters": [
+        {
+          "key": "id",
+          "name": "id",
+          "type": "String"
+        },
+        {
+          "key": "from",
+          "name": "from",
+          "type": "TenancyAccount"
+        },
+        {
+          "key": "to",
+          "name": "to",
+          "type": "TenancyAccount"
+        }
+      ],
+      "path": "danil::tenancy::reseal_account_workspace",
+      "relay": false,
+      "audience": "window",
+      "authority": "admin",
+      "durable": false,
+      "enforcement": "server"
+    }
+  ]
+}

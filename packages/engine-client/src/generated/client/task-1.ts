@@ -1,6 +1,6 @@
 // GENERADO por packages/engine-client/scripts/generate.mjs. No editar a mano.
 import type { EngineTransport } from "../transport.ts";
-import type { CliTaskAdoptParams, CliTaskAdoptOutput, CliTaskAnswerParams, CliTaskAnswerOutput, CliTaskArchiveParams, CliTaskArchiveOutput, CliTaskAskParams, CliTaskAskOutput, CliTaskBudgetParams, CliTaskBudgetOutput, CliTaskBudgetCancelParams, CliTaskBudgetCancelOutput, CliTaskBudgetCreateParams, CliTaskBudgetCreateOutput, CliTaskBudgetExtendParams, CliTaskBudgetExtendOutput, CliTaskCheckpointParams, CliTaskCheckpointOutput, CliTaskCreateParams, CliTaskCreateOutput, CliTaskDeleteParams, CliTaskDeleteOutput, CliTaskExportSessionParams, CliTaskExportSessionOutput, CliTaskHandoffParams, CliTaskHandoffOutput, CliTaskListParams, CliTaskListOutput, CliTaskMoveParams, CliTaskMoveOutput, CliTaskNotifyParams, CliTaskNotifyOutput, CliTaskOpenParams, CliTaskOpenOutput, CliTaskPermissionParams, CliTaskPermissionOutput, CliTaskReadParams, CliTaskReadOutput, CliTaskReplyParams, CliTaskReplyOutput, CliTaskRequestHandoffParams, CliTaskRequestHandoffOutput } from "../commands/task-1.ts";
+import type { CliTaskAdoptParams, CliTaskAdoptOutput, CliTaskAnswerParams, CliTaskAnswerOutput, CliTaskArchiveParams, CliTaskArchiveOutput, CliTaskAskParams, CliTaskAskOutput, CliTaskBudgetParams, CliTaskBudgetOutput, CliTaskBudgetCancelParams, CliTaskBudgetCancelOutput, CliTaskBudgetCreateParams, CliTaskBudgetCreateOutput, CliTaskBudgetExtendParams, CliTaskBudgetExtendOutput, CliTaskCheckpointParams, CliTaskCheckpointOutput, CliTaskCreateParams, CliTaskCreateOutput, CliTaskDeleteParams, CliTaskDeleteOutput, CliTaskExportSessionParams, CliTaskExportSessionOutput, CliTaskHandoffParams, CliTaskHandoffOutput, CliTaskListParams, CliTaskListOutput, CliTaskMoveParams, CliTaskMoveOutput, CliTaskNotifyParams, CliTaskNotifyOutput, CliTaskOpenParams, CliTaskOpenOutput, CliTaskPermissionParams, CliTaskPermissionOutput, CliTaskReadParams, CliTaskReadOutput, CliTaskReparentParams, CliTaskReparentOutput, CliTaskReplyParams, CliTaskReplyOutput } from "../commands/task-1.ts";
 
 export function bind_task_1(t: EngineTransport) {
   return {
@@ -23,7 +23,7 @@ export function bind_task_1(t: EngineTransport) {
     "task open": () => t.call("task open", {}) as Promise<CliTaskOpenOutput>,
     "task permission": () => t.call("task permission", {}) as Promise<CliTaskPermissionOutput>,
     "task read": () => t.call("task read", {}) as Promise<CliTaskReadOutput>,
+    "task reparent": () => t.call("task reparent", {}) as Promise<CliTaskReparentOutput>,
     "task reply": () => t.call("task reply", {}) as Promise<CliTaskReplyOutput>,
-    "task request-handoff": () => t.call("task request-handoff", {}) as Promise<CliTaskRequestHandoffOutput>,
   };
 }

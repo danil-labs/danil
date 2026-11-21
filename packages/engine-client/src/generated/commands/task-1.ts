@@ -56,11 +56,11 @@ export type CliTaskPermissionOutput = null;
 export type CliTaskReadParams = Record<string, never>;
 export type CliTaskReadOutput = null;
 
+export type CliTaskReparentParams = Record<string, never>;
+export type CliTaskReparentOutput = null;
+
 export type CliTaskReplyParams = Record<string, never>;
 export type CliTaskReplyOutput = null;
-
-export type CliTaskRequestHandoffParams = Record<string, never>;
-export type CliTaskRequestHandoffOutput = null;
 
 export const COMMANDS_TASK_1 = {
   "task adopt": { kind: "cli", scope: null, authority: "admin", channel: null },
@@ -82,6 +82,6 @@ export const COMMANDS_TASK_1 = {
   "task open": { kind: "cli", scope: null, authority: "task", channel: null },
   "task permission": { kind: "cli", scope: null, authority: "task", channel: null },
   "task read": { kind: "cli", scope: null, authority: "read", channel: null },
+  "task reparent": { kind: "cli", scope: null, authority: "task", channel: null },
   "task reply": { kind: "cli", scope: null, authority: "task", channel: null },
-  "task request-handoff": { kind: "cli", scope: null, authority: "task", channel: null },
 } as const;

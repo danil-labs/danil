@@ -1,6 +1,6 @@
 // GENERADO por packages/engine-client/scripts/generate.mjs. No editar a mano.
 import type { EngineTransport } from "../transport.ts";
-import type { ListAccountsParams, ListAccountsOutput, ListActiveTurnsParams, ListActiveTurnsOutput, ListActivityParams, ListActivityOutput, ListAgentProfilesParams, ListAgentProfilesOutput, ListAgentStatusParams, ListAgentStatusOutput, ListAgentsParams, ListAgentsOutput, ListArchivedParams, ListArchivedOutput, ListBundledLanguagePacksParams, ListBundledLanguagePacksOutput, ListDelegatedSessionsParams, ListDelegatedSessionsOutput, ListDependenciesParams, ListDependenciesOutput, ListGitHostsParams, ListGitHostsOutput, ListGovernedMcpLoginsParams, ListGovernedMcpLoginsOutput, ListIntegrationsParams, ListIntegrationsOutput, ListKnownMcpParams, ListKnownMcpOutput, ListLanguagePacksParams, ListLanguagePacksOutput, ListLiveSessionsParams, ListLiveSessionsOutput, ListLiveTurnsParams, ListLiveTurnsOutput, ListLocalModelsParams, ListLocalModelsOutput, ListMachineAgentsParams, ListMachineAgentsOutput, ListMcpProvidersParams, ListMcpProvidersOutput, ListMcpServersParams, ListMcpServersOutput } from "../commands/list-1.ts";
+import type { ListAccountsParams, ListAccountsOutput, ListActiveTurnsParams, ListActiveTurnsOutput, ListActivityParams, ListActivityOutput, ListAgentProfilesParams, ListAgentProfilesOutput, ListAgentStatusParams, ListAgentStatusOutput, ListAgentsParams, ListAgentsOutput, ListArchivedParams, ListArchivedOutput, ListBundledLanguagePacksParams, ListBundledLanguagePacksOutput, ListDelegatedSessionsParams, ListDelegatedSessionsOutput, ListDependenciesParams, ListDependenciesOutput, ListGitHostsParams, ListGitHostsOutput, ListGovernedMcpLoginsParams, ListGovernedMcpLoginsOutput, ListIntegrationsParams, ListIntegrationsOutput, ListKnownMcpParams, ListKnownMcpOutput, ListLanguagePacksParams, ListLanguagePacksOutput, ListLiveSessionsParams, ListLiveSessionsOutput, ListLiveTurnsParams, ListLiveTurnsOutput, ListLocalModelsParams, ListLocalModelsOutput, ListLocalOrchestratorsParams, ListLocalOrchestratorsOutput, ListMachineAgentsParams, ListMachineAgentsOutput, ListMcpProvidersParams, ListMcpProvidersOutput } from "../commands/list-1.ts";
 
 export function bind_list_1(t: EngineTransport) {
   return {
@@ -22,8 +22,8 @@ export function bind_list_1(t: EngineTransport) {
     list_live_sessions: (params: ListLiveSessionsParams) => t.call("list_live_sessions", params) as Promise<ListLiveSessionsOutput>,
     list_live_turns: () => t.call("list_live_turns", {}) as Promise<ListLiveTurnsOutput>,
     list_local_models: () => t.call("list_local_models", {}) as Promise<ListLocalModelsOutput>,
+    list_local_orchestrators: (params: ListLocalOrchestratorsParams) => t.call("list_local_orchestrators", params) as Promise<ListLocalOrchestratorsOutput>,
     list_machine_agents: () => t.call("list_machine_agents", {}) as Promise<ListMachineAgentsOutput>,
     list_mcp_providers: () => t.call("list_mcp_providers", {}) as Promise<ListMcpProvidersOutput>,
-    list_mcp_servers: () => t.call("list_mcp_servers", {}) as Promise<ListMcpServersOutput>,
   };
 }

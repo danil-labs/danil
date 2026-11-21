@@ -1,10 +1,11 @@
 // GENERADO por packages/engine-client/scripts/generate.mjs. No editar a mano.
 import type { EngineTransport } from "../transport.ts";
-import type { RemoveAccountParams, RemoveAccountOutput, RemoveGhParams, RemoveGhOutput, RemoveGoogleDriveParams, RemoveGoogleDriveOutput, RemoveLanguagePackParams, RemoveLanguagePackOutput, RemoveLocalModelParams, RemoveLocalModelOutput, RemoveLocalRuntimeParams, RemoveLocalRuntimeOutput, RemoveMcpServerParams, RemoveMcpServerOutput, RemoveProviderParams, RemoveProviderOutput, RemoveSkillSourceParams, RemoveSkillSourceOutput, RemoveSourceParams, RemoveSourceOutput, RemoveToolParams, RemoveToolOutput, RemoveWorkspaceParams, RemoveWorkspaceOutput } from "../commands/remove.ts";
+import type { RemoveAccountParams, RemoveAccountOutput, RemoveAccountProjectParams, RemoveAccountProjectOutput, RemoveGhParams, RemoveGhOutput, RemoveGoogleDriveParams, RemoveGoogleDriveOutput, RemoveLanguagePackParams, RemoveLanguagePackOutput, RemoveLocalModelParams, RemoveLocalModelOutput, RemoveLocalRuntimeParams, RemoveLocalRuntimeOutput, RemoveMcpServerParams, RemoveMcpServerOutput, RemoveProviderParams, RemoveProviderOutput, RemoveSkillSourceParams, RemoveSkillSourceOutput, RemoveSourceParams, RemoveSourceOutput, RemoveToolParams, RemoveToolOutput, RemoveWorkspaceParams, RemoveWorkspaceOutput } from "../commands/remove.ts";
 
 export function bind_remove(t: EngineTransport) {
   return {
     remove_account: (params: RemoveAccountParams) => t.call("remove_account", params) as Promise<RemoveAccountOutput>,
+    remove_account_project: (params: RemoveAccountProjectParams) => t.call("remove_account_project", params) as Promise<RemoveAccountProjectOutput>,
     remove_gh: () => t.call("remove_gh", {}) as Promise<RemoveGhOutput>,
     remove_google_drive: () => t.call("remove_google_drive", {}) as Promise<RemoveGoogleDriveOutput>,
     remove_language_pack: (params: RemoveLanguagePackParams) => t.call("remove_language_pack", params) as Promise<RemoveLanguagePackOutput>,

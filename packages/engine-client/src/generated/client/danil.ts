@@ -1,6 +1,6 @@
 // GENERADO por packages/engine-client/scripts/generate.mjs. No editar a mano.
 import type { EngineTransport } from "../transport.ts";
-import type { DanilAccountRefreshParams, DanilAccountRefreshOutput, DanilAccountRemovePhotoParams, DanilAccountRemovePhotoOutput, DanilAccountSetPhotoParams, DanilAccountSetPhotoOutput, DanilClientTokenParams, DanilClientTokenOutput, DanilConnectOptionsParams, DanilConnectOptionsOutput, DanilConnectStartParams, DanilConnectStartOutput, DanilConnectStatusParams, DanilConnectStatusOutput, DanilDisconnectParams, DanilDisconnectOutput, DanilSessionsParams, DanilSessionsOutput, DanilSetDefaultAccountParams, DanilSetDefaultAccountOutput, DanilWorkspaceAccountParams, DanilWorkspaceAccountOutput, DanilWorkspaceLinkParams, DanilWorkspaceLinkOutput, DanilWorkspaceLinkStatusParams, DanilWorkspaceLinkStatusOutput, DanilWorkspaceSetAccountParams, DanilWorkspaceSetAccountOutput, DanilWorkspaceUnlinkParams, DanilWorkspaceUnlinkOutput } from "../commands/danil.ts";
+import type { DanilAccountRefreshParams, DanilAccountRefreshOutput, DanilAccountRemovePhotoParams, DanilAccountRemovePhotoOutput, DanilAccountSetPhotoParams, DanilAccountSetPhotoOutput, DanilClientTokenParams, DanilClientTokenOutput, DanilConnectOptionsParams, DanilConnectOptionsOutput, DanilConnectStartParams, DanilConnectStartOutput, DanilConnectStatusParams, DanilConnectStatusOutput, DanilConnectedDetachParams, DanilConnectedDetachOutput, DanilConnectedStatusParams, DanilConnectedStatusOutput, DanilDisconnectParams, DanilDisconnectOutput, DanilSessionsParams, DanilSessionsOutput, DanilSetDefaultAccountParams, DanilSetDefaultAccountOutput, DanilWorkspaceAccountParams, DanilWorkspaceAccountOutput, DanilWorkspaceLinkParams, DanilWorkspaceLinkOutput, DanilWorkspaceLinkStatusParams, DanilWorkspaceLinkStatusOutput, DanilWorkspaceSetAccountParams, DanilWorkspaceSetAccountOutput, DanilWorkspaceUnlinkParams, DanilWorkspaceUnlinkOutput } from "../commands/danil.ts";
 
 export function bind_danil(t: EngineTransport) {
   return {
@@ -11,6 +11,8 @@ export function bind_danil(t: EngineTransport) {
     danil_connect_options: () => t.call("danil_connect_options", {}) as Promise<DanilConnectOptionsOutput>,
     danil_connect_start: (params?: DanilConnectStartParams) => t.call("danil_connect_start", params) as Promise<DanilConnectStartOutput>,
     danil_connect_status: () => t.call("danil_connect_status", {}) as Promise<DanilConnectStatusOutput>,
+    danil_connected_detach: (params: DanilConnectedDetachParams) => t.call("danil_connected_detach", params) as Promise<DanilConnectedDetachOutput>,
+    danil_connected_status: () => t.call("danil_connected_status", {}) as Promise<DanilConnectedStatusOutput>,
     danil_disconnect: (params?: DanilDisconnectParams) => t.call("danil_disconnect", params) as Promise<DanilDisconnectOutput>,
     danil_sessions: () => t.call("danil_sessions", {}) as Promise<DanilSessionsOutput>,
     danil_set_default_account: (params: DanilSetDefaultAccountParams) => t.call("danil_set_default_account", params) as Promise<DanilSetDefaultAccountOutput>,

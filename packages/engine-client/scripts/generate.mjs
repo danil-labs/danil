@@ -2,19 +2,36 @@
 // Generador del contrato RPC1 del motor: commands.json -> src/generated/*.
 // Node puro, sin dependencias. Uso: node packages/engine-client/scripts/generate.mjs
 import { createHash } from "node:crypto";
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const root = resolve(here, "../../..");
-const source = join(root, "apps/desktop/src-tauri/crates/engine-protocol/commands.json");
+// El manifiesto del motor vendorizado (danil-engine crates/engine-manifest): base + extensiones.
+const contract = resolve(here, "../contract");
+const source = join(contract, "commands.json");
 const out = resolve(here, "../src/generated");
 const MAX_LINES = 380; // tope R6: 400 líneas por archivo
 
 const raw = readFileSync(source);
 const spec = JSON.parse(raw.toString("utf8"));
-const hash = createHash("sha256").update(raw).digest("hex");
+const digest = createHash("sha256").update(raw);
+// Las extensiones (`extensions/*_v1.json`) suman comandos, eventos y features al manifiesto base.
+const extDir = join(contract, "extensions");
+for (const file of readdirSync(extDir).filter((f) => f.endsWith(".json")).sort()) {
+  const bytes = readFileSync(join(extDir, file));
+  digest.update(bytes);
+  const ext = JSON.parse(bytes.toString("utf8"));
+  const known = new Set(spec.commands.map((c) => c.name));
+  for (const c of ext.commands ?? []) if (!known.has(c.name)) spec.commands.push(c);
+  const events = new Set((spec.events ?? []).map((e) => (typeof e === "string" ? e : e.name)));
+  for (const e of ext.events ?? []) if (!events.has(typeof e === "string" ? e : e.name)) (spec.events ??= []).push(e);
+  const features = [].concat(spec.features ?? []);
+  for (const f of [].concat(ext.features ?? [])) if (!features.includes(f)) features.push(f);
+  spec.features = features;
+}
+const hash = digest.digest("hex");
 const HEADER = `// GENERADO por packages/engine-client/scripts/generate.mjs. No editar a mano.\n`;
 
 // ---- tipos Rust -> TS ----

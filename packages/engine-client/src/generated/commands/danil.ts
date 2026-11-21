@@ -34,6 +34,14 @@ export type DanilConnectStartOutput = unknown;
 export type DanilConnectStatusParams = Record<string, never>;
 export type DanilConnectStatusOutput = unknown;
 
+export interface DanilConnectedDetachParams {
+  organizationId: string;
+}
+export type DanilConnectedDetachOutput = unknown;
+
+export type DanilConnectedStatusParams = Record<string, never>;
+export type DanilConnectedStatusOutput = unknown;
+
 export interface DanilDisconnectParams {
   account?: string | null;
 }
@@ -82,6 +90,8 @@ export const COMMANDS_DANIL = {
   danil_connect_options: { kind: "invoke", scope: null, authority: "admin", channel: null },
   danil_connect_start: { kind: "invoke", scope: null, authority: "admin", channel: null },
   danil_connect_status: { kind: "invoke", scope: null, authority: "admin", channel: null },
+  danil_connected_detach: { kind: "invoke", scope: null, authority: "admin", channel: null },
+  danil_connected_status: { kind: "invoke", scope: null, authority: "admin", channel: null },
   danil_disconnect: { kind: "invoke", scope: null, authority: "admin", channel: null },
   danil_sessions: { kind: "invoke", scope: null, authority: "admin", channel: null },
   danil_set_default_account: { kind: "invoke", scope: null, authority: "admin", channel: null },

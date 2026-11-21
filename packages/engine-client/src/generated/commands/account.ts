@@ -5,6 +5,9 @@ export type CliAccountDefaultOutput = null;
 export type CliAccountListParams = Record<string, never>;
 export type CliAccountListOutput = null;
 
+export type CliAccountRequestParams = Record<string, never>;
+export type CliAccountRequestOutput = null;
+
 export interface AccountCredentialDeleteParams {
   credential: string;
 }
@@ -37,6 +40,16 @@ export interface AccountLimitsParams {
 }
 export type AccountLimitsOutput = unknown;
 
+export interface AccountRequestSettleParams {
+  requestId: string;
+  result?: unknown | null;
+  error?: unknown | null;
+}
+export type AccountRequestSettleOutput = null;
+
+export type AccountRequestTakeParams = Record<string, never>;
+export type AccountRequestTakeOutput = unknown[];
+
 export interface AccountStatusParams {
   provider: string;
   id: string;
@@ -46,11 +59,14 @@ export type AccountStatusOutput = unknown;
 export const COMMANDS_ACCOUNT = {
   "account default": { kind: "cli", scope: null, authority: "admin", channel: null },
   "account list": { kind: "cli", scope: null, authority: "read", channel: null },
+  "account request": { kind: "cli", scope: null, authority: "admin", channel: null },
   account_credential_delete: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
   account_credential_remove_machine: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
   account_credential_restore_machine: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
   account_credentials_list: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
   account_credentials_upload: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
   account_limits: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
+  account_request_settle: { kind: "invoke", scope: null, authority: "admin", channel: null },
+  account_request_take: { kind: "invoke", scope: null, authority: "admin", channel: null },
   account_status: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
 } as const;

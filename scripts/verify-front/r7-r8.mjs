@@ -1,11 +1,18 @@
 import { createHash } from "node:crypto";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { ROOT, scan } from "./lib.mjs";
 
 const sha = (p) => createHash("sha256").update(readFileSync(p)).digest("hex");
+/** Hash del manifiesto del motor: commands.json y luego cada extensión en orden (como el generador). */
+const engineSha = (p) => {
+  const h = createHash("sha256").update(readFileSync(p));
+  const dir = join(dirname(p), "extensions");
+  if (existsSync(dir)) for (const f of readdirSync(dir).filter((f) => f.endsWith(".json")).sort()) h.update(readFileSync(join(dir, f)));
+  return h.digest("hex");
+};
 
-function checkContract(rel, sourcePath) {
+function checkContract(rel, sourcePath, digest = sha) {
   const file = join(ROOT, rel);
   if (!existsSync(file)) return [];
   const text = readFileSync(file, "utf8");
@@ -16,14 +23,14 @@ function checkContract(rel, sourcePath) {
   const source = sourcePath(text, file);
   if (!source.path) return fail(lineOf(hash), source.error);
   if (!existsSync(source.path)) return fail(lineOf(hash), `la fuente ${source.path} no existe`);
-  const expected = sha(source.path);
+  const expected = digest(source.path);
   const got = hash[1].replace(/^sha256:/i, "").toLowerCase();
   return got === expected ? [] : fail(lineOf(hash), `CONTRACT_HASH ${got} ≠ sha256 de la fuente ${expected}; regenera el cliente`);
 }
 
 export function r7() {
   const out = checkContract("packages/engine-client/src/generated/contract.ts",
-    () => ({ path: join(ROOT, "apps/desktop/src-tauri/crates/engine-protocol/commands.json") }));
+    () => ({ path: join(ROOT, "packages/engine-client/contract/commands.json") }), engineSha);
   out.push(...checkContract("packages/platform-client/src/generated/contract.ts", (text, file) => {
     const m = /source:\s*(\S+)/.exec(text);
     if (!m) return { error: 'falta el comentario "source:" con la ruta del openapi.json' };

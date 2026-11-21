@@ -87,6 +87,17 @@ export interface TreePatchParams {
 }
 export type TreePatchOutput = string;
 
+export interface TreeReadPartParams {
+  project: string;
+  session: string;
+  tree: string;
+  path: string;
+  offset: number;
+  size: number;
+  revision?: string | null;
+}
+export type TreeReadPartOutput = unknown;
+
 export interface TreeRenameParams {
   project: string;
   session: string;
@@ -150,6 +161,7 @@ export const COMMANDS_TREE = {
   tree_office_preview: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
   tree_open_external: { kind: "invoke", scope: "machine", authority: "admin", channel: null },
   tree_patch: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
+  tree_read_part: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
   tree_rename: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
   tree_show: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
   tree_summary: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },

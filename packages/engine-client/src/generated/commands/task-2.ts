@@ -1,9 +1,15 @@
 // GENERADO por packages/engine-client/scripts/generate.mjs. No editar a mano.
+export type CliTaskRequestHandoffParams = Record<string, never>;
+export type CliTaskRequestHandoffOutput = null;
+
 export type CliTaskRequestsParams = Record<string, never>;
 export type CliTaskRequestsOutput = null;
 
 export type CliTaskResolveParams = Record<string, never>;
 export type CliTaskResolveOutput = null;
+
+export type CliTaskResultParams = Record<string, never>;
+export type CliTaskResultOutput = null;
 
 export type CliTaskSaveParams = Record<string, never>;
 export type CliTaskSaveOutput = null;
@@ -39,9 +45,27 @@ export interface TaskHistoryParams {
 }
 export type TaskHistoryOutput = unknown;
 
+export interface TaskLifecycleApplyParams {
+  project: string;
+  id: string;
+  action: string;
+  consent: string;
+  discard: boolean;
+}
+export type TaskLifecycleApplyOutput = unknown;
+
+export interface TaskLifecyclePreviewParams {
+  project: string;
+  id: string;
+  action: string;
+}
+export type TaskLifecyclePreviewOutput = unknown;
+
 export const COMMANDS_TASK_2 = {
+  "task request-handoff": { kind: "cli", scope: null, authority: "task", channel: null },
   "task requests": { kind: "cli", scope: null, authority: "read", channel: null },
   "task resolve": { kind: "cli", scope: null, authority: "task", channel: null },
+  "task result": { kind: "cli", scope: null, authority: "read", channel: null },
   "task save": { kind: "cli", scope: null, authority: "task", channel: null },
   "task send": { kind: "cli", scope: null, authority: "task", channel: null },
   "task show": { kind: "cli", scope: null, authority: "read", channel: null },
@@ -50,4 +74,6 @@ export const COMMANDS_TASK_2 = {
   task_blockers: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
   task_coordinator: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
   task_history: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
+  task_lifecycle_apply: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
+  task_lifecycle_preview: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
 } as const;

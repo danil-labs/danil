@@ -1,4 +1,34 @@
 // GENERADO por packages/engine-client/scripts/generate.mjs. No editar a mano.
+export type CliNoticeFetchParams = Record<string, never>;
+export type CliNoticeFetchOutput = null;
+
+export type CliNoticeTakeParams = Record<string, never>;
+export type CliNoticeTakeOutput = null;
+
+export type NotifyParams = Record<string, never>;
+export type NotifyOutput = null;
+
+export type ObservabilityConnectParams = Record<string, never>;
+export type ObservabilityConnectOutput = unknown;
+
+export type ObservabilityDisconnectParams = Record<string, never>;
+export type ObservabilityDisconnectOutput = null;
+
+export interface OfficePreviewParams {
+  path: string;
+}
+export type OfficePreviewOutput = unknown;
+
+export interface OpenExternalParams {
+  target: string;
+}
+export type OpenExternalOutput = null;
+
+export interface OpenFileExternalParams {
+  target: string;
+}
+export type OpenFileExternalOutput = null;
+
 export type OpenGoogleDriveDesktopParams = Record<string, never>;
 export type OpenGoogleDriveDesktopOutput = null;
 
@@ -56,55 +86,15 @@ export interface PreviewFileParams {
 }
 export type PreviewFileOutput = unknown;
 
-export interface PreviewTreeFilesParams {
-  project: string;
-  baseRef?: string | null;
-}
-export type PreviewTreeFilesOutput = unknown;
-
-export interface PreviewTreeFolderParams {
-  project: string;
-  path: string;
-  offset: number;
-}
-export type PreviewTreeFolderOutput = unknown;
-
-export interface PreviewTreeShowParams {
-  project: string;
-  baseRef?: string | null;
-  path: string;
-}
-export type PreviewTreeShowOutput = unknown;
-
-export interface ProjectBaseBranchesParams {
-  project: string;
-  refresh?: boolean | null;
-  details?: boolean | null;
-}
-export type ProjectBaseBranchesOutput = unknown;
-
-export interface ProjectCloneStatusParams {
-  operation: string;
-}
-export type ProjectCloneStatusOutput = unknown | null;
-
-export interface ProjectSetupCommandParams {
-  project: string;
-}
-export type ProjectSetupCommandOutput = string | null;
-
-export interface ProviderDownloadSizeParams {
-  provider: string;
-}
-export type ProviderDownloadSizeOutput = number;
-
-export interface PublicationsOfParams {
-  project: string;
-  session: string;
-}
-export type PublicationsOfOutput = unknown[];
-
 export const COMMANDS_MISC_7 = {
+  "notice fetch": { kind: "cli", scope: null, authority: "read", channel: null },
+  "notice take": { kind: "cli", scope: null, authority: "read", channel: null },
+  notify: { kind: "cli", scope: null, authority: "task", channel: null },
+  observability_connect: { kind: "invoke", scope: "machine", authority: "admin", channel: null },
+  observability_disconnect: { kind: "invoke", scope: "machine", authority: "admin", channel: null },
+  office_preview: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
+  open_external: { kind: "invoke", scope: "machine", authority: "admin", channel: null },
+  open_file_external: { kind: "invoke", scope: "machine", authority: "admin", channel: null },
   open_google_drive_desktop: { kind: "invoke", scope: "machine", authority: "admin", channel: null },
   open_zotero: { kind: "invoke", scope: "machine", authority: "admin", channel: null },
   "operation show": { kind: "cli", scope: null, authority: "read", channel: null },
@@ -118,12 +108,4 @@ export const COMMANDS_MISC_7 = {
   prepare_runtime: { kind: "invoke", scope: "machine", authority: "admin", channel: null },
   prepare_session_continuation: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
   preview_file: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
-  preview_tree_files: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
-  preview_tree_folder: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
-  preview_tree_show: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
-  project_base_branches: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
-  project_clone_status: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
-  project_setup_command: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
-  provider_download_size: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
-  publications_of: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
 } as const;

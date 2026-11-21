@@ -1,0 +1,57 @@
+{
+  "version": 1,
+  "name": "engine_update",
+  "description": "Actualización remota del motor de una computadora administrada: lectura de la versión y la última release firmada de su canal, y pedido de instalación al servicio de root seldon-update@. release null es la última firmada del canal; force true es la confirmación explícita de «Actualizar ya» y corta los turnos. machine_resources.engine trae version, build y, con la capacidad, channel y latest. Fuera del hash de compatibilidad (status.contract). El motor anuncia engine_update_v1 solo si la máquina tiene ese servicio y llaves de release.",
+  "features": [
+    "engine_update_v1"
+  ],
+  "commands": [
+    {
+      "async": false,
+      "channel": null,
+      "kind": "invoke",
+      "name": "engine_update_status",
+      "output": "-> Result < Value , String >",
+      "parameters": [
+        {
+          "key": "refresh",
+          "name": "refresh",
+          "type": "Option < bool >"
+        }
+      ],
+      "path": "engine_update::engine_update_status",
+      "scope": "machine",
+      "relay": true,
+      "audience": "window",
+      "authority": "admin",
+      "durable": false,
+      "enforcement": "server"
+    },
+    {
+      "async": false,
+      "channel": null,
+      "kind": "invoke",
+      "name": "engine_update",
+      "output": "-> Result < Value , String >",
+      "parameters": [
+        {
+          "key": "release",
+          "name": "release",
+          "type": "Option < String >"
+        },
+        {
+          "key": "force",
+          "name": "force",
+          "type": "Option < bool >"
+        }
+      ],
+      "path": "engine_update::engine_update",
+      "scope": "machine",
+      "relay": true,
+      "audience": "window",
+      "authority": "admin",
+      "durable": false,
+      "enforcement": "server"
+    }
+  ]
+}

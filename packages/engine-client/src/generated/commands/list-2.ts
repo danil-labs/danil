@@ -1,4 +1,7 @@
 // GENERADO por packages/engine-client/scripts/generate.mjs. No editar a mano.
+export type ListMcpServersParams = Record<string, never>;
+export type ListMcpServersOutput = unknown[];
+
 export interface ListMemoryEntriesParams {
   project: string;
   scope: unknown;
@@ -83,10 +86,8 @@ export type ListSurfacesOutput = unknown[];
 export type ListSystemSessionsParams = Record<string, never>;
 export type ListSystemSessionsOutput = unknown[];
 
-export type ListTaskMentionsParams = Record<string, never>;
-export type ListTaskMentionsOutput = unknown[];
-
 export const COMMANDS_LIST_2 = {
+  list_mcp_servers: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
   list_memory_entries: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
   list_mentions: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
   list_models: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
@@ -107,5 +108,4 @@ export const COMMANDS_LIST_2 = {
   list_storage: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
   list_surfaces: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
   list_system_sessions: { kind: "invoke", scope: "machine", authority: "admin", channel: null },
-  list_task_mentions: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
 } as const;

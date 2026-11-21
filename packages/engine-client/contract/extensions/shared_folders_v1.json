@@ -1,0 +1,50 @@
+{
+  "version": 1,
+  "name": "shared_folders",
+  "description": "Carpetas compartidas de un workspace de la organización (docs/organization-server.md § «Carpetas compartidas»): share_folder copia la carpeta de trabajo de la carpeta id a /srv/danil/<org>/<workspace>/<id>/ y la apunta ahí; unshare_folder la cierra (solo quien la compartió; no borra nada). list_projects trae las que compartieron otros miembros (con Git, cada uno en su worktree .worktrees/<user_id>) y marca cada carpeta compartida con shared, shared_by, shared_at y shared_by_me. Las tareas siguen privadas. Fuera del hash de compatibilidad (status.contract).",
+  "features": [
+    "shared_folders_v1"
+  ],
+  "commands": [
+    {
+      "async": false,
+      "channel": null,
+      "kind": "invoke",
+      "name": "share_folder",
+      "output": "-> Result < Project , Failure >",
+      "parameters": [
+        {
+          "key": "id",
+          "name": "id",
+          "type": "String"
+        }
+      ],
+      "path": "projects::share_folder",
+      "scope": "workspace",
+      "audience": "window",
+      "authority": "admin",
+      "durable": false,
+      "enforcement": "server"
+    },
+    {
+      "async": false,
+      "channel": null,
+      "kind": "invoke",
+      "name": "unshare_folder",
+      "output": "-> Result < Project , Failure >",
+      "parameters": [
+        {
+          "key": "id",
+          "name": "id",
+          "type": "String"
+        }
+      ],
+      "path": "projects::unshare_folder",
+      "scope": "workspace",
+      "audience": "window",
+      "authority": "admin",
+      "durable": false,
+      "enforcement": "server"
+    }
+  ]
+}

@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "name": "account_workspace",
+  "description": "Workspaces de Danil ligados a su cuenta de tenancy (plan 2026-11-18-sesiones-por-organizacion-modelo-slack § 6). create_account_workspace {id, name, account: {org, account_id}} crea el workspace con el id que asigna el servidor (para el Free, engine_workspace_id) y sella la cuenta en su bóveda; con la misma cuenta devuelve el existente, con otra falla con danil.error.account_conflict y nunca liga un local (danil.error.workspace_exists). account_id es texto decimal. Las filas de list_workspaces y workspaces_startup llevan account {org, account_id} si el workspace es ligado; sin el campo es local. Ninguna credencial entra ni se guarda. Solo la ventana; una VM responde danil.error.unsupported. Fuera del hash de compatibilidad (status.contract).",
+  "features": [
+    "account_workspace_v1"
+  ],
+  "commands": [
+    {
+      "async": false,
+      "channel": null,
+      "ids": {
+        "workspace": [
+          "id"
+        ]
+      },
+      "kind": "invoke",
+      "name": "create_account_workspace",
+      "output": "-> Result < Wire < Workspace > , Failure >",
+      "parameters": [
+        {
+          "key": "id",
+          "name": "id",
+          "type": "String"
+        },
+        {
+          "key": "name",
+          "name": "name",
+          "type": "String"
+        },
+        {
+          "key": "account",
+          "name": "account",
+          "type": "TenancyAccount"
+        }
+      ],
+      "path": "danil::tenancy::create_account_workspace",
+      "relay": false,
+      "audience": "window",
+      "authority": "admin",
+      "durable": false,
+      "enforcement": "server"
+    }
+  ]
+}

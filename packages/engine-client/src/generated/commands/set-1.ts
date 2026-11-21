@@ -67,6 +67,20 @@ export interface SetEffortParams {
 }
 export type SetEffortOutput = null;
 
+export interface SetFreeRouterGrantParams {
+  workspace: string;
+  token: string;
+}
+export type SetFreeRouterGrantOutput = unknown;
+
+export interface SetFreeRouterUnionParams {
+  workspace: string;
+  platformAccount?: string | null;
+  org?: string | null;
+  sub?: string | null;
+}
+export type SetFreeRouterUnionOutput = unknown;
+
 export interface SetGoUsageKeyParams {
   provider: string;
   id: string;
@@ -121,18 +135,6 @@ export interface SetProjectDirectoryParams {
 }
 export type SetProjectDirectoryOutput = string;
 
-export interface SetProjectSetupCommandParams {
-  project: string;
-  command?: string | null;
-}
-export type SetProjectSetupCommandOutput = null;
-
-export interface SetProjectWorkTreeParams {
-  id: string;
-  dir?: string | null;
-}
-export type SetProjectWorkTreeOutput = unknown;
-
 export const COMMANDS_SET_1 = {
   set_active_account: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
   set_active_local_model: { kind: "invoke", scope: "machine", authority: "admin", channel: null },
@@ -144,6 +146,8 @@ export const COMMANDS_SET_1 = {
   set_api_key: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
   set_chat_background: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
   set_effort: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
+  set_free_router_grant: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
+  set_free_router_union: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
   set_go_usage_key: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
   set_google_drive_desktop_use: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
   set_integration_enabled: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
@@ -153,6 +157,4 @@ export const COMMANDS_SET_1 = {
   set_profile: { kind: "invoke", scope: "machine", authority: "admin", channel: null },
   set_project_base_branch: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
   set_project_directory: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
-  set_project_setup_command: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
-  set_project_work_tree: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
 } as const;

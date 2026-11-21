@@ -1,27 +1,29 @@
 // GENERADO por packages/engine-client/scripts/generate.mjs. No editar a mano.
 import type { EngineTransport } from "../transport.ts";
-import type { CliVmLoginParams, CliVmLoginOutput, CliVmSetupParams, CliVmSetupOutput, CliVmStartParams, CliVmStartOutput, CliVmStatusParams, CliVmStatusOutput, CliVmStopParams, CliVmStopOutput, WatchTaskTreeParams, WatchTaskTreeOutput, WindowReadyParams, WindowReadyOutput, WindowVitalsParams, WindowVitalsOutput, CliWorkspaceClearLogoParams, CliWorkspaceClearLogoOutput, CliWorkspaceCreateParams, CliWorkspaceCreateOutput, CliWorkspaceListParams, CliWorkspaceListOutput, CliWorkspaceSetLogoParams, CliWorkspaceSetLogoOutput, CliWorkspaceShowParams, CliWorkspaceShowOutput, WorkspacesStartupParams, WorkspacesStartupOutput, WorktreeRenameBranchParams, WorktreeRenameBranchOutput, WriteMemoryEntryParams, WriteMemoryEntryOutput, WriteShellInputParams, WriteShellInputOutput, ZoteroBibLinksParams, ZoteroBibLinksOutput, ZoteroStatusParams, ZoteroStatusOutput } from "../commands/misc-11.ts";
+import type { SyncAccountCredentialsParams, SyncAccountCredentialsOutput, SyncWorkspaceParams, SyncWorkspaceOutput, SyncWorkspaceMemoryParams, SyncWorkspaceMemoryOutput, SyncZoteroBibsParams, SyncZoteroBibsOutput, TasksAwaitingQuotaParams, TasksAwaitingQuotaOutput, TurnAuthorsParams, TurnAuthorsOutput, TypstLiveChangeParams, TypstLiveChangeOutput, TypstLiveCloseDocParams, TypstLiveCloseDocOutput, TypstLiveOpenParams, TypstLiveOpenOutput, TypstLiveRevealParams, TypstLiveRevealOutput, TypstLiveStopParams, TypstLiveStopOutput, UninstallIntegrationParams, UninstallIntegrationOutput, UninstallSourceSkillParams, UninstallSourceSkillOutput, UnlinkZoteroBibParams, UnlinkZoteroBibOutput, UnshareFolderParams, UnshareFolderOutput, UnwatchTaskTreeParams, UnwatchTaskTreeOutput, UpdateIntegrationParams, UpdateIntegrationOutput, UpdateSkillSourceParams, UpdateSkillSourceOutput, UpdateSourceParams, UpdateSourceOutput, CliVmLoginParams, CliVmLoginOutput, CliVmSetupParams, CliVmSetupOutput } from "../commands/misc-11.ts";
 
 export function bind_misc_11(t: EngineTransport) {
   return {
+    sync_account_credentials: (params: SyncAccountCredentialsParams) => t.call("sync_account_credentials", params) as Promise<SyncAccountCredentialsOutput>,
+    sync_workspace: (params: SyncWorkspaceParams) => t.call("sync_workspace", params) as Promise<SyncWorkspaceOutput>,
+    sync_workspace_memory: (params: SyncWorkspaceMemoryParams) => t.call("sync_workspace_memory", params) as Promise<SyncWorkspaceMemoryOutput>,
+    sync_zotero_bibs: () => t.call("sync_zotero_bibs", {}) as Promise<SyncZoteroBibsOutput>,
+    tasks_awaiting_quota: (params: TasksAwaitingQuotaParams) => t.call("tasks_awaiting_quota", params) as Promise<TasksAwaitingQuotaOutput>,
+    turn_authors: (params: TurnAuthorsParams) => t.call("turn_authors", params) as Promise<TurnAuthorsOutput>,
+    typst_live_change: (params: TypstLiveChangeParams) => t.call("typst_live_change", params) as Promise<TypstLiveChangeOutput>,
+    typst_live_close_doc: (params: TypstLiveCloseDocParams) => t.call("typst_live_close_doc", params) as Promise<TypstLiveCloseDocOutput>,
+    typst_live_open: (params: TypstLiveOpenParams) => t.call("typst_live_open", params) as Promise<TypstLiveOpenOutput>,
+    typst_live_reveal: (params: TypstLiveRevealParams) => t.call("typst_live_reveal", params) as Promise<TypstLiveRevealOutput>,
+    typst_live_stop: (params?: TypstLiveStopParams) => t.call("typst_live_stop", params) as Promise<TypstLiveStopOutput>,
+    uninstall_integration: (params: UninstallIntegrationParams) => t.call("uninstall_integration", params) as Promise<UninstallIntegrationOutput>,
+    uninstall_source_skill: (params: UninstallSourceSkillParams) => t.call("uninstall_source_skill", params) as Promise<UninstallSourceSkillOutput>,
+    unlink_zotero_bib: (params: UnlinkZoteroBibParams) => t.call("unlink_zotero_bib", params) as Promise<UnlinkZoteroBibOutput>,
+    unshare_folder: (params: UnshareFolderParams) => t.call("unshare_folder", params) as Promise<UnshareFolderOutput>,
+    unwatch_task_tree: (params: UnwatchTaskTreeParams) => t.call("unwatch_task_tree", params) as Promise<UnwatchTaskTreeOutput>,
+    update_integration: (params: UpdateIntegrationParams) => t.call("update_integration", params) as Promise<UpdateIntegrationOutput>,
+    update_skill_source: (params: UpdateSkillSourceParams) => t.call("update_skill_source", params) as Promise<UpdateSkillSourceOutput>,
+    update_source: (params: UpdateSourceParams) => t.call("update_source", params) as Promise<UpdateSourceOutput>,
     "vm login": () => t.call("vm login", {}) as Promise<CliVmLoginOutput>,
     "vm setup": () => t.call("vm setup", {}) as Promise<CliVmSetupOutput>,
-    "vm start": () => t.call("vm start", {}) as Promise<CliVmStartOutput>,
-    "vm status": () => t.call("vm status", {}) as Promise<CliVmStatusOutput>,
-    "vm stop": () => t.call("vm stop", {}) as Promise<CliVmStopOutput>,
-    watch_task_tree: (params: WatchTaskTreeParams) => t.call("watch_task_tree", params) as Promise<WatchTaskTreeOutput>,
-    window_ready: (params: WindowReadyParams) => t.call("window_ready", params) as Promise<WindowReadyOutput>,
-    window_vitals: (params: WindowVitalsParams) => t.call("window_vitals", params) as Promise<WindowVitalsOutput>,
-    "workspace clear-logo": () => t.call("workspace clear-logo", {}) as Promise<CliWorkspaceClearLogoOutput>,
-    "workspace create": () => t.call("workspace create", {}) as Promise<CliWorkspaceCreateOutput>,
-    "workspace list": () => t.call("workspace list", {}) as Promise<CliWorkspaceListOutput>,
-    "workspace set-logo": () => t.call("workspace set-logo", {}) as Promise<CliWorkspaceSetLogoOutput>,
-    "workspace show": () => t.call("workspace show", {}) as Promise<CliWorkspaceShowOutput>,
-    workspaces_startup: () => t.call("workspaces_startup", {}) as Promise<WorkspacesStartupOutput>,
-    worktree_rename_branch: (params: WorktreeRenameBranchParams) => t.call("worktree_rename_branch", params) as Promise<WorktreeRenameBranchOutput>,
-    write_memory_entry: (params: WriteMemoryEntryParams) => t.call("write_memory_entry", params) as Promise<WriteMemoryEntryOutput>,
-    write_shell_input: (params: WriteShellInputParams) => t.call("write_shell_input", params) as Promise<WriteShellInputOutput>,
-    zotero_bib_links: () => t.call("zotero_bib_links", {}) as Promise<ZoteroBibLinksOutput>,
-    zotero_status: () => t.call("zotero_status", {}) as Promise<ZoteroStatusOutput>,
   };
 }

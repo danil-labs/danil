@@ -1,4 +1,31 @@
 // GENERADO por packages/engine-client/scripts/generate.mjs. No editar a mano.
+export interface AttachmentPreviewParams {
+  project: string;
+  id: string;
+  rel: string;
+}
+export type AttachmentPreviewOutput = unknown;
+
+export interface BackupTaskWorkParams {
+  project: string;
+  id: string;
+}
+export type BackupTaskWorkOutput = null;
+
+export interface CallMcpAppToolParams {
+  connectionId: string;
+  name: string;
+  arguments: unknown;
+}
+export type CallMcpAppToolOutput = unknown;
+
+export interface ChangeAgentFoldersParams {
+  scope: unknown;
+  name: string;
+  change: unknown;
+}
+export type ChangeAgentFoldersOutput = string[] | null;
+
 export type ChatParams = Record<string, never>;
 export type ChatOutput = null;
 
@@ -44,6 +71,11 @@ export interface ChooseChatBackgroundParams {
 }
 export type ChooseChatBackgroundOutput = null;
 
+export interface ClearFreeRouterGrantParams {
+  workspace: string;
+}
+export type ClearFreeRouterGrantOutput = null;
+
 export interface CliTaskOpenedParams {
   operation: string;
   error?: string | null;
@@ -78,31 +110,11 @@ export interface CloneProjectParams {
 }
 export type CloneProjectOutput = unknown;
 
-export interface CloseMcpAppParams {
-  connectionId: string;
-}
-export type CloseMcpAppOutput = null;
-
-export interface ClosePortParams {
-  session: string;
-  pid: number;
-  puerto: number;
-}
-export type ClosePortOutput = unknown;
-
-export interface CloseProcessParams {
-  session: string;
-  pid: number;
-}
-export type CloseProcessOutput = unknown;
-
-export type CollectOrphansParams = Record<string, never>;
-export type CollectOrphansOutput = unknown;
-
-export type CliConfigGetParams = Record<string, never>;
-export type CliConfigGetOutput = null;
-
 export const COMMANDS_MISC_2 = {
+  attachment_preview: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
+  backup_task_work: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
+  call_mcp_app_tool: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
+  change_agent_folders: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
   chat: { kind: "cli", scope: null, authority: "task", channel: null },
   chat_background: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
   chat_visual_part: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
@@ -112,6 +124,7 @@ export const COMMANDS_MISC_2 = {
   check_integration: { kind: "invoke", scope: "machine", authority: "admin", channel: null },
   check_mcp: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
   choose_chat_background: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
+  clear_free_router_grant: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
   cli_task_opened: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
   "client grant": { kind: "cli", scope: null, authority: "admin", channel: null },
   "client list": { kind: "cli", scope: null, authority: "admin", channel: null },
@@ -119,9 +132,4 @@ export const COMMANDS_MISC_2 = {
   "client rotate": { kind: "cli", scope: null, authority: "admin", channel: null },
   "client show": { kind: "cli", scope: null, authority: "admin", channel: null },
   clone_project: { kind: "stream", scope: "workspace", authority: "admin", channel: "progress" },
-  close_mcp_app: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
-  close_port: { kind: "invoke", scope: "machine", authority: "admin", channel: null },
-  close_process: { kind: "invoke", scope: "machine", authority: "admin", channel: null },
-  collect_orphans: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
-  "config get": { kind: "cli", scope: null, authority: "read", channel: null },
 } as const;

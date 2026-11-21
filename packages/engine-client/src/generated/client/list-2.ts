@@ -1,9 +1,10 @@
 // GENERADO por packages/engine-client/scripts/generate.mjs. No editar a mano.
 import type { EngineTransport } from "../transport.ts";
-import type { ListMemoryEntriesParams, ListMemoryEntriesOutput, ListMentionsParams, ListMentionsOutput, ListModelsParams, ListModelsOutput, ListPermissionModesParams, ListPermissionModesOutput, ListPortsParams, ListPortsOutput, ListProjectRepositoriesParams, ListProjectRepositoriesOutput, ListProjectsParams, ListProjectsOutput, ListProvidersParams, ListProvidersOutput, ListRadiantConnectionsParams, ListRadiantConnectionsOutput, ListRadiantWorkspacesParams, ListRadiantWorkspacesOutput, ListSessionGitParams, ListSessionGitOutput, ListSkillSourcesParams, ListSkillSourcesOutput, ListSlashMenuParams, ListSlashMenuOutput, ListSourceBranchesParams, ListSourceBranchesOutput, ListSourceSkillsParams, ListSourceSkillsOutput, ListSourcesParams, ListSourcesOutput, ListSpacesParams, ListSpacesOutput, ListStorageParams, ListStorageOutput, ListSurfacesParams, ListSurfacesOutput, ListSystemSessionsParams, ListSystemSessionsOutput, ListTaskMentionsParams, ListTaskMentionsOutput } from "../commands/list-2.ts";
+import type { ListMcpServersParams, ListMcpServersOutput, ListMemoryEntriesParams, ListMemoryEntriesOutput, ListMentionsParams, ListMentionsOutput, ListModelsParams, ListModelsOutput, ListPermissionModesParams, ListPermissionModesOutput, ListPortsParams, ListPortsOutput, ListProjectRepositoriesParams, ListProjectRepositoriesOutput, ListProjectsParams, ListProjectsOutput, ListProvidersParams, ListProvidersOutput, ListRadiantConnectionsParams, ListRadiantConnectionsOutput, ListRadiantWorkspacesParams, ListRadiantWorkspacesOutput, ListSessionGitParams, ListSessionGitOutput, ListSkillSourcesParams, ListSkillSourcesOutput, ListSlashMenuParams, ListSlashMenuOutput, ListSourceBranchesParams, ListSourceBranchesOutput, ListSourceSkillsParams, ListSourceSkillsOutput, ListSourcesParams, ListSourcesOutput, ListSpacesParams, ListSpacesOutput, ListStorageParams, ListStorageOutput, ListSurfacesParams, ListSurfacesOutput, ListSystemSessionsParams, ListSystemSessionsOutput } from "../commands/list-2.ts";
 
 export function bind_list_2(t: EngineTransport) {
   return {
+    list_mcp_servers: () => t.call("list_mcp_servers", {}) as Promise<ListMcpServersOutput>,
     list_memory_entries: (params: ListMemoryEntriesParams) => t.call("list_memory_entries", params) as Promise<ListMemoryEntriesOutput>,
     list_mentions: (params: ListMentionsParams) => t.call("list_mentions", params) as Promise<ListMentionsOutput>,
     list_models: (params: ListModelsParams) => t.call("list_models", params) as Promise<ListModelsOutput>,
@@ -24,6 +25,5 @@ export function bind_list_2(t: EngineTransport) {
     list_storage: (params: ListStorageParams) => t.call("list_storage", params) as Promise<ListStorageOutput>,
     list_surfaces: () => t.call("list_surfaces", {}) as Promise<ListSurfacesOutput>,
     list_system_sessions: () => t.call("list_system_sessions", {}) as Promise<ListSystemSessionsOutput>,
-    list_task_mentions: () => t.call("list_task_mentions", {}) as Promise<ListTaskMentionsOutput>,
   };
 }

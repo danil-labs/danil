@@ -77,14 +77,16 @@ export type ListLiveTurnsOutput = unknown[];
 export type ListLocalModelsParams = Record<string, never>;
 export type ListLocalModelsOutput = unknown[];
 
+export interface ListLocalOrchestratorsParams {
+  workspace: string;
+}
+export type ListLocalOrchestratorsOutput = unknown;
+
 export type ListMachineAgentsParams = Record<string, never>;
 export type ListMachineAgentsOutput = unknown;
 
 export type ListMcpProvidersParams = Record<string, never>;
 export type ListMcpProvidersOutput = unknown[];
-
-export type ListMcpServersParams = Record<string, never>;
-export type ListMcpServersOutput = unknown[];
 
 export const COMMANDS_LIST_1 = {
   list_accounts: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
@@ -105,7 +107,7 @@ export const COMMANDS_LIST_1 = {
   list_live_sessions: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
   list_live_turns: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
   list_local_models: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
+  list_local_orchestrators: { kind: "invoke", scope: null, authority: "admin", channel: null },
   list_machine_agents: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
   list_mcp_providers: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
-  list_mcp_servers: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
 } as const;

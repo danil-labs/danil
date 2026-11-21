@@ -1,4 +1,58 @@
 // GENERADO por packages/engine-client/scripts/generate.mjs. No editar a mano.
+export interface PreviewTreeFilesParams {
+  project: string;
+  baseRef?: string | null;
+}
+export type PreviewTreeFilesOutput = unknown;
+
+export interface PreviewTreeFolderParams {
+  project: string;
+  path: string;
+  offset: number;
+}
+export type PreviewTreeFolderOutput = unknown;
+
+export interface PreviewTreeShowParams {
+  project: string;
+  baseRef?: string | null;
+  path: string;
+}
+export type PreviewTreeShowOutput = unknown;
+
+export interface ProjectBaseBranchesParams {
+  project: string;
+  refresh?: boolean | null;
+  details?: boolean | null;
+}
+export type ProjectBaseBranchesOutput = unknown;
+
+export interface ProjectCloneStatusParams {
+  operation: string;
+}
+export type ProjectCloneStatusOutput = unknown | null;
+
+export interface ProjectSetupCommandParams {
+  project: string;
+}
+export type ProjectSetupCommandOutput = string | null;
+
+export interface ProveFreeRouterBindingParams {
+  workspace: string;
+  nonce: string;
+}
+export type ProveFreeRouterBindingOutput = unknown;
+
+export interface ProviderDownloadSizeParams {
+  provider: string;
+}
+export type ProviderDownloadSizeOutput = number;
+
+export interface PublicationsOfParams {
+  project: string;
+  session: string;
+}
+export type PublicationsOfOutput = unknown[];
+
 export interface QueueReadyParams {
   project: string;
   session: string;
@@ -31,6 +85,12 @@ export interface ReintentarReanudacionPorEntregasParams {
   session: string;
 }
 export type ReintentarReanudacionPorEntregasOutput = string;
+
+export interface ReleaseFreeRouterOwnerParams {
+  sub: string;
+  workspaces?: string[] | null;
+}
+export type ReleaseFreeRouterOwnerOutput = unknown;
 
 export interface RenameProjectParams {
   id: string;
@@ -67,102 +127,26 @@ export type RepoBranchesOutput = unknown;
 export type RequestCloseParams = Record<string, never>;
 export type RequestCloseOutput = null;
 
-export interface ResealAccountCredentialParams {
-  workspace: string;
-  credential: string;
-  version: number;
-  targets: unknown[];
-}
-export type ResealAccountCredentialOutput = unknown[];
-
-export interface RespondPermissionParams {
-  session: string;
-  requestId: string;
-  allow: boolean;
-  revision?: number | null;
-}
-export type RespondPermissionOutput = unknown;
-
-export interface RestoreTaskWorkParams {
-  project: string;
-  id: string;
-  destination: string;
-}
-export type RestoreTaskWorkOutput = null;
-
-export interface RestoreVersionParams {
-  referencia: unknown;
-}
-export type RestoreVersionOutput = unknown;
-
-export interface ResumeAwaitingQuotaParams {
-  provider: string;
-}
-export type ResumeAwaitingQuotaOutput = number;
-
-export interface ReuseProjectParams {
-  workspace: string;
-  project: string;
-  space?: string | null;
-}
-export type ReuseProjectOutput = unknown;
-
-export type RunParams = Record<string, never>;
-export type RunOutput = null;
-
-export interface RunActivityCommandParams {
-  project: string;
-  title: string;
-  activity?: string | null;
-  command: string;
-}
-export type RunActivityCommandOutput = unknown;
-
-export interface RunShellCommandParams {
-  project: string;
-  session?: string | null;
-  command: string;
-  queueId?: string | null;
-  provider?: string | null;
-  model?: string | null;
-  effort?: string | null;
-  permissionMode?: string | null;
-  space?: string | null;
-  agent?: string | null;
-  baseRef?: string | null;
-  runId?: string | null;
-  unwrapSnapshot?: boolean | null;
-}
-export type RunShellCommandOutput = unknown;
-
-export interface SaveAgentDeclarationParams {
-  project: string;
-  name: string;
-  description: string;
-  instructions: string;
-}
-export type SaveAgentDeclarationOutput = unknown;
-
 export const COMMANDS_MISC_8 = {
+  preview_tree_files: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
+  preview_tree_folder: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
+  preview_tree_show: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
+  project_base_branches: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
+  project_clone_status: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
+  project_setup_command: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
+  prove_free_router_binding: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
+  provider_download_size: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
+  publications_of: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
   queue_ready: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
   reclaim_storage: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
   record_export: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
   recreate_task_work: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
   reintentar_reanudacion_por_entregas: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
+  release_free_router_owner: { kind: "invoke", scope: "machine", authority: "admin", channel: null },
   rename_project: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
   rename_session: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
   rename_space: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
   rename_workspace: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
   repo_branches: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
   request_close: { kind: "desktop", scope: null, authority: "admin", channel: null },
-  reseal_account_credential: { kind: "invoke", scope: null, authority: "admin", channel: null },
-  respond_permission: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
-  restore_task_work: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
-  restore_version: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
-  resume_awaiting_quota: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
-  reuse_project: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
-  run: { kind: "cli", scope: null, authority: "task", channel: null },
-  run_activity_command: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
-  run_shell_command: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
-  save_agent_declaration: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
 } as const;

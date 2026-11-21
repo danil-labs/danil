@@ -1,4 +1,26 @@
 // GENERADO por packages/engine-client/scripts/generate.mjs. No editar a mano.
+export interface FileSizeParams {
+  path: string;
+}
+export type FileSizeOutput = number;
+
+export interface FinishBrowserLoginParams {
+  id: string;
+  scope?: string | null;
+}
+export type FinishBrowserLoginOutput = unknown;
+
+export interface FinishGitHostSetupParams {
+  id: string;
+  scope?: string | null;
+}
+export type FinishGitHostSetupOutput = unknown;
+
+export interface FinishGoogleDriveLoginParams {
+  workspace?: string | null;
+}
+export type FinishGoogleDriveLoginOutput = unknown;
+
 export interface FinishTaskParams {
   project: string;
   id: string;
@@ -13,6 +35,11 @@ export type CliFolderListOutput = null;
 
 export type CliFolderShowParams = Record<string, never>;
 export type CliFolderShowOutput = null;
+
+export interface FreeRouterBindingParams {
+  workspace: string;
+}
+export type FreeRouterBindingOutput = unknown;
 
 export type GetProfileParams = Record<string, never>;
 export type GetProfileOutput = unknown;
@@ -57,6 +84,13 @@ export interface GoogleDriveStatusParams {
 }
 export type GoogleDriveStatusOutput = unknown;
 
+export interface GuardarAdjuntoParams {
+  mime: string;
+  nombre?: string | null;
+  datos: string;
+}
+export type GuardarAdjuntoOutput = string;
+
 export interface GuardarImagenPegadaParams {
   mime: string;
   datos: string;
@@ -66,44 +100,16 @@ export type GuardarImagenPegadaOutput = string;
 export type GuideParams = Record<string, never>;
 export type GuideOutput = null;
 
-export interface HasMcpAppParams {
-  server: string;
-  tool: string;
-}
-export type HasMcpAppOutput = boolean;
-
-export interface ImportChatBackgroundParams {
-  source: string;
-}
-export type ImportChatBackgroundOutput = string;
-
-export interface ImportChatBackgroundDataParams {
-  dataUrl: string;
-}
-export type ImportChatBackgroundDataOutput = string;
-
-export type CliInboxListParams = Record<string, never>;
-export type CliInboxListOutput = null;
-
-export type CliInboxTakeParams = Record<string, never>;
-export type CliInboxTakeOutput = null;
-
-export interface InjectMessageParams {
-  project: string;
-  session: string;
-  prompt: string;
-  queueId?: string | null;
-  attachments?: string[] | null;
-  taskMentions?: unknown[] | null;
-  recipients?: unknown[] | null;
-}
-export type InjectMessageOutput = null;
-
 export const COMMANDS_MISC_5 = {
+  file_size: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
+  finish_browser_login: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
+  finish_git_host_setup: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
+  finish_google_drive_login: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
   finish_task: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
   "folder add": { kind: "cli", scope: null, authority: "admin", channel: null },
   "folder list": { kind: "cli", scope: null, authority: "read", channel: null },
   "folder show": { kind: "cli", scope: null, authority: "read", channel: null },
+  free_router_binding: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
   get_profile: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
   get_project_directory: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
   get_radiant_identity: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
@@ -113,12 +119,7 @@ export const COMMANDS_MISC_5 = {
   git_host_projects: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
   google_drive_desktop_status: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
   google_drive_status: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
+  guardar_adjunto: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
   guardar_imagen_pegada: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
   guide: { kind: "cli", scope: null, authority: "read", channel: null },
-  has_mcp_app: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
-  import_chat_background: { kind: "invoke", scope: null, authority: "admin", channel: null },
-  import_chat_background_data: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
-  "inbox list": { kind: "cli", scope: null, authority: "read", channel: null },
-  "inbox take": { kind: "cli", scope: null, authority: "task", channel: null },
-  inject_message: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
 } as const;

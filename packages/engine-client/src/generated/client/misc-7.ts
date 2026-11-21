@@ -1,9 +1,17 @@
 // GENERADO por packages/engine-client/scripts/generate.mjs. No editar a mano.
 import type { EngineTransport } from "../transport.ts";
-import type { OpenGoogleDriveDesktopParams, OpenGoogleDriveDesktopOutput, OpenZoteroParams, OpenZoteroOutput, CliOperationShowParams, CliOperationShowOutput, CliOperationWaitParams, CliOperationWaitOutput, PendingRequestsParams, PendingRequestsOutput, CliPortfolioCreateParams, CliPortfolioCreateOutput, CliPortfolioListParams, CliPortfolioListOutput, CliPortfolioRenameParams, CliPortfolioRenameOutput, PrepareAttachmentsParams, PrepareAttachmentsOutput, PreparePrintParams, PreparePrintOutput, PrepareRuntimeParams, PrepareRuntimeOutput, PrepareSessionContinuationParams, PrepareSessionContinuationOutput, PreviewFileParams, PreviewFileOutput, PreviewTreeFilesParams, PreviewTreeFilesOutput, PreviewTreeFolderParams, PreviewTreeFolderOutput, PreviewTreeShowParams, PreviewTreeShowOutput, ProjectBaseBranchesParams, ProjectBaseBranchesOutput, ProjectCloneStatusParams, ProjectCloneStatusOutput, ProjectSetupCommandParams, ProjectSetupCommandOutput, ProviderDownloadSizeParams, ProviderDownloadSizeOutput, PublicationsOfParams, PublicationsOfOutput } from "../commands/misc-7.ts";
+import type { CliNoticeFetchParams, CliNoticeFetchOutput, CliNoticeTakeParams, CliNoticeTakeOutput, NotifyParams, NotifyOutput, ObservabilityConnectParams, ObservabilityConnectOutput, ObservabilityDisconnectParams, ObservabilityDisconnectOutput, OfficePreviewParams, OfficePreviewOutput, OpenExternalParams, OpenExternalOutput, OpenFileExternalParams, OpenFileExternalOutput, OpenGoogleDriveDesktopParams, OpenGoogleDriveDesktopOutput, OpenZoteroParams, OpenZoteroOutput, CliOperationShowParams, CliOperationShowOutput, CliOperationWaitParams, CliOperationWaitOutput, PendingRequestsParams, PendingRequestsOutput, CliPortfolioCreateParams, CliPortfolioCreateOutput, CliPortfolioListParams, CliPortfolioListOutput, CliPortfolioRenameParams, CliPortfolioRenameOutput, PrepareAttachmentsParams, PrepareAttachmentsOutput, PreparePrintParams, PreparePrintOutput, PrepareRuntimeParams, PrepareRuntimeOutput, PrepareSessionContinuationParams, PrepareSessionContinuationOutput, PreviewFileParams, PreviewFileOutput } from "../commands/misc-7.ts";
 
 export function bind_misc_7(t: EngineTransport) {
   return {
+    "notice fetch": () => t.call("notice fetch", {}) as Promise<CliNoticeFetchOutput>,
+    "notice take": () => t.call("notice take", {}) as Promise<CliNoticeTakeOutput>,
+    notify: () => t.call("notify", {}) as Promise<NotifyOutput>,
+    observability_connect: () => t.call("observability_connect", {}) as Promise<ObservabilityConnectOutput>,
+    observability_disconnect: () => t.call("observability_disconnect", {}) as Promise<ObservabilityDisconnectOutput>,
+    office_preview: (params: OfficePreviewParams) => t.call("office_preview", params) as Promise<OfficePreviewOutput>,
+    open_external: (params: OpenExternalParams) => t.call("open_external", params) as Promise<OpenExternalOutput>,
+    open_file_external: (params: OpenFileExternalParams) => t.call("open_file_external", params) as Promise<OpenFileExternalOutput>,
     open_google_drive_desktop: () => t.call("open_google_drive_desktop", {}) as Promise<OpenGoogleDriveDesktopOutput>,
     open_zotero: () => t.call("open_zotero", {}) as Promise<OpenZoteroOutput>,
     "operation show": () => t.call("operation show", {}) as Promise<CliOperationShowOutput>,
@@ -17,13 +25,5 @@ export function bind_misc_7(t: EngineTransport) {
     prepare_runtime: (params?: PrepareRuntimeParams) => t.call("prepare_runtime", params) as Promise<PrepareRuntimeOutput>,
     prepare_session_continuation: (params: PrepareSessionContinuationParams) => t.call("prepare_session_continuation", params) as Promise<PrepareSessionContinuationOutput>,
     preview_file: (params: PreviewFileParams) => t.call("preview_file", params) as Promise<PreviewFileOutput>,
-    preview_tree_files: (params: PreviewTreeFilesParams) => t.call("preview_tree_files", params) as Promise<PreviewTreeFilesOutput>,
-    preview_tree_folder: (params: PreviewTreeFolderParams) => t.call("preview_tree_folder", params) as Promise<PreviewTreeFolderOutput>,
-    preview_tree_show: (params: PreviewTreeShowParams) => t.call("preview_tree_show", params) as Promise<PreviewTreeShowOutput>,
-    project_base_branches: (params: ProjectBaseBranchesParams) => t.call("project_base_branches", params) as Promise<ProjectBaseBranchesOutput>,
-    project_clone_status: (params: ProjectCloneStatusParams) => t.call("project_clone_status", params) as Promise<ProjectCloneStatusOutput>,
-    project_setup_command: (params: ProjectSetupCommandParams) => t.call("project_setup_command", params) as Promise<ProjectSetupCommandOutput>,
-    provider_download_size: (params: ProviderDownloadSizeParams) => t.call("provider_download_size", params) as Promise<ProviderDownloadSizeOutput>,
-    publications_of: (params: PublicationsOfParams) => t.call("publications_of", params) as Promise<PublicationsOfOutput>,
   };
 }

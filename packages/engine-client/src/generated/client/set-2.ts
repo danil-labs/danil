@@ -1,12 +1,16 @@
 // GENERADO por packages/engine-client/scripts/generate.mjs. No editar a mano.
 import type { EngineTransport } from "../transport.ts";
-import type { SetProviderConsentParams, SetProviderConsentOutput, SetRootParams, SetRootOutput, SetSessionPinnedParams, SetSessionPinnedOutput, SetSessionStageParams, SetSessionStageOutput, SetSkillSourceEnabledParams, SetSkillSourceEnabledOutput, SetSourceBranchParams, SetSourceBranchOutput, SetSourceSkillParams, SetSourceSkillOutput, SetSpaceFoldersParams, SetSpaceFoldersOutput, SetTaskArchivedParams, SetTaskArchivedOutput, SetWorkspaceHostGithubParams, SetWorkspaceHostGithubOutput, SetWorkspaceLanguageParams, SetWorkspaceLanguageOutput, SetWorkspaceLogoParams, SetWorkspaceLogoOutput, SetWorkspaceLogoPngParams, SetWorkspaceLogoPngOutput, SetWorkspaceOutputLanguageParams, SetWorkspaceOutputLanguageOutput, SetWorkspacePermissionModeParams, SetWorkspacePermissionModeOutput, SetWorkspaceSourceParams, SetWorkspaceSourceOutput, SetWorkspaceTerminalThemeParams, SetWorkspaceTerminalThemeOutput, SetWorkspaceWorktreesRootParams, SetWorkspaceWorktreesRootOutput } from "../commands/set-2.ts";
+import type { SetProjectSetupCommandParams, SetProjectSetupCommandOutput, SetProjectWorkTreeParams, SetProjectWorkTreeOutput, SetProviderConsentParams, SetProviderConsentOutput, SetRootParams, SetRootOutput, SetSessionModelParams, SetSessionModelOutput, SetSessionPinnedParams, SetSessionPinnedOutput, SetSessionProviderParams, SetSessionProviderOutput, SetSessionStageParams, SetSessionStageOutput, SetSkillSourceEnabledParams, SetSkillSourceEnabledOutput, SetSourceBranchParams, SetSourceBranchOutput, SetSourceSkillParams, SetSourceSkillOutput, SetSpaceFoldersParams, SetSpaceFoldersOutput, SetTaskArchivedParams, SetTaskArchivedOutput, SetWorkspaceHostGithubParams, SetWorkspaceHostGithubOutput, SetWorkspaceLanguageParams, SetWorkspaceLanguageOutput, SetWorkspaceLogoParams, SetWorkspaceLogoOutput, SetWorkspaceLogoPngParams, SetWorkspaceLogoPngOutput, SetWorkspaceOutputLanguageParams, SetWorkspaceOutputLanguageOutput, SetWorkspacePermissionModeParams, SetWorkspacePermissionModeOutput, SetWorkspaceSourceParams, SetWorkspaceSourceOutput, SetWorkspaceTerminalThemeParams, SetWorkspaceTerminalThemeOutput } from "../commands/set-2.ts";
 
 export function bind_set_2(t: EngineTransport) {
   return {
+    set_project_setup_command: (params: SetProjectSetupCommandParams) => t.call("set_project_setup_command", params) as Promise<SetProjectSetupCommandOutput>,
+    set_project_work_tree: (params: SetProjectWorkTreeParams) => t.call("set_project_work_tree", params) as Promise<SetProjectWorkTreeOutput>,
     set_provider_consent: (params: SetProviderConsentParams) => t.call("set_provider_consent", params) as Promise<SetProviderConsentOutput>,
     set_root: (params: SetRootParams) => t.call("set_root", params) as Promise<SetRootOutput>,
+    set_session_model: (params: SetSessionModelParams) => t.call("set_session_model", params) as Promise<SetSessionModelOutput>,
     set_session_pinned: (params: SetSessionPinnedParams) => t.call("set_session_pinned", params) as Promise<SetSessionPinnedOutput>,
+    set_session_provider: (params: SetSessionProviderParams) => t.call("set_session_provider", params) as Promise<SetSessionProviderOutput>,
     set_session_stage: (params: SetSessionStageParams) => t.call("set_session_stage", params) as Promise<SetSessionStageOutput>,
     set_skill_source_enabled: (params: SetSkillSourceEnabledParams) => t.call("set_skill_source_enabled", params) as Promise<SetSkillSourceEnabledOutput>,
     set_source_branch: (params: SetSourceBranchParams) => t.call("set_source_branch", params) as Promise<SetSourceBranchOutput>,
@@ -21,6 +25,5 @@ export function bind_set_2(t: EngineTransport) {
     set_workspace_permission_mode: (params: SetWorkspacePermissionModeParams) => t.call("set_workspace_permission_mode", params) as Promise<SetWorkspacePermissionModeOutput>,
     set_workspace_source: (params: SetWorkspaceSourceParams) => t.call("set_workspace_source", params) as Promise<SetWorkspaceSourceOutput>,
     set_workspace_terminal_theme: (params: SetWorkspaceTerminalThemeParams) => t.call("set_workspace_terminal_theme", params) as Promise<SetWorkspaceTerminalThemeOutput>,
-    set_workspace_worktrees_root: (params: SetWorkspaceWorktreesRootParams) => t.call("set_workspace_worktrees_root", params) as Promise<SetWorkspaceWorktreesRootOutput>,
   };
 }

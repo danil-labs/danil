@@ -36,7 +36,13 @@ export const EVENTS = [
   "telegram-changed",
   "toolchain",
   "typst-live",
-  "usage"
+  "usage",
+  "account.request",
+  "engine-adoption",
+  "state.copy_changed",
+  "state.changed",
+  "machine-usage",
+  "person-session"
 ] as const;
 export type EventName = (typeof EVENTS)[number];
 /** El contrato no describe payloads de eventos todavía: unknown hasta que lo haga. */
@@ -78,4 +84,10 @@ export interface EventPayloads {
   "toolchain": unknown;
   "typst-live": unknown;
   "usage": unknown;
+  "account.request": unknown;
+  "engine-adoption": unknown;
+  "state.copy_changed": unknown;
+  "state.changed": unknown;
+  "machine-usage": unknown;
+  "person-session": unknown;
 }

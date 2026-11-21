@@ -1,4 +1,16 @@
 // GENERADO por packages/engine-client/scripts/generate.mjs. No editar a mano.
+export interface SetProjectSetupCommandParams {
+  project: string;
+  command?: string | null;
+}
+export type SetProjectSetupCommandOutput = null;
+
+export interface SetProjectWorkTreeParams {
+  id: string;
+  dir?: string | null;
+}
+export type SetProjectWorkTreeOutput = unknown;
+
 export interface SetProviderConsentParams {
   provider: string;
   accepted: boolean;
@@ -10,12 +22,27 @@ export interface SetRootParams {
 }
 export type SetRootOutput = null;
 
+export interface SetSessionModelParams {
+  project: string;
+  id: string;
+  model?: string | null;
+  effort?: string | null;
+}
+export type SetSessionModelOutput = null;
+
 export interface SetSessionPinnedParams {
   project: string;
   id: string;
   pinned: boolean;
 }
 export type SetSessionPinnedOutput = null;
+
+export interface SetSessionProviderParams {
+  project: string;
+  session: string;
+  provider: string;
+}
+export type SetSessionProviderOutput = null;
 
 export interface SetSessionStageParams {
   project: string;
@@ -106,16 +133,14 @@ export interface SetWorkspaceTerminalThemeParams {
 }
 export type SetWorkspaceTerminalThemeOutput = unknown;
 
-export interface SetWorkspaceWorktreesRootParams {
-  id: string;
-  root?: string | null;
-}
-export type SetWorkspaceWorktreesRootOutput = unknown;
-
 export const COMMANDS_SET_2 = {
+  set_project_setup_command: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
+  set_project_work_tree: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
   set_provider_consent: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
   set_root: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
+  set_session_model: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
   set_session_pinned: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
+  set_session_provider: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
   set_session_stage: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
   set_skill_source_enabled: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
   set_source_branch: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
@@ -130,5 +155,4 @@ export const COMMANDS_SET_2 = {
   set_workspace_permission_mode: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
   set_workspace_source: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
   set_workspace_terminal_theme: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
-  set_workspace_worktrees_root: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
 } as const;

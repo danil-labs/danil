@@ -6,7 +6,9 @@ import {
   bind_add,
   bind_auth,
   bind_cancel,
+  bind_create,
   bind_danil,
+  bind_engine,
   bind_github,
   bind_handler,
   bind_install,
@@ -15,6 +17,7 @@ import {
   bind_list_2,
   bind_list_3,
   bind_mcp,
+  bind_person,
   bind_plugin,
   bind_radiant,
   bind_read,
@@ -23,6 +26,7 @@ import {
   bind_session,
   bind_set_1,
   bind_set_2,
+  bind_set_3,
   bind_site,
   bind_skill,
   bind_task_1,
@@ -41,6 +45,7 @@ import {
   bind_misc_9,
   bind_misc_10,
   bind_misc_11,
+  bind_misc_12,
 } from "./client/index.ts";
 export type { EngineTransport } from "./transport.ts";
 
@@ -50,7 +55,9 @@ export function createEngineClient(transport: EngineTransport) {
     ...bind_add(transport),
     ...bind_auth(transport),
     ...bind_cancel(transport),
+    ...bind_create(transport),
     ...bind_danil(transport),
+    ...bind_engine(transport),
     ...bind_github(transport),
     ...bind_handler(transport),
     ...bind_install(transport),
@@ -59,6 +66,7 @@ export function createEngineClient(transport: EngineTransport) {
     ...bind_list_2(transport),
     ...bind_list_3(transport),
     ...bind_mcp(transport),
+    ...bind_person(transport),
     ...bind_plugin(transport),
     ...bind_radiant(transport),
     ...bind_read(transport),
@@ -67,6 +75,7 @@ export function createEngineClient(transport: EngineTransport) {
     ...bind_session(transport),
     ...bind_set_1(transport),
     ...bind_set_2(transport),
+    ...bind_set_3(transport),
     ...bind_site(transport),
     ...bind_skill(transport),
     ...bind_task_1(transport),
@@ -85,6 +94,7 @@ export function createEngineClient(transport: EngineTransport) {
     ...bind_misc_9(transport),
     ...bind_misc_10(transport),
     ...bind_misc_11(transport),
+    ...bind_misc_12(transport),
     subscribe<E extends EventName>(event: E, cb: (payload: EventPayloads[E]) => void): () => void {
       return transport.subscribe(event, cb as (payload: unknown) => void);
     },
