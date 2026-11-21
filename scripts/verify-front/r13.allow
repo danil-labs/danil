@@ -1,9 +1,5 @@
 # R13 trinquete (2026-11-21): ruta cuenta. Solo puede bajar. Ver r13.mjs.
 apps/auth/src/main.tsx 1
-packages/features/account/src/components/AccountCard.tsx 9
-packages/features/account/src/components/AccountErrorView.tsx 2
-packages/features/account/src/components/AccountIdentity.tsx 3
-packages/features/account/src/screens/AccountScreen.tsx 1
 packages/features/ai-credentials/src/components/CredentialErrorNotice.tsx 5
 packages/features/ai-credentials/src/components/MachineWakeNotice.tsx 2
 packages/features/ai-credentials/src/components/ProviderCard.tsx 12
@@ -46,7 +42,6 @@ packages/shell/src/App.tsx 16
 packages/shell/src/ErrorBoundary.tsx 1
 packages/shell/src/Rail.tsx 6
 packages/shell/src/routes.tsx 10
-packages/features/settings/src/components/AccountSection.tsx 34
 packages/features/settings/src/components/AiAccountsSection.tsx 12
 packages/features/settings/src/components/SourceControlSection.tsx 15
 packages/features/settings/src/components/machines/ActivityTab.tsx 8

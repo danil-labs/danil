@@ -1,16 +1,18 @@
-import { createSignal, For, onCleanup, onMount, Show, type JSX } from "solid-js";
+import { createResource, createSignal, For, onCleanup, onMount, Show, type JSX } from "solid-js";
 import { Dynamic } from "solid-js/web";
 import {
   Badge, Button, Close, Dialog, DialogContent, DialogTitle, Select,
   Sidebar, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, cn,
 } from "@danil/ui";
 import { t } from "@danil/ui/i18n";
+import { usePlatform } from "@danil/platform-client";
+import { host } from "@danil/host";
 import {
   idSub, idTab, SETTINGS_ENTRIES, settingsTarget,
   type SettingsEntryId, type SettingsGroup, type SettingsTab,
 } from "../entries.ts";
 import { ICONOS } from "../components/entry-icons.tsx";
-import { AccountSection } from "../components/AccountSection.tsx";
+import { AccountSection } from "../components/account/AccountSection.tsx";
 import { AiAccountsSection } from "../components/AiAccountsSection.tsx";
 import { MachinesSection } from "../components/machines/MachinesSection.tsx";
 import { PreferencesSection } from "../components/preferences/PreferencesSection.tsx";
@@ -85,14 +87,30 @@ const TAB_TITLES: Record<string, () => string> = {
 
 export function SettingsModal(props: SettingsModalProps) {
   let hoja: HTMLDivElement | undefined;
+  const client = usePlatform();
+  const [profile] = createResource(async () => {
+    try {
+      return await client.getMe();
+    } catch {
+      return null;
+    }
+  });
+
+  const handleOpenBilling = () => {
+    void host.openExternal("https://danil.ai/billing");
+  };
+
+  const handleOpenEmails = () => {
+    void host.openExternal("https://alfa-app.danil.ai/?settings=emails");
+  };
 
   const resolverPanel = (id: string, entryId: SettingsEntryId): (() => JSX.Element) | null => {
     if (props.customPanels?.[id]) return props.customPanels[id]!;
     if (entryId === "account") {
-      if (id === "cuenta-danil") return () => <AccountSection slot={props.accountSlot} part="profile" />;
-      if (id === "emails") return () => <AccountSection part="emails" />;
-      if (id === "usage") return () => <AccountSection part="usage" />;
-      if (id === "plan") return () => <AccountSection part="plan" />;
+      if (id === "cuenta-danil") return () => <AccountSection slot={props.accountSlot} part="profile" profile={profile()} onOpenEmails={handleOpenEmails} onOpenBilling={handleOpenBilling} />;
+      if (id === "emails") return () => <AccountSection part="emails" profile={profile()} onOpenEmails={handleOpenEmails} onOpenBilling={handleOpenBilling} />;
+      if (id === "usage") return () => <AccountSection part="usage" profile={profile()} onOpenEmails={handleOpenEmails} onOpenBilling={handleOpenBilling} />;
+      if (id === "plan") return () => <AccountSection part="plan" profile={profile()} onOpenEmails={handleOpenEmails} onOpenBilling={handleOpenBilling} />;
       if (id === "security") return null;
     }
     if (entryId === "preferences") return () => <PreferencesSection tab={id} slot={props.preferencesSlot} />;

@@ -7,10 +7,12 @@ import {
   SettingsRow,
   SettingsSection,
 } from "@danil/ui";
+import { t } from "@danil/ui/i18n";
 
 export interface AccountSectionProps {
   slot?: JSX.Element;
   part: "profile" | "emails" | "usage" | "plan";
+  profile?: { name?: string | null; email?: string | null; active_organization_id?: string | null } | null;
   onOpenBilling?: () => void;
   onOpenEmails?: () => void;
 }
@@ -28,28 +30,25 @@ function FallbackAccountPart(props: AccountSectionProps) {
     return (
       <SettingsPanel data-danil-account="profile">
         <SettingsSection
-          title="Cuenta de Danil"
-          description="Identidad y credenciales sincronizadas con la plataforma."
+          title={t("danil.account.title")}
+          description={t("danil.account.web_description")}
         >
           <SettingsRow
-            label="Perfil de usuario"
-            description="Sesión activa en Danil"
+            label={t("danil.account.your_account")}
+            description={props.profile?.name || props.profile?.email || t("danil.account.loading")}
           />
-        </SettingsSection>
-        <SettingsSection
-          title="Plan y suscripción"
-          description="Nivel de servicio y gestión de usuarios."
-        >
           <SettingsRow
-            label="Plan activo"
-            description="Administra los detalles de facturación en la consola web."
+            label={t("danil.emails.manage_label")}
+            description={t("danil.emails.manage_description")}
+            data-account-emails-link=""
           >
             <Button
               size="sm"
               variant="secondary"
-              onClick={() => props.onOpenBilling?.()}
+              onClick={() => props.onOpenEmails?.()}
             >
-              Administrar
+              <ExternalLink size={14} class="mr-1.5" />
+              {t("danil.emails.manage")}
             </Button>
           </SettingsRow>
         </SettingsSection>
@@ -61,12 +60,12 @@ function FallbackAccountPart(props: AccountSectionProps) {
     return (
       <SettingsPanel data-danil-account="emails">
         <SettingsSection
-          title="Correos"
-          description="Direcciones de correo vinculadas a tu cuenta."
+          title={t("danil.emails.title")}
+          description={t("danil.emails.description")}
         >
           <SettingsRow
-            label="Administrar correos"
-            description="Agrega o cambia la dirección principal de tu cuenta en la web."
+            label={t("danil.emails.manage_label")}
+            description={t("danil.emails.manage_description")}
             data-account-emails-link=""
           >
             <Button
@@ -75,7 +74,7 @@ function FallbackAccountPart(props: AccountSectionProps) {
               onClick={() => props.onOpenEmails?.()}
             >
               <ExternalLink size={14} class="mr-1.5" />
-              Administrar
+              {t("danil.emails.manage")}
             </Button>
           </SettingsRow>
         </SettingsSection>
@@ -87,12 +86,12 @@ function FallbackAccountPart(props: AccountSectionProps) {
     return (
       <SettingsPanel data-danil-account="usage">
         <SettingsSection
-          title="Uso y consumo"
-          description="Estadísticas de uso de agentes, computación y llamadas a modelos."
+          title={t("settings.tab.usage")}
+          description={t("settings.account_card.not_asked")}
         >
           <SettingsBlock>
             <p class="m-0 text-sm text-neutral-500">
-              No hay métricas de consumo registradas en esta sesión.
+              {t("danil.account.loading")}
             </p>
           </SettingsBlock>
         </SettingsSection>
@@ -104,19 +103,19 @@ function FallbackAccountPart(props: AccountSectionProps) {
     return (
       <SettingsPanel data-danil-account="plan">
         <SettingsSection
-          title="Plan"
-          description="Nivel de suscripción actual."
+          title={t("settings.tab.plan")}
+          description={t("settings.account_card.active")}
         >
           <SettingsRow
-            label="Mejorar plan"
-            description="Cambia a un plan con mayor capacidad de máquinas y límites ampliados."
+            label={t("settings.tab.plan")}
+            description={t("settings.account_card.active")}
           >
             <Button
               size="sm"
               variant="secondary"
               onClick={() => props.onOpenBilling?.()}
             >
-              Mejorar plan
+              {t("danil.emails.manage")}
             </Button>
           </SettingsRow>
         </SettingsSection>
