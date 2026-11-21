@@ -3,6 +3,9 @@ import test from "node:test";
 import { boot, sleep } from "../helpers/jsdom-app.mjs";
 import { fleet, engine } from "../helpers/fake-relay.mjs";
 import { open, HOME, VM, remote, until } from "../helpers/desktop-account.mjs";
+import { installSessionsEdge } from "../helpers/web-sessions-edge.mjs";
+
+installSessionsEdge();
 
 const deferred = () => { let resolve; const promise = new Promise(r => { resolve = r; }); return { promise, resolve }; };
 const machine = id => ({ machine_id: id, name: id, state: "running", connection: "connected" });
@@ -102,7 +105,8 @@ for (const [status, code] of [[401, null], [403, null], [404, null], [501, null]
   f.relays.m1.setState("offline");
   assert.ok(await until(() => reads() > before)); await sleep(150);
   assert.deepEqual(await app.w.__TAURI_INTERNALS__.invoke("machine_list"), [], "una respuesta definitiva no conserva máquinas revocadas");
-  if (status === 401) assert.equal(app.w.document.querySelector('[data-tira]'), null, "la sesión invalidada desmonta la ventana");
+  // W4 (plan web varias sesiones): un 401 de un contexto deja sus máquinas fuera y la ventana abierta; solo la cookie muerta la cierra.
+  if (status === 401) assert.ok(app.w.document.querySelector('[data-tira]'), "un contexto vencido no desmonta la ventana");
   else assert.ok(app.w.document.querySelector('[data-machines-unavailable]'), "la falta de acceso o de servicio es visible");
   assert.deepEqual(app.failures, []);
 });

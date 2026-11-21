@@ -471,6 +471,7 @@
   "shell.workspaces.agent_created_elsewhere": "An agent created “{name}” in {org}. Add it from “Add workspace” on this computer.",
   "shell.workspaces.dismiss_removed": "Dismiss",
   "shell.profile.preferences": "Preferences",
+  "shell.workspaces.session_expired": "Sign in to this organization again: its session expired",
   "shell.workspaces.organization_required": "The organization needs attention",
   "shell.workspaces.machine_unresponsive": "The machine for {name} is not responding. Try again in a moment.",
   "shell.workspaces.machine_retry": "Retry",

@@ -12,7 +12,7 @@ const Return = lazy(() => import("./CheckoutReturn"));
 
 const pending = () => new URLSearchParams(window.location.search).has("checkout") || !!sessionStorage.getItem(BILLING_RETURN_KEY);
 
-export function windowBilling(transport: ReturnType<typeof platformTransport>, profile: PlatformProfile, organizations: OrganizationSelection, workspace: () => PlatformWorkspace | undefined, machine: BillingReturnProps["machine"]) {
+export function windowBilling(transport: ReturnType<typeof platformTransport>, profile: PlatformProfile, organizations: OrganizationSelection, workspace: () => PlatformWorkspace | undefined, machine: BillingReturnProps["machine"], transportFor: (org: string) => ReturnType<typeof platformTransport> = () => transport) {
   const org = profile.active_organization_id ?? null;
   async function select(id: string) {
     if (org === id) return;
@@ -34,7 +34,7 @@ export function windowBilling(transport: ReturnType<typeof platformTransport>, p
       return <Suspense><Plan api={billingV2(transport, org)} summaryHref={billingHref()} role={role} context={`${profile.id}:${org}`} /></Suspense>;
     } : undefined,
   };
-  const returned = () => <BillingReturnGate api={personApi} onActive={select} machine={machine} plan={id => billingV2(transport, id).organization()} />;
+  const returned = () => <BillingReturnGate api={personApi} onActive={select} machine={machine} plan={id => billingV2(transportFor(id), id).organization()} />;
   return { account, returned };
 }
 

@@ -38,8 +38,11 @@ function wire(hidden: () => ReadonlySet<string>, onSeeded: (ids: readonly string
     if (count > seenRemoved) setMenuNotice(true);
     seenRemoved = count;
   });
+  const catalog = capabilities().webRailCatalog;
   const availableFor = (org: string, context: string) => {
     revision();
+    // La web: el riel sale del catálogo de cada contexto, nunca de lo que sirve una máquina.
+    if (catalog) return catalog.workspaces(context);
     return sessionWorkspaceSource(groups()?.find((g) => g.context_id === context)?.plan ?? null, () => danilAvailableContext(org, context), () => accounts.available(org));
   };
   const refreshAccounts = () => accounts.refresh(groups() ?? [], sessions.send, (context) => records.get(context)?.person ?? null);
@@ -71,6 +74,8 @@ function wire(hidden: () => ReadonlySet<string>, onSeeded: (ids: readonly string
   });
   const records = new Map<string, { person: string | null; asking: boolean; sync: ReturnType<typeof createAddedSync> }>();
   const known = new Set<string>();
+  /** Lo agregado que se vio de cada contexto: una sesión vencida no puede releerlo y conserva sus cuadros. */
+  const lastAdded = new Map<string, ReadonlySet<string>>();
   const active = (id: string) => groups()?.find((g) => g.context_id === id);
   const store = prefsAddedStore(() => leerPref<unknown>(ADDED_KEY, {}), (all) => escribirPref(ADDED_KEY, all));
   const ensure = (g: ContextGroup) => {
@@ -104,11 +109,14 @@ function wire(hidden: () => ReadonlySet<string>, onSeeded: (ids: readonly string
     for (const id of accounts.known()) known.add(id);
     return groups()?.map((g): SessionRailGroup => {
     const empty_reason = sessions.emptyReason(g.context_id);
-    const available = empty_reason ? [] : availableFor(g.org, g.context_id);
+    // Una sesión vencida conserva sus cuadros: el grupo se queda con su aviso «Vuelve a entrar».
+    const available = empty_reason && empty_reason !== "session_expired" ? [] : availableFor(g.org, g.context_id);
     // Los ids sin atribuir solo evitan que reaparezcan como locales; no aportan filas al grupo.
     for (const w of danilAvailable(g.org) ?? []) known.add(w.id);
     for (const w of available ?? []) known.add(w.id);
-    return { ...g, available, free: accounts.free(g.context_id), empty_reason, added: records.get(g.context_id)?.sync.added() ?? null, person: records.get(g.context_id)?.person ?? null };
+    const added = records.get(g.context_id)?.sync.added() ?? null;
+    if (added) lastAdded.set(g.context_id, added);
+    return { ...g, available, free: accounts.free(g.context_id), empty_reason, added: added ?? (empty_reason === "session_expired" ? lastAdded.get(g.context_id) ?? null : null), person: records.get(g.context_id)?.person ?? null };
     }) ?? null;
   });
   createEffect(() => {
@@ -118,6 +126,12 @@ function wire(hidden: () => ReadonlySet<string>, onSeeded: (ids: readonly string
   createEffect(on(syncKey, () => {
     for (const g of rows() ?? []) if (g.available && g.person) void records.get(g.context_id)?.sync.sync();
   }));
+  if (catalog) {
+    const returned = createSessionReturn(async () => { await sessions.refresh(); await catalog.refresh(); });
+    returned();
+    window.addEventListener("focus", returned);
+    document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") returned(); });
+  }
   if (capabilities().nativeWindow) {
     // Las peticiones de la CLI (`account.request`); al arrancar se drenan las que llegaron antes.
     void sessions.refresh().then(() => requests.pump());
@@ -149,6 +163,23 @@ function wire(hidden: () => ReadonlySet<string>, onSeeded: (ids: readonly string
       return id;
     },
     add: (context: string, id: string) => records.get(context)?.sync.add(id),
+    /**
+     * Agrega un workspace de un contexto recién admitido. Espera a que el riel lea su persona
+     * (`GET /v1/identity/me` del contexto): un intento cada 150 ms durante 6 s, el plazo de una
+     * lectura del borde, y el conjunto se relee solo mientras el contexto aún no está.
+     */
+    addAdmitted: async (context: string, id: string) => {
+      for (let attempt = 0; attempt < 40 && !records.get(context)?.person; attempt++) {
+        if (!active(context) && attempt % 5 === 0) await sessions.refresh();
+        await new Promise((resolve) => setTimeout(resolve, 150));
+      }
+      const record = records.get(context);
+      if (!record?.person) throw { detail: "session_not_in_set" };
+      record.sync.add(id);
+      // Lo agregado queda en la cola local y se sube con reintentos (workspace-added-sync): no se pierde.
+      await record.sync.sync();
+      await catalog?.refresh();
+    },
     remove: (context: string, id: string) => records.get(context)?.sync.remove(id),
     refreshContext: (context: string) => { const group = active(context); return group ? readDanilContext(group.org, context, true) : Promise.resolve(); },
     refresh: () => { void refreshAccounts(); for (const g of groups() ?? []) void readDanilContext(g.org, g.context_id); },

@@ -5,7 +5,7 @@ import { createFreeRouterPlatform, platformScope, type EdgeSend, type EngineCall
 export type FreeRouterHost = {
   edge: EdgeSend;
   /** La persona (`/me.id`) y el listado de `/v1/workspaces` de la sesión de plataforma; `null` sin sesión. */
-  identity: () => Promise<{ sub: string; list: unknown } | null>;
+  identity: (workspace?: string) => Promise<{ sub: string; list: unknown } | null>;
   /** Las órdenes del motor que sirve ese workspace del motor; `null`, el motor de la máquina activa. */
   engine: (policy: FreeModelPolicy | null) => EngineCall;
 };
@@ -37,7 +37,7 @@ function routerFor(policy: FreeModelPolicy, h: FreeRouterHost): FreeRouterPlatfo
 
 /** El account activo de la sesión para este workspace del motor; sin él, el Router no se ofrece. */
 async function scopeOf(policy: FreeModelPolicy, h: FreeRouterHost): Promise<FreeRouterScope> {
-  const who = await h.identity().catch(() => null);
+  const who = await h.identity(policy.workspace_id).catch(() => null);
   const active = who && (who.list as { active_workspace_id?: unknown } | null)?.active_workspace_id;
   const scope = who && typeof active === "string" ? platformScope(who.list, active, who.sub, policy.workspace_id) : null;
   if (!scope) throw closed();

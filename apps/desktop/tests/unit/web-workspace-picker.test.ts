@@ -51,21 +51,23 @@ test("two signed-in identities and three organizations share a read-only picker"
     ["Proyecto", "Norte"], ["Diseño", ""], ["Proyecto", "Sur · a@example.test"], ["Proyecto", "Sur · b@example.test"],
   ]);
   assert.deepEqual(f.writes, []);
-  await f.picker.add(rows[3]);
-  assert.deepEqual(f.writes, [{ path: "workspaces/preferences/added/engine4", context: "C" }, { path: "workspaces/select", context: "C" }]);
-  assert.deepEqual(await f.picker.pinned(), [rows[3]]);
+  const applied: string[] = [];
+  await f.picker.add(rows[3], async row => { applied.push(`${row.context}:${row.engine_workspace_id}`); });
+  assert.deepEqual(applied, ["C:engine4"], "the rail adds it to its own context");
+  assert.deepEqual(f.writes, [], "the picker writes nothing global: no workspaces/select");
 });
 
-test("revocation after display, missing echo and refusal never confirm a pin", async () => {
+test("revocation after display and a refused add never confirm a pin", async () => {
   const f = fixture(), row = (await f.picker.catalog()).rows[3];
   f.families.pop();
-  await assert.rejects(f.picker.add(row), /not_available/);
-  assert.deepEqual(f.writes, []);
+  let applied = 0;
+  await assert.rejects(f.picker.add(row, async () => { applied++; }), /not_available/);
+  assert.equal(applied, 0);
   const other = (await f.picker.catalog()).rows[0];
   let confirmed = 0; f.picker.subscribe(() => { confirmed++; });
-  f.mismatch(); await assert.rejects(f.picker.add(other), /echo/);
-  f.deny(); await assert.rejects(f.picker.add(other), /revoked/);
+  await assert.rejects(f.picker.add(other, async () => { throw new Error("revoked"); }), /revoked/);
   assert.equal(confirmed, 0);
+  assert.deepEqual(f.writes, []);
 });
 
 test("a partial directory preserves verified rows and an additive return reopens once", async () => {
@@ -75,36 +77,6 @@ test("a partial directory preserves verified rows and an additive return reopens
   assert.equal(got.partial, true); assert.equal(got.rows.length, 2);
   assert.equal(f.picker.resume(), false); await f.picker.connect();
   assert.equal(f.connections(), 1); assert.equal(f.picker.resume(), true); assert.equal(f.picker.resume(), false);
-});
-
-test("a workspace without an engine opens by account ID and remains visible on a fresh mount", async () => {
-  let selected: string | null = null;
-  const writes: string[] = [];
-  const account = { account_id: "1000000000000", engine_workspace_id: null, name: "Danil" };
-  const headers = { "X-Danil-Session-Applied": "A", "X-Danil-Session-Applied-Org": "org_A" };
-  const make = () => webWorkspacePicker({
-    async call(path) {
-      if (path === "identity/sessions/catalog") return Response.json({version: 1, items: [
-        { session_id: "first", sub: "user_A", contexts: [{context_id: "A", org: "org_A", workspaces: [account]}] }
-      ]});
-      if (path === "workspaces") return Response.json({active_workspace_id: selected}, {headers});
-      throw new Error("unexpected request " + path);
-    },
-    async mutation(path, init) {
-      assert.equal(path, "workspaces/select");
-      assert.equal(new Headers(init?.headers).get("X-Danil-Session"), "A");
-      assert.equal(init?.method, "POST");
-      selected = JSON.parse(String(init.body)).workspace;
-      assert.equal(selected, account.account_id);
-      writes.push(path);
-      return Response.json({workspace: {id: selected, org: "org_A", name: "Danil", role: "owner"}}, {headers});
-    },
-  }, {store: {} as Storage});
-  const picker = make();
-  const row = (await picker.catalog()).rows[0];
-  await picker.add(row);
-  assert.deepEqual(writes, ["workspaces/select"]);
-  assert.deepEqual(await make().pinned(), [row]);
 });
 
 test("an organization without a context is listed once and admitted on its own", async () => {

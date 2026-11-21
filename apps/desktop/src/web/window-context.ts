@@ -1,57 +1,54 @@
-import type { machinesClient } from "@terminus/computers";
+import type { Machine, machinesClient } from "@terminus/computers";
 import type { Fleet } from "@terminus/fleet";
-import type { GroupAccount, GroupAccountCapabilities } from "../lib/group-account.ts";
+import type { GroupAccount } from "../lib/group-account.ts";
+import type { WebSessionCommands, WebSessionStatus } from "./web-session-contexts.ts";
 
 type Client = ReturnType<typeof machinesClient>;
-/** Solo publica la organización después de verificar el inventario con su eco. */
-export function windowContext(options: { legacy: Client; factory?: (context: string) => Client; account?: GroupAccountCapabilities["groupAccount"]; fleet: () => Fleet; revision: () => unknown; onContextsSettled?: (contexts: readonly string[]) => void }) {
-  let verified: GroupAccount | null = null;
-  let pending: GroupAccount | null = null;
+type Answer = Awaited<ReturnType<Client["list"]>>;
+export type ContextRow = { machine: Machine; group: GroupAccount };
+
+/**
+ * Todas las organizaciones del conjunto a la vez (plan web varias sesiones § 2.1): cada una con su
+ * cliente de máquinas, su `X-Danil-Session` y su eco. La organización de la ventana es la del
+ * workspace abierto (`active`), nunca un contexto por omisión del servidor.
+ */
+export function windowContext(options: { factory: (context: string) => Client; sessions: Pick<WebSessionCommands, "handle">; groups: () => readonly GroupAccount[]; fallback: () => string | null; active: () => string | null; fleet: () => Fleet; revision: () => unknown; onContextsSettled?: (contexts: readonly string[]) => void; onContextState?: (context: string, expired: boolean) => void }) {
   const clients = new Map<string, Client>();
-  function client(context?: string): Client {
-    if (!context) return options.legacy;
+  const groups = options.groups;
+  const info = (context: string) => groups().find((g) => g.context === context) ?? null;
+  function client(context?: string | null): Client {
+    if (!context) throw new Error("session_selection_required");
     let found = clients.get(context);
-    if (!found) {
-      if (!options.factory) throw new Error("context_transport_unavailable");
-      found = options.factory(context); clients.set(context, found);
-    }
+    if (!found) { found = options.factory(context); clients.set(context, found); }
     return found;
   }
   return {
-    client, current: () => verified,
-    info: (context: string) => pending?.context === context ? pending : verified?.context === context ? verified : null,
-    async inventory() {
-      const group = await options.account?.current(); pending = group ?? null;
-      const settled = options.account?.contexts?.();
-      if (settled !== undefined && settled !== null) {
-        if (verified?.context !== group?.context || verified && !settled.includes(verified.context)) verified = null;
-        options.fleet().pruneContexts(settled);
-        options.onContextsSettled?.(settled);
-      }
-      const legacy = !group && (!options.account || options.account.legacy?.());
-      if (!legacy && (!group || !options.factory)) { verified = null; return null; }
-      const answer = await client(group?.context).list();
-      if (answer.kind !== "ok") {
-        verified = null; pending = null;
-        if (group && (answer.kind === "unavailable" || answer.kind === "error" && answer.code === "session_echo_mismatch")) {
-          return { answer: await options.legacy.list(), group: null };
-        }
-        return { answer, group: null };
-      }
-      verified = group ?? null;
-      const rows = group ? answer.value.filter(row => row.kind === "personal" || row.organization_id === group.org) : answer.value;
-      return { answer: { ...answer, value: rows }, group: verified };
-    },
-    source: {
-      group: () => { options.revision(); return verified; },
-      workspaces: () => { options.revision(); return verified ? options.fleet().available(verified.org, verified.context) : null; },
-    },
+    client, info, groups,
+    current: () => { options.revision(); const active = options.active(); return active ? info(active) : null; },
+    /** Cada orden va al contexto del workspace abierto; la atención del riel, a todos. */
     engine<T extends { handle: (command: string, args?: Record<string, unknown>, options?: { headers?: HeadersInit }) => Promise<unknown> }>(engine: T) {
-      return { ...engine, handle: (command: string, args?: Record<string, unknown>, init?: { headers?: HeadersInit }) => {
+      return { handle: (command: string, args?: Record<string, unknown>, init?: { headers?: HeadersInit }) => {
         const headers = new Headers(init?.headers);
-        if (!headers.has("x-danil-context")) headers.set("x-danil-context", verified?.context ?? "");
+        if (command !== "list_workspace_attention" && !headers.has("x-danil-context")) headers.set("x-danil-context", options.active() ?? options.fallback() ?? "");
         return engine.handle(command, args, { ...init, headers });
       } };
+    },
+    /** Las máquinas de cada organización con su propio contexto; una que falla no borra las demás. */
+    async inventory(): Promise<{ answer: Answer; rows: ContextRow[] } | null> {
+      const status = await options.sessions.handle("danil_session_status").catch(() => null) as WebSessionStatus | null;
+      if (!status || status.state !== "connected") return null;
+      const settled = groups();
+      const ids = settled.map((g) => g.context);
+      for (const id of [...clients.keys()]) if (!ids.includes(id)) clients.delete(id);
+      options.fleet().pruneContexts(ids);
+      options.onContextsSettled?.(ids);
+      const answers = await Promise.all(settled.map(async (group) => ({ group, answer: await client(group.context).list().catch(() => ({ kind: "unavailable", status: 0 }) as Answer) })));
+      // Un 401 de un contexto marca solo su grupo; uno que vuelve a contestar se desmarca.
+      for (const { group, answer } of answers) if (answer.kind === "ok" || answer.kind === "unauthorized") options.onContextState?.(group.context, answer.kind === "unauthorized");
+      const ok = answers.filter((a) => a.answer.kind === "ok");
+      if (!ok.length && answers.length) return { answer: answers[0].answer, rows: [] };
+      const rows = ok.flatMap(({ group, answer }) => (answer.kind === "ok" ? answer.value : []).filter((row) => row.kind === "personal" || row.organization_id === group.org).map((machine) => ({ machine, group })));
+      return { answer: { kind: "ok", value: rows.map((r) => r.machine) } as Answer, rows };
     },
   };
 }

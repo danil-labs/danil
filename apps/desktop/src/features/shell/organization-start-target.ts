@@ -9,3 +9,14 @@ export function organizationStartTarget(groups: readonly SessionRailGroup[], wor
   }
   return null;
 }
+
+/** W6: el workspace de la URL y su dueño (`account` = sub del correo, `org`); el contexto se resuelve de nuevo, nunca se guarda. */
+export function requestedStartTarget(groups: readonly SessionRailGroup[], families: readonly { family: string; sub?: string }[], search: string) {
+  const params = new URLSearchParams(search);
+  const [id, org, sub] = ["workspace", "org", "account"].map((name) => params.get(name));
+  if (!id || !org || !sub) return null;
+  const family = families.find((f) => f.sub === sub)?.family;
+  const group = family ? groups.find((g) => g.org === org && g.family === family) : undefined;
+  // Solo un workspace del catálogo de ese contexto que la persona agregó: la URL no abre otra cosa.
+  return group?.available?.some((row) => row.id === id) && group.added?.has(id) ? { id, context: group.context_id } : null;
+}

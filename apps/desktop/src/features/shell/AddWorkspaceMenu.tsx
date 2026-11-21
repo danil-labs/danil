@@ -41,6 +41,12 @@ export default function AddWorkspaceMenu(props: {
   const { open, setOpen, step, setStep, context, setContext, query, setQuery, close } = createAddWorkspaceMenuState();
   if (resume) setOpen(true);
   createEffect(() => openRequestedSessionMenu(props.sessions, { context: setContext, step: setStep, open: setOpen }));
+  /** Del «+» web: lo agrega a `added` de su contexto y lo abre con su sesión, sin escribir nada global. */
+  async function addPicked(row: { context: string; engine_workspace_id?: string | null }) {
+    if (!row.engine_workspace_id) throw new Error("workspace_not_available");
+    await props.sessions.addAdmitted(row.context, row.engine_workspace_id);
+    props.onOpen(row.engine_workspace_id, row.context);
+  }
   const rows = () => props.hidden.filter((w) => matchesName(w.name, query()));
   // El abierto ya enseña su distintivo en su cuadro; los de Danil sin agregar también avisan.
   const waiting = () => topState([...props.hidden, ...(props.danil.toAdd ?? [])].filter((w) => w.id !== props.open).flatMap((w) => props.tasksOf(w.id)));
@@ -120,7 +126,7 @@ export default function AddWorkspaceMenu(props: {
             </div>
           </Show>
         </Show>
-        </>}>{web => <WebWorkspacePicker picker={web()} close={close} />}</Show>
+        </>}>{web => <WebWorkspacePicker picker={web()} close={close} add={addPicked} />}</Show>
       </PopoverContent>
     </Popover></>
   );

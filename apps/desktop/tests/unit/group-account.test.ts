@@ -143,31 +143,42 @@ test("web machine inventory and tickets use cookie context, require echo before 
   assert.equal(reads, before);
 });
 
-test("web grouped source only exposes verified inventory and exact scoped workspace listings; legacy echo fallback stays ungrouped", async () => {
+test("the web window lists the machines of every context of the set, each with its own client", async () => {
   const { windowContext } = await import("../../src/web/window-context.ts");
-  const group = { context: "ctx", org: "org", name: "Org", plan: "teams" };
-  const fleet = { available: (org: string, context: string) => { assert.equal(org, "org"); assert.equal(context, "ctx"); return [{ id: "scoped", name: "Scoped" }]; } } as never;
-  let legacyReads = 0;
-  let answer: unknown = { kind: "ok", value: [{ machine_id: "m", organization_id: "org", state: "online" }, { machine_id: "alien", organization_id: "other", state: "online" }] };
-  const source = windowContext({ legacy: { list: async () => { legacyReads++; return { kind: "ok", value: [] }; } } as never, factory: () => ({ list: async () => answer }) as never, account: { current: async () => group, send: async () => ({ status: 404 }) }, fleet: () => fleet, revision: () => {} });
-  assert.equal(source.source.group(), null);
+  const status = { state: "connected", sessions: [{ family: "s", sub: "u", email: null, contexts: [{ context_id: "p", org: "org_p", org_name: "P", plan: "pro" }, { context_id: "x", org: "org_x", org_name: "X", plan: "pro" }] }] };
+  const asked: string[] = [];
+  const pruned: string[][] = [];
+  let active: string | null = null;
+  const groups = () => status.sessions.flatMap(f => f.contexts.map(c => ({ context: c.context_id, org: c.org, name: c.org_name, plan: c.plan })));
+  const source = windowContext({ sessions: { handle: async () => status }, groups, fallback: () => groups()[0]?.context ?? null, active: () => active,
+    factory: (context) => ({ list: async () => { asked.push(context); return { kind: "ok", value: [{ machine_id: `m_${context}`, organization_id: `org_${context}`, state: "online" }, { machine_id: "alien", organization_id: "other", state: "online" }] }; } }) as never,
+    fleet: () => ({ pruneContexts: (ids: Iterable<string>) => pruned.push([...ids]) }) as never, revision: () => {} });
   const result = await source.inventory();
-  assert.deepEqual(result?.answer.kind === "ok" ? result.answer.value.map(row => row.machine_id) : [], ["m"]);
-  assert.deepEqual(source.source.group(), group);
-  assert.deepEqual(source.source.workspaces(), [{ id: "scoped", name: "Scoped" }]);
+  assert.deepEqual(asked.sort(), ["p", "x"]);
+  assert.deepEqual(result?.rows.map(r => [r.machine.machine_id, r.group.context]), [["m_p", "p"], ["m_x", "x"]]);
+  assert.deepEqual(pruned, [["p", "x"]]);
+  assert.equal(source.info("x")?.org, "org_x");
+  assert.equal(source.current(), null);
+  active = "x";
+  assert.equal(source.current()?.context, "x");
   const calls: Headers[] = [];
-  const engine = source.engine({ handle: async (_command, _args, options) => { calls.push(new Headers(options?.headers)); return []; } });
+  const engine = source.engine({ handle: async (_c, _a, options) => { calls.push(new Headers(options?.headers)); return []; } });
   await engine.handle("list_workspaces");
-  await engine.handle("read_task", {}, { headers: { "x-danil-context": "captured" } });
-  assert.equal(calls[0].get("x-danil-context"), "ctx");
-  assert.equal(calls[1].get("x-danil-context"), "captured");
-  answer = { kind: "error", status: null, code: "session_echo_mismatch" };
-  await source.inventory();
-  assert.equal(source.source.group(), null);
-  assert.equal(source.source.workspaces(), null);
-  assert.equal(legacyReads, 1);
-  await engine.handle("list_workspaces");
-  assert.equal(calls[2].get("x-danil-context"), "");
+  await engine.handle("read_task", {}, { headers: { "x-danil-context": "p" } });
+  await engine.handle("list_workspace_attention");
+  assert.deepEqual(calls.map(h => h.get("x-danil-context")), ["x", "p", null], "the open workspace's context; attention of every context");
+});
+
+test("one organization that fails keeps the machines of the others; a dead cookie lists nothing", async () => {
+  const { windowContext } = await import("../../src/web/window-context.ts");
+  let status: unknown = { state: "connected", sessions: [{ family: "s", sub: "u", email: null, contexts: [{ context_id: "p", org: "org_p", org_name: "P", plan: "pro" }, { context_id: "x", org: "org_x", org_name: "X", plan: "pro" }] }] };
+  const groups = () => ((status as { sessions?: { contexts: { context_id: string; org: string; org_name: string; plan: string }[] }[] }).sessions ?? []).flatMap(f => f.contexts.map(c => ({ context: c.context_id, org: c.org, name: c.org_name, plan: c.plan })));
+  const source = windowContext({ sessions: { handle: async () => status }, groups, fallback: () => null, active: () => null,
+    factory: (context) => ({ list: async () => context === "x" ? { kind: "error", status: 503 } : { kind: "ok", value: [{ machine_id: "m", organization_id: "org_p", state: "online" }] } }) as never,
+    fleet: () => ({ pruneContexts: () => {} }) as never, revision: () => {} });
+  assert.deepEqual((await source.inventory())?.rows.map(r => r.group.context), ["p"]);
+  status = { state: "disconnected", sessions: [] };
+  assert.equal(await source.inventory(), null);
 });
 
 test('successful scoped redemption invalidates the existing organization balance event, unavailable does not', async (t) => {
@@ -184,45 +195,3 @@ test('successful scoped redemption invalidates the existing organization balance
   assert.equal(changed, 1);
 });
 
-test("web GC uses every settled context including inactive ones, never an erroneous or malformed sessions response", async () => {
-  const { webGroupAccount } = await import("../../src/web/group-account.ts");
-  const { windowContext } = await import("../../src/web/window-context.ts");
-  let body: unknown = { default_context: "selected", items: [{ contexts: [{ context_id: "selected", org: "A" }, { context_id: "inactive", org: "B" }] }] };
-  let failure: number | null = null;
-  const account = webGroupAccount({ call: async () => { if (failure) throw { status: failure }; return new Response(JSON.stringify(body)); }, mutation: async () => new Response() });
-  const pruned: string[][] = [];
-  const source = windowContext({ legacy: { list: async () => ({ kind: "ok", value: [] }) } as never, factory: () => ({ list: async () => ({ kind: "error", status: 503 }) }) as never,
-    account, fleet: () => ({ pruneContexts: ids => pruned.push([...ids]) }) as never, revision: () => {} });
-  await source.inventory();
-  assert.deepEqual(pruned, [["selected", "inactive"]]);
-  for (failure of [404, 501, 503]) { await source.inventory(); assert.equal(account.contexts(), null); }
-  failure = null; body = { items: [{ contexts: "malformed" }] };
-  await source.inventory(); assert.equal(account.contexts(), null);
-  assert.equal(pruned.length, 1);
-  body = { items: [] };
-  await source.inventory();
-  assert.deepEqual(pruned, [["selected", "inactive"], []]);
-});
-
-test("revoked web group disappears before its replacement machine inventory answers", async () => {
-  const { windowContext } = await import("../../src/web/window-context.ts");
-  let group = { context: "old", org: "A", name: "A", plan: "teams" };
-  let release!: () => void;
-  let delayed = false;
-  let changes = 0;
-  const source = windowContext({ legacy: {} as never, factory: () => ({ list: async () => {
-    if (delayed) await new Promise<void>(resolve => { release = resolve; });
-    return { kind: "ok", value: [] };
-  } }) as never, account: { current: async () => group, contexts: () => [group.context], send: async () => ({ status: 404 }) },
-    fleet: () => ({ pruneContexts: () => {}, available: () => null }) as never, revision: () => {}, onContextsSettled: () => { changes++; } });
-  await source.inventory();
-  assert.equal(source.source.group()?.context, "old");
-  group = { ...group, context: "new", org: "B", name: "B" }; delayed = true;
-  const pending = source.inventory();
-  await new Promise(resolve => setTimeout(resolve, 0));
-  assert.equal(changes, 2);
-  assert.equal(source.source.group(), null);
-  assert.equal(source.source.workspaces(), null);
-  release(); await pending;
-  assert.equal(source.source.group()?.context, "new");
-});

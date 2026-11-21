@@ -49,12 +49,6 @@ test("cookie session reads profile and all workspace pages, selects with CSRF an
     assert.equal(url.origin, "https://api.danil.ai");
     if (url.pathname.endsWith("/me")) return Response.json({ id: "user_A", name: "A", workspace: "11", organizations: [] });
     if (url.pathname.endsWith("/csrf")) return Response.json({ csrf_token: "bound-to-session" });
-    if (url.pathname.endsWith("/select")) {
-      assert.equal(r.headers.get("x-csrf-token"), "bound-to-session");
-      assert.equal(r.headers.get("idempotency-key"), "selection-1");
-      assert.deepEqual(await r.json(), { workspace: "9007199254740993" });
-      return Response.json({ workspace: { id: "9007199254740993", org: "org_A", name: "Workspace", role: "owner" } });
-    }
     if (url.pathname.endsWith("/logout")) {
       assert.equal(r.headers.get("x-csrf-token"), "bound-to-session");
       return new Response(null, { status: 204 });
@@ -66,9 +60,8 @@ test("cookie session reads profile and all workspace pages, selects with CSRF an
   assert.equal(new URL(api.loginUrl("https://app.danil.ai/")).searchParams.get("return_to"), "https://app.danil.ai/");
   assert.equal((await api.me()).id, "user_A");
   assert.deepEqual((await api.workspaces()).map(w => w.id), ["11", "9007199254740993"]);
-  assert.equal((await api.select("9007199254740993", "selection-1")).workspace.id, "9007199254740993");
   await api.logout();
-  assert.equal(calls.filter(r => r.method === "POST").length, 2);
+  assert.equal(calls.filter(r => r.method === "POST").length, 1);
 });
 
 for (const status of [401, 403, 429, 503]) test(`HTTP ${status} stays distinct, without login or legacy fallback`, async () => {
