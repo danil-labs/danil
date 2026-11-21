@@ -192,7 +192,8 @@ test('a workspace of the organization machine (placement) goes to its hosted mac
       return super.send(data);
     }
   };
-  const app = await boot('listo', 'web-multi-session-hosted', {}, undefined, {}, { web: true, beforeImport(w) { w.WebSocket = Socket; globalThis.WebSocket = Socket; } });
+  // La Mac quedó elegida en «Ejecutar en» en una visita anterior, cuando la regla todavía la aceptaba.
+  const app = await boot('listo', 'web-multi-session-hosted', {}, undefined, {}, { web: true, beforeImport(w) { w.localStorage.setItem('danil.web.user_a.preferences.machines.run_on', JSON.stringify({ wx1: 'mxmac' })); w.WebSocket = Socket; globalThis.WebSocket = Socket; } });
   t.after(() => app.w.dispatchEvent(new app.w.Event('pagehide')));
   const doc = app.w.document;
   await until(() => (tile(doc, 'wx1') || doc.querySelector('[data-org-stack="org_x"]')) && fake.sockets.length >= 3, 'rail and the three machines');
@@ -205,6 +206,9 @@ test('a workspace of the organization machine (placement) goes to its hosted mac
   const asked = sent.filter(s => ['list_live_sessions', 'list_projects', 'list_models'].includes(s.command) && s.workspace === 'wx1');
   assert.ok(asked.length && asked.every(s => s.machine === 'mxhosted'), `X's workspace goes to its hosted machine: ${JSON.stringify(asked)}`);
   const list = await app.w.__TAURI_INTERNALS__.invoke('machine_list');
+  const mac = list.find(m => m.id === 'mxmac');
+  assert.ok(mac && mac.hosts === false && mac.refuses === true && !mac.materializes, `a connected Mac does not host an organization_machine workspace: ${JSON.stringify(mac)}`);
+  await until(() => !doc.body.textContent.includes('Mac.domain.name · Org X¿') && ![...doc.querySelectorAll('[data-create-on], [data-run-on]')].some(e => e.textContent.includes('Mac.domain.name')), 'the remembered Mac is dropped from the composer');
   assert.equal(list.find(m => m.active)?.id ?? null, 'mxhosted', `the header and «Ejecutar en» pick the hosted machine: ${JSON.stringify(list)}`);
 });
 

@@ -9,7 +9,7 @@ import { knownMachineName } from "./known-names";
 import { isMac } from "../../lib/window";
 import { capabilities } from "../../lib/platform";
 
-export { runsWorkspace } from "./runs-workspace";
+import { runsWorkspace } from "./runs-workspace"; export { runsWorkspace };
 
 /**
  * `machine_list`: `hosts` es si tiene el workspace abierto (`null`, que no se sabe
@@ -63,11 +63,11 @@ const [elegidas, guardarElegidas] = createRoot(() =>
 /** El destino recordado, antes de comprobar su presencia en el inventario. */
 export const rememberedRunOn = (workspace: string | null): string | null => workspace ? elegidas()[workspace] ?? null : null;
 
-/** La máquina elegida para `workspace`, si sigue en la lista y puede correr una tarea de `project`. */
+/** La máquina elegida para `workspace`, si sigue en la lista, sirve el workspace y puede correr una tarea de `project`. */
 export function runOn(workspace: string | null, project?: ProjectPlace): string | null {
   const id = rememberedRunOn(workspace);
   const machine = id ? machines().find((m) => m.id === id) : undefined;
-  if (!id || machine?.active || (machine && unavailable(machine, project))) return null;
+  if (!id || machine?.active || (machine && (unavailable(machine, project) || !runsWorkspace(machine)))) return null;
   return cloudInventory() === "initial" || machines().length === 0 || machine ? id : null;
 }
 
