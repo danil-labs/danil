@@ -11,6 +11,7 @@ import { SessionLoading } from './auth/SessionLoading';
 import { signInError, WorkosAuthPage } from './auth/workos';
 import { webOrganizations } from './organization-context';
 import { webWorkspacePicker } from './workspace-picker';
+import { webCredentialSource } from './credentials-source';
 import { activeGroupCredits, contextMachines, type PlatformProfile, PlatformSessionError, type PlatformWorkspace, platformSession, platformTransport } from './platform-session';
 import { type CapabilitiesSnapshot, readCapabilities, supports } from './service-capabilities';
 import type { WebSessionDeployment } from './session-config';
@@ -239,7 +240,7 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
         // El Free router de plataforma con la cookie de esta sesión y su workspace activo (`/me.workspace`).
         setFreeRouterHost({ edge: freeRouterWebEdge(transport), engine: policy => freeRouterEngine(policy ? freeModelScope(policy) : undefined),
           identity: async () => (person ? { sub: person.id, list: { active_workspace_id: person.workspace, items: rows() } } : null) });
-        windowApp = mountWindow({ machines, contextMachines: context => contextMachines(`${options.origin}/v1`, transport, __DANIL_WEB_RELAY_ORIGINS__, context), permits, relayOrigin: __DANIL_WEB_RELAY_ORIGINS__[0],
+        windowApp = mountWindow({ machines, contextMachines: context => contextMachines(`${options.origin}/v1`, transport, __DANIL_WEB_RELAY_ORIGINS__, context), permits, relayOrigin: __DANIL_WEB_RELAY_ORIGINS__[0], credentials: webCredentialSource(options.origin, transport),
           profile: startup.accountProfile(lifetime.signal), onUnauthorized: expired,
           onUnavailable: () => { setError('web.platform.unavailable'); gate(); later(); },
           services: {

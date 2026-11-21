@@ -16,7 +16,7 @@ import { selectEngineWorkspace, webMachineCall } from "./workspace-runtime";
 import { windowContext } from "./window-context";
 
 declare const __TERMINUS_VERSION__: string;
-type Base = { billing: ReturnType<typeof import("./window-billing").windowBilling>; contextMachines?: (context: string) => ReturnType<typeof machinesClient>; machines: ReturnType<typeof machinesClient>; relayOrigin: string; permits: (name: string) => boolean; organizations?: Capabilities["organizations"]; promo?: Capabilities["webPromo"]; groupAccount?: Capabilities["groupAccount"]; reauth?: Capabilities["webReauth"]; preparing?: () => boolean; onUnauthorized: () => void; profile: AccountProfileSource; services: Pick<Capabilities, "webWorkspaces" | "webWorkspacePicker" | "danilCredits">; onUnavailable: () => void; };
+type Base = { billing: ReturnType<typeof import("./window-billing").windowBilling>; contextMachines?: (context: string) => ReturnType<typeof machinesClient>; machines: ReturnType<typeof machinesClient>; relayOrigin: string; credentials?: Capabilities["accountCredentials"]; permits: (name: string) => boolean; organizations?: Capabilities["organizations"]; promo?: Capabilities["webPromo"]; groupAccount?: Capabilities["groupAccount"]; reauth?: Capabilities["webReauth"]; preparing?: () => boolean; onUnauthorized: () => void; profile: AccountProfileSource; services: Pick<Capabilities, "webWorkspaces" | "webWorkspacePicker" | "danilCredits">; onUnavailable: () => void; };
 const Picker = lazy(() => import("../features/machines/MachinePicker").then(m => ({ default: m.MachinePicker })));
 const AccountMachines = lazy(() => import("../features/machines/AccountMachines"));
 /** Another machine's slice changed: the window rereads just that. */
@@ -174,6 +174,7 @@ export function mountWindow(base: Base, mounted: Mounted) {
       return fleet.license(scope.current()?.context);
     },
     accountComputers: { list: async () => { const answer = await scope.client(scope.current()?.context).list(); return answer.kind === "ok" ? { kind: "ok", value: answer.value.map(machineToComputer) } : answer.kind === "unavailable" ? { kind: "error", status: answer.status } : answer; }, onRenamed: () => {}, subscribe: changed => { window.addEventListener("harness:machines", changed); return () => window.removeEventListener("harness:machines", changed); } },
+    accountCredentials: base.credentials,
     webAccounts: mounted.webAccounts,
     webRailSource: scope.source, webPromo: base.promo, groupAccount: base.groupAccount, webReauth: base.reauth,
     retryMachines: () => { fleet.retry(); void refresh(); },
