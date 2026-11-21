@@ -75,11 +75,9 @@ export function WorkspaceScreen(props: { id: string }): JSX.Element {
   const targetMachine = createMemo(() => {
     const ws = currentWorkspace();
     const list = machines() ?? [];
-    if (ws?.org) {
-      const match = list.find((m) => m.organization_id === ws.org);
-      if (match) return match;
-    }
-    return list[0];
+    // La máquina de la organización del workspace; nunca la de otra organización.
+    if (!ws?.org) return undefined;
+    return list.find((m) => m.organization_id === ws.org);
   });
 
   const conn = createMemo<MachineConnection | undefined>(() => {
