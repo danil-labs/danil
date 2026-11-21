@@ -17,18 +17,18 @@ La red del borde está centralizada en `src/http.ts` con reintentos automáticos
 | `@danil/feature-machines` | `stopMachine` | `POST /v1/machines/{id}/stop` | Apagado de una máquina remota. |
 | `@danil/feature-machines` | `createMachineTicket` | `POST /v1/machines/{id}/tickets` | Emisión de ticket de conexión de un solo uso para el transporte relay. |
 | `@danil/feature-machines` | `getOperation` | `GET /v1/operations/{id}` | Sondeo de estado y progreso de operaciones asíncronas. |
-| `@danil/feature-workspaces` | `getOrganizations` | `GET /identity/organizations` | Consulta de organizaciones / planes accesibles por el usuario. |
-| `@danil/feature-workspaces` | `selectOrganization` | `POST /identity/organizations/select` | Selección de organización activa. |
-| `@danil/feature-workspaces` | `getWorkspaces` | `GET /workspaces` | Consulta de la lista de workspaces de la organización. |
-| `@danil/feature-workspaces` | `createWorkspace` | `POST /workspaces` | Creación de un nuevo workspace. |
-| `@danil/feature-workspaces` | `selectWorkspace` | `POST /workspaces/select` | Selección del workspace activo. |
+| `@danil/feature-workspaces` | `getOrganizations` | `GET /v1/identity/organizations` | Consulta de organizaciones / planes accesibles por el usuario. |
+| `@danil/feature-workspaces` | `selectOrganization` | `POST /v1/identity/organizations/select` | Selección de organización activa. |
+| `@danil/feature-workspaces` | `getWorkspaces` | `GET /v1/workspaces` | Consulta de la lista de workspaces de la organización. |
+| `@danil/feature-workspaces` | `createWorkspace` | `POST /v1/workspaces` | Creación de un nuevo workspace. |
+| `@danil/feature-workspaces` | `selectWorkspace` | `POST /v1/workspaces/select` | Selección del workspace activo. |
 | `@danil/feature-projects` | (Modelo `Workspace`) | Contexto de workspace | Tipos derivados del modelo OpenAPI de workspace. |
 | `@danil/feature-ai-credentials` | `getWorkspaceAccounts` | `GET /v1/credentials/workspaces/{workspace_id}/accounts` | Consulta unificada y cacheada de cuentas configuradas y máquinas destinatarias (`recipients`). |
 | `@danil/feature-ai-credentials` | `putWorkspaceAccount` | `PUT /v1/credentials/workspaces/{workspace_id}/accounts` | Alta o actualización de credencial sellada con WebCrypto (`TERMINUS-SECRET/1`). |
 | `@danil/feature-ai-credentials` | `deleteWorkspaceAccount` | `DELETE /v1/credentials/workspaces/{workspace_id}/accounts/{credential_id}` | Eliminación de una credencial configurada. |
 | `@danil/feature-ai-credentials` | `removeWorkspaceAccountMachine` | `DELETE /v1/credentials/workspaces/{workspace_id}/accounts/{credential_id}/machines/{machine_id}` | Retiro de acceso de una credencial en una máquina específica. |
 | `@danil/feature-ai-credentials` | `restoreWorkspaceAccountMachine` | `POST /v1/credentials/workspaces/{workspace_id}/accounts/{credential_id}/machines/{machine_id}/restore` | Restauración de acceso de una credencial en una máquina específica. |
-| `@danil/feature-account` | (Perfil y plan) | `/v1` | Consulta de perfil de usuario y resumen del plan (solo lectura). |
+| `@danil/feature-account` | `getMe` | `GET /v1/identity/me` | Consulta de perfil de usuario y resumen del plan (solo lectura). |
 
 ---
 
