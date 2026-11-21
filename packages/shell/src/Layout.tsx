@@ -1,4 +1,4 @@
-import { type JSX } from "solid-js";
+import { createEffect, createSignal, type JSX } from "solid-js";
 import { Rail, type OrganizationItem } from "./Rail.tsx";
 import { RailErrorBoundary, MainErrorBoundary } from "./ErrorBoundary.tsx";
 import { RouteView, RailSlot } from "./routes.tsx";
@@ -14,11 +14,20 @@ export interface LayoutProps {
 export function Layout(props: LayoutProps): JSX.Element {
   const router = useRouter();
 
+  const [lastWorkspaceId, setLastWorkspaceId] = createSignal<string | undefined>(props.activeWorkspaceId);
+
+  createEffect(() => {
+    const r = router.route();
+    if (r.name === "workspace" && r.id) {
+      setLastWorkspaceId(r.id);
+    }
+  });
+
   const currentRouteName = () => router.route().name;
 
   const currentWorkspaceId = () => {
     const r = router.route();
-    return r.name === "workspace" ? r.id : props.activeWorkspaceId;
+    return r.name === "workspace" ? r.id : (lastWorkspaceId() ?? props.activeWorkspaceId);
   };
 
   const handleSelectWorkspace = (id: string) => {
@@ -36,8 +45,6 @@ export function Layout(props: LayoutProps): JSX.Element {
         width: "100vw",
         height: "100vh",
         overflow: "hidden",
-        background: "#0e0f12",
-        color: "#ffffff",
       }}
     >
       {/* Riel con ErrorBoundary por zona */}
@@ -64,11 +71,15 @@ export function Layout(props: LayoutProps): JSX.Element {
           height: "100%",
           overflow: "auto",
           position: "relative",
-          background: "#0e0f12",
         }}
       >
         <MainErrorBoundary>
-          {props.children ?? <RouteView route={router.route()} />}
+          {props.children ?? (
+            <RouteView
+              route={router.route()}
+              activeWorkspaceId={currentWorkspaceId()}
+            />
+          )}
         </MainErrorBoundary>
       </main>
     </div>

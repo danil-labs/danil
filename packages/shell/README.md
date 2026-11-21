@@ -1,33 +1,28 @@
 # @danil/shell
 
-Shell de la aplicación Danil: router, arranque lineal, riel vertical y layout principal.
+Shell de aplicación que orquesta la composición de features, riel de navegación y enrutamiento principal de Danil (Web y Desktop).
 
-## Arquitectura
+## Principios y reglas
 
-- **Arranque lineal (B-030, B-031)**:
-  1. `session` (`useSession`): sin sesión muestra pantalla de entrada (enlace a `/login` en Web; botón que llama a `session.add` en Desk).
-  2. Con sesión válida: monta el layout con riel + área principal. Sin estampida de 15 llamadas paralelas en el arranque; cada pantalla solicita sus datos cuando se monta.
-- **Router de estados mínimo**:
-  - Rutas soportadas: `"machines"`, `"workspace/:id"`, `"account"`.
-  - Sin dependencias externas pesadas, basado en señales de SolidJS con sincronización de historial del navegador.
-- **Riel vertical (DS1 v2)**:
-  - Agrupado por organización: un «stack» por organización con su logo que se despliega hacia abajo.
-  - De cara al cliente habla en nombres de plan («Personal», «Team», «Enterprise»), nunca la palabra «Organización» (B-008, B-009).
-  - Botón «+» con solo «Agregar workspace».
-  - Recibe sus datos vía props/slots desde las features.
-- **ErrorBoundary por zona**:
-  - `RailErrorBoundary`: protege la navegación lateral.
-  - `MainErrorBoundary`: protege el área principal de contenido.
-- **Composición de features (R3)**:
-  - `src/routes.tsx` es el único archivo del shell que compone pantallas de `@danil/feature-*`.
+- **Regla R3 (Único punto de composición)**: `packages/shell/src/routes.tsx` es el único archivo del shell que importa paquetes `@danil/feature-*`. Ningún otro componente interno (Layout, Rail, router) accede directamente a las features.
+- **Borde `/v1`**: Todas las pantallas consumen exclusivamente las APIs del borde `/v1` provistas por `@danil/platform-client` o el motor mediante sus queries y contratos.
+- **Estilos del sistema**: No se introducen estilos en línea con colores hexadecimales arbitrarios; se respetan las clases y variables del sistema (`@danil/ui` y `global.css`).
 
-## Piezas de features pendientes de implementación
+## Riel de navegación
 
-- `@danil/feature-machines`: pantallas completas pendientes de implementación en su paquete.
-- `@danil/feature-workspaces`: pantallas completas pendientes de implementación en su paquete.
-- `@danil/feature-account`: pantallas completas pendientes de implementación en su paquete.
-- `@danil/feature-projects`: pantallas completas pendientes de implementación en su paquete.
-- `@danil/feature-chat`: pantallas completas pendientes de implementación en su paquete.
-- `@danil/feature-terminal`: pantallas completas pendientes de implementación en su paquete.
-- `@danil/feature-files`: pantallas completas pendientes de implementación en su paquete.
-- `@danil/feature-ai-credentials`: pantallas completas pendientes de implementación en su paquete.
+El riel (`Layout.tsx`) aloja la navegación global dentro de un `RailErrorBoundary`:
+- **Espacios de trabajo**: Monta `RailGroups` de `@danil/feature-workspaces` vía el slot `RailSlot` exportado por `routes.tsx`. Muestra la agrupación por plan («Personal», «Team», «Enterprise») y el botón «+» que abre `CreateWorkspaceDialog`.
+- **Navegación fija**: Mantiene los accesos fijos a Máquinas (`/machines`) y Cuenta (`/account`).
+
+## Rutas y composición de pantallas
+
+| Ruta | Feature montada | Origen de datos | Estado |
+|---|---|---|---|
+| `machines` (`/machines`) | `MachinesScreen` (`@danil/feature-machines`) | `GET /v1/machines` vía `useMachines()` | Activa |
+| `workspace/:id` (`/workspace/:id`) | Vista con pestañas (`Tabs` de `@danil/ui`) componiendo pantallas de espacio: | — | Activa |
+| ↳ Pestaña **Proyectos** | `ProjectsScreen` (`@danil/feature-projects`) | `useProjects()` pasando `workspaceId` y conexión de máquina | Activa |
+| ↳ Pestaña **Chat** | `ChatScreen` (`@danil/feature-chat`) | `useSessionHistory()` y stream de turnos de agente con `sessionId` / `workspaceId` | Activa |
+| ↳ Pestaña **Archivos** | `FilesScreen` (`@danil/feature-files`) | `useTree()` y lector de archivos pasando `workspaceId` | Activa |
+| ↳ Pestaña **Terminal** | `TerminalScreen` (`@danil/feature-terminal`) | Pendiente: `@danil/feature-terminal` no exporta aún pantalla en su índice; monta `PlaceholderScreen` | Pendiente |
+| `ai-credentials` (`/ai-credentials`) | `AiCredentialsScreen` (`@danil/feature-ai-credentials`) | `useWorkspaceAccounts()` y `useProviders()` con el `workspaceId` activo | Activa |
+| `account` (`/account`) | `AccountScreen` (`@danil/feature-account`) | Pendiente: `@danil/feature-account` no exporta aún pantalla en su índice; monta `PlaceholderScreen` | Pendiente |
