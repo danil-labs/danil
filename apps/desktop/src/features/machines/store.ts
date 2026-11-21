@@ -118,7 +118,10 @@ export function setTaskRowMachine(lookup: (id: string) => string | null | undefi
  * no la hay, su prefijo.
  */
 export function machineOf(id: string | null | undefined) {
-  const machine = id ? (taskRowMachine(id) ?? capabilities().taskMachine?.(id) ?? null) : null;
+  // En la web no hay motor local: sin fila ni prefijo, lo que pide la pantalla (una cuenta de IA, por ejemplo)
+  // va a la máquina de la ventana (la VM de la nube), no a un «local» que no existe.
+  const web = !capabilities().nativeWindow;
+  const machine = id ? (taskRowMachine(id) ?? capabilities().taskMachine?.(id) ?? (web ? capabilities().windowMachine?.()?.id : null) ?? null) : null;
   return machine ? { headers: { "x-terminus-machine": machine } } : undefined;
 }
 

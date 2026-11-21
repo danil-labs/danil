@@ -105,6 +105,11 @@ export function mountWindow(base: Base, mounted: Mounted) {
     revision();
     return fleet.machines().length > 1;
   };
+  // El chip de la VM en Cuentas de IA se ve aunque sea la única: «Ejecutar en» sí pide más de una.
+  const any = () => {
+    revision();
+    return fleet.machines().length > 0;
+  };
   async function update() {
     if (stopped) return false;
     if (!base.permits("machines")) { setMissing(true); fleet.setMachines([]); return false; }
@@ -164,7 +169,7 @@ export function mountWindow(base: Base, mounted: Mounted) {
         </Suspense>
       ) : null,
     accountMachines: props =>
-      several() ? (
+      any() ? (
         <Suspense fallback={null}>
           <AccountMachines {...props} machines={machines} />
         </Suspense>
