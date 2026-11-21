@@ -693,6 +693,9 @@ importers:
       '@danil/feature-projects':
         specifier: workspace:*
         version: link:../features/projects
+      '@danil/feature-settings':
+        specifier: workspace:*
+        version: link:../features/settings
       '@danil/feature-terminal':
         specifier: workspace:*
         version: link:../features/terminal

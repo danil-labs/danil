@@ -1,4 +1,6 @@
-import type { JSX } from "solid-js";
+import { createSignal, lazy, Show, Suspense, type JSX } from "solid-js";
+
+const SettingsModal = lazy(() => import("@danil/feature-settings").then((m) => ({ default: m.SettingsModal })));
 import { Rail } from "./Rail.tsx";
 import { RailErrorBoundary, MainErrorBoundary } from "./ErrorBoundary.tsx";
 import { RouteView, RailSlot } from "./routes.tsx";
@@ -13,6 +15,7 @@ export interface LayoutProps {
 
 export function Layout(props: LayoutProps): JSX.Element {
   const router = useRouter();
+  const [settings, setSettings] = createSignal<string | null>(null);
 
   const currentRouteName = () => router.route().name;
 
@@ -37,6 +40,7 @@ export function Layout(props: LayoutProps): JSX.Element {
         <Rail
           activeRoute={currentRouteName()}
           onSelectRoute={handleSelectRoute}
+          onSettings={() => setSettings("account")}
           slots={{
             stacks: (
               <RailSlot
@@ -48,6 +52,14 @@ export function Layout(props: LayoutProps): JSX.Element {
           }}
         />
       </RailErrorBoundary>
+
+      <Show when={settings()}>
+        {(panel) => (
+          <Suspense>
+            <SettingsModal open panel={panel()} onClose={() => setSettings(null)} />
+          </Suspense>
+        )}
+      </Show>
 
       {/* Área principal con ErrorBoundary por zona */}
       <main class="relative h-full flex-1 overflow-auto bg-bg">
