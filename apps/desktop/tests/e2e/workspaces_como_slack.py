@@ -23,6 +23,11 @@ Variables:
                             secreto más `workos_api_key`. Para máquinas sin Secrets Manager.
   WORKSPACES_SLACK_OUT      carpeta de evidencia (por omisión ~/work/qa/workspaces-como-slack/<UTC>).
   WORKSPACES_SLACK_CLICK_S  umbral de «al instante» por clic (por omisión 1.5, R1).
+  DANIL_WEB_DIST            carpeta `dist-web` de una rama. Playwright contesta las peticiones a
+                            DANIL_WEB_URL con esos archivos (index.html para rutas sin archivo,
+                            como not_found_handling=single-page-application, y el CSP del <meta>
+                            como cabecera). El origen sigue siendo el real: borde, cookie e
+                            identity no cambian; la página es la de la rama.
 
 La entrada es por Magic Auth en AuthKit hospedado: el arnés pide el código que AuthKit acaba de
 generar a la API de WorkOS (evento `magic_auth.created` → `GET /user_management/magic_auth/{id}`)
@@ -32,6 +37,7 @@ from __future__ import annotations
 
 import datetime as dt
 import json
+import mimetypes
 import os
 import re
 import stat
@@ -207,9 +213,28 @@ def rail(page):
 
 
 def tile(page, name: str, email: str | None = None):
+    """Cuadro del riel: button cuyo nombre accesible es «{nombre}, {correo}» (o lleva el nombre)."""
     pat = re.escape(name) + (r'.*' + re.escape(email) if email else '')
     return rail(page).get_by_role('button', name=re.compile(pat)).or_(
         rail(page).get_by_role('link', name=re.compile(pat))).first
+
+
+def reveal(page, name: str, email: str | None = None):
+    """Con varios workspaces de una org, el riel los apila: abre las pilas hasta ver el cuadro."""
+    t = tile(page, name, email)
+    if t.is_visible():
+        return t
+    stacks = rail(page).locator('[data-org-stack]')
+    for i in range(stacks.count()):
+        st = stacks.nth(i)
+        if st.is_visible():
+            st.click()
+            try:
+                t.wait_for(state='visible', timeout=1000)
+                return t
+            except Exception:
+                page.keyboard.press('Escape')
+    return t
 
 
 def rail_rows(page) -> list[str]:
@@ -235,7 +260,7 @@ def org_of_row(page, name: str) -> str:
 
 def open_and_time(page, run: Run, name: str, org: str, email: str | None = None) -> float:
     """Clic en la fila y espera la lista de tareas de ese workspace. Devuelve segundos."""
-    target = tile(page, name, email)
+    target = reveal(page, name, email)
     if not target.is_visible():
         raise StepFailed(f'la fila «{name}» no está en el riel')
     t0 = time.monotonic()
@@ -252,6 +277,12 @@ def open_and_time(page, run: Run, name: str, org: str, email: str | None = None)
 
 
 def _opened(page, name: str, org: str) -> bool:
+    current = rail(page).locator('[aria-current="true"], [aria-current="page"]').first
+    try:
+        if current.count() and name not in (current.get_attribute('aria-label', timeout=200) or current.inner_text(timeout=200)):
+            return False
+    except Exception:
+        pass
     head = page.get_by_role('banner').or_(page.locator('header')).first
     try:
         htext = head.inner_text(timeout=200)
@@ -274,7 +305,10 @@ def sign_in(page, wos: WorkOS, email: str):
     if not page.url.startswith('https://') or 'authkit' not in page.url:
         entry = page.get_by_role('button', name=re.compile('Continuar con tu correo|Continue with (your )?email', re.I)).or_(
             page.get_by_role('link', name=re.compile('Continuar con tu correo|Continue with (your )?email', re.I))).first
-        entry.click(timeout=20000)
+        try:
+            entry.click(timeout=20000)
+        except Exception:
+            raise Invalid('la web no mostró «Continuar con tu correo» en 20 s: no hay cómo entrar') from None
     page.wait_for_url(re.compile(r'authkit'), timeout=30000)
     box = page.get_by_role('textbox', name=re.compile('Correo|Email', re.I)).first
     box.fill(email, timeout=20000)
@@ -350,14 +384,10 @@ def scenario(page, run: Run, cfg: dict, wos: WorkOS):
         if page.context.cookies():
             raise Invalid('el contexto no está limpio: ya tiene cookies')
         page.goto(WEB + '/', wait_until='domcontentloaded')
-        me = None
-        for _ in range(100):
-            me = next((e for e in run.edge if e['path'] == '/v1/identity/me'), None)
-            if me:
-                break
-            page.wait_for_timeout(100)
-        if not me or me['status'] != 401:
-            raise Invalid(f'sin cookies, /v1/identity/me debía responder 401 y respondió {me and me["status"]}')
+        page.wait_for_timeout(3000)
+        # Sin sesiones, el modelo viejo responde 401 en identity/me; el nuevo puede no llamar al
+        # borde. Solo se anota: la precondición es el contexto sin cookies.
+        run.notes['unauthenticated_edge'] = [e for e in run.edge if e['step'] == '0']
         run.notes['versions'] = versions(page)
 
     def s1():
@@ -369,7 +399,7 @@ def scenario(page, run: Run, cfg: dict, wos: WorkOS):
         if page.get_by_text(re.compile('Elegir organización|Choose (an )?organization', re.I)).first.is_visible():
             raise StepFailed('aparece una segunda pantalla para elegir organización dentro de Danil')
         for name, org in ((A, A_ORG), (X1, X_ORG), (X2, X_ORG)):
-            if tile(page, name).is_visible() and org not in org_of_row(page, name):
+            if reveal(page, name).is_visible() and org not in org_of_row(page, name):
                 raise StepFailed(f'la fila «{name}» no lleva el nombre de su organización «{org}»')
         guards(page, run, mark, 'paso 1', rail_check=False)
 
@@ -378,7 +408,7 @@ def scenario(page, run: Run, cfg: dict, wos: WorkOS):
         for name in (X1, A):
             add_from_plus(page, name)
         for name, org in ((X1, X_ORG), (A, A_ORG)):
-            if not tile(page, name).is_visible():
+            if not reveal(page, name).is_visible():
                 raise StepFailed(f'«{name}» no quedó en el riel')
             if org not in org_of_row(page, name):
                 raise StepFailed(f'«{name}» quedó en el riel sin su organización «{org}»')
@@ -440,7 +470,7 @@ def scenario(page, run: Run, cfg: dict, wos: WorkOS):
 
     def s8():
         mark = len(run.edge)
-        if not tile(page, X2).is_visible():
+        if not reveal(page, X2).is_visible():
             raise StepFailed(f'«{X2}» ya no está en el riel')
         open_and_time(page, run, X2, X_ORG)
         page.wait_for_timeout(2000)
@@ -479,7 +509,7 @@ def expect_visible(page, name: str, msg: str):
 
 def add_from_plus(page, name: str):
     """«+» del riel → elegir el workspace por su nombre."""
-    if tile(page, name).is_visible():
+    if reveal(page, name).is_visible():
         return
     plus = rail(page).get_by_role('button', name=re.compile(r'^(\+|Agregar workspace|Add workspace)', re.I)).first
     try:
@@ -550,6 +580,48 @@ def capture_computers(run: Run):
     return on_response
 
 
+def _headers_for(path: Path, pattern: str) -> dict:
+    """Cabeceras de un bloque de `_headers` (formato de Cloudflare), en minúsculas."""
+    out, current = {}, None
+    if not path.is_file():
+        return out
+    for line in path.read_text().splitlines():
+        if not line.strip() or line.lstrip().startswith('#'):
+            continue
+        if not line[0].isspace():
+            current = line.strip()
+        elif current == pattern and ':' in line:
+            k, v = line.strip().split(':', 1)
+            out[k.strip().lower()] = v.strip()
+    return out
+
+
+def serve_dist(ctx, dist: Path, run: Run):
+    """Contesta DANIL_WEB_URL/** con `dist` (SPA): un archivo si existe, si no index.html."""
+    dist = dist.resolve()
+    index = (dist / 'index.html').read_text()
+    m = re.search(r'<meta[^>]+http-equiv=["\']Content-Security-Policy["\'][^>]+content=["\']([^"\']+)', index, re.I)
+    base = _headers_for(dist / '_headers', '/*')  # mismas cabeceras que Workers Assets
+    if 'content-security-policy' not in base and m:
+        base['content-security-policy'] = m.group(1)
+    csp = base
+    run.notes['web_dist'] = {'path': str(dist), 'headers': sorted(base)}
+
+    def handle(route):
+        req = route.request
+        if req.method not in ('GET', 'HEAD'):
+            return route.continue_()
+        rel = urllib.parse.unquote(urllib.parse.urlsplit(req.url).path).lstrip('/')
+        f = (dist / rel).resolve()
+        if rel and f.is_file() and dist in f.parents:
+            ctype = mimetypes.guess_type(f.name)[0] or 'application/octet-stream'
+            return route.fulfill(status=200, body=f.read_bytes(), headers={**base, 'content-type': ctype})
+        return route.fulfill(status=200, body=index, headers={'content-type': 'text/html; charset=utf-8', **csp})
+
+    ctx.route(WEB + '/**', handle)
+    ctx.route(WEB, handle)
+
+
 # --- Arranque ------------------------------------------------------------------------------
 
 def main() -> int:
@@ -572,6 +644,12 @@ def main() -> int:
         browser = p.chromium.launch()
         ctx = browser.new_context(viewport={'width': 1440, 'height': 900}, locale='es-MX')
         ctx.tracing.start(screenshots=True, snapshots=True)
+        if os.environ.get('DANIL_WEB_DIST'):
+            dist = Path(os.environ['DANIL_WEB_DIST'])
+            if not (dist / 'index.html').is_file():
+                print(f'DANIL_WEB_DIST no tiene index.html: {dist}', file=sys.stderr)
+                return 2
+            serve_dist(ctx, dist, run)
         page = ctx.new_page()
         page.on('response', run.on_response)
         page.on('response', capture_computers(run))
