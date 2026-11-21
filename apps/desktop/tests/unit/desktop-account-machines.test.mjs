@@ -173,8 +173,7 @@ test("an action wakes the VM; a physical machine that is off is never started", 
   assert.ok(await until(() => relayCalls("cmp_vm", "send_message").length === 1, 3000), "the action wakes the VM and is delivered");
   await sleep(300);
   assert.equal(relayCalls("cmp_vm", "send_message").length, 1, "once");
-  const toasts = [...doc.querySelectorAll("[data-machine-toast]")].map((n) => n.textContent);
-  assert.ok(toasts.some((x) => x.includes("Danil VM se encendió")), `a toast says it turned on: ${toasts}`);
+  assert.equal(doc.querySelectorAll("[data-machine-toast]").length, 0, "a machine turning on shows no floating notice");
   assert.ok(!text().includes("Algo se rompió"), "no generic failure");
   assert.deepEqual(app.failures, []);
 });
