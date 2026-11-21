@@ -1,3 +1,4 @@
+import { SignalDot, type SignalTone } from "@danil/ui";
 import type { ConnectionStatus } from "../model.ts";
 
 export interface MachineBadgeProps {
@@ -33,16 +34,16 @@ export function MachineBadge(props: MachineBadgeProps) {
     return props.state ?? "desconocida";
   };
 
-  const dotColor = () => {
-    if (isPending()) return "bg-amber-500 animate-pulse";
-    if (props.state === "running") return "bg-emerald-500";
-    return "bg-neutral-400";
+  const tone = (): SignalTone => {
+    if (isPending()) return "warning";
+    if (props.state === "running") return "success";
+    return "off";
   };
 
   return (
-    <span class="inline-flex items-center gap-1.5 text-xs text-neutral-500 dark:text-neutral-400">
-      <span class={`h-2 w-2 rounded-full ${dotColor()}`} aria-hidden="true" />
-      <span>{label()}</span>
+    <span class="inline-flex items-center gap-1.5 text-xs text-neutral-500">
+      <SignalDot tone={tone()} pulse={isPending()} />
+      <span data-machine-state="">{label()}</span>
     </span>
   );
 }

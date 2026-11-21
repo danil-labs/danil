@@ -35,12 +35,12 @@ export function RunOnPicker(props: RunOnPickerProps) {
       <button
         type="button"
         disabled={props.disabled || props.loading}
-        class="inline-flex items-center gap-2 rounded-md border border-neutral-300 bg-white px-2.5 py-1.5 text-xs font-medium text-neutral-800 shadow-sm transition hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-200 dark:hover:bg-neutral-800"
+        class="inline-flex items-center gap-2 rounded-md border border-border bg-surface px-2.5 py-1.5 text-xs font-medium text-neutral-800 shadow-sm transition hover:bg-neutral-200 hover:text-neutral-950 disabled:cursor-not-allowed disabled:opacity-50"
         aria-haspopup="listbox"
         aria-expanded={open()}
         onClick={() => setOpen((prev) => !prev)}
       >
-        <span class="text-neutral-500 dark:text-neutral-400">Ejecutar en:</span>
+        <span class="text-neutral-500">Ejecutar en:</span>
         <Show
           when={selected()}
           fallback={<span class="italic text-neutral-400">Seleccionar máquina</span>}
@@ -68,7 +68,7 @@ export function RunOnPicker(props: RunOnPickerProps) {
 
       <Show when={open()}>
         <div
-          class="absolute left-0 z-50 mt-1 min-w-[14rem] rounded-md border border-neutral-200 bg-white py-1 shadow-lg dark:border-neutral-800 dark:bg-neutral-900"
+          class="absolute left-0 z-50 mt-1 min-w-[14rem] rounded-md border border-border bg-surface py-1 shadow-lg"
           role="listbox"
         >
           <Show
@@ -87,8 +87,8 @@ export function RunOnPicker(props: RunOnPickerProps) {
                     aria-selected={isSelected()}
                     class={`flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-xs transition ${
                       isSelected()
-                        ? "bg-neutral-100 font-medium text-neutral-900 dark:bg-neutral-800 dark:text-neutral-100"
-                        : "text-neutral-700 hover:bg-neutral-50 dark:text-neutral-300 dark:hover:bg-neutral-800/60"
+                        ? "bg-surface-raised font-semibold text-neutral-950"
+                        : "text-neutral-700 hover:bg-neutral-200 hover:text-neutral-950"
                     }`}
                     onClick={() => handleSelect(m)}
                   >
