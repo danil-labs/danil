@@ -1,8 +1,8 @@
 import { type Accessor, createEffect, createSignal, For, on, onCleanup, Show } from "solid-js";
 import { df } from "../lib/format";
 import { t } from "../lib/i18n";
-import { SignalDot } from "../ui/SignalDot";
-import { Toast, ToastPortal } from "../ui/Toast";
+import { SignalDot } from "../../../../packages/ui/src/SignalDot";
+import { Toast, ToastPortal } from "../../../../packages/ui/src/Toast";
 /** On, off, starting or speaking another contract: what the page says of a machine. */
 export type MachineStatus = "online" | "offline" | "starting" | "outdated";
 

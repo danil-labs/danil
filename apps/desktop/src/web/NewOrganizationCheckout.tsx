@@ -1,14 +1,14 @@
 import { createEffect, createMemo, createResource, createSignal, For, onCleanup, Show } from "solid-js";
 import { t } from "../lib/i18n";
-import { Button } from "../ui/Button";
-import { Input } from "../ui/Input";
-import { Select } from "../ui/Select";
-import { SettingsRow, SettingsSection } from "../features/settings/index";
-import { PlatformSessionError } from "./platform-session";
+import { Button } from "../../../../packages/ui/src/Button";
+import { Input } from "../../../../packages/ui/src/Input";
+import { Select } from "../../../../packages/ui/src/Select";
+import { SettingsRow, SettingsSection } from "../../../../packages/features/settings/src/index";
+import { PlatformSessionError } from "../../../../packages/session/src/platform-session";
 import { PAYMENT_URL_DEADLINE_MS, waitForPaymentUrl } from "./billing-v2-return";
 import { BillingPromotionField, promotionCodeInvalid } from "./BillingPromotionField";
 import { checkoutPlans } from "./billing-v2-plans";
-import type { billingV2 } from "../platform/treasury";
+import type { billingV2 } from "../../../../packages/platform-client/src/treasury";
 import { rememberBillingReturn } from "./billing-route";
 import { bindCreationCheckout, creationKey } from "./billing-v2-idempotency";
 

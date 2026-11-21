@@ -1,41 +1,12 @@
-/**
- * Punto de entrada público de la feature @danil/feature-chat.
- * Exporta pantallas y piezas que el shell monta.
- */
-
-// Pantallas
-export { ChatScreen } from "./screens/ChatScreen.tsx";
-export type { ChatScreenProps } from "./screens/ChatScreen.tsx";
-
-// Componentes
-export { MessageItem } from "./components/MessageItem.tsx";
-export type { MessageItemProps } from "./components/MessageItem.tsx";
-export { ReasoningBlock } from "./components/ReasoningBlock.tsx";
-export type { ReasoningBlockProps } from "./components/ReasoningBlock.tsx";
-export { ToolPermissionCard } from "./components/ToolPermissionCard.tsx";
-export type { ToolPermissionCardProps } from "./components/ToolPermissionCard.tsx";
-export { Composer } from "./components/Composer.tsx";
-export type { ComposerProps } from "./components/Composer.tsx";
-export { ErrorBanner } from "./components/ErrorBanner.tsx";
-export type { ErrorBannerProps } from "./components/ErrorBanner.tsx";
-
-// Store
-export { createChatStore } from "./store.ts";
-export type { ChatStoreState } from "./store.ts";
-
-// Tipos de modelo
-export type {
-  ChatTurnView,
-  ChatHistoryView,
-  ChatStreamEvent,
-  ChatRole,
-  TurnPiece,
-  ReasoningPiece,
-  DeltaPiece,
-  ToolPiece,
-  ShellPiece,
-  PermissionPiece,
-  QuestionPiece,
-  TurnStatus,
-  TurnState,
-} from "./model.ts";
+export { modoInicial, modoRecordado, recordarModo } from "./modes.ts";
+export type { HandoverPending } from "./handover.ts";
+export { guardable } from "./queue.ts";
+export type { Encolado } from "./MessageQueue.tsx";
+export type { Msg } from "./Chat.tsx";
+export { lotesDeDeltas, type Programar } from "./deltaFrames.ts";
+export { hasOlder, hasRecentGap, HistoryPager, type OlderState } from "./history.ts";
+export type { HandoverState } from "./handover.ts";
+export { anexarDeltas, anexarImagen, anexarRazonamiento, mcpCallFromName, mensajesDelHilo, tramoGuardado, transcripcion, type ChatEvent, type Session, type TranscriptOrigin, type Turn, type Delta } from "./transcript.ts";
+export { vivoTrasLeer } from "./threadOrder.ts";
+export type { PermissionRequest } from "./Chat.tsx";
+export { mergeGates, type PendingPermission } from "./permissionGates.ts";

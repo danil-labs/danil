@@ -1,8 +1,8 @@
 import type { edgeTransport } from "@terminus/computers";
 import type { GroupAccount, GroupReply, GroupSend } from "../lib/group-account.ts";
 import { settledContextIds } from "../lib/settled-contexts.ts";
-import { CREDITS_BALANCE_PATH } from "../platform/treasury.ts";
-import { WORKSPACES_PROMO_REDEEM_PATH } from "../platform/workspaces.ts";
+import { CREDITS_BALANCE_PATH } from "../../../../packages/platform-client/src/treasury.ts";
+import { WORKSPACES_PROMO_REDEEM_PATH } from "../../../../packages/platform-client/src/workspaces.ts";
 
 export function webGroupAccount(transport: ReturnType<typeof edgeTransport>, credits?: { read: (context: string) => Promise<GroupReply>; clear: () => void }, orgOf?: (context: string) => string | null) {
   let legacy = false;

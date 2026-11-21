@@ -1,12 +1,12 @@
 import { type Machine, type machinesClient, machineToComputer, RelaySession } from "@terminus/computers";
 import { Fleet, memberKey, relayLink, unwrap } from "@terminus/fleet";
 import { createSignal, lazy, Suspense } from "solid-js";
-import { createContextRelayPool, machinesListed } from "../features/machines";
-import { sessionRailState } from "../features/shell";
-import { createRouter, type SliceChange } from "../features/machines/router";
-import type { AccountProfileSource } from "../features/settings/account-profile";
+import { createContextRelayPool, machinesListed } from "../../../../packages/features/machines/src";
+import { sessionRailState } from "../../../../packages/shell/src/shell";
+import { createRouter, type SliceChange } from "../../../../packages/features/machines/src/router";
+import type { AccountProfileSource } from "../../../../packages/features/settings/src/account-profile";
 import { t } from "../lib/i18n";
-import { type Capabilities, setCapabilities, type WebAccountsSource } from "../lib/platform";
+import { type Capabilities, setCapabilities, type WebAccountsSource } from "../../../../packages/host/src/platform";
 import { leerPref } from "../lib/prefs";
 import { deliver } from "../lib/serviceEvents";
 import { installIpc } from "./ipc";
@@ -19,8 +19,8 @@ import { openWorkspaceUrl } from "./open-workspace-url";
 
 declare const __TERMINUS_VERSION__: string;
 type Base = { billing: ReturnType<typeof import("./window-billing").windowBilling>; contextMachines: (context: string) => ReturnType<typeof machinesClient>; sessions: import("./web-session-contexts").WebSessionCommands; active: ReturnType<typeof import("./window-active-context").windowActiveContext>; rail?: Capabilities["webRailCatalog"]; relayOrigin: string; credentials?: Capabilities["accountCredentials"]; permits: (name: string) => boolean; organizations?: Capabilities["organizations"]; promo?: Capabilities["webPromo"]; groupAccount?: Capabilities["groupAccount"]; reauth?: Capabilities["webReauth"]; preparing?: () => boolean; profile: AccountProfileSource; services: Pick<Capabilities, "webWorkspacePicker" | "danilCredits">; onUnavailable: () => void; };
-const Picker = lazy(() => import("../features/machines/MachinePicker").then(m => ({ default: m.MachinePicker })));
-const AccountMachines = lazy(() => import("../features/machines/AccountMachines"));
+const Picker = lazy(() => import("../../../../packages/features/machines/src/MachinePicker").then(m => ({ default: m.MachinePicker })));
+const AccountMachines = lazy(() => import("../../../../packages/features/machines/src/AccountMachines"));
 /** Another machine's slice changed: the window rereads just that. */
 function slicesChanged(changes: SliceChange[]) {
   if (changes.includes("workspaces")) window.dispatchEvent(new CustomEvent("harness:workspace-name"));
@@ -75,7 +75,7 @@ export function mountWindow(base: Base, mounted: Mounted) {
       powers.set(key, power);
       if (changed) void refresh();
       bump(n => n + 1);
-      void import("../features/machines/store").then(({ machineNamesChanged, refetchMachines }) => {
+      void import("../../../../packages/features/machines/src/store").then(({ machineNamesChanged, refetchMachines }) => {
         if (stopped) return;
         machineNamesChanged();
         void refetchMachines();
@@ -190,7 +190,7 @@ export function mountWindow(base: Base, mounted: Mounted) {
   let disposeApp: (() => void) | undefined;
   let disposeNotice: (() => void) | undefined;
   let noticeLayer: HTMLElement | undefined;
-  void import("./phrases").then(() => import("../app/main")).then(app => {
+  void import("./phrases").then(() => import("../../../../packages/shell/src/app/main")).then(app => {
     disposeApp = app.disposeWindow;
     if (stopped) disposeApp();
   }).catch(base.onUnavailable);

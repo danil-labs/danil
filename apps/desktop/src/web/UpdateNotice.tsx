@@ -1,9 +1,9 @@
 import { onCleanup, onMount, Show } from "solid-js";
 import { t } from "../lib/i18n";
-import { Button } from "../ui/Button";
-import { Toast, ToastPortal } from "../ui/Toast";
+import { Button } from "../../../../packages/ui/src/Button";
+import { Toast, ToastPortal } from "../../../../packages/ui/src/Toast";
 import { newBuild, setNewBuild, setUpdateNoticeReady } from "./update-state";
-import { platformFetch } from "../platform/client.ts";
+import { platformFetch } from "../../../../packages/platform-client/src/client.ts";
 
 /** How often an open tab asks whether a deploy changed the page. */
 const CHECK_EVERY = 10 * 60_000;

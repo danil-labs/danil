@@ -1,7 +1,7 @@
-import { availableDanilCredits, CREDITS_BALANCE_PATH, type GroupReply } from "../platform/treasury.ts";
+import { availableDanilCredits, CREDITS_BALANCE_PATH, type GroupReply } from "../../../../packages/platform-client/src/treasury.ts";
 import { groupPromoReply } from "./group-promo-reply.ts";
 import { normalizePromoCode } from "./promo-rejections.ts";
-import { WORKSPACES_PROMO_REDEEM_PATH } from "../platform/workspaces.ts";
+import { WORKSPACES_PROMO_REDEEM_PATH } from "../../../../packages/platform-client/src/workspaces.ts";
 
 export type GroupAccount = { context: string; org: string; name: string; plan: string | null; role?: string | null };
 export type { GroupReply };

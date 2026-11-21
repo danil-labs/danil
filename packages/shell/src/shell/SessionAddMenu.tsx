@@ -1,0 +1,64 @@
+import { createSignal, For, Show } from "solid-js";
+import { t } from "../../../../apps/desktop/src/lib/i18n";
+import { capabilities } from "../../../host/src/platform";
+import { cn } from "../../../../apps/desktop/src/lib/utils";
+import { TITULO_DE_GRUPO } from "../../../ui/src/ContextMenu";
+import { KeyedList } from "../../../ui/src/KeyedList";
+import { ITEM_DE_MENU } from "../../../ui/src/Popover";
+import { matchesName } from "./hidden-workspaces";
+import { emptyReasonKey, refusalEmptyReason } from "./session-empty";
+import type { sessionRail } from "./session-groups";
+import { freeSessionRow } from "./session-rail-view";
+import WorkspaceSearch, { SEARCH_FROM } from "./WorkspaceSearch";
+import { WorkspaceSourceStatus } from "./WorkspaceSourceStatus";
+
+type Rail = ReturnType<typeof sessionRail>;
+const NOTE = "m-0 px-2 py-1.5 text-caption text-neutral-500";
+const errorKey = (e: unknown) => {
+  const empty = refusalEmptyReason(e);
+  if (empty) return emptyReasonKey(empty);
+  const detail = (e as { detail?: string } | null)?.detail;
+  return detail === "too_many_contexts" ? "danil.error.too_many_contexts" : detail === "organization_auth_required" ? "shell.workspaces.sessions_auth" : detail === "cancelled" ? "shell.workspaces.sessions_cancelled" : "shell.workspaces.sessions_failed";
+};
+
+export function SessionAddEntries(props: { sessions: Rail; signedIn: boolean; onStep: () => void; onClose: () => void }) {
+  const run = () => { props.onClose(); void props.sessions.sessions.addAccount().catch(() => {}); };
+  return <>
+    <button type="button" role="menuitem" class={ITEM_DE_MENU} data-add-danil-step="" onClick={() => {
+      if (props.sessions.groups()?.length || props.signedIn) { props.onStep(); props.sessions.refresh(); }
+      else run();
+    }}>{t("shell.workspaces.add_danil")}</button>
+    <Show when={props.sessions.groups()?.some((g) => (g.available_contexts ?? 0) > 0)}><p role="status" class={NOTE}>{t("shell.workspaces.new_available")}</p></Show>
+      <button type="button" role="menuitem" class={ITEM_DE_MENU} onClick={run}>{t("shell.workspaces.add_session")}</button>
+  </>;
+}
+
+export function SessionAddStep(props: { sessions: Rail; context?: string | null; query: string; onQuery: (s: string) => void; onClose: () => void; onOpen: (id: string, context?: string) => void }) {
+  const [error, setError] = createSignal<string | null>(null);
+  const [creating, setCreating] = createSignal(false);
+  const createFree = async (context: string) => {
+    if (creating()) return;
+    setCreating(true); setError(null);
+    try { const id = await props.sessions.createFree(context); props.onClose(); props.onOpen(id, context); }
+    catch (e) { setError(errorKey(e)); }
+    finally { setCreating(false); }
+  };
+  const groups = () => (props.sessions.groups() ?? []).filter((g) => !props.context || g.context_id === props.context);
+  const size = () => groups().reduce((n, g) => n + (g.available?.length ?? 0), 0);
+  return <div data-danil-workspaces="">
+    <Show when={error()}>{(key) => <p role="alert" class="m-0 px-2 py-1.5 text-caption text-error-strong">{t(key())}</p>}</Show>
+    <Show when={size() >= SEARCH_FROM}><WorkspaceSearch value={props.query} onInput={props.onQuery} /></Show>
+    <div class="max-h-64 overflow-y-auto p-0.5">
+      <KeyedList each={groups()} by={(g) => g.context_id}>{(g) => <div data-session-context={g().context_id}>
+        <p class={cn("m-0", TITULO_DE_GRUPO)}>{g().email} · {g().org_name ?? g().org}</p>
+        <Show when={g().empty_reason}>{(reason) => <p role="status" class={NOTE}>{t(emptyReasonKey(reason()))}</p>}</Show>
+        <Show when={!g().added?.has(g().free?.id ?? "") && freeSessionRow(g())}><button type="button" role="menuitem" class={ITEM_DE_MENU} disabled={creating()} onClick={() => void createFree(g().context_id)}>{t("shell.workspaces.free_workspace")}</button></Show>
+        <Show when={g().available} fallback={<WorkspaceSourceStatus organization={g().org_name ?? g().org} available={g().available} onRetry={() => props.sessions.refreshContext(g().context_id)} />}>
+          <For each={(g().available ?? []).filter((w) => w.id !== freeSessionRow(g())?.id && !g().added?.has(w.id) && matchesName(w.name, props.query))}>{(w) => <button type="button" role="menuitem" class={cn(ITEM_DE_MENU, "flex min-w-0 items-center gap-2")} aria-label={t("shell.workspaces.add_named", { name: w.name })} data-add-danil={w.id} onClick={() => { props.sessions.add(g().context_id, w.id); props.onClose(); props.onOpen(w.id, g().context_id); }}><span class="min-w-0 flex-1 truncate">{w.name}</span><span class="shrink-0 text-caption text-neutral-500">{t("shell.workspaces.add_row")}</span></button>}</For>
+        </Show>
+      </div>}</KeyedList>
+    </div>
+  </div>;
+}
+
+export const usesSessionMenu = (rail: Rail, signedIn: boolean) => capabilities().nativeWindow && (rail.groups() !== null || !signedIn);

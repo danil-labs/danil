@@ -1,6 +1,6 @@
 import { createSignal } from "solid-js";
 import type { WebSessionCommands } from "./web-session-contexts.ts";
-import { fetchSessionsCatalog } from "../platform/identity.ts";
+import { fetchSessionsCatalog } from "../../../../packages/platform-client/src/identity.ts";
 
 type Row = { id: string; name: string; account: string | null };
 type Reply = { status: number; body?: unknown };

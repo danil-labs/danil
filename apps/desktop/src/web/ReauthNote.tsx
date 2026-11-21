@@ -1,8 +1,8 @@
 import { Show } from "solid-js";
-import type { Capabilities } from "../lib/platform";
+import type { Capabilities } from "../../../../packages/host/src/platform";
 import { t } from "../lib/i18n";
-import { Button } from "../ui/Button";
-import { Toast, ToastPortal } from "../ui/Toast";
+import { Button } from "../../../../packages/ui/src/Button";
+import { Toast, ToastPortal } from "../../../../packages/ui/src/Toast";
 
 /** Identity pidió un login nuevo para la organización y la página no vuelve sola: lo ofrece aquí. */
 export function ReauthNote(props: { reauth?: Capabilities["webReauth"] }) {

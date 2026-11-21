@@ -1,4 +1,4 @@
-import { isMac } from "./window.ts";
+import { isMac } from "../../../../packages/host/src/window.ts";
 
 const ATAJOS = {
   findInTask: { mac: "⌘F", windows: "Ctrl+F", ariaMac: "Meta+F", ariaWindows: "Control+F" },

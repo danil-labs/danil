@@ -1,5 +1,5 @@
-import { type SignalTone, taskSignalTone } from "./lib/design";
-import { cn } from "./lib/utils";
+import { type SignalTone, taskSignalTone } from "@terminus/design";
+import { cn } from "../../../apps/desktop/src/lib/utils";
 
 export { type SignalTone, taskSignalTone };
 

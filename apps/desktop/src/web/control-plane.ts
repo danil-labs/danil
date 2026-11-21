@@ -1,5 +1,5 @@
 /** Lo común de las fuentes web del plano de control. */
-import { platformFetch } from "../platform/client.ts";
+import { platformFetch } from "../../../../packages/platform-client/src/client.ts";
 
 export type Fetch = (input: string, init?: RequestInit) => Promise<Response>;
 

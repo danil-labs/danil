@@ -12,7 +12,7 @@
  *   cookie viva cierra la página.
  */
 import { EdgeError, type EdgeTransport } from "@terminus/computers";
-import { SESSION_ROUTES } from "../platform/identity.ts";
+import { SESSION_ROUTES } from "../../../../packages/platform-client/src/identity.ts";
 
 type Args = Record<string, unknown>;
 type Context = { context_id: string; org: string; org_name: string | null; plan: string | null; role?: string | null; personal?: boolean };

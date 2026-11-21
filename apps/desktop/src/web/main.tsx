@@ -1,10 +1,10 @@
-import "../styles/global.css";
+import "../../../../packages/ui/src/styles/global.css";
 import "../lib/sharedClock";
 import { billingEntry } from "./billing-route";
 import { phoneRoute } from "./phone";
 import { announceStaleTab, updateNoticeReady } from "./update-state";
 
-declare const __DANIL_WEB_API__: import("./session-config").WebSessionDeployment;
+declare const __DANIL_WEB_API__: import("../../../../packages/session/src/session-config").WebSessionDeployment;
 /** La compilación publica la versión del teléfono en `<base>m/` (`DANIL_WEB_PHONE=1`, `web-mobile.mjs`). */
 declare const __DANIL_WEB_PHONE__: boolean;
 
@@ -32,5 +32,5 @@ else if (phone) window.location.replace(phone);
 else {
   document.querySelector("link[data-app-preload]")?.setAttribute("rel", "modulepreload");
   const root = document.getElementById("root") as HTMLElement;
-  void import("./window-session").then(m => m.startWindow(__DANIL_WEB_API__, root));
+  void import("../../../../packages/session/src/window-session").then(m => m.startWindow(__DANIL_WEB_API__, root));
 }

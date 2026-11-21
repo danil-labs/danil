@@ -1,4 +1,4 @@
-import type { SessionRow } from "../features/projects/Sessions";
+import type { SessionRow } from "../../../../packages/features/projects/src/Sessions";
 import { contextSnapshotKey, contextualSnapshot, createSnapshotWriter, snapshotMatchesContext, snapshotStorageKey } from "./context-snapshot.ts";
 import type { Project } from "./model";
 import type { Space } from "./spaces";

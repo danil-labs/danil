@@ -1,9 +1,9 @@
 import { BILLING_RETURN_KEY } from "./billing-v2-return";
 import type { Machine, OrganizationSelection } from "@terminus/computers";
 import { createSignal, lazy, onCleanup, Show, Suspense } from "solid-js";
-import type { Capabilities } from "../lib/platform";
-import { billingV2 } from "../platform/treasury";
-import type { PlatformProfile, PlatformWorkspace, platformTransport } from "./platform-session";
+import type { Capabilities } from "../../../../packages/host/src/platform";
+import { billingV2 } from "../../../../packages/platform-client/src/treasury";
+import type { PlatformProfile, PlatformWorkspace, platformTransport } from "../../../../packages/session/src/platform-session";
 
 import { billingHref } from "./billing-route";
 

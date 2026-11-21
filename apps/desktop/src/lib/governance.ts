@@ -5,8 +5,8 @@
  */
 import { listen } from "./serviceEvents";
 import { createSignal } from "solid-js";
-import { invoke } from "../engine/client.ts";
-import { capabilities } from "./platform";
+import { invoke } from "../../../../packages/engine-client/src/client.ts";
+import { capabilities } from "../../../../packages/host/src/platform";
 
 export type GovernedSection = "context_sources" | "mcp_servers" | "skills" | "agents" | "models";
 

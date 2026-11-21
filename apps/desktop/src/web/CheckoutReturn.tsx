@@ -1,10 +1,10 @@
 import type { Machine } from "@terminus/computers";
 import { createSignal, onCleanup, onMount, Show } from "solid-js";
 import { t } from "../lib/i18n";
-import { Button } from "../ui/Button";
-import { PlatformSessionError } from "./platform-session";
+import { Button } from "../../../../packages/ui/src/Button";
+import { PlatformSessionError } from "../../../../packages/session/src/platform-session";
 import { BILLING_RETURN_KEY, checkoutReturn, followCheckout, waitWithSignal } from "./billing-v2-return";
-import type { billingV2 } from "../platform/treasury";
+import type { billingV2 } from "../../../../packages/platform-client/src/treasury";
 import { clearCreationCheckout } from "./billing-v2-idempotency";
 
 type Api = ReturnType<typeof billingV2>;
