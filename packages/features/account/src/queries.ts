@@ -3,10 +3,7 @@ import {
   type Accessor,
   type Resource,
 } from "solid-js";
-import {
-  createPlatformClient,
-  type PlatformClient,
-} from "@danil/platform-client";
+import { usePlatform, type PlatformClient } from "@danil/platform-client";
 import type { ProfileData } from "./model.ts";
 import { getPlanLabel } from "./model.ts";
 
@@ -27,9 +24,10 @@ export interface UseProfileResult {
  * Preserva el error en error() para permitir reintentos (B-006).
  */
 export function useProfile(options?: UseProfileOptions): UseProfileResult {
+  const shared = usePlatform();
   const resolveClient = (): PlatformClient => {
     const provided = typeof options?.client === "function" ? options.client() : options?.client;
-    return provided ?? createPlatformClient();
+    return provided ?? shared;
   };
 
   const currentSessionKey = () => {
