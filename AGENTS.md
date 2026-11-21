@@ -1,5 +1,7 @@
 # Danil: repository map
 
+[Contrato de API, relaciones y estado](docs/API.md).
+
 This repository holds the Danil clients and what they share. The domain
 (workspaces, tasks, agent turns, accounts) lives in the engine `seldon-runtime`,
 which is not here.
@@ -11,7 +13,7 @@ which is not here.
 | `packages/design` | Task states, marks, status and list words, folder colors, theme colors, and the type and radius scale both apps use. | — |
 | `packages/tasks` | The task list both apps derive: flat list, filter and grouping, two-line card, agents dock. | — |
 | `packages/chat` | How every client reads an agent message: links, the visual directive, next steps, tool steps and the HTML sandbox. | — |
-| `packages/attention` | The Inbox, channels, customization and support access from any client, over the same-origin BFF. | — |
+| `packages/attention` | The Inbox, channels, customization and support access from any client. | — |
 | `packages/computers` | Danil Machines from any client: control-plane API, relay session (WebSocket injected) and wake rules. | — |
 | `packages/fleet` | Several machines behind one panel: the call envelope (the machine comes only from it), a slice with its status per machine, bounded waits and the merge. | — |
 | `packages/carry` | Carrying work between machines: what travels, the copy in parts and the base the new task starts on. | — |
