@@ -40,6 +40,11 @@ export function windowContext(options: { factory: (context: string) => Client; s
      * `organization` de su organización, y sin esto la personal Free se queda sin máquina («local»).
      */
     fleetKind: (machine: Machine, group: GroupAccount) => (machine.organization_id === group.org ? "organization" as const : "personal" as const),
+    /**
+     * La hospedada de su organización. `machine-provisioning` dice `hosted | connected` y el contrato viejo
+     * `organization | personal`: la Mac o PC de una persona (conectada, con dueño) nunca es la hospedada.
+     */
+    hosted: (machine: Machine) => !["personal", "connected"].includes(machine.kind ?? "") && !machine.person_id,
     /** La misma computadora inscrita en dos organizaciones se distingue por su organización. */
     machineName: (machine: Machine, group: GroupAccount, rows: readonly ContextRow[]) => {
       const name = machine.name || machine.machine_id;

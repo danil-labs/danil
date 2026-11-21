@@ -174,9 +174,9 @@ test('a reload opens the workspace of the URL with the session of its (email, or
 test('a workspace of the organization machine (placement) goes to its hosted machine, even if a connected Mac lists it', async t => {
   // Las filas reales de la organización Danil en beta: su hospedada (sin listado mientras no contesta) y la Mac de la persona conectada.
   const machinesFor = context => context === 'ctx_x'
-    ? [{ machine_id: 'mxhosted', name: null, kind: 'organization', organization_id: 'org_x', state: 'running', connection: 'connected' },
-       { machine_id: 'mxmac', name: 'Mac.domain.name', kind: 'personal', organization_id: 'org_x', state: 'running', connection: 'connected' }]
-    : [{ machine_id: 'mp', name: 'Mac.domain.name', kind: 'personal', organization_id: 'org_p', state: 'running', connection: 'connected' }];
+    ? [{ machine_id: 'mxhosted', name: null, kind: 'hosted', organization_id: 'org_x', state: 'stopped', connection: 'disconnected' },
+       { machine_id: 'mxmac', name: 'Mac.domain.name', kind: 'connected', person_id: 'user_a', organization_id: 'org_x', state: 'running', connection: 'connected' }]
+    : [{ machine_id: 'mp', name: 'Mac.domain.name', kind: 'connected', person_id: 'user_a', organization_id: 'org_p', state: 'running', connection: 'connected' }];
   edge({ machinesFor });
   const fake = relay({ table });
   const sent = [];
@@ -204,6 +204,8 @@ test('a workspace of the organization machine (placement) goes to its hosted mac
   }, 'tasks of X are asked');
   const asked = sent.filter(s => ['list_live_sessions', 'list_projects', 'list_models'].includes(s.command) && s.workspace === 'wx1');
   assert.ok(asked.length && asked.every(s => s.machine === 'mxhosted'), `X's workspace goes to its hosted machine: ${JSON.stringify(asked)}`);
+  const list = await app.w.__TAURI_INTERNALS__.invoke('machine_list');
+  assert.equal(list.find(m => m.active)?.id ?? null, 'mxhosted', `the header and «Ejecutar en» pick the hosted machine: ${JSON.stringify(list)}`);
 });
 
 test('a Free personal workspace is served by its own connected machine: tasks, accounts and models carry the workspace and go to that machine', async t => {

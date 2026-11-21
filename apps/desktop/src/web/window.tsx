@@ -129,7 +129,7 @@ export function mountWindow(base: Base, mounted: Mounted) {
     setMissing(false);
     bump(n => n + 1);
     fleet.setMachines(rows.map(({ machine, group }) => ({ id: machine.machine_id, name: scope.machineName(machine, group, rows),
-      wakes: machineToComputer(machine).wakeable === true && base.permits("machines.start"), kind: scope.fleetKind(machine, group), hosted: machine.kind !== "personal", context: group.context, organizationId: machine.organization_id ?? null,
+      wakes: machineToComputer(machine).wakeable === true && base.permits("machines.start"), kind: scope.fleetKind(machine, group), hosted: scope.hosted(machine), context: group.context, organizationId: machine.organization_id ?? null,
     })));
     for (const { machine, group } of rows) fleet.observe(machine.machine_id, machineToComputer(machine).state, group.context);
     machinesListed(fleet);
