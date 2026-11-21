@@ -68,7 +68,6 @@ type DanilStatus = { state: string; computer_id?: string | null };
 
 const RELIST = 10 * 60_000;
 const TOKEN_MARGIN = 60_000;
-const TOAST_FOR = 5_000;
 
 /** Who the fan-out is for: this computer, its account and the control plane. Another one installs anew. */
 /** Sin cuenta: esta computadora es `"local"` (`machine_list`), como en el resto de la ventana. */
@@ -385,19 +384,6 @@ export function startAccountMachines(target: Target = window) {
     });
     const route = (command: string, args?: unknown, options?: { headers?: HeadersInit }) => router.handle(command, (args ?? {}) as Record<string, unknown>, options);
     setMachineRoute(route);
-    const layer = document.createElement("div");
-    document.body.append(layer);
-    const unmount = render(
-      () => (
-        <MachineToasts
-          machines={() => {
-            changed();
-            return fleet.machines().map((info) => ({ id: info.id, name: info.name, status: status(info.id), known: fleet.state(info.id) !== "unknown" }));
-          }}
-        />
-      ),
-      layer,
-    );
     const onPageHide = () => fleet.flush();
     window.addEventListener("pagehide", onPageHide);
     installed = {
@@ -409,8 +395,6 @@ export function startAccountMachines(target: Target = window) {
         setMachineRoute(null);
         window.removeEventListener("pagehide", onPageHide);
         setCapabilities(previous);
-        unmount();
-        layer.remove();
         router.close();
       },
     };
@@ -579,46 +563,4 @@ export function startAccountMachines(target: Target = window) {
     void engineWorkspaces.refresh();
     return sync();
   });
-}
-
-/** `known`: the relay already said its state; before that `offline` only means not asked yet. */
-type Row = { id: string; name: string; status: MachineStatus; known: boolean };
-
-/** A machine of the account that turns on or off says so once, without asking for anything. */
-function MachineToasts(props: { machines: () => Row[] }) {
-  const [shown, setShown] = createSignal<{ key: number; text: string }[]>([]);
-  const last = new Map<string, MachineStatus>();
-  let n = 0;
-  const said = (row: Row) => {
-    if (row.status === "online") return t("shell.machines.now_on", { name: row.name });
-    if (row.status === "starting") return t("shell.machines.waking", { name: row.name });
-    if (row.status === "offline") return t("shell.machines.now_off", { name: row.name });
-    return null;
-  };
-  const watch = () => {
-    for (const row of props.machines()) {
-      if (!row.known) continue;
-      const before = last.get(row.id);
-      last.set(row.id, row.status);
-      // The first state is how it was found, not a change.
-      if (before === undefined || before === row.status) continue;
-      const text = said(row);
-      if (!text) continue;
-      const key = ++n;
-      setShown((list) => [...list.filter((x) => x.text !== text), { key, text }]);
-      setTimeout(() => setShown((list) => list.filter((x) => x.key !== key)), TOAST_FOR);
-    }
-    return shown();
-  };
-  return (
-    <ToastPortal>
-      <For each={watch()}>
-        {(toast) => (
-          <Toast data-machine-toast="" onDismiss={() => setShown((list) => list.filter((x) => x.key !== toast.key))}>
-            <span class="text-xs text-neutral-700">{toast.text}</span>
-          </Toast>
-        )}
-      </For>
-    </ToastPortal>
-  );
 }

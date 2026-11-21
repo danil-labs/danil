@@ -24,7 +24,7 @@ async function until(read, what = 'Window condition') {
   }
 }
 
-function edge({ expireX = () => false, lateX2 = () => true, personalPlan = 'pro', machineName = null, machineKind = 'organization', machinesFor = null } = {}) {
+function edge({ expireX = () => false, lateX2 = () => true, personalPlan = 'pro', machineName = null, machineKind = 'organization', machinesFor = null, extraX = [] } = {}) {
   const state = { calls: [], unscoped: [], selects: [], expired: 0, admitted: [] };
   const echo = (context, body, init = {}) => Response.json(body, { ...init, headers: { 'X-Danil-Session-Applied': context, 'X-Danil-Session-Applied-Org': ORGS[context] } });
   const fetcher = async (input, init = {}) => {
@@ -47,9 +47,9 @@ function edge({ expireX = () => false, lateX2 = () => true, personalPlan = 'pro'
         { context_id: 'ctx_x', org: 'org_x', org_name: 'Org X', plan: 'pro', role: 'member' }] }], primary: 'ses_a', default_context: 'ctx_p' });
       case '/v1/identity/sessions/catalog': return Response.json({ version: 1, items: [{ session_id: 'ses_a', sub: 'user_a', email: 'a@example.test', contexts: [
         { context_id: 'ctx_p', org: 'org_p', org_name: 'Personal', catalog_state: 'listed', workspaces: [{ account_id: 'p1', engine_workspace_id: 'wp', name: 'Personal Uno' }] },
-        { context_id: 'ctx_x', org: 'org_x', org_name: 'Org X', catalog_state: 'listed', workspaces: [{ account_id: 'x1', engine_workspace_id: 'wx1', name: 'X Uno' }, ...(lateX2() ? [{ account_id: 'x2', engine_workspace_id: 'wx2', name: 'X Dos' }] : [])] }] }] });
+        { context_id: 'ctx_x', org: 'org_x', org_name: 'Org X', catalog_state: 'listed', workspaces: [{ account_id: 'x1', engine_workspace_id: 'wx1', name: 'X Uno' }, ...(lateX2() ? [{ account_id: 'x2', engine_workspace_id: 'wx2', name: 'X Dos' }] : []), ...extraX.map(w => ({ account_id: w.account, engine_workspace_id: w.id, name: w.name }))] }] }] });
       case '/v1/identity/me': return echo(context, { id: 'user_a', name: 'QA A', email: 'a@example.test', workspace: null, organizations: [] });
-      case '/v1/workspaces/preferences': return echo(context, { version: 1, added: context === 'ctx_p' ? ['wp'] : ['wx1', 'wx2'] });
+      case '/v1/workspaces/preferences': return echo(context, { version: 1, added: context === 'ctx_p' ? ['wp'] : ['wx1', 'wx2', ...extraX.map(w => w.id)] });
       case '/v1/workspaces': return echo(context, { items: context === 'ctx_x' ? [{ id: 'x1', org: 'org_x', name: 'X Uno', role: 'member', engine_workspace_id: 'wx1', placement: { kind: 'organization_machine' } }] : [], next_cursor: null });
       case '/v1/credits/balance': return echo(context, { items: [] });
       case '/v1/machines': if (machinesFor) return echo(context, { items: machinesFor(context), next_cursor: null });
@@ -171,45 +171,63 @@ test('a reload opens the workspace of the URL with the session of its (email, or
   assert.deepEqual(state.unscoped, []);
 });
 
-test('a workspace of the organization machine (placement) goes to its hosted machine, even if a connected Mac lists it', async t => {
-  // Las filas reales de la organización Danil en beta: su hospedada (sin listado mientras no contesta) y la Mac de la persona conectada.
+function danilRows(macLists) {
+  // Las filas reales de la organización Danil en beta: la hospedada (Nube, lista solo otro workspace) y la Mac conectada.
   const machinesFor = context => context === 'ctx_x'
-    ? [{ machine_id: 'mxhosted', name: null, kind: 'hosted', organization_id: 'org_x', state: 'stopped', connection: 'disconnected' },
+    ? [{ machine_id: 'mxhosted', name: 'Nube', kind: 'hosted', organization_id: 'org_x', state: 'running', connection: 'connected' },
        { machine_id: 'mxmac', name: 'Mac.domain.name', kind: 'connected', person_id: 'user_a', organization_id: 'org_x', state: 'running', connection: 'connected' }]
     : [{ machine_id: 'mp', name: 'Mac.domain.name', kind: 'connected', person_id: 'user_a', organization_id: 'org_p', state: 'running', connection: 'connected' }];
-  edge({ machinesFor });
+  const lists = { mxhosted: [{ id: 'acvnube', name: 'ACV NUBE', context_root: null }], mxmac: macLists ? [{ id: 'wx1', name: 'X Uno', context_root: null }] : [] };
+  return { machinesFor, lists };
+}
+
+async function openDanil(t, name, macLists, target = 'wx1') {
+  const { machinesFor, lists } = danilRows(macLists);
+  edge({ machinesFor, extraX: [{ id: 'acvnube', name: 'ACV NUBE', account: 'x9' }] });
   const fake = relay({ table });
   const sent = [];
-  const empty = { workspaces: [], active: null };
   const Socket = class extends fake.Socket {
     send(data) {
       const m = JSON.parse(data);
       const machine = /machines\/([a-z]+)\//.exec(this.url)?.[1];
       if (m.type === 'call') sent.push({ machine, command: m.command, workspace: m.workspace });
-      // La hospedada (apagada en beta) no lista nada; la Mac conectada lista el workspace de la organización aunque no lo tenga.
-      const listed = machine === 'mxmac' ? { workspaces: [{ id: 'wx1', name: 'X Uno', context_root: null }], active: null } : empty;
-      if (m.type === 'call' && machine !== 'mp' && ['list_workspaces', 'workspaces_startup', 'list_workspace_attention'].includes(m.command)) return void setTimeout(() => this.onmessage?.({ data: JSON.stringify({ type: 'result', id: m.id, value: m.command === 'list_workspace_attention' ? [] : listed }) }), 0);
+      if (m.type === 'call' && lists[machine] && ['list_workspaces', 'workspaces_startup', 'list_workspace_attention'].includes(m.command))
+        return void setTimeout(() => this.onmessage?.({ data: JSON.stringify({ type: 'result', id: m.id, value: m.command === 'list_workspace_attention' ? [] : { workspaces: lists[machine], active: null } }) }), 0);
       return super.send(data);
     }
   };
-  // La Mac quedó elegida en «Ejecutar en» en una visita anterior, cuando la regla todavía la aceptaba.
-  const app = await boot('listo', 'web-multi-session-hosted', {}, undefined, {}, { web: true, beforeImport(w) { w.localStorage.setItem('danil.web.user_a.preferences.machines.run_on', JSON.stringify({ wx1: 'mxmac' })); w.WebSocket = Socket; globalThis.WebSocket = Socket; } });
+  // Una visita anterior dejó la Mac elegida en «Ejecutar en».
+  const app = await boot('listo', name, {}, undefined, {}, { web: true, beforeImport(w) { w.localStorage.setItem('danil.web.user_a.preferences.machines.run_on', JSON.stringify({ wx1: 'mxmac' })); w.WebSocket = Socket; globalThis.WebSocket = Socket; } });
   t.after(() => app.w.dispatchEvent(new app.w.Event('pagehide')));
   const doc = app.w.document;
-  await until(() => (tile(doc, 'wx1') || doc.querySelector('[data-org-stack="org_x"]')) && fake.sockets.length >= 3, 'rail and the three machines');
+  await until(() => (tile(doc, target) || doc.querySelector('[data-org-stack="org_x"]')) && fake.sockets.length >= 3, 'rail and the three machines');
   await until(() => {
-    if (sent.some(s => s.command === 'list_live_sessions' && s.workspace === 'wx1')) return true;
-    if (!tile(doc, 'wx1')) doc.querySelector('[data-org-stack="org_x"]')?.click();
-    else if (tile(doc, 'wx1').dataset.clicked !== '1') { tile(doc, 'wx1').dataset.clicked = '1'; tile(doc, 'wx1').click(); }
+    if (tile(doc, target)?.dataset.clicked === '1') return true;
+    if (!tile(doc, target)) doc.querySelector('[data-org-stack="org_x"]')?.click();
+    else if (tile(doc, target).dataset.clicked !== '1') { tile(doc, target).dataset.clicked = '1'; tile(doc, target).click(); }
     return false;
-  }, 'tasks of X are asked');
-  const asked = sent.filter(s => ['list_live_sessions', 'list_projects', 'list_models'].includes(s.command) && s.workspace === 'wx1');
-  assert.ok(asked.length && asked.every(s => s.machine === 'mxhosted'), `X's workspace goes to its hosted machine: ${JSON.stringify(asked)}`);
+  }, `${target} open`);
+  return { app, doc, sent };
+}
+
+test('a workspace that no machine lists is not sent anywhere and says so', async t => {
+  const { app, doc, sent } = await openDanil(t, 'web-multi-session-unlisted', false);
+  await until(() => doc.body.textContent.includes('Ninguna máquina con acceso tiene este workspace'), 'a clear notice');
+  await new Promise(resolve => setTimeout(resolve, 300));
+  assert.deepEqual(sent.filter(s => s.workspace === 'wx1' && ['list_live_sessions', 'list_projects', 'list_models', 'list_accounts'].includes(s.command)), [], 'nothing is asked of a machine that does not list it');
   const list = await app.w.__TAURI_INTERNALS__.invoke('machine_list');
-  const mac = list.find(m => m.id === 'mxmac');
-  assert.ok(mac && mac.hosts === false && mac.refuses === true && !mac.materializes, `a connected Mac does not host an organization_machine workspace: ${JSON.stringify(mac)}`);
-  await until(() => !doc.body.textContent.includes('Mac.domain.name · Org X¿') && ![...doc.querySelectorAll('[data-create-on], [data-run-on]')].some(e => e.textContent.includes('Mac.domain.name')), 'the remembered Mac is dropped from the composer');
-  assert.equal(list.find(m => m.active)?.id ?? null, 'mxhosted', `the header and «Ejecutar en» pick the hosted machine: ${JSON.stringify(list)}`);
+  assert.equal(list.find(m => m.active)?.id ?? null, null, `no machine is picked: ${JSON.stringify(list)}`);
+  await until(() => doc.body.textContent.includes('Sin máquina'), 'the header says there is no machine');
+  assert.equal([...doc.querySelectorAll('button, span')].some(e => e.textContent.trim() === 'local'), false, 'never «local» on the web');
+});
+
+test('a workspace opens on the online machine that lists it, whatever its kind', async t => {
+  const { app, sent } = await openDanil(t, 'web-multi-session-listed', true);
+  await until(() => sent.some(s => s.command === 'list_live_sessions' && s.workspace === 'wx1'), 'tasks of X are asked');
+  const asked = sent.filter(s => ['list_live_sessions', 'list_projects', 'list_models'].includes(s.command) && s.workspace === 'wx1');
+  assert.ok(asked.every(s => s.machine === 'mxmac'), `only the machine that lists it: ${JSON.stringify(asked)}`);
+  const list = await app.w.__TAURI_INTERNALS__.invoke('machine_list');
+  assert.equal(list.find(m => m.active)?.id ?? null, 'mxmac');
 });
 
 test('a Free personal workspace is served by its own connected machine: tasks, accounts and models carry the workspace and go to that machine', async t => {
@@ -237,3 +255,10 @@ test('a Free personal workspace is served by its own connected machine: tasks, a
   assert.deepEqual(state.selects, []);
 });
 
+
+test('the hosted machine\'s own workspace (ACV NUBE) shows its tasks: they are asked of the machine that lists it', async t => {
+  const { doc, sent } = await openDanil(t, 'web-multi-session-acv', false, 'acvnube');
+  await until(() => sent.some(s => s.command === 'list_live_sessions' && s.workspace === 'acvnube' && s.machine === 'mxhosted'), 'the task list of ACV NUBE is asked of the Nube');
+  await until(() => doc.body.textContent.includes('Tarea t1'), 'its tasks are shown');
+  assert.deepEqual(sent.filter(s => s.workspace === 'wx1' && s.machine === 'mxhosted' && /list_(agents|accounts|live_sessions)/.test(s.command)), [], 'nothing of another workspace goes to the Nube');
+});

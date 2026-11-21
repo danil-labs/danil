@@ -1,7 +1,9 @@
-Danil 0.3.3 fixes 0.3.2: the installer brings the bundled tools back, starting with git.
+Danil 0.3.4 adds sign-in when the app opens, brings your workspaces from all your organizations into one place, and includes the 0.3.3 fixes.
 
-- **A complete install again.** Danil 0.3.2 for Windows and Linux shipped without git, Python or the browser. Installing 0.3.3 over it restores the tools.
-- **Git that does not answer.** The engine waits fifteen seconds for the bundled git. If it does not answer, Danil says whether it was slow or did not start, and how to repair it.
-- **One Danil entry.** The picker groups Danil Credits and the Free AI Router under one entry. Its panel shows the balance and how to use each one.
-- **Machines.** The machine name no longer flickers to “Connecting…” at startup. A machine that does not answer no longer hides the list of the others.
-- **Tasks and drafts.** A delegated task opens on its machine. Drafts survive a failed read.
+- **Sign-in when you open Danil.** Danil asks you to sign in the first time. Your local workspaces link to your personal workspace on their own.
+- **All your organizations together.** The rail shows the workspaces of each organization. Each workspace opens with its own session.
+- **Machines.** Your connected Mac shows in the list. An organization workspace runs on its hosted machine.
+- **Plans.** You review the plan and the credits before you pay.
+- **AI providers.** A new screen groups your providers and their accounts.
+- **Chat.** Agent messages show as Markdown, with mentions and links.
+- **A complete install.** The Windows and Linux installer brings git, Python and the browser back. If git does not answer in fifteen seconds, Danil says why and how to repair it.

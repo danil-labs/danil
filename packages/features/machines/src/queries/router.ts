@@ -263,21 +263,16 @@ export function createRouterCore(config: RouterConfig) {
   /** Los workspaces de la cuenta que esta computadora no tiene viven en sus otras máquinas, y los de una organización en su servidor. En la web, todos. */
   const elsewhere = (workspace: string | null) => !local || (!hasHere(workspace) && (fleet.inRegistry(workspace) || organizations().has(workspace as string)));
   /**
-   * En la web, un workspace que ninguna máquina lista todavía va a la hospedada de su organización (la que sirve
-   * los workspaces `organization_machine`), nunca a una Mac conectada que no lo tiene. Apagada, la lectura lo dice.
+   * Las máquinas de un workspace; sin workspace (en la web), todas. En la web, solo las que lo listan en su
+   * `list_workspaces`: un workspace es de la cuenta, y lo consume la máquina con acceso que lo tiene. Ninguna
+   * otra recibe sus llamadas (ni la hospedada ni una «primera encendida»).
    */
-  const hostedOf = () => (local ? null : fleet.machines().find((m) => m.hosted)?.id ?? null);
-  /** Las máquinas de un workspace; sin workspace (en la web), todas. En la web, sin ninguna que lo liste, la hospedada de su organización. */
   const membersOf = (workspace: string | null) => {
     if (!workspace) return fleet.machines().map((m) => m.id);
-    // Un workspace `organization_machine` lo sirve la hospedada de su organización, aunque una Mac conectada lo liste.
-    const own = !local && config.organizationMachine?.(workspace) ? hostedOf() : null;
-    if (own) return [own];
-    // Una Mac conectada solo recibe los workspaces que lista; los demás son de la hospedada.
-    const members = local ? fleet.membersOf(workspace) : fleet.membersOf(workspace).filter((id) => fleet.info(id)?.hosted || fleet.lists(id, workspace) === true || (fleet.lists(id, workspace) === null && !hostedOf()));
-    const hosted = members.length ? null : hostedOf();
-    return hosted ? [hosted] : members;
+    return local ? fleet.membersOf(workspace) : fleet.machines().filter((m) => fleet.lists(m.id, workspace) === true).map((m) => m.id);
   };
+  /** En la web: sin máquina que lo liste, se dice y no se intenta nada. */
+  const noMachine = () => ({ what: t("web.machines.none_for_workspace"), detail: "no_machine" });
   /** La máquina que atiende un workspace que no está aquí: la primera encendida de sus miembros, o la primera. */
   const leadOf = (workspace: string | null): string | null => {
     const members = membersOf(workspace).filter((m) => fleet.power(m) !== "outdated");
@@ -570,6 +565,7 @@ export function createRouterCore(config: RouterConfig) {
   /** Una lectura de la barra: lo de aquí ya, más lo último de cada otra máquina del workspace. */
   async function fanRead(command: string, args: Args, workspace: string | null, options: Options): Promise<unknown> {
     const members = command === "list_workspace_attention" ? fleet.machines().map((m) => m.id) : membersOf(workspace);
+    if (!local && workspace && !members.length && command !== "list_workspace_attention") throw noMachine();
     // El canal de avance se queda en la ventana: por el relay vuelve solo la respuesta final.
     const envelopes = members.map((machine) => ({ machine, workspace, command, args: withoutChannel(command, args) }));
     const slices: Slice[] = [];
@@ -728,7 +724,8 @@ export function createRouterCore(config: RouterConfig) {
     if (!merged) throw noAnswer(slices, null);
     const ids = (merged.workspaces ?? []).map((w) => w?.id).filter((id): id is string => typeof id === "string");
     // Una máquina sin workspaces no deja la página sin ninguno abierto: el primero de la cuenta.
-    if (!active || !ids.includes(active)) active = typeof merged.active === "string" && ids.includes(merged.active) ? merged.active : (ids[0] ?? null);
+    // El abierto es de la página: que ninguna máquina lo liste no lo cambia por otro (se dice «sin máquina»).
+    if (!active) active = typeof merged.active === "string" && ids.includes(merged.active) ? merged.active : (ids[0] ?? null);
     rememberContexts(merged);
     return { ...merged, active };
   }
@@ -753,8 +750,8 @@ export function createRouterCore(config: RouterConfig) {
     const workspace = active;
     const lead = defaultMachine(workspace);
     const members = new Set(local ? fleet.membersOf(workspace) : membersOf(workspace));
-    // En la web, un workspace de la máquina de su organización no se hace suyo en otra (una Mac conectada).
-    const owned = !local && !!workspace && !!config.organizationMachine?.(workspace);
+    // En la web, una máquina que no lista el workspace no lo sirve ni lo hace suyo.
+    const owned = !local && !!workspace;
     const home = config.home?.();
     const selfOs = systemOf(home?.os);
     return [
@@ -817,8 +814,8 @@ export function createRouterCore(config: RouterConfig) {
       throw noAnswer(slices, workspace);
     }
     const named = homeOf(args);
-    const lead = (named && fleet.has(named) ? named : null) ?? leadOf(workspace) ?? (local ? leadOf(null) : hostedOf());
-    if (!lead) throw { what: t("web.machines.none_for_workspace"), detail: "no_machine" };
+    const lead = (named && fleet.has(named) ? named : null) ?? leadOf(workspace) ?? (local ? leadOf(null) : null);
+    if (!lead) throw noMachine();
     return remote(lead, command, args, callWorkspace(workspace, args));
   }
 
@@ -908,7 +905,7 @@ export function createRouterCore(config: RouterConfig) {
       if (context) return await remote(context, command, args, callWorkspace(workspace, args));
       if (elsewhere(workspace)) {
         // En la web, un workspace sin máquinas propias en el registro se atiende en la VM de la cuenta, como las cuentas de IA.
-        const lead = leadOf(workspace) ?? hostedOf();
+        const lead = leadOf(workspace);
         if (lead) return await remote(lead, command, args, callWorkspace(workspace, args));
         if (!local) throw { what: t("web.machines.none_for_workspace"), detail: "no_machine" };
       }
