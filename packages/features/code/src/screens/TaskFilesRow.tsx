@@ -1,8 +1,8 @@
 import { type JSX, Show, createSignal } from "solid-js";
-import { t } from "../../../../apps/desktop/src/lib/i18n";
-import { setMoviendoHueco } from "../../../../apps/desktop/src/lib/sites";
-import { cn } from "../../../../apps/desktop/src/lib/utils";
-import { BELOW_LOCATION_MARGIN } from "../../../host/src/window";
+import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { setMoviendoHueco } from "../../../../../apps/desktop/src/lib/sites";
+import { cn } from "../../../../../apps/desktop/src/lib/utils";
+import { BELOW_LOCATION_MARGIN } from "../../../../host/src/window";
 
 /** The chat keeps its 320 px minimum plus the 16 px gutter, whatever width was chosen. */
 const CHAT_ROOM = 336;

@@ -1,6 +1,6 @@
-import { temaPintado } from "../../../../apps/desktop/src/lib/theme";
-import { DIBUJOS, EN_CLARO } from "./file-icons";
-import { iconoDe } from "./icons";
+import { temaPintado } from "../../../../../apps/desktop/src/lib/theme";
+import { DIBUJOS, EN_CLARO } from "../model/file-icons";
+import { iconoDe } from "../model/icons";
 
 /**
  * El icono de un archivo, pintado. Sin icono en el catálogo pinta el genérico

@@ -2,11 +2,11 @@ import { For, Show, createMemo, type JSX } from "solid-js";
 import Columns2 from "lucide-solid/icons/columns-2";
 import Rows2 from "lucide-solid/icons/rows-2";
 import UnfoldVertical from "lucide-solid/icons/unfold-vertical";
-import { cn } from "../../../../apps/desktop/src/lib/utils";
-import { t } from "../../../../apps/desktop/src/lib/i18n";
-import { createPref } from "../../../../apps/desktop/src/lib/prefs";
-import { ajuste } from "../../../../apps/desktop/src/lib/wrap";
-import { Button } from "../../../ui/src/Button";
+import { cn } from "../../../../../apps/desktop/src/lib/utils";
+import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { createPref } from "../../../../../apps/desktop/src/lib/prefs";
+import { ajuste } from "../../../../../apps/desktop/src/lib/wrap";
+import { Button } from "../../../../ui/src/Button";
 import {
   filasDosPaneles,
   marcarLineas,
@@ -16,7 +16,7 @@ import {
   type Hunk,
   type Linea,
   type Tramo,
-} from "./diff";
+} from "../model/diff";
 
 /**
  * Las piezas del diff que comparten el visor de archivos (`FileViewer.tsx`) y

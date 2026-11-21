@@ -1,18 +1,18 @@
 import { For, Show, createEffect, createSignal, on, onCleanup } from "solid-js";
 import { createStore, reconcile } from "solid-js/store";
-import { alMoverseElArbol, avisarDeLosArboles } from "./refresh";
-import { precargarEditor } from "./editorLoad";
-import { Skeleton } from "../../../ui/src/Skeleton";
+import { alMoverseElArbol, avisarDeLosArboles } from "../queries/refresh";
+import { precargarEditor } from "../model/editorLoad";
+import { Skeleton } from "../../../../ui/src/Skeleton";
 import { Channel } from "@tauri-apps/api/core";
-import { invoke } from "../../../engine-client/src/client.ts";
-import { machineOf } from "../../machines/src/store";
-import { FailureNote, asFailure, type Failure } from "../../../ui/src/Failure";
-import type { ArbolEnTarea } from "../../../../apps/desktop/src/lib/model";
-import { t } from "../../../../apps/desktop/src/lib/i18n";
+import { invoke } from "../../../../engine-client/src/client.ts";
+import { machineOf } from "../../../machines/src/store";
+import { FailureNote, asFailure, type Failure } from "../../../../ui/src/Failure";
+import type { ArbolEnTarea } from "../../../../../apps/desktop/src/lib/model";
+import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import ArbolDeArchivos from "./FileTreeLazy";
 import KnCloud from "./KnCloud";
-import { siguienteLista } from "./trees";
-import { recordarArboles } from "./treeKind";
+import { siguienteLista } from "../model/trees";
+import { recordarArboles } from "../queries/treeKind";
 
 /**
  * El árbol de trabajo: la carpeta del proyecto donde corre el agente, una

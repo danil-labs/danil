@@ -4,15 +4,15 @@ import ChevronUp from "lucide-solid/icons/chevron-up";
 import CircleAlert from "lucide-solid/icons/circle-alert";
 import TriangleAlert from "lucide-solid/icons/triangle-alert";
 import { For, Show, Suspense, createEffect, createSignal, lazy, on, onCleanup } from "solid-js";
-import { t } from "../../../../apps/desktop/src/lib/i18n";
-import { invoke } from "../../../engine-client/src/client.ts";
-import { machineOf } from "../../machines/src/store";
-import { Button } from "../../../ui/src/Button";
-import { FailureNote, asFailure, type Failure } from "../../../ui/src/Failure";
-import { Spinner } from "../../../ui/src/Spinner";
-import { type DiagnosticoTypst, type ExportacionTypst, lugarDe, pedirArreglo, principalElegido } from "./typst";
+import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { invoke } from "../../../../engine-client/src/client.ts";
+import { machineOf } from "../../../machines/src/store";
+import { Button } from "../../../../ui/src/Button";
+import { FailureNote, asFailure, type Failure } from "../../../../ui/src/Failure";
+import { Spinner } from "../../../../ui/src/Spinner";
+import { type DiagnosticoTypst, type ExportacionTypst, lugarDe, pedirArreglo, principalElegido } from "../queries/typst";
 
-const PdfDocument = lazy(() => import("../../viewers/src/Pdf"));
+const PdfDocument = lazy(() => import("../../../viewers/src/Pdf"));
 
 /** Cuánto espera, desde el último cambio guardado, a volver a compilar: cada vez escribe el PDF entero. */
 const PAUSA_DE_LA_EXPORTACION = 800;

@@ -1,7 +1,7 @@
-import { invoke } from "../../../engine-client/src/client.ts";
-import { machineOf } from "../../machines/src/store";
-import type { ArbolEnTarea } from "../../../../apps/desktop/src/lib/model";
-import { esDeCodigo } from "./workdirKind";
+import { invoke } from "../../../../engine-client/src/client.ts";
+import { machineOf } from "../../../machines/src/store";
+import type { ArbolEnTarea } from "../../../../../apps/desktop/src/lib/model";
+import { esDeCodigo } from "../model/workdirKind";
 
 /**
  * De qué clase es cada árbol de una tarea, para que una pestaña sepa si abre en

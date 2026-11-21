@@ -12,41 +12,41 @@ import {
   untrack,
   type JSX,
 } from "solid-js";
-import { invoke } from "../../../engine-client/src/client.ts";
-import { machineOf } from "../../machines/src/store";
+import { invoke } from "../../../../engine-client/src/client.ts";
+import { machineOf } from "../../../machines/src/store";
 import Navegador from "lucide-solid/icons/external-link";
 import IconoDescarga from "lucide-solid/icons/download";
 import IconoCodigo from "lucide-solid/icons/code";
 import IconoLado from "lucide-solid/icons/columns-2";
 import IconoPrevia from "lucide-solid/icons/eye";
 import IconoCambios from "lucide-solid/icons/git-compare";
-import { Button } from "../../../ui/src/Button";
-import { FailureNote, asFailure, type Failure } from "../../../ui/src/Failure";
-import { Markdown } from "../../../ui/src/Markdown";
-import Documento from "../../artifacts/src/Document";
-import type { Preview } from "../../artifacts/src/Preview";
-import { formaDe } from "../../artifacts/src/sandbox";
-import { cn } from "../../../../apps/desktop/src/lib/utils";
-import { HEADER_HEIGHT } from "../../../host/src/window";
-import { t } from "../../../../apps/desktop/src/lib/i18n";
-import { createPref, hayPref } from "../../../../apps/desktop/src/lib/prefs";
-import { ariaDeAtajo, textoDeAtajo } from "../../../../apps/desktop/src/lib/shortcuts";
-import { peso } from "../../../../apps/desktop/src/lib/format";
-import { capabilities } from "../../../host/src/platform";
+import { Button } from "../../../../ui/src/Button";
+import { FailureNote, asFailure, type Failure } from "../../../../ui/src/Failure";
+import { Markdown } from "../../../../ui/src/Markdown";
+import Documento from "../../../artifacts/src/Document";
+import type { Preview } from "../../../artifacts/src/Preview";
+import { formaDe } from "../../../artifacts/src/sandbox";
+import { cn } from "../../../../../apps/desktop/src/lib/utils";
+import { HEADER_HEIGHT } from "../../../../host/src/window";
+import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { createPref, hayPref } from "../../../../../apps/desktop/src/lib/prefs";
+import { ariaDeAtajo, textoDeAtajo } from "../../../../../apps/desktop/src/lib/shortcuts";
+import { peso } from "../../../../../apps/desktop/src/lib/format";
+import { capabilities } from "../../../../host/src/platform";
 import { mediaKindOf, type TreePart } from "@terminus/protocol";
-import type { LeerParte } from "../../viewers/src/Media";
-import { comoDiff, parsearDiff, type ArchivoDiff } from "./diff";
-import { CuerpoDeArchivo, SelectorDeDisposicion } from "./Changes";
-import { IDOS, alMoverseElArbol, comoEntra, esBorrado, type DetalleDeIdos } from "./refresh";
-import { setMoviendoHueco } from "../../../../apps/desktop/src/lib/sites";
-import { cargarEditor } from "./editorLoad";
-import { alternarAjuste, esAtajoDeAjuste } from "../../../../apps/desktop/src/lib/wrap";
-import { gramaticaDe, nombreDeLenguaje } from "./languages";
-import { sangriaDe } from "./indent";
-import { IconoDeArchivo } from "./FileIcon";
-import { esArbolDeCodigo } from "./treeKind";
-import PaginaEnVivo, { direccionDePagina } from "./PagePreview";
-import { delimiterFor } from "../../viewers/src/csv";
+import type { LeerParte } from "../../../viewers/src/Media";
+import { comoDiff, parsearDiff, type ArchivoDiff } from "../model/diff";
+import { CuerpoDeArchivo, SelectorDeDisposicion } from "../components/Changes";
+import { IDOS, alMoverseElArbol, comoEntra, esBorrado, type DetalleDeIdos } from "../queries/refresh";
+import { setMoviendoHueco } from "../../../../../apps/desktop/src/lib/sites";
+import { cargarEditor } from "../model/editorLoad";
+import { alternarAjuste, esAtajoDeAjuste } from "../../../../../apps/desktop/src/lib/wrap";
+import { gramaticaDe, nombreDeLenguaje } from "../model/languages";
+import { sangriaDe } from "../model/indent";
+import { IconoDeArchivo } from "../components/FileIcon";
+import { esArbolDeCodigo } from "../queries/treeKind";
+import PaginaEnVivo, { direccionDePagina } from "../components/PagePreview";
+import { delimiterFor } from "../../../viewers/src/csv";
 import {
   type DiagnosticoTypst,
   ampliadaDe,
@@ -66,17 +66,17 @@ import {
   vivaDe,
   mirarEditorTypst,
   dejarDeMirarEditorTypst,
-} from "./typst";
-import { llevaVistaTypst } from "./typstScope";
+} from "../queries/typst";
+import { llevaVistaTypst } from "../model/typstScope";
 
 const EditorDeCodigo = lazy(cargarEditor);
-const VistaPreviaTypst = lazy(() => import("./TypstPreview"));
-const VistaTypstExportada = lazy(() => import("./TypstExportPreview"));
+const VistaPreviaTypst = lazy(() => import("../components/TypstPreview"));
+const VistaTypstExportada = lazy(() => import("../components/TypstExportPreview"));
 /** Los visores de lo que no se edita bajan solo al abrirse: `pdfjs-dist` no entra en el arranque. */
-const PdfDocument = lazy(() => import("../../viewers/src/Pdf"));
-const ZoomableImage = lazy(() => import("../../viewers/src/ImageViewer"));
-const DelimitedTable = lazy(() => import("../../viewers/src/CsvTable"));
-const Reproductor = lazy(() => import("../../viewers/src/Media"));
+const PdfDocument = lazy(() => import("../../../viewers/src/Pdf"));
+const ZoomableImage = lazy(() => import("../../../viewers/src/ImageViewer"));
+const DelimitedTable = lazy(() => import("../../../viewers/src/CsvTable"));
+const Reproductor = lazy(() => import("../../../viewers/src/Media"));
 
 /**
  * Un archivo de un árbol de la tarea, en una sola barra: dónde está, qué se
@@ -404,7 +404,7 @@ export default function VisorDeArchivo(props: {
     setBajando(true);
     setFalloAfuera(null);
     try {
-      const { descargar } = await import("../../viewers/src/Media");
+      const { descargar } = await import("../../../viewers/src/Media");
       await descargar(props.ruta, leer);
     } catch (e) {
       setFalloAfuera(asFailure(e));
@@ -1181,7 +1181,7 @@ function Cuerpo(props: {
     setBajando(true);
     setFalloDescarga(null);
     try {
-      const { descargar } = await import("../../viewers/src/Media");
+      const { descargar } = await import("../../../viewers/src/Media");
       await descargar(props.ruta, props.leerParte);
     } catch (e) {
       setFalloDescarga(asFailure(e));

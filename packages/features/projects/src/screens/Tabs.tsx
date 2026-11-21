@@ -23,8 +23,8 @@ import {
 } from "../../../../ui/src/DropdownMenu";
 import { MarcaAgente } from "../../../../ui/src/icons";
 import { WithMentions } from "../../../chat/src/components/WithMentions";
-import { IconoDeArchivo } from "../../../code/src/FileIcon";
-import { colorDeMarca, describirEstado, localDe } from "../../../code/src/localStatus";
+import { IconoDeArchivo } from "../../../code/src/components/FileIcon";
+import { colorDeMarca, describirEstado, localDe } from "../../../code/src/queries/localStatus";
 import { AstroAvatar } from "./AstroAvatar";
 import { displayName, watchProfiles } from "../queries/profiles";
 import SessionGit, { sessionGitDescription } from "../components/SessionGit";

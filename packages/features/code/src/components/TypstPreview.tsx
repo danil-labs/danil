@@ -1,4 +1,4 @@
-import { listen } from "../../../../apps/desktop/src/lib/serviceEvents";
+import { listen } from "../../../../../apps/desktop/src/lib/serviceEvents";
 import Check from "lucide-solid/icons/check";
 import ChevronDown from "lucide-solid/icons/chevron-down";
 import ChevronUp from "lucide-solid/icons/chevron-up";
@@ -11,14 +11,14 @@ import TriangleAlert from "lucide-solid/icons/triangle-alert";
 import ZoomIn from "lucide-solid/icons/zoom-in";
 import ZoomOut from "lucide-solid/icons/zoom-out";
 import { For, Show, createEffect, createSignal, on, onCleanup, onMount } from "solid-js";
-import { t } from "../../../../apps/desktop/src/lib/i18n";
-import { invoke } from "../../../engine-client/src/client.ts";
-import { machineOf } from "../../machines/src/store";
-import { seguirHueco, type Hueco } from "../../../../apps/desktop/src/lib/sites";
-import { Button } from "../../../ui/src/Button";
-import { FailureNote, asFailure, type Failure } from "../../../ui/src/Failure";
-import { IconButton } from "../../viewers/src/IconButton";
-import { clampZoom, ZOOM_STEP } from "../../viewers/src/zoom";
+import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { invoke } from "../../../../engine-client/src/client.ts";
+import { machineOf } from "../../../machines/src/store";
+import { seguirHueco, type Hueco } from "../../../../../apps/desktop/src/lib/sites";
+import { Button } from "../../../../ui/src/Button";
+import { FailureNote, asFailure, type Failure } from "../../../../ui/src/Failure";
+import { IconButton } from "../../../viewers/src/IconButton";
+import { clampZoom, ZOOM_STEP } from "../../../viewers/src/zoom";
 import {
   type DiagnosticoTypst,
   type ExportacionTypst,
@@ -43,8 +43,8 @@ import {
   tomarVista,
   vivaDe,
   zoomDe,
-} from "./typst";
-import { Spinner } from "../../../ui/src/Spinner";
+} from "../queries/typst";
+import { Spinner } from "../../../../ui/src/Spinner";
 
 /**
  * La vista en vivo de un documento Typst de la tarea: la página de Tinymist en

@@ -66,19 +66,19 @@ import { createThreadsStore } from "../../../features/threads/src";
 import { createWorkspaceStore } from "../../../features/workspace/src";
 import { deliver, listen } from "../../../../apps/desktop/src/lib/serviceEvents";
 
-const VisorDeArchivo = lazy(() => import("../../../features/code/src/FileViewer"));
+const VisorDeArchivo = lazy(() => import("../../../features/code/src/screens/FileViewer"));
 
-import { avisarDeLosArboles } from "../../../features/code/src/refresh";
-import TaskFilesRow, { taskFilesWidth } from "../../../features/code/src/TaskFilesRow";
-import { TaskSide, TaskSideShell } from "../../../features/code/src/TaskSide";
-import { arbolesDe, contiene, ubicar } from "../../../features/code/src/treeKind";
+import { avisarDeLosArboles } from "../../../features/code/src/queries/refresh";
+import TaskFilesRow, { taskFilesWidth } from "../../../features/code/src/screens/TaskFilesRow";
+import { TaskSide, TaskSideShell } from "../../../features/code/src/screens/TaskSide";
+import { arbolesDe, contiene, ubicar } from "../../../features/code/src/queries/treeKind";
 import { moviendoHueco } from "../../../../apps/desktop/src/lib/sites";
 
 const DeleteTaskDialog = lazy(() => import("../../../features/projects/src/screens/DeleteTaskDialog"));
 const HandoverDialog = lazy(() => import("../../../features/chat/src/screens/HandoverDialog"));
-const TaskFilesCard = lazy(() => import("../../../features/code/src/TaskFiles"));
+const TaskFilesCard = lazy(() => import("../../../features/code/src/screens/TaskFiles"));
 
-import { esDeCodigo } from "../../../features/code/src/workdirKind";
+import { esDeCodigo } from "../../../features/code/src/model/workdirKind";
 import Observability from "../../../features/observability/src/Observability";
 import AnadirCarpeta, { type ClonEnCurso, type InicioDeCarpeta } from "../../../features/projects/src/screens/AddWorkdir";
 import AgentPageTasks from "../../../features/projects/src/screens/AgentPageTasks";
@@ -153,7 +153,7 @@ import type { ActivityEvent } from "@terminus/protocol";
 import { ATTACHMENT_DOCUMENTS_FEATURE, PROVIDER_HANDOFF_FEATURE, SESSION_MODEL_FEATURE } from "@terminus/protocol";
 import { mergeGates } from "../../../features/chat/src/model/permissionGates";
 import { openChatVisual, readChatVisual } from "../../../features/chat/src/queries/readVisual";
-import { apagarVistasDe, hayVistasDe, soltarVistasHuerfanas } from "../../../features/code/src/typst";
+import { apagarVistasDe, hayVistasDe, soltarVistasHuerfanas } from "../../../features/code/src/queries/typst";
 import { type ConversationScope, createConversationHandoff } from "../../../features/conversation-handoff/src";
 import { createDraftsStore } from "../../../features/drafts/src";
 import { asleep, withLastAnswer } from "../../../features/machines/src/lastAnswer";

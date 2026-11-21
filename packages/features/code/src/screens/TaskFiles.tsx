@@ -1,5 +1,5 @@
 import { For, Show, Suspense, createResource, createSignal, onCleanup, onMount } from "solid-js";
-import { SignalDot } from "../../../ui/src/SignalDot";
+import { SignalDot } from "../../../../ui/src/SignalDot";
 import Ellipsis from "lucide-solid/icons/ellipsis";
 import GitCompare from "lucide-solid/icons/git-compare";
 import ListTree from "lucide-solid/icons/list-tree";
@@ -7,25 +7,25 @@ import Maximize2 from "lucide-solid/icons/maximize-2";
 import MessageSquare from "lucide-solid/icons/message-square";
 import Minimize2 from "lucide-solid/icons/minimize-2";
 import X from "lucide-solid/icons/x";
-import { capabilities } from "../../../host/src/platform";
-import { arbolesDe } from "./treeKind";
-import { Button } from "../../../ui/src/Button";
-import { ITEM_DE_MENU, Popover, PopoverContent, PopoverTrigger } from "../../../ui/src/Popover";
-import { t } from "../../../../apps/desktop/src/lib/i18n";
-import { invoke } from "../../../engine-client/src/client.ts";
-import { copyText } from "../../../host/src/clipboard";
-import { cn } from "../../../../apps/desktop/src/lib/utils";
-import { HEADER_HEIGHT } from "../../../host/src/window";
-import type { ArbolEnTarea } from "../../../../apps/desktop/src/lib/model";
-import type { TaskFiles } from "../../../../apps/desktop/src/lib/taskFiles";
-import { machineOf } from "../../machines/src/store";
-import type { Cambios } from "./Changes";
-import Codigo from "./Code";
-import KnIntegrate from "./KnIntegrate";
-import VistaPreviaDeTarea from "./TaskPreview";
+import { capabilities } from "../../../../host/src/platform";
+import { arbolesDe } from "../queries/treeKind";
+import { Button } from "../../../../ui/src/Button";
+import { ITEM_DE_MENU, Popover, PopoverContent, PopoverTrigger } from "../../../../ui/src/Popover";
+import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { invoke } from "../../../../engine-client/src/client.ts";
+import { copyText } from "../../../../host/src/clipboard";
+import { cn } from "../../../../../apps/desktop/src/lib/utils";
+import { HEADER_HEIGHT } from "../../../../host/src/window";
+import type { ArbolEnTarea } from "../../../../../apps/desktop/src/lib/model";
+import type { TaskFiles } from "../../../../../apps/desktop/src/lib/taskFiles";
+import { machineOf } from "../../../machines/src/store";
+import type { Cambios } from "../components/Changes";
+import Codigo from "../components/Code";
+import KnIntegrate from "../components/KnIntegrate";
+import VistaPreviaDeTarea from "../components/TaskPreview";
 import VisorDeArchivo from "./FileViewer";
-import { IconoDeArchivo } from "./FileIcon";
-import { alMoverseElArbol } from "./refresh";
+import { IconoDeArchivo } from "../components/FileIcon";
+import { alMoverseElArbol } from "../queries/refresh";
 import type { TreePart } from "@terminus/protocol";
 
 const nameOf = (path: string) => path.split("/").pop() ?? path;
@@ -120,7 +120,7 @@ export default function TaskFilesCard(props: {
   const download = async () => {
     const tab = activeTab();
     if (!tab) return;
-    const { descargar } = await import("../../viewers/src/Media");
+    const { descargar } = await import("../../../viewers/src/Media");
     await descargar(tab.path, (offset, size, revision) => invoke<TreePart>("tree_read_part", {
       project: props.project, session: props.session, tree: tab.tree, path: tab.path, offset, size, revision: revision ?? null,
     }, machineOf(props.session))).catch(() => {});

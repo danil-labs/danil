@@ -1,1 +1,1 @@
-export { default as WorkdirIcon } from "./WorkdirIcon.tsx";
+export { default as WorkdirIcon } from "./components/WorkdirIcon.tsx";

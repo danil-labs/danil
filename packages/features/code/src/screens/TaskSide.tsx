@@ -1,11 +1,11 @@
 import { type JSX, Match, Show, Switch } from "solid-js";
-import SearchPanel from "../../chat/src/components/SearchPanel";
-import { DelegatedPanel, type DelegatedPanelModel } from "../../chat/src/screens/DelegatedTasks";
-import type { SearchSurface } from "../../chat/src/screens/ThreadSearch";
-import { t } from "../../../../apps/desktop/src/lib/i18n";
-import type { TaskSideMode } from "../../../../apps/desktop/src/lib/taskFiles";
-import { UsagePanel } from "../../../shell/src/shell/UsageTool";
-import type { Usage } from "../../../shell/src/shell/usage";
+import SearchPanel from "../../../chat/src/components/SearchPanel";
+import { DelegatedPanel, type DelegatedPanelModel } from "../../../chat/src/screens/DelegatedTasks";
+import type { SearchSurface } from "../../../chat/src/screens/ThreadSearch";
+import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import type { TaskSideMode } from "../../../../../apps/desktop/src/lib/taskFiles";
+import { UsagePanel } from "../../../../shell/src/shell/UsageTool";
+import type { Usage } from "../../../../shell/src/shell/usage";
 
 /** The files window frame. Search, usage and delegated tasks reuse it instead of a second box. */
 export function TaskSideShell(props: { mode: TaskSideMode; side: JSX.Element; children: JSX.Element }) {

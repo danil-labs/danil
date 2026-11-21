@@ -1,9 +1,9 @@
-import { listen } from "../../../../apps/desktop/src/lib/serviceEvents";
+import { listen } from "../../../../../apps/desktop/src/lib/serviceEvents";
 import { createEffect, createRoot, createSignal, on } from "solid-js";
-import { t } from "../../../../apps/desktop/src/lib/i18n";
-import { invoke } from "../../../engine-client/src/client.ts";
-import { createPref } from "../../../../apps/desktop/src/lib/prefs";
-import { huecoLibre, moviendoHueco, zonasEncima, type Hueco } from "../../../../apps/desktop/src/lib/sites";
+import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { invoke } from "../../../../engine-client/src/client.ts";
+import { createPref } from "../../../../../apps/desktop/src/lib/prefs";
+import { huecoLibre, moviendoHueco, zonasEncima, type Hueco } from "../../../../../apps/desktop/src/lib/sites";
 
 /** `environment/typst.rs` · `Diagnostico`. */
 export type DiagnosticoTypst = {
@@ -35,7 +35,7 @@ type AvisoTypst = {
   pages: number | null;
 };
 
-export { esTypst } from "./typstScope";
+export { esTypst } from "../model/typstScope";
 
 /** Si el plugin Typst está activo en este workspace: sin él, un `.typ` es un archivo de texto más. */
 const [pluginTypst, setPluginTypst] = createSignal(false);
