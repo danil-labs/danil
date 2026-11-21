@@ -32,25 +32,12 @@ export function createEngineQueue(env: {
   // No listing of the web carries the features: there every one is absent.
   const announces = (session: string, feature: string) => rowOf(session)?.features?.includes(feature) === true;
 
-  /** The engine of the task can dispatch its queue: it announces both features. */
+  /**
+   * The engine of the task dispatches its queue: it announces both features. Every
+   * `save_queue` asks it to (`App.tsx`); without them the person sends it.
+   */
   const engineCanDispatch = (session: string | null | undefined): boolean =>
     !!session && announces(session, QUEUE_FEATURE) && announces(session, QUEUE_DISPATCH_FEATURE);
-
-  // What the last `save_queue` of this window asked of each task's engine.
-  const asked = new Map<string, boolean>();
-
-  /**
-   * The only activation point: the extra arguments of `save_queue`. The window asks the
-   * engine to dispatch the queue when it can, and stops dispatching it from that save on.
-   */
-  function queueSave(session: string): { engineDispatch?: true } {
-    const on = engineCanDispatch(session);
-    asked.set(session, on);
-    return on ? { engineDispatch: true } : {};
-  }
-
-  /** The engine dispatches this task's queue: the last `save_queue` of this window asked it to. */
-  const engineDispatchesQueue = (session: string | null | undefined): boolean => !!session && asked.get(session) === true;
 
   // `stop_turn_if` only where the call reaches the engine as the person: Desk to its own
   // engine over IPC. The account relay token and connect.danil.ai do not carry the person.
@@ -105,7 +92,7 @@ export function createEngineQueue(env: {
   }
 
   return {
-    engineCanDispatch, queueSave, engineDispatchesQueue, turnStarted, stopTurn,
+    engineCanDispatch, turnStarted, stopTurn,
     /** The turn closed (`done`): the next Stop reads the turn again. */
     turnClosed: (session: string) => { seen.delete(session); },
     /** Releases a held queue: it goes out now if the task is free, else when its turn closes. */

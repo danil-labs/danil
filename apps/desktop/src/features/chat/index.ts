@@ -1,7 +1,6 @@
 export { modoInicial, modoRecordado, recordarModo } from "./modes.ts";
 export type { HandoverPending } from "./handover.ts";
-export { despachable, esDeLaTerminal, guardable, retencionAlCargar, siguienteLote, sueltaElBorrador } from "./queue.ts";
-export type { RazonDeRetencion } from "./queue.ts";
+export { guardable } from "./queue.ts";
 export type { Encolado } from "./MessageQueue.tsx";
 export type { Msg } from "./Chat.tsx";
 export { lotesDeDeltas, type Programar } from "./deltaFrames.ts";
