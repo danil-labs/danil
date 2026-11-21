@@ -314,3 +314,5 @@ them answers that the command is unknown, and only that feature turns off.
   SHA-256 `ab06a5f1a733a8a1e9533151db8e44b3de35cbaec21119a122ed161e1ba1f976`.
 - `account_adoption_proof_v1.json`: `adoption_proof`, the possession proof for `POST /v1/workspaces/adopt` (A17), (danil-engine#481), copied from danil-engine dev `40f5bc9c`,
   SHA-256 `3c957da1463df967f551f8f82746e99158511bdf7ee2787f587fd9564f36d5d6`.
+- `engine_adoption_v1.json`: `engine_adoption_status`, `engine_adoption_retry` and the `engine-adoption` event: the engine adopts the local workspaces into the personal org by itself (decision 2026-11-20 «la sesión vive en el motor» § 2.5) (danil-engine#504), copied from danil-engine `feat/maquinas-conectadas` `1e96f512`,
+  SHA-256 `67bbaf7c85962e7d19275dcf40310bfe98eb257355951e1e1dbb05f0c7ad510f`.

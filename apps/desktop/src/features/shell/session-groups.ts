@@ -5,8 +5,12 @@ import { escribirPref, leerPref } from "../../lib/prefs.ts";
 import { listen } from "../../lib/serviceEvents.ts";
 import { danilAvailable, danilAvailableContext, readDanilContext } from "../machines/index.ts";
 import { type CreatedNotice, createAccountRequests } from "./account-requests.ts";
+import { engineAdoptionReport, engineOwnsAdoption, onEngineAdoption, retryEngineAdoption } from "./engine-adoption.ts";
+import { engineFeatures } from "./engine-features.ts";
+import { createPersonalOpener } from "./personal-open.ts";
 import { createAccountWorkspaces } from "./session-account-workspaces.ts";
 import { type ContextGroup, createSessionContexts } from "./session-contexts.ts";
+import { handAdoptionReport, handedReport } from "./session-gate.ts";
 import type { EmptyReason } from "./session-empty.ts";
 import { coalesceSessionReturn as createSessionReturn } from "./session-return.ts";
 import { sessionSeedInputs, sessionSyncKey } from "./session-seeding.ts";
@@ -24,7 +28,8 @@ function wire(hidden: () => ReadonlySet<string>, onSeeded: (ids: readonly string
   const [revision, bump] = createSignal(0);
   const changed = () => bump((n) => n + 1);
   const sessions = createSessionContexts(invoke, changed);
-  const accounts = createAccountWorkspaces(invoke, !!capabilities().nativeWindow, changed);
+  const accounts = createAccountWorkspaces(invoke, !!capabilities().nativeWindow, changed, engineFeatures);
+  accounts.forgetRefusals();
   const groups = () => (revision(), sessions.groups());
   const [laterContext, setLaterContext] = createSignal<string | null>(null);
   const [organizationNotice, setOrganizationNotice] = createSignal(false);
@@ -42,7 +47,8 @@ function wire(hidden: () => ReadonlySet<string>, onSeeded: (ids: readonly string
     revision();
     return sessionWorkspaceSource(groups()?.find((g) => g.context_id === context)?.plan ?? null, () => danilAvailableContext(org, context), () => accounts.available(org));
   };
-  const refreshAccounts = () => accounts.refresh(groups() ?? [], sessions.send, (context) => records.get(context)?.person ?? null);
+  const opener = createPersonalOpener({ send: sessions.send, reread: async () => { await sessions.refresh(); return sessions.groups(); }, defaultContext: sessions.defaultContext, groups: sessions.groups });
+  const refreshAccounts = () => accounts.refresh(groups() ?? [], sessions.send, (context) => records.get(context)?.person ?? null, opener);
   const accountKey = createMemo(() => JSON.stringify(groups()?.map((g) => [g.context_id, g.org, g.plan]) ?? null));
   createEffect(on(accountKey, () => void refreshAccounts()));
   // Una persona nueva recibe su organización personal después del login. Se reintenta sin otro
@@ -64,6 +70,8 @@ function wire(hidden: () => ReadonlySet<string>, onSeeded: (ids: readonly string
     },
   };
   let adoptionStarted = false;
+  // Con `engine_adoption_v1` (y la sesión en el motor) el reintento lo hace el motor.
+  let engineAdopts = false;
   createEffect(() => {
     if (adoptionStarted || !groups()?.length) return;
     adoptionStarted = true;
@@ -123,6 +131,16 @@ function wire(hidden: () => ReadonlySet<string>, onSeeded: (ids: readonly string
     void sessions.refresh().then(() => requests.pump());
     void listen("danil-connect", () => { void adoption.retry(); }).catch(() => {});
     void listen("account.request", () => void requests.pump()).catch(() => {});
+    // Lo que el motor liga después, en segundo plano, llega al mismo aviso.
+    void engineFeatures().then((f) => {
+      if (!engineOwnsAdoption(f)) return;
+      engineAdopts = true;
+      void onEngineAdoption(listen, (a) => {
+        const group = groups()?.find((g) => g.org === a.org);
+        const report = engineAdoptionReport(a, group?.context_id, group?.org_name ?? null);
+        if (report?.adopted.length) handAdoptionReport(report);
+      }).catch(() => {});
+    });
     const refreshed = createSessionReturn(async () => {
       await refreshAccounts();
       for (const g of groups() ?? []) await readDanilContext(g.org, g.context_id);
@@ -136,8 +154,9 @@ function wire(hidden: () => ReadonlySet<string>, onSeeded: (ids: readonly string
   }
   return {
     agentCreated, clearAgentCreated: () => setAgentCreated(null),
-    adoptionReport: accounts.adoptionReport, clearAdoptionReport: accounts.clearAdoptionReport,
-    retryAdoption: () => { accounts.clearAdoptionUnavailable(); void adoption.retry(); },
+    adoptionReport: () => accounts.adoptionReport() ?? handedReport(), clearAdoptionReport: () => { accounts.clearAdoptionReport(); handAdoptionReport(null); },
+    retryAdoption: () => { if (engineAdopts) return void retryEngineAdoption(invoke); accounts.clearAdoptionUnavailable(); void adoption.retry(); },
+    adoptionProgress: accounts.adoptionProgress, personalOutcome: accounts.personalOutcome, sealedElsewhere: (org: string) => (revision(), accounts.sealedElsewhere(org)), hasAdoptionCandidates: accounts.hasAdoptionCandidates,
     organizationNotice, clearOrganizationNotice: () => setOrganizationNotice(false), notifyOrganization: () => { setOrganizationNotice(true); setMenuNotice(true); },
     sessions, groups: rows, known, menuNotice, acknowledgeNotice: () => setMenuNotice(false), emptyReason: () => (revision(), sessions.emptyReason()), removed: () => (revision(), sessions.removed()), laterContext, acknowledgeLater: () => setLaterContext(null), ready: () => (revision(), sessions.ready()), connected: () => (revision(), sessions.connected()),
     createFree: async (context: string) => {

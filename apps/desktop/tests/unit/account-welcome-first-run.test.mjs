@@ -115,6 +115,8 @@ function engine({ directory = [], status = { state: "disconnected", name: "Mac" 
 }
 
 const screen = (w) => w.document.querySelector("[data-account-welcome]");
+/** Sin sesión la ventana no monta la app: el login es el del gate de arranque (`SessionGate`). */
+const gate = (w) => w.document.querySelector("[data-session-gate]")?.dataset.sessionGate ?? null;
 const heading = (w) => w.document.querySelector("h1")?.textContent ?? "";
 
 function assertNoLocalWorkspace(app, state) {
@@ -137,8 +139,9 @@ test("the first run asks only for the Danil account: there is no way to continue
     const app = await boot("listo", "account-welcome-required", e.table);
     const { w } = app;
     await sleep(800);
-    assert.equal(screen(w)?.dataset.accountWelcome, "choose", w.document.body.textContent.slice(0, 400));
+    assert.equal(gate(w), "sign_in", w.document.body.textContent.slice(0, 400));
     assert.equal(heading(w), "Conecta tu cuenta de Danil");
+    assert.equal(screen(w), null, "nothing of the app is mounted behind the login");
     assert.equal(w.document.querySelector("[data-account-welcome-local]"), null, "«Continuar sin cuenta» is gone");
     assert.ok(!w.document.body.textContent.includes("Continuar sin cuenta"));
     assertNoLocalWorkspace(app, e.state);
@@ -155,9 +158,9 @@ test("signing in enters the personal Free workspace without creating a local one
     const app = await boot("listo", "account-welcome-one", e.table);
     const { w } = app;
     await sleep(800);
-    w.document.querySelector("[data-account-welcome-connect]").click();
+    w.document.querySelector("[data-first-login-sign-in]").click();
     await sleep(300);
-    assert.equal(screen(w)?.dataset.accountWelcome, "signing");
+    assert.ok(w.document.querySelector('[data-session-gate] [role="status"]'), "signing in");
     assert.equal(e.state.signIns, 1, "the same single sign-in as Settings");
     assert.ok(w.document.body.textContent.includes("WDJB-MJHT"), "the code to confirm");
 
@@ -183,9 +186,8 @@ test("an existing session is reused and enters the personal Free workspace", asy
   try {
     const app = await boot("listo", "account-welcome-many", e.table);
     const { w } = app;
-    await sleep(800);
-    w.document.querySelector("[data-account-welcome-connect]").click();
-    await sleep(1500);
+    // La sesión ya confirmada en el gate no se vuelve a pedir en el alta.
+    await sleep(2300);
     assert.equal(e.state.signIns, 0, "an existing session is reused");
     assert.equal(screen(w), null);
     assert.equal(w.document.querySelector("[data-account-welcome-pick]"), null);
@@ -205,30 +207,23 @@ test("a computer that chose «local» before is asked for the session again", as
     const app = await boot("listo", "account-welcome-was-local", e.table, undefined, { [KEY]: "local" });
     const { w } = app;
     await sleep(800);
-    assert.equal(screen(w)?.dataset.accountWelcome, "choose");
+    assert.equal(gate(w), "sign_in");
     assertNoLocalWorkspace(app, e.state);
   } finally {
     e.restore();
   }
 });
 
-test("answered «connected» but without a session: no local workspace, and it can go back to sign in", async () => {
+test("answered «connected» but without a session: no local workspace, and only the sign in is shown", async () => {
   const e = engine();
   try {
     const app = await boot("listo", "account-welcome-answered", e.table, undefined, { [KEY]: "connected" });
     const { w } = app;
     await sleep(1000);
     assert.equal(screen(w), null);
-    assert.equal(heading(w), "Conecta tu IA.");
-    assert.ok(w.document.body.textContent.includes("Inicia sesión en Danil para continuar."), w.document.body.textContent.slice(0, 600));
-    assert.ok(w.document.querySelector("[data-onboarding-retry]"), "a retry is offered");
+    assert.equal(gate(w), "sign_in", w.document.body.textContent.slice(0, 600));
+    assert.ok(!w.document.body.textContent.includes("Conecta tu IA."), "the onboarding does not mount without a session");
     assertNoLocalWorkspace(app, e.state);
-
-    const atras = [...w.document.querySelectorAll("footer button")].find((b) => b.textContent === "Atrás");
-    assert.ok(atras, "«Atrás» goes back to sign in");
-    atras.click();
-    await sleep(600);
-    assert.equal(screen(w)?.dataset.accountWelcome, "choose");
 
     w.dispatchEvent(new w.CustomEvent("harness:open-settings", { detail: "download" }));
     await sleep(600);

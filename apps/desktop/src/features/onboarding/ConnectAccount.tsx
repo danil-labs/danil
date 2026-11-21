@@ -10,6 +10,7 @@ import { Button } from "../../ui/Button";
 import { Spinner } from "../../ui/Spinner";
 import { createDanilSession } from "../settings/danil-session";
 import { requestAccessInBrowser, TerminusLicense } from "../settings/TerminusLicense";
+import { noteFirstLoginSignedIn } from "../shell";
 import { rememberAccountWelcome } from "./account-welcome";
 
 type Step = "choose" | "signing";
@@ -40,6 +41,7 @@ export default function ConnectAccount(props: { onListo: (result: ConnectAccount
 
   const finish = (result: ConnectAccountResult) => {
     rememberAccountWelcome("connected");
+    noteFirstLoginSignedIn();
     props.onListo(result);
   };
 

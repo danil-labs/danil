@@ -80,7 +80,12 @@ export async function open(name, { status = SIGNED_IN, token = TOKEN, computers 
   const renamed = [];
   const responses = local(calls, {
     danil_connect_status: status,
-    danil_session_status: status,
+    // La cuenta `danil_*` del motor (la del puente) es otra que la sesión de Desk del gate de arranque:
+    // sin ella la ventana sigue con sesión de Desk, sin familias, como un riel sin organizaciones.
+    danil_session_status: (...args) => {
+      const s = typeof status === "function" ? status(...args) : status;
+      return s?.state === "connected" ? s : { state: "connected" };
+    },
     ...(token ? { account_relay_token: token } : {}),
     ...extra,
   });

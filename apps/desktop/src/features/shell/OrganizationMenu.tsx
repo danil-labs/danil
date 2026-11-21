@@ -82,7 +82,7 @@ export default function OrganizationMenu(props: { selection: OrganizationSelecti
             </For>
           </Show>
           <Show when={s().error}>
-            <p class="m-0 px-2 pt-1 text-caption text-error-strong" role="alert">{t("shell.organization.error")}</p>
+            <p class="m-0 px-2 pt-1 text-caption text-error-strong" role="alert">{t(s().error === "busy" ? "shell.organization.busy" : "shell.organization.error")}</p>
           </Show>
           <div class="my-1 h-px bg-border" />
         </div>

@@ -158,6 +158,8 @@ export async function boot(environment, version, responses, userAgent, storage =
           ? Promise.resolve({ ready: true, blocked: false, reason: null, items: [] })
           : Promise.reject(new Error("el guarda entra a mano"));
       }
+      // El gate de la sesión (`SessionGate`) no monta la app sin sesión: quien prueba «sin sesión» lo dice.
+      if (cmd === "danil_session_status" && !(cmd in responses)) return Promise.resolve({ state: "connected" });
       if (cmd in responses) {
         const response = responses[cmd];
         if (response instanceof Error) return Promise.reject(response);
@@ -334,6 +336,8 @@ export async function boot(environment, version, responses, userAgent, storage =
    * respaldo por clave— es una ampliación pendiente.
    */
   w.localStorage.setItem("harness:lengua", "es");
+  // El login del primer arranque tapa el riel; quien lo prueba pasa `false` en `storage`.
+  w.localStorage.setItem("harness.layout.onboarding.first_login_v1", "true");
   // Lo que dejó una ventana anterior: el arranque en caliente lee de aquí antes del primer IPC.
   for (const [key, value] of Object.entries(storage)) w.localStorage.setItem(key, value);
 
