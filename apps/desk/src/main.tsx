@@ -7,8 +7,8 @@ import "./app.css";
 // Desk: varias sesiones guardadas en el motor (P1); el login lo hace el navegador.
 const host = createTauriHost();
 setHost(host);
-await host.ready;
 const session = createDeskSession(host);
 const App = createShell({ session, host });
 
-render(() => <App isDesk />, document.getElementById("root")!);
+// Monta cuando el host sabe qué máquina es esta computadora (RV1b N11).
+void host.ready.then(() => render(() => <App isDesk />, document.getElementById("root")!));
