@@ -1,4 +1,6 @@
+import { sendIdentityMe } from "../../platform/identity.ts";
 import { accountId as asAccountId, type PendingUnions } from "./account-transfers.ts";
+import { WORKSPACES_ADOPT_CHALLENGE_PATH, WORKSPACES_ADOPT_PATH, workspacesPagePath } from "../../platform/workspaces.ts";
 
 /** Un workspace local que se puede adoptar en la organización personal (`adoption_candidates`). */
 export type AdoptionCandidate = { id: string; name: string; created_at?: number; adoptable?: boolean; reason?: string };
@@ -53,7 +55,7 @@ function stopCause(reply: { status: number; body?: unknown }): string | null {
 /** El `sub` de la persona en ese contexto: el que firma la prueba y el servidor compara con la sesión. */
 async function personOf(send: Send, context: string, known: string | null) {
   if (known) return known;
-  const reply = await send(context, "GET", "/v1/identity/me").catch(() => null);
+  const reply = await sendIdentityMe(send, context).catch(() => null);
   const id = (reply?.body as { id?: unknown } | undefined)?.id;
   return reply?.status === 200 && typeof id === "string" && id ? id : null;
 }
@@ -64,7 +66,7 @@ async function platformByEngine(send: Send, context: string): Promise<Map<string
   const seen = new Set<string>();
   let cursor: string | null = null;
   do {
-    const reply = await send(context, "GET", `/v1/workspaces${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ""}`).catch(() => null);
+    const reply = await send(context, "GET", workspacesPagePath(cursor)).catch(() => null);
     if (!reply || reply.status !== 200) return null;
     const body = reply.body as { items?: unknown[]; next_cursor?: string | null };
     for (const raw of body.items ?? []) {
@@ -145,7 +147,7 @@ export async function adoptLocals(
     let proof: AdoptionProof | null;
     let nonce: string;
     try {
-      const challenge = await send(free.context_id, "POST", "/v1/workspaces/adopt/challenge", { engine_workspace_id: c.id });
+      const challenge = await send(free.context_id, "POST", WORKSPACES_ADOPT_CHALLENGE_PATH, { engine_workspace_id: c.id });
       const stop = stopCause(challenge);
       if (stop) return { adopted, already, refused, failed, unavailable: true, cause: stop, attempted };
       // El límite de retos: este repaso termina y el siguiente lo vuelve a intentar.
@@ -164,7 +166,7 @@ export async function adoptLocals(
       // Cada intento lleva un reto distinto, así que su llave también: la repetición segura entre intentos
       // la da el servidor (mismo id, misma llave de posesión y misma organización responden la misma cuenta).
       const body = { engine_workspace_id: c.id, name: c.name, proof: { nonce, jwk: proof.jwk, sig: proof.sig } };
-      reply = await send(free.context_id, "POST", "/v1/workspaces/adopt", body, `${memory.key(c.id)}.${nonce}`);
+      reply = await send(free.context_id, "POST", WORKSPACES_ADOPT_PATH, body, `${memory.key(c.id)}.${nonce}`);
     } catch {
       failed.push({ id: c.id, name: c.name, reason: "network" });
       continue;
@@ -221,7 +223,7 @@ export function adoptionTarget<G extends { org: string; plan?: string | null }>(
  */
 export async function adoptionTargetOf<G extends { context_id: string; org: string; plan?: string | null }>(groups: readonly G[], send: Send): Promise<G | undefined> {
   if (!groups.length) return undefined;
-  const me = await send(groups[0].context_id, "GET", "/v1/identity/me").catch(() => null);
+  const me = await sendIdentityMe(send, groups[0].context_id).catch(() => null);
   if (!me || me.status !== 200) return adoptionTarget(groups);
   const organizations = (me.body as { organizations?: unknown } | null)?.organizations;
   if (!Array.isArray(organizations)) return adoptionTarget(groups);

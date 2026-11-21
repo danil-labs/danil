@@ -1,9 +1,11 @@
+import { probeIdentityMe } from "../../platform/identity.ts";
 import { addSessionAccount } from "./add-session-account.ts";
 import { createSessionEmptyState, refusalEmptyReason } from "./session-empty.ts";
 
 export type { ContextGroup, ContextInvoke, ContextReply, SessionContext, SessionFamily, SessionStatus } from "./session-context-types.ts";
 
 import type { ContextGroup, ContextInvoke, ContextReply, SessionFamily, SessionStatus } from "./session-context-types.ts";
+import { isWorkspaceCreationPath } from "../../platform/workspaces.ts";
 
 export function contextGroups(status: SessionStatus | null): ContextGroup[] | null {
   if (!status || !Array.isArray(status.sessions)) return null;
@@ -37,7 +39,7 @@ export function createSessionContexts(invoke: ContextInvoke, changed: () => void
       connected = status.state === "connected";
       if (unsupported && status.sessions?.some((f) => f.contexts.length)) {
         const context = status.sessions.flatMap((f) => f.contexts)[0].context_id;
-        await invoke("danil_edge_fetch", { method: "GET", path: "/v1/identity/me", context });
+        await probeIdentityMe(invoke, context);
         if (read !== epoch) return;
       }
       families = status.sessions ?? [];
@@ -51,7 +53,7 @@ export function createSessionContexts(invoke: ContextInvoke, changed: () => void
   }
   // Crear y adoptar exigen la llave de quien llama (Rust lo rechaza sin ella): inventarla aquí rompería sus reintentos.
   const callerKey = (method: string, path: string, key?: string) =>
-    key || !(method === "POST" && (path === "/v1/workspaces" || path === "/v1/workspaces/adopt")) ? { idempotencyKey: key ?? crypto.randomUUID() } : {};
+    key || !(method === "POST" && isWorkspaceCreationPath(path)) ? { idempotencyKey: key ?? crypto.randomUUID() } : {};
   const send = async (context: string, method: string, path: string, body?: unknown, idempotencyKey?: string, optionalRoute = false): Promise<ContextReply> => {
     if (unsupported) throw { detail: "session_echo_mismatch" };
     const group = groups?.find((g) => g.context_id === context);

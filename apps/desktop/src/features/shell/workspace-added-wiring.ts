@@ -9,7 +9,7 @@
 import type { OrganizationSelection } from "@terminus/computers";
 import type { Listed } from "@terminus/fleet";
 import { createEffect, createMemo, createRoot, createSignal, on } from "solid-js";
-import { edgeFetch, ORGANIZATION_CHANGED } from "../../platform/client.ts";
+import { edgeFetch, ORGANIZATION_CHANGED, platformFetch } from "../../platform/client.ts";
 import { capabilities } from "../../lib/platform.ts";
 import { escribirPref, leerPref } from "../../lib/prefs.ts";
 import { listen } from "../../lib/serviceEvents.ts";
@@ -18,6 +18,7 @@ import { danilAvailable, danilMachines, readDanil } from "../machines/index.ts";
 import { sessionRail } from "./session-groups.ts";
 import { type AddedTransport, createAddedSync } from "./workspace-added-sync.ts";
 import { ADDED_KEY, edgeAddedTransport, prefsAddedStore, type WebSend, webAddedTransport } from "./workspace-added-transport.ts";
+import { fetchIdentityMe } from "../../platform/identity.ts";
 
 declare const __DANIL_WEB_API__: import("../../web/session-config").WebSessionDeployment | undefined;
 
@@ -73,7 +74,7 @@ function wire(hidden: () => ReadonlySet<string>, onSeeded: (ids: readonly string
   const askPerson = () => {
     if (!native || asking || person() || !sessions.ready() || !sessions.connected() || sessions.groups() !== null) return;
     asking = true;
-    edgeFetch<{ id?: unknown }>("GET", "/v1/identity/me")
+    fetchIdentityMe<{ id?: unknown }>(edgeFetch)
       .then((r) => {
         const id = r.status === 200 ? r.body?.id : null;
         if (typeof id === "string" && id) setPerson(id);
@@ -84,7 +85,7 @@ function wire(hidden: () => ReadonlySet<string>, onSeeded: (ids: readonly string
 
   const desk: AddedTransport | null = native ? edgeAddedTransport(edgeFetch) : null;
   // La web arma su transporte de cookie con el borde de su build.
-  if (!native && !web && typeof __DANIL_WEB_API__ !== "undefined") web = webAddedTransport(platformTransport(__DANIL_WEB_API__, (input, init) => fetch(input, init)));
+  if (!native && !web && typeof __DANIL_WEB_API__ !== "undefined") web = webAddedTransport(platformTransport(__DANIL_WEB_API__, (input, init) => platformFetch(input, init)));
   const pick = () => desk ?? web ?? unavailable;
   const sync = createAddedSync({
     transport: { get: () => pick().get(), put: (id) => pick().put(id), remove: (id) => pick().remove(id), seed: (ids) => pick().seed(ids) },

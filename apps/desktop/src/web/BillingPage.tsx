@@ -12,6 +12,7 @@ import { billingV2 } from "../platform/treasury";
 import { organizationSession } from "./organization-session";
 import { isOrganizationAuthRequired } from "./organization-context";
 import { PlatformSessionError, platformSession, platformTransport } from "./platform-session";
+import { platformFetch } from "../platform/client.ts";
 import type { WebSessionDeployment } from "./session-config";
 import CheckoutReturn from "./CheckoutReturn";
 import { BILLING_RETURN_KEY, checkoutReturn } from "./billing-v2-return";
@@ -40,7 +41,7 @@ function BillingPage(props: { options: WebSessionDeployment }) {
   const returning = !!checkoutReturn(location.href).id || !!sessionStorage.getItem(BILLING_RETURN_KEY);
   const fromDesk = query.get("return") === "desk";
   const lifetime = new AbortController();
-  const request: typeof fetch = (input, init) => fetch(input, {
+  const request: typeof fetch = (input, init) => platformFetch(input, {
     ...init,
     signal: init?.signal ? AbortSignal.any([init.signal, lifetime.signal]) : lifetime.signal,
   });

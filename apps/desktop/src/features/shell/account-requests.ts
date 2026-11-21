@@ -1,4 +1,5 @@
 import type { ContextGroup, ContextReply } from "./session-context-types.ts";
+import { WORKSPACES_PATH } from "../../platform/workspaces.ts";
 
 /** Una petición de la CLI (`account_requests_v1`), como la entrega `account_request_take`. */
 export type AccountRequest = { request_id: string; op: string; args?: { name?: string; org?: string }; key: string; caller_task?: string | null };
@@ -93,7 +94,7 @@ export async function runAccountRequest(row: AccountRequest, deps: AccountReques
     // La llave de la CLI es la del servidor: dos despachos de la misma petición crean un solo workspace.
     // El Free corre en la computadora de la persona; en una organización de pago decide su admin (el valor por omisión del servidor).
     const body = group.plan === "free" ? { name, placement: { kind: "member_computer" } } : { name };
-    reply = await deps.send(group.context_id, "POST", "/v1/workspaces", body, row.key);
+    reply = await deps.send(group.context_id, "POST", WORKSPACES_PATH, body, row.key);
   } catch {
     return { outcome: { error: { code: "operation_failed" } } };
   }

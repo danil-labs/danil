@@ -4,6 +4,7 @@ import { availableDanilCredits, scopedCreditsRead } from "../platform/treasury.t
 import { webGroupAccount } from "./group-account.ts";
 import { webRedeemPromo } from "./group-promo.ts";
 import { listWorkspaces, workspaceId } from "./platform-workspaces.ts";
+import { platformFetch } from "../platform/client.ts";
 
 const profile = z.object({ id: z.string().startsWith("user_"), name: z.string(), email: z.unknown().optional(), workspace: workspaceId.nullable(), organizations: z.array(z.object({ id: z.string(), name: z.string(), type: z.string().nullish() })), active_organization_id: z.string().min(1).nullish() });
 export type PlatformProfile = z.infer<typeof profile>;
@@ -13,7 +14,7 @@ export { EdgeError as PlatformSessionError } from "@terminus/computers";
 export type { PlatformWorkspace } from "./platform-workspaces.ts";
 export const platformTransport = edgeTransport;
 
-export function platformSession(options: { origin: string; timeoutMs: number }, request: typeof fetch = fetch, orgOf?: (context: string) => string | null) {
+export function platformSession(options: { origin: string; timeoutMs: number }, request: typeof fetch = platformFetch, orgOf?: (context: string) => string | null) {
   const transport = platformTransport(options, request);
   const { call } = transport;
   const identity = edgeIdentity(transport, options.origin);

@@ -5,6 +5,8 @@
  * cuando es owner o admin allí. Si no, la solicitud queda para que un admin la
  * apruebe en Harness.
  */
+import { workspacesPagePath, workspaceTransferAcceptPath, workspaceTransfersPath } from "../../platform/workspaces.ts";
+import { sendIdentityMe } from "../../platform/identity.ts";
 export type MoveGroup = { context_id: string; org: string; org_name?: string | null; role?: string | null };
 export type MoveDestination = { org: string; name: string; context: string | null; immediate: boolean };
 export type MoveAccount = { id: string; version: number };
@@ -30,7 +32,7 @@ export async function catalog(send: Send, context: string): Promise<unknown[]> {
   const seen = new Set<string>();
   let cursor: string | null = null;
   do {
-    const reply = await send(context, "GET", `/v1/workspaces${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ""}`).catch(() => null);
+    const reply = await send(context, "GET", workspacesPagePath(cursor)).catch(() => null);
     if (!reply || reply.status !== 200) break;
     const body = reply.body as { items?: unknown[]; next_cursor?: string | null };
     items.push(...(body.items ?? []));
@@ -58,7 +60,7 @@ export async function accountOfEngine(send: Send, context: string, engine: strin
  * ventana para aceptar en el mismo gesto.
  */
 export async function moveDestinations(send: Send, source: { context_id: string; org: string }, groups: readonly MoveGroup[]): Promise<MoveDestination[]> {
-  const me = await send(source.context_id, "GET", "/v1/identity/me");
+  const me = await sendIdentityMe(send, source.context_id);
   if (me.status !== 200 || me.empty_reason) throw { detail: moveCause(me) };
   const organizations = (me.body as { organizations?: unknown } | null)?.organizations;
   if (!Array.isArray(organizations)) return [];
@@ -85,14 +87,14 @@ export async function moveWorkspace(
   target: MoveDestination,
   requestKey = crypto.randomUUID(),
 ): Promise<MoveResult> {
-  const reply = await send(source.context_id, "POST", `/v1/workspaces/${encodeURIComponent(account.id)}/transfers`, { to_org: target.org, if_version: account.version }, requestKey);
+  const reply = await send(source.context_id, "POST", workspaceTransfersPath(account.id), { to_org: target.org, if_version: account.version }, requestKey);
   if (reply.status < 200 || reply.status >= 300 || reply.empty_reason) throw { detail: moveCause(reply) };
   const body = reply.body as { transfer_id?: unknown; state?: unknown } | null | undefined;
   const transfer = typeof body?.transfer_id === "string" && TRANSFER_ID.test(body.transfer_id) ? body.transfer_id : null;
   if (!transfer) throw { detail: "transfer_reply_invalid" };
   if (body?.state === "accepted") return { state: "moved", warning: null };
   if (!target.immediate || !target.context) return { state: "pending", warning: null };
-  const accepted = await send(target.context, "POST", `/v1/workspaces/transfers/${transfer}/accept`, {}, crypto.randomUUID());
+  const accepted = await send(target.context, "POST", workspaceTransferAcceptPath(transfer), {}, crypto.randomUUID());
   if (accepted.status >= 200 && accepted.status < 300 && !accepted.empty_reason) return { state: "moved", warning: null };
   return { state: "pending", warning: moveCause(accepted) };
 }

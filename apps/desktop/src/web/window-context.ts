@@ -2,6 +2,7 @@ import type { Machine, machinesClient } from "@terminus/computers";
 import type { Fleet } from "@terminus/fleet";
 import type { GroupAccount } from "../lib/group-account.ts";
 import type { WebSessionCommands, WebSessionStatus } from "./web-session-contexts.ts";
+import { WORKSPACES_PATH } from "../platform/workspaces.ts";
 
 type Client = ReturnType<typeof machinesClient>;
 type Answer = Awaited<ReturnType<Client["list"]>>;
@@ -77,7 +78,7 @@ export function windowContext(options: { factory: (context: string) => Client; s
       options.onContextsSettled?.(ids);
       const [answers] = await Promise.all([
         Promise.all(settled.map(async (group) => ({ group, answer: await client(group.context).list().catch(() => ({ kind: "unavailable", status: 0 }) as Answer) }))),
-        Promise.all(settled.map((group) => options.sessions.handle("danil_edge_fetch", { method: "GET", path: "/v1/workspaces", context: group.context }).catch(() => null))).then((replies) => {
+        Promise.all(settled.map((group) => options.sessions.handle("danil_edge_fetch", { method: "GET", path: WORKSPACES_PATH, context: group.context }).catch(() => null))).then((replies) => {
           const next = new Set<string>();
           for (const reply of replies as ({ status: number; body?: { items?: { engine_workspace_id?: unknown; placement?: { kind?: unknown } }[] } } | null)[])
             for (const row of reply?.status === 200 ? reply.body?.items ?? [] : []) if (row.placement?.kind === "organization_machine" && typeof row.engine_workspace_id === "string") next.add(row.engine_workspace_id);
