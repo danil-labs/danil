@@ -1,5 +1,6 @@
 /**
  * Pantalla principal del Chat y orquestación de turnos del agente.
+ * Paridad visual con apps/desktop/src/features/chat/Chat.tsx.
  */
 
 import { createEffect, For, Show } from "solid-js";
@@ -111,25 +112,25 @@ export function ChatScreen(props: ChatScreenProps) {
     store.state.activeTurn.status === "waiting_permission";
 
   return (
-    <div class="flex flex-col h-full w-full bg-stone-950 text-stone-100 overflow-hidden">
-      {/* Barra superior de estado */}
-      <header class="px-4 py-2 border-b border-stone-800/80 bg-stone-900/40 flex items-center justify-between text-xs">
+    <div class="flex flex-col h-full w-full bg-background text-neutral-950 dark:text-neutral-100 overflow-hidden">
+      {/* Barra superior de estado (h-[30px] HEADER_HEIGHT) */}
+      <header class="h-[30px] px-3 border-b border-border bg-background flex items-center justify-between text-xs shrink-0 select-none">
         <div class="flex items-center gap-2">
-          <span class="w-2 h-2 rounded-full bg-emerald-500" />
-          <span class="font-mono text-stone-400 truncate max-w-sm">
+          <span class="w-1.5 h-1.5 rounded-full bg-success-strong" />
+          <span class="font-mono text-neutral-500 truncate max-w-sm">
             Sesión: {props.sessionId}
           </span>
         </div>
         <Show when={isTurnRunning()}>
-          <div class="flex items-center gap-1.5 text-amber-400">
-            <span class="inline-block w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping" />
+          <div class="flex items-center gap-1.5 text-warning-strong font-medium">
+            <span class="inline-block w-1.5 h-1.5 rounded-full bg-warning-strong animate-pulse" />
             <span>Turno activo</span>
           </div>
         </Show>
       </header>
 
       {/* Área scrollable de mensajes */}
-      <main class="flex-1 overflow-y-auto">
+      <main class="flex-1 overflow-y-auto min-h-0">
         <Show when={historyResource.error}>
           <ErrorBanner
             message={
@@ -149,28 +150,33 @@ export function ChatScreen(props: ChatScreenProps) {
         <Show
           when={!historyResource.loading || store.state.history.length > 0}
           fallback={
-            <div class="p-8 text-center text-stone-500 text-sm">
+            <div class="p-8 text-center text-neutral-500 text-sm">
               Cargando historial de la sesión...
             </div>
           }
         >
-          <For each={store.state.history}>
-            {(turn) => (
-              <MessageItem
-                turn={turn}
-                onPermissionDecide={handlePermissionDecide}
-              />
-            )}
-          </For>
+          <div
+            data-chat-thread
+            class="mx-auto grid w-full gap-y-2 max-w-[964px] px-6 sm:px-12 py-4 grid-cols-[minmax(0,1fr)]"
+          >
+            <For each={store.state.history}>
+              {(turn) => (
+                <MessageItem
+                  turn={turn}
+                  onPermissionDecide={handlePermissionDecide}
+                />
+              )}
+            </For>
 
-          <Show when={activeTurnView()}>
-            {(at) => (
-              <MessageItem
-                turn={at()}
-                onPermissionDecide={handlePermissionDecide}
-              />
-            )}
-          </Show>
+            <Show when={activeTurnView()}>
+              {(at) => (
+                <MessageItem
+                  turn={at()}
+                  onPermissionDecide={handlePermissionDecide}
+                />
+              )}
+            </Show>
+          </div>
         </Show>
       </main>
 

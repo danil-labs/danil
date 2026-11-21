@@ -4,8 +4,26 @@
  */
 
 import { createSignal, Show } from "solid-js";
-import { ChevronRight } from "./icons.tsx";
 import type { ReasoningPiece } from "../model.ts";
+
+function ChevronRight(props: { size?: number; class?: string }) {
+  return (
+    <svg
+      width={props.size ?? 13}
+      height={props.size ?? 13}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.5"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      class={props.class}
+      aria-hidden="true"
+    >
+      <path d="m9 18 6-6-6-6" />
+    </svg>
+  );
+}
 
 export interface ReasoningBlockProps {
   piece: ReasoningPiece;
@@ -31,9 +49,7 @@ export function ReasoningBlock(props: ReasoningBlockProps) {
       >
         <ChevronRight
           size={13}
-          strokeWidth={1.5}
           class={`shrink-0 transition-transform motion-reduce:transition-none ${isExpanded() ? "rotate-90" : ""}`}
-          aria-hidden="true"
         />
         <span class="inline-flex min-w-0 items-center gap-1.5">
           <Show
