@@ -7,7 +7,7 @@ import {
   type Resource,
 } from "solid-js";
 import {
-  createPlatformClient,
+  usePlatform,
   type PlatformClient,
 } from "@danil/platform-client";
 import {
@@ -127,26 +127,10 @@ export interface UseMachinesReturn {
  * Conexión que despierta la VM reintentando automáticamente (M6b).
  */
 export function useMachines(session?: SessionInput): UseMachinesReturn {
+  const client = usePlatform();
   const resolved = () => resolveSession(session);
 
-  const defaultClient = createPlatformClient({
-    getToken: async () => {
-      const r = resolved();
-      if (!r.source) return undefined;
-      const t = await r.source.tokenFor(r.sessionKey);
-      return t ?? undefined;
-    },
-    csrf: () => {
-      const r = resolved();
-      return r.source ? r.source.csrf() : undefined;
-    },
-    onUnauthorized: () => {
-      const r = resolved();
-      r.source?.onUnauthorized(r.sessionKey);
-    },
-  });
-
-  const getClient = () => resolved().client ?? defaultClient;
+  const getClient = () => resolved().client ?? client;
 
   const [machines, { refetch }] = createResource(
     () => resolved().sessionKey,
