@@ -13,9 +13,9 @@ const SCOPE_AT: Record<string, number> = {
 /** Cada router ve una identidad; nunca elige el primer contexto de una máquina. */
 export function scopedFleet(fleet: Fleet, scope: Scope): Fleet {
   const machines = () => fleet.machines().filter(row => row.context === scope.context && !scope.localOnly &&
-    (!scope.context || row.kind === "organization" && row.organizationId === scope.org));
+    (!scope.context || row.kind === "personal" || row.kind === "organization" && row.organizationId === scope.org));
   const allowed = (machine: string) => machines().some(row => row.id === machine);
-  const members = (workspace: string | null) => fleet.membersOf(workspace, scope.context).filter(allowed);
+  const members = (workspace: string | null) => (workspace ? fleet.membersOf(workspace, scope.context).filter(allowed) : machines().map(m => m.id));
   return new Proxy(fleet, {
     get(target, property) {
       if (property === "machines") return machines;
@@ -23,7 +23,7 @@ export function scopedFleet(fleet: Fleet, scope: Scope): Fleet {
       if (property === "info") return (machine: string) => allowed(machine) ? fleet.info(machine, scope.context) : undefined;
       if (property === "membersOf") return members;
       if (property === "leadOf") return (workspace: string | null) => {
-        const rows = members(workspace).filter(machine => fleet.power(machine, scope.context) !== "outdated");
+        const rows = (workspace ? members(workspace) : machines().map(machine => machine.id)).filter(machine => fleet.power(machine, scope.context) !== "outdated");
         return rows.find(machine => fleet.power(machine, scope.context) === "on") ?? rows[0] ?? null;
       };
       if (property === "license") return () => machines().map(machine => fleet.blocked(machine.id, scope.context)).find(Boolean) ?? null;

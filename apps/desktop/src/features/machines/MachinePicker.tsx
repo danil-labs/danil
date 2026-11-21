@@ -9,6 +9,7 @@ import { SignalDot } from "../../ui/SignalDot";
 import { ConnectMachine, connectSource } from "./ConnectMachine";
 import { MachineIcon } from "./MachineIcon";
 import { isGuestMachine } from "./guestLink";
+import { capabilities } from "../../lib/platform";
 import { cloudInventory, rememberedRunOn, type Machine, machineName, machines, type ProjectPlace, refetchMachines, runOn, runsWorkspace, setRunOn, unavailable, wakesOf } from "./store";
 
 let pedida = false;
@@ -32,10 +33,10 @@ export function MachinePicker(props: { workspace: string | null; project?: Proje
   const [abierto, setAbierto] = createSignal(false);
   const [conectando, setConectando] = createSignal(false);
   const fuente = connectSource();
-  const opciones = () => machines().filter(runsWorkspace);
+  const opciones = () => machines().filter((m) => (!capabilities().nativeWindow ? !m.local : true) && runsWorkspace(m));
   const elegida = () => {
     const id = runOn(props.workspace, props.project);
-    return opciones().find((m) => (id ? m.id === id : m.active));
+    return opciones().find((m) => (id ? m.id === id : m.active)) ?? (!capabilities().nativeWindow && opciones().length === 1 ? opciones()[0] : undefined);
   };
   const nombre = (m: Machine) => machineName(m.id, m.local);
 
@@ -66,7 +67,7 @@ export function MachinePicker(props: { workspace: string | null; project?: Proje
     const name = remembered ? machineName(remembered, false) : null;
     return name && name !== remembered ? name : t("shell.machines.label");
   };
-  const muestra = () => cloudInitial() || machines().length > 1;
+  const muestra = () => cloudInitial() || (!capabilities().nativeWindow ? machines().length > 0 : machines().length > 1);
   return (
     <Show when={muestra()}>
       <Popover open={abierto()} onOpenChange={(v) => { setAbierto(v); if (v) { void refetchMachines(); } }} placement="top-start" gutter={4}>

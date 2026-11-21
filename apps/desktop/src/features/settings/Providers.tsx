@@ -8,6 +8,8 @@ import type { Startup, Workspace } from "./workspaces-store";
 import { manifiesto, t } from "../../lib/i18n";
 import { prosa, type Frase } from "../../lib/prose";
 import { Badge } from "../../ui/Badge";
+import { capabilities } from "../../lib/platform.ts";
+import { machines } from "../machines/store.ts";
 import { Button } from "../../ui/Button";
 import { Input } from "../../ui/Input";
 import { Toggle } from "../../ui/Toggle";
@@ -143,7 +145,9 @@ export default function Providers(props: { solo?: string | string[] }) {
 
 function WorkspaceProviders(props: { solo?: string | string[] }) {
   const startup = invoke<Startup>("list_workspaces");
-  const scope = startup.then((s) => s.active ?? "pending");
+  const targetMachine = () => (!capabilities().nativeWindow ? (machines().find((m) => !m.local)?.id ?? null) : null);
+  const machineOpts = () => (targetMachine() ? { headers: { "x-terminus-machine": targetMachine()! } } : undefined);
+  const scope = startup.then((s) => s.active ?? s.workspaces?.[0]?.id ?? (!capabilities().nativeWindow ? "cloud" : "pending"));
   const [scopeId, setScopeId] = createSignal<string | null>(null);
   void scope.then((id) => setScopeId(id === "pending" ? null : id), () => {});
   const [githubAccount, setGithubAccount] = createSignal<GithubAccountState>({ mode: "unknown", connected: false, reauthorize: false, session: null });
@@ -164,7 +168,7 @@ function WorkspaceProviders(props: { solo?: string | string[] }) {
     setInstallingCli(true);
     setCliFailure(null);
     try {
-      await invoke("install_gh");
+      await invoke("install_gh", undefined, machineOpts());
       await refreshCli();
     } catch (e) { setCliFailure(asFailure(e)); }
     finally { setInstallingCli(false); }
@@ -172,7 +176,7 @@ function WorkspaceProviders(props: { solo?: string | string[] }) {
   async function refreshCli() {
     setLoadingCli(true);
     try {
-      const report = await invoke<{ githubCli?: NonNullable<ReturnType<typeof cli>> }>("check_environment");
+      const report = await invoke<{ githubCli?: NonNullable<ReturnType<typeof cli>> }>("check_environment", undefined, machineOpts());
       setCli(report.githubCli ?? null);
     } finally { setLoadingCli(false); }
   }
@@ -238,7 +242,7 @@ function WorkspaceProviders(props: { solo?: string | string[] }) {
   async function cargar() {
     setCargando(true);
     try {
-      setLista(await listGitHosts<Provider>(await scope));
+      setLista(await listGitHosts<Provider>(await scope, machineOpts()));
       setFallo(null);
     } catch (e) {
       // Cargando, vacío y error son tres pantallas distintas: dejar la lista
@@ -622,7 +626,7 @@ function WorkspaceProviders(props: { solo?: string | string[] }) {
                     </Switch>
                   }
                 >
-                  <Show when={p.id === "github" && (hostUsable() || hostGithub())}>
+                  <Show when={capabilities().nativeWindow && p.id === "github" && (hostUsable() || hostGithub())}>
                     <SettingsRow
                       label={t("providers.github.host_mode.title")}
                       description={hostGithub() && !hostUsable() ? t("providers.github.host_mode.ignored") : undefined}

@@ -3,7 +3,7 @@ import GitBranch from "lucide-solid/icons/git-branch";
 import Monitor from "lucide-solid/icons/monitor";
 import { MachineIcon } from "../machines/MachineIcon";
 import { WorkdirIcon } from "../code";
-import { machineName, machineWakes } from "../machines/store";
+import { machineName, machines, machineWakes } from "../machines/store";
 import { type JSX, Show } from "solid-js";
 import { createCopied } from "../../lib/clipboard";
 import { t } from "../../lib/i18n";
@@ -47,8 +47,9 @@ function Pista(props: { tip: JSX.Element; children: JSX.Element; class?: string;
 /** Máquina / proyecto / rama de la tarea, arriba a la izquierda de su ventana. */
 export default function TaskLocation(props: TaskLocationProps) {
   const here = () => capabilities().windowMachine?.();
-  const nombre = () => (props.machine ? machineName(props.machine) : (here()?.name ?? machineName("local")));
-  const id = () => props.machine ?? here()?.id ?? "local";
+  const fallbackMachine = () => (!capabilities().nativeWindow ? (machines().find((m) => !m.local) ?? null) : null);
+  const nombre = () => (props.machine ? machineName(props.machine) : (here()?.name ?? (fallbackMachine() ? machineName(fallbackMachine()!.id, false) : machineName("local"))));
+  const id = () => props.machine ?? here()?.id ?? fallbackMachine()?.id ?? "local";
   const wakes = () => machineWakes(id());
   const { copied: copiada, copy: copiar } = createCopied();
   const pantalla = () => {

@@ -119,7 +119,8 @@ export function setTaskRowMachine(lookup: (id: string) => string | null | undefi
  */
 export function machineOf(id: string | null | undefined) {
   const machine = id ? (taskRowMachine(id) ?? capabilities().taskMachine?.(id) ?? null) : null;
-  return machine ? { headers: { "x-terminus-machine": machine } } : undefined;
+  const target = machine ?? (!capabilities().nativeWindow ? (machines().find((m) => !m.local)?.id ?? null) : null);
+  return target ? { headers: { "x-terminus-machine": target } } : undefined;
 }
 
 /** «Traer a esta Mac» o «a esta PC»: solo donde hay motor local, el escritorio. */

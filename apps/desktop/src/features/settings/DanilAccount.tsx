@@ -65,7 +65,6 @@ function ManageEmailsRow(props: { web?: boolean }) {
 /** En la web la persona ya entró con su cuenta. Perfil se monta de nuevo al volver a su pestaña, así que relee un principal cambiado en Correos. */
 function WebAccount(props: { source: AccountProfileSource; part?: DanilAccountPart }) {
   const identity = createAccountIdentity(props.source);
-  const workspaces = createWorkspaces();
   const emails = () => props.part === "emails" ? capabilities().accountEmails : undefined;
   return (
     <SettingsPanel data-danil-account="web">
@@ -78,10 +77,7 @@ function WebAccount(props: { source: AccountProfileSource; part?: DanilAccountPa
         {(source) => <EmailsSection source={source()} onPrimaryChanged={() => window.dispatchEvent(new CustomEvent(PROFILE_CHANGED))} />}
       </Show>
       <Show when={props.part === "machines"}>
-        {/* Por el id: cada recarga trae otro objeto del mismo workspace y desmontaba la lista. */}
-        <Show when={workspaces.actual()?.id} keyed>
-          {(id) => <AccountComputersSection workspace={id} />}
-        </Show>
+        <AccountComputersSection />
         <ConnectMachineSection />
         <WslMachineSection />
       </Show>

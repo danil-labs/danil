@@ -68,7 +68,7 @@ export function createContextRouter(config: ContextRouterConfig, createRouterCor
     if (command === "set_active_workspace" && args.id === null) {
       cleared = true; activeContext = undefined; setActiveWorkspaceContext(null); return null;
     }
-    if (cleared && !["set_active_workspace", "list_workspaces", "workspaces_startup", "list_workspace_attention", "service_poll", "machine_list"].includes(command))
+    if (cleared && !["set_active_workspace", "list_workspaces", "workspaces_startup", "list_workspace_attention", "service_poll", "machine_list", "list_surfaces", "list_providers", "list_accounts", "list_git_hosts", "check_environment", "install_provider"].includes(command) && !headers.has("x-terminus-machine"))
       throw new FleetError("unknown_machine", null);
     if (!explicit && command === "list_workspace_attention") {
       const ids = [...new Set(config.fleet.machines().map(machine => machine.context).filter((id): id is string => !!id))];

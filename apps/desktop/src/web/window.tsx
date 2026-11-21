@@ -124,6 +124,9 @@ export function mountWindow(base: Base, mounted: Mounted) {
     fleet.setMachines(answer.value.map(machine => ({ id: machine.machine_id, name: machine.name || machine.machine_id,
       wakes: machineToComputer(machine).wakeable === true && base.permits("machines.start"), kind: group ? machine.kind === "personal" ? "personal" : "organization" : machine.kind ?? (machine.organization_id && !machine.person_id ? "organization" : null), context: group?.context, organizationId: machine.organization_id ?? null,
     })));
+    for (const machine of answer.value) {
+      fleet.observe(machine.machine_id, machineToComputer(machine).state, group?.context);
+    }
     machinesListed(fleet);
     fleet.subscribeEvents();
     await selectEngineWorkspace(active, base.services.webWorkspaces, group);
@@ -164,7 +167,7 @@ export function mountWindow(base: Base, mounted: Mounted) {
         </Suspense>
       ) : null,
     accountMachines: props =>
-      several() ? (
+      fleet.machines().length > 0 ? (
         <Suspense fallback={null}>
           <AccountMachines {...props} machines={machines} />
         </Suspense>
@@ -173,7 +176,20 @@ export function mountWindow(base: Base, mounted: Mounted) {
       revision();
       return fleet.license(scope.current()?.context);
     },
-    accountComputers: { list: async () => { const answer = await scope.client(scope.current()?.context).list(); return answer.kind === "ok" ? { kind: "ok", value: answer.value.map(machineToComputer) } : answer.kind === "unavailable" ? { kind: "error", status: answer.status } : answer; }, onRenamed: () => {}, subscribe: changed => { window.addEventListener("harness:machines", changed); return () => window.removeEventListener("harness:machines", changed); } },
+    accountComputers: {
+      list: async () => {
+        const group = scope.current();
+        const answer = await scope.client(group?.context).list();
+        if (answer.kind !== "ok") return answer.kind === "unavailable" ? { kind: "error", status: answer.status } : answer;
+        const rows = group ? answer.value.filter(row => row.kind === "personal" || row.organization_id === group.org) : answer.value;
+        return { kind: "ok", value: rows.map(machineToComputer) };
+      },
+      onRenamed: () => {},
+      subscribe: changed => {
+        window.addEventListener("harness:machines", changed);
+        return () => window.removeEventListener("harness:machines", changed);
+      }
+    },
     webAccounts: mounted.webAccounts,
     webRailSource: scope.source, webPromo: base.promo, groupAccount: base.groupAccount, webReauth: base.reauth,
     retryMachines: () => { fleet.retry(); void refresh(); },

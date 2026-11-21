@@ -376,7 +376,7 @@ export default function App() {
   const [sources, setSources] = createSignal<Source[]>([]);
   // `rows: null`: la máquina está apagada y no contestó; el selector ofrece lo que se sabe de ella.
   const [draftProjects, setDraftProjects] = createSignal<{ workspace: string; machine: string; rows: Project[] | null } | null>(null);
-  const draftMachine = () => runOn(workspaceActivo()) ?? machines().find(m => m.active)?.id ?? null;
+  const draftMachine = () => runOn(workspaceActivo()) ?? machines().find(m => m.active)?.id ?? (!capabilities().nativeWindow ? (machines().find((m) => !m.local)?.id ?? null) : null);
   const draftOptions = () => {
     const machine = draftMachine();
     return machine ? { headers: { "x-terminus-machine": machine } } : undefined;
@@ -5457,7 +5457,7 @@ export default function App() {
 
   const [carryModule, setCarryModule] = createSignal<CarryModule | null>(null);
   const [hojaDeLlevar, setHojaDeLlevar] = createSignal<{ key: string; check: CarryCheck; busy?: boolean } | null>(null);
-  const maquinaDeLaVentana = () => capabilities().windowMachine?.()?.id ?? machines().find((m) => m.active)?.id ?? "local";
+  const maquinaDeLaVentana = () => capabilities().windowMachine?.()?.id ?? machines().find((m) => m.active)?.id ?? (!capabilities().nativeWindow ? (machines().find((m) => !m.local)?.id ?? "local") : "local");
   async function moduloDeLlevar(): Promise<CarryModule> {
     const mod = carryModule() ?? (await import("../features/machines/carry"));
     setCarryModule(() => mod);

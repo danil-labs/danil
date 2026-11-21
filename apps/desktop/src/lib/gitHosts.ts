@@ -1,4 +1,5 @@
 import { createSignal } from "solid-js";
+import type { InvokeOptions } from "@tauri-apps/api/core";
 import { invoke } from "./invoke.ts";
 import { prosa, type Frase } from "./prose.ts";
 import { t } from "./i18n.ts";
@@ -28,8 +29,8 @@ export type GitHost = {
 const [known, setKnown] = createSignal<Record<string, GitHost>>({});
 let requested = false;
 
-export async function listGitHosts<T extends GitHost = GitHost>(scope?: string): Promise<T[]> {
-  const hosts = await invoke<T[]>("list_git_hosts", scope === undefined ? undefined : { scope });
+export async function listGitHosts<T extends GitHost = GitHost>(scope?: string, options?: InvokeOptions): Promise<T[]> {
+  const hosts = await invoke<T[]>("list_git_hosts", scope === undefined ? undefined : { scope }, options);
   setKnown(Object.fromEntries(hosts.map((h) => [h.id, h])));
   return hosts;
 }
