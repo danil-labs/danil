@@ -9,7 +9,7 @@ import catalog from "./billing-v2/catalog.synthetic.json";
 import organization from "./billing-v2/organization.suspended.json";
 import balance from "./billing-v2/balance.with-debt.json";
 import transactions from "./billing-v2/transactions.page.json";
-import type { billingV2 } from "../../src/web/billing-v2-api";
+import type { billingV2 } from "../../src/platform/treasury";
 
 const params = new URLSearchParams(location.search);
 const calls: string[] = [];

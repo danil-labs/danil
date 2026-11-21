@@ -8,7 +8,7 @@ import { SessionLoading } from "./auth/SessionLoading";
 import { signInError, WorkosAuthPage } from "./auth/workos";
 import BillingPlan from "./BillingPlan";
 import { billingHref, rememberBillingLogin } from "./billing-route";
-import { billingV2 } from "./billing-v2-api";
+import { billingV2 } from "../platform/treasury";
 import { organizationSession } from "./organization-session";
 import { isOrganizationAuthRequired } from "./organization-context";
 import { PlatformSessionError, platformSession, platformTransport } from "./platform-session";

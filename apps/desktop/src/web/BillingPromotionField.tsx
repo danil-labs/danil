@@ -2,7 +2,7 @@ import { createUniqueId, Show } from "solid-js";
 import { SettingsRow } from "../features/settings/index";
 import { t } from "../lib/i18n";
 import { Input } from "../ui/Input";
-import { PromotionCodeFormatError } from "./billing-v2-api";
+import { PromotionCodeFormatError } from "../platform/treasury";
 import { PlatformSessionError } from "./platform-session";
 
 export function promotionCodeInvalid(error: unknown) {

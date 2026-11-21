@@ -1,7 +1,7 @@
 import { strict as assert } from "node:assert";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
-import { billingV2 } from "../../src/web/billing-v2-api.ts";
+import { billingV2 } from "../../src/platform/treasury.ts";
 
 const fixture = (name: string) => JSON.parse(readFileSync(new URL(`../fixtures/billing-v2/${name}.json`, import.meta.url), "utf8")).value;
 

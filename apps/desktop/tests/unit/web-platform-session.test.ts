@@ -1,5 +1,4 @@
-import { scopedCreditsRead } from "../../src/web/scoped-credits.ts";
-import { activeGroupCredits } from "../../src/web/active-group-credits.ts";
+import { activeGroupCredits, scopedCreditsRead } from "../../src/platform/treasury.ts";
 import assert from "node:assert/strict";
 import test from "node:test";
 import { platformSession, PlatformSessionError } from "../../src/web/platform-session.ts";

@@ -177,7 +177,7 @@ test("a URL can only reopen a workspace of its context's catalog that the person
 test("billing of each organization goes with that organization's context, also on the payment return of another one", async () => {
   const { windowActiveContext } = await import("../../src/web/window-active-context.ts");
   const { setActiveWorkspaceContext } = await import("../../src/lib/workspace-context.ts");
-  const { billingV2 } = await import("../../src/web/billing-v2-api.ts");
+  const { billingV2 } = await import("../../src/platform/treasury.ts");
   const { transport, sent } = fakeEdge((s) => {
     if (s.path === "identity/sessions") return json(sessions);
     const context = s.headers.get("X-Danil-Session") ?? "";

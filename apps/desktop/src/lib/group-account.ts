@@ -1,4 +1,4 @@
-import { availableDanilCredits } from "./credits-balance.ts";
+import { availableDanilCredits, CREDITS_BALANCE_PATH } from "../platform/treasury.ts";
 import { groupPromoReply } from "./group-promo-reply.ts";
 import { normalizePromoCode } from "./promo-rejections.ts";
 
@@ -9,7 +9,7 @@ export type GroupSend = (context: string, method: "GET" | "POST", path: string, 
 /** No se reutiliza un saldo del workspace activo para representar otra organización. */
 export async function readGroupBalance(send: GroupSend, group: GroupAccount): Promise<number | null> {
   try {
-    const reply = await send(group.context, "GET", "/v1/credits/balance");
+    const reply = await send(group.context, "GET", CREDITS_BALANCE_PATH);
     return reply.status === 200 ? availableCredits(reply.body, group.org) : null;
   } catch { return null; }
 }
