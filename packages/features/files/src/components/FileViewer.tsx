@@ -1,6 +1,6 @@
 import { For, Show, createMemo, createSignal, type Accessor, type JSX } from "solid-js";
 import type { MachineConnection } from "@danil/engine-client";
-import { useFileContent } from "../queries.ts";
+import type { useFileContent } from "../queries.ts";
 import { FileIcon } from "./FileIcon.tsx";
 import type { TreeContext } from "../model.ts";
 
@@ -8,6 +8,7 @@ export interface FileViewerProps {
   conn: Accessor<MachineConnection | null | undefined> | MachineConnection | null | undefined;
   path: Accessor<string | null | undefined> | string | null | undefined;
   context?: Accessor<TreeContext | undefined> | TreeContext;
+  useFileContent?: typeof useFileContent;
   class?: string;
 }
 
@@ -69,13 +70,22 @@ export function FileViewer(props: FileViewerProps): JSX.Element {
   const currentPath = () => (typeof props.path === "function" ? (props.path as Accessor<string | null | undefined>)() : props.path);
   const [allowLarge, setAllowLarge] = createSignal(false);
 
-  // Hook único para contenido en queries.ts
-  const contentQuery = useFileContent(
-    props.conn,
-    currentPath,
-    props.context,
-    () => ({ allowLargeFile: allowLarge() }),
-  );
+  const fallbackQuery = {
+    data: () => null,
+    refetch: () => {},
+    loading: () => false,
+    error: () => null,
+  };
+
+  // Hook inyectado desde la pantalla (R12)
+  const contentQuery = props.useFileContent
+    ? props.useFileContent(
+        props.conn,
+        currentPath,
+        props.context,
+        () => ({ allowLargeFile: allowLarge() }),
+      )
+    : fallbackQuery;
 
   const lines = createMemo(() => {
     const text = contentQuery.data()?.text ?? "";

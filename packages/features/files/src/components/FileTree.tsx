@@ -1,6 +1,6 @@
 import { For, Show, createMemo, createSignal, type Accessor, type JSX } from "solid-js";
 import type { MachineConnection } from "@danil/engine-client";
-import { useTree } from "../queries.ts";
+import type { useTree } from "../queries.ts";
 import { FileIcon } from "./FileIcon.tsx";
 import type { FileNodeView, GitStatusKind, TreeContext } from "../model.ts";
 
@@ -9,6 +9,7 @@ export interface FileTreeProps {
   context?: Accessor<TreeContext | undefined> | TreeContext;
   selectedPath?: string | null;
   onSelect: (path: string) => void;
+  useTree?: typeof useTree;
   class?: string;
 }
 
@@ -143,8 +144,17 @@ function SubTree(props: {
   level: number;
   selectedPath?: string | null;
   onSelect: (path: string) => void;
+  useTree?: typeof useTree;
 }): JSX.Element {
-  const treeQuery = useTree(props.conn, () => props.path, props.context);
+  const fallbackQuery = {
+    data: () => null,
+    refetch: () => {},
+    loading: () => false,
+    error: () => null,
+  };
+  const treeQuery = props.useTree
+    ? props.useTree(props.conn, () => props.path, props.context)
+    : fallbackQuery;
   const [expandedMap, setExpandedMap] = createSignal<Record<string, boolean>>({});
 
   const toggle = (itemPath: string) => {
@@ -196,6 +206,7 @@ function SubTree(props: {
                     level={props.level + 1}
                     selectedPath={props.selectedPath}
                     onSelect={props.onSelect}
+                    useTree={props.useTree}
                   />
                 </Show>
               </>
@@ -208,7 +219,15 @@ function SubTree(props: {
 }
 
 export function FileTree(props: FileTreeProps): JSX.Element {
-  const rootQuery = useTree(props.conn, "", props.context);
+  const fallbackQuery = {
+    data: () => null,
+    refetch: () => {},
+    loading: () => false,
+    error: () => null,
+  };
+  const rootQuery = props.useTree
+    ? props.useTree(props.conn, "", props.context)
+    : fallbackQuery;
   const [expandedMap, setExpandedMap] = createSignal<Record<string, boolean>>({});
   const [busca, setBusca] = createSignal("");
 

@@ -8,7 +8,6 @@ import type { ProfileData } from "./model.ts";
 import { getPlanLabel } from "./model.ts";
 
 export interface UseProfileOptions {
-  client?: PlatformClient | (() => PlatformClient | undefined | null);
   sessionKey?: Accessor<string | undefined | null> | string | null;
 }
 
@@ -24,11 +23,7 @@ export interface UseProfileResult {
  * Preserva el error en error() para permitir reintentos (B-006).
  */
 export function useProfile(options?: UseProfileOptions): UseProfileResult {
-  const shared = usePlatform();
-  const resolveClient = (): PlatformClient => {
-    const provided = typeof options?.client === "function" ? options.client() : options?.client;
-    return provided ?? shared;
-  };
+  const client = usePlatform();
 
   const currentSessionKey = () => {
     const key = typeof options?.sessionKey === "function" ? options.sessionKey() : options?.sessionKey;
@@ -38,7 +33,6 @@ export function useProfile(options?: UseProfileOptions): UseProfileResult {
   const [data, { refetch }] = createResource(
     currentSessionKey,
     async () => {
-      const client = resolveClient();
       const me = await client.getMe();
 
       let orgs = me.organizations ?? [];

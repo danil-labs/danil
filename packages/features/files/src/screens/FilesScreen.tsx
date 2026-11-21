@@ -1,5 +1,6 @@
 import { createSignal, type Accessor, type JSX } from "solid-js";
 import type { MachineConnection } from "@danil/engine-client";
+import { useTree, useFileContent } from "../queries.ts";
 import { FileTree } from "../components/FileTree.tsx";
 import { FileViewer } from "../components/FileViewer.tsx";
 import type { TreeContext } from "../model.ts";
@@ -23,6 +24,7 @@ export function FilesScreen(props: FilesScreenProps): JSX.Element {
           context={props.context}
           selectedPath={selectedPath()}
           onSelect={(path) => setSelectedPath(path)}
+          useTree={useTree}
         />
       </aside>
 
@@ -32,6 +34,7 @@ export function FilesScreen(props: FilesScreenProps): JSX.Element {
           conn={props.conn}
           path={selectedPath()}
           context={props.context}
+          useFileContent={useFileContent}
         />
       </main>
     </div>

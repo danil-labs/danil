@@ -30,7 +30,7 @@ export type GitStatusKind = "modified" | "added" | "deleted" | "untracked" | "ig
 /** Contexto de sesión y proyecto para operaciones de árbol */
 export interface TreeContext {
   project?: string;
-  session?: string;
+  sessionId?: string;
   tree?: string;
 }
 

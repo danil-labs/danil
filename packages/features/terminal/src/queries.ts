@@ -7,10 +7,22 @@ export type ShellConnection =
   | (() => MachineConnection | undefined);
 
 export interface UseShellOptions {
-  session?: string;
+  sessionId?: string;
   command?: string;
   project?: string;
   autoStart?: boolean;
+}
+
+export const MAX_OUTPUT_LINES = 2000;
+
+function appendBoundedOutput(prev: string, next: string, maxLines = MAX_OUTPUT_LINES): string {
+  const combined = prev + next;
+  const newlineCount = (combined.match(/\n/g) || []).length;
+  if (newlineCount <= maxLines) {
+    return combined;
+  }
+  const lines = combined.split("\n");
+  return lines.slice(-maxLines).join("\n");
 }
 
 export interface UseShellReturn {
@@ -54,29 +66,34 @@ export function useShell(
   const [pid, setPid] = createSignal<number | null>(null);
   const [bufferedCount, setBufferedCount] = createSignal(0);
 
-  const sessionId = options?.session ?? generateSessionId();
+  const sessionId = options?.sessionId ?? generateSessionId();
   let lastCommand = options?.command ?? "";
   const stdinBuffer: string[] = [];
   let unsubscribe: (() => void) | null = null;
+  let isFlushing = false;
 
   const flushStdinBuffer = async (client: EngineClient) => {
-    if (stdinBuffer.length === 0) return;
-    const queued = [...stdinBuffer];
-    stdinBuffer.length = 0;
-    setBufferedCount(0);
-
-    for (const item of queued) {
-      try {
-        await client.write_shell_input({
-          session: sessionId,
-          input: item,
-        });
-      } catch (err: unknown) {
-        const message = err instanceof Error ? err.message : String(err);
-        setError(message);
-        setStatus("error");
-        break;
+    if (isFlushing || stdinBuffer.length === 0) return;
+    isFlushing = true;
+    try {
+      while (stdinBuffer.length > 0) {
+        const item = stdinBuffer[0];
+        try {
+          await client.write_shell_input({
+            session: sessionId,
+            input: item,
+          });
+          stdinBuffer.shift();
+          setBufferedCount(stdinBuffer.length);
+        } catch (err: unknown) {
+          const message = err instanceof Error ? err.message : String(err);
+          setError(message);
+          setStatus("error");
+          break;
+        }
       }
+    } finally {
+      isFlushing = false;
     }
   };
 
@@ -112,7 +129,7 @@ export function useShell(
             ? new TextDecoder().decode(raw)
             : String(raw);
         if (text) {
-          setOutput((prev) => prev + text);
+          setOutput((prev) => appendBoundedOutput(prev, text));
         }
       } else if (kind === "shell_done") {
         setStatus("done");
@@ -159,26 +176,18 @@ export function useShell(
   };
 
   const write = async (input: string): Promise<void> => {
+    stdinBuffer.push(input);
+    setBufferedCount(stdinBuffer.length);
+
     if (!isPtyReady()) {
       // B-017: retiene pulsaciones en buffer hasta que el pty esté listo
-      stdinBuffer.push(input);
-      setBufferedCount(stdinBuffer.length);
       return;
     }
 
     const client = resolveClient(conn);
     if (!client) return;
 
-    try {
-      await client.write_shell_input({
-        session: sessionId,
-        input,
-      });
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : String(err);
-      setError(message);
-      setStatus("error");
-    }
+    await flushStdinBuffer(client);
   };
 
   const stop = async (): Promise<void> => {
@@ -197,6 +206,13 @@ export function useShell(
   };
 
   const retry = async (): Promise<void> => {
+    const client = resolveClient(conn);
+    if (client && isPtyReady() && stdinBuffer.length > 0) {
+      setError(null);
+      setStatus("running");
+      await flushStdinBuffer(client);
+      return;
+    }
     await run(lastCommand);
   };
 

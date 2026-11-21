@@ -17,6 +17,7 @@ export {
   useWorkspaceAccounts,
   useConnectAccount,
   useDeleteAccount,
+  useCredentialMutation,
   useRemoveMachineAccount,
   useRestoreMachineAccount,
   useWakeMachine,
@@ -26,6 +27,7 @@ export type {
   UseMachineAccountCredentialsReturn,
   ConnectAccountOptions,
   MachineQueryTarget,
+  CredentialMachineMutationFn,
 } from "./queries.ts";
 
 export type {
