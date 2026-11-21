@@ -11,6 +11,7 @@ import X from "lucide-solid/icons/x";
 import { createEffect, createMemo, createSignal, createUniqueId, For, lazy, on, onCleanup, Show, Suspense } from "solid-js";
 import { rememberRoster } from "../../../../../apps/desktop/src/lib/handlerRoster";
 import { createCopied } from "../../../../host/src/clipboard";
+import { machineAction } from "../../../../host/src/machine-action";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { invoke } from "../../../../engine-client/src/client.ts";
 import {
@@ -224,6 +225,8 @@ export default function VistaDeProyecto(props: {
   /** Lo que se ofrece como modelo por defecto al crear un agente. */
   modelos: ModelChoices;
 }) {
+  // Abrir el proyecto es una acción de la persona: su VM se enciende si está apagada.
+  machineAction();
   const [pestana, setPestana] = createSignal("tasks");
   // El cuerpo no se remonta al cambiar de carpeta: cada una abre en sus tareas.
   createEffect(on(() => props.proyecto.id, () => setPestana("tasks"), { defer: true }));

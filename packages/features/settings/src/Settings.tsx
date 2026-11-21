@@ -14,6 +14,7 @@ import { Dynamic } from "solid-js/web";
 import { t } from "../../../../apps/desktop/src/lib/i18n";
 import { invoke } from "../../../engine-client/src/client.ts";
 import { capabilities } from "../../../host/src/platform";
+import { machineAction } from "../../../host/src/machine-action";
 import { listen } from "../../../../apps/desktop/src/lib/serviceEvents";
 import { flechaDeLista } from "../../../../apps/desktop/src/lib/shortcuts";
 import { type Superficie } from "../../../../apps/desktop/src/lib/surfaces";
@@ -120,12 +121,12 @@ const pestanasDe = (
     languages: tab("languages", () => t("settings.languages.title"), () => <SettingsPanel><PaquetesDeLengua /></SettingsPanel>),
     workspaces: tab("workspaces", () => t("settings.tab.workspace_bar"), () => <Workspaces />),
     download: capabilities().appDownloads ? tab("download", () => t("web.download.tab"), () => <Suspense fallback={null}><AppDownloads /></Suspense>) : undefined,
-    "proveedores-ia": tab("proveedores-ia", () => t("settings.nav.ai_providers"), () => <AIProviders superficies={superficies()} estado={agentes.estadoSuperficies} onRetry={agentes.reintentarSuperficies} />),
+    "proveedores-ia": tab("proveedores-ia", () => t("settings.nav.ai_providers"), () => { machineAction(); return <AIProviders superficies={superficies()} estado={agentes.estadoSuperficies} onRetry={agentes.reintentarSuperficies} />; }),
     machines: cuenta ? tab("machines", () => t("settings.tab.machines"), () => <Suspense fallback={null}><DanilAccount part="machines" /></Suspense>) : undefined,
     entorno: tab("entorno", () => t("settings.nav.environment"), () => <Environment />),
     activity: tab("activity", () => t("activity.title"), () => <Suspense fallback={null}><ActivityLogs workspace={workspace()} machine={activityMachine()} /></Suspense>),
-    proyectos: tab("proyectos", () => t("settings.tab.folders"), proyectos ? () => <Suspense fallback={null}><ManageProjects contexto={proyectos} /></Suspense> : null),
-    fuentes: tab("fuentes", () => t("settings.nav.sources"), () => <Providers />),
+    proyectos: tab("proyectos", () => t("settings.tab.folders"), proyectos ? () => { machineAction(); return <Suspense fallback={null}><ManageProjects contexto={proyectos} /></Suspense>; } : null),
+    fuentes: tab("fuentes", () => t("settings.nav.sources"), () => { machineAction(); return <Providers />; }),
     secrets: tab("secrets", () => t("settings.tab.secrets"), capabilities().nativeWindow || capabilities().accountCredentials ? () => <Suspense fallback={null}><Secrets /></Suspense> : null),
     agentes: tab("agentes", () => t("settings.nav.agents"), () => (
       <Suspense fallback={null}>

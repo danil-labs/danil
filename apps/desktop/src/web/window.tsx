@@ -14,6 +14,7 @@ import type { MachineRow, MachineStatus } from "./SyncNote";
 import { createWebTransport } from "./transport";
 import { browser, takeSettingsParam } from "./window-browser";
 import { webMachineCall } from "./workspace-runtime";
+import { MACHINE_ACTION } from "../../../../packages/host/src/machine-action";
 import { windowContext } from "./window-context";
 import { openWorkspaceUrl } from "./open-workspace-url";
 
@@ -49,6 +50,8 @@ export function mountWindow(base: Base, mounted: Mounted) {
             if (!base.permits("machines.session")) throw unavailable();
             const reply = await scope.client(info.context).admission(info.id);
             if (reply.kind === "unauthorized") void refresh();
+            // Sin `wake`, una VM apagada contesta 409: la sesión se detiene sin reintentar hasta una acción de la persona.
+            if (reply.kind === "error" && reply.status === 409 && reply.code === "machine_stopped") throw { code: "machine_stopped" };
             if (reply.kind !== "ok") throw unavailable();
             return reply.value;
           },
@@ -195,6 +198,20 @@ export function mountWindow(base: Base, mounted: Mounted) {
     if (stopped) disposeApp();
   }).catch(base.onUnavailable);
   window.addEventListener("pagehide", () => fleet.close(), { once: true });
+  // Abrir una pantalla que necesita la VM es una acción: se enciende una vez (`wake: true`) y se vuelve a leer.
+  const waking = new Map<string, Promise<void>>();
+  const onMachineAction = () => {
+    const context = scope.current()?.context;
+    for (const m of fleet.machines(context)) {
+      const key = memberKey(m.id, m.context);
+      if (!m.wakes || fleet.power(m.id, m.context) === "on" || waking.has(key)) continue;
+      waking.set(key, fleet.wake(m.id, m.context)
+        .then(() => { for (const name of ["harness:machines", "harness:service-resync"]) window.dispatchEvent(new CustomEvent(name)); })
+        .catch(() => {})
+        .finally(() => { waking.delete(key); bump(n => n + 1); }));
+    }
+  };
+  window.addEventListener(MACHINE_ACTION, onMachineAction);
   void Promise.all([import("solid-js/web"), import("./SyncNote"), import("./UpdateNotice"), import("./ReauthNote"), import("./phrases")]).then(([{ render }, { SyncNote }, { UpdateNotice }, { ReauthNote, WorkspaceNote }]) => {
     if (stopped) return;
     const layer = document.createElement("div");
@@ -207,6 +224,6 @@ export function mountWindow(base: Base, mounted: Mounted) {
       </>
     ), layer);
   });
-  return { refresh, close: () => { stopped = true; stopListing(); url.close(); active.close(); disposeApp?.(); disposeNotice?.(); noticeLayer?.remove(); } };
+  return { refresh, close: () => { stopped = true; window.removeEventListener(MACHINE_ACTION, onMachineAction); stopListing(); url.close(); active.close(); disposeApp?.(); disposeNotice?.(); noticeLayer?.remove(); } };
 }
 

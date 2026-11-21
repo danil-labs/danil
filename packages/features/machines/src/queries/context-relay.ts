@@ -13,6 +13,7 @@ export function createCloudRelayFactory(cloud: ReturnType<typeof createSessionCl
       endpoint: EDGE_ENDPOINT, computerId: info.id,
       getAdmission: async () => {
         const answer = await cloud.client.admission(info.id, info.context);
+        if (answer.kind === "error" && answer.status === 409 && answer.code === "machine_stopped") throw { code: "machine_stopped" };
         if (answer.kind !== "ok") throw new Error(answer.kind);
         return answer.value;
       },

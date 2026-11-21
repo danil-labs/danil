@@ -677,13 +677,14 @@ export class Fleet {
   }
 
   /** `license_required` si alguna máquina está detenida por la licencia: la UI enseña el aviso de Terminus de pago. */
-  license(context?: string): Blocked | null {
-    return this.scoped(context).map((m) => this.blocked(m.id, context)).find(Boolean) ?? null;
+  license(context?: string): "license_required" | null {
+    return this.scoped(context).some((m) => this.blocked(m.id, context) === "license_required") ? "license_required" : null;
   }
 
   /** «Reintentar»: vuelve a abrir las sesiones detenidas. */
   retry() {
-    for (const m of this.members.values()) if (m.link.blocked?.()) m.link.retry?.();
+    // Una VM apagada no se reabre aquí: reabrirla pide un ticket sin `wake` y vuelve el 409. La enciende `wake`.
+    for (const m of this.members.values()) if (m.link.blocked?.() === "license_required") m.link.retry?.();
   }
 
   /** Los eventos de todas: cada máquina se suscribe ahora y las que lleguen después, al agregarse. */
@@ -815,6 +816,8 @@ export class Fleet {
     const started = member.link.state() === "starting" || (await this.config.wake(id, member.info.context).catch(() => false));
     if (started === "not_startable") throw new FleetError("machine_off", id, "not_remotely_startable", false);
     if (!started) throw new FleetError("machine_off", id, "start_failed", true);
+    // La sesión se detuvo al ver la VM apagada (409): ya encendida, vuelve a pedir su ticket.
+    if (member.link.blocked?.() === "machine_stopped") member.link.retry?.();
     await new Promise<void>((resolve, reject) => {
       const done = (ok: boolean) => {
         clearTimeout(timer);
