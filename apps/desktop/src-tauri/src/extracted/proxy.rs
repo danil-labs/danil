@@ -275,6 +275,7 @@ pub(super) fn desktop_command(name: &str) -> bool {
                 | "danil_sign_in"
                 | "danil_sign_out"
                 | "danil_edge_fetch"
+                | "danil_credentials_sync"
                 | "typst_live_complete"
                 | "service_filter"
                 | "load_history"
@@ -377,6 +378,23 @@ pub(super) fn invoke(state: &State, command: &str, arguments: Value) -> Result<V
     state
         .client()
         .invoke(command, state.workspace(), arguments)
+        .map_err(|e| failure(&e))
+        .and_then(reply)
+}
+/// Como [`engine_call`], pero sobre el workspace que se indica: una orden del
+/// motor que lee la bóveda de ese workspace y no la del abierto en la ventana.
+pub(super) fn engine_call_in(
+    app: &tauri::AppHandle,
+    workspace: &str,
+    command: &str,
+    args: Value,
+) -> Result<Value, Value> {
+    let state = app
+        .try_state::<Arc<State>>()
+        .ok_or_else(|| failure(&Error::new("app_unavailable")))?;
+    state
+        .client()
+        .invoke(command, Some(workspace.to_owned()), args)
         .map_err(|e| failure(&e))
         .and_then(reply)
 }

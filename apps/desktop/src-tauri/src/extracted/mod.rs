@@ -495,6 +495,7 @@ fn start(client: Option<Arc<Client>>, autostart: bool, launcher: launcher::Launc
             desk_auth::danil_sign_in,
             desk_auth::danil_sign_out,
             desk_auth::danil_edge_fetch,
+            desk_auth::danil_credentials_sync,
             proxy::service_filter,
             proxy::load_history,
             handler_policy::handler_action,

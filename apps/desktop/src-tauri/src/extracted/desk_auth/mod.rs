@@ -5,6 +5,7 @@
 //! nunca tokens. Cada familia conserva su propia renovación y sus contextos.
 
 mod context_role;
+mod credentials;
 mod families;
 mod login_browser;
 pub(crate) mod pkce;
@@ -283,6 +284,18 @@ pub(super) fn danil_edge_fetch(
         .fetch(&method, &path, body.as_ref(), &key, context.as_deref())
         .map(|reply| edge_reply(&method, &reply, &key))
         .map_err(|fail| error(&fail))
+}
+
+/// «Sincronizar credenciales»: lleva a las máquinas de la persona las copias
+/// selladas de las claves que esta computadora guarda en su bóveda local. Todo
+/// ocurre aquí y en el motor local; la webview solo dispara la orden y recibe
+/// conteos, nunca un secreto ni un token (`desk_auth::credentials`).
+#[tauri::command(async)]
+pub(super) fn danil_credentials_sync(
+    app: tauri::AppHandle,
+    context: Option<String>,
+) -> Result<Value, Value> {
+    credentials::sync(&app, context.as_deref())
 }
 
 #[cfg(test)]
