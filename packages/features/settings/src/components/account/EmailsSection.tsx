@@ -227,7 +227,7 @@ export function EmailsSection(props: { source: AccountEmailsSource; onPrimaryCha
       <Show when={feedback()}>
         {(f) => (
           <p
-            role={f().kind === "success" ? `status` : "alert"}
+            role={f().kind === "success" ? "status" : "alert"}
             class="m-0 pt-3 text-ui text-neutral-950"
             data-account-emails-feedback={f().kind}
           >
@@ -249,7 +249,7 @@ type ItemProps = {
   onResend: () => void;
   resending: boolean;
   onResult: (f: Feedback) => void;
-  onChanged: (kind: "verified" | "primary" | "removed" | "gone") => (Promise<void>);
+  onChanged: (kind: "verified" | "primary" | "removed" | "gone") => Promise<void>;
 };
 
 function EmailItem(props: ItemProps) {
@@ -258,7 +258,7 @@ function EmailItem(props: ItemProps) {
   const email = () => props.row.email;
   let box: HTMLDivElement | undefined;
   // El botón que se pulsó desaparece: el foco va a lo que lo reemplaza, no al body.
-  const focusIn = (selector: string) => queueMicrotask(() => (box?.querySelector<HTMLElement>(selector)?.focus()));
+  const focusIn = (selector: string) => queueMicrotask(() => box?.querySelector<HTMLElement>(selector)?.focus());
   const ask = (what: "primary" | "remove") => {
     props.onResult(null);
     setConfirming(what);
@@ -269,7 +269,7 @@ function EmailItem(props: ItemProps) {
     focusIn("[data-email-action]");
   };
 
-  async function run(action: () => (Promise<void>), ok: string, kind: "primary" | "removed") {
+  async function run(action: () => Promise<void>, ok: string, kind: "primary" | "removed") {
     setBusy(true);
     try {
       await action();
@@ -418,7 +418,7 @@ function CodeForm(props: {
   resending: boolean;
   onClose: () => void;
   onResult: (f: Feedback) => void;
-  onChanged: (kind: "verified" | "gone") => (Promise<void>);
+  onChanged: (kind: "verified" | "gone") => Promise<void>;
 }) {
   const [code, setCode] = createSignal("");
   const [error, setError] = createSignal<string | null>(null);
