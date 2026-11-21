@@ -400,6 +400,7 @@
   "shell.machines.on": "encendida",
   "shell.machines.off": "apagada",
   "shell.machines.unlinked": "sin este workspace",
+  "shell.machines.disconnected": "Desconectada",
   "shell.machines.task_on": "Corre en {name}",
   "shell.machines.task_off": "Corre en {name}, apagada: se enciende cuando actúes sobre esta tarea.",
   "shell.machines.asleep_notice": "{name} está apagada: se enciende cuando envíes un mensaje.",
