@@ -48,7 +48,7 @@ Este documento audita y verifica el cumplimiento formal de la lógica de negocio
 |---|---|---|---|
 | **Consola interactiva con streaming ANSI:** Renderizado en streaming y decodificación de texto y secuencias ANSI. | Cumple | `src/queries.ts:102-112` | Acumulador reactivo de salida con soporte UTF-8 y decodificación de chunks. |
 | **Stdin sin pérdidas (B-017):** Retención en buffer (`stdinBuffer`) de pulsaciones hasta que el pty remoto confirma que está listo (`shell_started` / `isPtyReady`). | Cumple | `src/queries.ts:62-81, 158-163` | `flushStdinBuffer` se dispara exclusivamente al recibir `shell_started`. |
-| **Aislamiento causal por sesión:** Los eventos de streaming en el canal `"chat"` deben corresponder estrictamente a la sesión de la terminal activa para evitar mezcla de salidas entre terminales concurrentes. | No cumple | `src/queries.ts:90-117` | El listener de eventos `"chat"` no filtra por `event.session === sessionId`, lo que permite que eventos de otros shells o tareas contaminen la salida de la terminal activa. |
+| **Aislamiento causal por sesión:** Los eventos de streaming en el canal `"chat"` deben corresponder estrictamente a la sesión de la terminal activa para evitar mezcla de salidas entre terminales concurrentes. | Cumple | `src/queries.ts:89-96` | El listener del evento `"chat"` comprueba `eventSession === sessionId`, descartando eventos ajenos a la sesión activa de la terminal. |
 | **Ciclo de vida y cierre limpio:** Invocación de `run_shell_command`, `write_shell_input`, `stop_shell_command` y `close_process` al desmontar. | Cumple | `src/queries.ts:137, 169, 185, 218` | Ciclo de vida completo implementado con `onCleanup`. |
 
 ---
