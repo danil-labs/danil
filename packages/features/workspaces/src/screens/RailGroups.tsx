@@ -12,15 +12,15 @@ import {
   useSelectWorkspace,
   openAddWorkspace,
 } from "../queries.ts";
-import { WorkspaceErrorView } from "./WorkspaceErrorView.tsx";
-import { WorkspaceEmptyView } from "./WorkspaceEmptyView.tsx";
-import { OrganizationRailLayout } from "./OrganizationRailLayout.tsx";
-import { OrganizationRailGroup } from "./OrganizationRailGroup.tsx";
+import { WorkspaceErrorView } from "../components/WorkspaceErrorView.tsx";
+import { WorkspaceEmptyView } from "../components/WorkspaceEmptyView.tsx";
+import { OrganizationRailLayout } from "../components/OrganizationRailLayout.tsx";
+import { OrganizationRailGroup } from "../components/OrganizationRailGroup.tsx";
 import {
   changeOrgPreference,
   type OrgPreference,
   type SessionRailGroup,
-} from "./organization-rail-model.ts";
+} from "../components/organization-rail-model.ts";
 
 export interface RailGroupsProps {
   engineClient?: EngineClient | (() => EngineClient | undefined | null);

@@ -1,6 +1,6 @@
 import { Show, type Component } from "solid-js";
 import type { EngineClient } from "@danil/engine-client";
-import { RailGroups } from "../components/RailGroups.tsx";
+import { RailGroups } from "./RailGroups.tsx";
 import {
   useWorkspaces,
   openAddWorkspace,
