@@ -22,6 +22,7 @@ export type { WorkspaceEmptyViewProps } from "./components/WorkspaceEmptyView.ts
 export {
   useOrganizations,
   useWorkspaces,
+  groupWorkspacesByOrg,
   createWorkspace,
   selectWorkspace,
   getActiveWorkspaceId,
