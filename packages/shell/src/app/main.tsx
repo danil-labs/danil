@@ -3,7 +3,7 @@
 import "../../../../apps/desktop/src/locales/catalogs";
 import { render } from "solid-js/web";
 import App from "./App";
-import Setup from "../../../features/settings/src/Setup";
+import Setup from "../../../features/settings/src/screens/Setup";
 import { Lanzador, SessionGate } from "../shell";
 import { invoke } from "../../../engine-client/src/client.ts";
 import { seguirElTema } from "../../../../apps/desktop/src/lib/theme";
@@ -34,7 +34,7 @@ if (capabilities().nativeWindow) {
   });
   void askGuestChannels().then((channels) => setCapabilities({ ...capabilities(), wsl: channels.includes("wsl") }));
   // El Free router de plataforma con la sesión de Desk; fuera de la carga inicial.
-  void import("../../../features/settings/src/free-router-desk").then((m) => m.installDeskFreeRouter());
+  void import("../../../features/settings/src/queries/free-router-desk").then((m) => m.installDeskFreeRouter());
 }
 
 /**

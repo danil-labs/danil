@@ -20,9 +20,9 @@ import { AstroAvatar } from "./AstroAvatar";
 import { BodyPicker } from "../components/BodyPicker";
 import { DEFAULT_PROFILE, notifyProfiles } from "../queries/profiles";
 import { TelegramSection } from "../components/TelegramSection";
-import type { HandlerTarget } from "../../../settings/src/HandlerPolicy";
+import type { HandlerTarget } from "../../../settings/src/screens/HandlerPolicy";
 import { LazyPart, retryableLazy } from "../../../../ui/src/LazyPart";
-const HandlerPolicy = retryableLazy(() => import("../../../settings/src/HandlerPolicy"));
+const HandlerPolicy = retryableLazy(() => import("../../../settings/src/screens/HandlerPolicy"));
 
 /** Las extensiones que el webview pinta como `data:` URI (`preview::data_url`). */
 const IMAGES = ["png", "jpg", "jpeg", "webp", "gif"];

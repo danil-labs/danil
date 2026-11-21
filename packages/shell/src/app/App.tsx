@@ -61,7 +61,7 @@ import {
 import { createComposerStore } from "../../../features/composer/src";
 import { createProjectsStore } from "../../../features/projects/src";
 import type { DeleteTarget } from "../../../features/projects/src/screens/DeleteTaskDialog";
-import type { HandlerTarget } from "../../../features/settings/src/HandlerPolicy";
+import type { HandlerTarget } from "../../../features/settings/src/screens/HandlerPolicy";
 import { createThreadsStore } from "../../../features/threads/src";
 import { createWorkspaceStore } from "../../../features/workspace/src";
 import { deliver, listen } from "../../../../apps/desktop/src/lib/serviceEvents";
@@ -92,7 +92,7 @@ const TaskLocation = lazy(() => import("../../../features/chat/src/screens/TaskL
 const Screen = lazy(() => import("../../../features/screen/src/screens/Screen"));
 // El aviso de licencia solo se baja si la flota lo pide (trae los textos de Danil).
 const MachinesLicense = lazy(() =>
-  import("../../../features/settings/src/TerminusLicense").then((m) => ({
+  import("../../../features/settings/src/screens/TerminusLicense").then((m) => ({
     default: (props: { onRetry: () => void }) => (
       // En el escritorio, el correo del sistema; en la web, el del navegador.
       <m.TerminusLicense compact onRequest={capabilities().nativeWindow ? m.requestAccessInBrowser : m.requestAccessInPage} onRetry={props.onRetry} />
@@ -136,14 +136,14 @@ import { esChatDeAgente } from "../../../features/projects/src/model/taskTree";
 import {
   DEFAULT_PERMISSION_MODE_EVENT,
   type DefaultPermissionModeChange,
-} from "../../../features/settings/src/DefaultPermissions";
-import type { ContextoDeProyectos } from "../../../features/settings/src/ManageProjects";
+} from "../../../features/settings/src/screens/DefaultPermissions";
+import type { ContextoDeProyectos } from "../../../features/settings/src/screens/ManageProjects";
 
 // Configuración solo se abre a pedido: no entra en la carga inicial.
-const Settings = lazy(() => import("../../../features/settings/src/Settings"));
+const Settings = lazy(() => import("../../../features/settings/src/screens/Settings"));
 
-import { listaBasta, reconciliar } from "../../../features/settings/src/early-startup";
-import { createWorkspaces, type Startup } from "../../../features/settings/src/workspaces-store";
+import { listaBasta, reconciliar } from "../../../features/settings/src/model/early-startup";
+import { createWorkspaces, type Startup } from "../../../features/settings/src/queries/workspaces-store";
 import { createAttention, topState } from "../shell/attention";
 import TaskNotifier from "../shell/TaskNotifier";
 
@@ -159,7 +159,7 @@ import { createDraftsStore } from "../../../features/drafts/src";
 import { asleep, withLastAnswer } from "../../../features/machines/src/queries/lastAnswer";
 import { unconfirmedOpen } from "../../../features/machines/src/model/unconfirmedOpen";
 import { createBatchDelivery, createServiceStream, type ServicePage } from "../../../features/service-stream/src";
-import { ConexionesMenu } from "../../../features/settings/src/Tools";
+import { ConexionesMenu } from "../../../features/settings/src/screens/Tools";
 import { TitleBarSection } from "../shell";
 import AppTools from "../shell/AppTools";
 import CloseGuard from "../shell/CloseGuard";

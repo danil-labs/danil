@@ -6,7 +6,7 @@
  * loads no remote images.
  */
 import { accountAssetUrl, readAccountAsset } from "@terminus/computers";
-import { blobToDataUrl } from "../../../../packages/features/settings/src/account-profile.ts";
+import { blobToDataUrl } from "../../../../packages/features/settings/src/model/account-profile.ts";
 import { apiUrl } from "./computers.ts";
 import { type Fetch, refused, sessionCall } from "./control-plane.ts";
 import { WORKSPACES_PATH, workspaceAssetPath } from "../../../../packages/platform-client/src/workspaces.ts";

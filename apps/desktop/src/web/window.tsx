@@ -4,7 +4,7 @@ import { createSignal, lazy, Suspense } from "solid-js";
 import { createContextRelayPool, machinesListed, mergeByMachineId } from "../../../../packages/features/machines/src";
 import { sessionRailState } from "../../../../packages/shell/src/shell";
 import { createRouter, type SliceChange } from "../../../../packages/features/machines/src/queries/router";
-import type { AccountProfileSource } from "../../../../packages/features/settings/src/account-profile";
+import type { AccountProfileSource } from "../../../../packages/features/settings/src/model/account-profile";
 import { t } from "../lib/i18n";
 import { type Capabilities, setCapabilities, type WebAccountsSource } from "../../../../packages/host/src/platform";
 import { leerPref } from "../lib/prefs";

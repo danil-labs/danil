@@ -4,7 +4,7 @@ import { invoke } from "../../../engine-client/src/client.ts";
 import { legible, type Query, type Read } from "../../../../apps/desktop/src/lib/limits";
 import { detalleDe } from "../../../ui/src/Failure";
 import { machineOf } from "../../../features/machines/src/queries/store";
-import type { Account, AccountList, AccountStatus } from "../../../features/settings/src/accounts-store";
+import type { Account, AccountList, AccountStatus } from "../../../features/settings/src/queries/accounts-store";
 
 // Consumo de las cuentas activas; las lecturas fallidas conservan el último dato marcado como antiguo.
 // El refresco automático debe respetar el caché y evitar cuentas sin consumo disponible.

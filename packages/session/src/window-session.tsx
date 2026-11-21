@@ -23,8 +23,8 @@ import { webSessionCommands, type WebSessionStatus } from '../../../apps/desktop
 import { webRailCatalog } from '../../../apps/desktop/src/web/web-rail-catalog';
 import { windowActiveContext } from '../../../apps/desktop/src/web/window-active-context';
 import { freeModelScope } from '../../../apps/desktop/src/lib/free-model-policy';
-import { freeRouterEngine, freeRouterWebEdge } from '../../features/settings/src/free-router-adapters';
-import { setFreeRouterHost, signOutPlatform } from '../../features/settings/src/free-router-session';
+import { freeRouterEngine, freeRouterWebEdge } from '../../features/settings/src/queries/free-router-adapters';
+import { setFreeRouterHost, signOutPlatform } from '../../features/settings/src/queries/free-router-session';
 import { sessionRailState } from '../../shell/src/shell';
 import { platformFetch } from '../../platform-client/src/client';
 
