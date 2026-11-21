@@ -1,5 +1,3 @@
-import type { JSX } from "solid-js";
-
 export type SettingsEntryId =
   | "account"
   | "preferences"
@@ -15,7 +13,7 @@ export type SettingsGroup = "you" | "workspace";
 export interface SettingsTab {
   id: string;
   name: string;
-  panel: (() => JSX.Element) | null;
+  panel: (() => import("solid-js").JSX.Element) | null;
 }
 
 export interface SettingsEntryDef {
@@ -80,6 +78,33 @@ export const SETTINGS_ENTRIES: readonly SettingsEntryDef[] = [
     tabs: ["operation", "plugins", "memory", "external"],
   },
 ] as const;
+
+export const TAB_NAMES: Record<string, string> = {
+  "cuenta-danil": "Cuentas de Danil",
+  emails: "Correos",
+  usage: "Uso",
+  plan: "Plan",
+  security: "Seguridad",
+  general: "General",
+  appearance: "Estilo",
+  notify: "Avisos",
+  languages: "Lenguas",
+  workspaces: "Barra de workspaces",
+  download: "Descargas",
+  "proveedores-ia": "Proveedores de IA",
+  fuentes: "Control de Fuentes",
+  machines: "Tus máquinas",
+  entorno: "Estado del entorno",
+  activity: "Actividad",
+  proyectos: "Carpetas",
+  secrets: "Secretos",
+  agentes: "Agentes",
+  skills: "Skills",
+  operation: "MCP",
+  plugins: "Plugins",
+  memory: "Memoria",
+  external: "Acceso externo",
+};
 
 const MOVED: Record<string, string> = {
   secretos: "secrets",

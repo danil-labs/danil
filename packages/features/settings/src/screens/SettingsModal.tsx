@@ -1,11 +1,3 @@
-import Bot from "lucide-solid/icons/bot";
-import CircleUserRound from "lucide-solid/icons/circle-user-round";
-import Folders from "lucide-solid/icons/folders";
-import GitBranch from "lucide-solid/icons/git-branch";
-import Monitor from "lucide-solid/icons/monitor";
-import Plug from "lucide-solid/icons/plug";
-import SlidersHorizontal from "lucide-solid/icons/sliders-horizontal";
-import Sparkles from "lucide-solid/icons/sparkles";
 import {
   createSignal,
   For,
@@ -37,10 +29,13 @@ import {
   SETTINGS_ENTRIES,
   SETTINGS_GROUPS,
   settingsTarget,
+  TAB_NAMES,
   type SettingsEntryId,
   type SettingsGroup,
   type SettingsTab,
 } from "../entries.ts";
+import { ICONOS } from "../components/entry-icons.tsx";
+import { AccountSection } from "../components/AccountSection.tsx";
 
 export interface SettingsModalProps {
   open?: boolean;
@@ -65,43 +60,7 @@ interface Entrada {
   tabs: SettingsTab[];
 }
 
-const ICONOS: Record<SettingsEntryId, () => JSX.Element> = {
-  account: () => <CircleUserRound size={15} />,
-  preferences: () => <SlidersHorizontal size={15} />,
-  "ai-accounts": () => <Sparkles size={15} />,
-  "source-control": () => <GitBranch size={15} />,
-  machines: () => <Monitor size={15} />,
-  projects: () => <Folders size={15} />,
-  "agents-skills": () => <Bot size={15} />,
-  connections: () => <Plug size={15} />,
-};
 
-const TAB_NAMES: Record<string, string> = {
-  "cuenta-danil": "Cuentas de Danil",
-  emails: "Correos",
-  usage: "Uso",
-  plan: "Plan",
-  security: "Seguridad",
-  general: "General",
-  appearance: "Estilo",
-  notify: "Avisos",
-  languages: "Lenguas",
-  workspaces: "Barra de workspaces",
-  download: "Descargas",
-  "proveedores-ia": "Proveedores de IA",
-  fuentes: "Control de Fuentes",
-  machines: "Tus máquinas",
-  entorno: "Estado del entorno",
-  activity: "Actividad",
-  proyectos: "Carpetas",
-  secrets: "Secretos",
-  agentes: "Agentes",
-  skills: "Skills",
-  operation: "MCP",
-  plugins: "Plugins",
-  memory: "Memoria",
-  external: "Acceso externo",
-};
 
 export function SettingsModal(props: SettingsModalProps) {
   let hoja: HTMLDivElement | undefined;
@@ -110,11 +69,22 @@ export function SettingsModal(props: SettingsModalProps) {
     if (props.customPanels?.[id]) {
       return props.customPanels[id]!;
     }
-    if (entryId === "account" && props.accountSlot && id === "cuenta-danil") {
-      return () => <>{props.accountSlot}</>;
-    }
-    if (entryId === "ai-accounts" && props.aiAccountsSlot) {
-      return () => <>{props.aiAccountsSlot}</>;
+    if (entryId === "account") {
+      if (id === "cuenta-danil") {
+        return () => <AccountSection slot={props.accountSlot} part="profile" />;
+      }
+      if (id === "emails") {
+        return () => <AccountSection part="emails" />;
+      }
+      if (id === "usage") {
+        return () => <AccountSection part="usage" />;
+      }
+      if (id === "plan") {
+        return () => <AccountSection part="plan" />;
+      }
+      if (id === "security") {
+        return null;
+      }
     }
     if (entryId === "machines" && props.machinesSlot && id === "machines") {
       return () => <>{props.machinesSlot}</>;

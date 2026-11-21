@@ -12,3 +12,4 @@ Notas de portado de Configuración desde `apps/desktop` al front rebuild nuevo (
 
 - portado de apps/desktop/src/features/settings/Settings.tsx:1-572
 - portado de apps/desktop/src/features/settings/settings-entries.ts:1-37
+- portado de apps/desktop/src/features/settings/DanilAccountsEntry.tsx:1-8 y DanilAccount.tsx:1-120 (AccountSection: perfil, emails, usage, plan)
