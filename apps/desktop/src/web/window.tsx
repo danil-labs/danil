@@ -88,7 +88,7 @@ export function mountWindow(base: Base, mounted: Mounted) {
     onSlice: () => bump(n => n + 1),
   });
   const stopListing = fleet.onListing(() => bump(n => n + 1));
-  const active = createRouter({ contextInfo: scope.info, self: null, fleet, native: null, deliver, onSlices: slicesChanged,
+  const active = createRouter({ contextInfo: scope.routing, self: null, fleet, native: null, deliver, onSlices: slicesChanged,
     pickedFor: workspace => {
       const picked: Record<string, string> = leerPref("machines.run_on", {});
       return workspace ? picked[workspace] ?? null : null;
@@ -128,7 +128,7 @@ export function mountWindow(base: Base, mounted: Mounted) {
     listed = new Map(rows.map(({ machine, group }) => [memberKey(machine.machine_id, group.context), machine]));
     setMissing(false);
     bump(n => n + 1);
-    fleet.setMachines(rows.map(({ machine, group }) => ({ id: machine.machine_id, name: machine.name || machine.machine_id,
+    fleet.setMachines(rows.map(({ machine, group }) => ({ id: machine.machine_id, name: scope.machineName(machine, group, rows),
       wakes: machineToComputer(machine).wakeable === true && base.permits("machines.start"), kind: machine.kind === "personal" ? "personal" : "organization", context: group.context, organizationId: machine.organization_id ?? null,
     })));
     for (const { machine, group } of rows) fleet.observe(machine.machine_id, machineToComputer(machine).state, group.context);

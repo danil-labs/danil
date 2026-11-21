@@ -5,6 +5,8 @@ import type { WebSessionCommands, WebSessionStatus } from "./web-session-context
 
 type Client = ReturnType<typeof machinesClient>;
 type Answer = Awaited<ReturnType<Client["list"]>>;
+/** Las lecturas que el motor responde por workspace (tareas, proyectos, cuentas, modelos). */
+const OF_THE_WORKSPACE = new Set(["list_live_sessions", "list_projects", "list_portfolios", "list_spaces", "list_accounts", "account_status", "list_models", "list_providers", "list_surfaces", "list_agents"]);
 export type ContextRow = { machine: Machine; group: GroupAccount };
 
 /**
@@ -24,11 +26,28 @@ export function windowContext(options: { factory: (context: string) => Client; s
   }
   return {
     client, info, groups,
+    /**
+     * Lo que el router sabe de un contexto. En la web no hay «esta computadora»: una organización
+     * Free la sirven sus máquinas conectadas, como cualquier otra (no `localOnly`).
+     */
+    routing: (context: string) => { const group = info(context); return group ? { ...group, plan: group.plan === "free" ? null : group.plan } : null; },
+    /** La misma computadora inscrita en dos organizaciones se distingue por su organización. */
+    machineName: (machine: Machine, group: GroupAccount, rows: readonly ContextRow[]) => {
+      const name = machine.name || machine.machine_id;
+      return rows.some((row) => row.group.context !== group.context && (row.machine.name || row.machine.machine_id) === name) ? `${name} · ${group.name}` : name;
+    },
     current: () => { options.revision(); const active = options.active(); return active ? info(active) : null; },
     /** Cada orden va al contexto del workspace abierto; la atención del riel, a todos. */
-    engine<T extends { handle: (command: string, args?: Record<string, unknown>, options?: { headers?: HeadersInit }) => Promise<unknown> }>(engine: T) {
-      return { handle: (command: string, args?: Record<string, unknown>, init?: { headers?: HeadersInit }) => {
+    /**
+     * Cada orden va al contexto del workspace abierto; la atención del riel, a todos. Por el relay, el motor
+     * exige el workspace de cada lectura del workspace: si aún no hay uno abierto (el arranque), esas órdenes
+     * esperan a que el riel abra uno, hasta 10 s, en vez de salir sin workspace.
+     */
+    engine<T extends { handle: (command: string, args?: Record<string, unknown>, options?: { headers?: HeadersInit }) => Promise<unknown>; activeWorkspace?: () => string | null }>(engine: T) {
+      return { handle: async (command: string, args?: Record<string, unknown>, init?: { headers?: HeadersInit }) => {
         const headers = new Headers(init?.headers);
+        if (OF_THE_WORKSPACE.has(command) && !headers.has("x-terminus-workspace"))
+          for (let waited = 0; !engine.activeWorkspace?.() && waited < 10_000; waited += 100) await new Promise((resolve) => setTimeout(resolve, 100));
         if (command !== "list_workspace_attention" && !headers.has("x-danil-context")) headers.set("x-danil-context", options.active() ?? options.fallback() ?? "");
         return engine.handle(command, args, { ...init, headers });
       } };
