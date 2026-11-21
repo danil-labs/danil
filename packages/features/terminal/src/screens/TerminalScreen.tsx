@@ -14,7 +14,7 @@ export interface TerminalScreenProps {
   conn?: ShellConnection;
   command?: string;
   project?: string;
-  session?: string;
+  sessionId?: string;
   title?: string;
 }
 
@@ -37,7 +37,7 @@ export function TerminalScreen(
   const shell = useShell(
     () => (typeof props.conn === "function" ? props.conn() : props.conn),
     {
-      session: props.session,
+      sessionId: props.sessionId,
       command: props.command,
       project: props.project,
       autoStart: true,
