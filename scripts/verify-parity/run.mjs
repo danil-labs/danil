@@ -50,7 +50,7 @@ const browser = await chromium.launch();
 let failed = 0;
 const report = [];
 
-async function shoot(base, step, file) {
+async function shoot(base, step, file, region) {
   const ctx = await browser.newContext({ viewport: VIEWPORT, locale: "es-MX", colorScheme: "dark", timezoneId: "America/Mexico_City" });
   const page = await ctx.newPage();
   await attachFixtures(page);
@@ -62,7 +62,10 @@ async function shoot(base, step, file) {
   await step(page, base);
   await page.waitForTimeout(800);
   await page.screenshot({ path: file, animations: "disabled", caret: "hide" });
+  const box = region ? await page.locator(region).first().boundingBox().catch(() => null) : null;
+  const text = await page.locator(region || "body").first().innerText().catch(() => "");
   await ctx.close();
+  return Object.assign(box || {}, { text, found: !!box || !region });
 }
 
 for (const name of recipes) {
@@ -71,22 +74,41 @@ for (const name of recipes) {
   if (/name:\s*\//.test(src) || /\.catch\(\s*\(\)\s*=>\s*\{\s*\}\s*\)/.test(src)) {
     failed++; report.push(`FAIL ${name}: receta no válida (nombre por regex o .catch(() => {})); usa el nombre visible exacto y deja que el paso falle`); continue;
   }
-  const r = (await import(join(HERE, "screens", `${name}.mjs`))).default;
+  const r = { ...(await import(join(HERE, "screens", `${name}.mjs`))).default };
+  if (!r.region && name.startsWith("configuracion-")) r.region = "[role=dialog]";
   const a = join(OUT, `${name}-old.png`), b = join(OUT, `${name}-new.png`), d = join(OUT, `${name}-diff.png`);
   try {
-    await shoot(oldSrv.url, r.old, a);
-    await shoot(newSrv.url, r.new, b);
+    var boxOld = await shoot(oldSrv.url, r.old, a, r.region);
+    var boxNew = await shoot(newSrv.url, r.new, b, r.region);
+    if (r.region && !boxOld.found) throw new Error(`la región ${r.region} no existe en la app vieja`);
+    if (r.region && !boxNew.found) throw new Error(`la región ${r.region} no existe en la app nueva`);
   } catch (e) {
     failed++; report.push(`FAIL ${name}: la receta falló: ${e.message.split("\n")[0]}`); continue;
   }
-  const A = PNG.sync.read(readFileSync(a)), B = PNG.sync.read(readFileSync(b));
+  let A = PNG.sync.read(readFileSync(a)), B = PNG.sync.read(readFileSync(b));
+  // Con región: se mide solo dentro de la caja del original (el fondo no diluye la diferencia).
+  if (r.region) {
+    const crop = (img, bx) => {
+      const x = Math.max(0, Math.round(bx.x)), y = Math.max(0, Math.round(bx.y));
+      const w = Math.min(img.width - x, Math.round(bx.width)), h = Math.min(img.height - y, Math.round(bx.height));
+      const out = new PNG({ width: w, height: h });
+      PNG.bitblt(img, out, x, y, w, h, 0, 0);
+      return out;
+    };
+    A = crop(A, boxOld); B = crop(B, boxOld);
+  }
   const diff = new PNG({ width: A.width, height: A.height });
   const n = pixelmatch(A.data, B.data, diff.data, A.width, A.height, { threshold: 0.05 } /* 0.1 no distingue grises del tema oscuro: un par distinto daba 1,97 % */);
   writeFileSync(d, PNG.sync.write(diff));
   const frac = n / (A.width * A.height), max = r.threshold ?? DEFAULT_THRESHOLD;
-  const ok = frac <= max;
+  // Texto visible: las mismas líneas, en el mismo orden (un píxel no ve una pestaña de más; esto sí).
+  const lines = (t) => t.split("\n").map((l) => l.trim()).filter(Boolean);
+  const lo = lines(boxOld.text), ln = lines(boxNew.text);
+  const falta = lo.filter((l) => !ln.includes(l)), sobra = ln.filter((l) => !lo.includes(l));
+  const textoOk = r.ignoreText || (!falta.length && !sobra.length);
+  const ok = frac <= max && textoOk;
   if (!ok) failed++;
-  report.push(`${ok ? "ok  " : "FAIL"} ${name}: ${(frac * 100).toFixed(2)} % distinto (máx ${(max * 100).toFixed(1)} %)  ${d}`);
+  report.push(`${ok ? "ok  " : "FAIL"} ${name}: ${(frac * 100).toFixed(2)} % distinto (máx ${(max * 100).toFixed(1)} %)${textoOk ? "" : ` · texto distinto — falta ${JSON.stringify(falta.slice(0, 6))}; sobra ${JSON.stringify(sobra.slice(0, 6))}`}  ${d}`);
 }
 await browser.close(); oldSrv.s.close(); newSrv.s.close();
 console.log(report.join("\n"));

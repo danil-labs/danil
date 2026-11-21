@@ -1,9 +1,13 @@
+import { IconButton, Settings as SettingsIcon } from "@danil/ui";
+import { t } from "@danil/ui/i18n";
 import type { JSX } from "solid-js";
 import { Server, User } from "@danil/ui";
 
 export interface RailProps {
   activeRoute?: string;
   onSelectRoute?: (route: "machines" | "account" | string) => void;
+  /** Engrane del pie: abre Configuración (apps/desktop WorkspaceColumn.tsx:267-269). */
+  onSettings?: () => void;
   slots?: {
     top?: JSX.Element;
     stacks?: JSX.Element;
@@ -53,6 +57,9 @@ export function Rail(props: RailProps): JSX.Element {
 
       {/* Botón inferior: Cuenta */}
       <div class="flex shrink-0 flex-col items-center gap-1 pt-1 pb-2" data-workspace-column-foot="">
+        <IconButton size="md" label={t("settings.title")} onClick={() => props.onSettings?.()}>
+          <SettingsIcon size={17} aria-hidden="true" />
+        </IconButton>
         {props.slots?.bottom ? (
           props.slots.bottom
         ) : (

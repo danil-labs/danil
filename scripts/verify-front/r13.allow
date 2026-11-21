@@ -53,6 +53,5 @@ packages/features/workspaces/src/screens/WorkspacePickerModal.tsx 5
 packages/features/workspaces/src/screens/WorkspacesScreen.tsx 3
 packages/platform-client/src/http.ts 3
 packages/shell/src/App.tsx 16
-packages/shell/src/ErrorBoundary.tsx 1
 packages/shell/src/Rail.tsx 6
-packages/shell/src/routes.tsx 10
+packages/shell/src/routes.tsx 9
