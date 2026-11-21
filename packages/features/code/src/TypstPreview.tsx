@@ -17,8 +17,8 @@ import { machineOf } from "../../machines/src/store";
 import { seguirHueco, type Hueco } from "../../../../apps/desktop/src/lib/sites";
 import { Button } from "../../../ui/src/Button";
 import { FailureNote, asFailure, type Failure } from "../../../ui/src/Failure";
-import { IconButton } from "../../viewers/src/IconButton";
-import { clampZoom, ZOOM_STEP } from "../../viewers/src/zoom";
+import { IconButton } from "../../viewers/src/components/IconButton";
+import { clampZoom, ZOOM_STEP } from "../../viewers/src/model/zoom";
 import {
   type DiagnosticoTypst,
   type ExportacionTypst,

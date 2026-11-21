@@ -16,7 +16,7 @@ import { envolver, SANDBOX_ARTEFACTO } from "../../features/artifacts/src/model/
 import { useFileMachine } from "./fileMachine";
 
 // El visor entero baja solo al abrir la vista previa: `pdfjs-dist` no entra en el arranque.
-const PdfDocument = lazy(() => import("../../features/viewers/src/Pdf"));
+const PdfDocument = lazy(() => import("../../features/viewers/src/screens/Pdf"));
 const Documento = lazy(() => import("../../features/artifacts/src/screens/Document"));
 
 // La miniatura de un HTML: la página a ancho de escritorio, reducida al ancho de la tarjeta.
@@ -116,7 +116,7 @@ export function FilePreview(props: { path: string; alt?: string }) {
           : await invoke<{ pdf: string | null }>("office_preview", { path: props.path }, enSuMaquina());
       if (!preview.pdf || !lienzo) throw new Error("sin_pdf");
       setPdf(preview.pdf);
-      const { renderFirstPage } = await import("../../features/viewers/src/pdfThumb");
+      const { renderFirstPage } = await import("../../features/viewers/src/model/pdfThumb");
       await renderFirstPage(preview.pdf, lienzo, ANCHO);
       setPagina("lista");
     } catch (e) {

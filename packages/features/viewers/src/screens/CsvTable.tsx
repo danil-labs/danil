@@ -1,6 +1,6 @@
 import { For, Show, createMemo } from "solid-js";
-import { t } from "../../../../apps/desktop/src/lib/i18n";
-import { parseTable } from "./csv";
+import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { parseTable } from "../model/csv";
 
 /**
  * Un `.csv` o `.tsv` como tabla. La primera fila es la de encabezados: es la

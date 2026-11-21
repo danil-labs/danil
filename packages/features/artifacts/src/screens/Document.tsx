@@ -14,8 +14,8 @@ import { cn } from "../../../../../apps/desktop/src/lib/utils";
 import ZoomIn from "lucide-solid/icons/zoom-in";
 import ZoomOut from "lucide-solid/icons/zoom-out";
 import RotateCcw from "lucide-solid/icons/rotate-ccw";
-import { IconButton } from "../../../viewers/src/IconButton";
-import { ZOOM_STEP } from "../../../viewers/src/zoom";
+import { IconButton } from "../../../viewers/src/components/IconButton";
+import { ZOOM_STEP } from "../../../viewers/src/model/zoom";
 
 export default function Documento(props: {
   html: string;

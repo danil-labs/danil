@@ -1,9 +1,9 @@
 import { readTreeFile, type TreePart } from "@terminus/protocol";
 import { Show, createResource, createSignal, onCleanup } from "solid-js";
-import { t } from "../../../../apps/desktop/src/lib/i18n";
-import { capabilities } from "../../../host/src/platform";
-import { peso } from "../../../../apps/desktop/src/lib/format";
-import { FailureNote, asFailure } from "../../../ui/src/Failure";
+import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { capabilities } from "../../../../host/src/platform";
+import { peso } from "../../../../../apps/desktop/src/lib/format";
+import { FailureNote, asFailure } from "../../../../ui/src/Failure";
 
 /** Lo que se lee del árbol de la tarea, una parte cada vez (`tree_read_part`). */
 export type LeerParte = (offset: number, size: number, revision?: string) => Promise<TreePart>;

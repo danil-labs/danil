@@ -8,7 +8,7 @@ import { extensionDe, nombreDe } from "../../../../apps/desktop/src/lib/steps";
 import type { Preview } from "../../artifacts/src/components/Preview";
 
 /** Baja al abrirse: `pdfjs-dist` no entra en el arranque de la ventana. */
-const PdfDocument = lazy(() => import("../../viewers/src/Pdf"));
+const PdfDocument = lazy(() => import("../../viewers/src/screens/Pdf"));
 
 export default function Adjuntos(props: {
   /** Las rutas del archivo, tal como las guarda el turno. */

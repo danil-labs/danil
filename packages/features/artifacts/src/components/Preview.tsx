@@ -30,13 +30,13 @@ import { Markdown } from "../../../../ui/src/Markdown";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { extensionDe } from "../../../../../apps/desktop/src/lib/steps";
 import { peso, nf } from "../../../../../apps/desktop/src/lib/format";
-import { delimiterFor } from "../../../viewers/src/csv";
+import { delimiterFor } from "../../../viewers/src/model/csv";
 import { ArtifactDownloadError, readArtifactDownload } from "../model/download.ts";
 
 /** Bajan al abrirse: `pdfjs-dist` no entra en el arranque de la ventana. */
-const PdfDocument = lazy(() => import("../../../viewers/src/Pdf"));
-const ZoomableImage = lazy(() => import("../../../viewers/src/ImageViewer"));
-const DelimitedTable = lazy(() => import("../../../viewers/src/CsvTable"));
+const PdfDocument = lazy(() => import("../../../viewers/src/screens/Pdf"));
+const ZoomableImage = lazy(() => import("../../../viewers/src/screens/ImageViewer"));
+const DelimitedTable = lazy(() => import("../../../viewers/src/screens/CsvTable"));
 
 export type Preview = {
   rel: string;

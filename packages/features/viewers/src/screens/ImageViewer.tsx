@@ -2,9 +2,9 @@ import { createSignal } from "solid-js";
 import ZoomIn from "lucide-solid/icons/zoom-in";
 import ZoomOut from "lucide-solid/icons/zoom-out";
 import RotateCcw from "lucide-solid/icons/rotate-ccw";
-import { t } from "../../../../apps/desktop/src/lib/i18n";
-import { IconButton } from "./IconButton";
-import { clampZoom, offsetOnZoom, ZOOM_STEP } from "./zoom";
+import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { IconButton } from "../components/IconButton";
+import { clampZoom, offsetOnZoom, ZOOM_STEP } from "../model/zoom";
 
 /**
  * Una imagen con zoom y desplazamiento. La rueda acerca solo con ⌘/Ctrl —el

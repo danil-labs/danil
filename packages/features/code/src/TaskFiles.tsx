@@ -120,7 +120,7 @@ export default function TaskFilesCard(props: {
   const download = async () => {
     const tab = activeTab();
     if (!tab) return;
-    const { descargar } = await import("../../viewers/src/Media");
+    const { descargar } = await import("../../viewers/src/screens/Media");
     await descargar(tab.path, (offset, size, revision) => invoke<TreePart>("tree_read_part", {
       project: props.project, session: props.session, tree: tab.tree, path: tab.path, offset, size, revision: revision ?? null,
     }, machineOf(props.session))).catch(() => {});

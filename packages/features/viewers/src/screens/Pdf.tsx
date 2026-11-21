@@ -6,10 +6,10 @@ import PdfWorker from "pdfjs-dist/build/pdf.worker.min.mjs?worker";
 import ZoomIn from "lucide-solid/icons/zoom-in";
 import ZoomOut from "lucide-solid/icons/zoom-out";
 import RotateCcw from "lucide-solid/icons/rotate-ccw";
-import { t } from "../../../../apps/desktop/src/lib/i18n";
-import { cn } from "../../../../apps/desktop/src/lib/utils";
-import { IconButton } from "./IconButton";
-import { clampZoom, ZOOM_STEP } from "./zoom";
+import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { cn } from "../../../../../apps/desktop/src/lib/utils";
+import { IconButton } from "../components/IconButton";
+import { clampZoom, ZOOM_STEP } from "../model/zoom";
 
 pdfjs.GlobalWorkerOptions.workerPort = new PdfWorker();
 
