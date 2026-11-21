@@ -24,11 +24,11 @@ import { createCloudMachines } from "./cloud-machines";
  * Dónde se leen y renombran las computadoras: lo que da la plataforma (la web)
  * o, en el escritorio, el token de cliente de esa cuenta.
  */
-export function accountComputersSource(account: string | null = null, workspace?: string): AccountComputersSource | null {
+export function accountComputersSource(_account: string | null = null, _workspace?: string): AccountComputersSource | null {
   const given = capabilities().accountComputers;
   if (given) return given;
   if (!capabilities().danilAccount) return null;
-  if (!account && !workspace) {
+  {
     const cloud = createCloudMachines(invoke);
     return {
       onRenamed: () => {},
@@ -43,7 +43,6 @@ export function accountComputersSource(account: string | null = null, workspace?
       },
     };
   }
-  return null;
 }
 
 const sameDay = (a: Date, b: Date) => a.toDateString() === b.toDateString();

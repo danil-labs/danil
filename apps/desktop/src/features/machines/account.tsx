@@ -473,9 +473,9 @@ export function startAccountMachines(target: Target = window) {
       token = null;
       return settled();
     }
-    // Otro error es transitorio: el inventario sigue sin resolver hasta el siguiente evento o `RELIST`.
-    if (answer.kind !== "ok") return;
-    const mine = answer.value.find((c) => c.computer_id === self);
+    // `/v1/computers` es del sistema viejo: si no responde, las VMs de `/v1/machines` se leen igual.
+    const legacyRows = answer.kind === "ok" ? answer.value : [];
+    const mine = legacyRows.find((c) => c.computer_id === self);
     setSelfName(mine?.name?.trim() || null);
     homeWakes = mine ? wakes(mine) : false;
     homeOs = systemOf(mine?.os) ?? windowSystem();
@@ -483,7 +483,7 @@ export function startAccountMachines(target: Target = window) {
     homeVersion = mine?.host_version ?? null;
     const cloudRows = await readCloud();
     if (epoch !== cloudEpoch) return;
-    const others = orderComputers(mergeBridgeInventory(answer.value, cloudRows).filter((c) => c.computer_id !== self));
+    const others = orderComputers(mergeBridgeInventory(legacyRows, cloudRows).filter((c) => c.computer_id !== self));
     await readGuestMachines();
     if (epoch !== cloudEpoch) return;
     const key = JSON.stringify([self, account, client.endpoint]);
