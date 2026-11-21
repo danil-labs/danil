@@ -60,7 +60,7 @@ export function AccountIdentityBlock(props: AccountIdentityBlockProps) {
           <div class="min-w-0 truncate text-sm font-semibold text-neutral-950" data-account-name="">
             {who()}
           </div>
-          <Show when={props.name && props.email}>
+          <Show when={props.email && props.email !== props.name}>
             <div class="min-w-0 truncate text-ui text-neutral-500">{props.email}</div>
           </Show>
         </div>
