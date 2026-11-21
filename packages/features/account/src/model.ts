@@ -12,37 +12,31 @@ export interface ProfileData {
   planLabel: string;
 }
 
-function cleanPlanText(text: string): string {
-  const cleaned = text
-    .replace(/\b(organización|organizacion|organization|org)\b/gi, "")
-    .trim();
-  if (!cleaned) return "Personal";
-  return cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
+function cleanPlanName(str: string): string {
+  const c = str.replace(/\b(organización|organizacion|organization|org)\b/gi, "").trim();
+  return c ? `${c.charAt(0).toUpperCase()}${c.slice(1)}` : "Personal";
 }
 
 /**
- * Devuelve el nombre del plan para la visualización.
- * La interfaz muestra el nombre del plan («Personal», «Team», «Enterprise»)
- * y nunca la palabra genérica «Organización» (B-008, P11).
+ * Devuelve el nombre del plan para la visualización (B-008, P11).
+ * La interfaz habla siempre de planes («Personal», «Team», «Enterprise»)
+ * y nunca expone la palabra «organización» de cara a la persona.
  */
 export function getPlanLabel(org?: PlatformOrganizationRef | null): string {
   if (!org) return "Personal";
-  const type = org.type?.toLowerCase();
-  if (type === "enterprise") return "Enterprise";
-  if (type === "team" || type === "teams") return "Team";
-  if (type === "personal" || type === "free") return "Personal";
+  const t = (org.type ?? "").toLowerCase();
+  if (t === "enterprise") return "Enterprise";
+  if (t === "team" || t === "teams") return "Team";
+  if (t === "personal" || t === "free") return "Personal";
 
-  const rawPlan = org.plan;
-  if (typeof rawPlan === "string" && rawPlan.trim()) {
-    const p = rawPlan.toLowerCase().trim();
-    if (p === "enterprise") return "Enterprise";
-    if (p === "team" || p === "teams") return "Team";
-    if (p === "personal" || p === "free") return "Personal";
-    return cleanPlanText(rawPlan);
+  const p = typeof org.plan === "string" ? org.plan.trim() : "";
+  if (p) {
+    const lp = p.toLowerCase();
+    if (lp === "enterprise") return "Enterprise";
+    if (lp === "team" || lp === "teams") return "Team";
+    if (lp === "personal" || lp === "free") return "Personal";
+    return cleanPlanName(p);
   }
 
-  if (typeof org.name === "string" && org.name.trim()) {
-    return cleanPlanText(org.name);
-  }
-  return "Personal";
+  return org.name && org.name.trim() ? cleanPlanName(org.name) : "Personal";
 }

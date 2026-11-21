@@ -9,6 +9,7 @@ import { getBillingUrl, getHarnessUrl } from "../config.ts";
 
 export interface AccountScreenProps {
   useProfileHook?: typeof useProfile;
+  planLabel?: string;
   class?: string;
 }
 
@@ -85,7 +86,7 @@ export const AccountScreen: Component<AccountScreenProps> = (props) => {
                 </p>
 
                 <AccountCard
-                  name={data().planLabel}
+                  name={props.planLabel ?? data().planLabel}
                   plan="Plan activo"
                   detail={data().activeOrganization?.name}
                   active={true}
