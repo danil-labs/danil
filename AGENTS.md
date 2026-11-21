@@ -53,7 +53,7 @@ Estructura modular del front rebuild (SolidJS):
 | `packages/engine-client` | Cliente tipado de comandos RPC1 del motor y selección de transporte (`local` en Desk, `relay` vía WebSocket). | WebSocket al relay o IPC de Tauri inyectado vía `@danil/host` | Manifiesto RPC1 del motor vendorizado en `packages/engine-client/contract/` (base + extensiones, desde danil-engine `crates/engine-manifest`), genera `src/generated` |
 | `packages/session` | Gestión unificada de identidad y sesión: cookie HttpOnly (web) o sesiones de motor (Desk). | `@danil/platform-client`, comandos RPC1 de sesión en Desk | OpenAPI del borde y comandos RPC1 (`danil_sessions`, `danil_connect_start`, etc.) |
 | `packages/host` | Lo que solo la plataforma sabe hacer: IPC de Tauri hacia el motor local (Desk), abrir el navegador; `setHost`/`host` para las features. | `@tauri-apps/api` | Comandos RPC1 del motor; implementa `LocalHost` y `DeskAuthHost` |
-| `packages/ui` | Primitivas y componentes visuales puros y reutilizables (SolidJS + Tailwind CSS + Kobalte). Sin dominio ni red. | Nada de dominio ni de red (sin dependencias de `@danil/*`) | Componentes y tokens exportados en `src/index.ts` |
+| `packages/ui` | Primitivas y componentes visuales puros y reutilizables (SolidJS + Tailwind CSS + Kobalte). Exporta `@danil/ui/i18n`. Sin dominio ni red. | Nada de dominio ni de red (sin dependencias de `@danil/*`) | Componentes y tokens exportados en `src/index.ts`, catálogos e i18n en `@danil/ui/i18n` |
 | `packages/shell` | Router de estados mínimo, arranque lineal con sesión, riel vertical DS1 v2, layout y ErrorBoundaries. Único que compone features. | `@danil/session`, `@danil/ui`, componentes de `@danil/feature-*` | Rutas (`"machines"`, `"workspace/:id"`, `"account"`), props y slots |
 | `packages/features/machines` | Lista de máquinas, selector de ejecución en compositor, sondeo de VMs nuevas, encendido/apagado remoto y conexión. | `@danil/platform-client`, `@danil/engine-client`, `@danil/session`, `@danil/host`, `@danil/ui` | OpenAPI (`getMachines`, `startMachine`, `stopMachine`, `createMachineTicket`, `getOperation`) y RPC1 (`connectMachine`) |
 | `packages/features/workspaces` | Riel vertical DS1 v2 (`RailGroups`), selección atómica de workspaces, nombres de plan, gestión y creación de workspaces. | `@danil/platform-client`, `@danil/engine-client`, `@danil/session`, `@danil/ui` | OpenAPI (`getOrganizations`, `selectOrganization`, `getWorkspaces`, `createWorkspace`, `selectWorkspace`) y RPC1 (`set_active_workspace`) |
@@ -64,7 +64,7 @@ Estructura modular del front rebuild (SolidJS):
 | `packages/features/terminal` | Consola interactiva con ANSI, streaming y stdin sin pérdidas (F2.5). | `@danil/engine-client`, `@danil/ui`, `@danil/session`, `@danil/host` | Tipos generados por los clientes |
 | `packages/features/account` | Perfil, plan y enlaces a billing y harness por `host.openExternal` (F2.8). | `@danil/platform-client`, `@danil/ui`, `@danil/session`, `@danil/host` | OpenAPI del borde y tipos generados por los clientes |
 
-### Reglas de arquitectura (R1–R10)
+### Reglas de arquitectura (R1–R14)
 
 Verificación con Node puro: `node scripts/verify-front.mjs` (o `pnpm front:verify`).
 
@@ -78,6 +78,28 @@ Verificación con Node puro: `node scripts/verify-front.mjs` (o `pnpm front:veri
 - **R8:** Lista negra: nada de appv2, mensajería, `/v1/compute` ni `/v1/computers`.
 - **R9:** DRY: prohibidas 12+ líneas consecutivas idénticas normalizadas en dos archivos (salvo `generated/`).
 - **R10:** Prohibido manejar `404` o `501` en features: se manejan y reintentan automáticamente en `platform-client`.
+- **R11:** Ninguna feature acepta `client?:`/`session?:` como opción: cliente de `usePlatform()`, sesión de `useSession()`.
+- **R12:** `components/` no importa `queries` ni `@danil/{platform-client,engine-client,host,session}` (solo `import type`): datos y callbacks por props.
+- **R13:** Textos del catálogo de `apps/desktop` y trinquete `r13.allow`: todo texto visible sale del catálogo único `@danil/ui/i18n` (`packages/ui/src/i18n`, port de `apps/desktop/src/lib/i18n.ts`), cuyos JSON son copia de `apps/desktop/src/locales`. Rompe la compilación:
+  1. una clave de `t("…")` que no está en el catálogo `es`;
+  2. texto escrito en el JSX o en `title`/`aria-label`/`placeholder`/`label`/`etiqueta`/`alt`;
+  3. un string con forma de frase fuera del catálogo (diccionarios locales incluidos);
+  4. una frase del catálogo nuevo que no es idéntica a la de `apps/desktop` (texto inventado).
+  Trinquete `r13.allow`: guarda las violaciones que existían al crear el gate (`ruta cuenta`). Un archivo nuevo con violaciones o una cuenta que sube rompe la compilación, y una cuenta que baja exige actualizar `r13.allow` en el mismo commit. La escuadra dueña de un archivo lo deja en 0 y borra su línea. `R13_RAW=1 node scripts/verify-front.mjs` muestra todas.
+- **R14:** Sin `__TAURI__` ni `navigator.userAgent` fuera de `packages/host` y `apps/*`: la plataforma la dice `host.kind`.
+
+### Gate de paridad visual (R13 visual)
+
+Comprueba con píxeles que la app nueva sea la app actual con otra arquitectura por dentro: sirve `apps/desktop` (modo web, base `/`) y `apps/workspace` compiladas, con el mismo borde simulado (`edge-fixtures.mjs`), en `es-MX` y tema oscuro, a 1280×800. Captura cada receta en las dos y compara con `pixelmatch`.
+
+- **Cómo se corre:**
+  ```bash
+  cd scripts/verify-parity && npm install          # una vez (Playwright, pixelmatch, pngjs)
+  node scripts/verify-parity/run.mjs               # todas las recetas
+  node scripts/verify-parity/run.mjs inicio        # una receta
+  PARITY_BUILD=1 node scripts/verify-parity/run.mjs   # recompila las dos apps antes
+  ```
+- **Qué bloquea:** sale con código 1 si una receta falla o pasa su umbral (2 % de píxeles por omisión, `threshold` en la receta). Capturas y diffs en `scripts/verify-parity/out/` (`<receta>-old.png`, `-new.png`, `-diff.png`).
 
 ### Red, clientes y despliegue
 
