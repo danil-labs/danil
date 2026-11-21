@@ -6,15 +6,6 @@
 export { TerminalScreen } from "./screens/TerminalScreen.tsx";
 export type { TerminalScreenProps } from "./screens/TerminalScreen.tsx";
 
-export {
-  Terminal,
-  TerminalBar,
-  TerminalName,
-  TerminalBody,
-  TerminalCursor,
-} from "./components/TerminalPrimitives.tsx";
-
-export { AnsiText, parseAnsi } from "./components/AnsiText.tsx";
 export { TerminalError } from "./components/TerminalError.tsx";
 
 export { useShell } from "./queries.ts";

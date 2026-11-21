@@ -2,7 +2,7 @@ import { For, Show, createMemo, createSignal, type Accessor, type JSX } from "so
 import type { MachineConnection } from "@danil/engine-client";
 import { useFileContent } from "../queries.ts";
 import { FileIcon } from "./FileIcon.tsx";
-import { LARGE_FILE_THRESHOLD_BYTES, type TreeContext } from "../model.ts";
+import type { TreeContext } from "../model.ts";
 
 export interface FileViewerProps {
   conn: Accessor<MachineConnection | null | undefined> | MachineConnection | null | undefined;
@@ -18,24 +18,50 @@ function formatBytes(bytes?: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
 }
 
-function Breadcrumbs(props: { path: string }): JSX.Element {
-  const parts = () => props.path.split("/").filter(Boolean);
+/** La ruta partida en carpetas y el nombre, con el diseño visual exacto de desktop */
+function Migas(props: { ruta: string; children?: JSX.Element }): JSX.Element {
+  const partes = () => props.ruta.split(/[/\\]/).filter(Boolean);
+  const nombre = () => partes().at(-1) ?? props.ruta;
+  const carpetas = () => partes().slice(0, -1);
 
   return (
-    <nav aria-label="Ruta de archivo" class="flex items-center gap-1 text-xs text-neutral-400 truncate">
-      <For each={parts()}>
-        {(part, index) => (
-          <>
-            <Show when={index() > 0}>
-              <span class="text-neutral-600">/</span>
-            </Show>
-            <span class={index() === parts().length - 1 ? "text-neutral-200 font-medium truncate" : "truncate"}>
-              {part}
-            </span>
-          </>
-        )}
-      </For>
+    <nav aria-label="Ruta de archivo" title={props.ruta} class="flex min-w-0 flex-1 items-center gap-1 text-xs text-neutral-400">
+      <Show when={carpetas().length > 0}>
+        <span dir="rtl" class="min-w-0 truncate text-left">
+          <bdi>
+            <For each={carpetas()}>
+              {(carpeta) => (
+                <>
+                  {carpeta}
+                  <span aria-hidden="true" class="px-1 opacity-70">›</span>
+                </>
+              )}
+            </For>
+          </bdi>
+        </span>
+      </Show>
+      <span class="inline-flex shrink-0 items-center gap-1.5 font-medium text-neutral-200">
+        <FileIcon path={props.ruta} size={13} class="shrink-0" />
+        {nombre()}
+      </span>
+      {props.children}
     </nav>
+  );
+}
+
+function BarraDeEstado(props: { lineas: number; bytes?: number }): JSX.Element {
+  return (
+    <div
+      role="group"
+      aria-label="Estado del archivo"
+      class="flex h-6 shrink-0 items-center justify-end gap-3 border-t border-neutral-800 bg-neutral-900/60 px-3 text-[11px] text-neutral-500 font-mono"
+    >
+      <span>{props.lineas} líneas</span>
+      <Show when={props.bytes !== undefined}>
+        <span>{formatBytes(props.bytes)}</span>
+      </Show>
+      <span>UTF-8</span>
+    </div>
   );
 }
 
@@ -73,14 +99,20 @@ export function FileViewer(props: FileViewerProps): JSX.Element {
           </div>
         }
       >
-        {/* Cabecera / Barra de herramientas */}
-        <div class="flex shrink-0 items-center justify-between gap-3 border-b border-neutral-800 px-3 h-10 bg-neutral-900/60">
-          <div class="flex items-center gap-2 min-w-0">
-            <FileIcon path={currentPath() ?? ""} size={16} />
-            <Breadcrumbs path={currentPath() ?? ""} />
-          </div>
+        {/* Cabecera / Barra de herramientas con diseño visual de desktop */}
+        <div class="flex h-9 shrink-0 items-center justify-between gap-2 border-b border-neutral-800 bg-neutral-900 px-2.5">
+          <Migas ruta={currentPath() ?? ""}>
+            <Show when={contentQuery.data()?.isLargeFile}>
+              <span
+                title="Archivo truncado por límite de tamaño"
+                class="shrink-0 text-amber-400 font-medium"
+              >
+                ●
+              </span>
+            </Show>
+          </Migas>
 
-          <div class="flex items-center gap-3 shrink-0 text-xs text-neutral-400">
+          <div class="flex items-center gap-1.5 shrink-0 text-xs text-neutral-400">
             <Show when={contentQuery.data()?.bytes !== undefined}>
               <span class="font-mono text-[11px] text-neutral-500">
                 {formatBytes(contentQuery.data()?.bytes)}
@@ -88,8 +120,9 @@ export function FileViewer(props: FileViewerProps): JSX.Element {
             </Show>
 
             <button
+              type="button"
               onClick={() => contentQuery.refetch()}
-              class="p-1 hover:text-neutral-200 rounded hover:bg-neutral-800 transition-colors"
+              class="flex size-6 items-center justify-center rounded text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800 transition-colors"
               title="Recargar archivo"
             >
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-3.5 h-3.5">
@@ -116,6 +149,7 @@ export function FileViewer(props: FileViewerProps): JSX.Element {
               </span>
             </div>
             <button
+              type="button"
               onClick={() => setAllowLarge(true)}
               class="px-2.5 py-1 text-xs font-medium bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border border-amber-500/30 rounded transition-colors whitespace-nowrap"
             >
@@ -135,7 +169,7 @@ export function FileViewer(props: FileViewerProps): JSX.Element {
           </div>
         </Show>
 
-        {/* Estado de error: REGLA R10/Mandatoria: Muestra error con botón de reintento, NUNCA lista o vista vacía */}
+        {/* Estado de error (R10) */}
         <Show when={contentQuery.error()}>
           <div class="flex flex-col items-center justify-center m-6 p-6 text-center text-xs bg-rose-500/10 border border-rose-500/20 rounded-md">
             <span class="text-rose-400 font-medium mb-1">Error al leer el archivo</span>
@@ -143,6 +177,7 @@ export function FileViewer(props: FileViewerProps): JSX.Element {
               No se pudo obtener el contenido de {currentPath()}
             </span>
             <button
+              type="button"
               onClick={() => contentQuery.refetch()}
               class="px-3 py-1.5 text-xs font-medium bg-neutral-800 hover:bg-neutral-700 text-neutral-200 rounded border border-neutral-700 transition-colors"
             >
@@ -153,9 +188,9 @@ export function FileViewer(props: FileViewerProps): JSX.Element {
 
         {/* Visor de solo lectura con <pre> y numeración de líneas */}
         <Show when={contentQuery.data() && !contentQuery.error()}>
-          <div class="flex-1 min-h-0 overflow-auto flex font-mono text-xs leading-5">
+          <div class="flex-1 min-h-0 overflow-auto flex font-mono text-xs leading-5 bg-neutral-950">
             {/* Columna de números de línea */}
-            <div class="select-none py-2 px-3 text-right text-neutral-600 bg-neutral-900/30 border-r border-neutral-800/60 shrink-0">
+            <div class="select-none py-2 px-3 text-right text-neutral-600 bg-neutral-900/30 border-r border-neutral-800/60 shrink-0 tabular-nums">
               <For each={lines()}>
                 {(_, idx) => <div>{idx() + 1}</div>}
               </For>
@@ -174,6 +209,11 @@ export function FileViewer(props: FileViewerProps): JSX.Element {
               </code>
             </pre>
           </div>
+
+          <BarraDeEstado
+            lineas={lines().length}
+            bytes={contentQuery.data()?.bytes}
+          />
         </Show>
       </Show>
     </div>

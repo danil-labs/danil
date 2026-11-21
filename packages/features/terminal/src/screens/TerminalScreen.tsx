@@ -1,14 +1,13 @@
 import { Show, createEffect } from "solid-js";
-import {} from "@danil/ui";
-import { useShell, type ShellConnection } from "../queries.ts";
 import {
   Terminal,
-  TerminalBar,
   TerminalName,
   TerminalBody,
   TerminalCursor,
-} from "../components/TerminalPrimitives.tsx";
-import { AnsiText } from "../components/AnsiText.tsx";
+  BARRA_DE_TERMINAL,
+  AnsiText,
+} from "@danil/ui";
+import { useShell, type ShellConnection } from "../queries.ts";
 import { TerminalError } from "../components/TerminalError.tsx";
 
 export interface TerminalScreenProps {
@@ -21,12 +20,10 @@ export interface TerminalScreenProps {
 
 /**
  * Pantalla de Terminal interactiva conectada al motor Danil por RPC1.
- * Soporta stream de salida ANSI, interacción stdin y buffer para B-017.
- * Puede invocarse como componente JSX <TerminalScreen conn={conn} />
- * o directamente como TerminalScreen(conn).
+ * Usa Terminal y AnsiText de @danil/ui con la misma apariencia de apps/desktop.
  */
 export function TerminalScreen(
-  propsOrConn: TerminalScreenProps | ShellConnection
+  propsOrConn: TerminalScreenProps | ShellConnection,
 ) {
   const isDirectConn =
     typeof propsOrConn === "function" ||
@@ -44,7 +41,7 @@ export function TerminalScreen(
       command: props.command,
       project: props.project,
       autoStart: true,
-    }
+    },
   );
 
   let bodyRef: HTMLPreElement | undefined;
@@ -114,7 +111,7 @@ export function TerminalScreen(
 
   return (
     <Terminal class="h-full flex flex-col">
-      <TerminalBar>
+      <div class={`flex items-center justify-between gap-3 ${BARRA_DE_TERMINAL} border-b border-border/20 select-none`}>
         <div class="flex items-center gap-2 min-w-0">
           <TerminalName>
             <span
@@ -163,7 +160,7 @@ export function TerminalScreen(
             Limpiar
           </button>
         </div>
-      </TerminalBar>
+      </div>
 
       <Show when={shell.error()}>
         <TerminalError

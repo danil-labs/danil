@@ -1,4 +1,4 @@
-import { For, Show, createSignal, type Accessor, type JSX } from "solid-js";
+import { For, Show, createMemo, createSignal, type Accessor, type JSX } from "solid-js";
 import type { MachineConnection } from "@danil/engine-client";
 import { useTree } from "../queries.ts";
 import { FileIcon } from "./FileIcon.tsx";
@@ -11,6 +11,13 @@ export interface FileTreeProps {
   onSelect: (path: string) => void;
   class?: string;
 }
+
+const SANGRIA = 12;
+const CHEVRON = 13;
+
+const HuecoDeChevron = () => (
+  <span class="shrink-0" style={{ width: `${CHEVRON}px` }} aria-hidden="true" />
+);
 
 function GitBadge(props: { status?: GitStatusKind | null }): JSX.Element {
   if (!props.status) return null;
@@ -28,19 +35,21 @@ function GitBadge(props: { status?: GitStatusKind | null }): JSX.Element {
 
   const colorClass = () => {
     switch (props.status) {
-      case "modified": return "text-amber-400 bg-amber-400/10";
-      case "added": return "text-emerald-400 bg-emerald-400/10";
-      case "deleted": return "text-rose-400 bg-rose-400/10";
-      case "untracked": return "text-neutral-400 bg-neutral-400/10";
-      case "ignored": return "text-neutral-500 bg-neutral-500/10";
+      case "modified": return "text-amber-400";
+      case "added": return "text-emerald-400";
+      case "deleted": return "text-rose-400";
+      case "untracked": return "text-neutral-400";
+      case "ignored": return "text-neutral-500";
       default: return "text-neutral-400";
     }
   };
 
   return (
     <span
-      class={`px-1 py-0.5 text-[10px] font-mono font-medium rounded shrink-0 ${colorClass()}`}
+      class={`shrink-0 font-mono text-[10px] font-semibold ${colorClass()}`}
+      role="img"
       title={`Git: ${props.status}`}
+      aria-label={`Git: ${props.status}`}
     >
       {letter()}
     </span>
@@ -55,56 +64,75 @@ function TreeNodeRow(props: {
   onToggle: () => void;
   onSelect: () => void;
 }): JSX.Element {
-  return (
-    <div
-      role="treeitem"
-      aria-selected={props.isSelected}
-      aria-expanded={props.item.isDirectory ? props.isExpanded : undefined}
-      class={`flex items-center gap-1.5 py-1 px-2 cursor-pointer select-none text-xs rounded transition-colors ${
-        props.isSelected
-          ? "bg-neutral-800 text-neutral-100 font-medium"
-          : "text-neutral-300 hover:bg-neutral-800/50 hover:text-neutral-200"
-      }`}
-      style={{ "padding-left": `${props.level * 14 + 8}px` }}
-      onClick={() => {
-        if (props.item.isDirectory) {
-          props.onToggle();
-        } else {
-          props.onSelect();
-        }
-      }}
-    >
-      {/* Indicador de expansión o espacio */}
-      <span class="w-3.5 h-3.5 shrink-0 flex items-center justify-center text-neutral-400">
-        {props.item.isDirectory ? (
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            class={`w-3 h-3 transition-transform ${props.isExpanded ? "rotate-90" : ""}`}
-          >
-            <polyline points="9 18 15 12 9 6" />
-          </svg>
-        ) : null}
-      </span>
+  const paddingLeft = () => `${props.level * SANGRIA + 8}px`;
 
-      {/* Icono de archivo o carpeta */}
+  if (props.item.isDirectory) {
+    return (
+      <button
+        type="button"
+        role="treeitem"
+        aria-selected={props.isSelected}
+        aria-expanded={props.isExpanded}
+        class={`flex w-full items-center gap-1.5 py-1 pr-3 text-left text-xs outline-none transition-colors hover:bg-neutral-800/60 focus-visible:outline-2 focus-visible:outline-neutral-400 ${
+          props.isSelected ? "bg-neutral-800 text-neutral-100 font-medium" : "text-neutral-300"
+        }`}
+        style={{ "padding-left": paddingLeft() }}
+        onClick={props.onToggle}
+      >
+        <span class="shrink-0 flex items-center justify-center text-neutral-500" style={{ width: `${CHEVRON}px` }}>
+          {props.isExpanded ? (
+            <svg viewBox="0 0 24 24" width={CHEVRON} height={CHEVRON} fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="6 9 12 15 18 9" />
+            </svg>
+          ) : (
+            <svg viewBox="0 0 24 24" width={CHEVRON} height={CHEVRON} fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="9 18 15 12 9 6" />
+            </svg>
+          )}
+        </span>
+        <FileIcon
+          path={props.item.path}
+          isDirectory={true}
+          expanded={props.isExpanded}
+          size={13}
+        />
+        <span class="min-w-0 flex-1 truncate font-mono" title={props.item.name}>
+          {props.item.name}
+        </span>
+        <GitBadge status={props.item.gitStatus} />
+      </button>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      role="treeitem"
+      data-ruta={props.item.path}
+      aria-selected={props.isSelected}
+      class={`flex w-full items-center gap-1.5 py-1 pr-3 text-left text-xs outline-none transition-colors hover:bg-neutral-800/60 focus-visible:outline-2 focus-visible:outline-neutral-400 ${
+        props.isSelected ? "bg-neutral-800 text-neutral-100 font-medium" : "text-neutral-300"
+      }`}
+      style={{ "padding-left": paddingLeft() }}
+      onClick={props.onSelect}
+    >
+      <HuecoDeChevron />
       <FileIcon
         path={props.item.path}
-        isDirectory={props.item.isDirectory}
-        expanded={props.isExpanded}
-        size={14}
+        isDirectory={false}
+        size={13}
+        class="shrink-0 text-neutral-500"
       />
-
-      {/* Nombre del archivo */}
-      <span class="truncate flex-1" title={props.item.path}>
+      <span
+        class={`min-w-0 flex-1 truncate font-mono ${
+          props.item.gitStatus ? "font-semibold" : ""
+        } ${props.item.gitStatus === "deleted" ? "line-through opacity-60" : ""}`}
+        title={props.item.name}
+      >
         {props.item.name}
       </span>
-
-      {/* Estado Git */}
       <GitBadge status={props.item.gitStatus} />
-    </div>
+    </button>
   );
 }
 
@@ -126,15 +154,16 @@ function SubTree(props: {
   return (
     <div>
       <Show when={treeQuery.loading()}>
-        <div class="py-1 text-xs text-neutral-500 italic" style={{ "padding-left": `${(props.level + 1) * 14 + 8}px` }}>
+        <div class="py-1 text-xs text-neutral-500 italic" style={{ "padding-left": `${(props.level + 1) * SANGRIA + 8}px` }}>
           Cargando...
         </div>
       </Show>
 
       <Show when={treeQuery.error()}>
-        <div class="p-2 my-1 text-xs text-rose-400 bg-rose-500/10 rounded border border-rose-500/20" style={{ "padding-left": `${(props.level + 1) * 14 + 8}px` }}>
+        <div class="p-2 my-1 text-xs text-rose-400 bg-rose-500/10 rounded border border-rose-500/20" style={{ "padding-left": `${(props.level + 1) * SANGRIA + 8}px` }}>
           <span>Error al listar carpeta</span>
           <button
+            type="button"
             onClick={() => treeQuery.refetch()}
             class="ml-2 px-1.5 py-0.5 text-[11px] bg-neutral-800 hover:bg-neutral-700 text-neutral-200 rounded"
           >
@@ -181,24 +210,55 @@ function SubTree(props: {
 export function FileTree(props: FileTreeProps): JSX.Element {
   const rootQuery = useTree(props.conn, "", props.context);
   const [expandedMap, setExpandedMap] = createSignal<Record<string, boolean>>({});
+  const [busca, setBusca] = createSignal("");
 
   const toggle = (itemPath: string) => {
     setExpandedMap((prev) => ({ ...prev, [itemPath]: !prev[itemPath] }));
   };
 
+  const itemsVisibles = createMemo(() => {
+    const query = busca().trim().toLowerCase();
+    const items = rootQuery.data()?.items ?? [];
+    if (!query) return items;
+    return items.filter((item) =>
+      item.name.toLowerCase().includes(query) || item.path.toLowerCase().includes(query),
+    );
+  });
+
   return (
     <div
       role="tree"
       aria-label="Explorador de archivos"
-      class={`flex flex-col h-full overflow-y-auto bg-neutral-900 border-r border-neutral-800 p-2 text-neutral-300 ${
+      class={`flex flex-col h-full overflow-y-auto bg-neutral-900 border-r border-neutral-800 text-neutral-300 ${
         props.class ?? ""
       }`}
     >
-      <div class="flex items-center justify-between pb-2 mb-2 border-b border-neutral-800 text-xs font-semibold text-neutral-400 uppercase tracking-wider">
-        <span>Archivos</span>
+      {/* Barra superior con búsqueda y refresco idéntica al diseño desktop */}
+      <div class="sticky top-0 z-10 flex h-9 items-center gap-1 border-b border-neutral-800 bg-neutral-900 px-2">
+        <label class="flex min-w-0 flex-1 items-center gap-1.5">
+          <svg viewBox="0 0 24 24" width={13} height={13} fill="none" stroke="currentColor" stroke-width="2" class="shrink-0 text-neutral-500" aria-hidden="true">
+            <circle cx="11" cy="11" r="8" />
+            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+          </svg>
+          <input
+            type="search"
+            value={busca()}
+            onInput={(e) => setBusca(e.currentTarget.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Escape" && busca()) {
+                e.stopPropagation();
+                setBusca("");
+              }
+            }}
+            placeholder="Buscar archivos..."
+            aria-label="Buscar archivos"
+            class="min-h-7 w-full bg-transparent px-0 py-0 text-xs text-neutral-200 placeholder:text-neutral-500 outline-none border-none focus:ring-0"
+          />
+        </label>
         <button
+          type="button"
           onClick={() => rootQuery.refetch()}
-          class="p-1 text-neutral-400 hover:text-neutral-200 rounded hover:bg-neutral-800 transition-colors"
+          class="flex size-6 items-center justify-center rounded text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800 transition-colors"
           title="Refrescar árbol"
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-3.5 h-3.5">
@@ -221,12 +281,13 @@ export function FileTree(props: FileTreeProps): JSX.Element {
         </div>
       </Show>
 
-      {/* Estado de error: REGLA R10/Mandatoria: Muestra error con botón de reintento, NUNCA lista vacía */}
+      {/* Estado de error (R10) */}
       <Show when={rootQuery.error()}>
-        <div class="flex flex-col items-center justify-center p-6 text-center text-xs bg-rose-500/10 border border-rose-500/20 rounded-md my-2">
+        <div class="flex flex-col items-center justify-center p-6 text-center text-xs bg-rose-500/10 border border-rose-500/20 rounded-md my-2 mx-2">
           <span class="text-rose-400 font-medium mb-1">Error al cargar el árbol</span>
           <span class="text-neutral-400 mb-3 text-[11px]">No se pudo obtener la lista de archivos</span>
           <button
+            type="button"
             onClick={() => rootQuery.refetch()}
             class="px-3 py-1.5 text-xs font-medium bg-neutral-800 hover:bg-neutral-700 text-neutral-200 rounded border border-neutral-700 transition-colors"
           >
@@ -237,36 +298,47 @@ export function FileTree(props: FileTreeProps): JSX.Element {
 
       {/* Lista de nodos */}
       <Show when={rootQuery.data() && !rootQuery.error()}>
-        <div class="space-y-0.5">
-          <For each={rootQuery.data()?.items}>
-            {(item) => {
-              const isExp = () => Boolean(expandedMap()[item.path]);
-              const isSel = () => props.selectedPath === item.path;
+        <div class="grid grid-cols-1 content-start py-1">
+          <Show
+            when={itemsVisibles().length > 0}
+            fallback={
+              <Show when={busca().trim()}>
+                <p class="m-0 px-3 py-2 text-xs text-neutral-500">
+                  Sin resultados para «{busca().trim()}»
+                </p>
+              </Show>
+            }
+          >
+            <For each={itemsVisibles()}>
+              {(item) => {
+                const isExp = () => Boolean(expandedMap()[item.path]);
+                const isSel = () => props.selectedPath === item.path;
 
-              return (
-                <>
-                  <TreeNodeRow
-                    item={item}
-                    level={0}
-                    isSelected={isSel()}
-                    isExpanded={isExp()}
-                    onToggle={() => toggle(item.path)}
-                    onSelect={() => props.onSelect(item.path)}
-                  />
-                  <Show when={item.isDirectory && isExp()}>
-                    <SubTree
-                      conn={props.conn}
-                      context={props.context}
-                      path={item.path}
-                      level={1}
-                      selectedPath={props.selectedPath}
-                      onSelect={props.onSelect}
+                return (
+                  <>
+                    <TreeNodeRow
+                      item={item}
+                      level={0}
+                      isSelected={isSel()}
+                      isExpanded={isExp()}
+                      onToggle={() => toggle(item.path)}
+                      onSelect={() => props.onSelect(item.path)}
                     />
-                  </Show>
-                </>
-              );
-            }}
-          </For>
+                    <Show when={item.isDirectory && isExp()}>
+                      <SubTree
+                        conn={props.conn}
+                        context={props.context}
+                        path={item.path}
+                        level={1}
+                        selectedPath={props.selectedPath}
+                        onSelect={props.onSelect}
+                      />
+                    </Show>
+                  </>
+                );
+              }}
+            </For>
+          </Show>
         </div>
       </Show>
     </div>
