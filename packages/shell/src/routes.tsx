@@ -1,5 +1,5 @@
 import { lazy, createSignal, createMemo, createEffect, createRenderEffect, Show, on, onCleanup, untrack, type JSX } from "solid-js";
-import { Tabs, TabsList, TabsTrigger, TabsContent, Button, FailureNote } from "@danil/ui";
+import { Tabs, TabsList, TabsTrigger, TabsContent, Button, FailureNote, asFailure } from "@danil/ui";
 import { useMachines, type MachineConnection } from "@danil/feature-machines";
 import { useWorkspaces } from "@danil/feature-workspaces";
 import { useSession } from "@danil/session/solid";
@@ -83,10 +83,7 @@ function WorkspaceConnectionFallback(props: {
       when={!props.machinesError}
       fallback={
         <div class="flex h-48 flex-col items-center justify-center gap-3 p-6 text-center text-xs">
-          <FailureNote
-            what="No pudimos cargar las máquinas de esta organización."
-            detail={props.machinesError instanceof Error ? props.machinesError.message : String(props.machinesError)}
-          />
+          <FailureNote f={asFailure(props.machinesError)} />
           <Button size="sm" variant="secondary" onClick={props.onRetryMachines}>
             Reintentar
           </Button>
@@ -108,7 +105,7 @@ function WorkspaceConnectionFallback(props: {
           when={!props.isError}
           fallback={
             <div class="flex h-48 flex-col items-center justify-center gap-3 p-6 text-center text-xs">
-              <FailureNote what="Error al conectar con la máquina del espacio." />
+              <FailureNote f={asFailure("Error al conectar con la máquina del espacio.")} />
               <Show when={props.onRetryConn}>
                 <Button size="sm" variant="secondary" onClick={props.onRetryConn}>
                   Reintentar conexión

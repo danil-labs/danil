@@ -3,7 +3,7 @@ import { SessionProvider, useSession } from "@danil/session/solid";
 import { createWebSession, webLoginUrl, type SessionSource, type Session } from "@danil/session";
 import { createPlatformClient, PlatformProvider, type PlatformClient } from "@danil/platform-client";
 import { host as defaultHost, type Host } from "@danil/host";
-import { Button, FailureNote } from "@danil/ui";
+import { Button, FailureNote, asFailure } from "@danil/ui";
 import { RouterProvider } from "./router.tsx";
 import { Layout } from "./Layout.tsx";
 
@@ -176,7 +176,7 @@ function AppWithSession(props: AppProps): JSX.Element {
 function SessionFailure(props: { onRetry: () => void }): JSX.Element {
   return (
     <div class="flex h-screen w-screen flex-col items-center justify-center gap-3 bg-bg">
-      <FailureNote what="No pudimos comprobar tu sesión." />
+      <FailureNote f={asFailure("No pudimos comprobar tu sesión.")} />
       <Button onClick={props.onRetry}>Reintentar</Button>
     </div>
   );
