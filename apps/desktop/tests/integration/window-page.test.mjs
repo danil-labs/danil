@@ -401,11 +401,6 @@ for (const end of ['logout', '401']) test(`${end} revokes the mounted person's c
   assert.deepEqual(app.failures, []);
 });
 
-const ORGS = { items: [{ id: 'org_A', name: 'Danil', plan: 'enterprise', role: 'owner' }, { id: 'org_B', name: 'Otra', plan: 'team', role: 'member' }], next_cursor: null, active_organization_id: 'org_B' };
-const CAPS = { contract: 'mvp-v1', items: [{ name: 'identity.organizations', version: 1, status: 'available' }] };
-const SELECTION = () => new Response(JSON.stringify({ type: 'urn:danil:problem:workspace_selection_required', status: 403, code: 'workspace_selection_required' }), { status: 403, headers: { 'content-type': 'application/problem+json' } });
-const TWO = [{ id: '11', org: 'org_B', name: 'Alpha', role: 'owner' }, { id: '12', org: 'org_B', name: 'Beta', role: 'owner' }];
-
 test('automatic material failure stays local and recovers through the beta machine-session window', async t => {
   const { engine } = await import('../helpers/fake-relay.mjs');
   const table = { ...engine, list_sources: undefined };
@@ -464,48 +459,6 @@ for (const end of ['pagehide', '401']) test(`${end} during startup cannot mount 
   assert.equal(app.w.document.querySelector('[data-tira]'), null);
   assert.deepEqual(app.failures, []);
 });
-
-// H2: la ventana montada resuelve sola la organización de una cuenta nueva.
-const ORG_CAPS = { contract: 'mvp-v1', items: ['identity.organizations'].map(name => ({ name, version: 1, status: 'available' })) };
-const NEW_ORG = { id: 'org_N', name: 'Personal', plan: 'free', role: 'owner' };
-const problemOf = (status, code, extra = {}) => new Response(JSON.stringify({ type: `urn:danil:problem:${code}`, status, code, ...extra }), { status, headers: { 'content-type': 'application/problem+json' } });
-const navigations = app => app.failures.filter(f => f.includes('Not implemented: navigation'));
-const others = app => app.failures.filter(f => !f.includes('Not implemented: navigation'));
-
-// Las esperas de la página (1 s en adelante) duran un instante; la prueba espera en tiempo real lo que equivale a varias rondas.
-function fastClock(t) {
-  const realTimeout = globalThis.setTimeout;
-  globalThis.setTimeout = (run, ms, ...rest) => realTimeout(run, ms >= 1000 ? 20 : ms, ...rest);
-  t.after(() => { globalThis.setTimeout = realTimeout; });
-  return ms => new Promise(resolve => realTimeout(resolve, ms));
-}
-
-/** Una cuenta nueva sin workspace; `select` contesta lo que diga la prueba. */
-function newAccount({ orgs = [NEW_ORG], orgsAfter, after = edge => edge.listed > 1, machines, select = () => Response.json({ organization: NEW_ORG, workspace: null }), me = () => ({ id: 'user_N', name: 'New', workspace: null, organizations: [] }) } = {}) {
-  const edge = { calls: [], selected: null, listed: 0, me: 0 };
-  const fetcher = async (input, init) => {
-    const url = new URL(String(input));
-    if (url.origin === 'http://localhost' && url.pathname.includes('/assets/')) return new Response('');
-    edge.calls.push(`${init?.method ?? 'GET'} ${url.pathname}`);
-    if (url.pathname === '/v1/capabilities') return Response.json(machines ? { ...ORG_CAPS, items: [...ORG_CAPS.items, { name: 'machines', version: 1, status: 'available' }] } : ORG_CAPS);
-    if (url.pathname === '/v1/machines') return machines ? machines(edge) : new Response(null, { status: 404 });
-    if (url.pathname === '/v1/identity/me') { edge.me++; return Response.json(me(edge)); }
-    if (url.pathname === '/v1/identity/csrf') return Response.json({ csrf_token: 'bound' });
-    if (url.pathname === '/v1/identity/organizations') {
-      edge.listed++;
-      const items = orgsAfter && after(edge) ? orgsAfter : orgs;
-      return Response.json({ items, next_cursor: null, active_organization_id: edge.selected });
-    }
-    if (url.pathname === '/v1/identity/organizations/select') {
-      const reply = await select(JSON.parse(init.body).organization_id);
-      if (reply.ok) edge.selected = JSON.parse(init.body).organization_id;
-      return reply;
-    }
-    throw new Error(`Unexpected request ${url.pathname}`);
-  };
-  fetcher.__jsdomApp = true; globalThis.fetch = fetcher;
-  return edge;
-}
 
 for (const scenario of ['one account with two organizations', 'two accounts', 'return to the picker']) test(`the flat workspace picker opens for ${scenario}`, async t => {
   const single = scenario === 'one account with two organizations';
