@@ -65,6 +65,7 @@ test("B2 G: unknown a online no pasa por apagada", async t => {
   const observer = new app.w.MutationObserver(sample); observer.observe(app.w.document.body, { attributes: true, subtree: true, childList: true }); sample();
   f.relays.m1.setState("online"); f.relays.m2.setState("online"); await sleep(150); sample(); observer.disconnect();
   assert.ok(!states.includes("offline"), states.join(","));
+  assert.equal(app.w.document.querySelector("[data-web-sync-toast]"), null, "a machine changing state shows no floating notice");
   assert.ok(app.w.document.querySelector('[data-create-on]')); assert.deepEqual(app.failures, []);
 });
 

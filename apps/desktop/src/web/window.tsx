@@ -195,14 +195,14 @@ export function mountWindow(base: Base, mounted: Mounted) {
     if (stopped) disposeApp();
   }).catch(base.onUnavailable);
   window.addEventListener("pagehide", () => fleet.close(), { once: true });
-  void Promise.all([import("solid-js/web"), import("./SyncNote"), import("./UpdateNotice"), import("./ReauthNote"), import("./phrases")]).then(([{ render }, { SyncNote }, { UpdateNotice }, { ReauthNote, WorkspaceNote }]) => {
+  void Promise.all([import("solid-js/web"), import("./SyncNote"), import("./UpdateNotice"), import("./ReauthNote"), import("./phrases")]).then(([{ render }, { MachineStates, MachinesUnavailableNote }, { UpdateNotice }, { ReauthNote, WorkspaceNote }]) => {
     if (stopped) return;
     const layer = document.createElement("div");
     noticeLayer = layer;
     document.body.append(layer);
     disposeNotice = render(() => (
       <>
-        <SyncNote machines={machines} unavailable={missing()} />
+        <MachineStates machines={machines} /><MachinesUnavailableNote unavailable={missing()} />
         <UpdateNotice />{base.billing.returned()}<ReauthNote reauth={base.reauth} /><WorkspaceNote preparing={base.preparing} />
       </>
     ), layer);
