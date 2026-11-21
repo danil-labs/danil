@@ -50,8 +50,7 @@ export async function executeTaskDeletionLifecycle(
     return await applyTaskDeletion(conn, target, preview, { discard: options?.discard ?? false });
   } catch (err) {
     const isConsentChanged =
-      (err && typeof err === "object" && "code" in err && (err as { code: string }).code === "task_family_consent_changed") ||
-      (err instanceof Error && err.message.includes("task_family_consent_changed"));
+      Boolean(err && typeof err === "object" && "code" in err && (err as { code: unknown }).code === "task_family_consent_changed");
 
     if (isConsentChanged) {
       // Solicitar nueva preview sin reaplicar a ciegas

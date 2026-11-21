@@ -287,8 +287,7 @@ export async function applyTaskDeletion(
     raw = await conn.client.task_lifecycle_apply(args);
   } catch (err: unknown) {
     const code = err && typeof err === "object" && "code" in err ? String((err as { code: unknown }).code) : "";
-    const msg = err instanceof Error ? err.message : String(err);
-    if (code === "task_family_consent_changed" || msg.includes("task_family_consent_changed") || msg.includes("consent")) {
+    if (code === "task_family_consent_changed") {
       const consentErr = new Error("task_family_consent_changed");
       (consentErr as unknown as { code: string }).code = "task_family_consent_changed";
       throw consentErr;
@@ -297,11 +296,7 @@ export async function applyTaskDeletion(
   }
 
   const obj = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : null;
-  if (
-    obj?.code === "task_family_consent_changed" ||
-    obj?.error === "task_family_consent_changed" ||
-    obj?.status === "task_family_consent_changed"
-  ) {
+  if (obj?.code === "task_family_consent_changed") {
     const consentErr = new Error("task_family_consent_changed");
     (consentErr as unknown as { code: string }).code = "task_family_consent_changed";
     throw consentErr;
