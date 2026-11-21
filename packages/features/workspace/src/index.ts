@@ -1,1 +1,1 @@
-export { createWorkspaceStore } from "./store.ts";
+export { createWorkspaceStore } from "./queries/store.ts";

@@ -1,10 +1,10 @@
 import { createMemo, createSignal, untrack } from "solid-js";
-import type { Project, Source } from "../../../../apps/desktop/src/lib/model";
-import type { Trigger } from "../../../../apps/desktop/src/lib/mentions";
-import { editDraft, insertMention, insertRecipient, type Recipient } from "../../../../apps/desktop/src/lib/recipients.ts";
-import type { MentionTarget, TaskMention, TextEdit } from "../../../../apps/desktop/src/lib/taskMentions";
-import { adjuntosDevueltos, adjuntosSinMandar, fuentesHeredadas, sameSources, unirFuentes } from "../../../../apps/desktop/src/lib/taskDraft.ts";
-import type { HandoverPending } from "../../chat/src";
+import type { Project, Source } from "../../../../../apps/desktop/src/lib/model";
+import type { Trigger } from "../../../../../apps/desktop/src/lib/mentions";
+import { editDraft, insertMention, insertRecipient, type Recipient } from "../../../../../apps/desktop/src/lib/recipients.ts";
+import type { MentionTarget, TaskMention, TextEdit } from "../../../../../apps/desktop/src/lib/taskMentions";
+import { adjuntosDevueltos, adjuntosSinMandar, fuentesHeredadas, sameSources, unirFuentes } from "../../../../../apps/desktop/src/lib/taskDraft.ts";
+import type { HandoverPending } from "../../../chat/src";
 
 type HistoryEntry = { text: string; task_mentions?: TaskMention[]; recipients?: Recipient[] };
 export type DraftConfiguration = { agent: string; surface: string; model: string; effort: string; mode?: string };

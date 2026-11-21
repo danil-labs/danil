@@ -79,7 +79,7 @@ const HandoverDialog = lazy(() => import("../../../features/chat/src/screens/Han
 const TaskFilesCard = lazy(() => import("../../../features/code/src/screens/TaskFiles"));
 
 import { esDeCodigo } from "../../../features/code/src/model/workdirKind";
-import Observability from "../../../features/observability/src/Observability";
+import Observability from "../../../features/observability/src/screens/Observability";
 import AnadirCarpeta, { type ClonEnCurso, type InicioDeCarpeta } from "../../../features/projects/src/screens/AddWorkdir";
 import AgentPageTasks from "../../../features/projects/src/screens/AgentPageTasks";
 import { createTaskFiles, type TaskSideMode } from "../../../../apps/desktop/src/lib/taskFiles";

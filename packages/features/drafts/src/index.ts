@@ -1,1 +1,1 @@
-export { createDraftsStore, type Draft, type DraftConfiguration } from "./store.ts";
+export { createDraftsStore, type Draft, type DraftConfiguration } from "./queries/store.ts";
