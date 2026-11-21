@@ -249,12 +249,6 @@ export function useMachines(): UseMachinesReturn {
               }
               if (err.kind === "error") {
                 if (err.code === "machine_unreachable" || err.code === "stopped") {
-                  void client
-                    .startMachine({
-                      id: machineId,
-                      idempotencyKey: idempotencyKey(),
-                    })
-                    .catch(() => {});
                   return { kind: "machine_unreachable" };
                 }
                 if (err.code === "starting") {
