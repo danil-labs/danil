@@ -132,3 +132,44 @@ test("Desk's createSessionContexts runs unchanged over the cookie adapter", asyn
   const reply = await contexts.send("ctx_x", "GET", "/v1/identity/me");
   assert.equal(reply.status, 200);
 });
+
+test("an idempotency key with control characters is replaced, never sent raw", async () => {
+  const { transport, sent } = fakeEdge((s) => (s.path === "identity/sessions" ? json(sessions) : new Response(null, { status: 204, headers: echo(s, "org_x") })));
+  const web = webSessionCommands(transport, { expired: () => {} });
+  await web.handle("danil_session_status");
+  await web.handle("danil_edge_fetch", { method: "POST", path: "/v1/workspaces/promo/redeem", context: "ctx_x", idempotencyKey: "a\r\nX-Evil: 1" });
+  assert.match(sent.at(-1)!.headers.get("Idempotency-Key")!, /^[0-9a-f-]{36}$/);
+});
+
+test("the window transport sends the open workspace's context and refuses a reply without its echo", async () => {
+  const { windowActiveContext } = await import("../../src/web/window-active-context.ts");
+  const { setActiveWorkspaceContext } = await import("../../src/lib/workspace-context.ts");
+  let applied: [string, string] | null = null;
+  const { transport, sent } = fakeEdge((s) => (s.path === "identity/sessions" ? json(sessions) : json({}, { headers: applied ? { "X-Danil-Session-Applied": applied[0], "X-Danil-Session-Applied-Org": applied[1] } : echo(s, orgOf[s.headers.get("X-Danil-Session") ?? ""]) })));
+  const web = webSessionCommands(transport, { expired: () => {} });
+  await web.handle("danil_session_status");
+  const active = windowActiveContext(web);
+  const scoped = active.scoped(transport);
+  setActiveWorkspaceContext("ctx_x");
+  await scoped.call("workspaces/accounts");
+  assert.equal(sent.at(-1)!.headers.get("X-Danil-Session"), "ctx_x");
+  applied = ["ctx_personal", "org_personal"];
+  await assert.rejects(scoped.call("workspaces/accounts"), { code: "session_echo_mismatch" }, "the default context answering is refused");
+  applied = ["ctx_x", "org_personal"];
+  await assert.rejects(scoped.mutation("workspaces/accounts"), { code: "session_echo_mismatch" });
+  applied = null;
+  const billing = active.scoped(transport, active.of("org_personal"));
+  await billing.mutation("billing/checkout-sessions");
+  assert.equal(sent.at(-1)!.headers.get("X-Danil-Session"), "ctx_personal", "billing keeps its own organization while another workspace is open");
+  setActiveWorkspaceContext(null);
+});
+
+test("a URL can only reopen a workspace of its context's catalog that the person added", async () => {
+  const { requestedStartTarget } = await import("../../src/features/shell/organization-start-target.ts");
+  const group = { context_id: "ctx_x", org: "org_x", org_name: "X", plan: "pro", family: "ses_a", email: "a@example.com", available: [{ id: "wx1", name: "X Uno" }, { id: "wx2", name: "X Dos" }], added: new Set(["wx1"]), person: "user_a" };
+  const families = [{ family: "ses_a", sub: "user_a" }];
+  assert.deepEqual(requestedStartTarget([group], families, "?workspace=wx1&org=org_x&account=user_a"), { id: "wx1", context: "ctx_x" });
+  assert.equal(requestedStartTarget([group], families, "?workspace=wx2&org=org_x&account=user_a"), null, "not added");
+  assert.equal(requestedStartTarget([group], families, "?workspace=wb&org=org_x&account=user_a"), null, "another organization's workspace");
+  assert.equal(requestedStartTarget([group], families, "?workspace=wx1&org=org_x&account=user_b"), null, "another email");
+});

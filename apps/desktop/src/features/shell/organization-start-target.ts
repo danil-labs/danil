@@ -17,5 +17,6 @@ export function requestedStartTarget(groups: readonly SessionRailGroup[], famili
   if (!id || !org || !sub) return null;
   const family = families.find((f) => f.sub === sub)?.family;
   const group = family ? groups.find((g) => g.org === org && g.family === family) : undefined;
-  return group ? { id, context: group.context_id } : null;
+  // Solo un workspace del catálogo de ese contexto que la persona agregó: la URL no abre otra cosa.
+  return group?.available?.some((row) => row.id === id) && group.added?.has(id) ? { id, context: group.context_id } : null;
 }

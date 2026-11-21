@@ -162,7 +162,7 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
       const organizations = active.organizations();
       setFreeRouterHost({ edge: freeRouterWebEdge(transport), engine: policy => freeRouterEngine(policy ? freeModelScope(policy) : undefined),
         identity: async () => ({ sub: profile.id, list: { active_workspace_id: null, items: [] } }) });
-      const billing = windowBilling(transport, profile, organizations, () => undefined, async () => null);
+      const billing = windowBilling(active.scoped(plain, active.of(profile.active_organization_id)), profile, organizations, () => undefined, async () => null);
       const current = async () => { const group = active.current(); return group ? { context: group.context, org: group.org, name: group.name, plan: group.plan, role: group.role } : null; };
       windowApp = mountWindow({ sessions, rail, contextMachines: context => contextMachines(`${options.origin}/v1`, raw, __DANIL_WEB_RELAY_ORIGINS__, context), permits, relayOrigin: __DANIL_WEB_RELAY_ORIGINS__[0], credentials: webCredentialSource(options.origin, transport),
         profile: webAccountProfile(transport), onUnauthorized: expired,

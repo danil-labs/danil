@@ -80,7 +80,7 @@ export function webSessionCommands(transport: EdgeTransport, options: { expired:
     const key = text(args.idempotencyKey);
     if (method !== "GET") {
       headers.set("Content-Type", "application/json");
-      headers.set("Idempotency-Key", key && key.length <= 128 ? key : crypto.randomUUID());
+      headers.set("Idempotency-Key", key && /^[\x21-\x7e]{1,128}$/.test(key) ? key : crypto.randomUUID());
     }
     let response: Response;
     try {
