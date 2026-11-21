@@ -21,3 +21,6 @@ Notas de portado de Configuración desde `apps/desktop` al front rebuild nuevo (
 - portado de apps/desktop/src/features/settings/AppDownloads.tsx:1-36 (DownloadsTab: instaladores oficiales)
 - portado de apps/desktop/src/features/settings/AIProviders.tsx:1-121 y ai-providers-view.ts:1-21 (AiAccountsSection: proveedores Claude, Codex, Gemini, Grok)
 - portado de apps/desktop/src/features/settings/Providers.tsx:1-250 (SourceControlSection: GitHub, GitLab, Bitbucket)
+- portado de apps/desktop/src/features/settings/DanilAccount.tsx:80-90 (MachinesTab: tus máquinas)
+- portado de apps/desktop/src/features/settings/Environment.tsx:1-150 (EnvironmentTab: estado del entorno y dependencias)
+- portado de apps/desktop/src/features/settings/ActivityLogs.tsx:1-102 (ActivityTab: registro y logs de actividad)
