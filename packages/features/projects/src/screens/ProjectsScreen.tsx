@@ -1,7 +1,7 @@
 import { For, Show, createMemo, createSignal } from "solid-js";
 import type { MachineConnection } from "@danil/engine-client";
 import type { DeleteTaskTarget, TaskRecord } from "../model.ts";
-import { useProjects } from "../queries.ts";
+import { useProjects, inspectTaskDeletion, applyTaskDeletion } from "../queries.ts";
 import { DeleteTaskDialog } from "../components/DeleteTaskDialog.tsx";
 import { ProjectItemView } from "../components/ProjectItemView.tsx";
 import { TaskErrorView } from "../components/TaskErrorView.tsx";
@@ -14,7 +14,7 @@ export interface ProjectsScreenProps {
 }
 
 export function ProjectsScreen(props: ProjectsScreenProps) {
-  const { projects, tasksByProject, loading, error, refetch } = useProjects(
+  const { projects, tasksByProject, projectErrors, loading, error, refetch, refetchProject } = useProjects(
     () => props.conn,
     () => props.workspaceId
   );
@@ -119,9 +119,11 @@ export function ProjectsScreen(props: ProjectsScreenProps) {
                     <ProjectItemView
                       project={project}
                       tasks={tasksByProject()[project.id] ?? []}
+                      error={projectErrors()[project.id]}
                       selectedTaskId={props.selectedTaskId}
                       onSelectTask={props.onSelectTask}
                       onDeleteTask={handleDeleteTask}
+                      onRetry={(p) => void refetchProject(p)}
                     />
                   )}
                 </For>
@@ -136,6 +138,8 @@ export function ProjectsScreen(props: ProjectsScreenProps) {
           <DeleteTaskDialog
             conn={props.conn}
             target={target()}
+            onInspect={(t) => inspectTaskDeletion(props.conn, t)}
+            onApply={(t, prev, opts) => applyTaskDeletion(props.conn, t, prev, opts)}
             onClose={() => setDeleteTarget(null)}
           />
         )}

@@ -1,13 +1,16 @@
 import { For, Show, createSignal } from "solid-js";
 import type { ProjectItem, TaskRecord } from "../model.ts";
 import { TaskItemView } from "./TaskItemView.tsx";
+import { TaskErrorView } from "./TaskErrorView.tsx";
 
 export interface ProjectItemViewProps {
   project: ProjectItem;
   tasks: TaskRecord[];
+  error?: unknown;
   selectedTaskId?: string;
   onSelectTask?: (task: TaskRecord) => void;
   onDeleteTask?: (task: TaskRecord) => void;
+  onRetry?: (project: ProjectItem) => void;
 }
 
 export function ProjectItemView(props: ProjectItemViewProps) {
@@ -37,32 +40,48 @@ export function ProjectItemView(props: ProjectItemViewProps) {
         </div>
 
         <div class="flex items-center gap-2">
-          <span class="inline-flex items-center rounded-full bg-neutral-100 px-2 py-0.5 text-[11px] font-medium text-neutral-600">
-            {props.tasks.length} {props.tasks.length === 1 ? "tarea" : "tareas"}
-          </span>
+          <Show when={props.error}>
+            <span class="inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-[11px] font-medium text-red-700">
+              Error
+            </span>
+          </Show>
+          <Show when={!props.error}>
+            <span class="inline-flex items-center rounded-full bg-neutral-100 px-2 py-0.5 text-[11px] font-medium text-neutral-600">
+              {props.tasks.length} {props.tasks.length === 1 ? "tarea" : "tareas"}
+            </span>
+          </Show>
         </div>
       </button>
 
       <Show when={expanded()}>
         <div class="flex flex-col gap-1.5 border-t border-neutral-100 p-2.5 bg-neutral-50/30">
-          <Show
-            when={props.tasks.length > 0}
-            fallback={
-              <p class="m-0 py-2 text-center text-xs text-neutral-400">
-                Sin tareas en este proyecto
-              </p>
-            }
-          >
-            <For each={props.tasks}>
-              {(task) => (
-                <TaskItemView
-                  task={task}
-                  isSelected={props.selectedTaskId === task.id}
-                  onSelect={props.onSelectTask}
-                  onDelete={props.onDeleteTask}
-                />
-              )}
-            </For>
+          <Show when={props.error}>
+            <TaskErrorView
+              error={props.error}
+              onRetry={() => props.onRetry?.(props.project)}
+            />
+          </Show>
+
+          <Show when={!props.error}>
+            <Show
+              when={props.tasks.length > 0}
+              fallback={
+                <p class="m-0 py-2 text-center text-xs text-neutral-400">
+                  Sin tareas en este proyecto
+                </p>
+              }
+            >
+              <For each={props.tasks}>
+                {(task) => (
+                  <TaskItemView
+                    task={task}
+                    isSelected={props.selectedTaskId === task.id}
+                    onSelect={props.onSelectTask}
+                    onDelete={props.onDeleteTask}
+                  />
+                )}
+              </For>
+            </Show>
           </Show>
         </div>
       </Show>
