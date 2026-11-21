@@ -1,5 +1,6 @@
 import { createSignal } from "solid-js";
 import type { WebSessionCommands } from "./web-session-contexts.ts";
+import { fetchSessionsCatalog } from "../platform/identity.ts";
 
 type Row = { id: string; name: string; account: string | null };
 type Reply = { status: number; body?: unknown };
@@ -14,7 +15,7 @@ export function webRailCatalog(sessions: Pick<WebSessionCommands, "handle">) {
   const [lists, setLists] = createSignal<ReadonlyMap<string, readonly Row[] | null>>(new Map());
   let running: Promise<void> | null = null;
   async function read() {
-    const reply = (await sessions.handle("danil_edge_fetch", { method: "GET", path: "/v1/identity/sessions/catalog" })) as Reply;
+    const reply = (await fetchSessionsCatalog(sessions)) as Reply;
     if (reply.status !== 200) return;
     const items = (reply.body as { items?: unknown } | null)?.items;
     const next = new Map<string, readonly Row[] | null>();

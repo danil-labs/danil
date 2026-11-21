@@ -18,6 +18,7 @@ import { danilAvailable, danilMachines, readDanil } from "../machines/index.ts";
 import { sessionRail } from "./session-groups.ts";
 import { type AddedTransport, createAddedSync } from "./workspace-added-sync.ts";
 import { ADDED_KEY, edgeAddedTransport, prefsAddedStore, type WebSend, webAddedTransport } from "./workspace-added-transport.ts";
+import { fetchIdentityMe } from "../../platform/identity.ts";
 
 declare const __DANIL_WEB_API__: import("../../web/session-config").WebSessionDeployment | undefined;
 
@@ -73,7 +74,7 @@ function wire(hidden: () => ReadonlySet<string>, onSeeded: (ids: readonly string
   const askPerson = () => {
     if (!native || asking || person() || !sessions.ready() || !sessions.connected() || sessions.groups() !== null) return;
     asking = true;
-    edgeFetch<{ id?: unknown }>("GET", "/v1/identity/me")
+    fetchIdentityMe<{ id?: unknown }>(edgeFetch)
       .then((r) => {
         const id = r.status === 200 ? r.body?.id : null;
         if (typeof id === "string" && id) setPerson(id);

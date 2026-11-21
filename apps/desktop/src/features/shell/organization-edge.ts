@@ -4,6 +4,7 @@
  * Un status que no es 2xx se vuelve `{status, code}`; uno desconocido se trata por su status.
  */
 import type { OrganizationSource } from "@terminus/computers";
+import { fetchEdgeOrganizations, selectEdgeOrganization } from "../../platform/identity.ts";
 import { type BusyOptions, retryBusy } from "./select-busy.ts";
 import { CAPABILITIES_PATH } from "../../platform/machines.ts";
 
@@ -20,10 +21,10 @@ async function bodyOf(reply: Promise<Reply>): Promise<unknown> {
 export function edgeOrganizationSource(edgeFetch: EdgeFetch, beforeSelect?: () => void, busy?: BusyOptions): OrganizationSource {
   return {
     capabilities: () => bodyOf(edgeFetch("GET", CAPABILITIES_PATH)),
-    list: () => bodyOf(edgeFetch("GET", "/v1/identity/organizations")),
+    list: () => bodyOf(fetchEdgeOrganizations(edgeFetch)),
     select: (id, key) => {
       beforeSelect?.();
-      return retryBusy(() => bodyOf(edgeFetch("POST", "/v1/identity/organizations/select", { organization_id: id }, key)), busy);
+      return retryBusy(() => bodyOf(selectEdgeOrganization(edgeFetch, id, key)), busy);
     },
   };
 }
