@@ -1,9 +1,9 @@
 # @danil/engine-client
 
-Cliente del motor con transportes local y relay; la UI no distingue cuál.
+Cliente tipado del contrato RPC1 del motor (`src/generated`, generado) y sus transportes.
 
-- Consume: WebSocket/RPC del motor.
-- Contrato: el manifiesto RPC1 (se genera con `pnpm generate`).
-- Entrada pública: `src/index.ts`.
-- Reglas: R1 (red solo aquí y en session, host, clients), R3 y R4 de `03-structure.md`.
-- Estado: esqueleto F1.1, sin lógica.
+- `transports/local.ts`: Desk; usa `host.invoke`/`host.listen` inyectados (el IPC de Tauri vive en `packages/host`).
+- `transports/relay.ts`: WebSocket al relay con ticket de un solo uso (`requestTicket` inyectado), correlación por id, cursor de eventos al reconectar, backoff exponencial con jitter y estado `waking` mientras la máquina despierta. Sin lista blanca de comandos.
+- `connect.ts`: `connectMachine({sessionKey, machine, host?, platform})` elige transporte (único lugar que distingue local de relay), cachea por `(sessionKey, machine_id)` y expone `status()` como señal.
+
+Protocolo de trama del relay (JSON): petición `{id, method, params}`, respuesta `{id, result}` o `{id, error:{code,message}}`, evento `{event, payload, cursor}`; al reconectar el cliente envía `{resume:{cursor}}`.

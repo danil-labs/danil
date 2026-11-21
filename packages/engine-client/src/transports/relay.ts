@@ -143,6 +143,7 @@ export function createRelayTransport(opts: RelayOptions): StatefulTransport {
       return reconnectLater();
     }
 
+    if (res.kind !== "ok") return reconnectLater();
     let ws: WebSocket;
     try {
       ws = open(res.ticket.url, [SUBPROTOCOL, `ticket.${res.ticket.ticket}`]);
