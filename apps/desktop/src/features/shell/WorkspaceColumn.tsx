@@ -19,7 +19,7 @@ import { AttentionBadge, MarcaDeWorkspace } from "./WorkspaceMarks";
 
 export { AttentionBadge, MarcaDeWorkspace, monogram } from "./WorkspaceMarks";
 
-import { organizationStartTarget } from "./organization-start-target";
+import { organizationStartTarget, requestedStartTarget } from "./organization-start-target";
 import ProfileMenu from "./ProfileMenu";
 import { SessionWorkspaceRows } from "./SessionWorkspaceRows";
 import { sessionRail } from "./session-groups";
@@ -49,11 +49,14 @@ export default function WorkspaceColumn(props: {
     if (!rows.some((w) => w.id === open) || (ws.activoContexto() && !sessions.groups()?.some((group) => group.context_id === ws.activoContexto()))) { const target = organizationStartTarget(sessions.groups() ?? [], open, ws.activoContexto(), sessions.sessions.defaultContext()); void ws.cambiarA(target?.id ?? rows.find((row) => !sessions.known.has(row.id))?.id ?? null, target?.context); }
   });
   let sessionsSettled = false;
+  // La web abre al arrancar el de la URL (W6) o el primero agregado, aunque ninguna máquina diga un activo.
+  const asked = capabilities().nativeWindow ? "" : window.location.search;
   createEffect(() => {
     const groups = sessions.groups();
-    if (sessionsSettled || !groups?.length || groups.some((g) => !g.available || !g.added) || !ws.activo()) return;
+    if (sessionsSettled || !groups?.length || groups.some((g) => !g.available || !g.added) || (!ws.activo() && capabilities().nativeWindow)) return;
     sessionsSettled = true;
-    const next = sessions.known.has(ws.activo()!) ? organizationStartTarget(groups, ws.activo()!, ws.activoContexto(), sessions.sessions.defaultContext()) : null;
+    const open = ws.activo();
+    const next = requestedStartTarget(groups, sessions.sessions.families(), asked) ?? (open ? (sessions.known.has(open) ? organizationStartTarget(groups, open, ws.activoContexto(), sessions.sessions.defaultContext()) : null) : organizationStartTarget(groups, "", null, sessions.sessions.defaultContext()));
     if (next && (next.id !== ws.activo() || next.context !== ws.activoContexto())) void ws.cambiarA(next.id, next.context);
   });
   let list: HTMLDivElement | undefined;

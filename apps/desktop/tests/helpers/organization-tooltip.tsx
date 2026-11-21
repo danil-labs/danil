@@ -31,4 +31,3 @@ export { mountOrganizationLayout } from "./organization-layout";
 
 export { mountOrganizationGroup } from "./organization-group";
 
-export { mountWebOrganization } from "./organization-web";

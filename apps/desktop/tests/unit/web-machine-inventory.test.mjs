@@ -3,6 +3,9 @@ import test from "node:test";
 import { boot, sleep } from "../helpers/jsdom-app.mjs";
 import { fleet, engine } from "../helpers/fake-relay.mjs";
 import { open, HOME, VM, remote, until } from "../helpers/desktop-account.mjs";
+import { installSessionsEdge } from "../helpers/web-sessions-edge.mjs";
+
+installSessionsEdge();
 
 const deferred = () => { let resolve; const promise = new Promise(r => { resolve = r; }); return { promise, resolve }; };
 const machine = id => ({ machine_id: id, name: id, state: "running", connection: "connected" });

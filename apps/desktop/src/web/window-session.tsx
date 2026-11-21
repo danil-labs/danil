@@ -139,12 +139,14 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
       } catch (cause) {
         if (gone()) return;
         const status = cause instanceof PlatformSessionError ? cause.status : (cause as { status?: number } | null)?.status ?? 0;
+        const shown = preparing() && !error();
         if (FIRST_MOUNT_TRANSIENT.includes(status) || (cause as { detail?: string } | null)?.detail === 'unavailable') {
           if (++attempts >= FIRST_MOUNT_ATTEMPTS) { setPreparing(false); setError('web.platform.unavailable'); }
           else setPreparing(true);
         } else { setPreparing(false); setError(status === 403 ? 'web.platform.denied' : 'web.platform.unavailable'); }
         setIdentified(true);
-        gate();
+        // La carga ya pintada no se repinta en cada reintento.
+        if (!(shown && preparing() && !error())) gate();
         later();
       }
     }

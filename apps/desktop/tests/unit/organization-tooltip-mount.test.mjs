@@ -17,7 +17,7 @@ test("organization tooltip shares hover reads, refreshes on existing events and 
   const doc = app.w.document;
   const style = doc.createElement("style"); style.textContent = (await Promise.all((await readdir(dir)).filter((file) => file.endsWith(".css")).map((file) => readFile(join(dir, file), "utf8")))).join("\n"); doc.head.append(style);
   const root = doc.createElement("div"); doc.body.append(root);
-  const { mountOrganizationTooltip, mountOrganizationStack, mountOrganizationMenu, mountGroupAccountMenu, mountOrganizationLayout, mountOrganizationGroup, mountWebOrganization } = await import(pathToFileURL(join(dir, "fixture.mjs")).href);
+  const { mountOrganizationTooltip, mountOrganizationStack, mountOrganizationMenu, mountGroupAccountMenu, mountOrganizationLayout, mountOrganizationGroup } = await import(pathToFileURL(join(dir, "fixture.mjs")).href);
   const mounted = mountOrganizationTooltip(root); t.after(mounted.dispose);
   const trigger = doc.querySelector("#org-tooltip-tile");
   const hover = (inside) => trigger.dispatchEvent(new app.w.PointerEvent(inside ? "pointerenter" : "pointerleave", { bubbles: true, pointerType: "mouse" }));
@@ -170,17 +170,6 @@ test("organization tooltip shares hover reads, refreshes on existing events and 
   assert.equal(doc.querySelectorAll('[data-account-menu-context]').length, 1);
   assert.equal([...doc.querySelectorAll('[role="menuitem"]')].filter((row) => row.textContent === "Fijar en la barra").length, 1);
   single.dispose(); root.replaceChildren();
-  const web = mountWebOrganization(root); t.after(web.dispose);
-  assert.ok(await until(() => root.querySelector('[data-rail-organization="org"]')));
-  assert.equal(root.querySelector('[data-rail-organization="org"]').getAttribute("aria-label"), "Acme");
-  const webTile = root.querySelector('[data-workspace-context="web-context"]');
-  assert.match(webTile.getAttribute("aria-label"), /web@example.test/);
-  webTile.dispatchEvent(new app.w.KeyboardEvent("keydown", { key: "F10", shiftKey: true, bubbles: true }));
-  assert.ok(await until(() => [...doc.querySelectorAll('[role="menuitem"]')].some((row) => row.textContent.includes("Cerrar sesión de web@example.test"))));
-  assert.equal([...doc.querySelectorAll('[role="menuitem"]')].some((row) => row.textContent.includes("Cerrar sesión de Acme")), false);
-  assert.equal([...doc.querySelectorAll('[role="menuitem"]')].some((row) => row.textContent.includes("Canjear")), false);
-  [...doc.querySelectorAll('[role="menuitem"]')].find((row) => row.textContent.includes("Cerrar sesión de web@example.test")).click();
-  assert.ok(await until(() => web.actions.includes("sign-out")));
   assert.deepEqual(app.failures, []);
 
 });

@@ -93,7 +93,7 @@ export function mountWindow(base: Base, mounted: Mounted) {
       return workspace ? picked[workspace] ?? null : null;
     },
   });
-  const url = openWorkspaceUrl(active, base.sessions);
+  openWorkspaceUrl(active, base.sessions);
   const status = (id: string, context?: string): MachineStatus => {
     const power = fleet.power(id, context);
     return power === "on" ? "online" : power === "off" ? "offline" : power;
@@ -134,7 +134,6 @@ export function mountWindow(base: Base, mounted: Mounted) {
     for (const { machine, group } of rows) fleet.observe(machine.machine_id, machineToComputer(machine).state, group.context);
     machinesListed(fleet);
     fleet.subscribeEvents();
-    await url.restore();
     active.registryChanged();
     for (const name of ["harness:workspace-name", "harness:service-resync", "harness:machines"]) window.dispatchEvent(new CustomEvent(name));
     return true;

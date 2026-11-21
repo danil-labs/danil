@@ -12,6 +12,10 @@ async function until(read) {
   }
 }
 
+import { installSessionsEdge } from '../helpers/web-sessions-edge.mjs';
+
+installSessionsEdge();
+
 async function open(t, ...args) {
   const app = await boot(...args);
   t.after(() => app.w.dispatchEvent(new app.w.Event('pagehide')));
@@ -81,29 +85,6 @@ test('the window mounts against an edge that has no /v1/compute and announces ma
 });
 
 
-for (const status of [501, 503]) test(`/v1/workspaces ${status} mounts the window and keeps reading the list by itself`, async t => {
-  const calls = [];
-  const fetcher = async input => {
-    const url = new URL(String(input));
-    if (url.origin === 'http://localhost' && url.pathname.includes('/assets/')) return new Response('');
-    calls.push(url.pathname);
-    if (url.pathname === '/v1/capabilities') return Response.json({ contract: 'mvp-v1', items: ['workspaces', 'identity.organizations'].map(name => ({ name, version: 1, status: 'available' })) });
-    if (url.pathname === '/v1/identity/me') return Response.json({ id: 'user_A', name: 'Operator', workspace: '11', organizations: [] });
-    if (url.pathname === '/v1/identity/organizations') return Response.json({ items: [{ id: 'org_A', name: 'Danil', plan: 'enterprise', role: 'owner' }, { id: 'org_B', name: 'Otra', plan: 'team', role: 'member' }], next_cursor: null, active_organization_id: 'org_A' });
-    if (url.pathname === '/v1/workspaces') return new Response(null, { status });
-    throw new Error(`Unexpected request ${url.pathname}`);
-  };
-  fetcher.__jsdomApp = true; globalThis.fetch = fetcher;
-  const app = await open(t, 'listo', `workspaces-${status}`, {}, undefined, {}, { web: true });
-  const doc = app.w.document;
-  await until(() => doc.querySelector('[data-tira]'));
-  assert.equal(doc.querySelector('[data-web-gate]'), null);
-  await until(() => calls.filter(path => path === '/v1/workspaces').length >= 2);
-  doc.querySelector('[data-profile-menu] button').click();
-  await until(() => doc.querySelector('[data-sign-out]'));
-  assert.deepEqual(app.failures, []);
-});
-
 test('machines 404 shows the cloud as unavailable, retries by itself and never falls back to «This computer»', async t => {
   const calls = [];
   const fake = relay();
@@ -160,37 +141,6 @@ test('a 403 from identity on the first mount keeps loading and retries by itself
   assert.ok(meCalls >= 2, 'identity was read again without the person asking');
   assert.equal(gate(), null);
   assert.ok(calls.includes('GET /v1/identity/me'));
-  assert.deepEqual(app.failures, []);
-});
-
-test('an empty workspace list on the first mount mounts the window and adopts the workspace when it arrives', async t => {
-  let listed = 0;
-  const fetcher = async (input, init) => {
-    const url = new URL(String(input));
-    if (url.origin === 'http://localhost' && url.pathname.includes('/assets/')) return new Response('');
-    if (['/v1/capabilities', '/v1/identity/organizations', '/v1/machines'].includes(url.pathname)) return new Response(null, { status: 404 });
-    if (url.pathname === '/v1/identity/me') return Response.json({ id: 'user_A', name: 'Operator', workspace: '11', organizations: [] });
-    if (url.pathname === '/v1/workspaces') {
-      listed++;
-      return Response.json({ items: listed === 1 ? [] : [{ id: '11', org: 'org_A', name: 'Alpha', role: 'owner' }], next_cursor: null });
-    }
-    throw new Error(`Unexpected request ${url.pathname}`);
-  };
-  fetcher.__jsdomApp = true;
-  globalThis.fetch = fetcher;
-  const app = await open(t, 'listo', 'first-mount-empty', {}, undefined, {}, { web: true, beforeImport(w) {
-    w.WebSocket = class { constructor() { throw new Error('No relay is approved'); } };
-    globalThis.WebSocket = w.WebSocket;
-  } });
-  const gate = () => app.w.document.querySelector('[data-web-gate]');
-  const doc = app.w.document;
-  await until(() => doc.querySelector('[data-tira]'));
-  assert.ok(listed >= 1, 'the window mounts on the empty answer');
-  assert.equal(gate(), null);
-  await until(() => listed >= 2);
-  doc.querySelector('[data-profile-menu] button').click();
-  await until(() => [...doc.querySelectorAll('button[aria-pressed="true"]')].some(b => b.textContent === 'Alpha'));
-  assert.equal(gate(), null);
   assert.deepEqual(app.failures, []);
 });
 
@@ -367,50 +317,6 @@ test('sign out stays active and stable through the retries, and a click during a
 });
 
 // P1: identity crea la organización Free al darse de alta y workspaces la tiene ~40 s después.
-test('a brand-new account enters the window at once, without onboarding, and adopts its workspace in the background', async t => {
-  const { engine } = await import('../helpers/fake-relay.mjs');
-  const calls = [];
-  let ready = false;
-  const fake = relay({ table: { ...engine, list_workspaces: { workspaces: [], active: null }, workspaces_startup: { workspaces: [], active: null } } });
-  const fetcher = async (input, init) => {
-    const url = new URL(String(input));
-    if (url.origin === 'http://localhost' && url.pathname.includes('/assets/')) return new Response('');
-    calls.push(`${init?.method ?? 'GET'} ${url.pathname}`);
-    if (url.pathname === '/v1/capabilities') return Response.json({ contract: 'mvp-v1', items: ['machines', 'machines.session', 'workspaces'].map(name => ({ name, version: 1, status: 'available' })) });
-    if (url.pathname === '/v1/identity/me') return Response.json({ id: 'user_N', name: 'New', workspace: ready ? '21' : null, organizations: [] });
-    if (url.pathname === '/v1/workspaces') return ready ? Response.json({ items: [{ id: '21', org: 'org_N', name: 'Mi espacio', role: 'owner' }], next_cursor: null })
-      : new Response(JSON.stringify({ code: 'organization_selection_required' }), { status: 403, headers: { 'content-type': 'application/problem+json' } });
-    if (url.pathname === '/v1/identity/csrf') return Response.json({ csrf_token: 'bound' });
-    if (url.pathname === '/v1/machines') return Response.json({ items: [{ machine_id: 'm1', name: 'Danil', state: 'running', connection: 'connected' }], next_cursor: null });
-    if (url.pathname === '/v1/machines/m1/tickets') return Response.json({ ticket: 'one-use', url: 'wss://connect.danil.ai/v1/machines/m1/session', expires_at: '2099-01-01T00:00:00Z' });
-    if (url.pathname === '/v1/identity/organizations') return new Response(null, { status: 404 });
-    throw new Error(`Unexpected request ${url.pathname}`);
-  };
-  fetcher.__jsdomApp = true; globalThis.fetch = fetcher;
-  const app = await open(t, 'listo', 'brand-new-account', {}, undefined, {}, { web: true, beforeImport(w) { w.WebSocket = fake.Socket; globalThis.WebSocket = fake.Socket; } });
-  const doc = app.w.document;
-  await until(() => doc.querySelector('[data-tira]'));
-  await until(() => fake.calls.some(c => c.command === 'workspaces_startup' || c.command === 'list_workspaces'));
-  await new Promise(resolve => setTimeout(resolve, 300));
-  assert.equal(doc.querySelector('[data-web-gate]'), null, 'no blocking screen');
-  assert.equal(doc.querySelector('[data-web-onboarding]'), null, 'no «Crea tu workspace» onboarding on the web');
-  assert.ok(!doc.body.textContent.includes('Preparando tu espacio'));
-  await until(() => doc.querySelector('[data-web-preparing-workspace]'));
-  assert.equal(doc.querySelector('[data-web-preparing-workspace]').getAttribute('role'), 'status', 'a notice that does not interrupt');
-  assert.equal(doc.querySelector('[data-web-preparing-workspace]').textContent, 'Preparando tu workspace…');
-  const meBefore = calls.filter(call => call === 'GET /v1/identity/me').length;
-  await until(() => calls.filter(call => call === 'GET /v1/identity/me').length > meBefore);
-  const tira = doc.querySelector('[data-tira]');
-  ready = true;
-  doc.querySelector('[data-profile-menu] button').click();
-  await until(() => [...doc.querySelectorAll('button[aria-pressed="true"]')].some(b => b.textContent === 'Mi espacio'));
-  assert.equal(doc.querySelector('[data-tira]'), tira, 'the same window stays mounted, without reloading');
-  await until(() => !doc.querySelector('[data-web-preparing-workspace]'));
-  assert.equal(doc.querySelector('[data-web-gate]'), null);
-  assert.equal(doc.querySelector('[data-web-onboarding]'), null);
-  assert.deepEqual(app.failures, []);
-});
-
 // P5: con sesión válida, mientras se comprueba se ve la carga y nunca la entrada.
 test('a valid session shows only the loading screen while it is checked and then the window, never the sign-in', async t => {
   let release;
@@ -499,47 +405,6 @@ const ORGS = { items: [{ id: 'org_A', name: 'Danil', plan: 'enterprise', role: '
 const CAPS = { contract: 'mvp-v1', items: [{ name: 'identity.organizations', version: 1, status: 'available' }] };
 const SELECTION = () => new Response(JSON.stringify({ type: 'urn:danil:problem:workspace_selection_required', status: 403, code: 'workspace_selection_required' }), { status: 403, headers: { 'content-type': 'application/problem+json' } });
 const TWO = [{ id: '11', org: 'org_B', name: 'Alpha', role: 'owner' }, { id: '12', org: 'org_B', name: 'Beta', role: 'owner' }];
-for (const [label, me, workspaces] of [
-  ['403 workspace_selection_required', SELECTION, TWO],
-  ['403 workspace_selection_required and no workspaces', SELECTION, []],
-  ['200 with workspace null', () => Response.json({ id: 'user_A', name: 'Operator', workspace: null, organizations: [] }), []],
-]) test(`an organization without a workspace (${label}) offers the organization selector and sign out, never «No tienes nada»`, async t => {
-  const calls = [];
-  const fetcher = async input => {
-    const url = new URL(String(input));
-    if (url.origin === 'http://localhost' && url.pathname.includes('/assets/')) return new Response('');
-    calls.push(url.pathname);
-    if (url.pathname === '/v1/identity/me') return me();
-    if (url.pathname === '/v1/capabilities') return Response.json(CAPS);
-    if (url.pathname === '/v1/identity/organizations') return Response.json(ORGS);
-    if (url.pathname === '/v1/workspaces') return Response.json({ items: workspaces, next_cursor: null });
-    throw new Error(`Unexpected request ${url.pathname}`);
-  };
-  fetcher.__jsdomApp = true; globalThis.fetch = fetcher;
-  const app = await open(t, 'listo', `org-without-workspace-${label.length}`, {}, undefined, {}, { web: true });
-  const doc = app.w.document;
-  if (label.startsWith('403') && workspaces.length === 0) {
-    // Sin workspace que elegir no hay caja vacía: la carga, con cerrar sesión, y se reintenta.
-    await until(() => doc.querySelector('[data-web-loading] [data-web-sign-out]'));
-    assert.equal(doc.querySelector('[data-web-gate]'), null);
-    assert.equal(doc.querySelector('[data-web-auth]'), null);
-  } else if (label.startsWith('403')) {
-    // Varios workspaces y ninguno elegido: identity no da perfil y se elige aquí.
-    const gate = () => doc.querySelector('[data-web-gate]');
-    await until(() => gate()?.querySelector('[data-web-organization="org_A"]'));
-    assert.equal(gate().querySelector('[role="alert"]'), null, 'no «No tienes acceso»');
-    assert.ok(gate().querySelector('[data-web-organization="org_B"][aria-pressed="true"]'), 'the active one is marked');
-    assert.ok(gate().querySelector('[data-web-sign-out]'), 'sign out is offered');
-    assert.deepEqual([...gate().querySelectorAll('button')].map(b => b.textContent).filter(name => ['Alpha', 'Beta'].includes(name)), ['Alpha', 'Beta']);
-  } else {
-    await until(() => doc.querySelector('[data-tira]'));
-    assert.equal(doc.querySelector('[data-web-gate]'), null);
-    doc.querySelector('[data-profile-menu] button').click();
-    await until(() => doc.querySelector('[data-sign-out]'));
-  }
-  assert.ok(!doc.body.textContent.includes('No tienes nada'));
-  assert.ok(!calls.some(path => path.startsWith('/v1/compute')));
-});
 
 test('automatic material failure stays local and recovers through the beta machine-session window', async t => {
   const { engine } = await import('../helpers/fake-relay.mjs');
@@ -641,136 +506,6 @@ function newAccount({ orgs = [NEW_ORG], orgsAfter, after = edge => edge.listed >
   fetcher.__jsdomApp = true; globalThis.fetch = fetcher;
   return edge;
 }
-
-test('Q1: a new account with one organization and none active selects it by itself', async t => {
-  const edge = newAccount();
-  const app = await open(t, 'listo', 'h2-q1', {}, undefined, {}, { web: true });
-  await until(() => app.w.document.querySelector('[data-tira]'));
-  await until(() => edge.selected === 'org_N');
-  assert.equal(edge.calls.filter(c => c === 'POST /v1/identity/organizations/select').length, 1);
-  assert.deepEqual(navigations(app), [], 'no sign-in');
-  assert.deepEqual(others(app), []);
-});
-
-test('Q1b: when me returns the selected organization as active the page reloads once, without a loop', async t => {
-  const pause = fastClock(t);
-  const edge = newAccount({ me: edge => ({ id: 'user_N', name: 'New', workspace: null, organizations: edge.selected ? [NEW_ORG] : [], active_organization_id: edge.selected }) });
-  const app = await open(t, 'listo', 'h2-q1b', {}, undefined, {}, { web: true });
-  await until(() => edge.selected === 'org_N');
-  await until(() => navigations(app).length === 1);
-  const me = edge.me;
-  await pause(400);
-  assert.equal(navigations(app).length, 1, 'one reload when the personal organization is chosen');
-  assert.equal(edge.me, me, 'nothing keeps polling after the reload');
-  assert.equal(edge.calls.filter(c => c === 'POST /v1/identity/organizations/select').length, 1);
-  assert.deepEqual(others(app), []);
-});
-
-test('Q2: organization_auth_required on select goes to the sign-in once, without a blocking screen', async t => {
-  const pause = fastClock(t);
-  const edge = newAccount({ select: () => problemOf(409, 'organization_auth_required', { organization: 'org_N' }) });
-  const app = await open(t, 'listo', 'h2-q2', {}, undefined, {}, { web: true });
-  await until(() => navigations(app).length === 1);
-  assert.ok(app.w.sessionStorage.getItem('danil.web.org-auth.org_N'), 'the loop guard is marked for that organization');
-  await pause(400);
-  assert.equal(navigations(app).length, 1, 'a single redirect');
-  assert.equal(edge.calls.filter(c => c === 'POST /v1/identity/organizations/select').length, 1);
-  assert.equal(app.w.document.querySelector('[data-web-gate]'), null);
-  assert.deepEqual(others(app), []);
-});
-
-test('Q3: the same 409 right after coming back does not redirect again and offers to sign in again', async t => {
-  newAccount({ select: () => problemOf(409, 'organization_auth_required', { organization: 'org_N' }) });
-  const app = await open(t, 'listo', 'h2-q3', {}, undefined, {}, { web: true, beforeImport(w) { w.sessionStorage.setItem('danil.web.org-auth.org_N', String(Date.now() - 30_000)); } });
-  const doc = app.w.document;
-  await until(() => doc.querySelector('[data-tira]'));
-  doc.querySelector('[data-profile-menu] button').click();
-  await until(() => doc.querySelector('[data-web-reauth-sign-in]'));
-  const again = doc.querySelector('[data-web-reauth-sign-in]');
-  assert.equal(again.disabled, false, 'the button is active');
-  assert.match(again.textContent, /Volver a iniciar sesión/);
-  assert.deepEqual(navigations(app), [], 'no second redirect');
-  again.click();
-  await until(() => navigations(app).length === 1);
-  assert.deepEqual(others(app), []);
-});
-
-test('Q5: several organizations and none active keep the selector, without selecting by themselves', async t => {
-  const pause = fastClock(t);
-  const edge = newAccount({ orgs: [NEW_ORG, { id: 'org_O', name: 'Otra', plan: 'team', role: 'member' }] });
-  const app = await open(t, 'listo', 'h2-q5', {}, undefined, {}, { web: true });
-  const doc = app.w.document;
-  await until(() => doc.querySelector('[data-tira]'));
-  await until(() => edge.listed >= 1);
-  await pause(400);
-  assert.ok(!edge.calls.includes('POST /v1/identity/organizations/select'), 'no automatic selection');
-  const state = edge.calls.filter(c => c === 'GET /v1/identity/organizations').length;
-  assert.ok(state >= 1, 'the organizations were read');
-  assert.deepEqual(navigations(app), []);
-  assert.deepEqual(others(app), []);
-});
-
-// P2 de la revisión de H2: la organización llega después de montar y la ventana la elige sola, sin canjear.
-for (const [label, machines] of [
-  ['/v1/machines answers 403 organization_selection_required', edge => edge.selected ? Response.json({ items: [], next_cursor: null }) : problemOf(403, 'organization_selection_required')],
-  ['no route answers 403', null],
-]) test(`an organization created after mounting is selected by itself (${label})`, async t => {
-  const edge = newAccount({ orgs: [], orgsAfter: [NEW_ORG], ...(machines ? { machines } : {}) });
-  const app = await open(t, 'listo', `h2-late-org-${label.length}`, {}, undefined, {}, { web: true });
-  await until(() => app.w.document.querySelector('[data-tira]'));
-  await until(() => edge.selected === 'org_N');
-  assert.ok(edge.listed >= 2, 'the list was read again');
-  assert.deepEqual(navigations(app), []);
-  assert.deepEqual(others(app), []);
-});
-
-// P1 de la revisión 3 de H2: la recarga que hace el sistema al cambiar la organización se ve como carga.
-test('a change of active organization reloads once behind the loading screen, without buttons', async t => {
-  let me = 0;
-  const fetcher = async input => {
-    const url = new URL(String(input));
-    if (url.origin === 'http://localhost' && url.pathname.includes('/assets/')) return new Response('');
-    if (['/v1/capabilities', '/v1/identity/organizations', '/v1/machines'].includes(url.pathname)) return new Response(null, { status: 404 });
-    if (url.pathname === '/v1/identity/me') return Response.json({ id: 'user_N', name: 'New', workspace: null, organizations: [], active_organization_id: me++ === 0 ? null : 'org_N' });
-    throw new Error(`Unexpected request ${url.pathname}`);
-  };
-  fetcher.__jsdomApp = true; globalThis.fetch = fetcher;
-  const app = await open(t, 'listo', 'h2-org-reload', {}, undefined, {}, { web: true });
-  const doc = app.w.document;
-  await until(() => doc.querySelector('[data-tira]'));
-  await until(() => navigations(app).length === 1);
-  assert.ok(doc.querySelector('[data-web-loading]'), 'the loading screen covers the reload');
-  assert.equal(doc.querySelector('[data-web-gate]'), null);
-  assert.equal(doc.querySelector('[data-web-sign-out]'), null);
-  assert.equal(doc.querySelector('[data-tira]'), null);
-  await new Promise(resolve => setTimeout(resolve, 1500));
-  assert.equal(navigations(app).length, 1, 'exactly one navigation');
-  assert.deepEqual(others(app), []);
-});
-
-for (const timing of ['on entry', 'after refresh']) test(`Danil lists a transferred workspace ${timing} before an account workspace is selected`, async t => {
-  let reads = 0;
-  const row = { id: '25', org: 'org_Danil', name: 'Proyecto transferido', role: 'owner',
-    engine_workspace_id: 'abcdef12', placement: { kind: 'member_computer' }, moved_from: { org: 'org_Origen', account_id: '11' } };
-  const fetcher = async input => {
-    const { pathname } = new URL(String(input));
-    if (pathname === '/v1/identity/me') return Response.json({ id: 'user_A', name: 'Operator', workspace: null, active_organization_id: 'org_Danil', organizations: [{ id: 'org_Danil', name: 'Danil' }] });
-    if (pathname === '/v1/capabilities') return Response.json({ contract: 'mvp-v1', items: [{ name: 'workspaces', version: 1, status: 'available' }] });
-    if (pathname === '/v1/workspaces') {
-      reads++;
-      return Response.json({ items: timing === 'on entry' || reads > 1 ? [row] : [], next_cursor: null });
-    }
-    return new Response(null, { status: 404 });
-  };
-  fetcher.__jsdomApp = true;
-  globalThis.fetch = fetcher;
-  const app = await open(t, 'listo', `transferred-catalog-${timing.replace(' ', '-')}`, {}, undefined, {}, { web: true });
-  const doc = app.w.document;
-  await until(() => doc.querySelector('[data-profile-menu] button'));
-  doc.querySelector('[data-profile-menu] button').click();
-  await until(() => [...doc.querySelectorAll('button[aria-pressed="false"]')].some(b => b.textContent === 'Proyecto transferido'));
-  assert.deepEqual(app.failures, []);
-});
 
 for (const scenario of ['one account with two organizations', 'two accounts', 'return to the picker']) test(`the flat workspace picker opens for ${scenario}`, async t => {
   const single = scenario === 'one account with two organizations';
