@@ -1,5 +1,5 @@
 import { Show, createEffect } from "solid-js";
-import {} from "@danil/ui";
+import { Button } from "@danil/ui";
 import { useShell, type ShellConnection } from "../queries.ts";
 import {
   Terminal,
@@ -21,9 +21,7 @@ export interface TerminalScreenProps {
 
 /**
  * Pantalla de Terminal interactiva conectada al motor Danil por RPC1.
- * Soporta stream de salida ANSI, interacción stdin y buffer para B-017.
- * Puede invocarse como componente JSX <TerminalScreen conn={conn} />
- * o directamente como TerminalScreen(conn).
+ * Paridad visual con apps/desktop/src/ui/Terminal.tsx y terminal.css.
  */
 export function TerminalScreen(
   propsOrConn: TerminalScreenProps | ShellConnection
@@ -120,48 +118,52 @@ export function TerminalScreen(
             <span
               class="w-2 h-2 rounded-full inline-block"
               classList={{
-                "bg-yellow-400 animate-pulse": shell.status() === "starting",
-                "bg-green-500": shell.status() === "running",
-                "bg-red-500": shell.status() === "error",
+                "bg-warning-strong animate-pulse": shell.status() === "starting",
+                "bg-success-strong": shell.status() === "running",
+                "bg-error-strong": shell.status() === "error",
                 "bg-neutral-500": shell.status() === "done" || shell.status() === "idle",
               }}
             />
             <span>{displayTitle()}</span>
             <Show when={shell.pid()}>
-              <span class="text-terminal-muted font-normal text-[11px]">
+              <span class="text-terminal-muted font-normal text-caption font-mono">
                 (PID: {shell.pid()})
               </span>
             </Show>
           </TerminalName>
         </div>
 
-        <div class="flex items-center gap-3">
+        <div class="flex items-center gap-2">
           <Show when={!shell.isPtyReady() && shell.bufferedCount() > 0}>
-            <span class="text-amber-400 text-[11px] font-mono bg-amber-950/40 px-1.5 py-0.5 rounded border border-amber-800/40">
-              Buffer: {shell.bufferedCount()} teclas retenidas (B-017)
+            <span class="text-warning-strong text-caption font-mono bg-warning/10 px-1.5 py-0.5 rounded border border-warning/20">
+              Buffer: {shell.bufferedCount()}
             </span>
           </Show>
           <Show when={shell.status() === "starting"}>
-            <span class="text-yellow-400/80 text-[11px]">Iniciando pty...</span>
+            <span class="text-warning-strong text-caption">Iniciando...</span>
           </Show>
           <Show when={shell.status() === "running"}>
-            <button
+            <Button
               type="button"
+              variant="secondary"
+              size="compact"
               onClick={() => void shell.stop()}
-              class="px-2 py-0.5 rounded bg-terminal-accent/20 hover:bg-terminal-accent/30 text-terminal-accent text-xs font-mono"
               title="Detener proceso (Ctrl+C)"
+              class="text-caption font-mono"
             >
               Detener
-            </button>
+            </Button>
           </Show>
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            size="compact"
             onClick={() => shell.clear()}
-            class="px-2 py-0.5 rounded bg-terminal-bar hover:bg-surface text-terminal-muted hover:text-terminal-text text-xs"
             title="Limpiar pantalla"
+            class="text-caption text-terminal-muted hover:text-terminal-text"
           >
             Limpiar
-          </button>
+          </Button>
         </div>
       </TerminalBar>
 

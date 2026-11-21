@@ -1,4 +1,4 @@
-import {} from "@danil/ui";
+import { Button } from "@danil/ui";
 
 export interface TerminalErrorProps {
   message: string;
@@ -7,22 +7,23 @@ export interface TerminalErrorProps {
 
 /**
  * Componente de visualización de errores con botón de reintento.
- * Cumple con la regla de mostrar errores de API explícitamente con acción de reintento.
+ * Paridad visual con apps/desktop/src/ui/Failure.tsx.
  */
 export function TerminalError(props: TerminalErrorProps) {
   return (
-    <div class="flex items-center justify-between gap-3 bg-red-950/40 border border-red-800/60 rounded px-3 py-2 text-xs text-red-200 m-2">
+    <div class="flex items-center justify-between gap-3 bg-surface-raised border border-border rounded px-3 py-2 text-caption text-error-strong m-2">
       <div class="flex items-center gap-2 min-w-0">
-        <span class="text-red-400 font-bold">Error:</span>
-        <span class="truncate">{props.message}</span>
+        <span class="font-bold">Error:</span>
+        <span class="truncate font-mono">{props.message}</span>
       </div>
-      <button
+      <Button
         type="button"
+        variant="secondary"
+        size="compact"
         onClick={() => props.onRetry()}
-        class="shrink-0 px-2.5 py-1 rounded bg-red-800/80 hover:bg-red-700 text-white font-medium transition-colors"
       >
         Reintentar
-      </button>
+      </Button>
     </div>
   );
 }

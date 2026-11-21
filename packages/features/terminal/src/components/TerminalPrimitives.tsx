@@ -1,18 +1,16 @@
 import { splitProps, type JSX } from "solid-js";
-import {} from "@danil/ui";
 
 /**
  * Primitivas visuales para la superficie y controles de terminal.
- * Corrige B-018 asegurando min-w-0 y break-words/break-all para
- * evitar que strings largos sin espacios desborden paneles.
+ * Paridad visual con apps/desktop/src/ui/Terminal.tsx.
  */
 export const SUPERFICIE_DE_TERMINAL =
-  "grid min-h-0 min-w-0 overflow-hidden rounded-md bg-terminal text-terminal-text border border-border/40 shadow-sm";
+  "grid min-h-0 min-w-0 overflow-hidden rounded-md bg-terminal text-terminal-text";
 export const BARRA_DE_TERMINAL =
-  "flex items-center justify-between gap-3 bg-terminal-bar px-3 py-2 text-xs text-terminal-muted border-b border-border/20 select-none";
+  "flex items-center justify-between gap-3 bg-terminal-bar px-3 py-2 text-xs text-terminal-muted";
 export const NOMBRE_DE_TERMINAL = "font-medium text-terminal-text flex items-center gap-2";
 export const CUERPO_DE_TERMINAL =
-  "m-0 min-h-0 min-w-0 flex-1 overflow-auto p-3 font-mono text-xs leading-5 break-words break-all whitespace-pre-wrap outline-none focus:ring-1 focus:ring-terminal-accent/30";
+  "m-0 min-h-0 min-w-0 overflow-auto p-3 font-mono text-xs leading-5 break-words whitespace-pre-wrap outline-none";
 
 export function Terminal(props: JSX.HTMLAttributes<HTMLDivElement>) {
   const [propios, resto] = splitProps(props, ["class", "children"]);
