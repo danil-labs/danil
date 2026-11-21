@@ -1,5 +1,4 @@
 import {
-  createResource,
   createSignal,
   onCleanup,
   onMount,
@@ -11,6 +10,8 @@ import {
   isClientError,
   idempotencyKey,
   backoffDelay,
+  createQuery,
+  invalidate,
   type PlatformClient,
 } from "@danil/platform-client";
 import {
@@ -82,17 +83,16 @@ async function pollOperation(
     }
     const delay = backoffDelay(attempt++, 1000, 5000);
     await new Promise<void>((resolve, reject) => {
-      const timer = setTimeout(resolve, delay);
-      if (signal) {
-        signal.addEventListener(
-          "abort",
-          () => {
-            clearTimeout(timer);
-            reject(new DOMException("Aborted", "AbortError"));
-          },
-          { once: true },
-        );
-      }
+      if (signal?.aborted) return reject(new DOMException("Aborted", "AbortError"));
+      const onAbort = () => {
+        clearTimeout(timer);
+        reject(new DOMException("Aborted", "AbortError"));
+      };
+      const timer = setTimeout(() => {
+        signal?.removeEventListener("abort", onAbort);
+        resolve();
+      }, delay);
+      signal?.addEventListener("abort", onAbort, { once: true });
     });
   }
   throw new DOMException("Aborted", "AbortError");
@@ -117,6 +117,29 @@ export interface UseMachinesReturn {
  * Encendido y apagado con sondeo de getOperation con signal y backoff (RV1 #29, RV2 #13).
  * Conexión que pasa host a connectMachine para Desk local (RV1 #10) y reutiliza caché (RV1 #30).
  */
+let pollTimer: ReturnType<typeof setInterval> | null = null;
+let pollRefCount = 0;
+
+function startPolling(): void {
+  pollRefCount++;
+  if (!pollTimer) {
+    pollTimer = setInterval(() => {
+      invalidate("machines");
+    }, 15_000);
+  }
+}
+
+function stopPolling(): void {
+  pollRefCount--;
+  if (pollRefCount <= 0) {
+    if (pollTimer) {
+      clearInterval(pollTimer);
+      pollTimer = null;
+    }
+    pollRefCount = 0;
+  }
+}
+
 export function useMachines(): UseMachinesReturn {
   const client = usePlatform();
   const session = useSession();
@@ -127,10 +150,10 @@ export function useMachines(): UseMachinesReturn {
     abortController.abort();
   });
 
-  const [machines, { refetch }] = createResource(
-    () => sessionKey(),
-    async () => {
-      const res = await client.getMachines();
+  const query = createQuery(
+    () => ["machines", sessionKey()].join(":"),
+    async (signal) => {
+      const res = await client.getMachines(undefined, { signal });
       return sortMachines(res.items ?? []);
     },
   );
@@ -138,13 +161,11 @@ export function useMachines(): UseMachinesReturn {
   const [operating, setOperating] = createSignal<Record<string, "starting" | "stopping">>({});
 
   onMount(() => {
-    const timer = setInterval(() => {
-      void refetch();
-    }, 15_000);
+    startPolling();
+  });
 
-    onCleanup(() => {
-      clearInterval(timer);
-    });
+  onCleanup(() => {
+    stopPolling();
   });
 
   async function start(machineId: string): Promise<Operation> {
@@ -162,7 +183,8 @@ export function useMachines(): UseMachinesReturn {
       if (opId) {
         finalOp = await pollOperation(client, opId, abortController.signal);
       }
-      await refetch();
+      invalidate("machines");
+      await query.refetch();
       return finalOp;
     } finally {
       setOperating((prev) => {
@@ -188,7 +210,8 @@ export function useMachines(): UseMachinesReturn {
       if (opId) {
         finalOp = await pollOperation(client, opId, abortController.signal);
       }
-      await refetch();
+      invalidate("machines");
+      await query.refetch();
       return finalOp;
     } finally {
       setOperating((prev) => {
@@ -274,21 +297,22 @@ export function useMachines(): UseMachinesReturn {
   }
 
   function getConnection(machineId: string): MachineConnection | undefined {
-    const list = machines();
+    const list = query.data();
     const machine = list?.find((m) => m.machine_id === machineId);
     if (!machine) return undefined;
     return connect(machine);
   }
 
   const handleRefetch = async (): Promise<Machine[] | undefined> => {
-    const res = await refetch();
-    return res ?? undefined;
+    invalidate("machines");
+    const res = await query.refetch();
+    return (res as Machine[] | undefined) ?? undefined;
   };
 
   return {
-    machines,
-    loading: () => machines.loading,
-    error: () => machines.error,
+    machines: query.data as Resource<Machine[]>,
+    loading: () => query.data.loading,
+    error: () => query.data.error,
     refetch: handleRefetch,
     start,
     stop,
