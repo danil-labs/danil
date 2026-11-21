@@ -10,8 +10,11 @@ import {
   useOrganizations,
   useWorkspaces,
   useSelectWorkspace,
-  openAddWorkspace,
 } from "../queries.ts";
+import { useSession } from "@danil/session/solid";
+import { webLoginUrl } from "@danil/session";
+import { host } from "@danil/host";
+import { AddWorkspaceMenu } from "../components/AddWorkspaceMenu.tsx";
 import { WorkspaceErrorView } from "../components/WorkspaceErrorView.tsx";
 import { WorkspaceEmptyView } from "../components/WorkspaceEmptyView.tsx";
 import { OrganizationRailLayout } from "../components/OrganizationRailLayout.tsx";
@@ -36,6 +39,7 @@ export interface RailGroupsProps {
  * El «+» solo ofrece «Agregar workspace» abriendo el selector externo (RV1 #8, RV2 #20).
  */
 export const RailGroups: Component<RailGroupsProps> = (props) => {
+  const session = useSession();
   const orgsQuery = useOrganizations();
   const workspacesQuery = useWorkspaces();
   const selectWorkspace = useSelectWorkspace();
@@ -66,11 +70,13 @@ export const RailGroups: Component<RailGroupsProps> = (props) => {
     }
   };
 
-  const handleAddWorkspace = (orgId?: string) => {
+  const handleAddAccountOrOrg = () => {
     if (props.onAddWorkspace) {
-      props.onAddWorkspace(orgId);
+      props.onAddWorkspace();
+    } else if (host.kind === "desk") {
+      session.add();
     } else {
-      openAddWorkspace(orgId);
+      void host.openExternal(webLoginUrl());
     }
   };
 
@@ -103,7 +109,7 @@ export const RailGroups: Component<RailGroupsProps> = (props) => {
         available: orgWorkspaces.map((w) => ({
           id: w.id,
           name: w.name || `Workspace ${w.id}`,
-          logo: (w as any).logo ?? null,
+          logo: w.logo ?? null,
         })),
       };
     });
@@ -114,7 +120,7 @@ export const RailGroups: Component<RailGroupsProps> = (props) => {
     return wsList.map((w) => ({
       id: w.id,
       name: w.name || `Workspace ${w.id}`,
-      logo: (w as any).logo ?? null,
+      logo: w.logo ?? null,
     }));
   });
 
@@ -174,7 +180,7 @@ export const RailGroups: Component<RailGroupsProps> = (props) => {
           when={sessionGroups().length > 0}
           fallback={
             <WorkspaceEmptyView
-              onAddWorkspace={() => handleAddWorkspace()}
+              onAddWorkspace={() => handleAddAccountOrOrg()}
             />
           }
         >
@@ -197,16 +203,8 @@ export const RailGroups: Component<RailGroupsProps> = (props) => {
             )}
           />
 
-          {/* Botón «+» → «Agregar workspace» al pie del riel (RV1 #8, RV2 #20) */}
-          <button
-            type="button"
-            data-add-workspace=""
-            class="grid size-8 shrink-0 place-items-center rounded-md text-neutral-500 hover:bg-neutral-200 hover:text-neutral-950 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-primary transition-colors"
-            aria-label="Agregar workspace"
-            onClick={() => handleAddWorkspace()}
-          >
-            <span class="text-base font-semibold leading-none">+</span>
-          </button>
+          {/* Botón «+» con AddWorkspaceMenu (RV2b «+», RV1b N13) */}
+          <AddWorkspaceMenu onAddAccountOrOrg={handleAddAccountOrOrg} />
         </Show>
       </Show>
     </div>

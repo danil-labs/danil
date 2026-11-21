@@ -20,6 +20,8 @@ const MESSAGES: Record<string, string> = {
   "shell.workspaces.sessions_failed": "Error al cerrar sesión",
   "shell.workspaces.choose_organization": "Elegir organización",
   "shell.workspaces.web_organization_required": "Se requiere organización",
+  "shell.workspaces.add": "Agregar workspace",
+  "shell.workspaces.add_session": "Agregar cuenta u organización",
 };
 
 export function t(key: string, data?: Record<string, string | number>): string {

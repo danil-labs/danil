@@ -12,8 +12,6 @@ export function OrganizationWorkspaceTile(props: {
   active: boolean;
   state: AttentionState | null;
   stateLabel: string;
-  send?: any;
-  credits?: any;
   loadLogo?: (contextId: string, id: string, logo: string | null) => Promise<string | null>;
   onOpen: () => void;
   onMenu: (target: HTMLElement) => void;
@@ -78,8 +76,6 @@ export function OrganizationWorkspaceTile(props: {
             stale={props.stale}
             tile={props.tile}
             active={hover()}
-            send={props.send}
-            credits={props.credits}
           />
         </TooltipContent>
       </TooltipRoot>

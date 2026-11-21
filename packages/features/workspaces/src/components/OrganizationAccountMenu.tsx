@@ -25,7 +25,6 @@ export function OrganizationAccountMenu(props: {
   index: number;
   count: number;
   promo?: boolean;
-  send?: any;
   onPromo?: () => void;
   onManage: () => void;
   onHide: () => void;
