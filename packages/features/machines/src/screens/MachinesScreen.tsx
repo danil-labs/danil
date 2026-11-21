@@ -1,5 +1,5 @@
-import { For, Show } from "solid-js";
-import { MachineRow } from "../components/MachineRow.tsx";
+import { createSignal, For, Show } from "solid-js";
+import { Close, SignalDot } from "@danil/ui";
 import { useMachines, type SessionInput } from "../queries.ts";
 
 export interface MachinesScreenProps {
@@ -8,10 +8,9 @@ export interface MachinesScreenProps {
 }
 
 /**
- * Pantalla «Tus máquinas» (M1, M2):
- * Lista todas las máquinas que devuelve GET /v1/machines para la sesión,
- * sin filtros y sin depender de que haya un workspace activo.
- * Errores de API muestran botón de reintento, nunca lista vacía (M8).
+ * Pantalla «Tus máquinas»:
+ * Lista las máquinas disponibles con la apariencia y estructura de AccountMachines de apps/desktop.
+ * Datos y operaciones gestionados por useMachines.
  */
 export function MachinesScreen(props: MachinesScreenProps) {
   const {
@@ -25,6 +24,23 @@ export function MachinesScreen(props: MachinesScreenProps) {
     getConnection,
     operating,
   } = useMachines(props.session);
+
+  const [asking, setAsking] = createSignal<string | null>(null);
+  const [failed, setFailed] = createSignal(false);
+
+  async function handleTogglePower(id: string, isRunning: boolean) {
+    setAsking(null);
+    try {
+      if (isRunning) {
+        await stop(id);
+      } else {
+        await start(id);
+      }
+      setFailed(false);
+    } catch {
+      setFailed(true);
+    }
+  }
 
   return (
     <div class={`flex w-full flex-col gap-4 p-4 ${props.class ?? ""}`} data-machines-screen="">
@@ -81,20 +97,75 @@ export function MachinesScreen(props: MachinesScreenProps) {
       </Show>
 
       <Show when={machines() && machines()!.length > 0}>
-        <div class="flex flex-col gap-2">
+        <ul
+          class="-mt-1 flex flex-wrap items-center gap-1.5 px-3 pb-1 text-xs text-neutral-500"
+          data-account-machines=""
+        >
           <For each={machines()!}>
-            {(machine) => (
-              <MachineRow
-                machine={machine}
-                isOperating={operating()[machine.machine_id]}
-                connection={getConnection(machine.machine_id)}
-                onStart={start}
-                onStop={stop}
-                onConnect={connect}
-              />
-            )}
+            {(m) => {
+              const name = () => m.name?.trim() || m.machine_id;
+              const on = () => m.state === "running";
+              const isOperating = () => Boolean(operating()[m.machine_id]);
+              return (
+                <li
+                  class="flex min-w-0 items-center gap-1 rounded-sm border border-border py-0.5 pr-0.5 pl-1.5"
+                  data-account-machine={m.machine_id}
+                  data-machine-id={m.machine_id}
+                  data-on={on() ? "true" : "false"}
+                  title={on() ? "En línea" : "Desconectada"}
+                >
+                  <SignalDot tone={on() ? "success" : "off"} />
+                  <span class="max-w-[140px] truncate">{name()}</span>
+                  <Show
+                    when={asking() === m.machine_id}
+                    fallback={
+                      <div class="flex items-center gap-1">
+                        <Show when={!isOperating()}>
+                          <button
+                            type="button"
+                            class="grid size-4 place-items-center rounded-sm hover:bg-surface-muted hover:text-neutral-950"
+                            aria-label={on() ? `Apagar ${name()}` : `Encender ${name()}`}
+                            title={on() ? `Apagar ${name()}` : `Encender ${name()}`}
+                            onClick={() => setAsking(m.machine_id)}
+                          >
+                            <Close size={11} />
+                          </button>
+                        </Show>
+                        <button
+                          type="button"
+                          class="rounded px-1 text-2xs text-neutral-500 hover:bg-surface-muted hover:text-neutral-950"
+                          onClick={() => connect(m)}
+                        >
+                          Conectar
+                        </button>
+                      </div>
+                    }
+                  >
+                    <button
+                      type="button"
+                      class="px-1 text-error-strong"
+                      data-sign-out-yes=""
+                      onClick={() => void handleTogglePower(m.machine_id, on())}
+                    >
+                      {on() ? "Apagar" : "Encender"}
+                    </button>
+                    <button
+                      type="button"
+                      class="px-1"
+                      onClick={() => setAsking(null)}
+                    >
+                      Cancelar
+                    </button>
+                  </Show>
+                </li>
+              );
+            }}
           </For>
-        </div>
+        </ul>
+      </Show>
+
+      <Show when={failed()}>
+        <span class="text-xs text-error-strong">Error al cambiar el estado de la máquina</span>
       </Show>
     </div>
   );
