@@ -1,6 +1,6 @@
 import { createSignal, For, Show } from "solid-js";
+import { ITEM_DE_MENU, Popover, PopoverContent, PopoverTrigger, SignalDot } from "@danil/ui";
 import type { Machine } from "../model.ts";
-import { MachineBadge } from "./MachineBadge.tsx";
 import { MachineIcon } from "./MachineIcon.tsx";
 
 export interface RunOnPickerProps {
@@ -14,96 +14,106 @@ export interface RunOnPickerProps {
 }
 
 /**
- * Selector «Ejecutar en» (M3):
- * Ofrece las máquinas donde se puede ejecutar el workspace actual.
- * La plataforma entrega la lista ya filtrada; este componente solo presenta.
- * El ícono visual depende de kind; la lógica no (R5).
+ * Selector «Ejecutar en»: la máquina donde corre una tarea.
+ * Apariencia idéntica a MachinePicker de apps/desktop manteniendo las props actuales.
  */
 export function RunOnPicker(props: RunOnPickerProps) {
-  const [open, setOpen] = createSignal(false);
+  const [abierto, setAbierto] = createSignal(false);
 
-  const selected = () =>
-    props.machines.find((m) => m.machine_id === props.selectedId) ?? props.machines[0];
+  const elegida = () =>
+    props.machines.find((m) => (props.selectedId ? m.machine_id === props.selectedId : false)) ??
+    props.machines[0];
 
-  const handleSelect = (m: Machine) => {
-    setOpen(false);
-    props.onSelect?.(m);
+  const nombre = (m: Machine) => m.name?.trim() || m.machine_id;
+
+  const etiqueta = () => {
+    const chosen = elegida();
+    if (chosen) return nombre(chosen);
+    return "Ejecutar en";
   };
 
   return (
-    <div class={`relative inline-block text-left ${props.class ?? ""}`} data-run-on-picker="">
-      <button
-        type="button"
-        disabled={props.disabled || props.loading}
-        class="inline-flex items-center gap-2 rounded-md border border-neutral-300 bg-white px-2.5 py-1.5 text-xs font-medium text-neutral-800 shadow-sm transition hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-200 dark:hover:bg-neutral-800"
-        aria-haspopup="listbox"
-        aria-expanded={open()}
-        onClick={() => setOpen((prev) => !prev)}
-      >
-        <span class="text-neutral-500 dark:text-neutral-400">Ejecutar en:</span>
-        <Show
-          when={selected()}
-          fallback={<span class="italic text-neutral-400">Seleccionar máquina</span>}
+    <div class={`inline-block text-left ${props.class ?? ""}`} data-run-on-picker="">
+      <Popover open={abierto()} onOpenChange={setAbierto} placement="top-start" gutter={4}>
+        <PopoverTrigger
+          disabled={props.disabled || props.loading}
+          class="flex min-h-7 max-w-[260px] items-center gap-1.5 rounded-sm px-1 text-left text-xs text-neutral-500 hover:text-neutral-950 disabled:cursor-not-allowed disabled:opacity-50"
+          aria-label="Ejecutar en"
         >
-          {(m) => (
-            <span class="inline-flex items-center gap-1.5 font-medium">
-              <MachineIcon kind={m().kind} class="h-3.5 w-3.5" />
-              <span>{m().name?.trim() || m().machine_id}</span>
-            </span>
-          )}
-        </Show>
-        <svg
-          class="h-3.5 w-3.5 text-neutral-400"
-          viewBox="0 0 20 20"
-          fill="currentColor"
-          aria-hidden="true"
-        >
-          <path
-            fill-rule="evenodd"
-            d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z"
-            clip-rule="evenodd"
-          />
-        </svg>
-      </button>
-
-      <Show when={open()}>
-        <div
-          class="absolute left-0 z-50 mt-1 min-w-[14rem] rounded-md border border-neutral-200 bg-white py-1 shadow-lg dark:border-neutral-800 dark:bg-neutral-900"
-          role="listbox"
-        >
-          <Show
-            when={props.machines.length > 0}
-            fallback={
-              <div class="px-3 py-2 text-xs text-neutral-500">No hay máquinas disponibles</div>
-            }
-          >
-            <For each={props.machines}>
-              {(m) => {
-                const isSelected = () => m.machine_id === selected()?.machine_id;
-                return (
-                  <button
-                    type="button"
-                    role="option"
-                    aria-selected={isSelected()}
-                    class={`flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-xs transition ${
-                      isSelected()
-                        ? "bg-neutral-100 font-medium text-neutral-900 dark:bg-neutral-800 dark:text-neutral-100"
-                        : "text-neutral-700 hover:bg-neutral-50 dark:text-neutral-300 dark:hover:bg-neutral-800/60"
-                    }`}
-                    onClick={() => handleSelect(m)}
-                  >
-                    <span class="inline-flex items-center gap-2 truncate">
-                      <MachineIcon kind={m.kind} class="h-3.5 w-3.5 shrink-0" />
-                      <span class="truncate">{m.name?.trim() || m.machine_id}</span>
-                    </span>
-                    <MachineBadge state={m.state} connection={m.connection} />
-                  </button>
-                );
-              }}
-            </For>
+          <MachineIcon wakes={(elegida() as { wakes?: boolean } | undefined)?.wakes} size={12} />
+          <span class="truncate">{etiqueta()}</span>
+          <Show when={elegida()}>
+            {(chosen) => <SignalDot tone={chosen().state === "running" ? "success" : "off"} />}
           </Show>
-        </div>
-      </Show>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="11"
+            height="11"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="m6 9 6 6 6-6" />
+          </svg>
+        </PopoverTrigger>
+        <PopoverContent class="w-[300px] overflow-hidden p-0 text-caption text-neutral-500 shadow-lg">
+          <p class="m-0 border-b border-border px-2 py-1.5">Ejecutar en</p>
+          <div class="py-1">
+            <Show
+              when={props.machines.length > 0}
+              fallback={
+                <div class="px-3 py-2 text-xs text-neutral-500">No hay máquinas disponibles</div>
+              }
+            >
+              <For each={props.machines}>
+                {(m) => {
+                  const isSelected = () => elegida()?.machine_id === m.machine_id;
+                  const isOn = () => m.state === "running";
+                  return (
+                    <button
+                      class={`${ITEM_DE_MENU} flex items-center gap-2 disabled:opacity-50`}
+                      data-machine-option={m.machine_id}
+                      onClick={() => {
+                        setAbierto(false);
+                        props.onSelect?.(m);
+                      }}
+                    >
+                      <MachineIcon wakes={(m as { wakes?: boolean }).wakes} size={12} />
+                      <SignalDot tone={isOn() ? "success" : "off"} />
+                      <span class="flex-1 truncate">{nombre(m)}</span>
+                      <span class="text-2xs">
+                        {isOn() ? "encendida" : "apagada"}
+                      </span>
+                      <span class="flex w-3 shrink-0">
+                        <Show when={isSelected()}>
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="12"
+                            height="12"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            aria-hidden="true"
+                          >
+                            <path d="M20 6 9 17l-5-5" />
+                          </svg>
+                        </Show>
+                      </span>
+                    </button>
+                  );
+                }}
+              </For>
+            </Show>
+          </div>
+        </PopoverContent>
+      </Popover>
     </div>
   );
 }
