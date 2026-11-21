@@ -73,7 +73,8 @@ for (const name of recipes) {
   if (/name:\s*\//.test(src) || /\.catch\(\s*\(\)\s*=>\s*\{\s*\}\s*\)/.test(src)) {
     failed++; report.push(`FAIL ${name}: receta no válida (nombre por regex o .catch(() => {})); usa el nombre visible exacto y deja que el paso falle`); continue;
   }
-  const r = (await import(join(HERE, "screens", `${name}.mjs`))).default;
+  const r = { ...(await import(join(HERE, "screens", `${name}.mjs`))).default };
+  if (!r.region && name.startsWith("configuracion-")) r.region = "[role=dialog]";
   const a = join(OUT, `${name}-old.png`), b = join(OUT, `${name}-new.png`), d = join(OUT, `${name}-diff.png`);
   try {
     var boxOld = await shoot(oldSrv.url, r.old, a, r.region);
