@@ -1,3 +1,4 @@
+import { sendIdentityMe } from "../../platform/identity.ts";
 import { accountId as asAccountId, type PendingUnions } from "./account-transfers.ts";
 
 /** Un workspace local que se puede adoptar en la organización personal (`adoption_candidates`). */
@@ -53,7 +54,7 @@ function stopCause(reply: { status: number; body?: unknown }): string | null {
 /** El `sub` de la persona en ese contexto: el que firma la prueba y el servidor compara con la sesión. */
 async function personOf(send: Send, context: string, known: string | null) {
   if (known) return known;
-  const reply = await send(context, "GET", "/v1/identity/me").catch(() => null);
+  const reply = await sendIdentityMe(send, context).catch(() => null);
   const id = (reply?.body as { id?: unknown } | undefined)?.id;
   return reply?.status === 200 && typeof id === "string" && id ? id : null;
 }
@@ -221,7 +222,7 @@ export function adoptionTarget<G extends { org: string; plan?: string | null }>(
  */
 export async function adoptionTargetOf<G extends { context_id: string; org: string; plan?: string | null }>(groups: readonly G[], send: Send): Promise<G | undefined> {
   if (!groups.length) return undefined;
-  const me = await send(groups[0].context_id, "GET", "/v1/identity/me").catch(() => null);
+  const me = await sendIdentityMe(send, groups[0].context_id).catch(() => null);
   if (!me || me.status !== 200) return adoptionTarget(groups);
   const organizations = (me.body as { organizations?: unknown } | null)?.organizations;
   if (!Array.isArray(organizations)) return adoptionTarget(groups);

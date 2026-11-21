@@ -1,3 +1,4 @@
+import { probeIdentityMe } from "../../platform/identity.ts";
 import { addSessionAccount } from "./add-session-account.ts";
 import { createSessionEmptyState, refusalEmptyReason } from "./session-empty.ts";
 
@@ -37,7 +38,7 @@ export function createSessionContexts(invoke: ContextInvoke, changed: () => void
       connected = status.state === "connected";
       if (unsupported && status.sessions?.some((f) => f.contexts.length)) {
         const context = status.sessions.flatMap((f) => f.contexts)[0].context_id;
-        await invoke("danil_edge_fetch", { method: "GET", path: "/v1/identity/me", context });
+        await probeIdentityMe(invoke, context);
         if (read !== epoch) return;
       }
       families = status.sessions ?? [];
