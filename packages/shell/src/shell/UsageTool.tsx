@@ -13,7 +13,7 @@ import { MarcaAgente } from "../../../ui/src/icons";
 import { ProgressBar } from "../../../ui/src/ProgressBar";
 import { type Usage, usageKey } from "./usage";
 
-const AccountCard = sharedLazy(() => import("../../../features/settings/src/AccountCard"));
+const AccountCard = sharedLazy(() => import("../../../features/settings/src/screens/AccountCard"));
 const DanilCredits = sharedLazy(() => import("../../../features/chat/src/screens/DanilCredits"));
 
 function orderedCards(usage: Usage, agent: string) {

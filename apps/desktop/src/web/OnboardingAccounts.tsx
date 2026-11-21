@@ -2,9 +2,9 @@ import { isFreeRouterAgent, isRetiredAgent } from "../../../../packages/tasks/sr
 import { createSignal, For, Match, onCleanup, onMount, Show, Switch } from "solid-js";
 import { nombreDeAgente } from "../../../../packages/features/onboarding/src/queries/onboarding-store";
 import { Pantalla } from "../../../../packages/features/onboarding/src/components/Screen";
-import { accountKeyUrl } from "../../../../packages/features/settings/src/account-auth";
-import type { AccountList, AgentOpt, LoginEvent } from "../../../../packages/features/settings/src/accounts-store";
-import { LoginCodeForm } from "../../../../packages/features/settings/src/LoginCodeForm";
+import { accountKeyUrl } from "../../../../packages/features/settings/src/model/account-auth";
+import type { AccountList, AgentOpt, LoginEvent } from "../../../../packages/features/settings/src/queries/accounts-store";
+import { LoginCodeForm } from "../../../../packages/features/settings/src/screens/LoginCodeForm";
 import { t } from "../lib/i18n";
 import { invoke } from "../../../../packages/engine-client/src/client.ts";
 import { listen } from "../lib/serviceEvents";

@@ -5,7 +5,7 @@ import { leerPref } from "../../../../apps/desktop/src/lib/prefs";
 import { t } from "../../../../apps/desktop/src/lib/i18n";
 import { Button } from "../../../ui/src/Button";
 import { Toast } from "../../../ui/src/Toast";
-import { createWorkspaces } from "../../../features/settings/src/workspaces-store";
+import { createWorkspaces } from "../../../features/settings/src/queries/workspaces-store";
 import type { AttentionState, WorkspaceAttention } from "./attention";
 import { Dynamic } from "solid-js/web";
 import { cn } from "../../../../apps/desktop/src/lib/utils";

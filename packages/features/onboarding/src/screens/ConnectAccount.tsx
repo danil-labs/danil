@@ -8,8 +8,8 @@ import { createEffect, createSignal, type JSX, on, Show } from "solid-js";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { Button } from "../../../../ui/src/Button";
 import { Spinner } from "../../../../ui/src/Spinner";
-import { createDanilSession } from "../../../settings/src/danil-session";
-import { requestAccessInBrowser, TerminusLicense } from "../../../settings/src/TerminusLicense";
+import { createDanilSession } from "../../../settings/src/components/danil-session";
+import { requestAccessInBrowser, TerminusLicense } from "../../../settings/src/screens/TerminusLicense";
 import { noteFirstLoginSignedIn } from "../../../../shell/src/shell";
 import { rememberAccountWelcome } from "../model/account-welcome";
 

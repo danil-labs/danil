@@ -1,4 +1,4 @@
-import type { AccountProfileSource } from "../../../../packages/features/settings/src/account-profile.ts";
+import type { AccountProfileSource } from "../../../../packages/features/settings/src/model/account-profile.ts";
 import type { platformTransport } from "../../../../packages/session/src/platform-session";
 
 /** Identity owns the person; photo editing is unavailable until identity publishes it. */

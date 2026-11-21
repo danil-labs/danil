@@ -5,9 +5,9 @@
  */
 import type { AccountWorkspace, Answer, Computer, CredentialSource, MemorySource, SpaceOrderSource } from "@terminus/computers";
 import { createRoot, createSignal, type JSX } from "solid-js";
-import type { AccountEmailsSource } from "../../features/settings/src/account-emails";
-import type { AccountProfileSource } from "../../features/settings/src/account-profile";
-import type { Account } from "../../features/settings/src/accounts-store";
+import type { AccountEmailsSource } from "../../features/settings/src/model/account-emails";
+import type { AccountProfileSource } from "../../features/settings/src/model/account-profile";
+import type { Account } from "../../features/settings/src/queries/accounts-store";
 import type { AuditLogSource } from "../../../apps/desktop/src/web/audit-log";
 import type { WorkspaceAssetsSource } from "../../../apps/desktop/src/web/workspace-assets";
 

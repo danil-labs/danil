@@ -16,8 +16,8 @@ import { RemoveButton } from "../../../../ui/src/IconAction";
 import { Input } from "../../../../ui/src/Input";
 import { MarcaAgente } from "../../../../ui/src/icons";
 import { Spinner } from "../../../../ui/src/Spinner";
-import { Consentir } from "../../../settings/src/FreeRouterConsentDialog";
-import { DialogoDeConexion } from "../../../settings/src/LoginDialog";
+import { Consentir } from "../../../settings/src/components/FreeRouterConsentDialog";
+import { DialogoDeConexion } from "../../../settings/src/components/LoginDialog";
 import { AvanceDeDescarga, BarraDeCarga, CodigoParaConfirmar, Peso } from "./DownloadProgress";
 import { AL_FINAL, type Conexiones, type Fila, nombreDeFila, ordenDelMapa, type Paso } from "../queries/connect-store";
 

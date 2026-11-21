@@ -25,8 +25,8 @@ import { prosa } from "../../../../../apps/desktop/src/lib/prose";
 import { cn } from "../../../../../apps/desktop/src/lib/utils";
 import { MarcaAgente } from "../../../../ui/src/icons";
 import { Popover, PopoverContent, PopoverTrigger } from "../../../../ui/src/Popover";
-import type { AccountList } from "../../../settings/src/accounts-store";
-import { createFreeRouterConsent } from "../../../settings/src/free-router-consent";
+import type { AccountList } from "../../../settings/src/queries/accounts-store";
+import { createFreeRouterConsent } from "../../../settings/src/components/free-router-consent";
 import { DANIL_CREDITS } from "../model/danil-credits";
 
 const DanilServices = lazy(() => import("./DanilServices"));
