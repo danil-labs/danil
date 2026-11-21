@@ -1,11 +1,13 @@
 import type { Component, JSX } from "solid-js";
 import type { SessionSource } from "@danil/session";
+import type { PlatformClient } from "@danil/platform-client";
+import type { Host } from "@danil/host";
 import { App, type AppProps } from "./App.tsx";
 
 export interface CreateShellOptions {
   session?: SessionSource;
-  platform?: unknown;
-  host?: unknown;
+  platform?: PlatformClient;
+  host?: Host;
   initialPath?: string;
 }
 

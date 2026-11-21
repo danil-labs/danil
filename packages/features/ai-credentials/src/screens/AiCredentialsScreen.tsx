@@ -1,17 +1,12 @@
-import { createMemo, For, type JSX, Show } from "solid-js";
-import type {
-  ConnectOptions,
-  EngineClient,
-  PlatformClient,
-  WorkspaceRecipient,
-} from "../model.ts";
+import { createMemo, createSignal, For, type JSX, Show } from "solid-js";
+import type { MachineConnection } from "@danil/engine-client";
+import type { WorkspaceRecipient } from "../model.ts";
 import {
   useConnectAccount,
   useDeleteAccount,
   useProviders,
   useRemoveMachineAccount,
   useRestoreMachineAccount,
-  useWakeMachine,
   useWorkspaceAccounts,
 } from "../queries.ts";
 import { CredentialErrorNotice } from "../components/CredentialErrorNotice.tsx";
@@ -19,28 +14,27 @@ import { MachineWakeNotice } from "../components/MachineWakeNotice.tsx";
 import { ProviderCard } from "../components/ProviderCard.tsx";
 
 export interface AiCredentialsScreenProps {
-  workspaceId?: string;
-  platformClient?: PlatformClient;
-  engineClient?: EngineClient;
-  connectOptions?: ConnectOptions;
+  workspaceId: string;
+  conn?: MachineConnection;
   knownMachineIds?: string[];
+  onWakeMachine?: (machineId: string) => Promise<void> | void;
 }
 
 export function AiCredentialsScreen(props: AiCredentialsScreenProps): JSX.Element {
-  const activeWorkspaceId = () => props.workspaceId ?? "default";
+  const activeWorkspaceId = () => props.workspaceId;
 
   // Consulta única y cacheada de credenciales del workspace (B-023)
   const accountsQuery = useWorkspaceAccounts(activeWorkspaceId);
 
   // Consulta de proveedores en el motor
-  const providersQuery = useProviders(props.engineClient);
+  const providersQuery = useProviders(() => props.conn?.client);
 
   // Mutaciones
   const connectAction = useConnectAccount();
   const deleteAction = useDeleteAccount();
   const removeMachineAction = useRemoveMachineAccount();
   const restoreMachineAction = useRestoreMachineAccount();
-  const wakeAction = useWakeMachine();
+  const [waking, setWaking] = createSignal(false);
 
   const recipients = (): WorkspaceRecipient[] =>
     accountsQuery.data()?.recipients ?? [];
@@ -62,12 +56,14 @@ export function AiCredentialsScreen(props: AiCredentialsScreenProps): JSX.Elemen
   });
 
   async function handleWake(machineId: string) {
-    if (props.connectOptions) {
-      await wakeAction.wake({
-        ...props.connectOptions,
-        machine: { machine_id: machineId },
-      });
-      accountsQuery.refetch();
+    if (props.onWakeMachine) {
+      setWaking(true);
+      try {
+        await props.onWakeMachine(machineId);
+        accountsQuery.refetch();
+      } finally {
+        setWaking(false);
+      }
     }
   }
 
@@ -136,7 +132,7 @@ export function AiCredentialsScreen(props: AiCredentialsScreenProps): JSX.Elemen
       <MachineWakeNotice
         missingMachines={missingMachines()}
         onWake={handleWake}
-        waking={wakeAction.waking()}
+        waking={waking()}
       />
 
       {/* Lista de tarjetas de proveedores */}
