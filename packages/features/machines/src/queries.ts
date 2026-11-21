@@ -11,6 +11,7 @@ export * from "./queries/engine-workspaces.ts";
 export * from "./queries/guestChannels.ts";
 export * from "./queries/guestLink.ts";
 export * from "./queries/lastAnswer.ts";
+export * from "./queries/machines-query.ts";
 export * from "./queries/router.ts";
 export * from "./queries/scoped-fleet.ts";
 export * from "./queries/session-cloud.ts";

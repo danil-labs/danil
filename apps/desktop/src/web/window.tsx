@@ -1,5 +1,6 @@
 import { RelaySession } from "@terminus/computers";
-import { type Machine, type machinesClient, machineToComputer } from "../../../../packages/platform-client/src/machines.ts";
+import { type Machine, machineToComputer } from "../../../../packages/platform-client/src/machines.ts";
+import type { MachinesQuery } from "../../../../packages/features/machines/src/queries/machines-query.ts";
 import { Fleet, memberKey, relayLink, unwrap } from "@terminus/fleet";
 import { createSignal, lazy, Suspense } from "solid-js";
 import { createContextRelayPool, machinesListed, mergeByMachineId } from "../../../../packages/features/machines/src";
@@ -20,7 +21,7 @@ import { windowContext } from "./window-context";
 import { openWorkspaceUrl } from "./open-workspace-url";
 
 declare const __TERMINUS_VERSION__: string;
-type Base = { billing: ReturnType<typeof import("./window-billing").windowBilling>; contextMachines: (context: string) => ReturnType<typeof machinesClient>; sessions: import("./web-session-contexts").WebSessionCommands; active: ReturnType<typeof import("./window-active-context").windowActiveContext>; rail?: Capabilities["webRailCatalog"]; relayOrigin: string; credentials?: Capabilities["accountCredentials"]; permits: (name: string) => boolean; organizations?: Capabilities["organizations"]; promo?: Capabilities["webPromo"]; groupAccount?: Capabilities["groupAccount"]; reauth?: Capabilities["webReauth"]; preparing?: () => boolean; profile: AccountProfileSource; services: Pick<Capabilities, "webWorkspacePicker" | "danilCredits">; onUnavailable: () => void; };
+type Base = { billing: ReturnType<typeof import("./window-billing").windowBilling>; contextMachines: (context: string) => MachinesQuery; sessions: import("./web-session-contexts").WebSessionCommands; active: ReturnType<typeof import("./window-active-context").windowActiveContext>; rail?: Capabilities["webRailCatalog"]; relayOrigin: string; credentials?: Capabilities["accountCredentials"]; permits: (name: string) => boolean; organizations?: Capabilities["organizations"]; promo?: Capabilities["webPromo"]; groupAccount?: Capabilities["groupAccount"]; reauth?: Capabilities["webReauth"]; preparing?: () => boolean; profile: AccountProfileSource; services: Pick<Capabilities, "webWorkspacePicker" | "danilCredits">; onUnavailable: () => void; };
 const Picker = lazy(() => import("../../../../packages/features/machines/src/screens/MachinePicker").then(m => ({ default: m.MachinePicker })));
 const AccountMachines = lazy(() => import("../../../../packages/features/machines/src/screens/AccountMachines"));
 /** Another machine's slice changed: the window rereads just that. */

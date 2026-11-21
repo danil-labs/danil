@@ -12,6 +12,7 @@ import { type MachinesAnswer, machineToComputer, machinesClient } from "../../..
 
 import { edgeUntil, type EdgeMethod, type EdgeReply as NativeReply, type Patience } from "../../../../platform-client/src/client.ts";
 import { capabilitiesUrl } from "../../../../platform-client/src/machines.ts";
+import { machinesQuery } from "./machines-query.ts";
 
 /** Solo una base para armar rutas `/v1/...`; la webview no llama a este origen (lo hace Rust). */
 export const EDGE_ENDPOINT = "https://edge.danil.ai/v1";
@@ -65,7 +66,7 @@ export function edgeFetch(invoke: Invoke, onProblem?: (error: unknown) => void, 
 
 export function createCloudMachines(invoke: Invoke, onProblem?: (error: unknown) => void, endpoint = EDGE_ENDPOINT) {
   const fetch = edgeFetch(invoke, onProblem);
-  const client = machinesClient({ endpoint, fetch });
+  const client = machinesQuery(machinesClient({ endpoint, fetch }));
   /**
    * Lo que el borde anuncia, con la lectura común de Desk y la web (`@terminus/computers`):
    * `denied` sin acceso; `null` sin catálogo (404/501); `undefined` un fallo transitorio
