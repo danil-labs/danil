@@ -48,6 +48,7 @@ export function useSessionHistory(
   client: EngineClient,
   sessionId: Accessor<string>,
   project: Accessor<string | undefined> = () => "",
+  onLoaded?: (turns: ChatTurnView[]) => void,
 ): [Resource<ChatTurnView[]>, { refetch: () => void; mutate: (v: ChatTurnView[]) => void }] {
   const [history, { refetch, mutate }] = createResource(sessionId, async (id) => {
     if (!id) return [];
@@ -55,7 +56,9 @@ export function useSessionHistory(
       project: project() ?? "",
       id,
     });
-    return transcribeSessionTurns(res);
+    const turns = transcribeSessionTurns(res);
+    onLoaded?.(turns);
+    return turns;
   });
 
   return [history, { refetch, mutate }];

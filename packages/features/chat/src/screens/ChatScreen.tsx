@@ -3,8 +3,8 @@
  * Paridad visual con apps/desktop/src/features/chat/Chat.tsx.
  */
 
-import { createEffect, For, Show } from "solid-js";
-import type { EngineClient } from "@danil/engine-client";
+import { For, Show, createSignal } from "solid-js";
+import type { MachineConnection } from "@danil/engine-client";
 import { createChatStore } from "../store.ts";
 import {
   useSessionHistory,
@@ -12,6 +12,7 @@ import {
   useSendMessage,
   useStopTurn,
   useRespondPermission,
+  useAnswerQuestion,
 } from "../queries.ts";
 import { MessageItem } from "../components/MessageItem.tsx";
 import { Composer } from "../components/Composer.tsx";
@@ -20,42 +21,45 @@ import { TurnStatus } from "../components/TurnStatus.tsx";
 import type { ChatTurnView } from "../model.ts";
 
 export interface ChatScreenProps {
-  conn: EngineClient;
+  conn: MachineConnection;
   sessionId: string;
   project?: string;
 }
 
-export function ChatScreen(props: ChatScreenProps) {
+interface ChatSessionViewProps {
+  conn: MachineConnection;
+  sessionId: string;
+  project?: string;
+}
+
+function ChatSessionView(props: ChatSessionViewProps) {
   const store = createChatStore(props.sessionId);
 
-  // Consulta del historial de la sesión
+  // Consulta del historial de la sesión: reconcilia en el fetcher sin createEffect (RV1 #35)
   const [historyResource, { refetch }] = useSessionHistory(
-    props.conn,
+    props.conn.client,
     () => props.sessionId,
     () => props.project,
+    (turns) => {
+      store.setHistory(turns);
+    },
   );
 
-  // Sincronizar el historial persistido con el store (B-014)
-  createEffect(() => {
-    const data = historyResource();
-    if (data) {
-      store.setHistory(data);
-    }
-  });
-
-  // Suscripción de streaming reactiva con cursor
+  // Suscripción de streaming reactiva con cursor plano fuera del store (RV1 #13)
   useChatStream(
-    props.conn,
+    props.conn.client,
     () => props.sessionId,
-    store.state.cursor,
+    store.cursor,
     (ev) => {
       store.handleStreamEvent(ev);
     },
   );
 
-  const { sendMessage, isSending, sendError } = useSendMessage(props.conn);
-  const { stopTurn, isStopping } = useStopTurn(props.conn);
-  const { respondPermission, isResponding } = useRespondPermission(props.conn);
+  const { sendMessage, isSending, sendError } = useSendMessage(props.conn.client);
+  const { stopTurn, isStopping } = useStopTurn(props.conn.client);
+  const { respondPermission, isResponding: isRespondingPermission } = useRespondPermission(props.conn.client);
+  const { answerQuestion } = useAnswerQuestion(props.conn.client);
+  const [isAnsweringQuestion, setIsAnsweringQuestion] = createSignal(false);
 
   const handleSend = async (prompt: string) => {
     try {
@@ -87,6 +91,22 @@ export function ChatScreen(props: ChatScreenProps) {
       });
     } catch {
       // Revertir o reportar si falla
+    }
+  };
+
+  const handleAnswerQuestion = async (requestId: string, answers: unknown[]) => {
+    setIsAnsweringQuestion(true);
+    try {
+      store.answerQuestion(requestId, answers);
+      await answerQuestion({
+        sessionId: props.sessionId,
+        requestId,
+        answers,
+      });
+    } catch {
+      // Revertir o reportar si falla
+    } finally {
+      setIsAnsweringQuestion(false);
     }
   };
 
@@ -168,6 +188,7 @@ export function ChatScreen(props: ChatScreenProps) {
                 <MessageItem
                   turn={turn}
                   onPermissionDecide={handlePermissionDecide}
+                  onAnswerQuestion={handleAnswerQuestion}
                 />
               )}
             </For>
@@ -177,6 +198,7 @@ export function ChatScreen(props: ChatScreenProps) {
                 <MessageItem
                   turn={at()}
                   onPermissionDecide={handlePermissionDecide}
+                  onAnswerQuestion={handleAnswerQuestion}
                 />
               )}
             </Show>
@@ -190,9 +212,27 @@ export function ChatScreen(props: ChatScreenProps) {
         onStop={handleStop}
         isSending={isSending()}
         isTurnRunning={isTurnRunning() || isStopping()}
-        disabled={isResponding()}
+        disabled={isRespondingPermission() || isAnsweringQuestion()}
       />
     </div>
+  );
+}
+
+/**
+ * ChatScreen con clave por sessionId (RV1 #35).
+ * Se desmonta y vuelve a montar al cambiar de sesión para aislar el store y streaming.
+ */
+export function ChatScreen(props: ChatScreenProps) {
+  return (
+    <Show when={props.sessionId} keyed>
+      {(sid) => (
+        <ChatSessionView
+          conn={props.conn}
+          sessionId={sid}
+          project={props.project}
+        />
+      )}
+    </Show>
   );
 }
 

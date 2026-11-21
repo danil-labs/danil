@@ -23,16 +23,18 @@ export interface ChatStoreState {
   sessionId: string;
   history: ChatTurnView[];
   activeTurn: TurnState;
-  cursor: StreamCursor;
   error: string | null;
 }
 
 export function createChatStore(sessionId: string) {
+  // B-014 / RV1 #13: el cursor vive fuera del store reactivo de Solid como objeto plano
+  // para evitar mutar proxies.
+  const cursor: StreamCursor = createStreamCursor(sessionId);
+
   const [state, setState] = createStore<ChatStoreState>({
     sessionId,
     history: [],
     activeTurn: createInitialTurnState(),
-    cursor: createStreamCursor(sessionId),
     error: null,
   });
 
@@ -43,7 +45,7 @@ export function createChatStore(sessionId: string) {
     const { turns, activeStillRunning } = reconcileHistoryWithMemory(
       persistedTurns,
       state.activeTurn,
-      state.cursor,
+      cursor,
     );
 
     setState("history", turns);
@@ -243,12 +245,13 @@ export function createChatStore(sessionId: string) {
   const reset = () => {
     setState("history", []);
     setState("activeTurn", createInitialTurnState());
-    setState("cursor", createStreamCursor(sessionId));
+    Object.assign(cursor, createStreamCursor(sessionId));
     setState("error", null);
   };
 
   return {
     state,
+    cursor,
     setHistory,
     handleStreamEvent,
     addUserMessage,

@@ -160,6 +160,24 @@ export function transcribeSessionTurns(rawSession: unknown): ChatTurnView[] {
       });
     }
 
+    // Hidratar preguntas guardadas
+    if (Array.isArray(t.questions)) {
+      t.questions.forEach((q, qIdx) => {
+        if (q && typeof q === "object") {
+          const qObj = q as { request_id?: string; text?: string; questions?: unknown[]; answers?: unknown[] };
+          pieces.push({
+            id: `question_${id}_${qIdx}`,
+            kind: "question",
+            requestId: qObj.request_id ?? `req_${qIdx}`,
+            text: qObj.text ?? "",
+            questions: qObj.questions,
+            answers: qObj.answers,
+            status: "answered",
+          });
+        }
+      });
+    }
+
     // Agregar delta principal de texto
     if (text) {
       pieces.push({

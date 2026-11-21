@@ -86,13 +86,6 @@ export function WorkspaceScreen(props: { id: string }): JSX.Element {
     return connect(m);
   });
 
-  // Conexión compatible con EngineClient y MachineConnection para ChatScreen
-  const chatConn = createMemo<(ChatScreenProps["conn"] & MachineConnection) | undefined>(() => {
-    const c = conn();
-    if (!c) return undefined;
-    return Object.assign(c.client, c);
-  });
-
   return (
     <div style={{ display: "flex", "flex-direction": "column", height: "100%", width: "100%", overflow: "hidden" }}>
       <Tabs defaultValue="projects" class="workspace-tabs" style={{ display: "flex", "flex-direction": "column", height: "100%" }}>
@@ -124,7 +117,7 @@ export function WorkspaceScreen(props: { id: string }): JSX.Element {
           </Tabs.Content>
           <Tabs.Content value="chat" style={{ height: "100%" }}>
             <Show
-              when={chatConn()}
+              when={conn()}
               fallback={
                 <div class="flex h-32 items-center justify-center text-xs text-neutral-400">
                   Conectando con la máquina del espacio...
