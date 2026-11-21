@@ -97,11 +97,7 @@ export async function fetchProjectsAndTasks(
     const taskLists = await batchMap(projects, BATCH_CONCURRENCY, async (project) => {
       try {
         let rawTasks: unknown[] = [];
-        if (typeof clientAny.list_sessions === "function") {
-          rawTasks = (await (
-            clientAny.list_sessions as (args: { project: string }) => Promise<unknown[]>
-          )({ project: project.id })) ?? [];
-        } else if (typeof conn.client.list_live_sessions === "function") {
+        if (typeof conn.client.list_live_sessions === "function") {
           rawTasks = (await conn.client.list_live_sessions({ project: project.id })) ?? [];
         }
         const tasks: TaskRecord[] = (Array.isArray(rawTasks) ? rawTasks : []).map((t) => {
@@ -261,9 +257,32 @@ export async function applyTaskDeletion(
   let result: DeleteTaskResult;
 
   if (typeof clientAny.task_lifecycle_apply === "function") {
-    const raw = (await (
-      clientAny.task_lifecycle_apply as (a: unknown) => Promise<unknown>
-    )(args)) as Record<string, unknown>;
+    let raw: Record<string, unknown>;
+    try {
+      raw = (await (
+        clientAny.task_lifecycle_apply as (a: unknown) => Promise<unknown>
+      )(args)) as Record<string, unknown>;
+    } catch (err: unknown) {
+      const code = err && typeof err === "object" && "code" in err ? String((err as { code: unknown }).code) : "";
+      const msg = err instanceof Error ? err.message : String(err);
+      if (code === "task_family_consent_changed" || msg.includes("task_family_consent_changed") || msg.includes("consent")) {
+        const consentErr = new Error("task_family_consent_changed");
+        (consentErr as unknown as { code: string }).code = "task_family_consent_changed";
+        throw consentErr;
+      }
+      throw err;
+    }
+
+    if (
+      raw?.code === "task_family_consent_changed" ||
+      raw?.error === "task_family_consent_changed" ||
+      raw?.status === "task_family_consent_changed"
+    ) {
+      const consentErr = new Error("task_family_consent_changed");
+      (consentErr as unknown as { code: string }).code = "task_family_consent_changed";
+      throw consentErr;
+    }
+
     const applied = Array.isArray(raw?.applied)
       ? (raw.applied as { project: string; id: string }[])
       : preview.members.map((m) => ({ project: m.project, id: m.id }));

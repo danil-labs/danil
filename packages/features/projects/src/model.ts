@@ -6,7 +6,6 @@ export type RawProjectsOutput = Awaited<ReturnType<EngineClient["list_projects"]
 export type RawLiveSessionsOutput = Awaited<ReturnType<EngineClient["list_live_sessions"]>>;
 export type RawSessionParams = Parameters<EngineClient["list_live_sessions"]>[0];
 export type RawDeleteParams = Parameters<EngineClient["delete_session"]>[0];
-export type RawBlockersParams = Parameters<EngineClient["task_blockers"]>[0];
 export type RawFinishParams = Parameters<EngineClient["finish_task"]>[0];
 export type Workspace = PlatformWorkspace;
 
