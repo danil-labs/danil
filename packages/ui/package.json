@@ -9,9 +9,15 @@
   "scripts": {
     "typecheck": "tsc --noEmit"
   },
+  "dependencies": {
+    "@kobalte/core": "^0.13.13",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "solid-js": "^1.9.17",
+    "tailwind-merge": "^3.6.0"
+  },
   "devDependencies": {
     "typescript": "^5.7.2",
-    "vite": "^6.0.5",
-    "solid-js": "^1.9.17"
+    "vite": "^6.0.5"
   }
 }
