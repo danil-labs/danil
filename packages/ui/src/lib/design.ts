@@ -85,7 +85,7 @@ export const AGENT_MARKS: Record<AgentMarkId, AgentMark> = {
 };
 
 export type ToolMarkId =
-  | "github" | "git" | "bitbucket" | "gitlab" | "atlassian" | "notion" | "figma" | "excalidraw" | "mcp" | "drive" | "zotero" | "drawio" | "typst" | "libreoffice" | "cua" | "danil" | "supabase" | "slack" | "linear" | "sentry" | "vercel" | "docker" | "postgresql" | "playwright" | "stripe" | "cloudflare" | "googlecloud" | "aws" | "workos";
+  | "github" | "git" | "bitbucket" | "gitlab" | "atlassian" | "notion" | "figma" | "excalidraw" | "mcp" | "drive" | "zotero" | "drawio" | "typst" | "libreoffice" | "cua" | "danil" | "slack" | "linear" | "sentry" | "vercel" | "docker" | "postgresql" | "playwright" | "stripe" | "cloudflare" | "googlecloud" | "aws" | "workos";
 
 export type ToolMarkPath = { d: string; fill: string | null };
 
@@ -206,12 +206,6 @@ export const TOOL_MARKS: Record<ToolMarkId, ToolMark> = {
     dark: [
       { d: "M 120.300781 167.566406 C 125.898438 186.785156 143.5 200 163.5 200 L 166 200 C 190.851562 200 211 179.832031 211 154.949219 L 211 49.839844 L 173.5 49.839844 L 173.5 155.140625 C 173.5 159.183594 170.226562 162.457031 166.1875 162.457031 C 163.078125 162.457031 160.3125 160.492188 159.285156 157.558594 L 132.6875 81.515625 C 117.589844 38.347656 56.542969 38.347656 41.445312 81.515625 L 0 200 L 42.484375 200 L 80.179688 92.234375 C 82.460938 85.71875 91.675781 85.71875 93.953125 92.234375 Z", fill: "#ececef" },
       { d: "M 192.25 37.5 C 202.605469 37.5 211 29.105469 211 18.75 C 211 8.394531 202.605469 0 192.25 0 C 181.894531 0 173.5 8.394531 173.5 18.75 C 173.5 29.105469 181.894531 37.5 192.25 37.5", fill: "#ececef" }
-    ],
-  },
-  supabase: {
-    viewBox: "0 0 24 24",
-    paths: [
-      { d: "M11.9 1.036c-.015-.986-1.26-1.41-1.874-.637L.764 12.05C-.33 13.427.65 15.455 2.409 15.455h9.579l.113 7.51c.014.985 1.259 1.408 1.873.636l9.262-11.653c1.093-1.375.113-3.403-1.645-3.403h-9.642z", fill: "#3FCF8E" }
     ],
   },
   slack: {
