@@ -83,7 +83,7 @@ Verificación con Node puro: `node scripts/verify-front.mjs` (o `pnpm front:veri
 
 - **Aislamiento de red:** La red solo vive en `packages/platform-client`, `packages/engine-client`, `packages/session` y `packages/host`.
 - **Cliente único del borde:** Un solo cliente del borde por app instanciado en el shell (`createPlatformClient`); las features lo consumen únicamente con `usePlatform()`.
-- **Despliegue web (`apps/workspace`):** Se despliega como Worker `danil-front-preview` en `preview-front.danil.ai` con `pnpm -C apps/workspace run deploy`.
+- **Despliegue web (`apps/workspace`):** Worker `danil-front-preview`, que sirve `preview-front.danil.ai` y **`beta.danil.ai`** (F4.3). Se despliega con `pnpm -C apps/workspace run deploy`. `wrangler deploy` sincroniza los dominios con `apps/workspace/wrangler.jsonc`: si una rama no declara un dominio en `routes`, el despliegue lo quita (así cayó beta con 530 el 2026-11-21). Despliega solo desde una rama con los dos dominios declarados.
 - **Front viejo y migración:** `apps/desktop` y los paquetes viejos (`attention`, `computers`, `fleet`, `carry`, `chat`, `tasks`, `protocol`, `design`) son el front viejo y se borran en F4.4: el front nuevo no los importa.
 
 ## Product names
