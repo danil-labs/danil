@@ -9,7 +9,7 @@ import { ToastStack } from '../ui/Toast';
 import { SessionLoading } from './auth/SessionLoading';
 import { signInError, WorkosAuthPage } from './auth/workos';
 import { webWorkspacePicker } from './workspace-picker';
-import { webCredentialSource } from './credentials-source';
+import { webCredentialSource } from '../platform/credentials';
 import { webAccountProfile } from './account';
 import { contextMachines, type PlatformProfile, PlatformSessionError, platformSession, platformTransport } from './platform-session';
 import { type CapabilitiesSnapshot, readCapabilities, supports } from './service-capabilities';

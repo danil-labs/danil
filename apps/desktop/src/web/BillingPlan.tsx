@@ -8,7 +8,7 @@ import { billingScopes, type BillingScope } from "./billing-v2-scopes";
 import { BillingPromotionField, promotionCodeInvalid } from "./BillingPromotionField";
 import { billingFingerprint } from "./billing-v2-idempotency";
 import { checkoutPlans } from "./billing-v2-plans";
-import type { billingV2, PlanChoice } from "./billing-v2-api";
+import type { billingV2, PlanChoice } from "../platform/treasury";
 import { hostedCheckoutUrl, PAYMENT_URL_DEADLINE_MS, paymentInProgress, waitForPaymentUrl } from "./billing-v2-return";
 import { rememberBillingReturn } from "./billing-route";
 

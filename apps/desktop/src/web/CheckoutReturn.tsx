@@ -4,7 +4,7 @@ import { t } from "../lib/i18n";
 import { Button } from "../ui/Button";
 import { PlatformSessionError } from "./platform-session";
 import { BILLING_RETURN_KEY, checkoutReturn, followCheckout, waitWithSignal } from "./billing-v2-return";
-import type { billingV2 } from "./billing-v2-api";
+import type { billingV2 } from "../platform/treasury";
 import { clearCreationCheckout } from "./billing-v2-idempotency";
 
 type Api = ReturnType<typeof billingV2>;

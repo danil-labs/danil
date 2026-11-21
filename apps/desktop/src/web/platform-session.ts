@@ -1,10 +1,9 @@
 import { edgeIdentity, edgeTransport } from "@terminus/computers";
 import { z } from "zod";
-import { availableDanilCredits } from "../lib/credits-balance.ts";
+import { availableDanilCredits, scopedCreditsRead } from "../platform/treasury.ts";
 import { webGroupAccount } from "./group-account.ts";
 import { webRedeemPromo } from "./group-promo.ts";
 import { listWorkspaces, workspaceId } from "./platform-workspaces.ts";
-import { scopedCreditsRead } from "./scoped-credits.ts";
 import { platformFetch } from "../platform/client.ts";
 
 const profile = z.object({ id: z.string().startsWith("user_"), name: z.string(), email: z.unknown().optional(), workspace: workspaceId.nullable(), organizations: z.array(z.object({ id: z.string(), name: z.string(), type: z.string().nullish() })), active_organization_id: z.string().min(1).nullish() });

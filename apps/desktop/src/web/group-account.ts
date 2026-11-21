@@ -1,14 +1,15 @@
 import type { edgeTransport } from "@terminus/computers";
 import type { GroupAccount, GroupReply, GroupSend } from "../lib/group-account.ts";
 import { settledContextIds } from "../lib/settled-contexts.ts";
+import { CREDITS_BALANCE_PATH } from "../platform/treasury.ts";
 import { WORKSPACES_PROMO_REDEEM_PATH } from "../platform/workspaces.ts";
 
 export function webGroupAccount(transport: ReturnType<typeof edgeTransport>, credits?: { read: (context: string) => Promise<GroupReply>; clear: () => void }, orgOf?: (context: string) => string | null) {
   let legacy = false;
   let settled: readonly string[] | null = null;
   const send: GroupSend = async (context, method, path, body, key) => {
-    if (!["/v1/credits/balance", WORKSPACES_PROMO_REDEEM_PATH].includes(path)) throw { detail: "invalid_request" };
-    if (method === "GET" && path === "/v1/credits/balance" && credits) return credits.read(context);
+    if (![CREDITS_BALANCE_PATH, WORKSPACES_PROMO_REDEEM_PATH].includes(path)) throw { detail: "invalid_request" };
+    if (method === "GET" && path === CREDITS_BALANCE_PATH && credits) return credits.read(context);
     const init = { headers: { "X-Danil-Session": context, ...(key ? { "Idempotency-Key": key } : {}), ...(body ? { "Content-Type": "application/json" } : {}) }, ...(body ? { body: JSON.stringify(body) } : {}) };
     const response = await (method === "GET" ? transport.call(path.slice(4), init) : transport.mutation(path.slice(4), init));
     if (response.ok && (response.headers.get("X-Danil-Session-Applied") !== context || (orgOf && (!orgOf(context) || response.headers.get("X-Danil-Session-Applied-Org") !== orgOf(context))))) throw { detail: "session_echo_mismatch" };

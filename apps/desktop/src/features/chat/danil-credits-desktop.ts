@@ -1,8 +1,9 @@
 import { listenDanilConnectionChange } from "../../lib/danilConnectionEvents";
-import { edgeFetch, edgeUntil, ORGANIZATION_CHANGED } from "../../platform/client";
+import { edgeFetch, ORGANIZATION_CHANGED } from "../../platform/client";
 import { getWorkspaces } from "../../platform/workspaces";
 import { invoke } from "../../engine/client";
 import { availableDanilCredits, type DanilCreditsSource } from "./danil-credits";
+import { readCreditsBalance } from "../../platform/treasury";
 
 // Presupuesto de reintentos para las dos lecturas de una misma tarjeta.
 const RETRY_BUDGET_MS = 5_000;
@@ -20,7 +21,7 @@ export const desktopCredits: DanilCreditsSource = {
     const bound = directory.body.items.find((row) => row.engine_workspace_id === active);
     if (!bound?.org || signal.aborted) return null;
 
-    const reply = await edgeUntil("GET", "/v1/credits/balance", undefined, patience(), transport);
+    const reply = await readCreditsBalance(patience(), transport);
     return !signal.aborted && reply.status === 200 ? availableDanilCredits(reply.body, bound.org) : null;
   },
 

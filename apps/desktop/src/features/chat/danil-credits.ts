@@ -15,4 +15,4 @@ export type DanilCreditsSource = {
   recharge?: () => Promise<void>;
 };
 
-export { availableDanilCredits } from "../../lib/credits-balance.ts";
+export { availableDanilCredits } from "../../platform/treasury.ts";

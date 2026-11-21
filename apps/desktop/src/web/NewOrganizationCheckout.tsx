@@ -8,7 +8,7 @@ import { PlatformSessionError } from "./platform-session";
 import { PAYMENT_URL_DEADLINE_MS, waitForPaymentUrl } from "./billing-v2-return";
 import { BillingPromotionField, promotionCodeInvalid } from "./BillingPromotionField";
 import { checkoutPlans } from "./billing-v2-plans";
-import type { billingV2 } from "./billing-v2-api";
+import type { billingV2 } from "../platform/treasury";
 import { rememberBillingReturn } from "./billing-route";
 import { bindCreationCheckout, creationKey } from "./billing-v2-idempotency";
 

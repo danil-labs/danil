@@ -1,5 +1,15 @@
+import type { edgeTransport } from "@terminus/computers";
 import { z } from "zod";
-import { availableDanilCredits } from "../lib/credits-balance.ts";
+import { edgeUntil, type Patience } from "./client.ts";
+
+/** La ruta del saldo de Treasury en el borde. */
+export const CREDITS_BALANCE_PATH = "/v1/credits/balance";
+
+/** La respuesta de una lectura por contexto (saldo o promoción de un grupo). */
+export type GroupReply = { status: number; body?: unknown; retry_after_ms?: number };
+
+/** Lee el saldo de Treasury por el transporte de Desk. */
+export const readCreditsBalance = (patience?: Patience, transport?: Parameters<typeof edgeUntil>[4]) => edgeUntil("GET", CREDITS_BALANCE_PATH, undefined, patience, transport);
 
 type Transport = { call(path: string, init?: RequestInit): Promise<Response>; mutation(path: string, init?: RequestInit): Promise<Response> };
 const money = z.object({ currency: z.literal("MXN"), amount_micro: z.string().regex(/^-?(0|[1-9]\d{0,18})$/) });
@@ -66,5 +76,36 @@ export function billingV2(transport: Transport, organizationId: string | null) {
       return status;
     },
     portal: (key: string) => write("billing/portal-sessions", undefined, key, portal),
+  };
+}
+
+/** Proyección del saldo de Treasury para la organización del workspace activo. */
+export function availableDanilCredits(value: unknown, organizationId: string): number | null {
+  if (!value || typeof value !== "object") return null;
+  const { organization_id, available } = value as { organization_id?: unknown; available?: unknown };
+  if (organization_id !== organizationId || !available || typeof available !== "object") return null;
+  const { currency, amount_micro } = available as { currency?: unknown; amount_micro?: unknown };
+  if (currency !== "MXN" || typeof amount_micro !== "string" || !/^(0|[1-9][0-9]{0,18})$/.test(amount_micro)) return null;
+  if (BigInt(amount_micro) > 9223372036854775807n) return null;
+  return Number(amount_micro) / 1_000_000;
+}
+
+/** El compositor y los menús comparten la lectura 30 s, sin sondeo; ningún saldo sin eco alimenta un grupo. */
+export function scopedCreditsRead(transport: ReturnType<typeof edgeTransport>, now: () => number = Date.now, orgOf?: (context: string) => string | null) {
+  const reads = new Map<string, { promise: Promise<GroupReply>; until: number }>();
+  return {
+    clear: () => reads.clear(),
+    read(context: string): Promise<GroupReply> {
+      const existing = reads.get(context);
+      if (existing && existing.until > now()) return existing.promise;
+      const pending = (async () => {
+        const response = await transport.call("credits/balance", { headers: { "X-Danil-Session": context } });
+        if (response.ok && (response.headers.get("X-Danil-Session-Applied") !== context || (orgOf && (!orgOf(context) || response.headers.get("X-Danil-Session-Applied-Org") !== orgOf(context))))) throw { detail: "session_echo_mismatch" };
+        return { status: response.status, body: await response.json() };
+      })();
+      reads.set(context, { promise: pending, until: now() + 30_000 });
+      void pending.catch(() => { if (reads.get(context)?.promise === pending) reads.delete(context); });
+      return pending;
+    },
   };
 }
