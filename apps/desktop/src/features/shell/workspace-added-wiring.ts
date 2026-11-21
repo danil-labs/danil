@@ -9,7 +9,7 @@
 import type { OrganizationSelection } from "@terminus/computers";
 import type { Listed } from "@terminus/fleet";
 import { createEffect, createMemo, createRoot, createSignal, on } from "solid-js";
-import { edgeFetch, ORGANIZATION_CHANGED } from "../../platform/client.ts";
+import { edgeFetch, ORGANIZATION_CHANGED, platformFetch } from "../../platform/client.ts";
 import { capabilities } from "../../lib/platform.ts";
 import { escribirPref, leerPref } from "../../lib/prefs.ts";
 import { listen } from "../../lib/serviceEvents.ts";
@@ -84,7 +84,7 @@ function wire(hidden: () => ReadonlySet<string>, onSeeded: (ids: readonly string
 
   const desk: AddedTransport | null = native ? edgeAddedTransport(edgeFetch) : null;
   // La web arma su transporte de cookie con el borde de su build.
-  if (!native && !web && typeof __DANIL_WEB_API__ !== "undefined") web = webAddedTransport(platformTransport(__DANIL_WEB_API__, (input, init) => fetch(input, init)));
+  if (!native && !web && typeof __DANIL_WEB_API__ !== "undefined") web = webAddedTransport(platformTransport(__DANIL_WEB_API__, (input, init) => platformFetch(input, init)));
   const pick = () => desk ?? web ?? unavailable;
   const sync = createAddedSync({
     transport: { get: () => pick().get(), put: (id) => pick().put(id), remove: (id) => pick().remove(id), seed: (ids) => pick().seed(ids) },
