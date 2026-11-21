@@ -39,6 +39,7 @@ import { AccountSection } from "../components/AccountSection.tsx";
 import { AiAccountsSection } from "../components/AiAccountsSection.tsx";
 import { MachinesSection } from "../components/machines/MachinesSection.tsx";
 import { PreferencesSection } from "../components/preferences/PreferencesSection.tsx";
+import { ProjectsSection } from "../components/projects/ProjectsSection.tsx";
 import { SourceControlSection } from "../components/SourceControlSection.tsx";
 
 export interface SettingsModalProps {

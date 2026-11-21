@@ -497,6 +497,37 @@ importers:
         specifier: ^6.0.5
         version: 6.4.4(@types/node@26.4.0)(jiti@2.7.0)(lightningcss@1.32.0)
 
+  packages/features/settings:
+    dependencies:
+      '@danil/engine-client':
+        specifier: workspace:*
+        version: link:../../engine-client
+      '@danil/host':
+        specifier: workspace:*
+        version: link:../../host
+      '@danil/platform-client':
+        specifier: workspace:*
+        version: link:../../platform-client
+      '@danil/session':
+        specifier: workspace:*
+        version: link:../../session
+      '@danil/ui':
+        specifier: workspace:*
+        version: link:../../ui
+      lucide-solid:
+        specifier: ^1.31.0
+        version: 1.31.0(solid-js@1.9.17)
+    devDependencies:
+      solid-js:
+        specifier: ^1.9.17
+        version: 1.9.17
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+      vite:
+        specifier: ^6.0.5
+        version: 6.4.4(@types/node@26.4.0)(jiti@2.7.0)(lightningcss@1.32.0)
+
   packages/features/terminal:
     dependencies:
       '@danil/engine-client':
