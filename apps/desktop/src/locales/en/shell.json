@@ -319,6 +319,7 @@
   "shell.turn.permission_no_reply": "The agent asked for permission but did not say how to answer it.",
   "shell.turn.permission_delivery_unknown": "It is unknown whether the reply reached the agent. It was not sent again: check the task before repeating it.",
   "shell.turn.stop_failed": "The turn could not be stopped: {error}",
+  "shell.turn.not_stoppable_yet": "This turn cannot be stopped yet; try again in a moment.",
   "shell.update.available": "There is a new version: {version}",
   "shell.update.background": "It downloads in the background. You can keep working.",
   "shell.update.downloading": "Downloading it…",

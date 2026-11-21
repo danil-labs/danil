@@ -27,7 +27,7 @@ import type { Encolado } from "./MessageQueue";
  * Por qué la cola no avanza sola. Espejo de `retenida` en `App.tsx`, donde está
  * lo que significa cada una.
  */
-export type RazonDeRetencion = "fallo" | "borrador" | "pregunta" | "session";
+export type RazonDeRetencion = "fallo" | "borrador" | "pregunta" | "session" | "motor";
 
 /** Todo lo que hace falta para decidir, junto y sin leer señales. */
 export type EstadoDeLaCola = {

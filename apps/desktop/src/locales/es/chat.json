@@ -337,6 +337,8 @@
   "chat.error.service_gap": "Falta una parte de la salida en vivo. Vuelve a abrir la tarea para consultar lo guardado.",
   "chat.error.service_unavailable": "Danil dejó de responder por un momento. No se confirmó que el turno haya terminado.",
   "chat.error.service_restarted": "Danil se reinició en segundo plano. Revisa la tarea antes de continuar; su turno pudo interrumpirse.",
+  "chat.error.invalid_turn_id": "No se reconoce el turno que se quiere detener.",
+  "chat.error.person_required": "Este turno solo lo puede detener la persona.",
   "chat.mentions.handler": "Agente",
   "chat.mentions.group_repository": "Del repositorio {folder}",
   "chat.mentions.group_repository_unnamed": "Del repositorio",

@@ -77,6 +77,8 @@ export type ChatEvent = {
      * data URL. No es un paso: se pega a la respuesta en curso.
      */
     | "image"
+    /** Su motor cambió la cola (`chat_queue_v1`): se relee con `load_queue`. No se pinta. */
+    | "queue"
     | "done";
   text: string;
   meta: string | null;

@@ -1,0 +1,107 @@
+{
+  "version": 1,
+  "name": "chat_queue",
+  "description": "Cola de chat v1: el control condicional de turno C0 (decisión 2026-11-19-cola-chat-control-condicional-de-turno, PROPUESTA), la clave de idempotencia de send_message (decisión 2026-11-20-extraccion-al-motor-fronteras § 4.2-4.4, PROPUESTA) y el despacho de la cola de la persona en el motor (COLA), en transición y apagado por omisión. Aditivo y fuera del hash de compatibilidad (status.contract): ninguna orden, parámetro ni respuesta de commands.json cambia de forma. RASGO. Un cliente usa esto solo si el motor anuncia chat_queue_v1 en status.service_features. El despacho de la cola en el motor tiene su propio rasgo, chat_queue_dispatch_v1 (COLA); get_turn y stop_turn_if no dependen de él. Sin el rasgo, cualquier respuesta a get_turn o stop_turn_if (también service.error.command, unsupported o command_not_allowed) es estado desconocido: no hay control confirmado, no se ofrece Detener condicional y clientMessageId no da dedup (un motor sin el rasgo lo ignora). Un error de lectura (máquina dormida, relay caído) también es estado desconocido, nunca idle. TURN_ID. Identidad opaca de un turno: texto de 1 a 128 caracteres. El cliente solo la compara por igualdad; no la interpreta, no la ordena y no la deriva de otro dato. Una sola regla en todas las plataformas: turn_id nace en la reserva del turno en el motor (también en la reserva sintética del residente). El coordinador nativo (TurnIdentity, hoy solo en Linux) conserva su execution_id, que es interno: no se expone ni se compara con turn_id. Por eso turn_id ya existe en starting. No se reutiliza. started_at (desde) no es identidad: se reescribe al dirigir un turno. GET_TURN {project, session} -> TurnState {state, turn_id?}. state: idle (la tarea no tiene turno en este motor), starting (turno reservado, sin control registrado todavía), running (control registrado y no cerrando), closing (cerrando: sigue ocupando la tarea y ya no se detiene), relieved (lo contesta el servicio anterior durante un relevo; aquí no hay control). turn_id viene en starting, running y closing, y nunca en idle ni relieved. Solo running es un control confirmado. Lectura pasiva: no toma ni suelta la reserva de la tarea (history::reserve) ni otro candado de archivo, no lanza ni detiene nada y no cuenta en status.busy (PASSIVE_READS). Una reserva de archivo sin turno (restaurar, renombrar, borrar, worktree) no se ve: get_turn da idle y send_message puede responder history.error.busy. Una tarea que este motor no conoce da idle. STOP_TURN_IF {project, session, turnId} -> StopIf {outcome}. Compara turnId con el turno de la tarea y, si coincide y está running, lo marca detenido bajo el mismo candado del registro de controles: entre la comparación y la marca no entra otro turno. Solo lo pide una persona: la ventana de esta máquina (principal admin, que nunca trae relay) o el relay con caller = person. Una tarea, un cliente del CLI, el relay con caller computer o sin caller reciben chat.error.person_required. Además pasa la admisión y el chequeo de dueño de siempre. stop_turn no cambia: lo siguen usando los caminos que no llegan como persona. outcome, en este orden: 1) not_controllable si el turno de la tarea está relieved, antes de comparar turnId (lo tiene el servicio anterior y este motor no puede compararlo); 2) not_running si la tarea no tiene turno en este motor; 3) turn_changed si la tarea tiene un turno con otro turn_id, en cualquier estado; 4) con el mismo turn_id: not_controllable si está starting, closing si ya está cerrando y stop_requested si estaba running: se pidió la detención; no es un cierre, que se confirma con done o cuando get_turn da idle u otro turn_id. Fuera de stop_requested no hay ningún efecto: ni cancel_children, ni reclaim_task_processes, ni close_local_resident, ni marca de detenido. stop_requested tiene los efectos de stop_turn, también retener la cola (COLA). Repetir stop_turn_if sobre un turno ya pedido devuelve stop_requested sin repetir efectos. Durable como stop_turn: un reintento con el mismo request_id recibe el mismo recibo, y un clic nuevo es un request_id nuevo. ERRORES. Un solo prefijo, chat.error.*, y ninguno tiene efecto (no lanza, no detiene ni registra nada): chat.error.person_required (stop_turn_if sin una persona; Failure con esa clave y detail person_required), chat.error.invalid_turn_id (stop_turn_if con turnId vacío o de más de 128 caracteres; Failure con esa clave y detail invalid_turn_id), y en send_message, como la cadena de siempre, chat.error.invalid_client_message_id, chat.error.client_message_id_reused, chat.error.client_message_in_progress y chat.error.client_message_uncertain. QUEUE_READY no cambia, ni de forma (sigue siendo -> Result < bool , String >) ni de semántica: toma y suelta la reserva de la tarea, y da false con un turno o con una reserva de archivo sin turno. La usa la ventana que despacha la cola. SEND_MESSAGE suma clientMessageId (Option < String >, en invoke_parameters): la clave de idempotencia del cliente, de 1 a 128 caracteres de [A-Za-z0-9_-]. Sin ella, send_message se comporta como hoy. PENDIENTE: este motor acepta clientMessageId y lo ignora, sin dedup; un cliente no cuenta con la dedup por chat_queue_v1, que llegará con un rasgo propio. Lo que sigue es el contrato de esa dedup. Con ella, la dedup es durable (en disco: sobrevive a un reinicio del motor) y por tarea: por (workspace, project, session), o por (workspace, project) cuando el envío crea la tarea (sin session). La clave de un envío que crea una tarea queda atada a la tarea creada en el mismo paso en que se crea: un reintento con session igual a esa tarea encuentra la clave y no lanza otro turno. La clave se conserva mientras exista la tarea. Junto a la clave el motor guarda un digest de (provider, prompt, attachments); session y las demás opciones no entran en él. Un reenvío con una clave ya registrada nunca lanza otro turno ni crea otra tarea, y contesta, en este orden: 1) chat.error.client_message_id_reused si su digest no es el del primero; 2) chat.error.client_message_in_progress si el primero sigue en curso en este motor, sin esperarlo: el cliente reintenta con la misma clave; 3) chat.error.client_message_uncertain si la suerte del primero quedó incierta (el motor se reinició después de registrar la clave y antes de registrar su desenlace): no se relanza ni se da por enviado lo que quizá no salió, y cada reenvío con esa clave recibe lo mismo; 4) el desenlace registrado del primero: el mismo Ok(session), o el mismo Err si falló después de un efecto (tarea creada, turno reservado o lanzado). Si el primer envío falló antes de cualquier efecto (validación, history.error.busy), la clave no queda registrada y el siguiente envío con ella es un intento nuevo. clientMessageId mal formado: chat.error.invalid_client_message_id, sin lanzar turno ni registrar nada. El recibo por request_id no cambia; la clave cubre los reenvíos con otro request_id (ventana reiniciada, relay). RELAY Y AUTORIDAD. get_turn, stop_turn_if y queue_resume son invoke, scope workspace, audience window y authority admin; el relay las acepta (relay_rule) y pasan el chequeo de dueño de la tarea por session (remote_parent), como stop_turn. get_turn es pasiva (PASSIVE_READS) y las otras dos no. Ninguna es deferrable. Estas reglas las hace cumplir el motor (relay_rule, el chequeo de dueño y PASSIVE_READS). No se supone que un relay las aplique: en el relay legado no se verificó, y el relay nuevo (danil-labs/relay 4cc473f) no filtra por comando. COLA. El despacho de la cola en el motor está en transición y apagado por omisión. El motor despacha la cola de la persona (.cola.json) de una tarea solo con activación explícita, y con las dos cosas: 1) su opción está encendida (SELDON_QUEUE_DISPATCH=1 en el entorno del motor; sin ella está apagada), y solo entonces anuncia chat_queue_dispatch_v1; 2) la última ventana que guardó esa cola lo pidió con engineDispatch: true en save_queue (Option < bool >, en invoke_parameters). El motor guarda esa petición por tarea, en disco, junto a .cola.json. Un save_queue sin engineDispatch la apaga, y una ventana vieja nunca lo manda: esa cola la despacha la ventana, como antes. Con la opción apagada el motor no despacha ninguna cola, aunque la ventana lo pida: no anuncia chat_queue_dispatch_v1, no retiene ni marca nada, load_queue no da held y queue_resume responde service.error.command; la ventana despacha como antes. La opción queda apagada mientras pueda conectarse una ventana que despacha por su cuenta, porque la activación por tarea no cubre dos casos: una ventana vieja que ya tiene la cola en memoria cuando otra la activa, y una ventana vieja que abre la tarea después de que otra la activó y se cerró. La reserva de la tarea solo impide dos turnos a la vez, el motor no sabe qué ventanas están conectadas ni con qué capacidades, y el send_message de una ventana vieja no trae clientMessageId. Lo que sigue vale para la cola que despacha el motor. Se despacha con la ventana abierta o cerrada; la ventana la sigue editando con save_queue y leyendo con load_queue, y no la despacha por su cuenta. Cada elemento guarda también sus recipients. Lo que se escribe en una cola vacía queda armado y sale una vez al cerrar el turno: el motor toma el lote de cabeza (sin mezclar remitentes ni juntar un renglón que empieza por ! o / con otro), lo marca en .cola-dispatch.json y lo lanza por el camino de send_message, con el texto de cada renglón separado por una línea en blanco, el sobre del primero y el agente, modelo, esfuerzo y modo del último. Deja la cola cuando el turno quedó reservado con su input escrito. Un ! de la persona no lo lanza el motor: corre en su terminal. Antes salen las entregas que esperan en el motor (.entregas.json). Con una pregunta del agente sin contestar espera a la respuesta. La cola queda retenida, y no sale sola, tras Detener (stop_turn o stop_turn_if con stop_requested), tras un cierre fallido, si falla su lanzamiento y al arrancar el motor: un lote que quedó a medio lanzar vuelve a la cola retenido y no se reenvía. Lo que se suma a una cola retenida espera con ella. load_queue no devuelve lo que ya salió o está saliendo, y marca held: true en cada elemento de una cola retenida. QUEUE_RESUME {project, session} -> Result < () , String >: suelta la cola retenida; sale ya si la tarea no tiene turno y, si no, al cerrar su turno aunque se haya detenido (Detener y enviar). Si el motor no despacha esa cola (opción apagada o sin engineDispatch), responde service.error.command, sin efecto. Durable como stop_turn. El motor avisa cada cambio de la cola con el evento chat de siempre, kind queue y la session: la ventana relee con load_queue. Un turno que lanza el motor no lo inicia la interfaz: con el Free router de plataforma su lanzamiento falla (free_router.turn_not_owner) y la cola queda retenida; queue_resume desde la interfaz sí lo lanza. NO DEFINIDO EN V1: las órdenes por elemento de E1b (queue_enqueue, queue_cancel, queue_edit, queue_get, queue_item, queue_interrupt_and_send), un evento propio de la cola y la cola de la CLI (.cli-queue/). Ejemplos: fixtures/chat_queue_v1.examples.json. Mock con guion: fixtures/chat_queue_v1.mock.json.",
+  "features": [
+    "chat_queue_v1",
+    "chat_queue_dispatch_v1"
+  ],
+  "commands": [
+    {
+      "async": false,
+      "channel": null,
+      "kind": "invoke",
+      "name": "get_turn",
+      "output": "-> Result < TurnState , Failure >",
+      "parameters": [
+        {
+          "key": "project",
+          "name": "project",
+          "type": "String"
+        },
+        {
+          "key": "session",
+          "name": "session",
+          "type": "String"
+        }
+      ],
+      "path": "chat::get_turn",
+      "scope": "workspace",
+      "audience": "window",
+      "authority": "admin",
+      "durable": false,
+      "enforcement": "server"
+    },
+    {
+      "async": false,
+      "channel": null,
+      "kind": "invoke",
+      "name": "stop_turn_if",
+      "output": "-> Result < StopIf , Failure >",
+      "parameters": [
+        {
+          "key": "project",
+          "name": "project",
+          "type": "String"
+        },
+        {
+          "key": "session",
+          "name": "session",
+          "type": "String"
+        },
+        {
+          "key": "turnId",
+          "name": "turn_id",
+          "type": "String"
+        }
+      ],
+      "path": "chat::stop_turn_if",
+      "scope": "workspace",
+      "audience": "window",
+      "authority": "admin",
+      "durable": true,
+      "enforcement": "server"
+    },
+    {
+      "async": false,
+      "channel": null,
+      "kind": "invoke",
+      "name": "queue_resume",
+      "output": "-> Result < () , String >",
+      "parameters": [
+        {
+          "key": "project",
+          "name": "project",
+          "type": "String"
+        },
+        {
+          "key": "session",
+          "name": "session",
+          "type": "String"
+        }
+      ],
+      "path": "chat::queue_resume",
+      "scope": "workspace",
+      "audience": "window",
+      "authority": "admin",
+      "durable": true,
+      "enforcement": "server"
+    }
+  ],
+  "invoke_parameters": {
+    "send_message": [
+      {
+        "key": "clientMessageId",
+        "name": "client_message_id",
+        "type": "Option < String >"
+      }
+    ],
+    "save_queue": [
+      {
+        "key": "engineDispatch",
+        "name": "engine_dispatch",
+        "type": "Option < bool >"
+      }
+    ]
+  }
+}

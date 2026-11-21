@@ -31,6 +31,8 @@
     "chat.effort.unconfirmed",
     "chat.effort.unsupported",
     "chat.error.agent_not_in_folder",
+    "chat.error.invalid_turn_id",
+    "chat.error.person_required",
     "chat.failure.free_router_mcp_credentials",
     "chat.failure.free_router_model_only",
     "chat.failure.free_router_stopped",

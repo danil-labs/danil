@@ -3,7 +3,7 @@ import { despachable, esDeLaTerminal, guardable, retencionAlCargar, siguienteLot
 import { editMentions, type TaskMention } from "../../lib/taskMentions.ts";
 export type QueueScope = { workspace: string | null; generation: number; session: string | null; project: string };
 type Saved = { project: string; items: Encolado[]; retained: RazonDeRetencion | null };
-type Rules = { busy: boolean; waiting: boolean; editing?: boolean };
+type Rules = { busy: boolean; waiting: boolean; editing?: boolean; shellOnly?: boolean };
 export type HiddenQueueBatch = { session: string; project: string; scope: QueueScope; epoch: number; batch: Encolado[]; message: Omit<Encolado, "id"> };
 type Dependencies = {
   scope: () => QueueScope;
@@ -52,16 +52,16 @@ export function createTaskQueues(deps: Dependencies) {
     if (before && before[0] === queued && queued.length === 0) return;
     void write({ ...scope, session: id }, queued);
   }));
-  async function openSession(session: string, project: string, isCurrent: () => boolean = () => true) {
+  async function openSession(session: string, project: string, isCurrent: () => boolean = () => true, fromEngine = false) {
     const scope = { ...currentScope(), session, project }, requestEpoch = epoch, revision = ++readRevision;
     try {
-      const cached = saved.get(session);
+      const cached = fromEngine ? undefined : saved.get(session);
       const queued = cached?.items ?? await deps.readQueue(scope);
       if (!current(scope) || currentScope().session !== session || currentScope().project !== project || requestEpoch !== epoch || revision !== readRevision || !isCurrent()) return;
-      const restored = saved.get(session);
+      const restored = fromEngine ? undefined : saved.get(session);
       const kept = retentions.get(scope.workspace ?? "")?.get(session);
       retentions.get(scope.workspace ?? "")?.delete(session);
-      const reason = restored ? restored.retained : retencionAlCargar(queued.length, kept);
+      const reason = fromEngine ? (queued.some(item => item.held) ? "motor" : null) : restored ? restored.retained : retencionAlCargar(queued.length, kept);
       diskDraft = !restored && kept === undefined && reason === "borrador" ? session : null;
       batch(() => { setItems(restored?.items ?? queued); setOwner(session); setRetained(reason); });
     } catch (error) {
@@ -87,7 +87,7 @@ export function createTaskQueues(deps: Dependencies) {
     if (!despachable({ pendientes: items().length, de: owner(), mirando: scope.session, ocupado: rules.busy,
       editando: rules.editing ?? editing(), retenida: retained(), esperando: rules.waiting })) return null;
     const { mensaje, lote, resto } = siguienteLote(items());
-    if (!mensaje) return null;
+    if (!mensaje || (rules.shellOnly && !esDeLaTerminal(lote[0]))) return null;
     if (esDeLaTerminal(lote[0])) return { kind: "shell" as const, item: lote[0] };
     setItems(resto);
     return { kind: "message" as const, message: mensaje, itemIds: lote.map(item => item.id) };

@@ -179,7 +179,7 @@ import AvisoDeVersion from "../features/shell/VersionNotice";
 import WorkspaceColumn from "../features/shell/WorkspaceColumn";
 import Sitio from "../features/sites/Site";
 import { DragOverlay, UnsavedCloseDialog } from "../features/tabs";
-import { createTaskQueues } from "../features/task-queues";
+import { createEngineQueue, createTaskQueues, waitForBusySessions } from "../features/task-queues";
 import { VELO_DE_FONDO } from "../lib/chat-background";
 import { fondoDeChat, fondoPropio, imagenDelWorkspace, veloDeFondo } from "../lib/chat-background-store";
 import { connected } from "../lib/engineConnection";
@@ -1324,10 +1324,11 @@ export default function App() {
   // el material que la tarea lee.
   const [ventana, setVentana] = createSignal<Ventana>(null);
 
+  const { engineCanDispatch, engineDispatchesQueue, queueSave, resumeQueue, stopTurn, turnClosed, turnStarted } = createEngineQueue({ invoke, machines, machineOf, nativeWindow: () => capabilities().nativeWindow, notStoppableYet: (id) => threads.appendLive(id, [{ role: "system", text: t("shell.turn.not_stoppable_yet"), meta: "aviso" }]) });
   const taskQueues = createTaskQueues({
     scope: () => ({ workspace: workspaceActivo(), generation: workspaceContext.generation(), session: sessionId(), project: project() }),
     readQueue: (scope) => invoke<Encolado[]>("load_queue", { project: scope.project, session: scope.session }, opcionesDeLaTarea(scope.session, scope.workspace)),
-    writeQueue: (scope, queued) => invoke("save_queue", { project: scope.project, session: scope.session, queued }, opcionesDeLaTarea(scope.session, scope.workspace)),
+    writeQueue: (scope, queued) => invoke("save_queue", { project: scope.project, session: scope.session, queued, ...queueSave(scope.session) }, opcionesDeLaTarea(scope.session, scope.workspace)),
     onSaveFailure: (error, scope) => threads.appendLive(scope.session, [{ role: "system", text: t("shell.queue.save_failed", { error: prosaDe(error) }), meta: "aviso" }]),
   });
   onCleanup(taskQueues.dispose);
@@ -1342,13 +1343,12 @@ export default function App() {
       const current = () => scope.workspace === workspaceActivo() && scope.generation === workspaceContext.generation();
       if (shell) detenidos.add(id);
       try {
-        const stopped = shell ? await invoke<boolean>("stop_shell_command", { session: id }, scope.route)
-          : await invoke("stop_turn", { project: scope.project, session: id }, scope.route);
+        const stopped = shell ? await invoke<boolean>("stop_shell_command", { session: id }, scope.route) : await stopTurn(scope);
         if (current()) {
           if (shell && stopped === false) detenidos.delete(id);
-          if (!shell) { void reconcileActiveTurns(); setPermissions(ps => ps.filter(p => p.session !== id)); }
+          if (!shell) { void reconcileActiveTurns(); if (stopped !== false) setPermissions(ps => ps.filter(p => p.session !== id)); }
         }
-        return shell ? stopped : undefined;
+        return stopped;
       } catch (error) {
         if (current()) {
           if (shell) detenidos.delete(id);
@@ -1371,6 +1371,8 @@ export default function App() {
   const colaDe = taskQueues.owner;
   const retenida = taskQueues.retained;
   const editando = taskQueues.editing;
+  // La cola que despacha el motor es la de su disco: se relee cuando él la cambia.
+  const releerCola = (id: string) => { if (id === sessionId() && engineDispatchesQueue(id)) void taskQueues.openSession(id, project(), undefined, true).catch(() => {}); };
 
   /** El título de la sesión ocupada. */
   const [esperandoA, setEsperandoA] = createSignal<string | null>(null);
@@ -2448,6 +2450,7 @@ export default function App() {
       // marcada como viva para siempre, con su caja en «Detener» y sin nada
       // corriendo detrás.
       if (kind === "done") {
+        turnClosed(session);
         threads.finishActivity(session, workspace || workspaceActivo());
         setEnFondo((ids) => ids.filter((id) => id !== session));
         if (!esDelWorkspaceAbierto(workspace)) {
@@ -2526,7 +2529,7 @@ export default function App() {
         ["delta", "reasoning", "image", "tool", "tool_done", "notice", "task_launched", "segment_saved", "command_output", "command_running"].includes(kind);
       if (!esGate && !esDelWorkspaceAbierto(workspace) && !retainedStream) return;
 
-      if (kind === "started") { handoff.observe({ kind: "started", scope: conversationScope(session) }); return; }
+      if (kind === "started") { const scope = conversationScope(session); handoff.observe({ kind: "started", scope }); turnStarted(scope); return; }
 
       if (kind === "task_launched") {
         paintTranscript();
@@ -2534,6 +2537,7 @@ export default function App() {
         return;
       }
       if (kind === "segment_saved") { paintTranscript(); return; }
+      if (kind === "queue") { releerCola(session); return; }
 
       if (kind === "mcp_auth") {
         noteMcpSignIn(session, text);
@@ -2583,6 +2587,7 @@ export default function App() {
 
       if (kind === "done") {
         void settleTurn(session, ok, text === "unsaved");
+        releerCola(session);
         return;
       }
 
@@ -3002,6 +3007,8 @@ export default function App() {
     if (contestar) setPorContestar((ss) => [...ss, session]);
     void settleTurn(session, true).then(() => {
       if (contestar) void contestarALaTerminal(session, contestar);
+      // El motor no lanza un `!`: lo que esperaba detrás se lo devuelve la ventana.
+      else if (!detenido && session === sessionId() && cola().length && retenida() !== "motor" && engineDispatchesQueue(session)) void reanudarCola(session);
     });
   }
 
@@ -3233,29 +3240,8 @@ export default function App() {
     if (id) taskQueues.releaseDiskDraft(id, vivas().includes(id));
   });
 
-  createEffect(() => {
-    if (retenida() !== "session" || !cola().length || !sessionId()) return;
-    const id = sessionId();
-    const proyecto = project();
-    const generation = workspaceContext.generation();
-    let cancelled = false;
-    let checking = false;
-    const timer = setInterval(async () => {
-      if (checking) return;
-      checking = true;
-      try {
-        const ready = await invoke<boolean>("queue_ready", { project: proyecto, session: id }, deLaTarea(id));
-        if (ready && !cancelled && generation === workspaceContext.generation() && id === sessionId()) {
-          taskQueues.retain(null);
-        }
-      } catch {
-        // Un fallo al consultar no demuestra que la tarea ya esté disponible.
-      } finally {
-        checking = false;
-      }
-    }, 1000);
-    onCleanup(() => { cancelled = true; clearInterval(timer); });
-  });
+  waitForBusySessions({ queues: taskQueues, session: sessionId, project, generation: workspaceContext.generation, engineDispatches: engineDispatchesQueue,
+    ready: (proyecto, id) => invoke<boolean>("queue_ready", { project: proyecto, session: id }, deLaTarea(id)), drain: (id) => void drainHiddenQueue(id) });
 
   // El lote se retira y reserva en la misma actualización: no pueden salir dos turnos.
   createEffect(
@@ -3275,7 +3261,7 @@ export default function App() {
           return;
         }
         batch(() => {
-          const next = taskQueues.next({ busy: ocupado, waiting: esp, editing: edit });
+          const next = taskQueues.next({ busy: ocupado, waiting: esp, editing: edit, shellOnly: engineDispatchesQueue(mirando) });
           if (!next) return;
           if (next.kind === "shell") {
             void ejecutarDeLaCola(next.item);
@@ -3290,7 +3276,7 @@ export default function App() {
 
   async function drainHiddenQueue(session: string) {
     const history = hilos()[session];
-    const reservation = taskQueues.beginHidden(session, handoffBlocked(session) || vivas().includes(session) || settlingTurns().includes(session) ||
+    const reservation = taskQueues.beginHidden(session, engineDispatchesQueue(session) || handoffBlocked(session) || vivas().includes(session) || settlingTurns().includes(session) ||
       injecting().some(item => item.session === session) || !history || preguntasPendientes([...(history?.base ?? []), ...(history?.vivo ?? [])]));
     if (!reservation) return;
     const generation = workspaceContext.generation();
@@ -3309,15 +3295,6 @@ export default function App() {
       taskQueues.endHidden(session);
     }
   }
-
-  onMount(() => {
-    const timer = setInterval(() => {
-      for (const [session, queued] of taskQueues.savedEntries()) {
-        if (queued.retained === "session") void drainHiddenQueue(session);
-      }
-    }, 1000);
-    onCleanup(() => clearInterval(timer));
-  });
 
   // Al cerrar un turno se refresca el historial, y la carpeta: una tarea
   // recién nacida no pasó por `abrirSesion`, y sin carpeta la tarjeta de
@@ -3639,7 +3616,9 @@ export default function App() {
     // Después de la transcripción, que la reemplaza entera: un aviso
     // escrito antes de este punto no dejaría rastro.
     try {
-      await taskQueues.openSession(id, proyecto, current);
+      await taskQueues.openSession(id, proyecto, current, engineCanDispatch(id));
+      // Lo que ya esperaba cuando se le pide al motor queda retenido por él: se relee tras pedírselo.
+      if (engineCanDispatch(id) && sessionId() === id) void taskQueues.persist(id, proyecto, cola()).then(() => releerCola(id), () => {});
     } catch (e) {
       if (!current()) return;
       // Sin esto la cola queda sin dueño: no es «no pude leerla», es que
@@ -5577,7 +5556,10 @@ export default function App() {
       return (await ejecutarComando(id, lanzado, comando, null)) === null;
     }
     if (queueBusy() || cola().length > 0) {
-      encolarYSoltar(prompt, attachments, message.task_mentions, message.recipients);
+      // El motor manda lo encolado tal como está guardado: con sus adjuntos ya en su máquina.
+      const abierta = sessionId(), listos = engineCanDispatch(abierta) ? await attachmentsFor(attachments, deLaTarea(abierta), project()).catch((e) => void setError(prosaDe(e))) : attachments;
+      if (!listos || sessionId() !== abierta) return false;
+      encolarYSoltar(prompt, listos, message.task_mentions, message.recipients);
       setInput("");
       // Encolado se los lleva puestos: salen del borrador ya.
       setArchivos(archivos().filter((a) => !attachments.includes(a)));
@@ -5707,7 +5689,7 @@ export default function App() {
   }
 
   /**
-   * Devuelve el mensaje al frente de la cola y la retiene por `session`. En un
+   * Devuelve el mensaje al frente de la cola y la retiene por `session`, salvo si la despacha el motor. En un
    * solo lote: la sesión deja de estar viva en la misma pasada en que la cola
    * queda retenida, o el despacho la sacaría otra vez en el hueco.
    */
@@ -5720,7 +5702,7 @@ export default function App() {
     batch(() => {
       taskQueues.prependBusy({ ...m, id: m.id ?? `${Date.now().toString(36)}-${++encolados}` });
       setEsperandoA(titular.title);
-      taskQueues.retain("session");
+      taskQueues.retain(engineCanDispatch(abierta) ? null : "session");
       setArrancando(false);
       if (abierta) marcarQuieta(abierta);
     });
@@ -5758,7 +5740,17 @@ export default function App() {
   async function detenerYEnviar(id: string) {
     const abierta = sessionId(), message = cola().find(item => item.id === id);
     if (!abierta || !message || !interrumpible(message) || injecting().some(item => item.session === abierta && item.id === id)) return;
-    await handoff.replaceWithQueued(conversationScope(abierta), id);
+    if (!engineDispatchesQueue(abierta)) return handoff.replaceWithQueued(conversationScope(abierta), id);
+    // Lo manda el motor: con el recibo de Detener, la cola sale al cerrar el turno.
+    taskQueues.prioritize(id);
+    await handoff.requestStop(conversationScope(abierta));
+    if (!handoffAt(abierta)?.error) await reanudarCola(abierta);
+  }
+
+  /** Suelta la cola que retiene el motor, con el orden que se ve ya guardado. */
+  async function reanudarCola(id: string) {
+    try { if (id === sessionId()) await taskQueues.persist(id, project(), cola()); await resumeQueue(conversationScope(id)); }
+    catch (e) { threads.appendLive(id, [{ role: "system", ...mensajeDeFallo(e), meta: "fallo" }]); }
   }
 
   /**
@@ -6700,7 +6692,7 @@ export default function App() {
           onEditar: editarEncolado,
           onBorrar: quitarEncolado,
           onEditando: taskQueues.editMode,
-          onMandar: () => { const id = sessionId(), view = handoffAt(id), next = cola().find(item => interrumpible(item) && !injecting().some(pending => pending.session === id && pending.id === item.id)); if (busy() && next) void detenerYEnviar(next.id); else if (id && !busy() && view?.error && view.pending?.phase === "waiting-close") void handoff.replaceWithQueued(conversationScope(id), view.pending.queueItemId); else taskQueues.retain(null); },
+          onMandar: () => { const id = sessionId(), view = handoffAt(id), next = cola().find(item => interrumpible(item) && !injecting().some(pending => pending.session === id && pending.id === item.id)); if (busy() && next) void detenerYEnviar(next.id); else if (id && !busy() && view?.error && view.pending?.phase === "waiting-close") void handoff.replaceWithQueued(conversationScope(id), view.pending.queueItemId); else if (id && engineDispatchesQueue(id)) void reanudarCola(id); else taskQueues.retain(null); },
           onDetenerYEnviar: pp.sesion && vivas().includes(pp.sesion) && !esperando()
             ? detenerYEnviar
             : null,
