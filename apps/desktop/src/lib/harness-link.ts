@@ -5,7 +5,7 @@ import { canRedeemPromo } from "./promo-role.ts";
  * hoy; en otra web, o en la ventana, no se ofrece el enlace.
  */
 const HARNESS_BY_WEB: Record<string, string> = {
-  "beta.danil.ai": "https://harness-beta.danil.ai",
+  "beta.danil.ai": "https://harness.danil.ai",
 };
 
 /**

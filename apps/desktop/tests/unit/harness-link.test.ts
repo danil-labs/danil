@@ -10,7 +10,7 @@ test("owner y admin de una organización en beta van a Harness con su organizaci
   for (const role of ["owner", "admin"]) {
     assert.equal(
       harnessAdminUrl("beta.danil.ai", { org: "org_1", role, plan: "team" }),
-      "https://harness-beta.danil.ai/auth/identity/login?organization=org_1",
+      "https://harness.danil.ai/auth/identity/login?organization=org_1",
     );
   }
 });
