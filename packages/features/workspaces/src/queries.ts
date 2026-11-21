@@ -77,14 +77,7 @@ export interface UseOrganizationsResult {
  * Un error se preserva en error() para permitir reintentos (B-006).
  */
 export function useOrganizations(options?: ClientResolverOptions): UseOrganizationsResult {
-  const fallbackClient = usePlatform();
-  const getClient = () => {
-    if (options?.client) {
-      const c = typeof options.client === "function" ? options.client() : options.client;
-      if (c) return c;
-    }
-    return fallbackClient;
-  };
+  const client = usePlatform();
 
   const getSessionKey = () => {
     const s = typeof options?.session === "function" ? options.session() : options?.session;
@@ -94,7 +87,6 @@ export function useOrganizations(options?: ClientResolverOptions): UseOrganizati
   const [data, { refetch }] = createResource(
     getSessionKey,
     async () => {
-      const client = getClient();
       const res = await client.getOrganizations();
       const items = res.items ?? res.organizations ?? [];
       const orgs = items.map((org) => ({
@@ -138,14 +130,7 @@ export interface UseWorkspacesResult {
  * Consulta los workspaces del usuario por sesión.
  */
 export function useWorkspaces(options?: UseWorkspacesOptions): UseWorkspacesResult {
-  const fallbackClient = usePlatform();
-  const getClient = () => {
-    if (options?.client) {
-      const c = typeof options.client === "function" ? options.client() : options.client;
-      if (c) return c;
-    }
-    return fallbackClient;
-  };
+  const client = usePlatform();
 
   const getSourceKey = () => {
     const s = typeof options?.session === "function" ? options.session() : options?.session;
@@ -156,7 +141,6 @@ export function useWorkspaces(options?: UseWorkspacesOptions): UseWorkspacesResu
   const [data, { refetch, mutate }] = createResource(
     getSourceKey,
     async () => {
-      const client = getClient();
       const res = await client.getWorkspaces();
       const list = res.items ?? res.workspaces ?? [];
       const orgId = typeof options?.organizationId === "function" ? options.organizationId() : options?.organizationId;
@@ -226,6 +210,66 @@ export function setActiveOrganizationId(id: string | null): void {
 
 export interface SelectWorkspaceOptions extends ClientResolverOptions {
   engineClient?: EngineClient | (() => EngineClient | undefined | null);
+}
+
+/**
+ * Hook para seleccionar un workspace (RV1 #2, RV2 #2).
+ * Captura usePlatform() una vez en el cuerpo del hook y cierra sobre el cliente.
+ */
+export function useSelectWorkspace() {
+  const client = usePlatform();
+  return async (
+    workspaceId: string,
+    options?: SelectWorkspaceOptions,
+  ): Promise<void> => {
+    const idempotencyKey = generateIdempotencyKey("ws-select");
+
+    // 1. Primero la plataforma
+    await client.selectWorkspace({
+      idempotencyKey,
+      body: { workspace: workspaceId },
+    });
+
+    // 2. Si falla lo anterior, no llega a este punto.
+    // 3. Notificar al motor local si está disponible
+    const engine = typeof options?.engineClient === "function" ? options.engineClient() : options?.engineClient;
+    if (engine) {
+      await engine.set_active_workspace({ id: workspaceId });
+    }
+
+    // 4. Actualizar el estado local
+    setActiveWorkspaceIdSignal(workspaceId);
+  };
+}
+
+/**
+ * Hook para seleccionar la organización activa (RV1 #2, RV2 #2).
+ * Captura usePlatform() en el cuerpo del hook y cierra sobre el cliente.
+ */
+export function useSelectOrganization() {
+  const client = usePlatform();
+  return async (organizationId: string): Promise<void> => {
+    const idempotencyKey = generateIdempotencyKey("org-select");
+
+    await client.selectOrganization({
+      idempotencyKey,
+      body: { organization_id: organizationId },
+    });
+
+    setActiveOrganizationIdSignal(organizationId);
+  };
+}
+
+/**
+ * Hook que agrupa las acciones de selección cerrando sobre usePlatform().
+ */
+export function useWorkspaceActions() {
+  const select = useSelectWorkspace();
+  const selectOrg = useSelectOrganization();
+  return {
+    selectWorkspace: select,
+    selectOrganization: selectOrg,
+  };
 }
 
 /**

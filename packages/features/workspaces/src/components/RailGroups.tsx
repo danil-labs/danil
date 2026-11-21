@@ -10,7 +10,7 @@ import type { Workspace } from "../model.ts";
 import {
   useOrganizations,
   useWorkspaces,
-  selectWorkspace,
+  useSelectWorkspace,
   getActiveWorkspaceId,
   type ClientResolverOptions,
 } from "../queries.ts";
@@ -40,6 +40,7 @@ export interface RailGroupsProps extends ClientResolverOptions {
 export const RailGroups: Component<RailGroupsProps> = (props) => {
   const orgsQuery = useOrganizations(props);
   const workspacesQuery = useWorkspaces(props);
+  const selectWorkspace = useSelectWorkspace();
 
   const [dialogOpen, setDialogOpen] = createSignal(false);
   const [targetOrgId, setTargetOrgId] = createSignal<string | undefined>(undefined);

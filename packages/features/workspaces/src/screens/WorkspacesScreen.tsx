@@ -2,7 +2,7 @@ import { createSignal, Show, type Component } from "solid-js";
 import type { EngineClient } from "@danil/engine-client";
 import { RailGroups, type RailGroupsProps } from "../components/RailGroups.tsx";
 import { CreateWorkspaceDialog } from "../components/CreateWorkspaceDialog.tsx";
-import { useOrganizations, useWorkspaces, selectWorkspace, type ClientResolverOptions } from "../queries.ts";
+import { useOrganizations, useWorkspaces, useSelectWorkspace, type ClientResolverOptions } from "../queries.ts";
 import type { Workspace } from "../model.ts";
 
 export interface WorkspacesScreenProps extends ClientResolverOptions {
@@ -21,6 +21,7 @@ export const WorkspacesScreen: Component<WorkspacesScreenProps> = (props) => {
 
   const orgsQuery = useOrganizations(props);
   const workspacesQuery = useWorkspaces(props);
+  const selectWorkspace = useSelectWorkspace();
 
   const handleCreated = async (created: Workspace) => {
     workspacesQuery.refetch();

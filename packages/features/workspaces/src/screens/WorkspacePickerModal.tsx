@@ -10,7 +10,7 @@ import type { Workspace, Organization } from "../model.ts";
 import {
   useOrganizations,
   useWorkspaces,
-  selectWorkspace,
+  useSelectWorkspace,
   getActiveWorkspaceId,
   type ClientResolverOptions,
 } from "../queries.ts";
@@ -36,6 +36,7 @@ export const WorkspacePickerModal: Component<WorkspacePickerModalProps> = (props
 
   const orgsQuery = useOrganizations(props);
   const workspacesQuery = useWorkspaces(props);
+  const selectWorkspace = useSelectWorkspace();
 
   const activeId = () => props.activeWorkspaceId ?? getActiveWorkspaceId();
 
