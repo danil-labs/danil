@@ -1,6 +1,6 @@
 import { For, Show } from "solid-js";
-import { Popover, PopoverContent, PopoverTrigger } from "../../../ui/src/Popover";
-import { Button } from "../../../ui/src/Button";
+import { Popover, PopoverContent, PopoverTrigger } from "../../../../ui/src/Popover";
+import { Button } from "../../../../ui/src/Button";
 import {
   cuando,
   mismaVersion,
@@ -9,8 +9,8 @@ import {
   type History,
   type Publicacion,
   type VersionRef,
-} from "./history";
-import { t } from "../../../../apps/desktop/src/lib/i18n";
+} from "../queries/history";
+import { t } from "../../../../../apps/desktop/src/lib/i18n";
 
 /**
  * La cadena de versiones de un artefacto, y cuál se está mirando.

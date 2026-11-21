@@ -12,12 +12,12 @@ import Navegador from "lucide-solid/icons/external-link";
 import PanelRight from "lucide-solid/icons/panel-right";
 import { Button } from "./Button";
 import { Dialog, DialogContent, DialogTitle } from "./Dialog";
-import { envolver, SANDBOX_ARTEFACTO } from "../../features/artifacts/src/sandbox";
+import { envolver, SANDBOX_ARTEFACTO } from "../../features/artifacts/src/model/sandbox";
 import { useFileMachine } from "./fileMachine";
 
 // El visor entero baja solo al abrir la vista previa: `pdfjs-dist` no entra en el arranque.
 const PdfDocument = lazy(() => import("../../features/viewers/src/Pdf"));
-const Documento = lazy(() => import("../../features/artifacts/src/Document"));
+const Documento = lazy(() => import("../../features/artifacts/src/screens/Document"));
 
 // La miniatura de un HTML: la página a ancho de escritorio, reducida al ancho de la tarjeta.
 const HTML_ANCHO = 1280;

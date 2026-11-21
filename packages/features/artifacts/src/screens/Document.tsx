@@ -5,17 +5,17 @@ import {
   leerEstado,
   SANDBOX_ARTEFACTO,
   type Forma,
-} from "./sandbox";
-import { t } from "../../../../apps/desktop/src/lib/i18n";
-import { flechaDeLista } from "../../../../apps/desktop/src/lib/shortcuts";
-import { Back, Next } from "../../../ui/src/icons";
-import { Button } from "../../../ui/src/Button";
-import { cn } from "../../../../apps/desktop/src/lib/utils";
+} from "../model/sandbox";
+import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { flechaDeLista } from "../../../../../apps/desktop/src/lib/shortcuts";
+import { Back, Next } from "../../../../ui/src/icons";
+import { Button } from "../../../../ui/src/Button";
+import { cn } from "../../../../../apps/desktop/src/lib/utils";
 import ZoomIn from "lucide-solid/icons/zoom-in";
 import ZoomOut from "lucide-solid/icons/zoom-out";
 import RotateCcw from "lucide-solid/icons/rotate-ccw";
-import { IconButton } from "../../viewers/src/IconButton";
-import { ZOOM_STEP } from "../../viewers/src/zoom";
+import { IconButton } from "../../../viewers/src/IconButton";
+import { ZOOM_STEP } from "../../../viewers/src/zoom";
 
 export default function Documento(props: {
   html: string;

@@ -1,15 +1,15 @@
 import { For, Show, Suspense, createEffect, createSignal, lazy, on, onCleanup } from "solid-js";
-import { invoke } from "../../../engine-client/src/client.ts";
+import { invoke } from "../../../../engine-client/src/client.ts";
 import { save } from "@tauri-apps/plugin-dialog";
 import { join, tempDir } from "@tauri-apps/api/path";
-import { useFileMachine } from "../../../ui/src/fileMachine";
-import Documento from "./Document";
+import { useFileMachine } from "../../../../ui/src/fileMachine";
+import Documento from "../screens/Document";
 import Versiones from "./Versions";
 import {
   envolver,
   formaDe,
   type Forma,
-} from "./sandbox";
+} from "../model/sandbox";
 import {
   descargarArtefacto,
   historiaDe,
@@ -21,22 +21,22 @@ import {
   type Publicacion,
   type Via,
   type VersionRef,
-} from "./history";
-import { Button } from "../../../ui/src/Button";
-import { Print } from "../../../ui/src/icons";
-import { FailureNote, asFailure, type Failure, detalleDe } from "../../../ui/src/Failure";
-import { Skeleton } from "../../../ui/src/Skeleton";
-import { Markdown } from "../../../ui/src/Markdown";
-import { t } from "../../../../apps/desktop/src/lib/i18n";
-import { extensionDe } from "../../../../apps/desktop/src/lib/steps";
-import { peso, nf } from "../../../../apps/desktop/src/lib/format";
-import { delimiterFor } from "../../viewers/src/csv";
-import { ArtifactDownloadError, readArtifactDownload } from "./download.ts";
+} from "../queries/history";
+import { Button } from "../../../../ui/src/Button";
+import { Print } from "../../../../ui/src/icons";
+import { FailureNote, asFailure, type Failure, detalleDe } from "../../../../ui/src/Failure";
+import { Skeleton } from "../../../../ui/src/Skeleton";
+import { Markdown } from "../../../../ui/src/Markdown";
+import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { extensionDe } from "../../../../../apps/desktop/src/lib/steps";
+import { peso, nf } from "../../../../../apps/desktop/src/lib/format";
+import { delimiterFor } from "../../../viewers/src/csv";
+import { ArtifactDownloadError, readArtifactDownload } from "../model/download.ts";
 
 /** Bajan al abrirse: `pdfjs-dist` no entra en el arranque de la ventana. */
-const PdfDocument = lazy(() => import("../../viewers/src/Pdf"));
-const ZoomableImage = lazy(() => import("../../viewers/src/ImageViewer"));
-const DelimitedTable = lazy(() => import("../../viewers/src/CsvTable"));
+const PdfDocument = lazy(() => import("../../../viewers/src/Pdf"));
+const ZoomableImage = lazy(() => import("../../../viewers/src/ImageViewer"));
+const DelimitedTable = lazy(() => import("../../../viewers/src/CsvTable"));
 
 export type Preview = {
   rel: string;

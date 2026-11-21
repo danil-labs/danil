@@ -1,5 +1,5 @@
-import { unknownCommand } from "../../../../apps/desktop/src/lib/errorCode.ts";
-import type { VersionRef } from "./history.ts";
+import { unknownCommand } from "../../../../../apps/desktop/src/lib/errorCode.ts";
+import type { VersionRef } from "../queries/history.ts";
 
 export type DownloadFailure = "too_large" | "incomplete" | "timeout" | "remote_outdated";
 export class ArtifactDownloadError extends Error {

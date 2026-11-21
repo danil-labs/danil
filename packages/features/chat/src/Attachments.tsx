@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogTitle } from "../../../ui/src/Dialog";
 import FileText from "lucide-solid/icons/file-text";
 import { t } from "../../../../apps/desktop/src/lib/i18n";
 import { extensionDe, nombreDe } from "../../../../apps/desktop/src/lib/steps";
-import type { Preview } from "../../artifacts/src/Preview";
+import type { Preview } from "../../artifacts/src/components/Preview";
 
 /** Baja al abrirse: `pdfjs-dist` no entra en el arranque de la ventana. */
 const PdfDocument = lazy(() => import("../../viewers/src/Pdf"));

@@ -1,7 +1,7 @@
-import { machineOf } from "../../machines/src/store";
+import { machineOf } from "../../../machines/src/store";
 import type { InvokeOptions } from "@tauri-apps/api/core";
-import { invoke } from "../../../engine-client/src/client.ts";
-import { manifiesto, t } from "../../../../apps/desktop/src/lib/i18n.ts";
+import { invoke } from "../../../../engine-client/src/client.ts";
+import { manifiesto, t } from "../../../../../apps/desktop/src/lib/i18n.ts";
 
 /**
  * **La única forma de nombrar una versión.** El número solo no identifica nada:

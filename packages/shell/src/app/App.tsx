@@ -20,8 +20,8 @@ import {
   Suspense,
   Switch,
 } from "solid-js";
-import VisorDeArtefacto from "../../../features/artifacts/src/ArtifactViewer";
-import type { Preview } from "../../../features/artifacts/src/Preview";
+import VisorDeArtefacto from "../../../features/artifacts/src/screens/ArtifactViewer";
+import type { Preview } from "../../../features/artifacts/src/components/Preview";
 import Chat, {
   type Author,
   type Msg,
