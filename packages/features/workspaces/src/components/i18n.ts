@@ -12,6 +12,7 @@ const MESSAGES: Record<string, string> = {
   "shell.rail.tip_balance_loading": "Saldo: …",
   "shell.rail.tip_balance_unavailable": "Saldo: No disponible",
   "shell.rail.open": "Abrir",
+  "chat.credits.amount": "{count}",
 };
 
 export function t(key: string, data?: Record<string, string | number>): string {

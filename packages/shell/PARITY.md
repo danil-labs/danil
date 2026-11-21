@@ -42,4 +42,6 @@ Todas las pantallas y zonas asignadas en la tarea VP1 (shell, riel, «Máquinas�
 ## Componentes Portados (VP1a - Paridad Riel DS1 v2)
 
 - `OrganizationWorkspaceTile`: portado de `apps/desktop/src/features/shell/OrganizationWorkspaceTile.tsx`
+- `OrganizationWorkspaceTooltip`: portado de `apps/desktop/src/features/shell/OrganizationWorkspaceTooltip.tsx`
+
 
