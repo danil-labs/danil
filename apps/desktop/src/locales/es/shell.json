@@ -540,5 +540,8 @@
   "shell.workspaces.admit": "Admitir",
   "shell.workspaces.catalog_empty": "Sin workspaces accesibles",
   "shell.workspaces.catalog_unavailable": "No se pudo comprobar",
-  "shell.workspaces.admission_failed": "No se pudo admitir la organización. Inténtalo de nuevo."
+  "shell.workspaces.admission_failed": "No se pudo admitir la organización. Inténtalo de nuevo.",
+  "shell.workspaces.pinned_other_account": "Es de otra cuenta ({email}). Para abrirlo, cierra sesión y entra con esa cuenta.",
+  "shell.workspaces.pinned_switch_failed": "No se pudo cambiar de organización. Inténtalo de nuevo.",
+  "shell.workspaces.pinned_switching": "Cambiando de organización"
 }
