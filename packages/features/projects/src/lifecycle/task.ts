@@ -38,10 +38,16 @@ export async function executeTaskDeletionLifecycle(
   conn: MachineConnection,
   target: DeleteTaskTarget,
   preview: DeleteTaskPreview,
-  onConsentRenewalNeeded?: (newPreview: DeleteTaskPreview) => void,
+  optionsOrConsentCallback?:
+    | { discard?: boolean; onConsentRenewalNeeded?: (newPreview: DeleteTaskPreview) => void }
+    | ((newPreview: DeleteTaskPreview) => void),
 ): Promise<DeleteTaskResult> {
+  const options =
+    typeof optionsOrConsentCallback === "function"
+      ? { onConsentRenewalNeeded: optionsOrConsentCallback, discard: false }
+      : optionsOrConsentCallback;
   try {
-    return await applyTaskDeletion(conn, target, preview);
+    return await applyTaskDeletion(conn, target, preview, { discard: options?.discard ?? false });
   } catch (err) {
     const isConsentChanged =
       (err && typeof err === "object" && "code" in err && (err as { code: string }).code === "task_family_consent_changed") ||
@@ -50,8 +56,8 @@ export async function executeTaskDeletionLifecycle(
     if (isConsentChanged) {
       // Solicitar nueva preview sin reaplicar a ciegas
       const freshPreview = await inspectTaskDeletion(conn, target);
-      if (onConsentRenewalNeeded) {
-        onConsentRenewalNeeded(freshPreview);
+      if (options?.onConsentRenewalNeeded) {
+        options.onConsentRenewalNeeded(freshPreview);
       }
       throw new TaskLifecycleError({
         code: "task_family_consent_changed",

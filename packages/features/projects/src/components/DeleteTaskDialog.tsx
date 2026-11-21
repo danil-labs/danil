@@ -1,25 +1,32 @@
-import { For, Show, createEffect, createMemo, createSignal, onMount, onCleanup } from "solid-js";
+import { For, Show, createMemo, createSignal, onMount, onCleanup } from "solid-js";
 import type { MachineConnection } from "@danil/engine-client";
 import type {
   DeleteTaskTarget,
   DeleteTaskPreview,
   DeleteTaskMemberItem,
   TaskIntegrationStatus,
+  DeleteTaskResult,
 } from "../model.ts";
-import { inspectTaskDeletion, applyTaskDeletion } from "../queries.ts";
 import { DeleteTaskMember } from "./DeleteTaskMember.tsx";
 
 export interface DeleteTaskDialogProps {
-  conn: MachineConnection;
+  conn?: MachineConnection;
   target: DeleteTaskTarget;
   isCurrent?: () => boolean;
   onDeleted?: (members: { project: string; id: string }[]) => void;
   onClose: () => void;
+  onInspect?: (target: DeleteTaskTarget) => Promise<DeleteTaskPreview>;
+  onApply?: (
+    target: DeleteTaskTarget,
+    preview: DeleteTaskPreview,
+    options: { discard: boolean }
+  ) => Promise<DeleteTaskResult>;
 }
 
 export function DeleteTaskDialog(props: DeleteTaskDialogProps) {
   const [preview, setPreview] = createSignal<DeleteTaskPreview | null>(null);
   const [reviewed, setReviewed] = createSignal<ReadonlySet<string>>(new Set());
+  const [confirmDiscard, setConfirmDiscard] = createSignal(false);
   const [busy, setBusy] = createSignal(false);
   const [error, setError] = createSignal("");
   const [invalid, setInvalid] = createSignal(false);
@@ -40,6 +47,10 @@ export function DeleteTaskDialog(props: DeleteTaskDialogProps) {
     member.files.length > 0 ||
     integrationOf(member) !== "merged";
 
+  const hasDiscardableChanges = createMemo(() =>
+    members().some((m) => m.files.length > 0 || integrationOf(m) !== "merged")
+  );
+
   const accepted = (member: DeleteTaskMemberItem) =>
     !needsReview(member) || reviewed().has(memberKey(member));
 
@@ -51,27 +62,33 @@ export function DeleteTaskDialog(props: DeleteTaskDialogProps) {
 
   const ready = createMemo(() => {
     const isCur = props.isCurrent ? props.isCurrent() : true;
+    const discardConfirmed = !hasDiscardableChanges() || confirmDiscard();
     return (
       !busy() &&
       isCur &&
       !invalid() &&
       !!preview()?.consent &&
       members().length > 0 &&
-      members().every((m) => m.inspection.status === "complete" && accepted(m))
+      members().every((m) => m.inspection.status === "complete" && accepted(m)) &&
+      discardConfirmed
     );
   });
 
   async function inspect(message = "") {
     setPreview(null);
     setReviewed(new Set<string>());
+    setConfirmDiscard(false);
     setInvalid(false);
     setError(message);
     setBusy(true);
 
     try {
-      // B-010: Llamada directa sin evaluar target.supported
-      const seen = await inspectTaskDeletion(props.conn, props.target);
+      if (!props.onInspect) {
+        throw new Error("No se ha configurado la acción de inspección");
+      }
+      const seen = await props.onInspect(props.target);
       setPreview(seen);
+      setShown(true);
     } catch (failure) {
       const failMsg = failure instanceof Error ? failure.message : String(failure);
       setError([message, failMsg].filter(Boolean).join("\n"));
@@ -108,7 +125,12 @@ export function DeleteTaskDialog(props: DeleteTaskDialogProps) {
         return;
       }
 
-      const result = await applyTaskDeletion(props.conn, props.target, seen);
+      if (!props.onApply) {
+        throw new Error("No se ha configurado la acción de aplicación");
+      }
+
+      const discard = hasDiscardableChanges() ? confirmDiscard() : false;
+      const result = await props.onApply(props.target, seen, { discard });
       props.onDeleted?.(result.applied);
 
       if (result.status === "complete" && result.failures.length === 0) {
@@ -127,7 +149,6 @@ export function DeleteTaskDialog(props: DeleteTaskDialogProps) {
       const text = failure instanceof Error ? failure.message : String(failure);
 
       if (code === "task_family_consent_changed" || text.includes("consent")) {
-        // B-011: Reinspección con debounce
         scheduleDebouncedInspect("El consentimiento de la tarea cambió; reinspeccionando...");
       } else {
         setInvalid(true);
@@ -140,12 +161,7 @@ export function DeleteTaskDialog(props: DeleteTaskDialogProps) {
 
   onMount(async () => {
     await inspect();
-    if (shown()) return;
-    if (ready() && members().length === (props.target.members ?? 1) && members().every((m) => !needsReview(m))) {
-      await apply();
-    } else {
-      setShown(true);
-    }
+    setShown(true);
   });
 
   return (
@@ -220,6 +236,20 @@ export function DeleteTaskDialog(props: DeleteTaskDialogProps) {
               )}
             </For>
           </ul>
+
+          <Show when={hasDiscardableChanges()}>
+            <label class="flex items-center gap-2 rounded-md border border-amber-200 bg-amber-50 p-2.5 text-xs font-medium text-amber-900">
+              <input
+                type="checkbox"
+                class="accent-primary"
+                data-delete-confirm-discard
+                disabled={busy() || invalid()}
+                checked={confirmDiscard()}
+                onChange={(e) => setConfirmDiscard(e.currentTarget.checked)}
+              />
+              Confirmar descarte explícito de archivos sin guardar o cambios no integrados
+            </label>
+          </Show>
 
           <Show when={error()}>
             <p role="alert" class="m-0 whitespace-pre-wrap break-all text-xs text-red-600">
