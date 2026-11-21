@@ -1,21 +1,6 @@
 import type { JSX } from "solid-js";
 import { Server, User } from "@danil/ui";
 
-/** @deprecated Retirado en RV1 #7 / RV2 #25; el riel se compone por slots con RailGroups. */
-export type OrganizationItem = unknown;
-/** @deprecated Retirado en RV1 #7 / RV2 #25. */
-export type WorkspaceItem = unknown;
-
-/** @deprecated Usar planLabel de @danil/feature-workspaces (RV1 #26, RV2 #24). */
-export function formatPlanName(plan?: string | null): string {
-  if (!plan) return "Personal";
-  const p = plan.trim().toLowerCase();
-  if (p === "personal" || p === "free") return "Personal";
-  if (p === "team" || p === "teams") return "Team";
-  if (p === "enterprise") return "Enterprise";
-  return "Personal";
-}
-
 export interface RailProps {
   activeRoute?: string;
   onSelectRoute?: (route: "machines" | "account" | string) => void;

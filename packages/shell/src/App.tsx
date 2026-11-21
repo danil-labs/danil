@@ -1,20 +1,19 @@
-import { createSignal, onMount, Show, type Component, type JSX } from "solid-js";
+import { createSignal, onMount, Show, type JSX } from "solid-js";
 import { SessionProvider, useSession } from "@danil/session/solid";
 import { createWebSession, webLoginUrl, type SessionSource, type Session } from "@danil/session";
 import { createPlatformClient, PlatformProvider, type PlatformClient } from "@danil/platform-client";
-import { host } from "@danil/host";
+import { host as defaultHost, setHost, type Host } from "@danil/host";
 import { Button, FailureNote } from "@danil/ui";
 import { RouterProvider } from "./router.tsx";
 import { Layout } from "./Layout.tsx";
-import type { OrganizationItem } from "./Rail.tsx";
 
 export interface AppProps {
   sessionSource?: SessionSource;
-  platform?: unknown;
-  host?: unknown;
+  platform?: PlatformClient;
+  host?: Host;
   initialPath?: string;
   isDesk?: boolean;
-  organizations?: OrganizationItem[];
+  organizations?: unknown;
   activeWorkspaceId?: string;
   onAddWorkspace?: (organizationId?: string) => void;
   children?: JSX.Element;
@@ -57,7 +56,7 @@ function AppWithSession(props: AppProps): JSX.Element {
   const [checking, setChecking] = createSignal(true);
 
   // La plataforma la dice el host, no una variable global de Tauri (R15).
-  const isDesk = () => props.isDesk ?? host.kind === "desk";
+  const isDesk = () => props.isDesk ?? defaultHost.kind === "desk";
   // Un error al leer la sesión no es «sin sesión» (M8): se muestra con reintento.
   const [failure, setFailure] = createSignal<unknown>(null);
 
@@ -132,6 +131,9 @@ function SessionFailure(props: { onRetry: () => void }): JSX.Element {
 }
 
 export function App(props: AppProps): JSX.Element {
+  if (props.host) {
+    setHost(props.host);
+  }
   let sessionSource = props.sessionSource;
   if (!sessionSource) {
     sessionSource = createWebSession();
@@ -140,7 +142,7 @@ export function App(props: AppProps): JSX.Element {
   const source = sessionSource;
   // Un solo cliente del borde para toda la app (regla 2): las features lo leen con usePlatform().
   // El transporte lo da la sesión: cookie + CSRF en la web, el motor en Desk (P1).
-  const platform = (props.platform as PlatformClient | undefined) ?? createPlatformClient(source.transport());
+  const platform = props.platform ?? createPlatformClient(source.transport());
 
   return (
     <SessionProvider source={source}>

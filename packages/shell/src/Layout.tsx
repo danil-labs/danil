@@ -1,6 +1,4 @@
 import type { JSX } from "solid-js";
-import { host } from "@danil/host";
-import { API_BASE } from "@danil/platform-client";
 import { Rail } from "./Rail.tsx";
 import { RailErrorBoundary, MainErrorBoundary } from "./ErrorBoundary.tsx";
 import { RouteView, RailSlot } from "./routes.tsx";
@@ -32,16 +30,6 @@ export function Layout(props: LayoutProps): JSX.Element {
     router.navigate(`/${to}`);
   };
 
-  const handleAddWorkspace = (orgId?: string) => {
-    if (props.onAddWorkspace) {
-      props.onAddWorkspace(orgId);
-    } else {
-      const base = API_BASE.replace(/\/v1\/?$/, "");
-      const query = orgId ? `?org=${encodeURIComponent(orgId)}` : "";
-      void host.openExternal(`${base}/workspaces/add${query}`);
-    }
-  };
-
   return (
     <div class="flex h-screen w-screen overflow-hidden bg-bg text-neutral-950">
       {/* Riel con ErrorBoundary por zona */}
@@ -54,7 +42,7 @@ export function Layout(props: LayoutProps): JSX.Element {
               <RailSlot
                 activeWorkspaceId={currentWorkspaceId()}
                 onSelectWorkspace={handleSelectWorkspace}
-                onAddWorkspace={handleAddWorkspace}
+                onAddWorkspace={props.onAddWorkspace}
               />
             ),
           }}

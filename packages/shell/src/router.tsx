@@ -3,7 +3,6 @@ import { createContext, createSignal, onCleanup, onMount, useContext, type JSX }
 export type Route =
   | { name: "machines" }
   | { name: "workspace"; id: string }
-  | { name: "ai-credentials" }
   | { name: "account" };
 
 export interface RouterContextValue {
@@ -29,10 +28,6 @@ export function parseRoute(rawPath: string): Route {
     return { name: "account" };
   }
 
-  if (path === "ai-credentials") {
-    return { name: "ai-credentials" };
-  }
-
   const workspaceMatch = path.match(/^workspace\/([^/]+)/);
   if (workspaceMatch && workspaceMatch[1]) {
     return { name: "workspace", id: decodeURIComponent(workspaceMatch[1]) };
@@ -47,8 +42,6 @@ export function routeToPath(route: Route): string {
       return "/machines";
     case "workspace":
       return `/workspace/${encodeURIComponent(route.id)}`;
-    case "ai-credentials":
-      return "/ai-credentials";
     case "account":
       return "/account";
   }
