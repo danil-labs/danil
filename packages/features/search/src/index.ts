@@ -15,8 +15,7 @@ export {
   GROUPS,
   PER_GROUP,
   RECENT,
-  failureWhat,
-  failureDetail,
+  asFailure,
 } from "./model.ts";
 export type {
   SearchFilter,
@@ -28,4 +27,5 @@ export type {
   Archivadas,
   Result,
   RawArchivedTasksOutput,
+  Failure,
 } from "./model.ts";

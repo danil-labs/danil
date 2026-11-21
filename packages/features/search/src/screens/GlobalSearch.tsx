@@ -19,8 +19,7 @@ import {
   GROUPS,
   PER_GROUP,
   RECENT,
-  failureWhat,
-  failureDetail,
+  asFailure,
 } from "../model.ts";
 import { useArchivedTasks } from "../queries.ts";
 
@@ -187,7 +186,13 @@ function Panel(props: GlobalSearchProps & { initial: SearchFilter }) {
       </div>
       <div ref={list} id="global-search-list" role="listbox" aria-label={t("search.results")} class="max-h-[min(60vh,440px)] overflow-y-auto pb-1.5">
         <Show when={archived.error && filter() === "archived"}>
-          <div class="px-3.5 py-2"><FailureNote what={failureWhat(archived.error)} detail={failureDetail(archived.error)} /></div>
+          <div class="px-3.5 py-2">
+            <FailureNote
+              what={asFailure(archived.error).what}
+              detail={asFailure(archived.error).detail}
+              detailLabel={t("common.failure.detail")}
+            />
+          </div>
         </Show>
         <For each={sections()}>
           {(section) => (

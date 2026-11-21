@@ -1,5 +1,5 @@
 import type { EngineClient } from "@danil/engine-client";
-import { t } from "@danil/ui/i18n";
+import { clavesConocidas, t } from "@danil/ui/i18n";
 
 // Derivación de tipos de EngineClient (R2)
 export type RawArchivedTasksOutput = Awaited<ReturnType<EngineClient["archived_tasks"]>>;
@@ -68,18 +68,99 @@ export function matchesTaskQuery(fields: (string | null | undefined)[], query: s
   return terms.every((term) => haystack.includes(term));
 }
 
-export function failureWhat(err: unknown): string {
-  if (!err) return "";
-  if (typeof err === "object" && "message" in err && typeof (err as { message: unknown }).message === "string") {
-    return (err as { message: string }).message;
-  }
-  return String(err);
+export interface Failure {
+  what: string;
+  detail?: string;
 }
 
-export function failureDetail(err: unknown): string | undefined {
-  if (typeof err === "object" && err !== null && "detail" in err) {
-    const d = (err as { detail: unknown }).detail;
-    return typeof d === "string" ? d : JSON.stringify(d);
+type Data = Record<string, string | number>;
+const record = (e: unknown): e is Record<string, unknown> => e !== null && typeof e === "object";
+const readable = (e: unknown): e is string =>
+  typeof e === "string" && e.trim().length > 0 && !/\[object \w+\]/.test(e);
+
+const whatOf = (e: unknown): unknown => {
+  if (typeof e === "string" && clavesConocidas().has(`cli.error.${e}`)) return { clave: `cli.error.${e}` };
+  if (!record(e)) return e;
+  if ("what" in e) return e.what;
+  if (typeof e.message_key === "string" && clavesConocidas().has(e.message_key)) return { clave: e.message_key };
+  return e;
+};
+
+const humano = (v: unknown): v is string => readable(v) && /\s/.test(v.trim());
+
+export function explicacionDelMotor(e: unknown): string | null {
+  const niveles: Record<string, unknown>[] = [];
+  let nivel: unknown = e;
+  for (let i = 0; i < 3 && record(nivel); i++) {
+    niveles.push(nivel);
+    nivel = nivel.detail;
   }
-  return undefined;
+  const primero = (campo: string, plano = false) => {
+    for (const n of niveles) {
+      if (plano && n instanceof Error) continue;
+      if (humano(n[campo])) return (n[campo] as string).trim();
+    }
+    return null;
+  };
+  const partes = [primero("reason") ?? primero("message", true), primero("recovery")].filter(
+    (p, i, all): p is string => !!p && all.indexOf(p) === i,
+  );
+  return partes.length ? partes.join("\n") : null;
+}
+
+export function claveDe(e: unknown): string | null {
+  const what = whatOf(e);
+  const clave = record(what) ? what.clave : what;
+  return typeof clave === "string" && clavesConocidas().has(clave) ? clave : null;
+}
+
+function phrase(e: unknown, datos?: Data): string | null {
+  const clave = claveDe(e);
+  if (clave) {
+    const supplied = record(e) && record(e.datos)
+      ? Object.fromEntries(Object.entries(e.datos).filter(([, v]) =>
+          typeof v === "string" || typeof v === "number",
+        )) as Data : undefined;
+    return t(clave, { ...supplied, ...datos });
+  }
+  return readable(e) ? e : null;
+}
+
+function conExplicacion(what: string, e: unknown): string {
+  const extra = explicacionDelMotor(e);
+  if (!extra) return what;
+  return what.includes(extra) ? what : `${what}\n${extra}`;
+}
+
+function diagnostic(e: unknown): string {
+  if (typeof e === "string") return readable(e) ? e : "";
+  if (e == null) return "";
+  const seen = new WeakSet<object>();
+  try {
+    return JSON.stringify(e, (_key, value: unknown) => {
+      if (typeof value === "bigint") return value.toString();
+      if (!record(value)) return value;
+      if (seen.has(value)) return "[Circular]";
+      seen.add(value);
+      return value instanceof Error ? { ...value, message: value.message, stack: value.stack, cause: value.cause } : value;
+    }) ?? "";
+  } catch {
+    return "";
+  }
+}
+
+/** Una estructura inesperada nunca sustituye la explicación por su coerción a texto. */
+export function asFailure(e: unknown, datos?: Data): Failure {
+  const envelope = record(e) && "what" in e;
+  const what = (envelope || claveDe(e)) ? phrase(whatOf(e), datos) : null;
+  const resolvedWhat = what ? conExplicacion(what, e) : (() => {
+    const fallback = t("common.failure.generic");
+    const extra = explicacionDelMotor(e) ?? (record(e) && readable(e.message) ? e.message : null);
+    return extra ? `${extra}\n${fallback}` : fallback;
+  })();
+  const detail = diagnostic(envelope ? e.detail : e);
+  return {
+    what: resolvedWhat,
+    detail: detail || undefined,
+  };
 }
