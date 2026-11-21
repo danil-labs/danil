@@ -9,6 +9,7 @@ import { accountAssetUrl, readAccountAsset } from "@terminus/computers";
 import { blobToDataUrl } from "../features/settings/account-profile.ts";
 import { apiUrl } from "./computers.ts";
 import { type Fetch, refused, sessionCall } from "./control-plane.ts";
+import { platformFetch } from "../platform/client.ts";
 
 
 export type WorkspaceAssetKind = "logo" | "background";
@@ -34,7 +35,7 @@ export function webWorkspaceAssets(
   endpoint: string,
   getToken: () => string | Promise<string>,
   onUnauthorized?: () => void,
-  f: Fetch = (input, init) => fetch(input, init),
+  f: Fetch = (input, init) => platformFetch(input, init),
 ): WorkspaceAssetsSource {
   let rows: Promise<Map<string, Row>> | null = null;
   const images = new Map<string, Promise<string | null>>();

@@ -3,6 +3,7 @@ import { t } from "../lib/i18n";
 import { Button } from "../ui/Button";
 import { Toast, ToastPortal } from "../ui/Toast";
 import { newBuild, setNewBuild, setUpdateNoticeReady } from "./update-state";
+import { platformFetch } from "../platform/client.ts";
 
 /** How often an open tab asks whether a deploy changed the page. */
 const CHECK_EVERY = 10 * 60_000;
@@ -16,7 +17,7 @@ function buildOf(page: Document) {
 
 /** The deployed build, or null when the answer is not this page: a redirect to sign in serves another app's HTML. */
 async function deployedBuild(base: string) {
-  const response = await fetch(base, { cache: "no-store" });
+  const response = await platformFetch(base, { cache: "no-store" });
   if (!response.ok || response.redirected) return null;
   const page = new DOMParser().parseFromString(await response.text(), "text/html");
   const build = buildOf(page);

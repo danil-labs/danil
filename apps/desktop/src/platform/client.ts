@@ -138,3 +138,6 @@ export const selectWorkspace = (workspaceId: string, p?: Patience) => {
   cancelEdgeWrites();
   return bodyOf<{ workspace: Workspace }>("POST", "/v1/workspaces/select", { workspace: workspaceId }, p);
 };
+
+/** El `fetch` real de la plataforma para las fuentes que lo necesitan directamente. */
+export const platformFetch: typeof fetch = (input, init) => fetch(input, init);

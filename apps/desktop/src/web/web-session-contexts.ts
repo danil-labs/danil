@@ -71,7 +71,7 @@ export function webSessionCommands(transport: EdgeTransport, options: { expired:
     return last;
   }
 
-  async function fetch(args: Args) {
+  async function edgeRequest(args: Args) {
     const method = String(args.method ?? "GET").toUpperCase();
     const path = text(args.path);
     const context = text(args.context);
@@ -118,7 +118,7 @@ export function webSessionCommands(transport: EdgeTransport, options: { expired:
     answers: (command: string) => COMMANDS.has(command),
     handle(command: string, args: Args = {}): Promise<unknown> {
       if (command === "danil_session_status") return status();
-      if (command === "danil_edge_fetch") return fetch(args);
+      if (command === "danil_edge_fetch") return edgeRequest(args);
       if (command === "danil_sign_out") return signOut(args);
       return Promise.reject(refused("command"));
     },

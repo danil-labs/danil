@@ -26,6 +26,7 @@ import { freeModelScope } from '../lib/free-model-policy';
 import { freeRouterEngine, freeRouterWebEdge } from '../features/settings/free-router-adapters';
 import { setFreeRouterHost, signOutPlatform } from '../features/settings/free-router-session';
 import { sessionRailState } from '../features/shell';
+import { platformFetch } from '../platform/client';
 
 declare const __DANIL_WEB_RELAY_ORIGINS__: string[];
 const FIRST_RETRY_MS = 1000;
@@ -45,7 +46,7 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
     aplicarLengua();
     seguirElTema();
     const lifetime = new AbortController();
-    const request: typeof fetch = (input, init = {}) => lifetime.signal.aborted ? Promise.reject(new DOMException('The page was closed', 'AbortError')) : fetch(input, { ...init, signal: init.signal ? AbortSignal.any([init.signal, lifetime.signal]) : lifetime.signal });
+    const request: typeof fetch = (input, init = {}) => lifetime.signal.aborted ? Promise.reject(new DOMException('The page was closed', 'AbortError')) : platformFetch(input, { ...init, signal: init.signal ? AbortSignal.any([init.signal, lifetime.signal]) : lifetime.signal });
     // El eco de la organización se comprueba con el conjunto de la cookie (M2 del dictamen de seguridad).
     const api = platformSession(options, request, context => sessions.scopeOf(context)?.org ?? null);
     const raw = platformTransport(options, request);
