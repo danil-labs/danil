@@ -297,52 +297,9 @@ import { LazyPart, retryableLazy } from "../../../ui/src/LazyPart";
 import { BotonConAtajo } from "../../../ui/src/Shortcut";
 import { Toast, ToastStack } from "../../../ui/src/Toast";
 
-// Lo que falla en el camino a la ventana y no en el comando: se vuelve a
-// preguntar en vez de pintarlo (`cli/service/mod.rs`, `para_la_ventana`).
-const TRANSPORTE = new Set([
-  "shell.service.unreachable",
-  "shell.service.busy",
-  "shell.service.version",
-]);
+import { createSleepSession, TRANSPORTE, type ComandoQueNace, type Corrida, type LiveTurn, type TerminalLanzada } from "../../../features/chat/src";
 
-/** Un turno que sigue contestando, tal como lo cuenta `turn::list_live_turns`. */
-type TerminalLanzada = {
-  project: string;
-  provider: string;
-  model: string | null;
-  effort: string | null;
-  permission_mode: string | null;
-};
-
-/** Lo que devuelve `run_shell_command`: el turno y la tarea donde corrió. */
-type Corrida = { session: string; turn: Turn };
-
-/** Un `!` escrito sin tarea, hasta que Rust dice cuál abrió. */
-type ComandoQueNace = {
-  lanzado: TerminalLanzada;
-  provisional: string;
-  titulo: string;
-  claveBorrador: string;
-  generation: number;
-  session: string | null;
-};
-
-type LiveTurn = {
-  session: string;
-  workspace: string;
-  project: string;
-  started_at: number;
-  /** El agente ya contestó y el turno solo sigue abierto por una hija. */
-  background?: boolean;
-  /** Lo que ocupa la tarea es un `!` y no el agente. */
-  shell?: { id: string; command: string };
-};
-
-// Sin botón todavía: expone `sleep_session` para el gesto «Dormir» que la
-// pantalla aún no ofrece.
-export async function sleepSession(project: string, session: string) {
-  await invoke<void>("sleep_session", { project, session }, machineOf(session));
-}
+export const { sleepSession } = createSleepSession({ machineOf });
 
 export default function App() {
   /**
@@ -1166,6 +1123,7 @@ export default function App() {
     drafts.invalidateProvider(id, session.provider);
     if (id === sessionId() && (session.subagent || session.parent)) composer.useProfile({ model: modeloDeSubtarea(session), effort: session.effort });
   }
+  let lifecycleRevision = 0;
   /**
    * El destino que demora el envío. Si la tarea aún no tiene id,
    * la espera se muestra en su pestaña provisional o en el borrador.
@@ -1213,7 +1171,6 @@ export default function App() {
   const [vivas, setVivas] = createSignal<string[]>([]);
   const finishedTurns = new Map<string, boolean | null | undefined>();
   const [settlingTurns, setSettlingTurns] = createSignal<string[]>([]);
-  let lifecycleRevision = 0;
   const turnRevisions = new Map<string, number>();
   function advanceTurn(id: string) {
     lifecycleRevision++;
@@ -4924,6 +4881,7 @@ export default function App() {
     } else pestanas.ensure({ id, project: proyecto, titulo: "" });
     void reatarVistaPrevia(proyecto, id);
   }
+  let gateSeq = 0;
 
   /**
    * Lanza un turno. Devuelve si llegó a arrancar: con `false`, quien
@@ -5263,7 +5221,6 @@ export default function App() {
    * decisión que nadie puede tomar.
    */
   const permissionReads = new Map<string, number>();
-  let gateSeq = 0;
   async function reponerGates(session: string, workspace = workspaceActivo()) {
     const generation = workspaceContext.generation();
     const reading = (permissionReads.get(session) ?? 0) + 1;

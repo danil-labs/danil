@@ -10,3 +10,4 @@ export { anexarDeltas, anexarImagen, anexarRazonamiento, mcpCallFromName, mensaj
 export { vivoTrasLeer } from "./model/threadOrder.ts";
 export type { PermissionRequest } from "./screens/Chat.tsx";
 export { mergeGates, type PendingPermission } from "./model/permissionGates.ts";
+export { createSleepSession, TRANSPORTE, type ComandoQueNace, type Corrida, type LiveTurn, type TerminalLanzada } from "./queries/sleepSession.ts";
