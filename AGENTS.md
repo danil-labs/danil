@@ -63,6 +63,28 @@ Estructura modular del front rebuild (SolidJS):
 | `packages/features/terminal` | Feature de terminales (esqueleto F1.1). | `@danil/engine-client`, `@danil/ui`, `@danil/session`, `@danil/host` | Tipos generados por los clientes |
 | `packages/features/account` | Perfil y resumen del plan, solo lectura (esqueleto F1.1). | `@danil/platform-client`, `@danil/ui`, `@danil/session`, `@danil/host` | OpenAPI del borde y tipos generados por los clientes |
 
+### Reglas de arquitectura (R1–R10)
+
+Verificación con Node puro: `node scripts/verify-front.mjs` (o `pnpm front:verify`).
+
+- **R1:** Ningún `fetch`, `WebSocket`, `EventSource`, `@tauri-apps/api` ni `invoke` fuera de `platform-client`, `engine-client`, `session` y `host`.
+- **R2:** Ningún tipo de respuesta escrito a mano fuera de `model.ts` (derivados de los clientes generados); cliente único del borde por app (`usePlatform()` en features).
+- **R3:** Una feature no importa a otra; solo `shell` (o un `apps/*`) las compone.
+- **R4:** `packages/ui` no importa nada de dominio ni de red (no importa `@danil/*`).
+- **R5:** La UI no distingue local de nube: sin `isLocal`, `is_local`, `kind === "personal"` ni comprobaciones locales fuera de `engine-client`.
+- **R6:** Tope de 400 líneas por archivo `.ts/.tsx` (incluyendo `generated/`).
+- **R7:** Si cambia el contrato RPC1 (`commands.json`) o OpenAPI (`openapi.json`), `CONTRACT_HASH` debe coincidir con su sha256 o se regeneran los clientes.
+- **R8:** Lista negra: nada de appv2, mensajería, `/v1/compute` ni `/v1/computers`.
+- **R9:** DRY: prohibidas 12+ líneas consecutivas idénticas normalizadas en dos archivos (salvo `generated/`).
+- **R10:** Prohibido manejar `404` o `501` en features: se manejan y reintentan automáticamente en `platform-client`.
+
+### Red, clientes y despliegue
+
+- **Aislamiento de red:** La red solo vive en `packages/platform-client`, `packages/engine-client`, `packages/session` y `packages/host`.
+- **Cliente único del borde:** Un solo cliente del borde por app instanciado en el shell (`createPlatformClient`); las features lo consumen únicamente con `usePlatform()`.
+- **Despliegue web (`apps/workspace`):** Se despliega como Worker `danil-front-preview` en `preview-front.danil.ai` con `pnpm -C apps/workspace run deploy`.
+- **Front viejo y migración:** `apps/desktop` y los paquetes viejos (`attention`, `computers`, `fleet`, `carry`, `chat`, `tasks`, `protocol`, `design`) son el front viejo y se borran en F4.4: el front nuevo no los importa.
+
 ## Product names
 
 Danil is one product: one account, and the same app in the window, the web and
