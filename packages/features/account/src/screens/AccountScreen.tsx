@@ -1,4 +1,5 @@
 import { Show, type Component } from "solid-js";
+import { SettingsBlock, SettingsPanel, SettingsRow, SettingsSection } from "@danil/ui";
 import { useProfile } from "../queries.ts";
 import { BillingLink } from "../components/BillingLink.tsx";
 import { HarnessLink } from "../components/HarnessLink.tsx";
@@ -26,88 +27,84 @@ export const AccountScreen: Component<AccountScreenProps> = (props) => {
 
   return (
     <div
-      class={`flex flex-col gap-6 max-w-2xl text-foreground ${props.class ?? ""}`}
+      class={`p-6 max-w-4xl text-neutral-950 dark:text-neutral-100 ${props.class ?? ""}`}
       data-danil-account="profile"
     >
-      <Show when={profileQuery.error()}>
-        {(err) => (
-          <AccountErrorView
-            message={resolveErrorMessage(err())}
-            onRetry={profileQuery.refetch}
-          />
-        )}
-      </Show>
+      <SettingsPanel>
+        <Show when={profileQuery.error()}>
+          {(err) => (
+            <AccountErrorView
+              message={resolveErrorMessage(err())}
+              onRetry={profileQuery.refetch}
+            />
+          )}
+        </Show>
 
-      <Show
-        when={!profileQuery.loading() || profileQuery.profile()}
-        fallback={
-          <div class="py-6 text-sm text-neutral-400" data-account-loading="">
-            Cargando cuenta...
-          </div>
-        }
-      >
-        <Show when={profileQuery.profile()}>
-          {(data) => (
-            <>
-              {/* Sección: Perfil del usuario */}
-              <section class="border-b border-zinc-800 pb-5" data-account-profile="">
-                <h2 class="text-base font-medium text-zinc-100">Cuenta de Danil</h2>
-                <p class="text-xs text-zinc-400 mt-1">
-                  Identidad y credenciales sincronizadas con la plataforma.
-                </p>
+        <Show
+          when={!profileQuery.loading() || profileQuery.profile()}
+          fallback={
+            <SettingsBlock data-account-loading="">
+              <p class="m-0 text-sm text-neutral-500">Cargando cuenta…</p>
+            </SettingsBlock>
+          }
+        >
+          <Show when={profileQuery.profile()}>
+            {(data) => (
+              <>
+                {/* Sección: Perfil del usuario */}
+                <SettingsSection
+                  title="Cuenta de Danil"
+                  description="Identidad y credenciales sincronizadas con la plataforma."
+                  data-account-profile=""
+                >
+                  <SettingsRow
+                    lead={
+                      <span
+                        data-account-avatar="initials"
+                        class="flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-full bg-surface-muted text-base font-semibold text-neutral-700 uppercase"
+                      >
+                        {(data().me.name || data().me.id).slice(0, 2).toUpperCase()}
+                      </span>
+                    }
+                    label={data().me.name || data().me.id}
+                    description={`ID: ${data().me.id}`}
+                  >
+                    <Show when={data().me.state}>
+                      <span class="rounded border border-border bg-surface-muted px-2 py-0.5 text-xs text-neutral-600">
+                        {data().me.state}
+                      </span>
+                    </Show>
+                  </SettingsRow>
+                </SettingsSection>
 
-                <div class="mt-4 flex items-center justify-between py-3 border-t border-zinc-800/60">
-                  <div class="flex flex-col gap-0.5">
-                    <span class="text-sm font-medium text-zinc-200">
-                      {data().me.name || data().me.id}
-                    </span>
-                    <span class="text-xs text-zinc-500 font-mono">
-                      ID: {data().me.id}
-                    </span>
-                  </div>
-                  <Show when={data().me.state}>
-                    <span class="text-xs px-2 py-0.5 rounded bg-zinc-800 text-zinc-400 border border-zinc-700/60">
-                      {data().me.state}
-                    </span>
-                  </Show>
-                </div>
-              </section>
-
-              {/* Sección: Plan y Organización actual */}
-              <section class="border-b border-zinc-800 pb-5" data-account-plan="">
-                <h3 class="text-sm font-medium text-zinc-200">Plan y suscripción</h3>
-                <p class="text-xs text-zinc-400 mt-1">
-                  Nivel de servicio y gestión de usuarios de la organización.
-                </p>
-
-                <div class="mt-4 flex flex-col gap-3">
-                  <div class="flex items-center justify-between py-3 border-t border-zinc-800/60">
-                    <div class="flex flex-col gap-0.5">
+                {/* Sección: Plan y Organización actual */}
+                <SettingsSection
+                  title="Plan y suscripción"
+                  description="Nivel de servicio y gestión de usuarios de la organización."
+                  data-account-plan=""
+                >
+                  <SettingsRow
+                    label={
                       <div class="flex items-center gap-2">
-                        <span class="text-sm font-medium text-zinc-100">
-                          {data().planLabel}
-                        </span>
-                        <span class="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-300 border border-zinc-700">
+                        <span>{data().planLabel}</span>
+                        <span class="rounded border border-border bg-surface-muted px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-neutral-700">
                           Plan activo
                         </span>
                       </div>
-                      <Show when={data().activeOrganization?.name}>
-                        <span class="text-xs text-zinc-400 mt-0.5">
-                          {data().activeOrganization?.name}
-                        </span>
-                      </Show>
-                    </div>
+                    }
+                    description={data().activeOrganization?.name}
+                  >
                     <div class="flex items-center gap-2">
                       <BillingLink />
                       <HarnessLink />
                     </div>
-                  </div>
-                </div>
-              </section>
-            </>
-          )}
+                  </SettingsRow>
+                </SettingsSection>
+              </>
+            )}
+          </Show>
         </Show>
-      </Show>
+      </SettingsPanel>
     </div>
   );
 };

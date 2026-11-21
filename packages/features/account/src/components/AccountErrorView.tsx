@@ -1,4 +1,5 @@
 import { type Component } from "solid-js";
+import { Button, SettingsBlock } from "@danil/ui";
 
 export interface AccountErrorViewProps {
   message?: string;
@@ -11,22 +12,13 @@ export interface AccountErrorViewProps {
  */
 export const AccountErrorView: Component<AccountErrorViewProps> = (props) => {
   return (
-    <div
-      class="rounded-md border border-red-900/50 bg-red-950/20 p-4 text-xs"
-      role="alert"
-      data-danil-account-error=""
-    >
-      <div class="text-red-400 font-semibold mb-1">Error al consultar perfil</div>
-      <p class="m-0 text-red-300 text-xs mb-3">
+    <SettingsBlock data-danil-account-error="">
+      <p class="m-0 text-sm text-error-strong" role="alert">
         {props.message ?? "No se pudieron obtener los datos de la cuenta desde la plataforma."}
       </p>
-      <button
-        type="button"
-        onClick={props.onRetry}
-        class="px-2.5 py-1 text-xs font-medium rounded border border-red-700/60 bg-red-900/30 text-red-200 hover:bg-red-800/40 transition-colors cursor-pointer"
-      >
+      <Button size="sm" variant="secondary" class="justify-self-start" onClick={props.onRetry}>
         Reintentar
-      </button>
-    </div>
+      </Button>
+    </SettingsBlock>
   );
 };

@@ -1,5 +1,6 @@
 import { type Component, type JSX } from "solid-js";
 import { host } from "@danil/host";
+import { Button } from "@danil/ui";
 import { getHarnessUrl } from "../config.ts";
 
 export interface HarnessLinkProps {
@@ -17,16 +18,14 @@ export const HarnessLink: Component<HarnessLinkProps> = (props) => {
   };
 
   return (
-    <button
-      type="button"
+    <Button
+      size="sm"
+      variant="secondary"
       onClick={handleClick}
-      class={
-        props.class ??
-        "inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded border border-zinc-700 bg-zinc-800 text-zinc-200 hover:bg-zinc-700 hover:text-white transition-colors cursor-pointer"
-      }
+      class={props.class}
       data-harness-link=""
     >
       {props.children ?? "Administrar usuarios y permisos"}
-    </button>
+    </Button>
   );
 };
