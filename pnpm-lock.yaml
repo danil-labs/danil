@@ -284,10 +284,11 @@ importers:
   packages/design: {}
 
   packages/engine-client:
-    devDependencies:
+    dependencies:
       solid-js:
         specifier: ^1.9.17
         version: 1.9.17
+    devDependencies:
       typescript:
         specifier: ^5.7.2
         version: 5.9.3
