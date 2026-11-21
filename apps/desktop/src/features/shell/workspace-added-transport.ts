@@ -4,6 +4,7 @@
  */
 import { EdgeError } from "@terminus/computers";
 import type { AddedRecord, AddedStore, AddedTransport, PendingOp, PreferencesReply } from "./workspace-added-sync.ts";
+import { edgePath } from "../../platform/client.ts";
 
 const PREFERENCES = "workspaces/preferences";
 const ENGINE_ID = /^[A-Za-z0-9_-]{1,128}$/;
@@ -19,7 +20,7 @@ export type EdgeSend = (method: "GET" | "PUT" | "DELETE", path: string, body?: u
  */
 export function edgeAddedTransport(send: EdgeSend): AddedTransport {
   const reply = async (method: "GET" | "PUT" | "DELETE", path: string, body?: unknown): Promise<PreferencesReply> => {
-    const r = await send(method, `/v1/${path}`, body);
+    const r = await send(method, edgePath(path), body);
     return { status: r.status, body: r.body };
   };
   const one = (method: "PUT" | "DELETE", id: string) => (ENGINE_ID.test(id) ? reply(method, `${PREFERENCES}/added/${id}`) : Promise.resolve(MALFORMED));

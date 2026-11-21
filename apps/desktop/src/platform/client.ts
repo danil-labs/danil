@@ -124,3 +124,6 @@ export async function edgeUntil<T = unknown>(method: EdgeMethod, path: string, b
 
 /** El `fetch` real de la plataforma para las fuentes que lo necesitan directamente. */
 export const platformFetch: typeof fetch = (input, init) => fetch(input, init);
+
+/** Una ruta del borde a partir de su tramo relativo (`workspaces/…` → `/v1/workspaces/…`). */
+export const edgePath = (path: string) => `/v1/${path}`;
