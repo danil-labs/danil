@@ -129,6 +129,9 @@ export function mountWindow(base: Base, mounted: Mounted) {
     fleet.setMachines(answer.value.map(machine => ({ id: machine.machine_id, name: machine.name || machine.machine_id,
       wakes: machineToComputer(machine).wakeable === true && base.permits("machines.start"), kind: group ? machine.kind === "personal" ? "personal" : "organization" : machine.kind ?? (machine.organization_id && !machine.person_id ? "organization" : null), context: group?.context, organizationId: machine.organization_id ?? null,
     })));
+    for (const machine of answer.value) {
+      fleet.observe(machine.machine_id, machineToComputer(machine).state, group?.context);
+    }
     machinesListed(fleet);
     fleet.subscribeEvents();
     await selectEngineWorkspace(active, base.services.webWorkspaces, group);
