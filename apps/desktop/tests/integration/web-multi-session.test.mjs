@@ -217,7 +217,9 @@ test('a workspace that no machine lists is not sent anywhere and says so', async
   assert.deepEqual(sent.filter(s => s.workspace === 'wx1' && ['list_live_sessions', 'list_projects', 'list_models', 'list_accounts'].includes(s.command)), [], 'nothing is asked of a machine that does not list it');
   const list = await app.w.__TAURI_INTERNALS__.invoke('machine_list');
   assert.equal(list.find(m => m.active)?.id ?? null, null, `no machine is picked: ${JSON.stringify(list)}`);
-  await until(() => doc.body.textContent.includes('Sin máquina'), 'the header says there is no machine');
+  // El encabezado nombra la última máquina elegida (la Mac guardada en «Ejecutar en»), en gris: no sirve este workspace.
+  await until(() => doc.querySelector('[data-task-location-machine]')?.textContent.includes('Mac.domain.name') && doc.querySelector('[data-task-location]')?.dataset.taskLocationOn === 'false', 'the header names the last chosen machine, greyed');
+  assert.equal(doc.body.textContent.includes('Sin máquina'), false);
   assert.equal([...doc.querySelectorAll('button, span')].some(e => e.textContent.trim() === 'local'), false, 'never «local» on the web');
 });
 

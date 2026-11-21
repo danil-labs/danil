@@ -400,6 +400,7 @@
   "shell.machines.on": "on",
   "shell.machines.off": "off",
   "shell.machines.unlinked": "lacks this workspace",
+  "shell.machines.disconnected": "Disconnected",
   "shell.machines.task_on": "Runs on {name}",
   "shell.machines.task_off": "Runs on {name}, which is off: it starts when you act on this task.",
   "shell.machines.asleep_notice": "{name} is off: it starts when you send a message.",

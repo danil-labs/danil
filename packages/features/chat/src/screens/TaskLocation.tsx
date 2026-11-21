@@ -66,8 +66,8 @@ export default function TaskLocation(props: TaskLocationProps) {
       class="relative z-10 flex min-w-0 shrink-0 items-center gap-px px-3.5 pt-2 text-ui text-neutral-500"
     >
       <Pista
-        class={cn("max-w-[40%] shrink", !props.on && "opacity-65")}
-        tip={props.on ? t("shell.machines.task_on", { name: nombre() }) : t("shell.machines.task_off", { name: nombre() })}
+        class={cn("max-w-[40%] shrink", !props.on && "opacity-65", !nombre() && "hidden")}
+        tip={props.on ? t("shell.machines.task_on", { name: nombre() }) : t(capabilities().nativeWindow ? "shell.machines.task_off" : "shell.machines.disconnected", { name: nombre() })}
       >
         <MachineIcon wakes={wakes()} size={14} class="shrink-0" />
         <span data-task-location-machine="" class="min-w-0 truncate">{nombre()}</span>
