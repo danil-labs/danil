@@ -36,6 +36,7 @@ import {
 } from "../entries.ts";
 import { ICONOS } from "../components/entry-icons.tsx";
 import { AccountSection } from "../components/AccountSection.tsx";
+import { AiAccountsSection } from "../components/AiAccountsSection.tsx";
 import { PreferencesSection } from "../components/preferences/PreferencesSection.tsx";
 
 export interface SettingsModalProps {
@@ -94,6 +95,9 @@ export function SettingsModal(props: SettingsModalProps) {
           slot={props.preferencesSlot}
         />
       );
+    }
+    if (entryId === "ai-accounts") {
+      return () => <AiAccountsSection slot={props.aiAccountsSlot} />;
     }
     if (entryId === "machines" && props.machinesSlot && id === "machines") {
       return () => <>{props.machinesSlot}</>;
