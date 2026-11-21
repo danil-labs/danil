@@ -30,8 +30,6 @@ export type RouterConfig = {
    * las otras de sus copias (`state_copy`), sin preguntar a cada una por el relay.
    */
   engineFeatures?: () => readonly string[];
-  /** En la web: si el workspace del motor vive en la máquina de su organización (`placement: organization_machine`). */
-  organizationMachine?: (workspace: string) => boolean;
   /** La máquina de la ventana. `os` solo si se sabe; sin `wakes`, se pinta como laptop. */
   home?: () => { wakes?: boolean; os?: SystemId | null; features?: readonly string[]; version?: string | null };
 };
