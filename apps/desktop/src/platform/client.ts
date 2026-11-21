@@ -8,7 +8,6 @@ import { invoke } from "../engine/client.ts";
 export type Me = { id: string; name: string; state?: string; workspace: string | null; organizations: { id: string; name: string; type?: string; role?: string }[]; active_organization_id?: string | null };
 export type Organization = { id: string; name: string; plan: string; role: string };
 export type OrganizationList = { items: Organization[]; next_cursor: string | null; active_organization_id?: string | null };
-export type { Workspace, WorkspaceList } from "./workspaces.ts";
 
 export type Patience = {
   /** Corta la espera; la promesa rechaza con el último fallo. */
@@ -132,4 +131,3 @@ export const selectOrganization = (organizationId: string, p?: Patience) => {
   cancelEdgeWrites();
   return bodyOf<{ organization: Organization; workspace: string | null }>("POST", "/v1/identity/organizations/select", { organization_id: organizationId }, p);
 };
-export { workspaces, selectWorkspace } from "./workspaces.ts";
