@@ -3,10 +3,7 @@ use std::ffi::OsStr;
 use std::os::unix::process::CommandExt;
 
 // Catálogo de args.rs del motor, más help y kn. `machines` es el grupo público
-// de Danil Machines. Hasta el motor que lo tiene, el error es del motor, no
-// abrir la ventana. No publicar este cliente antes de ese pin. `computers` es
-// su alias oculto en el motor (lo llama el verify publicado); sale de aquí
-// cuando el motor lo retire.
+// de Danil Machines. El alias viejo `computers` no se reenvía desde Desk nuevo.
 const COMMANDS: &[&str] = &[
     "account",
     "activity",
@@ -15,7 +12,6 @@ const COMMANDS: &[&str] = &[
     "auth",
     "chat",
     "client",
-    "computers",
     "config",
     "context",
     "credential",
