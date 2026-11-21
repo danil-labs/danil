@@ -1,5 +1,12 @@
 import { createResource, createSignal, type Accessor, type Resource } from "solid-js";
-import type { ClientError, PlatformClient } from "@danil/platform-client";
+import {
+  usePlatform,
+  type ClientError,
+  type PlatformClient,
+  type WorkspaceAccounts,
+  type AccountCredential,
+  type PutWorkspaceAccount,
+} from "@danil/platform-client";
 import {
   connectMachine,
   type ConnectOptions,
@@ -10,12 +17,10 @@ import {
 import type {
   ConnectAccountOptions,
   EngineProviderItem,
-  PutWorkspaceAccountPayload,
-  WorkspaceAccountsResponse,
 } from "./model.ts";
 import { sealForRecipients } from "./seal.ts";
 
-export type { ConnectAccountOptions };
+export type { ConnectAccountOptions, AccountCredential };
 
 export type MachineQueryTarget =
   | EngineClient
@@ -67,41 +72,40 @@ const UNAVAILABLE_ERROR: ClientError = {
  * Consulta única y cacheada de cuentas de IA y destinatarios por workspace (B-023).
  *
  * Ruta OpenAPI: `GET /v1/credentials/workspaces/{workspace_id}/accounts`
- * Pendiente de contrato en `@danil/platform-client`.
  */
 export function useWorkspaceAccounts(
   workspaceId: Accessor<string | null | undefined>,
-  _platformClient?: PlatformClient,
+  platformClient?: PlatformClient,
 ) {
+  const platform = usePlatform();
+  const client = platformClient ?? platform;
+
   const [data, { refetch, mutate }] = createResource<
-    WorkspaceAccountsResponse | null,
+    WorkspaceAccounts | null,
     string | null | undefined
   >(workspaceId, async (id) => {
     if (!id) return null;
-    // La ruta GET /v1/credentials/workspaces/{workspace_id}/accounts no está
-    // en @danil/platform-client todavía. Se devuelve error tipado unavailable.
-    throw UNAVAILABLE_ERROR;
+    return await client.getWorkspaceAccounts({ workspace_id: id });
   });
 
   return {
     data,
     refetch: () => void refetch(),
-    mutate: (v: WorkspaceAccountsResponse | null) => mutate(v),
+    mutate: (v: WorkspaceAccounts | null) => mutate(v),
     loading: () => data.loading,
     error: () => data.error as ClientError | null,
   };
 }
-
-
 
 /**
  * Conexión de cuenta sellando el secreto para cada máquina receptora (X25519).
  *
  * Sella el secreto con `seal.ts` y envía `copies: [{ machine_id, sealed }]`.
  * Ruta OpenAPI: `PUT /v1/credentials/workspaces/{workspace_id}/accounts`
- * Pendiente de contrato en `@danil/platform-client`.
  */
-export function useConnectAccount(_platformClient?: PlatformClient) {
+export function useConnectAccount(platformClient?: PlatformClient) {
+  const platform = usePlatform();
+  const client = platformClient ?? platform;
   const [saving, setSaving] = createSignal(false);
   const [error, setError] = createSignal<ClientError | null>(null);
 
@@ -128,7 +132,7 @@ export function useConnectAccount(_platformClient?: PlatformClient) {
         secretValue,
       );
 
-      const _payload: PutWorkspaceAccountPayload = {
+      const body: PutWorkspaceAccount = {
         kind: opts.kind ?? "api_key",
         provider: opts.provider,
         slot: opts.slot,
@@ -140,8 +144,10 @@ export function useConnectAccount(_platformClient?: PlatformClient) {
         })),
       };
 
-      // La ruta PUT /v1/credentials/workspaces/{workspace_id}/accounts no está generada
-      throw UNAVAILABLE_ERROR;
+      await client.putWorkspaceAccount({
+        workspace_id: opts.workspaceId,
+        body,
+      });
     } catch (e) {
       const clientErr = (e as ClientError)?.kind ? (e as ClientError) : UNAVAILABLE_ERROR;
       setError(clientErr);
@@ -162,17 +168,21 @@ export function useConnectAccount(_platformClient?: PlatformClient) {
  * Borra una cuenta de credenciales y sus copias en todas las máquinas.
  *
  * Ruta OpenAPI: `DELETE /v1/credentials/workspaces/{workspace_id}/accounts/{credential_id}`
- * Pendiente de contrato en `@danil/platform-client`.
  */
-export function useDeleteAccount(_platformClient?: PlatformClient) {
+export function useDeleteAccount(platformClient?: PlatformClient) {
+  const platform = usePlatform();
+  const client = platformClient ?? platform;
   const [deleting, setDeleting] = createSignal(false);
   const [error, setError] = createSignal<ClientError | null>(null);
 
-  async function remove(_workspaceId: string, _credentialId: string): Promise<void> {
+  async function remove(workspaceId: string, credentialId: string): Promise<void> {
     setDeleting(true);
     setError(null);
     try {
-      throw UNAVAILABLE_ERROR;
+      await client.deleteWorkspaceAccount({
+        workspace_id: workspaceId,
+        credential_id: credentialId,
+      });
     } catch (e) {
       const clientErr = (e as ClientError)?.kind ? (e as ClientError) : UNAVAILABLE_ERROR;
       setError(clientErr);
@@ -193,21 +203,26 @@ export function useDeleteAccount(_platformClient?: PlatformClient) {
  * Quita una máquina (`removed`) de una credencial.
  *
  * Ruta OpenAPI: `DELETE /v1/credentials/workspaces/{workspace_id}/accounts/{credential_id}/machines/{machine_id}`
- * Pendiente de contrato en `@danil/platform-client`.
  */
-export function useRemoveMachineAccount(_platformClient?: PlatformClient) {
+export function useRemoveMachineAccount(platformClient?: PlatformClient) {
+  const platform = usePlatform();
+  const client = platformClient ?? platform;
   const [removing, setRemoving] = createSignal(false);
   const [error, setError] = createSignal<ClientError | null>(null);
 
   async function removeMachine(
-    _workspaceId: string,
-    _credentialId: string,
-    _machineId: string,
+    workspaceId: string,
+    credentialId: string,
+    machineId: string,
   ): Promise<void> {
     setRemoving(true);
     setError(null);
     try {
-      throw UNAVAILABLE_ERROR;
+      await client.removeWorkspaceAccountMachine({
+        workspace_id: workspaceId,
+        credential_id: credentialId,
+        machine_id: machineId,
+      });
     } catch (e) {
       const clientErr = (e as ClientError)?.kind ? (e as ClientError) : UNAVAILABLE_ERROR;
       setError(clientErr);
@@ -228,21 +243,26 @@ export function useRemoveMachineAccount(_platformClient?: PlatformClient) {
  * Restaura una credencial en una máquina a estado `pending`.
  *
  * Ruta OpenAPI: `POST /v1/credentials/workspaces/{workspace_id}/accounts/{credential_id}/machines/{machine_id}/restore`
- * Pendiente de contrato en `@danil/platform-client`.
  */
-export function useRestoreMachineAccount(_platformClient?: PlatformClient) {
+export function useRestoreMachineAccount(platformClient?: PlatformClient) {
+  const platform = usePlatform();
+  const client = platformClient ?? platform;
   const [restoring, setRestoring] = createSignal(false);
   const [error, setError] = createSignal<ClientError | null>(null);
 
   async function restoreMachine(
-    _workspaceId: string,
-    _credentialId: string,
-    _machineId: string,
+    workspaceId: string,
+    credentialId: string,
+    machineId: string,
   ): Promise<void> {
     setRestoring(true);
     setError(null);
     try {
-      throw UNAVAILABLE_ERROR;
+      await client.restoreWorkspaceAccountMachine({
+        workspace_id: workspaceId,
+        credential_id: credentialId,
+        machine_id: machineId,
+      });
     } catch (e) {
       const clientErr = (e as ClientError)?.kind ? (e as ClientError) : UNAVAILABLE_ERROR;
       setError(clientErr);

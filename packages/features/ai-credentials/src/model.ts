@@ -4,11 +4,22 @@ import type {
   Machine,
   Workspace,
   PlatformClient,
+  AccountCredential,
+  WorkspaceAccounts,
+  PutWorkspaceAccount,
 } from "@danil/platform-client";
 import type { EngineClient, MachineRef, ConnectOptions, MachineConnection } from "@danil/engine-client";
 
 // Tipos derivados del cliente de plataforma generado
-export type { ClientError, PlatformClient, Machine as PlatformMachine, Workspace as PlatformWorkspace };
+export type {
+  ClientError,
+  PlatformClient,
+  Machine as PlatformMachine,
+  Workspace as PlatformWorkspace,
+  AccountCredential,
+  WorkspaceAccounts,
+  PutWorkspaceAccount,
+};
 export type PlatformCredentialItem = NonNullable<NonNullable<CredentialProviderList["items"]>[number]>;
 
 // Tipos derivados del cliente de motor generado
@@ -25,7 +36,7 @@ export type MachineCredentialState = "active" | "pending" | "removed";
 export interface MachineCredentialStatus {
   machine_id: string;
   state: MachineCredentialState;
-  version: number;
+  version?: number;
   last_seen_at?: string | null;
 }
 
@@ -37,45 +48,21 @@ export type CredentialKind =
   | "mcp_oauth"
   | "env_secret";
 
-export interface WorkspaceCredential {
-  credential_id: string;
-  kind: CredentialKind;
-  provider: string;
-  slot: string;
-  label?: string | null;
-  hint?: string | null;
-  status?: string | null;
-  version: number;
-  config?: Record<string, unknown> | null;
-  created_at?: string;
-  updated_at?: string;
-  machines?: MachineCredentialStatus[];
-}
+export type WorkspaceCredential = AccountCredential;
 
 export interface WorkspaceRecipient {
   machine_id: string;
   public_key: string | null;
 }
 
-export interface WorkspaceAccountsResponse {
-  credentials: WorkspaceCredential[];
-  recipients: WorkspaceRecipient[];
-}
+export type WorkspaceAccountsResponse = WorkspaceAccounts;
 
 export interface SealedCopy {
   machine_id: string;
   sealed: string;
 }
 
-export interface PutWorkspaceAccountPayload {
-  kind: CredentialKind;
-  provider: string;
-  slot: string;
-  label?: string;
-  hint?: string;
-  config?: Record<string, unknown>;
-  copies: SealedCopy[];
-}
+export type PutWorkspaceAccountPayload = PutWorkspaceAccount;
 
 export interface ConnectAccountOptions {
   workspaceId: string;

@@ -5,7 +5,7 @@ import {
   type Resource,
 } from "solid-js";
 import {
-  createPlatformClient,
+  usePlatform,
   type PlatformClient,
 } from "@danil/platform-client";
 import type { EngineClient } from "@danil/engine-client";
@@ -29,21 +29,7 @@ export function resolvePlatformClient(options?: ClientResolverOptions): Platform
     }
   }
 
-  const sessionObj = typeof options?.session === "function" ? options.session() : options?.session;
-  const source = options?.sessionSource;
-
-  if (source && sessionObj) {
-    return createPlatformClient({
-      getToken: async () => {
-        const token = await source.tokenFor(sessionObj.key);
-        return token ?? undefined;
-      },
-      csrf: () => source.csrf(),
-      onUnauthorized: () => source.onUnauthorized(sessionObj.key),
-    });
-  }
-
-  return createPlatformClient();
+  return usePlatform();
 }
 
 function generateIdempotencyKey(prefix: string): string {
@@ -65,6 +51,15 @@ export interface UseOrganizationsResult {
  * Un error se preserva en error() para permitir reintentos (B-006).
  */
 export function useOrganizations(options?: ClientResolverOptions): UseOrganizationsResult {
+  const fallbackClient = usePlatform();
+  const getClient = () => {
+    if (options?.client) {
+      const c = typeof options.client === "function" ? options.client() : options.client;
+      if (c) return c;
+    }
+    return fallbackClient;
+  };
+
   const getSessionKey = () => {
     const s = typeof options?.session === "function" ? options.session() : options?.session;
     return s ? s.key : "current";
@@ -73,7 +68,7 @@ export function useOrganizations(options?: ClientResolverOptions): UseOrganizati
   const [data, { refetch }] = createResource(
     getSessionKey,
     async () => {
-      const client = resolvePlatformClient(options);
+      const client = getClient();
       const res = await client.getOrganizations();
       const items = res.items ?? res.organizations ?? [];
       return items.map((org) => ({
@@ -109,6 +104,15 @@ export interface UseWorkspacesResult {
  * Consulta los workspaces del usuario por sesión.
  */
 export function useWorkspaces(options?: UseWorkspacesOptions): UseWorkspacesResult {
+  const fallbackClient = usePlatform();
+  const getClient = () => {
+    if (options?.client) {
+      const c = typeof options.client === "function" ? options.client() : options.client;
+      if (c) return c;
+    }
+    return fallbackClient;
+  };
+
   const getSourceKey = () => {
     const s = typeof options?.session === "function" ? options.session() : options?.session;
     const orgId = typeof options?.organizationId === "function" ? options.organizationId() : options?.organizationId;
@@ -118,7 +122,7 @@ export function useWorkspaces(options?: UseWorkspacesOptions): UseWorkspacesResu
   const [data, { refetch, mutate }] = createResource(
     getSourceKey,
     async () => {
-      const client = resolvePlatformClient(options);
+      const client = getClient();
       const res = await client.getWorkspaces();
       const list = res.items ?? res.workspaces ?? [];
       const orgId = typeof options?.organizationId === "function" ? options.organizationId() : options?.organizationId;
