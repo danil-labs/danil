@@ -1,7 +1,7 @@
 import { type Machine, type machinesClient, machineToComputer, RelaySession } from "@terminus/computers";
 import { Fleet, memberKey, relayLink, unwrap } from "@terminus/fleet";
 import { createSignal, lazy, Suspense } from "solid-js";
-import { createContextRelayPool, machinesListed } from "../features/machines";
+import { createContextRelayPool, machinesListed, mergeByMachineId } from "../features/machines";
 import { sessionRailState } from "../features/shell";
 import { createRouter, type SliceChange } from "../features/machines/router";
 import type { AccountProfileSource } from "../features/settings/account-profile";
@@ -10,7 +10,7 @@ import { type Capabilities, setCapabilities, type WebAccountsSource } from "../l
 import { leerPref } from "../lib/prefs";
 import { deliver } from "../lib/serviceEvents";
 import { installIpc } from "./ipc";
-import type { MachineRow, MachineStatus } from "./SyncNote";
+import type { MachineStatus } from "./SyncNote";
 import { createWebTransport } from "./transport";
 import { browser, takeSettingsParam } from "./window-browser";
 import { webMachineCall } from "./workspace-runtime";
@@ -95,24 +95,15 @@ export function mountWindow(base: Base, mounted: Mounted) {
     },
   });
   const url = openWorkspaceUrl(active, base.sessions);
-  const status = (id: string, context?: string): MachineStatus => {
-    const power = fleet.power(id, context);
-    return power === "on" ? "online" : power === "off" ? "offline" : power;
-  };
-  const machines = (): MachineRow[] => {
+  const status = (id: string, context?: string): MachineStatus => { const power = fleet.power(id, context); return power === "on" ? "online" : power === "off" ? "offline" : power; };
+  const machines = () => {
     revision();
     const slices = fleet.sliceStatuses(scope.current()?.context);
-    return fleet.machines().map(m => ({ id: m.id, name: m.name, status: status(m.id, m.context), at: slices[m.id]?.status === "cached" ? slices[m.id].at : null }));
+    return mergeByMachineId(fleet.machines().map(m => ({ machine: listed.get(memberKey(m.id, m.context)) ?? { machine_id: m.id, name: m.name }, organization: { id: m.organizationId ?? m.context ?? "", name: (m.context && scope.info(m.context)?.name) || m.name }, status: status(m.id, m.context), at: slices[m.id]?.status === "cached" ? slices[m.id].at : null })));
   };
-  const several = () => {
-    revision();
-    return fleet.machines().length > 1;
-  };
+  const several = () => (revision(), fleet.machines().length > 1);
   // El chip de la VM en Cuentas de IA se ve aunque sea la única: «Ejecutar en» sí pide más de una.
-  const any = () => {
-    revision();
-    return fleet.machines().length > 0;
-  };
+  const any = () => (revision(), fleet.machines().length > 0);
   async function update() {
     if (stopped) return false;
     if (!base.permits("machines")) { setMissing(true); fleet.setMachines([]); return false; }

@@ -5,7 +5,8 @@ import { t } from "../../lib/i18n";
 import { invoke } from "../../lib/invoke.ts";
 import type { AccountMachinesProps } from "../../lib/platform";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../../ui/DropdownMenu";
-import type { MachineRow } from "../../web/SyncNote";
+import type { MergedMachineRow as MachineRow } from "./merge-by-machine";
+import { MachineOrganizations } from "./MachineOrganizations";
 
 /**
  * The machines where one account is signed in, under its card: each chip says
@@ -16,8 +17,7 @@ export default function AccountMachines(props: AccountMachinesProps & { machines
   const [asking, setAsking] = createSignal<string | null>(null);
   const [failed, setFailed] = createSignal(false);
   const row = (id: string) => props.machines().find((m) => m.id === id);
-  const others = () =>
-    props.machines().filter((m) => m.status !== "outdated" && !(props.account.machines ?? []).some((x) => x.machine === m.id));
+  const others = () => props.machines().filter((m) => m.status !== "outdated" && !(props.account.machines ?? []).some((x) => x.machine === m.id));
 
   async function signOut(id: string, machine: string) {
     setAsking(null);
@@ -44,7 +44,7 @@ export default function AccountMachines(props: AccountMachinesProps & { machines
               title={on() ? t("web.computers.state.online") : t("web.computers.state.offline")}
             >
               <SignalDot tone={on() ? "success" : "off"} />
-              <span class="max-w-[140px] truncate">{name()}</span>
+              <span class="max-w-[140px] truncate">{name()}</span><MachineOrganizations organizations={row(m.machine)?.organizations} />
               <Show
                 when={asking() === m.id}
                 fallback={
@@ -85,7 +85,7 @@ export default function AccountMachines(props: AccountMachinesProps & { machines
                   onSelect={() => void props.add({ headers: { "x-terminus-machine": m.id } })}
                 >
                   <SignalDot tone={m.status === "online" ? "success" : "off"} />
-                  <span class="truncate">{m.name}</span>
+                  <span class="truncate">{m.name}</span><MachineOrganizations organizations={m.organizations} />
                 </DropdownMenuItem>
               )}
             </For>
