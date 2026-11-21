@@ -3,10 +3,8 @@ export { AccountScreen } from "./screens/AccountScreen.tsx";
 export type { AccountScreenProps } from "./screens/AccountScreen.tsx";
 
 // Componentes y piezas públicas
-export { HarnessLink } from "./components/HarnessLink.tsx";
-export type { HarnessLinkProps } from "./components/HarnessLink.tsx";
-export { BillingLink } from "./components/BillingLink.tsx";
-export type { BillingLinkProps } from "./components/BillingLink.tsx";
+export { ExternalLink } from "./components/ExternalLink.tsx";
+export type { ExternalLinkProps } from "./components/ExternalLink.tsx";
 export { AccountErrorView } from "./components/AccountErrorView.tsx";
 export type { AccountErrorViewProps } from "./components/AccountErrorView.tsx";
 

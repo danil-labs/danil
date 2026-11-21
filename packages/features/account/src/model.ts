@@ -12,9 +12,12 @@ export interface ProfileData {
   planLabel: string;
 }
 
-function sanitizePlan(raw: string): string {
-  const stripped = raw.replace(/\b(organización|organizacion|organization|org)\b/gi, "").trim();
-  return stripped ? stripped.charAt(0).toUpperCase() + stripped.slice(1) : "Personal";
+function cleanPlanText(text: string): string {
+  const cleaned = text
+    .replace(/\b(organización|organizacion|organization|org)\b/gi, "")
+    .trim();
+  if (!cleaned) return "Personal";
+  return cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
 }
 
 /**
@@ -24,10 +27,22 @@ function sanitizePlan(raw: string): string {
  */
 export function getPlanLabel(org?: PlatformOrganizationRef | null): string {
   if (!org) return "Personal";
-  const tier = ((org as { plan?: string; type?: string }).plan ?? org.type ?? "").toLowerCase();
-  if (tier === "enterprise") return "Enterprise";
-  if (tier === "team" || tier === "teams") return "Team";
-  if (tier === "personal" || tier === "free") return "Personal";
-  if (org.name) return sanitizePlan(org.name);
+  const type = org.type?.toLowerCase();
+  if (type === "enterprise") return "Enterprise";
+  if (type === "team" || type === "teams") return "Team";
+  if (type === "personal" || type === "free") return "Personal";
+
+  const rawPlan = org.plan;
+  if (typeof rawPlan === "string" && rawPlan.trim()) {
+    const p = rawPlan.toLowerCase().trim();
+    if (p === "enterprise") return "Enterprise";
+    if (p === "team" || p === "teams") return "Team";
+    if (p === "personal" || p === "free") return "Personal";
+    return cleanPlanText(rawPlan);
+  }
+
+  if (typeof org.name === "string" && org.name.trim()) {
+    return cleanPlanText(org.name);
+  }
   return "Personal";
 }

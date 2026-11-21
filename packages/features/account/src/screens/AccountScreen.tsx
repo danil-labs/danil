@@ -1,10 +1,11 @@
 import { Show, type Component } from "solid-js";
+import { host } from "@danil/host";
 import { useProfile } from "../queries.ts";
-import { BillingLink } from "../components/BillingLink.tsx";
-import { HarnessLink } from "../components/HarnessLink.tsx";
+import { ExternalLink } from "../components/ExternalLink.tsx";
 import { AccountErrorView } from "../components/AccountErrorView.tsx";
 import { AccountIdentityBlock } from "../components/AccountIdentity.tsx";
 import { AccountCard } from "../components/AccountCard.tsx";
+import { getBillingUrl, getHarnessUrl } from "../config.ts";
 
 export interface AccountScreenProps {
   useProfileHook?: typeof useProfile;
@@ -24,6 +25,14 @@ function resolveErrorMessage(err: unknown): string | undefined {
  */
 export const AccountScreen: Component<AccountScreenProps> = (props) => {
   const profileQuery = (props.useProfileHook ?? useProfile)();
+
+  const handleOpenBilling = () => {
+    void host.openExternal(getBillingUrl());
+  };
+
+  const handleOpenHarness = () => {
+    void host.openExternal(getHarnessUrl());
+  };
 
   return (
     <div
@@ -84,8 +93,12 @@ export const AccountScreen: Component<AccountScreenProps> = (props) => {
                   variant="row"
                   actions={
                     <div class="flex items-center gap-2">
-                      <BillingLink />
-                      <HarnessLink />
+                      <ExternalLink onOpen={handleOpenBilling} data-link="billing">
+                        Administrar
+                      </ExternalLink>
+                      <ExternalLink onOpen={handleOpenHarness} data-link="harness">
+                        Administrar usuarios y permisos
+                      </ExternalLink>
                     </div>
                   }
                 />
