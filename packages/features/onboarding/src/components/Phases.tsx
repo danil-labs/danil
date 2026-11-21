@@ -1,7 +1,7 @@
 import { For, Show } from "solid-js";
 import Check from "lucide-solid/icons/check";
-import { t } from "../../../../apps/desktop/src/lib/i18n";
-import { cn } from "../../../../apps/desktop/src/lib/utils";
+import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { cn } from "../../../../../apps/desktop/src/lib/utils";
 import {
   createFullscreen,
   HEADER_HEIGHT,
@@ -9,8 +9,8 @@ import {
   needsTrafficLightPadding,
   TRAFFIC_LIGHT_PADDING,
   toggleMaximizeFromHeader,
-} from "../../../host/src/window";
-import ControlesDeVentana from "../../../shell/src/shell/WindowControls";
+} from "../../../../host/src/window";
+import ControlesDeVentana from "../../../../shell/src/shell/WindowControls";
 
 /** Las dos fases del alta: preparar incluye conectar la IA; personalizar es la última pantalla. */
 export function Fases(props: { actual: number }) {

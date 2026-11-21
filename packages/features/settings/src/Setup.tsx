@@ -25,13 +25,13 @@ import { cn } from "../../../../apps/desktop/src/lib/utils";
 import { Button } from "../../../ui/src/Button";
 import { asFailure, type Failure, FailureNote, prosaDe } from "../../../ui/src/Failure";
 import { Toast, ToastPortal } from "../../../ui/src/Toast";
-import { esIncluida, fallasIncluidas, funcion } from "../../onboarding/src/bundled";
-import type { Conexiones } from "../../onboarding/src/connect-store";
-import { accountWelcomeAnswered, offerAccountWelcome } from "../../onboarding/src/account-welcome";
-import { entrarAlWorkspaceFree } from "../../onboarding/src/onboarding-store";
-import { CabeceraDelAlta } from "../../onboarding/src/Phases";
-import type { EstadoDeEtapa, Instalacion } from "../../onboarding/src/Prepare";
-import { Escenario, QUIETO, TituloCambiante } from "../../onboarding/src/Stage";
+import { esIncluida, fallasIncluidas, funcion } from "../../onboarding/src/model/bundled";
+import type { Conexiones } from "../../onboarding/src/queries/connect-store";
+import { accountWelcomeAnswered, offerAccountWelcome } from "../../onboarding/src/model/account-welcome";
+import { entrarAlWorkspaceFree } from "../../onboarding/src/queries/onboarding-store";
+import { CabeceraDelAlta } from "../../onboarding/src/components/Phases";
+import type { EstadoDeEtapa, Instalacion } from "../../onboarding/src/components/Prepare";
+import { Escenario, QUIETO, TituloCambiante } from "../../onboarding/src/components/Stage";
 import type { EnvReport } from "./environment-store";
 
 /**
@@ -60,13 +60,13 @@ const RITMO_CONSEJOS = 5000;
 const RITMO_FOTO = 5000;
 
 // Conectar la IA y personalizar solo se cargan en el primer arranque: la carga inicial está en su techo.
-const MapaDeConexiones = lazy(() => import("../../onboarding/src/ConnectAI").then((m) => ({ default: m.MapaDeConexiones })));
-const PanelDeIA = lazy(() => import("../../onboarding/src/ConnectAI").then((m) => ({ default: m.PanelDeIA })));
-const Comprobacion = lazy(() => import("../../onboarding/src/ConnectAI").then((m) => ({ default: m.Comprobacion })));
-const Personalizar = lazy(() => import("../../onboarding/src/Personalize"));
-const PreparationProgress = lazy(() => import("../../onboarding/src/Prepare").then((m) => ({ default: m.PreparationProgress })));
-const FuncionesAfectadas = lazy(() => import("../../onboarding/src/Repair").then((m) => ({ default: m.FuncionesAfectadas })));
-const ConectarCuenta = lazy(() => import("../../onboarding/src/ConnectAccount"));
+const MapaDeConexiones = lazy(() => import("../../onboarding/src/components/ConnectAI").then((m) => ({ default: m.MapaDeConexiones })));
+const PanelDeIA = lazy(() => import("../../onboarding/src/components/ConnectAI").then((m) => ({ default: m.PanelDeIA })));
+const Comprobacion = lazy(() => import("../../onboarding/src/components/ConnectAI").then((m) => ({ default: m.Comprobacion })));
+const Personalizar = lazy(() => import("../../onboarding/src/screens/Personalize"));
+const PreparationProgress = lazy(() => import("../../onboarding/src/components/Prepare").then((m) => ({ default: m.PreparationProgress })));
+const FuncionesAfectadas = lazy(() => import("../../onboarding/src/components/Repair").then((m) => ({ default: m.FuncionesAfectadas })));
+const ConectarCuenta = lazy(() => import("../../onboarding/src/screens/ConnectAccount"));
 
 /** El hueco de una tarjeta mientras llega su trozo: mismo borde, sin contenido. */
 function TarjetaVacia() {
@@ -431,7 +431,7 @@ export default function Setup(props: { children: JSX.Element }) {
     preparadas ??= (async () => {
       if (!workspace()) setWorkspace(await entrarAlWorkspaceFree());
       if (!conexiones()) {
-        const [{ crearConexiones }] = await Promise.all([import("../../onboarding/src/connect-store"), import("../../onboarding/src/ConnectAI")]);
+        const [{ crearConexiones }] = await Promise.all([import("../../onboarding/src/queries/connect-store"), import("../../onboarding/src/components/ConnectAI")]);
         runWithOwner(dueño, () => setConexiones(crearConexiones()));
       }
       await conexiones()?.cargar();

@@ -1,8 +1,8 @@
 import CircleCheck from "lucide-solid/icons/circle-check";
 import TriangleAlert from "lucide-solid/icons/triangle-alert";
 import { Match, Switch } from "solid-js";
-import { t } from "../../../../apps/desktop/src/lib/i18n";
-import { Spinner } from "../../../ui/src/Spinner";
+import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { Spinner } from "../../../../ui/src/Spinner";
 
 export type EstadoDeEtapa = "waiting" | "running" | "succeeded" | "failed" | "skipped";
 

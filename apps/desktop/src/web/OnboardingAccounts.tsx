@@ -1,7 +1,7 @@
 import { isFreeRouterAgent, isRetiredAgent } from "../../../../packages/tasks/src/agents.ts";
 import { createSignal, For, Match, onCleanup, onMount, Show, Switch } from "solid-js";
-import { nombreDeAgente } from "../../../../packages/features/onboarding/src/onboarding-store";
-import { Pantalla } from "../../../../packages/features/onboarding/src/Screen";
+import { nombreDeAgente } from "../../../../packages/features/onboarding/src/queries/onboarding-store";
+import { Pantalla } from "../../../../packages/features/onboarding/src/components/Screen";
 import { accountKeyUrl } from "../../../../packages/features/settings/src/account-auth";
 import type { AccountList, AgentOpt, LoginEvent } from "../../../../packages/features/settings/src/accounts-store";
 import { LoginCodeForm } from "../../../../packages/features/settings/src/LoginCodeForm";

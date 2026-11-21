@@ -23,7 +23,7 @@ import { ExternalLink } from "../../../ui/src/ExternalLink";
 import "../../../../apps/desktop/src/locales/settingsPhrases";
 
 // La tarjeta de Drive es la del alta; su chunk solo lo carga quien abre Fuentes.
-const Integraciones = lazy(() => import("../../onboarding/src/ToolCards").then((m) => ({ default: m.Integraciones })));
+const Integraciones = lazy(() => import("../../onboarding/src/components/ToolCards").then((m) => ({ default: m.Integraciones })));
 // GitHub de la cuenta de Danil: con sesión, su tarjeta reemplaza la local.
 const GithubAccount = lazy(() => import("./github-account/GithubAccount"));
 const CredentialsInUse = lazy(() => import("./credentials/AccountCredentials").then((m) => ({ default: m.CredentialsInUse })));

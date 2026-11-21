@@ -6,22 +6,22 @@
 
 import { batch, createSignal, onCleanup } from "solid-js";
 import { createStore } from "solid-js/store";
-import { t } from "../../../../apps/desktop/src/lib/i18n";
-import { invoke } from "../../../engine-client/src/client.ts";
-import { acceptedFreeModelPolicy, freeModelScope, sameFreeModelPolicy, type FreeModelConsent, type FreeModelStartup } from "../../../../apps/desktop/src/lib/free-model-policy.ts";
-import { loadFreeModelPolicy } from "../../../../apps/desktop/src/lib/free-model-policy-load.ts";
-import type { Consentimiento } from "../../settings/src/free-router-consent";
-import { textoDeFalta } from "../../../../apps/desktop/src/lib/no-space";
+import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { invoke } from "../../../../engine-client/src/client.ts";
+import { acceptedFreeModelPolicy, freeModelScope, sameFreeModelPolicy, type FreeModelConsent, type FreeModelStartup } from "../../../../../apps/desktop/src/lib/free-model-policy.ts";
+import { loadFreeModelPolicy } from "../../../../../apps/desktop/src/lib/free-model-policy-load.ts";
+import type { Consentimiento } from "../../../settings/src/free-router-consent";
+import { textoDeFalta } from "../../../../../apps/desktop/src/lib/no-space";
 
-import { listen } from "../../../../apps/desktop/src/lib/serviceEvents";
-import type { Superficie } from "../../../../apps/desktop/src/lib/surfaces.ts";
-import { detalleDe, prosaDe } from "../../../ui/src/Failure";
-import { accountPresentation } from "../../settings/src/AccountCard";
-import { accountKeyUrl } from "../../settings/src/account-auth";
-import type { AccountList, AccountStatus, AgentOpt, LoginEvent } from "../../settings/src/accounts-store";
-import { ORIGEN_SISTEMA } from "../../settings/src/environment-store";
-import { canonicalAgentId, isFreeRouterAgent, isRetiredAgent, OPENCODE } from "../../../tasks/src/agents.ts";
-import "../../../../apps/desktop/src/locales/settingsPhrases";
+import { listen } from "../../../../../apps/desktop/src/lib/serviceEvents";
+import type { Superficie } from "../../../../../apps/desktop/src/lib/surfaces.ts";
+import { detalleDe, prosaDe } from "../../../../ui/src/Failure";
+import { accountPresentation } from "../../../settings/src/AccountCard";
+import { accountKeyUrl } from "../../../settings/src/account-auth";
+import type { AccountList, AccountStatus, AgentOpt, LoginEvent } from "../../../settings/src/accounts-store";
+import { ORIGEN_SISTEMA } from "../../../settings/src/environment-store";
+import { canonicalAgentId, isFreeRouterAgent, isRetiredAgent, OPENCODE } from "../../../../tasks/src/agents.ts";
+import "../../../../../apps/desktop/src/locales/settingsPhrases";
 
 type Agente = AgentOpt & { source: string | null; system_broken: boolean };
 type Avance = { id: string; done: number; bytes: number };

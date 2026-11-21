@@ -1,2 +1,2 @@
-export { rememberAccountWelcome } from "./account-welcome";
-export { CabeceraDelAlta } from "./Phases";
+export { rememberAccountWelcome } from "./model/account-welcome";
+export { CabeceraDelAlta } from "./components/Phases";

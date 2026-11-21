@@ -1,6 +1,6 @@
-import { t } from "../../../../apps/desktop/src/lib/i18n";
-import { isMac, isWindows } from "../../../host/src/window";
-import type { EnvReport } from "../../settings/src/environment-store";
+import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { isMac, isWindows } from "../../../../host/src/window";
+import type { EnvReport } from "../../../settings/src/environment-store";
 
 /**
  * Lo que trae Terminus ya preparado. No se instala ni se ofrece por separado:

@@ -1,11 +1,11 @@
 import { createSignal, onMount, Show } from "solid-js";
-import { t } from "../../../../apps/desktop/src/lib/i18n";
-import { invoke } from "../../../engine-client/src/client.ts";
-import { Button } from "../../../ui/src/Button";
-import { prosaDe } from "../../../ui/src/Failure";
-import { Input } from "../../../ui/src/Input";
-import { Comprobacion } from "./ConnectAI";
-import { Integraciones, Plugins } from "./ToolCards";
+import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { invoke } from "../../../../engine-client/src/client.ts";
+import { Button } from "../../../../ui/src/Button";
+import { prosaDe } from "../../../../ui/src/Failure";
+import { Input } from "../../../../ui/src/Input";
+import { Comprobacion } from "../components/ConnectAI";
+import { Integraciones, Plugins } from "../components/ToolCards";
 
 /** La última pantalla del alta: el workspace, las herramientas con que ya se trabaja y los plugins. */
 export default function Personalizar(props: {

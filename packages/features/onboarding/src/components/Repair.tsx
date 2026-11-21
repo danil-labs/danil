@@ -1,9 +1,9 @@
 import TriangleAlert from "lucide-solid/icons/triangle-alert";
 import { For, Show } from "solid-js";
-import { t } from "../../../../apps/desktop/src/lib/i18n";
-import { Button } from "../../../ui/src/Button";
-import { type Failure, FailureNote } from "../../../ui/src/Failure";
-import { type Falla, funcion, motivo, remedio } from "./bundled";
+import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { Button } from "../../../../ui/src/Button";
+import { type Failure, FailureNote } from "../../../../ui/src/Failure";
+import { type Falla, funcion, motivo, remedio } from "../model/bundled";
 
 /** Las funciones que no pasaron la comprobación, con lo que las arregla: reparar, reiniciar o reinstalar. */
 export function FuncionesAfectadas(props: {

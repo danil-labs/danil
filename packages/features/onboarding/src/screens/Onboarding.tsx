@@ -1,15 +1,15 @@
 import { createSignal, lazy, onMount, Show, Suspense } from "solid-js";
-import { t } from "../../../../apps/desktop/src/lib/i18n";
-import { capabilities } from "../../../host/src/platform";
-import { Button } from "../../../ui/src/Button";
-import { FailureNote, asFailure, prosaDe } from "../../../ui/src/Failure";
-import { crearConexiones } from "./connect-store";
-import { Comprobacion, MapaDeConexiones, PanelDeIA } from "./ConnectAI";
-import { accountWelcomeAnswered } from "./account-welcome";
-import { entrarAlWorkspaceFree } from "./onboarding-store";
+import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { capabilities } from "../../../../host/src/platform";
+import { Button } from "../../../../ui/src/Button";
+import { FailureNote, asFailure, prosaDe } from "../../../../ui/src/Failure";
+import { crearConexiones } from "../queries/connect-store";
+import { Comprobacion, MapaDeConexiones, PanelDeIA } from "../components/ConnectAI";
+import { accountWelcomeAnswered } from "../model/account-welcome";
+import { entrarAlWorkspaceFree } from "../queries/onboarding-store";
 import Personalizar from "./Personalize";
-import { CabeceraDelAlta } from "./Phases";
-import { Escenario, TituloCambiante } from "./Stage";
+import { CabeceraDelAlta } from "../components/Phases";
+import { Escenario, TituloCambiante } from "../components/Stage";
 
 /**
  * El alta sin preparación pendiente: conectar la IA y personalizar. La primera
@@ -18,7 +18,7 @@ import { Escenario, TituloCambiante } from "./Stage";
  * Free; nunca crea uno local (plan de cuentas F1.2).
  */
 // Una computadora gestionada llega preparada y con sus asistentes: en el navegador el alta es otra.
-const AltaGestionada = lazy(() => import("../../../../apps/desktop/src/web/Onboarding"));
+const AltaGestionada = lazy(() => import("../../../../../apps/desktop/src/web/Onboarding"));
 const ConectarCuenta = lazy(() => import("./ConnectAccount"));
 
 type Props = { onListo: () => void };

@@ -1,6 +1,6 @@
-import { invoke } from "../../../engine-client/src/client.ts";
-import { semillaDelAlta, t } from "../../../../apps/desktop/src/lib/i18n";
-import { sealFirstFreeWorkspace } from "../../../shell/src/shell";
+import { invoke } from "../../../../engine-client/src/client.ts";
+import { semillaDelAlta, t } from "../../../../../apps/desktop/src/lib/i18n";
+import { sealFirstFreeWorkspace } from "../../../../shell/src/shell";
 /** Activa el workspace con la lengua del alta. La ventana entra al Free (F1.2); `add_workspace` solo en la web. */
 async function activar(w: { id: string; name: string }) {
   const semilla = semillaDelAlta(); // "sistema" no se guarda: sin lengua sigue al sistema.

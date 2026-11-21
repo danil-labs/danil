@@ -1,10 +1,10 @@
 import Check from "lucide-solid/icons/check";
 import Copy from "lucide-solid/icons/copy";
 import { Show } from "solid-js";
-import { createCopied } from "../../../host/src/clipboard";
-import { mb } from "../../../../apps/desktop/src/lib/format";
-import { t } from "../../../../apps/desktop/src/lib/i18n";
-import { CancelButton } from "../../../ui/src/IconAction";
+import { createCopied } from "../../../../host/src/clipboard";
+import { mb } from "../../../../../apps/desktop/src/lib/format";
+import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { CancelButton } from "../../../../ui/src/IconAction";
 
 /**
  * Lo que baja, igual en proveedores de IA, herramientas y plugins: a la derecha su peso y la ×
