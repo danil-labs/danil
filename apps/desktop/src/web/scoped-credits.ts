@@ -11,7 +11,7 @@ export function scopedCreditsRead(transport: ReturnType<typeof edgeTransport>, n
       if (existing && existing.until > now()) return existing.promise;
       const pending = (async () => {
         const response = await transport.call("credits/balance", { headers: { "X-Danil-Session": context } });
-        if (response.ok && (response.headers.get("X-Danil-Session-Applied") !== context || (orgOf && response.headers.get("X-Danil-Session-Applied-Org") !== orgOf(context)))) throw { detail: "session_echo_mismatch" };
+        if (response.ok && (response.headers.get("X-Danil-Session-Applied") !== context || (orgOf && (!orgOf(context) || response.headers.get("X-Danil-Session-Applied-Org") !== orgOf(context))))) throw { detail: "session_echo_mismatch" };
         return { status: response.status, body: await response.json() };
       })();
       reads.set(context, { promise: pending, until: now() + 30_000 });

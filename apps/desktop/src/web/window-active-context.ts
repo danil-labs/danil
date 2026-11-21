@@ -27,7 +27,7 @@ export function windowActiveContext(sessions: Pick<WebSessionCommands, "last">) 
       const own = headers.get("X-Danil-Session");
       const group = own ? groups().find((g) => g.context === own) ?? null : pick();
       // Ninguna llamada de la ventana cae en el contexto por omisión: sin grupo, no sale.
-      if (!group) throw { code: own ? "session_not_in_set" : "session_selection_required", status: 401 };
+      if (!group) throw { code: own ? "session_not_in_set" : "session_selection_required", status: 428 }; // nunca 401: no es la cookie muerta
       headers.set("X-Danil-Session", group.context);
       const response = await transport[method](path, { ...init, headers });
       if (response.ok && (response.headers.get("X-Danil-Session-Applied") !== group.context || response.headers.get("X-Danil-Session-Applied-Org") !== group.org)) {

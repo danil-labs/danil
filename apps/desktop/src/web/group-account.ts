@@ -10,7 +10,7 @@ export function webGroupAccount(transport: ReturnType<typeof edgeTransport>, cre
     if (method === "GET" && path === "/v1/credits/balance" && credits) return credits.read(context);
     const init = { headers: { "X-Danil-Session": context, ...(key ? { "Idempotency-Key": key } : {}), ...(body ? { "Content-Type": "application/json" } : {}) }, ...(body ? { body: JSON.stringify(body) } : {}) };
     const response = await (method === "GET" ? transport.call(path.slice(4), init) : transport.mutation(path.slice(4), init));
-    if (response.ok && (response.headers.get("X-Danil-Session-Applied") !== context || (orgOf && response.headers.get("X-Danil-Session-Applied-Org") !== orgOf(context)))) throw { detail: "session_echo_mismatch" };
+    if (response.ok && (response.headers.get("X-Danil-Session-Applied") !== context || (orgOf && (!orgOf(context) || response.headers.get("X-Danil-Session-Applied-Org") !== orgOf(context))))) throw { detail: "session_echo_mismatch" };
     if (response.ok && method === "POST") credits?.clear();
     return { status: response.status, body: await response.json() };
   };
