@@ -8,8 +8,7 @@ import { invoke } from "../engine/client.ts";
 export type Me = { id: string; name: string; state?: string; workspace: string | null; organizations: { id: string; name: string; type?: string; role?: string }[]; active_organization_id?: string | null };
 export type Organization = { id: string; name: string; plan: string; role: string };
 export type OrganizationList = { items: Organization[]; next_cursor: string | null; active_organization_id?: string | null };
-export type Workspace = { id: string; org?: string; name: string; role?: string; engine_workspace_id?: string };
-export type WorkspaceList = { items: Workspace[]; next_cursor: string | null; empty_reason?: string; active_workspace_id?: string | null };
+export type { Workspace, WorkspaceList } from "./workspaces.ts";
 
 export type Patience = {
   /** Corta la espera; la promesa rechaza con el último fallo. */
@@ -129,12 +128,8 @@ const bodyOf = <T>(method: EdgeMethod, path: string, body: unknown, p?: Patience
 
 export const me = (p?: Patience) => bodyOf<Me>("GET", "/v1/identity/me", undefined, p);
 export const organizations = (p?: Patience) => bodyOf<OrganizationList>("GET", "/v1/identity/organizations", undefined, p);
-export const workspaces = (p?: Patience) => bodyOf<WorkspaceList>("GET", "/v1/workspaces", undefined, p);
 export const selectOrganization = (organizationId: string, p?: Patience) => {
   cancelEdgeWrites();
   return bodyOf<{ organization: Organization; workspace: string | null }>("POST", "/v1/identity/organizations/select", { organization_id: organizationId }, p);
 };
-export const selectWorkspace = (workspaceId: string, p?: Patience) => {
-  cancelEdgeWrites();
-  return bodyOf<{ workspace: Workspace }>("POST", "/v1/workspaces/select", { workspace: workspaceId }, p);
-};
+export { workspaces, selectWorkspace } from "./workspaces.ts";

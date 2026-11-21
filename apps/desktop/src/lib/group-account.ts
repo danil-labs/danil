@@ -1,6 +1,7 @@
 import { availableDanilCredits } from "./credits-balance.ts";
 import { groupPromoReply } from "./group-promo-reply.ts";
 import { normalizePromoCode } from "./promo-rejections.ts";
+import { WORKSPACES_PROMO_REDEEM_PATH } from "../platform/workspaces.ts";
 
 export type GroupAccount = { context: string; org: string; name: string; plan: string | null; role?: string | null };
 export type GroupReply = { status: number; body?: unknown; retry_after_ms?: number };
@@ -20,7 +21,7 @@ export async function redeemGroupCode(send: GroupSend, group: GroupAccount, code
   const value = normalizePromoCode(code);
   if (!value) throw { status: 422, code: "invalid_code" };
   try {
-    const reply = await send(group.context, "POST", "/v1/workspaces/promo/redeem", { code: value }, key);
+    const reply = await send(group.context, "POST", WORKSPACES_PROMO_REDEEM_PATH, { code: value }, key);
     return groupPromoReply(reply);
   } catch (error) {
     const refusal = error as { detail?: string; status?: number } | null;

@@ -3,6 +3,7 @@
  * Un paso fuera de orden, una respuesta de antes de un logout o un valor desconocido dejan el Router cerrado.
  */
 import type { EdgeMethod } from "../../platform/client.ts";
+import { workspaceFreeRouterPath } from "../../platform/workspaces.ts";
 
 export type FreeRouterScope = {
   /** `accounts.id` de tenancy (BIGINT como cadena). */
@@ -130,7 +131,7 @@ export function createFreeRouterPlatform(deps: FreeRouterDeps) {
   const budgetMs = deps.budgetMs ?? 20_000;
   const entries = new Map<string, Entry>();
   let epochs = 0;
-  const base = (account: string) => `/v1/workspaces/${account}/free-router`;
+  const base = workspaceFreeRouterPath;
   const idOf = (s: FreeRouterScope) => `${s.account}\n${s.workspace}\n${s.sub}`;
 
   /** Un intento con su clave: repite lo transitorio dentro del presupuesto y nunca lo definitivo. */

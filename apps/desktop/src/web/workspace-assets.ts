@@ -9,6 +9,7 @@ import { accountAssetUrl, readAccountAsset } from "@terminus/computers";
 import { blobToDataUrl } from "../features/settings/account-profile.ts";
 import { apiUrl } from "./computers.ts";
 import { type Fetch, refused, sessionCall } from "./control-plane.ts";
+import { WORKSPACES_PATH, workspaceAssetPath } from "../platform/workspaces.ts";
 
 
 export type WorkspaceAssetKind = "logo" | "background";
@@ -42,7 +43,7 @@ export function webWorkspaceAssets(
   const call = sessionCall(getToken, onUnauthorized, f);
 
   function list(): Promise<Map<string, Row>> {
-    rows ??= call(apiUrl(endpoint, "/v1/workspaces"))
+    rows ??= call(apiUrl(endpoint, WORKSPACES_PATH))
       .then(async (response) => {
         const body = (await response.json().catch(() => null)) as { workspaces?: unknown } | null;
         const map = new Map<string, Row>();
@@ -81,7 +82,7 @@ export function webWorkspaceAssets(
 
   async function change(workspace: string, kind: WorkspaceAssetKind, init: RequestInit): Promise<boolean> {
     if (!(await list()).has(workspace)) return false;
-    const url = apiUrl(endpoint, `/v1/workspaces/${encodeURIComponent(workspace)}/${kind}`);
+    const url = apiUrl(endpoint, workspaceAssetPath(workspace, kind));
     let response = await call(url, init);
     // Another change bumped the workspace's version at the same time: once more.
     if (response.status === 409 && (await code(response.clone())) === "settings_conflict") response = await call(url, init);
