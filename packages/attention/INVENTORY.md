@@ -1,0 +1,35 @@
+# packages/attention
+
+**se borra.** Lo importa solo el teléfono: `apps/mobile/src/lib/inbox.tsx:2`, `apps/mobile/src/app/inbox.tsx:12`, `apps/mobile/src/app/inbox-thread.tsx:5`, `apps/mobile/src/app/search.tsx:3`, `apps/mobile/src/ui/InboxParts.tsx:3` (`inbox.ts`), `apps/mobile/src/app/channels.tsx:4` (`channels.ts`) y `apps/mobile/src/lib/customization.tsx:2`. Ningún archivo de `packages/features` ni de `packages/shell` importa `@terminus/attention` (el `attention.ts` del shell es otro módulo). El paquete habla con el BFF viejo `/terminus/alpha-api` y `/alpha-api`: conversaciones de Appv2, canales, campañas, mensajería y soporte. R8 prohíbe mensajería y appv2. En la fase 3 se borra entero; no se funde en una feature ni sube a ui.
+
+| Archivo | Exports | Clase | Destino | Motivo |
+|---|---|---|---|---|
+| src/broadcast-panel.ts | CAMPAIGN_STATUSES, CampaignStatus, Campaign, StatusOut, CampaignStats, Recipient, Rejection, AddContactsResult, Template, TemplateChannel, TemplateSyncResult, HeaderFormat, TemplateHeader, TemplateContent, TemplateInput, CampaignInput, Contact, canManageBroadcast, BroadcastPermissions, BroadcastSource, BroadcastPanelError, maskPhone, contactTagLabels, createBroadcastPanel, BroadcastPanel, operableChannels, FAILED_PROCESS_STATUSES, countFailedProcess, CampaignAction, actionsFor, buildingAudience, campaignProgress, sendsDone, cleanReason, failureReason, summarizeFailures, summarizeRejections, ACTIVITY_WINDOWS, ActivityWindow, contactsInWindow, extractTemplateVariables, draftContent, templateContent, templateVariables, templateHasUnmappableParams, normalizeTemplateName, TextNode, parseTemplateText | viejo | se borra | Panel de campañas encima de createBroadcasts. Mismo BFF de marketing. Evidencia: Solo lo alcanza packages/attention/test/broadcast-panel.test.ts. |
+| src/broadcasts.ts | BROADCAST_STATES, BroadcastState, Broadcast, BroadcastTemplate, BroadcastChannel, BroadcastContact, BroadcastPermissions, BroadcastAction, BroadcastError, broadcastTemplate, canManageBroadcast, broadcastActions, createBroadcasts | viejo | se borra | createBroadcasts pega a /alpha-api/api/marketing/campaigns. Campañas de Appv2. Evidencia: Dentro del paquete lo importa src/broadcast-panel.ts:1. Fuera, solo el test broadcasts.test.ts. |
+| src/channels.ts | ConnectionState, Channel, connectionOf, createChannels | viejo | se borra | createChannels hace fetch a /terminus/alpha-api/api/channels. BFF alfa de Appv2. Evidencia: lo importan apps/mobile/src/app/channels.tsx:4. |
+| src/customization.ts | FEATURES, FeatureId, EnabledFeature, Selection, Context, isEnabledFeature, emptySelection, decodeSelection, toggleFeature, encodeSelection, contextKey | viejo | se borra | Catálogo alfa inbox, broadcasts, agents, channels. Lo lee el teléfono solo con EXPO_PUBLIC_TERMINUS_ALPHA. No es una feature nueva. Evidencia: lo importan apps/mobile/src/lib/customization.tsx:2. |
+| src/inbox.ts | AccountPermissions, Account, Conversation, ConversationCounts, Message, Page, InboxSession, createInbox, InboxFilter, INBOX_FILTERS, ConversationLabel, normalizeProvider, formatPhoneNumber, contactIdentifier, contactDisplayName, contactSubIdentifier, humanHasReplied, needsHuman, conversationLabels, matchesFilter | viejo | se borra | createInbox hace fetch a /terminus/alpha-api (auth/profile, conversaciones de Appv2). Sistema viejo de mensajería, R8. Evidencia: lo importan apps/mobile/src/ui/InboxParts.tsx:3, apps/mobile/src/app/inbox.tsx:12, apps/mobile/src/app/inbox-thread.tsx:5, apps/mobile/src/app/search.tsx:3, apps/mobile/src/lib/inbox.tsx:2. |
+| src/messaging.ts | ReplyError, createMessaging | viejo | se borra | createMessaging hace POST {prefix}/api/messaging/reply con prefix /terminus/alpha-api. Mensajería Appv2. Evidencia: Solo lo alcanza packages/attention/test/messaging.test.ts. |
+| src/request.ts | sessionFetch | viejo | se borra | sessionFetch pone Authorization y X-Danil-Workspace y reintenta 401 y 409. Lo usan inbox, channels y support-access contra el BFF alfa. Evidencia: Dentro del paquete lo importan src/inbox.ts:1, src/channels.ts:2 y src/support-access.ts:2. |
+| src/service.ts | ServiceAgent, ServiceResource, ServiceAgentDetail, ServiceHttpTool, ServiceVariable, hostOf, createService, ServiceApi | viejo | se borra | createService lista agentes, canales y tools del proxy alfa /terminus/alpha-api. No es el motor. Evidencia: Nadie lo importa, ni dentro de src. Solo existe el archivo. |
+| src/support-access.ts | SupportLevel, SupportStatus, SupportGrant, SupportWorkspace, Membership, OrganizationWorkspace, isManager, grantOf, createSupportAccess | viejo | se borra | createSupportAccess llama /terminus/alpha-api/auth/account/support-access. Soporte del BFF viejo. Evidencia: Solo lo alcanza packages/attention/test/support-access.test.ts. |
+| src/workspace-account.ts | WorkspaceEntry, AccountSources, resolveWorkspaceAccount, enterWorkspace | viejo | se borra | resolveWorkspaceAccount une el directorio con la cuenta de Danil Agents y enterWorkspace hace POST /api/workspace/enter. Nadie lo importa. Evidencia: Nadie lo importa, ni dentro de src. inbox.ts lo nombra en un comentario y no lo llama. |
+
+## Imports cruzados
+
+Cada import de producción. `archivo:línea` es la línea del `from` (la que muestra `grep -n`). La flecha apunta adonde va el archivo importado. Los tests no entran.
+
+### Sale de este paquete
+
+Ninguno. Este paquete no importa otros paquetes ni features.
+
+### Entra desde otra feature, el shell, ui, otro paquete o un apps/*
+
+- `apps/mobile/src/app/channels.tsx:4` → `se borra` (hoy `../../../../packages/attention/src/channels.ts`). En su lugar: se borra. No sube a ui ni entra por props del shell: es Appv2 y el BFF /terminus/alpha-api o /alpha-api (R8).
+- `apps/mobile/src/app/inbox-thread.tsx:5` → `se borra` (hoy `../../../../packages/attention/src/inbox.ts`). En su lugar: se borra. No sube a ui ni entra por props del shell: es Appv2 y el BFF /terminus/alpha-api o /alpha-api (R8).
+- `apps/mobile/src/app/inbox.tsx:12` → `se borra` (hoy `../../../../packages/attention/src/inbox.ts`). En su lugar: se borra. No sube a ui ni entra por props del shell: es Appv2 y el BFF /terminus/alpha-api o /alpha-api (R8).
+- `apps/mobile/src/app/search.tsx:3` → `se borra` (hoy `../../../../packages/attention/src/inbox.ts`). En su lugar: se borra. No sube a ui ni entra por props del shell: es Appv2 y el BFF /terminus/alpha-api o /alpha-api (R8).
+- `apps/mobile/src/lib/customization.tsx:2` → `se borra` (hoy `../../../../packages/attention/src/customization.ts`). En su lugar: se borra. No sube a ui ni entra por props del shell: es Appv2 y el BFF /terminus/alpha-api o /alpha-api (R8).
+- `apps/mobile/src/lib/inbox.tsx:2` → `se borra` (hoy `../../../../packages/attention/src/inbox.ts`). En su lugar: se borra. No sube a ui ni entra por props del shell: es Appv2 y el BFF /terminus/alpha-api o /alpha-api (R8).
+- `apps/mobile/src/ui/InboxParts.tsx:3` → `se borra` (hoy `../../../../packages/attention/src/inbox.ts`). En su lugar: se borra. No sube a ui ni entra por props del shell: es Appv2 y el BFF /terminus/alpha-api o /alpha-api (R8).
+
