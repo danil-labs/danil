@@ -25,6 +25,11 @@ export interface RelayOptions {
   backoff?: { baseMs?: number; maxMs?: number };
   /** Espera entre reintentos mientras la máquina despierta (M6b). */
   wakeRetryMs?: number;
+  /**
+   * true SOLO cuando la persona pidió conectar o encender esta máquina. Sin eso, una VM
+   * apagada queda en `stopped` sin un solo reintento: cargar o refrescar nunca la despierta.
+   */
+  wake?: boolean;
   callTimeoutMs?: number;
 }
 
@@ -51,7 +56,9 @@ export function backoffDelay(attempt: number, baseMs: number, maxMs: number, ran
 }
 
 /** Cuánto se insiste en despertar una VM antes de mostrar error con reintento (M6b). */
-const WAKE_WINDOW_MS = 3 * 60_000;
+const WAKE_WINDOW_MS = 2 * 60_000;
+/** Intentos de ticket mientras despierta, con backoff 2 s, 4 s, 8 s, 15 s… */
+const MAX_WAKE_ATTEMPTS = 6;
 /** Intentos seguidos sin una sesión sana antes de rendirse: cada ticket despierta la VM (SR1, 4). */
 const MAX_FAILED_ATTEMPTS = 8;
 /** Una conexión cuenta como sana si dura esto abierta; solo entonces se reinicia el backoff. */
@@ -85,6 +92,9 @@ export function createRelayTransport(opts: RelayOptions): StatefulTransport {
   // Frames que esperan socket, con su id: uno que vence se saca antes de reconectar.
   const queue: Array<{ id: number; frame: string }> = [];
   let wakingSince: number | null = null;
+  let wakeAttempts = 0;
+  // El permiso de despertar se gasta al conectar: una reconexión posterior nunca despierta (RV-FOCO1 #2).
+  let mayWake = opts.wake === true;
   let nextId = 1;
   let socket: WebSocket | null = null;
   let cursor: string | number | undefined; // último cursor de evento visto (B-014)
@@ -159,17 +169,24 @@ export function createRelayTransport(opts: RelayOptions): StatefulTransport {
     }
     if (closed) return;
     if (res.kind === "machine_unreachable" || res.kind === "stopped" || res.kind === "starting") {
-      // M6b: pedir el ticket despierta la VM; se insiste un rato acotado y después es error
-      // con reintento, para no despertarla sin fin sin que nadie mire (sin lista blanca, B-035).
+      // Sin acción de la persona no se insiste: la VM se muestra apagada (FOCO NUEVO).
+      if (!mayWake) {
+        setStatus("stopped");
+        rejectAll(new RelayError("machine_stopped"));
+        return;
+      }
+      // Con acción de la persona: pocos intentos con backoff, y después error con reintento manual.
       wakingSince ??= Date.now();
-      if (Date.now() - wakingSince > WAKE_WINDOW_MS) {
+      wakeAttempts += 1;
+      if (wakeAttempts > MAX_WAKE_ATTEMPTS || Date.now() - wakingSince > WAKE_WINDOW_MS) {
         wakingSince = null;
+        wakeAttempts = 0;
         setStatus("error");
         rejectAll(new RelayError("wake_timeout"));
         return;
       }
       setStatus("waking");
-      return schedule(wakeMs);
+      return schedule(Math.min(wakeMs * 2 ** (wakeAttempts - 1), 15_000));
     }
     wakingSince = null;
     if (res.kind === "error") {
@@ -198,6 +215,9 @@ export function createRelayTransport(opts: RelayOptions): StatefulTransport {
     ws.onopen = () => {
       if (socket !== ws) return;
       everConnected = true;
+      mayWake = false;
+      wakeAttempts = 0;
+      wakingSince = null;
       // El backoff vuelve a cero solo si la sesión se sostiene (un relay que abre y cierra no da bucle).
       const opened = ws;
       setTimeout(() => {
@@ -233,6 +253,7 @@ export function createRelayTransport(opts: RelayOptions): StatefulTransport {
       // en vez de mandarlos para que fallen allá (RV1c N16).
       if (LOCAL_ONLY.has(name)) return Promise.reject(new RelayError("not_relayable", name));
       if (status === "error") return Promise.reject(new RelayError("unavailable"));
+      if (status === "stopped") return Promise.reject(new RelayError("machine_stopped"));
       const id = nextId++;
       const frame = JSON.stringify({ id, method: name, params });
       return new Promise((resolve, reject) => {

@@ -16,6 +16,8 @@ export interface ConnectOptions {
   /** Presente solo en Desk. */
   host?: LocalHost;
   platform: { requestTicket: RelayOptions["requestTicket"] } & Partial<Omit<RelayOptions, "sessionKey" | "machineId" | "requestTicket">>;
+  /** true solo por una acción de la persona (Conectar, Encender): permite despertar la VM. */
+  wake?: boolean;
 }
 
 export interface MachineConnection {
@@ -34,7 +36,9 @@ export function connectMachine(opts: ConnectOptions): MachineConnection {
   // iniciar sesión o reintentar, se abre otra.
   // `untrack`: quien llama desde un memo no queda suscrito al estado (si no, cada cambio de
   // estado reabriría la conexión: RV1b N1).
-  if (hit && untrack(hit.status) !== "error") return hit;
+  // Una conexión en `stopped` sí se reabre si ahora la persona pide despertar.
+  const reusable = hit && untrack(hit.status) !== "error" && !(opts.wake && untrack(hit.status) === "stopped");
+  if (reusable) return hit;
   if (hit) hit.close();
 
   // Lo local lo declara el host (Desk sabe qué máquina es esta computadora); la UI no (R5).
@@ -45,6 +49,7 @@ export function connectMachine(opts: ConnectOptions): MachineConnection {
         ...opts.platform,
         sessionKey: opts.sessionKey,
         machineId: opts.machine.machine_id,
+        wake: opts.wake === true,
       });
 
   const [status, setStatus] = createSignal<ConnectionStatus>(transport.status());

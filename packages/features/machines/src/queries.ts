@@ -105,7 +105,8 @@ export interface UseMachinesReturn {
   refetch: () => Promise<Machine[] | undefined>;
   start: (machineId: string) => Promise<Operation>;
   stop: (machineId: string) => Promise<Operation>;
-  connect: (machine: Machine) => MachineConnection;
+  /** `wake` solo por una acción de la persona (Conectar, Encender): nunca al cargar. */
+  connect: (machine: Machine, opts?: { wake?: boolean }) => MachineConnection;
   getConnection: (machineId: string) => MachineConnection | undefined;
   operating: Accessor<Record<string, "starting" | "stopping">>;
 }
@@ -222,10 +223,11 @@ export function useMachines(): UseMachinesReturn {
     }
   }
 
-  function connect(machine: Machine): MachineConnection {
+  function connect(machine: Machine, opts?: { wake?: boolean }): MachineConnection {
     const sKey = sessionKey();
 
     return connectMachine({
+      wake: opts?.wake === true,
       sessionKey: sKey,
       machine: {
         machine_id: machine.machine_id,

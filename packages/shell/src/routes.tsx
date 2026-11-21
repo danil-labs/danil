@@ -1,4 +1,4 @@
-import { lazy, createSignal, createMemo, createEffect, createRenderEffect, Show, on, onCleanup, type JSX } from "solid-js";
+import { lazy, createSignal, createMemo, createEffect, createRenderEffect, Show, on, onCleanup, untrack, type JSX } from "solid-js";
 import { Tabs, TabsList, TabsTrigger, TabsContent, Button, FailureNote } from "@danil/ui";
 import { useMachines, type MachineConnection } from "@danil/feature-machines";
 import { useWorkspaces } from "@danil/feature-workspaces";
@@ -64,9 +64,21 @@ function WorkspaceConnectionFallback(props: {
   hasMachine: boolean;
   isError: boolean;
   isWaking: boolean;
+  isStopped?: boolean;
   onRetryConn?: () => void;
 }): JSX.Element {
   return (
+    <Show
+      when={!props.isStopped || props.isWaking}
+      fallback={
+        <div class="flex h-48 flex-col items-center justify-center gap-3 p-6 text-center text-xs">
+          <p class="m-0 font-medium text-neutral-300">La máquina está apagada.</p>
+          <Button size="sm" variant="secondary" onClick={props.onRetryConn}>
+            Encender y conectar
+          </Button>
+        </div>
+      }
+    >
     <Show
       when={!props.machinesError}
       fallback={
@@ -113,6 +125,7 @@ function WorkspaceConnectionFallback(props: {
         </Show>
       </Show>
     </Show>
+    </Show>
   );
 }
 
@@ -124,6 +137,8 @@ export function WorkspaceScreen(props: { id: string }): JSX.Element {
 
   // Estado de vista del workspace: tarea elegida en Proyectos (RV1 #1, RV2 #1)
   const [selectedTask, setSelectedTask] = createSignal<TaskRecord | null>(null);
+  // La máquina que la persona pidió encender, por id: el permiso no pasa a otro workspace (RV-FOCO1 #1).
+  const [wakeFor, setWakeFor] = createSignal<string | null>(null);
   const [retryCount, setRetryCount] = createSignal(0);
 
   const currentWorkspace = createMemo(() => {
@@ -147,13 +162,24 @@ export function WorkspaceScreen(props: { id: string }): JSX.Element {
     if (!ws?.org) return undefined;
     return list.find((m) => m.organization_id === ws.org);
   }, undefined, { equals: (a, b) => a?.machine_id === b?.machine_id });
+  // El estado actual de esa máquina, leído de la lista en cada sondeo (no del objeto memorizado) (RV-FOCO1 #3).
+  const targetState = () => {
+    const id = targetMachine()?.machine_id;
+    return (machines() ?? []).find((m) => m.machine_id === id)?.state;
+  };
 
   const conn = createMemo(
     on(
-      () => [targetMachine(), retryCount()] as const,
-      ([m]) => {
+      () => [targetMachine(), retryCount(), targetState() === "running"] as const,
+      ([m, , running]) => {
         if (!m) return undefined;
-        const c = connect(m);
+        // Al cargar solo se conecta a una máquina encendida; una apagada se muestra «apagada» y
+        // se despierta solo con el botón de ESA máquina (FOCO NUEVO, M6b).
+        // El permiso vale para UNA conexión: se lee y se gasta aquí mismo (SR-FOCO C1).
+        const wake = untrack(wakeFor) === m.machine_id;
+        if (wake) setWakeFor(null);
+        if (!wake && !running) return undefined;
+        const c = connect(m, { wake });
         onCleanup(() => c.close());
         return c;
       }
@@ -177,7 +203,10 @@ export function WorkspaceScreen(props: { id: string }): JSX.Element {
     ),
   );
 
-  const isReady = () => Boolean(conn() && conn()!.status() !== "error");
+  const isReady = () => Boolean(conn() && !["error", "stopped"].includes(conn()!.status()));
+  const isStopped = () =>
+    Boolean(targetMachine()) && (conn()?.status() === "stopped" || (!conn() && targetState() !== "running" && targetState() !== "starting"));
+  const isStarting = () => !conn() && targetState() === "starting";
   const isConnError = () => Boolean(conn() && conn()!.status() === "error");
   const isConnWaking = () => Boolean(conn() && conn()!.status() === "waking");
 
@@ -188,8 +217,12 @@ export function WorkspaceScreen(props: { id: string }): JSX.Element {
       onRetryMachines={() => void refetch()}
       hasMachine={Boolean(targetMachine())}
       isError={isConnError()}
-      isWaking={isConnWaking()}
-      onRetryConn={() => setRetryCount((n) => n + 1)}
+      isWaking={isConnWaking() || isStarting()}
+      isStopped={isStopped()}
+      onRetryConn={() => {
+        setWakeFor(targetMachine()?.machine_id ?? null);
+        setRetryCount((n) => n + 1);
+      }}
     />
   );
 

@@ -32,3 +32,4 @@ export * from "./sidebar.tsx";
 export * from "./layer.ts";
 export * from "./pointer-focus.ts";
 export { cn } from "./lib/utils.ts";
+export { seguirElTema, elegirApariencia } from "./lib/theme.ts";

@@ -39,17 +39,35 @@ const AUTH = {
   } as Record<string, string>,
 };
 
-/** El `?error=` del regreso del login, como lo muestra la página (apps/desktop/src/web/auth/workos.tsx). */
+/** El regreso del login por `?result=` o `?error=`, como lo muestra la página. */
 function signInError(): string {
   if (typeof location === "undefined") return "";
-  const code = new URLSearchParams(location.search).get("error");
-  return code ? (AUTH.errors[code] ?? AUTH.errors.callback_failed) : "";
+  const url = new URL(location.href);
+  const params = url.searchParams;
+  const error = params.get("error");
+  const result = params.get("result");
+
+  if (!error && !result) return "";
+
+  params.delete("error");
+  params.delete("result");
+  const qs = params.toString();
+  const cleanUrl = url.pathname + (qs ? `?${qs}` : "") + url.hash;
+  if (typeof history !== "undefined" && typeof history.replaceState === "function") {
+    history.replaceState(history.state, "", cleanUrl);
+  }
+
+  if (result === "cancelled") return "";
+  if (result === "no_access") return AUTH.errors.access_required;
+  if (result === "failed") return AUTH.errors.callback_failed;
+  if (error) return Object.hasOwn(AUTH.errors, error) ? AUTH.errors[error] : AUTH.errors.callback_failed;
+  return "";
 }
 
 /** La entrada original (WorkosAuthPage de apps/desktop), copiada tal cual (R13). */
-function EntryScreen(props: { isDesk: boolean; onAddSession?: () => void }): JSX.Element {
+function EntryScreen(props: { isDesk: boolean; onAddSession?: () => void; error: string }): JSX.Element {
   document.title = "Danil";
-  const error = signInError();
+  const error = props.error;
   return (
     <main class="flex h-full flex-col items-center overflow-y-auto bg-bg px-6 py-10 text-neutral-950" data-web-auth="workos">
       <div class="grid w-full max-w-sm gap-6">
@@ -85,6 +103,8 @@ function EntryScreen(props: { isDesk: boolean; onAddSession?: () => void }): JSX
 
 function AppWithSession(props: AppProps): JSX.Element {
   const sessionContext = useSession();
+  // El regreso del login (`?result=`/`?error=`) se lee y se limpia una vez al arrancar, no en el render (RV-FOCO1 #6).
+  const returnError = signInError();
   const [checking, setChecking] = createSignal(true);
 
   // La plataforma la dice el host, no una variable global de Tauri (R15).
@@ -135,7 +155,7 @@ function AppWithSession(props: AppProps): JSX.Element {
       <Show when={!failure()} fallback={<SessionFailure onRetry={check} />}>
       <Show
         when={hasActiveSession()}
-        fallback={<EntryScreen isDesk={isDesk()} onAddSession={handleAddSession} />}
+        fallback={<EntryScreen isDesk={isDesk()} onAddSession={handleAddSession} error={returnError} />}
       >
         <RouterProvider initialPath={props.initialPath}>
           <Layout

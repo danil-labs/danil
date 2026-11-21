@@ -10,6 +10,7 @@ Quién soy y con qué sesión se habla con el borde, tras una sola interfaz (`Se
   - `person_session_fetch`: **todas** las llamadas al borde de Desk van por aquí (`createEngineTransport`); el motor pone la sesión del contexto activo y la ventana nunca ve un token.
   - Evento `person-session`: el motor avisa cuando cambia el estado.
 - `refresh()` devuelve `signed_in`, `signed_out` o `error` (un borde o un motor caído no es «sin sesión», M8).
+- Primer montaje web: `refresh()` reintenta 403, 404 y 503 hasta 8 veces (1 s a 8 s) para esperar la cookie de sesión de WorkOS tras la redirección.
 - `transport()` da el transporte del borde para `createPlatformClient` (uno por app, lo crea el shell).
 - `@danil/session/solid`: `SessionProvider` y `useSession()`.
 - Sin reglas de permisos: la plataforma dice qué ve cada persona.
