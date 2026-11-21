@@ -10,7 +10,7 @@ import { grupos, idsDeProveedor, opcionesDeAlta, routers, visible, visibles, typ
 import { prosa } from "../../../../apps/desktop/src/lib/prose";
 import { rotuloDeSuperficie, type Superficie } from "../../../../apps/desktop/src/lib/surfaces";
 import { Badge } from "../../../ui/src/Badge";
-import { rotuloDeMarca } from "../../chat/src/marks";
+import { rotuloDeMarca } from "../../chat/src/model/marks";
 import Accounts from "./Accounts";
 import AddAccountPicker from "./AddAccountPicker";
 import DanilBlock from "./DanilBlock";

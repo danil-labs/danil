@@ -1,7 +1,7 @@
 import { type JSX, Match, Show, Switch } from "solid-js";
-import SearchPanel from "../../chat/src/SearchPanel";
-import { DelegatedPanel, type DelegatedPanelModel } from "../../chat/src/DelegatedTasks";
-import type { SearchSurface } from "../../chat/src/ThreadSearch";
+import SearchPanel from "../../chat/src/components/SearchPanel";
+import { DelegatedPanel, type DelegatedPanelModel } from "../../chat/src/screens/DelegatedTasks";
+import type { SearchSurface } from "../../chat/src/screens/ThreadSearch";
 import { t } from "../../../../apps/desktop/src/lib/i18n";
 import type { TaskSideMode } from "../../../../apps/desktop/src/lib/taskFiles";
 import { UsagePanel } from "../../../shell/src/shell/UsageTool";

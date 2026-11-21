@@ -1,5 +1,5 @@
 import { createEffect, createSignal, createUniqueId, For, Match, onCleanup, Show, Switch } from "solid-js";
-import { ACTIVITY_MOTIONS, createActivityMotionCycle, createActivityMotionPreference } from "./activityMotion";
+import { ACTIVITY_MOTIONS, createActivityMotionCycle, createActivityMotionPreference } from "../../model/activityMotion";
 import "./activity-indicator.css";
 import { createNow } from "../../../../../../apps/desktop/src/lib/sharedClock";
 import { t } from "../../../../../../apps/desktop/src/lib/i18n";

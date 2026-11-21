@@ -22,7 +22,7 @@ import {
   DropdownMenuTrigger,
 } from "../../../ui/src/DropdownMenu";
 import { MarcaAgente } from "../../../ui/src/icons";
-import { WithMentions } from "../../chat/src/WithMentions";
+import { WithMentions } from "../../chat/src/components/WithMentions";
 import { IconoDeArchivo } from "../../code/src/FileIcon";
 import { colorDeMarca, describirEstado, localDe } from "../../code/src/localStatus";
 import { AstroAvatar } from "./AstroAvatar";

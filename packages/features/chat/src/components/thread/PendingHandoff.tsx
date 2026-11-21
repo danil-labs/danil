@@ -2,7 +2,7 @@ import { type Component, type ComponentProps, type ParentProps, Show } from "sol
 import { Dynamic } from "solid-js/web";
 import type { HandoffPresentation } from "../../../../conversation-handoff/src";
 import { t } from "../../../../../../apps/desktop/src/lib/i18n";
-import Adjuntos from "../../Attachments";
+import Adjuntos from "../Attachments";
 
 export function handoffStatus(handoff: NonNullable<HandoffPresentation>): string {
   switch (handoff.phase) {

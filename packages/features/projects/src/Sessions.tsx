@@ -26,7 +26,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "../../../ui/src/Popover";
-import { WithMentions } from "../../chat/src/WithMentions";
+import { WithMentions } from "../../chat/src/components/WithMentions";
 import FolderChip from "./FolderChip";
 import { gitAppearance, RailPull, sessionGitDescription } from "./SessionGit";
 import { WithTaskHoverCard } from "./TaskHoverCardTrigger";

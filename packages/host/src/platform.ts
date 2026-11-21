@@ -63,7 +63,7 @@ export type Capabilities = import("../../../apps/desktop/src/lib/group-account")
   webWorkspacePicker?: import("../../../apps/desktop/src/web/workspace-picker").WorkspacePicker;
   webReauth?: { needed: () => boolean; signIn: () => void; failed?: () => boolean };
   /** Saldo de la cuenta Danil desde un BFF autenticado; ausente hasta verificar el adaptador. */
-  danilCredits?: import("../../features/chat/src/danil-credits").DanilCreditsSource;
+  danilCredits?: import("../../features/chat/src/model/danil-credits").DanilCreditsSource;
   spaceOrder?: SpaceOrderSource;
   /** Controles de ventana propios, semáforo de macOS y bandeja. */
   nativeWindow: boolean;
