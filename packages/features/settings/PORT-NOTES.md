@@ -20,3 +20,4 @@ Notas de portado de Configuración desde `apps/desktop` al front rebuild nuevo (
 - portado de apps/desktop/src/features/settings/Workspaces.tsx:1-150 (WorkspacesTab: gestión de workspace y logo)
 - portado de apps/desktop/src/features/settings/AppDownloads.tsx:1-36 (DownloadsTab: instaladores oficiales)
 - portado de apps/desktop/src/features/settings/AIProviders.tsx:1-121 y ai-providers-view.ts:1-21 (AiAccountsSection: proveedores Claude, Codex, Gemini, Grok)
+- portado de apps/desktop/src/features/settings/Providers.tsx:1-250 (SourceControlSection: GitHub, GitLab, Bitbucket)
