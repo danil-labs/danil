@@ -19,7 +19,8 @@
     "@danil/feature-terminal": "workspace:*",
     "@danil/feature-files": "workspace:*",
     "@danil/feature-ai-credentials": "workspace:*",
-    "@danil/feature-account": "workspace:*"
+    "@danil/feature-account": "workspace:*",
+    "@danil/platform-client": "workspace:*"
   },
   "devDependencies": {
     "typescript": "^5.7.2",

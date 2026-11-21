@@ -46,17 +46,19 @@ async function once(req: TransportRequest, o: HttpOptions): Promise<Response> {
   const headers: Record<string, string> = { Accept: "application/json, application/problem+json" };
   for (const [k, v] of Object.entries(req.headers ?? {})) if (v !== undefined) headers[k] = v;
   if (req.body !== undefined) headers["Content-Type"] = "application/json";
-  if (o.getToken) {
-    const token = await o.getToken(o.getWorkspaceId?.());
-    if (token) headers.Authorization = `Bearer ${token}`;
+  // Desk: Bearer del motor. Web: sin token, va la cookie HttpOnly del borde.
+  const token = o.getToken ? await o.getToken(o.getWorkspaceId?.()) : undefined;
+  if (token) headers.Authorization = `Bearer ${token}`;
+  // El borde compara `x-csrf-token` con el de la sesión web en toda mutación.
+  if (!token && req.method !== "GET") {
+    const csrf = await o.csrf?.();
+    if (csrf) headers["X-CSRF-Token"] = csrf;
   }
-  const csrf = await o.csrf?.();
-  if (csrf) headers["X-CSRF"] = csrf;
   return fetch(buildUrl(req), {
     method: req.method,
     headers,
     body: req.body === undefined ? undefined : JSON.stringify(req.body),
-    credentials: o.getToken ? "omit" : "include",
+    credentials: token ? "omit" : "include",
     signal: o.signal,
   });
 }

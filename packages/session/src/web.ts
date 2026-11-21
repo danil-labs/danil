@@ -1,5 +1,10 @@
-import { API_BASE } from "../../platform-client/src/config.ts";
+import { API_BASE } from "@danil/platform-client";
 import type { Session, SessionSource } from "./types.ts";
+
+/** Entrada web: el borde manda a WorkOS (identity) y vuelve a `returnTo` con la cookie puesta. */
+export function webLoginUrl(returnTo: string = location.href, apiBase: string = API_BASE): string {
+  return `${apiBase}/identity/login?return_to=${encodeURIComponent(returnTo)}`;
+}
 
 export interface WebSessionOptions {
   apiBase?: string;
@@ -45,7 +50,7 @@ export function createWebSession(opts: WebSessionOptions = {}): SessionSource & 
       current = null;
       csrfToken = null;
       emit();
-      redirect("/login");
+      redirect(webLoginUrl(location.href, base));
     },
     async add() {
       throw new Error("unsupported: la web no tiene selector de correo");

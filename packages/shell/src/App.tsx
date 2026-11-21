@@ -1,6 +1,7 @@
 import { createSignal, onMount, Show, type Component, type JSX } from "solid-js";
 import { SessionProvider, useSession } from "@danil/session/solid";
-import { createWebSession, type SessionSource, type Session } from "@danil/session";
+import { createWebSession, webLoginUrl, type SessionSource, type Session } from "@danil/session";
+import { createPlatformClient, PlatformProvider, type PlatformClient } from "@danil/platform-client";
 import { RouterProvider } from "./router.tsx";
 import { Layout } from "./Layout.tsx";
 import type { OrganizationItem } from "./Rail.tsx";
@@ -58,7 +59,7 @@ function EntryScreen(props: { isDesk: boolean; onAddSession?: () => void }): JSX
           when={props.isDesk}
           fallback={
             <a
-              href="/login"
+              href={webLoginUrl()}
               style={{
                 display: "inline-block",
                 padding: "10px 20px",
@@ -181,9 +182,24 @@ export function App(props: AppProps): JSX.Element {
     sessionSource = createWebSession();
   }
 
+  const source = sessionSource;
+  // Un solo cliente del borde para toda la app (regla 2): las features lo leen con usePlatform().
+  const platform =
+    (props.platform as PlatformClient | undefined) ??
+    createPlatformClient({
+      getToken: async (workspaceId) => {
+        const key = workspaceId ?? source.list().find((s) => !s.expired)?.key;
+        return key ? ((await source.tokenFor(key)) ?? undefined) : undefined;
+      },
+      csrf: () => source.csrf(),
+      onUnauthorized: () => source.onUnauthorized(source.list()[0]?.key),
+    });
+
   return (
-    <SessionProvider source={sessionSource}>
-      <AppWithSession {...props} />
+    <SessionProvider source={source}>
+      <PlatformProvider client={platform}>
+        <AppWithSession {...props} />
+      </PlatformProvider>
     </SessionProvider>
   );
 }

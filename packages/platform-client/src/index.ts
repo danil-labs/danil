@@ -15,3 +15,5 @@ export type { ClientError } from "./errors.ts";
 export { isClientError } from "./errors.ts";
 export type * from "./generated/types.ts";
 export { CONTRACT_HASH } from "./generated/contract.ts";
+export { API_BASE } from "./config.ts";
+export { PlatformProvider, usePlatform } from "./solid.ts";

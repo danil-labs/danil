@@ -13,3 +13,10 @@ Cliente del borde /v1 con reintento ante 404/501/503 (R10) y la URL base única.
   `{kind:"unavailable", retrying:true}` por `onUnavailable`, nunca como error final.
 - Web usa cookie (`credentials: "include"`); Desk pasa `getToken` y va con Bearer.
 - Reglas: R1 (red solo aquí y en session, host, engine-client), R3 y R4 de `03-structure.md`.
+
+## Un solo cliente por app
+
+- La app (el shell) crea **un** cliente con `createPlatformClient({ getToken, csrf, onUnauthorized })` a partir de la sesión y lo provee con `<PlatformProvider client>`.
+- Las features lo leen en su `queries.ts` con `usePlatform()`. Una feature no crea su propio cliente.
+- Web: sin token, la petición va con `credentials: "include"` (cookie `__Host-danil_session` del borde) y toda mutación lleva `X-CSRF-Token`. Desk: `Authorization: Bearer` del motor y `credentials: "omit"`.
+- `API_BASE` (`src/config.ts`, `VITE_DANIL_API_BASE`) es la única URL base del front.

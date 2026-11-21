@@ -535,10 +535,11 @@ importers:
         version: 6.4.4(@types/node@26.4.0)(jiti@2.7.0)(lightningcss@1.32.0)
 
   packages/platform-client:
-    devDependencies:
+    dependencies:
       solid-js:
         specifier: ^1.9.17
         version: 1.9.17
+    devDependencies:
       typescript:
         specifier: ^5.7.2
         version: 5.9.3
@@ -590,6 +591,9 @@ importers:
       '@danil/feature-workspaces':
         specifier: workspace:*
         version: link:../features/workspaces
+      '@danil/platform-client':
+        specifier: workspace:*
+        version: link:../platform-client
       '@danil/session':
         specifier: workspace:*
         version: link:../session
