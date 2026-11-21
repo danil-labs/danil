@@ -146,3 +146,90 @@ export type CredentialProviderList = {
   }>;
   [key: string]: any;
 };
+
+export type CredentialMachine = {
+  machine_id: string;
+  state: "active" | "pending" | "removed";
+  version?: number;
+  last_seen_at?: string | null;
+  [key: string]: any;
+};
+
+export type AccountCredential = {
+  credential_id: string;
+  kind: "api_key" | "mcp_secret" | "zotero" | "subscription" | "mcp_oauth" | "env_secret";
+  provider: string;
+  slot: string;
+  label?: string | null;
+  hint?: string | null;
+  status: string;
+  version: number;
+  config?: {
+    [key: string]: any;
+  } | null;
+  created_at?: string;
+  updated_at?: string;
+  machines: Array<CredentialMachine>;
+  [key: string]: any;
+};
+
+export type CredentialRecipient = {
+  machine_id: string;
+  /** X25519, base64 */
+  public_key: string;
+  [key: string]: any;
+};
+
+export type WorkspaceAccounts = {
+  credentials: Array<AccountCredential>;
+  recipients: Array<CredentialRecipient>;
+  [key: string]: any;
+};
+
+export type SealedCopy = {
+  machine_id: string;
+  /** Sobre TERMINUS-SECRET/1 en base64 */
+  sealed: string;
+};
+
+export type PutWorkspaceAccount = {
+  kind: "api_key" | "mcp_secret" | "zotero" | "subscription" | "mcp_oauth" | "env_secret";
+  provider: string;
+  slot: string;
+  label?: string;
+  hint?: string;
+  config?: {
+    [key: string]: any;
+  };
+  copies: Array<SealedCopy>;
+};
+
+export type AccountCredentialEnvelope = {
+  credential: AccountCredential;
+  [key: string]: any;
+};
+
+export type Ok = {
+  ok?: boolean;
+  [key: string]: any;
+};
+
+export type GithubConnection = {
+  connected: boolean;
+  status?: string | null;
+  login?: string | null;
+  avatar?: string | null;
+  version?: number | null;
+  install_url?: string | null;
+  [key: string]: any;
+};
+
+export type GithubAuthorizeRequest = {
+  return_to?: string;
+};
+
+export type GithubAuthorizeResponse = {
+  url: string;
+  expires_at?: string | number | null;
+  [key: string]: any;
+};

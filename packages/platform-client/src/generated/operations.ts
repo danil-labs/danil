@@ -1,5 +1,5 @@
 // GENERADO por scripts/generate.mjs. No editar.
-import type { CreateWorkspaceRequest, CredentialProviderList, Loose, Machine, MachineList, MachineTicket, Me, Operation, OrganizationList, SelectOrganizationRequest, SelectOrganizationResponse, SelectWorkspaceRequest, SelectWorkspaceResponse, Workspace, WorkspaceList } from "./types.ts";
+import type { AccountCredentialEnvelope, CreateWorkspaceRequest, CredentialProviderList, GithubAuthorizeRequest, GithubAuthorizeResponse, GithubConnection, Loose, Machine, MachineList, MachineTicket, Me, Ok, Operation, OrganizationList, PutWorkspaceAccount, SelectOrganizationRequest, SelectOrganizationResponse, SelectWorkspaceRequest, SelectWorkspaceResponse, Workspace, WorkspaceAccounts, WorkspaceList } from "./types.ts";
 
 export type TransportRequest = {
   method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
@@ -57,6 +57,30 @@ export function createOperations(t: Transport) {
     /** Desconecta a la persona del proveedor */
     disconnectCredentialProvider: (args: { provider: string; idempotencyKey: string }) =>
       t<void>({ method: "DELETE", path: `/credentials/providers/${encodeURIComponent(String(args!.provider))}/connections/me`, headers: { "Idempotency-Key": args?.idempotencyKey } }),
+    /** Cuentas de IA del workspace y máquinas destinatarias */
+    getWorkspaceAccounts: (args: { workspace_id: string }) =>
+      t<WorkspaceAccounts>({ method: "GET", path: `/credentials/workspaces/${encodeURIComponent(String(args!.workspace_id))}/accounts` }),
+    /** Guarda o rota una cuenta de IA con sus copias selladas */
+    putWorkspaceAccount: (args: { workspace_id: string; body: PutWorkspaceAccount }) =>
+      t<AccountCredentialEnvelope>({ method: "PUT", path: `/credentials/workspaces/${encodeURIComponent(String(args!.workspace_id))}/accounts`, body: args?.body }),
+    /** Borra la cuenta y sus copias */
+    deleteWorkspaceAccount: (args: { workspace_id: string; credential_id: string }) =>
+      t<Ok>({ method: "DELETE", path: `/credentials/workspaces/${encodeURIComponent(String(args!.workspace_id))}/accounts/${encodeURIComponent(String(args!.credential_id))}` }),
+    /** Quita una máquina de la cuenta */
+    removeWorkspaceAccountMachine: (args: { workspace_id: string; credential_id: string; machine_id: string }) =>
+      t<Ok>({ method: "DELETE", path: `/credentials/workspaces/${encodeURIComponent(String(args!.workspace_id))}/accounts/${encodeURIComponent(String(args!.credential_id))}/machines/${encodeURIComponent(String(args!.machine_id))}` }),
+    /** Devuelve la máquina a pending */
+    restoreWorkspaceAccountMachine: (args: { workspace_id: string; credential_id: string; machine_id: string }) =>
+      t<Ok>({ method: "POST", path: `/credentials/workspaces/${encodeURIComponent(String(args!.workspace_id))}/accounts/${encodeURIComponent(String(args!.credential_id))}/machines/${encodeURIComponent(String(args!.machine_id))}/restore` }),
+    /** Estado de GitHub de la persona */
+    getGithubConnection: () =>
+      t<GithubConnection>({ method: "GET", path: `/credentials/github` }),
+    /** Revoca y borra la conexión de GitHub */
+    disconnectGithub: () =>
+      t<Ok>({ method: "DELETE", path: `/credentials/github` }),
+    /** URL para autorizar GitHub en el navegador */
+    authorizeGithub: (args: { body: GithubAuthorizeRequest }) =>
+      t<GithubAuthorizeResponse>({ method: "POST", path: `/credentials/github/authorize`, body: args?.body }),
   };
 }
 export type Operations = ReturnType<typeof createOperations>;

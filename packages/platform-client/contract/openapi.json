@@ -729,6 +729,349 @@
           }
         }
       }
+    },
+    "/v1/credentials/workspaces/{workspace_id}/accounts": {
+      "get": {
+        "operationId": "getWorkspaceAccounts",
+        "summary": "Cuentas de IA del workspace y máquinas destinatarias",
+        "tags": [
+          "credentials"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/WorkspaceId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Cuentas de IA del workspace y máquinas destinatarias",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkspaceAccounts"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "put": {
+        "operationId": "putWorkspaceAccount",
+        "summary": "Guarda o rota una cuenta de IA con sus copias selladas",
+        "tags": [
+          "credentials"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/WorkspaceId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Guarda o rota una cuenta de IA con sus copias selladas",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountCredentialEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          },
+          "400": {
+            "description": "invalid_recipient",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Loose"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "credential_slot_conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Loose"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PutWorkspaceAccount"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/credentials/workspaces/{workspace_id}/accounts/{credential_id}": {
+      "delete": {
+        "operationId": "deleteWorkspaceAccount",
+        "summary": "Borra la cuenta y sus copias",
+        "tags": [
+          "credentials"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/WorkspaceId"
+          },
+          {
+            "$ref": "#/components/parameters/CredentialId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Borra la cuenta y sus copias",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ok"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/credentials/workspaces/{workspace_id}/accounts/{credential_id}/machines/{machine_id}": {
+      "delete": {
+        "operationId": "removeWorkspaceAccountMachine",
+        "summary": "Quita una máquina de la cuenta",
+        "tags": [
+          "credentials"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/WorkspaceId"
+          },
+          {
+            "$ref": "#/components/parameters/CredentialId"
+          },
+          {
+            "$ref": "#/components/parameters/AccountMachineId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Quita una máquina de la cuenta",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ok"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/credentials/workspaces/{workspace_id}/accounts/{credential_id}/machines/{machine_id}/restore": {
+      "post": {
+        "operationId": "restoreWorkspaceAccountMachine",
+        "summary": "Devuelve la máquina a pending",
+        "tags": [
+          "credentials"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/WorkspaceId"
+          },
+          {
+            "$ref": "#/components/parameters/CredentialId"
+          },
+          {
+            "$ref": "#/components/parameters/AccountMachineId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Devuelve la máquina a pending",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ok"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/credentials/github": {
+      "get": {
+        "operationId": "getGithubConnection",
+        "summary": "Estado de GitHub de la persona",
+        "tags": [
+          "credentials"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Estado de GitHub de la persona",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GithubConnection"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "delete": {
+        "operationId": "disconnectGithub",
+        "summary": "Revoca y borra la conexión de GitHub",
+        "tags": [
+          "credentials"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Revoca y borra la conexión de GitHub",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ok"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/credentials/github/authorize": {
+      "post": {
+        "operationId": "authorizeGithub",
+        "summary": "URL para autorizar GitHub en el navegador",
+        "tags": [
+          "credentials"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "URL para autorizar GitHub en el navegador",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GithubAuthorizeResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GithubAuthorizeRequest"
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -765,6 +1108,30 @@
       },
       "Provider": {
         "name": "provider",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      },
+      "WorkspaceId": {
+        "name": "workspace_id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      },
+      "CredentialId": {
+        "name": "credential_id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      },
+      "AccountMachineId": {
+        "name": "machine_id",
         "in": "path",
         "required": true,
         "schema": {
@@ -1235,6 +1602,297 @@
           }
         },
         "additionalProperties": true
+      },
+      "CredentialMachine": {
+        "type": "object",
+        "required": [
+          "machine_id",
+          "state"
+        ],
+        "additionalProperties": true,
+        "properties": {
+          "machine_id": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "active",
+              "pending",
+              "removed"
+            ]
+          },
+          "version": {
+            "type": "integer"
+          },
+          "last_seen_at": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "AccountCredential": {
+        "type": "object",
+        "required": [
+          "credential_id",
+          "kind",
+          "provider",
+          "slot",
+          "status",
+          "version",
+          "machines"
+        ],
+        "additionalProperties": true,
+        "properties": {
+          "credential_id": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "api_key",
+              "mcp_secret",
+              "zotero",
+              "subscription",
+              "mcp_oauth",
+              "env_secret"
+            ]
+          },
+          "provider": {
+            "type": "string"
+          },
+          "slot": {
+            "type": "string"
+          },
+          "label": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "hint": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "status": {
+            "type": "string"
+          },
+          "version": {
+            "type": "integer"
+          },
+          "config": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "additionalProperties": true
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "updated_at": {
+            "type": "string"
+          },
+          "machines": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CredentialMachine"
+            }
+          }
+        }
+      },
+      "CredentialRecipient": {
+        "type": "object",
+        "required": [
+          "machine_id",
+          "public_key"
+        ],
+        "additionalProperties": true,
+        "properties": {
+          "machine_id": {
+            "type": "string"
+          },
+          "public_key": {
+            "type": "string",
+            "description": "X25519, base64"
+          }
+        }
+      },
+      "WorkspaceAccounts": {
+        "type": "object",
+        "required": [
+          "credentials",
+          "recipients"
+        ],
+        "additionalProperties": true,
+        "properties": {
+          "credentials": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AccountCredential"
+            }
+          },
+          "recipients": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CredentialRecipient"
+            }
+          }
+        }
+      },
+      "SealedCopy": {
+        "type": "object",
+        "required": [
+          "machine_id",
+          "sealed"
+        ],
+        "properties": {
+          "machine_id": {
+            "type": "string"
+          },
+          "sealed": {
+            "type": "string",
+            "description": "Sobre TERMINUS-SECRET/1 en base64"
+          }
+        }
+      },
+      "PutWorkspaceAccount": {
+        "type": "object",
+        "required": [
+          "kind",
+          "provider",
+          "slot",
+          "copies"
+        ],
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "api_key",
+              "mcp_secret",
+              "zotero",
+              "subscription",
+              "mcp_oauth",
+              "env_secret"
+            ]
+          },
+          "provider": {
+            "type": "string"
+          },
+          "slot": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "hint": {
+            "type": "string"
+          },
+          "config": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "copies": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SealedCopy"
+            }
+          }
+        }
+      },
+      "AccountCredentialEnvelope": {
+        "type": "object",
+        "required": [
+          "credential"
+        ],
+        "additionalProperties": true,
+        "properties": {
+          "credential": {
+            "$ref": "#/components/schemas/AccountCredential"
+          }
+        }
+      },
+      "Ok": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          }
+        }
+      },
+      "GithubConnection": {
+        "type": "object",
+        "required": [
+          "connected"
+        ],
+        "additionalProperties": true,
+        "properties": {
+          "connected": {
+            "type": "boolean"
+          },
+          "status": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "login": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "avatar": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "version": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "install_url": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "GithubAuthorizeRequest": {
+        "type": "object",
+        "properties": {
+          "return_to": {
+            "type": "string"
+          }
+        }
+      },
+      "GithubAuthorizeResponse": {
+        "type": "object",
+        "required": [
+          "url"
+        ],
+        "additionalProperties": true,
+        "properties": {
+          "url": {
+            "type": "string"
+          },
+          "expires_at": {
+            "type": [
+              "string",
+              "integer",
+              "null"
+            ]
+          }
+        }
       }
     }
   }
