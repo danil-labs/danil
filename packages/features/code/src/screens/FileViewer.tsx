@@ -23,9 +23,9 @@ import IconoCambios from "lucide-solid/icons/git-compare";
 import { Button } from "../../../../ui/src/Button";
 import { FailureNote, asFailure, type Failure } from "../../../../ui/src/Failure";
 import { Markdown } from "../../../../ui/src/Markdown";
-import Documento from "../../../artifacts/src/Document";
-import type { Preview } from "../../../artifacts/src/Preview";
-import { formaDe } from "../../../artifacts/src/sandbox";
+import Documento from "../../../artifacts/src/screens/Document";
+import type { Preview } from "../../../artifacts/src/components/Preview";
+import { formaDe } from "../../../artifacts/src/model/sandbox";
 import { cn } from "../../../../../apps/desktop/src/lib/utils";
 import { HEADER_HEIGHT } from "../../../../host/src/window";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
@@ -34,7 +34,7 @@ import { ariaDeAtajo, textoDeAtajo } from "../../../../../apps/desktop/src/lib/s
 import { peso } from "../../../../../apps/desktop/src/lib/format";
 import { capabilities } from "../../../../host/src/platform";
 import { mediaKindOf, type TreePart } from "@terminus/protocol";
-import type { LeerParte } from "../../../viewers/src/Media";
+import type { LeerParte } from "../../../viewers/src/screens/Media";
 import { comoDiff, parsearDiff, type ArchivoDiff } from "../model/diff";
 import { CuerpoDeArchivo, SelectorDeDisposicion } from "../components/Changes";
 import { IDOS, alMoverseElArbol, comoEntra, esBorrado, type DetalleDeIdos } from "../queries/refresh";
@@ -46,7 +46,7 @@ import { sangriaDe } from "../model/indent";
 import { IconoDeArchivo } from "../components/FileIcon";
 import { esArbolDeCodigo } from "../queries/treeKind";
 import PaginaEnVivo, { direccionDePagina } from "../components/PagePreview";
-import { delimiterFor } from "../../../viewers/src/csv";
+import { delimiterFor } from "../../../viewers/src/model/csv";
 import {
   type DiagnosticoTypst,
   ampliadaDe,
@@ -73,10 +73,10 @@ const EditorDeCodigo = lazy(cargarEditor);
 const VistaPreviaTypst = lazy(() => import("../components/TypstPreview"));
 const VistaTypstExportada = lazy(() => import("../components/TypstExportPreview"));
 /** Los visores de lo que no se edita bajan solo al abrirse: `pdfjs-dist` no entra en el arranque. */
-const PdfDocument = lazy(() => import("../../../viewers/src/Pdf"));
-const ZoomableImage = lazy(() => import("../../../viewers/src/ImageViewer"));
-const DelimitedTable = lazy(() => import("../../../viewers/src/CsvTable"));
-const Reproductor = lazy(() => import("../../../viewers/src/Media"));
+const PdfDocument = lazy(() => import("../../../viewers/src/screens/Pdf"));
+const ZoomableImage = lazy(() => import("../../../viewers/src/screens/ImageViewer"));
+const DelimitedTable = lazy(() => import("../../../viewers/src/screens/CsvTable"));
+const Reproductor = lazy(() => import("../../../viewers/src/screens/Media"));
 
 /**
  * Un archivo de un árbol de la tarea, en una sola barra: dónde está, qué se
@@ -404,7 +404,7 @@ export default function VisorDeArchivo(props: {
     setBajando(true);
     setFalloAfuera(null);
     try {
-      const { descargar } = await import("../../../viewers/src/Media");
+      const { descargar } = await import("../../../viewers/src/screens/Media");
       await descargar(props.ruta, leer);
     } catch (e) {
       setFalloAfuera(asFailure(e));
@@ -1181,7 +1181,7 @@ function Cuerpo(props: {
     setBajando(true);
     setFalloDescarga(null);
     try {
-      const { descargar } = await import("../../../viewers/src/Media");
+      const { descargar } = await import("../../../viewers/src/screens/Media");
       await descargar(props.ruta, props.leerParte);
     } catch (e) {
       setFalloDescarga(asFailure(e));

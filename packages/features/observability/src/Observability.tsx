@@ -3,7 +3,7 @@ import { listen } from "../../../../apps/desktop/src/lib/serviceEvents";
 import { createSignal, onCleanup, onMount, Show } from "solid-js";
 import { t } from "../../../../apps/desktop/src/lib/i18n";
 import { Button } from "../../../ui/src/Button";
-import Sitio from "../../sites/src/Site";
+import Sitio from "../../sites/src/screens/Site";
 import { prosaDe } from "../../../ui/src/Failure";
 
 type AgentsViewStatus = { installed: boolean; enabled: boolean };

@@ -20,8 +20,8 @@ import {
   Suspense,
   Switch,
 } from "solid-js";
-import VisorDeArtefacto from "../../../features/artifacts/src/ArtifactViewer";
-import type { Preview } from "../../../features/artifacts/src/Preview";
+import VisorDeArtefacto from "../../../features/artifacts/src/screens/ArtifactViewer";
+import type { Preview } from "../../../features/artifacts/src/components/Preview";
 import Chat, {
   type Author,
   type Msg,
@@ -89,7 +89,7 @@ const AgentProfile = retryableLazy(() => import("../../../features/projects/src/
 // El alta solo se abre sin workspace o al agregar otro: no entra en la carga inicial.
 const Onboarding = lazy(() => import("../../../features/onboarding/src/Onboarding"));
 const TaskLocation = lazy(() => import("../../../features/chat/src/screens/TaskLocation"));
-const Screen = lazy(() => import("../../../features/screen/src/Screen"));
+const Screen = lazy(() => import("../../../features/screen/src/screens/Screen"));
 // El aviso de licencia solo se baja si la flota lo pide (trae los textos de Danil).
 const MachinesLicense = lazy(() =>
   import("../../../features/settings/src/TerminusLicense").then((m) => ({
@@ -177,7 +177,7 @@ import UsageTool from "../shell/UsageTool";
 import { createUsage } from "../shell/usage";
 import AvisoDeVersion from "../shell/VersionNotice";
 import WorkspaceColumn from "../shell/WorkspaceColumn";
-import Sitio from "../../../features/sites/src/Site";
+import Sitio from "../../../features/sites/src/screens/Site";
 import { DragOverlay, UnsavedCloseDialog } from "../../../features/tabs/src";
 import { createEngineQueue, createTaskQueues } from "../../../features/task-queues/src";
 import { VELO_DE_FONDO } from "../../../../apps/desktop/src/lib/chat-background";

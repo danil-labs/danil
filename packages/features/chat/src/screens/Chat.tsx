@@ -1,5 +1,5 @@
 import { isRetiredAgent } from "@terminus/tasks";
-import type { Preview } from "../../../artifacts/src/Preview";
+import type { Preview } from "../../../artifacts/src/components/Preview";
 import { HistoryDetails } from "../components/HistoryDetails";
 import type { InvokeOptions } from "@tauri-apps/api/core";
 import { getCurrentWebview } from "@tauri-apps/api/webview";

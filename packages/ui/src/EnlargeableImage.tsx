@@ -6,7 +6,7 @@ import { t } from "../../../apps/desktop/src/lib/i18n";
 import { Dialog, DialogContent, DialogTitle } from "./Dialog";
 
 // Solo dentro del diálogo ampliado: no entra en la carga inicial.
-const ZoomableImage = lazy(() => import("../../features/viewers/src/ImageViewer"));
+const ZoomableImage = lazy(() => import("../../features/viewers/src/screens/ImageViewer"));
 // El carrusel (embla) solo hace falta con varias imágenes: tampoco entra.
 const ImageStrip = lazy(() => import("./ImageStrip"));
 

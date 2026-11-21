@@ -1,2 +1,2 @@
-export { createTaskQueues, type QueueScope } from "./store.ts";
-export { createEngineQueue } from "./engine.ts";
+export { createTaskQueues, type QueueScope } from "./queries/store.ts";
+export { createEngineQueue } from "./queries/engine.ts";

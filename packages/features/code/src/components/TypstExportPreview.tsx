@@ -12,7 +12,7 @@ import { FailureNote, asFailure, type Failure } from "../../../../ui/src/Failure
 import { Spinner } from "../../../../ui/src/Spinner";
 import { type DiagnosticoTypst, type ExportacionTypst, lugarDe, pedirArreglo, principalElegido } from "../queries/typst";
 
-const PdfDocument = lazy(() => import("../../../viewers/src/Pdf"));
+const PdfDocument = lazy(() => import("../../../viewers/src/screens/Pdf"));
 
 /** Cuánto espera, desde el último cambio guardado, a volver a compilar: cada vez escribe el PDF entero. */
 const PAUSA_DE_LA_EXPORTACION = 800;

@@ -19,7 +19,7 @@ import { elegirFondoDeChat, elegirVeloDeFondo, elegirVeloDePaneles, elegirVeloDe
 /** Guardar en el workspace va en su propio trozo: la carga inicial solo pinta. */
 const motor = () => import("../../../../apps/desktop/src/lib/chat-background-engine");
 import { VELO_DE_PANELES_MAX, VELO_DE_PANELES_MIN, VELO_DE_PESTANAS_MAX, VELO_DE_PESTANAS_MIN } from "../../../../apps/desktop/src/lib/chat-background";
-import type { Preview } from "../../artifacts/src/Preview";
+import type { Preview } from "../../artifacts/src/components/Preview";
 import {
   apariencia,
   chooseDarkStyle,
