@@ -24,7 +24,6 @@ import ProfileMenu from "./ProfileMenu";
 import { SessionWorkspaceRows } from "./SessionWorkspaceRows";
 import { sessionRail } from "./session-groups";
 import { sessionVisible } from "./session-rail-view";
-import { WebOrganizationRows } from "./WebOrganizationRows";
 
 /** Cambiar de workspace con un clic y ver, sin entrar, qué espera en cada uno. */
 
@@ -214,13 +213,10 @@ export default function WorkspaceColumn(props: {
       class="flex h-full w-12 shrink-0 flex-col"
     >
       <div ref={list} class="flex min-h-0 flex-1 flex-col items-center gap-1 overflow-x-hidden overflow-y-auto pt-2 pb-2">
-        <Show when={capabilities().groupAccount && !capabilities().nativeWindow} fallback={<>        <Show when={accounts && others().length > 0}>
+        <Show when={accounts && others().length > 0}>
           <AccountHeader accounts={accounts} id={accounts!.current.user_id} email={accounts!.current.email} extra={accounts!.current.extra} signedIn />
         </Show>
         <SessionWorkspaceRows sessions={sessions} rows={visibles()} render={(w) => <Tile w={w()} />} active={ws.activo() && ws.activoContexto() ? { workspace: ws.activo()!, context: ws.activoContexto()! } : null} tasksOf={(id, context) => props.attention.find((row) => row.workspace === id && row.context === context)?.tasks ?? []} staleOf={(id, context) => props.attention.find((row) => row.workspace === id && row.context === context)?.stale ?? false} stateLabel={(state) => state ? taskLabel(state, true) : ""} onOpen={(id, context) => void ws.cambiarA(id, context)} onManage={() => props.onManage()} />
-</>}>
-          <WebOrganizationRows rows={visibles()} active={ws.activo() ?? null} tasksOf={(id, context) => props.attention.find((row) => row.workspace === id && row.context === context)?.tasks ?? []} staleOf={(id, context) => props.attention.find((row) => row.workspace === id && row.context === context)?.stale ?? false} stateLabel={(state) => state ? taskLabel(state, true) : ""} onOpen={(id, context) => void ws.cambiarA(id, context)} onManage={() => props.onManage()} onRemove={(id) => danil.remove(id)} fallback={<SessionWorkspaceRows sessions={sessions} rows={visibles()} render={(w) => <Tile w={w()} />} active={null} tasksOf={(id) => tasksOf(id)} stateLabel={(state) => state ? taskLabel(state, true) : ""} onOpen={(id) => void ws.cambiarA(id)} onManage={() => props.onManage()} />} />
-        </Show>
         <AddWorkspaceMenu
           sessions={sessions}
           hidden={hiddenRows(ws.lista() ?? [])}

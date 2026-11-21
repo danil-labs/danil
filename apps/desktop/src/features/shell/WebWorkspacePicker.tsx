@@ -9,7 +9,7 @@ import type { PickerOrg, PickerRow, WorkspacePicker } from "../../web/workspace-
  * No hay una segunda pantalla de organizaciones: elegir una fila de organización admite solo esa y
  * la lista se relee. `catalog_state` separa «sin workspaces accesibles» de «no se pudo comprobar».
  */
-export function WebWorkspacePicker(props: { picker: WorkspacePicker; close: () => void }) {
+export function WebWorkspacePicker(props: { picker: WorkspacePicker; close: () => void; add: (row: PickerRow) => Promise<void> }) {
   const [data, { refetch }] = createResource(() => props.picker.catalog());
   const [busy, setBusy] = createSignal(false);
   const [error, setError] = createSignal("");
@@ -29,7 +29,7 @@ export function WebWorkspacePicker(props: { picker: WorkspacePicker; close: () =
     if (busy()) return;
     setError(""); setBusy(true);
     try {
-      if (row) { await props.picker.add(row); props.close(); }
+      if (row) { await props.picker.add(row, props.add); props.close(); }
       else await props.picker.connect();
     } catch { setError(row ? "shell.workspaces.add_failed" : "shell.workspaces.connect_failed"); void refetch(); }
     finally { setBusy(false); }

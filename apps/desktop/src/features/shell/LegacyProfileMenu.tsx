@@ -10,7 +10,6 @@ import { canRedeemPromo } from "../../lib/promo-role";
 import { type Apariencia, apariencia, elegirApariencia } from "../../lib/theme";
 import { cn } from "../../lib/utils";
 import { ITEM_DE_MENU, Popover, PopoverAnchor, PopoverContent } from "../../ui/Popover";
-import { WebWorkspaceMenuList } from "./WebWorkspaceMenuList";
 
 const PromoRedeem = lazy(() => import("./PromoRedeem"));
 
@@ -101,7 +100,6 @@ export default function ProfileMenu(props: {
           )}
         </Show>
         <Show when={canRedeemPromo(capabilities().webPromoRole) ? capabilities().webPromo : undefined}>{redeem => <Suspense fallback={null}><PromoRedeem redeem={redeem()} /></Suspense>}</Show>
-        <Show when={capabilities().webWorkspaces}>{session => <><WebWorkspaceMenuList session={session()} close={() => setOpen(false)} /><div class="my-1 h-px bg-border" /></>}</Show>
         <p class="m-0 px-2 pt-1 pb-1 text-caption font-medium text-neutral-500">{t("shell.profile.theme")}</p>
         <div role="radiogroup" aria-label={t("shell.profile.theme")} class={cn(SEGMENTO, "mx-2 mb-2")}>
           <For each={TEMAS}>

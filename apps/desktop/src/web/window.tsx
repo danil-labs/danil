@@ -12,11 +12,12 @@ import { installIpc } from "./ipc";
 import type { MachineRow, MachineStatus } from "./SyncNote";
 import { createWebTransport } from "./transport";
 import { browser, takeSettingsParam } from "./window-browser";
-import { selectEngineWorkspace, webMachineCall } from "./workspace-runtime";
+import { webMachineCall } from "./workspace-runtime";
 import { windowContext } from "./window-context";
+import { openWorkspaceUrl } from "./open-workspace-url";
 
 declare const __TERMINUS_VERSION__: string;
-type Base = { billing: ReturnType<typeof import("./window-billing").windowBilling>; contextMachines?: (context: string) => ReturnType<typeof machinesClient>; machines: ReturnType<typeof machinesClient>; relayOrigin: string; credentials?: Capabilities["accountCredentials"]; permits: (name: string) => boolean; organizations?: Capabilities["organizations"]; promo?: Capabilities["webPromo"]; groupAccount?: Capabilities["groupAccount"]; reauth?: Capabilities["webReauth"]; preparing?: () => boolean; onUnauthorized: () => void; profile: AccountProfileSource; services: Pick<Capabilities, "webWorkspaces" | "webWorkspacePicker" | "danilCredits">; onUnavailable: () => void; };
+type Base = { billing: ReturnType<typeof import("./window-billing").windowBilling>; contextMachines: (context: string) => ReturnType<typeof machinesClient>; sessions: import("./web-session-contexts").WebSessionCommands; rail?: Capabilities["webRailCatalog"]; relayOrigin: string; credentials?: Capabilities["accountCredentials"]; permits: (name: string) => boolean; organizations?: Capabilities["organizations"]; promo?: Capabilities["webPromo"]; groupAccount?: Capabilities["groupAccount"]; reauth?: Capabilities["webReauth"]; preparing?: () => boolean; onUnauthorized: () => void; profile: AccountProfileSource; services: Pick<Capabilities, "webWorkspaces" | "webWorkspacePicker" | "danilCredits">; onUnavailable: () => void; };
 const Picker = lazy(() => import("../features/machines/MachinePicker").then(m => ({ default: m.MachinePicker })));
 const AccountMachines = lazy(() => import("../features/machines/AccountMachines"));
 /** Another machine's slice changed: the window rereads just that. */
@@ -38,7 +39,7 @@ export function mountWindow(base: Base, mounted: Mounted) {
   const powers = new Map<string, string>();
   const unavailable = () => ({ what: t("web.machines.unavailable"), detail: "machines_unavailable" });
   const pool = createContextRelayPool();
-  const scope = windowContext({ legacy: base.machines, factory: base.contextMachines, account: base.groupAccount, fleet: () => fleet, revision, onContextsSettled: contexts => { active.pruneContexts(contexts); bump(n => n + 1); } });
+  const scope = windowContext({ factory: base.contextMachines, sessions: base.sessions, active: () => active.activeContext(), fleet: () => fleet, revision, onContextsSettled: contexts => { active.pruneContexts(contexts); bump(n => n + 1); } });
   const fleet: Fleet = new Fleet({ self: null, storage: mounted.storage,
     connect: info => {
       const create = () => {
@@ -92,6 +93,7 @@ export function mountWindow(base: Base, mounted: Mounted) {
       return workspace ? picked[workspace] ?? null : null;
     },
   });
+  const url = openWorkspaceUrl(active, base.sessions);
   const status = (id: string, context?: string): MachineStatus => {
     const power = fleet.power(id, context);
     return power === "on" ? "online" : power === "off" ? "offline" : power;
@@ -115,7 +117,7 @@ export function mountWindow(base: Base, mounted: Mounted) {
     if (!base.permits("machines")) { setMissing(true); fleet.setMachines([]); return false; }
     const inventory = await scope.inventory();
     if (!inventory) { setMissing(true); fleet.setMachines([]); bump(n => n + 1); return false; }
-    const { answer, group } = inventory;
+    const { answer, rows } = inventory;
     if (stopped) return false;
     if (answer.kind === "unauthorized") { base.onUnauthorized(); return false; }
     if (answer.kind !== "ok") {
@@ -123,18 +125,16 @@ export function mountWindow(base: Base, mounted: Mounted) {
       if (answer.kind === "error" && (answer.status === null || answer.status === 408 || answer.status === 429 || answer.status >= 500)) return false;
       setMissing(true); fleet.setMachines([]); return false;
     }
-    listed = new Map(answer.value.map(machine => [memberKey(machine.machine_id, group?.context), machine]));
+    listed = new Map(rows.map(({ machine, group }) => [memberKey(machine.machine_id, group.context), machine]));
     setMissing(false);
     bump(n => n + 1);
-    fleet.setMachines(answer.value.map(machine => ({ id: machine.machine_id, name: machine.name || machine.machine_id,
-      wakes: machineToComputer(machine).wakeable === true && base.permits("machines.start"), kind: group ? machine.kind === "personal" ? "personal" : "organization" : machine.kind ?? (machine.organization_id && !machine.person_id ? "organization" : null), context: group?.context, organizationId: machine.organization_id ?? null,
+    fleet.setMachines(rows.map(({ machine, group }) => ({ id: machine.machine_id, name: machine.name || machine.machine_id,
+      wakes: machineToComputer(machine).wakeable === true && base.permits("machines.start"), kind: machine.kind === "personal" ? "personal" : "organization", context: group.context, organizationId: machine.organization_id ?? null,
     })));
-    for (const machine of answer.value) {
-      fleet.observe(machine.machine_id, machineToComputer(machine).state, group?.context);
-    }
+    for (const { machine, group } of rows) fleet.observe(machine.machine_id, machineToComputer(machine).state, group.context);
     machinesListed(fleet);
     fleet.subscribeEvents();
-    await selectEngineWorkspace(active, base.services.webWorkspaces, group);
+    await url.restore();
     active.registryChanged();
     for (const name of ["harness:workspace-name", "harness:service-resync", "harness:machines"]) window.dispatchEvent(new CustomEvent(name));
     return true;
@@ -184,10 +184,10 @@ export function mountWindow(base: Base, mounted: Mounted) {
     accountComputers: { list: async () => { const answer = await scope.client(scope.current()?.context).list(); return answer.kind === "ok" ? { kind: "ok", value: answer.value.map(machineToComputer) } : answer.kind === "unavailable" ? { kind: "error", status: answer.status } : answer; }, onRenamed: () => {}, subscribe: changed => { window.addEventListener("harness:machines", changed); return () => window.removeEventListener("harness:machines", changed); } },
     accountCredentials: base.credentials,
     webAccounts: mounted.webAccounts,
-    webRailSource: scope.source, webPromo: base.promo, groupAccount: base.groupAccount, webReauth: base.reauth,
+    webRailCatalog: base.rail, webPromo: base.promo, groupAccount: base.groupAccount, webReauth: base.reauth,
     retryMachines: () => { fleet.retry(); void refresh(); },
   });
-  installIpc(window, createWebTransport(scope.engine(active), __TERMINUS_VERSION__, browser));
+  installIpc(window, createWebTransport(scope.engine(active), __TERMINUS_VERSION__, browser, base.sessions));
   let disposeApp: (() => void) | undefined;
   let disposeNotice: (() => void) | undefined;
   let noticeLayer: HTMLElement | undefined;

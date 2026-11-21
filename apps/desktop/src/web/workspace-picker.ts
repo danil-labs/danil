@@ -1,8 +1,6 @@
 import { z } from "zod";
 import type { EdgeTransport } from "@terminus/computers";
-import { parsePreferences } from "../features/shell/workspace-added-sync.ts";
-import { webAddedTransport } from "../features/shell/workspace-added-transport.ts";
-import { workspace as platformWorkspace, workspaceId } from "./platform-workspaces.ts";
+import { workspaceId } from "./platform-workspaces.ts";
 
 const id = z.string().min(1);
 const workspace = z.object({ account_id: workspaceId, engine_workspace_id: id.nullish(), name: id });
@@ -39,23 +37,11 @@ export type PickerOrg = {
 };
 export type WorkspacePicker = ReturnType<typeof webWorkspacePicker>;
 
-function scoped(transport: EdgeTransport, row: Pick<PickerRow, "context" | "org">): EdgeTransport {
-  const send = async (method: keyof EdgeTransport, path: string, init?: RequestInit) => {
-    const headers = new Headers(init?.headers);
-    headers.set("X-Danil-Session", row.context);
-    const response = await transport[method](path, { ...init, headers });
-    if (response.headers.get("X-Danil-Session-Applied") !== row.context || response.headers.get("X-Danil-Session-Applied-Org") !== row.org)
-      throw new Error("session_echo_mismatch");
-    return response;
-  };
-  return { call: (path, init) => send("call", path, init), mutation: (path, init) => send("mutation", path, init) };
-}
-
 function organizationName(org: string, name: string | null | undefined) {
   return name && name !== org ? name : "";
 }
 
-export function webWorkspacePicker(transport: EdgeTransport, options: { store: Storage; connect?: () => Promise<void>; selected?: (row: PickerRow) => void; signIn?: (organization: string) => void }) {
+export function webWorkspacePicker(transport: EdgeTransport, options: { store: Storage; connect?: () => Promise<void>; signIn?: (organization: string) => void }) {
   const subscribers = new Set<() => void>();
   async function catalog() {
     const body = directory.parse(await (await transport.call("identity/sessions/catalog")).json());
@@ -131,39 +117,14 @@ export function webWorkspacePicker(transport: EdgeTransport, options: { store: S
       return resume;
     },
     subscribe(fn: () => void) { subscribers.add(fn); return () => { subscribers.delete(fn); }; },
-    async pinned() {
-      const { rows } = await catalog();
-      const groups = new Map<string, PickerRow[]>();
-      for (const row of rows) {
-        const group = groups.get(row.context);
-        if (group) group.push(row); else groups.set(row.context, [row]);
-      }
-      return (await Promise.all([...groups.values()].map(async group => {
-        const client = scoped(transport, group[0]);
-        const [prefs, active] = await Promise.all([
-          group.some(row => row.engine_workspace_id) ? webAddedTransport(client).get().catch(() => null) : null,
-          client.call("workspaces").then(async response => z.object({ active_workspace_id: workspaceId.nullable() }).parse(await response.json()).active_workspace_id).catch(() => null),
-        ]);
-        const added = new Set(prefs?.status === 200 ? parsePreferences(prefs.body)?.added : []);
-        return group.filter(row => row.account_id === active || (row.engine_workspace_id && added.has(row.engine_workspace_id)));
-      }))).flat();
-    },
-    async add(chosen: PickerRow) {
+    /**
+     * Agregar es del riel (plan web varias sesiones § 2.1): se comprueba que la fila siga en el
+     * catálogo y `apply` la agrega a `added` de su contexto y la abre en el cliente. No hay
+     * `workspaces/select`: abrir un workspace no escribe nada global en el servidor.
+     */
+    async add(chosen: PickerRow, apply: (row: PickerRow) => Promise<void>) {
       const row = await admitted(chosen);
-      const client = scoped(transport, row);
-      if (row.engine_workspace_id) {
-        const result = await webAddedTransport(client).put(row.engine_workspace_id);
-        if (result.status !== 204) throw new Error("workspace_preference_not_saved");
-      }
-      const response = await client.mutation("workspaces/select", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "Idempotency-Key": crypto.randomUUID() },
-        body: JSON.stringify({ workspace: row.account_id }),
-      });
-      const selection = z.object({ workspace: platformWorkspace }).parse(await response.json());
-      if (!response.ok || selection.workspace.id !== row.account_id || selection.workspace.org !== row.org)
-        throw new Error("workspace_selection_mismatch");
-      options.selected?.(row);
+      await apply(row);
       for (const fn of subscribers) fn();
     },
   };

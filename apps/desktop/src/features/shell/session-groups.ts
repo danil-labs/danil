@@ -38,8 +38,11 @@ function wire(hidden: () => ReadonlySet<string>, onSeeded: (ids: readonly string
     if (count > seenRemoved) setMenuNotice(true);
     seenRemoved = count;
   });
+  const catalog = capabilities().webRailCatalog;
   const availableFor = (org: string, context: string) => {
     revision();
+    // La web: el riel sale del catálogo de cada contexto, nunca de lo que sirve una máquina.
+    if (catalog) return catalog.workspaces(context);
     return sessionWorkspaceSource(groups()?.find((g) => g.context_id === context)?.plan ?? null, () => danilAvailableContext(org, context), () => accounts.available(org));
   };
   const refreshAccounts = () => accounts.refresh(groups() ?? [], sessions.send, (context) => records.get(context)?.person ?? null);
@@ -118,6 +121,12 @@ function wire(hidden: () => ReadonlySet<string>, onSeeded: (ids: readonly string
   createEffect(on(syncKey, () => {
     for (const g of rows() ?? []) if (g.available && g.person) void records.get(g.context_id)?.sync.sync();
   }));
+  if (catalog) {
+    const returned = createSessionReturn(async () => { await sessions.refresh(); await catalog.refresh(); });
+    returned();
+    window.addEventListener("focus", returned);
+    document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") returned(); });
+  }
   if (capabilities().nativeWindow) {
     // Las peticiones de la CLI (`account.request`); al arrancar se drenan las que llegaron antes.
     void sessions.refresh().then(() => requests.pump());
@@ -149,6 +158,16 @@ function wire(hidden: () => ReadonlySet<string>, onSeeded: (ids: readonly string
       return id;
     },
     add: (context: string, id: string) => records.get(context)?.sync.add(id),
+    /** Agrega un workspace de un contexto recién admitido: espera a que el riel conozca su persona. */
+    addAdmitted: async (context: string, id: string) => {
+      for (let attempt = 0; attempt < 40 && !records.get(context)?.person; attempt++) {
+        if (!active(context)) await sessions.refresh();
+        await new Promise((resolve) => setTimeout(resolve, 150));
+      }
+      if (!records.get(context)?.person) throw { detail: "session_not_in_set" };
+      records.get(context)!.sync.add(id);
+      await catalog?.refresh();
+    },
     remove: (context: string, id: string) => records.get(context)?.sync.remove(id),
     refreshContext: (context: string) => { const group = active(context); return group ? readDanilContext(group.org, context, true) : Promise.resolve(); },
     refresh: () => { void refreshAccounts(); for (const g of groups() ?? []) void readDanilContext(g.org, g.context_id); },

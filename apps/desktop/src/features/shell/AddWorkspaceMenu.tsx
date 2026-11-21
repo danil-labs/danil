@@ -120,7 +120,7 @@ export default function AddWorkspaceMenu(props: {
             </div>
           </Show>
         </Show>
-        </>}>{web => <WebWorkspacePicker picker={web()} close={close} />}</Show>
+        </>}>{web => <WebWorkspacePicker picker={web()} close={close} add={async (row) => { if (!row.engine_workspace_id) throw new Error("workspace_not_available"); await props.sessions.addAdmitted(row.context, row.engine_workspace_id); props.onOpen(row.engine_workspace_id, row.context); }} />}</Show>
       </PopoverContent>
     </Popover></>
   );
