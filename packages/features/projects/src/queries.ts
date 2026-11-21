@@ -182,126 +182,94 @@ export async function inspectTaskDeletion(
   conn: MachineConnection,
   target: DeleteTaskTarget
 ): Promise<DeleteTaskPreview> {
-  const clientAny = conn.client as Record<string, unknown>;
-  const args = { project: target.project, id: target.id, action: "delete" };
+  const raw = await conn.client.task_lifecycle_preview({
+    project: target.project,
+    id: target.id,
+    action: "delete",
+  });
 
-  if (typeof clientAny.task_lifecycle_preview === "function") {
-    const raw = (await (
-      clientAny.task_lifecycle_preview as (a: unknown) => Promise<unknown>
-    )(args)) as Record<string, unknown>;
-    const rawMembers = Array.isArray(raw?.members) ? raw.members : [];
-    const members: DeleteTaskMemberItem[] = rawMembers.map((m: unknown) => {
-      const item = (m && typeof m === "object" ? m : {}) as Record<string, unknown>;
-      const insp = (item.inspection && typeof item.inspection === "object"
-        ? item.inspection
-        : {}) as Record<string, unknown>;
-      const integ = typeof item.integration === "string" ? (item.integration as TaskIntegrationStatus) : "unconfirmed";
-      return {
-        id: String(item.id ?? target.id),
-        project: String(item.project ?? target.project),
-        title: typeof item.title === "string" ? item.title : undefined,
-        files: Array.isArray(item.files) ? (item.files as string[]) : [],
-        inspection: {
-          status: String(insp.status ?? "complete"),
-          error: typeof insp.error === "string" ? insp.error : undefined,
-        },
-        integration: integ,
-      };
-    });
-
-    return {
-      consent: typeof raw?.consent === "string" ? raw.consent : "consent-" + Date.now(),
-      members:
-        members.length > 0
-          ? members
-          : [
-              {
-                id: target.id,
-                project: target.project,
-                files: [],
-                inspection: { status: "complete" },
-                integration: "merged",
-              },
-            ],
-    };
+  const obj = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
+  const consent = typeof obj.consent === "string" && obj.consent.trim().length > 0 ? obj.consent : null;
+  if (!consent) {
+    throw new Error("No se pudo obtener la vista previa de eliminación: el motor no proporcionó consentimiento");
   }
 
-  return {
-    consent: "consent-fallback-" + Date.now(),
-    members: [
-      {
-        id: target.id,
-        project: target.project,
-        files: [],
-        inspection: { status: "complete" },
-        integration: "merged",
+  const rawMembers = Array.isArray(obj.members) ? obj.members : [];
+  const members: DeleteTaskMemberItem[] = rawMembers.map((m: unknown) => {
+    const item = (m && typeof m === "object" ? m : {}) as Record<string, unknown>;
+    const insp = (item.inspection && typeof item.inspection === "object"
+      ? item.inspection
+      : {}) as Record<string, unknown>;
+    const integ = typeof item.integration === "string" ? (item.integration as TaskIntegrationStatus) : "unconfirmed";
+    return {
+      id: String(item.id ?? target.id),
+      project: String(item.project ?? target.project),
+      title: typeof item.title === "string" ? item.title : undefined,
+      files: Array.isArray(item.files) ? (item.files as string[]) : [],
+      inspection: {
+        status: String(insp.status ?? "complete"),
+        error: typeof insp.error === "string" ? insp.error : undefined,
       },
-    ],
+      integration: integ,
+    };
+  });
+
+  return {
+    consent,
+    members,
   };
 }
 
 export async function applyTaskDeletion(
   conn: MachineConnection,
   target: DeleteTaskTarget,
-  preview: DeleteTaskPreview
+  preview: DeleteTaskPreview,
+  options?: { discard?: boolean }
 ): Promise<DeleteTaskResult> {
-  const clientAny = conn.client as Record<string, unknown>;
-  const discard = preview.members.some((m) => m.files.length > 0);
+  const discard = options?.discard ?? false;
   const args = {
     project: target.project,
     id: target.id,
+    action: "delete",
     consent: preview.consent,
     discard,
   };
 
-  let result: DeleteTaskResult;
-
-  if (typeof clientAny.task_lifecycle_apply === "function") {
-    let raw: Record<string, unknown>;
-    try {
-      raw = (await (
-        clientAny.task_lifecycle_apply as (a: unknown) => Promise<unknown>
-      )(args)) as Record<string, unknown>;
-    } catch (err: unknown) {
-      const code = err && typeof err === "object" && "code" in err ? String((err as { code: unknown }).code) : "";
-      const msg = err instanceof Error ? err.message : String(err);
-      if (code === "task_family_consent_changed" || msg.includes("task_family_consent_changed") || msg.includes("consent")) {
-        const consentErr = new Error("task_family_consent_changed");
-        (consentErr as unknown as { code: string }).code = "task_family_consent_changed";
-        throw consentErr;
-      }
-      throw err;
-    }
-
-    if (
-      raw?.code === "task_family_consent_changed" ||
-      raw?.error === "task_family_consent_changed" ||
-      raw?.status === "task_family_consent_changed"
-    ) {
+  let raw: Record<string, unknown>;
+  try {
+    raw = (await conn.client.task_lifecycle_apply(args)) as Record<string, unknown>;
+  } catch (err: unknown) {
+    const code = err && typeof err === "object" && "code" in err ? String((err as { code: unknown }).code) : "";
+    const msg = err instanceof Error ? err.message : String(err);
+    if (code === "task_family_consent_changed" || msg.includes("task_family_consent_changed") || msg.includes("consent")) {
       const consentErr = new Error("task_family_consent_changed");
       (consentErr as unknown as { code: string }).code = "task_family_consent_changed";
       throw consentErr;
     }
-
-    const applied = Array.isArray(raw?.applied)
-      ? (raw.applied as { project: string; id: string }[])
-      : preview.members.map((m) => ({ project: m.project, id: m.id }));
-    const failures = Array.isArray(raw?.failures)
-      ? (raw.failures as { project: string; id: string; error: unknown }[])
-      : [];
-    result = {
-      status: String(raw?.status ?? (failures.length === 0 ? "complete" : "partial")),
-      applied,
-      failures,
-    };
-  } else {
-    await conn.client.delete_session({ project: target.project, id: target.id, force: true });
-    result = {
-      status: "complete",
-      applied: preview.members.map((m) => ({ project: m.project, id: m.id })),
-      failures: [],
-    };
+    throw err;
   }
+
+  if (
+    raw?.code === "task_family_consent_changed" ||
+    raw?.error === "task_family_consent_changed" ||
+    raw?.status === "task_family_consent_changed"
+  ) {
+    const consentErr = new Error("task_family_consent_changed");
+    (consentErr as unknown as { code: string }).code = "task_family_consent_changed";
+    throw consentErr;
+  }
+
+  const applied = Array.isArray(raw?.applied)
+    ? (raw.applied as { project: string; id: string }[])
+    : preview.members.map((m) => ({ project: m.project, id: m.id }));
+  const failures = Array.isArray(raw?.failures)
+    ? (raw.failures as { project: string; id: string; error: unknown }[])
+    : [];
+  const result: DeleteTaskResult = {
+    status: String(raw?.status ?? (failures.length === 0 ? "complete" : "partial")),
+    applied,
+    failures,
+  };
 
   if (result.applied.length > 0) {
     removeTasksFromStore(result.applied);
