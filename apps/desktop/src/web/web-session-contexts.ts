@@ -12,6 +12,7 @@
  *   cookie viva cierra la página.
  */
 import { EdgeError, type EdgeTransport } from "@terminus/computers";
+import { CAPABILITIES_PATH } from "../platform/machines.ts";
 
 type Args = Record<string, unknown>;
 type Context = { context_id: string; org: string; org_name: string | null; plan: string | null; role?: string | null; personal?: boolean };
@@ -23,7 +24,7 @@ const OPAQUE = /^[A-Za-z0-9_-]{1,128}$/;
 const PATH = /^\/v1\/[A-Za-z0-9_\-./]+(\?[A-Za-z0-9_\-.=&%]*)?$/;
 const METHODS = new Set(["GET", "POST", "PUT", "DELETE"]);
 /** Las rutas de la sesión misma: no son de una organización y no llevan contexto. */
-const SESSION_ROUTES = new Set(["/v1/identity/sessions", "/v1/identity/sessions/catalog", "/v1/identity/contexts", "/v1/capabilities"]);
+const SESSION_ROUTES = new Set(["/v1/identity/sessions", "/v1/identity/sessions/catalog", "/v1/identity/contexts", CAPABILITIES_PATH]);
 
 const text = (value: unknown) => (typeof value === "string" && value ? value : null);
 const refused = (detail: string, extra: Args = {}) => ({ detail, ...extra });

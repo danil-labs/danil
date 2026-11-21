@@ -5,6 +5,7 @@
  */
 import type { OrganizationSource } from "@terminus/computers";
 import { type BusyOptions, retryBusy } from "./select-busy.ts";
+import { CAPABILITIES_PATH } from "../../platform/machines.ts";
 
 type Reply = { status: number; body: unknown; retry_after_ms?: number };
 export type EdgeFetch = (method: "GET" | "POST", path: string, body?: unknown, idempotencyKey?: string) => Promise<Reply>;
@@ -18,7 +19,7 @@ async function bodyOf(reply: Promise<Reply>): Promise<unknown> {
 
 export function edgeOrganizationSource(edgeFetch: EdgeFetch, beforeSelect?: () => void, busy?: BusyOptions): OrganizationSource {
   return {
-    capabilities: () => bodyOf(edgeFetch("GET", "/v1/capabilities")),
+    capabilities: () => bodyOf(edgeFetch("GET", CAPABILITIES_PATH)),
     list: () => bodyOf(edgeFetch("GET", "/v1/identity/organizations")),
     select: (id, key) => {
       beforeSelect?.();

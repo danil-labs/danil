@@ -190,7 +190,7 @@ export function LogoDelWorkspace(props: {
   const cuenta = capabilities().accountAssets;
   const [version, setVersion] = createSignal(0);
   /* Sin `createResource`: suspendería el panel de Estilo entero, y en la web
-     cada relectura de `/v1/computers` trae otro objeto del workspace y lo
+     cada relectura de la lista de computadoras del borde trae otro objeto del workspace y lo
      dejaría en blanco. Se relee solo si cambia el id o se guardó un logo. */
   const [logoDeLaCuenta, setLogoDeLaCuenta] = createSignal<string | null | undefined>();
   createEffect(

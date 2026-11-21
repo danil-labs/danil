@@ -10,6 +10,7 @@
 import { type CapabilityList, type Computer, type Fetch, type MachinesAnswer, announces, capabilityList, machineToComputer, machinesClient, mayCall } from "@terminus/computers";
 
 import { edgeUntil, type EdgeMethod, type EdgeReply as NativeReply, type Patience } from "../../platform/client.ts";
+import { capabilitiesUrl } from "../../platform/machines.ts";
 
 /** Solo una base para armar rutas `/v1/...`; la webview no llama a este origen (lo hace Rust). */
 export const EDGE_ENDPOINT = "https://edge.danil.ai/v1";
@@ -71,7 +72,7 @@ export function createCloudMachines(invoke: Invoke, onProblem?: (error: unknown)
    */
   async function capabilities(): Promise<CapabilityList | null | undefined | "denied"> {
     try {
-      const response = await fetch(`${endpoint}/capabilities`);
+      const response = await fetch(capabilitiesUrl(endpoint));
       if (response.status === 401 || response.status === 403) return "denied";
       if (response.status === 404 || response.status === 501) return null;
       if (response.status !== 200) return undefined;
