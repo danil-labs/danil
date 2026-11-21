@@ -21,3 +21,4 @@ ignoran en R1–R5, R8 y R10 (no en R6 ni R9).
 | R8 | lista negra: supabase, appv2, messaging, mensajeria, `/v1/compute`, `/v1/computers` | `r7-r8.mjs` |
 | R9 | 12+ líneas consecutivas idénticas (normalizadas) en dos archivos; ignora `generated/` y bloques de puro ruido | `r9.mjs` |
 | R10 | `404` o `501` en features | `r2-r5.mjs` |
+- **R2 (cliente único):** `createPlatformClient(` solo en `packages/shell`, `packages/platform-client` y `apps/*`; las features usan `usePlatform()`.

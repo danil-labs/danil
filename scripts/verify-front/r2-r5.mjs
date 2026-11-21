@@ -7,7 +7,10 @@ const isModel = (f) => /\/model\.ts$/.test(f.path) && f.path.split("/").length =
 export function r2(files) {
   return scan(files, (f) => inFeature(f) && !isModel(f),
     /\b(?:type|interface)\s+(?:Machine|Workspace|Organization|Profile|Ticket|Operation)\b/,
-    "R2: tipo de recurso declarado fuera de model.ts (derívalo de los clientes generados en model.ts)");
+    "R2: tipo de recurso declarado fuera de model.ts (derívalo de los clientes generados en model.ts)")
+    .concat(scan(files, (f) => !/^(packages\/(shell|platform-client)|apps)\//.test(f.path),
+      /\bcreatePlatformClient\s*\(/,
+      "R2: cliente del borde creado fuera del shell o de una app; las features usan usePlatform()"));
 }
 
 const IMPORT = /(?:\bfrom\s*|\bimport\s*\(?\s*|\brequire\s*\(\s*)(["'])([^"']+)\1/;
