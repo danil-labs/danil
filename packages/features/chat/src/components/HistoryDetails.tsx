@@ -5,7 +5,7 @@ import { retainRowWhile } from "../model/threadRow";
 import { invoke } from "../../../../engine-client/src/client";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { Markdown } from "../../../../ui/src/Markdown";
-import { machineOf } from "../../../machines/src/store";
+import { machineOf } from "../../../machines/src/queries/store";
 import type { Session } from "../model/transcript";
 
 const REREADS = 5;

@@ -16,7 +16,7 @@ import { Button } from "../../../ui/src/Button";
 import { asFailure, type Failure, FailureNote, prosaDe } from "../../../ui/src/Failure";
 import { Input } from "../../../ui/src/Input";
 import { MarcaFuente, repoDe } from "../../../ui/src/sources";
-import { machineName, machines } from "../../machines/src/store";
+import { machineName, machines } from "../../machines/src/queries/store";
 import { SalidaDelAgente } from "./AgentOutput";
 import { CloseBehavior } from "./CloseBehavior";
 import { DefaultPermissions } from "./DefaultPermissions";

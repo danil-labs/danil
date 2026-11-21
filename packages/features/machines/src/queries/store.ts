@@ -2,14 +2,14 @@ import { type MachineState, type SystemId } from "@terminus/computers";
 import { SEP } from "@terminus/fleet";
 import { REMOTE_CHILD_FEATURE, type RemoteScope } from "@terminus/tasks";
 import { createRoot, createSignal } from "solid-js";
-import { invoke } from "../../../engine-client/src/client";
-import { t } from "../../../../apps/desktop/src/lib/i18n";
-import { createPref, escribirPref, leerPref } from "../../../../apps/desktop/src/lib/prefs";
-import { knownMachineName } from "./known-names";
-import { isMac } from "../../../host/src/window";
-import { capabilities } from "../../../host/src/platform";
+import { invoke } from "../../../../engine-client/src/client";
+import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { createPref, escribirPref, leerPref } from "../../../../../apps/desktop/src/lib/prefs";
+import { knownMachineName } from "../model/known-names";
+import { isMac } from "../../../../host/src/window";
+import { capabilities } from "../../../../host/src/platform";
 
-import { runsWorkspace } from "./runs-workspace"; export { runsWorkspace };
+import { runsWorkspace } from "../model/runs-workspace"; export { runsWorkspace };
 
 /**
  * `machine_list`: `hosts` es si tiene el workspace abierto (`null`, que no se sabe

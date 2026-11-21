@@ -1,4 +1,4 @@
-import { machineOf } from "../../../machines/src/store";
+import { machineOf } from "../../../machines/src/queries/store";
 import { createMemo, createResource, createSignal } from "solid-js";
 import { invoke } from "../../../../engine-client/src/client.ts";
 import { pooled, TASK_HISTORY_AT_ONCE } from "../../../../../apps/desktop/src/lib/pool";

@@ -5,7 +5,7 @@ import { peso } from "../../../../apps/desktop/src/lib/format";
 import { cn } from "../../../../apps/desktop/src/lib/utils";
 import { Badge } from "../../../ui/src/Badge";
 import { ProgressBar } from "../../../ui/src/ProgressBar";
-import { type Machine, machineName } from "../../../features/machines/src/store";
+import { type Machine, machineName } from "../../../features/machines/src/queries/store";
 import { UPDATE_FEATURE, active, engineVersion, hasUsage, heaviest, history, leftovers, level, split, topProcesses, updateState } from "./machineUsage";
 import RefreshCw from "lucide-solid/icons/refresh-cw";
 

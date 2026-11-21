@@ -13,7 +13,7 @@ import {
   type JSX,
 } from "solid-js";
 import { invoke } from "../../../../engine-client/src/client.ts";
-import { machineOf } from "../../../machines/src/store";
+import { machineOf } from "../../../machines/src/queries/store";
 import Navegador from "lucide-solid/icons/external-link";
 import IconoDescarga from "lucide-solid/icons/download";
 import IconoCodigo from "lucide-solid/icons/code";

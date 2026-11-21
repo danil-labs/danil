@@ -1,6 +1,6 @@
 import { createRoot, createSignal, Show } from 'solid-js';
 import { render } from 'solid-js/web';
-import { forgetMachineNames } from '../../features/machines/src/known-names';
+import { forgetMachineNames } from '../../features/machines/src/model/known-names';
 import { aplicarLengua, t } from '../../../apps/desktop/src/lib/i18n';
 import { setShellCacheScope } from '../../../apps/desktop/src/lib/shellCache';
 import { seguirElTema } from '../../../apps/desktop/src/lib/theme';

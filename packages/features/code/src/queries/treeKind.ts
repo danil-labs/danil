@@ -1,5 +1,5 @@
 import { invoke } from "../../../../engine-client/src/client.ts";
-import { machineOf } from "../../../machines/src/store";
+import { machineOf } from "../../../machines/src/queries/store";
 import type { ArbolEnTarea } from "../../../../../apps/desktop/src/lib/model";
 import { esDeCodigo } from "../model/workdirKind";
 

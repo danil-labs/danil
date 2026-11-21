@@ -2,15 +2,15 @@ import Check from "lucide-solid/icons/check";
 import ChevronDown from "lucide-solid/icons/chevron-down";
 import Plus from "lucide-solid/icons/plus";
 import { batch, createSignal, For, onMount, Show } from "solid-js";
-import { t } from "../../../../apps/desktop/src/lib/i18n";
-import { Dialog, DialogContent, DialogTitle } from "../../../ui/src/Dialog";
-import { ITEM_DE_MENU, Popover, PopoverContent, PopoverTrigger } from "../../../ui/src/Popover";
-import { SignalDot } from "../../../ui/src/SignalDot";
+import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { Dialog, DialogContent, DialogTitle } from "../../../../ui/src/Dialog";
+import { ITEM_DE_MENU, Popover, PopoverContent, PopoverTrigger } from "../../../../ui/src/Popover";
+import { SignalDot } from "../../../../ui/src/SignalDot";
 import { ConnectMachine, connectSource } from "./ConnectMachine";
-import { MachineIcon } from "./MachineIcon";
-import { isGuestMachine } from "./guestLink";
-import { capabilities } from "../../../host/src/platform";
-import { cloudInventory, rememberedRunOn, type Machine, machineName, machines, type ProjectPlace, refetchMachines, runOn, runsWorkspace, setRunOn, unavailable, wakesOf } from "./store";
+import { MachineIcon } from "../components/MachineIcon";
+import { isGuestMachine } from "../queries/guestLink";
+import { capabilities } from "../../../../host/src/platform";
+import { cloudInventory, rememberedRunOn, type Machine, machineName, machines, type ProjectPlace, refetchMachines, runOn, runsWorkspace, setRunOn, unavailable, wakesOf } from "../queries/store";
 
 let pedida = false;
 

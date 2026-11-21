@@ -39,7 +39,7 @@ import { displayName, notifyProfiles } from "../../projects/src/queries/profiles
 import { SettingsPanel, SettingsRow, SettingsSection } from "./layout";
 import { LogoDelWorkspace } from "./Workspaces";
 import { createWorkspaces } from "./workspaces-store";
-import { machineOf } from "../../machines/src/store";
+import { machineOf } from "../../machines/src/queries/store";
 
 const IMAGES = ["png", "jpg", "jpeg", "webp"];
 

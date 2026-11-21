@@ -11,7 +11,7 @@
  * a guests-only fleet as `"local"`; with no guest either, nothing is installed.
  * Lazy from `app/main.tsx`.
  */
-import "../../../../apps/desktop/src/web/phrases";
+import "../../../../../apps/desktop/src/web/phrases";
 import {
   type Computer,
   createScreenAccess,
@@ -31,33 +31,33 @@ import {
 import { Fleet, type MachineInfo, unwrap } from "@terminus/fleet";
 import { createRoot, createSignal, For } from "solid-js";
 import { render } from "solid-js/web";
-import { listenDanilConnectionChange } from "../../../../apps/desktop/src/lib/danilConnectionEvents";
-import { cancelEdgeWrites } from "../../../platform-client/src/client.ts";
-import { whenConnected } from "../../../../apps/desktop/src/lib/engineConnection";
-import { t } from "../../../../apps/desktop/src/lib/i18n";
-import { setMachineRoute } from "../../../engine-client/src/client";
-import { type Capabilities, capabilities, setCapabilities } from "../../../host/src/platform";
-import { leerPref } from "../../../../apps/desktop/src/lib/prefs";
-import { deliver, listen } from "../../../../apps/desktop/src/lib/serviceEvents";
-import { isMac, isWindows } from "../../../host/src/window";
-import { Toast, ToastPortal } from "../../../ui/src/Toast";
-import type { MachineStatus } from "../../../../apps/desktop/src/web/SyncNote";
-import { type DanilSessionInfo, railSession, type WorkspaceAccount } from "../../settings/src/danil-sessions";
+import { listenDanilConnectionChange } from "../../../../../apps/desktop/src/lib/danilConnectionEvents";
+import { cancelEdgeWrites } from "../../../../platform-client/src/client.ts";
+import { whenConnected } from "../../../../../apps/desktop/src/lib/engineConnection";
+import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { setMachineRoute } from "../../../../engine-client/src/client";
+import { type Capabilities, capabilities, setCapabilities } from "../../../../host/src/platform";
+import { leerPref } from "../../../../../apps/desktop/src/lib/prefs";
+import { deliver, listen } from "../../../../../apps/desktop/src/lib/serviceEvents";
+import { isMac, isWindows } from "../../../../host/src/window";
+import { Toast, ToastPortal } from "../../../../ui/src/Toast";
+import type { MachineStatus } from "../../../../../apps/desktop/src/web/SyncNote";
+import { type DanilSessionInfo, railSession, type WorkspaceAccount } from "../../../settings/src/danil-sessions";
 import AccountMachines from "./AccountMachines";
-import { mergeBridgeInventory } from "./bridge-inventory";
-import { CLOUD_RETRY_INITIAL_MS, CLOUD_RETRY_MS } from "./cloud-machines";
-import { createConnectedStatus } from "./connected-status";
-import { createCloudRelayFactory } from "./context-relay";
-import { machinesListed, setDanilFleet } from "./danil-source";
-import { createEngineWorkspaces, railOf } from "./engine-workspaces";
-import { guestChannels } from "./guestChannels";
-import { createGuestLink, guestMachineInfo, isGuestMachine, wakeGuestMachine } from "./guestLink";
+import { mergeBridgeInventory } from "../model/bridge-inventory";
+import { CLOUD_RETRY_INITIAL_MS, CLOUD_RETRY_MS } from "../queries/cloud-machines";
+import { createConnectedStatus } from "../queries/connected-status";
+import { createCloudRelayFactory } from "../queries/context-relay";
+import { machinesListed, setDanilFleet } from "../queries/danil-source";
+import { createEngineWorkspaces, railOf } from "../queries/engine-workspaces";
+import { guestChannels } from "../queries/guestChannels";
+import { createGuestLink, guestMachineInfo, isGuestMachine, wakeGuestMachine } from "../queries/guestLink";
 import { MachinePicker } from "./MachinePicker";
-import { infoOf } from "./machine-info";
-import { createRouter, type Invoke, type Router, type SliceChange } from "./router";
-import { createSessionCloud } from "./session-cloud";
-import { machineNamesChanged, refetchMachines, setCloudInventory } from "./store";
-import type { WslChild } from "./wsl";
+import { infoOf } from "../model/machine-info";
+import { createRouter, type Invoke, type Router, type SliceChange } from "../queries/router";
+import { createSessionCloud } from "../queries/session-cloud";
+import { machineNamesChanged, refetchMachines, setCloudInventory } from "../queries/store";
+import type { WslChild } from "../model/wsl";
 
 type Internals = { invoke: Invoke };
 type Target = Window & { __TAURI_INTERNALS__?: Internals };

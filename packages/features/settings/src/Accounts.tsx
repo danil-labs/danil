@@ -36,7 +36,7 @@ import { Input } from "../../../ui/src/Input";
 import { MarcaAgente } from "../../../ui/src/icons";
 import { Skeleton } from "../../../ui/src/Skeleton";
 import { Terminal, TerminalBody } from "../../../ui/src/Terminal";
-import { machineOf } from "../../machines/src/store";
+import { machineOf } from "../../machines/src/queries/store";
 import AccountCard, { accountPresentation } from "./AccountCard";
 import { accountKeyUrl, addBlockedByExternal } from "./account-auth";
 import {

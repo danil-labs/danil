@@ -4,8 +4,8 @@
  * `@terminus/computers`). Con la máquina dormida, la caja escribe con eso: no
  * contestar no es no tener agentes, y enviar es lo que la enciende.
  */
-import { errorCode } from "../../../../apps/desktop/src/lib/errorCode";
-import { escribirPref, leerPref } from "../../../../apps/desktop/src/lib/prefs";
+import { errorCode } from "../../../../../apps/desktop/src/lib/errorCode";
+import { escribirPref, leerPref } from "../../../../../apps/desktop/src/lib/prefs";
 
 const KEY = "machines.last_answer";
 /** Apagada, o encendiéndose tras pedirle algo (`router.ts`). */

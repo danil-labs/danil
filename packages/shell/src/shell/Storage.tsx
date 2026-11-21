@@ -33,7 +33,7 @@ import {
 } from "../../../ui/src/Tooltip";
 import { Badge } from "../../../ui/src/Badge";
 import { ProgressBar } from "../../../ui/src/ProgressBar";
-import { type Machine, machineName, machines as fleetMachines } from "../../../features/machines/src/store";
+import { type Machine, machineName, machines as fleetMachines } from "../../../features/machines/src/queries/store";
 import { MachineCard, MemoryTab, type Power, type TaskLookup } from "./MachineCard";
 import { UPDATE_FEATURE, USAGE_FEATURE, hasUsage, remember, worst } from "./machineUsage";
 import { errorCode } from "../../../../apps/desktop/src/lib/errorCode";

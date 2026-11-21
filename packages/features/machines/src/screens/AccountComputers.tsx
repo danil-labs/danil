@@ -8,17 +8,17 @@ import {
 } from "@terminus/computers";
 import Pencil from "lucide-solid/icons/pencil";
 import { createSignal, For, onMount, onCleanup, Show } from "solid-js";
-import { df } from "../../../../apps/desktop/src/lib/format";
-import { t } from "../../../../apps/desktop/src/lib/i18n";
-import { invoke } from "../../../engine-client/src/client";
-import { capabilities, type AccountComputersSource } from "../../../host/src/platform";
-import { isMac } from "../../../host/src/window";
-import { Button } from "../../../ui/src/Button";
-import { Input } from "../../../ui/src/Input";
-import { SettingsBlock, SettingsRow, SettingsSection } from "../../settings/src/layout";
-import { workspaceComputersSource } from "./workspace-computers";
-import { machineNamesChanged } from "./store";
-import { createCloudMachines } from "./cloud-machines";
+import { df } from "../../../../../apps/desktop/src/lib/format";
+import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { invoke } from "../../../../engine-client/src/client";
+import { capabilities, type AccountComputersSource } from "../../../../host/src/platform";
+import { isMac } from "../../../../host/src/window";
+import { Button } from "../../../../ui/src/Button";
+import { Input } from "../../../../ui/src/Input";
+import { SettingsBlock, SettingsRow, SettingsSection } from "../../../settings/src/layout";
+import { workspaceComputersSource } from "../queries/workspace-computers";
+import { machineNamesChanged } from "../queries/store";
+import { createCloudMachines } from "../queries/cloud-machines";
 
 /**
  * Dónde se leen y renombran las computadoras: lo que da la plataforma (la web)

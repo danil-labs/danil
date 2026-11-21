@@ -6,7 +6,7 @@ import TriangleAlert from "lucide-solid/icons/triangle-alert";
 import { For, Show, Suspense, createEffect, createSignal, lazy, on, onCleanup } from "solid-js";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { invoke } from "../../../../engine-client/src/client.ts";
-import { machineOf } from "../../../machines/src/store";
+import { machineOf } from "../../../machines/src/queries/store";
 import { Button } from "../../../../ui/src/Button";
 import { FailureNote, asFailure, type Failure } from "../../../../ui/src/Failure";
 import { Spinner } from "../../../../ui/src/Spinner";

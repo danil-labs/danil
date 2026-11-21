@@ -1,6 +1,6 @@
 import { Show, createEffect, createSignal, on, onCleanup, onMount } from "solid-js";
 import { invoke } from "../../../engine-client/src/client.ts";
-import { machineOf } from "../../../features/machines/src/store";
+import { machineOf } from "../../../features/machines/src/queries/store";
 import { Button } from "../../../ui/src/Button";
 import { Toast } from "../../../ui/src/Toast";
 import { t } from "../../../../apps/desktop/src/lib/i18n";

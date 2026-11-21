@@ -1,4 +1,4 @@
-import type { AccountComputersSource } from "../../../host/src/platform.ts";
+import type { AccountComputersSource } from "../../../../host/src/platform.ts";
 
 /** El registro de la misma cuenta decide cuáles computadoras pertenecen al workspace. */
 export function workspaceComputersSource(source: AccountComputersSource, workspace: string): AccountComputersSource {

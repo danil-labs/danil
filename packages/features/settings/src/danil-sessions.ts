@@ -6,7 +6,7 @@
  * Node lo importan.
  */
 import { invoke } from "../../../engine-client/src/client.ts";
-import { forgetMachineNames } from "../../machines/src/known-names.ts";
+import { forgetMachineNames } from "../../machines/src/model/known-names.ts";
 import { type DanilConnectStatus, failureCode } from "./danil-account.ts";
 
 export type DanilSessionInfo = {

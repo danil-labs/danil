@@ -9,8 +9,8 @@
  */
 import { type CapabilityList, type Computer, type Fetch, type MachinesAnswer, announces, capabilityList, machineToComputer, machinesClient, mayCall } from "@terminus/computers";
 
-import { edgeUntil, type EdgeMethod, type EdgeReply as NativeReply, type Patience } from "../../../platform-client/src/client.ts";
-import { capabilitiesUrl } from "../../../platform-client/src/machines.ts";
+import { edgeUntil, type EdgeMethod, type EdgeReply as NativeReply, type Patience } from "../../../../platform-client/src/client.ts";
+import { capabilitiesUrl } from "../../../../platform-client/src/machines.ts";
 
 /** Solo una base para armar rutas `/v1/...`; la webview no llama a este origen (lo hace Rust). */
 export const EDGE_ENDPOINT = "https://edge.danil.ai/v1";

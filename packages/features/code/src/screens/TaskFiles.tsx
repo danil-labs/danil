@@ -18,7 +18,7 @@ import { cn } from "../../../../../apps/desktop/src/lib/utils";
 import { HEADER_HEIGHT } from "../../../../host/src/window";
 import type { ArbolEnTarea } from "../../../../../apps/desktop/src/lib/model";
 import type { TaskFiles } from "../../../../../apps/desktop/src/lib/taskFiles";
-import { machineOf } from "../../../machines/src/store";
+import { machineOf } from "../../../machines/src/queries/store";
 import type { Cambios } from "../components/Changes";
 import Codigo from "../components/Code";
 import KnIntegrate from "../components/KnIntegrate";

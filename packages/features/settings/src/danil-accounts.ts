@@ -9,7 +9,7 @@ import { invoke } from "../../../engine-client/src/client";
 import { listen } from "../../../../apps/desktop/src/lib/serviceEvents";
 import { listenDanilConnectionChange } from "../../../../apps/desktop/src/lib/danilConnectionEvents";
 import { failureCode } from "./danil-account";
-import { machines } from "../../machines/src/store";
+import { machines } from "../../machines/src/queries/store";
 import {
   addAccount,
   connectedSessions,

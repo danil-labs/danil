@@ -101,8 +101,8 @@ const MachinesLicense = lazy(() =>
 );
 
 import { canonicalAgentId, isFreeRouterModel, lastActivity, launcherOf, OPENCODE, taskDescendants, withRemoteLaunchers } from "@terminus/tasks";
-import type { CarriedBase, CarryCheck } from "../../../features/machines/src/carry";
-import { bringHereLabel, canBringHere, carryOrigin, machineName, machineOf, machines, machineWakes, refetchMachines, remoteChildScope, runOn, senderTaskId, setRunOn, setTaskRowMachine } from "../../../features/machines/src/store";
+import type { CarriedBase, CarryCheck } from "../../../features/machines/src/queries/carry";
+import { bringHereLabel, canBringHere, carryOrigin, machineName, machineOf, machines, machineWakes, refetchMachines, remoteChildScope, runOn, senderTaskId, setRunOn, setTaskRowMachine } from "../../../features/machines/src/queries/store";
 import { activeTaskCounts, activityByProject, type HiddenProjects, hiddenIn, type PickedAt, picksIn, rememberPick, setHidden, storedPicks, taskCountOf } from "../../../features/projects/src";
 import { createdTasks } from "../../../features/projects/src/model/agentPageFilters";
 import BaseBranchPicker from "../../../features/projects/src/screens/BaseBranchPicker";
@@ -111,15 +111,15 @@ import { EmptyContext, ProjectPicker } from "../../../features/projects/src/scre
 
 // Chunk aparte: solo lo carga quien crea una tarea, no la carga inicial.
 const MachinePicker = lazy(() =>
-  import("../../../features/machines/src/MachinePicker").then((m) => ({ default: m.MachinePicker })),
+  import("../../../features/machines/src/screens/MachinePicker").then((m) => ({ default: m.MachinePicker })),
 );
 // Llevar el trabajo a otra máquina: solo al enviar a una que no es la de la carpeta.
-const CarrySheet = lazy(() => import("../../../features/machines/src/CarrySheet"));
-const CarryProgress = lazy(() => import("../../../features/machines/src/CarryProgress"));
+const CarrySheet = lazy(() => import("../../../features/machines/src/screens/CarrySheet"));
+const CarryProgress = lazy(() => import("../../../features/machines/src/screens/CarryProgress"));
 const CarryOriginLabel = lazy(() =>
-  import("../../../features/machines/src/CarryProgress").then((m) => ({ default: m.CarryOriginLabel })),
+  import("../../../features/machines/src/screens/CarryProgress").then((m) => ({ default: m.CarryOriginLabel })),
 );
-type CarryModule = typeof import("../../../features/machines/src/carry");
+type CarryModule = typeof import("../../../features/machines/src/queries/carry");
 /** Lo que corta un envío cuya copia se detuvo: el fallo y su arreglo quedan en el encabezado. */
 const CARRY_STOPPED = Symbol("carry-stopped");
 const VistaDeProyecto = lazy(() => import("../../../features/projects/src/screens/ProjectView"));
@@ -156,8 +156,8 @@ import { openChatVisual, readChatVisual } from "../../../features/chat/src/queri
 import { apagarVistasDe, hayVistasDe, soltarVistasHuerfanas } from "../../../features/code/src/queries/typst";
 import { type ConversationScope, createConversationHandoff } from "../../../features/conversation-handoff/src";
 import { createDraftsStore } from "../../../features/drafts/src";
-import { asleep, withLastAnswer } from "../../../features/machines/src/lastAnswer";
-import { unconfirmedOpen } from "../../../features/machines/src/unconfirmedOpen";
+import { asleep, withLastAnswer } from "../../../features/machines/src/queries/lastAnswer";
+import { unconfirmedOpen } from "../../../features/machines/src/model/unconfirmedOpen";
 import { createBatchDelivery, createServiceStream, type ServicePage } from "../../../features/service-stream/src";
 import { ConexionesMenu } from "../../../features/settings/src/Tools";
 import { TitleBarSection } from "../shell";
@@ -5398,7 +5398,7 @@ export default function App() {
   const [hojaDeLlevar, setHojaDeLlevar] = createSignal<{ key: string; check: CarryCheck; busy?: boolean } | null>(null);
   const maquinaDeLaVentana = () => capabilities().windowMachine?.()?.id ?? machines().find((m) => m.active)?.id ?? "local";
   async function moduloDeLlevar(): Promise<CarryModule> {
-    const mod = carryModule() ?? (await import("../../../features/machines/src/carry"));
+    const mod = carryModule() ?? (await import("../../../features/machines/src/queries/carry"));
     setCarryModule(() => mod);
     return mod;
   }

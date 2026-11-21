@@ -26,11 +26,11 @@ import {
   newState,
   withoutRemote,
 } from "@terminus/carry";
-import "../../../../apps/desktop/src/locales/workPhrases";
-import { invoke } from "../../../engine-client/src/client";
-import type { Project } from "../../../../apps/desktop/src/lib/model";
-import { escribirPref, leerPref } from "../../../../apps/desktop/src/lib/prefs";
-import { t } from "../../../../apps/desktop/src/lib/i18n";
+import "../../../../../apps/desktop/src/locales/workPhrases";
+import { invoke } from "../../../../engine-client/src/client";
+import type { Project } from "../../../../../apps/desktop/src/lib/model";
+import { escribirPref, leerPref } from "../../../../../apps/desktop/src/lib/prefs";
+import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { type CarryOrigin, machineName, rememberOrigin } from "./store";
 
 const on = (machine: string) => ({ headers: { "x-terminus-machine": machine } });
@@ -210,7 +210,7 @@ export function jobFor(check: CarryCheck, choice: { selection: Selection; partSi
 async function cloneOn(check: CarryCheck, progress: (phase: string, percent: number | null) => void) {
   const url = check.status.remoteUrl ?? check.project.remote_url;
   if (!url) throw { what: { clave: "work.error.project_missing" }, detail: "no_remote" };
-  const { followClone } = await import("../../projects/src/queries/remoteClone");
+  const { followClone } = await import("../../../projects/src/queries/remoteClone");
   const operation = crypto.randomUUID();
   await followClone(
     { operation, machine: check.target, workspace: check.workspace, name: check.project.name },

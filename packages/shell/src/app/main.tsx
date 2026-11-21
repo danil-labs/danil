@@ -16,7 +16,7 @@ import { aplicarLengua, refreshLanguage, lenguasDisponibles, semillaDelAlta } fr
 import { cargarPaquetes } from "../../../../apps/desktop/src/locales/packs";
 import { mountAfterLanguagePacks } from "../../../../apps/desktop/src/locales/startup";
 import { capabilities, setCapabilities } from "../../../host/src/platform";
-import { askGuestChannels } from "../../../features/machines/src/guestChannels";
+import { askGuestChannels } from "../../../features/machines/src/queries/guestChannels";
 import "../../../../apps/desktop/src/lib/sharedClock";
 // Errores y avisos de encargado se leen al fallar algo, ya con la ventana montada: entran por detrás.
 // Si el trozo no carga, caen a la prosa del motor; el panel de encargados lo vuelve a pedir.
@@ -113,4 +113,4 @@ else void mountAfterLanguagePacks(lenguasDeDisco, montar);
 
 // Las otras computadoras de la cuenta de Danil, en un trozo aparte: sin sesión no instala nada.
 // La web trae su propio transporte (`web/main.tsx`).
-if (capabilities().nativeWindow) void import("../../../features/machines/src/account").then((m) => m.startAccountMachines());
+if (capabilities().nativeWindow) void import("../../../features/machines/src/screens/account").then((m) => m.startAccountMachines());

@@ -17,14 +17,14 @@ import {
   sizeVerdict,
   takenAtMs,
 } from "@terminus/carry";
-import { Dialog, DialogContent, DialogTitle } from "../../../ui/src/Dialog";
-import { Button } from "../../../ui/src/Button";
-import { Toggle } from "../../../ui/src/Toggle";
-import { copyText } from "../../../host/src/clipboard";
-import { df, elapsed, peso } from "../../../../apps/desktop/src/lib/format";
-import { t } from "../../../../apps/desktop/src/lib/i18n";
-import { type CarryCheck, bytesPerSecond, createsProject, engine, ignoredAllowed, jobFor, partSize, trustKey } from "./carry";
-import { machineName } from "./store";
+import { Dialog, DialogContent, DialogTitle } from "../../../../ui/src/Dialog";
+import { Button } from "../../../../ui/src/Button";
+import { Toggle } from "../../../../ui/src/Toggle";
+import { copyText } from "../../../../host/src/clipboard";
+import { df, elapsed, peso } from "../../../../../apps/desktop/src/lib/format";
+import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { type CarryCheck, bytesPerSecond, createsProject, engine, ignoredAllowed, jobFor, partSize, trustKey } from "../queries/carry";
+import { machineName } from "../queries/store";
 
 /** Lo que se pide al exportar mientras la persona decide; se rehace al cambiar la selección. */
 type Preview = { state: CarryState; bytes: number | null; tooLarge: boolean };

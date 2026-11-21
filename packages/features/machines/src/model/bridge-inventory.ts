@@ -1,5 +1,5 @@
 import type { Computer } from "@terminus/computers";
-import { type ContextComputer, contextMachineKey } from "./session-cloud.ts";
+import { type ContextComputer, contextMachineKey } from "../queries/session-cloud.ts";
 
 /** El puente conserva las capacidades del motor; el borde aporta la atribución y el estado actual. */
 export function mergeBridgeInventory(bridge: readonly Computer[], edge: readonly ContextComputer[]): ContextComputer[] {

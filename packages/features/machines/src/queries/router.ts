@@ -17,16 +17,16 @@
  */
 import { callWorkspace, isDeferrable, systemOf } from "@terminus/computers";
 import { AttentionBook, classOf, type Envelope, FleetError, type MachineInfo, registryRow, type Slice, unwrap, wrap } from "@terminus/fleet";
-import { clavesConocidas, t } from "../../../../apps/desktop/src/lib/i18n.ts";
+import { clavesConocidas, t } from "../../../../../apps/desktop/src/lib/i18n.ts";
 import { readActiveTurns } from "./active-turns-read.ts";
 import { type ContextRouterConfig, createContextRouter } from "./context-router.ts";
 import type { EngineWorkspace } from "./engine-workspaces.ts";
-import type { RouterConfig } from "./router-config.ts";
-import { headerOf, withoutHeader } from "./router-headers.ts";
-import { markUnconfirmedOpen } from "./unconfirmedOpen.ts";
-import { createWebEventQueue } from "./web-event-queue.ts";
+import type { RouterConfig } from "../model/router-config.ts";
+import { headerOf, withoutHeader } from "../model/router-headers.ts";
+import { markUnconfirmedOpen } from "../model/unconfirmedOpen.ts";
+import { createWebEventQueue } from "../model/web-event-queue.ts";
 
-export { unconfirmedOpen } from "./unconfirmedOpen.ts";
+export { unconfirmedOpen } from "../model/unconfirmedOpen.ts";
 
 type Args = Record<string, unknown>;
 type Options = { headers?: HeadersInit } | undefined;
@@ -103,7 +103,7 @@ const CHANGES: Record<string, SliceChange> = {
   list_task_mentions: "mentions",
 };
 
-export type { RouterConfig } from "./router-config.ts";
+export type { RouterConfig } from "../model/router-config.ts";
 
 function withoutChannel(command: string, args: Args): Args {
   const channel = CHANNELS[command];

@@ -3,7 +3,7 @@ import { Fleet, memberKey, relayLink, unwrap } from "@terminus/fleet";
 import { createSignal, lazy, Suspense } from "solid-js";
 import { createContextRelayPool, machinesListed } from "../../../../packages/features/machines/src";
 import { sessionRailState } from "../../../../packages/shell/src/shell";
-import { createRouter, type SliceChange } from "../../../../packages/features/machines/src/router";
+import { createRouter, type SliceChange } from "../../../../packages/features/machines/src/queries/router";
 import type { AccountProfileSource } from "../../../../packages/features/settings/src/account-profile";
 import { t } from "../lib/i18n";
 import { type Capabilities, setCapabilities, type WebAccountsSource } from "../../../../packages/host/src/platform";
@@ -19,8 +19,8 @@ import { openWorkspaceUrl } from "./open-workspace-url";
 
 declare const __TERMINUS_VERSION__: string;
 type Base = { billing: ReturnType<typeof import("./window-billing").windowBilling>; contextMachines: (context: string) => ReturnType<typeof machinesClient>; sessions: import("./web-session-contexts").WebSessionCommands; active: ReturnType<typeof import("./window-active-context").windowActiveContext>; rail?: Capabilities["webRailCatalog"]; relayOrigin: string; credentials?: Capabilities["accountCredentials"]; permits: (name: string) => boolean; organizations?: Capabilities["organizations"]; promo?: Capabilities["webPromo"]; groupAccount?: Capabilities["groupAccount"]; reauth?: Capabilities["webReauth"]; preparing?: () => boolean; profile: AccountProfileSource; services: Pick<Capabilities, "webWorkspacePicker" | "danilCredits">; onUnavailable: () => void; };
-const Picker = lazy(() => import("../../../../packages/features/machines/src/MachinePicker").then(m => ({ default: m.MachinePicker })));
-const AccountMachines = lazy(() => import("../../../../packages/features/machines/src/AccountMachines"));
+const Picker = lazy(() => import("../../../../packages/features/machines/src/screens/MachinePicker").then(m => ({ default: m.MachinePicker })));
+const AccountMachines = lazy(() => import("../../../../packages/features/machines/src/screens/AccountMachines"));
 /** Another machine's slice changed: the window rereads just that. */
 function slicesChanged(changes: SliceChange[]) {
   if (changes.includes("workspaces")) window.dispatchEvent(new CustomEvent("harness:workspace-name"));
@@ -75,7 +75,7 @@ export function mountWindow(base: Base, mounted: Mounted) {
       powers.set(key, power);
       if (changed) void refresh();
       bump(n => n + 1);
-      void import("../../../../packages/features/machines/src/store").then(({ machineNamesChanged, refetchMachines }) => {
+      void import("../../../../packages/features/machines/src/queries/store").then(({ machineNamesChanged, refetchMachines }) => {
         if (stopped) return;
         machineNamesChanged();
         void refetchMachines();

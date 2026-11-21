@@ -1,5 +1,5 @@
-import type { JournalEvent } from "../../../../apps/desktop/src/lib/serviceEvents";
-import type { PushedBatch, ServicePage } from "../../service-stream/src/index.ts";
+import type { JournalEvent } from "../../../../../apps/desktop/src/lib/serviceEvents";
+import type { PushedBatch, ServicePage } from "../../../service-stream/src/index.ts";
 
 /** A paused tab cannot retain an unbounded journal; overflow becomes an explicit resync. */
 const MAX_BYTES = 2 * 1024 * 1024;

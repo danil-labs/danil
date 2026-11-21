@@ -1,4 +1,4 @@
-import { SignalDot } from "../../../ui/src/SignalDot";
+import { SignalDot } from "../../../../ui/src/SignalDot";
 import {
   type Answer,
   type Computer,
@@ -10,14 +10,14 @@ import {
 import Check from "lucide-solid/icons/check";
 import Copy from "lucide-solid/icons/copy";
 import { createSignal, For, Match, onCleanup, onMount, Show, Switch } from "solid-js";
-import { t } from "../../../../apps/desktop/src/lib/i18n";
-import { createCopied } from "../../../host/src/clipboard";
-import { invoke } from "../../../engine-client/src/client";
-import { capabilities } from "../../../host/src/platform";
-import { Button } from "../../../ui/src/Button";
-import { Input } from "../../../ui/src/Input";
-import { Spinner } from "../../../ui/src/Spinner";
-import { SettingsBlock, SettingsSection } from "../../settings/src/layout";
+import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { createCopied } from "../../../../host/src/clipboard";
+import { invoke } from "../../../../engine-client/src/client";
+import { capabilities } from "../../../../host/src/platform";
+import { Button } from "../../../../ui/src/Button";
+import { Input } from "../../../../ui/src/Input";
+import { Spinner } from "../../../../ui/src/Spinner";
+import { SettingsBlock, SettingsSection } from "../../../settings/src/layout";
 
 export type ConnectMachineProps = {
   /** `GET /v1/computers` con la sesión de la cuenta. */
