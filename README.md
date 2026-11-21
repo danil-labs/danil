@@ -1,5 +1,7 @@
 # Danil
 
+[Contrato de API, relaciones y estado](docs/API.md).
+
 Danil is a desktop agentic development environment. It runs terminal agents
 (Claude Code, Codex and others) against your organization's repositories and
 answers in plain language — for people who need those answers but don't write
