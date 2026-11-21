@@ -6,17 +6,14 @@ import {
   type Accessor,
 } from "solid-js";
 import type { EngineClient } from "@danil/engine-client";
-import type { Workspace } from "../model.ts";
 import {
   useOrganizations,
   useWorkspaces,
-  selectWorkspace,
-  getActiveWorkspaceId,
-  type ClientResolverOptions,
+  useSelectWorkspace,
+  openAddWorkspace,
 } from "../queries.ts";
 import { WorkspaceErrorView } from "./WorkspaceErrorView.tsx";
 import { WorkspaceEmptyView } from "./WorkspaceEmptyView.tsx";
-import { CreateWorkspaceDialog } from "./CreateWorkspaceDialog.tsx";
 import { OrganizationRailLayout } from "./OrganizationRailLayout.tsx";
 import { OrganizationRailGroup } from "./OrganizationRailGroup.tsx";
 import {
@@ -25,9 +22,9 @@ import {
   type SessionRailGroup,
 } from "./organization-rail-model.ts";
 
-export interface RailGroupsProps extends ClientResolverOptions {
+export interface RailGroupsProps {
   engineClient?: EngineClient | (() => EngineClient | undefined | null);
-  activeWorkspaceId?: Accessor<string | null> | string | null;
+  activeWorkspaceId?: Accessor<string | null | undefined> | string | null;
   onSelectWorkspace?: (workspaceId: string) => void | Promise<void>;
   onAddWorkspace?: (orgId?: string) => void;
   class?: string;
@@ -36,13 +33,13 @@ export interface RailGroupsProps extends ClientResolverOptions {
 /**
  * RailGroups: pinta el riel DS1 v2 agrupado por organización.
  * Utiliza OrganizationRailLayout, OrganizationRailGroup, OrganizationStack y OrganizationWorkspaceTile.
+ * El «+» solo ofrece «Agregar workspace» abriendo el selector externo (RV1 #8, RV2 #20).
  */
 export const RailGroups: Component<RailGroupsProps> = (props) => {
-  const orgsQuery = useOrganizations(props);
-  const workspacesQuery = useWorkspaces(props);
+  const orgsQuery = useOrganizations();
+  const workspacesQuery = useWorkspaces();
+  const selectWorkspace = useSelectWorkspace();
 
-  const [dialogOpen, setDialogOpen] = createSignal(false);
-  const [targetOrgId, setTargetOrgId] = createSignal<string | undefined>(undefined);
   const [selectionError, setSelectionError] = createSignal<string | null>(null);
   const [preference, setPreference] = createSignal<OrgPreference>({
     version: 1,
@@ -53,20 +50,14 @@ export const RailGroups: Component<RailGroupsProps> = (props) => {
     if (typeof props.activeWorkspaceId === "function") {
       return props.activeWorkspaceId();
     }
-    if (typeof props.activeWorkspaceId === "string") {
-      return props.activeWorkspaceId;
-    }
-    return getActiveWorkspaceId();
+    return props.activeWorkspaceId ?? null;
   };
 
   const handleSelectWorkspace = async (workspaceId: string) => {
     setSelectionError(null);
     try {
       await selectWorkspace(workspaceId, {
-        client: props.client,
         engineClient: props.engineClient,
-        session: props.session,
-        sessionSource: props.sessionSource,
       });
       await props.onSelectWorkspace?.(workspaceId);
     } catch (err: unknown) {
@@ -75,59 +66,38 @@ export const RailGroups: Component<RailGroupsProps> = (props) => {
     }
   };
 
-  const openCreateDialog = (orgId?: string) => {
-    setTargetOrgId(orgId);
+  const handleAddWorkspace = (orgId?: string) => {
     if (props.onAddWorkspace) {
       props.onAddWorkspace(orgId);
     } else {
-      setDialogOpen(true);
+      openAddWorkspace(orgId);
     }
-  };
-
-  const handleCreated = (created: Workspace) => {
-    workspacesQuery.refetch();
-    handleSelectWorkspace(created.id);
   };
 
   // Agrupación de workspaces por id de organización
   const workspacesByOrg = createMemo(() => {
     const list = workspacesQuery.workspaces() || [];
-    const map = new Map<string, Workspace[]>();
+    const map = new Map<string, typeof list>();
     for (const ws of list) {
-      const orgKey = ws.org || "default";
-      const existing = map.get(orgKey) || [];
+      if (!ws.org) continue;
+      const existing = map.get(ws.org) || [];
       existing.push(ws);
-      map.set(orgKey, existing);
+      map.set(ws.org, existing);
     }
     return map;
   });
 
   const sessionGroups = createMemo<SessionRailGroup[]>(() => {
     const orgs = orgsQuery.organizations() || [];
-    const wsList = workspacesQuery.workspaces() || [];
     if (orgs.length === 0) {
-      if (wsList.length === 0) return [];
-      return [
-        {
-          context_id: "default",
-          org: "default",
-          org_name: "Personal",
-          available: wsList.map((w) => ({
-            id: w.id,
-            name: w.name || `Workspace ${w.id}`,
-            logo: (w as any).logo ?? null,
-          })),
-        },
-      ];
+      return [];
     }
     return orgs.map((org) => {
-      const orgWorkspaces =
-        workspacesByOrg().get(org.id) ||
-        (orgs.length === 1 ? wsList : []);
+      const orgWorkspaces = workspacesByOrg().get(org.id) || [];
       return {
         context_id: org.id,
         org: org.id,
-        org_name: org.planLabel || org.name || "Personal",
+        org_name: org.planLabel || "Personal",
         plan: org.plan || org.type,
         role: org.role,
         available: orgWorkspaces.map((w) => ({
@@ -204,7 +174,7 @@ export const RailGroups: Component<RailGroupsProps> = (props) => {
           when={sessionGroups().length > 0}
           fallback={
             <WorkspaceEmptyView
-              onAddWorkspace={() => openCreateDialog()}
+              onAddWorkspace={() => handleAddWorkspace()}
             />
           }
         >
@@ -227,30 +197,18 @@ export const RailGroups: Component<RailGroupsProps> = (props) => {
             )}
           />
 
-          {/* Botón «+» → «Agregar workspace» al pie del riel */}
+          {/* Botón «+» → «Agregar workspace» al pie del riel (RV1 #8, RV2 #20) */}
           <button
             type="button"
             data-add-workspace=""
             class="grid size-8 shrink-0 place-items-center rounded-md text-neutral-500 hover:bg-neutral-200 hover:text-neutral-950 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-primary transition-colors"
             aria-label="Agregar workspace"
-            onClick={() => openCreateDialog()}
+            onClick={() => handleAddWorkspace()}
           >
             <span class="text-base font-semibold leading-none">+</span>
           </button>
         </Show>
       </Show>
-
-      {/* Modal para crear workspace */}
-      <CreateWorkspaceDialog
-        open={dialogOpen()}
-        onClose={() => setDialogOpen(false)}
-        organizations={orgsQuery.organizations()}
-        defaultOrgId={targetOrgId()}
-        onCreated={handleCreated}
-        client={props.client}
-        session={props.session}
-        sessionSource={props.sessionSource}
-      />
     </div>
   );
 };

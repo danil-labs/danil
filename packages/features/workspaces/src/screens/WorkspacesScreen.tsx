@@ -1,36 +1,32 @@
-import { createSignal, Show, type Component } from "solid-js";
+import { Show, type Component } from "solid-js";
 import type { EngineClient } from "@danil/engine-client";
-import { RailGroups, type RailGroupsProps } from "../components/RailGroups.tsx";
-import { CreateWorkspaceDialog } from "../components/CreateWorkspaceDialog.tsx";
-import { useOrganizations, useWorkspaces, selectWorkspace, type ClientResolverOptions } from "../queries.ts";
-import type { Workspace } from "../model.ts";
+import { RailGroups } from "../components/RailGroups.tsx";
+import {
+  useWorkspaces,
+  openAddWorkspace,
+} from "../queries.ts";
 
-export interface WorkspacesScreenProps extends ClientResolverOptions {
+export interface WorkspacesScreenProps {
   engineClient?: EngineClient | (() => EngineClient | undefined | null);
   activeWorkspaceId?: string | null;
   onSelectWorkspace?: (workspaceId: string) => void | Promise<void>;
+  onAddWorkspace?: (orgId?: string) => void;
 }
 
 /**
  * Pantalla principal de workspaces que el shell puede montar.
  * Integra el riel DS1 v2 y la gestión de selección de workspace.
+ * El «+» abre la página de agregar workspace externa (RV1 #8, RV2 #20).
  */
 export const WorkspacesScreen: Component<WorkspacesScreenProps> = (props) => {
-  const [dialogOpen, setDialogOpen] = createSignal(false);
-  const [selectedOrgId, setSelectedOrgId] = createSignal<string | undefined>(undefined);
+  const workspacesQuery = useWorkspaces();
 
-  const orgsQuery = useOrganizations(props);
-  const workspacesQuery = useWorkspaces(props);
-
-  const handleCreated = async (created: Workspace) => {
-    workspacesQuery.refetch();
-    await selectWorkspace(created.id, {
-      client: props.client,
-      engineClient: props.engineClient,
-      session: props.session,
-      sessionSource: props.sessionSource,
-    });
-    await props.onSelectWorkspace?.(created.id);
+  const handleAddWorkspace = (orgId?: string) => {
+    if (props.onAddWorkspace) {
+      props.onAddWorkspace(orgId);
+    } else {
+      openAddWorkspace(orgId);
+    }
   };
 
   return (
@@ -43,10 +39,7 @@ export const WorkspacesScreen: Component<WorkspacesScreenProps> = (props) => {
           </span>
           <button
             type="button"
-            onClick={() => {
-              setSelectedOrgId(undefined);
-              setDialogOpen(true);
-            }}
+            onClick={() => handleAddWorkspace()}
             class="px-2 py-1 text-[11px] font-medium rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-200 transition-colors"
           >
             + Agregar workspace
@@ -54,16 +47,10 @@ export const WorkspacesScreen: Component<WorkspacesScreenProps> = (props) => {
         </div>
 
         <RailGroups
-          client={props.client}
           engineClient={props.engineClient}
-          session={props.session}
-          sessionSource={props.sessionSource}
           activeWorkspaceId={props.activeWorkspaceId}
           onSelectWorkspace={props.onSelectWorkspace}
-          onAddWorkspace={(orgId) => {
-            setSelectedOrgId(orgId);
-            setDialogOpen(true);
-          }}
+          onAddWorkspace={handleAddWorkspace}
         />
       </aside>
 
@@ -78,7 +65,7 @@ export const WorkspacesScreen: Component<WorkspacesScreenProps> = (props) => {
           </div>
           <button
             type="button"
-            onClick={() => setDialogOpen(true)}
+            onClick={() => handleAddWorkspace()}
             class="px-3.5 py-2 rounded-lg bg-white text-zinc-950 text-xs font-semibold hover:bg-zinc-200 transition-colors shadow-sm"
           >
             Agregar workspace
@@ -94,7 +81,7 @@ export const WorkspacesScreen: Component<WorkspacesScreenProps> = (props) => {
             <p class="text-sm text-zinc-400">No se encontraron workspaces activos.</p>
             <button
               type="button"
-              onClick={() => setDialogOpen(true)}
+              onClick={() => handleAddWorkspace()}
               class="px-3 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-xs text-white font-medium transition-colors"
             >
               Agregar workspace
@@ -102,17 +89,6 @@ export const WorkspacesScreen: Component<WorkspacesScreenProps> = (props) => {
           </div>
         </Show>
       </main>
-
-      <CreateWorkspaceDialog
-        open={dialogOpen()}
-        onClose={() => setDialogOpen(false)}
-        organizations={orgsQuery.organizations()}
-        defaultOrgId={selectedOrgId()}
-        onCreated={handleCreated}
-        client={props.client}
-        session={props.session}
-        sessionSource={props.sessionSource}
-      />
     </div>
   );
 };

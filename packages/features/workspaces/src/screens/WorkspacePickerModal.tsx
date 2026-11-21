@@ -6,18 +6,16 @@ import {
   type Component,
 } from "solid-js";
 import type { EngineClient } from "@danil/engine-client";
-import type { Workspace, Organization } from "../model.ts";
+import type { Organization } from "../model.ts";
 import {
   useOrganizations,
   useWorkspaces,
-  selectWorkspace,
-  getActiveWorkspaceId,
-  type ClientResolverOptions,
+  useSelectWorkspace,
+  openAddWorkspace,
 } from "../queries.ts";
-import { CreateWorkspaceDialog } from "../components/CreateWorkspaceDialog.tsx";
 import { WorkspaceErrorView } from "../components/WorkspaceErrorView.tsx";
 
-export interface WorkspacePickerModalProps extends ClientResolverOptions {
+export interface WorkspacePickerModalProps {
   open: boolean;
   onClose: () => void;
   engineClient?: EngineClient | (() => EngineClient | undefined | null);
@@ -28,16 +26,17 @@ export interface WorkspacePickerModalProps extends ClientResolverOptions {
 /**
  * Modal rápido para buscar, conmutar y agregar workspaces.
  * Reemplaza el antiguo WorkspacePicker desacoplándolo de transportes manuales.
+ * El botón «+ Agregar workspace» abre el flujo externo vía host.openExternal (RV1 #8, RV2 #20).
  */
 export const WorkspacePickerModal: Component<WorkspacePickerModalProps> = (props) => {
   const [query, setQuery] = createSignal("");
-  const [dialogOpen, setDialogOpen] = createSignal(false);
   const [selectionError, setSelectionError] = createSignal<string | null>(null);
 
-  const orgsQuery = useOrganizations(props);
-  const workspacesQuery = useWorkspaces(props);
+  const orgsQuery = useOrganizations();
+  const workspacesQuery = useWorkspaces();
+  const selectWorkspace = useSelectWorkspace();
 
-  const activeId = () => props.activeWorkspaceId ?? getActiveWorkspaceId();
+  const activeId = () => props.activeWorkspaceId ?? null;
 
   const filteredWorkspaces = createMemo(() => {
     const list = workspacesQuery.workspaces() || [];
@@ -58,10 +57,7 @@ export const WorkspacePickerModal: Component<WorkspacePickerModalProps> = (props
     setSelectionError(null);
     try {
       await selectWorkspace(wsId, {
-        client: props.client,
         engineClient: props.engineClient,
-        session: props.session,
-        sessionSource: props.sessionSource,
       });
       await props.onSelectWorkspace?.(wsId);
       props.onClose();
@@ -71,9 +67,9 @@ export const WorkspacePickerModal: Component<WorkspacePickerModalProps> = (props
     }
   };
 
-  const handleCreated = async (created: Workspace) => {
-    workspacesQuery.refetch();
-    await handleSelect(created.id);
+  const handleAddWorkspace = () => {
+    openAddWorkspace();
+    props.onClose();
   };
 
   return (
@@ -164,7 +160,7 @@ export const WorkspacePickerModal: Component<WorkspacePickerModalProps> = (props
           <div class="pt-2 border-t border-zinc-800 flex justify-between items-center">
             <button
               type="button"
-              onClick={() => setDialogOpen(true)}
+              onClick={handleAddWorkspace}
               class="text-xs text-zinc-300 hover:text-white flex items-center gap-1 font-medium"
             >
               <span>+</span>
@@ -180,16 +176,6 @@ export const WorkspacePickerModal: Component<WorkspacePickerModalProps> = (props
           </div>
         </div>
       </div>
-
-      <CreateWorkspaceDialog
-        open={dialogOpen()}
-        onClose={() => setDialogOpen(false)}
-        organizations={orgsQuery.organizations()}
-        onCreated={handleCreated}
-        client={props.client}
-        session={props.session}
-        sessionSource={props.sessionSource}
-      />
     </Show>
   );
 };

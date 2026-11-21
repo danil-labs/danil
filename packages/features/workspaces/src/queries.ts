@@ -1,21 +1,22 @@
 import {
   createResource,
-  createSignal,
+  onCleanup,
   type Accessor,
   type Resource,
 } from "solid-js";
 import {
   usePlatform,
-  type PlatformClient,
+  idempotencyKey,
+  API_BASE,
 } from "@danil/platform-client";
+import { host } from "@danil/host";
 import type { EngineClient } from "@danil/engine-client";
-import type { Session, SessionSource } from "@danil/session";
 import type { Workspace, Organization, WorkspaceGroup } from "./model.ts";
-import { getPlanLabel } from "./model.ts";
+import { planLabel } from "./model.ts";
 
 /**
- * Agrupa workspaces por organización asegurando pertenencia estricta (Regla 2.1, 2.8).
- * Sin filtrados ambiguos ni claves predeterminadas compartidas.
+ * Agrupa workspaces por organización asegurando pertenencia estricta (11 §2, Regla 2.1, 2.8).
+ * Sin filtrados ambiguos ni workspaces huérfanos sin organización (RV1 #32, RV2 #22).
  */
 export function groupWorkspacesByOrg(
   workspaces: Workspace[],
@@ -29,40 +30,12 @@ export function groupWorkspacesByOrg(
     const key = ws.org;
     if (key && orgMap.has(key)) {
       orgMap.get(key)!.push(ws);
-    } else if (organizations.length > 0) {
-      orgMap.get(organizations[0].id)?.push(ws);
     }
   }
   return organizations.map((org) => ({
     organization: org,
     workspaces: orgMap.get(org.id) ?? [],
   }));
-}
-
-export interface ClientResolverOptions {
-  client?: PlatformClient | (() => PlatformClient | undefined | null);
-  session?: Accessor<Session | undefined | null> | Session | null;
-  sessionSource?: SessionSource;
-}
-
-export function resolvePlatformClient(options?: ClientResolverOptions): PlatformClient {
-  if (options?.client) {
-    if (typeof options.client === "function") {
-      const c = options.client();
-      if (c) return c;
-    } else {
-      return options.client;
-    }
-  }
-
-  return usePlatform();
-}
-
-function generateIdempotencyKey(prefix: string): string {
-  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
-    return crypto.randomUUID();
-  }
-  return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 }
 
 export interface UseOrganizationsResult {
@@ -74,43 +47,30 @@ export interface UseOrganizationsResult {
 
 /**
  * Consulta las organizaciones del usuario por sesión.
+ * Captura usePlatform() en el cuerpo del hook (RV1 #2, RV2 #2) y soporta cancelación por signal.
  * Un error se preserva en error() para permitir reintentos (B-006).
  */
-export function useOrganizations(options?: ClientResolverOptions): UseOrganizationsResult {
-  const fallbackClient = usePlatform();
-  const getClient = () => {
-    if (options?.client) {
-      const c = typeof options.client === "function" ? options.client() : options.client;
-      if (c) return c;
-    }
-    return fallbackClient;
-  };
+export function useOrganizations(): UseOrganizationsResult {
+  const client = usePlatform();
+  const controller = new AbortController();
+  onCleanup(() => controller.abort());
 
-  const getSessionKey = () => {
-    const s = typeof options?.session === "function" ? options.session() : options?.session;
-    return s ? s.key : "current";
-  };
-
-  const [data, { refetch }] = createResource(
-    getSessionKey,
-    async () => {
-      const client = getClient();
-      const res = await client.getOrganizations();
-      const items = res.items ?? res.organizations ?? [];
-      const orgs = items.map((org) => ({
-        ...org,
-        planLabel: getPlanLabel(org),
-      }));
-      // Orden determinista DS1 v2: Personal primero, luego alfabéticamente por plan
-      return orgs.sort((a, b) => {
-        const aIsPersonal = a.planLabel === "Personal" || a.type === "personal";
-        const bIsPersonal = b.planLabel === "Personal" || b.type === "personal";
-        if (aIsPersonal && !bIsPersonal) return -1;
-        if (!aIsPersonal && bIsPersonal) return 1;
-        return a.planLabel.localeCompare(b.planLabel);
-      });
-    }
-  );
+  const [data, { refetch }] = createResource(async () => {
+    const res = await client.getOrganizations({ signal: controller.signal });
+    const items = res.items ?? [];
+    const orgs = items.map((org) => ({
+      ...org,
+      planLabel: planLabel(org),
+    }));
+    // Orden determinista DS1 v2: Personal primero, luego alfabéticamente por plan
+    return orgs.sort((a, b) => {
+      const aIsPersonal = a.planLabel === "Personal" || a.type === "personal";
+      const bIsPersonal = b.planLabel === "Personal" || b.type === "personal";
+      if (aIsPersonal && !bIsPersonal) return -1;
+      if (!aIsPersonal && bIsPersonal) return 1;
+      return a.planLabel.localeCompare(b.planLabel);
+    });
+  });
 
   return {
     organizations: data,
@@ -120,10 +80,6 @@ export function useOrganizations(options?: ClientResolverOptions): UseOrganizati
       void refetch(info);
     },
   };
-}
-
-export interface UseWorkspacesOptions extends ClientResolverOptions {
-  organizationId?: Accessor<string | undefined | null> | string | null;
 }
 
 export interface UseWorkspacesResult {
@@ -136,36 +92,20 @@ export interface UseWorkspacesResult {
 
 /**
  * Consulta los workspaces del usuario por sesión.
+ * Captura usePlatform() en el cuerpo del hook (RV1 #2, RV2 #2).
+ * Sin filtro local por org ni workspaces sin organización (RV1 #32, RV2 #22).
  */
-export function useWorkspaces(options?: UseWorkspacesOptions): UseWorkspacesResult {
-  const fallbackClient = usePlatform();
-  const getClient = () => {
-    if (options?.client) {
-      const c = typeof options.client === "function" ? options.client() : options.client;
-      if (c) return c;
-    }
-    return fallbackClient;
-  };
+export function useWorkspaces(): UseWorkspacesResult {
+  const client = usePlatform();
+  const controller = new AbortController();
+  onCleanup(() => controller.abort());
 
-  const getSourceKey = () => {
-    const s = typeof options?.session === "function" ? options.session() : options?.session;
-    const orgId = typeof options?.organizationId === "function" ? options.organizationId() : options?.organizationId;
-    return `${s ? s.key : "current"}:${orgId ?? "all"}`;
-  };
-
-  const [data, { refetch, mutate }] = createResource(
-    getSourceKey,
-    async () => {
-      const client = getClient();
-      const res = await client.getWorkspaces();
-      const list = res.items ?? res.workspaces ?? [];
-      const orgId = typeof options?.organizationId === "function" ? options.organizationId() : options?.organizationId;
-      if (orgId) {
-        return list.filter((w) => w.org === orgId);
-      }
-      return list;
-    }
-  );
+  const [data, { refetch, mutate }] = createResource(async () => {
+    const res = await client.getWorkspaces({ signal: controller.signal });
+    const list = res.items ?? [];
+    // 11 §2: No existen workspaces sin organización
+    return list.filter((w) => !!w.org);
+  });
 
   return {
     workspaces: data,
@@ -178,102 +118,81 @@ export function useWorkspaces(options?: UseWorkspacesOptions): UseWorkspacesResu
   };
 }
 
-export interface CreateWorkspaceParams {
-  name: string;
-  org?: string;
-}
-
-/**
- * Crea un nuevo workspace en la plataforma.
- */
-export async function createWorkspace(
-  params: CreateWorkspaceParams,
-  options?: ClientResolverOptions,
-): Promise<Workspace> {
-  const client = resolvePlatformClient(options);
-  const idempotencyKey = generateIdempotencyKey("ws-create");
-
-  const created = await client.createWorkspace({
-    idempotencyKey,
-    body: {
-      name: params.name,
-      org: params.org,
-    },
-  });
-
-  return created;
-}
-
-// Señales globales locales para la selección activa
-const [activeWorkspaceIdSignal, setActiveWorkspaceIdSignal] = createSignal<string | null>(null);
-const [activeOrganizationIdSignal, setActiveOrganizationIdSignal] = createSignal<string | null>(null);
-
-export function getActiveWorkspaceId(): string | null {
-  return activeWorkspaceIdSignal();
-}
-
-export function setActiveWorkspaceId(id: string | null): void {
-  setActiveWorkspaceIdSignal(id);
-}
-
-export function getActiveOrganizationId(): string | null {
-  return activeOrganizationIdSignal();
-}
-
-export function setActiveOrganizationId(id: string | null): void {
-  setActiveOrganizationIdSignal(id);
-}
-
-export interface SelectWorkspaceOptions extends ClientResolverOptions {
+export interface SelectWorkspaceOptions {
   engineClient?: EngineClient | (() => EngineClient | undefined | null);
 }
 
 /**
- * Selecciona un workspace de forma atómica (B-007):
- * 1. Primero la plataforma.
- * 2. Si la plataforma falla, el estado local no cambia (la función lanza error).
- * 3. Si tiene éxito y hay cliente del motor, se invoca set_active_workspace en el motor.
- * 4. Por último se actualiza la señal local.
- * Esta es la única acción de selección que el shell debe llamar.
+ * Hook para seleccionar un workspace (RV1 #2, RV2 #2, RV1 #16, RV2 #21).
+ * 1. Primero la plataforma vía cliente del borde (B-007).
+ * 2. Si tiene éxito y hay motor, invoca set_active_workspace en el motor.
+ * La ruta del router es la única dueña del workspace activo (sin señales globales).
  */
-export async function selectWorkspace(
-  workspaceId: string,
-  options?: SelectWorkspaceOptions,
-): Promise<void> {
-  const client = resolvePlatformClient(options);
-  const idempotencyKey = generateIdempotencyKey("ws-select");
+export function useSelectWorkspace() {
+  const client = usePlatform();
+  return async (
+    workspaceId: string,
+    options?: SelectWorkspaceOptions,
+  ): Promise<void> => {
+    const key = idempotencyKey();
 
-  // 1. Primero la plataforma
-  await client.selectWorkspace({
-    idempotencyKey,
-    body: { workspace: workspaceId },
-  });
+    // 1. Primero la plataforma
+    await client.selectWorkspace({
+      idempotencyKey: key,
+      body: { workspace: workspaceId },
+    });
 
-  // 2. Si falla lo anterior, no llega a este punto.
-  // 3. Notificar al motor local si está disponible
-  const engine = typeof options?.engineClient === "function" ? options.engineClient() : options?.engineClient;
-  if (engine) {
-    await engine.set_active_workspace({ id: workspaceId });
-  }
-
-  // 4. Actualizar el estado local
-  setActiveWorkspaceIdSignal(workspaceId);
+    // 2. Notificar al motor local si está disponible
+    const engine =
+      typeof options?.engineClient === "function"
+        ? options.engineClient()
+        : options?.engineClient;
+    if (engine) {
+      await engine.set_active_workspace({ id: workspaceId });
+    }
+  };
 }
 
 /**
- * Selecciona la organización activa en la plataforma.
+ * Hook para seleccionar la organización activa (RV1 #2, RV2 #2).
  */
-export async function selectOrganization(
-  organizationId: string,
-  options?: ClientResolverOptions,
-): Promise<void> {
-  const client = resolvePlatformClient(options);
-  const idempotencyKey = generateIdempotencyKey("org-select");
+export function useSelectOrganization() {
+  const client = usePlatform();
+  return async (organizationId: string): Promise<void> => {
+    const key = idempotencyKey();
 
-  await client.selectOrganization({
-    idempotencyKey,
-    body: { organization_id: organizationId },
-  });
+    await client.selectOrganization({
+      idempotencyKey: key,
+      body: { organization_id: organizationId },
+    });
+  };
+}
 
-  setActiveOrganizationIdSignal(organizationId);
+/**
+ * Hook que agrupa las acciones de selección cerrando sobre usePlatform().
+ */
+export function useWorkspaceActions() {
+  const select = useSelectWorkspace();
+  const selectOrg = useSelectOrganization();
+  return {
+    selectWorkspace: select,
+    selectOrganization: selectOrg,
+  };
+}
+
+/**
+ * Devuelve la URL para agregar un workspace (RV1 #8, RV2 #20).
+ * El «+» solo ofrece «Agregar workspace» abriendo el selector externo.
+ */
+export function getAddWorkspaceUrl(orgId?: string): string {
+  const base = API_BASE.replace(/\/v1\/?$/, "");
+  const query = orgId ? `?org=${encodeURIComponent(orgId)}` : "";
+  return `${base}/workspaces/add${query}`;
+}
+
+/**
+ * Abre la página externa para agregar un workspace mediante host.openExternal (RV1 #8, RV2 #20).
+ */
+export function openAddWorkspace(orgId?: string): void {
+  void host.openExternal(getAddWorkspaceUrl(orgId));
 }

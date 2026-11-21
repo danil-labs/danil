@@ -1,11 +1,13 @@
-import { createEffect, createSignal, type JSX } from "solid-js";
-import { Rail, type OrganizationItem } from "./Rail.tsx";
+import type { JSX } from "solid-js";
+import { host } from "@danil/host";
+import { API_BASE } from "@danil/platform-client";
+import { Rail } from "./Rail.tsx";
 import { RailErrorBoundary, MainErrorBoundary } from "./ErrorBoundary.tsx";
 import { RouteView, RailSlot } from "./routes.tsx";
 import { useRouter } from "./router.tsx";
 
 export interface LayoutProps {
-  organizations?: OrganizationItem[];
+  organizations?: unknown;
   activeWorkspaceId?: string;
   onAddWorkspace?: (organizationId?: string) => void;
   children?: JSX.Element;
@@ -14,20 +16,12 @@ export interface LayoutProps {
 export function Layout(props: LayoutProps): JSX.Element {
   const router = useRouter();
 
-  const [lastWorkspaceId, setLastWorkspaceId] = createSignal<string | undefined>(props.activeWorkspaceId);
-
-  createEffect(() => {
-    const r = router.route();
-    if (r.name === "workspace" && r.id) {
-      setLastWorkspaceId(r.id);
-    }
-  });
-
   const currentRouteName = () => router.route().name;
 
+  // La ruta del router es la única fuente de verdad del workspace activo (RV1 #16, RV2 #21)
   const currentWorkspaceId = () => {
     const r = router.route();
-    return r.name === "workspace" ? r.id : (lastWorkspaceId() ?? props.activeWorkspaceId);
+    return r.name === "workspace" ? r.id : undefined;
   };
 
   const handleSelectWorkspace = (id: string) => {
@@ -36,6 +30,16 @@ export function Layout(props: LayoutProps): JSX.Element {
 
   const handleSelectRoute = (to: "machines" | "account" | string) => {
     router.navigate(`/${to}`);
+  };
+
+  const handleAddWorkspace = (orgId?: string) => {
+    if (props.onAddWorkspace) {
+      props.onAddWorkspace(orgId);
+    } else {
+      const base = API_BASE.replace(/\/v1\/?$/, "");
+      const query = orgId ? `?org=${encodeURIComponent(orgId)}` : "";
+      void host.openExternal(`${base}/workspaces/add${query}`);
+    }
   };
 
   return (
@@ -50,7 +54,7 @@ export function Layout(props: LayoutProps): JSX.Element {
               <RailSlot
                 activeWorkspaceId={currentWorkspaceId()}
                 onSelectWorkspace={handleSelectWorkspace}
-                onAddWorkspace={props.onAddWorkspace}
+                onAddWorkspace={handleAddWorkspace}
               />
             ),
           }}

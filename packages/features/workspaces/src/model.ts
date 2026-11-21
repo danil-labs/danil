@@ -14,27 +14,23 @@ export interface WorkspaceGroup {
   workspaces: Workspace[];
 }
 
-export interface WorkspaceSelectionState {
-  activeWorkspaceId: string | null;
-  activeOrganizationId: string | null;
-}
-
-function cleanPlanText(text: string): string {
-  const cleaned = text
-    .replace(/\b(organización|organizacion|organization|org)\b/gi, "")
-    .trim();
-  if (!cleaned) return "Personal";
-  return cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
-}
-
 /**
  * Devuelve el nombre del plan para la visualización (B-008, P11).
  * La interfaz habla siempre de planes («Personal», «Team», «Enterprise»)
- * y nunca expone la palabra «organización» de cara a la persona.
+ * y nunca expone la palabra «organización» ni cae al nombre de la organización (P11, RV1 #26, RV2 #24).
  */
-export function getPlanLabel(org?: PlatformOrganizationRef | null): string {
+export function planLabel(
+  org?: { type?: string | null; plan?: string | null } | null | string,
+): string {
   if (!org) return "Personal";
-  const type = org.type?.toLowerCase();
+  if (typeof org === "string") {
+    const p = org.trim().toLowerCase();
+    if (p === "enterprise") return "Enterprise";
+    if (p === "team" || p === "teams") return "Team";
+    return "Personal";
+  }
+
+  const type = org.type?.toLowerCase().trim();
   if (type === "enterprise") return "Enterprise";
   if (type === "team" || type === "teams") return "Team";
   if (type === "personal" || type === "free") return "Personal";
@@ -45,11 +41,9 @@ export function getPlanLabel(org?: PlatformOrganizationRef | null): string {
     if (p === "enterprise") return "Enterprise";
     if (p === "team" || p === "teams") return "Team";
     if (p === "personal" || p === "free") return "Personal";
-    return cleanPlanText(rawPlan);
   }
 
-  if (typeof org.name === "string" && org.name.trim()) {
-    return cleanPlanText(org.name);
-  }
   return "Personal";
 }
+
+export const getPlanLabel = planLabel;
