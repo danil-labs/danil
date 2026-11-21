@@ -5,7 +5,7 @@
  */
 
 import { parseChatEvent, type ChatStreamEvent } from "../model.ts";
-import { updateCursorWithEvent, type StreamCursor } from "./cursor.ts";
+import { updateCursorWithEvent, isDuplicateEvent, type StreamCursor } from "./cursor.ts";
 
 export interface EventStreamSource {
   subscribe(event: string, cb: (payload: unknown) => void): () => void;
@@ -28,6 +28,11 @@ export function subscribeToChatEvents(options: StreamSubscriptionOptions): () =>
         const parsed = parseChatEvent(rawPayload);
         if (!parsed) return;
         if (parsed.session !== sessionId) return;
+
+        // B-014: descarta eventos duplicados retransmitidos durante reconexión
+        if (isDuplicateEvent(cursor, parsed)) {
+          return;
+        }
 
         updateCursorWithEvent(cursor, parsed);
         onEvent(parsed);

@@ -35,6 +35,7 @@ export type {
   ToolPiece,
   ShellPiece,
   PermissionPiece,
+  QuestionPiece,
   TurnStatus,
   TurnState,
 } from "./model.ts";

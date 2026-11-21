@@ -69,6 +69,7 @@ export function createChatStore(sessionId: string) {
           text: event.text,
           messageId: event.message_id,
           durationMs: event.duration_ms ?? undefined,
+          requestId: event.request_id ?? undefined,
         };
         break;
 
@@ -78,25 +79,28 @@ export function createChatStore(sessionId: string) {
           text: event.text,
           messageId: event.message_id,
           startsMessage: event.starts_message,
+          requestId: event.request_id ?? undefined,
         };
         break;
 
       case "tool":
         turnEvent = {
           type: "TOOL_START",
-          id: event.id ?? `tool_${Date.now()}`,
+          id: event.id ?? event.request_id ?? `tool_${Date.now()}`,
           name: event.text || "tool",
           target: event.target,
           detail: event.detail,
+          requestId: event.request_id ?? undefined,
         };
         break;
 
       case "tool_done":
         turnEvent = {
           type: "TOOL_DONE",
-          id: event.id ?? "",
+          id: event.id ?? event.request_id ?? "",
           ok: event.ok ?? null,
           detail: event.detail,
+          requestId: event.request_id ?? undefined,
         };
         break;
 
@@ -138,6 +142,23 @@ export function createChatStore(sessionId: string) {
           type: "PERMISSION_RESOLVE",
           requestId: event.request_id ?? "",
           decision: event.ok ? "allow" : "deny",
+        };
+        break;
+
+      case "question":
+        turnEvent = {
+          type: "QUESTION_REQUEST",
+          requestId: event.request_id ?? `q_${Date.now()}`,
+          text: event.text,
+          questions: event.questions ?? (Array.isArray(event.detail) ? event.detail : undefined),
+        };
+        break;
+
+      case "question_answered":
+        turnEvent = {
+          type: "QUESTION_ANSWER",
+          requestId: event.request_id ?? "",
+          answers: event.answers ?? (Array.isArray(event.detail) ? event.detail : []),
         };
         break;
 
@@ -206,6 +227,15 @@ export function createChatStore(sessionId: string) {
     setState("activeTurn", nextTurnState);
   };
 
+  const answerQuestion = (requestId: string, answers: unknown[]) => {
+    const nextTurnState = turnReducer(state.activeTurn, {
+      type: "QUESTION_ANSWER",
+      requestId,
+      answers,
+    });
+    setState("activeTurn", nextTurnState);
+  };
+
   const setError = (error: string | null) => {
     setState("error", error);
   };
@@ -223,6 +253,7 @@ export function createChatStore(sessionId: string) {
     handleStreamEvent,
     addUserMessage,
     resolvePermission,
+    answerQuestion,
     setError,
     reset,
   };

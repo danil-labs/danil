@@ -17,6 +17,7 @@ export interface StreamCursor {
   deltasReceivedCount: number;
   piecesCount: number;
   lastEventTimestamp: number;
+  seenEventIds?: Set<string>;
 }
 
 export function createStreamCursor(sessionId: string): StreamCursor {
@@ -28,11 +29,41 @@ export function createStreamCursor(sessionId: string): StreamCursor {
     deltasReceivedCount: 0,
     piecesCount: 0,
     lastEventTimestamp: Date.now(),
+    seenEventIds: new Set<string>(),
   };
+}
+
+export function isDuplicateEvent(cursor: StreamCursor, event: ChatStreamEvent): boolean {
+  if (!cursor.seenEventIds) return false;
+  const eventKey =
+    event.segment_id ??
+    event.message_id ??
+    (event.request_id ? `${event.kind}:${event.request_id}` : null) ??
+    (event.kind === "delta" && event.starts_message && event.id ? `start:${event.id}` : null);
+  if (!eventKey) return false;
+  return cursor.seenEventIds.has(eventKey);
 }
 
 export function updateCursorWithEvent(cursor: StreamCursor, event: ChatStreamEvent): void {
   cursor.lastEventTimestamp = Date.now();
+  if (!cursor.seenEventIds) {
+    cursor.seenEventIds = new Set<string>();
+  }
+  const eventKey =
+    event.segment_id ??
+    event.message_id ??
+    (event.request_id ? `${event.kind}:${event.request_id}` : null) ??
+    (event.kind === "delta" && event.starts_message && event.id ? `start:${event.id}` : null);
+  if (eventKey) {
+    cursor.seenEventIds.add(eventKey);
+    if (cursor.seenEventIds.size > 2000) {
+      const iter = cursor.seenEventIds.values();
+      for (let i = 0; i < 500; i++) {
+        const val = iter.next().value;
+        if (val) cursor.seenEventIds.delete(val);
+      }
+    }
+  }
   if (event.segment_id) {
     cursor.lastSegmentId = event.segment_id;
   }
@@ -45,7 +76,12 @@ export function updateCursorWithEvent(cursor: StreamCursor, event: ChatStreamEve
   if (event.kind === "delta") {
     cursor.deltasReceivedCount += 1;
   }
-  if (event.kind === "tool" || event.kind === "reasoning" || event.kind === "shell_started") {
+  if (
+    event.kind === "tool" ||
+    event.kind === "reasoning" ||
+    event.kind === "shell_started" ||
+    event.kind === "question"
+  ) {
     cursor.piecesCount += 1;
   }
 }
