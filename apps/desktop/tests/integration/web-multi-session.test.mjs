@@ -24,7 +24,7 @@ async function until(read, what = 'Window condition') {
   }
 }
 
-function edge({ expireX = () => false, lateX2 = () => true } = {}) {
+function edge({ expireX = () => false, lateX2 = () => true, personalPlan = 'pro', machineName = null } = {}) {
   const state = { calls: [], unscoped: [], selects: [], expired: 0, admitted: [] };
   const echo = (context, body, init = {}) => Response.json(body, { ...init, headers: { 'X-Danil-Session-Applied': context, 'X-Danil-Session-Applied-Org': ORGS[context] } });
   const fetcher = async (input, init = {}) => {
@@ -43,7 +43,7 @@ function edge({ expireX = () => false, lateX2 = () => true } = {}) {
       case '/v1/identity/csrf': return Response.json({ csrf_token: 'bound' });
       case '/v1/identity/contexts': if (state.admitFails) return Response.json({ code: 'unavailable' }, { status: 503, headers: { 'content-type': 'application/problem+json' } }); state.admitted.push(JSON.parse(String(init.body))); return Response.json({ context_id: 'ctx_x', org: 'org_x' });
       case '/v1/identity/sessions': return Response.json({ version: 1, items: [{ session_id: 'ses_a', sub: 'user_a', email: 'a@example.test', contexts: [
-        { context_id: 'ctx_p', org: 'org_p', org_name: 'Personal', plan: 'pro', personal: true },
+        { context_id: 'ctx_p', org: 'org_p', org_name: 'Personal', plan: personalPlan, personal: true },
         { context_id: 'ctx_x', org: 'org_x', org_name: 'Org X', plan: 'pro', role: 'member' }] }], primary: 'ses_a', default_context: 'ctx_p' });
       case '/v1/identity/sessions/catalog': return Response.json({ version: 1, items: [{ session_id: 'ses_a', sub: 'user_a', email: 'a@example.test', contexts: [
         { context_id: 'ctx_p', org: 'org_p', org_name: 'Personal', catalog_state: 'listed', workspaces: [{ account_id: 'p1', engine_workspace_id: 'wp', name: 'Personal Uno' }] },
@@ -52,7 +52,7 @@ function edge({ expireX = () => false, lateX2 = () => true } = {}) {
       case '/v1/workspaces/preferences': return echo(context, { version: 1, added: context === 'ctx_p' ? ['wp'] : ['wx1', 'wx2'] });
       case '/v1/workspaces': return echo(context, { items: [], next_cursor: null });
       case '/v1/credits/balance': return echo(context, { items: [] });
-      case '/v1/machines': return echo(context, { items: [{ machine_id: context === 'ctx_p' ? 'mp' : 'mx', name: context === 'ctx_p' ? 'Nube P' : 'Nube X', kind: 'organization', organization_id: ORGS[context], state: 'running', connection: 'connected' }], next_cursor: null });
+      case '/v1/machines': return echo(context, { items: [{ machine_id: context === 'ctx_p' ? 'mp' : 'mx', name: machineName ?? (context === 'ctx_p' ? 'Nube P' : 'Nube X'), kind: 'organization', organization_id: ORGS[context], state: 'running', connection: 'connected' }], next_cursor: null });
     }
     if (/^\/v1\/machines\/m[px]\/tickets$/.test(url.pathname)) return echo(context, { ticket: 'one-use', url: `wss://connect.danil.ai${url.pathname.replace('/tickets', '/session')}`, expires_at: '2099-01-01T00:00:00Z' });
     return echo(context, {}, { status: 404 });
@@ -169,3 +169,28 @@ test('a reload opens the workspace of the URL with the session of its (email, or
   assert.deepEqual(state.selects, []);
   assert.deepEqual(state.unscoped, []);
 });
+
+test('a Free personal workspace is served by its own connected machine: tasks, accounts and models carry the workspace and go to that machine', async t => {
+  const state = edge({ personalPlan: 'free', machineName: 'Mac.domain.name' });
+  const fake = relay({ table: { ...table, list_accounts: [], account_status: { connected: false }, list_models: { provider: 'codex', models: [], fallback: false } } });
+  const sent = [];
+  const Socket = class extends fake.Socket { send(data) { const m = JSON.parse(data); if (m.type === 'call') sent.push({ machine: /machines\/(m[px])\//.exec(this.url)?.[1], command: m.command, workspace: m.workspace }); return super.send(data); } };
+  const app = await boot('listo', 'web-multi-session-free', {}, undefined, {}, { web: true, beforeImport(w) { w.WebSocket = Socket; globalThis.WebSocket = Socket; } });
+  t.after(() => app.w.dispatchEvent(new app.w.Event('pagehide')));
+  const doc = app.w.document;
+  await until(() => tile(doc, 'wp') && fake.sockets.length >= 2, 'rail and both machines');
+  tile(doc, 'wp').click();
+  await until(() => tile(doc, 'wp')?.getAttribute('aria-current') === 'true', 'personal open');
+  await app.w.__TAURI_INTERNALS__.invoke('list_accounts', {}).catch(() => {});
+  await until(() => ['list_live_sessions', 'list_models', 'list_accounts'].every(c => sent.some(s => s.command === c && s.workspace === 'wp')), 'tasks, models and accounts of DW reach a machine');
+  for (const command of ['list_live_sessions', 'list_models', 'list_accounts']) {
+    const calls = sent.filter(s => s.command === command && s.workspace === 'wp');
+    assert.ok(calls.every(s => s.machine === 'mp'), `${command} goes to the personal organization's machine, not X's: ${JSON.stringify(calls)}`);
+  }
+  assert.deepEqual(sent.filter(s => ['list_live_sessions', 'list_models', 'list_accounts'].includes(s.command) && !s.workspace), [], 'no call without its workspace');
+  const names = [...doc.querySelectorAll('[data-machine-row], [data-sync-machine]')].map(e => e.textContent);
+  const machineNames = (await app.w.__TAURI_INTERNALS__.invoke('machine_list')).map(m => m.name);
+  assert.equal(new Set(machineNames).size, machineNames.length, `one computer in two organizations is told apart: ${machineNames.join(', ')} ${names.join(', ')}`);
+  assert.deepEqual(state.selects, []);
+});
+
