@@ -1,15 +1,23 @@
-import { createSignal, onMount, Show, ErrorBoundary, type Component, type JSX } from "solid-js";
+import { createSignal, onMount, Show, type Component, type JSX } from "solid-js";
 import { SessionProvider, useSession } from "@danil/session/solid";
 import { createWebSession, type SessionSource, type Session } from "@danil/session";
+import { RouterProvider } from "./router.tsx";
+import { Layout } from "./Layout.tsx";
+import type { OrganizationItem } from "./Rail.tsx";
 
 export interface AppProps {
   sessionSource?: SessionSource;
   platform?: unknown;
   host?: unknown;
+  initialPath?: string;
   isDesk?: boolean;
+  organizations?: OrganizationItem[];
+  activeWorkspaceId?: string;
+  onAddWorkspace?: (organizationId?: string) => void;
+  children?: JSX.Element;
 }
 
-function EntryScreen(props: { isDesk: boolean; onAddSession?: () => void }) {
+function EntryScreen(props: { isDesk: boolean; onAddSession?: () => void }): JSX.Element {
   return (
     <div
       style={{
@@ -90,15 +98,17 @@ function EntryScreen(props: { isDesk: boolean; onAddSession?: () => void }) {
   );
 }
 
-function AppWithSession(props: AppProps) {
+function AppWithSession(props: AppProps): JSX.Element {
   const sessionContext = useSession();
   const [checking, setChecking] = createSignal(true);
 
   const isDesk = () =>
     props.isDesk ??
     (typeof window !== "undefined" &&
-      Boolean((window as unknown as { __TAURI__?: unknown; __TAURI_INTERNALS__?: unknown }).__TAURI__ ||
-        (window as unknown as { __TAURI__?: unknown; __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__));
+      Boolean(
+        (window as unknown as { __TAURI__?: unknown; __TAURI_INTERNALS__?: unknown }).__TAURI__ ||
+          (window as unknown as { __TAURI__?: unknown; __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__,
+      ));
 
   onMount(() => {
     // Arranque lineal (B-030, B-031):
@@ -151,42 +161,15 @@ function AppWithSession(props: AppProps) {
         when={hasActiveSession()}
         fallback={<EntryScreen isDesk={isDesk()} onAddSession={handleAddSession} />}
       >
-        <div
-          style={{
-            display: "flex",
-            height: "100vh",
-            width: "100vw",
-            overflow: "hidden",
-            background: "#0e0f12",
-            color: "#ffffff",
-          }}
-        >
-          {/* Layout con riel + área principal */}
-          <aside
-            id="danil-shell-rail"
-            style={{
-              width: "64px",
-              height: "100%",
-              "border-right": "1px solid #1f2128",
-              background: "#12141a",
-              display: "flex",
-              "flex-direction": "column",
-            }}
+        <RouterProvider initialPath={props.initialPath}>
+          <Layout
+            organizations={props.organizations}
+            activeWorkspaceId={props.activeWorkspaceId}
+            onAddWorkspace={props.onAddWorkspace}
           >
-            {/* Riel inicial */}
-          </aside>
-          <main
-            id="danil-shell-main"
-            style={{
-              flex: "1",
-              height: "100%",
-              overflow: "auto",
-              position: "relative",
-            }}
-          >
-            {/* Área principal */}
-          </main>
-        </div>
+            {props.children}
+          </Layout>
+        </RouterProvider>
       </Show>
     </Show>
   );
