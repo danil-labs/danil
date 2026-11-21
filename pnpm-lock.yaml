@@ -614,10 +614,26 @@ importers:
   packages/tasks: {}
 
   packages/ui:
-    devDependencies:
+    dependencies:
+      '@kobalte/core':
+        specifier: ^0.13.13
+        version: 0.13.13(solid-js@1.9.17)
+      class-variance-authority:
+        specifier: ^0.7.1
+        version: 0.7.1
+      clsx:
+        specifier: ^2.1.1
+        version: 2.1.1
+      lucide-solid:
+        specifier: ^1.31.0
+        version: 1.31.0(solid-js@1.9.17)
       solid-js:
         specifier: ^1.9.17
         version: 1.9.17
+      tailwind-merge:
+        specifier: ^3.6.0
+        version: 3.6.0
+    devDependencies:
       typescript:
         specifier: ^5.7.2
         version: 5.9.3

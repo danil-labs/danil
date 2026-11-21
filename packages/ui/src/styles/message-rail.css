@@ -1,0 +1,11 @@
+/* El riel es un carrusel de marcas: unas pocas a la vez, y la que está bajo el
+   puntero crece con sus vecinas. */
+
+@media (prefers-reduced-motion: no-preference) {
+  .riel-marca {
+    transition:
+      width 120ms ease-out,
+      background-color 120ms ease-out,
+      top 120ms ease-out;
+  }
+}
