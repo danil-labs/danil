@@ -90,6 +90,8 @@ G2 = re.compile(
 )
 # G4: rutas que cambian la organización activa de la sesión (marca del modelo viejo, decisión § 5).
 G4 = re.compile(r'/organizations/select\b')
+# Un contexto vencido o perdido a mitad de la prueba no se esconde como una fila sin tareas.
+REAUTH = re.compile(r'Vuelve a entrar a esta organizaci[oó]n', re.I)
 CHALLENGE = re.compile(r'asegurarnos de que eres humano|verify (that )?you are (a )?human|Verifique que es un ser humano', re.I)
 TASKS = re.compile(r'Todavía no hay tareas|Sin tareas todavía|No hay tareas con estos filtros|No tasks yet|^Tareas$|^Tasks$')
 
@@ -191,6 +193,11 @@ def guards(page, run: Run, mark: int, label: str, rail_check: bool = True):
     bad = [e for e in run.edge[max(mark, run.guard_from):] if e['status'] in (401, 403) or e['status'] >= 500]
     if bad:
         raise StepFailed(f'G1 en {label}: ' + ', '.join(f"{e['status']} {e['method']} {e['path']}" for e in bad[:5]))
+    reauth = page.locator('[data-web-reauth-sign-in]').or_(page.get_by_text(REAUTH)).first
+    if reauth.count() and reauth.is_visible():
+        org = reauth.evaluate("(el) => { const g = el.closest('[role=group]'); "
+                              "return (g && g.getAttribute('aria-label')) || ''; }") or '¿org?'
+        raise StepFailed(f'apareció volver a iniciar sesión en {org} ({label})')
     text = page.locator('body').inner_text(timeout=5000)
     m = G2.search(text)
     if m:
