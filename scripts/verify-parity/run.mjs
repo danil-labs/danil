@@ -54,6 +54,9 @@ async function shoot(base, step, file) {
   const ctx = await browser.newContext({ viewport: VIEWPORT, locale: "es-MX", colorScheme: "dark", timezoneId: "America/Mexico_City" });
   const page = await ctx.newPage();
   await attachFixtures(page);
+  // Determinista: mismo saludo aleatorio y misma hora en las dos apps.
+  await page.addInitScript(() => { let i = 0; Math.random = () => ((i++ * 0.6180339887) % 1); });
+  await page.clock.setFixedTime(new Date("2026-11-21T10:00:00-06:00"));
   await page.goto(base + "/");
   await page.waitForLoadState("networkidle").catch(() => {});
   await step(page, base);
