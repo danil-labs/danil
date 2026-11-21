@@ -1,6 +1,6 @@
 import { createSignal, createEffect, onCleanup, type Accessor } from "solid-js";
 import type { MachineConnection, EngineClient } from "@danil/engine-client";
-import type { ShellStatus } from "./model.ts";
+import { parseShellEvent, type ShellStatus } from "./model.ts";
 
 export type ShellConnection =
   | MachineConnection
@@ -104,34 +104,21 @@ export function useShell(
     }
 
     unsubscribe = client.subscribe("chat", (payload: unknown) => {
-      if (!payload || typeof payload !== "object") return;
-      const event = payload as Record<string, unknown>;
-      const eventSession = event.session ?? event.sessionId ?? event.session_id;
-      if (eventSession && eventSession !== sessionId) {
-        return;
-      }
-      const kind = event.type ?? event.subtype ?? event.event ?? event.kind;
+      const event = parseShellEvent(payload);
+      if (!event || event.session !== sessionId) return;
 
-      if (kind === "shell_started") {
+      if (event.kind === "shell_started") {
         setIsPtyReady(true);
         setStatus("running");
-        const foundPid = event.pid ?? event.process_id;
-        if (typeof foundPid === "number") {
-          setPid(foundPid);
+        if (typeof event.pid === "number") {
+          setPid(event.pid);
         }
         void flushStdinBuffer(client);
-      } else if (kind === "shell_output") {
-        const raw = event.chunk ?? event.output ?? event.text ?? event.data ?? event.bytes ?? "";
-        const text =
-          typeof raw === "string"
-            ? raw
-            : raw instanceof Uint8Array
-            ? new TextDecoder().decode(raw)
-            : String(raw);
-        if (text) {
-          setOutput((prev) => appendBoundedOutput(prev, text));
+      } else if (event.kind === "shell_output") {
+        if (event.text) {
+          setOutput((prev) => appendBoundedOutput(prev, event.text!));
         }
-      } else if (kind === "shell_done") {
+      } else if (event.kind === "shell_done") {
         setStatus("done");
         setIsPtyReady(false);
       }
