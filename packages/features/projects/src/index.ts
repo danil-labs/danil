@@ -28,6 +28,8 @@ export type { TaskLifecycleErrorDetails } from "./lifecycle/index.ts";
 export {
   useProjects,
   getProjectsStore,
+  getOrCreateProjectsStore,
+  getStoreKey,
   removeTasksFromStore,
   fetchProjectsAndTasks,
   inspectTaskDeletion,
@@ -36,7 +38,16 @@ export {
 } from "./queries.ts";
 export type { ProjectsState, UseProjectsResult } from "./queries.ts";
 
-// Tipos del modelo de vista
+// Tipos del modelo de vista y parseos puros (R2, R12)
+export {
+  parseProjectItem,
+  parseProjects,
+  parseTaskRecord,
+  parseTasks,
+  parseDeleteTaskMemberItem,
+  parseDeleteTaskPreview,
+  parseDeleteTaskResult,
+} from "./model.ts";
 export type {
   ProjectItem,
   TaskRecord,

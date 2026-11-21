@@ -14,7 +14,7 @@ export interface ProjectsScreenProps {
 }
 
 export function ProjectsScreen(props: ProjectsScreenProps) {
-  const { projects, tasksByProject, loading, error, refetch } = useProjects(
+  const { projects, tasksByProject, projectErrors, loading, error, refetch, refetchProject } = useProjects(
     () => props.conn,
     () => props.workspaceId
   );
@@ -119,9 +119,11 @@ export function ProjectsScreen(props: ProjectsScreenProps) {
                     <ProjectItemView
                       project={project}
                       tasks={tasksByProject()[project.id] ?? []}
+                      error={projectErrors()[project.id]}
                       selectedTaskId={props.selectedTaskId}
                       onSelectTask={props.onSelectTask}
                       onDeleteTask={handleDeleteTask}
+                      onRetry={(p) => void refetchProject(p)}
                     />
                   )}
                 </For>
