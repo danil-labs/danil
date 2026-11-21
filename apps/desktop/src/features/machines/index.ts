@@ -1,3 +1,4 @@
 export { contextAttentionStale } from "./context-attention.ts";
 export { createContextRelayPool } from "./context-relay-pool.ts";
 export { danilAvailable, danilAvailableContext, danilMachines, isDanilWorkspace, machinesListed, readDanil, readDanilContext } from "./danil-source.ts";
+export { type MachineOrganization, type MergedMachineRow, type SessionMachineRow, mergeByMachineId } from "./merge-by-machine.ts";

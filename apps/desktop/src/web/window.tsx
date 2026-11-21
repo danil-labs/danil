@@ -1,7 +1,7 @@
 import { type Machine, type machinesClient, machineToComputer, RelaySession } from "@terminus/computers";
 import { Fleet, memberKey, relayLink, unwrap } from "@terminus/fleet";
 import { createSignal, lazy, Suspense } from "solid-js";
-import { createContextRelayPool, machinesListed } from "../features/machines";
+import { createContextRelayPool, machinesListed, mergeByMachineId } from "../features/machines";
 import { sessionRailState } from "../features/shell";
 import { createRouter, type SliceChange } from "../features/machines/router";
 import type { AccountProfileSource } from "../features/settings/account-profile";
@@ -11,7 +11,6 @@ import { leerPref } from "../lib/prefs";
 import { deliver } from "../lib/serviceEvents";
 import { installIpc } from "./ipc";
 import type { MachineStatus } from "./SyncNote";
-import { mergeByMachineId } from "../features/machines/merge-by-machine";
 import { createWebTransport } from "./transport";
 import { browser, takeSettingsParam } from "./window-browser";
 import { webMachineCall } from "./workspace-runtime";

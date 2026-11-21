@@ -13,7 +13,7 @@ export type SessionMachineRow = {
 };
 
 /** Una máquina una sola vez en la lista, con todas sus organizaciones. */
-export type MergedMachineRow = { id: string; name: string; status: MachineStatus; at: number | null; organizations: MachineOrganization[] };
+export type MergedMachineRow = { id: string; name: string; status: MachineStatus; at: number | null; organizations?: MachineOrganization[] };
 
 // La que más dice gana: encendida en un contexto es encendida.
 const RANK: Record<MachineStatus, number> = { online: 3, starting: 2, offline: 1, outdated: 0 };
@@ -24,8 +24,8 @@ const RANK: Record<MachineStatus, number> = { online: 3, starting: 2, offline: 1
  * si se llaman igual, se distinguen por su organización como antes. La flota, el router y la
  * colocación de workspaces no pasan por aquí.
  */
-export function mergeByMachineId(rows: readonly SessionMachineRow[]): MergedMachineRow[] {
-  const byId = new Map<string, MergedMachineRow>();
+export function mergeByMachineId(rows: readonly SessionMachineRow[]): (MergedMachineRow & { organizations: MachineOrganization[] })[] {
+  const byId = new Map<string, MergedMachineRow & { organizations: MachineOrganization[] }>();
   for (const { machine, organization, status, at } of rows) {
     const found = byId.get(machine.machine_id);
     if (!found) {
