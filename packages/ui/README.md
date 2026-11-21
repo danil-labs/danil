@@ -1,10 +1,10 @@
 # @danil/ui
 
-Biblioteca de componentes de interfaz de usuario de Danil (SolidJS + Tailwind CSS + Kobalte).
+Biblioteca de componentes visuales puros y sistema de internacionalización para las aplicaciones de Danil (SolidJS + Tailwind CSS + Kobalte).
 
 ## Qué hace
 
-Provee los componentes visuales puros, primitivas y controles reutilizables para las aplicaciones de Danil:
+Provee los componentes visuales puros, primitivas, controles reutilizables y catálogos de traducción para Danil:
 - Botones, inputs, selects, toggles, textareas.
 - Diálogos, popovers, menús contextuales, dropdowns y tooltips.
 - Paneles, tabs, tablas, barras de progreso y terminal.
@@ -12,16 +12,64 @@ Provee los componentes visuales puros, primitivas y controles reutilizables para
 - Atajos de teclado (`Shortcut`), marcas (`MarcaServicio`), marcas de agentes/proveedores e íconos.
 - Renderizado de texto ANSI (`AnsiText`).
 - Riel de navegación lateral (`Sidebar`).
+- Internacionalización y catálogo único de textos a través del submódulo `@danil/ui/i18n`.
 
-## Qué no consume
+## Qué consume
 
-- **Nada de dominio**: no tiene conocimiento del motor (`danil-engine`), tareas, agentes, workspaces ni modelos.
-- **Nada de red**: no realiza llamadas HTTP, WebSocket, IPC de Tauri ni invoca endpoints remotos.
-- **Sin dependencias circulares**: no importa `@terminus/*` ni `@danil/*`.
+- **Nada de dominio**: no tiene conocimiento del motor (`danil-engine`), tareas, agentes, workspaces ni modelos de datos.
+- **Nada de red**: no realiza llamadas HTTP, WebSocket, IPC de Tauri ni invoca endpoints remotos (R1).
+- **Aislamiento absoluto**: no importa ningún paquete `@danil/*` (cumple estrictamente con la regla R4).
+
+## Internacionalización (`@danil/ui/i18n`)
+
+Submódulo de textos e internacionalización unificado para todo el front nuevo:
+- **Origen:** Port directo de `apps/desktop/src/lib/i18n.ts`.
+- **Catálogos:** Los archivos JSON ubicados en `packages/ui/src/i18n/locales/` son copia idéntica de `apps/desktop/src/locales/`. La regla R13 (`scripts/verify-front.mjs`) rechaza cualquier texto inventado o frase que no coincida con el catálogo de `apps/desktop`.
+- **Carga de idiomas:**
+  - `es` (español) es la lengua base y está empotrada de forma síncrona en `catalogs.ts`. Sin ella, `t()` devuelve la clave tal cual.
+  - `en` (inglés) se carga de forma diferida en segundo plano al arrancar la aplicación mediante `cargarLenguas()`.
+
+### Inicialización en la aplicación
+
+Al inicializar la app (`apps/workspace`, `apps/desk`), se importan los catálogos y se arrancan las lenguas secundarias:
+
+```ts
+import { cargarLenguas } from "@danil/ui/i18n";
+
+// Carga las lenguas diferidas sin bloquear el arranque inicial
+void cargarLenguas();
+```
+
+### Cómo se usa `t()`
+
+Todo texto visible en JSX, atributos accesibles (`aria-label`, `title`, `placeholder`, `alt`) o cadenas de mensaje debe provenir del catálogo mediante `t()`:
+
+```tsx
+import { t } from "@danil/ui/i18n";
+
+export function MiComponente() {
+  return (
+    <div>
+      {/* Clave directa del catálogo */}
+      <h1>{t("inicio.bienvenida")}</h1>
+
+      {/* Con interpolación de variables */}
+      <p>{t("archivos.progreso", { actual: 1, total: 5 })}</p>
+
+      {/* En atributos accesibles */}
+      <input
+        type="search"
+        placeholder={t("comun.buscar")}
+        aria-label={t("comun.buscar")}
+      />
+    </div>
+  );
+}
+```
 
 ## Componentes y utilidades exportadas
 
-Todos los componentes se exportan a través del punto de entrada `src/index.ts`:
+Todos los componentes de interfaz se exportan a través del punto de entrada `src/index.ts`:
 
 - **AnsiText**: `AnsiText`
 - **Badge**: `Badge`, `badgeVariants`
