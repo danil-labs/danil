@@ -7,6 +7,7 @@ import "./app.css";
 // Desk: varias sesiones guardadas en el motor (P1); el login lo hace el navegador.
 const host = createTauriHost();
 setHost(host);
+await host.ready;
 const session = createDeskSession(host);
 const App = createShell({ session, host });
 

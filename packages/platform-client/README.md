@@ -22,3 +22,5 @@ Cliente del borde /v1 con reintento ante 404/501/503 (R10) y la URL base única.
   - `createEngineTransport` (Desk): `person_session_fetch` del motor con el contexto de la sesión activa; sin tokens en la ventana.
 - R10: 404/501/503 y fallos de red se reintentan con backoff (`backoffDelay`, 1 s → 30 s con jitter) **solo** en lecturas y en mutaciones con `Idempotency-Key` (`idempotencyKey()`), hasta 10 intentos; después `{kind:"unavailable", retrying:false}` y la vista ofrece reintentar. Cada operación acepta `opts.signal` para cancelar al desmontar.
 - `API_BASE`, `BILLING_URL` y `HARNESS_URL` (`src/config.ts`) son las únicas URLs del front.
+- `planLabel(org)` (`src/plan.ts`): la única regla del nombre de plan (Personal, Team, Enterprise); nunca cae al nombre de la organización.
+- `createQuery(key, fetcher)` e `invalidate(prefix)` (`src/query.ts`): lecturas con clave compartidas entre vistas (una petición, un valor; `invalidate` tras una mutación). Las features las usan en su `queries.ts` (RV1 #17, B-023).

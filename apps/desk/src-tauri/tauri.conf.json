@@ -1,8 +1,8 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "Danil",
+  "productName": "Danil Desk (nuevo, dev)",
   "version": "0.3.3",
-  "identifier": "ai.danil.terminus",
+  "identifier": "ai.danil.desk.dev",
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:5175",
@@ -50,15 +50,24 @@
       "signingIdentity": "-",
       "dmg": {
         "background": "macos/dmg-background.png",
-        "windowSize": { "width": 660, "height": 400 },
-        "appPosition": { "x": 180, "y": 190 },
-        "applicationFolderPosition": { "x": 480, "y": 190 }
+        "windowSize": {
+          "width": 660,
+          "height": 400
+        },
+        "appPosition": {
+          "x": 180,
+          "y": 190
+        },
+        "applicationFolderPosition": {
+          "x": 480,
+          "y": 190
+        }
       }
     },
     "android": {
       "debugApplicationIdSuffix": ".debug"
     },
-    "createUpdaterArtifacts": true
+    "createUpdaterArtifacts": false
   },
   "plugins": {
     "updater": {
@@ -68,7 +77,8 @@
       ],
       "windows": {
         "installMode": "passive"
-      }
+      },
+      "active": false
     }
   }
 }

@@ -97,9 +97,10 @@ export function createDeskSession(host: DeskAuthHost): SessionSource {
     transport: (o: RetryOptions = {}) =>
       createEngineTransport(fetchVia, () => activeKey, {
         ...o,
-        onUnauthorized: () => {
-          o.onUnauthorized?.();
-          source.onUnauthorized(activeKey ?? undefined);
+        // Se vence la sesión que hizo la petición, no la activa en este momento (RV1 #21).
+        onUnauthorized: (key) => {
+          o.onUnauthorized?.(key);
+          source.onUnauthorized(key);
         },
       }),
     onUnauthorized(sessionKey) {

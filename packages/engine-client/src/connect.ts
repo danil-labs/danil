@@ -1,4 +1,4 @@
-import { createSignal, type Accessor } from "solid-js";
+import { createSignal, untrack, type Accessor } from "solid-js";
 import { createEngineClient, type EngineClient } from "./generated/client.ts";
 import { createLocalTransport, type LocalHost } from "./transports/local.ts";
 import { createRelayTransport, type RelayOptions } from "./transports/relay.ts";
@@ -32,7 +32,9 @@ export function connectMachine(opts: ConnectOptions): MachineConnection {
   const hit = cache.get(key);
   // Una conexión en error (ticket 401/403, VM que no despertó) no se reusa: tras volver a
   // iniciar sesión o reintentar, se abre otra.
-  if (hit && hit.status() !== "error") return hit;
+  // `untrack`: quien llama desde un memo no queda suscrito al estado (si no, cada cambio de
+  // estado reabriría la conexión: RV1b N1).
+  if (hit && untrack(hit.status) !== "error") return hit;
   if (hit) hit.close();
 
   // Lo local lo declara el host (Desk sabe qué máquina es esta computadora); la UI no (R5).

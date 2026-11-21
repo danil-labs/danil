@@ -3,13 +3,13 @@ import type { ClientError } from "./errors.ts";
 import type { Transport, TransportRequest } from "./generated/operations.ts";
 
 /** Lo que devuelve un envío: estado HTTP y cuerpo ya leído. */
-export type Reply = { status: number; body: unknown };
+export type Reply = { status: number; body: unknown; /** Con qué sesión se hizo (Desk): a quién vence un 401. */ sessionKey?: string };
 
 /** Cómo se reintenta (R10). Compartido por el transporte HTTP y el del motor. */
 export type RetryOptions = {
   /** Aviso a la UI en cada reintento: {kind:"unavailable", retrying:true}. */
   onUnavailable?: (e: Extract<ClientError, { kind: "unavailable" }>) => void;
-  onUnauthorized?: () => void;
+  onUnauthorized?: (sessionKey?: string) => void;
   /** Intentos ante 404/501/503 o fallo de red antes de rendirse con retrying:false. */
   maxAttempts?: number;
   /** Ajustables solo para pruebas. */
@@ -85,7 +85,7 @@ export function withRetry(send: (req: TransportRequest, attempt: number) => Prom
       }
       if (reply && reply.status >= 200 && reply.status < 300) return reply.body as T;
       if (reply?.status === 401) {
-        o.onUnauthorized?.();
+        o.onUnauthorized?.(reply.sessionKey);
         throw { kind: "unauthorized" } satisfies ClientError;
       }
       if (reply?.status === 403) {
@@ -169,15 +169,17 @@ export function createEngineTransport(fetchVia: EngineFetch, context: () => stri
     const qs = new URLSearchParams();
     for (const [k, v] of Object.entries(req.query ?? {})) if (v !== undefined) qs.set(k, String(v));
     const path = `/v1${req.path}${qs.size ? `?${qs}` : ""}`;
+    const ctx = context() ?? null;
     const r = await fetchVia({
       method: req.method,
       path,
       body: req.body,
       idempotencyKey: req.headers?.["Idempotency-Key"] ?? null,
-      context: context() ?? null,
+      context: ctx,
     });
+    const sessionKey = ctx ?? undefined;
     // Sin sesión en esa organización el motor responde vacío con su motivo: es un 401.
-    if (r.empty_reason === "no_session") return { status: 401, body: { code: "no_session" } };
-    return { status: r.status, body: r.body };
+    if (r.empty_reason === "no_session") return { status: 401, body: { code: "no_session" }, sessionKey };
+    return { status: r.status, body: r.body, sessionKey };
   }, o);
 }

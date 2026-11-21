@@ -8,6 +8,8 @@ import type { DeskAuthHost } from "@danil/session";
  */
 export interface Host extends LocalHost, DeskAuthHost {
   kind: "desk" | "web";
+  /** Resuelve cuando el host sabe qué máquinas son esta computadora. */
+  ready: Promise<void>;
   /** Siempre presente en un host: esta computadora (Desk) o ninguna (web). */
   isLocal(machineId: string): boolean;
   openExternal(url: string): Promise<void>;
@@ -33,6 +35,9 @@ export const host: Host = {
   invoke: (command, args) => current.invoke(command, args),
   call: (method, params) => current.call(method, params),
   listen: (event, cb) => current.listen(event, cb),
+  get ready() {
+    return current.ready;
+  },
   isLocal: (machineId) => current.isLocal(machineId),
   openExternal: (url) => current.openExternal(url),
 };

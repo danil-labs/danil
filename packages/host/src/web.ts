@@ -11,6 +11,7 @@ export function createWebHost(): Host {
     listen: () => () => {},
     // En la web no hay máquina local: todas van por relay.
     isLocal: () => false,
+    ready: Promise.resolve(),
     openExternal: async (url) => {
       // Solo https: una URL `javascript:` o `data:` que venga del servidor no se abre (SR1, 12).
       if (!/^https:\/\//i.test(url)) throw new Error("unsupported_url");

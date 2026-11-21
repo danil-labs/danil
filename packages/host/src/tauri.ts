@@ -37,11 +37,14 @@ async function selfMachines(): Promise<Set<string>> {
 export function createTauriHost(): Host {
   let self = new Set<string>();
   const load = () => selfMachines().then((ids) => (self = ids));
-  void load();
+  // La app espera `ready` antes de montar: así ninguna conexión a esta computadora
+  // se abre por relay antes de saber que es local (RV1b N11).
+  const ready = load().then(() => undefined);
   // La inscripción cambia al iniciar o cerrar sesión: se vuelve a leer cuando el motor avisa.
   void tauriListen("person-session", () => void load());
   return {
     kind: "desk",
+    ready,
     isLocal: (machineId) => self.has(machineId),
     invoke,
     call: (method, params) => invoke(method, params),

@@ -8,11 +8,20 @@ export function r11(files) {
     "R11: opción client?/session? en una feature; el cliente sale de usePlatform() y la sesión de useSession()");
 }
 
-/** R12: components/ solo pinta: no llama a queries, a la red ni al host. */
+/** R12: components/ solo pinta: no llama a queries, a la red ni al host (imports multilínea incluidos). */
 export function r12(files) {
-  return scan(files, (f) => inFeature(f) && /\/components\//.test(f.path),
-    /^\s*import\s+(?!type\b)[^;]*from\s*["'](\.\.?\/(\.\.\/)*queries(\.ts)?|@danil\/(platform-client|engine-client|host|session)(\/solid)?)["']/,
-    "R12: components/ importa queries o un cliente/host; pasa datos y callbacks por props desde screens/");
+  const BAD = /from\s*["'](\.\.?\/(\.\.\/)*queries(\.ts)?|@danil\/(platform-client|engine-client|host|session)(\/solid)?)["']/;
+  const out = [];
+  for (const f of files) {
+    if (!(inFeature(f) && /\/components\//.test(f.path))) continue;
+    const text = f.codeLines.join("\n");
+    for (const m of text.matchAll(/^\s*import\s+(?!type\b)[\s\S]*?from\s*["'][^"']+["'];?/gm)) {
+      if (!BAD.test(m[0])) continue;
+      const line = text.slice(0, m.index).split("\n").length;
+      out.push({ path: f.path, line, reason: "R12: components/ importa queries o un cliente/host; pasa datos y callbacks por props desde screens/" });
+    }
+  }
+  return out;
 }
 
 /** R14: nada de detectar la plataforma por globales fuera de host (R15 de 03-structure). */

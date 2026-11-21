@@ -13,3 +13,4 @@ Danil Desk con el front nuevo: monta el shell común con `createDeskSession(crea
 ## Configuración de Tauri (SR2, N1)
 
 `app_lib` (el crate de `apps/desktop/src-tauri`) expande `generate_context!()` con su propio `tauri.conf.json`. Por eso `tauri:dev` y `tauri:build` pasan `--config src-tauri/tauri.conf.json`: la CLI lo pone en `TAURI_CONFIG` y se mezcla encima del de desktop, así que manda la CSP de Desk (`connect-src` solo `ipc:` y `wss://connect.danil.ai`, sin hosts retirados), su `frontendDist` y su `devUrl`. Al compilar en la Mac, comprueba la CSP efectiva en el inspector (cabeceras del protocolo `tauri://`).
+- Identidad de desarrollo propia (`ai.danil.desk.dev`) y sin updater: no comparte datos ni actualizaciones con el Danil instalado (`ai.danil.terminus`) hasta que `architect` decida la identidad final (RV2b).

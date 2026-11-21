@@ -120,7 +120,7 @@ export interface UseMachinesReturn {
 export function useMachines(): UseMachinesReturn {
   const client = usePlatform();
   const session = useSession();
-  const sessionKey = () => session.active() ?? session.list()[0]?.key ?? "";
+  const sessionKey = () => session.active() ?? session.sessions()[0]?.key ?? "";
 
   const abortController = new AbortController();
   onCleanup(() => {
