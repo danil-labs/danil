@@ -13,6 +13,7 @@ import type { ContextGroup, ContextInvoke } from "./session-context-types.ts";
 import { createSessionContexts } from "./session-contexts.ts";
 import { createAddedSync } from "./workspace-added-sync.ts";
 import { ADDED_KEY, edgeAddedTransport, prefsAddedStore } from "./workspace-added-transport.ts";
+import { sendIdentityMe } from "../../platform/identity.ts";
 
 export type FirstFreeOptions = { delays?: readonly number[]; wait?: (ms: number) => Promise<void> };
 export type FirstFreeRefusal = "no_session" | "engine_unsupported" | "no_free_org" | "several_free_orgs" | "refresh_failed" | "not_available_yet";
@@ -77,7 +78,7 @@ type Send = ReturnType<typeof createSessionContexts>["send"];
  */
 async function markAdded(group: ContextGroup, id: string, send: Send, available: (org: string) => readonly { id: string }[]) {
   try {
-    const me = await send(group.context_id, "GET", "/v1/identity/me");
+    const me = await sendIdentityMe(send, group.context_id);
     const person = (me.body as { id?: unknown } | null)?.id;
     if (me.status !== 200 || typeof person !== "string") return;
     const sync = createAddedSync({

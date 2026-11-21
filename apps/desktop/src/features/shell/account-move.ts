@@ -6,6 +6,7 @@
  * apruebe en Harness.
  */
 import { workspacesPagePath, workspaceTransferAcceptPath, workspaceTransfersPath } from "../../platform/workspaces.ts";
+import { sendIdentityMe } from "../../platform/identity.ts";
 export type MoveGroup = { context_id: string; org: string; org_name?: string | null; role?: string | null };
 export type MoveDestination = { org: string; name: string; context: string | null; immediate: boolean };
 export type MoveAccount = { id: string; version: number };
@@ -59,7 +60,7 @@ export async function accountOfEngine(send: Send, context: string, engine: strin
  * ventana para aceptar en el mismo gesto.
  */
 export async function moveDestinations(send: Send, source: { context_id: string; org: string }, groups: readonly MoveGroup[]): Promise<MoveDestination[]> {
-  const me = await send(source.context_id, "GET", "/v1/identity/me");
+  const me = await sendIdentityMe(send, source.context_id);
   if (me.status !== 200 || me.empty_reason) throw { detail: moveCause(me) };
   const organizations = (me.body as { organizations?: unknown } | null)?.organizations;
   if (!Array.isArray(organizations)) return [];

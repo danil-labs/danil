@@ -18,6 +18,7 @@ import { sessionSeedInputs, sessionSyncKey } from "./session-seeding.ts";
 import { sessionWorkspaceSource } from "./session-workspace-source.ts";
 import { createAddedSync } from "./workspace-added-sync.ts";
 import { ADDED_KEY, edgeAddedTransport, prefsAddedStore } from "./workspace-added-transport.ts";
+import { sendIdentityMe } from "../../platform/identity.ts";
 
 export type SessionRailGroup = ContextGroup & { available: readonly { id: string; name: string; logo?: string | null }[] | null; added: ReadonlySet<string> | null; person: string | null; free?: { id: string; name: string }; empty_reason?: EmptyReason | null };
 let instance: ReturnType<typeof wire> | undefined;
@@ -104,7 +105,7 @@ function wire(hidden: () => ReadonlySet<string>, onSeeded: (ids: readonly string
     });
     records.set(g.context_id, record);
     record.asking = true;
-    void sessions.send(g.context_id, "GET", "/v1/identity/me").then((r) => {
+    void sendIdentityMe(sessions.send, g.context_id).then((r) => {
       const id = (r.body as { id?: unknown } | null)?.id;
       if (r.status === 200 && typeof id === "string" && active(g.context_id)) {
         record.person = id;
