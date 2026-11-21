@@ -700,6 +700,17 @@ test("AI credentials keep their machine even when their email matches", () => {
   assert.deepEqual(merged.accounts[2].machines, [{ machine: "cmp_mac", id: "cmp_mac~b1", on: false }]);
 });
 
+test("the active account comes from the first machine that has one: a hosted machine without accounts, answering first, does not hide the Mac's", () => {
+  const { fleet } = setup({ cmp_vm: { state: "online" }, cmp_mac: { state: "online" } }, [VM, MAC], { self: null });
+  const slice = (machine: string, value: unknown): Slice => ({ machine, status: "ok", has: true, value, at: 0 });
+  const merged = fleet.merge("list_accounts", [
+    slice("cmp_vm", { provider: "codex", active: null, accounts: [] }),
+    slice("cmp_mac", { provider: "codex", active: "a1", accounts: [{ id: "a1", identity: "ana@example.com" }] }),
+  ]) as { active: string | null; accounts: { id: string }[] };
+  assert.equal(merged.active, "cmp_mac~a1");
+  assert.deepEqual(merged.accounts.map((a) => a.id), ["cmp_mac~a1"]);
+});
+
 test("Claude Team and Personal with the same email keep their ids and active selection", () => {
   const { fleet } = setup({ cmp_vm: { state: "online" }, cmp_mac: { state: "online" } }, [VM, MAC], { self: null });
   const slice = (machine: string, value: unknown): Slice => ({ machine, status: "ok", has: true, value, at: 0 });

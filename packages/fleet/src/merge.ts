@@ -307,8 +307,9 @@ function mergeAccounts(ctx: MergeContext, parts: Slice[]): unknown {
     id: panelId(g.usageFrom.machine, g.row.id),
     machines: g.members.map((m) => ({ ...m, id: panelId(m.machine, m.id) })),
   }));
-  const activeId = (lead.value as Row).active;
-  const active = typeof activeId === "string" ? accounts.find((a) => a.machines.some((m) => m.machine === lead.machine && m.id === panelId(lead.machine, activeId)))?.id ?? null : null;
+  // La activa es la de la primera que tenga una: la hospedada sin cuentas, primera, no borra la de la Mac.
+  const owner = lists.find((s) => typeof (s.value as Row).active === "string") ?? lead, activeId = (owner.value as Row).active;
+  const active = typeof activeId === "string" ? accounts.find((a) => a.machines.some((m) => m.machine === owner.machine && m.id === panelId(owner.machine, activeId)))?.id ?? null : null;
   return { ...(lead.value as Row), active, accounts };
 }
 
