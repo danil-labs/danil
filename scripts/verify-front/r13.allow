@@ -25,7 +25,6 @@ packages/features/projects/src/components/TaskErrorView.tsx 1
 packages/features/projects/src/components/TaskItemView.tsx 2
 packages/features/projects/src/lifecycle/task.ts 1
 packages/features/projects/src/screens/ProjectsScreen.tsx 3
-packages/features/settings/src/components/AccountSection.tsx 34
 packages/features/settings/src/components/AiAccountsSection.tsx 12
 packages/features/settings/src/components/SourceControlSection.tsx 15
 packages/features/settings/src/components/machines/ActivityTab.tsx 8
@@ -40,7 +39,6 @@ packages/features/settings/src/components/preferences/WorkspacesTab.tsx 14
 packages/features/settings/src/components/projects/ManageProjectsTab.tsx 10
 packages/features/settings/src/components/projects/SecretsTab.tsx 6
 packages/features/settings/src/entries.ts 11
-packages/features/settings/src/screens/SettingsModal.tsx 11
 packages/features/terminal/src/queries.ts 1
 packages/features/terminal/src/screens/TerminalScreen.tsx 6
 packages/features/workspaces/src/components/OrganizationAccountMenu.tsx 3
