@@ -18,7 +18,8 @@ export interface RelayOptions {
   sessionKey: string;
   machineId: string;
   /** Cableada por quien llama con platform-client. */
-  requestTicket(sessionKey: string, machineId: string): Promise<TicketResult>;
+  /** `wake` true solo con permiso de la persona: el borde enciende la VM solo con `{"wake": true}` (relay#18). */
+  requestTicket(sessionKey: string, machineId: string, wake: boolean): Promise<TicketResult>;
   /** Inyectable para pruebas; por defecto el WebSocket global. */
   webSocket?: (url: string, protocols: string[]) => WebSocket;
   random?: () => number;
@@ -163,7 +164,7 @@ export function createRelayTransport(opts: RelayOptions): StatefulTransport {
     if (closed) return;
     let res: TicketResult;
     try {
-      res = await opts.requestTicket(opts.sessionKey, opts.machineId);
+      res = await opts.requestTicket(opts.sessionKey, opts.machineId, mayWake);
     } catch {
       return reconnectLater();
     }
