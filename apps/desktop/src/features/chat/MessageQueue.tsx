@@ -56,6 +56,8 @@ export type Encolado = {
    * agente en ese turno cae ahí (`spaces::TurnDesk`).
    */
   space?: string | null;
+  /** El motor retiene su cola (`load_queue`, `chat_queue_v1`): no sale sola. Lo escrito aquí lo ignora. */
+  held?: boolean;
 };
 
 export type ColaDeMensajesProps = {
@@ -69,14 +71,14 @@ export type ColaDeMensajesProps = {
   actual: { agent: string; model: string };
   /**
    * Por qué la cola no avanza sola: falló el turno anterior, quedó de otra
-   * sesión, o el agente preguntó algo que nadie ha contestado.
+   * sesión, el agente preguntó algo que nadie ha contestado o el motor la retiene.
    *
    * Es la razón y no un `boolean` porque **una de las tres no se puede soltar a
    * mano**: dejar salir la cola con una pregunta abierta haría correr el turno
    * siguiente sin el dato que el agente pidió, que es la forma educada de
    * adivinar igual.
    */
-  retenida: null | "fallo" | "borrador" | "pregunta" | "session";
+  retenida: null | "fallo" | "borrador" | "pregunta" | "session" | "motor";
   /**
    * Con `session`: el título de la sesión ocupada a
    * la que se espera. La cola sale sola cuando esa tarea termina.

@@ -314,3 +314,5 @@ them answers that the command is unknown, and only that feature turns off.
   SHA-256 `ab06a5f1a733a8a1e9533151db8e44b3de35cbaec21119a122ed161e1ba1f976`.
 - `account_adoption_proof_v1.json`: `adoption_proof`, the possession proof for `POST /v1/workspaces/adopt` (A17), (danil-engine#481), copied from danil-engine dev `40f5bc9c`,
   SHA-256 `3c957da1463df967f551f8f82746e99158511bdf7ee2787f587fd9564f36d5d6`.
+- `chat_queue_v1.json`: `get_turn`, `stop_turn_if`, `queue_resume`, `clientMessageId` on `send_message` and `engineDispatch` on `save_queue`; the engine dispatches a task's queue only with `chat_queue_dispatch_v1` and when the window asks for it, and stops only the visible turn (terminus-workspace#357), copied from danil-engine `feat/cola-en-el-motor` `315e2266`,
+  SHA-256 `b1593d7d55434f07a0b4b7e306b1df9ce5486b171e4bd6fd66163364483606de`.

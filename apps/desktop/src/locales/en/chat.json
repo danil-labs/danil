@@ -337,6 +337,8 @@
   "chat.error.service_gap": "Part of the live output is unavailable. Reopen the task to read the saved conversation.",
   "chat.error.service_unavailable": "Danil stopped responding for a moment. The task has not been confirmed as finished.",
   "chat.error.service_restarted": "Danil restarted in the background. Review the task before continuing; its turn may have been interrupted.",
+  "chat.error.invalid_turn_id": "The turn to stop is not recognized.",
+  "chat.error.person_required": "Only the person can stop this turn.",
   "chat.mentions.handler": "Agent",
   "chat.mentions.group_repository": "From the {folder} repository",
   "chat.mentions.group_repository_unnamed": "From the repository",
