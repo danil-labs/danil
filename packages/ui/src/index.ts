@@ -6,3 +6,8 @@ export * from "./Textarea.tsx";
 export * from "./Select.tsx";
 export * from "./Toggle.tsx";
 export * from "./Tabs.tsx";
+export * from "./Dialog.tsx";
+export * from "./Popover.tsx";
+export * from "./Tooltip.tsx";
+export * from "./ContextMenu.tsx";
+export * from "./DropdownMenu.tsx";
