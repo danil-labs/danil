@@ -30,7 +30,7 @@ export function useTree(
     return {
       client: c.client,
       project: ctx.project ?? "",
-      session: ctx.session ?? "",
+      session: ctx.sessionId ?? "",
       tree: ctx.tree ?? "",
       path: p,
     };
@@ -137,7 +137,7 @@ export function useFileContent(
     return {
       client: c.client,
       project: ctx.project ?? "",
-      session: ctx.session ?? "",
+      session: ctx.sessionId ?? "",
       tree: ctx.tree ?? "",
       path: p,
       allowLargeFile: opts.allowLargeFile ?? false,
@@ -207,7 +207,7 @@ export function useFileDiff(
     return {
       client: c.client,
       project: ctx.project ?? "",
-      session: ctx.session ?? "",
+      session: ctx.sessionId ?? "",
       tree: ctx.tree ?? "",
       path: p,
     };
@@ -242,7 +242,7 @@ export function useWriteFile(
     path: string;
     text: string;
     project?: string;
-    session?: string;
+    sessionId?: string;
     tree?: string;
   }): Promise<boolean> => {
     const c = typeof conn === "function" ? conn() : conn;
@@ -252,7 +252,7 @@ export function useWriteFile(
     try {
       await c.client.tree_write({
         project: params.project ?? "",
-        session: params.session ?? "",
+        session: params.sessionId ?? "",
         tree: params.tree ?? "",
         path: params.path,
         text: params.text,

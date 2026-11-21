@@ -31,5 +31,6 @@ CodeMirror 6 no está presente en las dependencias actuales del workspace. Se pr
 
 ## Pendiente
 
+- Pendiente del motor: El tope de 5 MB (B-019) se aplica tras recibir la respuesta de `tree_show` porque el motor aún no dispone de un comando `tree_stat` previo ni de parámetro de límite/offset en `tree_show` (RV2 #31).
 - Pendiente: Integrar el editor interactivo CodeMirror 6 cuando se añada `@danil/ui/code-editor` o la dependencia directa al workspace.
 - Pendiente: Incorporar el comando RPC1 tipado `tree_read_part` con paginación binaria formal (`offset`, `length`, `total_size`, `encoding`) una vez disponible en el motor.
