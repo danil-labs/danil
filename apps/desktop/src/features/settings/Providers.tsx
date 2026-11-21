@@ -1,5 +1,6 @@
 import { For, Match, Show, Suspense, Switch, createEffect, createSignal, lazy, on, onCleanup, onMount } from "solid-js";
 import { invoke } from "../../lib/invoke.ts";
+import { capabilities } from "../../lib/platform.ts";
 import { FailureNote, asFailure, detalleDe, type Failure } from "../../ui/Failure";
 import { Skeleton } from "../../ui/Skeleton";
 import { MarcaGitHost } from "../../ui/icons";
@@ -143,7 +144,8 @@ export default function Providers(props: { solo?: string | string[] }) {
 
 function WorkspaceProviders(props: { solo?: string | string[] }) {
   const startup = invoke<Startup>("list_workspaces");
-  const scope = startup.then((s) => s.active ?? "pending");
+  // En la web sin workspace abierto, la cuenta se resuelve por el primero de la lista.
+  const scope = startup.then((s) => s.active ?? (capabilities().nativeWindow ? null : s.workspaces[0]?.id) ?? "pending");
   const [scopeId, setScopeId] = createSignal<string | null>(null);
   void scope.then((id) => setScopeId(id === "pending" ? null : id), () => {});
   const [githubAccount, setGithubAccount] = createSignal<GithubAccountState>({ mode: "unknown", connected: false, reauthorize: false, session: null });
@@ -622,7 +624,7 @@ function WorkspaceProviders(props: { solo?: string | string[] }) {
                     </Switch>
                   }
                 >
-                  <Show when={p.id === "github" && (hostUsable() || hostGithub())}>
+                  <Show when={p.id === "github" && capabilities().nativeWindow && (hostUsable() || hostGithub())}>
                     <SettingsRow
                       label={t("providers.github.host_mode.title")}
                       description={hostGithub() && !hostUsable() ? t("providers.github.host_mode.ignored") : undefined}
