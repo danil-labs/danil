@@ -39,3 +39,4 @@ export * from "./lib/format.ts";
 export * from "./lib/focus.ts";
 export * from "./lib/errorCode.ts";
 export * from "./IconButton.tsx";
+export * from "./Pressable.tsx";

@@ -10,6 +10,9 @@ export function r9(files) {
   const v = [];
   for (const f of files) {
     if (inGenerated(f.path)) continue;
+    // Un port mecánico (`// port: apps/desktop/…`) es copia fiel: su parecido con el original o con otra copia no es
+    // duplicación nueva, y contarlo empujaba a ofuscar líneas para esquivar el gate (2026-11-21).
+    if (/^\/\/\s*port:\s*apps\/desktop\//.test(f.text)) continue;
     const rows = [];
     f.lines.forEach((l, i) => { const n = norm(l); if (n) rows.push({ n, line: i + 1 }); });
     for (let i = 0; i + WINDOW <= rows.length; i++) {
