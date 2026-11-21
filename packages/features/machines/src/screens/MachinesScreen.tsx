@@ -1,9 +1,25 @@
-import { createSignal, For, Show } from "solid-js";
+import { createSignal, For, onCleanup, Show } from "solid-js";
+import { isClientError } from "@danil/platform-client";
 import { Close, SignalDot } from "@danil/ui";
+import type { Machine, MachineConnection } from "../model.ts";
 import { useMachines } from "../queries.ts";
 
 export interface MachinesScreenProps {
   class?: string;
+}
+
+function formatLoadError(err: unknown): string {
+  if (isClientError(err)) {
+    if (err.kind === "error") return err.message;
+    if (err.kind === "unavailable") return "Plataforma no disponible";
+    if (err.kind === "unauthorized") return "No autorizado";
+    if (err.kind === "forbidden") return "Acceso denegado";
+  }
+  if (err instanceof Error) return err.message;
+  if (typeof err === "object" && err !== null && "message" in err && typeof (err as { message: unknown }).message === "string") {
+    return (err as { message: string }).message;
+  }
+  return "No se pudo conectar con la plataforma";
 }
 
 /**
@@ -26,6 +42,21 @@ export function MachinesScreen(props: MachinesScreenProps) {
 
   const [asking, setAsking] = createSignal<string | null>(null);
   const [failed, setFailed] = createSignal(false);
+
+  const opened: MachineConnection[] = [];
+  onCleanup(() => {
+    for (const conn of opened) {
+      try {
+        conn.close();
+      } catch {}
+    }
+    opened.length = 0;
+  });
+
+  function handleConnect(m: Machine) {
+    const conn = connect(m);
+    opened.push(conn);
+  }
 
   async function handleTogglePower(id: string, isRunning: boolean) {
     setAsking(null);
@@ -70,7 +101,7 @@ export function MachinesScreen(props: MachinesScreenProps) {
           >
             <span>
               Error al cargar las máquinas:{" "}
-              {(err() as any)?.message ?? "No se pudo conectar con la plataforma"}
+              {formatLoadError(err())}
             </span>
             <button
               type="button"
@@ -133,7 +164,7 @@ export function MachinesScreen(props: MachinesScreenProps) {
                         <button
                           type="button"
                           class="rounded px-1 text-2xs text-neutral-500 hover:bg-surface-muted hover:text-neutral-950"
-                          onClick={() => connect(m)}
+                          onClick={() => handleConnect(m)}
                         >
                           Conectar
                         </button>

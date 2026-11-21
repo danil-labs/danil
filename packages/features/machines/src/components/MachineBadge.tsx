@@ -24,6 +24,7 @@ export function MachineBadge(props: MachineBadgeProps) {
     if (props.engineStatus === "reconnecting") return "reconectando…";
     if (props.isOperating === "starting" || props.state === "starting") return "iniciando…";
     if (props.isOperating === "stopping" || props.state === "stopping") return "deteniendo…";
+    if (props.engineStatus === "error") return "error de conexión";
     if (props.state === "running") {
       return props.connection === "connected" || props.engineStatus === "connected"
         ? "activa · conectada"
@@ -35,6 +36,7 @@ export function MachineBadge(props: MachineBadgeProps) {
 
   const dotColor = () => {
     if (isPending()) return "bg-amber-500 animate-pulse";
+    if (props.engineStatus === "error") return "bg-red-500";
     if (props.state === "running") return "bg-emerald-500";
     return "bg-neutral-400";
   };
