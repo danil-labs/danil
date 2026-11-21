@@ -752,7 +752,9 @@ export function createRouterCore(config: RouterConfig) {
   function machineList() {
     const workspace = active;
     const lead = defaultMachine(workspace);
-    const members = new Set(fleet.membersOf(workspace));
+    const members = new Set(local ? fleet.membersOf(workspace) : membersOf(workspace));
+    // En la web, un workspace de la máquina de su organización no se hace suyo en otra (una Mac conectada).
+    const owned = !local && !!workspace && !!config.organizationMachine?.(workspace);
     const home = config.home?.();
     const selfOs = systemOf(home?.os);
     return [
@@ -768,8 +770,8 @@ export function createRouterCore(config: RouterConfig) {
           connection: fleet.state(m.id),
           power: fleet.power(m.id),
           hosts: workspace ? members.has(m.id) : null,
-          materializes: adopts(m, workspace),
-          refuses: !permitted(m, workspace) && m.kind !== "organization",
+          materializes: owned ? members.has(m.id) : adopts(m, workspace),
+          refuses: owned ? !members.has(m.id) : !permitted(m, workspace) && m.kind !== "organization",
           wakes: m.wakes,
           ...(m.features?.length ? { features: [...m.features] } : {}),
           ...(m.version ? { version: m.version } : {}),
