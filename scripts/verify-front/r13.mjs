@@ -30,7 +30,7 @@ function load(dir, lang) {
 
 const SKIP = (p) => p.startsWith("packages/ui/src/i18n/") || p.startsWith("apps/desktop/") || p.includes("/generated/");
 const ATTR = /\b(title|aria-label|placeholder|label|etiqueta|alt|description|descripcion)\s*=\s*"([^"]*[A-Za-zÁÉÍÓÚáéíóúñÑ]{2}[^"]*)"/g;
-const JSX_TEXT = />\s*([¿¡A-Za-zÁÉÍÓÚÑáéíóúñ«][^<>{}\n]*[A-Za-záéíóúñ.…»?!])\s*</g;
+const JSX_TEXT = /(?<!=)>\s*([¿¡A-Za-zÁÉÍÓÚÑáéíóúñ«][^<>{}\n]*[A-Za-záéíóúñ.…»?!])\s*</g;
 const PHRASE = /(["'`])((?:¿|¡|[A-ZÁÉÍÓÚÑ])[a-záéíóúñü]+(?:[ ,.:;…«»¿?¡!-]+[A-Za-zÁÉÍÓÚÑáéíóúñü0-9{}]+)+[.…»?!]?)\1/g;
 
 /**
