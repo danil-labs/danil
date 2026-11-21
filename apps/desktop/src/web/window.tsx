@@ -1,4 +1,5 @@
-import { type Machine, type machinesClient, machineToComputer, RelaySession } from "@terminus/computers";
+import { RelaySession } from "@terminus/computers";
+import { type Machine, type machinesClient, machineToComputer } from "../../../../packages/platform-client/src/machines.ts";
 import { Fleet, memberKey, relayLink, unwrap } from "@terminus/fleet";
 import { createSignal, lazy, Suspense } from "solid-js";
 import { createContextRelayPool, machinesListed, mergeByMachineId } from "../../../../packages/features/machines/src";

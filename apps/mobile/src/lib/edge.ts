@@ -13,16 +13,18 @@ import {
   type Computer,
   type EdgeDeployment,
   type EdgeTransport,
-  type MachineAdmission,
   type OrganizationSource,
-  DEFAULT_RELAY_ORIGINS,
   EdgeError,
   edgeIdentity,
   edgeTransport,
+} from "@terminus/computers";
+import {
+  type Admission as MachineAdmission,
+  DEFAULT_RELAY_ORIGINS,
   machineToComputer,
   machinesClient,
   wokeOf,
-} from "@terminus/computers";
+} from "../../../../packages/platform-client/src/machines.ts";
 
 export type EdgeOptions = {
   fetch?: typeof fetch;

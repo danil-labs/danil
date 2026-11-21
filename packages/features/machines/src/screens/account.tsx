@@ -26,8 +26,10 @@ import {
   startedOf,
   systemOf,
   wakes,
-  wokeOf,
 } from "@terminus/computers";
+import {
+  wokeOf,
+} from "../../../../platform-client/src/machines.ts";
 import { Fleet, type MachineInfo, unwrap } from "@terminus/fleet";
 import { createRoot, createSignal } from "solid-js";
 import { listenDanilConnectionChange } from "../../../../../apps/desktop/src/lib/danilConnectionEvents";

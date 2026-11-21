@@ -13,7 +13,7 @@ import { webOrganizationSource } from '../../src/web/organizations.ts';
 import { edgeOrganizationSource } from '../../src/features/shell/organization-edge.ts';
 import { createOrganizationSelection } from "@terminus/computers";
 import { createCloudMachines } from '../../src/features/machines/cloud-machines.ts';
-import { machineToComputer, machinesClient } from '@terminus/computers';
+import { machineToComputer, machinesClient } from '../../../../packages/platform-client/src/machines.ts';
 
 const directory = process.env.DANIL_MVP_CONTRACTS ?? '/home/alejandro/danil/mvp/contracts/mvp-v1';
 const examples = `${directory}/examples/`;

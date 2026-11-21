@@ -1,4 +1,4 @@
-import type { Machine, machinesClient } from "@terminus/computers";
+import type { Machine, machinesClient } from "../../../../packages/platform-client/src/machines.ts";
 import type { Fleet } from "@terminus/fleet";
 import type { GroupAccount } from "../lib/group-account.ts";
 import type { WebSessionCommands, WebSessionStatus } from "./web-session-contexts.ts";
