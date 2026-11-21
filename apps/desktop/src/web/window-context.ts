@@ -31,6 +31,12 @@ export function windowContext(options: { factory: (context: string) => Client; s
      * Free la sirven sus máquinas conectadas, como cualquier otra (no `localOnly`).
      */
     routing: (context: string) => { const group = info(context); return group ? { ...group, plan: group.plan === "free" ? null : group.plan } : null; },
+    /**
+     * En la web, una máquina inscrita en la organización del contexto la sirve, aunque sea la Mac de la
+     * persona (`kind: personal`, conectada a esa organización): el router por contexto solo usa máquinas
+     * `organization` de su organización, y sin esto la personal Free se queda sin máquina («local»).
+     */
+    fleetKind: (machine: Machine, group: GroupAccount) => (machine.organization_id === group.org ? "organization" as const : "personal" as const),
     /** La misma computadora inscrita en dos organizaciones se distingue por su organización. */
     machineName: (machine: Machine, group: GroupAccount, rows: readonly ContextRow[]) => {
       const name = machine.name || machine.machine_id;
@@ -66,7 +72,7 @@ export function windowContext(options: { factory: (context: string) => Client; s
       for (const { group, answer } of answers) if (answer.kind === "ok" || answer.kind === "unauthorized") options.onContextState?.(group.context, answer.kind === "unauthorized");
       const ok = answers.filter((a) => a.answer.kind === "ok");
       if (!ok.length && answers.length) return { answer: answers[0].answer, rows: [] };
-      const rows = ok.flatMap(({ group, answer }) => (answer.kind === "ok" ? answer.value : []).filter((row) => row.kind === "personal" || row.organization_id === group.org).map((machine) => ({ machine, group })));
+      const rows = ok.flatMap(({ group, answer }) => (answer.kind === "ok" ? answer.value : []).filter((row) => row.organization_id === group.org).map((machine) => ({ machine, group })));
       return { answer: { kind: "ok", value: rows.map((r) => r.machine) } as Answer, rows };
     },
   };

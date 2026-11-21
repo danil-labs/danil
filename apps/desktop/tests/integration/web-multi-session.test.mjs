@@ -24,7 +24,7 @@ async function until(read, what = 'Window condition') {
   }
 }
 
-function edge({ expireX = () => false, lateX2 = () => true, personalPlan = 'pro', machineName = null } = {}) {
+function edge({ expireX = () => false, lateX2 = () => true, personalPlan = 'pro', machineName = null, machineKind = 'organization' } = {}) {
   const state = { calls: [], unscoped: [], selects: [], expired: 0, admitted: [] };
   const echo = (context, body, init = {}) => Response.json(body, { ...init, headers: { 'X-Danil-Session-Applied': context, 'X-Danil-Session-Applied-Org': ORGS[context] } });
   const fetcher = async (input, init = {}) => {
@@ -52,7 +52,7 @@ function edge({ expireX = () => false, lateX2 = () => true, personalPlan = 'pro'
       case '/v1/workspaces/preferences': return echo(context, { version: 1, added: context === 'ctx_p' ? ['wp'] : ['wx1', 'wx2'] });
       case '/v1/workspaces': return echo(context, { items: [], next_cursor: null });
       case '/v1/credits/balance': return echo(context, { items: [] });
-      case '/v1/machines': return echo(context, { items: [{ machine_id: context === 'ctx_p' ? 'mp' : 'mx', name: machineName ?? (context === 'ctx_p' ? 'Nube P' : 'Nube X'), kind: 'organization', organization_id: ORGS[context], state: 'running', connection: 'connected' }], next_cursor: null });
+      case '/v1/machines': return echo(context, { items: [{ machine_id: context === 'ctx_p' ? 'mp' : 'mx', name: machineName ?? (context === 'ctx_p' ? 'Nube P' : 'Nube X'), kind: machineKind, organization_id: ORGS[context], state: 'running', connection: 'connected' }], next_cursor: null });
     }
     if (/^\/v1\/machines\/m[px]\/tickets$/.test(url.pathname)) return echo(context, { ticket: 'one-use', url: `wss://connect.danil.ai${url.pathname.replace('/tickets', '/session')}`, expires_at: '2099-01-01T00:00:00Z' });
     return echo(context, {}, { status: 404 });
@@ -171,7 +171,8 @@ test('a reload opens the workspace of the URL with the session of its (email, or
 });
 
 test('a Free personal workspace is served by its own connected machine: tasks, accounts and models carry the workspace and go to that machine', async t => {
-  const state = edge({ personalPlan: 'free', machineName: 'Mac.domain.name' });
+  // El caso real de beta: la Mac de la persona, conectada a cada organización, llega como `kind: personal`.
+  const state = edge({ personalPlan: 'free', machineName: 'Mac.domain.name', machineKind: 'personal' });
   const fake = relay({ table: { ...table, list_accounts: [], account_status: { connected: false }, list_models: { provider: 'codex', models: [], fallback: false } } });
   const sent = [];
   const Socket = class extends fake.Socket { send(data) { const m = JSON.parse(data); if (m.type === 'call') sent.push({ machine: /machines\/(m[px])\//.exec(this.url)?.[1], command: m.command, workspace: m.workspace }); return super.send(data); } };
