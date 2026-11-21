@@ -11,8 +11,6 @@ export { RailGroups } from "./components/RailGroups.tsx";
 export type { RailGroupsProps } from "./components/RailGroups.tsx";
 export { WorkspaceItem } from "./components/WorkspaceItem.tsx";
 export type { WorkspaceItemProps } from "./components/WorkspaceItem.tsx";
-export { CreateWorkspaceDialog } from "./components/CreateWorkspaceDialog.tsx";
-export type { CreateWorkspaceDialogProps } from "./components/CreateWorkspaceDialog.tsx";
 export { WorkspaceErrorView } from "./components/WorkspaceErrorView.tsx";
 export type { WorkspaceErrorViewProps } from "./components/WorkspaceErrorView.tsx";
 export { WorkspaceEmptyView } from "./components/WorkspaceEmptyView.tsx";
@@ -23,32 +21,22 @@ export {
   useOrganizations,
   useWorkspaces,
   groupWorkspacesByOrg,
-  createWorkspace,
-  selectWorkspace,
   useSelectWorkspace,
   useSelectOrganization,
   useWorkspaceActions,
-  getActiveWorkspaceId,
-  setActiveWorkspaceId,
-  selectOrganization,
-  getActiveOrganizationId,
-  setActiveOrganizationId,
-  resolvePlatformClient,
+  getAddWorkspaceUrl,
+  openAddWorkspace,
 } from "./queries.ts";
 export type {
   UseOrganizationsResult,
-  UseWorkspacesOptions,
   UseWorkspacesResult,
-  CreateWorkspaceParams,
   SelectWorkspaceOptions,
-  ClientResolverOptions,
 } from "./queries.ts";
 
 // Tipos de vista derivados y utilidades
-export { getPlanLabel } from "./model.ts";
+export { planLabel, getPlanLabel } from "./model.ts";
 export type {
   Workspace,
   Organization,
   WorkspaceGroup,
-  WorkspaceSelectionState,
 } from "./model.ts";
