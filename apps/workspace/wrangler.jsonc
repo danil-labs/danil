@@ -4,6 +4,8 @@
   "name": "danil-front-preview",
   "compatibility_date": "2026-11-01",
   "assets": { "directory": "./dist", "not_found_handling": "single-page-application" },
+  // wrangler deploy sincroniza estos dominios: el que no esté aquí se quita del Worker.
+  // beta.danil.ai sirve esta app desde F4.3; no lo borres sin mover beta a otro Worker.
   "routes": [
     { "pattern": "preview-front.danil.ai", "custom_domain": true },
     { "pattern": "beta.danil.ai", "custom_domain": true }
