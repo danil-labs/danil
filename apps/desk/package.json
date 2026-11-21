@@ -6,7 +6,11 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "tauri": "tauri",
+    "tauri:dev": "tauri dev",
+    "tauri:build": "tauri build",
+    "engine:sidecar": "node ../desktop/scripts/engine.mjs sidecar"
   },
   "dependencies": {
     "@danil/shell": "workspace:*",
@@ -16,6 +20,7 @@
     "@danil/ui": "workspace:*"
   },
   "devDependencies": {
+    "@tauri-apps/cli": "^2.12.4",
     "typescript": "^5.7.2",
     "vite": "^6.0.5",
     "vite-plugin-solid": "^2.11.14",
