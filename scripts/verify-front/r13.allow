@@ -42,17 +42,3 @@ packages/shell/src/App.tsx 16
 packages/shell/src/ErrorBoundary.tsx 1
 packages/shell/src/Rail.tsx 6
 packages/shell/src/routes.tsx 10
-packages/features/settings/src/components/AiAccountsSection.tsx 12
-packages/features/settings/src/components/SourceControlSection.tsx 15
-packages/features/settings/src/components/machines/ActivityTab.tsx 8
-packages/features/settings/src/components/machines/EnvironmentTab.tsx 14
-packages/features/settings/src/components/machines/MachinesTab.tsx 9
-packages/features/settings/src/components/preferences/AppearanceTab.tsx 27
-packages/features/settings/src/components/preferences/DownloadsTab.tsx 8
-packages/features/settings/src/components/preferences/GeneralTab.tsx 40
-packages/features/settings/src/components/preferences/LanguagesTab.tsx 9
-packages/features/settings/src/components/preferences/NotifyTab.tsx 12
-packages/features/settings/src/components/preferences/WorkspacesTab.tsx 14
-packages/features/settings/src/components/projects/ManageProjectsTab.tsx 10
-packages/features/settings/src/components/projects/SecretsTab.tsx 6
-packages/features/settings/src/entries.ts 11
