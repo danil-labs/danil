@@ -99,6 +99,7 @@
   "web.machines.license_required": "Usar tus otras computadoras desde aquí es parte de Danil de pago.",
   "web.machines.lost": "Se perdió la conexión con {name}. Inténtalo otra vez.",
   "web.machines.missing_workspace": "{name} no tiene este workspace y su motor todavía no sabe crearlo. Actualízalo para crear tareas ahí.",
+  "web.machines.no_machine": "Sin máquina",
   "web.machines.none_for_workspace": "Ninguna máquina con acceso tiene este workspace.",
   "web.machines.off_action": "{name} está sin conexión. Verifica que Danil esté abierto y tenga acceso a internet.",
   "web.machines.off_wakes": "{name} está sin conexión: se enciende cuando le mandes un mensaje o hagas algo en ella.",
