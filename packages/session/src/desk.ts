@@ -1,4 +1,4 @@
-import { createEngineTransport, type EngineFetch, type RetryOptions } from "@danil/platform-client";
+import { clearQueries, createEngineTransport, type EngineFetch, type RetryOptions } from "@danil/platform-client";
 import type {
   PersonSessionFetchParams,
   PersonSessionLoginCompleteParams,
@@ -152,6 +152,7 @@ export function createDeskSession(host: DeskAuthHost): SessionSource {
     async remove(key) {
       // Cerrar una sesión no cierra las otras (02): se cierra solo ese contexto.
       await host.call("person_session_logout", { context: key });
+      clearQueries();
       expired.delete(key);
       await source.refresh();
     },

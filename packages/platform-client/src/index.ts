@@ -23,4 +23,4 @@ export { CONTRACT_HASH } from "./generated/contract.ts";
 export { API_BASE, BILLING_URL, HARNESS_URL } from "./config.ts";
 export { PlatformProvider, usePlatform } from "./solid.ts";
 export { planLabel } from "./plan.ts";
-export { createQuery, invalidate } from "./query.ts";
+export { createQuery, invalidate, clearQueries } from "./query.ts";

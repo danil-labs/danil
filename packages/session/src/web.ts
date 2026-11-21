@@ -1,5 +1,6 @@
 import {
   API_BASE,
+  clearQueries,
   createHttpTransport,
   createOperations,
   isClientError,
@@ -61,6 +62,7 @@ export function createWebSession(opts: WebSessionOptions = {}): SessionSource {
         },
       }),
     onUnauthorized() {
+      clearQueries();
       current = null;
       csrfToken = null;
       emit();
@@ -71,6 +73,7 @@ export function createWebSession(opts: WebSessionOptions = {}): SessionSource {
     },
     async remove() {
       await bare.logout({ body: {} }).catch(() => {});
+      clearQueries();
       current = null;
       emit();
       redirect(webLoginUrl(location.origin + "/"));

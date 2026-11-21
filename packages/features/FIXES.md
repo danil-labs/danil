@@ -14,3 +14,4 @@
 - RV2b N7 → commit 5d9d4235
 - RV2b N10 → commit a7522ed1
 - RV1c N16 → (este commit): el riel solo selecciona en el borde y navega; set_active_workspace lo hace WorkspaceScreen con su propio conn; engine-client rechaza comandos relay:false por relay (LOCAL_ONLY). RV1c #37 (setHost en render) → este commit.
+- RV1c N17 → máquinas de credenciales filtradas por la organización del workspace. RV1c N18/N19 y RV2c N-a → query.ts: una lectura por clave compartida entre vistas e invalidaciones, valor no entregado si la clave cambió, abort al quedarse sin vistas, clearQueries al cerrar sesión.
