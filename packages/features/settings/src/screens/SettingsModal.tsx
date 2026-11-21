@@ -1,18 +1,41 @@
-import { createResource, createSignal, For, onCleanup, onMount, Show, type JSX } from "solid-js";
+import {
+  createSignal,
+  For,
+  onCleanup,
+  onMount,
+  Show,
+  type JSX,
+} from "solid-js";
 import { Dynamic } from "solid-js/web";
 import {
-  Badge, Button, Close, Dialog, DialogContent, DialogTitle, Select,
-  Sidebar, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, cn,
+  Badge,
+  Button,
+  Close,
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  Select,
+  Sidebar,
+  SidebarContent,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  cn,
 } from "@danil/ui";
-import { t } from "@danil/ui/i18n";
-import { usePlatform } from "@danil/platform-client";
-import { host } from "@danil/host";
 import {
-  idSub, idTab, SETTINGS_ENTRIES, settingsTarget,
-  type SettingsEntryId, type SettingsGroup, type SettingsTab,
+  idSub,
+  idTab,
+  SETTINGS_ENTRIES,
+  SETTINGS_GROUPS,
+  settingsTarget,
+  TAB_NAMES,
+  type SettingsEntryId,
+  type SettingsGroup,
+  type SettingsTab,
 } from "../entries.ts";
 import { ICONOS } from "../components/entry-icons.tsx";
-import { AccountSection } from "../components/account/AccountSection.tsx";
+import { AccountSection } from "../components/AccountSection.tsx";
 import { AiAccountsSection } from "../components/AiAccountsSection.tsx";
 import { MachinesSection } from "../components/machines/MachinesSection.tsx";
 import { PreferencesSection } from "../components/preferences/PreferencesSection.tsx";
@@ -42,99 +65,76 @@ interface Entrada {
   tabs: SettingsTab[];
 }
 
-const GRUPOS: { id: SettingsGroup; nombre: () => string }[] = [
-  { id: "you", nombre: () => t("settings.nav.group_you") },
-  { id: "workspace", nombre: () => t("settings.nav.group_workspace") },
-];
 
-const ENCABEZADOS: Record<SettingsEntryId, { name: () => string; icono: () => JSX.Element }> = {
-  account: { name: () => t("settings.entry.account"), icono: ICONOS.account },
-  preferences: { name: () => t("settings.entry.preferences"), icono: ICONOS.preferences },
-  "ai-accounts": { name: () => t("settings.entry.ai_accounts"), icono: ICONOS["ai-accounts"] },
-  "source-control": { name: () => t("settings.entry.source_control"), icono: ICONOS["source-control"] },
-  machines: { name: () => t("settings.entry.machines"), icono: ICONOS.machines },
-  projects: { name: () => t("settings.entry.projects"), icono: ICONOS.projects },
-  "agents-skills": { name: () => t("settings.entry.agents_skills"), icono: ICONOS["agents-skills"] },
-  connections: { name: () => t("settings.nav.connections"), icono: ICONOS.connections },
-};
-
-const TAB_TITLES: Record<string, () => string> = {
-  "cuenta-danil": () => t("settings.nav.danil_account"),
-  emails: () => t("settings.tab.emails"),
-  usage: () => t("settings.tab.usage"),
-  plan: () => t("settings.tab.plan"),
-  security: () => t("settings.tab.security"),
-  general: () => t("settings.nav.general"),
-  appearance: () => t("settings.nav.appearance"),
-  notify: () => t("settings.tab.notify"),
-  languages: () => t("settings.languages.title"),
-  workspaces: () => t("settings.tab.workspace_bar"),
-  download: () => t("web.download.tab"),
-  "proveedores-ia": () => t("settings.nav.ai_providers"),
-  machines: () => t("settings.tab.machines"),
-  entorno: () => t("settings.nav.environment"),
-  activity: () => t("activity.title"),
-  proyectos: () => t("settings.tab.folders"),
-  fuentes: () => t("settings.nav.sources"),
-  secrets: () => t("settings.tab.secrets"),
-  agentes: () => t("settings.nav.agents"),
-  skills: () => t("settings.nav.skills"),
-  operation: () => t("settings.skills.tab_mcp"),
-  plugins: () => t("settings.tab.plugins"),
-  memory: () => t("settings.tab.memory"),
-  external: () => t("settings.tab.external"),
-};
 
 export function SettingsModal(props: SettingsModalProps) {
   let hoja: HTMLDivElement | undefined;
-  const client = usePlatform();
-  const [profile] = createResource(async () => {
-    try {
-      return await client.getMe();
-    } catch {
-      return null;
-    }
-  });
-
-  const handleOpenBilling = () => {
-    void host.openExternal("https://danil.ai/billing");
-  };
-
-  const handleOpenEmails = () => {
-    void host.openExternal("https://alfa-app.danil.ai/?settings=emails");
-  };
 
   const resolverPanel = (id: string, entryId: SettingsEntryId): (() => JSX.Element) | null => {
-    if (props.customPanels?.[id]) return props.customPanels[id]!;
-    if (entryId === "account") {
-      if (id === "cuenta-danil") return () => <AccountSection slot={props.accountSlot} part="profile" profile={profile()} onOpenEmails={handleOpenEmails} onOpenBilling={handleOpenBilling} />;
-      if (id === "emails") return () => <AccountSection part="emails" profile={profile()} onOpenEmails={handleOpenEmails} onOpenBilling={handleOpenBilling} />;
-      if (id === "usage") return () => <AccountSection part="usage" profile={profile()} onOpenEmails={handleOpenEmails} onOpenBilling={handleOpenBilling} />;
-      if (id === "plan") return () => <AccountSection part="plan" profile={profile()} onOpenEmails={handleOpenEmails} onOpenBilling={handleOpenBilling} />;
-      if (id === "security") return null;
+    if (props.customPanels?.[id]) {
+      return props.customPanels[id]!;
     }
-    if (entryId === "preferences") return () => <PreferencesSection tab={id} slot={props.preferencesSlot} />;
-    if (entryId === "ai-accounts") return () => <AiAccountsSection slot={props.aiAccountsSlot} />;
-    if (entryId === "source-control") return () => <SourceControlSection slot={props.sourceControlSlot} />;
-    if (entryId === "machines") return () => <MachinesSection tab={id} slot={props.machinesSlot} />;
-    if (entryId === "projects") return () => <ProjectsSection tab={id} slot={props.projectsSlot} />;
-    return null;
+    if (entryId === "account") {
+      if (id === "cuenta-danil") {
+        return () => <AccountSection slot={props.accountSlot} part="profile" />;
+      }
+      if (id === "emails") {
+        return () => <AccountSection part="emails" />;
+      }
+      if (id === "usage") {
+        return () => <AccountSection part="usage" />;
+      }
+      if (id === "plan") {
+        return () => <AccountSection part="plan" />;
+      }
+      if (id === "security") {
+        return null;
+      }
+    }
+    if (entryId === "preferences") {
+      return () => (
+        <PreferencesSection
+          tab={id}
+          slot={props.preferencesSlot}
+        />
+      );
+    }
+    if (entryId === "ai-accounts") {
+      return () => <AiAccountsSection slot={props.aiAccountsSlot} />;
+    }
+    if (entryId === "source-control") {
+      return () => <SourceControlSection slot={props.sourceControlSlot} />;
+    }
+    if (entryId === "machines") {
+      return () => (
+        <MachinesSection
+          tab={id}
+          slot={props.machinesSlot}
+        />
+      );
+    }
+    if (id === "security") {
+      return null;
+    }
+    return () => (
+      <div class="py-8 text-center text-sm text-neutral-400">
+        {TAB_NAMES[id] ?? id}
+      </div>
+    );
   };
 
   const entradas = (): Entrada[] =>
-    SETTINGS_ENTRIES.flatMap((e) => {
-      const h = ENCABEZADOS[e.id];
-      if (!h) return [];
-      const tabs: SettingsTab[] = e.tabs.map((tid) => {
-        const titleFn = TAB_TITLES[tid];
-        return {
-          id: tid,
-          get name() { return titleFn ? titleFn() : tid; },
-          panel: resolverPanel(tid, e.id),
-        };
-      });
-      return [{ id: e.id, group: e.group, get name() { return h.name(); }, icono: h.icono, tabs }];
-    });
+    SETTINGS_ENTRIES.map((e) => ({
+      id: e.id,
+      group: e.group,
+      name: e.name,
+      icono: ICONOS[e.id],
+      tabs: e.tabs.map((tid) => ({
+        id: tid,
+        name: TAB_NAMES[tid] ?? tid,
+        panel: resolverPanel(tid, e.id),
+      })),
+    }));
 
   const pedido = settingsTarget(props.panel);
   const todasEntradas = entradas();
@@ -144,7 +144,8 @@ export function SettingsModal(props: SettingsModalProps) {
   const [foco, setFoco] = createSignal<SettingsEntryId>(inicial.id);
   const [subs, setSubs] = createSignal<Partial<Record<SettingsEntryId, string>>>(
     pedido?.tab && inicial.id === pedido.entry && inicial.tabs.some((p) => p.id === pedido.tab)
-      ? { [inicial.id]: pedido.tab } : {},
+      ? { [inicial.id]: pedido.tab }
+      : {},
   );
 
   onMount(() => {
@@ -164,14 +165,24 @@ export function SettingsModal(props: SettingsModalProps) {
   function mover(paso: number | "inicio" | "fin") {
     const list = todasEntradas;
     const i = list.findIndex((d) => d.id === foco());
-    const j = paso === "inicio" ? 0 : paso === "fin" ? list.length - 1 : (i + paso + list.length) % list.length;
+    const j =
+      paso === "inicio"
+        ? 0
+        : paso === "fin"
+          ? list.length - 1
+          : (i + paso + list.length) % list.length;
     const id = list[j].id;
     setFoco(id);
     document.getElementById(idTab(id))?.focus();
   }
 
   function teclas(e: KeyboardEvent) {
-    const pasos: Record<string, number | "inicio" | "fin"> = { ArrowDown: 1, ArrowUp: -1, Home: "inicio", End: "fin" };
+    const pasos: Record<string, number | "inicio" | "fin"> = {
+      ArrowDown: 1,
+      ArrowUp: -1,
+      Home: "inicio",
+      End: "fin",
+    };
     const paso = pasos[e.key];
     if (paso === undefined) return;
     e.preventDefault();
@@ -187,7 +198,11 @@ export function SettingsModal(props: SettingsModalProps) {
   const entrada = () => todasEntradas.find((d) => d.id === activo()) ?? todasEntradas[0];
   const pestana = () => {
     const e = entrada();
-    return e.tabs.find((p) => p.id === subs()[e.id] && p.panel) ?? e.tabs.find((p) => p.panel) ?? e.tabs[0];
+    return (
+      e.tabs.find((p) => p.id === subs()[e.id] && p.panel) ??
+      e.tabs.find((p) => p.panel) ??
+      e.tabs[0]
+    );
   };
 
   const elegir = (p: SettingsTab) => {
@@ -211,18 +226,23 @@ export function SettingsModal(props: SettingsModalProps) {
       <DialogContent
         ref={hoja}
         class="flex h-[min(900px,100%)] w-[min(1120px,100%)] max-w-[1120px] flex-col overflow-hidden p-0"
-        aria-label={t("settings.title")}
+        aria-label="Configuración"
       >
         <div class="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)] grid-rows-[auto_minmax(0,1fr)] md:grid-cols-[224px_minmax(0,1fr)] md:grid-rows-[minmax(0,1fr)]">
           <header class="grid gap-3 border-b border-border bg-rail px-4 py-3 md:hidden">
             <div class="flex items-center justify-between gap-3">
-              <DialogTitle class="m-0 text-lead font-semibold">{t("settings.title")}</DialogTitle>
-              <Button variant="ghost" size="iconCompact" onClick={props.onClose} aria-label={t("settings.close")}>
+              <DialogTitle class="m-0 text-lead font-semibold">Configuración</DialogTitle>
+              <Button
+                variant="ghost"
+                size="iconCompact"
+                onClick={props.onClose}
+                aria-label="Cerrar configuración (Esc)"
+              >
                 <Close size={16} />
               </Button>
             </div>
             <Select
-              aria-label={t("settings.nav.label")}
+              aria-label="Secciones de configuración"
               value={activo()}
               onChange={(event) => {
                 const id = event.currentTarget.value as SettingsEntryId;
@@ -230,9 +250,9 @@ export function SettingsModal(props: SettingsModalProps) {
                 setActivo(id);
               }}
             >
-              <For each={GRUPOS}>
+              <For each={SETTINGS_GROUPS}>
                 {(group) => (
-                  <optgroup label={group.nombre()}>
+                  <optgroup label={group.nombre}>
                     <For each={todasEntradas.filter((entry) => entry.group === group.id)}>
                       {(entry) => <option value={entry.id}>{entry.name}</option>}
                     </For>
@@ -241,17 +261,22 @@ export function SettingsModal(props: SettingsModalProps) {
               </For>
             </Select>
           </header>
-          <Sidebar role="tablist" aria-orientation="vertical" aria-label={t("settings.nav.label")} class="hidden border-0 bg-rail md:grid">
+          <Sidebar
+            role="tablist"
+            aria-orientation="vertical"
+            aria-label="Secciones de configuración"
+            class="hidden border-0 bg-rail md:grid"
+          >
             <SidebarHeader class="pb-6 pl-5 pr-3 pt-4">
-              <h2 class="m-0 text-lead font-semibold">{t("settings.title")}</h2>
+              <h2 class="m-0 text-lead font-semibold">Configuración</h2>
             </SidebarHeader>
 
             <SidebarContent class="flex flex-col gap-6 overflow-y-auto px-0 pb-4 pl-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-              <For each={GRUPOS}>
+              <For each={SETTINGS_GROUPS}>
                 {(g) => (
                   <Show when={todasEntradas.some((e) => e.group === g.id)}>
                     <div role="presentation" class="flex flex-col gap-3">
-                      <p class="m-0 px-3 text-xs text-neutral-500">{g.nombre()}</p>
+                      <p class="m-0 px-3 text-xs text-neutral-500">{g.nombre}</p>
                       <SidebarMenu role="presentation" class="gap-1.5">
                         <For each={todasEntradas.filter((e) => e.group === g.id)}>
                           {(d) => (
@@ -268,7 +293,9 @@ export function SettingsModal(props: SettingsModalProps) {
                                 onClick={() => abrir(d)}
                                 onKeyDown={teclas}
                               >
-                                <span class="flex size-4 items-center justify-center">{d.icono()}</span>
+                                <span class="flex size-4 items-center justify-center">
+                                  {d.icono()}
+                                </span>
                                 <span class="truncate">{d.name}</span>
                               </SidebarMenuButton>
                             </SidebarMenuItem>
@@ -293,11 +320,19 @@ export function SettingsModal(props: SettingsModalProps) {
                 <header
                   class={cn(
                     "grid grid-cols-[minmax(0,1fr)] items-center gap-3 md:grid-cols-[minmax(0,1fr)_auto]",
-                    entrada().tabs.length > 1 ? "mb-5" : "border-0 border-b border-solid border-border pb-4",
+                    entrada().tabs.length > 1
+                      ? "mb-5"
+                      : "border-0 border-b border-solid border-border pb-4",
                   )}
                 >
                   <h2 class="m-0 text-lg font-semibold">{entrada().name}</h2>
-                  <Button variant="ghost" size="iconCompact" class="hidden size-7 md:inline-flex" onClick={props.onClose} aria-label={t("settings.close")}>
+                  <Button
+                    variant="ghost"
+                    size="iconCompact"
+                    class="hidden size-7 md:inline-flex"
+                    onClick={props.onClose}
+                    aria-label="Cerrar configuración (Esc)"
+                  >
                     <Close size={16} />
                   </Button>
                 </header>
@@ -317,17 +352,18 @@ export function SettingsModal(props: SettingsModalProps) {
                           aria-selected={pestana().id === p.id}
                           aria-controls="cfg-subpanel"
                           aria-disabled={p.panel ? undefined : true}
-                          title={p.panel ? undefined : t("settings.nav.soon_why")}
+                          title={p.panel ? undefined : "Todavía no está en la app"}
                           tabindex={pestana().id === p.id ? 0 : -1}
                           onClick={() => elegir(p)}
                           class={cn(
                             "-mb-px inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap border-0 border-b-2 border-solid border-transparent bg-transparent px-0 pt-0 pb-2 text-sm text-neutral-500 hover:text-neutral-950 aria-disabled:cursor-default aria-disabled:hover:text-neutral-500",
-                            pestana().id === p.id && "border-neutral-950 font-semibold text-neutral-950",
+                            pestana().id === p.id &&
+                              "border-neutral-950 font-semibold text-neutral-950",
                           )}
                         >
                           {p.name}
                           <Show when={!p.panel}>
-                            <Badge forma="dato">{t("settings.nav.soon")}</Badge>
+                            <Badge forma="dato">pronto</Badge>
                           </Show>
                         </button>
                       )}

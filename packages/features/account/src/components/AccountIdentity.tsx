@@ -1,6 +1,5 @@
 import { Show } from "solid-js";
 import { Button } from "@danil/ui";
-import { t } from "@danil/ui/i18n";
 
 export interface AccountAvatarProps {
   photo?: string | null;
@@ -48,7 +47,7 @@ export interface AccountIdentityBlockProps {
 
 /** Configuración: foto, nombre y correo de la cuenta, con «Cambiar foto» y «Quitar foto». */
 export function AccountIdentityBlock(props: AccountIdentityBlockProps) {
-  const who = () => props.name || props.email || t("danil.account.your_account");
+  const who = () => props.name || props.email || "Tu cuenta";
 
   return (
     <div
@@ -74,7 +73,7 @@ export function AccountIdentityBlock(props: AccountIdentityBlockProps) {
                 disabled={props.busy}
                 onClick={props.onChangePhoto}
               >
-                {props.busy ? t("danil.account.photo_saving") : t("danil.account.photo_change")}
+                {props.busy ? "Guardando…" : "Cambiar foto"}
               </Button>
             </Show>
             <Show when={props.photo && props.onRemovePhoto}>
@@ -84,14 +83,14 @@ export function AccountIdentityBlock(props: AccountIdentityBlockProps) {
                 disabled={props.busy}
                 onClick={props.onRemovePhoto}
               >
-                {t("danil.account.photo_remove")}
+                Quitar foto
               </Button>
             </Show>
           </div>
         </Show>
       </div>
       <Show when={!props.readonly && props.hint !== null}>
-        <p class="m-0 text-ui text-neutral-500">{props.hint ?? t("danil.account.photo_hint")}</p>
+        <p class="m-0 text-ui text-neutral-500">{props.hint ?? "Una foto cuadrada en PNG o JPEG."}</p>
       </Show>
       <Show when={props.problem}>
         {(text) => <p class="m-0 text-ui text-error-strong" role="alert">{text()}</p>}

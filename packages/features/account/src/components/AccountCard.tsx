@@ -1,6 +1,5 @@
 import { For, Show, createSignal, type JSX } from "solid-js";
 import { Badge, ProgressBar, Spinner } from "@danil/ui";
-import { t } from "@danil/ui/i18n";
 
 export interface AccountCardProps {
   name: string;
@@ -70,13 +69,13 @@ export function AccountCard(props: AccountCardProps) {
   const conexion = () => (
     <Show
       when={!props.checkingStatus}
-      fallback={<StatusTag row={fila()}>{t("settings.account_card.checking")}</StatusTag>}
+      fallback={<StatusTag row={fila()}>Comprobando…</StatusTag>}
     >
       <Show
         when={!props.statusUnknown}
         fallback={
           <StatusTag row={fila()} tone="disconnected">
-            {t("settings.account_card.unverified")}
+            Sin verificar
           </StatusTag>
         }
       >
@@ -87,9 +86,7 @@ export function AccountCard(props: AccountCardProps) {
           }
         >
           <StatusTag row={fila()} tone={props.authenticated ? "connected" : "disconnected"}>
-            {props.authenticated
-              ? t("settings.account_card.connected")
-              : t("settings.account_card.disconnected")}
+            {props.authenticated ? "Conectada" : "Desconectada"}
           </StatusTag>
         </Show>
       </Show>
@@ -130,7 +127,7 @@ export function AccountCard(props: AccountCardProps) {
               )}
             </Show>
             <Show when={props.active && !fila()}>
-              <StatusTag tone="active">{t("settings.account_card.active")}</StatusTag>
+              <StatusTag tone="active">Activa</StatusTag>
             </Show>
             <Show when={!fila()}>{conexion()}</Show>
           </div>
@@ -147,7 +144,7 @@ export function AccountCard(props: AccountCardProps) {
           </Show>
         </div>
         <Show when={fila() && props.active}>
-          <StatusTag row tone="connected">{t("settings.account_card.active")}</StatusTag>
+          <StatusTag row tone="connected">Activa</StatusTag>
         </Show>
         <Show when={fila()}>{conexion()}</Show>
         <Show when={props.actions}>
@@ -163,7 +160,7 @@ export function AccountCard(props: AccountCardProps) {
         >
           <Show when={!props.limits && props.loadingLimits}>
             <p class="m-0 flex items-center text-xs text-neutral-500">
-              <Spinner size={11} label={t("settings.account_card.asking")} />
+              <Spinner size={11} label="Consultando límites…" />
             </p>
           </Show>
 
@@ -177,7 +174,7 @@ export function AccountCard(props: AccountCardProps) {
                       <div class="flex items-baseline gap-2 text-xs">
                         <span class="min-w-0 truncate text-neutral-700">{ventana.label}</span>
                         <span class="ml-auto shrink-0 whitespace-nowrap tabular-nums text-neutral-500">
-                          {resta()}% {t("settings.account_card.remaining")}
+                          {resta()}% restante
                         </span>
                       </div>
                       <ProgressBar
@@ -199,8 +196,8 @@ export function AccountCard(props: AccountCardProps) {
                 type="button"
                 class="ml-auto grid size-6 shrink-0 place-items-center rounded-sm text-neutral-500 hover:bg-surface hover:text-neutral-950 disabled:opacity-60"
                 disabled={busy()}
-                aria-label={t("settings.account_card.refresh_account")}
-                title={t("settings.account_card.refresh_account")}
+                aria-label="Actualizar cuenta"
+                title="Actualizar cuenta"
                 onClick={() => void refreshAccount()}
               >
                 <svg

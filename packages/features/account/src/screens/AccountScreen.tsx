@@ -1,7 +1,6 @@
 import { Show, type Component } from "solid-js";
 import { host } from "@danil/host";
 import { useSession } from "@danil/session/solid";
-import { t } from "@danil/ui/i18n";
 import { useProfile } from "../queries.ts";
 import { ExternalLink } from "../components/ExternalLink.tsx";
 import { AccountErrorView } from "../components/AccountErrorView.tsx";
@@ -72,7 +71,7 @@ export const AccountScreen: Component<AccountScreenProps> = (props) => {
         when={!profileQuery.loading() || profileQuery.profile()}
         fallback={
           <div class="py-6 text-sm text-neutral-400" data-account-loading="">
-            {t("danil.account.loading")}
+            Cargando cuenta...
           </div>
         }
       >
@@ -82,10 +81,10 @@ export const AccountScreen: Component<AccountScreenProps> = (props) => {
               {/* Sección: Perfil del usuario */}
               <section class="border-b border-border pb-5" data-account-profile="">
                 <h2 class="text-base font-medium text-neutral-900 dark:text-neutral-100">
-                  {t("danil.account.title")}
+                  Cuenta de Danil
                 </h2>
                 <p class="text-xs text-neutral-500 mt-1">
-                  {t("danil.account.web_description")}
+                  Identidad y credenciales sincronizadas con la plataforma.
                 </p>
 
                 <AccountIdentityBlock
@@ -98,15 +97,15 @@ export const AccountScreen: Component<AccountScreenProps> = (props) => {
               {/* Sección: Plan y Organización actual */}
               <section class="pb-5" data-account-plan="">
                 <h3 class="text-sm font-medium text-neutral-900 dark:text-neutral-100 mb-1">
-                  {t("settings.tab.plan")}
+                  Plan y suscripción
                 </h3>
                 <p class="text-xs text-neutral-500 mb-4">
-                  {t("danil.account.web_description")}
+                  Nivel de servicio y gestión de usuarios de la organización.
                 </p>
 
                 <AccountCard
                   name={props.planLabel ?? data().planLabel}
-                  plan={t("settings.account_card.active")}
+                  plan="Plan activo"
                   detail={data().activeOrganization?.name}
                   active={true}
                   authenticated={true}
@@ -114,10 +113,10 @@ export const AccountScreen: Component<AccountScreenProps> = (props) => {
                   actions={
                     <div class="flex items-center gap-2">
                       <ExternalLink onOpen={handleOpenBilling} data-link="billing">
-                        {t("danil.emails.manage")}
+                        Administrar
                       </ExternalLink>
                       <ExternalLink onOpen={handleOpenHarness} data-link="harness">
-                        {t("danil.emails.manage")}
+                        Administrar usuarios y permisos
                       </ExternalLink>
                     </div>
                   }
