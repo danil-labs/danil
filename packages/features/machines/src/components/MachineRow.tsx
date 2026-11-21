@@ -13,6 +13,14 @@ export interface MachineRowProps {
   onConnect?: (machine: Machine) => unknown;
 }
 
+function actionErrorMessage(err: unknown, fallback: string): string {
+  if (err instanceof Error) return err.message;
+  if (typeof err === "object" && err !== null && "message" in err && typeof (err as { message: unknown }).message === "string") {
+    return (err as { message: string }).message;
+  }
+  return fallback;
+}
+
 export function MachineRow(props: MachineRowProps) {
   const [actionError, setActionError] = createSignal<string | null>(null);
 
@@ -24,8 +32,8 @@ export function MachineRow(props: MachineRowProps) {
     setActionError(null);
     try {
       await props.onStart?.(props.machine.machine_id);
-    } catch (err: any) {
-      setActionError(err?.message ?? "Error al encender");
+    } catch (err: unknown) {
+      setActionError(actionErrorMessage(err, "Error al encender"));
     }
   };
 
@@ -33,8 +41,8 @@ export function MachineRow(props: MachineRowProps) {
     setActionError(null);
     try {
       await props.onStop?.(props.machine.machine_id);
-    } catch (err: any) {
-      setActionError(err?.message ?? "Error al apagar");
+    } catch (err: unknown) {
+      setActionError(actionErrorMessage(err, "Error al apagar"));
     }
   };
 
@@ -42,8 +50,8 @@ export function MachineRow(props: MachineRowProps) {
     setActionError(null);
     try {
       props.onConnect?.(props.machine);
-    } catch (err: any) {
-      setActionError(err?.message ?? "Error al conectar");
+    } catch (err: unknown) {
+      setActionError(actionErrorMessage(err, "Error al conectar"));
     }
   };
 
@@ -69,7 +77,7 @@ export function MachineRow(props: MachineRowProps) {
         </div>
 
         <div class="flex shrink-0 items-center gap-1.5">
-          <Show when={props.machine.state === "stopped" && !props.isOperating}>
+          <Show when={(props.machine.state === "stopped" || engineStatus() === "error") && !props.isOperating}>
             <button
               type="button"
               class="rounded-md border border-neutral-300 px-2.5 py-1 text-xs font-medium text-neutral-700 transition hover:bg-neutral-100 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800"
@@ -79,7 +87,7 @@ export function MachineRow(props: MachineRowProps) {
             </button>
           </Show>
 
-          <Show when={props.machine.state === "running" && !props.isOperating}>
+          <Show when={props.machine.state === "running" && engineStatus() !== "error" && !props.isOperating}>
             <button
               type="button"
               class="rounded-md border border-neutral-300 px-2.5 py-1 text-xs font-medium text-neutral-700 transition hover:bg-neutral-100 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800"
