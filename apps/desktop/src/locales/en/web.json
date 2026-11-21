@@ -103,7 +103,7 @@
   "web.machines.start_failed": "We could not start {name}. Try again in a minute; if it keeps failing, write to hola@danil.ai.",
   "web.machines.outdated_action": "{name} needs an update before you can use it from here.",
   "web.machines.missing_workspace": "{name} doesn't have this workspace and its engine can't create it yet. Update it to create tasks there.",
-  "web.machines.none_for_workspace": "No machine of the account has this workspace.",
+  "web.machines.none_for_workspace": "No machine with access has this workspace.",
   "web.machines.timeout": "{name} didn't answer in time. You're seeing the last thing it said.",
   "web.machines.lost": "The connection to {name} was lost. Try again.",
   "web.machines.workspace_mismatch": "{name} won't allow this from here: it belongs to another workspace or account.",
