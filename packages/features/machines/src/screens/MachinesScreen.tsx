@@ -1,9 +1,8 @@
 import { createSignal, For, Show } from "solid-js";
 import { Close, SignalDot } from "@danil/ui";
-import { useMachines, type SessionInput } from "../queries.ts";
+import { useMachines } from "../queries.ts";
 
 export interface MachinesScreenProps {
-  session?: SessionInput;
   class?: string;
 }
 
@@ -23,7 +22,7 @@ export function MachinesScreen(props: MachinesScreenProps) {
     connect,
     getConnection,
     operating,
-  } = useMachines(props.session);
+  } = useMachines();
 
   const [asking, setAsking] = createSignal<string | null>(null);
   const [failed, setFailed] = createSignal(false);

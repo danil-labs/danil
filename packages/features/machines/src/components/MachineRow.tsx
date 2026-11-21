@@ -7,6 +7,7 @@ export interface MachineRowProps {
   machine: Machine;
   isOperating?: "starting" | "stopping";
   connection?: MachineConnection;
+  iconIsLocal?: boolean;
   onStart?: (id: string) => Promise<unknown>;
   onStop?: (id: string) => Promise<unknown>;
   onConnect?: (machine: Machine) => unknown;
@@ -55,7 +56,7 @@ export function MachineRow(props: MachineRowProps) {
     >
       <div class="flex items-center justify-between gap-3">
         <div class="flex min-w-0 items-center gap-2.5">
-          <MachineIcon kind={props.machine.kind} class="h-4 w-4 shrink-0 text-neutral-600 dark:text-neutral-400" />
+          <MachineIcon iconIsLocal={props.iconIsLocal} class="h-4 w-4 shrink-0 text-neutral-600 dark:text-neutral-400" />
           <div class="flex min-w-0 flex-col">
             <span class="truncate text-sm font-medium text-neutral-900 dark:text-neutral-100">{name()}</span>
             <MachineBadge

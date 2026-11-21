@@ -3,15 +3,18 @@ export interface MachineIconProps {
   size?: number;
   class?: string;
   kind?: string;
+  iconIsLocal?: boolean;
 }
 
 /**
- * Una VM que Danil puede encender (`wakes`) frente a una máquina de la persona.
+ * Una VM que Danil puede encender (`wakes`) frente a una máquina de la persona (`iconIsLocal`).
  * El sistema, cuando se sabe, se lee en la tarjeta de la tarea; el icono no lo dibuja.
  */
 export function MachineIcon(props: MachineIconProps) {
   const size = () => props.size ?? 12;
-  return props.wakes ? (
+  const isComputer = () => (props.iconIsLocal !== undefined ? props.iconIsLocal : !props.wakes);
+
+  return !isComputer() ? (
     <svg
       xmlns="http://www.w3.org/2000/svg"
       width={size()}

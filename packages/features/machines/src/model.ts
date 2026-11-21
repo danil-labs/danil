@@ -10,9 +10,13 @@ import type {
   LocalHost,
 } from "@danil/engine-client";
 
+export type OperationState = "pending" | "running" | "succeeded" | "failed";
+
 export type Machine = ApiMachine;
 export type MachineList = ApiMachineList;
-export type Operation = ApiOperation;
+export type Operation = Omit<ApiOperation, "state"> & {
+  state?: OperationState | string;
+};
 
 export type MachineState = NonNullable<Machine["state"]>;
 export type MachineConnectionState = NonNullable<Machine["connection"]>;
