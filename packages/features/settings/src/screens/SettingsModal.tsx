@@ -36,6 +36,7 @@ import {
 } from "../entries.ts";
 import { ICONOS } from "../components/entry-icons.tsx";
 import { AccountSection } from "../components/AccountSection.tsx";
+import { PreferencesSection } from "../components/preferences/PreferencesSection.tsx";
 
 export interface SettingsModalProps {
   open?: boolean;
@@ -85,6 +86,14 @@ export function SettingsModal(props: SettingsModalProps) {
       if (id === "security") {
         return null;
       }
+    }
+    if (entryId === "preferences") {
+      return () => (
+        <PreferencesSection
+          tab={id}
+          slot={props.preferencesSlot}
+        />
+      );
     }
     if (entryId === "machines" && props.machinesSlot && id === "machines") {
       return () => <>{props.machinesSlot}</>;
