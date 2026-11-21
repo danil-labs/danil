@@ -88,7 +88,7 @@ export function mountWindow(base: Base, mounted: Mounted) {
     onSlice: () => bump(n => n + 1),
   });
   const stopListing = fleet.onListing(() => bump(n => n + 1));
-  const active = createRouter({ contextInfo: scope.routing, self: null, fleet, native: null, deliver, onSlices: slicesChanged,
+  const active = createRouter({ contextInfo: scope.routing, organizationMachine: scope.organizationMachine, self: null, fleet, native: null, deliver, onSlices: slicesChanged,
     pickedFor: workspace => {
       const picked: Record<string, string> = leerPref("machines.run_on", {});
       return workspace ? picked[workspace] ?? null : null;

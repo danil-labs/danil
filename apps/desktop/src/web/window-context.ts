@@ -16,6 +16,8 @@ export type ContextRow = { machine: Machine; group: GroupAccount };
  */
 export function windowContext(options: { factory: (context: string) => Client; sessions: Pick<WebSessionCommands, "handle">; groups: () => readonly GroupAccount[]; fallback: () => string | null; active: () => string | null; fleet: () => Fleet; revision: () => unknown; onContextsSettled?: (contexts: readonly string[]) => void; onContextState?: (context: string, expired: boolean) => void }) {
   const clients = new Map<string, Client>();
+  /** Los workspaces del motor que viven en la máquina de su organización, según `GET /v1/workspaces` de cada contexto. */
+  let hostedWorkspaces = new Set<string>();
   const groups = options.groups;
   const info = (context: string) => groups().find((g) => g.context === context) ?? null;
   function client(context?: string | null): Client {
@@ -26,6 +28,7 @@ export function windowContext(options: { factory: (context: string) => Client; s
   }
   return {
     client, info, groups,
+    organizationMachine: (workspace: string) => hostedWorkspaces.has(workspace),
     /**
      * Lo que el router sabe de un contexto. En la web no hay «esta computadora»: una organización
      * Free la sirven sus máquinas conectadas, como cualquier otra (no `localOnly`).
@@ -67,7 +70,15 @@ export function windowContext(options: { factory: (context: string) => Client; s
       for (const id of [...clients.keys()]) if (!ids.includes(id)) clients.delete(id);
       options.fleet().pruneContexts(ids);
       options.onContextsSettled?.(ids);
-      const answers = await Promise.all(settled.map(async (group) => ({ group, answer: await client(group.context).list().catch(() => ({ kind: "unavailable", status: 0 }) as Answer) })));
+      const [answers] = await Promise.all([
+        Promise.all(settled.map(async (group) => ({ group, answer: await client(group.context).list().catch(() => ({ kind: "unavailable", status: 0 }) as Answer) }))),
+        Promise.all(settled.map((group) => options.sessions.handle("danil_edge_fetch", { method: "GET", path: "/v1/workspaces", context: group.context }).catch(() => null))).then((replies) => {
+          const next = new Set<string>();
+          for (const reply of replies as ({ status: number; body?: { items?: { engine_workspace_id?: unknown; placement?: { kind?: unknown } }[] } } | null)[])
+            for (const row of reply?.status === 200 ? reply.body?.items ?? [] : []) if (row.placement?.kind === "organization_machine" && typeof row.engine_workspace_id === "string") next.add(row.engine_workspace_id);
+          hostedWorkspaces = next;
+        }),
+      ]);
       // Un 401 de un contexto marca solo su grupo; uno que vuelve a contestar se desmarca.
       for (const { group, answer } of answers) if (answer.kind === "ok" || answer.kind === "unauthorized") options.onContextState?.(group.context, answer.kind === "unauthorized");
       const ok = answers.filter((a) => a.answer.kind === "ok");
