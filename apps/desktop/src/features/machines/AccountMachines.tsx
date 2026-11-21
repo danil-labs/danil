@@ -2,7 +2,7 @@ import { type Accessor, For, Show, createSignal } from "solid-js";
 import { SignalDot } from "../../ui/SignalDot";
 import X from "lucide-solid/icons/x";
 import { t } from "../../lib/i18n";
-import { invoke } from "../../lib/invoke.ts";
+import { invoke } from "../../engine/client.ts";
 import type { AccountMachinesProps } from "../../lib/platform";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../../ui/DropdownMenu";
 import type { MachineRow } from "../../web/SyncNote";

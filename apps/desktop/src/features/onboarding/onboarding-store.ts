@@ -1,4 +1,4 @@
-import { invoke } from "../../lib/invoke.ts";
+import { invoke } from "../../engine/client.ts";
 import { semillaDelAlta, t } from "../../lib/i18n";
 import { sealFirstFreeWorkspace } from "../shell";
 /** Activa el workspace con la lengua del alta. La ventana entra al Free (F1.2); `add_workspace` solo en la web. */

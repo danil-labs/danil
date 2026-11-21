@@ -1,6 +1,6 @@
 import { createEffect, createSignal, on, onCleanup } from "solid-js";
 import { t } from "../../lib/i18n";
-import { invoke } from "../../lib/invoke.ts";
+import { invoke } from "../../engine/client.ts";
 import { legible, type Query, type Read } from "../../lib/limits";
 import { detalleDe } from "../../ui/Failure";
 import { machineOf } from "../machines/store";

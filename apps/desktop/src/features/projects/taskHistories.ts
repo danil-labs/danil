@@ -1,6 +1,6 @@
 import { machineOf } from "../machines/store";
 import { createMemo, createResource, createSignal } from "solid-js";
-import { invoke } from "../../lib/invoke.ts";
+import { invoke } from "../../engine/client.ts";
 import { pooled, TASK_HISTORY_AT_ONCE } from "../../lib/pool";
 
 type Row = { id: string; updated_at: unknown };

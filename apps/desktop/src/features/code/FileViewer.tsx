@@ -12,7 +12,7 @@ import {
   untrack,
   type JSX,
 } from "solid-js";
-import { invoke } from "../../lib/invoke.ts";
+import { invoke } from "../../engine/client.ts";
 import { machineOf } from "../machines/store";
 import Navegador from "lucide-solid/icons/external-link";
 import IconoDescarga from "lucide-solid/icons/download";

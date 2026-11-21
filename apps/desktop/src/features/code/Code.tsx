@@ -4,7 +4,7 @@ import { alMoverseElArbol, avisarDeLosArboles } from "./refresh";
 import { precargarEditor } from "./editorLoad";
 import { Skeleton } from "../../ui/Skeleton";
 import { Channel } from "@tauri-apps/api/core";
-import { invoke } from "../../lib/invoke.ts";
+import { invoke } from "../../engine/client.ts";
 import { machineOf } from "../machines/store";
 import { FailureNote, asFailure, type Failure } from "../../ui/Failure";
 import type { ArbolEnTarea } from "../../lib/model";

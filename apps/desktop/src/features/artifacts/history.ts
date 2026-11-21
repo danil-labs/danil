@@ -1,6 +1,6 @@
 import { machineOf } from "../machines/store";
 import type { InvokeOptions } from "@tauri-apps/api/core";
-import { invoke } from "../../lib/invoke.ts";
+import { invoke } from "../../engine/client.ts";
 import { manifiesto, t } from "../../lib/i18n.ts";
 
 /**

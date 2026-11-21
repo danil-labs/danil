@@ -3,7 +3,7 @@ import type { AppBridge } from "@modelcontextprotocol/ext-apps/app-bridge";
 import AppWindow from "lucide-solid/icons/app-window";
 import { createSignal, onCleanup, onMount, Show } from "solid-js";
 import { t } from "../../lib/i18n";
-import { invoke } from "../../lib/invoke";
+import { invoke } from "../../engine/client";
 import { asFailure, type Failure, FailureNote } from "../../ui/Failure";
 import DrawioMcpCanvas from "./DrawioMcpCanvas";
 import ExcalidrawMcpCanvas from "./ExcalidrawMcpCanvas";

@@ -27,7 +27,7 @@ import {
   withoutRemote,
 } from "@terminus/carry";
 import "../../locales/workPhrases";
-import { invoke } from "../../lib/invoke";
+import { invoke } from "../../engine/client";
 import type { Project } from "../../lib/model";
 import { escribirPref, leerPref } from "../../lib/prefs";
 import { t } from "../../lib/i18n";

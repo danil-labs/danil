@@ -2,7 +2,7 @@ import { type MachineState, type SystemId } from "@terminus/computers";
 import { SEP } from "@terminus/fleet";
 import { REMOTE_CHILD_FEATURE, type RemoteScope } from "@terminus/tasks";
 import { createRoot, createSignal } from "solid-js";
-import { invoke } from "../../lib/invoke";
+import { invoke } from "../../engine/client";
 import { t } from "../../lib/i18n";
 import { createPref, escribirPref, leerPref } from "../../lib/prefs";
 import { knownMachineName } from "./known-names";

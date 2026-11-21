@@ -1,7 +1,7 @@
 import { For, Show, createEffect, createSignal } from "solid-js";
 import { conflictCopyOf, deleteMemoryFile, memoryEntryText, writeMemoryFile } from "@terminus/computers";
 import History from "lucide-solid/icons/history";
-import { invoke } from "../../lib/invoke.ts";
+import { invoke } from "../../engine/client.ts";
 import { confirm } from "@tauri-apps/plugin-dialog";
 import Pencil from "lucide-solid/icons/pencil";
 import Plus from "lucide-solid/icons/plus";

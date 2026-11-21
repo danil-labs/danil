@@ -1,5 +1,5 @@
 import { For, Show, createSignal, onCleanup, onMount } from "solid-js";
-import { invoke } from "../../lib/invoke.ts";
+import { invoke } from "../../engine/client.ts";
 import { Select } from "../../ui/Select";
 import { t, type Manifiesto } from "../../lib/i18n";
 import { instalarDelBundle, lenguasDelBundle, type Paquete } from "../../locales/packs";

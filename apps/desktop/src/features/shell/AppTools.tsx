@@ -2,7 +2,7 @@ import { listen } from "../../lib/serviceEvents";
 import ChartNoAxesCombined from "lucide-solid/icons/chart-no-axes-combined";
 import { createSignal, onCleanup, Show } from "solid-js";
 import { t } from "../../lib/i18n";
-import { invoke } from "../../lib/invoke.ts";
+import { invoke } from "../../engine/client.ts";
 import { sharedLazy } from "../../lib/sharedLazy";
 import PuertosAbiertos from "./OpenPorts";
 

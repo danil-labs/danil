@@ -7,7 +7,7 @@ import {
   type JSX,
 } from "solid-js";
 import type { InvokeOptions } from "@tauri-apps/api/core";
-import { invoke } from "../../lib/invoke.ts";
+import { invoke } from "../../engine/client.ts";
 import { t } from "../../lib/i18n";
 import { open } from "@tauri-apps/plugin-dialog";
 import ChevronLeft from "lucide-solid/icons/chevron-left";

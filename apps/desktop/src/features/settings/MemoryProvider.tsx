@@ -1,5 +1,5 @@
 import { createSignal, onMount, Show } from "solid-js";
-import { invoke } from "../../lib/invoke.ts";
+import { invoke } from "../../engine/client.ts";
 import { Button } from "../../ui/Button";
 import { Textarea } from "../../ui/Textarea";
 import { FailureNote, asFailure, type Failure } from "../../ui/Failure";

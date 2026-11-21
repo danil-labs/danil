@@ -1,6 +1,6 @@
 import { For, Show } from "solid-js";
 import { t } from "../../lib/i18n";
-import { invoke } from "../../lib/invoke.ts";
+import { invoke } from "../../engine/client.ts";
 import { prosa } from "../../lib/prose";
 import { cn } from "../../lib/utils";
 import { Button } from "../../ui/Button";

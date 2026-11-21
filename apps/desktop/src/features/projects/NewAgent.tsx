@@ -1,7 +1,7 @@
 import { createMemo, createSignal, For, Show } from "solid-js";
 import { lockedBy } from "../../lib/governance";
 import { t } from "../../lib/i18n";
-import { invoke } from "../../lib/invoke.ts";
+import { invoke } from "../../engine/client.ts";
 import type { CreatedHandler, HandlerScope } from "../../lib/model";
 import {
   type CatalogosDeModelos,

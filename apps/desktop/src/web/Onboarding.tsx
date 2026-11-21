@@ -3,7 +3,7 @@ import { createSignal, For, Match, onMount, Show, Switch } from "solid-js";
 import { crearWorkspace } from "../features/onboarding/onboarding-store";
 import { Pantalla } from "../features/onboarding/Screen";
 import { t } from "../lib/i18n";
-import { invoke } from "../lib/invoke.ts";
+import { invoke } from "../engine/client.ts";
 import { capabilities } from "../lib/platform";
 import { cn } from "../lib/utils";
 import { HEADER_HEIGHT } from "../lib/window";

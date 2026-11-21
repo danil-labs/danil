@@ -7,7 +7,7 @@ import Star from "lucide-solid/icons/star";
 import { routerOfferState } from "@terminus/tasks";
 import { createMemo, createSignal, For, Show, lazy } from "solid-js";
 import { t } from "../../lib/i18n";
-import { invoke } from "../../lib/invoke.ts";
+import { invoke } from "../../engine/client.ts";
 import { left, type Query } from "../../lib/limits";
 import {
   agruparModelos,

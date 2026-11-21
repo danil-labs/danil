@@ -5,7 +5,7 @@
 import "../../locales/danilPhrases";
 import { ACCESS_CONTACT, accessMailto } from "@terminus/design";
 import { t } from "../../lib/i18n";
-import { invoke } from "../../lib/invoke";
+import { invoke } from "../../engine/client";
 import { Button } from "../../ui/Button";
 
 /** El código con que el plano de control (o el motor) dice que la cuenta no tiene Terminus. */

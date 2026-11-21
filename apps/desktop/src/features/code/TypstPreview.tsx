@@ -12,7 +12,7 @@ import ZoomIn from "lucide-solid/icons/zoom-in";
 import ZoomOut from "lucide-solid/icons/zoom-out";
 import { For, Show, createEffect, createSignal, on, onCleanup, onMount } from "solid-js";
 import { t } from "../../lib/i18n";
-import { invoke } from "../../lib/invoke.ts";
+import { invoke } from "../../engine/client.ts";
 import { machineOf } from "../machines/store";
 import { seguirHueco, type Hueco } from "../../lib/sites";
 import { Button } from "../../ui/Button";

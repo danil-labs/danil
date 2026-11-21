@@ -1,5 +1,5 @@
 import { For, Show, Suspense, createEffect, createSignal, lazy, on, onCleanup, onMount, splitProps, type JSX } from "solid-js";
-import { invoke } from "../../lib/invoke.ts";
+import { invoke } from "../../engine/client.ts";
 import { open } from "@tauri-apps/plugin-dialog";
 import Cloud from "lucide-solid/icons/cloud";
 import ImagePlus from "lucide-solid/icons/image-plus";

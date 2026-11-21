@@ -2,7 +2,7 @@ import { listen } from "../../lib/serviceEvents";
 import { createSignal, onCleanup, onMount, Show } from "solid-js";
 import { copyText } from "../../lib/clipboard";
 import { t } from "../../lib/i18n";
-import { invoke } from "../../lib/invoke";
+import { invoke } from "../../engine/client";
 import { Button } from "../../ui/Button";
 import { asFailure, type Failure, FailureNote } from "../../ui/Failure";
 import { MermaidDiagram } from "../../ui/Mermaid";

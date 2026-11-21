@@ -2,7 +2,7 @@
  * Free router v8 1d: la interfaz sigue el recorrido RPC1 `free_router_platform_v1`; la autoridad es `workspaces` por el borde.
  * Un paso fuera de orden, una respuesta de antes de un logout o un valor desconocido dejan el Router cerrado.
  */
-import type { EdgeMethod } from "../../lib/edge.ts";
+import type { EdgeMethod } from "../../platform/client.ts";
 
 export type FreeRouterScope = {
   /** `accounts.id` de tenancy (BIGINT como cadena). */

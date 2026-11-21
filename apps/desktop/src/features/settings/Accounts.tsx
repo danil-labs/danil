@@ -13,7 +13,7 @@ import { createStore, reconcile } from "solid-js/store";
 import { createCopied } from "../../lib/clipboard";
 import { enfocar } from "../../lib/focus";
 import { t } from "../../lib/i18n";
-import { invoke } from "../../lib/invoke.ts";
+import { invoke } from "../../engine/client.ts";
 
 import { revocada } from "../../lib/limits";
 import { textoDeFalta } from "../../lib/no-space";

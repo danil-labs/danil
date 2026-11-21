@@ -3,7 +3,7 @@
  * aquí: `danil_edge_fetch` lo pone en Rust, solo admite una lista cerrada de
  * rutas. `edgeUntil` reintenta 404, 429, 501 y 503 con backoff e idempotencia.
  */
-import { invoke } from "./invoke.ts";
+import { invoke } from "../engine/client.ts";
 
 export type Me = { id: string; name: string; state?: string; workspace: string | null; organizations: { id: string; name: string; type?: string; role?: string }[]; active_organization_id?: string | null };
 export type Organization = { id: string; name: string; plan: string; role: string };

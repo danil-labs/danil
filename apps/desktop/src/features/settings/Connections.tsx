@@ -16,7 +16,7 @@ import {
 import { createResource, createSignal, For, Show } from "solid-js";
 import { createCopied } from "../../lib/clipboard";
 import { t } from "../../lib/i18n";
-import { invoke } from "../../lib/invoke.ts";
+import { invoke } from "../../engine/client.ts";
 import { Badge } from "../../ui/Badge";
 import { Button } from "../../ui/Button";
 import { Dialog, DialogContent, DialogTitle } from "../../ui/Dialog";

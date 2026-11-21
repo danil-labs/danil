@@ -16,7 +16,7 @@ import {
 } from "solid-js";
 import { connected } from "../../lib/engineConnection";
 import { t } from "../../lib/i18n";
-import { invoke } from "../../lib/invoke.ts";
+import { invoke } from "../../engine/client.ts";
 import { anotarFalta, SIN_ESPACIO, textoSinEspacio } from "../../lib/no-space";
 import { capabilities } from "../../lib/platform";
 import { listen } from "../../lib/serviceEvents";

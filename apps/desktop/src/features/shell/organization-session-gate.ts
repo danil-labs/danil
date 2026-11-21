@@ -1,7 +1,7 @@
 import { isOrganizationSelectionRequired, type OrganizationSelection } from "@terminus/computers";
 import { listenDanilConnectionChange } from "../../lib/danilConnectionEvents";
-import { onEdgeProblem } from "../../lib/edge";
-import { invoke } from "../../lib/invoke";
+import { onEdgeProblem } from "../../platform/client";
+import { invoke } from "../../engine/client";
 import { hasSessionGroups } from "./session-groups";
 
 /** Un conjunto usa los menús de grupo; sin él, queda el selector anterior. */

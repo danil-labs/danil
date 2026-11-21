@@ -14,7 +14,7 @@ import ExternalIcon from "lucide-solid/icons/external-link";
 import Plus from "lucide-solid/icons/plus";
 import { For, Show, createEffect, createSignal, onCleanup, onMount } from "solid-js";
 import { t } from "../../../lib/i18n";
-import { invoke } from "../../../lib/invoke.ts";
+import { invoke } from "../../../engine/client.ts";
 import { capabilities } from "../../../lib/platform";
 import { Badge } from "../../../ui/Badge";
 import { Button } from "../../../ui/Button";

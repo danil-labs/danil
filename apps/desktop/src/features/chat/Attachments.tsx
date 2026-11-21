@@ -1,5 +1,5 @@
 import { createResource, createSignal, Show, For, Suspense, lazy } from "solid-js";
-import { invoke } from "../../lib/invoke.ts";
+import { invoke } from "../../engine/client.ts";
 import X from "lucide-solid/icons/x";
 import { Dialog, DialogContent, DialogTitle } from "../../ui/Dialog";
 import FileText from "lucide-solid/icons/file-text";

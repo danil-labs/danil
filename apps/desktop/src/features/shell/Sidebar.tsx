@@ -9,7 +9,7 @@ import { destinoEnVuelo, puntoDelArrastre, tareaEnVuelo } from "../../lib/drag";
 import { recordarCarpetas } from "../../lib/folderKinds";
 import { t } from "../../lib/i18n";
 import { watchRoster } from "../../lib/handlerRoster";
-import { invoke } from "../../lib/invoke.ts";
+import { invoke } from "../../engine/client.ts";
 import type { AgentProfile, HandlerList, HandlerStatus, Project } from "../../lib/model";
 import { createPref } from "../../lib/prefs";
 import { sharedLazy } from "../../lib/sharedLazy";

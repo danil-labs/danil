@@ -12,7 +12,7 @@ import Copy from "lucide-solid/icons/copy";
 import { createSignal, For, Match, onCleanup, onMount, Show, Switch } from "solid-js";
 import { t } from "../../lib/i18n";
 import { createCopied } from "../../lib/clipboard";
-import { invoke } from "../../lib/invoke";
+import { invoke } from "../../engine/client";
 import { capabilities } from "../../lib/platform";
 import { Button } from "../../ui/Button";
 import { Input } from "../../ui/Input";

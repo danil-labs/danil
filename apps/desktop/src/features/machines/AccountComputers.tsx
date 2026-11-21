@@ -10,7 +10,7 @@ import Pencil from "lucide-solid/icons/pencil";
 import { createSignal, For, onMount, onCleanup, Show } from "solid-js";
 import { df } from "../../lib/format";
 import { t } from "../../lib/i18n";
-import { invoke } from "../../lib/invoke";
+import { invoke } from "../../engine/client";
 import { capabilities, type AccountComputersSource } from "../../lib/platform";
 import { isMac } from "../../lib/window";
 import { Button } from "../../ui/Button";

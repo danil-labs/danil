@@ -1,5 +1,5 @@
 import { For, Show, createSignal, onCleanup, onMount } from "solid-js";
-import { invoke } from "../../lib/invoke.ts";
+import { invoke } from "../../engine/client.ts";
 import { Button } from "../../ui/Button";
 import { Toast } from "../../ui/Toast";
 import type { Source } from "../../lib/model";

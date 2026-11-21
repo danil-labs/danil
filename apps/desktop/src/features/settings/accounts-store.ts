@@ -7,7 +7,7 @@
  */
 import type { Frase } from "../../lib/prose";
 import { createEffect, createSignal, on, onCleanup } from "solid-js";
-import { invoke } from "../../lib/invoke.ts";
+import { invoke } from "../../engine/client.ts";
 import { legible, type Query, type Read } from "../../lib/limits";
 import { t } from "../../lib/i18n";
 import type { Failure } from "../../ui/Failure";

@@ -4,9 +4,9 @@
  * cerrar sesión. Hay una sola cuenta: cambiar de usuario es cerrar sesión y
  * entrar con otra. La ventana nunca ve tokens.
  */
-import { cancelEdgeWrites } from "../../lib/edge.ts";
+import { cancelEdgeWrites } from "../../platform/client.ts";
 import { signOutPlatform } from "./free-router-session.ts";
-import { invoke } from "../../lib/invoke.ts";
+import { invoke } from "../../engine/client.ts";
 import { forgetMachineNames } from "../machines/known-names.ts";
 
 export type DanilConnectState = "disconnected" | "pending" | "connected" | "error";

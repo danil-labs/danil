@@ -1,5 +1,5 @@
 import { createEffect, createSignal, on, onCleanup, onMount, Show } from "solid-js";
-import { invoke } from "../../lib/invoke.ts";
+import { invoke } from "../../engine/client.ts";
 import { listen } from "../../lib/serviceEvents";
 import { Button } from "../../ui/Button";
 import { aDireccion, corta, hayCapaEncima, seguirHueco, zonasEncima } from "../../lib/sites";

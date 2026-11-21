@@ -1,5 +1,5 @@
 import { Channel } from "@tauri-apps/api/core";
-import { invoke } from "../../lib/invoke.ts";
+import { invoke } from "../../engine/client.ts";
 import { open } from "@tauri-apps/plugin-dialog";
 import { Show, createEffect, createMemo, createSignal, on } from "solid-js";
 import { type ProjectRepository } from "../../lib/projectRepositories";

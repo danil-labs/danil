@@ -16,7 +16,7 @@ import {
   parseMemoryEntry,
   readMemoryFile,
 } from "@terminus/computers";
-import { invoke } from "../../lib/invoke.ts";
+import { invoke } from "../../engine/client.ts";
 import type { MemoriaEntrada, MemoriaScope } from "../../lib/model";
 import { capabilities } from "../../lib/platform";
 

@@ -3,7 +3,7 @@ import Plus from "lucide-solid/icons/plus";
 import { createSignal, Show } from "solid-js";
 import { enfocarYSeleccionar } from "../../lib/focus";
 import { t } from "../../lib/i18n";
-import { invoke } from "../../lib/invoke.ts";
+import { invoke } from "../../engine/client.ts";
 import { carpetaDeTrabajo, type Project } from "../../lib/model";
 import { ubicacionDeProyecto } from "../../lib/projectLocation";
 import { PROJECT_NAME_MAX_LENGTH } from "../../lib/projectNames";

@@ -4,7 +4,7 @@ import GitBranch from "lucide-solid/icons/git-branch";
 import Plus from "lucide-solid/icons/plus";
 import Search from "lucide-solid/icons/search";
 import ChevronRight from "lucide-solid/icons/chevron-right";
-import { invoke } from "../../lib/invoke";
+import { invoke } from "../../engine/client";
 import { t } from "../../lib/i18n";
 import { enfocar } from "../../lib/focus";
 import { mergeRepositories, repositoryCloneUrl, repositoryIdentity, type ProjectRepository } from "../../lib/projectRepositories";

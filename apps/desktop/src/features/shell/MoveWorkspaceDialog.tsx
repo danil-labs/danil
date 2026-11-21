@@ -13,7 +13,7 @@ async function openHarness() {
     window.open(HARNESS, "_blank", "noopener,noreferrer");
     return;
   }
-  const { invoke } = await import("../../lib/invoke.ts");
+  const { invoke } = await import("../../engine/client.ts");
   await invoke("open_external", { target: HARNESS }).catch(() => {});
 }
 

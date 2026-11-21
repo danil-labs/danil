@@ -5,7 +5,7 @@
 import "../../locales/danilPhrases";
 import { createSignal, For, onCleanup, onMount } from "solid-js";
 import { t } from "../../lib/i18n";
-import { invoke } from "../../lib/invoke";
+import { invoke } from "../../engine/client";
 import { listen } from "../../lib/serviceEvents";
 import { Button } from "../../ui/Button";
 import {

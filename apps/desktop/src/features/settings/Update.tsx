@@ -1,4 +1,4 @@
-import { invoke } from "../../lib/invoke.ts";
+import { invoke } from "../../engine/client.ts";
 import { For, Match, Show, Switch, createSignal, onMount } from "solid-js";
 import { check, type Update } from "@tauri-apps/plugin-updater";
 import { getVersion } from "@tauri-apps/api/app";

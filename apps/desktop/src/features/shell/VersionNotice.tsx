@@ -3,7 +3,7 @@ import { check, type Update } from "@tauri-apps/plugin-updater";
 import { Button } from "../../ui/Button";
 import { Toast } from "../../ui/Toast";
 import { t } from "../../lib/i18n";
-import { invoke } from "../../lib/invoke.ts";
+import { invoke } from "../../engine/client.ts";
 import { waitingThen } from "./liveTurns";
 
 /** Elegir qué hacer con las tareas vivas solo hace falta con una versión lista: va aparte de la carga inicial. */

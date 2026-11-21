@@ -2,7 +2,7 @@ import Plus from "lucide-solid/icons/plus";
 import { createSignal, For, type JSX, onCleanup, onMount, Show } from "solid-js";
 import { createStore, reconcile } from "solid-js/store";
 import { t } from "../../lib/i18n";
-import { invoke } from "../../lib/invoke.ts";
+import { invoke } from "../../engine/client.ts";
 import type { AgenteDeMaquina, CatalogoDeAgentes } from "../../lib/model";
 import { Button } from "../../ui/Button";
 import { Dialog, DialogContent, DialogTitle } from "../../ui/Dialog";

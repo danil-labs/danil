@@ -1,6 +1,6 @@
 import { listenDanilConnectionChange } from "../../lib/danilConnectionEvents";
-import { edgeFetch, edgeUntil, ORGANIZATION_CHANGED, type WorkspaceList } from "../../lib/edge";
-import { invoke } from "../../lib/invoke";
+import { edgeFetch, edgeUntil, ORGANIZATION_CHANGED, type WorkspaceList } from "../../platform/client";
+import { invoke } from "../../engine/client";
 import { availableDanilCredits, type DanilCreditsSource } from "./danil-credits";
 
 // Presupuesto de reintentos para las dos lecturas de una misma tarjeta.

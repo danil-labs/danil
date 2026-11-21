@@ -1,6 +1,6 @@
 import { For, Show, createEffect, createMemo, createSignal, onMount } from "solid-js";
 import { errorCode } from "../../lib/errorCode";
-import { invoke } from "../../lib/invoke";
+import { invoke } from "../../engine/client";
 import { t } from "../../lib/i18n";
 import { Button } from "../../ui/Button";
 import { Dialog, DialogContent, DialogTitle } from "../../ui/Dialog";

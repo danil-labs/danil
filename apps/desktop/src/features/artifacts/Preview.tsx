@@ -1,5 +1,5 @@
 import { For, Show, Suspense, createEffect, createSignal, lazy, on, onCleanup } from "solid-js";
-import { invoke } from "../../lib/invoke.ts";
+import { invoke } from "../../engine/client.ts";
 import { save } from "@tauri-apps/plugin-dialog";
 import { join, tempDir } from "@tauri-apps/api/path";
 import { useFileMachine } from "../../ui/fileMachine";

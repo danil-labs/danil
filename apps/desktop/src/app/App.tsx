@@ -188,7 +188,7 @@ import { recordarCarpetas } from "../lib/folderKinds";
 import { lista } from "../lib/format";
 import { lastRoster, rememberRoster } from "../lib/handlerRoster";
 import { aplicarLenguaDeWorkspace, t } from "../lib/i18n";
-import { captureWorkspaceContext, displayWorkspaceSnapshot, invoke, requestedWorkspaceSnapshot } from "../lib/invoke.ts";
+import { captureWorkspaceContext, displayWorkspaceSnapshot, invoke, requestedWorkspaceSnapshot } from "../engine/client.ts";
 import type { InternalTaskLink } from "../lib/links";
 import type { MentionSources } from "../lib/mentions";
 import type {

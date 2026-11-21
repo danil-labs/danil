@@ -3,7 +3,7 @@ import Copy from "lucide-solid/icons/copy";
 import { createEffect, createSignal, Match, onCleanup, Show, Switch } from "solid-js";
 import { createCopied } from "../../lib/clipboard";
 import { t } from "../../lib/i18n";
-import { invoke } from "../../lib/invoke.ts";
+import { invoke } from "../../engine/client.ts";
 import { Button } from "../../ui/Button";
 import { prosaDe } from "../../ui/Failure";
 import { Input } from "../../ui/Input";

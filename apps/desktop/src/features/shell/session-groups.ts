@@ -1,5 +1,5 @@
 import { createEffect, createMemo, createRoot, createSignal, on } from "solid-js";
-import { invoke } from "../../lib/invoke.ts";
+import { invoke } from "../../engine/client.ts";
 import { bridgePersonSession } from "../../lib/person-session.ts";
 import { capabilities } from "../../lib/platform.ts";
 import { escribirPref, leerPref } from "../../lib/prefs.ts";

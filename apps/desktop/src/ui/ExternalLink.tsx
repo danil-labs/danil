@@ -1,5 +1,5 @@
 import type { JSX } from "solid-js";
-import { invoke } from "../lib/invoke.ts";
+import { invoke } from "../engine/client.ts";
 import { cn } from "../lib/utils";
 
 export const ENLACE =

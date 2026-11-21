@@ -9,7 +9,7 @@ import {
   onCleanup,
   onMount,
 } from "solid-js";
-import { invoke } from "../../lib/invoke.ts";
+import { invoke } from "../../engine/client.ts";
 import { listen } from "../../lib/serviceEvents";
 import RefreshCw from "lucide-solid/icons/refresh-cw";
 import SquareArrowOutUpRight from "lucide-solid/icons/square-arrow-out-up-right";

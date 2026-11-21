@@ -9,7 +9,7 @@ import {
   on,
   onMount,
 } from "solid-js";
-import { invoke } from "../../lib/invoke.ts";
+import { invoke } from "../../engine/client.ts";
 import { copyText } from "../../lib/clipboard";
 import { t } from "../../lib/i18n";
 import { elapsed, percent } from "../../lib/format";

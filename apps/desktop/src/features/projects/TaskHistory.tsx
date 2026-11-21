@@ -1,5 +1,5 @@
 import { machineOf } from "../machines/store";
-import { invoke } from "../../lib/invoke.ts";
+import { invoke } from "../../engine/client.ts";
 import { listen } from "../../lib/serviceEvents";
 import { Show, createMemo, createResource, createSignal, onCleanup, onMount } from "solid-js";
 import { t } from "../../lib/i18n";

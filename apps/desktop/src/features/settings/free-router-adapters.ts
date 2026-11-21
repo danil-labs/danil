@@ -1,8 +1,8 @@
 /** El motor y el borde que usa el cliente del Free router de plataforma, en Desk (Rust) y en la web (cookie). */
 import { EdgeError, type EdgeTransport } from "@terminus/computers";
 import type { InvokeOptions } from "@tauri-apps/api/core";
-import { edgeFetch } from "../../lib/edge.ts";
-import { invoke } from "../../lib/invoke.ts";
+import { edgeFetch } from "../../platform/client.ts";
+import { invoke } from "../../engine/client.ts";
 import type { EdgeSend, EngineCall } from "./free-router-platform.ts";
 
 /** Las órdenes RPC1 del pase y la lista de workspaces, cada una por su nombre, al motor (`options` lleva su ámbito). */

@@ -12,7 +12,7 @@ import { arbolesDe } from "./treeKind";
 import { Button } from "../../ui/Button";
 import { ITEM_DE_MENU, Popover, PopoverContent, PopoverTrigger } from "../../ui/Popover";
 import { t } from "../../lib/i18n";
-import { invoke } from "../../lib/invoke.ts";
+import { invoke } from "../../engine/client.ts";
 import { copyText } from "../../lib/clipboard";
 import { cn } from "../../lib/utils";
 import { HEADER_HEIGHT } from "../../lib/window";

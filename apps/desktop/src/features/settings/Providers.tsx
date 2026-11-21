@@ -1,5 +1,5 @@
 import { For, Match, Show, Suspense, Switch, createEffect, createSignal, lazy, on, onCleanup, onMount } from "solid-js";
-import { invoke } from "../../lib/invoke.ts";
+import { invoke } from "../../engine/client.ts";
 import { capabilities } from "../../lib/platform.ts";
 import { FailureNote, asFailure, detalleDe, type Failure } from "../../ui/Failure";
 import { Skeleton } from "../../ui/Skeleton";

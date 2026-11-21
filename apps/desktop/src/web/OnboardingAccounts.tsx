@@ -6,7 +6,7 @@ import { accountKeyUrl } from "../features/settings/account-auth";
 import type { AccountList, AgentOpt, LoginEvent } from "../features/settings/accounts-store";
 import { LoginCodeForm } from "../features/settings/LoginCodeForm";
 import { t } from "../lib/i18n";
-import { invoke } from "../lib/invoke.ts";
+import { invoke } from "../engine/client.ts";
 import { listen } from "../lib/serviceEvents";
 import { Badge } from "../ui/Badge";
 import { Button } from "../ui/Button";

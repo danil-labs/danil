@@ -1,6 +1,6 @@
 import type { InvokeOptions } from "@tauri-apps/api/core";
 import { errorCode } from "../../lib/errorCode";
-import { invoke } from "../../lib/invoke";
+import { invoke } from "../../engine/client";
 import { t } from "../../lib/i18n";
 import { detalleDe, prosaDe } from "../../ui/Failure";
 

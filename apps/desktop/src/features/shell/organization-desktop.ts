@@ -6,7 +6,7 @@
  */
 
 import { createOrganizationSelection, type OrganizationSelection } from "@terminus/computers";
-import { cancelEdgeWrites, edgeFetch, ORGANIZATION_CHANGED } from "../../lib/edge";
+import { cancelEdgeWrites, edgeFetch, ORGANIZATION_CHANGED } from "../../platform/client";
 import { edgeOrganizationSource } from "./organization-edge";
 import { legacyOrganizationGate } from "./organization-session-gate";
 

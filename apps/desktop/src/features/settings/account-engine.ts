@@ -1,5 +1,5 @@
 /** La persona de la cuenta de Danil según el motor del escritorio (`danil_account_*`). */
-import { invoke } from "../../lib/invoke.ts";
+import { invoke } from "../../engine/client.ts";
 import { imagenInerte } from "../../lib/links.ts";
 import { urlDeAvatar } from "../projects/avatar-src.ts";
 import type { AccountProfile, AccountProfileSource } from "./account-profile.ts";

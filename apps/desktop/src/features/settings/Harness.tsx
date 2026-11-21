@@ -3,7 +3,7 @@
  * motor (`radiant.error.*`, `radiant.governance.*`, `radiant.usage.*`) siguen en
  * `radiant.json` porque son el nombre del contrato, no de la pantalla.
  */
-import { invoke } from "../../lib/invoke.ts";
+import { invoke } from "../../engine/client.ts";
 import { listen } from "../../lib/serviceEvents";
 import { createSignal, For, lazy, onCleanup, onMount, Show, Suspense } from "solid-js";
 import { t } from "../../lib/i18n";

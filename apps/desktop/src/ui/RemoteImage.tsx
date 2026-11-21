@@ -1,4 +1,4 @@
-import { invoke } from "../lib/invoke";
+import { invoke } from "../engine/client";
 import { createResource, Show } from "solid-js";
 import { imagenInerte } from "../lib/links";
 import { EnlargeableImage } from "./EnlargeableImage";

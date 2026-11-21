@@ -8,7 +8,7 @@ import TriangleAlert from "lucide-solid/icons/triangle-alert";
 import { createSignal, For, Match, Show, Switch, type JSX } from "solid-js";
 import { lista } from "../../lib/format";
 import { t } from "../../lib/i18n";
-import { invoke } from "../../lib/invoke.ts";
+import { invoke } from "../../engine/client.ts";
 import { cn } from "../../lib/utils";
 import { Badge } from "../../ui/Badge";
 import { Button } from "../../ui/Button";

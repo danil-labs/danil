@@ -1,7 +1,7 @@
 import { listen } from "../../lib/serviceEvents";
 import Coffee from "lucide-solid/icons/coffee";
 import { createSignal, For, onCleanup, Show } from "solid-js";
-import { invoke } from "../../lib/invoke.ts";
+import { invoke } from "../../engine/client.ts";
 import { t } from "../../lib/i18n";
 import { cn } from "../../lib/utils";
 import type { SignalTone } from "../../ui/SignalDot";

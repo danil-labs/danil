@@ -5,7 +5,7 @@
  * cuenta única de `danil-account.ts`. Sin dependencias de Solid: las pruebas de
  * Node lo importan.
  */
-import { invoke } from "../../lib/invoke.ts";
+import { invoke } from "../../engine/client.ts";
 import { forgetMachineNames } from "../machines/known-names.ts";
 import { type DanilConnectStatus, failureCode } from "./danil-account.ts";
 

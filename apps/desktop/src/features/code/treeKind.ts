@@ -1,4 +1,4 @@
-import { invoke } from "../../lib/invoke.ts";
+import { invoke } from "../../engine/client.ts";
 import { machineOf } from "../machines/store";
 import type { ArbolEnTarea } from "../../lib/model";
 import { esDeCodigo } from "./workdirKind";

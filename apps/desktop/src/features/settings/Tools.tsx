@@ -1,7 +1,7 @@
 import { For, Show, Suspense, createSignal, lazy, onCleanup, onMount } from "solid-js";
 import { SignalDot } from "../../ui/SignalDot";
 import { listen } from "../../lib/serviceEvents";
-import { invoke } from "../../lib/invoke.ts";
+import { invoke } from "../../engine/client.ts";
 import { Button } from "../../ui/Button";
 import { Textarea } from "../../ui/Textarea";
 import { FailureNote, asFailure, type Failure } from "../../ui/Failure";

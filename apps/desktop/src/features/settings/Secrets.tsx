@@ -16,7 +16,7 @@ import { createEffect, createMemo, createResource, createSignal, For, Match, on,
 import { unknownCommand } from "../../lib/errorCode.ts";
 import { df } from "../../lib/format";
 import { t } from "../../lib/i18n";
-import { invoke } from "../../lib/invoke.ts";
+import { invoke } from "../../engine/client.ts";
 import type { Project } from "../../lib/model";
 import { capabilities } from "../../lib/platform";
 import { Badge } from "../../ui/Badge";

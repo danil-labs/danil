@@ -2,7 +2,7 @@ import type { HistoryChunk, HistoryRef } from "@terminus/protocol";
 import { currentRef, readDetailText } from "@terminus/chat/historyDetail";
 import { createResource, createSignal, For, Show, onCleanup, type JSX } from "solid-js";
 import { retainRowWhile } from "./threadRow";
-import { invoke } from "../../lib/invoke";
+import { invoke } from "../../engine/client";
 import { t } from "../../lib/i18n";
 import { Markdown } from "../../ui/Markdown";
 import { machineOf } from "../machines/store";

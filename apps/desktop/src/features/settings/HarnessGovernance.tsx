@@ -1,4 +1,4 @@
-import { invoke } from "../../lib/invoke.ts";
+import { invoke } from "../../engine/client.ts";
 import { listen } from "../../lib/serviceEvents";
 import { createEffect, createSignal, For, on, onCleanup, Show } from "solid-js";
 import {

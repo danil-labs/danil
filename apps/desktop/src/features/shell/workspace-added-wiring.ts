@@ -9,7 +9,7 @@
 import type { OrganizationSelection } from "@terminus/computers";
 import type { Listed } from "@terminus/fleet";
 import { createEffect, createMemo, createRoot, createSignal, on } from "solid-js";
-import { edgeFetch, ORGANIZATION_CHANGED } from "../../lib/edge.ts";
+import { edgeFetch, ORGANIZATION_CHANGED } from "../../platform/client.ts";
 import { capabilities } from "../../lib/platform.ts";
 import { escribirPref, leerPref } from "../../lib/prefs.ts";
 import { listen } from "../../lib/serviceEvents.ts";

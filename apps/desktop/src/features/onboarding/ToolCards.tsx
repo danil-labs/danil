@@ -9,7 +9,7 @@ import { createSignal, For, type JSX, Match, onCleanup, onMount, Show, Switch } 
 import { createStore } from "solid-js/store";
 import { mb } from "../../lib/format";
 import { t } from "../../lib/i18n";
-import { invoke } from "../../lib/invoke.ts";
+import { invoke } from "../../engine/client.ts";
 import { borrarPref, leerPref } from "../../lib/prefs";
 import { prosa, type Frase } from "../../lib/prose";
 import { cn } from "../../lib/utils";

@@ -1,5 +1,5 @@
 import { For, Match, Show, Switch, createSignal, onMount } from "solid-js";
-import { invoke } from "../../lib/invoke.ts";
+import { invoke } from "../../engine/client.ts";
 import { FailureNote, asFailure, type Failure } from "../../ui/Failure";
 import { t } from "../../lib/i18n";
 import { Button } from "../../ui/Button";

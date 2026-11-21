@@ -3,7 +3,7 @@
  * llegan como `person-session`; la ventana los oye como `danil-connect`, igual que los del botón.
  */
 import { emit as tauriEmit } from "@tauri-apps/api/event";
-import { invoke as nativeInvoke } from "./invoke.ts";
+import { invoke as nativeInvoke } from "../engine/client.ts";
 import { listen as serviceListen } from "./serviceEvents.ts";
 
 type Listen = (event: string, handler: (event: { payload: unknown }) => void) => Promise<() => void>;

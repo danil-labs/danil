@@ -1,7 +1,7 @@
 import X from "lucide-solid/icons/x";
 import { Show } from "solid-js";
 import { t } from "../../lib/i18n";
-import { invoke } from "../../lib/invoke.ts";
+import { invoke } from "../../engine/client.ts";
 import { createPref } from "../../lib/prefs";
 import { Button } from "../../ui/Button";
 import { GitHubMark } from "../../ui/icons";

@@ -12,7 +12,7 @@ import Sparkles from "lucide-solid/icons/sparkles";
 import { createResource, createSignal, For, type JSX, lazy, onCleanup, onMount, Show, Suspense } from "solid-js";
 import { Dynamic } from "solid-js/web";
 import { t } from "../../lib/i18n";
-import { invoke } from "../../lib/invoke.ts";
+import { invoke } from "../../engine/client.ts";
 import { capabilities } from "../../lib/platform";
 import { listen } from "../../lib/serviceEvents";
 import { flechaDeLista } from "../../lib/shortcuts";

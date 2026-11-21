@@ -1,7 +1,7 @@
 import { listen } from "../../lib/serviceEvents";
 import { createEffect, createRoot, createSignal, on } from "solid-js";
 import { t } from "../../lib/i18n";
-import { invoke } from "../../lib/invoke.ts";
+import { invoke } from "../../engine/client.ts";
 import { createPref } from "../../lib/prefs";
 import { huecoLibre, moviendoHueco, zonasEncima, type Hueco } from "../../lib/sites";
 

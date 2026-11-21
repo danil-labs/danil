@@ -1,5 +1,5 @@
 import { For, Show, createEffect, createSignal, on, onCleanup } from "solid-js";
-import { invoke } from "../../lib/invoke.ts";
+import { invoke } from "../../engine/client.ts";
 import Check from "lucide-solid/icons/check";
 import ChevronDown from "lucide-solid/icons/chevron-down";
 import RefreshCw from "lucide-solid/icons/refresh-cw";

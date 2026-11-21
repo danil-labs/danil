@@ -1,5 +1,5 @@
 import { createSignal } from "solid-js";
-import { invoke } from "../../lib/invoke.ts";
+import { invoke } from "../../engine/client.ts";
 import { imagenInerte } from "../../lib/links";
 import { capabilities } from "../../lib/platform";
 import { machineOf } from "../machines/store";

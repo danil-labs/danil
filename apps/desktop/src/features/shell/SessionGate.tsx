@@ -1,7 +1,7 @@
 import "../../locales/danilPhrases";
 import { createEffect, createMemo, createSignal, For, type JSX, Match, onCleanup, onMount, Show, Switch } from "solid-js";
 import { t } from "../../lib/i18n";
-import { invoke } from "../../lib/invoke";
+import { invoke } from "../../engine/client";
 import { capabilities } from "../../lib/platform";
 import { escribirPref, leerPref } from "../../lib/prefs";
 import { listen } from "../../lib/serviceEvents";

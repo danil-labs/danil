@@ -1,5 +1,5 @@
 import { createEffect, createMemo, createSignal, on, onCleanup } from "solid-js";
-import { invoke } from "../../lib/invoke.ts";
+import { invoke } from "../../engine/client.ts";
 import { machineOf } from "../machines/store";
 import { FileMachine } from "../../ui/fileMachine";
 import PreviewPane, { type Preview } from "./Preview";

@@ -3,7 +3,7 @@ import { Show, createSignal, onCleanup, onMount } from "solid-js";
 import { Button } from "../../ui/Button";
 import { Toast } from "../../ui/Toast";
 import { t } from "../../lib/i18n";
-import { invoke as routedInvoke } from "../../lib/invoke.ts";
+import { invoke as routedInvoke } from "../../engine/client.ts";
 import { quietFinished } from "./TaskNotifier";
 import {
   setWaitRows,

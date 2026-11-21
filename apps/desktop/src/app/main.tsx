@@ -5,7 +5,7 @@ import { render } from "solid-js/web";
 import App from "./App";
 import Setup from "../features/settings/Setup";
 import { Lanzador, SessionGate } from "../features/shell";
-import { invoke } from "../lib/invoke.ts";
+import { invoke } from "../engine/client.ts";
 import { seguirElTema } from "../lib/theme";
 import { aplicarEscala, atajoDeEscala } from "../lib/zoom";
 import { trimNativeMenu } from "../lib/contextMenu";

@@ -6,7 +6,7 @@ import Sun from "lucide-solid/icons/sun";
 import Trash2 from "lucide-solid/icons/trash-2";
 import X from "lucide-solid/icons/x";
 import { For, Show, createResource, createSignal, onCleanup, onMount, type Component } from "solid-js";
-import { invoke } from "../../lib/invoke.ts";
+import { invoke } from "../../engine/client.ts";
 import { t } from "../../lib/i18n";
 import { elegirArchivoDeImagen } from "../../lib/pick-image";
 import type { AgentProfile, AgenteDeMaquina, CatalogoDeAgentes } from "../../lib/model";

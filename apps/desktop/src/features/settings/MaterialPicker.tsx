@@ -1,5 +1,5 @@
 import { For, Match, Show, Switch, createSignal, onMount } from "solid-js";
-import { invoke } from "../../lib/invoke.ts";
+import { invoke } from "../../engine/client.ts";
 import { open } from "@tauri-apps/plugin-dialog";
 import ChevronLeft from "lucide-solid/icons/chevron-left";
 import FolderOpen from "lucide-solid/icons/folder-open";

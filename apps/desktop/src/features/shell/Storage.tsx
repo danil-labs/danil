@@ -11,7 +11,7 @@ import {
   onCleanup,
   untrack,
 } from "solid-js";
-import { invoke } from "../../lib/invoke.ts";
+import { invoke } from "../../engine/client.ts";
 import { t } from "../../lib/i18n";
 import { peso } from "../../lib/format";
 import { conservar } from "../../lib/sessionRefresh";

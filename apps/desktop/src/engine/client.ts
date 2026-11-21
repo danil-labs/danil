@@ -1,11 +1,11 @@
 import { type InvokeArgs, type InvokeOptions, invoke as tauri } from "@tauri-apps/api/core";
-import { connected, whenConnected } from "./engineConnection.ts";
-import { withoutAbout } from "./taskMentions.ts";
-import { captureWorkspaceContext } from "./workspace-context.ts";
+import { connected, whenConnected } from "../lib/engineConnection.ts";
+import { withoutAbout } from "../lib/taskMentions.ts";
+import { captureWorkspaceContext } from "../lib/workspace-context.ts";
 
-export { captureWorkspaceContext, displayWorkspaceSnapshot, requestedWorkspaceSnapshot } from "./workspace-context.ts";
+export { captureWorkspaceContext, displayWorkspaceSnapshot, requestedWorkspaceSnapshot } from "../lib/workspace-context.ts";
 
-import { errorCode } from "./errorCode.ts";
+import { errorCode } from "../lib/errorCode.ts";
 
 /**
  * El único `invoke` de la ventana: el de Tauri, que espera al servicio en vez
@@ -15,9 +15,9 @@ import { errorCode } from "./errorCode.ts";
  * existe— cruza tal cual y sin demora.
  */
 
-export { canRepeat, neverRan, retrying, WAITS } from "./invoke-retries.ts";
+export { canRepeat, neverRan, retrying, WAITS } from "./retries.ts";
 
-import { canRepeat, retrying, sleep } from "./invoke-retries.ts";
+import { canRepeat, retrying, sleep } from "./retries.ts";
 
 /**
  * Antes de que la ventana tenga motor (`launcher.rs`, fase `connecting`) el proxy

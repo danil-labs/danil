@@ -1,6 +1,6 @@
 import { resolveTaskGit as resolveSharedTaskGit } from "@terminus/tasks";
 import { Channel } from "@tauri-apps/api/core";
-import { invoke } from "../../lib/invoke.ts";
+import { invoke } from "../../engine/client.ts";
 import { type Accessor, createSignal } from "solid-js";
 
 import { type TaskGitStatus, mergeRemoteGit, readTaskGit, retainGitObservation, sameGit as mismoGit, UNKNOWN_TASK_GIT } from "@terminus/tasks";

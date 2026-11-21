@@ -13,7 +13,7 @@ import { type ChatBackgroundChange, chatBackgroundView } from "@terminus/protoco
 import { blobToDataUrl } from "../features/settings/account-profile.ts";
 import { VELO_DE_FONDO, VELO_DE_PANELES, VELO_DE_PESTANAS, fondoDe, type FondoDeChat } from "./chat-background.ts";
 import * as store from "./chat-background-store.ts";
-import { invoke } from "./invoke.ts";
+import { invoke } from "../engine/client.ts";
 import { capabilities } from "./platform.ts";
 import { shrinkImage } from "./shrink-image.ts";
 import { errorCode, unknownCommand } from "./errorCode.ts";

@@ -1,7 +1,7 @@
 import { routerAvailable } from "@terminus/tasks";
 import { createSignal, lazy, onCleanup, Show } from "solid-js";
 import { t } from "../../lib/i18n";
-import { invoke } from "../../lib/invoke.ts";
+import { invoke } from "../../engine/client.ts";
 import { acceptedFreeModelPolicy, freeModelScope, sameFreeModelPolicy, type FreeModelConsent, type FreeModelPolicy, type FreeModelStartup } from "../../lib/free-model-policy.ts";
 import { loadFreeModelPolicy } from "../../lib/free-model-policy-load.ts";
 import type { Frase } from "../../lib/prose";

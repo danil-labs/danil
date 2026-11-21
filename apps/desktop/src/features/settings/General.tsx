@@ -7,7 +7,7 @@ import Trash2 from "lucide-solid/icons/trash-2";
 import { createSignal, For, Match, onMount, Show, Switch } from "solid-js";
 import { df } from "../../lib/format";
 import { t } from "../../lib/i18n";
-import { invoke } from "../../lib/invoke.ts";
+import { invoke } from "../../engine/client.ts";
 import { abbreviateHomePath, remoteHost, remotePathLabel } from "../../lib/remote-path";
 import type { Source } from "../../lib/model";
 import { cn } from "../../lib/utils";

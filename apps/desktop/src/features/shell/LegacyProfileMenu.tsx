@@ -4,7 +4,7 @@ import LogOut from "lucide-solid/icons/log-out";
 import UserRound from "lucide-solid/icons/user-round";
 import { createSignal, For, lazy, Show, Suspense, untrack } from "solid-js";
 import { t } from "../../lib/i18n";
-import { invoke } from "../../lib/invoke.ts";
+import { invoke } from "../../engine/client.ts";
 import { capabilities } from "../../lib/platform";
 import { canRedeemPromo } from "../../lib/promo-role";
 import { type Apariencia, apariencia, elegirApariencia } from "../../lib/theme";

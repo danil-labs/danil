@@ -2,7 +2,7 @@ import { handlerMutation, handlerOperationRunning, pendingHandlerOperation, resu
 import "../../locales/handlerPhrases";
 import "../../locales/failurePhrases";
 import { createEffect, createMemo, createSignal, For, onCleanup, Show } from "solid-js";
-import { invoke } from "../../lib/invoke.ts";
+import { invoke } from "../../engine/client.ts";
 import { t } from "../../lib/i18n";
 import { detalleDe } from "../../lib/failure";
 import type { HandlerApproval, HandlerMemory, HandlerRelease, HandlerRequests } from "../../lib/model";

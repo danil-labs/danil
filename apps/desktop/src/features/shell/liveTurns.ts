@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { createSignal } from "solid-js";
-import { invoke as routedInvoke } from "../../lib/invoke.ts";
+import { invoke as routedInvoke } from "../../engine/client.ts";
 import { t } from "../../lib/i18n";
 
 export type LiveTurn = {

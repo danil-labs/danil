@@ -12,7 +12,7 @@ import { createEffect, createMemo, createSignal, createUniqueId, For, lazy, on, 
 import { rememberRoster } from "../../lib/handlerRoster";
 import { createCopied } from "../../lib/clipboard";
 import { t } from "../../lib/i18n";
-import { invoke } from "../../lib/invoke.ts";
+import { invoke } from "../../engine/client.ts";
 import {
   type Agent,
   carpetaDeTrabajo,

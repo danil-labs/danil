@@ -9,7 +9,7 @@ import {
 import type { Extension, Text } from "@codemirror/state";
 import { EditorView, ViewPlugin } from "@codemirror/view";
 import { t } from "../../lib/i18n";
-import { invoke } from "../../lib/invoke.ts";
+import { invoke } from "../../engine/client.ts";
 import { machineOf } from "../machines/store";
 import type { InsercionDeRuta } from "./typst";
 

@@ -7,7 +7,7 @@ import { Show, createSignal, type JSX } from "solid-js";
 import { createCopied } from "../../lib/clipboard";
 import { enfocar } from "../../lib/focus";
 import { t } from "../../lib/i18n";
-import { invoke } from "../../lib/invoke.ts";
+import { invoke } from "../../engine/client.ts";
 import { Button } from "../../ui/Button";
 import { Dialog, DialogContent, DialogTitle } from "../../ui/Dialog";
 import { prosaDe } from "../../ui/Failure";

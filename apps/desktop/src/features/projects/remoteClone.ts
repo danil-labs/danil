@@ -4,7 +4,7 @@
  * recupera con `project_clone_status` tras recargar o perder la conexión
  * (seldon-host `docs/connector.md`, «Clonar desde el relay»).
  */
-import { invoke } from "../../lib/invoke";
+import { invoke } from "../../engine/client";
 import { t } from "../../lib/i18n";
 import type { Project } from "../../lib/model";
 import { borrarPref, escribirPref, leerPref } from "../../lib/prefs";

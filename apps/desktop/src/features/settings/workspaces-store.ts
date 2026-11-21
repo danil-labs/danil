@@ -9,7 +9,7 @@
  */
 import { createMemo, createSignal, onCleanup, onMount } from "solid-js";
 import { t } from "../../lib/i18n";
-import { invoke } from "../../lib/invoke.ts";
+import { invoke } from "../../engine/client.ts";
 import { createNavigationOrder } from "../../lib/navigation-order";
 import { capabilities } from "../../lib/platform";
 import type { Frase } from "../../lib/prose";

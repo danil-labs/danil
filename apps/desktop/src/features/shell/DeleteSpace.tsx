@@ -12,7 +12,7 @@ import {
   spaceName,
   type TaskSeen,
 } from "../../lib/spaces";
-import { invoke } from "../../lib/invoke.ts";
+import { invoke } from "../../engine/client.ts";
 import { machineOf } from "../machines/store";
 import type { Project } from "../../lib/model";
 import { Button } from "../../ui/Button";

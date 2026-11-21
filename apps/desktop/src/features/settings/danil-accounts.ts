@@ -5,7 +5,7 @@
  * `sessions()` es `undefined` mientras lee y `null` con un motor anterior.
  */
 import { createEffect, createSignal, on, onCleanup, onMount } from "solid-js";
-import { invoke } from "../../lib/invoke";
+import { invoke } from "../../engine/client";
 import { listen } from "../../lib/serviceEvents";
 import { listenDanilConnectionChange } from "../../lib/danilConnectionEvents";
 import { failureCode } from "./danil-account";
