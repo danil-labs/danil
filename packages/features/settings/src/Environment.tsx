@@ -25,8 +25,8 @@ import {
 } from "./environment-store";
 import { MarcaAgente } from "../../../ui/src/icons";
 import { FailureNote, asFailure, type Failure } from "../../../ui/src/Failure";
-import { esIncluida, fallasIncluidas } from "../../onboarding/src/bundled";
-import { FuncionesAfectadas } from "../../onboarding/src/Repair";
+import { esIncluida, fallasIncluidas } from "../../onboarding/src/model/bundled";
+import { FuncionesAfectadas } from "../../onboarding/src/components/Repair";
 import { peso } from "../../../../apps/desktop/src/lib/format";
 import { Skeleton } from "../../../ui/src/Skeleton";
 import { RETARDO_TOOLTIP, TooltipContent, TooltipRoot, TooltipTrigger } from "../../../ui/src/Tooltip";

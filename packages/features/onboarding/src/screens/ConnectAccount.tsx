@@ -5,13 +5,13 @@
  */
 import Cloud from "lucide-solid/icons/cloud";
 import { createEffect, createSignal, type JSX, on, Show } from "solid-js";
-import { t } from "../../../../apps/desktop/src/lib/i18n";
-import { Button } from "../../../ui/src/Button";
-import { Spinner } from "../../../ui/src/Spinner";
-import { createDanilSession } from "../../settings/src/danil-session";
-import { requestAccessInBrowser, TerminusLicense } from "../../settings/src/TerminusLicense";
-import { noteFirstLoginSignedIn } from "../../../shell/src/shell";
-import { rememberAccountWelcome } from "./account-welcome";
+import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { Button } from "../../../../ui/src/Button";
+import { Spinner } from "../../../../ui/src/Spinner";
+import { createDanilSession } from "../../../settings/src/danil-session";
+import { requestAccessInBrowser, TerminusLicense } from "../../../settings/src/TerminusLicense";
+import { noteFirstLoginSignedIn } from "../../../../shell/src/shell";
+import { rememberAccountWelcome } from "../model/account-welcome";
 
 type Step = "choose" | "signing";
 
