@@ -891,7 +891,8 @@ export function createRouterCore(config: RouterConfig) {
       const context = !local ? contextOwner(command, args, workspace) : null;
       if (context) return await remote(context, command, args, callWorkspace(workspace, args));
       if (elsewhere(workspace)) {
-        const lead = leadOf(workspace);
+        // En la web, un workspace sin máquinas propias en el registro se atiende en la VM de la cuenta, como las cuentas de IA.
+        const lead = leadOf(workspace) ?? (!local ? leadOf(null) : null);
         if (lead) return await remote(lead, command, args, callWorkspace(workspace, args));
         if (!local) throw { what: t("web.machines.none_for_workspace"), detail: "no_machine" };
       }
