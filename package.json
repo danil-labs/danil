@@ -21,7 +21,8 @@
     "version:bump": "pnpm -C apps/desktop version:bump",
     "hooks:install": "node apps/desktop/scripts/install-hooks.mjs",
     "prepare": "node apps/desktop/scripts/install-hooks.mjs",
-    "front:build": "pnpm --filter @danil/app-workspace --filter @danil/app-auth --filter @danil/app-desk build",
+    "front:build": "pnpm front:verify && pnpm --filter @danil/app-workspace --filter @danil/app-auth --filter @danil/app-desk build",
+    "front:verify": "node scripts/verify-front.mjs",
     "front:typecheck": "pnpm --filter \"./apps/{workspace,auth,desk}\" --filter \"./packages/**\" typecheck"
   }
 }
