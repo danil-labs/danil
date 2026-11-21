@@ -1,0 +1,44 @@
+{
+  "version": 1,
+  "name": "connected_machines",
+  "description": "Máquinas conectadas por organización (plan 2026-11-20-maquinas-por-organizacion § 5 «Contrato v3» de terminus-workspace, con la decisión 2026-11-20-sesion-en-el-motor). El motor se inscribe solo: por cada organización de la sesión de la persona (person_session_v1) pide POST /v1/machines/self/enroll {install_id, hostname, platform} por el borde, con X-Danil-Session si es un contexto, al iniciar sesión, al arrancar y cada 10 min, y solo si esa organización aún no tiene credencial. Guarda machine_credential en su bóveda (Clase::Danil, ámbito danil-computers, ranura connected-<organization_id>) y en connected.json solo lo que no es secreto. Con ella la canjea en el borde, POST {edge}/v1/machines/boot-credential {machine_id, machine_credential} -> {token, expires_at en segundos de época} (danil-boot+jwt, iss=machine-provisioning, aud=relay; opción B del plan: sin sesión de persona), y abre solo el canal de datos en {connect}/v1/connect (DANIL_CONNECT_URL solo https o loopback, por omisión https://connect.danil.ai), lo renueva antes de que venza (un cuarto de la vida que le queda, como mucho 10 min antes) y mantiene un relay GET {connect}/v1/connect con Bearer <token> por organización. danil_connected_status -> ConnectedStatus {install_id, hostname, platform, organizations: [{organization_id, machine_id, state: connecting|connected|error, online, error?, expires_at?}]} (expires_at en ms de época de la credencial de arranque vigente). danil_connected_detach {organizationId} -> ConnectedStatus: corta el relay y olvida la credencial aquí; no avisa a la central y la siguiente inscripción la vuelve a pedir mientras haya sesión en esa organización. Errores (detail): invalid_organization; vault si la bóveda no se abre. error de la fila: invalid_machine_credential (la central no la reconoce o se quitó la máquina: se olvida y se vuelve a inscribir en la siguiente vuelta), owner_not_authorized (reintenta cada 5 min), not_a_member, personal_machine_limit, unavailable. Por el relay de una máquina conectada solo se ven y tocan los workspaces sellados con esa organización (tenancy); nada de toda la máquina. Ningún comando devuelve la credencial ni el token. Solo la ventana y la CLI local (relay: false). Fuera del hash de compatibilidad (status.contract).",
+  "features": [
+    "connected_machines_v1"
+  ],
+  "commands": [
+    {
+      "async": false,
+      "channel": null,
+      "kind": "invoke",
+      "name": "danil_connected_status",
+      "output": "-> Result < ConnectedStatus , Failure >",
+      "parameters": [],
+      "path": "danil::connected::danil_connected_status",
+      "relay": false,
+      "audience": "window",
+      "authority": "admin",
+      "durable": false,
+      "enforcement": "server"
+    },
+    {
+      "async": false,
+      "channel": null,
+      "kind": "invoke",
+      "name": "danil_connected_detach",
+      "output": "-> Result < ConnectedStatus , Failure >",
+      "parameters": [
+        {
+          "key": "organizationId",
+          "name": "organization_id",
+          "type": "String"
+        }
+      ],
+      "path": "danil::connected::danil_connected_detach",
+      "relay": false,
+      "audience": "window",
+      "authority": "admin",
+      "durable": false,
+      "enforcement": "server"
+    }
+  ]
+}

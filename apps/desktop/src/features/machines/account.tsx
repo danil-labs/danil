@@ -46,6 +46,7 @@ import { type DanilSessionInfo, railSession, type WorkspaceAccount } from "../se
 import AccountMachines from "./AccountMachines";
 import { mergeBridgeInventory } from "./bridge-inventory";
 import { CLOUD_RETRY_INITIAL_MS, CLOUD_RETRY_MS } from "./cloud-machines";
+import { createConnectedStatus } from "./connected-status";
 import { createCloudRelayFactory } from "./context-relay";
 import { machinesListed, setDanilFleet } from "./danil-source";
 import { createEngineWorkspaces, railOf } from "./engine-workspaces";
@@ -143,7 +144,7 @@ export function startAccountMachines(target: Target = window) {
     // `403 organization_selection_required`: se abre el selector de organización (si esta ventana lo tiene).
     const organizations = (capabilities() as { organizations?: () => Promise<{ report: (e: unknown) => unknown }> }).organizations;
     void organizations?.().then((selector) => selector.report(e));
-  }, undefined, contexts => { installed?.router.pruneContexts(contexts); installed?.fleet.pruneContexts(contexts); });
+  }, undefined, contexts => { installed?.router.pruneContexts(contexts); installed?.fleet.pruneContexts(contexts); }, createConnectedStatus(invoke));
   let cloudIds = new Set<string>();
   /** `machines.session.renew` anunciada por el borde: el relay renueva dentro del canal. */
   let cloudRenew = false;

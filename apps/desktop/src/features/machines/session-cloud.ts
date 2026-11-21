@@ -8,11 +8,12 @@ type Context = { context_id: string; org: string; plan?: string | null };
 type Status = { state?: string; sessions?: { contexts: Context[] }[] };
 export type ContextComputer = Computer & { context?: string };
 
-/** Cada identidad conserva su endpoint; una máquina de organización solo sirve a su propia organización. */
-export function mergeContextMachines(groups: { context: Context; computers: Computer[] }[]): ContextComputer[] {
+/** Cada identidad conserva su endpoint; una máquina de organización solo sirve a su propia organización. `own`: las inscripciones de esta computadora, que ya es la fila local. */
+export function mergeContextMachines(groups: { context: Context; computers: Computer[] }[], own: ReadonlySet<string> = new Set()): ContextComputer[] {
   const rows = new Map<string, ContextComputer>();
   for (const { context, computers } of groups) for (const row of computers) {
     if (row.kind === "organization" && row.organization_id !== context.org) continue;
+    if (row.kind === "personal" && own.has(row.computer_id)) continue;
     rows.set(contextMachineKey(row.computer_id, context.context_id), { ...row, context: context.context_id });
   }
   return [...rows.values()];
@@ -20,7 +21,8 @@ export function mergeContextMachines(groups: { context: Context; computers: Comp
 
 export const contextMachineKey = (machine: string, context?: string) => JSON.stringify([machine, context ?? ""]);
 
-export function createSessionCloud(invoke: Invoke, onProblem?: (error: unknown) => void, endpoint = EDGE_ENDPOINT, onContextsSettled?: (contexts: readonly string[]) => void) {
+/** `here`: las inscripciones que el motor reporta de esta computadora (`connected-status.ts`). */
+export function createSessionCloud(invoke: Invoke, onProblem?: (error: unknown) => void, endpoint = EDGE_ENDPOINT, onContextsSettled?: (contexts: readonly string[]) => void, here?: { read: () => Promise<void>; own: () => ReadonlySet<string> }) {
   const legacy = createCloudMachines(invoke, onProblem, endpoint);
   let clients = new Map<string, ReturnType<typeof createCloudMachines>>();
   let current = new Map<string, ContextComputer>();
@@ -82,14 +84,14 @@ export function createSessionCloud(invoke: Invoke, onProblem?: (error: unknown) 
       const list = [...new Map(status.sessions!.flatMap((s) => s.contexts).map((c) => [c.context_id, c])).values()];
       contexts = new Map(list.map((c) => [c.context_id, c]));
       clients = new Map([...clients].filter(([id]) => contexts?.has(id)));
-      const answers = await Promise.all(list.map(async (context) => ({ context, answer: await child(context.context_id).rows() })));
+      const [answers] = await Promise.all([Promise.all(list.map(async (context) => ({ context, answer: await child(context.context_id).rows() }))), here?.read()]);
       if (version !== epoch) return { state: "retrying" as const };
       if (unsupported) {
         contexts = null;
         current.clear();
         return legacy.rows();
       }
-      const rows = mergeContextMachines(answers.flatMap(({ context, answer }) => answer.state === "ready" ? [{ context, computers: answer.computers }] : []));
+      const rows = mergeContextMachines(answers.flatMap(({ context, answer }) => answer.state === "ready" ? [{ context, computers: answer.computers }] : []), here?.own());
       current = new Map(rows.map((r) => [contextMachineKey(r.computer_id, r.context), r]));
       // Se quita lo denegado de inmediato; una familia no puede conservar datos de otra.
       return { state: "ready" as const, computers: rows, retrying: answers.some(({ answer }) => answer.state === "retrying" || answer.state === "unavailable"), renewInChannel: answers.length > 0 && answers.every(({ answer }) => answer.state === "ready" && answer.renewInChannel) };

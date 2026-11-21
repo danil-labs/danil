@@ -80,6 +80,13 @@ const SIN_INTERFAZ = {
   danil_connect_options: "Desk tiene una sola cuenta (login por identity): no hay «Continuar como <correo>»; queda en el contrato del motor",
   // La columna derecha de la tarea nueva se quitó: sus archivos viven dentro de la tarea. Siguen en el contrato del motor.
   create_empty_session: "la pedía la columna derecha de la tarea nueva, que ya no existe; queda en el contrato del motor",
+  // La sesión vive en el motor: estas órdenes las llama Rust (`desk_auth/engine_session.rs`), no la webview.
+  ...Object.fromEntries([
+    "person_session_login", "person_session_login_complete", "person_session_status", "person_session_logout", "person_session_select_organization", "person_session_fetch",
+  ].map(command => [command, "las llama desk_auth en Rust detrás de danil_session_status, danil_sign_in, danil_sign_in_complete, danil_sign_out y danil_edge_fetch"])),
+  danil_connected_detach: "quitar una máquina conectada aún no tiene pantalla; el motor la vuelve a inscribir mientras haya sesión",
+  engine_adoption_status: "el login inicial lee el avance de la adopción del motor en su propio cambio",
+  engine_adoption_retry: "el login inicial ofrece reintentar la adopción del motor en su propio cambio",
   // Extensión de orquestadores: las pide el relay de Danil Machines (MCP remoto), no una pantalla.
   connect_external: "la pide el MCP remoto de Danil Machines por el relay",
   connection_call: "la pide el MCP remoto de Danil Machines por el relay",
