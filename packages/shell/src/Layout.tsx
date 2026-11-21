@@ -39,14 +39,7 @@ export function Layout(props: LayoutProps): JSX.Element {
   };
 
   return (
-    <div
-      style={{
-        display: "flex",
-        width: "100vw",
-        height: "100vh",
-        overflow: "hidden",
-      }}
-    >
+    <div class="flex h-screen w-screen overflow-hidden bg-bg text-neutral-950">
       {/* Riel con ErrorBoundary por zona */}
       <RailErrorBoundary>
         <Rail
@@ -65,14 +58,7 @@ export function Layout(props: LayoutProps): JSX.Element {
       </RailErrorBoundary>
 
       {/* Área principal con ErrorBoundary por zona */}
-      <main
-        style={{
-          flex: "1",
-          height: "100%",
-          overflow: "auto",
-          position: "relative",
-        }}
-      >
+      <main class="relative h-full flex-1 overflow-auto bg-bg">
         <MainErrorBoundary>
           {props.children ?? (
             <RouteView

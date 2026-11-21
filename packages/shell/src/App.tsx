@@ -22,82 +22,33 @@ export interface AppProps {
 
 function EntryScreen(props: { isDesk: boolean; onAddSession?: () => void }): JSX.Element {
   return (
-    <div
-      style={{
-        display: "flex",
-        "flex-direction": "column",
-        "align-items": "center",
-        "justify-content": "center",
-        height: "100vh",
-        width: "100vw",
-        background: "#0e0f12",
-        color: "#ffffff",
-        "font-family": "system-ui, -apple-system, sans-serif",
-      }}
+    <main
+      class="flex h-full min-h-screen w-full flex-col items-center justify-center overflow-y-auto bg-bg px-6 py-10 text-neutral-950 dark:text-neutral-100"
+      data-web-auth="workos"
     >
-      <div
-        style={{
-          display: "flex",
-          "flex-direction": "column",
-          "align-items": "center",
-          gap: "24px",
-          padding: "32px",
-          background: "#18191e",
-          "border-radius": "12px",
-          border: "1px solid #2a2c33",
-          "max-width": "400px",
-          width: "90%",
-          "text-align": "center",
-        }}
-      >
-        <div style={{ "font-size": "24px", "font-weight": "600", "letter-spacing": "-0.02em" }}>
-          Danil
+      <div class="grid w-full max-w-sm gap-6">
+        <h1 class="m-0 font-display text-3xl font-bold tracking-[-0.03em]">Danil</h1>
+        <div class="grid gap-2">
+          <h2 class="m-0 text-xl font-semibold">Iniciar sesión</h2>
+          <p class="m-0 text-sm text-neutral-500" role="status">
+            Inicia sesión para acceder a tus máquinas y espacios de trabajo.
+          </p>
         </div>
-        <p style={{ color: "#9da1b0", margin: "0", "font-size": "14px", "line-height": "1.5" }}>
-          Inicia sesión para acceder a tus máquinas y espacios de trabajo.
-        </p>
 
         <Show
           when={props.isDesk}
           fallback={
-            <a
-              href={webLoginUrl()}
-              style={{
-                display: "inline-block",
-                padding: "10px 20px",
-                background: "#2f68f6",
-                color: "#ffffff",
-                "text-decoration": "none",
-                "border-radius": "8px",
-                "font-weight": "500",
-                "font-size": "14px",
-                transition: "background 0.2s",
-              }}
-            >
+            <Button as="a" class="min-h-11" href={webLoginUrl()}>
               Iniciar sesión
-            </a>
+            </Button>
           }
         >
-          <button
-            type="button"
-            onClick={props.onAddSession}
-            style={{
-              padding: "10px 20px",
-              background: "#2f68f6",
-              color: "#ffffff",
-              border: "none",
-              "border-radius": "8px",
-              "font-weight": "500",
-              "font-size": "14px",
-              cursor: "pointer",
-              transition: "background 0.2s",
-            }}
-          >
+          <Button class="min-h-11" onClick={props.onAddSession}>
             Iniciar sesión
-          </button>
+          </Button>
         </Show>
       </div>
-    </div>
+    </main>
   );
 }
 
@@ -139,20 +90,15 @@ function AppWithSession(props: AppProps): JSX.Element {
     <Show
       when={!checking()}
       fallback={
-        <div
-          style={{
-            display: "flex",
-            height: "100vh",
-            width: "100vw",
-            background: "#0e0f12",
-            color: "#9da1b0",
-            "align-items": "center",
-            "justify-content": "center",
-            "font-family": "system-ui, sans-serif",
-          }}
+        <main
+          class="flex h-full min-h-screen w-full flex-col items-center justify-center bg-bg px-6 py-10 text-neutral-950 dark:text-neutral-100"
+          data-web-loading=""
         >
-          Cargando...
-        </div>
+          <h1 class="m-0 font-display text-3xl font-bold tracking-[-0.03em]">Danil</h1>
+          <p class="m-0 mt-3 text-sm text-neutral-500" role="status">
+            Conectando…
+          </p>
+        </main>
       }
     >
       <Show when={!failure()} fallback={<SessionFailure onRetry={check} />}>
