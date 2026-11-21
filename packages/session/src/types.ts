@@ -8,6 +8,7 @@ export interface Session {
   /** Llave estable: el `context_id` del motor en Desk; "web" en la web. */
   key: string;
   email: string;
+  name?: string | null;
   organization_id: string | null;
   /** Nombre de la organización tal como lo da identity (nunca se muestra la palabra «Organización»). */
   organization_name: string | null;

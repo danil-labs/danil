@@ -21,7 +21,6 @@ export type {
   Organization,
   ProfileData,
 } from "./model.ts";
-export { getPlanLabel } from "./model.ts";
 
 // Configuración de URLs
 export {

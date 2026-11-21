@@ -86,7 +86,8 @@ export function createWebSession(opts: WebSessionOptions = {}): SessionSource {
         const org = me.organizations?.find((o) => o.id === me.active_organization_id) ?? me.organizations?.[0];
         current = {
           key: "web",
-          email: me.name ?? "",
+          email: "",
+          name: me.name ?? null,
           organization_id: org?.id ?? null,
           organization_name: org?.name ?? null,
           plan: org?.plan ?? null,

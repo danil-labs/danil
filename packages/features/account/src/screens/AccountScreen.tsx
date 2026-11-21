@@ -1,5 +1,6 @@
 import { Show, type Component } from "solid-js";
 import { host } from "@danil/host";
+import { useSession } from "@danil/session/solid";
 import { useProfile } from "../queries.ts";
 import { ExternalLink } from "../components/ExternalLink.tsx";
 import { AccountErrorView } from "../components/AccountErrorView.tsx";
@@ -26,6 +27,23 @@ function resolveErrorMessage(err: unknown): string | undefined {
  */
 export const AccountScreen: Component<AccountScreenProps> = (props) => {
   const profileQuery = (props.useProfileHook ?? useProfile)();
+
+  let activeSession: () => { email?: string; name?: string | null } | undefined = () => undefined;
+  try {
+    const s = useSession();
+    activeSession = () => {
+      const activeKey = s.active();
+      return s.sessions().find((sess) => sess.key === activeKey) ?? s.sessions()[0];
+    };
+  } catch {
+    // Fuera de SessionProvider
+  }
+
+  const resolveUserEmail = (me: { name?: string; email?: string }) => {
+    const sess = activeSession();
+    const rawEmail = sess?.email || me.email;
+    return rawEmail && rawEmail.trim() ? rawEmail : sess?.name || me.name;
+  };
 
   const handleOpenBilling = () => {
     void host.openExternal(getBillingUrl());
@@ -70,8 +88,8 @@ export const AccountScreen: Component<AccountScreenProps> = (props) => {
                 </p>
 
                 <AccountIdentityBlock
-                  name={data().me.name || data().me.id}
-                  email={(data().me as { email?: string }).email}
+                  name={data().me.name || activeSession()?.name || data().me.id}
+                  email={resolveUserEmail(data().me as { name?: string; email?: string })}
                   readonly={true}
                 />
               </section>

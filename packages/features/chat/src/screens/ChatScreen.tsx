@@ -60,6 +60,10 @@ function ChatSessionView(props: ChatSessionViewProps) {
   const { respondPermission, isResponding: isRespondingPermission } = useRespondPermission(props.conn.client);
   const { answerQuestion } = useAnswerQuestion(props.conn.client);
   const [isAnsweringQuestion, setIsAnsweringQuestion] = createSignal(false);
+  const [actionError, setActionError] = createSignal<{
+    message: string;
+    onRetry: () => void;
+  } | null>(null);
 
   const handleSend = async (prompt: string) => {
     try {
@@ -82,29 +86,45 @@ function ChatSessionView(props: ChatSessionViewProps) {
   };
 
   const handlePermissionDecide = async (requestId: string, decision: "allow" | "deny") => {
+    setActionError(null);
     try {
-      store.resolvePermission(requestId, decision);
       await respondPermission({
         sessionId: props.sessionId,
         requestId,
         allow: decision === "allow",
       });
-    } catch {
-      // Revertir o reportar si falla
+      store.resolvePermission(requestId, decision);
+    } catch (err) {
+      const message =
+        err instanceof Error
+          ? err.message
+          : "Error al responder a la solicitud de permiso";
+      setActionError({
+        message,
+        onRetry: () => void handlePermissionDecide(requestId, decision),
+      });
     }
   };
 
   const handleAnswerQuestion = async (requestId: string, answers: unknown[]) => {
     setIsAnsweringQuestion(true);
+    setActionError(null);
     try {
-      store.answerQuestion(requestId, answers);
       await answerQuestion({
         sessionId: props.sessionId,
         requestId,
         answers,
       });
-    } catch {
-      // Revertir o reportar si falla
+      store.answerQuestion(requestId, answers);
+    } catch (err) {
+      const message =
+        err instanceof Error
+          ? err.message
+          : "Error al enviar la respuesta a la pregunta";
+      setActionError({
+        message,
+        onRetry: () => void handleAnswerQuestion(requestId, answers),
+      });
     } finally {
       setIsAnsweringQuestion(false);
     }
@@ -169,6 +189,16 @@ function ChatSessionView(props: ChatSessionViewProps) {
 
         <Show when={sendError()}>
           <ErrorBanner message={sendError()!} />
+        </Show>
+
+        <Show when={actionError()}>
+          {(err) => (
+            <ErrorBanner
+              message={err().message}
+              onRetry={err().onRetry}
+              isRetrying={isRespondingPermission() || isAnsweringQuestion()}
+            />
+          )}
         </Show>
 
         <Show
