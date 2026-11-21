@@ -1,10 +1,10 @@
 import { createEffect, createSignal, on, onCleanup, onMount, Show } from "solid-js";
-import { invoke } from "../../../engine-client/src/client.ts";
-import { listen } from "../../../../apps/desktop/src/lib/serviceEvents";
-import { Button } from "../../../ui/src/Button";
-import { aDireccion, corta, hayCapaEncima, seguirHueco, zonasEncima } from "../../../../apps/desktop/src/lib/sites";
-import { t } from "../../../../apps/desktop/src/lib/i18n";
-import { prosaDe } from "../../../ui/src/Failure";
+import { invoke } from "../../../../engine-client/src/client.ts";
+import { listen } from "../../../../../apps/desktop/src/lib/serviceEvents";
+import { Button } from "../../../../ui/src/Button";
+import { aDireccion, corta, hayCapaEncima, seguirHueco, zonasEncima } from "../../../../../apps/desktop/src/lib/sites";
+import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { prosaDe } from "../../../../ui/src/Failure";
 
 /**
  * Un sitio dentro de la ventana. **Lo que este componente pinta es el hueco**;

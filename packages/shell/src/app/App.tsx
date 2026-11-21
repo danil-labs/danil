@@ -177,7 +177,7 @@ import UsageTool from "../shell/UsageTool";
 import { createUsage } from "../shell/usage";
 import AvisoDeVersion from "../shell/VersionNotice";
 import WorkspaceColumn from "../shell/WorkspaceColumn";
-import Sitio from "../../../features/sites/src/Site";
+import Sitio from "../../../features/sites/src/screens/Site";
 import { DragOverlay, UnsavedCloseDialog } from "../../../features/tabs/src";
 import { createEngineQueue, createTaskQueues } from "../../../features/task-queues/src";
 import { VELO_DE_FONDO } from "../../../../apps/desktop/src/lib/chat-background";
