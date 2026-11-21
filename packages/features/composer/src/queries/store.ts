@@ -1,10 +1,10 @@
 import { batch, createEffect, createMemo, createSignal, on, onCleanup, onMount, untrack } from "solid-js";
-import type { Agent, AgentModels, ModoDePermiso } from "../../../../apps/desktop/src/lib/model.ts";
-import { type CatalogosDeModelos, effortAlCambiarDeModelo, type OpcionDeModelo } from "../../../../apps/desktop/src/lib/models.ts";
-import type { CliCommand, Skill, SlashMenu } from "../../../../apps/desktop/src/lib/skills.ts";
-import { esDe, paraElMenu, type Superficie, superficieDe } from "../../../../apps/desktop/src/lib/surfaces.ts";
-import { modoInicial, modoRecordado, recordarModo } from "../../chat/src/index.ts";
-import { OPENCODE } from "../../../tasks/src/agents.ts";
+import type { Agent, AgentModels, ModoDePermiso } from "../../../../../apps/desktop/src/lib/model.ts";
+import { type CatalogosDeModelos, effortAlCambiarDeModelo, type OpcionDeModelo } from "../../../../../apps/desktop/src/lib/models.ts";
+import type { CliCommand, Skill, SlashMenu } from "../../../../../apps/desktop/src/lib/skills.ts";
+import { esDe, paraElMenu, type Superficie, superficieDe } from "../../../../../apps/desktop/src/lib/surfaces.ts";
+import { modoInicial, modoRecordado, recordarModo } from "../../../chat/src/index.ts";
+import { OPENCODE } from "../../../../tasks/src/agents.ts";
 
 type Invoke = <T>(command: string, args?: Record<string, unknown>, options?: { headers: Record<string, string> }) => Promise<T>;
 export type ComposerConfiguration = { agent: string; surface: string; model: string; effort: string; mode?: string };
