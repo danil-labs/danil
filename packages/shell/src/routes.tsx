@@ -1,4 +1,5 @@
 import { Show, type Component, type JSX } from "solid-js";
+import { Tabs } from "@danil/ui";
 import type { Route } from "./router.tsx";
 
 // src/routes.tsx es el ÚNICO archivo del shell que compone features (Regla R3)
@@ -32,8 +33,6 @@ function PlaceholderScreen(props: { title: string; subtitle?: string }): JSX.Ele
         display: "flex",
         "flex-direction": "column",
         "box-sizing": "border-box",
-        background: "#0e0f12",
-        color: "#ffffff",
         "font-family": "system-ui, -apple-system, sans-serif",
       }}
     >
@@ -41,7 +40,7 @@ function PlaceholderScreen(props: { title: string; subtitle?: string }): JSX.Ele
         {props.title}
       </div>
       <Show when={props.subtitle}>
-        <div style={{ color: "#8b8f9e", "font-size": "13px" }}>{props.subtitle}</div>
+        <div style={{ opacity: "0.7", "font-size": "13px" }}>{props.subtitle}</div>
       </Show>
     </div>
   );
@@ -54,6 +53,29 @@ const getFeatureScreen = <T extends Component<any>>(
   return typeof module[name] === "function" ? (module[name] as T) : undefined;
 };
 
+export interface RailSlotProps {
+  activeWorkspaceId?: string | null;
+  onSelectWorkspace?: (workspaceId: string) => void | Promise<void>;
+  onAddWorkspace?: (orgId?: string) => void;
+}
+
+export function RailSlot(props: RailSlotProps): JSX.Element {
+  const Component = getFeatureScreen<Component<WorkspacesFeature.RailGroupsProps>>(
+    WorkspacesFeature,
+    "RailGroups",
+  );
+  if (Component) {
+    return (
+      <Component
+        activeWorkspaceId={props.activeWorkspaceId}
+        onSelectWorkspace={props.onSelectWorkspace}
+        onAddWorkspace={props.onAddWorkspace}
+      />
+    );
+  }
+  return null;
+}
+
 export function MachinesScreen(): JSX.Element {
   const FeatureComponent = getFeatureScreen(MachinesFeature, "MachinesScreen");
   if (FeatureComponent) {
@@ -62,18 +84,102 @@ export function MachinesScreen(): JSX.Element {
   return <PlaceholderScreen title="Máquinas" subtitle="Gestión y estado de tus máquinas conectadas" />;
 }
 
-export function WorkspaceScreen(props: { id: string }): JSX.Element {
-  const FeatureComponent = getFeatureScreen<Component<{ id: string }>>(
-    WorkspacesFeature,
-    "WorkspaceScreen",
+export function ProjectsScreen(props: { workspaceId?: string; conn?: any }): JSX.Element {
+  const FeatureComponent = getFeatureScreen<Component<any>>(
+    ProjectsFeature,
+    "ProjectsScreen",
   );
   if (FeatureComponent) {
-    return <FeatureComponent id={props.id} />;
+    return <FeatureComponent workspaceId={props.workspaceId} conn={props.conn} />;
+  }
+  return <PlaceholderScreen title="Proyectos" subtitle="Tareas y proyectos del espacio seleccionado" />;
+}
+
+export function ChatScreen(props: { workspaceId?: string; sessionId?: string; conn?: any }): JSX.Element {
+  const FeatureComponent = getFeatureScreen<Component<any>>(
+    ChatFeature,
+    "ChatScreen",
+  );
+  if (FeatureComponent) {
+    return (
+      <FeatureComponent
+        workspaceId={props.workspaceId}
+        sessionId={props.sessionId ?? props.workspaceId ?? ""}
+        conn={props.conn}
+      />
+    );
+  }
+  return <PlaceholderScreen title="Chat" subtitle="Conversación y turnos con el agente" />;
+}
+
+export function FilesScreen(props: { workspaceId?: string; conn?: any }): JSX.Element {
+  const FeatureComponent = getFeatureScreen<Component<any>>(
+    FilesFeature,
+    "FilesScreen",
+  );
+  if (FeatureComponent) {
+    return <FeatureComponent workspaceId={props.workspaceId} conn={props.conn} />;
+  }
+  return <PlaceholderScreen title="Archivos" subtitle="Explorador de archivos del espacio de trabajo" />;
+}
+
+export function TerminalScreen(props: { workspaceId?: string }): JSX.Element {
+  const FeatureComponent = getFeatureScreen<Component<any>>(
+    TerminalFeature,
+    "TerminalScreen",
+  );
+  if (FeatureComponent) {
+    return <FeatureComponent workspaceId={props.workspaceId} />;
   }
   return (
     <PlaceholderScreen
-      title={`Espacio de trabajo: ${props.id}`}
-      subtitle="Proyectos, tareas y agentes del espacio seleccionado"
+      title="Terminal"
+      subtitle="Terminal y procesos interactivos del espacio de trabajo"
+    />
+  );
+}
+
+export function WorkspaceScreen(props: { id: string }): JSX.Element {
+  return (
+    <div style={{ display: "flex", "flex-direction": "column", height: "100%", width: "100%", overflow: "hidden" }}>
+      <Tabs defaultValue="projects" class="workspace-tabs" style={{ display: "flex", "flex-direction": "column", height: "100%" }}>
+        <Tabs.List class="workspace-tabs-list" style={{ display: "flex", "border-bottom": "1px solid var(--border-subtle, rgba(255,255,255,0.08))", padding: "0 16px" }}>
+          <Tabs.Trigger value="projects" class="workspace-tab-trigger">Proyectos</Tabs.Trigger>
+          <Tabs.Trigger value="chat" class="workspace-tab-trigger">Chat</Tabs.Trigger>
+          <Tabs.Trigger value="files" class="workspace-tab-trigger">Archivos</Tabs.Trigger>
+          <Tabs.Trigger value="terminal" class="workspace-tab-trigger">Terminal</Tabs.Trigger>
+        </Tabs.List>
+        <div style={{ flex: "1", overflow: "auto" }}>
+          <Tabs.Content value="projects" style={{ height: "100%" }}>
+            <ProjectsScreen workspaceId={props.id} />
+          </Tabs.Content>
+          <Tabs.Content value="chat" style={{ height: "100%" }}>
+            <ChatScreen workspaceId={props.id} sessionId={props.id} />
+          </Tabs.Content>
+          <Tabs.Content value="files" style={{ height: "100%" }}>
+            <FilesScreen workspaceId={props.id} />
+          </Tabs.Content>
+          <Tabs.Content value="terminal" style={{ height: "100%" }}>
+            <TerminalScreen workspaceId={props.id} />
+          </Tabs.Content>
+        </div>
+      </Tabs>
+    </div>
+  );
+}
+
+export function AiCredentialsScreen(props: { workspaceId?: string }): JSX.Element {
+  const FeatureComponent = getFeatureScreen<Component<{ workspaceId?: string }>>(
+    AICredentialsFeature,
+    "AiCredentialsScreen",
+  );
+  if (FeatureComponent) {
+    return <FeatureComponent workspaceId={props.workspaceId} />;
+  }
+  return (
+    <PlaceholderScreen
+      title="Credenciales de IA"
+      subtitle="Proveedores y modelos configurados para este espacio"
     />
   );
 }
@@ -86,7 +192,7 @@ export function AccountScreen(): JSX.Element {
   return <PlaceholderScreen title="Cuenta" subtitle="Perfil y configuración del plan" />;
 }
 
-export function RouteView(props: { route: Route }): JSX.Element {
+export function RouteView(props: { route: Route; activeWorkspaceId?: string }): JSX.Element {
   return (
     <div style={{ width: "100%", height: "100%", position: "relative" }}>
       <Show when={props.route.name === "machines"}>
@@ -96,6 +202,9 @@ export function RouteView(props: { route: Route }): JSX.Element {
         {(props.route as { name: "workspace"; id: string }).id && (
           <WorkspaceScreen id={(props.route as { name: "workspace"; id: string }).id} />
         )}
+      </Show>
+      <Show when={props.route.name === "ai-credentials"}>
+        <AiCredentialsScreen workspaceId={props.activeWorkspaceId} />
       </Show>
       <Show when={props.route.name === "account"}>
         <AccountScreen />
