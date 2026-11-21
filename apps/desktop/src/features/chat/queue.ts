@@ -1,54 +1,24 @@
 import type { Encolado } from "./MessageQueue";
 
 /**
- * De quién es la cola que se tiene en la mano, y cuándo se le deja salir.
+ * De quién es la cola que se tiene en la mano.
  *
  * **Lo encolado es de una SESIÓN, pero se sostiene en una sola señal**: la de la
  * tarea que se está mirando. Cambiar de tarea es entonces una secuencia de
  * asignaciones —la sesión primero, soltar la cola después— y en Solid cada una
- * corre los efectos antes de la siguiente. Ese hueco de un paso es donde la cola
- * de una tarea se encuentra con la sesión de otra, y ahí es donde hay que
- * decidir con las dos delante.
+ * corre los efectos antes de la siguiente. En ese hueco de un paso la cola de
+ * una tarea se encuentra con la sesión de otra: guardarla ahí la escribiría en
+ * la carpeta equivocada y la dejaría vacía en la suya.
  *
- * **Sin esto, lo escrito para una tarea sale en la siguiente que se abra.** Con
- * un turno corriendo en A y dos mensajes en cola, pulsar la pestaña de B los
- * manda a los dos **en B**: `abrirSesion` pone la sesión antes de soltar lo que
- * había en la mano, y ese `setSessionId` apaga `busy` —B no está contestando—
- * con la cola de A todavía puesta, así que el efecto que despacha lee «hay cola y
- * nadie está ocupado» y dispara. De propina, lo que quedaba se guarda vacío en la
- * carpeta de A: la cola sale en la tarea equivocada y desaparece de la suya.
- *
- * La decisión vive aquí, en una función que se puede probar, y no repartida en
- * las condiciones de un efecto: **el fallo no es ninguna de las condiciones, es
- * el orden en que se evalúan respecto a un cambio de sesión.**
+ * La ventana no manda nada de la cola por su cuenta: la despacha el motor que
+ * anuncia `chat_queue_dispatch_v1`, y si no, la persona con «Enviar».
  */
 
 /**
- * Por qué la cola no avanza sola. Espejo de `retenida` en `App.tsx`, donde está
- * lo que significa cada una.
+ * Por qué la cola no sale sola: una pregunta sin contestar, el motor la retiene,
+ * su motor no la despacha (`manual`) o la encabeza un `!`, que el motor no corre.
  */
-export type RazonDeRetencion = "fallo" | "borrador" | "pregunta" | "session" | "motor";
-
-/** Todo lo que hace falta para decidir, junto y sin leer señales. */
-export type EstadoDeLaCola = {
-  /** Cuántos mensajes esperan. */
-  pendientes: number;
-  /**
-   * De qué sesión es la cola que se tiene en la mano. `null` es una
-   * conversación que todavía no existe en disco: su cola es suya igual, pero no
-   * tiene carpeta donde guardarse.
-   */
-  de: string | null;
-  /** Qué tarea se está mirando. `null` es la conversación en blanco. */
-  mirando: string | null;
-  /** Si la tarea que se está mirando está contestando. */
-  ocupado: boolean;
-  /** Si hay un renglón de la cola abierto para editar. */
-  editando: boolean;
-  retenida: RazonDeRetencion | null;
-  /** Si el agente preguntó algo que nadie ha contestado. */
-  esperando: boolean;
-};
+export type RazonDeRetencion = "pregunta" | "motor" | "manual" | "terminal";
 
 /**
  * ¿La cola en la mano es la de la tarea que se está mirando?
@@ -59,20 +29,6 @@ export type EstadoDeLaCola = {
  */
 export function esDeLaTareaAbierta(de: string | null, mirando: string | null): boolean {
   return de === mirando;
-}
-
-/**
- * ¿Sale el siguiente mensaje?
- *
- * Las cuatro razones de quedarse quieto —contestando, editando, retenida, una
- * pregunta sin contestar— significan lo mismo para quien mira: de aquí no sale
- * nada hasta que alguien haga algo. La quinta, la de arriba, no se le enseña
- * porque no es un estado de la cola sino un instante de un cambio de tarea.
- */
-export function despachable(e: EstadoDeLaCola): boolean {
-  if (e.pendientes === 0) return false;
-  if (!esDeLaTareaAbierta(e.de, e.mirando)) return false;
-  return !e.ocupado && !e.editando && e.retenida === null && !e.esperando;
 }
 
 /**
@@ -87,114 +43,7 @@ export function guardable(de: string | null, mirando: string | null): de is stri
   return de !== null && esDeLaTareaAbierta(de, mirando);
 }
 
-/**
- * Lo leído de disco sin retención conservada es `borrador`: sobrevivió a cerrar
- * la app. Marcar así lo que la ventana conservó al cambiar de workspace lo deja
- * parado aunque su turno acabe bien.
- */
-export function retencionAlCargar(
-  pendientes: number,
-  conservada: RazonDeRetencion | null | undefined,
-): RazonDeRetencion | null {
-  if (pendientes === 0) return null;
-  return conservada === undefined ? "borrador" : conservada;
-}
-
-/**
- * Un borrador leído de disco con su tarea contestando se escribió para ese turno;
- * sin soltarlo no sale al cerrarlo. El de un cierre sin desenlace no se suelta.
- */
-export function sueltaElBorrador(
-  retenida: RazonDeRetencion | null,
-  viva: boolean,
-  deDisco: boolean,
-): boolean {
-  return retenida === "borrador" && viva && deDisco;
-}
-
-
-/**
- * ¿Los dos vienen del mismo sitio? Compara el sobre: quién lo manda, dónde se
- * contesta, cuántos saltos lleva y desde qué escritorio se mandó.
- */
-function mismoRemite(a: Encolado, b: Encolado): boolean {
-  return (
-    (a.agent ?? null) === (b.agent ?? null) &&
-    (a.channel ?? null) === (b.channel ?? null) &&
-    (a.reply_to?.folder ?? null) === (b.reply_to?.folder ?? null) &&
-    (a.reply_to?.task ?? null) === (b.reply_to?.task ?? null) &&
-    (a.hops ?? null) === (b.hops ?? null) &&
-    (a.from_task?.task ?? null) === (b.from_task?.task ?? null) &&
-    (a.space ?? null) === (b.space ?? null)
-  );
-}
-
-/**
- * Lo que sale en el turno siguiente, y lo que se queda esperando al otro.
- *
- * Un lote no mezcla remitentes: en un buzón se encolan a la vez las entregas
- * de otros y lo que la persona escriba, y juntarlas firmaría el texto de una
- * con la cara del otro. Sale el grupo de cabeza; el resto espera al siguiente.
- */
-export function siguienteLote(items: readonly Encolado[]): {
-  mensaje: Omit<Encolado, "id"> | null;
-  lote: Encolado[];
-  resto: Encolado[];
-} {
-  const primero = items[0];
-  if (!primero) return { mensaje: null, lote: [], resto: [] };
-  let corte = 1;
-  if (!esComando(primero))
-    while (corte < items.length && mismoRemite(primero, items[corte]) && !esComando(items[corte])) corte++;
-  const lote = items.slice(0, corte);
-  return { mensaje: agruparCola(lote), lote, resto: items.slice(corte) };
-}
-
-/**
- * Junta en un mensaje lo que la cola tiene esperando. El sobre sale del primero
- * —un lote es homogéneo por construcción ([`siguienteLote`])— y la
- * configuración del último, que es la que se eligió más tarde.
- */
-export function agruparCola(items: readonly Encolado[]): Omit<Encolado, "id"> | null {
-  const ultimo = items.at(-1);
-  if (!ultimo) return null;
-  let offset = 0;
-  const task_mentions = items.flatMap(item => {
-    const refs = (item.task_mentions ?? []).map(m => ({ ...m, start: m.start + offset, end: m.end + offset }));
-    offset += item.text.length + 2;
-    return refs;
-  });
-  // Los destinatarios se rebasan igual que el material: el backend comprueba
-  // cada tramo contra el texto que de verdad se manda, y uno que quedara
-  // señalando el texto de su renglón rechaza el lote entero.
-  let destino = 0;
-  const recipients = items.flatMap(item => {
-    const refs = (item.recipients ?? []).map(r => ({ ...r, start: r.start + destino, end: r.end + destino }));
-    destino += item.text.length + 2;
-    return refs;
-  });
-  const remite = items[0];
-  return {
-    ...(task_mentions.length ? { task_mentions } : {}),
-    ...(recipients.length ? { recipients } : {}),
-    // Solo cuando los hay: una clave escrita en `null` y una clave ausente
-    // significan lo mismo, y dos formas de lo mismo se comparan mal.
-    ...(remite.agent ? { agent: remite.agent } : {}),
-    ...(remite.channel ? { channel: remite.channel } : {}),
-    ...(remite.reply_to ? { reply_to: remite.reply_to } : {}),
-    ...(remite.hops != null ? { hops: remite.hops } : {}),
-    ...(remite.from_task ? { from_task: remite.from_task } : {}),
-    ...(remite.space ? { space: remite.space } : {}),
-    text: items.map(item => item.text).join("\n\n"),
-    provider: ultimo.provider,
-    model: ultimo.model,
-    effort: ultimo.effort,
-    permission_mode: ultimo.permission_mode,
-    attachments: [...new Set(items.flatMap(item => item.attachments))],
-  };
-}
-
-// Un `!` o un `/` pegado a otro renglón saldría como un solo comando.
+// Un `!` o un `/` es un comando: no entra en un turno vivo ni se interrumpe con él.
 function esComando(item: Encolado): boolean {
   return /^[!/]/.test(item.text.trimStart());
 }

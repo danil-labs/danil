@@ -5,6 +5,7 @@ import Paperclip from "lucide-solid/icons/paperclip";
 import Pause from "lucide-solid/icons/pause";
 import Pencil from "lucide-solid/icons/pencil";
 import Play from "lucide-solid/icons/play";
+import RotateCcw from "lucide-solid/icons/rotate-ccw";
 import SquareTerminal from "lucide-solid/icons/square-terminal";
 import X from "lucide-solid/icons/x";
 import { createSignal, For, onCleanup, Show } from "solid-js";
@@ -13,7 +14,7 @@ import { cn } from "../../lib/utils";
 import type { Agent } from "../../lib/model";
 import { Button } from "../../ui/Button";
 import { Textarea } from "../../ui/Textarea";
-import { deOtraTarea, esDeLaTerminal, interrumpible } from "./queue";
+import { deOtraTarea, esDeLaTerminal, interrumpible, type RazonDeRetencion } from "./queue";
 
 // Conserva la configuración al encolar; el lote adopta la del último mensaje.
 export type Encolado = {
@@ -58,6 +59,8 @@ export type Encolado = {
   space?: string | null;
   /** El motor retiene su cola (`load_queue`, `chat_queue_v1`): no sale sola. Lo escrito aquí lo ignora. */
   held?: boolean;
+  /** El motor no sabe si salió (se reinició a mitad del despacho): no lo reenvía solo. Lo escrito aquí lo ignora. */
+  uncertain?: boolean;
 };
 
 export type ColaDeMensajesProps = {
@@ -70,20 +73,11 @@ export type ColaDeMensajesProps = {
   /** Con qué se responde ahora mismo, para marcar lo que se escribió con otra cosa. */
   actual: { agent: string; model: string };
   /**
-   * Por qué la cola no avanza sola: falló el turno anterior, quedó de otra
-   * sesión, el agente preguntó algo que nadie ha contestado o el motor la retiene.
-   *
-   * Es la razón y no un `boolean` porque **una de las tres no se puede soltar a
-   * mano**: dejar salir la cola con una pregunta abierta haría correr el turno
-   * siguiente sin el dato que el agente pidió, que es la forma educada de
-   * adivinar igual.
+   * Por qué la cola no sale sola. Es la razón y no un `boolean` porque **una no
+   * se puede soltar a mano**: dejar salir la cola con una pregunta abierta haría
+   * correr el turno siguiente sin el dato que el agente pidió.
    */
-  retenida: null | "fallo" | "borrador" | "pregunta" | "session" | "motor";
-  /**
-   * Con `session`: el título de la sesión ocupada a
-   * la que se espera. La cola sale sola cuando esa tarea termina.
-   */
-  esperandoA?: string | null;
+  retenida: RazonDeRetencion | null;
   onEditar: (id: string, text: string, mentions?: TaskMention[]) => void;
   onBorrar: (id: string) => void;
   /** Interrumpe el turno actual y envía el mensaje cuando su cierre esté confirmado. */
@@ -91,6 +85,8 @@ export type ColaDeMensajesProps = {
   /** Editar pausa la cola: un turno que cierra a mitad de la edición no se lleva el texto a medias. */
   onEditando: (activo: boolean) => void;
   onMandar: () => void;
+  /** Reenvía como mensaje nuevo uno que quizá ya salió: puede llegar dos veces. */
+  onReenviar: (id: string) => void;
   /** Abre la tarea que mandó una entrega. */
   onOpenTask?: (folder: string, task: string, machine?: string | null) => void;
 };
@@ -141,8 +137,7 @@ export default function ColaDeMensajes(props: ColaDeMensajesProps) {
     cerrar();
   }
 
-  // Las tres razones por las que la cola no avanza —falló el turno, quedó de
-  // otra sesión, se está editando— se ven igual porque significan lo mismo:
+  // Una razón o una edición abierta se ven igual porque significan lo mismo:
   // de aquí no sale nada hasta que alguien haga algo.
   const parada = () => props.retenida !== null || editando() !== null;
 
@@ -162,12 +157,8 @@ export default function ColaDeMensajes(props: ColaDeMensajesProps) {
               {t("chat.queue.label")} ·{" "}
               <span class="tabular-nums">{props.items.length}</span>
             </span>
-            <Show when={props.retenida === "session" && props.esperandoA}>
-              {(tarea) => (
-                <span class="truncate text-xs text-neutral-500">
-                  {t("chat.queue.waiting_for", { tarea: tarea() })}
-                </span>
-              )}
+            <Show when={props.retenida === "manual"}>
+              <span class="truncate text-xs text-neutral-500">{t("chat.queue.engine_outdated")}</span>
             </Show>
             {/* Con una pregunta abierta no hay «mandar»: lo de la cola se
                 escribió sin la respuesta, y soltarlo la daría por contestada. Se
@@ -269,7 +260,14 @@ export default function ColaDeMensajes(props: ColaDeMensajesProps) {
                     </Show>
 
                     <span class="flex shrink-0 items-center gap-0.5">
-                      <Show when={interrumpible(it) ? props.onDetenerYEnviar : null}>
+                      <Show when={it.uncertain}>
+                        <span class="text-xs text-warning-strong">{t("chat.queue.uncertain")}</span>
+                        <Button type="button" variant="ghost" size="icon" class="size-7" aria-label={t("chat.queue.send_again_aria", { n: i() + 1 })}
+                          title={t("chat.queue.send_again")} disabled={props.pending?.includes(it.id)} onClick={() => props.onReenviar(it.id)}>
+                          <RotateCcw size={13} />
+                        </Button>
+                      </Show>
+                      <Show when={interrumpible(it) && !it.uncertain ? props.onDetenerYEnviar : null}>
                         {(parar) => (
                           <Button
                             type="button"

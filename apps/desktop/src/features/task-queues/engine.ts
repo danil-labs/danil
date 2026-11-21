@@ -41,7 +41,7 @@ export function createEngineQueue(env: {
 
   /**
    * The only activation point: the extra arguments of `save_queue`. The window asks the
-   * engine to dispatch the queue when it can, and stops dispatching it from that save on.
+   * engine to dispatch the queue when it can; it never dispatches the queue itself.
    */
   function queueSave(session: string): { engineDispatch?: true } {
     const on = engineCanDispatch(session);

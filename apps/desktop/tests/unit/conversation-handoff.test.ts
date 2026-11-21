@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { batch, createEffect, createRoot, createSignal } from "solid-js";
+import { batch, createRoot, createSignal } from "solid-js";
 import { createConversationHandoff, type ConversationScope } from "../../src/features/conversation-handoff/index.ts";
 import { createTaskQueues } from "../../src/features/task-queues/index.ts";
 
@@ -75,17 +75,14 @@ function integrated() {
     const handoff = createConversationHandoff({ current: () => scope,
       runtime: { active, stop: async () => new Promise<void>((yes, no) => { stopAck = yes; stopFailure = no; }) },
       queue: { message: (_scope, id) => queue.items().find(item => item.id === id), select: (_scope, id) => { if (!queue.items().some(item => item.id === id)) return false; queue.prioritize(id); return true; },
-        release: () => queue.retain(null), failed: () => queue.retain("fallo") } });
-    createEffect(() => {
-      const next = queue.next({ busy: active() || handoff.blocked(scope), waiting: false });
-      if (next?.kind === "message") { sends++; handoff.observe({ kind: "dispatching", scope, itemIds: next.itemIds }); }
-    });
+        // The window sends the chosen item once, on release: there is no queue dispatcher.
+        release: (_scope, id) => { sends++; handoff.observe({ kind: "dispatching", scope, itemIds: [id] }); }, failed: () => {} } });
     return { queue, handoff, sends: () => sends, stopAck: () => stopAck(), stopFailure: (error: unknown) => stopFailure(error),
       terminal: () => batch(() => { setActive(false); handoff.observe({ kind: "terminal", scope }); }),
       dispose: () => { handoff.dispose(); queue.dispose(); dispose(); } };
   });
 }
-for (const order of ["terminal-first", "ack-first"] as const) test(`the real queue dispatcher preserves handoff until both facts: ${order}`, async () => {
+for (const order of ["terminal-first", "ack-first"] as const) test(`the explicit send preserves handoff until both facts: ${order}`, async () => {
   const f = integrated(); await f.queue.openSession("s", "p");
   const original = { id: "original", text: "queued message", provider: "codex", model: null, effort: null, permission_mode: null, attachments: [] };
   f.queue.enqueue(original); const pending = f.handoff.replaceWithQueued(scope, original.id);
@@ -104,7 +101,7 @@ test("a rejected stop preserves the original object in the real queue through a 
   const original = { id: "original", text: "queued message", provider: "codex", model: null, effort: null, permission_mode: null, attachments: [] };
   f.queue.enqueue(original); const pending = f.handoff.replaceWithQueued(scope, original.id);
   f.stopFailure(new Error("stop rejected")); await pending; f.terminal();
-  assert.equal(f.queue.items()[0], original); assert.equal(f.queue.retained(), "fallo"); assert.equal(f.sends(), 0); f.dispose();
+  assert.equal(f.queue.items()[0], original); assert.equal(f.sends(), 0); f.dispose();
 });
 
  test("the native shell not-applied reply clears intent without releasing a queue or declaring terminal", async () => {
