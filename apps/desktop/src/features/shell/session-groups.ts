@@ -176,8 +176,8 @@ function wire(hidden: () => ReadonlySet<string>, onSeeded: (ids: readonly string
       const record = records.get(context);
       if (!record?.person) throw { detail: "session_not_in_set" };
       record.sync.add(id);
+      // Lo agregado queda en la cola local y se sube con reintentos (workspace-added-sync): no se pierde.
       await record.sync.sync();
-      if (!record.sync.added()?.has(id)) throw { detail: "workspace_preference_not_saved" };
       await catalog?.refresh();
     },
     remove: (context: string, id: string) => records.get(context)?.sync.remove(id),

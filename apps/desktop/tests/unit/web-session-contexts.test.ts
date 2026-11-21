@@ -173,3 +173,39 @@ test("a URL can only reopen a workspace of its context's catalog that the person
   assert.equal(requestedStartTarget([group], families, "?workspace=wb&org=org_x&account=user_a"), null, "another organization's workspace");
   assert.equal(requestedStartTarget([group], families, "?workspace=wx1&org=org_x&account=user_b"), null, "another email");
 });
+
+test("billing of each organization goes with that organization's context, also on the payment return of another one", async () => {
+  const { windowActiveContext } = await import("../../src/web/window-active-context.ts");
+  const { setActiveWorkspaceContext } = await import("../../src/lib/workspace-context.ts");
+  const { billingV2 } = await import("../../src/web/billing-v2-api.ts");
+  const { transport, sent } = fakeEdge((s) => {
+    if (s.path === "identity/sessions") return json(sessions);
+    const context = s.headers.get("X-Danil-Session") ?? "";
+    return json({ organization_id: orgOf[context], plan_key: "pro", state: "active", payer: { is_you: true } }, { headers: echo(s, orgOf[context]) });
+  });
+  const web = webSessionCommands(transport, { expired: () => {} });
+  await web.handle("danil_session_status");
+  const active = windowActiveContext(web);
+  setActiveWorkspaceContext("ctx_personal");
+  const forOrg = active.billingFor(transport, "user_a");
+  const x = await billingV2(forOrg("org_x"), "org_x").organization();
+  assert.equal(sent.at(-1)!.headers.get("X-Danil-Session"), "ctx_x", "the return of X's payment reads X with X's context while the personal one is open");
+  assert.ok(x, "no billing_organization_mismatch");
+  await billingV2(forOrg("org_personal"), "org_personal").organization();
+  assert.equal(sent.at(-1)!.headers.get("X-Danil-Session"), "ctx_personal");
+  setActiveWorkspaceContext(null);
+});
+
+test("the Free router of a workspace open in X gets X's platform account, never another organization's", async () => {
+  const { windowActiveContext } = await import("../../src/web/window-active-context.ts");
+  const { setActiveWorkspaceContext } = await import("../../src/lib/workspace-context.ts");
+  const { transport } = fakeEdge(() => json(sessions));
+  const web = webSessionCommands(transport, { expired: () => {} });
+  await web.handle("danil_session_status");
+  const accounts: Record<string, Record<string, string>> = { ctx_x: { wx1: "acc_x1" }, ctx_personal: { wp: "acc_p" } };
+  const identity = windowActiveContext(web).freeRouterIdentity((context, engine) => accounts[context]?.[engine] ?? null);
+  setActiveWorkspaceContext("ctx_x");
+  assert.deepEqual(await identity("wx1"), { sub: "user_a", list: { active_workspace_id: "acc_x1", items: [{ id: "acc_x1", org: "org_x" }] } });
+  assert.equal(await identity("wp"), null, "a workspace of the personal org is not in X's catalog");
+  setActiveWorkspaceContext(null);
+});

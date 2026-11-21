@@ -119,6 +119,7 @@ test('a 401 of one organization (its API and its machine ticket) leaves the page
   assert.equal(doc.querySelector('[data-web-auth]'), null, 'no sign-in screen');
   assert.ok(tile(doc, 'wp'), 'the personal workspace stays in the rail');
   assert.ok(doc.querySelector('[data-rail-organization="org_x"]'), 'the X group stays, marked');
+  assert.ok(doc.querySelector('[data-web-reauth-sign-in]'), 'and it offers to sign in to X again');
 });
 
 test('a machine that goes off keeps its tile, and a workspace added to the catalog later appears without a reload', async t => {
@@ -136,7 +137,10 @@ test('a machine that goes off keeps its tile, and a workspace added to the catal
   await new Promise(resolve => realTimeout(resolve, 400));
   assert.ok(tile(doc, 'wp') && tile(doc, 'wx1'), 'machines off do not remove tiles');
   late = true;
-  await until(() => tile(doc, 'wx2') || doc.querySelector('[data-org-stack="org_x"]'), 'the new workspace arrives by the poll, without focus or reload');
+  await until(() => {
+    if (!tile(doc, 'wx2')) doc.querySelector('[data-org-stack="org_x"]')?.click();
+    return tile(doc, 'wx2');
+  }, 'the new workspace arrives by the poll, without focus or reload');
   assert.deepEqual(state.selects, []);
   assert.deepEqual(app.failures.filter(f => f.includes('navigation')), []);
 });

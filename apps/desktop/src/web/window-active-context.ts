@@ -1,4 +1,4 @@
-import type { EdgeTransport, OrganizationSelection } from "@terminus/computers";
+import { EdgeError, type EdgeTransport, type OrganizationSelection } from "@terminus/computers";
 import type { GroupAccount } from "../lib/group-account.ts";
 import { activeWorkspaceContext } from "../lib/workspace-context.ts";
 import type { WebSessionCommands, WebSessionStatus } from "./web-session-contexts.ts";
@@ -27,12 +27,12 @@ export function windowActiveContext(sessions: Pick<WebSessionCommands, "last">) 
       const own = headers.get("X-Danil-Session");
       const group = own ? groups().find((g) => g.context === own) ?? null : pick();
       // Ninguna llamada de la ventana cae en el contexto por omisión: sin grupo, no sale.
-      if (!group) throw { code: own ? "session_not_in_set" : "session_selection_required", status: 428 }; // nunca 401: no es la cookie muerta
+      if (!group) throw new EdgeError(428, null, own ? "session_not_in_set" : "session_selection_required"); // nunca 401: no es la cookie muerta
       headers.set("X-Danil-Session", group.context);
       const response = await transport[method](path, { ...init, headers });
       if (response.ok && (response.headers.get("X-Danil-Session-Applied") !== group.context || response.headers.get("X-Danil-Session-Applied-Org") !== group.org)) {
         await response.body?.cancel();
-        throw { code: "session_echo_mismatch", status: 502 };
+        throw new EdgeError(502, null, "session_echo_mismatch");
       }
       return response;
     };
@@ -48,5 +48,13 @@ export function windowActiveContext(sessions: Pick<WebSessionCommands, "last">) 
     const choose = async (id: string) => { await refresh(); if (groups().some((g) => g.org === id)) chosen = id; };
     return { state, load: async () => {}, choose, subscribe: () => () => {}, needed: () => false, report: () => false, dismiss: () => {}, stop: () => {} } as unknown as OrganizationSelection;
   };
-  return { groups, current, scoped, of, organizations };
+  /** Billing de una organización con el contexto de esa organización (la vuelta del pago puede ser de otra). */
+  const billingFor = (transport: EdgeTransport, sub?: string) => (org: string) => scoped(transport, () => of(org, sub)() ?? of(org)());
+  /** El Free router de un workspace del motor: su account de plataforma en el contexto del workspace abierto. */
+  const freeRouterIdentity = (accountOf: (context: string, engine: string) => string | null) => async (workspace?: string) => {
+    const group = current();
+    const account = group && workspace ? accountOf(group.context, workspace) : null;
+    return group && account ? { sub: group.sub, list: { active_workspace_id: account, items: [{ id: account, org: group.org }] } } : null;
+  };
+  return { groups, current, scoped, of, billingFor, freeRouterIdentity, organizations };
 }

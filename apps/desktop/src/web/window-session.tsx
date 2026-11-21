@@ -25,6 +25,7 @@ import { windowActiveContext } from './window-active-context';
 import { freeModelScope } from '../lib/free-model-policy';
 import { freeRouterEngine, freeRouterWebEdge } from '../features/settings/free-router-adapters';
 import { setFreeRouterHost, signOutPlatform } from '../features/settings/free-router-session';
+import { sessionRailState } from '../features/shell';
 
 declare const __DANIL_WEB_RELAY_ORIGINS__: string[];
 const FIRST_RETRY_MS = 1000;
@@ -162,13 +163,12 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
       disposeGate = undefined;
       const organizations = active.organizations(() => sessions.handle('danil_session_status'));
       setFreeRouterHost({ edge: freeRouterWebEdge(transport), engine: policy => freeRouterEngine(policy ? freeModelScope(policy) : undefined),
-        // El account de plataforma del workspace del motor, en el contexto del workspace abierto.
-        identity: async workspace => { const group = active.current(); const account = group && workspace ? rail.accountOf(group.context, workspace) : null; return group && account ? { sub: group.sub, list: { active_workspace_id: account, items: [{ id: account, org: group.org }] } } : null; } });
+        identity: active.freeRouterIdentity(rail.accountOf) });
       const billing = windowBilling(active.scoped(plain, active.of(profile.active_organization_id, profile.id)), profile, organizations, () => undefined, async (id, signal) => {
         const group = active.of(id)();
         const listed = group ? await contextMachines(`${options.origin}/v1`, raw, __DANIL_WEB_RELAY_ORIGINS__, group.context).list(signal) : null;
         return listed?.kind === 'ok' ? organizationMachine(id, listed.value) : null;
-      });
+      }, active.billingFor(plain, profile.id));
       const current = async () => { const group = active.current(); return group ? { context: group.context, org: group.org, name: group.name, plan: group.plan, role: group.role } : null; };
       windowApp = mountWindow({ sessions, rail, contextMachines: context => contextMachines(`${options.origin}/v1`, raw, __DANIL_WEB_RELAY_ORIGINS__, context), permits, relayOrigin: __DANIL_WEB_RELAY_ORIGINS__[0], credentials: webCredentialSource(options.origin, transport),
         profile: webAccountProfile(transport), active,
@@ -177,6 +177,8 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
           webWorkspacePicker: webWorkspacePicker(plain, { store: window.sessionStorage, signIn: organization => window.location.assign(api.loginUrl(home, organization)) }),
           danilCredits: { readBalance: async signal => { const group = active.current(); return group ? api.creditsBalance(group.org, signal, group.context) : null; } },
         },
+        // W4: una organización con la sesión vencida ofrece volver a entrar a esa organización.
+        reauth: { needed: () => !!expiredOrganization(), signIn: () => window.location.assign(api.loginUrl(home, expiredOrganization() ?? undefined)) },
         billing, groupAccount: { send: api.groupAccount.send, current, legacy: () => false, contexts: () => active.groups().map(g => g.context) },
       }, { storage: cache.storage, webAccounts: {
         current: { user_id: profile.id, name: profile.name, email: typeof profile.email === 'string' ? profile.email : null, extra: false },
@@ -184,6 +186,7 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
       } });
       void refresh();
     }
+    const expiredOrganization = () => sessionRailState()?.groups()?.find(g => g.empty_reason === 'session_expired')?.org ?? null;
     function stopServices() { clearTimeout(timer); lifetime.abort(); }
     const close = () => { stopped = true; stopServices(); windowApp?.close(); disposeGate?.(); dispose(); };
     window.addEventListener('pagehide', close, { once: true });
