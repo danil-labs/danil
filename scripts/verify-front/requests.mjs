@@ -9,7 +9,7 @@
 //   DANIL_WEB_API_ORIGIN=https://edge.danil.ai TERMINUS_WEB_BASE=/ pnpm -C apps/desktop web:build
 // REQUESTS_VERBOSE=1 lista todas las peticiones al borde.
 import http from "node:http";
-import { createReadStream, existsSync, statSync } from "node:fs";
+import { createReadStream, existsSync, readFileSync, statSync } from "node:fs";
 import { execSync } from "node:child_process";
 import { createRequire } from "node:module";
 import { extname, join } from "node:path";
@@ -17,7 +17,9 @@ import { extname, join } from "node:path";
 const ROOT = join(import.meta.dirname, "..", "..");
 const PARITY = join(ROOT, "scripts/verify-parity");
 const DIST = join(ROOT, "apps/desktop/dist-web");
-const { chromium } = createRequire(join(PARITY, "package.json"))("playwright");
+let chromium;
+try { ({ chromium } = createRequire(join(PARITY, "package.json"))("playwright")); }
+catch { console.error("falta Playwright: npm ci en scripts/verify-parity"); process.exit(2); }
 const { handleEdgeRoute } = await import(join(PARITY, "edge-fixtures.mjs"));
 
 /** Cada recurso y la ruta del borde que lo sirve (sin query: una página siguiente es otra petición). */
@@ -28,7 +30,9 @@ const RESOURCES = {
   me: (p) => p === "/v1/identity/me",
 };
 
-if (process.env.REQUESTS_BUILD || !existsSync(join(DIST, "index.html"))) {
+// Una build con otra base (move-gate compila con `/terminus/`) no sirve aquí: se recompila con base `/`.
+const builtAtRoot = () => existsSync(join(DIST, "index.html")) && /(src|href)="\/assets\//.test(readFileSync(join(DIST, "index.html"), "utf8"));
+if (process.env.REQUESTS_BUILD || !builtAtRoot()) {
   execSync("pnpm -C apps/desktop web:build", { cwd: ROOT, stdio: "inherit", env: { ...process.env, DANIL_WEB_API_ORIGIN: "https://edge.danil.ai", TERMINUS_WEB_BASE: "/" } });
 }
 
