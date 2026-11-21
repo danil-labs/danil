@@ -8,15 +8,22 @@ import { Badge } from "@danil/ui";
 import { Button } from "@danil/ui";
 import { Input } from "@danil/ui";
 import { Skeleton } from "@danil/ui";
-// PORT-DATA: utilidad sin portar features/settings/account-emails — import { AccountEmailsError, type AccountEmailsSource, EMAIL_SHAPE, type EmailRow, emailErrorText, emailRows, } from "./account-emails";
-// PORT-DATA: utilidad sin portar features/settings/layout — import { SettingsSection } from "./layout";
-// PORT-DATA: utilidad sin portar lib/sharedClock — import { createNow } from "../../lib/sharedClock";
+import { SettingsSection } from "@danil/ui";
+import {
+  AccountEmailsError,
+  type AccountEmailsSource,
+  EMAIL_SHAPE,
+  type EmailRow,
+  emailErrorText,
+  emailRows,
+} from "../../lib/account-emails";
+import { createNow } from "../../lib/sharedClock";
 
 type Feedback = { kind: "success" | "error"; text: string } | null;
 
 /** Segundos que faltan hasta `until` (ms), con un tic por segundo. */
 function countdown(until: () => number | null) {
-  const now = createNow();  // PORT-DATA
+  const now = createNow();
   return () => {
     const end = until();
     return end == null ? 0 : Math.max(0, Math.ceil((end - now()) / 1000));
@@ -45,7 +52,7 @@ export function EmailsSection(props: { source: AccountEmailsSource; onPrimaryCha
   // Leer un recurso con error lanza y se lleva el panel entero: solo se lee listo.
   const ready = () => list.state === "ready" || list.state === "refreshing";
   const loading = () => list.state === "pending" || list.state === "unresolved";
-  const rows = () => (ready() ? emailRows(list()!) : []);  // PORT-DATA
+  const rows = () => (ready() ? emailRows(list()!) : []);
   const focusAdd = () => queueMicrotask(() => addWrap?.querySelector("button")?.focus());
 
   async function sendCode(email: string, fromDraft: boolean) {
@@ -60,9 +67,9 @@ export function EmailsSection(props: { source: AccountEmailsSource; onPrimaryCha
       setFeedback({ kind: "success", text: t("danil.emails.sent", { email: sent.email }) });
       void refetch();
     } catch (err) {
-      if (err instanceof AccountEmailsError && err.resendAfter != null) waitUntil(email, err.resendAfter);  // PORT-DATA
-      if (fromDraft) setDraftError(emailErrorText(err, email));  // PORT-DATA
-      else setFeedback({ kind: "error", text: emailErrorText(err, email) });  // PORT-DATA
+      if (err instanceof AccountEmailsError && err.resendAfter != null) waitUntil(email, err.resendAfter);
+      if (fromDraft) setDraftError(emailErrorText(err, email));
+      else setFeedback({ kind: "error", text: emailErrorText(err, email) });
     } finally {
       setSending(false);
     }
@@ -71,7 +78,7 @@ export function EmailsSection(props: { source: AccountEmailsSource; onPrimaryCha
   function submitDraft() {
     const email = draft().trim().toLowerCase();
     setFeedback(null);
-    if (!EMAIL_SHAPE.test(email)) return setDraftError(t("danil.emails.error.invalid_email"));  // PORT-DATA
+    if (!EMAIL_SHAPE.test(email)) return setDraftError(t("danil.emails.error.invalid_email"));
     if (rows().some((r) => r.email === email && r.verified)) return setDraftError(t("danil.emails.error.already_verified"));
     setDraftError(null);
     void sendCode(email, true);
@@ -220,7 +227,7 @@ export function EmailsSection(props: { source: AccountEmailsSource; onPrimaryCha
       <Show when={feedback()}>
         {(f) => (
           <p
-            role={f().kind === "success" ? "status" : "alert"}
+            role={f().kind === "success" ? `status` : "alert"}
             class="m-0 pt-3 text-ui text-neutral-950"
             data-account-emails-feedback={f().kind}
           >
@@ -242,7 +249,7 @@ type ItemProps = {
   onResend: () => void;
   resending: boolean;
   onResult: (f: Feedback) => void;
-  onChanged: (kind: "verified" | "primary" | "removed" | "gone") => Promise<void>;
+  onChanged: (kind: "verified" | "primary" | "removed" | "gone") => (Promise<void>);
 };
 
 function EmailItem(props: ItemProps) {
@@ -251,7 +258,7 @@ function EmailItem(props: ItemProps) {
   const email = () => props.row.email;
   let box: HTMLDivElement | undefined;
   // El botón que se pulsó desaparece: el foco va a lo que lo reemplaza, no al body.
-  const focusIn = (selector: string) => queueMicrotask(() => box?.querySelector<HTMLElement>(selector)?.focus());
+  const focusIn = (selector: string) => queueMicrotask(() => (box?.querySelector<HTMLElement>(selector)?.focus()));
   const ask = (what: "primary" | "remove") => {
     props.onResult(null);
     setConfirming(what);
@@ -262,7 +269,7 @@ function EmailItem(props: ItemProps) {
     focusIn("[data-email-action]");
   };
 
-  async function run(action: () => Promise<void>, ok: string, kind: "primary" | "removed") {
+  async function run(action: () => (Promise<void>), ok: string, kind: "primary" | "removed") {
     setBusy(true);
     try {
       await action();
@@ -270,7 +277,7 @@ function EmailItem(props: ItemProps) {
       props.onResult({ kind: "success", text: ok });
       await props.onChanged(kind);
     } catch (err) {
-      props.onResult({ kind: "error", text: emailErrorText(err, email()) });  // PORT-DATA
+      props.onResult({ kind: "error", text: emailErrorText(err, email()) });
     } finally {
       setBusy(false);
     }
@@ -411,7 +418,7 @@ function CodeForm(props: {
   resending: boolean;
   onClose: () => void;
   onResult: (f: Feedback) => void;
-  onChanged: (kind: "verified" | "gone") => Promise<void>;
+  onChanged: (kind: "verified" | "gone") => (Promise<void>);
 }) {
   const [code, setCode] = createSignal("");
   const [error, setError] = createSignal<string | null>(null);
@@ -431,15 +438,15 @@ function CodeForm(props: {
       props.onResult({ kind: "success", text: t("danil.emails.verified", { email: props.email }) });
       await props.onChanged("verified");
     } catch (err) {
-      const reason = err instanceof AccountEmailsError ? err.code : "";  // PORT-DATA
+      const reason = err instanceof AccountEmailsError ? err.code : "";
       if (reason === "email_in_use" || reason === "email_needs_support") {
-        props.onResult({ kind: "error", text: emailErrorText(err, props.email) });  // PORT-DATA
+        props.onResult({ kind: "error", text: emailErrorText(err, props.email) });
         await props.onChanged("gone");
         return;
       }
       if (reason === "code_expired" || reason === "no_challenge") setDead("expired");
       if (reason === "too_many_attempts") setDead("exhausted");
-      setError(emailErrorText(err, props.email));  // PORT-DATA
+      setError(emailErrorText(err, props.email));
       // El campo queda desactivado y suelta el foco: pasa a pedir otro código.
       if (reason === "too_many_attempts") queueMicrotask(() => resend?.closest("form")?.querySelector<HTMLElement>("button:not(:disabled)")?.focus());
     } finally {
