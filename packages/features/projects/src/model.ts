@@ -40,7 +40,7 @@ export interface WorkspaceProjectsCatalog {
 export type TaskIntegrationStatus = "merged" | "unmerged" | "none" | "unconfirmed";
 
 export interface DeleteMemberInspection {
-  status: "complete" | "pending" | "error" | string;
+  status: "complete" | "pending" | "unconfirmed" | "error" | string;
   error?: string;
 }
 
@@ -171,7 +171,7 @@ export function parseDeleteTaskMemberItem(
     title: typeof item.title === "string" ? item.title : undefined,
     files: Array.isArray(item.files) ? item.files.filter((f): f is string => typeof f === "string") : [],
     inspection: {
-      status: String(insp.status ?? "complete"),
+      status: typeof insp.status === "string" && insp.status ? insp.status : "unconfirmed",
       error: typeof insp.error === "string" ? insp.error : undefined,
     },
     integration: integ,

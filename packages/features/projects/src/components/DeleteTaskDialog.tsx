@@ -145,10 +145,10 @@ export function DeleteTaskDialog(props: DeleteTaskDialogProps) {
       }
     } catch (failure) {
       setShown(true);
-      const code = failure && typeof failure === "object" && "code" in failure ? (failure as { code: string }).code : "";
+      const code = failure && typeof failure === "object" && "code" in failure ? String((failure as { code: unknown }).code) : "";
       const text = failure instanceof Error ? failure.message : String(failure);
 
-      if (code === "task_family_consent_changed" || text.includes("consent")) {
+      if (code === "task_family_consent_changed") {
         scheduleDebouncedInspect("El consentimiento de la tarea cambió; reinspeccionando...");
       } else {
         setInvalid(true);
