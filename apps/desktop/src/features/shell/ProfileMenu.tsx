@@ -11,6 +11,7 @@ import DanilFooterEntry from "./DanilFooterEntry";
 import { EmptySessionSignOut } from "./EmptySessionSignOut";
 import { GroupOrganizationWatch } from "./GroupOrganizationWatch";
 import { noteWebAccountMode, usesGroupAccounts } from "./session-menu-mode";
+import { WebWorkspaceMenuList } from "./WebWorkspaceMenuList";
 
 const LegacyProfileMenu = lazy(() => import("./LegacyProfileMenu"));
 
@@ -62,11 +63,7 @@ export default function ProfileMenu(props: {
         <DanilFooterEntry collapsed onOpen={alternar} />
       </PopoverAnchor>
       <PopoverContent class="w-72 p-1" aria-label={t("shell.profile.menu")}>
-        <Show when={capabilities().webWorkspaces}>{session => <>
-          <p class="m-0 px-2 pt-1 text-caption font-medium text-neutral-500">{t("web.platform.workspaces")}</p>
-          <For each={session().rows()}>{row => <button type="button" class={ITEM_DE_MENU} aria-pressed={session().active() === row.id} disabled={session().busy() || session().uncertain()} onClick={() => { setOpen(false); session().choose(row.id); }}>{row.name}</button>}</For>
-          <div class="my-1 h-px bg-border" />
-        </>}</Show>
+        <Show when={capabilities().webWorkspaces}>{session => <><WebWorkspaceMenuList session={session()} close={() => setOpen(false)} /><div class="my-1 h-px bg-border" /></>}</Show>
         <p class="m-0 px-2 pt-1 pb-1 text-caption font-medium text-neutral-500">{t("shell.profile.theme")}</p>
         <div role="radiogroup" aria-label={t("shell.profile.theme")} class={cn(SEGMENTO, "mx-2 mb-2")}>
           <For each={TEMAS}>
