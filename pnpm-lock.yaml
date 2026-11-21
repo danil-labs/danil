@@ -41,13 +41,28 @@ importers:
 
   apps/desk:
     dependencies:
+      '@danil/host':
+        specifier: workspace:*
+        version: link:../../packages/host
+      '@danil/session':
+        specifier: workspace:*
+        version: link:../../packages/session
       '@danil/shell':
         specifier: workspace:*
         version: link:../../packages/shell
+      '@danil/ui':
+        specifier: workspace:*
+        version: link:../../packages/ui
       solid-js:
         specifier: ^1.9.17
         version: 1.9.17
     devDependencies:
+      '@tailwindcss/vite':
+        specifier: ^4.3.3
+        version: 4.3.3(vite@6.4.4(@types/node@26.4.0)(jiti@2.7.0)(lightningcss@1.32.0))
+      tailwindcss:
+        specifier: ^4.3.3
+        version: 4.3.3
       typescript:
         specifier: ^5.7.2
         version: 5.9.3
@@ -538,6 +553,16 @@ importers:
   packages/fleet: {}
 
   packages/host:
+    dependencies:
+      '@danil/engine-client':
+        specifier: workspace:*
+        version: link:../engine-client
+      '@danil/session':
+        specifier: workspace:*
+        version: link:../session
+      '@tauri-apps/api':
+        specifier: ^2.12.4
+        version: 2.12.4
     devDependencies:
       solid-js:
         specifier: ^1.9.17
@@ -3254,10 +3279,6 @@ packages:
 
   embla-carousel@8.6.0:
     resolution: {integrity: sha512-SjWyZBHJPbqxHOzckOfo8lHisEaJWmwd23XppYFYVh10bU66/Pn5tkVkbkCMZVdbUE5eTCI2nD8OyIP4Z+uwkA==}
-
-  enhanced-resolve@5.24.5:
-    resolution: {integrity: sha512-L1l8TNvomm6UVW5B253AGxQagSQr+vGwhMlrrfRS2qmhx46AMpMVJKQYLvWYbysTMY8VoicOvzHzoHMbyzB+4A==}
-    engines: {node: '>=10.13.0'}
 
   enhanced-resolve@5.26.0:
     resolution: {integrity: sha512-9vhedylFonb2YGogzUKX6+Ja72gOJbN1QHAqdrvqLwhdl/QWbKopzoUC9EbQNVsAns/bx/4uyqalrQAoy1IByw==}
@@ -6324,7 +6345,7 @@ snapshots:
   '@tailwindcss/node@4.3.3':
     dependencies:
       '@jridgewell/remapping': 2.3.5
-      enhanced-resolve: 5.24.5
+      enhanced-resolve: 5.26.0
       jiti: 2.7.0
       lightningcss: 1.32.0
       magic-string: 0.30.21
@@ -7274,11 +7295,6 @@ snapshots:
       solid-js: 1.9.17
 
   embla-carousel@8.6.0: {}
-
-  enhanced-resolve@5.24.5:
-    dependencies:
-      graceful-fs: 4.2.11
-      tapable: 2.3.3
 
   enhanced-resolve@5.26.0:
     dependencies:

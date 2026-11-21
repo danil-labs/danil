@@ -1,4 +1,13 @@
 import { render } from "solid-js/web";
-import { Shell } from "@danil/shell";
+import { createTauriHost, setHost } from "@danil/host";
+import { createDeskSession } from "@danil/session";
+import { createShell } from "@danil/shell";
+import "./app.css";
 
-render(() => <Shell />, document.getElementById("root")!);
+// Desk: varias sesiones guardadas en el motor (P1); el login lo hace el navegador.
+const host = createTauriHost();
+setHost(host);
+const session = createDeskSession(host);
+const App = createShell({ session, host });
+
+render(() => <App isDesk />, document.getElementById("root")!);
