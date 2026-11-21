@@ -4,7 +4,7 @@ import "../locales/catalogs";
 import { render } from "solid-js/web";
 import App from "./App";
 import Setup from "../features/settings/Setup";
-import Lanzador from "../features/shell/Launcher";
+import { Lanzador, SessionGate } from "../features/shell";
 import { invoke } from "../lib/invoke.ts";
 import { seguirElTema } from "../lib/theme";
 import { aplicarEscala, atajoDeEscala } from "../lib/zoom";
@@ -99,7 +99,7 @@ const montar = () => {
       // La preparación va por fuera de la app: si falta git no hay nada útil detrás.
       <Lanzador>
         <Setup>
-          <App />
+          <SessionGate><App /></SessionGate>
         </Setup>
       </Lanzador>
     ),
