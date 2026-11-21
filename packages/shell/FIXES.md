@@ -1,0 +1,20 @@
+# FIXES packages/shell
+
+- RV1 #1: f85b11cb
+- RV1 #23: f85b11cb, 095a9eb2
+- RV1 #24: f85b11cb
+- RV1 #26: 5c752497
+- RV2 #1: f85b11cb
+- RV2 #9: 5c752497
+- RV2 #10: ya resuelto
+- RV2 #24: 5c752497
+- RV2 #26: f85b11cb
+- RV1b N1: 86323ba0
+- RV1b N2: 5c752497
+- RV1b N3: 5c752497
+- RV1b N4: 5c752497
+- RV1b N5: 5c752497
+- RV1b N14: 5c752497
+- RV1b N15: 5c752497
+- RV2b N2: 5c752497
+- RV2b N11: 5c752497

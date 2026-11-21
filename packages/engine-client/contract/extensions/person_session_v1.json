@@ -1,0 +1,157 @@
+{
+  "version": 1,
+  "name": "person_session",
+  "description": "La sesión de la persona vive en el motor (decisión 2026-11-20-sesion-en-el-motor de terminus-workspace). Es la de Desk (desk_auth): PKCE S256 contra /v1/identity/desk/authorize y /v1/identity/desk/token por el borde (DANIL_EDGE_URL solo https hacia *.danil.ai, o http hacia 127.0.0.1 en una compilación de prueba; por omisión https://edge.danil.ai), regreso a http://127.0.0.1:<puerto>/callback, access solo en memoria, refresh rotatorio en la bóveda del motor (Clase::Danil, ámbito danil-computers, ranuras person-*), familias y contextos por organización (X-Danil-Session con eco X-Danil-Session-Applied). person_session_login {mode?: \"add\"} -> {url, redirect_uri, expires_at, attempt}: abre el loopback y devuelve la liga; el motor no abre el navegador, lo hace quien la muestra; empezar otro cancela el anterior; vuelve sola por el loopback. person_session_login_complete {pasted} -> estado: la dirección a la que llevó el navegador, su consulta o solo el código (state, si viene, debe ser el del flujo: state_mismatch). person_session_status -> {state: connected|disconnected, account?, email?, account_name?, storage, sessions?: [{family, email, contexts: [{context_id, org, org_name, plan, role?}]}], default_context?, login?: {state: pending|done|error, error?, enrollment?, enrollments?: [{attempt, state: running|done, organizations: [{organization_id, online, error?}]}]}}: enrollments es la inscripción de las organizaciones que trajo cada uno de los últimos 8 logins, por attempt (enrollment, la del último) (espera hasta 60 s a que cada relay conteste); danil login sale con 0 solo si todas quedaron en línea; nunca tokens. person_session_logout {family?, context?}: sin nada cierra todas y desconecta las máquinas conectadas; con context, esa organización y su máquina. person_session_select_organization {organizationId, context?}: POST /v1/identity/organizations/select; no se cruza con la adopción ni con la inscripción. person_session_fetch {method, path, body?, idempotencyKey?, context?} -> {status, body, location?, idempotencyKey?, retry_after_ms?, empty_reason?}: solo la lista cerrada de desk_auth::session::allowed, sin la vía promo (retirada) y sin POST /v1/machines/self/enroll (la respuesta trae la credencial de máquina; el motor inscribe por su cuenta); otra ruta, invalid_request. Con sesión, el motor inscribe esta máquina en cada organización (connected_machines_v1). Evento person-session con el estado cuando cambia; no sale por ningún relay. Errores (detail): invalid_request, no_session, cancelled, login_not_started, state_mismatch, invalid_grant, access_denied, timeout, not_available_yet, unavailable; unsupported en una VM con el conector aparte. Solo la ventana y la CLI local (relay: false). Fuera del hash de compatibilidad (status.contract).",
+  "features": [
+    "person_session_v1"
+  ],
+  "events": [
+    "person-session"
+  ],
+  "commands": [
+    {
+      "async": false,
+      "channel": null,
+      "kind": "invoke",
+      "name": "person_session_login",
+      "output": "-> Result < Value , Failure >",
+      "parameters": [
+        {
+          "key": "mode",
+          "name": "mode",
+          "type": "Option < String >"
+        }
+      ],
+      "path": "danil::person::person_session_login",
+      "relay": false,
+      "audience": "window",
+      "authority": "admin",
+      "durable": false,
+      "enforcement": "server"
+    },
+    {
+      "async": false,
+      "channel": null,
+      "kind": "invoke",
+      "name": "person_session_login_complete",
+      "output": "-> Result < Value , Failure >",
+      "parameters": [
+        {
+          "key": "pasted",
+          "name": "pasted",
+          "type": "String"
+        }
+      ],
+      "path": "danil::person::person_session_login_complete",
+      "relay": false,
+      "audience": "window",
+      "authority": "admin",
+      "durable": false,
+      "enforcement": "server"
+    },
+    {
+      "async": false,
+      "channel": null,
+      "kind": "invoke",
+      "name": "person_session_status",
+      "output": "-> Result < Value , Failure >",
+      "parameters": [],
+      "path": "danil::person::person_session_status",
+      "relay": false,
+      "audience": "window",
+      "authority": "admin",
+      "durable": false,
+      "enforcement": "server"
+    },
+    {
+      "async": false,
+      "channel": null,
+      "kind": "invoke",
+      "name": "person_session_logout",
+      "output": "-> Result < Value , Failure >",
+      "parameters": [
+        {
+          "key": "family",
+          "name": "family",
+          "type": "Option < String >"
+        },
+        {
+          "key": "context",
+          "name": "context",
+          "type": "Option < String >"
+        }
+      ],
+      "path": "danil::person::person_session_logout",
+      "relay": false,
+      "audience": "window",
+      "authority": "admin",
+      "durable": false,
+      "enforcement": "server"
+    },
+    {
+      "async": false,
+      "channel": null,
+      "kind": "invoke",
+      "name": "person_session_select_organization",
+      "output": "-> Result < Value , Failure >",
+      "parameters": [
+        {
+          "key": "organizationId",
+          "name": "organization_id",
+          "type": "String"
+        },
+        {
+          "key": "context",
+          "name": "context",
+          "type": "Option < String >"
+        }
+      ],
+      "path": "danil::person::person_session_select_organization",
+      "relay": false,
+      "audience": "window",
+      "authority": "admin",
+      "durable": false,
+      "enforcement": "server"
+    },
+    {
+      "async": false,
+      "channel": null,
+      "kind": "invoke",
+      "name": "person_session_fetch",
+      "output": "-> Result < Value , Failure >",
+      "parameters": [
+        {
+          "key": "method",
+          "name": "method",
+          "type": "String"
+        },
+        {
+          "key": "path",
+          "name": "path",
+          "type": "String"
+        },
+        {
+          "key": "body",
+          "name": "body",
+          "type": "Option < Value >"
+        },
+        {
+          "key": "idempotencyKey",
+          "name": "idempotency_key",
+          "type": "Option < String >"
+        },
+        {
+          "key": "context",
+          "name": "context",
+          "type": "Option < String >"
+        }
+      ],
+      "path": "danil::person::person_session_fetch",
+      "relay": false,
+      "audience": "window",
+      "authority": "admin",
+      "durable": false,
+      "enforcement": "server"
+    }
+  ]
+}

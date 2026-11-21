@@ -1,6 +1,10 @@
 packages:
   - apps/desktop
+  - apps/workspace
+  - apps/auth
+  - apps/desk
   - packages/*
+  - packages/features/*
 
 # pnpm 10.15+ / 12: approval for packages that run install scripts.
 # Without this, `pnpm build` (beforeBuildCommand de Tauri) aborta en Linux

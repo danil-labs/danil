@@ -1,0 +1,103 @@
+/* La marca de «esto está seleccionado», y **un solo dueño para las listas que
+   la necesitan**.
+
+   Por qué es una regla de CSS y no una cadena de utilities. La marca la piden
+   sitios que no comparten nada más: `ui/sidebar.tsx` la dispara con
+   `data-active` —el botón de Tareas del riel colapsado— y
+   `navigation/NavigationListRow.tsx` con `aria-current`. Dos copias de la misma
+   barra es exactamente lo que hace que dentro de un mes sean dos barras
+   distintas. Vive en la capa `components`, que estaba declarada y vacía.
+
+   **Los dos sitios del panel de proyectos ya no la usan**, los dos a petición
+   de quien usa la app y por el mismo motivo: la barra competía con lo que ya
+   hay a la izquierda de esas filas. En el historial, con la sangría de la tarea
+   bajo su proyecto; en la fila del proyecto, con el chevron y la carpeta. Lo
+   que distingue ahí a lo abierto es el relleno más el peso del texto,
+   declarado en `Sessions.tsx` y `ui/sidebar.tsx`; lo que eso cuesta está justo
+   debajo.
+
+   ## Por qué una barra y no un fondo más fuerte
+
+   Un fondo NO puede marcar un estado con estas superficies, y está medido: la
+   fila seleccionada daba **1,00:1 en oscuro** (`ui/sidebar.tsx`, navy al 5 %
+   sobre el negro OLED: `#010102` contra `#000000`), 1,07:1 en `NavigationListRow`
+   y 1,21:1 en la sesión abierta del historial. WCAG 2.2 § 1.4.11 pide **3:1**
+   para lo que no es texto cuando de ello depende identificar un estado, y toda
+   la rampa de superficies del sistema vive por debajo de 1,5:1 entre escalones
+   contiguos — subir el relleno hasta 3:1 sería un bloque que grita, no una
+   selección.
+
+   La barra sí llega, con el color de acción y sin tocar ningún token:
+
+   | | claro | oscuro |
+   |---|---|---|
+   | Barra sobre la fila rellena del riel | 4,79:1 | 12,26:1 |
+   | Barra sobre `surface-raised` (NavigationListRow) | 6,07:1 | 14,93:1 |
+
+   Medido contra el CSS compilado, componiendo el alfa hasta la primera
+   superficie opaca.
+
+   ## Por qué `--color-primary` y no un neutro
+
+   El sistema visual reserva el morado para «acciones/decisiones del
+   agente (botones, CTAs, **estados activos**)». Un estado activo es el caso
+   nombrado. Y es donde la inversión de marca trabaja a favor: en oscuro la barra
+   es el amarillo, que sobre negro es lo más legible que tiene la app.
+
+   Esto NO reabre el tinte morado que `NavigationListRow` descartó con razón: el
+   relleno de la fila sigue siendo neutro. Lo que se añade es un rasgo de 3 px al
+   borde, que es donde el morado significa lo que tiene que significar. */
+
+/* `relative` para que la barra se ancle a la fila. Va aquí y no en cada
+   consumidor porque una fila sin él pinta la barra contra el ancestro
+   posicionado más cercano —sale disparada al borde del panel— y eso no da
+   error: da una raya en otro sitio. */
+.marca-seleccion {
+  position: relative;
+}
+
+/* Los dos atributos, y no una clase: cada lista ya marca su estado con el que
+   le corresponde por accesibilidad —`aria-current` en una lista de navegación,
+   `data-active` en el riel con `role="tab"` que usa `aria-selected`—. Pedirles
+   además una clase de estado sería un tercer sitio donde la marca se puede
+   olvidar. */
+.marca-seleccion[aria-current="true"]::before,
+.marca-seleccion[data-active="true"]::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 60%;
+  min-height: 14px;
+  border-radius: 999px;
+  background: var(--color-primary);
+}
+
+/* La pestaña abierta del riel de Configuración: se funde con el contenido y sus
+   esquinas exteriores se curvan hacia afuera. Sin barra de acento; la marcan el
+   fondo, la forma y el peso del nombre. */
+.pestana-fundida {
+  position: relative;
+}
+
+.pestana-fundida[data-active="true"]::before,
+.pestana-fundida[data-active="true"]::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  width: 10px;
+  height: 10px;
+  pointer-events: none;
+}
+
+.pestana-fundida[data-active="true"]::before {
+  top: -10px;
+  background: radial-gradient(circle at 0 0, transparent 10px, var(--color-surface) 10.5px);
+}
+
+.pestana-fundida[data-active="true"]::after {
+  bottom: -10px;
+  background: radial-gradient(circle at 0 100%, transparent 10px, var(--color-surface) 10.5px);
+}

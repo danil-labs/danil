@@ -1,0 +1,84 @@
+{
+  "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
+  "productName": "Danil Desk (nuevo, dev)",
+  "version": "0.3.3",
+  "identifier": "ai.danil.desk.dev",
+  "build": {
+    "frontendDist": "../dist",
+    "devUrl": "http://localhost:5175",
+    "beforeDevCommand": "pnpm engine:sidecar && pnpm dev",
+    "beforeBuildCommand": "pnpm build && pnpm engine:sidecar"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "Danil",
+        "width": 1000,
+        "height": 720,
+        "resizable": true,
+        "fullscreen": false,
+        "label": "main",
+        "minWidth": 720,
+        "minHeight": 520,
+        "titleBarStyle": "Overlay",
+        "hiddenTitle": true,
+        "create": false
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; script-src 'self'; script-src-elem 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: terminus-image: http://terminus-image.localhost; font-src 'self' data:; media-src 'self' data:; connect-src 'self' ipc: http://ipc.localhost wss://connect.danil.ai; frame-src 'self' terminus-page: http://terminus-page.localhost; object-src 'none'; base-uri 'none'; form-action 'none'"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "resources": {
+      "../../desktop/plugins/languages": "lenguas"
+    },
+    "externalBin": [
+      "binaries/danil-engine",
+      "binaries/seldon-runtime"
+    ],
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "macOS": {
+      "signingIdentity": "-",
+      "dmg": {
+        "background": "macos/dmg-background.png",
+        "windowSize": {
+          "width": 660,
+          "height": 400
+        },
+        "appPosition": {
+          "x": 180,
+          "y": 190
+        },
+        "applicationFolderPosition": {
+          "x": 480,
+          "y": 190
+        }
+      }
+    },
+    "android": {
+      "debugApplicationIdSuffix": ".debug"
+    },
+    "createUpdaterArtifacts": false
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDM5ODEzRDE1M0QwQ0RFQjgKUldTNDNndzlGVDJCT1hPSnp4ZzBIbkowOW9kVGFYb0YyRkZKZjNTT2N3eERXOXhuRi9UblY5d3EK",
+      "endpoints": [
+        "https://github.com/danil-labs/danil/releases/latest/download/latest.json"
+      ],
+      "windows": {
+        "installMode": "passive"
+      },
+      "active": false
+    }
+  }
+}

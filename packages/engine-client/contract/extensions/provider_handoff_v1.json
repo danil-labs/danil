@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "name": "provider_handoff",
+  "description": "Cambiar de CLI (Claude, Codex, OpenCode) dentro de una tarea normal: set_session_provider deja un consentimiento de un solo uso para el siguiente turno, que abre una sesión nueva con la conversación como texto o retoma la sesión aparcada con lo que pasó desde entonces. load_session suma can_hand_over y hand_over_blocked. Fuera del hash de compatibilidad (status.contract).",
+  "features": [
+    "provider_handoff_v1"
+  ],
+  "commands": [
+    {
+      "async": false,
+      "channel": null,
+      "kind": "invoke",
+      "name": "set_session_provider",
+      "output": "-> Result < () , Failure >",
+      "parameters": [
+        {
+          "key": "project",
+          "name": "project",
+          "type": "String"
+        },
+        {
+          "key": "session",
+          "name": "session",
+          "type": "String"
+        },
+        {
+          "key": "provider",
+          "name": "provider",
+          "type": "String"
+        }
+      ],
+      "path": "chat::set_session_provider",
+      "scope": "workspace",
+      "audience": "window",
+      "authority": "admin",
+      "durable": false,
+      "enforcement": "server"
+    }
+  ]
+}

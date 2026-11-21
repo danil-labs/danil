@@ -1,0 +1,24 @@
+{
+  "name": "@danil/feature-chat",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@danil/ui": "workspace:*",
+    "@danil/platform-client": "workspace:*",
+    "@danil/engine-client": "workspace:*",
+    "@danil/session": "workspace:*",
+    "@danil/host": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.2",
+    "vite": "^6.0.5",
+    "solid-js": "^1.9.17"
+  }
+}

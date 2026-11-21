@@ -41,6 +41,51 @@ which is not here.
 
 Read the guide of the area before editing it.
 
+## Front nuevo (rebuild)
+
+Estructura modular del front rebuild (SolidJS):
+
+| Paquete / App | Qué hace | Qué consume | Contrato |
+|---|---|---|---|
+| `apps/desk` | Danil Desk con el front nuevo: shell + sesiones del motor (`createDeskSession(createTauriHost())`). Envoltorio Tauri propio pendiente. | `@danil/shell`, `@danil/host`, `@danil/session` | Comandos RPC1 del motor |
+| `apps/workspace` | Aplicación web de Danil (front rebuild); estático Vite servido por Worker en Cloudflare (`danil-front-preview`). | `@danil/shell`, `@danil/session`, `@danil/ui`, SolidJS | Despliegue en Cloudflare Workers (`preview-front.danil.ai`) |
+| `packages/platform-client` | Cliente tipado del borde `/v1` con reintentos automáticos (404/501/503, R10) y URL base única. | Borde HTTP `/v1` (`src/http.ts` es el único fetch al borde) | OpenAPI vendorizado (`contract/openapi.json`), genera `types`, `operations`, `contract` |
+| `packages/engine-client` | Cliente tipado de comandos RPC1 del motor y selección de transporte (`local` en Desk, `relay` vía WebSocket). | WebSocket al relay o IPC de Tauri inyectado vía `@danil/host` | Manifiesto RPC1 del motor vendorizado en `packages/engine-client/contract/` (base + extensiones, desde danil-engine `crates/engine-manifest`), genera `src/generated` |
+| `packages/session` | Gestión unificada de identidad y sesión: cookie HttpOnly (web) o sesiones de motor (Desk). | `@danil/platform-client`, comandos RPC1 de sesión en Desk | OpenAPI del borde y comandos RPC1 (`danil_sessions`, `danil_connect_start`, etc.) |
+| `packages/host` | Lo que solo la plataforma sabe hacer: IPC de Tauri hacia el motor local (Desk), abrir el navegador; `setHost`/`host` para las features. | `@tauri-apps/api` | Comandos RPC1 del motor; implementa `LocalHost` y `DeskAuthHost` |
+| `packages/ui` | Primitivas y componentes visuales puros y reutilizables (SolidJS + Tailwind CSS + Kobalte). Sin dominio ni red. | Nada de dominio ni de red (sin dependencias de `@danil/*`) | Componentes y tokens exportados en `src/index.ts` |
+| `packages/shell` | Router de estados mínimo, arranque lineal con sesión, riel vertical DS1 v2, layout y ErrorBoundaries. Único que compone features. | `@danil/session`, `@danil/ui`, componentes de `@danil/feature-*` | Rutas (`"machines"`, `"workspace/:id"`, `"account"`), props y slots |
+| `packages/features/machines` | Lista de máquinas, selector de ejecución en compositor, sondeo de VMs nuevas, encendido/apagado remoto y conexión. | `@danil/platform-client`, `@danil/engine-client`, `@danil/session`, `@danil/host`, `@danil/ui` | OpenAPI (`getMachines`, `startMachine`, `stopMachine`, `createMachineTicket`, `getOperation`) y RPC1 (`connectMachine`) |
+| `packages/features/workspaces` | Riel vertical DS1 v2 (`RailGroups`), selección atómica de workspaces, nombres de plan, gestión y creación de workspaces. | `@danil/platform-client`, `@danil/engine-client`, `@danil/session`, `@danil/ui` | OpenAPI (`getOrganizations`, `selectOrganization`, `getWorkspaces`, `createWorkspace`, `selectWorkspace`) y RPC1 (`set_active_workspace`) |
+| `packages/features/projects` | Catálogo de proyectos y tareas por máquina, carga acotada en lote, borrado con ciclo de vida y debounce, store reactivo unificado. | `@danil/engine-client`, `@danil/platform-client`, `@danil/ui` | RPC1 (`list_projects`, `list_live_sessions`, `delete_session`, `finish_task`) y OpenAPI (`Workspace`) |
+| `packages/features/chat` | Conversación con agentes, streaming reactivo con cursor, máquina de estados causal de turnos (razonamiento, deltas, herramientas) y aprobaciones de seguridad. | `@danil/engine-client`, `@danil/ui` | RPC1 (`load_session`, `send_message`, `stop_turn`, `respond_permission`, `answer_question`) y eventos push `"chat"` |
+| `packages/features/files` | Árbol de archivos con estado git, visor de archivos con tope de 5 MB y breadcrumbs, mapeo compacto de iconos. | `@danil/engine-client`, `@danil/ui` | RPC1 (`tree_files`, `tree_folder`, `tree_git_status`, `tree_show`, `tree_write`, `tree_patch`) |
+| `packages/features/ai-credentials` | Conexión, custodia y propagación de credenciales de IA selladas con WebCrypto (`TERMINUS-SECRET/1`), consulta única y cacheada por workspace, encendido explícito de máquinas apagadas. | `@danil/platform-client`, `@danil/engine-client`, `@danil/ui` | OpenAPI (`getWorkspaceAccounts`, `putWorkspaceAccount`, `deleteWorkspaceAccount`, `removeWorkspaceAccountMachine`, `restoreWorkspaceAccountMachine`) y RPC1 (`list_providers`, `connectMachine`) |
+| `packages/features/terminal` | Consola interactiva con ANSI, streaming y stdin sin pérdidas (F2.5). | `@danil/engine-client`, `@danil/ui`, `@danil/session`, `@danil/host` | Tipos generados por los clientes |
+| `packages/features/account` | Perfil, plan y enlaces a billing y harness por `host.openExternal` (F2.8). | `@danil/platform-client`, `@danil/ui`, `@danil/session`, `@danil/host` | OpenAPI del borde y tipos generados por los clientes |
+
+### Reglas de arquitectura (R1–R10)
+
+Verificación con Node puro: `node scripts/verify-front.mjs` (o `pnpm front:verify`).
+
+- **R1:** Ningún `fetch`, `WebSocket`, `EventSource`, `@tauri-apps/api` ni `invoke` fuera de `platform-client`, `engine-client`, `session` y `host`.
+- **R2:** Ningún tipo de respuesta escrito a mano fuera de `model.ts` (derivados de los clientes generados); cliente único del borde por app (`usePlatform()` en features).
+- **R3:** Una feature no importa a otra; solo `shell` (o un `apps/*`) las compone.
+- **R4:** `packages/ui` no importa nada de dominio ni de red (no importa `@danil/*`).
+- **R5:** La UI no distingue local de nube: sin `isLocal`, `is_local`, `kind === "personal"` ni comprobaciones locales fuera de `engine-client`.
+- **R6:** Tope de 400 líneas por archivo `.ts/.tsx` (incluyendo `generated/`).
+- **R7:** Si cambia el contrato RPC1 (`commands.json`) o OpenAPI (`openapi.json`), `CONTRACT_HASH` debe coincidir con su sha256 o se regeneran los clientes.
+- **R8:** Lista negra: nada de appv2, mensajería, `/v1/compute` ni `/v1/computers`.
+- **R9:** DRY: prohibidas 12+ líneas consecutivas idénticas normalizadas en dos archivos (salvo `generated/`).
+- **R10:** Prohibido manejar `404` o `501` en features: se manejan y reintentan automáticamente en `platform-client`.
+
+### Red, clientes y despliegue
+
+- **Aislamiento de red:** La red solo vive en `packages/platform-client`, `packages/engine-client`, `packages/session` y `packages/host`.
+- **Cliente único del borde:** Un solo cliente del borde por app instanciado en el shell (`createPlatformClient`); las features lo consumen únicamente con `usePlatform()`.
+- **Despliegue web (`apps/workspace`):** Se despliega como Worker `danil-front-preview` en `preview-front.danil.ai` con `pnpm -C apps/workspace run deploy`.
+- **Front viejo y migración:** `apps/desktop` y los paquetes viejos (`attention`, `computers`, `fleet`, `carry`, `chat`, `tasks`, `protocol`, `design`) son el front viejo y se borran en F4.4: el front nuevo no los importa.
+
 ## Product names
 
 Danil is one product: one account, and the same app in the window, the web and

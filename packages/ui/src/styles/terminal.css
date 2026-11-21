@@ -1,0 +1,88 @@
+/* La segunda capa de color: terminal, código y diff. Repinta eso y nada más.
+   El chrome de la app —superficies, rampa neutra, acción, semánticos— es la
+   primera capa y no se configura; las mediciones de `docs/visual-system.md`
+   están hechas contra ella. Lo sostiene `scripts/guards/terminal-themes.mjs`.
+
+   Sin capa, para ganarle al `:root` que emite `@theme`, igual que el bloque de
+   oscuro de `global.css`. El atributo lo pone `lib/terminal-themes.ts` sobre
+   `<html>`, y la vista previa de Ajustes lo pone sobre cada tarjeta: como son
+   variables en cascada, una tarjeta con el atributo se pinta entera con el tema
+   que enseña sin que nadie toque un color desde JavaScript.
+
+   Cada tema declara los nueve tokens aunque repita el valor del anterior: el
+   que falta lo hereda del tema puesto en `<html>` y la tarjeta enseñaría un
+   color que no es suyo.
+
+   Los valores salen de los esquemas publicados de cada terminal y no de una
+   captura. La excepción es `muted`, que se deriva: un esquema de terminal
+   define fondo, texto y dieciséis colores ANSI, y ninguno de ellos es el gris
+   secundario que esta interfaz necesita. Se eligió el más tenue que llega a
+   4,5:1 sobre el fondo Y sobre la barra. */
+
+/* El de hoy. Repite `@theme` valor por valor: quien no elige nada no ve un
+   cambio. */
+[data-terminal-theme="terminus"] {
+  --color-terminal: #101421;
+  --color-terminal-bar: #1b2030;
+  --color-terminal-line: #30384e;
+  --color-terminal-text: #dfe5f1;
+  --color-terminal-muted: #aab4cb;
+  --color-terminal-ok: #8fdfb0;
+  --color-terminal-warn: #f4eb7b;
+  --color-terminal-error: #fca5a5;
+  --color-terminal-accent: #b6a0ff;
+}
+
+/* Tomorrow Night Blue, de Chris Kempson. */
+[data-terminal-theme="tomorrow-night-blue"] {
+  --color-terminal: #002451;
+  --color-terminal-bar: #00346e;
+  --color-terminal-line: #003f8e;
+  --color-terminal-text: #ffffff;
+  --color-terminal-muted: #a8b9de;
+  --color-terminal-ok: #d1f1a9;
+  --color-terminal-warn: #ffeead;
+  --color-terminal-error: #ff9da4;
+  --color-terminal-accent: #ebbbff;
+}
+
+/* Nord, de Arctic Ice Studio. El rojo del esquema da 3,05:1 sobre su propio
+   fondo: se aclara hasta 4,67 para que una línea de error se lea. */
+[data-terminal-theme="nord"] {
+  --color-terminal: #2e3440;
+  --color-terminal-bar: #3b4252;
+  --color-terminal-line: #4c566a;
+  --color-terminal-text: #d8dee9;
+  --color-terminal-muted: #a9b3c6;
+  --color-terminal-ok: #a3be8c;
+  --color-terminal-warn: #ebcb8b;
+  --color-terminal-error: #d08c92;
+  --color-terminal-accent: #b48ead;
+}
+
+/* Gruvbox Dark, de Pavel Pertsev. Su rojo claro se queda en 4,29:1 y sube un
+   punto; los otros ocho son los del esquema. */
+[data-terminal-theme="gruvbox-dark"] {
+  --color-terminal: #282828;
+  --color-terminal-bar: #3c3836;
+  --color-terminal-line: #665c54;
+  --color-terminal-text: #ebdbb2;
+  --color-terminal-muted: #bdae93;
+  --color-terminal-ok: #b8bb26;
+  --color-terminal-warn: #fabd2f;
+  --color-terminal-error: #f95d46;
+  --color-terminal-accent: #d3869b;
+}
+
+/* Dracula, de Zeno Rocha. */
+[data-terminal-theme="dracula"] {
+  --color-terminal: #282a36;
+  --color-terminal-bar: #44475a;
+  --color-terminal-line: #6272a4;
+  --color-terminal-text: #f8f8f2;
+  --color-terminal-muted: #b5bccf;
+  --color-terminal-ok: #50fa7b;
+  --color-terminal-warn: #f1fa8c;
+  --color-terminal-error: #ff6e6e;
+  --color-terminal-accent: #bd93f9;
+}

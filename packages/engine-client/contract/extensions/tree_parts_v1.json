@@ -1,0 +1,60 @@
+{
+  "version": 1,
+  "name": "tree_parts",
+  "description": "Los bytes de cualquier archivo de un árbol de la tarea por partes, leídos del disco, para reproducir video o audio y descargarlo desde una ventana o un teléfono, también por el relay. Fuera del hash de compatibilidad (status.contract).",
+  "features": [
+    "tree_parts_v1"
+  ],
+  "commands": [
+    {
+      "async": false,
+      "channel": null,
+      "kind": "invoke",
+      "name": "tree_read_part",
+      "output": "-> Result < TreePart , Failure >",
+      "parameters": [
+        {
+          "key": "project",
+          "name": "project",
+          "type": "String"
+        },
+        {
+          "key": "session",
+          "name": "session",
+          "type": "String"
+        },
+        {
+          "key": "tree",
+          "name": "tree",
+          "type": "String"
+        },
+        {
+          "key": "path",
+          "name": "path",
+          "type": "String"
+        },
+        {
+          "key": "offset",
+          "name": "offset",
+          "type": "u64"
+        },
+        {
+          "key": "size",
+          "name": "size",
+          "type": "u32"
+        },
+        {
+          "key": "revision",
+          "name": "revision",
+          "type": "Option < String >"
+        }
+      ],
+      "path": "development::tree_read_part",
+      "scope": "workspace",
+      "audience": "window",
+      "authority": "admin",
+      "durable": false,
+      "enforcement": "server"
+    }
+  ]
+}
