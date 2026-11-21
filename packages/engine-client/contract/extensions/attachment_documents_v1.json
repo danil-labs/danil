@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "name": "attachment_documents",
+  "description": "Adjuntar documentos además de imágenes: guardar_adjunto acepta el nombre original y los tipos comunes (PDF, texto, Office y OpenDocument), con el mismo tope de 25 MB. Fuera del hash de compatibilidad (status.contract).",
+  "features": [
+    "attachment_documents_v1"
+  ],
+  "commands": [
+    {
+      "async": false,
+      "channel": null,
+      "kind": "invoke",
+      "name": "guardar_adjunto",
+      "output": "-> Result < String , Failure >",
+      "parameters": [
+        {
+          "key": "mime",
+          "name": "mime",
+          "type": "String"
+        },
+        {
+          "key": "nombre",
+          "name": "nombre",
+          "type": "Option < String >"
+        },
+        {
+          "key": "datos",
+          "name": "datos",
+          "type": "String"
+        }
+      ],
+      "path": "chat::guardar_adjunto",
+      "scope": "workspace",
+      "audience": "window",
+      "authority": "admin",
+      "durable": false,
+      "enforcement": "server"
+    }
+  ]
+}

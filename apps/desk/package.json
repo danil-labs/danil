@@ -1,0 +1,30 @@
+{
+  "name": "@danil/app-desk",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "typecheck": "tsc --noEmit",
+    "tauri": "tauri",
+    "tauri:dev": "tauri dev --config src-tauri/tauri.conf.json",
+    "tauri:build": "tauri build --config src-tauri/tauri.conf.json",
+    "engine:sidecar": "node ../desktop/scripts/engine.mjs sidecar"
+  },
+  "dependencies": {
+    "@danil/shell": "workspace:*",
+    "solid-js": "^1.9.17",
+    "@danil/host": "workspace:*",
+    "@danil/session": "workspace:*",
+    "@danil/ui": "workspace:*"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.12.4",
+    "typescript": "^5.7.2",
+    "vite": "^6.0.5",
+    "vite-plugin-solid": "^2.11.14",
+    "@tailwindcss/vite": "^4.3.3",
+    "tailwindcss": "^4.3.3"
+  }
+}

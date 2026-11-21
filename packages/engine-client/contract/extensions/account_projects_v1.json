@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "name": "account_projects",
+  "description": "Carpetas de la cuenta de Danil en esta máquina: remove_account_project quita de la cuenta (DELETE /v1/workspaces/:id/projects/:id) una que aquí no está. Con el rasgo, además, set_space_folders y create_space aceptan las carpetas de la cuenta, list_project_repositories ofrece las de la cuenta con su project, reuse_project las trae, clonar o crear sobre su remoto reutiliza su id y delete_project da de baja en la cuenta la carpeta sin remoto que vivía aquí. Fuera del hash de compatibilidad (status.contract).",
+  "features": [
+    "account_projects_v1"
+  ],
+  "commands": [
+    {
+      "async": false,
+      "channel": null,
+      "kind": "invoke",
+      "name": "remove_account_project",
+      "output": "-> Result < () , Failure >",
+      "parameters": [
+        {
+          "key": "id",
+          "name": "id",
+          "type": "String"
+        }
+      ],
+      "path": "projects::remove_account_project",
+      "scope": "workspace",
+      "audience": "window",
+      "authority": "admin",
+      "durable": false,
+      "enforcement": "server"
+    }
+  ]
+}

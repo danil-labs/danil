@@ -1,0 +1,239 @@
+/**
+ * Pantalla principal del Chat y orquestación de turnos del agente.
+ * Paridad visual con apps/desktop/src/features/chat/Chat.tsx.
+ */
+
+import { For, Show, createSignal } from "solid-js";
+import type { MachineConnection } from "@danil/engine-client";
+import { createChatStore } from "../store.ts";
+import {
+  useSessionHistory,
+  useChatStream,
+  useSendMessage,
+  useStopTurn,
+  useRespondPermission,
+  useAnswerQuestion,
+} from "../queries.ts";
+import { MessageItem } from "../components/MessageItem.tsx";
+import { Composer } from "../components/Composer.tsx";
+import { ErrorBanner } from "../components/ErrorBanner.tsx";
+import { TurnStatus } from "../components/TurnStatus.tsx";
+import type { ChatTurnView } from "../model.ts";
+
+export interface ChatScreenProps {
+  conn: MachineConnection;
+  sessionId: string;
+  project?: string;
+}
+
+interface ChatSessionViewProps {
+  conn: MachineConnection;
+  sessionId: string;
+  project?: string;
+}
+
+function ChatSessionView(props: ChatSessionViewProps) {
+  const store = createChatStore(props.sessionId);
+
+  // Consulta del historial de la sesión: reconcilia en el fetcher sin createEffect (RV1 #35)
+  const [historyResource, { refetch }] = useSessionHistory(
+    props.conn.client,
+    () => props.sessionId,
+    () => props.project,
+    (turns) => {
+      store.setHistory(turns);
+    },
+  );
+
+  // Suscripción de streaming reactiva con cursor plano fuera del store (RV1 #13)
+  useChatStream(
+    props.conn.client,
+    () => props.sessionId,
+    store.cursor,
+    (ev) => {
+      store.handleStreamEvent(ev);
+    },
+  );
+
+  const { sendMessage, isSending, sendError } = useSendMessage(props.conn.client);
+  const { stopTurn, isStopping } = useStopTurn(props.conn.client);
+  const { respondPermission, isResponding: isRespondingPermission } = useRespondPermission(props.conn.client);
+  const { answerQuestion } = useAnswerQuestion(props.conn.client);
+  const [isAnsweringQuestion, setIsAnsweringQuestion] = createSignal(false);
+
+  const handleSend = async (prompt: string) => {
+    try {
+      store.addUserMessage(prompt);
+      await sendMessage({
+        sessionId: props.sessionId,
+        prompt,
+        project: props.project,
+      });
+    } catch {
+      // El error se gestiona mediante sendError reactivo
+    }
+  };
+
+  const handleStop = async () => {
+    await stopTurn({
+      sessionId: props.sessionId,
+      project: props.project,
+    });
+  };
+
+  const handlePermissionDecide = async (requestId: string, decision: "allow" | "deny") => {
+    try {
+      store.resolvePermission(requestId, decision);
+      await respondPermission({
+        sessionId: props.sessionId,
+        requestId,
+        allow: decision === "allow",
+      });
+    } catch {
+      // Revertir o reportar si falla
+    }
+  };
+
+  const handleAnswerQuestion = async (requestId: string, answers: unknown[]) => {
+    setIsAnsweringQuestion(true);
+    try {
+      store.answerQuestion(requestId, answers);
+      await answerQuestion({
+        sessionId: props.sessionId,
+        requestId,
+        answers,
+      });
+    } catch {
+      // Revertir o reportar si falla
+    } finally {
+      setIsAnsweringQuestion(false);
+    }
+  };
+
+  // Convertir el turno en vuelo en vista de turno si está activo
+  const activeTurnView = (): ChatTurnView | null => {
+    const at = store.state.activeTurn;
+    if (at.status === "idle" || at.pieces.length === 0) return null;
+    return {
+      id: at.turnId ?? "active_turn",
+      role: "agent",
+      text: at.pieces
+        .filter((p) => p.kind === "delta")
+        .map((p) => (p as { text: string }).text)
+        .join(""),
+      pieces: at.pieces,
+      status: "streaming",
+      model: at.model,
+      error: at.error,
+    };
+  };
+
+  const isTurnRunning = () =>
+    store.state.activeTurn.status === "running" ||
+    store.state.activeTurn.status === "waiting_permission";
+
+  return (
+    <div class="flex flex-col h-full w-full bg-background text-neutral-950 dark:text-neutral-100 overflow-hidden">
+      {/* Barra superior de estado (h-[30px] HEADER_HEIGHT) */}
+      <header class="h-[30px] px-3 border-b border-border bg-background flex items-center justify-between text-xs shrink-0 select-none">
+        <div class="flex items-center gap-2">
+          <span class="w-1.5 h-1.5 rounded-full bg-success-strong" />
+          <span class="font-mono text-neutral-500 truncate max-w-sm">
+            Sesión: {props.sessionId}
+          </span>
+        </div>
+        <Show when={isTurnRunning()}>
+          <div class="flex items-center gap-1.5 font-medium">
+            <TurnStatus
+              esperando={store.state.activeTurn.status === "waiting_permission"}
+              desde={Date.now()}
+              inline
+            />
+          </div>
+        </Show>
+      </header>
+
+      {/* Área scrollable de mensajes */}
+      <main class="flex-1 overflow-y-auto min-h-0">
+        <Show when={historyResource.error}>
+          <ErrorBanner
+            message={
+              historyResource.error instanceof Error
+                ? historyResource.error.message
+                : "No se pudo cargar la conversación"
+            }
+            onRetry={refetch}
+            isRetrying={historyResource.loading}
+          />
+        </Show>
+
+        <Show when={sendError()}>
+          <ErrorBanner message={sendError()!} />
+        </Show>
+
+        <Show
+          when={!historyResource.loading || store.state.history.length > 0}
+          fallback={
+            <div class="p-8 text-center text-neutral-500 text-sm">
+              Cargando historial de la sesión...
+            </div>
+          }
+        >
+          <div
+            data-chat-thread
+            class="mx-auto grid w-full gap-y-2 max-w-[964px] px-6 sm:px-12 py-4 grid-cols-[minmax(0,1fr)]"
+          >
+            <For each={store.state.history}>
+              {(turn) => (
+                <MessageItem
+                  turn={turn}
+                  onPermissionDecide={handlePermissionDecide}
+                  onAnswerQuestion={handleAnswerQuestion}
+                />
+              )}
+            </For>
+
+            <Show when={activeTurnView()}>
+              {(at) => (
+                <MessageItem
+                  turn={at()}
+                  onPermissionDecide={handlePermissionDecide}
+                  onAnswerQuestion={handleAnswerQuestion}
+                />
+              )}
+            </Show>
+          </div>
+        </Show>
+      </main>
+
+      {/* Compositor de entrada */}
+      <Composer
+        onSend={handleSend}
+        onStop={handleStop}
+        isSending={isSending()}
+        isTurnRunning={isTurnRunning() || isStopping()}
+        disabled={isRespondingPermission() || isAnsweringQuestion()}
+      />
+    </div>
+  );
+}
+
+/**
+ * ChatScreen con clave por sessionId (RV1 #35).
+ * Se desmonta y vuelve a montar al cambiar de sesión para aislar el store y streaming.
+ */
+export function ChatScreen(props: ChatScreenProps) {
+  return (
+    <Show when={props.sessionId} keyed>
+      {(sid) => (
+        <ChatSessionView
+          conn={props.conn}
+          sessionId={sid}
+          project={props.project}
+        />
+      )}
+    </Show>
+  );
+}
+
+export default ChatScreen;

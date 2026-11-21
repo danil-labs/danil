@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "name": "handler_list_source",
+  "description": "handler list elige qué lee: --source folder (la carpeta registrada) o task (el árbol de la tarea que llama). Fuera del hash de compatibilidad (status.contract). cli_flags son flags que la capacidad suma a rutas del CLI que ya existen.",
+  "features": [
+    "handler_list_source_v1"
+  ],
+  "commands": [],
+  "cli_flags": {
+    "handler list": [
+      "source"
+    ]
+  }
+}

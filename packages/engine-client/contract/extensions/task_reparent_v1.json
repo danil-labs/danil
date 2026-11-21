@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "name": "task_reparent",
+  "description": "Cambiar el lanzador de una tarea delegada. Fuera del hash de compatibilidad (status.contract).",
+  "features": [
+    "task_reparent_v1"
+  ],
+  "commands": [
+    {
+      "kind": "cli",
+      "name": "task reparent",
+      "path": "task reparent",
+      "flags": [
+        "task*",
+        "parent*",
+        "dry-run!"
+      ],
+      "writes": true,
+      "audience": "public",
+      "authority": "task",
+      "durable": true,
+      "relay": false,
+      "enforcement": "server"
+    }
+  ]
+}

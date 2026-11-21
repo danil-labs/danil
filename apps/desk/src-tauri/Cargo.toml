@@ -1,0 +1,27 @@
+[package]
+name = "danil-desk"
+version = "0.1.0"
+description = "Danil Desk Tauri wrapper"
+authors = ["Danil"]
+license = "Apache-2.0"
+repository = "https://github.com/danil-labs/danil"
+edition = "2021"
+rust-version = "1.89"
+default-run = "danil-desk"
+
+[dependencies]
+app_lib = { path = "../../desktop/src-tauri", package = "terminus" }
+tauri = { version = "2.12.5", features = ["tray-icon", "image-png"] }
+tauri-plugin-log = "2"
+tauri-plugin-dialog = "2.8.4"
+tauri-plugin-updater = "2.14.1"
+tauri-plugin-process = "2.4.0"
+tauri-plugin-notification = "2"
+tauri-plugin-clipboard-manager = "2.5.0"
+
+[build-dependencies]
+tauri-build = { version = "2.7.4", features = [] }
+
+[features]
+default = ["custom-protocol"]
+custom-protocol = ["tauri/custom-protocol"]

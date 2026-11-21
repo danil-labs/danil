@@ -1,0 +1,73 @@
+{
+  "version": 1,
+  "name": "light_state",
+  "description": "Estado ligero, etapa 1: índice de esta máquina por workspace en machines/local/ (tasks.json, projects.json y machine.json; cada recurso {schema, version, data} con version = SHA-256 de data canónico). state_manifest da las versiones; state_resource da un recurso y, con la versión vigente, {not_modified: true}; el evento state.changed {workspace, resource, version} avisa al cambiar. Fuera del hash de compatibilidad (status.contract).",
+  "features": [
+    "light_state_v1"
+  ],
+  "events": [
+    "state.changed"
+  ],
+  "commands": [
+    {
+      "async": false,
+      "channel": null,
+      "ids": {
+        "workspace": [
+          "workspace"
+        ]
+      },
+      "kind": "invoke",
+      "name": "state_manifest",
+      "output": "-> Result < StateManifest , String >",
+      "parameters": [
+        {
+          "key": "workspace",
+          "name": "workspace",
+          "type": "Option < String >"
+        }
+      ],
+      "path": "light_state::state_manifest",
+      "scope": "workspace",
+      "audience": "window",
+      "authority": "admin",
+      "durable": false,
+      "enforcement": "server"
+    },
+    {
+      "async": false,
+      "channel": null,
+      "ids": {
+        "workspace": [
+          "workspace"
+        ]
+      },
+      "kind": "invoke",
+      "name": "state_resource",
+      "output": "-> Result < Value , String >",
+      "parameters": [
+        {
+          "key": "workspace",
+          "name": "workspace",
+          "type": "Option < String >"
+        },
+        {
+          "key": "resource",
+          "name": "resource",
+          "type": "String"
+        },
+        {
+          "key": "version",
+          "name": "version",
+          "type": "Option < String >"
+        }
+      ],
+      "path": "light_state::state_resource",
+      "scope": "workspace",
+      "audience": "window",
+      "authority": "admin",
+      "durable": false,
+      "enforcement": "server"
+    }
+  ]
+}

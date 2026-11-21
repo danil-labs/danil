@@ -1,0 +1,22 @@
+{
+  "name": "@danil/host",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.2",
+    "vite": "^6.0.5",
+    "solid-js": "^1.9.17"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "^2.12.4",
+    "@danil/engine-client": "workspace:*",
+    "@danil/session": "workspace:*"
+  }
+}

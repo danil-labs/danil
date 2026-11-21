@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "name": "artifact_parts",
+  "description": "Los bytes de una versión de un artefacto por partes, para que una ventana de otra computadora lo descargue entero. Fuera del hash de compatibilidad (status.contract).",
+  "features": [
+    "artifact_parts_v1"
+  ],
+  "commands": [
+    {
+      "async": false,
+      "channel": null,
+      "kind": "invoke",
+      "name": "artifact_read_part",
+      "output": "-> Result < ArtifactPart , Failure >",
+      "parameters": [
+        {
+          "key": "referencia",
+          "name": "referencia",
+          "type": "VersionRef"
+        },
+        {
+          "key": "offset",
+          "name": "offset",
+          "type": "u64"
+        },
+        {
+          "key": "size",
+          "name": "size",
+          "type": "u32"
+        }
+      ],
+      "path": "versions::artifact_read_part",
+      "scope": "workspace",
+      "audience": "window",
+      "authority": "admin",
+      "durable": false,
+      "enforcement": "server"
+    }
+  ]
+}
