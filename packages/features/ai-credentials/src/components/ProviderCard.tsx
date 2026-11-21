@@ -77,26 +77,26 @@ export function ProviderCard(props: ProviderCardProps): JSX.Element {
   }
 
   return (
-    <div class="rounded-lg border border-neutral-200 bg-white p-5 shadow-sm transition-all dark:border-neutral-800 dark:bg-neutral-900">
-      {/* Cabecera del proveedor */}
-      <div class="flex items-start justify-between border-b border-neutral-100 pb-4 dark:border-neutral-800">
+    <div class="rounded-lg border border-neutral-800 bg-neutral-900/80 p-5 shadow-sm transition-all text-neutral-200">
+      {/* Cabecera del proveedor con apariencia de apps/desktop */}
+      <div class="flex items-start justify-between border-b border-neutral-800 pb-4">
         <div>
           <div class="flex items-center gap-2">
-            <h3 class="text-base font-semibold text-neutral-900 dark:text-neutral-100">
+            <h3 class="text-sm font-semibold text-neutral-100">
               {props.name}
             </h3>
             <Show when={props.kind === "subscription"}>
-              <span class="inline-flex items-center rounded bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700 border border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-900">
+              <span class="inline-flex items-center rounded bg-sky-500/10 px-2 py-0.5 text-[11px] font-medium text-sky-400 border border-sky-500/20">
                 Suscripción
               </span>
             </Show>
             <Show when={hasCredentials()}>
-              <span class="inline-flex items-center rounded bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-900">
-                Conectado
+              <span class="inline-flex items-center rounded bg-emerald-500/10 px-2 py-0.5 text-[11px] font-medium text-emerald-400 border border-emerald-500/20">
+                Conectada
               </span>
             </Show>
           </div>
-          <p class="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
+          <p class="mt-1 text-xs text-neutral-400">
             {props.description}
           </p>
         </div>
@@ -105,7 +105,7 @@ export function ProviderCard(props: ProviderCardProps): JSX.Element {
           <button
             type="button"
             onClick={() => setShowInput(true)}
-            class="inline-flex items-center gap-1.5 rounded-md border border-neutral-300 bg-white px-3 py-1.5 text-xs font-medium text-neutral-700 shadow-sm hover:bg-neutral-50 focus:outline-none focus:ring-2 focus:ring-neutral-400 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
+            class="inline-flex items-center gap-1.5 rounded-md border border-neutral-700 bg-neutral-800 px-3 py-1.5 text-xs font-medium text-neutral-200 shadow-sm hover:bg-neutral-700 hover:text-white transition-colors focus:outline-none focus:ring-1 focus:ring-neutral-500"
           >
             <svg class="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
@@ -117,9 +117,9 @@ export function ProviderCard(props: ProviderCardProps): JSX.Element {
 
       {/* Caso especial Antigravity (Gemini): suscripción */}
       <Show when={props.id === "antigravity"}>
-        <div class="mt-4 rounded-md border border-blue-100 bg-blue-50/50 p-3 text-xs text-blue-800 dark:border-blue-900/50 dark:bg-blue-950/30 dark:text-blue-300">
-          <p class="font-medium">Autenticación por suscripción Danil</p>
-          <p class="mt-0.5 text-blue-700 dark:text-blue-400">
+        <div class="mt-4 rounded-md border border-sky-500/20 bg-sky-500/10 p-3 text-xs text-sky-300">
+          <p class="font-medium text-sky-200">Autenticación por suscripción Danil</p>
+          <p class="mt-0.5 text-sky-300/80">
             Antigravity se autentica por suscripción (kind=subscription), a diferencia de las API keys.
             La especificación de subida está pendiente en el contrato del borde.
           </p>
@@ -128,7 +128,7 @@ export function ProviderCard(props: ProviderCardProps): JSX.Element {
               type="button"
               disabled={props.connecting}
               onClick={handleConnect}
-              class="inline-flex items-center gap-1.5 rounded-md bg-neutral-900 px-3 py-1.5 text-xs font-medium text-white shadow-sm hover:bg-neutral-800 focus:outline-none focus:ring-2 focus:ring-neutral-500 disabled:opacity-50 dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-neutral-200"
+              class="inline-flex items-center gap-1.5 rounded-md bg-neutral-100 px-3 py-1.5 text-xs font-medium text-neutral-900 shadow-sm hover:bg-white focus:outline-none disabled:opacity-50 transition-colors"
             >
               Conectar suscripción
             </button>
@@ -142,7 +142,7 @@ export function ProviderCard(props: ProviderCardProps): JSX.Element {
           <div>
             <label
               for={`input-${props.id}`}
-              class="block text-xs font-medium text-neutral-700 dark:text-neutral-300"
+              class="block text-xs font-medium text-neutral-300"
             >
               API Key ({props.name})
             </label>
@@ -153,7 +153,7 @@ export function ProviderCard(props: ProviderCardProps): JSX.Element {
                 placeholder="Pega la API Key aquí (se sellará con X25519 antes de viajar)"
                 value={apiKey()}
                 onInput={(e) => setApiKey(e.currentTarget.value)}
-                class="w-full rounded-md border border-neutral-300 bg-white px-3 py-1.5 text-xs text-neutral-900 placeholder:text-neutral-400 focus:border-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100 dark:focus:border-neutral-400 dark:focus:ring-neutral-400"
+                class="w-full rounded-md border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-xs text-neutral-200 placeholder:text-neutral-500 focus:border-neutral-500 focus:outline-none focus:ring-1 focus:ring-neutral-500"
               />
             </div>
             <p class="mt-1 text-[11px] text-neutral-500">
@@ -165,7 +165,7 @@ export function ProviderCard(props: ProviderCardProps): JSX.Element {
             <button
               type="submit"
               disabled={props.connecting}
-              class="inline-flex items-center gap-1.5 rounded-md bg-neutral-900 px-3 py-1.5 text-xs font-medium text-white shadow-sm hover:bg-neutral-800 focus:outline-none focus:ring-2 focus:ring-neutral-500 disabled:opacity-50 dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-neutral-200"
+              class="inline-flex items-center gap-1.5 rounded-md bg-neutral-100 px-3 py-1.5 text-xs font-medium text-neutral-900 shadow-sm hover:bg-white focus:outline-none disabled:opacity-50 transition-colors"
             >
               <Show when={props.connecting} fallback="Guardar y sellar">
                 Guardando...
@@ -178,7 +178,7 @@ export function ProviderCard(props: ProviderCardProps): JSX.Element {
                 setApiKey("");
                 setLocalError(null);
               }}
-              class="rounded-md border border-neutral-300 bg-transparent px-3 py-1.5 text-xs font-medium text-neutral-700 hover:bg-neutral-50 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800"
+              class="rounded-md border border-neutral-700 bg-transparent px-3 py-1.5 text-xs font-medium text-neutral-300 hover:bg-neutral-800 transition-colors"
             >
               Cancelar
             </button>
@@ -188,7 +188,7 @@ export function ProviderCard(props: ProviderCardProps): JSX.Element {
 
       {/* Mensaje de error local */}
       <Show when={localError()}>
-        <div class="mt-3 rounded-md bg-red-50 p-2.5 text-xs text-red-700 dark:bg-red-950/40 dark:text-red-300">
+        <div class="mt-3 rounded-md bg-rose-500/10 border border-rose-500/20 p-2.5 text-xs text-rose-300">
           {localError()}
         </div>
       </Show>
@@ -199,14 +199,14 @@ export function ProviderCard(props: ProviderCardProps): JSX.Element {
           <h4 class="text-xs font-semibold uppercase tracking-wider text-neutral-500">
             Cuentas configuradas
           </h4>
-          <ul class="divide-y divide-neutral-100 rounded-md border border-neutral-100 dark:divide-neutral-800 dark:border-neutral-800">
+          <ul class="divide-y divide-neutral-800 rounded-md border border-neutral-800 bg-neutral-950/40">
             <For each={providerCredentials()}>
               {(cred) => (
                 <li class="p-3">
                   <div class="flex items-center justify-between">
                     <div>
                       <div class="flex items-center gap-2">
-                        <span class="text-xs font-medium text-neutral-900 dark:text-neutral-100">
+                        <span class="text-xs font-medium text-neutral-100">
                           {cred.label || props.name}
                         </span>
                         <Show when={cred.hint}>
@@ -215,7 +215,7 @@ export function ProviderCard(props: ProviderCardProps): JSX.Element {
                           </span>
                         </Show>
                       </div>
-                      <span class="text-[11px] text-neutral-400">
+                      <span class="text-[11px] text-neutral-500">
                         Versión {cred.version} · {cred.slot}
                       </span>
                     </div>
@@ -223,7 +223,7 @@ export function ProviderCard(props: ProviderCardProps): JSX.Element {
                     <button
                       type="button"
                       onClick={() => props.onDelete(cred.credential_id)}
-                      class="inline-flex items-center gap-1 rounded px-2 py-1 text-xs text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/30"
+                      class="inline-flex items-center gap-1 rounded px-2 py-1 text-xs text-rose-400 hover:bg-rose-500/10 transition-colors"
                       title="Eliminar credencial en todas las máquinas"
                     >
                       <svg class="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -235,15 +235,15 @@ export function ProviderCard(props: ProviderCardProps): JSX.Element {
 
                   {/* Estado por máquina (B-022) */}
                   <Show when={cred.machines && cred.machines.length > 0}>
-                    <div class="mt-3 border-t border-neutral-100 pt-2 dark:border-neutral-800">
+                    <div class="mt-3 border-t border-neutral-800/60 pt-2">
                       <p class="text-[11px] font-medium text-neutral-500">
                         Estado por máquina:
                       </p>
                       <ul class="mt-1 space-y-1">
                         <For each={cred.machines}>
                           {(m: MachineCredentialStatus) => (
-                            <li class="flex items-center justify-between text-xs">
-                              <span class="font-mono text-neutral-700 dark:text-neutral-300">
+                            <li class="flex items-center justify-between text-xs py-0.5">
+                              <span class="font-mono text-neutral-300">
                                 {m.machine_id}
                               </span>
                               <div class="flex items-center gap-2">
@@ -253,18 +253,18 @@ export function ProviderCard(props: ProviderCardProps): JSX.Element {
                                     <Show
                                       when={m.state === "pending"}
                                       fallback={
-                                        <span class="inline-flex items-center rounded bg-neutral-100 px-2 py-0.5 text-[10px] font-medium text-neutral-600 border border-neutral-200 dark:bg-neutral-800 dark:text-neutral-400 dark:border-neutral-700">
+                                        <span class="inline-flex items-center rounded bg-neutral-800 px-2 py-0.5 text-[10px] font-medium text-neutral-400 border border-neutral-700">
                                           Removida
                                         </span>
                                       }
                                     >
-                                      <span class="inline-flex items-center rounded bg-amber-50 px-2 py-0.5 text-[10px] font-medium text-amber-700 border border-amber-200 dark:bg-amber-950/30 dark:text-amber-400 dark:border-amber-800">
+                                      <span class="inline-flex items-center rounded bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium text-amber-400 border border-amber-500/20">
                                         Pendiente
                                       </span>
                                     </Show>
                                   }
                                 >
-                                  <span class="inline-flex items-center rounded bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-700 border border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-400 dark:border-emerald-800">
+                                  <span class="inline-flex items-center rounded bg-emerald-500/10 px-2 py-0.5 text-[10px] font-medium text-emerald-400 border border-emerald-500/20">
                                     Activa
                                   </span>
                                 </Show>
@@ -275,7 +275,7 @@ export function ProviderCard(props: ProviderCardProps): JSX.Element {
                                     <button
                                       type="button"
                                       onClick={() => props.onRemoveMachine(cred.credential_id, m.machine_id)}
-                                      class="text-[10px] text-neutral-500 underline hover:text-red-600"
+                                      class="text-[10px] text-neutral-500 underline hover:text-rose-400 transition-colors"
                                     >
                                       Quitar
                                     </button>
@@ -284,7 +284,7 @@ export function ProviderCard(props: ProviderCardProps): JSX.Element {
                                   <button
                                     type="button"
                                     onClick={() => props.onRestoreMachine(cred.credential_id, m.machine_id)}
-                                    class="text-[10px] text-neutral-500 underline hover:text-emerald-600"
+                                    class="text-[10px] text-neutral-500 underline hover:text-emerald-400 transition-colors"
                                   >
                                     Restaurar
                                   </button>

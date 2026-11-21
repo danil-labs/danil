@@ -102,19 +102,21 @@ export function AiCredentialsScreen(props: AiCredentialsScreenProps): JSX.Elemen
   ];
 
   return (
-    <div class="mx-auto max-w-4xl space-y-6 p-6 text-neutral-900 dark:text-neutral-100">
-      {/* Encabezado */}
-      <div class="flex flex-col gap-1 border-b border-neutral-200 pb-5 dark:border-neutral-800">
-        <h1 class="text-xl font-bold tracking-tight text-neutral-950 dark:text-white">
-          Cuentas y Credenciales de IA
-        </h1>
-        <p class="text-sm text-neutral-500 dark:text-neutral-400">
+    <div class="mx-auto max-w-4xl space-y-6 p-6 text-neutral-200">
+      {/* Encabezado con apariencia de desktop */}
+      <section class="grid min-w-0 gap-1 border-b border-neutral-800 pb-5">
+        <header class="flex min-h-7 min-w-0 flex-wrap items-center gap-2">
+          <h2 class="m-0 min-w-0 flex-1 text-lg font-semibold text-neutral-100">
+            Cuentas y Credenciales de IA
+          </h2>
+        </header>
+        <p class="m-0 text-xs text-neutral-400">
           Gestiona las claves y accesos a modelos de lenguaje para tus máquinas. Los secretos se sellan
           en el cliente con X25519 antes de viajar a la plataforma.
         </p>
-      </div>
+      </section>
 
-      {/* Manejo de error de la API con botón de reintento (regla obligatoria) */}
+      {/* Manejo de error de la API con botón de reintento (regla R10) */}
       <Show when={accountsQuery.error()}>
         <CredentialErrorNotice
           error={accountsQuery.error()}
@@ -124,7 +126,7 @@ export function AiCredentialsScreen(props: AiCredentialsScreenProps): JSX.Elemen
 
       {/* Estado de carga inicial */}
       <Show when={accountsQuery.loading()}>
-        <div class="flex items-center gap-2 rounded-lg border border-neutral-200 bg-neutral-50 p-4 text-xs text-neutral-600 dark:border-neutral-800 dark:bg-neutral-900/50 dark:text-neutral-400">
+        <div class="flex items-center gap-2 rounded-lg border border-neutral-800 bg-neutral-900/60 p-4 text-xs text-neutral-400">
           <svg class="size-4 animate-spin text-neutral-500" fill="none" viewBox="0 0 24 24">
             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
