@@ -1,6 +1,6 @@
-import type { ChatEvent } from "../../chat/src/index.ts";
-import type { JournalEvent } from "../../../../apps/desktop/src/lib/serviceEvents";
-import type { PushedBatch } from "./store.ts";
+import type { ChatEvent } from "../../../chat/src/index.ts";
+import type { JournalEvent } from "../../../../../apps/desktop/src/lib/serviceEvents";
+import type { PushedBatch } from "../queries/store.ts";
 
 const REPUESTO = new Set(["delta", "reasoning", "tool", "tool_done", "command_output", "command_running", "shell_started", "shell_output", "image", "retry", "notice", "task_launched", "segment_saved"]);
 /** One journal delivery policy for native catchup and relayed replay. */
