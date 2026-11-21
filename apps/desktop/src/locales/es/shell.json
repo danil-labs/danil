@@ -319,6 +319,7 @@
   "shell.turn.permission_no_reply": "El agente pidió permiso, pero no indicó cómo contestarle.",
   "shell.turn.permission_delivery_unknown": "No se sabe si la respuesta llegó al agente. No se volvió a enviar: revisa la tarea antes de repetirla.",
   "shell.turn.stop_failed": "No se pudo detener el turno: {error}",
+  "shell.turn.not_stoppable_yet": "Este turno todavía no se puede detener; intenta de nuevo en un momento.",
   "shell.update.available": "Hay una versión nueva: {version}",
   "shell.update.background": "Se descarga en segundo plano. Puedes seguir trabajando.",
   "shell.update.downloading": "Descargando…",

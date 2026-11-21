@@ -1324,7 +1324,7 @@ export default function App() {
   // el material que la tarea lee.
   const [ventana, setVentana] = createSignal<Ventana>(null);
 
-  const { engineCanDispatch, engineDispatchesQueue, queueSave, resumeQueue, stopTurn, turnClosed, turnStarted } = createEngineQueue({ invoke, machines, machineOf, nativeWindow: () => capabilities().nativeWindow });
+  const { engineCanDispatch, engineDispatchesQueue, queueSave, resumeQueue, stopTurn, turnClosed, turnStarted } = createEngineQueue({ invoke, machines, machineOf, nativeWindow: () => capabilities().nativeWindow, notStoppableYet: (id) => threads.appendLive(id, [{ role: "system", text: t("shell.turn.not_stoppable_yet"), meta: "aviso" }]) });
   const taskQueues = createTaskQueues({
     scope: () => ({ workspace: workspaceActivo(), generation: workspaceContext.generation(), session: sessionId(), project: project() }),
     readQueue: (scope) => invoke<Encolado[]>("load_queue", { project: scope.project, session: scope.session }, opcionesDeLaTarea(scope.session, scope.workspace)),
