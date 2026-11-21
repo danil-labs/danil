@@ -5,8 +5,6 @@
  */
 import { invoke } from "../engine/client.ts";
 
-export type Workspace = { id: string; org?: string; name: string; role?: string; engine_workspace_id?: string };
-export type WorkspaceList = { items: Workspace[]; next_cursor: string | null; empty_reason?: string; active_workspace_id?: string | null };
 
 export type Patience = {
   /** Corta la espera; la promesa rechaza con el último fallo. */
@@ -122,13 +120,7 @@ export async function edgeUntil<T = unknown>(method: EdgeMethod, path: string, b
   }
 }
 
-const bodyOf = <T>(method: EdgeMethod, path: string, body: unknown, p?: Patience) => edgeUntil<T>(method, path, body, p).then((r) => r.body);
 
-export const workspaces = (p?: Patience) => bodyOf<WorkspaceList>("GET", "/v1/workspaces", undefined, p);
-export const selectWorkspace = (workspaceId: string, p?: Patience) => {
-  cancelEdgeWrites();
-  return bodyOf<{ workspace: Workspace }>("POST", "/v1/workspaces/select", { workspace: workspaceId }, p);
-};
 
 /** El `fetch` real de la plataforma para las fuentes que lo necesitan directamente. */
 export const platformFetch: typeof fetch = (input, init) => fetch(input, init);

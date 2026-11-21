@@ -6,6 +6,7 @@ import { engineOwnsAdoption } from "./engine-adoption.ts";
 import { engineFeatures } from "./engine-features.ts";
 import type { AdoptionProgress } from "./first-login.ts";
 import type { PersonalOpener, PersonalOutcome } from "./personal-open.ts";
+import { workspacesPagePath } from "../../platform/workspaces.ts";
 
 export type AccountWorkspace = { id: string; name: string; account: { org: string; account_id: string } };
 export type FreeWorkspace = { id: string; name: string; account_id: string };
@@ -39,7 +40,7 @@ async function catalog(send: Send, context: string) {
   const seen = new Set<string>();
   let cursor: string | null = null;
   do {
-    const reply = await send(context, "GET", `/v1/workspaces${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ""}`).catch(() => null);
+    const reply = await send(context, "GET", workspacesPagePath(cursor)).catch(() => null);
     if (!reply || reply.status !== 200) break;
     const body = reply.body as { items?: unknown[]; next_cursor?: string | null };
     items.push(...(body.items ?? []));
@@ -186,7 +187,7 @@ export function createAccountWorkspaces(invoke: Invoke, native: boolean, changed
           let cursor: string | null = null;
           const seen = new Set<string>();
           do {
-            const reply = await send(group.context_id, "GET", `/v1/workspaces${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ""}`);
+            const reply = await send(group.context_id, "GET", workspacesPagePath(cursor));
             if (epoch !== version) return;
             if (reply.status !== 200) { failed = true; break; }
             const body = reply.body as { items?: { id?: unknown; org?: unknown; name?: unknown; engine_workspace_id?: unknown }[]; next_cursor?: string | null };
