@@ -9,7 +9,7 @@ import { Button } from "@danil/ui";
 import { Input } from "@danil/ui";
 import { Skeleton } from "@danil/ui";
 import { AccountEmailsError, type AccountEmailsSource, EMAIL_SHAPE, type EmailRow, emailErrorText, emailRows, } from "../../lib/account-emails.ts";
-// PORT-DATA: utilidad sin portar features/settings/layout — import { SettingsSection } from "./layout";
+import { SettingsSection } from "@danil/ui";
 import { createNow } from "../../lib/sharedClock.ts";
 
 type Feedback = { kind: "success" | "error"; text: string } | null;

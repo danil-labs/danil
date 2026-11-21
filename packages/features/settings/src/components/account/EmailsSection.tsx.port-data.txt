@@ -1,4 +1,0 @@
-# Líneas PORT-DATA de packages/features/settings/src/components/account/EmailsSection.tsx (original apps/desktop/src/features/settings/EmailsSection.tsx, 527 líneas). Resuélvelas con hooks de queries.ts, props o slots; nada más cambia.
-IMPORT SettingsSection :: utilidad sin portar features/settings/layout
-L89 SettingsSection :: <SettingsSection title={t("danil.emails.title")} description={t("danil.emails.description")} data-account-emails="">
-L231 SettingsSection :: </SettingsSection>
