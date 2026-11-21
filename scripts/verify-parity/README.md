@@ -20,3 +20,5 @@ Cada escuadra de front es dueña de la receta de su pantalla. Exporta `{ old(pag
 los pasos que da la persona para llegar a la pantalla en cada app (clics por rol y nombre visible, los mismos en las dos).
 Si la app nueva necesita otros pasos, no hay paridad de flujo: se arregla la app, no la receta.
 Una ruta del borde que falte se agrega en `edge-fixtures.mjs`, igual para las dos.
+
+**Recetas honestas (el runner las rechaza si no):** cada paso usa el nombre visible exacto (`{ name: "Máquinas", exact: true }`, nunca una regex que acepte otra cosa) y ningún paso se esconde con `.catch(() => {})`: si la app nueva no tiene el botón, la receta falla, y eso es falta de paridad. Umbral de color de `pixelmatch`: 0.05 (con 0.1 dos pantallas distintas en tema oscuro daban menos de 2 %).

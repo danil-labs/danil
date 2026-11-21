@@ -66,6 +66,11 @@ async function shoot(base, step, file) {
 }
 
 for (const name of recipes) {
+  const src = readFileSync(join(HERE, "screens", `${name}.mjs`), "utf8");
+  // Recetas honestas: la persona llega por un nombre visible exacto, y un paso que falla no se esconde.
+  if (/name:\s*\//.test(src) || /\.catch\(\s*\(\)\s*=>\s*\{\s*\}\s*\)/.test(src)) {
+    failed++; report.push(`FAIL ${name}: receta no válida (nombre por regex o .catch(() => {})); usa el nombre visible exacto y deja que el paso falle`); continue;
+  }
   const r = (await import(join(HERE, "screens", `${name}.mjs`))).default;
   const a = join(OUT, `${name}-old.png`), b = join(OUT, `${name}-new.png`), d = join(OUT, `${name}-diff.png`);
   try {
@@ -76,7 +81,7 @@ for (const name of recipes) {
   }
   const A = PNG.sync.read(readFileSync(a)), B = PNG.sync.read(readFileSync(b));
   const diff = new PNG({ width: A.width, height: A.height });
-  const n = pixelmatch(A.data, B.data, diff.data, A.width, A.height, { threshold: 0.1 });
+  const n = pixelmatch(A.data, B.data, diff.data, A.width, A.height, { threshold: 0.05 } /* 0.1 no distingue grises del tema oscuro: un par distinto daba 1,97 % */);
   writeFileSync(d, PNG.sync.write(diff));
   const frac = n / (A.width * A.height), max = r.threshold ?? DEFAULT_THRESHOLD;
   const ok = frac <= max;
