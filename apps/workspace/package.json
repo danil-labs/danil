@@ -6,15 +6,21 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "deploy": "vite build && wrangler deploy"
   },
   "dependencies": {
     "@danil/shell": "workspace:*",
-    "solid-js": "^1.9.17"
+    "solid-js": "^1.9.17",
+    "@danil/session": "workspace:*",
+    "@danil/ui": "workspace:*"
   },
   "devDependencies": {
     "typescript": "^5.7.2",
     "vite": "^6.0.5",
-    "vite-plugin-solid": "^2.11.14"
+    "vite-plugin-solid": "^2.11.14",
+    "@tailwindcss/vite": "^4.3.3",
+    "tailwindcss": "^4.3.3",
+    "wrangler": "^4.0.0"
   }
 }

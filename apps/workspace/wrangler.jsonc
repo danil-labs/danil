@@ -1,0 +1,8 @@
+{
+  // App web nueva (front rebuild): estático de Vite servido por un Worker propio,
+  // separado de danil-web-beta. Habla con el borde beta (edge.danil.ai).
+  "name": "danil-front-preview",
+  "compatibility_date": "2026-11-01",
+  "assets": { "directory": "./dist", "not_found_handling": "single-page-application" },
+  "routes": [{ "pattern": "preview-front.danil.ai", "custom_domain": true }]
+}

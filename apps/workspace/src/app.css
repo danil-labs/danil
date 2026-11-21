@@ -1,0 +1,5 @@
+/* Estilos de la app web: la hoja del sistema visual (packages/ui) y las fuentes de Tailwind de shell y features. */
+@import "@danil/ui/styles/global.css";
+@source "../../../packages/shell/src";
+@source "../../../packages/features";
+@source "../../../packages/ui/src";
