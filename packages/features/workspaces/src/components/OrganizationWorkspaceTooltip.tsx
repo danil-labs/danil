@@ -8,8 +8,6 @@ export interface OrganizationWorkspaceTooltipProps {
   active?: boolean;
   balance?: number | string | null;
   loadingBalance?: boolean;
-  send?: any;
-  credits?: any;
 }
 
 export function OrganizationWorkspaceTooltip(props: OrganizationWorkspaceTooltipProps) {

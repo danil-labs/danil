@@ -7,8 +7,10 @@ export { WorkspacePickerModal } from "./screens/WorkspacePickerModal.tsx";
 export type { WorkspacePickerModalProps } from "./screens/WorkspacePickerModal.tsx";
 
 // Componentes del riel y selectores
-export { RailGroups } from "./components/RailGroups.tsx";
-export type { RailGroupsProps } from "./components/RailGroups.tsx";
+export { RailGroups } from "./screens/RailGroups.tsx";
+export type { RailGroupsProps } from "./screens/RailGroups.tsx";
+export { AddWorkspaceMenu } from "./components/AddWorkspaceMenu.tsx";
+export type { AddWorkspaceMenuProps } from "./components/AddWorkspaceMenu.tsx";
 export { WorkspaceItem } from "./components/WorkspaceItem.tsx";
 export type { WorkspaceItemProps } from "./components/WorkspaceItem.tsx";
 export { WorkspaceErrorView } from "./components/WorkspaceErrorView.tsx";
@@ -24,7 +26,6 @@ export {
   useSelectWorkspace,
   useSelectOrganization,
   useWorkspaceActions,
-  getAddWorkspaceUrl,
   openAddWorkspace,
 } from "./queries.ts";
 export type {

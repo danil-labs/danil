@@ -13,6 +13,8 @@ import {
   useSelectWorkspace,
   openAddWorkspace,
 } from "../queries.ts";
+import { useSession } from "@danil/session/solid";
+import { host } from "@danil/host";
 import { WorkspaceErrorView } from "../components/WorkspaceErrorView.tsx";
 
 export interface WorkspacePickerModalProps {
@@ -29,6 +31,7 @@ export interface WorkspacePickerModalProps {
  * El botón «+ Agregar workspace» abre el flujo externo vía host.openExternal (RV1 #8, RV2 #20).
  */
 export const WorkspacePickerModal: Component<WorkspacePickerModalProps> = (props) => {
+  const session = useSession();
   const [query, setQuery] = createSignal("");
   const [selectionError, setSelectionError] = createSignal<string | null>(null);
 
@@ -68,7 +71,11 @@ export const WorkspacePickerModal: Component<WorkspacePickerModalProps> = (props
   };
 
   const handleAddWorkspace = () => {
-    openAddWorkspace();
+    if (host.kind === "desk") {
+      session.add();
+    } else {
+      openAddWorkspace();
+    }
     props.onClose();
   };
 

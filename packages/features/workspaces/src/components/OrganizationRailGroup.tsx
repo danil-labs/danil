@@ -39,8 +39,6 @@ function menuArrows(event: KeyboardEvent) {
 
 export type OrganizationRailActions = {
   sessions?: {
-    sendOptional?: any;
-    families?: () => any;
     close?: (opts: { context: string }) => Promise<void>;
     closeEmail?: (email: string | null, family?: string) => Promise<void>;
   };
@@ -61,7 +59,6 @@ export function OrganizationRailGroup(props: {
   onChange: (action: "pin" | "up" | "down") => void;
   index: number;
   count: number;
-  credits?: any;
 }) {
   const [menu, setMenu] = createSignal<{ key: string; stack: boolean; target: HTMLElement; rect: DOMRect } | null>(null);
   let returnFocus: HTMLElement | undefined;
@@ -104,8 +101,6 @@ export function OrganizationRailGroup(props: {
       active={active(row())}
       state={topState(tasksOf(row().id, row().context.context_id))}
       stateLabel={stateLabel(topState(tasksOf(row().id, row().context.context_id)))}
-      credits={props.credits}
-      send={props.sessions?.sessions?.sendOptional}
       onOpen={() => props.onOpen(row())}
       onMenu={(target) => show(row(), target)}
       onMove={(step) => props.onChange(step === -1 ? "up" : "down")}
@@ -196,7 +191,6 @@ export function OrganizationRailGroup(props: {
                 pinned={props.org.pinned}
                 index={props.index}
                 count={props.count}
-                send={props.sessions?.sessions?.sendOptional}
                 onOpen={() => {
                   props.onOpen(row());
                   dismiss();

@@ -1,6 +1,8 @@
 import { Show, type Component } from "solid-js";
 import type { EngineClient } from "@danil/engine-client";
-import { RailGroups } from "../components/RailGroups.tsx";
+import { useSession } from "@danil/session/solid";
+import { host } from "@danil/host";
+import { RailGroups } from "./RailGroups.tsx";
 import {
   useWorkspaces,
   openAddWorkspace,
@@ -19,13 +21,16 @@ export interface WorkspacesScreenProps {
  * El «+» abre la página de agregar workspace externa (RV1 #8, RV2 #20).
  */
 export const WorkspacesScreen: Component<WorkspacesScreenProps> = (props) => {
+  const session = useSession();
   const workspacesQuery = useWorkspaces();
 
   const handleAddWorkspace = (orgId?: string) => {
     if (props.onAddWorkspace) {
       props.onAddWorkspace(orgId);
+    } else if (host.kind === "desk") {
+      session.add();
     } else {
-      openAddWorkspace(orgId);
+      openAddWorkspace();
     }
   };
 

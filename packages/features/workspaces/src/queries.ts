@@ -1,18 +1,19 @@
 import {
-  createResource,
-  onCleanup,
   type Accessor,
   type Resource,
 } from "solid-js";
 import {
   usePlatform,
   idempotencyKey,
-  API_BASE,
+  planLabel,
+  createQuery,
+  invalidate,
 } from "@danil/platform-client";
+import { useSession } from "@danil/session/solid";
+import { webLoginUrl } from "@danil/session";
 import { host } from "@danil/host";
 import type { EngineClient } from "@danil/engine-client";
 import type { Workspace, Organization, WorkspaceGroup } from "./model.ts";
-import { planLabel } from "./model.ts";
 
 /**
  * Agrupa workspaces por organización asegurando pertenencia estricta (11 §2, Regla 2.1, 2.8).
@@ -46,38 +47,41 @@ export interface UseOrganizationsResult {
 }
 
 /**
- * Consulta las organizaciones del usuario por sesión.
- * Captura usePlatform() en el cuerpo del hook (RV1 #2, RV2 #2) y soporta cancelación por signal.
+ * Consulta las organizaciones del usuario por sesión con createQuery (RV1 #17).
+ * Captura usePlatform() en el cuerpo del hook (RV1 #2, RV2 #2) y usa planLabel común (RV1 #26).
  * Un error se preserva en error() para permitir reintentos (B-006).
  */
 export function useOrganizations(): UseOrganizationsResult {
   const client = usePlatform();
-  const controller = new AbortController();
-  onCleanup(() => controller.abort());
+  const session = useSession();
+  const sessionKey = () => session.active() ?? session.sessions()[0]?.key ?? "default";
 
-  const [data, { refetch }] = createResource(async () => {
-    const res = await client.getOrganizations({ signal: controller.signal });
-    const items = res.items ?? [];
-    const orgs = items.map((org) => ({
-      ...org,
-      planLabel: planLabel(org),
-    }));
-    // Orden determinista DS1 v2: Personal primero, luego alfabéticamente por plan
-    return orgs.sort((a, b) => {
-      const aIsPersonal = a.planLabel === "Personal" || a.type === "personal";
-      const bIsPersonal = b.planLabel === "Personal" || b.type === "personal";
-      if (aIsPersonal && !bIsPersonal) return -1;
-      if (!aIsPersonal && bIsPersonal) return 1;
-      return a.planLabel.localeCompare(b.planLabel);
-    });
-  });
+  const { data, refetch } = createQuery(
+    () => `organizations:${sessionKey()}`,
+    async (signal) => {
+      const res = await client.getOrganizations({ signal });
+      const items = res.items ?? [];
+      const orgs = items.map((org) => ({
+        ...org,
+        planLabel: planLabel(org),
+      }));
+      // Orden determinista DS1 v2: Personal primero, luego alfabéticamente por plan
+      return orgs.sort((a, b) => {
+        const aIsPersonal = a.planLabel === "Personal" || a.type === "personal";
+        const bIsPersonal = b.planLabel === "Personal" || b.type === "personal";
+        if (aIsPersonal && !bIsPersonal) return -1;
+        if (!aIsPersonal && bIsPersonal) return 1;
+        return a.planLabel.localeCompare(b.planLabel);
+      });
+    },
+  );
 
   return {
-    organizations: data,
+    organizations: data as Resource<Organization[]>,
     loading: () => data.loading,
     error: () => data.error,
-    refetch: (info?: unknown) => {
-      void refetch(info);
+    refetch: (_info?: unknown) => {
+      void refetch();
     },
   };
 }
@@ -91,30 +95,33 @@ export interface UseWorkspacesResult {
 }
 
 /**
- * Consulta los workspaces del usuario por sesión.
+ * Consulta los workspaces del usuario por sesión con createQuery (RV1 #17).
  * Captura usePlatform() en el cuerpo del hook (RV1 #2, RV2 #2).
  * Sin filtro local por org ni workspaces sin organización (RV1 #32, RV2 #22).
  */
 export function useWorkspaces(): UseWorkspacesResult {
   const client = usePlatform();
-  const controller = new AbortController();
-  onCleanup(() => controller.abort());
+  const session = useSession();
+  const sessionKey = () => session.active() ?? session.sessions()[0]?.key ?? "default";
 
-  const [data, { refetch, mutate }] = createResource(async () => {
-    const res = await client.getWorkspaces({ signal: controller.signal });
-    const list = res.items ?? [];
-    // 11 §2: No existen workspaces sin organización
-    return list.filter((w) => !!w.org);
-  });
+  const { data, refetch, mutate } = createQuery(
+    () => `workspaces:${sessionKey()}`,
+    async (signal) => {
+      const res = await client.getWorkspaces({ signal });
+      const list = res.items ?? [];
+      // 11 §2: No existen workspaces sin organización
+      return list.filter((w) => !!w.org);
+    },
+  );
 
   return {
-    workspaces: data,
+    workspaces: data as Resource<Workspace[]>,
     loading: () => data.loading,
     error: () => data.error,
-    refetch: (info?: unknown) => {
-      void refetch(info);
+    refetch: (_info?: unknown) => {
+      void refetch();
     },
-    mutate,
+    mutate: (workspaces: Workspace[]) => mutate(workspaces),
   };
 }
 
@@ -150,6 +157,8 @@ export function useSelectWorkspace() {
     if (engine) {
       await engine.set_active_workspace({ id: workspaceId });
     }
+
+    invalidate("workspaces:");
   };
 }
 
@@ -165,6 +174,8 @@ export function useSelectOrganization() {
       idempotencyKey: key,
       body: { organization_id: organizationId },
     });
+
+    invalidate("organizations:");
   };
 }
 
@@ -181,18 +192,8 @@ export function useWorkspaceActions() {
 }
 
 /**
- * Devuelve la URL para agregar un workspace (RV1 #8, RV2 #20).
- * El «+» solo ofrece «Agregar workspace» abriendo el selector externo.
+ * Abre la acción externa para agregar workspace o iniciar sesión (RV1 #8, RV2 #20, RV2b «+»).
  */
-export function getAddWorkspaceUrl(orgId?: string): string {
-  const base = API_BASE.replace(/\/v1\/?$/, "");
-  const query = orgId ? `?org=${encodeURIComponent(orgId)}` : "";
-  return `${base}/workspaces/add${query}`;
-}
-
-/**
- * Abre la página externa para agregar un workspace mediante host.openExternal (RV1 #8, RV2 #20).
- */
-export function openAddWorkspace(orgId?: string): void {
-  void host.openExternal(getAddWorkspaceUrl(orgId));
+export function openAddWorkspace(): void {
+  void host.openExternal(webLoginUrl());
 }
