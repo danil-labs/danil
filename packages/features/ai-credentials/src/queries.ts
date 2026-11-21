@@ -8,11 +8,14 @@ import {
   type MachineRef,
 } from "@danil/engine-client";
 import type {
+  ConnectAccountOptions,
   EngineProviderItem,
   PutWorkspaceAccountPayload,
   WorkspaceAccountsResponse,
 } from "./model.ts";
 import { sealForRecipients } from "./seal.ts";
+
+export type { ConnectAccountOptions };
 
 export type MachineQueryTarget =
   | EngineClient
@@ -89,16 +92,7 @@ export function useWorkspaceAccounts(
   };
 }
 
-export interface ConnectAccountOptions {
-  workspaceId: string;
-  provider: string;
-  slot: string;
-  label?: string;
-  hint?: string;
-  kind?: "api_key" | "subscription" | "mcp_secret";
-  secret?: string;
-  recipients: Array<{ machine_id: string; public_key: string | null }>;
-}
+
 
 /**
  * Conexión de cuenta sellando el secreto para cada máquina receptora (X25519).

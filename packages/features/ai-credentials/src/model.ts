@@ -77,6 +77,17 @@ export interface PutWorkspaceAccountPayload {
   copies: SealedCopy[];
 }
 
+export interface ConnectAccountOptions {
+  workspaceId: string;
+  provider: string;
+  slot: string;
+  label?: string;
+  hint?: string;
+  kind?: "api_key" | "subscription" | "mcp_secret";
+  secret?: string;
+  recipients: Array<{ machine_id: string; public_key: string | null }>;
+}
+
 export interface ProviderViewItem {
   id: SupportedProvider | string;
   name: string;
