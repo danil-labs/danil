@@ -1,5 +1,5 @@
 import { ErrorBoundary as SolidErrorBoundary, type JSX, type ParentProps } from "solid-js";
-import { Button, FailureNote } from "@danil/ui";
+import { Button, FailureNote, asFailure } from "@danil/ui";
 
 export function RailErrorBoundary(props: ParentProps): JSX.Element {
   return (
@@ -23,10 +23,7 @@ export function MainErrorBoundary(props: ParentProps): JSX.Element {
     <SolidErrorBoundary
       fallback={(err, reset) => (
         <div class="flex h-full w-full flex-col items-center justify-center gap-4 bg-bg p-8 text-center text-neutral-950 dark:text-neutral-100">
-          <FailureNote
-            what="Ha ocurrido un error en esta vista"
-            detail={err instanceof Error ? err.message : String(err)}
-          />
+          <FailureNote f={asFailure(err)} />
           <Button onClick={reset}>
             Reintentar
           </Button>

@@ -4,7 +4,7 @@
  */
 
 import { Show } from "solid-js";
-import { FailureNote, Button } from "@danil/ui";
+import { FailureNote, asFailure, Button } from "@danil/ui";
 
 export interface ErrorBannerProps {
   message: string;
@@ -15,7 +15,7 @@ export interface ErrorBannerProps {
 export function ErrorBanner(props: ErrorBannerProps) {
   return (
     <div class="m-4 flex items-start justify-between gap-3 rounded-lg border border-border bg-surface-raised p-4">
-      <FailureNote what={props.message} />
+      <FailureNote f={asFailure(props.message)} />
       <Show when={props.onRetry}>
         <Button
           type="button"

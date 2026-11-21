@@ -57,6 +57,8 @@ const buttonVariants = cva(
           "bg-error-strong text-[var(--action-text)] hover:brightness-95 active:scale-[0.98]",
         // Ejecutar un `!`: no es la acción de preguntar al agente. Texto 18,53:1
         // en claro y 16,60:1 en oscuro; en hover, 17,22:1 y 12,15:1.
+        // Enlace dentro de una frase: las clases de los `<button class="cursor-pointer underline underline-offset-2">` de apps/desktop (ui-inventory.md).
+        link: "h-auto min-h-0 p-0 font-normal border-0 bg-transparent cursor-pointer underline underline-offset-2 hover:text-neutral-950",
         terminal:
           "bg-neutral-950 text-neutral-50 shadow-sm hover:bg-neutral-900 active:scale-[0.98]",
       },
