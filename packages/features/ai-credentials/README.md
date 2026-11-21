@@ -24,11 +24,11 @@ Gestiona la conexión, custodia y propagación de credenciales de inteligencia a
 
 | Método y Ruta | OperationId / Contrato | Estado | Detalle |
 |---|---|---|---|
-| `GET /v1/credentials/workspaces/{workspace_id}/accounts` | `getWorkspaceAiAccounts` | Pendiente de contrato | Pendiente en `@danil/platform-client`; el hook devuelve error tipado `unavailable`. |
-| `PUT /v1/credentials/workspaces/{workspace_id}/accounts` | `putWorkspaceAiAccount` | Pendiente de contrato | Pendiente en `@danil/platform-client`; el hook devuelve error tipado `unavailable`. |
-| `DELETE /v1/credentials/workspaces/{workspace_id}/accounts/{credential_id}` | `deleteWorkspaceAiAccount` | Pendiente de contrato | Pendiente en `@danil/platform-client`; el hook devuelve error tipado `unavailable`. |
-| `DELETE /v1/credentials/workspaces/{workspace_id}/accounts/{credential_id}/machines/{machine_id}` | `removeMachineFromAiAccount` | Pendiente de contrato | Pendiente en `@danil/platform-client`; el hook devuelve error tipado `unavailable`. |
-| `POST /v1/credentials/workspaces/{workspace_id}/accounts/{credential_id}/machines/{machine_id}/restore` | `restoreMachineToAiAccount` | Pendiente de contrato | Pendiente en `@danil/platform-client`; el hook devuelve error tipado `unavailable`. |
+| `GET /v1/credentials/workspaces/{workspace_id}/accounts` | `getWorkspaceAccounts` | generado | Generado en `@danil/platform-client`; consumido por `useWorkspaceAccounts`. |
+| `PUT /v1/credentials/workspaces/{workspace_id}/accounts` | `putWorkspaceAccount` | generado | Generado en `@danil/platform-client`; consumido por `useConnectAccount`. |
+| `DELETE /v1/credentials/workspaces/{workspace_id}/accounts/{credential_id}` | `deleteWorkspaceAccount` | generado | Generado en `@danil/platform-client`; consumido por `useDeleteAccount`. |
+| `DELETE /v1/credentials/workspaces/{workspace_id}/accounts/{credential_id}/machines/{machine_id}` | `removeWorkspaceAccountMachine` | generado | Generado en `@danil/platform-client`; consumido por `useRemoveMachineAccount`. |
+| `POST /v1/credentials/workspaces/{workspace_id}/accounts/{credential_id}/machines/{machine_id}/restore` | `restoreWorkspaceAccountMachine` | generado | Generado en `@danil/platform-client`; consumido por `useRestoreMachineAccount`. |
 
 ### Antigravity (Gemini)
 
