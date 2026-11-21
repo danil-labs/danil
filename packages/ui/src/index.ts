@@ -14,6 +14,7 @@ export * from "./Popover.tsx";
 export * from "./ProgressBar.tsx";
 export * from "./SectionLabel.tsx";
 export * from "./Select.tsx";
+export * from "./Settings.tsx";
 export * from "./Shortcut.tsx";
 export * from "./SignalDot.tsx";
 export * from "./Skeleton.tsx";
