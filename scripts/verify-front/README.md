@@ -22,3 +22,7 @@ ignoran en R1–R5, R8 y R10 (no en R6 ni R9).
 | R9 | 12+ líneas consecutivas idénticas (normalizadas) en dos archivos; ignora `generated/` y bloques de puro ruido | `r9.mjs` |
 | R10 | `404` o `501` en features | `r2-r5.mjs` |
 - **R2 (cliente único):** `createPlatformClient(` solo en `packages/shell`, `packages/platform-client` y `apps/*`; las features usan `usePlatform()`.
+- **R11:** ninguna feature acepta `client?:`/`session?:` como opción: cliente de `usePlatform()`, sesión de `useSession()`.
+- **R12:** `components/` no importa `queries` ni `@danil/{platform-client,engine-client,host,session}` (solo `import type`): datos y callbacks por props.
+- **R14:** sin `__TAURI__` ni `navigator.userAgent` fuera de `packages/host` y `apps/*`: la plataforma la dice `host.kind`.
+- **R2** cubre también `packages/shell` y `packages/session`.
