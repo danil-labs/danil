@@ -9,7 +9,10 @@ import {
 import type { Session, SessionSource, SessionState } from "./types.ts";
 
 /** Entrada web: el borde manda a WorkOS (identity) y vuelve a `returnTo` con la cookie puesta. */
-export function webLoginUrl(returnTo: string = location.href, apiBase: string = API_BASE): string {
+export function webLoginUrl(
+  returnTo: string = typeof location !== "undefined" ? `${location.origin}/` : "/",
+  apiBase: string = API_BASE,
+): string {
   return `${apiBase}/identity/login?return_to=${encodeURIComponent(returnTo)}`;
 }
 
@@ -103,7 +106,7 @@ export function createWebSession(opts: WebSessionOptions = {}): SessionSource {
       current = null;
       csrfToken = null;
       emit();
-      redirect(webLoginUrl(location.href));
+      redirect(webLoginUrl());
     },
     async add() {
       throw new Error("unsupported: la web tiene una sola sesión; cierra sesión y entra con otro correo");
@@ -113,7 +116,7 @@ export function createWebSession(opts: WebSessionOptions = {}): SessionSource {
       clearQueries();
       current = null;
       emit();
-      redirect(webLoginUrl(location.origin + "/"));
+      redirect(webLoginUrl());
     },
     subscribe(fn) {
       listeners.add(fn);
