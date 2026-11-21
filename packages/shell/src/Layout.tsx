@@ -1,7 +1,7 @@
 import { type JSX } from "solid-js";
 import { Rail, type OrganizationItem } from "./Rail.tsx";
 import { RailErrorBoundary, MainErrorBoundary } from "./ErrorBoundary.tsx";
-import { RouteView } from "./routes.tsx";
+import { RouteView, RailSlot } from "./routes.tsx";
 import { useRouter } from "./router.tsx";
 
 export interface LayoutProps {
@@ -43,12 +43,17 @@ export function Layout(props: LayoutProps): JSX.Element {
       {/* Riel con ErrorBoundary por zona */}
       <RailErrorBoundary>
         <Rail
-          organizations={props.organizations}
-          activeWorkspaceId={currentWorkspaceId()}
           activeRoute={currentRouteName()}
-          onSelectWorkspace={handleSelectWorkspace}
           onSelectRoute={handleSelectRoute}
-          onAddWorkspace={props.onAddWorkspace}
+          slots={{
+            stacks: (
+              <RailSlot
+                activeWorkspaceId={currentWorkspaceId()}
+                onSelectWorkspace={handleSelectWorkspace}
+                onAddWorkspace={props.onAddWorkspace}
+              />
+            ),
+          }}
         />
       </RailErrorBoundary>
 

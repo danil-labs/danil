@@ -54,6 +54,29 @@ const getFeatureScreen = <T extends Component<any>>(
   return typeof module[name] === "function" ? (module[name] as T) : undefined;
 };
 
+export interface RailSlotProps {
+  activeWorkspaceId?: string | null;
+  onSelectWorkspace?: (workspaceId: string) => void | Promise<void>;
+  onAddWorkspace?: (orgId?: string) => void;
+}
+
+export function RailSlot(props: RailSlotProps): JSX.Element {
+  const Component = getFeatureScreen<Component<WorkspacesFeature.RailGroupsProps>>(
+    WorkspacesFeature,
+    "RailGroups",
+  );
+  if (Component) {
+    return (
+      <Component
+        activeWorkspaceId={props.activeWorkspaceId}
+        onSelectWorkspace={props.onSelectWorkspace}
+        onAddWorkspace={props.onAddWorkspace}
+      />
+    );
+  }
+  return null;
+}
+
 export function MachinesScreen(): JSX.Element {
   const FeatureComponent = getFeatureScreen(MachinesFeature, "MachinesScreen");
   if (FeatureComponent) {
