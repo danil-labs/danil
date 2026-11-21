@@ -58,7 +58,7 @@ test("lista las credenciales del workspace con sus máquinas y para quién sella
     source(200, { credentials: [CREDENTIAL, { id: "x" }], recipients: [{ computer_id: "cmp_mac", name: "Mac", public_key: "AAAA", online: true }, { computer_id: "cmp_vm", public_key: null }] }, seen),
     "w 1",
   );
-  assert.equal(seen[0]!.url, "https://computers.example/v1/workspaces/w%201/credentials");
+  assert.equal(seen[0]!.url, "https://computers.example/v1/credentials/workspaces/w%201/accounts");
   assert.equal(seen[0]!.method, "GET");
   assert.equal(seen[0]!.headers?.authorization, "Bearer jwt");
   assert.equal(answer.kind, "ok");
@@ -67,7 +67,7 @@ test("lista las credenciales del workspace con sus máquinas y para quién sella
   assert.equal(answer.value.credentials[0]!.machines.length, 3);
   assert.deepEqual(answer.value.recipients, [
     { computer_id: "cmp_mac", name: "Mac", public_key: "AAAA", online: true, service_features: null },
-    { computer_id: "cmp_vm", name: null, public_key: null, online: false, service_features: null },
+    { computer_id: "cmp_vm", name: null, public_key: null, online: true, service_features: null },
   ]);
   assert.equal(answer.value.local_only, undefined, "el Worker no sabe de claves locales");
   assert.deepEqual(credentialMachines(answer.value.credentials[0]!).map((m) => m.computer_id), ["cmp_mac", "cmp_vm", "cmp_old"]);
@@ -104,7 +104,7 @@ test("crea o rota con PUT y las copias selladas", async () => {
   const answer = await putCredential(source(200, { credential: { ...CREDENTIAL, kind: "zotero", slot: put.slot } }, seen), "w1", put);
   assert.equal(seen[0]!.method, "PUT");
   assert.equal(seen[0]!.headers?.["content-type"], "application/json");
-  assert.deepEqual(JSON.parse(seen[0]!.body!), put);
+  assert.deepEqual(JSON.parse(seen[0]!.body!), { ...put, copies: [{ machine_id: "cmp_mac", sealed: "c2VhbGVk" }] });
   assert.equal(answer.kind === "ok" && answer.value.slot, "referencias/zotero-key");
 });
 
@@ -116,9 +116,9 @@ test("quita y vuelve a poner en una máquina, y borra de la cuenta", async () =>
   assert.deepEqual(
     seen.map((s) => `${s.method} ${s.url.replace("https://computers.example", "")}`),
     [
-      "DELETE /v1/workspaces/w1/credentials/cred_1/machines/cmp_vm",
-      "POST /v1/workspaces/w1/credentials/cred_1/machines/cmp_vm/restore",
-      "DELETE /v1/workspaces/w1/credentials/cred_1",
+      "DELETE /v1/credentials/workspaces/w1/accounts/cred_1/machines/cmp_vm",
+      "POST /v1/credentials/workspaces/w1/accounts/cred_1/machines/cmp_vm/restore",
+      "DELETE /v1/credentials/workspaces/w1/accounts/cred_1",
     ],
   );
   assert.equal(removed.kind, "ok");

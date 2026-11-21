@@ -161,7 +161,7 @@ export function githubAuthorizeOf(raw: unknown): GithubAuthorize {
 
 const routeOf = (workspace: string) => `/v1/workspaces/${encodeURIComponent(workspace)}/github`;
 const credentialRoute = (workspace: string, credential: string, computer: string) =>
-  `/v1/workspaces/${encodeURIComponent(workspace)}/credentials/${encodeURIComponent(credential)}/machines/${encodeURIComponent(computer)}`;
+  `/v1/credentials/workspaces/${encodeURIComponent(workspace)}/accounts/${encodeURIComponent(credential)}/machines/${encodeURIComponent(computer)}`;
 const credentialOrThrow = (body: unknown) => {
   const c = githubCredentialOf(isObj(body) ? body.credential : null);
   if (!c) throw new Error("bad_credential");

@@ -149,8 +149,8 @@ test("quitar y volver a poner una máquina usan las rutas comunes de credenciale
   assert.deepEqual(
     seen.map((s) => [s.method, s.url]),
     [
-      ["DELETE", "https://computers.example/v1/workspaces/w/credentials/cred_1/machines/cmp_vm"],
-      ["POST", "https://computers.example/v1/workspaces/w/credentials/cred_1/machines/cmp_vm/restore"],
+      ["DELETE", "https://computers.example/v1/credentials/workspaces/w/accounts/cred_1/machines/cmp_vm"],
+      ["POST", "https://computers.example/v1/credentials/workspaces/w/accounts/cred_1/machines/cmp_vm/restore"],
     ],
   );
 });

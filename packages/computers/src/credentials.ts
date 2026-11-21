@@ -126,9 +126,10 @@ async function call<T>(source: CredentialSource, method: string, path: string, r
 const STATES = new Set(["active", "pending", "removed", "signed_in", "unsupported"]);
 
 function machineOf(raw: unknown): CredentialMachine | null {
-  if (!isObj(raw) || !str(raw.computer_id)) return null;
+  const machine = str(raw && isObj(raw) ? (raw.machine_id ?? raw.computer_id) : null);
+  if (!isObj(raw) || !machine) return null;
   return {
-    computer_id: raw.computer_id as string,
+    computer_id: machine,
     name: str(raw.name),
     state: (STATES.has(raw.state as string) ? raw.state : "pending") as CredentialMachineState,
     version: num(raw.version),
@@ -139,9 +140,10 @@ function machineOf(raw: unknown): CredentialMachine | null {
 
 /** Lee una credencial del Worker o del motor; null si no trae lo mínimo. */
 export function credentialOf(raw: unknown): Credential | null {
-  if (!isObj(raw) || !str(raw.id) || !str(raw.kind) || !str(raw.slot)) return null;
+  const id = str(isObj(raw) ? (raw.credential_id ?? raw.id) : null);
+  if (!isObj(raw) || !id || !str(raw.kind) || !str(raw.slot)) return null;
   return {
-    id: raw.id as string,
+    id,
     workspace_id: str(raw.workspace_id),
     kind: raw.kind as CredentialKind,
     provider: str(raw.provider) ?? (raw.kind as string),
@@ -162,13 +164,14 @@ export function credentialOf(raw: unknown): Credential | null {
 export function credentialsListingOf(raw: unknown): CredentialsListing {
   if (!isObj(raw) || !Array.isArray(raw.credentials)) throw new Error("bad_credentials");
   const recipients = (Array.isArray(raw.recipients) ? raw.recipients : []).flatMap((r): CredentialRecipient[] =>
-    isObj(r) && str(r.computer_id)
+    isObj(r) && str(r.machine_id ?? r.computer_id)
       ? [
           {
-            computer_id: r.computer_id as string,
+            computer_id: str(r.machine_id ?? r.computer_id) as string,
             name: str(r.name),
             public_key: str(r.public_key),
-            online: r.online === true,
+            // El servicio nuevo no informa presencia: no se descarta a nadie por eso.
+            online: r.online !== false,
             service_features: Array.isArray(r.service_features) ? r.service_features.filter((f): f is string => typeof f === "string") : null,
           },
         ]
@@ -196,7 +199,8 @@ export function credentialsListingOf(raw: unknown): CredentialsListing {
   return listing;
 }
 
-const routeOf = (workspace: string) => `/v1/workspaces/${encodeURIComponent(workspace)}/credentials`;
+/** Las cuentas de IA del workspace en `credentials` (reemplaza `/v1/workspaces/:id/credentials`, 410). */
+const routeOf = (workspace: string) => `/v1/credentials/workspaces/${encodeURIComponent(workspace)}/accounts`;
 const credentialOrThrow = (body: unknown) => {
   const c = credentialOf(isObj(body) ? body.credential : null);
   if (!c) throw new Error("bad_credential");
@@ -210,7 +214,9 @@ export function listCredentials(source: CredentialSource, workspace: string) {
 
 /** Crea o rota una credencial sellada (api_key, mcp_secret, zotero, env_secret) con una copia por máquina. */
 export function putCredential(source: CredentialSource, workspace: string, put: CredentialPut) {
-  return call(source, "PUT", routeOf(workspace), credentialOrThrow, put);
+  // El servicio nombra a la máquina `machine_id`; aquí sigue siendo `computer_id`.
+  const body = { ...put, copies: put.copies.map((c) => ({ machine_id: c.computer_id, sealed: c.sealed })) };
+  return call(source, "PUT", routeOf(workspace), credentialOrThrow, body);
 }
 
 /** La borra de la cuenta; cada máquina la saca de su bóveda al reconciliar. */
