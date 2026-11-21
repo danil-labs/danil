@@ -43,11 +43,11 @@ export function ChatScreen(props: ChatScreenProps) {
     }
   });
 
-  // Suscripción de streaming reactiva con cursor
+  // Suscripción de streaming reactiva con cursor fuera del store
   useChatStream(
     props.conn,
     () => props.sessionId,
-    store.state.cursor,
+    store.cursor,
     (ev) => {
       store.handleStreamEvent(ev);
     },
