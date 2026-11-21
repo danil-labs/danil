@@ -755,7 +755,7 @@ export function createRouterCore(config: RouterConfig) {
           power: fleet.power(m.id),
           hosts: workspace ? members.has(m.id) : null,
           materializes: adopts(m, workspace),
-          refuses: !permitted(m, workspace),
+          refuses: !permitted(m, workspace) && m.kind !== "organization",
           wakes: m.wakes,
           ...(m.features?.length ? { features: [...m.features] } : {}),
           ...(m.version ? { version: m.version } : {}),
