@@ -8,9 +8,9 @@ import { Button } from "../../../ui/src/Button";
 import { Dialog, DialogContent, DialogTitle } from "../../../ui/src/Dialog";
 import { EmptyState } from "../../../ui/src/EmptyState";
 import { prosaDe } from "../../../ui/src/Failure";
-import { AstroAvatar } from "../../projects/src/AstroAvatar";
-import NewAgent, { type ModelChoices } from "../../projects/src/NewAgent";
-import { displayName, notifyProfiles } from "../../projects/src/profiles";
+import { AstroAvatar } from "../../projects/src/screens/AstroAvatar";
+import NewAgent, { type ModelChoices } from "../../projects/src/screens/NewAgent";
+import { displayName, notifyProfiles } from "../../projects/src/queries/profiles";
 import { SettingsPanel, SettingsRow, SettingsSection } from "./layout";
 
 export default function Agents(props: {

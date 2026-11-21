@@ -9,7 +9,7 @@ import { createWorkspaces } from "../../../features/settings/src/workspaces-stor
 import type { AttentionState, WorkspaceAttention } from "./attention";
 import { Dynamic } from "solid-js/web";
 import { cn } from "../../../../apps/desktop/src/lib/utils";
-import { stateColor, stateIcon } from "../../../features/projects/src/TaskStatus";
+import { stateColor, stateIcon } from "../../../features/projects/src/screens/TaskStatus";
 import type { ChatEvent } from "@terminus/protocol";
 
 /** Qué tareas avisan: todas, solo las que necesitan a la persona, o ninguna. */

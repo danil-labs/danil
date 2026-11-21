@@ -41,7 +41,7 @@ import { createBlockKeys, estimateBlock } from "../model/threadRows";
 import type { ObservedTurnActivity as TurnActivity } from "../../../../../apps/desktop/src/lib/activityObservation";
 import type { VirtualThreadApi } from "../components/VirtualThread";
 import { CHUNK, chunkAt, chunkIds, chunkOf, chunkStart, headChunk, tailChunk, type Lectura } from "../model/threadWindow";
-import { workLabel } from "../../../projects/src/branchLabel";
+import { workLabel } from "../../../projects/src/model/branchLabel";
 import { sangrarTerminal } from "../model/terminalIndent";
 import { ponerLanzamiento } from "../model/launchGroups";
 import { freeMcpNoticeAt } from "../model/free-mcp-notice.ts";
@@ -72,7 +72,7 @@ import type {
   ModoDePermiso,
   Source,
 } from "../../../../../apps/desktop/src/lib/model";
-import { AstroAvatar } from "../../../projects/src/AstroAvatar";
+import { AstroAvatar } from "../../../projects/src/screens/AstroAvatar";
 import {
   type CatalogosDeModelos,
   modelBrand,

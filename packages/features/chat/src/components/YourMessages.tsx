@@ -5,7 +5,7 @@ import { RETARDO_TOOLTIP } from "../../../../ui/src/Tooltip";
 import { cn } from "../../../../../apps/desktop/src/lib/utils";
 import { modelBrand } from "../../../../../apps/desktop/src/lib/models";
 import { MarcaAgente } from "../../../../ui/src/icons";
-import { AstroAvatar } from "../../../projects/src/AstroAvatar";
+import { AstroAvatar } from "../../../projects/src/screens/AstroAvatar";
 
 /** Un input del hilo, con la identidad de quien lo envió si fue un agente. */
 export type InputMessage = {

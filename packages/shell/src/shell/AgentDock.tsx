@@ -8,8 +8,8 @@ import { t } from "../../../../apps/desktop/src/lib/i18n";
 import type { AgentProfile } from "../../../../apps/desktop/src/lib/model";
 import { cn } from "../../../../apps/desktop/src/lib/utils";
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from "../../../ui/src/ContextMenu";
-import { AstroAvatar } from "../../../features/projects/src/AstroAvatar";
-import { displayName } from "../../../features/projects/src/profiles";
+import { AstroAvatar } from "../../../features/projects/src/screens/AstroAvatar";
+import { displayName } from "../../../features/projects/src/queries/profiles";
 import { agentFolder, type DockAgent, orderDockAgents } from "./dockLayout";
 
 export type { DockAgent } from "./dockLayout";

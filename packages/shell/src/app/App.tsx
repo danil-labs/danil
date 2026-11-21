@@ -60,7 +60,7 @@ import {
 } from "../../../features/chat/src/model/transcript";
 import { createComposerStore } from "../../../features/composer/src";
 import { createProjectsStore } from "../../../features/projects/src";
-import type { DeleteTarget } from "../../../features/projects/src/DeleteTaskDialog";
+import type { DeleteTarget } from "../../../features/projects/src/screens/DeleteTaskDialog";
 import type { HandlerTarget } from "../../../features/settings/src/HandlerPolicy";
 import { createThreadsStore } from "../../../features/threads/src";
 import { createWorkspaceStore } from "../../../features/workspace/src";
@@ -74,18 +74,18 @@ import { TaskSide, TaskSideShell } from "../../../features/code/src/TaskSide";
 import { arbolesDe, contiene, ubicar } from "../../../features/code/src/treeKind";
 import { moviendoHueco } from "../../../../apps/desktop/src/lib/sites";
 
-const DeleteTaskDialog = lazy(() => import("../../../features/projects/src/DeleteTaskDialog"));
+const DeleteTaskDialog = lazy(() => import("../../../features/projects/src/screens/DeleteTaskDialog"));
 const HandoverDialog = lazy(() => import("../../../features/chat/src/screens/HandoverDialog"));
 const TaskFilesCard = lazy(() => import("../../../features/code/src/TaskFiles"));
 
 import { esDeCodigo } from "../../../features/code/src/workdirKind";
 import Observability from "../../../features/observability/src/Observability";
-import AnadirCarpeta, { type ClonEnCurso, type InicioDeCarpeta } from "../../../features/projects/src/AddWorkdir";
-import AgentPageTasks from "../../../features/projects/src/AgentPageTasks";
+import AnadirCarpeta, { type ClonEnCurso, type InicioDeCarpeta } from "../../../features/projects/src/screens/AddWorkdir";
+import AgentPageTasks from "../../../features/projects/src/screens/AgentPageTasks";
 import { createTaskFiles, type TaskSideMode } from "../../../../apps/desktop/src/lib/taskFiles";
 
 // Chunk aparte: el perfil completo de un agente solo se carga al abrirlo.
-const AgentProfile = retryableLazy(() => import("../../../features/projects/src/AgentProfile"));
+const AgentProfile = retryableLazy(() => import("../../../features/projects/src/screens/AgentProfile"));
 // El alta solo se abre sin workspace o al agregar otro: no entra en la carga inicial.
 const Onboarding = lazy(() => import("../../../features/onboarding/src/Onboarding"));
 const TaskLocation = lazy(() => import("../../../features/chat/src/screens/TaskLocation"));
@@ -104,10 +104,10 @@ import { canonicalAgentId, isFreeRouterModel, lastActivity, launcherOf, OPENCODE
 import type { CarriedBase, CarryCheck } from "../../../features/machines/src/carry";
 import { bringHereLabel, canBringHere, carryOrigin, machineName, machineOf, machines, machineWakes, refetchMachines, remoteChildScope, runOn, senderTaskId, setRunOn, setTaskRowMachine } from "../../../features/machines/src/store";
 import { activeTaskCounts, activityByProject, type HiddenProjects, hiddenIn, type PickedAt, picksIn, rememberPick, setHidden, storedPicks, taskCountOf } from "../../../features/projects/src";
-import { createdTasks } from "../../../features/projects/src/agentPageFilters";
-import BaseBranchPicker from "../../../features/projects/src/BaseBranchPicker";
-import { watchHandlerStatus, watchHandlerStatuses } from "../../../features/projects/src/handlerPresence";
-import { EmptyContext, ProjectPicker } from "../../../features/projects/src/Projects";
+import { createdTasks } from "../../../features/projects/src/model/agentPageFilters";
+import BaseBranchPicker from "../../../features/projects/src/screens/BaseBranchPicker";
+import { watchHandlerStatus, watchHandlerStatuses } from "../../../features/projects/src/queries/handlerPresence";
+import { EmptyContext, ProjectPicker } from "../../../features/projects/src/screens/Projects";
 
 // Chunk aparte: solo lo carga quien crea una tarea, no la carga inicial.
 const MachinePicker = lazy(() =>
@@ -122,17 +122,17 @@ const CarryOriginLabel = lazy(() =>
 type CarryModule = typeof import("../../../features/machines/src/carry");
 /** Lo que corta un envío cuya copia se detuvo: el fallo y su arreglo quedan en el encabezado. */
 const CARRY_STOPPED = Symbol("carry-stopped");
-const VistaDeProyecto = lazy(() => import("../../../features/projects/src/ProjectView"));
+const VistaDeProyecto = lazy(() => import("../../../features/projects/src/screens/ProjectView"));
 
 import { mensajeDeFallo } from "../../../features/chat/src/model/failures";
-import { workLabel } from "../../../features/projects/src/branchLabel";
-import { DEFAULT_PROFILE, displayName, notifyProfiles, watchProfiles } from "../../../features/projects/src/profiles";
-import RecentAgentChats from "../../../features/projects/src/RecentAgentChats";
-import { type SessionRow, threadTitle } from "../../../features/projects/src/Sessions";
-import TabStrip, { NewTabButton } from "../../../features/projects/src/Tabs";
-import { createTaskWork, ResumeTask } from "../../../features/projects/src/TaskHistory";
-import type { Etapa } from "../../../features/projects/src/TaskStage";
-import { esChatDeAgente } from "../../../features/projects/src/taskTree";
+import { workLabel } from "../../../features/projects/src/model/branchLabel";
+import { DEFAULT_PROFILE, displayName, notifyProfiles, watchProfiles } from "../../../features/projects/src/queries/profiles";
+import RecentAgentChats from "../../../features/projects/src/screens/RecentAgentChats";
+import { type SessionRow, threadTitle } from "../../../features/projects/src/screens/Sessions";
+import TabStrip, { NewTabButton } from "../../../features/projects/src/screens/Tabs";
+import { createTaskWork, ResumeTask } from "../../../features/projects/src/screens/TaskHistory";
+import type { Etapa } from "../../../features/projects/src/screens/TaskStage";
+import { esChatDeAgente } from "../../../features/projects/src/model/taskTree";
 import {
   DEFAULT_PERMISSION_MODE_EVENT,
   type DefaultPermissionModeChange,

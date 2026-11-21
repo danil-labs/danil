@@ -210,7 +210,7 @@ export function jobFor(check: CarryCheck, choice: { selection: Selection; partSi
 async function cloneOn(check: CarryCheck, progress: (phase: string, percent: number | null) => void) {
   const url = check.status.remoteUrl ?? check.project.remote_url;
   if (!url) throw { what: { clave: "work.error.project_missing" }, detail: "no_remote" };
-  const { followClone } = await import("../../projects/src/remoteClone");
+  const { followClone } = await import("../../projects/src/queries/remoteClone");
   const operation = crypto.randomUUID();
   await followClone(
     { operation, machine: check.target, workspace: check.workspace, name: check.project.name },
