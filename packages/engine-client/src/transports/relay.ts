@@ -56,11 +56,14 @@ const MAX_FAILED_ATTEMPTS = 8;
 /** Una conexión cuenta como sana si dura esto abierta; solo entonces se reinicia el backoff. */
 const HEALTHY_MS = 10_000;
 
+/** Hosts del relay (contrato relay-v1): lista cerrada, no cualquier *.danil.ai (SR2, N5). */
+const RELAY_HOSTS = new Set(["connect.danil.ai"]);
+
 /** El ticket solo viaja a un relay de Danil por wss (SR1, 3). */
 export function trustedRelayUrl(raw: string): boolean {
   try {
     const u = new URL(raw);
-    return u.protocol === "wss:" && (u.hostname === "danil.ai" || u.hostname.endsWith(".danil.ai")) && (u.port === "" || u.port === "443");
+    return u.protocol === "wss:" && RELAY_HOSTS.has(u.hostname) && (u.port === "" || u.port === "443");
   } catch {
     return false;
   }

@@ -8,8 +8,8 @@
     "build": "vite build",
     "typecheck": "tsc --noEmit",
     "tauri": "tauri",
-    "tauri:dev": "tauri dev",
-    "tauri:build": "tauri build",
+    "tauri:dev": "tauri dev --config src-tauri/tauri.conf.json",
+    "tauri:build": "tauri build --config src-tauri/tauri.conf.json",
     "engine:sidecar": "node ../desktop/scripts/engine.mjs sidecar"
   },
   "dependencies": {

@@ -68,7 +68,10 @@ async function pollOperation(
   signal?: AbortSignal,
 ): Promise<Operation> {
   let attempt = 0;
+  // Tope total: encender una VM tarda minutos, no horas (SR2, N4). Después, error con reintento.
+  const deadline = Date.now() + 15 * 60_000;
   while (!signal?.aborted) {
+    if (Date.now() > deadline) throw new Error("operation_timeout");
     const op = await client.getOperation({ id: operationId }, { signal });
     if (op.state === "succeeded") {
       return op;
