@@ -19,32 +19,64 @@ export interface AppProps {
   children?: JSX.Element;
 }
 
+/** Textos de la entrada, copiados de apps/desktop/src/locales/es/web.json (web.auth.*). */
+const AUTH = {
+  signin_title: "Inicia sesión en Danil",
+  workos_hint: "Entra con tu cuenta de Danil.",
+  workos_email: "Continuar con tu correo",
+  workos_password_hint:
+    "Puedes entrar con un código que te enviamos por correo. Si tu contraseña de Danil no funciona aquí, usa el código o restablécela.",
+  errors: {
+    callback_failed:
+      "El enlace venció, ya se usó o no se pudo completar el acceso. Vuelve a iniciar sesión; si falta confirmar tu correo, podrás pedir otro enlace.",
+    email_not_verified: "Ese correo no está verificado. Verifícalo en el paso anterior o entra con Google o Microsoft.",
+    unknown_person: "No encontramos una cuenta de Danil para este acceso. Contacta a soporte de Danil.",
+    no_login_yet: "Tu cuenta de Danil todavía no puede entrar a esta versión. Contacta a soporte de Danil.",
+    login_banned: "Este acceso está desactivado. Contacta a soporte de Danil.",
+    identity_unavailable: "No se puede entrar en este momento. Vuelve a intentarlo en unos minutos.",
+    access_required:
+      "Tu cuenta de Danil todavía no puede entrar. Vuelve a iniciar sesión en unos minutos. Si sigue igual, contacta a soporte de Danil.",
+  } as Record<string, string>,
+};
+
+/** El `?error=` del regreso del login, como lo muestra la página (apps/desktop/src/web/auth/workos.tsx). */
+function signInError(): string {
+  if (typeof location === "undefined") return "";
+  const code = new URLSearchParams(location.search).get("error");
+  return code ? (AUTH.errors[code] ?? AUTH.errors.callback_failed) : "";
+}
+
+/** La entrada original (WorkosAuthPage de apps/desktop), copiada tal cual (R13). */
 function EntryScreen(props: { isDesk: boolean; onAddSession?: () => void }): JSX.Element {
+  document.title = "Danil";
+  const error = signInError();
   return (
-    <main
-      class="flex h-full min-h-screen w-full flex-col items-center justify-center overflow-y-auto bg-bg px-6 py-10 text-neutral-950 dark:text-neutral-100"
-      data-web-auth="workos"
-    >
+    <main class="flex h-full flex-col items-center overflow-y-auto bg-bg px-6 py-10 text-neutral-950" data-web-auth="workos">
       <div class="grid w-full max-w-sm gap-6">
-        <h1 class="m-0 font-display text-3xl font-bold tracking-[-0.03em]">Danil</h1>
+        <h1 class="m-0 text-3xl font-display font-bold tracking-[-0.03em]">Danil</h1>
         <div class="grid gap-2">
-          <h2 class="m-0 text-xl font-semibold">Iniciar sesión</h2>
+          <h2 class="m-0 text-xl font-semibold">{AUTH.signin_title}</h2>
           <p class="m-0 text-sm text-neutral-500" role="status">
-            Inicia sesión para acceder a tus máquinas y espacios de trabajo.
+            {AUTH.workos_hint}
           </p>
         </div>
-
         <Show
           when={props.isDesk}
           fallback={
             <Button as="a" class="min-h-11" href={webLoginUrl()}>
-              Iniciar sesión
+              {AUTH.workos_email}
             </Button>
           }
         >
           <Button class="min-h-11" onClick={props.onAddSession}>
-            Iniciar sesión
+            {AUTH.workos_email}
           </Button>
+        </Show>
+        <p class="m-0 text-sm text-neutral-500">{AUTH.workos_password_hint}</p>
+        <Show when={error}>
+          <p class="m-0 text-sm text-error-strong" role="alert">
+            {error}
+          </p>
         </Show>
       </div>
     </main>
