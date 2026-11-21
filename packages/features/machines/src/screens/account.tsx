@@ -29,8 +29,7 @@ import {
   wokeOf,
 } from "@terminus/computers";
 import { Fleet, type MachineInfo, unwrap } from "@terminus/fleet";
-import { createRoot, createSignal, For } from "solid-js";
-import { render } from "solid-js/web";
+import { createRoot, createSignal } from "solid-js";
 import { listenDanilConnectionChange } from "../../../../../apps/desktop/src/lib/danilConnectionEvents";
 import { cancelEdgeWrites } from "../../../../platform-client/src/client.ts";
 import { whenConnected } from "../../../../../apps/desktop/src/lib/engineConnection";
@@ -40,7 +39,6 @@ import { type Capabilities, capabilities, setCapabilities } from "../../../../ho
 import { leerPref } from "../../../../../apps/desktop/src/lib/prefs";
 import { deliver, listen } from "../../../../../apps/desktop/src/lib/serviceEvents";
 import { isMac, isWindows } from "../../../../host/src/window";
-import { Toast, ToastPortal } from "../../../../ui/src/Toast";
 import type { MachineStatus } from "../../../../../apps/desktop/src/web/SyncNote";
 import { type DanilSessionInfo, railSession, type WorkspaceAccount } from "../../../settings/src/danil-sessions";
 import AccountMachines from "./AccountMachines";

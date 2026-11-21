@@ -2,7 +2,6 @@ import type { Machine, machinesClient } from "@terminus/computers";
 import type { Fleet } from "@terminus/fleet";
 import type { GroupAccount } from "../lib/group-account.ts";
 import type { WebSessionCommands, WebSessionStatus } from "./web-session-contexts.ts";
-import { WORKSPACES_PATH } from "../../../../packages/platform-client/src/workspaces.ts";
 
 type Client = ReturnType<typeof machinesClient>;
 type Answer = Awaited<ReturnType<Client["list"]>>;
