@@ -1,4 +1,4 @@
-import { isOrganizationSelectionRequired } from "@terminus/computers";
+import { isOrganizationSelectionRequired, machinesClient } from "@terminus/computers";
 import { createEffect, createResource, createSignal, onCleanup, Show } from "solid-js";
 import { render } from "solid-js/web";
 import { aplicarLengua, t } from "../lib/i18n";
@@ -7,14 +7,18 @@ import { Button } from "../ui/Button";
 import { SessionLoading } from "./auth/SessionLoading";
 import { signInError, WorkosAuthPage } from "./auth/workos";
 import BillingPlan from "./BillingPlan";
-import { rememberBillingLogin } from "./billing-route";
+import { billingHref, rememberBillingLogin } from "./billing-route";
 import { billingV2 } from "./billing-v2-api";
 import { organizationSession } from "./organization-session";
 import { isOrganizationAuthRequired } from "./organization-context";
 import { PlatformSessionError, platformSession, platformTransport } from "./platform-session";
 import type { WebSessionDeployment } from "./session-config";
-import { BillingReturnGate } from "./window-billing";
+import CheckoutReturn from "./CheckoutReturn";
+import { BILLING_RETURN_KEY, checkoutReturn } from "./billing-v2-return";
+import { organizationMachine } from "./window-billing";
 import "./phrases";
+
+declare const __DANIL_WEB_RELAY_ORIGINS__: string[];
 
 export function startBilling(options: WebSessionDeployment, root: HTMLElement) {
   aplicarLengua();
@@ -33,7 +37,8 @@ function BillingPage(props: { options: WebSessionDeployment }) {
   const [expired, setExpired] = createSignal(false);
   const [authOrg, setAuthOrg] = createSignal<string>();
   const [attemptedPersonal, setAttemptedPersonal] = createSignal<string>();
-  const [revision, refreshBilling] = createSignal(0);
+  const returning = !!checkoutReturn(location.href).id || !!sessionStorage.getItem(BILLING_RETURN_KEY);
+  const fromDesk = query.get("return") === "desk";
   const lifetime = new AbortController();
   const request: typeof fetch = (input, init) => fetch(input, {
     ...init,
@@ -60,6 +65,12 @@ function BillingPage(props: { options: WebSessionDeployment }) {
       }
     }),
   };
+  const machines = machinesClient({ endpoint: `${props.options.origin}/v1`, relayOrigins: __DANIL_WEB_RELAY_ORIGINS__, transport });
+  async function machine(id: string, signal: AbortSignal) {
+    if (ready()?.active !== id) return null;
+    const result = await machines.list(signal);
+    return result.kind === "ok" ? organizationMachine(id, result.value) : null;
+  }
   const session = organizationSession(transport, lifetime.signal, () => {});
   const selection = session.selection;
   const [state, setState] = createSignal(selection.state());
@@ -106,15 +117,18 @@ function BillingPage(props: { options: WebSessionDeployment }) {
       <main class="h-full overflow-y-auto bg-bg px-4 py-8 text-neutral-950">
         <div class="mx-auto grid max-w-3xl gap-6">
           <Show when={!profile.error} fallback={<div role="alert"><p>{t("web.billing_v2.error")}</p><Button onClick={() => void refetch()}>{t("web.computers.retry")}</Button></div>}>
-            <Show when={ready()} fallback={<p role="status">{t("web.billing_v2.loading")}</p>}>{current => <>
-              <BillingReturnGate api={personApi} onActive={select} onSettled={() => refreshBilling(n => n + 1)} plan={id => billingV2(transport, id).organization()} />
+            <Show when={ready()} fallback={<p role="status">{t("web.billing_v2.loading")}</p>}>{current =>
+              <Show when={!returning} fallback={<section class="mx-auto grid w-full max-w-md gap-4 py-10">
+                <CheckoutReturn api={personApi} onActive={select} machine={machine} plan={id => billingV2(transport, id).organization()}
+                  confirmation={{ app: home, billing: billingHref(), desk: fromDesk }} />
+              </section>}>
               <Show when={current().error && !current().busy}><p role="alert">{t("web.billing_v2.error")}</p><Button onClick={() => { setAttemptedPersonal(undefined); void selection.load(); }}>{t("web.computers.retry")}</Button></Show>
               <Show when={!current().busy && !current().error && (!current().active || active())}><Show when={active()} keyed fallback={
-                <BillingPlan api={personApi} fallbackPlan="free" role={() => ""} context={identifiedProfile()?.id ?? "unselected"} revision={revision()} initialPlan={initialPlan} initialPromotion={initialPromotion} />
+                <BillingPlan api={personApi} fallbackPlan="free" role={() => ""} context={identifiedProfile()?.id ?? "unselected"} initialPlan={initialPlan} initialPromotion={initialPromotion} />
               }>{org =>
-                <BillingPlan api={billingV2(transport, org.id)} fallbackPlan={org.plan} role={() => org.role ?? ""} context={`${identifiedProfile()?.id ?? "unselected"}:${org.id}`} revision={revision()} initialPlan={initialPlan} initialPromotion={initialPromotion} />
+                <BillingPlan api={billingV2(transport, org.id)} fallbackPlan={org.plan} role={() => org.role ?? ""} context={`${identifiedProfile()?.id ?? "unselected"}:${org.id}`} initialPlan={initialPlan} initialPromotion={initialPromotion} />
               }</Show></Show>
-            </>}</Show>
+            </Show>}</Show>
           </Show>
         </div>
       </main>

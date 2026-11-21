@@ -1,4 +1,11 @@
 {
+  "web.billing_v2.confirmed_plan": "Your {plan} plan is active",
+  "web.billing_v2.confirmation_machine_creating": "Creating your machine…",
+  "web.billing_v2.machine_ready": "Ready",
+  "web.billing_v2.open_app": "Go to the app",
+  "web.billing_v2.back_to_desk": "Back to Desk",
+  "web.billing_v2.desk_fallback": "If Desk does not open, switch back to your open Danil Desk window.",
+  "web.billing_v2.back_to_plans": "Back to plans",
   "web.billing_v2.organization": "Organization",
   "web.billing_v2.choose_plan": "Choose a plan",
   "web.billing_v2.contact": "Let’s talk",

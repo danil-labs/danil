@@ -1,3 +1,4 @@
+import { BILLING_RETURN_KEY } from "./billing-v2-return";
 import type { Machine, OrganizationSelection } from "@terminus/computers";
 import { createSignal, lazy, onCleanup, Show, Suspense } from "solid-js";
 import type { Capabilities } from "../lib/platform";
@@ -9,7 +10,7 @@ import { billingHref } from "./billing-route";
 const Plan = lazy(() => import("./BillingPlan"));
 const Return = lazy(() => import("./CheckoutReturn"));
 
-const pending = () => new URLSearchParams(window.location.search).has("checkout") || !!sessionStorage.getItem("danil.billing.return");
+const pending = () => new URLSearchParams(window.location.search).has("checkout") || !!sessionStorage.getItem(BILLING_RETURN_KEY);
 
 export function windowBilling(transport: ReturnType<typeof platformTransport>, profile: PlatformProfile, organizations: OrganizationSelection, workspace: () => PlatformWorkspace | undefined, machine: BillingReturnProps["machine"]) {
   const org = profile.active_organization_id ?? null;
