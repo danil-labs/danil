@@ -54,7 +54,8 @@ export function MachinesScreen(props: MachinesScreenProps) {
   });
 
   function handleConnect(m: Machine) {
-    const conn = connect(m);
+    // La persona pulsó Conectar: puede despertar la VM (M6b).
+    const conn = connect(m, { wake: true });
     opened.push(conn);
   }
 

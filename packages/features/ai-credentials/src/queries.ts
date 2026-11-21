@@ -334,7 +334,8 @@ export function useWakeMachine() {
     setWaking(true);
     setError(null);
     try {
-      return connectMachine(opts);
+      // Acción explícita de la persona: puede despertar la VM.
+      return connectMachine({ ...opts, wake: true });
     } catch (e) {
       setError(e);
       throw e;

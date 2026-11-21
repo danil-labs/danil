@@ -64,9 +64,21 @@ function WorkspaceConnectionFallback(props: {
   hasMachine: boolean;
   isError: boolean;
   isWaking: boolean;
+  isStopped?: boolean;
   onRetryConn?: () => void;
 }): JSX.Element {
   return (
+    <Show
+      when={!props.isStopped || props.isWaking}
+      fallback={
+        <div class="flex h-48 flex-col items-center justify-center gap-3 p-6 text-center text-xs">
+          <p class="m-0 font-medium text-neutral-300">La máquina está apagada.</p>
+          <Button size="sm" variant="secondary" onClick={props.onRetryConn}>
+            Encender y conectar
+          </Button>
+        </div>
+      }
+    >
     <Show
       when={!props.machinesError}
       fallback={
@@ -113,6 +125,7 @@ function WorkspaceConnectionFallback(props: {
         </Show>
       </Show>
     </Show>
+    </Show>
   );
 }
 
@@ -151,9 +164,13 @@ export function WorkspaceScreen(props: { id: string }): JSX.Element {
   const conn = createMemo(
     on(
       () => [targetMachine(), retryCount()] as const,
-      ([m]) => {
+      ([m, attempt]) => {
         if (!m) return undefined;
-        const c = connect(m);
+        // Al cargar solo se conecta a una máquina encendida; una apagada se muestra «apagada» y
+        // se despierta solo con el botón (attempt > 0 = acción de la persona) (FOCO NUEVO, M6b).
+        const wake = attempt > 0;
+        if (!wake && m.state !== "running") return undefined;
+        const c = connect(m, { wake });
         onCleanup(() => c.close());
         return c;
       }
@@ -177,7 +194,8 @@ export function WorkspaceScreen(props: { id: string }): JSX.Element {
     ),
   );
 
-  const isReady = () => Boolean(conn() && conn()!.status() !== "error");
+  const isReady = () => Boolean(conn() && !["error", "stopped"].includes(conn()!.status()));
+  const isStopped = () => Boolean(targetMachine() && (!conn() || conn()!.status() === "stopped") && targetMachine()!.state !== "running");
   const isConnError = () => Boolean(conn() && conn()!.status() === "error");
   const isConnWaking = () => Boolean(conn() && conn()!.status() === "waking");
 
@@ -189,6 +207,7 @@ export function WorkspaceScreen(props: { id: string }): JSX.Element {
       hasMachine={Boolean(targetMachine())}
       isError={isConnError()}
       isWaking={isConnWaking()}
+      isStopped={isStopped()}
       onRetryConn={() => setRetryCount((n) => n + 1)}
     />
   );
