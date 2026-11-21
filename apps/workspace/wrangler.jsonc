@@ -7,7 +7,6 @@
   // wrangler deploy sincroniza estos dominios: el que no esté aquí se quita del Worker.
   // beta.danil.ai sirve esta app desde F4.3; no lo borres sin mover beta a otro Worker.
   "routes": [
-    { "pattern": "preview-front.danil.ai", "custom_domain": true },
-    { "pattern": "beta.danil.ai", "custom_domain": true }
+    { "pattern": "preview-front.danil.ai", "custom_domain": true }
   ]
 }
