@@ -8,19 +8,16 @@ export {
   useMachines,
   sortMachines,
   groupMachinesByOrg,
-  resolveSession,
 } from "./queries.ts";
 export type {
   UseMachinesReturn,
-  SessionInput,
-  SessionOptions,
-  ResolvedSession,
 } from "./queries.ts";
 
 export type {
   Machine,
   MachineList,
   Operation,
+  OperationState,
   MachineState,
   MachineConnectionState,
   MachineKind,

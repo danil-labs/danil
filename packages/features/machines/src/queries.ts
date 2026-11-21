@@ -9,6 +9,8 @@ import {
 import {
   usePlatform,
   isClientError,
+  idempotencyKey,
+  backoffDelay,
   type PlatformClient,
 } from "@danil/platform-client";
 import {
@@ -16,38 +18,9 @@ import {
   type LocalHost,
   type MachineConnection,
 } from "@danil/engine-client";
-import type { Session, SessionSource } from "@danil/session";
+import { useSession } from "@danil/session/solid";
+import { host } from "@danil/host";
 import type { Machine, Operation } from "./model.ts";
-
-export interface SessionOptions {
-  session?: Session | null;
-  source?: SessionSource | null;
-  client?: PlatformClient;
-  sessionKey?: string;
-  host?: LocalHost;
-}
-
-export type SessionInput =
-  | Session
-  | SessionSource
-  | SessionOptions
-  | (() => Session | null | undefined)
-  | null
-  | undefined;
-
-function createIdempotencyKey(): string {
-  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
-    return crypto.randomUUID();
-  }
-  return `idemp_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
-}
-
-export interface ResolvedSession {
-  sessionKey: string;
-  source?: SessionSource;
-  client?: PlatformClient;
-  host?: LocalHost;
-}
 
 /**
  * Ordena máquinas de forma determinista (M1, 6.1) sin violar R5:
@@ -89,63 +62,37 @@ export function groupMachinesByOrg(machines: Machine[]): Map<string, Machine[]> 
   return map;
 }
 
-function isSessionSource(v: unknown): v is SessionSource {
-  return typeof v === "object" && v !== null && "list" in v && typeof (v as any).list === "function";
-}
-
-function isSession(v: unknown): v is Session {
-  return typeof v === "object" && v !== null && "key" in v && typeof (v as any).key === "string" && !("list" in v);
-}
-
-export function resolveSession(input?: SessionInput): ResolvedSession {
-  if (!input) {
-    return { sessionKey: "web" };
-  }
-  if (typeof input === "function") {
-    const s = input();
-    return { sessionKey: s?.key ?? "web" };
-  }
-  if (typeof input === "object" && input !== null) {
-    if (isSessionSource(input)) {
-      const sessions = input.list();
-      return { sessionKey: sessions[0]?.key ?? "web", source: input };
-    }
-    if (isSession(input)) {
-      return { sessionKey: input.key };
-    }
-    const opts = input as SessionOptions;
-    const s = opts.session;
-    const sKey = opts.sessionKey ?? s?.key ?? (opts.source ? opts.source.list()[0]?.key : undefined) ?? "web";
-    return {
-      sessionKey: sKey,
-      source: opts.source ?? undefined,
-      client: opts.client,
-      host: opts.host,
-    };
-  }
-  return { sessionKey: "web" };
-}
-
 async function pollOperation(
   client: PlatformClient,
   operationId: string,
-  timeoutMs = 60_000,
-  intervalMs = 1_500,
+  signal?: AbortSignal,
 ): Promise<Operation> {
-  const start = Date.now();
-  while (Date.now() - start < timeoutMs) {
-    const op = await client.getOperation({ id: operationId });
-    const s = op.state?.toLowerCase();
-    if (s === "succeeded" || s === "success" || s === "completed" || s === "done") {
+  let attempt = 0;
+  while (!signal?.aborted) {
+    const op = await client.getOperation({ id: operationId }, { signal });
+    if (op.state === "succeeded") {
       return op;
     }
-    if (s === "failed" || s === "error") {
+    if (op.state === "failed") {
       const msg = op.error?.message ?? `Operation failed with state ${op.state}`;
       throw new Error(msg);
     }
-    await new Promise((resolve) => setTimeout(resolve, intervalMs));
+    const delay = backoffDelay(attempt++, 1000, 5000);
+    await new Promise<void>((resolve, reject) => {
+      const timer = setTimeout(resolve, delay);
+      if (signal) {
+        signal.addEventListener(
+          "abort",
+          () => {
+            clearTimeout(timer);
+            reject(new DOMException("Aborted", "AbortError"));
+          },
+          { once: true },
+        );
+      }
+    });
   }
-  throw new Error("Operation timed out");
+  throw new DOMException("Aborted", "AbortError");
 }
 
 export interface UseMachinesReturn {
@@ -161,28 +108,31 @@ export interface UseMachinesReturn {
 }
 
 /**
- * useMachines(session)
+ * useMachines()
  * Consulta todas las máquinas visibles vía getMachines sin filtrar ni depender de workspace (M1, M2).
  * Refresco periódico cada 15 s (M7).
- * Encendido y apagado con sondeo de getOperation (M6).
- * Conexión que despierta la VM reintentando automáticamente (M6b).
+ * Encendido y apagado con sondeo de getOperation con signal y backoff (RV1 #29, RV2 #13).
+ * Conexión que pasa host a connectMachine para Desk local (RV1 #10) y reutiliza caché (RV1 #30).
  */
-export function useMachines(session?: SessionInput): UseMachinesReturn {
+export function useMachines(): UseMachinesReturn {
   const client = usePlatform();
-  const resolved = () => resolveSession(session);
+  const session = useSession();
+  const sessionKey = () => session.active() ?? session.list()[0]?.key ?? "";
 
-  const getClient = () => resolved().client ?? client;
+  const abortController = new AbortController();
+  onCleanup(() => {
+    abortController.abort();
+  });
 
   const [machines, { refetch }] = createResource(
-    () => resolved().sessionKey,
+    () => sessionKey(),
     async () => {
-      const res = await getClient().getMachines();
+      const res = await client.getMachines();
       return sortMachines(res.items ?? []);
     },
   );
 
   const [operating, setOperating] = createSignal<Record<string, "starting" | "stopping">>({});
-  const [connections, setConnections] = createSignal<Record<string, MachineConnection>>({});
 
   onMount(() => {
     const timer = setInterval(() => {
@@ -196,16 +146,18 @@ export function useMachines(session?: SessionInput): UseMachinesReturn {
 
   async function start(machineId: string): Promise<Operation> {
     setOperating((prev) => ({ ...prev, [machineId]: "starting" }));
-    const cl = getClient();
     try {
-      const op = await cl.startMachine({
-        id: machineId,
-        idempotencyKey: createIdempotencyKey(),
-      });
+      const op = await client.startMachine(
+        {
+          id: machineId,
+          idempotencyKey: idempotencyKey(),
+        },
+        { signal: abortController.signal },
+      );
       const opId = op.id ?? op.operation_id;
       let finalOp = op;
       if (opId) {
-        finalOp = await pollOperation(cl, opId);
+        finalOp = await pollOperation(client, opId, abortController.signal);
       }
       await refetch();
       return finalOp;
@@ -220,16 +172,18 @@ export function useMachines(session?: SessionInput): UseMachinesReturn {
 
   async function stop(machineId: string): Promise<Operation> {
     setOperating((prev) => ({ ...prev, [machineId]: "stopping" }));
-    const cl = getClient();
     try {
-      const op = await cl.stopMachine({
-        id: machineId,
-        idempotencyKey: createIdempotencyKey(),
-      });
+      const op = await client.stopMachine(
+        {
+          id: machineId,
+          idempotencyKey: idempotencyKey(),
+        },
+        { signal: abortController.signal },
+      );
       const opId = op.id ?? op.operation_id;
       let finalOp = op;
       if (opId) {
-        finalOp = await pollOperation(cl, opId);
+        finalOp = await pollOperation(client, opId, abortController.signal);
       }
       await refetch();
       return finalOp;
@@ -243,22 +197,21 @@ export function useMachines(session?: SessionInput): UseMachinesReturn {
   }
 
   function connect(machine: Machine): MachineConnection {
-    const r = resolved();
-    const cl = getClient();
+    const sKey = sessionKey();
 
-    const conn = connectMachine({
-      sessionKey: r.sessionKey,
+    return connectMachine({
+      sessionKey: sKey,
       machine: {
         machine_id: machine.machine_id,
         kind: machine.kind,
       },
-      host: r.host,
+      host,
       platform: {
         requestTicket: async (_sKey, machineId) => {
           try {
-            const ticketRes = await cl.createMachineTicket({
+            const ticketRes = await client.createMachineTicket({
               id: machineId,
-              idempotencyKey: createIdempotencyKey(),
+              idempotencyKey: idempotencyKey(),
             });
             if (ticketRes.ticket && ticketRes.url) {
               return {
@@ -276,10 +229,6 @@ export function useMachines(session?: SessionInput): UseMachinesReturn {
               message: "Missing ticket or admission url",
             };
           } catch (err: unknown) {
-            // Regla 6.4 y 6.5 / M6b: el encendido ocurre únicamente por acción explícita de la persona (conectar).
-            // Si la VM está apagada (machine_unreachable / stopped por code), la plataforma debe encenderla al emitir ticket;
-            // si no lo hizo automáticamente (incidente 2), disparamos startMachine como respaldo para que despierte
-            // sin requerir encendidos manuales por consola ni arrojar error final.
             if (isClientError(err)) {
               if (err.kind === "unauthorized" || err.kind === "forbidden") {
                 return {
@@ -297,10 +246,10 @@ export function useMachines(session?: SessionInput): UseMachinesReturn {
               }
               if (err.kind === "error") {
                 if (err.code === "machine_unreachable" || err.code === "stopped") {
-                  void cl
+                  void client
                     .startMachine({
                       id: machineId,
-                      idempotencyKey: createIdempotencyKey(),
+                      idempotencyKey: idempotencyKey(),
                     })
                     .catch(() => {});
                   return { kind: "machine_unreachable" };
@@ -325,13 +274,13 @@ export function useMachines(session?: SessionInput): UseMachinesReturn {
         },
       },
     });
-
-    setConnections((prev) => ({ ...prev, [machine.machine_id]: conn }));
-    return conn;
   }
 
   function getConnection(machineId: string): MachineConnection | undefined {
-    return connections()[machineId];
+    const list = machines();
+    const machine = list?.find((m) => m.machine_id === machineId);
+    if (!machine) return undefined;
+    return connect(machine);
   }
 
   const handleRefetch = async (): Promise<Machine[] | undefined> => {
