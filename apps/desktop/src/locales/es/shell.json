@@ -471,6 +471,7 @@
   "shell.workspaces.agent_created_elsewhere": "Un agente creó «{name}» en {org}. Agrégalo desde «Agregar workspace» en este equipo.",
   "shell.workspaces.dismiss_removed": "Descartar",
   "shell.profile.preferences": "Preferencias",
+  "shell.workspaces.session_expired": "Vuelve a entrar a esta organización: su sesión venció",
   "shell.workspaces.organization_required": "La organización requiere atención",
   "shell.workspaces.machine_unresponsive": "La máquina de {name} no responde. Intenta de nuevo en un momento.",
   "shell.workspaces.machine_retry": "Reintentar",

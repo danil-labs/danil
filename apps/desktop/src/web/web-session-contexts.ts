@@ -41,9 +41,11 @@ function parseStatus(body: unknown): WebSessionStatus {
       if (!id || !OPAQUE.test(id) || !org) return [];
       return [{ context_id: id, org, org_name: text(c.org_name), plan: text(c.plan), ...(text(c.role) ? { role: text(c.role) } : {}), ...(c.personal === true ? { personal: true } : {}) }];
     });
-    return [{ family, sub, email: text(f.email), contexts: contexts.slice(0, 20) }];
+    return [{ family, sub, email: text(f.email), contexts }];
   });
-  return { state: "connected", sessions, default_context: text(raw.default_context) };
+  // La web no depende del contexto por omisión del servidor: su preferencia es la personal del primer correo.
+  const first = sessions[0]?.contexts;
+  return { state: "connected", sessions, default_context: (first?.find((c) => c.personal) ?? first?.[0])?.context_id ?? null };
 }
 
 export function webSessionCommands(transport: EdgeTransport, options: { expired: () => void; changed?: (status: WebSessionStatus) => void }) {

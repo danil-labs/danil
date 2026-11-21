@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { webMachineCall, selectEngineWorkspace } from "../../src/web/workspace-runtime.ts";
+import { webMachineCall } from "../../src/web/workspace-runtime.ts";
 
 test("only the machine for an existing task may receive its continuation", async () => {
   let live = "vm";
@@ -16,18 +16,4 @@ test("only the machine for an existing task may receive its continuation", async
   await send("mac");
   assert.deepEqual(deliveries, ["vm", "mac"]);
   assert.deepEqual(wakes, deliveries);
-});
-
-test("an active account workspace never becomes an engine ID", async () => {
-  const selections: unknown[] = [];
-  const router = {activeContext: () => "c", activeWorkspace: () => "old",
-    handle: async (_cmd: string, args: {id: string | null}) => selections.push(args.id)};
-  const row = {id: "17", org: "org_A", engine_workspace_id: null as string | null};
-  const directory = {active: () => "17", rows: () => [row]};
-  const sync = (org: string) => selectEngineWorkspace(router as never, directory as never, {context: "c", org});
-  await sync("org_A");
-  row.engine_workspace_id = "engine";
-  await sync("org_A");
-  await sync("org_B");
-  assert.deepEqual(selections, [null, "engine", null]);
 });

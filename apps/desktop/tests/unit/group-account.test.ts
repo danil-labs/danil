@@ -149,7 +149,8 @@ test("the web window lists the machines of every context of the set, each with i
   const asked: string[] = [];
   const pruned: string[][] = [];
   let active: string | null = null;
-  const source = windowContext({ sessions: { handle: async () => status, last: () => status as never }, active: () => active,
+  const groups = () => status.sessions.flatMap(f => f.contexts.map(c => ({ context: c.context_id, org: c.org, name: c.org_name, plan: c.plan })));
+  const source = windowContext({ sessions: { handle: async () => status }, groups, fallback: () => groups()[0]?.context ?? null, active: () => active,
     factory: (context) => ({ list: async () => { asked.push(context); return { kind: "ok", value: [{ machine_id: `m_${context}`, organization_id: `org_${context}`, state: "online" }, { machine_id: "alien", organization_id: "other", state: "online" }] }; } }) as never,
     fleet: () => ({ pruneContexts: (ids: Iterable<string>) => pruned.push([...ids]) }) as never, revision: () => {} });
   const result = await source.inventory();
@@ -171,7 +172,8 @@ test("the web window lists the machines of every context of the set, each with i
 test("one organization that fails keeps the machines of the others; a dead cookie lists nothing", async () => {
   const { windowContext } = await import("../../src/web/window-context.ts");
   let status: unknown = { state: "connected", sessions: [{ family: "s", sub: "u", email: null, contexts: [{ context_id: "p", org: "org_p", org_name: "P", plan: "pro" }, { context_id: "x", org: "org_x", org_name: "X", plan: "pro" }] }] };
-  const source = windowContext({ sessions: { handle: async () => status, last: () => status as never }, active: () => null,
+  const groups = () => ((status as { sessions?: { contexts: { context_id: string; org: string; org_name: string; plan: string }[] }[] }).sessions ?? []).flatMap(f => f.contexts.map(c => ({ context: c.context_id, org: c.org, name: c.org_name, plan: c.plan })));
+  const source = windowContext({ sessions: { handle: async () => status }, groups, fallback: () => null, active: () => null,
     factory: (context) => ({ list: async () => context === "x" ? { kind: "error", status: 503 } : { kind: "ok", value: [{ machine_id: "m", organization_id: "org_p", state: "online" }] } }) as never,
     fleet: () => ({ pruneContexts: () => {} }) as never, revision: () => {} });
   assert.deepEqual((await source.inventory())?.rows.map(r => r.group.context), ["p"]);

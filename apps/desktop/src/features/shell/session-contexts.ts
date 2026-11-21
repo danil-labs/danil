@@ -88,6 +88,8 @@ export function createSessionContexts(invoke: ContextInvoke, changed: () => void
     sendOptional: (context: string, method: string, path: string, body?: unknown, key?: string) => send(context, method, path, body, key, true),
     defaultContext: () => defaultContext,
     noteOrganizationProblem: (context: string) => { if (empty.note(context, { status: 403, empty_reason: "organization_selection_required" })) notify(); },
+    /** Lo que otra vía (las máquinas de la web) supo de un contexto: vencido, o que volvió a contestar. */
+    noteContext: (context: string, expired: boolean) => { if (empty.note(context, expired ? { status: 401, empty_reason: "session_expired" } : { status: 200 })) notify(); },
     closeEmail: async (email: string | null, fallbackFamily: string) => {
       const ids = email ? families.filter((f) => f.email?.trim().toLowerCase() === email.trim().toLowerCase()).map((f) => f.family) : [fallbackFamily];
       for (const family of ids) await close({ family });

@@ -26,9 +26,11 @@ export function windowActiveContext(sessions: Pick<WebSessionCommands, "last">) 
       const headers = new Headers(init?.headers);
       const own = headers.get("X-Danil-Session");
       const group = own ? groups().find((g) => g.context === own) ?? null : pick();
-      if (group && !own) headers.set("X-Danil-Session", group.context);
+      // Ninguna llamada de la ventana cae en el contexto por omisión: sin grupo, no sale.
+      if (!group) throw { code: own ? "session_not_in_set" : "session_selection_required", status: 401 };
+      headers.set("X-Danil-Session", group.context);
       const response = await transport[method](path, { ...init, headers });
-      if (group && response.ok && (response.headers.get("X-Danil-Session-Applied") !== group.context || response.headers.get("X-Danil-Session-Applied-Org") !== group.org)) {
+      if (response.ok && (response.headers.get("X-Danil-Session-Applied") !== group.context || response.headers.get("X-Danil-Session-Applied-Org") !== group.org)) {
         await response.body?.cancel();
         throw { code: "session_echo_mismatch", status: 502 };
       }
@@ -37,11 +39,14 @@ export function windowActiveContext(sessions: Pick<WebSessionCommands, "last">) 
     return { call: (path, init) => send("call", path, init), mutation: (path, init) => send("mutation", path, init) };
   };
   /** El contexto vigente de una organización del primer correo que la tenga (billing es de su organización, no del workspace abierto). */
-  const of = (org: string | null | undefined) => () => groups().find((g) => g.org === org) ?? null;
+  const of = (org: string | null | undefined, sub?: string) => () => groups().find((g) => g.org === org && (!sub || g.sub === sub)) ?? null;
   /** Lo que aún pide un selector de organización (billing al volver del pago) sin escribir nada global. */
-  const organizations = (): OrganizationSelection => {
-    const state = () => ({ kind: "ready" as const, items: groups().map((g) => ({ id: g.org, name: g.name, plan: g.plan ?? "", role: g.role ?? "" })), active: current()?.org ?? null });
-    return { state, load: async () => {}, choose: async () => {}, subscribe: () => () => {}, needed: () => false, report: () => false, dismiss: () => {}, stop: () => {} } as unknown as OrganizationSelection;
+  const organizations = (refresh: () => Promise<unknown>): OrganizationSelection => {
+    // La vuelta del pago «elige» la organización pagada solo en este cliente: relee el conjunto, donde aparece si es nueva.
+    let chosen: string | null = null;
+    const state = () => ({ kind: "ready" as const, items: groups().map((g) => ({ id: g.org, name: g.name, plan: g.plan ?? "", role: g.role ?? "" })), active: chosen ?? current()?.org ?? null });
+    const choose = async (id: string) => { await refresh(); if (groups().some((g) => g.org === id)) chosen = id; };
+    return { state, load: async () => {}, choose, subscribe: () => () => {}, needed: () => false, report: () => false, dismiss: () => {}, stop: () => {} } as unknown as OrganizationSelection;
   };
   return { groups, current, scoped, of, organizations };
 }

@@ -1,7 +1,7 @@
 import { createSignal } from "solid-js";
 import type { WebSessionCommands } from "./web-session-contexts.ts";
 
-type Row = { id: string; name: string };
+type Row = { id: string; name: string; account: string | null };
 type Reply = { status: number; body?: unknown };
 
 /**
@@ -23,7 +23,7 @@ export function webRailCatalog(sessions: Pick<WebSessionCommands, "handle">) {
         const context = typeof raw?.context_id === "string" ? raw.context_id : null;
         if (!context) continue;
         const rows = Array.isArray(raw.workspaces)
-          ? raw.workspaces.flatMap((w: { engine_workspace_id?: unknown; name?: unknown }) => (typeof w?.engine_workspace_id === "string" && w.engine_workspace_id ? [{ id: w.engine_workspace_id, name: typeof w.name === "string" ? w.name : w.engine_workspace_id }] : []))
+          ? raw.workspaces.flatMap((w: { engine_workspace_id?: unknown; account_id?: unknown; name?: unknown }) => (typeof w?.engine_workspace_id === "string" && w.engine_workspace_id ? [{ id: w.engine_workspace_id, name: typeof w.name === "string" ? w.name : w.engine_workspace_id, account: typeof w.account_id === "string" ? w.account_id : null }] : []))
           : null;
         // Un vacío confirmado es una lista vacía; uno sin comprobar conserva la lectura anterior.
         next.set(context, rows ?? (raw.catalog_state === "empty" ? [] : lists().get(context) ?? null));
@@ -33,6 +33,8 @@ export function webRailCatalog(sessions: Pick<WebSessionCommands, "handle">) {
   }
   return {
     workspaces: (context: string) => lists().get(context) ?? null,
+    /** El account de plataforma de un workspace del motor en ese contexto (el Free router lo necesita). */
+    accountOf: (context: string, engine: string) => lists().get(context)?.find((row) => row.id === engine)?.account ?? null,
     refresh: () => (running ??= read().catch(() => {}).finally(() => { running = null; })),
   };
 }

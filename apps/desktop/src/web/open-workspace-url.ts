@@ -18,5 +18,5 @@ export function openWorkspaceUrl(router: Router, sessions: Sessions, location: P
     if (url.href !== location.href) history.replaceState(history.state, "", url.href);
   }
   window.addEventListener("harness:workspace", remember);
-  return { remember };
+  return { remember, close: () => window.removeEventListener("harness:workspace", remember) };
 }

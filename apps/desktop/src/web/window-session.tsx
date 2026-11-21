@@ -18,7 +18,7 @@ import { clearWebCaches, retryWait, sessionExit, workspaceCache } from './sessio
 import { UpdateNotice } from './UpdateNotice';
 import { mountWindow } from './window';
 import './phrases';
-import { windowBilling } from './window-billing';
+import { organizationMachine, windowBilling } from './window-billing';
 import { webSessionCommands, type WebSessionStatus } from './web-session-contexts';
 import { webRailCatalog } from './web-rail-catalog';
 import { windowActiveContext } from './window-active-context';
@@ -45,7 +45,8 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
     seguirElTema();
     const lifetime = new AbortController();
     const request: typeof fetch = (input, init = {}) => lifetime.signal.aborted ? Promise.reject(new DOMException('The page was closed', 'AbortError')) : fetch(input, { ...init, signal: init.signal ? AbortSignal.any([init.signal, lifetime.signal]) : lifetime.signal });
-    const api = platformSession(options, request);
+    // El eco de la organización se comprueba con el conjunto de la cookie (M2 del dictamen de seguridad).
+    const api = platformSession(options, request, context => sessions.scopeOf(context)?.org ?? null);
     const raw = platformTransport(options, request);
     const [caps, setCaps] = createSignal<CapabilitiesSnapshot | null>(null);
     const [error, setError] = createSignal('');
@@ -111,7 +112,7 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
       let ready = false;
       try {
         setCaps(await readCapabilities(plain));
-        if (!gone()) ready = await windowApp?.refresh() ?? false;
+        if (!gone()) [ready] = await Promise.all([windowApp?.refresh() ?? false, rail.refresh()]);
       } catch (cause) { wait = retryWait(cause, wait); }
       finally { later(ready ? POLL_MS : wait); }
     }
@@ -159,13 +160,18 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
       setShellCacheScope({ mine: () => false, prefer: null });
       disposeGate?.();
       disposeGate = undefined;
-      const organizations = active.organizations();
+      const organizations = active.organizations(() => sessions.handle('danil_session_status'));
       setFreeRouterHost({ edge: freeRouterWebEdge(transport), engine: policy => freeRouterEngine(policy ? freeModelScope(policy) : undefined),
-        identity: async () => ({ sub: profile.id, list: { active_workspace_id: null, items: [] } }) });
-      const billing = windowBilling(active.scoped(plain, active.of(profile.active_organization_id)), profile, organizations, () => undefined, async () => null);
+        // El account de plataforma del workspace del motor, en el contexto del workspace abierto.
+        identity: async workspace => { const group = active.current(); const account = group && workspace ? rail.accountOf(group.context, workspace) : null; return group && account ? { sub: group.sub, list: { active_workspace_id: account, items: [{ id: account, org: group.org }] } } : null; } });
+      const billing = windowBilling(active.scoped(plain, active.of(profile.active_organization_id, profile.id)), profile, organizations, () => undefined, async (id, signal) => {
+        const group = active.of(id)();
+        const listed = group ? await contextMachines(`${options.origin}/v1`, raw, __DANIL_WEB_RELAY_ORIGINS__, group.context).list(signal) : null;
+        return listed?.kind === 'ok' ? organizationMachine(id, listed.value) : null;
+      });
       const current = async () => { const group = active.current(); return group ? { context: group.context, org: group.org, name: group.name, plan: group.plan, role: group.role } : null; };
       windowApp = mountWindow({ sessions, rail, contextMachines: context => contextMachines(`${options.origin}/v1`, raw, __DANIL_WEB_RELAY_ORIGINS__, context), permits, relayOrigin: __DANIL_WEB_RELAY_ORIGINS__[0], credentials: webCredentialSource(options.origin, transport),
-        profile: webAccountProfile(transport), onUnauthorized: expired,
+        profile: webAccountProfile(transport), active,
         onUnavailable: () => { setError('web.platform.unavailable'); mounted = false; gate(); later(); },
         services: {
           webWorkspacePicker: webWorkspacePicker(plain, { store: window.sessionStorage, signIn: organization => window.location.assign(api.loginUrl(home, organization)) }),
