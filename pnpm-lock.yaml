@@ -680,6 +680,9 @@ importers:
       '@danil/ui':
         specifier: workspace:*
         version: link:../ui
+      lucide-solid:
+        specifier: ^1.31.0
+        version: 1.31.0(solid-js@1.9.17)
     devDependencies:
       solid-js:
         specifier: ^1.9.17

@@ -1,12 +1,11 @@
-// port: apps/desktop/src/features/shell/GitHubStar.tsx:1-79
+// port: apps/desktop/src/features/shell/GitHubStar.tsx:1-78
 import X from "lucide-solid/icons/x";
 import { Show } from "solid-js";
 import { t } from "@danil/ui/i18n";
-// PORT-DATA: capa de datos vieja lib/invoke: va por queries.ts — import { invoke } from "../../lib/invoke.ts";
-// PORT-DATA: capa de datos vieja lib/prefs: va por queries.ts — import { createPref } from "../../lib/prefs";
 import { Button } from "@danil/ui";
 import { GitHubMark } from "@danil/ui";
 import { RETARDO_TOOLTIP, TooltipContent, TooltipRoot, TooltipTrigger } from "@danil/ui";
+import { createPref, openExternal } from "../queries.ts";
 
 const REPOSITORIO = "https://github.com/danil-labs/danil";
 
@@ -19,7 +18,7 @@ const REPOSITORIO = "https://github.com/danil-labs/danil";
  * el nombre del workspace ya no vive aquí.
  */
 export default function GitHubStar() {
-  const [oculto, setOculto] = createPref("github.star.dismissed", false);  // PORT-DATA
+  const [oculto, setOculto] = createPref("github.star.dismissed", false);
   let grupo: HTMLDivElement | undefined;
   let abriendo = false;
   const ocultar = () => {
@@ -34,7 +33,7 @@ export default function GitHubStar() {
   const abrir = () => {
     if (abriendo) return;
     abriendo = true;
-    void invoke("site_open_external", { url: REPOSITORIO })
+    void openExternal(REPOSITORIO)
       .then(ocultar)
       .catch(() => {})
       .finally(() => {

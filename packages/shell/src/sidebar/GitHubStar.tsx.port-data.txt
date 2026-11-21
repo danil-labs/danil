@@ -1,5 +1,0 @@
-# Líneas PORT-DATA de packages/shell/src/sidebar/GitHubStar.tsx (original apps/desktop/src/features/shell/GitHubStar.tsx, 79 líneas). Resuélvelas con hooks de queries.ts, props o slots; nada más cambia.
-IMPORT invoke :: capa de datos vieja lib/invoke: va por queries.ts
-IMPORT createPref :: capa de datos vieja lib/prefs: va por queries.ts
-L22 createPref :: const [oculto, setOculto] = createPref("github.star.dismissed", false);
-L37 invoke :: void invoke("site_open_external", { url: REPOSITORIO })
