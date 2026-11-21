@@ -93,6 +93,8 @@ export function createRelayTransport(opts: RelayOptions): StatefulTransport {
   const queue: Array<{ id: number; frame: string }> = [];
   let wakingSince: number | null = null;
   let wakeAttempts = 0;
+  // El permiso de despertar se gasta al conectar: una reconexión posterior nunca despierta (RV-FOCO1 #2).
+  let mayWake = opts.wake === true;
   let nextId = 1;
   let socket: WebSocket | null = null;
   let cursor: string | number | undefined; // último cursor de evento visto (B-014)
@@ -168,7 +170,7 @@ export function createRelayTransport(opts: RelayOptions): StatefulTransport {
     if (closed) return;
     if (res.kind === "machine_unreachable" || res.kind === "stopped" || res.kind === "starting") {
       // Sin acción de la persona no se insiste: la VM se muestra apagada (FOCO NUEVO).
-      if (!opts.wake) {
+      if (!mayWake) {
         setStatus("stopped");
         rejectAll(new RelayError("machine_stopped"));
         return;
@@ -213,6 +215,9 @@ export function createRelayTransport(opts: RelayOptions): StatefulTransport {
     ws.onopen = () => {
       if (socket !== ws) return;
       everConnected = true;
+      mayWake = false;
+      wakeAttempts = 0;
+      wakingSince = null;
       // El backoff vuelve a cero solo si la sesión se sostiene (un relay que abre y cierra no da bucle).
       const opened = ws;
       setTimeout(() => {
@@ -248,6 +253,7 @@ export function createRelayTransport(opts: RelayOptions): StatefulTransport {
       // en vez de mandarlos para que fallen allá (RV1c N16).
       if (LOCAL_ONLY.has(name)) return Promise.reject(new RelayError("not_relayable", name));
       if (status === "error") return Promise.reject(new RelayError("unavailable"));
+      if (status === "stopped") return Promise.reject(new RelayError("machine_stopped"));
       const id = nextId++;
       const frame = JSON.stringify({ id, method: name, params });
       return new Promise((resolve, reject) => {

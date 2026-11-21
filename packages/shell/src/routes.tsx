@@ -137,6 +137,8 @@ export function WorkspaceScreen(props: { id: string }): JSX.Element {
 
   // Estado de vista del workspace: tarea elegida en Proyectos (RV1 #1, RV2 #1)
   const [selectedTask, setSelectedTask] = createSignal<TaskRecord | null>(null);
+  // La máquina que la persona pidió encender, por id: el permiso no pasa a otro workspace (RV-FOCO1 #1).
+  const [wakeFor, setWakeFor] = createSignal<string | null>(null);
   const [retryCount, setRetryCount] = createSignal(0);
 
   const currentWorkspace = createMemo(() => {
@@ -160,16 +162,21 @@ export function WorkspaceScreen(props: { id: string }): JSX.Element {
     if (!ws?.org) return undefined;
     return list.find((m) => m.organization_id === ws.org);
   }, undefined, { equals: (a, b) => a?.machine_id === b?.machine_id });
+  // El estado actual de esa máquina, leído de la lista en cada sondeo (no del objeto memorizado) (RV-FOCO1 #3).
+  const targetState = () => {
+    const id = targetMachine()?.machine_id;
+    return (machines() ?? []).find((m) => m.machine_id === id)?.state;
+  };
 
   const conn = createMemo(
     on(
-      () => [targetMachine(), retryCount()] as const,
-      ([m, attempt]) => {
+      () => [targetMachine(), retryCount(), targetState() === "running"] as const,
+      ([m, , running]) => {
         if (!m) return undefined;
         // Al cargar solo se conecta a una máquina encendida; una apagada se muestra «apagada» y
-        // se despierta solo con el botón (attempt > 0 = acción de la persona) (FOCO NUEVO, M6b).
-        const wake = attempt > 0;
-        if (!wake && m.state !== "running") return undefined;
+        // se despierta solo con el botón de ESA máquina (FOCO NUEVO, M6b).
+        const wake = wakeFor() === m.machine_id;
+        if (!wake && !running) return undefined;
         const c = connect(m, { wake });
         onCleanup(() => c.close());
         return c;
@@ -178,6 +185,10 @@ export function WorkspaceScreen(props: { id: string }): JSX.Element {
   );
 
   onCleanup(() => conn()?.close());
+  // Conectada la máquina, el permiso de despertar se gasta: volver más tarde no la despierta.
+  createEffect(() => {
+    if (conn()?.status() === "connected") setWakeFor(null);
+  });
 
   // B-007, paso 2: el motor de la máquina de ESTE workspace marca el workspace activo, con su
   // propio conn y solo cuando está conectado. Por relay el motor no expone el comando
@@ -195,7 +206,9 @@ export function WorkspaceScreen(props: { id: string }): JSX.Element {
   );
 
   const isReady = () => Boolean(conn() && !["error", "stopped"].includes(conn()!.status()));
-  const isStopped = () => Boolean(targetMachine() && (!conn() || conn()!.status() === "stopped") && targetMachine()!.state !== "running");
+  const isStopped = () =>
+    Boolean(targetMachine()) && (conn()?.status() === "stopped" || (!conn() && targetState() !== "running" && targetState() !== "starting"));
+  const isStarting = () => !conn() && targetState() === "starting";
   const isConnError = () => Boolean(conn() && conn()!.status() === "error");
   const isConnWaking = () => Boolean(conn() && conn()!.status() === "waking");
 
@@ -206,9 +219,12 @@ export function WorkspaceScreen(props: { id: string }): JSX.Element {
       onRetryMachines={() => void refetch()}
       hasMachine={Boolean(targetMachine())}
       isError={isConnError()}
-      isWaking={isConnWaking()}
+      isWaking={isConnWaking() || isStarting()}
       isStopped={isStopped()}
-      onRetryConn={() => setRetryCount((n) => n + 1)}
+      onRetryConn={() => {
+        setWakeFor(targetMachine()?.machine_id ?? null);
+        setRetryCount((n) => n + 1);
+      }}
     />
   );
 
