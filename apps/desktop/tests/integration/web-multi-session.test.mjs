@@ -50,7 +50,7 @@ function edge({ expireX = () => false, lateX2 = () => true, personalPlan = 'pro'
         { context_id: 'ctx_x', org: 'org_x', org_name: 'Org X', catalog_state: 'listed', workspaces: [{ account_id: 'x1', engine_workspace_id: 'wx1', name: 'X Uno' }, ...(lateX2() ? [{ account_id: 'x2', engine_workspace_id: 'wx2', name: 'X Dos' }] : [])] }] }] });
       case '/v1/identity/me': return echo(context, { id: 'user_a', name: 'QA A', email: 'a@example.test', workspace: null, organizations: [] });
       case '/v1/workspaces/preferences': return echo(context, { version: 1, added: context === 'ctx_p' ? ['wp'] : ['wx1', 'wx2'] });
-      case '/v1/workspaces': return echo(context, { items: [], next_cursor: null });
+      case '/v1/workspaces': return echo(context, { items: context === 'ctx_x' ? [{ id: 'x1', org: 'org_x', name: 'X Uno', role: 'member', engine_workspace_id: 'wx1', placement: { kind: 'organization_machine' } }] : [], next_cursor: null });
       case '/v1/credits/balance': return echo(context, { items: [] });
       case '/v1/machines': if (machinesFor) return echo(context, { items: machinesFor(context), next_cursor: null });
         return echo(context, { items: [{ machine_id: context === 'ctx_p' ? 'mp' : 'mx', name: machineName ?? (context === 'ctx_p' ? 'Nube P' : 'Nube X'), kind: machineKind, organization_id: ORGS[context], state: 'running', connection: 'connected' }], next_cursor: null });
@@ -171,7 +171,7 @@ test('a reload opens the workspace of the URL with the session of its (email, or
   assert.deepEqual(state.unscoped, []);
 });
 
-test('a workspace of the organization machine goes to its hosted machine, never to a connected Mac that does not list it', async t => {
+test('a workspace of the organization machine (placement) goes to its hosted machine, even if a connected Mac lists it', async t => {
   // Las filas reales de la organización Danil en beta: su hospedada (sin listado mientras no contesta) y la Mac de la persona conectada.
   const machinesFor = context => context === 'ctx_x'
     ? [{ machine_id: 'mxhosted', name: null, kind: 'organization', organization_id: 'org_x', state: 'running', connection: 'connected' },
@@ -186,8 +186,9 @@ test('a workspace of the organization machine goes to its hosted machine, never 
       const m = JSON.parse(data);
       const machine = /machines\/([a-z]+)\//.exec(this.url)?.[1];
       if (m.type === 'call') sent.push({ machine, command: m.command, workspace: m.workspace });
-      // Ninguna de las dos máquinas de X lista el workspace todavía.
-      if (m.type === 'call' && machine !== 'mp' && ['list_workspaces', 'workspaces_startup', 'list_workspace_attention'].includes(m.command)) return void setTimeout(() => this.onmessage?.({ data: JSON.stringify({ type: 'result', id: m.id, value: m.command === 'list_workspace_attention' ? [] : empty }) }), 0);
+      // La hospedada (apagada en beta) no lista nada; la Mac conectada lista el workspace de la organización aunque no lo tenga.
+      const listed = machine === 'mxmac' ? { workspaces: [{ id: 'wx1', name: 'X Uno', context_root: null }], active: null } : empty;
+      if (m.type === 'call' && machine !== 'mp' && ['list_workspaces', 'workspaces_startup', 'list_workspace_attention'].includes(m.command)) return void setTimeout(() => this.onmessage?.({ data: JSON.stringify({ type: 'result', id: m.id, value: m.command === 'list_workspace_attention' ? [] : listed }) }), 0);
       return super.send(data);
     }
   };

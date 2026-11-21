@@ -270,6 +270,9 @@ export function createRouterCore(config: RouterConfig) {
   /** Las máquinas de un workspace; sin workspace (en la web), todas. En la web, sin ninguna que lo liste, la hospedada de su organización. */
   const membersOf = (workspace: string | null) => {
     if (!workspace) return fleet.machines().map((m) => m.id);
+    // Un workspace `organization_machine` lo sirve la hospedada de su organización, aunque una Mac conectada lo liste.
+    const own = !local && config.organizationMachine?.(workspace) ? hostedOf() : null;
+    if (own) return [own];
     // Una Mac conectada solo recibe los workspaces que lista; los demás son de la hospedada.
     const members = local ? fleet.membersOf(workspace) : fleet.membersOf(workspace).filter((id) => fleet.info(id)?.hosted || fleet.lists(id, workspace) === true || (fleet.lists(id, workspace) === null && !hostedOf()));
     const hosted = members.length ? null : hostedOf();
@@ -951,7 +954,7 @@ export function createRouterCore(config: RouterConfig) {
     const picked = config.pickedFor?.(ws) ?? null;
     const lead = defaultMachine(ws);
     // Una elegida que no tiene permiso en este workspace no cuenta: «Ejecutar en» no la ofrece aquí.
-    const runs = (id: string) => (id === self ? true : !!fleet.info(id) && (!ws || fleet.membersOf(ws).includes(id) || permitted(fleet.info(id) as MachineInfo, ws)));
+    const runs = (id: string) => (id === self ? true : !!fleet.info(id) && (!ws || (local ? fleet.membersOf(ws).includes(id) || permitted(fleet.info(id) as MachineInfo, ws) : membersOf(ws).includes(id))));
     const machine = picked && runs(picked) ? picked : lead;
     return machine ? { machine, lead: machine === lead } : null;
   }
