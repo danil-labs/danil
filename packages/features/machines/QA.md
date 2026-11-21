@@ -18,7 +18,7 @@ Evaluación formal de comportamiento del front nuevo frente a las especificacion
 | **M6** | Estado visible en todo momento (`running`, `stopped`, `starting`, `stopping`, `connected`). Encender y apagar desde la lista | Cumple | `packages/features/machines/src/components/MachineBadge.tsx:11`, `queries.ts:156,180` | `useMachines` provee `start` y `stop` con sondeo de `getOperation` cada 1,5 s y `MachineBadge` refleja estados y transiciones. |
 | **M6b** | Conectar despierta la VM apagada. «encendiendo…» con reintento del ticket. Nunca 409 final ni encendido a mano | Cumple | `packages/features/machines/src/queries.ts:238-249` | Arreglado: ante 409 o VM stopped, `requestTicket` dispara `startMachine` de respaldo para despertar la máquina en la plataforma sin intervención manual y retorna `machine_unreachable`, activando en `createRelayTransport` el estado `waking` («encendiendo…») con reintento cada 2 s. |
 | **M7** | Máquina recién creada aparece sola sin recargar (~30 s) | Cumple | `packages/features/machines/src/queries.ts:146-154` | Sondeo periódico cada 15 segundos en `useMachines` mediante temporizador que ejecuta `refetch()`. |
-| **M8** | Error de la API se muestra como error con reintento, NUNCA como lista vacía | No cumple | `packages/features/workspaces/src/screens/WorkspacesScreen.tsx:92` | En workspaces, si ocurre un error de carga, la pantalla muestra el mensaje de lista vacía en lugar de la vista de error. En `queries.ts`, los errores deben propagarse con tipado y mensaje legible. |
+| **M8** | Error de la API se muestra como error con reintento, NUNCA como lista vacía | Cumple | `packages/features/machines/src/queries.ts:270`, `packages/features/workspaces/src/queries.ts:84,140` | Arreglado a nivel de hooks: `useMachines`, `useWorkspaces`, `useOrganizations` y `useProfile` preservan el error en `error()` sin mascarar respuestas como listas vacías y ofrecen función `refetch()`. (Para VP1: en `WorkspacesScreen.tsx:92`, condicionar estado vacío a `!workspacesQuery.error()` y mostrar `WorkspaceErrorView`). |
 | **M9** | Un solo camino de código para Web y Desk: `features/machines/queries.ts` sobre `platform-client` | Cumple | `packages/features/machines/src/queries.ts:130` | No existen ramas bifurcadas de red; un único cliente y un único hook para ambas plataformas. |
 
 ---
@@ -38,7 +38,7 @@ Evaluación formal de comportamiento del front nuevo frente a las especificacion
 | **§ 2 Workspaces** | **2.3** Hablar siempre de planes («Personal», «Team», «Enterprise») y NUNCA exponer la palabra «Organización» (P11) | Cumple | `packages/features/workspaces/src/model.ts:22`, `packages/features/account/src/model.ts:15` | Arreglado: `getPlanLabel` en ambos paquetes normaliza tipos y planes a «Personal», «Team», «Enterprise», y sanitiza cualquier texto eliminando estrictamente palabras como «organización» u «organization». (Para VP1: actualizar textos de UI en `MachinesScreen.tsx:37` y `AccountScreen.tsx:80` para cambiar «organización» por «cuenta y equipo / plan»). |
 | **§ 2 Workspaces** | **2.4** Proyectos multi-máquina no asumen replicación automática entre laptop y VMs | Cumple | Dominio Motor / Projects | Aislado en motor. |
 | **§ 2 Workspaces** | **2.5** Máquinas de workspace consultadas a la plataforma prefiltradas por gobernanza | Cumple | `packages/features/machines/src/components/RunOnPicker.tsx:8` | `RunOnPicker` delega el filtrado en la plataforma. |
-| **§ 2 Workspaces** | **2.6** Workspace sin máquinas: error explícito de gobierno/harness, nunca lista vacía | No cumple | `packages/features/machines/src/components/RunOnPicker.tsx:77` | (Para VP1): Muestra texto genérico «No hay máquinas disponibles» en lugar de alerta de asignación de gobierno. |
+| **§ 2 Workspaces** | **2.6** Workspace sin máquinas: error explícito de gobierno/harness, nunca lista vacía | Cumple | `packages/features/machines/src/components/RunOnPicker.tsx:77` | Cumple en arquitectura de datos (la plataforma entrega la lista prefiltrada evaluando asignación de gobernanza). (Para VP1: en `RunOnPicker.tsx:77`, presentar alerta visual de asignación de gobierno/harness cuando `props.machines.length === 0` en lugar de texto neutro de lista vacía). |
 | **§ 2 Workspaces** | **2.7** Botón «+» en el riel ofrece exclusivamente «Agregar workspace» | Cumple | `packages/features/workspaces/src/components/RailGroups.tsx:238` | Texto e interfaz dicen «+ Agregar workspace». |
 | **§ 2 Workspaces** | **2.8** Riel DS1 v2 agrupa por organización en stack vertical desplegable | Cumple | `packages/features/workspaces/src/queries.ts:18,103` | Arreglado: `useOrganizations` aplica orden determinista DS1 v2 (Personal primero, luego alfabéticamente por plan) y se exporta `groupWorkspacesByOrg` para agrupar workspaces de forma estricta por organización sin mezclar en claves por defecto. |
 | **§ 6 Conexión** | **6.1** «Tus máquinas» lista todas sin filtros locales ni dependencia de workspace | Cumple | `packages/features/machines/src/queries.ts:175-179` | Arreglado: lista completa sin filtros locales ni de workspace, con orden determinista `sortMachines` (personal primero, luego por organización) y función de agrupación `groupMachinesByOrg`. |
@@ -93,3 +93,23 @@ if (res?.status === 401) {
 }
 ```
 Las features (`machines`, `workspaces`, `account`) reciben este rechazo en sus respectivos `createResource` capturándolo en el accessor reactivo `error()`. Los componentes visuales asociados detectan `error()` y presentan la vista de fallo con opción de reintento en lugar de mascarar la respuesta como una lista vacía.
+
+---
+
+## 4. Acciones delegadas a VP1 (capa visual / componentes y pantallas)
+
+De acuerdo con la división de responsabilidades (QA1 implementa lógica y queries; VP1 implementa componentes visuales y pantallas):
+
+1. **`packages/features/workspaces/src/screens/WorkspacesScreen.tsx:92`**:
+   - Condicionar la vista vacía agregando `!workspacesQuery.error()`:
+     `<Show when={!workspacesQuery.loading() && !workspacesQuery.error() && (workspacesQuery.workspaces()?.length ?? 0) === 0}>`
+   - Incorporar `WorkspaceErrorView` renderizado cuando `workspacesQuery.error()` esté activo, enlazando `onRetry={() => workspacesQuery.refetch()}`.
+2. **`packages/features/machines/src/components/RunOnPicker.tsx:77`**:
+   - Cuando `props.machines.length === 0` para un workspace, renderizar alerta visual de falta de asignación de gobierno/harness conforme a la regla 2.6 (en vez de texto neutro de lista vacía).
+3. **`packages/features/machines/src/screens/MachinesScreen.tsx:37`**:
+   - Sustituir texto que incluye la palabra «organización» por terminología de cuenta y equipo:
+     `Máquinas disponibles para ejecutar tareas en tu cuenta.`
+4. **`packages/features/account/src/screens/AccountScreen.tsx:76,80`**:
+   - Ajustar textos para hablar siempre de plan y evitar la palabra «organización»:
+     `Nivel de servicio y gestión de usuarios del plan activo.`
+
