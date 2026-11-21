@@ -249,13 +249,16 @@ def rail_rows(page) -> list[str]:
 
 
 def org_of_row(page, name: str) -> str:
-    """El texto del grupo del riel que contiene la fila: debe nombrar su organización."""
+    """La organización de la fila: nombre accesible del ancestro role=group (o, si no hay,
+    el texto del grupo que contiene el cuadro)."""
+    reveal(page, name)
     return tile(page, name).evaluate(
-        """(el) => { let n = el; for (let i = 0; i < 6 && n; i++, n = n.parentElement) {
-              const g = n.closest('[role=group],[data-organization],section,li,ul');
-              if (g && g !== n) { n = g; }
-              if ((n.innerText || '').split('\\n').length > 1) return n.innerText; }
-            return el.getAttribute('aria-label') || el.innerText; }""")
+        """(el) => { const g = el.closest('[role=group]');
+              if (g) return (g.getAttribute('aria-label') || '') + '\\n' + (g.innerText || '');
+              let n = el.parentElement;
+              for (let i = 0; i < 6 && n; i++, n = n.parentElement)
+                if ((n.innerText || '').split('\\n').length > 1) return n.innerText;
+              return el.getAttribute('aria-label') || el.innerText; }""")
 
 
 def open_and_time(page, run: Run, name: str, org: str, email: str | None = None) -> float:
