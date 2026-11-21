@@ -1,8 +1,43 @@
 import { For, Show, createSignal, type Accessor, type JSX } from "solid-js";
 import type { MachineConnection } from "@danil/engine-client";
+import { Button } from "@danil/ui";
 import { useTree } from "../queries.ts";
 import { FileIcon } from "./FileIcon.tsx";
 import type { FileNodeView, GitStatusKind, TreeContext } from "../model.ts";
+
+const SANGRIA = 12;
+const CHEVRON = 13;
+
+function ChevronDown(props: { size?: number; class?: string }) {
+  return (
+    <svg width={props.size ?? CHEVRON} height={props.size ?? CHEVRON} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class={props.class} aria-hidden="true">
+      <path d="m6 9 6 6 6-6" />
+    </svg>
+  );
+}
+
+function ChevronRight(props: { size?: number; class?: string }) {
+  return (
+    <svg width={props.size ?? CHEVRON} height={props.size ?? CHEVRON} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class={props.class} aria-hidden="true">
+      <path d="m9 18 6-6-6-6" />
+    </svg>
+  );
+}
+
+function HuecoDeChevron() {
+  return <span class="shrink-0" style={{ width: `${CHEVRON}px` }} aria-hidden="true" />;
+}
+
+function RefreshIcon(props: { size?: number; class?: string }) {
+  return (
+    <svg width={props.size ?? 13} height={props.size ?? 13} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class={props.class} aria-hidden="true">
+      <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
+      <path d="M21 3v5h-5" />
+      <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
+      <path d="M3 21v-5h5" />
+    </svg>
+  );
+}
 
 export interface FileTreeProps {
   conn: Accessor<MachineConnection | null | undefined> | MachineConnection | null | undefined;
@@ -21,26 +56,27 @@ function GitBadge(props: { status?: GitStatusKind | null }): JSX.Element {
       case "added": return "A";
       case "deleted": return "D";
       case "untracked": return "U";
-      case "ignored": return "I";
+      case "ignored": return "!";
       default: return "";
     }
   };
 
   const colorClass = () => {
     switch (props.status) {
-      case "modified": return "text-amber-400 bg-amber-400/10";
-      case "added": return "text-emerald-400 bg-emerald-400/10";
-      case "deleted": return "text-rose-400 bg-rose-400/10";
-      case "untracked": return "text-neutral-400 bg-neutral-400/10";
-      case "ignored": return "text-neutral-500 bg-neutral-500/10";
-      default: return "text-neutral-400";
+      case "modified": return "text-warning-strong";
+      case "added":
+      case "untracked": return "text-success-strong";
+      case "deleted":
+      case "ignored": return "text-error-strong";
+      default: return "text-neutral-500";
     }
   };
 
   return (
     <span
-      class={`px-1 py-0.5 text-[10px] font-mono font-medium rounded shrink-0 ${colorClass()}`}
+      class={`shrink-0 font-mono text-2xs font-semibold ${colorClass()}`}
       title={`Git: ${props.status}`}
+      role="img"
     >
       {letter()}
     </span>
@@ -55,17 +91,18 @@ function TreeNodeRow(props: {
   onToggle: () => void;
   onSelect: () => void;
 }): JSX.Element {
+  const sangria = () => `${props.level * SANGRIA + 12}px`;
+
   return (
-    <div
+    <button
+      type="button"
       role="treeitem"
       aria-selected={props.isSelected}
       aria-expanded={props.item.isDirectory ? props.isExpanded : undefined}
-      class={`flex items-center gap-1.5 py-1 px-2 cursor-pointer select-none text-xs rounded transition-colors ${
-        props.isSelected
-          ? "bg-neutral-800 text-neutral-100 font-medium"
-          : "text-neutral-300 hover:bg-neutral-800/50 hover:text-neutral-200"
+      class={`flex w-full items-center gap-1.5 py-1 pr-3 text-left text-label outline-none hover:bg-surface-muted focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
+        props.isSelected ? "bg-surface-muted font-semibold" : ""
       }`}
-      style={{ "padding-left": `${props.level * 14 + 8}px` }}
+      style={{ "padding-left": sangria() }}
       onClick={() => {
         if (props.item.isDirectory) {
           props.onToggle();
@@ -74,37 +111,39 @@ function TreeNodeRow(props: {
         }
       }}
     >
-      {/* Indicador de expansión o espacio */}
-      <span class="w-3.5 h-3.5 shrink-0 flex items-center justify-center text-neutral-400">
-        {props.item.isDirectory ? (
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            class={`w-3 h-3 transition-transform ${props.isExpanded ? "rotate-90" : ""}`}
-          >
-            <polyline points="9 18 15 12 9 6" />
-          </svg>
-        ) : null}
-      </span>
+      {/* Indicador de chevron para carpetas o espacio para archivos */}
+      {props.item.isDirectory ? (
+        props.isExpanded ? (
+          <ChevronDown size={CHEVRON} class="shrink-0 text-neutral-500" />
+        ) : (
+          <ChevronRight size={CHEVRON} class="shrink-0 text-neutral-500" />
+        )
+      ) : (
+        <HuecoDeChevron />
+      )}
 
       {/* Icono de archivo o carpeta */}
       <FileIcon
         path={props.item.path}
         isDirectory={props.item.isDirectory}
         expanded={props.isExpanded}
-        size={14}
+        size={13}
+        class="shrink-0"
       />
 
       {/* Nombre del archivo */}
-      <span class="truncate flex-1" title={props.item.path}>
+      <span
+        class={`min-w-0 flex-1 truncate font-mono text-xs ${
+          props.isSelected ? "text-neutral-950 dark:text-neutral-100" : "text-neutral-500 hover:text-neutral-950 dark:hover:text-neutral-200"
+        }`}
+        title={props.item.name}
+      >
         {props.item.name}
       </span>
 
       {/* Estado Git */}
       <GitBadge status={props.item.gitStatus} />
-    </div>
+    </button>
   );
 }
 
@@ -126,20 +165,21 @@ function SubTree(props: {
   return (
     <div>
       <Show when={treeQuery.loading()}>
-        <div class="py-1 text-xs text-neutral-500 italic" style={{ "padding-left": `${(props.level + 1) * 14 + 8}px` }}>
+        <div class="py-1 text-caption text-neutral-500 italic" style={{ "padding-left": `${(props.level + 1) * SANGRIA + 12}px` }}>
           Cargando...
         </div>
       </Show>
 
       <Show when={treeQuery.error()}>
-        <div class="p-2 my-1 text-xs text-rose-400 bg-rose-500/10 rounded border border-rose-500/20" style={{ "padding-left": `${(props.level + 1) * 14 + 8}px` }}>
+        <div class="p-2 my-1 text-xs text-error-strong bg-surface-raised rounded border border-border flex items-center justify-between" style={{ "padding-left": `${(props.level + 1) * SANGRIA + 12}px` }}>
           <span>Error al listar carpeta</span>
-          <button
+          <Button
+            variant="secondary"
+            size="compact"
             onClick={() => treeQuery.refetch()}
-            class="ml-2 px-1.5 py-0.5 text-[11px] bg-neutral-800 hover:bg-neutral-700 text-neutral-200 rounded"
           >
             Reintentar
-          </button>
+          </Button>
         </div>
       </Show>
 
@@ -190,54 +230,49 @@ export function FileTree(props: FileTreeProps): JSX.Element {
     <div
       role="tree"
       aria-label="Explorador de archivos"
-      class={`flex flex-col h-full overflow-y-auto bg-neutral-900 border-r border-neutral-800 p-2 text-neutral-300 ${
+      class={`flex flex-col h-full overflow-y-auto bg-background p-1 text-neutral-900 dark:text-neutral-100 select-none ${
         props.class ?? ""
       }`}
     >
-      <div class="flex items-center justify-between pb-2 mb-2 border-b border-neutral-800 text-xs font-semibold text-neutral-400 uppercase tracking-wider">
+      <div class="flex h-[30px] items-center justify-between px-2 text-ui font-semibold text-neutral-500 border-b border-border mb-1 shrink-0">
         <span>Archivos</span>
-        <button
-          onClick={() => rootQuery.refetch()}
-          class="p-1 text-neutral-400 hover:text-neutral-200 rounded hover:bg-neutral-800 transition-colors"
+        <Button
+          variant="ghost"
+          size="compact"
+          class="shrink-0 text-neutral-500 hover:text-neutral-950 dark:hover:text-neutral-100"
           title="Refrescar árbol"
+          aria-label="Refrescar"
+          onClick={() => rootQuery.refetch()}
         >
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-3.5 h-3.5">
-            <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
-            <path d="M21 3v5h-5" />
-            <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
-            <path d="M3 21v-5h5" />
-          </svg>
-        </button>
+          <RefreshIcon size={13} />
+        </Button>
       </div>
 
       {/* Estado de carga */}
       <Show when={rootQuery.loading()}>
         <div class="flex items-center justify-center p-6 text-xs text-neutral-500">
-          <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-neutral-400" fill="none" viewBox="0 0 24 24">
-            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
-            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-          </svg>
           <span>Cargando archivos...</span>
         </div>
       </Show>
 
       {/* Estado de error: REGLA R10/Mandatoria: Muestra error con botón de reintento, NUNCA lista vacía */}
       <Show when={rootQuery.error()}>
-        <div class="flex flex-col items-center justify-center p-6 text-center text-xs bg-rose-500/10 border border-rose-500/20 rounded-md my-2">
-          <span class="text-rose-400 font-medium mb-1">Error al cargar el árbol</span>
-          <span class="text-neutral-400 mb-3 text-[11px]">No se pudo obtener la lista de archivos</span>
-          <button
+        <div class="flex flex-col items-center justify-center p-4 text-center text-xs bg-surface-raised border border-border rounded my-2">
+          <span class="text-error-strong font-medium mb-1">Error al cargar el árbol</span>
+          <span class="text-neutral-500 mb-3 text-caption">No se pudo obtener la lista de archivos</span>
+          <Button
+            variant="secondary"
+            size="compact"
             onClick={() => rootQuery.refetch()}
-            class="px-3 py-1.5 text-xs font-medium bg-neutral-800 hover:bg-neutral-700 text-neutral-200 rounded border border-neutral-700 transition-colors"
           >
             Reintentar
-          </button>
+          </Button>
         </div>
       </Show>
 
       {/* Lista de nodos */}
       <Show when={rootQuery.data() && !rootQuery.error()}>
-        <div class="space-y-0.5">
+        <div class="min-w-0">
           <For each={rootQuery.data()?.items}>
             {(item) => {
               const isExp = () => Boolean(expandedMap()[item.path]);
