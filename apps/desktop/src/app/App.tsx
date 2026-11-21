@@ -1320,11 +1320,12 @@ export default function App() {
   // el material que la tarea lee.
   const [ventana, setVentana] = createSignal<Ventana>(null);
 
-  const { engineCanDispatch, engineDispatchesQueue, queueSave, resumeQueue, stopTurn, turnClosed, turnStarted } = createEngineQueue({ invoke, machines, machineOf, nativeWindow: () => capabilities().nativeWindow, notStoppableYet: (id) => threads.appendLive(id, [{ role: "system", text: t("shell.turn.not_stoppable_yet"), meta: "aviso" }]) });
+  const { engineCanDispatch, resumeQueue, stopTurn, turnClosed, turnStarted } = createEngineQueue({ invoke, machines, machineOf, nativeWindow: () => capabilities().nativeWindow, notStoppableYet: (id) => threads.appendLive(id, [{ role: "system", text: t("shell.turn.not_stoppable_yet"), meta: "aviso" }]) });
   const taskQueues = createTaskQueues({
     scope: () => ({ workspace: workspaceActivo(), generation: workspaceContext.generation(), session: sessionId(), project: project() }),
     readQueue: (scope) => invoke<Encolado[]>("load_queue", { project: scope.project, session: scope.session }, opcionesDeLaTarea(scope.session, scope.workspace)),
-    writeQueue: (scope, queued) => invoke("save_queue", { project: scope.project, session: scope.session, queued, ...queueSave(scope.session) }, opcionesDeLaTarea(scope.session, scope.workspace)),
+    // Siempre: un motor que no lo conoce ignora el argumento, y el que sí no toma esta ventana por una vieja.
+    writeQueue: (scope, queued) => invoke("save_queue", { project: scope.project, session: scope.session, queued, engineDispatch: true }, opcionesDeLaTarea(scope.session, scope.workspace)),
     onSaveFailure: (error, scope) => threads.appendLive(scope.session, [{ role: "system", text: t("shell.queue.save_failed", { error: prosaDe(error) }), meta: "aviso" }]),
   });
   onCleanup(taskQueues.dispose);
@@ -1369,7 +1370,7 @@ export default function App() {
   // `load_queue` marca `held` lo que el motor retiene: no sale hasta «Enviar».
   const retenidaPorElMotor = () => cola().some((item) => item.held);
   // La cola que despacha el motor es la de su disco: se relee cuando él la cambia.
-  const releerCola = (id: string) => { if (id === sessionId() && engineDispatchesQueue(id)) void taskQueues.openSession(id, project(), undefined, true).catch(() => {}); };
+  const releerCola = (id: string) => { if (id === sessionId() && engineCanDispatch(id)) void taskQueues.openSession(id, project(), undefined, true).catch(() => {}); };
 
   // El CLI está reintentando contra su proveedor, en esta sesión: los eventos
   // de otra tarea siguen llegando a esta ventana, y sin la sesión un turno de
@@ -2973,7 +2974,7 @@ export default function App() {
     void settleTurn(session, true).then(() => {
       if (contestar) void contestarALaTerminal(session, contestar);
       // El motor no lanza un `!`: lo que esperaba detrás se lo devuelve la ventana.
-      else if (!detenido && session === sessionId() && cola().length && !retenidaPorElMotor() && engineDispatchesQueue(session)) void reanudarCola(session);
+      else if (!detenido && session === sessionId() && cola().length && !retenidaPorElMotor() && engineCanDispatch(session)) void reanudarCola(session);
     });
   }
 
@@ -3223,7 +3224,7 @@ export default function App() {
   function mandarElegido(session: string) {
     const view = handoffAt(session), id = view?.pending?.queueItemId;
     if (!id || !view.released || view.error || view.pending?.phase !== "waiting-close" || vivas().includes(session) || settlingTurns().includes(session)) return;
-    if (!engineDispatchesQueue(session)) return void enviarDeLaCola(session, id);
+    if (!engineCanDispatch(session)) return void enviarDeLaCola(session, id);
     handoff.observe({ kind: "dispatching", scope: conversationScope(session), itemIds: [id] });
     void reanudarCola(session);
   }
@@ -3237,11 +3238,11 @@ export default function App() {
     if (busy()) { if (next) void detenerYEnviar(next.id); return; }
     if (view?.error && view.pending?.phase === "waiting-close") return void handoff.replaceWithQueued(conversationScope(id), view.pending.queueItemId);
     if (head && esDeLaTerminal(head)) void ejecutarDeLaCola(head);
-    else if (engineDispatchesQueue(id)) void reanudarCola(id);
+    else if (engineCanDispatch(id)) void reanudarCola(id);
     else if (head) void enviarDeLaCola(id, head.id);
   }
 
-  /** Por qué la cola no sale sola; `manual`, el motor de esta máquina no la despacha (también en la web). */
+  /** Por qué la cola no sale sola; `manual`: no se sabe si su motor la despacha (no anuncia el rasgo, o es la web). */
   function razonDeLaCola(): RazonDeRetencion | null {
     const id = sessionId(), head = cola().find((item) => !item.uncertain);
     if (esperando()) return "pregunta";
@@ -5677,7 +5678,7 @@ export default function App() {
   async function detenerYEnviar(id: string) {
     const abierta = sessionId(), message = cola().find(item => item.id === id);
     if (!abierta || !message || !interrumpible(message) || injecting().some(item => item.session === abierta && item.id === id)) return;
-    if (!engineDispatchesQueue(abierta)) return handoff.replaceWithQueued(conversationScope(abierta), id);
+    if (!engineCanDispatch(abierta)) return handoff.replaceWithQueued(conversationScope(abierta), id);
     // Lo manda el motor: con el recibo de Detener, la cola sale al cerrar el turno.
     taskQueues.prioritize(id);
     await handoff.requestStop(conversationScope(abierta));

@@ -158,7 +158,7 @@ export default function ColaDeMensajes(props: ColaDeMensajesProps) {
               <span class="tabular-nums">{props.items.length}</span>
             </span>
             <Show when={props.retenida === "manual"}>
-              <span class="truncate text-xs text-neutral-500">{t("chat.queue.engine_outdated")}</span>
+              <span class="truncate text-xs text-neutral-500">{t("chat.queue.manual")}</span>
             </Show>
             {/* Con una pregunta abierta no hay «mandar»: lo de la cola se
                 escribió sin la respuesta, y soltarlo la daría por contestada. Se

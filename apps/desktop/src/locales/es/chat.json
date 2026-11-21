@@ -186,7 +186,7 @@
   "chat.queue.send": "mandar",
   "chat.queue.send_now": "Mandar ahora",
   "chat.queue.send_now_aria": "Mandar ahora el mensaje {n} de la cola",
-  "chat.queue.engine_outdated": "Actualiza el motor de esta máquina para que la cola salga sola",
+  "chat.queue.manual": "Si la cola no sale sola, pulsa Enviar",
   "chat.queue.uncertain": "Puede que ya haya salido",
   "chat.queue.send_again": "Enviar de nuevo",
   "chat.queue.send_again_aria": "Enviar de nuevo el mensaje {n} de la cola",

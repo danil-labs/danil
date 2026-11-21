@@ -16,7 +16,7 @@ import type { Encolado } from "./MessageQueue";
 
 /**
  * Por qué la cola no sale sola: una pregunta sin contestar, el motor la retiene,
- * su motor no la despacha (`manual`) o la encabeza un `!`, que el motor no corre.
+ * no se sabe si su motor la despacha (`manual`) o la encabeza un `!`, que el motor no corre.
  */
 export type RazonDeRetencion = "pregunta" | "motor" | "manual" | "terminal";
 
