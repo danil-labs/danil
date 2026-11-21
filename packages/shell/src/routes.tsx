@@ -1,4 +1,4 @@
-import { lazy, createSignal, createMemo, createRenderEffect, Show, on, onCleanup, type JSX } from "solid-js";
+import { lazy, createSignal, createMemo, createEffect, createRenderEffect, Show, on, onCleanup, type JSX } from "solid-js";
 import { Tabs, TabsList, TabsTrigger, TabsContent, Button, FailureNote } from "@danil/ui";
 import { useMachines, type MachineConnection } from "@danil/feature-machines";
 import { useWorkspaces } from "@danil/feature-workspaces";
@@ -40,20 +40,16 @@ const RailGroups = lazy(() =>
   import("@danil/feature-workspaces").then((m) => ({ default: m.RailGroups }))
 );
 
-// Conexión del workspace activo compartida reactivamente con RailSlot para set_active_workspace (N15)
-const [activeWorkspaceConn, setActiveWorkspaceConn] = createSignal<MachineConnection | undefined>(undefined);
 
 export interface RailSlotProps {
   activeWorkspaceId?: string | null;
   onSelectWorkspace?: (workspaceId: string) => void | Promise<void>;
   onAddWorkspace?: (orgId?: string) => void;
-  engineClient?: MachineConnection["client"] | (() => MachineConnection["client"] | undefined | null);
 }
 
 export function RailSlot(props: RailSlotProps): JSX.Element {
   return (
     <RailGroups
-      engineClient={props.engineClient ?? (() => activeWorkspaceConn()?.client)}
       activeWorkspaceId={props.activeWorkspaceId}
       onSelectWorkspace={props.onSelectWorkspace}
       onAddWorkspace={props.onAddWorkspace}
@@ -156,25 +152,30 @@ export function WorkspaceScreen(props: { id: string }): JSX.Element {
     on(
       () => [targetMachine(), retryCount()] as const,
       ([m]) => {
-        if (!m) {
-          setActiveWorkspaceConn(undefined);
-          return undefined;
-        }
+        if (!m) return undefined;
         const c = connect(m);
-        setActiveWorkspaceConn(c);
-        onCleanup(() => {
-          c.close();
-          setActiveWorkspaceConn(undefined);
-        });
+        onCleanup(() => c.close());
         return c;
       }
     )
   );
 
-  onCleanup(() => {
-    conn()?.close();
-    setActiveWorkspaceConn(undefined);
-  });
+  onCleanup(() => conn()?.close());
+
+  // B-007, paso 2: el motor de la máquina de ESTE workspace marca el workspace activo, con su
+  // propio conn y solo cuando está conectado. Por relay el motor no expone el comando
+  // (`relay: false`): engine-client lo rechaza tipado y aquí se omite (RV1c N16).
+  createEffect(
+    on(
+      () => [conn(), conn()?.status()] as const,
+      ([c, status]) => {
+        if (!c || status !== "connected") return;
+        c.client.set_active_workspace({ id: props.id }).catch((e: { code?: string }) => {
+          if (e?.code !== "not_relayable") console.warn("set_active_workspace", e);
+        });
+      },
+    ),
+  );
 
   const isReady = () => Boolean(conn() && conn()!.status() !== "error");
   const isConnError = () => Boolean(conn() && conn()!.status() === "error");

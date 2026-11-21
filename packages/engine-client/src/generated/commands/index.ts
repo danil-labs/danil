@@ -135,3 +135,7 @@ export const COMMANDS = {
   ...COMMANDS_MISC_12,
 } as const;
 export type CommandName = keyof typeof COMMANDS;
+/** Comandos que el motor no expone por relay (`relay: false` en el manifiesto): solo IPC local. */
+export const LOCAL_ONLY: ReadonlySet<string> = new Set(
+  Object.entries(COMMANDS).filter(([, m]) => !m.relay).map(([n]) => n),
+);

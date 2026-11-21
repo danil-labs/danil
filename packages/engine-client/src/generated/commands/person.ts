@@ -34,10 +34,10 @@ export type PersonSessionStatusParams = Record<string, never>;
 export type PersonSessionStatusOutput = unknown;
 
 export const COMMANDS_PERSON = {
-  person_session_fetch: { kind: "invoke", scope: null, authority: "admin", channel: null },
-  person_session_login: { kind: "invoke", scope: null, authority: "admin", channel: null },
-  person_session_login_complete: { kind: "invoke", scope: null, authority: "admin", channel: null },
-  person_session_logout: { kind: "invoke", scope: null, authority: "admin", channel: null },
-  person_session_select_organization: { kind: "invoke", scope: null, authority: "admin", channel: null },
-  person_session_status: { kind: "invoke", scope: null, authority: "admin", channel: null },
+  person_session_fetch: { kind: "invoke", scope: null, authority: "admin", channel: null, relay: false },
+  person_session_login: { kind: "invoke", scope: null, authority: "admin", channel: null, relay: false },
+  person_session_login_complete: { kind: "invoke", scope: null, authority: "admin", channel: null, relay: false },
+  person_session_logout: { kind: "invoke", scope: null, authority: "admin", channel: null, relay: false },
+  person_session_select_organization: { kind: "invoke", scope: null, authority: "admin", channel: null, relay: false },
+  person_session_status: { kind: "invoke", scope: null, authority: "admin", channel: null, relay: false },
 } as const;

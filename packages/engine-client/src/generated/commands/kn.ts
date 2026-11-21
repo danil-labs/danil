@@ -35,10 +35,10 @@ export interface KnUpdateParams {
 export type KnUpdateOutput = null;
 
 export const COMMANDS_KN = {
-  kn_cloud_start: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
-  kn_cloud_state: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
-  kn_finish: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
-  kn_pending: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
-  kn_status: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
-  kn_update: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
+  kn_cloud_start: { kind: "invoke", scope: "workspace", authority: "admin", channel: null, relay: true },
+  kn_cloud_state: { kind: "invoke", scope: "workspace", authority: "admin", channel: null, relay: true },
+  kn_finish: { kind: "invoke", scope: "workspace", authority: "admin", channel: null, relay: true },
+  kn_pending: { kind: "invoke", scope: "workspace", authority: "admin", channel: null, relay: true },
+  kn_status: { kind: "invoke", scope: "workspace", authority: "admin", channel: null, relay: true },
+  kn_update: { kind: "invoke", scope: "workspace", authority: "admin", channel: null, relay: true },
 } as const;

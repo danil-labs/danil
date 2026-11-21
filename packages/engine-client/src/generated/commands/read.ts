@@ -34,10 +34,10 @@ export interface ReadVersionParams {
 export type ReadVersionOutput = string;
 
 export const COMMANDS_READ = {
-  read_activity: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
-  read_activity_log: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
-  read_drawio_asset: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
-  read_mcp_app: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
-  read_mcp_app_resource: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
-  read_version: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
+  read_activity: { kind: "invoke", scope: "workspace", authority: "admin", channel: null, relay: true },
+  read_activity_log: { kind: "invoke", scope: "workspace", authority: "admin", channel: null, relay: true },
+  read_drawio_asset: { kind: "invoke", scope: "workspace", authority: "admin", channel: null, relay: true },
+  read_mcp_app: { kind: "invoke", scope: "workspace", authority: "admin", channel: null, relay: true },
+  read_mcp_app_resource: { kind: "invoke", scope: "workspace", authority: "admin", channel: null, relay: true },
+  read_version: { kind: "invoke", scope: "workspace", authority: "admin", channel: null, relay: true },
 } as const;

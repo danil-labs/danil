@@ -21,11 +21,11 @@ export type CliPluginUpdateParams = Record<string, never>;
 export type CliPluginUpdateOutput = null;
 
 export const COMMANDS_PLUGIN = {
-  "plugin check": { kind: "cli", scope: null, authority: "read", channel: null },
-  "plugin disable": { kind: "cli", scope: null, authority: "catalog", channel: null },
-  "plugin enable": { kind: "cli", scope: null, authority: "catalog", channel: null },
-  "plugin install": { kind: "cli", scope: null, authority: "catalog", channel: null },
-  "plugin list": { kind: "cli", scope: null, authority: "read", channel: null },
-  "plugin uninstall": { kind: "cli", scope: null, authority: "admin", channel: null },
-  "plugin update": { kind: "cli", scope: null, authority: "catalog", channel: null },
+  "plugin check": { kind: "cli", scope: null, authority: "read", channel: null, relay: false },
+  "plugin disable": { kind: "cli", scope: null, authority: "catalog", channel: null, relay: false },
+  "plugin enable": { kind: "cli", scope: null, authority: "catalog", channel: null, relay: false },
+  "plugin install": { kind: "cli", scope: null, authority: "catalog", channel: null, relay: false },
+  "plugin list": { kind: "cli", scope: null, authority: "read", channel: null, relay: false },
+  "plugin uninstall": { kind: "cli", scope: null, authority: "admin", channel: null, relay: false },
+  "plugin update": { kind: "cli", scope: null, authority: "catalog", channel: null, relay: false },
 } as const;

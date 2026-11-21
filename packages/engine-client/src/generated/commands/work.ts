@@ -51,11 +51,11 @@ export interface WorkWritePartParams {
 export type WorkWritePartOutput = unknown;
 
 export const COMMANDS_WORK = {
-  work_cancel: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
-  work_export: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
-  work_import: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
-  work_key: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
-  work_read_part: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
-  work_status: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
-  work_write_part: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
+  work_cancel: { kind: "invoke", scope: "workspace", authority: "admin", channel: null, relay: true },
+  work_export: { kind: "invoke", scope: "workspace", authority: "admin", channel: null, relay: true },
+  work_import: { kind: "invoke", scope: "workspace", authority: "admin", channel: null, relay: true },
+  work_key: { kind: "invoke", scope: "workspace", authority: "admin", channel: null, relay: true },
+  work_read_part: { kind: "invoke", scope: "workspace", authority: "admin", channel: null, relay: true },
+  work_status: { kind: "invoke", scope: "workspace", authority: "admin", channel: null, relay: true },
+  work_write_part: { kind: "invoke", scope: "workspace", authority: "admin", channel: null, relay: true },
 } as const;

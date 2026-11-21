@@ -36,11 +36,11 @@ export interface CancelQuestionParams {
 export type CancelQuestionOutput = unknown;
 
 export const COMMANDS_CANCEL = {
-  cancel_browser_login: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
-  cancel_google_drive_login: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
-  cancel_install: { kind: "invoke", scope: "machine", authority: "admin", channel: null },
-  cancel_local_model: { kind: "invoke", scope: "machine", authority: "admin", channel: null },
-  cancel_login: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
-  cancel_project_clone: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
-  cancel_question: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
+  cancel_browser_login: { kind: "invoke", scope: "workspace", authority: "admin", channel: null, relay: true },
+  cancel_google_drive_login: { kind: "invoke", scope: "workspace", authority: "admin", channel: null, relay: true },
+  cancel_install: { kind: "invoke", scope: "machine", authority: "admin", channel: null, relay: true },
+  cancel_local_model: { kind: "invoke", scope: "machine", authority: "admin", channel: null, relay: true },
+  cancel_login: { kind: "invoke", scope: "workspace", authority: "admin", channel: null, relay: true },
+  cancel_project_clone: { kind: "invoke", scope: "workspace", authority: "admin", channel: null, relay: true },
+  cancel_question: { kind: "invoke", scope: "workspace", authority: "admin", channel: null, relay: true },
 } as const;

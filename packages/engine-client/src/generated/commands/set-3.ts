@@ -6,5 +6,5 @@ export interface SetWorkspaceWorktreesRootParams {
 export type SetWorkspaceWorktreesRootOutput = unknown;
 
 export const COMMANDS_SET_3 = {
-  set_workspace_worktrees_root: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
+  set_workspace_worktrees_root: { kind: "invoke", scope: "workspace", authority: "admin", channel: null, relay: true },
 } as const;

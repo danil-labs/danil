@@ -13,3 +13,4 @@
 - RV1b N6 → commit 910dcad4
 - RV2b N7 → commit 5d9d4235
 - RV2b N10 → commit a7522ed1
+- RV1c N16 → (este commit): el riel solo selecciona en el borde y navega; set_active_workspace lo hace WorkspaceScreen con su propio conn; engine-client rechaza comandos relay:false por relay (LOCAL_ONLY). RV1c #37 (setHost en render) → este commit.

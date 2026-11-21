@@ -26,7 +26,6 @@ import {
 } from "../components/organization-rail-model.ts";
 
 export interface RailGroupsProps {
-  engineClient?: EngineClient | (() => EngineClient | undefined | null);
   activeWorkspaceId?: Accessor<string | null | undefined> | string | null;
   onSelectWorkspace?: (workspaceId: string) => void | Promise<void>;
   onAddWorkspace?: (orgId?: string) => void;
@@ -60,9 +59,7 @@ export const RailGroups: Component<RailGroupsProps> = (props) => {
   const handleSelectWorkspace = async (workspaceId: string) => {
     setSelectionError(null);
     try {
-      await selectWorkspace(workspaceId, {
-        engineClient: props.engineClient,
-      });
+      await selectWorkspace(workspaceId, {});
       await props.onSelectWorkspace?.(workspaceId);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Error al seleccionar workspace";

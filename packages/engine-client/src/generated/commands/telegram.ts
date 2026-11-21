@@ -49,16 +49,16 @@ export interface TelegramStatusParams {
 export type TelegramStatusOutput = unknown;
 
 export const COMMANDS_TELEGRAM = {
-  "telegram confirm": { kind: "cli", scope: null, authority: "task", channel: null },
-  "telegram disable": { kind: "cli", scope: null, authority: "admin", channel: null },
-  "telegram export": { kind: "cli", scope: null, authority: "admin", channel: null },
-  "telegram forget-token": { kind: "cli", scope: null, authority: "admin", channel: null },
-  "telegram pair": { kind: "cli", scope: null, authority: "admin", channel: null },
-  "telegram restore": { kind: "cli", scope: null, authority: "admin", channel: null },
-  "telegram set-token": { kind: "cli", scope: null, authority: "admin", channel: null },
-  "telegram status": { kind: "cli", scope: null, authority: "admin", channel: null },
-  telegram_disable: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
-  telegram_set_token: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
-  telegram_start_pairing: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
-  telegram_status: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
+  "telegram confirm": { kind: "cli", scope: null, authority: "task", channel: null, relay: false },
+  "telegram disable": { kind: "cli", scope: null, authority: "admin", channel: null, relay: false },
+  "telegram export": { kind: "cli", scope: null, authority: "admin", channel: null, relay: false },
+  "telegram forget-token": { kind: "cli", scope: null, authority: "admin", channel: null, relay: false },
+  "telegram pair": { kind: "cli", scope: null, authority: "admin", channel: null, relay: false },
+  "telegram restore": { kind: "cli", scope: null, authority: "admin", channel: null, relay: false },
+  "telegram set-token": { kind: "cli", scope: null, authority: "admin", channel: null, relay: false },
+  "telegram status": { kind: "cli", scope: null, authority: "admin", channel: null, relay: false },
+  telegram_disable: { kind: "invoke", scope: "workspace", authority: "admin", channel: null, relay: true },
+  telegram_set_token: { kind: "invoke", scope: "workspace", authority: "admin", channel: null, relay: true },
+  telegram_start_pairing: { kind: "invoke", scope: "workspace", authority: "admin", channel: null, relay: true },
+  telegram_status: { kind: "invoke", scope: "workspace", authority: "admin", channel: null, relay: true },
 } as const;

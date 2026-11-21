@@ -65,11 +65,11 @@ export interface CreateSpaceParams {
 export type CreateSpaceOutput = unknown;
 
 export const COMMANDS_CREATE = {
-  create_account_workspace: { kind: "invoke", scope: null, authority: "admin", channel: null },
-  create_agent: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
-  create_agent_thread: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
-  create_empty_session: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
-  create_project: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
-  create_remote_child: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
-  create_space: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
+  create_account_workspace: { kind: "invoke", scope: null, authority: "admin", channel: null, relay: false },
+  create_agent: { kind: "invoke", scope: "workspace", authority: "admin", channel: null, relay: true },
+  create_agent_thread: { kind: "invoke", scope: "workspace", authority: "admin", channel: null, relay: true },
+  create_empty_session: { kind: "invoke", scope: "workspace", authority: "admin", channel: null, relay: true },
+  create_project: { kind: "invoke", scope: "workspace", authority: "admin", channel: null, relay: true },
+  create_remote_child: { kind: "invoke", scope: "workspace", authority: "admin", channel: null, relay: true },
+  create_space: { kind: "invoke", scope: "workspace", authority: "admin", channel: null, relay: true },
 } as const;

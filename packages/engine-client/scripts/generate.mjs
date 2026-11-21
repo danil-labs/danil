@@ -121,7 +121,7 @@ function commandBlock(c) {
   return `${body}\nexport type ${P}Output = ${outputType(c.output)};\n`;
 }
 const meta = (c) =>
-  `  ${prop(c.name)}: { kind: ${JSON.stringify(c.kind)}, scope: ${JSON.stringify(c.scope ?? null)}, authority: ${JSON.stringify(c.authority ?? null)}, channel: ${JSON.stringify(c.channel ?? null)} },`;
+  `  ${prop(c.name)}: { kind: ${JSON.stringify(c.kind)}, scope: ${JSON.stringify(c.scope ?? null)}, authority: ${JSON.stringify(c.authority ?? null)}, channel: ${JSON.stringify(c.channel ?? null)}, relay: ${c.relay === false ? "false" : "true"} },`;
 
 rmSync(out, { recursive: true, force: true });
 mkdirSync(join(out, "commands"), { recursive: true });
@@ -151,6 +151,10 @@ export const COMMANDS = {
 ${chunks.map((c) => `  ...${varName(c.file)},`).join("\n")}
 } as const;
 export type CommandName = keyof typeof COMMANDS;
+/** Comandos que el motor no expone por relay (\`relay: false\` en el manifiesto): solo IPC local. */
+export const LOCAL_ONLY: ReadonlySet<string> = new Set(
+  Object.entries(COMMANDS).filter(([, m]) => !m.relay).map(([n]) => n),
+);
 `);
 w("commands.ts", `export * from "./commands/index.ts";\n`);
 

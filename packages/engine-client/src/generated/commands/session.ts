@@ -27,10 +27,10 @@ export interface SessionWorktreeParams {
 export type SessionWorktreeOutput = unknown | null;
 
 export const COMMANDS_SESSION = {
-  "session attach": { kind: "cli", scope: null, authority: "admin", channel: null },
-  "session detach": { kind: "cli", scope: null, authority: "read", channel: null },
-  "session list": { kind: "cli", scope: null, authority: "admin", channel: null },
-  session_folder: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
-  session_usage: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
-  session_worktree: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
+  "session attach": { kind: "cli", scope: null, authority: "admin", channel: null, relay: false },
+  "session detach": { kind: "cli", scope: null, authority: "read", channel: null, relay: false },
+  "session list": { kind: "cli", scope: null, authority: "admin", channel: null, relay: false },
+  session_folder: { kind: "invoke", scope: "workspace", authority: "admin", channel: null, relay: true },
+  session_usage: { kind: "invoke", scope: "workspace", authority: "admin", channel: null, relay: true },
+  session_worktree: { kind: "invoke", scope: "workspace", authority: "admin", channel: null, relay: true },
 } as const;

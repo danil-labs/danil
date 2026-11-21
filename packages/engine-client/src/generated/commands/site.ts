@@ -69,15 +69,15 @@ export interface SiteZoomParams {
 export type SiteZoomOutput = null;
 
 export const COMMANDS_SITE = {
-  site_close: { kind: "desktop", scope: null, authority: "admin", channel: null },
-  site_go: { kind: "desktop", scope: null, authority: "admin", channel: null },
-  site_hide: { kind: "desktop", scope: null, authority: "admin", channel: null },
-  site_navigate: { kind: "desktop", scope: null, authority: "admin", channel: null },
-  site_open: { kind: "desktop", scope: null, authority: "admin", channel: null },
-  site_open_external: { kind: "desktop", scope: null, authority: "admin", channel: null },
-  site_open_local: { kind: "desktop", scope: null, authority: "admin", channel: null },
-  site_place: { kind: "desktop", scope: null, authority: "admin", channel: null },
-  site_reload: { kind: "desktop", scope: null, authority: "admin", channel: null },
-  site_sweep: { kind: "desktop", scope: null, authority: "admin", channel: null },
-  site_zoom: { kind: "desktop", scope: null, authority: "admin", channel: null },
+  site_close: { kind: "desktop", scope: null, authority: "admin", channel: null, relay: true },
+  site_go: { kind: "desktop", scope: null, authority: "admin", channel: null, relay: true },
+  site_hide: { kind: "desktop", scope: null, authority: "admin", channel: null, relay: true },
+  site_navigate: { kind: "desktop", scope: null, authority: "admin", channel: null, relay: true },
+  site_open: { kind: "desktop", scope: null, authority: "admin", channel: null, relay: true },
+  site_open_external: { kind: "desktop", scope: null, authority: "admin", channel: null, relay: true },
+  site_open_local: { kind: "desktop", scope: null, authority: "admin", channel: null, relay: true },
+  site_place: { kind: "desktop", scope: null, authority: "admin", channel: null, relay: true },
+  site_reload: { kind: "desktop", scope: null, authority: "admin", channel: null, relay: true },
+  site_sweep: { kind: "desktop", scope: null, authority: "admin", channel: null, relay: true },
+  site_zoom: { kind: "desktop", scope: null, authority: "admin", channel: null, relay: true },
 } as const;

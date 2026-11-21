@@ -1,3 +1,4 @@
+import { LOCAL_ONLY } from "../generated/commands.ts";
 import type { ConnectionStatus, StatefulTransport } from "./types.ts";
 
 export interface Ticket {
@@ -228,6 +229,9 @@ export function createRelayTransport(opts: RelayOptions): StatefulTransport {
     },
     call(name, params) {
       if (closed) return Promise.reject(new RelayError("closed"));
+      // El motor no expone estos comandos por relay (`relay: false`): se rechazan aquí, tipados,
+      // en vez de mandarlos para que fallen allá (RV1c N16).
+      if (LOCAL_ONLY.has(name)) return Promise.reject(new RelayError("not_relayable", name));
       if (status === "error") return Promise.reject(new RelayError("unavailable"));
       const id = nextId++;
       const frame = JSON.stringify({ id, method: name, params });

@@ -9,7 +9,6 @@ import {
 } from "../queries.ts";
 
 export interface WorkspacesScreenProps {
-  engineClient?: EngineClient | (() => EngineClient | undefined | null);
   activeWorkspaceId?: string | null;
   onSelectWorkspace?: (workspaceId: string) => void | Promise<void>;
   onAddWorkspace?: (orgId?: string) => void;
@@ -52,7 +51,6 @@ export const WorkspacesScreen: Component<WorkspacesScreenProps> = (props) => {
         </div>
 
         <RailGroups
-          engineClient={props.engineClient}
           activeWorkspaceId={props.activeWorkspaceId}
           onSelectWorkspace={props.onSelectWorkspace}
           onAddWorkspace={handleAddWorkspace}

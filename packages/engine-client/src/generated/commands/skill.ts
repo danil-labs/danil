@@ -33,15 +33,15 @@ export type SkillSourceFreshnessParams = Record<string, never>;
 export type SkillSourceFreshnessOutput = unknown[];
 
 export const COMMANDS_SKILL = {
-  "skill disable": { kind: "cli", scope: null, authority: "catalog", channel: null },
-  "skill enable": { kind: "cli", scope: null, authority: "unattended", channel: null },
-  "skill list": { kind: "cli", scope: null, authority: "read", channel: null },
-  "skill source-add": { kind: "cli", scope: null, authority: "admin", channel: null },
-  "skill source-disable": { kind: "cli", scope: null, authority: "catalog", channel: null },
-  "skill source-enable": { kind: "cli", scope: null, authority: "catalog", channel: null },
-  "skill source-remove": { kind: "cli", scope: null, authority: "admin", channel: null },
-  "skill source-update": { kind: "cli", scope: null, authority: "catalog", channel: null },
-  "skill sources": { kind: "cli", scope: null, authority: "read", channel: null },
-  "skill uninstall": { kind: "cli", scope: null, authority: "admin", channel: null },
-  skill_source_freshness: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
+  "skill disable": { kind: "cli", scope: null, authority: "catalog", channel: null, relay: false },
+  "skill enable": { kind: "cli", scope: null, authority: "unattended", channel: null, relay: false },
+  "skill list": { kind: "cli", scope: null, authority: "read", channel: null, relay: false },
+  "skill source-add": { kind: "cli", scope: null, authority: "admin", channel: null, relay: false },
+  "skill source-disable": { kind: "cli", scope: null, authority: "catalog", channel: null, relay: false },
+  "skill source-enable": { kind: "cli", scope: null, authority: "catalog", channel: null, relay: false },
+  "skill source-remove": { kind: "cli", scope: null, authority: "admin", channel: null, relay: false },
+  "skill source-update": { kind: "cli", scope: null, authority: "catalog", channel: null, relay: false },
+  "skill sources": { kind: "cli", scope: null, authority: "read", channel: null, relay: false },
+  "skill uninstall": { kind: "cli", scope: null, authority: "admin", channel: null, relay: false },
+  skill_source_freshness: { kind: "invoke", scope: "workspace", authority: "admin", channel: null, relay: true },
 } as const;

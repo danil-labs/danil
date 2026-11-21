@@ -33,13 +33,13 @@ export interface McpLogoutParams {
 export type McpLogoutOutput = null;
 
 export const COMMANDS_MCP = {
-  "mcp add": { kind: "cli", scope: null, authority: "unattended", channel: null },
-  "mcp check": { kind: "cli", scope: null, authority: "read", channel: null },
-  "mcp connect": { kind: "cli", scope: null, authority: "catalog", channel: null },
-  "mcp disconnect": { kind: "cli", scope: null, authority: "unattended", channel: null },
-  "mcp list": { kind: "cli", scope: null, authority: "read", channel: null },
-  "mcp login": { kind: "cli", scope: null, authority: "catalog", channel: null },
-  "mcp remove": { kind: "cli", scope: null, authority: "unattended", channel: null },
-  mcp_login: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
-  mcp_logout: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
+  "mcp add": { kind: "cli", scope: null, authority: "unattended", channel: null, relay: false },
+  "mcp check": { kind: "cli", scope: null, authority: "read", channel: null, relay: false },
+  "mcp connect": { kind: "cli", scope: null, authority: "catalog", channel: null, relay: false },
+  "mcp disconnect": { kind: "cli", scope: null, authority: "unattended", channel: null, relay: false },
+  "mcp list": { kind: "cli", scope: null, authority: "read", channel: null, relay: false },
+  "mcp login": { kind: "cli", scope: null, authority: "catalog", channel: null, relay: false },
+  "mcp remove": { kind: "cli", scope: null, authority: "unattended", channel: null, relay: false },
+  mcp_login: { kind: "invoke", scope: "workspace", authority: "admin", channel: null, relay: true },
+  mcp_logout: { kind: "invoke", scope: "workspace", authority: "admin", channel: null, relay: true },
 } as const;

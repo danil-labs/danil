@@ -57,16 +57,16 @@ export interface AccountStatusParams {
 export type AccountStatusOutput = unknown;
 
 export const COMMANDS_ACCOUNT = {
-  "account default": { kind: "cli", scope: null, authority: "admin", channel: null },
-  "account list": { kind: "cli", scope: null, authority: "read", channel: null },
-  "account request": { kind: "cli", scope: null, authority: "admin", channel: null },
-  account_credential_delete: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
-  account_credential_remove_machine: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
-  account_credential_restore_machine: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
-  account_credentials_list: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
-  account_credentials_upload: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
-  account_limits: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
-  account_request_settle: { kind: "invoke", scope: null, authority: "admin", channel: null },
-  account_request_take: { kind: "invoke", scope: null, authority: "admin", channel: null },
-  account_status: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
+  "account default": { kind: "cli", scope: null, authority: "admin", channel: null, relay: false },
+  "account list": { kind: "cli", scope: null, authority: "read", channel: null, relay: false },
+  "account request": { kind: "cli", scope: null, authority: "admin", channel: null, relay: false },
+  account_credential_delete: { kind: "invoke", scope: "workspace", authority: "admin", channel: null, relay: true },
+  account_credential_remove_machine: { kind: "invoke", scope: "workspace", authority: "admin", channel: null, relay: true },
+  account_credential_restore_machine: { kind: "invoke", scope: "workspace", authority: "admin", channel: null, relay: true },
+  account_credentials_list: { kind: "invoke", scope: "workspace", authority: "admin", channel: null, relay: true },
+  account_credentials_upload: { kind: "invoke", scope: "workspace", authority: "admin", channel: null, relay: true },
+  account_limits: { kind: "invoke", scope: "workspace", authority: "admin", channel: null, relay: true },
+  account_request_settle: { kind: "invoke", scope: null, authority: "admin", channel: null, relay: false },
+  account_request_take: { kind: "invoke", scope: null, authority: "admin", channel: null, relay: false },
+  account_status: { kind: "invoke", scope: "workspace", authority: "admin", channel: null, relay: true },
 } as const;

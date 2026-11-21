@@ -20,7 +20,6 @@ import { WorkspaceErrorView } from "../components/WorkspaceErrorView.tsx";
 export interface WorkspacePickerModalProps {
   open: boolean;
   onClose: () => void;
-  engineClient?: EngineClient | (() => EngineClient | undefined | null);
   activeWorkspaceId?: string | null;
   onSelectWorkspace?: (workspaceId: string) => void | Promise<void>;
 }
@@ -59,9 +58,7 @@ export const WorkspacePickerModal: Component<WorkspacePickerModalProps> = (props
   const handleSelect = async (wsId: string) => {
     setSelectionError(null);
     try {
-      await selectWorkspace(wsId, {
-        engineClient: props.engineClient,
-      });
+      await selectWorkspace(wsId, {});
       await props.onSelectWorkspace?.(wsId);
       props.onClose();
     } catch (err: unknown) {

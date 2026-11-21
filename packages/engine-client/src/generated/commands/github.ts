@@ -37,12 +37,12 @@ export interface GithubAccountStatusParams {
 export type GithubAccountStatusOutput = unknown;
 
 export const COMMANDS_GITHUB = {
-  "github install": { kind: "cli", scope: null, authority: "admin", channel: null },
-  "github status": { kind: "cli", scope: null, authority: "read", channel: null },
-  github_account_authorize: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
-  github_account_changed: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
-  github_account_disconnect: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
-  github_account_installations: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
-  github_account_set_areas: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
-  github_account_status: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
+  "github install": { kind: "cli", scope: null, authority: "admin", channel: null, relay: false },
+  "github status": { kind: "cli", scope: null, authority: "read", channel: null, relay: false },
+  github_account_authorize: { kind: "invoke", scope: "workspace", authority: "admin", channel: null, relay: true },
+  github_account_changed: { kind: "invoke", scope: "workspace", authority: "admin", channel: null, relay: true },
+  github_account_disconnect: { kind: "invoke", scope: "workspace", authority: "admin", channel: null, relay: true },
+  github_account_installations: { kind: "invoke", scope: "workspace", authority: "admin", channel: null, relay: true },
+  github_account_set_areas: { kind: "invoke", scope: "workspace", authority: "admin", channel: null, relay: true },
+  github_account_status: { kind: "invoke", scope: "workspace", authority: "admin", channel: null, relay: true },
 } as const;

@@ -26,11 +26,11 @@ export interface EngineUpdateStatusParams {
 export type EngineUpdateStatusOutput = unknown;
 
 export const COMMANDS_ENGINE = {
-  "engine start": { kind: "cli", scope: null, authority: "admin", channel: null },
-  "engine status": { kind: "cli", scope: null, authority: "admin", channel: null },
-  "engine stop": { kind: "cli", scope: null, authority: "admin", channel: null },
-  engine_adoption_retry: { kind: "invoke", scope: null, authority: "admin", channel: null },
-  engine_adoption_status: { kind: "invoke", scope: null, authority: "admin", channel: null },
-  engine_update: { kind: "invoke", scope: "machine", authority: "admin", channel: null },
-  engine_update_status: { kind: "invoke", scope: "machine", authority: "admin", channel: null },
+  "engine start": { kind: "cli", scope: null, authority: "admin", channel: null, relay: false },
+  "engine status": { kind: "cli", scope: null, authority: "admin", channel: null, relay: false },
+  "engine stop": { kind: "cli", scope: null, authority: "admin", channel: null, relay: false },
+  engine_adoption_retry: { kind: "invoke", scope: null, authority: "admin", channel: null, relay: false },
+  engine_adoption_status: { kind: "invoke", scope: null, authority: "admin", channel: null, relay: false },
+  engine_update: { kind: "invoke", scope: "machine", authority: "admin", channel: null, relay: true },
+  engine_update_status: { kind: "invoke", scope: "machine", authority: "admin", channel: null, relay: true },
 } as const;

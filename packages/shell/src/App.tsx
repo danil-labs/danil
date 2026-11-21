@@ -2,7 +2,7 @@ import { createSignal, onMount, Show, type JSX } from "solid-js";
 import { SessionProvider, useSession } from "@danil/session/solid";
 import { createWebSession, webLoginUrl, type SessionSource, type Session } from "@danil/session";
 import { createPlatformClient, PlatformProvider, type PlatformClient } from "@danil/platform-client";
-import { host as defaultHost, setHost, type Host } from "@danil/host";
+import { host as defaultHost, type Host } from "@danil/host";
 import { Button, FailureNote } from "@danil/ui";
 import { RouterProvider } from "./router.tsx";
 import { Layout } from "./Layout.tsx";
@@ -163,9 +163,7 @@ function SessionFailure(props: { onRetry: () => void }): JSX.Element {
 }
 
 export function App(props: AppProps): JSX.Element {
-  if (props.host) {
-    setHost(props.host);
-  }
+  // El host lo fija la app al arrancar (apps/*/src/main.tsx), no el render (RV1c #37).
   let sessionSource = props.sessionSource;
   if (!sessionSource) {
     sessionSource = createWebSession();

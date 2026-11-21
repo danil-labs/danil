@@ -125,9 +125,7 @@ export function useWorkspaces(): UseWorkspacesResult {
   };
 }
 
-export interface SelectWorkspaceOptions {
-  engineClient?: EngineClient | (() => EngineClient | undefined | null);
-}
+export interface SelectWorkspaceOptions {}
 
 /**
  * Hook para seleccionar un workspace (RV1 #2, RV2 #2, RV1 #16, RV2 #21).
@@ -149,15 +147,8 @@ export function useSelectWorkspace() {
       body: { workspace: workspaceId },
     });
 
-    // 2. Notificar al motor local si está disponible
-    const engine =
-      typeof options?.engineClient === "function"
-        ? options.engineClient()
-        : options?.engineClient;
-    if (engine) {
-      await engine.set_active_workspace({ id: workspaceId });
-    }
-
+    // El paso 2 (motor) lo hace la pantalla del workspace con su propio conn (RV1c N16).
+    void options;
     invalidate("workspaces:");
   };
 }

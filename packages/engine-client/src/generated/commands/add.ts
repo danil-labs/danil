@@ -39,10 +39,10 @@ export interface AddWorkspaceParams {
 export type AddWorkspaceOutput = unknown;
 
 export const COMMANDS_ADD = {
-  add_account: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
-  add_folder: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
-  add_mcp_servers: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
-  add_repo_url: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
-  add_skill_source: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
-  add_workspace: { kind: "invoke", scope: "workspace", authority: "admin", channel: null },
+  add_account: { kind: "invoke", scope: "workspace", authority: "admin", channel: null, relay: true },
+  add_folder: { kind: "invoke", scope: "workspace", authority: "admin", channel: null, relay: true },
+  add_mcp_servers: { kind: "invoke", scope: "workspace", authority: "admin", channel: null, relay: true },
+  add_repo_url: { kind: "invoke", scope: "workspace", authority: "admin", channel: null, relay: true },
+  add_skill_source: { kind: "invoke", scope: "workspace", authority: "admin", channel: null, relay: true },
+  add_workspace: { kind: "invoke", scope: "workspace", authority: "admin", channel: null, relay: true },
 } as const;
