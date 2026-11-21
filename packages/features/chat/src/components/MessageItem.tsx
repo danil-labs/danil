@@ -1,11 +1,15 @@
 /**
  * Renderizado de un turno de mensaje y sus piezas causales (B-015, B-016).
+ * Paridad visual con apps/desktop/src/features/chat.
  */
 
 import { For, Show } from "solid-js";
 import type { ChatTurnView, TurnPiece } from "../model.ts";
-import { ReasoningBlock } from "./ReasoningBlock.tsx";
 import { ToolPermissionCard } from "./ToolPermissionCard.tsx";
+import { MessageText } from "./MessageText.tsx";
+import { Reasoning } from "./Reasoning.tsx";
+import { ShellCard } from "./ShellCard.tsx";
+import { Timeline } from "./Timeline.tsx";
 
 export interface MessageItemProps {
   turn: ChatTurnView;
@@ -18,7 +22,7 @@ export function MessageItem(props: MessageItemProps) {
   const renderPiece = (piece: TurnPiece) => {
     switch (piece.kind) {
       case "reasoning":
-        return <ReasoningBlock piece={piece} />;
+        return <Reasoning bloques={[{ text: piece.text, durationMs: piece.durationMs }]} />;
 
       case "permission":
         return (
@@ -29,38 +33,24 @@ export function MessageItem(props: MessageItemProps) {
         );
 
       case "tool":
-        return (
-          <div class="my-1.5 px-3 py-2 rounded border border-stone-800 bg-stone-900/40 text-xs flex items-center justify-between">
-            <div class="flex items-center gap-2">
-              <span class="font-mono text-stone-400">⚡ {piece.name}</span>
-              <Show when={piece.target}>
-                <span class="font-mono text-stone-500 truncate max-w-xs">{piece.target}</span>
-              </Show>
-            </div>
-            <span class="text-[10px]">
-              {piece.status === "running" && <span class="text-amber-400">ejecutando...</span>}
-              {piece.status === "completed" && <span class="text-emerald-400">✓ listo</span>}
-              {piece.status === "error" && <span class="text-rose-400">✗ error</span>}
-            </span>
-          </div>
-        );
+        return <Timeline pieces={[piece]} />;
 
       case "shell":
         return (
-          <div class="my-2 rounded border border-stone-800 bg-stone-950 p-2 font-mono text-xs overflow-x-auto">
-            <div class="text-stone-400">$ {piece.command}</div>
-            <Show when={piece.output}>
-              <pre class="text-stone-500 mt-1 whitespace-pre-wrap">{piece.output}</pre>
-            </Show>
-          </div>
+          <ShellCard
+            command={piece.command}
+            output={piece.output}
+            exitCode={piece.exitCode}
+            vivo={
+              piece.status === "running"
+                ? { desde: Date.now(), deteniendo: false, onDetener: () => {} }
+                : undefined
+            }
+          />
         );
 
       case "delta":
-        return (
-          <div class="text-sm text-stone-100 whitespace-pre-wrap leading-relaxed py-1">
-            {piece.text}
-          </div>
-        );
+        return <MessageText text={piece.text} incoming={!isUser()} />;
 
       default:
         return null;
@@ -68,45 +58,39 @@ export function MessageItem(props: MessageItemProps) {
   };
 
   return (
-    <div
-      class={`p-4 border-b border-stone-900/80 transition-colors ${
-        isUser() ? "bg-stone-900/30" : "bg-transparent"
-      }`}
-    >
-      <div class="max-w-4xl mx-auto flex flex-col gap-1">
-        <div class="flex items-center justify-between text-xs text-stone-400 mb-1">
-          <div class="flex items-center gap-2">
-            <span class="font-semibold text-stone-300">
-              {isUser() ? "Tú" : props.turn.author?.label ?? "Agente"}
+    <article class="group/mensaje col-start-1 min-w-0 max-w-full py-2.5 transition-colors">
+      <div class="flex items-center justify-between text-xs text-neutral-500 mb-1">
+        <div class="flex items-center gap-2">
+          <span class="font-semibold text-neutral-900 dark:text-neutral-200">
+            {isUser() ? "Tú" : props.turn.author?.label ?? "Agente"}
+          </span>
+          <Show when={props.turn.reportedModel ?? props.turn.model}>
+            <span class="text-2xs font-mono px-1.5 py-0.5 rounded bg-surface-muted text-neutral-500 border border-border">
+              {props.turn.reportedModel ?? props.turn.model}
             </span>
-            <Show when={props.turn.reportedModel ?? props.turn.model}>
-              <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-stone-800 text-stone-400">
-                {props.turn.reportedModel ?? props.turn.model}
-              </span>
-            </Show>
-          </div>
-
-          <Show when={props.turn.status === "streaming"}>
-            <span class="text-amber-400 text-[10px] animate-pulse">en curso...</span>
           </Show>
         </div>
 
-        {/* Piezas ordenadas causalmente */}
-        <Show
-          when={props.turn.pieces.length > 0}
-          fallback={
-            <div class="text-sm text-stone-100 whitespace-pre-wrap leading-relaxed">
-              {props.turn.text}
-            </div>
-          }
-        >
-          <For each={props.turn.pieces}>{(piece) => renderPiece(piece)}</For>
-        </Show>
-
-        <Show when={props.turn.error}>
-          <div class="text-rose-400 text-xs mt-2 italic">⚠ {props.turn.error}</div>
+        <Show when={props.turn.status === "streaming"}>
+          <span class="text-warning-strong text-2xs animate-pulse">en curso...</span>
         </Show>
       </div>
-    </div>
+
+      {/* Piezas ordenadas causalmente */}
+      <Show
+        when={props.turn.pieces.length > 0}
+        fallback={
+          <MessageText text={props.turn.text} incoming={!isUser()} />
+        }
+      >
+        <For each={props.turn.pieces}>{(piece) => renderPiece(piece)}</For>
+      </Show>
+
+      <Show when={props.turn.error}>
+        <div class="text-error-strong text-xs mt-2 font-mono">⚠ {props.turn.error}</div>
+      </Show>
+    </article>
   );
 }
+
+export default MessageItem;

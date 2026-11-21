@@ -1,8 +1,49 @@
 /**
  * Compositor de mensajes e instrucciones para el agente.
+ * Paridad visual con apps/desktop/src/features/chat/Chat.tsx:2161-2685 y ComposerAction.tsx.
  */
 
 import { createSignal, Show } from "solid-js";
+import { Button } from "@danil/ui";
+
+function ArrowUp(props: { size?: number; class?: string }) {
+  return (
+    <svg
+      width={props.size ?? 16}
+      height={props.size ?? 16}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2.5"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      class={props.class}
+      aria-hidden="true"
+    >
+      <path d="m5 12 7-7 7 7" />
+      <path d="M12 19V5" />
+    </svg>
+  );
+}
+
+function Square(props: { size?: number; class?: string }) {
+  return (
+    <svg
+      width={props.size ?? 10}
+      height={props.size ?? 10}
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      class={props.class}
+      aria-hidden="true"
+    >
+      <rect width="18" height="18" x="3" y="3" rx="2" />
+    </svg>
+  );
+}
 
 export interface ComposerProps {
   onSend: (text: string) => Promise<void> | void;
@@ -30,44 +71,58 @@ export function Composer(props: ComposerProps) {
     }
   };
 
+  const isStopAction = () => Boolean(props.isTurnRunning && !text().trim());
+
   return (
-    <div class="border-t border-stone-800 bg-stone-900/90 p-3">
-      <form onSubmit={handleSubmit} class="flex flex-col gap-2 max-w-4xl mx-auto">
-        <div class="relative rounded-lg border border-stone-700 bg-stone-950/60 focus-within:border-stone-500 transition-colors">
+    <div class="border-t border-border bg-background p-3">
+      <form
+        onSubmit={handleSubmit}
+        class="mx-auto max-w-[964px] rounded-lg border border-border-strong bg-surface-raised px-1 pt-0.5 pb-1.5 shadow-md transition-colors"
+      >
+        <div class="relative min-w-0">
           <textarea
             value={text()}
             onInput={(e) => setText(e.currentTarget.value)}
             onKeyDown={handleKeyDown}
             disabled={props.disabled}
             placeholder="Escribe una instrucción o mensaje para el agente (Enter para enviar, Shift+Enter para salto de línea)..."
-            rows={2}
-            class="w-full resize-none bg-transparent p-3 text-sm text-stone-100 placeholder-stone-500 focus:outline-none"
+            rows={1}
+            class="relative block w-full max-h-[11.25rem] min-h-10 overflow-y-auto border border-transparent px-2 py-1.5 text-ui leading-[1.4] [font-family:inherit] [scrollbar-gutter:stable] bg-transparent text-neutral-950 dark:text-neutral-100 placeholder:text-neutral-400 outline-none resize-none"
           />
+        </div>
 
-          <div class="flex items-center justify-between px-3 py-2 border-t border-stone-800/60">
-            <div class="text-[11px] text-stone-500">
-              Presiona <kbd class="font-mono bg-stone-800 px-1 rounded text-stone-400">Enter</kbd> para enviar
-            </div>
+        <div class="flex min-w-0 items-center justify-between gap-1 px-2 pt-1 border-t border-border/40">
+          <div class="text-caption text-neutral-500">
+            Presiona <kbd class="font-mono bg-surface-muted px-1 py-0.5 rounded text-neutral-600 dark:text-neutral-400 text-2xs">Enter</kbd> para enviar
+          </div>
 
-            <div class="flex items-center gap-2">
-              <Show when={props.isTurnRunning && props.onStop}>
-                <button
-                  type="button"
-                  onClick={() => props.onStop?.()}
-                  class="px-3 py-1 rounded bg-rose-600/80 hover:bg-rose-500 text-white text-xs font-medium transition-colors"
+          <div class="flex items-center gap-2">
+            <Show
+              when={isStopAction()}
+              fallback={
+                <Button
+                  type="submit"
+                  size="iconCompact"
+                  class="shrink-0 rounded-full"
+                  disabled={!text().trim() || props.isSending || props.disabled}
+                  title="Enviar mensaje"
+                  aria-label="Enviar"
                 >
-                  Detener
-                </button>
-              </Show>
-
-              <button
-                type="submit"
-                disabled={!text().trim() || props.isSending || props.disabled}
-                class="px-3 py-1 rounded bg-stone-100 hover:bg-white text-stone-900 text-xs font-medium transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                  <ArrowUp size={16} />
+                </Button>
+              }
+            >
+              <Button
+                type="button"
+                size="iconCompact"
+                class="shrink-0 rounded-full bg-neutral-950 text-neutral-50 hover:bg-neutral-900"
+                title="Detener turno"
+                aria-label="Detener"
+                onClick={() => props.onStop?.()}
               >
-                {props.isSending ? "Enviando..." : "Enviar"}
-              </button>
-            </div>
+                <Square size={10} />
+              </Button>
+            </Show>
           </div>
         </div>
       </form>
