@@ -1,5 +1,5 @@
 import { Show, type Component, type JSX } from "solid-js";
-import { Tabs } from "@danil/ui";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@danil/ui";
 import type { Route } from "./router.tsx";
 
 // src/routes.tsx es el ÚNICO archivo del shell que compone features (Regla R3)
@@ -26,21 +26,12 @@ export const features = {
 
 function PlaceholderScreen(props: { title: string; subtitle?: string }): JSX.Element {
   return (
-    <div
-      style={{
-        padding: "32px",
-        height: "100%",
-        display: "flex",
-        "flex-direction": "column",
-        "box-sizing": "border-box",
-        "font-family": "system-ui, -apple-system, sans-serif",
-      }}
-    >
-      <div style={{ "font-size": "20px", "font-weight": "600", "margin-bottom": "8px" }}>
+    <div class="flex h-full flex-col p-8 font-sans">
+      <div class="mb-2 text-lg font-semibold text-neutral-950 dark:text-neutral-100">
         {props.title}
       </div>
       <Show when={props.subtitle}>
-        <div style={{ opacity: "0.7", "font-size": "13px" }}>{props.subtitle}</div>
+        <div class="text-xs text-neutral-500">{props.subtitle}</div>
       </Show>
     </div>
   );
@@ -141,27 +132,27 @@ export function TerminalScreen(props: { workspaceId?: string }): JSX.Element {
 
 export function WorkspaceScreen(props: { id: string }): JSX.Element {
   return (
-    <div style={{ display: "flex", "flex-direction": "column", height: "100%", width: "100%", overflow: "hidden" }}>
-      <Tabs defaultValue="projects" class="workspace-tabs" style={{ display: "flex", "flex-direction": "column", height: "100%" }}>
-        <Tabs.List class="workspace-tabs-list" style={{ display: "flex", "border-bottom": "1px solid var(--border-subtle, rgba(255,255,255,0.08))", padding: "0 16px" }}>
-          <Tabs.Trigger value="projects" class="workspace-tab-trigger">Proyectos</Tabs.Trigger>
-          <Tabs.Trigger value="chat" class="workspace-tab-trigger">Chat</Tabs.Trigger>
-          <Tabs.Trigger value="files" class="workspace-tab-trigger">Archivos</Tabs.Trigger>
-          <Tabs.Trigger value="terminal" class="workspace-tab-trigger">Terminal</Tabs.Trigger>
-        </Tabs.List>
-        <div style={{ flex: "1", overflow: "auto" }}>
-          <Tabs.Content value="projects" style={{ height: "100%" }}>
+    <div class="flex h-full w-full flex-col overflow-hidden bg-background">
+      <Tabs defaultValue="projects" class="flex h-full flex-col">
+        <TabsList class="border-b border-border px-4 pt-2">
+          <TabsTrigger value="projects">Proyectos</TabsTrigger>
+          <TabsTrigger value="chat">Chat</TabsTrigger>
+          <TabsTrigger value="files">Archivos</TabsTrigger>
+          <TabsTrigger value="terminal">Terminal</TabsTrigger>
+        </TabsList>
+        <div class="flex-1 min-h-0 overflow-auto">
+          <TabsContent value="projects" class="h-full">
             <ProjectsScreen workspaceId={props.id} />
-          </Tabs.Content>
-          <Tabs.Content value="chat" style={{ height: "100%" }}>
+          </TabsContent>
+          <TabsContent value="chat" class="h-full">
             <ChatScreen workspaceId={props.id} sessionId={props.id} />
-          </Tabs.Content>
-          <Tabs.Content value="files" style={{ height: "100%" }}>
+          </TabsContent>
+          <TabsContent value="files" class="h-full">
             <FilesScreen workspaceId={props.id} />
-          </Tabs.Content>
-          <Tabs.Content value="terminal" style={{ height: "100%" }}>
+          </TabsContent>
+          <TabsContent value="terminal" class="h-full">
             <TerminalScreen workspaceId={props.id} />
-          </Tabs.Content>
+          </TabsContent>
         </div>
       </Tabs>
     </div>
@@ -194,7 +185,7 @@ export function AccountScreen(): JSX.Element {
 
 export function RouteView(props: { route: Route; activeWorkspaceId?: string }): JSX.Element {
   return (
-    <div style={{ width: "100%", height: "100%", position: "relative" }}>
+    <div class="relative h-full w-full">
       <Show when={props.route.name === "machines"}>
         <MachinesScreen />
       </Show>
