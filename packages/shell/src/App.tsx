@@ -2,6 +2,8 @@ import { createSignal, onMount, Show, type Component, type JSX } from "solid-js"
 import { SessionProvider, useSession } from "@danil/session/solid";
 import { createWebSession, webLoginUrl, type SessionSource, type Session } from "@danil/session";
 import { createPlatformClient, PlatformProvider, type PlatformClient } from "@danil/platform-client";
+import { host } from "@danil/host";
+import { Button, FailureNote } from "@danil/ui";
 import { RouterProvider } from "./router.tsx";
 import { Layout } from "./Layout.tsx";
 import type { OrganizationItem } from "./Rail.tsx";
@@ -103,29 +105,23 @@ function AppWithSession(props: AppProps): JSX.Element {
   const sessionContext = useSession();
   const [checking, setChecking] = createSignal(true);
 
-  const isDesk = () =>
-    props.isDesk ??
-    (typeof window !== "undefined" &&
-      Boolean(
-        (window as unknown as { __TAURI__?: unknown; __TAURI_INTERNALS__?: unknown }).__TAURI__ ||
-          (window as unknown as { __TAURI__?: unknown; __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__,
-      ));
+  // La plataforma la dice el host, no una variable global de Tauri (R15).
+  const isDesk = () => props.isDesk ?? host.kind === "desk";
+  // Un error al leer la sesión no es «sin sesión» (M8): se muestra con reintento.
+  const [failure, setFailure] = createSignal<unknown>(null);
 
-  onMount(() => {
-    // Arranque lineal (B-030, B-031):
-    // 1) Una sola llamada para validar sesión en lugar de estampida de 15 llamadas
-    const source = sessionContext.source as SessionSource & { refresh?: () => Promise<unknown> };
-    if (typeof source.refresh === "function") {
-      source
-        .refresh()
-        .catch(() => {})
-        .finally(() => {
-          setChecking(false);
-        });
-    } else {
-      setChecking(false);
-    }
-  });
+  const check = () => {
+    setChecking(true);
+    setFailure(null);
+    sessionContext.source
+      .refresh()
+      .then((state) => {
+        if (state.kind === "error") setFailure(state.error);
+      })
+      .finally(() => setChecking(false));
+  };
+  // Arranque lineal (B-030, B-031): una sola lectura de sesión; cada pantalla pide lo suyo al montarse.
+  onMount(check);
 
   const activeSessions = () =>
     sessionContext.sessions().filter((s: Session) => !s.expired);
@@ -133,9 +129,10 @@ function AppWithSession(props: AppProps): JSX.Element {
   const hasActiveSession = () => activeSessions().length > 0;
 
   const handleAddSession = () => {
-    sessionContext.source.add().catch((e: unknown) => {
-      console.error("Error al añadir sesión:", e);
-    });
+    sessionContext.source
+      .add()
+      .then((pending) => pending.done)
+      .catch((e: unknown) => setFailure(e));
   };
 
   return (
@@ -158,6 +155,7 @@ function AppWithSession(props: AppProps): JSX.Element {
         </div>
       }
     >
+      <Show when={!failure()} fallback={<SessionFailure onRetry={check} />}>
       <Show
         when={hasActiveSession()}
         fallback={<EntryScreen isDesk={isDesk()} onAddSession={handleAddSession} />}
@@ -172,7 +170,18 @@ function AppWithSession(props: AppProps): JSX.Element {
           </Layout>
         </RouterProvider>
       </Show>
+      </Show>
     </Show>
+  );
+}
+
+/** La sesión no se pudo leer (borde o motor caídos): error con reintento, nunca la pantalla de entrada. */
+function SessionFailure(props: { onRetry: () => void }): JSX.Element {
+  return (
+    <div class="flex h-screen w-screen flex-col items-center justify-center gap-3 bg-bg">
+      <FailureNote what="No pudimos comprobar tu sesión." />
+      <Button onClick={props.onRetry}>Reintentar</Button>
+    </div>
   );
 }
 
@@ -184,16 +193,8 @@ export function App(props: AppProps): JSX.Element {
 
   const source = sessionSource;
   // Un solo cliente del borde para toda la app (regla 2): las features lo leen con usePlatform().
-  const platform =
-    (props.platform as PlatformClient | undefined) ??
-    createPlatformClient({
-      getToken: async (workspaceId) => {
-        const key = workspaceId ?? source.list().find((s) => !s.expired)?.key;
-        return key ? ((await source.tokenFor(key)) ?? undefined) : undefined;
-      },
-      csrf: () => source.csrf(),
-      onUnauthorized: () => source.onUnauthorized(source.list()[0]?.key),
-    });
+  // El transporte lo da la sesión: cookie + CSRF en la web, el motor en Desk (P1).
+  const platform = (props.platform as PlatformClient | undefined) ?? createPlatformClient(source.transport());
 
   return (
     <SessionProvider source={source}>

@@ -9,6 +9,8 @@ export function createWebHost(): Host {
     invoke: unsupported("invoke"),
     call: unsupported("call"),
     listen: () => () => {},
+    // En la web no hay máquina local: todas van por relay.
+    isLocal: () => false,
     openExternal: async (url) => {
       window.open(url, "_blank", "noopener");
     },

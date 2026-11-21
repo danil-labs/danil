@@ -43,11 +43,14 @@ export class RelayError extends Error {
 
 const SUBPROTOCOL = "danil.machine-session.v1";
 
-/** Backoff exponencial con jitter completo (B-033). */
+/** Backoff exponencial con jitter (B-033): la misma fórmula que el borde (`@danil/platform-client`). */
 export function backoffDelay(attempt: number, baseMs: number, maxMs: number, random: () => number): number {
   const cap = Math.min(maxMs, baseMs * 2 ** attempt);
-  return Math.floor(cap / 2 + random() * (cap / 2));
+  return Math.floor(cap * (0.5 + random() * 0.5));
 }
+
+/** Cuánto se insiste en despertar una VM antes de mostrar error con reintento (M6b). */
+const WAKE_WINDOW_MS = 3 * 60_000;
 
 export function createRelayTransport(opts: RelayOptions): StatefulTransport {
   const base = opts.backoff?.baseMs ?? 500;
@@ -61,7 +64,9 @@ export function createRelayTransport(opts: RelayOptions): StatefulTransport {
   const statusSubs = new Set<(s: ConnectionStatus) => void>();
   const listeners = new Map<string, Set<(p: unknown) => void>>();
   const pending = new Map<number, Pending>();
-  const queue: string[] = [];
+  // Frames que esperan socket, con su id: uno que vence se saca antes de reconectar.
+  const queue: Array<{ id: number; frame: string }> = [];
+  let wakingSince: number | null = null;
   let nextId = 1;
   let socket: WebSocket | null = null;
   let cursor: string | number | undefined; // último cursor de evento visto (B-014)
@@ -130,9 +135,19 @@ export function createRelayTransport(opts: RelayOptions): StatefulTransport {
     }
     if (closed) return;
     if (res.kind === "machine_unreachable" || res.kind === "stopped" || res.kind === "starting") {
-      setStatus("waking"); // M6b: sin lista blanca de comandos (B-035)
+      // M6b: pedir el ticket despierta la VM; se insiste un rato acotado y después es error
+      // con reintento, para no despertarla sin fin sin que nadie mire (sin lista blanca, B-035).
+      wakingSince ??= Date.now();
+      if (Date.now() - wakingSince > WAKE_WINDOW_MS) {
+        wakingSince = null;
+        setStatus("error");
+        rejectAll(new RelayError("wake_timeout"));
+        return;
+      }
+      setStatus("waking");
       return schedule(wakeMs);
     }
+    wakingSince = null;
     if (res.kind === "error") {
       // Errores del borde no transitorios no se reintentan a ciegas.
       if (res.code === "unauthorized" || res.code === "forbidden") {
@@ -158,7 +173,7 @@ export function createRelayTransport(opts: RelayOptions): StatefulTransport {
       // Al reconectar, el último cursor para no perder ni repetir eventos.
       if (cursor !== undefined) ws.send(JSON.stringify({ resume: { cursor } }));
       setStatus("connected");
-      for (const q of queue.splice(0)) ws.send(q);
+      for (const q of queue.splice(0)) if (pending.has(q.id)) ws.send(q.frame);
     };
     ws.onmessage = (e) => onMessage(e.data);
     ws.onclose = () => {
@@ -187,11 +202,14 @@ export function createRelayTransport(opts: RelayOptions): StatefulTransport {
       return new Promise((resolve, reject) => {
         const t = setTimeout(() => {
           pending.delete(id);
+          // Una llamada vencida no se envía al reconectar: la UI ya la dio por fallida.
+          const i = queue.findIndex((q) => q.id === id);
+          if (i >= 0) queue.splice(i, 1);
           reject(new RelayError("timeout"));
         }, timeoutMs);
         pending.set(id, { resolve, reject, timer: t });
         if (socket && socket.readyState === 1) socket.send(frame);
-        else queue.push(frame);
+        else queue.push({ id, frame });
       });
     },
     subscribe(event, cb) {

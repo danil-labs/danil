@@ -591,6 +591,9 @@ importers:
 
   packages/session:
     dependencies:
+      '@danil/engine-client':
+        specifier: workspace:*
+        version: link:../engine-client
       '@danil/platform-client':
         specifier: workspace:*
         version: link:../platform-client
@@ -631,6 +634,9 @@ importers:
       '@danil/feature-workspaces':
         specifier: workspace:*
         version: link:../features/workspaces
+      '@danil/host':
+        specifier: workspace:*
+        version: link:../host
       '@danil/platform-client':
         specifier: workspace:*
         version: link:../platform-client

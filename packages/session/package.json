@@ -11,7 +11,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@danil/platform-client": "workspace:*"
+    "@danil/platform-client": "workspace:*",
+    "@danil/engine-client": "workspace:*"
   },
   "devDependencies": {
     "typescript": "^5.7.2",

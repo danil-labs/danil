@@ -1,16 +1,21 @@
-import { createTransport, type HttpOptions } from "./http.ts";
-import { createOperations } from "./generated/operations.ts";
+import { createOperations, type Transport } from "./generated/operations.ts";
 
-export type PlatformClientOptions = Pick<
-  HttpOptions,
-  "getToken" | "getWorkspaceId" | "csrf" | "onUnauthorized" | "onUnavailable" | "signal"
->;
-
-export function createPlatformClient(options: PlatformClientOptions = {}) {
-  return createOperations(createTransport(options));
+/** El cliente del borde sobre un transporte: HTTP con cookie (web) o el motor (Desk). Uno por app. */
+export function createPlatformClient(transport: Transport) {
+  return createOperations(transport);
 }
 export type PlatformClient = ReturnType<typeof createPlatformClient>;
 
+export { createOperations };
+export type { Transport, TransportRequest, RequestOptions } from "./generated/operations.ts";
+export {
+  createHttpTransport,
+  createEngineTransport,
+  withRetry,
+  backoffDelay,
+  idempotencyKey,
+} from "./http.ts";
+export type { HttpOptions, RetryOptions, EngineFetch, Reply } from "./http.ts";
 export type { ClientError } from "./errors.ts";
 export { isClientError } from "./errors.ts";
 export type * from "./generated/types.ts";

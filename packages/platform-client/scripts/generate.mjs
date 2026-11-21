@@ -84,9 +84,10 @@ for (const [path, item] of Object.entries(spec.paths)) {
     const argT = fields.length ? `args${allOptional ? "?" : ""}: { ${fields.join("; ")} }` : "";
     const pathExpr = "`" + path.replace(/^\/v1/, "").replace(/\{(\w+)\}/g, (_, n) => `\${encodeURIComponent(String(args!.${n}))}`) + "`";
     const obj = (list, from = "args") => `{ ${list.map((x) => `${q(x.name)}: ${from}?.${q(x.key)}`).join(", ")} }`;
+    const signature = [argT, "opts?: RequestOptions"].filter(Boolean).join(", ");
     ops.push(
-      `${op.summary ? `    /** ${op.summary} */\n` : ""}    ${op.operationId}: (${argT}) =>\n` +
-      `      t<${ret}>({ method: "${method.toUpperCase()}", path: ${pathExpr}` +
+      `${op.summary ? `    /** ${op.summary} */\n` : ""}    ${op.operationId}: (${signature}) =>\n` +
+      `      t<${ret}>({ method: "${method.toUpperCase()}", path: ${pathExpr}, signal: opts?.signal` +
       (queryP.length ? `, query: ${obj(queryP)}` : "") +
       (headerP.length ? `, headers: ${obj(headerP)}` : "") +
       (bodySchema ? `, body: args?.body` : "") + ` }),`,
@@ -97,7 +98,8 @@ const operations =
   HEADER +
   `import type { ${[...imports].sort().join(", ")} } from "./types.ts";\n\n` +
   `export type TransportRequest = {\n  method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";\n  path: string;\n` +
-  `  query?: Record<string, string | number | boolean | undefined>;\n  headers?: Record<string, string | undefined>;\n  body?: unknown;\n};\n` +
+  `  query?: Record<string, string | number | boolean | undefined>;\n  headers?: Record<string, string | undefined>;\n  body?: unknown;\n  /** Cancela la petición y su reintento (la vista que la pidió se desmontó). */\n  signal?: AbortSignal;\n};\n` +
+  `/** Opciones por llamada. */\nexport type RequestOptions = { signal?: AbortSignal };\n` +
   `export type Transport = <T>(req: TransportRequest) => Promise<T>;\n\n` +
   `export function createOperations(t: Transport) {\n  return {\n${ops.join("\n")}\n  };\n}\n` +
   `export type Operations = ReturnType<typeof createOperations>;\n`;

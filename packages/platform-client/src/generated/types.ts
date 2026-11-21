@@ -28,6 +28,8 @@ export type OrganizationRef = {
   role?: string;
   /** Abierto; hoy se observa personal. */
   type?: string;
+  /** free, team, enterprise… */
+  plan?: string | null;
   [key: string]: any;
 };
 
@@ -232,4 +234,8 @@ export type GithubAuthorizeResponse = {
   url: string;
   expires_at?: string | number | null;
   [key: string]: any;
+};
+
+export type CsrfToken = {
+  csrf_token: string;
 };

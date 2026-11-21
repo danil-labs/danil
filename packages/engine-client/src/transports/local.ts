@@ -5,6 +5,8 @@ export interface LocalHost {
   invoke<T = unknown>(command: string, args?: unknown): Promise<T>;
   /** Suscribe a un evento del motor; devuelve la baja (puede resolverse async). */
   listen(event: string, cb: (payload: unknown) => void): (() => void) | Promise<() => void>;
+  /** true si `machineId` es esta computadora (su motor responde por IPC, sin relay). */
+  isLocal?(machineId: string): boolean;
 }
 
 export function createLocalTransport(host: LocalHost): StatefulTransport {

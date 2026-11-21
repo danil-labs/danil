@@ -1072,6 +1072,77 @@
           }
         }
       }
+    },
+    "/v1/identity/csrf": {
+      "get": {
+        "operationId": "getCsrf",
+        "summary": "CSRF de la sesión web (cookie); se manda como X-CSRF-Token en cada mutación",
+        "tags": [
+          "identity"
+        ],
+        "security": [
+          {
+            "webCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "CSRF",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CsrfToken"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/identity/logout": {
+      "post": {
+        "operationId": "logout",
+        "summary": "Cierra la sesión web y borra la cookie",
+        "tags": [
+          "identity"
+        ],
+        "security": [
+          {
+            "webCookie": []
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Sesión cerrada"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1267,6 +1338,13 @@
           "type": {
             "type": "string",
             "description": "Abierto; hoy se observa personal."
+          },
+          "plan": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "free, team, enterprise…"
           }
         },
         "required": [
@@ -1891,6 +1969,17 @@
               "integer",
               "null"
             ]
+          }
+        }
+      },
+      "CsrfToken": {
+        "type": "object",
+        "required": [
+          "csrf_token"
+        ],
+        "properties": {
+          "csrf_token": {
+            "type": "string"
           }
         }
       }

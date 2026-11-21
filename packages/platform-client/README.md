@@ -16,7 +16,9 @@ Cliente del borde /v1 con reintento ante 404/501/503 (R10) y la URL base única.
 
 ## Un solo cliente por app
 
-- La app (el shell) crea **un** cliente con `createPlatformClient({ getToken, csrf, onUnauthorized })` a partir de la sesión y lo provee con `<PlatformProvider client>`.
-- Las features lo leen en su `queries.ts` con `usePlatform()`. Una feature no crea su propio cliente.
-- Web: sin token, la petición va con `credentials: "include"` (cookie `__Host-danil_session` del borde) y toda mutación lleva `X-CSRF-Token`. Desk: `Authorization: Bearer` del motor y `credentials: "omit"`.
-- `API_BASE` (`src/config.ts`, `VITE_DANIL_API_BASE`) es la única URL base del front.
+- La app (el shell) crea **un** cliente: `createPlatformClient(session.transport())`, y lo provee con `<PlatformProvider client>`. Las features lo leen en su `queries.ts` con `usePlatform()` (gate R2).
+- Transportes (`src/http.ts`), con un solo bucle de reintento (`withRetry`):
+  - `createHttpTransport` (web): cookie `__Host-danil_session` (`credentials: "include"`), `X-CSRF-Token` en mutaciones y rotación ante `csrf_failed`.
+  - `createEngineTransport` (Desk): `person_session_fetch` del motor con el contexto de la sesión activa; sin tokens en la ventana.
+- R10: 404/501/503 y fallos de red se reintentan con backoff (`backoffDelay`, 1 s → 30 s con jitter) **solo** en lecturas y en mutaciones con `Idempotency-Key` (`idempotencyKey()`), hasta 10 intentos; después `{kind:"unavailable", retrying:false}` y la vista ofrece reintentar. Cada operación acepta `opts.signal` para cancelar al desmontar.
+- `API_BASE`, `BILLING_URL` y `HARNESS_URL` (`src/config.ts`) son las únicas URLs del front.

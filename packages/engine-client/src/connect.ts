@@ -30,9 +30,13 @@ const cache = new Map<string, MachineConnection>();
 export function connectMachine(opts: ConnectOptions): MachineConnection {
   const key = `${opts.sessionKey}\u0000${opts.machine.machine_id}`;
   const hit = cache.get(key);
-  if (hit) return hit;
+  // Una conexión en error (ticket 401/403, VM que no despertó) no se reusa: tras volver a
+  // iniciar sesión o reintentar, se abre otra.
+  if (hit && hit.status() !== "error") return hit;
+  if (hit) hit.close();
 
-  const isLocal = opts.machine.kind === "local" && opts.host !== undefined;
+  // Lo local lo declara el host (Desk sabe qué máquina es esta computadora); la UI no (R5).
+  const isLocal = opts.host?.isLocal?.(opts.machine.machine_id) === true;
   const transport: StatefulTransport = isLocal
     ? createLocalTransport(opts.host!)
     : createRelayTransport({

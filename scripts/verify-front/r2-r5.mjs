@@ -44,8 +44,10 @@ export function r4(files) {
 const LOCAL = /\b(isLocal|is_local|kind\s*===?\s*["']personal["']|local\s*\?)/;
 
 export function r5(files) {
-  return scan(files, (f) => !f.path.startsWith("packages/engine-client/"), LOCAL,
-    "R5: distinción local/nube fuera de engine-client",
+  // `host` es la única pieza que sabe qué máquina es esta computadora (Desk) y se lo dice a
+  // engine-client; la UI nunca distingue. Ver packages/host/README.md.
+  return scan(files, (f) => !/^packages\/(engine-client|host)\//.test(f.path), LOCAL,
+    "R5: distinción local/nube fuera de engine-client y host",
     (f, line) => /\/components\//.test(f.path) && /icon/i.test(line));
 }
 
