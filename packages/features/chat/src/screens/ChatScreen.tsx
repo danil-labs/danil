@@ -16,6 +16,7 @@ import {
 import { MessageItem } from "../components/MessageItem.tsx";
 import { Composer } from "../components/Composer.tsx";
 import { ErrorBanner } from "../components/ErrorBanner.tsx";
+import { TurnStatus } from "../components/TurnStatus.tsx";
 import type { ChatTurnView } from "../model.ts";
 
 export interface ChatScreenProps {
@@ -122,9 +123,12 @@ export function ChatScreen(props: ChatScreenProps) {
           </span>
         </div>
         <Show when={isTurnRunning()}>
-          <div class="flex items-center gap-1.5 text-warning-strong font-medium">
-            <span class="inline-block w-1.5 h-1.5 rounded-full bg-warning-strong animate-pulse" />
-            <span>Turno activo</span>
+          <div class="flex items-center gap-1.5 font-medium">
+            <TurnStatus
+              esperando={store.state.activeTurn.status === "waiting_permission"}
+              desde={Date.now()}
+              inline
+            />
           </div>
         </Show>
       </header>
@@ -191,3 +195,5 @@ export function ChatScreen(props: ChatScreenProps) {
     </div>
   );
 }
+
+export default ChatScreen;
