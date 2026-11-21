@@ -1,14 +1,15 @@
 import type { edgeTransport } from "@terminus/computers";
 import { z } from "zod";
-import type { GroupReply } from "../lib/group-account.ts";
-import type { webGroupAccount } from "../web/group-account.ts";
-import { edgeFetch, edgeUntil, type Patience } from "./client.ts";
+import { edgeUntil, type Patience } from "./client.ts";
 
 /** La ruta del saldo de Treasury en el borde. */
 export const CREDITS_BALANCE_PATH = "/v1/credits/balance";
 
+/** La respuesta de una lectura por contexto (saldo o promoción de un grupo). */
+export type GroupReply = { status: number; body?: unknown; retry_after_ms?: number };
+
 /** Lee el saldo de Treasury por el transporte de Desk. */
-export const readCreditsBalance = (patience: Patience, transport: { send: typeof edgeFetch }) => edgeUntil("GET", CREDITS_BALANCE_PATH, undefined, patience, transport);
+export const readCreditsBalance = (patience?: Patience, transport?: Parameters<typeof edgeUntil>[4]) => edgeUntil("GET", CREDITS_BALANCE_PATH, undefined, patience, transport);
 
 type Transport = { call(path: string, init?: RequestInit): Promise<Response>; mutation(path: string, init?: RequestInit): Promise<Response> };
 const money = z.object({ currency: z.literal("MXN"), amount_micro: z.string().regex(/^-?(0|[1-9]\d{0,18})$/) });
@@ -107,13 +108,4 @@ export function scopedCreditsRead(transport: ReturnType<typeof edgeTransport>, n
       return pending;
     },
   };
-}
-
-export function activeGroupCredits(api: { groupAccount: ReturnType<typeof webGroupAccount>; creditsBalance: (org: string | null | undefined, signal: AbortSignal, context?: string) => Promise<number | null> }, organization: string | null | undefined) {
-  return { readBalance: async (signal: AbortSignal) => {
-    const group = await api.groupAccount.current();
-    if (signal.aborted) return null;
-    if (group && group.org === organization) return api.creditsBalance(group.org, signal, group.context);
-    return api.groupAccount.legacy() ? api.creditsBalance(organization, signal) : null;
-  } };
 }
