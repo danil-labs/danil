@@ -45,6 +45,8 @@ export type MachineInfo = {
   child?: boolean;
   organization?: { id: string; workspaces: readonly { id: string; name: string }[] } | null;
   kind?: string | null;
+  /** Máquina hospedada de su organización (no la Mac o PC de una persona): sirve los workspaces de la organización. */
+  hosted?: boolean;
   organizationId?: string | null;
   context?: string;
 };
@@ -431,6 +433,12 @@ export class Fleet {
    * tienen vinculado. Nunca según quién contestó al final.
    * Si alguna fila lo sirve por una organización, solo esas: vive en su servidor.
    */
+  /** Si `machine` listó `workspace` en su `list_workspaces`; `null` mientras no se conoce su lista. */
+  lists(machine: string, workspace: string, context?: string): boolean | null {
+    const listed = this.listings.get(memberKey(machine, context));
+    return listed ? listed.some((w) => w.id === workspace) : null;
+  }
+
   membersOf(workspace: string | null, context?: string): string[] {
     if (!workspace) return [];
     const order = this.scoped(context).map((m) => m.id);

@@ -24,7 +24,7 @@ async function until(read, what = 'Window condition') {
   }
 }
 
-function edge({ expireX = () => false, lateX2 = () => true, personalPlan = 'pro', machineName = null, machineKind = 'organization' } = {}) {
+function edge({ expireX = () => false, lateX2 = () => true, personalPlan = 'pro', machineName = null, machineKind = 'organization', machinesFor = null } = {}) {
   const state = { calls: [], unscoped: [], selects: [], expired: 0, admitted: [] };
   const echo = (context, body, init = {}) => Response.json(body, { ...init, headers: { 'X-Danil-Session-Applied': context, 'X-Danil-Session-Applied-Org': ORGS[context] } });
   const fetcher = async (input, init = {}) => {
@@ -52,9 +52,10 @@ function edge({ expireX = () => false, lateX2 = () => true, personalPlan = 'pro'
       case '/v1/workspaces/preferences': return echo(context, { version: 1, added: context === 'ctx_p' ? ['wp'] : ['wx1', 'wx2'] });
       case '/v1/workspaces': return echo(context, { items: [], next_cursor: null });
       case '/v1/credits/balance': return echo(context, { items: [] });
-      case '/v1/machines': return echo(context, { items: [{ machine_id: context === 'ctx_p' ? 'mp' : 'mx', name: machineName ?? (context === 'ctx_p' ? 'Nube P' : 'Nube X'), kind: machineKind, organization_id: ORGS[context], state: 'running', connection: 'connected' }], next_cursor: null });
+      case '/v1/machines': if (machinesFor) return echo(context, { items: machinesFor(context), next_cursor: null });
+        return echo(context, { items: [{ machine_id: context === 'ctx_p' ? 'mp' : 'mx', name: machineName ?? (context === 'ctx_p' ? 'Nube P' : 'Nube X'), kind: machineKind, organization_id: ORGS[context], state: 'running', connection: 'connected' }], next_cursor: null });
     }
-    if (/^\/v1\/machines\/m[px]\/tickets$/.test(url.pathname)) return echo(context, { ticket: 'one-use', url: `wss://connect.danil.ai${url.pathname.replace('/tickets', '/session')}`, expires_at: '2099-01-01T00:00:00Z' });
+    if (/^\/v1\/machines\/m[a-z]*\/tickets$/.test(url.pathname)) return echo(context, { ticket: 'one-use', url: `wss://connect.danil.ai${url.pathname.replace('/tickets', '/session')}`, expires_at: '2099-01-01T00:00:00Z' });
     return echo(context, {}, { status: 404 });
   };
   fetcher.__jsdomApp = true;
@@ -168,6 +169,40 @@ test('a reload opens the workspace of the URL with the session of its (email, or
   assert.ok(tile(doc, 'wp') && tile(doc, 'wx1'), 'the rail is the same after reload');
   assert.deepEqual(state.selects, []);
   assert.deepEqual(state.unscoped, []);
+});
+
+test('a workspace of the organization machine goes to its hosted machine, never to a connected Mac that does not list it', async t => {
+  // Las filas reales de la organización Danil en beta: su hospedada (sin listado mientras no contesta) y la Mac de la persona conectada.
+  const machinesFor = context => context === 'ctx_x'
+    ? [{ machine_id: 'mxhosted', name: null, kind: 'organization', organization_id: 'org_x', state: 'running', connection: 'connected' },
+       { machine_id: 'mxmac', name: 'Mac.domain.name', kind: 'personal', organization_id: 'org_x', state: 'running', connection: 'connected' }]
+    : [{ machine_id: 'mp', name: 'Mac.domain.name', kind: 'personal', organization_id: 'org_p', state: 'running', connection: 'connected' }];
+  edge({ machinesFor });
+  const fake = relay({ table });
+  const sent = [];
+  const empty = { workspaces: [], active: null };
+  const Socket = class extends fake.Socket {
+    send(data) {
+      const m = JSON.parse(data);
+      const machine = /machines\/([a-z]+)\//.exec(this.url)?.[1];
+      if (m.type === 'call') sent.push({ machine, command: m.command, workspace: m.workspace });
+      // Ninguna de las dos máquinas de X lista el workspace todavía.
+      if (m.type === 'call' && machine !== 'mp' && ['list_workspaces', 'workspaces_startup', 'list_workspace_attention'].includes(m.command)) return void setTimeout(() => this.onmessage?.({ data: JSON.stringify({ type: 'result', id: m.id, value: m.command === 'list_workspace_attention' ? [] : empty }) }), 0);
+      return super.send(data);
+    }
+  };
+  const app = await boot('listo', 'web-multi-session-hosted', {}, undefined, {}, { web: true, beforeImport(w) { w.WebSocket = Socket; globalThis.WebSocket = Socket; } });
+  t.after(() => app.w.dispatchEvent(new app.w.Event('pagehide')));
+  const doc = app.w.document;
+  await until(() => (tile(doc, 'wx1') || doc.querySelector('[data-org-stack="org_x"]')) && fake.sockets.length >= 3, 'rail and the three machines');
+  await until(() => {
+    if (sent.some(s => s.command === 'list_live_sessions' && s.workspace === 'wx1')) return true;
+    if (!tile(doc, 'wx1')) doc.querySelector('[data-org-stack="org_x"]')?.click();
+    else if (tile(doc, 'wx1').dataset.clicked !== '1') { tile(doc, 'wx1').dataset.clicked = '1'; tile(doc, 'wx1').click(); }
+    return false;
+  }, 'tasks of X are asked');
+  const asked = sent.filter(s => ['list_live_sessions', 'list_projects', 'list_models'].includes(s.command) && s.workspace === 'wx1');
+  assert.ok(asked.length && asked.every(s => s.machine === 'mxhosted'), `X's workspace goes to its hosted machine: ${JSON.stringify(asked)}`);
 });
 
 test('a Free personal workspace is served by its own connected machine: tasks, accounts and models carry the workspace and go to that machine', async t => {
