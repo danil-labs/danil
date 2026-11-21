@@ -51,6 +51,20 @@ export function backoffDelay(attempt: number, baseMs: number, maxMs: number, ran
 
 /** Cuánto se insiste en despertar una VM antes de mostrar error con reintento (M6b). */
 const WAKE_WINDOW_MS = 3 * 60_000;
+/** Intentos seguidos sin una sesión sana antes de rendirse: cada ticket despierta la VM (SR1, 4). */
+const MAX_FAILED_ATTEMPTS = 8;
+/** Una conexión cuenta como sana si dura esto abierta; solo entonces se reinicia el backoff. */
+const HEALTHY_MS = 10_000;
+
+/** El ticket solo viaja a un relay de Danil por wss (SR1, 3). */
+export function trustedRelayUrl(raw: string): boolean {
+  try {
+    const u = new URL(raw);
+    return u.protocol === "wss:" && (u.hostname === "danil.ai" || u.hostname.endsWith(".danil.ai")) && (u.port === "" || u.port === "443");
+  } catch {
+    return false;
+  }
+}
 
 export function createRelayTransport(opts: RelayOptions): StatefulTransport {
   const base = opts.backoff?.baseMs ?? 500;
@@ -96,6 +110,12 @@ export function createRelayTransport(opts: RelayOptions): StatefulTransport {
   };
 
   const reconnectLater = () => {
+    if (attempt >= MAX_FAILED_ATTEMPTS) {
+      // Sin tope, una pestaña olvidada mantiene la VM despierta: error con reintento manual.
+      setStatus("error");
+      rejectAll(new RelayError("unavailable"));
+      return;
+    }
     setStatus(everConnected ? "reconnecting" : "connecting");
     schedule(backoffDelay(attempt++, base, max, random));
   };
@@ -159,6 +179,11 @@ export function createRelayTransport(opts: RelayOptions): StatefulTransport {
     }
 
     if (res.kind !== "ok") return reconnectLater();
+    if (!trustedRelayUrl(res.ticket.url)) {
+      setStatus("error");
+      rejectAll(new RelayError("untrusted_relay"));
+      return;
+    }
     let ws: WebSocket;
     try {
       ws = open(res.ticket.url, [SUBPROTOCOL, `ticket.${res.ticket.ticket}`]);
@@ -168,8 +193,12 @@ export function createRelayTransport(opts: RelayOptions): StatefulTransport {
     socket = ws;
     ws.onopen = () => {
       if (socket !== ws) return;
-      attempt = 0;
       everConnected = true;
+      // El backoff vuelve a cero solo si la sesión se sostiene (un relay que abre y cierra no da bucle).
+      const opened = ws;
+      setTimeout(() => {
+        if (socket === opened) attempt = 0;
+      }, HEALTHY_MS);
       // Al reconectar, el último cursor para no perder ni repetir eventos.
       if (cursor !== undefined) ws.send(JSON.stringify({ resume: { cursor } }));
       setStatus("connected");

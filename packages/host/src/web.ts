@@ -12,7 +12,9 @@ export function createWebHost(): Host {
     // En la web no hay máquina local: todas van por relay.
     isLocal: () => false,
     openExternal: async (url) => {
-      window.open(url, "_blank", "noopener");
+      // Solo https: una URL `javascript:` o `data:` que venga del servidor no se abre (SR1, 12).
+      if (!/^https:\/\//i.test(url)) throw new Error("unsupported_url");
+      window.open(url, "_blank", "noopener,noreferrer");
     },
   };
 }

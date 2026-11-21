@@ -47,6 +47,7 @@ export function createTauriHost(): Host {
     call: (method, params) => invoke(method, params),
     listen: (event, cb) => tauriListen(event, (e) => cb(e.payload)),
     openExternal: async (url) => {
+      if (!/^https:\/\//i.test(url)) throw new Error("unsupported_url");
       await invoke("open_external", { target: url });
     },
   };
