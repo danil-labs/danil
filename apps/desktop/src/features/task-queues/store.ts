@@ -22,9 +22,10 @@ export function createTaskQueues(deps: Dependencies) {
     const now = currentScope();
     return !disposed && now.workspace === scope.workspace && now.generation === scope.generation;
   };
+  const keyOf = (scope: QueueScope & { session: string }) => JSON.stringify([scope.workspace, scope.project, scope.session]);
   function persist(scope: QueueScope & { session: string }, queued: Encolado[]) {
     if (disposed) return Promise.resolve();
-    const key = JSON.stringify([scope.workspace, scope.project, scope.session]);
+    const key = keyOf(scope);
     const snapshot = queued.slice();
     const run = () => deps.writeQueue(scope, snapshot);
     const previous = writes.get(key);
@@ -49,8 +50,10 @@ export function createTaskQueues(deps: Dependencies) {
     const live = () => current(scope) && currentScope().session === session && currentScope().project === project && requestEpoch === epoch && revision === readRevision && isCurrent();
     try {
       const cached = fromEngine ? undefined : saved.get(session);
+      // A reread waits for this window's saves, and one started while it reads is newer than what it brings.
+      if (fromEngine) await writes.get(keyOf(scope))?.catch(() => {});
       const queued = cached?.items ?? await deps.readQueue(scope);
-      if (!live()) return;
+      if (!live() || (fromEngine && untrack(owner) === session && writes.has(keyOf(scope)))) return;
       const restored = fromEngine ? undefined : saved.get(session);
       batch(() => { setItems(restored?.items ?? queued); setOwner(session); });
     } catch (error) {

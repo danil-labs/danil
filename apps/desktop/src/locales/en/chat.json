@@ -186,7 +186,7 @@
   "chat.queue.send": "send",
   "chat.queue.send_now": "Send now",
   "chat.queue.send_now_aria": "Send queued message {n} now",
-  "chat.queue.manual": "If the queue doesn't go out on its own, press Send",
+  "chat.queue.manual": "If the queue doesn't go out on its own, press send",
   "chat.queue.uncertain": "It may have gone out already",
   "chat.queue.send_again": "Send again",
   "chat.queue.send_again_aria": "Send queued message {n} again",

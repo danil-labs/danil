@@ -1369,8 +1369,8 @@ export default function App() {
   const editando = taskQueues.editing;
   // `load_queue` marca `held` lo que el motor retiene: no sale hasta «Enviar».
   const retenidaPorElMotor = () => cola().some((item) => item.held);
-  // La cola que despacha el motor es la de su disco: se relee cuando él la cambia.
-  const releerCola = (id: string) => { if (id === sessionId() && engineCanDispatch(id)) void taskQueues.openSession(id, project(), undefined, true).catch(() => {}); };
+  // Con su aviso `queue` y con `done`, tenga o no el rasgo: lo que el motor ya mandó no se queda en la mano.
+  const releerCola = (id: string) => { if (id === sessionId()) void taskQueues.openSession(id, project(), undefined, true).catch(() => {}); };
 
   // El CLI está reintentando contra su proveedor, en esta sesión: los eventos
   // de otra tarea siguen llegando a esta ventana, y sin la sesión un turno de
