@@ -1,0 +1,44 @@
+{
+  "kn.error.missing": "Danil could not launch its own kn. Reopen the app; without it nothing is written to this folder.",
+  "kn.error.run": "kn could not complete the operation. Check the detail and try again.",
+  "kn.error.conflict": "There is a conflict while integrating. Update the session, resolve it there, and integrate again.",
+  "kn.error.invalid": "kn rejected the request. Check that the session still exists.",
+  "kn.error.principal": "I could not find this project's folder. Choose it again.",
+  "kn.error.name": "That session name is not valid for kn.",
+  "kn.error.path": "kn did not return the session folder.",
+  "kn.error.session": "This task does not have a kn session yet.",
+  "kn.integrate": "Save",
+  "kn.integrate.title": "Save to the folder",
+  "kn.integrate.body": "This writes this task's files into the origin folder. If Drive or OneDrive syncs that folder, it uploads them afterwards.",
+  "kn.integrate.confirm": "Save",
+  "kn.integrate.cancel": "Cancel",
+  "kn.integrate.busy": "Saving…",
+  "kn.integrate.empty": "There are no changes to save.",
+  "kn.stale.title": "The origin folder changed",
+  "kn.stale.body": "Someone or another app touched it since this task started. New tasks already copy the latest.",
+  "kn.stale.update": "Update session",
+  "kn.stale.updating": "Updating…",
+  "kn.pending.count": {
+    "one": "{count} file",
+    "other": "{count} files"
+  },
+  "kn.pending.task": "In the task",
+  "kn.pending.folder": "In the folder",
+  "kn.pending.absent": "not there",
+  "kn.pending.added": "New in the task",
+  "kn.pending.modified": "Changed",
+  "kn.pending.deleted": "No longer in the task",
+  "kn.update": "Update from the main folder",
+  "kn.update.busy": "Updating…",
+  "kn.cloud.progress": "Downloading from the cloud: {done} of {total}",
+  "kn.cloud.confirm": {
+    "one": "{count} file is still in the cloud ({size}).",
+    "other": "{count} files are still in the cloud ({size})."
+  },
+  "kn.cloud.start": "Download",
+  "kn.cloud.failed": {
+    "one": "{count} file could not be downloaded from the cloud.",
+    "other": "{count} files could not be downloaded from the cloud."
+  },
+  "kn.cloud.retry": "Retry"
+}

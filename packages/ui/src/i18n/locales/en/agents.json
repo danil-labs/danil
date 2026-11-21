@@ -1,0 +1,12 @@
+{
+  "agents.mode.manual": "Manual",
+  "agents.mode.edits": "Accepts edits",
+  "agents.mode.auto": "Automatic",
+  "agents.mode.missing.codex": "The current Codex integration does not yet connect App Server approvals to Danil. Only automatic mode is available for now.",
+  "agents.mode.missing.antigravity.manual": "Antigravity doesn't return approvals: what it emits while working has no way to ask for permission, and it doesn't read replies.",
+  "agents.mode.missing.antigravity.edits": "Antigravity accepts edits, but it doesn't ask permission for commands: it denies them on its own and ends the turn with no answer and no reason.",
+  "agents.command.clash.picker": "{command} wasn't sent: the model and the reasoning level are chosen in the composer's model picker.",
+  "agents.command.clash.session": "{command} wasn't sent: it resets the {agent} session, and this conversation would no longer match it. To start over, open another task.",
+  "agents.command.clash.account_settings": "{command} wasn't sent: it writes the {agent} account settings, which all its tasks share.",
+  "agents.command.clash.writes_home": "{command} wasn't sent: it writes a memory dump of about 20 MB to your home folder."
+}

@@ -26,3 +26,14 @@ ignoran en R1–R5, R8 y R10 (no en R6 ni R9).
 - **R12:** `components/` no importa `queries` ni `@danil/{platform-client,engine-client,host,session}` (solo `import type`): datos y callbacks por props.
 - **R14:** sin `__TAURI__` ni `navigator.userAgent` fuera de `packages/host` y `apps/*`: la plataforma la dice `host.kind`.
 - **R2** cubre también `packages/shell` y `packages/session`.
+
+## R13 · textos de la app actual (2026-11-21)
+
+Todo texto visible sale del catálogo único `@danil/ui/i18n` (`packages/ui/src/i18n`, port de `apps/desktop/src/lib/i18n.ts`), cuyos JSON son copia de `apps/desktop/src/locales`. Rompe la compilación:
+
+1. una clave de `t("…")` que no está en el catálogo `es`;
+2. texto escrito en el JSX o en `title`/`aria-label`/`placeholder`/`label`/`etiqueta`/`alt`;
+3. un string con forma de frase fuera del catálogo (diccionarios locales incluidos);
+4. una frase del catálogo nuevo que no es idéntica a la de `apps/desktop` (texto inventado).
+
+**Trinquete:** `r13.allow` guarda las violaciones que existían al crear el gate (`ruta cuenta`). Un archivo nuevo con violaciones o una cuenta que sube rompe la compilación, y una cuenta que baja exige actualizar `r13.allow` en el mismo commit. La escuadra dueña de un archivo lo deja en 0 y borra su línea. `R13_RAW=1 node scripts/verify-front.mjs` muestra todas.

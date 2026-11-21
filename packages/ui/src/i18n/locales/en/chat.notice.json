@@ -1,0 +1,8 @@
+{
+  "chat.notice.handler_definition_modified": "The handler definition changed during the turn. Review the changes and restore the definition or release its quarantine before continuing.",
+  "chat.notice.handler_memory_in_doubt": "The memory identity is unresolved. The handler continues without its own memory.",
+  "chat.notice.handler_memory_unavailable": "The handler memory store is unavailable. It continues without its own memory.",
+  "chat.notice.handler_memory_legacy": "Some memory notes saved by name are not loaded for this identity.",
+  "chat.notice.handler_requires_tool_missing": "A tool requested by the handler is not on this turn’s PATH.",
+  "chat.notice.free_router_mcp_unavailable": "These MCP integrations are unavailable with Free AI Router. This mode restricts commands, arguments, environment variables and headers, even when they contain no secrets."
+}

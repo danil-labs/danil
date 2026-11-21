@@ -1,0 +1,19 @@
+{
+  "markdown.link.here": "Abrir aquí",
+  "markdown.link.outside": "Abrir en mi navegador",
+  "markdown.link.copy": "Copiar enlace",
+  "markdown.link.copied": "Enlace copiado",
+  "markdown.link.open_task": "Abrir tarea",
+  "markdown.link.other_workspace": "Esta tarea pertenece a otro workspace. Ábrela desde ese workspace.",
+  "markdown.diagram.loading": "Cargando diagrama",
+  "markdown.diagram.reload": "Volver a dibujar el diagrama",
+  "markdown.diagram.expand": "Ver diagrama en toda la ventana",
+  "markdown.diagram.viewer": "Visor de diagrama",
+  "markdown.diagram.zoom_in": "Acercar",
+  "markdown.diagram.zoom_out": "Alejar",
+  "markdown.diagram.reset_view": "Restablecer vista",
+  "markdown.diagram.close": "Salir de la vista en toda la ventana",
+  "markdown.code.copy": "Copiar código",
+  "markdown.code.copied": "Copiado",
+  "markdown.table.resize_column": "Arrastra para cambiar el ancho de la columna; doble clic para ajustarla sola"
+}

@@ -1,0 +1,18 @@
+{
+  "development.error.tree_watch": "No se pueden detectar cambios en esta carpeta. Cierra la pestaña de la tarea y vuelve a abrirla para reintentar.",
+  "development.error.task_folder_open": "No pude abrir la carpeta de esta tarea.",
+  "development.error.preview_git": "No pude preparar git para leer la rama elegida.",
+  "development.error.preview_path": "Ese archivo no pertenece a esta vista previa.",
+  "development.error.preview_file": "No pude leer este archivo de la rama elegida.",
+  "development.error.working_copy_save": "No pude guardar la copia de trabajo.",
+  "development.error.open_gone": "Ese archivo ya no está en la carpeta de trabajo.",
+  "development.error.open_external": "No se pudo abrir el archivo ni mostrar su carpeta.",
+  "development.error.tree_name": "«{path}» no sirve como nombre de archivo o carpeta.",
+  "development.error.tree_exists": "Ya hay un archivo o una carpeta en «{path}».",
+  "development.error.tree_parent_gone": "La carpeta de «{path}» ya no está en la carpeta de trabajo.",
+  "development.error.tree_gone": "«{path}» ya no está en la carpeta de trabajo.",
+  "development.error.tree_into_itself": "«{path}» no se puede mover dentro de sí misma.",
+  "development.error.tree_create": "No pude crear «{path}».",
+  "development.error.tree_rename": "No pude renombrar «{path}».",
+  "development.error.tree_delete": "No pude borrar «{path}»."
+}

@@ -1,0 +1,19 @@
+{
+  "markdown.link.here": "Open here",
+  "markdown.link.outside": "Open in my browser",
+  "markdown.link.copy": "Copy link",
+  "markdown.link.copied": "Link copied",
+  "markdown.link.open_task": "Open task",
+  "markdown.link.other_workspace": "This task belongs to another workspace. Open it from that workspace.",
+  "markdown.diagram.loading": "Loading diagram",
+  "markdown.diagram.reload": "Redraw diagram",
+  "markdown.diagram.expand": "Expand diagram to the whole window",
+  "markdown.diagram.viewer": "Diagram viewer",
+  "markdown.diagram.zoom_in": "Zoom in",
+  "markdown.diagram.zoom_out": "Zoom out",
+  "markdown.diagram.reset_view": "Reset view",
+  "markdown.diagram.close": "Exit whole-window view",
+  "markdown.code.copy": "Copy code",
+  "markdown.code.copied": "Copied",
+  "markdown.table.resize_column": "Drag to resize the column; double-click to fit it automatically"
+}

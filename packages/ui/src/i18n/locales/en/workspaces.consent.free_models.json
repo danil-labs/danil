@@ -1,0 +1,4 @@
+{
+  "workspaces.consent.free_models.accept": "I enable Free AI Router in this workspace. Kilo, Vercel and Reflection services process requests. AI models may vary.",
+  "workspaces.consent.free_models.responsibility": "I understand that my prompts, files and responses may be logged and used for training or improvement. Reflection may retain content for 30 days and flagged content for up to 12 months, subject to the exceptions in its terms. These periods do not cover the whole provider chain. I will not send private code, keys, confidential or sensitive information or personal data. I accept the applicable provider terms."
+}

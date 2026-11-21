@@ -1,0 +1,7 @@
+{
+  "connectors.telegram.audio_refused": "Voice and audio messages aren't accepted yet. Please type your message.",
+  "connectors.telegram.unsupported": "For now only text, photos and files are accepted.",
+  "connectors.telegram.file_too_big": "«{name}» is larger than {max} MB, and Telegram doesn't let a bot download it. Send it in parts or another way.",
+  "connectors.telegram.file_failed": "Couldn't download «{name}». Please send it again.",
+  "connectors.telegram.delivery_failed": "Your message didn't reach the agent. Please send it again."
+}

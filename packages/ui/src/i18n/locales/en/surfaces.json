@@ -1,0 +1,15 @@
+{
+  "surfaces.badge.no_account": "not connected",
+  "surfaces.badge.no_driver": "not drivable",
+  "surfaces.badge.not_installed": "not installed",
+  "surfaces.badge.off": "off",
+  "surfaces.badge.unpicked": "not picked",
+  "surfaces.free_off": "Free models are not enabled in this workspace",
+  "surfaces.label.free": "Free AI Router",
+  "surfaces.label.free_short": "Free AI Router",
+  "surfaces.no_account": "{agent} account not connected",
+  "surfaces.no_driver": "This version of the app can't drive {agent} yet",
+  "surfaces.no_key": "Your {agent} account is not connected",
+  "surfaces.not_installed": "{agent} is not on this computer",
+  "surfaces.badge.harness": "Danil Teams"
+}

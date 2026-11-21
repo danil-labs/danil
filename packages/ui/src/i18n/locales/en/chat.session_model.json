@@ -1,0 +1,6 @@
+{
+  "chat.session_model.not_offered": "That model is not one this agent offers in this workspace.",
+  "chat.session_model.effort_not_offered": "That effort is not one of this model's.",
+  "chat.session_model.catalog_unavailable": "This agent's model catalog could not be read. Check the connection and try again.",
+  "chat.session_model.agent_changed": "The task changed agent while the model was being saved. Choose it again."
+}

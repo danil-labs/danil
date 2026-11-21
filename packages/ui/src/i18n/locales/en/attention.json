@@ -1,0 +1,14 @@
+{
+  "attention.desktop.error.unavailable": "Could not reach Danil. Try again in a moment.",
+  "attention.desktop.error.no_session": "Your Danil session ended. Connect again.",
+  "attention.desktop.error.access_required": "You need authorized access to Danil. You can request it by email at hola@danil.ai.",
+  "attention.desktop.error.session_ended": "Your Danil session ended. Connect again.",
+  "attention.desktop.error.client_token": "First sign in to Danil in Settings › Danil account.",
+  "attention.desktop.error.person_mismatch": "You confirmed with another account. Use this computer's Danil account.",
+  "attention.desktop.error.route_missing": "This feature is not available for this computer yet.",
+  "attention.desktop.error.grant_failed": "Danil did not accept this computer. Try again.",
+  "attention.desktop.error.timeout": "The browser did not confirm in time. Try again.",
+  "attention.desktop.error.browser": "Could not open the browser.",
+  "attention.desktop.error.invalid_code": "The confirmation is no longer valid. Try again.",
+  "attention.desktop.error.unknown_endpoint": "This computer points to an unknown Danil server."
+}

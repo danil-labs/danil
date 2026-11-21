@@ -1,0 +1,44 @@
+{
+  "kn.error.missing": "Danil no pudo lanzar su propio kn. Vuelve a abrir la app; sin él no se escribe en esta carpeta.",
+  "kn.error.run": "kn no pudo completar la operación. Revisa el detalle y vuelve a intentarlo.",
+  "kn.error.conflict": "Hay un conflicto al integrar. Actualiza la sesión, resuélvelo ahí y vuelve a integrar.",
+  "kn.error.invalid": "kn rechazó el pedido. Revisa que la sesión siga existiendo.",
+  "kn.error.principal": "No encontré la carpeta de este proyecto. Vuelve a elegirla.",
+  "kn.error.name": "Ese nombre de sesión no vale para kn.",
+  "kn.error.path": "kn no devolvió la carpeta de la sesión.",
+  "kn.error.session": "Esta tarea aún no tiene sesión kn.",
+  "kn.integrate": "Guardar",
+  "kn.integrate.title": "Guardar en la carpeta",
+  "kn.integrate.body": "Esto escribe los archivos de esta tarea en la carpeta de origen. Si Drive o OneDrive la sincroniza, los sube después.",
+  "kn.integrate.confirm": "Guardar",
+  "kn.integrate.cancel": "Cancelar",
+  "kn.integrate.busy": "Guardando…",
+  "kn.integrate.empty": "No hay cambios que guardar.",
+  "kn.stale.title": "La carpeta de origen cambió",
+  "kn.stale.body": "Alguien o otra aplicación la tocó desde que empezó esta tarea. Las tareas nuevas ya copian lo último.",
+  "kn.stale.update": "Actualizar sesión",
+  "kn.stale.updating": "Actualizando…",
+  "kn.pending.count": {
+    "one": "{count} archivo",
+    "other": "{count} archivos"
+  },
+  "kn.pending.task": "En la tarea",
+  "kn.pending.folder": "En la carpeta",
+  "kn.pending.absent": "no está",
+  "kn.pending.added": "Nuevo en la tarea",
+  "kn.pending.modified": "Cambió",
+  "kn.pending.deleted": "Ya no está en la tarea",
+  "kn.update": "Actualizar desde la principal",
+  "kn.update.busy": "Actualizando…",
+  "kn.cloud.progress": "Descargando de la nube: {done} de {total}",
+  "kn.cloud.confirm": {
+    "one": "{count} archivo sigue en la nube ({size}).",
+    "other": "{count} archivos siguen en la nube ({size})."
+  },
+  "kn.cloud.start": "Descargar",
+  "kn.cloud.failed": {
+    "one": "No se pudo descargar {count} archivo de la nube.",
+    "other": "No se pudieron descargar {count} archivos de la nube."
+  },
+  "kn.cloud.retry": "Reintentar"
+}

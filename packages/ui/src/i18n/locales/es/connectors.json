@@ -1,0 +1,7 @@
+{
+  "connectors.telegram.audio_refused": "Todavía no acepto audios. Escríbeme el mensaje.",
+  "connectors.telegram.unsupported": "De momento solo acepto texto, fotos y archivos.",
+  "connectors.telegram.file_too_big": "«{name}» pesa más de {max} MB y Telegram no deja que un bot lo baje. Mándalo en partes o por otro medio.",
+  "connectors.telegram.file_failed": "No pude bajar «{name}». Vuelve a mandarlo.",
+  "connectors.telegram.delivery_failed": "Tu mensaje no llegó al agente. Vuelve a mandarlo."
+}

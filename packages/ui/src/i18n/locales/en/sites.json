@@ -1,0 +1,13 @@
+{
+  "sites.address": "Address",
+  "sites.address_placeholder": "Search or type an address",
+  "sites.back": "Back",
+  "sites.error.stalled": "{site} answered but did not finish loading.",
+  "sites.forward": "Forward",
+  "sites.new_tab": "New tab",
+  "sites.opening": "Opening {site}…",
+  "sites.outside": "Open in my browser",
+  "sites.reload": "Reload",
+  "sites.retry": "Try again",
+  "sites.start": "Type an address above to start browsing."
+}

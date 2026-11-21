@@ -1,0 +1,72 @@
+{
+  "spaces.order.error": "Could not save the spaces order. Try again.",
+  "spaces.bar.label": "{workspace} spaces",
+  "spaces.default_name": "Space 1",
+  "spaces.delete.archive_and_delete": {
+    "one": "Delete and archive 1 task",
+    "other": "Delete and archive {count} tasks"
+  },
+  "spaces.delete.body": {
+    "one": "Its task is archived and its work tree removed. Branches and their PRs stay as they are. The space cannot be recovered. Projects are not deleted.",
+    "other": "Its {count} tasks are archived and their work trees removed. Branches and their PRs stay as they are. The space cannot be recovered. Projects are not deleted."
+  },
+  "spaces.delete.body_empty": "It has no tasks. It leaves the bar and cannot be recovered. Projects are not deleted.",
+  "spaces.delete.cancel": "Cancel",
+  "spaces.delete.changed_body": "What is marked appeared or changed while you were looking. Check it and confirm again.",
+  "spaces.delete.changed_title": "There are new changes since you opened this",
+  "spaces.delete.delete_empty": "Delete space",
+  "spaces.delete.discard_and_delete": "Discard changes and delete",
+  "spaces.delete.failed_body": "The space keeps them. Fix what each one says and delete again: it continues from here.",
+  "spaces.delete.failed_title": {
+    "one": "One task couldn't be archived",
+    "other": "{count} tasks couldn't be archived"
+  },
+  "spaces.delete.files": {
+    "one": "1 file",
+    "other": "{count} files"
+  },
+  "spaces.delete.mark_changed": "changed",
+  "spaces.delete.mark_new": "new",
+  "spaces.delete.open": "Open",
+  "spaces.delete.open_named": "Open {title}",
+  "spaces.delete.reading": "Reading what it has…",
+  "spaces.delete.see_archived": "See in Archived",
+  "spaces.delete.title": "Delete “{name}”",
+  "spaces.delete.toast": {
+    "one": "“{name}” deleted · 1 task archived",
+    "other": "“{name}” deleted · {count} tasks archived"
+  },
+  "spaces.delete.uncommitted": "Uncommitted changes ({count})",
+  "spaces.delete.uncommitted_why": "They are discarded when you delete and can't be recovered. New untracked files too.",
+  "spaces.delete.unsaved": "Not saved to their folder ({count})",
+  "spaces.delete.unsaved_why": "They stay in the task's copy.",
+  "spaces.delete.working": "Working now ({count})",
+  "spaces.delete.working_why": "They stop when you delete.",
+  "spaces.error.archived": "This task is archived and can’t be moved.",
+  "spaces.error.busy": "Another operation is changing this workspace's spaces. Try again in a moment.",
+  "spaces.error.child": "A subtask goes with its main task. Move the main task and the family goes with it.",
+  "spaces.error.folder_missing": "That project no longer exists.",
+  "spaces.error.last": "It's the workspace's only space and can't be deleted.",
+  "spaces.error.missing": "That space no longer exists.",
+  "spaces.error.name_empty": "Give the space a name.",
+  "spaces.error.name_long": "The space's name can't be longer than {max} characters.",
+  "spaces.error.none": "This workspace has no readable space. Check the spaces folder before continuing.",
+  "spaces.error.outside": "Ephemeral tasks don't belong to any space.",
+  "spaces.error.storage": "The spaces couldn't be read or saved. Keep the files and try again.",
+  "spaces.menu.delete": "Delete…",
+  "spaces.menu.delete_last": "A workspace has at least one space. Create another one before deleting this one.",
+  "spaces.menu.rename": "Rename",
+  "spaces.move.folder_stays": "The project stays where it is: {folder}.",
+  "spaces.move.to": "Move to another space",
+  "spaces.move.toast": "Moved to {name}",
+  "spaces.new.cancel": "Cancel",
+  "spaces.new.create": "Create space",
+  "spaces.new.folders": "Add recent project",
+  "spaces.new.name": "Name",
+  "spaces.new.no_folders": "“{workspace}” has no projects yet; the space is born with none.",
+  "spaces.new.placeholder": "e.g. Billing",
+  "spaces.new.title": "New space",
+  "spaces.rail.empty": "“{name}” has no projects yet.",
+  "spaces.rename.label": "Name of the space “{name}”",
+  "spaces.toast.go": "Go"
+}
