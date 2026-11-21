@@ -1,7 +1,7 @@
 import type { Extension } from "@codemirror/state";
 import { gramaticaDe } from "./languages";
 
-export const cargarEditor = () => import("./CodeEditor");
+export const cargarEditor = () => import("../components/CodeEditor");
 
 const COMUNES = ["a.ts", "a.tsx", "a.js", "a.json", "a.md", "a.rs", "a.py", "a.go", "a.java"];
 

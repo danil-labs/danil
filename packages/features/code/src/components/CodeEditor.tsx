@@ -42,13 +42,13 @@ import {
   lineNumbers,
 } from "@codemirror/view";
 import { Show, createEffect, createMemo, onCleanup, onMount, untrack } from "solid-js";
-import { t } from "../../../../apps/desktop/src/lib/i18n";
-import { ajuste } from "../../../../apps/desktop/src/lib/wrap";
-import { frasesDelEditor } from "./editorPhrases";
-import { sangriaDe } from "./indent";
-import { RESALTADO, TEMA } from "./editorTheme";
-import { MUESTRA, gramaticaDe, gramaticaLista } from "./languages";
-import { type DondeTypst, autocompletadoTypst } from "./typstComplete";
+import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { ajuste } from "../../../../../apps/desktop/src/lib/wrap";
+import { frasesDelEditor } from "../model/editorPhrases";
+import { sangriaDe } from "../model/indent";
+import { RESALTADO, TEMA } from "../model/editorTheme";
+import { MUESTRA, gramaticaDe, gramaticaLista } from "../model/languages";
+import { type DondeTypst, autocompletadoTypst } from "../queries/typstComplete";
 
 /**
  * El archivo abierto para escribir, con CodeMirror 6 montado a mano. Entra con

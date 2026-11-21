@@ -1,5 +1,5 @@
-import { invoke } from "../../../engine-client/src/client.ts";
-import { machineOf } from "../../machines/src/store";
+import { invoke } from "../../../../engine-client/src/client.ts";
+import { machineOf } from "../../../machines/src/store";
 import ChevronDown from "lucide-solid/icons/chevron-down";
 import ChevronRight from "lucide-solid/icons/chevron-right";
 import Cloud from "lucide-solid/icons/cloud";
@@ -21,17 +21,17 @@ import {
   onMount,
   Show,
 } from "solid-js";
-import { t } from "../../../../apps/desktop/src/lib/i18n";
-import { cn } from "../../../../apps/desktop/src/lib/utils";
-import { HEADER_HEIGHT } from "../../../host/src/window";
-import { Button } from "../../../ui/src/Button";
-import { Input } from "../../../ui/src/Input";
-import { asFailure, type Failure, FailureNote } from "../../../ui/src/Failure";
-import { ITEM_DE_MENU, Popover, PopoverContent } from "../../../ui/src/Popover";
+import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { cn } from "../../../../../apps/desktop/src/lib/utils";
+import { HEADER_HEIGHT } from "../../../../host/src/window";
+import { Button } from "../../../../ui/src/Button";
+import { Input } from "../../../../ui/src/Input";
+import { asFailure, type Failure, FailureNote } from "../../../../ui/src/Failure";
+import { ITEM_DE_MENU, Popover, PopoverContent } from "../../../../ui/src/Popover";
 import { IconoDeArchivo } from "./FileIcon";
-import { colorDeMarca, describirEstado, publicarLocales } from "./localStatus";
-import { alMoverseElArbol, avisarDeIdos, avisarDeLosArboles, idos } from "./refresh";
-import { crearLector, esTransitorio } from "./treeLoader";
+import { colorDeMarca, describirEstado, publicarLocales } from "../queries/localStatus";
+import { alMoverseElArbol, avisarDeIdos, avisarDeLosArboles, idos } from "../queries/refresh";
+import { crearLector, esTransitorio } from "../model/treeLoader";
 import {
   arrastrarRuta,
   conVistaTypst,
@@ -43,7 +43,7 @@ import {
   principalElegido,
   rutaEnVuelo,
   seguirPluginTypst,
-} from "./typst";
+} from "../queries/typst";
 import {
   type CambioKn,
   type Carpeta,
@@ -56,7 +56,7 @@ import {
   type Nodo,
   type Resumen,
   rutasDeCarpetas,
-} from "./tree";
+} from "../model/tree";
 
 const SANGRIA = 12;
 const CHEVRON = 13;

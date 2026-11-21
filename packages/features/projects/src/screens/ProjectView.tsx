@@ -35,7 +35,7 @@ import {
   PopoverTrigger,
 } from "../../../../ui/src/Popover";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../../../ui/src/Tabs";
-import WorkdirIcon from "../../../code/src/WorkdirIcon";
+import WorkdirIcon from "../../../code/src/components/WorkdirIcon";
 import MaterialPicker from "../../../settings/src/MaterialPicker";
 import { agentsWithDifferentReaders } from "../model/agentReaders";
 import { AstroAvatar } from "./AstroAvatar";
