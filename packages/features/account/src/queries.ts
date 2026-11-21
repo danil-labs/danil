@@ -3,9 +3,8 @@ import {
   type Accessor,
   type Resource,
 } from "solid-js";
-import { usePlatform, type PlatformClient } from "@danil/platform-client";
+import { usePlatform, planLabel, type PlatformClient } from "@danil/platform-client";
 import type { ProfileData } from "./model.ts";
-import { getPlanLabel } from "./model.ts";
 
 export interface UseProfileOptions {
   sessionKey?: Accessor<string | undefined | null> | string | null;
@@ -51,12 +50,12 @@ export function useProfile(options?: UseProfileOptions): UseProfileResult {
       }
 
       const activeOrg = orgs.find((o) => o.id === activeOrgId) ?? orgs[0] ?? null;
-      const planLabel = getPlanLabel(activeOrg);
+      const currentPlanLabel = planLabel(activeOrg);
 
       return {
         me,
         activeOrganization: activeOrg,
-        planLabel,
+        planLabel: currentPlanLabel,
       };
     }
   );
