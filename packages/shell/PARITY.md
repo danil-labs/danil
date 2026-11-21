@@ -44,6 +44,8 @@ Todas las pantallas y zonas asignadas en la tarea VP1 (shell, riel, «Máquinas�
 - `OrganizationWorkspaceTile`: portado de `apps/desktop/src/features/shell/OrganizationWorkspaceTile.tsx`
 - `OrganizationWorkspaceTooltip`: portado de `apps/desktop/src/features/shell/OrganizationWorkspaceTooltip.tsx`
 - `OrganizationStack`: portado de `apps/desktop/src/features/shell/OrganizationStack.tsx`
+- `OrganizationRailGroup`: portado de `apps/desktop/src/features/shell/OrganizationRailGroup.tsx`
+
 
 
 
