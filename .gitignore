@@ -29,3 +29,4 @@ apps/desktop/dist-web/
 
 # Pinned work-tools metadata is tracked; the prepared tree and its downloads are not.
 apps/desktop/build/
+apps/*/dist/
