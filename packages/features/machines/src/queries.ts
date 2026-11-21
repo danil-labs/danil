@@ -235,11 +235,21 @@ export function useMachines(session?: SessionInput): UseMachinesReturn {
               message: "Missing ticket or admission url",
             };
           } catch (err: any) {
-            if (err && (err.status === 409 || err.code === "machine_unreachable")) {
+            // Regla 6.4 y 6.5 / M6b: el encendido ocurre únicamente por acción explícita de la persona (conectar).
+            // Si la VM está apagada (409 machine_unreachable / stopped), la plataforma debe encenderla al emitir ticket;
+            // si no lo hizo automáticamente (incidente 2), disparamos startMachine como respaldo para que despierte
+            // sin requerir encendidos manuales por consola ni arrojar error final.
+            if (err && (err.status === 409 || err.code === "machine_unreachable" || err.code === "stopped")) {
+              void cl
+                .startMachine({
+                  id: machineId,
+                  idempotencyKey: createIdempotencyKey(),
+                })
+                .catch(() => {});
               return { kind: "machine_unreachable" };
             }
-            if (err && (err.code === "stopped" || err.code === "starting")) {
-              return { kind: err.code };
+            if (err && err.code === "starting") {
+              return { kind: "starting" };
             }
             return {
               kind: "error",
