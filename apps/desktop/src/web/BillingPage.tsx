@@ -105,10 +105,6 @@ function BillingPage(props: { options: WebSessionDeployment }) {
     <Show when={!profile.loading} fallback={<SessionLoading />}>
       <main class="h-full overflow-y-auto bg-bg px-4 py-8 text-neutral-950">
         <div class="mx-auto grid max-w-3xl gap-6">
-          <header class="flex flex-wrap items-center justify-between gap-3">
-            <h1 class="m-0 font-display text-lead font-bold">{t("settings.tab.plan")}</h1>
-            <Button as="a" variant="ghost" href={home}>{t("common.brand_name")}</Button>
-          </header>
           <Show when={!profile.error} fallback={<div role="alert"><p>{t("web.billing_v2.error")}</p><Button onClick={() => void refetch()}>{t("web.computers.retry")}</Button></div>}>
             <Show when={ready()} fallback={<p role="status">{t("web.billing_v2.loading")}</p>}>{current => <>
               <BillingReturnGate api={personApi} onActive={select} onSettled={() => refreshBilling(n => n + 1)} plan={id => billingV2(transport, id).organization()} />

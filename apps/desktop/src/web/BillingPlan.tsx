@@ -83,6 +83,7 @@ export default function BillingPlan(props: { api: Api; role: () => string; conte
     const key = org?.plan_key ?? props.fallbackPlan;
     return { id: key, label: key ? t(`web.billing_v2.plan_${key}`) : "" };
   };
+  const paid = (key: string | undefined) => key === "pro" || key === "team" || key === "enterprise";
   const pendingPrefix = () => `danil.billing.${props.context}.`;
   const keyFor = (action: string) => { const storageKey = `${pendingPrefix()}key.${action}`; const key = sessionStorage.getItem(storageKey) ?? crypto.randomUUID(); sessionStorage.setItem(storageKey, key); return key; };
   async function run(action: string, operation: (key: string, signal: AbortSignal) => Promise<unknown>, promotionCode?: string) {
@@ -129,6 +130,9 @@ export default function BillingPlan(props: { api: Api; role: () => string; conte
   }
   async function portal() { const api = props.api; await run("portal", async key => redirect(hostedCheckoutUrl((await api.portal(key)).url, "portal"))); }
   onMount(() => {
+    const refreshOnFocus = () => { if (!data.loading) refresh(n => n + 1); };
+    window.addEventListener("focus", refreshOnFocus);
+    onCleanup(() => window.removeEventListener("focus", refreshOnFocus));
     const timer = setInterval(() => {
       if (data.loading) return;
       const results = data.latest;
@@ -146,19 +150,25 @@ export default function BillingPlan(props: { api: Api; role: () => string; conte
     <Show when={!data.loading || data.latest} fallback={<p>{t("web.billing_v2.loading")}</p>}>
       <Show when={!data.error} fallback={<p role="status">{t(message(data.error))}</p>}>
         <Show when={data()}>{value => <>
-          <Show when={currentPlan(value()).id}><SettingsSection>
-            <SettingsRow label={t("web.billing_v2.your_plan")}><span>{currentPlan(value()).label}</span></SettingsRow>
-          </SettingsSection></Show>
+          <Show when={currentPlan(value()).id}>
+            <SettingsSection title={t("web.billing_v2.current_plan", { plan: currentPlan(value()).label })}
+              aside={<Show when={!summary() && paid(currentPlan(value()).id) && permitted("billing.manage") && fulfilled(value().organization)?.payer.is_you}>
+                <Button disabled={busy()} onClick={() => void portal()}>{t("web.billing_v2.manage_subscription")}</Button>
+              </Show>} />
+          </Show>
           <Show when={failed(value().organization)}>{error => <SettingsSection title={t("web.billing_v2.plan")}><p role="status">{t(message(error()))}</p></SettingsSection>}</Show>
           <Show when={failed(value().catalog)}>{error => <SettingsSection title={t("web.billing_v2.plan")}><p role="status">{t(error() instanceof PlatformSessionError && (error().status === 503 || error().code === "plan_price_pending") ? "web.billing_v2.unavailable" : message(error()))}</p></SettingsSection>}</Show>
           <Show when={fulfilled(value().catalog)}>{catalog => {
-            const plans = () => checkoutPlans(catalog());
+            const plans = () => {
+              const current = currentPlan(value()).id;
+              return checkoutPlans(catalog()).filter(plan => !paid(current) || (plan.id !== "free" && plan.id !== current));
+            };
             const review = () => {
               const plan = plans().find(item => item.id === selected());
               if (!permitted("billing.manage") || !plan?.choice || !plan.price || plan.id === currentPlan(value()).id) return;
               return { id: plan.id, choice: plan.choice, price: plan.price };
             };
-            return <Show when={review()} fallback={<SettingsSection title={t("web.billing_v2.choose_plan")}>
+            return <Show when={review()} fallback={<SettingsSection title={t(paid(currentPlan(value()).id) ? "web.billing_v2.other_plans" : "web.billing_v2.choose_plan")}>
               <div class="grid gap-2 sm:grid-cols-2">
                 <For each={plans()}>{plan => <article class="rounded-lg border border-line p-3">
                   <strong>{t(`web.billing_v2.plan_${plan.id}`)}</strong>
@@ -180,14 +190,18 @@ export default function BillingPlan(props: { api: Api; role: () => string; conte
               </SettingsSection>
             }</Show>;
           }}</Show>
-          <Show when={fulfilled(value().organization)}>{org => <SettingsSection>
-            <Show when={!summary() && permitted("billing.manage") && org().payer.is_you}><SettingsRow label={t("web.billing_v2.payment")}><Button disabled={busy()} onClick={() => void portal()}>{t("web.billing_v2.open")}</Button></SettingsRow></Show>
-          </SettingsSection>}</Show>
           <Show when={failed(value().balance)}>{error => <SettingsSection title={t("web.billing_v2.balance")}><p role="status">{t(message(error()))}</p></SettingsSection>}</Show>
           <Show when={fulfilled(value().balance)}>{balance => <SettingsSection title={t("web.billing_v2.balance")}>
             <For each={(["available", "included", "gift", "purchased"] as const)}>{kind => <SettingsRow label={t(`web.billing_v2.${kind}`)}><span>{displayMoney(balance()[kind])}</span></SettingsRow>}</For>
-            <Show when={!summary() && permitted("credits.purchase")}><For each={fulfilled(value().catalog)?.credit_packs.filter(p => p.sellable)}>{pack => <SettingsRow label={displayMoney(pack.credits)}><Button disabled={busy()} onClick={() => { const catalog = fulfilled(value().catalog); if (catalog) void buy(pack.pack_id, catalog.catalog_version); }}>{t("web.billing_v2.buy")}</Button></SettingsRow>}</For></Show>
           </SettingsSection>}</Show>
+          <Show when={!summary() && permitted("credits.purchase") && fulfilled(value().catalog)}>{catalog => {
+            const packs = () => catalog().credit_packs.filter(pack => pack.sellable);
+            return <Show when={packs().length}><SettingsSection title={t("web.billing_v2.buy")}>
+              <For each={packs()}>{pack => <SettingsRow label={t("web.billing_v2.credit_pack", { amount: displayMoney(pack.credits) })}>
+                <Button disabled={busy()} onClick={() => void buy(pack.pack_id, catalog().catalog_version)}>{t("web.billing_v2.buy")}</Button>
+              </SettingsRow>}</For>
+            </SettingsSection></Show>;
+          }}</Show>
           <Show when={failed(value().transactions)}>{error => <SettingsSection title={t("web.billing_v2.transactions")}><p role="status">{t(message(error()))}</p></SettingsSection>}</Show>
           <Show when={fulfilled(value().transactions)}>{page => <PagedRows title={t("web.billing_v2.transactions")} initial={page()} load={props.api.transactions} />}</Show>
         </>}</Show>
