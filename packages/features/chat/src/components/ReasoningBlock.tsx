@@ -1,10 +1,10 @@
 /**
  * Bloque visual para el razonamiento / pensamiento profundo del agente (B-015).
- *
- * Mantiene la visibilidad del pensamiento durante y después del cierre del turno.
+ * Paridad visual con apps/desktop/src/features/chat/Reasoning.tsx y TurnActivity.tsx.
  */
 
 import { createSignal, Show } from "solid-js";
+import { ChevronRight } from "./icons.tsx";
 import type { ReasoningPiece } from "../model.ts";
 
 export interface ReasoningBlockProps {
@@ -22,36 +22,41 @@ export function ReasoningBlock(props: ReasoningBlockProps) {
   };
 
   return (
-    <div class="my-2 rounded border border-stone-800 bg-stone-900/60 overflow-hidden text-xs">
+    <div class="my-1.5 min-w-0">
       <button
         type="button"
         onClick={() => setIsExpanded((prev) => !prev)}
-        class="w-full flex items-center justify-between px-3 py-2 text-stone-400 hover:text-stone-200 hover:bg-stone-800/40 transition-colors"
+        class="inline-flex min-w-0 max-w-full items-center gap-2 rounded-sm py-1.5 text-left text-ui font-normal text-neutral-500 hover:text-neutral-950 dark:hover:text-neutral-100 outline-none focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary"
+        aria-expanded={isExpanded()}
       >
-        <div class="flex items-center gap-2">
+        <ChevronRight
+          size={13}
+          strokeWidth={1.5}
+          class={`shrink-0 transition-transform motion-reduce:transition-none ${isExpanded() ? "rotate-90" : ""}`}
+          aria-hidden="true"
+        />
+        <span class="inline-flex min-w-0 items-center gap-1.5">
           <Show
             when={!props.piece.completed}
-            fallback={
-              <span class="inline-block w-2 h-2 rounded-full bg-emerald-500/70" />
-            }
+            fallback={<span class="inline-block w-1.5 h-1.5 rounded-full bg-neutral-400" />}
           >
-            <span class="inline-block w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+            <span class="inline-block w-1.5 h-1.5 rounded-full bg-warning-strong animate-pulse" />
           </Show>
-          <span class="font-medium text-stone-300">
-            {props.piece.completed ? "Razonamiento" : "Pensando..."}
-          </span>
+          <span class="text-xs">{props.piece.completed ? "Razonamiento" : "Pensando..."}</span>
           <Show when={formattedDuration()}>
-            <span class="text-stone-500 text-[10px]">({formattedDuration()})</span>
+            <span class="text-caption text-neutral-400 font-mono">({formattedDuration()})</span>
           </Show>
-        </div>
-        <span class="text-stone-500 transform transition-transform text-[10px]">
-          {isExpanded() ? "▲ Ocultar" : "▼ Ver"}
         </span>
       </button>
 
       <Show when={isExpanded()}>
-        <div class="px-3 py-2 border-t border-stone-800/80 bg-stone-950/40 font-mono text-stone-400 whitespace-pre-wrap leading-relaxed select-text">
-          {props.piece.text || "..."}
+        <div
+          class="min-w-0 ml-2.5 border-l border-border pl-1.5 mb-2"
+          data-reasoning-content=""
+        >
+          <div class="text-caption whitespace-pre-wrap text-neutral-500 select-text leading-relaxed font-mono px-1 py-1">
+            {props.piece.text || "..."}
+          </div>
         </div>
       </Show>
     </div>

@@ -1,8 +1,10 @@
 /**
  * Tarjeta de aprobación / confirmación de seguridad para herramientas sensibles.
+ * Paridad visual con apps/desktop/src/features/chat/InterruptionBlock.tsx y Chat.tsx:2081-2139.
  */
 
 import { Show } from "solid-js";
+import { Button } from "@danil/ui";
 import type { PermissionPiece } from "../model.ts";
 
 export interface ToolPermissionCardProps {
@@ -13,55 +15,61 @@ export interface ToolPermissionCardProps {
 
 export function ToolPermissionCard(props: ToolPermissionCardProps) {
   return (
-    <div class="my-3 p-3 rounded-lg border border-amber-600/30 bg-amber-950/20 text-xs">
-      <div class="flex items-start justify-between gap-2 mb-2">
-        <div>
-          <span class="font-semibold text-amber-300">Aprobación requerida</span>
-          <p class="text-stone-300 mt-1">
-            El agente solicita ejecutar la herramienta:{" "}
-            <code class="font-mono bg-stone-800 px-1 py-0.5 rounded text-amber-200">
-              {props.permission.toolName}
+    <section
+      data-interruption="permission"
+      class="my-3 grid min-w-0 grid-cols-[minmax(0,1fr)] gap-3 overflow-hidden rounded-lg border border-warning/60 ring-1 ring-warning/15 bg-surface-raised p-3 shadow-sm outline-none"
+    >
+      <div>
+        <p class="m-0 text-sm font-semibold text-neutral-950 dark:text-neutral-100">
+          Autorización requerida
+        </p>
+        <p class="m-0 text-sm text-neutral-700 dark:text-neutral-300 mt-1">
+          El agente solicita ejecutar la herramienta:{" "}
+          <code class="rounded-sm border border-border bg-surface-muted px-1.5 py-0.5 font-mono text-xs text-neutral-900 dark:text-neutral-100">
+            {props.permission.toolName}
+          </code>
+        </p>
+        <Show when={props.permission.target}>
+          <div class="mt-2">
+            <code class="block max-h-40 overflow-auto rounded-sm border border-border bg-surface-muted p-3 font-mono text-xs break-words whitespace-pre-wrap text-neutral-700 dark:text-neutral-300">
+              {props.permission.target}
             </code>
-          </p>
-          <Show when={props.permission.target}>
-            <p class="font-mono text-stone-400 text-[11px] mt-1 break-all">
-              Objetivo: {props.permission.target}
-            </p>
-          </Show>
-        </div>
+          </div>
+        </Show>
       </div>
 
       <Show
         when={props.permission.status === "pending"}
         fallback={
-          <div class="mt-2 text-stone-400 italic">
+          <div class="text-caption text-neutral-500 italic">
             {props.permission.status === "allowed" ? (
-              <span class="text-emerald-400">✓ Ejecución autorizada</span>
+              <span class="text-success-strong font-medium">✓ Ejecución autorizada</span>
             ) : (
-              <span class="text-rose-400">✗ Ejecución denegada</span>
+              <span class="text-error-strong font-medium">✗ Ejecución denegada</span>
             )}
           </div>
         }
       >
-        <div class="flex items-center gap-2 mt-3">
-          <button
+        <div class="flex justify-end gap-2 pt-1">
+          <Button
             type="button"
-            disabled={props.isResponding}
-            onClick={() => props.onDecide(props.permission.requestId, "allow")}
-            class="px-3 py-1.5 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-medium transition-colors disabled:opacity-50"
-          >
-            Autorizar
-          </button>
-          <button
-            type="button"
+            variant="secondary"
+            size="sm"
             disabled={props.isResponding}
             onClick={() => props.onDecide(props.permission.requestId, "deny")}
-            class="px-3 py-1.5 rounded bg-stone-800 hover:bg-stone-700 text-stone-300 transition-colors disabled:opacity-50"
           >
             Denegar
-          </button>
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            disabled={props.isResponding}
+            onClick={() => props.onDecide(props.permission.requestId, "allow")}
+          >
+            Autorizar
+          </Button>
         </div>
       </Show>
-    </div>
+    </section>
   );
 }
