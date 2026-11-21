@@ -47,11 +47,12 @@ Estructura modular del front rebuild (SolidJS):
 
 | Paquete / App | Qué hace | Qué consume | Contrato |
 |---|---|---|---|
+| `apps/desk` | Danil Desk con el front nuevo: shell + sesiones del motor (`createDeskSession(createTauriHost())`). Envoltorio Tauri propio pendiente. | `@danil/shell`, `@danil/host`, `@danil/session` | Comandos RPC1 del motor |
 | `apps/workspace` | Aplicación web de Danil (front rebuild); estático Vite servido por Worker en Cloudflare (`danil-front-preview`). | `@danil/shell`, `@danil/session`, `@danil/ui`, SolidJS | Despliegue en Cloudflare Workers (`preview-front.danil.ai`) |
 | `packages/platform-client` | Cliente tipado del borde `/v1` con reintentos automáticos (404/501/503, R10) y URL base única. | Borde HTTP `/v1` (`src/http.ts` es el único fetch al borde) | OpenAPI vendorizado (`contract/openapi.json`), genera `types`, `operations`, `contract` |
 | `packages/engine-client` | Cliente tipado de comandos RPC1 del motor y selección de transporte (`local` en Desk, `relay` vía WebSocket). | WebSocket al relay o IPC de Tauri inyectado vía `@danil/host` | Manifiesto RPC1 del motor (`commands.json`), genera `src/generated` |
 | `packages/session` | Gestión unificada de identidad y sesión: cookie HttpOnly (web) o sesiones de motor (Desk). | `@danil/platform-client`, comandos RPC1 de sesión en Desk | OpenAPI del borde y comandos RPC1 (`danil_sessions`, `danil_connect_start`, etc.) |
-| `packages/host` | Interfaz de capacidades nativas (solo tipos): navegador externo, archivos, notificaciones. | Nada | Contrato de capacidades para host web y host Desk |
+| `packages/host` | Lo que solo la plataforma sabe hacer: IPC de Tauri hacia el motor local (Desk), abrir el navegador; `setHost`/`host` para las features. | `@tauri-apps/api` | Comandos RPC1 del motor; implementa `LocalHost` y `DeskAuthHost` |
 | `packages/ui` | Primitivas y componentes visuales puros y reutilizables (SolidJS + Tailwind CSS + Kobalte). Sin dominio ni red. | Nada de dominio ni de red (sin dependencias de `@danil/*`) | Componentes y tokens exportados en `src/index.ts` |
 | `packages/shell` | Router de estados mínimo, arranque lineal con sesión, riel vertical DS1 v2, layout y ErrorBoundaries. Único que compone features. | `@danil/session`, `@danil/ui`, componentes de `@danil/feature-*` | Rutas (`"machines"`, `"workspace/:id"`, `"account"`), props y slots |
 | `packages/features/machines` | Lista de máquinas, selector de ejecución en compositor, sondeo de VMs nuevas, encendido/apagado remoto y conexión. | `@danil/platform-client`, `@danil/engine-client`, `@danil/session`, `@danil/host`, `@danil/ui` | OpenAPI (`getMachines`, `startMachine`, `stopMachine`, `createMachineTicket`, `getOperation`) y RPC1 (`connectMachine`) |
@@ -60,8 +61,8 @@ Estructura modular del front rebuild (SolidJS):
 | `packages/features/chat` | Conversación con agentes, streaming reactivo con cursor, máquina de estados causal de turnos (razonamiento, deltas, herramientas) y aprobaciones de seguridad. | `@danil/engine-client`, `@danil/ui` | RPC1 (`load_session`, `send_message`, `stop_turn`, `respond_permission`, `answer_question`) y eventos push `"chat"` |
 | `packages/features/files` | Árbol de archivos con estado git, visor de archivos con tope de 5 MB y breadcrumbs, mapeo compacto de iconos. | `@danil/engine-client`, `@danil/ui` | RPC1 (`tree_files`, `tree_folder`, `tree_git_status`, `tree_show`, `tree_write`, `tree_patch`) |
 | `packages/features/ai-credentials` | Conexión, custodia y propagación de credenciales de IA selladas con WebCrypto (`TERMINUS-SECRET/1`), consulta única y cacheada por workspace, encendido explícito de máquinas apagadas. | `@danil/platform-client`, `@danil/engine-client`, `@danil/ui` | OpenAPI (`getWorkspaceAccounts`, `putWorkspaceAccount`, `deleteWorkspaceAccount`, `removeWorkspaceAccountMachine`, `restoreWorkspaceAccountMachine`) y RPC1 (`list_providers`, `connectMachine`) |
-| `packages/features/terminal` | Feature de terminales (esqueleto F1.1). | `@danil/engine-client`, `@danil/ui`, `@danil/session`, `@danil/host` | Tipos generados por los clientes |
-| `packages/features/account` | Perfil y resumen del plan, solo lectura (esqueleto F1.1). | `@danil/platform-client`, `@danil/ui`, `@danil/session`, `@danil/host` | OpenAPI del borde y tipos generados por los clientes |
+| `packages/features/terminal` | Consola interactiva con ANSI, streaming y stdin sin pérdidas (F2.5). | `@danil/engine-client`, `@danil/ui`, `@danil/session`, `@danil/host` | Tipos generados por los clientes |
+| `packages/features/account` | Perfil, plan y enlaces a billing y harness por `host.openExternal` (F2.8). | `@danil/platform-client`, `@danil/ui`, `@danil/session`, `@danil/host` | OpenAPI del borde y tipos generados por los clientes |
 
 ### Reglas de arquitectura (R1–R10)
 
