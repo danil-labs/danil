@@ -8,15 +8,28 @@ import { TaskErrorView } from "../components/TaskErrorView.tsx";
 
 export interface ProjectsScreenProps {
   conn: MachineConnection;
+  machineId?: string;
+  machine_id?: string;
   workspaceId?: string;
   selectedTaskId?: string;
   onSelectTask?: (task: TaskRecord) => void;
 }
 
 export function ProjectsScreen(props: ProjectsScreenProps) {
-  const { projects, tasksByProject, projectErrors, loading, error, refetch, refetchProject } = useProjects(
+  const machineId = () => props.machineId ?? props.machine_id;
+  const {
+    projects,
+    tasksByProject,
+    projectErrors,
+    loading,
+    error,
+    refetch,
+    refetchProject,
+    storeKey,
+  } = useProjects(
     () => props.conn,
-    () => props.workspaceId
+    () => props.workspaceId,
+    machineId
   );
 
   const [search, setSearch] = createSignal("");
@@ -139,7 +152,12 @@ export function ProjectsScreen(props: ProjectsScreenProps) {
             conn={props.conn}
             target={target()}
             onInspect={(t) => inspectTaskDeletion(props.conn, t)}
-            onApply={(t, prev, opts) => applyTaskDeletion(props.conn, t, prev, opts)}
+            onApply={(t, prev, opts) =>
+              applyTaskDeletion(props.conn, t, prev, {
+                ...opts,
+                storeKey: storeKey(),
+              })
+            }
             onClose={() => setDeleteTarget(null)}
           />
         )}

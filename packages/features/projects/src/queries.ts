@@ -174,35 +174,23 @@ export interface UseProjectsResult {
         }
       | undefined
   ) => void;
+  storeKey: () => string;
 }
 
 export function useProjects(
   conn: MachineConnection | Accessor<MachineConnection | undefined>,
-  workspaceId?: string | Accessor<string | undefined>
+  workspaceId?: string | Accessor<string | undefined>,
+  machineId?: string | Accessor<string | undefined>
 ): UseProjectsResult {
   const getConn = typeof conn === "function" ? conn : () => conn;
   const getWorkspaceId = typeof workspaceId === "function" ? workspaceId : () => workspaceId;
+  const getMachineId = typeof machineId === "function" ? machineId : () => machineId;
 
-  let sessionKey: string | undefined;
-  try {
-    const session = useSession();
-    sessionKey = session.active() ?? session.sessions()[0]?.key;
-  } catch {
-    sessionKey = undefined;
-  }
-
-  const getMachineId = () => {
-    const c = getConn();
-    if (!c) return undefined;
-    return (
-      (c as unknown as { machine_id?: string; machineId?: string; machine?: { machine_id?: string } }).machine_id ??
-      (c as unknown as { machineId?: string }).machineId ??
-      (c as unknown as { machine?: { machine_id?: string } }).machine?.machine_id
-    );
-  };
+  const session = useSession();
+  const sessionKey = () => session.active() ?? session.sessions()[0]?.key;
 
   const currentStore = createMemo(() => {
-    return getOrCreateProjectsStore(sessionKey, getMachineId(), getWorkspaceId());
+    return getOrCreateProjectsStore(sessionKey(), getMachineId(), getWorkspaceId());
   });
 
   const [resource, { refetch, mutate }] = createResource(
@@ -213,10 +201,11 @@ export function useProjects(
         conn: c,
         workspaceId: getWorkspaceId(),
         machineId: getMachineId(),
+        sessionKey: sessionKey(),
       };
     },
     async (source) => {
-      return fetchProjectsAndTasks(source.conn, source.workspaceId, sessionKey, source.machineId);
+      return fetchProjectsAndTasks(source.conn, source.workspaceId, source.sessionKey, source.machineId);
     }
   );
 
@@ -251,6 +240,7 @@ export function useProjects(
     refetch,
     refetchProject,
     mutate,
+    storeKey: () => getStoreKey(sessionKey(), getMachineId(), getWorkspaceId()),
   };
 }
 
@@ -271,7 +261,7 @@ export async function applyTaskDeletion(
   conn: MachineConnection,
   target: DeleteTaskTarget,
   preview: DeleteTaskPreview,
-  options?: { discard?: boolean }
+  options?: { discard?: boolean; storeKey?: string }
 ): Promise<DeleteTaskResult> {
   const discard = options?.discard ?? false;
   const args = {
@@ -305,7 +295,7 @@ export async function applyTaskDeletion(
   const result = parseDeleteTaskResult(raw, preview);
 
   if (result.applied.length > 0) {
-    removeTasksFromStore(result.applied);
+    removeTasksFromStore(result.applied, options?.storeKey);
   }
 
   return result;
