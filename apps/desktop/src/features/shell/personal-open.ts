@@ -7,6 +7,7 @@
 type Send = (context: string, method: string, path: string, body?: unknown, key?: string) => Promise<{ status: number; body?: unknown }>;
 type Group = { context_id: string; org: string; email?: string | null };
 type Log = (...args: unknown[]) => void;
+import { type BusyOptions, isBusy, retryBusy } from "./select-busy.ts";
 
 /** `open`: ya está entre las sesiones. `retry`: transitorio, en segundo plano. `later`: inesperado, al siguiente arranque. */
 export type PersonalOutcome = { kind: "open"; context: string } | { kind: "retry"; cause: string } | { kind: "later"; cause: string } | { kind: "none"; cause: string };
@@ -28,7 +29,7 @@ const codeOf = (body: unknown, status: number) => {
   return typeof code === "string" ? code : `select_${status}`;
 };
 
-export async function openPersonal(groups: readonly Group[], send: Send, reread: () => Promise<readonly Group[] | null>, log: Log = console.warn): Promise<PersonalOutcome> {
+export async function openPersonal(groups: readonly Group[], send: Send, reread: () => Promise<readonly Group[] | null>, log: Log = console.warn, busy?: BusyOptions): Promise<PersonalOutcome> {
   if (!groups.length) return { kind: "none", cause: "no_session" };
   // Con dos correos cada uno tiene su personal: el destino no se elige por la persona (plan § 4).
   if (new Set(groups.map((g) => g.email?.trim().toLowerCase() ?? "")).size > 1) return { kind: "none", cause: "several_emails" };
@@ -41,7 +42,8 @@ export async function openPersonal(groups: readonly Group[], send: Send, reread:
   const open = groups.find((g) => g.org === org);
   if (open) return { kind: "open", context: open.context_id };
   let reply: Awaited<ReturnType<Send>>;
-  try { reply = await send(via, "POST", "/v1/identity/organizations/select", { organization_id: org }); } catch { return { kind: "retry", cause: "network" }; }
+  // `busy`: el motor está ligando y no tuvo el turno; se espera un poco y, si sigue, queda en segundo plano.
+  try { reply = await retryBusy(() => send(via, "POST", "/v1/identity/organizations/select", { organization_id: org }), busy); } catch (e) { return { kind: "retry", cause: isBusy(e) ? "busy" : "network" }; }
   if (reply.status < 200 || reply.status >= 300) {
     const cause = codeOf(reply.body, reply.status);
     if (transient(reply.status)) return { kind: "retry", cause };
@@ -60,7 +62,7 @@ export type PersonalOpener = {
   adopted: () => Promise<void>;
 };
 
-export function createPersonalOpener(deps: { send: Send; reread: () => Promise<readonly Group[] | null>; defaultContext: () => string | null; groups: () => readonly Group[] | null; log?: Log }): PersonalOpener {
+export function createPersonalOpener(deps: { send: Send; reread: () => Promise<readonly Group[] | null>; defaultContext: () => string | null; groups: () => readonly Group[] | null; log?: Log; wait?: BusyOptions["wait"] }): PersonalOpener {
   let restore: { context: string; org: string } | null = null;
   // Lo inesperado no se repite en cada foco: espera al siguiente arranque.
   let later: PersonalOutcome | null = null;
@@ -70,7 +72,7 @@ export function createPersonalOpener(deps: { send: Send; reread: () => Promise<r
       if (later) return later;
       const before = deps.defaultContext();
       const org = groups.find((g) => g.context_id === before)?.org;
-      const outcome = await openPersonal(groups, deps.send, deps.reread, log);
+      const outcome = await openPersonal(groups, deps.send, deps.reread, log, { wait: deps.wait });
       if (outcome.kind === "open" && before && org) restore = { context: before, org };
       if (outcome.kind === "later") later = outcome;
       return outcome;
@@ -79,7 +81,7 @@ export function createPersonalOpener(deps: { send: Send; reread: () => Promise<r
       const target = restore;
       restore = null;
       if (!target || !deps.groups()?.some((g) => g.context_id === target.context)) return;
-      const reply = await deps.send(target.context, "POST", "/v1/identity/organizations/select", { organization_id: target.org }).catch(() => null);
+      const reply = await retryBusy(() => deps.send(target.context, "POST", "/v1/identity/organizations/select", { organization_id: target.org }), { wait: deps.wait }).catch(() => null);
       if (!reply || reply.status < 200 || reply.status >= 300) log("[first-login] previous organization not restored", { status: reply?.status ?? null });
     },
   };

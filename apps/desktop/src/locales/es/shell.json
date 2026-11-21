@@ -81,6 +81,7 @@
   "shell.profile.menu": "Tu cuenta y preferencias",
   "shell.organization.title": "Organización",
   "shell.organization.error": "No se pudo cambiar de organización. Inténtalo de nuevo.",
+  "shell.organization.busy": "Danil está terminando de ligar tus workspaces, intenta de nuevo en un momento.",
   "shell.profile.theme": "Tema",
   "shell.sidebar.actions": "Acciones",
   "shell.sidebar.clone_unnamed": "Proyecto sin nombre",
