@@ -1,0 +1,23 @@
+{
+  "activity.title": "Registros de actividad",
+  "activity.description": "Instalaciones, diagnósticos y mantenimiento de tus máquinas, separados de tus tareas.",
+  "activity.machine": "Máquina",
+  "activity.this_machine": "Esta máquina",
+  "activity.refresh": "Actualizar",
+  "activity.back": "Todos los registros",
+  "activity.empty": "Todavía no hay actividad registrada en esta máquina.",
+  "activity.loading": "Cargando registros…",
+  "activity.offline": "La máquina está desconectada. Los registros se actualizarán cuando vuelva a conectarse.",
+  "activity.unavailable": "No se pudieron leer los registros. Comprueba la conexión y que esta máquina tenga Danil actualizado.",
+  "activity.technical": "Detalles técnicos · comandos y salida de cada paso",
+  "activity.output": "Salida del comando",
+  "activity.no_output": "Este paso no produjo salida.",
+  "activity.previous": "Página anterior",
+  "activity.next": "Página siguiente",
+  "activity.exit": "Código de salida: {code}",
+  "activity.state.running": "En curso",
+  "activity.state.success": "Completado",
+  "activity.state.failure": "Falló",
+  "activity.state.interrupted": "Interrumpido",
+  "activity.view": "Ver registros"
+}

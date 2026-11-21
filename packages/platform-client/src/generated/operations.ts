@@ -47,8 +47,11 @@ export function createOperations(t: Transport) {
     stopMachine: (args: { id: string; idempotencyKey: string }, opts?: RequestOptions) =>
       t<Operation>({ method: "POST", path: `/machines/${encodeURIComponent(String(args!.id))}/stop`, signal: opts?.signal, headers: { "Idempotency-Key": args?.idempotencyKey } }),
     /** Ticket de un solo uso para abrir la sesión */
-    createMachineTicket: (args: { id: string; idempotencyKey: string }, opts?: RequestOptions) =>
-      t<MachineTicket>({ method: "POST", path: `/machines/${encodeURIComponent(String(args!.id))}/tickets`, signal: opts?.signal, headers: { "Idempotency-Key": args?.idempotencyKey } }),
+    createMachineTicket: (args: { id: string; idempotencyKey: string; body?: {
+  /** true SOLO por una acción de la persona: enciende la VM apagada. Sin wake, a una VM apagada responde 409 machine_stopped y no la enciende (relay#18). */
+  wake?: boolean;
+} }, opts?: RequestOptions) =>
+      t<MachineTicket>({ method: "POST", path: `/machines/${encodeURIComponent(String(args!.id))}/tickets`, signal: opts?.signal, headers: { "Idempotency-Key": args?.idempotencyKey }, body: args?.body }),
     /** Estado de una operación */
     getOperation: (args: { id: string }, opts?: RequestOptions) =>
       t<Operation>({ method: "GET", path: `/operations/${encodeURIComponent(String(args!.id))}`, signal: opts?.signal }),

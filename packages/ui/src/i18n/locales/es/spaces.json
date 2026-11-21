@@ -1,0 +1,72 @@
+{
+  "spaces.order.error": "No se pudo guardar el orden de los espacios. Inténtalo de nuevo.",
+  "spaces.bar.label": "Espacios de {workspace}",
+  "spaces.default_name": "Espacio 1",
+  "spaces.delete.archive_and_delete": {
+    "one": "Eliminar y archivar 1 tarea",
+    "other": "Eliminar y archivar {count} tareas"
+  },
+  "spaces.delete.body": {
+    "one": "Su tarea se archiva y se quita su árbol de trabajo. Las ramas y sus PR se quedan como están. El espacio no se recupera. Los proyectos no se borran.",
+    "other": "Sus {count} tareas se archivan y se quitan sus árboles de trabajo. Las ramas y sus PR se quedan como están. El espacio no se recupera. Los proyectos no se borran."
+  },
+  "spaces.delete.body_empty": "No tiene tareas. Sale de la barra y no se recupera. Los proyectos no se borran.",
+  "spaces.delete.cancel": "Cancelar",
+  "spaces.delete.changed_body": "Lo marcado apareció o cambió mientras mirabas. Revísalo y confirma otra vez.",
+  "spaces.delete.changed_title": "Hay cambios nuevos desde que abriste esto",
+  "spaces.delete.delete_empty": "Eliminar espacio",
+  "spaces.delete.discard_and_delete": "Descartar cambios y eliminar",
+  "spaces.delete.failed_body": "El espacio sigue con ellas. Resuelve lo que dice cada una y vuelve a eliminar: se continúa desde aquí.",
+  "spaces.delete.failed_title": {
+    "one": "Una tarea no se pudo archivar",
+    "other": "{count} tareas no se pudieron archivar"
+  },
+  "spaces.delete.files": {
+    "one": "1 archivo",
+    "other": "{count} archivos"
+  },
+  "spaces.delete.mark_changed": "cambió",
+  "spaces.delete.mark_new": "nuevo",
+  "spaces.delete.open": "Abrir",
+  "spaces.delete.open_named": "Abrir {title}",
+  "spaces.delete.reading": "Leyendo qué tiene…",
+  "spaces.delete.see_archived": "Ver en Archivadas",
+  "spaces.delete.title": "Eliminar «{name}»",
+  "spaces.delete.toast": {
+    "one": "«{name}» eliminado · 1 tarea archivada",
+    "other": "«{name}» eliminado · {count} tareas archivadas"
+  },
+  "spaces.delete.uncommitted": "Cambios sin commitear ({count})",
+  "spaces.delete.uncommitted_why": "Se descartan al eliminar y no se recuperan. Los archivos nuevos sin rastrear también.",
+  "spaces.delete.unsaved": "Sin guardar en su carpeta ({count})",
+  "spaces.delete.unsaved_why": "Se quedan en la copia de la tarea.",
+  "spaces.delete.working": "Trabajando ahora ({count})",
+  "spaces.delete.working_why": "Se detienen al eliminar.",
+  "spaces.error.archived": "Esta tarea está archivada y no se puede mover.",
+  "spaces.error.busy": "Otra operación está cambiando los espacios de este workspace. Vuelve a intentarlo en un momento.",
+  "spaces.error.child": "Una subtarea va con su tarea principal. Mueve la tarea principal y la familia irá con ella.",
+  "spaces.error.folder_missing": "Ese proyecto ya no existe.",
+  "spaces.error.last": "Es el único espacio del workspace y no se puede eliminar.",
+  "spaces.error.missing": "Ese espacio ya no existe.",
+  "spaces.error.name_empty": "Ponle un nombre al espacio.",
+  "spaces.error.name_long": "El nombre del espacio no puede tener más de {max} caracteres.",
+  "spaces.error.none": "Este workspace no tiene ningún espacio legible. Revisa la carpeta spaces antes de seguir.",
+  "spaces.error.outside": "Las tareas efímeras no pertenecen a ningún espacio.",
+  "spaces.error.storage": "No se pudieron leer o guardar los espacios. Conserva los archivos y vuelve a intentarlo.",
+  "spaces.menu.delete": "Eliminar…",
+  "spaces.menu.delete_last": "Un workspace tiene al menos un espacio. Crea otro antes de eliminar este.",
+  "spaces.menu.rename": "Renombrar",
+  "spaces.move.folder_stays": "El proyecto no cambia: {folder}.",
+  "spaces.move.to": "Mover a otro espacio",
+  "spaces.move.toast": "Movida a {name}",
+  "spaces.new.cancel": "Cancelar",
+  "spaces.new.create": "Crear espacio",
+  "spaces.new.folders": "Agregar proyecto reciente",
+  "spaces.new.name": "Nombre",
+  "spaces.new.no_folders": "«{workspace}» todavía no tiene proyectos; el espacio nace sin ninguno.",
+  "spaces.new.placeholder": "p. ej. Facturación",
+  "spaces.new.title": "Nuevo espacio",
+  "spaces.rail.empty": "«{name}» todavía no tiene proyectos.",
+  "spaces.rename.label": "Nombre del espacio «{name}»",
+  "spaces.toast.go": "Ir"
+}

@@ -1,0 +1,14 @@
+{
+  "screen.open": "Screen",
+  "screen.open_tip": "See the screen of {name}",
+  "screen.tab": "{name} screen",
+  "screen.connecting": "Connecting to the screen…",
+  "screen.offline": "The computer is off. Its screen shows while it's on.",
+  "screen.unavailable": "The screen is not available on this computer.",
+  "screen.busy": "Two screens of this computer are already open. Close one to see this one.",
+  "screen.ended": "The screen closed.",
+  "screen.failed": "Couldn't connect to the screen.",
+  "screen.empty_hint": "What agents open, like their browser, shows here. With nothing open, it stays black.",
+  "screen.retry": "Reconnect",
+  "screen.control_unavailable": "This computer’s engine only supports viewing."
+}

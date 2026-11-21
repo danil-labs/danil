@@ -1,0 +1,18 @@
+{
+  "development.error.tree_watch": "Changes in this folder cannot be detected. Close and reopen the task tab to retry.",
+  "development.error.task_folder_open": "I could not open this task's folder.",
+  "development.error.preview_git": "Could not prepare git to read the selected branch.",
+  "development.error.preview_path": "That file does not belong to this preview.",
+  "development.error.preview_file": "Could not read this file from the selected branch.",
+  "development.error.working_copy_save": "I could not save the working copy.",
+  "development.error.open_gone": "That file is no longer in the working folder.",
+  "development.error.open_external": "Could not open the file or show its folder.",
+  "development.error.tree_name": "“{path}” cannot be used as a file or folder name.",
+  "development.error.tree_exists": "There is already a file or folder at “{path}”.",
+  "development.error.tree_parent_gone": "The folder for “{path}” is no longer in the working folder.",
+  "development.error.tree_gone": "“{path}” is no longer in the working folder.",
+  "development.error.tree_into_itself": "“{path}” cannot be moved inside itself.",
+  "development.error.tree_create": "Could not create “{path}”.",
+  "development.error.tree_rename": "Could not rename “{path}”.",
+  "development.error.tree_delete": "Could not delete “{path}”."
+}

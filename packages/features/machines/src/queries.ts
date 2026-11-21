@@ -235,11 +235,15 @@ export function useMachines(): UseMachinesReturn {
       },
       host,
       platform: {
-        requestTicket: async (_sKey, machineId) => {
+        requestTicket: async (_sKey, machineId, wake) => {
           try {
+            // Sin wake el borde nunca enciende: a una VM apagada responde 409 machine_stopped (relay#18).
+            // Con wake (acción de la persona) responde 503 machine_starting y platform-client reintenta
+            // con la misma Idempotency-Key hasta que el motor conecta.
             const ticketRes = await client.createMachineTicket({
               id: machineId,
               idempotencyKey: idempotencyKey(),
+              ...(wake ? { body: { wake: true } } : {}),
             });
             if (ticketRes.ticket && ticketRes.url) {
               return {
@@ -273,10 +277,13 @@ export function useMachines(): UseMachinesReturn {
                 };
               }
               if (err.kind === "error") {
-                if (err.code === "machine_unreachable" || err.code === "stopped") {
+                if (err.code === "machine_stopped" || err.code === "stopped") {
+                  return { kind: "stopped" };
+                }
+                if (err.code === "machine_unreachable") {
                   return { kind: "machine_unreachable" };
                 }
-                if (err.code === "starting") {
+                if (err.code === "machine_starting" || err.code === "starting") {
                   return { kind: "starting" };
                 }
                 return {

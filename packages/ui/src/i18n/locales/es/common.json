@@ -1,0 +1,127 @@
+{
+  "common.brand_name": "Danil",
+  "common.failure.generic": "No se pudo completar la acción. Revisa si se completó antes de reintentar; si persiste, comparte el detalle con soporte.",
+  "common.failure.detail": "Detalle para reportarlo",
+  "common.install.no_space": "Necesitas {needed} libres y tienes {free}. Libera espacio y vuelve a intentar.",
+  "common.install.no_space_plain": "No hay espacio suficiente en el disco. Libera espacio y vuelve a intentar.",
+  "common.clipboard.write_failed": "No se pudo copiar al portapapeles. Vuelve a intentar.",
+  "common.toast.dismiss": "Cerrar el aviso",
+  "common.ago.just_now": "hace un momento",
+  "common.ago.minutes": "hace {count} min",
+  "common.ago.hours": "hace {count} h",
+  "common.limits.not_started": "sin empezar",
+  "common.limits.no_reset_date": "sin fecha de reset",
+  "common.limits.reset_done": "ya reseteó",
+  "common.limits.reset_in_min": "reset en {count} min",
+  "common.limits.reset_in_hours": "reset en {count} h",
+  "common.limits.reset_in_days": "reset en {count} días",
+  "common.history.person": "tú",
+  "common.history.agent": "el agente",
+  "common.history.via.open_outside": "abierto afuera",
+  "common.history.via.download": "descarga",
+  "common.history.via.branch": "Rama",
+  "common.history.via.pull_request": "Pull request",
+  "common.steps.read.one": "Leyó",
+  "common.steps.read.many": "Leyó {count} archivos",
+  "common.steps.search.one": "Buscó",
+  "common.steps.search.many": "Buscó {count} veces",
+  "common.steps.write.one": "Escribió",
+  "common.steps.change.one": "Cambió",
+  "common.steps.edit.one": "Editó",
+  "common.steps.edit.many": {
+    "one": "Cambió {count} archivo",
+    "other": "Cambió {count} archivos"
+  },
+  "common.steps.run": "Ejecutó",
+  "common.steps.web.one": "Consultó la web",
+  "common.steps.web.many": "Consultó la web {count} veces",
+  "common.steps.plan.one": "Anotó el plan",
+  "common.steps.plan.many": "Anotó el plan {count} veces",
+  "common.steps.other.one": "Usó {tool}",
+  "common.steps.other.many": "Usó {count} herramientas",
+  "common.steps.permission.allowed": "Aprobaste {tool}",
+  "common.steps.permission.denied": "Denegaste {tool}",
+  "common.steps.permission.allowed_by": "{who} aprobó {tool}",
+  "common.steps.permission.denied_by": "{who} denegó {tool}",
+  "common.steps.reading": "Leyendo",
+  "common.steps.searching": "Buscando",
+  "common.steps.writing": "Escribiendo",
+  "common.steps.changing": "Cambiando",
+  "common.steps.editing": "Editando",
+  "common.steps.running": "Ejecutando",
+  "common.steps.web_searching": "Consultando la web",
+  "common.steps.planning": "Anotando el plan",
+  "common.steps.using": "Usando {tool}",
+  "common.steps.summary.read": {
+    "one": "leyó {count} archivo",
+    "other": "leyó {count} archivos"
+  },
+  "common.steps.summary.search": {
+    "one": "hizo {count} búsqueda",
+    "other": "hizo {count} búsquedas"
+  },
+  "common.steps.summary.edit": {
+    "one": "editó {count} archivo",
+    "other": "editó {count} archivos"
+  },
+  "common.steps.summary.run": {
+    "one": "ejecutó {count} comando",
+    "other": "ejecutó {count} comandos"
+  },
+  "common.steps.summary.web": {
+    "one": "hizo {count} consulta web",
+    "other": "hizo {count} consultas web"
+  },
+  "common.steps.summary.plan": {
+    "one": "anotó el plan",
+    "other": "anotó el plan {count} veces"
+  },
+  "common.steps.summary.other": {
+    "one": "usó {count} herramienta",
+    "other": "usó {count} herramientas"
+  },
+  "common.steps.summary.allowed": {
+    "one": "{count} permiso aprobado",
+    "other": "{count} permisos aprobados"
+  },
+  "common.steps.summary.denied": {
+    "one": "{count} permiso denegado",
+    "other": "{count} permisos denegados"
+  },
+  "common.steps.summary_live.read": {
+    "one": "leyendo {count} archivo",
+    "other": "leyendo {count} archivos"
+  },
+  "common.steps.summary_live.search": {
+    "one": "haciendo {count} búsqueda",
+    "other": "haciendo {count} búsquedas"
+  },
+  "common.steps.summary_live.edit": {
+    "one": "editando {count} archivo",
+    "other": "editando {count} archivos"
+  },
+  "common.steps.summary_live.run": {
+    "one": "ejecutando {count} comando",
+    "other": "ejecutando {count} comandos"
+  },
+  "common.steps.summary_live.web": {
+    "one": "haciendo {count} consulta web",
+    "other": "haciendo {count} consultas web"
+  },
+  "common.steps.summary_live.plan": {
+    "one": "anotando el plan",
+    "other": "anotando el plan ({count} veces)"
+  },
+  "common.steps.summary_live.other": {
+    "one": "usando {count} herramienta",
+    "other": "usando {count} herramientas"
+  },
+  "common.steps.summary.separator": ", ",
+  "common.duration.under_second": "menos de 1 s",
+  "common.duration.min_sec": "{minutes}m {seconds}s",
+  "common.duration.sec": "{seconds}s",
+  "common.usage.millions": "{value}M",
+  "common.usage.thousands": "{value}k",
+  "common.part.failed": "No se pudo cargar esta parte de la ventana.",
+  "common.part.retry": "Reintentar"
+}

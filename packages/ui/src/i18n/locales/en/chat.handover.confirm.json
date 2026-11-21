@@ -1,0 +1,6 @@
+{
+  "chat.handover.confirm.title": "Change provider in this task",
+  "chat.handover.confirm.body": "{from} → {to}. The conversation travels as text and is trimmed; the new provider reads what was said, but doesn't remember files or commands from earlier turns.",
+  "chat.handover.confirm.cancel": "Cancel",
+  "chat.handover.confirm.accept": "Change"
+}

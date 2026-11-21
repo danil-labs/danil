@@ -1,3 +1,3 @@
 // GENERADO por scripts/generate.mjs. No editar.
 // source: packages/platform-client/contract/openapi.json
-export const CONTRACT_HASH = "93589d7e10098ac0949f67eeeb7e1210096537932402760c3e9441c7778eb217";
+export const CONTRACT_HASH = "88fa77dbb0c5d43d72b7c77e4fcb7fcb3d53ca0e7289951c1b1f87ae9b56bf30";

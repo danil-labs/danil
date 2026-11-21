@@ -1,0 +1,127 @@
+{
+  "common.brand_name": "Danil",
+  "common.failure.generic": "The action failed. Check whether it completed before retrying; if it persists, share the details with support.",
+  "common.failure.detail": "Detail for reporting it",
+  "common.install.no_space": "You need {needed} free and have {free}. Free up some space and try again.",
+  "common.install.no_space_plain": "There isn't enough disk space. Free up some space and try again.",
+  "common.clipboard.write_failed": "Could not copy to the clipboard. Try again.",
+  "common.toast.dismiss": "Dismiss the notice",
+  "common.ago.just_now": "a moment ago",
+  "common.ago.minutes": "{count} min ago",
+  "common.ago.hours": "{count} h ago",
+  "common.limits.not_started": "not started",
+  "common.limits.no_reset_date": "no reset date",
+  "common.limits.reset_done": "already reset",
+  "common.limits.reset_in_min": "reset in {count} min",
+  "common.limits.reset_in_hours": "reset in {count} h",
+  "common.limits.reset_in_days": "reset in {count} days",
+  "common.history.person": "you",
+  "common.history.agent": "the agent",
+  "common.history.via.open_outside": "opened outside",
+  "common.history.via.download": "download",
+  "common.history.via.branch": "Branch",
+  "common.history.via.pull_request": "Pull request",
+  "common.steps.read.one": "Read",
+  "common.steps.read.many": "Read {count} files",
+  "common.steps.search.one": "Searched",
+  "common.steps.search.many": "Searched {count} times",
+  "common.steps.write.one": "Wrote",
+  "common.steps.change.one": "Changed",
+  "common.steps.edit.one": "Edited",
+  "common.steps.edit.many": {
+    "one": "Changed {count} file",
+    "other": "Changed {count} files"
+  },
+  "common.steps.run": "Ran",
+  "common.steps.web.one": "Searched the web",
+  "common.steps.web.many": "Searched the web {count} times",
+  "common.steps.plan.one": "Noted the plan",
+  "common.steps.plan.many": "Noted the plan {count} times",
+  "common.steps.other.one": "Used {tool}",
+  "common.steps.other.many": "Used {count} tools",
+  "common.steps.permission.allowed": "You approved {tool}",
+  "common.steps.permission.denied": "You denied {tool}",
+  "common.steps.permission.allowed_by": "{who} approved {tool}",
+  "common.steps.permission.denied_by": "{who} denied {tool}",
+  "common.steps.reading": "Reading",
+  "common.steps.searching": "Searching",
+  "common.steps.writing": "Writing",
+  "common.steps.changing": "Changing",
+  "common.steps.editing": "Editing",
+  "common.steps.running": "Running",
+  "common.steps.web_searching": "Searching the web",
+  "common.steps.planning": "Noting the plan",
+  "common.steps.using": "Using {tool}",
+  "common.steps.summary.read": {
+    "one": "read {count} file",
+    "other": "read {count} files"
+  },
+  "common.steps.summary.search": {
+    "one": "searched once",
+    "other": "searched {count} times"
+  },
+  "common.steps.summary.edit": {
+    "one": "edited {count} file",
+    "other": "edited {count} files"
+  },
+  "common.steps.summary.run": {
+    "one": "ran {count} command",
+    "other": "ran {count} commands"
+  },
+  "common.steps.summary.web": {
+    "one": "made {count} web request",
+    "other": "made {count} web requests"
+  },
+  "common.steps.summary.plan": {
+    "one": "updated the plan",
+    "other": "updated the plan {count} times"
+  },
+  "common.steps.summary.other": {
+    "one": "used {count} tool",
+    "other": "used {count} tools"
+  },
+  "common.steps.summary.allowed": {
+    "one": "{count} permission approved",
+    "other": "{count} permissions approved"
+  },
+  "common.steps.summary.denied": {
+    "one": "{count} permission denied",
+    "other": "{count} permissions denied"
+  },
+  "common.steps.summary_live.read": {
+    "one": "reading {count} file",
+    "other": "reading {count} files"
+  },
+  "common.steps.summary_live.search": {
+    "one": "running {count} search",
+    "other": "running {count} searches"
+  },
+  "common.steps.summary_live.edit": {
+    "one": "editing {count} file",
+    "other": "editing {count} files"
+  },
+  "common.steps.summary_live.run": {
+    "one": "running {count} command",
+    "other": "running {count} commands"
+  },
+  "common.steps.summary_live.web": {
+    "one": "making {count} web request",
+    "other": "making {count} web requests"
+  },
+  "common.steps.summary_live.plan": {
+    "one": "updating the plan",
+    "other": "updating the plan ({count} times)"
+  },
+  "common.steps.summary_live.other": {
+    "one": "using {count} tool",
+    "other": "using {count} tools"
+  },
+  "common.steps.summary.separator": ", ",
+  "common.duration.under_second": "less than 1 s",
+  "common.duration.min_sec": "{minutes}m {seconds}s",
+  "common.duration.sec": "{seconds}s",
+  "common.usage.millions": "{value}M",
+  "common.usage.thousands": "{value}k",
+  "common.part.failed": "This part of the window could not load.",
+  "common.part.retry": "Retry"
+}

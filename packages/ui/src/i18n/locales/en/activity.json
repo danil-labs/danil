@@ -1,0 +1,23 @@
+{
+  "activity.title": "Activity logs",
+  "activity.description": "Installations, diagnostics and maintenance on your machines, separate from your tasks.",
+  "activity.machine": "Machine",
+  "activity.this_machine": "This machine",
+  "activity.refresh": "Refresh",
+  "activity.back": "All activity",
+  "activity.empty": "No activity has been recorded on this machine yet.",
+  "activity.loading": "Loading logs…",
+  "activity.offline": "This machine is offline. Logs will refresh when it reconnects.",
+  "activity.unavailable": "Could not read the logs. Check the connection and that Danil is up to date on this machine.",
+  "activity.technical": "Technical details · commands and output for each step",
+  "activity.output": "Command output",
+  "activity.no_output": "This step produced no output.",
+  "activity.previous": "Previous page",
+  "activity.next": "Next page",
+  "activity.exit": "Exit code: {code}",
+  "activity.state.running": "Running",
+  "activity.state.success": "Completed",
+  "activity.state.failure": "Failed",
+  "activity.state.interrupted": "Interrupted",
+  "activity.view": "View logs"
+}

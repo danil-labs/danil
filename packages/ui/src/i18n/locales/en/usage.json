@@ -1,0 +1,18 @@
+{
+  "usage.heading": "Usage",
+  "usage.bar.aria": "What is left on your active accounts",
+  "usage.refresh": "Ask again how much you have left",
+  "usage.tool.title": "{agent}: {left}% left in the window running now",
+  "usage.refresh_all": "Refresh",
+  "usage.manage_accounts": "Manage accounts",
+  "usage.bug_report": "Report a Danil bug",
+  "usage.bug_report.ask_agent": "Ask the agent",
+  "usage.bug_report.open_web": "Open a blank issue",
+  "usage.query.failed": "Could not ask {agent} how much you have left.",
+  "usage.context.label": "Memory",
+  "usage.context.this_agent": "This agent",
+  "usage.context.unmeasured_title": "{limit} tokens fit in this conversation. {agent} does not publish how many it has used, so how much is left cannot be measured.",
+  "usage.context.measured_title": "{used} of {limit} tokens of conversation memory.",
+  "usage.context.unlimited_title": "{agent} does not publish how many tokens fit: it has used {used}, so how much is left cannot be measured.",
+  "usage.context.bar_label": "Conversation memory used"
+}

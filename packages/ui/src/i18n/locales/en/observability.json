@@ -1,0 +1,8 @@
+{
+  "observability.error": "Could not open AgentsView. Try again.",
+  "observability.loading": "Opening AgentsView…",
+  "observability.manage": "Manage integration",
+  "observability.retry": "Retry",
+  "observability.tab": "Analytics",
+  "observability.unavailable": "Enable AgentsView to open your task analytics."
+}

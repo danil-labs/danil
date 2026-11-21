@@ -1,0 +1,13 @@
+{
+  "sites.address": "Dirección",
+  "sites.address_placeholder": "Busca o escribe una dirección",
+  "sites.back": "Atrás",
+  "sites.error.stalled": "{site} contestó pero no terminó de cargar.",
+  "sites.forward": "Adelante",
+  "sites.new_tab": "Nueva pestaña",
+  "sites.opening": "Abriendo {site}…",
+  "sites.outside": "Abrir en mi navegador",
+  "sites.reload": "Recargar",
+  "sites.retry": "Reintentar",
+  "sites.start": "Escribe una dirección arriba para empezar a navegar."
+}

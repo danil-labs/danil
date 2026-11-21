@@ -545,16 +545,12 @@
             "$ref": "#/components/responses/NotFound"
           },
           "409": {
-            "description": "machine_unreachable: el motor está desconectado",
+            "description": "machine_stopped (apagada y sin wake), machine_unreachable, ticket_already_issued u operation_in_progress",
             "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              },
               "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Problem"
+                  "type": "object",
+                  "additionalProperties": true
                 }
               }
             }
@@ -567,6 +563,34 @@
           },
           "default": {
             "$ref": "#/components/responses/Error"
+          },
+          "503": {
+            "description": "machine_starting: la VM enciende (con wake); reintentar con la misma Idempotency-Key tras Retry-After",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "wake": {
+                    "type": "boolean",
+                    "description": "true SOLO por una acción de la persona: enciende la VM apagada. Sin wake, a una VM apagada responde 409 machine_stopped y no la enciende (relay#18)."
+                  }
+                }
+              }
+            }
           }
         }
       }

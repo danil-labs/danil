@@ -1,0 +1,53 @@
+{
+  "launcher.handoff.first.title": "Danil gets a new engine",
+  "launcher.handoff.first.body": "Your workspaces, tasks, accounts and vault move to the new engine without being copied: they stay in the same folder. First, Terminus 0.2.74 has to close and finish what it is doing.",
+  "launcher.handoff.readopt.title": "Terminus 0.2.74 opened this data again",
+  "launcher.handoff.readopt.body": "After the engine change, Terminus 0.2.74 opened this folder again, or the app moved. The engine has to take the data back; nothing is deleted.",
+  "launcher.handoff.nothing_killed": "Nothing is force-closed: each task is allowed to finish.",
+  "launcher.handoff.start": "Move to the new engine",
+  "launcher.handoff.done": "Done.",
+  "launcher.handoff.open": "Open Danil",
+  "launcher.step.window.pending": "Close the Terminus 0.2.74 window if it is open",
+  "launcher.step.window.open": "Terminus 0.2.74 is still open: close it. While it is open it restarts its service",
+  "launcher.step.window.done": "The Terminus 0.2.74 window is closed",
+  "launcher.step.work.pending": "The previous Terminus is finishing what it has in progress",
+  "launcher.step.work.tasks": {
+    "one": "The previous Terminus is working on {count} task",
+    "other": "The previous Terminus is working on {count} tasks"
+  },
+  "launcher.step.work.done": "The previous Terminus finished and closed",
+  "launcher.step.git.pending": "Waiting for Git",
+  "launcher.step.git.done": "Git finished",
+  "launcher.step.engine.pending": "Start the new engine with your data",
+  "launcher.step.engine.done": "The new engine has your data",
+  "launcher.failed.title": "The Danil engine did not start",
+  "launcher.failed.reason.engine_missing": "The engine is missing from the installation. Install Danil again.",
+  "launcher.failed.reason.not_private": "An engine file is not private: another account on this computer can read it. The window does not connect like that.",
+  "launcher.failed.reason.service_busy": "Another process holds the data and does not let it go.",
+  "launcher.failed.reason.authority_incompatible": "The engine does not accept this data folder as it is.",
+  "launcher.failed.reason.other": "Could not connect to the engine.",
+  "launcher.failed.incompatible.title": "The window and engine are incompatible",
+  "launcher.failed.reason.version_mismatch": "The window and engine use different contract versions. A compatible engine is required to connect.",
+  "launcher.failed.log": "Its log is at:",
+  "launcher.failed.code": "Code: {code}",
+  "launcher.failed.back": "To go back to Terminus 0.2.74: close this window, install 0.2.74 from {url} and open it. Your data is still in this folder and 0.2.74 opens it:",
+  "launcher.failed.retry": "Retry",
+  "launcher.blank_0274": "Terminus 0.2.74 is open on this data and stays blank while this engine works: close it. To go back to 0.2.74, close this window and wait for the engine to finish its tasks and stop (5 minutes without clients).",
+  "launcher.failed.reason.adoption_required": "The engine asks to adopt the data again and could not.",
+  "launcher.failed.reason.engine_start_failed": "The engine closed while starting or did not answer in time.",
+  "launcher.previous.waiting": {
+    "one": "Waiting for {count} task of the previous version to finish…",
+    "other": "Waiting for {count} tasks of the previous version to finish…"
+  },
+  "launcher.previous.waiting_unknown": "Waiting for the previous version to finish what it is doing…",
+  "launcher.previous.body": "Danil was updated and comes in on its own as soon as it is done.",
+  "launcher.previous.stop_now": "Stop and enter now",
+  "launcher.previous.confirm": {
+    "one": "{count} task that is working will be cut off. With the new engine it continues on its own where it left off; what it was doing at this moment may be lost.",
+    "other": "{count} tasks that are working will be cut off. With the new engine they continue on their own where they left off; what they were doing at this moment may be lost."
+  },
+  "launcher.previous.confirm_unknown": "What the previous version is doing will be cut off. Tasks continue on their own with the new engine where they left off; what they were doing at this moment may be lost.",
+  "launcher.previous.stop": "Stop",
+  "launcher.previous.keep_waiting": "Keep waiting",
+  "launcher.previous.stopping": "Stopping the previous version…"
+}
