@@ -14,8 +14,10 @@ with sync_playwright() as p:
     page = browser.new_page()
     page.set_default_navigation_timeout(120000)
     page.goto(BASE + "?role=owner&variants=1", wait_until="networkidle")
-    for name in ["Free", "Pro", "Team", "Enterprise"]:
+    for name in ["Team", "Enterprise"]:
         page.locator("article").get_by_text(name, exact=True).wait_for()
+    assert page.get_by_role("heading", name="Tu plan: Pro").count() == 1
+    assert page.locator("article").get_by_text("Free", exact=True).count() == 0
     assert page.locator("article").get_by_text("Business", exact=True).count() == 0
     enterprise = page.locator("article").filter(has_text="Enterprise")
     assert enterprise.get_by_role("link", name="Hablemos").count() == 1
@@ -31,7 +33,7 @@ with sync_playwright() as p:
     page.goto(BASE + "?role=owner&payer=yes", wait_until="networkidle")
     page.get_by_role("button", name="Cambiar de plan").wait_for()
     assert page.get_by_role("button", name="Cancelar suscripción").count() == 0
-    assert page.get_by_role("button", name="Abrir").count() == 1
+    assert page.get_by_role("button", name="Administrar suscripción").count() == 1
     assert page.get_by_text("Facturas", exact=True).count() == 0
     assert page.get_by_role("button", name="Reanudar suscripción").count() == 0
     for operation, label in [
@@ -107,7 +109,7 @@ with sync_playwright() as p:
       window.setInterval = (run, delay, ...args) => interval(run, delay === 30000 ? 100 : delay, ...args);
     """)
     retry.goto(BASE + "?catalog=retry")
-    retry.locator("article").get_by_text("Pro", exact=True).wait_for(timeout=5000)
+    retry.locator("article").get_by_text("Team", exact=True).wait_for(timeout=5000)
     assert retry.evaluate("window.billingCalls").count("catalog") >= 2
     browser.close()
 
