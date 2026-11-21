@@ -79,7 +79,8 @@ function WebAccount(props: { source: AccountProfileSource; part?: DanilAccountPa
       </Show>
       <Show when={props.part === "machines"}>
         {/* Por el id: cada recarga trae otro objeto del mismo workspace y desmontaba la lista. */}
-        <Show when={workspaces.actual()?.id} keyed>
+        {/* Sin workspace actual la lista de la cuenta se pinta igual: la web las lee de `/v1/machines`. */}
+        <Show when={workspaces.actual()?.id} keyed fallback={<AccountComputersSection />}>
           {(id) => <AccountComputersSection workspace={id} />}
         </Show>
         <ConnectMachineSection />
