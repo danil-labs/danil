@@ -10,6 +10,7 @@ import type {
   ToolPiece,
   ShellPiece,
   PermissionPiece,
+  QuestionPiece,
   TurnStatus,
   TurnState,
 } from "./turns/machine.ts";
@@ -21,6 +22,7 @@ export type {
   ToolPiece,
   ShellPiece,
   PermissionPiece,
+  QuestionPiece,
   TurnStatus,
   TurnState,
 };
@@ -66,6 +68,8 @@ export interface ChatStreamEvent {
     | "shell_done"
     | "permission"
     | "permission_resolved"
+    | "question"
+    | "question_answered"
     | "notice"
     | "done";
   text: string;
@@ -80,6 +84,8 @@ export interface ChatStreamEvent {
   request_id?: string | null;
   duration_ms?: number | null;
   model?: string | null;
+  questions?: unknown[];
+  answers?: unknown[];
 }
 
 /** Transforma el payload crudo del evento push 'chat' en ChatStreamEvent tipado. */
@@ -104,6 +110,8 @@ export function parseChatEvent(raw: unknown): ChatStreamEvent | null {
     request_id: typeof ev.request_id === "string" ? ev.request_id : null,
     duration_ms: typeof ev.duration_ms === "number" ? ev.duration_ms : null,
     model: typeof ev.model === "string" ? ev.model : null,
+    questions: Array.isArray(ev.questions) ? ev.questions : undefined,
+    answers: Array.isArray(ev.answers) ? ev.answers : undefined,
   };
 }
 

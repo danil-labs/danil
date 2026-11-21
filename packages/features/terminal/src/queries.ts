@@ -89,6 +89,10 @@ export function useShell(
     unsubscribe = client.subscribe("chat", (payload: unknown) => {
       if (!payload || typeof payload !== "object") return;
       const event = payload as Record<string, unknown>;
+      const eventSession = event.session ?? event.sessionId ?? event.session_id;
+      if (eventSession && eventSession !== sessionId) {
+        return;
+      }
       const kind = event.type ?? event.subtype ?? event.event ?? event.kind;
 
       if (kind === "shell_started") {

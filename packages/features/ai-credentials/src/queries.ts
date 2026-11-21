@@ -17,6 +17,7 @@ import {
 import type {
   ConnectAccountOptions,
   EngineProviderItem,
+  RawAccountCredentialsListOutput,
 } from "./model.ts";
 import { sealForRecipients } from "./seal.ts";
 
@@ -56,6 +57,42 @@ export function useProviders(machine: MachineQueryTarget): UseProvidersReturn {
 
   return {
     providers: data,
+    refetch: () => void refetch(),
+    mutate: (v) => mutate(v),
+    loading: () => data.loading,
+    error: () => data.error,
+  };
+}
+
+export interface UseMachineAccountCredentialsReturn {
+  credentials: Resource<RawAccountCredentialsListOutput | null>;
+  refetch: () => void;
+  mutate: (v: RawAccountCredentialsListOutput | null) => void;
+  loading: Accessor<boolean>;
+  error: Accessor<unknown>;
+}
+
+/**
+ * Consulta el estado de las credenciales de cuenta en el motor local o remoto (11-business-logic § 3).
+ *
+ * Utiliza el método RPC1 `account_credentials_list` del motor conectado.
+ */
+export function useMachineAccountCredentials(
+  machine: MachineQueryTarget
+): UseMachineAccountCredentialsReturn {
+  const getTarget = typeof machine === "function" ? machine : () => machine;
+
+  const [data, { refetch, mutate }] = createResource(getTarget, async (target) => {
+    if (!target) return null;
+    if ("account_credentials_list" in target && typeof target.account_credentials_list === "function") {
+      const result = await target.account_credentials_list();
+      return result as RawAccountCredentialsListOutput;
+    }
+    return null;
+  });
+
+  return {
+    credentials: data,
     refetch: () => void refetch(),
     mutate: (v) => mutate(v),
     loading: () => data.loading,
@@ -113,12 +150,6 @@ export function useConnectAccount(platformClient?: PlatformClient) {
     setSaving(true);
     setError(null);
     try {
-      if (opts.kind === "subscription" && opts.provider === "antigravity") {
-        // Antigravity se autentica por suscripción (kind=subscription).
-        // Pendiente de especificación en el contrato sobre qué payload se sube.
-        throw UNAVAILABLE_ERROR;
-      }
-
       const secretValue = opts.secret ?? "";
       const sealTargets = opts.recipients.map((r) => ({
         computer_id: r.machine_id,

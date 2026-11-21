@@ -17,6 +17,13 @@ export type { TaskItemViewProps } from "./components/TaskItemView.tsx";
 export { TaskErrorView } from "./components/TaskErrorView.tsx";
 export type { TaskErrorViewProps } from "./components/TaskErrorView.tsx";
 
+// Ciclo de vida de tareas (task_lifecycle)
+export {
+  executeTaskDeletionLifecycle,
+  TaskLifecycleError,
+} from "./lifecycle/index.ts";
+export type { TaskLifecycleErrorDetails } from "./lifecycle/index.ts";
+
 // Queries y Store reactivo
 export {
   useProjects,
@@ -45,7 +52,6 @@ export type {
   RawLiveSessionsOutput,
   RawSessionParams,
   RawDeleteParams,
-  RawBlockersParams,
   RawFinishParams,
   Workspace,
 } from "./model.ts";

@@ -15,6 +15,7 @@ export interface ReasoningPiece {
   text: string;
   completed: boolean;
   durationMs?: number;
+  requestId?: string | null;
 }
 
 export interface DeltaPiece {
@@ -22,6 +23,7 @@ export interface DeltaPiece {
   kind: "delta";
   text: string;
   messageId?: string;
+  requestId?: string | null;
 }
 
 export interface ToolPiece {
@@ -32,6 +34,7 @@ export interface ToolPiece {
   status: "running" | "completed" | "error";
   ok: boolean | null;
   detail?: unknown;
+  requestId?: string | null;
 }
 
 export interface ShellPiece {
@@ -52,7 +55,23 @@ export interface PermissionPiece {
   status: "pending" | "allowed" | "denied";
 }
 
-export type TurnPiece = ReasoningPiece | DeltaPiece | ToolPiece | ShellPiece | PermissionPiece;
+export interface QuestionPiece {
+  id: string;
+  kind: "question";
+  requestId: string;
+  text: string;
+  questions?: unknown[];
+  answers?: unknown[];
+  status: "pending" | "answered" | "cancelled";
+}
+
+export type TurnPiece =
+  | ReasoningPiece
+  | DeltaPiece
+  | ToolPiece
+  | ShellPiece
+  | PermissionPiece
+  | QuestionPiece;
 
 export interface TurnState {
   status: TurnStatus;
@@ -66,15 +85,17 @@ export interface TurnState {
 
 export type TurnEvent =
   | { type: "START"; turnId?: string; model?: string }
-  | { type: "REASONING"; text: string; messageId?: string; durationMs?: number }
-  | { type: "DELTA"; text: string; messageId?: string; startsMessage?: boolean }
-  | { type: "TOOL_START"; id: string; name: string; target?: string; detail?: unknown }
-  | { type: "TOOL_DONE"; id: string; ok: boolean | null; detail?: unknown }
+  | { type: "REASONING"; text: string; messageId?: string; durationMs?: number; requestId?: string }
+  | { type: "DELTA"; text: string; messageId?: string; startsMessage?: boolean; requestId?: string }
+  | { type: "TOOL_START"; id: string; name: string; target?: string; detail?: unknown; requestId?: string }
+  | { type: "TOOL_DONE"; id: string; ok: boolean | null; detail?: unknown; requestId?: string }
   | { type: "SHELL_START"; id: string; command: string }
   | { type: "SHELL_OUTPUT"; id: string; text: string }
   | { type: "SHELL_DONE"; id: string; exitCode?: number | null }
   | { type: "PERMISSION_REQUEST"; requestId: string; toolName: string; target?: string }
   | { type: "PERMISSION_RESOLVE"; requestId: string; decision: "allow" | "deny" }
+  | { type: "QUESTION_REQUEST"; requestId: string; text: string; questions?: unknown[] }
+  | { type: "QUESTION_ANSWER"; requestId: string; answers: unknown[] }
   | { type: "FINISH"; ok?: boolean }
   | { type: "ERROR"; error: string }
   | { type: "RESET" };
@@ -123,6 +144,7 @@ export function turnReducer(state: TurnState, event: TurnEvent): TurnState {
           text: event.text,
           completed: false,
           durationMs: event.durationMs,
+          requestId: event.requestId,
         });
       }
 
@@ -162,6 +184,7 @@ export function turnReducer(state: TurnState, event: TurnEvent): TurnState {
           kind: "delta",
           text: event.text,
           messageId: event.messageId,
+          requestId: event.requestId,
         });
       }
 
@@ -193,6 +216,7 @@ export function turnReducer(state: TurnState, event: TurnEvent): TurnState {
         status: "running",
         ok: null,
         detail: event.detail,
+        requestId: event.requestId,
       });
 
       return {
@@ -206,7 +230,9 @@ export function turnReducer(state: TurnState, event: TurnEvent): TurnState {
 
     case "TOOL_DONE": {
       const currentPieces = state.pieces.map((p) => {
-        if (p.id === event.id && p.kind === "tool") {
+        const matchesId = p.id === event.id;
+        const matchesReq = Boolean(event.requestId) && (p as ToolPiece).requestId === event.requestId;
+        if ((matchesId || matchesReq) && p.kind === "tool") {
           return {
             ...p,
             status: event.ok === false ? ("error" as const) : ("completed" as const),
@@ -283,6 +309,41 @@ export function turnReducer(state: TurnState, event: TurnEvent): TurnState {
           return {
             ...p,
             status: event.decision === "allow" ? ("allowed" as const) : ("denied" as const),
+          };
+        }
+        return p;
+      });
+      return {
+        ...state,
+        status: "running",
+        pieces: currentPieces,
+      };
+    }
+
+    case "QUESTION_REQUEST": {
+      const currentPieces = [...state.pieces];
+      currentPieces.push({
+        id: `question_${event.requestId}`,
+        kind: "question",
+        requestId: event.requestId,
+        text: event.text,
+        questions: event.questions,
+        status: "pending",
+      });
+      return {
+        ...state,
+        status: "waiting_permission",
+        pieces: currentPieces,
+      };
+    }
+
+    case "QUESTION_ANSWER": {
+      const currentPieces = state.pieces.map((p) => {
+        if (p.kind === "question" && p.requestId === event.requestId) {
+          return {
+            ...p,
+            status: "answered" as const,
+            answers: event.answers,
           };
         }
         return p;
