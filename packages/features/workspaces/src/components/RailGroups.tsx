@@ -118,7 +118,7 @@ export const RailGroups: Component<RailGroupsProps> = (props) => {
   });
 
   return (
-    <div class={`flex flex-col gap-2 w-full select-none ${props.class || ""}`}>
+    <div class={`flex flex-col gap-1 w-full select-none ${props.class || ""}`}>
       {/* Error de selección atómica */}
       <Show when={selectionError()}>
         <WorkspaceErrorView
@@ -148,9 +148,9 @@ export const RailGroups: Component<RailGroupsProps> = (props) => {
 
       {/* Estado cargando inicial */}
       <Show when={orgsQuery.loading() && !orgsQuery.organizations()}>
-        <div class="flex flex-col gap-2 p-2">
-          <div class="h-8 rounded bg-zinc-800/60 animate-pulse" />
-          <div class="h-8 rounded bg-zinc-800/60 animate-pulse" />
+        <div class="flex flex-col items-center gap-2 p-1">
+          <div class="size-8 rounded-md bg-surface-muted animate-pulse" />
+          <div class="size-8 rounded-md bg-surface-muted animate-pulse" />
         </div>
       </Show>
 
@@ -164,7 +164,7 @@ export const RailGroups: Component<RailGroupsProps> = (props) => {
             />
           }
         >
-          <div class="flex flex-col gap-3">
+          <div class="flex flex-col items-center gap-2 w-full">
             <For each={orgsQuery.organizations()}>
               {(org: Organization) => {
                 const orgWorkspaces = () =>
@@ -174,44 +174,31 @@ export const RailGroups: Component<RailGroupsProps> = (props) => {
                 const expanded = () => isOrgExpanded(org.id);
 
                 return (
-                  <div class="flex flex-col rounded-lg bg-zinc-900/60 border border-zinc-800/80 overflow-hidden">
+                  <div role="group" data-rail-organization={org.id} class="flex w-full flex-col items-center gap-1">
                     {/* Cabecera del stack con logo y nombre del plan (B-008) */}
                     <button
                       type="button"
                       onClick={() => toggleOrg(org.id)}
-                      class="flex items-center justify-between w-full px-2.5 py-2 hover:bg-zinc-800/50 transition-colors text-left"
+                      title={`Plan ${org.planLabel}`}
+                      aria-label={`Plan ${org.planLabel}`}
+                      class="group relative grid size-10 w-full shrink-0 place-items-center outline-none select-none"
                     >
-                      <div class="flex items-center gap-2 min-w-0">
-                        {/* Logo o avatar del plan */}
-                        <div class="w-6 h-6 rounded-md bg-zinc-800 border border-zinc-700/80 flex items-center justify-center text-xs font-bold text-white shrink-0">
-                          {org.planLabel.charAt(0).toUpperCase()}
-                        </div>
-                        {/* Nombre del plan (nunca «Organización») */}
-                        <span class="text-xs font-semibold text-zinc-200 truncate">
-                          {org.planLabel}
-                        </span>
-                      </div>
-                      {/* Indicador de desplegable hacia abajo */}
-                      <svg
-                        class={`w-3.5 h-3.5 text-zinc-400 transition-transform duration-200 ${
-                          expanded() ? "rotate-180" : ""
-                        }`}
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
+                      <span
+                        aria-hidden="true"
+                        class="danil-mark relative grid size-8 place-items-center rounded-md border border-border bg-surface text-label font-semibold text-neutral-700 hover:bg-neutral-200 hover:text-neutral-950 group-focus-visible:outline-solid group-focus-visible:outline-2 group-focus-visible:outline-offset-2 group-focus-visible:outline-primary transition-colors"
                       >
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                      </svg>
+                        {org.planLabel.charAt(0).toUpperCase()}
+                      </span>
                     </button>
 
                     {/* Contenido desplegable hacia abajo */}
                     <Show when={expanded()}>
-                      <div class="flex flex-col gap-1 p-2 border-t border-zinc-800/60 bg-zinc-950/40">
+                      <div class="flex w-full flex-col items-center gap-1">
                         <Show
                           when={orgWorkspaces().length > 0}
                           fallback={
-                            <div class="py-2 text-center text-[11px] text-zinc-500">
-                              Sin workspaces
+                            <div class="py-1 text-center text-caption text-neutral-500">
+                              Vacío
                             </div>
                           }
                         >
@@ -231,10 +218,11 @@ export const RailGroups: Component<RailGroupsProps> = (props) => {
                         <button
                           type="button"
                           onClick={() => openCreateDialog(org.id)}
-                          class="flex items-center gap-1.5 px-2.5 py-1.5 mt-1 rounded text-[11px] font-medium text-zinc-400 hover:text-white hover:bg-zinc-800/60 transition-colors"
+                          title="Agregar workspace"
+                          aria-label="Agregar workspace"
+                          class="grid size-8 shrink-0 place-items-center rounded-md border border-dashed border-border text-neutral-500 outline-none hover:border-border-strong hover:bg-neutral-200 hover:text-neutral-950 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary transition-colors text-sm"
                         >
-                          <span class="text-sm leading-none">+</span>
-                          <span>Agregar workspace</span>
+                          +
                         </button>
                       </div>
                     </Show>
@@ -249,13 +237,10 @@ export const RailGroups: Component<RailGroupsProps> = (props) => {
       {/* Modal para crear workspace */}
       <CreateWorkspaceDialog
         open={dialogOpen()}
-        onClose={() => setDialogOpen(false)}
-        organizations={orgsQuery.organizations()}
         defaultOrgId={targetOrgId()}
+        organizations={orgsQuery.organizations() || []}
+        onClose={() => setDialogOpen(false)}
         onCreated={handleCreated}
-        client={props.client}
-        session={props.session}
-        sessionSource={props.sessionSource}
       />
     </div>
   );

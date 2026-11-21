@@ -1,6 +1,12 @@
 import { createUniqueId, For, type JSX, Show } from "solid-js";
 import { Dynamic } from "solid-js/web";
 import GitBranch from "lucide-solid/icons/git-branch";
+import Server from "lucide-solid/icons/server";
+import User from "lucide-solid/icons/user";
+import Laptop from "lucide-solid/icons/laptop";
+import Settings from "lucide-solid/icons/settings";
+import Pencil from "lucide-solid/icons/pencil";
+export { GitBranch, Server, User, Laptop, Settings, Pencil };
 import { AGENT_MARKS, type AgentMark, agentMarkId } from "./lib/design";
 import { MarcaServicio } from "./marcas";
 

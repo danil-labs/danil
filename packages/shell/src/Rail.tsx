@@ -1,4 +1,5 @@
 import { createSignal, For, Show, type JSX } from "solid-js";
+import { Server, User } from "@danil/ui";
 
 export interface WorkspaceItem {
   id: string;
@@ -78,22 +79,12 @@ export function Rail(props: RailProps): JSX.Element {
 
   return (
     <nav
-      aria-label="Navegación principal"
-      style={{
-        width: "64px",
-        height: "100%",
-        display: "flex",
-        "flex-direction": "column",
-        "align-items": "center",
-        padding: "12px 0",
-        background: "#12141a",
-        "border-right": "1px solid #1f2128",
-        "user-select": "none",
-        "box-sizing": "border-box",
-      }}
+      aria-label="Espacios de trabajo"
+      data-workspace-column=""
+      class="flex h-full w-12 shrink-0 flex-col border-r border-border bg-surface select-none"
     >
       {/* Botón superior: Máquinas */}
-      <div style={{ display: "flex", "flex-direction": "column", "align-items": "center", gap: "8px", width: "100%" }}>
+      <div class="flex w-full flex-col items-center gap-1 pt-2">
         {props.slots?.top ? (
           props.slots.top
         ) : (
@@ -102,51 +93,21 @@ export function Rail(props: RailProps): JSX.Element {
             title="Máquinas"
             aria-label="Máquinas"
             onClick={() => props.onSelectRoute?.("machines")}
-            style={{
-              width: "40px",
-              height: "40px",
-              "border-radius": "10px",
-              display: "flex",
-              "align-items": "center",
-              "justify-content": "center",
-              background: props.activeRoute === "machines" ? "#2a2d38" : "transparent",
-              color: props.activeRoute === "machines" ? "#ffffff" : "#8b8f9e",
-              border: "none",
-              cursor: "pointer",
-              transition: "all 0.15s ease",
-            }}
+            class={`grid size-8 shrink-0 place-items-center rounded-md text-neutral-500 outline-none transition-colors hover:bg-neutral-200 hover:text-neutral-950 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
+              props.activeRoute === "machines"
+                ? "border border-border-strong bg-surface-raised font-semibold text-neutral-950 shadow-sm"
+                : ""
+            }`}
           >
-            {/* Icono de máquina / computadoras */}
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <rect x="2" y="3" width="20" height="14" rx="2" />
-              <line x1="8" y1="21" x2="16" y2="21" />
-              <line x1="12" y1="17" x2="12" y2="21" />
-            </svg>
+            <Server size={17} aria-hidden="true" />
           </button>
         )}
       </div>
 
-      <div
-        style={{
-          width: "32px",
-          height: "1px",
-          background: "#1f2128",
-          margin: "12px 0",
-        }}
-      />
+      <span aria-hidden="true" class="my-1.5 h-px w-6 shrink-0 bg-border-strong self-center" />
 
       {/* Stacks por organización según DS1 v2 */}
-      <div
-        style={{
-          flex: "1",
-          width: "100%",
-          display: "flex",
-          "flex-direction": "column",
-          "align-items": "center",
-          gap: "12px",
-          "overflow-y": "auto",
-        }}
-      >
+      <div class="flex min-h-0 flex-1 flex-col items-center gap-1 overflow-x-hidden overflow-y-auto py-1">
         {props.slots?.stacks ? (
           props.slots.stacks
         ) : (
@@ -156,77 +117,35 @@ export function Rail(props: RailProps): JSX.Element {
               const expanded = () => isExpanded(org.id);
 
               return (
-                <div
-                  style={{
-                    display: "flex",
-                    "flex-direction": "column",
-                    "align-items": "center",
-                    width: "100%",
-                    gap: "6px",
-                  }}
-                >
-                  {/* Cabecera del stack: Logo de la organización que despliega hacia abajo */}
+                <div role="group" data-rail-organization={org.id} class="flex w-full flex-col items-center gap-1">
+                  {/* Cabecera del stack: Botón de la organización */}
                   <button
                     type="button"
                     title={`Plan ${planLabel()}`}
                     aria-label={`Plan ${planLabel()}`}
                     onClick={() => toggleStack(org.id)}
-                    style={{
-                      width: "42px",
-                      height: "42px",
-                      "border-radius": "12px",
-                      background: "#1c1e26",
-                      border: "1px solid #282a36",
-                      color: "#e2e4ed",
-                      display: "flex",
-                      "align-items": "center",
-                      "justify-content": "center",
-                      "font-weight": "600",
-                      "font-size": "14px",
-                      cursor: "pointer",
-                      position: "relative",
-                      transition: "transform 0.15s ease",
-                    }}
+                    class="group relative grid size-10 w-full shrink-0 place-items-center outline-none select-none"
                   >
-                    <Show
-                      when={org.logoUrl}
-                      fallback={<span>{org.name.slice(0, 2).toUpperCase()}</span>}
-                    >
-                      <img
-                        src={org.logoUrl}
-                        alt={planLabel()}
-                        style={{ width: "24px", height: "24px", "border-radius": "6px" }}
-                      />
-                    </Show>
-
-                    {/* Indicador sutil de despliegue */}
                     <span
-                      style={{
-                        position: "absolute",
-                        bottom: "2px",
-                        right: "4px",
-                        "font-size": "8px",
-                        color: "#6b7082",
-                        transform: expanded() ? "rotate(0deg)" : "rotate(-90deg)",
-                        transition: "transform 0.15s ease",
-                      }}
+                      aria-hidden="true"
+                      class="danil-mark relative grid size-8 place-items-center rounded-md border border-border bg-surface text-label font-semibold text-neutral-700 hover:bg-neutral-200 hover:text-neutral-950 group-focus-visible:outline-solid group-focus-visible:outline-2 group-focus-visible:outline-offset-2 group-focus-visible:outline-primary transition-colors"
                     >
-                      ▼
+                      <Show
+                        when={org.logoUrl}
+                        fallback={<span>{org.name.slice(0, 2).toUpperCase()}</span>}
+                      >
+                        <img
+                          src={org.logoUrl}
+                          alt={planLabel()}
+                          class="size-6 rounded"
+                        />
+                      </Show>
                     </span>
                   </button>
 
                   {/* Workspaces de la organización desplegados hacia abajo */}
                   <Show when={expanded()}>
-                    <div
-                      style={{
-                        display: "flex",
-                        "flex-direction": "column",
-                        "align-items": "center",
-                        gap: "6px",
-                        width: "100%",
-                        padding: "2px 0",
-                      }}
-                    >
+                    <div class="flex w-full flex-col items-center gap-1">
                       <For each={org.workspaces}>
                         {(ws) => {
                           const isActive = () =>
@@ -238,23 +157,20 @@ export function Rail(props: RailProps): JSX.Element {
                               title={ws.name}
                               aria-label={ws.name}
                               onClick={() => props.onSelectWorkspace?.(ws.id)}
-                              style={{
-                                width: "34px",
-                                height: "34px",
-                                "border-radius": "8px",
-                                background: isActive() ? "#2f68f6" : "#181a22",
-                                color: isActive() ? "#ffffff" : "#a1a5b5",
-                                border: isActive() ? "1px solid #4a7ef9" : "1px solid #232530",
-                                display: "flex",
-                                "align-items": "center",
-                                "justify-content": "center",
-                                "font-size": "12px",
-                                "font-weight": "500",
-                                cursor: "pointer",
-                                transition: "all 0.15s ease",
-                              }}
+                              class="marca-seleccion group relative grid size-10 w-full shrink-0 place-items-center outline-none select-none"
+                              aria-current={isActive() ? "true" : undefined}
+                              data-workspace-tile={ws.id}
                             >
-                              {ws.name.slice(0, 2).toUpperCase()}
+                              <span
+                                aria-hidden="true"
+                                class={`relative grid size-8 place-items-center rounded-md border text-label font-semibold transition-colors group-focus-visible:outline-solid group-focus-visible:outline-2 group-focus-visible:outline-offset-2 group-focus-visible:outline-primary ${
+                                  isActive()
+                                    ? "border-border-strong bg-surface-raised text-neutral-950 shadow-sm"
+                                    : "border-border bg-surface text-neutral-700 hover:bg-neutral-200 hover:text-neutral-950"
+                                }`}
+                              >
+                                {ws.name.slice(0, 2).toUpperCase()}
+                              </span>
                             </button>
                           );
                         }}
@@ -266,20 +182,7 @@ export function Rail(props: RailProps): JSX.Element {
                         title="Agregar workspace"
                         aria-label="Agregar workspace"
                         onClick={() => props.onAddWorkspace?.(org.id)}
-                        style={{
-                          width: "30px",
-                          height: "30px",
-                          "border-radius": "8px",
-                          background: "transparent",
-                          color: "#6b7082",
-                          border: "1px dashed #2a2d38",
-                          display: "flex",
-                          "align-items": "center",
-                          "justify-content": "center",
-                          "font-size": "16px",
-                          cursor: "pointer",
-                          transition: "all 0.15s ease",
-                        }}
+                        class="grid size-8 shrink-0 place-items-center rounded-md border border-dashed border-border text-neutral-500 outline-none hover:border-border-strong hover:bg-neutral-200 hover:text-neutral-950 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary transition-colors text-sm"
                       >
                         +
                       </button>
@@ -293,7 +196,7 @@ export function Rail(props: RailProps): JSX.Element {
       </div>
 
       {/* Botón inferior: Cuenta */}
-      <div style={{ display: "flex", "flex-direction": "column", "align-items": "center", gap: "8px", width: "100%" }}>
+      <div class="flex shrink-0 flex-col items-center gap-1 pt-1 pb-2" data-workspace-column-foot="">
         {props.slots?.bottom ? (
           props.slots.bottom
         ) : (
@@ -302,25 +205,13 @@ export function Rail(props: RailProps): JSX.Element {
             title="Cuenta"
             aria-label="Cuenta"
             onClick={() => props.onSelectRoute?.("account")}
-            style={{
-              width: "40px",
-              height: "40px",
-              "border-radius": "10px",
-              display: "flex",
-              "align-items": "center",
-              "justify-content": "center",
-              background: props.activeRoute === "account" ? "#2a2d38" : "transparent",
-              color: props.activeRoute === "account" ? "#ffffff" : "#8b8f9e",
-              border: "none",
-              cursor: "pointer",
-              transition: "all 0.15s ease",
-            }}
+            class={`grid size-8 shrink-0 place-items-center rounded-md text-neutral-500 outline-none transition-colors hover:bg-neutral-200 hover:text-neutral-950 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
+              props.activeRoute === "account"
+                ? "border border-border-strong bg-surface-raised font-semibold text-neutral-950 shadow-sm"
+                : ""
+            }`}
           >
-            {/* Icono de usuario / cuenta */}
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-              <circle cx="12" cy="7" r="4" />
-            </svg>
+            <User size={17} aria-hidden="true" />
           </button>
         )}
       </div>
