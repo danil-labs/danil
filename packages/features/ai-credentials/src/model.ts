@@ -26,9 +26,10 @@ export type PlatformCredentialItem = NonNullable<NonNullable<CredentialProviderL
 export type { EngineClient, MachineRef, ConnectOptions, MachineConnection };
 export type EngineProvidersOutput = Awaited<ReturnType<EngineClient["list_providers"]>>;
 export type EngineProviderItem = EngineProvidersOutput extends (infer U)[] ? U : unknown;
+export type RawAccountCredentialsListOutput = Awaited<ReturnType<EngineClient["account_credentials_list"]>>;
 
 // Proveedores admitidos por la nueva arquitectura
-export type SupportedProvider = "claude" | "codex" | "antigravity" | "opencode";
+export type SupportedProvider = "claude" | "codex" | "antigravity" | "opencode" | "gemini";
 
 // Estados por máquina según contrato B-022 y API.md migración 008
 export type MachineCredentialState = "active" | "pending" | "removed";

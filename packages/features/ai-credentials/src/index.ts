@@ -13,6 +13,7 @@ export type { CredentialErrorNoticeProps } from "./components/CredentialErrorNot
 
 export {
   useProviders,
+  useMachineAccountCredentials,
   useWorkspaceAccounts,
   useConnectAccount,
   useDeleteAccount,
@@ -22,12 +23,14 @@ export {
 } from "./queries.ts";
 export type {
   UseProvidersReturn,
+  UseMachineAccountCredentialsReturn,
   ConnectAccountOptions,
   MachineQueryTarget,
 } from "./queries.ts";
 
 export type {
   SupportedProvider,
+  RawAccountCredentialsListOutput,
   MachineCredentialState,
   MachineCredentialStatus,
   CredentialKind,
