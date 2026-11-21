@@ -25,7 +25,7 @@ async function until(read, what = 'Window condition') {
 }
 
 function edge({ expireX = () => false, lateX2 = () => true } = {}) {
-  const state = { calls: [], unscoped: [], selects: [], expired: 0 };
+  const state = { calls: [], unscoped: [], selects: [], expired: 0, admitted: [] };
   const echo = (context, body, init = {}) => Response.json(body, { ...init, headers: { 'X-Danil-Session-Applied': context, 'X-Danil-Session-Applied-Org': ORGS[context] } });
   const fetcher = async (input, init = {}) => {
     const url = new URL(String(input));
@@ -41,6 +41,7 @@ function edge({ expireX = () => false, lateX2 = () => true } = {}) {
     switch (url.pathname) {
       case '/v1/capabilities': return Response.json({ contract: 'mvp-v1', items: ['machines', 'machines.session', 'workspaces'].map(name => ({ name, version: 1, status: 'available' })) });
       case '/v1/identity/csrf': return Response.json({ csrf_token: 'bound' });
+      case '/v1/identity/contexts': state.admitted.push(JSON.parse(String(init.body))); return Response.json({ context_id: 'ctx_x', org: 'org_x' });
       case '/v1/identity/sessions': return Response.json({ version: 1, items: [{ session_id: 'ses_a', sub: 'user_a', email: 'a@example.test', contexts: [
         { context_id: 'ctx_p', org: 'org_p', org_name: 'Personal', plan: 'pro', personal: true },
         { context_id: 'ctx_x', org: 'org_x', org_name: 'Org X', plan: 'pro', role: 'member' }] }], primary: 'ses_a', default_context: 'ctx_p' });
@@ -120,6 +121,12 @@ test('a 401 of one organization (its API and its machine ticket) leaves the page
   assert.ok(tile(doc, 'wp'), 'the personal workspace stays in the rail');
   assert.ok(doc.querySelector('[data-rail-organization="org_x"]'), 'the X group stays, marked');
   assert.ok(doc.querySelector('[data-web-reauth-sign-in]'), 'and it offers to sign in to X again');
+  expire = false;
+  doc.querySelector('[data-web-reauth-sign-in]').click();
+  await until(() => state.admitted.length === 1, 'signing in again admits only X');
+  assert.deepEqual(state.admitted, [{ organization: 'org_x', session_id: 'ses_a' }]);
+  assert.deepEqual(app.failures.filter(f => f.includes('navigation')), [], 'no full login: the other organizations of the cookie stay');
+  assert.ok(tile(doc, 'wp'));
 });
 
 test('a machine that goes off keeps its tile, and a workspace added to the catalog later appears without a reload', async t => {

@@ -161,6 +161,7 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
       setShellCacheScope({ mine: () => false, prefer: null });
       disposeGate?.();
       disposeGate = undefined;
+      const picker = webWorkspacePicker(plain, { store: window.sessionStorage, signIn: organization => window.location.assign(api.loginUrl(home, organization)) });
       const organizations = active.organizations(() => sessions.handle('danil_session_status'));
       setFreeRouterHost({ edge: freeRouterWebEdge(transport), engine: policy => freeRouterEngine(policy ? freeModelScope(policy) : undefined),
         identity: active.freeRouterIdentity(rail.accountOf) });
@@ -174,11 +175,13 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
         profile: webAccountProfile(transport), active,
         onUnavailable: () => { setError('web.platform.unavailable'); mounted = false; gate(); later(); },
         services: {
-          webWorkspacePicker: webWorkspacePicker(plain, { store: window.sessionStorage, signIn: organization => window.location.assign(api.loginUrl(home, organization)) }),
+          webWorkspacePicker: picker,
           danilCredits: { readBalance: async signal => { const group = active.current(); return group ? api.creditsBalance(group.org, signal, group.context) : null; } },
         },
         // W4: una organización con la sesión vencida ofrece volver a entrar a esa organización.
-        reauth: { needed: () => !!expiredOrganization(), signIn: () => window.location.assign(api.loginUrl(home, expiredOrganization() ?? undefined)) },
+        // Admite solo esa organización (como el «+»): un login completo reemplazaría todo el conjunto de la cookie. Solo
+        // si identity exige SSO o MFA (409 organization_auth_required) el selector manda al login de esa organización.
+        reauth: { needed: () => !!expiredGroup(), signIn: () => { const g = expiredGroup(); if (g) void picker.admit({ session: g.family, sub: '', email: g.email ?? '', org: g.org, organization: g.org_name ?? '', context: null, admission_required: true, catalog_state: 'listed' }).then(() => sessionRailState()?.sessions.refresh()).catch(() => {}); } },
         billing, groupAccount: { send: api.groupAccount.send, current, legacy: () => false, contexts: () => active.groups().map(g => g.context) },
       }, { storage: cache.storage, webAccounts: {
         current: { user_id: profile.id, name: profile.name, email: typeof profile.email === 'string' ? profile.email : null, extra: false },
@@ -186,7 +189,7 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
       } });
       void refresh();
     }
-    const expiredOrganization = () => sessionRailState()?.groups()?.find(g => g.empty_reason === 'session_expired')?.org ?? null;
+    const expiredGroup = () => sessionRailState()?.groups()?.find(g => g.empty_reason === 'session_expired') ?? null;
     function stopServices() { clearTimeout(timer); lifetime.abort(); }
     const close = () => { stopped = true; stopServices(); windowApp?.close(); disposeGate?.(); dispose(); };
     window.addEventListener('pagehide', close, { once: true });
