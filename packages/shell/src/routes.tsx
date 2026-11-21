@@ -1,4 +1,4 @@
-import { lazy, createSignal, createMemo, createEffect, createRenderEffect, Show, on, onCleanup, type JSX } from "solid-js";
+import { lazy, createSignal, createMemo, createEffect, createRenderEffect, Show, on, onCleanup, untrack, type JSX } from "solid-js";
 import { Tabs, TabsList, TabsTrigger, TabsContent, Button, FailureNote } from "@danil/ui";
 import { useMachines, type MachineConnection } from "@danil/feature-machines";
 import { useWorkspaces } from "@danil/feature-workspaces";
@@ -175,7 +175,9 @@ export function WorkspaceScreen(props: { id: string }): JSX.Element {
         if (!m) return undefined;
         // Al cargar solo se conecta a una máquina encendida; una apagada se muestra «apagada» y
         // se despierta solo con el botón de ESA máquina (FOCO NUEVO, M6b).
-        const wake = wakeFor() === m.machine_id;
+        // El permiso vale para UNA conexión: se lee y se gasta aquí mismo (SR-FOCO C1).
+        const wake = untrack(wakeFor) === m.machine_id;
+        if (wake) setWakeFor(null);
         if (!wake && !running) return undefined;
         const c = connect(m, { wake });
         onCleanup(() => c.close());
@@ -185,10 +187,6 @@ export function WorkspaceScreen(props: { id: string }): JSX.Element {
   );
 
   onCleanup(() => conn()?.close());
-  // Conectada la máquina, el permiso de despertar se gasta: volver más tarde no la despierta.
-  createEffect(() => {
-    if (conn()?.status() === "connected") setWakeFor(null);
-  });
 
   // B-007, paso 2: el motor de la máquina de ESTE workspace marca el workspace activo, con su
   // propio conn y solo cuando está conectado. Por relay el motor no expone el comando

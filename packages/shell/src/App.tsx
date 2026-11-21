@@ -60,7 +60,7 @@ function signInError(): string {
   if (result === "cancelled") return "";
   if (result === "no_access") return AUTH.errors.access_required;
   if (result === "failed") return AUTH.errors.callback_failed;
-  if (error) return AUTH.errors[error] ?? AUTH.errors.callback_failed;
+  if (error) return Object.hasOwn(AUTH.errors, error) ? AUTH.errors[error] : AUTH.errors.callback_failed;
   return "";
 }
 
