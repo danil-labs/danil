@@ -257,7 +257,10 @@ export function WorkspaceScreen(props: { id: string }): JSX.Element {
                 <AiCredentialsScreen
                   workspaceId={props.id}
                   conn={c()}
-                  knownMachineIds={machines()?.map((m) => m.machine_id)}
+                  // Solo las máquinas de la organización de este workspace (RV1c N17, regla 0).
+                  knownMachineIds={(machines() ?? [])
+                    .filter((m) => m.organization_id === currentWorkspace()?.org)
+                    .map((m) => m.machine_id)}
                   onWakeMachine={async (id) => {
                     await start(id);
                   }}
