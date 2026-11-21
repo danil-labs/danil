@@ -7,6 +7,8 @@ export * from "./MessageText.tsx";
 export * from "./Reasoning.tsx";
 export * from "./Questions.tsx";
 export * from "./InterruptionBlock.tsx";
+export * from "./ShellCard.tsx";
+
 
 
 
