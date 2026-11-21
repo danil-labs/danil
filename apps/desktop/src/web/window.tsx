@@ -142,7 +142,7 @@ export function mountWindow(base: Base, mounted: Mounted) {
     ...base.services,
     organizations: base.organizations,
     initialSettings: takeSettingsParam(),
-    machineName: id => id === "local" ? t(missing() ? "web.machines.unavailable" : "web.machines.no_machine") : fleet.name(id, scope.current()?.context),
+    machineName: id => id === "local" ? (missing() ? t("web.machines.unavailable") : "") : fleet.name(id, scope.current()?.context),
     taskWritable: id => {
       revision();
       const context = scope.current()?.context;

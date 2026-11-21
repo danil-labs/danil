@@ -102,7 +102,7 @@ const MachinesLicense = lazy(() =>
 
 import { canonicalAgentId, isFreeRouterModel, lastActivity, launcherOf, OPENCODE, taskDescendants, withRemoteLaunchers } from "@terminus/tasks";
 import type { CarriedBase, CarryCheck } from "../features/machines/carry";
-import { bringHereLabel, canBringHere, carryOrigin, machineName, machineOf, machines, machineWakes, refetchMachines, remoteChildScope, runOn, senderTaskId, setRunOn, setTaskRowMachine } from "../features/machines/store";
+import { bringHereLabel, canBringHere, carryOrigin, machineName, machineOf, machines, machineWakes, refetchMachines, rememberedRunOn, remoteChildScope, runOn, senderTaskId, setRunOn, setTaskRowMachine } from "../features/machines/store";
 import { activeTaskCounts, activityByProject, type HiddenProjects, hiddenIn, type PickedAt, picksIn, rememberPick, setHidden, storedPicks, taskCountOf } from "../features/projects";
 import { createdTasks } from "../features/projects/agentPageFilters";
 import BaseBranchPicker from "../features/projects/BaseBranchPicker";
@@ -6294,14 +6294,14 @@ export default function App() {
       <div data-task-bar="" class={cn("flex min-w-0 shrink-0 flex-col overflow-hidden", LOCATION_BAR)}>{contenido}</div>;
     const ubicacion = () => <Show when={pp.sesion} fallback={<Show when={!paginaDeAgente()}>{barraDeLaTarea(<Suspense fallback={null}><TaskLocation
       /* La tarea nueva: la máquina y la carpeta donde va a correr. La rama sale al empezarla. */
-      machine={draftMachine() ?? undefined}
-      on={machines().find(m => m.id === draftMachine())?.on !== false}
+      machine={(draftMachine() ?? (capabilities().nativeWindow ? null : rememberedRunOn(workspaceActivo()))) ?? undefined}
+      on={((m) => m?.on !== false && (capabilities().nativeWindow || (!!m && m.hosts !== false)))(machines().find(m => m.id === (draftMachine() ?? rememberedRunOn(workspaceActivo()))))}
       onScreen={abrirPantalla}
       project={proyectoDeLaCelda()}
       path={carpetaDeTrabajo(proyectoDeLaCelda() ?? {}) || undefined} /></Suspense>)}</Show>}>{(id) => {
       return barraDeLaTarea(<Suspense fallback={null}><TaskLocation
         machine={filaDe(id())?.machine}
-        on={!apagadas()[id()] && filaDe(id())?.machine_on !== false}
+        on={!apagadas()[id()] && filaDe(id())?.machine_on !== false && (capabilities().nativeWindow || machines().find(m => m.id === filaDe(id())?.machine)?.hosts !== false)}
         onScreen={abrirPantalla}
         onFiles={() => {
           const folder = proyectoDeLaCelda()?.id;
