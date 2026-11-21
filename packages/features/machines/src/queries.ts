@@ -8,6 +8,7 @@ import {
 } from "solid-js";
 import {
   usePlatform,
+  isClientError,
   type PlatformClient,
 } from "@danil/platform-client";
 import {
@@ -274,27 +275,51 @@ export function useMachines(session?: SessionInput): UseMachinesReturn {
               code: "invalid_ticket_response",
               message: "Missing ticket or admission url",
             };
-          } catch (err: any) {
+          } catch (err: unknown) {
             // Regla 6.4 y 6.5 / M6b: el encendido ocurre únicamente por acción explícita de la persona (conectar).
-            // Si la VM está apagada (409 machine_unreachable / stopped), la plataforma debe encenderla al emitir ticket;
+            // Si la VM está apagada (machine_unreachable / stopped por code), la plataforma debe encenderla al emitir ticket;
             // si no lo hizo automáticamente (incidente 2), disparamos startMachine como respaldo para que despierte
             // sin requerir encendidos manuales por consola ni arrojar error final.
-            if (err && (err.status === 409 || err.code === "machine_unreachable" || err.code === "stopped")) {
-              void cl
-                .startMachine({
-                  id: machineId,
-                  idempotencyKey: createIdempotencyKey(),
-                })
-                .catch(() => {});
-              return { kind: "machine_unreachable" };
+            if (isClientError(err)) {
+              if (err.kind === "unauthorized" || err.kind === "forbidden") {
+                return {
+                  kind: "error",
+                  code: err.kind,
+                  message: err.kind,
+                };
+              }
+              if (err.kind === "unavailable") {
+                return {
+                  kind: "error",
+                  code: "unavailable",
+                  message: "Plataforma no disponible",
+                };
+              }
+              if (err.kind === "error") {
+                if (err.code === "machine_unreachable" || err.code === "stopped") {
+                  void cl
+                    .startMachine({
+                      id: machineId,
+                      idempotencyKey: createIdempotencyKey(),
+                    })
+                    .catch(() => {});
+                  return { kind: "machine_unreachable" };
+                }
+                if (err.code === "starting") {
+                  return { kind: "starting" };
+                }
+                return {
+                  kind: "error",
+                  code: err.code || "ticket_failed",
+                  message: err.message,
+                };
+              }
             }
-            if (err && err.code === "starting") {
-              return { kind: "starting" };
-            }
+            const message = err instanceof Error ? err.message : String(err);
             return {
               kind: "error",
-              code: err?.code ?? "ticket_failed",
-              message: err?.message,
+              code: "ticket_failed",
+              message,
             };
           }
         },
