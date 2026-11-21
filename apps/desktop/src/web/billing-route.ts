@@ -57,7 +57,9 @@ export function billingEntry(location: Location, store: Storage) {
       store.removeItem(PAYMENT);
       returned.searchParams.delete("settings");
     }
-    return returned;
+    if (returned || !checkout) return returned;
+    current.pathname = billingPath();
+    return current;
   }
   const login = resume(store, LOGIN, current);
   store.removeItem(LOGIN);

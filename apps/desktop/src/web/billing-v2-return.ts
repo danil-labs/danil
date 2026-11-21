@@ -1,3 +1,5 @@
+export const BILLING_RETURN_KEY = "danil.billing.return";
+
 type CheckoutState = "pending" | "paid" | "active" | "expired" | "canceled" | "error";
 type CheckoutStatus = { state: CheckoutState; terminal: boolean; organization_id?: string };
 export type CheckoutOutcome = { kind: "active"; organizationId?: string } | { kind: "paid" | "processing" | "cancelled" | "expired" | "error" };
