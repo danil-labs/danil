@@ -30,19 +30,16 @@ export function AiCredentialsScreen(props: AiCredentialsScreenProps): JSX.Elemen
   const activeWorkspaceId = () => props.workspaceId ?? "default";
 
   // Consulta única y cacheada de credenciales del workspace (B-023)
-  const accountsQuery = useWorkspaceAccounts(
-    activeWorkspaceId,
-    props.platformClient,
-  );
+  const accountsQuery = useWorkspaceAccounts(activeWorkspaceId);
 
   // Consulta de proveedores en el motor
   const providersQuery = useProviders(props.engineClient);
 
   // Mutaciones
-  const connectAction = useConnectAccount(props.platformClient);
-  const deleteAction = useDeleteAccount(props.platformClient);
-  const removeMachineAction = useRemoveMachineAccount(props.platformClient);
-  const restoreMachineAction = useRestoreMachineAccount(props.platformClient);
+  const connectAction = useConnectAccount();
+  const deleteAction = useDeleteAccount();
+  const removeMachineAction = useRemoveMachineAccount();
+  const restoreMachineAction = useRestoreMachineAccount();
   const wakeAction = useWakeMachine();
 
   const recipients = (): WorkspaceRecipient[] =>
