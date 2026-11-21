@@ -59,7 +59,7 @@ export function mountWindow(base: Base, mounted: Mounted) {
     },
     wake: async (id, context) => {
       if (!base.permits("machines.start")) return "not_startable";
-      const answer = await scope.client(context).start(id);
+      const answer = await scope.client(context).wake(id);
       if (answer.kind === "unauthorized") base.onUnauthorized();
       if (answer.kind === "ok") { void refresh(); return true; }
       return answer.kind === "error" && answer.code === "not_remotely_startable" ? "not_startable" : false;

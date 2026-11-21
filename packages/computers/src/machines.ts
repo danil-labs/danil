@@ -157,11 +157,11 @@ export function machinesClient(config: MachinesConfig) {
     return { kind: "error", status, ...(code ? { code } : {}), ...meta };
   }
 
-  async function call<T>(collection: boolean, method: string, path: string, read: (body: unknown) => T, { ok = [200], received, signal }: { ok?: number[]; received?: (response: MachinesResponse) => void; signal?: AbortSignal } = {}): Promise<MachinesAnswer<T>> {
+  async function call<T>(collection: boolean, method: string, path: string, read: (body: unknown) => T, { ok = [200], received, signal, body: payload, key }: { ok?: number[]; received?: (response: MachinesResponse) => void; signal?: AbortSignal; body?: string; key?: string } = {}): Promise<MachinesAnswer<T>> {
     let response: MachinesResponse;
     try {
       signal?.throwIfAborted();
-      const write = method === "GET" ? undefined : { method, headers: { "content-type": "application/json", "Idempotency-Key": requestId() }, body: "{}" };
+      const write = method === "GET" ? undefined : { method, headers: { "content-type": "application/json", "Idempotency-Key": key ?? requestId() }, body: payload ?? "{}" };
       if (config.transport) {
         const route = path.replace(/^\//, "");
         response = method === "GET" ? await config.transport.call(route, signal ? { signal } : undefined) : await config.transport.mutation(route, write);
@@ -259,6 +259,24 @@ export function machinesClient(config: MachinesConfig) {
       }
       if (operation.status !== "succeeded") return { kind: "error", status: null, code: operation.error?.code ?? `operation_${operation.status}` };
       return call(false, "GET", idPath(id), readMachine);
+    },
+
+    /**
+     * Enciende una VM apagada por una acción de la persona: `POST …/tickets {"wake": true}` con la MISMA
+     * `Idempotency-Key` en cada intento. `503 machine_starting` pide esperar `Retry-After` y reintentar hasta el
+     * `201` (normalmente menos de 2 s). Nunca se llama al cargar, listar ni en segundo plano: sin `wake`, una
+     * VM apagada contesta `409 machine_stopped` y no se enciende. El ticket de esta respuesta se descarta.
+     */
+    async wake(id: string): Promise<MachinesAnswer<true>> {
+      const key = requestId();
+      const deadline = now() + (config.operationTimeoutMs ?? OPERATION_TIMEOUT_MS);
+      for (;;) {
+        const answer = await call(false, "POST", `${idPath(id)}/tickets`, () => true as const, { ok: [200, 201], body: '{"wake":true}', key });
+        if (answer.kind !== "error" || answer.status !== 503 || answer.code !== "machine_starting") return answer;
+        const wait = pollingDelay(answer.retryAfter, 2_000);
+        if (now() + wait > deadline) return { kind: "error", status: 503, code: "operation_timeout" };
+        await sleep(wait);
+      }
     },
 
     /** Un ticket de un solo uso para el canal de datos. Si la URL no pasa la validación, el ticket no sale de aquí. */

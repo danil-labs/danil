@@ -56,6 +56,7 @@ export function createSessionCloud(invoke: Invoke, onProblem?: (error: unknown) 
     client: {
       admission: (id: string, context?: string) => target(id, context).admission(id),
       start: (id: string, context?: string) => target(id, context).start(id),
+      wake: (id: string, context?: string) => target(id, context).wake(id),
     },
     async rows() {
       const version = ++epoch;

@@ -289,7 +289,7 @@ export function startAccountMachines(target: Target = window) {
       // sigue en servicio y solo falla la orden que no conoce (nunca la máquina entera).
       wake: async (id, context) => {
         if (isGuestMachine(id)) return wakeGuestMachine(id);
-        if (cloudIds.has(id)) return wokeOf(await cloud.client.start(id, context));
+        if (cloudIds.has(id)) return wokeOf(await cloud.client.wake(id, context));
         if (endpoint === null) throw { code: "unknown_machine", detail: id };
         return startedOf(await startComputer(endpoint, (await getToken()).token, id));
       },
