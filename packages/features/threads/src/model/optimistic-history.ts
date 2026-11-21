@@ -1,5 +1,5 @@
-import type { HistoryPager, Msg, Session } from "../../chat/src/index.ts";
-import { conservarEnOrden, conservarPorClave } from "../../../session/src/sessionRefresh.ts";
+import type { HistoryPager, Msg, Session } from "../../../chat/src/index.ts";
+import { conservarEnOrden, conservarPorClave } from "../../../../session/src/sessionRefresh.ts";
 
 // `persisted`: a row with a turn the engine already confirmed, painted in `base`. It
 // holds the turns the thread had at confirmation: the row survives until a read

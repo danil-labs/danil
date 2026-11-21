@@ -1,5 +1,5 @@
-import { displayWorkspaceContext } from "../../../../apps/desktop/src/lib/workspace-context.ts";
-import { createContextViews } from "../../../../apps/desktop/src/lib/workspace-view-scope.ts";
+import { displayWorkspaceContext } from "../../../../../apps/desktop/src/lib/workspace-context.ts";
+import { createContextViews } from "../../../../../apps/desktop/src/lib/workspace-view-scope.ts";
 import { createThreadsCore } from "./store-core.ts";
 
 export type { MachineWait } from "./store-core.ts";

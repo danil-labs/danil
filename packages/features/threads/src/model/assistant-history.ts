@@ -1,4 +1,4 @@
-import { hasRecentGap, transcripcion, type Msg, type Session, type Turn } from "../../chat/src/index.ts";
+import { hasRecentGap, transcripcion, type Msg, type Session, type Turn } from "../../../chat/src/index.ts";
 
 export const idsDeTurnos = (turns: readonly Turn[]) => new Set(turns.flatMap(turn => turn.id ? [turn.id] : []));
 

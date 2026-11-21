@@ -1,9 +1,9 @@
 import { batch, createMemo, createSignal, type Setter, untrack } from "solid-js";
-import { anexarDeltas, type ChatEvent, type HandoverState, HistoryPager, hasOlder, hasRecentGap, lotesDeDeltas, type Msg, mensajesDelHilo, type OlderState, type Session, type TranscriptOrigin, transcripcion, vivoTrasLeer } from "../../chat/src/index.ts";
-import { createActivityProjection } from "./activity.ts";
-import { createAssistantHistory, idsDeTurnos } from "./assistant-history.ts";
-import { createOptimisticHistory, hasUnsettledPrefix, type OptimisticHistoryState } from "./optimistic-history.ts";
-import { type TranscriptMetadata, transcriptEvent } from "./transcript-events.ts";
+import { anexarDeltas, type ChatEvent, type HandoverState, HistoryPager, hasOlder, hasRecentGap, lotesDeDeltas, type Msg, mensajesDelHilo, type OlderState, type Session, type TranscriptOrigin, transcripcion, vivoTrasLeer } from "../../../chat/src/index.ts";
+import { createActivityProjection } from "../model/activity.ts";
+import { createAssistantHistory, idsDeTurnos } from "../model/assistant-history.ts";
+import { createOptimisticHistory, hasUnsettledPrefix, type OptimisticHistoryState } from "../model/optimistic-history.ts";
+import { type TranscriptMetadata, transcriptEvent } from "../model/transcript-events.ts";
 
 export type MachineWait = { machine: string; phase: "waking" | "connecting" };
 

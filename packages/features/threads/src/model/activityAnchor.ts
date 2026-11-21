@@ -1,4 +1,4 @@
-import type { Msg } from "../../chat/src/index.ts";
+import type { Msg } from "../../../chat/src/index.ts";
 
 // Persisted transcript pieces use `${turn id}:${piece}`.
 export function savedActivityTurn(message: Msg) {

@@ -1,6 +1,6 @@
-import { anexarImagen, anexarRazonamiento, mcpCallFromName, tramoGuardado, type ChatEvent, type Msg } from "../../chat/src/index.ts";
-import { type Paso, pasoDe } from "../../../../apps/desktop/src/lib/steps.ts";
-import { clavesConocidas, t } from "../../../../apps/desktop/src/lib/i18n.ts";
+import { anexarImagen, anexarRazonamiento, mcpCallFromName, tramoGuardado, type ChatEvent, type Msg } from "../../../chat/src/index.ts";
+import { type Paso, pasoDe } from "../../../../../apps/desktop/src/lib/steps.ts";
+import { clavesConocidas, t } from "../../../../../apps/desktop/src/lib/i18n.ts";
 
 export type TranscriptMetadata = { provider?: string; author: NonNullable<Msg["author"]> | null; model?: string | null };
 /** Paint-only facts. Turn lifecycle, gates and machine control remain with their owners. */
