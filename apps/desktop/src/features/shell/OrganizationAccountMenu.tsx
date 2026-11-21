@@ -1,6 +1,7 @@
 import { createSignal, type JSX, Show } from "solid-js";
 import { type GroupAccount, type GroupSend, redeemGroupCode } from "../../lib/group-account";
 import { t } from "../../lib/i18n";
+import { harnessAdminUrl } from "../../lib/harness-link";
 import { canRedeemPromo } from "../../lib/promo-role";
 import { cn } from "../../lib/utils";
 import { SEPARADOR_DE_MENU, TITULO_DE_GRUPO } from "../../ui/ContextMenu";
@@ -28,6 +29,7 @@ export function OrganizationAccountMenu(props: { group: GroupAccount; email: str
       <p class={cn("m-0", TITULO_DE_GRUPO)}>{t("shell.rail.tip_account", { org: props.group.name, email: props.email ?? "" })}</p>
       {props.notice}
       <Show when={!props.web && canRedeemPromo(props.group.role)}><button type="button" role="menuitem" class={ITEM_DE_MENU} onClick={() => props.onPromo()}>{t("web.promo.redeem")}</button></Show>
+      <Show when={props.web && harnessAdminUrl(location.host, props.group)}>{(url) => <a role="menuitem" class={ITEM_DE_MENU} href={url()} target="_blank" rel="noopener">{t("web.harness.manage_org")}</a>}</Show>
       <Show when={props.organizationControls !== false}><OrganizationPositionMenu pinned={props.pinned} index={props.index} count={props.count} onPin={() => props.onPin()} onMove={(step) => props.onMove(step)} /></Show>
       <Show when={!props.web}><button type="button" role="menuitem" class={ITEM_DE_MENU} disabled={busy()} onClick={() => void close(() => props.onCloseOrg(props.group.context))}>{t("shell.workspaces.close_org", { name: props.group.name })}</button></Show>
       <button type="button" role="menuitem" class={ITEM_DE_MENU} disabled={busy()} onClick={() => void close(() => props.onCloseEmail(props.email, props.group.context))}>{t("shell.workspaces.close_email", { email: props.email ?? "" })}</button>
