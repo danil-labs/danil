@@ -2,7 +2,7 @@ import { Show } from "solid-js";
 import { t } from "../../../../apps/desktop/src/lib/i18n";
 import { capabilities } from "../../../host/src/platform";
 import { Button } from "../../../ui/src/Button";
-import { createDanilCreditsBalance } from "../../chat/src/store";
+import { createDanilCreditsBalance } from "../../chat/src/queries/store";
 import { SettingsRow } from "./layout";
 
 /**

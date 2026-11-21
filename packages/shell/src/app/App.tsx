@@ -28,24 +28,24 @@ import Chat, {
   type PermissionRequest,
   type VistaDeLaConversacion,
   vistaNueva,
-} from "../../../features/chat/src/Chat";
-import { DelegatedLaunch, type DelegatedListProps, DelegatedNone, type DelegatedPanelModel, DelegatedToolbar, delegatedAttention, delegatedDescendants, delegatedFamilies } from "../../../features/chat/src/DelegatedTasks";
-import { agentSwitchBlocked, canHandOverTask, type HandoverPending, handoverInForce, handoverMatches, MACHINE_UNANNOUNCED, shellCli } from "../../../features/chat/src/handover";
-import McpSignInNotice, { noteMcpSignIn } from "../../../features/chat/src/McpSignInNotice";
-import type { Encolado } from "../../../features/chat/src/MessageQueue";
+} from "../../../features/chat/src/screens/Chat";
+import { DelegatedLaunch, type DelegatedListProps, DelegatedNone, type DelegatedPanelModel, DelegatedToolbar, delegatedAttention, delegatedDescendants, delegatedFamilies } from "../../../features/chat/src/screens/DelegatedTasks";
+import { agentSwitchBlocked, canHandOverTask, type HandoverPending, handoverInForce, handoverMatches, MACHINE_UNANNOUNCED, shellCli } from "../../../features/chat/src/model/handover";
+import McpSignInNotice, { noteMcpSignIn } from "../../../features/chat/src/screens/McpSignInNotice";
+import type { Encolado } from "../../../features/chat/src/components/MessageQueue";
 import {
   MODO_AUTOMATICO,
-} from "../../../features/chat/src/modes";
-import PreviousAgentChat from "../../../features/chat/src/PreviousAgentChat";
-import type { AlmacenDePreguntas, PreguntasAMedias, Respuesta, RespuestaEnviada } from "../../../features/chat/src/Questions";
-import { contestaALaTerminal, ENTREGA_SIN_CONFIRMAR, esDeLaTerminal, interrumpible, inyectable, type RazonDeRetencion } from "../../../features/chat/src/queue";
-import type { ComandoEnVivo } from "../../../features/chat/src/ShellCard";
-import type { AlMargen } from "../../../features/chat/src/SideQuestion";
-import { comandoEscrito } from "../../../features/chat/src/slashOutput";
-import { type SearchSurface, ThreadSearch, type ThreadSearchTarget } from "../../../features/chat/src/ThreadSearch";
-import TranscriptSource from "../../../features/chat/src/TranscriptSource";
-import { comandoDeTerminal } from "../../../features/chat/src/terminalIndent";
-import type { Lectura } from "../../../features/chat/src/threadWindow";
+} from "../../../features/chat/src/model/modes";
+import PreviousAgentChat from "../../../features/chat/src/screens/PreviousAgentChat";
+import type { AlmacenDePreguntas, PreguntasAMedias, Respuesta, RespuestaEnviada } from "../../../features/chat/src/components/Questions";
+import { contestaALaTerminal, ENTREGA_SIN_CONFIRMAR, esDeLaTerminal, interrumpible, inyectable, type RazonDeRetencion } from "../../../features/chat/src/model/queue";
+import type { ComandoEnVivo } from "../../../features/chat/src/components/ShellCard";
+import type { AlMargen } from "../../../features/chat/src/components/SideQuestion";
+import { comandoEscrito } from "../../../features/chat/src/model/slashOutput";
+import { type SearchSurface, ThreadSearch, type ThreadSearchTarget } from "../../../features/chat/src/screens/ThreadSearch";
+import TranscriptSource from "../../../features/chat/src/screens/TranscriptSource";
+import { comandoDeTerminal } from "../../../features/chat/src/model/terminalIndent";
+import type { Lectura } from "../../../features/chat/src/model/threadWindow";
 import {
   type ChatEvent,
   type ChatExportado,
@@ -57,7 +57,7 @@ import {
   type SessionEvent,
   type Signatures,
   type Turn,
-} from "../../../features/chat/src/transcript";
+} from "../../../features/chat/src/model/transcript";
 import { createComposerStore } from "../../../features/composer/src";
 import { createProjectsStore } from "../../../features/projects/src";
 import type { DeleteTarget } from "../../../features/projects/src/DeleteTaskDialog";
@@ -75,7 +75,7 @@ import { arbolesDe, contiene, ubicar } from "../../../features/code/src/treeKind
 import { moviendoHueco } from "../../../../apps/desktop/src/lib/sites";
 
 const DeleteTaskDialog = lazy(() => import("../../../features/projects/src/DeleteTaskDialog"));
-const HandoverDialog = lazy(() => import("../../../features/chat/src/HandoverDialog"));
+const HandoverDialog = lazy(() => import("../../../features/chat/src/screens/HandoverDialog"));
 const TaskFilesCard = lazy(() => import("../../../features/code/src/TaskFiles"));
 
 import { esDeCodigo } from "../../../features/code/src/workdirKind";
@@ -88,7 +88,7 @@ import { createTaskFiles, type TaskSideMode } from "../../../../apps/desktop/src
 const AgentProfile = retryableLazy(() => import("../../../features/projects/src/AgentProfile"));
 // El alta solo se abre sin workspace o al agregar otro: no entra en la carga inicial.
 const Onboarding = lazy(() => import("../../../features/onboarding/src/Onboarding"));
-const TaskLocation = lazy(() => import("../../../features/chat/src/TaskLocation"));
+const TaskLocation = lazy(() => import("../../../features/chat/src/screens/TaskLocation"));
 const Screen = lazy(() => import("../../../features/screen/src/Screen"));
 // El aviso de licencia solo se baja si la flota lo pide (trae los textos de Danil).
 const MachinesLicense = lazy(() =>
@@ -124,7 +124,7 @@ type CarryModule = typeof import("../../../features/machines/src/carry");
 const CARRY_STOPPED = Symbol("carry-stopped");
 const VistaDeProyecto = lazy(() => import("../../../features/projects/src/ProjectView"));
 
-import { mensajeDeFallo } from "../../../features/chat/src/failures";
+import { mensajeDeFallo } from "../../../features/chat/src/model/failures";
 import { workLabel } from "../../../features/projects/src/branchLabel";
 import { DEFAULT_PROFILE, displayName, notifyProfiles, watchProfiles } from "../../../features/projects/src/profiles";
 import RecentAgentChats from "../../../features/projects/src/RecentAgentChats";
@@ -151,8 +151,8 @@ const DeleteSpace = lazy(() => import("../shell/DeleteSpace"));
 
 import type { ActivityEvent } from "@terminus/protocol";
 import { ATTACHMENT_DOCUMENTS_FEATURE, PROVIDER_HANDOFF_FEATURE, SESSION_MODEL_FEATURE } from "@terminus/protocol";
-import { mergeGates } from "../../../features/chat/src/permissionGates";
-import { openChatVisual, readChatVisual } from "../../../features/chat/src/readVisual";
+import { mergeGates } from "../../../features/chat/src/model/permissionGates";
+import { openChatVisual, readChatVisual } from "../../../features/chat/src/queries/readVisual";
 import { apagarVistasDe, hayVistasDe, soltarVistasHuerfanas } from "../../../features/code/src/typst";
 import { type ConversationScope, createConversationHandoff } from "../../../features/conversation-handoff/src";
 import { createDraftsStore } from "../../../features/drafts/src";
@@ -2881,7 +2881,7 @@ export default function App() {
       threads.replaceTurn(p.session, fila);
       setPermissions((ps) => ps.filter((x) => x.session !== p.session || x.requestId !== p.requestId));
     } catch (e) {
-      const { sinRespuesta } = await import("../../../features/chat/src/permissionRecovery");
+      const { sinRespuesta } = await import("../../../features/chat/src/model/permissionRecovery");
       const cerrada = sinRespuesta(p, await pendientesDe(p.session, workspace), e);
       if (cerrada) {
         setPermissions(ps => ps.filter(x => x.session !== p.session || x.requestId !== p.requestId));
@@ -4706,7 +4706,7 @@ export default function App() {
     if (agente !== cliDeLaSesion(id) || drafts.peek(claveAbierta())?.provider || !anunciaEnLaTarea(id, SESSION_MODEL_FEATURE)) return;
     const proyecto = project();
     const opciones = opcionesDeLaTarea(id, workspaceActivo());
-    void import("../../../features/chat/src/handoverSend")
+    void import("../../../features/chat/src/queries/handoverSend")
       .then((m) => m.saveSessionModel(proyecto, id, modelo, nivel, opciones, effortOnly))
       .catch(avisar(id));
   }
@@ -5099,7 +5099,7 @@ export default function App() {
       if (pendiente && !vigente) {
         drafts.handover(null, claveBorrador);
       }
-      const { sendWithHandover } = await import("../../../features/chat/src/handoverSend");
+      const { sendWithHandover } = await import("../../../features/chat/src/queries/handoverSend");
       const traspaso = await sendWithHandover({
         session: abierta,
         pending: vigente?.to ?? null,

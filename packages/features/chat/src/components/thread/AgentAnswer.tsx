@@ -3,10 +3,10 @@ import { imagenInerte } from "../../../../../../apps/desktop/src/lib/links";
 import { splitNextSteps, type NextStepsPart } from "../../../../../../apps/desktop/src/lib/nextSteps";
 import { CarruselDeImagenes } from "../../../../../ui/src/EnlargeableImage";
 import { Markdown } from "../../../../../ui/src/Markdown";
-import ChatVisual from "../../ChatVisual";
-import NextSteps from "../../NextSteps";
-import { splitChatVisuals, type ChatVisual as Visual } from "../../visualDirective";
-import type { VisualBudget } from "../../visualBudget";
+import ChatVisual from "../ChatVisual";
+import NextSteps from "../NextSteps";
+import { splitChatVisuals, type ChatVisual as Visual } from "../../model/visualDirective";
+import type { VisualBudget } from "../../model/visualBudget";
 
 
 export type RespuestaRapida = {

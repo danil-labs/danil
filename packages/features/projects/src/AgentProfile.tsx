@@ -6,7 +6,7 @@ import FolderOpen from "lucide-solid/icons/folder-open";
 import ImagePlus from "lucide-solid/icons/image-plus";
 import Trash2 from "lucide-solid/icons/trash-2";
 import { createEffect, createMemo, createSignal, on, onCleanup, Show } from "solid-js";
-import SelectorDeModelo from "../../chat/src/ModelPicker";
+import SelectorDeModelo from "../../chat/src/components/ModelPicker";
 import { t } from "../../../../apps/desktop/src/lib/i18n";
 import type { AgentProfile as Profile, HandlerDefinition, HandlerStatus } from "../../../../apps/desktop/src/lib/model";
 import { type CatalogosDeModelos, type OpcionDeModelo, opcionesDeModelos } from "../../../../apps/desktop/src/lib/models";

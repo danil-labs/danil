@@ -14,7 +14,7 @@ import { ProgressBar } from "../../../ui/src/ProgressBar";
 import { type Usage, usageKey } from "./usage";
 
 const AccountCard = sharedLazy(() => import("../../../features/settings/src/AccountCard"));
-const DanilCredits = sharedLazy(() => import("../../../features/chat/src/DanilCredits"));
+const DanilCredits = sharedLazy(() => import("../../../features/chat/src/screens/DanilCredits"));
 
 function orderedCards(usage: Usage, agent: string) {
   const all = usage.activeCards();

@@ -17,7 +17,7 @@ import { prosaDe } from "../../../ui/src/Failure";
 import { Input } from "../../../ui/src/Input";
 import { Select } from "../../../ui/src/Select";
 import { Textarea } from "../../../ui/src/Textarea";
-import SelectorDeModelo from "../../chat/src/ModelPicker";
+import SelectorDeModelo from "../../chat/src/components/ModelPicker";
 import { GovernedNotice } from "../../settings/src/Governed";
 import { AstroAvatar, type Cuerpo } from "./AstroAvatar";
 import { agentId } from "./agentId";
