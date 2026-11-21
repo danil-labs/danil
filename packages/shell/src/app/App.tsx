@@ -89,7 +89,7 @@ const AgentProfile = retryableLazy(() => import("../../../features/projects/src/
 // El alta solo se abre sin workspace o al agregar otro: no entra en la carga inicial.
 const Onboarding = lazy(() => import("../../../features/onboarding/src/Onboarding"));
 const TaskLocation = lazy(() => import("../../../features/chat/src/TaskLocation"));
-const Screen = lazy(() => import("../../../features/screen/src/Screen"));
+const Screen = lazy(() => import("../../../features/screen/src/screens/Screen"));
 // El aviso de licencia solo se baja si la flota lo pide (trae los textos de Danil).
 const MachinesLicense = lazy(() =>
   import("../../../features/settings/src/TerminusLicense").then((m) => ({

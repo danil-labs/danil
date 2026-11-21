@@ -1,9 +1,9 @@
 import { SCREEN_CONTROL_DESKTOP } from "@terminus/computers";
 import { createSignal, onCleanup, onMount, Show } from "solid-js";
-import { t } from "../../../../apps/desktop/src/lib/i18n";
-import { Button } from "../../../ui/src/Button";
-import { screenConnection, type Phase } from "./connection";
-import { screenInput } from "./input";
+import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { Button } from "../../../../ui/src/Button";
+import { screenConnection, type Phase } from "../queries/connection";
+import { screenInput } from "../model/input";
 
 const MESSAGE: Record<Exclude<Phase, "connecting" | "live">, () => string> = {
   offline: () => t("screen.offline"),
