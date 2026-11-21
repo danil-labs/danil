@@ -12,8 +12,8 @@ import { cn } from "../../../../apps/desktop/src/lib/utils";
 import { Dialog, DialogContent, DialogTitle } from "../../../ui/src/Dialog";
 import { asFailure, FailureNote } from "../../../ui/src/Failure";
 import { Input } from "../../../ui/src/Input";
-import type { SessionRow } from "../../../features/projects/src/Sessions";
-import { matchesTaskQuery } from "../../../features/projects/src/taskSearch";
+import type { SessionRow } from "../../../features/projects/src/screens/Sessions";
+import { matchesTaskQuery } from "../../../features/projects/src/model/taskSearch";
 
 export type SearchFilter = "all" | "tasks" | "archived" | "folders" | "actions";
 type Group = Exclude<SearchFilter, "all">;

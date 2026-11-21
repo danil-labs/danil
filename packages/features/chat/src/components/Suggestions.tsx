@@ -3,7 +3,7 @@ import Sparkles from "lucide-solid/icons/sparkles";
 import { For, Show, createEffect, on } from "solid-js";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import type { HandlerStatus } from "../../../../../apps/desktop/src/lib/model";
-import { AstroAvatar } from "../../../projects/src/AstroAvatar";
+import { AstroAvatar } from "../../../projects/src/screens/AstroAvatar";
 import { cn } from "../../../../../apps/desktop/src/lib/utils";
 import { MarcaAgente } from "../../../../ui/src/icons";
 

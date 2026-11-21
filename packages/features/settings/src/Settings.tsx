@@ -33,7 +33,7 @@ import {
   SidebarMenuItem,
 } from "../../../ui/src/sidebar";
 import { machines } from "../../machines/src/store";
-import type { ModelChoices } from "../../projects/src/NewAgent";
+import type { ModelChoices } from "../../projects/src/screens/NewAgent";
 import AIProviders from "./AIProviders";
 import type { SurfacesState } from "./ai-providers-view";
 import Connections from "./Connections";

@@ -34,8 +34,8 @@ import {
 import { cn } from "../../../../apps/desktop/src/lib/utils";
 import { Button } from "../../../ui/src/Button";
 import { prosaDe } from "../../../ui/src/Failure";
-import { AstroAvatar } from "../../projects/src/AstroAvatar";
-import { displayName, notifyProfiles } from "../../projects/src/profiles";
+import { AstroAvatar } from "../../projects/src/screens/AstroAvatar";
+import { displayName, notifyProfiles } from "../../projects/src/queries/profiles";
 import { SettingsPanel, SettingsRow, SettingsSection } from "./layout";
 import { LogoDelWorkspace } from "./Workspaces";
 import { createWorkspaces } from "./workspaces-store";

@@ -24,14 +24,14 @@ import {
   SidebarMenuItem,
   Sidebar as SidebarShell,
 } from "../../../ui/src/sidebar";
-import { type ClonEnCurso, faseDeClon } from "../../../features/projects/src/AddWorkdir";
-import { AstroAvatar } from "../../../features/projects/src/AstroAvatar";
-import { watchHandlerStatuses } from "../../../features/projects/src/handlerPresence";
-import type { ModelChoices } from "../../../features/projects/src/NewAgent";
-import { notifyProfiles, watchProfiles } from "../../../features/projects/src/profiles";
-import Sessions, { type SessionRow } from "../../../features/projects/src/Sessions";
-import { effectiveTaskGit, watchSessionGit } from "../../../features/projects/src/taskGit";
-import type { Etapa } from "../../../features/projects/src/TaskStage";
+import { type ClonEnCurso, faseDeClon } from "../../../features/projects/src/screens/AddWorkdir";
+import { AstroAvatar } from "../../../features/projects/src/screens/AstroAvatar";
+import { watchHandlerStatuses } from "../../../features/projects/src/queries/handlerPresence";
+import type { ModelChoices } from "../../../features/projects/src/screens/NewAgent";
+import { notifyProfiles, watchProfiles } from "../../../features/projects/src/queries/profiles";
+import Sessions, { type SessionRow } from "../../../features/projects/src/screens/Sessions";
+import { effectiveTaskGit, watchSessionGit } from "../../../features/projects/src/queries/taskGit";
+import type { Etapa } from "../../../features/projects/src/screens/TaskStage";
 import {
   agentOptions,
   applySidebarView,
@@ -49,7 +49,7 @@ import { machineName, machines } from "../../../features/machines/src/store";
 // Solo al crear un encargado: fuera de la carga inicial.
 import { LazyPart, retryableLazy } from "../../../ui/src/LazyPart";
 import { Spinner } from "../../../ui/src/Spinner";
-const NewAgent = retryableLazy(() => import("../../../features/projects/src/NewAgent"));
+const NewAgent = retryableLazy(() => import("../../../features/projects/src/screens/NewAgent"));
 
 // Fuera de la carga inicial: el botón y el dock llegan un instante después de la lista.
 const AgentDock = lazy(() => import("./AgentDock"));

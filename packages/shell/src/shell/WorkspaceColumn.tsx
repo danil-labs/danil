@@ -7,7 +7,7 @@ import { cn } from "../../../../apps/desktop/src/lib/utils";
 import { ITEM_DE_MENU, Popover, PopoverAnchor, PopoverContent } from "../../../ui/src/Popover";
 import { RETARDO_TOOLTIP, TooltipContent, TooltipRoot, TooltipTrigger } from "../../../ui/src/Tooltip";
 import type { RailWorkspace } from "../../../features/machines/src/engine-workspaces";
-import { taskLabel } from "../../../features/projects/src/TaskStatus";
+import { taskLabel } from "../../../features/projects/src/screens/TaskStatus";
 import { cerrarConEscape, createRail } from "../../../features/settings/src/workspaces-store";
 import { AccountHeader } from "./AccountHeader";
 import AddWorkspaceMenu, { menuArrows } from "./AddWorkspaceMenu";

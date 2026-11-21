@@ -14,8 +14,8 @@ import {
 import { cn } from "../../../../apps/desktop/src/lib/utils";
 import { Button } from "../../../ui/src/Button";
 import { ITEM_DE_MENU, Popover, PopoverContent, PopoverTrigger } from "../../../ui/src/Popover";
-import { AstroAvatar } from "../../../features/projects/src/AstroAvatar";
-import { FolderSquare } from "../../../features/projects/src/FolderChip";
+import { AstroAvatar } from "../../../features/projects/src/screens/AstroAvatar";
+import { FolderSquare } from "../../../features/projects/src/screens/FolderChip";
 
 export type SidebarFilterFolder = { id: string; name: string; count: number };
 /** `installed` falso: ya no está instalado, pero tiene tareas. */

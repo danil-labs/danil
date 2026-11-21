@@ -13,9 +13,9 @@ import { Button } from "../../../ui/src/Button";
 import { Input } from "../../../ui/src/Input";
 import { ITEM_DE_MENU, Popover, PopoverContent, PopoverTrigger } from "../../../ui/src/Popover";
 import { SidebarMenuButton } from "../../../ui/src/sidebar";
-import { FolderSquare } from "../../../features/projects/src/FolderChip";
-import type { SessionRow } from "../../../features/projects/src/Sessions";
-import EstadoDeTarea from "../../../features/projects/src/TaskStatus";
+import { FolderSquare } from "../../../features/projects/src/screens/FolderChip";
+import type { SessionRow } from "../../../features/projects/src/screens/Sessions";
+import EstadoDeTarea from "../../../features/projects/src/screens/TaskStatus";
 
 /** El rasgo que enciende la cabecera sobre la que se soltaría la tarea que va en la mano. */
 const RECIBE_LA_TAREA = ["ring-2", "ring-primary"];
