@@ -1,1 +1,1 @@
-export { createComposerStore, type ComposerConfiguration } from "./store.ts";
+export { createComposerStore, type ComposerConfiguration } from "./queries/store.ts";
