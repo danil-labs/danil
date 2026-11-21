@@ -41,7 +41,7 @@ function edge({ expireX = () => false, lateX2 = () => true } = {}) {
     switch (url.pathname) {
       case '/v1/capabilities': return Response.json({ contract: 'mvp-v1', items: ['machines', 'machines.session', 'workspaces'].map(name => ({ name, version: 1, status: 'available' })) });
       case '/v1/identity/csrf': return Response.json({ csrf_token: 'bound' });
-      case '/v1/identity/contexts': state.admitted.push(JSON.parse(String(init.body))); return Response.json({ context_id: 'ctx_x', org: 'org_x' });
+      case '/v1/identity/contexts': if (state.admitFails) return Response.json({ code: 'unavailable' }, { status: 503, headers: { 'content-type': 'application/problem+json' } }); state.admitted.push(JSON.parse(String(init.body))); return Response.json({ context_id: 'ctx_x', org: 'org_x' });
       case '/v1/identity/sessions': return Response.json({ version: 1, items: [{ session_id: 'ses_a', sub: 'user_a', email: 'a@example.test', contexts: [
         { context_id: 'ctx_p', org: 'org_p', org_name: 'Personal', plan: 'pro', personal: true },
         { context_id: 'ctx_x', org: 'org_x', org_name: 'Org X', plan: 'pro', role: 'member' }] }], primary: 'ses_a', default_context: 'ctx_p' });
@@ -121,6 +121,11 @@ test('a 401 of one organization (its API and its machine ticket) leaves the page
   assert.ok(tile(doc, 'wp'), 'the personal workspace stays in the rail');
   assert.ok(doc.querySelector('[data-rail-organization="org_x"]'), 'the X group stays, marked');
   assert.ok(doc.querySelector('[data-web-reauth-sign-in]'), 'and it offers to sign in to X again');
+  state.admitFails = true;
+  doc.querySelector('[data-web-reauth-sign-in]').click();
+  await until(() => doc.querySelector('[data-web-reauth-failed]'), 'a failed admission is shown on the notice');
+  state.admitFails = false;
+  state.admitted.length = 0;
   expire = false;
   doc.querySelector('[data-web-reauth-sign-in]').click();
   await until(() => state.admitted.length === 1, 'signing in again admits only X');

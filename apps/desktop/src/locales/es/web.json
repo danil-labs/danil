@@ -323,6 +323,7 @@
   "web.promo.rate_limited_unknown": "Espera un momento antes de reintentar",
   "web.promo.rejected": "No se pudo canjear el código ({code})",
   "web.organization.reauth": "Vuelve a iniciar sesión para entrar a tu organización.",
+  "web.organization.reauth_failed": "No se pudo volver a entrar. Inténtalo de nuevo en un momento.",
   "web.organization.reauth_action": "Volver a iniciar sesión",
   "web.platform.other_organization": "Otra organización",
   "web.platform.switch_failed": "No se pudo cambiar de organización. Inténtalo de nuevo.",

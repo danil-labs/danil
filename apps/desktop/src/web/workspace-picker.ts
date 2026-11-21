@@ -90,8 +90,9 @@ export function webWorkspacePicker(transport: EdgeTransport, options: { store: S
      * marca para reabrir el selector al volver y se manda el login con `organization_id`, para que
      * AuthKit no pregunte la organización otra vez.
      */
-    async admit(entry: PickerOrg) {
-      options.store.setItem(resumeKey, "1");
+    async admit(entry: PickerOrg, { resume = true } = {}) {
+      // Desde el aviso «Vuelve a entrar» no se reabre el «+» al volver del login.
+      if (resume) options.store.setItem(resumeKey, "1");
       try {
         await transport.mutation("identity/contexts", {
           method: "POST",

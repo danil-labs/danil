@@ -11,6 +11,7 @@ export function ReauthNote(props: { reauth?: Capabilities["webReauth"] }) {
       <ToastPortal>
         <Toast data-web-reauth="">
           <p class="m-0 text-xs text-neutral-950">{t("web.organization.reauth")}</p>
+          <Show when={props.reauth?.failed?.()}><p role="alert" data-web-reauth-failed="" class="m-0 text-xs text-error-strong">{t("web.organization.reauth_failed")}</p></Show>
           <Button size="compact" data-web-reauth-sign-in="" onClick={() => props.reauth?.signIn()}>{t("web.organization.reauth_action")}</Button>
         </Toast>
       </ToastPortal>

@@ -323,6 +323,7 @@
   "web.promo.rate_limited_unknown": "Wait a moment before retrying",
   "web.promo.rejected": "The code could not be redeemed ({code})",
   "web.organization.reauth": "Sign in again to enter your organization.",
+  "web.organization.reauth_failed": "Could not sign in again. Try again in a moment.",
   "web.organization.reauth_action": "Sign in again",
   "web.platform.other_organization": "Other organization",
   "web.platform.switch_failed": "Could not switch organization. Try again.",

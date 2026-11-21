@@ -54,6 +54,7 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
     const [preparing, setPreparing] = createSignal(false);
     const [signedOut, setSignedOut] = createSignal(false);
     const [identified, setIdentified] = createSignal(false);
+    const [reauthFailed, setReauthFailed] = createSignal(false);
     const returnError = signInError(window.location.search);
     let windowApp: ReturnType<typeof mountWindow> | undefined;
     let disposeGate: (() => void) | undefined;
@@ -181,7 +182,7 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
         // W4: una organización con la sesión vencida ofrece volver a entrar a esa organización.
         // Admite solo esa organización (como el «+»): un login completo reemplazaría todo el conjunto de la cookie. Solo
         // si identity exige SSO o MFA (409 organization_auth_required) el selector manda al login de esa organización.
-        reauth: { needed: () => !!expiredGroup(), signIn: () => { const g = expiredGroup(); if (g) void picker.admit({ session: g.family, sub: '', email: g.email ?? '', org: g.org, organization: g.org_name ?? '', context: null, admission_required: true, catalog_state: 'listed' }).then(() => sessionRailState()?.sessions.refresh()).catch(() => {}); } },
+        reauth: { needed: () => !!expiredGroup(), failed: reauthFailed, signIn: () => { const g = expiredGroup(); setReauthFailed(false); if (g) void picker.admit({ session: g.family, sub: '', email: g.email ?? '', org: g.org, organization: g.org_name ?? '', context: null, admission_required: true, catalog_state: 'listed' }, { resume: false }).then(() => sessionRailState()?.sessions.refresh()).catch(() => setReauthFailed(true)); } },
         billing, groupAccount: { send: api.groupAccount.send, current, legacy: () => false, contexts: () => active.groups().map(g => g.context) },
       }, { storage: cache.storage, webAccounts: {
         current: { user_id: profile.id, name: profile.name, email: typeof profile.email === 'string' ? profile.email : null, extra: false },

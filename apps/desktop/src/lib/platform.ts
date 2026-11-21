@@ -61,7 +61,7 @@ export type WebAccountsSource = {
 export type Capabilities = import("./group-account").GroupAccountCapabilities & {
   webPromo?: (code: string, idempotencyKey: string) => Promise<{ machine?: { state?: string }; unavailable?: boolean }>;
   webWorkspacePicker?: import("../web/workspace-picker").WorkspacePicker;
-  webReauth?: { needed: () => boolean; signIn: () => void };
+  webReauth?: { needed: () => boolean; signIn: () => void; failed?: () => boolean };
   /** Saldo de la cuenta Danil desde un BFF autenticado; ausente hasta verificar el adaptador. */
   danilCredits?: import("../features/chat/danil-credits").DanilCreditsSource;
   spaceOrder?: SpaceOrderSource;
