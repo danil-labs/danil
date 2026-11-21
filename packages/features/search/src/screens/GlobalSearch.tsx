@@ -20,6 +20,7 @@ import {
   PER_GROUP,
   RECENT,
   asFailure,
+  prosa,
 } from "../model.ts";
 import { useArchivedTasks } from "../queries.ts";
 
@@ -188,7 +189,7 @@ function Panel(props: GlobalSearchProps & { initial: SearchFilter }) {
         <Show when={archived.error && filter() === "archived"}>
           <div class="px-3.5 py-2">
             <FailureNote
-              what={asFailure(archived.error).what}
+              what={prosa(asFailure(archived.error).what)}
               detail={asFailure(archived.error).detail}
               detailLabel={t("common.failure.detail")}
             />

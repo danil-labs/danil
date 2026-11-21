@@ -16,6 +16,7 @@ export {
   PER_GROUP,
   RECENT,
   asFailure,
+  prosa,
 } from "./model.ts";
 export type {
   SearchFilter,
@@ -28,4 +29,6 @@ export type {
   Result,
   RawArchivedTasksOutput,
   Failure,
+  Prosa,
+  Frase,
 } from "./model.ts";

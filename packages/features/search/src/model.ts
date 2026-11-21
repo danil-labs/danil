@@ -68,9 +68,21 @@ export function matchesTaskQuery(fields: (string | null | undefined)[], query: s
   return terms.every((term) => haystack.includes(term));
 }
 
+export type Frase = {
+  clave: string;
+  datos?: Record<string, string | number>;
+};
+
+export type Prosa = string | Frase;
+
+export function prosa(p: Prosa): string {
+  if (typeof p === "string") return p;
+  return t(p.clave, p.datos);
+}
+
 export interface Failure {
-  what: string;
-  detail?: string;
+  what: Prosa;
+  detail: string;
 }
 
 type Data = Record<string, string | number>;
@@ -114,22 +126,21 @@ export function claveDe(e: unknown): string | null {
   return typeof clave === "string" && clavesConocidas().has(clave) ? clave : null;
 }
 
-function phrase(e: unknown, datos?: Data): string | null {
+function phrase(e: unknown, datos?: Data): Prosa | null {
   const clave = claveDe(e);
-  if (clave) {
-    const supplied = record(e) && record(e.datos)
-      ? Object.fromEntries(Object.entries(e.datos).filter(([, v]) =>
-          typeof v === "string" || typeof v === "number",
-        )) as Data : undefined;
-    return t(clave, { ...supplied, ...datos });
-  }
-  return readable(e) ? e : null;
+  if (!clave) return readable(e) ? e : null;
+  const supplied = record(e) && record(e.datos)
+    ? Object.fromEntries(Object.entries(e.datos).filter(([, v]) =>
+        typeof v === "string" || typeof v === "number",
+      )) as Data : undefined;
+  return { clave, datos: { ...supplied, ...datos } };
 }
 
-function conExplicacion(what: string, e: unknown): string {
+function conExplicacion(what: Prosa, e: unknown): Prosa {
   const extra = explicacionDelMotor(e);
   if (!extra) return what;
-  return what.includes(extra) ? what : `${what}\n${extra}`;
+  const texto = prosa(what);
+  return texto.includes(extra) ? texto : `${texto}\n${extra}`;
 }
 
 function diagnostic(e: unknown): string {
@@ -152,15 +163,9 @@ function diagnostic(e: unknown): string {
 /** Una estructura inesperada nunca sustituye la explicación por su coerción a texto. */
 export function asFailure(e: unknown, datos?: Data): Failure {
   const envelope = record(e) && "what" in e;
-  const what = (envelope || claveDe(e)) ? phrase(whatOf(e), datos) : null;
-  const resolvedWhat = what ? conExplicacion(what, e) : (() => {
-    const fallback = t("common.failure.generic");
-    const extra = explicacionDelMotor(e) ?? (record(e) && readable(e.message) ? e.message : null);
-    return extra ? `${extra}\n${fallback}` : fallback;
-  })();
-  const detail = diagnostic(envelope ? e.detail : e);
+  const what = (envelope || claveDe(e)) && phrase(whatOf(e), datos);
   return {
-    what: resolvedWhat,
-    detail: detail || undefined,
+    what: what ? conExplicacion(what, e) : { clave: "common.failure.generic" },
+    detail: diagnostic(envelope ? e.detail : e),
   };
 }
