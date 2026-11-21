@@ -150,7 +150,17 @@ export function useConnectAccount(platformClient?: PlatformClient) {
     setSaving(true);
     setError(null);
     try {
+      const isSecretRequired = opts.kind !== "subscription";
       const secretValue = opts.secret ?? "";
+      if (isSecretRequired && secretValue.trim().length === 0) {
+        throw {
+          kind: "error",
+          status: 400,
+          code: "empty_secret",
+          message: "Secret cannot be empty or whitespace only",
+        } satisfies ClientError;
+      }
+
       const sealTargets = opts.recipients.map((r) => ({
         computer_id: r.machine_id,
         public_key: r.public_key,
@@ -162,6 +172,15 @@ export function useConnectAccount(platformClient?: PlatformClient) {
         opts.slot,
         secretValue,
       );
+
+      if (isSecretRequired && sealedCopies.length === 0) {
+        throw {
+          kind: "error",
+          status: 400,
+          code: "empty_copies",
+          message: "At least one recipient copy is required",
+        } satisfies ClientError;
+      }
 
       const body: PutWorkspaceAccount = {
         kind: opts.kind ?? "api_key",
