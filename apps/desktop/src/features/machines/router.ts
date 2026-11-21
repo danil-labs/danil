@@ -262,8 +262,19 @@ export function createRouterCore(config: RouterConfig) {
   const hasHere = (workspace: string | null) => local && (!workspace || listed === null || listed.has(workspace));
   /** Los workspaces de la cuenta que esta computadora no tiene viven en sus otras máquinas, y los de una organización en su servidor. En la web, todos. */
   const elsewhere = (workspace: string | null) => !local || (!hasHere(workspace) && (fleet.inRegistry(workspace) || organizations().has(workspace as string)));
-  /** Las máquinas de un workspace; sin workspace (en la web), todas. */
-  const membersOf = (workspace: string | null) => (workspace ? fleet.membersOf(workspace) : fleet.machines().map((m) => m.id));
+  /**
+   * En la web, un workspace que ninguna máquina lista todavía va a la hospedada de su organización (la que sirve
+   * los workspaces `organization_machine`), nunca a una Mac conectada que no lo tiene. Apagada, la lectura lo dice.
+   */
+  const hostedOf = () => (local ? null : fleet.machines().find((m) => m.hosted)?.id ?? null);
+  /** Las máquinas de un workspace; sin workspace (en la web), todas. En la web, sin ninguna que lo liste, la hospedada de su organización. */
+  const membersOf = (workspace: string | null) => {
+    if (!workspace) return fleet.machines().map((m) => m.id);
+    // Una Mac conectada solo recibe los workspaces que lista; los demás son de la hospedada.
+    const members = local ? fleet.membersOf(workspace) : fleet.membersOf(workspace).filter((id) => fleet.info(id)?.hosted || fleet.lists(id, workspace) === true || (fleet.lists(id, workspace) === null && !hostedOf()));
+    const hosted = members.length ? null : hostedOf();
+    return hosted ? [hosted] : members;
+  };
   /** La máquina que atiende un workspace que no está aquí: la primera encendida de sus miembros, o la primera. */
   const leadOf = (workspace: string | null): string | null => {
     const members = membersOf(workspace).filter((m) => fleet.power(m) !== "outdated");
@@ -555,7 +566,7 @@ export function createRouterCore(config: RouterConfig) {
 
   /** Una lectura de la barra: lo de aquí ya, más lo último de cada otra máquina del workspace. */
   async function fanRead(command: string, args: Args, workspace: string | null, options: Options): Promise<unknown> {
-    const members = command === "list_workspace_attention" ? fleet.machines().map((m) => m.id) : fleet.membersOf(workspace);
+    const members = command === "list_workspace_attention" ? fleet.machines().map((m) => m.id) : membersOf(workspace);
     // El canal de avance se queda en la ventana: por el relay vuelve solo la respuesta final.
     const envelopes = members.map((machine) => ({ machine, workspace, command, args: withoutChannel(command, args) }));
     const slices: Slice[] = [];
@@ -801,7 +812,7 @@ export function createRouterCore(config: RouterConfig) {
       throw noAnswer(slices, workspace);
     }
     const named = homeOf(args);
-    const lead = (named && fleet.has(named) ? named : null) ?? leadOf(workspace) ?? leadOf(null);
+    const lead = (named && fleet.has(named) ? named : null) ?? leadOf(workspace) ?? (local ? leadOf(null) : hostedOf());
     if (!lead) throw { what: t("web.machines.none_for_workspace"), detail: "no_machine" };
     return remote(lead, command, args, callWorkspace(workspace, args));
   }
@@ -892,7 +903,7 @@ export function createRouterCore(config: RouterConfig) {
       if (context) return await remote(context, command, args, callWorkspace(workspace, args));
       if (elsewhere(workspace)) {
         // En la web, un workspace sin máquinas propias en el registro se atiende en la VM de la cuenta, como las cuentas de IA.
-        const lead = leadOf(workspace) ?? (!local ? leadOf(null) : null);
+        const lead = leadOf(workspace) ?? hostedOf();
         if (lead) return await remote(lead, command, args, callWorkspace(workspace, args));
         if (!local) throw { what: t("web.machines.none_for_workspace"), detail: "no_machine" };
       }

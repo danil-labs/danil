@@ -4,7 +4,7 @@ type Scope = { context?: string; org?: string; localOnly?: boolean };
 const ENVELOPE = new Set(["read", "readLive", "call", "raw", "peek"]);
 const SCOPE_AT: Record<string, number> = {
   has: 1, info: 1, name: 1, state: 1, power: 1, wake: 1, untilOnline: 1, deferred: 1, blocked: 1,
-  setListing: 2, organizationMachines: 1, available: 1, observe: 2, membersOf: 1, leadOf: 1,
+  setListing: 2, lists: 2, organizationMachines: 1, available: 1, observe: 2, membersOf: 1, leadOf: 1,
   organizationWorkspaces: 0, remotes: 0, argsFor: 2, context: 0, encode: 3, merge: 3,
   sliceStatuses: 0, setRegistry: 1, getRegistry: 0, inRegistry: 1, markShared: 1, isShared: 1,
   sharedCount: 0, license: 0, rename: 2, closeMember: 1,
