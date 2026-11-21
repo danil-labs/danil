@@ -4,11 +4,17 @@ export { MachineRow, type MachineRowProps } from "./components/MachineRow.tsx";
 export { MachineBadge, type MachineBadgeProps } from "./components/MachineBadge.tsx";
 export { MachineIcon, type MachineIconProps } from "./components/MachineIcon.tsx";
 
-export { useMachines } from "./queries.ts";
+export {
+  useMachines,
+  sortMachines,
+  groupMachinesByOrg,
+  resolveSession,
+} from "./queries.ts";
 export type {
   UseMachinesReturn,
   SessionInput,
   SessionOptions,
+  ResolvedSession,
 } from "./queries.ts";
 
 export type {

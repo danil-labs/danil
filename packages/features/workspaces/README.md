@@ -4,8 +4,9 @@ Feature de navegación por riel y gestión de workspaces (DS1 v2).
 
 ## Qué hace
 
-- **Riel DS1 v2 (`RailGroups`):** Pinta el riel agrupado verticalmente por plan con logo y desplegable hacia abajo.
-- **Nombres de plan (B-008):** Usa exclusivamente nombres de plan («Personal», «Team», «Enterprise») y nunca términos de agrupación interna.
+- **Riel DS1 v2 (`RailGroups`):** Pinta el riel agrupado verticalmente por plan con logo y desplegable hacia abajo. Incluye ordenamiento determinista DS1 v2 (Personal primero) y helper de agrupación estricta por organización (`groupWorkspacesByOrg`).
+- **Nombres de plan (B-008, P11):** Usa exclusivamente nombres de plan («Personal», «Team», «Enterprise») y nunca términos de agrupación interna como «organización».
+- **Pertenencia estricta a organización (Regla 2.1):** Los workspaces pertenecen estrictamente a una organización; los filtros omiten workspaces sin asignación explícita.
 - **Selección atómica (B-007):** Primero actualiza la plataforma; si falla, el estado local no cambia. Si tiene éxito, notifica al motor e impacta la señal local.
 - **Manejo de errores y estado vacío (B-006):** Los fallos de red se presentan con vista de error y botón de reintento, nunca como listas vacías.
 - **Creación de workspaces:** Flujo accesible desde el botón «+» («Agregar workspace»).

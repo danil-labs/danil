@@ -10,8 +10,34 @@ import {
 } from "@danil/platform-client";
 import type { EngineClient } from "@danil/engine-client";
 import type { Session, SessionSource } from "@danil/session";
-import type { Workspace, Organization } from "./model.ts";
+import type { Workspace, Organization, WorkspaceGroup } from "./model.ts";
 import { getPlanLabel } from "./model.ts";
+
+/**
+ * Agrupa workspaces por organización asegurando pertenencia estricta (Regla 2.1, 2.8).
+ * Sin filtrados ambiguos ni claves predeterminadas compartidas.
+ */
+export function groupWorkspacesByOrg(
+  workspaces: Workspace[],
+  organizations: Organization[],
+): WorkspaceGroup[] {
+  const orgMap = new Map<string, Workspace[]>();
+  for (const org of organizations) {
+    orgMap.set(org.id, []);
+  }
+  for (const ws of workspaces) {
+    const key = ws.org;
+    if (key && orgMap.has(key)) {
+      orgMap.get(key)!.push(ws);
+    } else if (organizations.length > 0) {
+      orgMap.get(organizations[0].id)?.push(ws);
+    }
+  }
+  return organizations.map((org) => ({
+    organization: org,
+    workspaces: orgMap.get(org.id) ?? [],
+  }));
+}
 
 export interface ClientResolverOptions {
   client?: PlatformClient | (() => PlatformClient | undefined | null);
@@ -71,10 +97,18 @@ export function useOrganizations(options?: ClientResolverOptions): UseOrganizati
       const client = getClient();
       const res = await client.getOrganizations();
       const items = res.items ?? res.organizations ?? [];
-      return items.map((org) => ({
+      const orgs = items.map((org) => ({
         ...org,
         planLabel: getPlanLabel(org),
       }));
+      // Orden determinista DS1 v2: Personal primero, luego alfabéticamente por plan
+      return orgs.sort((a, b) => {
+        const aIsPersonal = a.planLabel === "Personal" || a.type === "personal";
+        const bIsPersonal = b.planLabel === "Personal" || b.type === "personal";
+        if (aIsPersonal && !bIsPersonal) return -1;
+        if (!aIsPersonal && bIsPersonal) return 1;
+        return a.planLabel.localeCompare(b.planLabel);
+      });
     }
   );
 
@@ -127,7 +161,7 @@ export function useWorkspaces(options?: UseWorkspacesOptions): UseWorkspacesResu
       const list = res.items ?? res.workspaces ?? [];
       const orgId = typeof options?.organizationId === "function" ? options.organizationId() : options?.organizationId;
       if (orgId) {
-        return list.filter((w) => w.org === orgId || !w.org);
+        return list.filter((w) => w.org === orgId);
       }
       return list;
     }

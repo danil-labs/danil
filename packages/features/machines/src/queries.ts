@@ -41,11 +41,51 @@ function createIdempotencyKey(): string {
   return `idemp_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
 }
 
-interface ResolvedSession {
+export interface ResolvedSession {
   sessionKey: string;
   source?: SessionSource;
   client?: PlatformClient;
   host?: LocalHost;
+}
+
+/**
+ * Ordena máquinas de forma determinista (M1, 6.1) sin violar R5:
+ * 1. Agrupadas por organization_id.
+ * 2. Agrupadas por kind.
+ * 3. Alfabéticamente por nombre o machine_id.
+ */
+export function sortMachines(machines: Machine[]): Machine[] {
+  return [...machines].sort((a, b) => {
+    const orgA = a.organization_id ?? "";
+    const orgB = b.organization_id ?? "";
+    if (orgA !== orgB) {
+      return orgA.localeCompare(orgB);
+    }
+
+    const kindA = a.kind ?? "";
+    const kindB = b.kind ?? "";
+    if (kindA !== kindB) {
+      return kindA.localeCompare(kindB);
+    }
+
+    const nameA = a.name?.trim() || a.machine_id;
+    const nameB = b.name?.trim() || b.machine_id;
+    return nameA.localeCompare(nameB);
+  });
+}
+
+/**
+ * Agrupa máquinas por organización para vistas que requieran secciones DS1 v2.
+ */
+export function groupMachinesByOrg(machines: Machine[]): Map<string, Machine[]> {
+  const map = new Map<string, Machine[]>();
+  for (const m of sortMachines(machines)) {
+    const key = m.organization_id || m.kind || "default";
+    const list = map.get(key) || [];
+    list.push(m);
+    map.set(key, list);
+  }
+  return map;
 }
 
 function isSessionSource(v: unknown): v is SessionSource {
@@ -56,7 +96,7 @@ function isSession(v: unknown): v is Session {
   return typeof v === "object" && v !== null && "key" in v && typeof (v as any).key === "string" && !("list" in v);
 }
 
-function resolveSession(input?: SessionInput): ResolvedSession {
+export function resolveSession(input?: SessionInput): ResolvedSession {
   if (!input) {
     return { sessionKey: "web" };
   }
@@ -74,7 +114,7 @@ function resolveSession(input?: SessionInput): ResolvedSession {
     }
     const opts = input as SessionOptions;
     const s = opts.session;
-    const sKey = opts.sessionKey ?? s?.key ?? "web";
+    const sKey = opts.sessionKey ?? s?.key ?? (opts.source ? opts.source.list()[0]?.key : undefined) ?? "web";
     return {
       sessionKey: sKey,
       source: opts.source ?? undefined,
@@ -136,7 +176,7 @@ export function useMachines(session?: SessionInput): UseMachinesReturn {
     () => resolved().sessionKey,
     async () => {
       const res = await getClient().getMachines();
-      return res.items ?? [];
+      return sortMachines(res.items ?? []);
     },
   );
 
@@ -235,11 +275,21 @@ export function useMachines(session?: SessionInput): UseMachinesReturn {
               message: "Missing ticket or admission url",
             };
           } catch (err: any) {
-            if (err && (err.status === 409 || err.code === "machine_unreachable")) {
+            // Regla 6.4 y 6.5 / M6b: el encendido ocurre únicamente por acción explícita de la persona (conectar).
+            // Si la VM está apagada (409 machine_unreachable / stopped), la plataforma debe encenderla al emitir ticket;
+            // si no lo hizo automáticamente (incidente 2), disparamos startMachine como respaldo para que despierte
+            // sin requerir encendidos manuales por consola ni arrojar error final.
+            if (err && (err.status === 409 || err.code === "machine_unreachable" || err.code === "stopped")) {
+              void cl
+                .startMachine({
+                  id: machineId,
+                  idempotencyKey: createIdempotencyKey(),
+                })
+                .catch(() => {});
               return { kind: "machine_unreachable" };
             }
-            if (err && (err.code === "stopped" || err.code === "starting")) {
-              return { kind: err.code };
+            if (err && err.code === "starting") {
+              return { kind: "starting" };
             }
             return {
               kind: "error",

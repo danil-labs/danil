@@ -5,7 +5,7 @@ Feature de cuenta y perfil de usuario de solo lectura (F2.8 y F3.2).
 ## Qué hace
 
 - Muestra la identidad y perfil del usuario autenticado (`AccountScreen`).
-- Muestra el plan y organización actual usando el nombre del plan (`Personal`, `Team`, `Enterprise`), nunca la palabra genérica «Organización».
+- Muestra el plan y organización actual usando el nombre del plan (`Personal`, `Team`, `Enterprise`), sanitizando estrictamente para no exponer nunca la palabra genérica «Organización» (P11).
 - Enlaza a la aplicación externa de facturación mediante el botón «Administrar» (`BillingLink`).
 - Enlaza a la consola de gobernanza y permisos mediante «Administrar usuarios y permisos» (`HarnessLink`, F3.2).
 - Toda navegación externa se ejecuta a través de `host.openExternal` de `@danil/host`.
