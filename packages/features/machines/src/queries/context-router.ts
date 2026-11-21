@@ -1,7 +1,7 @@
 import { FleetError } from "@terminus/fleet";
-import { rememberWorkspaceSnapshot, setActiveWorkspaceContext } from "../../../../apps/desktop/src/lib/workspace-context.ts";
+import { rememberWorkspaceSnapshot, setActiveWorkspaceContext } from "../../../../../apps/desktop/src/lib/workspace-context.ts";
 import { createContextAttention } from "./context-attention.ts";
-import type { Invoke, RouterConfig } from "./router-config.ts";
+import type { Invoke, RouterConfig } from "../model/router-config.ts";
 import { scopedFleet } from "./scoped-fleet.ts";
 
 type ContextInfo = { org: string; plan?: string | null };

@@ -30,8 +30,8 @@ import { WithMentions } from "../../../chat/src/components/WithMentions";
 import FolderChip from "./FolderChip";
 import { gitAppearance, RailPull, sessionGitDescription } from "../components/SessionGit";
 import { WithTaskHoverCard } from "../components/TaskHoverCardTrigger";
-import { MachineChip } from "../../../machines/src/MachineChip";
-import { bringHereLabel, canBringHere, machines } from "../../../machines/src/store";
+import { MachineChip } from "../../../machines/src/components/MachineChip";
+import { bringHereLabel, canBringHere, machines } from "../../../machines/src/queries/store";
 import { createTaskHistories } from "../queries/taskHistories";
 
 // Solo hace falta cuando algo estorba al terminar o archivar: fuera de la carga inicial.

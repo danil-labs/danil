@@ -1,9 +1,9 @@
 import { SignalDot } from "../../../../ui/src/SignalDot";
 import GitBranch from "lucide-solid/icons/git-branch";
 import Monitor from "lucide-solid/icons/monitor";
-import { MachineIcon } from "../../../machines/src/MachineIcon";
+import { MachineIcon } from "../../../machines/src/components/MachineIcon";
 import { WorkdirIcon } from "../../../code/src";
-import { machineName, machineWakes } from "../../../machines/src/store";
+import { machineName, machineWakes } from "../../../machines/src/queries/store";
 import { type JSX, Show } from "solid-js";
 import { createCopied } from "../../../../host/src/clipboard";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";

@@ -1,7 +1,7 @@
 import { createSignal, onCleanup, onMount, untrack } from "solid-js";
 import { invoke } from "../../../engine-client/src/client.ts";
 import { listen } from "../../../../apps/desktop/src/lib/serviceEvents";
-import { machineOf } from "../../../features/machines/src/store";
+import { machineOf } from "../../../features/machines/src/queries/store";
 import { contextAttentionOf, mergeContextAttention } from "./context-attention";
 
 /** Espejo de `workspace/attention.rs`. El orden es la prioridad. */

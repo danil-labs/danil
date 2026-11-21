@@ -18,7 +18,7 @@ export function desktopOrganizations(): OrganizationSelection {
       onSelected: (organization, workspace) => {
         window.dispatchEvent(new CustomEvent(ORGANIZATION_CHANGED, { detail: { organization: organization.id, workspace } }));
         // Solo tras un cambio: fuera de la carga inicial.
-        void import("../../../features/machines/src/store").then((m) => m.refetchMachines());
+        void import("../../../features/machines/src/queries/store").then((m) => m.refetchMachines());
       },
     },
   );

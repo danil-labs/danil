@@ -32,7 +32,7 @@ import { Spinner } from "../../../ui/src/Spinner";
 import { CredentialMachines, LocalKeysBanner } from "./credentials/AccountCredentials";
 import { act, credentialsBackend, credentialsView, failureOf, reloadCredentials } from "./credentials/store";
 import { SettingsBlock, SettingsPanel, SettingsSection } from "./layout";
-import { machines } from "../../machines/src/store";
+import { machines } from "../../machines/src/queries/store";
 import { secretsRoute } from "./secrets-support";
 
 const NAME_PROBLEM = {

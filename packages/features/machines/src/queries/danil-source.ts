@@ -1,7 +1,7 @@
 import { type Fleet, type Listed, listedWorkspaces } from "@terminus/fleet";
 import { createRoot, createSignal } from "solid-js";
-import { availableInContext } from "./context-source.ts";
-import { rememberMachineNames } from "./known-names.ts";
+import { availableInContext } from "../model/context-source.ts";
+import { rememberMachineNames } from "../model/known-names.ts";
 
 /**
  * Los workspaces de Danil de una organización de pago (plan de agregar workspaces, A2 y A3): lo que

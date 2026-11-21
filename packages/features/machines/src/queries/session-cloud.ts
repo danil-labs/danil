@@ -1,6 +1,6 @@
 import type { Computer } from "@terminus/computers";
-import { reportOrganizationProblem } from "../../../../apps/desktop/src/lib/organization-problems.ts";
-import { settledContextIds } from "../../../../apps/desktop/src/lib/settled-contexts.ts";
+import { reportOrganizationProblem } from "../../../../../apps/desktop/src/lib/organization-problems.ts";
+import { settledContextIds } from "../../../../../apps/desktop/src/lib/settled-contexts.ts";
 import { createCloudMachines, EDGE_ENDPOINT } from "./cloud-machines.ts";
 
 type Invoke = (command: string, args?: Record<string, unknown>) => Promise<unknown>;

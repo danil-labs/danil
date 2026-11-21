@@ -1,6 +1,6 @@
 import { createEffect, createMemo, createSignal, on, onCleanup } from "solid-js";
 import { invoke } from "../../../engine-client/src/client.ts";
-import { machineOf } from "../../machines/src/store";
+import { machineOf } from "../../machines/src/queries/store";
 import { FileMachine } from "../../../ui/src/fileMachine";
 import PreviewPane, { type Preview } from "./Preview";
 import { prosaDe } from "../../../ui/src/Failure";

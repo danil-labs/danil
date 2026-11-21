@@ -1,5 +1,5 @@
 import { invoke } from "../../../../engine-client/src/client.ts";
-import { machineOf } from "../../../machines/src/store";
+import { machineOf } from "../../../machines/src/queries/store";
 import ChevronDown from "lucide-solid/icons/chevron-down";
 import ChevronRight from "lucide-solid/icons/chevron-right";
 import Cloud from "lucide-solid/icons/cloud";

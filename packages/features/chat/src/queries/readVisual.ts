@@ -1,7 +1,7 @@
 import { invoke } from "../../../../engine-client/src/client";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { errorCode } from "../../../../../apps/desktop/src/lib/errorCode.ts";
-import { machineOf } from "../../../machines/src/store";
+import { machineOf } from "../../../machines/src/queries/store";
 import { readVisualHtml, type VisualPart, type VisualWhole, VISUAL_FILE, VISUAL_TREE } from "@terminus/chat/visual";
 
 type Scope = { workspace: string; project: string; session: string };

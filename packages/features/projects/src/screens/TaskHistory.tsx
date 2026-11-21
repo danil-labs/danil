@@ -1,4 +1,4 @@
-import { machineOf } from "../../../machines/src/store";
+import { machineOf } from "../../../machines/src/queries/store";
 import { invoke } from "../../../../engine-client/src/client.ts";
 import { listen } from "../../../../../apps/desktop/src/lib/serviceEvents";
 import { Show, createMemo, createResource, createSignal, onCleanup, onMount } from "solid-js";

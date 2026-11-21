@@ -14,7 +14,7 @@ import { capabilities } from "../../../../host/src/platform";
 import { leerPref } from "../../../../../apps/desktop/src/lib/prefs";
 import type { Project } from "../../../../../apps/desktop/src/lib/model";
 import { LazyPart, retryableLazy } from "../../../../ui/src/LazyPart";
-import { machineName, machines, runOn } from "../../../machines/src/store";
+import { machineName, machines, runOn } from "../../../machines/src/queries/store";
 
 const RepositoryPicker = retryableLazy(() => import("../components/RepositoryPicker"));
 

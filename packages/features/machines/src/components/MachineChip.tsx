@@ -1,7 +1,7 @@
-import { t } from "../../../../apps/desktop/src/lib/i18n";
-import { cn } from "../../../../apps/desktop/src/lib/utils";
+import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { cn } from "../../../../../apps/desktop/src/lib/utils";
 import { MachineIcon } from "./MachineIcon";
-import { machineName, machineWakes } from "./store";
+import { machineName, machineWakes } from "../queries/store";
 
 /** La máquina que corre una tarea; atenuada si está apagada. */
 export function MachineChip(props: { machine: string; on: boolean; class?: string }) {

@@ -15,7 +15,7 @@ import { Badge } from "../../../../ui/src/Badge";
 import { Button } from "../../../../ui/src/Button";
 import { type Failure, FailureNote } from "../../../../ui/src/Failure";
 import { Input } from "../../../../ui/src/Input";
-import { machineName, machines } from "../../../machines/src/store";
+import { machineName, machines } from "../../../machines/src/queries/store";
 import { SettingsBlock } from "../layout";
 import { act, credentialsView, failureOf, reloadCredentials } from "./store";
 

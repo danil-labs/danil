@@ -1,11 +1,11 @@
 import { type Accessor, For, Show, createSignal } from "solid-js";
-import { SignalDot } from "../../../ui/src/SignalDot";
+import { SignalDot } from "../../../../ui/src/SignalDot";
 import X from "lucide-solid/icons/x";
-import { t } from "../../../../apps/desktop/src/lib/i18n";
-import { invoke } from "../../../engine-client/src/client.ts";
-import type { AccountMachinesProps } from "../../../host/src/platform";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../../../ui/src/DropdownMenu";
-import type { MachineRow } from "../../../../apps/desktop/src/web/SyncNote";
+import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { invoke } from "../../../../engine-client/src/client.ts";
+import type { AccountMachinesProps } from "../../../../host/src/platform";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../../../../ui/src/DropdownMenu";
+import type { MachineRow } from "../../../../../apps/desktop/src/web/SyncNote";
 
 /**
  * The machines where one account is signed in, under its card: each chip says

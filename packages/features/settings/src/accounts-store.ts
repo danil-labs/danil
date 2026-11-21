@@ -12,7 +12,7 @@ import { legible, type Query, type Read } from "../../../../apps/desktop/src/lib
 import { t } from "../../../../apps/desktop/src/lib/i18n";
 import type { Failure } from "../../../ui/src/Failure";
 import { detalleDe } from "../../../ui/src/Failure";
-import { machineOf } from "../../machines/src/store";
+import { machineOf } from "../../machines/src/queries/store";
 
 export type Account = {
   id: string;

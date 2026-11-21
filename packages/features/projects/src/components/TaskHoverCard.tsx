@@ -14,7 +14,7 @@ import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import type { AgentModels, AgentProfile, HandlerStatus } from "../../../../../apps/desktop/src/lib/model";
 import { nombreDeModelo, providerMark } from "../../../../../apps/desktop/src/lib/models";
 import { MarcaAgente } from "../../../../ui/src/icons";
-import { machineName, machineSystem, machines } from "../../../machines/src/store";
+import { machineName, machineSystem, machines } from "../../../machines/src/queries/store";
 import { AstroAvatar } from "../screens/AstroAvatar";
 import { workLabel } from "../model/branchLabel";
 import { displayName } from "../queries/profiles";

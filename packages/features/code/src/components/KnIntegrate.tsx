@@ -1,6 +1,6 @@
 import { For, Show, createSignal } from "solid-js";
 import { invoke } from "../../../../engine-client/src/client.ts";
-import { machineOf } from "../../../machines/src/store";
+import { machineOf } from "../../../machines/src/queries/store";
 import { Button } from "../../../../ui/src/Button";
 import { Dialog, DialogContent, DialogTitle } from "../../../../ui/src/Dialog";
 import { FailureNote, asFailure, type Failure } from "../../../../ui/src/Failure";

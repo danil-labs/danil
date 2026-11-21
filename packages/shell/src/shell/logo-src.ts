@@ -2,7 +2,7 @@ import { createSignal } from "solid-js";
 import { invoke } from "../../../engine-client/src/client.ts";
 import { imagenInerte } from "../../../../apps/desktop/src/lib/links";
 import { capabilities } from "../../../host/src/platform";
-import { machineOf } from "../../../features/machines/src/store";
+import { machineOf } from "../../../features/machines/src/queries/store";
 
 /**
  * El logo del workspace como `data:` URI. La ventana no pinta un `file://`

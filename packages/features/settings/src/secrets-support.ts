@@ -1,4 +1,4 @@
-import type { Machine } from "../../machines/src/store";
+import type { Machine } from "../../machines/src/queries/store";
 
 type SecretMachine = Pick<Machine, "id" | "active" | "features">;
 export type SecretsRoute = "worker" | "unsupported" | `engine:${string}`;

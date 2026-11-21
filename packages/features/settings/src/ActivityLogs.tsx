@@ -5,7 +5,7 @@ import { listen } from "../../../../apps/desktop/src/lib/serviceEvents";
 import { t } from "../../../../apps/desktop/src/lib/i18n";
 import { Button } from "../../../ui/src/Button";
 import { Select } from "../../../ui/src/Select";
-import { machineName, machines, refetchMachines } from "../../machines/src/store";
+import { machineName, machines, refetchMachines } from "../../machines/src/queries/store";
 import { SettingsPanel, SettingsSection } from "./layout";
 
 export default function ActivityLogs(props: { workspace: string | null; machine?: string | null }) {

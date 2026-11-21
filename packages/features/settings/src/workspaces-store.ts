@@ -15,7 +15,7 @@ import { capabilities } from "../../../host/src/platform";
 import type { Frase } from "../../../../apps/desktop/src/lib/prose";
 import { activeWorkspaceContext, workspaceContextOptions } from "../../../../apps/desktop/src/lib/workspace-context.ts";
 import { asFailure, type Failure } from "../../../ui/src/Failure";
-import type { RailWorkspace } from "../../machines/src/engine-workspaces";
+import type { RailWorkspace } from "../../machines/src/queries/engine-workspaces";
 
 export type Workspace = {
   id: string;

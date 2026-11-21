@@ -45,7 +45,7 @@ import {
 import { type DockAgent } from "./dockLayout";
 import type { SidebarFilterProps } from "./SidebarFilter";
 import { flattenTasks, folderCounts } from "./sidebarTasks";
-import { machineName, machines } from "../../../features/machines/src/store";
+import { machineName, machines } from "../../../features/machines/src/queries/store";
 // Solo al crear un encargado: fuera de la carga inicial.
 import { LazyPart, retryableLazy } from "../../../ui/src/LazyPart";
 import { Spinner } from "../../../ui/src/Spinner";

@@ -2,18 +2,18 @@ import { isFreeRouterAgent, isRetiredAgent } from "@terminus/tasks";
 // Todo va directo a la ventana, sin el reparto entre máquinas ni sus reintentos:
 // repetir una instalación por un `app_unavailable` la correría dos veces.
 import { invoke } from "@tauri-apps/api/core";
-import { listen } from "../../../../apps/desktop/src/lib/serviceEvents";
+import { listen } from "../../../../../apps/desktop/src/lib/serviceEvents";
 import { For, Match, Show, Switch, createEffect, createMemo, createSignal, on, onCleanup, onMount } from "solid-js";
-import { t } from "../../../../apps/desktop/src/lib/i18n";
-import { offersGuests } from "./guestChannels";
-import { Badge } from "../../../ui/src/Badge";
-import { Button } from "../../../ui/src/Button";
-import { MarcaAgente } from "../../../ui/src/icons";
-import { Input } from "../../../ui/src/Input";
-import { ProgressBar } from "../../../ui/src/ProgressBar";
-import { SignalDot } from "../../../ui/src/SignalDot";
-import { Spinner } from "../../../ui/src/Spinner";
-import { SettingsBlock, SettingsRow, SettingsSection } from "../../settings/src/layout";
+import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { offersGuests } from "../queries/guestChannels";
+import { Badge } from "../../../../ui/src/Badge";
+import { Button } from "../../../../ui/src/Button";
+import { MarcaAgente } from "../../../../ui/src/icons";
+import { Input } from "../../../../ui/src/Input";
+import { ProgressBar } from "../../../../ui/src/ProgressBar";
+import { SignalDot } from "../../../../ui/src/SignalDot";
+import { Spinner } from "../../../../ui/src/Spinner";
+import { SettingsBlock, SettingsRow, SettingsSection } from "../../../settings/src/layout";
 import {
   linuxUserSlug,
   type WslCatalogItem,
@@ -24,7 +24,7 @@ import {
   type WslLinuxState,
   wslState,
   wslUserProblem,
-} from "./wsl";
+} from "../model/wsl";
 
 const MB = 1024 * 1024;
 const mb = (bytes: number | null | undefined) => Math.max(0, Math.round((bytes ?? 0) / MB));
