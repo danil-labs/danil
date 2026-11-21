@@ -1,0 +1,1208 @@
+/* Cimiento de estilos: **la única definición** de cada valor del sistema
+   visual. Un componente que declara su propio color se sale del sistema y deja
+   de responder al cambio de tema.
+
+   La hoja anterior traía su propia versión de
+   los tokens, escrita a mano, y se había desviado del sistema en seis sitios
+   medibles: el amarillo de oscuro (`#f5d90a` en vez de `#f4eb7b`), el fondo de
+   oscuro (un near-black suelto en vez del del sistema), los neutros (zinc en
+   vez de la rampa con ancla navy), los bordes (sólidos en vez de hairline con alfa), la
+   tipografía (declaraba Geist y no la cargaba) y la densidad de los controles.
+   Conservar ese aspecto era conservar la desviación. Los tokens actuales son
+   la única fuente de verdad. */
+@layer theme, base, components, utilities;
+
+/* Tailwind entero, preflight incluido. Los átomos asumen ese reset: por ejemplo,
+   una variante transparente no vuelve a neutralizar el estilo nativo del
+   navegador. Se importa por partes para declarar el orden de capas de forma
+   explícita. */
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/preflight.css" layer(base);
+@import "tailwindcss/utilities.css" layer(utilities);
+
+/* La marca de selección y el riel de mensajes, que son lo único que hay
+   hoy en la capa `components`. Van en su archivo y no aquí porque este es la
+   definición del sistema —tokens y base— y aquellos son reglas de componente
+   que los consumen. El motivo entero, con las mediciones, está dentro de cada uno. */
+@import "./selection.css" layer(components);
+@import "./message-rail.css" layer(components);
+
+/* La segunda capa de color, sin capa a propósito: tiene que ganarle al `:root`
+   que emite `@theme`, igual que el bloque de oscuro de más abajo. */
+@import "./terminal.css";
+
+/* Detección explícita de las clases en uso: sin `@import "tailwindcss"` no hay
+   escaneo automático que heredar. */
+@source "../**/*.{ts,tsx}";
+
+/* -------------------------------------------------------------- tipografía */
+
+/* Geist empaquetada, no traída de un CDN. Esta app corre en
+   escritorio y se usa sin red; con la fuente en un CDN cae al stack del sistema
+   en silencio justo en el caso normal. Son dos archivos variables —el rango
+   100–900 entero en cada uno— y 107 KB en total. */
+@font-face {
+  font-family: "Geist";
+  src: url("./fonts/Geist-Variable.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Geist Mono";
+  src: url("./fonts/GeistMono-Variable.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* La display solo pinta títulos: Bricolage Grotesque (OFL 1.1), latín y latín
+   extendido por separado para cargar solo lo que se pinta. */
+@font-face {
+  font-family: "Bricolage Grotesque";
+  src: url("./fonts/BricolageGrotesque-Latin-Variable.woff2") format("woff2");
+  font-weight: 200 800;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Bricolage Grotesque";
+  src: url("./fonts/BricolageGrotesque-LatinExt-Variable.woff2") format("woff2");
+  font-weight: 200 800;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+/* ------------------------------------------------------------------ tokens */
+
+/* Oscuro por atributo, no por media query — es una decisión de marca, no del
+   sistema operativo. Hoy el atributo lo pone `main.tsx`
+   siguiendo al sistema operativo, así que el comportamiento no cambia: la app
+   sigue sin interruptor. Lo que cambia es que ahora **puede** tenerlo sin tocar
+   una sola regla. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+/* `static` emite todas las variables aunque Tailwind no vea una utility que las
+   use: también son la API de los átomos y las reglas base. */
+@theme static {
+  --color-primary: #6539f5;
+  --color-primary-dark: #5429e5;
+  --color-secondary: #f4eb7b;
+  --color-accent: #5fcc79;
+
+  /* **El fondo de una línea del diff, y por qué no es `success/10`.** Un tinte
+     por opacidad usa el mismo color en los dos temas, así que el verde que se
+     posa bien sobre blanco casi desaparece sobre el fondo oscuro: la fila que
+     dice qué entró se leería como contexto. Se declaran los cuatro valores a
+     mano, que es lo que la opacidad no puede dar.
+
+     Van muy tenues a propósito. Lo que tiene que resaltar es el código, no la
+     franja: el fondo dice de qué lado está la línea y la barra de la izquierda
+     —`success`/`error` a plena saturación, iguales en los dos temas— es lo que
+     se ve de un vistazo al recorrer el archivo.
+
+     **El verde sube un punto para pesar lo mismo que el rojo.** Contra
+     `surface-muted`, que es el fondo del bloque, daba **1,011:1** — la fila que
+     dice qué entró era invisible salvo por su barra, mientras que la de salida
+     sí se veía (1,039). Las dos líneas dicen lo mismo de lados opuestos y tienen
+     que pesar igual. Ahora 1,033 y 1,039.
+
+     Es el mismo desequilibrio que tenía oscuro con los colores cambiados de
+     lado, y sale del mismo sitio: los cuatro valores se eligieron a ojo contra
+     el fondo del tema, no contra la superficie donde acaban posándose. */
+  --color-diff-add: #e6f4ea;
+  --color-diff-del: #fdecec;
+  /* El tramo que cambió dentro de la línea: 1,313 y 1,299 sobre su franja,
+     texto a 12,86 y 12,93. */
+  --color-diff-add-word: #aedfbc;
+  --color-diff-del-word: #f7c9c9;
+
+  --color-success: #5fcc79;
+  --color-error: #ef4444;
+  --color-warning: #f59e0b;
+  --color-info: #3b82f6;
+
+  /* La terminal de la preparación es oscura en los dos temas. */
+  --color-terminal: #101421;
+  --color-terminal-bar: #1b2030;
+  --color-terminal-line: #30384e;
+  --color-terminal-text: #dfe5f1;
+  --color-terminal-muted: #aab4cb;
+  --color-terminal-ok: #8fdfb0;
+  --color-terminal-warn: #f4eb7b;
+  --color-terminal-error: #fca5a5;
+  --color-terminal-accent: #b6a0ff;
+
+  /* Tonos "strong" para texto. TIENEN que vivir en `@theme` y no en `:root`:
+     Tailwind v4 solo emite la utility (`text-warning-strong`) para lo declarado
+     aquí. En `:root` la variable existiría y la clase no haría nada.
+
+     **Dos bajan un escalón, y es el espejo de lo que ya se hizo en oscuro.** Ahí
+     los cuatro se subieron al 400 porque un medio pensado para blanco cae sobre
+     la superficie oscura; en claro pasaba lo contrario con dos de ellos y nadie lo
+     había mirado:
+
+     | | sobre `surface` | sobre su chip al 15 % |
+     |---|---|---|
+     | `#d97706` (amber-600) | 3,19:1 | 2,84:1 |
+     | `#16a34a` (green-600) | 3,30:1 | 2,97:1 |
+
+     Un chip de estado de cuenta —«conectada», «desconectada»— es exactamente lo
+     que hay que poder leer de un vistazo. Con el escalón 800 de la misma rampa:
+     7,09 y 7,13 sobre `surface`, 6,32 y 6,43 sobre su chip.
+
+     El 700 también pasa sobre `surface` (5,02) y **no sobre el chip** (4,48 y
+     4,52): se descartó porque un margen de 0,02 lo rompe el día que alguien suba
+     el tinte del chip del 15 % al 20 %.
+
+     `error` se queda donde estaba: 4,83 sobre `surface`. `info` baja al 700 porque
+     su `Badge` (texto sobre `info` al 15 %) daba 4,35: ahora 5,64 sobre `surface`
+     y 4,86 en el peor fondo claro. */
+  --color-success-strong: #166534;
+  --color-error-strong: #dc2626;
+  --color-warning-strong: #92400e;
+  --color-info-strong: #1d4ed8;
+
+  /* El enlace lleva el matiz y la saturación exactos del verde de marca
+     `#5fcc79`, bajado hasta pasar AA: **4,74:1** en el peor caso claro. Sin
+     oscurecer daba 2,08:1 y se reportó ilegible. Va aquí y no en `primary`
+     porque ese es el color de acción de toda la app —19 usos de texto y 26 de
+     relleno— y el enlace del chat no es una acción de la app. */
+  --color-emphasis: #6539f5;
+  --color-link: #277c3c;
+
+  /* El editor de código (`features/code/CodeEditor.tsx`). Medidos sobre
+     `surface-muted` y sobre la selección compuesta encima, que es el peor caso:
+     `docs/visual-system.md` § El editor de código. */
+  --color-syntax-keyword: #6d28d9;
+  --color-syntax-string: #166534;
+  --color-syntax-number: #92400e;
+  --color-syntax-function: #1e40af;
+  --color-syntax-type: #115e59;
+  --color-syntax-tag: #9f1239;
+  --color-syntax-attribute: #7e22ce;
+  --color-syntax-comment: #585a6e;
+  --color-editor-selection: color-mix(in srgb, var(--color-primary) 14%, var(--color-surface-muted));
+  --color-editor-match: color-mix(in srgb, var(--color-warning) 20%, var(--color-surface-muted));
+  /* Transparente para que la selección se vea debajo; sobre `surface-muted` compone #eaebef. */
+  --color-editor-active-line: color-mix(in srgb, var(--color-neutral-950) 4%, transparent);
+
+  /* Amarillo y navy que NO se invierten con el tema. `primary` sí cambia entre
+     temas —morado en claro, teal en oscuro—, así que no puede expresar "el
+     amarillo Danil" por su cuenta y estos dos existen para eso. */
+  --color-brand-yellow: #f4eb7b;
+  --color-brand-navy: #0a0d23;
+  --color-brand-purple: #6539f5;
+
+  --color-neutral-50: #fafbfd;
+  --color-neutral-100: #f3f4f8;
+  --color-neutral-200: #e2e4ee;
+  --color-neutral-300: #d0d3e0;
+  /* **Un escalón más oscuro que el de la rampa, y por medición.** Este es el
+     gris de todo lo secundario —103 usos en 29 archivos: metadatos, marcas de
+     tiempo, rótulos, contadores, rutas— y sobre `surface-muted` (`#f3f4f8`) el
+     valor anterior daba **4,37:1**, por debajo del 4,5 que pide AA. Ahora el
+     peor caso de las cuatro superficies del tema claro es 5,04:1, y 4,57:1 sobre
+     la tarea abierta (`neutral-200`). */
+  --color-neutral-500: #62647a;
+  --color-neutral-700: #3c3f50;
+  --color-neutral-900: #14162a;
+  --color-neutral-950: #0a0d23;
+
+  --color-bg: #f9f9f9;
+  --color-surface: #ffffff;
+  --color-surface-raised: #ffffff;
+  /* El borde de un workspace de Danil en el riel: reemplaza al normal, nunca se suma. */
+  --color-danil-mark-from: #6539f5;
+  --color-danil-mark-to: #8f5ff8;
+  /* El globo de la persona lleva un tinte de marca y el de un agente se queda
+     en `surface-raised`, pegado al fondo: lo que escribe la persona es lo que
+     tiene que saltar al recorrer el hilo. Cada tema mezcla su propio primario
+     —violeta en claro, teal en oscuro— y por eso el oscuro repite la regla. */
+  --color-chat-user: color-mix(in srgb, var(--color-primary) 8%, var(--color-surface-raised));
+  --color-chat-user-border: color-mix(in srgb, var(--color-primary) 20%, transparent);
+  /* La pregunta al margen (`/btw`). Sigue al primario salvo en grafito oscuro. */
+  --color-side: var(--color-primary);
+  /* El globo de un agente u otra tarea. En claro `surface-raised` es blanco como el chat (1,00:1). */
+  --color-chat-incoming: var(--color-surface-muted);
+  /* Los globos del Inbox alfa repiten los de Danil Agents (Appv2): blanco el del
+     contacto y verde WhatsApp el saliente. En oscuro el saliente es claro y lleva tinta oscura. */
+  --color-inbox-bubble-in: #ffffff;
+  --color-inbox-bubble-out: #d9fdd3;
+  --color-inbox-bubble-out-text: var(--color-neutral-950);
+  --color-inbox-bubble-out-muted: var(--color-neutral-500);
+  --color-inbox-bubble-out-label: var(--color-neutral-700);
+  /* El ícono de canal del Inbox alfa lleva el color de marca, igual en los dos temas, como en Appv2. */
+  --color-inbox-channel-whatsapp: #25d366;
+  --color-inbox-channel-instagram: #e1306c;
+  --color-inbox-channel-messenger: #1877f2;
+  --color-surface-muted: #f3f4f8;
+  /* El riel de Configuración. Un escalón por debajo de `surface-muted` para que la
+     pestaña abierta, que se funde con el contenido en `surface`, se separe del riel:
+     1,15:1 en claro contra 1,10:1 con `surface-muted`. El gris secundario da 4,55:1 encima. */
+  --color-rail: #edeff5;
+  --color-border: rgb(10 13 35 / 0.1);
+  --color-border-strong: rgb(10 13 35 / 0.16);
+
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+
+  /* La escala de texto que comparten los clientes (`packages/design/src/scale.ts`).
+     Sin `--line-height` a propósito: cada átomo decide su interlineado. */
+  --text-2xs: 0.625rem;
+  --text-caption: 0.6875rem;
+  --text-label: 0.75rem;
+  --text-ui: 0.8125rem;
+  --text-body: 0.875rem;
+  --text-lead: 0.9375rem;
+
+  /* Las medidas del visor son contrato del documento, no decisiones de una
+     pantalla. La hoja conserva el ancho de texto A4 que publica el exportador
+     más el relleno del contenedor; el alto mínimo evita que una tabla o una
+     presentación se vuelvan una rendija en un panel angosto. */
+  --artifact-preview-min-height: 300px;
+  --artifact-presentation-min-height: 360px;
+  --artifact-document-max-width: calc(17cm + 56px);
+
+  --shadow-sm: 0 1px 2px rgb(10 13 35 / 0.06);
+  --shadow-md: 0 2px 8px rgb(10 13 35 / 0.08);
+  --shadow-lg: 0 8px 24px rgb(10 13 35 / 0.1);
+
+  --font-sans: "Geist", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, "SF Mono", monospace;
+  /* Solo los títulos de la app. Lo que escribe el agente se queda en la de
+     interfaz: la display es la voz del producto, no la suya. */
+  --font-display: "Bricolage Grotesque", "Geist", ui-sans-serif, system-ui, sans-serif;
+
+  /* El bloque que espera. Solo opacidad y en un rango corto: un skeleton que
+     late fuerte compite por atención con lo que llegue después, y lo que tiene
+     que decir —«viene algo, y de este tamaño»— ya lo dice la forma. */
+  @keyframes danil-skeleton {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.55;
+    }
+  }
+
+  /* El latido del "está pensando": el streaming del agente es lo único que
+     recibe sutileza; todo lo demás va seco. Por pasos y no interpolado: una
+     animación continua repinta la ventana a 60 cuadros mientras se espera. */
+  --animate-danil-pulse: danil-pulse 2s steps(2, jump-none) infinite;
+  /* Todo lo que se repite cambia en múltiplos de 1/12 s y se ancla al reloj
+     común (`lib/sharedClock.ts`): un loader o cuarenta repintan la ventana en
+     los mismos 12 cuadros por segundo. El giro es la excepción: por pasos se
+     leía como un loader trabado. En Chromium es continuo y solo mueve
+     `transform`, que el compositor anima sin el hilo principal; en WebKit va
+     por pasos más finos (abajo). Un solo loader, `ui/Spinner.tsx`, y dos
+     giros: el normal y el lento del anillo de la tarea que el motor aún
+     registra. `pulse` pisa el de Tailwind, que es continuo. */
+  --animate-spin: spin 1s linear infinite;
+  --animate-spin-lento: spin 2.5s linear infinite;
+  --animate-pulse: pulse 2s steps(2, jump-start) infinite;
+  --animate-skeleton: danil-skeleton 1.5s steps(18) infinite;
+  /* El trazo que corre hacia el centro del mapa mientras se conecta una IA. */
+  --animate-flujo: flujo 0.75s steps(9) infinite;
+  /* La línea de una descarga que no reporta cuánto lleva. */
+  --animate-barrido: barrido 1.5s steps(18) infinite;
+  /* Lo que aparece en su sitio: sube poco y se enciende. */
+  --animate-entrar: entrar 0.35s ease both;
+  /* Lo que falló tiembla de lado a lado una vez. */
+  --animate-sacudir: sacudir 0.45s ease-in-out both;
+  @keyframes sacudir {
+    0%, 100% { transform: translateX(0); }
+    20%, 60% { transform: translateX(-6px); }
+    40%, 80% { transform: translateX(6px); }
+  }
+  @keyframes entrar {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+  }
+  @keyframes flujo {
+    to {
+      stroke-dashoffset: -12;
+    }
+  }
+  @keyframes barrido {
+    from {
+      transform: translateX(-100%);
+    }
+    to {
+      transform: translateX(300%);
+    }
+  }
+  @keyframes danil-pulse {
+    0%,
+    100% {
+      opacity: 0.35;
+      transform: scale(0.85);
+    }
+    50% {
+      opacity: 1;
+      transform: scale(1.1);
+    }
+  }
+}
+
+/* WebKit (Safari y la app de Mac) recompone la ventana entera a 60 cuadros por
+   segundo mientras gira algo continuo. Ahí el giro va a 24 pasos por segundo:
+   el doble de fino que la rejilla de 1/12 s y lejos de los 60. Solo WebKit
+   implementa `hanging-punctuation`; si Chromium lo implementa, cae aquí y
+   sigue girando, solo que por pasos. */
+@supports (hanging-punctuation: first) {
+  :root {
+    --animate-spin: spin 1s steps(24) infinite;
+    --animate-spin-lento: spin 2.5s steps(60) infinite;
+  }
+}
+
+@utility min-h-artifact-preview {
+  min-height: var(--artifact-preview-min-height);
+}
+
+@utility min-h-artifact-presentation {
+  min-height: var(--artifact-presentation-min-height);
+}
+
+@utility max-w-artifact-document {
+  max-width: var(--artifact-document-max-width);
+}
+
+/* Claro es la base, y **va antes que oscuro a propósito**.
+
+   `:root` y `[data-theme="dark"]` pesan lo mismo —una clase de especificidad
+   cada uno—, así que entre los dos decide **quién va después**. Esto vivía
+   debajo del bloque oscuro y le ganaba: en tema oscuro, `color-scheme` valía
+   `light`, `--action-text` valía `#ffffff` y la barra de scroll usaba el pulgar
+   claro. Medido en el DOM, no deducido.
+
+   Lo caro no era el token: **`color-scheme` es lo que le dice al sistema con qué
+   esquema pintar los controles nativos.** El desplegable de un `<select>` lo
+   pinta el sistema operativo, así que el selector de modelo y proveedor se
+   pintaba en claro dentro de una app en oscuro. Reportado como «con el hover se
+   hacen las letras blancas», que era el sistema pintando su selección encima de
+   una lista que no debía ser clara.
+
+   Y explica por qué `--action-text` no lo usaba nadie: su valor de oscuro nunca
+   llegaba, así que quien lo probaba lo veía «roto» y resolvía a mano. Un token
+   que no se aplica no es un token: es una promesa que el CSS incumple en
+   silencio. */
+:root {
+  color-scheme: light;
+  --tab-veil-rgb: 10 13 35;
+  --tab-veil-scale: 0.27;
+  --action-text: #ffffff;
+  --scrollbar-thumb: rgb(10 13 35 / 0.15);
+  --scrollbar-thumb-hover: rgb(10 13 35 / 0.3);
+
+  /* Los dos tonos de cada cuerpo celeste (`AstroAvatar.tsx`): el 1 es el lado
+     iluminado y el 2 el cuerpo. No salen de la rampa neutra porque distinguen
+     a quince agentes entre sí, y quince escalones de una rampa no se distinguen. */
+  --astro-sun-1: #ffe9b8;
+  --astro-sun-2: #ffd98a;
+  --astro-planet-1: #dccbff;
+  --astro-planet-2: #c9b2ff;
+  --astro-moon-1: #cdd8f0;
+  --astro-moon-2: #a9b6d8;
+  --astro-asteroid-1: #e0cbb4;
+  --astro-asteroid-2: #c9ae90;
+  --astro-star-1: #cfe2ff;
+  --astro-star-2: #a9c8ff;
+  --astro-hole-1: #ffc46b;
+  --astro-hole-2: #2e2547;
+  --astro-ringed-1: #ffd9c2;
+  --astro-ringed-2: #f5b592;
+  --astro-comet-1: #c8f2f7;
+  --astro-comet-2: #92dde8;
+  --astro-nebula-1: #ffcfe9;
+  --astro-nebula-2: #f0a5cf;
+  --astro-binary-1: #ffc9c2;
+  --astro-binary-2: #f59b96;
+  --astro-dwarf-1: #d4f0cf;
+  --astro-dwarf-2: #a4d49c;
+  --astro-pulsar-1: #d6d9ff;
+  --astro-pulsar-2: #adb3f5;
+  --astro-catplanet-1: #ffd2a6;
+  --astro-catplanet-2: #ee9a58;
+  --astro-monkeyplanet-1: #edd0c2;
+  --astro-monkeyplanet-2: #c48468;
+
+  /* El ojo sale de la luminosidad del cuerpo, no del tema: catorce cuerpos son
+     claros y llevan el ojo oscuro, y el agujero negro es oscuro y lo lleva
+     claro. Invertirlos con el tema le borra los ojos a alguno de los dos
+     grupos, porque el cuerpo debajo no cambió de lado. */
+  --astro-eye-dark: #0b1026;
+  --astro-eye-light: #eef1fa;
+}
+
+/* Oscuro: la inversión de marca morado→amarillo, sobre una rampa con ancla
+   navy. Sin capa, para ganarle al `:root` que emite `@theme`.
+
+   **Ya no es el negro OLED, y el motivo está medido tres veces en este mismo
+   repositorio.** El suelo en `#000000` gastaba todo el presupuesto de contraste
+   en un solo sitio —texto a **20,12:1**, casi el triple de lo que pide AAA— y
+   no dejaba nada para construir profundidad: las cuatro superficies se
+   separaban **1,06:1** entre contiguas y **1,21:1** de punta a punta. Cuatro
+   superficies declaradas que eran, en la práctica, una sola.
+
+   Lo que eso costó ya estaba anotado, cada caso resuelto por separado:
+
+   - `selection.css` — la fila seleccionada daba **1,00:1**; marcarla con un
+     relleno era imposible y hubo que añadir una barra de 3 px.
+   - `ui/sidebar.tsx` — el navy al 5 % daba `#010102` sobre `#000000`.
+   - `ui/Markdown.tsx` — `neutral-950` «se daba la vuelta a `#fafafa`» y lo más
+     brillante de la ventana acababa siendo un `<pre>` largo.
+
+   Los tres son el mismo problema: **un suelo en negro puro no deja sitio por
+   debajo**, así que todo lo que necesita distinguirse tiene que subir, y lo
+   único que queda para distinguirlo es el brillo.
+
+   Se levanta el suelo y se baja el techo. Los escalones contiguos quedan en
+   **1,099 / 1,142 / 1,183** y la rampa entera en **1,484:1**; el texto da
+   **16,60:1** sobre `bg` y **11,18:1** en el peor caso, más del doble de AAA en
+   los dos extremos. Nada baja de AA — la tabla está bajo `--color-neutral-500`.
+
+   **`surface-muted` cambia de sitio, y eso es lo que arregla su nombre.** En
+   claro es más oscura que `surface`: una superficie hundida. En oscuro
+   era la más clara de las cuatro, no por criterio sino por no tener a dónde
+   bajar desde `#000000`, así que el bloque de código y el de diff flotaban por
+   encima de la página en vez de hundirse en ella. Ahora ocupa el segundo
+   escalón, entre `bg` y `surface`, y las dos direcciones del tema coinciden.
+
+   Los bordes NO se tocan. Hoy hacen el trabajo que la elevación no podía hacer;
+   con las superficies separadas seguramente sobre alfa, pero eso se ajusta
+   mirando la app, no despejando una tabla. */
+[data-theme="dark"] {
+  color-scheme: dark;
+  --color-inbox-bubble-in: #1b1b1e;
+  --color-inbox-bubble-out: #ececef;
+  --color-inbox-bubble-out-text: #08080a;
+  --color-inbox-bubble-out-muted: #52525b;
+  --color-inbox-bubble-out-label: #52525b;
+  --tab-veil-rgb: 0 0 0;
+  --tab-veil-scale: 1;
+
+  --color-bg: #070b1c;
+  --color-surface: #1a2240;
+  --color-surface-raised: #242e54;
+  --color-danil-mark-from: #8b6cff;
+  --color-danil-mark-to: #c9a8ff;
+  --color-surface-muted: #101630;
+  /* Riel de Configuración: 1,18:1 contra `surface`; el gris secundario da 6,31:1. */
+  --color-rail: #0d132b;
+  --color-border: rgb(255 255 255 / 0.1);
+  --color-border-strong: rgb(255 255 255 / 0.16);
+
+  --color-primary: #4fe3d8;
+  --color-primary-dark: #6bede4;
+  --color-secondary: #6539f5;
+
+  /* Los tonos de texto de estado son medios elegidos para posarse sobre blanco;
+     sobre la superficie oscura caen a ~2,5:1 y el estado se vuelve ilegible. Se
+     suben al escalón 400 para conservar el tono y pasar AA.
+
+     Revisados al levantar el suelo: el peor caso de los cuatro es ahora sobre
+     `surface-raised` y da 7,97 / 5,02 / 8,32 / 5,46. Siguen pasando AA y no se
+     tocan — lo que cambió debajo de ellos no les llegó a cambiar el escalón. */
+  --color-success-strong: #4ade80;
+  --color-error-strong: #f87171;
+  --color-warning-strong: #fbbf24;
+  /* `info` sube al 300: en el 400, su `Badge` daba 4,29 sobre `surface-raised`; ahora 6,06 en el peor fondo. */
+  --color-info-strong: #93c5fd;
+
+  /* La negrita lleva el teal de marca y el enlace se queda en el ámbar. El
+     verde que lleva el enlace en claro cae aquí a un paso del teal —135° y
+     175°— y las dos marcas se confundirían dentro del mismo párrafo. */
+  --color-emphasis: #4fe3d8;
+  --color-link: #fbbf24;
+
+  --color-chat-user: color-mix(in srgb, var(--color-primary) 12%, var(--color-surface-raised));
+  --color-chat-user-border: color-mix(in srgb, var(--color-primary) 25%, transparent);
+  --color-chat-incoming: var(--color-surface-raised);
+
+  --color-syntax-keyword: #c4b5fd;
+  --color-syntax-string: #86efac;
+  --color-syntax-number: #fcd34d;
+  --color-syntax-function: #93c5fd;
+  --color-syntax-type: #5eead4;
+  --color-syntax-tag: #fda4af;
+  --color-syntax-attribute: #d8b4fe;
+  --color-syntax-comment: #99a2c4;
+  --color-editor-selection: color-mix(in srgb, var(--color-primary) 16%, var(--color-surface-muted));
+
+  /* Sobre `surface-muted` (#101630), que es el fondo del bloque de diff.
+     Remedidos al mover esa superficie, sin cambiar los valores: dan **1,164:1**
+     el de entrada y **1,142:1** el de salida.
+
+     Se igualan a propósito. Las dos líneas del diff dicen lo mismo de lados
+     opuestos, y una que pese menos que la otra se lee como que importa menos. */
+  --color-diff-add: #122a1b;
+  --color-diff-del: #3a1a1f;
+  /* 1,506 y 1,510 sobre su franja, texto a 8,62 y 8,76. */
+  --color-diff-add-word: #1c4a2d;
+  --color-diff-del-word: #6c2a3c;
+
+  /* **La rampa deja de ser el zinc de Tailwind y pasa a llevar el ancla navy**,
+     que es la que el tema claro ya usaba (`#fafbfd` → `#0a0d23`). Eran dos
+     rampas distintas para los dos temas; ahora es una sola recorrida en
+     direcciones opuestas, que es lo que la cabecera de este archivo dice que se
+     vino a hacer. El azul es sutil —nueve puntos de canal— y su trabajo es que
+     el oscuro se lea como el oscuro de esta marca y no como un gris cualquiera. */
+  --color-neutral-50: #070b1c;
+  --color-neutral-100: #101630;
+  --color-neutral-200: #242e54;
+  --color-neutral-300: #39456f;
+  /* **El escalón que fija el suelo de toda la rampa**, porque es el gris de todo
+     lo secundario —254 usos: metadatos, marcas de tiempo, rótulos, contadores,
+     rutas— y por tanto el primero que rompe AA cuando las superficies suben.
+
+     Su historia, entera: `#71717a` (zinc-500) no llegaba a AA en ninguna de las
+     cuatro superficies; `#8b8b94` lo arregló contra la rampa OLED y volvió a
+     caer al levantar el suelo. Con las superficies de navy, la más clara es
+     `surface-raised` (`#242e54`) y `#8d96bc` da **4,53:1** ahí y 6,73:1 en el
+     mejor caso.
+
+     Va justo A PROPÓSITO. Subirlo más lo acerca a `neutral-700` (5,80:1 en el
+     mismo peor caso) y entonces un metadato deja de leerse como metadato: la
+     jerarquía se paga con la distancia entre estos dos, no con el margen sobre
+     el mínimo. Y es lo que ata la rampa por abajo — si algún día `raised` sube,
+     este valor tiene que volver a medirse. */
+  --color-neutral-500: #8d96bc;
+  --color-neutral-700: #a3abcb;
+  --color-neutral-900: #c6cbe2;
+  /* El techo, y **lo que más se nota del cambio entero**. `#fafafa` sobre
+     `#000000` daba 20,12:1: el máximo que un panel puede emitir, sostenido
+     durante horas en una app de escritorio. Ahora 16,12:1 sobre `bg` y 11,45:1
+     en el peor caso — más del doble de AAA por todas partes. Lo que se va es el
+     halo, no la legibilidad. */
+  --color-neutral-950: #e9ecf8;
+
+  /* Texto sobre la acción: el navy del fondo sobre el teal, **12,40:1**. La
+     acción de oscuro es un relleno claro, así que su texto va oscuro. */
+  --action-text: #070b1c;
+  --scrollbar-thumb: rgb(255 255 255 / 0.18);
+  --scrollbar-thumb-hover: rgb(255 255 255 / 0.35);
+
+  /* Las sombras se invierten o desaparecen. Las de claro son navy al 6-10 %, y
+     sobre el navy del fondo oscuro no separan nada: lo elevado y lo plano se
+     ven igual. En oscuro la sombra tiene que ser negra y mucho más opaca. */
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.4);
+  --shadow-md: 0 2px 8px rgb(0 0 0 / 0.45);
+  --shadow-lg: 0 16px 40px rgb(0 0 0 / 0.55);
+
+  /* Los tres que el navy se traga: la luna y el asteroide caen al tono de la
+     chrome oscura, y el agujero negro deja de separarse de un fondo que ya es
+     casi tan oscuro como él. Los otros doce son pasteles y se sostienen. */
+  --astro-moon-1: #e4eaf8;
+  --astro-moon-2: #bfc9e4;
+  --astro-asteroid-1: #e8d6c0;
+  --astro-hole-1: #ffd98a;
+  --astro-hole-2: #3d315e;
+}
+
+
+/* Grafito, el oscuro por omisión; el navy queda como alternativa (Ajustes → Apariencia, `lib/theme.ts`).
+   Negros neutros, acción en blanco roto y el amarillo de marca en los enlaces.
+   Suelo en `#111113`: con `#08080a` la barra, el riel y el sidebar se veían negros.
+   Texto 16,00:1 sobre `bg`; `neutral-500` 4,98:1 en el peor caso. */
+[data-theme="dark"][data-dark-style="graphite"] {
+  --color-bg: #111113;
+  --color-surface: #212124;
+  --color-surface-raised: #2c2c30;
+  --color-surface-muted: #19191c;
+  --color-rail: #161618;
+  --color-border: rgb(255 255 255 / 0.08);
+  --color-border-strong: rgb(255 255 255 / 0.14);
+
+  /* Texto sobre la acción: 16,00:1. */
+  --color-primary: #ececef;
+  --color-primary-dark: #ffffff;
+  --action-text: #111113;
+  --color-secondary: #f4eb7b;
+
+  --color-emphasis: #ececef;
+  --color-link: #f4eb7b;
+  /* El teal del navy: el blanco roto del primario no la distingue del hilo. */
+  --color-side: #4fe3d8;
+
+  /* Tinte amarillo: sin él el globo de la persona es igual al de un agente (`surface-raised`). */
+  --color-chat-user: color-mix(in srgb, var(--color-brand-yellow) 8%, var(--color-surface-raised));
+  --color-chat-user-border: color-mix(in srgb, var(--color-brand-yellow) 22%, transparent);
+
+  --color-syntax-comment: #8b8b94;
+
+  --color-neutral-50: #111113;
+  /* El hover del sidebar: 1,13:1 contra la columna. */
+  --color-neutral-100: #1e1e21;
+  --color-neutral-200: #2c2c30;
+  --color-neutral-300: #424248;
+  --color-neutral-500: #9a9aa3;
+  --color-neutral-700: #b4b4bc;
+  --color-neutral-900: #d4d4d8;
+  --color-neutral-950: #ececef;
+
+}
+
+/* La muestra de Violeta no hereda los colores de la paleta elegida en `<html>`. */
+[data-theme="light"][data-light-style="violet"] {
+  --color-bg: #f9f9f9;
+  --color-surface: #ffffff;
+  --color-rail: #edeff5;
+  --color-primary: var(--color-brand-purple);
+  --color-neutral-500: #62647a;
+  --color-neutral-950: var(--color-brand-navy);
+  --color-border-strong: rgb(10 13 35 / 0.16);
+}
+
+/* Grafito claro, el estilo alternativo del claro (Ajustes → Apariencia). Grises
+   neutros, acción en negro y el amarillo de marca de relleno; los enlaces van en un
+   ocre del mismo matiz (6,36:1). `neutral-500` da 4,80:1 sobre la tarea abierta. */
+[data-theme="light"][data-light-style="graphite"] {
+  --color-bg: #f4f4f5;
+  --color-surface: #ffffff;
+  --color-surface-raised: #ffffff;
+  --color-surface-muted: #ececee;
+  --color-rail: #ebebed;
+  --color-border: rgb(9 9 11 / 0.09);
+  --color-border-strong: rgb(9 9 11 / 0.15);
+
+  /* Texto sobre la acción: 17,72:1. */
+  --color-primary: #18181b;
+  --color-primary-dark: #27272a;
+  --action-text: #ffffff;
+
+  --color-emphasis: #0a0a0b;
+  --color-link: #6e5f00;
+
+  --color-chat-user: color-mix(in srgb, var(--color-brand-yellow) 28%, var(--color-surface-raised));
+  --color-chat-user-border: color-mix(in srgb, #c9bb2a 45%, transparent);
+  /* 1,14:1 contra el chat. */
+  --color-chat-incoming: #f0f0f2;
+
+  --color-neutral-50: #fafafa;
+  /* El hover del sidebar: 1,10:1 contra la columna. */
+  --color-neutral-100: #e9e9ec;
+  --color-neutral-200: #e0e0e4;
+  --color-neutral-300: #d4d4d8;
+  --color-neutral-500: #5f5f68;
+  --color-neutral-700: #3f3f46;
+  --color-neutral-900: #18181b;
+  --color-neutral-950: #0a0a0b;
+
+  --scrollbar-thumb: rgb(9 9 11 / 0.15);
+  --scrollbar-thumb-hover: rgb(9 9 11 / 0.3);
+
+  --shadow-sm: 0 1px 2px rgb(9 9 11 / 0.08);
+  --shadow-md: 0 2px 8px rgb(9 9 11 / 0.08);
+  --shadow-lg: 0 8px 24px rgb(9 9 11 / 0.1);
+}
+
+/* -------------------------------------------------------------------- base */
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  /* La ventana no scrollea nunca: el alto está fijo al viewport y el único que
+     se mueve es el panel de chat. Sin esto la página entera crece con la
+     conversación y arrastra la cabecera y el composer fuera de vista. */
+  html,
+  body,
+  #root {
+    height: 100%;
+    overflow: hidden;
+  }
+
+  /* La escala de la ventana (⌘+/⌘−/⌘0, `lib/zoom.ts`). Todo lo que Tailwind
+     mide en `rem` cuelga de aquí; lo escrito en px no la sigue. */
+  html {
+    font-size: calc(16px * var(--escala-ui, 1));
+  }
+
+  /* El maya conserva Geist también en los títulos: ninguna palabra con
+     saltillo `U+02BC` mezcla dos fuentes. `i18n.ts` pone el `lang`. */
+  html[lang="yua"] {
+    --font-display: var(--font-sans);
+  }
+
+  body {
+    margin: 0;
+    font-family: var(--font-sans);
+    background: var(--color-bg);
+    color: var(--color-neutral-950);
+    font-size: 0.875rem;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  button {
+    cursor: pointer;
+  }
+
+  button:disabled {
+    cursor: not-allowed;
+  }
+
+  /* Anillo de foco de reserva para cualquier control nativo. Los átomos pueden
+     especializarlo, pero un control nuevo no puede quedar sin indicador. */
+  :focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+
+  /* Barras de scroll finas. */
+  ::-webkit-scrollbar {
+    width: 5px;
+    height: 5px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: transparent;
+    border-radius: 999px;
+  }
+  [data-scroll-active]::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thumb);
+  }
+  [data-scroll-active]::-webkit-scrollbar-thumb:hover {
+    background: var(--scrollbar-thumb-hover);
+  }
+  /* El resto de la app esconde la barra hasta que te mueves. En un formulario
+     recortado eso se lee como «aquí no hay más». Esta clase la deja a la vista. */
+  .scroll-visible {
+    scrollbar-width: thin;
+    scrollbar-color: var(--scrollbar-thumb) transparent;
+  }
+  .scroll-visible::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thumb);
+  }
+  .scroll-visible::-webkit-scrollbar-thumb:hover {
+    background: var(--scrollbar-thumb-hover);
+  }
+  @supports not selector(::-webkit-scrollbar) {
+    * {
+      scrollbar-width: thin;
+      scrollbar-color: transparent transparent;
+    }
+    [data-scroll-active] {
+      scrollbar-color: var(--scrollbar-thumb) transparent;
+    }
+  }
+}
+
+/* Velo translúcido de la cabecera de pestañas. La pestaña activa lo tapa con su propio
+   fondo (`.tab-active`), así que caja y texto son el mismo elemento. */
+.tab-veil {
+  position: relative;
+  isolation: isolate;
+}
+.tab-veil::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: rgb(var(--tab-veil-rgb) / calc(var(--tab-veil, 0.3) * var(--tab-veil-scale)));
+  -webkit-backdrop-filter: blur(10px) saturate(1.3);
+  backdrop-filter: blur(10px) saturate(1.3);
+}
+/* Vidrio de las columnas y barras (historial, riel, árbol, título, consumo):
+   el fondo de Estilo se pinta detrás del área de trabajo y aquí solo se
+   vela y desenfoca. El compositor y los
+   mensajes siguen sólidos: ahí se lee y se escribe. */
+.glass-panel {
+  background: color-mix(in srgb, var(--color-bg) calc(var(--panel-veil, 0.4) * 100%), transparent);
+  -webkit-backdrop-filter: blur(22px) saturate(1.4);
+  backdrop-filter: blur(22px) saturate(1.4);
+}
+/* Repite el fondo del área de trabajo fijo al viewport: sin
+   velo encima, la pestaña activa se funde con su panel. Las esquinas cóncavas de su pie
+   son ::before y ::after de la misma pestaña. */
+.tab-active {
+  --tab-foot: 6px;
+  position: relative;
+  border-radius: var(--tab-foot) var(--tab-foot) 0 0;
+}
+/* El área de trabajo lleva el mismo fondo fijo que la pestaña activa: las dos se leen como una pieza. */
+.work-background,
+.tab-active,
+.tab-active::before,
+.tab-active::after {
+  background:
+    linear-gradient(color-mix(in srgb, var(--color-surface) calc(var(--window-veil, 0.82) * 100%), transparent) 0 0),
+    var(--window-image, none) center / cover no-repeat,
+    var(--color-surface);
+  background-attachment: fixed;
+}
+.tab-active::before,
+.tab-active::after,
+.tab-join::before,
+.tab-join::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  width: var(--tab-foot);
+  height: var(--tab-foot);
+  pointer-events: none;
+}
+.tab-active::before,
+.tab-join::before {
+  right: 100%;
+  -webkit-mask: radial-gradient(circle at 0 0, transparent var(--tab-foot), #000 calc(var(--tab-foot) + 0.5px));
+  mask: radial-gradient(circle at 0 0, transparent var(--tab-foot), #000 calc(var(--tab-foot) + 0.5px));
+}
+.tab-active::after,
+.tab-join::after {
+  left: 100%;
+  -webkit-mask: radial-gradient(circle at 100% 0, transparent var(--tab-foot), #000 calc(var(--tab-foot) + 0.5px));
+  mask: radial-gradient(circle at 100% 0, transparent var(--tab-foot), #000 calc(var(--tab-foot) + 0.5px));
+}
+/* La pestaña de un documento se funde con el panel de abajo, igual que `.tab-active`
+   con la ventana. El relleno es la superficie del panel, no el fondo de la ventana:
+   el documento se lee sobre `surface` y la franja de atrás es `surface-muted`. */
+.tab-join {
+  --tab-foot: 6px;
+  position: relative;
+  border-radius: var(--tab-foot) var(--tab-foot) 0 0;
+  background: var(--color-surface);
+}
+.tab-join::before,
+.tab-join::after {
+  background: var(--color-surface);
+}
+/* Marco de la ventana (franja y columna de workspaces): en claro un gris sólido y la
+   barra lateral un tono hundido; en oscuro se queda el velo y el vidrio de siempre. */
+:root:not([data-theme="dark"]) .window-frame {
+  background: var(--color-neutral-200);
+}
+:root:not([data-theme="dark"]) .window-frame::before {
+  display: none;
+}
+:root:not([data-theme="dark"]) .sidebar-tone {
+  background: var(--color-surface-muted);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+/* En la franja de la ventana la primera pestaña nace en el borde de la barra lateral:
+   su pie izquierdo cortaría esa esquina, así que solo ese queda recto. */
+[data-title-bar] [data-envoltorio="0"].tab-active::before {
+  display: none;
+}
+
+/* La tarjeta fijada del riel: el borde lo dibuja ::after para abrirle arriba
+   al centro un hueco redondo, donde va el alfiler sin fondo. Una clase y no
+   ocho utilidades `after:` porque la carga inicial va al límite de su techo. */
+.tarjeta-fijada::after {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border: 1px solid color-mix(in srgb, var(--color-neutral-950) 18%, transparent);
+  border-radius: inherit;
+  pointer-events: none;
+  -webkit-mask: radial-gradient(circle 9px at 50% 0, transparent 8.5px, #000 9px);
+  mask: radial-gradient(circle 9px at 50% 0, transparent 8.5px, #000 9px);
+}
+.tarjeta-fijada-alfiler { rotate: 35deg; }
+
+/* Un workspace de Danil en el riel: un solo borde de 1 px con degradado en lugar del normal.
+   El relleno va en una variable para que el hover y el activo sigan pintando su superficie. */
+.danil-mark {
+  --danil-mark-fill: var(--color-surface);
+  border-color: transparent;
+  background:
+    linear-gradient(var(--danil-mark-fill), var(--danil-mark-fill)) padding-box,
+    linear-gradient(135deg, var(--color-danil-mark-from), var(--color-danil-mark-to)) border-box;
+}
+.group:hover .danil-mark { --danil-mark-fill: var(--color-neutral-200); }
+.danil-mark[data-active] { --danil-mark-fill: var(--color-surface-raised); }
+
+/* Nace en la tobera del icono de 15 px centrado en 20 px, sobre el eje del
+   cohete (x + y = 20); arriba-centro de la llama queda en (6, 14). */
+.finish-task-flame {
+  top: 14px;
+  left: 4px;
+  transform: rotate(45deg);
+  transform-origin: center top;
+}
+
+[data-session-finish][aria-busy="true"] {
+  background-color: color-mix(in srgb, var(--color-brand-purple) 20%, transparent);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  [data-session-finish][aria-busy="true"] .finish-task-rocket {
+    animation: finish-task-ignition 160ms linear infinite;
+  }
+
+  .finish-task-flame {
+    animation: finish-task-exhaust 260ms ease-in-out infinite alternate;
+  }
+}
+
+@keyframes finish-task-ignition {
+  0%, 100% { transform: translate(0, 0); }
+  25% { transform: translate(-0.6px, 0.6px); }
+  75% { transform: translate(0.6px, -0.6px); }
+}
+
+@keyframes finish-task-exhaust {
+  from { transform: rotate(45deg) scaleY(0.65); opacity: 0.65; }
+  to { transform: rotate(45deg) scaleY(1.15); opacity: 1; }
+}
+
+/* La cara de un agente (`AstroAvatar.tsx`). Cada cuerpo pone sus dos tonos y el
+   color de su ojo en las tres variables que leen los trazos; sin la clase, el
+   SVG se pinta sin relleno. Sin `transform-box: fill-box` cada giro orbita la
+   esquina del `viewBox` y no su propio centro. */
+.astro-sun { --astro-1: var(--astro-sun-1); --astro-2: var(--astro-sun-2); --astro-ojo: var(--astro-eye-dark); }
+.astro-planet { --astro-1: var(--astro-planet-1); --astro-2: var(--astro-planet-2); --astro-ojo: var(--astro-eye-dark); }
+.astro-moon { --astro-1: var(--astro-moon-1); --astro-2: var(--astro-moon-2); --astro-ojo: var(--astro-eye-dark); }
+.astro-asteroid { --astro-1: var(--astro-asteroid-1); --astro-2: var(--astro-asteroid-2); --astro-ojo: var(--astro-eye-dark); }
+.astro-star { --astro-1: var(--astro-star-1); --astro-2: var(--astro-star-2); --astro-ojo: var(--astro-eye-dark); }
+.astro-hole { --astro-1: var(--astro-hole-1); --astro-2: var(--astro-hole-2); --astro-ojo: var(--astro-eye-light); }
+.astro-ringed { --astro-1: var(--astro-ringed-1); --astro-2: var(--astro-ringed-2); --astro-ojo: var(--astro-eye-dark); }
+.astro-comet { --astro-1: var(--astro-comet-1); --astro-2: var(--astro-comet-2); --astro-ojo: var(--astro-eye-dark); }
+.astro-nebula { --astro-1: var(--astro-nebula-1); --astro-2: var(--astro-nebula-2); --astro-ojo: var(--astro-eye-dark); }
+.astro-binary { --astro-1: var(--astro-binary-1); --astro-2: var(--astro-binary-2); --astro-ojo: var(--astro-eye-dark); }
+.astro-dwarf { --astro-1: var(--astro-dwarf-1); --astro-2: var(--astro-dwarf-2); --astro-ojo: var(--astro-eye-dark); }
+.astro-pulsar { --astro-1: var(--astro-pulsar-1); --astro-2: var(--astro-pulsar-2); --astro-ojo: var(--astro-eye-dark); }
+.astro-catplanet { --astro-1: var(--astro-catplanet-1); --astro-2: var(--astro-catplanet-2); --astro-ojo: var(--astro-eye-dark); }
+.astro-monkeyplanet { --astro-1: var(--astro-monkeyplanet-1); --astro-2: var(--astro-monkeyplanet-2); --astro-ojo: var(--astro-eye-dark); }
+
+.astro-face::after {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  border-radius: 9999px;
+  border: 1.5px solid var(--color-primary);
+  opacity: 0;
+}
+
+.astro-gira,
+.astro-corona,
+.astro-columpio,
+.astro-estela,
+.astro-ojos,
+.astro-fotones {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+/* Orejas, cola y bigotes se anclan al viewBox: el origen lo pone cada trazo
+   en el punto de unión. fill-box los haría orbitar el centro de su caja. */
+.astro-orejas,
+.astro-cola,
+.astro-bigotes {
+  transform-box: view-box;
+}
+
+/* Los dos pares de ojos viven en el árbol y se turnan por estado: montar y
+   desmontar el nodo corta el parpadeo a media animación. */
+.astro-ojos-cerrados { display: none; }
+[data-astro-status="asleep"] .astro-ojos { display: none; }
+[data-astro-status="asleep"] .astro-ojos-cerrados { display: block; }
+
+/* La materia del agujero negro entra por su ángulo y cae al centro. El giro va
+   en el grupo y la caída en la partícula, porque una sola transform no puede
+   llevar las dos: la rotación es del `viewBox` y el avance es propio. */
+.astro-caida {
+  transform-box: view-box;
+  transform-origin: 32px 32px;
+  transform: rotate(var(--astro-ang));
+}
+.astro-particula {
+  transform-box: view-box;
+  transform-origin: 32px 32px;
+  opacity: 0;
+}
+[data-astro-status="asleep"] .astro-particula { display: none; }
+
+/* Todo lo que se mueve en un astro cambia en múltiplos de 1/12 s y se ancla a
+   `startTime = 0` (`lib/sharedClock.ts`): la ventana repinta a 12 cuadros por
+   segundo, con un avatar o con cuarenta. Cada tramo dura un número entero de
+   doceavos y lleva tantos pasos como doceavos dura. */
+@media (prefers-reduced-motion: no-preference) {
+  .astro-face[data-astro-working="true"]::after {
+    animation: astro-pulso 3s step-end infinite;
+  }
+  .astro-ojos {
+    animation: astro-blink 6s step-end infinite;
+  }
+  /* Despierto no gira: se distingue de dormido por el color y los ojos. */
+  [data-astro-status="working"] .astro-gira {
+    animation: astro-gira 9s steps(108) infinite;
+  }
+  [data-astro-status="working"] .astro-corona {
+    animation: astro-gira 24s steps(288) infinite reverse;
+  }
+  /* El anillo se columpia, no da la vuelta: una elipse en rotación completa
+     pasa por la vertical y deja de leerse como anillo. */
+  [data-astro-status="working"] .astro-columpio {
+    animation: astro-columpio 2s steps(24) infinite alternate;
+  }
+  [data-astro-status="working"] .astro-estela {
+    animation: astro-estela 1s steps(12) infinite alternate;
+  }
+  [data-astro-status="working"] .astro-particula {
+    animation: astro-cae 2.5s step-end infinite;
+  }
+  [data-astro-status="working"] .astro-fotones {
+    animation: astro-fotones 1.25s steps(15) infinite alternate;
+  }
+  [data-astro-status="working"] .astro-orejas {
+    animation: astro-orejas 0.5s steps(6) infinite alternate;
+  }
+  [data-astro-status="working"] .astro-orejas-inv {
+    animation: astro-orejas 0.5s steps(6) infinite alternate-reverse;
+  }
+  [data-astro-status="working"] .astro-cola {
+    animation: astro-cola 0.5s steps(6) infinite alternate;
+  }
+  [data-astro-status="working"] .astro-bigotes {
+    animation: astro-bigotes 0.5s steps(6) infinite alternate;
+  }
+}
+
+/* Con la ventana escondida o minimizada no se mueve nada; al volver arrancan de
+   nuevo y se anclan otra vez al reloj común. Sin foco sigue, que ahí se mira. */
+:root[data-window-idle] [data-task-orbit] [data-spinner],
+:root[data-window-idle] .astro-face,
+:root[data-window-idle] .astro-face::after,
+:root[data-window-idle] .astro-face * {
+  animation: none !important;
+}
+
+@keyframes astro-pulso {
+  0% { opacity: 0.5; transform: scale(0.92); animation-timing-function: steps(27); }
+  75%, 100% { opacity: 0; transform: scale(1.12); }
+}
+@keyframes astro-blink {
+  0%, 97.2222% { transform: scaleY(1); }
+  95.8333% { transform: scaleY(0.08); }
+}
+@keyframes astro-gira {
+  to { transform: rotate(360deg); }
+}
+@keyframes astro-columpio {
+  from { transform: rotate(-15deg); }
+  to { transform: rotate(15deg); }
+}
+@keyframes astro-cae {
+  0% { transform: translateX(0); opacity: 0; animation-timing-function: steps(6); }
+  20% { transform: translateX(2.6px); opacity: 0.95; animation-timing-function: steps(18); }
+  80% { transform: translateX(10.4px); opacity: 0.35; animation-timing-function: steps(6); }
+  100% { transform: translateX(13px); opacity: 0; }
+}
+@keyframes astro-fotones {
+  from { stroke-width: 2.4; opacity: 0.85; }
+  to { stroke-width: 3.4; opacity: 1; }
+}
+@keyframes astro-estela {
+  from { opacity: 0.55; transform: translateX(0); }
+  to { opacity: 1; transform: translateX(-1.5px); }
+}
+@keyframes astro-orejas {
+  from { transform: rotate(-8deg); }
+  to { transform: rotate(8deg); }
+}
+@keyframes astro-cola {
+  from { transform: rotate(-16deg); }
+  to { transform: rotate(14deg); }
+}
+@keyframes astro-bigotes {
+  from { transform: rotate(-7deg); }
+  to { transform: rotate(7deg); }
+}
+
+
+/* La señal de toda la app. Cambiar tamaño o tono aquí la cambia en todas partes;
+   móvil lee el mismo tamaño de `SIGNAL_DOT_SIZE` (`packages/design`). */
+:root {
+  --signal-dot-size: 7px;
+  --signal-success: var(--color-success);
+  --signal-error: var(--color-error-strong);
+  --signal-warning: var(--color-warning-strong);
+  --signal-neutral: var(--color-neutral-500);
+  --signal-off: var(--color-neutral-300);
+  --signal-working: var(--color-primary);
+}
+.signal-dot { display: inline-block; width: var(--signal-dot-size); height: var(--signal-dot-size); flex-shrink: 0; border-radius: 50%; }
+.signal-dot[data-tone="success"] { background: var(--signal-success); }
+.signal-dot[data-tone="error"] { background: var(--signal-error); }
+.signal-dot[data-tone="warning"] { background: var(--signal-warning); }
+.signal-dot[data-tone="neutral"] { background: var(--signal-neutral); }
+.signal-dot[data-tone="off"] { background: var(--signal-off); }
+.signal-dot[data-tone="working"] { background: var(--signal-working); }
+.signal-icon[data-tone="success"] { color: var(--signal-success); }
+.signal-icon[data-tone="warning"] { color: var(--signal-warning); }
+.signal-icon[data-tone="neutral"] { color: var(--signal-neutral); }
+
+/* La lista del riel no se adelanta con barras. Nace con la estructura y,
+   cuando las tareas existen, entran juntas. `@starting-style` es el antes
+   del primer pintado: la transición corre de 0 a 1 sin script. Va en el
+   bloque, no en cada fila, para no pelear con la opacidad de arrastrar.
+   Un bloque nuevo —otra carpeta, otro espacio— entra igual; uno que ya
+   estaba no se repite. Quien pidió menos movimiento no ve la transición. */
+@media (prefers-reduced-motion: no-preference) {
+  [data-sidebar-tasks] > * {
+    transition: opacity 320ms ease-out;
+  }
+  @starting-style {
+    [data-sidebar-tasks] > * {
+      opacity: 0;
+    }
+  }
+}
+
+/* Secciones de la tarjeta: el contenido se recorta dentro de su sección;
+   omitir una sección por agrupación elimina también su ancho. */
+.task-card-lines { position: relative; container-type: inline-size; display: flex; align-items: center; gap: 6px; width: 100%; min-width: 0; --task-card-lead: 16px; }
+.task-card-main { display: flex; min-width: 0; flex: 1; flex-direction: column; }
+/* Con el menú a la vista, el título se desvanece a su lado y la hora con él;
+   el cohete de la segunda línea sigue a la vista y a mano. */
+.group\/session:hover .task-card-with-menu .task-card-title,
+.group\/session:focus-within .task-card-with-menu .task-card-title,
+.task-card-with-menu[data-menu-open] .task-card-title { mask-image: linear-gradient(to right, #000 calc(100% - 36px), transparent); }
+.group\/session:hover .task-card-with-menu [data-session-time],
+.group\/session:focus-within .task-card-with-menu [data-session-time],
+.task-card-with-menu[data-menu-open] [data-session-time] { mask-image: linear-gradient(to right, #000, transparent); }
+/* El menú ocupa el hueco del estado: si los dos se vieran, el «⋯» quedaría
+   encima del loader. */
+.group\/session:hover .task-card-with-menu [data-session-status],
+.group\/session:focus-within .task-card-with-menu [data-session-status],
+.task-card-with-menu[data-menu-open] [data-session-status] { visibility: hidden; }
+/* Icono y texto de cada dato van juntos. El espacio que sobra queda antes de
+   la caja de la hora, no entre la carpeta, la máquina y la rama. */
+.task-card-metadata { display: flex; min-width: 0; align-items: center; gap: 6px; height: 16px; overflow: hidden; }
+.task-card-metadata svg { flex-shrink: 0; }
+.task-card-provider { display: inline-flex; flex-shrink: 0; align-items: center; justify-content: center; }
+.task-card-has-agent .task-card-provider { width: var(--task-card-lead, 16px); }
+.task-card-slot { display: flex; min-width: 0; flex: 0 1 auto; align-items: center; overflow: hidden; }
+.task-card-git { display: flex; min-width: 0; flex: 0 1 auto; align-items: center; gap: 4px; overflow: hidden; }
+.task-card-tail { display: inline-flex; flex-shrink: 0; align-items: center; gap: 4px; }
+.task-card-rocket { display: inline-flex; width: 18px; height: 18px; flex-shrink: 0; align-items: center; justify-content: center; }
+.task-card-rocket:empty { display: none; }
+.task-card-time { display: flex; min-width: var(--task-card-lead, 16px); height: 16px; align-items: center; justify-content: center; white-space: nowrap; text-align: center; }
+/* La cara y el logo del proveedor comparten esta columna: 16 px, centrados. */
+.task-card-face { display: inline-flex; width: var(--task-card-lead, 16px); height: var(--task-card-lead, 16px); flex-shrink: 0; align-items: center; justify-content: center; }
+/* Una caja para la hora y para el ⋯, pegada al padding de la tarjeta
+   (`pr-2.5`), el mismo que a la izquierda. El loader, el punto y el ⋯ viven en
+   una columna fija de 16 px —la misma que la cara a la izquierda— al ras del
+   borde, así que no se mueven de una tarjeta a otra. La hora se centra bajo
+   esa columna; si es más ancha («ahora»), crece hacia la izquierda y el loader
+   se queda donde estaba. */
+.task-card-end { display: flex; width: max-content; flex-shrink: 0; flex-direction: column; align-items: flex-end; }
+.task-card-end-mark { position: relative; display: flex; width: var(--task-card-lead, 16px); height: 22px; align-items: center; justify-content: center; }
+.task-card-mark { display: inline-flex; width: 100%; height: 20px; flex-shrink: 0; align-items: center; justify-content: center; }
+.task-card-identity { position: relative; display: inline-flex; width: 100%; height: 100%; flex-shrink: 0; align-items: center; justify-content: center; }
+.task-card-orbit { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none; }
+.task-card-badge { display: inline-flex; width: 12px; height: 12px; align-items: center; justify-content: center; }
