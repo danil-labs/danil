@@ -1,4 +1,4 @@
-import { lazy, createSignal, createMemo, Show, type JSX } from "solid-js";
+import { lazy, createSignal, createMemo, Show, on, onCleanup, type JSX } from "solid-js";
 import { Tabs } from "@danil/ui";
 import { useMachines, type MachineConnection } from "@danil/feature-machines";
 import { useWorkspaces } from "@danil/feature-workspaces";
@@ -78,12 +78,21 @@ export function WorkspaceScreen(props: { id: string }): JSX.Element {
     // La máquina de la organización del workspace; nunca la de otra organización.
     if (!ws?.org) return undefined;
     return list.find((m) => m.organization_id === ws.org);
-  });
+  }, undefined, { equals: (a, b) => a?.machine_id === b?.machine_id });
 
-  const conn = createMemo<MachineConnection | undefined>(() => {
-    const m = targetMachine();
-    if (!m) return undefined;
-    return connect(m);
+  const conn = createMemo(
+    on(targetMachine, (m) => {
+      if (!m) return undefined;
+      const c = connect(m);
+      onCleanup(() => {
+        c.close();
+      });
+      return c;
+    })
+  );
+
+  onCleanup(() => {
+    conn()?.close();
   });
 
   return (
