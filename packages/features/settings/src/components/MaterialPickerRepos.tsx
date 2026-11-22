@@ -10,6 +10,7 @@ import { MarcaGitHost } from "../../../../ui/src/icons";
 import { enfocar } from "../../../../../apps/desktop/src/lib/focus";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { Badge } from "../../../../ui/src/Badge";
+import { Pressable } from "../../../../ui/src/Pressable";
 import type { createSelectorDeMaterial } from "./MaterialPickerState";
 
 export function createVistasDeMaterial(selector: ReturnType<typeof createSelectorDeMaterial>) {
@@ -24,8 +25,7 @@ export function createVistasDeMaterial(selector: ReturnType<typeof createSelecto
                   más de una organización, vuelve a esa lista; si se
                   saltó por tener una sola, vuelve directo a las
                   cuentas. */}
-              <button
-                type="button"
+              <Pressable
                 class="grid size-6 shrink-0 place-items-center rounded-sm text-neutral-500 outline-none hover:bg-surface-muted hover:text-neutral-950 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                 aria-label={
                   (areas()?.length ?? 0) > 1
@@ -40,7 +40,7 @@ export function createVistasDeMaterial(selector: ReturnType<typeof createSelecto
                 onClick={() => volverDesdeRepos()}
               >
                 <ChevronLeft size={14} />
-              </button>
+              </Pressable>
             </Show>
             <MarcaGitHost id={p().id} size={14} />
             <span class="text-ui font-medium text-neutral-950">
@@ -151,15 +151,14 @@ export function createVistasDeMaterial(selector: ReturnType<typeof createSelecto
         {(p) => (
           <div class="flex items-center gap-1.5">
             <Show when={puedeVolverDesdeAreas()}>
-              <button
-                type="button"
+              <Pressable
                 class="grid size-6 shrink-0 place-items-center rounded-sm text-neutral-500 outline-none hover:bg-surface-muted hover:text-neutral-950 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                 aria-label={t("settings.material.back_to_accounts")}
                 title={t("settings.material.back_to_accounts")}
                 onClick={() => volverAProveedores()}
               >
                 <ChevronLeft size={14} />
-              </button>
+              </Pressable>
             </Show>
             <MarcaGitHost id={p().id} size={14} />
             <span class="text-ui font-medium text-neutral-950">

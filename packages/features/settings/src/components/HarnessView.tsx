@@ -10,6 +10,7 @@ import { Button } from "../../../../ui/src/Button";
 import { asFailure, type Failure, FailureNote } from "../../../../ui/src/Failure";
 import { Input } from "../../../../ui/src/Input";
 import { Select } from "../../../../ui/src/Select";
+import { Pressable } from "../../../../ui/src/Pressable";
 import HarnessGovernance from "./HarnessGovernance";
 import type { Status, Mode, RemoteWorkspace, Identity } from "./HarnessTypes";
 
@@ -174,8 +175,7 @@ export default function Harness() {
         >
           <For each={["cloud", "custom"] as Mode[]}>
             {(id) => (
-              <button
-                type="button"
+              <Pressable
                 role="radio"
                 aria-checked={mode() === id}
                 disabled={busy() || running()}
@@ -186,7 +186,7 @@ export default function Harness() {
                 onClick={() => chooseServer(id)}
               >
                 {id === "cloud" ? t("harness.server.cloud") : t("harness.server.custom")}
-              </button>
+              </Pressable>
             )}
           </For>
         </div>

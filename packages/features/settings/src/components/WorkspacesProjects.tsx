@@ -6,6 +6,7 @@ import { Input } from "../../../../ui/src/Input";
 import type { Project } from "../../../../../apps/desktop/src/lib/model";
 import { PROJECT_NAME_MAX_LENGTH } from "../../../../../apps/desktop/src/lib/projectNames";
 import { FailureNote, asFailure, type Failure } from "../../../../ui/src/Failure";
+import { Pressable } from "../../../../ui/src/Pressable";
 import { enfocar } from "../../../../../apps/desktop/src/lib/focus";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 
@@ -66,7 +67,7 @@ export function Proyectos(props: { onCambio: () => void }) {
                 <Show
                   when={editando() === p.id}
                   fallback={
-                    <button
+                    <Pressable
                       class="min-h-8 min-w-0 flex-1 truncate rounded-md px-1 py-1 text-left text-xs hover:bg-surface-muted"
                       onClick={() => {
                         setBorrador(p.name);
@@ -75,7 +76,7 @@ export function Proyectos(props: { onCambio: () => void }) {
                       }}
                     >
                       {p.name}
-                    </button>
+                    </Pressable>
                   }
                 >
                   <Input
