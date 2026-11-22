@@ -14,7 +14,8 @@ import ExternalIcon from "lucide-solid/icons/external-link";
 import Plus from "lucide-solid/icons/plus";
 import { For, Show, createEffect, createSignal, onCleanup, onMount } from "solid-js";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
-import { invoke } from "../../../../engine-client/src/client.ts";
+import { accountCredentialRemoveMachine, accountCredentialRestoreMachine, danilWorkspaceAccount, githubAccountAuthorize, githubAccountDisconnect, githubAccountInstallations, githubAccountStatus } from "../queries/engine-github";
+import { openExternal } from "../queries/engine-open";
 import { capabilities } from "../../../../host/src/platform";
 import { Badge } from "../../../../ui/src/Badge";
 import { Button } from "../../../../ui/src/Button";
@@ -114,7 +115,7 @@ export default function GithubAccount(props: {
 
   async function read(): Promise<GithubStatus | null> {
     if (capabilities().danilAccount) {
-      const of = await invoke<WorkspaceAccountOf>("danil_workspace_account", { workspace: props.scope }).catch(() => null);
+      const of = await danilWorkspaceAccount<WorkspaceAccountOf>({ workspace: props.scope }).catch(() => null);
       setSession(!!of?.signed_in);
       if (!of?.signed_in) {
         setAvailable(false);
@@ -124,7 +125,7 @@ export default function GithubAccount(props: {
       setSession(true);
     }
     try {
-      const raw = await invoke<unknown>("github_account_status", { scope: props.scope });
+      const raw = await githubAccountStatus<unknown>({ scope: props.scope });
       const notice = (raw as { adopt_notice?: { login?: unknown; account_login?: unknown } } | null)?.adopt_notice;
       if (notice && typeof notice.login === "string" && typeof notice.account_login === "string") {
         setAdoptNotice({ login: notice.login, account_login: notice.account_login });
@@ -143,7 +144,7 @@ export default function GithubAccount(props: {
 
   async function readInstallations(): Promise<GithubInstallations | null> {
     try {
-      const listed = githubInstallationsOf(await invoke("github_account_installations", { scope: props.scope }));
+      const listed = githubInstallationsOf(await githubAccountInstallations({ scope: props.scope }));
       if (disposed) return null;
       setInstalls(listed);
       if (listed.install_url) setInstallUrl(listed.install_url);
@@ -183,7 +184,7 @@ export default function GithubAccount(props: {
     setBusy("authorize");
     clearFailure();
     try {
-      const { url, opened } = githubAuthorizeOf(await invoke("github_account_authorize", { scope: props.scope }));
+      const { url, opened } = githubAuthorizeOf(await githubAccountAuthorize({ scope: props.scope }));
       if (disposed) return;
       setWaiting(url);
       // Si el motor no la abrió (la web, un motor sin pantalla), se abre aquí; si algo la bloquea, queda el enlace.
@@ -219,7 +220,7 @@ export default function GithubAccount(props: {
     setBusy("disconnect");
     clearFailure();
     try {
-      await invoke("github_account_disconnect", { scope: props.scope });
+      await githubAccountDisconnect({ scope: props.scope });
       if (disposed) return;
       setInstalls(null);
       applyStatus({ connected: false, credential: null, install_url: installUrl() });
@@ -247,8 +248,8 @@ export default function GithubAccount(props: {
     try {
       const args = { scope: props.scope, credential: c.id, computer: m.computer_id };
       const reply = (restore
-        ? await invoke("account_credential_restore_machine", args)
-        : await invoke("account_credential_remove_machine", args)) as { credential?: unknown };
+        ? await accountCredentialRestoreMachine(args)
+        : await accountCredentialRemoveMachine(args)) as { credential?: unknown };
       const next = githubCredentialOf(reply?.credential);
       if (next && !disposed) applyStatus({ ...(status() as GithubStatus), credential: next });
       else await read();
@@ -260,7 +261,7 @@ export default function GithubAccount(props: {
   }
 
   const machineName = (m: GithubMachine) => m.name || capabilities().machineName?.(m.computer_id) || m.computer_id;
-  const openUrl = (url: string) => invoke("open_external", { target: url }).catch(() => {});
+  const openUrl = (url: string) => openExternal({ target: url }).catch(() => {});
   const scopeOf = (i: GithubInstallation) =>
     i.repository_selection === "all"
       ? t("providers.github.account.scope_all")

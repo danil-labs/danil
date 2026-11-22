@@ -1,6 +1,6 @@
 import { For, Show, createEffect, createMemo, createSignal, on, onCleanup, onMount } from "solid-js";
 import type { Activity, ActivityLog, ActivityRow } from "@terminus/protocol";
-import { invoke } from "../../../../engine-client/src/client";
+import { listActivity, readActivity, readActivityLog } from "../queries/engine-activity";
 import { listen } from "../../../../../apps/desktop/src/lib/serviceEvents";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { Button } from "../../../../ui/src/Button";
@@ -32,8 +32,8 @@ export default function ActivityLogs(props: { workspace: string | null; machine?
     const route = options();
     setBusy(true); setError(false);
     try {
-      const answer = await invoke<ActivityRow[]>("list_activity", { project: null }, route);
-      const record = id ? await invoke<Activity>("read_activity", { id }, route) : null;
+      const answer = await listActivity<ActivityRow[]>({ project: null }, route);
+      const record = id ? await readActivity<Activity>({ id }, route) : null;
       if (key !== generation) return;
       setRows(answer.map(row => rows().find(old => old.id === row.id && JSON.stringify(old) === JSON.stringify(row)) ?? row));
       if (record) record.steps = record.steps.map(part => detail()?.steps.find(old => old.id === part.id && JSON.stringify(old) === JSON.stringify(part)) ?? part);
@@ -50,7 +50,7 @@ export default function ActivityLogs(props: { workspace: string | null; machine?
     if (step() !== part || offsets().at(-1) !== history.at(-1)) setLog(null);
     setStep(part); setOffsets(history); setError(false);
     try {
-      const page = await invoke<ActivityLog>("read_activity_log", { id, step: part, offset: history.at(-1) ?? 0 }, route);
+      const page = await readActivityLog<ActivityLog>({ id, step: part, offset: history.at(-1) ?? 0 }, route);
       if (key === generation && request === logRequest && step() === part) setLog(page);
     } catch { if (key === generation && request === logRequest && step() === part) setError(true); }
   };

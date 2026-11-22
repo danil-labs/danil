@@ -1,5 +1,8 @@
 import { For, Match, Show, Suspense, Switch, createEffect, createSignal, lazy, on, onCleanup, onMount } from "solid-js";
-import { invoke } from "../../../../engine-client/src/client.ts";
+import { checkEnvironment } from "../queries/engine-environment";
+import { attachRepo, cancelBrowserLogin, checkGitHost, connectGitHost, disconnectGitHost, finishBrowserLogin, gitHostAreas, gitHostAvailableAreas, gitHostProjects, installGh, selectGitHostArea, startBrowserLogin } from "../queries/engine-git";
+import { openExternal } from "../queries/engine-open";
+import { listWorkspaces, setWorkspaceHostGithub } from "../queries/engine-workspaces";
 import { capabilities } from "../../../../host/src/platform.ts";
 import { FailureNote, asFailure, detalleDe, type Failure } from "../../../../ui/src/Failure";
 import { Skeleton } from "../../../../ui/src/Skeleton";
@@ -143,7 +146,7 @@ export default function Providers(props: { solo?: string | string[] }) {
 }
 
 function WorkspaceProviders(props: { solo?: string | string[] }) {
-  const startup = invoke<Startup>("list_workspaces");
+  const startup = listWorkspaces<Startup>();
   // En la web sin workspace abierto, la cuenta se resuelve por el primero de la lista.
   const scope = startup.then((s) => s.active ?? (capabilities().nativeWindow ? null : s.workspaces[0]?.id) ?? "pending");
   const [scopeId, setScopeId] = createSignal<string | null>(null);
@@ -166,7 +169,7 @@ function WorkspaceProviders(props: { solo?: string | string[] }) {
     setInstallingCli(true);
     setCliFailure(null);
     try {
-      await invoke("install_gh");
+      await installGh();
       await refreshCli();
     } catch (e) { setCliFailure(asFailure(e)); }
     finally { setInstallingCli(false); }
@@ -174,7 +177,7 @@ function WorkspaceProviders(props: { solo?: string | string[] }) {
   async function refreshCli() {
     setLoadingCli(true);
     try {
-      const report = await invoke<{ githubCli?: NonNullable<ReturnType<typeof cli>> }>("check_environment");
+      const report = await checkEnvironment<{ githubCli?: NonNullable<ReturnType<typeof cli>> }>();
       setCli(report.githubCli ?? null);
     } finally { setLoadingCli(false); }
   }
@@ -199,7 +202,7 @@ function WorkspaceProviders(props: { solo?: string | string[] }) {
     setSavingHost(true);
     setHostFailure(null);
     try {
-      const w = await invoke<Workspace>("set_workspace_host_github", { id, enabled });
+      const w = await setWorkspaceHostGithub<Workspace>({ id, enabled });
       setHostGithub(!!w.host_github);
     } catch (e) {
       setHostGithub(before);
@@ -309,7 +312,7 @@ function WorkspaceProviders(props: { solo?: string | string[] }) {
     setOcupado((o) => ({ ...o, [id]: "comprobando" }));
     setFallas((f) => ({ ...f, [id]: null }));
     try {
-      const fresco = await invoke<Provider>("check_git_host", { id, scope: await scope });
+      const fresco = await checkGitHost<Provider>({ id, scope: await scope });
       if (fresco.unverified) {
         setFallas((f) => ({ ...f, [id]: fresco.unverified! }));
       }
@@ -333,7 +336,7 @@ function WorkspaceProviders(props: { solo?: string | string[] }) {
     setOcupado((o) => ({ ...o, [p.id]: "conectando" }));
     setFallas((f) => ({ ...f, [p.id]: null }));
     try {
-      const fresco = await invoke<Provider>("connect_git_host", {
+      const fresco = await connectGitHost<Provider>({
         scope: await scope,
         id: p.id,
         data: b.data,
@@ -366,14 +369,14 @@ function WorkspaceProviders(props: { solo?: string | string[] }) {
     setOcupado((o) => ({ ...o, [p.id]: "esperando" }));
     setFallas((f) => ({ ...f, [p.id]: null }));
     try {
-      const e = await invoke<Wait>("start_browser_login", { id: p.id, scope: await scope });
+      const e = await startBrowserLogin<Wait>({ id: p.id, scope: await scope });
       if (disposed) { await cancelarNavegador(p.id); return; }
       setEsperas((x) => ({ ...x, [p.id]: e }));
       // El navegador de la persona ya tiene su sesión; el webview no.
-      invoke("open_external", { target: e.url }).catch(() => {});
+      openExternal({ target: e.url }).catch(() => {});
       // Esta espera dura lo que la persona tarde en aprobar. Mientras, la
       // pantalla enseña el código y el botón de cancelar, que corta de verdad.
-      const fresco = await invoke<Provider>("finish_browser_login", { id: p.id, scope: await scope });
+      const fresco = await finishBrowserLogin<Provider>({ id: p.id, scope: await scope });
       if (disposed) return;
       setComprobado((c) => ({ ...c, [p.id]: true }));
       reemplazar(fresco);
@@ -403,7 +406,7 @@ function WorkspaceProviders(props: { solo?: string | string[] }) {
     setChoosing((x) => ({ ...x, [p.id]: true }));
     setFallas((x) => ({ ...x, [p.id]: null }));
     try {
-      await invoke("open_external", { target: p.setup_url });
+      await openExternal({ target: p.setup_url });
     } catch (e) {
       setMontajes((x) => ({ ...x, [p.id]: null }));
       setFallas((x) => ({ ...x, [p.id]: asFailure(e) }));
@@ -425,13 +428,13 @@ function WorkspaceProviders(props: { solo?: string | string[] }) {
     const setup = montajes()[id];
     setMontajes((x) => ({ ...x, [id]: null }));
     setChoosing((x) => ({ ...x, [id]: false }));
-    invoke("cancel_browser_login", { id, scope: await scope }).catch(() => {});
+    cancelBrowserLogin({ id, scope: await scope }).catch(() => {});
     if (setup && !disposed) await verAreas(id);
   }
 
   async function desconectar(id: string) {
     try {
-      await invoke("disconnect_git_host", { id, scope: await scope });
+      await disconnectGitHost({ id, scope: await scope });
       setChoosing((current) => ({ ...current, [id]: false }));
       setAreas((a) => ({ ...a, [id]: null }));
       setAbierta((a) => ({ ...a, [id]: null }));
@@ -451,8 +454,8 @@ function WorkspaceProviders(props: { solo?: string | string[] }) {
     setAreas((a) => ({ ...a, [id]: null }));
     try {
       const r = choosing()[id]
-        ? await invoke<Area[]>("git_host_available_areas", { id, scope: await scope })
-        : await invoke<Area[]>("git_host_areas", { id, scope: await scope });
+        ? await gitHostAvailableAreas<Area[]>({ id, scope: await scope })
+        : await gitHostAreas<Area[]>({ id, scope: await scope });
       if (disposed) return false;
       setAreas((a) => ({ ...a, [id]: r }));
       return true;
@@ -468,7 +471,7 @@ function WorkspaceProviders(props: { solo?: string | string[] }) {
     setOcupado((o) => ({ ...o, [id]: "listando" }));
     setFallas((f) => ({ ...f, [id]: null }));
     try {
-      const result = await invoke<Provider>("select_git_host_area", { id, area, enabled, scope: await scope });
+      const result = await selectGitHostArea<Provider>({ id, area, enabled, scope: await scope });
       if (disposed) return;
       reemplazar(result);
       setAbierta({});
@@ -492,7 +495,7 @@ function WorkspaceProviders(props: { solo?: string | string[] }) {
     setOcupado((o) => ({ ...o, [id]: "listando" }));
     setFallas((f) => ({ ...f, [id]: null }));
     try {
-      const r = await invoke<ProyectoRemoto[]>("git_host_projects", { id, area, scope: await scope });
+      const r = await gitHostProjects<ProyectoRemoto[]>({ id, area, scope: await scope });
       setRepos((x) => ({ ...x, [clave]: r }));
     } catch (e) {
       setFallas((f) => ({ ...f, [id]: asFailure(e) }));
@@ -513,7 +516,7 @@ function WorkspaceProviders(props: { solo?: string | string[] }) {
     setTrayendo(r.clone_url);
     setFallas((f) => ({ ...f, [id]: null }));
     try {
-      await invoke("attach_repo", {
+      await attachRepo({
         project: "",
         gitHost: id,
         cloneUrl: r.clone_url,

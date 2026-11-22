@@ -8,7 +8,6 @@ import TriangleAlert from "lucide-solid/icons/triangle-alert";
 import { createSignal, For, Match, Show, Switch, type JSX } from "solid-js";
 import { lista } from "../../../../../apps/desktop/src/lib/format";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
-import { invoke } from "../../../../engine-client/src/client.ts";
 import { cn } from "../../../../../apps/desktop/src/lib/utils";
 import { Badge } from "../../../../ui/src/Badge";
 import { Button } from "../../../../ui/src/Button";
@@ -19,7 +18,7 @@ import { Spinner } from "../../../../ui/src/Spinner";
 import { Consentir } from "../../../settings/src/components/FreeRouterConsentDialog";
 import { DialogoDeConexion } from "../../../settings/src/components/LoginDialog";
 import { AvanceDeDescarga, BarraDeCarga, CodigoParaConfirmar, Peso } from "./DownloadProgress";
-import { AL_FINAL, type Conexiones, type Fila, nombreDeFila, ordenDelMapa, type Paso } from "../queries/connect-store";
+import { AL_FINAL, type Conexiones, type Fila, nombreDeFila, openExternal, ordenDelMapa, type Paso } from "../queries/connect-store";
 
 type Nodo = "off" | "det" | "vivo" | "on";
 
@@ -358,7 +357,7 @@ function PanelDeClave(props: { c: Conexiones; f: Fila }) {
                 <button
                   type="button"
                   class="inline-flex cursor-pointer items-center gap-0.5 border-0 bg-transparent p-0 text-primary hover:underline"
-                  onClick={() => void invoke("open_external", { target: url() }).catch(() => {})}
+                  onClick={() => void openExternal(url()).catch(() => {})}
                 >
                   {url().replace(/^https?:\/\//, "")}
                   <ExternalLink size={11} aria-hidden="true" />

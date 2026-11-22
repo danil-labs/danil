@@ -2,7 +2,7 @@ import Plus from "lucide-solid/icons/plus";
 import { createSignal, For, type JSX, onCleanup, onMount, Show } from "solid-js";
 import { createStore, reconcile } from "solid-js/store";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
-import { invoke } from "../../../../engine-client/src/client.ts";
+import { deleteAgent, listMachineAgents } from "../queries/engine-agents";
 import type { AgenteDeMaquina, CatalogoDeAgentes } from "../../../../../apps/desktop/src/lib/model";
 import { Button } from "../../../../ui/src/Button";
 import { Dialog, DialogContent, DialogTitle } from "../../../../ui/src/Dialog";
@@ -29,7 +29,7 @@ export default function Agents(props: {
   async function refresh() {
     const current = ++generation;
     try {
-      const catalog = await invoke<CatalogoDeAgentes>("list_machine_agents");
+      const catalog = await listMachineAgents<CatalogoDeAgentes>();
       if (current !== generation) return;
       setAgents(reconcile(catalog.own.filter((row) => row.agent.own_scope?.kind === "workspace").map(row => ({ ...row, id: row.agent.name })), { key: "id" }));
       setError(null);
@@ -50,7 +50,7 @@ export default function Agents(props: {
     if (!row || row.agent.package === "business" || busy()) return;
     setBusy(true);
     try {
-      await invoke("delete_agent", { project: "", name: row.agent.name });
+      await deleteAgent({ project: "", name: row.agent.name });
       setDeleting(null);
       notifyProfiles();
       window.dispatchEvent(new Event("harness:encargados"));

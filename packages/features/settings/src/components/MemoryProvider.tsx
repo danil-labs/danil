@@ -1,5 +1,6 @@
 import { createSignal, onMount, Show } from "solid-js";
-import { invoke } from "../../../../engine-client/src/client.ts";
+import { setMemoryProvider } from "../queries/engine-accounts";
+import { listWorkspaces } from "../queries/engine-workspaces";
 import { Button } from "../../../../ui/src/Button";
 import { Textarea } from "../../../../ui/src/Textarea";
 import { FailureNote, asFailure, type Failure } from "../../../../ui/src/Failure";
@@ -22,7 +23,7 @@ export default function ProveedorDeMemoria() {
   const [fallo, setFallo] = createSignal<Failure | null>(null);
 
   function cargar() {
-    void invoke<Startup>("list_workspaces").then((s) => {
+    void listWorkspaces<Startup>().then((s) => {
       const activo = s.workspaces.find((w) => w.id === s.active);
       if (!activo) return;
       setWorkspace(activo.id);
@@ -46,7 +47,7 @@ export default function ProveedorDeMemoria() {
     setSaving(true);
     setFallo(null);
     try {
-      const w = await invoke<{ memoria: MemoriaProveedor }>("set_memory_provider", {
+      const w = await setMemoryProvider<{ memoria: MemoriaProveedor }>({
         id,
         block: block(),
         readWrite: readWrite(),
@@ -66,7 +67,7 @@ export default function ProveedorDeMemoria() {
     setSaving(true);
     setFallo(null);
     try {
-      const w = await invoke<{ memoria: MemoriaProveedor }>("set_memory_provider", {
+      const w = await setMemoryProvider<{ memoria: MemoriaProveedor }>({
         id,
         block: null,
         readWrite: true,

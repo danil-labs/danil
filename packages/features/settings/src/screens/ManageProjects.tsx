@@ -3,7 +3,7 @@ import Plus from "lucide-solid/icons/plus";
 import { createSignal, Show } from "solid-js";
 import { enfocarYSeleccionar } from "../../../../../apps/desktop/src/lib/focus";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
-import { invoke } from "../../../../engine-client/src/client.ts";
+import { openExternal } from "../queries/engine-open";
 import { carpetaDeTrabajo, type Project } from "../../../../../apps/desktop/src/lib/model";
 import { ubicacionDeProyecto } from "../../../../../apps/desktop/src/lib/projectLocation";
 import { PROJECT_NAME_MAX_LENGTH } from "../../../../../apps/desktop/src/lib/projectNames";
@@ -50,7 +50,7 @@ export default function ManageProjects(props: { contexto: ContextoDeProyectos })
   const [renombrando, setRenombrando] = createSignal<string | null>(null);
   const [nombre, setNombre] = createSignal("");
 
-  const revelar = (ruta: string) => void invoke("open_external", { target: ruta }).catch(() => {});
+  const revelar = (ruta: string) => void openExternal({ target: ruta }).catch(() => {});
 
   function FilaDeProyecto(pp: { p: () => Project }) {
     const p = pp.p;

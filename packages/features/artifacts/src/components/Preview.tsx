@@ -1,5 +1,4 @@
 import { For, Show, Suspense, createEffect, createSignal, lazy, on, onCleanup } from "solid-js";
-import { invoke } from "../../../../engine-client/src/client.ts";
 import { save } from "@tauri-apps/plugin-dialog";
 import { join, tempDir } from "@tauri-apps/api/path";
 import { useFileMachine } from "../../../../ui/src/fileMachine";
@@ -14,14 +13,18 @@ import {
   descargarArtefacto,
   historiaDe,
   leerVersion,
+  openExternal,
+  preparePrint,
   publicacionesDe,
+  readArtifactPart,
   registrarSalida,
   restaurarVersion,
   type History,
+  type Preview,
   type Publicacion,
   type Via,
   type VersionRef,
-} from "../queries/history";
+} from "../queries";
 import { Button } from "../../../../ui/src/Button";
 import { Print } from "../../../../ui/src/icons";
 import { FailureNote, asFailure, type Failure, detalleDe } from "../../../../ui/src/Failure";
@@ -38,16 +41,7 @@ const PdfDocument = lazy(() => import("../../../viewers/src/screens/Pdf"));
 const ZoomableImage = lazy(() => import("../../../viewers/src/screens/ImageViewer"));
 const DelimitedTable = lazy(() => import("../../../viewers/src/screens/CsvTable"));
 
-export type Preview = {
-  rel: string;
-  kind: "html" | "image" | "text" | "pdf" | "binary" | string;
-  text: string | null;
-  data_url: string | null;
-  /** Bytes del PDF en base64, solo con `kind: "pdf"`. */
-  pdf: string | null;
-  bytes: number;
-  truncated: boolean;
-};
+export type { Preview };
 
 /**
  * La frase del catálogo partida por sus `{marcas}`, para que el dato que va en
@@ -202,11 +196,11 @@ export default function PreviewPane(props: {
       const path = remota()
         ? await join(await tempDir(), "terminus-print", props.absPath.split(/[/\\]/).pop() || "artefacto.html")
         : props.absPath;
-      const destino = await invoke<string>("prepare_print", {
+      const destino = await preparePrint(
         path,
-        html: envolver(html, { impresion: true }),
-      });
-      await invoke("open_external", { target: destino });
+        envolver(html, { impresion: true }),
+      );
+      await openExternal(destino);
       // A partir de aquí el documento corre sin contenedor: es una salida, y se
       // anota como tal aunque el PDF lo escriba el navegador y no la app.
       await anotar("pdf", destino);
@@ -284,7 +278,7 @@ export default function PreviewPane(props: {
     if (!ruta) return;
     setFallo(null);
     try {
-      await invoke("open_external", { target: ruta });
+      await openExternal(ruta);
     } catch (e) {
       setFallo({
         what: t("artifacts.open_external.failed"),
@@ -386,7 +380,7 @@ export default function PreviewPane(props: {
       const version = h.versions.find(entry => entry.referencia.n === base.n && entry.referencia.artifact === base.artifact && entry.referencia.project === base.project && entry.referencia.session === base.session);
       const machine = enSuMaquina();
       const blob = await readArtifactDownload(base, version?.bytes ?? NaN, p.kind === "text" || p.kind === "html", {
-        part: (referencia, offset, size) => invoke("artifact_read_part", { referencia, offset, size }, machine),
+        part: (referencia, offset, size) => readArtifactPart(referencia, offset, size, machine),
         text: referencia => leerVersion(referencia, machine),
       });
       const enlace = document.createElement("a");

@@ -1,4 +1,4 @@
-import { invoke } from "../../../../engine-client/src/client.ts";
+import { restartApp, serviceCancelUpdate, servicePrepareUpdate, updateInstall } from "../queries/engine-environment";
 import { For, Match, Show, Switch, createSignal, onMount } from "solid-js";
 import { check, type Update } from "@tauri-apps/plugin-updater";
 import { getVersion } from "@tauri-apps/api/app";
@@ -136,10 +136,10 @@ export default function Actualizacion(props: { build?: string }) {
       }
       v = { ...v, u };
       setVersion({ ...v, paso: "bajando", fallo: null, ocupan: null });
-      await invoke("service_prepare_update");
+      await servicePrepareUpdate();
       stopped = true;
       // En Windows `downloadAndInstall` cierra la app; Rust instala sin cerrarla.
-      await invoke("update_install");
+      await updateInstall();
       setVersion({ ...v, paso: "listo", fallo: null, ocupan: null });
     } catch (e) {
       if (!checked) {
@@ -147,7 +147,7 @@ export default function Actualizacion(props: { build?: string }) {
         setVersion({ t: "sin-respuesta", crudo: f.detail || prosa(f.what) });
         return;
       }
-      await invoke("service_cancel_update");
+      await serviceCancelUpdate();
       setVersion({
         ...v,
         paso: "quieto",
@@ -267,7 +267,7 @@ export default function Actualizacion(props: { build?: string }) {
                   variant="secondary"
                   size="sm"
                   class="justify-self-start"
-                  onClick={() => void invoke("restart_app")}
+                  onClick={() => void restartApp()}
                 >
                   {t("settings.update.relaunch")}
                 </Button>

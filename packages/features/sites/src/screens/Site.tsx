@@ -1,5 +1,14 @@
 import { createEffect, createSignal, on, onCleanup, onMount, Show } from "solid-js";
-import { invoke } from "../../../../engine-client/src/client.ts";
+import {
+  siteClose,
+  siteGo,
+  siteHide,
+  siteNavigate,
+  siteOpen,
+  siteOpenExternal,
+  sitePlace,
+  siteReload,
+} from "../queries.ts";
 import { listen } from "../../../../../apps/desktop/src/lib/serviceEvents";
 import { Button } from "../../../../ui/src/Button";
 import { aDireccion, corta, hayCapaEncima, seguirHueco, zonasEncima } from "../../../../../apps/desktop/src/lib/sites";
@@ -109,7 +118,7 @@ export default function Sitio(props: {
     setEstado("cargando");
     setFallo("");
     esperar();
-    void invoke("site_navigate", { label: l, url })
+    void siteNavigate(l, url)
       .then(colocar)
       .catch((e) => {
         setEstado("fallo");
@@ -128,7 +137,7 @@ export default function Sitio(props: {
       // Se esconde antes de contar nada: la capa está encima del hueco, así que
       // el mensaje no se vería debajo de ella.
       const l = label();
-      if (l) void invoke("site_hide", { label: l }).catch(() => {});
+      if (l) void siteHide(l).catch(() => {});
       setEstado("fallo");
       setFallo(t("sites.error.stalled", { site: corta(donde()) }));
     }, PACIENCIA);
@@ -144,7 +153,7 @@ export default function Sitio(props: {
   /** Un paso del historial de la capa. Ver `sites::site_go`. */
   function ir(delta: number) {
     const l = label();
-    if (l) void invoke("site_go", { label: l, delta }).catch(() => {});
+    if (l) void siteGo(l, delta).catch(() => {});
   }
 
   function reintentar() {
@@ -153,7 +162,7 @@ export default function Sitio(props: {
     setEstado("cargando");
     setFallo("");
     esperar();
-    void invoke("site_reload", { label: l })
+    void siteReload(l)
       .then(colocar)
       .catch((e) => {
         setEstado("fallo");
@@ -171,7 +180,7 @@ export default function Sitio(props: {
     const pedido = destino();
     let s: { label: string; url: string };
     try {
-      s = await invoke<{ label: string; url: string }>("site_open", {
+      s = await siteOpen({
         url: pedido,
         x: ultimo.x,
         y: ultimo.y,
@@ -189,7 +198,7 @@ export default function Sitio(props: {
     }
     abriendo = false;
     // La pestaña se cerró mientras Rust abría: la capa no tiene dueño.
-    if (cerrado) return void invoke("site_close", { label: s.label }).catch(() => {});
+    if (cerrado) return void siteClose(s.label).catch(() => {});
     setLabel(s.label);
     if (destino() !== pedido) return navegar(s.label, destino());
     setEstado("cargando");
@@ -220,10 +229,10 @@ export default function Sitio(props: {
       estado() !== "abriendo" &&
       estado() !== "inicio";
     if (!puede) {
-      void invoke("site_hide", { label: l }).catch(() => {});
+      void siteHide(l).catch(() => {});
       return;
     }
-    void invoke("site_place", { label: l, ...ultimo }).catch(() => {});
+    void sitePlace({ label: l, ...ultimo }).catch(() => {});
   }
 
   onMount(() => {
@@ -272,7 +281,7 @@ export default function Sitio(props: {
     cerrado = true;
     clearTimeout(reloj);
     const l = label();
-    if (l) void invoke("site_close", { label: l }).catch(() => {});
+    if (l) void siteClose(l).catch(() => {});
   });
 
   return (
@@ -378,7 +387,7 @@ export default function Sitio(props: {
           aria-label={t("sites.outside")}
           title={t("sites.outside")}
           onClick={() =>
-            void invoke("site_open_external", { url: donde() }).catch(() => {})
+            void siteOpenExternal(donde()).catch(() => {})
           }
         >
           ↗

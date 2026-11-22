@@ -16,7 +16,8 @@ import {
 import { createResource, createSignal, For, Show } from "solid-js";
 import { createCopied } from "../../../../host/src/clipboard";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
-import { invoke } from "../../../../engine-client/src/client.ts";
+import { accountRelayToken, localOrchestratorConnect, localOrchestratorDisconnect } from "../queries/engine-connections";
+import { listLocalOrchestrators } from "../queries/engine-misc";
 import { Badge } from "../../../../ui/src/Badge";
 import { Button } from "../../../../ui/src/Button";
 import { Dialog, DialogContent, DialogTitle } from "../../../../ui/src/Dialog";
@@ -34,7 +35,7 @@ type ClientToken = { token: string; expires_at: number; endpoint: string };
 type Loaded = { endpoint: string; connections: Connection[]; computers: Computer[]; workspaces: AccountWorkspace[]; capabilities: ConnectionCapabilities | null } | { failed: string };
 
 async function token(): Promise<ClientToken> {
-  return (await invoke("account_relay_token", {})) as ClientToken;
+  return (await accountRelayToken({})) as ClientToken;
 }
 
 async function load(): Promise<Loaded> {
@@ -69,7 +70,7 @@ type LocalOrchestrator = {
 async function loadLocal(workspace: string | null): Promise<LocalOrchestrator[] | null> {
   if (!workspace) return null;
   try {
-    return await invoke<LocalOrchestrator[]>("list_local_orchestrators", { workspace });
+    return await listLocalOrchestrators<LocalOrchestrator[]>({ workspace });
   } catch {
     // Un motor sin la extensión no conoce la orden: el apartado no aparece.
     return null;
@@ -91,7 +92,7 @@ function LocalSection(props: { workspace: string | null }) {
     setBusy(true);
     setFailed(false);
     try {
-      const made = await invoke<LocalOrchestrator>("local_orchestrator_connect", {
+      const made = await localOrchestratorConnect<LocalOrchestrator>({
         workspace: props.workspace,
         label: label().trim(),
         permissionMode: mode(),
@@ -110,7 +111,7 @@ function LocalSection(props: { workspace: string | null }) {
     setBusy(true);
     setFailed(false);
     try {
-      await invoke("local_orchestrator_disconnect", { workspace: props.workspace, id: o.id });
+      await localOrchestratorDisconnect({ workspace: props.workspace, id: o.id });
       await refetch();
     } catch {
       setFailed(true);

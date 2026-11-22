@@ -7,7 +7,7 @@ import { Show, createSignal, type JSX } from "solid-js";
 import { createCopied } from "../../../../host/src/clipboard";
 import { enfocar } from "../../../../../apps/desktop/src/lib/focus";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
-import { invoke } from "../../../../engine-client/src/client.ts";
+import { openExternal } from "../queries/engine-open";
 import { Button } from "../../../../ui/src/Button";
 import { Dialog, DialogContent, DialogTitle } from "../../../../ui/src/Dialog";
 import { prosaDe } from "../../../../ui/src/Failure";
@@ -97,7 +97,7 @@ export function DialogoDeConexion(props: {
                 {t("settings.accounts.step_browser_hint", { agent: props.etiqueta })}
               </p>
               <div class="flex flex-wrap items-center gap-2">
-                <Button variant="secondary" size="sm" onClick={() => invoke("open_external", { target: u() }).catch(() => {})}>
+                <Button variant="secondary" size="sm" onClick={() => openExternal({ target: u() }).catch(() => {})}>
                   <ExternalLink size={14} />
                   {t("settings.accounts.open_browser")}
                 </Button>

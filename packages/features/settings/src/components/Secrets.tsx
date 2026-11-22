@@ -16,7 +16,8 @@ import { createEffect, createMemo, createResource, createSignal, For, Match, on,
 import { unknownCommand } from "../../../../../apps/desktop/src/lib/errorCode.ts";
 import { df } from "../../../../../apps/desktop/src/lib/format";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
-import { invoke } from "../../../../engine-client/src/client.ts";
+import { envSecretRemove, envSecretSet, envSecretsList } from "../queries/engine-secrets";
+import { listProjects } from "../queries/engine-workspaces";
 import type { Project } from "../../../../../apps/desktop/src/lib/model";
 import { capabilities } from "../../../../host/src/platform";
 import { Badge } from "../../../../ui/src/Badge";
@@ -72,7 +73,7 @@ function updatedOf(row: SecretRow): string | null {
 
 async function readEngineSecrets(): Promise<EngineSecrets> {
   try {
-    const answer = await invoke<{ secrets?: EngineSecret[] } | null>("env_secrets_list");
+    const answer = await envSecretsList<{ secrets?: EngineSecret[] } | null>();
     return { kind: "ready", secrets: Array.isArray(answer?.secrets) ? answer.secrets : [] };
   } catch (e) {
     return unknownCommand(e) ? { kind: "unsupported" } : { kind: "failed", failure: failureOf(e) };
@@ -94,7 +95,7 @@ function SecretItem(props: { row: SecretRow; overrides: boolean; onChange: () =>
     let f: Failure | null = null;
     if (viaEngine() && props.row.local) {
       try {
-        await invoke("env_secret_remove", { folder: props.row.folder ?? "*", name: props.row.name });
+        await envSecretRemove({ folder: props.row.folder ?? "*", name: props.row.name });
       } catch (e) {
         f = failureOf(e);
       }
@@ -185,7 +186,7 @@ function SecretDialog(props: { rows: SecretRow[]; folders: Project[]; initial: {
     let f: Failure | null = null;
     if (viaEngine()) {
       try {
-        await invoke("env_secret_set", { folder: folder() ?? "*", name: name(), value: v, replace: !!existing() });
+        await envSecretSet({ folder: folder() ?? "*", name: name(), value: v, replace: !!existing() });
       } catch (err) {
         f = failureOf(err);
       }
@@ -336,7 +337,7 @@ export default function Secrets() {
     setEditing(what);
   };
   // Las carpetas del workspace, para elegir alcance y nombrar los grupos; sin lista se ve el id.
-  const [folders] = createResource(() => invoke<Project[]>("list_projects").catch(() => [] as Project[]), { initialValue: [] });
+  const [folders] = createResource(() => listProjects<Project[]>().catch(() => [] as Project[]), { initialValue: [] });
   const folderName = (id: string) => folders().find((p) => p.id === id)?.name ?? id;
   const [engine, { refetch: rereadEngine }] = createResource(route, (target) => target === "worker"
     ? Promise.resolve(null)

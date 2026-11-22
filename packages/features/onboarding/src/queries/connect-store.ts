@@ -72,6 +72,9 @@ const EN_CURSO = new Set<Paso["k"]>(["descargando", "entrando", "clave", "compro
 const ORDEN = ["claude", "codex", "antigravity", "grok", OPENCODE];
 /** ZCode va siempre al final, aunque esté en la computadora o el motor traiga proveedores nuevos. */
 export const AL_FINAL = "zcode";
+
+export const openExternal = (target: string) =>
+  invoke("open_external", { target });
 const posicion = (id: string) => {
   if (id === AL_FINAL) return ORDEN.length + 1;
   const i = ORDEN.indexOf(id);

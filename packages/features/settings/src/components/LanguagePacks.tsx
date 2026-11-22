@@ -1,5 +1,5 @@
 import { For, Show, createSignal, onMount } from "solid-js";
-import { invoke } from "../../../../engine-client/src/client.ts";
+import { installLanguagePack, removeLanguagePack } from "../queries/engine-language";
 import { open } from "@tauri-apps/plugin-dialog";
 import {
   lengua,
@@ -73,7 +73,7 @@ export function PaquetesDeLengua() {
     if (typeof elegido !== "string") return;
     setTrabajando(true);
     try {
-      await invoke("install_language_pack", { source: elegido });
+      await installLanguagePack({ source: elegido });
       await recargar();
     } catch (e) {
       setFallo({ ...asFailure(e), what: t("settings.languages.error_install") });
@@ -86,7 +86,7 @@ export function PaquetesDeLengua() {
     setTrabajando(true);
     setFallo(null);
     try {
-      await invoke("remove_language_pack", { code: codigo });
+      await removeLanguagePack({ code: codigo });
       // Y del motor, que es lo que hace que la app vuelva al respaldo ahora y no
       // en el siguiente arranque. Sin esto `t()` seguiría contestando desde el
       // catálogo en memoria de una carpeta que ya no existe.

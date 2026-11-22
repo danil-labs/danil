@@ -5,7 +5,7 @@
 import "../../../../../apps/desktop/src/locales/danilPhrases";
 import { ACCESS_CONTACT, accessMailto } from "@terminus/design";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
-import { invoke } from "../../../../engine-client/src/client";
+import { openExternal } from "../queries/engine-open";
 import { Button } from "../../../../ui/src/Button";
 
 /** El código con que el plano de control (o el motor) dice que la cuenta no tiene Terminus. */
@@ -17,7 +17,7 @@ export const accessRequestHref = () => accessMailto(t("danil.license.request_sub
 export const requestAccessInPage = () => window.location.assign(accessRequestHref());
 
 /** En el escritorio, el cliente de correo del sistema. */
-export const requestAccessInBrowser = () => void invoke("open_external", { target: accessRequestHref() }).catch(() => {});
+export const requestAccessInBrowser = () => void openExternal({ target: accessRequestHref() }).catch(() => {});
 
 export function TerminusLicense(props: { onRequest: () => void; onRetry: () => void; busy?: boolean; compact?: boolean }) {
   return (

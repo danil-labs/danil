@@ -1,7 +1,7 @@
 import { routerAvailable } from "@terminus/tasks";
 import { createSignal, lazy, onCleanup, Show } from "solid-js";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
-import { invoke } from "../../../../engine-client/src/client.ts";
+import { listModels, setProviderConsent, workspacesStartup } from "../queries/engine-consent";
 import { acceptedFreeModelPolicy, freeModelScope, sameFreeModelPolicy, type FreeModelConsent, type FreeModelPolicy, type FreeModelStartup } from "../../../../../apps/desktop/src/lib/free-model-policy.ts";
 import { loadFreeModelPolicy } from "../../../../../apps/desktop/src/lib/free-model-policy-load.ts";
 import type { Frase } from "../../../../../apps/desktop/src/lib/prose";
@@ -45,7 +45,7 @@ export function createFreeRouterConsent(opts: { agente: () => string; despues?: 
 
   async function refreshRoute(policy: FreeModelPolicy) {
     const generation = ++catalogGeneration;
-    const catalog = await invoke<{ models: { id: string; gratis?: boolean }[] }>("list_models", { provider: opts.agente() }, freeModelScope(policy)).catch(() => null);
+    const catalog = await listModels<{ models: { id: string; gratis?: boolean }[] }>({ provider: opts.agente() }, freeModelScope(policy)).catch(() => null);
     if (generation === catalogGeneration) setRouteAvailable(catalog ? routerAvailable(catalog.models) : false);
   }
 
@@ -92,7 +92,7 @@ export function createFreeRouterConsent(opts: { agente: () => string; despues?: 
     try {
       const policy = texto()?.policy;
       if (!policy) throw new Error(t("settings.accounts.free.unavailable"));
-      const startup = await invoke<FreeModelStartup>("workspaces_startup");
+      const startup = await workspacesStartup<FreeModelStartup>();
       if (startup.active !== policy.workspace_id) throw new Error(t("settings.accounts.free.policy_changed"));
       if (isPlatformPolicy(policy)) {
         await platform(valor, policy);
@@ -103,8 +103,7 @@ export function createFreeRouterConsent(opts: { agente: () => string; despues?: 
       if (valor && (!fresh?.acceptance_ref || !sameFreeModelPolicy(policy, fresh))) {
         throw new Error(t("settings.accounts.free.policy_changed"));
       }
-      const w = await invoke<{ free_model_consent?: FreeModelConsent }>(
-        "set_provider_consent",
+      const w = await setProviderConsent<{ free_model_consent?: FreeModelConsent }>(
         { provider: valor ? fresh!.acceptance_ref : opts.agente(), accepted: valor },
         freeModelScope(policy),
       ).catch((e: unknown) => (needsPlatform(e) ? null : Promise.reject(e)));
