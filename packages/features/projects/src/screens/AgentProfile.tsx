@@ -6,7 +6,7 @@ import FolderOpen from "lucide-solid/icons/folder-open";
 import ImagePlus from "lucide-solid/icons/image-plus";
 import Trash2 from "lucide-solid/icons/trash-2";
 import { createEffect, createMemo, createSignal, on, onCleanup, Show } from "solid-js";
-import SelectorDeModelo from "../../../chat/src/components/ModelPicker";
+import { SelectorDeModelo } from "../model/ports";
 import type { CreateFreeRouterConsent } from "../../../../ui/src/lib/freeRouterConsent.ts";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import type { AgentProfile as Profile, HandlerDefinition, HandlerStatus } from "../../../../../apps/desktop/src/lib/model";
@@ -23,7 +23,7 @@ import { DEFAULT_PROFILE, notifyProfiles } from "../queries/profiles";
 import { TelegramSection } from "../components/TelegramSection";
 import { LazyPart, retryableLazy } from "../../../../ui/src/LazyPart";
 import { Pressable } from "../../../../ui/src/Pressable";
-const HandlerPolicy = retryableLazy(() => import("../../../settings/src/screens/HandlerPolicy"));
+const HandlerPolicy = retryableLazy(() => import("./HandlerPolicy"));
 
 /** Las extensiones que el webview pinta como `data:` URI (`preview::data_url`). */
 const IMAGES = ["png", "jpg", "jpeg", "webp", "gif"];
