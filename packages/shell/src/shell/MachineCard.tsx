@@ -7,9 +7,9 @@ import { Badge } from "../../../ui/src/Badge";
 import { ProgressBar } from "../../../ui/src/ProgressBar";
 import { type Machine, machineName } from "../../../features/machines/src/queries/store";
 import { UPDATE_FEATURE, engineVersion, hasUsage, heaviest, leftovers, level, split, updateState } from "./machineUsage";
-import RefreshCw from "lucide-solid/icons/refresh-cw";
 import { Pressable } from "../../../ui/src/Pressable";
 import { Metric, NOTE, NOTE_INFO, SEG_TASKS, taskTitle, type TaskLookup, type When } from "./machine-card-parts";
+import { RefreshSpinner } from "../../../ui/src/Spinner";
 
 export { taskTitle, type TaskLookup, type When } from "./machine-card-parts";
 export { MemoryTab } from "./machine-memory-tab";
@@ -202,7 +202,7 @@ export function MachineCard(props: {
               <Show when={props.onRefresh}>
                 <Pressable class="grid size-6 place-items-center rounded-sm text-neutral-500 outline-none hover:bg-surface-muted hover:text-neutral-950 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-primary disabled:opacity-60"
                   aria-label={t("shell.machine_panel.update_check")} title={t("shell.machine_panel.update_check")} disabled={refreshing()} onClick={() => void refresh()}>
-                  <RefreshCw size={12} class={refreshing() ? "animate-spin" : undefined} aria-hidden />
+                  <RefreshSpinner size={12} spinning={refreshing()} aria-hidden />
                 </Pressable>
               </Show>
               <Show when={update() === "idle" || update() === "sending"}>

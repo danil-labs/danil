@@ -6,7 +6,7 @@ import ShieldQuestion from "lucide-solid/icons/shield-question";
 import { SignalDot, taskSignalTone } from "../../../../ui/src/SignalDot";
 import { Match, Show, Switch } from "solid-js";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
-import { Spinner } from "../../../../ui/src/Spinner";
+import { Spinner, DashedRing } from "../../../../ui/src/Spinner";
 import { cn } from "../../../../../apps/desktop/src/lib/utils";
 import { type TaskActivity, markedState, taskPriority } from "../../../../ui/src/index";
 
@@ -48,15 +48,6 @@ export function stateIcon(state: ReturnType<typeof taskPriority>) {
  * El color de cada estado en la tarjeta del riel: preguntar y pedir aprobación
  * comparten el ámbar fuerte, que sobre el fondo del riel se lee como texto.
  */
-/** El anillo punteado de la tarea que el motor todavía registra. */
-function RailDashedRing(props: { size?: number }) {
-  return (
-    <svg data-spinner viewBox="0 0 16 16" width={props.size ?? 14} height={props.size ?? 14} class="animate-spin-lento text-neutral-500 motion-reduce:animate-none" aria-hidden="true">
-      <circle cx="8" cy="8" r="5.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-dasharray="2.2 2.4" />
-    </svg>
-  );
-}
-
 /**
  * El estado de la tarjeta, en el mismo cuadro que el menú (22×20): el loader,
  * el anillo de «recién creada» y el punto van al centro. La cara del agente no
@@ -72,8 +63,8 @@ function CardMark(props: TaskActivity & { identityLabel?: string; provisional?: 
         <Show when={state()}>
           <span class="task-card-badge"><SignalDot tone={taskSignalTone(state())} /></span>
         </Show>
-      }><span class="task-card-orbit"><Spinner size={14} class="animate-spin-lento text-primary motion-reduce:animate-none" /></span></Show>
-    }><span class="task-card-orbit"><RailDashedRing size={14} /></span></Show>
+      }><span class="task-card-orbit"><Spinner size={14} speed="slow" class="text-primary" /></span></Show>
+    }><span class="task-card-orbit"><DashedRing size={14} /></span></Show>
   </span>;
 }
 
@@ -93,7 +84,7 @@ function RailMark(props: TaskActivity & { provisional?: boolean; archivada?: boo
     <Switch>
       <Match when={props.provisional && !props.plegadas}>
         <span class="inline-flex shrink-0 items-center justify-center" title={t("projects.status.provisional")} aria-label={t("projects.status.provisional")}>
-          <RailDashedRing size={lado()} />
+          <DashedRing size={lado()} />
         </span>
       </Match>
       <Match when={state() === "working"}>

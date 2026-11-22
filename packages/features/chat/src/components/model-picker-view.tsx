@@ -14,6 +14,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "../../../../ui/src/Popo
 import { Pressable } from "../../../../ui/src/Pressable";
 import { DISPARADOR, nombreDeNivel, type SelectorDeModeloProps } from "./model-picker-types";
 import { createSelectorDeModelo } from "./model-picker-state";
+import { Input } from "../../../../ui/src/Input";
 
 const DanilServices = lazy(() => import("./DanilServices"));
 
@@ -77,7 +78,8 @@ export default function SelectorDeModelo(props: SelectorDeModeloProps) {
       <PopoverContent class="flex h-[min(22rem,70vh)] w-[min(24rem,calc(100vw-2rem))] flex-col overflow-hidden p-0" data-owns-escape>
         <div class="flex min-h-9 items-center gap-2 border-b border-border px-3 text-neutral-500">
           <Search size={15} class="shrink-0" />
-          <input
+          <Input
+            variant="plain"
             ref={(element) => (campo = element)}
             value={busqueda()}
             placeholder={t("chat.model.search")}

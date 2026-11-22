@@ -5,6 +5,7 @@ import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { enfocar } from "../../../../../apps/desktop/src/lib/focus";
 import { Pressable } from "../../../../ui/src/Pressable";
 import type { createAlcance } from "./scope-state";
+import { Input } from "../../../../ui/src/Input";
 
 export function createPiezas(s: ReturnType<typeof createAlcance>) {
   const { busca, setBusca, setPaso, traerCarpeta } = s;
@@ -20,9 +21,9 @@ export function createPiezas(s: ReturnType<typeof createAlcance>) {
         class="pointer-events-none absolute top-1/2 left-2 -translate-y-1/2"
         aria-hidden="true"
       />
-      <input
+      <Input
         ref={enfocar}
-        class="w-full bg-transparent py-1 pr-2 pl-6 text-caption outline-none"
+        variant="picker"
         placeholder={marcador}
         value={busca()}
         onInput={(e) => setBusca(e.currentTarget.value)}

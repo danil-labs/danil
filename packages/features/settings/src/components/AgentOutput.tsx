@@ -6,6 +6,7 @@ import { t, type Manifiesto } from "../../../../../apps/desktop/src/lib/i18n";
 import { instalarDelBundle, lenguasDelBundle, type Paquete } from "../../../../../apps/desktop/src/locales/packs";
 import type { Startup } from "../queries/workspaces-store";
 import { SettingsRow } from "../../../../ui/src/SettingsLayout";
+import { Input } from "../../../../ui/src/Input";
 
 /**
  * El perfil que pide en qué lengua contesta el agente. Solo se ofrece la
@@ -126,7 +127,8 @@ export function SalidaDelAgente() {
         >
           {(unico) => (
             <label class="flex w-fit items-center gap-2 text-sm">
-              <input
+              <Input
+                variant="plain"
                 type="checkbox"
                 checked={valor() === unico().codigo}
                 onChange={(e) => void elegir(e.currentTarget.checked ? unico().codigo : "", e.currentTarget)}
