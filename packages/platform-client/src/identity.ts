@@ -136,6 +136,9 @@ export const SESSION_ROUTES = new Set([
   CAPABILITIES_PATH,
 ]);
 
+/** Las lecturas de la sesión web que se comparten en una carga: la persona de cada contexto y el catálogo del riel. */
+export const SHARED_SESSION_READS = new Set(["/v1/identity/me", "/v1/identity/sessions/catalog"]);
+
 /** URL base de inicio de sesión de identity. */
 export const IDENTITY_LOGIN_PATH = "/v1/identity/login";
 

@@ -27,6 +27,7 @@ import { freeRouterEngine, freeRouterWebEdge } from '../../features/settings/src
 import { setFreeRouterHost, signOutPlatform } from '../../features/settings/src/queries/free-router-session';
 import { sessionRailState } from '../../shell/src/shell';
 import { platformFetch } from '../../platform-client/src/client';
+import { contextMachinesQuery } from '../../features/machines/src/queries/machines-query';
 
 declare const __DANIL_WEB_RELAY_ORIGINS__: string[];
 const FIRST_RETRY_MS = 1000;
@@ -71,6 +72,8 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
     const sessions = webSessionCommands(raw, { expired: () => expired() });
     const active = windowActiveContext(sessions);
     const rail = webRailCatalog(sessions);
+    /** La lista de máquinas de cada contexto, compartida por la facturación, la ventana y sus pantallas. */
+    const machines = contextMachinesQuery(context => contextMachines(`${options.origin}/v1`, raw, __DANIL_WEB_RELAY_ORIGINS__, context));
     /** Un 401 sin contexto propio es la cookie muerta; uno con `X-Danil-Session` es de ese contexto. */
     const guarded = (send: typeof raw.call): typeof raw.call => async (path, init) => {
       try { return await send(path, init); }
@@ -79,7 +82,13 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
         throw cause;
       }
     };
-    const plain = { call: guarded(raw.call), mutation: guarded(raw.mutation) };
+    /** Una escritura de identity o workspaces cambia el conjunto, el catálogo o la persona: las lecturas compartidas se olvidan. */
+    const invalidating = (send: typeof raw.mutation): typeof raw.mutation => (path, init) => {
+      if (!/^\/?(identity|workspaces)(\/|\?|$)/.test(path)) return send(path, init);
+      sessions.invalidate();
+      return send(path, init).finally(sessions.invalidate);
+    };
+    const plain = { call: guarded(raw.call), mutation: guarded(invalidating(raw.mutation)) };
     const transport = active.scoped(plain);
     function gate() {
       windowApp?.close();
@@ -169,11 +178,11 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
         identity: active.freeRouterIdentity(rail.accountOf) });
       const billing = windowBilling(active.scoped(plain, active.of(profile.active_organization_id, profile.id)), profile, organizations, () => undefined, async (id, signal) => {
         const group = active.of(id)();
-        const listed = group ? await contextMachines(`${options.origin}/v1`, raw, __DANIL_WEB_RELAY_ORIGINS__, group.context).list(signal) : null;
+        const listed = group ? await machines(group.context).list(signal) : null;
         return listed?.kind === 'ok' ? organizationMachine(id, listed.value) : null;
       }, active.billingFor(plain, profile.id));
       const current = async () => { const group = active.current(); return group ? { context: group.context, org: group.org, name: group.name, plan: group.plan, role: group.role } : null; };
-      windowApp = mountWindow({ sessions, rail, contextMachines: context => contextMachines(`${options.origin}/v1`, raw, __DANIL_WEB_RELAY_ORIGINS__, context), permits, relayOrigin: __DANIL_WEB_RELAY_ORIGINS__[0], credentials: webCredentialSource(options.origin, transport),
+      windowApp = mountWindow({ sessions, rail, contextMachines: machines, permits, relayOrigin: __DANIL_WEB_RELAY_ORIGINS__[0], credentials: webCredentialSource(options.origin, transport),
         profile: webAccountProfile(transport), active,
         onUnavailable: () => { setError('web.platform.unavailable'); mounted = false; gate(); later(); },
         services: {
