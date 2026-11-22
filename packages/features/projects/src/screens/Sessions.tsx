@@ -1,4 +1,9 @@
-import { invoke } from "../../../../engine-client/src/client.ts";
+import {
+  finishTask as finishTaskQuery,
+  setTaskArchived,
+  getTaskBlockers,
+  discardTaskChanges,
+} from "../queries";
 import ChevronRight from "lucide-solid/icons/chevron-right";
 import MoreVertical from "lucide-solid/icons/more-vertical";
 import Pin from "lucide-solid/icons/pin";
@@ -432,7 +437,7 @@ export default function Sessions(props: {
       // La fila sale y el cohete despega en el mismo gesto: esperar a que el
       // motor mate turnos y tome los candados deja el estallido solo.
       celebrateFinishedTask(rect);
-      await invoke("finish_task", { project, id }, enSuMaquina(id));
+      await finishTaskQuery(project, id, enSuMaquina(id));
       // `anunciar` no actualiza esta ventana: su firma es la de quien
       // escribió, y el sondeo la descarta. Sin este aviso el archivado
       // queda en disco y la lista de aquí sigue mostrando la fila.
@@ -452,7 +457,7 @@ export default function Sessions(props: {
       const project = projectOfId(id);
       sacar(id);
       setMenu(null);
-      await invoke("set_task_archived", { project, id, archived: true }, enSuMaquina(id));
+      await setTaskArchived(project, id, true, enSuMaquina(id));
       avisarCambio(project);
     } catch (error) {
       devolver(id);
@@ -480,7 +485,7 @@ export default function Sessions(props: {
     // una tarea que todavía tiene algo en el camino.
     let blockers: Blockers;
     try {
-      blockers = await invoke<Blockers>("task_blockers", { project: projectOfId(id), id, finish }, enSuMaquina(id));
+      blockers = await getTaskBlockers(projectOfId(id), id, finish, enSuMaquina(id));
     } catch (error) {
       setActionFailure({ action: finish ? "finish" : "archive", error, retry: () => void intentar(id, finish, rect) });
       return;
@@ -501,7 +506,7 @@ export default function Sessions(props: {
     marcar(ids => [...ids, a.id]);
     try {
       for (const work of a.blockers.unsaved) {
-        await invoke("discard_task_changes", { project: work.project ?? projectOfId(a.id), id: work.session, files: work.files }, enSuMaquina(a.id));
+        await discardTaskChanges(work.project ?? projectOfId(a.id), work.session, work.files, enSuMaquina(a.id));
       }
     } catch (error) {
       setActionFailure({ action: "discard", error, retry: () => void intentar(a.id, a.finish, a.rect) });

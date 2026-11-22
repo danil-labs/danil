@@ -1,7 +1,7 @@
 import { createMemo, createSignal, For, Show } from "solid-js";
 import { lockedBy } from "../../../../../apps/desktop/src/lib/governance";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
-import { invoke } from "../../../../engine-client/src/client.ts";
+import { createAgent, saveAgentProfile, setAgentModel } from "../queries";
 import type { CreatedHandler, HandlerScope } from "../../../../../apps/desktop/src/lib/model";
 import {
   type CatalogosDeModelos,
@@ -94,7 +94,7 @@ export default function NewAgent(props: {
     const scope: HandlerScope =
       alcance() === "workspace" ? { kind: "workspace" } : { kind: "project", id: project };
     try {
-      const creado = await invoke<CreatedHandler>("create_agent", {
+      const creado = await createAgent({
         name: id(),
         description: description().trim(),
         instructions: instructions().trim(),
@@ -104,7 +104,7 @@ export default function NewAgent(props: {
       // agente ya existe y se le ponen desde su perfil: no es motivo para fallar.
       const displayName = name().trim();
       if (displayName !== id() || body() !== null) {
-        await invoke("save_agent_profile", {
+        await saveAgentProfile({
           project,
           name: id(),
           displayName: displayName !== id() ? displayName : null,
@@ -115,7 +115,7 @@ export default function NewAgent(props: {
       }
       const elegido = modelo();
       if (elegido) {
-        await invoke("set_agent_model", {
+        await setAgentModel({
           project,
           name: id(),
           provider: elegido.agent,

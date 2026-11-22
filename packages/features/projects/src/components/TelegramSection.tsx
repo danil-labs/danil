@@ -3,7 +3,14 @@ import Copy from "lucide-solid/icons/copy";
 import { createEffect, createSignal, Match, onCleanup, Show, Switch } from "solid-js";
 import { createCopied } from "../../../../host/src/clipboard";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
-import { invoke } from "../../../../engine-client/src/client.ts";
+import {
+  getTelegramStatus,
+  getKeepAwakeStatus,
+  setTelegramToken,
+  startTelegramPairing,
+  disableTelegram,
+  setKeepAwake,
+} from "../queries";
 import { Button } from "../../../../ui/src/Button";
 import { prosaDe } from "../../../../ui/src/Failure";
 import { Input } from "../../../../ui/src/Input";
@@ -46,10 +53,7 @@ export function TelegramSection(props: { project: string; name: string }) {
   async function refresh() {
     const mine = ++request;
     try {
-      const next = await invoke<TelegramStatus>("telegram_status", {
-        project: props.project,
-        name: props.name,
-      });
+      const next = await getTelegramStatus(props.project, props.name);
       if (mine === request) setStatus(next);
     } catch (error) {
       if (mine === request) setFailure(prosaDe(error));
@@ -63,7 +67,7 @@ export function TelegramSection(props: { project: string; name: string }) {
     void refresh();
   });
   const events = listen("telegram-changed", () => void refresh());
-  void invoke<{ mode: AwakeMode }>("keep_awake_status")
+  void getKeepAwakeStatus()
     .then((s) => setAwake(s.mode))
     .catch(() => {});
   const awakeEvents = listen<{ mode: AwakeMode }>("keep-awake-changed", (e) =>
@@ -90,22 +94,18 @@ export function TelegramSection(props: { project: string; name: string }) {
 
   const saveToken = () =>
     run(async () => {
-      await invoke("telegram_set_token", {
-        project: props.project,
-        name: props.name,
-        token: token().trim(),
-      });
+      await setTelegramToken(props.project, props.name, token().trim());
       setToken("");
       setReplacing(false);
     });
   const startPairing = () =>
     run(() =>
-      invoke<Pairing>("telegram_start_pairing", { project: props.project, name: props.name }),
+      startTelegramPairing(props.project, props.name),
     );
   const disable = () =>
-    run(() => invoke("telegram_disable", { project: props.project, name: props.name }));
-  const awakeAlways = () => run(() => invoke("set_keep_awake", { mode: "on" }));
-  const awakeWhileWorking = () => run(() => invoke("set_keep_awake", { mode: "agent" }));
+    run(() => disableTelegram(props.project, props.name));
+  const awakeAlways = () => run(() => setKeepAwake("on"));
+  const awakeWhileWorking = () => run(() => setKeepAwake("agent"));
 
   const pending = () => {
     const p = status()?.pairing;
