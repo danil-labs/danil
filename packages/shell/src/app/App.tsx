@@ -80,7 +80,7 @@ import { type TaskSideMode } from "../../../../apps/desktop/src/lib/taskFiles";
 // Chunk aparte: el perfil completo de un agente solo se carga al abrirlo.
 const AgentProfile = retryableLazy(() => import("../../../features/projects/src/screens/AgentProfile"));
 // El alta solo se abre sin workspace o al agregar otro: no entra en la carga inicial.
-const Onboarding = lazy(() => import("../../../features/onboarding/src/screens/Onboarding"));
+const Onboarding = lazy(() => import("../../../features/onboarding/src/screens/Onboarding")), FuncionesAfectadas = lazy(() => import("../../../features/onboarding/src").then((m) => ({ default: m.FuncionesAfectadas }))), Integraciones = lazy(() => import("../../../features/onboarding/src/components/ToolCards").then((m) => ({ default: m.Integraciones })));
 const TaskLocation = lazy(() => import("../../../features/chat/src/screens/TaskLocation"));
 const Screen = lazy(() => import("../../../features/screen/src/screens/Screen"));
 // El aviso de licencia solo se baja si la flota lo pide (trae los textos de Danil).
@@ -6044,7 +6044,7 @@ export default function App() {
             proyecto={proyectoAbierto() ?? project()}
             agentesEnUso={agentesEnUso()}
             onClose={cerrarAjustes}
-            proyectos={proyectosEnAjustes}
+            proyectos={proyectosEnAjustes} avisoReparacion={(p) => <Suspense fallback={null}><FuncionesAfectadas {...p} /></Suspense>} integraciones={(p) => <Suspense fallback={null}><Integraciones {...p} /></Suspense>}
             onAgentProfile={(enProyecto, name) => {
               cerrarAjustes();
               openAgentProfile(enProyecto, name);

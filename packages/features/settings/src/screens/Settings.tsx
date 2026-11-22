@@ -45,6 +45,8 @@ import Integrations from "../components/Integrations";
 import { PaquetesDeLengua } from "../components/LanguagePacks";
 import { SettingsPanel, SettingsSection } from "../components/layout";
 import type { ContextoDeProyectos } from "./ManageProjects";
+import type { Falla } from "../../../../ui/src/lib/bundled";
+import type { Failure } from "../../../../ui/src/Failure";
 import ProveedorDeMemoria from "../components/MemoryProvider";
 import { NotifyBehavior } from "../components/NotifyBehavior";
 import Providers from "../components/Providers";
@@ -106,6 +108,14 @@ const pestanasDe = (
   proyectos: ContextoDeProyectos | undefined,
   workspace: () => string | null,
   activityMachine: () => string | null,
+  avisoReparacion?: (p: {
+    fallas: Falla[];
+    reparando: boolean;
+    error: Failure | null;
+    onReparar: () => void;
+    onReiniciar: () => void;
+  }) => JSX.Element,
+  integraciones?: (p: { solo: string[]; onCambio: () => void }) => JSX.Element,
 ): Record<string, Pestana | undefined> => {
   const cuenta = capabilities().danilAccount || capabilities().accountProfile;
   const tab = (id: string, name: () => string, panel: Pestana["panel"]): Pestana => ({ id, get name() { return name(); }, panel });
@@ -123,10 +133,10 @@ const pestanasDe = (
     download: capabilities().appDownloads ? tab("download", () => t("web.download.tab"), () => <Suspense fallback={null}><AppDownloads /></Suspense>) : undefined,
     "proveedores-ia": tab("proveedores-ia", () => t("settings.nav.ai_providers"), () => { machineAction(); return <AIProviders superficies={superficies()} estado={agentes.estadoSuperficies} onRetry={agentes.reintentarSuperficies} />; }),
     machines: cuenta ? tab("machines", () => t("settings.tab.machines"), () => <Suspense fallback={null}><DanilAccount part="machines" /></Suspense>) : undefined,
-    entorno: tab("entorno", () => t("settings.nav.environment"), () => <Environment />),
+    entorno: tab("entorno", () => t("settings.nav.environment"), () => <Environment avisoReparacion={avisoReparacion} />),
     activity: tab("activity", () => t("activity.title"), () => <Suspense fallback={null}><ActivityLogs workspace={workspace()} machine={activityMachine()} /></Suspense>),
     proyectos: tab("proyectos", () => t("settings.tab.folders"), proyectos ? () => { machineAction(); return <Suspense fallback={null}><ManageProjects contexto={proyectos} /></Suspense>; } : null),
-    fuentes: tab("fuentes", () => t("settings.nav.sources"), () => { machineAction(); return <Providers />; }),
+    fuentes: tab("fuentes", () => t("settings.nav.sources"), () => { machineAction(); return <Providers integraciones={integraciones} />; }),
     secrets: tab("secrets", () => t("settings.tab.secrets"), capabilities().nativeWindow || capabilities().accountCredentials ? () => <Suspense fallback={null}><Secrets /></Suspense> : null),
     agentes: tab("agentes", () => t("settings.nav.agents"), () => (
       <Suspense fallback={null}>
@@ -224,6 +234,14 @@ export default function Settings(props: {
   onAgentProfile?: (project: string, name: string) => void;
   /** Los proyectos del espacio y lo que se puede hacer con ellos. */
   proyectos?: ContextoDeProyectos;
+  avisoReparacion?: (p: {
+    fallas: Falla[];
+    reparando: boolean;
+    error: Failure | null;
+    onReparar: () => void;
+    onReiniciar: () => void;
+  }) => JSX.Element;
+  integraciones?: (p: { solo: string[]; onCambio: () => void }) => JSX.Element;
 }) {
   // Lo que se puede elegir para trabajar, que es lo que decide qué proveedores
   // tienen pantalla. Con su estado: aquí no apaga nada, lo enseña.
@@ -308,7 +326,7 @@ export default function Settings(props: {
       setEstadoSuperficies({ k: "loading" });
       cargarSuperficies();
     },
-  }, props.proyectos, () => props.workspace ?? null, () => props.activityMachine ?? null);
+  }, props.proyectos, () => props.workspace ?? null, () => props.activityMachine ?? null, props.avisoReparacion, props.integraciones);
   const ENTRADAS = entradasDe(pestanas);
 
   // Sin soporte del motor activo, Secretos no se ofrece; su enlace directo sí abre el aviso.

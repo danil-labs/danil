@@ -3,7 +3,9 @@
 import "../../../../apps/desktop/src/locales/catalogs";
 import { render } from "solid-js/web";
 import App from "./App";
-import Setup from "../../../features/settings/src/screens/Setup";
+import { Setup } from "../../../features/onboarding/src";
+import { checkEnvironment, installTool, prepareRuntime, restartApp, servicePoll, setupRequired } from "../../../features/settings/src/queries/engine-environment";
+import { listWorkspaces } from "../../../features/settings/src/queries/engine-workspaces";
 import { Lanzador, SessionGate } from "../shell";
 import { invoke } from "../../../engine-client/src/client.ts";
 import { seguirElTema } from "../../../../apps/desktop/src/lib/theme";
@@ -98,7 +100,15 @@ const montar = () => {
       // El lanzador va antes que todo: sin motor conectado no hay a quién preguntar.
       // La preparación va por fuera de la app: si falta git no hay nada útil detrás.
       <Lanzador>
-        <Setup>
+        <Setup
+          checkEnvironment={checkEnvironment}
+          installTool={installTool}
+          prepareRuntime={prepareRuntime}
+          restartApp={restartApp}
+          servicePoll={servicePoll}
+          setupRequired={setupRequired}
+          listWorkspaces={listWorkspaces}
+        >
           <SessionGate><App /></SessionGate>
         </Setup>
       </Lanzador>
