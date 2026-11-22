@@ -126,7 +126,7 @@ apps/desktop/             the window (this is what the installers ship)
   npx/                    the npx installer
 apps/mobile/              the iOS and Android app (Expo) and its dev bridge
 packages/design           shim for apps/mobile only; the tokens live in packages/ui
-packages/tasks            the task list both apps derive: flat list, filter, two-line card, agents dock
+packages/tasks            shim for apps/mobile: re-exports packages/ui/src/lib/tasks/index.ts
 packages/chat             shim for apps/mobile: re-exports packages/ui/src/lib/chat and engine-client history
 packages/attention        Inbox, channels and customization of the phone
 packages/computers        Danil Machines client: control-plane API, relay session, wake rules

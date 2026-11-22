@@ -9,7 +9,7 @@
  * Cada cliente pinta esto a su manera; qué entra y en qué orden sale de aquí.
  * Lo que solo el escritorio sabe (git, PR, worktree) lo añade él.
  */
-import { type TaskActivity, type TaskState, taskPriority } from "../../ui/src/index.ts";
+import { type TaskActivity, type TaskState, taskPriority } from "../../index.ts";
 import { providerMark } from "./model-presentation.ts";
 import { type SidebarContext, type SidebarGroup, type SidebarTask, activityOf, isPinned, needsYou } from "./view.ts";
 

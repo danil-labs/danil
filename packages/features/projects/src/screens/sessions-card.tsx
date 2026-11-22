@@ -15,7 +15,7 @@ import EtapaDeTarea from "./TaskStage";
 import EstadoDeTarea from "./TaskStatus";
 import { sharesTaskGit } from "../queries/taskGit";
 import type { TaskActivity } from "../../../../ui/src/index";
-import { taskCard } from "@terminus/tasks";
+import { taskCard } from "../../../../ui/src/lib/tasks/index.ts";
 import { shortTaskTime, type SessionRow, type SessionsProps } from "./sessions-model";
 import type { SessionsState } from "./sessions-state";
 
@@ -33,7 +33,7 @@ export function createFilaDelRiel(props: SessionsProps, state: SessionsState) {
     menu: () => JSX.Element;
     cohete: () => JSX.Element;
   }) => {
-    // Qué lleva la línea 2 lo decide la tarjeta compartida con el teléfono (`@terminus/tasks`).
+    // Qué lleva la línea 2 lo decide la tarjeta compartida con el teléfono (`packages/ui/src/lib/tasks/index.ts`).
     const tarjeta = () => taskCard(r.s, { live: props.vivas, approving: props.aprobando, hideFolder: hideFolder(r.s), hideMachine: props.hideMachine });
     const activeAgent = () => r.s.agent;
     const git = () => gitDe(r.s);

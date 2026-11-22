@@ -1,11 +1,11 @@
-import { resolveTaskGit as resolveSharedTaskGit } from "@terminus/tasks";
+import { resolveTaskGit as resolveSharedTaskGit } from "../../../../ui/src/lib/tasks/index.ts";
 import { Channel } from "@tauri-apps/api/core";
 import { invoke } from "../../../../engine-client/src/client.ts";
 import { type Accessor, createSignal } from "solid-js";
 
-import { type TaskGitStatus, mergeRemoteGit, readTaskGit, retainGitObservation, sameGit as mismoGit, UNKNOWN_TASK_GIT } from "@terminus/tasks";
-export type { CheckState, KnState, ReviewState } from "@terminus/tasks";
-export { canFinishTask, mergeRemoteGit, retainGitObservation } from "@terminus/tasks";
+import { type TaskGitStatus, mergeRemoteGit, readTaskGit, retainGitObservation, sameGit as mismoGit, UNKNOWN_TASK_GIT } from "../../../../ui/src/lib/tasks/index.ts";
+export type { CheckState, KnState, ReviewState } from "../../../../ui/src/lib/tasks/index.ts";
+export { canFinishTask, mergeRemoteGit, retainGitObservation } from "../../../../ui/src/lib/tasks/index.ts";
 export type GitStatus = TaskGitStatus;
 export const UNKNOWN_GIT: GitStatus = UNKNOWN_TASK_GIT;
 

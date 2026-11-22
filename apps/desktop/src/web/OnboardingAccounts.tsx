@@ -1,4 +1,4 @@
-import { isFreeRouterAgent, isRetiredAgent } from "../../../../packages/tasks/src/agents.ts";
+import { isFreeRouterAgent, isRetiredAgent } from "../../../../packages/ui/src/lib/tasks/agents.ts";
 import { createSignal, For, Match, onCleanup, onMount, Show, Switch } from "solid-js";
 import { nombreDeAgente } from "../../../../packages/features/onboarding/src/queries/onboarding-store";
 import { Pantalla } from "../../../../packages/features/onboarding/src/components/Screen";

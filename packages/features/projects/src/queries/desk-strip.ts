@@ -7,7 +7,7 @@ import { appendToStoredStrip, deleteStoredStrip, migrateLegacyStrip, spacesWithS
 import { deleteLayout, readLayout, spacesWithLayout } from "../../../../../apps/desktop/src/lib/panels.ts";
 import { claveDeBorrador, esProvisional } from "../../../../../apps/desktop/src/lib/taskDraft.ts";
 import { escribirPref, leerPref } from "../../../../../apps/desktop/src/lib/prefs.ts";
-import { chipModel as modeloDeSubtarea } from "../../../../tasks/src/surfaces.ts";
+import { chipModel as modeloDeSubtarea } from "../../../../ui/src/lib/tasks/surfaces.ts";
 import type { ModoDePermiso, Project, Source } from "../../../../../apps/desktop/src/lib/model.ts";
 import type { createComposerStore, createDraftsStore, createThreadsStore, Machine, PanelsStore, Session, TabsStore } from "../../../../../apps/desktop/src/lib/project-block-types.ts";
 import type { AttentionStore, WorkspaceStore } from "../screens/workspace-session.ts";

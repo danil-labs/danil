@@ -16,7 +16,7 @@ import { comandoEscrito } from "../model/slashOutput";
 import { type Signatures } from "../model/transcript";
 import { type Session } from "../model/transcript.ts";
 import { type Msg } from "../screens/Chat";
-import { OPENCODE, canonicalAgentId, isFreeRouterModel } from "@terminus/tasks";
+import { OPENCODE, canonicalAgentId, isFreeRouterModel } from "../../../../ui/src/lib/tasks/index.ts";
 import { batch, type Accessor, type Setter } from "solid-js";
 import type { CarriedBase, DraftsPort, MachineWait, MachinesPort, SessionRow, WorkspaceContextPort, createThreadsStore } from "./types.ts";
 import type { createTabs } from "../../../../../apps/desktop/src/lib/tabs.ts";

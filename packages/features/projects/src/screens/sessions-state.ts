@@ -14,7 +14,7 @@ import { matchesTaskQuery } from "../model/taskSearch";
 import { effectiveTaskGit, type GitStatus, watchSessionGit } from "../queries/taskGit";
 import { isSubtask } from "../model/taskAuthors";
 import { type Rama as RamaDeTareas, taskTree } from "../model/taskTree";
-import { buildTaskTree, taskIdentity, withTaskAncestors } from "@terminus/tasks";
+import { buildTaskTree, taskIdentity, withTaskAncestors } from "../../../../ui/src/lib/tasks/index.ts";
 import type { Aviso, Blockers, SessionRow, SessionsProps } from "./sessions-model";
 
 type EstadoDelWorktree = { available: boolean; owned: boolean };

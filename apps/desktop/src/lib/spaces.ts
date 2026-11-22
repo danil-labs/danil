@@ -1,4 +1,4 @@
-import { isSubtask, type LauncherRow } from "../../../../packages/tasks/src/flat.ts";
+import { isSubtask, type LauncherRow } from "../../../../packages/ui/src/lib/tasks/flat.ts";
 import { t } from "./i18n.ts";
 
 /**

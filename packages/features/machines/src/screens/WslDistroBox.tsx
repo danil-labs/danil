@@ -1,4 +1,4 @@
-import { isFreeRouterAgent, isRetiredAgent } from "@terminus/tasks";
+import { isFreeRouterAgent, isRetiredAgent } from "../../../../ui/src/lib/tasks/index.ts";
 import { invoke } from "@tauri-apps/api/core";
 import { For, Match, Show, Switch, createSignal, onMount } from "solid-js";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";

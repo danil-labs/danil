@@ -3,7 +3,7 @@
  * teléfono; las palabras de cada opción viven en `SIDEBAR_LABELS` de
  * `packages/ui` (el escritorio las lee de `shell.sidebar.view.*`).
  */
-import { type TaskActivity, type TaskState, taskPriority } from "../../ui/src/index.ts";
+import { type TaskActivity, type TaskState, taskPriority } from "../../index.ts";
 import { type WorkState, WORK_STATES } from "./workState.ts";
 
 /** Qué enseña la lista de tareas. `folders` vacío son todas las carpetas. */

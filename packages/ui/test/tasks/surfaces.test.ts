@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { chipModel, menuSurfaces, type Surface, surfaceHas, surfaceOf } from "../src/index.ts";
+import { chipModel, menuSurfaces, type Surface, surfaceHas, surfaceOf } from "../../src/lib/tasks/index.ts";
 
 const zen: Surface = { id: "opencode-zen", provider: "opencode-zen", label: "OpenCode", catalogo: "de_pago", usable: true, marca: null, porque: null };
 const free: Surface = { id: "opencode-zen:free", provider: "opencode-zen", label: "Modelos Free", catalogo: "gratuitos", usable: false, marca: "sin activar", porque: null };

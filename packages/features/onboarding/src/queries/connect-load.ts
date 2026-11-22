@@ -7,7 +7,7 @@ import type { Superficie } from "../../../../../apps/desktop/src/lib/surfaces.ts
 import { prosaDe } from "../../../../ui/src/Failure";
 import { accountKeyUrl } from "../../../../ui/src/lib/account-auth.ts";
 import { ORIGEN_SISTEMA } from "../../../../ui/src/lib/bundled.ts";
-import { canonicalAgentId, isFreeRouterAgent, isRetiredAgent } from "../../../../tasks/src/agents.ts";
+import { canonicalAgentId, isFreeRouterAgent, isRetiredAgent } from "../../../../ui/src/lib/tasks/agents.ts";
 import { CLAVES, EN_CURSO, explicar, type Fila, fueCancelada, type Modo, type Paso, posicion } from "./connect-rows";
 import { type Agente, cuentaConectada } from "./connect-login";
 import type { EstadoDeConexiones } from "./connect-state";

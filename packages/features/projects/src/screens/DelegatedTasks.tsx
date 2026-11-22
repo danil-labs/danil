@@ -10,7 +10,7 @@ import Sessions, { readableSessionTitle, type SessionRow } from "./Sessions";
 import { DelegatedSkeleton } from "../components/DelegatedSkeleton";
 import { DelegatedReference } from "../components/DelegatedReference";
 import { delegatedRailRows } from "../model/delegatedRail";
-import { type TaskTreeRow, taskDescendants } from "@terminus/tasks";
+import { type TaskTreeRow, taskDescendants } from "../../../../ui/src/lib/tasks/index.ts";
 import { taskPriority } from "../../../../ui/src/index";
 import { delegatedAttention } from "../model/delegatedRail";
 

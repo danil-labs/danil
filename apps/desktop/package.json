@@ -49,7 +49,6 @@
     "@tauri-apps/plugin-updater": "^2.14.1",
     "@terminus/computers": "workspace:*",
     "@terminus/fleet": "workspace:*",
-    "@terminus/tasks": "workspace:*",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "embla-carousel-solid": "^8.6.0",
