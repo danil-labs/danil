@@ -41,6 +41,8 @@ test("organization rail omits empty groups and headers, opens the chooser after 
   assert.match(doc.querySelector("[data-add-danil-step]").textContent, /Agregar workspace.*Inicia sesión y elige uno/);
   assert.doesNotMatch(doc.querySelector("[role=menu]").textContent, /Hay workspaces nuevos|Agregar cuenta u organización/);
   doc.querySelector("[data-add-danil-step]").click();
+  assert.ok(await until(() => [...doc.querySelectorAll('[role="menuitem"]')].some((b) => b.textContent === "Conectar otra cuenta")));
+  [...doc.querySelectorAll('[role="menuitem"]')].find((b) => b.textContent === "Conectar otra cuenta").click();
   assert.ok(await until(() => logins.length === 1));
   assert.equal(logins[0].mode, "add");
   assert.ok(await until(() => [...doc.querySelectorAll('[role="alert"] p')].some((p) => p.textContent === "Llegaste al máximo de 20 organizaciones conectadas. Cierra una para agregar otra.")), "the cause stays visible in the error Toast after the menu closes");
@@ -49,6 +51,8 @@ test("organization rail omits empty groups and headers, opens the chooser after 
   doc.querySelector("[data-add-workspace]").click();
   assert.ok(await until(() => doc.querySelector("[data-add-danil-step]")));
   doc.querySelector("[data-add-danil-step]").click();
+  assert.ok(await until(() => [...doc.querySelectorAll('[role="menuitem"]')].some((b) => b.textContent === "Conectar otra cuenta")));
+  [...doc.querySelectorAll('[role="menuitem"]')].find((b) => b.textContent === "Conectar otra cuenta").click();
   assert.ok(await until(() => logins.length === 2));
   status.sessions[0].contexts = status.sessions[0].contexts.filter((c) => c.context_id !== "a");
   app.emit("danil-connect", structuredClone(status));

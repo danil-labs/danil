@@ -143,7 +143,7 @@ test("Desk group can redeem only when its context says owner or admin", async ()
   assert.ok(await until(() => doc.querySelectorAll("[data-workspace-context]").length === roles.length));
   for (let i = 0; i < roles.length; i++) {
     openContextMenu(app, `role-${i}`);
-    assert.ok(await until(() => [...doc.querySelectorAll('[role="menuitem"]')].some((b) => b.textContent === `Cerrar sesión de Org ${i}`)));
+    assert.ok(await until(() => doc.querySelector(`[data-account-menu-context="role-${i}"]`)));
     assert.equal([...doc.querySelectorAll('[role="menuitem"]')].some((b) => b.textContent === "Canjear código"), roles[i] === "owner" || roles[i] === "admin", `Desk role ${roles[i]}`);
     escape(app); await sleep(50);
   }
