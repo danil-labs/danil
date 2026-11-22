@@ -1,16 +1,18 @@
 /**
  * Las máquinas de la organización por el borde (`/v1/machines`), vistas desde Desk.
- * Es el cliente único de `@terminus/computers` (`machines.ts`). Todas las llamadas al
+ * Usa el cliente único de máquinas (`platform-client/src/machines.ts`). Todas las llamadas al
  * borde pasan por el comando Rust `danil_edge_fetch`: el access vive en Rust y nunca
  * llega a la webview. Un 404 o un 501 llega como `not_available_yet` y la nube queda
  * «no disponible»: se oculta con gracia y se reintenta sola, guiada por
  * `GET /v1/capabilities` (Desk compilado no se recompila por cambios del servidor).
  * El canal de datos no pasa por aquí: va directo al relay con el ticket, solo a un origen exacto (`DEFAULT_RELAY_ORIGINS`).
  */
-import { type CapabilityList, type Computer, type Fetch, type MachinesAnswer, announces, capabilityList, machineToComputer, machinesClient, mayCall } from "@terminus/computers";
+import { type CapabilityList, type Computer, type Fetch, announces, capabilityList, mayCall } from "@terminus/computers";
+import { type MachinesAnswer, machineToComputer, machinesClient } from "../../../../platform-client/src/machines.ts";
 
 import { edgeUntil, type EdgeMethod, type EdgeReply as NativeReply, type Patience } from "../../../../platform-client/src/client.ts";
 import { capabilitiesUrl } from "../../../../platform-client/src/machines.ts";
+import { machinesQuery } from "./machines-query.ts";
 
 /** Solo una base para armar rutas `/v1/...`; la webview no llama a este origen (lo hace Rust). */
 export const EDGE_ENDPOINT = "https://edge.danil.ai/v1";
@@ -64,7 +66,7 @@ export function edgeFetch(invoke: Invoke, onProblem?: (error: unknown) => void, 
 
 export function createCloudMachines(invoke: Invoke, onProblem?: (error: unknown) => void, endpoint = EDGE_ENDPOINT) {
   const fetch = edgeFetch(invoke, onProblem);
-  const client = machinesClient({ endpoint, fetch });
+  const client = machinesQuery(machinesClient({ endpoint, fetch }));
   /**
    * Lo que el borde anuncia, con la lectura común de Desk y la web (`@terminus/computers`):
    * `denied` sin acceso; `null` sin catálogo (404/501); `undefined` un fallo transitorio

@@ -26,3 +26,28 @@ ignoran en R1–R5, R8 y R10 (no en R6 ni R9).
 - **R12:** `components/` no importa `queries` ni `@danil/{platform-client,engine-client,host,session}` (solo `import type`): datos y callbacks por props.
 - **R14:** sin `__TAURI__` ni `navigator.userAgent` fuera de `packages/host` y `apps/*`: la plataforma la dice `host.kind`.
 - **R2** cubre también `packages/shell` y `packages/session`.
+
+## Peticiones por recurso (`requests.mjs`)
+
+Plan front-move 3.2: una carga de la web pide cada recurso del borde una vez. Sirve la build web de
+`apps/desktop` (base `/`) con el borde simulado de `scripts/verify-parity/edge-fixtures.mjs`, abre la
+página como persona con sesión, espera `networkidle` + 3 s y cuenta los GET de `/v1/machines`,
+`/v1/identity/sessions`, `/v1/identity/sessions/catalog` y `/v1/identity/me`.
+
+```bash
+cd scripts/verify-parity && npm ci            # una vez (Playwright)
+node scripts/verify-front/requests.mjs        # machines=1 sessions=1 catalog=1 me=1
+REQUESTS_BUILD=1 node scripts/verify-front/requests.mjs   # recompila antes
+REQUESTS_VERBOSE=1 node scripts/verify-front/requests.mjs # lista cada petición con su contexto y tiempo
+```
+
+Sale 1 si alguno pasa de 1. Un recurso con contexto (`X-Danil-Session`) se cuenta por contexto: la lista
+de máquinas de dos organizaciones son dos recursos, y el número impreso es el máximo entre contextos.
+Si `dist-web` se compiló con otra base (move-gate usa `/terminus/`), recompila solo. El borde simulado
+repite `X-Danil-Session-Applied[-Org]` como el real: sin ese eco la web descarta cada respuesta con
+contexto y reintenta, y la cuenta no sería la de beta.
+
+Las lecturas se comparten con `sharedRead` (`packages/platform-client/src/shared-read.ts`): la misma
+lectura en curso, o la de hace menos de 3 s, para todos; un fallo no se guarda y una escritura la olvida.
+Máquinas: `features/machines/src/queries/machines-query.ts`. Sesión, catálogo y `me` en la web:
+`webSessionCommands` (`apps/desktop/src/web/web-session-contexts.ts`).

@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import { readFileSync, existsSync } from "node:fs";
 import { test } from "node:test";
-import { type Fetch, machinesClient, machineToComputer, powerOf } from "../src/index.ts";
+import { type Fetch, powerOf } from "../../computers/src/index.ts";
+import { machinesClient, machineToComputer } from "../src/machines.ts";
 
 type Call = { url: string; method: string; headers: Record<string, string>; body?: string };
 

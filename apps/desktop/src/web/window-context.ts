@@ -1,9 +1,10 @@
-import type { Machine, machinesClient } from "@terminus/computers";
+import type { Machine } from "../../../../packages/platform-client/src/machines.ts";
+import type { MachinesQuery } from "../../../../packages/features/machines/src/queries/machines-query.ts";
 import type { Fleet } from "@terminus/fleet";
 import type { GroupAccount } from "../lib/group-account.ts";
 import type { WebSessionCommands, WebSessionStatus } from "./web-session-contexts.ts";
 
-type Client = ReturnType<typeof machinesClient>;
+type Client = MachinesQuery;
 type Answer = Awaited<ReturnType<Client["list"]>>;
 /** Las lecturas que el motor responde por workspace (tareas, proyectos, cuentas, modelos). */
 const OF_THE_WORKSPACE = new Set(["list_live_sessions", "list_projects", "list_portfolios", "list_spaces", "list_accounts", "account_status", "list_models", "list_providers", "list_surfaces", "list_agents"]);
@@ -72,7 +73,7 @@ export function windowContext(options: { factory: (context: string) => Client; s
       for (const id of [...clients.keys()]) if (!ids.includes(id)) clients.delete(id);
       options.fleet().pruneContexts(ids);
       options.onContextsSettled?.(ids);
-      const answers = await Promise.all(settled.map(async (group) => ({ group, answer: await client(group.context).list().catch(() => ({ kind: "unavailable", status: 0 }) as Answer) })));
+      const answers = await Promise.all(settled.map(async (group) => ({ group, answer: await client(group.context).list(undefined, { fresh: true }).catch(() => ({ kind: "unavailable", status: 0 }) as Answer) })));
       // Un 401 de un contexto marca solo su grupo; uno que vuelve a contestar se desmarca.
       for (const { group, answer } of answers) if (answer.kind === "ok" || answer.kind === "unauthorized") options.onContextState?.(group.context, answer.kind === "unauthorized");
       const ok = answers.filter((a) => a.answer.kind === "ok");

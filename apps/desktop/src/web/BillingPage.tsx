@@ -1,4 +1,5 @@
-import { isOrganizationSelectionRequired, machinesClient } from "@terminus/computers";
+import { isOrganizationSelectionRequired } from "@terminus/computers";
+import { machinesClient } from "../../../../packages/platform-client/src/machines.ts";
 import { createEffect, createResource, createSignal, onCleanup, Show } from "solid-js";
 import { render } from "solid-js/web";
 import { aplicarLengua, t } from "../lib/i18n";

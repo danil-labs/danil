@@ -47,7 +47,8 @@ export type AttachmentsMountDeps = { advanceTurn: (id: string) => number; agent:
 
 /** Movido tal cual de packages/shell/src/app/App.tsx (líneas 2006–2194, tarea 2.5). Lo que usaba del cuerpo de App llega por `deps`. */
 export function createAttachmentsMount(deps: AttachmentsMountDeps) {
-  const { advanceTurn, agent, aplicar, asleep, bloqueo, closeActiveTab, composer, conversationScope, createBatchDelivery, enCache, finishedTurns, grupos, handoff, hilos, leerTarea, listaBasta, loadResult, marcarQuieta, pestanas, project, projectCatalog, recargarMaterial, reconciliar, refreshSessions, releerProyectos, sessionId, setBloqueo, setEnCache, setEnFondo, setPermissions, setSesiones, setSettings, setSettlingTurns, setStartupReadError, soltarHilo, tareaDelRiel, taskQueues, threads, turnRevisions, vivas, workspaceContext } = deps;
+  const { advanceTurn, agent, aplicar, asleep, bloqueo, closeActiveTab, composer, conversationScope, createBatchDelivery, enCache, finishedTurns, grupos, handoff, hilos, leerTarea, listaBasta, loadResult, marcarQuieta, pestanas, project, projectCatalog, recargarMaterial, reconciliar, refreshSessions, sessionId, setBloqueo, setEnCache, setEnFondo, setPermissions, setSesiones, setSettings, setSettlingTurns, setStartupReadError, soltarHilo, tareaDelRiel, taskQueues, threads, turnRevisions, vivas, workspaceContext } = deps;
+  const releerProyectos = ((...a: Parameters<typeof deps.releerProyectos>) => deps.releerProyectos(...a)) as typeof deps.releerProyectos;
   const mandarElegido: AttachmentsMountDeps["mandarElegido"] = (...a: Parameters<AttachmentsMountDeps["mandarElegido"]>) => deps.mandarElegido(...a);
   const releerUna: AttachmentsMountDeps["releerUna"] = (...a: Parameters<AttachmentsMountDeps["releerUna"]>) => deps.releerUna(...a);
   const soltarTerminal: AttachmentsMountDeps["soltarTerminal"] = (...a: Parameters<AttachmentsMountDeps["soltarTerminal"]>) => deps.soltarTerminal(...a);
