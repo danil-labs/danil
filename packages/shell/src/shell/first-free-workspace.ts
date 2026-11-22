@@ -15,7 +15,7 @@ import { ADDED_KEY, edgeAddedTransport, prefsAddedStore } from "./workspace-adde
 import { sendIdentityMe } from "../../../platform-client/src/identity.ts";
 
 export type FirstFreeOptions = { delays?: readonly number[]; wait?: (ms: number) => Promise<void> };
-export type FirstFreeRefusal = "no_session" | "engine_unsupported" | "refresh_failed" | "not_available_yet";
+type FirstFreeRefusal = "no_session" | "engine_unsupported" | "refresh_failed" | "not_available_yet";
 
 /**
  * Las esperas entre lecturas, con retroceso: ~30 s en total. Una cuenta nueva

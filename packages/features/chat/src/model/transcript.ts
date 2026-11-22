@@ -17,6 +17,3 @@ export * from "./transcript-render.ts";
  * pantalla: vive en `packages/ui/src/lib/chat/tools.ts`, junto con la marca del servicio.
  */
 export { mcpCallFromName };
-
-/** El modelo que se muestra al abrir una tarea; la misma regla en el teléfono (`packages/ui/src/lib/tasks/index.ts`). */
-export { chipModel as modeloDeSubtarea } from "../../../../ui/src/lib/tasks/surfaces.ts";

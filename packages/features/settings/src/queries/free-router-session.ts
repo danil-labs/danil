@@ -11,7 +11,7 @@ export type FreeRouterHost = {
 };
 
 /** El código con que el motor nuevo contesta `set_provider_consent` en un workspace que no es personal. */
-export const PLATFORM_REQUIRED = "free_router.platform_required";
+const PLATFORM_REQUIRED = "free_router.platform_required";
 
 let host: FreeRouterHost | null = null;
 const routers = new Map<string, FreeRouterPlatform>();

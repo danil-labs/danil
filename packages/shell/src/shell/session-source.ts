@@ -15,7 +15,7 @@ type Listen = <T>(event: string, on: (e: { payload: T }) => void) => Promise<() 
 
 export const ENGINE_SESSION_FEATURE = "person_session_v1";
 
-export function deskSessionSource(invoke: Invoke, listen?: Listen): SessionSource {
+function deskSessionSource(invoke: Invoke, listen?: Listen): SessionSource {
   return {
     origin: "desk",
     read: () => invoke<PersonSession>("danil_session_status").then((s) => s ?? null),

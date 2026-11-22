@@ -205,4 +205,4 @@ function claseDeSistema(meta: string | undefined): Clase {
   if (meta === "fin") return "fin";
   return "aviso";
 }
-export { SelectorDeModelo, type Bloque, type Avance, type BloqueDeMensaje, type BloqueDePasos, type BloqueDeTrabajo, METRICA_DEL_CAMPO, FUENTE_DE_TERMINAL, archivosDelNavegador, mensajeDe, pasosDe, trabajoDe, fromWork, SIN_MENSAJE, SIN_AVANCE, SOLTAR_LO_LEIDO_MS, ANCHO_DEL_RIEL, mismoRemitente, ESPERA_DEL_RIEL_MS, DESFASE_DEL_SALTO, activitySteps, claveDeTrabajo, claveDeBloque, textoVisible, esInterrupcion, HILO_POR_TRAMOS, FILAS_ANTES_DE_PEDIR, FILA_DEL_MENSAJE, TOPE_MENU, filterMentionSources, textoDeSistema, claseDeSistema };
+export { SelectorDeModelo, type Bloque, type Avance, type BloqueDeTrabajo, METRICA_DEL_CAMPO, FUENTE_DE_TERMINAL, archivosDelNavegador, mensajeDe, pasosDe, trabajoDe, fromWork, SIN_MENSAJE, SIN_AVANCE, SOLTAR_LO_LEIDO_MS, ANCHO_DEL_RIEL, mismoRemitente, ESPERA_DEL_RIEL_MS, DESFASE_DEL_SALTO, activitySteps, claveDeTrabajo, claveDeBloque, textoVisible, esInterrupcion, HILO_POR_TRAMOS, FILAS_ANTES_DE_PEDIR, FILA_DEL_MENSAJE, filterMentionSources, textoDeSistema, claseDeSistema };

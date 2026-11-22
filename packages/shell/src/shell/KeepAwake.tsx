@@ -10,7 +10,7 @@ import { Pressable } from "../../../ui/src/Pressable";
 
 export type Mode = "on" | "agent" | "off";
 
-export interface Status {
+interface Status {
   mode: Mode;
   active: boolean;
   supported: boolean;
@@ -18,7 +18,7 @@ export interface Status {
 
 export const MODES: Mode[] = ["on", "agent", "off"];
 
-export function nameOf(mode: Mode): string {
+function nameOf(mode: Mode): string {
   switch (mode) {
     case "on":
       return t("shell.keep_awake.on");
@@ -29,7 +29,7 @@ export function nameOf(mode: Mode): string {
   }
 }
 
-export function descriptionOf(mode: Mode): string {
+function descriptionOf(mode: Mode): string {
   switch (mode) {
     case "on":
       return t("shell.keep_awake.on.description");
@@ -45,7 +45,7 @@ export function descriptionOf(mode: Mode): string {
  * un agente en el riel: el servicio avisa a todos con `keep-awake-changed`, así
  * que cambiarlo en uno se ve en el otro.
  */
-export function watchKeepAwake() {
+function watchKeepAwake() {
   const [status, setStatus] = createSignal<Status | null>(null);
 
   void invoke<Status>("keep_awake_status").then(setStatus).catch(() => {});

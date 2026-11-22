@@ -5,10 +5,10 @@ import { t } from "../../../../../apps/desktop/src/lib/i18n.ts";
  * uno probado con un código. El servidor decide; aquí solo la forma y el orden.
  */
 
-export type AccountEmail = { email: string; primary: boolean; verified: boolean };
-export type PendingEmail = { email: string; resendAfter: number };
+type AccountEmail = { email: string; primary: boolean; verified: boolean };
+type PendingEmail = { email: string; resendAfter: number };
 export type AccountEmails = { emails: AccountEmail[]; pending: PendingEmail[] };
-export type CodeSent = { email: string; expiresIn: number; resendAfter: number };
+type CodeSent = { email: string; expiresIn: number; resendAfter: number };
 
 export type AccountEmailsSource = {
   list(): Promise<AccountEmails>;
@@ -47,7 +47,7 @@ export function emailRows(list: AccountEmails): EmailRow[] {
 export const EMAIL_SHAPE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
 /** Códigos con texto propio en el catálogo (`danil.emails.error.*`). */
-export const EMAIL_ERRORS = [
+const EMAIL_ERRORS = [
   "code_invalid",
   "code_expired",
   "no_challenge",

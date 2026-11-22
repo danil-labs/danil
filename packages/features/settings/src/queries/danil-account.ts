@@ -9,7 +9,7 @@ import { signOutPlatform } from "./free-router-session.ts";
 import { invoke } from "../../../../engine-client/src/client.ts";
 import { forgetMachineNames } from "../../../../session/src/known-machine-names.ts";
 
-export type DanilConnectState = "disconnected" | "pending" | "connected" | "error";
+type DanilConnectState = "disconnected" | "pending" | "connected" | "error";
 
 export type DanilConnectStatus = {
   state: DanilConnectState;

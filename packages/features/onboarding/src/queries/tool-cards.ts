@@ -1,8 +1,8 @@
 import { invoke } from "../../../../engine-client/src/client.ts";
 import type { Frase } from "../../../../../apps/desktop/src/lib/prose";
 
-export type Wait = { code: string; url: string };
-export type Campo = { id: string; label: Frase; help: Frase; required: boolean };
+type Wait = { code: string; url: string };
+type Campo = { id: string; label: Frase; help: Frase; required: boolean };
 export type Proveedor = {
   id: string;
   name: string;
@@ -18,7 +18,7 @@ export type Conocido = { id: string; grupo: string; pide_sesion: boolean; conect
 export type VinculoBib = { archivo: string; coleccion?: string; ids?: string[]; sincronizado?: number; fallo?: string };
 export type AgenteMcp = { id: string; label: string; recibe: boolean; instalado: boolean; login?: boolean };
 export type Plugin = { id: string; installed: boolean; installing: boolean; supported: boolean };
-export type FalloDelMotor = { what: Frase; detail?: string };
+type FalloDelMotor = { what: Frase; detail?: string };
 export type AvanceDeDrive = {
   kind: "progress" | "verifying" | "done" | "cancelled" | "error" | "connection";
   received?: number;

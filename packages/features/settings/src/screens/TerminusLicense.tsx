@@ -11,7 +11,7 @@ import { Button } from "../../../../ui/src/Button";
 /** El código con que el plano de control (o el motor) dice que la cuenta no tiene Terminus. */
 export const LICENSE_REQUIRED = "license_required";
 
-export const accessRequestHref = () => accessMailto(t("danil.license.request_subject"));
+const accessRequestHref = () => accessMailto(t("danil.license.request_subject"));
 
 /** En la web, el cliente de correo del navegador. */
 export const requestAccessInPage = () => window.location.assign(accessRequestHref());

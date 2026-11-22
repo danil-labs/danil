@@ -5,7 +5,7 @@ import type { EstadoLocal, MarcaLocal } from "../../../../ui/src/lib/localStatus
 import type { Machine } from "../../../../ui/src/lib/machine";
 
 /** Lo que el alta y el perfil de un agente le pasan al selector de modelo de chat. */
-export type SelectorDeModeloProps = {
+type SelectorDeModeloProps = {
   createFreeRouterConsent: CreateFreeRouterConsent;
   models: OpcionDeModelo[];
   superficie: string;

@@ -1,5 +1,5 @@
 /** Espejo de `Opcion` en `src-tauri/src/runtime/questions.rs`. */
-export type Opcion = { value: string; label: string; detail?: string | null };
+type Opcion = { value: string; label: string; detail?: string | null };
 
 /** Espejo de `Pregunta`. Lo que el agente necesita saber y no puede deducir. */
 export type Pregunta = {

@@ -38,6 +38,3 @@ export const readDrawioAsset = (path: string): Promise<string> =>
 
 export const listIntegrations = (): Promise<(Plugins)> =>
   invoke<(Plugins)>("list_integrations");
-
-export const mcpLogin = (provider: string, id: string): Promise<void> =>
-  invoke("mcp_login", { provider, id });

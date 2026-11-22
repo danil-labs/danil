@@ -2,7 +2,7 @@
  * Liga los locales antes de montar la app, sin el riel (como el alta en `first-free-workspace.ts`):
  * lee sus propios contextos, abre la personal si falta y adopta. Lo que no termina sigue en el riel.
  */
-import { type AdoptionStep, linkingOutcome } from "./first-login.ts";
+import { linkingOutcome } from "./first-login.ts";
 import { createPersonalOpener } from "./personal-open.ts";
 import { createAccountWorkspaces } from "./session-account-workspaces.ts";
 import type { ContextInvoke } from "./session-context-types.ts";
@@ -36,5 +36,3 @@ export function createLinker(invoke: ContextInvoke, features: () => Promise<read
     },
   };
 }
-
-export type LinkRow = { id: string; name: string; step: AdoptionStep };

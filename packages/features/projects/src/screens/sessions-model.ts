@@ -17,14 +17,6 @@ export type Blockers = {
 export type Aviso = { id: string; finish: boolean; rect?: DOMRect; blockers: Blockers };
 
 /** El título de un tema; el de la Bandeja sale del catálogo, no de `session.json`. */
-/** El nombre del agente en la pastilla de la fila: diez caracteres como mucho,
- *  para que el mensaje de al lado conserve su sitio. Completo en el `title`. */
-const AGENT_NAME_MAX = 10;
-export function shortAgentName(nombre: string): string {
-  const letras = [...nombre];
-  return letras.length > AGENT_NAME_MAX ? `${letras.slice(0, AGENT_NAME_MAX - 1).join("")}…` : nombre;
-}
-
 /**
  * La hora corta de la tarjeta del riel: `ahora`, `4m`, `2h`, `ayer`, `3d` dentro
  * de la semana y después la fecha (`12 oct`). No es un contador: se escribe al

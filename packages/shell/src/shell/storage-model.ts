@@ -3,7 +3,7 @@ import { t } from "../../../../apps/desktop/src/lib/i18n";
 import { haceCuanto } from "../../../../apps/desktop/src/lib/limits";
 export { type Machine, machineName, machines as fleetMachines } from "../../../features/machines/src/queries/store";
 
-export type Clase = "recuperable" | "git" | "fuente" | "trabajo" | "registro";
+type Clase = "recuperable" | "git" | "fuente" | "trabajo" | "registro";
 
 export type Bloque = { rel: string; clase: Clase; bytes: number };
 
@@ -20,9 +20,9 @@ export type TareaConPeso = {
   actividad?: number;
 };
 
-export type Suelto = { etiqueta: string; bytes: number; rel: string | null };
+type Suelto = { etiqueta: string; bytes: number; rel: string | null };
 
-export type GrupoArchivado = {
+type GrupoArchivado = {
   cuantas: number;
   bytes: number;
   recuperable: number;
@@ -58,7 +58,7 @@ export type Grupo = {
   recuperable: number;
 };
 
-export const DIA_MS = 86_400_000;
+const DIA_MS = 86_400_000;
 
 export function actividadDe(ms: number | undefined): string {
   if (!ms) return "";

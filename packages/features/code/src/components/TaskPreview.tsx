@@ -44,4 +44,4 @@ export default function VistaPreviaDeTarea(props: {
 }
 
 /** La clave del árbol mientras no hay tarea; el reatado la sustituye. */
-export const ARBOL_DE_VISTA_PREVIA = ".preview";
+const ARBOL_DE_VISTA_PREVIA = ".preview";

@@ -2,7 +2,7 @@
  * `busy` (danil-engine#507): el motor está ligando workspaces y no tuvo el turno para cambiar de
  * organización. No se ejecutó nada: repetir la misma petición con la misma clave es seguro.
  */
-export const BUSY = "busy";
+const BUSY = "busy";
 const WAITS = [500, 1000];
 const pause = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 

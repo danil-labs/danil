@@ -3,7 +3,7 @@ import { Popover, PopoverContent } from "../../../../ui/src/Popover";
 import { threadTitle } from "../screens/Sessions";
 import type { TaskHoverCardProps } from "./TaskHoverCard";
 
-export const TASK_HOVER_CARD_DELAY = 400;
+const TASK_HOVER_CARD_DELAY = 400;
 const CLOSE_DELAY = 150;
 
 // El cuerpo de la tarjeta no entra en la carga inicial: solo hace falta al pasar por una fila.

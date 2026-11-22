@@ -17,7 +17,7 @@ export type AttentionState = "unseen" | "asked" | "approving" | "failed";
 
 export type TaskAttention = { session: string; project: string; state: AttentionState; };
 
-export type WorkspaceAttention = { workspace: string; tasks: TaskAttention[]; };
+type WorkspaceAttention = { workspace: string; tasks: TaskAttention[]; };
 
 export type AttentionStore = { list: Accessor<WorkspaceAttention[]>; of: (workspace: string | null) => TaskAttention[]; unseen: (workspace: string | null) => Set<string>; markSeen(workspace: string, session: string): void; };
 
