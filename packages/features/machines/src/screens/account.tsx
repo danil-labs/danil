@@ -34,9 +34,8 @@ import { listenDanilConnectionChange } from "../../../../../apps/desktop/src/lib
 import { whenConnected } from "../../../../../apps/desktop/src/lib/engineConnection";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { type Capabilities, capabilities, setCapabilities } from "../../../../host/src/platform";
-import { leerPref } from "../../../../../apps/desktop/src/lib/prefs";
 import { deliver, listen } from "../../../../../apps/desktop/src/lib/serviceEvents";
-import { isMac, isWindows } from "../../../../host/src/window";
+import { isMac } from "../../../../host/src/window";
 import type { MachineStatus } from "../../../../../apps/desktop/src/web/SyncNote";
 import AccountMachines from "./AccountMachines";
 import { mergeBridgeInventory } from "../model/bridge-inventory";
@@ -49,27 +48,11 @@ import { guestChannels } from "../queries/guestChannels";
 import { createGuestLink, guestMachineInfo, isGuestMachine, wakeGuestMachine } from "../queries/guestLink";
 import { MachinePicker } from "./MachinePicker";
 import { infoOf } from "../model/machine-info";
-import { createRouter, type Invoke, type Router, type SliceChange } from "../queries/router";
+import { createRouter, type Invoke } from "../queries/router";
 import { createSessionCloud } from "../queries/session-cloud";
 import { machineNamesChanged, refetchMachines, setCloudInventory } from "../queries/store";
 import type { WslChild } from "../model/wsl";
-
-type Internals = { invoke: Invoke };
-type Target = Window & { __TAURI_INTERNALS__?: Internals };
-
-/** `account_relay_token` (`proxy.rs`): the engine's short-lived client token of the account. */
-type ClientToken = { token: string; expires_at: number; endpoint: string; computer_id: string };
-type DanilStatus = { state: string; computer_id?: string | null };
-
-const RELIST = 10 * 60_000;
-const TOKEN_MARGIN = 60_000;
-
-/** Who the fan-out is for: this computer, its account and the control plane. Another one installs anew. */
-/** Sin cuenta: esta computadora es `"local"` (`machine_list`), como en el resto de la ventana. */
-const LOCAL = "local";
-const LOCAL_KEY = JSON.stringify([LOCAL, null, null]);
-
-type Installed = { key: string; fleet: Fleet; router: Router; restore: () => void };
+import { RELIST, TOKEN_MARGIN, LOCAL, LOCAL_KEY, windowSystem, refresh, slicesChanged, pickedFor, type Internals, type Target, type ClientToken, type DanilStatus, type Installed } from "./account-helpers";
 
 let started = false;
 
@@ -96,31 +79,6 @@ let syncing: Promise<void> | null = null;
 /** El nombre con que la cuenta conoce a esta computadora («Macbook m4»); sin él, «Esta Mac». */
 const [selfName, setSelfName] = createRoot(() => createSignal<string | null>(null));
 const homeName = () => selfName() ?? (isMac() ? t("shell.machines.this_mac") : t("shell.machines.this_computer"));
-
-/** Sistema de la ventana de escritorio. La web no carga este módulo. */
-function windowSystem(): SystemId {
-  if (isMac()) return "macos";
-  if (isWindows()) return "windows";
-  return "linux";
-}
-
-/** Tell every list of the window to read again: the machines behind it changed. */
-function refresh() {
-  for (const name of ["harness:workspace-name", "harness:sources", "harness:tasks-changed", "harness:service-resync"]) {
-    window.dispatchEvent(new CustomEvent(name));
-  }
-  void refetchMachines();
-}
-
-/** Another machine's slice changed: the window rereads just that. */
-function slicesChanged(changes: SliceChange[]) {
-  if (changes.includes("workspaces")) window.dispatchEvent(new CustomEvent("harness:workspace-name"));
-  window.dispatchEvent(new CustomEvent("harness:machine-slices", { detail: { changes } }));
-  if (changes.includes("attention")) window.dispatchEvent(new CustomEvent("harness:service-resync"));
-}
-
-/** The machine picked in «Ejecutar en» for `workspace` (`store.ts`), remembered per workspace. */
-const pickedFor = (workspace: string | null) => (workspace ? (leerPref<Record<string, string>>("machines.run_on", {})[workspace] ?? null) : null);
 
 /** `railSession` es la sesión del riel de la cuenta: la pasa el shell, que es quien la conoce. */
 export function startAccountMachines<DanilSessionInfo, WorkspaceAccount>(
