@@ -212,6 +212,33 @@ export async function handleEdgeRoute(route) {
         body: JSON.stringify(mockData.capabilities)
       });
     }
+
+    if (pathname === "/v1/workspaces/preferences") {
+      const added = mockData.workspaces.map(w => `ws_${w.id}`);
+      return route.fulfill({
+        status: 200,
+        headers: jsonHeaders,
+        body: JSON.stringify({ version: 1, added, updated_at: "2026-11-21T00:00:00Z" })
+      });
+    }
+  }
+
+  if (method === "PUT") {
+    if (pathname === "/v1/workspaces/preferences" || pathname.startsWith("/v1/workspaces/preferences/added/")) {
+      return route.fulfill({
+        status: 204,
+        headers: jsonHeaders
+      });
+    }
+  }
+
+  if (method === "DELETE") {
+    if (pathname.startsWith("/v1/workspaces/preferences/added/")) {
+      return route.fulfill({
+        status: 204,
+        headers: jsonHeaders
+      });
+    }
   }
 
   if (method === "POST") {
@@ -239,6 +266,44 @@ export async function handleEdgeRoute(route) {
         body: JSON.stringify({ active_organization_id: targetId })
       });
     }
+
+    // Borde real (~/work/terminus-workspace/repos/edge/src/routing.ts:70 y docs/contracts/mvp-v1/machines.openapi.yaml):
+    // POST /v1/machines/{machine_id}/tickets emite un ticket de relay; si la máquina está apagada y no lleva wake, responde 409 machine_stopped.
+    const ticketMatch = pathname.match(/^\/v1\/machines\/([^/]+)\/tickets$/);
+    if (ticketMatch) {
+      const machineId = ticketMatch[1];
+      const machine = mockData.machines.find(m => m.machine_id === machineId);
+      let body = {};
+      try { body = req.postDataJSON() || {}; } catch {}
+      if (machine?.state === "stopped" && !body.wake) {
+        return route.fulfill({
+          status: 409,
+          headers: {
+            "content-type": "application/problem+json",
+            "access-control-allow-origin": origin,
+            "access-control-allow-credentials": "true",
+            "access-control-expose-headers": "x-danil-session-applied, x-danil-session-applied-org, retry-after, location",
+            ...echo
+          },
+          body: JSON.stringify({
+            type: "urn:danil:problem:machine_stopped",
+            title: "Machine Stopped",
+            status: 409,
+            code: "machine_stopped",
+            detail: "machine_stopped"
+          })
+        });
+      }
+      return route.fulfill({
+        status: 201,
+        headers: jsonHeaders,
+        body: JSON.stringify({
+          ticket: `tkt_${machineId}`,
+          url: `wss://connect.danil.ai/v1/machines/${machineId}/session`,
+          protocol: "danil.machine-session.v1"
+        })
+      });
+    }
   }
 
   // 404 problem+json for everything else
@@ -260,4 +325,54 @@ export async function handleEdgeRoute(route) {
 
 export async function attachFixtures(page) {
   await page.route("https://edge.danil.ai/**", handleEdgeRoute);
+
+  let cursor = 0;
+  await page.routeWebSocket("**/v1/machines/**", (ws) => {
+    ws.send(JSON.stringify({ type: "state", state: "online" }));
+    ws.send(JSON.stringify({ type: "engine", contract: "1", host_version: "1.0.0" }));
+    ws.onMessage((raw) => {
+      let msg;
+      try { msg = JSON.parse(raw); } catch { return; }
+      if (msg.type === "ping") {
+        ws.send(JSON.stringify({ type: "pong", t: msg.t }));
+      } else if (msg.type === "auth") {
+        ws.send(JSON.stringify({ type: "auth", expires_at: new Date(Date.now() + 600000).toISOString() }));
+      } else if (msg.type === "subscribe") {
+        ws.send(JSON.stringify({ type: "events", runtime: "rt1", cursor: ++cursor, replay: false, events: [] }));
+      } else if (msg.type === "call") {
+        let value = [];
+        if (msg.command === "list_workspace_attention") {
+          value = [];
+        } else if (msg.command === "workspaces_startup" || msg.command === "list_workspaces") {
+          value = { workspaces: mockData.workspaces.map(w => ({ id: `ws_${w.id}`, name: w.name, context_root: null })), active: "ws_1" };
+        } else if (msg.command === "list_projects") {
+          value = [{ id: "p1", name: "Proyecto 1", working_directory: "/lab/p1", kind: "git", portfolio: null, sources: [] }];
+        } else if (msg.command === "list_live_sessions") {
+          value = [{ id: "t1", title: "Tarea de prueba", last_message: "Primera tarea", provider: "codex", model: "gpt-5.6", refs: [], created_at: 1000, updated_at: 1000, turns: 1, parent: null, esperando: false }];
+        } else if (msg.command === "load_session") {
+          value = {
+            id: "t1",
+            provider: "codex",
+            sources: [],
+            model: "gpt-5.6",
+            effort: null,
+            permission_mode: null,
+            turns: [
+              { role: "user", id: "u1", at: 1, text: "Primera tarea" },
+              { role: "assistant", id: "a1", at: 2, text: "Respuesta del agente" }
+            ]
+          };
+        } else if (msg.command === "list_surfaces") {
+          value = [{ id: "codex", provider: "codex", label: "Codex", catalogo: "todo", usable: true, marca: null, porque: null }];
+        } else if (msg.command === "list_models") {
+          value = { provider: "codex", models: [{ id: "gpt-5.6", label: "GPT-5.6", gratis: null, note: null, efforts: [], default_effort: null }], fallback: false };
+        } else if (msg.command === "list_providers") {
+          value = [{ id: "codex", label: "Codex", available: true, driver: true }];
+        } else if (msg.command === "task_history") {
+          value = { history: { archived: false, events: [], recovery: null }, branch: null, path: "/lab", available: true, owned: false, restorable: false, recreatable: false, incomplete: false };
+        }
+        ws.send(JSON.stringify({ type: "result", id: msg.id, value }));
+      }
+    });
+  });
 }
