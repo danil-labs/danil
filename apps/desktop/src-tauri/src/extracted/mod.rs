@@ -469,6 +469,7 @@ fn start(client: Option<Arc<Client>>, autostart: bool, launcher: launcher::Launc
                 page_preview::atender(ctx.app_handle().clone(), request, responder)
             },
         )
+        .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())

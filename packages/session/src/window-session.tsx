@@ -1,3 +1,4 @@
+import { parseWorkspaceAddLink } from "../../../apps/desktop/src/lib/workspace-add-link";
 import { createRoot, createSignal, Show } from 'solid-js';
 import { render } from 'solid-js/web';
 import { forgetMachineNames } from './known-machine-names';
@@ -67,6 +68,15 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
     let timer: ReturnType<typeof setTimeout> | undefined;
     let wait = FIRST_RETRY_MS;
     const home = new URL(import.meta.env.BASE_URL, window.location.origin).href;
+    const returnSearch = new URLSearchParams(window.location.search);
+    let harnessWorkspace = parseWorkspaceAddLink(returnSearch);
+    const loginReturn = new URL(home);
+    if (harnessWorkspace) {
+      for (const key of ["add_workspace", "org", "workspace", "account"]) {
+        const value = returnSearch.get(key);
+        if (value) loginReturn.searchParams.set(key, value);
+      }
+    }
     const permits = (name: string) => supports(caps(), name);
     const gone = () => stopped || signedOut() || exit.leaving();
     const sessions = webSessionCommands(raw, { expired: () => expired() });
@@ -97,7 +107,7 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
       windowApp = undefined;
       disposeGate?.();
       root.replaceChildren();
-      disposeGate = render(() => <Show when={identified() && !signedOut() && !preparing()} fallback={<><ToastStack><UpdateNotice /></ToastStack><Show when={signedOut() || returnError} fallback={<SessionLoading onSignOut={preparing() ? () => void exit.leave() : undefined} />}><WorkosAuthPage loginUrl={api.loginUrl(home)} error={returnError} /></Show></>}><main class="flex h-full flex-col gap-4 overflow-y-auto bg-bg p-10 text-neutral-950" data-web-gate="">
+      disposeGate = render(() => <Show when={identified() && !signedOut() && !preparing()} fallback={<><ToastStack><UpdateNotice /></ToastStack><Show when={signedOut() || returnError} fallback={<SessionLoading onSignOut={preparing() ? () => void exit.leave() : undefined} />}><WorkosAuthPage loginUrl={api.loginUrl(loginReturn.href)} error={returnError} /></Show></>}><main class="flex h-full flex-col gap-4 overflow-y-auto bg-bg p-10 text-neutral-950" data-web-gate="">
         <ToastStack><UpdateNotice /></ToastStack>
         <h1 class="m-0 font-display text-lead font-bold">{t('common.brand_name')}</h1>
         <Show when={error()}><p role="alert">{t(error())}</p><Button onClick={() => void load()}>{t('web.computers.retry')}</Button></Show>
@@ -174,7 +184,7 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
       setShellCacheScope({ mine: () => false, prefer: null });
       disposeGate?.();
       disposeGate = undefined;
-      const picker = webWorkspacePicker(plain, { store: window.sessionStorage, signIn: organization => window.location.assign(api.loginUrl(home, organization)) });
+      const picker = webWorkspacePicker(plain, { store: window.sessionStorage, takeHarnessWorkspace: () => { const link = harnessWorkspace; harnessWorkspace = null; return link; }, signIn: organization => window.location.assign(api.loginUrl(loginReturn.href, organization)) });
       const organizations = active.organizations(() => sessions.handle('danil_session_status'));
       setFreeRouterHost({ edge: freeRouterWebEdge(transport), engine: policy => freeRouterEngine(policy ? freeModelScope(policy) : undefined),
         identity: active.freeRouterIdentity(rail.accountOf) });

@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { createRoot } from 'solid-js';
-import { createHiddenWorkspaces, keepSlots, matchesName, railHidden, railVisible } from '../../src/features/shell/hidden-workspaces.ts';
-import { danilToAdd, railWithDanil } from '../../src/features/shell/danil-rail.ts';
-import { capabilities, setCapabilities } from '../../src/lib/platform.ts';
+import { createHiddenWorkspaces, keepSlots, matchesName, railHidden, railVisible } from '../../../../packages/shell/src/shell/hidden-workspaces.ts';
+import { danilToAdd, railWithDanil } from '../../../../packages/shell/src/shell/danil-rail.ts';
+import { capabilities, setCapabilities } from '../../../../packages/host/src/platform.ts';
 
 const rail = [{ id: 'a', name: 'Alfa' }, { id: 'b', name: 'Beta' }, { id: 'c', name: 'Canción' }, { id: 'd', name: 'Delta' }];
 const ids = (list: { id: string }[]) => list.map(w => w.id);
@@ -108,7 +108,7 @@ test('without the source or the added list the rail stays as it was, and nothing
 });
 
 test('a Danil tile says so to who cannot see its mark; a local one does not', async () => {
-  const { tileLabel } = await import('../../src/features/shell/danil-rail.ts');
+  const { tileLabel } = await import('../../../../packages/shell/src/shell/danil-rail.ts');
   const t = (key: string, v: Record<string, string>) => key === 'shell.workspaces.danil_tile' ? `${v.name}, workspace de Danil` : `${v.name}: ${v.state}`;
   assert.equal(tileLabel('Acme', true, null, t), 'Acme, workspace de Danil');
   assert.equal(tileLabel('Acme', true, 'Espera', t), 'Acme, workspace de Danil: Espera');
@@ -117,7 +117,7 @@ test('a Danil tile says so to who cannot see its mark; a local one does not', as
 });
 
 test('regression: on entering, a Danil workspace the person did not add is not the open one', async () => {
-  const { openOnStart } = await import('../../src/features/shell/danil-rail.ts');
+  const { openOnStart } = await import('../../../../packages/shell/src/shell/danil-rail.ts');
   const list = [{ id: 'local' }, { id: 'acme' }, { id: 'ops' }, { id: 'old' }];
   const available = [{ id: 'acme', name: 'Acme' }, { id: 'ops', name: 'Ops' }, { id: 'labs', name: 'Labs' }];
   assert.equal(openOnStart(list, 'ops', new Set(), { available, added: new Set(['labs', 'acme']) }), 'acme', 'the first added in the rail');
