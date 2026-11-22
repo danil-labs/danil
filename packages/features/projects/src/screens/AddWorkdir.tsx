@@ -19,7 +19,6 @@ import { capabilities } from "../../../../host/src/platform";
 import { leerPref } from "../../../../../apps/desktop/src/lib/prefs";
 import type { Project } from "../../../../../apps/desktop/src/lib/model";
 import { LazyPart, retryableLazy } from "../../../../ui/src/LazyPart";
-import { machineName, machines, runOn } from "../../../machines/src/queries/store";
 
 const RepositoryPicker = retryableLazy(() => import("../components/RepositoryPicker"));
 
@@ -86,6 +85,9 @@ export default function AnadirCarpeta(props: {
   onHecho: (p: Project, activate: boolean) => Promise<void> | void;
   /** Lo que el riel enseña del clon. `null` es que no hay ninguno. */
   onClon: (clon: ClonEnCurso | null) => void;
+  machines: () => { id: string; local: boolean; hosts: boolean | null }[];
+  runOn: (workspace: string | null) => string | null;
+  machineName: (id: string) => string;
 }) {
   const [camino, setCamino] = createSignal<"clonar" | "vacia" | null>(null);
   const [directorio, setDirectorio] = createSignal<string | null>(null);
@@ -108,14 +110,14 @@ export default function AnadirCarpeta(props: {
   // Se relee al abrir: el escritorio instala sus máquinas después de montar esto.
   const remota = createMemo(() => {
     void props.abierto;
-    runOn(props.workspace);
-    machines();
+    props.runOn(props.workspace);
+    props.machines();
     return capabilities().remoteCreate?.(props.workspace) ?? null;
   });
   const enRemota = () => (remota() ? { headers: { "x-terminus-machine": remota()?.machine as string } } : undefined);
   /** La máquina elegida en «Creado en», también esta: sin la cabecera la orden iría a la del workspace. */
   const enElegida = () => enRemota() ?? (aqui() ? { headers: { "x-terminus-machine": aqui() as string } } : undefined);
-  const aqui = () => machines().find((m) => m.local)?.id ?? null;
+  const aqui = () => props.machines().find((m) => m.local)?.id ?? null;
   const spaceAlli = () => (remota() && !remota()?.lead ? undefined : (props.space ?? undefined));
   // Un fallo del formulario —la dirección vacía— no es un clon fallido. Sin
   // esto el riel pintaría una fila por cada intento que no llegó a git.
@@ -324,7 +326,7 @@ export default function AnadirCarpeta(props: {
   async function chooseRepository(repo: ProjectRepository) {
     // Ya clonado en la máquina elegida: se abre ese. La lista sale de la máquina
     // del workspace; en otra elegida se clona ahí.
-    const deLaElegida = remota() ? remota()?.lead === true : machines().find((m) => m.local)?.hosts !== false;
+    const deLaElegida = remota() ? remota()?.lead === true : props.machines().find((m) => m.local)?.hosts !== false;
     if (repo.project && props.workspace && deLaElegida) {
       await terminar(reuseProject({
         workspace: props.workspace, project: repo.project, space: props.space ?? undefined,
@@ -382,7 +384,7 @@ export default function AnadirCarpeta(props: {
               <div class="grid gap-1">
                 <span class="text-ui text-neutral-500">{t("projects.add.clone_directory")}</span>
                 <p class="m-0 break-all font-mono text-xs">{destino() ?? directorio()}</p>
-                <Show when={remota()}>{(m) => <p class="m-0 text-xs text-neutral-500">{t("projects.add.remote_directory", { name: machineName(m().machine) })}</p>}</Show>
+                <Show when={remota()}>{(m) => <p class="m-0 text-xs text-neutral-500">{t("projects.add.remote_directory", { name: props.machineName(m().machine) })}</p>}</Show>
                 <Show when={!remota()}><Button
                   type="button"
                   variant="outline"
@@ -396,7 +398,7 @@ export default function AnadirCarpeta(props: {
               </div>
               <Show when={fallo()}>{(f) => <FailureNote f={f()} />}</Show>
               <Show when={fallo() && remota() && provider()}>
-                <p class="m-0 text-xs text-neutral-500" data-git-host-hint="">{t("projects.add.remote_git_host", { name: machineName(remota()?.machine as string) })}</p>
+                <p class="m-0 text-xs text-neutral-500" data-git-host-hint="">{t("projects.add.remote_git_host", { name: props.machineName(remota()?.machine as string) })}</p>
               </Show>
               <Show when={operation()}>
                 <div class="grid gap-2">
@@ -463,7 +465,7 @@ export default function AnadirCarpeta(props: {
               <div class="grid gap-1">
                 <span class="text-ui text-neutral-500">{t("projects.add.clone_directory")}</span>
                 <p class="m-0 break-all font-mono text-xs">{destino() ?? directorio()}</p>
-                <Show when={remota()}>{(m) => <p class="m-0 text-xs text-neutral-500">{t("projects.add.remote_directory", { name: machineName(m().machine) })}</p>}</Show>
+                <Show when={remota()}>{(m) => <p class="m-0 text-xs text-neutral-500">{t("projects.add.remote_directory", { name: props.machineName(m().machine) })}</p>}</Show>
                 <Show when={!remota()}><Button
                   type="button"
                   variant="outline"

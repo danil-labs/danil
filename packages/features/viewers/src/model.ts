@@ -1,3 +1,3 @@
-export * from "./model/csv";
+export * from "../../../ui/src/lib/csv";
 export * from "./model/pdfThumb";
-export * from "./model/zoom";
+export * from "../../../ui/src/lib/zoom";

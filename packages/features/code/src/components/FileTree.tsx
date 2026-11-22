@@ -11,7 +11,7 @@ import {
   treeRename,
   treeSummary,
 } from "../queries";
-import { machineOf } from "../../../machines/src/queries/store";
+import { machineOf } from "../../../../host/src/machine";
 import ChevronDown from "lucide-solid/icons/chevron-down";
 import ChevronRight from "lucide-solid/icons/chevron-right";
 import Cloud from "lucide-solid/icons/cloud";
@@ -40,7 +40,7 @@ import { Button } from "../../../../ui/src/Button";
 import { Input } from "../../../../ui/src/Input";
 import { asFailure, type Failure, FailureNote } from "../../../../ui/src/Failure";
 import { ITEM_DE_MENU, Popover, PopoverContent } from "../../../../ui/src/Popover";
-import { IconoDeArchivo } from "./FileIcon";
+import { IconoDeArchivo } from "../../../../ui/src/FileIcon";
 import { colorDeMarca, describirEstado, publicarLocales } from "../queries/localStatus";
 import { alMoverseElArbol, avisarDeIdos, avisarDeLosArboles, idos } from "../queries/refresh";
 import { crearLector, esTransitorio } from "../model/treeLoader";

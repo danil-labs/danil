@@ -27,7 +27,7 @@ import {
   typstLiveCloseDoc,
   typstLiveReveal,
 } from "../queries";
-import { machineOf } from "../../../machines/src/queries/store";
+import { machineOf } from "../../../../host/src/machine";
 import Navegador from "lucide-solid/icons/external-link";
 import IconoDescarga from "lucide-solid/icons/download";
 import IconoCodigo from "lucide-solid/icons/code";
@@ -37,9 +37,8 @@ import IconoCambios from "lucide-solid/icons/git-compare";
 import { Button } from "../../../../ui/src/Button";
 import { FailureNote, asFailure, type Failure } from "../../../../ui/src/Failure";
 import { Markdown } from "../../../../ui/src/Markdown";
-import Documento from "../../../artifacts/src/screens/Document";
-import type { Preview } from "../../../artifacts/src/components/Preview";
-import { formaDe } from "../../../artifacts/src/model/sandbox";
+import Documento from "../../../../ui/src/Document";
+import { formaDe } from "../../../../ui/src/lib/sandbox";
 import { cn } from "../../../../../apps/desktop/src/lib/utils";
 import { HEADER_HEIGHT } from "../../../../host/src/window";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
@@ -47,8 +46,8 @@ import { createPref, hayPref } from "../../../../../apps/desktop/src/lib/prefs";
 import { ariaDeAtajo, textoDeAtajo } from "../../../../../apps/desktop/src/lib/shortcuts";
 import { peso } from "../../../../../apps/desktop/src/lib/format";
 import { capabilities } from "../../../../host/src/platform";
-import { mediaKindOf, type TreePart } from "@terminus/protocol";
-import type { LeerParte } from "../../../viewers/src/screens/Media";
+import { type FilePreview as Preview, mediaKindOf, type TreePart } from "@terminus/protocol";
+import type { LeerParte } from "../../../../host/src/tree-download";
 import { comoDiff, parsearDiff, type ArchivoDiff } from "../model/diff";
 import { CuerpoDeArchivo, SelectorDeDisposicion } from "../components/Changes";
 import { IDOS, alMoverseElArbol, comoEntra, esBorrado, type DetalleDeIdos } from "../queries/refresh";
@@ -57,10 +56,10 @@ import { cargarEditor } from "../model/editorLoad";
 import { alternarAjuste, esAtajoDeAjuste } from "../../../../../apps/desktop/src/lib/wrap";
 import { gramaticaDe, nombreDeLenguaje } from "../model/languages";
 import { sangriaDe } from "../model/indent";
-import { IconoDeArchivo } from "../components/FileIcon";
+import { IconoDeArchivo } from "../../../../ui/src/FileIcon";
 import { esArbolDeCodigo } from "../queries/treeKind";
 import PaginaEnVivo, { direccionDePagina } from "../components/PagePreview";
-import { delimiterFor } from "../../../viewers/src/model/csv";
+import { delimiterFor } from "../../../../ui/src/lib/csv";
 import {
   type DiagnosticoTypst,
   ampliadaDe,
@@ -86,11 +85,14 @@ import { llevaVistaTypst } from "../model/typstScope";
 const EditorDeCodigo = lazy(cargarEditor);
 const VistaPreviaTypst = lazy(() => import("../components/TypstPreview"));
 const VistaTypstExportada = lazy(() => import("../components/TypstExportPreview"));
-/** Los visores de lo que no se edita bajan solo al abrirse: `pdfjs-dist` no entra en el arranque. */
-const PdfDocument = lazy(() => import("../../../viewers/src/screens/Pdf"));
-const ZoomableImage = lazy(() => import("../../../viewers/src/screens/ImageViewer"));
-const DelimitedTable = lazy(() => import("../../../viewers/src/screens/CsvTable"));
-const Reproductor = lazy(() => import("../../../viewers/src/screens/Media"));
+
+/** Los visores de pdf, imagen, tabla y medio los compone el shell. */
+export type Visores = {
+  pdf: (props: { base64: string; name: string }) => JSX.Element;
+  imagen: (props: { src: string; alt: string }) => JSX.Element;
+  tabla: (props: { text: string; delim: string }) => JSX.Element;
+  medio: (props: { ruta: string; tipo: "video" | "audio"; leer: LeerParte }) => JSX.Element;
+};
 
 /**
  * Un archivo de un árbol de la tarea, en una sola barra: dónde está, qué se
@@ -195,6 +197,7 @@ export default function VisorDeArchivo(props: {
   onBorrado?: () => void;
   /** Cómo guardar desde fuera, para cerrar la pestaña guardando. `null` al desmontarse. */
   onGuardador: (guardar: (() => Promise<boolean>) | null) => void;
+  visores: Visores;
 }) {
   // El editor y su gramática se piden a la vez y al abrir la pestaña, no uno detrás de otro.
   void cargarEditor();
@@ -418,7 +421,7 @@ export default function VisorDeArchivo(props: {
     setBajando(true);
     setFalloAfuera(null);
     try {
-      const { descargar } = await import("../../../viewers/src/screens/Media");
+      const { descargar } = await import("../../../../host/src/tree-download");
       await descargar(props.ruta, leer);
     } catch (e) {
       setFalloAfuera(asFailure(e));
@@ -484,8 +487,8 @@ export default function VisorDeArchivo(props: {
       return {
         kind: p.kind === "html" ? "text" : p.kind,
         text: p.text ?? "",
-        data_url: p.data_url,
-        pdf: p.pdf,
+        data_url: p.data_url ?? null,
+        pdf: p.pdf ?? null,
         bytes: p.bytes,
         truncated: p.truncated,
       };
@@ -906,7 +909,7 @@ export default function VisorDeArchivo(props: {
 
                 <Show when={!mostrarCambios() && !editable()}>
                   <div data-select-scope class="min-h-0 min-w-0 flex-1 overflow-y-auto bg-surface-muted">
-                    <Cuerpo contenido={c()} ruta={props.ruta} onOpenExternal={() => void openExternal()} pedirOffice={pedirOffice} leerParte={leerParte()} conDescarga={conDescarga()} />
+                    <Cuerpo contenido={c()} ruta={props.ruta} onOpenExternal={() => void openExternal()} pedirOffice={pedirOffice} leerParte={leerParte()} conDescarga={conDescarga()} visores={props.visores} />
                   </div>
                 </Show>
 
@@ -966,13 +969,14 @@ export default function VisorDeArchivo(props: {
                         ruta={props.ruta}
                         version={contenido()?.text ?? ""}
                         onIrA={irAlDiagnostico}
+                        renderPdf={props.visores.pdf}
                       />
                     </Suspense>
                   }
                 >
                   <Show
                     when={pagina()}
-                    fallback={<Previa texto={textoDeLaPrevia()} ruta={props.ruta} aSangre={deCodigo() !== false} />}
+                    fallback={<Previa texto={textoDeLaPrevia()} ruta={props.ruta} aSangre={deCodigo() !== false} visores={props.visores} />}
                   >
                     {(url) => <PaginaEnVivo url={url()} nombre={props.ruta} />}
                   </Show>
@@ -1100,7 +1104,7 @@ function BotonDeBarra(props: { pulsado: boolean; titulo: string; onClick: () => 
 }
 
 /** Lo que se ve del archivo: una tabla si es tabular, su HTML en el marco de los artefactos o su Markdown pintado. */
-function Previa(props: { texto: string; ruta: string; aSangre: boolean }) {
+function Previa(props: { texto: string; ruta: string; aSangre: boolean; visores: Visores }) {
   const delim = () => delimiterFor(props.ruta);
   return (
     <Show
@@ -1127,7 +1131,7 @@ function Previa(props: { texto: string; ruta: string; aSangre: boolean }) {
     >
       {(d) => (
         <Suspense fallback={<p class="m-0 p-3 text-xs text-neutral-500">{t("code.file.opening")}</p>}>
-          <DelimitedTable text={props.texto} delim={d()} />
+          {props.visores.tabla({ text: props.texto, delim: d() })}
         </Suspense>
       )}
     </Show>
@@ -1182,6 +1186,7 @@ function Cuerpo(props: {
   pedirOffice: () => Promise<Preview> | null;
   leerParte: LeerParte | null;
   conDescarga: boolean;
+  visores: Visores;
 }) {
   const esOffice = () => props.contenido.kind === "binary" && OFFICE.includes(extension(props.ruta));
   /** Un video o un audio se reproduce aquí aunque el motor lo cuente como binario. */
@@ -1195,7 +1200,7 @@ function Cuerpo(props: {
     setBajando(true);
     setFalloDescarga(null);
     try {
-      const { descargar } = await import("../../../viewers/src/screens/Media");
+      const { descargar } = await import("../../../../host/src/tree-download");
       await descargar(props.ruta, props.leerParte);
     } catch (e) {
       setFalloDescarga(asFailure(e));
@@ -1232,10 +1237,10 @@ function Cuerpo(props: {
 
       <Suspense fallback={<p class="m-0 p-3 text-xs text-neutral-500">{t("code.file.opening")}</p>}>
         <Show when={props.contenido.kind === "image" && props.contenido.data_url}>
-          {(source) => <ZoomableImage src={source()} alt={props.ruta} />}
+          {(source) => props.visores.imagen({ src: source(), alt: props.ruta })}
         </Show>
         <Show when={props.contenido.kind === "pdf" && props.contenido.pdf}>
-          {(data) => <PdfDocument base64={data()} name={props.ruta} />}
+          {(data) => props.visores.pdf({ base64: data(), name: props.ruta })}
         </Show>
       </Suspense>
 
@@ -1246,7 +1251,7 @@ function Cuerpo(props: {
         >
           {(data) => (
             <Suspense fallback={<p class="m-0 p-3 text-xs text-neutral-500">{t("code.file.opening")}</p>}>
-              <PdfDocument base64={data()} name={props.ruta} />
+              {props.visores.pdf({ base64: data(), name: props.ruta })}
             </Suspense>
           )}
         </Show>
@@ -1255,7 +1260,7 @@ function Cuerpo(props: {
       <Show when={medio()}>
         {(tipo) => (
           <Suspense fallback={<p class="m-0 p-3 text-xs text-neutral-500">{t("code.file.opening")}</p>}>
-            <Reproductor ruta={props.ruta} tipo={tipo()} leer={props.leerParte!} />
+            {props.visores.medio({ ruta: props.ruta, tipo: tipo(), leer: props.leerParte! })}
           </Suspense>
         )}
       </Show>

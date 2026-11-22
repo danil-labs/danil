@@ -16,7 +16,7 @@ import { cn } from "../../../../../apps/desktop/src/lib/utils";
 import { type Project, type Source } from "../../../../../apps/desktop/src/lib/model";
 import { lineaDeProcedencia, procedencia } from "../../../../../apps/desktop/src/lib/sourceOrigin";
 import { Badge } from "../../../../ui/src/Badge";
-import WorkdirIcon, { workdirKindLabel } from "../../../code/src/components/WorkdirIcon";
+import WorkdirIcon, { workdirKindLabel } from "../../../../ui/src/WorkdirIcon";
 import PickerRow from "../components/PickerRow";
 import { byRecent, type PickedAt, pickerSections, taskCountOf } from "../model/recent";
 

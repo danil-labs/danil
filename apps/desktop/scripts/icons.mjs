@@ -47,7 +47,7 @@ import { dirname, join, normalize } from "node:path";
 
 const RAIZ = fileURLToPath(new URL("..", import.meta.url));
 const TEMA = join(RAIZ, "node_modules/material-icon-theme/dist/material-icons.json");
-const DESTINO = join(RAIZ, "src/features/code/file-icons.ts");
+const DESTINO = join(RAIZ, "../../packages/ui/src/file-icons.ts");
 
 /**
  * Qué iconos se empaquetan. **Es la única decisión de este script.**
@@ -191,7 +191,7 @@ if (process.argv.includes("--check")) {
   const actual = existsSync(DESTINO) ? readFileSync(DESTINO, "utf8") : "";
   if (actual !== salida) {
     console.error(
-      "src/features/code/file-icons.ts está desactualizado.\n" +
+      "packages/ui/src/file-icons.ts está desactualizado.\n" +
         "Córrelo: node scripts/icons.mjs",
     );
     process.exit(1);

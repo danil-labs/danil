@@ -1,6 +1,6 @@
 import { createSignal } from "solid-js";
 import { invoke } from "../../../../engine-client/src/client.ts";
-import { machineOf } from "../../../machines/src/queries/store";
+import { machineOf } from "../../../../host/src/machine";
 
 /**
  * La cara propia, ya leída como `data:` URI. La política de la ventana no

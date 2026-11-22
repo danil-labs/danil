@@ -23,13 +23,13 @@ import { copyText } from "../../../../host/src/clipboard";
 import { cn } from "../../../../../apps/desktop/src/lib/utils";
 import { HEADER_HEIGHT } from "../../../../host/src/window";
 import type { TaskFiles } from "../../../../../apps/desktop/src/lib/taskFiles";
-import { machineOf } from "../../../machines/src/queries/store";
+import { machineOf } from "../../../../host/src/machine";
 import type { Cambios } from "../components/Changes";
 import Codigo from "../components/Code";
 import KnIntegrate from "../components/KnIntegrate";
 import VistaPreviaDeTarea from "../components/TaskPreview";
-import VisorDeArchivo from "./FileViewer";
-import { IconoDeArchivo } from "../components/FileIcon";
+import VisorDeArchivo, { type Visores } from "./FileViewer";
+import { IconoDeArchivo } from "../../../../ui/src/FileIcon";
 import { alMoverseElArbol } from "../queries/refresh";
 import type { TreePart } from "@terminus/protocol";
 
@@ -55,6 +55,7 @@ export default function TaskFilesCard(props: {
   onExportChat: () => Promise<void>;
   onMoved: (session: string, tree: string, from: string, to: string) => void;
   onRemoved: (session: string, tree: string, path: string) => void;
+  visores: Visores;
 }) {
   const key = () => props.panelKey ?? props.session;
   // Guardar va junto a las pestañas y no en el buscador, que así se lee entero.
@@ -125,7 +126,7 @@ export default function TaskFilesCard(props: {
   const download = async () => {
     const tab = activeTab();
     if (!tab) return;
-    const { descargar } = await import("../../../viewers/src/screens/Media");
+    const { descargar } = await import("../../../../host/src/tree-download");
     await descargar(tab.path, (offset, size, revision) => readTreePart<TreePart>({
       project: props.project, session: props.session, tree: tab.tree, path: tab.path, offset, size, revision: revision ?? null,
     }, machineOf(props.session))).catch(() => {});
@@ -233,6 +234,7 @@ export default function TaskFilesCard(props: {
                   onBorrado={() => props.files.removed(key(), tab.tree, tab.path)}
                   onAbrirOtro={(path) => open(tab.tree, path, false, true)}
                   onGuardado={props.onSaved}
+                  visores={props.visores}
                 />
               </div>
             )}</For>

@@ -5,17 +5,17 @@ import {
   leerEstado,
   SANDBOX_ARTEFACTO,
   type Forma,
-} from "../model/sandbox";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
-import { flechaDeLista } from "../../../../../apps/desktop/src/lib/shortcuts";
-import { Back, Next } from "../../../../ui/src/icons";
-import { Button } from "../../../../ui/src/Button";
-import { cn } from "../../../../../apps/desktop/src/lib/utils";
+} from "./lib/sandbox";
+import { t } from "../../../apps/desktop/src/lib/i18n";
+import { flechaDeLista } from "../../../apps/desktop/src/lib/shortcuts";
+import { Back, Next } from "./icons";
+import { Button } from "./Button";
+import { cn } from "../../../apps/desktop/src/lib/utils";
 import ZoomIn from "lucide-solid/icons/zoom-in";
 import ZoomOut from "lucide-solid/icons/zoom-out";
 import RotateCcw from "lucide-solid/icons/rotate-ccw";
-import { IconButton } from "../../../viewers/src/components/IconButton";
-import { ZOOM_STEP } from "../../../viewers/src/model/zoom";
+import { IconButton } from "./IconButton";
+import { ZOOM_STEP } from "./lib/zoom";
 
 export default function Documento(props: {
   html: string;

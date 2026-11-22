@@ -1,1 +1,1 @@
-export * from "@terminus/chat/sandbox";
+export * from "../../../../ui/src/lib/sandbox";

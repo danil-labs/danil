@@ -8,8 +8,8 @@ import ZoomOut from "lucide-solid/icons/zoom-out";
 import RotateCcw from "lucide-solid/icons/rotate-ccw";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { cn } from "../../../../../apps/desktop/src/lib/utils";
-import { IconButton } from "../components/IconButton";
-import { clampZoom, ZOOM_STEP } from "../model/zoom";
+import { IconButton } from "../../../../ui/src/IconButton";
+import { clampZoom, ZOOM_STEP } from "../../../../ui/src/lib/zoom";
 
 pdfjs.GlobalWorkerOptions.workerPort = new PdfWorker();
 

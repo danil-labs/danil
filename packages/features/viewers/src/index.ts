@@ -1,6 +1,6 @@
 export * from "./model";
 export * from "./queries";
-export * from "./components/IconButton";
+export * from "../../../ui/src/IconButton";
 export * from "./screens/Media";
 export { default as CsvTable } from "./screens/CsvTable";
 export { default as ImageViewer } from "./screens/ImageViewer";

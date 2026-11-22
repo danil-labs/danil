@@ -1,6 +1,6 @@
 // Con la extensión: `scripts/*.test.ts` corre en Node con
 // `--experimental-strip-types`, donde un relativo sin extensión no resuelve.
-import { POR_EXTENSION, POR_NOMBRE } from "./file-icons.ts";
+import { POR_EXTENSION, POR_NOMBRE } from "../file-icons.ts";
 
 /**
  * Qué icono le toca a cada archivo del árbol de código. Aparte del componente

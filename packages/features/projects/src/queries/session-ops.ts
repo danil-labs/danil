@@ -1,6 +1,6 @@
 import type { InvokeOptions } from "@tauri-apps/api/core";
 import { invoke } from "../../../../engine-client/src/client.ts";
-import { machineOf } from "../../../machines/src/queries/store";
+import { machineOf } from "../../../../host/src/machine";
 
 export type Blockers = {
   not_finished: boolean;

@@ -5,7 +5,7 @@ import { precargarEditor } from "../model/editorLoad";
 import { Skeleton } from "../../../../ui/src/Skeleton";
 import { Channel } from "@tauri-apps/api/core";
 import { listTaskTrees, watchTaskTree, unwatchTaskTree } from "../queries";
-import { machineOf } from "../../../machines/src/queries/store";
+import { machineOf } from "../../../../host/src/machine";
 import { FailureNote, asFailure, type Failure } from "../../../../ui/src/Failure";
 import type { ArbolEnTarea } from "../../../../../apps/desktop/src/lib/model";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
