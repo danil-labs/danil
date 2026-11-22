@@ -118,7 +118,7 @@ import {
 import type { ContextoDeProyectos } from "../../../features/settings/src/screens/ManageProjects";
 
 // Configuración solo se abre a pedido: no entra en la carga inicial.
-const Settings = lazy(() => import("../../../features/settings/src/screens/Settings"));
+const Settings = lazy(() => import("./settingsSlots"));
 
 import { listaBasta, reconciliar } from "../../../features/settings/src/model/early-startup";
 import { createWorkspaces, type Startup } from "../../../features/settings/src/queries/workspaces-store";

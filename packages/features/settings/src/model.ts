@@ -12,5 +12,4 @@ export * from "./model/logo-crop";
 export * from "./model/orchestratorSnippets";
 export * from "./model/secrets-support";
 export * from "./model/settings-entries";
-export * from "./model/settings-panels";
 export * from "./model/workspace-menu-escape";

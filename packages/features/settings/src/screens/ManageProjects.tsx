@@ -16,7 +16,7 @@ import { ITEM_DE_MENU, Popover, PopoverContent, PopoverTrigger } from "../../../
 import { Table, TableBody, TableCell, TableHead, TableHeaderCell, TableRow } from "../../../../ui/src/Table";
 import { workdirIconKind } from "../../../../ui/src/lib/workdirKind";
 import WorkdirIcon, { workdirKindLabel } from "../../../../ui/src/WorkdirIcon";
-import { SettingsBlock, SettingsPanel, SettingsSection } from "../components/layout";
+import { SettingsBlock, SettingsPanel, SettingsSection } from "../../../../ui/src/SettingsLayout";
 import { PickerVisibilityItem } from "../components/PickerVisibilityItem";
 import { TaskCountCell } from "../components/TaskCountCell";
 import "../../../../../apps/desktop/src/locales/settingsPhrases";

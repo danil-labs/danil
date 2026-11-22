@@ -4,7 +4,7 @@ import { openExternal } from "../queries/engine-open";
 import { capabilities } from "../../../../host/src/platform";
 import { Button } from "../../../../ui/src/Button";
 import { sessionRailState } from "../../../../shell/src/shell";
-import { SettingsPanel } from "./layout";
+import { SettingsPanel } from "../../../../ui/src/SettingsLayout";
 
 const webOrigin = import.meta.env.VITE_DANIL_WEB_ORIGIN || "https://beta.danil.ai";
 

@@ -13,7 +13,7 @@ import { Input } from "../../../../ui/src/Input";
 import { ProgressBar } from "../../../../ui/src/ProgressBar";
 import { SignalDot } from "../../../../ui/src/SignalDot";
 import { Spinner } from "../../../../ui/src/Spinner";
-import { SettingsBlock, SettingsRow, SettingsSection } from "../../../settings/src/components/layout";
+import { SettingsBlock, SettingsRow, SettingsSection } from "../../../../ui/src/SettingsLayout";
 import {
   linuxUserSlug,
   type WslCatalogItem,

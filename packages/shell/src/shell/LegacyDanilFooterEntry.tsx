@@ -4,6 +4,7 @@ import { t } from "../../../../apps/desktop/src/lib/i18n";
 import { capabilities } from "../../../host/src/platform";
 import { cn } from "../../../../apps/desktop/src/lib/utils";
 import { SignalDot } from "../../../ui/src/SignalDot";
+import { machines } from "../../../features/machines/src/queries/store";
 import { AccountAvatar, type AccountProfile, type AccountProfileSource, createAccountIdentity, createDanilAccounts, createDanilSession, type DanilAccounts, engineAccountProfile, PROFILE_CHANGED, profileFromStatus, sessionForWorkspace, statusOf } from "../../../features/settings/src";
 import { Pressable } from "../../../ui/src/Pressable";
 
@@ -21,7 +22,7 @@ export default function DanilFooterEntry(props: EntryProps) {
 }
 
 function MachineEntry(props: EntryProps) {
-  const accounts = createDanilAccounts({ workspace: "active" });
+  const accounts = createDanilAccounts({ workspace: "active", machines });
   return (
     <Show when={accounts.sessions() !== undefined} fallback={props.fallback}>
       <Show when={accounts.connected().length > 0} fallback={<SingleEntry {...props} />}>

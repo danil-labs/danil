@@ -1,6 +1,6 @@
 export * from "./model/bridge-inventory.ts";
 export * from "./model/context-source.ts";
-export * from "./model/known-names.ts";
+export * from "../../../session/src/known-machine-names.ts";
 export * from "./model/machine-info.ts";
 export * from "./model/router-config.ts";
 export * from "./model/router-headers.ts";

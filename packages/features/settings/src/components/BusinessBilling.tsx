@@ -31,7 +31,7 @@ import {
   summaryError,
 } from "../model/business-billing";
 import { CFDI_USES, checkFiscal, type FiscalField, regimesFor, rfcPersonType } from "../model/fiscal";
-import { SettingsPanel, SettingsRow, SettingsSection } from "./layout";
+import { SettingsPanel, SettingsRow, SettingsSection } from "../../../../ui/src/SettingsLayout";
 
 const PLANS_URL = "https://danil.ai/planes";
 

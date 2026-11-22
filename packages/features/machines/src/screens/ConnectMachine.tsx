@@ -17,7 +17,7 @@ import { capabilities } from "../../../../host/src/platform";
 import { Button } from "../../../../ui/src/Button";
 import { Input } from "../../../../ui/src/Input";
 import { Spinner } from "../../../../ui/src/Spinner";
-import { SettingsBlock, SettingsSection } from "../../../settings/src/components/layout";
+import { SettingsBlock, SettingsSection } from "../../../../ui/src/SettingsLayout";
 
 export type ConnectMachineProps = {
   /** `GET /v1/computers` con la sesión de la cuenta. */

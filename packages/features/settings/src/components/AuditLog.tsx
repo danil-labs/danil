@@ -5,7 +5,7 @@ import { Button } from "../../../../ui/src/Button";
 import { Select } from "../../../../ui/src/Select";
 import { Skeleton } from "../../../../ui/src/Skeleton";
 import type { AuditActorType, AuditEntry, AuditLogSource } from "../../../../../apps/desktop/src/web/audit-log";
-import { SettingsPanel, SettingsSection } from "./layout";
+import { SettingsPanel, SettingsSection } from "../../../../ui/src/SettingsLayout";
 
 const FILTERS: AuditActorType[] = ["ai", "user", "member", "danil_support", "system"];
 const TONE: Record<AuditActorType, "info" | "active" | "neutral" | "warning"> = { ai: "info", user: "active", member: "neutral", danil_support: "warning", system: "neutral" };

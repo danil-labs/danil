@@ -11,7 +11,6 @@ export * from "./queries/free-router-session";
 export * from "./queries/handlerOperations";
 export * from "./queries/workspaces-store";
 export { accountStatus, addAccount as addProviderAccount, cancelLogin, discardAccount, installProvider, listAccounts, listProviders, loginAccount, removeAccount, resumeAwaitingQuota, setActiveAccount, setApiKey, setMemoryProvider, submitLoginCode, tasksAwaitingQuota } from "./queries/engine-accounts";
-export * from "./queries/engine-activity";
 export * from "./queries/engine-agents";
 export * from "./queries/engine-connections";
 export * from "./queries/engine-consent";

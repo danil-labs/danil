@@ -5,8 +5,8 @@ import { listen } from "../../../../../apps/desktop/src/lib/serviceEvents";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { Button } from "../../../../ui/src/Button";
 import { Select } from "../../../../ui/src/Select";
-import { machineName, machines, refetchMachines } from "../../../machines/src/queries/store";
-import { SettingsPanel, SettingsSection } from "./layout";
+import { machineName, machines, refetchMachines } from "../queries/store";
+import { SettingsPanel, SettingsSection } from "../../../../ui/src/SettingsLayout";
 
 export default function ActivityLogs(props: { workspace: string | null; machine?: string | null }) {
   const [chosen, setChosen] = createSignal(props.machine ?? "");

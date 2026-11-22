@@ -17,7 +17,7 @@ import FolderOpen from "lucide-solid/icons/folder-open";
 import { FailureNote, asFailure, type Failure } from "../../../../ui/src/Failure";
 import { Button } from "../../../../ui/src/Button";
 import { Badge } from "../../../../ui/src/Badge";
-import { SettingsRow, SettingsSection } from "./layout";
+import { SettingsRow, SettingsSection } from "../../../../ui/src/SettingsLayout";
 
 /**
  * Qué lenguas tiene puestas la app, dentro de Estado del entorno.
