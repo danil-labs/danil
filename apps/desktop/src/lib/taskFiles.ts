@@ -1,7 +1,7 @@
 import { createStore, produce } from "solid-js/store";
 
 /** A file open in a task's own files panel; `changes` opens it in the diff view. */
-export type TaskFileTab = {
+type TaskFileTab = {
   id: string;
   tree: string;
   path: string;

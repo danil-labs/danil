@@ -21,7 +21,7 @@ export type Space = {
 
 export type SpaceRef = { id: string; name: string | null; deleted?: boolean };
 
-export type FileMark = { path: string; hash: string };
+type FileMark = { path: string; hash: string };
 
 export type TaskSeen = {
   folder: string;

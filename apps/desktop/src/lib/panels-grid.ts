@@ -23,7 +23,7 @@ export const sameSite = (a: PanelSite | null, b: PanelSite | null) =>
   a !== null && b !== null && a.col === b.col && a.fila === b.fila;
 
 // El tirador necesita área de agarre más ancha que el filete de 1 px.
-export const DIVIDER_WIDTH = 12;
+const DIVIDER_WIDTH = 12;
 
 export function panelReadingOrder(
   rowsPerColumn: readonly number[],

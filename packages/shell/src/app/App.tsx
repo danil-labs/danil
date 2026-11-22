@@ -85,7 +85,7 @@ import {
 } from "../../../../apps/desktop/src/lib/taskDraft";
 import { createChatEvents, createSleepSession, createThreadStream, createThreadSide, createAttachments, createAttachmentsMount, createResync, createResyncCommands, createShellCommand, createDraftSend, createHandover, createSend, createSendGates, createSendNow, createPanelDeChat } from "../../../features/chat/src";
 
-export const { sleepSession } = createSleepSession({ machineOf });
+createSleepSession({ machineOf });
 
 export default function App() {
   /**

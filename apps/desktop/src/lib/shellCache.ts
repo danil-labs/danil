@@ -84,7 +84,7 @@ const encode = (value: object) => {
 };
 const list = (values: object[]) => `[${values.map(encode).join(",")}]`;
 
-export function encodeSnapshot(snapshot: ShellSnapshot, rows: number): string {
+function encodeSnapshot(snapshot: ShellSnapshot, rows: number): string {
   const sessions = Object.entries(snapshot.sessions)
     .map(([folder, values]) => `${JSON.stringify(folder)}:${list(values.slice(0, rows))}`)
     .join(",");

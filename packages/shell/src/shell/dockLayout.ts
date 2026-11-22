@@ -2,8 +2,6 @@
 export {
   type DockAgent,
   agentFolder,
-  dockCapacity,
   dockSources,
   orderDockAgents,
-  planDock,
 } from "@terminus/tasks";

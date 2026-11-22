@@ -87,7 +87,7 @@ export type SocketLike = {
 export type SocketFactory = (url: string, protocols?: string[]) => SocketLike;
 
 export const SUBPROTOCOL = "danil.computers.v1";
-export const MACHINE_SESSION_PROTOCOL = "danil.machine-session.v1";
+const MACHINE_SESSION_PROTOCOL = "danil.machine-session.v1";
 const OPEN = 1;
 const BACKOFF = [500, 1000, 2000, 5000, 10000];
 const PING_EVERY = 20_000;
@@ -99,9 +99,9 @@ export const WAKE_TIMEOUT = 330_000;
 const REPLACED = 4001;
 const REVOKED = 4003;
 /** Cuánto antes de `session_expires_at` se cambia de ticket. */
-export const ADMISSION_RENEW_BEFORE = 10_000;
+const ADMISSION_RENEW_BEFORE = 10_000;
 /** Cuánto se espera la respuesta `auth` del relay a una renovación en el canal antes de reabrir. */
-export const ADMISSION_RENEW_WAIT = 4_000;
+const ADMISSION_RENEW_WAIT = 4_000;
 const TICKET_CONTEXT_REVOKED = 4008;
 /** El token con que se abrió la sesión venció sin renovarse: se reabre con uno nuevo. */
 export const TOKEN_EXPIRED = 4005;

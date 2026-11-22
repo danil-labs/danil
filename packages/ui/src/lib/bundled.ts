@@ -3,7 +3,7 @@
  * Compartido entre onboarding, settings y el visor de dependencias.
  */
 
-export const INCLUIDAS = ["git", "python", "agent-browser", "ripgrep", "uv", "computer-use"] as const;
+const INCLUIDAS = ["git", "python", "agent-browser", "ripgrep", "uv", "computer-use"] as const;
 
 export type Motivo = "missing" | "version_mismatch" | "import_failed" | "timed_out" | "damaged";
 
@@ -54,13 +54,6 @@ export type EnvReport = {
   runtimeVersions: Record<string, string>;
 };
 
-export type Preparacion = {
-  id: string;
-  kind: "sizing" | "downloading" | "installing" | "done" | "error";
-  done: number;
-  bytes: number;
-  failure: string | null;
-};
 
 const motivoDe = (valor: unknown, timedOut?: boolean): Motivo | null => {
   if (typeof valor === "string" && MOTIVOS.has(valor)) return valor as Motivo;

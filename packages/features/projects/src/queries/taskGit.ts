@@ -5,9 +5,9 @@ import { type Accessor, createSignal } from "solid-js";
 
 import { type TaskGitStatus, mergeRemoteGit, readTaskGit, retainGitObservation, sameGit as mismoGit, UNKNOWN_TASK_GIT } from "@terminus/tasks";
 export type { CheckState, KnState, ReviewState } from "@terminus/tasks";
-export { canFinishTask, mergeRemoteGit, retainGitObservation } from "@terminus/tasks";
+export { canFinishTask, mergeRemoteGit } from "@terminus/tasks";
 export type GitStatus = TaskGitStatus;
-export const UNKNOWN_GIT: GitStatus = UNKNOWN_TASK_GIT;
+const UNKNOWN_GIT: GitStatus = UNKNOWN_TASK_GIT;
 
 /** El registro nuevo, o el mismo si ninguna fila cambió: así no avisa a nadie. */
 function conservarFilas(previous: Record<string, GitStatus>, next: Record<string, GitStatus>) {

@@ -1,5 +1,5 @@
 export type ReturnGroup = { context_id: string; org: string; org_name: string | null; available: readonly { id: string }[] | null; added: ReadonlySet<string> | null };
-export type AddReturnState = { phase: "pending" | "returned" | "error"; before: string[]; attempt: number; detail?: string };
+type AddReturnState = { phase: "pending" | "returned" | "error"; before: string[]; attempt: number; detail?: string };
 export type AddReturnResult = { ids: string[]; organizations: string[] };
 
 /** Solo guarda ids públicos en la pestaña; nunca credenciales ni respuestas del borde. */

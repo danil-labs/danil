@@ -62,7 +62,7 @@ export type MemoriaScope =
   | { kind: "agent"; name: string };
 
 // Sin agente, la entrada es de la persona y task también es null.
-export type MemoriaOrigen = {
+type MemoriaOrigen = {
   workspace: string;
   project: string;
   task: string | null;
@@ -123,7 +123,7 @@ export type ArbolEnTarea = {
 
 // base_changed cuenta commits incorporados; drift cuenta commits pendientes.
 // unknown no garantiza que la base esté intacta y no debe tratarse como current.
-export type Deriva = {
+type Deriva = {
   status: "current" | "drift" | "base_changed" | "unknown";
   behind: number | null;
   // Los asuntos vienen del repositorio y no se traducen.
@@ -251,7 +251,7 @@ export type HandlerMemory = {
   server?: string;
 };
 
-export type HandlerRequest = {
+type HandlerRequest = {
   kind: "mcp" | "memory" | "tools" | "network";
   slot?: string;
   access?: string;
@@ -297,7 +297,7 @@ export type HandlerStatusRow = {
   live_tasks: number;
 };
 
-export type BloqueoDeCarpeta = { folder: string; origin: string; repository: boolean };
+type BloqueoDeCarpeta = { folder: string; origin: string; repository: boolean };
 
 export type AgenteDeMaquina = {
   agent: HandlerDefinition;
@@ -310,7 +310,7 @@ export type AgenteDeMaquina = {
   catalog_taken: string | null;
 };
 
-export type AgenteDelRepositorio = {
+type AgenteDelRepositorio = {
   agent: HandlerDefinition;
   profile: AgentProfile;
   folders: string[];
@@ -321,9 +321,3 @@ export type CatalogoDeAgentes = {
   repository: AgenteDelRepositorio[];
 };
 
-// restore solo repone folders si la lista actual coincide con expected; de lo contrario devuelve conflict.
-// null significa todas las carpetas.
-export type CambioDeCarpetas =
-  | { kind: "add"; folder: string }
-  | { kind: "remove"; folder: string }
-  | { kind: "restore"; expected: string[] | null; folders: string[] | null };

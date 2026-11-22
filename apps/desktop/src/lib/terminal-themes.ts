@@ -8,10 +8,10 @@ import { createSignal } from "solid-js";
  * Un nombre de esquema es un nombre propio y no pasa por `t()`. La elección es
  * del workspace: `workspaces::Workspace::terminal_theme`.
  */
-export type TemaDeTerminal = { id: string; name: string };
+type TemaDeTerminal = { id: string; name: string };
 
 /** El primero es el que se pinta sin elección. */
-export const TEMAS_DE_TERMINAL: readonly TemaDeTerminal[] = [
+const TEMAS_DE_TERMINAL: readonly TemaDeTerminal[] = [
   { id: "terminus", name: "Danil" },
   { id: "tomorrow-night-blue", name: "Tomorrow Night Blue" },
   { id: "nord", name: "Nord" },
@@ -21,8 +21,7 @@ export const TEMAS_DE_TERMINAL: readonly TemaDeTerminal[] = [
 
 const POR_OMISION = TEMAS_DE_TERMINAL[0].id;
 
-const [temaDeTerminal, setTemaDeTerminal] = createSignal(POR_OMISION);
-export { temaDeTerminal };
+const [, setTemaDeTerminal] = createSignal(POR_OMISION);
 
 /**
  * Un identificador que ya no existe cae al de por omisión en vez de dejar el

@@ -104,7 +104,7 @@ export function opcionesDeModelos(
  * locale es la operación invariante de Unicode, que es exactamente lo que pide
  * comparar identificadores.
  */
-export function normalizarBusqueda(value: string) {
+function normalizarBusqueda(value: string) {
   return value
     .toLowerCase()
     .normalize("NFD")

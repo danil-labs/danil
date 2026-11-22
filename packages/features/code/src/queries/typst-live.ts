@@ -235,7 +235,7 @@ export function diagnosticosDelArchivo(session: string, arbol: string, ruta: str
   return compiladoDe(session, arbol)?.diagnostics.filter((d) => d.path === ruta && d.line !== null) ?? [];
 }
 
-export type Salto = { session: string; arbol: string; ruta: string; linea: number; columna: number; n: number };
+type Salto = { session: string; arbol: string; ruta: string; linea: number; columna: number; n: number };
 
 /** Ir a un diagnóstico: lo consume el editor del archivo, también el que se monta después. */
 const [salto, setSalto] = createSignal<Salto | null>(null);

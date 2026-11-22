@@ -50,7 +50,7 @@ function origen(sel: Selection): Element | null {
 }
 
 /** Selecciona el bloque que toca; devuelve `false` si no hay ninguno. */
-export function seleccionarElBloque(): boolean {
+function seleccionarElBloque(): boolean {
   const sel = document.getSelection();
   if (!sel) return false;
   let bloque = ambitoSobre(origen(sel));

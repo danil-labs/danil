@@ -12,22 +12,19 @@ import {
 } from "./client.ts";
 import { CAPABILITIES_PATH } from "./machines.ts";
 
-import type { Me, OrganizationList, SelectOrganizationResponse } from "./generated/types.ts";
+import type { Me, SelectOrganizationResponse } from "./generated/types.ts";
 
 /**
  * Las respuestas del dominio salen del OpenAPI vendorizado (`contract/openapi.json`, R2 y R7). Lo que el front
  * leía antes y el contrato no trae (`workspace` como cadena en `Me`, `next_cursor` de la lista y
  * `organization`/`workspace` en la respuesta de `select`) es hallazgo para danil-contracts, no un campo aquí.
  */
-export type { Me, OrganizationList, OrganizationRef, SelectOrganizationResponse } from "./generated/types.ts";
+export type { Me } from "./generated/types.ts";
 
 const bodyOf = <T>(method: EdgeMethod, path: string, body?: unknown, p?: Patience) =>
   edgeUntil<T>(method, path, body, p).then((r) => r.body);
 
 export const me = (p?: Patience) => bodyOf<Me>("GET", "/v1/identity/me", undefined, p);
-
-export const organizations = (p?: Patience) =>
-  bodyOf<OrganizationList>("GET", "/v1/identity/organizations", undefined, p);
 
 export const selectOrganization = (organizationId: string, p?: Patience) => {
   cancelEdgeWrites();
