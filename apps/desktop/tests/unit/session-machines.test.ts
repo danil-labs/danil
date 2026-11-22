@@ -1,12 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { mergeBridgeInventory } from "../../src/features/machines/bridge-inventory.ts";
-import { createContextRelayPool } from "../../src/features/machines/context-relay-pool.ts";
-import { createSessionCloud, mergeContextMachines } from "../../src/features/machines/session-cloud.ts";
-import { createAccountWorkspaces } from "../../src/features/shell/session-account-workspaces.ts";
-import { confirmEmailClose, emailContextCount } from "../../src/features/shell/session-close-confirm.ts";
-import { createSessionEmptyState } from "../../src/features/shell/session-empty.ts";
-import { sessionWorkspaceSource } from "../../src/features/shell/session-workspace-source.ts";
+import { mergeBridgeInventory } from "../../../../packages/features/machines/src/model/bridge-inventory.ts";
+import { createContextRelayPool } from "../../../../packages/features/machines/src/queries/context-relay-pool.ts";
+import { createSessionCloud, mergeContextMachines } from "../../../../packages/features/machines/src/queries/session-cloud.ts";
+import { createAccountWorkspaces } from "../../../../packages/shell/src/shell/session-account-workspaces.ts";
+import { confirmEmailClose, emailContextCount } from "../../../../packages/shell/src/shell/session-close-confirm.ts";
+import { createSessionEmptyState } from "../../../../packages/shell/src/shell/session-empty.ts";
+import { sessionWorkspaceSource } from "../../../../packages/shell/src/shell/session-workspace-source.ts";
 import { subscribeOrganizationProblems } from "../../src/lib/organization-problems.ts";
 
 const contexts = [{ context_id: "a", org: "A" }, { context_id: "b", org: "B" }];
@@ -107,13 +107,16 @@ test("missing context echo discards every scoped inventory and falls back to uns
 test("paid groups never offer local seals, Free never offers another machine, and unknown plans use organization machines", () => {
   const remote = [{ id: "org-machine", name: "Paid" }];
   const local = [{ id: "here", name: "Sealed on this computer" }];
-  const group = (plan: string | null) => sessionWorkspaceSource(plan, () => remote, () => local);
+  const group = (plan: string | null, personal?: boolean) => sessionWorkspaceSource({ plan, ...(personal === undefined ? {} : { personal }) }, () => remote, () => local);
   assert.deepEqual(group("paid"), remote);
   assert.deepEqual(group(null), remote);
   assert.deepEqual(group("free"), local);
   assert.equal(group("paid")?.some((w) => w.id === "here"), false);
   assert.equal(group("free")?.some((w) => w.id === "org-machine"), false);
-  assert.deepEqual(sessionWorkspaceSource("paid", () => null, () => local), null);
+  assert.deepEqual(sessionWorkspaceSource({ plan: "paid" }, () => null, () => local), null);
+  assert.deepEqual(sessionWorkspaceSource(null, () => remote, () => local), remote);
+  assert.deepEqual(group("pro", true), local, "the personal org upgraded to Pro keeps running on this computer");
+  assert.deepEqual(group("free", false), remote, "identity saying it is not personal wins over the plan");
 });
 
 test("the bridge remains the base without sessions, retaining organization and engine capabilities", () => {

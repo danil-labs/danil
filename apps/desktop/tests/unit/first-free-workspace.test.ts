@@ -5,7 +5,7 @@
  */
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { FIRST_FREE_DELAYS, sealFirstFreeWorkspace } from "../../src/features/shell/first-free-workspace.ts";
+import { FIRST_FREE_DELAYS, sealFirstFreeWorkspace } from "../../../../packages/shell/src/shell/first-free-workspace.ts";
 
 const data = new Map<string, string>();
 Object.defineProperty(globalThis, "localStorage", {
@@ -13,7 +13,7 @@ Object.defineProperty(globalThis, "localStorage", {
   value: { getItem: (k: string) => data.get(k) ?? null, setItem: (k: string, v: string) => void data.set(k, v), removeItem: (k: string) => void data.delete(k) },
 });
 
-type Family = { family: string; email: string; contexts: { context_id: string; org: string; org_name: string; plan: string | null }[] };
+type Family = { family: string; email: string; contexts: { context_id: string; org: string; org_name: string; plan: string | null; personal?: boolean }[] };
 const FREE: Family = { family: "f1", email: "ana@norte.mx", contexts: [{ context_id: "c1", org: "org_1", org_name: "Ana", plan: "free" }] };
 
 function engine(o: { sessions?: Family[]; statusFailsOnce?: boolean; features?: string[]; noMachine?: boolean; catalogAfter?: number; catalogStatus?: number; sealed?: string[] } = {}) {
@@ -91,6 +91,7 @@ test("a new account waits with backoff for its Free workspace, bounded", async (
 const permanent: [string, Parameters<typeof engine>[0]][] = [
   ["no_session", { sessions: [] }],
   ["no_free_org", { sessions: [{ ...FREE, contexts: [{ ...FREE.contexts[0], plan: "teams" }] }] }],
+  ["no_free_org", { sessions: [{ ...FREE, contexts: [{ ...FREE.contexts[0], personal: false }] }] }],
   ["several_free_orgs", { sessions: [{ ...FREE, contexts: [...FREE.contexts, { context_id: "c2", org: "org_2", org_name: "Ana 2", plan: "free" }] }] }],
   ["engine_unsupported", { features: [] }],
   ["engine_unsupported", { noMachine: true }],
@@ -119,6 +120,13 @@ test("signed out without a family list fails at once; connected with families st
     return e.invoke<T>(command, args);
   };
   assert.equal((await sealFirstFreeWorkspace(loading, noWait)).id, "ws_free");
+});
+
+test("a personal org upgraded to Pro is entered like the Free one", async () => {
+  const e = engine({ sessions: [{ ...FREE, contexts: [{ ...FREE.contexts[0], plan: "pro", personal: true }] }] });
+  const w = await sealFirstFreeWorkspace(e.invoke, noWait);
+  assert.equal(w.id, "ws_free");
+  assert.equal(e.state.created.length, 1);
 });
 
 test("an onboarding cut after sealing only reactivates the sealed workspace", async () => {

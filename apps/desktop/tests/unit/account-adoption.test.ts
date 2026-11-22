@@ -6,9 +6,9 @@
  */
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { adoptionTarget, adoptionTargetOf, adoptLocals, prefsAdoptionMemory } from "../../src/features/shell/account-adoption.ts";
-import { prefsPendingUnions } from "../../src/features/shell/account-transfers.ts";
-import { createAccountWorkspaces } from "../../src/features/shell/session-account-workspaces.ts";
+import { adoptionTarget, adoptionTargetOf, adoptLocals, isPersonal, prefsAdoptionMemory } from "../../../../packages/shell/src/shell/account-adoption.ts";
+import { prefsPendingUnions } from "../../../../packages/shell/src/shell/account-transfers.ts";
+import { accountRefreshKey, createAccountWorkspaces } from "../../../../packages/shell/src/shell/session-account-workspaces.ts";
 
 function prefs() {
   const store = new Map<string, unknown>();
@@ -329,4 +329,20 @@ test("locals are adopted only when there is exactly one Free org", () => {
   assert.equal(adoptionTarget([g("org_free", "free"), g("org_acme", "paid")])?.org, "org_free");
   assert.equal(adoptionTarget([g("org_a", "free"), g("org_b", "free")]), undefined, "dos correos con su Free: elige la persona");
   assert.equal(adoptionTarget([g("org_acme", "paid")]), undefined);
+});
+
+test("the personal org is recognized by `personal`, whatever its plan, and by Free only when identity does not say", () => {
+  const g = (org: string, plan: string | null, personal?: boolean) => ({ context_id: `c-${org}`, org, plan, ...(personal === undefined ? {} : { personal }) });
+  assert.equal(adoptionTarget([g("org_mine", "pro", true), g("org_acme", "team", false)])?.org, "org_mine", "a personal org upgraded to Pro is still the target");
+  assert.equal(adoptionTarget([g("org_free", "free", false)]), undefined, "identity saying it is not personal wins over the plan");
+  assert.equal(isPersonal(g("org_old", "free")), true, "an older identity without the field falls back to the Free plan");
+  assert.equal(isPersonal(g("org_old", "pro")), false);
+});
+
+test("the accounts are read again when identity starts saying which org is personal, with the same plan", () => {
+  const g = (personal?: boolean) => [{ context_id: "c1", org: "org_mine", plan: "pro", ...(personal === undefined ? {} : { personal }) }];
+  assert.notEqual(accountRefreshKey(g()), accountRefreshKey(g(true)), "personal: true arrives after the identity deploy");
+  assert.notEqual(accountRefreshKey([{ context_id: "c1", org: "o", plan: "free" }]), accountRefreshKey([{ context_id: "c1", org: "o", plan: "free", personal: false }]), "a correction with the same plan");
+  assert.equal(accountRefreshKey([{ context_id: "c1", org: "o", plan: "free" }]), accountRefreshKey([{ context_id: "c1", org: "o", plan: "free", personal: true }]), "same meaning, no extra read");
+  assert.equal(accountRefreshKey(null), "null");
 });

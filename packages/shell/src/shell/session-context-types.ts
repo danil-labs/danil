@@ -1,6 +1,6 @@
 import type { EmptyReply, RemovedContext } from "./session-empty.ts";
 
-export type SessionContext = { context_id: string; org: string; org_name: string | null; plan: string | null; role?: string | null; workspaces?: "all" | "later" };
+export type SessionContext = { context_id: string; org: string; org_name: string | null; plan: string | null; role?: string | null; workspaces?: "all" | "later"; personal?: boolean };
 export type SessionFamily = { family: string; sub?: string; email: string | null; contexts: SessionContext[]; available_contexts?: number };
 export type ContextGroup = SessionContext & { family: string; email: string | null; available_contexts?: number };
 export type SessionStatus = { state: string; sessions?: SessionFamily[]; default_context?: string | null; empty_reason?: string | null; removed?: RemovedContext[] };

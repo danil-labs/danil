@@ -7,7 +7,7 @@
  * funciones del riel): lee los contextos y el catálogo por su cuenta.
  */
 import { escribirPref, leerPref } from "../../../../apps/desktop/src/lib/prefs.ts";
-import { adoptionTarget } from "./account-adoption.ts";
+import { adoptionTarget, isPersonal } from "./account-adoption.ts";
 import { createAccountWorkspaces } from "./session-account-workspaces.ts";
 import type { ContextGroup, ContextInvoke } from "./session-context-types.ts";
 import { createSessionContexts } from "./session-contexts.ts";
@@ -51,8 +51,7 @@ export async function sealFirstFreeWorkspace(invoke: ContextInvoke, { delays = F
     if (!groups?.length && state !== null && state !== "connected") throw refuse("no_session");
     if (groups === null) { if (last) throw refuse("not_available_yet"); continue; }
     if (!groups.length) throw refuse("no_session");
-    const free = groups.filter((g) => g.plan === "free");
-    if (!free.length) throw refuse("no_free_org");
+    if (!groups.some(isPersonal)) throw refuse("no_free_org");
     const personal = adoptionTarget(groups);
     if (!personal) throw refuse("several_free_orgs");
     const refresh = () => accounts.refresh(groups, sessions.send);

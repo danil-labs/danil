@@ -5,8 +5,8 @@
  */
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { type AccountRequest, createAccountRequests, listOrgs, pickGroup, runAccountRequest } from "../../src/features/shell/account-requests.ts";
-import type { ContextGroup, ContextReply } from "../../src/features/shell/session-context-types.ts";
+import { type AccountRequest, createAccountRequests, listOrgs, pickGroup, runAccountRequest } from "../../../../packages/shell/src/shell/account-requests.ts";
+import type { ContextGroup, ContextReply } from "../../../../packages/shell/src/shell/session-context-types.ts";
 
 const group = (context_id: string, org: string, org_name: string, plan: string | null, role: string | null, email = "a@example.com"): ContextGroup =>
   ({ context_id, org, org_name, plan, role, family: "f", email });
@@ -67,6 +67,16 @@ test("creating sends the CLI key as Idempotency-Key, seals here and two dispatch
   assert.deepEqual(second.outcome, first.outcome);
   assert.deepEqual(sealed[0], ["org_free", "1000", "qw0xyz0", "Docs"]);
   assert.deepEqual(first.created, { name: "Docs", org: "Personal", task: "task-9", materialized: true });
+});
+
+test("the personal org upgraded to Pro still creates on this computer and needs no admin", async () => {
+  const api = server();
+  const sealed: unknown[] = [];
+  const mine = { ...group("c-mine", "org_mine", "Personal", "pro", "member"), personal: true };
+  const got = await runAccountRequest(request({ name: "Docs" }, "workspace.create", "key-pro"), { groups: () => [mine, acme], send: api.send, createHere: async (...a: unknown[]) => { sealed.push(a); } });
+  assert.deepEqual(api.posts.map((p) => [p.context, p.body]), [["c-mine", { name: "Docs", placement: { kind: "member_computer" } }]]);
+  assert.equal(sealed.length, 1, "sealed here like the Free one");
+  assert.ok("result" in got.outcome);
 });
 
 test("a paid org leaves the placement to its admin and only a member computer workspace is sealed here", async () => {

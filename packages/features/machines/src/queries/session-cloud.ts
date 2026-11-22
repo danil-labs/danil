@@ -4,7 +4,8 @@ import { settledContextIds } from "../../../../../apps/desktop/src/lib/settled-c
 import { createCloudMachines, EDGE_ENDPOINT } from "./cloud-machines.ts";
 
 type Invoke = (command: string, args?: Record<string, unknown>) => Promise<unknown>;
-type Context = { context_id: string; org: string; plan?: string | null };
+// `personal` va al router (`isPersonal`): copiar solo algunos campos lo haría decidir por el plan.
+type Context = { context_id: string; org: string; plan?: string | null; personal?: boolean };
 type Status = { state?: string; sessions?: { contexts: Context[] }[] };
 export type ContextComputer = Computer & { context?: string };
 

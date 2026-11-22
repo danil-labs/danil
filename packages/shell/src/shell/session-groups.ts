@@ -9,7 +9,7 @@ import { type CreatedNotice, createAccountRequests } from "./account-requests.ts
 import { engineAdoptionReport, engineOwnsAdoption, onEngineAdoption, retryEngineAdoption } from "./engine-adoption.ts";
 import { engineFeatures } from "./engine-features.ts";
 import { createPersonalOpener } from "./personal-open.ts";
-import { createAccountWorkspaces } from "./session-account-workspaces.ts";
+import { accountRefreshKey, createAccountWorkspaces } from "./session-account-workspaces.ts";
 import { type ContextGroup, createSessionContexts } from "./session-contexts.ts";
 import { handAdoptionReport, handedReport } from "./session-gate.ts";
 import type { EmptyReason } from "./session-empty.ts";
@@ -50,11 +50,11 @@ function wire(hidden: () => ReadonlySet<string>, onSeeded: (ids: readonly string
     revision();
     // La web: el riel sale del catálogo de cada contexto, nunca de lo que sirve una máquina.
     if (catalog) return catalog.workspaces(context);
-    return sessionWorkspaceSource(groups()?.find((g) => g.context_id === context)?.plan ?? null, () => danilAvailableContext(org, context), () => accounts.available(org));
+    return sessionWorkspaceSource(groups()?.find((g) => g.context_id === context) ?? null, () => danilAvailableContext(org, context), () => accounts.available(org));
   };
   const opener = createPersonalOpener({ send: sessions.send, reread: async () => { await sessions.refresh(); return sessions.groups(); }, defaultContext: sessions.defaultContext, groups: sessions.groups });
   const refreshAccounts = () => accounts.refresh(groups() ?? [], sessions.send, (context) => records.get(context)?.person ?? null, opener);
-  const accountKey = createMemo(() => JSON.stringify(groups()?.map((g) => [g.context_id, g.org, g.plan]) ?? null));
+  const accountKey = createMemo(() => accountRefreshKey(groups()));
   createEffect(on(accountKey, () => void refreshAccounts()));
   // Una persona nueva recibe su organización personal después del login. Se reintenta sin otro
   // inicio de sesión hasta que identity liga el contexto y el reclamo se hace, o se agota el plazo.

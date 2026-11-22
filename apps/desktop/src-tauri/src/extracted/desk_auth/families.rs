@@ -30,6 +30,12 @@ pub(super) struct Context {
     pub empty_reason: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub workspaces: Option<String>,
+    #[serde(
+        default,
+        deserialize_with = "super::context_role::deserialize_personal",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub personal: Option<bool>,
 }
 #[derive(Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 struct Metadata {

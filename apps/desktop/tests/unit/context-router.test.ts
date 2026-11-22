@@ -2,10 +2,10 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { Fleet, type Link } from "@terminus/fleet";
 import "../helpers/catalog.ts";
-import { contextAttentionStale, createContextAttention } from "../../src/features/machines/context-attention.ts";
-import { createContextRouter } from "../../src/features/machines/context-router.ts";
-import { createRouter } from "../../src/features/machines/router.ts";
-import { scopedFleet } from "../../src/features/machines/scoped-fleet.ts";
+import { contextAttentionStale, createContextAttention } from "../../../../packages/features/machines/src/queries/context-attention.ts";
+import { createContextRouter } from "../../../../packages/features/machines/src/queries/context-router.ts";
+import { createRouter } from "../../../../packages/features/machines/src/queries/router.ts";
+import { scopedFleet } from "../../../../packages/features/machines/src/queries/scoped-fleet.ts";
 import { activeWorkspaceContext, captureWorkspaceContext, displayWorkspaceContext, displayWorkspaceSnapshot, rememberWorkspaceSnapshot, requestedWorkspaceSnapshot, setActiveWorkspaceContext, setDisplayWorkspaceContext } from "../../src/lib/workspace-context.ts";
 
 function setup(plans: Record<string, string> = {}) {
@@ -22,7 +22,7 @@ function setup(plans: Record<string, string> = {}) {
   } });
   fleet.setMachines(["a", "b"].map(context => ({ id: "vm", name: "Org", wakes: true, kind: "organization", organizationId: "org", context, linked: new Set(["same"]) })));
   for (const context of ["a", "b"]) fleet.setListing("vm", [{ id: "same", name: "Shared" }], context);
-  const router = createRouter({ self: "local", fleet, contextInfo: context => context === "free" ? { org: "free-org", plan: "free" } : ["a", "b"].includes(context) ? { org: "org", plan: plans[context] ?? "teams" } : null,
+  const router = createRouter({ self: "local", fleet, contextInfo: context => context === "free" ? { org: "free-org", plan: "free" } : context === "pro-personal" ? { org: "mine-org", plan: "pro", personal: true } : ["a", "b"].includes(context) ? { org: "org", plan: plans[context] ?? "teams" } : null,
     deliver: events => delivered.push(...events),
     native: async (command, args, options) => { native.push({ command, args, options }); return command === "list_workspaces" ? { workspaces: [{ id: "local", name: "Local" }], active: "local" } : null; },
   });
@@ -80,6 +80,15 @@ test("captured task options retain their context after the active organization c
 test("a Free context executes only on this computer", async () => {
   const {router,calls,native}=setup();
   await router.handle("set_active_workspace",{id:"same"},contextOptions("free"));
+  await router.handle("send_message",{text:"local"});
+  assert.deepEqual(native.map(call=>call.command),["set_active_workspace","send_message"]);
+  assert.equal(calls.length,0);
+  router.close();
+});
+
+test("a personal context upgraded to Pro still executes only on this computer", async () => {
+  const {router,calls,native}=setup();
+  await router.handle("set_active_workspace",{id:"same"},contextOptions("pro-personal"));
   await router.handle("send_message",{text:"local"});
   assert.deepEqual(native.map(call=>call.command),["set_active_workspace","send_message"]);
   assert.equal(calls.length,0);
