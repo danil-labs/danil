@@ -9,6 +9,7 @@ import { chooseDarkStyle, chooseLightStyle, elegirApariencia, type DarkStyle, ty
 import { cn } from "../../../../../apps/desktop/src/lib/utils";
 import { Button } from "../../../../ui/src/Button";
 import { SettingsPanel, SettingsRow, SettingsSection } from "../../../../ui/src/SettingsLayout";
+import { Pressable } from "../../../../ui/src/Pressable";
 import { LogoDelWorkspace } from "./Workspaces";
 import type { MaquinasDeAjustes } from "../model/machines-port";
 import type { PiezasDeAjustes } from "../model/features-port";
@@ -39,7 +40,7 @@ export default function Appearance(props: { proyecto: string; maquinas: Maquinas
           >
             <For each={temas()}>
               {({ id, Icono, label }) => (
-                <button
+                <Pressable
                   role="radio"
                   aria-checked={tema() === id}
                   aria-label={label}
@@ -53,7 +54,7 @@ export default function Appearance(props: { proyecto: string; maquinas: Maquinas
                   onClick={() => setTema(elegirApariencia(id))}
                 >
                   <Icono size={16} />
-                </button>
+                </Pressable>
               )}
             </For>
           </div>
@@ -102,8 +103,7 @@ export default function Appearance(props: { proyecto: string; maquinas: Maquinas
             <For each={fondos()}>
               {({ id, label }) => (
                 <div role="listitem">
-                  <button
-                    type="button"
+                  <Pressable
                     aria-pressed={fondo() === id}
                     aria-label={label}
                     title={label}
@@ -150,7 +150,7 @@ export default function Appearance(props: { proyecto: string; maquinas: Maquinas
                         aria-hidden="true"
                       />
                     </Show>
-                  </button>
+                  </Pressable>
                 </div>
               )}
             </For>

@@ -1,4 +1,4 @@
-import type { MachineTaskUsage } from "@terminus/protocol";
+import type { MachineTaskUsage } from "../../../engine-client/src/index.ts";
 import { t } from "../../../../apps/desktop/src/lib/i18n";
 import { cn } from "../../../../apps/desktop/src/lib/utils";
 

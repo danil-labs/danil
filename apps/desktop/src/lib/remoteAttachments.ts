@@ -6,7 +6,7 @@
  * (`guardar_adjunto`) y allá se prepara su copia, igual que en el teléfono
  * (`apps/mobile/src/lib/engine.ts`).
  */
-import { IMAGE_MIMES, isImageMime, MAX_UPLOAD_BYTES, mimeOfAttachment } from "@terminus/protocol";
+import { IMAGE_MIMES, isImageMime, MAX_UPLOAD_BYTES, mimeOfAttachment } from "../../../../packages/engine-client/src/index.ts";
 
 export type AttachmentMover = {
   /** La máquina del turno anuncia `attachment_documents_v1`. */

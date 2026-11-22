@@ -2,7 +2,7 @@
  * Qué viaja y cuánto cuesta: reglas puras que comparten la hoja de la ventana,
  * la web y el teléfono (diseño «Llevar y traer trabajo entre máquinas», D1 y D2).
  */
-import type { WorkStatus } from "./types.ts";
+import type { WorkStatus } from "./carryTypes.ts";
 
 const MIB = 1024 * 1024;
 

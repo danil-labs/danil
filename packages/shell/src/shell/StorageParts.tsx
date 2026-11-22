@@ -1,4 +1,4 @@
-import type { MachineResources } from "@terminus/protocol";
+import type { MachineResources } from "../../../engine-client/src/index.ts";
 import type { JSX } from "solid-js";
 import { Show } from "solid-js";
 import { t } from "../../../../apps/desktop/src/lib/i18n";

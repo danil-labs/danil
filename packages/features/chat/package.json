@@ -10,16 +10,13 @@
     "@tanstack/solid-virtual": "3.13.51",
     "@tauri-apps/api": "^2.12.4",
     "@tauri-apps/plugin-dialog": "^2.8.4",
-    "@terminus/carry": "workspace:*",
     "@terminus/chat": "workspace:*",
-    "@terminus/protocol": "workspace:*",
     "@terminus/tasks": "workspace:*",
     "lucide-solid": "^1.31.0",
     "mdast-util-from-markdown": "2.0.3",
     "react": "19.0.0",
     "react-dom": "19.0.0",
-    "solid-js": "^1.9.17",
-    "zod": "^4.6.5"
+    "solid-js": "^1.9.17"
   },
   "devDependencies": {
     "@types/node": "^26.4.0",

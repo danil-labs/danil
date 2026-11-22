@@ -3,11 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "The commands a Terminus remote client may send to a machine's engine, and what they answer.",
+  "description": "Shim for apps/mobile only: re-exports the engine protocol that now lives in packages/engine-client.",
   "exports": {
     ".": "./src/index.ts"
-  },
-  "scripts": {
-    "test": "node --test 'test/*.test.ts'"
   }
 }

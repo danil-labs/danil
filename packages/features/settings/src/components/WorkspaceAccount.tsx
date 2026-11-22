@@ -6,6 +6,7 @@ import "../../../../../apps/desktop/src/locales/danilPhrases";
 import { createEffect, createSignal, on, Show } from "solid-js";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { Button } from "../../../../ui/src/Button";
+import { Pressable } from "../../../../ui/src/Pressable";
 import { cn } from "../../../../../apps/desktop/src/lib/utils";
 import type { MaquinasDeAjustes } from "../model/machines-port";
 import type { SesionesDeAjustes } from "../model/sessions-port";
@@ -85,9 +86,9 @@ export default function WorkspaceAccount(props: { workspace: string; name: strin
         <Show when={adding()}>
           <p class="m-0 text-neutral-500" data-workspace-adding="">
             {t("danil.account.pending", { code: accounts.pending()?.user_code ?? "" })}{" "}
-            <button type="button" class="cursor-pointer border-0 bg-transparent p-0 text-xs text-primary underline" onClick={accounts.reopen}>
+            <Pressable class="cursor-pointer border-0 bg-transparent p-0 text-xs text-primary underline" onClick={accounts.reopen}>
               {t("danil.account.open_again")}
-            </button>
+            </Pressable>
           </p>
         </Show>
         <Show when={message() === LICENSE_REQUIRED}>

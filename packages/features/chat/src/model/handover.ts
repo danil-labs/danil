@@ -1,4 +1,4 @@
-import { canHandOver as engineAllows } from "@terminus/protocol";
+import { canHandOver as engineAllows } from "../../../../engine-client/src/index.ts";
 
 /**
  * Cambiar de CLI en una tarea abierta (`provider_handoff_v1`). La autoridad es

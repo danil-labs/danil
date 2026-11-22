@@ -3,11 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Carry work between machines from any client: what travels, how it is copied in parts and how the task starts on top of it.",
+  "description": "Shim for apps/mobile only: re-exports carry, which now lives in packages/features/machines.",
   "exports": {
     ".": "./src/index.ts"
-  },
-  "scripts": {
-    "test": "node --test 'test/*.test.ts'"
   }
 }

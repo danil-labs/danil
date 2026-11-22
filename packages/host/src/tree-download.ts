@@ -1,4 +1,4 @@
-import { readTreeFile, type TreePart } from "@terminus/protocol";
+import { readTreeFile, type TreePart } from "../../engine-client/src/index.ts";
 
 /** Lo que se lee del árbol de la tarea, una parte cada vez (`tree_read_part`). */
 export type LeerParte = (offset: number, size: number, revision?: string) => Promise<TreePart>;

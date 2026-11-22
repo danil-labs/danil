@@ -1,21 +1,4 @@
-export * from "./types.ts";
-export {
-  ATTACHMENT_DOCUMENTS_FEATURE,
-  ATTACHMENT_MIMES,
-  DOCUMENT_MIMES,
-  IMAGE_MIMES,
-  MAX_UPLOAD_BYTES,
-  attachmentAccept,
-  acceptsDocuments,
-  isImageMime,
-  mimeOfAttachment,
-  type AttachmentMime,
-} from "./attachments.ts";
-export { type AppCommand, type AppFeature, APP_ACTIONS, APP_COMMANDS, APP_FEATURES, APP_READS, NEEDS_YOU, isAppAction, isAppCommand } from "./commands.ts";
-export { PROVIDER_HANDOFF_FEATURE, canHandOver } from "./handover.ts";
-export { MODEL_REQUIRED_KEY, SESSION_MODEL_FEATURE, SESSION_MODEL_REFUSALS, type SessionModelArgs, savesSessionModel, sessionModelArgs } from "./sessionModel.ts";
-export { MAX_TREE_FILE_BYTES, TREE_PARTS_FEATURE, TREE_PART_BYTES, TreeFileError, type TreeFileFailure, type TreePart, mediaKindOf, readTreeFile } from "./treeParts.ts";
-export { COMMAND_NOT_HERE, COMMAND_UNSUPPORTED, CommandSupport, type Support, isScopeRefusal, isUnknownCommand } from "./support.ts";
-export { type ChatBackground, type ChatBackgroundChange, type ChatBackgroundView, type ChatVeil, DEFAULT_CHAT_VEIL, chatBackgroundImageUrl, chatBackgroundView } from "./background.ts";
-export { isSingle as isSingleAttention, mergeAttention } from "./attention.ts";
-export type { Activity, ActivityEvent, ActivityLog, ActivityRow, ActivityState, ActivityStep } from "./activity.ts";
+// Solo para apps/mobile, que está fuera del pnpm workspace y enlaza `@terminus/protocol`
+// con `file:`. El protocolo vive en packages/engine-client (tarea 3.6c); se borra cuando el
+// teléfono importe packages/engine-client/src/index.ts directamente.
+export * from "../../engine-client/src/index.ts";

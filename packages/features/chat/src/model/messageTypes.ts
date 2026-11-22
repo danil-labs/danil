@@ -1,4 +1,4 @@
-import type { HistoryRef } from "@terminus/protocol";
+import type { HistoryRef } from "../../../../engine-client/src/index.ts";
 import type { CodeRange } from "../../../../../apps/desktop/src/lib/model";
 import type { Recipient, SenderTask } from "../../../../../apps/desktop/src/lib/recipients";
 import type { Paso } from "../../../../../apps/desktop/src/lib/steps";

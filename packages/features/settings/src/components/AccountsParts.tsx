@@ -9,6 +9,7 @@ import { Button } from "../../../../ui/src/Button";
 import { MarcaAgente } from "../../../../ui/src/icons";
 import { accountPresentation } from "../screens/AccountCard";
 import { SettingsSection } from "../../../../ui/src/SettingsLayout";
+import { Pressable } from "../../../../ui/src/Pressable";
 import type Accounts from "./AccountsView";
 import type { createCuentas } from "./AccountsState";
 import type { createConexionDeCuentas } from "./AccountsConnect";
@@ -51,8 +52,7 @@ export function createPartesDeCuentas(props: Parameters<typeof Accounts>[0], cue
     ) : (
       <SettingsSection
         title={
-          <button
-            type="button"
+          <Pressable
             class="flex w-full min-w-0 items-center gap-2 rounded-sm bg-transparent p-0 text-left font-[inherit] text-neutral-950 outline-none focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
             aria-expanded={abierto()}
             aria-controls={idCuerpo}
@@ -88,7 +88,7 @@ export function createPartesDeCuentas(props: Parameters<typeof Accounts>[0], cue
                 abierto() && "rotate-90",
               )}
             />
-          </button>
+          </Pressable>
         }
       >
         {/* Plegada se oculta y no se desmonta: una conexión en curso vive aquí. */}

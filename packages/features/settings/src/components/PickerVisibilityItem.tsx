@@ -1,6 +1,7 @@
 import { Show } from "solid-js";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { ITEM_DE_MENU } from "../../../../ui/src/Popover";
+import { Pressable } from "../../../../ui/src/Pressable";
 
 /**
  * «Ocultar del selector» / «Mostrar en el selector», junto a «Quitar proyecto».
@@ -12,7 +13,7 @@ export function PickerVisibilityItem(props: { id: string; hidden: boolean; onSet
   return (
     <Show when={props.onSet}>
       {(apartar) => (
-        <button
+        <Pressable
           role="menuitem"
           class={ITEM_DE_MENU}
           data-picker-visibility={oculto() ? "hidden" : "shown"}
@@ -23,7 +24,7 @@ export function PickerVisibilityItem(props: { id: string; hidden: boolean; onSet
           }}
         >
           {oculto() ? t("settings.projects.show_in_picker") : t("settings.projects.hide_in_picker")}
-        </button>
+        </Pressable>
       )}
     </Show>
   );
