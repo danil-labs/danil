@@ -9,3 +9,4 @@ export { createSessionMutations, type SessionMutationsDeps } from "./queries/ses
 export { createRailSessions, type RailSessionsDeps } from "./model/rail-sessions.ts";
 export { createTaskWork } from "./screens/TaskHistory";
 export type { HandlerTarget } from "./screens/HandlerPolicy";
+export type { default as AgentProfileScreen } from "./screens/AgentProfile";

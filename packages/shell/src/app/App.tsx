@@ -14,14 +14,15 @@ import { createSpacesState } from "./spaces-state";
 import { AgentProfile, CarryOriginLabel, CarryProgress,       MachinePicker,      TaskLocation } from "./lazy-screens";
 import ArrowLeft from "lucide-solid/icons/arrow-left";
 import {
-  batch,
+  
+  
   
   
   
   createSignal,
   
   
-  type JSX,
+  
   
   
   
@@ -56,8 +57,6 @@ import { createdTasks } from "../../../features/projects/src/model/agentPageFilt
 import BaseBranchPicker from "../../../features/projects/src/screens/BaseBranchPicker";
 import { watchHandlerStatus, watchHandlerStatuses } from "../../../features/projects/src/queries/handlerPresence";
 import { EmptyContext, ProjectPicker } from "../../../features/projects/src/screens/Projects";
-
-import { workLabel } from "../../../ui/src/lib/workLabel.ts";
 import { DEFAULT_PROFILE, displayName, notifyProfiles, watchProfiles } from "../../../features/projects/src/queries/profiles";
 import RecentAgentChats from "../../../features/projects/src/screens/RecentAgentChats";
 import {  threadTitle } from "../../../features/projects/src/screens/Sessions";
@@ -93,18 +92,9 @@ import {
   esProvisional,
   proyectoDeNuevaTarea,
 } from "../../../../apps/desktop/src/lib/taskDraft";
-import { cn } from "../../../../apps/desktop/src/lib/utils";
-import {
-  
-  
-  
-  LOCATION_BAR,
-  
-} from "../../../host/src/window";
 import { Button } from "../../../ui/src/Button";
 import { prosaDe } from "../../../ui/src/Failure";
-import { LazyPart } from "../../../ui/src/LazyPart";
-import { createPanelDeChatState, createChatEvents, createSleepSession, createThreadStream, createThreadSide, createAttachments, createAttachmentsMount, createResync, createResyncCommands, createShellCommand, createDraftSend, createHandover, createSend, createSendGates, createSendNow, createPanelDeChat } from "../../../features/chat/src";
+import { createPanelDeChatParts, createPanelDeChatState, createChatEvents, createSleepSession, createThreadStream, createThreadSide, createAttachments, createAttachmentsMount, createResync, createResyncCommands, createShellCommand, createDraftSend, createHandover, createSend, createSendGates, createSendNow, createPanelDeChat } from "../../../features/chat/src";
 
 export const { sleepSession } = createSleepSession({ machineOf });
 
@@ -176,39 +166,16 @@ export default function App() {
 
   const { SelectorDeProyecto, botonDeArchivos, botonDelArbol, consumo, delegatedPanels, guardarLectura, lecturas, montadas, mudarPestana, muestra, nombreDeSeparar, olvidarPestana, proyectoDeLaVista, searchSurfaces, setDelegatedPanels, setSearchSurfaces, setThreadSearchTargets, threadSearchTargets, tiraDeLaVentana, vistaDe } = createPanelDeChat({ createUsage, EmptyContext, MachinePicker, ProjectPicker, TabStrip, activarPestana, actividadDeProyectos, agent, agents, archivosDeTarea, arrastrarPestana, botonDeNuevaPestana, busy, cargandoHilo, carpetaDelProyecto, celdaDe, cerrarBorrador, cerrarPestana, cerrarPestanas, composerProjects, contextConfirmed, contextRoot, cuentasTocadas, elegidosAqui, elegirCarpetaDelWorkspace, elegirProyecto, enBorrador, filaDe, hilos, llaveDeBorrador, mandarVentana, marcaDe, materialError, ocultarDelSelector, ocultosAqui, paginaDeAgente, paneles, permissions, pestanaDelanteEn, pestanas, pestanasDe, preguntadas, project, projectList, proyectoAbierto, reabrirPestana, recargarMaterial, recordarEleccion, setAnadiendoCarpeta, setDraftBases, setPreguntasAMedias, setReadRevision, setSettings, soltarPreguntas, sources, tapadoPorElProyecto, tareasActivas, tareasEnVentanas, taskSourcesError, vivas, vueltaDelBorrador, workspaceActivo });
   const { estadoDePanelDeChat } = createPanelDeChatState({ DEFAULT_PROFILE, abrirSesion, almacenDePreguntas, archivosDeTarea, attention, carpetaDelProyecto, cola, colaDe, composerProjects, createTaskWork, deLaTarea, deleteTask, esChatDeAgente, esperando, etaparSesion, fijarSesion, filaDe, fondoDelAgente, hablandoCon, hablarConEncargado, hilos, lecturas, llaveDeBorrador, machineOf, moverSesion, opcionesDeLaTarea, origenes, permissions, preguntadas, project, projectList, renombrarSesion, requestedProfile, senderTaskId, sesiones, sesionesConEstado, sessionId, setDelegatedPanels, setFondoDelAgente, setRequestedProfile, situacionDeTraspaso, tareaDelRiel, vistaDe, vivas, watchHandlerStatus, watchProfiles, workspaceActivo });
+  const { perfilDePanelDeChat, ubicacionDePanelDeChat } = createPanelDeChatParts({ AgentProfile, TaskLocation, createFreeRouterConsent, folderIcon, abrirPantalla, abrirSesion, agent, apagadas, archivosDeTarea, busy, catalogos, composer, draftMachine, effort, estadoDePanelDeChat, filaDe, machineName, machineWakes, machines, paginaDeAgente, rememberedRunOn, saveDraftConfiguration, sessionId, superficies, workspaceActivo });
   const PanelDeChat = (pp: {
     sesion: string | null;
     /** El proyecto de esa tarea. `null` en la ventana en blanco, que no tiene. */
     proyecto?: string | null;
     soloLectura?: boolean;
   }) => {
-    const { visualWorkspace, esperandoAqui, proyectoDeLaCelda, clavePanel, estadoDelTrabajo, refreshWork, delegation, delegationData, delegatedRows, delegatedList, coordinatingTask, recuperable, origenArchivada, esRepositorio, encargadoDeLaCelda, bloqueoDeTraspaso, motivoDeTraspaso, identidadVisualDeLaCelda, estadoDelEncargado, profiles, cellProfile, chatBackground, declared, viewingProfile, setViewingProfile, handlerPolicy, lecturaDeLaCelda, preguntasDeLaCelda, vistaDeLaCelda, mensajes, historialAnteriorEnReposo, soloPorSerAnterior, seguirConElAgente } = estadoDePanelDeChat(pp);
-    // Máquina, carpeta y rama de la tarea. Una función y no un elemento: el chat la pinta
-    // y, cuando los archivos lo tapan, la fila de la tarea pinta la suya.
-    // Es una sola barra con las herramientas de la ventana (que flotan a su derecha):
-    // la caja guarda su altura aunque `TaskLocation` aún no cargue, para que el chat
-    // empiece siempre debajo y el primer mensaje no quede bajo esas herramientas.
-    const barraDeLaTarea = (contenido: JSX.Element) =>
-      <div data-task-bar="" class={cn("flex min-w-0 shrink-0 flex-col overflow-hidden", LOCATION_BAR)}>{contenido}</div>;
-    const ubicacion = () => <Show when={pp.sesion} fallback={<Show when={!paginaDeAgente()}>{barraDeLaTarea(<Suspense fallback={null}><TaskLocation
-      /* La tarea nueva: la máquina y la carpeta donde va a correr. La rama sale al empezarla. */
-      machine={(draftMachine() ?? (capabilities().nativeWindow ? null : rememberedRunOn(workspaceActivo()))) ?? undefined} machineName={machineName} machineWakes={machineWakes} folderIcon={folderIcon}
-      on={((m) => m?.on !== false && (capabilities().nativeWindow || (!!m && m.hosts !== false)))(machines().find(m => m.id === (draftMachine() ?? rememberedRunOn(workspaceActivo()))))}
-      onScreen={abrirPantalla}
-      project={proyectoDeLaCelda()}
-      path={carpetaDeTrabajo(proyectoDeLaCelda() ?? {}) || undefined} /></Suspense>)}</Show>}>{(id) => {
-      return barraDeLaTarea(<Suspense fallback={null}><TaskLocation
-        machine={filaDe(id())?.machine} machineName={machineName} machineWakes={machineWakes} folderIcon={folderIcon}
-        on={!apagadas()[id()] && filaDe(id())?.machine_on !== false && (capabilities().nativeWindow || machines().find(m => m.id === filaDe(id())?.machine)?.hosts !== false)}
-        onScreen={abrirPantalla}
-        onFiles={() => {
-          const folder = proyectoDeLaCelda()?.id;
-          if (folder) void abrirSesion(folder, id()).then(() => archivosDeTarea.setOpen(id(), true));
-        }}
-        project={proyectoDeLaCelda()}
-        path={estadoDelTrabajo()?.path || undefined}
-        branch={workLabel(estadoDelTrabajo()?.branch, estadoDelTrabajo()?.alias) || undefined} /></Suspense>);
-    }}</Show>;
+    const estado = estadoDePanelDeChat(pp);
+    const { visualWorkspace, esperandoAqui, proyectoDeLaCelda, clavePanel, estadoDelTrabajo, refreshWork, delegation, delegationData, delegatedRows, delegatedList, coordinatingTask, recuperable, origenArchivada, esRepositorio, encargadoDeLaCelda, bloqueoDeTraspaso, motivoDeTraspaso, identidadVisualDeLaCelda, estadoDelEncargado, profiles, cellProfile, declared, viewingProfile, setViewingProfile, lecturaDeLaCelda, preguntasDeLaCelda, vistaDeLaCelda, mensajes, historialAnteriorEnReposo, soloPorSerAnterior, seguirConElAgente } = estado;
+    const ubicacion = ubicacionDePanelDeChat(pp, estado);
     return (
     <Show
       when={viewingProfile() && declared()}
@@ -535,31 +502,7 @@ export default function App() {
       } />
       }
     >
-      {(e) => (
-        <LazyPart><AgentProfile
-          project={proyectoDeLaCelda()?.id ?? ""} createFreeRouterConsent={createFreeRouterConsent}
-          agent={e()}
-          profile={cellProfile()}
-          handlerPolicy={handlerPolicy()}
-          status={estadoDelEncargado()}
-          background={chatBackground() ?? null}
-          superficies={superficies() ?? []}
-          catalogos={catalogos()}
-          currentAgent={filaDe(pp.sesion ?? "")?.provider ?? null}
-          onModelChosen={(elegidoAgent, elegidoModel) => {
-            // Solo si es la conversación que tiene el mando: las demás
-            // celdas no tienen composer propio con quien aplicarlo, y
-            // pisarían el agente/modelo de la que sí lo tiene.
-            if (pp.sesion !== sessionId() || busy()) return;
-            batch(() => {
-              composer.resumeTask({ provider: elegidoAgent || agent(), model: elegidoModel ?? "", effort: effort() });
-              saveDraftConfiguration();
-            });
-          }}
-          onDeleted={() => setViewingProfile(false)}
-          onClose={() => setViewingProfile(false)}
-        /></LazyPart>
-      )}
+      {perfilDePanelDeChat(pp, estado)}
     </Show>
     );
   };

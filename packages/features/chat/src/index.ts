@@ -28,3 +28,4 @@ export { createChatEvents } from "./queries/chat-events.ts";
 export { createThreadsStore } from "./queries/threads-store.ts";
 export { createActivityProjection, activityElapsed, type TurnActivity } from "./model/activity.ts";
 export { createPanelDeChatState } from "./queries/panel-state.ts";
+export { createPanelDeChatParts } from "./screens/PanelDeChatParts.tsx";
