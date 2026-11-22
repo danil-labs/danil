@@ -32,7 +32,7 @@ import type { Preview } from "../../../features/artifacts/src/components/Preview
 import Chat, {
   type Msg,
 } from "../../../features/chat/src/screens/Chat";
-import { DelegatedLaunch, type DelegatedListProps,  type DelegatedPanelModel,  delegatedDescendants } from "../../../features/chat/src/screens/DelegatedTasks";
+import { DelegatedLaunch, type DelegatedListProps,  type DelegatedPanelModel,  delegatedDescendants } from "../../../features/projects/src/screens/DelegatedTasks";
 import { agentSwitchBlocked, MACHINE_UNANNOUNCED } from "../../../features/chat/src/model/handover";
 import { noteMcpSignIn } from "../../../features/settings/src/screens/McpSignInNotice";
 import PreviousAgentChat from "../../../features/chat/src/screens/PreviousAgentChat";

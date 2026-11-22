@@ -12,7 +12,7 @@ import Paneles from "../shell/Panels";
 import Columns2 from "lucide-solid/icons/columns-2";
 import { type Accessor, For, Index, type JSX, type Setter, Show } from "solid-js";
 
-import { DelegatedNone, type DelegatedPanelModel, DelegatedToolbar } from "../../../features/chat/src/screens/DelegatedTasks";
+import { DelegatedNone, type DelegatedPanelModel, DelegatedToolbar } from "../../../features/projects/src/screens/DelegatedTasks";
 import { type SearchSurface, ThreadSearch, type ThreadSearchTarget } from "../../../features/chat/src/screens/ThreadSearch";
 import UsageTool, {  } from "../shell/UsageTool";
 import { type TaskFilesPanel, type TaskFilesSide, type TaskSideMode } from "../../../../apps/desktop/src/lib/taskFiles.ts";
