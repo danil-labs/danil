@@ -41,7 +41,8 @@
  */
 import { CSS_INLINE, inlineVisualStyles, JS_INLINE, type VisualTheme } from "./inlineVisual.ts";
 
-export const CSP_ARTEFACTO = [
+/** Lo que comparten el artefacto y los visores MCP (draw.io y el proxy): nada sale del marco. */
+const CSP_BASE = [
   "default-src 'none'",
   "script-src 'unsafe-inline'",
   "style-src 'unsafe-inline'",
@@ -57,8 +58,12 @@ export const CSP_ARTEFACTO = [
   "base-uri 'none'",
   "object-src 'none'",
   "worker-src 'none'",
-  "manifest-src 'none'",
-].join("; ");
+];
+
+/** La política de los visores MCP: la del artefacto sin `manifest-src`. */
+export const CSP_VISOR = CSP_BASE.join("; ");
+
+export const CSP_ARTEFACTO = [...CSP_BASE, "manifest-src 'none'"].join("; ");
 
 /**
  * Lo único que se le concede al marco. Sin `allow-same-origin` (origen opaco),

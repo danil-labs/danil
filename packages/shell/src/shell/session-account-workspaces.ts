@@ -6,7 +6,7 @@ import { engineOwnsAdoption } from "./engine-adoption.ts";
 import { engineFeatures } from "./engine-features.ts";
 import type { AdoptionProgress } from "./first-login.ts";
 import type { PersonalOpener, PersonalOutcome } from "./personal-open.ts";
-import { workspacesPagePath } from "../../../platform-client/src/workspaces.ts";
+import { workspaceCatalog, workspacesPagePath } from "../../../platform-client/src/workspaces.ts";
 
 export type AccountWorkspace = { id: string; name: string; account: { org: string; account_id: string } };
 export type FreeWorkspace = { id: string; name: string; account_id: string };
@@ -32,23 +32,6 @@ export function accountWorkspaces(value: unknown): AccountWorkspace[] {
     const w = row as Partial<AccountWorkspace>;
     return typeof w?.id === "string" && typeof w.account?.org === "string" && typeof w.account.account_id === "string" ? [{ id: w.id, name: typeof w.name === "string" && w.name.trim() ? w.name : w.id, account: w.account }] : [];
   });
-}
-
-/** Las filas del catálogo de una organización, página a página. Un error corta y devuelve lo leído. */
-async function catalog(send: Send, context: string) {
-  const items: unknown[] = [];
-  const seen = new Set<string>();
-  let cursor: string | null = null;
-  do {
-    const reply = await send(context, "GET", workspacesPagePath(cursor)).catch(() => null);
-    if (!reply || reply.status !== 200) break;
-    const body = reply.body as { items?: unknown[]; next_cursor?: string | null };
-    items.push(...(body.items ?? []));
-    cursor = typeof body.next_cursor === "string" ? body.next_cursor : null;
-    if (cursor && seen.has(cursor)) break;
-    if (cursor) seen.add(cursor);
-  } while (cursor);
-  return items;
 }
 
 /** El destino local se fija explícitamente: abrir un workspace remoto no puede desviar la creación. */
@@ -174,7 +157,7 @@ export function createAccountWorkspaces(invoke: Invoke, native: boolean, changed
         if (transfer && rows.length) {
           let moved = 0;
           for (const group of groups) {
-            const items = await catalog(send, group.context_id);
+            const items = await workspaceCatalog(send, group.context_id);
             if (epoch !== version) return;
             moved += await applyMoves(invoke, header(), movesFor(rows, group.org, group.context_id, items), pending);
           }
