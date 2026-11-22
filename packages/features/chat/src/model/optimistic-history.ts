@@ -1,4 +1,6 @@
-import type { HistoryPager, Msg, Session } from "../../../chat/src/index.ts";
+import type { HistoryPager } from "./history.ts";
+import type { Msg } from "../screens/Chat.tsx";
+import type { Session } from "./transcript.ts";
 import { conservarEnOrden, conservarPorClave } from "../../../../session/src/sessionRefresh.ts";
 
 // `persisted`: a row with a turn the engine already confirmed, painted in `base`. It

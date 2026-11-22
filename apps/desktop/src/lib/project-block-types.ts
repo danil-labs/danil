@@ -2,7 +2,7 @@
 // Un solo sitio: la feature no importa a otra (R3).
 import type { createComposerStore } from "../../../../packages/features/composer/src/index.ts";
 import type { createDraftsStore } from "../../../../packages/features/drafts/src/index.ts";
-import type { createThreadsStore } from "../../../../packages/features/threads/src/index.ts";
+import type { createThreadsStore } from "../../../../packages/features/chat/src/index.ts";
 import type { createPanels } from "./panels.ts";
 import type { createTabs } from "./tabs.ts";
 import type { createTaskFiles } from "./taskFiles.ts";
@@ -15,14 +15,14 @@ export type TabsStore = ReturnType<typeof createTabs>;
 export type TaskFilesStore = ReturnType<typeof createTaskFiles>;
 export { type createComposerStore } from "../../../../packages/features/composer/src/index.ts";
 export { type createDraftsStore } from "../../../../packages/features/drafts/src/index.ts";
-export { type createThreadsStore } from "../../../../packages/features/threads/src/index.ts";
+export { type createThreadsStore } from "../../../../packages/features/chat/src/index.ts";
 
 export { type Machine, type ProjectPlace } from "../../../../packages/features/machines/src/queries.ts";
 export { type ComposerConfiguration } from "../../../../packages/features/composer/src/index.ts";
 export { type Draft, type DraftConfiguration } from "../../../../packages/features/drafts/src/index.ts";
 export { type ChatEvent, type HandoverPending, type HandoverState, type Msg, type PermissionRequest, type Session, type TranscriptOrigin } from "../../../../packages/features/chat/src/index.ts";
-export { type MachineWait, type createThreadsCore } from "../../../../packages/features/threads/src/queries.ts";
-export { type OptimisticHistoryState, type TranscriptMetadata } from "../../../../packages/features/threads/src/model.ts";
+export { type MachineWait, type createThreadsCore } from "../../../../packages/features/chat/src/queries.ts";
+export { type OptimisticHistoryState, type TranscriptMetadata } from "../../../../packages/features/chat/src/model.ts";
 export { type Author } from "../../../../packages/features/chat/src/model/messageTypes.ts";
 export { type Preview } from "../../../../packages/features/artifacts/src/components/Preview.tsx";
 export { type ChatExportado } from "../../../../packages/features/chat/src/model/transcript.ts";

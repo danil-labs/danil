@@ -4,7 +4,7 @@ import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { listModels, setProviderConsent, workspacesStartup } from "../queries/engine-consent";
 import { acceptedFreeModelPolicy, freeModelScope, sameFreeModelPolicy, type FreeModelConsent, type FreeModelPolicy, type FreeModelStartup } from "../../../../../apps/desktop/src/lib/free-model-policy.ts";
 import { loadFreeModelPolicy } from "../../../../../apps/desktop/src/lib/free-model-policy-load.ts";
-import type { Frase } from "../../../../../apps/desktop/src/lib/prose";
+import type { Consentimiento } from "../../../../ui/src/lib/freeRouterConsent.ts";
 import { prosaDe } from "../../../../ui/src/Failure";
 import { activatePlatform, isPlatformPolicy, needsPlatform, withdrawPlatform } from "../queries/free-router-session.ts";
 
@@ -28,7 +28,7 @@ async function politicaConReintento(): Promise<FreeModelPolicy | null> {
  * frase tiene el número al lado, y un guarda en Rust falla si el texto se
  * mueve sin que la versión suba.
  */
-export type Consentimiento = { lineas: Frase[]; version: number; policy: FreeModelPolicy };
+export type { Consentimiento };
 
 /** El consentimiento de Router IA gratis: lo comparten Configuración y el selector de modelos. */
 export function createFreeRouterConsent(opts: { agente: () => string; despues?: () => Promise<void> | void }) {

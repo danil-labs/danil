@@ -1,4 +1,4 @@
-export * from "./model/account-auth";
+export * from "../../../ui/src/lib/account-auth.ts";
 export * from "./model/account-emails";
 export * from "./model/account-profile";
 export * from "./model/ai-providers-groups";

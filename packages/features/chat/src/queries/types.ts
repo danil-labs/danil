@@ -17,7 +17,7 @@ import type { listaBasta, reconciliar } from "../../../settings/src/model/early-
 import type { Startup } from "../../../settings/src/queries/workspaces-store";
 import type { DefaultPermissionModeChange } from "../../../settings/src/screens/DefaultPermissions";
 import type { createEngineQueue, createTaskQueues } from "../../../task-queues/src";
-import type { createThreadsStore } from "../../../threads/src";
+import type { createThreadsStore } from "./threads-store.ts";
 import type { createWorkspaceStore } from "../../../workspace/src";
 import type { createContextSource } from "../../../workspaces/src";
 

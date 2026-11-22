@@ -34,3 +34,8 @@ export * from "./model/transcript.ts";
 export * from "./model/visualBudget.ts";
 export * from "./model/visualDirective.ts";
 export * from "./model/workFace.ts";
+export * from "./model/activity.ts";
+export * from "./model/activityAnchor.ts";
+export * from "./model/assistant-history.ts";
+export * from "./model/optimistic-history.ts";
+export * from "./model/transcript-events.ts";

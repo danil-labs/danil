@@ -6,7 +6,7 @@ import { openExternal } from "../queries/engine-open";
 import { textoDeFalta } from "../../../../../apps/desktop/src/lib/no-space";
 import { capabilities } from "../../../../host/src/platform";
 import { detalleDe } from "../../../../ui/src/Failure";
-import { accountKeyUrl, addBlockedByExternal } from "../model/account-auth";
+import { accountKeyUrl, addBlockedByExternal } from "../../../../ui/src/lib/account-auth.ts";
 import { type Account, type AccountList, type AccountStatus, type AgentOpt, type EnEspera } from "../queries/accounts-store";
 import type { BloqueoAlta } from "../model/ai-providers-groups";
 import { ESPERA_ANTES_DE_LA_TERMINAL_MS } from "./AccountsModel";
