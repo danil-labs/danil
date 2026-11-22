@@ -1,13 +1,3 @@
-/**
- * Sin uso en producto: ningún cliente aparta una máquina por su contrato; solo
- * un `version_mismatch` real del relay o del motor la marca. No es compuerta.
- *
- * Si el motor de una computadora habla el contrato con el que se hizo un
- * cliente: `contract` es el hash que dio su último `hello` (`GET /v1/computers`)
- * y `own`, el de `commands.json` del cliente.
- */
-export type Compatibility = "ok" | "outdated" | "unknown";
-
 // Familia auditada: cada contrato solo añade órdenes al anterior y conserva
 // las existentes y los eventos byte por byte. El segundo añade
 // chat_visual_part; el tercero, las credenciales de la cuenta
@@ -24,11 +14,4 @@ const VISUAL_PARTS = [
 export function machineContracts(own: string | null | undefined): string[] {
   const normalized = typeof own === "string" ? own.trim().toLowerCase() : "";
   return VISUAL_PARTS.includes(normalized) ? [...VISUAL_PARTS] : normalized ? [normalized] : [];
-}
-
-export function machineCompatibility(contract: string | null | undefined, own: string | null | undefined): Compatibility {
-  const theirs = typeof contract === "string" ? contract.trim().toLowerCase() : "";
-  const mine = typeof own === "string" ? own.trim().toLowerCase() : "";
-  if (!theirs || !mine) return "unknown";
-  return machineContracts(mine).includes(theirs) ? "ok" : "outdated";
 }

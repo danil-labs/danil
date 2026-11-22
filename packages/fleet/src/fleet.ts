@@ -113,7 +113,7 @@ export type FleetConfig = {
   /** La máquina de la ventana (sus ids van sueltos), o `null` en la web. */
   self?: string | null;
   connect(info: MachineInfo): Link;
-  /** Si este cliente habla el contrato de un motor: `null` si no se sabe (`machineCompatibility`). */
+  /** Si este cliente habla el contrato de un motor: `null` si no se sabe. */
   compatible?(contract: string | null): boolean | null;
   /** Enciende una VM por el plano de control; `false` si no se pudo, `not_startable` si no es suya de encender. */
   wake?(machine: string, context?: string): Promise<boolean | "not_startable">;

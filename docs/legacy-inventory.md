@@ -20,38 +20,30 @@ Inventario exhaustivo de todo el código en el front que consume o adapta sistem
 
 | Archivo:línea | Qué consume | Sistema viejo | Reemplazo por el borde (ruta exacta) o «se borra» | Evidencia |
 |---|---|---|---|---|
-|  | Endpoint legado /v1/computers | /v1/computers |  vía  |  |
-|  | Endpoint legado /v1/computers | /v1/computers |  vía  |  |
-|  | Endpoint legado /v1/computers | /v1/computers |  vía  |  |
-|  | Endpoint legado /v1/computers | /v1/computers |  vía  |  |
-|  | Endpoint legado /v1/computers | /v1/computers |  vía  |  |
-|  | Endpoint legado /v1/computers | /v1/computers |  vía  |  |
-|  | Endpoint legado /v1/computers | /v1/computers |  vía  |  |
-|  | Endpoint legado /v1/computers | /v1/computers |  vía  |  |
-|  | Endpoint legado /v1/computers | /v1/computers |  vía  |  |
-|  | Endpoint legado /v1/computers | /v1/computers |  vía  |  |
-|  | Endpoint legado /v1/computers | /v1/computers |  vía  |  |
-|  | Endpoint legado /v1/computers | /v1/computers |  vía  |  |
-|  | Endpoint legado /v1/computers | /v1/computers |  vía  |  |
-|  | Endpoint legado /v1/computers | /v1/computers |  vía  |  |
-|  | Endpoint legado /v1/computers | /v1/computers |  vía  |  |
-|  | Endpoint legado /v1/computers | /v1/computers |  vía  |  |
-|  | Endpoint legado /v1/computers | /v1/computers |  vía  |  |
-|  | Endpoint legado /v1/computers | /v1/computers |  vía  |  |
-|  | Endpoint legado /v1/computers | /v1/computers |  vía  |  |
-|  | Endpoint legado /v1/computers | /v1/computers |  vía  |  |
-|  | Endpoint legado /v1/computers | /v1/computers |  vía  |  |
-|  | Endpoint legado /v1/computers | /v1/computers |  vía  |  |
-|  | Endpoint legado /v1/computers | /v1/computers |  vía  |  |
-|  | Endpoint legado /v1/computers | /v1/computers |  vía  |  |
-|  | Endpoint legado /v1/computers | /v1/computers |  vía  |  |
-|  | Endpoint legado /v1/computers | /v1/computers |  vía  |  |
-|  | Endpoint legado /v1/computers | /v1/computers |  vía  |  |
-|  | Endpoint legado /v1/computers | /v1/computers |  vía  |  |
-|  | Endpoint legado /v1/computers | /v1/computers |  vía  |  |
-|  | Endpoint legado /v1/computers | /v1/computers |  vía  |  |
-|  | Endpoint legado /v1/computers | /v1/computers |  vía  |  |
-|  | Variable de entorno de computers | DANIL_COMPUTERS_URL |  vía  |  |
+| `packages/computers/src/api.ts:10` | Endpoint legado /v1/computers | /v1/computers | Se queda en 3.4: lo usa `origin/dev` 9a0ee2ad (`apps/desktop/src/features/machines/account.tsx:453`, `:279`, `:292`) | `listComputers`, `sessionProbe` o `startComputer`; los usa `account.tsx`/`ConnectMachine.tsx`/`Connections.tsx` de Alberto en `origin/dev`: se queda |
+| `packages/computers/src/api.ts:122` | Endpoint legado /v1/computers | /v1/computers | Se queda en 3.4: lo usa `origin/dev` 9a0ee2ad (`apps/desktop/src/features/machines/account.tsx:453`, `:279`, `:292`) | `listComputers`, `sessionProbe` o `startComputer`; los usa `account.tsx`/`ConnectMachine.tsx`/`Connections.tsx` de Alberto en `origin/dev`: se queda |
+| `packages/computers/src/api.ts:215` | Endpoint legado /v1/computers | /v1/computers | Se queda en 3.4: lo usa `origin/dev` 9a0ee2ad (`apps/desktop/src/features/machines/account.tsx:453`, `:279`, `:292`) | `listComputers`, `sessionProbe` o `startComputer`; los usa `account.tsx`/`ConnectMachine.tsx`/`Connections.tsx` de Alberto en `origin/dev`: se queda |
+| `packages/computers/src/api.ts:227` | Endpoint legado /v1/computers | /v1/computers | Se queda en 3.4: lo usa `origin/dev` 9a0ee2ad (`apps/desktop/src/features/machines/account.tsx:453`, `:279`, `:292`) | `listComputers`, `sessionProbe` o `startComputer`; los usa `account.tsx`/`ConnectMachine.tsx`/`Connections.tsx` de Alberto en `origin/dev`: se queda |
+| `packages/computers/src/links.ts:3` | Endpoint legado /v1/computers | /v1/computers | Se queda en 3.4: lo usa `origin/dev` 9a0ee2ad (`apps/desktop/src/features/machines/account.tsx:453`, `:279`, `:292`) | Comentario del flujo que sigue vivo (`GET /v1/computers` en `origin/dev`): se queda |
+| `packages/computers/src/links.ts:104` | Endpoint legado /v1/computers | /v1/computers | Se queda en 3.4: lo usa `origin/dev` 9a0ee2ad (`apps/desktop/src/features/machines/account.tsx:453`, `:279`, `:292`) | Comentario del flujo que sigue vivo (`GET /v1/computers` en `origin/dev`): se queda |
+| `packages/computers/src/machine.ts:15` | Endpoint legado /v1/computers | /v1/computers | Se queda en 3.4: lo usa `origin/dev` 9a0ee2ad (`apps/desktop/src/features/machines/account.tsx:453`, `:279`, `:292`) | Comentario del flujo que sigue vivo (`GET /v1/computers` en `origin/dev`): se queda |
+| `packages/computers/src/relay.ts:120` | Endpoint legado /v1/computers | /v1/computers | Se queda en 3.4: lo usa `origin/dev` 9a0ee2ad (`apps/desktop/src/features/machines/account.tsx:453`, `:279`, `:292`) | Relay `computers.danil.ai` (URL de sesión o de API); lo usa `account.tsx` de Alberto en `origin/dev`: se queda |
+| `packages/computers/src/connect.ts:5` | Endpoint legado /v1/computers | /v1/computers | Se queda en 3.4: lo usa `origin/dev` 9a0ee2ad (`apps/desktop/src/features/machines/account.tsx:453`, `:279`, `:292`) | Comentario del flujo que sigue vivo (`GET /v1/computers` en `origin/dev`): se queda |
+| `packages/computers/src/connect.ts:45` | Endpoint legado /v1/computers | /v1/computers | Se queda en 3.4: lo usa `origin/dev` 9a0ee2ad (`apps/desktop/src/features/machines/account.tsx:453`, `:279`, `:292`) | Comentario del flujo que sigue vivo (`GET /v1/computers` en `origin/dev`): se queda |
+| `packages/computers/test/screen.test.ts:6` | Endpoint legado /v1/computers | /v1/computers | Se queda en 3.4: lo usa `origin/dev` 9a0ee2ad (`apps/desktop/src/features/machines/account.tsx:453`, `:279`, `:292`) | Relay `computers.danil.ai` (URL de sesión o de API); lo usa `account.tsx` de Alberto en `origin/dev`: se queda |
+| `packages/computers/test/screen.test.ts:7` | Endpoint legado /v1/computers | /v1/computers | Se queda en 3.4: lo usa `origin/dev` 9a0ee2ad (`apps/desktop/src/features/machines/account.tsx:453`, `:279`, `:292`) | Relay `computers.danil.ai` (URL de sesión o de API); lo usa `account.tsx` de Alberto en `origin/dev`: se queda |
+| `packages/computers/test/screen.test.ts:44` | Endpoint legado /v1/computers | /v1/computers | Se queda en 3.4: lo usa `origin/dev` 9a0ee2ad (`apps/desktop/src/features/machines/account.tsx:453`, `:279`, `:292`) | Relay `computers.danil.ai` (URL de sesión o de API); lo usa `account.tsx` de Alberto en `origin/dev`: se queda |
+| `packages/computers/test/computers.test.ts:72` | Endpoint legado /v1/computers | /v1/computers | Se queda en 3.4: lo usa `origin/dev` 9a0ee2ad (`apps/desktop/src/features/machines/account.tsx:453`, `:279`, `:292`) | Relay `computers.danil.ai` (URL de sesión o de API); lo usa `account.tsx` de Alberto en `origin/dev`: se queda |
+| `packages/computers/test/computers.test.ts:73` | Endpoint legado /v1/computers | /v1/computers | Se queda en 3.4: lo usa `origin/dev` 9a0ee2ad (`apps/desktop/src/features/machines/account.tsx:453`, `:279`, `:292`) | Relay `computers.danil.ai` (URL de sesión o de API); lo usa `account.tsx` de Alberto en `origin/dev`: se queda |
+| `packages/computers/test/computers.test.ts:74` | Endpoint legado /v1/computers | /v1/computers | Se queda en 3.4: lo usa `origin/dev` 9a0ee2ad (`apps/desktop/src/features/machines/account.tsx:453`, `:279`, `:292`) | Relay `computers.danil.ai` (URL de sesión o de API); lo usa `account.tsx` de Alberto en `origin/dev`: se queda |
+| `packages/computers/test/computers.test.ts:75` | Endpoint legado /v1/computers | /v1/computers | Se queda en 3.4: lo usa `origin/dev` 9a0ee2ad (`apps/desktop/src/features/machines/account.tsx:453`, `:279`, `:292`) | Relay `computers.danil.ai` (URL de sesión o de API); lo usa `account.tsx` de Alberto en `origin/dev`: se queda |
+| `packages/computers/test/computers.test.ts:262` | Endpoint legado /v1/computers | /v1/computers | Se queda en 3.4: lo usa `origin/dev` 9a0ee2ad (`apps/desktop/src/features/machines/account.tsx:453`, `:279`, `:292`) | Relay `computers.danil.ai` (URL de sesión o de API); lo usa `account.tsx` de Alberto en `origin/dev`: se queda |
+| `packages/computers/test/computers.test.ts:263` | Endpoint legado /v1/computers | /v1/computers | Se queda en 3.4: lo usa `origin/dev` 9a0ee2ad (`apps/desktop/src/features/machines/account.tsx:453`, `:279`, `:292`) | Relay `computers.danil.ai` (URL de sesión o de API); lo usa `account.tsx` de Alberto en `origin/dev`: se queda |
+| `packages/computers/README.md:20` | Endpoint legado /v1/computers | /v1/computers | Se queda en 3.4: lo usa `origin/dev` 9a0ee2ad (`apps/desktop/src/features/machines/account.tsx:453`, `:279`, `:292`) | Comentario del flujo que sigue vivo (`GET /v1/computers` en `origin/dev`): se queda |
+| `packages/features/machines/src/screens/account.tsx:457` | Endpoint legado /v1/computers | /v1/computers | Se queda en 3.4: lo usa `origin/dev` 9a0ee2ad (`apps/desktop/src/features/machines/account.tsx:453`, `:279`, `:292`) | Comentario del flujo que sigue vivo (`GET /v1/computers` en `origin/dev`): se queda |
+| `packages/features/machines/src/screens/ConnectMachine.tsx:23` | Endpoint legado /v1/computers | /v1/computers | Se queda en 3.4: lo usa `origin/dev` 9a0ee2ad (`apps/desktop/src/features/machines/account.tsx:453`, `:279`, `:292`) | Comentario del flujo que sigue vivo (`GET /v1/computers` en `origin/dev`): se queda |
+| `packages/fleet/src/fleet.ts:213` | Endpoint legado /v1/computers | /v1/computers | Se queda en 3.4: lo usa `origin/dev` 9a0ee2ad (`apps/desktop/src/features/machines/account.tsx:453`, `:279`, `:292`) | Comentario del flujo que sigue vivo (`GET /v1/computers` en `origin/dev`): se queda |
+| `packages/fleet/src/fleet.ts:249` | Endpoint legado /v1/computers | /v1/computers | Se queda en 3.4: lo usa `origin/dev` 9a0ee2ad (`apps/desktop/src/features/machines/account.tsx:453`, `:279`, `:292`) | Comentario del flujo que sigue vivo (`GET /v1/computers` en `origin/dev`): se queda |
 |  | Reglas, contratos o referencias de Appv2 | appv2 | «se borra» |  |
 |  | Reglas, contratos o referencias de Appv2 | appv2 | «se borra» |  |
 |  | Reglas, contratos o referencias de Appv2 | appv2 | «se borra» |  |
@@ -134,8 +126,10 @@ Inventario exhaustivo de todo el código en el front que consume o adapta sistem
 |  | Subruta legada /v1/workspaces/{id}/memory | /v1/workspaces/.../memory | «se borra» |  |
 |  | Subruta legada /v1/workspaces/{id}/memory | /v1/workspaces/.../memory | «se borra» |  |
 |  | Subruta legada /v1/workspaces/{id}/logo | /v1/workspaces/.../logo |  vía  |  |
+| `packages/platform-client/test/edge-context.test.ts:21` | Prueba de `X-Danil-Session` en PUT del logo (p-ctx 391ae088) | /v1/workspaces/.../logo | `PUT /v1/workspaces/{id}/logo` vía `platformFetch` | Añadida por p-ctx después de 3.1 |
 |  | Subruta legada /v1/workspaces/{id}/logo | /v1/workspaces/.../logo |  vía  |  |
 |  | Subruta legada /v1/workspaces/{id}/background | /v1/workspaces/.../background |  vía  |  |
+| `packages/platform-client/test/edge-context.test.ts:22` | Prueba de `X-Danil-Session` en DELETE del fondo (p-ctx 391ae088) | /v1/workspaces/.../background | `DELETE /v1/workspaces/{id}/background` vía `platformFetch` | Añadida por p-ctx después de 3.1 |
 |  | Subruta legada /v1/workspaces/{id}/restore | /v1/workspaces/.../restore | «se borra» |  |
 |  | Subruta legada /v1/workspaces/{id}/purge | /v1/workspaces/.../purge | «se borra» |  |
 |  | Gate de feature legado | legacyOrganizationGate |  vía  |  |
@@ -148,19 +142,6 @@ Inventario exhaustivo de todo el código en el front que consume o adapta sistem
 |  | Propiedad legacy de cuenta de grupo | groupAccount.legacy | «se borra» |  |
 |  | Propiedad legacy de cuenta de grupo | groupAccount.legacy | «se borra» |  |
 |  | Propiedad legacy de cuenta de grupo | groupAccount.legacy | «se borra» |  |
-|  | Compatibilidad de motor legado | machineCompatibility |  vía  |  |
-|  | Compatibilidad de motor legado | machineCompatibility |  vía  |  |
-|  | Compatibilidad de motor legado | machineCompatibility |  vía  |  |
-|  | Compatibilidad de motor legado | machineCompatibility |  vía  |  |
-|  | Compatibilidad de motor legado | machineCompatibility |  vía  |  |
-|  | Compatibilidad de motor legado | machineCompatibility |  vía  |  |
-|  | Compatibilidad de motor legado | machineCompatibility |  vía  |  |
-|  | Compatibilidad de motor legado | machineCompatibility |  vía  |  |
-|  | Compatibilidad de motor legado | machineCompatibility |  vía  |  |
-|  | Compatibilidad de motor legado | machineCompatibility |  vía  |  |
-|  | Compatibilidad de motor legado | machineCompatibility |  vía  |  |
-|  | Compatibilidad de motor legado | machineCompatibility |  vía  |  |
-|  | Contratos de motor legado | machineContracts |  vía  |  |
 |  | Contratos de motor legado | machineContracts |  vía  |  |
 |  | Contratos de motor legado | machineContracts |  vía  |  |
 |  | Contratos de motor legado | machineContracts |  vía  |  |
@@ -176,8 +157,8 @@ Patrones disjuntos y exactos para el gate de verificación  y :
 
 | Patrón | Regex | Sistema viejo | Conteo actual | Acción |
 |---|---|---|---:|---|
-| /v1/computers | /v1/computers | Borde viejo /v1/computers (R8) | 31 | Se borra |
-| DANIL_COMPUTERS_URL | DANIL_COMPUTERS_URL | Variable de entorno de computers | 1 | Se borra |
+| /v1/computers | /v1/computers | Borde viejo /v1/computers (R8) | 24 | Se queda lo que usa `origin/dev` (3.4: 31→24) |
+| DANIL_COMPUTERS_URL | DANIL_COMPUTERS_URL | Variable de entorno de computers | 0 | Borrado (3.4) |
 | appv2 | [aA]ppv2 | Appv2 / Danil Agents (R8) | 19 | Se borra |
 | createMessaging | createMessaging | Mensajería Appv2 (R8) | 7 | Se borra |
 | /terminus/alpha-api | /terminus/alpha-api | BFF alfa legado /terminus/alpha-api | 21 | Se borra |
@@ -186,16 +167,16 @@ Patrones disjuntos y exactos para el gate de verificación  y :
 | /v1/me/workspaces | /v1/me/workspaces | Borde viejo /v1/me/workspaces | 1 | Se borra |
 | /v1/workspaces/.../github | /v1/workspaces/[^/]+/github | Borde viejo github sync | 7 | Se borra |
 | /v1/workspaces/.../memory | /v1/workspaces/[^/]+/memory | Borde viejo memory | 6 | Se borra |
-| /v1/workspaces/.../logo | /v1/workspaces/[^/]+/logo | Borde viejo logo | 2 | Se borra |
-| /v1/workspaces/.../background | /v1/workspaces/[^/]+/background | Borde viejo background | 1 | Se borra |
+| /v1/workspaces/.../logo | /v1/workspaces/[^/]+/logo | Borde viejo logo | 3 | Se borra |
+| /v1/workspaces/.../background | /v1/workspaces/[^/]+/background | Borde viejo background | 2 | Se borra |
 | /v1/workspaces/.../restore | /v1/workspaces/[^/]+/restore | Borde viejo restore | 1 | Se borra |
 | /v1/workspaces/.../purge | /v1/workspaces/[^/]+/purge | Borde viejo purge | 1 | Se borra |
 | legacyOrganizationGate | legacyOrganizationGate | Gate de organización legado | 3 | Se borra |
 | LegacyProfileMenu | LegacyProfileMenu | Menú de perfil legado | 2 | Se borra |
 | LegacyDanilFooterEntry | LegacyDanilFooterEntry | Footer legado | 1 | Se borra |
 | groupAccount.legacy | groupAccount.*legacy | groupAccount legado | 4 | Se borra |
-| machineCompatibility | machineCompatibility | Compatibilidad vieja de máquinas | 12 | Se borra |
-| machineContracts | machineContracts | Contratos viejos de máquinas | 7 | Se borra |
+| machineCompatibility | machineCompatibility | Compatibilidad vieja de máquinas | 0 | Borrado (3.4) |
+| machineContracts | machineContracts | Contratos viejos de máquinas | 6 | Se borra |
 | workers.internal | workers[.]internal | workers.internal | 0 | Se borra |
 | access-projection | access-projection | access-projection | 0 | Se borra |
 | legacy-desktop-auth | legacy-desktop-auth | legacy-desktop-auth | 0 | Se borra |
