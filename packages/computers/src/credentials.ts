@@ -106,8 +106,8 @@ const isObj = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 
 const str = (v: unknown): string | null => (typeof v === "string" && v ? v : null);
 const num = (v: unknown): number | null => (typeof v === "number" && Number.isFinite(v) ? v : null);
 
-async function call<T>(source: CredentialSource, method: string, path: string, read: (body: unknown) => T, body?: unknown): Promise<CredentialAnswer<T>> {
-  const response = await bearerCall(source, method, path, body);
+async function call<T>(source: CredentialSource, method: string, path: string, read: (body: unknown) => T, body?: unknown, key?: string): Promise<CredentialAnswer<T>> {
+  const response = await bearerCall(source, method, path, body, key ? { "Idempotency-Key": key } : {});
   if (!response) return { kind: "error", status: null };
   const { json } = response;
   const code = errorCodeOf(json);
@@ -212,26 +212,31 @@ export function listCredentials(source: CredentialSource, workspace: string) {
   return call(source, "GET", routeOf(workspace), credentialsListingOf);
 }
 
+/*
+ * Las escrituras llevan una `Idempotency-Key` por operación lógica: la del llamador (`key`), que la repite
+ * si reintenta, o una nueva por llamada.
+ */
+
 /** Crea o rota una credencial sellada (api_key, mcp_secret, zotero, env_secret) con una copia por máquina. */
-export function putCredential(source: CredentialSource, workspace: string, put: CredentialPut) {
+export function putCredential(source: CredentialSource, workspace: string, put: CredentialPut, key: string = crypto.randomUUID()) {
   // El servicio nombra a la máquina `machine_id`; aquí sigue siendo `computer_id`.
   const body = { ...put, copies: put.copies.map((c) => ({ machine_id: c.computer_id, sealed: c.sealed })) };
-  return call(source, "PUT", routeOf(workspace), credentialOrThrow, body);
+  return call(source, "PUT", routeOf(workspace), credentialOrThrow, body, key);
 }
 
 /** La borra de la cuenta; cada máquina la saca de su bóveda al reconciliar. */
-export function deleteCredential(source: CredentialSource, workspace: string, credential: string) {
-  return call(source, "DELETE", `${routeOf(workspace)}/${encodeURIComponent(credential)}`, () => null);
+export function deleteCredential(source: CredentialSource, workspace: string, credential: string, key: string = crypto.randomUUID()) {
+  return call(source, "DELETE", `${routeOf(workspace)}/${encodeURIComponent(credential)}`, () => null, undefined, key);
 }
 
 /** La quita de una máquina: con `sealed`, no la revoca en el proveedor. */
-export function removeCredentialMachine(source: CredentialSource, workspace: string, credential: string, computer: string) {
-  return call(source, "DELETE", `${routeOf(workspace)}/${encodeURIComponent(credential)}/machines/${encodeURIComponent(computer)}`, credentialOrThrow);
+export function removeCredentialMachine(source: CredentialSource, workspace: string, credential: string, computer: string, key: string = crypto.randomUUID()) {
+  return call(source, "DELETE", `${routeOf(workspace)}/${encodeURIComponent(credential)}/machines/${encodeURIComponent(computer)}`, credentialOrThrow, undefined, key);
 }
 
 /** La vuelve a poner en una máquina; una sellada queda `pending` hasta que otra la selle para ella. */
-export function restoreCredentialMachine(source: CredentialSource, workspace: string, credential: string, computer: string) {
-  return call(source, "POST", `${routeOf(workspace)}/${encodeURIComponent(credential)}/machines/${encodeURIComponent(computer)}/restore`, credentialOrThrow);
+export function restoreCredentialMachine(source: CredentialSource, workspace: string, credential: string, computer: string, key: string = crypto.randomUUID()) {
+  return call(source, "POST", `${routeOf(workspace)}/${encodeURIComponent(credential)}/machines/${encodeURIComponent(computer)}/restore`, credentialOrThrow, undefined, key);
 }
 
 // -----------------------------------------------------------------------------

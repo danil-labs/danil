@@ -50,6 +50,22 @@ test("el reintento de una escritura de cuentas repite su llave", async () => {
   assert.equal(keys[0], keys[1]);
 });
 
+test("dos reintentos del llamador con la misma key mandan la misma llave", async () => {
+  const { keys, transport } = web([503]);
+  const source = webCredentialSource(ORIGIN, transport);
+  for (const write of [
+    (key: string) => putCredential(source, "w1", PUT, key),
+    (key: string) => deleteCredential(source, "w1", "cred_1", key),
+    (key: string) => removeCredentialMachine(source, "w1", "cred_1", "cmp_1", key),
+    (key: string) => restoreCredentialMachine(source, "w1", "cred_1", "cmp_1", key),
+  ]) {
+    keys.length = 0;
+    assert.equal((await write("op-1")).kind, "error");
+    assert.equal((await write("op-1")).kind, "error");
+    assert.deepEqual(keys, ["op-1", "op-1"]);
+  }
+});
+
 test("edgeUntil repite la llave en cada reintento y estrena una por escritura", async () => {
   const keys: (string | undefined)[] = [];
   let n = 0;
