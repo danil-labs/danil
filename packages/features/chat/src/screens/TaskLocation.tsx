@@ -1,9 +1,7 @@
 import { SignalDot } from "../../../../ui/src/SignalDot";
 import GitBranch from "lucide-solid/icons/git-branch";
 import Monitor from "lucide-solid/icons/monitor";
-import { MachineIcon } from "../../../machines/src/components/MachineIcon";
-import { WorkdirIcon } from "../../../code/src";
-import { machineName, machineWakes } from "../../../machines/src/queries/store";
+import { MachineIcon } from "../../../../ui/src/MachineIcon";
 import { type JSX, Show } from "solid-js";
 import { createCopied } from "../../../../host/src/clipboard";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
@@ -15,6 +13,9 @@ import { RETARDO_TOOLTIP, TooltipContent, TooltipRoot, TooltipTrigger } from "..
 export type TaskLocationProps = {
   /** El `machine` de la fila; sin él, la máquina de la ventana. */
   machine?: string;
+  machineName: (id: string, local?: boolean) => string;
+  machineWakes: (id: string) => boolean;
+  folderIcon: (project: { kind: string; cloud?: string | null }) => JSX.Element;
   on: boolean;
   project?: { name: string; kind: string; cloud?: string | null };
   /** La carpeta de trabajo de la tarea (su worktree). */
@@ -47,9 +48,9 @@ function Pista(props: { tip: JSX.Element; children: JSX.Element; class?: string;
 /** Máquina / proyecto / rama de la tarea, arriba a la izquierda de su ventana. */
 export default function TaskLocation(props: TaskLocationProps) {
   const here = () => capabilities().windowMachine?.();
-  const nombre = () => (props.machine ? machineName(props.machine) : (here()?.name ?? machineName("local")));
+  const nombre = () => (props.machine ? props.machineName(props.machine) : (here()?.name ?? props.machineName("local")));
   const id = () => props.machine ?? here()?.id ?? "local";
-  const wakes = () => machineWakes(id());
+  const wakes = () => props.machineWakes(id());
   const { copied: copiada, copy: copiar } = createCopied();
   const pantalla = () => {
     const m = props.machine ?? here()?.id;
@@ -83,7 +84,7 @@ export default function TaskLocation(props: TaskLocationProps) {
               label={props.onFiles ? t("shell.folder.view_on", { name: nombre() }) : undefined}
               tip={<>{props.onFiles ? t("shell.folder.view_on", { name: nombre() }) : t("chat.location.project")}<Show when={props.path}>{(ruta) => <span class="block font-mono text-caption font-normal opacity-80">{abbreviateHomePath(ruta())}</span>}</Show></>}
             >
-              <span aria-hidden="true" class="inline-flex shrink-0"><WorkdirIcon kind={proyecto().kind} cloud={proyecto().cloud} size={14} /></span>
+              <span aria-hidden="true" class="inline-flex shrink-0">{props.folderIcon(proyecto())}</span>
               <span data-task-location-project="" class="min-w-0 truncate">{proyecto().name}</span>
             </Pista>
           </>

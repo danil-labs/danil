@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogTitle } from "../../../../ui/src/Dialog";
 import { ITEM_DE_MENU, Popover, PopoverContent, PopoverTrigger } from "../../../../ui/src/Popover";
 import { SignalDot } from "../../../../ui/src/SignalDot";
 import { ConnectMachine, connectSource } from "./ConnectMachine";
-import { MachineIcon } from "../components/MachineIcon";
+import { MachineIcon } from "../../../../ui/src/MachineIcon";
 import { isGuestMachine } from "../queries/guestLink";
 import { capabilities } from "../../../../host/src/platform";
 import { cloudInventory, rememberedRunOn, type Machine, machineName, machines, type ProjectPlace, refetchMachines, runOn, runsWorkspace, setRunOn, unavailable, wakesOf } from "../queries/store";

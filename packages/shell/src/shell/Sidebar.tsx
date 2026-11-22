@@ -28,6 +28,7 @@ import { type ClonEnCurso, faseDeClon } from "../../../features/projects/src/scr
 import { AstroAvatar } from "../../../features/projects/src/screens/AstroAvatar";
 import { watchHandlerStatuses } from "../../../features/projects/src/queries/handlerPresence";
 import type { ModelChoices } from "../../../features/projects/src/screens/NewAgent";
+import type { CreateFreeRouterConsent } from "../../../ui/src/lib/freeRouterConsent.ts";
 import { notifyProfiles, watchProfiles } from "../../../features/projects/src/queries/profiles";
 import Sessions, { type SessionRow } from "../../../features/projects/src/screens/Sessions";
 import { effectiveTaskGit, watchSessionGit } from "../../../features/projects/src/queries/taskGit";
@@ -143,6 +144,7 @@ export default function Sidebar(props: {
   onAbrirProyecto: (id: string, machine?: string) => void;
   /** Lo que se ofrece como modelo por defecto al crear un agente. */
   modelos: ModelChoices;
+  createFreeRouterConsent: CreateFreeRouterConsent;
   /**
    * Empezar una tarea dentro de ese proyecto, sin pasar por su vista. `""` es sin carpeta.
    * `machine`, la del grupo partido por máquina (`""` es esta): la tarea se lanza en ella.
@@ -680,6 +682,7 @@ export default function Sidebar(props: {
         abierto onAbrir={open => { if (!open) setCreatingAgentIn(null); }}
         project={project().id}
         modelos={props.modelos}
+        createFreeRouterConsent={props.createFreeRouterConsent}
         onCreado={() => setCreatingAgentIn(null)}
       /></LazyPart>}</Show>
       <SidebarShell
