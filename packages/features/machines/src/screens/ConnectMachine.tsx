@@ -12,7 +12,7 @@ import Copy from "lucide-solid/icons/copy";
 import { createSignal, For, Match, onCleanup, onMount, Show, Switch } from "solid-js";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { createCopied } from "../../../../host/src/clipboard";
-import { invoke } from "../../../../engine-client/src/client";
+import { getAccountRelayToken } from "../queries";
 import { capabilities } from "../../../../host/src/platform";
 import { Button } from "../../../../ui/src/Button";
 import { Input } from "../../../../ui/src/Input";
@@ -169,7 +169,7 @@ export function connectSource(account?: string | null): ConnectMachineProps | nu
   if (!capabilities().danilAccount) return null;
   return {
     list: async () => {
-      const client = await invoke<{ token: string; endpoint: string }>("account_relay_token", account ? { account } : {}).catch(() => null);
+      const client = await getAccountRelayToken(account).catch(() => null);
       return client ? listComputers(client.endpoint, client.token) : { kind: "error", status: null };
     },
     // La flota del escritorio vuelve a leer la cuenta (`account.tsx`) y suma la nueva.

@@ -1,12 +1,14 @@
-import { invoke } from "../../../../engine-client/src/client.ts";
+import {
+  connectObservability,
+  disconnectObservability,
+  getAgentsViewStatus,
+} from "../queries.ts";
 import { listen } from "../../../../../apps/desktop/src/lib/serviceEvents";
 import { createSignal, onCleanup, onMount, Show } from "solid-js";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { Button } from "../../../../ui/src/Button";
 import Sitio from "../../../sites/src/screens/Site";
 import { prosaDe } from "../../../../ui/src/Failure";
-
-type AgentsViewStatus = { installed: boolean; enabled: boolean };
 
 export default function Observability(props: { onManage: () => void }) {
   const [url, setUrl] = createSignal<string | null>(null);
@@ -20,13 +22,13 @@ export default function Observability(props: { onManage: () => void }) {
     setUnavailable(false);
     setError(null);
     try {
-      const status = await invoke<AgentsViewStatus>("agentsview_status");
+      const status = await getAgentsViewStatus();
       if (current !== request) return;
       if (!status.installed || !status.enabled) {
         setUnavailable(true);
         return;
       }
-      const connection = await invoke<{ url: string }>("observability_connect");
+      const connection = await connectObservability();
       if (current === request) setUrl(connection.url);
     } catch (error) {
       if (current === request) setError(prosaDe(error));
@@ -41,7 +43,7 @@ export default function Observability(props: { onManage: () => void }) {
     window.removeEventListener("harness:workspace", refresh);
     void events.then((unlisten) => unlisten());
     // Sin este aviso el servidor sigue indexando con la pestaña cerrada.
-    void invoke("observability_disconnect").catch(() => {});
+    void disconnectObservability().catch(() => {});
   });
 
   return (

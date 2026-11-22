@@ -2,7 +2,7 @@ import { type Accessor, For, Show, createSignal } from "solid-js";
 import { SignalDot } from "../../../../ui/src/SignalDot";
 import X from "lucide-solid/icons/x";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
-import { invoke } from "../../../../engine-client/src/client.ts";
+import { removeMachineAccount } from "../queries";
 import type { AccountMachinesProps } from "../../../../host/src/platform";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../../../../ui/src/DropdownMenu";
 import type { MergedMachineRow as MachineRow } from "../model/merge-by-machine";
@@ -22,7 +22,7 @@ export default function AccountMachines(props: AccountMachinesProps & { machines
   async function signOut(id: string, machine: string) {
     setAsking(null);
     try {
-      await invoke("remove_account", { provider: props.provider, id }, { headers: { "x-terminus-machine": machine } });
+      await removeMachineAccount(props.provider, id, machine);
       setFailed(false);
     } catch {
       setFailed(true);

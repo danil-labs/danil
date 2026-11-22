@@ -10,7 +10,6 @@ import Pencil from "lucide-solid/icons/pencil";
 import { createSignal, For, onMount, onCleanup, Show } from "solid-js";
 import { df } from "../../../../../apps/desktop/src/lib/format";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
-import { invoke } from "../../../../engine-client/src/client";
 import { capabilities, type AccountComputersSource } from "../../../../host/src/platform";
 import { isMac } from "../../../../host/src/window";
 import { Button } from "../../../../ui/src/Button";
@@ -29,7 +28,7 @@ export function accountComputersSource(_account: string | null = null, _workspac
   if (given) return given;
   if (!capabilities().danilAccount) return null;
   {
-    const cloud = createCloudMachines(invoke);
+    const cloud = createCloudMachines();
     return {
       onRenamed: () => {},
       list: async () => {
